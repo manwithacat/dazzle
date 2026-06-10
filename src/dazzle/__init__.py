@@ -28,4 +28,18 @@ __all__ = [
     "Result",
     "UnwrapError",
     "NewType",
+    "register_lifespan_hook",
 ]
+
+
+def __getattr__(name: str) -> object:
+    # #1366: the supported host-app startup/shutdown path, surfaced at the top
+    # level so downstream code finds it before reaching for the deprecated
+    # @app.on_event (which a custom lifespan silently ignores). Lazy because
+    # importing back.runtime pulls FastAPI (~350ms) — `import dazzle` and
+    # `dazzle --help` must stay light (the v0.80.8 lesson).
+    if name == "register_lifespan_hook":
+        from .back.runtime.lifespan_hooks import register_lifespan_hook
+
+        return register_lifespan_hook
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

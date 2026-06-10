@@ -559,7 +559,11 @@ class DazzleBackendApp:
         Shutdown: stop the audit logger (if configured), then close the pool —
         mirroring the previous ordering (pool opens first, closes last).
         """
-        from dazzle.back.runtime.lifespan_hooks import run_shutdown_hooks, run_startup_hooks
+        from dazzle.back.runtime.lifespan_hooks import (
+            run_legacy_router_events,
+            run_shutdown_hooks,
+            run_startup_hooks,
+        )
 
         pool_min = int(os.environ.get("DAZZLE_DB_POOL_MIN", "2"))
         pool_max = int(os.environ.get("DAZZLE_DB_POOL_MAX", "10"))
@@ -571,9 +575,17 @@ class DazzleBackendApp:
         # pool is open so they can use the DB. Replaces the @on_event hooks a custom lifespan
         # silently dropped.
         await run_startup_hooks(app)
+        # #1366: HOST-APP @app.on_event handlers — drained with original
+        # FastAPI semantics (a failed startup hook aborts boot) after the
+        # framework is up. Each emits a deprecation warning pointing at
+        # dazzle.register_lifespan_hook, the supported path.
+        await run_legacy_router_events(app, "startup")
         try:
             yield
         finally:
+            # Host shuts down first (proper nesting), then framework hooks,
+            # then audit logger, then the pool.
+            await run_legacy_router_events(app, "shutdown")
             await run_shutdown_hooks(app)
             if self._audit_logger is not None:
                 await self._audit_logger.stop()

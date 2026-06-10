@@ -77,3 +77,42 @@ async def run_shutdown_hooks(app: Any) -> None:
     resource teardown), resilient to individual failures."""
     for hook in reversed(list(getattr(app.state, _SHUTDOWN_ATTR, []))):
         await _run_one(hook)
+
+
+async def run_legacy_router_events(app: Any, phase: str) -> None:
+    """Run HOST-APP ``@app.on_event`` handlers inside the dazzle lifespan (#1366).
+
+    A custom ``lifespan=`` makes Starlette skip its default lifespan, which is
+    the only thing that drains ``app.router.on_startup`` / ``on_shutdown`` —
+    so downstream hooks registered on the app ``build()`` returns were
+    appended to those lists and **silently never ran** (a host app lost its
+    auth/pool init with no warning). v0.81.59's registry protected the
+    framework's own subsystems; this drains the host's handlers with the
+    original FastAPI semantics.
+
+    Deliberate contrasts with the framework registry above:
+
+    - **Exceptions propagate.** A failed host startup hook aborts boot —
+      original ``on_event`` semantics, and exactly the loud failure the
+      silent-loss incident needed. (Framework hooks stay resilient: they were
+      dead for releases, so restoring them must not crash working deploys.)
+    - **One WARNING per handler**, pointing at ``register_lifespan_hook`` —
+      ``on_event`` is deprecated upstream and Starlette's own router-level
+      support is already gone, so the bridge is a compatibility courtesy,
+      not the recommended path.
+
+    ``getattr`` defensively: a future FastAPI may drop the lists entirely.
+    """
+    attr = "on_startup" if phase == "startup" else "on_shutdown"
+    handlers = list(getattr(getattr(app, "router", None), attr, []) or [])
+    for handler in handlers:
+        logger.warning(
+            "Running legacy @app.on_event(%r) handler %r inside the dazzle lifespan "
+            "(#1366). on_event is deprecated — migrate to "
+            "dazzle.back.runtime.lifespan_hooks.register_lifespan_hook.",
+            phase,
+            getattr(handler, "__name__", handler),
+        )
+        result = handler()
+        if inspect.isawaitable(result):
+            await result

@@ -15,7 +15,7 @@
 
 package: dazzle
   source: __all__
-  count: 12
+  count: 13
   exports:
   - BackendError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
   - DazzleError: class (bases=[Exception]) (message: 'str', context: 'ErrorContext | None' = None)
@@ -29,6 +29,7 @@ package: dazzle
   - ValidationError: class (bases=[DazzleError]) (message: 'str', context: 'ErrorContext | None' = None)
   - __version__: str (version-like)
   - ir: module (dazzle.core.ir)
+  - register_lifespan_hook: function (app: 'Any', *, startup: 'LifespanHook | None' = None, shutdown: 'LifespanHook | None' = None) -> 'None'
 
 package: dazzle.back
   source: _LOADERS

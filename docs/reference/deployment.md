@@ -61,6 +61,20 @@ volume_size_gb = 100
 volume_iops = 10000
 ```
 
+## Host-App Lifecycle Hooks
+
+When your own code needs startup/shutdown work on the Dazzle app (connection pools, auth caches, background clients), use the supported hook API:
+
+```python
+import dazzle
+
+dazzle.register_lifespan_hook(app, startup=init_pool, shutdown=close_pool)
+```
+
+Hooks may be sync or async, run inside the framework's lifespan (after the DB pool opens, so they can use the database), and shutdown hooks run in reverse order.
+
+**Do not use `@app.on_event`.** Dazzle constructs the app with a custom `lifespan=`, which makes Starlette skip the default lifespan — the only thing that ever read the `on_event` lists. (Starlette 1.x removed the draining machinery entirely; FastAPI keeps `on_event` only as a deprecated write-only shim.) As of v0.82.24 (#1366) Dazzle drains those legacy handlers itself with original semantics — a failed startup handler aborts boot — and logs a deprecation warning per handler, so existing code works loudly rather than failing silently. Migrate to `register_lifespan_hook`.
+
 ## TigerBeetle Support
 
 TigerBeetle is a high-performance financial ledger database. Since AWS has no managed TigerBeetle service, Dazzle deploys a self-hosted cluster on EC2.

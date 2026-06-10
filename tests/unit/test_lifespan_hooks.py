@@ -6,9 +6,11 @@ lifespan. `@app.on_event` is silently ignored when a custom lifespan is set, so 
 hooks were dead — and no test exercised the lifespan startup path to notice.
 """
 
+import logging
 import warnings
 from contextlib import asynccontextmanager
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -127,3 +129,83 @@ def test_no_on_event_calls_remain_in_runtime_source() -> None:
             if pattern.search(line):
                 offenders.append(f"{py.relative_to(root)}:{i}")
     assert not offenders, f"use register_lifespan_hook, not @app.on_event: {offenders}"
+
+
+# ---------------------------------------------------------------------------
+# #1366: legacy host-app @app.on_event handlers
+# ---------------------------------------------------------------------------
+
+
+class TestLegacyRouterEvents:
+    def _app_with_handlers(self):
+        from types import SimpleNamespace
+
+        calls: list[str] = []
+
+        def sync_start() -> None:
+            calls.append("sync_start")
+
+        async def async_start() -> None:
+            calls.append("async_start")
+
+        async def async_stop() -> None:
+            calls.append("async_stop")
+
+        router = SimpleNamespace(on_startup=[sync_start, async_start], on_shutdown=[async_stop])
+        app = SimpleNamespace(router=router)
+        return app, calls
+
+    @pytest.mark.asyncio
+    async def test_startup_handlers_run_in_order(self, caplog) -> None:
+        from dazzle.back.runtime.lifespan_hooks import run_legacy_router_events
+
+        app, calls = self._app_with_handlers()
+        with caplog.at_level(logging.WARNING):
+            await run_legacy_router_events(app, "startup")
+        assert calls == ["sync_start", "async_start"]
+        # One deprecation warning per handler, naming the supported path.
+        warnings = [r for r in caplog.records if "register_lifespan_hook" in r.getMessage()]
+        assert len(warnings) == 2
+
+    @pytest.mark.asyncio
+    async def test_shutdown_handlers_run(self) -> None:
+        from dazzle.back.runtime.lifespan_hooks import run_legacy_router_events
+
+        app, calls = self._app_with_handlers()
+        await run_legacy_router_events(app, "shutdown")
+        assert calls == ["async_stop"]
+
+    @pytest.mark.asyncio
+    async def test_startup_failure_propagates(self) -> None:
+        # Original FastAPI on_event semantics: a failed startup hook aborts
+        # boot — the loud failure the silent-loss incident needed. (Framework
+        # registry hooks deliberately swallow; host hooks deliberately don't.)
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.lifespan_hooks import run_legacy_router_events
+
+        def boom() -> None:
+            raise RuntimeError("pool init failed")
+
+        app = SimpleNamespace(router=SimpleNamespace(on_startup=[boom], on_shutdown=[]))
+        with pytest.raises(RuntimeError, match="pool init failed"):
+            await run_legacy_router_events(app, "startup")
+
+    @pytest.mark.asyncio
+    async def test_missing_router_lists_tolerated(self) -> None:
+        # Defensive: a future FastAPI may drop the deprecated lists entirely.
+        from types import SimpleNamespace
+
+        from dazzle.back.runtime.lifespan_hooks import run_legacy_router_events
+
+        await run_legacy_router_events(SimpleNamespace(router=SimpleNamespace()), "startup")
+        await run_legacy_router_events(SimpleNamespace(), "startup")  # no router at all
+
+
+def test_register_lifespan_hook_is_a_public_lazy_export() -> None:
+    """#1366: the supported path must be reachable as `dazzle.register_lifespan_hook`."""
+    import dazzle
+    from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+
+    assert dazzle.register_lifespan_hook is register_lifespan_hook
+    assert "register_lifespan_hook" in dazzle.__all__

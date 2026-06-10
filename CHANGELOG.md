@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.24] - 2026-06-10
+
+### Fixed
+- **Host-app `@app.on_event` hooks no longer die silently under the custom lifespan** (#1366). Starlette's
+  design makes `lifespan=` replace the default lifespan — the only consumer of `router.on_startup`/
+  `on_shutdown` — and Starlette 1.x removed the draining machinery entirely, leaving `on_event` a
+  write-only deprecated shim. v0.81.59's registry protected the framework's own subsystems; downstream
+  hooks (a host app's auth/pool init) were still appended and never executed, with no warning. The dazzle
+  lifespan now drains host handlers with **original FastAPI semantics** — a failed startup hook aborts
+  boot (the loud failure the silent-loss incident needed; framework hooks stay resilient by contrast) —
+  emitting one deprecation warning per handler. Host shutdown handlers run before framework teardown
+  (proper nesting); the drain is defensive against future FastAPI removing the lists.
+
+### Added
+- **`dazzle.register_lifespan_hook` is now a public, documented API** (#1366). The supported host-app
+  startup/shutdown path existed since v0.81.59 but was buried at `dazzle.back.runtime.lifespan_hooks` and
+  undocumented — which is *why* downstream reached for the familiar (broken) `@app.on_event` idiom.
+  Re-exported at the top level via lazy `__getattr__` (zero import cost — `import dazzle` stays light),
+  documented in `docs/reference/deployment.md` ("Host-App Lifecycle Hooks"); public-helpers api-surface
+  baseline regenerated (12 → 13 names).
+
 ## [0.82.23] - 2026-06-10
 
 ### Fixed
