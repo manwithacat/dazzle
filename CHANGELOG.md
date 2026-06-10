@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.14] - 2026-06-10
+
+### Added
+- **Parse errors suggest fixes** (#1360). Unknown field types resolve other-languages' names via a curated
+  alias map (`string`/`varchar`→`str(N)`, `integer`→`int`, `boolean`→`bool`, `numeric`→`decimal(p,s)`,
+  `timestamp`→`datetime`, `foreign_key`/`fk`→`ref Entity`, `dict`→`json`, …) with difflib fuzzy fallback
+  for typos (`emial`→`email`), and every unknown-type error lists the valid types. The keyword-dispatch
+  helper's default unknown-keyword error now names the block's legal keywords and suggests the closest
+  match (blocks with custom `on_unknown` recovery are unchanged). The error channel is the
+  highest-frequency teaching moment for agents — corrections should resolve from the message alone.
+  One corpus diagnostic snapshot updated for the richer message.
+
 ## [0.82.13] - 2026-06-10
 
 ### Added

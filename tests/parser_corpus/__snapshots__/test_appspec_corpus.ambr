@@ -91,7 +91,10 @@
         'column': 9,
         'error_type': 'ParseError',
         'line': 8,
-        'message': "Unknown type: 'invalidtype'",
+        'message': '''
+          Unknown type: 'invalidtype'.
+            Valid types: bool, date, datetime, decimal, email, enum, file, float, int, json, money, ref, slug, str, text, timezone, url, uuid, ancestors_of, belongs_to, descendants_of, embeds, has_many, has_one, latest_one
+        ''',
         'severity': 'error',
       }),
     ]),

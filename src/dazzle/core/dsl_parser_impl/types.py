@@ -4,6 +4,7 @@ Type parsing for DAZZLE DSL.
 Handles field type specifications and field modifiers.
 """
 
+import difflib
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +17,33 @@ if TYPE_CHECKING:
 
 # Type alias for default values (scalars or date expressions)
 DefaultValue = str | int | float | bool | ir.DateLiteral | ir.DateArithmeticExpr | None
+
+# #1360: type names agents carry over from other languages/ORMs, mapped to the
+# Dazzle type to suggest. Checked before fuzzy matching so the suggestion is
+# the *right* one, not merely the closest string.
+_FOREIGN_TYPE_ALIASES = {
+    "string": "str(N)",
+    "varchar": "str(N)",
+    "char": "str(N)",
+    "integer": "int",
+    "bigint": "int",
+    "boolean": "bool",
+    "double": "float",
+    "real": "float",
+    "number": "int (or decimal(p,s) for exact values)",
+    "numeric": "decimal(p,s)",
+    "timestamp": "datetime",
+    "time": "datetime",
+    "blob": "file",
+    "bytes": "file",
+    "dict": "json",
+    "object": "json",
+    "array": "json (or has_many Entity for relations)",
+    "list": "json (or has_many Entity for relations)",
+    "foreign_key": "ref Entity",
+    "fk": "ref Entity",
+    "currency": "money",
+}
 
 # Duration suffix to DurationUnit mapping
 DURATION_SUFFIX_MAP = {
@@ -145,8 +173,18 @@ class TypeParserMixin:
                 token.line,
                 token.column,
             )
+        # #1360: agents arrive with other languages' type names — resolve the
+        # near-miss for them instead of leaving a dead-end error.
+        known_types = sorted(_value_dispatch) + sorted(
+            tt.name.lower() for tt in _token_type_dispatch
+        )
+        alias = _FOREIGN_TYPE_ALIASES.get(str(token.value).lower())
+        if alias is None:
+            close = difflib.get_close_matches(str(token.value), known_types, n=1, cutoff=0.6)
+            alias = close[0] if close else None
+        hint = f" Did you mean {alias!r}?" if alias else ""
         raise make_parse_error(
-            f"Unknown type: {token.value!r}",
+            f"Unknown type: {token.value!r}.{hint}\n  Valid types: {', '.join(known_types)}",
             self.file,
             token.line,
             token.column,

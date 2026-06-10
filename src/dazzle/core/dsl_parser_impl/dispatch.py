@@ -46,6 +46,7 @@ whole point of choosing this style over the Lark-generator alternative.
 
 from __future__ import annotations
 
+import difflib
 from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol, TypeVar
@@ -132,14 +133,25 @@ def parse_block_with_dispatch[StateT](
         if on_unknown is not None:
             on_unknown(parser)
         else:
-            _default_unknown_keyword(parser)
+            known = sorted({tt.name.lower() for tt in first_class_keywords} | set(ident_kw))
+            _default_unknown_keyword(parser, known)
 
 
-def _default_unknown_keyword(parser: _ParserLike) -> None:
-    """Default ``on_unknown`` — raise a generic parse error at this token."""
+def _default_unknown_keyword(parser: _ParserLike, known: list[str] | None = None) -> None:
+    """Default ``on_unknown`` — raise a parse error at this token.
+
+    #1360: when the caller's keyword tables are available, name the legal
+    keywords and suggest the closest one — a typo'd keyword should resolve
+    itself from the error message alone.
+    """
     tok = parser.current_token()
+    hint = ""
+    if known:
+        close = difflib.get_close_matches(str(tok.value), known, n=1, cutoff=0.6)
+        suggest = f" Did you mean {close[0]!r}?" if close else ""
+        hint = f"{suggest}\n  Valid keywords here: {', '.join(known)}"
     raise make_parse_error(
-        f"Unknown keyword in block: {tok.value!r}",
+        f"Unknown keyword in block: {tok.value!r}.{hint}",
         parser.file,
         tok.line,
         tok.column,
