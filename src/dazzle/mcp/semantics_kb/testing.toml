@@ -17,6 +17,8 @@ category = "Testing"
 doc_page = "testing"
 doc_order = 2
 definition = "JSON/YAML specification defining E2E test flows. Auto-generated from DSL but can be customized."
+# parse_check: mixed-content (JSON FlowSpec document, not DSL)
+parse_check = false
 example = '''
 {
   "flows": [{

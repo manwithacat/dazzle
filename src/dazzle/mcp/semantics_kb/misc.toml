@@ -10,6 +10,8 @@ category = "Dazzle Runtime"
 doc_page = "access-control"
 doc_order = 10
 definition = "Session-based authentication system in Dazzle. Uses cookie-based sessions backed by the configured PostgreSQL database. Auth is optional and can be enabled/disabled per project."
+# parse_check: mixed-content (DSL persona/scope example followed by a raw HTTP request + JSON login payload)
+parse_check = false
 example = '''
 # In DSL, use personas to define role-based access:
 persona admin "Admin":
@@ -226,9 +228,11 @@ definition = "Named demo state that sets up context for testing or demonstration
 syntax = '''
 scenario <name> "<Title>":
   description: "<what this scenario tests>"
+  [seed_script: "<path/to/data.json>"]
 
-  for persona <persona_name>:
+  as persona <persona_name>:
     start_route: "<url>"
+    [seed_script: "<path/to/data.json>"]
 
   [demo:]
     [<EntityName>:]
@@ -238,16 +242,16 @@ example = '''
 scenario happy_path "Happy Path":
   description: "Normal user flow - create, edit, complete"
 
-  for persona customer:
+  as persona customer:
     start_route: "/tickets/new"
 
-  for persona agent:
+  as persona agent:
     start_route: "/queue"
 
 scenario with_data "Populated State":
   description: "Pre-loaded data for testing"
 
-  for persona agent:
+  as persona agent:
     start_route: "/queue"
 
   demo:
@@ -689,7 +693,7 @@ schedule hourly_sync "Hourly Data Sync":
   overlap: skip
 
   steps:
-    - step sync:
+    - step synchronize:
         service: sync_external_data
         timeout: 10m
 '''
@@ -754,7 +758,9 @@ Step kinds:
 syntax = '''
 steps:
   - step <name>:
-      kind: <service|send|wait|human_task|subprocess|parallel|condition|side_effect|query|foreach|llm_intent>
+      # The step kind (service|send|wait|human_task|subprocess|parallel|
+      # condition|side_effect|query|foreach|llm_intent) is inferred from
+      # which field is present — there is no explicit `kind:` field.
 
       # For SERVICE:
       service: <ServiceName>
@@ -772,9 +778,11 @@ steps:
         surface: <surface_name>
         assignee_role: <role>
         outcomes:
-          - name: approve
-            label: "Approve"
-            goto: <next_step|complete|fail>
+          - <name> ["<Label>"]:
+              goto: <next_step|complete|fail>
+              [sets:]
+                [- <Entity>.<field> -> <value>]
+              [style: <primary|danger|...>]
 
       # For CONDITION:
       condition: "<expression>"
@@ -799,25 +807,20 @@ process expense_approval "Expense Approval":
 
   steps:
     - step validate:
-        kind: service
         service: validate_expense
         timeout: 30s
 
     - step review:
-        kind: human_task
         human_task:
           surface: expense_review
           assignee_role: manager
           outcomes:
-            - name: approve
-              label: "Approve Expense"
-              goto: complete
-            - name: reject
-              label: "Reject"
-              goto: fail
+            - approve "Approve Expense":
+                goto: complete
+            - reject "Reject":
+                goto: fail
 
     - step notify:
-        kind: send
         channel: notifications
         message: ExpenseDecision
 '''
@@ -903,7 +906,7 @@ channel notifications "Email Notifications":
       to: "support@example.com"
     action: create SupportTicket
     mapping:
-      from -> requester_email
+      sender -> requester_email
       subject -> title
       body -> description
 '''

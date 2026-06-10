@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 24  # v24: KB examples rewritten for `as:` persona binding (#1350, was `for:`)
+SEED_SCHEMA_VERSION = 25  # v25: KB examples parse-verified + fixed against current grammar (#1358)
 
 
 def compute_seed_version() -> str:

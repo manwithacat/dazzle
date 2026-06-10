@@ -24,12 +24,12 @@ scope:
   <action>: all                 # 'all' means no filter (full table access)
     as: <role>
 
-# forbid: and audit: blocks
+# forbid: block and audit: directive
 forbid:
   <action>: role(<name>)        # separation-of-duty constraints
 
-audit:
-  <action>: role(<name>)        # compliance logging
+audit: all                      # compliance logging — or a subset:
+audit: [create, update, delete]
 
 # permit: expressions — role checks only (field conditions are a parser error here):
 # role(<name>) - User has the specified role
@@ -45,7 +45,8 @@ audit:
 # not (condition) - Parenthesised negation
 # Combine with: and, or — all boolean logic compiles to SQL
 
-# Cedar-style actions: list, read, create, update, delete, approve, prescribe, etc.
+# Valid actions in permit:/forbid: blocks: create, read, update, delete, list
+# (model domain verbs like "prescribe"/"dispense" onto these CRUD operations)
 # Cedar evaluation: FORBID rules override PERMIT; default is deny
 
 # Legacy access: block (read/write permissions — still supported)
@@ -102,17 +103,14 @@ entity Prescription "Prescription":
 
   permit:
     read: role(doctor) or role(pharmacist) or role(nurse)
-    prescribe: role(doctor)
-    dispense: role(pharmacist)
+    create: role(doctor)        # only doctors prescribe (create)
+    update: role(pharmacist)    # only pharmacists dispense (update)
 
   forbid:
-    prescribe: role(pharmacist)
-    dispense: role(doctor)
+    create: role(pharmacist)    # pharmacists cannot prescribe
+    update: role(doctor)        # doctors cannot dispense
 
-  audit:
-    read: role(admin)
-    prescribe: role(compliance_officer)
-    dispense: role(compliance_officer)
+  audit: [read, create, update]
 
 # Legacy style (still supported)
 entity Document "Document":

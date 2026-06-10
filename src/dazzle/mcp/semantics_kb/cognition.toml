@@ -67,7 +67,7 @@ patterns: <tag1>, <tag2>, <tag3>
 example = '''
 entity Invoice "Invoice":
   domain: billing
-  patterns: lifecycle, audit, line_items
+  patterns: lifecycle, audit_trail, line_items
 
 entity User "User":
   domain: identity

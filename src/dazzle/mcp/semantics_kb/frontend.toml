@@ -10,6 +10,8 @@ category = "Frontend"
 doc_page = "frontend"
 doc_order = 1
 definition = "Declarative HTTP interaction layer for Dazzle-generated frontends. All interactions expressed via HTML attributes (hx-get, hx-post, hx-target, hx-swap, hx-trigger). Server renders HTML fragments; HTMX swaps them into the DOM."
+# parse_check: mixed-content (HTML/HTMX markup, not DSL)
+parse_check = false
 syntax = '''
 <element
   hx-{verb}="/endpoint"   <!-- get, post, put, delete -->
@@ -83,6 +85,8 @@ category = "Frontend"
 doc_page = "frontend"
 doc_order = 3
 definition = "A fragment's formal interface specifying required/optional params, events it emits, events it listens to, and swap targets. Enables LLM agents to compose fragments without reading implementation."
+# parse_check: mixed-content (MCP tool invocation + JSON contract payload, not DSL)
+parse_check = false
 syntax = '''
 fragment: <name>
 template: fragments/<name>.html
@@ -124,6 +128,8 @@ category = "Frontend"
 doc_page = "frontend"
 doc_order = 4
 definition = "Out-of-band swap pattern (hx-swap-oob) for updating multiple DOM elements from a single server response. Used for autofill: selecting a search result populates multiple related form fields."
+# parse_check: mixed-content (Python endpoint code + HTML OOB markup, not DSL)
+parse_check = false
 syntax = '''
 <!-- Server response includes multiple elements -->
 

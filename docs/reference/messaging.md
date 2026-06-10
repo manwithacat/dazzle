@@ -88,7 +88,7 @@ channel notifications "Email Notifications":
       to: "support@example.com"
     action: create SupportTicket
     mapping:
-      from -> requester_email
+      sender -> requester_email
       subject -> title
       body -> description
 ```

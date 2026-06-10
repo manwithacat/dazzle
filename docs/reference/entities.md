@@ -55,7 +55,7 @@ entity <EntityName> "<Display Name>":
 entity Ticket "Support Ticket":
   intent: "Track and resolve customer issues through structured workflow"
   domain: support
-  patterns: lifecycle, assignment, audit
+  patterns: lifecycle, assignment, audit_trail
 
   id: uuid pk
   title: str(200) required
@@ -86,8 +86,8 @@ entity Ticket "Support Ticket":
 
   # Example data for LLM understanding
   examples:
-    {title: "Login page not loading", status: open, priority: high}
-    {title: "Password reset email delayed", status: in_progress, priority: medium}
+    - title: "Login page not loading", status: open
+    - title: "Password reset email delayed", status: in_progress
 ```
 
 **Related:** [Surface](surfaces.md#surface), [Field Types](entities.md#field-types), [Relationships](entities.md#relationships), [State Machine](entities.md#state-machine), [Invariant](entities.md#invariant), [Computed Field](entities.md#computed-field), [Access Rules](access-control.md#access-rules), [Archetype](entities.md#archetype), [Intent](entities.md#intent), [Examples](entities.md#examples)
@@ -606,7 +606,7 @@ entity Task "Task":
     in_progress -> done
     in_progress -> todo
     done -> todo: role(admin)  # Only admin can reopen
-    done -> archived: auto after 30 days OR manual
+    done -> archived: auto after 30 days or manual
 
 entity Ticket "Ticket":
   status: enum[open,resolved,closed]=open
@@ -614,7 +614,7 @@ entity Ticket "Ticket":
 
   transitions:
     open -> resolved: requires resolution_note
-    resolved -> closed: auto after 7 days OR manual
+    resolved -> closed: auto after 7 days or manual
     resolved -> open
     * -> open: role(admin)  # Admin can reopen from any state
 ```
@@ -839,7 +839,7 @@ patterns: <tag1>, <tag2>, <tag3>
 ```dsl
 entity Invoice "Invoice":
   domain: billing
-  patterns: lifecycle, audit, line_items
+  patterns: lifecycle, audit_trail, line_items
 
 entity User "User":
   domain: identity

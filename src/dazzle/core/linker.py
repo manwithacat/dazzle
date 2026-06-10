@@ -197,7 +197,7 @@ def build_appspec(
     entities = _link_subtypes(entities, merged_fragment.grant_schemas)
 
     # 9d. Inject `deleted_at: datetime optional` for entities with
-    # `soft_delete: true` (#1218 Option A). The runtime filters
+    # the `soft_delete` directive (#1218 Option A). The runtime filters
     # read paths on `deleted_at IS NULL` and the DELETE handler
     # stamps the column instead of issuing a hard DELETE — both
     # require the column to exist. Authors who already declared
@@ -515,7 +515,7 @@ def _inject_soft_delete_fields(entities: list[ir.EntitySpec]) -> list[ir.EntityS
     The runtime soft-delete plumbing (read-path tombstone filter +
     DELETE-as-UPDATE) needs the column to exist. Authors who already
     declared ``deleted_at`` explicitly keep their field unchanged —
-    we only fill the gap when ``soft_delete: true`` is set with no
+    we only fill the gap when ``soft_delete`` is set with no
     accompanying field.
     """
     out: list[ir.EntitySpec] = []

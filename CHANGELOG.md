@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.13] - 2026-06-10
+
+### Added
+- **KB example parse gate** (#1358): every `example`/`dsl` field in `src/dazzle/mcp/semantics_kb/*.toml`
+  now runs through the real parser in CI (`tests/unit/test_kb_examples_parse_1358.py`, 96 cases + a
+  coverage tripwire). When the probe ran, **37 of 108 examples didn't parse** — the #1350 pathology class
+  far beyond the `for:` shape. ~25 genuinely-invalid examples were fixed against the current grammar
+  (stale `for persona` scenario syntax, invalid permit operations, unsupported `round()` aggregate,
+  malformed `aggregate:` blocks, dotted field paths in surface sections, reserved-keyword violations,
+  out-of-order experience step phases, function calls in attention conditions, dotted persona-defaults
+  values); 13 deliberately mixed-content entries (DSL + JSON/Python/bash/diagrams) are marked
+  `parse_check = false` with per-entry justification comments. `SEED_SCHEMA_VERSION` bumped to 25;
+  KB-derived reference docs regenerated.
+- **Near-miss scenario keys now raise actionable parse errors** (#1358): `persona_entries:`, `personas:`,
+  and `seed_data_path:` were silently swallowed by the scenario parser's tolerate-unknown path — the KB,
+  `examples/support_tickets` (all three of its scenarios were inert: empty `persona_entries`, dropped
+  seed path), and `grammar.md`'s production each taught a different dead shape, and nothing complained.
+  The parser now raises pointing at the working shape (`as persona <name>:` blocks / `seed_script:`);
+  support_tickets' scenarios are rewritten and verified to populate IR; the grammar production is
+  corrected at the generator.
+
+### Fixed
+- **`soft_delete` is a bare directive, not `soft_delete: true`** — the `: true` form is a parse error, yet
+  the KB pattern, the #1217 test needle, the inference KB's prefer-string, and two code comments all taught
+  it. All corrected (#1358). Also corrected `grammar.md`'s `metric_line` production, which promised
+  aggregate arithmetic (`done / total * 100`) the parser has never accepted — one `aggregate_call` per
+  metric; the derived-metrics feature gap is filed as #1359.
+
+### Agent Guidance
+- **Scenario persona binding**: one `as persona <name>:` block per persona (children: `start_route:`,
+  `seed_script:`); scenario-level seed data is `seed_script:`. `persona_entries:`/`personas:`/
+  `seed_data_path:` are parse errors as of this release.
+- **`soft_delete`** is a bare entity directive — never write `soft_delete: true`.
+- **KB examples are now executable documentation** — if you edit an `example`/`dsl` field in
+  `semantics_kb/*.toml`, the parse gate runs it; mark genuinely mixed-content entries
+  `parse_check = false` with a justification comment.
+
 ## [0.82.12] - 2026-06-10
 
 ### Fixed

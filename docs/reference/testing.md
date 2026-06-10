@@ -91,9 +91,11 @@ Named demo state that sets up context for testing or demonstration. Scenarios de
 ```dsl
 scenario <name> "<Title>":
   description: "<what this scenario tests>"
+  [seed_script: "<path/to/data.json>"]
 
-  for persona <persona_name>:
+  as persona <persona_name>:
     start_route: "<url>"
+    [seed_script: "<path/to/data.json>"]
 
   [demo:]
     [<EntityName>:]
@@ -106,16 +108,16 @@ scenario <name> "<Title>":
 scenario happy_path "Happy Path":
   description: "Normal user flow - create, edit, complete"
 
-  for persona customer:
+  as persona customer:
     start_route: "/tickets/new"
 
-  for persona agent:
+  as persona agent:
     start_route: "/queue"
 
 scenario with_data "Populated State":
   description: "Pre-loaded data for testing"
 
-  for persona agent:
+  as persona agent:
     start_route: "/queue"
 
   demo:

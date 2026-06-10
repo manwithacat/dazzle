@@ -2060,7 +2060,7 @@ id = "prefer_soft_delete_keyword"
 name = "Prefer the soft_delete: keyword over hand-rolled tombstone columns"
 triggers = ["soft delete", "is_deleted", "deleted_at", "archived_at", "tombstone", "logical delete", "retention", "undelete", "restore deleted"]
 anti_pattern = "Hand-rolling `deleted_at: datetime optional` + per-surface `scope: deleted_at = null` rules + custom DELETE handler"
-prefer = "Declare `soft_delete: true` on the entity — framework auto-adds the `deleted_at` field, applies the tombstone filter on list/read/aggregate, and rewrites DELETE to stamp the column"
+prefer = "Declare the bare `soft_delete` directive on the entity — framework auto-adds the `deleted_at` field, applies the tombstone filter on list/read/aggregate, and rewrites DELETE to stamp the column"
 rationale = "Since v0.71.153 (#1218) the `soft_delete:` keyword is fully wired. It composes with `scope:` predicates via QueryBuilder, so authors don't double-filter. Use it when the business case calls for retention, undelete affordance, or regulatory recovery. Reach for a state machine instead when the lifecycle has *multiple* terminal/intermediate states (e.g. draft → published → archived) — soft-delete is a single tombstone flag, not a workflow."
 example = """
 # GOOD — first-class soft-delete (since v0.71.153, #1218)

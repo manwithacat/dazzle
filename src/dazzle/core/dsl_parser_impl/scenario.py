@@ -49,6 +49,26 @@ class ScenarioParserMixin:
                 tok.line,
                 tok.column,
             )
+        # #1358: these near-miss key names were silently swallowed for months
+        # (support_tickets shipped three inert scenarios). The whole indented
+        # block under the unknown key gets consumed token-by-token by the
+        # tolerate path, so the author gets zero signal — raise instead.
+        if tok.type == TokenType.IDENTIFIER and tok.value in {
+            "persona_entries",
+            "personas",
+            "seed_data_path",
+        }:
+            hint = (
+                'use `seed_script: "<path>"`'
+                if tok.value == "seed_data_path"
+                else "declare one `as persona <name>:` block per persona"
+            )
+            raise make_parse_error(
+                f"`{tok.value}:` is not a scenario key — {hint}.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
         # Unknown but not a renamed-keyword footgun: tolerate.
         self.advance()
         self.skip_newlines()
@@ -99,11 +119,11 @@ class ScenarioParserMixin:
             scenario busy_term "Busy Term":
               description: "Mid-year state with active workloads"
 
-              for persona teacher:
+              as persona teacher:
                 start_route: "/classes"
                 seed_script: "scenarios/busy_term_teacher.json"
 
-              for persona student:
+              as persona student:
                 start_route: "/my-assignments"
         """
         self.expect(TokenType.SCENARIO)
@@ -169,7 +189,7 @@ class ScenarioParserMixin:
         Parse per-persona scenario entry.
 
         Syntax:
-            for persona teacher:
+            as persona teacher:
               start_route: "/classes"
               seed_script: "scenarios/busy_term_teacher.json"
         """

@@ -33,7 +33,9 @@ _PHASE2_ENTRIES = [
     ("shared_parent_join", "diamond", "share: StudentProfile"),
     ("self_referencing_hierarchy", "tree", "descendants_of self"),
     ("temporal", "interval", "temporal:"),
-    ("soft_delete", "tombstone", "soft_delete: true"),
+    # #1358: needle was `soft_delete: true`, which the parser REJECTS — the
+    # keyword is a bare directive (entity.py); the KB example now parses.
+    ("soft_delete", "tombstone", "soft_delete"),
 ]
 
 

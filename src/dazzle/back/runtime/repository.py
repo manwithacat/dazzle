@@ -1113,7 +1113,7 @@ class Repository[T: BaseModel]:
         # #1218 Option A: tombstone filter for soft-delete entities.
         # Composes via QueryBuilder so the predicate AND-merges with
         # any user/scope filters already in `filters`. Authors opt
-        # into the filter via `soft_delete: true` on the entity.
+        # into the filter via the `soft_delete` directive on the entity.
         # `include_deleted` query-param + RBAC gate is a follow-up.
         effective_filters: dict[str, Any] = dict(filters) if filters else {}
         if self.entity_spec.soft_delete:

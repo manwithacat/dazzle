@@ -40,37 +40,49 @@ Steps and outputs can declare satisfies refs for explicit coverage traceability:
 ### Example
 
 ```dsl
-# CRUD process (simple — usually handled by surfaces, not processes):
-#   Entity.create / Entity.update / Entity.delete via surface handlers
+# CRUD operations are handled by surfaces — processes are for multi-step workflows.
 
-# Lifecycle process (status transitions):
-process order_lifecycle:
-  trigger: entity Order status -> confirmed
-  steps:
-    - name: validate_inventory
-      kind: service
-      service: Inventory.check_availability
-    - name: process_payment
-      kind: service
-      service: Payment.charge
-      compensate_with: refund_payment
-    - name: fulfill_order
-      kind: service
-      service: Fulfillment.ship
+# Lifecycle process (status-transition trigger):
+process order_lifecycle "Order Lifecycle":
   implements: [ST-010, ST-011, ST-012]
 
-# Scheduled process (cron):
-process daily_report:
-  trigger: cron "0 8 * * *"
+  trigger:
+    when: entity Order status -> confirmed
+
   steps:
-    - name: generate_report
-      kind: service
-      service: Reporting.daily_summary
-    - name: send_email
-      kind: send
-      channel: email
-      message: daily_report
+    - step validate_inventory:
+        service: check_availability
+        timeout: 30s
+
+    - step process_payment:
+        service: charge_payment
+        timeout: 2m
+        compensate: refund_payment
+
+    - step fulfill_order:
+        service: ship_order
+        timeout: 1m
+
+  compensations:
+    - refund_payment:
+        service: refund_payment
+        timeout: 1m
+
+# Scheduled job (cron) — use a schedule, which runs steps on a timer:
+schedule daily_report "Daily Report":
   implements: [ST-020]
+
+  cron: "0 8 * * *"
+
+  steps:
+    - step generate_report:
+        service: daily_summary
+        timeout: 10m
+
+    - step send_email:
+        channel: notifications
+        message: DailyReportEmail
+        timeout: 1m
 ```
 
 **Related:** [Entity](entities.md#entity), Service, [Story](stories.md#story), [State Machine](entities.md#state-machine), Compensation
@@ -100,7 +112,9 @@ Step kinds:
 ```dsl
 steps:
   - step <name>:
-      kind: <service|send|wait|human_task|subprocess|parallel|condition|side_effect|query|foreach|llm_intent>
+      # The step kind (service|send|wait|human_task|subprocess|parallel|
+      # condition|side_effect|query|foreach|llm_intent) is inferred from
+      # which field is present — there is no explicit `kind:` field.
 
       # For SERVICE:
       service: <ServiceName>
@@ -118,9 +132,11 @@ steps:
         surface: <surface_name>
         assignee_role: <role>
         outcomes:
-          - name: approve
-            label: "Approve"
-            goto: <next_step|complete|fail>
+          - <name> ["<Label>"]:
+              goto: <next_step|complete|fail>
+              [sets:]
+                [- <Entity>.<field> -> <value>]
+              [style: <primary|danger|...>]
 
       # For CONDITION:
       condition: "<expression>"
@@ -148,25 +164,20 @@ process expense_approval "Expense Approval":
 
   steps:
     - step validate:
-        kind: service
         service: validate_expense
         timeout: 30s
 
     - step review:
-        kind: human_task
         human_task:
           surface: expense_review
           assignee_role: manager
           outcomes:
-            - name: approve
-              label: "Approve Expense"
-              goto: complete
-            - name: reject
-              label: "Reject"
-              goto: fail
+            - approve "Approve Expense":
+                goto: complete
+            - reject "Reject":
+                goto: fail
 
     - step notify:
-        kind: send
         channel: notifications
         message: ExpenseDecision
 ```
@@ -223,7 +234,7 @@ schedule hourly_sync "Hourly Data Sync":
   overlap: skip
 
   steps:
-    - step sync:
+    - step synchronize:
         service: sync_external_data
         timeout: 10m
 ```

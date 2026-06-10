@@ -75,10 +75,11 @@ surface document_history "Document History":
   section main:
     field title
     field version
-  section audit "Audit Trail":
-    field created_by.name "Created By"
+  # `audit` is a reserved keyword — pick another section name.
+  section history "Audit Trail":
+    field created_by "Created By"
     field created_at "Created At"
-    field updated_by.name "Last Updated By"
+    field updated_by "Last Updated By"
     field updated_at "Last Updated At"
 ```
 
@@ -153,24 +154,23 @@ entity Prescription "Prescription":
   dosage: str(100) required
   status: enum[draft,active,dispensed,cancelled]=draft
 
-  # Permit: who CAN perform actions
+  # Permit: who CAN perform actions. Operations are the fixed CRUD verbs
+  # (create/read/update/delete/list); domain actions map onto them:
+  # prescribe -> create, dispense -> update, cancel -> delete.
   permit:
     read: role(doctor) or role(pharmacist) or role(nurse)
-    prescribe: role(doctor)
-    dispense: role(pharmacist)
-    cancel: role(doctor) or role(pharmacist)
+    create: role(doctor)
+    update: role(pharmacist)
+    delete: role(doctor) or role(pharmacist)
 
-  # Forbid: separation of duty overrides
+  # Forbid: separation of duty overrides (FORBID > PERMIT > deny)
   forbid:
-    prescribe: role(pharmacist)
-    dispense: role(doctor)
+    create: role(pharmacist)
+    update: role(doctor)
 
-  # Audit: compliance logging
-  audit:
-    read: role(admin)
-    prescribe: role(compliance_officer)
-    dispense: role(compliance_officer)
-    cancel: role(compliance_officer)
+  # Audit: compliance logging — directive form (`all`, boolean, or an
+  # operation list like `[create, update, delete]`)
+  audit: all
 
   transitions:
     draft -> active: role(doctor)
@@ -263,13 +263,15 @@ workspace team_dashboard "Team Dashboard":
     limit: 10
     display: timeline
 
-  # Key performance metrics
+  # Key performance metrics — each metric is one aggregate call
+  # (count/sum/avg/min/max, optionally with a `where` filter).
+  # Derived ratios (e.g. completion rate) are computed downstream,
+  # not in the aggregate block.
   metrics:
     aggregate:
       total: count(Task)
       completed: count(Task where status = done)
       in_progress: count(Task where status = in_progress)
-      completion_rate: round(count(Task where status = done) * 100 / count(Task), 1)
 ```
 
 ---
@@ -306,7 +308,7 @@ surface order_lines "Order Lines":
   uses entity LineItem
   mode: list
   section main:
-    field order.placed_at "Order Date"
+    field order "Order"
     field product_name "Product"
     field quantity "Qty"
 ```
@@ -765,6 +767,15 @@ entity Role "Role":
   id: uuid pk
   name: str(80) required unique
 
+  # `via:` scope rule (EXISTS through the junction) — a member can read
+  # a Role only if a UserRole row links them to it. Every scope rule
+  # needs a matching permit op.
+  permit:
+    read: role(member)
+  scope:
+    read: via UserRole(user = current_user, role = id)
+      as: member
+
 entity UserRole "User Role":
   id: uuid pk
   user: ref User required
@@ -772,7 +783,9 @@ entity UserRole "User Role":
   granted_at: datetime auto_add
   revoked_at: datetime optional   # revocation = tombstone, not deletion
 
-# `via:` aggregate — count active roles per user
+# `via:` aggregate — count roles per user through the junction.
+# (Row-level predicates ride inside the aggregate's parens, e.g.
+# count(UserRole where revoked_at = null) for a direct junction count.)
 workspace admin_dash "Admin Dashboard":
   user_role_counts:
     source: User
@@ -783,16 +796,8 @@ workspace admin_dash "Admin Dashboard":
         - id: active_roles
           label: "Active Roles"
           primary_aggregate:
-            aggregate:
-              entity: Role
-              func: count
-              via: UserRole
-            where: revoked_at = null
-
-# `via:` scope rule — only Users you've co-rated can see your details
-scope:
-  read: via UserRole(user = current_user, role.code = co_rater)
-    as: rater
+            aggregate: count(Role)
+            via: UserRole(user = id)
 ```
 
 **Related:** [Direct One To Many](patterns.md#direct-one-to-many), [Primary Aggregate N To One](patterns.md#primary-aggregate-n-to-one), [Shared Parent Join](patterns.md#shared-parent-join), [Soft Delete](patterns.md#soft-delete)
@@ -973,11 +978,20 @@ surface project_detail "Project":
   section info:
     field name
     field status
-  section tasks "Tasks":
-    uses entity Task
-    filter: project = this
+
+# Sections render fields of the surface's own entity — a section can't
+# embed another entity. Express the child list as its own surface,
+# filterable by the parent FK.
+surface project_tasks "Project Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field project "Project"
     field title
     field status
+  ux:
+    purpose: "Tasks for a project, filtered by the parent FK"
+    filter: project
 ```
 
 ---
@@ -989,6 +1003,19 @@ Alert users to important events
 ### Example
 
 ```dsl
+# Entity with a computed field — time-based conditions live on computed
+# fields (days_since/days_until), which attention rules then compare.
+entity Order "Order":
+  id: uuid pk
+  order_number: str(20) required unique
+  customer: ref Customer required
+  status: enum[fresh,paid,shipped,delivered]=fresh
+  payment_status: enum[pending,paid,failed]=pending
+  total: decimal(10,2) required
+  shipped_at: datetime optional
+  created_at: datetime auto_add
+  days_since_shipped: computed days_since(shipped_at)
+
 # Surface with attention signals
 surface order_list "Orders":
   uses entity Order
@@ -996,7 +1023,7 @@ surface order_list "Orders":
 
   section main:
     field order_number
-    field customer.name
+    field customer "Customer"
     field status
     field total
 
@@ -1009,15 +1036,15 @@ surface order_list "Orders":
       message: "Payment failed!"
       action: order_retry_payment
 
-    # Shipping delayed
+    # Shipping delayed — compares the computed field
     attention warning:
-      when: days_since(shipped_at) > 5 and status = shipped
+      when: days_since_shipped > 5 and status = shipped
       message: "Delayed shipment"
 
-    # New order
+    # New order awaiting payment
     attention notice:
-      when: status = new and created_at > today
-      message: "New order today"
+      when: status = fresh and payment_status = pending
+      message: "New order awaiting payment"
 ```
 
 ---
@@ -1056,10 +1083,7 @@ workspace customer_overview "Customer Overview":
         - id: total_revenue
           label: "Total Revenue"
           primary_aggregate:
-            aggregate:
-              entity: Order
-              func: sum
-              column: total
+            aggregate: sum(Order.total)
 ```
 
 **Related:** [Direct One To Many](patterns.md#direct-one-to-many), [Junction Many To Many](patterns.md#junction-many-to-many), [Shared Parent Join](patterns.md#shared-parent-join)
@@ -1081,7 +1105,7 @@ surface ticket_list "Support Tickets":
   section main:
     field subject
     field status
-    field assigned_to.name
+    field assigned_to "Assignee"
 
   ux:
     purpose: "Manage support tickets by role"
@@ -1258,11 +1282,8 @@ workspace class_view "Class View":
         - id: attainment
           label: "Avg Score"
           primary_aggregate:
-            aggregate:
-              entity: MarkingResult
-              func: avg
-              column: score
-              share: StudentProfile     # the diamond pivot
+            aggregate: avg(MarkingResult.score)
+            share: StudentProfile     # the diamond pivot
 ```
 
 **Related:** [Primary Aggregate N To One](patterns.md#primary-aggregate-n-to-one), [Junction Many To Many](patterns.md#junction-many-to-many), [Subtype Of](patterns.md#subtype-of)
@@ -1272,7 +1293,7 @@ workspace class_view "Class View":
 ## Soft Delete
 
 Mark rows as deleted without physically removing them (tombstone pattern).
-Set `soft_delete: true` on the entity; the framework auto-injects a
+Add the bare `soft_delete` directive to the entity body; the framework auto-injects a
 nullable `deleted_at: datetime` tombstone field, auto-filters
 `deleted_at IS NULL` on list / read / aggregate, and converts DELETE
 requests into an UPDATE that stamps `deleted_at = NOW()`.
@@ -1288,8 +1309,9 @@ entity User "User":
   id: uuid pk
   email: email required unique
   display_name: str(120) required
-  soft_delete: true
-  # Framework auto-injects: `deleted_at: datetime optional` if missing.
+  soft_delete
+  # Bare keyword directive (no value). Framework auto-injects:
+  # `deleted_at: datetime optional` if missing.
 
 # List / read / aggregate paths auto-filter deleted_at IS NULL — authors
 # don't write the predicate. DELETE handler stamps deleted_at = NOW()

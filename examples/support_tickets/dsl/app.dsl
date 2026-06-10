@@ -613,23 +613,27 @@ persona manager "Support Manager":
 
 scenario happy_path "Happy Path":
   description: "Normal ticket flow - customer submits, agent resolves, customer satisfied"
-  persona_entries:
-    customer: start_route="/tickets/new"
-    agent: start_route="/queue"
+  as persona customer:
+    start_route: "/tickets/new"
+  as persona agent:
+    start_route: "/queue"
 
 scenario escalation "Escalation Flow":
   description: "Critical issue requiring manager attention and oversight"
-  persona_entries:
-    customer: start_route="/tickets"
-    agent: start_route="/queue?priority=critical"
-    manager: start_route="/dashboard"
+  as persona customer:
+    start_route: "/tickets"
+  as persona agent:
+    start_route: "/queue?priority=critical"
+  as persona manager:
+    start_route: "/dashboard"
 
 scenario backlog "Backlog Scenario":
   description: "High volume testing with many open tickets"
-  seed_data_path: "fixtures/backlog.json"
-  persona_entries:
-    agent: start_route="/queue"
-    manager: start_route="/dashboard"
+  seed_script: "fixtures/backlog.json"
+  as persona agent:
+    start_route: "/queue"
+  as persona manager:
+    start_route: "/dashboard"
 
 # =============================================================================
 # TOP-LEVEL ENUM — shared severity vocabulary

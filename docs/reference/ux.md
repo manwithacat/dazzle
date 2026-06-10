@@ -99,15 +99,26 @@ attention <critical|warning|notice|info>:
 ### Example
 
 ```dsl
-attention critical:
-  when: due_date < today and status != done
-  message: "Overdue task"
-  action: task_edit
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
 
-attention warning:
-  when: priority = high and status = todo
-  message: "High priority - needs assignment"
-  action: task_assign
+  section main:
+    field title
+    field status
+
+  ux:
+    purpose: "Track tasks and surface overdue work"
+
+    attention critical:
+      when: due_date < today and status != done
+      message: "Overdue task"
+      action: task_edit
+
+    attention warning:
+      when: priority = high and status = todo
+      message: "High priority - needs assignment"
+      action: task_assign
 ```
 
 ### Best Practices
@@ -215,9 +226,9 @@ Default field values for a persona in create/edit forms. Pre-populates fields ba
 ux:
   as <persona_name>:
     defaults:
-      <field>: <value>
+      <field>: <identifier-value>   # e.g. an enum value like draft
+      <field>: "<literal string>"
       <field>: current_user
-      <field>: current_user.<attribute>
 ```
 
 ### Example
@@ -256,7 +267,7 @@ surface order_create "New Order":
       defaults:
         created_by: current_user
         status: draft
-        region: current_user.region
+        region: "eu-west"
 ```
 
 **Related:** [Persona](ux.md#persona), [Ux Block](ux.md#ux-block), [Surface](surfaces.md#surface)
@@ -297,24 +308,32 @@ ux:
 ### Example
 
 ```dsl
-ux:
-  purpose: "Manage user accounts"
+surface user_list "Users":
+  uses entity User
+  mode: list
 
-  sort: name asc
-  filter: role, is_active
-  search: name, email
+  section main:
+    field name
+    field email
 
-  attention warning:
-    when: days_since(last_login) > 90
-    message: "Inactive account"
+  ux:
+    purpose: "Manage user accounts"
 
-  as admin:
-    scope: all
-    action_primary: user_create
+    sort: name asc
+    filter: role, is_active
+    search: name, email
 
-  as member:
-    scope: id = current_user.id
-    read_only: true
+    attention warning:
+      when: is_active = false
+      message: "Inactive account"
+
+    as admin:
+      scope: all
+      action_primary: user_create
+
+    as member:
+      scope: id = current_user.id
+      read_only: true
 ```
 
 **Related:** [Purpose](ux.md#purpose), [Information Needs](ux.md#information-needs), [Attention Signals](ux.md#attention-signals), [Persona](ux.md#persona), [Datatable](surfaces.md#datatable)

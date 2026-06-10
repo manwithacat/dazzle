@@ -753,9 +753,7 @@ region_directive
                 | "stage" ":" STRING NEWLINE
                 | "aggregate" ":" NEWLINE INDENT metric_line+ DEDENT ;
 
-metric_line   ::= IDENT ":" aggregate_expr NEWLINE ;
-
-aggregate_expr ::= aggregate_call | NUMBER | aggregate_expr ("+" | "-" | "*" | "/") aggregate_expr ;
+metric_line   ::= IDENT ":" aggregate_call NEWLINE ;
 
 filter_expr   ::= "all" | comparison (("and" | "or") comparison)* ;
 """
@@ -965,14 +963,16 @@ persona_decl  ::= "persona" IDENT STRING? ":" NEWLINE
 scenario_decl ::= "scenario" IDENT STRING? ":" NEWLINE
                   INDENT
                     ("description" ":" STRING NEWLINE)?
-                    ("personas" ":" NEWLINE INDENT persona_entry+ DEDENT)?
                     ("seed_script" ":" STRING NEWLINE)?
+                    persona_scenario_entry*
+                    demo_block?
                   DEDENT ;
 
-persona_entry ::= IDENT ":" NEWLINE
+persona_scenario_entry
+              ::= "as" "persona" IDENT ":" NEWLINE
                   INDENT
                     ("start_route" ":" STRING NEWLINE)?
-                    ("goals" ":" NEWLINE INDENT ("-" STRING NEWLINE)+ DEDENT)?
+                    ("seed_script" ":" STRING NEWLINE)?
                   DEDENT ;
 
 demo_decl     ::= "demo" IDENT ":" NEWLINE

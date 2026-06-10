@@ -3,7 +3,7 @@
 
 [meta]
 category = "Core Constructs"
-version = "0.82.12"
+version = "0.82.13"
 
 [concepts.entity]
 category = "Core Construct"
@@ -53,7 +53,7 @@ example = """
 entity Ticket "Support Ticket":
   intent: "Track and resolve customer issues through structured workflow"
   domain: support
-  patterns: lifecycle, assignment, audit
+  patterns: lifecycle, assignment, audit_trail
 
   id: uuid pk
   title: str(200) required
@@ -84,8 +84,8 @@ entity Ticket "Support Ticket":
 
   # Example data for LLM understanding
   examples:
-    {title: "Login page not loading", status: open, priority: high}
-    {title: "Password reset email delayed", status: in_progress, priority: medium}
+    - title: "Login page not loading", status: open
+    - title: "Password reset email delayed", status: in_progress
 """
 
 related = [
@@ -370,37 +370,49 @@ Steps and outputs can declare satisfies refs for explicit coverage traceability:
 """
 
 example = """
-# CRUD process (simple — usually handled by surfaces, not processes):
-#   Entity.create / Entity.update / Entity.delete via surface handlers
+# CRUD operations are handled by surfaces — processes are for multi-step workflows.
 
-# Lifecycle process (status transitions):
-process order_lifecycle:
-  trigger: entity Order status -> confirmed
-  steps:
-    - name: validate_inventory
-      kind: service
-      service: Inventory.check_availability
-    - name: process_payment
-      kind: service
-      service: Payment.charge
-      compensate_with: refund_payment
-    - name: fulfill_order
-      kind: service
-      service: Fulfillment.ship
+# Lifecycle process (status-transition trigger):
+process order_lifecycle "Order Lifecycle":
   implements: [ST-010, ST-011, ST-012]
 
-# Scheduled process (cron):
-process daily_report:
-  trigger: cron "0 8 * * *"
+  trigger:
+    when: entity Order status -> confirmed
+
   steps:
-    - name: generate_report
-      kind: service
-      service: Reporting.daily_summary
-    - name: send_email
-      kind: send
-      channel: email
-      message: daily_report
+    - step validate_inventory:
+        service: check_availability
+        timeout: 30s
+
+    - step process_payment:
+        service: charge_payment
+        timeout: 2m
+        compensate: refund_payment
+
+    - step fulfill_order:
+        service: ship_order
+        timeout: 1m
+
+  compensations:
+    - refund_payment:
+        service: refund_payment
+        timeout: 1m
+
+# Scheduled job (cron) — use a schedule, which runs steps on a timer:
+schedule daily_report "Daily Report":
   implements: [ST-020]
+
+  cron: "0 8 * * *"
+
+  steps:
+    - step generate_report:
+        service: daily_summary
+        timeout: 10m
+
+    - step send_email:
+        channel: notifications
+        message: DailyReportEmail
+        timeout: 1m
 """
 
 related = ["entity", "service", "story", "state_machine", "compensation"]
@@ -510,9 +522,9 @@ experience user_onboarding "User Onboarding":
   step vat_check:
     kind: surface
     surface vat_form
-    when: context.company.is_vat_registered = true
     prefill:
       company: context.company.id
+    when: context.company.is_vat_registered = true
     on success -> step complete
     on back -> step profile
 

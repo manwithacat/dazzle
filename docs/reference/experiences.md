@@ -111,9 +111,9 @@ experience user_onboarding "User Onboarding":
   step vat_check:
     kind: surface
     surface vat_form
-    when: context.company.is_vat_registered = true
     prefill:
       company: context.company.id
+    when: context.company.is_vat_registered = true
     on success -> step complete
     on back -> step profile
 
