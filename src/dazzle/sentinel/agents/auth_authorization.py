@@ -17,6 +17,24 @@ from dazzle.sentinel.models import (
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
+    from dazzle.core.ir.conditions import ConditionExpr
+
+
+def _condition_contains_principal_check(condition: ConditionExpr | None) -> bool:
+    """True if any node of the condition tree checks WHO the caller is.
+
+    A ``role(x)`` / grant check anywhere in the tree means the rule gates on
+    the principal — the `permit: read: role(a) or role(b)` grammar stores its
+    role gate here with ``personas == []`` (#1354). Field comparisons gate
+    rows, not principals, and don't count.
+    """
+    if condition is None:
+        return False
+    if condition.role_check is not None or condition.grant_check is not None:
+        return True
+    return _condition_contains_principal_check(
+        condition.left
+    ) or _condition_contains_principal_check(condition.right)
 
 
 # Sensitive classification levels that warrant stronger security.
@@ -242,7 +260,16 @@ class AuthAuthorizationAgent(DetectionAgent):
         title="Empty personas on classified data",
     )
     def empty_personas_classified_data(self, appspec: AppSpec) -> list[Finding]:
-        """Flag permission rules with an empty personas list on entities that hold classified data."""
+        """Flag permission rules that don't restrict WHO on classified entities.
+
+        #1354: ``permit: read: role(clinician) or role(admin)`` parses with
+        ``personas == []`` — the role gate lives in ``rule.condition`` as an
+        OR-tree of role_check nodes, and ``deny_all`` rules (#1281) are
+        explicit denials. Both were previously reported as wide-open with
+        CONFIRMED confidence (165 false positives on a fully role-scoped
+        project). Mirrors the role-gate semantics the runtime and
+        ``rbac/matrix.py`` have always applied.
+        """
         findings: list[Finding] = []
         policies = appspec.policies
         if policies is None:
@@ -257,66 +284,89 @@ class AuthAuthorizationAgent(DetectionAgent):
             if entity.access is None:
                 continue
             for rule in entity.access.permissions:
-                if rule.personas == []:
-                    findings.append(
-                        Finding(
-                            agent=AgentId.AA,
-                            heuristic_id="AA-04",
-                            category="auth",
-                            subcategory="data_governance",
-                            severity=Severity.MEDIUM,
-                            confidence=Confidence.CONFIRMED,
-                            title=(
-                                f"Entity '{entity.name}' has a "
-                                f"{rule.effect.value} {rule.operation.value} "
-                                f"rule with empty personas"
-                            ),
-                            description=(
-                                f"Entity '{entity.name}' contains classified "
-                                f"data but its {rule.effect.value} "
-                                f"{rule.operation.value} permission rule does "
-                                f"not restrict access to specific personas. "
-                                f"This means any authenticated user can "
-                                f"perform the operation on sensitive data."
-                            ),
-                            evidence=[
-                                Evidence(
-                                    evidence_type="ir_pattern",
-                                    location=f"entity:{entity.name}",
-                                    snippet=(
-                                        f"rule: {rule.effect.value} "
-                                        f"{rule.operation.value}, "
-                                        f"personas=[]"
-                                    ),
-                                    context=(
-                                        f"Entity has classifications: "
-                                        f"{[c.classification.value for c in policies.classifications if c.entity == entity.name]}"
-                                    ),
-                                ),
-                            ],
-                            remediation=Remediation(
-                                summary=(
-                                    f"Restrict the {rule.operation.value} "
-                                    f"permission on '{entity.name}' to "
-                                    f"specific personas."
-                                ),
-                                effort=RemediationEffort.SMALL,
-                                guidance=(
-                                    "Classified data should have explicit "
-                                    "persona restrictions on every permission "
-                                    "rule to enforce least-privilege access."
-                                ),
-                                dsl_example=(
-                                    f"access:\n"
-                                    f"  permissions:\n"
-                                    f"    {rule.operation.value}: "
-                                    f"[admin, data_steward]"
-                                ),
-                            ),
-                            entity_name=entity.name,
-                            construct_type="entity",
-                        ),
+                if rule.personas != []:
+                    continue
+                if rule.deny_all:
+                    continue  # explicit denial — nothing is open
+                if _condition_contains_principal_check(rule.condition):
+                    continue  # role()/grant() condition IS the persona restriction
+
+                if rule.condition is not None:
+                    # Row-condition only (e.g. `status = draft`): rows are
+                    # filtered but WHO is unrestricted. Real signal, weaker
+                    # claim than "any authenticated user sees everything".
+                    confidence = Confidence.LIKELY
+                    description = (
+                        f"Entity '{entity.name}' contains classified data but "
+                        f"its {rule.effect.value} {rule.operation.value} "
+                        f"permission rule restricts only WHICH ROWS (a field "
+                        f"condition), not WHO — any authenticated user "
+                        f"satisfying the row condition can perform the "
+                        f"operation on sensitive data."
                     )
+                    snippet = (
+                        f"rule: {rule.effect.value} {rule.operation.value}, "
+                        f"personas=[], condition=<row filter, no role check>"
+                    )
+                else:
+                    confidence = Confidence.CONFIRMED
+                    description = (
+                        f"Entity '{entity.name}' contains classified "
+                        f"data but its {rule.effect.value} "
+                        f"{rule.operation.value} permission rule does "
+                        f"not restrict access to specific personas. "
+                        f"This means any authenticated user can "
+                        f"perform the operation on sensitive data."
+                    )
+                    snippet = f"rule: {rule.effect.value} {rule.operation.value}, personas=[]"
+
+                findings.append(
+                    Finding(
+                        agent=AgentId.AA,
+                        heuristic_id="AA-04",
+                        category="auth",
+                        subcategory="data_governance",
+                        severity=Severity.MEDIUM,
+                        confidence=confidence,
+                        title=(
+                            f"Entity '{entity.name}' has a "
+                            f"{rule.effect.value} {rule.operation.value} "
+                            f"rule with empty personas"
+                        ),
+                        description=description,
+                        evidence=[
+                            Evidence(
+                                evidence_type="ir_pattern",
+                                location=f"entity:{entity.name}",
+                                snippet=snippet,
+                                context=(
+                                    f"Entity has classifications: "
+                                    f"{[c.classification.value for c in policies.classifications if c.entity == entity.name]}"
+                                ),
+                            ),
+                        ],
+                        remediation=Remediation(
+                            summary=(
+                                f"Restrict the {rule.operation.value} "
+                                f"permission on '{entity.name}' to "
+                                f"specific personas."
+                            ),
+                            effort=RemediationEffort.SMALL,
+                            guidance=(
+                                "Classified data should have explicit "
+                                "persona restrictions on every permission "
+                                "rule to enforce least-privilege access."
+                            ),
+                            dsl_example=(
+                                f"permit:\n"
+                                f"  {rule.operation.value}: "
+                                f"role(admin) or role(data_steward)"
+                            ),
+                        ),
+                        entity_name=entity.name,
+                        construct_type="entity",
+                    ),
+                )
         return findings
 
     # ------------------------------------------------------------------

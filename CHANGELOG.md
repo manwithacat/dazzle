@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.15] - 2026-06-10
+
+### Fixed
+- **sentinel AA-04 no longer flags condition-based permit rules as wide-open** (#1354). The
+  `permit: read: role(a) or role(b)` grammar stores its role gate in `rule.condition` (an OR-tree of
+  `role_check` nodes) with `personas == []`, and `deny_all` rules (#1281) are explicit denials — AA-04
+  treated both as "any authenticated user can access classified data" at CONFIRMED confidence, producing
+  165 false positives on a fully role-scoped project. AA-04 now walks the condition tree for
+  `role_check`/`grant_check` nodes (mirroring the role-gate semantics `rbac/matrix.py` and the runtime have
+  always applied) and skips `deny_all`. Rules with a *field-only* condition (rows filtered, WHO
+  unrestricted) are still flagged but downgraded to LIKELY with corrected wording; bare empty rules stay
+  CONFIRMED. The remediation example now shows the real `permit:`/`role()` syntax instead of the stale
+  `access: permissions:` block.
+
 ## [0.82.14] - 2026-06-10
 
 ### Added

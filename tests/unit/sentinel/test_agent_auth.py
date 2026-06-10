@@ -179,6 +179,74 @@ class TestAA04EmptyPersonasClassifiedData:
     def test_passes_no_policies(self, agent: AuthAuthorizationAgent) -> None:
         assert agent.empty_personas_classified_data(make_appspec()) == []
 
+    # -- #1354: condition-based permits are role gates, not wide-open rules --
+
+    def _classified_appspec(self, perm: PermissionRule):
+        entity = make_entity("Customer", access=_access(permissions=[perm]))
+        cls_spec = MagicMock()
+        cls_spec.entity = "Customer"
+        cls_spec.classification = MagicMock()
+        cls_spec.classification.value = "pii_direct"
+        policies = MagicMock()
+        policies.classifications = [cls_spec]
+        return make_appspec([entity], policies=policies)
+
+    def test_role_or_tree_condition_not_flagged(self, agent: AuthAuthorizationAgent) -> None:
+        # `permit: read: role(clinician) or role(admin)` → personas=[] but the
+        # role gate lives in the condition tree — the #1354 false positive.
+        from dazzle.core.ir.conditions import ConditionExpr, LogicalOperator, RoleCheck
+
+        cond = ConditionExpr(
+            left=ConditionExpr(role_check=RoleCheck(role_name="clinician")),
+            operator=LogicalOperator.OR,
+            right=ConditionExpr(role_check=RoleCheck(role_name="admin")),
+        )
+        perm = PermissionRule(operation=PermissionKind.READ, condition=cond)
+        assert agent.empty_personas_classified_data(self._classified_appspec(perm)) == []
+
+    def test_grant_check_condition_not_flagged(self, agent: AuthAuthorizationAgent) -> None:
+        from dazzle.core.ir.conditions import ConditionExpr, GrantCheck
+
+        cond = ConditionExpr(grant_check=GrantCheck(relation="viewer", scope_field="dept"))
+        perm = PermissionRule(operation=PermissionKind.READ, condition=cond)
+        assert agent.empty_personas_classified_data(self._classified_appspec(perm)) == []
+
+    def test_deny_all_rule_not_flagged(self, agent: AuthAuthorizationAgent) -> None:
+        perm = PermissionRule(operation=PermissionKind.DELETE, deny_all=True)
+        assert agent.empty_personas_classified_data(self._classified_appspec(perm)) == []
+
+    def test_field_only_condition_downgraded_to_likely(self, agent: AuthAuthorizationAgent) -> None:
+        # Row filter without any principal check: still a finding, but the
+        # "any authenticated user" CONFIRMED claim is wrong — LIKELY + reword.
+        from dazzle.core.ir.conditions import (
+            Comparison,
+            ComparisonOperator,
+            ConditionExpr,
+            ConditionValue,
+        )
+        from dazzle.sentinel.models import Confidence
+
+        cond = ConditionExpr(
+            comparison=Comparison(
+                field="status",
+                operator=ComparisonOperator.EQUALS,
+                value=ConditionValue(literal="draft"),
+            )
+        )
+        perm = PermissionRule(operation=PermissionKind.READ, condition=cond)
+        findings = agent.empty_personas_classified_data(self._classified_appspec(perm))
+        assert len(findings) == 1
+        assert findings[0].confidence == Confidence.LIKELY
+        assert "WHICH ROWS" in findings[0].description
+
+    def test_bare_empty_rule_stays_confirmed(self, agent: AuthAuthorizationAgent) -> None:
+        from dazzle.sentinel.models import Confidence
+
+        perm = PermissionRule(operation=PermissionKind.READ)
+        findings = agent.empty_personas_classified_data(self._classified_appspec(perm))
+        assert len(findings) == 1
+        assert findings[0].confidence == Confidence.CONFIRMED
+
 
 # =============================================================================
 # AA-05  Non-admin DELETE without FORBID
