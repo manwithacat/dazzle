@@ -279,8 +279,17 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
         "verify",
     }
 
-    # Find capitalized nouns (likely entity names)
-    capitalized = set(re.findall(r"\b([A-Z][a-z]+(?:[A-Z][a-z]+)*)\b", spec_text))
+    # Find capitalized nouns (likely entity names). #1353: capitalisation is
+    # only a signal mid-sentence — sentence-initial position capitalises any
+    # word ("Monthly statement…" → "Monthly" is an adjective, not an entity),
+    # so a candidate must occur at least once after a non-terminator character.
+    # Multi-hump CamelCase ("LineItem") is deliberate naming and always counts.
+    all_caps_tokens = set(re.findall(r"\b([A-Z][a-z]+(?:[A-Z][a-z]+)*)\b", spec_text))
+    mid_sentence_caps = set(
+        re.findall(r"(?<=[^.!?:\n])\s([A-Z][a-z]+(?:[A-Z][a-z]+)*)\b", spec_text)
+    )
+    camel_case = {t for t in all_caps_tokens if re.search(r"[a-z][A-Z]", t)}
+    capitalized = (all_caps_tokens & mid_sentence_caps) | camel_case
 
     # Find nouns after articles (a/an/the) - likely entities
     article_nouns = set(re.findall(r"\b(?:a|an|the)\s+([a-z]+(?:\s+[a-z]+)?)\b", spec_text.lower()))
@@ -434,6 +443,44 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
         "that",
         "which",
     }
+    # #1353: bare adjectives are not entities ("a small invoicing tool" must
+    # not yield entity `Small`). When the first word of an article phrase is
+    # an adjective, the entity signal — if any — is in what follows.
+    adjectives = {
+        "small",
+        "large",
+        "big",
+        "little",
+        "new",
+        "old",
+        "simple",
+        "basic",
+        "full",
+        "free",
+        "quick",
+        "fast",
+        "slow",
+        "easy",
+        "modern",
+        "minimal",
+        "lightweight",
+        "robust",
+        "comprehensive",
+        "single",
+        "multiple",
+        "monthly",
+        "weekly",
+        "daily",
+        "yearly",
+        "annual",
+        "quarterly",
+        "internal",
+        "external",
+        "public",
+        "private",
+        "custom",
+        "standard",
+    }
     existing_names = {e["name"].lower() for e in entities}
     skip_words_lower = {w.lower() for w in skip_words}
     for noun in article_nouns:
@@ -441,13 +488,20 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
         words = noun.split()
         if len(words) == 2 and words[1] in connector_words:
             continue
+        # Adjective-led phrases: shift to the following word; a lone
+        # adjective carries no entity signal at all.
+        if words[0] in adjectives:
+            if len(words) == 1:
+                continue
+            words = words[1:]
         # Take only the first word for multi-word phrases to avoid compounds
-        if len(words) > 1:
-            noun = words[0]
+        noun = words[0]
         if (
             noun not in common_article_words
             and noun not in existing_names
             and noun not in skip_words_lower
+            and noun not in adjectives
+            and not noun.endswith("ing")  # gerunds ("invoicing", "billing")
             and len(noun) >= 4
             and noun not in seen_roles  # Don't duplicate roles
         ):
@@ -459,6 +513,68 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
                     "suggested_fields": ["id", "created_at"],
                 }
             )
+
+    # #1353: comma-enumerated plural nouns are the dominant spec shape for
+    # listing a domain ("clients, invoices with line items, …") and the
+    # capitalised/article heuristics miss them entirely. Each enumeration
+    # segment's leading plural noun is a candidate; an "X with Y" tail names
+    # a second (child) entity, including two-word compounds ("line items").
+    non_plural_s = {"status", "address", "progress", "access", "process", "business", "analysis"}
+    existing_names = {e["name"].lower() for e in entities}
+
+    def _plural_candidate(word: str) -> str | None:
+        if not word.endswith("s") or word in non_plural_s:
+            return None
+        singular = word[:-1]
+        if (
+            len(singular) < 4
+            or singular in adjectives
+            or singular in skip_words_lower
+            or singular in common_article_words
+            or singular in seen_roles
+            or singular in existing_names
+            or singular.endswith("ing")
+        ):
+            return None
+        return singular
+
+    for segment in re.split(r"[,;:.]", spec_text.lower()):
+        m = re.match(
+            r"^\s*([a-z]+s)\b(?:\s+with\s+(?:([a-z]+)\s+)?([a-z]+s)\b)?",
+            segment,
+        )
+        if not m:
+            continue
+        lead, child_qualifier, child_plural = m.group(1), m.group(2), m.group(3)
+        lead_singular = _plural_candidate(lead)
+        if lead_singular:
+            existing_names.add(lead_singular)
+            entities.append(
+                {
+                    "name": lead_singular.title(),
+                    "type": "domain_entity",
+                    "source": "comma_list",
+                    "suggested_fields": ["id", "created_at"],
+                }
+            )
+        if child_plural:
+            child_singular = _plural_candidate(child_plural)
+            if child_singular:
+                name = (
+                    f"{child_qualifier.title()}{child_singular.title()}"
+                    if child_qualifier and child_qualifier not in adjectives
+                    else child_singular.title()
+                )
+                if name.lower() not in existing_names:
+                    existing_names.add(name.lower())
+                    entities.append(
+                        {
+                            "name": name,
+                            "type": "domain_entity",
+                            "source": "comma_list",
+                            "suggested_fields": ["id", "created_at"],
+                        }
+                    )
 
     # Deduplicate entities by name (case-insensitive)
     seen_names: set[str] = set()
@@ -537,8 +653,44 @@ def _identify_lifecycles(arguments: dict[str, Any]) -> str:
 
     lifecycles = []
 
+    # #1353: explicit arrow chains ("draft->sent->paid", "draft → sent → paid")
+    # are the strongest lifecycle signal in a spec — they mirror the DSL's own
+    # transitions syntax verbatim, so honour them before any pattern guessing.
+    # Attribution: the chain belongs to an entity named in the same sentence,
+    # else it is surfaced unattributed for the agent to place.
+    entity_names = [e if isinstance(e, str) else e.get("name", "") for e in entities]
+    for sentence in re.split(r"[.;\n]", spec_text):
+        for chain in re.findall(r"\b\w+(?:\s*(?:->|→|=>)\s*\w+)+", sentence):
+            states = [s.strip().lower() for s in re.split(r"\s*(?:->|→|=>)\s*", chain)]
+            if len(states) < 2:
+                continue
+            # Nearest entity mentioned before the chain wins (specs describe
+            # an entity then its lifecycle); fall back to the nearest after.
+            sentence_lower = sentence.lower()
+            chain_pos = sentence_lower.find(states[0])
+            best: tuple[float, str] | None = None
+            for n in entity_names:
+                pos = sentence_lower.find(n.lower()) if n else -1
+                if pos < 0:
+                    continue
+                distance = chain_pos - pos if pos <= chain_pos else (pos - chain_pos) + 10_000
+                if best is None or distance < best[0]:
+                    best = (distance, n)
+            owner = best[1] if best else "UNKNOWN"
+            lifecycles.append(
+                {
+                    "entity": owner,
+                    "status_field": "status",
+                    "states": states,
+                    "source": "arrow_chain",
+                }
+            )
+    arrow_entities = {lc["entity"] for lc in lifecycles}
+
     for entity in entities:
         entity_name = entity if isinstance(entity, str) else entity.get("name", "")
+        if entity_name in arrow_entities:
+            continue  # an explicit chain beats pattern guessing
         entity_lower = entity_name.lower()
 
         # Check if entity matches known lifecycle patterns

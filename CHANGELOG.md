@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.12] - 2026-06-10
+
+### Fixed
+- **Bootstrap cognition pass: adjective false positives gone, comma-list entities and arrow-chain
+  lifecycles found** (#1353). `spec_analyze discover_entities` no longer counts sentence-initial
+  capitalisation as an entity signal ("Monthly statement…" stops yielding entity `Monthly`; multi-hump
+  CamelCase still always counts), skips adjective-led article phrases ("a small invoicing tool" stops
+  yielding `Small`), and extracts comma-enumerated plural nouns including "X with Y" child compounds
+  ("clients, invoices with line items" → `Client`, `Invoice`, `LineItem`). `identify_lifecycles` now
+  honours explicit arrow chains (`draft->sent->paid`, unicode `→`) — the spec shape that mirrors DSL
+  transitions syntax verbatim — attributing each chain to the nearest preceding entity mention and
+  suppressing the weaker canned-pattern guess for that entity. The issue's repro spec now yields exactly
+  `Admin, Member, Client, Invoice, LineItem` + `Invoice: draft→sent→paid` (was: `Admin, Member, Monthly,
+  Small`, no lifecycle). 11 new regression tests pin the repro.
+
 ## [0.82.11] - 2026-06-10
 
 ### Added

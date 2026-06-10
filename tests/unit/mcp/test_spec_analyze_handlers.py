@@ -392,3 +392,92 @@ class TestRefineSpec:
         data = json.loads(result)
         # Should process without error
         assert "error" not in data
+
+
+class TestDiscoverEntitiesHeuristics1353:
+    """#1353: adjective/sentence-initial false positives, comma-list and
+    arrow-chain misses — pinned on the issue's exact repro spec."""
+
+    SPEC = (
+        "A small invoicing tool: clients, invoices with line items, "
+        "draft->sent->paid lifecycle, members see only their own client's "
+        "invoices, admins see all. Monthly statement email to each client."
+    )
+
+    def _names(self, spec: str) -> list[str]:
+        data = json.loads(_discover_entities({"spec_text": spec}))
+        return [e["name"] for e in data["entities"]]
+
+    def test_no_adjective_false_positives(self) -> None:
+        names = self._names(self.SPEC)
+        assert "Small" not in names  # "a small invoicing tool"
+        assert "Monthly" not in names  # sentence-initial adjective
+
+    def test_comma_list_plurals_extracted(self) -> None:
+        names = self._names(self.SPEC)
+        assert "Client" in names
+        assert "Invoice" in names
+
+    def test_with_compound_child_entity(self) -> None:
+        assert "LineItem" in self._names(self.SPEC)
+
+    def test_roles_still_detected(self) -> None:
+        names = self._names(self.SPEC)
+        assert "Member" in names
+        assert "Admin" in names
+
+    def test_camel_case_counts_even_sentence_initial(self) -> None:
+        names = self._names("LineItem rows roll up. The total is computed.")
+        assert "LineItem" in names
+
+    def test_non_plural_s_words_not_singularised(self) -> None:
+        names = self._names("status, address records for each site.")
+        assert "Statu" not in names
+        assert "Addres" not in names
+
+
+class TestArrowChainLifecycles1353:
+    """#1353: explicit arrow chains mirror DSL transitions syntax and must win."""
+
+    def test_arrow_chain_detected_and_attributed(self) -> None:
+        result = _identify_lifecycles(
+            {
+                "spec_text": "Invoices follow a draft->sent->paid lifecycle.",
+                "entities": ["Invoice"],
+            }
+        )
+        data = json.loads(result)
+        chains = [lc for lc in data["lifecycles"] if lc.get("source") == "arrow_chain"]
+        assert len(chains) == 1
+        assert chains[0]["states"] == ["draft", "sent", "paid"]
+        assert chains[0]["entity"] == "Invoice"
+
+    def test_unicode_arrow_detected(self) -> None:
+        result = _identify_lifecycles(
+            {"spec_text": "Tickets: open → triaged → closed.", "entities": ["Ticket"]}
+        )
+        data = json.loads(result)
+        chains = [lc for lc in data["lifecycles"] if lc.get("source") == "arrow_chain"]
+        assert chains and chains[0]["states"] == ["open", "triaged", "closed"]
+
+    def test_arrow_chain_beats_pattern_guess(self) -> None:
+        # "Order" matches the canned pattern, but the explicit chain must win.
+        result = _identify_lifecycles(
+            {
+                "spec_text": "Orders move quoted->packed->shipped.",
+                "entities": ["Order"],
+            }
+        )
+        data = json.loads(result)
+        order_lcs = [lc for lc in data["lifecycles"] if lc["entity"] == "Order"]
+        assert len(order_lcs) == 1
+        assert order_lcs[0]["source"] == "arrow_chain"
+        assert order_lcs[0]["states"] == ["quoted", "packed", "shipped"]
+
+    def test_chain_without_entity_is_unattributed(self) -> None:
+        result = _identify_lifecycles(
+            {"spec_text": "Everything is draft->live eventually.", "entities": []}
+        )
+        data = json.loads(result)
+        chains = [lc for lc in data["lifecycles"] if lc.get("source") == "arrow_chain"]
+        assert chains and chains[0]["entity"] == "UNKNOWN"
