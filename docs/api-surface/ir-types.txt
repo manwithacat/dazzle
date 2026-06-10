@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 366 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
+# Counts: 368 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -648,6 +648,22 @@ ir_class: DerivationLineage
     - derivation_function: str | None = None
     - rebuild_strategy: RebuildStrategy = <RebuildStrategy.FULL_REPLAY: 'full_replay'>
     - window_spec: WindowSpec | None = None
+
+ir_class: DerivedMetric
+  required:
+    - expression: DerivedMetricExpr
+  optional: (none)
+
+ir_class: DerivedMetricExpr
+  required: (none)
+  optional:
+    - binary_left: DerivedMetricExpr | None = None
+    - binary_op: Literal[+, -, *, /] | None = None
+    - binary_right: DerivedMetricExpr | None = None
+    - function_args: tuple[DerivedMetricExpr, Ellipsis] | None = None
+    - function_name: Literal[round, abs, nullif, coalesce] | None = None
+    - metric_name: str | None = None
+    - number_literal: int | float | None = None
 
 ir_class: DocumentSpec
   required:
@@ -3319,7 +3335,7 @@ ir_class: WorkspaceRegion
   optional:
     - action: str | None = None
     - action_cards: list[ActionCardSpec] = []
-    - aggregates: dict[str, AggregateRef] = {}
+    - aggregates: dict[str, AggregateRef | DerivedMetric] = {}
     - avatar_field: str | None = None
     - bin_count: int | None = None
     - bullet_actual: str | None = None

@@ -23,10 +23,11 @@ Replaces the legacy ``_AGGREGATE_RE`` parsing at runtime — see ADR-0024
 ``dev_docs/2026-05-19-aggregate-ref-ir-brainstorm.md``.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .. import ir
 from ..errors import make_parse_error
+from ..ir.aggregates import AggregateBinaryOp, DerivedFunctionName
 from ..lexer import TokenType
 
 _AGGREGATE_FUNCS: frozenset[str] = frozenset({"count", "sum", "avg", "min", "max"})
@@ -54,6 +55,10 @@ _CAST_TARGETS: frozenset[str] = frozenset({"float", "int", "numeric", "text"})
 # L3 expression — whitelisted function names. Mirrors
 # :data:`dazzle.core.ir.aggregates.AggregateFunctionName`.
 _EXPR_FUNCTIONS: frozenset[str] = frozenset({"nullif", "coalesce", "abs"})
+
+# Derived-metric functions (#1359). Mirrors
+# :data:`dazzle.core.ir.aggregates.DerivedFunctionName`.
+_DERIVED_FUNCTIONS: frozenset[str] = frozenset({"round", "abs", "nullif", "coalesce"})
 
 
 class AggregateParserMixin:
@@ -327,6 +332,104 @@ class AggregateParserMixin:
             f"aggregate expression mixes column-entity prefixes "
             f"({present!r} plus bare refs); use the same prefix on every "
             f"column or none at all",
+            self.file,
+            tok.line,
+            tok.column,
+        )
+
+    # ─────────────── Derived-metric parsing (#1359) ───────────────
+
+    def parse_derived_metric(self, declared_metrics: set[str]) -> "ir.DerivedMetric":
+        """Parse arithmetic over previously-declared metric names.
+
+        ``completion_rate: round(done / total * 100)`` — identifiers resolve
+        against *declared_metrics* (the names earlier in the same
+        ``aggregate:`` block); anything else is a precise parse error.
+        Evaluated in Python post-aggregation, never compiled to SQL.
+        """
+        expression = self._parse_derived_additive(declared_metrics)
+        return ir.DerivedMetric(expression=expression)
+
+    def _parse_derived_additive(self, declared: set[str]) -> "ir.DerivedMetricExpr":
+        left = self._parse_derived_multiplicative(declared)
+        while self.current_token().type in (TokenType.PLUS, TokenType.MINUS):
+            op: AggregateBinaryOp = "+" if self.current_token().type == TokenType.PLUS else "-"
+            self.advance()
+            right = self._parse_derived_multiplicative(declared)
+            left = ir.DerivedMetricExpr(binary_op=op, binary_left=left, binary_right=right)
+        return left
+
+    def _parse_derived_multiplicative(self, declared: set[str]) -> "ir.DerivedMetricExpr":
+        left = self._parse_derived_primary(declared)
+        while self.current_token().type in (TokenType.STAR, TokenType.SLASH):
+            op: AggregateBinaryOp = "*" if self.current_token().type == TokenType.STAR else "/"
+            self.advance()
+            right = self._parse_derived_primary(declared)
+            left = ir.DerivedMetricExpr(binary_op=op, binary_left=left, binary_right=right)
+        return left
+
+    def _parse_derived_primary(self, declared: set[str]) -> "ir.DerivedMetricExpr":
+        tok = self.current_token()
+
+        if tok.type == TokenType.NUMBER:
+            self.advance()
+            return ir.DerivedMetricExpr(number_literal=_parse_number_literal(tok.value))
+
+        if tok.type == TokenType.LPAREN:
+            self.advance()
+            inner = self._parse_derived_additive(declared)
+            self.expect(TokenType.RPAREN)
+            return inner
+
+        if tok.type == TokenType.IDENTIFIER or self._token_is_aggregate_func(tok):
+            name = str(tok.value)
+            # Function call?
+            if self.peek_token().type == TokenType.LPAREN:
+                if name not in _DERIVED_FUNCTIONS:
+                    raise make_parse_error(
+                        f"unknown derived-metric function {name!r} — valid: "
+                        f"{', '.join(sorted(_DERIVED_FUNCTIONS))}. Aggregate "
+                        f"calls (count/sum/avg/min/max) must be declared as "
+                        f"their own named metric first, then referenced by "
+                        f"name (#1359).",
+                        self.file,
+                        tok.line,
+                        tok.column,
+                    )
+                self.advance()
+                self.expect(TokenType.LPAREN)
+                args: list[ir.DerivedMetricExpr] = [self._parse_derived_additive(declared)]
+                while self.match(TokenType.COMMA):
+                    self.advance()
+                    args.append(self._parse_derived_additive(declared))
+                self.expect(TokenType.RPAREN)
+                return ir.DerivedMetricExpr(
+                    function_name=cast(DerivedFunctionName, name),
+                    function_args=tuple(args),
+                )
+            # Metric reference.
+            if name not in declared:
+                hint = (
+                    f"declared so far: {', '.join(sorted(declared))}"
+                    if declared
+                    else "no metrics declared before this line"
+                )
+                raise make_parse_error(
+                    f"unknown metric {name!r} in derived expression — derived "
+                    f"metrics may only reference names declared EARLIER in "
+                    f"the same aggregate: block ({hint}). For a plain "
+                    f"aggregate use count/sum/avg/min/max(...) (#1359).",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            self.advance()
+            return ir.DerivedMetricExpr(metric_name=name)
+
+        raise make_parse_error(
+            f"expected a metric name, number, function call, or "
+            f"parenthesised expression in derived metric, got "
+            f"{tok.type.value}",
             self.file,
             tok.line,
             tok.column,

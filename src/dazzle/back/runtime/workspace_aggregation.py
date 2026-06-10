@@ -1163,6 +1163,63 @@ def _bucket_key_label(value: Any) -> tuple[str, str]:
     return str(value), str(value)
 
 
+def _evaluate_derived_expr(expr: Any, values: dict[str, Any]) -> float | int:
+    """Evaluate a DerivedMetricExpr tree over aggregated scalar *values*.
+
+    Division by zero yields 0 (a dashboard ratio over an empty set reads as
+    0%, not an error); missing/None operands coerce to 0.
+    """
+    if expr.metric_name is not None:
+        v = values.get(expr.metric_name)
+        return v if isinstance(v, int | float) else 0
+    if expr.number_literal is not None:
+        literal: int | float = expr.number_literal
+        return literal
+    if expr.binary_op is not None:
+        left = _evaluate_derived_expr(expr.binary_left, values)
+        right = _evaluate_derived_expr(expr.binary_right, values)
+        if expr.binary_op == "+":
+            return left + right
+        if expr.binary_op == "-":
+            return left - right
+        if expr.binary_op == "*":
+            return left * right
+        return left / right if right else 0
+    # Function call (whitelist enforced by the IR validator).
+    args = [_evaluate_derived_expr(a, values) for a in expr.function_args]
+    if expr.function_name == "round":
+        return round(args[0], int(args[1])) if len(args) > 1 else round(args[0])
+    if expr.function_name == "abs":
+        return abs(args[0])
+    if expr.function_name == "nullif":
+        return 0 if args[0] == args[1] else args[0]
+    # coalesce — first non-zero arg (None never survives evaluation here).
+    return next((a for a in args if a), 0)
+
+
+def _evaluate_derived_metrics(
+    aggregates: dict[str, Any],
+    sync_results: dict[str, Any],
+    metric_order: list[str],
+) -> None:
+    """Fill ``sync_results`` for DerivedMetric entries, in declaration order.
+
+    The parser guarantees a derived metric only references names declared
+    earlier in the block, so a single ordered pass resolves chains
+    (a derived metric may reference another derived metric).
+    """
+    from dazzle.core.ir import DerivedMetric
+
+    for name in metric_order:
+        ref = aggregates.get(name)
+        if isinstance(ref, DerivedMetric):
+            try:
+                sync_results[name] = _evaluate_derived_expr(ref.expression, sync_results)
+            except Exception:  # defensive — a bad tree must not kill the dashboard
+                logger.warning("Derived metric %r evaluation failed", name, exc_info=True)
+                sync_results[name] = 0
+
+
 async def _compute_aggregate_metrics(
     aggregates: dict[str, Any],
     repositories: dict[str, Any] | None,
@@ -1260,6 +1317,12 @@ async def _compute_aggregate_metrics(
                 sync_results[result[0]] = result[1]
             elif isinstance(result, BaseException):
                 logger.warning("Aggregate metric query failed: %s", result)
+
+    # #1359: derived metrics — Python arithmetic over the aggregated scalars,
+    # evaluated in declaration order AFTER all queries resolved. Zero extra
+    # queries; scope filters already applied pre-aggregation, so the
+    # one-query-per-chart scope-safety contract is untouched.
+    _evaluate_derived_metrics(aggregates, sync_results, metric_order)
 
     # Build output in original order. v0.61.65: attach per-tile `tone` from
     # the region-level `tones:` map when the metric name has an entry. The

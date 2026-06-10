@@ -279,3 +279,115 @@ class AggregateRef(BaseModel):
     def is_expression(self) -> bool:
         """True when this aggregate uses the L3 nested-expression form."""
         return self.expression is not None
+
+
+# ---------------------------------------------------------------------------
+# Derived metrics (#1359)
+# ---------------------------------------------------------------------------
+
+# Whitelisted functions for derived-metric expressions. Evaluated in Python
+# over already-aggregated scalars (NOT compiled to SQL), so the set is closed
+# and arity-checked here exactly like AggregateExpr's functions.
+DerivedFunctionName = Literal["round", "abs", "nullif", "coalesce"]
+
+_DERIVED_FUNCTION_ARITY: dict[str, tuple[int, int | None]] = {
+    "round": (1, 2),
+    "abs": (1, 1),
+    "nullif": (2, 2),
+    "coalesce": (1, None),
+}
+
+
+class DerivedMetricExpr(BaseModel):
+    """A node in a derived-metric expression tree (#1359).
+
+    Tagged union, mirroring :class:`AggregateExpr`'s discipline. Variants:
+
+    1. **Metric reference** — a name declared *earlier in the same
+       ``aggregate:`` block* (``done``, ``total``). Populate ``metric_name``.
+    2. **Number literal** — ``100``, ``0.5``. Populate ``number_literal``.
+    3. **Binary op** — ``done / total``. Arithmetic only.
+    4. **Function call** — ``round(x, 1)``. Whitelisted, arity-checked.
+
+    Derived metrics are evaluated in Python over the aggregated scalar
+    results AFTER the scope-filtered aggregate queries ran — they add zero
+    queries and cannot touch rows, so the one-query-per-chart scope-safety
+    contract (docs/reference/reports.md) is preserved by construction.
+    """
+
+    metric_name: str | None = None
+
+    number_literal: int | float | None = None
+
+    binary_op: AggregateBinaryOp | None = None
+    binary_left: DerivedMetricExpr | None = None
+    binary_right: DerivedMetricExpr | None = None
+
+    function_name: DerivedFunctionName | None = None
+    function_args: tuple[DerivedMetricExpr, ...] | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+    @model_validator(mode="after")
+    def _check_variant(self) -> DerivedMetricExpr:
+        is_metric = self.metric_name is not None
+        is_number = self.number_literal is not None
+        is_binary = self.binary_op is not None
+        is_function = self.function_name is not None
+
+        populated = sum([is_metric, is_number, is_binary, is_function])
+        if populated == 0:
+            raise ValueError(
+                "DerivedMetricExpr must populate exactly one variant "
+                "(metric ref, number literal, binary op, or function call)"
+            )
+        if populated > 1:
+            raise ValueError(
+                "DerivedMetricExpr variants are mutually exclusive — got multiple at once"
+            )
+
+        if is_binary:
+            if self.binary_left is None or self.binary_right is None:
+                raise ValueError("binary op requires both binary_left and binary_right")
+        elif is_function:
+            if not self.function_args:
+                raise ValueError(f"function {self.function_name!r} requires arguments")
+            assert self.function_name is not None
+            arity_min, arity_max = _DERIVED_FUNCTION_ARITY[self.function_name]
+            n = len(self.function_args)
+            if n < arity_min or (arity_max is not None and n > arity_max):
+                raise ValueError(
+                    f"function {self.function_name!r} expects "
+                    f"{arity_min}{'' if arity_max == arity_min else '+'} arguments, got {n}"
+                )
+        return self
+
+    def referenced_metrics(self) -> tuple[str, ...]:
+        """All metric names referenced anywhere in this expression tree."""
+        if self.metric_name is not None:
+            return (self.metric_name,)
+        refs: list[str] = []
+        for child in (self.binary_left, self.binary_right):
+            if child is not None:
+                refs.extend(child.referenced_metrics())
+        if self.function_args:
+            for arg in self.function_args:
+                refs.extend(arg.referenced_metrics())
+        return tuple(refs)
+
+
+class DerivedMetric(BaseModel):
+    """A metric computed from other metrics in the same ``aggregate:`` block.
+
+    #1359: ``completion_rate: round(done / total * 100)`` — arithmetic over
+    previously-declared metric names. The parser validates every referenced
+    name was declared earlier in the block; the runtime evaluates the tree
+    in Python over the aggregated results (division by zero → 0).
+    """
+
+    expression: DerivedMetricExpr
+
+    model_config = ConfigDict(frozen=True)
+
+    def referenced_metrics(self) -> tuple[str, ...]:
+        return self.expression.referenced_metrics()

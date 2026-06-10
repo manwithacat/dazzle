@@ -17,6 +17,8 @@ from .aggregates import (
     AggregateExpr,
     AggregateFunc,
     AggregateRef,
+    DerivedMetric,
+    DerivedMetricExpr,
 )
 from .analytics import (
     AnalyticsConsentSpec,
@@ -865,6 +867,8 @@ __all__ = [
     "AggregateExpr",
     "AggregateFunc",
     "AggregateRef",
+    "DerivedMetric",
+    "DerivedMetricExpr",
     # Fidelity Scoring
     "FidelityGap",
     "FidelityGapCategory",

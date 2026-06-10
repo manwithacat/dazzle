@@ -753,7 +753,15 @@ region_directive
                 | "stage" ":" STRING NEWLINE
                 | "aggregate" ":" NEWLINE INDENT metric_line+ DEDENT ;
 
-metric_line   ::= IDENT ":" aggregate_call NEWLINE ;
+metric_line   ::= IDENT ":" (aggregate_call | derived_metric_expr) NEWLINE ;
+
+derived_metric_expr
+              ::= derived_term (("+" | "-" | "*" | "/") derived_term)* ;
+
+derived_term  ::= IDENT                          (* metric declared earlier in the block *)
+                | NUMBER
+                | ("round" | "abs" | "nullif" | "coalesce") "(" derived_metric_expr ("," derived_metric_expr)* ")"
+                | "(" derived_metric_expr ")" ;
 
 filter_expr   ::= "all" | comparison (("and" | "or") comparison)* ;
 """

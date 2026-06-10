@@ -12,7 +12,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .aggregates import AggregateRef
+from .aggregates import AggregateRef, DerivedMetric
 from .conditions import ConditionExpr, ViaCondition
 from .location import SourceLocation
 from .params import ParamRef
@@ -983,7 +983,9 @@ class WorkspaceRegion(BaseModel):
     # ADR-0024: aggregate metrics are typed AggregateRef IR. Parser
     # desugars `count(Entity [where ...])` / `avg(col)` / `avg(Entity.col)`
     # into the structured shape at parse time.
-    aggregates: dict[str, AggregateRef] = Field(default_factory=dict)
+    # #1359: derived metrics (arithmetic over earlier metric names) join
+    # plain aggregate refs in the same block.
+    aggregates: dict[str, AggregateRef | DerivedMetric] = Field(default_factory=dict)
     # v0.61.68: optional notice band rendered above the region body
     # inside the dashboard slot. Authors declare title (strong),
     # body (secondary copy), and tone (positive/warning/destructive/

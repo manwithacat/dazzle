@@ -2807,7 +2807,7 @@ class _WorkspaceRegionState:
     empty_message: str | None = None
     group_by: str | ir.BucketRef | None = None
     group_by_dims: list[str | ir.BucketRef] | None = None
-    aggregates: dict[str, ir.AggregateRef] = field(default_factory=dict)
+    aggregates: dict[str, ir.AggregateRef | ir.DerivedMetric] = field(default_factory=dict)
     date_field: str | None = None
     date_range: bool = False
     heatmap_rows: str | None = None
@@ -2995,7 +2995,15 @@ def _kw_aggregate(parser: Any, state: _WorkspaceRegionState) -> None:
             break
         metric_name = parser.expect_identifier_or_keyword().value
         parser.expect(TokenType.COLON)
-        state.aggregates[metric_name] = parser.parse_aggregate_ref()
+        # #1359: a metric line is either an aggregate call
+        # (count/sum/avg/min/max followed by '(') or a derived expression
+        # over the names declared EARLIER in this block.
+        if parser.peek_is_aggregate_call():
+            state.aggregates[metric_name] = parser.parse_aggregate_ref()
+        else:
+            state.aggregates[metric_name] = parser.parse_derived_metric(
+                set(state.aggregates.keys())
+            )
         parser.skip_newlines()
     parser.expect(TokenType.DEDENT)
 

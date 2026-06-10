@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.19] - 2026-06-10
+
+### Added
+- **Derived metrics — arithmetic over metric names in `aggregate:` blocks** (#1359 slice 1).
+  `completion_rate: round(done / total * 100)` now parses and renders: a metric line is either an
+  aggregate call or an expression over names declared *earlier in the same block* (`+ - * /`, parens,
+  number literals, `round`/`abs`/`nullif`/`coalesce`; chains of derived metrics allowed; forward/unknown
+  references are precise parse errors listing what *is* declared — the friendlier error #1359 asked for).
+  New frozen IR (`DerivedMetric`/`DerivedMetricExpr`, tagged-union with arity-checked functions, exported
+  from `dazzle.core.ir` — ir-types baseline regenerated); `WorkspaceRegion.aggregates` widens to
+  `dict[str, AggregateRef | DerivedMetric]`. Evaluation happens **in Python after the scope-filtered
+  aggregate queries return** (declaration-order pass in `_compute_aggregate_metrics`; division by zero → 0)
+  — zero extra queries, the one-query scope-safety contract untouched. Grammar + reports.md updated.
+  **Slice 2 (issue stays open):** per-bucket derived metrics in grouped charts (`_aggregate_via_groupby`)
+  and the `dazzle db explain-aggregate` post-step display.
+
 ## [0.82.18] - 2026-06-10
 
 ### Fixed

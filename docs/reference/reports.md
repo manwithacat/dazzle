@@ -114,6 +114,21 @@ The runtime picks automatically:
 
 The fast path is scope-safe by construction — one `WHERE` clause, one `GROUP BY`, no possibility of the enumeration-vs-count divergence from #847.
 
+### Derived metrics (#1359)
+
+A metric line may be **arithmetic over metric names declared earlier in the same `aggregate:` block** instead of an aggregate call:
+
+```dsl
+aggregate:
+  total: count(Task)
+  done: count(Task where status = done)
+  completion_rate: round(done / total * 100)
+```
+
+Operators `+ - * /`, parentheses, number literals, and the functions `round`, `abs`, `nullif`, `coalesce`. References resolve strictly to *earlier* names in the block (forward references are a parse error naming what *is* declared); a derived metric may reference another derived metric. Evaluation happens **in Python after the scope-filtered aggregate queries return** — zero extra queries, so the scope-safety contract above is untouched. Division by zero yields 0 (a ratio over an empty set reads as 0%, not an error).
+
+Slice 1 covers KPI tiles (`display: metrics`/`summary`); per-bucket derived metrics in grouped charts (`group_by:` + `display: bar_chart` etc.) are the #1359 slice-2 follow-up.
+
 ## Scope
 
 **Scope always applies, pre-aggregation.** The runtime threads the user's `__scope_predicate` into the query's `WHERE` before `GROUP BY` runs. A persona who can only see rows from their own department will see counts that reflect exactly those rows — never a leak via a "total" metric or an "Other (N)" bucket.
