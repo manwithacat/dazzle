@@ -9,7 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.82.29] - 2026-06-11
+## [0.82.30] - 2026-06-11
+
+### Changed
+- **route_generator final slice: CRUD + graph handler factories extracted to the `runtime/handlers/`
+  package** (#1361, closing the route_generator half). The four handler-factory families —
+  `list_handlers.py` (list body + field-condition guard), `read_handlers.py`, `write_handlers.py`
+  (create/update/delete/custom + ref injection + request-body parsing), `graph_handlers.py` (#619
+  neighborhood/shortest-path/components) — are now leaf modules (20 defs, ~1,900 lines);
+  `route_generator.py` drops 2,767 → 1,072 lines, **5,164 → 1,072 across the four slices**, keeping it as
+  the assembly point (`RouteGenerator`, `generate_crud_routes`, shared contracts + request/role/result
+  utils). AST-verbatim except 6 enumerated lazy imports of staying helpers (cycle avoidance — they resolve
+  through route_generator's namespace at call time, so patch points stay live) and `"RouteSpec"` forward
+  references. Module names avoid the `*_routes.py` suffix the runtime-urls walker globs; baseline: no
+  drift. Zero mock-patch strings targeted the moved names; no-jinja gate allowlist gains the package
+  (list_handlers carries the inline HTMX error-row/pagination-OOB HTML). Verified against real PG via the
+  `-m postgres` suite (361 tests, scope-runtime create/update paths the write handlers call).
 
 ### Changed
 - **route_generator slice 3: audit/auth wrap cluster extracted to `runtime/audit_wrap.py`** (#1361). The

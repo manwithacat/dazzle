@@ -75,6 +75,15 @@ _TYPED_ONLY_MODULES = (
     # route_generator.py; keep the gate covering code that originated in a
     # covered file (no HTML here, cheap insurance).
     "src/dazzle/back/runtime/audit_wrap.py",
+    # #1361 final slice — CRUD + graph handler factories extracted verbatim
+    # from route_generator.py into handlers/. list_handlers carries the
+    # inline HTMX error-row + pagination-OOB HTML; the other three have no
+    # HTML but originated in a covered file (cheap insurance).
+    "src/dazzle/back/runtime/handlers/__init__.py",
+    "src/dazzle/back/runtime/handlers/graph_handlers.py",
+    "src/dazzle/back/runtime/handlers/list_handlers.py",
+    "src/dazzle/back/runtime/handlers/read_handlers.py",
+    "src/dazzle/back/runtime/handlers/write_handlers.py",
     # v0.67.69 — marketing-page render fully Python-orchestrated.
     # inner_only.html + nav.html + footer.html + theme_toggle.html +
     # qa_personas.html + all 19 site/sections/*.html templates deleted.
