@@ -116,6 +116,100 @@ def test_agents_md_stays_a_stub() -> None:
     )
 
 
+def _claude_md_mcp_table() -> dict[str, str]:
+    """Parse the ``### MCP Tools`` table from .claude/CLAUDE.md.
+
+    Returns {tool_name: operations_cell_text} for every data row.
+    """
+    text = (REPO_ROOT / ".claude" / "CLAUDE.md").read_text()
+    section = text.split("### MCP Tools", 1)
+    assert len(section) == 2, "CLAUDE.md no longer has a `### MCP Tools` section"
+    rows = {}
+    for line in section[1].splitlines():
+        m = re.match(r"\|\s*`([a-z0-9_]+)`\s*\|\s*(.+?)\s*\|\s*$", line)
+        if m:
+            rows[m.group(1)] = m.group(2)
+        elif rows and line.strip() and not line.startswith("|"):
+            break  # table ended
+    assert rows, "CLAUDE.md `### MCP Tools` table has no parseable rows"
+    return rows
+
+
+def test_claude_md_mcp_tools_table_matches_registry() -> None:
+    """The CLAUDE.md MCP tools table must match the live registry exactly.
+
+    #1369 post-mortem: the hand-maintained table silently rotted to 26 of
+    34 tools, ~12 stale op lists, and a phantom `llm ask` op that never
+    existed — while the same file instructed agents to call a
+    `knowledge counter_prior` op the table didn't list. Two-way gate:
+    same tool names, and per-tool the listed ops must equal the
+    `operation` enum in the tool's input schema. Tools without an
+    operation enum (e.g. `bootstrap`) keep a prose cell, unchecked.
+    """
+    from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
+
+    registry = {t.name: t for t in get_all_consolidated_tools()}
+    table = _claude_md_mcp_table()
+
+    missing = sorted(set(registry) - set(table))
+    phantom = sorted(set(table) - set(registry))
+    assert not missing and not phantom, (
+        f"CLAUDE.md `### MCP Tools` table drifted from the registry.\n"
+        f"  Tools missing from the table: {missing}\n"
+        f"  Table rows with no registry tool: {phantom}\n"
+        f"Regenerate the row(s) from "
+        f"dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()."
+    )
+
+    stale_ops = []
+    for name, tool in registry.items():
+        enum = (tool.inputSchema or {}).get("properties", {}).get("operation", {}).get("enum")
+        if not enum:
+            continue
+        listed = {op.strip() for op in table[name].split(",")}
+        if listed != set(enum):
+            stale_ops.append(
+                f"  {name}: table says {sorted(listed)}, registry enum is {sorted(enum)}"
+            )
+    assert not stale_ops, (
+        "CLAUDE.md MCP tools table op lists drifted from the registry "
+        "operation enums:\n" + "\n".join(stale_ops)
+    )
+
+
+def _backticked_dir_names(line: str) -> set[str]:
+    """Backticked tokens that look like directory names (no path parts)."""
+    return {m.group(1) for m in re.finditer(r"`([a-z0-9_]+)`", line)}
+
+
+def test_claude_md_examples_and_fixtures_lists_match_disk() -> None:
+    """The Examples section's two lists must match the directory trees.
+
+    Two-way: every directory must be listed, every listed name must be a
+    directory. Pre-#1369 the examples line lagged 3 apps and the fixtures
+    line lagged 5 probes behind disk.
+    """
+    text = (REPO_ROOT / ".claude" / "CLAUDE.md").read_text()
+    for label, prefix, root in (
+        ("examples", "Working Dazzle apps in `examples/`:", REPO_ROOT / "examples"),
+        ("fixtures", "Framework-validation fixtures in `fixtures/`", REPO_ROOT / "fixtures"),
+    ):
+        line = next((ln for ln in text.splitlines() if ln.startswith(prefix)), None)
+        assert line, f"CLAUDE.md no longer has the {label} list line (prefix: {prefix!r})"
+        # Strip the lead-in (and the fixtures parenthetical lead-in) so only
+        # the name list is scanned; path-bearing tokens never match the
+        # directory-name pattern.
+        names = _backticked_dir_names(line.split(":", 1)[1])
+        on_disk = {p.name for p in root.iterdir() if p.is_dir()}
+        unlisted = sorted(on_disk - names)
+        ghosts = sorted(names - on_disk)
+        assert not unlisted and not ghosts, (
+            f"CLAUDE.md {label} list drifted from {root.name}/:\n"
+            f"  on disk but not listed: {unlisted}\n"
+            f"  listed but no directory: {ghosts}"
+        )
+
+
 def test_coverage_tool_constructs_all_exist_in_parser() -> None:
     """The curated list in dazzle.cli.coverage._DSL_CONSTRUCTS (which
     feeds the ``dazzle coverage --fail-on-uncovered`` CI gate) must

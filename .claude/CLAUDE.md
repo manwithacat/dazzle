@@ -222,9 +222,11 @@ Drift gate: `tests/unit/test_api_surface_drift.py` (21 tests). Adding `--write` 
 
 ## Examples
 
-Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`, `custom_renderer`, `pra`, `component_showcase`, `project_tracker`, `design_studio`, `llm_ticket_classifier`
+Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`, `custom_renderer`, `pra`, `component_showcase`, `project_tracker`, `design_studio`, `llm_ticket_classifier`, `acme_billing`, `hr_records`, `invoice_ops`
 
-Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract probes used only by `tests/`): `shapes_validation`, `rbac_validation`, `investigator_smoke`, `scope_runtime` (FK-path/EXISTS create-scope #1311 + update-destination #1312 verified against real Postgres via `tests/integration/test_scope_runtime_pg.py`)
+Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract probes used only by `tests/`): `shapes_validation`, `rbac_validation`, `investigator_smoke`, `asset_registry`, `shared_parent_aggregate`, `signing_validation`, `tenant_rls`, `transition_atomic`, `scope_runtime` (FK-path/EXISTS create-scope #1311 + update-destination #1312 verified against real Postgres via `tests/integration/test_scope_runtime_pg.py`)
+
+Both lists are drift-gated against the directory trees by `tests/unit/test_docs_drift.py` — adding or removing an example/fixture requires updating the matching line here.
 
 ## LSP Server
 
@@ -238,34 +240,44 @@ MCP = stateless reads, CLI = process/writes (ADR-0002). Use `dazzle search <keyw
 
 ### MCP Tools
 
+The table below is drift-gated against the live registry (`tests/unit/test_docs_drift.py`) — tool names and op lists must match `get_all_consolidated_tools()` exactly.
+
 | Tool | Operations |
 |------|-----------|
-| `dsl` | validate, inspect_entity, inspect_surface, lint, analyze, fidelity, export_frontend_spec |
-| `story` | get, coverage, scope_fidelity |
-| `rhythm` | get, list, coverage |
-| `process` | list, inspect, list_runs, get_run, coverage |
-| `test_design` | get, gaps |
-| `discovery` | coherence |
-| `graph` | query, dependencies, neighbourhood, concept, inference, export, import |
-| `knowledge` | concept, examples, workflow, inference |
-| `semantics` | extract, validate_events, tenancy, compliance, analytics |
-| `sitespec` | get, validate, scaffold, coherence, review, advise, get_copy, scaffold_copy, review_copy, get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts |
-| `composition` | audit, capture, analyze, report, inspect_styles |
-| `policy` | analyze, conflicts, coverage, simulate |
-| `sentinel` | findings, status, history |
-| `test_intelligence` | summary, failures, regression, coverage, context |
+| `agent_commands` | list, get, check_updates |
 | `api_pack` | list, search, get |
-| `mock` | status, request_log |
+| `bootstrap` | entry point for "build me an app" requests |
+| `compliance` | compile, evidence, gaps, summary, review |
+| `composition` | audit, capture, analyze, report, bootstrap, inspect_styles |
+| `conformance` | summary, cases, gaps, monitor_status |
 | `db` | status, verify |
 | `demo_data` | get |
-| `pitch` | get |
-| `status` | mcp, logs, telemetry, activity |
-| `bootstrap` | entry point for "build me an app" requests |
-| `spec_analyze` | discover_entities, identify_lifecycles, extract_personas |
+| `discovery` | coherence |
+| `dsl` | validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec |
+| `e2e` | list_modes, describe_mode, status, list_baselines |
+| `feedback` | list, get, triage, resolve |
+| `fitness` | queue |
+| `graph` | query, dependencies, dependents, neighbourhood, paths, stats, populate, concept, inference, related, export, import, triggers, topology |
 | `guide` | list, get, concordance, narrate |
-| `user_management` | list, create, get, update, deactivate |
+| `knowledge` | concept, examples, cli_help, workflow, inference, changelog, counter_prior, get_spec, search_commands |
+| `llm` | list_intents, list_models, inspect_intent, get_config |
+| `mock` | status, request_log |
+| `param` | list, get |
+| `perf` | list, report, show |
+| `pitch` | get |
+| `policy` | analyze, conflicts, coverage, simulate, access_matrix, verify_status |
+| `process` | list, inspect, list_runs, get_run, coverage |
+| `rhythm` | get, list, coverage |
+| `semantics` | extract, validate_events, tenancy, compliance, analytics, extract_guards |
+| `sentinel` | findings, status, history, fuzz_summary |
+| `sitespec` | get, validate, scaffold, get_copy, scaffold_copy, review_copy, coherence, review, get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts, advise |
+| `spec_analyze` | discover_entities, identify_lifecycles, extract_personas, surface_rules, generate_questions, refine_spec |
+| `status` | mcp, logs, active_project, telemetry, activity |
+| `story` | get, coverage, scope_fidelity |
+| `test_design` | get, gaps |
+| `test_intelligence` | summary, failures, regression, coverage, context, journey |
+| `user_management` | list, create, get, update, reset_password, deactivate, list_sessions, revoke_session, config |
 | `user_profile` | observe, observe_message, get, reset |
-| `llm` | ask |
 
 ### CLI Commands (process operations)
 
@@ -352,4 +364,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.82.31 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.82.32 | **Python**: 3.12+ | **Status**: Production Ready

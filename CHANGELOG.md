@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.32] - 2026-06-11
+
+### Fixed
+- **CLAUDE.md MCP tools table regenerated from the live registry + drift-gated** (#1369). The
+  hand-maintained table had rotted to 26 of 34 tools (missing `agent_commands`, `compliance`,
+  `conformance`, `e2e`, `feedback`, `fitness`, `param`, `perf`), ~12 stale op lists (including the
+  `knowledge counter_prior` op the same file instructs agents to call), and a phantom `llm ask` op that
+  never existed (real ops: `list_intents`, `list_models`, `inspect_intent`, `get_config`). The examples
+  list gained `acme_billing`, `hr_records`, `invoice_ops`; the fixtures list gained `asset_registry`,
+  `shared_parent_aggregate`, `signing_validation`, `tenant_rls`, `transition_atomic`. Three new gates in
+  `tests/unit/test_docs_drift.py`: two-way tool-name + per-tool op-enum equality against
+  `get_all_consolidated_tools()`, and two-way examples/fixtures list ↔ directory-tree equality.
+
+### Agent Guidance
+- The `### MCP Tools` table and the examples/fixtures lists in `.claude/CLAUDE.md` are now drift-gated —
+  adding an MCP tool/op or an example/fixture directory requires updating the matching CLAUDE.md line
+  in the same change.
+
 ## [0.82.31] - 2026-06-11
 
 ### Added
