@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.29] - 2026-06-11
+
+### Changed
+- **route_generator slice 3: audit/auth wrap cluster extracted to `runtime/audit_wrap.py`** (#1361). The
+  audit-context, access-logging, and auth-wrapping family — `_build_access_context`,
+  `_log_audit_decision`, `_compute_field_changes`, `_wrap_with_auth`, the cedar/auth/noauth handler
+  builders (10 defs, 555 lines) — is now a leaf module; `route_generator.py` drops 3,231 → 2,767 lines.
+  `test_audit_log`'s `_scoped_pre_read` patches retargeted to audit_wrap (the calling
+  `_build_cedar_handler` moved, so name resolution follows — the green-looking-but-inert patch hazard the
+  #1361 plan flagged). AST-verbatim except 4 enumerated lazy imports; runtime-urls baseline: no drift.
+
 ## [0.82.28] - 2026-06-11
 
 ### Changed

@@ -625,8 +625,8 @@ class TestScopeDenyAuditLogging:
 
         from fastapi import HTTPException
 
-        from dazzle.back.runtime import route_generator
-        from dazzle.back.runtime.route_generator import _build_cedar_handler
+        from dazzle.back.runtime import audit_wrap
+        from dazzle.back.runtime.audit_wrap import _build_cedar_handler
 
         mock_logger = AsyncMock()
         row_id = uuid4()
@@ -655,7 +655,9 @@ class TestScopeDenyAuditLogging:
         )
 
         # Scope filter hides the row: `_scoped_pre_read` returns None.
-        with patch.object(route_generator, "_scoped_pre_read", AsyncMock(return_value=None)):
+        # #1361 slice 3: the cedar handler lives in audit_wrap and resolves
+        # _scoped_pre_read through audit_wrap's namespace — patch it there.
+        with patch.object(audit_wrap, "_scoped_pre_read", AsyncMock(return_value=None)):
             with pytest.raises(HTTPException) as exc_info:
                 await handler(row_id, mock_request, auth_context)
 
@@ -675,8 +677,8 @@ class TestScopeDenyAuditLogging:
 
         from fastapi import HTTPException
 
-        from dazzle.back.runtime import route_generator
-        from dazzle.back.runtime.route_generator import _build_cedar_handler
+        from dazzle.back.runtime import audit_wrap
+        from dazzle.back.runtime.audit_wrap import _build_cedar_handler
 
         row_id = uuid4()
         mock_request = MagicMock()
@@ -698,7 +700,8 @@ class TestScopeDenyAuditLogging:
             is_create=False,
         )
 
-        with patch.object(route_generator, "_scoped_pre_read", AsyncMock(return_value=None)):
+        # #1361 slice 3: patch audit_wrap — see the note in the test above.
+        with patch.object(audit_wrap, "_scoped_pre_read", AsyncMock(return_value=None)):
             with pytest.raises(HTTPException) as exc_info:
                 await handler(row_id, mock_request, auth_context)
         assert exc_info.value.status_code == 404

@@ -71,6 +71,10 @@ _TYPED_ONLY_MODULES = (
     # verbatim from route_generator.py; the gate must keep covering the
     # moved HTML.
     "src/dazzle/back/runtime/htmx_render.py",
+    # #1361 slice 3 — audit context + auth wrapping extracted verbatim from
+    # route_generator.py; keep the gate covering code that originated in a
+    # covered file (no HTML here, cheap insurance).
+    "src/dazzle/back/runtime/audit_wrap.py",
     # v0.67.69 — marketing-page render fully Python-orchestrated.
     # inner_only.html + nav.html + footer.html + theme_toggle.html +
     # qa_personas.html + all 19 site/sections/*.html templates deleted.

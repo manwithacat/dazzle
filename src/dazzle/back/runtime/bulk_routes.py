@@ -24,7 +24,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from dazzle.back.runtime.route_generator import (
+from dazzle.back.runtime.audit_wrap import (
     _build_access_context,
     _record_to_dict,
 )
