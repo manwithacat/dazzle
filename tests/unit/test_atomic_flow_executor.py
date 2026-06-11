@@ -261,14 +261,14 @@ class TestUpdateStepExecution:
         assert exc.value.status_code == 404
 
     def test_update_routed_through_scope_when_enforcing(self, monkeypatch: Any) -> None:
-        import dazzle.back.runtime.route_generator as rg
+        import dazzle.back.runtime.scope_filters as sf
 
         seen: list[tuple[str, bool]] = []
 
         def _fake_update_enforce(**kwargs: Any) -> None:
             seen.append((kwargs["entity_name"], kwargs["also_check_source"]))
 
-        monkeypatch.setattr(rg, "_enforce_update_scope", _fake_update_enforce)
+        monkeypatch.setattr(sf, "_enforce_update_scope", _fake_update_enforce)
         db = _make_db()
         db._mock_cursor.fetchone = MagicMock(return_value={"id": "p-1", "legal_name": "old"})
         from types import SimpleNamespace
@@ -297,14 +297,14 @@ class TestPerStepScopeEnforcement:
         return SimpleNamespace(user=SimpleNamespace(id="u-1"), roles=["admin"])
 
     def test_each_create_is_routed_through_scope(self, monkeypatch: Any) -> None:
-        import dazzle.back.runtime.route_generator as rg
+        import dazzle.back.runtime.scope_filters as sf
 
         seen: list[str] = []
 
         def _fake_enforce(**kwargs: Any) -> None:
             seen.append(kwargs["entity_name"])
 
-        monkeypatch.setattr(rg, "_enforce_create_scope", _fake_enforce)
+        monkeypatch.setattr(sf, "_enforce_create_scope", _fake_enforce)
         db = _make_db()
         execute_atomic_flow(
             _flow_two_creates(),
@@ -319,12 +319,12 @@ class TestPerStepScopeEnforcement:
     def test_scope_denial_rolls_back_before_insert(self, monkeypatch: Any) -> None:
         from fastapi import HTTPException
 
-        import dazzle.back.runtime.route_generator as rg
+        import dazzle.back.runtime.scope_filters as sf
 
         def _deny(**kwargs: Any) -> None:
             raise HTTPException(status_code=403, detail="scope_create_denied")
 
-        monkeypatch.setattr(rg, "_enforce_create_scope", _deny)
+        monkeypatch.setattr(sf, "_enforce_create_scope", _deny)
         db = _make_db()
         with pytest.raises(HTTPException) as exc:
             execute_atomic_flow(
@@ -340,12 +340,12 @@ class TestPerStepScopeEnforcement:
 
     def test_no_enforcement_without_principal_or_specs(self, monkeypatch: Any) -> None:
         """Legacy/test wiring (no auth_context or access_specs) runs unguarded."""
-        import dazzle.back.runtime.route_generator as rg
+        import dazzle.back.runtime.scope_filters as sf
 
         def _boom(**kwargs: Any) -> None:
             raise AssertionError("enforcement must not run without auth_context+access_specs")
 
-        monkeypatch.setattr(rg, "_enforce_create_scope", _boom)
+        monkeypatch.setattr(sf, "_enforce_create_scope", _boom)
         db = _make_db()
         execute_atomic_flow(_flow_two_creates(), {"legal_name": "Alice"}, db)  # no kwargs
         assert db._mock_cursor.execute.call_count == 2  # both creates ran

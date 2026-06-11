@@ -414,6 +414,8 @@ class WorkspaceRouteBuilder:
                                     if user_id and auth_ctx:
                                         from dazzle.back.runtime.route_generator import (
                                             _normalize_role,
+                                        )
+                                        from dazzle.back.runtime.scope_filters import (
                                             _resolve_scope_filters,
                                         )
 

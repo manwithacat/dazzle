@@ -106,7 +106,7 @@ async def fetch_region_items(
         ir_filter = getattr(ctx, "_source_filter", None) or ctx.ir_region.filter
         if ir_filter is not None:
             try:
-                from dazzle.back.runtime.route_generator import _extract_condition_filters
+                from dazzle.back.runtime.scope_filters import _extract_condition_filters
 
                 filters = {}
                 _extract_condition_filters(
@@ -186,7 +186,7 @@ async def fetch_region_items(
         context_filters: dict[str, Any] = {}
         if ir_filter is not None and user_ctx.filter_context.get("current_context"):
             try:
-                from dazzle.back.runtime.route_generator import _extract_condition_filters
+                from dazzle.back.runtime.scope_filters import _extract_condition_filters
 
                 _extract_condition_filters(
                     ir_filter,

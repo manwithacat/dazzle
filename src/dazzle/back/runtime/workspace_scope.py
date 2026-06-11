@@ -35,10 +35,8 @@ def _apply_workspace_scope_filters(
         # The permit gate already controls entity-level access.
         return filters, False
 
-    from dazzle.back.runtime.route_generator import (
-        _normalize_role,
-        _resolve_scope_filters,
-    )
+    from dazzle.back.runtime.route_generator import _normalize_role
+    from dazzle.back.runtime.scope_filters import _resolve_scope_filters
 
     # Collect normalized user roles
     scope_user_roles: set[str] = set()

@@ -40,9 +40,9 @@ def _bind_rls_tenant_id(auth_context: AuthContext) -> None:
     """
     if not auth_context.is_authenticated:
         return
-    # Local import: route_generator imports auth at module load, so importing it
+    # Local import: scope_filters imports auth at module load, so importing it
     # at top level here would create a circular import.
-    from dazzle.back.runtime.route_generator import _resolve_user_attribute
+    from dazzle.back.runtime.scope_filters import _resolve_user_attribute
     from dazzle.back.runtime.tenant_isolation import (
         get_rls_user_attr_names,
         set_current_rls_user_attrs,

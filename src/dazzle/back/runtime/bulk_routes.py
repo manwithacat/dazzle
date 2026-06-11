@@ -27,8 +27,8 @@ from fastapi.responses import JSONResponse
 from dazzle.back.runtime.route_generator import (
     _build_access_context,
     _record_to_dict,
-    _scoped_pre_read,
 )
+from dazzle.back.runtime.scope_filters import _scoped_pre_read
 from dazzle.core.access import AccessOperationKind
 from dazzle.core.ir import BulkActionSpec
 from dazzle.core.strings import to_api_plural

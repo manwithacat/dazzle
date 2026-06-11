@@ -100,7 +100,7 @@ async def _fetch_entity_card_section_rows(
             merged_filters.update(scope_filters)
         section_filter = getattr(section, "filter", None)
         if section_filter is not None:
-            from dazzle.back.runtime.route_generator import _extract_condition_filters
+            from dazzle.back.runtime.scope_filters import _extract_condition_filters
 
             with suppress(Exception):
                 # #1225: thread `context_id` through so per-section
@@ -219,7 +219,7 @@ async def _fetch_task_inbox_items_per_source(
             merged_filters.update(scope_filters)
         source_filter = getattr(src, "filter", None)
         if source_filter is not None:
-            from dazzle.back.runtime.route_generator import _extract_condition_filters
+            from dazzle.back.runtime.scope_filters import _extract_condition_filters
 
             # #1232 — thread the source entity's FK→target map so dotted
             # left-side paths (`teacher.user = current_user`) resolve via

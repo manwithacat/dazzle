@@ -255,7 +255,7 @@ def _compile_scope(
     otherwise.
     """
     try:
-        from dazzle.back.runtime.route_generator import _resolve_predicate_filters
+        from dazzle.back.runtime.scope_filters import _resolve_predicate_filters
     except ImportError:
         logger.debug("route_generator scope compiler unavailable", exc_info=True)
         return None

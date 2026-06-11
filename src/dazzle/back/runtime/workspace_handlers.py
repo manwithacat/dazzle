@@ -53,7 +53,7 @@ async def _fetch_region_json(
             ir_filter = ctx.ir_region.filter
             if ir_filter is not None:
                 try:
-                    from dazzle.back.runtime.route_generator import (
+                    from dazzle.back.runtime.scope_filters import (
                         _extract_condition_filters,
                     )
 
@@ -97,7 +97,7 @@ async def _fetch_region_json(
             _ctx_id_batch = (filter_context or {}).get("current_context")
             if ir_filter is not None and _ctx_id_batch:
                 try:
-                    from dazzle.back.runtime.route_generator import (
+                    from dazzle.back.runtime.scope_filters import (
                         _extract_condition_filters,
                     )
 

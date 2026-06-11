@@ -246,7 +246,7 @@ async def check_entity_op(
     from typing import cast
 
     from dazzle.back.runtime.auth.models import AuthContext
-    from dazzle.back.runtime.route_generator import _scoped_pre_read
+    from dazzle.back.runtime.scope_filters import _scoped_pre_read
 
     existing = await _scoped_pre_read(
         service=info.service,
@@ -278,7 +278,7 @@ async def check_entity_op(
     # DESTINATION — the source pre-read above only checked the existing row.
     # Same enforcement the framework UPDATE route runs; 404 on denial.
     if op == "update" and payload is not None:
-        from dazzle.back.runtime.route_generator import _enforce_update_scope
+        from dazzle.back.runtime.scope_filters import _enforce_update_scope
 
         _enforce_update_scope(
             cedar_access_spec=info.cedar_access_spec,
@@ -394,16 +394,16 @@ def _check_scope_create(
     # through `_resolve_user_attribute` (built-in UserRecord fields +
     # `auth_context.preferences`) avoids the hardcoded-allowlist bug that
     # silently over-denied any attribute not on a fixed list.
-    from dazzle.back.runtime.route_generator import _LazyUserAttrs
+    from dazzle.back.runtime.scope_filters import _LazyUserAttrs
 
     auth_ctx = getattr(request.state, "auth_context", None) if hasattr(request, "state") else None
     user_attrs = _LazyUserAttrs(auth_ctx)
 
-    from dazzle.back.runtime.route_generator import build_create_scope_probe
     from dazzle.back.runtime.scope_create_eval import (
         ScopeCreateUnsupportedError,
         check_create_predicate,
     )
+    from dazzle.back.runtime.scope_filters import build_create_scope_probe
     from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
 
     probe = build_create_scope_probe(service, entity_name)

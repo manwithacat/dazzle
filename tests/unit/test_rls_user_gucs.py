@@ -147,7 +147,7 @@ def test_bind_resolves_registered_attrs_into_contextvar(monkeypatch) -> None:
             return resolved[attr]
 
         monkeypatch.setattr(
-            "dazzle.back.runtime.route_generator._resolve_user_attribute",
+            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
             fake_resolve,
         )
 
@@ -185,7 +185,7 @@ def test_bind_omits_empty_string_value(monkeypatch) -> None:
             return "t1" if attr == "tenant_id" else ""
 
         monkeypatch.setattr(
-            "dazzle.back.runtime.route_generator._resolve_user_attribute",
+            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
             fake_resolve,
         )
 
@@ -214,7 +214,7 @@ def test_bind_noop_when_no_registered_attrs(monkeypatch) -> None:
         return "t1" if attr == "tenant_id" else "should-not-be-called"
 
     monkeypatch.setattr(
-        "dazzle.back.runtime.route_generator._resolve_user_attribute",
+        "dazzle.back.runtime.scope_filters._resolve_user_attribute",
         fake_resolve,
     )
 

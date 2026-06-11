@@ -192,7 +192,7 @@ class TestApplyWorkspaceScopeFilters:
         # Mock _resolve_scope_filters to return a predicate result
         scope_filters = {"__scope_predicate": ("school_id = $1", ["school-1"])}
         with patch(
-            "dazzle.back.runtime.route_generator._resolve_scope_filters",
+            "dazzle.back.runtime.scope_filters._resolve_scope_filters",
             return_value=scope_filters,
         ):
             result_filters, denied = _apply_workspace_scope_filters(

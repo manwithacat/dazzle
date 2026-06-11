@@ -424,7 +424,7 @@ class TestViaDenyOnNullFK:
         ]
 
         with patch(
-            "dazzle.back.runtime.route_generator._resolve_user_attribute",
+            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
             return_value="__RBAC_DENY__",
         ):
             entity_field, sql, params = _build_via_subquery(
@@ -451,7 +451,7 @@ class TestViaDenyOnNullFK:
         ]
 
         with patch(
-            "dazzle.back.runtime.route_generator._resolve_user_attribute",
+            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
             return_value="__RBAC_DENY__",
         ):
             entity_field, sql, params = _build_via_subquery(
@@ -482,7 +482,7 @@ class TestViaDenyOnNullFK:
 
         filters: dict = {}
         with patch(
-            "dazzle.back.runtime.route_generator._resolve_user_attribute",
+            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
             return_value="__RBAC_DENY__",
         ):
             _extract_condition_filters(

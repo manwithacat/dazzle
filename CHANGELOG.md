@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.27] - 2026-06-11
+
+### Changed
+- **route_generator slice 1: scope/RBAC-filter cluster extracted to `runtime/scope_filters.py`** (#1361).
+  The Cedar row-RBAC family — scope resolution, scoped pre-reads, create/update scope enforcement,
+  predicate filters, via/FK-path subquery builders (15 defs, 1,352 lines) — is now a leaf module;
+  `route_generator.py` drops 5,164 → 3,888 lines. The ~12 cross-module lazy imports (policy,
+  atomic_flow_executor, auth/dependencies, fts/bulk routes, workspace fetchers) repoint to the leaf,
+  removing the import-cycle pressure that forced them lazy in the first place. 17 mock-patch strings
+  updated by call-site namespace resolution (the two `test_audit_log` sites correctly stay on
+  route_generator — its handlers resolve the re-imported name). AST-verified verbatim except 5 enumerated
+  lazy `_normalize_role` imports (cycle avoidance). runtime-urls api-surface baseline: no drift.
+
 ## [0.82.26] - 2026-06-11
 
 ### Changed

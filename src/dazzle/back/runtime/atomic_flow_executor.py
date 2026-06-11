@@ -338,7 +338,7 @@ def _enforce_create_step_scope(
     spec = access_specs.get(entity) if access_specs else None
     if spec is None:
         return
-    from dazzle.back.runtime.route_generator import _enforce_create_scope
+    from dazzle.back.runtime.scope_filters import _enforce_create_scope
 
     user = getattr(auth_context, "user", None)
     user_id = str(user.id) if user is not None and getattr(user, "id", None) is not None else None
@@ -708,7 +708,7 @@ def _enforce_update_step_scope(
     spec = access_specs.get(entity) if access_specs else None
     if spec is None:
         return
-    from dazzle.back.runtime.route_generator import _enforce_update_scope
+    from dazzle.back.runtime.scope_filters import _enforce_update_scope
 
     user = getattr(auth_context, "user", None)
     user_id = str(user.id) if user is not None and getattr(user, "id", None) is not None else None

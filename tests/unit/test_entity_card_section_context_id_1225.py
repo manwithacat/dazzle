@@ -79,7 +79,7 @@ def test_context_id_threaded_into_extract_condition_filters() -> None:
 
     with (
         patch(
-            "dazzle.back.runtime.route_generator._extract_condition_filters",
+            "dazzle.back.runtime.scope_filters._extract_condition_filters",
             side_effect=_capture,
         ),
         patch(
@@ -135,7 +135,7 @@ def test_context_id_defaults_to_none_for_backward_compat() -> None:
 
     with (
         patch(
-            "dazzle.back.runtime.route_generator._extract_condition_filters",
+            "dazzle.back.runtime.scope_filters._extract_condition_filters",
             side_effect=_capture,
         ),
         patch(
