@@ -24,9 +24,9 @@ state.
 Every command that can run repeatedly is a **loop with a termination
 condition**. `/improve` terminates when the backlog is empty and no new
 issues exist. `/issues` terminates when every issue is closed or left with a
-triage comment. `/ux-cycle` terminates when the backlog has no rows in any
-actionable state. `/ux-converge` terminates when the contract-failure count
-hits zero or stops dropping for two cycles.
+triage comment. `/improve`'s `framework-ux` lane terminates when the backlog
+has no rows in any actionable state; its `ux-converge` lane terminates when
+the contract-failure count hits zero or stops dropping for two cycles.
 
 There is no "run forever and see what happens." Every cycle either advances
 a measurable metric or logs a specific reason it didn't and moves on.
@@ -101,8 +101,8 @@ session's current model.
 
 ### 1.6 Self-observation: the loop tracks its own activity
 
-`/improve` logs every cycle including no-op cycles. `/ux-cycle` logs
-selected row, attempts, verdict, and notes. `/issues` logs triage decisions
+`/improve` logs every cycle including no-op cycles; its `framework-ux` lane
+logs selected row, attempts, verdict, and notes. `/issues` logs triage decisions
 and closed issues. After a multi-hour run, the log reads like a bench
 technician's journal — "attempted X, failed, attempted Y, succeeded,
 moved to Z" — and gives the human reviewer a compact story of what the
@@ -110,7 +110,7 @@ loop did and why.
 
 ### 1.7 External signals promote pushed work
 
-Several commands (especially `/improve` and `/ux-cycle`) check for new
+Several commands (especially `/improve`) check for new
 GitHub issues at the end of each cycle. A `needs-triage` label from one of
 the consumer teams (CyFuture, AegisMark, Penny Dreadful) causes the loop
 to **interrupt its backlog** and switch to `/issues` mode. This is how
@@ -234,8 +234,7 @@ confirmation before writing.
 ### 2.3 Command dependency graph
 
 ```
-              /improve ───┐
-              /ux-cycle ──┼──▶ /issues (when backlog clean and issues exist)
+              /improve ───┬──▶ /issues (when backlog clean and issues exist)
                           │
               /issues ────┼──▶ /ship (after each fix)
               /bump ──────┼──▶ /ship (after version bump)
@@ -247,8 +246,8 @@ confirmation before writing.
               /cimonitor──▶ triggers a /issues cycle if CI is red
 ```
 
-The productive loops (`/improve`, `/ux-cycle`) delegate to `/issues`
-when their backlogs are clean. `/issues` and `/bump` delegate to
+The productive loop (`/improve`) delegates to `/issues`
+when its backlog is clean. `/issues` and `/bump` delegate to
 `/ship` to actually publish work. `/check`, `/cimonitor`, `/smells`,
 and `/xproject` are read-only feeds that inform what the productive
 loops do next.
@@ -266,7 +265,7 @@ This is what promotes single-cycle commands into autonomous runs:
 
 - `/loop 15m /improve` — every 15 minutes, fix the next gap. Walks
   away for hours; comes back to a tree with N ready-to-review commits.
-- `/loop 30m /ux-cycle` — medium cadence for slow UX verification.
+- `/loop 30m /improve framework-ux` — medium cadence for slow UX verification.
 - `/loop /issues` — self-paced issue triage. Claude picks its own
   delay; speeds up when there's active work, slows down when there
   isn't.
@@ -287,8 +286,8 @@ after seven days.
 
 The harness is deliberately paranoid about a few things:
 
-- **Commits accumulate, pushes are explicit.** `/improve` and
-  `/ux-cycle` commit but never push. Only `/ship` and `/issues` push
+- **Commits accumulate, pushes are explicit.** `/improve` commits but
+  never pushes. Only `/ship` and `/issues` push
   (and `/issues` only after its own quality gates). This means a broken
   autonomous run can be `git reset --hard HEAD~N` without affecting
   anyone else's view of the repo.
@@ -376,8 +375,8 @@ $EDITOR dev_docs/improve-backlog.md
 For a heavy weekend of framework work:
 
 ```
-/loop 30m /ux-cycle       # governance + QA on UX layer
-/loop 20m /improve        # hygiene loop
+/loop 30m /improve framework-ux   # governance + QA on UX layer
+/loop 20m /improve                # hygiene loop
 # Claude Code will notify on every terminal event from either loop
 ```
 

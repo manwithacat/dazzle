@@ -321,7 +321,7 @@ dazzle contribution templates|create|validate|examples
 
 See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No new singletons** — use `RuntimeServices` or `ServerState` (ADR-0005)
-- **No SQLite in the app runtime** — `src/dazzle_back/` is PostgreSQL-only (ADR-0008). The MCP server's knowledge-graph DB and `core/process/version_manager.py` are outside that scope and may use SQLite.
+- **No SQLite in the app runtime** — `src/dazzle/back/` is PostgreSQL-only (ADR-0008). The MCP server's knowledge-graph DB and `core/process/version_manager.py` are outside that scope and may use SQLite.
 - **No SPA frameworks** — server-side rendering + HTMX (ADR-0011); rendering is the typed Fragment substrate since #1042 (ADR-0023), not Jinja2
 - **No field conditions in `permit:`** — use `scope:` with `as:` (ADR-0010; `as:` formerly `for:`, renamed in #998)
 - **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)
@@ -364,4 +364,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.82.32 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.82.33 | **Python**: 3.12+ | **Status**: Production Ready

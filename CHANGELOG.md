@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.33] - 2026-06-12
+
+### Fixed
+- **Stale references in agent-facing docs swept** (#1371). Three doc-truth drifts from past
+  consolidations: (1) `docs/autonomous-harness.md` still taught `/ux-cycle`, `/trial-cycle`, and
+  `/ux-converge` as standalone commands — converted to `/improve` lane phrasing (dependency graph,
+  termination prose, self-observation, signal-promotion, and the `/loop` cadence examples) while keeping
+  the historical 2026-04-25 consolidation note; (2) `.claude/hooks/subagent_context.py` injected the
+  pre-move `src/dazzle_back/`/`src/dazzle_ui/` paths into every subagent's context — corrected to
+  `src/dazzle/back/` (FastAPI runtime) and `src/dazzle/ui/` (UI runtime); (3) `.claude/CLAUDE.md`'s
+  ADR-0008 bullet carried the same `src/dazzle_back/` path. ADR-0008 also gained a dated status banner
+  (mirroring ADR-0011's pattern) noting the `asyncpg`→psycopg3 single-driver migration (#1341, v0.81.27),
+  with the Implementation section's driver line updated. ADR-0011's Jinja2 banner was already present (no
+  change needed).
+
 ## [0.82.32] - 2026-06-11
 
 ### Fixed

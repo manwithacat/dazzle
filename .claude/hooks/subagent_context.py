@@ -92,7 +92,7 @@ def main():
     context_parts = [
         f"Dazzle project: {project_name} (branch: {branch})",
         "Key dirs: src/dazzle/core/ (parser+IR), src/dazzle/mcp/ (MCP server), "
-        "src/dazzle_back/ (FastAPI runtime), src/dazzle_ui/ (UI templates)",
+        "src/dazzle/back/ (FastAPI runtime), src/dazzle/ui/ (UI runtime)",
         "Commands: dazzle serve|validate|lint|mcp|lsp",
         "Quality: ruff check src/ tests/ --fix && ruff format src/ tests/ | mypy src/dazzle | pytest tests/ -m 'not e2e'",
         "MCP tools: dsl, story, rhythm, process, test_design, discovery, graph, knowledge, "

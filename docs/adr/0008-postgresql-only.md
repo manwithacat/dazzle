@@ -3,6 +3,8 @@
 **Status:** Accepted
 **Date:** 2026-03-24
 
+> **Status note (2026-06-12):** The core decision (PostgreSQL as the sole production database) is unchanged and load-bearing. The specific *driver* — `asyncpg` in the original ADR — was replaced by **psycopg3** as the single PG driver in #1341 (v0.81.27); `asyncpg` is gone from `src/` and `pyproject.toml`. Read the Implementation section's driver references as historical; the runtime now uses `psycopg.AsyncConnection` (autocommit, dict rows) with `fetchval`/`fetchrow`/`fetchall` helpers in `connection.py`.
+
 ## Context
 
 Dazzle targets cloud deployments where apps are built from high-level DSL specifications and served by the FastAPI runtime (`src/dazzle/back/`). The runtime requires:
@@ -71,7 +73,7 @@ Use SQLite locally and switch to PG in CI and production.
 
 ## Implementation
 
-- `src/dazzle/back/` uses `asyncpg` directly; no SQLAlchemy dialect switching
+- `src/dazzle/back/` uses `psycopg3` directly (originally `asyncpg`; migrated in #1341, see the status note above); no SQLAlchemy dialect switching
 - All migrations in `alembic/` target PG dialect
 - `pytest` fixtures spin up a PG test database via the Docker Compose test profile
 - `dazzle db status|verify|reset` commands are PG-only
