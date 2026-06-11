@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.28] - 2026-06-11
+
+### Changed
+- **route_generator slice 2: HTMX render cluster extracted to `runtime/htmx_render.py`** (#1361). The
+  inline-HTML rendering family — table row/cell/pagination/empty/sentinel renderers, inline edit, the
+  HX-Trigger mutation wrapper, detail HTML (9 defs, 712 lines) — is now a leaf module;
+  `route_generator.py` drops 3,888 → 3,231 lines. AST-verbatim moves except two enumerated lazy imports of
+  staying helpers (cycle avoidance, keeps them patchable where their callers live). The typed-runtime
+  no-jinja gate's allowlist gains `htmx_render.py`; zero mock-patch strings targeted the moved names;
+  runtime-urls baseline: no drift.
+
 ## [0.82.27] - 2026-06-11
 
 ### Changed

@@ -206,7 +206,7 @@ def render_filterable_table(table: Any, *, page_title: str = "") -> str:
     empty state, screen-reader loading region, and pagination footer.
 
     The row body is fetched by HTMX from `table.api_endpoint` and
-    rendered by `route_generator._render_table_row` server-side; this
+    rendered by `htmx_render._render_table_row` server-side; this
     function does NOT inline the row markup itself.
     """
     if not table:

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 
-from dazzle.back.runtime.route_generator import _render_table_row
+from dazzle.back.runtime.htmx_render import _render_table_row
 
 
 def _table(*, bulk_actions: bool = True, inline: bool = True) -> dict:

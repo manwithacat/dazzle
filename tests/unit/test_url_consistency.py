@@ -382,13 +382,13 @@ class TestSurfaceContextPrefix:
 
 pytest.importorskip("fastapi")
 
+from dazzle.back.runtime.htmx_render import _with_htmx_triggers  # noqa: E402
 from dazzle.back.runtime.route_generator import (  # noqa: E402
     HandlerConfig,
     RouteSpec,
     _extract_result_id,
     _htmx_current_url,
     _htmx_parent_url,
-    _with_htmx_triggers,
     create_create_handler,
 )
 

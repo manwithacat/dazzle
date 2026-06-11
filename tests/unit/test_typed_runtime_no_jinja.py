@@ -67,6 +67,10 @@ _TYPED_ONLY_MODULES = (
     # (table_rows.html, table_pagination.html, table_sentinel.html)
     # are no longer reached from this code path.
     "src/dazzle/back/runtime/route_generator.py",
+    # #1361 slice 2 — the inline HTMX/HTML renderers above were extracted
+    # verbatim from route_generator.py; the gate must keep covering the
+    # moved HTML.
+    "src/dazzle/back/runtime/htmx_render.py",
     # v0.67.69 — marketing-page render fully Python-orchestrated.
     # inner_only.html + nav.html + footer.html + theme_toggle.html +
     # qa_personas.html + all 19 site/sections/*.html templates deleted.
