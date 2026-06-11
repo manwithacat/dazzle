@@ -535,7 +535,7 @@ async def run_agent_e2e_tests_handler(
         project_path: Optional path to project (uses active project if not specified)
         test_id: Specific test ID to run (default: all E2E tests)
         headless: Run browser in headless mode (default: True)
-        model: LLM model to use (default: claude-sonnet-4-20250514)
+        model: LLM model to use (default: dazzle.core.model_defaults.DEFAULT_JUDGMENT_MODEL)
 
     Returns:
         JSON string with test results including:

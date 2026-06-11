@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.31] - 2026-06-11
+
+### Added
+- **Single source of truth for framework Claude model defaults: `dazzle.core.model_defaults`** (#1368).
+  The 2026-06-11 cognition audit found six LLM-calling sites each pinning their own model ID, rotting
+  independently — the most common pin (`claude-sonnet-4-20250514`) was days from API retirement, and two
+  pricing tables still carried claude-3-era rates. New module exports `DEFAULT_JUDGMENT_MODEL`
+  (`claude-sonnet-4-6`, undated alias so it tracks the stable tier), `DEFAULT_MECHANICAL_MODEL` (dated
+  Haiku, per the Subagent Model Policy), and `ANTHROPIC_PRICING_PER_MTOK` (current lineup, $/MTok).
+  All call sites (agent core, E2E agent, trial-verdict fallback, composition visual, fitness CLI, LLM
+  API client, api_tracker pricing, fuzzer generator) now import from it. Policy gate
+  `tests/unit/test_model_defaults_policy.py` fails CI on any new `claude-*` model-ID literal under
+  `src/dazzle/` outside the defaults module, and pins the allowed DSL-syntax-example literals to the
+  pricing catalog so they can't age onto retired IDs.
+
+### Agent Guidance
+- Never hardcode a Claude model ID in framework code — import `DEFAULT_JUDGMENT_MODEL` /
+  `DEFAULT_MECHANICAL_MODEL` / `ANTHROPIC_PRICING_PER_MTOK` from `dazzle.core.model_defaults`. The
+  policy test makes a stray literal a CI failure; tier rationale is in the module docstring.
+
 ## [0.82.30] - 2026-06-11
 
 ### Changed

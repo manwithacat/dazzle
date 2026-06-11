@@ -7,6 +7,8 @@ the near-miss error distribution we want to test against.
 
 from __future__ import annotations
 
+from dazzle.core.model_defaults import DEFAULT_MECHANICAL_MODEL
+
 try:
     import anthropic
 except ImportError:
@@ -111,7 +113,7 @@ Write DAZZLE DSL for the following requirement. Output ONLY the DSL code, no exp
 def generate_samples(
     seed_dsl: str,
     count: int,
-    model: str = "claude-haiku-4-5-20251001",
+    model: str = DEFAULT_MECHANICAL_MODEL,
 ) -> list[str]:
     """Generate DSL samples using Haiku."""
     if anthropic is None:

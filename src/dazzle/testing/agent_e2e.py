@@ -36,6 +36,7 @@ from dazzle.agent.missions.testing import build_test_mission
 from dazzle.agent.models import ActionType, Element, PageState
 from dazzle.agent.observer import PlaywrightObserver
 from dazzle.agent.transcript import AgentTranscript
+from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
 
 logger = logging.getLogger("dazzle.testing.agent_e2e")
 
@@ -136,7 +137,7 @@ class E2EAgent:
     """
 
     MAX_STEPS = 15
-    DEFAULT_MODEL = "claude-sonnet-4-20250514"
+    DEFAULT_MODEL = DEFAULT_JUDGMENT_MODEL
 
     def __init__(
         self,

@@ -15,6 +15,7 @@ from pathlib import Path
 
 import typer
 
+from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
 from dazzle.fitness.backlog import read_backlog
 from dazzle.fitness.triage import (
     cluster_findings,
@@ -261,7 +262,7 @@ def _build_llm_client(model: str | None, dry_run: bool) -> object:
     In --dry-run mode, returns a placeholder that will never be called.
     In real mode, returns an LLMAPIClient from dazzle.llm.api_client.
     """
-    resolved_model = model or "claude-sonnet-4-6"
+    resolved_model = model or DEFAULT_JUDGMENT_MODEL
 
     class _DryRunClient:
         run_id = "dry-run"

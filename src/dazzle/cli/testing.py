@@ -14,6 +14,7 @@ import typer
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.lint import lint_appspec
+from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
 
 test_app = typer.Typer(
     help=(
@@ -1999,7 +2000,7 @@ def test_agent(
     model: str = typer.Option(
         None,
         "--model",
-        help="LLM model to use (default: claude-sonnet-4-20250514)",
+        help=f"LLM model to use (default: {DEFAULT_JUDGMENT_MODEL})",
     ),
     report: bool = typer.Option(
         True,

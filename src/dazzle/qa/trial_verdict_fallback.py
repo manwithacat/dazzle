@@ -17,6 +17,8 @@ import logging
 import os
 from typing import Any
 
+from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+
 logger = logging.getLogger(__name__)
 _FALLBACK_SYSTEM_PROMPT = """\
 You are writing the closing verdict for a software trial. The trial
@@ -98,7 +100,7 @@ def synthesize_verdict(
             pass
         client = anthropic.Anthropic(**client_kwargs)
         resp = client.messages.create(
-            model=model or "claude-sonnet-4-20250514",
+            model=model or DEFAULT_JUDGMENT_MODEL,
             max_tokens=512,
             system=prompt,
             messages=[

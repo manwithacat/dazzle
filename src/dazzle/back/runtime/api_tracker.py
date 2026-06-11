@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 from uuid import uuid4
 
 from dazzle.back.runtime.ops_database import ApiCallRecord, OpsDatabase
+from dazzle.core.model_defaults import ANTHROPIC_PRICING_PER_MTOK
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable
@@ -475,14 +476,13 @@ def create_openai_cost_calculator(
     Returns:
         Cost calculator function for use with ApiCostConfig
     """
-    # Default costs in cents per 1K tokens (as of 2024)
+    # Default costs in cents per 1K tokens. Claude models are configured
+    # via configure_anthropic_tracking(), which derives prices from
+    # dazzle.core.model_defaults.ANTHROPIC_PRICING_PER_MTOK.
     default_costs = {
         "gpt-4-turbo": (1.0, 3.0),  # $0.01/$0.03 per 1K
         "gpt-4": (3.0, 6.0),  # $0.03/$0.06 per 1K
         "gpt-3.5-turbo": (0.05, 0.15),  # $0.0005/$0.0015 per 1K
-        "claude-3-opus": (1.5, 7.5),  # $0.015/$0.075 per 1K
-        "claude-3-sonnet": (0.3, 1.5),  # $0.003/$0.015 per 1K
-        "claude-3-haiku": (0.025, 0.125),  # $0.00025/$0.00125 per 1K
     }
     costs = {**default_costs, **(model_costs or {})}
 
@@ -521,10 +521,9 @@ def configure_anthropic_tracking(tracker: ApiTracker) -> None:
             provider="anthropic",
             custom_calculator=create_openai_cost_calculator(
                 {
-                    "claude-3-opus-20240229": (1.5, 7.5),
-                    "claude-3-sonnet-20240229": (0.3, 1.5),
-                    "claude-3-haiku-20240307": (0.025, 0.125),
-                    "claude-3-5-sonnet-20241022": (0.3, 1.5),
+                    # $/MTok → cents per 1K tokens is a ÷10 conversion.
+                    model: (input_mtok / 10, output_mtok / 10)
+                    for model, (input_mtok, output_mtok) in ANTHROPIC_PRICING_PER_MTOK.items()
                 }
             ),
         )

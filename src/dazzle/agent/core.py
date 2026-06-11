@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+
 from .executor import Executor
 from .models import ActionResult, ActionType, AgentAction, PageState, Step
 from .observer import Observer
@@ -385,7 +387,7 @@ class DazzleAgent:
     6. Repeat
     """
 
-    DEFAULT_MODEL = "claude-sonnet-4-20250514"
+    DEFAULT_MODEL = DEFAULT_JUDGMENT_MODEL
 
     def __init__(
         self,

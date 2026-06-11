@@ -16,6 +16,8 @@ import uuid
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, cast
 
+from dazzle.core.model_defaults import ANTHROPIC_PRICING_PER_MTOK, DEFAULT_JUDGMENT_MODEL
+
 if TYPE_CHECKING:
     from anthropic import Anthropic
     from openai import OpenAI
@@ -165,10 +167,7 @@ class LLMAPIClient:
             self.model = model
         else:
             if provider == LLMProvider.ANTHROPIC:
-                # Updated from claude-3-5-sonnet-20241022 (retired) to
-                # claude-sonnet-4-6 (current stable). The old model id
-                # returns 404 from the Anthropic API as of 2026.
-                self.model = "claude-sonnet-4-6"
+                self.model = DEFAULT_JUDGMENT_MODEL
             else:
                 self.model = "gpt-4-turbo"
 
@@ -463,17 +462,10 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
         total_input = estimated_input_tokens + system_prompt_tokens
         total_output = estimated_output_tokens
 
-        # Pricing (as of 2024)
         pricing = {
             LLMProvider.ANTHROPIC: {
-                "claude-3-5-sonnet-20241022": {
-                    "input": 3.00 / 1_000_000,
-                    "output": 15.00 / 1_000_000,
-                },
-                "claude-3-sonnet-20240229": {
-                    "input": 3.00 / 1_000_000,
-                    "output": 15.00 / 1_000_000,
-                },
+                model: {"input": input_mtok / 1_000_000, "output": output_mtok / 1_000_000}
+                for model, (input_mtok, output_mtok) in ANTHROPIC_PRICING_PER_MTOK.items()
             },
             LLMProvider.OPENAI: {
                 "gpt-4-turbo": {"input": 10.00 / 1_000_000, "output": 30.00 / 1_000_000},
@@ -491,8 +483,8 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
                 self.provider,
                 self.model,
             )
-            # Default to Claude Sonnet pricing
-            model_pricing = pricing[LLMProvider.ANTHROPIC]["claude-3-5-sonnet-20241022"]
+            # Default to current Sonnet-tier pricing
+            model_pricing = pricing[LLMProvider.ANTHROPIC][DEFAULT_JUDGMENT_MODEL]
 
         cost = total_input * model_pricing["input"] + total_output * model_pricing["output"]
 

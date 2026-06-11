@@ -43,7 +43,7 @@ class LLMParserMixin:
 
             llm_model claude_sonnet "Claude Sonnet":
               provider: anthropic
-              model_id: claude-3-5-sonnet-20241022
+              model_id: claude-sonnet-4-6
               tier: balanced
               max_tokens: 4096
               cost_per_1k_input: 0.003
@@ -73,7 +73,7 @@ class LLMParserMixin:
         # First part - identifier
         parts.append(self.expect_identifier_or_keyword().value)
 
-        # Handle hyphenated model IDs like claude-3-5-sonnet-20241022
+        # Handle hyphenated model IDs like claude-haiku-4-5-20251001
         while self.match(TokenType.MINUS):
             self.advance()
             if self.match(TokenType.NUMBER):

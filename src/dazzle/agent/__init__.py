@@ -18,7 +18,7 @@ Usage:
     )
 
     # Create agent with observer + executor backends
-    agent = DazzleAgent(observer, executor, model="claude-sonnet-4-20250514")
+    agent = DazzleAgent(observer, executor)  # model defaults to dazzle.core.model_defaults
     transcript = await agent.run(mission)
 """
 

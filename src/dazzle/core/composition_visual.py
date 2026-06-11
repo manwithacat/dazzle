@@ -17,6 +17,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .model_defaults import DEFAULT_JUDGMENT_MODEL
+
 if TYPE_CHECKING:
     from .composition_capture import CapturedPage, CapturedSection
 
@@ -285,7 +287,7 @@ def _call_vision_api(
     prompt: str,
     *,
     api_key: str | None = None,
-    model: str = "claude-sonnet-4-5-20250929",
+    model: str = DEFAULT_JUDGMENT_MODEL,
     max_tokens: int = 2000,
 ) -> tuple[str, int]:
     """Call Claude's vision API with one or more images.
@@ -392,7 +394,7 @@ def evaluate_captures(
     spec_context: dict[str, Any] | None = None,
     references: dict[str, list[Any]] | None = None,
     api_key: str | None = None,
-    model: str = "claude-sonnet-4-5-20250929",
+    model: str = DEFAULT_JUDGMENT_MODEL,
     token_budget: int = 50_000,
 ) -> list[PageVisualResult]:
     """Evaluate captured screenshots using LLM vision analysis.
