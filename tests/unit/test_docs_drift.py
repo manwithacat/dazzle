@@ -88,6 +88,34 @@ def test_claude_md_constructs_all_exist_in_parser() -> None:
     )
 
 
+def test_agents_md_stays_a_stub() -> None:
+    """AGENTS.md must remain a pointer to .claude/CLAUDE.md, not a copy.
+
+    The pre-#1367 full-content AGENTS.md drifted 21 minor versions behind
+    the codebase (Jinja2-era UI claims, pip toolchain, retired commands)
+    because nothing watched it. The durable fix is structural: the file
+    carries no project facts that can rot, so this gate pins it to stub
+    shape — it must reference the canonical file, must not grow a version
+    stamp, and must stay short enough that fact-accretion is conspicuous.
+    """
+    text = (REPO_ROOT / "AGENTS.md").read_text()
+    assert ".claude/CLAUDE.md" in text, (
+        "AGENTS.md no longer points at .claude/CLAUDE.md — it must defer "
+        "to the canonical, drift-gated instruction file."
+    )
+    assert not re.search(r"\*\*Version\*\*:", text), (
+        "AGENTS.md has grown a version stamp. Version stamps in an "
+        "unmaintained copy are how the pre-#1367 file rotted to v0.61.13 "
+        "while the repo was at v0.82.30. Point at pyproject.toml instead."
+    )
+    line_count = len(text.splitlines())
+    assert line_count <= 40, (
+        f"AGENTS.md is {line_count} lines (limit 40). It must stay a stub "
+        f"that defers to .claude/CLAUDE.md — project facts duplicated here "
+        f"will drift (see #1367)."
+    )
+
+
 def test_coverage_tool_constructs_all_exist_in_parser() -> None:
     """The curated list in dazzle.cli.coverage._DSL_CONSTRUCTS (which
     feeds the ``dazzle coverage --fail-on-uncovered`` CI gate) must
