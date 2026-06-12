@@ -1389,3 +1389,206 @@ dazzle compliance gaps --framework soc2
 
 The AuditSpec at `.dazzle/compliance/output/iso27001/auditspec.json` is a stable, reproducible artifact — given the same DSL files, the same AuditSpec is produced. Commit the AuditSpec alongside your DSL to provide a dated record of your compliance posture at each release.
 '''
+
+# ---------------------------------------------------------------------------
+# Hand-written reference pages (#1372). These own their content on disk under
+# docs/reference/; they're registered here ONLY so `dazzle docs generate` links
+# them from the index. `handwritten = true` makes the generator skip rendering
+# (never overwrite them) and exempts them from the concept-coverage check.
+# ---------------------------------------------------------------------------
+
+[pages.project-layout]
+title = "Project Layout"
+slug = "project-layout"
+order = 100
+handwritten = true
+intro = "The recommended directory layout for a Dazzle project — where DSL, app code, and one-shot scripts live."
+
+[pages.grammar]
+title = "DSL Grammar Specification"
+slug = "grammar"
+order = 101
+handwritten = true
+intro = "The formal EBNF grammar for the DAZZLE DSL, regenerated from parser source by `dazzle grammar`."
+
+[pages.scenarios]
+title = "Personas and Scenarios"
+slug = "scenarios"
+order = 102
+handwritten = true
+intro = "Personas define user types; scenarios define test-data states for development and demonstration."
+
+[pages.islands]
+title = "UI Islands"
+slug = "islands"
+order = 103
+handwritten = true
+intro = "Self-contained interactive JavaScript components that mount into server-rendered pages."
+
+[pages.reports]
+title = "Reports & Charts"
+slug = "reports"
+order = 104
+handwritten = true
+intro = "How chart and report regions (bar_chart, pivot_table, heatmap, funnel, metrics) compile to scope-aware aggregate queries."
+
+[pages.runtime-capabilities]
+title = "Runtime UI Capabilities"
+slug = "runtime-capabilities"
+order = 105
+handwritten = true
+intro = "What the Dazzle runtime actually renders for each DSL construct — the map from DSL to live UI."
+
+[pages.htmx-templates]
+title = "HTMX Template Specification"
+slug = "htmx-templates"
+order = 106
+handwritten = true
+intro = "The HTMX interaction patterns the runtime emits; SSR + HTMX with no SPA framework."
+
+[pages.card-safety-invariants]
+title = "Card-Safety Invariants"
+slug = "card-safety-invariants"
+order = 107
+handwritten = true
+intro = "The canonical spec for what a card means in Dazzle templates and the eight invariants its scanners enforce."
+
+[pages.rbac-scope]
+title = "RBAC Scope Rules"
+slug = "rbac-scope"
+order = 108
+handwritten = true
+intro = "Operation-by-operation reference for `scope:` row-level authorization rules and their predicate algebra."
+
+[pages.rbac-verification]
+title = "RBAC Verification Framework"
+slug = "rbac-verification"
+order = 109
+handwritten = true
+intro = "The three-layer access-control verification system that proves DSL-declared security policies hold."
+
+[pages.security-profiles]
+title = "Security Profiles"
+slug = "security-profiles"
+order = 110
+handwritten = true
+intro = "The security profile every app declares in its `app` block, and what each profile enforces."
+
+[pages.enterprise-sso]
+title = "Enterprise SSO & Provisioning"
+slug = "enterprise-sso"
+order = 111
+handwritten = true
+intro = "Native per-org enterprise connections (OIDC, SAML, SCIM) behind the opt-in capability registry."
+
+[pages.pii-privacy]
+title = "PII & Privacy Primitives"
+slug = "pii-privacy"
+order = 112
+handwritten = true
+intro = "Analytics, consent, and privacy primitives for marking and handling personally identifiable data."
+
+[pages.document-signing]
+title = "Document Signing"
+slug = "document-signing"
+order = 113
+handwritten = true
+intro = "Native PAdES B-T document signing as a first-class DSL primitive via `signable: true`."
+
+[pages.tenant-hosts]
+title = "Multi-Tenant Hosts"
+slug = "tenant-hosts"
+order = 114
+handwritten = true
+intro = "The `tenant_host:` sub-block that auto-mounts Host-header-based tenant routing (#1289)."
+
+[pages.databases]
+title = "Database Configuration"
+slug = "databases"
+order = 115
+handwritten = true
+intro = "PostgreSQL configuration for development and production — Dazzle is Postgres-only (ADR-0008)."
+
+[pages.migrations]
+title = "Schema Migrations"
+slug = "migrations"
+order = 116
+handwritten = true
+intro = "How Dazzle uses Alembic for all schema changes, including framework entities (ADR-0017)."
+
+[pages.deployment]
+title = "AWS Deployment"
+slug = "deployment"
+order = 117
+handwritten = true
+intro = "Generating and managing AWS CDK infrastructure from your DSL specifications."
+
+[pages.cli]
+title = "CLI Reference"
+slug = "cli"
+order = 118
+handwritten = true
+intro = "Complete reference for the `dazzle` command-line interface and its command groups."
+
+[pages.e2e-environment]
+title = "E2E Environment (Mode A)"
+slug = "e2e-environment"
+order = 119
+handwritten = true
+intro = "The Mode A developer one-shot harness that launches a live example app for end-to-end testing."
+
+[pages.qa-trial-patterns]
+title = "QA Trial Patterns"
+slug = "qa-trial-patterns"
+order = 120
+handwritten = true
+intro = "Patterns surfaced by `dazzle qa trial` — qualitative business-user evaluation of a Dazzle app."
+
+[pages.fitness-methodology]
+title = "Fitness Methodology"
+slug = "fitness-methodology"
+order = 121
+handwritten = true
+intro = "The optional Agent-Led Fitness Methodology V&V loop that checks app fitness against declared intent."
+
+[pages.fitness-investigator]
+title = "Fitness Investigator"
+slug = "fitness-investigator"
+order = 122
+handwritten = true
+intro = "Agent-led investigation of ranked fitness clusters that produces actionable improvement proposals."
+
+[pages.fitness-triage]
+title = "Fitness Triage"
+slug = "fitness-triage"
+order = 123
+handwritten = true
+intro = "Turning a flat fitness backlog into ranked, actionable clusters for investigation."
+
+[pages.performance-envelope]
+title = "Performance Envelope"
+slug = "performance-envelope"
+order = 124
+handwritten = true
+intro = "Where the Dazzle runtime is fast, where it degrades, and by how much — measured."
+
+[pages.perf-observability]
+title = "Performance Observability"
+slug = "perf-observability"
+order = 125
+handwritten = true
+intro = "Local on-demand OpenTelemetry tracing for any Dazzle project via `dazzle perf`."
+
+[pages.perf-findings-schema]
+title = "Perf Findings Schema"
+slug = "perf-findings-schema"
+order = 126
+handwritten = true
+intro = "The JSON schema emitted by `dazzle perf report --format json` (FindingsReport)."
+
+[pages.implicitness-audit]
+title = "Implicitness Audit"
+slug = "implicitness-audit"
+order = 127
+handwritten = true
+intro = "A working doc on identifying implicit behaviour in Dazzle, written after a runtime post-mortem."

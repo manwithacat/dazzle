@@ -100,6 +100,71 @@ Complete reference for the `dazzle` command-line interface.
 
 ---
 
+## Command Groups
+
+Every registered command group (sub-app). Run `dazzle <group> --help` for its
+subcommands, or `dazzle commands` / `dazzle search <keyword>` to discover commands
+interactively. This table is drift-gated against the CLI registration in
+`src/dazzle/cli/__init__.py` (`tests/unit/test_docs_drift.py`) — adding a group
+there requires a row here.
+
+| Group | Purpose |
+|-------|---------|
+| `dazzle agent` | Agent-first development commands |
+| `dazzle analytics` | Analytics, consent, and privacy tooling |
+| `dazzle api-pack` | API pack management — generate DSL, scaffold packs, inspect infrastructure |
+| `dazzle auth` | Manage authentication users and sessions |
+| `dazzle backup` | Backup and restore project data |
+| `dazzle capability` | Manage opt-in feature capabilities |
+| `dazzle compliance` | Compliance documentation tools (ISO 27001 / SOC 2) |
+| `dazzle composition` | Visual composition analysis for Dazzle apps |
+| `dazzle conformance` | DSL conformance testing |
+| `dazzle contribution` | Community contribution packaging — create, validate, share |
+| `dazzle db` | Database migration commands (Alembic) |
+| `dazzle demo` | Demo data management commands |
+| `dazzle deploy` | Generate and manage AWS CDK infrastructure |
+| `dazzle discovery` | App discovery and coherence analysis |
+| `dazzle dlq` | Dead letter queue commands |
+| `dazzle docs` | Documentation generation, validation, and maintenance |
+| `dazzle events` | Event system commands |
+| `dazzle feedback` | Feedback reports — list, triage, resolve |
+| `dazzle fitness` | Agent-Led Fitness Methodology queries and triage |
+| `dazzle guide` | Inspect onboarding guides declared in the project DSL |
+| `dazzle inspect` | Introspect framework extension points and the public API surface |
+| `dazzle kg` | Knowledge graph management |
+| `dazzle lsp` | Language Server Protocol (LSP) commands |
+| `dazzle mcp` | MCP (Model Context Protocol) server commands |
+| `dazzle mock` | Vendor mock server management |
+| `dazzle nightly` | Run quality checks in parallel (faster pipeline) |
+| `dazzle outbox` | Event outbox commands |
+| `dazzle param` | Runtime parameter management |
+| `dazzle perf` | On-demand local OpenTelemetry tracing |
+| `dazzle pipeline` | Run the deterministic quality pipeline |
+| `dazzle pitch` | Generate investor pitch materials from DSL |
+| `dazzle process` | Process proposal, storage, and diagramming |
+| `dazzle process-migrate` | Process migration commands for safe DSL version deployments |
+| `dazzle pulse` | Project health pulse checks |
+| `dazzle qa` | QA toolkit — visual quality evaluation and screenshot capture |
+| `dazzle quality` | Quality pipeline scaffolding |
+| `dazzle rbac` | RBAC verification and compliance |
+| `dazzle rhythm` | Rhythm analysis and lifecycle management |
+| `dazzle sentinel` | SaaS Sentinel — failure-mode detection for Dazzle applications |
+| `dazzle signing` | Provision the native document signing primitive |
+| `dazzle spec` | Compare narrative product spec against DSL state — drift detection |
+| `dazzle specs` | Generate API specifications (OpenAPI / AsyncAPI) |
+| `dazzle story` | Story-driven test generation |
+| `dazzle stubs` | Manage domain service stubs |
+| `dazzle sweep` | Run unified health checks across example apps |
+| `dazzle tenant` | Multi-tenant schema management |
+| `dazzle test` | Multi-tier test runner (dsl-run / playwright / agent) |
+| `dazzle test-design` | Test design proposal, persistence, and coverage analysis |
+| `dazzle theme` | Inspect and manage app-shell themes |
+| `dazzle ux` | UX verification — deterministic interaction testing |
+| `dazzle vocab` | Manage app-local vocabulary (macros, aliases, patterns) |
+| `dazzle worker` | Background-job worker + scheduler |
+
+---
+
 ## Key Commands
 
 ### dazzle init

@@ -102,6 +102,12 @@ def generate_reference_docs(kb_dir: Path | None = None) -> dict[str, str]:
 
     result: dict[str, str] = {}
     for slug, page_meta in sorted(pages.items(), key=lambda p: p[1].get("order", 999)):
+        # Hand-written pages are registered in doc_pages.toml only so the
+        # generated index links them — the generator must NOT render/overwrite
+        # their on-disk content. (#1372: the naive "just link them" fix would
+        # be silently reverted by `dazzle docs generate`.)
+        if page_meta.get("handwritten"):
+            continue
         concepts = by_page.get(slug, [])
         result[slug] = _render_page(slug, page_meta, concepts, all_concepts)
 
@@ -168,6 +174,10 @@ def check_docs_coverage(kb_dir: Path | None = None) -> list[str]:
         # Auto-source pages introspect code at build time (e.g. the MCP tool
         # registry). They're allowed to have no concept entries.
         if (page_meta.get("auto_source") or "").strip():
+            continue
+        # Hand-written pages own their content on disk; they're registered only
+        # for index linking and never sourced from concept TOML entries (#1372).
+        if page_meta.get("handwritten"):
             continue
         issues.append(f"ERROR: Page '{slug}' in doc_pages.toml has no concepts")
 
@@ -511,11 +521,26 @@ def _render_index(pages: dict[str, dict[str, Any]]) -> str:
     lines.append("|---------|-------------|")
 
     sorted_pages = sorted(pages.items(), key=lambda p: p[1].get("order", 999))
-    for slug, meta in sorted_pages:
+    generated = [(s, m) for s, m in sorted_pages if not m.get("handwritten")]
+    handwritten = [(s, m) for s, m in sorted_pages if m.get("handwritten")]
+
+    for slug, meta in generated:
         title = meta.get("title", _concept_title(slug))
-        intro = meta.get("intro", "").strip()
-        desc = _first_sentence(intro)
+        desc = _first_sentence(meta.get("intro", "").strip())
         lines.append(f"| [{title}]({slug}.md) | {desc} |")
+
+    # Hand-written guides & operations pages — registered in doc_pages.toml with
+    # `handwritten = true` so they're linked here but never overwritten (#1372).
+    if handwritten:
+        lines.append("")
+        lines.append("## Guides & Operations")
+        lines.append("")
+        lines.append("| Page | Description |")
+        lines.append("|------|-------------|")
+        for slug, meta in handwritten:
+            title = meta.get("title", _concept_title(slug))
+            desc = _first_sentence(meta.get("intro", "").strip())
+            lines.append(f"| [{title}]({slug}.md) | {desc} |")
 
     lines.append("")
     return "\n".join(lines)

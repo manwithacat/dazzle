@@ -210,6 +210,59 @@ def test_claude_md_examples_and_fixtures_lists_match_disk() -> None:
         )
 
 
+def test_every_reference_page_is_linked_from_index() -> None:
+    """Every docs/reference/*.md must be linked from the generated index.
+
+    #1372: index.md is auto-generated from doc_pages.toml, so ~29 hand-written
+    pages could never appear in it and were undiscoverable. Hand-written pages
+    are now registered in doc_pages.toml with `handwritten = true` (linked,
+    never overwritten). This gate makes a new orphaned reference page a CI
+    failure — register it in doc_pages.toml (handwritten pages) or it won't be
+    discoverable from the index.
+    """
+    ref_dir = REPO_ROOT / "docs" / "reference"
+    index = (ref_dir / "index.md").read_text()
+    linked = set(re.findall(r"\(([a-z0-9-]+)\.md\)", index))
+    on_disk = {p.stem for p in ref_dir.glob("*.md")} - {"index"}
+    orphaned = sorted(on_disk - linked)
+    assert not orphaned, (
+        "Reference pages exist on disk but aren't linked from "
+        "docs/reference/index.md:\n  "
+        + "\n  ".join(orphaned)
+        + "\nRegister each in src/dazzle/mcp/semantics_kb/doc_pages.toml "
+        "(add `handwritten = true` for hand-written pages) and run "
+        "`dazzle docs generate`."
+    )
+
+
+def _cli_group_names() -> set[str]:
+    """Registered CLI command-group names (every `add_typer(..., name=...)`)."""
+    text = (REPO_ROOT / "src" / "dazzle" / "cli" / "__init__.py").read_text()
+    return set(re.findall(r'add_typer\([a-z_]+_app,\s*name="([a-z0-9-]+)"', text))
+
+
+def test_cli_md_documents_every_command_group() -> None:
+    """Every registered CLI command group must be named in cli.md.
+
+    #1372: cli.md was hand-maintained with no gate, so 45 of the registered
+    Typer sub-apps were never documented. This gate asserts each group name
+    appears in the CLI reference; the canonical list is the "Command Groups"
+    table.
+    """
+    groups = _cli_group_names()
+    assert groups, "no add_typer(name=...) groups found — parser drift?"
+    cli_md = (REPO_ROOT / "docs" / "reference" / "cli.md").read_text()
+    missing = sorted(
+        g for g in groups if f"dazzle {g}`" not in cli_md and f"`dazzle {g}`" not in cli_md
+    )
+    assert not missing, (
+        "CLI command groups registered in src/dazzle/cli/__init__.py but not "
+        "documented in docs/reference/cli.md:\n  "
+        + "\n  ".join(missing)
+        + "\nAdd a row to the `## Command Groups` table."
+    )
+
+
 def test_coverage_tool_constructs_all_exist_in_parser() -> None:
     """The curated list in dazzle.cli.coverage._DSL_CONSTRUCTS (which
     feeds the ``dazzle coverage --fail-on-uncovered`` CI gate) must

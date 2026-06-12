@@ -264,14 +264,16 @@ workspace team_dashboard "Team Dashboard":
     display: timeline
 
   # Key performance metrics — each metric is one aggregate call
-  # (count/sum/avg/min/max, optionally with a `where` filter).
-  # Derived ratios (e.g. completion rate) are computed downstream,
-  # not in the aggregate block.
+  # (count/sum/avg/min/max, optionally with a `where` filter), or a
+  # derived expression over metrics declared earlier in the block
+  # (#1359): arithmetic + round/abs/nullif/coalesce, evaluated after
+  # the scope-filtered queries (division by zero reads as 0).
   metrics:
     aggregate:
       total: count(Task)
       completed: count(Task where status = done)
       in_progress: count(Task where status = in_progress)
+      completion_rate: round(completed / total * 100)
 ```
 
 ---

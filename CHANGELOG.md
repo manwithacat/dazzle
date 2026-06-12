@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.35] - 2026-06-12
+
+### Fixed
+- **Reference-doc discoverability: hand-written pages now linked from the generated index; cli.md
+  documents every command group** (#1372). `docs/reference/index.md` is auto-generated from
+  `doc_pages.toml`, so ~28 hand-written reference pages (project-layout, reports, card-safety-invariants,
+  the fitness/perf/qa pages, etc.) could never appear in it — hand-edits would be reverted by
+  `dazzle docs generate`. Added a `handwritten = true` page type: registered pages are linked from a new
+  **Guides & Operations** index section but the generator skips rendering them (never overwrites their
+  on-disk content) and exempts them from the concept-coverage check. All 28 hand-written pages registered;
+  12 pages missing from the MkDocs nav added. `docs/reference/cli.md` gained a complete **Command Groups**
+  table covering all 52 registered CLI sub-apps (was documenting 19).
+
+### Agent Guidance
+- New reference pages must be registered in `src/dazzle/mcp/semantics_kb/doc_pages.toml` (add
+  `handwritten = true` for hand-authored pages) or they won't be linked from the index — enforced by
+  `test_every_reference_page_is_linked_from_index`. New CLI command groups must get a row in
+  `docs/reference/cli.md`'s Command Groups table — enforced by `test_cli_md_documents_every_command_group`.
+
 ## [0.82.34] - 2026-06-12
 
 ### Fixed
