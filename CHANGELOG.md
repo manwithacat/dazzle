@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.38] - 2026-06-12
+
 ### Added
 - **Subscription-billed LLM driver (`claude-cli`) — default for new projects.** Dazzle's dev-time
   cognition (`dazzle qa trial` persona agent + verdict synthesis, spec analysis, local `llm_intent`
