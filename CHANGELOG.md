@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.41] - 2026-06-13
+
 ### Fixed
 - **Signing: missing `[signing]` extra now fails actionably at every layer** (#1377). The sign
   route wraps the PDF generate/sign stack so a `SigningError` (missing fpdf2/pyhanko, unconfigured
