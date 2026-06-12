@@ -146,7 +146,7 @@ def call_claude_cli(
     system_prompt: str | None = None,
     model: str | None = None,
     timeout: int = 300,
-    max_turns: int = 1,
+    max_turns: int = 4,
 ) -> tuple[str, int]:
     """Run one completion through the Claude Code CLI (subscription-billed).
 
@@ -168,7 +168,28 @@ def call_claude_cli(
       guarantee is the entire point of this driver.
     """
     _refuse_cli_in_production()
-    cmd = ["claude", "--print", "--output-format", "json", "--max-turns", str(max_turns)]
+    # This is a pure text completion: a model that can see any tools
+    # (built-ins OR MCP servers from the cwd's .mcp.json) will eventually
+    # emit a tool_use turn instead of text — which then dies as
+    # error_max_turns (observed on trial step 4 of the first live run).
+    # Three layers: --tools "" drops the built-ins; --strict-mcp-config
+    # with no --mcp-config loads zero MCP servers; --disallowedTools "*"
+    # denies anything that still slips through (e.g. LSP, which sits
+    # outside the --tools set), and the max_turns default leaves room to
+    # recover from a denied attempt with a text reply.
+    cmd = [
+        "claude",
+        "--print",
+        "--output-format",
+        "json",
+        "--tools",
+        "",
+        "--strict-mcp-config",
+        "--disallowedTools",
+        "*",
+        "--max-turns",
+        str(max_turns),
+    ]
     if system_prompt:
         cmd.extend(["--system-prompt", system_prompt])
     if model:

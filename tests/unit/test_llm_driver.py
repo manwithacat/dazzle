@@ -140,6 +140,12 @@ class TestCallClaudeCli:
         assert cmd[:2] == ["claude", "--print"]
         assert "--system-prompt" in cmd and "be brief" in cmd
         assert "--model" in cmd and "claude-x" in cmd
+        # Pure-completion contract: no built-ins, no MCP servers, deny-all
+        # permissions — a visible tool eventually gets a tool_use turn
+        # instead of text and the call dies as error_max_turns.
+        assert "--tools" in cmd and "" in cmd
+        assert "--strict-mcp-config" in cmd
+        assert "--disallowedTools" in cmd and "*" in cmd
         # The prompt travels over stdin, never argv — flattened agent
         # history can exceed the macOS 256 KB per-argument kernel limit.
         assert "hi" not in cmd
