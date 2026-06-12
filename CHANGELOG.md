@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.39] - 2026-06-12
+
+### Fixed
+- **`claude-cli` driver runs `claude -p` as a pure completion** — the first live trial died at
+  step 4 with `error_max_turns` because the headless CLI session exposed its built-in tools and
+  the cwd's `.mcp.json` MCP servers, so the model emitted a `tool_use` turn instead of a
+  text-protocol reply. The shell-out now passes `--tools ""` (no built-ins),
+  `--strict-mcp-config` (no MCP servers), `--disallowedTools "*"` (denies stragglers like LSP),
+  and defaults `max_turns` to 4 for recovery headroom. Verified live: the
+  `sla_waiver_declined` trial completes on subscription billing — persona declined the waiver,
+  signing outcome `functional=pass`.
+
 ## [0.82.38] - 2026-06-12
 
 ### Added
