@@ -289,18 +289,25 @@ async def _handle_post(
         document_body = _resolve_document_body(entity=entity, row=row, project_root=project_root)
     except SigningError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    pdf = generate_pdf(
-        document_body,
-        signer_name=signatory_name,
-        branding=branding,
-        signature_png_bytes=signature_png,
-    )
-    signed_pdf = await async_sign_pdf(
-        pdf,
-        signer_name=signatory_name,
-        signer_email=signer_email,
-        branding=branding,
-    )
+    # SigningError carries an actionable message (missing [signing] extra,
+    # unconfigured cert, …). Without this wrapper it escapes as a bare
+    # {"detail": "Internal Server Error"} that tells the signer nothing
+    # (#1377 — burned two trial persona runs before anyone saw the cause).
+    try:
+        pdf = generate_pdf(
+            document_body,
+            signer_name=signatory_name,
+            branding=branding,
+            signature_png_bytes=signature_png,
+        )
+        signed_pdf = await async_sign_pdf(
+            pdf,
+            signer_name=signatory_name,
+            signer_email=signer_email,
+            branding=branding,
+        )
+    except SigningError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     patch: dict[str, Any] = {
         "status": "signed",

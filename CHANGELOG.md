@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Signing: missing `[signing]` extra now fails actionably at every layer** (#1377). The sign
+  route wraps the PDF generate/sign stack so a `SigningError` (missing fpdf2/pyhanko, unconfigured
+  cert) returns its message in the 500 detail instead of escaping as a bare
+  `{"detail": "Internal Server Error"}`; and `dazzle qa trial` preflights the server-side signing
+  deps at provision time, aborting with the install hint (exit 2) before burning an LLM persona
+  run into a guaranteed 500. Verified live both ways: deps removed → fast abort with hint; deps
+  present → happy-path trial signs (`functional=pass`).
+- **qa trial signing tool no longer silently truncates the document** (#1378). `open_signing_link`
+  echoed only the first 800 chars of the signing page with no marker, so personas filed false
+  high-severity "document truncated mid-sentence" bugs against complete documents. The cap is now
+  4000 chars and any cut carries an explicit `…[tool excerpt truncated …]` marker telling the
+  persona not to report it as a product bug.
+
 ## [0.82.40] - 2026-06-12
 
 ### Fixed

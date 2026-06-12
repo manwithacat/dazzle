@@ -337,6 +337,33 @@ class TestSubmitSignature:
         finally:
             del host._test_validator_reject  # type: ignore[attr-defined]
 
+    def test_pdf_stack_signing_error_carries_detail(self) -> None:
+        """#1377: a SigningError from the PDF generate/sign stack (e.g.
+        the [signing] extra is not installed) must surface its actionable
+        message, not escape as a bare {"detail": "Internal Server Error"}."""
+        from unittest.mock import patch as mock_patch
+
+        from dazzle.signing.tokens import SigningError
+
+        record_id = str(uuid4())
+        app, repo = _app_with_routes({record_id: {"status": "viewed"}})
+        client = TestClient(app)
+        token = mint_token(record_id, "a@example.com")
+        with mock_patch(
+            "dazzle.signing.routes.generate_pdf",
+            side_effect=SigningError(
+                "fpdf2 is not installed. Install with `pip install dazzle-dsl[signing]`."
+            ),
+        ):
+            resp = client.post(
+                f"/api/sign/Contract/{record_id}",
+                json={"token": token, "signatory_name": "Alice"},
+            )
+        assert resp.status_code == 500
+        assert "dazzle-dsl[signing]" in resp.json()["detail"]
+        # No status mutation on a failed sign.
+        assert repo.update_calls == []
+
     def test_signing_validator_dotted_path_must_be_valid(self) -> None:
         record_id = str(uuid4())
         app, _ = _app_with_routes(

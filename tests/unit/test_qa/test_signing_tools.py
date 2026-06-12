@@ -224,6 +224,50 @@ def test_open_signing_link_matches_seeded_doc(tmp_path: Path) -> None:
     assert sink["invoked"][-1] == "open_signing_link"
 
 
+def test_open_signing_link_marks_truncation_explicitly(tmp_path: Path) -> None:
+    """#1378: a silent [:800] cut made personas file false high-severity
+    "document truncated mid-sentence" bugs. Long pages must carry an
+    explicit excerpt marker; short pages must carry none."""
+    from unittest.mock import MagicMock, patch
+
+    from dazzle.qa.signing_tools import _PAGE_TEXT_CAP
+
+    inbox = tmp_path / "inbox.json"
+    inbox.write_text("[]")
+    doc = SeededDoc(
+        entity="Contract",
+        id="doc-1",
+        token="mytoken",
+        signing_url="http://localhost:3000/sign/Contract/doc-1?token=mytoken",
+        signatory_email="signer@example.com",
+    )
+    sink: dict = {}
+    tools = build_signing_tools(
+        base_url="http://localhost:3000",
+        inbox_path=inbox,
+        seeded_docs=[doc],
+        action_sink=sink,
+    )
+    open_link = next(t for t in tools if t.name == "open_signing_link")
+    args = {"entity": "Contract", "id": "doc-1", "token": "mytoken"}
+
+    long_page = MagicMock(status_code=200, text="<p>" + "waiver term x " * 600 + "</p>")
+    long_page.content = long_page.text.encode()
+    with patch("dazzle.qa.signing_tools.httpx.get", return_value=long_page):
+        result = _invoke(open_link, args)
+    assert "tool excerpt truncated" in result
+    # The persona must see substantially more than the old 800-char cap.
+    assert len(result) > 800
+
+    short_page = MagicMock(status_code=200, text="<p>short waiver</p>")
+    short_page.content = short_page.text.encode()
+    with patch("dazzle.qa.signing_tools.httpx.get", return_value=short_page):
+        result = _invoke(open_link, args)
+    assert "tool excerpt truncated" not in result
+    assert "short waiver" in result
+    assert _PAGE_TEXT_CAP >= 4000
+
+
 def test_read_inbox_machine_readable_format(tmp_path: Path) -> None:
     """read_inbox formats each entry with entity, id, and token on separate labelled lines."""
     inbox = tmp_path / "inbox.json"

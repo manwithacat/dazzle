@@ -36,7 +36,10 @@ def _make_entity(name: str, *fields: MagicMock) -> MagicMock:
 def test_provision_returns_context_when_signable(tmp_path: Path):
     app_spec = MagicMock()
     app_spec.has_signable_entity.return_value = True
-    with patch("dazzle.cli.qa.mint_ephemeral_cert_env") as mint:
+    with (
+        patch("dazzle.cli.qa._missing_signing_server_deps", return_value=[]),
+        patch("dazzle.cli.qa.mint_ephemeral_cert_env") as mint,
+    ):
         mint.return_value = {
             "SIGNING_CERT_PFX_B64": "x",
             "SIGNING_CERT_PASSWORD": "y",
@@ -51,6 +54,21 @@ def test_provision_returns_none_when_no_signable(tmp_path: Path):
     app_spec = MagicMock()
     app_spec.has_signable_entity.return_value = False
     assert _provision_signing_env(app_spec, tmp_path, project_name="Test") is None
+
+
+def test_provision_aborts_when_signing_server_deps_missing(tmp_path: Path):
+    """#1377: provisioning the signing rig without fpdf2/pyhanko burned a
+    full persona run into a guaranteed sign_document HTTP 500. The
+    preflight must exit 2 with the install hint instead."""
+    import pytest
+    import typer
+
+    app_spec = MagicMock()
+    app_spec.has_signable_entity.return_value = True
+    with patch("dazzle.cli.qa._missing_signing_server_deps", return_value=["fpdf", "pyhanko"]):
+        with pytest.raises(typer.Exit) as exc:
+            _provision_signing_env(app_spec, tmp_path, project_name="Test")
+    assert exc.value.exit_code == 2
 
 
 def test_seed_creates_one_doc_per_signable_entity():

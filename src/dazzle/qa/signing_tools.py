@@ -26,6 +26,10 @@ from dazzle.qa.signing_seed import SeededDoc
 # Used as a stub signature image for the signing route's `signature_png_b64` field.
 _STUB_SIGNATURE_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAFklEQVR4nGP8//8/A27AhEeOYeRKAwCl4wMRx3ocVQAAAABJRU5ErkJggg=="
 
+# open_signing_link page-text cap. The signing document is the payload the
+# persona must read to make a signing decision — generous on purpose (#1378).
+_PAGE_TEXT_CAP = 4000
+
 
 def build_signing_tools(
     *,
@@ -152,7 +156,17 @@ def _make_open_signing_link(
             _record_request(action_sink, method="GET", url=url, status=resp.status_code)
             # Strip HTML tags and collapse whitespace to give the LLM readable text.
             page_text = re.sub(r"<[^>]+>", " ", resp.text)
-            page_text = re.sub(r"\s+", " ", page_text).strip()[:800]
+            page_text = re.sub(r"\s+", " ", page_text).strip()
+            # The document IS the payload on a signing page — a tight cap
+            # cut legal terms mid-clause and personas filed false
+            # "document truncated" bugs (#1378). Cap generously, and when
+            # we do cut, say so explicitly so the persona never mistakes
+            # the tool's excerpt for a broken document.
+            if len(page_text) > _PAGE_TEXT_CAP:
+                page_text = page_text[:_PAGE_TEXT_CAP] + (
+                    " …[tool excerpt truncated — the full document continues on the "
+                    "real page; do NOT report this cut-off as a product bug]"
+                )
             return (
                 f"Opened signing page for {entity}/{id}: "
                 f"HTTP {resp.status_code} ({len(resp.content)} bytes).\n\n"

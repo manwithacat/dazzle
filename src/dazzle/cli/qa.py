@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import os
 import re
 import shutil
@@ -309,6 +310,12 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
     return True
 
 
+def _missing_signing_server_deps() -> list[str]:
+    """Importable-module names from the [signing] extra that the signing
+    SERVER path needs but the current environment lacks."""
+    return [mod for mod in ("fpdf", "pyhanko") if importlib.util.find_spec(mod) is None]
+
+
 def _provision_signing_env(
     app_spec: Any,
     tmp_root: Path,
@@ -324,6 +331,21 @@ def _provision_signing_env(
     """
     if not app_spec.has_signable_entity():
         return None
+    # Preflight the SERVER half of the signing stack before burning an
+    # LLM persona run (#1377): minting the cert needs only cryptography,
+    # but sign_document needs fpdf2 + pyhanko in the server process. A
+    # missing extra used to surface 6 steps later as an HTTP 500 the
+    # persona could only describe as "showstopper".
+    missing = _missing_signing_server_deps()
+    if missing:
+        typer.echo(
+            f"Signing trial harness: {' + '.join(missing)} not installed — the app "
+            "has signable entities and sign_document would return HTTP 500. "
+            "Install with: pip install 'dazzle-dsl[signing]' "
+            "(or: uv pip install 'fpdf2>=2.8.0' 'pyhanko>=0.25.0' 'Pillow>=10.0')",
+            err=True,
+        )
+        raise typer.Exit(code=2)
     env = mint_ephemeral_cert_env(tmp_root, project_name=project_name)
     inbox_path = tmp_root / "mock_inbox.json"
     inbox_path.write_text("[]", encoding="utf-8")
