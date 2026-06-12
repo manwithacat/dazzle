@@ -51,7 +51,19 @@ def _project_error() -> str:
     if is_dev_mode():
         return json.dumps(
             {
-                "error": "No project selected. Use 'select_project' to choose one, or pass 'project_path' directly.",
+                "error": (
+                    "No project selected. This MCP server is rooted at a framework "
+                    "checkout (dev mode), which only discovers example apps under "
+                    "examples/ and never auto-selects one — so a project living "
+                    "outside examples/ is invisible to it. To work on a specific "
+                    "project: call 'select_project', or pass 'project_path' directly, "
+                    "or (recommended) configure a project-scoped MCP entry with "
+                    "'--working-dir <project>', which gives that project its own lock, "
+                    "its own knowledge graph, and its pinned dazzle version instead of "
+                    "the framework-dev install. See docs/architecture/mcp-server.md "
+                    "(Per-project vs. global configuration)."
+                ),
+                "mode": "dev",
                 "available_projects": list(get_available_projects().keys()),
             }
         )

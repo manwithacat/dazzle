@@ -137,6 +137,28 @@ class TestFormatConflictMessage:
         # Should not raise on missing fields
         assert "kill 99" in msg
 
+    def _make_framework_checkout(self, root: Path) -> None:
+        """Build a dir that `_detect_dev_environment` recognises as a checkout."""
+        (root / "src" / "dazzle").mkdir(parents=True)
+        (root / "examples").mkdir()
+        (root / "pyproject.toml").write_text('[project]\nname = "dazzle-dsl"\n')
+
+    def test_framework_checkout_root_gets_project_scoped_hint(self, tmp_path: Path) -> None:
+        # #1374: a framework-rooted global MCP collides across sessions; the
+        # conflict message must nudge toward a project-scoped config.
+        self._make_framework_checkout(tmp_path)
+        conflict = LockConflict(pid=321, started_at=None, working_dir=None)
+        msg = format_conflict_message(conflict, tmp_path)
+        assert "--working-dir" in msg
+        assert "framework checkout" in msg
+
+    def test_plain_project_root_gets_no_dev_hint(self, tmp_path: Path) -> None:
+        # A normal project root (not a framework checkout) must not get the hint.
+        (tmp_path / "dazzle.toml").write_text('[project]\nname = "app"\n')
+        conflict = LockConflict(pid=322, started_at=None, working_dir=None)
+        msg = format_conflict_message(conflict, tmp_path)
+        assert "--working-dir" not in msg
+
     def test_age_formatting(self) -> None:
         assert _format_age(5) == "5s"
         assert _format_age(120) == "2m"

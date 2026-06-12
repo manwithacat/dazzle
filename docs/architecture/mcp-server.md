@@ -373,6 +373,46 @@ The MCP server is registered at `~/.claude/settings.json` (Claude Code) or `~/.c
 
 For Homebrew installations, this is configured automatically via `dazzle mcp setup`.
 
+### Per-project vs. global configuration
+
+**Prefer a project-scoped MCP entry over a single global, framework-rooted one.**
+
+When the server's working directory is a *framework checkout* (a clone of Dazzle
+itself — no `dazzle.toml`, but `src/dazzle/` + `examples/` present), it runs in
+**dev mode**: it only discovers the example apps under `examples/` and never
+auto-selects one. That is correct for working *on the framework*, but if you
+point one global MCP entry at the framework checkout and then open an unrelated
+project, two silent traps follow (#1374):
+
+- **Concurrent sessions collide.** The MCP lock is keyed per project root
+  (`<root>/.dazzle/mcp.lock`) to stop two servers racing the knowledge-graph
+  SQLite WAL. A global config pins *one* root for every session, so the second
+  session to boot fails with "Another DAZZLE MCP server is already running."
+- **Other projects are mis-rooted.** A project living outside `examples/` is
+  invisible to a framework-rooted server. Project tools either error ("No
+  project selected…") or operate on the framework-dev install — the wrong
+  knowledge graph and an unexpectedly-old `dazzle` version, so e.g. `dsl
+  validate` may reject newer grammar your project legitimately uses.
+
+The fix is to give **each project its own MCP entry** pointed at that project,
+using the project's own interpreter:
+
+```json
+{
+  "mcpServers": {
+    "dazzle-myproject": {
+      "command": "/path/to/MyProject/.venv/bin/python",
+      "args": ["-m", "dazzle.mcp", "--working-dir", "/path/to/MyProject"]
+    }
+  }
+}
+```
+
+Each project-scoped entry gets its own lock, its own knowledge graph, and the
+`dazzle` version pinned in that project's environment. Reserve a
+framework-rooted entry (`--working-dir <dazzle-checkout>`) for working *in* the
+framework repo, and use `select_project` to choose among its example apps.
+
 ## Internal Architecture
 
 The MCP server uses consolidated handlers for maintainability:
@@ -427,6 +467,25 @@ brew upgrade manwithacat/tap/dazzle
 # or
 pip install --upgrade dazzle-dsl
 ```
+
+### "Another DAZZLE MCP server is already running"
+
+A second Claude Code session can't start the MCP because the per-root lock is
+already held. This usually means a **single global MCP entry rooted at a
+framework checkout** is shared by every session — see
+[Per-project vs. global configuration](#per-project-vs-global-configuration).
+Give each project its own `--working-dir <project>` entry so it gets its own
+lock. (To release a genuinely stale lock, the failure message prints the holder
+PID and a `kill` command.)
+
+### Project tools return "No project selected" or operate on the wrong version
+
+The MCP is in **dev mode** (rooted at a framework checkout) and your project
+lives outside `examples/`, so it isn't discovered. Either `select_project`
+(for example apps), pass `project_path` explicitly, or — for a real project —
+configure a project-scoped MCP entry as above. A framework-rooted server runs
+the framework-dev `dazzle`, not your project's pinned wheel, which is why
+`dsl validate` can reject grammar your project legitimately uses.
 
 ## See Also
 

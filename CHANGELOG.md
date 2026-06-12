@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.37] - 2026-06-12
+
+### Fixed
+- **MCP dev-mode guardrails: a framework-rooted global server no longer fails silently for other
+  projects** (#1374). A globally-configured `--working-dir <framework-checkout>` MCP entry runs in dev
+  mode (discovers only `examples/`, never auto-selects), creating two silent traps for concurrent
+  framework+project work. Added guardrails (the per-root lock and per-project KG resolution were already
+  correct — this is surfacing, not behaviour change):
+  - `_project_error()`'s dev-mode branch now returns actionable guidance — explains the framework-rooted
+    dev-mode rooting and recommends a project-scoped `--working-dir <project>` entry (own lock, own
+    knowledge graph, pinned version) alongside the `select_project` / `project_path` escape hatches —
+    plus a `mode: "dev"` field, instead of an opaque "no project selected".
+  - `format_conflict_message()` appends a project-scoped-config hint when the contended root is a
+    framework checkout, so "Another DAZZLE MCP server is already running" explains *why* a second session
+    collides.
+  - `docs/architecture/mcp-server.md` gained a "Per-project vs. global configuration" section and two
+    troubleshooting entries covering both traps.
+
+### Agent Guidance
+- Recommend a **project-scoped** MCP entry (`--working-dir <project>` with the project's own interpreter)
+  over a single global framework-rooted one — each project then gets its own lock, knowledge graph, and
+  pinned `dazzle` version. Reserve a framework-rooted entry for working in the framework repo itself
+  (use `select_project` for its example apps). See `docs/architecture/mcp-server.md`.
+
 ## [0.82.36] - 2026-06-12
 
 ### Changed

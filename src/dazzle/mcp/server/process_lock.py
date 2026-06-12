@@ -223,6 +223,26 @@ def format_conflict_message(conflict: LockConflict, project_root: Path) -> str:
         lines.append(f"  Cwd:     {conflict.working_dir}")
     lines.append("")
     lines.append(f"To release: kill {conflict.pid}")
+    # A single global MCP rooted at a framework checkout pins one project root
+    # for *every* session, so the second session to boot can't acquire this
+    # per-root lock (#1374). If this root is a framework checkout, nudge toward
+    # a project-scoped config, which gets its own lock + KG and sidesteps this.
+    try:
+        from .state import _detect_dev_environment
+
+        is_framework_checkout = _detect_dev_environment(project_root)
+    except Exception:
+        # Never let a guidance hint break the (already-failing) boot path.
+        logger.debug("dev-environment probe for conflict hint failed", exc_info=True)
+        is_framework_checkout = False
+    if is_framework_checkout:
+        lines.append("")
+        lines.append(
+            "This root is a framework checkout. If you meant to work on a "
+            "specific project, point the MCP at that project's directory "
+            "(--working-dir <project>) so it gets its own lock, knowledge "
+            "graph, and pinned version rather than sharing this global one."
+        )
     return "\n".join(lines)
 
 
