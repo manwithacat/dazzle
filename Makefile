@@ -62,16 +62,16 @@ dev-install:
 # =============================================================================
 
 lint:
-	ruff check src/ tests/
+	uv run ruff check src/ tests/
 
 format:
-	ruff format src/ tests/
+	uv run ruff format src/ tests/
 
 format-check:
-	ruff format --check src/ tests/
+	uv run ruff format --check src/ tests/
 
 type-check:
-	mypy src/dazzle --ignore-missing-imports
+	uv run mypy src/dazzle --ignore-missing-imports
 
 security:
 	@echo "=== Bandit Security Check ==="
@@ -88,10 +88,10 @@ spell:
 # =============================================================================
 
 test:
-	pytest tests/ -v
+	uv run pytest tests/ -v
 
 test-fast:
-	pytest tests/ -x -q --ignore=tests/integration/ -m "not slow"
+	uv run pytest tests/ -x -q --ignore=tests/integration/ -m "not slow"
 
 # Fast infrastructure-drift gate used by /ux-cycle (cycles 312 + 314).
 # Runs the 4 horizontal-discipline lints + snapshot tests + card-safety invariants
@@ -107,14 +107,14 @@ test-ux-preflight:
 	@# the structural anchor for UI changes. The 4 remaining tests still
 	@# guard meaningful invariants (canonical-pointer linkage, template
 	@# None-safety, external-resource SRI, IR↔field-reader parity).
-	pytest tests/unit/test_canonical_pointer_lint.py \
+	uv run pytest tests/unit/test_canonical_pointer_lint.py \
 	       tests/unit/test_template_none_safety.py \
 	       tests/unit/test_external_resource_lint.py \
 	       tests/unit/test_ir_field_reader_parity.py \
 	       tests/unit/test_typed_runtime_no_jinja.py \
 	       -q
 	@# src/dazzle_ui/ merged into src/dazzle/ui/ in v0.67.98 (#1055).
-	mypy src/dazzle/ui/ --ignore-missing-imports
+	uv run mypy src/dazzle/ui/ --ignore-missing-imports
 	@# Non-blocking dist/ drift warning (cycle 319, silent-drift class 3).
 	@# Cycle 317 gap doc flagged dist/ accumulating across ~20 cycles; this
 	@# surfaces it on every preflight but doesn't fail the cycle — runs
@@ -134,7 +134,7 @@ test-ux-preflight:
 #
 # Path note: src/dazzle_back/ → src/dazzle/back/ at v0.67.98 (#1055).
 test-ux-deep: test-ux-preflight
-	mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle/back/ \
+	uv run mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle/back/ \
 	     --ignore-missing-imports --exclude 'eject'
 
 # On-demand half-finished-internals audit. Not part of preflight — regenerates
@@ -143,16 +143,16 @@ test-ux-deep: test-ux-preflight
 # #834 (hot_reload.py). Expected FP rate is high (cycle 328 measured ~83% for
 # module orphans); report format supports human skimming, not blocking CI.
 audit-internals:
-	python tests/unit/audit_internals.py
+	uv run python tests/unit/audit_internals.py
 
 test-integration:
-	pytest tests/integration/ -v
+	uv run pytest tests/integration/ -v
 
 test-all:
-	pytest tests/ -v --cov=src/dazzle --cov-report=term-missing
+	uv run pytest tests/ -v --cov=src/dazzle --cov-report=term-missing
 
 coverage:
-	pytest tests/ -v --cov=src/dazzle --cov-report=html --cov-report=term-missing
+	uv run pytest tests/ -v --cov=src/dazzle --cov-report=html --cov-report=term-missing
 	@echo ""
 	@echo "Coverage report: htmlcov/index.html"
 
