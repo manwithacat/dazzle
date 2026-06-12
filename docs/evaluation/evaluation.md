@@ -2,7 +2,7 @@
 
 <!-- MkDocs copy adapted from ../../EVALUATION.md; update both files together. -->
 
-*Last reviewed against v0.71.101 (2026-05-21).*
+*Last reviewed against v0.82.35 (2026-06-12).*
 
 This guide is for someone deciding whether Dazzle is worth their time. It
 assumes you are skeptical, short on time (~30 minutes), and want to see claims
@@ -45,8 +45,9 @@ properties that are normally scattered across hand-written code become
 ## Setup (~5 min)
 
 ```bash
-# From a clone of the repo:
-pip install -e ".[dev,llm,mcp]"
+# From a clone of the repo (uv is the canonical toolchain):
+uv sync --extra dev --extra llm --extra mcp
+# pip still works:           pip install -e ".[dev,llm,mcp]"
 # Or the published package:  pip install dazzle-dsl
 
 cd examples/support_tickets        # a small multi-role app used below
@@ -210,12 +211,15 @@ Ratings use the rubric in [`security-claims.md`](security-claims.md#maturity-rub
 
 | Subsystem | Maturity | One-line basis |
 |-----------|----------|----------------|
-| DSL parser + IR | **Stable** | Largest test surface in the repo; API-surface drift gates; 13 example apps + CI. |
+| DSL parser + IR | **Stable** | Largest test surface in the repo; API-surface drift gates; 14 example apps + CI. |
 | RBAC static matrix | **Stable** | Well-tested; CI security gate asserts zero unprotected cells on the RBAC fixture. |
 | Scope predicate algebra | **Beta** | Formal algebra, FK-graph-validated; parser-surface edge cases fixed as recently as v0.71.96. |
 | Runtime RBAC enforcement | **Beta** | Enforced on every CRUD route + tested; security fixes landed within the last few releases. |
 | Dynamic RBAC verifier | **Beta** | Real verifier since v0.71.91 (replaced a stub); functional, tested, needs live PostgreSQL. |
 | RBAC audit trail | **Beta** | Production `AuditLogger` → PostgreSQL; recently hardened (fail-closed mode, scope-deny capture). |
+| Session CSRF protection | **Beta** | Session-bound token + Origin gate, auth-class-derived disposition (ADR-0033); shipped v0.81.15–18, tested. |
+| Enterprise SSO/SCIM (opt-in) | **Beta** | OIDC/SAML/SCIM behind a `[capabilities]` opt-in registry; each piece tested, cluster (#1342) still in active development. |
+| Membership-fenced tenancy | **Beta** | Membership-derived `tenant_id` + Postgres RLS, proven vs real PG as non-superuser; RLS Phases A+E shipped, B–D roadmap. |
 | Compliance evidence mapping | **Beta** | ~100 tests; does what the docs claim; `partial` status unimplemented. |
 | Compliance — operational/infra checks | **Roadmap** | Not built. The pipeline reasons about the DSL spec only. |
 | MCP server / AI workflows | **Beta** | 30+ tools, all handlers implemented, ~315 tests; handler tests mock heavily, API still growing. |
@@ -274,7 +278,7 @@ Where a number *is* meaningful, these are reproducible:
 | Static decision coverage | `dazzle rbac matrix --format json` → share of cells not `PERMIT_UNPROTECTED` | 100% (360/360) on `shapes_validation` |
 | Runtime verifier pass rate | `dazzle rbac verify` → `passed / total` | run it yourself (needs PostgreSQL) |
 | Compliance coverage | `dazzle compliance compile` → `Coverage` line | 54% SOC 2 on `support_tickets` |
-| Test suite size | `pytest tests/ -m "not e2e" --co -q` | ~15,800 unit tests (~1,600 touch RBAC/scope/audit/compliance) |
+| Test suite size | `pytest tests/ -m "not e2e" --co -q` | ~17,900 unit tests (~1,600 touch RBAC/scope/audit/compliance) |
 
 ---
 
@@ -289,8 +293,8 @@ Where a number *is* meaningful, these are reproducible:
   not look at infrastructure. ~40% of ISO 27001 controls are not even
   assessable from a DSL.
 - **Several RBAC subsystems are Beta and young.** The dynamic verifier shipped
-  weeks ago; the enforcement path has had security fixes recently. Sound
-  architecture, still-hardening surface.
+  in the 0.71 series; the enforcement path has had security fixes across recent
+  releases. Sound architecture, still-hardening surface.
 - **The DSL is opinionated.** Adopting Dazzle means adopting its model of
   entities/roles/workflows. That is the real cost the capability matrix above
   does not show.

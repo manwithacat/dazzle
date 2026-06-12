@@ -2,7 +2,7 @@
 
 <!-- MkDocs copy adapted from ../../SECURITY_CLAIMS.md; update both files together. -->
 
-*Last reviewed against v0.71.101 (2026-05-21).*
+*Last reviewed against v0.82.35 (2026-06-12).*
 
 This document inventories every security-relevant claim Dazzle makes, with its
 implementation status, where it is enforced, where it is tested, and its known
@@ -41,13 +41,16 @@ last few releases (see the gap columns).
 
 | Subsystem | Maturity | Basis |
 |-----------|----------|-------|
-| DSL parser + IR | **Stable** | Largest test surface in the repo; API-surface drift gates; every construct exercised by 13 example apps and CI. |
+| DSL parser + IR | **Stable** | Largest test surface in the repo; API-surface drift gates; every construct exercised by 14 example apps and CI. |
 | RBAC static matrix | **Stable** | `generate_access_matrix` is well-tested; CI has a dedicated security gate asserting the `shapes_validation` matrix has zero unprotected cells. |
 | Scope predicate algebra | **Beta** | Formal 6-type predicate algebra, statically validated against the FK graph at `dazzle validate` time. Core is solid; parser-surface edge cases were still being fixed as recently as v0.71.96 (#1180). |
 | Runtime RBAC enforcement | **Beta** | Enforced on every generated CRUD route and tested — but the enforcement surface has had security fixes land recently (bulk endpoints, FK errors, scope-deny auditing). |
 | Dynamic RBAC verifier | **Beta** | A real verifier (boots the app, probes every role) shipped in v0.71.91 (#1171), replacing an earlier stub. Functional and tested, but only weeks old and requires a live PostgreSQL server. |
 | RBAC audit trail | **Beta** | The production `AuditLogger` writes every CRUD decision to PostgreSQL. Recently hardened (fail-closed mode #1172; scope-denied writes captured since #1179). |
 | Compliance evidence mapping | **Beta** | Maps DSL constructs to ISO 27001 / SOC 2 controls and flags coverage gaps. Does exactly what the (reframed) docs claim; the `partial` status is reserved but unimplemented. |
+| Session CSRF protection | **Beta** | Session-bound token + Origin gate with auth-class-derived disposition (ADR-0033). Shipped v0.81.15–18; young but tested. |
+| Enterprise SSO/SCIM (opt-in) | **Beta** | OIDC/SAML/SCIM behind a `[capabilities]` opt-in registry; a greenfield app exposes none. Each piece is tested, but the cluster (#1342) is still in active development. |
+| Membership-fenced tenancy | **Beta** | Global Identity + Org + fenced Membership; PostgreSQL RLS keyed on a membership-derived `tenant_id`, proven against real PG as a non-superuser. Phases A+E shipped; generated RLS (B–D) is roadmap. |
 
 ---
 
@@ -95,8 +98,10 @@ stated limits) · **Roadmap** (not yet built).
   generated route applies the role's `scope:` predicate as a SQL filter (or a
   pre-read for single-id ops). A row outside the caller's scope yields 404 on a
   single-id op — row existence stays opaque.
-- **Enforced where:** `src/dazzle/back/runtime/route_generator.py`
-  (`_build_cedar_handler`, `_scoped_pre_read`).
+- **Enforced where:** `src/dazzle/back/runtime/audit_wrap.py`
+  (`_build_cedar_handler`) and `scope_filters.py` (`_scoped_pre_read`),
+  assembled by `route_generator.py` — the #1361 god-file split extracted
+  these handler/filter clusters out of `route_generator.py`.
 - **Tested where:** `tests/unit/test_row_level_access.py`,
   `test_scoped_pre_read.py`, `tests/integration/test_acme_billing_rbac.py`.
 - **Known gaps:** This surface has had security fixes land recently — bulk-action
@@ -133,6 +138,57 @@ stated limits) · **Roadmap** (not yet built).
   #1172, and scope-denied UPDATE/DELETE were not captured until #1179. The
   `dazzle.rbac.audit` *sink* (`NullAuditSink` by default) is a separate
   verification-layer seam, **not** the production trail — don't confuse the two.
+
+### Authentication & tenancy
+
+#### C7 · Session mutations are gated by auth-class-derived CSRF protection
+- **Status:** Implemented · **Maturity:** Beta
+- **What it means:** State-changing requests are protected by a session-bound
+  CSRF token plus an Origin/Referer gate, with the disposition (enforce, exempt,
+  report) derived from each route's auth class rather than hand-wired per route.
+  The resulting policy is auditable.
+- **Enforced where:** `src/dazzle/back/runtime/csrf.py`; design recorded in
+  ADR-0033 (CSRF as an auth-class disposition).
+- **Tested where:** `tests/unit/test_csrf_disposition_phase3.py`,
+  `test_csrf_origin_gate_phase2.py`, `test_csrf_exempt_paths.py`,
+  `test_csrf_middleware_defers_to_route_cookie.py`.
+- **Known gaps:** Shipped across v0.81.15–18; ADR-0033 §Deferred lists hardening
+  deliberately not built (hx-headers transport switch, a DSL escape hatch). The
+  disposition surface is young — treat it as correct-but-recent.
+
+#### C8 · Enterprise SSO/SCIM is available only behind an explicit opt-in capability
+- **Status:** Implemented · **Maturity:** Beta
+- **What it means:** OIDC/SAML login and SCIM user/group provisioning are gated
+  behind a `[capabilities]` opt-in registry — a greenfield app exposes none of
+  these routes. SAML supports IdP-metadata import, SP-signed AuthnRequests,
+  encrypted assertions, and Single-Logout; SCIM supports the /Users, /Groups,
+  /ResourceTypes, and /Schemas endpoints.
+- **Enforced where:** `src/dazzle/back/runtime/auth/saml_provider.py`,
+  `saml_routes.py`, `scim_provisioning.py`, `scim_routes.py`; opt-in gate in
+  `auth/capability_guard.py`.
+- **Tested where:** `tests/integration/test_saml_routes.py`,
+  `test_scim_routes.py`; `tests/unit/test_saml_provider.py`,
+  `test_saml_metadata.py`, `test_saml_logout.py`.
+- **Known gaps:** The enterprise-auth cluster (#1342) is **still in active
+  development** — SP-initiated SLO and a boot guard (#1344) remain. Rated Beta:
+  each piece is code + tested, but the surface is young and the issue is open.
+
+#### C9 · Tenant rows are fenced by membership-derived row-level security
+- **Status:** Partial · **Maturity:** Beta
+- **What it means:** Identity is modelled as a global Identity + Org + fenced
+  Membership, with the active membership binding the request's `tenant_id`.
+  PostgreSQL row-level security keyed on that discriminator fences tenant rows;
+  fencing has been proven against a real database as a non-superuser.
+- **Enforced where:** `src/dazzle/back/runtime/auth/` (membership +
+  `current.py`); RLS binding derived from the active membership. The QA-auth
+  containment invariant is recorded in ADR-0035.
+- **Tested where:** `tests/integration/test_membership_rls_activation_pg.py`,
+  `test_auth_orgprovision_pg.py`; `tests/unit/test_bind_rls_from_membership.py`,
+  `test_auth_membership_model.py`.
+- **Known gaps:** RLS Phases A (discriminator substrate) and E (tenant
+  lifecycle) have shipped; generating RLS from the scope algebra (Phases B–D) is
+  roadmap. `Partial`: the substrate and activation path are real and tested, but
+  full per-entity RLS generation is not yet wired across the example fleet.
 
 ### Compliance
 

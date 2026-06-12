@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.36] - 2026-06-12
+
+### Changed
+- **Evaluator-facing claims docs refreshed and extended** (#1370). `EVALUATION.md` and
+  `SECURITY_CLAIMS.md` (plus their MkDocs mirrors under `docs/evaluation/`) were last reviewed at
+  v0.71.101 — 11 minor versions and several security-relevant subsystems behind. Refreshed the stale
+  facts: review stamp → v0.82.35; the C3 "enforced where" pointer now names `audit_wrap.py`
+  (`_build_cedar_handler`) and `scope_filters.py` (`_scoped_pre_read`) after the #1361 route_generator
+  split (was `route_generator.py`); example-app count 13 → 14; test-suite headline ~15,800 → ~17,900;
+  setup now leads with the canonical `uv sync`; rotted "weeks ago" recency language corrected. Extended
+  the claims inventory with three new entries, all rated **Beta** conservatively (no existing ratings
+  promoted): **C7** session/CSRF (auth-class-derived disposition, ADR-0033), **C8** enterprise SSO/SCIM
+  behind the `[capabilities]` opt-in registry (noted as still in active development under #1342), and
+  **C9** membership-fenced tenancy (`Partial`: RLS Phases A+E shipped, generated RLS B–D roadmap). Each
+  new entry cites its enforcing module and the automated tests that exercise it, per the doc's honesty
+  principle.
+
 ## [0.82.35] - 2026-06-12
 
 ### Fixed
