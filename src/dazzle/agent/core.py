@@ -397,6 +397,7 @@ class DazzleAgent:
         api_key: str | None = None,
         mcp_session: Any = None,
         use_tool_calls: bool = False,
+        llm_driver: str = "anthropic-api",
     ):
         self._observer = observer
         self._executor = executor
@@ -405,6 +406,16 @@ class DazzleAgent:
         self._mcp_session = mcp_session
         self._use_tool_calls = use_tool_calls
         self._tool_use_warned = False  # one-shot warning latch for MCP+tool_calls path
+        self._llm_driver = llm_driver
+        if llm_driver == "claude-cli" and use_tool_calls:
+            # claude -p is a text pipe — no native tool-use blocks. The
+            # text protocol's robust parser carries tool invocations
+            # instead, exactly as on the MCP sampling path.
+            logger.warning(
+                "use_tool_calls=True requested but llm_driver='claude-cli' "
+                "only supports the text protocol; falling back to text protocol."
+            )
+            self._use_tool_calls = False
         self._client: Any = None
         self._history: list[Step] = []
         self._tokens_used = 0
@@ -549,8 +560,10 @@ class DazzleAgent:
         """
         Get the next action from the LLM.
 
-        Three-way dispatch:
+        Four-way dispatch:
         - MCP sampling (mcp_session is not None) → text protocol via _decide_via_sampling
+        - llm_driver="claude-cli" → text protocol via _decide_via_claude_cli
+          (subscription-billed Claude Code CLI; no API key)
         - SDK + use_tool_calls=True → native tool use via _decide_via_anthropic_tools
         - SDK + use_tool_calls=False → text protocol via _decide_via_anthropic (default)
 
@@ -580,6 +593,10 @@ class DazzleAgent:
                 )
                 self._tool_use_warned = True
             response_text, tokens = await self._decide_via_sampling(system_prompt, messages)
+            action = self._parse_action(response_text, tool_registry)
+        elif self._llm_driver == "claude-cli":
+            # Path δ: Claude Code CLI + text protocol (subscription billing)
+            response_text, tokens = self._decide_via_claude_cli(system_prompt, messages)
             action = self._parse_action(response_text, tool_registry)
         elif self._use_tool_calls:
             # Path β: SDK + native tool use
@@ -720,6 +737,44 @@ class DazzleAgent:
 
         response_text = response.content[0].text.strip()
         return response_text, tokens
+
+    def _decide_via_claude_cli(
+        self,
+        system_prompt: str,
+        messages: list[dict[str, Any]],
+    ) -> tuple[str, int]:
+        """Request a completion via the Claude Code CLI (subscription-billed).
+
+        ``claude -p`` takes one prompt string per invocation, so the
+        message list (history + current state) is flattened to text the
+        same way the MCP sampling path flattens it — text parts only,
+        images skipped. Each step is a fresh CLI invocation carrying the
+        full flattened context; the loop's continuity lives in the
+        message history, not in any CLI session state.
+        """
+        from dazzle.llm.driver import call_claude_cli
+
+        parts: list[str] = []
+        for msg in messages:
+            content = msg["content"]
+            if isinstance(content, str):
+                text = content
+            elif isinstance(content, list):
+                # Extract text parts, skip images (claude -p is text-only here)
+                text_parts = [p["text"] for p in content if p.get("type") == "text"]
+                text = "\n".join(text_parts)
+            else:
+                text = str(content)
+            if msg["role"] == "assistant":
+                parts.append(f"[Your previous reply]\n{text}")
+            else:
+                parts.append(text)
+
+        return call_claude_cli(
+            "\n\n".join(parts),
+            system_prompt=system_prompt,
+            model=self._model,
+        )
 
     async def _decide_via_sampling(
         self,

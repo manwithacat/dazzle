@@ -888,6 +888,17 @@ def qa_trial(
     model: str | None = typer.Option(
         None, "--model", help="Override LLM model (default: Claude Sonnet)"
     ),
+    llm_driver: str | None = typer.Option(
+        None,
+        "--llm-driver",
+        help=(
+            "How the trial persona reaches the model: 'claude-cli' "
+            "(Claude Code CLI, billed to your Claude subscription — no API "
+            "key) or 'anthropic-api' (metered, ANTHROPIC_API_KEY). Default: "
+            "DAZZLE_LLM_DRIVER env, then [llm] driver in dazzle.toml, then "
+            "auto-detect. See docs/reference/llm-drivers.md."
+        ),
+    ),
     fresh_db: bool = typer.Option(
         False,
         "--fresh-db",
@@ -974,7 +985,31 @@ def qa_trial(
         )
         raise typer.Exit(code=2)
 
+    # Resolve the LLM driver before any server/db work so a missing
+    # key or CLI fails fast with onboarding guidance, not mid-trial.
+    from dazzle.core.manifest import load_manifest
+    from dazzle.llm.driver import LLMDriverError, resolve_llm_driver
+
+    manifest_driver: str | None = None
+    manifest_path = project_dir / "dazzle.toml"
+    if manifest_path.exists():
+        try:
+            manifest_driver = load_manifest(manifest_path).llm.driver
+        except Exception:
+            manifest_driver = None  # manifest problems surface later, in full
+    try:
+        resolved_driver = resolve_llm_driver(explicit=llm_driver, manifest_driver=manifest_driver)
+    except LLMDriverError as exc:
+        typer.echo(f"LLM driver: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
+    billing_note = (
+        "Claude subscription via Claude Code CLI"
+        if resolved_driver == "claude-cli"
+        else "Anthropic API (metered)"
+    )
     typer.echo(f"Trial scenario: {scenario_name} (as persona {login_persona})")
+    typer.echo(f"LLM driver: {resolved_driver} ({billing_note})")
 
     if fresh_db:
         _reset_db_for_trial(project_dir)
@@ -1133,7 +1168,10 @@ def qa_trial(
                         observer=observer_inner,
                         executor=executor_inner,
                         model=model,
-                        use_tool_calls=True,
+                        # Native tool use needs the SDK; the claude-cli
+                        # driver carries tools over the text protocol.
+                        use_tool_calls=resolved_driver != "claude-cli",
+                        llm_driver=resolved_driver,
                     )
                     mission_inner = build_trial_mission(
                         chosen,
@@ -1174,6 +1212,7 @@ def qa_trial(
             business_context=chosen.get("business_context", ""),
             friction=friction,
             model=model,
+            llm_driver=resolved_driver,
         )
         if verdict:
             verdict = f"(synthesized from recorded friction — agent ran out of steps)\n\n{verdict}"

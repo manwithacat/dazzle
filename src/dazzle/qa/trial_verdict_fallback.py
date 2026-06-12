@@ -73,23 +73,43 @@ def synthesize_verdict(
     friction: list[dict[str, Any]],
     model: str | None = None,
     api_key: str | None = None,
+    llm_driver: str,
 ) -> str:
     """Call the LLM once to write a verdict from the friction record.
+
+    ``llm_driver`` is required (no default) — the verdict call must bill
+    the same way the trial itself did, so callers pass the driver they
+    resolved, never an assumption.
 
     Returns the verdict text, or an empty string if the LLM call
     fails for any reason (we'd rather have an empty verdict and a
     good report than crash at the end of a 3-minute trial).
     """
-    try:
-        import anthropic
-    except ImportError:
-        return ""
-
     prompt = _FALLBACK_SYSTEM_PROMPT.format(
         user_identity=user_identity.strip() or "(not specified)",
         business_context=business_context.strip() or "(not specified)",
         friction_summary=_format_friction_for_synthesis(friction),
     )
+    user_msg = "Write the verdict now. One paragraph, in character."
+
+    if llm_driver == "claude-cli":
+        try:
+            from dazzle.llm.driver import call_claude_cli
+
+            text, _tokens = call_claude_cli(
+                user_msg,
+                system_prompt=prompt,
+                model=model or DEFAULT_JUDGMENT_MODEL,
+            )
+            return text.strip()
+        except Exception:
+            logger.debug("ignored exception in verdict fallback (claude-cli)", exc_info=True)
+            return ""
+
+    try:
+        import anthropic
+    except ImportError:
+        return ""
 
     try:
         client_kwargs: dict[str, Any] = {}
@@ -103,12 +123,7 @@ def synthesize_verdict(
             model=model or DEFAULT_JUDGMENT_MODEL,
             max_tokens=512,
             system=prompt,
-            messages=[
-                {
-                    "role": "user",
-                    "content": ("Write the verdict now. One paragraph, in character."),
-                }
-            ],
+            messages=[{"role": "user", "content": user_msg}],
         )
         # Extract text from the first content block
         for block in resp.content:

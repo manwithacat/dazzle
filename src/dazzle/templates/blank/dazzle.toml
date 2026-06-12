@@ -12,6 +12,23 @@ enabled = true
 provider = "session"
 allow_registration = true
 
+# LLM cognition driver — how dev-time agents (`dazzle qa trial`, spec
+# analysis) and local `llm_intent` testing reach a Claude model.
+#
+#   "claude-cli"    = Claude Code CLI, billed to your Claude subscription.
+#                     No API key needed — install https://claude.com/claude-code
+#                     and sign in once with `claude`. Development only.
+#   "anthropic-api" = metered Anthropic API via ANTHROPIC_API_KEY.
+#                     Required when you deploy.
+#   "auto"          = anthropic-api if ANTHROPIC_API_KEY is set, else claude-cli.
+#
+# Ready to deploy? Create a key at https://console.anthropic.com/settings/keys,
+# set ANTHROPIC_API_KEY in the deployment environment, and switch this to
+# "anthropic-api". Full dev → deploy path: docs/reference/llm-drivers.md
+# (`dazzle doctor` checks this for you).
+[llm]
+driver = "claude-cli"
+
 # Environment profiles — select via: dazzle <command> --env <name>
 # Or set DAZZLE_ENV=<name> for CI/CD.
 # Priority: --database-url > --env profile > DATABASE_URL > [database].url > default

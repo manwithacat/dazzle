@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Subscription-billed LLM driver (`claude-cli`) — default for new projects.** Dazzle's dev-time
+  cognition (`dazzle qa trial` persona agent + verdict synthesis, spec analysis, local `llm_intent`
+  testing) can now run through the Claude Code CLI (`claude -p`), billed to the developer's Claude
+  subscription — no API credit needed to evaluate Dazzle:
+  - New `src/dazzle/llm/driver.py`: driver resolution (flag > `DAZZLE_LLM_DRIVER` > `[llm] driver`
+    in dazzle.toml > auto) and the single `claude -p` shell-out, which strips `ANTHROPIC_API_KEY`
+    from the subprocess env so the subscription is always what's billed.
+  - `DazzleAgent` grew an `llm_driver` param and a `_decide_via_claude_cli` text-protocol path
+    (native tool use auto-downgrades, same as the MCP sampling path). `dazzle qa trial --llm-driver`
+    selects per-run; the resolved driver + billing is echoed at trial start.
+  - `dazzle init`'s blank template now pins `[llm] driver = "claude-cli"` with the dev → deploy
+    path narrated in comments. `dazzle doctor` gained an "LLM cognition" section reporting the
+    resolved driver and the deploy checklist.
+  - **Production guard**: under `DAZZLE_ENV=production`, every path to `claude -p` refuses —
+    `call_claude_cli` itself, driver resolution, and `LLMAPIClient`'s silent no-key fallback —
+    and raises with the API-key onboarding steps (console.anthropic.com) instead of degrading
+    onto a developer's subscription. The prompt travels over stdin (not argv), and the subprocess
+    env strips `ANTHROPIC_API_KEY` so the key can never be silently billed.
+  - New `docs/reference/llm-drivers.md` documents the full dev → deploy path; linked from the
+    reference index.
+
+### Fixed
+- `LLMAPIClient(provider=CLAUDE_CLI)` no longer defaults its model to `gpt-4-turbo` — explicit
+  CLI-provider clients now default to the judgment-tier Claude model like the Anthropic path.
+
+### Agent Guidance
+- **LLM cognition routes through two seams only**: `dazzle.llm.driver` (resolution + `claude -p`)
+  and `LLMAPIClient` (SDK + fallback + production guard). Never construct `anthropic.Anthropic()`
+  directly in feature code. Dev default is the subscription driver; deployment requires
+  `ANTHROPIC_API_KEY` + `[llm] driver = "anthropic-api"` — see `docs/reference/llm-drivers.md`.
+
 ## [0.82.37] - 2026-06-12
 
 ### Fixed

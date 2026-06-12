@@ -10,24 +10,22 @@ from __future__ import annotations
 import json
 import logging
 import os
-import shutil
-import subprocess
 import uuid
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, cast
 
 from dazzle.core.model_defaults import ANTHROPIC_PRICING_PER_MTOK, DEFAULT_JUDGMENT_MODEL
+from dazzle.llm.driver import (
+    PRODUCTION_NEEDS_API_KEY_MSG,
+    call_claude_cli,
+    claude_cli_available,
+)
 
 if TYPE_CHECKING:
     from anthropic import Anthropic
     from openai import OpenAI
 
 logger = logging.getLogger(__name__)
-
-
-def _claude_cli_available() -> bool:
-    """Check if Claude CLI is available."""
-    return shutil.which("claude") is not None
 
 
 def _strip_code_fence(s: str) -> str:
@@ -48,39 +46,6 @@ def _strip_code_fence(s: str) -> str:
     if s.rstrip().endswith("```"):
         s = s.rstrip()[:-3]
     return s.strip()
-
-
-def _call_claude_cli(prompt: str, system_prompt: str | None = None) -> str:
-    """
-    Call Claude via CLI (uses subscription, no API key needed).
-
-    Args:
-        prompt: The user prompt
-        system_prompt: Optional system prompt
-
-    Returns:
-        Claude's response text
-    """
-    cmd = ["claude", "--print"]
-
-    if system_prompt:
-        cmd.extend(["--system-prompt", system_prompt])
-
-    cmd.append(prompt)
-
-    logger.info("Calling Claude via CLI (using subscription)")
-    # Strip CLAUDECODE env var so the subprocess doesn't refuse to start
-    # when invoked from inside a Claude Code session.
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=env)
-    except subprocess.TimeoutExpired:
-        raise RuntimeError("Claude CLI timed out after 300 seconds")
-
-    if result.returncode != 0:
-        raise RuntimeError(f"Claude CLI failed: {result.stderr}")
-
-    return result.stdout
 
 
 class LLMProvider(StrEnum):
@@ -149,7 +114,7 @@ class LLMAPIClient:
 
         # If no API key found, try Claude CLI fallback
         if not self.api_key and not self._use_cli_fallback:
-            if _claude_cli_available():
+            if claude_cli_available():
                 logger.info("No API key found, using Claude CLI fallback (subscription-based)")
                 self._use_cli_fallback = True
                 self.provider = LLMProvider.CLAUDE_CLI
@@ -158,18 +123,24 @@ class LLMAPIClient:
                     f"API key not found for {provider}.\n"
                     f"Options:\n"
                     f"  1. Set {api_key_env or 'ANTHROPIC_API_KEY'} environment variable\n"
-                    f"  2. Install Claude CLI: https://claude.ai/download\n"
+                    f"  2. Install the Claude Code CLI: https://claude.com/claude-code\n"
                     f"     (Uses your Claude subscription, no API key needed)"
                 )
+
+        # Subscription billing is a development convenience, never a
+        # production dependency — a deployed app must not run its
+        # cognition on a developer's personal Claude subscription.
+        if self._use_cli_fallback and os.environ.get("DAZZLE_ENV") == "production":
+            raise RuntimeError(PRODUCTION_NEEDS_API_KEY_MSG)
 
         # Set default model
         if model:
             self.model = model
+        elif provider == LLMProvider.OPENAI:
+            self.model = "gpt-4-turbo"
         else:
-            if provider == LLMProvider.ANTHROPIC:
-                self.model = DEFAULT_JUDGMENT_MODEL
-            else:
-                self.model = "gpt-4-turbo"
+            # Anthropic API and Claude CLI both speak Claude model IDs.
+            self.model = DEFAULT_JUDGMENT_MODEL
 
         # Initialize provider client
         self._init_client()
@@ -209,7 +180,10 @@ class LLMAPIClient:
             The LLM's response text.
         """
         if self._use_cli_fallback:
-            return _call_claude_cli(user_prompt, system_prompt)
+            text, _tokens = call_claude_cli(
+                user_prompt, system_prompt=system_prompt, model=self.model
+            )
+            return text
         elif self.provider == LLMProvider.ANTHROPIC:
             return self._call_anthropic(system_prompt, user_prompt)
         else:
@@ -244,7 +218,9 @@ class LLMAPIClient:
 
         # Call LLM
         if self._use_cli_fallback:
-            response_text = _call_claude_cli(user_prompt, system_prompt)
+            response_text, _tokens = call_claude_cli(
+                user_prompt, system_prompt=system_prompt, model=self.model
+            )
         elif self.provider == LLMProvider.ANTHROPIC:
             response_text = self._call_anthropic(system_prompt, user_prompt)
         else:

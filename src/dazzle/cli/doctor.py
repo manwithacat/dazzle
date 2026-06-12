@@ -120,7 +120,42 @@ def doctor_command() -> None:
     else:
         _warn("Not in a DAZZLE project (no dazzle.toml)")
 
-    # 7. MCP registration
+    # 7. LLM cognition driver
+    typer.echo("\nLLM cognition:")
+    try:
+        from dazzle.llm.driver import (
+            API_KEY_CONSOLE_URL,
+            LLMDriverError,
+            resolve_llm_driver,
+        )
+
+        manifest_driver = None
+        if dazzle_toml.exists():
+            try:
+                from dazzle.core.manifest import load_manifest
+
+                manifest_driver = load_manifest(dazzle_toml).llm.driver
+            except Exception:
+                manifest_driver = None
+        try:
+            resolved = resolve_llm_driver(manifest_driver=manifest_driver)
+        except LLMDriverError as exc:
+            _warn(str(exc).splitlines()[0])
+            typer.echo(f"       {exc}")
+        else:
+            if resolved == "claude-cli":
+                _ok("driver: claude-cli (Claude subscription via Claude Code CLI)")
+                typer.echo(
+                    "       Development billing only. To deploy: create an API key "
+                    f"({API_KEY_CONSOLE_URL}), set ANTHROPIC_API_KEY, and switch "
+                    '[llm] driver = "anthropic-api". See docs/reference/llm-drivers.md.'
+                )
+            else:
+                _ok("driver: anthropic-api (ANTHROPIC_API_KEY set — deploy-ready)")
+    except ImportError:
+        _warn("LLM driver check unavailable")
+
+    # 8. MCP registration
     typer.echo("\nMCP:")
     try:
         from dazzle.mcp.setup import check_mcp_server

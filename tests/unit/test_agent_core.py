@@ -229,6 +229,67 @@ class TestAnthropicSdk:
 
 
 # =============================================================================
+# Claude CLI driver path (subscription-billed, text protocol)
+# =============================================================================
+
+
+class TestClaudeCliDriver:
+    def test_tool_calls_forced_off_under_cli_driver(self) -> None:
+        """claude -p is a text pipe; native tool use must downgrade to
+        the text protocol exactly like the MCP sampling path does."""
+        agent = DazzleAgent(
+            _mock_observer(),
+            _mock_executor(),
+            use_tool_calls=True,
+            llm_driver="claude-cli",
+        )
+        assert agent._use_tool_calls is False
+
+    @pytest.mark.asyncio
+    async def test_decide_routes_to_claude_cli(self) -> None:
+        agent = DazzleAgent(_mock_observer(), _mock_executor(), llm_driver="claude-cli")
+        state = PageState(url="u", title="t", visible_text="")
+        with patch(
+            "dazzle.llm.driver.call_claude_cli",
+            return_value=('{"action": "done", "success": true, "reasoning": "r"}', 42),
+        ) as mock_cli:
+            action, _prompt, _resp, tokens = await agent._decide(_simple_mission(), state, {})
+        mock_cli.assert_called_once()
+        assert action.type == ActionType.DONE
+        assert tokens == 42
+
+    def test_messages_flattened_to_single_prompt(self) -> None:
+        """History + state must arrive as one prompt string; image parts
+        are skipped (same contract as the MCP sampling path)."""
+        agent = DazzleAgent(_mock_observer(), _mock_executor(), llm_driver="claude-cli")
+        messages = [
+            {"role": "user", "content": "## Previous Actions\nstep one"},
+            {"role": "assistant", "content": "I understand. What's the current state?"},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"data": "..."}},
+                    {"type": "text", "text": "current state text"},
+                ],
+            },
+        ]
+        with patch("dazzle.llm.driver.call_claude_cli", return_value=("ok", 0)) as mock_cli:
+            agent._decide_via_claude_cli("sys", messages)
+        prompt = mock_cli.call_args.args[0]
+        assert "step one" in prompt
+        assert "current state text" in prompt
+        assert "image" not in prompt
+        assert mock_cli.call_args.kwargs["system_prompt"] == "sys"
+
+    def test_default_driver_unchanged(self) -> None:
+        """Default construction keeps the SDK path — existing callers
+        see no behavior change."""
+        agent = DazzleAgent(_mock_observer(), _mock_executor(), use_tool_calls=True)
+        assert agent._llm_driver == "anthropic-api"
+        assert agent._use_tool_calls is True
+
+
+# =============================================================================
 # Accessibility observer
 # =============================================================================
 

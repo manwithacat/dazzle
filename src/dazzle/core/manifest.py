@@ -343,6 +343,29 @@ class DevConfig:
 
 
 @dataclass
+class LLMConfig:
+    """LLM cognition driver configuration.
+
+    Controls how dev-time agents (``dazzle qa trial``, spec analysis)
+    and local ``llm_intent`` testing reach a Claude model:
+
+        - "claude-cli": Claude Code CLI — billed to the developer's
+          Claude subscription, no API key. Development only; the
+          runtime refuses it under DAZZLE_ENV=production.
+        - "anthropic-api": metered Anthropic API (ANTHROPIC_API_KEY).
+          Required for deployed apps.
+        - "auto" (default when the section is absent): anthropic-api
+          if ANTHROPIC_API_KEY is set, else claude-cli if installed.
+
+    Resolution order and the dev → deploy path are documented in
+    docs/reference/llm-drivers.md. New projects from ``dazzle init``
+    pin "claude-cli" so trying Dazzle never requires API credit.
+    """
+
+    driver: str = "auto"  # "auto" | "claude-cli" | "anthropic-api"
+
+
+@dataclass
 class TenantConfig:
     """Multi-tenant configuration.
 
@@ -609,6 +632,7 @@ class ProjectManifest:
     urls: URLsConfig = field(default_factory=URLsConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     dev: DevConfig = field(default_factory=DevConfig)
+    llm: LLMConfig = field(default_factory=LLMConfig)
     tenant: TenantConfig = field(default_factory=TenantConfig)
     i18n: I18nConfig = field(default_factory=I18nConfig)  # #955
     notifications: NotificationsConfig = field(default_factory=NotificationsConfig)  # #952
@@ -903,6 +927,12 @@ def load_manifest(path: Path) -> ProjectManifest:
         test_endpoints=dev_data.get("test_endpoints"),  # None if not set
     )
 
+    # Parse LLM driver config
+    llm_data = data.get("llm", {})
+    llm_config = LLMConfig(
+        driver=llm_data.get("driver", "auto"),
+    )
+
     # Parse tenant config
     tenant_data = data.get("tenant", {})
     tenant_config = TenantConfig(
@@ -1059,6 +1089,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         urls=urls_config,
         database=database_config,
         dev=dev_config,
+        llm=llm_config,
         tenant=tenant_config,
         i18n=i18n_config,
         notifications=notifications_config,
