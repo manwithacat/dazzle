@@ -17,6 +17,10 @@ lib/
 lib64/
 parts/
 sdist/
+# Root build output dir — `python -m build` default --outdir. Anchored with a
+# leading slash so it does NOT shadow the deliberately-tracked nested bundle
+# dir src/dazzle/ui/runtime/static/dist/ (#1373).
+/dist/
 var/
 wheels/
 *.egg-info/

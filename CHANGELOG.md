@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.34] - 2026-06-12
+
+### Fixed
+- **Repo hygiene: stray `app.db` removed, root `/dist/` now gitignored** (#1373). Deleted a 0-byte
+  untracked `app.db` stray at the repo root (Postgres-only project, nothing creates or references it).
+  Added an **anchored** `/dist/` entry to `.gitignore` (`python -m build`'s default `--outdir`) so a local
+  build can't leave committable wheels — anchored deliberately so it does not shadow the tracked nested
+  bundle dir `src/dazzle/ui/runtime/static/dist/`. (Premise correction vs the issue: `app.db` was never
+  tracked, just an ignored stray.)
+
 ## [0.82.33] - 2026-06-12
 
 ### Fixed
