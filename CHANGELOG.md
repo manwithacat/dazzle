@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.40] - 2026-06-12
+
+### Fixed
+- **`dazzle qa trial` exits 3 with "Trial ABORTED" when the agent loop dies** (#1375). An LLM
+  hard-failure (billing 400, CLI error) or observer crash previously printed "Trial complete.
+  0 friction observation(s)" and exited 0 — autonomous consumers booked infrastructure failures
+  as clean PASSes (observed live twice). The report is still written as the forensic record;
+  `trial_abort_message()` in `dazzle.qa.trial_report` carries the contract. Verified live:
+  the dead-key repro now exits 3 with the billing detail on stderr.
+
+### Changed
+- **All 14 example apps pin `[llm] driver = "claude-cli"`** in dazzle.toml, so trials and other
+  dev-time cognition run on the Claude subscription without flags — including when a (possibly
+  uncredited) `ANTHROPIC_API_KEY` is exported in the shell, which `auto` would otherwise prefer.
+  Projects created via `dazzle init --from <example>` inherit the pin, matching the blank template.
+
 ## [0.82.39] - 2026-06-12
 
 ### Fixed

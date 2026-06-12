@@ -284,6 +284,22 @@ def render_trial_report(report: TrialReport) -> str:
     return "\n".join(lines)
 
 
+def trial_abort_message(outcome: str, error: str | None, step_count: int = 0) -> str | None:
+    """Non-None when the trial must exit nonzero (#1375).
+
+    A transcript with ``outcome == "error"`` means the agent loop died —
+    LLM failure (billing/auth/CLI), observer crash, or a failed initial
+    navigation. Downstream automation (the /improve trials lane) reads
+    the exit code; "Trial complete. 0 friction observation(s)" + exit 0
+    here books an infrastructure failure as a clean PASS.
+    """
+    if outcome != "error":
+        return None
+    detail = error or "unknown agent-loop error"
+    ran = f"after {step_count} completed step(s)" if step_count else "before any step completed"
+    return f"Trial ABORTED {ran}: {detail}"
+
+
 def build_trial_report(
     *,
     scenario_name: str,

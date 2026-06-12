@@ -12,3 +12,9 @@ name = "dnr"
 
 [auth]
 enabled = false
+
+# Dev-time cognition (qa trial, spec analysis) bills the Claude
+# subscription via the Claude Code CLI — no API key needed. Deploys
+# need ANTHROPIC_API_KEY + "anthropic-api" (docs/reference/llm-drivers.md).
+[llm]
+driver = "claude-cli"

@@ -938,7 +938,11 @@ def qa_trial(
     from dazzle.agent.observer import PlaywrightObserver
     from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
     from dazzle.cli.utils import load_project_appspec
-    from dazzle.qa.trial_report import build_trial_report, render_trial_report
+    from dazzle.qa.trial_report import (
+        build_trial_report,
+        render_trial_report,
+        trial_abort_message,
+    )
     from dazzle.testing.ux.interactions.server_fixture import launch_interaction_server
 
     project_dir = _resolve_project_dir(app)
@@ -1258,6 +1262,18 @@ def qa_trial(
         output.parent.mkdir(parents=True, exist_ok=True)
 
     output.write_text(rendered, encoding="utf-8")
+
+    # #1375: an agent-loop death (LLM billing/auth failure, observer
+    # crash) must exit nonzero — autonomous consumers read the exit code
+    # and would otherwise book an infrastructure failure as a clean PASS.
+    # The report is still written above: it's the forensic record.
+    abort_msg = trial_abort_message(
+        transcript.outcome, transcript.error, step_count=len(transcript.steps)
+    )
+    if abort_msg is not None:
+        typer.echo(f"\n{abort_msg}\nReport (forensics): {output}", err=True)
+        raise typer.Exit(code=3)
+
     typer.echo(
         f"\nTrial complete. {len(friction)} friction observation(s) recorded. Report: {output}",
         file=sys.stdout,
