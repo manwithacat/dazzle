@@ -630,6 +630,15 @@ def verify_command(
             "1 on any interaction regression."
         ),
     ),
+    guides: bool = typer.Option(
+        False,
+        "--guides",
+        help=(
+            "Guide-walk oracle: boot the app and assert each onboarding guide's "
+            "first-step overlay actually renders for its audience persona. "
+            "Exit 2 on setup failure, 1 on any guide whose overlay doesn't render."
+        ),
+    ),
     strict: bool = typer.Option(False, "--strict", help="Exit 1 on any contract failure"),
     update_baseline: bool = typer.Option(
         False, "--update-baseline", help="Update baseline after run"
@@ -675,6 +684,19 @@ def verify_command(
         raise typer.Exit(_run_structural_only())
 
     project_root = Path.cwd().resolve()
+
+    # Route: --guides (guide-walk oracle). Server-rendered HTML — no Playwright.
+    # Runs independently so CI can gate on guide-overlay regressions.
+    if guides:
+        from dazzle.cli.ux_interactions import run_guide_walk
+
+        raise typer.Exit(
+            run_guide_walk(
+                project_root,
+                json_output=format_ == "json",
+                persona=persona,
+            )
+        )
 
     # Route: --interactions only. Runs independently of contracts /
     # browser so callers can gate on interaction regressions without

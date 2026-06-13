@@ -22,12 +22,14 @@ from dazzle.testing.ux.interactions.card_remove_reachable import (
     CardRemoveReachableInteraction,
 )
 from dazzle.testing.ux.interactions.context_select import ContextSelectInteraction
+from dazzle.testing.ux.interactions.guide_walk import GuideWalkInteraction
 
 __all__ = [
     "CardAddInteraction",
     "CardDragInteraction",
     "CardRemoveReachableInteraction",
     "ContextSelectInteraction",
+    "GuideWalkInteraction",
     "Interaction",
     "InteractionResult",
     "run_walk",

@@ -211,6 +211,124 @@ def _render_json_report(results: list[InteractionResult]) -> str:
     return json.dumps(payload, indent=2)
 
 
+# ---------------------------------------------------------------------------
+# Guide-walk oracle (--guides): assert each guide's first-step overlay renders
+# for its audience persona at runtime. Server-rendered HTML, so this path uses
+# a sync httpx client and skips Playwright entirely.
+# ---------------------------------------------------------------------------
+
+import re as _re  # noqa: E402
+
+_GUIDE_PERSONA_REF = _re.compile(r"\bpersona\s*=\s*([A-Za-z_][A-Za-z0-9_]*)")
+
+
+def _audience_personas(audience: str | None) -> list[str]:
+    """Persona ids named in a guide audience predicate (``persona = X or ...``)."""
+    return _GUIDE_PERSONA_REF.findall(audience or "")
+
+
+def _build_guide_walk(appspec: Any, persona: str, client_for: Any) -> list[Any]:
+    """Build one GuideWalkInteraction per guide (filtered by ``persona`` if set).
+
+    ``client_for`` is a callable ``persona -> http client`` (lets tests inject a
+    fake). Each guide is walked as its first audience persona, or only ``persona``'s
+    guides when a filter is given.
+    """
+    from dazzle.testing.ux.interactions.guide_walk import GuideWalkInteraction
+
+    walks: list[Any] = []
+    for guide in getattr(appspec, "guides", None) or []:
+        aud = _audience_personas(getattr(guide, "audience", ""))
+        if persona and persona not in aud:
+            continue
+        walk_persona = persona or (aud[0] if aud else "")
+        if not walk_persona:
+            continue
+        walks.append(
+            GuideWalkInteraction(
+                guide=guide,
+                persona=walk_persona,
+                surfaces=appspec.surfaces,
+                http=client_for(walk_persona),
+            )
+        )
+    return walks
+
+
+def _make_authed_client(site_url: str, persona: str, test_secret: str) -> Any:
+    """A sync httpx.Client authenticated as ``persona`` (session cookie installed)."""
+    import httpx
+
+    headers: dict[str, str] = {}
+    if test_secret:
+        headers["X-Test-Secret"] = test_secret
+    client = httpx.Client(base_url=site_url, headers=headers, follow_redirects=True, timeout=15)
+    resp = client.post("/__test__/authenticate", json={"role": persona, "username": persona})
+    if resp.status_code != 200:
+        client.close()
+        raise RuntimeError(
+            f"/__test__/authenticate returned HTTP {resp.status_code} for persona {persona!r} "
+            f"(body: {resp.text[:200]!r})"
+        )
+    data = resp.json()
+    token = data.get("session_token", "") or data.get("token", "")
+    if not token:
+        client.close()
+        raise RuntimeError(
+            f"/__test__/authenticate returned 200 but no session_token for {persona!r}"
+        )
+    client.cookies.set("dazzle_session", token)
+    return client
+
+
+def run_guide_walk(project_root: Path, *, json_output: bool = False, persona: str = "") -> int:
+    """Guide-walk oracle: assert every guide's first-step overlay renders for its audience.
+
+    Boots the app once; for each guide, authenticates as the guide's audience
+    persona (or only ``persona``'s guides when given) and asserts the
+    ``<dz-onboarding-step>`` overlay renders on the first step's surface.
+    Returns an exit code (0/1/2).
+    """
+    from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
+    from dazzle.core.appspec_loader import load_project_appspec
+
+    appspec = load_project_appspec(project_root)
+    if not (getattr(appspec, "guides", None) or []):
+        print("No guides declared — nothing to walk.", file=sys.stderr)
+        return EXIT_SETUP_FAILURE
+
+    results: list[InteractionResult] = []
+    clients: dict[str, Any] = {}
+    try:
+        with launch_interaction_server(project_root) as conn:
+            test_secret = read_runtime_test_secret(project_root) or ""
+
+            def _client_for(p: str) -> Any:
+                if p not in clients:
+                    clients[p] = _make_authed_client(conn.site_url, p, test_secret)
+                return clients[p]
+
+            try:
+                for walk in _build_guide_walk(appspec, persona, _client_for):
+                    results.append(walk.execute())
+            finally:
+                for c in clients.values():
+                    with suppress(Exception):
+                        c.close()
+    except Exception as exc:  # noqa: BLE001 — surface boot/setup failure as exit 2
+        print(f"[guide-walk] boot/setup failed: {exc!r}", file=sys.stderr)
+        return EXIT_SETUP_FAILURE
+
+    print(_render_json_report(results) if json_output else _render_human_report(results))
+    if not results:
+        print(
+            f"No guides matched persona {persona!r}." if persona else "No guides walked.",
+            file=sys.stderr,
+        )
+        return EXIT_SETUP_FAILURE
+    return EXIT_PASS if all(r.passed for r in results) else EXIT_REGRESSION
+
+
 def run_interaction_walk(
     project_root: Path,
     *,

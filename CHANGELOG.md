@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.54] - 2026-06-13
+
+### Added
+- **Guide-walk oracle — `dazzle ux verify --guides`** (example-guides Phase 3, scope A).
+  Boots an example app and, for each onboarding guide, authenticates as the guide's
+  audience persona and asserts the `<dz-onboarding-step>` overlay *actually renders* on
+  the first step's surface — the runtime proof that the persona, where they land, is shown
+  the guide the DSL promises (the "rooted/reachable" check the static gate deferred).
+  Server-rendered, so it uses a sync httpx client (no Playwright). First steps are
+  list/create surfaces (deterministic URLs); a detail/edit first step is honestly
+  log-skipped (needs a record id — deferred to a future full-journey walk), never silently
+  dropped. New `GuideWalkInteraction` + `_build_guide_walk`/`run_guide_walk` driver;
+  unit-tested and locally verified against support_tickets (customer + agent overlays
+  render). CI matrix wiring across all examples follows.
+
+### Agent Guidance
+- `dazzle ux verify --guides` (optionally `--persona <id>`) is the e2e oracle for guides:
+  exit 0 = every walked guide's overlay rendered, 1 = a guide promised an overlay the
+  runtime didn't show (the guide or the app drifted), 2 = setup/boot failure.
+
 ## [0.82.53] - 2026-06-13
 
 ### Added
