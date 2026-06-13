@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **acme_billing committed compliance auditspec regenerated** after the v0.82.44 `display_field`
+  additions changed the DSL source fingerprint (`dsl_hash`). Compliance content is unchanged — only
+  the source hash moved — but `test_acme_billing_reference_drift` pins the whole normalised auditspec,
+  so main CI went red. Reference re-committed; gate green. (Lesson: example-app DSL edits must run the
+  full `pytest tests/ -m "not e2e"`, not just validate+lint, when the app has an `expected/` dir.)
+
+
 ## [0.82.44] - 2026-06-13
 
 ### Changed
