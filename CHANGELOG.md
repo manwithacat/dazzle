@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.48] - 2026-06-13
+
+### Fixed
+- **`dazzle qa trial` signing harness: token + mock-inbox now match the seeded row's signatory.**
+  When a signable entity carried a realistic demo `signatory_email` (e.g. `SlaWaiver` →
+  `devon.park@retailco.example` via the seed overrides), `_build_signing_seed_batch` kept that value on
+  the row but the minted HMAC token and mock-inbox metadata used the caller's parameter
+  (`trial-signatory@example.com`) — the override only applied when the key was *absent*. The result was
+  an internally-contradictory document (body named one signatory, inbox/token another), which led trial
+  personas to distrust the document and decline, masking the real signing path and producing
+  false-critical verdicts. `_seed_signable_rows` now reads the effective `signatory_email` back off the
+  seeded row and mints the token + inbox to match. Surfaced by the `/improve` trials lane (cycle 187,
+  TR-54); the fix exposed a deeper gap — the CLI trial harness can't arm `signing_validator` rejection
+  at all (filed #1382, TR-55).
+
 ## [0.82.47] - 2026-06-13
 
 ### Fixed

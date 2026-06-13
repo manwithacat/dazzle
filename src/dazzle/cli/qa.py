@@ -685,6 +685,19 @@ def _seed_signable_rows(
             continue
 
         fixtures = _build_signing_seed_batch(entity, app_spec, signatory_email)
+        # The signable row may carry its own realistic signatory_email (from the
+        # demo-field overrides in _REALISTIC_SEED_OVERRIDES — e.g. SlaWaiver's
+        # "devon.park@retailco.example"). The token + mock-inbox metadata MUST
+        # match the *row*, otherwise the rendered document names one signatory
+        # while the inbox/token names another. That internal contradiction
+        # mis-calibrates qualitative trials: the agent distrusts the document and
+        # declines, so server-side signing_validators never fire and the run
+        # emits a false "no authority check exists" verdict.
+        effective_email = signatory_email
+        for fx in fixtures:
+            if fx.get("id") == "signable_row":
+                effective_email = fx["data"].get("signatory_email", signatory_email)
+                break
         resp = httpx.post(
             f"{base_url}/__test__/seed",
             json={"fixtures": fixtures},
@@ -705,14 +718,14 @@ def _seed_signable_rows(
         # past — verify_token then rejects it exactly as it would a real
         # two-week-old email link.
         expires_hours = -1 if token_state == "expired" else 72
-        token = mint_token(record_id=row_id, email=signatory_email, expires_hours=expires_hours)
+        token = mint_token(record_id=row_id, email=effective_email, expires_hours=expires_hours)
         docs.append(
             SeededDoc(
                 entity=entity.name,
                 id=row_id,
                 token=token,
                 signing_url=f"{base_url}/sign/{entity.name}/{row_id}?token={token}",
-                signatory_email=signatory_email,
+                signatory_email=effective_email,
                 token_state=token_state,
             )
         )
