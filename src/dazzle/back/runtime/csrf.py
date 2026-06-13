@@ -167,9 +167,14 @@ class CSRFConfig:
     # (a non-UUID tail is unreachable — FastAPI 422s it). Decline is a
     # body flag on the same POST endpoint, not a subpath, so no extra
     # pattern is required.
+    # The /resend subpath (TR-53) carries the same expired HMAC token in
+    # its form body as its credential — CSRF double-submit is just as
+    # redundant here as on the sign routes. Anchored to the UUID tail so
+    # only the exact recovery route inherits the exemption.
     na_signature_regexes: list[str] = field(
         default_factory=lambda: [
             r"^/sign/[^/]+/" + _UUID_RE + r"$",
+            r"^/sign/[^/]+/" + _UUID_RE + r"/resend$",
             r"^/api/sign/[^/]+/" + _UUID_RE + r"$",
         ]
     )

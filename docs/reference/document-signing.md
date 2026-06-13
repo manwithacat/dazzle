@@ -163,8 +163,33 @@ The dotted path is regex-constrained to lowercase identifier segments
   `declined`, `expired`, or `superseded`. No mutation.
 - **400** — Missing `token` query parameter.
 - **403** — Invalid, expired, or tampered token; or token's
-  `record_id` does not match the path.
+  `record_id` does not match the path. An **expired-but-genuine** link
+  (valid HMAC, elapsed expiry) renders the recovery page below instead
+  of a bare error; a tampered token gets the plain error.
 - **404** — Unknown entity or record.
+
+### `POST /sign/{entity_name}/{record_id}/resend`
+
+Expired-link recovery (TR-53). The body carries the expired token
+(`token=...`, form-encoded). The server re-verifies the token's HMAC
+(integrity only — expiry is *allowed* to be past), and if a
+`resend_hook` is configured, mints a **fresh** link and hands it to that
+hook for delivery to the original recipient's email.
+
+- **200** — A new link was delivered; confirmation page shown. The fresh
+  token is **never** returned in the response.
+- **200** + terminal-status message — Document already `signed` /
+  `declined` / `superseded`; nothing to renew.
+- **403** — Token tampered or `record_id` mismatch.
+- **404** — No `resend_hook` configured (self-serve renewal unavailable).
+- **500** — The `resend_hook` raised; a generic "couldn't send" page is
+  shown.
+
+The expired link's valid HMAC proves only that the bearer once held a
+legitimate link, which authorises **requesting** a fresh one be sent to
+the original email — never extending the link in the browser. An
+attacker replaying a stale link only triggers a mail to the genuine
+signer.
 
 ### `POST /api/sign/{entity_name}/{record_id}`
 
@@ -244,6 +269,46 @@ Resolution order at runtime:
 2. **`[project] name`** → minimal fallback. Project name appears as
    the organisation; tagline + footer stay empty.
 3. **Nothing useful** → framework default `PdfBranding(organisation="Dazzle App")`.
+
+## Expired-link recovery
+
+When a signer opens an expired link, the default page is a dead end —
+no way forward without contacting the sender out of band. Two optional
+`[signing]` keys turn that into a recovery path:
+
+```toml
+[signing]
+support_contact = "help@acme.example"
+resend_hook = "app.signing.resend.deliver"
+```
+
+- **`support_contact`** — an email or URL shown on signing error pages
+  as the human fallback. With nothing else configured, the expired page
+  says "contact …" instead of just "expired".
+- **`resend_hook`** — a dotted path to a project callable
+  `fn(*, entity_name, row, email, signing_url)`. When set, the expired
+  page offers a one-click **"Request a new signing link"** button; on
+  submit the framework mints a fresh link and calls your hook to deliver
+  it to `email` through your own channel (transactional email, queue,
+  …). The hook may be sync or async and may raise `SigningError` to
+  signal a delivery failure.
+
+```python
+# app/signing/resend.py
+from app.mail import send_email   # your project's mailer
+
+def deliver(*, entity_name, row, email, signing_url):
+    send_email(
+        to=email,
+        subject="Your new signing link",
+        body=f"Open your document to sign: {signing_url}",
+    )
+```
+
+**Security:** the expired token's valid HMAC authorises *requesting* a
+new link sent to the original recipient — nothing more. The fresh token
+never returns to the browser, so a replayed stale link can only trigger
+a mail to the genuine signer, never extend access for the bearer.
 
 ## Architecture
 

@@ -69,6 +69,24 @@ class TestSigningConfigParsing:
         assert manifest.signing.footer_text == "Acme Ltd | Registered in England & Wales"
         assert manifest.signing.location == "England and Wales"
 
+    def test_signing_recovery_keys_parsed(self, tmp_path: Path) -> None:
+        """TR-53: support_contact + resend_hook flow off the [signing] block,
+        defaulting to empty when absent."""
+        assert SigningConfig().support_contact == ""
+        assert SigningConfig().resend_hook == ""
+        manifest = load_manifest(
+            _write_manifest(
+                tmp_path,
+                """
+                [signing]
+                support_contact = "help@acme.example"
+                resend_hook = "app.signing.resend.deliver"
+                """,
+            )
+        )
+        assert manifest.signing.support_contact == "help@acme.example"
+        assert manifest.signing.resend_hook == "app.signing.resend.deliver"
+
     def test_signing_block_partial(self, tmp_path: Path) -> None:
         """Missing keys take the SigningConfig defaults — location
         stays 'United Kingdom' rather than collapsing to empty."""

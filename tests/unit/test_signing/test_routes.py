@@ -76,6 +76,8 @@ def _app_with_routes(
     signing_template: str | None = None,
     file_service: Any | None = None,
     branding: Any | None = None,
+    support_contact: str = "",
+    resend_hook: str = "",
 ) -> tuple[FastAPI, _MockRepo]:
     entity = _signable_entity(entity_name)
     updates: dict[str, Any] = {}
@@ -91,6 +93,8 @@ def _app_with_routes(
         repositories={entity_name: repo},
         file_service=file_service,
         branding=branding,
+        support_contact=support_contact,
+        resend_hook=resend_hook,
     )
     assert router is not None
     app = FastAPI()
@@ -718,3 +722,161 @@ class TestGetPageEmbedDocumentBody:
         # Stub body is still present; island is also present.
         assert 'class="signing-document"' in resp.text
         assert 'data-island="signing_pad"' in resp.text
+
+
+# ---------------------------------------------------------------------
+# Expired-link recovery (TR-53)
+# ---------------------------------------------------------------------
+
+# Module-level recorder so a dotted-path resend_hook resolves to a real
+# callable (mirrors the validator-injection pattern above).
+_resend_calls: list[dict[str, Any]] = []
+
+
+def _record_resend(*, entity_name: str, row: Any, email: str, signing_url: str) -> None:
+    _resend_calls.append(
+        {"entity_name": entity_name, "row": row, "email": email, "signing_url": signing_url}
+    )
+
+
+async def _async_record_resend(*, entity_name: str, row: Any, email: str, signing_url: str) -> None:
+    """An async hook — must be awaited directly, never run_until_complete'd
+    on the already-running request loop."""
+    _resend_calls.append({"email": email, "signing_url": signing_url})
+
+
+def _failing_resend(*, entity_name: str, row: Any, email: str, signing_url: str) -> None:
+    from dazzle.signing.tokens import SigningError
+
+    raise SigningError("mail server down")
+
+
+def _bare_raise_resend(*, entity_name: str, row: Any, email: str, signing_url: str) -> None:
+    # A non-SigningError failure — must NOT leak signing_url via a traceback.
+    raise ValueError(f"boom with {signing_url}")
+
+
+_RESEND_OK = "tests.unit.test_signing.test_routes._record_resend"
+_RESEND_ASYNC = "tests.unit.test_signing.test_routes._async_record_resend"
+_RESEND_FAIL = "tests.unit.test_signing.test_routes._failing_resend"
+_RESEND_BARE_RAISE = "tests.unit.test_signing.test_routes._bare_raise_resend"
+
+
+class TestExpiredLinkRecovery:
+    def setup_method(self) -> None:
+        _resend_calls.clear()
+
+    def _expired_token(self, record_id: str, email: str = "a@example.com") -> str:
+        # Negative expires_hours → already expired but HMAC-valid.
+        return mint_token(record_id, email, expires_hours=-1)
+
+    def test_expired_link_with_hook_offers_resend_form(self) -> None:
+        record_id = str(uuid4())
+        app, _ = _app_with_routes({record_id: {"status": "sent"}}, resend_hook=_RESEND_OK)
+        client = TestClient(app)
+        token = self._expired_token(record_id)
+        resp = client.get(f"/sign/Contract/{record_id}?token={token}")
+        assert resp.status_code == 403
+        assert "expired" in resp.text.lower()
+        assert f"/sign/Contract/{record_id}/resend" in resp.text
+        assert "Request a new signing link" in resp.text
+
+    def test_expired_link_without_hook_shows_support_contact(self) -> None:
+        record_id = str(uuid4())
+        app, _ = _app_with_routes(
+            {record_id: {"status": "sent"}}, support_contact="help@acme.example"
+        )
+        client = TestClient(app)
+        token = self._expired_token(record_id)
+        resp = client.get(f"/sign/Contract/{record_id}?token={token}")
+        assert resp.status_code == 403
+        assert "expired" in resp.text.lower()
+        assert "help@acme.example" in resp.text
+        # No self-serve form without a hook.
+        assert "/resend" not in resp.text
+
+    def test_tampered_token_gets_plain_error_not_recovery(self) -> None:
+        """A bad-HMAC token must NOT reach the recovery affordance."""
+        record_id = str(uuid4())
+        app, _ = _app_with_routes({record_id: {"status": "sent"}}, resend_hook=_RESEND_OK)
+        client = TestClient(app)
+        resp = client.get(f"/sign/Contract/{record_id}?token=garbage-token")
+        assert resp.status_code == 403
+        assert "Request a new signing link" not in resp.text
+
+    def test_resend_invokes_hook_and_does_not_leak_token(self) -> None:
+        record_id = str(uuid4())
+        app, repo = _app_with_routes({record_id: {"status": "sent"}}, resend_hook=_RESEND_OK)
+        client = TestClient(app)
+        token = self._expired_token(record_id, "signer@acme.example")
+        resp = client.post(f"/sign/Contract/{record_id}/resend", data={"token": token})
+        assert resp.status_code == 200
+        assert "signer@acme.example" in resp.text
+        # Hook called exactly once, to the verified email.
+        assert len(_resend_calls) == 1
+        assert _resend_calls[0]["email"] == "signer@acme.example"
+        # The freshly-minted token must NEVER appear in the HTTP response.
+        fresh = _resend_calls[0]["signing_url"]
+        new_token = fresh.split("token=")[1]
+        assert new_token not in resp.text
+        # Recovery does not mutate the document row.
+        assert repo.update_calls == []
+
+    def test_resend_without_hook_404s(self) -> None:
+        record_id = str(uuid4())
+        app, _ = _app_with_routes({record_id: {"status": "sent"}})
+        client = TestClient(app)
+        token = self._expired_token(record_id)
+        resp = client.post(f"/sign/Contract/{record_id}/resend", data={"token": token})
+        assert resp.status_code == 404
+
+    def test_resend_rejects_tampered_token(self) -> None:
+        record_id = str(uuid4())
+        app, _ = _app_with_routes({record_id: {"status": "sent"}}, resend_hook=_RESEND_OK)
+        client = TestClient(app)
+        resp = client.post(f"/sign/Contract/{record_id}/resend", data={"token": "garbage"})
+        assert resp.status_code == 403
+        assert _resend_calls == []
+
+    def test_resend_on_signed_doc_is_terminal_not_renewed(self) -> None:
+        record_id = str(uuid4())
+        app, _ = _app_with_routes({record_id: {"status": "signed"}}, resend_hook=_RESEND_OK)
+        client = TestClient(app)
+        token = self._expired_token(record_id)
+        resp = client.post(f"/sign/Contract/{record_id}/resend", data={"token": token})
+        assert resp.status_code == 200
+        assert _resend_calls == []  # already signed → nothing to renew
+
+    def test_resend_hook_failure_surfaces_gracefully(self) -> None:
+        record_id = str(uuid4())
+        app, _ = _app_with_routes({record_id: {"status": "sent"}}, resend_hook=_RESEND_FAIL)
+        client = TestClient(app)
+        token = self._expired_token(record_id)
+        resp = client.post(f"/sign/Contract/{record_id}/resend", data={"token": token})
+        assert resp.status_code == 500
+        assert "send a new link" in resp.text.lower()
+
+    def test_async_resend_hook_is_awaited(self) -> None:
+        """An async resend_hook must be awaited on the running loop, not
+        run_until_complete'd (which RuntimeErrors inside the handler)."""
+        record_id = str(uuid4())
+        app, _ = _app_with_routes({record_id: {"status": "sent"}}, resend_hook=_RESEND_ASYNC)
+        client = TestClient(app)
+        token = self._expired_token(record_id, "async@acme.example")
+        resp = client.post(f"/sign/Contract/{record_id}/resend", data={"token": token})
+        assert resp.status_code == 200
+        assert len(_resend_calls) == 1
+        assert _resend_calls[0]["email"] == "async@acme.example"
+
+    def test_non_signing_error_hook_does_not_leak_token(self) -> None:
+        """A hook that raises a bare (non-SigningError) exception must be
+        caught and produce the generic page — the fresh token must not
+        reach the response even though the exception message contains it."""
+        record_id = str(uuid4())
+        app, _ = _app_with_routes({record_id: {"status": "sent"}}, resend_hook=_RESEND_BARE_RAISE)
+        client = TestClient(app)
+        token = self._expired_token(record_id)
+        resp = client.post(f"/sign/Contract/{record_id}/resend", data={"token": token})
+        assert resp.status_code == 500
+        assert "send a new link" in resp.text.lower()
+        assert "token=" not in resp.text  # no leaked signing_url

@@ -503,12 +503,29 @@ class SigningConfig:
     The ``location`` field flows into the PKCS#7 signature metadata
     (PdfSignatureMetadata.location), recording the legal jurisdiction
     on every signed PDF.
+
+    Expired-link recovery (TR-53):
+
+        [signing]
+        support_contact = "support@acme.example"
+        resend_hook = "app.signing.resend.deliver"
+
+    ``resend_hook`` names a project callable
+    ``fn(*, entity_name, row, email, signing_url)`` that delivers a
+    freshly-minted link to the ORIGINAL recipient via the app's own
+    channel — the framework never hands a new token to the browser.
+    When set, the expired-link page offers a "Request a new signing
+    link" button. ``support_contact`` is shown on signing error pages
+    as the human fallback. Both optional; with neither, the expired
+    page still tells the signer to contact the sender.
     """
 
     organisation: str = ""
     tagline: str = ""
     footer_text: str = ""
     location: str = "United Kingdom"
+    support_contact: str = ""
+    resend_hook: str = ""
 
 
 @dataclass
@@ -1073,6 +1090,8 @@ def load_manifest(path: Path) -> ProjectManifest:
         tagline=str(signing_data.get("tagline", "")),
         footer_text=str(signing_data.get("footer_text", "")),
         location=str(signing_data.get("location", "United Kingdom")),
+        support_contact=str(signing_data.get("support_contact", "")),
+        resend_hook=str(signing_data.get("resend_hook", "")),
     )
 
     return ProjectManifest(

@@ -28,6 +28,7 @@ from dazzle.signing.tokens import (
     mint_token,
     token_hash,
     verify_token,
+    verify_token_allow_expired,
 )
 
 __all__ = (
@@ -38,4 +39,5 @@ __all__ = (
     "mint_token",
     "token_hash",
     "verify_token",
+    "verify_token_allow_expired",
 )

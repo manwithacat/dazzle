@@ -12,6 +12,7 @@ from dazzle.signing import (
     mint_token,
     token_hash,
     verify_token,
+    verify_token_allow_expired,
 )
 
 
@@ -57,6 +58,28 @@ def test_expired_token_rejects(monkeypatch):
 def test_malformed_token_rejects():
     with pytest.raises(InvalidTokenError):
         verify_token("not-a-valid-token")
+
+
+def test_allow_expired_accepts_expired_but_valid(monkeypatch):
+    """TR-53: an expired-but-HMAC-valid token verifies for recovery."""
+    monkeypatch.setattr(time, "time", lambda: 1_000_000.0)
+    token = mint_token("rec-1", "alice@example.com", expires_hours=1)
+    monkeypatch.setattr(time, "time", lambda: 1_000_000.0 + 3700)
+    # The strict path rejects it...
+    with pytest.raises(InvalidTokenError, match="expired"):
+        verify_token(token)
+    # ...the recovery path accepts it (integrity intact).
+    record_id, email = verify_token_allow_expired(token)
+    assert record_id == "rec-1"
+    assert email == "alice@example.com"
+
+
+def test_allow_expired_still_rejects_tampered():
+    """Recovery acceptance must not weaken HMAC integrity checking."""
+    token = mint_token("rec-1", "alice@example.com")
+    tampered = token[:-2] + ("aa" if not token.endswith("aa") else "bb")
+    with pytest.raises(InvalidTokenError):
+        verify_token_allow_expired(tampered)
 
 
 def test_missing_secret_raises_signing_error(monkeypatch):

@@ -46,8 +46,10 @@ from dazzle.signing.service import PdfBranding, async_sign_pdf, generate_pdf
 from dazzle.signing.tokens import (
     InvalidTokenError,
     SigningError,
+    mint_token,
     token_hash,
     verify_token,
+    verify_token_allow_expired,
 )
 
 log = logging.getLogger(__name__)
@@ -65,6 +67,8 @@ def create_signing_routes(
     branding: PdfBranding | None = None,
     file_service: Any | None = None,
     project_root: Path | None = None,
+    support_contact: str = "",
+    resend_hook: str = "",
 ) -> APIRouter | None:
     """Build the auto-mounted signing router.
 
@@ -91,6 +95,17 @@ def create_signing_routes(
             ``templates/letters/<entity>/default.html.j2``. When
             ``None``, file-based templates are not resolved and the
             stub placeholder is used as fallback.
+        support_contact: Optional human contact (email/URL) shown on
+            signing error pages — the recovery fallback when no
+            ``resend_hook`` is configured (TR-53).
+        resend_hook: Optional dotted path to a project callable
+            ``fn(*, entity_name, row, email, signing_url)`` that
+            delivers a freshly-minted signing link to the ORIGINAL
+            recipient through the app's own channel. When set, the
+            expired-link page offers a self-serve "Request a new
+            signing link" button. The framework never returns the new
+            token to the browser — possession of an expired link must
+            not extend it.
 
     Returns:
         ``None`` if no entity has ``signable: true``. Otherwise an
@@ -115,6 +130,22 @@ def create_signing_routes(
             signable=signable,
             repositories=repositories,
             project_root=project_root,
+            support_contact=support_contact,
+            resend_hook=resend_hook,
+        )
+
+    @router.post("/sign/{entity_name}/{record_id}/resend", response_class=HTMLResponse)
+    async def request_link_resend(
+        entity_name: str, record_id: UUID, request: Request
+    ) -> HTMLResponse:
+        return await _handle_resend(
+            entity_name=entity_name,
+            record_id=record_id,
+            request=request,
+            signable=signable,
+            repositories=repositories,
+            support_contact=support_contact,
+            resend_hook=resend_hook,
         )
 
     @router.post("/api/sign/{entity_name}/{record_id}")
@@ -171,6 +202,8 @@ async def _handle_get(
     signable: dict[str, EntitySpec],
     repositories: dict[str, Any],
     project_root: Path | None = None,
+    support_contact: str = "",
+    resend_hook: str = "",
 ) -> HTMLResponse:
     entity = _lookup_signable(entity_name, signable)
     repo = _lookup_repo(entity_name, repositories)
@@ -188,7 +221,20 @@ async def _handle_get(
         verified_id, _email = verify_token(token)
     except InvalidTokenError as exc:
         log.info("Signing link validation failed for %s/%s: %s", entity_name, record_id, exc)
-        body = _error_page("Invalid or expired link")
+        # Distinguish an *expired-but-genuine* link from a tampered one
+        # (TR-53). A valid HMAC over an elapsed expiry means the bearer
+        # once held a real link for this record — offer a recovery path
+        # instead of a dead end. A bad signature gets the plain error.
+        if _is_expired_but_valid(token, record_id):
+            body = _expired_recovery_page(
+                entity_name=entity_name,
+                record_id=str(record_id),
+                token=token,
+                support_contact=support_contact,
+                resend_hook=resend_hook,
+            )
+            return HTMLResponse(body, status_code=403)  # nosemgrep
+        body = _error_page("Invalid or expired link", support_contact=support_contact)
         return HTMLResponse(body, status_code=403)  # nosemgrep
 
     if verified_id != str(record_id):
@@ -274,7 +320,7 @@ async def _handle_post(
 
     if entity.signing_validator:
         try:
-            _invoke_validator(entity.signing_validator, entity=entity, row=row)
+            await _invoke_validator(entity.signing_validator, entity=entity, row=row)
         except SigningError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -354,9 +400,107 @@ async def _handle_post(
     )
 
 
+async def _handle_resend(
+    *,
+    entity_name: str,
+    record_id: UUID,
+    request: Request,
+    signable: dict[str, EntitySpec],
+    repositories: dict[str, Any],
+    support_contact: str = "",
+    resend_hook: str = "",
+) -> HTMLResponse:
+    """Request a fresh signing link for an expired one (TR-53).
+
+    Security model: the expired token's *valid HMAC* proves the bearer
+    once held a legitimate link for this ``(record, email)`` pair. That
+    authorises one thing only — asking the app to deliver a NEW link to
+    the original recipient's email through ``resend_hook``. The fresh
+    token is never returned to the browser, so possession of an expired
+    link can never silently extend it; an attacker who replays a stale
+    link only triggers a mail to the genuine signer.
+    """
+    if not resend_hook:
+        # No self-serve channel configured — the GET page wouldn't have
+        # shown the form, but guard the endpoint directly too.
+        body = _error_page(
+            "Self-service link renewal isn't available for this document.",
+            support_contact=support_contact,
+        )
+        return HTMLResponse(body, status_code=404)  # nosemgrep
+
+    form = await request.form()
+    token = str(form.get("token", ""))
+    try:
+        verified_id, email = verify_token_allow_expired(token)
+    except InvalidTokenError:
+        body = _error_page("Invalid link.", support_contact=support_contact)
+        return HTMLResponse(body, status_code=403)  # nosemgrep
+    if verified_id != str(record_id):
+        body = _error_page("Link does not match document.", support_contact=support_contact)
+        return HTMLResponse(body, status_code=403)  # nosemgrep
+
+    # Validate the entity is signable (raises 404 if not) — the return
+    # value isn't needed here, only the guard.
+    _lookup_signable(entity_name, signable)
+    repo = _lookup_repo(entity_name, repositories)
+    row = await repo.read(record_id)
+    if row is None:
+        body = _error_page("Document not found.", support_contact=support_contact)
+        return HTMLResponse(body, status_code=404)  # nosemgrep
+
+    status = _row_get(row, "status")
+    if status not in ("sent", "viewed"):
+        # Already signed/declined/superseded — nothing to renew.
+        body = _terminal_page(status)
+        return HTMLResponse(body, status_code=200)  # nosemgrep
+
+    # Mint a fresh link and hand it to the project's delivery channel.
+    # The new token goes to ``email`` (from the verified token), NEVER
+    # into the HTTP response.
+    new_token = mint_token(str(record_id), email)
+    base = str(request.base_url).rstrip("/")
+    signing_url = f"{base}/sign/{entity_name}/{record_id}?token={new_token}"
+    try:
+        await _invoke_resend_hook(
+            resend_hook,
+            entity_name=entity_name,
+            row=row,
+            email=email,
+            signing_url=signing_url,
+        )
+    except Exception as exc:
+        # Catch ANYTHING the project hook raises (not just SigningError):
+        # a bare exception would otherwise reach FastAPI's handler, whose
+        # debug traceback would expose ``signing_url`` — and with it the
+        # freshly minted token — in the error output.
+        log.warning("resend_hook failed for %s/%s: %s", entity_name, record_id, exc, exc_info=True)
+        body = _error_page(
+            "We couldn't send a new link right now.",
+            support_contact=support_contact,
+        )
+        return HTMLResponse(body, status_code=500)  # nosemgrep
+
+    body = _resend_confirmation_page(email=email, support_contact=support_contact)
+    return HTMLResponse(body, status_code=200)  # nosemgrep
+
+
 # ---------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------
+
+
+def _is_expired_but_valid(token: str, record_id: UUID) -> bool:
+    """True iff *token* has a valid HMAC + matching record but is expired.
+
+    Lets the GET handler offer recovery only for genuine expired links,
+    never for tampered/malformed ones (which stay a plain error).
+    """
+    try:
+        verified_id, _email = verify_token_allow_expired(token)
+    except InvalidTokenError:
+        return False
+    return verified_id == str(record_id)
 
 
 def _lookup_signable(name: str, signable: dict[str, EntitySpec]) -> EntitySpec:
@@ -431,17 +575,18 @@ def _resolve_dotted_callable(dotted_path: str, *, kind: str) -> Any:
         raise SigningError(f"{kind} {dotted_path!r} could not be resolved: {exc}") from exc
 
 
-def _invoke_validator(dotted_path: str, *, entity: EntitySpec, row: Any) -> None:
+async def _invoke_validator(dotted_path: str, *, entity: EntitySpec, row: Any) -> None:
     """Resolve and invoke a project-supplied ``signing_validator``.
 
     The hook can raise ``SigningError(...)`` to block the signature.
+    Sync or async hooks are both supported — an async hook is awaited
+    directly on the running request loop (``run_until_complete`` would
+    raise ``RuntimeError`` inside the already-running handler loop).
     """
     fn: _ValidatorFn = _resolve_dotted_callable(dotted_path, kind="signing_validator")
     result = fn(entity=entity, row=row)
     if hasattr(result, "__await__"):
-        import asyncio
-
-        asyncio.get_event_loop().run_until_complete(result)
+        await result
 
 
 def _invoke_template(dotted_path: str, *, entity: EntitySpec, row: Any) -> str:
@@ -461,6 +606,28 @@ def _invoke_template(dotted_path: str, *, entity: EntitySpec, row: Any) -> str:
             f"signing_template {dotted_path!r} must return str, got {type(result).__name__}"
         )
     return result
+
+
+async def _invoke_resend_hook(
+    dotted_path: str,
+    *,
+    entity_name: str,
+    row: Any,
+    email: str,
+    signing_url: str,
+) -> None:
+    """Resolve and invoke a project-supplied ``resend_hook`` (TR-53).
+
+    The hook delivers ``signing_url`` to ``email`` through the app's own
+    channel (email, SMS, queue…). Sync or async hooks are both supported
+    — an async hook is awaited directly on the running request loop. Its
+    return value is ignored — the fresh link must never flow back to the
+    browser.
+    """
+    fn = _resolve_dotted_callable(dotted_path, kind="resend_hook")
+    result = fn(entity_name=entity_name, row=row, email=email, signing_url=signing_url)
+    if hasattr(result, "__await__"):
+        await result
 
 
 def _resolve_document_body(
@@ -572,7 +739,21 @@ def _signing_page(*, entity_name: str, record_id: str, token: str, document_body
     )
 
 
-def _error_page(message: str) -> str:
+def _support_line(support_contact: str) -> str:
+    """An escaped 'contact …' paragraph, or empty when none configured."""
+    if not support_contact:
+        return ""
+    safe = html.escape(support_contact)
+    # mailto: only when it parses as a bare email; otherwise show as text
+    # (an attacker can't inject markup — value is project config, escaped).
+    if "@" in support_contact and "/" not in support_contact and " " not in support_contact:
+        link = f'<a href="mailto:{safe}">{safe}</a>'
+    else:
+        link = safe
+    return f"<p>Need help? Contact {link}.</p>"
+
+
+def _error_page(message: str, *, support_contact: str = "") -> str:
     safe_message = html.escape(message)
     return (
         "<!DOCTYPE html>"
@@ -580,6 +761,69 @@ def _error_page(message: str) -> str:
         "<title>Cannot sign document</title></head>"
         '<body style="font-family: system-ui; max-width: 540px; margin: 2rem auto;">'
         f"<h1>Cannot sign document</h1><p>{safe_message}</p>"
+        f"{_support_line(support_contact)}"
+        "</body></html>"
+    )
+
+
+def _expired_recovery_page(
+    *,
+    entity_name: str,
+    record_id: str,
+    token: str,
+    support_contact: str,
+    resend_hook: str,
+) -> str:
+    """The expired-link page with a recovery affordance (TR-53).
+
+    With a ``resend_hook`` it offers a one-click "Request a new signing
+    link" form (POSTs the expired token back; the server delivers a fresh
+    link to the original recipient). Without one it falls back to the
+    support contact, or generic 'contact the sender' guidance — never a
+    bare dead end.
+    """
+    safe_entity = html.escape(entity_name)
+    safe_id = html.escape(record_id)
+    if resend_hook:
+        # The form re-submits the expired token; the server re-verifies
+        # its HMAC before delivering a NEW link out-of-band.
+        action = f"/sign/{safe_entity}/{safe_id}/resend"
+        recovery = (
+            f'<form method="post" action="{action}">'
+            f'<input type="hidden" name="token" value="{html.escape(token)}">'
+            '<button type="submit" '
+            'style="font: inherit; padding: 0.6rem 1rem; cursor: pointer;">'
+            "Request a new signing link</button>"
+            "</form>"
+            "<p>We'll email a fresh link to the address this document was sent to.</p>"
+        )
+    else:
+        recovery = _support_line(support_contact) or (
+            "<p>Please contact whoever sent you this document to request a new link.</p>"
+        )
+    return (
+        "<!DOCTYPE html>"
+        '<html lang="en"><head><meta charset="utf-8">'
+        "<title>Signing link expired</title></head>"
+        '<body style="font-family: system-ui; max-width: 540px; margin: 2rem auto;">'
+        "<h1>This signing link has expired</h1>"
+        "<p>For security, signing links are valid for a limited time.</p>"
+        f"{recovery}"
+        "</body></html>"
+    )
+
+
+def _resend_confirmation_page(*, email: str, support_contact: str = "") -> str:
+    safe_email = html.escape(email)
+    return (
+        "<!DOCTYPE html>"
+        '<html lang="en"><head><meta charset="utf-8">'
+        "<title>New link sent</title></head>"
+        '<body style="font-family: system-ui; max-width: 540px; margin: 2rem auto;">'
+        "<h1>New signing link sent</h1>"
+        f"<p>We've sent a fresh signing link to {safe_email}. "
+        "Please check your inbox (and spam folder).</p>"
+        f"{_support_line(support_contact)}"
         "</body></html>"
     )
 

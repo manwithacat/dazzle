@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Expired signing-link recovery** (TR-53). When a signer opens an expired signing link, the
+  page is no longer a dead end. Two optional `[signing]` keys drive recovery:
+  `support_contact` (shown on signing error pages as the human fallback) and `resend_hook` (a
+  dotted path to a project callable `fn(*, entity_name, row, email, signing_url)`). With a
+  `resend_hook`, the expired page offers a one-click "Request a new signing link" button that
+  POSTs to `/sign/{entity}/{id}/resend`; the framework re-verifies the expired token's HMAC,
+  mints a fresh link, and hands it to the hook for out-of-band delivery to the original
+  recipient. The fresh token never returns to the browser — possession of an expired link can
+  request a new one be sent, never extend access. New `verify_token_allow_expired()` validates
+  integrity while permitting an elapsed expiry (recovery only). Verified live: the expired-link
+  trial persona now meets a real recovery page. See `docs/reference/document-signing.md`.
+
+### Fixed
+- **Signing validator/resend hooks no longer crash on an async callable.** `_invoke_validator`
+  (pre-existing) and the new `_invoke_resend_hook` used `asyncio.get_event_loop().run_until_complete()`
+  inside the already-running request loop, which raises `RuntimeError` for any `async def` hook.
+  Both now `await` the coroutine directly. The resend path also catches any hook exception (not
+  just `SigningError`) so a project mailer failure can't leak the freshly minted token through a
+  debug traceback.
+
 ## [0.82.42] - 2026-06-13
 
 ### Added

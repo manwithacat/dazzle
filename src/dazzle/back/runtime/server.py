@@ -1140,6 +1140,26 @@ class DazzleBackendApp:
 
         return None
 
+    def _resolve_signing_recovery(self) -> tuple[str, str]:
+        """Read ``[signing] support_contact`` / ``resend_hook`` (TR-53).
+
+        Returns ``(support_contact, resend_hook)`` — both empty strings
+        when unconfigured or the manifest can't be read, so the signing
+        router degrades to a plain (but non-dead-end) expired page.
+        """
+        if not self._project_root:
+            return "", ""
+        manifest_path = self._project_root / "dazzle.toml"
+        if not manifest_path.is_file():
+            return "", ""
+        try:
+            from dazzle.core.manifest import load_manifest
+
+            signing_cfg = load_manifest(manifest_path).signing
+        except Exception:
+            return "", ""
+        return signing_cfg.support_contact, signing_cfg.resend_hook
+
     def _wire_service_hooks(self) -> None:
         """Discover and register project-level service hooks."""
         if not self._project_root:
@@ -1903,12 +1923,15 @@ class DazzleBackendApp:
             try:
                 from dazzle.signing.routes import create_signing_routes
 
+                support_contact, resend_hook = self._resolve_signing_recovery()
                 signing_router = create_signing_routes(
                     list(self._appspec.domain.entities),
                     repositories=self._repositories,
                     file_service=self._file_service,
                     branding=self._resolve_pdf_branding(),
                     project_root=self._project_root,
+                    support_contact=support_contact,
+                    resend_hook=resend_hook,
                 )
                 if signing_router is not None:
                     self._app.include_router(signing_router)

@@ -58,11 +58,11 @@ def mint_token(
     return base64.urlsafe_b64encode(f"{payload}:{sig}".encode()).decode()
 
 
-def verify_token(token: str) -> tuple[str, str]:
-    """Verify a signing token and return ``(record_id, email)``.
+def _verify_token_signature(token: str) -> tuple[str, str, int]:
+    """Validate decode + shape + HMAC and return ``(record_id, email, expires)``.
 
-    Raises ``InvalidTokenError`` if the token is malformed, the HMAC
-    fails verification, or the expiry has passed.
+    Shared by :func:`verify_token` (which additionally enforces expiry)
+    and :func:`verify_token_allow_expired` (which deliberately doesn't).
     """
     secret = _get_secret()
     try:
@@ -89,9 +89,35 @@ def verify_token(token: str) -> tuple[str, str]:
     except ValueError as exc:
         raise InvalidTokenError("Malformed token expiry") from exc
 
+    return record_id, email, expires
+
+
+def verify_token(token: str) -> tuple[str, str]:
+    """Verify a signing token and return ``(record_id, email)``.
+
+    Raises ``InvalidTokenError`` if the token is malformed, the HMAC
+    fails verification, or the expiry has passed.
+    """
+    record_id, email, expires = _verify_token_signature(token)
     if time.time() > expires:
         raise InvalidTokenError("Token has expired")
+    return record_id, email
 
+
+def verify_token_allow_expired(token: str) -> tuple[str, str]:
+    """Verify a token's integrity but accept an expired timestamp.
+
+    For the expired-link recovery flow ONLY: a valid-but-expired HMAC
+    proves the bearer once held a legitimate link for this
+    ``(record, email)`` pair, which is sufficient to *request* a fresh
+    link be delivered to that same email — and nothing more. Callers
+    must never grant signing-page access or hand a fresh token to the
+    bearer on this basis; the new link goes out through the app's own
+    delivery channel to the original recipient.
+
+    Raises ``InvalidTokenError`` for malformed or tampered tokens.
+    """
+    record_id, email, _expires = _verify_token_signature(token)
     return record_id, email
 
 
