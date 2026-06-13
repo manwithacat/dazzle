@@ -50,6 +50,7 @@ entity Showcase "Component Showcase":
       as: admin
 
 entity User "User":
+  display_field: name
   id: uuid pk
   email: str(200) unique required
   name: str(100) required

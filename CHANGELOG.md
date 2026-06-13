@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Example apps: 19 FK-referenced entities across 9 apps gained a `display_field`** so foreign-key
+  dropdowns and table cells render human labels instead of raw UUIDs (acme_billing, component_showcase,
+  contact_manager, design_studio, hr_records, invoice_ops, llm_ticket_classifier, project_tracker).
+  Surfaced by an `/improve` example-apps Tier-1 `dazzle sweep examples` re-scan; cleared 19 lint
+  warnings fleet-wide with zero validate-error change.
+
+
 ## [0.82.43] - 2026-06-13
 
 ### Added

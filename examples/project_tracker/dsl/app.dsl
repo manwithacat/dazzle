@@ -27,6 +27,7 @@ persona member "Team Member":
 # ── Entities ─────────────────────────────────────────────────────────
 
 entity User "Team Member":
+  display_field: name
   id: uuid pk
   email: str(200) unique required
   name: str(100) required
@@ -47,6 +48,7 @@ entity User "Team Member":
       as: admin, manager, member
 
 entity Project "Project":
+  display_field: name
   id: uuid pk
   name: str(200) required
   description: text
@@ -69,6 +71,7 @@ entity Project "Project":
       as: admin, manager, member
 
 entity Milestone "Milestone":
+  display_field: name
   id: uuid pk
   parent_project: ref Project required
   name: str(200) required
@@ -95,6 +98,7 @@ entity Milestone "Milestone":
       as: admin, manager, member
 
 entity Task "Task":
+  display_field: title
   id: uuid pk
   parent_project: ref Project required
   milestone: ref Milestone

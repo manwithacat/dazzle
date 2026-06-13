@@ -7,6 +7,7 @@ module acme_billing.entities
 entity Organization "Organization":
   intent: "Tenant root — exercises direct-equality scope (id = current_user.org)"
 
+  display_field: name
   id: uuid pk
   name: str(120) required
   created_at: datetime auto_add
@@ -43,6 +44,7 @@ entity Organization "Organization":
 entity User "User":
   intent: "Domain user record — belongs to an org; user carries org ref for current_user.org resolution"
 
+  display_field: name
   id: uuid pk
   email: email required
   name: str(120) required
@@ -85,6 +87,7 @@ entity User "User":
 entity Project "Project":
   intent: "Org project — exercises EXISTS-via-junction scope (via Membership)"
 
+  display_field: name
   id: uuid pk
   name: str(120) required
   org: ref Organization required

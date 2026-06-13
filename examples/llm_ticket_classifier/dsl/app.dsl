@@ -120,6 +120,7 @@ llm_intent suggest_response "Suggest Response":
 # =============================================================================
 
 entity Ticket "Support Ticket":
+  display_field: subject
   id: uuid pk
   subject: str(200) required
   description: text required

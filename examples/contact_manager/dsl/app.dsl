@@ -53,6 +53,7 @@ entity Contact "Contact":
   domain: crm
   patterns: profile, searchable
 
+  display_field: email
   id: uuid pk
   first_name: str(100) required
   last_name: str(100) required

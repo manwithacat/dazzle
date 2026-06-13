@@ -56,6 +56,7 @@ persona employee "Employee":
 entity Department "Department":
   intent: "Org unit. Self-referencing parent_department forms a tree."
 
+  display_field: name
   id: uuid pk
   name: str(150) required
   parent_department: ref Department    # NULL for top-level
@@ -97,6 +98,7 @@ entity Department "Department":
 entity Role "Role":
   intent: "Catalogue of job titles. People hold roles via Employment rows."
 
+  display_field: title
   id: uuid pk
   title: str(150) required
   level: enum[ic1, ic2, ic3, ic4, ic5, ic6, m1, m2, m3, m4] required
@@ -130,6 +132,7 @@ entity Role "Role":
 entity Person "Person":
   intent: "Staff member, past or present. Identity record with temporal lifecycle (started_at → ended_at). Per-period facts (role, salary, manager) are in Employment/Salary/ManagerLink."
 
+  display_field: legal_name
   id: uuid pk
   legal_name: str(200) required
   preferred_name: str(100)

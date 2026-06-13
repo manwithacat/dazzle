@@ -8,6 +8,7 @@ entity Tenant "Tenant":
   archetype: tenant
   intent: "Tenant root — a customer company processing supplier invoices"
 
+  display_field: name
   id: uuid pk
   name: str(120) required
   slug: str(60) unique required
@@ -44,6 +45,7 @@ entity Tenant "Tenant":
 entity User "User":
   intent: "Domain user — carries tenant_id for current_user.tenant_id resolution"
 
+  display_field: name
   id: uuid pk
   email: email required
   name: str(120) required
@@ -78,6 +80,7 @@ entity User "User":
 entity Supplier "Supplier":
   intent: "A supplier that bills a tenant"
 
+  display_field: name
   id: uuid pk
   tenant_id: ref Tenant required
   name: str(160) required

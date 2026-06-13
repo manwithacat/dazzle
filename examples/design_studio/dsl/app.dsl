@@ -26,6 +26,7 @@ persona reviewer "Reviewer":
 # ── Entities ─────────────────────────────────────────────────────────
 
 entity User "User":
+  display_field: name
   id: uuid pk
   email: str(200) unique required
   name: str(100) required
@@ -44,6 +45,7 @@ entity User "User":
       as: admin, designer, reviewer
 
 entity Brand "Brand":
+  display_field: name
   id: uuid pk
   name: str(200) required
   description: text
@@ -67,6 +69,7 @@ entity Brand "Brand":
       as: admin, designer, reviewer
 
 entity Asset "Design Asset":
+  display_field: name
   id: uuid pk
   brand: ref Brand required
   name: str(200) required
