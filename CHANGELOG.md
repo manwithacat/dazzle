@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.56] - 2026-06-14
+
+### Added
+- **`docs/reference/guides.md`** (example-guides Phase 4) — the canonical, agent-discoverable
+  reference for the `guide` construct: the intent-spec reframe, the 8 render kinds, DSL shape,
+  the per-persona quality bar, the two-tier validation contract (fast gate + `dazzle ux verify
+  --guides` e2e oracle), and step-by-step **authoring guidance for the coding agent** using the
+  11 examples as the corpus. Registered in `doc_pages.toml` + linked from the reference index;
+  a pointer added to `CLAUDE.md`. **Completes the example-app guides initiative** (Phases 0–4).
+
+### Fixed
+- **Registered `llm-drivers.md` in `doc_pages.toml`** — it was on disk with a hand-edited index
+  link but unregistered, so it would drop out of the generated index. Now properly registered.
+
 ## [0.82.55] - 2026-06-14
 
 ### Added

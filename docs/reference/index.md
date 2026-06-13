@@ -17,7 +17,6 @@
 | [Rhythms](rhythms.md) | Rhythms capture longitudinal persona journeys through the app, organized into temporal phases containing scenes — evaluable actions on specific surfaces. |
 | [Ledgers & Transactions](ledgers.md) | Ledgers and transactions provide TigerBeetle-backed double-entry accounting. |
 | [LLM Models & Intents](llm.md) | DAZZLE supports declarative LLM job definitions for AI-powered tasks such as classification, extraction, and generation. |
-| [LLM Drivers](llm-drivers.md) | Subscription-billed (`claude-cli`) vs metered (`anthropic-api`) cognition: resolution order, the dev → deploy path, and the production guard. |
 | [Testing](testing.md) | DAZZLE provides a comprehensive testing toolkit including E2E testing with Playwright, FlowSpec test generation, semantic DOM conventions, capability discovery, CRUD completeness analysis, workflow coherence checks, and RBAC validation. |
 | [MCP Tool Inventory](mcp-tools.md) | Live inventory of the MCP tools exposed by `dazzle mcp run`. |
 | [Frontend & Templates](frontend.md) | The Dazzle frontend uses the **typed Fragment substrate** (frozen-dataclass HTML primitives) with HTMX for declarative server interactions. |
@@ -59,3 +58,5 @@
 | [Performance Observability](perf-observability.md) | Local on-demand OpenTelemetry tracing for any Dazzle project via `dazzle perf`. |
 | [Perf Findings Schema](perf-findings-schema.md) | The JSON schema emitted by `dazzle perf report --format json` (FindingsReport). |
 | [Implicitness Audit](implicitness-audit.md) | A working doc on identifying implicit behaviour in Dazzle, written after a runtime post-mortem. |
+| [Onboarding Guides](guides.md) | The `guide` construct: terse, in-fiction, per-persona onboarding overlays — authored by the agent, validated by a fast quality-bar gate plus an e2e guide-walk oracle. |
+| [LLM Drivers](llm-drivers.md) | Subscription-billed (`claude-cli`) vs metered (`anthropic-api`) cognition: resolution order, the dev → deploy path, and the production guard. |

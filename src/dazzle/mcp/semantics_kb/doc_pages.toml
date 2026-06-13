@@ -1592,3 +1592,17 @@ slug = "implicitness-audit"
 order = 127
 handwritten = true
 intro = "A working doc on identifying implicit behaviour in Dazzle, written after a runtime post-mortem."
+
+[pages.guides]
+title = "Onboarding Guides"
+slug = "guides"
+order = 128
+handwritten = true
+intro = "The `guide` construct: terse, in-fiction, per-persona onboarding overlays — authored by the agent, validated by a fast quality-bar gate plus an e2e guide-walk oracle. Read before authoring or editing a guide."
+
+[pages.llm-drivers]
+title = "LLM Drivers"
+slug = "llm-drivers"
+order = 129
+handwritten = true
+intro = "Subscription-billed (`claude-cli`) vs metered (`anthropic-api`) cognition: resolution order, the dev → deploy path, and the production guard."

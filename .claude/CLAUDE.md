@@ -341,6 +341,10 @@ Command playbooks that fan out subagents: pin `model: "claude-haiku-4-5-20251001
 - **Bump on every fix**: Run `/bump patch` after bug fixes before pushing. Every push gets a unique version for deployment traceability.
 - **Agent Guidance in CHANGELOG**: When a release introduces new patterns, conventions, ADRs, or breaking changes that affect how agents should work, add a `### Agent Guidance` section to that version's changelog entry. Keep entries concise — one bullet per topic, stating the rule and where to look.
 
+## Onboarding Guides
+
+When authoring or editing a `guide` (per-persona onboarding overlays), read `docs/reference/guides.md` first. Every example app carries terse, in-fiction, per-persona guides; the quality bar (coverage + terseness + in-fiction + concordance) is enforced by `tests/unit/test_example_guide_bar.py` on every commit, and `dazzle ux verify --guides` is the e2e oracle that proves each guide's overlay renders for its audience persona at runtime. New interactive personas need a guide (or an `_GUIDE_EXEMPT`/`_PENDING_GUIDE_AUTHORING` classification). Note: declaring guides introduces the framework `OnboardingState` entity into the app's RBAC matrix + compliance evidence — regenerate any committed `expected/` references after adding guides.
+
 ## UI Invariants
 
 - **Card safety**: any new region template, dashboard layout change, or fragment primitive must satisfy the 8 invariants in `docs/reference/card-safety-invariants.md`. The scanners in `src/dazzle/testing/ux/contract_checker.py` enforce them, and the composite gate `tests/unit/test_htmx_workspace_composite.py` runs them on the stitched post-HTMX DOM. Regions emit zero chrome + zero title; the dashboard slot owns both. Tests run on the composite DOM, not isolated templates.
@@ -368,4 +372,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.82.55 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.82.56 | **Python**: 3.12+ | **Status**: Production Ready
