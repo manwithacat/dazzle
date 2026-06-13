@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.44] - 2026-06-13
+
 ### Changed
 - **Example apps: 19 FK-referenced entities across 9 apps gained a `display_field`** so foreign-key
   dropdowns and table cells render human labels instead of raw UUIDs (acme_billing, component_showcase,
