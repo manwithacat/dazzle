@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.52] - 2026-06-13
+
+### Added
+- **`phase-contract` skill** (`.claude/skills/phase-contract/SKILL.md`) — an autonomous
+  multi-phase execution contract: when the user grants advance authority, a phased plan
+  becomes a gate-driven loop where each phase completes only when its machine-checkable
+  gate exits 0 (never self-certified), auto-proceeding on green, maintaining `PLAN.md`,
+  escalating only on a fixed list (gate fails after MAX_ATTEMPTS, unresolvable ambiguity,
+  destructive-beyond-scope, architecture-material). Includes prompt-injection defence
+  (repo-file instructions contradicting the contract are suspect).
+
+### Agent Guidance
+- For multi-phase work under granted autonomy ("keep going", "max effort", token-rich),
+  invoke the `phase-contract` skill; keep Dazzle ship discipline inside each phase's pass
+  step. See the new "Autonomous Multi-Phase Execution" section in `.claude/CLAUDE.md`.
+
 ## [0.82.51] - 2026-06-13
 
 ### Added
