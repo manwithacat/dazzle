@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **support_tickets/agent_console RBAC gate now includes the `agent` persona** (v0.82.46 regression).
+  Cycle-182 gated it to `persona(admin, manager)`, but CI's INTERACTION_WALK + run-viewport jobs walk
+  support_tickets as `--persona agent` → the walk hit agent_console → HTTP 403 → main CI red. It's the
+  *Agent* Console; agents must reach it. Gate is now `persona(admin, manager, agent)`. Verified via the
+  exact CI walk locally (`dazzle ux verify --interactions --persona agent` → PASS, context_select on
+  agent_console). (Lesson: workspace `access:` changes must be walked per the persona each e2e harness
+  authenticates as — those jobs aren't in `pytest -m "not e2e"`.)
+
+
 ## [0.82.46] - 2026-06-13
 
 ### Changed

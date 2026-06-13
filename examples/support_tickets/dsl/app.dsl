@@ -531,7 +531,7 @@ workspace my_tickets "My Tickets":
 workspace agent_console "Agent Console":
   purpose: "Pick an agent to see the tickets assigned to them and the comments on those tickets"
   stage: "simple_list"
-  access: persona(admin, manager)
+  access: persona(admin, manager, agent)
 
   context_selector:
     entity: User
