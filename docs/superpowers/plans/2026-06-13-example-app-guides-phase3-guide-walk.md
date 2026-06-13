@@ -26,6 +26,31 @@
 
 ---
 
+## DESIGN REFINEMENT (surfaced 2026-06-13 while verifying types)
+
+Surfaces route by **mode**, not uniformly — so `_surface_to_path` must branch on the
+target surface's mode, and detail/edit need a record id:
+- `list`   → `/app/{entity}`            (deterministic ✓)
+- `create` → `/app/{entity}/create`     (deterministic ✓)
+- `detail` → `/app/{entity}/{id}`       (**needs a seeded record id**)
+- `edit`   → `/app/{entity}/{id}/edit`  (**needs a seeded record id**)
+
+Several authored guides target detail/edit surfaces (e.g. simple_task `member_onboarding`
+step `start_it` → `surface.task_detail`). Resolution options (decide before Task 1):
+- **(A) Scope the oracle to the FIRST step** of each guide (almost always a list/create
+  surface = the landing). This is the highest-value, most-reliable proof ("does the
+  persona see the guide where they land?") and avoids id-resolution entirely. Log
+  detail/edit steps as "not walked (needs record id)" — no silent cap.
+- **(B) Full journey with id-resolution:** for a detail/edit target, GET the list page,
+  scrape the first record's id (`data-record-id` / row href), then fetch `/app/{entity}/{id}`.
+  More thorough, more fragile (depends on seeded demo data existing for that entity as the persona).
+- **(C) Hybrid:** walk list/create steps fully; for detail/edit steps, resolve an id when
+  the list yields one, else log-skip.
+
+**Recommendation: start with (A)** — it delivers the core oracle value (first-step
+rootedness, the thing the static gate deferred) at low risk, and (B/C) can extend it later.
+The `GuideWalkInteraction` impl below should take a `first_step_only: bool = True` flag.
+
 ## Pre-flight forks to settle in Task 0 (resolve from code; escalate only if blocked)
 
 - **F1 Redis bootability:** Which of the 11 examples need `REDIS_URL` to boot? Grep each `dazzle.toml` / dsl for redis/channels/job usage. Apps that need Redis either get a Redis service in the new CI job or are excluded from the e2e walk (still covered by the fast gate). Record the bootable set.
