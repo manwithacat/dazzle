@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.45] - 2026-06-13
+
 ### Fixed
 - **acme_billing committed compliance auditspec regenerated** after the v0.82.44 `display_field`
   additions changed the DSL source fingerprint (`dsl_hash`). Compliance content is unchanged — only
