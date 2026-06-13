@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.47] - 2026-06-13
+
 ### Fixed
 - **support_tickets/agent_console RBAC gate now includes the `agent` persona** (v0.82.46 regression).
   Cycle-182 gated it to `persona(admin, manager)`, but CI's INTERACTION_WALK + run-viewport jobs walk
