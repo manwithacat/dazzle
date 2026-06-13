@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.82.50] - 2026-06-13
+## [0.82.51] - 2026-06-13
+
+### Added
+- **simple_task onboarding guides for `manager` and `member`** (example-guides Phase 2,
+  first app). The Team Task Manager example now ships one terse, in-fiction guide per
+  interactive persona: admins set up the board + invite the team (existing), managers
+  triage/review/assign (`manager_onboarding`), members pick up/progress/submit their work
+  (`member_onboarding`). Drains `simple_task` from the Phase-2 worklist; the guide-bar
+  gate's hygiene ratchet confirms full per-persona coverage. The MCP guide-list test was
+  updated to reflect the three guides.
 
 ### Added
 - **Guide quality-bar fast gate** (`tests/unit/test_example_guide_bar.py`, example-guides

@@ -99,7 +99,8 @@ _GUIDE_EXEMPT: dict[str, set[str]] = {
 
 # Interactive personas still owed a guide (Phase 2 worklist). Shrinks to {}.
 _PENDING_GUIDE_AUTHORING: dict[str, set[str]] = {
-    "simple_task": {"manager", "member"},
+    # simple_task drained 2026-06-13 (Phase 2): manager_onboarding +
+    # member_onboarding authored; admin already had workspace_setup.
     "contact_manager": {"user"},
     "fieldtest_hub": {"manager"},
     "project_tracker": {"manager", "member"},

@@ -29,14 +29,19 @@ EXAMPLE_ROOT = Path(__file__).resolve().parents[2] / "examples" / "simple_task"
 
 
 def test_mcp_list_returns_summary_of_every_guide() -> None:
+    # simple_task ships one guide per interactive persona (admin /
+    # manager / member) since the example-guides Phase 2 authoring pass.
     payload = json.loads(guide_list_handler(EXAMPLE_ROOT, {}))
-    assert payload["total"] == 1
-    [guide] = payload["guides"]
-    assert guide["name"] == "workspace_setup"
-    assert guide["audience"] == "persona = admin"
-    assert guide["step_count"] == 3
-    assert guide["step_order"] == ["welcome_empty", "fill_title", "invite_team"]
-    assert guide["has_on_complete"] is True
+    assert payload["total"] == 3
+    by_name = {g["name"]: g for g in payload["guides"]}
+    assert set(by_name) == {"workspace_setup", "manager_onboarding", "member_onboarding"}
+    assert by_name["workspace_setup"]["audience"] == "persona = admin"
+    assert by_name["manager_onboarding"]["audience"] == "persona = manager"
+    assert by_name["member_onboarding"]["audience"] == "persona = member"
+    workspace_setup = by_name["workspace_setup"]
+    assert workspace_setup["step_count"] == 3
+    assert workspace_setup["step_order"] == ["welcome_empty", "fill_title", "invite_team"]
+    assert workspace_setup["has_on_complete"] is True
 
 
 def test_mcp_get_returns_full_ir_for_named_guide() -> None:
