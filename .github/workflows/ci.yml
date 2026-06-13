@@ -673,6 +673,87 @@ jobs:
       run: |
         pkill -f "dazzle serve" || true
 
+  # GUIDE_WALK oracle (example-guides Phase 3): for each example app, boot it,
+  # authenticate as each onboarding guide's audience persona, and assert the
+  # <dz-onboarding-step> overlay actually renders on the first step's surface —
+  # the runtime proof that the persona is shown the guide the DSL promises.
+  # No Playwright (server-rendered HTML, sync httpx). Matrixed over all 11
+  # examples so each gets a clean Postgres + its own boot.
+  #
+  # ADVISORY for now (continue-on-error): this is the first run that boots all
+  # 11 examples for a guide-walk; per-app CI bootability is being shaken out.
+  # PROMOTE to blocking (drop continue-on-error) once it's green across a few
+  # runs — same path the viewport gate (#1295) and interaction-walk took.
+  guide-walks:
+    name: GUIDE_WALK (onboarding overlays)
+    runs-on: ubuntu-latest
+    needs: [python-tests, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - simple_task
+          - contact_manager
+          - support_tickets
+          - ops_dashboard
+          - fieldtest_hub
+          - project_tracker
+          - design_studio
+          - llm_ticket_classifier
+          - acme_billing
+          - hr_records
+          - invoice_ops
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dazzle
+          POSTGRES_PASSWORD: dazzle_test
+          POSTGRES_DB: dazzle_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dazzle"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
+      DAZZLE_SKIP_INFRA_CHECK: "1"
+
+    steps:
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
+
+    - uses: ./.github/actions/setup-dazzle
+      with:
+        optional-pip: ""
+
+    - name: Run GUIDE_WALK (with retry)
+      continue-on-error: true  # ADVISORY — promote to blocking once green (see comment above)
+      run: |
+        cd examples/${{ matrix.app }}
+        set +e
+        for attempt in 1 2 3; do
+          echo "=== Attempt $attempt / 3 (app=${{ matrix.app }}) ==="
+          python -m dazzle ux verify --guides
+          rc=$?
+          echo "rc=$rc"
+          if [ $rc -eq 0 ]; then exit 0; fi
+          if [ $attempt -lt 3 ]; then
+            echo "Retrying in 5s..."
+            sleep 5
+          fi
+        done
+        exit $rc
+      timeout-minutes: 8
+
+    - name: Cleanup
+      if: always()
+      run: |
+        pkill -f "dazzle serve" || true
+
   # ux verify --contracts --managed — structural assertion that every
   # framework-generated contract against the canonical example app
   # (support_tickets) still passes after a given change. This is the

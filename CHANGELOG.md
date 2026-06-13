@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.55] - 2026-06-14
+
+### Added
+- **`GUIDE_WALK` CI job** (example-guides Phase 3) — matrixed over all 11 example apps, each
+  on a clean Postgres, running `dazzle ux verify --guides` (boot → auth as each guide's
+  audience persona → assert the `<dz-onboarding-step>` overlay renders). No Playwright.
+  Landed **advisory** (`continue-on-error`) per Dazzle's gate-promotion convention — promote
+  to blocking once green across a few runs (same path the viewport gate and interaction-walk
+  took), as per-app CI bootability is shaken out.
+
 ## [0.82.54] - 2026-06-13
 
 ### Added
