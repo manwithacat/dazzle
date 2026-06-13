@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.43] - 2026-06-13
+
 ### Added
 - **Expired signing-link recovery** (TR-53). When a signer opens an expired signing link, the
   page is no longer a dead end. Two optional `[signing]` keys drive recovery:
