@@ -120,7 +120,7 @@ For that, use the headless-Playwright runner at `src/dazzle/testing/fuzz_runtime
 python3 -c "
 from pathlib import Path
 from dazzle.testing.fuzz_runtime import run_app_fuzz
-report = run_app_fuzz(Path('/Volumes/SSD/Dazzle/examples/component_showcase'))
+report = run_app_fuzz(Path('/Volumes/SSD/Dazzle/fixtures/component_showcase'))
 print(f'{report.project}: {report.passed}/{report.total}')
 for c in report.failures:
     print(f'  FAIL  {c.name} — {c.detail[:120]}')

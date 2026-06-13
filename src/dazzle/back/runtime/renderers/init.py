@@ -34,7 +34,7 @@ def register_default_renderers(services: RuntimeServices) -> None:
     #   1. `[renderers] extra = ["my_name"]` in dazzle.toml
     #   2. `services.renderer_registry.register(name="my_name", handler=…)`
     #      in your app factory or startup hook.
-    # See examples/custom_renderer/ for a worked example, and #1116/#1117
+    # See fixtures/custom_renderer/ for a worked example, and #1116/#1117
     # for the design history.
     assert _DEFAULT_RENDERERS == ("fragment",), (
         "register_default_renderers is out of sync with _DEFAULT_RENDERERS. "
@@ -42,6 +42,6 @@ def register_default_renderers(services: RuntimeServices) -> None:
         "matching `services.renderer_registry.register(...)` call below. "
         "Project authors should NOT mutate _DEFAULT_RENDERERS — use "
         "`[renderers] extra` in dazzle.toml + a runtime register() call; "
-        "see examples/custom_renderer/."
+        "see fixtures/custom_renderer/."
     )
     services.renderer_registry.register(name="fragment", handler=FragmentSurfaceRenderer())

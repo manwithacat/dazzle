@@ -687,7 +687,7 @@ def _unknown_renderer_message(name: str, known: set[str], location: str) -> str:
         "       services.renderer_registry.register(\n"
         f"           name={name!r}, handler=MyRendererClass()\n"
         "       )\n\n"
-        "See examples/custom_renderer/ for a worked end-to-end example."
+        "See fixtures/custom_renderer/ for a worked end-to-end example."
     )
 
 

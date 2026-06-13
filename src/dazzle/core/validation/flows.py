@@ -374,7 +374,7 @@ def validate_process_step_service_refs(
 ) -> tuple[list[str], list[str]]:
     """Warn when a process step references a service that doesn't exist.
 
-    Found in examples/pra during /fuzz: `service: auto_assign_task` on a
+    Found in fixtures/pra during /fuzz: `service: auto_assign_task` on a
     process step where no such domain_service is declared.
     """
     errors: list[str] = []

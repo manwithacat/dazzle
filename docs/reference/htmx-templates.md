@@ -290,7 +290,7 @@ class ManuscriptViewer:
         return f'<section>{self._panel(detail.item)}{render_detail_view(detail)}</section>'
 ```
 
-See [`examples/custom_renderer/`](https://github.com/manwithacat/dazzle/tree/main/examples/custom_renderer)
+See [`fixtures/custom_renderer/`](https://github.com/manwithacat/dazzle/tree/main/fixtures/custom_renderer)
 for the full two-halves-of-the-contract recipe (link-time `[renderers]
 extra` allowlist + runtime `register(...)`) and the worked per-entity
 detail-viewer (`app/render/feedback_detail.py`).

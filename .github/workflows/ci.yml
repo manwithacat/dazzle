@@ -355,7 +355,7 @@ jobs:
 
     - name: Validate all example and fixture projects
       run: |
-        # examples/pra is the parser-conformance corpus — intentionally
+        # fixtures/pra is the parser-conformance corpus — intentionally
         # contains validation-failing shapes (HLESS decimal-on-monetary,
         # unreachable entities, broken FK chains, etc.) used to exercise
         # the parser/validator paths. It MUST fail `dazzle validate`.

@@ -61,7 +61,7 @@ def test_docstring_points_at_worked_example() -> None:
     reads the RuntimeServices source to figure out what's in scope,
     they should land on the worked example."""
     doc = RuntimeServices.__doc__ or ""
-    assert "examples/custom_renderer" in doc, (
+    assert "fixtures/custom_renderer" in doc, (
         "RuntimeServices docstring must link to the worked example so "
         "extension authors land on a real implementation, not just an "
         "abstract attribute list."

@@ -25,7 +25,7 @@ all components render correctly from a single create/edit form.
 ## Running
 
 ```bash
-cd examples/component_showcase
+cd fixtures/component_showcase
 dazzle serve --local
 ```
 

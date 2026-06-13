@@ -561,7 +561,7 @@ class RenderersConfig:
     Runtime registration (handler attached to a name) is a separate
     step — done in app code via
     ``services.renderer_registry.register(name=…, handler=…)``.
-    See ``examples/custom_renderer/`` for a worked example.
+    See ``fixtures/custom_renderer/`` for a worked example.
     """
 
     extra: list[str] = field(default_factory=list)

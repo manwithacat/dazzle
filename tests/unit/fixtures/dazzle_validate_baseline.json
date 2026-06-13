@@ -34,7 +34,7 @@
       "expected_errors": 0,
       "expected_warnings_min": 17
     },
-    "examples/component_showcase": {
+    "fixtures/component_showcase": {
       "expected_errors": 0,
       "expected_warnings_min": 8
     },
@@ -46,7 +46,7 @@
       "expected_errors": 0,
       "expected_warnings_min": 8
     },
-    "examples/pra": {
+    "fixtures/pra": {
       "expected_errors": 7,
       "expected_warnings_min": 350,
       "expected_error_patterns": [

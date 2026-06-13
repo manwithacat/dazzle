@@ -16,7 +16,7 @@ What this gate enforces:
       auto-fixed by an aggressive refactor)
 
 Why this exists:
-    Some examples (notably ``examples/pra``) are deliberate
+    Some examples (notably ``fixtures/pra``) are deliberate
     kitchen-sink test data that exercise grammar shapes the
     validator's semantic rules reject (e.g. ``decimal`` in stream
     schemas, ``permit:`` without ``scope:``). Without a baseline,

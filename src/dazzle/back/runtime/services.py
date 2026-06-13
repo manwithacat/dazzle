@@ -26,7 +26,7 @@ class RuntimeServices:
     **Reading this from extension code.** Every attribute below is
     part of the framework's public contract for extension authors —
     renderers (``services.renderer_registry.resolve(...)`` from
-    `examples/custom_renderer/`), primitives, route overrides, and
+    `fixtures/custom_renderer/`), primitives, route overrides, and
     any code that receives ``services`` as a parameter can read
     these. The ``Any``-typed optional services are typed loosely to
     dodge an import cycle at this level — see ``services: Any`` in
@@ -47,7 +47,7 @@ class RuntimeServices:
       Public API: ``register(name, handler)``,
       ``resolve(name) -> Handler | None``,
       ``registered_names() -> set[str]``. See
-      ``examples/custom_renderer/`` for the registration shape and
+      ``fixtures/custom_renderer/`` for the registration shape and
       #1116 / #1117 for the manifest + dispatch contract.
     - ``primitive_registry`` (``PrimitiveRegistry``) — registers DSL
       primitives (computed-field operators, predicate evaluators,
@@ -84,7 +84,7 @@ class RuntimeServices:
     need without locking the framework into a wider public API than
     it needs to commit to.
 
-    See also: ``examples/custom_renderer/`` (worked example),
+    See also: ``fixtures/custom_renderer/`` (worked example),
     ``docs/reference/access-control.md`` (renderer protocol), and
     #1121 (the design conversation that produced this docstring —
     a ``RendererServices`` Protocol shape was considered but

@@ -36,10 +36,6 @@ _KNOWN_EXAMPLES = [
     "ops_dashboard",
     "fieldtest_hub",
     "contact_manager",
-    # v0.71.15 — renderer extension worked example (#1117). Has no
-    # permit: rules at all, so no PERMIT_NO_SCOPE warnings can fire —
-    # included to keep the discovery gate honest.
-    "custom_renderer",
     # #1174 — multi-tenant billing app. Canonical adversarial-RBAC
     # teaching example: direct-equality, FK-path, EXISTS-via-junction
     # and compound (`!=`) scope rules, exercised by the adversarial
@@ -60,14 +56,6 @@ _KNOWN_EXAMPLES = [
 # (showcase one capability) and don't claim to teach the write-op scope
 # idiom. Each entry needs a one-line rationale.
 _DOGFOOD_EXEMPT = {
-    # Largest app in the repo; deliberate kitchen-sink corpus exercising
-    # every DSL form including grammar shapes the validator rejects
-    # (7 errors, 335+ warnings pinned in dazzle_validate_baseline.json).
-    # The example's README calls this out explicitly.
-    "pra",
-    # Widget gallery on a single Showcase entity — RBAC is incidental, the
-    # example exists to render every component, not to teach scope rules.
-    "component_showcase",
     # UX component expansion demo (Quill/Flatpickr/Tom Select). RBAC is
     # standard but the focus is widget integration, not the scope idiom.
     "project_tracker",

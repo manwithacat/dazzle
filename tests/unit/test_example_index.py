@@ -11,7 +11,10 @@ from dazzle.core.discovery.example_index import build_example_index
 # ---------------------------------------------------------------------------
 
 EXAMPLES_DIR = Path(__file__).parent.parent.parent / "examples"
-COMPONENT_SHOWCASE = EXAMPLES_DIR / "component_showcase"
+# component_showcase was reclassified examples/ → fixtures/ (2026-06-13 guides
+# Phase 0); the index builder still validates it at its new home.
+FIXTURES_DIR = Path(__file__).parent.parent.parent / "fixtures"
+COMPONENT_SHOWCASE = FIXTURES_DIR / "component_showcase"
 
 _has_component_showcase = (
     COMPONENT_SHOWCASE.is_dir() and (COMPONENT_SHOWCASE / "dazzle.toml").exists()
@@ -26,7 +29,7 @@ _has_component_showcase = (
 @pytest.mark.skipif(not _has_component_showcase, reason="component_showcase not available")
 class TestComponentShowcase:
     def test_widget_rich_text_indexed(self):
-        index = build_example_index(EXAMPLES_DIR)
+        index = build_example_index(FIXTURES_DIR)
         assert "widget_rich_text" in index
         refs = index["widget_rich_text"]
         assert len(refs) > 0
@@ -34,7 +37,7 @@ class TestComponentShowcase:
         assert "component_showcase" in app_names
 
     def test_widget_picker_indexed(self):
-        index = build_example_index(EXAMPLES_DIR)
+        index = build_example_index(FIXTURES_DIR)
         assert "widget_picker" in index
         refs = index["widget_picker"]
         assert len(refs) > 0
@@ -42,7 +45,7 @@ class TestComponentShowcase:
         assert "component_showcase" in app_names
 
     def test_example_ref_has_positive_line(self):
-        index = build_example_index(EXAMPLES_DIR)
+        index = build_example_index(FIXTURES_DIR)
         assert "widget_rich_text" in index
         for ref in index["widget_rich_text"]:
             if ref.app == "component_showcase":
@@ -52,7 +55,7 @@ class TestComponentShowcase:
                 break
 
     def test_layout_kanban_indexed(self):
-        index = build_example_index(EXAMPLES_DIR)
+        index = build_example_index(FIXTURES_DIR)
         assert "layout_kanban" in index
         refs = index["layout_kanban"]
         assert len(refs) > 0

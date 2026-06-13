@@ -26,7 +26,7 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 from dazzle.core.renderer_registry import known_renderer_names
 
-PROJECT = Path("examples/pra")  # heaviest example (~8.3k DSL lines)
+PROJECT = Path("fixtures/pra")  # heaviest example (~8.3k DSL lines)
 WARMUP = 5
 N = 40
 

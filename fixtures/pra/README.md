@@ -67,7 +67,7 @@ All streams are classified into exactly one RecordKind:
 ## Running
 
 ```bash
-cd examples/pra
+cd fixtures/pra
 dazzle validate    # Validate DSL
 dazzle serve   # Run the app
 ```

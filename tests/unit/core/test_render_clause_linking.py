@@ -158,7 +158,7 @@ def test_unknown_renderer_error_points_at_worked_example() -> None:
     """The error must mention the worked example so the agent knows
     there's a reference implementation to look at."""
     msg = _surface_error_message()
-    assert "examples/custom_renderer" in msg
+    assert "fixtures/custom_renderer" in msg
 
 
 def test_unknown_renderer_error_lists_currently_known_set() -> None:

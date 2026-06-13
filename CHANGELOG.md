@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.49] - 2026-06-13
+
+### Changed
+- **Reclassified `pra`, `component_showcase`, `custom_renderer` from `examples/` to
+  `fixtures/`** (example-guides Phase 0 — design at
+  `docs/superpowers/specs/2026-06-13-example-app-guides-design.md`). An *example* is now
+  exclusively a kayfabe business app demonstrating Dazzle as an app factory (and will
+  carry per-persona onboarding guides in later phases); framework artifacts — a
+  parser-conformance corpus, a component gallery, and a renderer-extension demo — live
+  under `fixtures/`. Examples: 14 → 11. Removed the `pra` entry from the MCP example
+  registry. All live references updated (framework docstrings/error-messages, asserting
+  tests, list/count gates, validate-baseline keys, CLAUDE.md drift lists, bench script,
+  CI/command comments, htmx-templates doc, moved-app READMEs); frozen history untouched.
+
+### Agent Guidance
+- New apps that demonstrate a *framework capability* (not a fictional business) belong in
+  `fixtures/`, not `examples/`. Every `examples/` app must be a kayfabe product and (from
+  later phases) carry per-persona guides. Note `src/dazzle/back/pra/` is the framework
+  perf-harness module — unrelated to `fixtures/pra/` (the corpus) and never moves with it.
+
 ## [0.82.48] - 2026-06-13
 
 ### Fixed

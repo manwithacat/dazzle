@@ -157,7 +157,7 @@ def test_custom_detail_viewer_can_delegate_to_generic_render() -> None:
     """#1297: a custom renderer holding `ctx["detail_context"]` can call
     the exported `render_detail_view` helper to produce the standard
     detail body, then wrap/append its own chrome. This pins the full
-    delegation round-trip the worked example (examples/custom_renderer)
+    delegation round-trip the worked example (fixtures/custom_renderer)
     relies on."""
     from dazzle.ui.runtime import render_detail_view
 

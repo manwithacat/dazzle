@@ -82,7 +82,7 @@ def dispatch_render(
             "  services.renderer_registry.register(\n"
             f"      name={renderer_name!r}, handler=MyRendererClass()\n"
             "  )\n\n"
-            "See examples/custom_renderer/ for a worked example."
+            "See fixtures/custom_renderer/ for a worked example."
         )
 
     html: str = handler.render(surface, ctx)

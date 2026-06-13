@@ -10,7 +10,7 @@ here so the link-time validator and runtime registry stay in sync.
 Projects extend the validator's known set via `[renderers] extra=[…]`
 in `dazzle.toml` — call ``known_renderer_names(manifest)`` instead of
 ``default_renderer_names()`` whenever a manifest is reachable. See
-#1116 and ``examples/custom_renderer/`` for the full extension path.
+#1116 and ``fixtures/custom_renderer/`` for the full extension path.
 """
 
 from typing import TYPE_CHECKING
@@ -45,7 +45,7 @@ def known_renderer_names(manifest: "ProjectManifest | None" = None) -> set[str]:
     The names returned here are the validation allowlist only. Runtime
     registration (handler attached to a name) is a separate step in app
     code via ``services.renderer_registry.register(name=…, handler=…)``.
-    See ``examples/custom_renderer/`` for a worked example.
+    See ``fixtures/custom_renderer/`` for a worked example.
     """
     names = set(_DEFAULT_RENDERERS)
     if manifest is not None and manifest.renderers.extra:
