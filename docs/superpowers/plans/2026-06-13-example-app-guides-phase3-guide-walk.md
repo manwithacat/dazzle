@@ -34,6 +34,20 @@
 
 ---
 
+> **Task 0 partially executed 2026-06-13 (de-risking):**
+> - **F1 (Redis):** survey across 11 examples — only `simple_task` (messaging.dsl) and
+>   `support_tickets` (runtime.dsl) match redis-ish constructs; support_tickets already
+>   boots in the existing INTERACTION_WALK CI job **without** a Redis service, so it
+>   degrades gracefully. Provisional conclusion: all 11 bootable on Postgres alone;
+>   confirm per-app in Task 3/4.
+> - **Mechanism PROVEN:** booted support_tickets locally, authed as `customer`, fetched
+>   `/app/ticket` (200) — the `<dz-onboarding-step ... data-guide="customer_onboarding"
+>   data-step="welcome_empty" ...>` overlay rendered. The guide-walk oracle is viable.
+> - **Correction:** the real tag is `<dz-onboarding-step class="..." data-guide="..."
+>   data-step="..." data-kind="..." data-placement="...">` — `class` precedes the
+>   `data-*` attrs, so the matcher checks `data-guide`/`data-step` independently (applied
+>   to the Task 1 impl above).
+
 ### Task 0: Settle the forks + confirm the boot+auth+overlay path manually
 
 **Files:** none (investigation) — produces the facts the later tasks hardcode.
@@ -189,8 +203,15 @@ class GuideWalkInteraction:
             resp = self.http.get(path)
             if resp.status_code != 200:
                 return InteractionResult(self.label, False, f"{path} returned {resp.status_code} for {self.persona}")
-            marker = f'dz-onboarding-step data-guide="{self.guide.name}" data-step="{step_name}"'
-            if marker not in resp.text:
+            # Attribute order is NOT guaranteed — the real tag is
+            # `<dz-onboarding-step class="..." data-guide="..." data-step="..." ...>`
+            # (class precedes the data-* attrs; verified by the Task 0 probe).
+            # Match the two identifying attributes independently.
+            if (
+                "dz-onboarding-step" not in resp.text
+                or f'data-guide="{self.guide.name}"' not in resp.text
+                or f'data-step="{step_name}"' not in resp.text
+            ):
                 return InteractionResult(
                     self.label, False,
                     f"overlay for step {step_name!r} did not render on {path} as {self.persona} "
