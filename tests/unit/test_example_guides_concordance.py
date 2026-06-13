@@ -22,14 +22,21 @@ from dazzle.core.guide_concordance import check_guide_concordance
 
 EXAMPLES_ROOT = Path(__file__).resolve().parents[2] / "examples"
 
-# The five example apps that ship guides. Order matters — keep the
-# canonical one first so a per-app failure header reads cleanly.
+# Every example app ships guides as of the 2026-06-13 example-guides Phase 2
+# authoring pass (all 11 examples covered, one guide per interactive persona).
+# Keep the canonical one first so a per-app failure header reads cleanly.
 _APPS_WITH_GUIDES = [
     "simple_task",
     "contact_manager",
     "support_tickets",
     "ops_dashboard",
     "fieldtest_hub",
+    "project_tracker",
+    "design_studio",
+    "llm_ticket_classifier",
+    "acme_billing",
+    "hr_records",
+    "invoice_ops",
 ]
 
 

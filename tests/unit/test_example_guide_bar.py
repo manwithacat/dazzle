@@ -97,19 +97,13 @@ _GUIDE_EXEMPT: dict[str, set[str]] = {
     "invoice_ops": {"tenant_admin", "finance_admin"},
 }
 
-# Interactive personas still owed a guide (Phase 2 worklist). Shrinks to {}.
-_PENDING_GUIDE_AUTHORING: dict[str, set[str]] = {
-    # simple_task drained 2026-06-13 (Phase 2): manager_onboarding +
-    # member_onboarding authored; admin already had workspace_setup.
-    "contact_manager": {"user"},
-    "fieldtest_hub": {"manager"},
-    "project_tracker": {"manager", "member"},
-    "design_studio": {"designer", "reviewer"},
-    "llm_ticket_classifier": {"support_agent", "supervisor"},
-    "acme_billing": {"org_owner", "auditor", "project_member", "external_contractor"},
-    "hr_records": {"manager", "finance", "employee"},
-    "invoice_ops": {"requester", "approver", "finance", "auditor"},
-}
+# Interactive personas still owed a guide (Phase 2 worklist). DRAINED:
+# Phase 2 completed 2026-06-13 — every example app now carries a guide for
+# each interactive persona (admins exempt above). A new app/persona without a
+# guide must be added here (or to _GUIDE_EXEMPT) or test_guide_coverage_partition
+# fails. llm_ticket_classifier's two guides are intentionally orientation-only
+# pending an optional DSL uplift (the app is view-centric; see PLAN.md).
+_PENDING_GUIDE_AUTHORING: dict[str, set[str]] = {}
 
 
 @pytest.mark.parametrize("app", _examples())

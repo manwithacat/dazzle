@@ -2,7 +2,7 @@
   "framework_id": "iso27001",
   "framework_name": "ISO/IEC 27001:2022",
   "framework_version": "2022",
-  "dsl_hash": "sha256:c6fcfc2f2ff86f55",
+  "dsl_hash": "sha256:df78eb654e5fffae",
   "controls": [
     {
       "control_id": "A.5.1",
@@ -160,6 +160,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Membership.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
         },
         {
           "entity": "SystemHealth",
@@ -398,6 +428,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Membership.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
         },
         {
           "entity": "SystemHealth",
@@ -688,6 +748,36 @@
           "dsl_ref": "Membership.permit"
         },
         {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
           "entity": "SystemHealth",
           "construct": "permit",
           "detail": "read: None",
@@ -923,6 +1013,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Membership.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
         },
         {
           "entity": "SystemHealth",
@@ -1241,6 +1361,66 @@
           "construct": "scope",
           "detail": "read: comparison=Comparison(field='project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
           "dsl_ref": "Membership.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "create: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "read: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "list: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "update: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "delete: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.scope"
         }
       ],
       "gap_description": "",
@@ -1402,6 +1582,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Membership.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
         },
         {
           "entity": "SystemHealth",
@@ -1609,6 +1819,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Membership.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
         },
         {
           "entity": "SystemHealth",
@@ -1948,6 +2188,36 @@
           "dsl_ref": "Membership.permit"
         },
         {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
           "entity": "SystemHealth",
           "construct": "permit",
           "detail": "read: None",
@@ -2163,6 +2433,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Membership.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
         },
         {
           "entity": "SystemHealth",
@@ -2602,6 +2902,36 @@
           "dsl_ref": "Membership.permit"
         },
         {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
           "entity": "SystemHealth",
           "construct": "permit",
           "detail": "read: None",
@@ -2797,6 +3127,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Membership.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
         },
         {
           "entity": "SystemHealth",
@@ -3115,6 +3475,66 @@
           "construct": "scope",
           "detail": "read: comparison=Comparison(field='project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
           "dsl_ref": "Membership.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "create: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "read: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "list: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "update: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "delete: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.scope"
         }
       ],
       "gap_description": "",
@@ -3336,6 +3756,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Membership.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
         },
         {
           "entity": "SystemHealth",
@@ -3675,6 +4125,66 @@
           "construct": "scope",
           "detail": "read: comparison=Comparison(field='project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
           "dsl_ref": "Membership.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "create: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "read: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "list: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "update: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "delete: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.scope"
         }
       ],
       "gap_description": "",
@@ -3968,6 +4478,36 @@
           "dsl_ref": "Membership.permit"
         },
         {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
           "entity": "SystemHealth",
           "construct": "permit",
           "detail": "read: None",
@@ -4163,6 +4703,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Membership.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.permit"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "permit",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.permit"
         },
         {
           "entity": "SystemHealth",
@@ -4481,6 +5051,66 @@
           "construct": "scope",
           "detail": "read: comparison=Comparison(field='project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
           "dsl_ref": "Membership.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "create: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "create: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "read: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "read: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "list: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "list: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "update: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "update: None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "delete: comparison=Comparison(field='user_id', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.id', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "OnboardingState.scope"
+        },
+        {
+          "entity": "OnboardingState",
+          "construct": "scope",
+          "detail": "delete: None",
+          "dsl_ref": "OnboardingState.scope"
         }
       ],
       "gap_description": "",

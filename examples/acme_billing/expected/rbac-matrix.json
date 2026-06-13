@@ -12,6 +12,7 @@
     "Project",
     "Invoice",
     "Membership",
+    "OnboardingState",
     "SystemHealth",
     "SystemMetric",
     "DeployHistory"
@@ -773,6 +774,156 @@
       "entity": "Membership",
       "operation": "delete",
       "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "OnboardingState",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "admin",
+      "entity": "OnboardingState",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "admin",
+      "entity": "OnboardingState",
+      "operation": "create",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "admin",
+      "entity": "OnboardingState",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "admin",
+      "entity": "OnboardingState",
+      "operation": "delete",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "OnboardingState",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "OnboardingState",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "OnboardingState",
+      "operation": "create",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "OnboardingState",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "OnboardingState",
+      "operation": "delete",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "OnboardingState",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "OnboardingState",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "OnboardingState",
+      "operation": "create",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "OnboardingState",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "OnboardingState",
+      "operation": "delete",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "OnboardingState",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "OnboardingState",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "OnboardingState",
+      "operation": "create",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "OnboardingState",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "OnboardingState",
+      "operation": "delete",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "OnboardingState",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "OnboardingState",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "OnboardingState",
+      "operation": "create",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "OnboardingState",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "OnboardingState",
+      "operation": "delete",
+      "decision": "PERMIT_SCOPED"
     },
     {
       "role": "admin",

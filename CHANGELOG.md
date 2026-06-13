@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.53] - 2026-06-13
+
+### Added
+- **Per-persona onboarding guides for every remaining example app** (example-guides Phase 2
+  complete). Authored guides covering every interactive persona across `contact_manager`,
+  `fieldtest_hub`, `project_tracker`, `design_studio`, `llm_ticket_classifier`, `acme_billing`,
+  `hr_records`, and `invoice_ops` (simple_task shipped earlier). All 11 examples now carry
+  terse, in-fiction guides — action-driven where the persona creates (Project/Task/Asset/
+  Invoice/Feedback), orientation-only (dismiss) for read-only personas (auditors, contractors,
+  HR managers/finance/employees). Admins remain exempt. The Phase-1 guide-bar gate's
+  `_PENDING_GUIDE_AUTHORING` worklist is drained to empty; coverage is now universal and
+  ratchet-protected.
+
+### Changed
+- **acme_billing committed references regenerated** (`expected/rbac-matrix.json`,
+  `expected/compliance-auditspec.json`) to include the `OnboardingState` framework entity that
+  an app gains when it declares guides (per-user guide progress; `PERMIT_SCOPED` to each user's
+  own rows — analogous to `AIJob` from `llm_intent`). No app RBAC/scope rules changed.
+
+### Agent Guidance
+- Declaring `guide` blocks in an app introduces the framework `OnboardingState` entity into its
+  RBAC matrix and compliance evidence. If the app has committed `expected/` references, regenerate
+  them after adding guides (see `tests/unit/test_acme_billing_reference_drift.py` recipe).
+
 ## [0.82.52] - 2026-06-13
 
 ### Added

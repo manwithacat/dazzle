@@ -102,3 +102,39 @@ guide tester_onboarding "Your first test session":
 
   on_complete:
     redirect: surface.test_session_list
+
+# ─── Manager journey ──────────────────────────────────────────────
+# Managers don't register devices — they watch quality and keep fixes
+# moving. Oversight + delegation, rooted on the issue and task lists.
+
+guide manager_onboarding "Stay on top of product quality":
+  audience: persona = manager
+
+  step quality_watch:
+    kind: spotlight
+    target: surface.issue_report_list
+    title: "Keep an eye on critical issues"
+    body: "Filter by severity to surface blockers. Anything critical needs an owner before the build ships."
+    placement: center
+    complete_on: dismiss
+
+  step delegate_fix:
+    kind: empty_state
+    target: surface.task_list
+    title: "Turn issues into assigned work"
+    body: "Create a task for each fix and assign it to an engineer, so nothing critical sits unowned."
+    cta_label: "New Task"
+    cta_target: surface.task_create
+    complete_on: event entity.Task.created
+
+  step track_progress:
+    kind: banner
+    target: surface.task_list
+    title: "Track what the team picks up"
+    body: "Come back here to see what's in progress and what's still waiting for an owner."
+    complete_on: dismiss
+
+  step_order: [quality_watch, delegate_fix, track_progress]
+
+  on_complete:
+    redirect: surface.issue_report_list

@@ -15,7 +15,7 @@ use contact_manager.core
 # without updating the guide fails `dazzle validate`.
 
 guide contacts_onboarding "Getting started with Contacts":
-  audience: persona = admin
+  audience: persona = admin or persona = user
 
   step welcome_empty:
     kind: empty_state
