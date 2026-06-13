@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.42] - 2026-06-13
+
 ### Added
 - **qa trial: `signing_token_state = "expired"` scenario key** (TR-51). `*_token_expired`
   scenarios previously seeded a fresh, signable token — the "two-week-old link" was persona
