@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.50] - 2026-06-13
+
+### Added
+- **Guide quality-bar fast gate** (`tests/unit/test_example_guide_bar.py`, example-guides
+  Phase 1). Every example app's onboarding guides are now linted on every commit for
+  terseness (body ≤200 / title ≤60 / ≤6 steps), in-fiction copy (no meta tokens), and
+  closes-the-loop (`on_complete.redirect`); concordance is enforced for free at load.
+  A per-persona **coverage partition** asserts every interactive persona is covered by a
+  guide, deliberately EXEMPT (admins), or on an explicit PENDING Phase-2 worklist, with a
+  hygiene ratchet so authoring a guide must clear its worklist entry.
+
+### Agent Guidance
+- When adding/editing an example guide, keep `body` ≤200 chars and speak as the product
+  (no "demo"/"Dazzle"/"showcase"). New interactive personas must be covered by a guide or
+  classified in `_GUIDE_EXEMPT`/`_PENDING_GUIDE_AUTHORING` in `test_example_guide_bar.py`.
+
 ## [0.82.49] - 2026-06-13
 
 ### Changed
