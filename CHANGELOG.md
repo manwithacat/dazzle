@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Example apps: 4 workspaces gained `access: persona(...)` gates** (RBAC omission — previously any
+  authenticated user could reach them). component_showcase/gallery → admin; design_studio/studio_dashboard
+  + asset_gallery → admin,designer,reviewer; support_tickets/agent_console → admin,manager (cross-agent
+  oversight console). Surfaced by the `/improve` example-apps lane (row 125); runtime-verified against
+  Postgres (the #1304/#1305 agent_console context-selector tests read as `manager`, still pass).
+
+
 ## [0.82.45] - 2026-06-13
 
 ### Fixed

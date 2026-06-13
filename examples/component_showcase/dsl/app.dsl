@@ -155,6 +155,7 @@ surface showcase_edit "Edit Showcase":
 # ── Workspace ────────────────────────────────────────────────────────
 
 workspace gallery "Component Gallery":
+  access: persona(admin)
   all_items:
     source: Showcase
     display: grid

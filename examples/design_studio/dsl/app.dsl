@@ -153,6 +153,7 @@ entity Feedback "Design Feedback":
 # ── Workspaces ───────────────────────────────────────────────────────
 
 workspace studio_dashboard "Studio Dashboard":
+  access: persona(admin, designer, reviewer)
   brands:
     source: Brand
     display: grid
@@ -166,6 +167,7 @@ workspace studio_dashboard "Studio Dashboard":
     display: metrics
 
 workspace asset_gallery "Asset Gallery":
+  access: persona(admin, designer, reviewer)
   gallery:
     source: Asset
     display: grid
