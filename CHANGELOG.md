@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.46] - 2026-06-13
+
 ### Changed
 - **Example apps: 4 workspaces gained `access: persona(...)` gates** (RBAC omission — previously any
   authenticated user could reach them). component_showcase/gallery → admin; design_studio/studio_dashboard
