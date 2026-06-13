@@ -18,13 +18,26 @@ from pathlib import Path
 
 @dataclass
 class SeededDoc:
-    """A document pre-seeded into the mock inbox for a trial run."""
+    """A document pre-seeded into the mock inbox for a trial run.
+
+    ``token_state`` records how the token was minted (TR-51):
+
+    - ``"fresh"`` — normal 72h-valid token; the persona can sign/decline.
+    - ``"expired"`` — minted already-expired so the scenario exercises the
+      "Invalid or expired link" page. The verifier reads this to expect
+      the row to stay untouched instead of inferring from sign attempts.
+
+    The state is harness-internal — it is deliberately NOT written to the
+    mock inbox, so the persona discovers expiry the way a real signer
+    would: by opening the link.
+    """
 
     entity: str
     id: str
     token: str
     signing_url: str
     signatory_email: str
+    token_state: str = "fresh"
 
 
 @dataclass

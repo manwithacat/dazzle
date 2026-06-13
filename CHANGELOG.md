@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **qa trial: `signing_token_state = "expired"` scenario key** (TR-51). `*_token_expired`
+  scenarios previously seeded a fresh, signable token — the "two-week-old link" was persona
+  fiction and the expired-link UX was never exercised. The harness can now mint an
+  already-expired token per scenario; the persona meets the real "Invalid or expired link"
+  page, and the post-trial verifier expects the document row to stay untouched (a mutated row
+  on an expired link grades as a security-relevant FAIL) instead of inferring "signed" from the
+  persona's attempt. `support_tickets/sla_waiver_token_expired` and
+  `contact_manager/engagement_letter_token_expired` now set it; authoring guidance added to the
+  qa-trial skill (Rule 7).
+
 ## [0.82.41] - 2026-06-13
 
 ### Fixed

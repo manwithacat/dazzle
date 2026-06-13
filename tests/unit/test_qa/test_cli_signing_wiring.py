@@ -98,9 +98,52 @@ def test_seed_creates_one_doc_per_signable_entity():
     assert len(docs) == 1
     assert docs[0].entity == "EngagementLetter"
     assert docs[0].token == "tok-abc"
+    assert docs[0].token_state == "fresh"
     # Verify that /__test__/seed was used (not Cedar-gated /api/{entity})
     call_url = mock_post.call_args[0][0]
     assert "/__test__/seed" in call_url, f"Expected /__test__/seed but got: {call_url}"
+
+
+def test_seed_expired_token_state_mints_already_expired(tmp_path: Path):
+    """TR-51: token_state='expired' must mint a token whose expiry is in
+    the past (negative expires_hours) and stamp the SeededDoc so the
+    verifier expects the row to stay untouched."""
+    entity = MagicMock(signable=True)
+    entity.name = "SlaWaiver"
+    entity.fields = []
+    app_spec = MagicMock()
+    app_spec.domain.entities = [entity]
+
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {"created": {"signable_row": {"id": "row-id-2"}}}
+
+    with (
+        patch("dazzle.cli.qa.mint_token", return_value="tok-expired") as mint,
+        patch("httpx.post", return_value=mock_response),
+        patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
+    ):
+        docs = _seed_signable_rows(
+            app_spec=app_spec,
+            base_url="http://localhost:3000",
+            signatory_email="a@b.com",
+            token_state="expired",
+        )
+    assert docs[0].token_state == "expired"
+    assert mint.call_args.kwargs["expires_hours"] < 0
+
+
+def test_expired_token_actually_fails_verification(tmp_path: Path):
+    """End-to-end at the token layer: a token minted with negative
+    expires_hours must be rejected by verify_token as expired."""
+    import pytest
+
+    from dazzle.signing.tokens import InvalidTokenError, mint_token, verify_token
+
+    with patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "test-secret"}):
+        token = mint_token("row-1", "a@b.com", expires_hours=-1)
+        with pytest.raises(InvalidTokenError, match="expired"):
+            verify_token(token)
 
 
 # ---------------------------------------------------------------------------

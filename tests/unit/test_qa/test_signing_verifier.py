@@ -76,6 +76,50 @@ def test_grades_fail_when_status_mismatches():
     assert outcome.functional["status"] == "fail"
 
 
+def test_expired_seed_overrides_inference_and_expects_untouched_row():
+    """TR-51: with token_state='expired' the expectation is fixed by the
+    seeding — even when the persona ATTEMPTED a signature, the verifier
+    must expect rejection (row stays 'sent'), not infer 'signed'."""
+    doc = SeededDoc("SlaWaiver", "abc", "tok", "http://x", "a@b.com", token_state="expired")
+    action_sink = {
+        "invoked": ["read_inbox", "open_signing_link", "sign_document"],
+        "requests": [
+            {"method": "GET", "url": "http://x/sign/SlaWaiver/abc?token=tok", "status": 403},
+            {"method": "POST", "url": "http://x/api/sign/SlaWaiver/abc", "status": 403},
+        ],
+        "active_doc": doc,
+    }
+    outcome = verify_signing_outcome(
+        action_sink=action_sink,
+        seeded_docs=[doc],
+        db_reader=MagicMock(return_value={"id": "abc", "status": "sent"}),
+        pdf_validator=MagicMock(),
+    )
+    assert outcome.expected_outcome_inferred == "token_expired"
+    assert outcome.functional["status"] == "pass"
+    assert outcome.functional["final_row_status"] == "sent"
+
+
+def test_expired_seed_fails_if_row_was_mutated():
+    """If an expired-token trial somehow ends with the row signed, that's
+    a security-relevant FAIL — the expired link accepted a signature."""
+    doc = SeededDoc("SlaWaiver", "abc", "tok", "http://x", "a@b.com", token_state="expired")
+    outcome = verify_signing_outcome(
+        action_sink={
+            "invoked": ["open_signing_link", "sign_document"],
+            "requests": [
+                {"method": "POST", "url": "http://x/api/sign/SlaWaiver/abc", "status": 200}
+            ],
+            "active_doc": doc,
+        },
+        seeded_docs=[doc],
+        db_reader=MagicMock(return_value={"id": "abc", "status": "signed"}),
+        pdf_validator=MagicMock(),
+    )
+    assert outcome.expected_outcome_inferred == "token_expired"
+    assert outcome.functional["status"] == "fail"
+
+
 def test_outcome_serializes_to_dict():
     outcome = SigningOutcome(detected=False, expected_outcome_inferred="not_engaged")
     assert asdict(outcome)["detected"] is False

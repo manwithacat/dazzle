@@ -653,7 +653,12 @@ def _build_signing_seed_batch(
 
 
 def _seed_signable_rows(
-    *, app_spec: Any, base_url: str, signatory_email: str, test_secret: str = ""
+    *,
+    app_spec: Any,
+    base_url: str,
+    signatory_email: str,
+    test_secret: str = "",
+    token_state: str = "fresh",
 ) -> list[SeededDoc]:
     """For each signable entity in *app_spec*, insert one row + mint a token.
 
@@ -661,6 +666,9 @@ def _seed_signable_rows(
     ``/api/{entity}`` endpoint, so this works on apps with Cedar policies.
     Required FK refs are resolved via the AppSpec IR and included as parent
     fixtures in the same batch (#1285).
+
+    ``token_state="expired"`` mints already-expired tokens so *_token_expired*
+    scenarios exercise the real "Invalid or expired link" page (TR-51).
 
     Returns a list of :class:`~dazzle.qa.signing_seed.SeededDoc` objects
     (one per signable entity) ready to write into the mock inbox.
@@ -693,7 +701,11 @@ def _seed_signable_rows(
                 f"got created keys: {list(created)}"
             )
 
-        token = mint_token(record_id=row_id, email=signatory_email)
+        # expires_hours=-1 mints a token whose expiry is already in the
+        # past — verify_token then rejects it exactly as it would a real
+        # two-week-old email link.
+        expires_hours = -1 if token_state == "expired" else 72
+        token = mint_token(record_id=row_id, email=signatory_email, expires_hours=expires_hours)
         docs.append(
             SeededDoc(
                 entity=entity.name,
@@ -701,6 +713,7 @@ def _seed_signable_rows(
                 token=token,
                 signing_url=f"{base_url}/sign/{entity.name}/{row_id}?token={token}",
                 signatory_email=signatory_email,
+                token_state=token_state,
             )
         )
     return docs
@@ -1037,6 +1050,20 @@ def qa_trial(
     typer.echo(f"Trial scenario: {scenario_name} (as persona {login_persona})")
     typer.echo(f"LLM driver: {resolved_driver} ({billing_note})")
 
+    # Optional per-scenario signing-token state (TR-51). "expired" seeds an
+    # already-expired token so *_token_expired scenarios exercise the real
+    # "Invalid or expired link" page instead of a fresh, signable token.
+    signing_token_state = str(chosen.get("signing_token_state", "fresh"))
+    if signing_token_state not in ("fresh", "expired"):
+        typer.echo(
+            f"Scenario '{scenario_name}': signing_token_state must be "
+            f"'fresh' or 'expired', got {signing_token_state!r}.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+    if signing_token_state == "expired":
+        typer.echo("Signing trial harness: seeding an EXPIRED token per scenario config.")
+
     if fresh_db:
         _reset_db_for_trial(project_dir)
 
@@ -1119,6 +1146,7 @@ def qa_trial(
                         base_url=site_url,
                         signatory_email="trial-signatory@example.com",
                         test_secret=test_secret_val,
+                        token_state=signing_token_state,
                     )
                     seed_ctx = SigningSeedContext(
                         env=seed_ctx.env,

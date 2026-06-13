@@ -95,6 +95,7 @@ Stop after declining. Call submit_verdict with your verdict.
 [[scenario]]
 name = "sla_waiver_token_expired"
 login_persona = "customer"
+signing_token_state = "expired"
 time_budget_seconds = 400
 max_steps = 25
 user_identity = """

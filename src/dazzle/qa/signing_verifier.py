@@ -15,6 +15,7 @@ _EXPECTED_STATUS: dict[str, str | None] = {
     "signed": "signed",
     "declined": "declined",
     "token_invalid": "sent",
+    "token_expired": "sent",
     "not_engaged": None,
 }
 
@@ -78,7 +79,17 @@ def verify_signing_outcome(
     """
     invoked: list[str] = action_sink.get("invoked", [])
     requests: list[dict[str, Any]] = action_sink.get("requests", [])
-    expected = infer_expected_outcome(invoked)
+    active_doc: SeededDoc | None = action_sink.get("active_doc")
+
+    # When the harness seeded an already-expired token (TR-51), the
+    # expectation is fixed by the seeding, not by what the persona tried:
+    # every sign/decline attempt must be rejected and the row must stay
+    # untouched. Tool-based inference would wrongly expect "signed" the
+    # moment the persona attempts a signature against the expired link.
+    if active_doc is not None and getattr(active_doc, "token_state", "fresh") == "expired":
+        expected = "token_expired"
+    else:
+        expected = infer_expected_outcome(invoked)
     outcome = SigningOutcome(detected=False, expected_outcome_inferred=expected)
 
     if not any("/sign/" in r.get("url", "") for r in requests):
@@ -86,8 +97,6 @@ def verify_signing_outcome(
 
     outcome.detected = True
     outcome.latency_ms = _compute_latency(requests)
-
-    active_doc: SeededDoc | None = action_sink.get("active_doc")
     if active_doc is None:
         outcome.functional = {
             "status": "harness_error",

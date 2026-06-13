@@ -108,6 +108,16 @@ The path is relative to the app's base URL. Fragment anchors work because worksp
 
 Rule of thumb: if your tasks start with "Find the X chart…", you probably want `starting_url` to drop the persona at X. Otherwise you're testing page layout, not the chart.
 
+### Rule 7: `signing_token_state` for expired-link scenarios (v0.82.42+)
+
+Apps with `signable: true` entities get the signing harness automatically (ephemeral cert, mock inbox, `read_inbox`/`open_signing_link`/`sign_document` tools). By default the seeded token is fresh and signable. To trial the *expired-link experience* — what a signer sees when they open a two-week-old email — set:
+
+```toml
+signing_token_state = "expired"   # default: "fresh"
+```
+
+The harness then mints an already-expired token, the signing page renders the real "Invalid or expired link" response, and the post-trial verifier expects the document row to stay untouched (any sign/decline attempt must be rejected). Without this key, a `*_token_expired` scenario silently tests the happy path: the persona gets a valid token and the expiry narrative is pure fiction (TR-51).
+
 ## Template
 
 See `templates/trial-toml-template.toml` for a blank form to fill in. Copy it to your project root, edit, then:
