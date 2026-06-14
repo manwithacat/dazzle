@@ -680,11 +680,12 @@ jobs:
   # No Playwright (server-rendered HTML, sync httpx). Matrixed over all 11
   # examples so each gets a clean Postgres + its own boot.
   #
-  # BLOCKING gate (promoted v0.82.57 after the advisory first run went green
-  # across all 11 examples — every app boots on Postgres-only and every guide's
-  # <dz-onboarding-step> overlay renders for its audience persona). Same
-  # promotion path the viewport gate (#1295) and interaction-walk took. A guide
-  # that promises an overlay the runtime doesn't show now fails main.
+  # ADVISORY (continue-on-error). Promoted to blocking in v0.82.57 after ONE
+  # green advisory run, then REVERTED in v0.82.58 — the very next run failed on
+  # the invoice_ops cell (passed in the advisory run), so the gate isn't yet
+  # reliably green. Investigate the invoice_ops flake/failure, then re-promote
+  # only after it's green across several runs (the viewport-gate convention says
+  # "a few runs", not one — lesson learned).
   guide-walks:
     name: GUIDE_WALK (onboarding overlays)
     runs-on: ubuntu-latest
@@ -732,6 +733,7 @@ jobs:
         optional-pip: ""
 
     - name: Run GUIDE_WALK (with retry)
+      continue-on-error: true  # ADVISORY — reverted from blocking (invoice_ops failed v0.82.57); re-promote once reliably green
       run: |
         cd examples/${{ matrix.app }}
         set +e

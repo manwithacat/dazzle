@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.58] - 2026-06-14
+
+### Changed
+- **Reverted the `GUIDE_WALK` gate to advisory** (`continue-on-error`). It was promoted to
+  blocking in v0.82.57 after a single green advisory run, but the very next run failed on the
+  `invoice_ops` cell (which had passed advisory) — so the gate isn't yet reliably green. Keeping
+  it advisory unblocks main while the invoice_ops failure is investigated; re-promote only after
+  it's green across several runs (the gate-promotion convention is "a few runs", not one).
+
 ## [0.82.57] - 2026-06-14
 
 ### Changed
