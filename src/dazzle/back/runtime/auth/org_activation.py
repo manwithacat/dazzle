@@ -96,6 +96,26 @@ def memberships_required(request: Any) -> bool:
     return bool(getattr(state, "memberships_required", False))
 
 
+def derive_memberships_required(appspec: Any, *, auto_provision: bool) -> bool:
+    """Whether membership-gated login is on for this app (#1393 Phase A).
+
+    True when EITHER:
+      * ``auto_provision`` (``auto_provision_single_org``) is set — the original
+        Plan 1c gate; or
+      * the app declares ``tenant_host:`` on any entity — declaring host-based
+        tenancy IMPLIES membership gating, so a non-member on a tenant host gets a
+        clean 403 (host-pin path) and an org-less identity on the canonical host
+        routes to ``/auth/no-orgs`` rather than a silently-empty legacy session.
+
+    Detected the same way ``app_factory`` decides whether to mount the tenant
+    middleware: any ``domain.entities`` member with a non-None ``tenant_host``.
+    """
+    if auto_provision:
+        return True
+    entities = getattr(getattr(appspec, "domain", None), "entities", None) or []
+    return any(getattr(e, "tenant_host", None) is not None for e in entities)
+
+
 def single_org_auto_provision(request: Any) -> bool:
     """Whether this app lazily provisions a single default org at activation
     (Plan 1c). Default False — pre-1c / multi-org apps don't auto-provision."""

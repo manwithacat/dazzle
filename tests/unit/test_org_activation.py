@@ -11,9 +11,38 @@ from dazzle.back.runtime.auth.org_activation import (
     NoOrgs,
     _login_redirect_for_outcome,
     activate_session_for_login,
+    derive_memberships_required,
     host_tenant_id_from_request,
     resolve_activation,
 )
+
+
+def _appspec(*tenant_host_flags: object) -> SimpleNamespace:
+    """An appspec whose domain.entities carry the given `tenant_host` values."""
+    entities = [SimpleNamespace(tenant_host=flag) for flag in tenant_host_flags]
+    return SimpleNamespace(domain=SimpleNamespace(entities=entities))
+
+
+class TestDeriveMembershipsRequired:
+    """#1393 Phase A: declaring `tenant_host:` implies membership-gated login."""
+
+    def test_tenant_host_implies_required_without_auto_provision(self) -> None:
+        spec = _appspec(None, SimpleNamespace(domain="acme.example"))  # one entity has tenant_host
+        assert derive_memberships_required(spec, auto_provision=False) is True
+
+    def test_auto_provision_still_implies_required(self) -> None:
+        spec = _appspec(None, None)  # no tenant_host
+        assert derive_memberships_required(spec, auto_provision=True) is True
+
+    def test_neither_is_not_required(self) -> None:
+        spec = _appspec(None, None)
+        assert derive_memberships_required(spec, auto_provision=False) is False
+
+    def test_no_entities_is_not_required(self) -> None:
+        assert derive_memberships_required(_appspec(), auto_provision=False) is False
+
+    def test_missing_domain_is_safe(self) -> None:
+        assert derive_memberships_required(SimpleNamespace(), auto_provision=False) is False
 
 
 def _m(mid: str, tid: str, status: str = "active") -> MembershipRecord:

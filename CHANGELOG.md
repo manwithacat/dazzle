@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.69] - 2026-06-14
+
+### Changed
+- **Declaring `tenant_host:` now implies membership-gated login (#1393 Phase A).**
+  Previously the membership gate (`app.state.memberships_required`) was set only
+  when `auto_provision_single_org` was on, so a multi-tenant `tenant_host:` app
+  that didn't opt into auto-provision never reached the membership model — a
+  zero-membership identity logged in to a silently-empty session ("passes auth,
+  sees empty screens"). Membership gating is now derived from
+  `derive_memberships_required(appspec, auto_provision=…)`: True when EITHER
+  `auto_provision_single_org` is set OR any entity declares `tenant_host:`. Effect:
+  a non-member on a host-pinned request still gets a 403 (unchanged — the host-pin
+  path always returned `HostForbidden`), and a genuinely org-less identity on the
+  canonical host now routes to `/auth/no-orgs` instead of falling through to the
+  legacy membership-less session.
+
+  ### Agent Guidance
+  - A `tenant_host:` app now REQUIRES memberships: users without an active
+    membership for the host's tenant get a 403 (host-pinned) or the no-orgs page
+    (canonical host). Set up membership provisioning (invite flow or
+    `auto_provision_single_org`) for such apps. This is the first slice of #1393;
+    a branded 403 page and apex tenant-discovery (Phases B–D) remain open.
+
 ## [0.82.68] - 2026-06-14
 
 ### Fixed

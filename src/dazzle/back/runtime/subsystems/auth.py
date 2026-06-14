@@ -64,7 +64,14 @@ class AuthSubsystem:
         # 1b behavior for existing apps.
         _auto_provision = bool(getattr(ctx.config, "auto_provision_single_org", False))
         ctx.app.state.single_org_auto_provision = _auto_provision
-        ctx.app.state.memberships_required = _auto_provision
+        # #1393 Phase A: declaring `tenant_host:` IMPLIES membership-gated login,
+        # decoupled from auto_provision_single_org (closes the "passes auth, sees
+        # empty screens" footgun). See `derive_memberships_required`.
+        from dazzle.back.runtime.auth.org_activation import derive_memberships_required
+
+        ctx.app.state.memberships_required = derive_memberships_required(
+            ctx.appspec, auto_provision=_auto_provision
+        )
         # auth Plan 3a: personas allowed to invite / manage org members
         # (fail-closed — empty means nobody can invite). Read by the invite route.
         _auth_cfg = getattr(ctx.config, "auth_config", None)
