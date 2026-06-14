@@ -53,6 +53,19 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
         if surface.entity_ref:
             used_entities.add(surface.entity_ref)
 
+    # #1380: entities surfaced via a `related ...: show: <Entity>` block on a
+    # detail/view surface are reachable — the parent detail page renders them,
+    # and they're navigable from there. Without this walk, a child entity that
+    # lives only inside a related block (and its CRUD surfaces) was falsely
+    # flagged "dead". Reused below to keep those child surfaces alive too.
+    related_entities: set[str] = set()
+    for surface in appspec.surfaces:
+        for group in getattr(surface, "related_groups", None) or []:
+            for shown in getattr(group, "show", None) or []:
+                if shown in all_entities:
+                    related_entities.add(shown)
+    used_entities |= related_entities
+
     # Entities referenced by workspace regions (source field)
     for workspace in appspec.workspaces:
         for region in workspace.regions:
@@ -141,6 +154,9 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
     # are reached via the custom route/pipeline/wizard/external mechanism, so
     # they are alive even without a workspace/nav reference.
     workspace_entities |= managed_entities
+    # #1380: child entities shown via a `related` block are reachable from the
+    # parent detail page, so their CRUD surfaces are alive (not dead).
+    workspace_entities |= related_entities
     for surface in appspec.surfaces:
         if surface.entity_ref and surface.entity_ref in workspace_entities:
             used_surfaces.add(surface.name)

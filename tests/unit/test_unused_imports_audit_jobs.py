@@ -301,3 +301,58 @@ class TestDefensive:
         # Sanity: the audit was captured + applied.
         assert len(appspec.audits) == 1
         assert appspec.audits[0].entity == "Ticket"
+
+
+# ---------------------------------------------------------------------------
+# Guide references count (#1379)
+# ---------------------------------------------------------------------------
+
+
+class TestGuideReference:
+    def test_guide_targeting_imported_surface_counts_as_use(self, tmp_path):
+        """#1379: a guides module that `use`s core and decorates a core surface
+        (step target / on_complete.redirect) must NOT warn 'never uses'."""
+        warnings = _link_and_check(
+            (
+                "core.dsl",
+                """
+                module proj.core
+                app a "A"
+
+                entity Task "T":
+                  id: uuid pk
+                  title: str(50)
+
+                surface task_list "Tasks":
+                  uses entity Task
+                  mode: list
+                  section main:
+                    field title "Title"
+                """,
+            ),
+            (
+                "guides.dsl",
+                """
+                module proj.guides
+                use proj.core
+
+                guide member_onboarding "Onboarding":
+                  audience: persona = member
+
+                  step welcome:
+                    kind: spotlight
+                    target: surface.task_list
+                    title: "Welcome"
+                    body: "Your tasks live here."
+                    complete_on: dismiss
+
+                  step_order: [welcome]
+
+                  on_complete:
+                    redirect: surface.task_list
+                """,
+            ),
+            tmp_path=tmp_path,
+        )
+        for w in warnings:
+            assert "never uses" not in w, f"unexpected: {w}"

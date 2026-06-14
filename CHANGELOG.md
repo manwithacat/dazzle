@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.62] - 2026-06-14
+
+### Fixed
+- **Import-usage lint no longer flags `use <app>.core` as unused on guides modules** (#1379).
+  `check_unused_imports` walked entities/surfaces/experiences/audits/jobs but not `guide`
+  blocks, so a guides module that decorates core surfaces (step `target`/`cta_target`,
+  `on_complete.redirect`, `complete_on: event entity.<E>.created`) got a false-positive
+  "imports but never uses" warning. It now walks guide references. (The broader "unify
+  reference collection" refactor remains a worthwhile follow-up.)
+- **Dead-construct lint no longer false-flags child-entity CRUD surfaces reachable via a
+  `related` block** (#1380). A child entity surfaced via `related ...: show: <Entity>` on a
+  detail surface (and its CRUD surfaces) is reachable from the parent detail page; the
+  reachability walk now counts `related_groups[].show` entities. (3rd instance of this class.)
+
 ## [0.82.61] - 2026-06-14
 
 ### Fixed

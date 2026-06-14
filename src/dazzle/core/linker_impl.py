@@ -939,6 +939,43 @@ def check_unused_imports(modules: list[ir.ModuleIR], symbols: SymbolTable) -> li
                     if owner and owner != module.name:
                         used_modules.add(owner)
 
+        # #1379: guides reference surfaces (each step's `target` / `cta_target`
+        # and `on_complete.redirect`) and entities (`complete_on: event
+        # entity.<E>.created`). Without this walk, a guides module that `use`s
+        # the core module to decorate its surfaces gets a false-positive
+        # "imports but never uses" warning even though it IS using them.
+        def _surface_owner(ref: str | None, _mod: str = module.name) -> str | None:
+            # _mod default-binds the loop variable so the closure doesn't
+            # capture it (ruff B023); it's only ever called within this iteration.
+            if not ref:
+                return None
+            name = ref.removeprefix("surface.").split(".")[0]
+            owner = symbols.symbol_sources.get(name)
+            return owner if owner and owner != _mod else None
+
+        for guide in getattr(module.fragment, "guides", None) or []:
+            for step in getattr(guide, "steps", None) or []:
+                for surf_owner in (
+                    _surface_owner(getattr(step, "target", None)),
+                    _surface_owner(getattr(step, "cta_target", None)),
+                ):
+                    if surf_owner:
+                        used_modules.add(surf_owner)
+                complete_on = getattr(step, "complete_on", None)
+                event_ref = getattr(complete_on, "event_ref", None) if complete_on else None
+                if event_ref and event_ref.startswith("entity."):
+                    parts = event_ref.split(".")
+                    if len(parts) >= 2:
+                        owner = symbols.symbol_sources.get(parts[1])
+                        if owner and owner != module.name:
+                            used_modules.add(owner)
+            on_complete = getattr(guide, "on_complete", None)
+            redirect_owner = _surface_owner(
+                getattr(on_complete, "redirect", None) if on_complete else None
+            )
+            if redirect_owner:
+                used_modules.add(redirect_owner)
+
         # Find unused imports
         unused = set(module.uses) - used_modules
         for unused_import in sorted(unused):

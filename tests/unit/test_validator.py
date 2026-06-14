@@ -985,6 +985,40 @@ class TestDeadConstructDetection:
         assert not any("Dead construct" in w and "beneficiary_list" in w for w in warnings)
         assert not any("Dead construct" in w and "Beneficiary" in w for w in warnings)
 
+    # --- related blocks keep child entities/surfaces alive (#1380) ---
+
+    def test_child_entity_via_related_block_is_not_dead(self) -> None:
+        """#1380: a child entity surfaced via a `related ...: show: <Entity>`
+        block on a detail surface — and that child's CRUD surfaces — are
+        reachable from the parent detail page, not dead."""
+        task = make_entity(name="Task")
+        comment = make_entity(name="Comment")
+        task_detail = ir.SurfaceSpec(
+            name="task_detail",
+            title="Task Detail",
+            entity_ref="Task",
+            mode=ir.SurfaceMode.VIEW,
+            sections=[],
+            related_groups=[
+                ir.RelatedGroup(
+                    name="comments", show=["Comment"], display=ir.RelatedDisplayMode.TABLE
+                )
+            ],
+        )
+        comment_create = self._make_surface(name="comment_create", entity_ref="Comment")
+        # Task is reachable via a workspace region (keeps task_detail alive too).
+        region = ir.WorkspaceRegion(name="tasks", source="Task")
+        workspace = self._make_workspace(regions=[region])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[task, comment]),
+            surfaces=[task_detail, comment_create],
+            workspaces=[workspace],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("Dead construct" in w and "'Comment'" in w for w in warnings)
+        assert not any("Dead construct" in w and "comment_create" in w for w in warnings)
+
     # --- managed_by exempts entity + surfaces from dead-construct (#1333) ---
 
     def test_managed_by_entity_and_surfaces_not_dead(self) -> None:
