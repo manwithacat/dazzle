@@ -282,7 +282,9 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
         # Validate invariants (v0.14.2)
         if self.entity_spec and self.entity_spec.invariants:
             try:
-                check_invariants_for_create(self.entity_spec.invariants, entity_data)
+                check_invariants_for_create(
+                    self.entity_spec.invariants, entity_data, entity=self.entity_name
+                )
             except InvariantViolationError:
                 raise  # Re-raise as-is
 
@@ -429,6 +431,7 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
                     self.entity_spec.invariants,
                     current_data,
                     update_data,
+                    entity=self.entity_name,
                 )
             except InvariantViolationError:
                 raise  # Re-raise as-is

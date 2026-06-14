@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.59] - 2026-06-14
+
+### Changed
+- **invariant_violation 422 now names the violated invariant + entity** (#1387). The error
+  body carries `invariant` (the rendered source expression, e.g. `amount >= 0`) and `entity`
+  alongside the existing `detail`/custom `message`, so the UI can show an actionable error
+  instead of a generic "constraint violated". New `render_invariant_expr` renders the
+  structured expression back to readable source; `InvariantViolationError` carries the entity.
+
 ## [0.82.58] - 2026-06-14
 
 ### Changed

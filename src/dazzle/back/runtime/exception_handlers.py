@@ -79,17 +79,29 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(InvariantViolationError)
     async def invariant_error_handler(request: Request, exc: InvariantViolationError) -> Response:
-        """Convert invariant violations to 422 Unprocessable Entity."""
+        """Convert invariant violations to 422 Unprocessable Entity.
+
+        Surfaces the violated invariant's source expression, its declared
+        ``code``, and the entity name so the UI can render an actionable error
+        instead of a generic "constraint violated" (#1387).
+        """
+        from dazzle.back.runtime.invariant_evaluator import render_invariant_expr
+
+        content: dict[str, Any] = {"detail": str(exc), "type": "invariant_violation"}
+        inv = exc.invariant
+        if inv is not None and getattr(inv, "expression", None) is not None:
+            rendered = render_invariant_expr(inv.expression)
+            if rendered:
+                content["invariant"] = rendered
+        if exc.entity:
+            content["entity"] = exc.entity
         if HtmxDetails.from_request(request).is_htmx:
             return json_or_htmx_error(
                 request,
                 [{"loc": [], "msg": str(exc)}],
                 error_type="invariant_violation",
             )
-        return _JSONResponse(
-            status_code=422,
-            content={"detail": str(exc), "type": "invariant_violation"},
-        )
+        return _JSONResponse(status_code=422, content=content)
 
     @app.exception_handler(ValidationError)
     async def validation_error_handler(request: Request, exc: ValidationError) -> Response:

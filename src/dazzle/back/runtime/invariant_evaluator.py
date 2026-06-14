@@ -22,10 +22,51 @@ from dazzle.back.specs.entity import (
 class InvariantViolationError(Exception):
     """Raised when an invariant constraint is violated."""
 
-    def __init__(self, message: str, invariant: InvariantSpec | None = None):
+    def __init__(
+        self,
+        message: str,
+        invariant: InvariantSpec | None = None,
+        entity: str | None = None,
+    ):
         self.message = message
         self.invariant = invariant
+        self.entity = entity
         super().__init__(message)
+
+
+def render_invariant_expr(expr: Any) -> str:
+    """Render an invariant expression back to a readable source-like string.
+
+    e.g. ``amount >= 0``, ``contact != null or company != null``. Used to name
+    the violated invariant in actionable 422 errors (#1387) — the structured
+    ``InvariantExprSpec`` has no readable ``__str__`` and no raw source is kept.
+    """
+    if expr is None:
+        return ""
+    kind = getattr(expr, "kind", None)
+    if kind == "literal":
+        value = getattr(expr, "value", None)
+        if value is None:
+            return "null"
+        return f'"{value}"' if isinstance(value, str) else str(value)
+    if kind == "field_ref":
+        return ".".join(getattr(expr, "path", None) or [])
+    if kind == "duration":
+        unit = getattr(getattr(expr, "duration_unit", None), "value", None) or "days"
+        return f"{getattr(expr, 'duration_value', '?')} {unit}"
+    if kind == "comparison":
+        op = getattr(getattr(expr, "comparison_op", None), "value", None) or "?"
+        left = render_invariant_expr(getattr(expr, "comparison_left", None))
+        right = render_invariant_expr(getattr(expr, "comparison_right", None))
+        return f"{left} {op} {right}"
+    if kind == "logical":
+        op = getattr(getattr(expr, "logical_op", None), "value", None) or "?"
+        left = render_invariant_expr(getattr(expr, "logical_left", None))
+        right = render_invariant_expr(getattr(expr, "logical_right", None))
+        return f"{left} {op} {right}"
+    if kind == "not":
+        return f"not {render_invariant_expr(getattr(expr, 'not_operand', None))}"
+    return str(expr)
 
 
 # =============================================================================
@@ -245,6 +286,7 @@ def validate_invariants(
     invariants: list[InvariantSpec],
     record: dict[str, Any],
     raise_on_violation: bool = False,
+    entity: str | None = None,
 ) -> list[InvariantSpec]:
     """
     Validate all invariants against a record.
@@ -266,7 +308,7 @@ def validate_invariants(
         if not validate_invariant(invariant, record):
             if raise_on_violation:
                 message = invariant.message or "Invariant constraint violated"
-                raise InvariantViolationError(message, invariant)
+                raise InvariantViolationError(message, invariant, entity=entity)
             violations.append(invariant)
 
     return violations
@@ -275,6 +317,7 @@ def validate_invariants(
 def check_invariants_for_create(
     invariants: list[InvariantSpec],
     record: dict[str, Any],
+    entity: str | None = None,
 ) -> None:
     """
     Check invariants before creating a record.
@@ -282,17 +325,19 @@ def check_invariants_for_create(
     Args:
         invariants: List of invariant specifications
         record: The record data to be created
+        entity: Entity name, surfaced on the raised error for actionable messages
 
     Raises:
         InvariantViolationError: If any invariant is violated
     """
-    validate_invariants(invariants, record, raise_on_violation=True)
+    validate_invariants(invariants, record, raise_on_violation=True, entity=entity)
 
 
 def check_invariants_for_update(
     invariants: list[InvariantSpec],
     current_record: dict[str, Any],
     updates: dict[str, Any],
+    entity: str | None = None,
 ) -> None:
     """
     Check invariants before updating a record.
@@ -301,10 +346,11 @@ def check_invariants_for_update(
         invariants: List of invariant specifications
         current_record: The current record data
         updates: The updates to apply
+        entity: Entity name, surfaced on the raised error for actionable messages
 
     Raises:
         InvariantViolationError: If any invariant would be violated after update
     """
     # Merge current record with updates to get the post-update state
     merged_record = {**current_record, **updates}
-    validate_invariants(invariants, merged_record, raise_on_violation=True)
+    validate_invariants(invariants, merged_record, raise_on_violation=True, entity=entity)

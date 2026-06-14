@@ -9,6 +9,7 @@ from dazzle.back.runtime.invariant_evaluator import (
     check_invariants_for_create,
     check_invariants_for_update,
     evaluate_invariant_expr,
+    render_invariant_expr,
     validate_invariant,
     validate_invariants,
 )
@@ -387,3 +388,35 @@ class TestViolationError:
         exc = InvariantViolationError("test message", inv)
         assert exc.message == "test message"
         assert exc.invariant is inv
+        assert exc.entity is None
+
+    def test_check_create_threads_entity_and_invariant_for_actionable_error(self) -> None:
+        """#1387: a violated invariant surfaces the entity name, the violated
+        invariant's readable expression, and the custom message — the data the
+        422 handler needs for an actionable error."""
+        inv = InvariantSpec(
+            expression=_comparison(_field_ref("amount"), ">=", _literal(0)),
+            message="Amount must be non-negative",
+        )
+        with pytest.raises(InvariantViolationError) as ei:
+            check_invariants_for_create([inv], {"amount": -5}, entity="Order")
+        exc = ei.value
+        assert exc.entity == "Order"
+        assert str(exc) == "Amount must be non-negative"
+        assert exc.invariant is inv
+        # The handler names the violated invariant via the readable renderer.
+        assert render_invariant_expr(exc.invariant.expression) == "amount >= 0"
+
+    def test_render_invariant_expr_logical_and_null(self) -> None:
+        expr = _logical(
+            _comparison(_field_ref("contact"), "!=", _literal(None)),
+            "or",
+            _comparison(_field_ref("company"), "!=", _literal(None)),
+        )
+        assert render_invariant_expr(expr) == "contact != null or company != null"
+
+    def test_check_update_threads_entity(self) -> None:
+        inv = InvariantSpec(expression=_comparison(_field_ref("qty"), ">=", _literal(0)))
+        with pytest.raises(InvariantViolationError) as ei:
+            check_invariants_for_update([inv], {"qty": 5}, {"qty": -1}, entity="LineItem")
+        assert ei.value.entity == "LineItem"
