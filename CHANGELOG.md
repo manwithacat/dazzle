@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.66] - 2026-06-14
+
+### Changed
+- **Custom renderers now get the framework output guarantee by default (#1392).**
+  The built-in `fragment` renderer is the trusted typed substrate; a custom
+  renderer (any `render:` name not in the framework defaults) previously
+  bypassed it entirely, so nothing stopped it returning a blank string — which
+  ships as an empty 200 (the "passes render, blank screen" failure). `dispatch_render`
+  now asserts **non-blank, well-formed, string** output on every custom-renderer
+  path and raises a typed `FragmentError` naming the surface + renderer. On by
+  default — no opt-in. The framework `fragment` path is untouched. The
+  well-formed probe is tolerant of valid HTML5 (unclosed `<li>`/`<p>`, void
+  elements, custom elements like `<dz-onboarding-step>`) — it only flags
+  binary/garbled output, never implicit-close nuances.
+
+  ### Agent Guidance
+  - A custom renderer's `render()` MUST return a non-empty HTML string. To render
+    "nothing", return an explicit empty-state element, not `""`. A blank/`None`
+    return now fails fast at render time with a directed `FragmentError` instead
+    of silently shipping an empty page. This is the first of #1392's structural
+    guarantees; chrome-enforcement and emitted-target reachability are tracked as
+    follow-ons on that issue.
+
 ## [0.82.65] - 2026-06-14
 
 ### Added

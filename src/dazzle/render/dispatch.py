@@ -27,8 +27,10 @@ would duplicate a moving target; passing in is honest.
 
 from __future__ import annotations
 
+from html.parser import HTMLParser
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.renderer_registry import default_renderer_names
 from dazzle.render.fragment import (
     URL,
     AppShell,
@@ -85,7 +87,58 @@ def dispatch_render(
             "See fixtures/custom_renderer/ for a worked example."
         )
 
-    html: str = handler.render(surface, ctx)
+    rendered = handler.render(surface, ctx)
+    # #1392: custom renderers opt back into the framework's output guarantee.
+    # The built-in `fragment` renderer is the trusted typed substrate; a custom
+    # renderer (any name not in the framework defaults) bypasses it entirely, so
+    # nothing previously stopped it returning a blank string — which ships as an
+    # empty 200 (the AegisMark "passes render, blank screen" failure). The
+    # framework now asserts non-blank, well-formed output on every custom-renderer
+    # path. On by default; raises a typed FragmentError naming the renderer.
+    if renderer_name not in default_renderer_names():
+        return _assert_custom_render_output(rendered, surface.name, renderer_name)
+    html: str = rendered  # framework `fragment` path: trusted typed substrate
+    return html
+
+
+class _OutputWellFormedProbe(HTMLParser):
+    """Tolerant parse pass for the #1392 output guarantee.
+
+    We only need the stdlib parser to *consume* the string without raising —
+    that catches binary/garbled output, not HTML5 implicit-close nuances
+    (unclosed ``<li>``/``<p>``, void ``<br>``/``<img>``, custom elements like
+    ``<dz-onboarding-step>``), which are all valid and must never be flagged.
+    """
+
+
+def _assert_custom_render_output(html: object, surface_name: str, renderer_name: str) -> str:
+    """Enforce the #1392 non-blank / well-formed guarantee for custom renderers.
+
+    Returns the validated HTML unchanged, or raises :class:`FragmentError`
+    naming the offending surface + renderer with a directed remediation.
+    """
+    if not isinstance(html, str):
+        raise FragmentError(
+            f"surface {surface_name!r}: custom renderer {renderer_name!r} returned "
+            f"{type(html).__name__}, not an HTML string. A renderer's render() must "
+            "return a non-empty HTML string (#1392 output guarantee)."
+        )
+    if not html.strip():
+        raise FragmentError(
+            f"surface {surface_name!r}: custom renderer {renderer_name!r} returned a "
+            "blank string. A blank body renders as an empty 200 — return an explicit "
+            "empty-state element instead of '' (#1392 output guarantee)."
+        )
+    try:
+        probe = _OutputWellFormedProbe(convert_charrefs=True)
+        probe.feed(html)
+        probe.close()
+    except Exception as exc:  # noqa: BLE001 — any parse failure is a guarantee breach
+        raise FragmentError(
+            f"surface {surface_name!r}: custom renderer {renderer_name!r} produced "
+            f"output that is not parseable as HTML ({exc}). Return well-formed HTML "
+            "(#1392 output guarantee)."
+        ) from exc
     return html
 
 
