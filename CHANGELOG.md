@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.67] - 2026-06-14
+
+### Added
+- **`current_tenant` scope/display variable (#1394, Layer 1).** In a `tenant_host:`
+  app, `current_tenant` binds the host-resolved tenant (`request.state.tenant`
+  from #1289) — distinct from the RLS row-tenancy `dazzle.tenant_id`, which can
+  diverge. Two surfaces:
+  - **Scope equality** — `field = current_tenant` (id-only) scopes rows to the
+    host tenant. Compiles to a `CurrentTenantRef` param marker (query filters) and
+    `NULLIF(current_setting('dazzle.host_tenant_id', true), '')::<type>` (RLS policy
+    bodies), reading a dedicated `dazzle.host_tenant_id` GUC set from the host
+    tenant context var. Fails closed (deny) on every path when no host tenant is
+    bound — apex host, non-tenant request, or a pooled connection's empty-string
+    GUC state. Proven against real Postgres (`tests/integration/test_current_tenant_scope_pg.py`).
+  - **Display gating** — `current_tenant.id|slug|kind|name` in `visible_when:` /
+    `when:` conditions resolves at render time (e.g. `visible_when:
+    current_tenant.kind == trust`). Cosmetic only; bound to the same host-tenant
+    source as scope so it hides exactly when scope would deny.
+
+  Tenant *attributes* are display-only; scope equality is id-only. Requires
+  `tenant_host:` — legacy schema-isolation apps deny `current_tenant` predicates
+  (use `current_user.<org_attr>`). See `docs/reference/rbac-scope.md`.
+
+  ### Agent Guidance
+  - Use `field = current_tenant` in a `scope:` rule to scope rows to the host
+    tenant in a `tenant_host:` app; use `current_tenant.kind`/`.slug` in
+    `visible_when:` for per-host-kind display gates. `current_tenant` ≠ the RLS
+    `dazzle.tenant_id` — it is the host-resolved tenant and fails closed without one.
+  - Display gates are cosmetic — always back a `current_tenant` display gate with
+    a matching `scope:` rule for real access control.
+
 ## [0.82.66] - 2026-06-14
 
 ### Changed

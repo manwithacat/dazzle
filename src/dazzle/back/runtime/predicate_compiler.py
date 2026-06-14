@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from dazzle.back.runtime.query_builder import quote_identifier
-from dazzle.back.runtime.rls_schema import USER_GUC_PREFIX
+from dazzle.back.runtime.rls_schema import HOST_TENANT_GUC, USER_GUC_PREFIX
 from dazzle.core.ir.fk_graph import FKEdge, FKGraph
 from dazzle.core.ir.predicates import (
     BoolComposite,
@@ -50,6 +50,17 @@ class UserAttrRef:
 @dataclass(frozen=True)
 class CurrentUserRef:
     """Marker: the route handler must resolve this to the current user's entity UUID."""
+
+
+@dataclass(frozen=True)
+class CurrentTenantRef:
+    """Marker: resolve this to the host-resolved tenant's id (#1394).
+
+    Bound from the host tenant context var (``request.state.tenant.id``), NOT
+    the RLS row-tenancy ``dazzle.tenant_id`` — the two can diverge. The marker
+    resolvers (``scope_filters`` / ``scope_create_eval``) fail closed (deny) when
+    no host tenant is set, mirroring an unresolvable user attribute.
+    """
 
 
 @dataclass(frozen=True)
@@ -227,6 +238,27 @@ def _guc_read(name: str, pg_type: str) -> str:
     return f"current_setting('{_USER_GUC_PREFIX}{name}', true)::{pg_type}"
 
 
+def _guc_read_host_tenant(pg_type: str) -> str:
+    """Render a fail-closed ``dazzle.host_tenant_id`` GUC read cast to ``pg_type`` (#1394).
+
+    The host-tenant GUC is distinct from the RLS ``dazzle.tenant_id`` (see
+    ``HOST_TENANT_GUC``). Two reset states must both fail closed (deny), never
+    error or leak:
+      * never set on this connection → ``current_setting(.., true)`` is NULL;
+      * set ``LOCAL`` by a prior request and reverted on a *pooled* connection →
+        the placeholder reverts to the empty string ``''``, and a bare
+        ``''::uuid`` would RAISE rather than deny.
+    ``NULLIF(.., '')`` collapses the empty-string case to NULL so ``col = NULL``
+    simply matches no rows. The host GUC is not set on every request (None for
+    non-tenant / apex), so unlike the always-set RLS fence it is genuinely
+    exposed to the pooled-empty-string state — hence the belt-and-suspenders.
+    """
+    # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query
+    # Closed templated DDL: the GUC name is the fixed framework constant and
+    # `pg_type` comes from the closed `_SCALAR_TO_PG_NAME` map — neither is request data.
+    return f"NULLIF(current_setting('{HOST_TENANT_GUC}', true), '')::{pg_type}"
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -303,6 +335,8 @@ def _compile_value_ref(
     if policy is None:
         if value.current_user:
             return "%s", [CurrentUserRef()]
+        if value.current_tenant:
+            return "%s", [CurrentTenantRef()]
         if value.user_attr is not None:
             return "%s", [UserAttrRef(value.user_attr)]
         # scalar literal (str, int, float, bool, or None-valued literal)
@@ -313,6 +347,12 @@ def _compile_value_ref(
         if pg_type is None:
             raise ValueError("policy mode: cannot cast a current_user GUC without a column pg type")
         return _guc_read("id", pg_type), []
+    if value.current_tenant:
+        if pg_type is None:
+            raise ValueError(
+                "policy mode: cannot cast a current_tenant GUC without a column pg type"
+            )
+        return _guc_read_host_tenant(pg_type), []
     if value.user_attr is not None:
         if pg_type is None:
             raise ValueError(

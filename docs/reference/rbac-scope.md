@@ -127,6 +127,56 @@ entity Task "Task":
       as: admin
 ```
 
+## `current_tenant` — host-tenant row scoping (#1394)
+
+In a `tenant_host:` app (#1289), `current_tenant` binds the **host-resolved
+tenant** — the tenant the request's `<slug>.host` Host header resolved to
+(`request.state.tenant`). Use it to scope rows to the tenant whose host the
+user is on:
+
+```dsl
+scope:
+  list: org = current_tenant
+    as: member
+  read: org = current_tenant
+    as: member
+  create: org = current_tenant
+    as: member
+```
+
+Key properties:
+
+- **Id-only in scope.** `field = current_tenant` (and the explicit
+  `field = current_tenant.id`) bind the tenant **id**. Tenant *attributes*
+  (`current_tenant.slug` / `.kind` / `.name`) are **display-gate only** (see
+  below) — not valid in a `scope:` predicate.
+- **Distinct from the RLS row-tenancy `dazzle.tenant_id`.** `current_tenant`
+  binds the *host* tenant via its own `dazzle.host_tenant_id` GUC. The two can
+  diverge; `current_tenant` never reads the RLS discriminator.
+- **Fails closed.** A request with no host tenant (apex host / non-tenant
+  request) denies every `current_tenant` predicate — list/read return no rows,
+  create/update are refused. Enforced in both the param-mode filter and the
+  RLS policy body.
+- **Requires `tenant_host:`.** Apps using the legacy schema-isolation
+  middleware don't bind the host tenant context, so `current_tenant` predicates
+  there deny — use `current_user.<org_attr>` instead.
+
+### Display gating with `current_tenant.<attr>`
+
+In `visible_when:` / `when:` conditions, `current_tenant.id|slug|kind|name`
+resolves at render time from the host tenant — e.g. show a region only on a
+trust-kind host:
+
+```dsl
+region trust_rollup:
+  visible_when: current_tenant.kind == trust
+```
+
+Display gating is **cosmetic** — it hides UI, it does not filter rows. Always
+back a `current_tenant` display gate with a matching `scope:` rule for the
+actual access control. The display gate is bound to the same host-tenant
+source as scope, so it hides exactly when the scope predicate would deny.
+
 ## Canonical patterns
 
 ### Pattern A — Public read, admin-only writes

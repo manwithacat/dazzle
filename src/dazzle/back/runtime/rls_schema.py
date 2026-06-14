@@ -55,6 +55,18 @@ if TYPE_CHECKING:
 # pg_backend imports this same constant so the two never drift.
 TENANT_GUC = "dazzle.tenant_id"
 
+# Fixed framework GUC name for the host-resolved tenant id (#1394). This is the
+# ``request.state.tenant.id`` from the #1289 ``tenant_host`` resolver — DELIBERATELY
+# distinct from ``TENANT_GUC`` (``dazzle.tenant_id``), which carries the RLS
+# row-tenancy discriminator. The two CAN diverge (a host-tenant app need not use
+# RLS row-tenancy, and vice-versa), so ``current_tenant`` scope predicates must
+# never read ``dazzle.tenant_id`` — that could bind the wrong tenant. The runtime
+# (``pg_backend._set_host_tenant_context``) sets this from the host tenant context
+# var; a scope policy body reads ``current_setting('dazzle.host_tenant_id', true)``.
+# An unset GUC reads NULL → the predicate fails closed (deny), mirroring the user
+# GUCs. Both sides derive the name from THIS constant so they can never drift.
+HOST_TENANT_GUC = "dazzle.host_tenant_id"
+
 # The fixed GUC name prefix for per-request user attributes that the intra-tenant
 # scope policies read (Phase C). A scope policy body reads
 # ``current_setting('dazzle.user_<attr>', true)`` and the runtime

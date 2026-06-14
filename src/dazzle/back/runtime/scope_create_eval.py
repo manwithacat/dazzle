@@ -52,6 +52,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from dazzle.back.runtime.predicate_compiler import (
+    CurrentTenantRef,
     CurrentUserRef,
     PayloadFieldRef,
     UserAttrRef,
@@ -278,6 +279,13 @@ def _resolve_marker(
         # None and falls back.
         entity_id = user_attrs.get("entity_id")
         return entity_id if entity_id is not None else user_id
+    if isinstance(param, CurrentTenantRef):
+        # #1394: host-resolved tenant id, bound as a probe SQL parameter. None
+        # (no host tenant) → the probe's `= %s` / `IN (%s)` sees SQL NULL → no
+        # match → the create is refused rather than left unfenced (fail-closed).
+        from dazzle.back.runtime.tenant_isolation import get_current_host_tenant_id
+
+        return get_current_host_tenant_id()
     if isinstance(param, UserAttrRef):
         # `dict.get` on `_LazyUserAttrs` routes through lazy resolution.
         return user_attrs.get(param.attr_name)
@@ -306,19 +314,35 @@ def _payload_value(payload: dict[str, Any], field: str) -> Any:
     return None
 
 
+# A right-hand sentinel that no payload value can ever equal, so a comparison
+# against it fails closed (#1394). Used when `current_tenant` is referenced but
+# no host tenant is bound: returning Python None would let `None == None` MATCH
+# when the payload field is also absent (fail-OPEN). The sentinel makes the
+# create-scope EQ comparison always False → deny.
+_CT_DENY = object()
+
+
 def _resolve_value(value: ValueRef, user_id: str, user_attrs: dict[str, Any]) -> Any:
     """Resolve a ValueRef to a concrete Python value for comparison.
 
-    Per the IR, exactly one of ``literal`` / ``current_user`` /
-    ``user_attr`` / ``literal_null`` is set:
+    Per the IR, exactly one of ``literal`` / ``current_user`` / ``current_tenant``
+    / ``user_attr`` / ``literal_null`` is set:
 
-    - ``current_user=True`` → the authenticated user's PK
-    - ``user_attr="X"``     → ``user_attrs[X]`` (None when missing)
-    - ``literal_null=True`` → Python None (SQL NULL literal)
-    - ``literal=<scalar>``  → pass through
+    - ``current_user=True``   → the authenticated user's PK
+    - ``current_tenant=True`` → the host-resolved tenant id (#1394), or the
+      deny-sentinel ``_CT_DENY`` when no host tenant is bound so the comparison
+      fails closed even if the payload field is also absent
+    - ``user_attr="X"``       → ``user_attrs[X]`` (None when missing)
+    - ``literal_null=True``   → Python None (SQL NULL literal)
+    - ``literal=<scalar>``    → pass through
     """
     if value.current_user:
         return user_id
+    if value.current_tenant:
+        from dazzle.back.runtime.tenant_isolation import get_current_host_tenant_id
+
+        host_tid = get_current_host_tenant_id()
+        return host_tid if host_tid else _CT_DENY
     if value.user_attr:
         return user_attrs.get(value.user_attr)
     if value.literal_null:
@@ -332,6 +356,11 @@ def _compare(left: Any, op: CompOp, right: Any) -> bool:
     a WHERE clause) and to False for ordering comparisons (we don't
     want a missing payload field to silently match an ordering
     predicate)."""
+    # #1394: the unresolvable-`current_tenant` deny sentinel fails closed for
+    # EVERY operator, not just EQ. Without this, `field != current_tenant` with
+    # no host tenant would be `left != _CT_DENY` → always True → fail OPEN.
+    if left is _CT_DENY or right is _CT_DENY:
+        return False
     if op == CompOp.EQ:
         return bool(left == right)
     if op == CompOp.NEQ:

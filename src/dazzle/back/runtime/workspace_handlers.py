@@ -247,6 +247,10 @@ async def _workspace_batch_handler(
         _batch_filter_ctx["current_user_id"] = _batch_user_id
     if _batch_user_entity:
         _batch_filter_ctx["current_user_entity"] = _batch_user_entity
+    # #1394: host-resolved tenant for `current_tenant[.attr]` display gates.
+    from dazzle.back.runtime.tenant_render_context import inject_current_tenant
+
+    inject_current_tenant(_batch_filter_ctx, request)
 
     results = await asyncio.gather(
         *(

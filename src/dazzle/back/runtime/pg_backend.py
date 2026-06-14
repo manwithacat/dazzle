@@ -15,7 +15,7 @@ from psycopg import sql as pgsql
 
 from dazzle.back.runtime.predicate_compiler import _USER_GUC_PREFIX
 from dazzle.back.runtime.query_builder import quote_identifier
-from dazzle.back.runtime.rls_schema import TENANT_GUC, USER_GUC_PREFIX
+from dazzle.back.runtime.rls_schema import HOST_TENANT_GUC, TENANT_GUC, USER_GUC_PREFIX
 from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 
@@ -28,6 +28,13 @@ logger = logging.getLogger(__name__)
 assert TENANT_GUC == "dazzle.tenant_id", (
     f"TENANT_GUC ({TENANT_GUC!r}) drifted from the set_config literal in "
     "_set_tenant_context — update both together."
+)
+
+# Drift guard (#1394): the inline GUC literal in ``_set_host_tenant_context`` must
+# equal HOST_TENANT_GUC (the name a ``current_tenant`` scope policy body reads).
+assert HOST_TENANT_GUC == "dazzle.host_tenant_id", (
+    f"HOST_TENANT_GUC ({HOST_TENANT_GUC!r}) drifted from the set_config literal in "
+    "_set_host_tenant_context — update both together."
 )
 
 # Drift guard (Phase C, C-2): the GUC name the runtime SETS in
@@ -83,6 +90,29 @@ def _set_tenant_context(conn: Any, tenant_id: str | None) -> None:
     conn.execute(
         pgsql.SQL("SELECT set_config('dazzle.tenant_id', %s, true)"),  # nosemgrep
         [tenant_id],
+    )
+
+
+def _set_host_tenant_context(conn: Any, host_tenant_id: str | None) -> None:
+    """Set the per-transaction ``dazzle.host_tenant_id`` GUC for ``current_tenant`` (#1394).
+
+    Distinct from ``_set_tenant_context``: this binds the host-resolved tenant id
+    (``request.state.tenant.id`` from the #1289 tenant_host resolver), which a
+    ``current_tenant`` scope policy body reads via
+    ``current_setting('dazzle.host_tenant_id', true)``. The GUC name is the fixed
+    framework constant :data:`HOST_TENANT_GUC` (module-load assertion guards drift).
+
+    - ``None`` (non-tenant request / apex host) → **no-op**: the GUC stays unset,
+      ``current_setting`` reads ``NULL`` → a ``current_tenant`` predicate matches
+      no rows (fail-closed).
+    - Present → passed as a **bind parameter** to ``set_config`` (never
+      interpolated); ``is_local = true`` makes it transaction-scoped.
+    """
+    if host_tenant_id is None:
+        return
+    conn.execute(
+        pgsql.SQL("SELECT set_config('dazzle.host_tenant_id', %s, true)"),  # nosemgrep
+        [host_tenant_id],
     )
 
 
@@ -350,6 +380,7 @@ class PostgresBackend:
         it takes precedence over the instance's search_path.
         """
         from dazzle.back.runtime.tenant_isolation import (
+            get_current_host_tenant_id,
             get_current_rls_user_attrs,
             get_current_tenant_id,
             get_current_tenant_schema,
@@ -359,6 +390,9 @@ class PostgresBackend:
         # RLS tenancy Phase B — bind dazzle.tenant_id for the shared_schema fence.
         # None (unauthenticated / non-tenant) leaves the GUC unset → fence denies.
         tenant_id = get_current_tenant_id()
+        # #1394 — bind dazzle.host_tenant_id (the host-resolved tenant) for
+        # `current_tenant` scope policies. None (non-tenant / apex) → no-op.
+        host_tenant_id = get_current_host_tenant_id()
         # RLS tenancy Phase C — bind the dazzle.user_<attr> GUCs the intra-tenant
         # scope policies read. Empty (no scope rules / unauthenticated) → no-op.
         rls_user_attrs = get_current_rls_user_attrs()
@@ -368,6 +402,7 @@ class PostgresBackend:
                 if effective_search_path:
                     _set_search_path(conn, effective_search_path)
                 _set_tenant_context(conn, tenant_id)
+                _set_host_tenant_context(conn, host_tenant_id)
                 _set_rls_user_attrs(conn, rls_user_attrs)
                 try:
                     yield PgConnectionWrapper(conn)
@@ -385,6 +420,7 @@ class PostgresBackend:
             if effective_search_path:
                 _set_search_path(conn, effective_search_path)
             _set_tenant_context(conn, tenant_id)
+            _set_host_tenant_context(conn, host_tenant_id)
             _set_rls_user_attrs(conn, rls_user_attrs)
             yield PgConnectionWrapper(conn)
             conn.commit()

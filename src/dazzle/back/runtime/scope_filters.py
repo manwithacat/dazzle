@@ -1321,11 +1321,15 @@ def _resolve_predicate_filters(
         return {}
 
     from dazzle.back.runtime.predicate_compiler import (
+        CurrentTenantRef,
         CurrentUserRef,
         UserAttrRef,
         compile_predicate,
     )
-    from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
+    from dazzle.back.runtime.tenant_isolation import (
+        get_current_host_tenant_id,
+        get_current_tenant_schema,
+    )
 
     schema = get_current_tenant_schema()
     sql, raw_params = compile_predicate(predicate, entity_name, fk_graph, schema=schema)
@@ -1340,6 +1344,14 @@ def _resolve_predicate_filters(
             # Prefer DSL User entity ID over auth user ID (#546)
             resolved = _resolve_user_attribute("entity_id", auth_context)
             resolved_params.append(user_id if resolved == "__RBAC_DENY__" else resolved)
+        elif isinstance(p, CurrentTenantRef):
+            # #1394: bind the host-resolved tenant id. No host tenant in context
+            # (non-tenant request / apex host) → deny cleanly, never an unfenced
+            # query, mirroring the unresolvable-user-attr deny above.
+            host_tid = get_current_host_tenant_id()
+            if not host_tid:
+                return None  # type: ignore[return-value]
+            resolved_params.append(host_tid)
         elif isinstance(p, UserAttrRef):
             resolved = _resolve_user_attribute(p.attr_name, auth_context)
             if resolved == "__RBAC_DENY__":

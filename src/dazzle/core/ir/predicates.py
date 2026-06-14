@@ -63,16 +63,23 @@ class ValueRef(BaseModel):
     """
     A value used on the right-hand side of a predicate comparison.
 
-    Exactly one of the four fields should be set:
-      - ``literal``      — a scalar Python value (str, int, float, bool)
-      - ``current_user`` — True means "the authenticated user's PK"
-      - ``user_attr``    — a named attribute on the current user (e.g. "org_id")
-      - ``literal_null`` — True means the SQL NULL literal
+    Exactly one of the five fields should be set:
+      - ``literal``        — a scalar Python value (str, int, float, bool)
+      - ``current_user``   — True means "the authenticated user's PK"
+      - ``user_attr``      — a named attribute on the current user (e.g. "org_id")
+      - ``current_tenant`` — True means "the host-resolved tenant's id" (#1394).
+        Binds ``request.state.tenant.id`` (the #1289 ``tenant_host`` ResolvedTenant),
+        NOT the RLS row-tenancy ``dazzle.tenant_id`` — the two can diverge, so
+        ``current_tenant`` compiles against the dedicated ``dazzle.host_tenant_id``
+        GUC / a ``CurrentTenantRef`` marker. Scope equality is id-only; tenant
+        *attributes* (slug/kind/name) are display-gate only in Layer 1.
+      - ``literal_null``   — True means the SQL NULL literal
     """
 
     literal: str | int | float | bool | None = None
     current_user: bool = False
     user_attr: str | None = None
+    current_tenant: bool = False
     literal_null: bool = False
 
     model_config = ConfigDict(frozen=True)

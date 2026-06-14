@@ -25,6 +25,32 @@ from dazzle.core.comparison import eval_comparison_op as _eval_comparison_op
 # ``context["tenant_config"]`` rather than the entity record.
 _TENANT_CONFIG_PREFIX = "tenant_config."
 
+# #1394: render-time reference to the host-resolved tenant. `current_tenant`
+# binds the tenant id; `current_tenant.<attr>` reads id/slug/kind/name off the
+# `current_tenant` context dict (populated from `request.state.tenant`).
+_CURRENT_TENANT_PREFIX = "current_tenant."
+_CURRENT_TENANT_ATTRS = frozenset({"id", "slug", "kind", "name"})
+
+
+def _resolve_current_tenant(ref: str, context: dict[str, Any]) -> Any:
+    """Resolve ``current_tenant`` / ``current_tenant.<attr>`` from render context.
+
+    Returns the tenant id for the bare reference, the named attribute for a
+    dotted reference (only id/slug/kind/name are valid), or ``None`` when no
+    host tenant is in context (apex / non-tenant request) — so a gate referencing
+    it simply hides rather than erroring.
+    """
+    tenant = context.get("current_tenant")
+    if not isinstance(tenant, dict):
+        return None
+    # Bare `current_tenant` and `current_tenant.id` both read the id from the
+    # SAME dict (single source of truth — no separate `current_tenant_id` key to
+    # drift out of sync). Dotted refs are limited to the id/slug/kind/name allowlist.
+    attr = "id" if ref == "current_tenant" else ref[len(_CURRENT_TENANT_PREFIX) :]
+    if attr not in _CURRENT_TENANT_ATTRS:
+        return None
+    return tenant.get(attr)
+
 
 def evaluate_condition(
     condition: dict[str, Any],
@@ -147,6 +173,11 @@ def _evaluate_comparison(
         key = field[len(_TENANT_CONFIG_PREFIX) :]
         tenant_config = context.get("tenant_config") or {}
         record_value = tenant_config.get(key) if isinstance(tenant_config, dict) else None
+    elif field == "current_tenant" or field.startswith(_CURRENT_TENANT_PREFIX):
+        # #1394: `current_tenant` / `current_tenant.<attr>` is a context namespace
+        # (the host-resolved tenant), not a record field. Drives display gates like
+        # `visible_when: current_tenant.kind == trust`.
+        record_value = _resolve_current_tenant(field, context)
     else:
         # Get the actual value from the record
         record_value = record.get(field)
@@ -200,6 +231,12 @@ def _resolve_value(value: Any, context: dict[str, Any]) -> Any:
                 if user_entity and isinstance(user_entity, dict):
                     return _resolve_dotted_field(user_entity, field_path)
                 return None
+            # #1394: current_tenant / current_tenant.<attr> on the value side
+            # (e.g. `trust == current_tenant.kind`).
+            if isinstance(literal_val, str) and (
+                literal_val == "current_tenant" or literal_val.startswith(_CURRENT_TENANT_PREFIX)
+            ):
+                return _resolve_current_tenant(literal_val, context)
             # Return the literal value as-is
             return literal_val
 

@@ -3200,6 +3200,7 @@ ir_class: ValidationRule
 ir_class: ValueRef
   required: (none)
   optional:
+    - current_tenant: bool = False
     - current_user: bool = False
     - literal: str | int | float | bool | None = None
     - literal_null: bool = False

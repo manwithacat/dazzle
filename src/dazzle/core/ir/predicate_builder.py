@@ -150,6 +150,15 @@ def build_scope_predicate(
             attr = raw_value[len("current_user.") :]
             return UserAttrCheck(field=field, op=op, user_attr=attr)
 
+        # current_tenant (#1394) — bare or the explicit `.id` form both bind the
+        # host-resolved tenant's id. Modelled as a ColumnCheck carrying a
+        # current_tenant ValueRef (reuses the audited ColumnCheck path; the
+        # compiler/resolvers branch on ValueRef.current_tenant). Scope equality
+        # is id-only — `current_tenant.<other_attr>` is a display-gate concept,
+        # rejected here so it can't silently bind the id.
+        if isinstance(raw_value, str) and raw_value in ("current_tenant", "current_tenant.id"):
+            return ColumnCheck(field=field, op=op, value=ValueRef(current_tenant=True))
+
         # Plain column check
         return ColumnCheck(field=field, op=op, value=_resolve_value_ref(raw_value))
 
@@ -198,6 +207,9 @@ def _resolve_value_ref(raw: str | int | float | bool | None) -> ValueRef:
     if isinstance(raw, str) and raw.startswith("current_user."):
         attr = raw[len("current_user.") :]
         return ValueRef(user_attr=attr)
+    # current_tenant (#1394) — id-only scope binding (see build_scope_predicate).
+    if isinstance(raw, str) and raw in ("current_tenant", "current_tenant.id"):
+        return ValueRef(current_tenant=True)
     return ValueRef(literal=raw)
 
 

@@ -500,6 +500,14 @@ def _scope_create_overlay(
             if getattr(value_ref, "current_user", False):
                 if user_id is not None:
                     overlay[p.field] = user_id
+            elif getattr(value_ref, "current_tenant", False):
+                # #1394: `field = current_tenant` binds the host-resolved tenant,
+                # which a generic in-process probe can't simulate (it would need a
+                # `<slug>.host` request so TenantResolutionMiddleware sets the host
+                # tenant context). Intentionally NOT overlaid: the cell stays a
+                # truthful WARNING ("unverified") rather than a misleading PASS/FAIL.
+                # Full current_tenant cell verification is a follow-up.
+                pass
             elif attr_name:
                 value = _resolve_user_attr(attr_name)
                 if value is not None:

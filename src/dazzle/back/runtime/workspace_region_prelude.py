@@ -119,6 +119,11 @@ async def resolve_request_user_context(
         filter_context["current_user_id"] = user_id
     if user_entity:
         filter_context["current_user_entity"] = user_entity
+    # #1394: expose the host-resolved tenant for `current_tenant[.attr]` display
+    # gates (e.g. `visible_when: current_tenant.kind == trust`).
+    from dazzle.back.runtime.tenant_render_context import inject_current_tenant
+
+    inject_current_tenant(filter_context, request)
     context_id = request.query_params.get("context_id")
     if context_id:
         filter_context["current_context"] = context_id

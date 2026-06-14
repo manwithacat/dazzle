@@ -33,6 +33,13 @@ from contextvars import ContextVar, Token
 
 _current_tenant_schema: ContextVar[str | None] = ContextVar("_current_tenant_schema", default=None)
 _current_tenant_id: ContextVar[str | None] = ContextVar("_current_tenant_id", default=None)
+# #1394: the host-resolved tenant id (``request.state.tenant.id`` from the #1289
+# tenant_host resolver). DELIBERATELY separate from ``_current_tenant_id`` (the RLS
+# row-tenancy discriminator) — the two can diverge, and ``current_tenant`` scope
+# predicates bind THIS one via the ``dazzle.host_tenant_id`` GUC / CurrentTenantRef.
+_current_host_tenant_id: ContextVar[str | None] = ContextVar(
+    "_current_host_tenant_id", default=None
+)
 _current_rls_user_attrs: ContextVar[dict[str, str] | None] = ContextVar(
     "_current_rls_user_attrs", default=None
 )
@@ -76,6 +83,26 @@ def set_current_tenant_id(tenant_id: str) -> Token[str | None]:
     set the per-transaction ``dazzle.tenant_id`` GUC.
     """
     return _current_tenant_id.set(tenant_id)
+
+
+def get_current_host_tenant_id() -> str | None:
+    """Get the host-resolved tenant id for this context (#1394).
+
+    Returns None when no host tenant is bound — non-tenant requests, apex hosts,
+    or apps without ``tenant_host``. ``connection()`` then sets no
+    ``dazzle.host_tenant_id`` GUC and the marker resolvers deny, so a
+    ``current_tenant`` scope predicate fails closed.
+    """
+    return _current_host_tenant_id.get()
+
+
+def set_current_host_tenant_id(tenant_id: str) -> Token[str | None]:
+    """Bind the host-resolved tenant id for this async context (#1394).
+
+    Returns a token for resetting (tenant middleware sets this from
+    ``request.state.tenant.id`` and resets it on request exit).
+    """
+    return _current_host_tenant_id.set(tenant_id)
 
 
 def get_current_rls_user_attrs() -> dict[str, str]:

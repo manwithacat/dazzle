@@ -94,4 +94,16 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
 
         assert isinstance(result, ResolvedTenant)
         request.state.tenant = result
-        return await call_next(request)
+        # #1394: bind the host tenant id for `current_tenant` scope predicates +
+        # the dazzle.host_tenant_id GUC. Reset on exit so it never leaks across
+        # requests sharing this context (mirrors the schema-token pattern).
+        from dazzle.back.runtime.tenant_isolation import (
+            _current_host_tenant_id,
+            set_current_host_tenant_id,
+        )
+
+        token = set_current_host_tenant_id(str(result.id))
+        try:
+            return await call_next(request)
+        finally:
+            _current_host_tenant_id.reset(token)
