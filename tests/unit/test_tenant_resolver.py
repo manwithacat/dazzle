@@ -85,6 +85,46 @@ async def test_lookup_returns_none_when_no_match_and_no_history():
     assert await r.lookup("missing") is None
 
 
+class _Entity:
+    """A non-subscriptable row object, like the default Repository.list() shape."""
+
+    def __init__(self, id: UUID, slug: str, name: str | None) -> None:
+        self.id = id
+        self.slug = slug
+        self.name = name
+
+
+async def test_lookup_tolerates_entity_object_rows() -> None:
+    # #1396: Repository.list() returns entity OBJECTS, not dicts. Subscripting one
+    # raised `TypeError: '<Entity>' object is not subscriptable` → 502 on every
+    # matched-tenant request. The resolver must read fields via attribute access.
+    rows = {("School", "westwood"): _Entity(_id(7), "westwood", "Westwood")}
+    r = Resolver(
+        probes=[EntityProbe("School", "slug")],
+        history_probe=None,
+        lookup_fn=lambda e, s: rows.get((e, s)),
+    )
+    res = await r.lookup("westwood")
+    assert isinstance(res, ResolvedTenant)
+    assert res.kind == "School"
+    assert res.id == _id(7)
+    assert res.slug == "westwood"
+    assert res.name == "Westwood"
+
+
+async def test_lookup_entity_object_with_custom_slug_field() -> None:
+    # The slug field is probe-configurable; attribute access must honour it.
+    rows = {("Trust", "acme"): _Entity(_id(8), "acme", None)}
+    r = Resolver(
+        probes=[EntityProbe("Trust", "slug")],
+        history_probe=None,
+        lookup_fn=lambda e, s: rows.get((e, s)),
+    )
+    res = await r.lookup("acme")
+    assert isinstance(res, ResolvedTenant)
+    assert res.name is None  # missing name → None, not an AttributeError
+
+
 async def test_lookup_returns_history_hit_when_unexpired():
     future = datetime.now(UTC) + timedelta(days=30)
     r = Resolver(

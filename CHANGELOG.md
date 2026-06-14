@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.70] - 2026-06-15
+
+### Fixed
+- **`tenant_host:` resolver 502 on every matched tenant (#1396).** `Resolver.lookup`
+  subscripted the looked-up row (`row["id"]`), but the default `lookup_fn` returns
+  the entity OBJECT from `Repository.list()` — not a dict — so a host that resolved
+  to a real tenant raised `TypeError: '<Entity>' object is not subscriptable` → HTTP
+  502. (Apex and unknown-slug paths never subscript, so smoke tests passed while
+  every real tenant 502'd.) The resolver now reads row fields via a `_row_get`
+  accessor tolerant of both dict rows and entity objects. This unblocks `tenant_host:`
+  end-to-end — including the #1394 `current_tenant` and #1393 membership-gate
+  features, which depend on `request.state.tenant` being set.
+
 ## [0.82.69] - 2026-06-14
 
 ### Changed

@@ -59,14 +59,16 @@ class HistoryProbe:
     expires_field: str = "expires_at"
 
 
-LookupFn = Callable[[str, str], dict[str, Any] | None | Awaitable[dict[str, Any] | None]]
-"""Signature: lookup_fn(entity_name, slug) -> row dict or None.
+LookupFn = Callable[[str, str], Any | None | Awaitable[Any | None]]
+"""Signature: lookup_fn(entity_name, slug) -> row or None.
 
+The row may be a dict OR a DSL entity object (the default ``Repository.list()``
+shape); the resolver reads fields via ``_row_get`` to tolerate both (#1396).
 Accepts sync or async callables; the resolver awaits coroutines."""
 
 
-HistoryLookupFn = Callable[[str, str], dict[str, Any] | None | Awaitable[dict[str, Any] | None]]
-"""Signature: history_lookup_fn(entity_name, old_slug) -> row dict or None."""
+HistoryLookupFn = Callable[[str, str], Any | None | Awaitable[Any | None]]
+"""Signature: history_lookup_fn(entity_name, old_slug) -> row (dict or entity) or None."""
 
 
 class Resolver:
@@ -94,9 +96,9 @@ class Resolver:
                 continue
             return ResolvedTenant(
                 kind=probe.entity_name,
-                id=row["id"],
-                slug=row[probe.slug_field],
-                name=row.get("name"),
+                id=_row_get(row, "id"),
+                slug=_row_get(row, probe.slug_field),
+                name=_row_get(row, "name"),
             )
 
         if self._history is None or self._history_lookup is None:
@@ -106,13 +108,27 @@ class Resolver:
         if h is None:
             return None
 
-        new_slug = h[self._history.new_slug_field]
-        expires = h[self._history.expires_field]
+        new_slug = _row_get(h, self._history.new_slug_field)
+        expires = _row_get(h, self._history.expires_field)
         if isinstance(expires, str):
             expires = datetime.fromisoformat(expires)
         if expires > self._now():
             return HistoryHit(old_slug=slug, new_slug=new_slug)
         return ExpiredHistoryHit(old_slug=slug, new_slug=new_slug)
+
+
+def _row_get(row: Any, key: str, default: Any = None) -> Any:
+    """Read ``key`` from a lookup row, tolerating dict rows AND entity objects.
+
+    ``lookup_fn`` may return a plain dict (raw/sqlite rows) or a DSL entity object
+    — the default ``Repository.list()`` shape returns entity objects, which are
+    NOT subscriptable. Subscripting one raised ``TypeError`` and 502'd every
+    matched-tenant request (#1396). Resolving both shapes through one accessor
+    keeps the resolver agnostic to the repository's row representation.
+    """
+    if isinstance(row, dict):
+        return row.get(key, default)
+    return getattr(row, key, default)
 
 
 async def _maybe_await(value: Any) -> Any:

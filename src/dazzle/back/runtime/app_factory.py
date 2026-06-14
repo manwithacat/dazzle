@@ -145,7 +145,9 @@ def _mount_tenant_resolution_middleware(
         slug_field_by_entity = {e.name: e.tenant_host.slug_field for e in ordered}
 
         def _make_slug_lookup(field_map: dict[str, str]) -> Any:
-            async def _lookup(entity_name: str, slug: str) -> dict[str, Any] | None:
+            # Returns the entity OBJECT row (not a dict) — the resolver reads it
+            # via _row_get, which tolerates both shapes (#1396).
+            async def _lookup(entity_name: str, slug: str) -> Any | None:
                 repo = repositories.get(entity_name)
                 if repo is None:
                     return None
@@ -156,7 +158,7 @@ def _mount_tenant_resolution_middleware(
 
             return _lookup
 
-        async def _history_lookup(entity_name: str, slug: str) -> dict[str, Any] | None:
+        async def _history_lookup(entity_name: str, slug: str) -> Any | None:
             repo = repositories.get(entity_name)
             if repo is None:
                 return None
