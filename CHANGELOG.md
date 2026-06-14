@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.68] - 2026-06-14
+
+### Fixed
+- mypy: `admin_builder` `WorkspaceRegion(...)` construction now passes the `refresh_interval` field (#1391 fallout — the pydantic-mypy plugin treats `Field(None, ...)` fields as required at hand-written call sites). Full `mypy src/dazzle` is green.
+
 ## [0.82.67] - 2026-06-14
 
 ### Added

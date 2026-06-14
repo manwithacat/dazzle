@@ -537,7 +537,11 @@ def _build_regions(
         if source and existing_entity_names is not None and source not in existing_entity_names:
             continue
 
-        regions.append(WorkspaceRegion(name=name, source=source, display=display, limit=None))
+        regions.append(
+            WorkspaceRegion(
+                name=name, source=source, display=display, limit=None, refresh_interval=None
+            )
+        )
 
     return regions
 
