@@ -1675,6 +1675,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'refresh_interval': None,
             'render': None,
             'revoke': None,
             'row_action': None,
@@ -1751,6 +1752,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'refresh_interval': None,
             'render': None,
             'revoke': None,
             'row_action': None,
@@ -1827,6 +1829,7 @@
             ]),
             'reference_lines': list([
             ]),
+            'refresh_interval': None,
             'render': None,
             'revoke': None,
             'row_action': None,

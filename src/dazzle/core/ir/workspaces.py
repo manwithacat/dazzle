@@ -1138,6 +1138,13 @@ class WorkspaceRegion(BaseModel):
     revoke: str | None = None  # action surface shown when state is "live"
     primary_action: str | None = None  # primary action surface (typically the commit)
     secondary_action: str | None = None  # optional draft / cancel surface
+    # #1391 (v0.82.65): declarative live-refresh. `refresh: every Ns` makes the
+    # region's dashboard card append `, every Ns` to its HTMX trigger so the
+    # existing region-fetch endpoint re-renders on a poll. Seconds; `None` =
+    # no polling (legacy). Validated `>= 5` at link time (load/cost floor —
+    # see docs/architecture/model-driven-failure-modes.md). SSE push and
+    # terminal-state-stop are deferred follow-ups, not this field.
+    refresh_interval: int | None = Field(None, ge=5)
 
     model_config = ConfigDict(frozen=True)
 

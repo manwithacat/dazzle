@@ -164,6 +164,10 @@ class _RenderDashboardMixin:
         trigger = "load" if c.eager else "intersect once"
         if c.sse_enabled:
             trigger += ", sse:entity.created, sse:entity.updated, sse:entity.deleted"
+        # #1391: declarative live-refresh — append a polling clause so HTMX
+        # re-fetches the region body every N seconds. Parser floors this at 5s.
+        if c.refresh_interval:
+            trigger += f", every {c.refresh_interval}s"
 
         body_html = (
             f'<div class="dz-card-body" '

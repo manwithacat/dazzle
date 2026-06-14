@@ -1481,6 +1481,11 @@ class DashboardCard:
     eyebrow: str = ""
     css_class: str = ""
     notice: DashboardNotice | None = None
+    # #1391: declarative live-refresh. When set (seconds, >= 5), the card's
+    # HTMX trigger appends `, every Ns` so the region-fetch endpoint re-renders
+    # on a poll. `None` = no polling (legacy). Composes with `sse_enabled` and
+    # the lazy/eager base trigger.
+    refresh_interval: int | None = None
     # #1204: edit-mode chrome gating. When False (the safe default), the
     # `dz-card-actions` div (Remove card × button) is omitted entirely
     # from emitted HTML — no hover-flash, no a11y tab target, no surprise

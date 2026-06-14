@@ -3372,6 +3372,7 @@ ir_class: WorkspaceRegion
     - progress_stages: list[str] = []
     - reference_bands: list[ReferenceBand] = []
     - reference_lines: list[ReferenceLine] = []
+    - refresh_interval: int | None = None
     - render: str | None = None
     - revoke: str | None = None
     - row_action: RowActionSpec | None = None

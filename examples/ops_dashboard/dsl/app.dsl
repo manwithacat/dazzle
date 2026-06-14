@@ -179,12 +179,15 @@ workspace command_center "Command Center":
   stage: "command_center"
   access: persona(ops_engineer)
 
-  # Alert Feed - Shows active alerts
+  # Alert Feed - Shows active alerts. Live-refreshes (#1391) so the
+  # on-call engineer sees new alerts without reloading — the region's
+  # HTMX card re-fetches every 30s.
   active_alerts:
     source: Alert
     filter: status = active
     sort: severity desc, triggered_at desc
     limit: 20
+    refresh: every 30s
 
   # Alert Timeline — chronological event stream across all systems
   alert_timeline:

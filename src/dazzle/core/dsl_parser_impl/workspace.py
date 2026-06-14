@@ -2852,6 +2852,7 @@ class _WorkspaceRegionState:
     entity_card_config: ir.EntityCardConfig | None = None
     row_action: ir.RowActionSpec | None = None  # #1148
     drill: str | None = None  # #1303 — per-row drill-to-detail (detail|none)
+    refresh_interval: int | None = None  # #1391 — `refresh: every Ns` poll seconds
 
 
 # ---------- Simple keyword-value branches ---------- #
@@ -3568,6 +3569,63 @@ _WORKSPACE_REGION_KEYWORDS: dict[TokenType, KeywordParser[_WorkspaceRegionState]
 }
 
 
+def _kw_refresh(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1391: ``refresh: every Ns`` — declarative live-refresh poll interval.
+
+    Accepted forms: ``refresh: every 30s`` / ``refresh: every 30`` /
+    ``refresh: 30s`` / ``refresh: 30`` (bare number = seconds). Stored as
+    seconds; the region's dashboard card appends ``, every Ns`` to its HTMX
+    trigger so the existing region-fetch endpoint re-renders on a poll.
+
+    Seconds only in v1 — a non-``s`` unit (``5m``/``2h``) is a directed parse
+    error pointing at seconds. Minimum 5s (load/cost floor, see
+    docs/architecture/model-driven-failure-modes.md); a smaller value errors.
+    """
+    parser.advance()  # consume `refresh`
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.EVERY):
+        parser.advance()  # optional `every`
+    if parser.match(TokenType.DURATION_LITERAL):
+        bad = parser.advance()
+        raise make_parse_error(
+            f"refresh interval {bad.value!r} must be expressed in seconds, "
+            "e.g. `refresh: every 30s`.",
+            parser.file,
+            bad.line,
+            bad.column,
+        )
+    num_tok = parser.expect(TokenType.NUMBER)
+    try:
+        seconds = int(num_tok.value)
+    except (TypeError, ValueError):
+        raise make_parse_error(
+            "refresh interval must be a whole number of seconds.",
+            parser.file,
+            num_tok.line,
+            num_tok.column,
+        )
+    if parser.match(TokenType.IDENTIFIER):
+        unit_tok = parser.advance()
+        if str(unit_tok.value) != "s":
+            raise make_parse_error(
+                f"refresh unit {unit_tok.value!r} not supported — express the "
+                "interval in seconds, e.g. `refresh: every 30s`.",
+                parser.file,
+                unit_tok.line,
+                unit_tok.column,
+            )
+    if seconds < 5:
+        raise make_parse_error(
+            f"refresh interval must be at least 5s (got {seconds}s) — polling "
+            "faster overloads the region-fetch endpoint.",
+            parser.file,
+            num_tok.line,
+            num_tok.column,
+        )
+    state.refresh_interval = seconds
+    parser.skip_newlines()
+
+
 _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]] = {
     "title": _kw_title,
     "primary_action": _kw_primary_action,
@@ -3578,6 +3636,7 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "entity_card_config": _kw_entity_card_config,
     "row_action": _kw_row_action,  # #1148
     "drill": _kw_drill,  # #1303
+    "refresh": _kw_refresh,  # #1391
 }
 
 
@@ -3685,4 +3744,5 @@ def _build_workspace_region(
         entity_card_config=state.entity_card_config,
         row_action=state.row_action,
         drill=state.drill,  # #1303
+        refresh_interval=state.refresh_interval,  # #1391
     )

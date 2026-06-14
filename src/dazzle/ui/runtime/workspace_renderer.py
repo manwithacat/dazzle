@@ -180,6 +180,10 @@ class RegionContext(BaseModel):
     # dashboard slot's panel header. Empty string when not set —
     # template branches on truthy value.
     eyebrow: str = ""
+    # #1391: declarative live-refresh poll interval (seconds, >= 5). None =
+    # no polling. Threaded to the DashboardCard so its HTMX trigger appends
+    # `, every Ns`.
+    refresh_interval: int | None = None
     # v0.61.53 (#893): bar_track display config — fill denominator and
     # value format string. Defaults preserve the legacy "raw" rendering
     # for non-bar_track displays.
@@ -640,6 +644,7 @@ def build_workspace_context(
                 delta=getattr(region, "delta", None),
                 css_class=getattr(region, "css_class", None) or "",  # #894
                 eyebrow=getattr(region, "eyebrow", None) or "",  # v0.61.60
+                refresh_interval=getattr(region, "refresh_interval", None),  # #1391
                 track_max=getattr(region, "track_max", None),  # #893
                 track_format=getattr(region, "track_format", None) or "",  # #893
                 action_cards=[
@@ -924,6 +929,7 @@ def render_workspace_content_typed(
                 eyebrow=r.eyebrow,
                 css_class=getattr(r, "css_class", "") or "",
                 notice=notice,
+                refresh_interval=getattr(r, "refresh_interval", None),  # #1391
                 edit_enabled=can_edit_layout,
             )
         )

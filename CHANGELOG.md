@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.65] - 2026-06-14
+
+### Added
+- **Declarative live-refresh for workspace regions (#1391).** A region may now
+  declare `refresh: every Ns` (e.g. `refresh: every 30s`) to have its dashboard
+  card poll the existing region-fetch endpoint every N seconds — no JS, no new
+  routes. Rides the HTMX trigger already emitted per card: the knob appends
+  `, every Ns` to `hx-trigger`. Accepted forms: `every 30s`, `every 30`, `30s`,
+  `30` (bare = seconds). Floored at 5s at parse time (load/cost guard); non-second
+  units are directed back to seconds. `examples/ops_dashboard` `active_alerts`
+  feed demonstrates it. SSE push and terminal-state-stop remain deferred follow-ups.
+
+  ### Agent Guidance
+  - Use `refresh: every Ns` on a region for live dashboards (alert feeds, run
+    status). Seconds only in v1, minimum 5s. The region body re-renders
+    scope-aware on every poll (same path as the initial fetch) — no extra wiring.
+
 ## [0.82.64] - 2026-06-14
 
 ### Fixed

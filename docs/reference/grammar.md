@@ -596,6 +596,7 @@ region_directive
                 | "action" ":" IDENT NEWLINE
                 | "empty" ":" STRING NEWLINE
                 | "stage" ":" STRING NEWLINE
+                | "refresh" ":" "every"? NUMBER ("s")? NEWLINE   (* #1391 live-refresh: poll seconds, >= 5 *)
                 | "aggregate" ":" NEWLINE INDENT metric_line+ DEDENT ;
 
 metric_line   ::= IDENT ":" (aggregate_call | derived_metric_expr) NEWLINE ;
