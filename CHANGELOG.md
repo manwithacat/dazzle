@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.64] - 2026-06-14
+
+### Fixed
+- **Guide-walk oracle: clarified surface→URL resolution + fixed the invoice_ops auditor guide**
+  (#1395). The framework's canonical route_map collapses every LIST surface of an entity to
+  `/app/<entity>`, so a secondary list surface (e.g. invoice_ops `audit_export`, shadowed by
+  `invoice_list`) is never independently rendered. The guide-walk's `_surface_url` was correct —
+  it caught a real guide-authoring bug: the auditor guide targeted the shadowed `audit_export`.
+  Re-targeted it to `invoice_list` (where the auditor actually lands), and `_surface_url` now
+  computes the entity slug identically to the framework (`.lower().replace("_","-")`).
+
 ## [0.82.63] - 2026-06-14
 
 ### Fixed

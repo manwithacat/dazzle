@@ -38,7 +38,13 @@ def _surface_url(surface: Any) -> tuple[str | None, str]:
     mode = getattr(raw_mode, "value", str(raw_mode)).lower()
     if not entity:
         return None, mode
-    slug = entity.lower()
+    # Match the framework's canonical surface route_map exactly (page_routes.py):
+    # all LIST surfaces of an entity collapse to /app/<slug>, CREATE to
+    # /app/<slug>/create. NOTE: two LIST surfaces on one entity therefore share a
+    # URL — only the default renders there, so a guide rooted on a *secondary*
+    # list surface (e.g. a shadowed audit_export) genuinely won't show its overlay;
+    # that's a guide-authoring bug the walk correctly surfaces, not a URL error.
+    slug = entity.lower().replace("_", "-")
     if "list" in mode:
         return f"/app/{slug}", mode
     if "create" in mode:

@@ -107,9 +107,9 @@ guide auditor_onboarding "Review the audit trail":
 
   step trail:
     kind: spotlight
-    target: surface.audit_export
-    title: "The audit trail"
-    body: "Every invoice's status history and timestamps are here to export — your starting point for any review."
+    target: surface.invoice_list
+    title: "Every invoice, with its trail"
+    body: "Each invoice carries its full status history and timestamps — your starting point for any review."
     placement: center
     complete_on: dismiss
 
@@ -123,4 +123,4 @@ guide auditor_onboarding "Review the audit trail":
   step_order: [trail, drill_in]
 
   on_complete:
-    redirect: surface.audit_export
+    redirect: surface.invoice_list
