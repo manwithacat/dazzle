@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.82.59"
+version = "0.82.60"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -130,6 +130,13 @@ lsp = [
 ]
 graph = [
     "networkx>=3.0",
+]
+e2e = [
+    # Playwright drives the browser-based UX walks (`dazzle ux verify
+    # --interactions`). Pinned >=1.40 for the sync-API shape used in
+    # cli/ux_interactions.py. NOTE: after `pip install 'dazzle-dsl[e2e]'`
+    # you still need `playwright install chromium` to fetch the browser. (#1376)
+    "playwright>=1.40",
 ]
 compliance = [
     "weasyprint>=60.0",

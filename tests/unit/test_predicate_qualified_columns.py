@@ -78,10 +78,15 @@ class TestUserAttrCheckQualifiesColumn:
         sql, _ = compile_predicate(predicate, "StudentProfile", FKGraph())
         assert sql == '"StudentProfile"."school" = %s'
 
-    def test_qualifies_with_explicit_schema(self) -> None:
+    def test_root_column_not_schema_qualified(self) -> None:
+        """#1386: the root entity's own WHERE column is NOT schema-qualified —
+        it must match the unqualified, search_path-resolved FROM clause. A
+        schema-qualified ref (``"tenant_x"."E"."col"``) diverges from FROM and
+        500s with UndefinedTable when the tenant schema lacks the table."""
         predicate = UserAttrCheck(field="school", op=CompOp.EQ, user_attr="school")
         sql, _ = compile_predicate(predicate, "StudentProfile", FKGraph(), schema="tenant_oakwood")
-        assert sql == '"tenant_oakwood"."StudentProfile"."school" = %s'
+        assert sql == '"StudentProfile"."school" = %s'
+        assert "tenant_oakwood" not in sql
 
     def test_no_entity_name_falls_back_to_unqualified(self) -> None:
         """The fallback for callers that don't pass entity_name keeps

@@ -1019,6 +1019,22 @@ def test_detail_type_aware_ref_renders_link_with_display() -> None:
     assert "Engineering" in html
 
 
+def test_detail_type_aware_ref_resolves_fk_dict_display_not_uuid() -> None:
+    """A FK column that arrives as a dict (id + __display__) renders the
+    referenced entity's display name as link text — never the raw dict repr
+    or a bare UUID (#1389)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"contact": {"id": "abc-123", "__display__": "Ada Lovelace"}},
+        "fields": [{"key": "contact", "type": "ref", "ref_route": "/contacts/{id}"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert 'href="/contacts/abc-123"' in html
+    assert "Ada Lovelace" in html
+    assert "__display__" not in html
+    assert "'id'" not in html  # no dict repr leaked as link text
+
+
 def test_detail_type_aware_ref_without_route_falls_back_to_text() -> None:
     """When `ref_route` is empty, the ref renders as plain Text using
     the display value — no broken link."""

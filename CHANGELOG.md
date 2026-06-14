@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.60] - 2026-06-14
+
+### Fixed
+- **Workspace region-list FK columns now render the referenced entity's display name**
+  (#1389). A `ref` cell whose value arrives as a `{id, __display__}` dict (from
+  `fk_display_only` joins) showed the raw dict repr / UUID as link text; it now resolves
+  `__display__` → id, never the dict repr.
+- **Scope predicates no longer schema-qualify the root entity's own WHERE column** (#1386).
+  The compiler emitted `"tenant_x"."E"."col"` while the FROM clause is unqualified
+  (search_path-resolved), causing an `UndefinedTable` 500 when the tenant schema lacks the
+  table. The root column is now `"E"."col"`, resolving through `search_path` identically to FROM.
+
+### Added
+- **`e2e` extra** (`pip install 'dazzle-dsl[e2e]'` → `playwright>=1.40`) (#1376). The
+  Playwright-missing error messages already pointed at `[e2e]`, but no such extra existed;
+  it does now (uv.lock updated). Messages also note `playwright install chromium` for the browser.
+
 ## [0.82.59] - 2026-06-14
 
 ### Changed

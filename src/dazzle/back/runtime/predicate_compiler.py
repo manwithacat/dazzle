@@ -458,7 +458,15 @@ def _qualify_column(
         return quote_identifier(field)
 
     resolved_field = _resolve_field_on_entity(field, entity_name, fk_graph)
-    return f"{_qualify_table(entity_name, schema)}.{quote_identifier(resolved_field)}"
+    # #1386: qualify the root entity's own column to the BARE table, never the
+    # tenant ``schema``. The FROM clause is emitted unqualified (resolved via
+    # ``search_path``), so a schema-qualified WHERE ref (``"tenant_x"."E"."col"``)
+    # diverges from it and 500s with UndefinedTable when the tenant schema lacks
+    # the table. An unqualified ``"E"."col"`` resolves through ``search_path``
+    # identically to FROM (both single-tenant-from-public and schema-per-tenant).
+    # ``schema`` is kept in the signature for the column-ref caller's contract.
+    _ = schema  # intentionally not schema-qualified for root columns (see above)
+    return f"{_qualify_table(entity_name, None)}.{quote_identifier(resolved_field)}"
 
 
 def _resolve_field_on_entity(

@@ -345,7 +345,9 @@ def run_interaction_walk(
         from playwright.sync_api import sync_playwright
     except ImportError:
         print(
-            "Playwright is not installed. Install with: pip install 'dazzle-dsl[e2e]'",
+            "Playwright is not installed. Install with: pip install 'dazzle-dsl[e2e]' "
+            "(or pip install 'playwright>=1.40'), then `playwright install chromium` "
+            "to fetch the browser.",
             file=sys.stderr,
         )
         return EXIT_SETUP_FAILURE

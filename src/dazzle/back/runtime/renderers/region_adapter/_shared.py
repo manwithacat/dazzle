@@ -152,7 +152,16 @@ def _render_typed_value(
 
     if col_type == "ref":
         ref_route = str(col.get("ref_route") or "")
-        display = item.get(f"{key}_display") or value
+        # Resolve the display label: prefer a sibling ``<key>_display``, then the
+        # FK dict's ``__display__`` (set by fk_display_only joins), then the id.
+        # Never fall back to the raw dict repr — that produced ``{'id': ...}`` as
+        # link text (#1389).
+        display = item.get(f"{key}_display")
+        if display is None:
+            if isinstance(value, dict):
+                display = value.get("__display__") or value.get("id") or ""
+            else:
+                display = value
         display_str = str(display)
         if ref_route:
             # Resolve the FK id. After repo.list(fk_display_only=True)
