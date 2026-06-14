@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.57] - 2026-06-14
+
+### Changed
+- **Promoted the `GUIDE_WALK` CI gate to blocking** (example-guides Phase 3). The advisory
+  first run went green across all 11 examples — every app boots on Postgres-only and every
+  onboarding guide's `<dz-onboarding-step>` overlay renders for its audience persona at
+  runtime. Dropped `continue-on-error`; a guide that promises an overlay the runtime doesn't
+  show now fails main. Same promotion path as the viewport gate (#1295) and interaction-walk.
+
 ## [0.82.56] - 2026-06-14
 
 ### Added

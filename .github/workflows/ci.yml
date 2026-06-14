@@ -680,10 +680,11 @@ jobs:
   # No Playwright (server-rendered HTML, sync httpx). Matrixed over all 11
   # examples so each gets a clean Postgres + its own boot.
   #
-  # ADVISORY for now (continue-on-error): this is the first run that boots all
-  # 11 examples for a guide-walk; per-app CI bootability is being shaken out.
-  # PROMOTE to blocking (drop continue-on-error) once it's green across a few
-  # runs — same path the viewport gate (#1295) and interaction-walk took.
+  # BLOCKING gate (promoted v0.82.57 after the advisory first run went green
+  # across all 11 examples — every app boots on Postgres-only and every guide's
+  # <dz-onboarding-step> overlay renders for its audience persona). Same
+  # promotion path the viewport gate (#1295) and interaction-walk took. A guide
+  # that promises an overlay the runtime doesn't show now fails main.
   guide-walks:
     name: GUIDE_WALK (onboarding overlays)
     runs-on: ubuntu-latest
@@ -731,7 +732,6 @@ jobs:
         optional-pip: ""
 
     - name: Run GUIDE_WALK (with retry)
-      continue-on-error: true  # ADVISORY — promote to blocking once green (see comment above)
       run: |
         cd examples/${{ matrix.app }}
         set +e
