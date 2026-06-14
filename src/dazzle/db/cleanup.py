@@ -36,11 +36,14 @@ def _build_delete_orphans_query(
     pk_column: str,
 ) -> str:
     """Build SQL to delete orphan rows. All args must be quoted identifiers."""
+    # #1384: cast both sides to text so a text FK vs uuid PK (or vice-versa)
+    # doesn't abort with "operator does not exist: uuid = text".
     return (
         f"DELETE FROM {child_table} "
         f"WHERE {fk_column} IS NOT NULL "
         f"AND NOT EXISTS ("
-        f"SELECT 1 FROM {parent_table} p WHERE p.{pk_column} = {child_table}.{fk_column}"
+        f"SELECT 1 FROM {parent_table} p "
+        f"WHERE p.{pk_column}::text = {child_table}.{fk_column}::text"
         f")"
     )
 
@@ -196,7 +199,10 @@ async def db_cleanup_impl(
                 count = await fetchval(conn, count_sql)
                 if count == 0:
                     continue
-                await conn.execute(f"DELETE FROM {quote_id(entity_name)} WHERE {where}")
+                # table + column names are quote_id()-sanitised identifiers
+                # (not bindable as params); no user-input values.
+                _del = f"DELETE FROM {quote_id(entity_name)} WHERE {where}"  # nosemgrep
+                await conn.execute(_del)  # nosemgrep
                 round_deleted += count
                 all_deletions.append(
                     {

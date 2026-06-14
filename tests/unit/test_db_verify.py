@@ -20,6 +20,18 @@ class TestBuildOrphanQuery:
         assert '"student"' in sql
         assert "NOT EXISTS" in sql
 
+    def test_casts_both_operands_to_text(self) -> None:
+        """#1384: a text FK vs uuid PK (or vice-versa) must not abort with
+        'operator does not exist: uuid = text' — both sides are cast to text."""
+        sql = _build_orphan_query(
+            child_table='"Exclusion"',
+            fk_column='"student"',
+            parent_table='"Student"',
+            pk_column='"id"',
+        )
+        assert "::text = " in sql
+        assert sql.count("::text") == 2
+
 
 class TestDbVerifyImpl:
     @pytest.mark.asyncio
@@ -71,6 +83,21 @@ class TestDbVerifyImpl:
         result = await db_verify_impl(entities=[school, student], conn=conn)
         assert result["warning_count"] == 1
         assert result["total_issues"] == 0  # no orphans, but warnings ≠ no issues
+
+    @pytest.mark.asyncio
+    async def test_error_count_tallies_errored_checks_1381(self, make_entity) -> None:
+        """#1381: a check that ERRORED before it could evaluate (e.g. 'relation
+        does not exist') must increment error_count — distinct from total_issues —
+        so a run where every check errors fails loudly instead of a vacuous green
+        pass (total_issues=0, exit 0)."""
+        student = make_entity("Student", {"school": "School"})
+        school = make_entity("School")
+
+        conn = scalar_conn(Exception("relation does not exist"))
+
+        result = await db_verify_impl(entities=[school, student], conn=conn)
+        assert result["error_count"] == 1
+        assert result["total_issues"] == 0  # errored ≠ clean
 
     @pytest.mark.asyncio
     async def test_warning_count_zero_on_clean_run(self, make_entity) -> None:

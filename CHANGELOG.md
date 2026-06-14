@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.61] - 2026-06-14
+
+### Fixed
+- **Signing resend/active-state gates derive from the entity's status enum** (#1385). The
+  GET/POST/resend handlers hard-coded `status in ("sent","viewed")`, so custom signing
+  lifecycles (e.g. `[pending, signed, withdrawn, expired]`) were always treated as terminal.
+  Active states are now `status enum − terminal set`; the default lifecycle still collapses
+  to `{sent, viewed}`. New `_active_signing_states` helper.
+- **`db verify` / `db cleanup` orphan-check SQL casts FK comparisons to text** (#1384). A
+  `ref` FK stored as text against a uuid PK (or vice-versa) aborted the check with
+  "operator does not exist: uuid = text"; both operands are now `::text`-cast.
+- **`dazzle db verify` no longer reports a vacuous green pass** (#1381). Checks that errored
+  before evaluating (e.g. "relation does not exist") now increment a distinct `error_count`
+  that gates the exit code on BOTH the human and `--json` paths — the `--json` branch
+  previously returned before any exit gate, so an all-errored run printed valid JSON and
+  exited 0.
+
 ## [0.82.60] - 2026-06-14
 
 ### Fixed

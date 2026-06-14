@@ -61,3 +61,18 @@ class TestDbCleanupImpl:
         result = await db_cleanup_impl(entities=[config], conn=conn)
         assert result["total_deleted"] == 0
         assert result["iterations"] == 0
+
+
+def test_build_delete_orphans_query_casts_to_text() -> None:
+    """#1384: the DELETE query casts both FK comparison operands to text so a
+    text FK vs uuid PK doesn't abort with 'operator does not exist: uuid = text'."""
+    from dazzle.db.cleanup import _build_delete_orphans_query
+
+    sql = _build_delete_orphans_query(
+        child_table='"Exclusion"',
+        fk_column='"student"',
+        parent_table='"Student"',
+        pk_column='"id"',
+    )
+    assert "::text = " in sql
+    assert sql.count("::text") == 2

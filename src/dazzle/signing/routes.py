@@ -194,6 +194,34 @@ class SignSubmission(BaseModel):
 # ---------------------------------------------------------------------
 
 
+# Statuses in which a signing document is terminal — no longer awaiting a
+# signature. A signable entity's *active* states are any of its declared
+# ``status`` enum values NOT in this set; the default lifecycle collapses to
+# {sent, viewed}. Lets custom signing lifecycles (e.g. [pending, signed,
+# withdrawn, expired]) use the GET / POST / resend gates and TR-53 recovery
+# without hard-coding ("sent", "viewed") (#1385).
+_TERMINAL_SIGNING_STATES = frozenset(
+    {"signed", "declined", "withdrawn", "superseded", "expired", "completed", "cancelled"}
+)
+
+
+def _active_signing_states(entity: EntitySpec) -> frozenset[str]:
+    """Statuses in which *entity* still accepts a signature / can be renewed.
+
+    Derived from the entity's ``status`` enum minus the framework terminal set;
+    falls back to the default ``{"sent", "viewed"}`` when the enum can't be read.
+    """
+    for field in getattr(entity, "fields", None) or []:
+        if getattr(field, "name", None) == "status":
+            values = getattr(getattr(field, "type", None), "enum_values", None)
+            if values:
+                active = frozenset(v for v in values if v not in _TERMINAL_SIGNING_STATES)
+                if active:
+                    return active
+            break
+    return frozenset({"sent", "viewed"})
+
+
 async def _handle_get(
     *,
     entity_name: str,
@@ -247,10 +275,12 @@ async def _handle_get(
         return HTMLResponse(body, status_code=404)  # nosemgrep
 
     status = _row_get(row, "status")
-    if status not in ("sent", "viewed"):
+    if status not in _active_signing_states(entity):
         body = _terminal_page(status)
         return HTMLResponse(body, status_code=200)  # nosemgrep
 
+    # First-view transition (default lifecycle only — a no-op for custom enums
+    # without a "sent" state, which is fine: view-tracking is optional).
     if status == "sent":
         await repo.update(
             record_id,
@@ -300,7 +330,7 @@ async def _handle_post(
         raise HTTPException(status_code=404, detail="Document not found")
 
     status = _row_get(row, "status")
-    if status not in ("sent", "viewed"):
+    if status not in _active_signing_states(entity):
         raise HTTPException(
             status_code=409,
             detail=f"Document in terminal status {status!r}; cannot accept signature",
@@ -440,9 +470,9 @@ async def _handle_resend(
         body = _error_page("Link does not match document.", support_contact=support_contact)
         return HTMLResponse(body, status_code=403)  # nosemgrep
 
-    # Validate the entity is signable (raises 404 if not) — the return
-    # value isn't needed here, only the guard.
-    _lookup_signable(entity_name, signable)
+    # Validate the entity is signable (raises 404 if not); the spec drives the
+    # active-state set for the renewal gate (#1385).
+    entity = _lookup_signable(entity_name, signable)
     repo = _lookup_repo(entity_name, repositories)
     row = await repo.read(record_id)
     if row is None:
@@ -450,7 +480,7 @@ async def _handle_resend(
         return HTMLResponse(body, status_code=404)  # nosemgrep
 
     status = _row_get(row, "status")
-    if status not in ("sent", "viewed"):
+    if status not in _active_signing_states(entity):
         # Already signed/declined/superseded — nothing to renew.
         body = _terminal_page(status)
         return HTMLResponse(body, status_code=200)  # nosemgrep

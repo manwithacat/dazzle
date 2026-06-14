@@ -880,3 +880,42 @@ class TestExpiredLinkRecovery:
         assert resp.status_code == 500
         assert "send a new link" in resp.text.lower()
         assert "token=" not in resp.text  # no leaked signing_url
+
+
+class TestActiveSigningStates:
+    """#1385: active (still-signable / renewable) states derive from the
+    entity's status enum, so custom lifecycles work — not a hard-coded tuple."""
+
+    def _entity_with_status_enum(self, values: list[str]) -> EntitySpec:
+        return EntitySpec(
+            name="Doc",
+            title="Doc",
+            fields=[
+                FieldSpec(
+                    name="id",
+                    type=FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                FieldSpec(
+                    name="status", type=FieldType(kind=FieldTypeKind.ENUM, enum_values=values)
+                ),
+            ],
+            signable=True,
+        )
+
+    def test_default_lifecycle_collapses_to_sent_viewed(self) -> None:
+        from dazzle.signing.routes import _active_signing_states
+
+        entity = self._entity_with_status_enum(["sent", "viewed", "signed", "declined", "expired"])
+        assert _active_signing_states(entity) == frozenset({"sent", "viewed"})
+
+    def test_custom_lifecycle_pending_is_active(self) -> None:
+        from dazzle.signing.routes import _active_signing_states
+
+        entity = self._entity_with_status_enum(["pending", "signed", "withdrawn", "expired"])
+        assert _active_signing_states(entity) == frozenset({"pending"})
+
+    def test_no_status_field_falls_back_to_default(self) -> None:
+        from dazzle.signing.routes import _active_signing_states
+
+        assert _active_signing_states(_signable_entity()) == frozenset({"sent", "viewed"})

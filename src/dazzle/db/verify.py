@@ -57,11 +57,15 @@ def _build_orphan_query(
 
     All arguments must already be quoted identifiers.
     """
+    # #1384: cast both sides to text. A `ref` FK column stored as text against a
+    # uuid PK (or vice-versa) otherwise aborts the check with "operator does not
+    # exist: uuid = text", which is then demoted to an errored check and the
+    # orphan sweep silently under-reports.
     return (
         f"SELECT count(*) FROM {child_table} c "
         f"WHERE c.{fk_column} IS NOT NULL "
         f"AND NOT EXISTS ("
-        f"SELECT 1 FROM {parent_table} p WHERE p.{pk_column} = c.{fk_column}"
+        f"SELECT 1 FROM {parent_table} p WHERE p.{pk_column}::text = c.{fk_column}::text"
         f")"
     )
 
@@ -84,6 +88,11 @@ async def db_verify_impl(
     checks: list[dict[str, Any]] = []
     total_issues = 0
     warning_count = 0  # #1035: column-mismatch / SQL errors emitted as ! lines
+    # #1381: checks that ERRORED before they could evaluate (e.g. "relation does
+    # not exist") must not be silently demoted to a clean pass. error_count is
+    # distinct from total_issues (real findings) and gates the exit code, so a
+    # run where every check errors fails loudly instead of reporting 0 / exit 0.
+    error_count = 0
 
     for entity in entities:
         ref_fields = get_ref_fields(entity)
@@ -137,6 +146,7 @@ async def db_verify_impl(
                     }
                 )
                 warning_count += 1
+                error_count += 1
 
     # #1364: required-ref NULL counts. Refs compile to soft (un-constrained)
     # columns by design; `required` is enforced at the app layer only, so
@@ -171,6 +181,7 @@ async def db_verify_impl(
                     }
                 )
                 warning_count += 1
+                error_count += 1
 
     # #1364: unanchored rows — entities whose at-least-one-anchor invariant
     # (`a != null or b != null`) is violated. Only that statically
@@ -207,9 +218,11 @@ async def db_verify_impl(
                     }
                 )
                 warning_count += 1
+                error_count += 1
 
     return {
         "checks": checks,
         "total_issues": total_issues,
         "warning_count": warning_count,
+        "error_count": error_count,
     }

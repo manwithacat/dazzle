@@ -942,8 +942,26 @@ def verify_command(
 
     result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
 
+    # #1381: compute the failure condition ONCE and gate BOTH output paths on
+    # it — including checks that ERRORED before they could evaluate (error_count).
+    # The --json branch previously returned before any exit gate, so a run where
+    # every FK check errored ("relation does not exist") printed valid JSON and
+    # exited 0 — a vacuous green pass. error_count makes that fail loud.
+    _fk = result["fk"]
+    _money = result["money"]
+    has_issues = bool(
+        _fk["total_issues"]
+        or _fk.get("error_count", 0)
+        or _fk.get("warning_count", 0)
+        or (_money["drift_count"] + _money["partial_count"])
+        or result["signable"]
+        or result["rls"]
+    )
+
     if as_json:
         console.print(json_mod.dumps(result, indent=2))
+        if has_issues:
+            raise typer.Exit(1)
         return
 
     console.print("\n[bold]FK Integrity:[/bold]")
@@ -1064,8 +1082,9 @@ def verify_command(
     # exit code lets `dazzle db verify` be wired into CI / nightly
     # quality swarms without a wrapper that has to re-parse stdout.
     # #1340 extends this to signable schema drift; Phase D to RLS drift.
-    money_drift = money_result["drift_count"] + money_result["partial_count"]
-    if fk_orphans or fk_warnings or money_drift or signable_drifts or rls_drifts:
+    # #1381: reuse the single failure condition computed above (includes
+    # error_count — checks that errored before they could evaluate).
+    if has_issues:
         raise typer.Exit(1)
 
 
