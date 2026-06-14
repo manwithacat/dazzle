@@ -198,6 +198,34 @@ class TestIntegrityHashChain:
             assert len(row["row_hash"]) == 64  # sha256 hexdigest
 
     @pytest.mark.asyncio
+    async def test_advisory_lock_precedes_chain_head_read(self, mock_conn) -> None:
+        """#1383: the hash-chain write takes a per-transaction advisory lock as
+        its first statement — before the chain-head SELECT — so concurrent worker
+        flushes serialise (head-read + INSERT as one critical section) and the
+        chain stays linear instead of forking."""
+        conn, cursor = mock_conn
+        logger = AuditLogger(
+            database_url="postgresql://localhost/test", audit_integrity="hash_chain"
+        )
+        await logger.log_decision(
+            operation="read",
+            entity_name="Task",
+            entity_id="t-0",
+            decision="allow",
+            matched_policy="permit",
+            policy_effect="permit",
+        )
+        await logger._flush()
+        sqls = [c[0] for c in cursor._executed]
+        lock_idx = next((i for i, s in enumerate(sqls) if "pg_advisory_xact_lock" in s), None)
+        seed_idx = next(
+            (i for i, s in enumerate(sqls) if "SELECT row_hash FROM _dazzle_audit_log" in s), None
+        )
+        assert lock_idx is not None, "advisory lock not taken for hash_chain write"
+        assert seed_idx is not None
+        assert lock_idx < seed_idx, "advisory lock must precede the chain-head read"
+
+    @pytest.mark.asyncio
     async def test_chain_seed_is_empty_string(self, mock_conn) -> None:
         """The very first row's prev_hash is the empty string seed."""
         conn, cursor = mock_conn

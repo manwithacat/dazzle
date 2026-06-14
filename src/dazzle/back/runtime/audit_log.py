@@ -16,6 +16,13 @@ from uuid import uuid4
 
 logger = logging.getLogger("dazzle.audit")
 
+# #1383: per-transaction advisory-lock key that serialises the hash-chain
+# head-read + batch INSERT across concurrent workers. Without it, two workers
+# seed `prev_hash` from the same row and interleave INSERTs, forking the linear
+# chain that `verify_chain` later assumes (→ false-positive boot warnings).
+# A fixed arbitrary 32-bit int ("audt"); distinct from the membership-events key.
+_AUDIT_LOG_LOCK_KEY = 0x61756474
+
 
 # Columns persisted as a row of `_dazzle_audit_log`. This is also the
 # canonical ordering used for the INSERT and — when `audit_integrity ==
@@ -407,6 +414,11 @@ class AuditLogger:
             try:
                 cursor = conn.cursor()
                 if self._audit_integrity == "hash_chain":
+                    # #1383: serialise the head-read + batch INSERT across
+                    # workers. pg_advisory_xact_lock is held until conn.commit()
+                    # below, so concurrent flushes can't seed from the same row
+                    # and interleave — the chain stays linear.
+                    cursor.execute("SELECT pg_advisory_xact_lock(%s)", (_AUDIT_LOG_LOCK_KEY,))
                     # Seed the chain from the most-recent existing row.
                     # `timestamp` is the only monotonically-increasing
                     # column we have ('id' is a uuid). Empty table → "".

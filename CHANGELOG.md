@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.63] - 2026-06-14
+
+### Fixed
+- **Audit hash-chain writes are now concurrency-safe across workers** (#1383). `_write_entries`
+  takes a per-transaction advisory lock (`pg_advisory_xact_lock`) as its first statement when
+  `audit_integrity = "hash_chain"`, serialising the chain-head read + batch INSERT so concurrent
+  worker flushes can't seed `prev_hash` from the same row and interleave — which forked the chain
+  and produced false-positive boot-time verification warnings. Mirrors the membership-events
+  advisory-lock pattern (#1363).
+
 ## [0.82.62] - 2026-06-14
 
 ### Fixed
