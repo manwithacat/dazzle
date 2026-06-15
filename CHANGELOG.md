@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.72] - 2026-06-15
+
+### Fixed
+- **`ux verify --guides` false-negatives with a custom-ASGI auth app (#1401).** `dazzle serve` sourced the page-render `get_auth_context` only from the framework auth middleware, so an app that wires UI auth through its own ASGI entrypoint got `auth_ctx=None` under serve — persona-gated overlays (onboarding guides) never rendered and the guide-walk oracle reported a false negative. A project may now expose an optional `page_auth_context(request)` callable on the existing `pipeline.serve.app_init` hook module; when present it overrides the framework default for page rendering, so `dazzle serve` (and the oracle that boots through it) resolve the same auth context the app's own server would. Missing callable = no-op; non-callable = ignored with a warning.
+
+  ### Agent Guidance
+  - If an app wires page-render auth outside the framework auth middleware, add a `page_auth_context(request) -> AuthContext | None` callable to `pipeline/serve/app_init.py`. See `docs/reference/project-layout.md` (Page-render auth bridge). Without it, `dazzle serve` and `ux verify --guides` won't see the app's auth context.
+
 ## [0.82.71] - 2026-06-15
 
 ### Fixed

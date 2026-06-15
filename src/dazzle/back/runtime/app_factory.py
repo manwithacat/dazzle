@@ -29,6 +29,14 @@ logger = logging.getLogger(__name__)
 # silent failures can't ship a half-configured app.
 _PROJECT_INIT_MODULE = "pipeline.serve.app_init"
 _PROJECT_INIT_HOOK = "register_middleware"
+# #1401: optional page-render auth bridge. An app that wires UI auth through its
+# own ASGI entrypoint (not the framework auth middleware) can expose a
+# ``page_auth_context(request) -> AuthContext | None`` callable on the same
+# project module; when present it OVERRIDES the framework default so `dazzle
+# serve` (and the `ux verify --guides` oracle that boots through it) resolve the
+# same auth context the app's own server would — otherwise the page-auth gate
+# sees None and the guide overlay never renders (a false negative).
+_PROJECT_PAGE_AUTH_HOOK = "page_auth_context"
 
 
 def _resolve_template_or_default(dotted: str | None, default: Any) -> Any:
@@ -230,6 +238,40 @@ def _invoke_project_post_build_hook(app: "FastAPI") -> None:
 
     logger.info("Invoking project post-build hook %s:%s", _PROJECT_INIT_MODULE, _PROJECT_INIT_HOOK)
     hook(app)
+
+
+def _resolve_project_page_auth_context() -> Any | None:
+    """Return the project's ``page_auth_context`` hook, or None (#1401).
+
+    Mirrors ``_invoke_project_post_build_hook``'s discovery: a project that wires
+    UI auth via a custom ASGI entrypoint exposes
+    ``pipeline.serve.app_init:page_auth_context``. A missing module / missing
+    callable is a no-op (the common case); a present callable overrides the
+    framework's ``builder.auth_middleware.get_auth_context`` for page rendering so
+    `dazzle serve` and the app's own server share one auth bridge.
+    """
+    import importlib
+
+    try:
+        module = importlib.import_module(_PROJECT_INIT_MODULE)
+    except ModuleNotFoundError:
+        return None
+    hook = getattr(module, _PROJECT_PAGE_AUTH_HOOK, None)
+    if hook is None:
+        return None
+    if not callable(hook):
+        logger.warning(
+            "Project %s:%s is not callable — ignoring",
+            _PROJECT_INIT_MODULE,
+            _PROJECT_PAGE_AUTH_HOOK,
+        )
+        return None
+    logger.info(
+        "Using project page-auth bridge %s:%s",
+        _PROJECT_INIT_MODULE,
+        _PROJECT_PAGE_AUTH_HOOK,
+    )
+    return hook
 
 
 def create_app(
@@ -730,6 +772,14 @@ def assemble_post_build_routes(
     get_auth_context = None
     if builder.auth_middleware:
         get_auth_context = builder.auth_middleware.get_auth_context
+    # #1401: a project that wires UI auth through its own ASGI entrypoint can
+    # override the page-render auth bridge via the project hook. When present it
+    # wins over the framework default so `dazzle serve` resolves the same auth
+    # context the app's own server would (without it, the guide-walk oracle sees
+    # auth_ctx=None and false-negatives).
+    _project_auth = _resolve_project_page_auth_context()
+    if _project_auth is not None:
+        get_auth_context = _project_auth
 
     # Compute persona -> default route mapping for authenticated root redirect (#569)
     persona_routes: dict[str, str] | None = None

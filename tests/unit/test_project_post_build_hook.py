@@ -11,6 +11,7 @@ import pytest
 from dazzle.back.runtime.app_factory import (
     _PROJECT_INIT_MODULE,
     _invoke_project_post_build_hook,
+    _resolve_project_page_auth_context,
 )
 
 
@@ -78,3 +79,39 @@ def test_hook_exception_propagates(cleanup_project_module):
     _install_project_module(register_middleware=broken_register)
     with pytest.raises(RuntimeError, match="project hook is broken"):
         _invoke_project_post_build_hook(object())  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# #1401 — page_auth_context override hook
+# ---------------------------------------------------------------------------
+
+
+def test_page_auth_context_absent_returns_none(cleanup_project_module):
+    """No project module → no override (the common case)."""
+    assert _resolve_project_page_auth_context() is None
+
+
+def test_page_auth_context_missing_callable_returns_none(cleanup_project_module):
+    """Module exists but doesn't expose page_auth_context → no override."""
+    _install_project_module(register_middleware=lambda app: None)
+    assert _resolve_project_page_auth_context() is None
+
+
+def test_page_auth_context_present_is_returned(cleanup_project_module):
+    """A present callable is returned so it can override the framework default."""
+
+    def bridge(request):
+        return {"user": "from-project"}
+
+    _install_project_module(page_auth_context=bridge)
+    resolved = _resolve_project_page_auth_context()
+    assert resolved is bridge
+    assert resolved("req") == {"user": "from-project"}
+
+
+def test_page_auth_context_non_callable_is_ignored(cleanup_project_module, caplog):
+    """A non-callable attribute is ignored (warn), never returned."""
+    caplog.set_level(logging.WARNING, logger="dazzle.back.runtime.app_factory")
+    _install_project_module(page_auth_context="not-callable")
+    assert _resolve_project_page_auth_context() is None
+    assert any("not callable" in r.message for r in caplog.records)

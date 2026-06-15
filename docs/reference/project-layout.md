@@ -133,6 +133,27 @@ module is a silent no-op (most projects don't need this); any exception
 raised by the hook itself is logged and re-raised so a broken hook
 can't ship a half-configured app.
 
+### Page-render auth bridge (#1401)
+
+If your app resolves UI auth through its **own** ASGI entrypoint rather than
+the framework auth middleware, the same module may expose a
+`page_auth_context(request) -> AuthContext | None` callable. When present, it
+**overrides** the framework default for page rendering, so `dazzle serve` (and
+the `ux verify --guides` oracle that boots through it) resolves the same auth
+context your own server would:
+
+```python
+# pipeline/serve/app_init.py
+def page_auth_context(request):
+    # Return your app's AuthContext (or None for anonymous).
+    return request.scope.get("dazzle_auth_ctx")
+```
+
+Without it, an app whose page-auth is wired outside the framework middleware
+leaves the server-rendered auth gate seeing `None` — so persona-gated overlays
+(e.g. onboarding guides) never render and `ux verify --guides` false-negatives.
+A missing callable is a no-op; a non-callable attribute is ignored with a warning.
+
 ## See Also
 
 - [Customising rendered output](htmx-templates.md#customising-rendered-output) — custom renderers + per-entity detail viewers (replaces the removed Jinja template-override mechanism)
