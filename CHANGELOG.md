@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.79] - 2026-06-15
+
+### Security
+- **Bumped `starlette` 1.2.1 → 1.3.1 and `cryptography` 48.0.0 → 49.0.0 to clear three newly-published advisories (pip-audit hard-fail on main).** The `Security Tests` CI job (`pip-audit --strict`) queries the live advisory DB, so these pinned transitive deps started failing as the advisories landed — not from any code change. Fixes: **CVE-2026-54283** (Starlette `request.form()` ignored `max_fields`/`max_part_size` for `application/x-www-form-urlencoded` → unauthenticated DoS via field-count/field-size), **CVE-2026-54282** (Starlette reconstructed `request.url` from an unvalidated path, letting a path without a leading `/` move the authority boundary so `request.url.hostname` became attacker-controlled), and **GHSA-537c-gmf6-5ccf** (cryptography wheels statically linked a vulnerable OpenSSL). Lock-only change; both version constraints already permitted the fixed releases (`fastapi` requires `starlette>=0.46.0`, no upper bound). Full unit suite (18095) green on the upgraded stack.
+
 ## [0.82.78] - 2026-06-15
 
 ### Changed
