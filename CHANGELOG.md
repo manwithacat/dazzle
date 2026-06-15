@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.77] - 2026-06-15
+
+### Added
+- **Custom-renderer conformance harness — `dazzle.testing.custom_renderer_conformance` (#1392 slice 2).** A shipped test-time oracle so downstream apps stop hand-rolling the check. `check_custom_renderer_conformance(appspec=…, services=…)` renders every custom-renderer surface (any `render:` name that isn't a framework default) against a **stub context** (`{}` by default — the empty-data path) and returns one `RendererConformanceResult` per surface, asserting: the renderer is registered; it doesn't raise on sparse ctx (a renderer must degrade to a visible empty state, never assume data); its output is non-blank + well-formed (reuses the slice-1 runtime probe `_assert_custom_render_output`); and its output is **inner-HTML-only** (no `<!doctype>`/`<html>`/`<body>` — a surface renderer must return a fragment, never a full document that bypasses the app chrome). Never raises — every breach is a structured `ok=False` result. The slice-1 runtime guarantee only fires when a request hits the surface; this harness catches the blank-only-on-empty-data case (the AegisMark "passes render, blank screen" class) with no live DB/server. The committed `fixtures/custom_renderer` app is now gated by it.
+
+  ### Agent Guidance
+  - Testing a project that ships a custom `render:` surface: call `dazzle.testing.custom_renderer_conformance.check_custom_renderer_conformance(appspec=…, services=…)` in a unit test and assert no `ok=False` results. It proves each custom surface degrades to a visible empty state and stays inner-HTML-only without booting the app.
+
 ## [0.82.76] - 2026-06-15
 
 ### Fixed
