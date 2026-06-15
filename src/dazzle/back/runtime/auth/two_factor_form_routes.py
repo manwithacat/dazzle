@@ -21,10 +21,11 @@ from datetime import timedelta
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Form, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Form, Query, Request
+from fastapi.responses import RedirectResponse, Response
 
 from dazzle.back.runtime.auth.crypto import cookie_secure
+from dazzle.back.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.back.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
     _login_redirect_for_outcome,
@@ -53,7 +54,7 @@ def create_two_factor_form_routes(
         method: Annotated[str, Form()] = "totp",
         code: Annotated[str, Form()] = "",
         next: Annotated[str, Query()] = "/",
-    ) -> RedirectResponse:
+    ) -> Response:
         """Verify a 2FA code and complete login.
 
         Reuses the validation primitives backing the JSON endpoint
@@ -114,7 +115,7 @@ def create_two_factor_form_routes(
             outcome, safe_next, memberships_required=memberships_required(request)
         )
         if redirect_to == FORBIDDEN_SENTINEL:
-            raise HTTPException(status_code=403, detail="no membership for this organization")
+            return forbidden_org_response(request)  # #1393: branded host-pin 403
         session = auth_store.create_session(
             user,
             expires_in=timedelta(days=session_expires_days),

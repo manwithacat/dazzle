@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.78] - 2026-06-15
+
+### Changed
+- **Host-pin login denial now returns a branded HTML 403, not a bare JSON error (#1393 branded-403 slice).** When a proven identity logs in on a host pinned to an organisation it isn't a member of, the five browser login flows (password login + signup, magic-link, SSO callback, 2FA verify) previously surfaced the `HostForbidden` → `FORBIDDEN_SENTINEL` denial as a raw `HTTPException(403, "no membership for this organization")` — a JSON error page in the browser. They now `return forbidden_org_response(request)`: a branded "This isn't your organisation" page (new `build_forbidden_org_view`, typed-Fragment, distinct from the no-orgs-*anywhere* page) rendered at HTTP 403. The JSON API login path (`routes._json_active_membership_id`) **deliberately keeps the JSON 403** — an API client wants the machine-readable error. Single shared helper `dazzle.back.runtime.auth.forbidden_org.forbidden_org_response`.
+
+  ### Agent Guidance
+  - The browser login routes now render a branded 403 page (not JSON) when a non-member hits a host-pinned login. The JSON `/auth` API still returns JSON 403. Phases B (apex discovery), C (declarative membership relation), and D (email-domain routing) of #1393 remain open and ADR-gated.
+
 ## [0.82.77] - 2026-06-15
 
 ### Added

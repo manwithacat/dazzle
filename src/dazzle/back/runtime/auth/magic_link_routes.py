@@ -14,10 +14,11 @@ import logging
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Form, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Form, Query, Request
+from fastapi.responses import RedirectResponse, Response
 
 from dazzle.back.runtime.auth.cookie_name import read_session_id, select_write_name
+from dazzle.back.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.back.runtime.auth.magic_link import (
     create_magic_link,
     validate_magic_link,
@@ -64,7 +65,7 @@ def create_magic_link_routes() -> APIRouter:
         token: str,
         request: Request,
         next: Annotated[str, Query()] = "/",
-    ) -> RedirectResponse:
+    ) -> Response:
         """Validate a magic link token and create a session.
 
         One-time use, expiry-gated. On success: creates session, sets
@@ -108,7 +109,7 @@ def create_magic_link_routes() -> APIRouter:
             outcome, safe_next, memberships_required=memberships_required(request)
         )
         if redirect_to == FORBIDDEN_SENTINEL:
-            raise HTTPException(status_code=403, detail="no membership for this organization")
+            return forbidden_org_response(request)  # #1393: branded host-pin 403
         session = auth_store.create_session(user, active_membership_id=membership_id)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)

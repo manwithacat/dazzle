@@ -76,6 +76,38 @@ def build_select_org_view(
     )
 
 
+def build_forbidden_org_view(
+    *,
+    product_name: str,
+    css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
+    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
+) -> Page:
+    """ "This isn't your organisation" — the identity authenticated but is not a
+    member of the tenant pinned by the host it logged in on (#1393 branded-403).
+
+    Distinct from :func:`build_no_orgs_view` (no memberships *anywhere*): here the
+    identity may well belong to *other* orgs, just not this host's. The host-pin
+    denial previously surfaced as a bare JSON ``HTTPException(403)``; this is the
+    branded page the five browser login flows now return instead.
+    """
+    body_children: list[Any] = [
+        Link(label=product_name, href=URL("/")),
+        Heading(body="This isn't your organisation", level=1),
+        Text(
+            body="You're signed in, but your account isn't a member of the "
+            "organisation at this address. If you belong to another organisation, "
+            "sign in there; otherwise ask an admin for an invitation.",
+            tone="muted",
+        ),
+    ]
+    return Page(
+        title=f"Not your organisation — {product_name}",
+        body=Stack(children=tuple(body_children)),
+        css_links=css_links,
+        js_scripts=js_scripts,
+    )
+
+
 def build_no_orgs_view(
     *,
     product_name: str,

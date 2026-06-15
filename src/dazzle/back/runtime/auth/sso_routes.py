@@ -24,11 +24,12 @@ import logging
 import secrets
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import RedirectResponse, Response
 
 from dazzle.back.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.back.runtime.auth.crypto import cookie_secure
+from dazzle.back.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.back.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
     _login_redirect_for_outcome,
@@ -140,7 +141,7 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
     async def sso_callback(
         provider: str,
         request: Request,
-    ) -> RedirectResponse:
+    ) -> Response:
         """Exchange the code, fetch userinfo, sign the user in."""
         config = get_provider(request.app.state, provider)
         if config is None:
@@ -221,7 +222,7 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
             outcome, safe_next, memberships_required=memberships_required(request)
         )
         if redirect_to == FORBIDDEN_SENTINEL:
-            raise HTTPException(status_code=403, detail="no membership for this organization")
+            return forbidden_org_response(request)  # #1393: branded host-pin 403
         session = auth_store.create_session(user, active_membership_id=membership_id)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)
