@@ -20,8 +20,9 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from dazzle.back.runtime.query_builder import quote_identifier
 from dazzle.back.runtime.repository import DatabaseManager, Repository
-from dazzle.back.specs.entity import EntitySpec
+from dazzle.back.specs.entity import EntitySpec, FieldSpec, ScalarType
 
 logger = logging.getLogger(__name__)
 
@@ -295,44 +296,111 @@ def _mirror_auth_user_to_domain(
     mirrored — other persona-backed entities (Tester, Agent, etc.) are
     handled by the ``backed_by`` DSL construct (cycle 248).
     """
-    user_sql = deps.entity_sql.get("User")
-    if user_sql is None:
+    user_spec = next((e for e in deps.entities if e.name == "User"), None)
+    if user_spec is None:
         return  # App has no User entity — nothing to mirror
+
+    # #1398: build the upsert from the User entity's ACTUAL declared schema rather
+    # than hard-coding name/role/is_active. A User entity may use username /
+    # display_name (no `name` column) and omit role / is_active, in which case the
+    # old fixed INSERT raised UndefinedColumn → swallowed → no mirror → every
+    # `ref User` create then failed. Auto timestamps are DB/runtime-managed; skip
+    # them here (created_at is set via NOW() below if the column exists).
+    writable = {f.name: f for f in user_spec.fields if not f.auto_add and not f.auto_update}
+    # Map the auth user's fields onto whichever columns the entity actually
+    # declares. `name` flows to any of the common label columns; `username` is
+    # derived from the email local-part when there's no better source.
+    bound: dict[str, Any] = {}
+    if "id" in writable:
+        bound["id"] = user_id
+    if "email" in writable:
+        bound["email"] = email
+    for label_col in ("name", "display_name", "full_name"):
+        if label_col in writable:
+            bound[label_col] = name
+    if "username" in writable:
+        bound["username"] = name or (email.split("@", 1)[0] if email else user_id)
+    if "role" in writable:
+        bound["role"] = role
+    if "is_active" in writable:
+        bound["is_active"] = True
+    # Satisfy any other required-without-default plain-scalar column with a
+    # type-appropriate placeholder so the NOT NULL insert can't fail on a column
+    # the auth user doesn't carry. enum / ref(FK) / uuid / date columns can't be
+    # safely placeholder-filled — leave them out (the warn-fallback covers the
+    # rare app that declares such a required-no-default column on User).
+    for fname, f in writable.items():
+        if fname in bound or not f.required or f.default is not None:
+            continue
+        placeholder = _scalar_placeholder(f)
+        if placeholder is not _NO_PLACEHOLDER:
+            bound[fname] = placeholder
+
+    if "id" not in bound:
+        return  # no id column to conflict on — can't upsert deterministically
+
+    # created_at: set NOW() inline when the entity declares it (covers the common
+    # auto_add timestamp that has no DB default in the test schema).
+    has_created_at = any(f.name == "created_at" for f in user_spec.fields)
+
+    cols = list(bound.keys())
+    col_sql = ", ".join(quote_identifier(c) for c in cols)
+    val_sql = ", ".join(["%s"] * len(cols))
+    params = [bound[c] for c in cols]
+    if has_created_at:
+        col_sql += ', "created_at"'
+        val_sql += ", NOW()"
+    update_cols = [c for c in cols if c != "id"]
+    if update_cols:
+        set_sql = ", ".join(
+            f"{quote_identifier(c)} = EXCLUDED.{quote_identifier(c)}" for c in update_cols
+        )
+        conflict = f"ON CONFLICT (id) DO UPDATE SET {set_sql}"
+    else:
+        conflict = "ON CONFLICT (id) DO NOTHING"
+    sql = f'INSERT INTO "User" ({col_sql}) VALUES ({val_sql}) {conflict}'
 
     try:
         with deps.db_manager.connection() as conn:
-            # Check if the User table has the expected columns
-            # Attempt a simple upsert with common User entity fields
-            conn.execute(
-                """
-                INSERT INTO "User" (id, email, name, role, is_active, created_at)
-                VALUES (%s, %s, %s, %s, %s, NOW())
-                ON CONFLICT (id) DO UPDATE SET
-                    email = EXCLUDED.email,
-                    name = EXCLUDED.name,
-                    role = EXCLUDED.role,
-                    is_active = EXCLUDED.is_active
-                """,
-                (user_id, email, name, role, True),
-            )
+            # Closed templated SQL: every interpolated identifier comes from the
+            # entity's declared FieldSpec.name (a validated identifier) via
+            # quote_identifier; all values are bound parameters.
+            # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            conn.execute(sql, tuple(params))
             conn.commit()
     except Exception:
-        # The User entity may have a different schema than expected
-        # (different columns, SQLite vs Postgres syntax, etc.).
-        # Fall back to a minimal insert with just id + email.
-        try:
-            with deps.db_manager.connection() as conn:
-                conn.execute(
-                    """
-                    INSERT INTO "User" (id, email, name, is_active, created_at)
-                    VALUES (%s, %s, %s, %s, NOW())
-                    ON CONFLICT (id) DO NOTHING
-                    """,
-                    (user_id, email, name, True),
-                )
-                conn.commit()
-        except Exception:
-            logger.warning("Could not mirror auth user %s into User entity", user_id, exc_info=True)
+        logger.warning("Could not mirror auth user %s into User entity", user_id, exc_info=True)
+
+
+# Sentinel: a field type with no safe scalar placeholder (enum / ref / uuid / …).
+_NO_PLACEHOLDER = object()
+
+_SCALAR_PLACEHOLDERS: dict[ScalarType, Any] = {
+    ScalarType.STR: "",
+    ScalarType.TEXT: "",
+    ScalarType.RICHTEXT: "",
+    ScalarType.SLUG: "",
+    ScalarType.URL: "",
+    ScalarType.TIMEZONE: "UTC",
+    ScalarType.INT: 0,
+    ScalarType.DECIMAL: 0,
+    ScalarType.FLOAT: 0.0,
+    ScalarType.BOOL: False,
+    ScalarType.JSON: "{}",
+}
+
+
+def _scalar_placeholder(field: FieldSpec) -> Any:
+    """A NOT-NULL-satisfying placeholder for a required-without-default column.
+
+    Only plain scalars get one — enum (needs a valid member), ref/FK (needs a real
+    row), uuid (FK-or-pk), email/date/datetime (format-constrained) return the
+    ``_NO_PLACEHOLDER`` sentinel so the caller leaves the column out.
+    """
+    ftype = getattr(field, "type", None)
+    if ftype is None or getattr(ftype, "kind", None) != "scalar":
+        return _NO_PLACEHOLDER
+    return _SCALAR_PLACEHOLDERS.get(ftype.scalar_type, _NO_PLACEHOLDER)
 
 
 async def _get_snapshot(deps: _TestDeps) -> SnapshotResponse:

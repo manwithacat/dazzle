@@ -175,6 +175,12 @@ def launch_interaction_server(
             terminate_stale_sessions(db_url)
 
     env = os.environ.copy()
+    # #1397: the managed verify/test server is inherently single-process. A host
+    # with WEB_CONCURRENCY set (e.g. Heroku = 3) would otherwise make uvicorn
+    # pick that worker count via the app-object path and REFUSE to bind
+    # (multi-worker needs an import string, not an app object) — the server never
+    # comes up and the interaction times out. Force single-process here.
+    env["WEB_CONCURRENCY"] = "1"
     if extra_env:
         env.update(extra_env)
 

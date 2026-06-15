@@ -785,7 +785,12 @@ def serve_command(
         help="Auto-start vendor mocks for API packs without credentials. Default: enabled in local mode.",
     ),
     workers: int | None = typer.Option(
-        None,
+        # #1397: default 1 (matching --help), NOT None. A None default forwarded
+        # as workers=None lets uvicorn silently consult WEB_CONCURRENCY via the
+        # app-object path and refuse to bind (multi-worker needs an import
+        # string). `dazzle serve` is single-process by default; production
+        # multi-worker is a separate Procfile `uvicorn --workers` invocation.
+        1,
         "--workers",
         help="Number of uvicorn workers (default: 1).",
     ),

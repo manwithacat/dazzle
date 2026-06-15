@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.71] - 2026-06-15
+
+### Fixed
+- **`dazzle serve` / `ux verify --guides` failed to bind when `WEB_CONCURRENCY` is set (#1397).** `dazzle serve`'s `--workers` Typer option defaulted to `None`; forwarded as `workers=None`, uvicorn silently consulted `WEB_CONCURRENCY` (e.g. Heroku=3) and then refused to bind because multi-worker needs an import string, not the app object — the server never came up and `ux verify` timed out. The default is now `1` (matching `--help`), and the managed verify/test server forces `WEB_CONCURRENCY=1` in its child env. Production multi-worker is unaffected (it's a separate Procfile `uvicorn --workers` invocation).
+- **Auth→domain `User` mirror 500'd for `username`/`display_name` schemas (#1398).** `_mirror_auth_user_to_domain` hard-coded a `name`/`role`/`is_active` INSERT, so a `User` entity without those columns raised `UndefinedColumn` → swallowed → no row mirrored → every `ref User` create then failed. The upsert is now derived from the `User` entity's actual declared schema (maps the auth user onto whichever of `name`/`display_name`/`full_name`/`username`/`role`/`is_active` exist, fills other required scalar columns with type-appropriate placeholders), with identifiers quoted and values bound.
+
 ## [0.82.70] - 2026-06-15
 
 ### Fixed

@@ -23,7 +23,76 @@ from dazzle.back.runtime.test_routes import (
     SeedRequest,
     SeedResponse,
     SnapshotResponse,
+    _mirror_auth_user_to_domain,
 )
+
+
+class _CaptureConn:
+    """A fake DB connection capturing the SQL + params the mirror runs."""
+
+    def __init__(self) -> None:
+        self.executed: list[tuple[str, tuple]] = []
+
+    def __enter__(self) -> _CaptureConn:
+        return self
+
+    def __exit__(self, *a: object) -> None:
+        return None
+
+    def execute(self, sql: str, params: tuple = ()) -> None:
+        self.executed.append((sql, params))
+
+    def commit(self) -> None:
+        return None
+
+
+class TestMirrorAuthUserSchemaDerived:
+    """#1398: the auth->domain User mirror derives columns from the entity's
+    actual schema, not a hard-coded name/role/is_active set."""
+
+    def _deps(self, *field_names: str) -> tuple[object, _CaptureConn]:
+        from types import SimpleNamespace
+
+        from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+
+        fields = [
+            FieldSpec(name=n, type=FieldType(kind="scalar", scalar_type=ScalarType.STR))
+            for n in field_names
+        ]
+        user = EntitySpec(name="User", fields=fields)
+        conn = _CaptureConn()
+        deps = SimpleNamespace(
+            entities=[user],
+            db_manager=SimpleNamespace(connection=lambda: conn),
+        )
+        return deps, conn
+
+    def test_username_display_name_schema_no_name_column(self) -> None:
+        # The exact repro: User has username/display_name, no name/role/is_active.
+        deps, conn = self._deps("id", "email", "username", "display_name")
+        _mirror_auth_user_to_domain(deps, "u-1", "alice@example.com", "Alice", "admin")
+        assert len(conn.executed) == 1
+        sql, params = conn.executed[0]
+        # Only declared columns are referenced -- no UndefinedColumn.
+        assert '"username"' in sql and '"display_name"' in sql
+        assert '"email"' in sql and "id" in sql
+        assert '"name"' not in sql and '"role"' not in sql and '"is_active"' not in sql
+        assert "ON CONFLICT (id) DO UPDATE" in sql
+        assert "Alice" in params
+
+    def test_classic_name_role_is_active_schema_still_works(self) -> None:
+        deps, conn = self._deps("id", "email", "name", "role", "is_active")
+        _mirror_auth_user_to_domain(deps, "u-2", "bob@example.com", "Bob", "member")
+        sql, params = conn.executed[0]
+        assert '"name"' in sql and '"role"' in sql and '"is_active"' in sql
+        assert "Bob" in params and "member" in params and True in params
+
+    def test_no_user_entity_is_noop(self) -> None:
+        from types import SimpleNamespace
+
+        deps = SimpleNamespace(entities=[], db_manager=SimpleNamespace(connection=lambda: None))
+        # Must not raise and must not touch the DB.
+        _mirror_auth_user_to_domain(deps, "u-3", "c@example.com", "Cara", "admin")
 
 
 class TestFixtureData:
