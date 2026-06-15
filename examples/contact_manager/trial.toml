@@ -109,6 +109,10 @@ Call submit_verdict describing the expired-link experience.
 [[scenario]]
 name = "engagement_letter_validator_rejected"
 login_persona = "user"
+# #1382: arm the project signing_validator to reject this row's signature so the
+# scenario actually exercises the authority-check path (the seeded row id is
+# pre-injected into DAZZLE_QA_SIGNING_REJECT_IDS before boot).
+signing_validator_reject = true
 time_budget_seconds = 400
 max_steps = 25
 user_identity = """

@@ -30,6 +30,14 @@ class SeededDoc:
     The state is harness-internal — it is deliberately NOT written to the
     mock inbox, so the persona discovers expiry the way a real signer
     would: by opening the link.
+
+    ``validator_reject`` (#1382) records that this row's id was armed in
+    ``DAZZLE_QA_SIGNING_REJECT_IDS`` before boot, so the project-side
+    ``signing_validator`` rejects the signature. Like ``token_state`` it
+    fixes the verifier's expectation (row stays ``sent``) rather than
+    inferring "signed" the moment the persona attempts a signature — without
+    it a successful rejection mis-scores as a failure and the persona's
+    "no authority check" verdict reads as a false-critical.
     """
 
     entity: str
@@ -38,6 +46,7 @@ class SeededDoc:
     signing_url: str
     signatory_email: str
     token_state: str = "fresh"
+    validator_reject: bool = False
 
 
 @dataclass
@@ -46,11 +55,19 @@ class SigningSeedContext:
 
     Not frozen so callers can accumulate seeded_docs after initial construction
     (e.g. Task 10 integration rebuilds the context with docs added incrementally).
+
+    ``signable_ids`` (#1382) maps signable-entity name → the UUID pre-generated
+    *before* boot, so the seed can insert the row under a known id and that same
+    id can be armed in ``DAZZLE_QA_SIGNING_REJECT_IDS`` (set pre-boot, the only
+    point the subprocess env is fixed). ``validator_reject`` flags that the
+    reject env var was armed for this run.
     """
 
     env: dict[str, str]
     inbox_path: Path
     seeded_docs: list[SeededDoc] = field(default_factory=list)
+    signable_ids: dict[str, str] = field(default_factory=dict)
+    validator_reject: bool = False
 
 
 def mint_ephemeral_cert_env(tmpdir: Path, *, project_name: str) -> dict[str, str]:

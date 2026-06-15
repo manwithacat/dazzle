@@ -16,6 +16,7 @@ _EXPECTED_STATUS: dict[str, str | None] = {
     "declined": "declined",
     "token_invalid": "sent",
     "token_expired": "sent",
+    "validator_rejected": "sent",  # #1382: validator blocks the signature → row stays sent
     "not_engaged": None,
 }
 
@@ -88,6 +89,12 @@ def verify_signing_outcome(
     # moment the persona attempts a signature against the expired link.
     if active_doc is not None and getattr(active_doc, "token_state", "fresh") == "expired":
         expected = "token_expired"
+    elif active_doc is not None and getattr(active_doc, "validator_reject", False):
+        # #1382: the project signing_validator is armed to reject this row, so the
+        # expectation is fixed by the seeding — the persona's sign attempt must be
+        # blocked and the row must stay `sent`. Tool inference would wrongly expect
+        # "signed" and a successful rejection would mis-score as a failure.
+        expected = "validator_rejected"
     else:
         expected = infer_expected_outcome(invoked)
     outcome = SigningOutcome(detected=False, expected_outcome_inferred=expected)

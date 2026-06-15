@@ -321,6 +321,7 @@ def _provision_signing_env(
     tmp_root: Path,
     *,
     project_name: str,
+    validator_reject: bool = False,
 ) -> SigningSeedContext | None:
     """Mint ephemeral cert + token secret if the app has any signable entity.
 
@@ -328,6 +329,16 @@ def _provision_signing_env(
     generated env vars and an empty inbox stub, or ``None`` when no signable
     entity exists.  The caller is responsible for merging ``ctx.env`` into
     ``os.environ`` before booting the server subprocess.
+
+    When *validator_reject* is set (#1382), a UUID is pre-generated for each
+    signable entity and ``DAZZLE_QA_SIGNING_REJECT_IDS`` is armed with the
+    comma-joined ids in the returned env — so the project ``signing_validator``
+    (which reads that var at request time) rejects the seeded row's signature.
+    Pre-generation is required because the env is fixed *before* boot but the
+    row is seeded *after*; the ids are threaded into the seed so the inserted
+    row carries exactly the armed id (the ``/__test__/seed`` endpoint honours an
+    explicit ``data["id"]``). Mirrors the proven integration-test pattern in
+    ``tests/integration/helpers/signable_runner.py``.
     """
     if not app_spec.has_signable_entity():
         return None
@@ -349,7 +360,26 @@ def _provision_signing_env(
     env = mint_ephemeral_cert_env(tmp_root, project_name=project_name)
     inbox_path = tmp_root / "mock_inbox.json"
     inbox_path.write_text("[]", encoding="utf-8")
-    return SigningSeedContext(env=env, inbox_path=inbox_path, seeded_docs=[])
+
+    # #1382: pre-generate one UUID per signable entity so the reject env var can
+    # be armed before boot with the exact id the seed will then insert under.
+    import uuid as _uuid_mod
+
+    signable_ids: dict[str, str] = {
+        entity.name: str(_uuid_mod.uuid4())
+        for entity in app_spec.domain.entities
+        if getattr(entity, "signable", False)
+    }
+    if validator_reject and signable_ids:
+        env["DAZZLE_QA_SIGNING_REJECT_IDS"] = ",".join(signable_ids.values())
+
+    return SigningSeedContext(
+        env=env,
+        inbox_path=inbox_path,
+        seeded_docs=[],
+        signable_ids=signable_ids,
+        validator_reject=validator_reject,
+    )
 
 
 # Per-entity realistic seed payloads for the trial harness.
@@ -600,7 +630,7 @@ def _collect_parent_fixtures(
 
 
 def _build_signing_seed_batch(
-    entity: Any, app_spec: Any, signatory_email: str
+    entity: Any, app_spec: Any, signatory_email: str, *, signable_id: str | None = None
 ) -> list[dict[str, Any]]:
     """Build a fixtures batch for one signable entity via ``/__test__/seed``.
 
@@ -610,6 +640,11 @@ def _build_signing_seed_batch(
     recursively so multi-hop FK chains (e.g. SlaWaiver→Ticket→User) don't
     produce 400 errors.  The signable entity itself is always the last fixture
     in the list under the fixture-id ``"signable_row"``.
+
+    When *signable_id* is given (#1382), the signable row's ``data["id"]`` is
+    pinned to it so the inserted row carries the UUID pre-armed in
+    ``DAZZLE_QA_SIGNING_REJECT_IDS``. The ``/__test__/seed`` endpoint honours an
+    explicit ``data["id"]`` (see ``test_routes._seed_fixtures``).
 
     Returns a list of fixture dicts ready for ``SeedRequest.fixtures``.
     """
@@ -640,6 +675,9 @@ def _build_signing_seed_batch(
         signable_data["signatory_email"] = signatory_email
     if "signatory_name" not in signable_data:
         signable_data["signatory_name"] = "Trial Signatory"
+    # #1382: pin the row id when the caller pre-generated one (reject scenarios).
+    if signable_id:
+        signable_data["id"] = signable_id
 
     signable_fixture: dict[str, Any] = {
         "id": "signable_row",
@@ -659,6 +697,8 @@ def _seed_signable_rows(
     signatory_email: str,
     test_secret: str = "",
     token_state: str = "fresh",
+    signable_ids: dict[str, str] | None = None,
+    validator_reject: bool = False,
 ) -> list[SeededDoc]:
     """For each signable entity in *app_spec*, insert one row + mint a token.
 
@@ -670,10 +710,17 @@ def _seed_signable_rows(
     ``token_state="expired"`` mints already-expired tokens so *_token_expired*
     scenarios exercise the real "Invalid or expired link" page (TR-51).
 
+    ``signable_ids`` (#1382) maps entity name → a pre-generated UUID to insert
+    the row under (so it matches the armed ``DAZZLE_QA_SIGNING_REJECT_IDS``).
+    ``validator_reject`` stamps each :class:`SeededDoc` so the verifier expects
+    the row to stay ``sent`` (the signature is blocked by the validator).
+
     Returns a list of :class:`~dazzle.qa.signing_seed.SeededDoc` objects
     (one per signable entity) ready to write into the mock inbox.
     """
     import httpx
+
+    signable_ids = signable_ids or {}
 
     headers: dict[str, str] = {}
     if test_secret:
@@ -684,7 +731,9 @@ def _seed_signable_rows(
         if not getattr(entity, "signable", False):
             continue
 
-        fixtures = _build_signing_seed_batch(entity, app_spec, signatory_email)
+        fixtures = _build_signing_seed_batch(
+            entity, app_spec, signatory_email, signable_id=signable_ids.get(entity.name)
+        )
         # The signable row may carry its own realistic signatory_email (from the
         # demo-field overrides in _REALISTIC_SEED_OVERRIDES — e.g. SlaWaiver's
         # "devon.park@retailco.example"). The token + mock-inbox metadata MUST
@@ -727,6 +776,7 @@ def _seed_signable_rows(
                 signing_url=f"{base_url}/sign/{entity.name}/{row_id}?token={token}",
                 signatory_email=effective_email,
                 token_state=token_state,
+                validator_reject=validator_reject,
             )
         )
     return docs
@@ -1077,6 +1127,25 @@ def qa_trial(
     if signing_token_state == "expired":
         typer.echo("Signing trial harness: seeding an EXPIRED token per scenario config.")
 
+    # Optional per-scenario validator-reject arming (#1382). When true, the
+    # seeded row's id is pre-armed in DAZZLE_QA_SIGNING_REJECT_IDS so the
+    # project signing_validator rejects the signature — the *_validator_rejected
+    # scenarios exercise the authority-check path instead of silently signing.
+    signing_validator_reject = bool(chosen.get("signing_validator_reject", False))
+    if signing_validator_reject and signing_token_state == "expired":
+        typer.echo(
+            f"Scenario '{scenario_name}': signing_validator_reject and "
+            "signing_token_state='expired' are mutually exclusive (an expired "
+            "token never reaches the validator).",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+    if signing_validator_reject:
+        typer.echo(
+            "Signing trial harness: arming the project signing_validator to "
+            "REJECT the seeded row per scenario config."
+        )
+
     if fresh_db:
         _reset_db_for_trial(project_dir)
 
@@ -1103,6 +1172,7 @@ def qa_trial(
             _trial_appspec,
             tmp_root,
             project_name=getattr(_trial_appspec, "name", None) or project_dir.name,
+            validator_reject=signing_validator_reject,
         )
     if seed_ctx is not None:
         # Inject signing env into this process so the server subprocess
@@ -1160,11 +1230,15 @@ def qa_trial(
                         signatory_email="trial-signatory@example.com",
                         test_secret=test_secret_val,
                         token_state=signing_token_state,
+                        signable_ids=seed_ctx.signable_ids,
+                        validator_reject=seed_ctx.validator_reject,
                     )
                     seed_ctx = SigningSeedContext(
                         env=seed_ctx.env,
                         inbox_path=seed_ctx.inbox_path,
                         seeded_docs=seeded,
+                        signable_ids=seed_ctx.signable_ids,
+                        validator_reject=seed_ctx.validator_reject,
                     )
                     write_mock_inbox(tmp_root, seeded)
                     from dazzle.qa.signing_tools import build_signing_tools

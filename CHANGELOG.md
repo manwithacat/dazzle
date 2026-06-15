@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.76] - 2026-06-15
+
+### Fixed
+- **`dazzle qa trial` `*_validator_rejected` scenarios were silently non-functional (#1382).** The project-side `signing_validator` reads its reject-list from `DAZZLE_QA_SIGNING_REJECT_IDS` at request time, but the trial harness never set it — so `validate_*` no-op'd, the signature succeeded (HTTP 200, row `signed`), and the persona emitted a **false-critical "the system has no authority check" verdict** against a scenario that was testing nothing it claimed to. The harness now supports a `signing_validator_reject = true` key on a `[[scenario]]` block: it pre-generates the signable row's UUID before boot (the only point the subprocess env is fixed), arms `DAZZLE_QA_SIGNING_REJECT_IDS` with it, and threads that id into the seed so the inserted row carries exactly the armed id (the `/__test__/seed` endpoint honours an explicit `data["id"]`). The post-trial verifier recognises the armed state and fixes the expected outcome to `validator_rejected` (row stays `sent`), so a successful rejection scores **PASS** and a row that slips through to `signed` scores **FAIL** — the genuine defect the scenario exists to catch. Mutually exclusive with `signing_token_state = "expired"` (an expired token never reaches the validator). The `support_tickets/sla_waiver_validator_rejected` and `contact_manager/engagement_letter_validator_rejected` scenarios are armed. Mirrors the proven integration-test pattern in `tests/integration/helpers/signable_runner.py`.
+
+  ### Agent Guidance
+  - Authoring a trial scenario that should exercise a project `signing_validator` rejection: add `signing_validator_reject = true` to the `[[scenario]]` block. The harness arms the reject env var and the verifier scores a blocked signature as PASS. Without it, the validator never fires and the persona files a false "no authority check" critical.
+
 ## [0.82.75] - 2026-06-15
 
 ### Fixed

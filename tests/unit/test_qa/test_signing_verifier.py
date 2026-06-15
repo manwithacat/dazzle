@@ -120,6 +120,53 @@ def test_expired_seed_fails_if_row_was_mutated():
     assert outcome.functional["status"] == "fail"
 
 
+def test_validator_reject_seed_overrides_inference_and_expects_untouched_row():
+    """#1382: with validator_reject the expectation is fixed by the seeding —
+    even when the persona attempted a signature, the verifier must expect the
+    project signing_validator to block it (row stays 'sent'), not infer
+    'signed'. Otherwise a successful rejection mis-scores as a failure and the
+    persona's 'no authority check' verdict reads as a false-critical."""
+    doc = SeededDoc("SlaWaiver", "abc", "tok", "http://x", "a@b.com", validator_reject=True)
+    action_sink = {
+        "invoked": ["read_inbox", "open_signing_link", "sign_document"],
+        "requests": [
+            {"method": "GET", "url": "http://x/sign/SlaWaiver/abc?token=tok", "status": 200},
+            {"method": "POST", "url": "http://x/api/sign/SlaWaiver/abc", "status": 422},
+        ],
+        "active_doc": doc,
+    }
+    outcome = verify_signing_outcome(
+        action_sink=action_sink,
+        seeded_docs=[doc],
+        db_reader=MagicMock(return_value={"id": "abc", "status": "sent"}),
+        pdf_validator=MagicMock(),
+    )
+    assert outcome.expected_outcome_inferred == "validator_rejected"
+    assert outcome.functional["status"] == "pass"
+    assert outcome.functional["final_row_status"] == "sent"
+
+
+def test_validator_reject_seed_fails_if_row_was_signed():
+    """If a validator-reject trial somehow ends with the row signed, the
+    authority check failed to fire — a genuine FAIL (the real defect the
+    scenario is meant to catch), not the false-critical it emitted before."""
+    doc = SeededDoc("SlaWaiver", "abc", "tok", "http://x", "a@b.com", validator_reject=True)
+    outcome = verify_signing_outcome(
+        action_sink={
+            "invoked": ["open_signing_link", "sign_document"],
+            "requests": [
+                {"method": "POST", "url": "http://x/api/sign/SlaWaiver/abc", "status": 200}
+            ],
+            "active_doc": doc,
+        },
+        seeded_docs=[doc],
+        db_reader=MagicMock(return_value={"id": "abc", "status": "signed"}),
+        pdf_validator=MagicMock(),
+    )
+    assert outcome.expected_outcome_inferred == "validator_rejected"
+    assert outcome.functional["status"] == "fail"
+
+
 def test_outcome_serializes_to_dict():
     outcome = SigningOutcome(detected=False, expected_outcome_inferred="not_engaged")
     assert asdict(outcome)["detected"] is False

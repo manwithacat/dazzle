@@ -50,6 +50,105 @@ def test_provision_returns_context_when_signable(tmp_path: Path):
     assert ctx.env["SIGNING_TOKEN_SECRET"] == "z"
 
 
+def _signable_app_spec(*names: str) -> MagicMock:
+    """An app_spec whose domain.entities are signable entities with the given names."""
+    entities = []
+    for n in names:
+        ent = MagicMock(signable=True)
+        ent.name = n
+        ent.fields = []
+        entities.append(ent)
+    app_spec = MagicMock()
+    app_spec.has_signable_entity.return_value = bool(entities)
+    app_spec.domain.entities = entities
+    return app_spec
+
+
+def test_provision_arms_reject_env_with_pregenerated_ids(tmp_path: Path):
+    """#1382: validator_reject pre-generates a UUID per signable entity, arms
+    DAZZLE_QA_SIGNING_REJECT_IDS with them, and records them in signable_ids
+    so the seed can insert the row under the armed id."""
+    app_spec = _signable_app_spec("SlaWaiver")
+    with (
+        patch("dazzle.cli.qa._missing_signing_server_deps", return_value=[]),
+        patch("dazzle.cli.qa.mint_ephemeral_cert_env", return_value={"SIGNING_TOKEN_SECRET": "z"}),
+    ):
+        ctx = _provision_signing_env(app_spec, tmp_path, project_name="Test", validator_reject=True)
+    assert ctx is not None
+    assert ctx.validator_reject is True
+    assert set(ctx.signable_ids) == {"SlaWaiver"}
+    armed = ctx.env["DAZZLE_QA_SIGNING_REJECT_IDS"].split(",")
+    assert armed == [ctx.signable_ids["SlaWaiver"]]
+
+
+def test_provision_does_not_arm_reject_env_by_default(tmp_path: Path):
+    """Without validator_reject the env var is never set — fresh scenarios and
+    the existing token-state scenarios are unaffected."""
+    app_spec = _signable_app_spec("SlaWaiver")
+    with (
+        patch("dazzle.cli.qa._missing_signing_server_deps", return_value=[]),
+        patch("dazzle.cli.qa.mint_ephemeral_cert_env", return_value={"SIGNING_TOKEN_SECRET": "z"}),
+    ):
+        ctx = _provision_signing_env(app_spec, tmp_path, project_name="Test")
+    assert ctx is not None
+    assert ctx.validator_reject is False
+    assert "DAZZLE_QA_SIGNING_REJECT_IDS" not in ctx.env
+    # ids are still pre-generated (harmless), just not armed.
+    assert set(ctx.signable_ids) == {"SlaWaiver"}
+
+
+def test_build_batch_pins_signable_id_when_given():
+    """#1382: an explicit signable_id is written into the signable row's
+    data['id'] so the inserted row carries the armed UUID."""
+    entity = MagicMock(signable=True)
+    entity.name = "SlaWaiver"
+    entity.fields = []
+    app_spec = MagicMock()
+    app_spec.domain.entities = [entity]
+
+    batch = _build_signing_seed_batch(
+        entity, app_spec, "a@b.com", signable_id="11111111-1111-1111-1111-111111111111"
+    )
+    signable_fixture = next(f for f in batch if f["id"] == "signable_row")
+    assert signable_fixture["data"]["id"] == "11111111-1111-1111-1111-111111111111"
+
+
+def test_seed_uses_pregenerated_id_and_stamps_validator_reject():
+    """#1382: _seed_signable_rows posts the pre-generated id and stamps the
+    SeededDoc so the verifier expects a validator rejection."""
+    entity = MagicMock(signable=True)
+    entity.name = "SlaWaiver"
+    entity.fields = []
+    app_spec = MagicMock()
+    app_spec.domain.entities = [entity]
+    pre_id = "22222222-2222-2222-2222-222222222222"
+
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {"created": {"signable_row": {"id": pre_id}}}
+
+    with (
+        patch("dazzle.cli.qa.mint_token", return_value="tok-abc"),
+        patch("httpx.post", return_value=mock_response) as mock_post,
+        patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
+    ):
+        docs = _seed_signable_rows(
+            app_spec=app_spec,
+            base_url="http://localhost:3000",
+            signatory_email="a@b.com",
+            signable_ids={"SlaWaiver": pre_id},
+            validator_reject=True,
+        )
+    # The posted fixture carried the pre-generated id.
+    posted = mock_post.call_args.kwargs["json"]["fixtures"]
+    signable_fixture = next(f for f in posted if f["id"] == "signable_row")
+    assert signable_fixture["data"]["id"] == pre_id
+    # The SeededDoc is stamped so the verifier fixes the expectation.
+    assert len(docs) == 1
+    assert docs[0].id == pre_id
+    assert docs[0].validator_reject is True
+
+
 def test_provision_returns_none_when_no_signable(tmp_path: Path):
     app_spec = MagicMock()
     app_spec.has_signable_entity.return_value = False
