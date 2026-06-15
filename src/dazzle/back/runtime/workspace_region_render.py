@@ -558,7 +558,23 @@ def _build_specialty_adapter_ctx(
         adapter_ctx["coaching_message"] = getattr(ctx_region, "coaching_message", "") or ""
     elif display_upper == "TABBED_LIST":
         adapter_ctx["region_name"] = getattr(ctx_region, "name", "")
-        adapter_ctx["source_tabs"] = inputs.source_tabs
+        # The tabbed_list adapter consumes plain dicts (entity_name / key /
+        # label / endpoint / eager); the runtime supplies SourceTabContext
+        # objects. Normalise to the dict shape so the lazy-tab strip renders
+        # (#1388 — before the base endpoint was registered this render path
+        # was never reached, so the object→dict gap went unnoticed).
+        adapter_ctx["source_tabs"] = [
+            st
+            if isinstance(st, dict)
+            else {
+                "entity_name": getattr(st, "entity_name", ""),
+                "key": (getattr(st, "entity_name", "") or "").lower(),
+                "label": getattr(st, "label", "") or getattr(st, "entity_name", ""),
+                "endpoint": getattr(st, "endpoint", ""),
+                "eager": bool(getattr(st, "eager", False)),
+            }
+            for st in (inputs.source_tabs or [])
+        ]
     elif display_upper == "PIVOT_TABLE":
         adapter_ctx["pivot_buckets"] = inputs.pivot_buckets
         adapter_ctx["pivot_dim_specs"] = inputs.pivot_dim_specs

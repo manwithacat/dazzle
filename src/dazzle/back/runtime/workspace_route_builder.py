@@ -235,6 +235,60 @@ class WorkspaceRouteBuilder:
                                 f"/api/workspaces/{ws_name}/regions/{ctx_region.name}/{_src_name}",
                                 tags=["Workspaces"],
                             )(_make_src_route(_src_region_ctx))
+
+                        # #1388: ALSO register the BASE endpoint. The dashboard
+                        # card's hx-get targets /regions/{name} (no source suffix);
+                        # only the per-source sub-endpoints above were registered,
+                        # so a multi-source region's card 404'd and rendered a
+                        # permanently-broken tile. The base renders the TABBED_LIST
+                        # shell (source_tabs) — a specialty display that emits the
+                        # tab strip + per-tab hx-get to the sub-endpoints and fetches
+                        # no items itself, so it needs no single source.
+                        _first_src = ctx_region.sources[0] if ctx_region.sources else ""
+                        _base_entity_spec = next(
+                            (e for e in entities if e.name == _first_src), None
+                        )
+                        _base_region_ctx = WorkspaceRegionContext(
+                            ctx_region=ctx_region,
+                            ir_region=ir_region,
+                            source="",  # TABBED_LIST shell fetches no items
+                            entity_spec=_base_entity_spec,
+                            attention_signals=[],
+                            ws_access=_ws_access,
+                            repositories=repositories,
+                            require_auth=require_auth,
+                            auth_middleware=auth_middleware,
+                            precomputed_columns=[],
+                            auto_include=[],
+                            cedar_access_spec=getattr(_base_entity_spec, "access", None),
+                            fk_graph=self._fk_graph,
+                            user_entity_name=self._user_entity_name,
+                            entity_access_specs=entity_access_specs,
+                            entity_ref_targets=self._entity_ref_targets,
+                            row_action_routes=row_action_routes,
+                            detail_url_template="",
+                            entity_detail_urls=_detail_urls_for(ir_region),
+                        )
+                        _ws_region_ctxs.append(_base_region_ctx)
+
+                        def _make_base_route(rctx: WorkspaceRegionContext) -> Any:
+                            async def workspace_tabbed_shell(
+                                request: Request,
+                                page: int = 1,
+                                page_size: int = 20,
+                                sort: str | None = None,
+                                dir: str = "asc",
+                            ) -> Any:
+                                return await _workspace_region_handler(
+                                    request, page, page_size, sort, dir, ctx=rctx
+                                )
+
+                            return workspace_tabbed_shell
+
+                        app.get(
+                            f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
+                            tags=["Workspaces"],
+                        )(_make_base_route(_base_region_ctx))
                         continue
 
                     # v0.61.75 (#907): bodyless authored display modes

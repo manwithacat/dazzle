@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.74] - 2026-06-15
+
+### Fixed
+- **Multi-entity workspace regions (`source: [A, B, …]`, `display: tabbed_list`) 404'd at the region-fetcher endpoint (#1388).** The dashboard card's lazy htmx fetch targets the BASE endpoint `GET /api/workspaces/{ws}/regions/{region}` (no source suffix), but the route builder only registered the per-source sub-endpoints `…/regions/{region}/{Entity}`. So the base request 404'd and the tile rendered permanently broken — declared, validate-clean, dead at runtime. The base endpoint is now registered too; it serves the TABBED_LIST shell (the tab strip + per-tab hx-get to the sub-endpoints) and fetches no items itself. A second latent gap surfaced once the route existed: the render layer handed the tabbed_list adapter `SourceTabContext` objects, but that adapter only consumes plain dicts — so the shell rendered "No tabs". The render boundary now normalises tabs to the dict shape the adapter expects, so the tab strip renders one tab per source entity.
+
 ## [0.82.73] - 2026-06-15
 
 ### Fixed
