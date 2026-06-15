@@ -33,7 +33,12 @@ class BuildService:
         from alembic import command
         from alembic.util.exc import CommandError
 
+        from dazzle.cli.db import _autostamp_if_materialized
+
         cfg = self._alembic_cfg(database_url)
+        # #1390: reconcile an empty alembic_version against an already-materialized
+        # schema so `check` reports the real additive diff, not a baseline replay.
+        _autostamp_if_materialized(cfg)
         try:
             command.check(cfg)
             return None  # No changes
@@ -49,7 +54,13 @@ class BuildService:
         """
         from alembic import command
 
+        from dazzle.cli.db import _autostamp_if_materialized
+
         cfg = self._alembic_cfg(database_url)
+        # #1390: same reconciliation as plan_migrations — without it, an empty
+        # alembic_version on a materialized DB replays the baseline instead of
+        # applying the additive diff.
+        _autostamp_if_materialized(cfg)
         command.upgrade(cfg, "head")
 
     def _alembic_cfg(self, database_url: str) -> Any:

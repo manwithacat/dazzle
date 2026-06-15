@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.73] - 2026-06-15
+
+### Fixed
+- **`dazzle migrate` / `dazzle db migrate` couldn't apply an additive column diff when `alembic_version` is empty (#1390).** In the "schema materialized but `alembic_version` empty" state (which Dazzle's dual-ledger setup produces), `migrate`/`--check` fell into alembic baseline-replay (CREATE TABLE on existing tables) and refused a simple `ADD COLUMN` — a downstream app deployed a new DSL field "green" but the column never reached the DB (then `UndefinedColumn` at write time). Both commands now **reconcile first**: when `alembic_version` is empty AND the framework `_dazzle_params` table already exists, they stamp to heads so the autogenerate produces only the additive diff. Guarded behind the materialization probe — a genuinely fresh DB still runs the full baseline. The row-count emptiness check is multi-head-safe. `--sql` (offline) no longer crashes with `NoInspectionAvailable`: in the materialized-empty state it refuses cleanly with a directed message (use `--check`/apply online), and any other offline render error is reported, not raised as a traceback. Shared by `dazzle migrate` (build service) and `dazzle db migrate`.
+
+  ### Agent Guidance
+  - Adding a DSL field to a deployed app: `dazzle db migrate` now reconciles an empty `alembic_version` against the live schema and applies the `ADD COLUMN` automatically — no manual `ALTER TABLE`. Don't use `--sql` to preview when the schema is materialized but unstamped (it can't introspect offline); use `--check` (online).
+
 ## [0.82.72] - 2026-06-15
 
 ### Fixed

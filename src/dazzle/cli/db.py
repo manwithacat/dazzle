@@ -263,6 +263,87 @@ def _safe_current_revision(cfg: Any) -> str | None:
         return None
 
 
+def _schema_is_materialized(cfg: Any) -> bool:
+    """True if the framework baseline table already exists (#1390).
+
+    Signals the "schema materialized but ``alembic_version`` empty" state: the app
+    booted (the runtime's ``ensure_dazzle_params_table()`` + DSL-derived tables
+    ran) but alembic was never stamped. ``_dazzle_params`` is created by both the
+    runtime bootstrap and the ``0001_framework_baseline`` migration, so its
+    presence means the framework baseline is already on disk. A genuinely fresh
+    DB returns False, so the normal baseline chain still runs there.
+    """
+    try:
+        from sqlalchemy import create_engine
+        from sqlalchemy import inspect as sa_inspect
+
+        url = cfg.get_main_option("sqlalchemy.url")
+        if not url:
+            return False
+        engine = create_engine(url)
+        try:
+            with engine.connect() as conn:
+                return bool(sa_inspect(conn).has_table("_dazzle_params"))
+        finally:
+            engine.dispose()
+    except Exception:
+        logger.debug("Materialization probe failed", exc_info=True)
+        return False
+
+
+def _alembic_version_is_empty(cfg: Any) -> bool:
+    """True if ``alembic_version`` is absent or carries no rows (unstamped).
+
+    Row-count based (not ``get_current_revision``) so it stays correct when the
+    project has multiple alembic heads — ``get_current_revision`` raises on
+    multiple rows, which would otherwise read as "unstamped" and re-stamp (#1390).
+    """
+    try:
+        from sqlalchemy import create_engine, text
+        from sqlalchemy import inspect as sa_inspect
+
+        url = cfg.get_main_option("sqlalchemy.url")
+        if not url:
+            return True
+        engine = create_engine(url)
+        try:
+            with engine.connect() as conn:
+                if not sa_inspect(conn).has_table("alembic_version"):
+                    return True
+                count = conn.execute(text("SELECT count(*) FROM alembic_version")).scalar()
+                return (count or 0) == 0
+        finally:
+            engine.dispose()
+    except Exception:
+        logger.debug("alembic_version emptiness probe failed", exc_info=True)
+        return False  # fail safe: don't auto-stamp when the probe is uncertain
+
+
+def _autostamp_if_materialized(cfg: Any) -> bool:
+    """Reconcile an empty ``alembic_version`` against an already-materialized schema.
+
+    When alembic is unstamped (``alembic_version`` empty — the state Dazzle's
+    dual-ledger setup produces) but the schema is already on disk, ``alembic``
+    would otherwise replay the baseline chain (CREATE TABLE on existing tables)
+    and refuse a simple additive diff (#1390). Stamping to ``heads`` aligns
+    alembic's metadata with reality so the subsequent autogenerate produces only
+    the additive ``ADD COLUMN`` diff. Guarded behind the materialization probe so
+    a genuinely fresh DB is untouched. Returns True if it stamped.
+    """
+    from alembic import command
+
+    if not _alembic_version_is_empty(cfg):
+        return False  # already stamped — normal alembic flow, nothing to reconcile
+    if not _schema_is_materialized(cfg):
+        return False  # genuinely fresh DB — let the baseline chain create everything
+    command.stamp(cfg, "heads")
+    console.print(
+        "[dim]alembic_version was empty but the schema is already materialized — "
+        "stamped to heads so only the additive diff is applied (#1390).[/dim]"
+    )
+    return True
+
+
 @db_app.command(name="upgrade")
 def upgrade_command(
     revision: str = typer.Argument(
@@ -676,6 +757,10 @@ def migrate_command(
 
     if check:
         console.print("[bold]Migration check (dry-run):[/bold]\n")
+        # #1390: reconcile an empty alembic_version against a materialized schema
+        # first, so `check` shows the real additive diff instead of a baseline
+        # replay. Stamping aligns metadata with reality — it is not a schema change.
+        _autostamp_if_materialized(cfg)
         try:
             command.check(cfg)
             console.print("[green]No pending changes.[/green]")
@@ -684,10 +769,36 @@ def migrate_command(
         return
 
     if sql:
-        command.upgrade(cfg, "head", sql=True)
+        # #1390: offline SQL replay runs from base and cannot introspect (the
+        # baseline migration's idempotent `has_table` guard crashes on the
+        # MockConnection). If the schema is materialized with an empty
+        # alembic_version, refuse cleanly with a directed path rather than a
+        # NoInspectionAvailable traceback — there is no offline DDL to preview.
+        if _alembic_version_is_empty(cfg) and _schema_is_materialized(cfg):
+            console.print(
+                "[yellow]Offline --sql preview isn't available here:[/yellow] "
+                "alembic_version is empty but the schema is already materialized, "
+                "so an offline replay would re-run the baseline against existing "
+                "tables.\nRun [bold]dazzle db migrate --check[/bold] to preview the "
+                "additive diff (online), or [bold]dazzle db migrate[/bold] to "
+                "reconcile and apply it."
+            )
+            raise typer.Exit(1)
+        try:
+            command.upgrade(cfg, "head", sql=True)
+        except Exception as e:
+            console.print(
+                f"[red]Could not render migration SQL offline:[/red] {e}\n"
+                "Use [bold]dazzle db migrate --check[/bold] (online) to preview "
+                "pending changes."
+            )
+            raise typer.Exit(1)
         return
 
     try:
+        # #1390: reconcile an empty alembic_version against a materialized schema
+        # so the autogenerate below produces an additive diff, not a baseline replay.
+        _autostamp_if_materialized(cfg)
         # Generate revision from current DSL diff.
         # process_revision_directives in env.py suppresses empty revisions,
         # so revision() returns None when there are no changes.
