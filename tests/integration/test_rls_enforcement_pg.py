@@ -360,16 +360,33 @@ def test_fail_closed_on_missing_context(harness: _RlsHarness) -> None:
                 )
 
 
-def test_empty_context_is_hard_error(harness: _RlsHarness) -> None:
-    """Invariant 4: an empty-string GUC makes ''::uuid raise
-    'invalid input syntax for type uuid' — a hard error, never a silent deny.
-    This proves the middleware must never set an empty value (companion §6.3)."""
+def test_empty_context_denies_not_errors(harness: _RlsHarness) -> None:
+    """Invariant 4 (#1400): an empty-string GUC must fail-closed by DENYING
+    (zero rows on read, RLS rejection on write), NOT by raising
+    'invalid input syntax for type uuid' on a bare ``''::uuid``.
+
+    Before #1400 the fence read ``current_setting(..)::uuid`` directly, so the
+    empty-string GUC state (reachable on a pooled connection whose placeholder
+    reverted to '') surfaced as a 500 — and a per-tenant DoS vector. The fence
+    now wraps the read in ``NULLIF(.., '')``, collapsing '' to NULL so it denies
+    identically to the unset state. Reads return no rows; writes are blocked by
+    the RESTRICTIVE WITH CHECK."""
     with harness.app_conn() as conn:
         _assert_app_is_non_superuser(conn)
-        with pytest.raises(pg_errors.InvalidTextRepresentation):
+        # Read: empty-string context → NULL fence → no rows, no error.
+        with conn.transaction():
+            conn.execute("SELECT set_config('dazzle.tenant_id', '', true)")
+            count = conn.execute('SELECT count(*) FROM "Project"').fetchone()[0]
+        assert count == 0, "empty-string GUC must deny (0 rows), not leak"
+        # Write: empty-string context → WITH CHECK fails → RLS rejection,
+        # never an InvalidTextRepresentation cast error.
+        with pytest.raises(pg_errors.InsufficientPrivilege, match="row-level security policy"):
             with conn.transaction():
                 conn.execute("SELECT set_config('dazzle.tenant_id', '', true)")
-                conn.execute('SELECT count(*) FROM "Project"').fetchone()
+                conn.execute(
+                    'INSERT INTO "Project" (tenant_id, id, name, owner) VALUES (%s, %s, %s, %s)',
+                    (harness.tenant_a, _new_id(), "empty-context insert", harness.member_a),
+                )
 
 
 def test_restrictive_only_is_deny_all(harness: _RlsHarness) -> None:

@@ -20,10 +20,14 @@ def test_fence_is_restrictive_with_missing_ok_current_setting() -> None:
     ddl = "\n".join(build_rls_policy_ddl(["Project"], partition_key="tenant_id"))
     assert 'ALTER TABLE "Project" ENABLE ROW LEVEL SECURITY' in ddl
     assert 'ALTER TABLE "Project" FORCE ROW LEVEL SECURITY' in ddl
-    # restrictive fence, USING + WITH CHECK, missing-ok current_setting, ::uuid
+    # restrictive fence, USING + WITH CHECK, missing-ok current_setting, ::uuid.
+    # NULLIF(.., '') collapses the pooled empty-string GUC state to NULL → deny
+    # instead of a raising ''::uuid (#1400).
     assert "AS RESTRICTIVE" in ddl
-    assert "current_setting('dazzle.tenant_id', true)::uuid" in ddl
-    assert ddl.count("current_setting('dazzle.tenant_id', true)::uuid") >= 2  # USING + WITH CHECK
+    assert "NULLIF(current_setting('dazzle.tenant_id', true), '')::uuid" in ddl
+    assert (
+        ddl.count("NULLIF(current_setting('dazzle.tenant_id', true), '')::uuid") >= 2
+    )  # USING + WITH CHECK
 
 
 def test_permissive_baseline_present() -> None:
@@ -48,7 +52,7 @@ def test_custom_partition_key() -> None:
     # the runtime sets). It must NOT become dazzle.org_id, which the runtime
     # never sets → silent total-deny.
     ddl = "\n".join(build_rls_policy_ddl(["Project"], partition_key="org_id"))
-    assert "\"org_id\" = current_setting('dazzle.tenant_id', true)::uuid" in ddl
+    assert "\"org_id\" = NULLIF(current_setting('dazzle.tenant_id', true), '')::uuid" in ddl
     # the partition-key-derived GUC name must never appear
     assert "dazzle.org_id" not in ddl
 

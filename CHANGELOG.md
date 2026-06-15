@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.75] - 2026-06-15
+
+### Fixed
+- **RLS tenant fence raised a 500 instead of denying on an empty-string GUC (#1400).** The generated `tenant_fence` policy (and the scoped-entity insert `server_default`) read `current_setting('dazzle.tenant_id', true)::uuid` with no `NULLIF`. The runtime only ever binds a real tenant id or no-ops (unset → NULL → clean deny), but a *pooled* connection whose placeholder GUC reverts to the empty string `''` made a bare `''::uuid` **raise** `invalid input syntax for type uuid: ""` during policy evaluation — a 500 rather than a 403/empty-result, and a potential per-tenant DoS vector. Both the fence read (`USING` + `WITH CHECK`) and the create-time `server_default` are now wrapped in `NULLIF(current_setting(.., true), '')::<type>`, so the empty-string state collapses to NULL and denies/`NOT NULL`-rejects identically to the unset state. Mirrors the `dazzle.host_tenant_id` hardening from #1394. The `dazzle_app` real-PG enforcement test that previously asserted the empty-string *hard error* now asserts the clean deny (zero rows on read, RLS rejection on write). Generated RLS policy DDL changed — re-apply/regen path exercised against real Postgres.
+
+  ### Agent Guidance
+  - The RLS tenant fence and the scoped-entity `tenant_id` insert default both fail closed on *both* the unset and empty-string GUC states now. Don't drop the middleware contract that never emits `''` — it remains defence-in-depth — but the engine no longer turns `''` into a 500.
+
 ## [0.82.74] - 2026-06-15
 
 ### Fixed

@@ -17,7 +17,9 @@ The authoritative artefact spec is
     ``NULL`` → ``NULL::uuid`` → the predicate is ``NULL`` (not true), so the row
     is excluded. This is fail-closed for reads (``USING``) and writes
     (``WITH CHECK``) alike, rather than a hard ``unrecognized configuration
-    parameter`` abort.
+    parameter`` abort. The read is also wrapped in ``NULLIF(.., '')`` so the
+    pooled empty-string GUC state collapses to NULL → deny, never a raising
+    ``''::uuid`` (a 500 instead of a clean deny, #1400).
   * §1.4 — the permissive ``tenant_baseline``. A fenced table with no permissive
     policy is *deny-all* (restrictive policies only subtract); the baseline
     ``USING (true)`` makes the effective set exactly the tenant's rows.
@@ -395,7 +397,13 @@ def _enable_force_fence(table: str, partition_key: str) -> list[str]:
     partition_key-derived name (C-2).
     """
     col = quote_identifier(partition_key)
-    fence_body = f"{col} = current_setting('{TENANT_GUC}', true)::uuid"
+    # NULLIF(.., '') collapses the pooled empty-string GUC state to NULL → deny,
+    # rather than letting a bare ``''::uuid`` RAISE during policy evaluation (a 500
+    # instead of a clean deny, #1400). The runtime only ever set_config()s a real
+    # tenant id or no-ops (NULL), but a placeholder GUC on a pooled connection can
+    # revert to '' across leases — fail-closed must cover that state too. Mirrors
+    # the host-GUC hardening in ``predicate_compiler._guc_read_host_tenant`` (#1394).
+    fence_body = f"{col} = NULLIF(current_setting('{TENANT_GUC}', true), '')::uuid"
     return [
         # §1.2 — re-run-safe; no IF NOT EXISTS needed.
         # nosemgrep: closed templated DDL over IR-controlled identifiers, parameterless (cf. search_schema.py / pg_backend.py)

@@ -611,7 +611,10 @@ def build_metadata(
             # session GUC on insert, so a scoped create needn't carry it (it's
             # excluded from the create input). The explicit cast is REQUIRED — PG
             # rejects a bare text default on a uuid column. An unset GUC →
-            # current_setting(...) NULL → NOT NULL violation (fail-closed).
+            # current_setting(...) NULL → NOT NULL violation (fail-closed). The
+            # NULLIF(.., '') wrapper (#1400) routes the pooled empty-string GUC
+            # state to the same NOT NULL violation rather than a raising
+            # ``''::uuid`` — same fence GUC, same pooled-revert vector.
             from sqlalchemy.dialects import postgresql
 
             pk_col = next((c for c in columns if c.name == partition_key), None)
@@ -623,7 +626,7 @@ def build_metadata(
                         "server_default (empty compiled type)"
                     )
                 pk_col.server_default = sa.DefaultClause(
-                    sa.text(f"current_setting('dazzle.tenant_id', true)::{pg_type}")
+                    sa.text(f"NULLIF(current_setting('dazzle.tenant_id', true), '')::{pg_type}")
                 )
 
         sa.Table(entity.name, metadata, *columns, *index_args, *constraint_args, *tenant_args)

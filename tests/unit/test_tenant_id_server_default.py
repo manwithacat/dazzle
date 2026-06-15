@@ -21,6 +21,9 @@ def test_scoped_partition_key_has_current_setting_default() -> None:
     sql_text = str(col.server_default.arg)
     assert "current_setting('dazzle.tenant_id', true)" in sql_text
     assert "::" in sql_text  # explicit cast present
+    # #1400: the read is NULLIF-wrapped so a pooled empty-string GUC routes to a
+    # NOT NULL violation (fail-closed) rather than a raising ''::<type> cast.
+    assert "NULLIF(current_setting('dazzle.tenant_id', true), '')::" in sql_text
 
     # The tenant root (Workspace) is NOT scoped → no current_setting default.
     ws = md.tables["Workspace"]

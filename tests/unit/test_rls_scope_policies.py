@@ -109,7 +109,7 @@ def test_enable_force_and_fence_still_present() -> None:
     assert 'ALTER TABLE "Project" FORCE ROW LEVEL SECURITY' in ddl
     assert 'CREATE POLICY tenant_fence ON "Project"' in ddl
     assert "AS RESTRICTIVE" in ddl
-    assert "current_setting('dazzle.tenant_id', true)::uuid" in ddl
+    assert "NULLIF(current_setting('dazzle.tenant_id', true), '')::uuid" in ddl  # #1400
 
 
 # ---------------------------------------------------------------------------

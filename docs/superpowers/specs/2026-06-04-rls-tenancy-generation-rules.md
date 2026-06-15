@@ -57,14 +57,15 @@ ALTER TABLE app.<entity> FORCE  ROW LEVEL SECURITY;
 CREATE POLICY tenant_fence ON app.<entity>
     AS RESTRICTIVE
     FOR ALL
-    USING      (tenant_id = current_setting('dazzle.tenant_id', true)::uuid)
-    WITH CHECK (tenant_id = current_setting('dazzle.tenant_id', true)::uuid);
+    USING      (tenant_id = NULLIF(current_setting('dazzle.tenant_id', true), '')::uuid)
+    WITH CHECK (tenant_id = NULLIF(current_setting('dazzle.tenant_id', true), '')::uuid);
 ```
 
 Notes that are load-bearing, not stylistic:
 
 - **`AS RESTRICTIVE`** — restrictive policies are ANDed with everything else and can never be widened by a permissive policy. This is the tenant ring.
 - **`current_setting('dazzle.tenant_id', true)`** — the `true` (missing-ok) argument is **required**. Without it, an *undefined* GUC raises `ERROR: unrecognized configuration parameter` (a hard transaction abort) rather than the “matches no rows” deny you want. With it: unset → text `NULL` → `NULL::uuid` → `NULL`, and `tenant_id = NULL` is `NULL` (not true), so the row is excluded. This is fail-closed for **reads and writes alike** (the `WITH CHECK` rejects inserts/updates when context is unset).
+- **`NULLIF(.., '')`** — (#1400) the empty-string GUC state (a pooled connection whose placeholder reverted to `''`) would make a bare `''::uuid` **raise** `invalid input syntax for type uuid: ""` during policy evaluation — a 500, not a clean deny, and a potential per-tenant DoS if the GUC can be steered to `''`. Wrapping the read in `NULLIF(.., '')` collapses `''` to `NULL`, so that state denies identically to the unset state. Mirrors the host-GUC hardening for `dazzle.host_tenant_id` (#1394).
 - **`WITH CHECK` on the fence** enforces that the framework-injected `tenant_id` equals the session’s tenant on every insert/update — a write cannot smuggle in another tenant’s id.
 
 ### 1.4 Permissive policies (at least one, always)
@@ -248,7 +249,7 @@ SELECT set_config('dazzle.user_id',   $2, true);
 
 - **Engine:** fail-closed. Unset context → `tenant_id = NULL` → no rows (reads) and rejected writes (the fence’s `WITH CHECK`). Defence in depth.
 - **Middleware:** fail-loud. Assert `dazzle.tenant_id` is set before issuing tenant-scoped work; raise an explicit error at the app boundary rather than letting the query silently return nothing.
-- **“No tenant” is always *unset*, never empty-string.** `set_config('dazzle.tenant_id', '', true)` makes `''::uuid` raise `invalid input syntax for type uuid` — a hard error, not a clean deny. The middleware never sets an empty value; the absence of a tenant is the absence of the GUC.
+- **“No tenant” is always *unset*, never empty-string.** The middleware never sets an empty value; the absence of a tenant is the absence of the GUC. Since #1400 the fence reads `NULLIF(current_setting(..), '')::uuid`, so even if a pooled connection’s placeholder reverts to `''`, that state collapses to `NULL` and denies identically to the unset state — fail-closed, never a raising `''::uuid` (a 500 + per-tenant DoS vector). The middleware contract (never emit `''`) still holds as defence-in-depth; the engine no longer *relies* on it to avoid a hard error.
 
 -----
 
@@ -279,7 +280,7 @@ Each invariant above is pinned by a test against **real PostgreSQL**, with `dazz
 1. **Cross-tenant read blocked by the engine.** Session scoped to tenant A reading tenant B’s rows returns nothing — verified with the app role, not app code.
 1. **Cross-tenant write blocked.** Insert/update carrying tenant B’s `tenant_id` under tenant A’s context is rejected by the fence’s `WITH CHECK`.
 1. **Fail-closed on missing context.** No `dazzle.tenant_id` set → reads return zero rows; writes rejected.
-1. **Empty context is a hard error, never a silent deny.** `set_config('dazzle.tenant_id','',true)` then a query raises `invalid input syntax for type uuid` — proving the middleware must never produce it.
+1. **Empty context denies, never errors (#1400).** `set_config('dazzle.tenant_id','',true)` then a read returns zero rows and a write is RLS-rejected — the `NULLIF(.., '')` wrapper collapses `''` to `NULL` so the empty-string state fails closed identically to the unset state, rather than raising `invalid input syntax for type uuid` (a 500 + per-tenant DoS vector). The middleware still must not produce `''`; the engine just no longer turns it into a hard error.
 1. **Restrictive-only is deny-all.** A table with the fence and no permissive policy returns nothing for a correctly-scoped session — guards against accidentally shipping a fenced-but-ungranted table.
 1. **Verb coverage.** For a scoped entity, each permitted verb has ≥1 permissive policy; a forbidden verb is denied and its denial is recorded in the IR.
 1. **Owner does not bypass under FORCE.** `dazzle_owner` running tenant-scoped DML with no context is filtered/rejected.
