@@ -27,6 +27,11 @@ class ResolvedTenant:
     id: UUID
     slug: str
     name: str | None = None
+    # ADR-0037 Phase 5: ancestor tenant ids walking the declared `parent:` chain
+    # from this host UP to the root (root last), EXCLUDING self (self is `id`).
+    # Empty for a root/flat tenant kind. A membership at this host OR any of these
+    # ancestors grants reachability (a member of the root reaches descendant hosts).
+    ancestor_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -71,6 +76,18 @@ HistoryLookupFn = Callable[[str, str], Any | None | Awaitable[Any | None]]
 """Signature: history_lookup_fn(entity_name, old_slug) -> row (dict or entity) or None."""
 
 
+FetchByIdFn = Callable[[str, str], Any | None | Awaitable[Any | None]]
+"""Signature: fetch_by_id_fn(entity_name, id) -> row (dict or entity) or None.
+
+Used by the ADR-0037 Phase-5 ancestor walk to fetch a parent tenant row by its
+id. May be sync or async; the resolver awaits coroutines."""
+
+# Defense-in-depth bound on the ancestor walk. The link-time validator
+# (validate_tenant_hierarchy_and_membership, H2) rejects real cycles, but the
+# resolver runs at request time independently, so cap the walk regardless.
+_MAX_ANCESTOR_WALK = 16
+
+
 class Resolver:
     """Stateless lookup chain over configured entity probes."""
 
@@ -82,12 +99,19 @@ class Resolver:
         history_lookup_fn: HistoryLookupFn | None = None,
         *,
         now_fn: Callable[[], datetime] = lambda: datetime.now(UTC),
+        parent_map: dict[str, tuple[str, str]] | None = None,
+        fetch_by_id_fn: FetchByIdFn | None = None,
     ) -> None:
         self._probes = probes
         self._history = history_probe
         self._lookup = lookup_fn
         self._history_lookup = history_lookup_fn
         self._now = now_fn
+        # ADR-0037 Phase 5: tenant-hierarchy ancestor walk. ``parent_map`` maps a
+        # tenant kind → ``(parent_fk_field, parent_kind)``; ``fetch_by_id_fn``
+        # fetches a parent row by id. Both None → no walk (flat tenancy / pre-L2).
+        self._parent_map = parent_map or {}
+        self._fetch_by_id = fetch_by_id_fn
 
     async def lookup(self, slug: str) -> ResolvedTenant | HistoryHit | ExpiredHistoryHit | None:
         for probe in self._probes:
@@ -99,6 +123,7 @@ class Resolver:
                 id=_row_get(row, "id"),
                 slug=_row_get(row, probe.slug_field),
                 name=_row_get(row, "name"),
+                ancestor_ids=await self._walk_ancestors(probe.entity_name, row),
             )
 
         if self._history is None or self._history_lookup is None:
@@ -115,6 +140,41 @@ class Resolver:
         if expires > self._now():
             return HistoryHit(old_slug=slug, new_slug=new_slug)
         return ExpiredHistoryHit(old_slug=slug, new_slug=new_slug)
+
+    async def _walk_ancestors(self, kind: str, row: Any) -> tuple[str, ...]:
+        """ADR-0037 Phase 5: ids of *row*'s ancestors up the ``parent:`` chain.
+
+        Walks ``parent_map`` from the resolved host kind to the root, fetching
+        each parent row by id via ``fetch_by_id_fn``. Returns the ancestor ids in
+        order (immediate parent first, root last), EXCLUDING the host itself.
+
+        Fail-safe: any gap (no parent map / no fetcher / NULL parent FK / missing
+        row / depth cap / a repeated id) truncates the chain. A shorter chain only
+        ever *narrows* reachability (fewer ancestors accepted) — never broadens it.
+        """
+        if not self._parent_map or self._fetch_by_id is None:
+            return ()
+        ancestors: list[str] = []
+        seen: set[str] = {str(_row_get(row, "id"))}
+        cur_kind, cur_row = kind, row
+        for _ in range(_MAX_ANCESTOR_WALK):
+            edge = self._parent_map.get(cur_kind)
+            if edge is None:
+                break  # reached a root (or a non-hierarchical kind)
+            parent_fk_field, parent_kind = edge
+            parent_id = _row_get(cur_row, parent_fk_field)
+            if parent_id is None:
+                break  # NULL parent FK → chain ends here
+            parent_id = str(parent_id)
+            if parent_id in seen:
+                break  # cycle guard (validator should have rejected) → truncate
+            seen.add(parent_id)
+            ancestors.append(parent_id)
+            parent_row = await _maybe_await(self._fetch_by_id(parent_kind, parent_id))
+            if parent_row is None:
+                break  # parent row gone → stop (ancestor id still recorded)
+            cur_kind, cur_row = parent_kind, parent_row
+        return tuple(ancestors)
 
 
 def _row_get(row: Any, key: str, default: Any = None) -> Any:

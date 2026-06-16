@@ -172,3 +172,87 @@ async def test_lookup_accepts_iso_string_expires_at():
         },
     )
     assert isinstance(await r.lookup("acme"), HistoryHit)
+
+
+# ---------------------------------------------------------------------------
+# ADR-0037 Phase 5 — ancestor-chain walk (ResolvedTenant.ancestor_ids)
+# ---------------------------------------------------------------------------
+
+
+async def test_walk_populates_ancestor_ids_two_level():
+    """A host that resolves to a child kind carries its root id in ancestor_ids."""
+    trust_id, school_id = _id(1), _id(2)
+    slug_rows = {("School", "westwood"): {"id": school_id, "slug": "westwood", "trust": trust_id}}
+    by_id = {("Trust", str(trust_id)): {"id": trust_id, "slug": "acme"}}
+    r = Resolver(
+        probes=[EntityProbe("School", "slug")],
+        history_probe=None,
+        lookup_fn=lambda e, s: slug_rows.get((e, s)),
+        parent_map={"School": ("trust", "Trust")},
+        fetch_by_id_fn=lambda e, i: by_id.get((e, str(i))),
+    )
+    res = await r.lookup("westwood")
+    assert isinstance(res, ResolvedTenant)
+    assert res.kind == "School"
+    assert res.id == school_id
+    assert res.ancestor_ids == (str(trust_id),)
+
+
+async def test_walk_three_level_chain():
+    region_id, trust_id, school_id = _id(10), _id(11), _id(12)
+    slug_rows = {
+        ("School", "ws"): {"id": school_id, "slug": "ws", "trust": trust_id},
+    }
+    by_id = {
+        ("Trust", str(trust_id)): {"id": trust_id, "region": region_id},
+        ("Region", str(region_id)): {"id": region_id},
+    }
+    r = Resolver(
+        probes=[EntityProbe("School", "slug")],
+        history_probe=None,
+        lookup_fn=lambda e, s: slug_rows.get((e, s)),
+        parent_map={"School": ("trust", "Trust"), "Trust": ("region", "Region")},
+        fetch_by_id_fn=lambda e, i: by_id.get((e, str(i))),
+    )
+    res = await r.lookup("ws")
+    assert res.ancestor_ids == (str(trust_id), str(region_id))  # root last
+
+
+async def test_no_parent_map_means_flat_no_ancestors():
+    rows = {("Org", "acme"): {"id": _id(1), "slug": "acme", "trust": _id(9)}}
+    r = Resolver(
+        probes=[EntityProbe("Org", "slug")],
+        history_probe=None,
+        lookup_fn=lambda e, s: rows.get((e, s)),
+    )
+    res = await r.lookup("acme")
+    assert res.ancestor_ids == ()
+
+
+async def test_null_parent_fk_truncates_chain():
+    rows = {("School", "ws"): {"id": _id(2), "slug": "ws", "trust": None}}
+    r = Resolver(
+        probes=[EntityProbe("School", "slug")],
+        history_probe=None,
+        lookup_fn=lambda e, s: rows.get((e, s)),
+        parent_map={"School": ("trust", "Trust")},
+        fetch_by_id_fn=lambda e, i: None,
+    )
+    res = await r.lookup("ws")
+    assert res.ancestor_ids == ()  # NULL parent → no ancestors (fail-safe narrow)
+
+
+async def test_missing_parent_row_records_id_then_stops():
+    """If the parent FK is set but the parent row is gone, the id is still recorded
+    (reachability stays correct) and the walk stops."""
+    trust_id, school_id = _id(1), _id(2)
+    slug_rows = {("School", "ws"): {"id": school_id, "slug": "ws", "trust": trust_id}}
+    r = Resolver(
+        probes=[EntityProbe("School", "slug")],
+        history_probe=None,
+        lookup_fn=lambda e, s: slug_rows.get((e, s)),
+        parent_map={"School": ("trust", "Trust"), "Trust": ("region", "Region")},
+        fetch_by_id_fn=lambda e, i: None,  # parent row not found
+    )
+    res = await r.lookup("ws")
+    assert res.ancestor_ids == (str(trust_id),)

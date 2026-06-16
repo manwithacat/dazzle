@@ -207,3 +207,56 @@ class TestLazyProvisioning:
         )
         assert store.provisioned == []  # host-pin guard: no provision
         assert isinstance(out, HostForbidden)
+
+
+class TestHostPinAncestorReachability:
+    """ADR-0037 Phase 5 — a membership at the root reaches descendant hosts via
+    the resolved host's ancestor chain (ResolvedTenant.ancestor_ids)."""
+
+    def test_root_member_reaches_descendant_host(self) -> None:
+        # Member of root "trust" (m-root); host resolves to descendant "school"
+        # whose ancestor chain is ("trust",). The ROOT membership activates.
+        out = resolve_activation(
+            memberships=[_m("m-root", "trust")],
+            host_tenant_id="school",
+            host_ancestor_ids=("trust",),
+        )
+        assert isinstance(out, Activated)
+        assert out.membership_id == "m-root"  # binds the root (→ RLS fence = trust)
+
+    def test_leaf_member_still_matches_host_directly(self) -> None:
+        out = resolve_activation(
+            memberships=[_m("m-leaf", "school")],
+            host_tenant_id="school",
+            host_ancestor_ids=("trust",),
+        )
+        assert isinstance(out, Activated)
+        assert out.membership_id == "m-leaf"
+
+    def test_non_member_of_whole_chain_is_forbidden(self) -> None:
+        # Member of an UNRELATED trust → not host, not any ancestor → 403.
+        out = resolve_activation(
+            memberships=[_m("m-other", "trust-B")],
+            host_tenant_id="school-A",
+            host_ancestor_ids=("trust-A",),
+        )
+        assert isinstance(out, HostForbidden)
+
+    def test_no_ancestors_is_exact_match_only(self) -> None:
+        # Empty ancestor chain preserves Layer-1 exact-match: root member on a
+        # leaf host with no chain is forbidden (no widening).
+        out = resolve_activation(
+            memberships=[_m("m-root", "trust")],
+            host_tenant_id="school",
+            host_ancestor_ids=(),
+        )
+        assert isinstance(out, HostForbidden)
+
+    def test_three_level_root_member_reaches_deepest_host(self) -> None:
+        out = resolve_activation(
+            memberships=[_m("m-region", "region")],
+            host_tenant_id="school",
+            host_ancestor_ids=("trust", "region"),
+        )
+        assert isinstance(out, Activated)
+        assert out.membership_id == "m-region"

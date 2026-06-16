@@ -52,7 +52,10 @@ FORBIDDEN_SENTINEL = "__forbidden__"
 
 
 def resolve_activation(
-    *, memberships: list[MembershipRecord], host_tenant_id: str | None
+    *,
+    memberships: list[MembershipRecord],
+    host_tenant_id: str | None,
+    host_ancestor_ids: tuple[str, ...] = (),
 ) -> ActivationOutcome:
     """Pure Phase-2 decision.
 
@@ -60,10 +63,19 @@ def resolve_activation(
     host-pinned (subdomain → org, #1289), else None (shared-domain switcher).
     Only ``status="active"`` memberships are eligible (a suspended/invited
     membership must never silently scope the session).
+
+    ADR-0037 Phase 5: ``host_ancestor_ids`` is the resolved host's ancestor chain
+    (``ResolvedTenant.ancestor_ids`` — root last, excluding self). A membership at
+    the host **or any ancestor** activates, so a member of the root reaches its
+    descendant hosts; the activated membership is the ancestor (root) one, so the
+    RLS fence binds the root tenant while ``current_tenant`` narrows the view to
+    the host (Phase 4). Default ``()`` preserves the exact-match (Layer-1)
+    behaviour. A non-member of the host's whole chain still gets ``HostForbidden``.
     """
     active = [m for m in memberships if m.status == "active"]
     if host_tenant_id is not None:
-        match = next((m for m in active if m.tenant_id == host_tenant_id), None)
+        acceptable = {host_tenant_id, *host_ancestor_ids}
+        match = next((m for m in active if m.tenant_id in acceptable), None)
         return Activated(match.id) if match is not None else HostForbidden()
     if not active:
         return NoOrgs()
@@ -84,6 +96,18 @@ def host_tenant_id_from_request(request: Any) -> str | None:
     resolved = getattr(state, "tenant", None) if state is not None else None
     tid = getattr(resolved, "id", None)
     return str(tid) if tid is not None else None
+
+
+def host_ancestor_ids_from_request(request: Any) -> tuple[str, ...]:
+    """The resolved host tenant's ancestor ids (ADR-0037 Phase 5), or ``()``.
+
+    Reads ``request.state.tenant.ancestor_ids`` (the ``parent:`` chain the
+    resolver walked, root last, excluding self). Empty for a root/flat host or an
+    app without a tenant hierarchy.
+    """
+    state = getattr(request, "state", None)
+    resolved = getattr(state, "tenant", None) if state is not None else None
+    return tuple(str(a) for a in (getattr(resolved, "ancestor_ids", ()) or ()))
 
 
 def memberships_required(request: Any) -> bool:
@@ -143,7 +167,11 @@ def activate_session_for_login(auth_store: Any, user: Any, request: Any) -> Acti
         appspec = getattr(app_state, "appspec", None)
         auth_store.ensure_single_org_membership(user, appspec=appspec)
         memberships = auth_store.get_memberships_for_identity(str(user.id))
-    return resolve_activation(memberships=memberships, host_tenant_id=host_tenant_id)
+    return resolve_activation(
+        memberships=memberships,
+        host_tenant_id=host_tenant_id,
+        host_ancestor_ids=host_ancestor_ids_from_request(request),
+    )
 
 
 def _login_redirect_for_outcome(

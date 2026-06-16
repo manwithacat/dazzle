@@ -142,6 +142,34 @@ def _mount_tenant_resolution_middleware(
 
     repositories = builder.repositories
 
+    # ADR-0037 Phase 5: tenant-hierarchy ancestor walk. Build a global
+    # {kind: (parent_fk_field, parent_kind)} map from the declared `parent:` edges
+    # (across all tenant kinds, any domain) + a fetch-by-id over the repositories.
+    # The Resolver uses these to populate ResolvedTenant.ancestor_ids so a member
+    # of a root reaches its descendant hosts. Empty map → flat tenancy (no walk).
+    _parent_map: dict[str, tuple[str, str]] = {}
+    for e in tenant_entities:
+        parent_fk = getattr(e.tenant_host, "parent", None)
+        if not parent_fk:
+            continue
+        fld = next((f for f in e.fields if f.name == parent_fk), None)
+        parent_kind = getattr(getattr(fld, "type", None), "ref_entity", None) if fld else None
+        if parent_kind:
+            _parent_map[e.name] = (parent_fk, str(parent_kind))
+
+    def _make_fetch_by_id() -> Any:
+        async def _fetch_by_id(entity_name: str, row_id: str) -> Any | None:
+            repo = repositories.get(entity_name)
+            if repo is None:
+                return None
+            result = await repo.list(filters={"id": row_id}, page_size=1)
+            items = result.get("items") or []
+            return items[0] if items else None
+
+        return _fetch_by_id
+
+    _fetch_by_id_fn = _make_fetch_by_id() if _parent_map else None
+
     for domain, entities in by_domain.items():
         ordered = sorted(entities, key=lambda e: e.tenant_host.order or 0)
         probes = [EntityProbe(e.name, e.tenant_host.slug_field) for e in ordered]
@@ -184,6 +212,8 @@ def _mount_tenant_resolution_middleware(
                 history_probe=history_probe,
                 lookup_fn=_make_slug_lookup(slug_field_by_entity),
                 history_lookup_fn=_history_lookup if history_probe else None,
+                parent_map=_parent_map,  # ADR-0037 Phase 5 (global; empty = flat)
+                fetch_by_id_fn=_fetch_by_id_fn,
             ),
             not_found_renderer=_resolve_template_or_default(
                 first_th.not_found_template,

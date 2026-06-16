@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.90] - 2026-06-16
+
+### Added
+- **Derived descendant-host reachability (ADR-0037 Phase 5, #1393 Phase C).** In a tenant hierarchy, a member of the **root** can now log in on a **descendant-kind host** (e.g. a Trust member on a `school.…` host), not just the exact tenant they hold a membership in. The tenant resolver walks the resolved host row's `parent:` chain up to the root and records the ancestor tenant ids on the new `ResolvedTenant.ancestor_ids` (DB-derived, root last, excluding self); `resolve_activation` activates a membership whose `tenant_id` is the host **or any ancestor**. The activated (root) membership drives the RLS fence (`dazzle.tenant_id` = the root), while the resolved host drives `current_tenant` view-narrowing (Phase 4) — so a root member on a school host is fenced to the trust and viewed to the one school; on the trust host, fenced to the trust and aggregated. **Backward-compatible + fail-closed:** the default empty ancestor chain preserves the exact-match gate (flat apps unchanged), only `status="active"` memberships are eligible, and every walk gap (NULL FK / missing row / cycle / depth cap) only ever *narrows* reachability — a member of an unrelated tenant still gets a 403. Built into the resolver + activation glue; no domain-table reads added to the auth path (the resolver, which already does tenant I/O and runs pre-login, owns the walk). Verified by 5 resolver-walk + 5 activation-reachability unit tests and an **adversarial security review** (no cross-tenant escalation across 6 categories).
+
+  ### Agent Guidance
+  - With a declared tenant hierarchy, grant a user ONE membership at the root; they reach every descendant host within it (the RLS fence stays at the root, the view narrows to the host). No per-leaf memberships.
+  - Operational edges (both fail closed / under-reach, by design): a tenant hierarchy deeper than 16 levels truncates the ancestor walk; an orphaned (deleted) intermediate tenant row severs reachability for higher-root members. Neither widens access.
+
 ## [0.82.89] - 2026-06-16
 
 ### Added
