@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.85] - 2026-06-16
+
+### Docs
+- **ADR-0036 + ADR-0037 promoted Proposed → Accepted** (design accepted; not yet implemented, tracked by #1394 / #1393). The former "open questions" are recorded as acceptance decisions: membership lives at the RLS/hierarchy root with **derived** descendant reachability (no per-leaf rows); aggregate (ancestor) host views are **read-only** across descendants (writes descend to the row's own kind); membership roles apply **uniformly** across the reachable subtree; the v1 principal is always the framework `User` (so `identity:` is dropped from the `membership:` surface — only `roles:` remains); invite/provisioning stays runtime-only; `order:`-vs-`parent:` consistency is an impl-time linker check. INDEX + ROADMAP updated to "Accepted". Clean-breaks (ADR-0003) keep these revisable pre-v1 if implementation surfaces a contradiction.
+
 ## [0.82.84] - 2026-06-16
 
 ### Docs

@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2026-06-16
-**Current Version**: v0.82.84
+**Current Version**: v0.82.85
 
 For past releases, see [CHANGELOG.md](CHANGELOG.md).
 
@@ -115,16 +115,16 @@ Domains of particular interest:
 
 Production deployments expose a different class of issue than development. Connection pool behavior, transaction isolation, event delivery guarantees, and deployment integrity verification are ongoing concerns. Each production incident teaches something about what the runtime must handle that the DSL cannot express.
 
-### Multi-Tenant Hierarchy & Membership (design stage)
+### Multi-Tenant Hierarchy & Membership (design accepted)
 
 The multi-tenant SaaS domain (above) has driven the tenancy model from isolation primitives toward a complete, declarative hierarchy. The foundation has shipped: RLS row-tenancy (the `dazzle.tenant_id` fence), host→tenant routing (`tenant_host:`, #1289), the first-class membership model (Plan 1a–1d), `current_tenant` as a scope/display variable bound to the resolved host tenant (#1394 Layer 1), and `tenant_host:`-implied membership-gated login (#1393 Phase A).
 
-Two **proposed** ADRs design the remaining model as a composed pair — *what scope a reached host implies* and *which hosts a user may reach* — both holding strictly **within one RLS isolation boundary** so the declarative convenience never widens the hard fence:
+Two **accepted** ADRs design the remaining model as a composed pair — *what scope a reached host implies* and *which hosts a user may reach* — both holding strictly **within one RLS isolation boundary** so the declarative convenience never widens the hard fence:
 
-- **[ADR-0036](docs/adr/0036-tenant-hierarchy-data-model.md) — Tenant hierarchy data model** (#1394 Layer 2). A declared `parent:` FK edge between `tenant_host` kinds, FK-graph-validated; aggregate-vs-single views compiled from the resolved host kind vs the source entity's kind (no new predicate). The RLS partition must sit at/above the hierarchy root.
-- **[ADR-0037](docs/adr/0037-declarative-membership-relation.md) — Declarative membership relation** (#1393 Phase C). A `membership:` block on the tenant-root kind that makes the previously-inferred tenant-root match explicit and link-validated; descendant-host reachability is *derived* from one root membership via ADR-0036's edges (no per-leaf rows).
+- **[ADR-0036](docs/adr/0036-tenant-hierarchy-data-model.md) — Tenant hierarchy data model** (#1394 Layer 2). A declared `parent:` FK edge between `tenant_host` kinds, FK-graph-validated; aggregate-vs-single views compiled from the resolved host kind vs the source entity's kind (no new predicate). The RLS partition must sit at/above the hierarchy root. Aggregate (ancestor) host views are read-only across descendants; writes descend to the row's own kind.
+- **[ADR-0037](docs/adr/0037-declarative-membership-relation.md) — Declarative membership relation** (#1393 Phase C). A `membership:` block on the tenant-root kind that makes the previously-inferred tenant-root match explicit and link-validated; descendant-host reachability is *derived* from one root membership via ADR-0036's edges (no per-leaf rows). The principal is the framework `User`; membership roles apply uniformly across the reachable subtree.
 
-Both are at the design stage with open questions to resolve jointly before acceptance; the routing-flow (#1393 Phase B apex discovery) and email-domain on-ramp (Phase D) are deferred follow-ons. This cluster is the canonical example of the convergence hypothesis at work: a real domain (multi-tenant SaaS, hierarchical orgs) generating friction that the framework absorbs as reusable, provable structure rather than per-app side code.
+Both are **accepted as design and not yet implemented** (tracked by #1394 / #1393); the routing-flow (#1393 Phase B apex discovery) and email-domain on-ramp (Phase D) are deferred follow-ons. This cluster is the canonical example of the convergence hypothesis at work: a real domain (multi-tenant SaaS, hierarchical orgs) generating friction that the framework absorbs as reusable, provable structure rather than per-app side code.
 
 ---
 

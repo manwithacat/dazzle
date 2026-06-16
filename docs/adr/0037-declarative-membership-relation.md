@@ -1,6 +1,6 @@
 # ADR-0037 — Declarative Membership Relation
 
-**Status:** Proposed
+**Status:** Accepted (2026-06-16) — design accepted; **not yet implemented** (tracked by #1393 Phase C). The acceptance decisions on the former open questions are recorded below.
 **Issue:** #1393 (multi-tenant login fundamentals) — **Phase C** (declarative user→tenant membership relation). Phase A (`tenant_host:` implies membership-gated login) shipped v0.82.69; branded-403 shipped v0.82.78.
 **Depends on:** the auth-identity model (Plan 1a–1d — framework-owned `Identity`/`Organization`/`Membership`/`Session`), the RLS row-tenancy model (`dazzle.tenant_id` fence), #1289 (`tenant_host`), ADR-0036 (tenant hierarchy data model — its sibling).
 **Reserved sibling:** ADR-0034 (RLS-tenancy capstone) — distinct; do not conflate.
@@ -29,7 +29,7 @@ Phase C does **not** introduce an app-owned membership table. The framework `Ide
 
 Membership is declared on the entity that is simultaneously the **RLS partition root and the ADR-0036 hierarchy root**. That root-kind row's id **is** the `dazzle.tenant_id` discriminator (one logical tenant identity — not a framework-`Organization`-plus-app-entity pair). Declaring membership on a non-root kind is a link-time error: membership is a property of the isolation boundary, not of every host kind.
 
-### D3 — Declarative surface (proposed): a `membership:` block on the tenant-root kind
+### D3 — Declarative surface: a `membership:` block on the tenant-root kind
 
 ```dsl
 # Example — a two-level org tree (illustrative; not framework-specific).
@@ -38,7 +38,6 @@ entity Org "Org":              # RLS partition root + hierarchy root
     domain: app.example
     slug_field: slug
   membership:
-    identity: User             # the identity entity (default: framework User)
     roles: role                # per-tenant role/persona source
 
 entity Team "Team":
@@ -49,7 +48,7 @@ entity Team "Team":
     parent: org                # ADR-0036 hierarchy edge
 ```
 
-`identity:` defaults to the framework `User`; `roles:` names the per-tenant role source (defaulting to the membership's `roles`). The block is what makes "this kind is the membership/RLS/hierarchy root, and its members are these identities with these roles" a **declared, checked** fact rather than an inferred one.
+The principal is **always the framework `User`** (the v1 decision below), so the surface carries only `roles:` — the per-tenant role source (defaulting to the membership's `roles`). The block is what makes "this kind is the membership/RLS/hierarchy root, and its members are `User` identities with these roles" a **declared, checked** fact rather than an inferred one.
 
 ### D4 — Descendant-host reachability is **derived** from root membership (answers ADR-0036's open question)
 
@@ -83,7 +82,7 @@ The linker enforces: **membership root == RLS `partition_key` root == ADR-0036 h
 
 ## Consequences
 
-- **New IR:** a `MembershipSpec` (identity entity, roles source) on the tenant-root kind; new `core/validation/tenancy.py` rules (membership on exactly the root kind; identity entity exists; three-root alignment per D5).
+- **New IR:** a `MembershipSpec` (roles source; principal is the framework `User`) on the tenant-root kind; new `core/validation/tenancy.py` rules (membership on exactly the root kind; three-root alignment per D5).
 - **Runtime:** the host-pin activation path (`org_activation.resolve_activation`) reads the *declared* binding instead of the inferred tenant-root match; reachability of descendant hosts is computed from root membership + the `parent:` chain. The `memberships` table/store is unchanged.
 - **Closes ADR-0036's open question:** membership at the root grants descendant reachability (D4); membership is **not** per-leaf.
 - **Greenfield-only**, consistent with the RLS-tenancy posture.
@@ -94,11 +93,11 @@ The linker enforces: **membership root == RLS `partition_key` root == ADR-0036 h
 - **Phase D — email-domain → tenant routing** (the SSO on-ramp via verified domains / `connections`). Builds *on* the declarative membership relation but is a separate construct.
 - **Multi-root apps** (an app with several independent tenant trees). The surface assumes one root per app; revisit if a concrete need appears.
 
-## Open questions (resolve before Accepted)
+## Decisions on the former open questions (resolved at acceptance)
 
-- **Role inheritance across the hierarchy:** do the membership's `roles` apply uniformly at every descendant host, or can a descendant host narrow/override the effective roles? (Default proposal: uniform; revisit with the aggregate-host-writes question from ADR-0036.)
-- **Identity ≠ framework `User`:** is a non-default `identity:` entity actually needed, or is the framework `User` always the principal? (If always `User`, `identity:` can be dropped from the surface.)
-- **Invitation/provisioning surface:** Phase A assumes memberships exist (invite flow or `auto_provision_single_org`); does the declarative relation imply a declarative invite/provision surface, or stay runtime-only?
+- **Role inheritance across the hierarchy → DECIDED: uniform.** A membership's `roles` apply unchanged at every reachable descendant host within the root. A descendant host does **not** narrow or override the effective roles in v1. This composes with ADR-0036's decision that aggregate (ancestor-kind) host views are read-only across descendants — the role set is the same everywhere; what the host *exposes* narrows by kind, not the roles. Per-descendant role narrowing is a deferred follow-up if a concrete need appears.
+- **Identity ≠ framework `User` → DECIDED: the v1 principal is always the framework `User`.** `identity:` is **dropped** from the surface (D3); the `membership:` block carries only `roles:`. A non-`User` identity entity is reserved for a future need (clean-breaks apply), not built now.
+- **Invitation/provisioning surface → DECIDED: runtime-only in v1.** Memberships are created by the existing runtime paths (invite flow / `auto_provision_single_org`); the declarative relation does **not** add a declarative invite/provision surface in this ADR. A declarative invite surface is a separate, deferred follow-up.
 
 ---
-*Draft raised from the #1393 escalation; sibling to ADR-0036. Not yet implemented; supersedes nothing. Design Phase C jointly with ADR-0036's open questions before promoting either to Accepted.*
+*Accepted 2026-06-16 as the design for #1393 Phase C; sibling ADR-0036 accepted jointly. Not yet implemented — supersedes nothing; implementation tracked by #1393. Clean-breaks (ADR-0003) apply: the acceptance decisions above are revisable pre-v1 should implementation surface a contradiction. Phases B (apex discovery) and D (email-domain routing) remain out of scope.*

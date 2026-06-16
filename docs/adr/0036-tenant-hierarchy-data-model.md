@@ -1,6 +1,6 @@
 # ADR-0036 — Tenant Hierarchy Data Model
 
-**Status:** Proposed
+**Status:** Accepted (2026-06-16) — design accepted; **not yet implemented** (tracked by #1394 Layer 2). The acceptance decisions on the former open questions are recorded below.
 **Issue:** #1394 (`current_tenant` Layer 2 — hierarchy-aware aggregate-vs-single); sibling #1393 (multi-tenant login fundamentals, Phase C — declarative membership relation)
 **Depends on:** ADR-0009 (predicate algebra), ADR-0008 (PostgreSQL-only), the RLS row-tenancy model (`project_rls_tenancy`, `dazzle.tenant_id` fence), #1289 (`tenant_host`), #1394 Layer 1 (`current_tenant` bound to the host `ResolvedTenant`, `dazzle.host_tenant_id` GUC, shipped v0.82.67)
 **Reserved sibling:** ADR-0034 (RLS-tenancy capstone) — distinct decision; do not conflate.
@@ -101,14 +101,14 @@ Layer 1 deferred per-attribute GUCs; this ADR does not add them. `current_tenant
 
 - **New IR:** `TenantHostSpec.parent: str | None` (the FK field name) + a linker-derived kind partial-order; new `core/validation/tenancy.py` rules (parent is a `ref` to a tenant-kind entity; no cycles; RLS-root-dominance per D4).
 - **Compiler:** `predicate_compiler` selects direct-vs-FK-path for `current_tenant` by comparing the request host `kind` to the source entity's kind via the declared hierarchy; deny when not an ancestor.
-- **Sibling coupling (#1393 Phase C):** the declarative **membership** relation ("which hosts a user may enter") and this hierarchy ("what scope the entered host implies") are complementary; Phase C should be designed jointly so membership at a parent kind implies reachability of its descendants per the same edges. This ADR does **not** decide the membership-relation surface — that is #1393's ADR.
+- **Sibling coupling (#1393 Phase C → ADR-0037, accepted jointly):** the declarative **membership** relation ("which hosts a user may enter") and this hierarchy ("what scope the entered host implies") compose — ADR-0037 (D4) puts membership at the root and **derives** descendant reachability from these `parent:` edges. This ADR does **not** define the membership-relation surface — that is ADR-0037's.
 - **Greenfield-only**, consistent with the RLS-tenancy posture: no migration path for re-parenting an existing tenant tree in v1.
 
-## Open questions (resolve before Accepted)
+## Decisions on the former open questions (resolved at acceptance)
 
-- **Membership × hierarchy:** does an active membership at a parent kind auto-grant descendant-host reachability, or must membership be per-leaf? (Couple with #1393 Phase C.)
-- **Cross-kind row actions at an aggregate host:** at an ancestor-kind host the user sees many descendant rows — are write actions allowed there, and under which row's scope? (Likely: aggregate views are read-mostly; writes require descending to a single host. Needs a decision.)
-- **`order:` interaction:** `tenant_host` already has an `order:` for multi-entity resolution; confirm the hierarchy chain and resolution order can't disagree.
+- **Membership × hierarchy → RESOLVED by ADR-0037 (D4).** Membership is declared/stored at the RLS/hierarchy **root**; descendant-host reachability is **derived** from that one root membership via the `parent:` edges. **No per-leaf membership rows.** An active membership at a parent (ancestor) kind therefore grants reachability of every descendant host within the same root.
+- **Cross-kind writes at an aggregate host → DECIDED: aggregate (ancestor-kind) host views are read-only across descendants.** A write requires descending to a host of the row's **own kind**, where the row's scope is a single unambiguous `<kind> = current_tenant`. The compiler emits the aggregate FK-path predicate (D3) for reads at an ancestor host; a state-changing operation whose target row is not of the host's own kind is denied (fail-closed). Relaxing this (scoped writes at an aggregate host) is a deferred follow-up if a concrete need appears; pairs with ADR-0037's uniform-role decision.
+- **`order:` interaction → DEFERRED (non-blocking, implementation-time).** `tenant_host`'s existing `order:` (multi-entity resolution) and the declared `parent:` chain must not disagree; the linker validates consistency when the feature is built. A validation concern, not a design fork — it does not gate acceptance.
 
 ---
-*Draft raised from the #1394/#1393 escalation. Not yet implemented; supersedes nothing. Promote to Accepted after the membership-relation (#1393 Phase C) brainstorm resolves the open questions.*
+*Accepted 2026-06-16 as the design for #1394 Layer 2; sibling ADR-0037 accepted jointly. Not yet implemented — supersedes nothing; implementation tracked by #1394. Clean-breaks (ADR-0003) apply: the acceptance decisions above are revisable pre-v1 should implementation surface a contradiction.*
