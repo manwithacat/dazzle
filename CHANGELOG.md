@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.92] - 2026-06-17
+
+### Added
+- **`fixtures/tenant_hierarchy` — worked example of the tenant hierarchy + membership pattern (ADR-0036 + ADR-0037).** A framework-validation fixture declaring a depth-3 tenant tree (Region ▸ Trust ▸ School, linked by `tenant_host: parent:`), `membership:` on the root kind, and a tenant-scoped `Report` entity whose `read: school = current_tenant` scope auto-expands to the self-or-ancestor disjunction (single at a School host, aggregate at a Trust/Region host) while its `update` scope stays single (read-only aggregate). Exercised by `tests/unit/test_tenant_hierarchy_fixture.py` (validates clean + compiles the documented depth-3 disjunction / single-write); cross-tenant isolation is proven against real Postgres in `tests/integration/test_current_tenant_scope_pg.py`. Added to the drift-gated fixtures list in CLAUDE.md.
+
+  ### Agent Guidance
+  - Copy `fixtures/tenant_hierarchy/dsl/domain.dsl` as the canonical starting point when authoring a hierarchical multi-tenant app — it's the capstone pattern (above) in runnable, validated form.
+
 ## [0.82.91] - 2026-06-16
 
 ### Changed
