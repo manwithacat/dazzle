@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.82] - 2026-06-16
+
+### Docs
+- **ADR-0036: abstracted the core phrasing to be framework-neutral.** The decisions now read in domain-neutral terms (tenant kind / parent / ancestor / descendant / root / leaf) with a `Vocabulary` preamble; the business illustration is confined to clearly-labeled "Example (org tree)" blocks (Org ▸ Team) rather than baked into the normative text. No decision changed.
+
 ## [0.82.81] - 2026-06-16
 
 ### Docs
