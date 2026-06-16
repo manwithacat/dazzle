@@ -3,7 +3,7 @@
 Split verbatim from dazzle.core.validator per #1361.
 """
 
-from .tenancy import validate_tenant_host_blocks
+from .tenancy import validate_tenant_hierarchy_and_membership, validate_tenant_host_blocks
 
 
 def validate_appspec(appspec_or_fragment: object) -> list[str]:
@@ -13,4 +13,6 @@ def validate_appspec(appspec_or_fragment: object) -> list[str]:
     the error list.  Returns a flat list of error strings.
     """
     errors, _warnings = validate_tenant_host_blocks(appspec_or_fragment)
+    h_errors, _h_warnings = validate_tenant_hierarchy_and_membership(appspec_or_fragment)
+    errors.extend(h_errors)
     return errors

@@ -127,6 +127,7 @@ from .surfaces import (
 from .tenancy import (
     _get_entities,
     validate_tenancy_partition_key,
+    validate_tenant_hierarchy_and_membership,
     validate_tenant_host_blocks,
 )
 from .ux import (
@@ -221,6 +222,7 @@ __all__ = [
     "validate_storage_refs",
     "validate_surfaces",
     "validate_tenancy_partition_key",
+    "validate_tenant_hierarchy_and_membership",
     "validate_tenant_host_blocks",
     "validate_transition_invocations",
     "validate_ux_specs",

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.88] - 2026-06-16
+
+### Added
+- **Link-time validation for tenant hierarchy + membership (ADR-0036/0037 Phase 3, #1394/#1393).** New `validate_tenant_hierarchy_and_membership` validator (run via `validate_appspec`) enforces, at `dazzle validate` time: **(H1)** `tenant_host.parent:` names a `ref` field whose target is itself a `tenant_host` kind; **(H2)** the `parent:` chain has no cycle; **(M1)** `membership:` is declared only on a `tenant_host` kind; **(M2)** `membership:` is declared only on a hierarchy **root** (no `parent:`) — the membership-root == hierarchy-root leg of ADR-0037 D5; **(M3)** `membership.roles` (when set) names a field on the entity. The third D5 leg (root == RLS partition root) binds at the runtime phase where the RLS-root↔entity mapping is established (not statically derivable from the `partition_key` column name). Parse + IR phases were v0.82.86/.87.
+
 ## [0.82.87] - 2026-06-16
 
 ### Added

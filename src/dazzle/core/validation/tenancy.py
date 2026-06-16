@@ -195,3 +195,115 @@ def validate_tenant_host_blocks(
         )
 
     return errors, warnings
+
+
+# ---------------------------------------------------------------------------
+# Tenant-hierarchy + membership validator (ADR-0036 D2 + ADR-0037 D2/D5)
+# ---------------------------------------------------------------------------
+
+
+def validate_tenant_hierarchy_and_membership(
+    appspec_or_fragment: object,
+) -> tuple[list[str], list[str]]:
+    """Hard-error rules for `tenant_host.parent:` (ADR-0036) and `membership:` (ADR-0037).
+
+    Hierarchy (ADR-0036 D2):
+      H1 — `parent:` names a `ref` field on the same entity whose target is
+           another entity that itself declares `tenant_host:` (a tenant kind).
+      H2 — the `parent:` chain has no cycle.
+
+    Membership (ADR-0037 D2 / the statically-checkable part of D5):
+      M1 — `membership:` is declared only on a `tenant_host` kind.
+      M2 — `membership:` is declared only on a hierarchy **root** (`parent` is
+           None) — the membership-root == hierarchy-root leg of D5.
+      M3 — `membership.roles` (when set) names a field on the same entity.
+
+    The third leg of D5 (membership/hierarchy root == RLS partition root) binds
+    at the runtime phase where the RLS-root↔entity mapping is established; it is
+    not statically derivable from `tenancy.partition_key` (a column name) alone.
+
+    Returns (errors, warnings).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    entities = _get_entities(appspec_or_fragment)
+    by_name: dict[str, Any] = {e.name: e for e in entities}
+
+    def _is_tenant_host(entity_name: str) -> bool:
+        ent = by_name.get(entity_name)
+        return ent is not None and getattr(ent, "tenant_host", None) is not None
+
+    for entity in entities:
+        th = getattr(entity, "tenant_host", None)
+
+        # ---- Hierarchy: parent edge -------------------------------------
+        parent_field = getattr(th, "parent", None) if th is not None else None
+        if parent_field is not None:
+            fld = next((f for f in entity.fields if f.name == parent_field), None)
+            if fld is None:
+                errors.append(
+                    f"Entity {entity.name!r}: tenant_host.parent {parent_field!r} "
+                    "does not name a field on the entity."
+                )
+            elif getattr(fld.type, "kind", None) != ir.FieldTypeKind.REF:
+                errors.append(
+                    f"Entity {entity.name!r}: tenant_host.parent {parent_field!r} "
+                    f"must be a `ref` field (got {getattr(fld.type, 'kind', None)})."
+                )
+            else:
+                target = getattr(fld.type, "ref_entity", None)
+                if not target or not _is_tenant_host(str(target)):
+                    errors.append(
+                        f"Entity {entity.name!r}: tenant_host.parent {parent_field!r} "
+                        f"points at {target!r}, which is not a `tenant_host` entity. "
+                        "A hierarchy parent must itself be a tenant kind."
+                    )
+
+        # ---- Membership block placement ---------------------------------
+        membership = getattr(entity, "membership", None)
+        if membership is not None:
+            if th is None:
+                errors.append(
+                    f"Entity {entity.name!r}: membership: requires this entity to be a "
+                    "`tenant_host` kind (membership is declared on the tenant-root kind)."
+                )
+            elif parent_field is not None:
+                errors.append(
+                    f"Entity {entity.name!r}: membership: must be declared on the "
+                    "tenant-root kind (a hierarchy root with no `parent:`), not on a "
+                    f"child kind (this entity's parent is {parent_field!r})."
+                )
+            roles_field = getattr(membership, "roles", None)
+            if roles_field is not None and not any(f.name == roles_field for f in entity.fields):
+                errors.append(
+                    f"Entity {entity.name!r}: membership.roles {roles_field!r} "
+                    "does not name a field on the entity."
+                )
+
+    # ---- Hierarchy: cycle detection (H2) --------------------------------
+    # Edge: entity -> parent-target entity (via the parent FK's ref_entity).
+    parent_of: dict[str, str] = {}
+    for entity in entities:
+        th = getattr(entity, "tenant_host", None)
+        pf = getattr(th, "parent", None) if th is not None else None
+        if pf is None:
+            continue
+        fld = next((f for f in entity.fields if f.name == pf), None)
+        target = getattr(getattr(fld, "type", None), "ref_entity", None) if fld else None
+        if target:
+            parent_of[entity.name] = str(target)
+    for start in parent_of:
+        seen: set[str] = set()
+        node: str | None = start
+        while node is not None and node in parent_of:
+            if node in seen:
+                errors.append(
+                    f"Tenant hierarchy has a cycle: the `parent:` chain starting at "
+                    f"{start!r} loops back on itself (no entity can be its own ancestor)."
+                )
+                break
+            seen.add(node)
+            node = parent_of.get(node)
+
+    return errors, warnings

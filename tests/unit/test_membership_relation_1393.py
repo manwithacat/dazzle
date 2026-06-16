@@ -7,11 +7,21 @@ source; principal is always the framework `User`) parses into
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
+from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
 from dazzle.core.linker import build_appspec
 from dazzle.core.parser import parse_modules
+from dazzle.core.validator import validate_appspec
+
+
+def _validate(src: str) -> list[str]:
+    _m, _a, _t, _c, _u, fragment = parse_dsl(src.lstrip(), Path("<test>"))
+    return [str(e) for e in validate_appspec(fragment)]
+
 
 _DSL = """module t
 app t "T"
@@ -89,3 +99,78 @@ entity Org "Org":
 """
     with pytest.raises(ParseError, match="membership"):
         _appspec(tmp_path, dsl)
+
+
+# ─────────────────── Phase 3: membership validation (ADR-0037 D2/D5) ───────────────────
+
+
+def test_membership_on_root_kind_ok() -> None:
+    src = """
+module t
+app t "T"
+entity Org "Org":
+  id: uuid pk
+  slug: slug required
+  role: str(40)
+  tenant_host:
+    domain: app.example
+    slug_field: slug
+  membership:
+    roles: role
+"""
+    assert not [e for e in _validate(src) if "membership" in e]
+
+
+def test_membership_on_child_kind_errors() -> None:
+    src = """
+module t
+app t "T"
+entity Org "Org":
+  id: uuid pk
+  slug: slug required
+  tenant_host:
+    domain: app.example
+    slug_field: slug
+entity Team "Team":
+  id: uuid pk
+  slug: slug required
+  org: ref Org required
+  role: str(40)
+  tenant_host:
+    domain: app.example
+    slug_field: slug
+    parent: org
+    order: 2
+  membership:
+    roles: role
+"""
+    assert any("tenant-root kind" in e for e in _validate(src))
+
+
+def test_membership_on_non_tenant_host_errors() -> None:
+    src = """
+module t
+app t "T"
+entity Org "Org":
+  id: uuid pk
+  role: str(40)
+  membership:
+    roles: role
+"""
+    assert any("requires this entity to be a" in e for e in _validate(src))
+
+
+def test_membership_roles_missing_field_errors() -> None:
+    src = """
+module t
+app t "T"
+entity Org "Org":
+  id: uuid pk
+  slug: slug required
+  tenant_host:
+    domain: app.example
+    slug_field: slug
+  membership:
+    roles: nope
+"""
+    assert any("membership.roles" in e and "nope" in e for e in _validate(src))
