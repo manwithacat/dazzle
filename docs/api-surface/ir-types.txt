@@ -2860,6 +2860,7 @@ ir_class: SurfaceSpec
     - headless: bool = False
     - layout: str = 'wizard'
     - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
+    - refresh_interval: int | None = None
     - related_groups: list[RelatedGroup] = []
     - render: str | None = None
     - search_fields: list[str] = []

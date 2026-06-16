@@ -11,6 +11,7 @@ from .. import ir
 from ..errors import make_parse_error
 from ..ir.location import SourceLocation
 from ..lexer import TokenType
+from ._refresh import parse_refresh_interval_seconds
 from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
@@ -659,6 +660,7 @@ class _SurfaceState:
     display: str | None = None  # v0.61.126 (#942)
     show_history: bool = False  # #956 cycle 8
     render: str | None = None  # Plan 2
+    refresh_interval: int | None = None  # #1399 slice 3
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -696,6 +698,20 @@ def _kw_render(parser: Any, state: _SurfaceState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.render = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_refresh(parser: Any, state: _SurfaceState) -> None:
+    """``refresh: every Ns`` — declarative live-refresh poll interval (#1399).
+
+    Standalone-surface analogue of the workspace-region primitive (#1391): the
+    list table's HTMX-loaded ``<tbody>`` appends ``, every Ns`` to its trigger so
+    the existing list data endpoint re-renders on a poll. Shares the parser +
+    5s floor with the region surface (``_refresh.parse_refresh_interval_seconds``).
+    """
+    parser.advance()  # consume `refresh`
+    parser.expect(TokenType.COLON)
+    state.refresh_interval = parse_refresh_interval_seconds(parser)
     parser.skip_newlines()
 
 
@@ -833,6 +849,7 @@ _SURFACE_KEYWORDS: dict[TokenType, KeywordParser[_SurfaceState]] = {
 
 _SURFACE_IDENT_KEYWORDS: dict[str, KeywordParser[_SurfaceState]] = {
     "show_history": _kw_show_history,
+    "refresh": _kw_refresh,  # #1399 slice 3 — live-refresh poll interval
 }
 
 
@@ -891,6 +908,7 @@ def _build_surface(
         display=state.display,
         show_history=state.show_history,
         render=state.render,
+        refresh_interval=state.refresh_interval,
     )
 
 

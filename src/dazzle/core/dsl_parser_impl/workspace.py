@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from ._refresh import parse_refresh_interval_seconds
 from .dispatch import KeywordParser, parse_block_with_dispatch
 
 if TYPE_CHECKING:
@@ -3583,46 +3584,8 @@ def _kw_refresh(parser: Any, state: _WorkspaceRegionState) -> None:
     """
     parser.advance()  # consume `refresh`
     parser.expect(TokenType.COLON)
-    if parser.match(TokenType.EVERY):
-        parser.advance()  # optional `every`
-    if parser.match(TokenType.DURATION_LITERAL):
-        bad = parser.advance()
-        raise make_parse_error(
-            f"refresh interval {bad.value!r} must be expressed in seconds, "
-            "e.g. `refresh: every 30s`.",
-            parser.file,
-            bad.line,
-            bad.column,
-        )
-    num_tok = parser.expect(TokenType.NUMBER)
-    try:
-        seconds = int(num_tok.value)
-    except (TypeError, ValueError):
-        raise make_parse_error(
-            "refresh interval must be a whole number of seconds.",
-            parser.file,
-            num_tok.line,
-            num_tok.column,
-        )
-    if parser.match(TokenType.IDENTIFIER):
-        unit_tok = parser.advance()
-        if str(unit_tok.value) != "s":
-            raise make_parse_error(
-                f"refresh unit {unit_tok.value!r} not supported — express the "
-                "interval in seconds, e.g. `refresh: every 30s`.",
-                parser.file,
-                unit_tok.line,
-                unit_tok.column,
-            )
-    if seconds < 5:
-        raise make_parse_error(
-            f"refresh interval must be at least 5s (got {seconds}s) — polling "
-            "faster overloads the region-fetch endpoint.",
-            parser.file,
-            num_tok.line,
-            num_tok.column,
-        )
-    state.refresh_interval = seconds
+    # Shared with the surface-refresh parser (#1399) so both stay in lockstep.
+    state.refresh_interval = parse_refresh_interval_seconds(parser)
     parser.skip_newlines()
 
 

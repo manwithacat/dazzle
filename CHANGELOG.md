@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.80] - 2026-06-16
+
+### Added
+- **Surface-level live-refresh — `refresh: every Ns` on standalone list surfaces (#1399 slice 3).** The standalone-surface analogue of the #1391 region polling primitive: a `list`-mode surface may declare `refresh: every Ns` so its HTMX-loaded `<tbody>` appends `, every Ns` to its trigger and re-fetches the existing list data endpoint on a poll — no new route, no client JS. New `SurfaceSpec.refresh_interval` IR field + surface parser keyword + `TableContext.refresh_interval` threaded through `template_compiler` into `table_renderer`. The interval parser (optional `every`, seconds-only, 5s floor) is now shared with the region surface via `dsl_parser_impl/_refresh.parse_refresh_interval_seconds`, so both stay in lockstep. The `ir-types` API-surface baseline + the DSL→IR golden-master snapshot are regenerated for the new field (drift-gate requirement).
+
+  ### Agent Guidance
+  - A `list` surface can now poll-refresh: add `refresh: every 30s` to the `surface:` block (≥5s; seconds only). Same syntax + floor as a workspace region's `refresh:`. Detail/edit surfaces ignore it (the trigger rides the list `<tbody>`).
+
 ## [0.82.79] - 2026-06-15
 
 ### Security

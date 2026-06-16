@@ -938,6 +938,7 @@ def _compile_list_surface(
             default_sort_dir=default_sort_dir,
             sort_field=default_sort_field,
             sort_dir=default_sort_dir,
+            refresh_interval=getattr(surface, "refresh_interval", None),  # #1399 slice 3
             search_fields=search_fields,
             empty_message=empty_message,
             empty_collection=empty_collection,

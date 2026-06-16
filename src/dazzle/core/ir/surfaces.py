@@ -368,6 +368,12 @@ class SurfaceSpec(BaseModel):
     # `AuditEntry` rows for the current row, RBAC-gated by the audit
     # block's `show_to:` declaration. False (default) = no panel.
     show_history: bool = False
+    # #1399 slice 3: declarative live-refresh for standalone list surfaces.
+    # `refresh: every Ns` makes the list table's HTMX-loaded <tbody> append
+    # `, every Ns` to its trigger so the existing list data endpoint re-renders
+    # on a poll. Seconds; `None` = no polling. Parallels WorkspaceRegion.
+    # refresh_interval (#1391); shares the same parser + 5s floor.
+    refresh_interval: int | None = None
 
     model_config = ConfigDict(frozen=True)
 

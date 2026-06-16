@@ -98,6 +98,9 @@ class TableContext(BaseModel):
     sort_dir: str = "asc"
     default_sort_field: str = ""
     default_sort_dir: str = "asc"
+    # #1399 slice 3: live-refresh poll interval (seconds); None = no polling.
+    # The HTMX-loaded <tbody> appends `, every Ns` to its trigger.
+    refresh_interval: int | None = None
     search_fields: list[str] = Field(default_factory=list)
     empty_message: str = "No items found."
     # Typed empty-state messages (#807). When a case is non-empty, the

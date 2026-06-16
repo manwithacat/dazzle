@@ -410,7 +410,15 @@ def render_filterable_table(table: Any, *, page_title: str = "") -> str:
     sort_qs = ""
     if sort_field:
         sort_qs = f"?sort={_esc(sort_field, quote=True)}&dir={_esc(sort_dir, quote=True)}"
-    trigger_attr = ' hx-trigger="load"' if not search_first else ""
+    # #1399 slice 3: live-refresh — append `every Ns` to the tbody trigger so
+    # the existing list data endpoint re-fetches on a poll. Parser floors at 5s.
+    refresh_interval = getattr(table, "refresh_interval", None)
+    _triggers: list[str] = []
+    if not search_first:
+        _triggers.append("load")
+    if refresh_interval:
+        _triggers.append(f"every {int(refresh_interval)}s")
+    trigger_attr = f' hx-trigger="{", ".join(_triggers)}"' if _triggers else ""
     tbody_html = (
         f'<tbody id="{table_id_attr}-body" '  # nosemgrep
         f'hx-get="{api_endpoint_attr}{sort_qs}"'
