@@ -187,6 +187,8 @@ class TokenType(Enum):
     SIGNING_TEMPLATE = "signing_template"
     # #1289: per-entity Host-header tenant resolution
     TENANT_HOST = "tenant_host"
+    # ADR-0037 (#1393 Phase C): declarative membership relation on the tenant-root kind
+    MEMBERSHIP = "membership"
     # #1333: entity lifecycle owned outside the DSL graph (route/pipeline/
     # wizard/external). Exempts the entity + its surfaces from the
     # dead-construct lint, orthogonally to `domain: platform`.

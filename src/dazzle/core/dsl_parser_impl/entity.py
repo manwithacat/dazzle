@@ -41,6 +41,8 @@ class _EntityParseContext:
     temporal: ir.TemporalSpec | None = None
     # Tenant host routing spec (v0.80.7, #1289 slice 1)
     tenant_host: ir.TenantHostSpec | None = None
+    # Declarative membership relation (ADR-0037, #1393 Phase C)
+    membership: ir.MembershipSpec | None = None
     # Lifecycle-ownership marker (#1333): route/pipeline/wizard/external
     managed_by: ir.ManagedBy | None = None
     bulk_config: ir.BulkConfig | None = None
@@ -187,6 +189,9 @@ class EntityParserMixin:
                 ctx.display_field = self._parse_entity_display_field()
             elif self.match(TokenType.TENANT_HOST):
                 self._parse_tenant_host_block(ctx)
+                continue
+            elif self.match(TokenType.MEMBERSHIP):
+                self._parse_membership_block(ctx)
                 continue
             elif self.match(TokenType.MANAGED_BY):
                 ctx.managed_by = self._parse_entity_managed_by()
@@ -993,6 +998,50 @@ class EntityParserMixin:
             )
         ctx.tenant_host = ir.TenantHostSpec(**fields)  # type: ignore[arg-type]
 
+    _MEMBERSHIP_ALLOWED_KEYS: frozenset[str] = frozenset({"roles"})
+
+    def _parse_membership_block(self, ctx: _EntityParseContext) -> None:
+        """Parse the ``membership:`` indented sub-field block (ADR-0037, #1393 Phase C).
+
+        v1 carries a single optional scalar ``roles:`` (the per-tenant role source
+        field). The principal is always the framework ``User`` — `identity:` is
+        deliberately omitted (ADR-0037 acceptance decision).
+        """
+        self.advance()  # consume MEMBERSHIP
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        fields: dict[str, object] = {}
+        last_key_tok = None
+        while not self.match(TokenType.DEDENT) and not self.match(TokenType.EOF):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT) or self.match(TokenType.EOF):
+                break
+            last_key_tok = self.expect_identifier_or_keyword()
+            key = last_key_tok.value
+            self.expect(TokenType.COLON)
+            # Scalar: collect the remaining tokens on the line as a compact string.
+            scalar_parts: list[str] = []
+            while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+                scalar_parts.append(str(self.advance().value))
+            fields[key] = "".join(scalar_parts)
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        extra = set(fields) - self._MEMBERSHIP_ALLOWED_KEYS
+        if extra:
+            tok_line = last_key_tok.line if last_key_tok else 0
+            tok_col = last_key_tok.column if last_key_tok else 0
+            raise make_parse_error(
+                f"Unknown sub-field(s) in membership: block: {sorted(extra)}",
+                self.file,
+                tok_line,
+                tok_col,
+            )
+        ctx.membership = ir.MembershipSpec(**fields)  # type: ignore[arg-type]
+
     def _parse_entity_field_declaration(self, ctx: _EntityParseContext) -> None:
         """Parse a regular or computed field declaration (the default branch)."""
         field_name = self.expect_identifier_or_keyword().value
@@ -1118,6 +1167,7 @@ class EntityParserMixin:
             graph_edge=ctx.graph_edge,
             graph_node=ctx.graph_node,
             tenant_host=ctx.tenant_host,
+            membership=ctx.membership,
             managed_by=ctx.managed_by,
             source=loc,
         )

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.87] - 2026-06-16
+
+### Added
+- **Declarative `membership:` block — IR + parser (ADR-0037 Phase 2, #1393 Phase C).** A tenant-root-kind entity may now declare a `membership:` block (v1 carries one optional `roles:` source field; the principal is always the framework `User`, so `identity:` is deliberately omitted per the ADR acceptance decision). New `membership` lexer keyword + `MembershipSpec` IR + `EntitySpec.membership`. Staged IR-first: **parse-only and inert** this phase — link-time validation (membership only on the RLS/hierarchy root; three-root alignment) and the runtime derived-reachability binding land in later phases. `ir-types` baseline + DSL→IR golden-master snapshot regenerated (every entity gains `membership: None`).
+
 ## [0.82.86] - 2026-06-16
 
 ### Added

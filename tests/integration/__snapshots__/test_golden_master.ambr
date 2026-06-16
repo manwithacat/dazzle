@@ -183,6 +183,7 @@
           'is_tenant_root': False,
           'lifecycle': None,
           'managed_by': None,
+          'membership': None,
           'name': 'Task',
           'patterns': list([
           ]),
@@ -420,6 +421,7 @@
           'is_tenant_root': False,
           'lifecycle': None,
           'managed_by': None,
+          'membership': None,
           'name': 'SystemHealth',
           'patterns': list([
             'system',
@@ -676,6 +678,7 @@
           'is_tenant_root': False,
           'lifecycle': None,
           'managed_by': None,
+          'membership': None,
           'name': 'SystemMetric',
           'patterns': list([
             'system',
@@ -937,6 +940,7 @@
           'is_tenant_root': False,
           'lifecycle': None,
           'managed_by': None,
+          'membership': None,
           'name': 'DeployHistory',
           'patterns': list([
             'system',

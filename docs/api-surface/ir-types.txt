@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 368 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
+# Counts: 369 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -772,6 +772,7 @@ ir_class: EntitySpec
     - is_tenant_root: bool = False
     - lifecycle: LifecycleSpec | None = None
     - managed_by: ManagedBy | None = None
+    - membership: MembershipSpec | None = None
     - patterns: list[str] = []
     - publishes: list[PublishSpec] = []
     - seed_template: SeedTemplateSpec | None = None
@@ -1773,6 +1774,11 @@ ir_class: MediaSpec
     - alt: str | None = None
     - kind: MediaKind = <MediaKind.NONE: 'none'>
     - src: str | None = None
+
+ir_class: MembershipSpec
+  required: (none)
+  optional:
+    - roles: str | None = None
 
 ir_class: MessageFieldSpec
   required:

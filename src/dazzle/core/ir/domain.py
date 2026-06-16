@@ -363,6 +363,29 @@ class TenantHostSpec(BaseModel):
     parent: str | None = None
 
 
+class MembershipSpec(BaseModel):
+    """Declarative user→tenant membership relation (ADR-0037, #1393 Phase C).
+
+    Declared with a `membership:` block on the **tenant-root kind** (the entity
+    that is simultaneously the RLS partition root and the ADR-0036 hierarchy
+    root). It makes the previously-inferred tenant-root match explicit and
+    link-validated: "this kind is the membership/RLS/hierarchy root, and its
+    members are framework `User` identities with these roles."
+
+    The principal is always the framework `User` in v1 (ADR-0037 acceptance
+    decision — `identity:` deliberately omitted). Descendant-host reachability is
+    DERIVED from one root membership via the `parent:` edges (no per-leaf rows).
+    The framework `memberships` store remains the runtime model; this block is a
+    validated binding, not a new table.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    # The per-tenant role/persona source field on the membership (the personas an
+    # identity holds *in this tenant*). `None` = the framework membership `roles`.
+    roles: str | None = None
+
+
 class EntitySpec(BaseModel):
     """
     Specification for a domain entity.
@@ -462,6 +485,9 @@ class EntitySpec(BaseModel):
     source: SourceLocation | None = None
     # v0.80.7 (#1289): host-header tenant routing configuration
     tenant_host: TenantHostSpec | None = None
+    # ADR-0037 (#1393 Phase C): declarative membership relation; set only on the
+    # tenant-root kind (link-validated). None = no declared membership here.
+    membership: MembershipSpec | None = None
     # #1333: lifecycle-ownership marker. When set, the entity is reachable
     # only via a mechanism outside the nav graph (route/pipeline/wizard/
     # external), so the dead-construct lint exempts it and its surfaces.
