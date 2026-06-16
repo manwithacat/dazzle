@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.84] - 2026-06-16
+
+### Docs
+- **ROADMAP: added a "Multi-Tenant Hierarchy & Membership (design stage)" focus area.** Records the shipped tenancy foundation (RLS fence, `tenant_host:`, membership model, `current_tenant` Layer 1, Phase-A gated login) and links the two proposed ADRs — [ADR-0036](docs/adr/0036-tenant-hierarchy-data-model.md) (hierarchy) and [ADR-0037](docs/adr/0037-declarative-membership-relation.md) (membership) — as the composed remaining design, both holding within one RLS isolation boundary. No code change.
+
 ## [0.82.83] - 2026-06-16
 
 ### Docs
