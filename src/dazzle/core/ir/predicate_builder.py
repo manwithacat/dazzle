@@ -18,6 +18,8 @@ Mapping rules
 - Compound AND / OR / NOT           → :class:`BoolComposite` (via ``make()``)
 """
 
+from typing import Any
+
 from dazzle.core.ir.conditions import (
     ComparisonOperator,
     ConditionExpr,
@@ -77,6 +79,7 @@ def build_scope_predicate(
     condition: ConditionExpr | None,
     entity_name: str,
     fk_graph: FKGraph,
+    entities_by_name: dict[str, Any] | None = None,
 ) -> ScopePredicate:
     """Convert a :class:`ConditionExpr` to a :data:`ScopePredicate` tree.
 
@@ -86,6 +89,14 @@ def build_scope_predicate(
         entity_name: Name of the root entity this condition is scoped to.
                      Used for FK path validation.
         fk_graph:    FK graph built from the application spec.
+        entities_by_name: Optional ``{name: EntitySpec}`` map. When provided,
+                     a ``field = current_tenant`` check whose ``field`` is an FK
+                     to a hierarchical tenant kind (ADR-0036) is expanded into a
+                     self-or-ancestor disjunction (aggregate at an ancestor host,
+                     single at a leaf host). The linker passes this **only for
+                     READ/LIST** scopes; writes keep the single leaf check
+                     (aggregate hosts are read-only, ADR-0036). ``None`` (the
+                     default) preserves the Layer-1 single-check behaviour.
 
     Returns:
         A :data:`ScopePredicate` node (or tree for compound conditions).
@@ -157,7 +168,18 @@ def build_scope_predicate(
         # is id-only — `current_tenant.<other_attr>` is a display-gate concept,
         # rejected here so it can't silently bind the id.
         if isinstance(raw_value, str) and raw_value in ("current_tenant", "current_tenant.id"):
-            return ColumnCheck(field=field, op=op, value=ValueRef(current_tenant=True))
+            base = ColumnCheck(field=field, op=op, value=ValueRef(current_tenant=True))
+            # ADR-0036 Layer 2: on a READ/LIST scope (caller opts in via
+            # entities_by_name) whose `field` is an FK to a tenant kind with an
+            # ancestor chain, expand to a self-or-ancestor disjunction so the one
+            # scope aggregates at an ancestor host and narrows at a leaf host.
+            # ONLY for `=` — a `!=` disjunction would leak — and fail-closed:
+            # any resolution uncertainty returns the unexpanded single check.
+            if op == CompOp.EQ and entities_by_name:
+                return _expand_current_tenant_hierarchy(
+                    field, base, entity_name, fk_graph, entities_by_name
+                )
+            return base
 
         # Plain column check
         return ColumnCheck(field=field, op=op, value=_resolve_value_ref(raw_value))
@@ -174,16 +196,93 @@ def build_scope_predicate(
         bool_op = bool_op_map[condition.operator]
 
         if bool_op is BoolOp.NOT:
-            left_pred = build_scope_predicate(condition.left, entity_name, fk_graph)
+            left_pred = build_scope_predicate(
+                condition.left, entity_name, fk_graph, entities_by_name
+            )
             return BoolComposite.make(BoolOp.NOT, [left_pred])
 
         # AND / OR — both left and right must be present
-        left_pred = build_scope_predicate(condition.left, entity_name, fk_graph)
-        right_pred = build_scope_predicate(condition.right, entity_name, fk_graph)
+        left_pred = build_scope_predicate(condition.left, entity_name, fk_graph, entities_by_name)
+        right_pred = build_scope_predicate(condition.right, entity_name, fk_graph, entities_by_name)
         return BoolComposite.make(bool_op, [left_pred, right_pred])
 
     # Fallback: empty condition with no recognised variant → Tautology
     return Tautology()
+
+
+# Cycle guard for the tenant-hierarchy walk. NOTE: this expansion runs inside
+# `build_appspec` (the linker), which does NOT run
+# `validate_tenant_hierarchy_and_membership` — that H2 cycle check is a separate
+# `dazzle validate` phase a bare `build_appspec` caller can skip. So this bound +
+# the `seen` set below are the SOLE defense against a malformed/cyclic chain
+# looping here; do not weaken them on the assumption the validator gated this. A
+# cycle collapses fail-closed to the single check (verified adversarially).
+_MAX_TENANT_HIERARCHY_DEPTH = 16
+
+
+def _expand_current_tenant_hierarchy(
+    field: str,
+    base: ColumnCheck,
+    entity_name: str,
+    fk_graph: FKGraph,
+    entities_by_name: dict[str, Any],
+) -> ScopePredicate:
+    """ADR-0036 Layer 2 — expand ``field = current_tenant`` into a self-or-ancestor
+    disjunction over the declared tenant hierarchy.
+
+    ``field`` is an FK on *entity_name* pointing at a tenant kind ``K``. If ``K``
+    has a ``tenant_host.parent`` chain, the row should be visible when the
+    host-resolved tenant is ``K`` (single, at a leaf host) **or** any ancestor of
+    ``K`` (aggregate, at an ancestor host). This yields::
+
+        field = current_tenant                       -- host kind == K (single)
+        OR field.<K.parent>          = current_tenant -- host kind == K's parent
+        OR field.<K.parent>.<...>    = current_tenant -- deeper ancestors
+
+    Each ancestor leg is a :class:`PathCheck` that walks ``K``'s ``parent:`` FK
+    chain appended to the authored ``field``. The deny cases (host is a descendant
+    of ``K``, or unrelated) fall out: no leg's value matches, so the row is
+    excluded — fail-closed, no new authority path.
+
+    **Fail-closed:** any resolution uncertainty (field is not an FK, target is not
+    a hierarchical tenant kind, a broken/cyclic chain, missing entity) returns the
+    unexpanded ``base`` single check — never a broader predicate.
+    """
+    target = fk_graph.resolve_target(entity_name, field)
+    if not target:
+        return base  # `field` is not an FK → Layer-1 single check
+    kind = entities_by_name.get(target)
+    th = getattr(kind, "tenant_host", None) if kind is not None else None
+    if th is None or getattr(th, "parent", None) is None:
+        return base  # target is not a hierarchical tenant kind → Layer-1
+
+    legs: list[ScopePredicate] = [base]
+    path: list[str] = [field]
+    seen: set[str] = {entity_name, target}
+    cur: Any = kind
+    depth = 0
+    while True:
+        cur_th = getattr(cur, "tenant_host", None)
+        parent_fk = getattr(cur_th, "parent", None) if cur_th is not None else None
+        if parent_fk is None:
+            break  # reached the hierarchy root
+        depth += 1
+        if depth > _MAX_TENANT_HIERARCHY_DEPTH:
+            return base  # runaway / cycle → fail-closed
+        path = [*path, str(parent_fk)]
+        legs.append(PathCheck(path=list(path), op=CompOp.EQ, value=ValueRef(current_tenant=True)))
+        nxt = fk_graph.resolve_target(cur.name, str(parent_fk))
+        if not nxt or nxt in seen:
+            return base  # broken or cyclic parent chain → fail-closed
+        seen.add(nxt)
+        nxt_kind = entities_by_name.get(nxt)
+        if nxt_kind is None:
+            return base  # parent kind missing from the spec → fail-closed
+        cur = nxt_kind
+
+    if len(legs) == 1:
+        return base  # no ancestor legs added → single check
+    return BoolComposite.make(BoolOp.OR, legs)
 
 
 # ---------------------------------------------------------------------------

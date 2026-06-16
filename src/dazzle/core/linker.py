@@ -840,6 +840,14 @@ def _compile_scope_predicates(
     """
     from dazzle.core.ir.domain import PermissionKind
 
+    # ADR-0036 Layer 2: the current_tenant hierarchy expansion (aggregate-vs-single)
+    # applies to READ/LIST scopes only — writes (CREATE/UPDATE/DELETE) keep the
+    # single leaf check, so an aggregate (ancestor) host is read-only (the single
+    # check matches no rows there). Passing entities_by_name opts a scope into the
+    # expansion; omitting it preserves the Layer-1 single check.
+    _read_ops = {PermissionKind.READ, PermissionKind.LIST}
+    _entities_by_name = {e.name: e for e in entities}
+
     result: list[ir.EntitySpec] = []
     for entity in entities:
         if entity.access is None or not entity.access.scopes:
@@ -848,7 +856,10 @@ def _compile_scope_predicates(
 
         compiled_scopes: list[ir.ScopeRule] = []
         for rule in entity.access.scopes:
-            predicate = build_scope_predicate(rule.condition, entity.name, fk_graph)  # type: ignore[operator]
+            _eb = _entities_by_name if rule.operation in _read_ops else None
+            predicate = build_scope_predicate(  # type: ignore[operator]
+                rule.condition, entity.name, fk_graph, entities_by_name=_eb
+            )
             # #1311 (ADR-0028): FK-path / EXISTS create-scope predicates are
             # resolved at runtime via a payload-time SQL probe; only enforce
             # the bounded FK-path depth cap at link time so a pathologically

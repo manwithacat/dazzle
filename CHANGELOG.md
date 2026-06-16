@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.89] - 2026-06-16
+
+### Added
+- **Hierarchy-aware `current_tenant` scope compilation (ADR-0036 Phase 4, #1394 Layer 2).** A READ/LIST scope `field = current_tenant`, where `field` is an FK to a tenant kind with a declared `parent:` chain, now compiles to a **self-or-ancestor disjunction** so one scope auto-selects aggregate-vs-single by host kind — `field = current_tenant OR field.<parent> = current_tenant OR …` up the chain. At a leaf-kind host it narrows to that tenant (single); at an ancestor-kind host it aggregates across descendants; at any unrelated/unset/empty host it denies (every leg `NULLIF`-wrapped → fail-closed). The expansion is **READ/LIST-only** — CREATE/UPDATE/DELETE keep the single leaf check, so an aggregate (ancestor) host is **read-only** (ADR-0036 write rule) without extra machinery. Built at link time in `build_scope_predicate` (`_expand_current_tenant_hierarchy`), gated by the linker per operation; **fail-closed on every uncertainty** (non-FK field, non-hierarchical target, broken/cyclic chain → the narrower single check, never broader). Only for `=` (a `!=` disjunction would leak). Verified by 5 unit tests + a real-Postgres isolation oracle (`test_current_tenant_hierarchy_aggregate_vs_single`: single-at-leaf, aggregate-at-ancestor with no cross-trust bleed, deny + fail-closed, read-only-at-aggregate writes) and an **adversarial security review** (no cross-tenant leak found across over-match / fail-open / write-path / compound / cycle / fail-closed categories).
+
+  ### Agent Guidance
+  - In a declared tenant hierarchy (`tenant_host: parent:`), author ONE `field = current_tenant` READ scope on the data entity (FK to the leaf tenant kind). The framework auto-aggregates at ancestor hosts and narrows at leaf hosts — do not hand-branch per host. Writes stay single (aggregate hosts are read-only).
+  - **Adversarial-review follow-ups (deferred, currently safe):** (1) the ancestor-leg root FK is emitted unqualified by the shared `_compile_path_check` — qualify it to the source table to pre-empt a future same-named-join-column ambiguity; (2) `current_tenant` under `NOT(...)` is a pre-existing author footgun (not a leak; expansion only narrows) — consider a validator rejection.
+
 ## [0.82.88] - 2026-06-16
 
 ### Added
