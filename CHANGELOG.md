@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.83] - 2026-06-16
+
+### Docs
+- **ADR-0037 (Proposed) — Declarative Membership Relation.** Drafts #1393 Phase C, sibling to ADR-0036. The framework already owns membership as a first-class runtime model (Plan 1a–1d); Phase C adds a **declared binding**, not a new table: a `membership:` block on the tenant-root kind (identity entity + per-tenant role source) makes the previously-inferred tenant-root match explicit and link-validated, with the root-kind row being the `dazzle.tenant_id` tenant root. **Descendant-host reachability is derived from one root membership** via ADR-0036's `parent:` edges (no per-leaf rows) — answering ADR-0036's open membership×hierarchy question. Validated invariant: membership root == RLS partition root == hierarchy root. Status **Proposed**; Phases B/D out of scope; three open questions gate Accepted. No code change.
+
 ## [0.82.82] - 2026-06-16
 
 ### Docs
