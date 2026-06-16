@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.91] - 2026-06-16
+
+### Changed
+- **Tenancy authoring pattern (capstone, ADR-0036 + ADR-0037).** With the tenant-hierarchy + membership model fully implemented (v0.82.86–.90), this consolidates the end-to-end authoring pattern that the per-phase entries introduced piecemeal. No code change — guidance only.
+
+  ### Agent Guidance
+  **Authoring a hierarchical multi-tenant app — the full pattern:**
+
+  1. **Declare each tenant level as an entity with `tenant_host:`**, and link the hierarchy with `parent:` (the `ref` FK field to the parent kind). The root has no `parent:`. Entities sharing a domain need distinct `order:`.
+     ```dsl
+     entity Trust "Trust":              # root tenant kind (RLS partition + hierarchy root)
+       id: uuid pk
+       slug: slug required
+       tenant_host: { domain: app.example, slug_field: slug, order: 1 }
+       membership:
+         roles: role                    # 2. membership ONLY on the root kind
+     entity School "School":            # child kind
+       id: uuid pk
+       slug: slug required
+       trust: ref Trust required
+       tenant_host: { domain: app.example, slug_field: slug, parent: trust, order: 2 }
+     ```
+  2. **Declare `membership:` on the root kind only** (the entity that is the RLS partition root *and* the hierarchy root). The root-kind row's id IS the `dazzle.tenant_id` discriminator. Grant each identity ONE membership at the root — descendant-host reachability is derived; do **not** create per-leaf memberships.
+  3. **Scope data entities with `<fk> = current_tenant` on the READ rule** (where `<fk>` is the FK to the leaf tenant kind). The framework auto-expands it to a self-or-ancestor disjunction: a **leaf-kind host** sees that one tenant (single), an **ancestor-kind host** sees all descendants (aggregate). Author ONE scope — never hand-branch per host. Keep `current_tenant` on `=` (not `!=`/`not(...)`).
+  4. **Writes stay single:** CREATE/UPDATE/DELETE scopes keep the single leaf check, so an aggregate (ancestor) host is **read-only** — a write requires descending to a host of the row's own kind.
+  5. **Runtime composition (automatic):** a root member logging in on a descendant host activates the root membership → the RLS fence (`dazzle.tenant_id`) binds the whole tenant, while the resolved host drives `current_tenant` → the view narrows to that sub-tree. RLS is the hard isolation boundary; `current_tenant` is the view selector; the hierarchy never aggregates across the RLS fence.
+  6. **`dazzle validate` enforces:** `parent:` is a `ref` to a `tenant_host` kind, no cycles, `membership:` only on the hierarchy root. Everything is fail-closed (no host / unset / empty GUC / unrelated tenant → deny).
+  - **Single-tenant / flat apps:** declare neither `parent:` nor a hierarchy — `field = current_tenant` stays the Layer-1 exact-match, unchanged.
+
 ## [0.82.90] - 2026-06-16
 
 ### Added
