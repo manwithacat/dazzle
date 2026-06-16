@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.81] - 2026-06-16
+
+### Docs
+- **ADR-0036 (Proposed) — Tenant Hierarchy Data Model.** Drafts the design for #1394 Layer 2 (hierarchy-aware `current_tenant` aggregate-vs-single) + its #1393 Phase C sibling. Key decisions: the hierarchy lives on the domain `tenant_host` entities as a declared `parent:` FK edge (FK-graph-validated), **not** on the `public.tenants` schema registry; aggregate-vs-single is compiled from the resolved host `kind` vs the source entity's kind (direct / FK-path / deny); and the load-bearing reconciliation — the hierarchy lives strictly within one RLS isolation boundary (the `tenant_id` partition sits at/above the hierarchy root; `current_tenant` never aggregates across RLS tenants). Status **Proposed**; three open questions gate Accepted. No code change.
+
 ## [0.82.80] - 2026-06-16
 
 ### Added
