@@ -2952,6 +2952,7 @@ ir_class: TenantHostSpec
     - history_entity: str | None = None
     - not_found_template: str | None = None
     - order: int | None = None
+    - parent: str | None = None
     - super_admin_role: str = 'super_admin'
 
 ir_class: TenantIsolationSpec

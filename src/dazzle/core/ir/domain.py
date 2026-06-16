@@ -353,6 +353,14 @@ class TenantHostSpec(BaseModel):
     not_found_template: str | None = None
     expired_template: str | None = None
     order: int | None = None
+    # ADR-0036 (#1394 Layer 2): tenant-hierarchy parent edge. Names a `ref` field
+    # on THIS entity whose target is another `tenant_host` entity (the parent
+    # kind). The linker derives the kind partial-order from these edges; the
+    # `current_tenant` compiler uses it to select aggregate-vs-single (a parent
+    # host aggregates over descendants via the FK path; a leaf host is single).
+    # `None` = a root / flat tenant kind. Validated against the FK graph + the
+    # RLS partition root at link time (ADR-0036 D2/D4).
+    parent: str | None = None
 
 
 class EntitySpec(BaseModel):

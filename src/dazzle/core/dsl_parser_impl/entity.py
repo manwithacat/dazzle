@@ -921,6 +921,7 @@ class EntityParserMixin:
             "not_found_template",
             "expired_template",
             "order",
+            "parent",  # ADR-0036 (#1394 L2): tenant-hierarchy parent FK field
         }
     )
 

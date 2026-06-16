@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.86] - 2026-06-16
+
+### Added
+- **Tenant-hierarchy `parent:` on `tenant_host:` — IR + parser (ADR-0036 Phase 1, #1394 Layer 2).** A `tenant_host:` block may now declare `parent: <fk_field>`, naming a `ref` field on the same entity whose target is another tenant-kind entity (the parent kind). Parsed into the new `TenantHostSpec.parent: str | None` (`None` = a root/flat tenant kind). Staged IR-first per the established pattern: this phase is **parse-only and inert** — link-time validation (parent is a `ref` to a `tenant_host` entity, no cycles, RLS-root alignment) and the runtime aggregate-vs-single `current_tenant` compilation land in later phases. `ir-types` API-surface baseline regenerated.
+
 ## [0.82.85] - 2026-06-16
 
 ### Docs
