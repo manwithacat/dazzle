@@ -18,6 +18,7 @@ entity Region "Region":
   tenant_host:
     domain: hierarchy.example
     slug_field: slug
+    canonical_hosts: [localhost]   # apex / dev / health-check host → no tenant bound
     order: 1
   membership:
     roles: role            # ADR-0037: membership ONLY on the root kind
@@ -31,6 +32,7 @@ entity Trust "Trust":
   tenant_host:
     domain: hierarchy.example
     slug_field: slug
+    canonical_hosts: [localhost]   # must match across all kinds on this domain
     parent: region         # hierarchy edge → Region
     order: 2
 
@@ -43,6 +45,7 @@ entity School "School":
   tenant_host:
     domain: hierarchy.example
     slug_field: slug
+    canonical_hosts: [localhost]   # must match across all kinds on this domain
     parent: trust          # hierarchy edge → Trust
     order: 3
 
@@ -54,11 +57,16 @@ entity Report "Report":
   title: str(200) required
   school: ref School required
   permit:
+    list: role(staff)
     read: role(staff)
     update: role(staff)
   scope:
-    # ADR-0036: on READ the framework expands this to the self-or-ancestor
+    # ADR-0036: on LIST/READ the framework expands this to the self-or-ancestor
     # disjunction — single at a School host, aggregate at a Trust/Region host.
+    # Both list AND read must be declared: the runtime resolves row scope per
+    # operation, so a list endpoint with only a `read:` rule default-denies.
+    list: school = current_tenant
+      as: staff
     read: school = current_tenant
       as: staff
     # Writes stay single (aggregate hosts are read-only) — unexpanded leaf check.

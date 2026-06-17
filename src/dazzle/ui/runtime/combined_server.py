@@ -315,7 +315,20 @@ def run_unified_server(
         bundled_css=bundled_css,
     )
 
-    from dazzle.back.runtime.app_factory import _invoke_project_post_build_hook
+    # Mount the tenant-resolution middleware on the single-worker in-process
+    # path too. Previously only the multi-worker `create_app_factory` path
+    # mounted it, so `dazzle serve` (default single-worker) silently skipped
+    # subdomain→`current_tenant` host resolution — tenant_host apps worked
+    # under `--workers N` / production but not in dev. Mirrors the factory's
+    # post-build sequence (app_factory.py: _stash + _mount).
+    from dazzle.back.runtime.app_factory import (
+        _invoke_project_post_build_hook,
+        _mount_tenant_resolution_middleware,
+        _stash_tenant_state_marker,
+    )
+
+    _stash_tenant_state_marker(app, appspec)
+    _mount_tenant_resolution_middleware(app, appspec, builder)
 
     _invoke_project_post_build_hook(app)
 

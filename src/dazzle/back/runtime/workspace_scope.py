@@ -35,16 +35,15 @@ def _apply_workspace_scope_filters(
         # The permit gate already controls entity-level access.
         return filters, False
 
+    from dazzle.back.runtime.auth.models import effective_roles_of
     from dazzle.back.runtime.route_generator import _normalize_role
     from dazzle.back.runtime.scope_filters import _resolve_scope_filters
 
-    # Collect normalized user roles
-    scope_user_roles: set[str] = set()
-    user_obj = getattr(auth_context, "user", None)
-    if user_obj:
-        for r in getattr(user_obj, "roles", []):
-            rname = r if isinstance(r, str) else getattr(r, "name", str(r))
-            scope_user_roles.add(_normalize_role(rname))
+    # Collect normalized user roles. auth Plan 1b: source from effective_roles
+    # (the active membership's roles when present, else legacy user.roles) so
+    # membership-scoped sessions match scope rules — the global user.roles is
+    # empty under the per-org membership model.
+    scope_user_roles: set[str] = {_normalize_role(r) for r in effective_roles_of(auth_context)}
 
     scope_result = _resolve_scope_filters(
         cedar_access_spec,

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.95] - 2026-06-17
+
+### Fixed
+- **`dazzle serve` (single-worker) now mounts `TenantResolutionMiddleware`.** The default in-process serve path (`run_unified_server` in `combined_server.py`) assembled page routes but never mounted the tenant-host resolution middleware — only the multi-worker `create_app_factory` path did. So subdomain→`current_tenant` host resolution silently did nothing under `dazzle serve` in dev (a `tenant_host:` app worked under `--workers N`/production but not single-worker). Now mirrors the factory's post-build sequence (`_stash_tenant_state_marker` + `_mount_tenant_resolution_middleware`). Surfaced by the new HTTP harness: a bogus subdomain returned 200 instead of 404.
+- **auth Plan 1b — LIST-scope row-RBAC now sources roles from the active membership.** Three list-scope sites (`handlers/list_handlers.py` API-CRUD list, `workspace_scope.py` region list, `workspace_route_builder.py` context-selector) still read the legacy global `user.roles` when matching `scope:` rule personas, while the read-detail (`_scoped_pre_read`), write, and create paths had already migrated to `effective_roles_of`. Under the per-org membership model `user.roles` is empty (roles live on the membership), so **every membership-scoped session default-denied on list/region endpoints** — `current_tenant` (and any membership-role-gated scope) returned 0 rows through HTTP even when the host resolved correctly. All five enforcement points now draw from `effective_roles_of` (membership-first, legacy `user.roles` fallback when no active membership — so non-membership apps are unaffected). Verified end-to-end: a single root-Region member now sees **single** at a School host and **aggregate** at a Trust/Region host via real HTTP.
+
+### Changed
+- **`scripts/verify_tenant_hierarchy_http.py` now asserts the full aggregate-vs-single property** (single at each School host, aggregate at each Trust/Region host, cross-trust no-bleed, fail-closed at the apex, middleware engaged via bogus-slug→404) instead of treating per-host selection as informational. This is the real functional harness that exercises the subdomain→`current_tenant` binding through `TenantResolutionMiddleware` end-to-end — the prior PG integration test set the host GUC manually and so never covered the live middleware→contextvar→scope-resolution→query chain (which is exactly where the two bugs above lived).
+- **`fixtures/tenant_hierarchy`: `Report` now declares a `list:` scope (+ `list:` permit) and all tenant kinds declare `canonical_hosts: [localhost]`.** The runtime resolves row scope per operation; an entity with only a `read:` rule default-denies its list endpoint. `canonical_hosts` must be identical across all kinds sharing a domain (validator Rule 6) and lets `localhost`/health/apex resolve as the no-tenant host.
+
+  ### Agent Guidance
+  - **Declare BOTH `list:` and `read:` scope rules** (and matching permits) on a tenant-scoped entity. Row scope is resolved per operation — a list endpoint with only `read:` scope returns an empty result (default-deny), not all rows. The hierarchy/`current_tenant` expansion applies to both LIST and READ.
+  - Row-RBAC role matching is **membership-first**: roles come from the session's active membership (`effective_roles_of`), not the global `user.roles`. When verifying a membership-scoped app, the staff/role must be on the `create_membership(roles=[...])`, not the user.
+  - `dazzle serve` single-worker now resolves `tenant_host:` subdomains like production. A non-canonical Host that isn't a subdomain of the declared domain returns **400 Bad Host**; declare dev/health hosts in `canonical_hosts:`.
+
 ## [0.82.94] - 2026-06-17
 
 ### Added
