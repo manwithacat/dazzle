@@ -86,7 +86,7 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
             f'<button class="dz-pagination-page{current_cls}"{current_attr} '  # nosemgrep
             f'hx-get="{endpoint_attr}?{url_q}" '
             f'hx-target="#{table_id}-body" '
-            f'hx-swap="morph:innerHTML" '
+            f'hx-swap="innerMorph" '
             f'hx-headers=\'{{"Accept": "text/html"}}\' '
             f'hx-indicator="#{table_id}-loading">{p}</button>'
         )

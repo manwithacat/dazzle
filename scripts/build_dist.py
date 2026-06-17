@@ -75,13 +75,6 @@ CSS_UNLAYERED: list[Path] = [
 JS_SOURCES = [
     # HTMX core + extensions (vendored). Order: core first, then extensions.
     STATIC / "vendor" / "htmx.min.js",
-    STATIC / "vendor" / "htmx-ext-json-enc.js",
-    STATIC / "vendor" / "idiomorph-ext.min.js",
-    STATIC / "vendor" / "htmx-ext-preload.js",
-    STATIC / "vendor" / "htmx-ext-response-targets.js",
-    STATIC / "vendor" / "htmx-ext-loading-states.js",
-    STATIC / "vendor" / "htmx-ext-sse.js",
-    STATIC / "vendor" / "htmx-ext-remove-me.js",
     # Alpine plugins + Alpine core (order matters: plugins before core).
     # SortableJS + alpine-sort were removed in #948 cycle 1 — pointer-event
     # drag in dashboard-builder.js replaced them. workspace-editor.js was

@@ -26,6 +26,17 @@
 (function () {
   "use strict";
 
+  // htmx 4 migration: attribute inheritance is explicit-by-default in htmx 4.
+  // Dazzle's emitted markup relies on htmx 2's implicit inheritance (e.g.
+  // inherited hx-target/hx-headers on ancestor containers). Restore the htmx 2
+  // behaviour here while a markup audit converts to explicit `:inherited`.
+  // Set synchronously at bundle-eval time — runs before htmx's DOMContentLoaded
+  // init since the bundle is deferred. (ADR htmx4 migration; revisit in the
+  // inheritance-audit follow-up.)
+  if (window.htmx && window.htmx.config) {
+    window.htmx.config.implicitInheritance = true;
+  }
+
   var COOKIE_NAME = "dazzle_csrf";
   var HEADER_NAME = "X-CSRF-Token";
   var UNSAFE = { POST: 1, PUT: 1, DELETE: 1, PATCH: 1 };
@@ -56,7 +67,9 @@
       return;
     }
 
-    var method = String((detail.ctx && detail.ctx.request && detail.ctx.request.method) || "get").toUpperCase();
+    var method = String(
+      (detail.ctx && detail.ctx.request && detail.ctx.request.method) || "get",
+    ).toUpperCase();
     if (UNSAFE[method] && !warned) {
       // Loud once-per-page: a mutating request is going out with no CSRF
       // cookie to echo, so the middleware will 403 it. Surfaces the #1337
