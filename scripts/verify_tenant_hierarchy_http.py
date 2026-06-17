@@ -43,9 +43,7 @@ def main() -> int:
     # 1. Fresh scratch DB. DB name is uuid-derived (not user input) — same
     #    nosemgrep posture as the other PG integration tests' scratch-DB DDL.
     with psycopg.connect(ADMIN_URL, autocommit=True) as a:
-        a.execute(
-            f'CREATE DATABASE "{DB}"'
-        )  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+        a.execute(f'CREATE DATABASE "{DB}"')  # nosemgrep
     server: subprocess.Popen | None = None
     failures: list[str] = []
     try:
@@ -76,7 +74,15 @@ def main() -> int:
         )
         for _ in range(60):
             try:
-                if httpx.get(f"{BASE}/health", timeout=2).status_code == 200:
+                # Host: localhost is declared canonical in the fixture, so the
+                # now-mounted TenantResolutionMiddleware passes it through (the
+                # connection target 127.0.0.1 isn't parseable as a canonical host).
+                if (
+                    httpx.get(
+                        f"{BASE}/health", headers={"Host": "localhost"}, timeout=2
+                    ).status_code
+                    == 200
+                ):
                     break
             except Exception:
                 pass
@@ -153,71 +159,95 @@ def main() -> int:
             sc, body = http_get(path, host, authed)
             return sc, sorted(t for t in TITLES if t in body)
 
-        # 5a0. Does the Host header reach the tenant middleware? A bogus slug
-        #      under the domain should 404 (resolver miss) if the header is seen.
+        # 5a0. Does the Host header reach the now-mounted tenant middleware? A bogus
+        #      slug under the domain must 404 (resolver miss = the header is seen).
         sc_bogus, _ = http_get("/reports", "nope.hierarchy.example")
         sc_real, _ = http_get("/reports", "schoola1.hierarchy.example")
         print(
             f"\n[diag] Host-header reaches middleware? bogus-slug -> HTTP {sc_bogus} "
             f"(404 = header seen, resolver miss) | real-slug -> HTTP {sc_real}"
         )
+        if sc_bogus != 404:
+            failures.append(
+                f"TenantResolutionMiddleware not engaged: bogus slug -> HTTP {sc_bogus} (want 404)"
+            )
 
         # 5a. Does the bootstrapped session actually AUTHENTICATE?
         sc_a, body_a = http_get("/auth/me", "schoola1.hierarchy.example", authed=True)
         sc_x, _ = http_get("/auth/me", "schoola1.hierarchy.example", authed=False)
         print(f"[diag] /auth/me authed -> HTTP {sc_a} {body_a[:80]!r} | anon -> HTTP {sc_x}")
 
-        # 5b. Surface localization (host=schoola1).
-        print("\n[diag] surface localization (host=schoola1.hierarchy.example):")
-        for path in ("/reports", "/api/workspaces/ops/regions/reports"):
-            a_sc, a_n = reports_at(path, "schoola1.hierarchy.example", True)
-            x_sc, x_n = reports_at(path, "schoola1.hierarchy.example", False)
-            print(
-                f"  {path:42} authed -> HTTP {a_sc} {len(a_n)} reports | anon -> HTTP {x_sc} {len(x_n)}"
-            )
+        # DIAG: what routes exist + what does the leaf host actually render?
+        import json as _json
 
-        # 6. Assert what the HTTP surface proves about the change:
-        #    (A) auth enforced  (B) RBAC scope APPLIED + fail-closed (not unscoped).
+        oc_sc, oc_body = http_get("/openapi.json", "localhost")
+        try:
+            paths = list(_json.loads(oc_body).get("paths", {}).keys())
+            rpaths = [p for p in paths if "report" in p.lower()]
+            print(f"[diag] report-ish API paths: {rpaths}")
+        except Exception as exc:
+            print(f"[diag] openapi parse failed ({oc_sc}): {exc}")
+        sc_leaf, leaf_body = http_get("/reports", "schoola1.hierarchy.example", authed=True)
+        print(
+            f"[diag] schoola1 /reports HTTP {sc_leaf} len={len(leaf_body)} "
+            f"hasRPTA1a={'RPTA1a' in leaf_body} snippet={leaf_body[:200]!r}"
+        )
+
+        # 6. Auth + fail-closed baseline.
         anon_sc, _ = http_get("/reports", "schoola1.hierarchy.example", authed=False)
         if anon_sc != 401:
             failures.append(f"auth not enforced: anon /reports -> HTTP {anon_sc} (want 401)")
         if sc_a != 200 or "staff@hierarchy.test" not in body_a:
             failures.append("bootstrapped staff session did not authenticate via /auth/me")
         apex_sc, apex_n = reports_at("/reports", "localhost", authed=True)
-        if apex_n:  # scope must fail-closed when no tenant is bound (NOT unscoped all-4)
+        if apex_n:  # no tenant bound at the apex → current_tenant unbound → fail-closed
             failures.append(f"scope not fail-closed: apex returned {apex_n} (want [])")
 
-        print("\n[result] HTTP-surface assertions:")
+        # 7. THE PROPERTY: per-host current_tenant selects single (leaf) vs aggregate
+        #    (ancestor). One root-Region member, driven at different host subdomains.
+        #    SA1={RPTA1a,RPTA1b} SA2={RPTA2a} (Trust A); SB1={RPTB1a} (Trust B).
+        expected = {
+            "schoola1.hierarchy.example": ["RPTA1a", "RPTA1b"],  # single leaf
+            "schoola2.hierarchy.example": ["RPTA2a"],  # single leaf
+            "trusta.hierarchy.example": ["RPTA1a", "RPTA1b", "RPTA2a"],  # aggregate
+            "trustb.hierarchy.example": ["RPTB1a"],  # aggregate (1 school)
+            "region1.hierarchy.example": ["RPTA1a", "RPTA1b", "RPTA2a", "RPTB1a"],  # aggregate root
+        }
+        print("\n[result] per-host current_tenant selection (one root-Region member):")
+        for host, want in expected.items():
+            sc, found = reports_at("/reports", host, authed=True)
+            ok = sc == 200 and found == sorted(want)
+            kind = "single " if host.startswith(("schoola", "schoolb")) else "aggreg."
+            print(f"  [{'OK ' if ok else 'FAIL'}] {kind} host={host:30} -> HTTP {sc} {found}")
+            if not ok:
+                failures.append(f"host {host}: HTTP {sc} got {found} want {sorted(want)}")
+
+        # 7a. Cross-trust no-bleed (explicit): Trust A host must NOT surface Trust B's report.
+        _, ta_found = reports_at("/reports", "trusta.hierarchy.example", authed=True)
+        if "RPTB1a" in ta_found:
+            failures.append(f"cross-trust bleed: Trust A host saw Trust B report {ta_found}")
+        else:
+            print("  [OK ] cross-trust no-bleed: Trust A host excludes Trust B's RPTB1a")
+
+        print("\n[result] HTTP-surface baseline:")
         print(f"  [{'OK ' if anon_sc == 401 else 'FAIL'}] anon /reports denied (HTTP {anon_sc})")
         print(
             f"  [{'OK ' if sc_a == 200 else 'FAIL'}] minted non-superuser staff session authenticates (/auth/me {sc_a})"
         )
         print(
-            f"  [{'OK ' if not apex_n else 'FAIL'}] RBAC scope applied + fail-closed (apex -> {len(apex_n)} rows)"
+            f"  [{'OK ' if not apex_n else 'FAIL'}] fail-closed at apex (apex -> {len(apex_n)} rows)"
         )
-
-        # 7. Per-host current_tenant selection — INFORMATIONAL. Binding the resolved
-        #    host to current_tenant requires TenantResolutionMiddleware, which is NOT
-        #    mounted under this localhost `dazzle serve` (a bogus subdomain doesn't
-        #    404 → the host-tenant resolver never runs), so current_tenant stays
-        #    unbound and every host fail-closes. The aggregate-vs-single SELECTION is
-        #    proven against real Postgres in tests/integration/test_current_tenant_scope_pg.py.
-        print("\n[info] per-host current_tenant selection (needs the host-routing middleware,")
-        print("       not active under localhost serve — proven via the PG isolation oracle):")
-        for host in (
-            "schoola1.hierarchy.example",
-            "trusta.hierarchy.example",
-            "region1.hierarchy.example",
-        ):
-            sc, found = reports_at("/reports", host, authed=True)
-            print(f"  host={host:30} -> HTTP {sc} {len(found)} {found}")
+        print(
+            f"  [{'OK ' if sc_bogus == 404 else 'FAIL'}] tenant middleware engaged (bogus slug -> {sc_bogus})"
+        )
 
         if failures:
             print("\nRESULT: FAIL\n  - " + "\n  - ".join(failures))
             return 1
-        print("\nRESULT: PASS — through real HTTP: auth enforced, the minted non-superuser")
-        print("session authenticates, and the current_tenant RBAC scope is applied + fail-closed.")
-        print("(Aggregate-vs-single host selection is proven against real Postgres by the oracle.)")
+        print("\nRESULT: PASS — through real HTTP, a single root-Region member sees")
+        print("SINGLE at a School host and AGGREGATE at a Trust/Region host, with no")
+        print("cross-trust bleed and fail-closed at the apex. The subdomain→current_tenant")
+        print("binding is exercised end-to-end by TenantResolutionMiddleware.")
         return 0
     finally:
         if server is not None:
@@ -232,9 +262,7 @@ def main() -> int:
                 "WHERE datname = %s AND pid <> pg_backend_pid()",
                 (DB,),
             )
-            a.execute(
-                f'DROP DATABASE IF EXISTS "{DB}"'
-            )  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            a.execute(f'DROP DATABASE IF EXISTS "{DB}"')  # nosemgrep
 
 
 if __name__ == "__main__":

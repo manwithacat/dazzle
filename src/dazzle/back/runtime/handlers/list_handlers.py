@@ -331,14 +331,15 @@ async def _list_handler_body(
     # When scopes list is non-empty, use _resolve_scope_filters which delegates
     # to the predicate compiler when predicates are available.
     if cedar_access_spec and is_authenticated and user_id:
-        # Collect normalized user roles for scope matching
-        _scope_user_roles: set[str] = set()
-        if auth_context is not None:
-            _scope_user_obj = getattr(auth_context, "user", None)
-            if _scope_user_obj:
-                for _r in getattr(_scope_user_obj, "roles", []):
-                    _rname = _r if isinstance(_r, str) else getattr(_r, "name", str(_r))
-                    _scope_user_roles.add(_normalize_role(_rname))
+        # Collect normalized user roles for scope matching. auth Plan 1b:
+        # source from effective_roles (active membership's roles when present,
+        # else legacy user.roles) so membership-scoped sessions match scope
+        # rules — the global user.roles is empty under the per-org model.
+        from dazzle.back.runtime.auth.models import effective_roles_of
+
+        _scope_user_roles: set[str] = {
+            _normalize_role(_r) for _r in effective_roles_of(auth_context)
+        }
 
         _has_scopes = bool(getattr(cedar_access_spec, "scopes", None))
         if _has_scopes:

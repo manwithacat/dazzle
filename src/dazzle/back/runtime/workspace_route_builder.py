@@ -466,6 +466,9 @@ class WorkspaceRouteBuilder:
                                         getattr(auth_ctx, "user_id", None) if auth_ctx else None
                                     )
                                     if user_id and auth_ctx:
+                                        from dazzle.back.runtime.auth.models import (
+                                            effective_roles_of,
+                                        )
                                         from dazzle.back.runtime.route_generator import (
                                             _normalize_role,
                                         )
@@ -473,16 +476,11 @@ class WorkspaceRouteBuilder:
                                             _resolve_scope_filters,
                                         )
 
-                                        user_roles: set[str] = set()
-                                        user_obj = getattr(auth_ctx, "user", None)
-                                        if user_obj:
-                                            for r in getattr(user_obj, "roles", []):
-                                                rname = (
-                                                    r
-                                                    if isinstance(r, str)
-                                                    else getattr(r, "name", str(r))
-                                                )
-                                                user_roles.add(_normalize_role(rname))
+                                        # auth Plan 1b: membership-aware role source
+                                        # (empty global user.roles under the per-org model).
+                                        user_roles: set[str] = {
+                                            _normalize_role(r) for r in effective_roles_of(auth_ctx)
+                                        }
                                         scope_result = _resolve_scope_filters(
                                             sel_access,
                                             "list",
