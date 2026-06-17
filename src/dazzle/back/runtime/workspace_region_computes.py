@@ -1346,7 +1346,7 @@ def compute_columns_for_persona(
     if not any(c.get("visible_condition") for c in precomputed_columns):
         return precomputed_columns
 
-    from dazzle.ui.utils.condition_eval import evaluate_condition as _eval_vis
+    from dazzle.core.condition_eval import evaluate_condition as _eval_vis
 
     role_ctx = {"user_roles": [r.removeprefix("role_") for r in user_roles]}
     return [

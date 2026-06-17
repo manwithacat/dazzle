@@ -13,7 +13,7 @@ filter generation helpers that are only needed in the backend.
 
 from typing import Any
 
-from dazzle.ui.utils.condition_eval import (
+from dazzle.core.condition_eval import (
     _resolve_value,  # noqa: PLC2701
     evaluate_condition,
 )

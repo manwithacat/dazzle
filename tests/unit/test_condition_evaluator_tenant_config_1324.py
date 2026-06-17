@@ -8,7 +8,7 @@ value from ``context["tenant_config"]`` at evaluation time. A bare flag
 resolution stays unchanged.
 """
 
-from dazzle.ui.utils.condition_eval import evaluate_condition
+from dazzle.core.condition_eval import evaluate_condition
 
 
 def _tenant_flag(key: str) -> dict:

@@ -2,7 +2,7 @@
 
 Display gates like ``visible_when: current_tenant.kind == trust`` resolve the
 host-resolved tenant from the render context (see
-``dazzle.ui.utils.condition_eval``). This helper populates that context from
+``dazzle.core.condition_eval``). This helper populates that context from
 ``request.state.tenant`` (the #1289 ``tenant_host`` ``ResolvedTenant``). Shared
 by every context builder so the keys stay consistent.
 

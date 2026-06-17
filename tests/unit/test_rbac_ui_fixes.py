@@ -233,8 +233,8 @@ class TestColumnVisibleCondition:
         assert col.hidden is False
 
     def test_column_hidden_when_role_denied(self) -> None:
+        from dazzle.core.condition_eval import evaluate_condition
         from dazzle.render.context import ColumnContext
-        from dazzle.ui.utils.condition_eval import evaluate_condition
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
         col = ColumnContext(key="salary", label="Salary", visible_condition=vis)
@@ -244,8 +244,8 @@ class TestColumnVisibleCondition:
         assert col.hidden is True
 
     def test_column_visible_when_role_allowed(self) -> None:
+        from dazzle.core.condition_eval import evaluate_condition
         from dazzle.render.context import ColumnContext
-        from dazzle.ui.utils.condition_eval import evaluate_condition
 
         vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
         col = ColumnContext(key="salary", label="Salary", visible_condition=vis)
@@ -282,7 +282,7 @@ class TestColumnVisibleCondition:
 
         # Simulate what page_routes.py now does: deep-copy, then mutate copy
         req_table = shared_table.model_copy(deep=True)
-        from dazzle.ui.utils.condition_eval import evaluate_condition
+        from dazzle.core.condition_eval import evaluate_condition
 
         role_ctx = {"user_roles": ["viewer"]}
         for _col in req_table.columns:
