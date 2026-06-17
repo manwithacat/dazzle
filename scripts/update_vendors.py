@@ -152,29 +152,14 @@ def _read_head(path: Path, lines: int = 5) -> str:
     return "\n".join(text.splitlines()[:lines])
 
 
-def _detect_htmx_version() -> str | None:
-    head = _read_head(VENDOR_DIR / "htmx.min.js", lines=3)
-    # htmx embeds version as: version:"2.0.8"  or  htmx.org@v2.0.8
-    m = re.search(r'version["\s:]+["\']?v?(\d+\.\d+\.\d+)', head)
-    if m:
-        return m.group(1)
-    m = re.search(r"htmx\.org@v?(\d+\.\d+\.\d+)", head)
-    if m:
-        return m.group(1)
-    return None
+# htmx is manually pinned to a 4.x beta (shipped v0.83.0, #1405). Bump this
+# together with the vendored htmx.min.js when moving to GA (#1409).
+HTMX_PINNED_VERSION = "4.0.0-beta4"
 
 
 def _detect_lucide_version() -> str | None:
     head = _read_head(VENDOR_DIR / "lucide.min.js", lines=5)
     m = re.search(r"lucide\s+v?(\d+\.\d+\.\d+)", head)
-    if m:
-        return m.group(1)
-    return None
-
-
-def _detect_idiomorph_version() -> str | None:
-    head = _read_head(VENDOR_DIR / "idiomorph-ext.min.js", lines=5)
-    m = re.search(r"[Ii]diomorph\s+v?(\d+\.\d+\.\d+)", head)
     if m:
         return m.group(1)
     return None
@@ -191,99 +176,35 @@ def _tag_version(tag: str) -> str:
 
 
 def update_htmx(*, check_only: bool) -> None:
-    """Update htmx core and extensions.
+    """htmx is PINNED to a manually-vendored 4.x beta — auto-update is a no-op.
 
-    Pin: htmx v2.x. v4 reorganised dist/ext/ and warrants a deliberate
-    migration; the cron isn't the right place for that decision.
+    htmx 2.0.9 → 4.0.0-beta4 shipped in v0.83.0 (#1405). The cron must NOT
+    touch htmx:
+
+    - ``_latest_stable_release`` deliberately skips pre-releases, so it cannot
+      track v4 betas — and pointing it at ``v2.`` (as it used to) would
+      *downgrade* the vendored beta back to htmx 2.x on the next run.
+    - The beta → GA bump is a deliberate, browser-gated decision tracked in
+      #1409, not something the cron should make.
+    - All htmx-2 extension files were dropped in the migration (native morph /
+      ``hx-status`` / ``hx-sse`` + Dazzle bridges replace them), so there is
+      nothing to fetch — fetching the old set would resurrect deleted files
+      and trip the vendor-hash drift gate.
+
+    So this reports the pinned version and returns without downloading. When
+    bumping to GA (#1409), update both the vendored ``htmx.min.js`` and
+    ``HTMX_PINNED_VERSION`` together.
     """
-    release = _latest_stable_release("bigskysoftware", "htmx", "v2.")
-    tag = release["tag_name"]
-    latest = _tag_version(tag)
-    current = _detect_htmx_version()
-
-    label = "htmx"
-    if current == latest:
-        print(f"{label}: {latest} (up to date)")
-    else:
-        print(f"{label}: {current or 'unknown'} -> {latest}")
-
-    if check_only:
-        return
-
-    # Download htmx.min.js from release assets
-    asset_url = None
-    for asset in release.get("assets", []):
-        if asset["name"] == "htmx.min.js":
-            asset_url = asset["browser_download_url"]
-            break
-
-    if asset_url:
-        data = _download(asset_url)
-        _save_vendor("htmx.min.js", data)
-    else:
-        # Fallback: download from dist/ on the tag
-        url = GITHUB_RAW.format(
-            owner="bigskysoftware", repo="htmx", tag=tag, path="dist/htmx.min.js"
-        )
-        data = _download(url)
-        _save_vendor("htmx.min.js", data)
-
-    # #1277: htmx 2.x extensions live in a separate canonical source repo
-    # (`bigskysoftware/htmx-extensions`), at `src/<name>/<name>.js`. The old
-    # path `bigskysoftware/htmx` at `dist/ext/<name>.js` is the deprecated
-    # v1 set (preserved only for unversioned unpkg URLs) and embeds a v1-
-    # version-check guard that fires the console warning "You are using an
-    # htmx 1 extension with htmx <version>" against htmx 2.x core. The new
-    # path tracks main (the htmx-extensions repo doesn't tag releases for
-    # individual extensions; per-extension versioning happens on npm).
-    extensions = {
-        "json-enc": "htmx-ext-json-enc.js",
-        "preload": "htmx-ext-preload.js",
-        "response-targets": "htmx-ext-response-targets.js",
-        "loading-states": "htmx-ext-loading-states.js",
-        "sse": "htmx-ext-sse.js",
-    }
-    for ext_name, dest_name in extensions.items():
-        url = GITHUB_RAW.format(
-            owner="bigskysoftware",
-            repo="htmx-extensions",
-            tag="main",
-            path=f"src/{ext_name}/{ext_name}.js",
-        )
-        data = _download(url)
-        _save_vendor(dest_name, data)
-        print(f"  downloaded {dest_name} (v2 source from htmx-extensions)")
-
-
-def update_idiomorph(*, check_only: bool) -> None:
-    """Update idiomorph extension.
-
-    Pin: 0.7.x. 0.x semver treats the minor as the breaking-change
-    axis, so jumping to 0.8 should also be intentional.
-    """
-    release = _latest_stable_release("bigskysoftware", "idiomorph", "v0.7.")
-    tag = release["tag_name"]
-    latest = _tag_version(tag)
-    current = _detect_idiomorph_version()
-
-    label = "idiomorph"
-    if current == latest:
-        print(f"{label}: {latest} (up to date)")
-    else:
-        print(f"{label}: {current or 'unknown'} -> {latest}")
-
-    if check_only:
-        return
-
-    url = GITHUB_RAW.format(
-        owner="bigskysoftware",
-        repo="idiomorph",
-        tag=tag,
-        path="dist/idiomorph-ext.min.js",
+    del check_only  # no-op regardless of dry-run
+    print(
+        f"htmx: pinned to {HTMX_PINNED_VERSION} (manually vendored; "
+        "auto-update skipped, GA bump tracked in #1409)"
     )
-    data = _download(url)
-    _save_vendor("idiomorph-ext.min.js", data)
-    print("  downloaded idiomorph-ext.min.js")
+
+
+# update_idiomorph removed in the htmx 4 migration (#1405): idiomorph-ext.min.js
+# was dropped in favour of htmx 4's native innerMorph/outerMorph. The cron used
+# to re-vendor it, which would resurrect the deleted file. (GA follow-up: #1409.)
 
 
 def update_lucide(*, check_only: bool) -> None:
@@ -375,7 +296,6 @@ def main() -> None:
         print("Updating vendored dependencies...\n")
 
     update_htmx(check_only=check_only)
-    update_idiomorph(check_only=check_only)
     update_lucide(check_only=check_only)
 
     if check_only:
