@@ -154,7 +154,7 @@ def _render_related_status_cards(group: Any, detail_item: dict[str, Any]) -> str
                     detail_url = detail_url_template.replace("{id}", item_id)
                     hx_attrs = (
                         f'hx-get="{_esc(detail_url, quote=True)}" '
-                        'hx-push-url="true" hx-target="body" hx-swap="innerHTML" '
+                        'hx-push-url="true" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
                     )
                 text_lines: list[str] = []
                 for idx, col in enumerate(columns[:3]):
@@ -228,7 +228,7 @@ def _render_related_file_list(group: Any, detail_item: dict[str, Any]) -> str:
                     detail_url = detail_url_template.replace("{id}", item_id)
                     hx_attrs = (
                         f'hx-get="{_esc(detail_url, quote=True)}" '
-                        'hx-push-url="true" hx-target="body" hx-swap="innerHTML" '
+                        'hx-push-url="true" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
                     )
                 text_lines: list[str] = []
                 for idx, col in enumerate(columns[:2]):
@@ -378,7 +378,7 @@ def _render_related_table_group(group: Any, detail_item: dict[str, Any]) -> str:
                     detail_url = detail_url_template.replace("{id}", item_id)
                     hx_attrs = (
                         f' hx-get="{_esc(detail_url, quote=True)}" '
-                        'hx-push-url="true" hx-target="body" hx-swap="innerHTML"'
+                        'hx-push-url="true" hx-trigger="click" hx-target="body" hx-swap="innerHTML"'
                     )
                 cells = "".join(
                     f"<td>{_render_related_table_cell(col, item) if isinstance(item, dict) else ''}</td>"
@@ -457,7 +457,7 @@ def render_detail_view(detail: Any) -> str:
             f'data-dz-entity="{entity_name_attr}" '
             f'hx-delete="{_esc(delete_url, quote=True)}" '
             f'hx-confirm="Delete this {_esc(entity_name_lower, quote=True)}?" '
-            f'hx-target="body" hx-swap="innerHTML">Delete</button>'
+            f'hx-trigger="click" hx-target="body" hx-swap="innerHTML">Delete</button>'
         )
 
     header_html = (
@@ -493,7 +493,7 @@ def render_detail_view(detail: Any) -> str:
                 f'hx-put="{api_url_attr}" '
                 f"hx-vals='{hx_vals}' "
                 f'hx-ext="json-enc" '
-                f'hx-target="body" hx-swap="innerHTML">{label}</button>'
+                f'hx-trigger="click" hx-target="body" hx-swap="innerHTML">{label}</button>'
             )
         transitions_html = (
             f'<div class="dz-detail-toolbar" data-dazzle-transitions="{entity_name_attr}">'
@@ -538,7 +538,7 @@ def render_detail_view(detail: Any) -> str:
                 f'<button class="dz-button dz-button-outline" '  # nosemgrep
                 f'data-dazzle-action="{entity_name_attr}.integration.'
                 f'{integration_name}.{mapping_name}" '
-                f'hx-post="{api_url_attr}" hx-target="body" hx-swap="innerHTML" '
+                f'hx-post="{api_url_attr}" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
                 f'hx-confirm="Execute {_esc(label_text, quote=True)}?">{label}</button>'
             )
         integration_html = (

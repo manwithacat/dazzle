@@ -116,7 +116,7 @@ class _RenderTablesMixin:
                 url_attr = ctx.escape_attr(url)
                 body_parts.append(
                     f'<tr class="dz-table__row dz-table__row--linked" '
-                    f'hx-get="{url_attr}" hx-target="body" hx-swap="innerHTML" '
+                    f'hx-get="{url_attr}" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
                     f'hx-push-url="true" tabindex="0"{row_id_attr}>'
                     f"{cells_html}</tr>"
                 )
@@ -650,7 +650,7 @@ class _RenderTablesMixin:
                 url_attr = ctx.escape_attr(url)
                 tbody_rows.append(
                     f'<tr class="dz-list-row is-clickable" '
-                    f'hx-get="{url_attr}" hx-target="body" hx-swap="innerHTML" '
+                    f'hx-get="{url_attr}" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
                     f'hx-push-url="true" tabindex="0">{cells_html}</tr>'
                 )
             else:

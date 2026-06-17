@@ -322,9 +322,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     if detail_url_template:
         detail_url = detail_url_template.replace("{id}", item_id)
         detail_url_attr = _html_mod.escape(detail_url, quote=True)
-        detail_hx_attrs = (
-            f'hx-get="{detail_url_attr}" hx-push-url="true" hx-target="body" hx-swap="innerHTML" '
-        )
+        detail_hx_attrs = f'hx-get="{detail_url_attr}" hx-push-url="true" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
         detail_link_html = (
             f'<a href="{detail_url_attr}" '  # nosemgrep
             f'data-dazzle-action="{entity_name_attr}.view" '
