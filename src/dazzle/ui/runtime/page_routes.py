@@ -1163,7 +1163,7 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
 
     # Evaluate role-based visible conditions (#487)
     if prc.ctx.user_roles is not None:
-        from dazzle.ui.utils.condition_eval import evaluate_condition
+        from dazzle.core.condition_eval import evaluate_condition
 
         _role_ctx = {
             "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],
@@ -1337,7 +1337,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
 
     # Evaluate role-based visible_condition on list columns (#585)
     if prc.ctx.user_roles is not None:
-        from dazzle.ui.utils.condition_eval import evaluate_condition
+        from dazzle.core.condition_eval import evaluate_condition
 
         _role_ctx = {
             "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],

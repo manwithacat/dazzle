@@ -85,7 +85,7 @@ class TestCSRFContract:
         )
         assert status == 200, (
             "A POST whose X-CSRF-Token echoes the dazzle_csrf cookie must pass — "
-            "this is exactly what dz-csrf.js wires onto htmx:configRequest."
+            "this is exactly what dz-csrf.js wires onto htmx:config:request."
         )
 
     def test_post_without_header_is_rejected(self) -> None:
@@ -150,7 +150,7 @@ class TestCSRFWiringBundled:
 
     def test_source_module_wires_configrequest_echo(self) -> None:
         src = _CSRF_JS.read_text(encoding="utf-8")
-        assert "htmx:configRequest" in src
+        assert "htmx:config:request" in src
         assert "dazzle_csrf" in src
         assert "X-CSRF-Token" in src
 
@@ -169,4 +169,4 @@ class TestCSRFWiringBundled:
             "in the bundle app pages load. Rebuild with scripts/build_dist.py."
         )
         assert "X-CSRF-Token" in bundle
-        assert "htmx:configRequest" in bundle
+        assert "htmx:config:request" in bundle

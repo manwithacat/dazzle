@@ -438,7 +438,7 @@ async def action_form_submit(
         # Wait for the submit to settle. Two phases:
         # 1. Network idle — for non-HTMX full-page submits, redirects, etc.
         # 2. Short explicit wait for HTMX ajax to complete AND the swap
-        #    to run. HTMX emits ``htmx:afterSwap`` once the response is
+        #    to run. HTMX emits ``htmx:after:swap`` once the response is
         #    rendered into the target; we wait for either that or a URL
         #    change, whichever comes first. ``networkidle`` alone isn't
         #    reliable for HTMX because the ajax round-trip may complete

@@ -610,8 +610,8 @@ async def render_region_html(
     typed_primitive_html: str = ""
 
     if display_upper in _TYPED_REGION_DISPLAYS:
-        from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
         from dazzle.render.fragment import FragmentRenderer
+        from dazzle.render.fragment.region import WorkspaceRegionAdapter
 
         # Adapter wants the lowercase display value (its _BUILDERS keys).
         # `ctx_region.display` is the authoritative post-inference value

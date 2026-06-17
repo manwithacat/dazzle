@@ -9,7 +9,7 @@ the dispatcher and no need to import sibling family modules.
 
 Public-API note: `_render_status_badge_html` is re-exported by
 `region_adapter/__init__.py` so the `from
-dazzle.back.runtime.renderers.region_adapter import _render_status_badge_html`
+dazzle.render.fragment.region import _render_status_badge_html`
 call sites in `renderer.py` keep working unchanged.
 
 See issue #1065 for the full decomposition plan.

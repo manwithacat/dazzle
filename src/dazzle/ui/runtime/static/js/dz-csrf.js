@@ -11,7 +11,7 @@
  * browser — masked in CI only because the test clients (htmx_client.py,
  * rbac/verification_harness.py, test_runner.py) echo the cookie by hand (#1337).
  *
- * This listens for `htmx:configRequest` (fired on every htmx request, bubbling
+ * This listens for `htmx:config:request` (fired on every htmx request, bubbling
  * to document.body) and copies the cookie into the header. Safe methods are
  * left alone — the middleware ignores the header on GET/HEAD, so attaching it
  * there would be harmless but we skip it to keep request headers minimal and to
@@ -25,6 +25,17 @@
 
 (function () {
   "use strict";
+
+  // htmx 4 migration: attribute inheritance is explicit-by-default in htmx 4.
+  // Dazzle's emitted markup relies on htmx 2's implicit inheritance (e.g.
+  // inherited hx-target/hx-headers on ancestor containers). Restore the htmx 2
+  // behaviour here while a markup audit converts to explicit `:inherited`.
+  // Set synchronously at bundle-eval time — runs before htmx's DOMContentLoaded
+  // init since the bundle is deferred. (ADR htmx4 migration; revisit in the
+  // inheritance-audit follow-up.)
+  if (window.htmx && window.htmx.config) {
+    window.htmx.config.implicitInheritance = true;
+  }
 
   var COOKIE_NAME = "dazzle_csrf";
   var HEADER_NAME = "X-CSRF-Token";
@@ -42,7 +53,7 @@
     return "";
   }
 
-  document.body.addEventListener("htmx:configRequest", function (evt) {
+  document.body.addEventListener("htmx:config:request", function (evt) {
     var detail = /** @type {CustomEvent} */ (evt).detail;
     var token = readCookie(COOKIE_NAME);
 
@@ -52,11 +63,13 @@
     // being what we expect. Method is used ONLY to scope the missing-cookie warn
     // to writes (the requests that would actually 403).
     if (token) {
-      detail.headers[HEADER_NAME] = token;
+      detail.ctx.request.headers[HEADER_NAME] = token;
       return;
     }
 
-    var method = String(detail.verb || "get").toUpperCase();
+    var method = String(
+      (detail.ctx && detail.ctx.request && detail.ctx.request.method) || "get",
+    ).toUpperCase();
     if (UNSAFE[method] && !warned) {
       // Loud once-per-page: a mutating request is going out with no CSRF
       // cookie to echo, so the middleware will 403 it. Surfaces the #1337

@@ -17,14 +17,14 @@ import asyncio
 import logging
 from typing import Any
 
-from dazzle.back.runtime.workspace_card_bodies import (
+from dazzle.back.runtime.workspace_scope import _apply_workspace_scope_filters
+from dazzle.render.fragment.region.workspace_card_bodies import (
     _dazzle_html_escape,
     _render_mini_bars_body,
     _render_quick_actions_body,
     _render_stamps_body,
     _render_thread_summary_body,
 )
-from dazzle.back.runtime.workspace_scope import _apply_workspace_scope_filters
 
 logger = logging.getLogger(__name__)
 

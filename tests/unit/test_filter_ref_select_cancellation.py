@@ -12,7 +12,7 @@ the contains-check fired too early and the warn still logged.
 
 #973 round 2 (v0.63.21): wire an explicit `AbortController` to two
 events:
-  - `htmx:beforeSwap` (htmx is about to morph the DOM)
+  - `htmx:before:swap` (htmx is about to morph the DOM)
   - `pagehide` (full browser navigation, also covers BFCache)
 
 Both fire BEFORE the fetch is cancelled, so the rejection arrives as
@@ -93,10 +93,10 @@ def test_uses_abort_controller() -> None:
 
 
 def test_aborts_on_htmx_before_swap() -> None:
-    """The controller must abort on htmx:beforeSwap."""
+    """The controller must abort on htmx:before:swap."""
     block = _helper_block()
-    assert "htmx:beforeSwap" in block and "controller.abort" in block, (
-        "Helper must wire `controller.abort()` to `htmx:beforeSwap` so "
+    assert "htmx:before:swap" in block and "controller.abort" in block, (
+        "Helper must wire `controller.abort()` to `htmx:before:swap` so "
         "in-page htmx swaps cancel the fetch deterministically (#973 round 2)."
     )
 
@@ -116,14 +116,14 @@ def test_listeners_are_one_shot() -> None:
     """Abort listeners must be `{ once: true }` to prevent leaks."""
     block = _helper_block()
     # Both listeners attached with once: true.
-    htmx_listener_idx = block.find('addEventListener("htmx:beforeSwap"')
+    htmx_listener_idx = block.find('addEventListener("htmx:before:swap"')
     pagehide_listener_idx = block.find('addEventListener("pagehide"')
     assert htmx_listener_idx > 0 and pagehide_listener_idx > 0
     # Find `{ once: true }` near each.
     htmx_window = block[htmx_listener_idx : htmx_listener_idx + 200]
     pagehide_window = block[pagehide_listener_idx : pagehide_listener_idx + 200]
     assert "once: true" in htmx_window, (
-        "htmx:beforeSwap listener must use `{ once: true }` so it self-removes "
+        "htmx:before:swap listener must use `{ once: true }` so it self-removes "
         "after firing (#973 round 2)."
     )
     assert "once: true" in pagehide_window, (
@@ -140,8 +140,8 @@ def test_listeners_cleaned_up_in_finally() -> None:
     )
     finally_idx = block.find(".finally(")
     finally_block = block[finally_idx : finally_idx + 600]
-    assert "removeEventListener" in finally_block and "htmx:beforeSwap" in finally_block, (
-        "finally must remove the htmx:beforeSwap listener (#973 round 2)."
+    assert "removeEventListener" in finally_block and "htmx:before:swap" in finally_block, (
+        "finally must remove the htmx:before:swap listener (#973 round 2)."
     )
     assert "removeEventListener" in finally_block and "pagehide" in finally_block, (
         "finally must remove the pagehide listener (#973 round 2)."

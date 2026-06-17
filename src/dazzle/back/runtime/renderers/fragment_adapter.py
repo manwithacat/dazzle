@@ -41,6 +41,7 @@ from dazzle.render.fragment import (
     TargetSelector,
     Text,
 )
+from dazzle.render.fragment.region._row_links import _resolve_row_links
 
 
 class FragmentSurfaceAdapter:
@@ -638,34 +639,6 @@ def _pick_empty_state(ctx: dict[str, Any]) -> tuple[str, str]:
     generic_message = str(ctx.get("empty_message", "") or "").strip()
     description = typed_value or generic_message or "Items will appear here when they are added."
     return default_title, description
-
-
-def _resolve_row_links(
-    items: list[dict[str, Any]], detail_url_template: str
-) -> tuple[str | None, ...]:
-    """Issue #1029 phase 1: per-row drill-down URL resolution.
-
-    `detail_url_template` is a Python format string carrying named
-    placeholders (typically `{id}`, but DSL authors may use `{slug}`,
-    `{code}`, etc.). For each item, substitute `{key}` with `item[key]`
-    and emit the resolved URL. Items missing a required key get `None`
-    (no row link) — defensive for partial records or rows that aren't
-    really drillable (e.g., summary rows).
-
-    Empty template → empty tuple (caller short-circuits before
-    reaching here, but defensive)."""
-    if not detail_url_template:
-        return ()
-    out: list[str | None] = []
-    for item in items:
-        try:
-            out.append(detail_url_template.format(**item))
-        except (KeyError, IndexError, ValueError):
-            # Template referenced a key that's not on this row, or the
-            # template has malformed placeholders. Skip the link
-            # rather than crash the whole list render.
-            out.append(None)
-    return tuple(out)
 
 
 def _format_cell(value: Any, kind: str) -> str:

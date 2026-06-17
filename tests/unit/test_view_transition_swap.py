@@ -7,9 +7,9 @@ match the CSS rule simultaneously. The View Transitions API requires
 unique transition names per snapshot — the duplicate causes the
 snapshot to silently bail and Chrome to log a console error.
 
-Fix: in `dz-islands.js`'s existing `htmx:beforeSwap` listener, set
+Fix: in `dz-islands.js`'s existing `htmx:before:swap` listener, set
 `target.style.viewTransitionName = "none"` if the target is
-`#main-content`. In the corresponding `htmx:afterSettle` listener,
+`#main-content`. In the corresponding `htmx:after:settle` listener,
 restore by setting it back to `""` (empty string hands authority back
 to the CSS cascade rule).
 """
@@ -24,8 +24,8 @@ def test_strip_in_before_swap() -> None:
     """beforeSwap listener must clear viewTransitionName for #main-content."""
     js = DZ_ISLANDS.read_text()
     # Locate the beforeSwap listener.
-    idx = js.find('"htmx:beforeSwap"')
-    assert idx >= 0, "missing htmx:beforeSwap listener in dz-islands.js"
+    idx = js.find('"htmx:before:swap"')
+    assert idx >= 0, "missing htmx:before:swap listener in dz-islands.js"
     # Read enough following code to capture the callback body.
     block = js[idx : idx + 2000]
     assert "main-content" in block, (
@@ -47,8 +47,8 @@ def test_strip_in_before_swap() -> None:
 def test_restore_in_after_settle() -> None:
     """afterSettle listener must restore viewTransitionName for #main-content."""
     js = DZ_ISLANDS.read_text()
-    idx = js.find('"htmx:afterSettle"')
-    assert idx >= 0, "missing htmx:afterSettle listener in dz-islands.js"
+    idx = js.find('"htmx:after:settle"')
+    assert idx >= 0, "missing htmx:after:settle listener in dz-islands.js"
     block = js[idx : idx + 2000]
     assert "main-content" in block, (
         "afterSettle listener must check for #main-content to restore the cleared transition name."

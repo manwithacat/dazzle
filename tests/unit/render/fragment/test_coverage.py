@@ -492,8 +492,8 @@ def test_supported_displays_match_adapter() -> None:
 
     Adding a display in either file without the other gets caught here.
     """
-    from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
     from dazzle.render.fragment.coverage import _SUPPORTED_DISPLAYS
+    from dazzle.render.fragment.region import WorkspaceRegionAdapter
 
     adapter_displays = (
         set(WorkspaceRegionAdapter._BUILDERS.keys())

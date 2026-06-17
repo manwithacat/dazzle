@@ -82,7 +82,7 @@ def test_list_pagination_emits_hx_get_for_each_page() -> None:
     assert "page=4" in html  # window around page 5
     assert "page=6" in html
     assert 'hx-target="#contact_table-body"' in html
-    assert 'hx-swap="morph:innerHTML"' in html
+    assert 'hx-swap="innerMorph"' in html  # htmx 4 native morph (was morph:innerHTML)
 
 
 def test_list_pagination_includes_first_and_last_pages() -> None:

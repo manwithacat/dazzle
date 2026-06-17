@@ -86,7 +86,7 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
             f'<button class="dz-pagination-page{current_cls}"{current_attr} '  # nosemgrep
             f'hx-get="{endpoint_attr}?{url_q}" '
             f'hx-target="#{table_id}-body" '
-            f'hx-swap="morph:innerHTML" '
+            f'hx-swap="innerMorph" '
             f'hx-headers=\'{{"Accept": "text/html"}}\' '
             f'hx-indicator="#{table_id}-loading">{p}</button>'
         )
@@ -322,9 +322,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     if detail_url_template:
         detail_url = detail_url_template.replace("{id}", item_id)
         detail_url_attr = _html_mod.escape(detail_url, quote=True)
-        detail_hx_attrs = (
-            f'hx-get="{detail_url_attr}" hx-push-url="true" hx-target="body" hx-swap="innerHTML" '
-        )
+        detail_hx_attrs = f'hx-get="{detail_url_attr}" hx-push-url="true" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
         detail_link_html = (
             f'<a href="{detail_url_attr}" '  # nosemgrep
             f'data-dazzle-action="{entity_name_attr}.view" '

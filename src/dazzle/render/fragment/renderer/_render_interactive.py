@@ -206,7 +206,7 @@ class _RenderInteractiveMixin:
             page_html_parts.append(
                 f'<button class="{cls}"{current_attr} '
                 f'hx-get="{endpoint_str}?page={entry}&page_size={p.page_size}{extra}" '
-                f'hx-target="{target}" hx-swap="morph:innerHTML" '
+                f'hx-target="{target}" hx-swap="innerMorph" '
                 f'hx-headers=\'{{"Accept": "text/html"}}\' '
                 f'hx-indicator="#{ctx.escape_attr(p.region_name)}-loading">'
                 f"{entry}"
@@ -419,6 +419,12 @@ class _RenderInteractiveMixin:
                 f'hx-get="{endpoint}" '
                 f'hx-target="{target}" '
                 f'hx-swap="innerHTML" '
+                # htmx 4: the select sits inside its own swap target, so the
+                # default `change` trigger re-fires on every reprocess after a
+                # swap → infinite refetch loop (htmx 2 didn't re-fire change on
+                # reprocess). The `changed` modifier gates on an actual value
+                # change, so the reprocessed same-value select stays quiet.
+                f'hx-trigger="change changed" '
                 f'hx-include="closest .filter-bar" '
                 f'name="filter_{ctx.escape_attr(col.key)}">'
                 f"{options_html}"

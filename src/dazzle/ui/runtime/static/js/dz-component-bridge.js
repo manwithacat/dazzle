@@ -10,8 +10,8 @@
  *   unmount(el, instance) — tear down the widget
  *
  * The bridge hooks into HTMX lifecycle events:
- *   htmx:beforeSwap  — unmount widgets in the swap target
- *   htmx:afterSettle — mount widgets in the swapped content
+ *   htmx:before:swap  — unmount widgets in the swap target
+ *   htmx:after:settle — mount widgets in the swapped content
  */
 (function () {
   var REGISTRY = {};
@@ -82,10 +82,10 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     mountWidgets(document);
-    document.body.addEventListener("htmx:afterSettle", function (e) {
+    document.body.addEventListener("htmx:after:settle", function (e) {
       mountWidgets(e.target);
     });
-    document.body.addEventListener("htmx:beforeSwap", function (e) {
+    document.body.addEventListener("htmx:before:swap", function (e) {
       if (e.detail && e.detail.target) {
         unmountWidgets(e.detail.target);
       }

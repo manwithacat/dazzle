@@ -3,7 +3,7 @@ Canonical comparison utilities shared across dazzle_back and dazzle_ui.
 
 Provides common value normalization and operator dispatch used by
 condition_evaluator, access_evaluator, invariant_evaluator, and the
-UI-side condition_eval module.
+core condition_eval module (relocated from ui/ in ADR-0038).
 """
 
 from typing import Any

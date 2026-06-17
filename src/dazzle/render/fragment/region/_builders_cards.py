@@ -22,11 +22,6 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from dazzle.back.runtime.renderers.region_adapter._shared import (
-    _region_title,
-    _render_typed_value,
-    _wrap_surface,
-)
 from dazzle.render.fragment import (
     URL,
     ActionCard,
@@ -44,6 +39,11 @@ from dazzle.render.fragment import (
     ProfileCard,
     RawHTML,
     Surface,
+)
+from dazzle.render.fragment.region._shared import (
+    _region_title,
+    _render_typed_value,
+    _wrap_surface,
 )
 
 

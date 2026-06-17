@@ -19,11 +19,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from dazzle.back.runtime.renderers.region_adapter._shared import (
-    _region_title,
-    _render_typed_value,
-    _wrap_surface,
-)
 from dazzle.render.fragment import (
     ActivityFeed,
     DayTimelineRegion,
@@ -35,6 +30,11 @@ from dazzle.render.fragment import (
     TaskInboxSummaryChip,
     Timeline,
     TimelineEvent,
+)
+from dazzle.render.fragment.region._shared import (
+    _region_title,
+    _render_typed_value,
+    _wrap_surface,
 )
 
 

@@ -253,7 +253,7 @@ def fuzz_richtext(page: Any, host_index: int = 0) -> list[FuzzCheck]:
             const host = document.querySelector('[data-dz-widget=\\"richtext\\"]');
             const clone = host.cloneNode(true);
             host.parentNode.replaceChild(clone, host);
-            document.body.dispatchEvent(new CustomEvent('htmx:afterSettle', {
+            document.body.dispatchEvent(new CustomEvent('htmx:after:settle', {
                 bubbles: true, detail: { target: clone }
             }));
         }"""

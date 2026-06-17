@@ -146,7 +146,7 @@ def test_button_carries_cohort_strip_class_token() -> None:
 
 def test_renderer_emits_action_div_around_pre_rendered_button() -> None:
     """End-to-end via the adapter + renderer."""
-    from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
+    from dazzle.render.fragment.region import WorkspaceRegionAdapter
     from dazzle.render.fragment.renderer import FragmentRenderer
 
     cfg = _config()
@@ -176,7 +176,7 @@ def test_renderer_emits_action_div_around_pre_rendered_button() -> None:
 
 
 def test_renderer_omits_action_div_when_empty() -> None:
-    from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
+    from dazzle.render.fragment.region import WorkspaceRegionAdapter
     from dazzle.render.fragment.renderer import FragmentRenderer
 
     cfg = _config()

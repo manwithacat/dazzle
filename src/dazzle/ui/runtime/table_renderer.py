@@ -423,7 +423,7 @@ def render_filterable_table(table: Any, *, page_title: str = "") -> str:
         f'<tbody id="{table_id_attr}-body" '  # nosemgrep
         f'hx-get="{api_endpoint_attr}{sort_qs}"'
         f"{trigger_attr} "
-        'hx-swap="morph:innerHTML" '
+        'hx-swap="innerMorph" '
         'hx-headers=\'{"Accept": "text/html"}\' '
         f'hx-indicator="#{table_id_attr}-loading-sr" '
         '@htmx:before-request="loading = true" '

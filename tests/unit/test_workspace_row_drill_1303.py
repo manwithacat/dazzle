@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
 from dazzle.back.runtime.workspace_card_data import _build_task_inbox_payload
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
 from dazzle.render.fragment.primitives.data import ListColumn, ListRegion
+from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer import FragmentRenderer
 
 

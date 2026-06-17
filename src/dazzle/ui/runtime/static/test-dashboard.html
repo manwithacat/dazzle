@@ -28,7 +28,7 @@
     .fail { color: #eb5757; font-weight: bold; }
   </style>
   {# #947 cycle 2 — dz-alpine.js wires the destroy+init handler
-     on htmx:afterSettle. Loaded so the bridge gates can verify
+     on htmx:after:settle. Loaded so the bridge gates can verify
      the same handler runs the framework uses in production. #}
   <script defer src="js/dz-alpine.js"></script>
   <script defer src="js/dashboard-builder.js"></script>

@@ -29,10 +29,10 @@ from dazzle.back.runtime.predicate_compiler import (
 )
 from dazzle.back.runtime.rls_schema import HOST_TENANT_GUC, TENANT_GUC
 from dazzle.back.runtime.tenant_render_context import inject_current_tenant
+from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir.predicate_builder import build_scope_predicate
 from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
-from dazzle.ui.utils.condition_eval import evaluate_condition
 
 # ──────────────────────────── IR / builder ────────────────────────────
 

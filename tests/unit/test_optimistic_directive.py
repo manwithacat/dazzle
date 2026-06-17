@@ -61,9 +61,9 @@ def test_subscribes_to_htmx_lifecycle_events(js: str) -> None:
     - afterRequest: keep on success, rollback on error
     - sendError: rollback on network failure (no response)
     """
-    assert 'addEventListener("htmx:beforeRequest"' in js
-    assert 'addEventListener("htmx:afterRequest"' in js
-    assert 'addEventListener("htmx:sendError"' in js
+    assert 'addEventListener("htmx:before:request"' in js
+    assert 'addEventListener("htmx:after:request"' in js
+    assert 'addEventListener("htmx:error"' in js
 
 
 def test_snapshots_parent_and_next_sibling_for_rollback(js: str) -> None:

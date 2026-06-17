@@ -1659,7 +1659,7 @@ class WorkspaceDrawer:
     The drawer is a fixed shape: backdrop div + aside container +
     header (close button + optional expand link) + content slot, plus
     the IIFE that wires `window.dzDrawer.open()` / `.close()` and the
-    document-level htmx:afterSettle defensive close (#934).
+    document-level htmx:after:settle defensive close (#934).
 
     The IIFE installs an init guard (`window.__dzDrawerInit`) so the
     listeners are registered exactly once across the session — the

@@ -1,7 +1,7 @@
 """Source-level contract tests for the widget bridge (#940).
 
 The dz-component-bridge mounts vendor instances on
-``htmx:afterSettle`` and unmounts on ``beforeSwap``. When a node
+``htmx:after:settle`` and unmounts on ``beforeSwap``. When a node
 *also* carries an Alpine ``x-data`` directive, three lifecycles
 converge on it: idiomorph (DOM identity), Alpine (reactive state),
 the vendor (DOM mutation). That's the wrapper-on-wrapper smell that
@@ -100,7 +100,7 @@ def test_no_widget_and_x_data_on_same_element() -> None:
             "`data-dz-widget` and `x-data` — the bridge mounts a "
             "vendor instance over a node Alpine is also driving, "
             "which contends for DOM ownership across "
-            "htmx:afterSettle / beforeSwap. Pick one lifecycle per "
+            "htmx:after:settle / beforeSwap. Pick one lifecycle per "
             "node (see #939, #940):\n\n"
             f"{rendered}"
         )

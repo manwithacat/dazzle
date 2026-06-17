@@ -101,7 +101,7 @@ class _RenderChartsMixin:
         # Late import to avoid circular dependency between renderer and
         # workspace adapter (the helper lives in adapter for now; could
         # be promoted to a shared module if more renderers need it).
-        from dazzle.back.runtime.renderers.region_adapter import (
+        from dazzle.render.fragment.region import (
             _render_status_badge_html,
         )
 
@@ -663,7 +663,7 @@ class _RenderChartsMixin:
 
         Empty path renders the legacy `fragments/empty_state.html` shape.
         """
-        from dazzle.back.runtime.renderers.region_adapter import (
+        from dazzle.render.fragment.region import (
             _render_status_badge_html,
         )
 

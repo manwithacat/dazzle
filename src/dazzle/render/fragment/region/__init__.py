@@ -24,10 +24,10 @@ issue #1065. Each subsequent PR moves one family out of `_dispatcher.py`
 into its own `_builders_<family>.py` module.
 """
 
-from dazzle.back.runtime.renderers.region_adapter._dispatcher import (
+from dazzle.render.fragment.region._dispatcher import (
     WorkspaceRegionAdapter,
 )
-from dazzle.back.runtime.renderers.region_adapter._shared import (
+from dazzle.render.fragment.region._shared import (
     _render_status_badge_html,
 )
 

@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 
 
 # Workspace drawer — backdrop + aside + IIFE that wires `dzDrawer.open()` /
-# `.close()` and the document-level htmx:afterSettle defensive close
+# `.close()` and the document-level htmx:after:settle defensive close
 # (#934). Loaded from the static asset because the IIFE is ~120 lines
 # of mixed HTML + JS with quote-density that's painful to inline as a
 # Python f-string. Read once at module-import time, then cached.
@@ -427,7 +427,7 @@ class _RenderShellMixin:
         (`render/fragment/static/workspace_drawer.html`). The IIFE
         installs an init guard so the document-level listeners
         (`dz:drawerOpen`, body click delegation, escape keydown,
-        htmx:afterSettle defensive close) are registered exactly
+        htmx:after:settle defensive close) are registered exactly
         once across the session — the drawer markup gets re-emitted
         on every workspace nav swap, but the listeners are only added
         on the first emission."""

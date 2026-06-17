@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.0] - 2026-06-17
+
+### Changed
+- **htmx 2.0.9 → htmx 4.0.0-beta4.** Runtime-library upgrade; SSR+HTMX (ADR-0011) unchanged. Vendored htmx 4 beta4 core and **dropped all htmx-2 extension files** — native features + small bridges + the server's existing contract cover them: idiomorph → native `hx-swap="innerMorph"`; response-targets → server `HX-Retarget` header (form-error targeting); sse → native `hx-sse:connect` (no live consumer); json-enc → **unnecessary** (htmx 4 posts `application/x-www-form-urlencoded`, which the server body parser already accepts); loading-states → native `hx-disabled-elt`; remove-me → `dz-toast.js` bridge (`data-dz-remove-after`). Client JS migrated to htmx 4: colon-namespaced events, fetch `detail.ctx.response`/`detail.ctx.request.headers` (CSRF), `htmx.config.implicitInheritance=true` (bridges explicit-inheritance pending a markup audit). Fixed a latent **experience-form data-loss** (handler was JSON-only + the form forced an `application/json` header while htmx 4 posts url-encoded → empty body; handler is now tolerant). Verified regression-free via `dazzle ux verify --interactions` on ops_dashboard/support_tickets/design_studio; full non-e2e suite green. Still **beta** — see `docs/evaluation/htmx4-evaluation.md`.
+- **Rendering layer boundary made pure and acyclic (ADR-0038, continues #1086).** `render/` is the pure `AppSpec→Fragment→HTML` layer in the four-layer stack `back → ui → render → core`; it must never import `back/` or `ui/`. Relocated ~3,700 LOC of pure rendering mis-homed in the HTTP package (`region_adapter/` + `workspace_card_bodies.py` → `render/fragment/region/`, `_resolve_row_links` → `render/fragment/region/_row_links.py`, `ui/utils/condition_eval.py` → `core/condition_eval.py`); `render/` now has zero `back/`/`ui/` imports. Surfaced during the htmx 4 evaluation. No behavior change — pure relocation.
+
+### Added
+- **Layering enforcement: `tests/unit/test_import_boundaries.py` now gates `render/` purity (ADR-0038 D3)** — `render/ ↛ {back, ui}`, top-level *and* lazy in-function imports. Zero new deps.
+- **`src/dazzle/ui/runtime/static/js/dz-toast.js`** — OOB-toast auto-dismiss bridge (replaces the htmx-2 remove-me extension).
+- **ADR-0038** + evaluation docs (`docs/evaluation/{htmx4-evaluation,back-ui-render-boundary,htmx4-browser-baseline}.md`); htmx-4 note on ADR-0011.
+
+  ### Agent Guidance
+  - **htmx 4: never rely on a default trigger.** htmx 4 re-fires implicit default triggers on swap/reprocess (htmx 2 didn't). A `<select>`/`<tr>` with `hx-get` but no `hx-trigger` will loop or auto-navigate. **Always emit an explicit `hx-trigger`** — `hx-trigger="change changed"` for filter selects (gate on value change), `hx-trigger="click"` for body-drill rows. This was the entire migration risk; both regressions had this one root cause.
+  - **htmx 4 has no json-enc.** Don't add it back — forms post `application/x-www-form-urlencoded` and the server body parser accepts it. Any handler reading a write body must parse **json OR form** (the main path does; experience routes now do too).
+  - htmx 4 event names are colon-namespaced (`htmx:before:request`); response data is `detail.ctx.response.status`/`.headers.get()`; request headers (CSRF) are `detail.ctx.request.headers`. Morph is native `hx-swap="innerMorph"`.
+  - **`render/` is the only place to author HTML/Fragment emission, importing only `render`/`core`/stdlib.** Shared code a `render/` file needs moves *down*, never up. Enforced by `test_import_boundaries.py`. Region builders now live at `render/fragment/region/`; `condition_eval` is now `dazzle.core.condition_eval`.
+
 ## [0.82.95] - 2026-06-17
 
 ### Fixed

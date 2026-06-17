@@ -19,7 +19,7 @@
   // When HTMX fires a request targeting a live region, set aria-busy="true"
   // so screen readers know content is loading. Clear it after the swap.
 
-  document.addEventListener("htmx:beforeRequest", function (evt) {
+  document.addEventListener("htmx:before:request", function (evt) {
     var targetSel =
       /** @type {HTMLElement} */ (evt.target).getAttribute("hx-target");
     if (!targetSel) return;
@@ -29,7 +29,7 @@
     }
   });
 
-  document.addEventListener("htmx:afterSwap", function (evt) {
+  document.addEventListener("htmx:after:swap", function (evt) {
     var target = /** @type {CustomEvent} */ (evt).detail.target;
     if (target && target.hasAttribute("aria-live")) {
       target.setAttribute("aria-busy", "false");
@@ -41,7 +41,7 @@
   // When hx-boost pushes a new URL into history, screen readers don't know
   // the page changed. Announce the new page title and move focus to <main>.
 
-  document.addEventListener("htmx:pushedIntoHistory", function () {
+  document.addEventListener("htmx:after:history:push", function () {
     requestAnimationFrame(function () {
       // Announce new page title
       var announcer = document.getElementById("dz-page-announcer");
@@ -72,7 +72,7 @@
   // After HTMX swaps form content (e.g. server-side validation), focus the
   // first field with aria-invalid="true" so the user knows what to fix.
 
-  document.addEventListener("htmx:afterSwap", function (evt) {
+  document.addEventListener("htmx:after:swap", function (evt) {
     var target = /** @type {CustomEvent} */ (evt).detail.target;
     if (!target) return;
     var form = target.querySelector("form, [data-dz-form]");
@@ -102,7 +102,7 @@
   // After hx-boost or fragment navigation, update aria-current="page"
   // on nav links to reflect the new active page.
 
-  document.addEventListener("htmx:pushedIntoHistory", function () {
+  document.addEventListener("htmx:after:history:push", function () {
     requestAnimationFrame(function () {
       var path = window.location.pathname;
       document.querySelectorAll("[data-dazzle-nav]").forEach(function (link) {

@@ -75,16 +75,6 @@ CSS_UNLAYERED: list[Path] = [
 JS_SOURCES = [
     # HTMX core + extensions (vendored). Order: core first, then extensions.
     STATIC / "vendor" / "htmx.min.js",
-    STATIC / "vendor" / "htmx-ext-json-enc.js",
-    STATIC / "vendor" / "idiomorph-ext.min.js",
-    STATIC / "vendor" / "htmx-ext-preload.js",
-    STATIC / "vendor" / "htmx-ext-response-targets.js",
-    STATIC / "vendor" / "htmx-ext-loading-states.js",
-    STATIC / "vendor" / "htmx-ext-sse.js",
-    STATIC / "vendor" / "htmx-ext-remove-me.js",
-    STATIC / "vendor" / "htmx-ext-class-tools.js",
-    STATIC / "vendor" / "htmx-ext-multi-swap.js",
-    STATIC / "vendor" / "htmx-ext-path-deps.js",
     # Alpine plugins + Alpine core (order matters: plugins before core).
     # SortableJS + alpine-sort were removed in #948 cycle 1 — pointer-event
     # drag in dashboard-builder.js replaced them. workspace-editor.js was
@@ -124,6 +114,9 @@ JS_SOURCES = [
     # timestamp, component root listing). Bundle cost ~1KB; methods
     # only do work when called.
     STATIC / "js" / "dz-debug.js",
+    # htmx 4 migration: auto-dismiss bridge for OOB toasts (replaces the
+    # dropped htmx-2 remove-me extension).
+    STATIC / "js" / "dz-toast.js",
     SITE_STATIC / "js" / "site.js",
 ]
 
@@ -140,6 +133,7 @@ FRAMEWORK_JS = {
     "dz-islands.js",
     "pdf-viewer.js",
     "dz-debug.js",
+    "dz-toast.js",
     "site.js",
 }
 
