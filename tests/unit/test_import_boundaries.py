@@ -1,6 +1,8 @@
-"""Import-boundary gates for the back↔ui cycle + IR fan-in (issue #1086).
+"""Import-boundary gates for the back↔ui cycle + IR fan-in (issue #1086)
+plus the render/ purity rule (ADR-0038).
 
-Three structural rules locked in by the #1086 sub-workstream sequence:
+Four structural rules locked in by the #1086 sub-workstream sequence and
+ADR-0038:
 
 1. ``dazzle.back/`` must not import from the modules that workstreams
    A/B/D explicitly migrated to ``dazzle.render``:
@@ -17,9 +19,9 @@ Three structural rules locked in by the #1086 sub-workstream sequence:
    Note: a broader ``back/`` ↛ ``dazzle.ui.*`` ban remains aspirational
    — back/ still imports ui-side helpers like ``theme``, ``css_loader``,
    ``asset_fingerprint``, ``htmx``, ``app_chrome``, ``site_renderer``,
-   ``workspace_renderer``, ``condition_eval``, etc. Those need their own
-   migrate-to-``render`` workstreams; tracked as future work in the
-   #1086 plan.
+   ``workspace_renderer``, etc. Those need their own migrate-to-``render``
+   workstreams; tracked as future work in the #1086 plan. (``condition_eval``
+   came off this list in ADR-0038 — relocated ui→core.)
 
 2. ``dazzle.ui/`` must not import from ``dazzle.back.*`` — with one
    documented exception, ``ui/runtime/combined_server.py``, whose job
@@ -31,6 +33,14 @@ Three structural rules locked in by the #1086 sub-workstream sequence:
    ``dazzle.core.ir.protocols`` adapter layer instead — adding new
    concrete-submodule imports under ``back/`` defeats the work that
    landed in #1092 and #1093.
+
+4. ``dazzle.render/`` must not import from ``dazzle.back.*`` or
+   ``dazzle.ui.*`` — at module top level OR inside functions (ADR-0038).
+   render/ is the pure AppSpec→Fragment→HTML layer; it imports only
+   ``render``/``core``/stdlib. Lazy in-function imports don't launder a
+   layer violation — the scanner's ``^\\s*`` prefix catches indented
+   imports too. Shared code needed by render/ moves *down* to
+   ``render`` or ``core``, never *up*.
 
 Gates run against any ``.py`` file under ``src/dazzle/back/`` or
 ``src/dazzle/ui/`` (production AND test code in those subtrees).
@@ -66,6 +76,12 @@ _BACK_BANNED_FROM_BACK_RENDERERS = re.compile(
 
 _UI_FROM_BACK = re.compile(r"^\s*from dazzle\.back[\.\s]")
 _BACK_FROM_BANNED_IR = re.compile(r"^\s*from dazzle\.core\.ir\.(appspec|surfaces|domain)\b")
+
+# ADR-0038: render/ is the pure rendering layer. It must not import from the
+# higher layers (back/ or ui/) — top-level OR lazy/in-function. Matches both
+# ``from dazzle.back …`` / ``from dazzle.ui …`` and ``import dazzle.back…`` /
+# ``import dazzle.ui…``; the ``^\s*`` prefix catches indented (lazy) imports.
+_RENDER_FROM_HIGHER = re.compile(r"^\s*(?:from|import)\s+dazzle\.(?:back|ui)[\.\s]")
 
 
 def _scan(root: Path, pattern: re.Pattern[str]) -> list[str]:
@@ -120,6 +136,25 @@ def test_ui_does_not_import_from_back() -> None:
     assert not offenders, (
         "ui/ must not import from back/ (outside combined_server.py). "
         "Use dazzle.render or dazzle.core. Offenders:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_render_does_not_import_back_or_ui() -> None:
+    """``dazzle.render/`` must not import from ``dazzle.back.*`` or
+    ``dazzle.ui.*`` (ADR-0038).
+
+    render/ is the pure AppSpec→Fragment→HTML layer: it imports only
+    ``render``, ``core``, and stdlib/third-party. Imports of a higher
+    layer — top-level or inside a function (lazy imports don't launder a
+    layer violation) — are forbidden. The fix for a render/ file that
+    needs ``back``/``ui`` code is to move that code *down* to ``render``
+    or ``core``, or invert the dependency so ``back`` passes it in.
+    """
+    offenders = _scan(REPO_ROOT / "src" / "dazzle" / "render", _RENDER_FROM_HIGHER)
+    assert not offenders, (
+        "render/ must not import from back/ or ui/ (ADR-0038). render/ is the "
+        "pure rendering layer — move the shared code down to render/ or core/, "
+        "or invert the dependency. Offenders:\n  " + "\n  ".join(offenders)
     )
 
 
