@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.94] - 2026-06-17
+
+### Changed
+- **Rendering layer boundary made pure and acyclic (ADR-0038, continues #1086).** `render/` is the pure `AppSpec→Fragment→HTML` layer in the four-layer stack `back → ui → render → core`; it must never import `back/` or `ui/`. Three load-bearing modules were mis-homed in the HTTP package `back/` (pure rendering, ~3,700 LOC), forcing `render/` to reach *up* via cycle-dodging lazy imports. Relocated: `back/runtime/renderers/region_adapter/` (10 modules) + `back/runtime/workspace_card_bodies.py` → `render/fragment/region/`; the pure `_resolve_row_links` helper extracted to `render/fragment/region/_row_links.py`; and `ui/utils/condition_eval.py` → `core/condition_eval.py`. `render/` now has zero `back/`/`ui/` imports. Surfaced during the htmx 4 evaluation (`docs/evaluation/back-ui-render-boundary.md`), which found the smeared rendering surface made the migration costlier. No behavior change — pure relocation; full non-e2e suite (18048 tests) green.
+
+### Added
+- **Layering enforcement: `tests/unit/test_import_boundaries.py` now gates `render/` purity (ADR-0038 D3).** Extends the #1086 boundary test with a fourth rule — `render/ ↛ {back, ui}`, catching top-level *and* lazy in-function imports — so the rule can't silently regress (the previous documented-only rule did). Zero new dependencies; matches the existing `*_drift.py` idiom.
+- **ADR-0038** (`docs/adr/0038-rendering-layer-boundary.md`) + the originating evaluation docs (`docs/evaluation/{htmx4-evaluation,back-ui-render-boundary}.md`).
+
+  ### Agent Guidance
+  - **`render/` is the only place to author HTML/Fragment emission, and it imports only `render`/`core`/stdlib.** When a `render/` file needs something from `back`/`ui`, move that code *down* (to `render` or `core`) or invert the dependency so `back` passes it in — never add an upward import. `back → render`/`back → core` is the legal direction. The gate `test_import_boundaries.py::test_render_does_not_import_back_or_ui` enforces this (lazy imports included).
+  - Workspace region builders now live at `render/fragment/region/` (was `back/runtime/renderers/region_adapter/`); `condition_eval` is now `dazzle.core.condition_eval` (was `dazzle.ui.utils`).
+
 ## [0.82.93] - 2026-06-17
 
 ### Changed
