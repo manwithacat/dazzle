@@ -391,7 +391,7 @@ class _RenderTablesMixin:
         Empty path renders `<p class="dz-empty-dense dz-queue-empty">`
         — note the legacy template uses BOTH classes.
         """
-        from dazzle.back.runtime.renderers.region_adapter import (
+        from dazzle.render.fragment.region import (
             _render_status_badge_html,
         )
 
@@ -514,7 +514,7 @@ class _RenderTablesMixin:
         Measure cells render raw values with `.is-measure` class.
         Summary line "{N} row(s)".
         """
-        from dazzle.back.runtime.renderers.region_adapter import (
+        from dazzle.render.fragment.region import (
             _render_status_badge_html,
         )
 

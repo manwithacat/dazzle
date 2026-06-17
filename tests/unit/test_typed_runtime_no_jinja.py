@@ -101,7 +101,7 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/back/runtime/workspace_region_render.py",
     "src/dazzle/back/runtime/workspace_region_computes.py",
     "src/dazzle/back/runtime/workspace_aggregation.py",
-    "src/dazzle/back/runtime/workspace_card_bodies.py",
+    "src/dazzle/render/fragment/region/workspace_card_bodies.py",
     "src/dazzle/back/runtime/workspace_card_data.py",
     "src/dazzle/back/runtime/workspace_card_fetchers.py",
     "src/dazzle/back/runtime/workspace_columns.py",

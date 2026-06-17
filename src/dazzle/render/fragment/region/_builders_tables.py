@@ -20,15 +20,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from dazzle.back.runtime.renderers.region_adapter._shared import (
-    _region_title,
-    _render_typed_value,
-    _wrap_surface,
-)
-from dazzle.back.runtime.workspace_card_bodies import (
-    _eval_row_condition,
-    _render_row_action_button,
-)
 from dazzle.render.fragment import (
     URL,
     CsvExportButton,
@@ -53,6 +44,16 @@ from dazzle.render.fragment import (
     Stack,
     Surface,
     Tabs,
+)
+from dazzle.render.fragment.region._row_links import _resolve_row_links
+from dazzle.render.fragment.region._shared import (
+    _region_title,
+    _render_typed_value,
+    _wrap_surface,
+)
+from dazzle.render.fragment.region.workspace_card_bodies import (
+    _eval_row_condition,
+    _render_row_action_button,
 )
 
 
@@ -248,8 +249,6 @@ class _BuildersTablesMixin:
         # share one substitution contract.
         row_links: tuple[str | None, ...] = ()
         if detail_url_template:
-            from dazzle.back.runtime.renderers.fragment_adapter import _resolve_row_links
-
             row_links = _resolve_row_links(row_items, detail_url_template)
 
         body: Fragment = ListRegion(

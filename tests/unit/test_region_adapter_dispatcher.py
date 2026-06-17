@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
+from dazzle.render.fragment.region import WorkspaceRegionAdapter
 
 
 class _FakeRegion:

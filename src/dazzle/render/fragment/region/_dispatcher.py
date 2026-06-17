@@ -19,36 +19,37 @@ import logging
 from collections.abc import Callable
 from typing import Any, Literal
 
+from dazzle.render.fragment import (
+    Fragment,
+)
+
 # Cross-cutting helpers extracted to ._shared in #1065 PR 2 (v0.67.129).
 # Re-imported here so the dispatcher's internal call sites keep working
 # unchanged. The public re-export of `_render_status_badge_html` for
 # external callers (renderer.py × 4 sites) lives in `__init__.py`.
-from dazzle.back.runtime.renderers.region_adapter._builders_cards import (
+from dazzle.render.fragment.region._builders_cards import (
     _BuildersCardsMixin,
 )
-from dazzle.back.runtime.renderers.region_adapter._builders_charts import (
+from dazzle.render.fragment.region._builders_charts import (
     _BuildersChartsMixin,
 )
-from dazzle.back.runtime.renderers.region_adapter._builders_metrics import (
+from dazzle.render.fragment.region._builders_metrics import (
     _BuildersMetricsMixin,
 )
-from dazzle.back.runtime.renderers.region_adapter._builders_misc import (
+from dazzle.render.fragment.region._builders_misc import (
     _BuildersMiscMixin,
 )
-from dazzle.back.runtime.renderers.region_adapter._builders_tables import (
+from dazzle.render.fragment.region._builders_tables import (
     _BuildersTablesMixin,
 )
-from dazzle.back.runtime.renderers.region_adapter._builders_timeline import (
+from dazzle.render.fragment.region._builders_timeline import (
     _BuildersTimelineMixin,
 )
-from dazzle.back.runtime.renderers.region_adapter._shared import (  # noqa: F401
+from dazzle.render.fragment.region._shared import (  # noqa: F401
     _region_title,
     _render_status_badge_html,
     _render_typed_value,
     _wrap_surface,
-)
-from dazzle.render.fragment import (
-    Fragment,
 )
 
 _log = logging.getLogger(__name__)

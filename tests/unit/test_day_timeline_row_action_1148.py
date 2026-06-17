@@ -106,7 +106,7 @@ def test_button_carries_day_timeline_class_token() -> None:
 def test_renderer_emits_action_div_around_pre_rendered_button() -> None:
     """End-to-end via the adapter + renderer: the button HTML
     appears inside the slot's action div."""
-    from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
+    from dazzle.render.fragment.region import WorkspaceRegionAdapter
     from dazzle.render.fragment.renderer import FragmentRenderer
 
     class _R:
@@ -135,7 +135,7 @@ def test_renderer_emits_action_div_around_pre_rendered_button() -> None:
 def test_renderer_omits_action_div_when_empty() -> None:
     """No action_html → no action div in the rendered slot. Keeps
     the markup minimal for slots that don't carry an action."""
-    from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
+    from dazzle.render.fragment.region import WorkspaceRegionAdapter
     from dazzle.render.fragment.renderer import FragmentRenderer
 
     class _R:

@@ -6,7 +6,13 @@ relocation + layering drift-test).
 change *what* HTML we produce or *how* (f-strings + `dazzle.render.html.esc`); it fixes *where* the
 producing code lives and makes the existing-but-unenforced layer rule a live gate.
 **Origin:** surfaced during the htmx 4 evaluation (`docs/evaluation/back-ui-render-boundary.md`), which
-found ~5,400 LOC of rendering in the HTTP package and 5 cycle-dodging lazy imports.
+found ~5,400 LOC of rendering in the HTTP package and cycle-dodging lazy imports.
+**Continues:** issue **#1086**, which already migrated `template_renderer`/`template_context`/
+`surface_access`/`access_evaluator`/`page_builder`/`dispatch` from `ui`/`back` into `dazzle.render` and
+locked in `ui/ ↛ back/` via `tests/unit/test_import_boundaries.py`. That test's docstring lists the
+`render→ui`/`back→ui` helpers (incl. `condition_eval`, `region_adapter` neighbours) as **explicit
+future work**. This ADR executes the next slice of that plan — the `render/` subtree specifically — and
+extends the same test to cover it.
 
 ## Context
 
@@ -60,22 +66,34 @@ No HTML-producing code that lacks an I/O reason lives in `back/` or `ui/`. `rend
 `dazzle.ui` or `dazzle.back` — at module top level **or** inside functions. Lazy imports do not launder
 a layer violation; they hide it.
 
-### D2 — Relocate the misplaced subsystems into `render/`
+### D2 — Relocate the misplaced subsystems into `render/` (and pure helpers to their layer)
 
-`back/runtime/renderers/region_adapter/` and `back/runtime/workspace_card_bodies.py` move into `render/`
-(target: `render/fragment/region/`). The four `render→back` lazy imports become normal top-level
-`render`-internal imports; the one `render→ui` lazy import (`condition_eval`) is resolved by relocating
-the pure helper it needs to a layer at or below `render`. `back/` keeps calling this code — that edge
-(`back → render`, ~48 sites already) is in the legal direction. Clean break, no shims (ADR-0003); the
-existing test suite is the behavioral oracle.
+Relocations (clean break, no shims — ADR-0003; the existing test suite is the behavioral oracle):
+- `back/runtime/renderers/region_adapter/` → `render/fragment/region/` (10 modules) — eliminates the
+  `render→back` edges from `_render_tables.py`/`_render_charts.py` (they become `render`-internal).
+- `back/runtime/workspace_card_bodies.py` → `render/fragment/region/` — pure (`core.ir` + stdlib);
+  region_adapter and two `back` fetchers import it (the latter as legal `back→render`).
+- `_resolve_row_links` (pure stdlib helper, currently in `back/runtime/renderers/fragment_adapter.py`)
+  → a `render/fragment/region/` helper — shared by the moved region_adapter and by `back`'s standalone
+  list path (which now imports it as `back→render`).
+- `ui/utils/condition_eval.py` → `core/condition_eval.py` — pure (`datetime` + `core.comparison`); its
+  natural home is `core` (the lowest layer, importable by everyone). Resolves the `render→ui` edge in
+  `render/dispatch.py` and also advances #1086's `back→ui` cleanup (back imports it too).
 
-### D3 — The boundary is enforced by a live drift-test, not documentation
+`back/` keeps calling all of this — the `back → render`/`back → core` direction is legal and already
+has ~48 sites. **Out of scope (remains #1086 future work):** the broader `back→ui` helper list
+(`theme`, `css_loader`, `htmx`, `app_chrome`, `site_renderer`, `workspace_renderer`, …) and folding the
+`ui/runtime/*_renderer.py` page layer down (see D4).
 
-`tests/unit/test_layering_drift.py` AST-walks `src/dazzle/render/**` and `src/dazzle/ui/**` and fails on
-any import (including in-function) of a higher layer: `render/` ↛ {`ui`, `back`}; `ui/` ↛ `back`. Zero
-new dependencies — it matches the established `*_drift.py` idiom (`test_api_surface_drift.py`,
-`test_vendor_hash_drift.py`, `test_docs_drift.py`). This makes the detector *live in the normal
-workflow* (the failure-modes rule's bar), so the rule cannot silently regress again.
+### D3 — The boundary is enforced by extending the existing live boundary test
+
+`tests/unit/test_import_boundaries.py` (from #1086) already enforces `ui/ ↛ back/` and `back/ ↛`
+migrated-render-modules, scanning the `ui/` and `back/` subtrees. This ADR **extends that same test** to
+also scan `src/dazzle/render/**` and fail on any import (top-level **or** in-function/lazy — the current
+scanner is line-regex; the extension must catch indented imports too) of a higher layer: `render/` ↛
+{`ui`, `back`}. No new test file (avoids two parallel boundary gates) and no new dependency. This keeps
+the detector *live in the normal workflow* (the failure-modes rule's bar), so the rule cannot silently
+regress again.
 
 ### D4 — The `ui/runtime/*_renderer.py` page-orchestration sub-seam is kept
 

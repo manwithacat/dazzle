@@ -172,7 +172,7 @@ _UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset()
 # `mode: list` + no display → standard Table).
 #
 # Mirrored against `WorkspaceRegionAdapter._BUILDERS | _ALIASES |
-# _TIMESERIES_VIEWS` in src/dazzle/back/runtime/renderers/region_adapter.py.
+# _TIMESERIES_VIEWS` in src/dazzle/render/fragment/region/ (ADR-0038).
 # We can't import the backend from core (layering rule) so the two
 # lists must stay in sync. The drift is enforced by
 # `tests/unit/render/fragment/test_coverage.py::test_supported_displays_match_adapter`.

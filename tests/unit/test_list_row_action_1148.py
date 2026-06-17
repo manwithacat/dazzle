@@ -15,7 +15,6 @@ data-builder + renderer path:
 
 from __future__ import annotations
 
-from dazzle.back.runtime.renderers.region_adapter import WorkspaceRegionAdapter
 from dazzle.core.ir.conditions import (
     Comparison,
     ComparisonOperator,
@@ -23,6 +22,7 @@ from dazzle.core.ir.conditions import (
     ConditionValue,
 )
 from dazzle.core.ir.workspaces import RowActionSpec
+from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer import FragmentRenderer
 
 

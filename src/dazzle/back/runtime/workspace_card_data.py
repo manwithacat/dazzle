@@ -425,7 +425,7 @@ def _build_cohort_cells(
         # the list and day_timeline paths.
         action_html = ""
         if row_action is not None:
-            from dazzle.back.runtime.workspace_card_bodies import (
+            from dazzle.render.fragment.region.workspace_card_bodies import (
                 _eval_row_condition,
                 _render_row_action_button,
             )
@@ -604,7 +604,7 @@ def _build_day_timeline_slots(
         # the list display — visible_when false → empty action_html.
         action_html = ""
         if row_action is not None:
-            from dazzle.back.runtime.workspace_card_bodies import (
+            from dazzle.render.fragment.region.workspace_card_bodies import (
                 _eval_row_condition,
                 _render_row_action_button,
             )
