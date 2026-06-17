@@ -42,3 +42,15 @@ disjunction (read) / single check (update). The cross-tenant *isolation* propert
 
 This fixture focuses on the host-hierarchy + `current_tenant` + membership layer;
 RLS row-tenancy (`tenancy:` / `dazzle.tenant_id`) is exercised by `fixtures/tenant_rls`.
+
+## HTTP-level harness
+
+`scripts/verify_tenant_hierarchy_http.py` boots this fixture as a real `dazzle
+serve` backend, **bootstraps the auth stack** (a non-superuser `staff` user holding
+one membership at the ROOT tenant), seeds the tree, and drives the scoped endpoints
+with the real session cookie. It proves through real HTTP that **auth is enforced**
+(anon → 401), the **minted session authenticates**, and the **`current_tenant` RBAC
+scope is applied + fail-closed** (apex → 0 rows, not unscoped). Note: binding a
+resolved *subdomain* to `current_tenant` needs `TenantResolutionMiddleware`, which a
+localhost `dazzle serve` does not mount — so the aggregate-vs-single *selection* is
+proven against real Postgres by the oracle above, not by this localhost harness.

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.82.94] - 2026-06-17
+## [0.82.95] - 2026-06-17
 
 ### Changed
 - **Rendering layer boundary made pure and acyclic (ADR-0038, continues #1086).** `render/` is the pure `AppSpec→Fragment→HTML` layer in the four-layer stack `back → ui → render → core`; it must never import `back/` or `ui/`. Three load-bearing modules were mis-homed in the HTTP package `back/` (pure rendering, ~3,700 LOC), forcing `render/` to reach *up* via cycle-dodging lazy imports. Relocated: `back/runtime/renderers/region_adapter/` (10 modules) + `back/runtime/workspace_card_bodies.py` → `render/fragment/region/`; the pure `_resolve_row_links` helper extracted to `render/fragment/region/_row_links.py`; and `ui/utils/condition_eval.py` → `core/condition_eval.py`. `render/` now has zero `back/`/`ui/` imports. Surfaced during the htmx 4 evaluation (`docs/evaluation/back-ui-render-boundary.md`), which found the smeared rendering surface made the migration costlier. No behavior change — pure relocation; full non-e2e suite (18048 tests) green.
@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ### Agent Guidance
   - **`render/` is the only place to author HTML/Fragment emission, and it imports only `render`/`core`/stdlib.** When a `render/` file needs something from `back`/`ui`, move that code *down* (to `render` or `core`) or invert the dependency so `back` passes it in — never add an upward import. `back → render`/`back → core` is the legal direction. The gate `test_import_boundaries.py::test_render_does_not_import_back_or_ui` enforces this (lazy imports included).
   - Workspace region builders now live at `render/fragment/region/` (was `back/runtime/renderers/region_adapter/`); `condition_eval` is now `dazzle.core.condition_eval` (was `dazzle.ui.utils`).
+
+## [0.82.94] - 2026-06-17
+
+### Added
+- **`scripts/verify_tenant_hierarchy_http.py` — auth-bootstrap + HTTP-level verification harness for the tenant-hierarchy feature.** Boots `fixtures/tenant_hierarchy` as a real `dazzle serve` backend against a scratch Postgres, bootstraps the auth stack (`AuthStore._init_db()` + a **non-superuser `staff` user holding one membership at the ROOT tenant** + a session), seeds a two-trust tree, and drives the scoped endpoints with the real session cookie via `http.client` (exact `Host:` control). Proves through real HTTP that **auth is enforced** (anon → 401), the **minted non-superuser session authenticates** (`/auth/me` → 200), and the **`current_tenant` RBAC scope is applied + fail-closed** (apex → 0 rows, not the unscoped all-rows result). The subdomain→`current_tenant` *binding* needs `TenantResolutionMiddleware`, which a localhost `dazzle serve` doesn't mount, so the aggregate-vs-single *selection* remains proven against real Postgres by `tests/integration/test_current_tenant_scope_pg.py`. Closes the gap the `verify` run hit (test-mode `/__test__/authenticate` yields a scope-bypassing superuser; `--local` doesn't init auth tables).
+
+  ### Agent Guidance
+  - To HTTP-verify a tenancy/RBAC change end-to-end, mint a real session with `AuthStore` (`_init_db` → `create_user` → `create_membership` → `create_session`) and send `Cookie: dazzle_session=<id>` — do **not** rely on `/__test__/authenticate` (superuser, bypasses scope) or `dazzle serve --local` default (test-mode disables `require_auth`; auth tables not initialised). Use full `dazzle serve --no-test-mode` and drive with `http.client` for exact `Host:` headers.
 
 ## [0.82.93] - 2026-06-17
 
