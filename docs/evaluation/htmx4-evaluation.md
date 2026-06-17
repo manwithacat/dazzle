@@ -185,3 +185,39 @@ afterthought.
   deferred/dropped from the v4 surface?
 - Native morph behaviour parity with idiomorph's Alpine `@`-attribute skip — confirmed by browser test
   before committing? (This is the make-or-break item.)
+
+---
+
+## Outcome (2026-06-17) — migration executed, far more tractable than estimated
+
+The migration to **htmx 4.0.0-beta4** was carried out on branch `htmx4-eval` and is **functional and
+green** by both gates (full non-e2e suite 18243 passed; `dazzle ux verify --interactions`
+regression-free vs the htmx-2 baseline on ops_dashboard/support_tickets/design_studio). This came in
+**well under the 13–20 day estimate** — the estimate assumed each tier was independent work; in
+practice several collapsed:
+
+- **The 30 event renames** were a mechanical sweep (camelCase→colon), ~64 sites incl. tests.
+- **XHR→fetch (Tier 1B)** was a small `detail.ctx.response`/`detail.ctx.request.headers` rewrite.
+- **idiomorph→native morph (Tier 1C)** needed only `hx-swap="innerMorph"`; the feared #964 Alpine
+  `@`-attr `InvalidCharacterError` **did not recur** (the old `Idiomorph.defaults` patch is inert and
+  harmless under native morph — no re-derivation needed).
+- **json-enc (Tier 1D)** turned out **unnecessary**: htmx 4 posts `application/x-www-form-urlencoded`
+  by default and the server's `_parse_request_body` already accepts that, so writes work with **no
+  bridge** (the residual `hx-ext="json-enc"` attrs are dead/ignored).
+- **response-targets (Tier 2)** is covered by the server's existing `HX-Retarget` header (core htmx 4),
+  not a client extension — so form-error targeting still works.
+
+**The real risk was concentrated in one place, and the browser oracle is what caught it:** htmx 4
+makes *implicit default triggers re-fire on swap/reprocess*. This surfaced as two distinct symptoms
+with one root cause — the `active_alerts` filter-select self-swap loop (198 fetches) and the
+body-drill `<tr>` auto-navigation that yanked support_tickets off its workspace. Neither is visible to
+the unit suite (server-side, version-agnostic); both were caught only by the interaction walks. Fix
+pattern: **make triggers explicit** (`hx-trigger="change changed"`, `hx-trigger="click"`). This
+validates the eval's core recommendation — *stand up the browser oracle first*.
+
+**Remaining (polish, non-blocking):** loading-states (submit-disable) + remove-me (toast auto-dismiss)
+are minor UX behaviours now dead (their attrs are ignored) and not covered by the walks — small bridge
+JS or native equivalents are a follow-up; dead-attr hygiene (`hx-ext="json-enc"`, `hx-target-422`);
+the explicit-inheritance markup audit (currently bridged by `implicitInheritance=true`); SSE
+(`hx-sse:connect`, no live consumer). Still on htmx 4 **beta** — hold the merge-to-main default until
+GA unless the beta is acceptable.
