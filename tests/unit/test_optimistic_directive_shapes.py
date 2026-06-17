@@ -185,9 +185,9 @@ class TestCycle1ContractIntact:
     def test_event_subscription_set_unchanged(self, js: str) -> None:
         """All three htmx lifecycle events must still be subscribed —
         cycle 2 just adds shape variation, not new lifecycle phases."""
-        assert 'addEventListener("htmx:beforeRequest"' in js
-        assert 'addEventListener("htmx:afterRequest"' in js
-        assert 'addEventListener("htmx:sendError"' in js
+        assert 'addEventListener("htmx:before:request"' in js
+        assert 'addEventListener("htmx:after:request"' in js
+        assert 'addEventListener("htmx:error"' in js
 
     def test_target_filter_intact(self, js: str) -> None:
         """ev.target !== el guard must still gate every handler so

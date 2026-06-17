@@ -30,7 +30,7 @@
   //      session.
   //   2. Look up `drawer` / `backdrop` / `content` / `expand` fresh on
   //      each call so post-morph swaps still find the live nodes.
-  //   3. `htmx:afterSettle` defensive close — if a swap landed
+  //   3. `htmx:after:settle` defensive close — if a swap landed
   //      anywhere other than `#dz-detail-drawer-content`, force the
   //      drawer closed. Stale `is-open` state from a previous workspace
   //      page can no longer leak across nav.
@@ -110,9 +110,9 @@
   // drawer's `is-open` state from a prior interaction would otherwise
   // persist visually across the swap. The drawer-targeted action path
   // (target == 'dz-detail-drawer-content') is left alone because the
-  // `dz:drawerOpen` trigger fires *after* htmx:afterSettle on that
+  // `dz:drawerOpen` trigger fires *after* htmx:after:settle on that
   // path — opening the drawer is the intended next step there.
-  document.body.addEventListener('htmx:afterSettle', function(e) {
+  document.body.addEventListener('htmx:after:settle', function(e) {
     var target = e.detail && e.detail.target;
     if (!target || target.id === 'dz-detail-drawer-content') return;
     if (window.dzDrawer && window.dzDrawer.isOpen) {

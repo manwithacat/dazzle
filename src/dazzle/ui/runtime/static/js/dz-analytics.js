@@ -151,7 +151,8 @@
 
   function onHtmxAfterRequest(evt) {
     const detail = evt.detail || {};
-    const status = (detail.xhr && detail.xhr.status) || 0;
+    const status =
+      (detail.ctx && detail.ctx.response && detail.ctx.response.status) || 0;
     const source = detail.elt;
     if (!source) return;
 
@@ -173,7 +174,7 @@
       }
     }
 
-    // Error path: dz_api_error. htmx:responseError also fires for 4xx/5xx,
+    // Error path: dz_api_error. htmx:response:error also fires for 4xx/5xx,
     // but we centralise emission here so both non-htmx xhr paths (Fetch,
     // manual calls) can be added later.
     if (status >= 400) {
@@ -188,9 +189,9 @@
 
       // Try to read X-Dz-Error-Code response header for a structured code.
       const errCode =
-        detail.xhr &&
-        detail.xhr.getResponseHeader &&
-        detail.xhr.getResponseHeader("X-Dz-Error-Code");
+        detail.ctx &&
+        detail.ctx.response &&
+        detail.ctx.response.headers.get("X-Dz-Error-Code");
       if (errCode) payload.error_code = clamp(errCode, MAX_STR);
 
       push(payload);
@@ -211,7 +212,7 @@
     });
 
     // htmx-driven search (attribute is on the filter form)
-    document.body.addEventListener("htmx:afterSwap", (evt) => {
+    document.body.addEventListener("htmx:after:swap", (evt) => {
       const target = evt.detail && evt.detail.target;
       if (!target) return;
       if (
@@ -277,8 +278,8 @@
     emitInitialPageView();
     attachSearchHooks();
 
-    document.body.addEventListener("htmx:afterSwap", onHtmxAfterSwap);
-    document.body.addEventListener("htmx:afterRequest", onHtmxAfterRequest);
+    document.body.addEventListener("htmx:after:swap", onHtmxAfterSwap);
+    document.body.addEventListener("htmx:after:request", onHtmxAfterRequest);
     document.body.addEventListener("click", onActionClick);
 
     // Expose debug handle (read-only list of the last N pushes is the

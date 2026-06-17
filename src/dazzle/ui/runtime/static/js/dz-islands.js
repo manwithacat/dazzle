@@ -62,7 +62,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     mountIslands(document);
-    document.body.addEventListener("htmx:afterSettle", function (e) {
+    document.body.addEventListener("htmx:after:settle", function (e) {
       mountIslands(e.target);
       // #974: restore view-transition-name after the swap settles. We
       // cleared it in beforeSwap (below) to avoid a transient duplicate
@@ -73,7 +73,7 @@
         e.target.style.viewTransitionName = "";
       }
     });
-    document.body.addEventListener("htmx:beforeSwap", function (e) {
+    document.body.addEventListener("htmx:before:swap", function (e) {
       if (e.detail && e.detail.target) unmountIslands([e.detail.target]);
       // #974: strip view-transition-name on the swap target during the
       // swap window so the new content's same-named element doesn't

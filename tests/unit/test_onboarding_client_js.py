@@ -32,11 +32,11 @@ def test_js_file_exists() -> None:
 
 
 def test_js_handles_all_lifecycle_events() -> None:
-    """The script must run on initial load AND on htmx:afterSwap so
+    """The script must run on initial load AND on htmx:after:swap so
     fragment-injected overlays get wired."""
     text = JS_PATH.read_text()
     assert 'addEventListener("DOMContentLoaded"' in text or "DOMContentLoaded" in text
-    assert "htmx:afterSwap" in text
+    assert "htmx:after:swap" in text
 
 
 def test_js_arms_nudge_autodismiss_with_correct_url_shape() -> None:
@@ -70,7 +70,7 @@ def test_js_positions_against_data_onboarding_anchor() -> None:
 
 
 def test_js_wired_guard_prevents_double_arm() -> None:
-    """``htmx:afterSwap`` calls initAll; the script must not re-arm
+    """``htmx:after:swap`` calls initAll; the script must not re-arm
     elements it's already wired (auto-dismiss timer would fire twice)."""
     text = JS_PATH.read_text()
     assert "data-dz-wired" in text

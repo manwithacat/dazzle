@@ -36,7 +36,7 @@
 //   - showToast(success) → tap pattern (single 10ms pulse)
 //   - showToast(error)   → error pattern (two short pulses)
 //   - swipe-left / swipe-right → tap pattern
-//   - htmx:afterRequest with status >= 400 → error pattern
+//   - htmx:after:request with status >= 400 → error pattern
 //
 // Silently no-ops when navigator.vibrate is unsupported (most
 // desktop browsers), when the meta tag is absent, OR when the user
@@ -90,8 +90,8 @@
   });
   document.addEventListener("swipe-left", () => window.dzHaptic.tap());
   document.addEventListener("swipe-right", () => window.dzHaptic.tap());
-  document.addEventListener("htmx:afterRequest", (e) => {
-    const xhr = e && e.detail && e.detail.xhr;
+  document.addEventListener("htmx:after:request", (e) => {
+    const xhr = e && e.detail && e.detail.ctx && e.detail.ctx.response;
     if (xhr && xhr.status >= 400) window.dzHaptic.error();
   });
 })();
@@ -392,7 +392,7 @@ document.addEventListener("alpine:init", () => {
       //           hx-swap="outerHTML"
       //           x-optimistic="remove:closest tr">Delete</button>
       //
-      // Rollback path: on htmx:responseError or htmx:sendError, the
+      // Rollback path: on htmx:response:error or htmx:error, the
       // removed node is re-inserted at its original position and a
       // toast surfaces the failure. Adopters can listen for
       // `dz:optimistic-rollback` if they want custom recovery UI.
@@ -633,7 +633,7 @@ document.addEventListener("alpine:init", () => {
 
         const onAfterRequest = (ev) => {
           if (ev.target !== el) return;
-          const xhr = ev.detail && ev.detail.xhr;
+          const xhr = ev.detail && ev.detail.ctx && ev.detail.ctx.response;
           const ok =
             ev.detail && ev.detail.successful !== undefined
               ? ev.detail.successful
@@ -732,9 +732,9 @@ document.addEventListener("alpine:init", () => {
           restore("send-error");
         };
 
-        el.addEventListener("htmx:beforeRequest", onBeforeRequest);
-        el.addEventListener("htmx:afterRequest", onAfterRequest);
-        el.addEventListener("htmx:sendError", onSendError);
+        el.addEventListener("htmx:before:request", onBeforeRequest);
+        el.addEventListener("htmx:after:request", onAfterRequest);
+        el.addEventListener("htmx:error", onSendError);
 
         el._dzOptimistic = { onBeforeRequest, onAfterRequest, onSendError };
       });
@@ -973,7 +973,7 @@ document.addEventListener("alpine:init", () => {
       this._applyStoredWidths();
 
       // Inject selected IDs into htmx bulk action requests
-      this.$el.addEventListener("htmx:configRequest", (e) => {
+      this.$el.addEventListener("htmx:config:request", (e) => {
         const detail = /** @type {CustomEvent} */ (e).detail;
         if (detail.elt.hasAttribute("data-dz-bulk-action")) {
           detail.parameters["ids"] = Array.from(this.selected);
@@ -981,13 +981,13 @@ document.addEventListener("alpine:init", () => {
       });
 
       // Loading state driven by HTMX events on the table root
-      this.$el.addEventListener("htmx:beforeRequest", () => {
+      this.$el.addEventListener("htmx:before:request", () => {
         this.loading = true;
       });
-      this.$el.addEventListener("htmx:afterSettle", () => {
+      this.$el.addEventListener("htmx:after:settle", () => {
         this.loading = false;
       });
-      this.$el.addEventListener("htmx:responseError", () => {
+      this.$el.addEventListener("htmx:response:error", () => {
         this.loading = false;
       });
 
@@ -2170,12 +2170,12 @@ document.addEventListener("alpine:init", () => {
 // tags processed elements internally so re-initing inited components is
 // a no-op — safe to fire on every settle.
 //
-// Listen on `htmx:afterSettle` (not `afterSwap`) for the same reason as
+// Listen on `htmx:after:settle` (not `afterSwap`) for the same reason as
 // the per-component listener in dashboard-builder.js: under the morph
 // extension `afterSwap` fires before idiomorph commits child-node text,
 // so the JSON data island still holds stale text at that point. See
 // #919 (the original fix) and #924 (this follow-up).
-document.body.addEventListener("htmx:afterSettle", (e) => {
+document.body.addEventListener("htmx:after:settle", (e) => {
   const target = e && e.detail && e.detail.target;
   if (!target) return;
   if (window.Alpine && typeof window.Alpine.initTree === "function") {
@@ -2281,20 +2281,20 @@ document.body.addEventListener("htmx:afterSettle", (e) => {
 // navigation feels instant. Each prefetch carries `HX-Preloaded: true` so
 // the server can identify it. When a low-privilege persona hovers a link
 // they don't have permission for, the prefetch returns 401/403 — and
-// htmx's standard `htmx:responseError` event bubbles to the browser
+// htmx's standard `htmx:response:error` event bubbles to the browser
 // console as a logged error. The user never clicked anything; the noise
 // is pure speculative-fetch artifact and drowns real signal.
 //
-// Fix: a `htmx:responseError` listener that consumes (preventDefault) the
+// Fix: a `htmx:response:error` listener that consumes (preventDefault) the
 // event when (a) the request was a prefetch (HX-Preloaded header) AND
 // (b) the status is 401 or 403. Real user-clicked navigations to a
 // 401/403 still log normally — those are signal, not noise.
-document.body.addEventListener("htmx:responseError", (e) => {
+document.body.addEventListener("htmx:response:error", (e) => {
   const detail = /** @type {any} */ (e).detail;
-  if (!detail || !detail.xhr || !detail.requestConfig) return;
-  const status = detail.xhr.status;
+  if (!detail || !detail.ctx || !detail.ctx.response || !detail.ctx.request) return;
+  const status = detail.ctx.response.status;
   if (status !== 401 && status !== 403) return;
-  const headers = detail.requestConfig.headers || {};
+  const headers = detail.ctx.request.headers || {};
   if (headers["HX-Preloaded"] !== "true") return;
   // Speculative prefetch + auth denied — silently consume.
   e.preventDefault();
@@ -2330,7 +2330,7 @@ window.dz.filterRefSelect = function (selectEl) {
   const refApi = selectEl.dataset.refApi;
   if (!refApi) return;
   const selectedValue = selectEl.dataset.selectedValue || "";
-  // #973 (round 2): wire AbortController to both htmx:beforeSwap and
+  // #973 (round 2): wire AbortController to both htmx:before:swap and
   // pagehide. Round 1 only checked `document.body.contains(selectEl)`
   // in .catch — that worked for in-page htmx swaps but not for full
   // browser navigation (Playwright `page.goto`, link clicks, form
@@ -2340,13 +2340,13 @@ window.dz.filterRefSelect = function (selectEl) {
   //
   // The robust discriminator is an explicit AbortController. We trip
   // it on:
-  //   - htmx:beforeSwap (htmx is about to morph the DOM under us)
+  //   - htmx:before:swap (htmx is about to morph the DOM under us)
   //   - pagehide (full browser navigation, also covers BFCache)
   // Both fire BEFORE the fetch is cancelled, so the rejection arrives
   // as a known AbortError we can swallow cleanly.
   const controller = new AbortController();
   const onAbort = () => controller.abort();
-  window.addEventListener("htmx:beforeSwap", onAbort, { once: true });
+  window.addEventListener("htmx:before:swap", onAbort, { once: true });
   window.addEventListener("pagehide", onAbort, { once: true });
 
   fetch(refApi + "?page_size=100", {
@@ -2398,7 +2398,7 @@ window.dz.filterRefSelect = function (selectEl) {
       // Detach listeners — listener accumulation across many filter
       // dropdowns on one page would otherwise grow unbounded. After
       // pagehide this is moot (page going away) but harmless.
-      window.removeEventListener("htmx:beforeSwap", onAbort);
+      window.removeEventListener("htmx:before:swap", onAbort);
       window.removeEventListener("pagehide", onAbort);
     });
 };

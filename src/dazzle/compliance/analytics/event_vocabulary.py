@@ -115,7 +115,7 @@ EVENT_SCHEMAS: tuple[EventSchema, ...] = (
     EventSchema(
         name="dz_page_view",
         description="A workspace surface was viewed — full load or htmx swap.",
-        fires_on="htmx:afterSwap into [data-dz-surface] OR initial window.load.",
+        fires_on="htmx:after:swap into [data-dz-surface] OR initial window.load.",
         core_params=(
             EventParam(
                 name="workspace",
@@ -222,7 +222,7 @@ EVENT_SCHEMAS: tuple[EventSchema, ...] = (
     EventSchema(
         name="dz_form_submit",
         description="A form POST completed successfully (2xx response).",
-        fires_on="htmx:afterRequest with response.status in 200..299 on [data-dz-form].",
+        fires_on="htmx:after:request with response.status in 200..299 on [data-dz-form].",
         core_params=(
             EventParam(
                 name="form_name",
@@ -291,7 +291,7 @@ EVENT_SCHEMAS: tuple[EventSchema, ...] = (
     EventSchema(
         name="dz_api_error",
         description="An htmx request returned a 4xx/5xx response.",
-        fires_on="htmx:responseError event (status >= 400).",
+        fires_on="htmx:response:error event (status >= 400).",
         core_params=(
             EventParam(
                 name="status_code",

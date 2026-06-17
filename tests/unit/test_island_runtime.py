@@ -136,7 +136,7 @@ class TestIslandLoaderJS:
         content = js_path.read_text()
         assert "data-island" in content
         assert "mountIslands" in content
-        assert "htmx:afterSettle" in content
+        assert "htmx:after:settle" in content
         assert "DOMContentLoaded" in content
 
     def test_loader_uses_weakset(self):

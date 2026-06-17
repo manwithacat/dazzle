@@ -20,8 +20,8 @@ def test_bridge_script_exists():
 
 def test_bridge_script_has_required_patterns():
     content = BRIDGE_PATH.read_text()
-    assert "htmx:beforeSwap" in content
-    assert "htmx:afterSettle" in content
+    assert "htmx:before:swap" in content
+    assert "htmx:after:settle" in content
     assert "data-dz-widget" in content
     assert "registerWidget" in content
 

@@ -62,14 +62,14 @@
       self._errors.push("Unhandled rejection: " + String(e.reason));
       if (self._errors.length > 20) self._errors.shift();
     });
-    document.addEventListener("htmx:responseError", function (e) {
+    document.addEventListener("htmx:response:error", function (e) {
       self._errors.push(
-        "htmx:responseError " +
-          (e.detail && e.detail.xhr ? e.detail.xhr.status : ""),
+        "htmx:response:error " +
+          (e.detail && e.detail.ctx && e.detail.ctx.response ? e.detail.ctx.response.status : ""),
       );
     });
-    document.addEventListener("htmx:sendError", function () {
-      self._errors.push("htmx:sendError");
+    document.addEventListener("htmx:error", function () {
+      self._errors.push("htmx:error");
     });
   };
 

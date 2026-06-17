@@ -3,7 +3,7 @@
  * with the Dazzle component bridge (dz-component-bridge.js).
  *
  * Each registration maps a data-dz-widget type to a { mount, unmount } pair.
- * The bridge calls mount() on htmx:afterSettle and unmount() on htmx:beforeSwap.
+ * The bridge calls mount() on htmx:after:settle and unmount() on htmx:before:swap.
  *
  * Widget types: combobox, multiselect, tags, datepicker, daterange,
  * range-tooltip. (Note: colorpicker dropped in #976 — `widget=color`

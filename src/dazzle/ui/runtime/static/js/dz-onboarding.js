@@ -20,7 +20,7 @@
  *    fall back to the CSS-default position (bottom-of-page for
  *    popover, viewport-centred for spotlight). Adding an anchor
  *    later is purely additive; no JS changes needed.
- *  - **htmx swap re-arming** — re-runs init on `htmx:afterSwap` so
+ *  - **htmx swap re-arming** — re-runs init on `htmx:after:swap` so
  *    overlays that arrive via fragment swap get wired up too.
  *
  * Zero dependencies beyond htmx (already loaded on every Dazzle page).
@@ -190,7 +190,7 @@
 
   // htmx swap re-arming. Any newly-injected onboarding overlays get
   // wired up the same as their initial-render siblings.
-  document.addEventListener("htmx:afterSwap", function (evt) {
+  document.addEventListener("htmx:after:swap", function (evt) {
     var target = /** @type {CustomEvent} */ (evt).detail.target;
     initAll(target || document);
   });

@@ -5,7 +5,7 @@
  * (and humans) use to verify invariants about the bridge between
  * HTMX morphs and Alpine reactivity:
  *
- *   - Has the most recent `htmx:afterSettle` fired? When?
+ *   - Has the most recent `htmx:after:settle` fired? When?
  *   - Is the `$data` proxy on a given selector the SAME instance
  *     it was before the last morph, or did it get re-attached?
  *   - Which `[x-data]` component roots are currently mounted?
@@ -40,7 +40,7 @@
     document.body &&
     typeof document.body.addEventListener === "function"
   ) {
-    document.body.addEventListener("htmx:afterSettle", function (e) {
+    document.body.addEventListener("htmx:after:settle", function (e) {
       registry.lastSettleAt = Date.now();
       registry.lastSettleTarget =
         e && e.detail && e.detail.target ? e.detail.target : null;

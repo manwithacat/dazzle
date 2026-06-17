@@ -5,7 +5,7 @@ each carrying `HX-Preloaded: true`. When a low-privilege persona hovers a
 link they don't have permission for, the prefetch returns 401/403 and
 htmx logs a console error — pure noise that drowns real signal.
 
-Fix: `dz-alpine.js` installs a `htmx:responseError` listener that
+Fix: `dz-alpine.js` installs a `htmx:response:error` listener that
 consumes events from prefetch requests (HX-Preloaded: true) with 401/403
 status. Real user-clicked navigations still log normally.
 """
@@ -17,13 +17,13 @@ DZ_ALPINE = REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "js" / 
 
 
 def test_response_error_listener_present() -> None:
-    """The htmx:responseError listener for #967 must be present."""
+    """The htmx:response:error listener for #967 must be present."""
     js = DZ_ALPINE.read_text()
-    # Multiple `htmx:responseError` listeners may exist — ensure at least
+    # Multiple `htmx:response:error` listeners may exist — ensure at least
     # one of them is the prefetch-silence handler keyed off HX-Preloaded.
-    assert "htmx:responseError" in js and "HX-Preloaded" in js, (
+    assert "htmx:response:error" in js and "HX-Preloaded" in js, (
         "Missing the htmx-preload silence listener (#967). "
-        "Look for `addEventListener('htmx:responseError', ...)` that "
+        "Look for `addEventListener('htmx:response:error', ...)` that "
         "checks `HX-Preloaded` header in dz-alpine.js."
     )
 
