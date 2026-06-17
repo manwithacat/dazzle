@@ -1,5 +1,12 @@
 # htmx 4 upgrade evaluation (independent, from `main`)
 
+> **✅ SHIPPED 2026-06-17 — htmx 2.0.9 → 4.0.0-beta4 merged to `main` as v0.83.0** (PR #1405,
+> squash commit `d316e22f8`), bundled with the ADR-0038 rendering-layer-boundary refactor. Verified
+> regression-free by the browser oracle (`dazzle ux verify --interactions`) on ops_dashboard /
+> support_tickets / design_studio + full non-e2e suite green. On htmx **beta**; the GA version bump
+> is the only remaining follow-up. The verdict/tiers below are the **pre-migration** assessment —
+> see the **Outcome** section at the end for what actually happened (far under estimate).
+
 Date: 2026-06-17
 Worktree: `.claude/worktrees/htmx4-eval`, branch `htmx4-eval` (branched from `origin/main` @ `841ecb9e7`)
 Method: fresh static audit of current `main`. No htmx 4 bundle swapped in; no code modified. The
@@ -188,7 +195,7 @@ afterthought.
 
 ---
 
-## Outcome (2026-06-17) — migration executed, far more tractable than estimated
+## Outcome (2026-06-17) — SHIPPED to `main` as v0.83.0; far more tractable than estimated
 
 The migration to **htmx 4.0.0-beta4** was carried out on branch `htmx4-eval` and is **functional and
 green** by both gates (full non-e2e suite 18243 passed; `dazzle ux verify --interactions`
