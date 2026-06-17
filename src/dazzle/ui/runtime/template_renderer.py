@@ -63,7 +63,7 @@ def _render_body_inner(context: PageContext) -> str:
         )
         return (
             f'<form class="dz-form-stack" hx-{method}="{action}" '
-            f'hx-target="body" hx-swap="innerHTML" hx-ext="json-enc" '
+            f'hx-target="body" hx-swap="innerHTML" '
             f'data-dazzle-form="{entity}" data-dazzle-form-mode="{escape(form.mode, quote=True)}">'
             f"{fields_html}"
             f"{submit_html}"

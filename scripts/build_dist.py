@@ -114,6 +114,9 @@ JS_SOURCES = [
     # timestamp, component root listing). Bundle cost ~1KB; methods
     # only do work when called.
     STATIC / "js" / "dz-debug.js",
+    # htmx 4 migration: auto-dismiss bridge for OOB toasts (replaces the
+    # dropped htmx-2 remove-me extension).
+    STATIC / "js" / "dz-toast.js",
     SITE_STATIC / "js" / "site.js",
 ]
 
@@ -130,6 +133,7 @@ FRAMEWORK_JS = {
     "dz-islands.js",
     "pdf-viewer.js",
     "dz-debug.js",
+    "dz-toast.js",
     "site.js",
 }
 

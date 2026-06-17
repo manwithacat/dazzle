@@ -75,9 +75,7 @@ class _RenderFormsMixin:
             method_attrs = f'action="{action}" method="GET"'
         else:
             hx_verb = "hx-put" if fs.method == "PUT" else "hx-post"
-            method_attrs = (
-                f'{hx_verb}="{action}" hx-target="body" hx-swap="innerHTML" hx-ext="json-enc"'
-            )
+            method_attrs = f'{hx_verb}="{action}" hx-target="body" hx-swap="innerHTML"'
         data_parts: list[str] = []
         if fs.entity_name:
             data_parts.append(f'data-dazzle-form="{ctx.escape_attr(fs.entity_name)}"')

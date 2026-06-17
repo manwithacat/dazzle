@@ -492,7 +492,6 @@ def render_detail_view(detail: Any) -> str:
                 f'data-dz-entity="{entity_name_attr}" '
                 f'hx-put="{api_url_attr}" '
                 f"hx-vals='{hx_vals}' "
-                f'hx-ext="json-enc" '
                 f'hx-trigger="click" hx-target="body" hx-swap="innerHTML">{label}</button>'
             )
         transitions_html = (

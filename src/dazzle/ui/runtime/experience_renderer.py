@@ -128,16 +128,18 @@ def _render_form_step_body(experience: Any, page_context: Any) -> str:
         f'hx-{hx_method}="{action_url_attr}" '
         f'hx-target="body" '
         f'hx-swap="innerHTML" '
-        f'hx-target-422="#form-errors" '
-        f'hx-target-5*="#form-errors" '
-        f'hx-headers=\'{{"Content-Type": "application/json"}}\' '
-        f'hx-ext="json-enc" '
+        # htmx 4 migration: dropped hx-target-422/5* (response-targets ext gone;
+        # the server's HX-Retarget header routes validation errors to
+        # #form-errors), the forced application/json header + hx-ext="json-enc"
+        # (htmx 4 posts url-encoded, which the handler now accepts).
         f'class="dz-experience-form-body">'
         '<div id="form-errors"></div>'
         f"{fields_body}"
         '<div class="dz-experience-actions">'
+        # htmx 4: native hx-disabled-elt replaces the loading-states ext's
+        # data-loading-disable; the native htmx-request class covers styling.
         '<button type="submit" class="dz-button dz-button-primary" '
-        'data-loading-class="loading" data-loading-disable>'
+        'hx-disabled-elt="this">'
         f"{submit_label}</button>"
         f"{transition_buttons}"
         "</div></form></div>"

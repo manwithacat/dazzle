@@ -529,9 +529,21 @@ async def _experience_step_post(
             entity_ref = step_spec.entity_ref
 
         if entity_ref and event == "success":
-            # Read request body
+            # Read request body. htmx 4 posts application/x-www-form-urlencoded
+            # by default (the json-enc extension was dropped in the htmx 4
+            # migration), so accept BOTH form-encoded and JSON — mirroring the
+            # main write path's tolerant parser. Inlined (not imported) because
+            # ui/ must not import back/ (ADR-0038).
             try:
-                body = await request.json()
+                content_type = (request.headers.get("content-type") or "").lower()
+                if (
+                    "application/x-www-form-urlencoded" in content_type
+                    or "multipart/form-data" in content_type
+                ):
+                    form = await request.form()
+                    body = {k: (None if v == "" else v) for k, v in dict(form).items()}
+                else:
+                    body = await request.json()
             except Exception:
                 body = {}
 

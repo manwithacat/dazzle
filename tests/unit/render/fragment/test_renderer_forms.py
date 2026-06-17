@@ -18,7 +18,9 @@ def test_render_form_stack_post_emits_hx_post() -> None:
     assert 'hx-post="/tasks/create"' in out
     assert 'hx-target="body"' in out
     assert 'hx-swap="innerHTML"' in out
-    assert 'hx-ext="json-enc"' in out
+    # htmx 4: json-enc dropped — POST goes url-encoded, the server's tolerant
+    # body parser handles it (no hx-ext needed).
+    assert 'hx-ext="json-enc"' not in out
     # Old plain-form attrs must NOT appear on POST/PUT — the RBAC
     # checker is strict on hx-post.
     assert 'action="/tasks/create"' not in out

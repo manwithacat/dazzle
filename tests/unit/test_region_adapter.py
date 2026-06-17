@@ -2108,7 +2108,8 @@ def test_queue_renders_transition_buttons_when_supplied() -> None:
     assert "Resolve" in html
     assert "Close" in html
     assert "Reopen" not in html  # skipped — current state already 'open'
-    assert 'hx-ext="json-enc"' in html
+    # htmx 4: json-enc dropped — queue transition PUTs go url-encoded and the
+    # server's tolerant body parser handles them (no hx-ext needed).
 
 
 def test_queue_count_metrics_overflow_render_via_dedicated_primitive() -> None:
