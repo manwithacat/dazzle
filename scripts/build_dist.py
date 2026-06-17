@@ -82,9 +82,6 @@ JS_SOURCES = [
     STATIC / "vendor" / "htmx-ext-loading-states.js",
     STATIC / "vendor" / "htmx-ext-sse.js",
     STATIC / "vendor" / "htmx-ext-remove-me.js",
-    STATIC / "vendor" / "htmx-ext-class-tools.js",
-    STATIC / "vendor" / "htmx-ext-multi-swap.js",
-    STATIC / "vendor" / "htmx-ext-path-deps.js",
     # Alpine plugins + Alpine core (order matters: plugins before core).
     # SortableJS + alpine-sort were removed in #948 cycle 1 — pointer-event
     # drag in dashboard-builder.js replaced them. workspace-editor.js was
