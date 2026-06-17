@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.94] - 2026-06-17
+
+### Added
+- **`scripts/verify_tenant_hierarchy_http.py` — auth-bootstrap + HTTP-level verification harness for the tenant-hierarchy feature.** Boots `fixtures/tenant_hierarchy` as a real `dazzle serve` backend against a scratch Postgres, bootstraps the auth stack (`AuthStore._init_db()` + a **non-superuser `staff` user holding one membership at the ROOT tenant** + a session), seeds a two-trust tree, and drives the scoped endpoints with the real session cookie via `http.client` (exact `Host:` control). Proves through real HTTP that **auth is enforced** (anon → 401), the **minted non-superuser session authenticates** (`/auth/me` → 200), and the **`current_tenant` RBAC scope is applied + fail-closed** (apex → 0 rows, not the unscoped all-rows result). The subdomain→`current_tenant` *binding* needs `TenantResolutionMiddleware`, which a localhost `dazzle serve` doesn't mount, so the aggregate-vs-single *selection* remains proven against real Postgres by `tests/integration/test_current_tenant_scope_pg.py`. Closes the gap the `verify` run hit (test-mode `/__test__/authenticate` yields a scope-bypassing superuser; `--local` doesn't init auth tables).
+
+  ### Agent Guidance
+  - To HTTP-verify a tenancy/RBAC change end-to-end, mint a real session with `AuthStore` (`_init_db` → `create_user` → `create_membership` → `create_session`) and send `Cookie: dazzle_session=<id>` — do **not** rely on `/__test__/authenticate` (superuser, bypasses scope) or `dazzle serve --local` default (test-mode disables `require_auth`; auth tables not initialised). Use full `dazzle serve --no-test-mode` and drive with `http.client` for exact `Host:` headers.
+
 ## [0.82.93] - 2026-06-17
 
 ### Changed
