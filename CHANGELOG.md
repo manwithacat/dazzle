@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.82.93] - 2026-06-17
+
+### Changed
+- **`fixtures/tenant_hierarchy`: added a viewable `Report` list surface + `ops` workspace region.** Surfaced while verifying the fixture in a running app (`dazzle serve --local`): the entity-only fixture had no HTTP endpoint that applied the `current_tenant` scope, so there was nothing to drive. The list surface + workspace region give a scoped `GET /api/workspaces/ops/regions/reports` endpoint (and `/reports`), making the aggregate-vs-single behavior reachable through the app, not just via the DB-level isolation oracle. Boot verified: the fixture starts cleanly as a real backend (7 entities, tenant middleware + RLS DDL generation + routes, no errors).
+
 ## [0.82.92] - 2026-06-17
 
 ### Added

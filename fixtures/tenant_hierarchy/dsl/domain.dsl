@@ -64,3 +64,16 @@ entity Report "Report":
     # Writes stay single (aggregate hosts are read-only) — unexpanded leaf check.
     update: school = current_tenant
       as: staff
+
+# A viewable list surface so the current_tenant scope is exercisable at an HTTP
+# endpoint (aggregate at an ancestor host, single at a leaf host).
+surface report_list "Reports":
+  uses entity Report
+  mode: list
+  section main:
+    field title "Title"
+
+workspace ops "Operations":
+  reports:
+    source: Report
+    display: list
