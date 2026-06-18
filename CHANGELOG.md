@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.3] - 2026-06-18
+
+### Fixed
+- **`TenantResolutionMiddleware` could double-mount under custom ASGI wrapping** (#1407). A custom entrypoint that drives both the `create_app_factory` mount and `combined_server.run_unified_server` on the *same* `app` stacked the middleware (and a second `TenantCache`) twice. `_mount_tenant_resolution_middleware` is now idempotent: an `app.state._tenant_resolution_mounted` sentinel (works before the stack is materialised) plus a `user_middleware` class scan (belt-and-suspenders) skip the second mount. Normal `dazzle serve`/production is unchanged — the two call sites are mutually exclusive there; this guards only the abnormal same-`app` reuse path.
+
 ## [0.83.2] - 2026-06-18
 
 ### Added

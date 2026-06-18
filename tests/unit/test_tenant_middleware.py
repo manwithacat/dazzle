@@ -136,3 +136,65 @@ def test_negative_cache_short_circuits_second_request():
     client.get("/whoami", headers={"host": "ghost.example.com"})
     client.get("/whoami", headers={"host": "ghost.example.com"})
     assert calls == ["ghost"]  # second request hit NEGATIVE
+
+
+def test_mount_tenant_resolution_middleware_is_idempotent():
+    """#1407: calling the mount twice on the same app adds the middleware once.
+
+    A custom ASGI wrapper can drive both the create_app_factory mount and the
+    combined_server mount on the same `app`. The guard must dedup so we don't
+    stack TenantResolutionMiddleware (and a second TenantCache) twice.
+    """
+    from types import SimpleNamespace
+
+    from dazzle.back.runtime.app_factory import _mount_tenant_resolution_middleware
+    from dazzle.core import ir
+
+    entity = SimpleNamespace(
+        name="Trust",
+        fields=[],
+        tenant_host=ir.TenantHostSpec(domain="example.com", slug_field="slug"),
+    )
+    appspec = SimpleNamespace(name="demo", domain=SimpleNamespace(entities=[entity]))
+    builder = SimpleNamespace(repositories={})
+
+    app = FastAPI()
+
+    def _count() -> int:
+        return sum(
+            1
+            for mw in app.user_middleware
+            if getattr(mw, "cls", None) is TenantResolutionMiddleware
+        )
+
+    _mount_tenant_resolution_middleware(app, appspec, builder)  # type: ignore[arg-type]
+    assert _count() == 1
+    _mount_tenant_resolution_middleware(app, appspec, builder)  # type: ignore[arg-type]
+    assert _count() == 1  # second call is a no-op
+
+
+def test_mount_tenant_resolution_middleware_dedups_via_stack_when_marker_absent():
+    """#1407 belt-and-suspenders: even without the app.state sentinel, an existing
+    middleware in the stack is detected and re-mount is skipped."""
+    from types import SimpleNamespace
+
+    from dazzle.back.runtime.app_factory import _mount_tenant_resolution_middleware
+    from dazzle.core import ir
+
+    entity = SimpleNamespace(
+        name="Trust",
+        fields=[],
+        tenant_host=ir.TenantHostSpec(domain="example.com", slug_field="slug"),
+    )
+    appspec = SimpleNamespace(name="demo", domain=SimpleNamespace(entities=[entity]))
+    builder = SimpleNamespace(repositories={})
+
+    app = FastAPI()
+    _mount_tenant_resolution_middleware(app, appspec, builder)  # type: ignore[arg-type]
+    # Clear the sentinel so only the stack scan can catch the duplicate.
+    app.state._tenant_resolution_mounted = False
+    _mount_tenant_resolution_middleware(app, appspec, builder)  # type: ignore[arg-type]
+    count = sum(
+        1 for mw in app.user_middleware if getattr(mw, "cls", None) is TenantResolutionMiddleware
+    )
+    assert count == 1
