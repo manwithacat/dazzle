@@ -1354,6 +1354,12 @@ class DazzleBackendApp:
         from dazzle.back.runtime.sse_wiring import LazyFrameworkBus, register_sse_callbacks
 
         assert self._app is not None
+        # Defensive: never double-mount the SSE router (e.g. if a future ops
+        # dashboard also mounts /_ops/sse). validate_routes() would reject the
+        # collision otherwise.
+        if any(getattr(r, "path", "") == "/_ops/sse/events" for r in self._app.routes):
+            logger.info("SSE routes already mounted; skipping live-push mount.")
+            return
         lazy_bus = LazyFrameworkBus(framework)
         register_sse_callbacks(self._services, lazy_bus)
 

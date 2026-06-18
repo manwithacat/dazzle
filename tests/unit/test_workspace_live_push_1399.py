@@ -149,6 +149,19 @@ class TestLazyFrameworkBus:
         asyncio.run(lazy.publish("entity.created", env))
         assert real.published == [("entity.created", env)]
 
+    def test_falls_back_to_bus_property_when_no_get_bus(self) -> None:
+        # NullEventFramework exposes `.bus` (a no-op NullBus) but no get_bus().
+        # The proxy must resolve via `.bus` instead of treating it as not-ready.
+        import asyncio
+
+        from dazzle.back.runtime.sse_wiring import LazyFrameworkBus
+
+        real = _RecordingBus()
+        framework = SimpleNamespace(bus=real)  # no get_bus attribute
+        lazy = LazyFrameworkBus(framework)
+        asyncio.run(lazy.publish("entity.updated", object()))
+        assert real.published and real.published[0][0] == "entity.updated"
+
 
 class TestSseMountGate:
     def test_any_workspace_live(self) -> None:

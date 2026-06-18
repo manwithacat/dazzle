@@ -42,8 +42,14 @@ class LazyFrameworkBus:
         self._framework = framework
 
     def _bus(self) -> Any | None:
+        # EventFramework exposes get_bus() (None until start()); NullEventFramework
+        # (events package unavailable) exposes only a `.bus` no-op NullBus. Prefer
+        # get_bus(), fall back to `.bus`, so the null framework yields an inert
+        # (connect + heartbeat, no events) SSE path instead of raising at start.
         getter = getattr(self._framework, "get_bus", None)
-        return getter() if getter is not None else None
+        if getter is not None:
+            return getter()
+        return getattr(self._framework, "bus", None)
 
     async def publish(self, topic: str, envelope: Any, *, transactional: bool = False) -> None:
         bus = self._bus()

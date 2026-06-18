@@ -185,15 +185,20 @@ class SSEStreamManager:
                 if subscription.stream_type not in (stream_type, StreamType.ALL):
                     continue
 
-                # Apply tenant filter
+                # Apply tenant filter. Compare as strings — the header is a str
+                # (#1399) but subscription.tenant_id may arrive as a UUID from
+                # request.state, so a raw `!=` would blackout every event.
                 if subscription.tenant_id:
                     event_tenant = envelope.headers.get("tenant_id")
-                    if event_tenant != subscription.tenant_id:
+                    if str(event_tenant) != str(subscription.tenant_id):
                         continue
 
-                # Apply entity filter
+                # Apply entity filter. Prefer payload["entity"] (#1399 nudges use
+                # a 2-part `entity.created` event_type, so envelope.entity_name —
+                # which reads event_type.split(".")[1] — would yield the action,
+                # not the entity); fall back to entity_name for 3-part app events.
                 if subscription.entity_filter:
-                    entity_name = envelope.entity_name
+                    entity_name = (envelope.payload or {}).get("entity") or envelope.entity_name
                     if entity_name != subscription.entity_filter:
                         continue
 
