@@ -577,6 +577,7 @@ workspace_decl ::= "workspace" IDENT STRING? ":" NEWLINE
                    INDENT
                      ("purpose" ":" STRING NEWLINE)?
                      ("access" ":" IDENT NEWLINE)?
+                     ("live" ":" ("on" | "off") NEWLINE)?   (* #1399 SSE live push; poll retained as fallback *)
                      workspace_region+
                      ux_block?
                    DEDENT ;

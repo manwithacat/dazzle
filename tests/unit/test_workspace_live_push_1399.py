@@ -18,8 +18,8 @@ class TestWorkspaceLiveIR:
         assert ws.live is True
 
 
-_LIVE_DSL = """module demo
-app demo "Demo"
+_LIVE_DSL = """module t
+app t "Test"
 entity Job "Job":
   id: uuid pk
   status: str(20) = "queued"
