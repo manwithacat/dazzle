@@ -18,6 +18,7 @@ This module pins three layers:
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -142,3 +143,121 @@ class TestLiveRefreshRenderer:
         )
         html = _render(card)
         assert 'hx-trigger="intersect once, every 45s"' in html
+
+
+class TestTerminalStateStop:
+    """#1399 slice 2 — `_region_polling_complete` decides the htmx-native poll-stop.
+
+    Inferred status field + all-rows-terminal rule, with conservative guards
+    (must poll, must have a state machine, must hold every row, non-empty).
+    """
+
+    @staticmethod
+    def _sm(status_field="status", states=("running", "done"), transitions=(("running", "done"),)):
+        from dazzle.core.ir.state_machine import StateMachineSpec, StateTransition
+
+        return StateMachineSpec(
+            status_field=status_field,
+            states=list(states),
+            transitions=[StateTransition(from_state=f, to_state=t) for f, t in transitions],
+        )
+
+    @staticmethod
+    def _ctx(*, refresh_interval, state_machine, display="LIST"):
+        return SimpleNamespace(
+            ir_region=SimpleNamespace(refresh_interval=refresh_interval),
+            entity_spec=SimpleNamespace(state_machine=state_machine),
+            ctx_region=SimpleNamespace(display=display),
+        )
+
+    @staticmethod
+    def _fetched(items, total=None):
+        return SimpleNamespace(items=items, total=len(items) if total is None else total)
+
+    def _complete(self, ctx, fetched):
+        from dazzle.back.runtime.workspace_region_handler import _region_polling_complete
+
+        return _region_polling_complete(ctx, fetched)
+
+    def test_all_rows_terminal_is_complete(self) -> None:
+        ctx = self._ctx(refresh_interval=30, state_machine=self._sm())
+        assert self._complete(ctx, self._fetched([{"status": "done"}, {"status": "done"}])) is True
+
+    def test_any_non_terminal_row_keeps_polling(self) -> None:
+        ctx = self._ctx(refresh_interval=30, state_machine=self._sm())
+        fetched = self._fetched([{"status": "done"}, {"status": "running"}])
+        assert self._complete(ctx, fetched) is False
+
+    def test_empty_region_keeps_polling(self) -> None:
+        ctx = self._ctx(refresh_interval=30, state_machine=self._sm())
+        assert self._complete(ctx, self._fetched([])) is False
+
+    def test_no_refresh_interval_never_stops(self) -> None:
+        ctx = self._ctx(refresh_interval=None, state_machine=self._sm())
+        assert self._complete(ctx, self._fetched([{"status": "done"}])) is False
+
+    def test_no_state_machine_never_stops(self) -> None:
+        ctx = self._ctx(refresh_interval=30, state_machine=None)
+        assert self._complete(ctx, self._fetched([{"status": "done"}])) is False
+
+    def test_more_pages_keep_polling(self) -> None:
+        """The fetched page is all-terminal, but total > page → a later page may
+        still carry live rows, so don't stop."""
+        ctx = self._ctx(refresh_interval=30, state_machine=self._sm())
+        fetched = self._fetched([{"status": "done"}], total=5)
+        assert self._complete(ctx, fetched) is False
+
+    def test_tolerates_entity_object_rows(self) -> None:
+        ctx = self._ctx(refresh_interval=30, state_machine=self._sm())
+        rows = [SimpleNamespace(status="done"), SimpleNamespace(status="done")]
+        assert self._complete(ctx, self._fetched(rows)) is True
+
+
+class TestRegionResponseBuild:
+    """#1399 slice 2 — `_build_region_response` emits the htmx-native poll-stop:
+    a triggerless outerHTML self-replacement via the HX-Reswap response header
+    when complete; a plain innerHTML body otherwise."""
+
+    def _build(self, ctx, fetched, html_body, hx_target):
+        from dazzle.back.runtime.workspace_region_handler import _build_region_response
+
+        return _build_region_response(ctx, fetched, html_body, hx_target)
+
+    def test_complete_with_target_emits_outerhtml_reswap(self) -> None:
+        ctx = TestTerminalStateStop._ctx(
+            refresh_interval=30, state_machine=TestTerminalStateStop._sm(), display="LIST"
+        )
+        fetched = TestTerminalStateStop._fetched([{"status": "done"}])
+        resp = self._build(ctx, fetched, "<div data-dz-region>body</div>", "region-jobs-card-2")
+
+        assert resp.headers.get("HX-Reswap") == "outerHTML"
+        body = resp.body.decode()
+        # The triggerless replacement preserves id + class + lowercased display,
+        # carries the completion marker, and has NO polling trigger.
+        assert 'id="region-jobs-card-2"' in body
+        assert 'class="dz-card-body"' in body
+        assert 'data-display="list"' in body
+        assert 'data-dz-poll-complete="true"' in body
+        assert "hx-trigger" not in body
+        assert "every" not in body
+        assert "<div data-dz-region>body</div>" in body
+
+    def test_complete_without_target_falls_back_to_plain_body(self) -> None:
+        ctx = TestTerminalStateStop._ctx(
+            refresh_interval=30, state_machine=TestTerminalStateStop._sm()
+        )
+        fetched = TestTerminalStateStop._fetched([{"status": "done"}])
+        resp = self._build(ctx, fetched, "<div data-dz-region>body</div>", None)
+
+        assert resp.headers.get("HX-Reswap") is None
+        assert resp.body.decode() == "<div data-dz-region>body</div>"
+
+    def test_incomplete_returns_plain_body_even_with_target(self) -> None:
+        ctx = TestTerminalStateStop._ctx(
+            refresh_interval=30, state_machine=TestTerminalStateStop._sm()
+        )
+        fetched = TestTerminalStateStop._fetched([{"status": "running"}])
+        resp = self._build(ctx, fetched, "<div data-dz-region>body</div>", "region-jobs-card-2")
+
+        assert resp.headers.get("HX-Reswap") is None
+        assert resp.body.decode() == "<div data-dz-region>body</div>"

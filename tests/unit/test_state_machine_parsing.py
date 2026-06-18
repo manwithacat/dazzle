@@ -260,3 +260,53 @@ entity User "User":
         role_field = entity.get_field("role")
         assert role_field is not None
         assert role_field.type.enum_values == ["admin", "user", "guest"]
+
+
+class TestTerminalStates:
+    """StateMachineSpec.terminal_states() — the #1399 poll-stop predicate."""
+
+    def test_state_with_no_outgoing_is_terminal(self) -> None:
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Job "Job":
+  id: uuid pk
+  status: enum[new, running, done]
+
+  transitions:
+    new -> running
+    running -> done
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        sm = fragment.entities[0].state_machine
+        assert sm is not None
+        # `done` has no outgoing transition → terminal; new/running are not.
+        assert sm.terminal_states() == {"done"}
+
+    def test_wildcard_self_target_is_still_terminal(self) -> None:
+        """A `* -> archived` wildcard makes `archived` reachable from every
+        state including itself; the self-loop must not mark it non-terminal."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Doc "Doc":
+  id: uuid pk
+  status: enum[active, archived]
+
+  transitions:
+    active -> archived
+    * -> archived
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        sm = fragment.entities[0].state_machine
+        assert sm is not None
+        # active can still leave (→ archived); archived's only target is itself.
+        assert sm.terminal_states() == {"archived"}
+
+    def test_no_transitions_means_all_states_terminal(self) -> None:
+        from dazzle.core.ir.state_machine import StateMachineSpec
+
+        sm = StateMachineSpec(status_field="status", states=["a", "b", "c"], transitions=[])
+        assert sm.terminal_states() == {"a", "b", "c"}

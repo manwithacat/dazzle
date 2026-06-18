@@ -228,6 +228,18 @@ class StateMachineSpec(BaseModel):
         """Check if a transition is allowed (ignoring guards)."""
         return to_state in self.get_allowed_targets(from_state)
 
+    def terminal_states(self) -> set[str]:
+        """States with no outgoing transition to a *different* state (#1399).
+
+        A state is terminal when, ignoring self-loops, nothing can leave it —
+        the lifecycle is finished there. Self-targets are subtracted so a
+        ``* -> archived`` wildcard (which makes ``archived`` reachable from
+        every state, including itself) doesn't spuriously mark ``archived``
+        non-terminal. With no transitions defined at all, every state is
+        terminal.
+        """
+        return {s for s in self.states if not (self.get_allowed_targets(s) - {s})}
+
     def get_transition(self, from_state: str, to_state: str) -> StateTransition | None:
         """Get the transition definition between two states."""
         for t in self.transitions:

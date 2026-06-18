@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.5] - 2026-06-18
+
+### Added
+- **Terminal-state-stop for polling regions** (#1399 slice 2). A region declaring `refresh: every Ns` now stops polling once its work is done: when the region's source entity has a state machine and **every** fetched row is in a terminal state, the poll halts (a finished pipeline isn't polled forever). Fully inferred — no new DSL. The status field is the entity's state-machine `status_field`; terminal states are those with no outgoing transition to a different state (self-loops and `* -> X` wildcards handled). Conservative guards: only when the region actually polls, only with a state machine, only when the fetched page holds every matching row (a later page may carry live rows), and never on an empty region (no rows yet ≠ done). New `StateMachineSpec.terminal_states()` IR helper. 16 new tests.
+- **htmx-native poll-stop mechanism.** htmx 4 (shipped v0.83.0) removed the legacy HTTP-286 poll-cancel, so stop is now done by self-replacement: a completed region's fetch returns a triggerless copy of its `dz-card-body` element with an `HX-Reswap: outerHTML` response header. htmx swaps the whole polling element out; the disconnected old element's `setInterval` self-clears (htmx 4 stops `every` polling only when the element leaves the DOM). The replacement preserves the element id (from the `HX-Target` request header — multi-card-safe), classes, and `data-display`; if `HX-Target` is absent it falls back to the normal body and keeps polling (safe no-op).
+
+  ### Agent Guidance
+  - **Don't use HTTP 286 to stop htmx polling — it's a no-op under htmx 4.** htmx 4 dropped the 286 special-case; an `every Ns` poll only stops when its element leaves the DOM. To stop a poll from the server, return a replacement element without the trigger and set `HX-Reswap: outerHTML` (read `HX-Target` to preserve the element id). The legacy 286 pattern silently keeps polling.
+
 ## [0.83.4] - 2026-06-18
 
 ### Fixed
