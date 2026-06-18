@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.4] - 2026-06-18
+
+### Fixed
+- **403 forbidden-detail reported global `user.roles`, not effective roles** (auth Plan 1b, #1406). The LIST permit-deny path's `_forbidden_detail(...)` populated `current_roles` from the global `user.roles` (empty under the per-org membership model) instead of `effective_roles_of(auth_context)` — so a membership-scoped session's 403 diagnostic showed no roles even though the decision used the membership's roles. Now sources the same effective roles the decision used. Diagnostic-only (the allow/deny decision and row-scope filter were already correct); the other five Plan 1b enforcement points already used `effective_roles_of`. Audit attribution (`audit_wrap.py`) stays on `user.roles` deliberately (Plan 2).
+
 ## [0.83.3] - 2026-06-18
 
 ### Fixed

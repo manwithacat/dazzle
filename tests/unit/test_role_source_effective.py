@@ -8,6 +8,8 @@ route_generator + policy switchover.
 
 from types import SimpleNamespace
 
+import pytest
+
 from dazzle.back.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
 
 
@@ -98,3 +100,60 @@ def test_policy_check_entity_op_sources_membership_roles(monkeypatch) -> None:
     except HTTPException:
         pass
     assert captured.get("roles") == ["admin"]
+
+
+def test_list_403_detail_reports_effective_roles_not_global() -> None:
+    """#1406: the LIST permit-deny 403 `detail.current_roles` must report the
+    *effective* (membership) roles the decision used, not the empty global
+    user.roles. A membership-scoped session has roles only on the membership."""
+    import asyncio
+    from unittest.mock import MagicMock
+
+    from fastapi import HTTPException
+
+    from dazzle.back.runtime.handlers.list_handlers import _list_handler_body
+    from dazzle.back.specs.auth import (
+        AccessConditionSpec,
+        AccessOperationKind,
+        AccessPolicyEffect,
+        EntityAccessSpec,
+        PermissionRuleSpec,
+    )
+
+    # LIST is permitted for "admin" only; this actor's membership grants "viewer".
+    spec = EntityAccessSpec(
+        permissions=[
+            PermissionRuleSpec(
+                operation=AccessOperationKind.LIST,
+                effect=AccessPolicyEffect.PERMIT,
+                condition=AccessConditionSpec(kind="role_check", role_name="admin"),
+            )
+        ]
+    )
+    # Membership says viewer; legacy global user.roles is empty (per-org model).
+    ctx = _ctx_with_membership(membership_roles=["viewer"], user_roles=[])
+
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(
+            _list_handler_body(
+                service=MagicMock(),
+                access_spec=None,
+                is_authenticated=True,
+                user_id="u-1",
+                request=MagicMock(),
+                page=1,
+                page_size=20,
+                sort=None,
+                dir="asc",
+                search=None,
+                cedar_access_spec=spec,
+                auth_context=ctx,
+                entity_name="Secret",
+            )
+        )
+
+    assert exc_info.value.status_code == 403
+    detail = exc_info.value.detail
+    assert isinstance(detail, dict)
+    # The fix: effective membership roles, NOT the empty global user.roles.
+    assert detail["current_roles"] == ["viewer"]

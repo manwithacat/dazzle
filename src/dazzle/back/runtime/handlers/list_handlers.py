@@ -314,13 +314,19 @@ async def _list_handler_body(
                 cedar_access_spec, AccessOperationKind.LIST, None, _ctx, entity_name=entity_name
             )
             if not decision.allowed:
+                # auth Plan 1b (#1406): report the *effective* roles the decision
+                # actually used (active membership's roles, else legacy user.roles),
+                # not the global user.roles — which is empty under the per-org model
+                # and made the 403 diagnostic misleading.
+                from dazzle.back.runtime.auth.models import effective_roles_of
+
                 raise HTTPException(
                     status_code=403,
                     detail=_forbidden_detail(
                         entity_name=entity_name,
                         operation=AccessOperationKind.LIST,
                         cedar_access_spec=cedar_access_spec,
-                        current_roles=list(getattr(_user, "roles", [])) if _user else [],
+                        current_roles=list(effective_roles_of(auth_context)),
                     ),
                 )
 
