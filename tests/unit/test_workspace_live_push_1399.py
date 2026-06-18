@@ -188,3 +188,48 @@ class TestSseMountGate:
         )
         assert _any_workspace_live([SimpleNamespace(live=False)]) is False
         assert _any_workspace_live([]) is False
+
+
+class TestSseDeliveryIntegration:
+    """Runtime-path: a real nudge envelope (from the actual lifecycle callback)
+    routes through ``SSEStreamManager._handle_envelope`` to a subscriber's queue
+    as an ``entity.created`` SSE frame, with tenant isolation.
+
+    This connects the two halves we own — the publish-side nudge builder and the
+    SSE routing/filtering — using the genuine envelope, not a mock. The bus
+    transport itself (postgres LISTEN/NOTIFY) is covered by the events suite;
+    our code is bus-transport-agnostic (publishes via the EventBus interface).
+    """
+
+    async def _nudge_envelope(self, tenant: str | None) -> object:
+        from dazzle.back.runtime.sse_wiring import register_sse_callbacks
+
+        bus = _RecordingBus()
+        svc = _FakeCRUDService("Job")
+        register_sse_callbacks({"Job": svc}, bus, _is_target=lambda s: True)
+        await svc._created[0]("Job", "id-1", {"id": "id-1", "tenant_id": tenant}, None)
+        return bus.published[0][1]
+
+    async def test_nudge_reaches_matching_subscriber(self) -> None:
+        from dazzle.back.runtime.sse_stream import SSEStreamManager, StreamType
+
+        envelope = await self._nudge_envelope("t1")
+        manager = SSEStreamManager(event_bus=_RecordingBus())
+        sub_id = manager.create_subscription(stream_type=StreamType.EVENTS, tenant_id="t1")
+
+        await manager._handle_envelope(envelope)
+
+        msg = manager._queues[sub_id].get_nowait()
+        assert msg.event == "entity.created"  # matches the client `sse:entity.created` trigger
+        assert msg.data.get("entity") == "Job"
+
+    async def test_nudge_isolated_across_tenants(self) -> None:
+        from dazzle.back.runtime.sse_stream import SSEStreamManager, StreamType
+
+        envelope = await self._nudge_envelope("t1")
+        manager = SSEStreamManager(event_bus=_RecordingBus())
+        other = manager.create_subscription(stream_type=StreamType.EVENTS, tenant_id="t2")
+
+        await manager._handle_envelope(envelope)
+
+        assert manager._queues[other].empty()  # t2 must not receive t1's nudge
