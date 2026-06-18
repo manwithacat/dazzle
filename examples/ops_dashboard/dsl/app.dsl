@@ -178,6 +178,9 @@ workspace command_center "Command Center":
   purpose: "Real-time operations monitoring and incident response"
   stage: "command_center"
   access: persona(ops_engineer)
+  # #1399 — SSE live push: cards update instantly on alert mutations; the
+  # per-region `refresh: every 30s` below stays as a fallback heartbeat.
+  live: on
 
   # Alert Feed - Shows active alerts. Live-refreshes (#1391) so the
   # on-call engineer sees new alerts without reloading — the region's
