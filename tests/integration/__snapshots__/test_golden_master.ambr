@@ -1599,6 +1599,7 @@
           'redirect_unauthenticated': '/login',
         }),
         'context_selector': None,
+        'live': False,
         'name': '_platform_admin',
         'nav_groups': list([
           dict({

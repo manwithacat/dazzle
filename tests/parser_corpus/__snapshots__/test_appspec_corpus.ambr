@@ -384,6 +384,7 @@
       ]),
       'workspaces': list([
         dict({
+          'live': False,
           'name': 'admin_dashboard',
           'purpose': 'Administrative overview of tasks and reports',
           'regions': list([
@@ -420,6 +421,7 @@
           'title': 'Admin Dashboard',
         }),
         dict({
+          'live': False,
           'name': 'user_home',
           'purpose': "User's personal task view",
           'regions': list([
