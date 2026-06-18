@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.7] - 2026-06-19
+
+### Changed
+- **GUIDE_WALK CI gate promoted to blocking** (#1395). The onboarding-overlay oracle (`dazzle ux verify --guides`, matrixed over all 11 examples) is no longer `continue-on-error`. The v0.82.57 promotion was reverted in v0.82.58 after one green run when the next failed on the `invoice_ops` auditor cell; that turned out to be the guide-authoring bug fixed in v0.82.64 (#1395) — the auditor guide targeted a *shadowed* secondary list surface the runtime never renders. Re-promoted after 7 consecutive runs with all 11 cells green (the "a few runs, not one" lesson). A persona is now blocked from merging if its DSL-promised onboarding overlay doesn't actually render at runtime.
+
 ## [0.83.6] - 2026-06-19
 
 ### Added

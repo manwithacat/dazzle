@@ -680,12 +680,13 @@ jobs:
   # No Playwright (server-rendered HTML, sync httpx). Matrixed over all 11
   # examples so each gets a clean Postgres + its own boot.
   #
-  # ADVISORY (continue-on-error). Promoted to blocking in v0.82.57 after ONE
-  # green advisory run, then REVERTED in v0.82.58 — the very next run failed on
-  # the invoice_ops cell (passed in the advisory run), so the gate isn't yet
-  # reliably green. Investigate the invoice_ops flake/failure, then re-promote
-  # only after it's green across several runs (the viewport-gate convention says
-  # "a few runs", not one — lesson learned).
+  # BLOCKING. The v0.82.57 promotion was reverted in v0.82.58 after ONE green
+  # run when the next failed on the invoice_ops cell. Root cause (#1395, fixed
+  # v0.82.64): not a flake — the invoice_ops auditor guide targeted a *shadowed*
+  # secondary list surface (audit_export) that the runtime never renders (every
+  # list surface of an entity collapses to /app/<entity>); re-targeted to the
+  # default surface. Re-promoted to blocking after 7 consecutive runs with all
+  # 11 example cells green (the "a few runs, not one" lesson — #1395).
   guide-walks:
     name: GUIDE_WALK (onboarding overlays)
     runs-on: ubuntu-latest
@@ -733,7 +734,8 @@ jobs:
         optional-pip: ""
 
     - name: Run GUIDE_WALK (with retry)
-      continue-on-error: true  # ADVISORY — reverted from blocking (invoice_ops failed v0.82.57); re-promote once reliably green
+      # BLOCKING (#1395) — re-promoted after 7 consecutive all-green runs.
+      # If flakes appear post-ratchet, re-add `continue-on-error: true` and reopen #1395.
       run: |
         cd examples/${{ matrix.app }}
         set +e
