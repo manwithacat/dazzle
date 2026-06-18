@@ -749,6 +749,10 @@ def build_workspace_context(
         context_selector_entity=ctx_entity,
         context_selector_label=ctx_label,
         context_options_url=ctx_options_url,
+        # #1399 slice 1 — live: on activates the already-wired client SSE
+        # connect + sse:entity.* card triggers. Tenant is resolved server-side
+        # by the /_ops/sse/events endpoint, so the URL carries no query params.
+        sse_url="/_ops/sse/events" if getattr(workspace, "live", False) else "",
     )
 
 

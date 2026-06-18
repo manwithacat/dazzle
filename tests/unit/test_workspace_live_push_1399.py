@@ -163,6 +163,22 @@ class TestLazyFrameworkBus:
         assert real.published and real.published[0][0] == "entity.updated"
 
 
+class TestRendererSseUrl:
+    def _ctx(self, dsl: str) -> object:
+        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+
+        module = parse_dsl(dsl, Path("test.dsl"))[5]
+        ws = next(w for w in module.workspaces if w.name == "ops")
+        # sse_url derives only from ws.live; app_spec (entity metadata) is irrelevant.
+        return build_workspace_context(ws, None)
+
+    def test_live_populates_sse_url(self) -> None:
+        assert self._ctx(_LIVE_DSL).sse_url == "/_ops/sse/events"
+
+    def test_not_live_leaves_sse_url_empty(self) -> None:
+        assert self._ctx(_NOLIVE_DSL).sse_url == ""
+
+
 class TestSseMountGate:
     def test_any_workspace_live(self) -> None:
         from dazzle.back.runtime.server import _any_workspace_live
