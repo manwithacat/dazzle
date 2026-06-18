@@ -123,6 +123,19 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
             if proc_step.human_task and proc_step.human_task.surface:
                 used_surfaces.add(proc_step.human_task.surface)
 
+    # Surfaces included via subtype_panel branches (#1411): a surface
+    # referenced only through `subtype_panel: when ... include surface X` is
+    # alive. Without this walk, _detect_dead_constructs false-flags such a
+    # surface as dead (caught by the fuzz sweep on fixtures/asset_registry).
+    for surface in appspec.surfaces:
+        for section in surface.sections:
+            panel = section.subtype_panel
+            if panel is None:
+                continue
+            for branch in panel.branches:
+                if branch.include_surface:
+                    used_surfaces.add(branch.include_surface)
+
     # Surfaces belonging to entities used in workspace regions are implicitly
     # alive — entity CRUD surfaces are navigable from workspace detail pages
     # even when not explicitly wired to a workspace action.

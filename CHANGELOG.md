@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.1] - 2026-06-18
+
+### Fixed
+- **Three framework validation/CLI gaps surfaced by the cross-app fuzz sweep** (validate/lint miss runtime-breaking conditions):
+  - **`lint` dead-construct detector ignored `subtype_panel` branch `include_surface` refs** (#1411) — a surface used only via `subtype_panel: when … include surface X` was wrongly flagged dead. `_detect_dead_constructs()` now walks `SubtypePanelSpec.branches[].include_surface`.
+  - **`validate` didn't catch an undefined surface in a workspace region `action:`** (#1412) — a typo'd `action:` shipped a runtime row-click to a dead URL (`ux.py` skipped it as "caught elsewhere" — it wasn't). Now a validation error; path-style action_grid CTAs (starting `/`) are exempted. Also fixed the dangling `action: doc_list` in `fixtures/signing_validation`.
+  - **CLI raw `FileNotFoundError` traceback when `dazzle.toml` is missing** (#1414) — `load_manifest()` now raises a friendly `DazzleError` ("No dazzle.toml found … run from a project root or `dazzle init`"), which validate/lint/serve already print cleanly.
+
+  ### Agent Guidance
+  - A workspace region `action:` must name a real surface — `dazzle validate` now errors on dangling refs. Use a path (`/…`) only for action_grid CTAs.
+
 ## [0.83.0] - 2026-06-17
 
 ### Changed

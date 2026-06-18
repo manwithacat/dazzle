@@ -418,11 +418,27 @@ def validate_workspace_region_actions(appspec: ir.AppSpec) -> tuple[list[str], l
 
     for workspace in appspec.workspaces:
         for region in workspace.regions:
-            if not region.action or not region.source:
+            if not region.action:
                 continue
             action_surface = surfaces_by_name.get(region.action)
             if action_surface is None:
-                continue  # unknown surface is caught elsewhere
+                # #1412: an `action:` referencing a non-existent surface was
+                # silently ignored (the old comment claimed it was "caught
+                # elsewhere" — it wasn't, so a typo'd ref shipped a runtime
+                # row-click to a dead URL). A path-style action (an action_grid
+                # CTA, which starts with "/") is legitimately not a surface
+                # name, so only flag identifier-shaped dangling refs.
+                if "/" not in region.action:
+                    region_label = getattr(region, "name", None) or region.source or "?"
+                    errors.append(
+                        f"Workspace '{workspace.name}' region '{region_label}' declares "
+                        f"`action: {region.action}` but no surface named "
+                        f"'{region.action}' exists — the row-click action would "
+                        f"navigate to a non-existent surface at runtime."
+                    )
+                continue
+            if not region.source:
+                continue  # FK-threading check below requires a source entity
             target_entity = action_surface.entity_ref
             if not target_entity or target_entity == region.source:
                 continue  # same-entity action — no FK needed

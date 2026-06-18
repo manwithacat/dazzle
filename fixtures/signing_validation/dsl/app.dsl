@@ -22,5 +22,4 @@ workspace docs_dashboard "Documents":
     source: TestDoc
     sort: id asc
     display: list
-    action: doc_list
     empty: "No documents"
