@@ -475,6 +475,51 @@ class DazzleBackendApp:
         declared = load_manifest(manifest_path).capabilities.enabled
         return resolve_capabilities(list(declared))
 
+    def _warn_unregistered_renderers(self) -> None:
+        """#1413: warn at boot when a custom renderer declared in dazzle.toml
+        ``[renderers] extra`` has no runtime handler registered.
+
+        Declaring a renderer (link-time, validated by build_appspec) and
+        registering its handler (runtime, ``services.renderer_registry.register``)
+        are separate steps. A declared-but-unregistered renderer passes
+        ``dazzle validate``/``lint`` but 500s with a FragmentError at first
+        request. Surface the gap at the moment it matters — boot — without
+        failing the boot (warning, not error).
+        """
+        if self._project_root is None or self._app is None:
+            return
+        manifest_path = self._project_root / "dazzle.toml"
+        if not manifest_path.is_file():
+            return
+        from dazzle.core.manifest import load_manifest
+
+        try:
+            declared = load_manifest(manifest_path).renderers.extra
+        except (ValueError, OSError):
+            # Best-effort warning only — a malformed/unreadable manifest is
+            # surfaced loudly by the appspec build that already ran; don't let
+            # this advisory check perturb boot.
+            return
+        if not declared:
+            return
+        services = getattr(self._app.state, "services", None)
+        registry = getattr(services, "renderer_registry", None)
+        if registry is None:
+            return
+        registered = set(registry.registered_names())
+        orphans = sorted(r for r in declared if r not in registered)
+        if orphans:
+            logger.warning(
+                "[dazzle] custom renderer(s) declared in dazzle.toml "
+                "[renderers] extra but never registered at runtime: %s — they "
+                "will 500 (FragmentError) at request time. Wire "
+                "services.renderer_registry.register(name=..., handler=...) at "
+                "startup (e.g. your register_all() via register_lifespan_hook). "
+                "Declared-but-unregistered renderers pass validate/lint but "
+                "fail at request (#1413).",
+                ", ".join(orphans),
+            )
+
     def _build_subsystem_context(self, auth_dep: Any = None, optional_auth_dep: Any = None) -> Any:
         """Build SubsystemContext from current DazzleBackendApp state."""
         from dazzle.back.runtime.subsystems import SubsystemContext
@@ -580,6 +625,10 @@ class DazzleBackendApp:
         # framework is up. Each emits a deprecation warning pointing at
         # dazzle.register_lifespan_hook, the supported path.
         await run_legacy_router_events(app, "startup")
+        # #1413: after all registration (framework defaults + project
+        # register_all via startup hooks/legacy events), warn on any custom
+        # renderer declared in dazzle.toml that never got a runtime handler.
+        self._warn_unregistered_renderers()
         try:
             yield
         finally:

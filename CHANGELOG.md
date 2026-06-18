@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.2] - 2026-06-18
+
+### Added
+- **Serve-time warning for declared-but-unregistered custom renderers** (#1413). A renderer declared in `dazzle.toml` `[renderers] extra` whose runtime handler is never wired passes `validate`/`lint` but 500s with a `FragmentError` at first request. The runtime now compares the declared set against `services.renderer_registry.registered_names()` after all startup hooks and logs a boot warning naming the orphans + the fix (`services.renderer_registry.register(...)` via `register_lifespan_hook`) — non-fatal, surfaced at the moment it matters. (Found by the cross-app fuzz sweep; prerequisite for #1392.)
+
 ## [0.83.1] - 2026-06-18
 
 ### Fixed
