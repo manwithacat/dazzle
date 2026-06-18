@@ -1728,3 +1728,28 @@ persona teacher "Teacher":
         assert any("missing" in e for e in errors), (
             f"Expected error mentioning 'missing' nav, got {errors}"
         )
+
+
+def test_workspace_region_action_undefined_surface_is_error(tmp_path) -> None:
+    """#1412: a workspace region `action:` that references a non-existent
+    surface is a validation error (it used to be silently ignored, shipping a
+    runtime row-click to a dead URL — caught by the fuzz sweep)."""
+    from dazzle.core.parser import parse_modules
+    from dazzle.core.validator import validate_workspace_region_actions
+
+    dsl = tmp_path / "app.dsl"
+    dsl.write_text(
+        "module t\n"
+        'app t "T"\n'
+        'entity Doc "Doc":\n'
+        "  id: uuid pk\n"
+        "  title: str(100)\n"
+        'workspace board "Board":\n'
+        "  docs:\n"
+        "    source: Doc\n"
+        "    display: list\n"
+        "    action: nonexistent_surface\n"
+    )
+    appspec = build_appspec(parse_modules([dsl]), "t")
+    errors, _warnings = validate_workspace_region_actions(appspec)
+    assert any("nonexistent_surface" in e for e in errors), errors

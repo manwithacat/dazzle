@@ -65,3 +65,15 @@ def test_non_string_entries_filtered(tmp_path: Path) -> None:
         "app.routes.graph:router",
         "app.routes.search:router",
     ]
+
+
+def test_missing_dazzle_toml_raises_dazzle_error(tmp_path: Path) -> None:
+    """#1414: a missing dazzle.toml raises a friendly DazzleError (which the CLI
+    catches and prints cleanly) instead of a raw FileNotFoundError traceback."""
+    import pytest
+
+    from dazzle.core.errors import DazzleError
+
+    missing = tmp_path / "dazzle.toml"  # never created
+    with pytest.raises(DazzleError, match="No dazzle.toml found"):
+        load_manifest(missing)

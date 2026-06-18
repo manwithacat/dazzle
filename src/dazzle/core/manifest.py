@@ -7,6 +7,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 from dazzle.core.db_url import normalise_postgres_scheme
+from dazzle.core.errors import DazzleError
 
 _FRAGMENT_CHROME_WARNED = False
 
@@ -784,6 +785,15 @@ def check_framework_version(manifest: ProjectManifest) -> None:
 
 
 def load_manifest(path: Path) -> ProjectManifest:
+    # #1414: a missing dazzle.toml used to raise a raw FileNotFoundError that
+    # escaped the CLI's `except (ParseError, DazzleError)` handlers as an
+    # unfriendly traceback. Raise a DazzleError (which validate/lint/serve all
+    # catch and print cleanly) instead.
+    if not path.exists():
+        raise DazzleError(
+            f"No dazzle.toml found at {path}. "
+            "Run from a Dazzle project root, or `dazzle init` to create one."
+        )
     data = tomllib.loads(path.read_text(encoding="utf-8"))
 
     project = data.get("project", {})

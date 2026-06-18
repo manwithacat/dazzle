@@ -114,3 +114,19 @@ class TestAssetRegistrySurfaces:
         vd = next(s for s in appspec.surfaces if s.name == "vehicle_detail")
         field_names = {e.field_name for e in vd.sections[0].elements}
         assert field_names == {"wheels", "vin", "fuel_type"}
+
+
+def test_subtype_panel_include_surfaces_not_flagged_dead() -> None:
+    """#1411: surfaces referenced only via a `subtype_panel` branch's
+    `include surface X` are alive — the extended-lint dead-construct detector
+    must not flag them. (Regression: the fuzz sweep caught these as false dead.)
+    """
+    from dazzle.core.lint import lint_appspec
+
+    appspec = _load_fixture()
+    _errors, warnings, _relevance = lint_appspec(appspec, extended=True)
+    dead = [w for w in warnings if "Dead construct" in w and "surface" in w]
+    for name in ("building_detail", "equipment_detail", "vehicle_detail"):
+        assert not any(name in w for w in dead), (
+            f"surface '{name}' is used via subtype_panel but was flagged dead: {dead}"
+        )
