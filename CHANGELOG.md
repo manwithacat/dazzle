@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.8] - 2026-06-19
+
+### Added
+- **`dazzle validate` / `lint` signpost declared custom renderers** (#1413). When `[renderers] extra` names custom renderers, `validate` now emits an advisory: it can't confirm runtime registration (it's static by design, ~50ms, no boot), so it points at `dazzle inspect renderers --runtime` — the boot-time gate that already exits non-zero when a declared renderer has no registered handler (the class that otherwise passes validate but 500s with `FragmentError` at request). The runtime gate's orphan→exit-1 behaviour is now regression-locked. `validate` still exits 0 (advisory, not error — preserving its static contract). The deeper "make `validate` itself boot-and-check" remains a separate call (it would change validate's contract).
+
 ## [0.83.7] - 2026-06-19
 
 ### Changed

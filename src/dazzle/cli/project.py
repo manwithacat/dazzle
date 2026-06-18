@@ -375,6 +375,27 @@ def init_command(
         raise typer.Exit(code=1)
 
 
+def _renderer_registration_advisory(extra_renderers: list[str]) -> str | None:
+    """#1413: a static signpost for declared custom renderers.
+
+    ``validate`` is deliberately static (~50ms, no boot), so it cannot see
+    whether a renderer declared in ``[renderers] extra`` actually had its
+    runtime handler registered — an unregistered renderer passes validate/lint
+    but 500s (FragmentError) at request. Point the author at the boot-time gate
+    that *can* confirm it (``dazzle inspect renderers --runtime`` exits non-zero
+    on the mismatch). Returns ``None`` when no custom renderers are declared.
+    """
+    if not extra_renderers:
+        return None
+    names = ", ".join(sorted(extra_renderers))
+    return (
+        f"{len(extra_renderers)} custom renderer(s) declared in [renderers] extra "
+        f"({names}). validate cannot confirm they are registered at runtime — an "
+        f"unregistered renderer passes validate but 500s (FragmentError) at request. "
+        f"Run `dazzle inspect renderers --runtime` to verify registration (#1413)."
+    )
+
+
 def validate_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
     format: str = typer.Option(
@@ -411,6 +432,15 @@ def validate_command(
 
         appspec = load_project_appspec(root)
         errors, warnings, relevance = lint_appspec(appspec)
+
+        # #1413: static signpost — validate can't see runtime renderer
+        # registration, so nudge toward the boot-time gate when custom
+        # renderers are declared.
+        renderer_advisory = _renderer_registration_advisory(
+            list(load_manifest(manifest_path).renderers.extra)
+        )
+        if renderer_advisory:
+            warnings.append(renderer_advisory)
 
         # Statically parse sitespec.yaml (if present) so schema errors
         # surface at validate-time instead of being swallowed by the
@@ -500,6 +530,12 @@ def lint_command(
         modules = parse_modules(dsl_files)
         appspec = build_appspec(modules, mf.project_root, known_renderers=known_renderer_names(mf))
         errors, warnings, relevance = lint_appspec(appspec, extended=True)
+
+        # #1413: same static signpost as `validate` — point at the runtime gate
+        # when custom renderers are declared (lint can't see registration either).
+        renderer_advisory = _renderer_registration_advisory(list(mf.renderers.extra))
+        if renderer_advisory:
+            warnings.append(renderer_advisory)
 
         if format == "vscode":
             _print_vscode_diagnostics(errors, warnings, root)
