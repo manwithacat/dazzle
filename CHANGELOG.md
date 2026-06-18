@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.6] - 2026-06-19
+
 ### Added
 - **Workspace SSE live push** (#1399 slice 1 — the last of the #1391 follow-ups). A workspace declaring `live: on` pushes "an entity changed" signals over Server-Sent Events so its cards refresh **instantly** on mutations, instead of waiting for the next `refresh: every Ns` poll tick. Push supersedes the poll; the poll is retained as a fallback heartbeat (and still self-stops on terminal state per slice 2). The signal is **nudge-only** — events carry the entity name + id + tenant header, never row field data; the card re-fetches via its existing scope-gated endpoint, so SSE can never leak a row a user can't see. Reuses the existing HLESS framework `EventBus` and the `/_ops/sse/events` stream (now mounted independently of the ops dashboard when a workspace is live). New `WorkspaceSpec.live` IR field + `live: on` parser keyword; CRUD lifecycle callbacks publish nudges to the canonical `entity.{created,updated,deleted}` topics; `ir-types` baseline updated. Wired into `examples/ops_dashboard`. 15 new tests.
 
