@@ -1296,6 +1296,7 @@ class WorkspaceSpec(BaseModel):
     # `nav_groups` so the workspace's own `nav_group` blocks (if any)
     # append after the inherited ones.
     nav_ref: str | None = None
+    live: bool = False  # #1399 slice 1 — SSE live push (poll retained as fallback)
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
     access: WorkspaceAccessSpec | None = None  # v0.22.0: Access control
     context_selector: ContextSelectorSpec | None = None  # v0.38.0
