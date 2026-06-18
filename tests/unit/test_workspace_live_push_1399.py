@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir.workspaces import WorkspaceSpec
@@ -123,3 +124,38 @@ class TestSseWiring:
         svc = _FakeCRUDService("Job")
         assert register_sse_callbacks({"Job": svc}, None, _is_target=lambda s: True) == 0
         assert svc._created == []
+
+
+class TestLazyFrameworkBus:
+    def test_publish_drops_when_bus_not_ready(self) -> None:
+        import asyncio
+
+        from dazzle.back.runtime.sse_wiring import LazyFrameworkBus
+
+        framework = SimpleNamespace(get_bus=lambda: None)
+        lazy = LazyFrameworkBus(framework)
+        # No bus yet -> publish is a silent no-op (must not raise).
+        asyncio.run(lazy.publish("entity.created", object()))
+
+    def test_publish_delegates_when_bus_ready(self) -> None:
+        import asyncio
+
+        from dazzle.back.runtime.sse_wiring import LazyFrameworkBus
+
+        real = _RecordingBus()
+        framework = SimpleNamespace(get_bus=lambda: real)
+        lazy = LazyFrameworkBus(framework)
+        env = object()
+        asyncio.run(lazy.publish("entity.created", env))
+        assert real.published == [("entity.created", env)]
+
+
+class TestSseMountGate:
+    def test_any_workspace_live(self) -> None:
+        from dazzle.back.runtime.server import _any_workspace_live
+
+        assert (
+            _any_workspace_live([SimpleNamespace(live=True), SimpleNamespace(live=False)]) is True
+        )
+        assert _any_workspace_live([SimpleNamespace(live=False)]) is False
+        assert _any_workspace_live([]) is False

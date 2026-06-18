@@ -27,6 +27,46 @@ _TOPICS = {
 }
 
 
+class LazyFrameworkBus:
+    """A bus-shaped proxy that resolves the EventFramework's real bus lazily.
+
+    The framework's concrete bus only exists after ``EventFramework.start()``
+    runs (a lifespan hook, post-construction). SSE publishers (nudge callbacks)
+    and the ``SSEStreamManager`` are wired at construction time, so they bind to
+    this proxy instead — every ``publish``/``subscribe`` call resolves the live
+    bus at call time (runtime, post-start). This removes any hook-ordering
+    dependency between framework start and SSE start.
+    """
+
+    def __init__(self, framework: Any) -> None:
+        self._framework = framework
+
+    def _bus(self) -> Any | None:
+        getter = getattr(self._framework, "get_bus", None)
+        return getter() if getter is not None else None
+
+    async def publish(self, topic: str, envelope: Any, *, transactional: bool = False) -> None:
+        bus = self._bus()
+        if bus is None:
+            logger.debug("SSE: event bus not ready, dropping publish to %s", topic)
+            return
+        await bus.publish(topic, envelope, transactional=transactional)
+
+    async def subscribe(self, topic: str, group_id: str, handler: Any) -> Any:
+        bus = self._bus()
+        if bus is None:
+            raise RuntimeError("SSE: event bus not started; cannot subscribe to " + topic)
+        return await bus.subscribe(topic, group_id, handler)
+
+    def __getattr__(self, name: str) -> Any:
+        # Delegate everything else (e.g. poll_and_process) to the live bus so
+        # `hasattr(proxy, ...)` reflects the real implementation at runtime.
+        bus = self._bus()
+        if bus is None:
+            raise AttributeError(name)
+        return getattr(bus, name)
+
+
 def _default_is_target(service: Any) -> bool:
     from dazzle.back.runtime.service_generator import CRUDService
 

@@ -366,10 +366,15 @@ def create_sse_routes(stream_manager: SSEStreamManager) -> Any:
 
         Streams create, update, delete events for entities.
         Can filter by entity name and/or tenant ID.
+
+        #1399 — prefer the request-resolved tenant (set by
+        TenantResolutionMiddleware) over the client-supplied query param so a
+        live-push client can't subscribe to another tenant's change signals.
         """
+        resolved_tenant = getattr(request.state, "tenant_id", None) or tenant_id
         sub_id = stream_manager.create_subscription(
             stream_type=StreamType.EVENTS,
-            tenant_id=tenant_id,
+            tenant_id=resolved_tenant,
             entity_filter=entity,
             last_event_id=last_event_id,
         )
