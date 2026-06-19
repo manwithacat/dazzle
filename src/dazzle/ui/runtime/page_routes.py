@@ -17,6 +17,7 @@ import inspect
 import json
 import logging
 import os
+import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable
@@ -130,7 +131,23 @@ async def _fetch_url(
     the event loop — critical when the backend runs in the same process.
     ``host`` forwards the original request's Host on this self-call (#1421).
     """
-    raw = await asyncio.to_thread(_sync_fetch, url, cookies, host)
+    try:
+        raw = await asyncio.to_thread(_sync_fetch, url, cookies, host)
+    except urllib.error.HTTPError as exc:
+        # #1422: this is a server-side self-call to the app's own REST API. Surface the
+        # upstream status DISTINCTLY — the callers below collapse the failure into a 404 /
+        # empty table, so without this a tenant/Host misroute on the internal hop reads as
+        # a generic "Failed to load". A 400/404 here under host tenancy usually means the
+        # internal hop lost the tenant Host (see #1421), not a genuinely missing row.
+        logger.warning(
+            "Internal page->REST self-fetch to %s returned HTTP %s%s — the page will "
+            "render not-found/empty. Under host tenancy a 400/404 here usually means the "
+            "internal hop lost the tenant Host (#1421/#1422), not a missing record.",
+            url,
+            exc.code,
+            f" (forwarded Host={host})" if host else " (no Host forwarded)",
+        )
+        raise
     result: dict[str, Any] = json.loads(raw)
     return result
 
@@ -184,7 +201,9 @@ def _resolve_host_to_forward(effective_backend_url: str, original_host: str | No
         return None
     try:
         netloc = urllib.parse.urlparse(effective_backend_url).hostname or ""
-    except Exception:
+    except ValueError:
+        # Malformed backend URL — fail safe (don't forward), but surface it.
+        logger.debug("Could not parse backend URL %r for host-forward gate", effective_backend_url)
         return None
     return original_host if netloc in _LOOPBACK_HOSTS else None
 

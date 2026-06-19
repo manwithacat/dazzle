@@ -13,7 +13,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import urllib.error
 from typing import Any
+
+import pytest
 
 from dazzle.ui.runtime import page_routes
 
@@ -94,3 +98,27 @@ def test_fetch_json_threads_host_through(monkeypatch) -> None:
         )
     )
     assert captured["host"] == "demo.aegismark.ai"
+
+
+def test_internal_fetch_http_error_logs_distinct_diagnostic(monkeypatch, caplog) -> None:
+    """#1422 piece 1 — a self-fetch HTTPError logs a distinct self-call/tenant diagnostic
+    (surfacing the upstream status) instead of collapsing silently into the caller's 404."""
+
+    def _raise_400(req: Any, timeout: int = 5):  # noqa: ANN401
+        raise urllib.error.HTTPError(req.full_url, 400, "Bad Host", {}, None)
+
+    monkeypatch.setattr(page_routes.urllib.request, "urlopen", _raise_400)
+    with caplog.at_level(logging.WARNING, logger="dazzle.ui.runtime.page_routes"):
+        # The HTTPError is re-raised by design (the caller provides the 404/empty fallback);
+        # pytest.raises asserts that while keeping the gate-forbidden `except: pass` out.
+        with pytest.raises(urllib.error.HTTPError):
+            asyncio.run(
+                page_routes._fetch_url(
+                    "http://127.0.0.1:5000/markingresults/abc",
+                    cookies=None,
+                    host="demo.aegismark.ai",
+                )
+            )
+    msgs = " ".join(r.message for r in caplog.records)
+    assert "self-fetch" in msgs and "400" in msgs
+    assert "tenant Host" in msgs and "demo.aegismark.ai" in msgs

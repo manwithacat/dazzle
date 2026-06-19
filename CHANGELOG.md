@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.24] - 2026-06-19
+
+### Changed
+- **Page→REST internal self-fetch failures now log a distinct diagnostic** (#1422 piece 1, follow-on to #1421). When a page handler's server-side self-call to the app's own REST API fails with an HTTP error, `_fetch_url` now logs a WARNING naming it as an *internal self-fetch*, the upstream status code, and the forwarded Host — instead of the failure collapsing into a generic "Failed to load" (→ a bare 404 / silent-empty table). A 400/404 on the internal hop under host tenancy (the #1421 class — the hop lost the tenant Host) is now unmistakable in the logs rather than "no signal." (The broader #1422 RFC — deriving `/app` links from a single materialized route set, and reconsidering the self-fetch architecture — remains open as a design pass.)
+
 ## [0.83.23] - 2026-06-19
 
 ### Fixed
