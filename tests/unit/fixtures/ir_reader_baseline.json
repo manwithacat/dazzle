@@ -64,7 +64,6 @@
   "hless.DerivationLineage.derivation_type",
   "hless.DerivationLineage.rebuild_strategy",
   "hless.DerivationLineage.window_spec",
-  "hless.ExpectedOutcome.emits",
   "hless.ExpectedOutcome.target_stream",
   "hless.HLESSViolation.stream_name",
   "hless.IdempotencyStrategy.derivation",

@@ -661,6 +661,7 @@ class _SurfaceState:
     show_history: bool = False  # #956 cycle 8
     render: str | None = None  # Plan 2
     refresh_interval: int | None = None  # #1399 slice 3
+    emits: list[str] = field(default_factory=list)  # #1392 item 3
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -791,6 +792,23 @@ def _kw_companion(parser: Any, state: _SurfaceState) -> None:
     state.companions.append(parser._parse_companion())
 
 
+def _kw_emits(parser: Any, state: _SurfaceState) -> None:
+    """``emits: [surface_a, surface_b]`` — surfaces this custom surface links to (#1392 item 3).
+
+    Each name must resolve to a declared surface (checked at validate time by
+    ``validate_emits_targets``). The dead-target build gate for the custom escape hatch.
+    """
+    parser.advance()  # consume 'emits'
+    parser.expect(TokenType.COLON)
+    parser.expect(TokenType.LBRACKET)
+    while not parser.match(TokenType.RBRACKET):
+        state.emits.append(parser.expect_identifier_or_keyword().value)
+        if parser.match(TokenType.COMMA):
+            parser.advance()
+    parser.expect(TokenType.RBRACKET)
+    parser.skip_newlines()
+
+
 def _kw_display(parser: Any, state: _SurfaceState) -> None:
     """``display: pdf_viewer`` — VIEW-mode display override (#942).
 
@@ -844,6 +862,7 @@ _SURFACE_KEYWORDS: dict[TokenType, KeywordParser[_SurfaceState]] = {
     TokenType.RELATED: _kw_related,
     TokenType.COMPANION: _kw_companion,
     TokenType.DISPLAY: _kw_display,
+    TokenType.EMITS: _kw_emits,  # #1392 item 3 — `emits` is a lexer keyword (TokenType.EMITS)
 }
 
 
@@ -909,6 +928,7 @@ def _build_surface(
         show_history=state.show_history,
         render=state.render,
         refresh_interval=state.refresh_interval,
+        emits=tuple(state.emits),
     )
 
 

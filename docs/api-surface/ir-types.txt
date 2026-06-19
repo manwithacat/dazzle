@@ -2871,6 +2871,7 @@ ir_class: SurfaceSpec
     - actions: list[SurfaceAction] = []
     - companions: list[CompanionSpec] = []
     - display: str | None = None
+    - emits: tuple[str, Ellipsis] = ()
     - entity_ref: str | None = None
     - headless: bool = False
     - layout: str = 'wizard'

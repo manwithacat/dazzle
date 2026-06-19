@@ -362,6 +362,10 @@ class SurfaceSpec(BaseModel):
     # (Jinja today; Fragment when a primitive exists for the surface mode
     # — see linker resolution rules). Validated at link time.
     render: str | None = None
+    # #1392 item 3: surfaces this (custom/render) surface links to — the dead-target
+    # build gate. Each name must resolve to a declared surface (validated like
+    # `primary_action -> surface`). `()` = undeclared/unconstrained (opt-in).
+    emits: tuple[str, ...] = ()
     # #956 cycle 8: opt-in audit-history region on detail surfaces.
     # When True and the surface's entity has a matching `audit on X:`
     # block, the renderer adds a history panel showing the

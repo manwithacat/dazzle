@@ -1121,6 +1121,8 @@
         'companions': list([
         ]),
         'display': None,
+        'emits': tuple(
+        ),
         'entity_ref': 'Task',
         'headless': False,
         'layout': 'wizard',
@@ -1179,6 +1181,8 @@
         'companions': list([
         ]),
         'display': None,
+        'emits': tuple(
+        ),
         'entity_ref': 'Task',
         'headless': False,
         'layout': 'wizard',
@@ -1246,6 +1250,8 @@
         'companions': list([
         ]),
         'display': None,
+        'emits': tuple(
+        ),
         'entity_ref': 'Task',
         'headless': False,
         'layout': 'wizard',
@@ -1304,6 +1310,8 @@
         'companions': list([
         ]),
         'display': None,
+        'emits': tuple(
+        ),
         'entity_ref': 'Task',
         'headless': False,
         'layout': 'wizard',
@@ -1380,6 +1388,8 @@
         'companions': list([
         ]),
         'display': None,
+        'emits': tuple(
+        ),
         'entity_ref': 'SystemHealth',
         'headless': False,
         'layout': 'wizard',
@@ -1487,6 +1497,8 @@
         'companions': list([
         ]),
         'display': None,
+        'emits': tuple(
+        ),
         'entity_ref': 'DeployHistory',
         'headless': False,
         'layout': 'wizard',
