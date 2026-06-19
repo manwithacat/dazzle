@@ -98,6 +98,7 @@ def _wait_for_server_ready(site_url: str, timeout: float) -> None:
 
     deadline = time.monotonic() + timeout
     last_error: Exception | None = None
+    last_5xx_status: int | None = None
     while time.monotonic() < deadline:
         try:
             with httpx.Client(timeout=2.0) as client:
@@ -108,9 +109,23 @@ def _wait_for_server_ready(site_url: str, timeout: float) -> None:
                 # ``ERR_CONNECTION_REFUSED`` race.
                 if resp.status_code < 500:
                     return
+                # Bound, but the root page itself is erroring. Record it
+                # so the timeout message points at the APP, not the port.
+                last_5xx_status = resp.status_code
         except Exception as exc:  # ConnectError, ConnectTimeout, etc.
             last_error = exc
         time.sleep(_HEALTH_POLL_INTERVAL_SECONDS)
+    # Two genuinely different failures, two messages (#1423): a persistent
+    # 5xx means uvicorn IS bound but GET / raises — don't say "never bound"
+    # and send the next debugger hunting a port/infra ghost. The real
+    # traceback is in the managed-server log.
+    if last_5xx_status is not None:
+        raise InteractionServerError(
+            f"Server at {site_url} is bound but GET / returned "
+            f"{last_5xx_status} for {timeout:.0f}s — the app boots but its "
+            f"root page raises. This is an APP error, not a bind failure: "
+            f"read the traceback in .dazzle/managed-server-logs/."
+        )
     raise InteractionServerError(
         f"Server at {site_url} did not accept connections within "
         f"{timeout:.0f}s (last error: {last_error!r}). The runtime.json "

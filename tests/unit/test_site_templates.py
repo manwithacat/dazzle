@@ -40,6 +40,44 @@ class TestBuildSitePageContext:
         assert ctx.current_route == "/"
         assert ctx.sections == []
 
+    def test_null_brand_fields_do_not_crash_root_page(self) -> None:
+        """A sitespec with `company_legal_name: null` (present-but-None) must not 500.
+
+        Regression for #1423: sitespec normalization injects brand keys with null
+        values; `brand.get("company_legal_name", product_name)` then returns that
+        None (not the default), and `str.replace(..., None)` raised TypeError on the
+        root page — uvicorn bound, but `GET /` 500'd, which the managed-server health
+        poll (`<500`) read as "never bound" → the llm_ticket_classifier GUIDE_WALK CI
+        timeout. `or`-fallbacks make null fields degrade to the product name.
+        """
+        from dazzle.ui.runtime.site_context import (
+            _build_copyright_text,
+            build_site_page_context,
+        )
+
+        # present-but-null on BOTH brand fields — the exact runtime shape.
+        text = _build_copyright_text(
+            {"copyright": "{{company_legal_name}} {{year}}"},
+            {"product_name": "AI Ticket Classifier", "company_legal_name": None},
+        )
+        assert "{{company_legal_name}}" not in text
+        assert "AI Ticket Classifier" in text  # null legal name → product name
+
+        # product_name itself null → falls back to "My App", no crash.
+        text2 = _build_copyright_text(
+            {"copyright": "© {{company_legal_name}}"},
+            {"product_name": None, "company_legal_name": None},
+        )
+        assert "My App" in text2
+
+        # full builder path with the null field present — must not raise.
+        sitespec_null: dict[str, Any] = {
+            "brand": {"product_name": "AI Ticket Classifier", "company_legal_name": None},
+            "layout": {"nav": {}, "footer": {"copyright": "© {{company_legal_name}}"}},
+        }
+        ctx = build_site_page_context(sitespec_null, "/")
+        assert ctx.product_name == "AI Ticket Classifier"
+
     def test_nav_items_extracted(self) -> None:
         from dazzle.ui.runtime.site_context import build_site_page_context
 

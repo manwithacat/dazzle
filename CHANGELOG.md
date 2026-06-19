@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.27] - 2026-06-19
+
+### Fixed
+- **Root marketing page (`GET /`) 500'd when a sitespec brand field was present-but-null** (#1423) — and it had been **silently red-flagging main CI for 3+ releases** via the blocking `GUIDE_WALK (llm_ticket_classifier)` gate. `_build_copyright_text` did `brand.get("company_legal_name", product_name)`; sitespec normalization injects `company_legal_name: None`, so `.get` returned that `None` (not the default) and `str.replace(..., None)` raised `TypeError` — the `dict.get(key, default)` present-but-null footgun. Fixed with `or`-fallbacks in `site_context.py` (`brand.get("company_legal_name") or product_name`) so null brand fields degrade to the product name. The failure hid because the managed-server health poll (`server_fixture.py::_wait_for_server_ready`) treats only `<500` as ready: uvicorn **was** bound, but `GET /` 500'd, so the poll timed out and reported the misleading *"runtime.json was written but uvicorn never bound to the port"* — sending diagnosis after a port/infra ghost. The poll now distinguishes "bound but persistent 5xx → app error, read the managed-server log" from "never connected → bind failure" (diagnostic only; success path unchanged). Regression test in `tests/unit/test_site_templates.py`.
+
+  ### Agent Guidance
+  - **`dict.get(key, default)` does NOT protect against present-but-null.** When a config dict (sitespec brand, theme, etc.) may carry a key set explicitly to `null`, use `d.get(key) or default`, not `d.get(key, default)` — `.get` only uses the default for *absent* keys, and a downstream `str.replace`/format on the `None` 500s the request. The whole root page went down on one null field.
+  - **A managed-server "never bound" timeout can be a hidden 500.** If `dazzle ux verify` / a GUIDE_WALK gate times out booting one specific app while `dazzle serve --local` boots it fine, the app is bound but `GET /` is 5xx — read `.dazzle/managed-server-logs/` for the real traceback, don't chase the port.
+
 ## [0.83.26] - 2026-06-19
 
 ### Added

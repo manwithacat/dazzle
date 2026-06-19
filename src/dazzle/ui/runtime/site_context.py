@@ -70,7 +70,10 @@ def _extract_footer_columns(footer: dict[str, Any]) -> list[SiteFooterColumn]:
 
 def _build_copyright_text(footer: dict[str, Any], brand: dict[str, Any]) -> str:
     """Build copyright/disclaimer text with template variable substitution."""
-    product_name = brand.get("product_name", "My App")
+    # `or`, not `.get(k, default)`: a sitespec may carry the key present-but-null
+    # (`company_legal_name: null`), and `.get` returns that None rather than the
+    # default \u2014 `str.replace(..., None)` then 500s the whole root page (#1423).
+    product_name = brand.get("product_name") or "My App"
     text = (
         footer.get("disclaimer")
         or footer.get("copyright")
@@ -79,7 +82,7 @@ def _build_copyright_text(footer: dict[str, Any], brand: dict[str, Any]) -> str:
     text = text.replace("{{year}}", str(datetime.now(tz=UTC).year))
     text = text.replace(
         "{{company_legal_name}}",
-        brand.get("company_legal_name", product_name),
+        brand.get("company_legal_name") or product_name,
     )
     return text
 
@@ -127,7 +130,7 @@ def build_site_page_context(
         SitePageContext ready for template rendering.
     """
     brand = sitespec_data.get("brand", {})
-    product_name = brand.get("product_name", "My App")
+    product_name = brand.get("product_name") or "My App"  # tolerate present-but-null (#1423)
     layout = sitespec_data.get("layout", {})
     nav = layout.get("nav", {})
     auth_config = layout.get("auth") or {}
