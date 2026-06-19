@@ -533,7 +533,7 @@ def _serve_ui_only(ctx: _ServeContext) -> None:
 
 def _serve_backend_only(ctx: _ServeContext) -> None:
     """Serve backend API only (no frontend UI)."""
-    from dazzle.ui.runtime import run_backend_only
+    from dazzle.back.runtime.combined_server import run_backend_only
 
     typer.echo(f"Starting Dazzle backend for '{ctx.appspec.name}'...")
     typer.echo(f"  • {len(ctx.appspec.domain.entities)} entities")
@@ -568,8 +568,8 @@ def _serve_backend_only(ctx: _ServeContext) -> None:
 
 def _serve_combined(ctx: _ServeContext) -> None:
     """Serve full combined API + UI server."""
+    from dazzle.back.runtime.combined_server import run_unified_server
     from dazzle.ui.converters import compute_persona_default_routes, convert_appspec_to_ui
-    from dazzle.ui.runtime import run_unified_server
 
     appspec = ctx.appspec
     mf = ctx.mf

@@ -9,7 +9,7 @@ import inspect
 
 import pytest
 
-from dazzle.ui.runtime.combined_server import (
+from dazzle.back.runtime.combined_server import (
     _clickable_url,
     _supports_hyperlinks,
     run_backend_only,
@@ -72,7 +72,6 @@ class TestRunUnifiedServerSignature:
             "appspec",
             "ui_spec",
             "port",
-            "db_path",
             "enable_test_mode",
             "enable_dev_mode",
             "enable_auth",
@@ -88,6 +87,10 @@ class TestRunUnifiedServerSignature:
             "theme_overrides",
             "redis_url",
             "config",
+            "local_assets",
+            "storage_defs",
+            "tenant_config",
+            "workers",
         }
         assert expected == set(sig.parameters.keys())
 
@@ -121,13 +124,14 @@ class TestRunBackendOnlySignature:
             "appspec",
             "host",
             "port",
-            "db_path",
             "enable_test_mode",
             "enable_dev_mode",
             "enable_graphql",
             "sitespec_data",
             "project_root",
             "redis_url",
+            "storage_defs",
+            "workers",
         }
         assert expected == set(sig.parameters.keys())
 
@@ -141,14 +145,14 @@ class TestModuleExports:
     """Test that the runtime module exports the right names."""
 
     def test_run_unified_server_exported(self) -> None:
-        """run_unified_server is available from dazzle.ui.runtime."""
-        from dazzle.ui.runtime import run_unified_server as fn
+        """run_unified_server is available from dazzle.back.runtime.combined_server."""
+        from dazzle.back.runtime.combined_server import run_unified_server as fn
 
         assert callable(fn)
 
     def test_run_backend_only_exported(self) -> None:
-        """run_backend_only is available from dazzle.ui.runtime."""
-        from dazzle.ui.runtime import run_backend_only as fn
+        """run_backend_only is available from dazzle.back.runtime.combined_server."""
+        from dazzle.back.runtime.combined_server import run_backend_only as fn
 
         assert callable(fn)
 

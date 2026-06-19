@@ -140,7 +140,7 @@ class TestCombinedServerWiring:
             Path(__file__).resolve().parents[2]
             / "src"
             / "dazzle"
-            / "ui"
+            / "back"
             / "runtime"
             / "combined_server.py"
         ).read_text()

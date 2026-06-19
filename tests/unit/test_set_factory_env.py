@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dazzle.ui.runtime.combined_server import _set_factory_env
+from dazzle.back.runtime.combined_server import _set_factory_env
 
 
 class TestSetFactoryEnv:

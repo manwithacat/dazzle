@@ -13,9 +13,9 @@ This module provides:
 - HTMX fragment endpoints for dynamic interactions
 
 Example usage:
-    >>> from dazzle.ui.runtime import run_unified_server
-    >>>
-    >>> # Run unified server (backend + page routes on one port)
+    >>> # The unified server is the back+ui composition root; it lives in the
+    >>> # back layer (ui must not import back — the composition root may import both):
+    >>> from dazzle.back.runtime.combined_server import run_unified_server
     >>> run_unified_server(appspec)
     >>>
     >>> # Generate static preview files
@@ -32,10 +32,6 @@ from dazzle.render.context import (
     PageContext,
     PdfViewerContext,
     TableContext,
-)
-from dazzle.ui.runtime.combined_server import (
-    run_backend_only,
-    run_unified_server,
 )
 from dazzle.ui.runtime.detail_renderer import render_detail_view
 from dazzle.ui.runtime.dev_server import (
@@ -75,7 +71,6 @@ __all__ = [
     "run_dev_server",
     "run_dev_server_from_dict",
     "run_dev_server_from_json",
-    # Unified server (single-port FastAPI)
-    "run_unified_server",
-    "run_backend_only",
+    # Unified server (single-port FastAPI) moved to dazzle.back.runtime.combined_server
+    # (#smells 2026-06-19 — ui must not import back; the composition root lives in back).
 ]

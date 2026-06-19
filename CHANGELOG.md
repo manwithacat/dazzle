@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.31] - 2026-06-19
+
+### Changed
+- **Relocated the back+ui composition root `combined_server` from `ui/runtime/` to `back/runtime/`** (smells round — import allow-list shrink). It was the *only* `dazzle.ui ↛ dazzle.back` violator (`run_unified_server`/`run_backend_only` glue both layers), held open by a 6-entry import-linter allow-list. Moving it to where it belongs — the composition root lives in `back`, which may legitimately import both layers (there is no `back ↛ ui` contract) — **drives the `ui ↛ back` import contract's allow-list to zero** (total `ignore_imports` 9 → 3). All its back imports were already deferred, so no module-level cycle. Callers updated: `cli/runtime_impl/serve.py` (the live serve path) + the `dazzle.ui.runtime` re-export removed; the test moved to `back/tests/` (where it now actually runs — `ui/tests/` isn't in `testpaths`) and two stale signature pins it carried (drifted while uncollected: `db_path` removed, `storage_defs`/`workers`/`local_assets`/`tenant_config` added) were corrected. `test_import_boundaries.py`'s ui→back exemption emptied; complexity baseline regenerated for the moved path. Verified: 3 import contracts KEPT, `dazzle serve` boots through the new path.
+
+  ### Agent Guidance
+  - **Composition roots live in `back/`, not `ui/`.** Code that must wire both layers together (a server that mounts back routes + ui pages) belongs under `back/runtime/` — `back` may import `ui`, but `ui` must never import `back` (now gated absolutely, zero allow-list). `run_unified_server`/`run_backend_only` import from `dazzle.back.runtime.combined_server`.
+
 ## [0.83.30] - 2026-06-19
 
 ### Added

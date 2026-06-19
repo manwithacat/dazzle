@@ -133,7 +133,7 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/core/expander.py",
     "src/dazzle/compliance/renderer.py",
     "src/dazzle/ui/runtime/template_renderer.py",
-    "src/dazzle/ui/runtime/combined_server.py",
+    "src/dazzle/back/runtime/combined_server.py",
     "src/dazzle/ui/runtime/hot_reload.py",
     "src/dazzle/back/runtime/subsystems/system_routes.py",
 )

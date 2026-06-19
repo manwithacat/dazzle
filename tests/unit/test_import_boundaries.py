@@ -23,9 +23,12 @@ ADR-0038:
    workstreams; tracked as future work in the #1086 plan. (``condition_eval``
    came off this list in ADR-0038 — relocated ui→core.)
 
-2. ``dazzle.ui/`` must not import from ``dazzle.back.*`` — with one
-   documented exception, ``ui/runtime/combined_server.py``, whose job
-   is to glue both layers together at the entry point (#1086 plan).
+2. ``dazzle.ui/`` must not import from ``dazzle.back.*`` — no exceptions.
+   (The lone former exception, the back+ui composition root, relocated from
+   ``ui/runtime/combined_server.py`` to ``back/runtime/combined_server.py`` in
+   the 2026-06-19 smells round — the composition root lives in back, which may
+   import both layers; this also drove the import-linter ``ui ↛ back`` allow-list
+   to zero.)
 
 3. ``dazzle.back/`` must not import from the three banned
    ``dazzle.core.ir.*`` submodules (``appspec``, ``surfaces``,
@@ -55,13 +58,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# ui/ entry-point glue — legitimately bridges back/ and ui/ at startup.
-# Filed in the #1086 migration plan as the documented exemption.
-_UI_TO_BACK_EXEMPT: frozenset[str] = frozenset(
-    {
-        "src/dazzle/ui/runtime/combined_server.py",
-    }
-)
+# No ui→back exemptions: the lone former one (combined_server, the back+ui
+# composition root) relocated to back/runtime in the 2026-06-19 smells round.
+_UI_TO_BACK_EXEMPT: frozenset[str] = frozenset()
 
 # Modules from ui/ and back/ whose contents moved to dazzle.render
 # during #1090, #1091, #1094. New back/ code referencing these paths
@@ -123,9 +122,8 @@ def test_back_does_not_import_migrated_render_modules() -> None:
 def test_ui_does_not_import_from_back() -> None:
     """``dazzle.ui/`` must not import from ``dazzle.back.*`` (#1086).
 
-    Exception: ``ui/runtime/combined_server.py`` is entry-point glue
-    that intentionally pulls both layers together — see the #1086
-    migration plan.
+    No exceptions since the 2026-06-19 smells round: the back+ui composition
+    root relocated from ui/ to ``back/runtime/combined_server.py``.
     """
     offenders = _scan(REPO_ROOT / "src" / "dazzle" / "ui", _UI_FROM_BACK)
     offenders = [

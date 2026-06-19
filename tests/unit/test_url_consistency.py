@@ -297,7 +297,7 @@ class TestServerPathsPassAppPrefix:
         import ast
         import inspect
 
-        from dazzle.ui.runtime import combined_server
+        from dazzle.back.runtime import combined_server
 
         source = inspect.getsource(combined_server)
         tree = ast.parse(source)
