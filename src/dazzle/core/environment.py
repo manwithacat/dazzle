@@ -94,6 +94,20 @@ def is_test() -> bool:
     return get_dazzle_env() == DazzleEnv.TEST
 
 
+def pin_production_env() -> None:
+    """#1420: pin ``DAZZLE_ENV=production`` when it is unset.
+
+    Production entry points that establish production by some *other* signal —
+    ``create_app_factory`` (uvicorn ``--factory``) which defaults an unset
+    ``DAZZLE_ENV`` to production, and ``dazzle serve --production`` — must make
+    that intent visible to every downstream ``is_production()`` read. Otherwise
+    the fail-closed auth guard (which reads ``DAZZLE_ENV`` directly) misses them
+    and an auth-disabled prod boot proceeds world-writable. ``setdefault`` never
+    overrides an explicitly-set value, so dev/test are unaffected.
+    """
+    os.environ.setdefault(DAZZLE_ENV_VAR, DazzleEnv.PRODUCTION.value)
+
+
 def should_enable_test_endpoints(manifest_override: bool | None = None) -> bool:
     """Determine if test endpoints (/__test__/*) should be enabled.
 

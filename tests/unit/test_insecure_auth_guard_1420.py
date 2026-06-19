@@ -38,7 +38,15 @@ class TestAssertSecureAuthConfig:
 class TestInsecureAckFromEnv:
     @pytest.mark.parametrize(
         "val,expected",
-        [("1", True), ("true", True), ("YES", True), ("0", False), ("", False), ("no", False)],
+        [
+            ("1", True),
+            ("true", True),
+            ("YES", True),
+            ("on", True),
+            ("0", False),
+            ("", False),
+            ("no", False),
+        ],
     )
     def test_reads_env_truthy(
         self, monkeypatch: pytest.MonkeyPatch, val: str, expected: bool
@@ -49,6 +57,30 @@ class TestInsecureAckFromEnv:
     def test_unset_is_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(INSECURE_ACK_VAR, raising=False)
         assert insecure_ack_from_env() is False
+
+
+class TestPinProductionEnv:
+    """#1420 M2 — production entry points must pin DAZZLE_ENV so is_production()
+    agrees with the entry point's intent (else the guard reads a stale unset env)."""
+
+    def test_pins_production_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import os
+
+        from dazzle.core.environment import is_production, pin_production_env
+
+        monkeypatch.delenv("DAZZLE_ENV", raising=False)
+        pin_production_env()
+        assert os.environ["DAZZLE_ENV"] == "production"
+        assert is_production() is True
+
+    def test_respects_explicit_value(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import os
+
+        from dazzle.core.environment import pin_production_env
+
+        monkeypatch.setenv("DAZZLE_ENV", "development")
+        pin_production_env()
+        assert os.environ["DAZZLE_ENV"] == "development"  # setdefault never overrides
 
 
 class TestSetupAuthWiring:

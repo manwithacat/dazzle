@@ -1169,7 +1169,12 @@ def create_app_factory(
     if redis_url:
         logger.info("Redis URL configured")
 
-    # Determine environment
+    # Determine environment. This factory (uvicorn --factory) treats an unset
+    # DAZZLE_ENV as production — pin it so the downstream fail-closed auth guard
+    # (which reads DAZZLE_ENV directly) sees the same intent (#1420).
+    from dazzle.core.environment import pin_production_env
+
+    pin_production_env()
     dazzle_env = os.environ.get("DAZZLE_ENV", "production")
     enable_dev_mode = dazzle_env == "development"
     enable_test_mode = dazzle_env in ("development", "test")

@@ -41,4 +41,4 @@ def assert_secure_auth_config(enable_auth: bool, *, production: bool, allow_inse
 
 def insecure_ack_from_env() -> bool:
     """True when DAZZLE_ALLOW_INSECURE_NO_AUTH is set truthy (1/true/yes)."""
-    return os.environ.get(INSECURE_ACK_VAR, "").strip().lower() in ("1", "true", "yes")
+    return os.environ.get(INSECURE_ACK_VAR, "").strip().lower() in ("1", "true", "yes", "on")

@@ -233,6 +233,11 @@ def _load_manifest_and_dotenv(ctx: _ServeContext, manifest: str) -> None:
 
 def _configure_production_mode(ctx: _ServeContext) -> None:
     """Apply production overrides: logging, env validation, migration check."""
+    # `dazzle serve --production` is a production intent; pin DAZZLE_ENV so the
+    # downstream fail-closed auth guard (reads DAZZLE_ENV directly) sees it (#1420).
+    from dazzle.core.environment import pin_production_env
+
+    pin_production_env()
     configure_production_logging()
     database_url_prod, redis_url_prod = validate_production_env()
 
