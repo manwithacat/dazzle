@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.25] - 2026-06-19
+
+### Added
+- **Route-override response contract + authoring guardrails** (#1392 item 2 — **completes #1392**). A `routes/*.py` override can declare what it returns with `# dazzle:returns page|fragment|partial|json`, and chrome falls out of the kind: `fragment` is wrapped in the app shell (HTMX-aware — inner HTML for an `HX-Request`, a full chromed document for a top-level nav, so an `hx-boost` nav can't delete the sidebar); `partial` is raw HTML; **`page` is a full document served as-is — never refused** (the deliberate full-bleed / novel-UI / island-host case); `json` passes through. A `fragment`/`partial` that returns a full `<!doctype>` is a loud typed error; an undeclared HTML override under `/app` gets a one-time advisory (a nudge, never a block). The contract composes **outside** the RBAC policy gate (`# dazzle:implements` permit/scope is unchanged). New `build_app_page_context` (extracted reusable app-shell builder; the two page-handler chrome-asset sites now share `_resolve_chrome_assets`, behavior-preserving). Reframed during brainstorming from a narrow chrome-wrap into a declared response contract so islands/novel-UX are a declared kind, not a refused escape. Completes #1392 (items 1/3/4 shipped previously).
+
+  ### Agent Guidance
+  - **Two guardrails, two postures, for custom `routes/*.py` handlers.** **RBAC is the line (mandatory):** a domain-touching override declares `# dazzle:implements <Entity>.<op> via <param>` or fails `dazzle rbac routes --strict`. **Response shape + chrome are your declared choice (novel UI welcome):** declare `# dazzle:returns page|fragment|partial|json` — `fragment` lives in the app shell, `page` is your own full document (served as-is, never refused). The framework enforces consistency with what you declared. See the `custom-route-undeclared-response` counter-prior + `docs/reference/surfaces.md`.
+
 ## [0.83.24] - 2026-06-19
 
 ### Changed
