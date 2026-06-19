@@ -1635,7 +1635,17 @@ class DazzleBackendApp:
             try:
                 from dazzle.back.runtime.route_overrides import build_override_router
 
-                override_router = build_override_router(self._project_root / "routes")
+                # #1392 item 2 — page-context builder for `# dazzle:returns fragment`
+                # overrides: chrome the handler's inner HTML in the app shell. deps=None
+                # ⇒ appspec from app.state + shell frame (the item-2 guarantee).
+                async def _ov_page_ctx(request: Any, current_route: str) -> Any:
+                    from dazzle.ui.runtime.page_routes import build_app_page_context
+
+                    return await build_app_page_context(request, current_route=current_route)
+
+                override_router = build_override_router(
+                    self._project_root / "routes", page_ctx_builder=_ov_page_ctx
+                )
                 if override_router is not None:
                     self._app.include_router(override_router)
 

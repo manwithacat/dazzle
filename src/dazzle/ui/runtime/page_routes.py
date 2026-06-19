@@ -774,34 +774,43 @@ def _resolve_chrome_assets(app_state: Any) -> _ChromeAssets:
 
 
 async def build_app_page_context(
-    request: Any, *, deps: _PageRouterConfig, current_route: str
+    request: Any, *, deps: _PageRouterConfig | None = None, current_route: str
 ) -> tuple[Any, _ChromeAssets]:
     """Build a reusable app-shell `PageContext` + chrome assets for an arbitrary route
     (#1392 item 2). Used by the route-override response-contract wrapper to chrome a
-    `# dazzle:returns fragment` handler with the same nav sidebar + assets a page gets.
+    `# dazzle:returns fragment` handler with the same shell + assets a page gets.
 
     Resolves auth/persona from the request (mirroring `_page_handler`), picks the
-    precomputed `NavModel` via `_resolve_nav_model`, and stamps `current_route` (the
-    override's path). `nav_items`/`nav_groups` are left empty — the modern sidebar is
-    driven by `nav_model`; the legacy curated lists are surface-specific and don't
-    apply to an arbitrary override path.
+    precomputed `NavModel` via `_resolve_nav_model`, and stamps `current_route`.
+    `nav_items`/`nav_groups` are left empty — the modern sidebar is driven by `nav_model`.
+
+    When `deps is None` (the route-override path, which has no page-router deps), the
+    appspec is read from `request.app.state.appspec` and `nav_model` is None — the
+    override renders in the app **shell frame** (topbar + chrome), the item-2 guarantee.
+    A fully persona-populated sidebar for overrides (needs the precomputed navs threaded
+    from `create_page_routes`) is a deliberate v1 follow-on.
     """
     from dazzle.render.context import PageContext
 
     is_authenticated = False
     user_roles: list[str] = []
-    if deps.get_auth_context is not None:
-        auth_ctx = await _resolve_auth_context(deps.get_auth_context, request)
+    get_auth_context = deps.get_auth_context if deps is not None else None
+    if get_auth_context is not None:
+        auth_ctx = await _resolve_auth_context(get_auth_context, request)
         if auth_ctx and auth_ctx.is_authenticated:
             is_authenticated = True
             user_roles = list(getattr(auth_ctx.user, "roles", None) or [])
 
     nav_model = (
         _resolve_nav_model(deps, user_roles, authenticated=is_authenticated)
-        if deps.get_auth_context is not None
+        if deps is not None and get_auth_context is not None
         else None
     )
-    appspec = deps.appspec
+    appspec = (
+        deps.appspec
+        if deps is not None
+        else getattr(getattr(getattr(request, "app", None), "state", None), "appspec", None)
+    )
     _app_title = str(getattr(appspec, "app_title", None) or getattr(appspec, "name", None) or "App")
     page_ctx = PageContext(
         page_title=_app_title,
