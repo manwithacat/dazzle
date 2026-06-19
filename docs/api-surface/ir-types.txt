@@ -2965,6 +2965,7 @@ ir_class: TenantHostSpec
     - cookie_scope: Literal[host, apex] = 'host'
     - expired_template: str | None = None
     - history_entity: str | None = None
+    - membership_gated: bool = True
     - not_found_template: str | None = None
     - order: int | None = None
     - parent: str | None = None

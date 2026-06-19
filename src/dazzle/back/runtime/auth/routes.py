@@ -20,7 +20,12 @@ from .models import (
     RegisterRequest,
     ResetPasswordRequest,
 )
-from .org_activation import Activated, HostForbidden, activate_session_for_login
+from .org_activation import (
+    Activated,
+    HostForbidden,
+    activate_session_for_login,
+    memberships_required,
+)
 from .store import AuthStore
 
 logger = logging.getLogger(__name__)
@@ -35,10 +40,18 @@ def _json_active_membership_id(auth_store: AuthStore, user: Any, request: Any) -
     serve, so the session is created membership-less — the RLS fence then denies
     (1a: no active membership → unbound GUC) until the client picks via
     ``POST /auth/switch-org``. Fail-safe: an un-activated session sees nothing.
+
+    #1418: the host-pin 403 applies only when the app gates login on membership.
+    An app that declared ``tenant_host: membership_gated: false`` (so
+    ``memberships_required`` is off) uses the host for resolution + the
+    ``current_tenant`` lens and self-authorizes — proceed membership-less (legacy
+    fence) on the JSON API path too, mirroring the HTML login redirect mapper.
     """
     outcome = activate_session_for_login(auth_store, user, request)
     if isinstance(outcome, HostForbidden):
-        raise HTTPException(status_code=403, detail="no membership for this organization")
+        if memberships_required(request):
+            raise HTTPException(status_code=403, detail="no membership for this organization")
+        return None  # membership_gated: false — membership-less session, RLS fence applies
     if isinstance(outcome, Activated):
         return outcome.membership_id
     return None

@@ -126,18 +126,25 @@ def derive_memberships_required(appspec: Any, *, auto_provision: bool) -> bool:
     True when EITHER:
       * ``auto_provision`` (``auto_provision_single_org``) is set — the original
         Plan 1c gate; or
-      * the app declares ``tenant_host:`` on any entity — declaring host-based
-        tenancy IMPLIES membership gating, so a non-member on a tenant host gets a
-        clean 403 (host-pin path) and an org-less identity on the canonical host
-        routes to ``/auth/no-orgs`` rather than a silently-empty legacy session.
+      * the app declares ``tenant_host:`` with membership gating (the default) on any
+        entity — declaring host-based tenancy IMPLIES membership gating, so a
+        non-member on a tenant host gets a clean 403 (host-pin path) and an org-less
+        identity on the canonical host routes to ``/auth/no-orgs`` rather than a
+        silently-empty legacy session.
 
-    Detected the same way ``app_factory`` decides whether to mount the tenant
-    middleware: any ``domain.entities`` member with a non-None ``tenant_host``.
+    #1418: a ``tenant_host:`` entity that opts out via ``membership_gated: false`` does
+    NOT contribute to the gate — an app using host resolution + the ``current_tenant``
+    host-lens without the membership table keeps the legacy (ungated) login. Mixed
+    apps (any gated host, or auto_provision) stay gated.
     """
     if auto_provision:
         return True
     entities = getattr(getattr(appspec, "domain", None), "entities", None) or []
-    return any(getattr(e, "tenant_host", None) is not None for e in entities)
+    return any(
+        getattr(th, "membership_gated", True)
+        for e in entities
+        if (th := getattr(e, "tenant_host", None)) is not None
+    )
 
 
 def single_org_auto_provision(request: Any) -> bool:
@@ -197,6 +204,13 @@ def _login_redirect_for_outcome(
     if isinstance(outcome, NeedsPicker):
         return None, "/auth/select-org"
     if isinstance(outcome, HostForbidden):
+        # #1418: a host-pinned no-membership is a 403 only when the app gates login on
+        # membership. An app that declared `tenant_host: membership_gated: false` (so
+        # `memberships_required` is off) uses the host purely for resolution + the
+        # `current_tenant` lens and self-authorizes — proceed with the legacy fence
+        # rather than locking every host-pinned login out for lack of a membership row.
+        if not memberships_required:
+            return None, next_target
         return None, FORBIDDEN_SENTINEL
     # NoOrgs
     if memberships_required:

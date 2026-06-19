@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.20] - 2026-06-19
+
+### Added
+- **`tenant_host: membership_gated:` opt-out** (#1418). A new boolean `tenant_host:` sub-key (default `true`) decouples host resolution from membership-gated login. Declaring `tenant_host:` previously *unconditionally* turned on the membership model, so an app that uses host resolution + the `current_tenant` host-lens **without** the enterprise-auth membership table 403'd every host-pinned login (`HostForbidden`). With `membership_gated: false`, `derive_memberships_required` no longer counts that host, and a host-pinned login with no membership **proceeds** (membership-less session; the RLS fence still applies) instead of 403 — on both the HTML redirect and JSON API (`POST /auth/login` / `/auth/register` / `/auth/change-password`) login paths. `api-surface/ir-types` baseline updated (`TenantHostSpec.membership_gated`).
+
+### Changed
+- `HostForbidden` activation now 403s only when the app gates login on membership (`memberships_required`). Existing apps are unaffected — `membership_gated` defaults `true`, so any app with `tenant_host:` (or `auto_provision_single_org`) keeps the 403; only an app that explicitly sets `membership_gated: false` on all its tenant-host entities proceeds membership-less.
+
 ## [0.83.19] - 2026-06-19
 
 ### Fixed

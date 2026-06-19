@@ -41,6 +41,7 @@ the framework's tenant middleware. `request.state.tenant` carries a typed
 | `not_found_template:` | framework default | dotted-path callable (`module:symbol`) returning 404 HTML |
 | `expired_template:` | framework default | dotted-path callable (`module:symbol`) returning 410 HTML |
 | `order:` | lexical | required iff 2+ entities share a `domain:` |
+| `membership_gated:` | `true` | `false` decouples host resolution from membership-gated login (#1418): the host + `current_tenant` lens work without the enterprise-auth membership table — a host-pinned login with no membership proceeds (the app self-authorizes) instead of 403. Leave `true` for the membership-gated model. |
 
 See the design spec at
 [`docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md`](../superpowers/specs/2026-05-28-tenant-host-keyword-design.md)

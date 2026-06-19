@@ -99,3 +99,44 @@ def test_middleware_class_is_importable():
     from dazzle.back.runtime.tenant.middleware import TenantResolutionMiddleware
 
     assert TenantResolutionMiddleware is not None
+
+
+def test_membership_gated_defaults_true():
+    """#1418: tenant_host gates membership-login by default (back-compat)."""
+    assert ir.TenantHostSpec(domain="example.com", slug_field="slug").membership_gated is True
+
+
+def test_parser_extracts_membership_gated_false():
+    """#1418: `membership_gated: false` opts the host out of membership-gated login."""
+    src = """
+module t
+app t "T"
+entity Org:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    domain: example.com
+    slug_field: slug
+    membership_gated: false
+""".lstrip()
+    _m, _a, _t, _c, _u, fragment = parse_dsl(src, Path("<test>"))
+    org = next(e for e in fragment.entities if e.name == "Org")
+    assert org.tenant_host is not None
+    assert org.tenant_host.membership_gated is False
+
+
+def test_parser_rejects_non_bool_membership_gated():
+    """#1418: a non-true/false value is a parse error."""
+    src = """
+module t
+app t "T"
+entity Org:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    domain: example.com
+    slug_field: slug
+    membership_gated: maybe
+""".lstrip()
+    with pytest.raises(Exception, match="membership_gated expects true/false"):
+        parse_dsl(src, Path("<test>"))

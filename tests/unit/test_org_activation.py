@@ -2,6 +2,8 @@
 
 from types import SimpleNamespace
 
+import pytest
+
 from dazzle.back.runtime.auth.models import MembershipRecord
 from dazzle.back.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
@@ -43,6 +45,24 @@ class TestDeriveMembershipsRequired:
 
     def test_missing_domain_is_safe(self) -> None:
         assert derive_memberships_required(SimpleNamespace(), auto_provision=False) is False
+
+    def test_membership_gated_false_does_not_gate(self) -> None:
+        # #1418: a tenant_host that opts out doesn't imply membership gating.
+        spec = _appspec(SimpleNamespace(domain="acme.example", membership_gated=False))
+        assert derive_memberships_required(spec, auto_provision=False) is False
+
+    def test_mixed_gated_and_ungated_still_gates(self) -> None:
+        # #1418: any gated tenant_host (default True) keeps the gate on.
+        spec = _appspec(
+            SimpleNamespace(domain="a.example", membership_gated=False),
+            SimpleNamespace(domain="b.example", membership_gated=True),
+        )
+        assert derive_memberships_required(spec, auto_provision=False) is True
+
+    def test_ungated_host_still_gated_by_auto_provision(self) -> None:
+        # #1418: auto_provision overrides — membership model is on regardless.
+        spec = _appspec(SimpleNamespace(domain="a.example", membership_gated=False))
+        assert derive_memberships_required(spec, auto_provision=True) is True
 
 
 def _m(mid: str, tid: str, status: str = "active") -> MembershipRecord:
@@ -146,10 +166,23 @@ class TestLoginRedirectMapper:
         assert mid is None
         assert target == "/auth/no-orgs"
 
-    def test_host_forbidden_uses_sentinel(self) -> None:
-        mid, target = _login_redirect_for_outcome(HostForbidden(), "/app")
+    def test_host_forbidden_sentinel_when_membership_gated(self) -> None:
+        # #1418: HostForbidden → 403 only when the app gates login on membership.
+        mid, target = _login_redirect_for_outcome(
+            HostForbidden(), "/app", memberships_required=True
+        )
         assert mid is None
         assert target == FORBIDDEN_SENTINEL
+
+    def test_host_forbidden_proceeds_when_ungated(self) -> None:
+        # #1418: a `tenant_host: membership_gated: false` app (memberships_required off)
+        # uses the host purely for resolution + the current_tenant lens — a host-pin with
+        # no membership proceeds (self-authorizes) instead of 403.
+        mid, target = _login_redirect_for_outcome(
+            HostForbidden(), "/app", memberships_required=False
+        )
+        assert mid is None
+        assert target == "/app"
 
 
 class _ProvisioningStore:
@@ -260,3 +293,44 @@ class TestHostPinAncestorReachability:
         )
         assert isinstance(out, Activated)
         assert out.membership_id == "m-region"
+
+
+class TestJsonApiHostForbiddenGate:
+    """#1418: the JSON API login path (_json_active_membership_id) honours the
+    membership gate exactly like the HTML redirect mapper — host-pin 403 only when
+    the app gates login on membership; a `membership_gated: false` app proceeds."""
+
+    @staticmethod
+    def _request(*, memberships_required: bool):
+        # Host-pinned request (state.tenant.id set) for an app whose membership gate
+        # is toggled. ancestor_ids empty (flat host).
+        tenant = SimpleNamespace(id="org-1", ancestor_ids=())
+        app = SimpleNamespace(state=SimpleNamespace(memberships_required=memberships_required))
+        return SimpleNamespace(app=app, state=SimpleNamespace(tenant=tenant))
+
+    @staticmethod
+    def _store_no_membership():
+        return SimpleNamespace(
+            get_memberships_for_identity=lambda _id: [],
+        )
+
+    def test_gated_app_raises_403(self) -> None:
+        from fastapi import HTTPException
+
+        from dazzle.back.runtime.auth.routes import _json_active_membership_id
+
+        user = SimpleNamespace(id="u-1")
+        with pytest.raises(HTTPException) as ei:
+            _json_active_membership_id(
+                self._store_no_membership(), user, self._request(memberships_required=True)
+            )
+        assert ei.value.status_code == 403
+
+    def test_ungated_app_proceeds_membership_less(self) -> None:
+        from dazzle.back.runtime.auth.routes import _json_active_membership_id
+
+        user = SimpleNamespace(id="u-1")
+        result = _json_active_membership_id(
+            self._store_no_membership(), user, self._request(memberships_required=False)
+        )
+        assert result is None  # proceed membership-less; RLS fence still applies

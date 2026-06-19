@@ -353,6 +353,12 @@ class TenantHostSpec(BaseModel):
     not_found_template: str | None = None
     expired_template: str | None = None
     order: int | None = None
+    # #1418: whether declaring this host implies membership-gated login. Default True
+    # (back-compat: tenant_host presence gates login + 403s a host-pinned non-member).
+    # Set False for an app that uses host resolution + the `current_tenant` host-lens
+    # WITHOUT the enterprise-auth membership table — a host-pin with no membership then
+    # proceeds (the app self-authorizes) instead of 403.
+    membership_gated: bool = True
     # ADR-0036 (#1394 Layer 2): tenant-hierarchy parent edge. Names a `ref` field
     # on THIS entity whose target is another `tenant_host` entity (the parent
     # kind). The linker derives the kind partial-order from these edges; the

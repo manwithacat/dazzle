@@ -1047,6 +1047,7 @@ class EntityParserMixin:
             "not_found_template",
             "expired_template",
             "order",
+            "membership_gated",  # #1418: opt out of membership-gated login on this host
             "parent",  # ADR-0036 (#1394 L2): tenant-hierarchy parent FK field
         }
     )
@@ -1085,6 +1086,17 @@ class EntityParserMixin:
                 fields[key] = items
             elif key == "order":
                 fields[key] = int(self.expect(TokenType.NUMBER).value)
+            elif key == "membership_gated":
+                # #1418: a bool literal (true/false).
+                val_tok = self.expect_identifier_or_keyword()
+                if val_tok.value not in ("true", "false"):
+                    raise make_parse_error(
+                        f"tenant_host: membership_gated expects true/false, got {val_tok.value!r}",
+                        self.file,
+                        val_tok.line,
+                        val_tok.column,
+                    )
+                fields[key] = val_tok.value == "true"
             else:
                 # Scalar: collect remaining tokens on line as a compact string.
                 # Handles simple identifiers (e.g. "host", "admin"), dotted paths
