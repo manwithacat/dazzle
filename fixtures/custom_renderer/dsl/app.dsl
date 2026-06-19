@@ -39,6 +39,10 @@ surface tag_cloud "Feedback word cloud":
   uses entity Feedback
   mode: custom
   render: word_cloud
+  # #1392 item 3: declare the surfaces this custom viewer links to. The linker
+  # fails the build if either target stops resolving (rename/delete) — the
+  # custom-mode analogue of `primary_action -> surface`.
+  emits: [feedback_list, feedback_detail]
 
 # Per-entity detail viewer (#1297) — the modern replacement for the
 # removed Jinja `components/detail_view.html` override. `mode: view`

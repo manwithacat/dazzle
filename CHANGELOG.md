@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.22] - 2026-06-19
+
+### Added
+- **Custom-surface emitted-target verification** (#1392 item 3). A custom surface can now declare the surfaces/routes it links to, and the linker fails the build when a declared target resolves to nothing — the custom-mode analogue of `primary_action -> surface`, closing "dead buttons ship green." Two declaration sites: a DSL `emits: [surface, ...]` clause on `render:`/`mode: custom` surfaces (new `SurfaceSpec.emits`; each name must resolve to a declared surface), and a `# dazzle:emits <path>` header on route-overrides (each path must match a mounted route, via `verify_emits_paths`). A dead target is a build error (`E_DEAD_EMIT_TARGET`) in the `dazzle validate`/lint pass. **Opt-in** — a custom surface with no `emits:`/`# dazzle:emits` is unconstrained (today's behaviour); the safety net is incremental. Declared-target resolution only (not render-and-crawl). `fixtures/custom_renderer` (`tag_cloud`) dogfoods it; `api-surface/ir-types` baseline updated. This is **not** a fix for #1421 (a framework-route bug). Item 2 of #1392 (chrome-enforced custom mode) remains.
+
+  ### Agent Guidance
+  - **Declare `emits:` on a custom (`render:`/`mode: custom`) surface** (or `# dazzle:emits <path>` on a route-override) to get build-time dead-link protection for the targets it links to — `dazzle validate` then fails with `E_DEAD_EMIT_TARGET` on a renamed/deleted/typo'd target instead of shipping a dead button. Opt-in; omit it to keep today's unconstrained behaviour.
+
 ## [0.83.21] - 2026-06-19
 
 ### Added

@@ -333,3 +333,39 @@ workspace dashboard "Dashboard":
 **Related:** [Datatable](surfaces.md#datatable), [Surface](surfaces.md#surface)
 
 ---
+
+## Emitted-target verification (`emits:`)
+
+A custom surface (`mode: custom` / `render: <name>`) renders Turing-complete Python,
+so the framework can't see the links it emits — a dead "View"/drill button ships green
+and 404s only on click. Declare the surfaces it links to with `emits:` and the linker
+verifies each at build time (the custom-mode analogue of `primary_action -> surface`):
+
+### Syntax
+
+```dsl
+surface task_board "Board":
+  uses entity Task
+  mode: custom
+  render: kanban_viewer
+  emits: [task_detail, task_create]   # surface names this viewer links to
+```
+
+Each name must resolve to a **declared surface**; an unresolvable target fails
+`dazzle validate` with `E_DEAD_EMIT_TARGET`. `emits:` is **opt-in** — a custom surface
+with no `emits:` is unconstrained (today's behaviour); declaring it buys back the
+dead-target build gate.
+
+**Route-overrides** declare the same contract via a `# dazzle:emits <path>` header
+alongside `# dazzle:route-override` (each path must match a mounted route):
+
+```python
+# dazzle:route-override GET /app/board
+# dazzle:emits /app/tasks/{id}
+```
+
+See `fixtures/custom_renderer` (the `tag_cloud` surface) for a worked example.
+
+**Related:** [Surface Modes](surfaces.md#surface-modes), [Surface Actions](surfaces.md#surface-actions)
+
+---
