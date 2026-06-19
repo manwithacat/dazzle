@@ -406,7 +406,40 @@ def convert_surfaces_to_services(
             )
             endpoints.append(list_endpoint)
 
+    # #1420 Slice 2: drop generated-REST endpoints whose (entity, op) is not in
+    # the entity's `expose:` allowlist (api_expose). None = all ops (default);
+    # only the five CRUD ops are gated — non-CRUD / unmapped endpoints pass through.
+    endpoints = _apply_expose_allowlist(endpoints, services, domain)
     return services, _dedupe_endpoints(endpoints)
+
+
+_GATED_OPS = frozenset({"list", "read", "create", "update", "delete"})
+
+
+def _apply_expose_allowlist(
+    endpoints: list[EndpointSpec],
+    services: list[ServiceSpec],
+    domain: ir.DomainSpec | None,
+) -> list[EndpointSpec]:
+    """Filter endpoints by each entity's ``api_expose`` allowlist (#1420 Slice 2)."""
+    if domain is None:
+        return endpoints
+    expose_by_entity = {e.name: e.api_expose for e in domain.entities}
+    svc_op = {s.name: s.domain_operation for s in services if s.domain_operation is not None}
+
+    def _exposed(ep: EndpointSpec) -> bool:
+        op = svc_op.get(ep.service)
+        if op is None:
+            return True  # non-entity / unmapped endpoint — never gated
+        op_name = op.kind.value
+        if op_name not in _GATED_OPS or op.entity is None:
+            return True  # CUSTOM / non-CRUD / entity-less ops are not gated by expose
+        allow = expose_by_entity.get(op.entity)
+        if allow is None:
+            return True  # no `expose:` declared → all ops (backward compatible)
+        return op_name in allow
+
+    return [ep for ep in endpoints if _exposed(ep)]
 
 
 def _dedupe_endpoints(endpoints: list[EndpointSpec]) -> list[EndpointSpec]:
