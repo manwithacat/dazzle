@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.12] - 2026-06-19
+
+### Added
+- **Conformant custom routes** (#1420 slice 3, ADR-0040 — completes the governed-API-surface invariant). A project's hand-written route-override that touches a domain entity should carry the security model, not bypass it. Slices 1–2 governed generated routes; this governs custom ones. The binding is the existing static `# dazzle:implements <Entity>.<op> via <param>` header (#1126) — it already wraps the handler with `policy.check_entity_op` (fail-closed permit/scope before the body), and being a scannable header (not a runtime decorator) it's analyzable. New: (1) a **boot-time conformance check** — a route-override that shadows a generated entity route (same method+path) but declares no binding is surfaced as a loud warning (`find_unbound_shadowing_overrides`); (2) a **`raw-db-in-custom-route` counter-prior** + `scan_handler_for_raw_db` scanner flagging the residue a binding can't constrain — raw SQL / a hand-built `Repository` in the handler body (the RBAC-bypass cousin of raw-sql-string-building), surfaced at authoring time. No new IR or DSL keyword (reuses #1126).
+
+  ### Agent Guidance
+  - **A custom route handler that touches a domain entity must bind to it.** Add `# dazzle:implements <Entity>.<op> via <id-param>` (the framework runs permit/scope before your handler) or call `dazzle.back.runtime.policy.check_entity_op(...)` in the body. Never reach the DB directly (raw SQL / a hand-built `Repository`) from a route handler — that bypasses RBAC entirely. To remove an unwanted generated route, use the entity's `expose:` allowlist (#1420 slice 2), don't shadow it with an un-gated override.
+
+
 ## [0.83.11] - 2026-06-19
 
 ### Added
