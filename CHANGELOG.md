@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.23] - 2026-06-19
+
+### Fixed
+- **`/app/<slug>/{id}` detail pages 404'd under host tenancy on single-dyno deploys** (#1421, the real root cause — supersedes the v0.83.14 route-synthesis fix, which addressed an orthogonal list-only case). A page handler (`detail`/`edit`/`list`/related-tabs) loads its row via a **server-side internal HTTP fetch to the app's own `/<plural>/{id}` REST endpoint**. On Heroku/Railway, `_resolve_backend_url` returns a loopback URL (`127.0.0.1:$PORT`) and the fetch forwarded only `Cookie`, never `Host` — so the internal request reached `TenantResolutionMiddleware` with `Host: 127.0.0.1`, was rejected as 400 "Bad Host", and the **detail** handler raised that as a 404 (the **list** handler swallowed the identical failure into an empty 200 — exactly the static-200/dynamic-404 asymmetry AegisMark observed). The internal self-fetch now **forwards the original request's `Host`** so the tenant re-resolves on the loopback hop — but **only when the backend target is loopback**, never on a `DAZZLE_BACKEND_URL` split-service deployment (where overriding the external backend's `Host` would break its vhost routing — caught in review). Root-caused by reproducing the full tenant-host boot (the route was always present + matched; the 404 came from inside the handler). Regression-locked by `tests/unit/test_page_route_internal_fetch_host_1421.py`.
+
 ## [0.83.22] - 2026-06-19
 
 ### Added
