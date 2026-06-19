@@ -12,6 +12,21 @@ from dazzle.back.runtime.auth.insecure_guard import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _restore_dazzle_env():
+    """`pin_production_env()` mutates os.environ via setdefault — which monkeypatch
+    does NOT undo (it only reverses its own setenv/delenv). Snapshot+restore so this
+    file's tests can't leak DAZZLE_ENV=production into the rest of the suite."""
+    import os
+
+    saved = os.environ.get("DAZZLE_ENV")
+    yield
+    if saved is None:
+        os.environ.pop("DAZZLE_ENV", None)
+    else:
+        os.environ["DAZZLE_ENV"] = saved
+
+
 class TestAssertSecureAuthConfig:
     def test_auth_enabled_is_always_ok(self) -> None:
         # Auth on → never a violation, even in production.
