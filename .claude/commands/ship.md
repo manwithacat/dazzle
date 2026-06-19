@@ -21,11 +21,13 @@ Commit all current changes and push to the remote. Follow these steps exactly:
               tests/unit/test_htmx_undefined_guards.py \
               tests/unit/test_forbidden_detail.py \
               tests/unit/test_typed_runtime_no_jinja.py \
+              tests/unit/test_complexity_ratchet.py \
+              tests/unit/test_import_contracts.py \
               2>/dev/null) \
          -q
   ```
 
-  Globs (`test_*_drift.py`, `test_no_*.py`) auto-pick up new gates so this list doesn't rot. The trailing explicit files are the htmx/Alpine boundary regressions that don't follow either naming convention; the `ls ... 2>/dev/null` wrapper drops any entry whose file has been deleted upstream so pre-flight survives drift (#1156). When you delete a pinned-regression test, remove its line here in the same commit.
+  Globs (`test_*_drift.py`, `test_no_*.py`) auto-pick up new gates so this list doesn't rot. The trailing explicit files are the gates that don't follow either naming convention: the htmx/Alpine boundary regressions, plus the **framework structural-fitness gates** (`test_complexity_ratchet.py` = radon CC/MI ratchet, `test_import_contracts.py` = import-linter layer contracts — both shipped v0.83.26; the ratchet shipping v0.83.27 red is exactly why they're pinned here). The `ls ... 2>/dev/null` wrapper drops any entry whose file has been deleted upstream so pre-flight survives drift (#1156). When you delete a pinned-regression test, remove its line here in the same commit. A complexity-ratchet failure means a touched function crossed CC 15 / a file dropped MI rank — refactor (often: extract a helper to keep the inline branch count down), or regenerate the baseline with `dazzle fitness code --write-baseline` if the increase is genuinely justified.
 
   If a drift gate fails, **fix the regression** — or, if it's a deliberate API-surface change, regenerate the baseline with `--write` and add a CHANGELOG entry under Added/Changed/Removed. Never bypass.
 

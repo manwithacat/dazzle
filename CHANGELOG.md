@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.28] - 2026-06-19
+
+### Fixed
+- **Keep `build_site_page_context` under the CC-15 ratchet ceiling** — the #1423 fix added an inline `or` that pushed it 15→16, which the v0.83.26 complexity ratchet correctly caught (after v0.83.27 had already shipped, because `test_complexity_ratchet.py` matches neither the `test_*_drift.py` nor `test_no_*.py` pre-flight glob). Extracted a `_brand_value()` null-safe helper (also DRYs the duplicated present-but-null guard) so the call sites add no branches. **Wired both framework structural-fitness gates (`test_complexity_ratchet.py`, `test_import_contracts.py`) into the `/ship` pre-flight list** so a ratchet/contract regression can't ship green again.
+
+  ### Agent Guidance
+  - **A complexity-ratchet failure = refactor, don't just rebaseline.** When a touched function crosses CC 15, prefer extracting a helper to drop the inline branch count over `dazzle fitness code --write-baseline` (rebaseline only when the increase is genuinely irreducible). The two fitness gates are now in the `/ship` pre-flight — they don't match the drift/policy globs, so they're pinned explicitly.
+
 ## [0.83.27] - 2026-06-19
 
 ### Fixed
