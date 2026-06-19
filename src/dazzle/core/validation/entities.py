@@ -297,6 +297,41 @@ def _validate_constraints(entity: ir.EntitySpec, errors: list[str]) -> None:
                 )
 
 
+_SURFACE_MODE_OP = {
+    ir.SurfaceMode.CREATE: "create",
+    ir.SurfaceMode.EDIT: "update",
+    ir.SurfaceMode.VIEW: "read",
+    ir.SurfaceMode.LIST: "list",
+}
+
+
+def validate_expose_surface_consistency(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """#1420 Slice 2: a surface whose CRUD op is excluded by its entity's
+    ``expose:`` allowlist is a contradiction — the surface renders but its
+    generated REST route is suppressed. Error so the author fixes one or the other.
+    """
+    errors: list[str] = []
+    expose_by_entity = {e.name: e.api_expose for e in appspec.domain.entities}
+    for surface in appspec.surfaces:
+        entity_ref = getattr(surface, "entity_ref", None)
+        if not entity_ref:
+            continue
+        allow = expose_by_entity.get(entity_ref)
+        if allow is None:  # `expose:` not declared → all ops exposed (default)
+            continue
+        op = _SURFACE_MODE_OP.get(surface.mode)
+        if op is None:  # CUSTOM / non-CRUD surface — not gated by expose
+            continue
+        if op not in allow:
+            errors.append(
+                f"Surface '{surface.name}' (mode: {op}) needs the '{op}' op, but entity "
+                f"'{entity_ref}' declares `expose: {', '.join(allow) or 'none'}` which omits it — "
+                f"the surface would render but its REST route is suppressed. Add '{op}' to "
+                f"`expose:` or remove the surface."
+            )
+    return errors, []
+
+
 def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all entities for semantic correctness.

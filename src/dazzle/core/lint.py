@@ -93,6 +93,13 @@ def lint_appspec(
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
+    # #1420 Slice 2: a surface whose op the entity's `expose:` omits is a contradiction.
+    from dazzle.core.validation.entities import validate_expose_surface_consistency
+
+    errors, warnings = validate_expose_surface_consistency(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
     errors, warnings = validate_experiences(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
