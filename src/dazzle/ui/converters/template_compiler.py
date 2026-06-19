@@ -1685,4 +1685,52 @@ def compile_appspec_to_templates(
             root_ctx.current_route = "/"
             contexts["/"] = root_ctx
 
+    # #1421 — synthesize a default detail page for every entity whose list emits a
+    # `/app/<slug>/{id}` row link but which has no explicit `mode: view` surface.
+    # The list-table + workspace list regions advertise `/app/<slug>/{id}` for
+    # every list entity (server.py), and the converter auto-adds the canonical
+    # `/<plural>/{id}` READ — but the app-shell detail page route was previously
+    # mounted only from a VIEW surface, so list-only entities 404'd on drill-to-
+    # detail. Mirror the converter's auto-READ so the emitted link always resolves.
+    if domain:
+        _detail_entities: set[str] = set(_list_surfaces_by_entity.keys())
+        for _ws in appspec.workspaces:
+            for _region in getattr(_ws, "regions", []) or []:
+                _src = getattr(_region, "source", None)
+                if _src:
+                    _detail_entities.add(_src)
+
+        for _entity_ref in sorted(_detail_entities):
+            _entity = domain.get_entity(_entity_ref)
+            if _entity is None:
+                continue
+            _slug = _entity.name.lower().replace("_", "-")
+            _detail_route = f"{app_prefix}/{_slug}/{{id}}"
+            if _detail_route in contexts:
+                continue  # an explicit VIEW surface already provides it
+
+            _synthetic = ir.SurfaceSpec(
+                name=f"{_slug}_detail", entity_ref=_entity.name, mode=SurfaceMode.VIEW
+            )
+            _ctx = compile_surface_to_context(
+                _synthetic,
+                _entity,
+                app_prefix=app_prefix,
+                reverse_refs=_reverse_refs.get(_entity.name),
+                poly_refs=_poly_refs.get(_entity.name),
+                enums=list(appspec.enums) if appspec.enums else None,
+                entities_with_create_surface=_entities_with_create_surface,
+            )
+            _ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
+            _ctx.nav_items = nav_items
+            _ctx.nav_by_persona = nav_by_persona
+            _ctx.nav_items_anon = [i for i in nav_items if i.route in _anon_safe_routes]
+            _ctx.nav_groups_anon = nav_groups_anon
+            _ctx.nav_groups = nav_groups_all
+            _ctx.nav_groups_by_persona = nav_groups_by_persona
+            _ctx.view_name = _synthetic.name
+            _ctx.entity_ref = _entity.name
+            contexts[_detail_route] = _ctx
+            _route_surfaces[_detail_route] = _synthetic
+
     return contexts
