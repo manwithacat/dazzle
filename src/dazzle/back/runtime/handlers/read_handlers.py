@@ -37,6 +37,7 @@ from dazzle.back.runtime.audit_wrap import (
 )
 from dazzle.back.runtime.auth import AuthContext
 from dazzle.back.runtime.htmx_render import _render_detail_html
+from dazzle.back.runtime.http_errors import require_found
 from dazzle.back.runtime.scope_filters import _scoped_pre_read
 
 if TYPE_CHECKING:
@@ -91,9 +92,7 @@ def create_read_handler(spec: "RouteSpec") -> Callable[..., Any]:
                             f"expected YYYY-MM-DD"
                         ),
                     )
-        result = await service.execute(operation="read", id=id, **_read_kwargs)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Not found")
+        result = require_found(await service.execute(operation="read", id=id, **_read_kwargs))
         html = _render_detail_html(request, result, entity_name)
         return html if html is not None else result
 

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.agent.core import AgentTool
+from dazzle.core.ir.identity import spec_display_id
 from dazzle.fitness.investigator.case_file import CaseFile
 from dazzle.fitness.investigator.tools import (
     BINARY_SNIFF_BYTES,
@@ -196,7 +197,7 @@ def _lookup_ir_node(appspec: Any, name: str) -> tuple[Any, str]:
         if not nodes:
             continue
         for node in nodes:
-            node_name = getattr(node, "name", None) or getattr(node, "id", None)
+            node_name = spec_display_id(node, default=None)
             if node_name == name:
                 return node, kind_name
     return None, ""
@@ -216,7 +217,7 @@ def _collect_ir_names(appspec: Any) -> list[str]:
         ("enums",),
     ):
         for node in _resolve_path(appspec, path) or []:
-            node_name = getattr(node, "name", None) or getattr(node, "id", None)
+            node_name = spec_display_id(node, default=None)
             if node_name:
                 names.append(str(node_name))
     return names
@@ -224,7 +225,7 @@ def _collect_ir_names(appspec: Any) -> list[str]:
 
 def _serialise_ir_node(node: Any, kind: str) -> dict[str, Any]:
     """Best-effort dict serialisation for an IR node."""
-    name = getattr(node, "name", None) or getattr(node, "id", None)
+    name = spec_display_id(node, default=None)
     result: dict[str, Any] = {"kind": kind, "name": name}
     for attr in ("title", "mode", "uses_entity", "personas", "fields", "scope_rules", "sections"):
         value = getattr(node, attr, None)

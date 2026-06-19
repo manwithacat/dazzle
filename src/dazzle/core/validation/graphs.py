@@ -6,6 +6,7 @@ Split verbatim from dazzle.core.validator per #1361.
 from collections.abc import Mapping
 
 from .. import ir
+from ..ir.state_machine import state_name
 
 # =============================================================================
 # Graph semantics validation (v0.46.0 — #619)
@@ -236,7 +237,7 @@ def validate_lifecycles(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         # with mismatched state lists. Treated as orthogonal, so this is
         # advisory only.
         if entity.state_machine is not None:
-            sm_states = {(s if isinstance(s, str) else s.name) for s in entity.state_machine.states}
+            sm_states = {state_name(s) for s in entity.state_machine.states}
             if sm_states and sm_states != declared_states:
                 warnings.append(
                     f"{prefix} state_machine states {sorted(sm_states)} "

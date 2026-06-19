@@ -26,6 +26,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.ir.identity import spec_display_id
 from dazzle.qa.models import CapturedScreen
 from dazzle.testing.browser_gate import BrowserGate
 from dazzle.testing.session_manager import SessionManager
@@ -76,9 +77,7 @@ def build_capture_plan(appspec: Any) -> list[CaptureTarget]:
 
     targets: list[CaptureTarget] = []
     for persona in personas:
-        persona_id: str = str(
-            getattr(persona, "name", None) or getattr(persona, "id", None) or "unknown"
-        )
+        persona_id: str = str(spec_display_id(persona))
         for workspace in workspaces:
             workspace_name: str = str(getattr(workspace, "name", None) or "unknown")
             targets.append(

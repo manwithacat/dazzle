@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Literal
 
+from dazzle.core.ir.state_machine import state_name
+
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
 
@@ -317,8 +319,8 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
             transitions: list[str] = []
             if entity_spec and entity_spec.state_machine:
                 for t in entity_spec.state_machine.transitions:
-                    from_s = t.from_state if isinstance(t.from_state, str) else t.from_state.name
-                    to_s = t.to_state if isinstance(t.to_state, str) else t.to_state.name
+                    from_s = state_name(t.from_state)
+                    to_s = state_name(t.to_state)
                     transitions.append(f"{from_s}\u2192{to_s}")
 
             has_edit = bool(

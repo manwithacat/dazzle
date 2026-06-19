@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.29] - 2026-06-19
+
+### Changed
+- **Retired three duplicated footgun classes into shared helpers + gates** (smells round 2026-06-19, "safe dedup" track). (1) The copy-pasted `if x is None: raise HTTPException(404, "Not found")` fetch-or-404 guard → `dazzle.back.runtime.http_errors.require_found(value)` (5 sites; the 404 contract now lives in one place + type-narrows). (2) `getattr(x, "name", None) or getattr(x, "id", …)` identity fallback → `dazzle.core.ir.identity.spec_display_id(spec)` (6 sites). (3) `s if isinstance(s, str) else s.name` state normalisation → `dazzle.core.ir.state_machine.state_name(s)` / `StateMachineSpec.state_names()` (6 sites). Each is locked by `tests/unit/test_dedup_footgun_gates.py` (forbids the inline form returning, with a pointer to the helper), now wired into the `/ship` pre-flight. The two CLAUDE.md "PersonaSpec identity" / "State machine states" gotchas now point at the helpers instead of endorsing the inline idiom. Zero behaviour change (helpers do exactly what the inline code did; state helpers use the free-function form so they stay duck-type/mock-compatible).
+
+  ### Agent Guidance
+  - **Three footguns now have one home each, gated.** Fetch-or-404 → `require_found`; spec/node display id (PersonaSpec is `.id` not `.name`) → `spec_display_id`; state-name normalisation → `state_name` / `StateMachineSpec.state_names()`. Re-inlining any of the three fails `test_dedup_footgun_gates.py`.
+
 ## [0.83.28] - 2026-06-19
 
 ### Fixed

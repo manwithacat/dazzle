@@ -134,6 +134,7 @@ from dazzle.back.runtime.htmx_render import (  # noqa: F401  (re-exported for ba
     _render_table_sentinel,
     _with_htmx_triggers,
 )
+from dazzle.back.runtime.http_errors import require_found
 
 # Scope / row-RBAC filter resolution lives in scope_filters.py (#1361 slice 1).
 # The names are re-imported at module level so existing
@@ -984,8 +985,7 @@ def generate_crud_routes(
     @router.get(f"{prefix}/{{id}}", tags=tags, summary=f"Get {entity_name}", response_model=model)
     async def get_item(id: UUID) -> Any:
         result = await service.execute(operation="read", id=id)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Not found")
+        result = require_found(result)
         return result
 
     # Create
@@ -1000,8 +1000,7 @@ def generate_crud_routes(
     )
     async def update_item(id: UUID, request: Request, data: update_schema) -> Any:
         result = await service.execute(operation="update", id=id, data=data)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Not found")
+        result = require_found(result)
         return _with_htmx_triggers(
             request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
         )
@@ -1056,8 +1055,7 @@ def generate_crud_routes(
             id=entity_id,
             data={field_name: value},
         )
-        if result is None:
-            raise HTTPException(status_code=404, detail="Not found")
+        result = require_found(result)
 
         # Return the new value as plain text; the template handles rendering
         updated_value = (

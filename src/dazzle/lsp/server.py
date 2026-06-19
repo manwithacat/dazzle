@@ -48,6 +48,7 @@ from pygls.lsp.server import LanguageServer
 from dazzle.core import ir
 from dazzle.core.errors import DazzleError, LinkError, ParseError, ValidationError
 from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.ir.identity import spec_display_id
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
@@ -488,7 +489,7 @@ _HOVER_FORMATTERS: dict[str, Any] = {
 
 def _format_generic_hover(construct_type: str, spec: Any) -> str:
     """Format a generic hover for any named construct."""
-    name = getattr(spec, "name", None) or getattr(spec, "id", "unknown")
+    name = spec_display_id(spec)
     title = getattr(spec, "title", None) or getattr(spec, "description", None)
 
     lines = [f"**{construct_type}** `{name}`"]

@@ -23,6 +23,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
               tests/unit/test_typed_runtime_no_jinja.py \
               tests/unit/test_complexity_ratchet.py \
               tests/unit/test_import_contracts.py \
+              tests/unit/test_dedup_footgun_gates.py \
               2>/dev/null) \
          -q
   ```

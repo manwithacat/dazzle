@@ -367,9 +367,9 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 ## Gotchas
 
 - **MCP test isolation**: Tests that mock `mcp.*` modules pollute `sys.modules`. The `tests/unit/conftest.py` 3-phase fixture handles this — don't bypass it.
-- **PersonaSpec identity**: Use `.id`, not `.name` — `getattr(p, "name", None) or getattr(p, "id", "unknown")`.
-- **State machine states**: Plain strings, not objects — use `s if isinstance(s, str) else s.name`.
+- **PersonaSpec identity**: `.id`, not `.name` — call `spec_display_id(spec)` (`dazzle.core.ir.identity`), don't re-inline `getattr(p, "name", None) or getattr(p, "id", …)` (gated by `tests/unit/test_dedup_footgun_gates.py`).
+- **State machine states**: Plain strings, not objects — call `StateMachineSpec.state_names()` or `state_name(s)` (`dazzle.core.ir.state_machine`), don't re-inline `s if isinstance(s, str) else s.name` (gated).
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.83.28 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.83.29 | **Python**: 3.12+ | **Status**: Production Ready

@@ -32,6 +32,7 @@ from pydantic import BaseModel
 
 from dazzle.back.runtime.audit_wrap import _wrap_with_auth
 from dazzle.back.runtime.htmx_render import _with_htmx_triggers
+from dazzle.back.runtime.http_errors import require_found
 from dazzle.back.runtime.repository import ConstraintViolationError
 from dazzle.back.runtime.scope_filters import _enforce_create_scope, _enforce_update_scope
 
@@ -455,9 +456,7 @@ def create_update_handler(spec: "RouteSpec") -> Callable[..., Any]:
         auth_ctx = _extra.get("auth_context")
         if auth_ctx is not None:
             kwargs["auth_context"] = auth_ctx
-        result = await service.execute(**kwargs)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Not found")
+        result = require_found(await service.execute(**kwargs))
         return _with_htmx_triggers(
             request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
         )

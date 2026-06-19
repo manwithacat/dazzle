@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir.state_machine import state_name
+
 from ..core import AgentTool
 
 if TYPE_CHECKING:
@@ -113,7 +115,7 @@ def build_dsl_summary(appspec: AppSpec) -> str:
         lines.append(f"- **{entity.name}** ({entity.title}): {', '.join(field_names)}")
         sm = entity.state_machine
         if sm and sm.states:
-            state_names = [s if isinstance(s, str) else s.name for s in sm.states][:6]
+            state_names = [state_name(s) for s in sm.states][:6]
             lines.append(f"  States: {' → '.join(state_names)}")
 
     # Surfaces with mode and entity
@@ -292,7 +294,7 @@ def make_query_dsl_tool(appspec: AppSpec) -> AgentTool:
                         result["fields"].append(field_info)
                     sm = entity.state_machine
                     if sm and sm.states:
-                        result["states"] = [s if isinstance(s, str) else s.name for s in sm.states]
+                        result["states"] = [state_name(s) for s in sm.states]
                         result["transitions"] = [
                             {
                                 "from": t.from_state,

@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from dazzle.core.ir.identity import spec_display_id
+
 from .loader import load_all_commands
 from .models import CommandDefinition, CommandStatus, MaturityGate, SyncManifest
 from .template_strings import (
@@ -183,10 +185,7 @@ def build_project_context(project_root: Path) -> dict[str, Any]:
                 ctx["story_count"] = len(appspec.stories)
                 ctx["entity_names"] = [e.name for e in appspec.domain.entities]
                 ctx["surface_names"] = [s.name for s in appspec.surfaces]
-                ctx["persona_names"] = [
-                    getattr(p, "name", None) or getattr(p, "id", "unknown")
-                    for p in appspec.personas
-                ]
+                ctx["persona_names"] = [spec_display_id(p) for p in appspec.personas]
     except Exception:
         ctx["validate_passes"] = False
 

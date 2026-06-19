@@ -32,6 +32,17 @@ SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = 86400
 
 
+def state_name(state: object) -> str:
+    """The plain name of a state value.
+
+    ``StateMachineSpec.states`` and transition ``from_state``/``to_state`` are typed
+    ``str``, but consumers historically guarded ``s if isinstance(s, str) else s.name``
+    defensively. This centralizes that guard so the footgun lives in one place
+    (use this instead of re-deriving the ``isinstance`` ternary).
+    """
+    return state if isinstance(state, str) else getattr(state, "name", str(state))
+
+
 class TimeUnit(StrEnum):
     """Time units for auto-transition delays."""
 
@@ -208,6 +219,10 @@ class StateMachineSpec(BaseModel):
     transitions: list[StateTransition] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
+
+    def state_names(self) -> list[str]:
+        """The states as plain name strings (via :func:`state_name`)."""
+        return [state_name(s) for s in self.states]
 
     def get_transitions_from(self, state: str) -> list[StateTransition]:
         """Get all transitions from a given state."""

@@ -15,6 +15,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir.state_machine import state_name
 from dazzle.core.patterns import SYSTEM_MANAGED_PATTERNS
 
 from ..core import AgentTool, Mission
@@ -364,7 +365,7 @@ def _make_check_state_transitions_tool(appspec: AppSpec) -> AgentTool:
                 }
             )
 
-        states = [s if isinstance(s, str) else s.name for s in sm.states]
+        states = [state_name(s) for s in sm.states]
 
         return {
             "entity": entity_name,
