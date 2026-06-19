@@ -50,6 +50,13 @@ _IMPLEMENTS_RE = re.compile(
 # fails the build (the custom-mode analogue of `primary_action -> surface`).
 _EMITS_RE = re.compile(r"#\s*dazzle:emits\s+(\S+)", re.IGNORECASE)
 
+# #1392 item 2 — declared response shape. The kind ENCODES chrome: only `fragment` is
+# shell-wrapped; `page` is a full document (novel/full-bleed UX, never refused);
+# `partial` is raw HTML for a targeted HTMX swap; `json` is data. Drives
+# `_wrap_with_response_contract`. None = undeclared (today's behaviour + advisory nudge).
+_RETURNS_RE = re.compile(r"#\s*dazzle:returns\s+(\w+)", re.IGNORECASE)
+_VALID_RETURN_KINDS = frozenset({"page", "fragment", "partial", "json"})
+
 # Valid Python module path: dotted identifier segments only.
 # Enforces that extension router specs from dazzle.toml resolve to
 # real package paths and prevents injection via the config value.
@@ -75,6 +82,9 @@ class RouteOverrideDescriptor:
     # #1392 item 3 — declared `# dazzle:emits <path>` link targets. Each must resolve
     # to a mounted route (verify_emits_paths). () = undeclared (opt-in).
     emits_paths: tuple[str, ...] = ()
+    # #1392 item 2 — declared response shape (page|fragment|partial|json). Drives
+    # `_wrap_with_response_contract` (kind encodes chrome). None = undeclared.
+    returns_kind: str | None = None
 
 
 def find_unbound_shadowing_overrides(
@@ -258,6 +268,17 @@ def discover_route_overrides(routes_dir: Path) -> list[RouteOverrideDescriptor]:
         # #1392 item 3 — declared link/fetch targets (one `# dazzle:emits <path>` per line).
         emits_paths = tuple(m.group(1) for m in _EMITS_RE.finditer(content))
 
+        # #1392 item 2 — declared response shape. Unknown kind = a discovery error.
+        returns_kind: str | None = None
+        returns_match = _RETURNS_RE.search(content)
+        if returns_match:
+            returns_kind = returns_match.group(1).lower()
+            if returns_kind not in _VALID_RETURN_KINDS:
+                raise ValueError(
+                    f"Route override {py_file.name}: `# dazzle:returns {returns_kind}` is not a "
+                    f"valid kind. Expected one of: {', '.join(sorted(_VALID_RETURN_KINDS))}."
+                )
+
         overrides.append(
             RouteOverrideDescriptor(
                 method=method,
@@ -268,6 +289,7 @@ def discover_route_overrides(routes_dir: Path) -> list[RouteOverrideDescriptor]:
                 implements_op=implements_op,
                 implements_via=implements_via,
                 emits_paths=emits_paths,
+                returns_kind=returns_kind,
             )
         )
         if implements_entity:
