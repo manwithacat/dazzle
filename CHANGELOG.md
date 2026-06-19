@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Framework structural-fitness gates** (decay prevention for `src/dazzle`'s own code — the one ungated surface, now decaying under high velocity). `dazzle fitness code` ranks framework files by **churn × complexity** (radon CC/MI × git change-frequency) into a structural-debt queue — which surfaces `server.py`/`workspace.py`/`entity.py` (C-rank + high-churn) as the real debt, not just the biggest files. A **complexity ratchet** (`tests/unit/test_complexity_ratchet.py` + a committed `complexity_baseline.json`) gates creep: a touched file may not drop its MI rank, a new file may not land at C, a new function may not exceed CC 15. Same baseline-and-tighten posture as the API-surface drift gates — `dazzle fitness code --write-baseline` re-tightens after a refactor. New dev deps: `radon`, `import-linter`.
+
+  ### Agent Guidance
+  - **Don't grow the hotspots.** `dev_docs/framework-hotspots.md` (regenerate with `dazzle fitness code --write`) is the framework's structural-debt queue. The complexity ratchet now fails CI if a touched file's radon MI rank drops or a new function exceeds CC 15 — refactor instead, or `dazzle fitness code --write-baseline` if the increase is genuinely justified (and note it).
+
 ## [0.83.25] - 2026-06-19
 
 ### Added
