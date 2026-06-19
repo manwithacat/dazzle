@@ -98,6 +98,51 @@ def find_unbound_shadowing_overrides(
     return violations
 
 
+_VALID_CRUD_OPS = frozenset({"list", "read", "create", "update", "delete"})
+
+
+def verify_route_matrix_completeness(
+    appspec: Any,
+    overrides: list[RouteOverrideDescriptor],
+    generated_paths: set[tuple[str, str]],
+) -> list[str]:
+    """#1420 Slice 3 / ADR-0040 D3 — every domain route must be matrix-represented.
+
+    The hard-gate form of the conformance check. Two ways a custom route escapes
+    the RBAC matrix:
+
+    1. **Unbound shadow** — an override that shadows a generated entity route but
+       carries no ``# dazzle:implements`` binding (no ``(entity, op)`` → no matrix
+       row). Reuses :func:`find_unbound_shadowing_overrides`.
+    2. **Dangling binding** — an override whose ``# dazzle:implements`` names an
+       entity that doesn't exist in the AppSpec, or an op outside the CRUD set.
+       Its row points at nothing.
+
+    Returns one violation string per offending override; ``[]`` means the route
+    set is matrix-complete. A CLI gate (`dazzle rbac routes --strict`) exits
+    non-zero when this is non-empty.
+    """
+    violations = list(find_unbound_shadowing_overrides(overrides, generated_paths))
+    entity_names = {e.name for e in appspec.domain.entities}
+    for o in overrides:
+        if o.implements_entity is None:
+            continue
+        if o.implements_entity not in entity_names:
+            violations.append(
+                f"Route override {o.method.upper()} {o.path} ({o.source_path.name}) binds to "
+                f"`# dazzle:implements {o.implements_entity}.{o.implements_op}` but entity "
+                f"{o.implements_entity!r} does not exist in the AppSpec — dangling binding, no "
+                "matrix row."
+            )
+        elif o.implements_op not in _VALID_CRUD_OPS:
+            violations.append(
+                f"Route override {o.method.upper()} {o.path} ({o.source_path.name}) binds to op "
+                f"{o.implements_op!r}, which is not a CRUD op (list/read/create/update/delete) — "
+                "no matrix row."
+            )
+    return violations
+
+
 _RAW_DB_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(r"\.execute\s*\(\s*['\"]?\s*(SELECT|INSERT|UPDATE|DELETE)\b", re.IGNORECASE),

@@ -9,6 +9,7 @@ binding is a conformance violation.
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 
 def _write_route(routes_dir: Path, name: str, header: str, *, via_param: bool = False) -> None:
@@ -118,3 +119,53 @@ class TestRawDbScanner:
             "    return {'ok': True}\n"
         )
         assert scan_handler_for_raw_db(src) == []
+
+
+class TestMatrixCompleteness:
+    """S3.3 / ADR-0040 D3 — every domain route is matrix-represented (hard gate)."""
+
+    @staticmethod
+    def _appspec(*entity_names: str):
+        return SimpleNamespace(
+            domain=SimpleNamespace(entities=[SimpleNamespace(name=n) for n in entity_names])
+        )
+
+    def test_unbound_shadowing_override_is_incomplete(self) -> None:
+        from dazzle.back.runtime.route_overrides import verify_route_matrix_completeness
+
+        v = verify_route_matrix_completeness(
+            self._appspec("Task"), [_desc("PUT", "/tasks/{id}")], {("PUT", "/tasks/{id}")}
+        )
+        assert v  # unbound shadow → no matrix row
+
+    def test_bound_to_known_entity_op_is_complete(self) -> None:
+        from dazzle.back.runtime.route_overrides import verify_route_matrix_completeness
+
+        bound = _desc("PUT", "/tasks/{id}", entity="Task", op="update", via="id")
+        assert verify_route_matrix_completeness(self._appspec("Task"), [bound], set()) == []
+
+    def test_bound_to_unknown_entity_is_violation(self) -> None:
+        from dazzle.back.runtime.route_overrides import verify_route_matrix_completeness
+
+        bad = _desc("PUT", "/ghosts/{id}", entity="Ghost", op="update", via="id")
+        v = verify_route_matrix_completeness(self._appspec("Task"), [bad], set())
+        assert any("Ghost" in x for x in v)
+
+    def test_bound_to_unknown_op_is_violation(self) -> None:
+        from dazzle.back.runtime.route_overrides import verify_route_matrix_completeness
+
+        bad = _desc("POST", "/tasks/x", entity="Task", op="frobnicate", via="id")
+        v = verify_route_matrix_completeness(self._appspec("Task"), [bad], set())
+        assert any("frobnicate" in x for x in v)
+
+    def test_rbac_routes_cli_reports_ok_on_clean_example(self) -> None:
+        """`dazzle rbac routes` wires the gate end-to-end; a no-override example is OK."""
+        from typer.testing import CliRunner
+
+        from dazzle.cli.rbac import rbac_app
+
+        result = CliRunner().invoke(
+            rbac_app, ["routes", "--manifest", "examples/ops_dashboard/dazzle.toml"]
+        )
+        assert result.exit_code == 0
+        assert "OK" in result.stdout

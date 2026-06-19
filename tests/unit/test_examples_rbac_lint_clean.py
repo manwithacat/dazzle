@@ -96,6 +96,32 @@ def test_example_dsl_has_zero_no_scope_rule_warnings(example_name: str) -> None:
     )
 
 
+@pytest.mark.parametrize("example_name", _KNOWN_EXAMPLES)
+def test_example_routes_are_matrix_complete(example_name: str) -> None:
+    """#1420 Slice 3 / ADR-0040 D3 — no example may carry a custom route-override
+    that escapes the RBAC matrix (an unbound override shadowing a generated route,
+    or a `# dazzle:implements` binding naming an entity/op the AppSpec lacks).
+    The framework-side form of the `dazzle rbac routes --strict` CI gate."""
+    from dazzle.back.converters.surface_converter import convert_surfaces_to_services
+    from dazzle.back.runtime.route_overrides import (
+        discover_route_overrides,
+        verify_route_matrix_completeness,
+    )
+
+    project_root = EXAMPLES_DIR / example_name
+    if not project_root.exists():
+        pytest.skip(f"Example directory missing: {project_root}")
+
+    appspec = load_project_appspec(project_root)
+    overrides = discover_route_overrides(project_root / "routes")
+    _services, endpoints = convert_surfaces_to_services(appspec.surfaces, appspec.domain)
+    generated = {(ep.method.value, ep.path) for ep in endpoints}
+    violations = verify_route_matrix_completeness(appspec, overrides, generated)
+    assert violations == [], (
+        f"Example `{example_name}` route(s) escape the RBAC matrix:\n" + "\n".join(violations)
+    )
+
+
 def test_every_examples_dir_under_lint() -> None:
     """Auto-discover any new example added to `examples/` so the
     gate catches it. Lists every subdirectory with a `dazzle.toml`

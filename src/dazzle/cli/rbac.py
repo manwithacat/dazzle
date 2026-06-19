@@ -371,6 +371,44 @@ def matrix(
         typer.echo(f"WARNING: {w.message}", err=True)
 
 
+@rbac_app.command("routes")
+def routes_cmd(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
+    strict: bool = typer.Option(
+        False, "--strict", help="Exit non-zero on any violation (CI security gate)."
+    ),
+) -> None:
+    """Route-override conformance: every domain route is RBAC-matrix-represented.
+
+    #1420 Slice 3 / ADR-0040 D3. Flags custom route-overrides in ``routes/`` that
+    shadow a generated entity route without a ``# dazzle:implements`` binding (no
+    matrix row), and bindings naming an entity/op the AppSpec lacks (dangling).
+    Run ``dazzle rbac routes --strict`` in CI to fail the build on any escape.
+    """
+    from dazzle.back.converters.surface_converter import convert_surfaces_to_services
+    from dazzle.back.runtime.route_overrides import (
+        discover_route_overrides,
+        verify_route_matrix_completeness,
+    )
+    from dazzle.core.appspec_loader import load_project_appspec
+
+    root = resolve_project(manifest)
+    appspec = load_project_appspec(root)
+    overrides = discover_route_overrides(root / "routes")
+    _services, endpoints = convert_surfaces_to_services(appspec.surfaces, appspec.domain)
+    generated = {(ep.method.value, ep.path) for ep in endpoints}
+    violations = verify_route_matrix_completeness(appspec, overrides, generated)
+
+    if not violations:
+        typer.echo("Route matrix-completeness: OK — every domain route is matrix-represented.")
+        return
+    for v in violations:
+        typer.echo(f"VIOLATION: {v}", err=True)
+    typer.echo(f"\n{len(violations)} route(s) escape the RBAC matrix.", err=True)
+    if strict:
+        raise typer.Exit(code=1)
+
+
 @rbac_app.command("verify")
 def verify_cmd(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
