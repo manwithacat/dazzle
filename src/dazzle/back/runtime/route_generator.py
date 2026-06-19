@@ -470,6 +470,12 @@ class RouteGenerator:
         # Maps entity_name → (persona_id, link_via) for each persona that
         # declares ``backed_by``. Built by the caller from appspec.personas.
         self.persona_backed_entities: dict[str, tuple[str, str]] = {}
+        # ADR-0039 D3b (#778/#1398): when the `User` entity declares `auth_identity:`,
+        # this holds its `link_via` so `ref User` create-injection resolves the domain
+        # `User` row by the link (e.g. email) instead of assuming domain id == auth id
+        # (#774). None = no binding → keep the #774 auth-id injection (D5). Set by the
+        # caller from `appspec.domain` after construction.
+        self.auth_identity_user_link: str | None = None
         self._router = _APIRouter()
 
     def generate_route(
@@ -571,16 +577,29 @@ class RouteGenerator:
                 # the link_via + repository so the create handler can do the async
                 # lookup at request time.
                 _persona_ref_map: dict[str, tuple[str, str, Any]] | None = None
+                _prm: dict[str, tuple[str, str, Any]] = {}
                 _backed = getattr(self, "persona_backed_entities", None) or {}
                 if _backed:
-                    _prm: dict[str, tuple[str, str, Any]] = {}
                     for fk_field, target in _refs.items():
                         if target in _backed and target != "User":
                             _persona_id, _link_via = _backed[target]
                             _target_repo = self.services.get(target)
                             if _target_repo:
                                 _prm[fk_field] = (target, _link_via, _target_repo)
-                    _persona_ref_map = _prm or None
+                # ADR-0039 D3b (#778/#1398): when `User` declares `auth_identity:`, resolve
+                # `ref User` create-injection by the declared link (e.g. email) — inject the
+                # domain `User` row's own id, not the auth id (#774's domain-id == auth-id
+                # assumption). Route these fields through the same link-resolution as backed
+                # entities and drop them from the auth-id `_user_ref_fields` path so they
+                # aren't double-injected. Undeclared `User` keeps #774 (D5).
+                _user_link = getattr(self, "auth_identity_user_link", None)
+                if _user_link is not None and _user_ref_fields:
+                    _user_repo = self.services.get("User")
+                    if _user_repo is not None:
+                        for fk_field in _user_ref_fields:
+                            _prm[fk_field] = ("User", _user_link, _user_repo)
+                        _user_ref_fields = []
+                _persona_ref_map = _prm or None
 
                 handler = create_create_handler(
                     RouteSpec(

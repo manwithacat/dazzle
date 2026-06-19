@@ -1813,6 +1813,13 @@ class DazzleBackendApp:
                         persona.link_via,
                     )
 
+        # ADR-0039 D3b (#778/#1398): if the `User` entity declares `auth_identity:`,
+        # resolve `ref User` create-injection by the declared link instead of the #774
+        # auth-id assumption. Undeclared ⇒ None ⇒ #774 unchanged (D5).
+        _user_ir = self._user_ir_entity()
+        if _user_ir is not None and _user_ir.auth_identity is not None:
+            route_generator.auth_identity_user_link = _user_ir.auth_identity.link_via
+
         # Collect (method, path) pairs already claimed by project overrides
         # and extension routers so the generic CRUD generator can skip
         # them — first-match still wins at request time, but a skipped

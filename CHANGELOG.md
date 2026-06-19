@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.18] - 2026-06-19
+
+### Added
+- **`ref User` link-resolution for declared bridges + `simple_task` dogfood** (#778/#1398, ADR-0039 Slice 4 — D3b, **completes ADR-0039**). When the `User` entity declares `auth_identity:`, a `ref User` create-injection now resolves the **domain** `User` row by the declared `link_via` (email) and injects *its* id — routed through the same proven `persona_ref_map` link-resolution as `backed_by` entities (cycle 249) — instead of assuming domain-id == auth-id (#774). Undeclared `User` keeps the #774 auth-id injection unchanged (D5). `examples/simple_task` now declares the bridge on its `User` (`link_via: email`, `name ← email_localpart`), dogfooding the full pipeline: the binding survives the project loader and the mirror builds a valid upsert for the real example schema. Closes #778 (auth user provisioned but not mirrored into the domain `User`) and #1398 (mirror generalises across `User` schemas).
+
+  ### Agent Guidance
+  - **Declare `auth_identity:` on the `User` entity** when an app has `ref User` FKs and uses the framework auth flow — the framework then provisions the domain `User` row on auth-user creation and resolves `ref User` by the email link. `link_via: email` (v1); `map:` required-no-default columns from `id`/`email`/`email_localpart`/`username`/`role`; `default:` for literals. Omit it (the default) to keep today's behaviour. `dazzle validate` rejects an incomplete binding (every required column must be resolved). See `examples/simple_task` for a worked example and ADR-0039.
+
 ## [0.83.17] - 2026-06-19
 
 ### Added

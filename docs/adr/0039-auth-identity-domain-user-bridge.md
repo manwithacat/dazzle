@@ -1,7 +1,10 @@
 # ADR-0039 — Auth-identity ↔ domain-`User` bridge via a declared binding
 
-**Status:** Accepted (2026-06-19) — design for #778 (parent of #1398/#1413 cluster); **not yet
-implemented** (tracked by #778). The two former open questions were ratified on 2026-06-19:
+**Status:** Accepted (2026-06-19) — **fully implemented** (#778/#1398), shipped v0.83.15–v0.83.18
+across four slices: D2 IR+parser (`auth_identity:` block, v0.83.15) · D6/A1 validate-completeness
+(v0.83.16) · D3a/D4 shared provisioning mirror + production `AuthStore.create_user` hook (v0.83.17) ·
+D3b `ref User` link-resolution + `examples/simple_task` dogfood (v0.83.18). The two former open
+questions were ratified on 2026-06-19:
 **A1 = a1** (validate-time resolution of every required column; never a swallowed runtime failure)
 and **A2 = opt-in** (declared `auth_identity:` enables the bridge). Both are folded into the
 decisions below.

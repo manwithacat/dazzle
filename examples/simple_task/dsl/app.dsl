@@ -39,6 +39,15 @@ entity User "Team Member":
   is_active: bool=true
   created_at: datetime auto_add
 
+  # ADR-0039 (#778/#1398): this entity IS the authenticated principal's domain row.
+  # On real auth-user creation the framework provisions a matching User row, and
+  # `ref User` FKs resolve to it via the email link — so a logged-in member can own
+  # tasks without a manual seed. `name` (required) is filled from the email local-part.
+  auth_identity:
+    link_via: email
+    map:
+      name: email_localpart
+
   permit:
     list: role(admin) or role(manager)
     read: role(admin) or role(manager)
