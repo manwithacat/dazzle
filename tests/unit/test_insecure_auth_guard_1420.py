@@ -49,3 +49,35 @@ class TestInsecureAckFromEnv:
     def test_unset_is_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(INSECURE_ACK_VAR, raising=False)
         assert insecure_ack_from_env() is False
+
+
+class TestSetupAuthWiring:
+    """The guard runs at the top of _setup_auth, before its enable_auth early-return,
+    so it needs no database."""
+
+    def _app(self, *, enable_auth: bool):
+        from dazzle.back.runtime.server import DazzleBackendApp
+        from tests.unit.test_build_server_config import _appspec  # minimal AppSpec helper
+
+        return DazzleBackendApp(_appspec(), enable_auth=enable_auth)
+
+    def test_prod_auth_off_build_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("DAZZLE_ENV", "production")
+        monkeypatch.delenv(INSECURE_ACK_VAR, raising=False)
+        app = self._app(enable_auth=False)
+        with pytest.raises(InsecureAuthConfigError):
+            app._setup_auth()
+
+    def test_prod_auth_off_acknowledged_does_not_raise(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("DAZZLE_ENV", "production")
+        monkeypatch.setenv(INSECURE_ACK_VAR, "1")
+        app = self._app(enable_auth=False)
+        # Returns (None, None) — the guard allows it; no DB touched on this path.
+        assert app._setup_auth() == (None, None)
+
+    def test_dev_auth_off_does_not_raise(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("DAZZLE_ENV", "development")
+        app = self._app(enable_auth=False)
+        assert app._setup_auth() == (None, None)

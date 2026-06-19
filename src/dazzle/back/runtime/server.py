@@ -1460,6 +1460,21 @@ class DazzleBackendApp:
 
         Returns (auth_dep, optional_auth_dep) for route generation.
         """
+        # #1420 Slice 1 — fail closed: auth disabled in production is a critical
+        # misconfiguration (generated CRUD would be world-writable). Runs before
+        # any auth/DB state is touched.
+        from dazzle.back.runtime.auth.insecure_guard import (
+            assert_secure_auth_config,
+            insecure_ack_from_env,
+        )
+        from dazzle.core.environment import is_production
+
+        assert_secure_auth_config(
+            self._enable_auth,
+            production=is_production(),
+            allow_insecure=insecure_ack_from_env(),
+        )
+
         auth_dep = None
         optional_auth_dep = None
         if not self._enable_auth:
