@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.16] - 2026-06-19
+
+### Added
+- **`auth_identity:` validate-time completeness gate** (#778/#1398, ADR-0039 Slice 2 — D6/A1). The bridge must be statically complete or `dazzle validate` errors — never a swallowed runtime insert failure (the #1398/#778 failure mode). `validate_auth_identity_binding` checks: at most one entity declares it; `link_via` is a real column and is `email` (v1); **every required, no-default column** (excluding pk / auto-timestamps) is resolved by `link_via`/`map`/`default`, else the registration mirror couldn't satisfy a NOT-NULL column; `map`/`default` targets are real columns; and the bound principal is **not** RLS-tenant-fenced (declares `tenant_host:`/`membership:`, or has a required `ref` to a tenant root) — a principal registers before having a tenant (D6). Wired into the `dazzle validate`/`lint` pass after the `expose:` consistency check.
+
 ## [0.83.15] - 2026-06-19
 
 ### Added

@@ -100,6 +100,13 @@ def lint_appspec(
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
+    # ADR-0039 (#778/#1398) D6/A1: the auth_identity: bridge must be statically complete.
+    from dazzle.core.validation.entities import validate_auth_identity_binding
+
+    errors, warnings = validate_auth_identity_binding(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
     errors, warnings = validate_experiences(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)

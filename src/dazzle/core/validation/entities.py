@@ -332,6 +332,106 @@ def validate_expose_surface_consistency(appspec: ir.AppSpec) -> tuple[list[str],
     return errors, []
 
 
+def validate_auth_identity_binding(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """ADR-0039 (#778/#1398) D6/A1 — the ``auth_identity:`` bridge must be statically
+    complete, or it is a validate-time error (never a swallowed runtime insert failure).
+
+    Checks, per entity declaring ``auth_identity:``:
+    - at most one entity in the app declares it (v1 binds exactly one principal);
+    - ``link_via`` names a real column on the entity, and is ``email`` (v1 scope);
+    - every **required, no-default** column (excluding pk / auto timestamps) is resolved
+      by ``link_via``, ``map``, or ``default`` — else the registration mirror can't satisfy
+      a NOT-NULL column and would fail at runtime;
+    - ``map``/``default`` targets name real columns;
+    - the bound entity is **not** RLS-tenant-fenced (the principal exists above any one
+      tenant; a fenced principal registers before having a tenant — reject per D6).
+    """
+    errors: list[str] = []
+    bound = [e for e in appspec.domain.entities if e.auth_identity is not None]
+    if not bound:
+        return [], []
+    if len(bound) > 1:
+        names = ", ".join(sorted(e.name for e in bound))
+        errors.append(
+            f"auth_identity: declared on more than one entity ({names}); v1 binds exactly "
+            f"one principal entity (the framework `User`)."
+        )
+
+    tenant_roots = {e.name for e in appspec.domain.entities if e.tenant_host is not None}
+
+    for entity in bound:
+        binding = entity.auth_identity
+        assert binding is not None  # for mypy; filtered above
+        cols = {f.name for f in entity.fields}
+
+        if binding.link_via not in cols:
+            errors.append(
+                f"auth_identity: on '{entity.name}': link_via '{binding.link_via}' is not a "
+                f"column on the entity."
+            )
+        if binding.link_via != "email":
+            errors.append(
+                f"auth_identity: on '{entity.name}': link_via '{binding.link_via}' — v1 supports "
+                f"link_via: email only."
+            )
+
+        resolved = (
+            {binding.link_via}
+            | {c for c, _ in binding.field_map}
+            | {c for c, _ in binding.defaults}
+        )
+        for col, _src in (*binding.field_map, *binding.defaults):
+            if col not in cols:
+                errors.append(
+                    f"auth_identity: on '{entity.name}': map/default target '{col}' is not a "
+                    f"column on the entity."
+                )
+
+        for f in entity.fields:
+            mods = f.modifiers
+            if ir.FieldModifier.REQUIRED not in mods:
+                continue
+            if (
+                ir.FieldModifier.PK in mods
+                or ir.FieldModifier.AUTO_ADD in mods
+                or ir.FieldModifier.AUTO_UPDATE in mods
+            ):
+                continue
+            if f.default is not None or f.default_expr is not None:
+                continue
+            if f.name not in resolved:
+                errors.append(
+                    f"auth_identity: on '{entity.name}': required column '{f.name}' is not "
+                    f"resolved by link_via/map/default — the registration mirror can't satisfy "
+                    f"it. Add it to `map:` (from id/email/email_localpart/username/role) or "
+                    f"`default:` (a literal)."
+                )
+
+        # D6 — reject a tenant-fenced principal binding.
+        fenced_reason: str | None = None
+        if entity.tenant_host is not None or entity.membership is not None:
+            fenced_reason = "it declares tenant_host:/membership: (it is a tenant root)"
+        else:
+            for f in entity.fields:
+                if (
+                    f.type.kind == ir.FieldTypeKind.REF
+                    and ir.FieldModifier.REQUIRED in f.modifiers
+                    and f.type.ref_entity in tenant_roots
+                ):
+                    fenced_reason = (
+                        f"required ref '{f.name}' fences it under tenant root '{f.type.ref_entity}'"
+                    )
+                    break
+        if fenced_reason is not None:
+            errors.append(
+                f"auth_identity: on '{entity.name}': the principal must be a global/unfenced "
+                f"entity, but {fenced_reason}. A principal registers before having a tenant; "
+                f"make the principal table global (ADR-0039 D6)."
+            )
+
+    return errors, []
+
+
 def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all entities for semantic correctness.
