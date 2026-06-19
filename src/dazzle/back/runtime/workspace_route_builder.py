@@ -27,6 +27,27 @@ from dazzle.core.ir import AppSpec
 
 logger = logging.getLogger(__name__)
 
+# #1420 S2.3 — workspace redirect-route HTTP method → CRUD op.
+_WS_COLLECTION_METHOD_OP = {"GET": "list", "POST": "create"}
+_WS_ITEM_METHOD_OP = {"GET": "read", "PUT": "update", "PATCH": "update", "DELETE": "delete"}
+
+
+def _workspace_route_methods(
+    api_expose: tuple[str, ...] | None,
+) -> tuple[list[str], list[str]]:
+    """Which workspace-redirect methods survive an entity's ``expose:`` allowlist.
+
+    Returns ``(collection_methods, item_methods)``. ``None`` = all ops exposed
+    (default). A route with no surviving methods should not be mounted (#1420 S2.3).
+    """
+
+    def keep(op: str) -> bool:
+        return api_expose is None or op in api_expose
+
+    coll = [m for m, op in _WS_COLLECTION_METHOD_OP.items() if keep(op)]
+    item = [m for m, op in _WS_ITEM_METHOD_OP.items() if keep(op)]
+    return coll, item
+
 
 class WorkspaceRouteBuilder:
     """Registers workspace region and entity redirect routes for DazzleBackendApp."""
@@ -609,6 +630,12 @@ class WorkspaceRouteBuilder:
         from dazzle.core.strings import to_api_plural
 
         seen: set[str] = set()
+        # #1420 S2.3 — only mount workspace-redirect methods for ops the source
+        # entity exposes (the redirect targets the now-gated canonical route).
+        domain = getattr(self._appspec, "domain", None)
+        expose_by_entity = {
+            e.name: getattr(e, "api_expose", None) for e in (domain.entities if domain else [])
+        }
 
         for workspace in workspaces:
             ws_name = workspace.name
@@ -624,30 +651,38 @@ class WorkspaceRouteBuilder:
                 seen.add(route_key)
 
                 _entity_plural = entity_plural
+                coll_methods, item_methods = _workspace_route_methods(expose_by_entity.get(source))
 
-                @app.api_route(  # type: ignore[misc, untyped-decorator, unused-ignore]
-                    f"/{ws_name}/{entity_plural}",
-                    methods=["GET", "POST"],
-                    tags=["Workspaces"],
-                    include_in_schema=False,
-                )
-                async def ws_entity_collection(
-                    _ep: str = _entity_plural,
-                ) -> RedirectResponse:
-                    # _ep is a compile-time slug from entity names — no user input involved.
-                    return RedirectResponse(url=f"/{_ep}", status_code=307)
+                if coll_methods:
 
-                @app.api_route(  # type: ignore[misc, untyped-decorator, unused-ignore]
-                    f"/{ws_name}/{entity_plural}/{{id}}",
-                    methods=["GET", "PUT", "PATCH", "DELETE"],
-                    tags=["Workspaces"],
-                    include_in_schema=False,
-                )
-                async def ws_entity_item(
-                    id: str,
-                    _ep: str = _entity_plural,
-                ) -> RedirectResponse:
-                    # Validate id is a bare UUID/slug (no slashes, no scheme).
-                    # Reject anything that looks like a path traversal or URL.
-                    safe_id = id.split("/")[0].split("?")[0].split("#")[0]
-                    return RedirectResponse(url=f"/{_ep}/{safe_id}", status_code=307)
+                    async def ws_entity_collection(
+                        _ep: str = _entity_plural,
+                    ) -> RedirectResponse:
+                        # _ep is a compile-time slug from entity names — no user input.
+                        return RedirectResponse(url=f"/{_ep}", status_code=307)
+
+                    app.add_api_route(
+                        f"/{ws_name}/{entity_plural}",
+                        ws_entity_collection,
+                        methods=coll_methods,
+                        tags=["Workspaces"],
+                        include_in_schema=False,
+                    )
+
+                if item_methods:
+
+                    async def ws_entity_item(
+                        id: str,
+                        _ep: str = _entity_plural,
+                    ) -> RedirectResponse:
+                        # Validate id is a bare UUID/slug (no slashes, no scheme).
+                        safe_id = id.split("/")[0].split("?")[0].split("#")[0]
+                        return RedirectResponse(url=f"/{_ep}/{safe_id}", status_code=307)
+
+                    app.add_api_route(
+                        f"/{ws_name}/{entity_plural}/{{id}}",
+                        ws_entity_item,
+                        methods=item_methods,
+                        tags=["Workspaces"],
+                        include_in_schema=False,
+                    )
