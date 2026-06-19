@@ -14,6 +14,7 @@ Entries are agent-scannable: each row is a counter-prior that prevents a wrong e
 
 ## Active entries
 
+- [custom-route-undeclared-response](custom-route-undeclared-response.md) — A `routes/*.py` override that returns HTML with no `# dazzle:returns` (can't be chromed → escapes the shell) and/or touches an entity with no `# dazzle:implements` (bypasses RBAC). Chrome/shape = declared choice (novel UI welcome via `page`); RBAC = the mandatory line (#1392/#1420).
 - [domain-coupled-keywords](domain-coupled-keywords.md) — Naming DSL keywords / field names after the source spec's domain (`pupil_card`, `customer_id`). Domain values belong at the adapter layer; the grammar stays generic.
 - [duplicated-parent-fields](duplicated-parent-fields.md) — Copying a parent's field onto a child alongside the `ref`. The Repository auto-includes ref data; the copy goes stale, the framework can't keep it in sync.
 - [exceptions-as-control-flow](exceptions-as-control-flow.md) — `try`/`except: pass` / fallback control flow / EAFP misused. Counters silent failures in user app code.

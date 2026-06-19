@@ -73,7 +73,10 @@ from typing import Any  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 from starlette.responses import HTMLResponse, JSONResponse  # noqa: E402
 
-from dazzle.back.runtime.route_overrides import _wrap_with_response_contract  # noqa: E402
+from dazzle.back.runtime.route_overrides import (  # noqa: E402
+    _wrap_with_response_contract,
+    build_override_router,
+)
 from dazzle.ui.runtime.page_routes import build_app_page_context  # noqa: E402
 
 
@@ -172,3 +175,52 @@ def test_undeclared_app_html_nudges_once(caplog) -> None:
         _call(h, kind=None, path="/app/undeclared", builder=_builder, request=_fake_request())
     nudges = [r for r in caplog.records if "declares no `# dazzle:returns`" in r.message]
     assert len(nudges) == 1  # one-time, keyed by path
+
+
+# ---------------------------------------------------- P4: integration dogfood
+
+
+def test_build_override_router_chromes_fragment_and_serves_page(tmp_path) -> None:
+    from fastapi import FastAPI
+    from starlette.testclient import TestClient
+
+    routes = tmp_path / "routes"
+    routes.mkdir()
+    (routes / "board.py").write_text(
+        "# dazzle:route-override GET /app/board\n# dazzle:returns fragment\n\n"
+        "from starlette.requests import Request\n"
+        "async def handler(request: Request):\n    return '<section>board</section>'\n"
+    )
+    (routes / "kiosk.py").write_text(
+        "# dazzle:route-override GET /app/kiosk\n# dazzle:returns page\n\n"
+        "from starlette.requests import Request\n"
+        "from starlette.responses import HTMLResponse\n"
+        "async def handler(request: Request):\n"
+        "    return HTMLResponse('<!doctype html><html><body>kiosk</body></html>')\n"
+    )
+    router = build_override_router(routes, page_ctx_builder=_builder)
+    app = FastAPI()
+    app.state.appspec = SimpleNamespace(app_title="App", name="app")
+    for attr, val in {
+        "fragment_chrome_css_links": ("/x.css",),
+        "fragment_chrome_js_scripts": ("/x.js",),
+        "fragment_chrome_theme": None,
+        "fragment_chrome_font_preconnect": (),
+        "fragment_chrome_favicon": "/f.svg",
+    }.items():
+        setattr(app.state, attr, val)
+    app.include_router(router)
+    client = TestClient(app)
+
+    # fragment, full-page nav → chromed (inner inside the app shell document)
+    full = client.get("/app/board")
+    assert full.status_code == 200
+    assert "<section>board</section>" in full.text and "<html" in full.text.lower()
+
+    # fragment, HTMX → inner only (no shell)
+    inner = client.get("/app/board", headers={"HX-Request": "true"})
+    assert inner.text == "<section>board</section>"
+
+    # page → full document served as-is (novel/full-bleed, never refused)
+    page = client.get("/app/kiosk")
+    assert "kiosk" in page.text and page.text.strip().lower().startswith("<!doctype")

@@ -369,3 +369,43 @@ See `fixtures/custom_renderer` (the `tag_cloud` surface) for a worked example.
 **Related:** [Surface Modes](surfaces.md#surface-modes), [Surface Actions](surfaces.md#surface-actions)
 
 ---
+
+## Route-override contract (custom routes)
+
+A project can hand-write routes in `routes/*.py` with declaration headers. The framework
+reads these headers statically (no code execution) so it can reason about custom routes.
+Two guardrails, two postures:
+
+- **RBAC is the line — mandatory.** A handler that touches a domain entity declares
+  `# dazzle:implements <Entity>.<op> via <param>` (permit/scope runs before the body) or
+  fails `dazzle rbac routes --strict`. Novel UI does not skip permit/scope.
+- **Response shape + chrome are your declared choice — novel UI welcome.** Declare
+  `# dazzle:returns <kind>` so the framework knows what you return and whether you live in
+  the app shell:
+
+| `# dazzle:returns` | meaning | framework |
+|--------------------|---------|-----------|
+| `fragment` | inner HTML that lives in the app shell | shell-wrapped (HTMX-aware) |
+| `partial` | raw HTML for a targeted HTMX swap | served as-is |
+| `page` | a full HTML document (full-bleed / novel UI / island host) | served as-is, **never refused** |
+| `json` | a JSON response | passed through |
+
+```python
+# routes/board.py
+# dazzle:route-override GET /app/board
+# dazzle:implements Task.list via task_id   # RBAC (mandatory)
+# dazzle:returns fragment                    # lives in the app shell
+# dazzle:emits /app/tasks/{id}               # declared link targets (#1392 item 3)
+
+async def handler(request, task_id: str):
+    return "<section>…</section>"            # inner HTML — the framework chromes it
+```
+
+The framework enforces *consistency with what you declared*: a `fragment`/`partial` that
+returns a full `<!doctype>` is a loud error; a `page` is untouched. An undeclared HTML
+override under `/app` gets a one-time advisory (a nudge, never a block). See the
+[`custom-route-undeclared-response`](https://github.com/manwithacat/dazzle/blob/main/docs/counter-priors/custom-route-undeclared-response.md) counter-prior.
+
+**Related:** [Emitted-target verification](surfaces.md#emitted-target-verification-emits)
+
+---
