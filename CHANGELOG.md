@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.10] - 2026-06-19
+
+### Security
+- **Fail closed when auth is disabled in production** (#1420 slice 1 of the governed-API-surface design). `enable_auth=False` makes the runtime attach no auth dependency, so generated CRUD routes mount with no permit/scope enforcement — world-writable. That is fine for local dev but a critical misconfiguration in production (a downstream hit it when an auth toggle was on in prod). The runtime now **refuses to start** when production + auth disabled, unless `DAZZLE_ALLOW_INSECURE_NO_AUTH=1` explicitly acknowledges a public, unauthenticated deploy (logged loudly). The dev/prod signal is `DAZZLE_ENV` (default `development`), and the production entry points that establish production by other means — `create_app_factory` (uvicorn `--factory`) and `dazzle serve --production` — now pin `DAZZLE_ENV` so the guard can't be bypassed by a forgotten env var (closes a fail-open found in adversarial review). Dev/test are unchanged.
+
+  ### Agent Guidance
+  - **Don't disable auth in production to "make it work."** If a generated route 401/403s, fix the `permit:`/`scope:` rules or the session — not `enable_auth`. A production boot with auth off now hard-fails by design (#1420). `DAZZLE_ALLOW_INSECURE_NO_AUTH` is only for a deliberately fully-public deployment.
+
 ## [0.83.9] - 2026-06-19
 
 ### Fixed
