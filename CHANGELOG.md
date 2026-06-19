@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.19] - 2026-06-19
+
+### Fixed
+- **Magic-link signup/login silently no-mailed on non-form bodies** (#1417). The handlers bind `email`/`name` via `Form()`, so a JSON (or otherwise non-form-urlencoded) body parsed empty and the handler took the account-enumeration-guard branch (303, no mail, no log) — indistinguishable from success. The forms submit form-urlencoded (htmx 4 dropped `json-enc`), so that is the contract; the silent failure is now surfaced: a request whose body is non-form **and** whose email parsed empty logs a WARNING (operationally distinct from a user genuinely submitting an empty field, which stays the quiet INFO guard). Also corrected the `_emit_form_stack` docstring, which still claimed `hx-ext="json-enc"` the markup no longer emits.
+
 ## [0.83.18] - 2026-06-19
 
 ### Added

@@ -65,9 +65,11 @@ class _RenderFormsMixin:
     def _emit_form_stack(self, fs: FormStack, ctx: RenderContext) -> str:
         """Render `<form>` with htmx-driven submission per legacy
         `components/form.html` contract — `hx-post` / `hx-put` (by
-        `fs.method`), `hx-target="body"`, `hx-swap="innerHTML"`,
-        `hx-ext="json-enc"` for JSON payload encoding. The RBAC
-        contract checker requires `hx-post` on the form element."""
+        `fs.method`), `hx-target="body"`, `hx-swap="innerHTML"`. The
+        body is submitted **form-urlencoded** (htmx's default): the
+        `json-enc` extension was dropped in the htmx 4 migration, so
+        handlers must read fields via `Form()`/`request.form()`, not
+        JSON. The RBAC contract checker requires `hx-post` on the form."""
         action = ctx.escape_attr(str(fs.action))
         fields_html = "".join(self._emit(f, ctx) for f in fs.fields)  # type: ignore[arg-type]
         submit_html = self._emit(fs.submit, ctx) if fs.submit is not None else ""

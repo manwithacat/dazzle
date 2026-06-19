@@ -1,5 +1,6 @@
 """Tests for GET /auth/magic/{token} — magic link consumer endpoint."""
 
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -294,3 +295,50 @@ class TestNextParamQueryInjection132:
             )
         # Confirm the dangerous unencoded shape is absent.
         assert "&inject=" not in location, f"Query injection via &: location={location!r} (#132)"
+
+
+_MAGIC_LOGGER = "dazzle.back.runtime.auth.magic_link_routes"
+
+
+class TestMisencodedBodyWarning:
+    """#1417 — a JSON (non-form) body makes Form() parse empty so the handler silently
+    redirects with no mail; that now logs a WARNING (distinct from a genuinely empty form,
+    which stays the quiet enumeration-guard path). The contract remains form-urlencoded."""
+
+    def test_login_json_body_warns_and_no_mail(self, client, mock_auth_store, caplog) -> None:
+        mailer = MagicMock()
+        client.app.state.mailer = mailer
+        with caplog.at_level(logging.WARNING, logger=_MAGIC_LOGGER):
+            resp = client.post(
+                "/auth/login/magic-link",
+                json={"email": "alice@example.com"},  # JSON body → Form() reads empty
+                follow_redirects=False,
+            )
+        assert resp.status_code == 303  # still redirects (enumeration-guard parity)
+        mailer.send_magic_link.assert_not_called()
+        assert any(
+            "non-form request body" in r.message and r.levelno == logging.WARNING
+            for r in caplog.records
+        ), [r.message for r in caplog.records]
+
+    def test_empty_form_does_not_warn(self, client, mock_auth_store, caplog) -> None:
+        mock_auth_store.get_user_by_email = MagicMock(return_value=None)
+        with caplog.at_level(logging.WARNING, logger=_MAGIC_LOGGER):
+            resp = client.post(
+                "/auth/login/magic-link",
+                data={"email": ""},  # genuinely empty form field — not a misencoding
+                follow_redirects=False,
+            )
+        assert resp.status_code == 303
+        assert not any("non-form request body" in r.message for r in caplog.records)
+
+    def test_signup_json_body_warns(self, client, mock_auth_store, caplog) -> None:
+        client.app.state.mailer = MagicMock()
+        with caplog.at_level(logging.WARNING, logger=_MAGIC_LOGGER):
+            resp = client.post(
+                "/auth/signup/magic-link",
+                json={"email": "bob@example.com", "name": "Bob"},
+                follow_redirects=False,
+            )
+        assert resp.status_code == 303
+        assert any("non-form request body" in r.message for r in caplog.records)

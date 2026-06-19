@@ -35,6 +35,32 @@ from dazzle.back.runtime.auth.redirect_safety import is_safe_redirect_path as _i
 _logger = logging.getLogger(__name__)
 
 
+def _warn_if_misencoded_body(request: Request, email: str, where: str) -> None:
+    """Surface the #1417 silent-failure: a non-form body whose form fields parse empty.
+
+    The magic-link forms submit ``application/x-www-form-urlencoded`` (htmx 4 dropped
+    ``json-enc``), so a JSON (or otherwise non-form) body makes ``Form()`` read empty and
+    the handler silently takes the enumeration-guard branch (303, no mail). When the email
+    parsed empty **and** the request carried a non-form body, log a WARNING — operationally
+    distinct from a user genuinely submitting an empty field (which stays the quiet INFO
+    enumeration guard). Detection-only: the request contract remains form-urlencoded.
+    """
+    if email.strip():
+        return
+    content_type = request.headers.get("content-type", "")
+    is_form = "form-urlencoded" in content_type or "multipart/form-data" in content_type
+    content_length = request.headers.get("content-length", "")
+    has_body = (content_length not in ("", "0")) or (bool(content_type) and not is_form)
+    if has_body and not is_form:
+        _logger.warning(
+            "%s received a non-form request body (content-type=%r) — the magic-link "
+            "endpoints expect application/x-www-form-urlencoded, so the form fields parsed "
+            "empty and no link was issued. Likely a JSON client; switch it to form encoding.",
+            where,
+            content_type or "<none>",
+        )
+
+
 def _build_magic_link_url(*, request: Request, token: str, next_path: str) -> str:
     """Compose the absolute consumer URL for a magic-link token.
 
@@ -188,6 +214,8 @@ def create_magic_link_routes() -> APIRouter:
                     "no link issued (account-enumeration guard)",
                     normalized_email,
                 )
+        else:
+            _warn_if_misencoded_body(request, email, "Login magic-link")
         # Same response regardless of whether email matched a user
         # — defensive against account enumeration.
         sent_url = "/login/sent"
@@ -268,6 +296,7 @@ def create_magic_link_routes() -> APIRouter:
                 "no user created (account-enumeration guard)",
                 normalized_email,
             )
+            _warn_if_misencoded_body(request, email, "Signup magic-link")
 
         sent_url = "/login/sent"
         if next and _is_safe_redirect_path(next) and next != "/":
