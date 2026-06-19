@@ -742,6 +742,80 @@ def _resolve_nav_model(
     return None
 
 
+@dataclass(frozen=True)
+class _ChromeAssets:
+    """The app-shell asset tuples `dispatch_render_page` needs, resolved from
+    `request.app.state` (#1392 item 2 — shared by page handlers + the route-override
+    response-contract chrome-wrap so an override's chrome === a page's chrome)."""
+
+    css_links: tuple[str, ...]
+    js_scripts: tuple[str, ...]
+    theme: str | None
+    font_preconnect: tuple[str, ...]
+    favicon: str
+
+
+def _resolve_chrome_assets(app_state: Any) -> _ChromeAssets:
+    """Resolve the chrome asset tuples from `app.state` (verbatim extraction of the
+    block previously inline in the page handlers)."""
+    return _ChromeAssets(
+        css_links=tuple(
+            getattr(app_state, "fragment_chrome_css_links", None)
+            or ("/static/dist/dazzle.min.css",)
+        ),
+        js_scripts=tuple(
+            getattr(app_state, "fragment_chrome_js_scripts", None)
+            or ("/static/dist/dazzle.min.js",)
+        ),
+        theme=getattr(app_state, "fragment_chrome_theme", None),
+        font_preconnect=tuple(getattr(app_state, "fragment_chrome_font_preconnect", None) or ()),
+        favicon=getattr(app_state, "fragment_chrome_favicon", "/static/assets/dazzle-favicon.svg"),
+    )
+
+
+async def build_app_page_context(
+    request: Any, *, deps: _PageRouterConfig, current_route: str
+) -> tuple[Any, _ChromeAssets]:
+    """Build a reusable app-shell `PageContext` + chrome assets for an arbitrary route
+    (#1392 item 2). Used by the route-override response-contract wrapper to chrome a
+    `# dazzle:returns fragment` handler with the same nav sidebar + assets a page gets.
+
+    Resolves auth/persona from the request (mirroring `_page_handler`), picks the
+    precomputed `NavModel` via `_resolve_nav_model`, and stamps `current_route` (the
+    override's path). `nav_items`/`nav_groups` are left empty — the modern sidebar is
+    driven by `nav_model`; the legacy curated lists are surface-specific and don't
+    apply to an arbitrary override path.
+    """
+    from dazzle.render.context import PageContext
+
+    is_authenticated = False
+    user_roles: list[str] = []
+    if deps.get_auth_context is not None:
+        auth_ctx = await _resolve_auth_context(deps.get_auth_context, request)
+        if auth_ctx and auth_ctx.is_authenticated:
+            is_authenticated = True
+            user_roles = list(getattr(auth_ctx.user, "roles", None) or [])
+
+    nav_model = (
+        _resolve_nav_model(deps, user_roles, authenticated=is_authenticated)
+        if deps.get_auth_context is not None
+        else None
+    )
+    appspec = deps.appspec
+    _app_title = str(getattr(appspec, "app_title", None) or getattr(appspec, "name", None) or "App")
+    page_ctx = PageContext(
+        page_title=_app_title,
+        app_name=_app_title,
+        nav_items=[],
+        nav_groups=[],
+        current_route=current_route,
+        nav_model=nav_model,
+        user_roles=list(user_roles),
+        tenant_config=getattr(getattr(request, "state", None), "tenant_config", {}) or {},
+    )
+    return page_ctx, _resolve_chrome_assets(request.app.state)
+
+
 def _apply_anon_nav(prc: _PageRequestContext) -> None:
     """#1127: swap the sidebar to the anon-safe variants.
 
@@ -1989,30 +2063,15 @@ def _render_response(prc: _PageRequestContext) -> Response:
         # downstream apps that already wire them — they're per-
         # deployment branding overrides, not a "use Jinja vs. typed"
         # toggle anymore.
-        app_state = prc.request.app.state
-        css_links = tuple(
-            getattr(app_state, "fragment_chrome_css_links", None)
-            or ("/static/dist/dazzle.min.css",)
-        )
-        js_scripts = tuple(
-            getattr(app_state, "fragment_chrome_js_scripts", None)
-            or ("/static/dist/dazzle.min.js",)
-        )
-        theme = getattr(app_state, "fragment_chrome_theme", None)
-        font_preconnect = tuple(getattr(app_state, "fragment_chrome_font_preconnect", None) or ())
-        favicon = getattr(
-            app_state,
-            "fragment_chrome_favicon",
-            "/static/assets/dazzle-favicon.svg",
-        )
+        _assets = _resolve_chrome_assets(prc.request.app.state)
         html = dispatch_render_page(
             render_ctx,
             rendered_inner,
-            css_links=css_links,
-            js_scripts=js_scripts,
-            theme=theme,
-            font_preconnect=font_preconnect,
-            favicon=favicon,
+            css_links=_assets.css_links,
+            js_scripts=_assets.js_scripts,
+            theme=_assets.theme,
+            font_preconnect=_assets.font_preconnect,
+            favicon=_assets.favicon,
         )
     response_headers: dict[str, str] = {}
     # hx-boost strips <head> from the response, so the browser's
@@ -2458,28 +2517,15 @@ async def _workspace_handler(
         user_roles=list(user_roles),
         tenant_config=getattr(getattr(request, "state", None), "tenant_config", {}) or {},
     )
-    app_state = request.app.state
-    css_links = tuple(
-        getattr(app_state, "fragment_chrome_css_links", None) or ("/static/dist/dazzle.min.css",)
-    )
-    js_scripts = tuple(
-        getattr(app_state, "fragment_chrome_js_scripts", None) or ("/static/dist/dazzle.min.js",)
-    )
-    theme = getattr(app_state, "fragment_chrome_theme", None)
-    font_preconnect = tuple(getattr(app_state, "fragment_chrome_font_preconnect", None) or ())
-    favicon = getattr(
-        app_state,
-        "fragment_chrome_favicon",
-        "/static/assets/dazzle-favicon.svg",
-    )
+    _assets = _resolve_chrome_assets(request.app.state)
     html = dispatch_render_page(
         page_ctx,
         workspace_inner,
-        css_links=css_links,
-        js_scripts=js_scripts,
-        theme=theme,
-        font_preconnect=font_preconnect,
-        favicon=favicon,
+        css_links=_assets.css_links,
+        js_scripts=_assets.js_scripts,
+        theme=_assets.theme,
+        font_preconnect=_assets.font_preconnect,
+        favicon=_assets.favicon,
     )
     return HTMLResponse(content=html)  # nosemgrep
 
