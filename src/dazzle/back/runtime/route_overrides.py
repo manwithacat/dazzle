@@ -98,6 +98,29 @@ def find_unbound_shadowing_overrides(
     return violations
 
 
+_RAW_DB_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (
+        re.compile(r"\.execute\s*\(\s*['\"]?\s*(SELECT|INSERT|UPDATE|DELETE)\b", re.IGNORECASE),
+        "raw SQL via .execute(...)",
+    ),
+    (re.compile(r"\bRepository\s*\("), "direct Repository(...) construction"),
+    (re.compile(r"(?m)^\s*(import\s+psycopg|from\s+psycopg(\.\w+)?\s+import)\b"), "psycopg import"),
+]
+
+
+def scan_handler_for_raw_db(source: str) -> list[str]:
+    """#1420 Slice 3 / ADR-0040 D4 — flag raw DB access in a custom route handler.
+
+    A domain-touching custom handler must bind via the ``# dazzle:implements``
+    header or call ``dazzle.back.runtime.policy.check_entity_op`` — not reach the
+    database directly (raw SQL / a hand-built Repository), which escapes the
+    declared binding and bypasses permit/scope. Returns one label per detected
+    pattern; ``[]`` means the handler does not touch the DB directly. Backs the
+    ``raw_db_in_custom_route`` counter-prior.
+    """
+    return [label for pat, label in _RAW_DB_PATTERNS if pat.search(source)]
+
+
 def discover_route_overrides(routes_dir: Path) -> list[RouteOverrideDescriptor]:
     """Scan a project routes directory for override declarations.
 

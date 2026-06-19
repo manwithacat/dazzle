@@ -85,3 +85,36 @@ class TestConformanceCheck:
 
         # A custom /reports route that doesn't shadow any generated entity route.
         assert find_unbound_shadowing_overrides([_desc("GET", "/reports")], self._GENERATED) == []
+
+
+class TestRawDbScanner:
+    """S3.3 / ADR-0040 D4 — the residue lint: raw DB access in a custom handler."""
+
+    def test_raw_sql_execute_is_flagged(self) -> None:
+        from dazzle.back.runtime.route_overrides import scan_handler_for_raw_db
+
+        src = (
+            "async def handler(request, id: str):\n"
+            "    async with conn() as c:\n"
+            "        await c.execute('DELETE FROM Task WHERE id = %s', (id,))\n"
+        )
+        assert scan_handler_for_raw_db(src)  # non-empty → flagged
+
+    def test_direct_repository_construction_is_flagged(self) -> None:
+        from dazzle.back.runtime.route_overrides import scan_handler_for_raw_db
+
+        src = (
+            "async def handler(request):\n    repo = Repository(Task, db)\n    return repo.list()\n"
+        )
+        assert scan_handler_for_raw_db(src)
+
+    def test_check_entity_op_handler_is_clean(self) -> None:
+        from dazzle.back.runtime.route_overrides import scan_handler_for_raw_db
+
+        src = (
+            "from dazzle.back.runtime.policy import check_entity_op\n"
+            "async def handler(request, id: str):\n"
+            "    await check_entity_op(request, 'Task', 'delete', row_id=id)\n"
+            "    return {'ok': True}\n"
+        )
+        assert scan_handler_for_raw_db(src) == []
