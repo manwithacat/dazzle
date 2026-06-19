@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.14] - 2026-06-19
+
+### Fixed
+- **`/app/<slug>/{id}` detail page route 404'd for list-only entities** (#1421, regression since ~v0.80.51). The list-table and workspace list-regions emit `/app/<slug>/{id}` row-drill links for **every** list entity, and the converter auto-adds the canonical `/<plural>/{id}` READ — but the app-shell detail *page* route was mounted only when the entity had an explicit `mode: view` surface. So an entity surfaced only via a list (no view surface) advertised a detail link that 404'd: standalone-list "View" actions, workspace list-region drill-downs (#1303), and custom `render:` detail viewers (#1297/#1301) reached through them all dead-ended. `compile_appspec_to_templates` now synthesizes a default detail page-context (entity-field fallback) for every list-surface / workspace-region entity that lacks a VIEW surface, mirroring the converter's auto-READ — so the emitted link always resolves. A link↔route gate test prevents the generator and the route table from silently diverging again.
+
+
 ## [0.83.13] - 2026-06-19
 
 ### Added
