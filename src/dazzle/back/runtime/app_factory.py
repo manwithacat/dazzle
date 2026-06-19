@@ -250,6 +250,23 @@ def _mount_tenant_resolution_middleware(
         )
         app.add_middleware(TenantResolutionMiddleware, binding=binding)
 
+        # #1404 Phase B: apex tenant discovery. On the apex (canonical) host, an
+        # authed identity hitting the app root is routed to their org host / picker /
+        # no-orgs. The membership is at the ROOT kind (ADR-0037), so resolve slugs from
+        # the root entity (no `parent:`, else the lowest-order kind on this domain).
+        if first_th.canonical_hosts:
+            from dazzle.back.runtime.tenant.apex_middleware import ApexDiscoveryMiddleware
+
+            _root = next((e for e in ordered if e.tenant_host.parent is None), ordered[0])
+            app.add_middleware(
+                ApexDiscoveryMiddleware,
+                canonical_hosts=tuple(h.lower() for h in first_th.canonical_hosts),
+                domain=domain,
+                root_entity=_root.name,
+                root_slug_field=_root.tenant_host.slug_field,
+                repositories=repositories,
+            )
+
         # #1289 slice 6: register the cache so dazzle.tenant.bust(slug) can
         # invalidate it from project code on raw-SQL renames or admin tooling.
         # Also register each entity's slug field so Repository.update can

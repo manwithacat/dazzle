@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.21] - 2026-06-19
+
+### Added
+- **Apex tenant discovery** (#1404 Phase B). When an authenticated identity GETs the apex (canonical) host app-root (`/`, `/app`), the framework now routes them to where their membership says they belong: exactly one active membership → 302 to `https://{slug}.{domain}/` (their org host); two or more → the org picker (`/auth/select-org`); zero → `/auth/no-orgs` (only when the app is membership-gated — an ungated app's apex stays its own landing). A pure `resolve_apex_redirect` mapper (reuses the Phase-2 `resolve_activation` with no host pin) makes the decision; `ApexDiscoveryMiddleware` is the thin glue (mounted per tenant-domain alongside `TenantResolutionMiddleware`). Fail-safe by construction: it fires only for authed GETs to the apex app-root, so it never intercepts the logged-out landing page, never loops (single-org is a cross-host redirect; picker/no-orgs paths are outside the trigger set), and an unresolvable or invalid slug passes through rather than redirecting. The `{slug}` is `validate_slug`-checked before it's ever interpolated into the redirect host (no open-redirect). Phase D (verified-domain SSO admin UI) remains open on #1404; its data layer already shipped.
+
 ## [0.83.20] - 2026-06-19
 
 ### Added
