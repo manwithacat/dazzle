@@ -274,3 +274,51 @@ def _build_llm_client(model: str | None, dry_run: bool) -> object:
     from dazzle.llm.api_client import LLMAPIClient
 
     return LLMAPIClient(model=resolved_model, temperature=0.2)
+
+
+_COMPLEXITY_BASELINE = Path("tests/unit/fixtures/complexity_baseline.json")
+
+
+@fitness_app.command("code")
+def code_command(
+    project: Path | None = typer.Option(None, "--project", help="Repo root (default: cwd)"),
+    since_days: int = typer.Option(180, "--since-days", help="Churn window in days"),
+    write: bool = typer.Option(
+        False, "--write", help="Regenerate dev_docs/framework-hotspots.md (the debt queue)"
+    ),
+    write_baseline: bool = typer.Option(
+        False, "--write-baseline", help="Regenerate the complexity ratchet baseline"
+    ),
+) -> None:
+    """Framework structural fitness: churn×complexity hotspot ranking for src/dazzle.
+
+    Report-only by default. `--write` refreshes the hotspot queue; `--write-baseline`
+    re-tightens the complexity ratchet (run after a refactor improves a file).
+    """
+    from dazzle.fitness.code import (
+        build_complexity_baseline,
+        change_frequency,
+        compute_complexity,
+        rank_hotspots,
+        render_hotspots_md,
+    )
+
+    repo = project or Path.cwd()
+    root = repo / "src" / "dazzle"
+
+    if write_baseline:
+        baseline = build_complexity_baseline(root)
+        out = repo / _COMPLEXITY_BASELINE
+        out.write_text(json.dumps(baseline, indent=2, sort_keys=True) + "\n")
+        typer.echo(f"Wrote {out} ({len(baseline)} files)")
+        return
+
+    ranked = rank_hotspots(compute_complexity(root), change_frequency(root, since_days))
+    md = render_hotspots_md(ranked)
+    if write:
+        out = repo / "dev_docs" / "framework-hotspots.md"
+        out.parent.mkdir(exist_ok=True)
+        out.write_text(md)
+        typer.echo(f"Wrote {out}")
+    else:
+        typer.echo(md)
