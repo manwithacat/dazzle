@@ -1,10 +1,11 @@
 # ADR-0040 — Conformant custom routes: the security model travels with the handler
 
-**Status:** Accepted (2026-06-19) — design for #1420 Slice 3 (the governed-API-surface invariant);
-**not yet implemented** (tracked by #1420). Decision ratified in brainstorming + this session
-("good plan. continue"). Builds on the Slice-1 fail-closed guard (v0.83.10) and Slice-2 `expose:`
-allowlist (v0.83.11). Relates to #1126, #1392, ADR-0025 (entity-level authz), the provable-RBAC
-framework (`src/dazzle/rbac/`).
+**Status:** Accepted (2026-06-19) — **fully implemented** (#1420). D2/D4 shipped v0.83.12 (boot
+conformance check + raw-DB counter-prior); **D3 (the RBAC-matrix completeness hard gate) shipped
+v0.83.13** as `dazzle rbac routes --strict` + a per-example completeness test. Decision ratified in
+brainstorming + this session. Builds on the Slice-1 fail-closed guard (v0.83.10) and Slice-2
+`expose:` allowlist (v0.83.11). Relates to #1126, #1392, ADR-0025 (entity-level authz), the
+provable-RBAC framework (`src/dazzle/rbac/`).
 
 ## Context
 

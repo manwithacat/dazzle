@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.13] - 2026-06-19
+
+### Added
+- **RBAC-matrix completeness gate** (#1420 / ADR-0040 D3 — completes the governed-API-surface invariant). The provable-route-set hard gate: every domain route — generated or custom — must be RBAC-matrix-represented. `verify_route_matrix_completeness` flags a custom route-override that escapes the matrix two ways: an **unbound shadow** (an override matching a generated entity route's method+path with no `# dazzle:implements` binding → no `(entity, op)` → no matrix row) or a **dangling binding** (a `# dazzle:implements` naming an entity/op the AppSpec doesn't have). Exposed as the CI security gate **`dazzle rbac routes --strict`** (non-zero exit on any violation) for downstream projects, plus a framework-side per-example completeness test so an example that gains an unbound override fails CI. This is the hard-gate escalation on top of Slice 3's boot-time (D2) + authoring-time (D4) guardrails.
+
+  ### Agent Guidance
+  - **Run `dazzle rbac routes --strict` in CI for any project with custom `routes/` overrides.** It fails the build if a custom route shadows a generated entity route without a `# dazzle:implements <Entity>.<op> via <param>` binding, or binds to an entity/op that doesn't exist. Combined with #1420 slices 1–2, no domain route can escape the permit/scope model.
+
+
 ## [0.83.12] - 2026-06-19
 
 ### Added
