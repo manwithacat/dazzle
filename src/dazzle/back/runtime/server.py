@@ -1608,6 +1608,19 @@ class DazzleBackendApp:
                 override_router = build_override_router(self._project_root / "routes")
                 if override_router is not None:
                     self._app.include_router(override_router)
+
+                # #1420 Slice 3 / ADR-0040 D2 — conformance: a route-override that
+                # shadows a generated entity route without a `# dazzle:implements`
+                # binding bypasses permit/scope. Surface it loudly at boot.
+                from dazzle.back.runtime.route_overrides import (
+                    discover_route_overrides,
+                    find_unbound_shadowing_overrides,
+                )
+
+                _overrides = discover_route_overrides(self._project_root / "routes")
+                _generated = {(ep.method.value, ep.path) for ep in self._endpoint_specs}
+                for _violation in find_unbound_shadowing_overrides(_overrides, _generated):
+                    logger.warning("[dazzle] %s", _violation)
             except Exception:
                 logger.debug("Route override discovery skipped", exc_info=True)
 

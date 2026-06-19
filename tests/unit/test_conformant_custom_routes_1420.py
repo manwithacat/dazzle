@@ -46,3 +46,42 @@ class TestImplementsBindingParses:
         d = discover_route_overrides(tmp_path)[0]
         assert d.implements_entity is None
         assert d.implements_op is None
+
+
+def _desc(method: str, path: str, *, entity=None, op=None, via=None):
+    from dazzle.back.runtime.route_overrides import RouteOverrideDescriptor
+
+    return RouteOverrideDescriptor(
+        method=method,
+        path=path,
+        source_path=Path("routes/x.py"),
+        handler=lambda: None,
+        implements_entity=entity,
+        implements_op=op,
+        implements_via=via,
+    )
+
+
+class TestConformanceCheck:
+    """S3.2 — an unbound override that shadows a generated entity route is a violation."""
+
+    _GENERATED = {("PUT", "/tasks/{id}"), ("POST", "/tasks"), ("GET", "/tasks")}
+
+    def test_unbound_shadowing_override_is_violation(self) -> None:
+        from dazzle.back.runtime.route_overrides import find_unbound_shadowing_overrides
+
+        v = find_unbound_shadowing_overrides([_desc("PUT", "/tasks/{id}")], self._GENERATED)
+        assert len(v) == 1
+        assert "PUT /tasks/{id}" in v[0]
+
+    def test_bound_shadowing_override_is_ok(self) -> None:
+        from dazzle.back.runtime.route_overrides import find_unbound_shadowing_overrides
+
+        bound = _desc("PUT", "/tasks/{id}", entity="Task", op="update", via="id")
+        assert find_unbound_shadowing_overrides([bound], self._GENERATED) == []
+
+    def test_unbound_non_shadowing_override_is_ok(self) -> None:
+        from dazzle.back.runtime.route_overrides import find_unbound_shadowing_overrides
+
+        # A custom /reports route that doesn't shadow any generated entity route.
+        assert find_unbound_shadowing_overrides([_desc("GET", "/reports")], self._GENERATED) == []

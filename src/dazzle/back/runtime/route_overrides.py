@@ -69,6 +69,35 @@ class RouteOverrideDescriptor:
     implements_via: str | None = None  # path-param name holding the row's PK
 
 
+def find_unbound_shadowing_overrides(
+    overrides: list[RouteOverrideDescriptor],
+    generated_paths: set[tuple[str, str]],
+) -> list[str]:
+    """#1420 Slice 3 / ADR-0040 D2 — conformance violations.
+
+    A route-override that *shadows* a generated entity route (same ``(METHOD,
+    path)``) but declares no ``# dazzle:implements`` binding silently replaces a
+    permit/scope-bound generated route with an un-gated custom one. Return one
+    human-readable violation string per such override; empty list = conformant.
+
+    ``generated_paths`` is the set of ``(METHOD, path)`` the generated CRUD layer
+    would mount (a domain route shape). An override that shadows one of these is
+    by definition domain-touching, so it must carry the binding.
+    """
+    violations: list[str] = []
+    for o in overrides:
+        if o.implements_entity is not None:
+            continue  # bound → conformant
+        if (o.method.upper(), o.path) in generated_paths:
+            violations.append(
+                f"Route override {o.method.upper()} {o.path} ({o.source_path.name}) shadows a "
+                "generated entity route but declares no `# dazzle:implements <Entity>.<op> via "
+                "<param>` binding — it bypasses the entity's permit/scope model. Add the binding, "
+                "or call dazzle.back.runtime.policy.check_entity_op(...) in the handler."
+            )
+    return violations
+
+
 def discover_route_overrides(routes_dir: Path) -> list[RouteOverrideDescriptor]:
     """Scan a project routes directory for override declarations.
 
