@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans (inline) or subagent-driven-development. Steps use `- [ ]`.
 
+> **✅ COMPLETE — shipped v0.83.26 (2026-06-19).** All three phases landed. **Deviation (P3 Step 5):** the 2 cross-layer edges (`core/process/eventbus_adapter → back`, `ui/runtime/combined_server → back`) and the transitive MCP/perf SQLite reaches turned out to be **load-bearing structural edges, not leaks** — so they're documented `ignore_imports` allow-list entries in `[tool.importlinter]` rather than relocations. The contracts gate every *new* cross-layer import absolute; reducing the allow-list later only tightens the ratchet. Follow-on **Component C** (framework-structure `/improve` lane + hotspot-sourced counter-prior) is the deferred next initiative.
+
 **Goal:** Gate framework structural decay — a churn×complexity hotspot diagnostic (A1), a complexity ratchet (A2), and import-linter layer contracts (B) — reusing Dazzle's drift-baseline pattern and the `dazzle fitness` Typer app.
 
 **Architecture:** Logic in a new `dazzle.fitness.code` module (CLI = thin wrapper, per ADR-0002); two drift-style pytest gates (`test_complexity_ratchet.py`, `test_import_contracts.py`) mirroring `test_api_surface_drift.py`; contracts in `pyproject.toml [tool.importlinter]`.
@@ -36,9 +38,9 @@
 - `change_frequency(root: Path, since_days: int = 180) -> dict[str, int]` — `{rel_path: commit_count}`.
 - `rank_hotspots(complexity, churn) -> list[tuple[str, float, int, str]]` — `(path, score, churn, mi_rank)` sorted desc; `score = churn * (100 - mi)`.
 
-- [ ] **Step 1: Add deps.** In `pyproject.toml` `[project.optional-dependencies] dev` (line ~185), add `"radon>=6.0"` and `"import-linter>=2.0"`. Run `uv lock && uv sync --extra dev`.
+- [x] **Step 1: Add deps.** In `pyproject.toml` `[project.optional-dependencies] dev` (line ~185), add `"radon>=6.0"` and `"import-linter>=2.0"`. Run `uv lock && uv sync --extra dev`.
 
-- [ ] **Step 2: Write the failing test** (`tests/unit/test_fitness_code.py`):
+- [x] **Step 2: Write the failing test** (`tests/unit/test_fitness_code.py`):
 ```python
 from pathlib import Path
 from dazzle.fitness.code import compute_complexity, rank_hotspots
@@ -58,9 +60,9 @@ def test_rank_hotspots_orders_by_churn_times_complexity():
     assert ranked[0][0] == "b.py"
 ```
 
-- [ ] **Step 3: Run → FAIL** (`compute_complexity` undefined). `.venv/bin/python -m pytest tests/unit/test_fitness_code.py -q`.
+- [x] **Step 3: Run → FAIL** (`compute_complexity` undefined). `.venv/bin/python -m pytest tests/unit/test_fitness_code.py -q`.
 
-- [ ] **Step 4: Implement `src/dazzle/fitness/code.py`:**
+- [x] **Step 4: Implement `src/dazzle/fitness/code.py`:**
 ```python
 """Framework structural-fitness: churn×complexity hotspot ranking + complexity baseline.
 
@@ -142,7 +144,7 @@ def render_hotspots_md(ranked: list[tuple], top: int = 30) -> str:
 ```
 *(The `except (SyntaxError, Exception)` is intentionally broad with a `continue` — but the `test_no_bare_except_pass` gate forbids silent `except Exception`. Add a `logger.debug(...)` line before `continue`, or catch `Exception` and re-raise-after-log. Use `import logging; logger = logging.getLogger(__name__)` + `logger.debug("radon skipped %s: %s", p, exc)`.)*
 
-- [ ] **Step 5: Wire the CLI** in `src/dazzle/cli/fitness.py`:
+- [x] **Step 5: Wire the CLI** in `src/dazzle/cli/fitness.py`:
 ```python
 @fitness_app.command("code")
 def code_command(
@@ -165,9 +167,9 @@ def code_command(
         typer.echo(md)
 ```
 
-- [ ] **Step 6: Run → PASS** + generate the real queue: `.venv/bin/dazzle fitness code --write` → inspect `dev_docs/framework-hotspots.md` (expect page_routes/server/app_factory/entity near the top). ruff + mypy.
+- [x] **Step 6: Run → PASS** + generate the real queue: `.venv/bin/dazzle fitness code --write` → inspect `dev_docs/framework-hotspots.md` (expect page_routes/server/app_factory/entity near the top). ruff + mypy.
 
-- [ ] **Step 7: Commit (local).**
+- [x] **Step 7: Commit (local).**
 ```bash
 .venv/bin/ruff format src/dazzle/fitness/code.py src/dazzle/cli/fitness.py tests/unit/test_fitness_code.py
 .venv/bin/ruff check src/dazzle/fitness/code.py src/dazzle/cli/fitness.py tests/unit/test_fitness_code.py --fix
@@ -184,7 +186,7 @@ git commit -m "feat(fitness): dazzle fitness code — churn×complexity hotspot 
 
 **Interfaces — Consumes:** `compute_complexity` (Task 1). **Produces:** `build_complexity_baseline(root) -> dict`, `compare_complexity(baseline, current, cc_ceiling=15) -> list[str]` (violation strings; empty = clean).
 
-- [ ] **Step 1: Write the failing test** (`tests/unit/test_complexity_ratchet.py`):
+- [x] **Step 1: Write the failing test** (`tests/unit/test_complexity_ratchet.py`):
 ```python
 import json
 from pathlib import Path
@@ -212,9 +214,9 @@ def test_compare_flags_new_high_cc_function():
     assert any("g" in s and "CC" in s for s in v)
 ```
 
-- [ ] **Step 2: Run → FAIL** (`build_complexity_baseline` undefined).
+- [x] **Step 2: Run → FAIL** (`build_complexity_baseline` undefined).
 
-- [ ] **Step 3: Implement** in `code.py`:
+- [x] **Step 3: Implement** in `code.py`:
 ```python
 _MI_RANK_ORDER = {"A": 3, "B": 2, "C": 1}
 
@@ -246,11 +248,11 @@ def compare_complexity(baseline: dict, current: dict, cc_ceiling: int = 15) -> l
 ```
 *(`build_complexity_baseline` dict-comp is awkward — write it as a plain loop returning `{k: {"mi_rank": cx[k]["mi_rank"], "functions": cx[k]["functions"]} for k in sorted(cx)}`.)*
 
-- [ ] **Step 4: Add `--write-baseline` to the CLI** (`fitness.py code_command`): a flag that writes `build_complexity_baseline(root)` to `tests/unit/fixtures/complexity_baseline.json` via `json.dump(..., indent=2, sort_keys=True)` + trailing newline. Generate it: `.venv/bin/dazzle fitness code --write-baseline`.
+- [x] **Step 4: Add `--write-baseline` to the CLI** (`fitness.py code_command`): a flag that writes `build_complexity_baseline(root)` to `tests/unit/fixtures/complexity_baseline.json` via `json.dump(..., indent=2, sort_keys=True)` + trailing newline. Generate it: `.venv/bin/dazzle fitness code --write-baseline`.
 
-- [ ] **Step 5: Run → PASS** (the committed baseline matches the current tree). `.venv/bin/python -m pytest tests/unit/test_complexity_ratchet.py -q`.
+- [x] **Step 5: Run → PASS** (the committed baseline matches the current tree). `.venv/bin/python -m pytest tests/unit/test_complexity_ratchet.py -q`.
 
-- [ ] **Step 6: ruff (NOT on the .json) + mypy + commit (local).** CHANGELOG note (Added: the complexity ratchet + how to regen the baseline).
+- [x] **Step 6: ruff (NOT on the .json) + mypy + commit (local).** CHANGELOG note (Added: the complexity ratchet + how to regen the baseline).
 ```bash
 git add src/dazzle/fitness/code.py src/dazzle/cli/fitness.py tests/unit/fixtures/complexity_baseline.json tests/unit/test_complexity_ratchet.py CHANGELOG.md
 git commit -m "feat(fitness): complexity ratchet — radon MI/CC drift gate (A2)"
@@ -262,11 +264,11 @@ git commit -m "feat(fitness): complexity ratchet — radon MI/CC drift gate (A2)
 
 **Files:** `pyproject.toml` (`[tool.importlinter]`); Create `tests/unit/test_import_contracts.py`; Fix `src/dazzle/core/process/eventbus_adapter.py`, `src/dazzle/ui/runtime/combined_server.py`.
 
-- [ ] **Step 1: Investigate the 2 violations.** `grep -nE "dazzle\.back" src/dazzle/core/process/eventbus_adapter.py src/dazzle/ui/runtime/combined_server.py`. For each: is the `back` import load-bearing, or a leak?
+- [x] **Step 1: Investigate the 2 violations.** `grep -nE "dazzle\.back" src/dazzle/core/process/eventbus_adapter.py src/dazzle/ui/runtime/combined_server.py`. For each: is the `back` import load-bearing, or a leak?
   - `core/process/eventbus_adapter.py` — `core` importing `back` is a layering inversion. Likely the adapter should accept the back dependency by injection (a callable/protocol passed in) rather than importing it, OR the adapter belongs in `back`. Choose the minimal correct fix (dependency injection if the import is a single call; relocate if it's tightly coupled).
   - `ui/runtime/combined_server.py` — the unified ASGI server lives in `ui/` but wires `back`. It almost certainly belongs in `back/runtime/` (or a neutral top-level). Relocate it + update the import site(s); or, if relocation is large, defer it to a documented allow-list entry and gate the rest `absolute`.
 
-- [ ] **Step 2: Write the failing test** (`tests/unit/test_import_contracts.py`):
+- [x] **Step 2: Write the failing test** (`tests/unit/test_import_contracts.py`):
 ```python
 import subprocess, sys
 
@@ -276,9 +278,9 @@ def test_import_contracts_pass():
 ```
 *(Confirm the import-linter CLI entry — it's `lint-imports` / `python -m importlinter`; adjust to the installed entrypoint. Prefer the programmatic API `importlinter.api.read_config` + `create_report` if the CLI module path is unstable.)*
 
-- [ ] **Step 3: Run → FAIL** (no contracts configured yet, or the 2 violations).
+- [x] **Step 3: Run → FAIL** (no contracts configured yet, or the 2 violations).
 
-- [ ] **Step 4: Author contracts** in `pyproject.toml`:
+- [x] **Step 4: Author contracts** in `pyproject.toml`:
 ```toml
 [tool.importlinter]
 root_packages = ["dazzle"]
@@ -302,11 +304,11 @@ source_modules = ["dazzle.back"]
 forbidden_modules = ["sqlite3", "aiosqlite"]
 ```
 
-- [ ] **Step 5: Fix the 2 leaks** (per Step 1's decision) so the contracts pass. Re-run the import-linter lint until clean.
+- [x] **Step 5: Fix the 2 leaks** (per Step 1's decision) so the contracts pass. Re-run the import-linter lint until clean.
 
-- [ ] **Step 6: Run → PASS.** `.venv/bin/python -m pytest tests/unit/test_import_contracts.py -q` + the import-linter CLI directly.
+- [x] **Step 6: Run → PASS.** `.venv/bin/python -m pytest tests/unit/test_import_contracts.py -q` + the import-linter CLI directly.
 
-- [ ] **Step 7: Full gate + ship (P1–P3 boundary).** `.venv/bin/ruff check src/ tests/ && .venv/bin/mypy src/dazzle && PATH=".venv/bin:$PATH" .venv/bin/python -m pytest tests/ -m "not e2e" -q -p no:cacheprovider`. CHANGELOG (Added: import contracts + the 2 boundary fixes; **Agent Guidance:** the framework layers are now import-gated — `core` ↛ `back`/`ui`, `ui` ↛ `back`, `back` ↛ sqlite; relocate cross-layer code, don't import across). `/bump patch`, commit, tag, push.
+- [x] **Step 7: Full gate + ship (P1–P3 boundary).** `.venv/bin/ruff check src/ tests/ && .venv/bin/mypy src/dazzle && PATH=".venv/bin:$PATH" .venv/bin/python -m pytest tests/ -m "not e2e" -q -p no:cacheprovider`. CHANGELOG (Added: import contracts + the 2 boundary fixes; **Agent Guidance:** the framework layers are now import-gated — `core` ↛ `back`/`ui`, `ui` ↛ `back`, `back` ↛ sqlite; relocate cross-layer code, don't import across). `/bump patch`, commit, tag, push.
 
 ---
 
