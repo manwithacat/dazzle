@@ -211,3 +211,35 @@ async def test_wrapper_raises_500_when_via_param_missing() -> None:
         await wrapped(request=req)  # no task_id kwarg
     assert exc.value.status_code == 500
     assert "policy_gate_missing_path_param" in str(exc.value.detail)
+
+
+def test_discover_populates_emits_paths(tmp_path: Path) -> None:
+    # #1392 item 3 — `# dazzle:emits <path>` headers parse into emits_paths.
+    routes_dir = _write_override(
+        tmp_path,
+        """
+        # dazzle:route-override GET /app/board
+        # dazzle:emits /app/tasks/{id}
+        # dazzle:emits /app/tasks/create
+
+        async def handler(request):
+            return {"ok": True}
+        """,
+    )
+    overrides = discover_route_overrides(routes_dir)
+    o = next(o for o in overrides if o.path == "/app/board")
+    assert o.emits_paths == ("/app/tasks/{id}", "/app/tasks/create")
+
+
+def test_no_emits_header_is_empty(tmp_path: Path) -> None:
+    routes_dir = _write_override(
+        tmp_path,
+        """
+        # dazzle:route-override GET /app/plain
+
+        async def handler(request):
+            return {"ok": True}
+        """,
+    )
+    overrides = discover_route_overrides(routes_dir)
+    assert overrides[0].emits_paths == ()

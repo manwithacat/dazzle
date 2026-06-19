@@ -45,6 +45,11 @@ _IMPLEMENTS_RE = re.compile(
     re.IGNORECASE,
 )
 
+# #1392 item 3 — declared link/fetch targets a handler emits (one path per line).
+# `verify_emits_paths` resolves each against the mounted route set; a dead target
+# fails the build (the custom-mode analogue of `primary_action -> surface`).
+_EMITS_RE = re.compile(r"#\s*dazzle:emits\s+(\S+)", re.IGNORECASE)
+
 # Valid Python module path: dotted identifier segments only.
 # Enforces that extension router specs from dazzle.toml resolve to
 # real package paths and prevents injection via the config value.
@@ -67,6 +72,9 @@ class RouteOverrideDescriptor:
     implements_entity: str | None = None
     implements_op: str | None = None  # one of: list, read, create, update, delete
     implements_via: str | None = None  # path-param name holding the row's PK
+    # #1392 item 3 — declared `# dazzle:emits <path>` link targets. Each must resolve
+    # to a mounted route (verify_emits_paths). () = undeclared (opt-in).
+    emits_paths: tuple[str, ...] = ()
 
 
 def find_unbound_shadowing_overrides(
@@ -224,6 +232,9 @@ def discover_route_overrides(routes_dir: Path) -> list[RouteOverrideDescriptor]:
                 )
                 implements_entity = implements_op = implements_via = None
 
+        # #1392 item 3 — declared link/fetch targets (one `# dazzle:emits <path>` per line).
+        emits_paths = tuple(m.group(1) for m in _EMITS_RE.finditer(content))
+
         overrides.append(
             RouteOverrideDescriptor(
                 method=method,
@@ -233,6 +244,7 @@ def discover_route_overrides(routes_dir: Path) -> list[RouteOverrideDescriptor]:
                 implements_entity=implements_entity,
                 implements_op=implements_op,
                 implements_via=implements_via,
+                emits_paths=emits_paths,
             )
         )
         if implements_entity:
