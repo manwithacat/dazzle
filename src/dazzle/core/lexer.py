@@ -193,6 +193,10 @@ class TokenType(Enum):
     # wizard/external). Exempts the entity + its surfaces from the
     # dead-construct lint, orthogonally to `domain: platform`.
     MANAGED_BY = "managed_by"
+    # #1420 Slice 2: per-op generated-REST allowlist on an entity (`expose: list, read`
+    # / `expose: none`). Absent = all ops (backward compatible). Named `expose` (not
+    # `api`) — `api` is an identifier inside the `interfaces:` construct.
+    EXPOSE = "expose"
     # v0.71.161 (#1223 Phase 3a.i): effective-dated / temporal entity declaration
     TEMPORAL = "temporal"
     # v0.71.162 (#1217 Phase 3e.i): subtype polymorphism for entities

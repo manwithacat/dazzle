@@ -45,6 +45,8 @@ class _EntityParseContext:
     membership: ir.MembershipSpec | None = None
     # Lifecycle-ownership marker (#1333): route/pipeline/wizard/external
     managed_by: ir.ManagedBy | None = None
+    # #1420 Slice 2: per-op generated-REST allowlist (None = all ops, default)
+    api_expose: tuple[str, ...] | None = None
     bulk_config: ir.BulkConfig | None = None
     # Seed template (v0.38.0)
     seed_template: ir.SeedTemplateSpec | None = None
@@ -195,6 +197,8 @@ class EntityParserMixin:
                 continue
             elif self.match(TokenType.MANAGED_BY):
                 ctx.managed_by = self._parse_entity_managed_by()
+            elif self.match(TokenType.EXPOSE):
+                ctx.api_expose = self._parse_entity_expose()
             else:
                 self._parse_entity_field_declaration(ctx)
                 continue  # field parsing handles its own skip_newlines
@@ -243,6 +247,33 @@ class EntityParserMixin:
                 tok.line,
                 tok.column,
             ) from None
+
+    def _parse_entity_expose(self) -> tuple[str, ...]:
+        """Parse ``expose: list, read`` / ``expose: none`` (#1420 Slice 2).
+
+        Comma-separated allowlist of generated-REST ops (mirrors ``patterns:``).
+        ``none`` ⇒ empty tuple (no generated public REST). Absent entirely ⇒ the
+        ctx default ``None`` (all ops). Rejects any op outside the closed set.
+        """
+        valid = ("list", "read", "create", "update", "delete")
+        self.advance()
+        self.expect(TokenType.COLON)
+        first = self.expect_identifier_or_keyword()
+        if first.value == "none":
+            return ()
+        ops = [first.value]
+        while self.match(TokenType.COMMA):
+            self.advance()
+            ops.append(self.expect_identifier_or_keyword().value)
+        for op in ops:
+            if op not in valid:
+                raise make_parse_error(
+                    f"expose: expects ops in [{', '.join(valid)}] or `none`, got {op!r}",
+                    self.file,
+                    first.line,
+                    first.column,
+                )
+        return tuple(ops)
 
     def _parse_entity_patterns(self) -> list[str]:
         """Parse ``patterns: a, b, c`` declaration."""
@@ -1169,6 +1200,7 @@ class EntityParserMixin:
             tenant_host=ctx.tenant_host,
             membership=ctx.membership,
             managed_by=ctx.managed_by,
+            api_expose=ctx.api_expose,
             source=loc,
         )
 

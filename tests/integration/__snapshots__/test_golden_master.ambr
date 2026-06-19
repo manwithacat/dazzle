@@ -25,6 +25,7 @@
       'entities': list([
         dict({
           'access': None,
+          'api_expose': None,
           'archetype_kind': None,
           'audit': None,
           'bulk': None,
@@ -238,6 +239,7 @@
             'visibility': list([
             ]),
           }),
+          'api_expose': None,
           'archetype_kind': None,
           'audit': None,
           'bulk': None,
@@ -474,6 +476,7 @@
             'visibility': list([
             ]),
           }),
+          'api_expose': None,
           'archetype_kind': None,
           'audit': None,
           'bulk': None,
@@ -731,6 +734,7 @@
             'visibility': list([
             ]),
           }),
+          'api_expose': None,
           'archetype_kind': None,
           'audit': None,
           'bulk': None,

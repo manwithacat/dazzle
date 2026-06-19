@@ -42,7 +42,7 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **Additional v0.2 keywords**: `defaults`, `focus`, `group_by`, `where`, `filter_map`
 
-**v0.34.0 Platform Capability Keywords**: `soft_delete`, `signable`, `signing_validator`, `signing_template`, `tenant_host`, `managed_by`, `temporal`, `subtype_of`, `subtype_panel`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `job`, `retry_backoff`, `dead_letter`, `ranking`, `highlight`, `tokenizer`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`
+**v0.34.0 Platform Capability Keywords**: `soft_delete`, `signable`, `signing_validator`, `signing_template`, `tenant_host`, `managed_by`, `temporal`, `subtype_of`, `subtype_panel`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `job`, `retry_backoff`, `dead_letter`, `ranking`, `highlight`, `tokenizer`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`, `expose`
 
 **v0.44.0 Heatmap / Progress / Activity Feed region keywords**: `activity_feed`, `tree`, `rows`, `columns`, `value`, `thresholds`, `stages`, `complete_at`
 

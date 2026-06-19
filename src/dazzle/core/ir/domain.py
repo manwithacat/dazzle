@@ -493,6 +493,10 @@ class EntitySpec(BaseModel):
     # external), so the dead-construct lint exempts it and its surfaces.
     # Orthogonal to `domain` — does NOT reclassify the business domain.
     managed_by: ManagedBy | None = None
+    # #1420 Slice 2: per-op generated-REST allowlist. None = all ops (default,
+    # backward compatible); () = no generated public REST (`api: none`); a tuple
+    # of op names (subset of list/read/create/update/delete) = explicit allowlist.
+    api_expose: tuple[str, ...] | None = None
 
     model_config = ConfigDict(frozen=True)
 

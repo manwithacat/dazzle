@@ -753,6 +753,7 @@ ir_class: EntitySpec
     - name: str
   optional:
     - access: AccessSpec | None = None
+    - api_expose: tuple[str, Ellipsis] | None = None
     - archetype_kind: ArchetypeKind | None = None
     - audit: AuditConfig | None = None
     - bulk: BulkConfig | None = None
