@@ -49,8 +49,17 @@ class AuthMiddleware:
         Get auth context from request.
 
         Reads session cookie and validates session.
+
+        #1419: resolve the session id the same tenant-aware way the rest of the
+        auth layer does (entity surfaces / permits read via ``read_session_id``).
+        Under ``tenant_host:`` new logins write ``__Host-<app>_session``; a single
+        fixed-name lookup returned an empty AuthContext → every workspace 403'd.
+        ``read_session_id`` tries the legacy ``default`` first, so single-tenant
+        apps are unchanged.
         """
-        session_id = request.cookies.get(self.cookie_name)
+        from dazzle.back.runtime.auth.cookie_name import read_session_id
+
+        session_id = read_session_id(request, default=self.cookie_name)
 
         if not session_id:
             return AuthContext()

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.9] - 2026-06-19
+
+### Fixed
+- **Workspaces 401/403 under `tenant_host:`** (#1419). `AuthMiddleware.get_auth_context` (and `DualAuthMiddleware`'s session fallback) read a single fixed cookie name (`dazzle_session`), so under `tenant_host:` — where new logins write `__Host-<app>_session` — the workspace auth path returned an empty `AuthContext` (roles `[]`) and **every** workspace 403'd, while entity surfaces (which read via the tenant-aware `read_session_id`) returned 200. The default-workspace landing then bounced every persona to the admin console and 403'd there too. Both middleware paths now resolve the session id via `read_session_id(request, default=self.cookie_name)` — the same primitive surfaces/permits use (legacy `dazzle_session` tried first, so single-tenant apps are unchanged). Logout already cleared all names via `names_to_clear`. 4 new tests.
+
 ## [0.83.8] - 2026-06-19
 
 ### Added

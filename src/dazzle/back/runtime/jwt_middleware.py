@@ -289,8 +289,12 @@ class DualAuthMiddleware:
                 "session_context": None,
             }
 
-        # Fall back to session cookie
-        session_id = request.cookies.get(self.cookie_name)
+        # Fall back to session cookie. #1419: tenant-aware lookup (the same
+        # primitive AuthMiddleware/surfaces use) so `__Host-<app>_session`
+        # under `tenant_host:` is found, not just the legacy fixed name.
+        from dazzle.back.runtime.auth.cookie_name import read_session_id
+
+        session_id = read_session_id(request, default=self.cookie_name)
         if session_id:
             session_context = self.auth_store.validate_session(session_id)
             if session_context.is_authenticated:
