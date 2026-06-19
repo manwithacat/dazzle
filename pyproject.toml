@@ -607,3 +607,54 @@ skips = [
 
 # Post-#1044 (v0.67.92): djlint + jinja2 retired; the framework no
 # longer ships any Jinja templates.
+
+[tool.importlinter]
+root_packages = ["dazzle"]
+include_external_packages = true
+
+# Framework structural-fitness (B): lock the layer boundaries while they're still nearly
+# clean. New cross-layer imports fail CI; the 2 pre-existing structural edges are
+# allow-listed as documented known-debt (relocations tracked via the hotspot queue).
+[[tool.importlinter.contracts]]
+name = "core stays backend- and UI-agnostic"
+type = "forbidden"
+source_modules = ["dazzle.core"]
+forbidden_modules = ["dazzle.back", "dazzle.ui"]
+# DIRECT imports only: dazzle/__init__.py eagerly imports back, so a transitive path
+# back exists from everything — the meaningful rule is "no core MODULE imports back/ui".
+allow_indirect_imports = "true"
+# core.process is the ADR-0008 runtime-bridge subsystem (not the pure IR/parser core);
+# its eventbus adapter bridges to back's event framework. Tracked debt: inject instead.
+ignore_imports = [
+    "dazzle.core.process.eventbus_adapter -> dazzle.back.events.envelope",
+    "dazzle.core.process.eventbus_adapter -> dazzle.back.runtime.auth.events",
+]
+
+[[tool.importlinter.contracts]]
+name = "ui must not reach into the runtime"
+type = "forbidden"
+source_modules = ["dazzle.ui"]
+forbidden_modules = ["dazzle.back"]
+allow_indirect_imports = "true"
+# combined_server is the unified back+ui composition entrypoint, mislocated in ui/runtime.
+# Tracked debt: relocate to back/runtime. Until then its DIRECT back edges are allow-listed.
+ignore_imports = [
+    "dazzle.ui.runtime.combined_server -> dazzle.back",
+    "dazzle.ui.runtime.combined_server -> dazzle.back.runtime.app_factory",
+    "dazzle.ui.runtime.combined_server -> dazzle.back.runtime.logging",
+    "dazzle.ui.runtime.combined_server -> dazzle.back.runtime.qa_routes",
+    "dazzle.ui.runtime.combined_server -> dazzle.back.runtime.server",
+    "dazzle.ui.runtime.combined_server -> dazzle.back.graphql",
+]
+
+[[tool.importlinter.contracts]]
+name = "back is Postgres-only (ADR-0008)"
+type = "forbidden"
+source_modules = ["dazzle.back"]
+forbidden_modules = ["sqlite3", "aiosqlite"]
+# ADR-0008 forbids SQLite in back's RUNTIME, not transitive reaches into the MCP
+# knowledge-graph / perf tracer / core.process.version_manager (which legitimately use
+# SQLite for their own stores, explicitly outside the app-data scope). So only DIRECT
+# back imports of sqlite are a violation. The one direct hit is a back test module.
+allow_indirect_imports = "true"
+ignore_imports = ["dazzle.back.tests.test_relations -> sqlite3"]
