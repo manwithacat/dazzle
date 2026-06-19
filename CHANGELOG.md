@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.30] - 2026-06-19
+
+### Added
+- **Broad-exception-swallow ratchet** (smells round "new gates" half, B2). A drift-style gate (`tests/unit/test_swallow_ratchet.py` + `dazzle.fitness.swallows.count_swallows`) that censuses the two swallow shapes the 2026-06-19 smells round flagged as the dominant semantic debt — `except (Exception|ImportError): pass|continue` (silent) and `except Exception: ... logger.debug(...)` (debug-only, effectively silent in prod) — and **fails CI if either count grows** past its committed baseline (44 silent / 181 debug-only). One-way valve, same posture as the complexity ratchet: a new broad swallow must be narrowed / raised to warning / left to propagate, not baselined in; burning some down lets you lower the baseline. Deterministic regex census (not AST) so the baseline is machine-stable. Wired into the `/ship` pre-flight.
+
+  ### Agent Guidance
+  - **No new broad-exception swallows.** `except Exception: logger.debug(...)` and `except (Exception|ImportError): pass` are now ratcheted at `tests/unit/test_swallow_ratchet.py` — adding one fails CI. Narrow to the specific expected exception, log at `warning`/`exception` so prod isn't blind, or let it propagate. The 225 existing sites are a tracked burn-down, not a license to add more.
+
 ## [0.83.29] - 2026-06-19
 
 ### Changed
