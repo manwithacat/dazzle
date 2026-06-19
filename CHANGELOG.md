@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.11] - 2026-06-19
+
+### Added
+- **`expose:` per-op generated-REST allowlist on entities** (#1420 slice 2). An entity may declare `expose: list, read` (only those generated routes exist) or `expose: none` (no generated public REST) while keeping persistence, the `permit:`/`scope:` model, GraphQL, and admin-workspace surfaces. Absent `expose:` = all ops (backward compatible). The allowlist is the single source of truth for which generated routes exist: it gates the surface-converter endpoints (top-level CRUD + auto READ/DELETE + the #1003 FK-lookup list) AND the workspace-prefixed redirect routes. A surface whose op the entity's `expose:` omits is now a `dazzle validate` error (no silent contradiction — the surface would render but its route would be suppressed). New `EntitySpec.api_expose` IR field + `expose` lexer keyword (named `expose`, not `api`, which is an identifier in the `interfaces:` construct).
+
+  ### Agent Guidance
+  - **`expose:` controls which generated REST routes an entity gets** — use it when a project ships its own hand-written API for an entity and wants to suppress the redundant generated one, without losing persistence/authz/UI. `expose: none` keeps everything but the public REST endpoints. Declaring a create/edit surface for an op you didn't `expose:` is a validate error.
+
+
 ## [0.83.10] - 2026-06-19
 
 ### Security
