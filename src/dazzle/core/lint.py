@@ -237,6 +237,13 @@ def lint_appspec(
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
+    # #1392 item 3: every custom-surface `emits:` target must resolve to a declared surface.
+    from dazzle.core.validation.ux import validate_emits_targets
+
+    errors, warnings = validate_emits_targets(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
     # Navigation curation lint (#1324 FR-6 — auto-discovery reliance, dead
     # curated nav items, ignored author-declared workspace nav_groups). All
     # WARNINGS.

@@ -109,6 +109,29 @@ def find_unbound_shadowing_overrides(
 _VALID_CRUD_OPS = frozenset({"list", "read", "create", "update", "delete"})
 
 
+def verify_emits_paths(
+    overrides: list[RouteOverrideDescriptor], route_paths: set[str]
+) -> list[str]:
+    """#1392 item 3 — every ``# dazzle:emits <path>`` must match a mounted route.
+
+    The route-override analogue of the surface ``emits:`` gate (and of
+    ``primary_action -> surface``): a route-override declares the link/fetch targets
+    its handler emits; an emitted path that matches no mounted route is a dead target.
+    ``route_paths`` is the mounted-route set in template form (generated CRUD routes +
+    route-override paths + page routes, e.g. ``/app/tasks/{id}``). Returns one
+    ``E_DEAD_EMIT_TARGET`` violation string per unresolved path; empty = clean.
+    """
+    violations: list[str] = []
+    for o in overrides:
+        for path in o.emits_paths:
+            if path not in route_paths:
+                violations.append(
+                    f"E_DEAD_EMIT_TARGET: route-override {o.path!r} emits {path!r}, which "
+                    f"matches no mounted route."
+                )
+    return violations
+
+
 def verify_route_matrix_completeness(
     appspec: Any,
     overrides: list[RouteOverrideDescriptor],

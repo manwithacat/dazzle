@@ -232,6 +232,34 @@ def validate_workspace_primary_actions(appspec: ir.AppSpec) -> tuple[list[str], 
     return errors, warnings
 
 
+def validate_emits_targets(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """#1392 item 3: every surface ``emits:`` target must resolve to a declared surface.
+
+    The custom-mode analogue of ``validate_workspace_primary_actions`` — a custom
+    (``render:`` / ``mode: custom``) surface declares the surfaces it links to; an
+    ``emits:`` naming a surface the AppSpec doesn't declare is a build ERROR
+    (``E_DEAD_EMIT_TARGET``), so a renamed / deleted / typo'd target fails the build
+    instead of shipping a dead link. Surfaces with no ``emits:`` are unconstrained
+    (opt-in).
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    declared_surfaces = {s.name for s in appspec.surfaces}
+
+    for surface in appspec.surfaces:
+        for target in surface.emits:
+            if target not in declared_surfaces:
+                errors.append(
+                    f"E_DEAD_EMIT_TARGET: surface '{surface.name}' emits: '{target}', "
+                    f"which is not a declared surface. Fix the name or remove it from "
+                    f"`emits:`."
+                )
+
+    return errors, []
+
+
 _TENANT_CONFIG_PREFIX = "tenant_config."
 
 
