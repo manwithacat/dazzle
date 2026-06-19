@@ -28,6 +28,7 @@
           'api_expose': None,
           'archetype_kind': None,
           'audit': None,
+          'auth_identity': None,
           'bulk': None,
           'computed_fields': list([
           ]),
@@ -242,6 +243,7 @@
           'api_expose': None,
           'archetype_kind': None,
           'audit': None,
+          'auth_identity': None,
           'bulk': None,
           'computed_fields': list([
           ]),
@@ -479,6 +481,7 @@
           'api_expose': None,
           'archetype_kind': None,
           'audit': None,
+          'auth_identity': None,
           'bulk': None,
           'computed_fields': list([
           ]),
@@ -737,6 +740,7 @@
           'api_expose': None,
           'archetype_kind': None,
           'audit': None,
+          'auth_identity': None,
           'bulk': None,
           'computed_fields': list([
           ]),

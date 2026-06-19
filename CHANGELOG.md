@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.15] - 2026-06-19
+
+### Added
+- **`auth_identity:` entity block — auth↔domain-`User` bridge** (#778/#1398, ADR-0039 Slice 1 — IR + parser). Declares, on the framework `User` entity, that it IS the auth principal's domain projection: a `link_via` join column (v1: `email`), a `map:` of auth-attributes (`id`/`email`/`email_localpart`/`username`/`role`) onto domain columns, and literal `default:`s for NOT-NULL columns the auth flow can't supply. New `AuthIdentitySpec` IR on `EntitySpec` (`api-surface/ir-types` baseline updated) + an `auth_identity` lexer keyword + entity-block parser arm; an unknown `map` source is a parse error. **Opt-in** (no declaration ⇒ today's behaviour, D5/D7); runtime provisioning + `ref User` link-resolution land in later slices.
+
 ## [0.83.14] - 2026-06-19
 
 ### Fixed

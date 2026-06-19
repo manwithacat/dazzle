@@ -197,6 +197,9 @@ class TokenType(Enum):
     # / `expose: none`). Absent = all ops (backward compatible). Named `expose` (not
     # `api`) — `api` is an identifier inside the `interfaces:` construct.
     EXPOSE = "expose"
+    # ADR-0039 (#778/#1398): `auth_identity:` block on the `User` entity declaring the
+    # auth↔domain bridge (provision domain row + resolve `ref User` by link_via). Opt-in.
+    AUTH_IDENTITY = "auth_identity"
     # v0.71.161 (#1223 Phase 3a.i): effective-dated / temporal entity declaration
     TEMPORAL = "temporal"
     # v0.71.162 (#1217 Phase 3e.i): subtype polymorphism for entities

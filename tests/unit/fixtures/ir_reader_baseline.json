@@ -7,6 +7,7 @@
   "approvals.ApprovalSpec.quorum",
   "appspec.AppSpec.hless_mode",
   "conditions.ConditionValue.date_expr",
+  "domain.AuthIdentitySpec.field_map",
   "domain.BulkConfig.export_enabled",
   "domain.BulkConfig.formats",
   "domain.BulkConfig.import_enabled",

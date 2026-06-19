@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 369 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
+# Counts: 370 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -310,6 +310,13 @@ ir_class: AuthEntrySpec
   required: (none)
   optional:
     - primary_entry: str = '/login'
+
+ir_class: AuthIdentitySpec
+  required: (none)
+  optional:
+    - defaults: tuple[tuple[str, str], Ellipsis] = ()
+    - field_map: tuple[tuple[str, str], Ellipsis] = ()
+    - link_via: str = 'email'
 
 ir_class: AuthPageSpec
   required:
@@ -756,6 +763,7 @@ ir_class: EntitySpec
     - api_expose: tuple[str, Ellipsis] | None = None
     - archetype_kind: ArchetypeKind | None = None
     - audit: AuditConfig | None = None
+    - auth_identity: AuthIdentitySpec | None = None
     - bulk: BulkConfig | None = None
     - computed_fields: list[ComputedFieldSpec] = []
     - constraints: list[Constraint] = []

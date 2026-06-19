@@ -386,6 +386,44 @@ class MembershipSpec(BaseModel):
     roles: str | None = None
 
 
+# Auth-identity binding source tokens (the auth principal's attributes the
+# registration mirror can read). Closed vocabulary — validated at parse time.
+AUTH_IDENTITY_SOURCES: tuple[str, ...] = (
+    "id",
+    "email",
+    "email_localpart",
+    "username",
+    "role",
+)
+
+
+class AuthIdentitySpec(BaseModel):
+    """Declares that this entity IS the auth principal's domain projection (ADR-0039).
+
+    Declared with an `auth_identity:` block on the framework `User` entity. It is the
+    single declared source of the auth↔domain bridge: on real auth-user creation the
+    framework provisions (mirrors) a domain row, and a `ref User` FK resolves to the
+    domain row's id (joined by `link_via`) rather than assuming `domain User.id == auth id`.
+
+    Opt-in (ADR-0039 D7): with no declaration, `User` behaves exactly as today — the auth
+    id is injected and no row is mirrored. The binding is FK-graph/link-validated at
+    `dazzle validate` (D6/A1): `link_via` must be a column and every required-no-default
+    column on `User` must be resolved via `field_map` or `defaults`, else a validate error.
+
+    **Never** changes `session.user_id` or any auth-store/membership/RLS/audit lookup (D1).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    # Column joining the domain row to the auth identity. v1 validates/tests `email` only.
+    link_via: str = "email"
+    # (domain_col, source) — source ∈ AUTH_IDENTITY_SOURCES — mapping auth-principal
+    # attributes onto domain columns at provisioning time.
+    field_map: tuple[tuple[str, str], ...] = ()
+    # (domain_col, literal) — NOT-NULL columns the auth flow can't supply, given a literal.
+    defaults: tuple[tuple[str, str], ...] = ()
+
+
 class EntitySpec(BaseModel):
     """
     Specification for a domain entity.
@@ -497,6 +535,10 @@ class EntitySpec(BaseModel):
     # backward compatible); () = no generated public REST (`api: none`); a tuple
     # of op names (subset of list/read/create/update/delete) = explicit allowlist.
     api_expose: tuple[str, ...] | None = None
+    # ADR-0039 (#778/#1398): when set on the `User` entity, declares the auth↔domain
+    # bridge — provision the domain row on auth-user creation + resolve `ref User` FKs
+    # by `link_via`. None = no bridge (behaves exactly as today; D5/D7).
+    auth_identity: AuthIdentitySpec | None = None
 
     model_config = ConfigDict(frozen=True)
 

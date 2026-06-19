@@ -47,6 +47,8 @@ class _EntityParseContext:
     managed_by: ir.ManagedBy | None = None
     # #1420 Slice 2: per-op generated-REST allowlist (None = all ops, default)
     api_expose: tuple[str, ...] | None = None
+    # ADR-0039 (#778/#1398): auth↔domain bridge binding (None = no bridge, default)
+    auth_identity: ir.AuthIdentitySpec | None = None
     bulk_config: ir.BulkConfig | None = None
     # Seed template (v0.38.0)
     seed_template: ir.SeedTemplateSpec | None = None
@@ -199,6 +201,8 @@ class EntityParserMixin:
                 ctx.managed_by = self._parse_entity_managed_by()
             elif self.match(TokenType.EXPOSE):
                 ctx.api_expose = self._parse_entity_expose()
+            elif self.match(TokenType.AUTH_IDENTITY):
+                ctx.auth_identity = self._parse_entity_auth_identity()
             else:
                 self._parse_entity_field_declaration(ctx)
                 continue  # field parsing handles its own skip_newlines
@@ -274,6 +278,92 @@ class EntityParserMixin:
                     first.column,
                 )
         return tuple(ops)
+
+    _AUTH_IDENTITY_SOURCES: tuple[str, ...] = (
+        "id",
+        "email",
+        "email_localpart",
+        "username",
+        "role",
+    )
+
+    def _parse_entity_auth_identity(self) -> ir.AuthIdentitySpec:
+        """Parse the entity-level ``auth_identity:`` block (ADR-0039, #778/#1398).
+
+        Declares the auth↔domain bridge on the ``User`` entity. Syntax::
+
+            auth_identity:
+              link_via: email                 # optional, default 'email'
+              map:                            # auth-attr -> domain-column mapping
+                username: email_localpart
+                display_name: email_localpart
+              default:                        # literal NOT-NULL fillers
+                role: viewer
+
+        ``map`` sources are the closed set in ``_AUTH_IDENTITY_SOURCES``; an unknown
+        source is a parse error. ``map``/``default`` are both optional.
+        """
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        link_via = "email"
+        field_map: list[tuple[str, str]] = []
+        defaults: list[tuple[str, str]] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+            key_tok = self.current_token()
+            key = key_tok.value
+            self.advance()
+            self.expect(TokenType.COLON)
+
+            if key == "link_via":
+                link_via = str(self.expect_identifier_or_keyword().value)
+            elif key in ("map", "default"):
+                target = field_map if key == "map" else defaults
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    col_tok = self.expect_identifier_or_keyword()
+                    self.expect(TokenType.COLON)
+                    if key == "map":
+                        src_tok = self.expect_identifier_or_keyword()
+                        if src_tok.value not in self._AUTH_IDENTITY_SOURCES:
+                            raise make_parse_error(
+                                f"auth_identity: map source {src_tok.value!r} is not one of "
+                                f"[{', '.join(self._AUTH_IDENTITY_SOURCES)}]",
+                                self.file,
+                                src_tok.line,
+                                src_tok.column,
+                            )
+                        target.append((str(col_tok.value), str(src_tok.value)))
+                    else:
+                        val_tok = self.advance()  # STRING / NUMBER / TRUE / FALSE / ident
+                        target.append((str(col_tok.value), str(val_tok.value)))
+                    self.skip_newlines()
+                self.expect(TokenType.DEDENT)
+            else:
+                raise make_parse_error(
+                    f"Unknown auth_identity: key {key!r}. Expected one of: link_via, map, default.",
+                    self.file,
+                    key_tok.line,
+                    key_tok.column,
+                )
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return ir.AuthIdentitySpec(
+            link_via=link_via,
+            field_map=tuple(field_map),
+            defaults=tuple(defaults),
+        )
 
     def _parse_entity_patterns(self) -> list[str]:
         """Parse ``patterns: a, b, c`` declaration."""
@@ -1201,6 +1291,7 @@ class EntityParserMixin:
             membership=ctx.membership,
             managed_by=ctx.managed_by,
             api_expose=ctx.api_expose,
+            auth_identity=ctx.auth_identity,
             source=loc,
         )
 
