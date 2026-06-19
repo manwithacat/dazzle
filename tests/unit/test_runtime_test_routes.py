@@ -47,29 +47,31 @@ class _CaptureConn:
 
 
 class TestMirrorAuthUserSchemaDerived:
-    """#1398: the auth->domain User mirror derives columns from the entity's
-    actual schema, not a hard-coded name/role/is_active set."""
+    """#1398 (now ADR-0039 Slice 3): the auth->domain User mirror derives columns from
+    the entity's actual schema (the undeclared/best-effort path), not a hard-coded
+    name/role/is_active set. The mirror reads the core-IR `User` via deps.user_ir_spec."""
 
-    def _deps(self, *field_names: str) -> tuple[object, _CaptureConn]:
+    def _deps(self, user_dsl_fields: str) -> tuple[object, _CaptureConn]:
+        from pathlib import Path
         from types import SimpleNamespace
 
-        from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+        from dazzle.core.dsl_parser_impl import parse_dsl
 
-        fields = [
-            FieldSpec(name=n, type=FieldType(kind="scalar", scalar_type=ScalarType.STR))
-            for n in field_names
-        ]
-        user = EntitySpec(name="User", fields=fields)
+        dsl = 'module t\napp t "T"\nentity User "User":\n  id: uuid pk\n' + user_dsl_fields
+        _n, _a, _t, _c, _u, frag = parse_dsl(dsl, Path("t.dsl"))
+        user = next(e for e in frag.entities if e.name == "User")
         conn = _CaptureConn()
         deps = SimpleNamespace(
-            entities=[user],
+            user_ir_spec=user,
             db_manager=SimpleNamespace(connection=lambda: conn),
         )
         return deps, conn
 
     def test_username_display_name_schema_no_name_column(self) -> None:
         # The exact repro: User has username/display_name, no name/role/is_active.
-        deps, conn = self._deps("id", "email", "username", "display_name")
+        deps, conn = self._deps(
+            "  email: str(120) required\n  username: str(40)\n  display_name: str(80)\n"
+        )
         _mirror_auth_user_to_domain(deps, "u-1", "alice@example.com", "Alice", "admin")
         assert len(conn.executed) == 1
         sql, params = conn.executed[0]
@@ -81,7 +83,9 @@ class TestMirrorAuthUserSchemaDerived:
         assert "Alice" in params
 
     def test_classic_name_role_is_active_schema_still_works(self) -> None:
-        deps, conn = self._deps("id", "email", "name", "role", "is_active")
+        deps, conn = self._deps(
+            "  email: str(120) required\n  name: str(80)\n  role: str(40)\n  is_active: bool=true\n"
+        )
         _mirror_auth_user_to_domain(deps, "u-2", "bob@example.com", "Bob", "member")
         sql, params = conn.executed[0]
         assert '"name"' in sql and '"role"' in sql and '"is_active"' in sql
@@ -90,9 +94,13 @@ class TestMirrorAuthUserSchemaDerived:
     def test_no_user_entity_is_noop(self) -> None:
         from types import SimpleNamespace
 
-        deps = SimpleNamespace(entities=[], db_manager=SimpleNamespace(connection=lambda: None))
-        # Must not raise and must not touch the DB.
+        # No User entity → user_ir_spec is None → mirror is a no-op (must not touch the DB).
+        conn = _CaptureConn()
+        deps = SimpleNamespace(
+            user_ir_spec=None, db_manager=SimpleNamespace(connection=lambda: conn)
+        )
         _mirror_auth_user_to_domain(deps, "u-3", "c@example.com", "Cara", "admin")
+        assert conn.executed == []
 
 
 class TestFixtureData:

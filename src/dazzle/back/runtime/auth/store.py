@@ -2,6 +2,7 @@
 
 import logging
 import secrets
+from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -80,6 +81,9 @@ class UserStoreMixin:
     _execute: Any
     _execute_one: Any
     _execute_modify: Any
+    # ADR-0039 (#778/#1398): optional domain-`User` provisioning hook, set by the server
+    # at build time when the app declares an `auth_identity:` bridge. None = no mirror.
+    _on_user_created: "Callable[[UserRecord], None] | None" = None
 
     def create_user(
         self,
@@ -130,6 +134,20 @@ class UserStoreMixin:
                 user.updated_at.isoformat(),
             ),
         )
+
+        # ADR-0039 (#778/#1398): provision the DSL `User` domain row for this principal
+        # when the app declares an `auth_identity:` bridge. The hook is set by the server
+        # at build time; absent (or no binding) ⇒ no-op. This is the single production
+        # choke point all auth-user creation funnels through (magic-link signup, SSO JIT,
+        # password signup, SCIM …). Best-effort — never break auth-user creation (D1).
+        hook = getattr(self, "_on_user_created", None)
+        if hook is not None:
+            try:
+                hook(user)
+            except Exception:
+                logger.warning(
+                    "domain-User provisioning hook failed for %s", user.id, exc_info=True
+                )
 
         return user
 

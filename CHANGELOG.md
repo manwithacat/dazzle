@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.17] - 2026-06-19
+
+### Added
+- **Auth↔domain-`User` provisioning mirror** (#778/#1398, ADR-0039 Slice 3 — D3a/D4). When the `User` entity declares `auth_identity:`, the framework now provisions the matching DSL `User` domain row on real auth-user creation — so apps with `ref User` FKs can create rows owned by any authenticated principal (closes the #778 "auth user exists, domain row missing → FK violation" defect for the production flow, and #1398's "mirror fails for username/display_name schemas" via the declared map). New `back/runtime/auth_identity_mirror.py` builds an idempotent `INSERT … ON CONFLICT (id) DO UPDATE` from the core-IR `User` schema: the **declared** path resolves columns from `link_via` + `map` + `default`; the **undeclared** path keeps the #1398 schema-derived best-effort. One shared helper called from **both** the production `AuthStore.create_user` choke point (via a server-set `_on_user_created` hook, wired only when a binding is declared — undeclared `User` is untouched, D5) **and** the test/QA `/__test__/authenticate` route (D4 — no divergent copy). Never touches `session.user_id`/membership/RLS/audit (D1); a mirror miss is logged, never breaks auth-user creation.
+
+### Fixed
+- **`ir_reader_baseline.json` shipped malformed in v0.83.16** — the `/bump` ship step ran `ruff format` over the JSON fixture, which introduced a trailing comma (invalid JSON) after the test gate had already passed. Re-normalized to valid JSON; `.json` fixtures are no longer passed through `ruff format`.
+
 ## [0.83.16] - 2026-06-19
 
 ### Added

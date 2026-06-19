@@ -55,7 +55,7 @@ from dazzle.back.runtime.workspace_handlers import (  # noqa: F401
 from dazzle.back.runtime.workspace_region_handler import _workspace_region_handler  # noqa: F401
 from dazzle.back.runtime.workspace_route_builder import WorkspaceRouteBuilder
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
-from dazzle.core.ir import AppSpec
+from dazzle.core.ir import AppSpec, EntitySpec
 
 if TYPE_CHECKING:
     from dazzle.back.events.framework import EventFramework
@@ -1492,6 +1492,30 @@ class DazzleBackendApp:
         )
         self._auth_middleware = AuthMiddleware(self._auth_store)
 
+        # ADR-0039 (#778/#1398): wire the domain-`User` provisioning mirror onto the
+        # production auth-user create path **only** when the app declares an
+        # `auth_identity:` bridge (D5 — undeclared `User` behaves exactly as today). The
+        # test/QA route gets the mirror unconditionally (create_test_routes, which keeps
+        # the #1398 best-effort for undeclared `User`). One rule, both paths (D4).
+        _user_ir = self._user_ir_entity()
+        if _user_ir is not None and _user_ir.auth_identity is not None:
+            from dazzle.back.runtime.auth_identity_mirror import mirror_auth_user_to_domain
+
+            _store = self._auth_store  # non-None here (just constructed)
+            assert _store is not None
+
+            def _provision_domain_user(user: Any, _spec: EntitySpec = _user_ir) -> None:
+                mirror_auth_user_to_domain(
+                    _store._execute_modify,
+                    _spec,
+                    user_id=str(user.id),
+                    email=user.email,
+                    username=user.username or "",
+                    role=(user.roles[0] if user.roles else ""),
+                )
+
+            _store._on_user_created = _provision_domain_user
+
         # #933: register the AuthStore with the module-level singleton
         # so project route handlers can call `current_user_id(request)`
         # / `current_user(request)` / `@require_auth(...)` without
@@ -1509,6 +1533,12 @@ class DazzleBackendApp:
         optional_auth_dep = create_optional_auth_dependency(self._auth_store)
 
         return auth_dep, optional_auth_dep
+
+    def _user_ir_entity(self) -> EntitySpec | None:
+        """The core-IR principal entity (ADR-0039) — the configured `user_entity`
+        (default `User`), or None if the app defines no such entity."""
+        name = getattr(self._auth_config, "user_entity", "User") if self._auth_config else "User"
+        return next((e for e in self._appspec.domain.entities if e.name == name), None)
 
     @staticmethod
     def _verify_scope_predicates(cedar_access_specs: dict[str, Any], fk_graph: Any) -> None:
@@ -2121,6 +2151,7 @@ class DazzleBackendApp:
                 auth_store=self._auth_store,
                 personas=self._personas,
                 project_root=self._project_root,
+                user_ir_spec=self._user_ir_entity(),
             )
             self._app.include_router(test_router)
 
