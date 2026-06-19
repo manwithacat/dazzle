@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-06-19)** by `2026-06-19-route-override-response-contract-1392-design.md` — the chrome-wrap is reframed as one consumer of a declared route-override **response contract** (`# dazzle:returns page|fragment|partial|json`), so islands/novel full-bleed UX are a declared `page` kind (never refused) and the RBAC line stays orthogonal+mandatory. Kept for history.
+
 # Chrome-enforced route-overrides (#1392 item 2a) — Design
 
 **Status:** Approved (2026-06-19). The final remaining slice of #1392 ("let custom renderers /
