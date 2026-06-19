@@ -62,3 +62,11 @@
 - Recommended next 3: (1) 1.3 core→mcp import, (2) `_fastapi_compat` consolidation + AST gate, (3) `load_json_or` util for the 119-instance silent-swallow class.
 - Calibration note for `smells.js`: regression finder should set PASS when all grep hits are test-only/intentional (1.1, 1.5a over-reported FAIL).
 - Commit: 0bcd50ce
+
+## Smells Run — 2026-06-19 (first decay-harness-integrated run)
+- Method: `/smells` Workflow, now 4 finders (regressions + 3 pattern cats + **decay-harness**), schema-validated. 5 agents, ~293k tokens, ~5.6 min.
+- Regressions: **0 production FAIL** (down from 2 — 1.3 core→mcp import + 1.8 Alpine window bindings both RESOLVED). 1.1/1.5a now correctly PASS (calibration fix landed). TRACK: 1.5b getattr=2,141 (↑ from 1,855), 1.6/1.7 now radon-sourced (22 MI-C files), 1.9 NEW import-allowlist=9 KEPT.
+- New patterns: 17 (top concern: debug-only broad exception swallows, 209 instances). Also: 485 deferred in-function imports (server.py=70), untyped ctx dict[str,Any] (33), inline 404-guard dup (13).
+- Decay: ratchet **clean**, contracts **kept**, allow-list **9** (flat); top target **server.py** (#2 hotspot, MI-C, _setup_routes cc=115). linker_impl.py::validate_references cc=119 is highest single fn but low-churn (#12).
+- Recommended next 3: (1) debug-only swallow audit via sentinel python_audit, (2) break back/runtime deferred-import cycles, (3) decompose server.py _setup_routes.
+- Commit: a07c2a09b
