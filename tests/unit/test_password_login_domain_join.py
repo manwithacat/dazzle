@@ -186,6 +186,42 @@ def test_unverified_user_does_not_evaluate_join() -> None:
     assert response.headers["location"] == "/app"
 
 
+def test_apply_domain_join_exception_does_not_break_login(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """If apply_domain_join raises, the login still completes (no 500)."""
+    import logging
+
+    user = _make_verified_user()
+    store = _DomainJoinStore(policy="auto_join", user=user)
+    client = _client(store)
+
+    def _boom(**kwargs: object) -> object:  # noqa: ARG001
+        raise RuntimeError("DB connection lost")
+
+    # Patch via the module that password_login_routes imports from at call time.
+    import dazzle.http.runtime.auth.join_requests as _jr
+
+    monkeypatch.setattr(_jr, "apply_domain_join", _boom)
+
+    with caplog.at_level(logging.WARNING, logger="dazzle.http.runtime.auth.password_login_routes"):
+        response = client.post(
+            "/auth/login/password",
+            data={"email": user.email, "password": "password"},
+        )
+
+    # Authentication must succeed — not a 500.
+    assert response.status_code == 303
+    # No membership created (join failed), but a session was still issued.
+    assert store.created_memberships == []
+    assert len(store.sessions) == 1
+    # Redirect goes to the normal no-membership destination, not an error page.
+    assert response.headers["location"] not in {"/auth/join-requested"}
+    assert "500" not in response.headers.get("location", "")
+    # A warning was emitted.
+    assert any("Domain-join evaluation failed" in r.message for r in caplog.records)
+
+
 @pytest.mark.parametrize("policy", ["auto_join", "admin_approval"])
 def test_join_evaluated_only_when_no_membership(policy: str) -> None:
     """If activation already resolves a membership, the join branch is skipped."""
