@@ -57,7 +57,7 @@ def _resolve_saml_connection(
         return store.get_connection(connection_id)
     if email and "@" in email:
         domain = email.rsplit("@", 1)[-1].strip().lower()
-        return store.get_connection_by_verified_domain(domain)
+        return store.get_connection_by_verified_domain(domain, types=("oidc", "saml"))
     host_tid = host_tenant_id_from_request(request)
     if host_tid:
         for conn in store.get_connections_for_tenant(host_tid):

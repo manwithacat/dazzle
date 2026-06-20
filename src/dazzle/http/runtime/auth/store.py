@@ -1418,13 +1418,25 @@ class SessionStoreMixin:
             return {}
         return {str(r["type"]): int(r["n"]) for r in rows}
 
-    def get_connection_by_verified_domain(self, domain: str) -> "ConnectionRecord | None":  # noqa: F821
+    def get_connection_by_verified_domain(  # noqa: F821
+        self,
+        domain: str,
+        *,
+        types: "tuple[str, ...] | None" = None,
+    ) -> "ConnectionRecord | None":
         """Route an email domain to its org's connection — VERIFIED domains only.
 
         Matches against ``verified_domains`` (never the unverified ``domains``
         claim) so org A cannot hijack org B's SSO by claiming its domain (spec §5).
         Returns the first active match; verified-domain uniqueness is owned by the
         domain-verification flow (a later slice).
+
+        When ``types`` is given, only connections whose ``type`` is in that set
+        are considered.  SSO callers pass ``types=("oidc", "saml")`` to prevent a
+        ``type="domain"`` connection (which has no SSO provider) from being handed
+        to the SSO resolver and crashing the login flow.  Callers that need the
+        unfiltered view (e.g. ``domain_verification.verify_domain``) omit the
+        argument.
         """
         import json
 
@@ -1432,6 +1444,8 @@ class SessionStoreMixin:
         for row in self._execute(
             "SELECT * FROM connections WHERE status = 'active' ORDER BY created_at"
         ):
+            if types is not None and row.get("type") not in types:
+                continue
             verified = [x.strip().lower() for x in json.loads(row.get("verified_domains") or "[]")]
             if d in verified:
                 return self._row_to_connection(row)
