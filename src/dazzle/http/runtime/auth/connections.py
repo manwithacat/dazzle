@@ -156,6 +156,8 @@ def resolve_provider(connection: Any) -> ConnectionProvider:
     Fail-loud: an unregistered pair raises ``ConnectionError`` — better than a
     silent no-op when a connection references a provider the build doesn't have.
     """
+    if connection.type == "domain":
+        raise ConnectionError("domain connections are routing-only and have no IdP provider")
     key = (connection.type, connection.provider)
     impl = _PROVIDERS.get(key)
     if impl is None:
