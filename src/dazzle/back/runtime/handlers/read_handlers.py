@@ -9,9 +9,10 @@ decision, and re-hydrates ``auto_include`` relations.
 A leaf module by design: it must not import ``route_generator`` at module
 level (``route_generator`` imports ``create_read_handler`` back at module
 level so the ``route_generator.<name>`` call sites, importers, and patch
-points keep resolving there). The shared util that stays in
-``route_generator`` (``_set_handler_annotations``) is imported lazily
-inside the factory body.
+points keep resolving there). The shared route-dispatch surface it needs
+(``RouteSpec``, ``_set_handler_annotations``) comes from the ``route_support``
+leaf at top level — extracted there in the 2026-06-20 smells round to break the
+import cycle that previously forced lazy in-function imports.
 
 NOTE (#1361 slice 3 contract, unchanged here): ``_scoped_pre_read`` is
 imported at module level from its real home, ``scope_filters`` — the Cedar
@@ -23,7 +24,7 @@ globs that pattern and this module defines no routes.
 
 from collections.abc import Callable
 from datetime import date
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request
@@ -38,10 +39,15 @@ from dazzle.back.runtime.audit_wrap import (
 from dazzle.back.runtime.auth import AuthContext
 from dazzle.back.runtime.htmx_render import _render_detail_html
 from dazzle.back.runtime.http_errors import require_found
-from dazzle.back.runtime.scope_filters import _scoped_pre_read
 
-if TYPE_CHECKING:
-    from dazzle.back.runtime.route_generator import RouteSpec
+# Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
+# 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
+# route_support is a leaf, so these are now plain top-level imports.
+from dazzle.back.runtime.route_support import (
+    RouteSpec,
+    _set_handler_annotations,
+)
+from dazzle.back.runtime.scope_filters import _scoped_pre_read
 
 
 def create_read_handler(spec: "RouteSpec") -> Callable[..., Any]:
@@ -49,10 +55,6 @@ def create_read_handler(spec: "RouteSpec") -> Callable[..., Any]:
 
     See :class:`RouteSpec` for the per-route contract (#1011).
     """
-    # Handler-annotation util stays in route_generator (shared with the
-    # custom handler + audit_wrap); lazy import keeps this module acyclic —
-    # route_generator imports this module at module level.
-    from dazzle.back.runtime.route_generator import _set_handler_annotations
 
     service = spec.service
     auto_include = spec.auto_include

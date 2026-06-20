@@ -490,7 +490,7 @@ class WorkspaceRouteBuilder:
                                         from dazzle.back.runtime.auth.models import (
                                             effective_roles_of,
                                         )
-                                        from dazzle.back.runtime.route_generator import (
+                                        from dazzle.back.runtime.route_support import (
                                             _normalize_role,
                                         )
                                         from dazzle.back.runtime.scope_filters import (

@@ -13,10 +13,11 @@ this family — JSON/form body parsing with empty-string→None coercion).
 A leaf module by design: it must not import ``route_generator`` at module
 level (``route_generator`` imports these names back at module level so the
 ``route_generator.<name>`` call sites, importers, and patch points keep
-resolving there). The shared utils that stay in ``route_generator``
-(``_extract_result_id``, ``_htmx_current_url``, ``_htmx_parent_url``,
-``_set_handler_annotations``) are imported lazily inside the factory
-bodies, enumerated per factory.
+resolving there). The shared route-dispatch surface it needs (``RouteSpec``,
+``_extract_result_id``, ``_htmx_current_url``, ``_htmx_parent_url``,
+``_set_handler_annotations``) comes from the ``route_support`` leaf at top
+level — extracted there in the 2026-06-20 smells round to break the import
+cycle that previously forced lazy in-function imports.
 
 Deliberately NOT named ``*_routes.py`` — the runtime-urls api-surface walker
 globs that pattern and this module defines no routes.
@@ -24,7 +25,7 @@ globs that pattern and this module defines no routes.
 
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException, Request
@@ -34,10 +35,18 @@ from dazzle.back.runtime.audit_wrap import _wrap_with_auth
 from dazzle.back.runtime.htmx_render import _with_htmx_triggers
 from dazzle.back.runtime.http_errors import require_found
 from dazzle.back.runtime.repository import ConstraintViolationError
-from dazzle.back.runtime.scope_filters import _enforce_create_scope, _enforce_update_scope
 
-if TYPE_CHECKING:
-    from dazzle.back.runtime.route_generator import RouteSpec
+# Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
+# 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
+# route_support is a leaf, so these are now plain top-level imports.
+from dazzle.back.runtime.route_support import (
+    RouteSpec,
+    _extract_result_id,
+    _htmx_current_url,
+    _htmx_parent_url,
+    _set_handler_annotations,
+)
+from dazzle.back.runtime.scope_filters import _enforce_create_scope, _enforce_update_scope
 
 
 async def _parse_request_body(request: Any) -> dict[str, Any]:
@@ -221,11 +230,6 @@ def create_create_handler(
             field that targets a persona-backed entity. Cycle 249
             (closes EX-049). See ``resolve_backed_entity_refs``.
     """
-    # Result-id util stays in route_generator (also used by audit_wrap);
-    # lazy import keeps this module acyclic — route_generator imports this
-    # module at module level. Factory-call time, so route_generator is
-    # fully loaded; the closure below captures the name from this scope.
-    from dazzle.back.runtime.route_generator import _extract_result_id
 
     service = spec.service
     if spec.input_schema is None:
@@ -368,10 +372,6 @@ def create_update_handler(spec: "RouteSpec") -> Callable[..., Any]:
     See :class:`RouteSpec` for the per-route contract (#1011).
     ``spec.input_schema`` is required for update handlers.
     """
-    # HTMX URL util stays in route_generator (also used by the delete
-    # path's parent-url helper + generate_crud_routes); lazy import keeps
-    # this module acyclic. Factory-call time; the closure captures it.
-    from dazzle.back.runtime.route_generator import _htmx_current_url
 
     service = spec.service
     if spec.input_schema is None:
@@ -484,10 +484,6 @@ def create_delete_handler(spec: "RouteSpec") -> Callable[..., Any]:
 
     See :class:`RouteSpec` for the per-route contract (#1011).
     """
-    # HTMX URL util stays in route_generator (also used by
-    # generate_crud_routes); lazy import keeps this module acyclic.
-    # Factory-call time; the closure captures it.
-    from dazzle.back.runtime.route_generator import _htmx_parent_url
 
     service = spec.service
     include_field_changes = spec.include_field_changes
@@ -558,9 +554,6 @@ def create_custom_handler(
     input_schema: type[BaseModel] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for custom operations."""
-    # Handler-annotation util stays in route_generator (shared with the
-    # read family + audit_wrap); lazy import keeps this module acyclic.
-    from dazzle.back.runtime.route_generator import _set_handler_annotations
 
     if input_schema:
 

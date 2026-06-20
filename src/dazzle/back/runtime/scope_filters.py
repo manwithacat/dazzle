@@ -10,9 +10,9 @@ pre-read used by UPDATE/DELETE/READ handlers, and the ``scope: create:`` /
 A leaf module by design: it must not import ``route_generator`` at module
 level (``route_generator`` imports these names back at module level so the
 ``route_generator.X`` patch points and re-exports keep working). The one
-shared helper that stays in ``route_generator`` (``_normalize_role``, also
-used by the audit/list paths there) is imported lazily inside function
-bodies.
+shared helper it needs (``_normalize_role``) comes from the ``route_support``
+leaf at top level — extracted there in the 2026-06-20 smells round to break
+the import cycle that previously forced lazy in-function imports.
 
 Deliberately NOT named ``*_routes.py`` — the runtime-urls api-surface walker
 globs that pattern and this module defines no routes.
@@ -25,6 +25,13 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException
 
 from dazzle.back.runtime.auth import AuthContext, effective_roles_of
+
+# Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
+# 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
+# route_support is a leaf, so these are now plain top-level imports.
+from dazzle.back.runtime.route_support import (
+    _normalize_role,
+)
 
 if TYPE_CHECKING:
     from dazzle.back.runtime.service_generator import BaseService
@@ -61,10 +68,6 @@ def _extract_cedar_row_filters(
     Returns a dict suitable for merging into the repository's filter kwargs.
     """
     import logging
-
-    # Lazy: _normalize_role stays in route_generator (also used by its
-    # audit/list paths); a module-level import here would be circular.
-    from dazzle.back.runtime.route_generator import _normalize_role
 
     _logger = logging.getLogger(__name__)
 
@@ -764,8 +767,6 @@ async def _scoped_pre_read(
     requires fk_graph; without it we cannot compile a scope predicate
     so we treat it as "no enforcement available here").
     """
-    # Lazy: _normalize_role stays in route_generator (circular otherwise).
-    from dazzle.back.runtime.route_generator import _normalize_role
 
     if not getattr(cedar_access_spec, "scopes", None):
         return await service.execute(operation="read", id=id)
@@ -959,8 +960,6 @@ def _enforce_create_scope(
     debug surfaces can grep on it. We don't leak the exact field that
     failed (avoids handing attackers a payload-tuning oracle).
     """
-    # Lazy: _normalize_role stays in route_generator (circular otherwise).
-    from dazzle.back.runtime.route_generator import _normalize_role
 
     if cedar_access_spec is None:
         return
@@ -1155,8 +1154,6 @@ def _enforce_update_scope(
     payload-time SQL probe as create-scope (#1311); simple leaves stay
     pure-Python. No ``scope: update:`` rules, or a matched ``all`` rule → no-op.
     """
-    # Lazy: _normalize_role stays in route_generator (circular otherwise).
-    from dazzle.back.runtime.route_generator import _normalize_role
 
     if cedar_access_spec is None:
         return
@@ -1279,8 +1276,6 @@ def _should_bypass_tenant_filter(
     call sites) means the bypass never applies — identical to the
     pre-cycle-5 behaviour.
     """
-    # Lazy: _normalize_role stays in route_generator (circular otherwise).
-    from dazzle.back.runtime.route_generator import _normalize_role
 
     if auth_context is None or not getattr(auth_context, "is_authenticated", False):
         return False

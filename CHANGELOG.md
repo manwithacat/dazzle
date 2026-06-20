@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.33] - 2026-06-20
+
+### Changed
+- **Broke the `route_generator` import cycle — structural-comprehensibility phase 2 of 4** (smells round). The CRUD route-generation cluster (`route_generator` + `scope_filters`, `audit_wrap`, `htmx_render`, `handlers/{read,write,list}_handlers`) was the **only genuine import cycle in `back/runtime/`** — a 7-module SCC that forced ~24 in-function ("lazy") imports to dodge it (the investigation found ~91% of `back/runtime`'s deferred imports were this kind of cycle-dodging or cargo-cult). Extracted the shared leaf surface the cluster reaches for — the `RouteSpec`/`HandlerConfig` dispatch contracts and the `_normalize_role`/`_set_handler_annotations`/`_is_htmx_request`/`_wants_html`/`_htmx_current_url`/`_htmx_parent_url`/`_extract_result_id` helpers — into a new **leaf module `back/runtime/route_support.py`** (depends only on fastapi/stdlib/`auth`/`render`, never on the cluster). The satellites now import *down* into the leaf at top level instead of *up* into `route_generator`, dissolving the SCC; the ~24 forced-lazy imports became plain top-level imports. `route_generator` re-exports the leaf surface for back-compat importers + patch points (`route_generator.<name>` still resolves). Verified: full non-e2e suite (18801 passed), `dazzle serve` boots, the SCC is gone (leaf invariant + zero satellite→`route_generator` imports asserted).
+
+  ### Agent Guidance
+  - **CRUD route-dispatch contracts/helpers live in `route_support` (the leaf), not `route_generator`.** Import `RouteSpec`/`HandlerConfig`/`_normalize_role`/etc. from `dazzle.back.runtime.route_support`. `route_generator` re-exports them for back-compat, but new code should import from the leaf. The handler/scope/audit modules must never import `route_generator` (it imports *them*) — that was the cycle.
+
 ## [0.83.32] - 2026-06-20
 
 ### Changed

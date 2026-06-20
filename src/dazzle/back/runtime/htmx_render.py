@@ -14,9 +14,10 @@ the moved HTML.
 A leaf module by design: it must not import ``route_generator`` at module
 level (``route_generator`` imports these names back at module level so the
 ``route_generator.X`` call sites, patch points, and re-exports keep
-working). The shared HTMX request utils that stay in ``route_generator``
-(``_is_htmx_request`` / ``_wants_html``, also used by the list/read/write
-handler bodies there) are imported lazily inside function bodies.
+working). The shared HTMX request utils it needs (``_is_htmx_request`` /
+``_wants_html``) come from the ``route_support`` leaf at top level —
+extracted there in the 2026-06-20 smells round to break the import cycle
+that previously forced lazy in-function imports.
 
 Deliberately NOT named ``*_routes.py`` — the runtime-urls api-surface walker
 globs that pattern and this module defines no routes.
@@ -29,6 +30,14 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from dazzle.back.runtime.htmx_response import htmx_trigger_headers
+
+# Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
+# 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
+# route_support is a leaf, so these are now plain top-level imports.
+from dazzle.back.runtime.route_support import (
+    _is_htmx_request,
+    _wants_html,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -578,7 +587,6 @@ def _with_htmx_triggers(
         action: Mutation action ("created", "updated", "deleted").
         redirect_url: Optional URL for HX-Redirect header (post-create navigation).
     """
-    from dazzle.back.runtime.route_generator import _is_htmx_request
 
     if not _is_htmx_request(request):
         return result
@@ -607,7 +615,6 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
     - Direct browser navigation → full page with app shell (#349)
     - API client (JSON) → None (let FastAPI serialize)
     """
-    from dazzle.back.runtime.route_generator import _is_htmx_request, _wants_html
 
     if not _wants_html(request):
         return None

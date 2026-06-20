@@ -164,14 +164,14 @@ class TestSoftDeleteRouteSpec:
     """
 
     def test_routespec_default_soft_delete_false(self) -> None:
-        from dazzle.back.runtime.route_generator import HandlerConfig, RouteSpec
+        from dazzle.back.runtime.route_support import HandlerConfig, RouteSpec
 
         hc = HandlerConfig(entity_name="Document")
         spec = RouteSpec(handler=hc, service=MagicMock())
         assert spec.soft_delete is False
 
     def test_routespec_carries_soft_delete_true(self) -> None:
-        from dazzle.back.runtime.route_generator import HandlerConfig, RouteSpec
+        from dazzle.back.runtime.route_support import HandlerConfig, RouteSpec
 
         hc = HandlerConfig(entity_name="Document")
         spec = RouteSpec(handler=hc, service=MagicMock(), soft_delete=True)

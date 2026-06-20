@@ -13,10 +13,10 @@ handler triplication.
 A leaf module by design: it must not import ``route_generator`` at module
 level (``route_generator`` imports these names back at module level so the
 ``route_generator.X`` patch points and re-exports keep working). The shared
-helpers that stay in ``route_generator`` (``_normalize_role``,
-``_set_handler_annotations``, ``_extract_result_id`` — each also used by
-the handler factories / list path remaining there) are imported lazily
-inside function bodies, enumerated per function.
+helpers it needs (``_normalize_role``, ``_set_handler_annotations``,
+``_extract_result_id``) come from the ``route_support`` leaf at top level —
+extracted there in the 2026-06-20 smells round to break the import cycle that
+previously forced lazy in-function imports.
 
 ``_scoped_pre_read`` is imported at module level from its real home,
 ``scope_filters`` — the cedar handler resolves it through *this* module's
@@ -34,6 +34,15 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, Request
 
 from dazzle.back.runtime.auth import AuthContext, effective_roles_of
+
+# Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
+# 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
+# route_support is a leaf, so these are now plain top-level imports.
+from dazzle.back.runtime.route_support import (
+    _extract_result_id,
+    _normalize_role,
+    _set_handler_annotations,
+)
 from dazzle.back.runtime.scope_filters import _scoped_pre_read
 from dazzle.render.access_messages import _forbidden_detail
 
@@ -68,10 +77,6 @@ def _build_access_context(
     that haven't been updated pass None and the bypass simply doesn't
     apply (identical to pre-cycle-4 behaviour).
     """
-    # Lazy: _normalize_role stays in route_generator (shared with its list
-    # path and the scope_filters / workspace lazy importers); a module-level
-    # import here would be circular.
-    from dazzle.back.runtime.route_generator import _normalize_role
     from dazzle.core.access import AccessRuntimeContext
 
     user = auth_context.user if auth_context.is_authenticated else None
@@ -274,10 +279,6 @@ def _build_cedar_handler(
     # Lazy: these stay in route_generator (shared with its read/custom
     # handler factories and create core); a module-level import here would
     # be circular. Build-time import — the inner closures capture them.
-    from dazzle.back.runtime.route_generator import (
-        _extract_result_id,
-        _set_handler_annotations,
-    )
     from dazzle.core.access import AccessOperationKind
 
     _op_kind = getattr(AccessOperationKind, operation.upper())
@@ -457,10 +458,6 @@ def _build_auth_handler(
     """Build an authenticated handler (with or without id param)."""
     # Lazy: shared helpers staying in route_generator — see the matching
     # note in _build_cedar_handler.
-    from dazzle.back.runtime.route_generator import (
-        _extract_result_id,
-        _set_handler_annotations,
-    )
 
     async def _auth_impl(
         id: UUID | None,
@@ -536,9 +533,6 @@ def _build_noauth_handler(
     is_create: bool,
 ) -> Callable[..., Any]:
     """Build an unauthenticated handler (with or without id param)."""
-    # Lazy: _set_handler_annotations stays in route_generator (shared with
-    # its read/custom handler factories); module-level would be circular.
-    from dazzle.back.runtime.route_generator import _set_handler_annotations
 
     if is_create:
 

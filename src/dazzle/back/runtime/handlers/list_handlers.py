@@ -15,9 +15,10 @@ HTML that originated in ``route_generator.py``.
 A leaf module by design: it must not import ``route_generator`` at module
 level (``route_generator`` imports these names back at module level so the
 ``route_generator.<name>`` call sites, importers, and patch points keep
-resolving there). The shared request/access utils that stay in
-``route_generator`` (``_is_htmx_request`` / ``_wants_html`` /
-``_normalize_role``) are imported lazily inside ``_list_handler_body``.
+resolving there). The shared request/access utils it needs (``RouteSpec`` /
+``_is_htmx_request`` / ``_wants_html`` / ``_normalize_role``) come from the
+``route_support`` leaf at top level — extracted there in the 2026-06-20 smells
+round to break the import cycle that previously forced lazy in-function imports.
 
 Deliberately NOT named ``*_routes.py`` — the runtime-urls api-surface walker
 globs that pattern and this module defines no routes.
@@ -38,12 +39,21 @@ from dazzle.back.runtime.htmx_render import (
     _render_table_row,
     _render_table_sentinel,
 )
+
+# Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
+# 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
+# route_support is a leaf, so these are now plain top-level imports.
+from dazzle.back.runtime.route_support import (
+    RouteSpec,
+    _is_htmx_request,
+    _normalize_role,
+    _wants_html,
+)
 from dazzle.back.runtime.scope_filters import _resolve_scope_filters
 from dazzle.render.access_messages import _forbidden_detail
 
 if TYPE_CHECKING:
     from dazzle.back.runtime.audit_log import AuditLogger
-    from dazzle.back.runtime.route_generator import RouteSpec
     from dazzle.back.specs.auth import EntityAccessSpec
     from dazzle.core.ir.fk_graph import FKGraph
 
@@ -282,15 +292,6 @@ async def _list_handler_body(
     from dazzle.back.runtime.condition_evaluator import (
         build_visibility_filter,
         filter_records_by_condition,
-    )
-
-    # Request/role utils stay in route_generator (shared across handler
-    # families + external importers); lazy import keeps this module
-    # acyclic — route_generator imports this module at module level.
-    from dazzle.back.runtime.route_generator import (
-        _is_htmx_request,
-        _normalize_role,
-        _wants_html,
     )
 
     # Gate: Cedar LIST permission check (entity-level, before row filters).

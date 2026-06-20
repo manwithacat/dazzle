@@ -527,7 +527,7 @@ class TestNormalizeRole:
         ],
     )
     def test_normalize_role(self, role: str, expected: str) -> None:
-        from dazzle.back.runtime.route_generator import _normalize_role
+        from dazzle.back.runtime.route_support import _normalize_role
 
         assert _normalize_role(role) == expected
 

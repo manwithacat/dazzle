@@ -36,7 +36,7 @@ def _apply_workspace_scope_filters(
         return filters, False
 
     from dazzle.back.runtime.auth.models import effective_roles_of
-    from dazzle.back.runtime.route_generator import _normalize_role
+    from dazzle.back.runtime.route_support import _normalize_role
     from dazzle.back.runtime.scope_filters import _resolve_scope_filters
 
     # Collect normalized user roles. auth Plan 1b: source from effective_roles
