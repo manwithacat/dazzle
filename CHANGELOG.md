@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.39] - 2026-06-20
+
+### Changed
+- **Decomposed the `server.py::_setup_routes` god-method (cc 115 → 67)** (smells backlog B4 — the decay harness's #1 refactor target). The 612-line route-mounting method was a sequence of independent `if config: create_X_routes(...)` feature blocks. Extracted the **13 feature-mount blocks** — audit-query, atomic-flow, grant, audit-history, locale, file, search, FTS, signing, bulk, parent-graph, test, dev-control-plane — into named `_mount_*` helpers (byte-exact bodies, the few shared locals threaded as params, each self-guarded). `_setup_routes` is now a readable orchestrator: prep → build the route generator → mount CRUD + the policy registry → a flat sequence of `self._mount_*()` calls. No behaviour change (the route-specific tests for every extracted family pass; `dazzle serve` boots; full non-e2e suite green). The complexity-ratchet baseline is re-tightened to the new cc-67 ceiling. (The remaining cc is the coupled prep + RouteGenerator construction; a further prep-extraction is an optional follow-up.)
+
+  ### Agent Guidance
+  - **Mounting a new feature router?** Add a `_mount_<feature>_routes(self, …)` helper next to the others in `DazzleBackendApp` and a `self._mount_<feature>_routes(…)` call in `_setup_routes`' mount sequence — don't grow the orchestrator inline. Each helper self-guards (`if not <config>: return`) and asserts `self._app is not None`.
+
+
 ## [0.83.38] - 2026-06-20
 
 ### Changed

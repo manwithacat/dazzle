@@ -1887,6 +1887,22 @@ class DazzleBackendApp:
         # is declared so existing projects see zero behaviour change.
         self._wire_storage_routes()
 
+        self._mount_audit_query_routes(audit_logger, auth_dep)
+        self._mount_atomic_flow_routes(auth_dep, cedar_access_specs, _fk_graph, audit_logger)
+        self._mount_grant_routes(auth_dep)
+        self._mount_audit_history_routes(auth_dep)
+        self._mount_locale_routes()
+        self._mount_file_routes()
+        self._mount_search_routes()
+        self._mount_fts_routes(auth_dep)
+        self._mount_signing_routes()
+        self._mount_bulk_routes(cedar_access_specs, _fk_graph, optional_auth_dep, _admin_personas)
+        self._mount_parent_graph_routes(node_graph_specs)
+        self._mount_test_routes()
+        self._mount_dev_routes()
+
+    def _mount_audit_query_routes(self, audit_logger: Any, auth_dep: Any) -> None:
+        assert self._app is not None
         # Audit query routes
         if audit_logger:
             from dazzle.http.runtime.audit_routes import create_audit_routes
@@ -1897,6 +1913,10 @@ class DazzleBackendApp:
             )
             self._app.include_router(audit_router)
 
+    def _mount_atomic_flow_routes(
+        self, auth_dep: Any, cedar_access_specs: Any, _fk_graph: Any, audit_logger: Any
+    ) -> None:
+        assert self._app is not None
         # #1228 Phase 3c.iii — atomic-flow routes (POST /api/atomic/<name>)
         if self._appspec and self._appspec.atomic_flows and self._db_manager:
             from dazzle.http.runtime.atomic_flow_routes import (
@@ -1946,6 +1966,8 @@ class DazzleBackendApp:
                 if _setter is not None:
                     _setter(_atomic_flow_registry, cedar_access_specs, _fk_graph)
 
+    def _mount_grant_routes(self, auth_dep: Any) -> None:
+        assert self._app is not None
         # Grant management routes (#629)
         if self._appspec and self._appspec.grant_schemas and self._db_manager:
             from dazzle.http.runtime.grant_routes import create_grant_routes
@@ -1957,6 +1979,8 @@ class DazzleBackendApp:
             )
             self._app.include_router(grant_router)
 
+    def _mount_audit_history_routes(self, auth_dep: Any) -> None:
+        assert self._app is not None
         # #956 cycle 11 — audit-history HTMX fragment route. Only
         # registered when the AppSpec declares at least one
         # `audit on X:` block (cycle-2's linker injects the
@@ -1973,6 +1997,8 @@ class DazzleBackendApp:
             )
             self._app.include_router(audit_history_router)
 
+    def _mount_locale_routes(self) -> None:
+        assert self._app is not None
         # #955 cycle 6 — locale switcher endpoint (`POST /_dazzle/i18n/locale`).
         # Always mounted; the macro template only renders when supported_locales
         # is non-empty. Cookie name + supported set come from manifest I18nConfig.
@@ -2001,6 +2027,8 @@ class DazzleBackendApp:
         except Exception:
             logger.warning("Locale router mount failed", exc_info=True)
 
+    def _mount_file_routes(self) -> None:
+        assert self._app is not None
         # File uploads
         if self._enable_files:
             from dazzle.http.runtime.file_storage import (
@@ -2060,6 +2088,8 @@ class DazzleBackendApp:
                 url_prefix="/files",
             )
 
+    def _mount_search_routes(self) -> None:
+        assert self._app is not None
         # Cross-entity search endpoint (#782) — registered only when any
         # entity has declared search fields (surface search_fields: or
         # entity `searchable` modifiers).
@@ -2073,6 +2103,8 @@ class DazzleBackendApp:
             if search_router is not None:
                 self._app.include_router(search_router)
 
+    def _mount_fts_routes(self, auth_dep: Any) -> None:
+        assert self._app is not None
         # #954 cycle 3 — tsvector-backed search endpoint(s). Registered
         # only when the AppSpec declares `search on <Entity>:` blocks.
         # The endpoint queries the cycle-2 search_vector column with
@@ -2093,6 +2125,8 @@ class DazzleBackendApp:
             except Exception:
                 logger.warning("FTS routes mount failed", exc_info=True)
 
+    def _mount_signing_routes(self) -> None:
+        assert self._app is not None
         # Native document signing endpoints (#1283 phase 3d) — mounted
         # when any entity has `signable: true`. The factory short-
         # circuits to None when no signable entity exists, so apps that
@@ -2121,6 +2155,10 @@ class DazzleBackendApp:
                 # here means the package is broken, not opted out.
                 logger.exception("Failed to import dazzle.signing.routes")
 
+    def _mount_bulk_routes(
+        self, cedar_access_specs: Any, _fk_graph: Any, optional_auth_dep: Any, _admin_personas: Any
+    ) -> None:
+        assert self._app is not None
         # Bulk-action endpoints (#785) — registered when any list-mode
         # surface declares `ux: bulk_actions:`.
         if self._repositories and self._appspec.surfaces:
@@ -2144,6 +2182,8 @@ class DazzleBackendApp:
             if bulk_router is not None:
                 self._app.include_router(bulk_router)
 
+    def _mount_parent_graph_routes(self, node_graph_specs: Any) -> None:
+        assert self._app is not None
         # Parent-scoped graph endpoints (#781) — registered when any
         # graph_node: block declares `parent: <ref_field>`.
         if node_graph_specs and self._repositories:
@@ -2157,6 +2197,8 @@ class DazzleBackendApp:
             if parent_graph_router is not None:
                 self._app.include_router(parent_graph_router)
 
+    def _mount_test_routes(self) -> None:
+        assert self._app is not None
         # Test routes
         if self._enable_test_mode and self._db_manager:
             from dazzle.http.runtime.test_routes import create_test_routes
@@ -2172,6 +2214,8 @@ class DazzleBackendApp:
             )
             self._app.include_router(test_router)
 
+    def _mount_dev_routes(self) -> None:
+        assert self._app is not None
         # Dev control plane
         if self._enable_dev_mode or self._enable_test_mode:
             from dazzle.http.runtime.control_plane import create_control_plane_routes
