@@ -64,7 +64,7 @@ def metadata_store() -> Any:
         db = PostgresBackend(database_url)
         with db.connection() as conn:
             conn.execute("DELETE FROM dazzle_files")
-    except Exception:
+    except Exception:  # best-effort test cleanup — table may not exist on a fresh DB
         pass
     return store
 
@@ -82,7 +82,7 @@ def file_service(temp_storage_path: Any) -> Any:
         db = PostgresBackend(database_url)
         with db.connection() as conn:
             conn.execute("DELETE FROM dazzle_files")
-    except Exception:
+    except Exception:  # best-effort test cleanup — table may not exist on a fresh DB
         pass
     return create_local_file_service(
         base_path=temp_storage_path,

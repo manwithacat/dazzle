@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.41] - 2026-06-20
+
+### Changed
+- **Made the broad exception swallows read as intentional** (smells backlog B3 — code aesthetics / reviewer bona-fides). The 7 broad `except Exception: pass`/`continue` swallows — all in fuzz-harness probing (`testing/fuzz_runtime`) and test-DB cleanup (`http/tests`) — now carry an inline intent comment (`# fuzz probe: a nav failure/timeout is expected — keep probing`, `# best-effort test cleanup — table may not exist on a fresh DB`). A reviewer no longer has to guess whether a bare `except Exception: pass` is deliberate or a swallowed bug. The 37 `except ImportError: pass` optional-dependency gates are left as-is — they're self-documenting (the `import X` in the `try` names the optional dependency, so the swallow's intent is already visible). No behaviour change. (The swallow ratchet from v0.83.30 continues to block *new* broad swallows.)
+
+
 ## [0.83.40] - 2026-06-20
 
 ### Changed

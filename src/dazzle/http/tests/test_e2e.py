@@ -194,7 +194,7 @@ class TestE2EEndpoints:
             db = PostgresBackend(database_url)
             with db.connection() as conn:
                 conn.execute('DELETE FROM "Task"')
-        except Exception:
+        except Exception:  # best-effort test cleanup — table may not exist on a fresh DB
             pass
         app = create_app(task_spec, database_url=database_url)
         return _TestClient(app)

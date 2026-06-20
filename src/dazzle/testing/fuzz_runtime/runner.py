@@ -393,7 +393,9 @@ def fuzz_chaos_monkey(
         path = rng.choice(paths)
         try:
             response = page.goto(f"{base}{path}", wait_until="domcontentloaded", timeout=8000)
-        except Exception:
+        except (
+            Exception
+        ):  # fuzz probe: a nav failure/timeout is expected — keep probing other paths
             continue
         if not response or response.status >= 400:
             continue
@@ -468,7 +470,9 @@ def fuzz_htmx_interactions(page: Any, base: str, paths: list[str]) -> list[FuzzC
     for path in paths:
         try:
             page.goto(f"{base}{path}", wait_until="domcontentloaded", timeout=8000)
-        except Exception:
+        except (
+            Exception
+        ):  # fuzz probe: a nav failure/timeout is expected — keep probing other paths
             continue
         # Find buttons / links with htmx attrs that don't navigate away.
         triggers = page.locator("[hx-get], [hx-post], [hx-put], [hx-delete], [hx-patch]")
@@ -648,7 +652,7 @@ def run_app_fuzz(project_root: Path) -> FuzzReport:
             for path in create_paths:
                 try:
                     page.goto(f"{base}{path}", wait_until="domcontentloaded", timeout=5000)
-                except Exception:
+                except Exception:  # fuzz probe: a failure here is expected — keep sweeping
                     continue
                 if page.locator('[data-dz-widget="richtext"]').count() > 0:
                     report.checks.extend(fuzz_richtext(page, host_index=0))
