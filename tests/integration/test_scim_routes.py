@@ -152,6 +152,13 @@ class _Store:
         self.revoked.append(membership_id)
         return 1
 
+    # admission gate (domain verification)
+    def get_org_settings(self, tenant_id):
+        return {}
+
+    def get_connections_for_tenant(self, tenant_id):
+        return []
+
     # SCIM groups (#1342) — in-memory
     def _ensure_group_state(self):
         if not hasattr(self, "_groups"):
