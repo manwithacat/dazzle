@@ -931,6 +931,11 @@ def assemble_post_build_routes(
             app_prefix="/app",
             convert_entity_fn=convert_entity,
             claimed_paths=claimed_paths,
+            # #1422: thread the runtime service map + auto-includes so page
+            # handlers read entity data in-process (no REST self-fetch). fk_graph
+            # + admin_personas are derived from the appspec inside create_page_routes.
+            entity_services=builder.services,
+            entity_auto_includes=builder.entity_auto_includes,
         )
         app.include_router(page_router, prefix="/app")
         logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))

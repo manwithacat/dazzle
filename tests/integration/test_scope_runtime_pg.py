@@ -614,3 +614,29 @@ async def test_invariant_unbalanced_rolls_back(app: _ScopeRuntimeApp) -> None:
     assert _posting_count(app._db_url, app.txn_id) == before, (
         "a violated invariant must roll back the appended posting"
     )
+
+
+# ---------------------------------------------------------------------------
+# #1422 — single-id READ scope enforcement through the relocated `gated_read`
+# core. The REST detail route now delegates to `access.gated.gated_read`, and
+# the page layer (detail/edit handlers) calls the SAME core in-process instead
+# of self-fetching this endpoint. This locks the read-path `scope: read:`
+# enforcement the relocation must preserve.
+# ---------------------------------------------------------------------------
+
+
+async def test_rest_read_respects_read_scope_via_gated_read(app: _ScopeRuntimeApp) -> None:
+    """A teacher may read an enrolment in their own department but gets 404 for a
+    foreign-department one — proving `gated_read` enforces `scope: read:`
+    (teaching_group.department = current_user.department) on the single-id read
+    path. The page layer now calls this same core in-process, so this transitively
+    covers the page-layer read enforcement (page maps the denial → 404)."""
+    client = await app.client_as("teacher_math")
+
+    own = await client.get(f"/enrolments/{app.math_enrolment_id}")
+    assert own.status_code == 200, f"own-department read should succeed: {own.text[:200]}"
+
+    foreign = await client.get(f"/enrolments/{app.science_enrolment_id}")
+    assert foreign.status_code == 404, (
+        f"out-of-scope read must 404 (gated_read denies), got {foreign.status_code}"
+    )

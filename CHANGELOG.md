@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.46] - 2026-06-20
+
+### Changed
+- **Page detail + edit handlers now read entity data IN-PROCESS** (#1422 option b, plan phase 2). The `/app/<slug>/{id}` detail page and `<id>/edit` form previously loaded their row via a server-side HTTP **self-fetch to the app's own REST endpoint** (the #1421 loopback/Host-forward class). They now call the relocated `gated_read` core directly via a shared `_read_entity_in_process` helper — same scope + permit enforcement (it IS the REST detail route's enforcement, relocated in v0.83.45), serialized with `jsonable_encoder` to match the REST `response_model=None` JSON shape the downstream FK-display / `when_expr` code consumes. Cedar entities go through `gated_read`; entities with no cedar spec do a plain read (matching the REST `_core` path). The scope/permit inputs (service map, fk_graph, admin_personas, auto_includes, cedar specs) are threaded onto `_PageRouterConfig` at `create_page_routes` time — **boot-path-independent** (fk_graph + admin_personas derived from the appspec; the runtime service map threaded from the builder), so it works regardless of which app-construction path serves. Read-scope enforcement on the single-id path is regression-locked by `test_scope_runtime_pg.py::test_rest_read_respects_read_scope_via_gated_read` (own-department read 200, foreign-department 404). No behavior change to rendered output. Next: the list/table + related-tabs path (`gated_list`), then the experience-POST mutation path, then deleting the self-fetch machinery + `DAZZLE_BACKEND_URL`.
+
+  ### Agent Guidance
+  - **Page handler needs a row?** Call `_read_entity_in_process(prc, entity_name, path_id)` (page_routes.py) — never self-fetch the REST API. It returns the REST-shaped JSON dict or `{"error": "not_found"}`. The per-entity scope/permit inputs live on `prc.deps` (`entity_services`/`entity_cedar_specs`/`entity_fk_graph`/`entity_admin_personas`/`entity_auto_includes`), wired at `create_page_routes` time from the builder + the appspec.
+
+
 ## [0.83.45] - 2026-06-20
 
 ### Added

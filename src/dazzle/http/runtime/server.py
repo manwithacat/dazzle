@@ -1813,17 +1813,6 @@ class DazzleBackendApp:
             admin_personas=_admin_personas,
         )
 
-        # #1422: expose the per-entity service map + scope/permit inputs on
-        # app.state so the page layer can read entity data IN-PROCESS via
-        # `access.gated.gated_read`/`gated_list` instead of self-fetching its
-        # own REST endpoint over loopback HTTP. These are the same objects the
-        # REST route handlers receive (RouteGenerator above), so the in-process
-        # path enforces scope + permit identically.
-        self._app.state.entity_services = self._services
-        self._app.state.entity_fk_graph = _fk_graph
-        self._app.state.entity_admin_personas = _admin_personas
-        self._app.state.entity_auto_includes = self._entity_auto_includes
-
         # Cycle 249 (EX-049): populate persona_backed_entities from appspec
         # so the create handler can auto-inject refs to backing entities.
         if self._appspec and self._appspec.personas:
@@ -2295,6 +2284,12 @@ class DazzleBackendApp:
     def services(self) -> dict[str, Any]:
         """Get service instances."""
         return self._services
+
+    @property
+    def entity_auto_includes(self) -> dict[str, list[str]]:
+        """Per-entity ``auto_include`` relations (#1422 — threaded into the page
+        layer so in-process reads hydrate the same relations the REST read does)."""
+        return self._entity_auto_includes
 
     def get_service(self, name: str) -> Any | None:
         """Get a service by name."""

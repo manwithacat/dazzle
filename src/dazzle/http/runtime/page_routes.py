@@ -617,6 +617,15 @@ class _PageRouterConfig:
     page_contexts: dict[str, Any] = field(default_factory=dict)
     access_configs: dict[str, Any] = field(default_factory=dict)
     entity_cedar_specs: dict[str, Any] = field(default_factory=dict)
+    # #1422: the per-entity scope/permit inputs the page layer needs to read
+    # entity data IN-PROCESS via `access.gated` instead of self-fetching its own
+    # REST endpoint. `entity_services` are the runtime CRUDService instances
+    # (threaded from the builder); `entity_fk_graph`/`entity_admin_personas` are
+    # derived from the appspec (same values the REST RouteGenerator receives).
+    entity_services: dict[str, Any] = field(default_factory=dict)
+    entity_auto_includes: dict[str, Any] = field(default_factory=dict)
+    entity_fk_graph: Any = None
+    entity_admin_personas: list[str] = field(default_factory=list)
     surface_entity: dict[str, str] = field(default_factory=dict)
     surface_mode: dict[str, str] = field(default_factory=dict)
     surface_workspace: dict[str, str] = field(default_factory=dict)
@@ -1272,18 +1281,64 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
     return None
 
 
+async def _read_entity_in_process(
+    prc: _PageRequestContext, entity_name: str, path_id: Any
+) -> dict[str, Any]:
+    """Read one entity row IN-PROCESS with scope + permit applied (#1422).
+
+    Replaces the page layer's HTTP self-fetch of its own REST detail endpoint.
+    Returns the record as the same JSON-shaped dict the REST route produced
+    (``jsonable_encoder`` over a ``response_model=None`` handler return), or
+    ``{"error": "not_found"}`` when the row is missing / scope- / permit-denied
+    — so callers' existing ``"error" in item`` → 404 handling is preserved.
+
+    All scope/permit inputs come from the page router config (``prc.deps``), wired
+    at ``create_page_routes`` time (boot-path-independent). Cedar entities go
+    through ``gated_read``; entities with no cedar spec do a plain read, matching
+    the REST ``_core`` path (no permit eval).
+    """
+    from fastapi.encoders import jsonable_encoder
+
+    from dazzle.http.runtime.access.gated import (
+        RecordNotFound,
+        access_context_from,
+        gated_read,
+    )
+
+    service = prc.deps.entity_services.get(entity_name)
+    if service is None:
+        return {"error": "not_found"}
+    cedar = prc.deps.entity_cedar_specs.get(entity_name)
+    auto_include = prc.deps.entity_auto_includes.get(entity_name)
+    try:
+        if cedar is not None:
+            access = access_context_from(
+                auth_context=prc.auth_ctx,
+                entity_name=entity_name,
+                cedar_access_spec=cedar,
+                fk_graph=prc.deps.entity_fk_graph,
+                admin_personas=prc.deps.entity_admin_personas,
+            )
+            item = await gated_read(service, access, path_id, include=auto_include)
+        else:
+            item = await service.execute(operation="read", id=path_id, include=auto_include)
+    except RecordNotFound:
+        return {"error": "not_found"}
+    if item is None:
+        return {"error": "not_found"}
+    encoded = jsonable_encoder(item)
+    return encoded if isinstance(encoded, dict) else {"error": "not_found"}
+
+
 async def _handle_detail(prc: _PageRequestContext) -> None:
     """Fetch and prepare detail page data for the per-request context."""
     req_detail = prc.ctx.detail.model_copy(deep=True)
 
-    # Fetch item data using the API endpoint template
-    req_detail.item = await _fetch_json(
-        prc.effective_backend_url,
-        prc.ctx.detail.api_endpoint or prc.ctx.detail.delete_url,
-        prc.path_id,
-        prc.cookies,
-        prc.host,
-    )
+    # Fetch item data IN-PROCESS (#1422) — no self-fetch. Same scope+permit the
+    # REST detail route applies (`gated_read` IS that enforcement, relocated),
+    # serialized via `jsonable_encoder` to match the REST `response_model=None`
+    # JSON shape the downstream FK-display / when_expr code expects.
+    req_detail.item = await _read_entity_in_process(prc, prc.ctx.detail.entity_name, prc.path_id)
     # Resolve FK dicts -> display strings so detail fields show names not UUIDs (#663)
     if req_detail.item and "error" not in req_detail.item:
         req_detail.item = _inject_display_names(req_detail.item)
@@ -1403,10 +1458,9 @@ async def _handle_edit_form(prc: _PageRequestContext) -> None:
     """Fetch and prepare edit form data for the per-request context."""
     req_form = prc.ctx.form.model_copy(deep=True)
 
-    # Fetch existing data using the *original* URL template
-    form_data = await _fetch_json(
-        prc.effective_backend_url, prc.ctx.form.action_url, prc.path_id, prc.cookies, prc.host
-    )
+    # Fetch existing data IN-PROCESS (#1422) — no self-fetch; same scope+permit
+    # as the REST detail route, via the shared in-process reader.
+    form_data = await _read_entity_in_process(prc, prc.ctx.form.entity_name, prc.path_id)
     if "error" not in form_data:
         req_form.initial_values = form_data
     else:
@@ -2597,6 +2651,8 @@ def create_page_routes(
     *,
     convert_entity_fn: Callable[..., Any] | None = None,
     claimed_paths: set[tuple[str, str]] | None = None,
+    entity_services: dict[str, Any] | None = None,
+    entity_auto_includes: dict[str, Any] | None = None,
 ) -> APIRouter:
     """
     Create FastAPI page routes from an AppSpec.
@@ -2694,6 +2750,16 @@ def create_page_routes(
     }
     anon_nav = _reconcile_nav_model(appspec, app_prefix, build_anon_nav(appspec, _nav_matrix))
 
+    # #1422: scope/permit inputs for in-process reads. fk_graph + admin_personas
+    # are pure functions of the appspec (the same values server.py's RouteGenerator
+    # derives — fk_graph=getattr(appspec,"fk_graph",None), admin_personas from
+    # tenancy); the runtime service map is threaded in from the builder.
+    _entity_fk_graph = getattr(appspec, "fk_graph", None)
+    _tenancy = getattr(appspec, "tenancy", None)
+    _entity_admin_personas = (
+        list(_tenancy.admin_personas) if _tenancy is not None and _tenancy.admin_personas else []
+    )
+
     deps = _PageRouterConfig(
         appspec=appspec,
         backend_url=backend_url,
@@ -2703,6 +2769,10 @@ def create_page_routes(
         page_contexts=page_contexts,
         access_configs=access_configs,
         entity_cedar_specs=entity_cedar_specs,
+        entity_services=entity_services or {},
+        entity_auto_includes=entity_auto_includes or {},
+        entity_fk_graph=_entity_fk_graph,
+        entity_admin_personas=_entity_admin_personas,
         surface_entity=surface_entity,
         surface_mode=surface_mode,
         surface_workspace=surface_workspace,
