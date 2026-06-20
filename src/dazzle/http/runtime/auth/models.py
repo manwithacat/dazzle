@@ -108,6 +108,25 @@ class OrganizationRecord(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class JoinRequestRecord(BaseModel):
+    """A pending/decided self-service join request (verified-domain join, #1424).
+
+    Created when a verified-email identity hits a tenant whose domain_join_policy
+    is ``admin_approval``. Approval creates the membership; denial is terminal.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    tenant_id: str
+    identity_id: str
+    email: str
+    status: str = "pending"  # pending | approved | denied
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    decided_at: datetime | None = None
+    decided_by: str | None = None
+
+
 class ScimGroupRecord(BaseModel):
     """A SCIM 2.0 Group, connection-scoped (#1342).
 

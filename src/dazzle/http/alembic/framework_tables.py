@@ -32,6 +32,7 @@ FRAMEWORK_TABLES: frozenset[str] = frozenset(
         "event_log",
         "health_checks",
         "invitations",
+        "join_requests",
         "magic_links",
         "membership_events",
         "memberships",

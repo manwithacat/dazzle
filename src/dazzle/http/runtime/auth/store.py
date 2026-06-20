@@ -35,6 +35,7 @@ from dazzle.core.db_url import normalise_postgres_scheme
 from .crypto import hash_password, verify_password
 from .models import (
     AuthContext,
+    JoinRequestRecord,
     MembershipRecord,
     OrganizationRecord,
     SessionRecord,
@@ -1205,6 +1206,107 @@ class SessionStoreMixin:
             "UPDATE organizations SET settings = %s, updated_at = %s WHERE id = %s",
             (json.dumps(settings), datetime.now(UTC).isoformat(), tenant_id),
         )
+
+    # -- Join requests (verified-domain self-service join, #1424) ---------------
+
+    def _row_to_join_request(self, row: dict[str, Any]) -> JoinRequestRecord:
+        return JoinRequestRecord(
+            id=row["id"],
+            tenant_id=row["tenant_id"],
+            identity_id=row["identity_id"],
+            email=row["email"],
+            status=row["status"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            decided_at=datetime.fromisoformat(row["decided_at"]) if row.get("decided_at") else None,
+            decided_by=row.get("decided_by"),
+        )
+
+    def create_join_request(
+        self,
+        *,
+        tenant_id: str,
+        identity_id: str,
+        email: str,
+    ) -> JoinRequestRecord:
+        """Create a pending join request for (tenant_id, identity_id).
+
+        Idempotent: if a pending row already exists for this (tenant, identity)
+        pair the existing record is returned unchanged (mirrors the
+        ``create_membership`` UniqueViolation re-read pattern).
+        """
+        jr = JoinRequestRecord(
+            id=secrets.token_urlsafe(24),
+            tenant_id=tenant_id,
+            identity_id=identity_id,
+            email=email,
+        )
+        try:
+            self._execute_modify(
+                """
+                INSERT INTO join_requests
+                    (id, tenant_id, identity_id, email, status, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    jr.id,
+                    jr.tenant_id,
+                    jr.identity_id,
+                    jr.email,
+                    jr.status,
+                    jr.created_at.isoformat(),
+                ),
+            )
+        except psycopg.errors.UniqueViolation:
+            # Concurrent create: another request inserted the pending row first.
+            # Re-read the winner; any other DB error must propagate.
+            existing = self._execute_one(
+                "SELECT * FROM join_requests "
+                "WHERE tenant_id = %s AND identity_id = %s AND status = 'pending'",
+                (tenant_id, identity_id),
+            )
+            if existing is None:
+                raise LookupError(
+                    "join_request create hit a unique-violation but no pending row "
+                    f"found for identity={identity_id!r} tenant={tenant_id!r}"
+                ) from None
+            return self._row_to_join_request(existing)
+        return jr
+
+    def get_pending_join_requests(self, tenant_id: str) -> list[JoinRequestRecord]:
+        """Return all pending join requests for a tenant, oldest first."""
+        rows = self._execute(
+            "SELECT * FROM join_requests WHERE tenant_id = %s AND status = 'pending' "
+            "ORDER BY created_at",
+            (tenant_id,),
+        )
+        return [self._row_to_join_request(r) for r in rows]
+
+    def get_join_request(self, request_id: str) -> JoinRequestRecord | None:
+        """Fetch a join request by id, or None if not found."""
+        row = self._execute_one("SELECT * FROM join_requests WHERE id = %s", (request_id,))
+        return self._row_to_join_request(row) if row else None
+
+    def decide_join_request(
+        self,
+        request_id: str,
+        *,
+        status: str,
+        decided_by: str,
+    ) -> JoinRequestRecord:
+        """Set the decision on a join request (``approved`` or ``denied``).
+
+        Raises ``LookupError`` if no such request exists.
+        """
+        now = datetime.now(UTC).isoformat()
+        rowcount = self._execute_modify(
+            "UPDATE join_requests SET status = %s, decided_at = %s, decided_by = %s WHERE id = %s",
+            (status, now, decided_by, request_id),
+        )
+        if rowcount == 0:
+            raise LookupError(f"no join_request with id {request_id!r}")
+        row = self._execute_one("SELECT * FROM join_requests WHERE id = %s", (request_id,))
+        assert row is not None  # just updated
+        return self._row_to_join_request(row)
 
     # -- Enterprise connections (auth Plan 4a — per-org OIDC/SAML/SCIM) -------
 
@@ -2641,6 +2743,28 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             """)
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)"
+            )
+            # Verified-domain self-service join requests (#1424). Mirrors alembic
+            # 0018_join_requests. One pending request per (tenant_id, identity_id)
+            # enforced via a partial unique index on status='pending'.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS join_requests (
+                    id          TEXT PRIMARY KEY,
+                    tenant_id   TEXT NOT NULL,
+                    identity_id TEXT NOT NULL,
+                    email       TEXT NOT NULL,
+                    status      TEXT NOT NULL DEFAULT 'pending',
+                    created_at  TEXT NOT NULL,
+                    decided_at  TEXT,
+                    decided_by  TEXT
+                )
+            """)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS ix_join_requests_tenant ON join_requests(tenant_id)"
+            )
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_join_requests_pending "
+                "ON join_requests(tenant_id, identity_id) WHERE status = 'pending'"
             )
             conn.commit()
         finally:
