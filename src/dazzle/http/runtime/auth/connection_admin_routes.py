@@ -86,7 +86,11 @@ def _fetch_saml_metadata(metadata_url: str) -> dict[str, str] | None:
     try:
         return parse_idp_metadata_xml(fetch_idp_metadata(metadata_url))
     except SamlMetadataError as exc:
-        raise CreateFormError(f"IdP metadata import failed ({exc.reason}): {exc}") from exc
+        # Surface only the structured, curated `.reason` to the client — not the raw
+        # `str(exc)`, which can carry internal fetch/parse detail (CodeQL
+        # py/stack-trace-exposure). The full exception is preserved via `from exc`
+        # for server-side logging.
+        raise CreateFormError(f"IdP metadata import failed: {exc.reason}") from exc
 
 
 def create_connection_admin_routes() -> APIRouter:

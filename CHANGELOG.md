@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.42] - 2026-06-20
+
+### Security
+- **Hardened the SAML IdP-metadata-import error message** (CodeQL `py/stack-trace-exposure`, `connection_admin_routes.py`). The metadata-import failure path interpolated the *raw* caught exception (`f"… ({exc.reason}): {exc}"`) into the client-facing `CreateFormError`, which could echo internal fetch/parse detail to the user. It now surfaces only the **stable, curated `.reason` code** (`scheme`/`host`/`dns`/`parse`/…); the full exception is still preserved via `from exc` for server-side logging. (Part of triaging the 38 CodeQL alerts re-surfaced by the v0.83.35 back→http path rename — the rename churned CodeQL's path-keyed fingerprints, re-opening pre-existing findings under new paths. The remaining 37 are false-positive / by-design and are being handled by a sanitizer model + documented dismissals.)
+
+
 ## [0.83.41] - 2026-06-20
 
 ### Changed
