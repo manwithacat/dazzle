@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.83.52] - 2026-06-20
+## [0.83.53] - 2026-06-20
+
+### Changed
+- **#1422 follow-on — decomposed `gated_list` (CC 37 → 10).** Extracted four
+  behaviour-preserving helpers from the list access core (`access/gated.py`):
+  `_apply_list_permit_gate` (Cedar LIST permit → `AccessForbidden`),
+  `_resolve_list_scope` (scope merge; returns the `_SCOPE_DEFAULT_DENY` sentinel for
+  the empty-page default-deny), `_parse_temporal_filters` (the post-gate `?as_of=`
+  parse + `InvalidTemporalParam`), and `_apply_list_post_filter` (OR-condition
+  visibility). `gated_list` is now a linear 5-step orchestration. Pure relocation —
+  no behaviour change; verified by the PG scope oracle (`test_scope_runtime_pg.py`,
+  20/20) plus a new helper-seam unit test (`test_gated_list_helpers.py`). Retires the
+  CC-37 high-water mark baselined in v0.83.51.
 
 ### Removed
 - **#1422 — the page→REST loopback self-fetch is gone entirely (clean break, ADR-0003).**
