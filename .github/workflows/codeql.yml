@@ -1,0 +1,46 @@
+name: "CodeQL"
+
+# Advanced CodeQL setup (replaces the former default setup, ADR/CHANGELOG note in
+# v0.83.43). Advanced setup is required so the repo-local sanitizer model pack
+# (.github/codeql/codeql-config.yml → manwithacat/dazzle-python-models) is applied —
+# default setup ignores config files and cannot load model packs.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: "27 3 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read       # pull the published model pack from GHCR
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # Covers the six languages the former default setup scanned:
+        # javascript + typescript + javascript-typescript all map to the
+        # `javascript-typescript` analysis.
+        language: ["actions", "javascript-typescript", "python", "ruby"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c35d1b164463ee62a100735382aaaa525c5d3496  # codeql-bundle-v2.25.6
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@c35d1b164463ee62a100735382aaaa525c5d3496  # codeql-bundle-v2.25.6
+        with:
+          category: "/language:${{ matrix.language }}"

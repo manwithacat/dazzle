@@ -9,6 +9,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.44] - 2026-06-20
+
+### Changed
+- **Hardened the public CodeQL model pack for long-term safety** (`manwithacat/dazzle-python-models`, bumped `0.0.1` → `0.0.2`). Now that the pack is published public on GHCR, three hygiene fixes so it "doesn't bite us in eight months": (a) an explicit **MIT LICENSE** file in the pack + `license: MIT` in `codeql-pack.yml` (mirrors the framework's license); (b) a **README** that scopes the MIT grant to the pack's *own* contents and explicitly states it does **not** extend to the CodeQL engine — which is governed by GitHub's CodeQL Terms & Conditions, not MIT; (c) a documented **version-immutability** policy — published versions are never re-published with different content, so any model change is a new version (`0.0.1` is preserved unchanged so the v0.83.43 tag reproduces against the model it shipped with). `codeql-config.yml` now pins `@0.0.2`.
+
+  ### Agent Guidance
+  - **The model pack is immutable per published version.** Never re-publish an existing version with changed content. To change the model: edit the data extension, bump `version:` in `codeql-pack.yml`, `codeql pack publish`, then pin the new version in `.github/codeql/codeql-config.yml`. The MIT license covers the pack's YAML only — not the CodeQL engine.
+
+
+## [0.83.43] - 2026-06-20
+
+### Changed
+- **Migrated CodeQL code scanning from default setup to advanced setup** (`.github/workflows/codeql.yml` + `.github/codeql/codeql-config.yml`). Default setup ignores configuration files and cannot load CodeQL model packs; advanced setup is required to apply the sanitizer model (below). The new workflow runs a 4-language matrix — `actions`, `javascript-typescript`, `python`, `ruby` — covering the same six languages the former default setup scanned (`javascript`/`typescript` fold into `javascript-typescript`). Actions are SHA-pinned (`github/codeql-action@c35d1b16` = codeql-bundle-v2.25.6) per repo convention; `packages: read` lets the run pull the published model pack. Default setup is disabled in the same change to avoid double-scanning.
+
+### Added
+- **CodeQL sanitizer model pack `manwithacat/dazzle-python-models`** (`.github/codeql/extensions/dazzle-python-models/`, published public to GHCR). A `barrierGuardModel` data extension teaches CodeQL that `dazzle.http.runtime.auth.redirect_safety.is_safe_redirect_path()` is a barrier guard for the `py/url-redirection` (CWE-601) flow. This clears the **12** auth-redirect alerts that are genuinely guarded by the framework's canonical redirect helper — correctly, at the analysis level, rather than by per-alert dismissal — so future routes that use the helper never re-alert. (Context: the v0.83.35 back→http path rename churned CodeQL's path-keyed fingerprints, re-opening 38 pre-existing findings under new `dazzle/http/...` paths. None were new vulnerabilities. Disposition: 1 fixed (v0.83.42), 12 modeled here, 25 dismissed-with-reason as false-positive / by-design.)
+
+  ### Agent Guidance
+  - **CodeQL is now advanced setup.** Tune analysis via `.github/codeql/codeql-config.yml` (not the repo's code-scanning UI). To suppress a *reusable* sanitizer/guard false-positive, prefer adding a `barrierGuardModel`/`barrierModel`/`sinkModel` row to the model pack over dismissing alerts — model the truth once and it holds across renames. MaD addressing gotcha: the `type` column is the **top-level package only** (`dazzle`); navigate submodules with `Member[...]` (the full dotted module string does NOT resolve via `moduleImport`). After editing the pack, bump its `version` in `codeql-pack.yml`, re-`codeql pack publish`, and update the pinned version in `codeql-config.yml`.
+
+
+## [0.83.42] - 2026-06-20
+
+### Security
+- **Hardened the SAML IdP-metadata-import error message** (CodeQL `py/stack-trace-exposure`, `connection_admin_routes.py`). The metadata-import failure path interpolated the *raw* caught exception (`f"… ({exc.reason}): {exc}"`) into the client-facing `CreateFormError`, which could echo internal fetch/parse detail to the user. It now surfaces only the **stable, curated `.reason` code** (`scheme`/`host`/`dns`/`parse`/…); the full exception is still preserved via `from exc` for server-side logging. (Part of triaging the 38 CodeQL alerts re-surfaced by the v0.83.35 back→http path rename — the rename churned CodeQL's path-keyed fingerprints, re-opening pre-existing findings under new paths. The remaining 37 are false-positive / by-design and are being handled by a sanitizer model + documented dismissals.)
+
+
+## [0.83.41] - 2026-06-20
+
+### Changed
+- **Made the broad exception swallows read as intentional** (smells backlog B3 — code aesthetics / reviewer bona-fides). The 7 broad `except Exception: pass`/`continue` swallows — all in fuzz-harness probing (`testing/fuzz_runtime`) and test-DB cleanup (`http/tests`) — now carry an inline intent comment (`# fuzz probe: a nav failure/timeout is expected — keep probing`, `# best-effort test cleanup — table may not exist on a fresh DB`). A reviewer no longer has to guess whether a bare `except Exception: pass` is deliberate or a swallowed bug. The 37 `except ImportError: pass` optional-dependency gates are left as-is — they're self-documenting (the `import X` in the `try` names the optional dependency, so the swallow's intent is already visible). No behaviour change. (The swallow ratchet from v0.83.30 continues to block *new* broad swallows.)
+
+
+## [0.83.40] - 2026-06-20
+
+### Changed
+- **Typed the region-builder render context** (smells backlog B1 — readability/self-documentation). The Fragment substrate (ADR-0023) is typed, but the context the `_build_*` region builders consumed was the last `ctx: dict[str, Any]` hole. Added **`RegionContext`** (`render/fragment/region/_context.py`) — a `total=False` `TypedDict` documenting the ~91 keys the builders read, grouped by display mode (list/table, charts, metrics, cards, timeline, graph…). Retyped all **32 builder signatures** `dict[str, Any]` → `RegionContext`; mypy now flags a typo'd key on access. The dynamic getattr dispatch keeps the construction→builder boundary clean (one `cast` at the single direct `_build_time_series` call). `columns` stays `Any` — it's genuinely polymorphic (a list of column-defs in tables, a grid-width `int` in cards), a good example of why the bag was untyped. Gate: `test_dedup_footgun_gates.py::test_region_builders_use_typed_context` forbids re-introducing `ctx: dict[str, Any]`. Behaviour-neutral (586 region tests pass, mypy clean).
+
+
+## [0.83.39] - 2026-06-20
+
+### Changed
+- **Decomposed the `server.py::_setup_routes` god-method (cc 115 → 67)** (smells backlog B4 — the decay harness's #1 refactor target). The 612-line route-mounting method was a sequence of independent `if config: create_X_routes(...)` feature blocks. Extracted the **13 feature-mount blocks** — audit-query, atomic-flow, grant, audit-history, locale, file, search, FTS, signing, bulk, parent-graph, test, dev-control-plane — into named `_mount_*` helpers (byte-exact bodies, the few shared locals threaded as params, each self-guarded). `_setup_routes` is now a readable orchestrator: prep → build the route generator → mount CRUD + the policy registry → a flat sequence of `self._mount_*()` calls. No behaviour change (the route-specific tests for every extracted family pass; `dazzle serve` boots; full non-e2e suite green). The complexity-ratchet baseline is re-tightened to the new cc-67 ceiling. (The remaining cc is the coupled prep + RouteGenerator construction; a further prep-extraction is an optional follow-up.)
+
+  ### Agent Guidance
+  - **Mounting a new feature router?** Add a `_mount_<feature>_routes(self, …)` helper next to the others in `DazzleBackendApp` and a `self._mount_<feature>_routes(…)` call in `_setup_routes`' mount sequence — don't grow the orchestrator inline. Each helper self-guards (`if not <config>: return`) and asserts `self._app is not None`.
+
+
+## [0.83.38] - 2026-06-20
+
+### Changed
+- **Migrated the layer-boundary gates from a hand-rolled regex test to import-linter contracts; retired `test_import_boundaries.py`** (smells backlog B2). The `back→http`/`ui→page` rename exposed that the hand-rolled gate's regexes silently **rot** across renames: 2 of its 4 rules had gone vacuous (rule 4's `dazzle\.(?:back|ui)` regex scanned for packages that no longer exist; rule 1 scanned for migrated-render modules whose old paths are gone), so they passed without enforcing anything. Graph-based import-linter contracts, by contrast, survived the rename automatically. Migrated the two still-real rules into `[tool.importlinter]` — **`render is pure`** (render ↛ http/page, ADR-0038) and **`http uses the core.ir facade`** (http ↛ `core.ir.{appspec,surfaces,domain}`, #1086) — and **the facade contract immediately caught a real violation the regex had missed** (`http/specs/entity.py` imported the `core.ir.domain` submodule via `import domain`, a form the `from … import` regex didn't match) — fixed to use the `dazzle.core.ir` facade. `lint-imports` now enforces all 5 layer rules (run by `test_import_contracts.py`); the fragile 180-line regex gate is deleted, references repointed.
+
+
+## [0.83.37] - 2026-06-20
+
+### Changed
+- **ADR-0038 doc hygiene** (loose-end sweep). Updated ADR-0038's status from "implementation in progress" to **implemented** (the `region_adapter` relocation + render-purity drift-test are on `main`), and noted that **ADR-0041 renamed the four-layer stack** it describes from `back → ui → render → core` to `http → page → render → core` (names only; the boundary rules are unchanged). Updated the matching ADR INDEX entry.
+
+
+## [0.83.36] - 2026-06-20
+
+### Security
+- **Patched two transitive-dependency CVEs flagged by Dependabot** (lockfile-only). `msgpack` 1.1.2 → **1.2.1** (high — out-of-bounds read / crash on `Unpacker` reuse, vulnerable `<= 1.2.0`; pulled in via `cachecontrol`). `pydantic-settings` 2.14.1 → **2.14.2** (medium — `NestedSecretsSettingsSource` follows symlinks outside the secrets dir, vulnerable `>= 2.12.0, < 2.14.2`; pulled in via `mcp`). Both are transitive (not direct deps); the bump is in `uv.lock` only — no `pyproject.toml` constraint change. Verified `pydantic_settings` 2.14.2 + `mcp` still import.
+
 ## [0.83.35] - 2026-06-20
 
 ### Changed

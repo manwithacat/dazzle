@@ -12,7 +12,7 @@ this module bridges ``ConditionExpr → string`` at the fetcher boundary.
 Lives under :mod:`dazzle.core.ir` rather than ``back/runtime`` because
 multiple layers (back/runtime fetchers, ui/runtime card builders) need
 to call it, and ``ui/`` is forbidden from importing from ``back/`` by
-the layering invariant (``test_import_boundaries.py``).
+the layering invariant (import-linter contracts; ``test_import_contracts.py``).
 """
 
 from __future__ import annotations

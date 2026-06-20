@@ -1,0 +1,11 @@
+name: "Dazzle CodeQL config"
+
+# Repo-local sanitizer model pack, published to GHCR. It teaches CodeQL that
+# `dazzle.http.runtime.auth.redirect_safety.is_safe_redirect_path()` is a barrier
+# guard for the url-redirection (CWE-601) data-flow, so the auth-redirect flows
+# that ARE guarded by the framework's canonical helper don't false-positive.
+# Source of the data extension: .github/codeql/extensions/dazzle-python-models/
+# (re-publish + bump the version here on any model change).
+packs:
+  python:
+    - manwithacat/dazzle-python-models@0.0.2

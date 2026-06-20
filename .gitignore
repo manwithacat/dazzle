@@ -157,3 +157,4 @@ tests/audit/classification.json
 # Local OpenTelemetry trace runs from `dazzle perf trace` (#1153 follow-on).
 .dazzle/perf/
 PLAN.md
+.github/codeql/extensions/**/.codeql/

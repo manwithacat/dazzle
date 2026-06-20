@@ -11,7 +11,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from dazzle.core.ir import domain as ir_domain
+from dazzle.core.ir import Constraint, TemporalSpec
 from dazzle.core.ir.state_machine import InvokeFlowSpec
 
 from .auth import EntityAccessSpec
@@ -664,7 +664,7 @@ class EntitySpec(BaseModel):
     # set to a TemporalSpec when the IR declares `temporal:` on the entity.
     # Imported from IR rather than re-defined — there's no semantic
     # divergence between the two layers for this shape.
-    temporal: ir_domain.TemporalSpec | None = Field(
+    temporal: TemporalSpec | None = Field(
         default=None,
         description="Temporal-entity declaration (start/end/key fields)",
     )
@@ -683,7 +683,7 @@ class EntitySpec(BaseModel):
     # #1357: entity-level `unique a, b` / `index x` constraints. Previously
     # dropped at the converter boundary (the #1302 bug class), so they reached
     # neither create_all nor alembic autogenerate.
-    constraints: list[ir_domain.Constraint] = Field(
+    constraints: list[Constraint] = Field(
         default_factory=list,
         description="Entity-level unique/index constraints from the DSL",
     )

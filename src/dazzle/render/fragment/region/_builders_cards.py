@@ -40,6 +40,7 @@ from dazzle.render.fragment import (
     RawHTML,
     Surface,
 )
+from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
@@ -52,7 +53,7 @@ class _BuildersCardsMixin:
     `WorkspaceRegionAdapter`. Same pattern as other family mixins.
     """
 
-    def _build_kanban(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_kanban(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: kanban` regions render as a `KanbanRegion` primitive
         matching `workspace/regions/kanban.html` byte-for-byte.
 
@@ -185,7 +186,7 @@ class _BuildersCardsMixin:
         )
         return _wrap_surface(title, "kanban", body)
 
-    def _build_profile_card(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_profile_card(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: profile_card` regions render single-record identity
         panels.
 
@@ -257,7 +258,7 @@ class _BuildersCardsMixin:
         )
         return _wrap_surface(title, "dashboard", body)
 
-    def _build_action_grid(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_action_grid(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: action_grid` regions render dashboard CTA cards.
 
         Phase 4B.1.b — replaces the prior alias to `_build_grid`, which
@@ -317,7 +318,7 @@ class _BuildersCardsMixin:
         body: Fragment = ActionGrid(cards=tuple(cards), empty_message=str(empty_msg))
         return _wrap_surface(title, "dashboard", body)
 
-    def _build_cohort_strip(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_cohort_strip(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: cohort_strip` regions render as a horizontal
         member-skim strip with lens toggle (#1018, v0.67.7).
 
@@ -420,7 +421,7 @@ class _BuildersCardsMixin:
         )
         return _wrap_surface(title, "dashboard", body)
 
-    def _build_entity_card(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_entity_card(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: entity_card` regions render as a composite 360°
         single-entity drill-down (#1017, v0.67.8). Domain-agnostic:
         pupil-360 in MIS, customer-360 in CRM, etc.

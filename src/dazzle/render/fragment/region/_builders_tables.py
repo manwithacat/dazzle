@@ -45,6 +45,7 @@ from dazzle.render.fragment import (
     Surface,
     Tabs,
 )
+from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _region_title,
@@ -62,7 +63,7 @@ class _BuildersTablesMixin:
     `WorkspaceRegionAdapter`. Same pattern as other family mixins.
     """
 
-    def _build_list(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_list(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: list` regions render as a Region(kind=list).
 
         Phase 4A core: items + columns → Table primitive (basic list).
@@ -96,7 +97,7 @@ class _BuildersTablesMixin:
         """
         title = _region_title(region)
         items = ctx.get("items", []) or []
-        columns = ctx.get("columns", []) or []
+        columns: list[Any] = ctx.get("columns", []) or []
 
         endpoint = ctx.get("endpoint")
         region_name = str(ctx.get("region_name") or getattr(region, "name", "") or "list")
@@ -272,7 +273,7 @@ class _BuildersTablesMixin:
 
         return _wrap_surface(title, "list", body)
 
-    def _build_queue(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_queue(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: queue` regions render as a review queue with inline
         state-transition action buttons.
 
@@ -443,7 +444,7 @@ class _BuildersTablesMixin:
         )
         return _wrap_surface(title, "list", body)
 
-    def _build_pivot_table(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_pivot_table(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: pivot_table` regions render as a `PivotTableRegion`
         primitive matching `workspace/regions/pivot_table.html`
         byte-for-byte. Phase 4B.4 wave 4: replaced the simpler
@@ -543,7 +544,7 @@ class _BuildersTablesMixin:
         )
         return _wrap_surface(title, "report", body)
 
-    def _build_tabbed_list(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_tabbed_list(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: tabbed_list` regions render as a tabbed container.
 
         Phase 4B.1.d preferred path — the runtime supplies `source_tabs`

@@ -33,6 +33,7 @@ from dazzle.render.fragment import (
     Tree,
     TreeNode,
 )
+from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
@@ -67,7 +68,7 @@ class _BuildersMiscMixin:
     `WorkspaceRegionAdapter`. Same pattern as other family mixins.
     """
 
-    def _build_confirm_action_panel(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_confirm_action_panel(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: confirm_action_panel` renders a `ConfirmGate`
         primitive — three-state consent panel matching the legacy
         `workspace/regions/confirm_action_panel.html` byte-for-byte.
@@ -145,7 +146,7 @@ class _BuildersMiscMixin:
         )
         return _wrap_surface(title or "Confirm", "dashboard", body)
 
-    def _build_search_box(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_search_box(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: search_box` renders a `SearchBox` primitive — HTMX
         FTS input + lazy-loaded results panel + Alpine coaching toggle.
 
@@ -192,7 +193,7 @@ class _BuildersMiscMixin:
         )
         return _wrap_surface(title, "form", body)
 
-    def _build_tree(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_tree(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: tree` regions render a recursive hierarchy as
         nested `<details>` nodes. Phase 4B.4 wave 2: dedicated
         `Tree` primitive replacing prior Stack-of-Text composition for
@@ -236,7 +237,7 @@ class _BuildersMiscMixin:
 
         return _wrap_surface(title, "list", body)
 
-    def _build_detail(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_detail(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: detail` regions render a single item's fields as a
         labelled Card. One Stack child per (label, value) pair, with
         type-aware value rendering matching the legacy template:
@@ -282,7 +283,7 @@ class _BuildersMiscMixin:
         )
         return _wrap_surface(title, "dashboard", body)
 
-    def _build_grid(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_grid(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: grid` regions render items as cards in a CSS-driven
         responsive grid layout. Phase 4B.4 wave 2: dedicated `GridRegion`
         primitive replacing prior generic `Grid` composition for byte-
