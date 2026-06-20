@@ -1,0 +1,8 @@
+extensions:
+  - addsTo:
+      pack: codeql/python-all
+      extensible: barrierGuardModel
+    data:
+      # is_safe_redirect_path(value) returns True only for safe same-origin paths;
+      # its True branch is a barrier guard for the url-redirection (CWE-601) flow.
+      - ['dazzle', 'Member[http].Member[runtime].Member[auth].Member[redirect_safety].Member[is_safe_redirect_path].Argument[0]', "true", 'url-redirection']

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.43] - 2026-06-20
+
+### Changed
+- **Migrated CodeQL code scanning from default setup to advanced setup** (`.github/workflows/codeql.yml` + `.github/codeql/codeql-config.yml`). Default setup ignores configuration files and cannot load CodeQL model packs; advanced setup is required to apply the sanitizer model (below). The new workflow runs a 4-language matrix — `actions`, `javascript-typescript`, `python`, `ruby` — covering the same six languages the former default setup scanned (`javascript`/`typescript` fold into `javascript-typescript`). Actions are SHA-pinned (`github/codeql-action@c35d1b16` = codeql-bundle-v2.25.6) per repo convention; `packages: read` lets the run pull the published model pack. Default setup is disabled in the same change to avoid double-scanning.
+
+### Added
+- **CodeQL sanitizer model pack `manwithacat/dazzle-python-models`** (`.github/codeql/extensions/dazzle-python-models/`, published public to GHCR). A `barrierGuardModel` data extension teaches CodeQL that `dazzle.http.runtime.auth.redirect_safety.is_safe_redirect_path()` is a barrier guard for the `py/url-redirection` (CWE-601) flow. This clears the **12** auth-redirect alerts that are genuinely guarded by the framework's canonical redirect helper — correctly, at the analysis level, rather than by per-alert dismissal — so future routes that use the helper never re-alert. (Context: the v0.83.35 back→http path rename churned CodeQL's path-keyed fingerprints, re-opening 38 pre-existing findings under new `dazzle/http/...` paths. None were new vulnerabilities. Disposition: 1 fixed (v0.83.42), 12 modeled here, 25 dismissed-with-reason as false-positive / by-design.)
+
+  ### Agent Guidance
+  - **CodeQL is now advanced setup.** Tune analysis via `.github/codeql/codeql-config.yml` (not the repo's code-scanning UI). To suppress a *reusable* sanitizer/guard false-positive, prefer adding a `barrierGuardModel`/`barrierModel`/`sinkModel` row to the model pack over dismissing alerts — model the truth once and it holds across renames. MaD addressing gotcha: the `type` column is the **top-level package only** (`dazzle`); navigate submodules with `Member[...]` (the full dotted module string does NOT resolve via `moduleImport`). After editing the pack, bump its `version` in `codeql-pack.yml`, re-`codeql pack publish`, and update the pinned version in `codeql-config.yml`.
+
+
 ## [0.83.42] - 2026-06-20
 
 ### Security
