@@ -8,4 +8,4 @@ name: "Dazzle CodeQL config"
 # (re-publish + bump the version here on any model change).
 packs:
   python:
-    - manwithacat/dazzle-python-models@0.0.1
+    - manwithacat/dazzle-python-models@0.0.2

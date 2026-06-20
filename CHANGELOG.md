@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.44] - 2026-06-20
+
+### Changed
+- **Hardened the public CodeQL model pack for long-term safety** (`manwithacat/dazzle-python-models`, bumped `0.0.1` → `0.0.2`). Now that the pack is published public on GHCR, three hygiene fixes so it "doesn't bite us in eight months": (a) an explicit **MIT LICENSE** file in the pack + `license: MIT` in `codeql-pack.yml` (mirrors the framework's license); (b) a **README** that scopes the MIT grant to the pack's *own* contents and explicitly states it does **not** extend to the CodeQL engine — which is governed by GitHub's CodeQL Terms & Conditions, not MIT; (c) a documented **version-immutability** policy — published versions are never re-published with different content, so any model change is a new version (`0.0.1` is preserved unchanged so the v0.83.43 tag reproduces against the model it shipped with). `codeql-config.yml` now pins `@0.0.2`.
+
+  ### Agent Guidance
+  - **The model pack is immutable per published version.** Never re-publish an existing version with changed content. To change the model: edit the data extension, bump `version:` in `codeql-pack.yml`, `codeql pack publish`, then pin the new version in `.github/codeql/codeql-config.yml`. The MIT license covers the pack's YAML only — not the CodeQL engine.
+
+
 ## [0.83.43] - 2026-06-20
 
 ### Changed
