@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.36] - 2026-06-20
+
+### Security
+- **Patched two transitive-dependency CVEs flagged by Dependabot** (lockfile-only). `msgpack` 1.1.2 → **1.2.1** (high — out-of-bounds read / crash on `Unpacker` reuse, vulnerable `<= 1.2.0`; pulled in via `cachecontrol`). `pydantic-settings` 2.14.1 → **2.14.2** (medium — `NestedSecretsSettingsSource` follows symlinks outside the secrets dir, vulnerable `>= 2.12.0, < 2.14.2`; pulled in via `mcp`). Both are transitive (not direct deps); the bump is in `uv.lock` only — no `pyproject.toml` constraint change. Verified `pydantic_settings` 2.14.2 + `mcp` still import.
+
 ## [0.83.35] - 2026-06-20
 
 ### Changed
