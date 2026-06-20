@@ -10,6 +10,7 @@ No FastAPI, no DB driver — the store is passed in, so this is exhaustively
 unit-testable (mirrors apex_discovery.resolve_apex_redirect's style).
 """
 
+from dataclasses import dataclass
 from typing import Any
 
 from dazzle.http.runtime.auth.org_settings import OrgSettings
@@ -48,3 +49,51 @@ def assert_domain_admissible(store: Any, tenant_id: str, email: str) -> None:
         raise DomainNotAdmissibleError(
             f"email domain {domain!r} is not a verified domain for this organization"
         )
+
+
+@dataclass(frozen=True)
+class Off:
+    """Verified-domain join is disabled for this tenant."""
+
+
+@dataclass(frozen=True)
+class AutoJoin:
+    """Verified-domain match: automatically create and join the membership."""
+
+
+@dataclass(frozen=True)
+class NeedsApproval:
+    """Verified-domain match: create membership but mark it pending admin approval."""
+
+
+@dataclass(frozen=True)
+class Noop:
+    """No join action: email unverified, pre-existing membership, or policy not recognized."""
+
+
+JoinOutcome = Off | AutoJoin | NeedsApproval | Noop
+
+
+def decide_domain_join(policy: str, *, email_verified: bool, has_membership: bool) -> JoinOutcome:
+    """Pure: what a verified-domain match should do. Fail-closed — an unverified
+    email or an existing membership is always Noop (routing/membership handled
+    elsewhere). Mirrors apex_discovery.resolve_apex_redirect's mapper style."""
+    if has_membership or not email_verified:
+        return Noop()
+    if policy == "off":
+        return Off()
+    if policy == "auto_join":
+        return AutoJoin()
+    if policy == "admin_approval":
+        return NeedsApproval()
+    return Noop()
+
+
+def resolve_domain_tenant(store: Any, email: str) -> str | None:
+    """Find the tenant that owns this email's verified domain.
+    Returns the tenant_id or None if no verified domain connection is found."""
+    domain = email_domain(email)
+    if not domain:
+        return None
+    conn = store.get_connection_by_verified_domain(domain)
+    return conn.tenant_id if conn is not None else None
