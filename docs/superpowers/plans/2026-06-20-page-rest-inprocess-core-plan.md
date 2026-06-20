@@ -345,7 +345,15 @@ except AccessForbidden:
     req_detail.item = {"error": "forbidden"}     # routes into the existing forbid-detail render branch
 ```
 
-(If `prc.deps` lacks `service_for`/`cedar_spec_for`/`fk_graph`/`admin_personas_for`/`auto_include_for` accessors, add thin accessors on `_PageRouterConfig` in this step — the data is already on it; this only names it. Keep the downstream `_inject_display_names` + error-branch logic at `page_routes.py:1289+` unchanged.)
+**Execution findings (2026-06-20, refines this task):**
+
+1. **Boot-state plumbing (DONE, prep).** The per-entity service map + `fk_graph` + `admin_personas` are NOT on `_PageRouterConfig` (only `entity_cedar_specs` is). They live on the route_generator at boot. Wired them onto `app.state` at `server.py:~1815` (right after `RouteGenerator(...)`): `app.state.entity_services = self._services`, `entity_fk_graph = _fk_graph`, `entity_admin_personas = _admin_personas`, `entity_auto_includes = self._entity_auto_includes`. The page handler reads them via `prc.request.app.state`; the cedar spec via `prc.deps.entity_cedar_specs.get(entity)`.
+
+2. **Serialization parity (the real subtlety — build the parity test FIRST).** The original `_fetch_json` returned the **FastAPI-serialized JSON dict** (UUIDs→str, dates→ISO, FK dicts). `gated_read` returns the **pre-serialization** object (a Pydantic model, or a relations-hydrated dict). The page's downstream code (`_inject_display_names`, `when_expr` eval at `1300-1306`, FK display) depends on the JSON shape. So the swap MUST serialize the `gated_read` result to the same dict the REST detail response produces *before* assigning `req_detail.item`. Determine the REST detail serialization (the response model / `model_dump(mode="json")` vs the dict-passthrough when relations are included) and apply it in-process. The page-vs-REST parity test is what proves this — write it before the swap and make it assert deep-equality of the prepared `req_detail.item` against the REST detail JSON.
+
+3. **Cedar / non-cedar branch.** Entities with a cedar spec → `gated_read`; entities without → plain `service.execute("read", id, include=auto_include)` (matches the REST `_core` path, which has no permit eval). Map a missing/None result and `RecordNotFound` → `{"error": "not_found"}` so the existing `"error" in req_detail.item` → 404 branch (`page_routes.py:1291-1298`) is preserved.
+
+(Original sketch — superseded by the findings above: "add thin accessors on `_PageRouterConfig`" — the data wasn't there; it's on app.state now.)
 
 - [ ] **Step 4: Run** `pytest tests/integration/test_gated_access_parity.py -m postgres -v` and the existing page/detail suite (`pytest tests/ -m "not e2e" -k "detail or page_route" -q`). Expected: PASS.
 
