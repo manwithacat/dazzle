@@ -381,6 +381,12 @@ def provision_scim_user(
     membership = _membership_in_org(store, identity_id, connection.tenant_id)
 
     if membership is None:
+        # Uniform tenant admission gate (#1424): refuse provisioning if the org
+        # restricts membership to its verified domains and this email is off-domain.
+        from dazzle.http.runtime.auth.domain_join import assert_domain_admissible
+
+        assert_domain_admissible(store, connection.tenant_id, email)
+
         try:
             membership = store.create_membership(
                 tenant_id=connection.tenant_id,

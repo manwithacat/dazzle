@@ -171,6 +171,12 @@ def accept_invitation(
         if m.tenant_id == inv.org_id:
             raise InvitationError("already_member", "already a member of this organization")
 
+    # Uniform tenant admission gate (#1424): if the org restricts membership to its
+    # verified domains, the accepting email's domain must be among them. No-op otherwise.
+    from dazzle.http.runtime.auth.domain_join import assert_domain_admissible
+
+    assert_domain_admissible(store, inv.org_id, accepting_email)
+
     try:
         membership = store.create_membership(
             tenant_id=inv.org_id,
