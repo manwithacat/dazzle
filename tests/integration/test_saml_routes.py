@@ -94,6 +94,9 @@ class _Store:
     def get_connections_for_tenant(self, tenant_id):
         return [c for c in self._connections.values() if c.tenant_id == tenant_id]
 
+    def get_org_settings(self, tenant_id):
+        return {}
+
     def get_user_by_email(self, email):
         return self._users.get(email)
 
