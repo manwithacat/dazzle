@@ -626,6 +626,10 @@ class _PageRouterConfig:
     entity_auto_includes: dict[str, Any] = field(default_factory=dict)
     entity_fk_graph: Any = None
     entity_admin_personas: list[str] = field(default_factory=list)
+    # Legacy pre-Cedar visibility specs (`entity.metadata["access"]`) the REST list
+    # route applies via build_visibility_filter — threaded so the in-process page
+    # list (gated_list) applies the same. Empty for Cedar-only apps. (#1422)
+    entity_access_specs: dict[str, Any] = field(default_factory=dict)
     surface_entity: dict[str, str] = field(default_factory=dict)
     surface_mode: dict[str, str] = field(default_factory=dict)
     surface_workspace: dict[str, str] = field(default_factory=dict)
@@ -1330,6 +1334,68 @@ async def _read_entity_in_process(
     return encoded if isinstance(encoded, dict) else {"error": "not_found"}
 
 
+async def _list_entity_in_process(
+    prc: _PageRequestContext,
+    entity_name: str,
+    *,
+    page: int,
+    page_size: int,
+    sort: str | None = None,
+    direction: str = "asc",
+    search: str | None = None,
+    filters: dict[str, Any] | None = None,
+    as_of_raw: str | None = None,
+    include_closed: bool = False,
+) -> dict[str, Any]:
+    """List entity rows IN-PROCESS with scope + permit applied (#1422).
+
+    Replaces the page layer's HTTP self-fetch of its own REST list endpoint. Calls
+    `gated_list` (the same enforcement the REST list route applies) and returns the
+    REST-shaped `{items,total,page,page_size}` dict (`jsonable_encoder` over the
+    result, so `items` are plain dicts as the table renderer expects). A
+    permit-denied / scope-empty / missing-service list yields an empty page.
+    """
+    from fastapi.encoders import jsonable_encoder
+
+    from dazzle.http.runtime.access.gated import (
+        AccessForbidden,
+        InvalidTemporalParam,
+        access_context_from,
+        gated_list,
+    )
+
+    _empty = {"items": [], "total": 0, "page": page, "page_size": page_size}
+    service = prc.deps.entity_services.get(entity_name)
+    if service is None:
+        return _empty
+    access = access_context_from(
+        auth_context=prc.auth_ctx,
+        entity_name=entity_name,
+        cedar_access_spec=prc.deps.entity_cedar_specs.get(entity_name),
+        fk_graph=prc.deps.entity_fk_graph,
+        admin_personas=prc.deps.entity_admin_personas,
+    )
+    sort_list = [f"-{sort}" if direction == "desc" else sort] if sort else None
+    try:
+        result = await gated_list(
+            service,
+            access,
+            page=page,
+            page_size=page_size,
+            sort_list=sort_list,
+            search=search,
+            user_filters=filters or None,
+            auto_include=prc.deps.entity_auto_includes.get(entity_name),
+            access_spec=prc.deps.entity_access_specs.get(entity_name),
+            temporal_as_of_raw=as_of_raw,
+            temporal_include_closed=include_closed,
+        )
+    except (AccessForbidden, InvalidTemporalParam):
+        return _empty
+    encoded = jsonable_encoder(result)
+    return encoded if isinstance(encoded, dict) else _empty
+
+
 async def _handle_detail(prc: _PageRequestContext) -> None:
     """Fetch and prepare detail page data for the per-request context."""
     req_detail = prc.ctx.detail.model_copy(deep=True)
@@ -1416,40 +1482,20 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     # Fetch related entity data for tabs (hub-and-spoke, #301)
     if req_detail.related_groups and prc.path_id:
 
-        async def _fetch_related_tab(
-            tab: Any, _id: str, _backend: str, _ck: Any, _host: str | None
-        ) -> None:
-            filter_params: dict[str, str] = {
-                f"filter[{tab.filter_field}]": _id,
-                "page": "1",
-                "page_size": "50",
-            }
-            # Polymorphic FK (#321): add type discriminator filter
+        async def _fetch_related_tab(tab: Any, _id: str) -> None:
+            # IN-PROCESS related-list read (#1422) — no self-fetch. Filter the
+            # related entity by its FK to this record (+ polymorphic type field).
+            _filters: dict[str, Any] = {tab.filter_field: _id}
             if tab.filter_type_field and tab.filter_type_value:
-                filter_params[f"filter[{tab.filter_type_field}]"] = tab.filter_type_value
-            params = urllib.parse.urlencode(filter_params)
-            url = f"{_backend}{tab.api_endpoint}?{params}"
-            try:
-                data = await _fetch_url(url, _ck, _host)
-                tab.rows = data.get("items", [])
-                tab.total = data.get("total", len(tab.rows))
-            except Exception:
-                logger.warning(
-                    "Failed to fetch related %s for %s",
-                    tab.entity_name,
-                    _id,
-                    exc_info=True,
-                )
+                _filters[tab.filter_type_field] = tab.filter_type_value
+            data = await _list_entity_in_process(
+                prc, tab.entity_name, page=1, page_size=50, filters=_filters
+            )
+            tab.rows = data.get("items", [])
+            tab.total = data.get("total", len(tab.rows))
 
         all_tabs = [tab for _group in req_detail.related_groups for tab in _group.tabs]
-        await asyncio.gather(
-            *[
-                _fetch_related_tab(
-                    tab, str(prc.path_id), prc.effective_backend_url, prc.cookies, prc.host
-                )
-                for tab in all_tabs
-            ]
-        )
+        await asyncio.gather(*[_fetch_related_tab(tab, str(prc.path_id)) for tab in all_tabs])
 
     prc.ctx_overrides["detail"] = req_detail
 
@@ -1580,17 +1626,32 @@ async def _handle_table(prc: _PageRequestContext) -> None:
         req_table.rows = []
         req_table.total = 0
     else:
-        query_string = urllib.parse.urlencode(api_params)
-        fetch_url = f"{prc.effective_backend_url}{req_table.api_endpoint}?{query_string}"
-
+        # IN-PROCESS list read (#1422) — no self-fetch. Same scope+permit the REST
+        # list route applies (gated_list), via the shared in-process lister.
+        _t_filters = {
+            k[7:-1]: v for k, v in api_params.items() if k.startswith("filter[") and k.endswith("]")
+        }
         try:
-            data = await _fetch_url(fetch_url, prc.cookies, prc.host)
+            data = await _list_entity_in_process(
+                prc,
+                req_table.entity_name,
+                page=int(api_params.get("page", "1") or 1),
+                page_size=int(api_params.get("page_size", "20") or 20),
+                sort=api_params.get("sort"),
+                direction=api_params.get("dir", "asc"),
+                search=api_params.get("search"),
+                filters=_t_filters or None,
+            )
             items = data.get("items", [])
             if items and isinstance(items[0], dict):
                 req_table.rows = items
             req_table.total = data.get("total", len(items))
         except Exception:
-            logger.warning("Failed to fetch list data from %s", fetch_url, exc_info=True)
+            logger.warning(
+                "Failed to list %s in-process",
+                getattr(req_table, "entity_name", "?"),
+                exc_info=True,
+            )
             req_table.rows = []
             req_table.total = 0
             _fetch_errored = True
@@ -2759,6 +2820,13 @@ def create_page_routes(
     _entity_admin_personas = (
         list(_tenancy.admin_personas) if _tenancy is not None and _tenancy.admin_personas else []
     )
+    # Legacy visibility specs — same shape the REST RouteGenerator derives
+    # (`{entity.name: entity.metadata["access"]}` for entities that declare one).
+    _entity_access_specs: dict[str, Any] = {}
+    for _e in appspec.domain.entities:
+        _md = getattr(_e, "metadata", None)
+        if _md and "access" in _md:
+            _entity_access_specs[_e.name] = _md["access"]
 
     deps = _PageRouterConfig(
         appspec=appspec,
@@ -2773,6 +2841,7 @@ def create_page_routes(
         entity_auto_includes=entity_auto_includes or {},
         entity_fk_graph=_entity_fk_graph,
         entity_admin_personas=_entity_admin_personas,
+        entity_access_specs=_entity_access_specs,
         surface_entity=surface_entity,
         surface_mode=surface_mode,
         surface_workspace=surface_workspace,

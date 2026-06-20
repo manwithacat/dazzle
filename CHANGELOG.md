@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.48] - 2026-06-20
+
+### Changed
+- **Page table + related-tabs read lists IN-PROCESS** (#1422 option b, plan phase 3 cont.). The `/app/<slug>` table page and the detail page's related-entity tabs previously self-fetched the app's own REST list endpoint over loopback HTTP. They now call `gated_list` directly via a shared `_list_entity_in_process` helper — same LIST permit gate + visibility + scope the REST list route applies, serialized to the REST `{items,total,…}` JSON shape the table renderer expects. The legacy `entity_access_specs` (pre-Cedar visibility) are derived from the appspec onto `_PageRouterConfig` (boot-path-independent, like fk_graph/admin_personas). The related-tabs still fan out concurrently via `asyncio.gather`, now over in-process coroutines. A permit-denied / scope-empty list yields an empty page. **No render-output change** — 1238 list/table/detail/related tests + the scope PG oracle green. With this, **every page read (detail, edit, list, related-tabs) is in-process** — only the experience-form mutation POST still self-fetches. Next: the write path (`gated_create/update/delete`), then deleting the loopback machinery + `DAZZLE_BACKEND_URL`.
+
+
 ## [0.83.47] - 2026-06-20
 
 ### Changed
