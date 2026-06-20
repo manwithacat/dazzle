@@ -1,7 +1,6 @@
 # ADR-0038 — Rendering layer boundary: `render/` is pure and acyclic
 
-**Status:** Accepted (2026-06-17). Implementation in progress on branch `htmx4-eval` (region_adapter
-relocation + layering drift-test).
+**Status:** Accepted (2026-06-17); **implemented** — `region_adapter`/`workspace_card_bodies` relocated into `render/`, `render/` is pure with zero upward imports, and the layering drift-test is live (`tests/unit/test_import_boundaries.py` rule 4). **Layer naming updated by ADR-0041 (2026-06-20):** the four-layer stack this ADR describes as `back → ui → render → core` is now `http → page → render → core` (`back/`→`http/`, `ui/`→`page/`); the boundary rules are unchanged, only the package names.
 **Completes:** ADR-0011 (SSR + htmx — no SPA) and ADR-0023 (typed Fragment emission). This ADR does not
 change *what* HTML we produce or *how* (f-strings + `dazzle.render.html.esc`); it fixes *where* the
 producing code lives and makes the existing-but-unenforced layer rule a live gate.

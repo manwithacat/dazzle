@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.37] - 2026-06-20
+
+### Changed
+- **ADR-0038 doc hygiene** (loose-end sweep). Updated ADR-0038's status from "implementation in progress" to **implemented** (the `region_adapter` relocation + render-purity drift-test are on `main`), and noted that **ADR-0041 renamed the four-layer stack** it describes from `back → ui → render → core` to `http → page → render → core` (names only; the boundary rules are unchanged). Updated the matching ADR INDEX entry.
+
+
 ## [0.83.36] - 2026-06-20
 
 ### Security
