@@ -3,6 +3,7 @@ from dazzle.http.runtime.access.gated import (
     AccessForbidden,
     RecordNotFound,
     access_context_from,
+    gated_read,
 )
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "AccessForbidden",
     "RecordNotFound",
     "access_context_from",
+    "gated_read",
 ]

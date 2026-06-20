@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.45] - 2026-06-20
+
+### Added
+- **In-process data-access core — `access/gated.py` + `gated_read`** (#1422 option b, plan phase 1). First slice of eliminating the page→REST HTTP self-fetch (the #1421 loopback/Host-forward class). A new transport-agnostic module holds the Cedar READ enforcement (scope via `_scoped_pre_read`, permit via `evaluate_permission`, audit, `auto_include` re-hydration) **relocated verbatim** out of the `read_handlers.py::_read_cedar` route closure. The REST read route is now a thin adapter that builds an `AccessContext`, calls `gated_read`, maps `RecordNotFound` → 404 (READ stays row-existence-opaque), and renders. **No behavior change** — byte-faithful relocation, verified by an adversarial parity review (one flagged divergence refuted against `git diff`: the original read path also called `_build_access_context` one-arg) plus the full read/RBAC suite + the `scope_runtime` PG oracle. Next slices: the page detail/edit/list handlers call `gated_read`/`gated_list` directly (no self-fetch), then the loopback machinery + `DAZZLE_BACKEND_URL` are deleted. Design + plan: `docs/superpowers/specs|plans/2026-06-20-page-rest-inprocess-core-*.md`.
+
+  ### Agent Guidance
+  - **Reading entity data inside the runtime?** Call `gated_read(service, access, id, ...)` from `dazzle.http.runtime.access.gated` — never self-fetch the REST API over HTTP. It applies scope + permit identically to the REST route (it IS the REST route's enforcement, relocated). Build `access` via `access_context_from(...)`. Permit/scope denial raises `RecordNotFound` (READ) — callers map it to their transport (404 / forbid render).
+
+
 ## [0.83.44] - 2026-06-20
 
 ### Changed

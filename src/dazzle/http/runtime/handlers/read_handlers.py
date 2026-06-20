@@ -1,10 +1,13 @@
 """Read/detail handler factory family for generated CRUD routes.
 
 Extracted verbatim from ``route_generator.py`` (#1361 final slice). This is
-the READ family: ``create_read_handler``, including the inlined Cedar-READ
-wrapper that fetches once through ``_scoped_pre_read`` (scope: read: row
-enforcement, #1174), evaluates the permit/forbid policy, audit-logs the
-decision, and re-hydrates ``auto_include`` relations.
+the READ family: ``create_read_handler``. The Cedar-READ enforcement (scope:
+read: row enforcement #1174, permit/forbid eval, audit, ``auto_include``
+re-hydration) was relocated to the transport-agnostic core
+``access.gated.gated_read`` (#1422) so the page layer calls the same core
+in-process instead of self-fetching this endpoint over loopback HTTP. The
+``_read_cedar`` wrapper here is now a thin adapter: build the AccessContext,
+call ``gated_read``, map ``RecordNotFound`` → 404, render the detail HTML.
 
 A leaf module by design: it must not import ``route_generator`` at module
 level (``route_generator`` imports ``create_read_handler`` back at module
@@ -13,10 +16,6 @@ points keep resolving there). The shared route-dispatch surface it needs
 (``RouteSpec``, ``_set_handler_annotations``) comes from the ``route_support``
 leaf at top level — extracted there in the 2026-06-20 smells round to break the
 import cycle that previously forced lazy in-function imports.
-
-NOTE (#1361 slice 3 contract, unchanged here): ``_scoped_pre_read`` is
-imported at module level from its real home, ``scope_filters`` — the Cedar
-read path resolves it through *this* module's namespace now.
 
 Deliberately NOT named ``*_routes.py`` — the runtime-urls api-surface walker
 globs that pattern and this module defines no routes.
@@ -30,10 +29,6 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, Request
 
 from dazzle.http.runtime.audit_wrap import (
-    _SCOPE_DENY_EFFECT,
-    _build_access_context,
-    _log_audit_decision,
-    _record_to_dict,
     _wrap_with_auth,
 )
 from dazzle.http.runtime.auth import AuthContext
@@ -47,7 +42,6 @@ from dazzle.http.runtime.route_support import (
     RouteSpec,
     _set_handler_annotations,
 )
-from dazzle.http.runtime.scope_filters import _scoped_pre_read
 
 
 def create_read_handler(spec: "RouteSpec") -> Callable[..., Any]:
@@ -110,87 +104,37 @@ def create_read_handler(spec: "RouteSpec") -> Callable[..., Any]:
         async def _read_cedar(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
-            from dazzle.core.access import AccessDecision, AccessOperationKind
-            from dazzle.http.runtime.audit_log import measure_evaluation_time
-            from dazzle.render.access_evaluator import evaluate_permission
+            # Thin adapter (#1422): the scope+permit enforcement and the data
+            # fetch were relocated, verbatim, into the transport-agnostic core
+            # `gated_read`. The page layer now calls the same core in-process
+            # instead of self-fetching this endpoint over loopback HTTP. This
+            # route keeps only the HTTP shaping: build the access context, call
+            # the core, map a denied/missing result to 404 (READ keeps
+            # row-existence opaque), and render the detail HTML.
+            from dazzle.http.runtime.access.gated import (
+                RecordNotFound,
+                access_context_from,
+                gated_read,
+            )
 
-            # Apply `scope: read:` row-level enforcement (#1174). Before this,
-            # the single-id READ path fetched the row unscoped and only ran the
-            # Cedar permit/forbid evaluator — so a role holding `permit: read`
-            # plus a `scope: read:` row-filter (e.g. `project.org =
-            # current_user.org`) could IDOR-fetch *any* row by id, cross-tenant.
-            # `_scoped_pre_read` re-queries through the scope predicate (the
-            # same path UPDATE/DELETE use) and returns None — yielding a 404 —
-            # when the row is outside the caller's scope.
             assert cedar_access_spec is not None
-            result = await _scoped_pre_read(
-                service=service,
-                operation="read",
-                id=id,
-                cedar_access_spec=cedar_access_spec,
+            access = access_context_from(
                 auth_context=auth_context,
                 entity_name=entity_name,
+                cedar_access_spec=cedar_access_spec,
                 fk_graph=fk_graph,
                 admin_personas=admin_personas,
             )
-            if result is None:
-                # Scope filter hid the row (or it does not exist). Record the
-                # deny in the audit trail — a scope-denied read is an
-                # access-control decision and `audit: all` entities must
-                # capture it — then 404 (row-existence opaque to the caller).
-                if audit_logger:
-                    _u, _ = _build_access_context(auth_context)
-                    await _log_audit_decision(
-                        audit_logger,
-                        request,
-                        operation="read",
-                        entity_name=entity_name,
-                        entity_id=str(id),
-                        decision="deny",
-                        matched_policy=_SCOPE_DENY_EFFECT,
-                        policy_effect=_SCOPE_DENY_EFFECT,
-                        user=_u,
-                    )
-                raise HTTPException(status_code=404, detail="Not found")
-            # `_scoped_pre_read` may return a row fetched via the list path,
-            # which does not carry `include=auto_include` relations. Re-fetch
-            # through the read path so the response shape is unchanged when a
-            # scope filter was applied. The re-fetch is intentionally unscoped:
-            # scope has already passed for this id above — this only restores
-            # the relation hydration the list-path row lacks.
-            if auto_include:
-                hydrated = await service.execute(operation="read", id=id, include=auto_include)
-                if hydrated is not None:
-                    result = hydrated
-
-            user, ctx = _build_access_context(auth_context)
-            assert cedar_access_spec is not None
-            decision: AccessDecision
-            decision, eval_us = measure_evaluation_time(
-                lambda: evaluate_permission(
-                    cedar_access_spec,
-                    AccessOperationKind.READ,
-                    _record_to_dict(result),
-                    ctx,
-                    entity_name=entity_name,
+            try:
+                result = await gated_read(
+                    service,
+                    access,
+                    id,
+                    include=auto_include,
+                    audit_logger=audit_logger,
+                    request=request,
                 )
-            )
-
-            if audit_logger:
-                await _log_audit_decision(
-                    audit_logger,
-                    request,
-                    operation="read",
-                    entity_name=entity_name,
-                    entity_id=str(id),
-                    decision="allow" if decision.allowed else "deny",
-                    matched_policy=decision.matched_policy,
-                    policy_effect=decision.effect,
-                    user=user,
-                    evaluation_time_us=eval_us,
-                )
-
-            if not decision.allowed:
+            except RecordNotFound:
                 raise HTTPException(status_code=404, detail="Not found")
             html = _render_detail_html(request, result, entity_name)
             return html if html is not None else result
