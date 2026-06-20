@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from dazzle.render.fragment import (
     Fragment,
@@ -45,6 +45,7 @@ from dazzle.render.fragment.region._builders_tables import (
 from dazzle.render.fragment.region._builders_timeline import (
     _BuildersTimelineMixin,
 )
+from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._shared import (  # noqa: F401
     _region_title,
     _render_status_badge_html,
@@ -163,7 +164,7 @@ class WorkspaceRegionAdapter(
         # TimeSeries family — same builder, different view argument.
         view = self._TIMESERIES_VIEWS.get(display_value)
         if view is not None:
-            return self._build_time_series(region, ctx, view)
+            return self._build_time_series(region, cast(RegionContext, ctx), view)
 
         # Resolve any alias to its canonical display value.
         canonical = self._ALIASES.get(display_value, display_value)

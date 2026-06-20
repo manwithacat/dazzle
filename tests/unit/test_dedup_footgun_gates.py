@@ -58,3 +58,23 @@ def test_no_inline_state_normalisation() -> None:
         "`StateMachineSpec.state_names()` or `dazzle.core.ir.state_machine.state_name(s)`:\n  "
         + "\n  ".join(hits)
     )
+
+
+def test_region_builders_use_typed_context() -> None:
+    """Region builders take `ctx: RegionContext`, not `ctx: dict[str, Any]`.
+
+    The Fragment substrate (ADR-0023) is typed; the region-builder context was the last
+    `dict[str, Any]` hole. `RegionContext` (render/fragment/region/_context.py) documents
+    the ~91 keys the `_build_*` methods read. Re-introducing `ctx: dict[str, Any]` in a
+    builder drops back to the untyped bag.
+    """
+    region_dir = _SRC / "render" / "fragment" / "region"
+    hits = [
+        f"{p.relative_to(_SRC.parent.parent)}"
+        for p in region_dir.glob("_builders_*.py")
+        if "ctx: dict[str, Any]" in p.read_text(encoding="utf-8")
+    ]
+    assert not hits, (
+        "Region builder(s) still take `ctx: dict[str, Any]` — use `ctx: RegionContext` "
+        "(dazzle.render.fragment.region._context):\n  " + "\n  ".join(hits)
+    )

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.40] - 2026-06-20
+
+### Changed
+- **Typed the region-builder render context** (smells backlog B1 — readability/self-documentation). The Fragment substrate (ADR-0023) is typed, but the context the `_build_*` region builders consumed was the last `ctx: dict[str, Any]` hole. Added **`RegionContext`** (`render/fragment/region/_context.py`) — a `total=False` `TypedDict` documenting the ~91 keys the builders read, grouped by display mode (list/table, charts, metrics, cards, timeline, graph…). Retyped all **32 builder signatures** `dict[str, Any]` → `RegionContext`; mypy now flags a typo'd key on access. The dynamic getattr dispatch keeps the construction→builder boundary clean (one `cast` at the single direct `_build_time_series` call). `columns` stays `Any` — it's genuinely polymorphic (a list of column-defs in tables, a grid-width `int` in cards), a good example of why the bag was untyped. Gate: `test_dedup_footgun_gates.py::test_region_builders_use_typed_context` forbids re-introducing `ctx: dict[str, Any]`. Behaviour-neutral (586 region tests pass, mypy clean).
+
+
 ## [0.83.39] - 2026-06-20
 
 ### Changed

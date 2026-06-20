@@ -31,6 +31,7 @@ from dazzle.render.fragment import (
     Timeline,
     TimelineEvent,
 )
+from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
@@ -43,7 +44,7 @@ class _BuildersTimelineMixin:
     `WorkspaceRegionAdapter`. Same pattern as `_BuildersChartsMixin`.
     """
 
-    def _build_timeline(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_timeline(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: timeline` regions render as a `Timeline` primitive
         matching `workspace/regions/timeline.html` byte-for-byte.
 
@@ -119,7 +120,7 @@ class _BuildersTimelineMixin:
         body: Fragment = Timeline(events=tuple(events), total=total, empty_message=str(empty_msg))
         return _wrap_surface(title, "report", body)
 
-    def _build_activity_feed(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_activity_feed(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: activity_feed` regions render as an ActivityFeed
         primitive — chronological feed with per-row dot, time line, and
         bubble carrying actor + description.
@@ -167,7 +168,7 @@ class _BuildersTimelineMixin:
 
         return _wrap_surface(title, "report", body)
 
-    def _build_day_timeline(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_day_timeline(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: day_timeline` regions render as a vertical
         chronological scroll of slot cards (#1016, v0.67.8).
 
@@ -231,7 +232,7 @@ class _BuildersTimelineMixin:
         )
         return _wrap_surface(title, "dashboard", body)
 
-    def _build_task_inbox(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_task_inbox(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: task_inbox` regions render as a workflow-led
         prioritised list of due actions (#1015, v0.67.8).
 

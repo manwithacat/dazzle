@@ -51,6 +51,7 @@ from dazzle.render.fragment import (
     Surface,
     TimeSeries,
 )
+from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _wrap_surface,
@@ -125,7 +126,7 @@ class _BuildersChartsMixin:
     pattern across subsequent PRs against #1065.
     """
 
-    def _build_radar(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_radar(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: radar` regions render as a Radar polar profile.
 
         ctx shape:
@@ -165,7 +166,7 @@ class _BuildersChartsMixin:
 
         return _wrap_surface(title, "report", body)
 
-    def _build_box_plot(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_box_plot(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: box_plot` regions render as a BoxPlot quartile table.
 
         ctx shape:
@@ -241,7 +242,7 @@ class _BuildersChartsMixin:
     def _build_time_series(
         self,
         region: Any,
-        ctx: dict[str, Any],
+        ctx: RegionContext,
         view: Literal["line", "area", "sparkline"],
     ) -> Surface:
         """Render a TimeSeries primitive (line / area / sparkline).
@@ -307,7 +308,7 @@ class _BuildersChartsMixin:
         )
         return _wrap_surface(title, "report", body)
 
-    def _build_diagram(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_diagram(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: diagram` renders an entity-relationship diagram via
         the Diagram primitive.
 
@@ -356,7 +357,7 @@ class _BuildersChartsMixin:
 
         return _wrap_surface(title, "report", Diagram(nodes=nodes, edges=tuple(edges)))
 
-    def _build_bar_track(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_bar_track(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: bar_track` renders one labelled, filled track per
         row with ARIA progressbar semantics + a summary line. Phase
         4B.1.b — uses the typed `BarTrack` primitive (replaced the
@@ -437,7 +438,7 @@ class _BuildersChartsMixin:
 
         return _wrap_surface(title, "report", body)
 
-    def _build_bullet(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_bullet(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: bullet` renders Stephen Few bullet rows — label +
         track (bands behind, actual bar, optional target tick) +
         formatted value. Phase 4B.4 wave 2: dedicated `Bullet` primitive
@@ -491,7 +492,7 @@ class _BuildersChartsMixin:
         )
         return _wrap_surface(title, "report", body)
 
-    def _build_funnel_chart(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_funnel_chart(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: funnel_chart` regions render as a `Funnel` primitive.
 
         Phase 4B.4 wave 3: dedicated builder (replaces prior bar_chart
@@ -562,7 +563,7 @@ class _BuildersChartsMixin:
         )
         return _wrap_surface(title, "report", body)
 
-    def _build_histogram(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_histogram(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: histogram` regions render as a `Histogram` primitive
         — continuous-axis SVG bar chart with optional vertical reference
         lines. Phase 4B.4 wave 3: dedicated builder (replaces prior alias
@@ -609,7 +610,7 @@ class _BuildersChartsMixin:
         )
         return _wrap_surface(title, "report", body)
 
-    def _build_heatmap(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_heatmap(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: heatmap` regions render as a `Heatmap` primitive
         — threshold-tinted matrix matching `workspace/regions/heatmap.html`
         byte-for-byte. Phase 4B.4 wave 4: dedicated builder (replaces
@@ -679,7 +680,7 @@ class _BuildersChartsMixin:
         )
         return _wrap_surface(title, "report", body)
 
-    def _build_bar_chart(self, region: Any, ctx: dict[str, Any]) -> Surface:
+    def _build_bar_chart(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: bar_chart` regions render as a BarChart primitive
         — list of (label, count) tuples derived from the region's
         group_by aggregation.
