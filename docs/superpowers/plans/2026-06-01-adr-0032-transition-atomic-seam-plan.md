@@ -12,7 +12,7 @@
 - `StateTransition` IR: `src/dazzle/core/ir/state_machine.py:118-135` (has `effects: list[StepEffect]`).
 - `StepEffect` / `EffectAction`: `src/dazzle/core/ir/process.py:133-165`.
 - on_transition parser: `src/dazzle/core/dsl_parser_impl/entity.py` — `_parse_entity_on_transition_block` (≈836-854), `_parse_transition_effect` (≈2149-2247), `_merge_transition_effects` (≈1019-1027). Existing effect DSL: `on_transition:` → `from -> to:` → nested `create E:` / `update E:` bodies.
-- `execute_atomic_flow`: `src/dazzle/back/runtime/atomic_flow_executor.py:378-528` — opens its own `with db_manager.connection() as conn:` at line 448; all inner helpers already take `conn` as a param.
+- `execute_atomic_flow`: `src/dazzle/http/runtime/atomic_flow_executor.py:378-528` — opens its own `with db_manager.connection() as conn:` at line 448; all inner helpers already take `conn` as a param.
 - Flows live in `appspec.atomic_flows` (`AtomicFlowSpec`, with `inputs: list[FlowInput]`).
 
 ---
@@ -39,7 +39,7 @@ on_transition:
 | `src/dazzle/core/ir/__init__.py` | export the new public IR names | Modify |
 | `src/dazzle/core/dsl_parser_impl/entity.py` | parse `invoke <flow>(<bindings>)` inside an `on_transition:` `from -> to:` block | Modify |
 | `src/dazzle/core/validator.py` | validate invoke: flow exists, required flow inputs bound, sources resolve, `self` valid | Modify |
-| `src/dazzle/back/runtime/atomic_flow_executor.py` | factor `execute_atomic_flow_on_conn(...)` (accept external conn); `execute_atomic_flow` becomes a thin wrapper | Modify |
+| `src/dazzle/http/runtime/atomic_flow_executor.py` | factor `execute_atomic_flow_on_conn(...)` (accept external conn); `execute_atomic_flow` becomes a thin wrapper | Modify |
 | `fixtures/transition_atomic/` (new) | a state-machine entity + `invoke` transition + the referenced `atomic` flow that parses + validates clean | Create |
 | `docs/api-surface/ir-types.txt` | regenerated baseline (new IR types) | Regenerate |
 | tests | parser, validator, executor-seam, fixture | Create/Modify |
@@ -122,7 +122,7 @@ Find where state-machine transitions are validated (grep `StateTransition`/`vali
 
 ## Task 4 — Executor seam: `execute_atomic_flow_on_conn`
 
-**Files:** `src/dazzle/back/runtime/atomic_flow_executor.py`, `tests/unit/test_atomic_flow_executor.py`.
+**Files:** `src/dazzle/http/runtime/atomic_flow_executor.py`, `tests/unit/test_atomic_flow_executor.py`.
 
 Pure refactor (Slice B will call the new entry point with a shared connection). Factor the body of `execute_atomic_flow`'s `with db_manager.connection() as conn:` block (lines ≈448-528) into:
 ```python

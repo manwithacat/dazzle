@@ -21,10 +21,10 @@
 | `src/dazzle/core/ir/conditions.py` | **Modify** — add `ViaBinding`, `ViaCondition` models + `via_condition` field on `ConditionExpr` |
 | `src/dazzle/core/dsl_parser_impl/entity.py` | **Modify** — add `_parse_via_condition()` method, branch in `_parse_scope_rule()` |
 | `src/dazzle/core/linker.py` | **Modify** — add via junction entity/field validation during linking |
-| `src/dazzle_back/specs/auth.py` | **Modify** — add `via_check` kind + via fields to `AccessConditionSpec` |
-| `src/dazzle_back/converters/entity_converter.py` | **Modify** — add `_convert_via_condition()`, branch in `_convert_scope_rule()` |
-| `src/dazzle_back/runtime/route_generator.py` | **Modify** — add `_build_via_subquery()`, handle `via_check` in `_extract_condition_filters()` |
-| `src/dazzle_back/runtime/query_builder.py` | **Modify** — add `IN_SUBQUERY` to `FilterOperator` + `to_sql()` handling |
+| `src/dazzle_http/specs/auth.py` | **Modify** — add `via_check` kind + via fields to `AccessConditionSpec` |
+| `src/dazzle_http/converters/entity_converter.py` | **Modify** — add `_convert_via_condition()`, branch in `_convert_scope_rule()` |
+| `src/dazzle_http/runtime/route_generator.py` | **Modify** — add `_build_via_subquery()`, handle `via_check` in `_extract_condition_filters()` |
+| `src/dazzle_http/runtime/query_builder.py` | **Modify** — add `IN_SUBQUERY` to `FilterOperator` + `to_sql()` handling |
 | `tests/unit/test_scope_via.py` | **Create** — all via-related tests (parser, IR, converter, runtime) |
 | `examples/shapes_validation/dsl/entities.dsl` | **Modify** — add junction-table scoped entity example |
 
@@ -584,8 +584,8 @@ git commit -m "feat(scope): add linker validation for via junction entities (#53
 ## Task 4: Backend Spec + Converter (was Task 3)
 
 **Files:**
-- Modify: `src/dazzle_back/specs/auth.py`
-- Modify: `src/dazzle_back/converters/entity_converter.py`
+- Modify: `src/dazzle_http/specs/auth.py`
+- Modify: `src/dazzle_http/converters/entity_converter.py`
 - Modify: `tests/unit/test_scope_via.py` (add converter tests)
 
 Add `via_check` kind to `AccessConditionSpec` and a `_convert_via_condition()` function.
@@ -596,8 +596,8 @@ Append to `tests/unit/test_scope_via.py`:
 
 ```python
 from dazzle.core.ir.domain import PermissionKind, ScopeRule
-from dazzle_back.converters.entity_converter import _convert_scope_rule
-from dazzle_back.specs.auth import AccessOperationKind
+from dazzle_http.converters.entity_converter import _convert_scope_rule
+from dazzle_http.specs.auth import AccessOperationKind
 
 
 class TestConvertViaCondition:
@@ -652,7 +652,7 @@ Expected: FAIL — `via_check` kind not recognized
 
 - [ ] **Step 3: Modify backend spec**
 
-In `src/dazzle_back/specs/auth.py`, update `AccessConditionSpec`:
+In `src/dazzle_http/specs/auth.py`, update `AccessConditionSpec`:
 
 1. Update the `kind` literal to include `"via_check"`:
 ```python
@@ -672,7 +672,7 @@ kind: Literal["comparison", "role_check", "logical", "grant_check", "via_check"]
 
 - [ ] **Step 4: Modify converter**
 
-In `src/dazzle_back/converters/entity_converter.py`, modify `_convert_scope_rule()` to branch before `_convert_access_condition()`:
+In `src/dazzle_http/converters/entity_converter.py`, modify `_convert_scope_rule()` to branch before `_convert_access_condition()`:
 
 ```python
 def _convert_scope_rule(rule: ir.ScopeRule) -> ScopeRuleSpec:
@@ -726,7 +726,7 @@ Expected: All PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/specs/auth.py src/dazzle_back/converters/entity_converter.py tests/unit/test_scope_via.py
+git add src/dazzle_http/specs/auth.py src/dazzle_http/converters/entity_converter.py tests/unit/test_scope_via.py
 git commit -m "feat(scope): add via_check backend spec and converter (#530)"
 ```
 
@@ -735,7 +735,7 @@ git commit -m "feat(scope): add via_check backend spec and converter (#530)"
 ## Task 5: Query Builder — `IN_SUBQUERY` Operator
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/query_builder.py`
+- Modify: `src/dazzle_http/runtime/query_builder.py`
 - Modify: `tests/unit/test_scope_via.py` (add query builder tests)
 
 Add the `IN_SUBQUERY` filter operator so the repository can execute subquery-based filters.
@@ -745,7 +745,7 @@ Add the `IN_SUBQUERY` filter operator so the repository can execute subquery-bas
 Append to `tests/unit/test_scope_via.py`:
 
 ```python
-from dazzle_back.runtime.query_builder import FilterCondition, FilterOperator
+from dazzle_http.runtime.query_builder import FilterCondition, FilterOperator
 
 
 class TestInSubqueryOperator:
@@ -780,7 +780,7 @@ Expected: FAIL — `IN_SUBQUERY` not in `FilterOperator`
 
 - [ ] **Step 3: Implement**
 
-In `src/dazzle_back/runtime/query_builder.py`:
+In `src/dazzle_http/runtime/query_builder.py`:
 
 1. Add to `FilterOperator` enum:
 ```python
@@ -807,7 +807,7 @@ Expected: All PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/query_builder.py tests/unit/test_scope_via.py
+git add src/dazzle_http/runtime/query_builder.py tests/unit/test_scope_via.py
 git commit -m "feat(scope): add IN_SUBQUERY filter operator (#530)"
 ```
 
@@ -816,7 +816,7 @@ git commit -m "feat(scope): add IN_SUBQUERY filter operator (#530)"
 ## Task 6: Route Generator — `_build_via_subquery()`
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py`
+- Modify: `src/dazzle_http/runtime/route_generator.py`
 - Modify: `tests/unit/test_scope_via.py` (add runtime tests)
 
 Build the SQL subquery from a `via_check` condition and wire it into `_extract_condition_filters()`.
@@ -831,7 +831,7 @@ from unittest.mock import MagicMock
 
 class TestBuildViaSubquery:
     def test_basic_subquery(self) -> None:
-        from dazzle_back.runtime.route_generator import _build_via_subquery
+        from dazzle_http.runtime.route_generator import _build_via_subquery
 
         bindings = [
             {"junction_field": "agent", "target": "current_user.contact", "operator": "="},
@@ -855,7 +855,7 @@ class TestBuildViaSubquery:
         assert len(params) >= 1
 
     def test_subquery_with_null_filter(self) -> None:
-        from dazzle_back.runtime.route_generator import _build_via_subquery
+        from dazzle_http.runtime.route_generator import _build_via_subquery
 
         bindings = [
             {"junction_field": "agent", "target": "current_user", "operator": "="},
@@ -875,7 +875,7 @@ class TestBuildViaSubquery:
         assert entity_field == "id"
 
     def test_subquery_with_not_null_filter(self) -> None:
-        from dazzle_back.runtime.route_generator import _build_via_subquery
+        from dazzle_http.runtime.route_generator import _build_via_subquery
 
         bindings = [
             {"junction_field": "user", "target": "current_user", "operator": "="},
@@ -897,7 +897,7 @@ class TestBuildViaSubquery:
 
 class TestExtractViaCheckFilters:
     def test_via_check_produces_in_subquery_filter(self) -> None:
-        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle_http.runtime.route_generator import _extract_condition_filters
 
         condition = MagicMock()
         condition.kind = "via_check"
@@ -927,7 +927,7 @@ Expected: FAIL — `_build_via_subquery` not found
 
 - [ ] **Step 3: Implement `_build_via_subquery()`**
 
-In `src/dazzle_back/runtime/route_generator.py`, add:
+In `src/dazzle_http/runtime/route_generator.py`, add:
 
 ```python
 def _build_via_subquery(
@@ -950,7 +950,7 @@ def _build_via_subquery(
         scoped entity to match against, subquery_sql is the SELECT statement,
         params is the list of parameterized values.
     """
-    from dazzle_back.runtime.query_builder import quote_identifier, validate_sql_identifier
+    from dazzle_http.runtime.query_builder import quote_identifier, validate_sql_identifier
 
     # Defence-in-depth: validate identifiers even though they come from DSL source.
     # Protects against future codepaths that might deserialize via specs from JSON.
@@ -1057,7 +1057,7 @@ Expected: All PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py tests/unit/test_scope_via.py
+git add src/dazzle_http/runtime/route_generator.py tests/unit/test_scope_via.py
 git commit -m "feat(scope): add via subquery builder and wire into filter extraction (#530)"
 ```
 
@@ -1121,7 +1121,7 @@ Expected: All PASS (both new and existing tests)
 
 - [ ] **Step 5: Lint and type check**
 
-Run: `ruff check src/dazzle/core/ir/conditions.py src/dazzle/core/dsl_parser_impl/entity.py src/dazzle_back/specs/auth.py src/dazzle_back/converters/entity_converter.py src/dazzle_back/runtime/route_generator.py src/dazzle_back/runtime/query_builder.py --fix && ruff format src/dazzle/core/ir/conditions.py src/dazzle/core/dsl_parser_impl/entity.py src/dazzle_back/specs/auth.py src/dazzle_back/converters/entity_converter.py src/dazzle_back/runtime/route_generator.py src/dazzle_back/runtime/query_builder.py`
+Run: `ruff check src/dazzle/core/ir/conditions.py src/dazzle/core/dsl_parser_impl/entity.py src/dazzle_http/specs/auth.py src/dazzle_http/converters/entity_converter.py src/dazzle_http/runtime/route_generator.py src/dazzle_http/runtime/query_builder.py --fix && ruff format src/dazzle/core/ir/conditions.py src/dazzle/core/dsl_parser_impl/entity.py src/dazzle_http/specs/auth.py src/dazzle_http/converters/entity_converter.py src/dazzle_http/runtime/route_generator.py src/dazzle_http/runtime/query_builder.py`
 
 Run: `mypy src/dazzle/core/ir/conditions.py`
 

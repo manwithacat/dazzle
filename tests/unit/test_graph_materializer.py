@@ -11,8 +11,8 @@ except ImportError:
 
 pytestmark = pytest.mark.skipif(not HAS_NX, reason="networkx not installed")
 
-from dazzle.back.runtime.graph_materializer import GraphMaterializer  # noqa: E402
 from dazzle.core.ir import GraphEdgeSpec  # noqa: E402
+from dazzle.http.runtime.graph_materializer import GraphMaterializer  # noqa: E402
 
 
 class TestGraphMaterializer:

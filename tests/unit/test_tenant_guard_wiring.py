@@ -12,9 +12,9 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.runtime.tenant.cookies import apex_cookie_name, host_cookie_name
-from dazzle.back.runtime.tenant.guard_wiring import enforce_cross_tenant
-from dazzle.back.runtime.tenant.resolver import ResolvedTenant
+from dazzle.http.runtime.tenant.cookies import apex_cookie_name, host_cookie_name
+from dazzle.http.runtime.tenant.guard_wiring import enforce_cross_tenant
+from dazzle.http.runtime.tenant.resolver import ResolvedTenant
 
 APP_NAME = "AegisMark"
 HOST_COOKIE = host_cookie_name(APP_NAME)

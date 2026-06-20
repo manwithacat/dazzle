@@ -32,7 +32,7 @@ redirect-URI registration reminder (`<base_url>/auth/enterprise/callback`) and a
 
 ## Task 1: diagnose kernel
 
-**Files:** Create `src/dazzle/back/runtime/auth/connection_doctor.py`,
+**Files:** Create `src/dazzle/http/runtime/auth/connection_doctor.py`,
 `tests/unit/test_connection_doctor.py`.
 
 - `Check`/`Diagnosis` frozen dataclasses, `diagnose_connection`. Tests: fully-configured →

@@ -7,16 +7,16 @@ from uuid import UUID, uuid4
 
 import pytest
 
-pytest.importorskip("dazzle.back.runtime.auth.current")
+pytest.importorskip("dazzle.http.runtime.auth.current")
 
-from dazzle.back.runtime.auth import (  # noqa: E402
+from dazzle.http.runtime.auth import (  # noqa: E402
     current_auth,
     current_user,
     current_user_id,
     register_auth_store,
     require_auth,
 )
-from dazzle.back.runtime.auth.models import AuthContext, UserRecord  # noqa: E402
+from dazzle.http.runtime.auth.models import AuthContext, UserRecord  # noqa: E402
 
 
 def _make_authed_context(

@@ -2,7 +2,7 @@
 
 Unit-level gates exercise the dzTable Alpine controller state machine
 directly via window.qualityGates.test*() helpers defined in the HTML
-test harness (src/dazzle/ui/runtime/static/test-data-table.html).
+test harness (src/dazzle/page/runtime/static/test-data-table.html).
 
 Integration gates fire real pointer and keyboard events against the live
 DOM to verify that event wiring and Alpine bindings work end-to-end.
@@ -27,7 +27,7 @@ from playwright.sync_api import Page, sync_playwright  # noqa: E402
 @pytest.fixture(scope="module")
 def server():
     """Serve the static directory on port 8768."""
-    static_dir = "src/dazzle/ui/runtime/static"
+    static_dir = "src/dazzle/page/runtime/static"
     proc = subprocess.Popen(
         ["python3", "-m", "http.server", "8768", "--directory", static_dir],
         stdout=subprocess.DEVNULL,

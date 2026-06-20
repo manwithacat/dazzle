@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dazzle.back.converters.entity_converter import convert_entities
-from dazzle.back.runtime.sa_schema import build_metadata
 from dazzle.core import ir
+from dazzle.http.converters.entity_converter import convert_entities
+from dazzle.http.runtime.sa_schema import build_metadata
 
 
 def _e(name: str, *fields: ir.FieldSpec, **kw) -> ir.EntitySpec:

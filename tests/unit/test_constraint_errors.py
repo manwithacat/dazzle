@@ -5,12 +5,12 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.runtime.repository import (
+from dazzle.http.runtime.repository import (
     ConstraintViolationError,
     Repository,
     _parse_constraint_error,
 )
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 # ---------------------------------------------------------------------------
 # _parse_constraint_error — string inputs (backwards-compatible)
@@ -197,7 +197,7 @@ def db_and_repo():
 
     from pydantic import BaseModel, Field
 
-    from dazzle.back.runtime.pg_backend import PostgresBackend
+    from dazzle.http.runtime.pg_backend import PostgresBackend
 
     class WidgetModel(BaseModel):
         id: UUIDType | None = Field(default=None)
@@ -313,7 +313,7 @@ def fk_db_and_repos():
 
     from pydantic import BaseModel, Field
 
-    from dazzle.back.runtime.pg_backend import PostgresBackend
+    from dazzle.http.runtime.pg_backend import PostgresBackend
 
     class TeamModel(BaseModel):
         id: UUIDType | None = Field(default=None)

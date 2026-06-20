@@ -7,7 +7,7 @@ analysis (`JsonFileAuditSink`). `set_audit_sink()` swaps the active sink.
 
 It is **not** the production audit trail. In production the sink is
 `NullAuditSink` *by design* (zero overhead) — the durable access-decision
-audit trail is the runtime `AuditLogger` (`dazzle.back.runtime.audit_log`),
+audit trail is the runtime `AuditLogger` (`dazzle.http.runtime.audit_log`),
 which writes every CRUD-route decision to the `_dazzle_audit_log`
 PostgreSQL table. A `NullAuditSink` default here therefore does **not**
 mean "auditing is off"; it means this verification seam is idle while the

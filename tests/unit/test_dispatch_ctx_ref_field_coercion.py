@@ -15,7 +15,7 @@ resolves."""
 
 from __future__ import annotations
 
-from dazzle.back.runtime.page_routes import _build_dispatch_ctx
+from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 from dazzle.render.context import FieldContext, FormContext
 
 

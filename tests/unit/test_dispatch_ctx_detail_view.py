@@ -10,7 +10,7 @@ Fix: iterate `detail.fields` directly. This pins the contract."""
 
 from __future__ import annotations
 
-from dazzle.back.runtime.page_routes import _build_dispatch_ctx
+from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 from dazzle.render.context import DetailContext, FieldContext
 
 
@@ -159,7 +159,7 @@ def test_custom_detail_viewer_can_delegate_to_generic_render() -> None:
     detail body, then wrap/append its own chrome. This pins the full
     delegation round-trip the worked example (fixtures/custom_renderer)
     relies on."""
-    from dazzle.ui.runtime import render_detail_view
+    from dazzle.page.runtime import render_detail_view
 
     detail = DetailContext(
         entity_name="Manuscript",

@@ -39,7 +39,7 @@ shell. Opt-in: no header ⇒ today's behaviour (handler owns its full response).
 ### 1. `build_app_page_context(request) -> PageContext` (prerequisite extraction)
 
 The nav/persona/tenant-config `PageContext` assembly currently **inline** in `_page_handler`
-(`src/dazzle/ui/runtime/page_routes.py` ~L2376 — `_resolve_nav_model` + `PageContext(...)` +
+(`src/dazzle/page/runtime/page_routes.py` ~L2376 — `_resolve_nav_model` + `PageContext(...)` +
 chrome css/js/theme/favicon resolution) is extracted into a reusable, request-only function.
 `_page_handler` is refactored to call it — **behavior-preserving** (same `PageContext`), pinned
 by the existing page-render tests + an extraction-parity test. This is the architecture-material

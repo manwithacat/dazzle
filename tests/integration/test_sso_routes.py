@@ -16,9 +16,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.middleware.sessions import SessionMiddleware
 
-pytest.importorskip("dazzle.back.runtime.auth.sso_routes")
-from dazzle.back.runtime.auth.sso_config import SsoProviderConfig  # noqa: E402
-from dazzle.back.runtime.auth.sso_routes import create_sso_routes  # noqa: E402
+pytest.importorskip("dazzle.http.runtime.auth.sso_routes")
+from dazzle.http.runtime.auth.sso_config import SsoProviderConfig  # noqa: E402
+from dazzle.http.runtime.auth.sso_routes import create_sso_routes  # noqa: E402
 
 
 def _google() -> SsoProviderConfig:

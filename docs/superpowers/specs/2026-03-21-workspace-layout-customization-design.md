@@ -32,7 +32,7 @@ User customizes --> Alpine state updates --> Save --> dzPrefs.set() --> PUT /aut
 | alpine-sort | SortableJS wrapper as Alpine plugin for drag-and-drop | ~2KB |
 | SortableJS | Drag-and-drop engine (dependency of alpine-sort) | ~15KB gzipped |
 
-All three are vendored into `src/dazzle_ui/static/vendor/` (consistent with existing HTMX vendoring pattern).
+All three are vendored into `src/dazzle_page/static/vendor/` (consistent with existing HTMX vendoring pattern).
 
 ### Relationship to `dz.js`
 

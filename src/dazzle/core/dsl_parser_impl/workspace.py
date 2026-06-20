@@ -5,7 +5,7 @@ This mixin is composed into Parser via
 src/dazzle/core/dsl_parser_impl/__init__.py — do not instantiate it
 directly. Parsed `WorkspaceSpec` objects are defined in
 src/dazzle/core/ir/workspaces.py and rendered by
-src/dazzle/back/runtime/workspace_rendering.py (and its extracted
+src/dazzle/http/runtime/workspace_rendering.py (and its extracted
 siblings in back/runtime/workspace_*.py).
 
 Handles workspace declarations including regions, aggregates, and display modes.
@@ -2533,7 +2533,7 @@ class WorkspaceParserMixin:
         return actions
 
     # Parsed access specs are enforced at request time in
-    # src/dazzle/ui/runtime/surface_access.py:check_surface_access().
+    # src/dazzle/page/runtime/surface_access.py:check_surface_access().
     def _parse_workspace_access(self) -> ir.WorkspaceAccessSpec:
         """
         Parse workspace access specification.

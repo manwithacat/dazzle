@@ -24,7 +24,7 @@ independent review focused on the secret-free invariant + org-scoping of the aud
 ### Task 1: Shared `environment_flags()` in `connection_doctor`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/connection_doctor.py`
+- Modify: `src/dazzle/http/runtime/auth/connection_doctor.py`
 - Modify: `src/dazzle/cli/auth_connection.py` (`_env_flags` delegates)
 - Test: `tests/unit/test_auth_connection_cli.py`
 
@@ -34,7 +34,7 @@ independent review focused on the secret-free invariant + org-scoping of the aud
 def test_environment_flags_reports_key_presence(monkeypatch) -> None:
     import base64
 
-    from dazzle.back.runtime.auth.connection_doctor import environment_flags
+    from dazzle.http.runtime.auth.connection_doctor import environment_flags
 
     monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", base64.b64encode(b"k" * 32).decode())
     secret_ok, _sso, _dns = environment_flags()
@@ -58,7 +58,7 @@ def environment_flags() -> tuple[bool, bool, bool]:
     """
     from importlib.util import find_spec
 
-    from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError, _load_key
+    from dazzle.http.runtime.auth.connection_crypto import ConnectionSecretError, _load_key
 
     try:
         _load_key()
@@ -73,7 +73,7 @@ def environment_flags() -> tuple[bool, bool, bool]:
 ```python
 def _env_flags() -> tuple[bool, bool, bool]:
     """(secret_key_ok, sso_extra_ok, dns_extra_ok) for the doctor."""
-    from dazzle.back.runtime.auth.connection_doctor import environment_flags
+    from dazzle.http.runtime.auth.connection_doctor import environment_flags
 
     return environment_flags()
 ```
@@ -88,7 +88,7 @@ Run: `pytest tests/unit/test_auth_connection_cli.py -q`
 ### Task 2: `get_connection_grace_status` store method
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py`
 - Test: `tests/integration/test_connections_pg.py`
 
 - [ ] **Step 1: Write the failing PG test** (append)
@@ -139,13 +139,13 @@ Run: `DATABASE_URL=postgresql://localhost/dazzle_dev pytest tests/integration/te
 
 ### Task 3: Handler gathers readiness / events / grace
 
-**Files:** Modify `src/dazzle/back/runtime/auth/connection_admin_routes.py` (`connections_page`).
+**Files:** Modify `src/dazzle/http/runtime/auth/connection_admin_routes.py` (`connections_page`).
 
 - [ ] **Step 1: Add imports** to the `connections_page` handler (it already imports
 `build_connections_view`, `ConnectionSecretError`, `txt_record`, `FragmentRenderer`):
 
 ```python
-        from dazzle.back.runtime.auth.connection_doctor import (
+        from dazzle.http.runtime.auth.connection_doctor import (
             diagnose_connection,
             environment_flags,
         )
@@ -219,7 +219,7 @@ dict is appended) attach the extras. Replace the `connections.append({...})` blo
 
 ### Task 4: View renders readiness + grace + history
 
-**Files:** Modify `src/dazzle/back/runtime/auth/connection_admin_views.py`.
+**Files:** Modify `src/dazzle/http/runtime/auth/connection_admin_views.py`.
 
 - [ ] **Step 1: Add two render helpers** (module level, after `_CSS`/`_JS`):
 

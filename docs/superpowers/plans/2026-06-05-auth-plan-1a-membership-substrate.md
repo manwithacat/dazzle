@@ -20,10 +20,10 @@
 
 | File | Responsibility | Change |
 |---|---|---|
-| `src/dazzle/back/runtime/auth/models.py` | Pydantic records + `AuthContext` | **Modify** — add `MembershipRecord`; add `active_membership` to `AuthContext`; membership-sourced `roles` |
-| `src/dazzle/back/runtime/auth/store.py` | Raw-SQL auth store | **Modify** — `memberships` DDL + `sessions.active_membership_id` in `_init_db`; CRUD; `create_session`/`validate_session` |
-| `src/dazzle/back/runtime/auth/dependencies.py` | Per-request RLS binding | **Modify** — `_bind_rls_tenant_id` reads active membership first |
-| `src/dazzle/back/alembic/versions/0007_memberships.py` | Schema migration | **Create** — `memberships` table + `sessions.active_membership_id` |
+| `src/dazzle/http/runtime/auth/models.py` | Pydantic records + `AuthContext` | **Modify** — add `MembershipRecord`; add `active_membership` to `AuthContext`; membership-sourced `roles` |
+| `src/dazzle/http/runtime/auth/store.py` | Raw-SQL auth store | **Modify** — `memberships` DDL + `sessions.active_membership_id` in `_init_db`; CRUD; `create_session`/`validate_session` |
+| `src/dazzle/http/runtime/auth/dependencies.py` | Per-request RLS binding | **Modify** — `_bind_rls_tenant_id` reads active membership first |
+| `src/dazzle/http/alembic/versions/0007_memberships.py` | Schema migration | **Create** — `memberships` table + `sessions.active_membership_id` |
 | `tests/unit/test_auth_membership_model.py` | Pure-model tests | **Create** |
 | `tests/unit/test_bind_rls_from_membership.py` | Bind-logic unit test | **Create** |
 | `tests/integration/test_auth_membership_pg.py` | Real-PG store + migration + keystone proof | **Create** |
@@ -33,7 +33,7 @@
 ## Task 1: `MembershipRecord` model
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/models.py`
+- Modify: `src/dazzle/http/runtime/auth/models.py`
 - Test: `tests/unit/test_auth_membership_model.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -42,7 +42,7 @@
 # tests/unit/test_auth_membership_model.py
 """MembershipRecord model (auth Plan 1a)."""
 
-from dazzle.back.runtime.auth.models import MembershipRecord
+from dazzle.http.runtime.auth.models import MembershipRecord
 
 
 class TestMembershipRecord:
@@ -88,7 +88,7 @@ Expected: FAIL — `ImportError: cannot import name 'MembershipRecord'`.
 
 - [ ] **Step 3: Add the model**
 
-In `src/dazzle/back/runtime/auth/models.py`, after the `SessionRecord` class, add:
+In `src/dazzle/http/runtime/auth/models.py`, after the `SessionRecord` class, add:
 
 ```python
 class MembershipRecord(BaseModel):
@@ -123,7 +123,7 @@ Expected: PASS (3 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/models.py tests/unit/test_auth_membership_model.py
+git add src/dazzle/http/runtime/auth/models.py tests/unit/test_auth_membership_model.py
 git commit -m "feat(auth): MembershipRecord model (Plan 1a)"
 ```
 
@@ -132,14 +132,14 @@ git commit -m "feat(auth): MembershipRecord model (Plan 1a)"
 ## Task 2: `AuthContext.active_membership` + membership-sourced roles
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/models.py` (the `AuthContext` class)
+- Modify: `src/dazzle/http/runtime/auth/models.py` (the `AuthContext` class)
 - Test: `tests/unit/test_auth_membership_model.py` (append)
 
 - [ ] **Step 1: Write the failing test (append to the existing file)**
 
 ```python
 # append to tests/unit/test_auth_membership_model.py
-from dazzle.back.runtime.auth.models import AuthContext, UserRecord
+from dazzle.http.runtime.auth.models import AuthContext, UserRecord
 
 
 class TestAuthContextActiveMembership:
@@ -174,7 +174,7 @@ Expected: FAIL — `AuthContext` has no `active_membership` / `effective_roles`.
 
 - [ ] **Step 3: Extend `AuthContext`**
 
-In `src/dazzle/back/runtime/auth/models.py`, modify the `AuthContext` class — add the field and property:
+In `src/dazzle/http/runtime/auth/models.py`, modify the `AuthContext` class — add the field and property:
 
 ```python
 class AuthContext(BaseModel):
@@ -223,7 +223,7 @@ Expected: PASS (6 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/models.py tests/unit/test_auth_membership_model.py
+git add src/dazzle/http/runtime/auth/models.py tests/unit/test_auth_membership_model.py
 git commit -m "feat(auth): AuthContext.active_membership + effective_roles (Plan 1a)"
 ```
 
@@ -232,7 +232,7 @@ git commit -m "feat(auth): AuthContext.active_membership + effective_roles (Plan
 ## Task 3: Alembic migration `0007_memberships`
 
 **Files:**
-- Create: `src/dazzle/back/alembic/versions/0007_memberships.py`
+- Create: `src/dazzle/http/alembic/versions/0007_memberships.py`
 - Test: `tests/integration/test_auth_membership_pg.py`
 
 - [ ] **Step 1: Write the failing integration test (with the shared scratch-DB harness)**
@@ -302,11 +302,11 @@ def test_migration_0007_creates_memberships_and_active_membership_col(scratch_ur
     from alembic import command
     from alembic.config import Config
 
-    from dazzle.back.alembic import alembic_ini_path  # existing helper
+    from dazzle.http.alembic import alembic_ini_path  # existing helper
 
     # Stand up the prior framework tables (users/sessions) the way the runtime does,
     # then run migrations to head.
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()  # creates users/sessions baseline so FKs resolve
@@ -321,7 +321,7 @@ def test_migration_0007_creates_memberships_and_active_membership_col(scratch_ur
     assert "active_membership_id" in _columns(scratch_url, "sessions")
 ```
 
-> If `dazzle.back.alembic.alembic_ini_path` does not exist, replace the Config construction with the project's standard way of locating `alembic.ini` (grep `Config(` under `src/dazzle/cli/db.py` for the canonical pattern and mirror it). The assertion content does not change.
+> If `dazzle.http.alembic.alembic_ini_path` does not exist, replace the Config construction with the project's standard way of locating `alembic.ini` (grep `Config(` under `src/dazzle/cli/db.py` for the canonical pattern and mirror it). The assertion content does not change.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -331,7 +331,7 @@ Expected: FAIL — migration head has no `memberships`/`active_membership_id` (o
 - [ ] **Step 3: Write the migration**
 
 ```python
-# src/dazzle/back/alembic/versions/0007_memberships.py
+# src/dazzle/http/alembic/versions/0007_memberships.py
 """Add memberships table + sessions.active_membership_id (auth Plan 1a).
 
 The framework gains a `memberships` join (identity x org x roles) — the fenced
@@ -410,7 +410,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/alembic/versions/0007_memberships.py tests/integration/test_auth_membership_pg.py
+git add src/dazzle/http/alembic/versions/0007_memberships.py tests/integration/test_auth_membership_pg.py
 git commit -m "feat(auth): alembic 0007 — memberships + sessions.active_membership_id (Plan 1a)"
 ```
 
@@ -419,7 +419,7 @@ git commit -m "feat(auth): alembic 0007 — memberships + sessions.active_member
 ## Task 4: `_init_db` DDL parity (dev create path)
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py` (the `_init_db` method)
+- Modify: `src/dazzle/http/runtime/auth/store.py` (the `_init_db` method)
 - Test: `tests/integration/test_auth_membership_pg.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -429,7 +429,7 @@ git commit -m "feat(auth): alembic 0007 — memberships + sessions.active_member
 def test_init_db_creates_memberships_and_active_membership_col(scratch_url: str) -> None:
     """The dev `_init_db` path creates the same shape as migration 0007
     (so create-all and migrate are interchangeable)."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -446,7 +446,7 @@ Expected: FAIL — `memberships` not created by `_init_db`.
 
 - [ ] **Step 3: Add the DDL to `_init_db`**
 
-In `src/dazzle/back/runtime/auth/store.py`, inside `_init_db`, after the `sessions` table creation block (and its `csrf_secret` idempotent ALTER), add:
+In `src/dazzle/http/runtime/auth/store.py`, inside `_init_db`, after the `sessions` table creation block (and its `csrf_secret` idempotent ALTER), add:
 
 ```python
         # auth Plan 1a: memberships (identity x org x roles) — the fenced source
@@ -488,7 +488,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_auth_membership_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_auth_membership_pg.py
 git commit -m "feat(auth): _init_db creates memberships + active_membership_id (Plan 1a)"
 ```
 
@@ -497,7 +497,7 @@ git commit -m "feat(auth): _init_db creates memberships + active_membership_id (
 ## Task 5: Membership CRUD on `AuthStore`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py`
 - Test: `tests/integration/test_auth_membership_pg.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -506,7 +506,7 @@ git commit -m "feat(auth): _init_db creates memberships + active_membership_id (
 # append to tests/integration/test_auth_membership_pg.py
 def _seed_user(store, email: str = "a@b.test") -> str:
     """Create a user row directly and return its id (str)."""
-    from dazzle.back.runtime.auth.models import UserRecord
+    from dazzle.http.runtime.auth.models import UserRecord
 
     user = UserRecord(email=email, password_hash="x")
     store.create_user(user)  # existing AuthStore method
@@ -514,7 +514,7 @@ def _seed_user(store, email: str = "a@b.test") -> str:
 
 
 def test_membership_crud_round_trip(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -551,7 +551,7 @@ Expected: FAIL — `AuthStore` has no `create_membership`.
 
 - [ ] **Step 3: Add CRUD + row mapper**
 
-In `src/dazzle/back/runtime/auth/store.py`, add (near the session methods). Import `MembershipRecord` from `.models` at the top alongside the other model imports, and ensure `json`/`datetime`/`UTC` are imported (they already are — used by user roles + timestamps):
+In `src/dazzle/http/runtime/auth/store.py`, add (near the session methods). Import `MembershipRecord` from `.models` at the top alongside the other model imports, and ensure `json`/`datetime`/`UTC` are imported (they already are — used by user roles + timestamps):
 
 ```python
     def _row_to_membership(self, row: dict[str, Any]) -> "MembershipRecord":
@@ -632,7 +632,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_auth_membership_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_auth_membership_pg.py
 git commit -m "feat(auth): AuthStore membership CRUD (Plan 1a)"
 ```
 
@@ -641,7 +641,7 @@ git commit -m "feat(auth): AuthStore membership CRUD (Plan 1a)"
 ## Task 6: `create_session` accepts `active_membership_id`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/models.py` (`SessionRecord`), `src/dazzle/back/runtime/auth/store.py` (`create_session`)
+- Modify: `src/dazzle/http/runtime/auth/models.py` (`SessionRecord`), `src/dazzle/http/runtime/auth/store.py` (`create_session`)
 - Test: `tests/integration/test_auth_membership_pg.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -649,7 +649,7 @@ git commit -m "feat(auth): AuthStore membership CRUD (Plan 1a)"
 ```python
 # append to tests/integration/test_auth_membership_pg.py
 def test_create_session_persists_active_membership_id(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -676,7 +676,7 @@ Expected: FAIL — `create_session` has no `active_membership_id`.
 
 - [ ] **Step 3a: Add the field to `SessionRecord`**
 
-In `src/dazzle/back/runtime/auth/models.py`, add to `SessionRecord`:
+In `src/dazzle/http/runtime/auth/models.py`, add to `SessionRecord`:
 
 ```python
     active_membership_id: str | None = None  # auth Plan 1a — pins the active org
@@ -684,7 +684,7 @@ In `src/dazzle/back/runtime/auth/models.py`, add to `SessionRecord`:
 
 - [ ] **Step 3b: Thread it through `create_session`**
 
-In `src/dazzle/back/runtime/auth/store.py`, modify `create_session` — add the parameter, the `SessionRecord` field, and the INSERT column:
+In `src/dazzle/http/runtime/auth/store.py`, modify `create_session` — add the parameter, the `SessionRecord` field, and the INSERT column:
 
 ```python
     def create_session(
@@ -733,7 +733,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/models.py src/dazzle/back/runtime/auth/store.py tests/integration/test_auth_membership_pg.py
+git add src/dazzle/http/runtime/auth/models.py src/dazzle/http/runtime/auth/store.py tests/integration/test_auth_membership_pg.py
 git commit -m "feat(auth): create_session persists active_membership_id (Plan 1a)"
 ```
 
@@ -742,7 +742,7 @@ git commit -m "feat(auth): create_session persists active_membership_id (Plan 1a
 ## Task 7: `validate_session` resolves the active membership
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py` (`validate_session`, and the `get_session`/`SessionRecord` hydration so it reads the new column)
+- Modify: `src/dazzle/http/runtime/auth/store.py` (`validate_session`, and the `get_session`/`SessionRecord` hydration so it reads the new column)
 - Test: `tests/integration/test_auth_membership_pg.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -750,7 +750,7 @@ git commit -m "feat(auth): create_session persists active_membership_id (Plan 1a
 ```python
 # append to tests/integration/test_auth_membership_pg.py
 def test_validate_session_populates_active_membership(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -770,7 +770,7 @@ def test_validate_session_populates_active_membership(scratch_url: str) -> None:
 
 def test_validate_session_no_membership_is_backward_compatible(scratch_url: str) -> None:
     """A session with no active membership still authenticates (legacy path)."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -791,7 +791,7 @@ Expected: FAIL — `active_membership` is `None` even when the session pins one 
 
 - [ ] **Step 3a: Hydrate `active_membership_id` in `get_session`**
 
-In `src/dazzle/back/runtime/auth/store.py`, find the method that maps a `sessions` row to a `SessionRecord` (inside `get_session`). Add the field to the `SessionRecord(...)` construction:
+In `src/dazzle/http/runtime/auth/store.py`, find the method that maps a `sessions` row to a `SessionRecord` (inside `get_session`). Add the field to the `SessionRecord(...)` construction:
 
 ```python
             active_membership_id=row.get("active_membership_id"),
@@ -829,7 +829,7 @@ Expected: PASS (2 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_auth_membership_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_auth_membership_pg.py
 git commit -m "feat(auth): validate_session resolves active membership (Plan 1a)"
 ```
 
@@ -838,7 +838,7 @@ git commit -m "feat(auth): validate_session resolves active membership (Plan 1a)
 ## Task 8: `_bind_rls_tenant_id` reads the active membership first
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/dependencies.py` (`_bind_rls_tenant_id`)
+- Modify: `src/dazzle/http/runtime/auth/dependencies.py` (`_bind_rls_tenant_id`)
 - Test: `tests/unit/test_bind_rls_from_membership.py`
 
 - [ ] **Step 1: Write the failing unit test**
@@ -849,8 +849,8 @@ git commit -m "feat(auth): validate_session resolves active membership (Plan 1a)
 
 from unittest.mock import patch
 
-from dazzle.back.runtime.auth.dependencies import _bind_rls_tenant_id
-from dazzle.back.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
+from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
+from dazzle.http.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
 
 
 def _ctx(active_membership=None, prefs=None) -> AuthContext:
@@ -866,9 +866,9 @@ def _ctx(active_membership=None, prefs=None) -> AuthContext:
 def test_binds_tenant_id_from_active_membership() -> None:
     m = MembershipRecord(id="m-1", tenant_id="tenant-xyz", identity_id="u-1", roles=["admin"])
     with patch(
-        "dazzle.back.runtime.tenant_isolation.set_current_tenant_id"
+        "dazzle.http.runtime.tenant_isolation.set_current_tenant_id"
     ) as set_tid, patch(
-        "dazzle.back.runtime.tenant_isolation.get_rls_user_attr_names", return_value=set()
+        "dazzle.http.runtime.tenant_isolation.get_rls_user_attr_names", return_value=set()
     ):
         _bind_rls_tenant_id(_ctx(active_membership=m))
     set_tid.assert_called_once_with("tenant-xyz")
@@ -876,16 +876,16 @@ def test_binds_tenant_id_from_active_membership() -> None:
 
 def test_falls_back_to_preferences_when_no_membership() -> None:
     with patch(
-        "dazzle.back.runtime.tenant_isolation.set_current_tenant_id"
+        "dazzle.http.runtime.tenant_isolation.set_current_tenant_id"
     ) as set_tid, patch(
-        "dazzle.back.runtime.tenant_isolation.get_rls_user_attr_names", return_value=set()
+        "dazzle.http.runtime.tenant_isolation.get_rls_user_attr_names", return_value=set()
     ):
         _bind_rls_tenant_id(_ctx(prefs={"tenant_id": "tenant-legacy"}))
     set_tid.assert_called_once_with("tenant-legacy")
 
 
 def test_unauthenticated_binds_nothing() -> None:
-    with patch("dazzle.back.runtime.tenant_isolation.set_current_tenant_id") as set_tid:
+    with patch("dazzle.http.runtime.tenant_isolation.set_current_tenant_id") as set_tid:
         _bind_rls_tenant_id(AuthContext())
     set_tid.assert_not_called()
 ```
@@ -897,7 +897,7 @@ Expected: FAIL on `test_binds_tenant_id_from_active_membership` — the current 
 
 - [ ] **Step 3: Make the membership the primary source**
 
-In `src/dazzle/back/runtime/auth/dependencies.py`, modify `_bind_rls_tenant_id` — replace the `tenant_id` resolution block (lines ~52-55) with a membership-first resolution:
+In `src/dazzle/http/runtime/auth/dependencies.py`, modify `_bind_rls_tenant_id` — replace the `tenant_id` resolution block (lines ~52-55) with a membership-first resolution:
 
 ```python
     # auth Plan 1a: prefer the active membership's tenant_id (the hard FK source);
@@ -921,7 +921,7 @@ Expected: PASS (3 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/dependencies.py tests/unit/test_bind_rls_from_membership.py
+git add src/dazzle/http/runtime/auth/dependencies.py tests/unit/test_bind_rls_from_membership.py
 git commit -m "feat(auth): bind RLS tenant from active membership, prefs fallback (Plan 1a)"
 ```
 
@@ -959,7 +959,7 @@ def test_membership_tenant_binds_fence_on_a_scoped_table(scratch_url: str) -> No
         for stmt in ddl:
             conn.execute(stmt)  # nosemgrep — static test DDL
 
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()

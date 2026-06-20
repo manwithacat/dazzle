@@ -14,12 +14,12 @@
 
 ## File Structure
 
-- **Modify** `src/dazzle/back/runtime/auth/models.py` — add `ScimGroupRecord`.
-- **Modify** `src/dazzle/back/runtime/auth/store.py` — `_init_db` tables (after `CONNECTIONS_DDL`, line ~1696) + group/member store methods.
-- **Modify** `src/dazzle/back/runtime/auth/scim_provisioning.py` — `recompute_membership_roles`, `SCIMGroupError`, group domain functions; drop role-mapping in `provision_scim_user`.
-- **Modify** `src/dazzle/back/runtime/auth/scim_routes.py` — Groups REST endpoints, Group JSON, PATCH parser; `GET /Users/{id}` read-only `groups` echo.
+- **Modify** `src/dazzle/http/runtime/auth/models.py` — add `ScimGroupRecord`.
+- **Modify** `src/dazzle/http/runtime/auth/store.py` — `_init_db` tables (after `CONNECTIONS_DDL`, line ~1696) + group/member store methods.
+- **Modify** `src/dazzle/http/runtime/auth/scim_provisioning.py` — `recompute_membership_roles`, `SCIMGroupError`, group domain functions; drop role-mapping in `provision_scim_user`.
+- **Modify** `src/dazzle/http/runtime/auth/scim_routes.py` — Groups REST endpoints, Group JSON, PATCH parser; `GET /Users/{id}` read-only `groups` echo.
 - **Modify** `docs/reference/enterprise-sso.md` + `CHANGELOG.md`.
-- **Tests:** `src/dazzle/back/tests/test_auth.py` (real-PG store methods), `tests/integration/test_scim_routes.py` (fake-store route + PATCH).
+- **Tests:** `src/dazzle/http/tests/test_auth.py` (real-PG store methods), `tests/integration/test_scim_routes.py` (fake-store route + PATCH).
 
 **FK note (convention + ordering):** the store scopes by `connection_id`/`tenant_id` in code rather than hard-FKing to `connections` (e.g. `memberships` has no connections FK). Follow that: `scim_groups.connection_id` is a plain `TEXT` column (code-scoped); keep FK + `ON DELETE CASCADE` only within the SCIM tables and to `memberships` (created at line 1625, before the SCIM tables).
 
@@ -28,15 +28,15 @@
 ## Task 1: `ScimGroupRecord` model
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/models.py`
-- Test: `src/dazzle/back/tests/test_auth.py`
+- Modify: `src/dazzle/http/runtime/auth/models.py`
+- Test: `src/dazzle/http/tests/test_auth.py`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# in src/dazzle/back/tests/test_auth.py (top-level, near other model tests)
+# in src/dazzle/http/tests/test_auth.py (top-level, near other model tests)
 def test_scim_group_record_fields() -> None:
-    from dazzle.back.runtime.auth.models import ScimGroupRecord
+    from dazzle.http.runtime.auth.models import ScimGroupRecord
 
     g = ScimGroupRecord(
         id="g1", connection_id="c1", display_name="Engineering",
@@ -47,7 +47,7 @@ def test_scim_group_record_fields() -> None:
     assert g.display_name == "Engineering"
 ```
 
-- [ ] **Step 2: Run → fail** — `pytest "src/dazzle/back/tests/test_auth.py::test_scim_group_record_fields" -q` → ImportError.
+- [ ] **Step 2: Run → fail** — `pytest "src/dazzle/http/tests/test_auth.py::test_scim_group_record_fields" -q` → ImportError.
 
 - [ ] **Step 3: Implement** — add to `models.py` (it already hosts `MembershipRecord`; use the same Pydantic `BaseModel` style):
 
@@ -74,8 +74,8 @@ class ScimGroupRecord(BaseModel):
 ## Task 2: Store schema + group/member methods
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py`
-- Test: `src/dazzle/back/tests/test_auth.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py`
+- Test: `src/dazzle/http/tests/test_auth.py`
 
 - [ ] **Step 1: Write the failing tests** (real-PG; new class, postgres-marked like `TestAuthStore`)
 
@@ -160,7 +160,7 @@ class TestScimGroupStore:
     def create_scim_group(self, connection_id: str, display_name: str) -> "ScimGroupRecord":
         from uuid import uuid4
 
-        from dazzle.back.runtime.auth.models import ScimGroupRecord
+        from dazzle.http.runtime.auth.models import ScimGroupRecord
 
         now = datetime.now(UTC).isoformat()
         gid = str(uuid4())
@@ -175,7 +175,7 @@ class TestScimGroupStore:
         )
 
     def _row_to_scim_group(self, row: dict[str, Any]) -> "ScimGroupRecord":
-        from dazzle.back.runtime.auth.models import ScimGroupRecord
+        from dazzle.http.runtime.auth.models import ScimGroupRecord
 
         return ScimGroupRecord(
             id=row["id"], connection_id=row["connection_id"],
@@ -256,7 +256,7 @@ class TestScimGroupStore:
         return [r["display_name"] for r in rows]
 ```
 
-- [ ] **Step 4: Run → pass** — `DATABASE_URL=… pytest "src/dazzle/back/tests/test_auth.py::TestScimGroupStore" -q`.
+- [ ] **Step 4: Run → pass** — `DATABASE_URL=… pytest "src/dazzle/http/tests/test_auth.py::TestScimGroupStore" -q`.
 
 - [ ] **Step 5: Commit** — `feat(scim): scim_groups + scim_group_members tables + store methods (#1342)`
 
@@ -265,8 +265,8 @@ class TestScimGroupStore:
 ## Task 3: `recompute_membership_roles`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/scim_provisioning.py`
-- Test: `src/dazzle/back/tests/test_auth.py`
+- Modify: `src/dazzle/http/runtime/auth/scim_provisioning.py`
+- Test: `src/dazzle/http/tests/test_auth.py`
 
 - [ ] **Step 1: Write the failing test** (real-PG; uses the Task-2 store)
 
@@ -274,7 +274,7 @@ class TestScimGroupStore:
     def test_recompute_unions_roles_across_groups(self, store: Any, membership: Any) -> None:
         from types import SimpleNamespace
 
-        from dazzle.back.runtime.auth.scim_provisioning import recompute_membership_roles
+        from dazzle.http.runtime.auth.scim_provisioning import recompute_membership_roles
 
         conn = SimpleNamespace(
             id="conn-1", tenant_id="org-1",
@@ -323,8 +323,8 @@ def recompute_membership_roles(store: Any, connection: Any, membership_id: str) 
 ## Task 4: Group domain functions (CRUD + member ops, with recompute)
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/scim_provisioning.py`
-- Test: `src/dazzle/back/tests/test_auth.py`
+- Modify: `src/dazzle/http/runtime/auth/scim_provisioning.py`
+- Test: `src/dazzle/http/tests/test_auth.py`
 
 - [ ] **Step 1: Write the failing tests** (real-PG)
 
@@ -332,7 +332,7 @@ def recompute_membership_roles(store: Any, connection: Any, membership_id: str) 
     def test_group_domain_ops_recompute(self, store: Any, membership: Any) -> None:
         from types import SimpleNamespace
 
-        from dazzle.back.runtime.auth import scim_provisioning as sp
+        from dazzle.http.runtime.auth import scim_provisioning as sp
 
         conn = SimpleNamespace(id="conn-1", tenant_id="org-1", group_mapping={"Eng": "engineer"})
         g = sp.create_group(store, conn, "Eng", member_ids=[membership.id])
@@ -354,7 +354,7 @@ def recompute_membership_roles(store: Any, connection: Any, membership_id: str) 
         from types import SimpleNamespace
         from uuid import uuid4
 
-        from dazzle.back.runtime.auth import scim_provisioning as sp
+        from dazzle.http.runtime.auth import scim_provisioning as sp
 
         conn = SimpleNamespace(id="conn-1", tenant_id="org-1", group_mapping={})
         other = store.create_user(email=f"o-{uuid4().hex[:8]}@x.test", password="p")
@@ -463,8 +463,8 @@ def remove_group_member(store: Any, connection: Any, group_id: str, member_id: s
 ## Task 5: Drop role-mapping from `provision_scim_user` (clean-break)
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/scim_provisioning.py` (`provision_scim_user`, ~line 67-113)
-- Test: `src/dazzle/back/tests/test_auth.py`
+- Modify: `src/dazzle/http/runtime/auth/scim_provisioning.py` (`provision_scim_user`, ~line 67-113)
+- Test: `src/dazzle/http/tests/test_auth.py`
 
 - [ ] **Step 1: Write the failing test** (real-PG)
 
@@ -472,7 +472,7 @@ def remove_group_member(store: Any, connection: Any, group_id: str, member_id: s
     def test_user_groups_attribute_no_longer_drives_roles(self, store: Any) -> None:
         from types import SimpleNamespace
 
-        from dazzle.back.runtime.auth.scim_provisioning import provision_scim_user
+        from dazzle.http.runtime.auth.scim_provisioning import provision_scim_user
 
         conn = SimpleNamespace(id="conn-1", tenant_id="org-1", group_mapping={"Eng": "engineer"})
         result = provision_scim_user(
@@ -510,14 +510,14 @@ Then, for the **existing-membership** branch, do NOT overwrite roles from the (n
 ## Task 6: PATCH op parser
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/scim_provisioning.py` (a pure parser) or a small helper module
-- Test: `src/dazzle/back/tests/test_auth.py` (pure, no DB)
+- Modify: `src/dazzle/http/runtime/auth/scim_provisioning.py` (a pure parser) or a small helper module
+- Test: `src/dazzle/http/tests/test_auth.py` (pure, no DB)
 
 - [ ] **Step 1: Write the failing tests** (pure function — runs without DATABASE_URL; put in a plain top-level test)
 
 ```python
 def test_parse_group_patch_ops() -> None:
-    from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+    from dazzle.http.runtime.auth.scim_provisioning import parse_group_patch
 
     body = {"Operations": [
         {"op": "add", "path": "members", "value": [{"value": "m1"}, {"value": "m2"}]},
@@ -531,7 +531,7 @@ def test_parse_group_patch_ops() -> None:
 
 
 def test_parse_group_patch_remove_all_and_replace_members() -> None:
-    from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+    from dazzle.http.runtime.auth.scim_provisioning import parse_group_patch
 
     ops = parse_group_patch({"Operations": [
         {"op": "remove", "path": "members"},
@@ -599,7 +599,7 @@ def parse_group_patch(body: dict[str, Any]) -> list[tuple]:
 ## Task 7: Groups REST routes + JSON
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/scim_routes.py` (endpoints + `_group_to_scim` + apply PATCH)
+- Modify: `src/dazzle/http/runtime/auth/scim_routes.py` (endpoints + `_group_to_scim` + apply PATCH)
 - Test: `tests/integration/test_scim_routes.py`
 
 - [ ] **Step 1: Write the failing tests** — extend the fake `_Store` (in `test_scim_routes.py`) with the group/member methods + `get_membership`/`update_membership_roles`/`get_member_group_names` (an in-memory impl), then:
@@ -641,7 +641,7 @@ def test_groups_crud_and_member_patch(scim_client) -> None:
 
     @router.post("/scim/v2/Groups", status_code=201)
     async def scim_create_group(request: Request) -> Any:
-        from dazzle.back.runtime.auth import scim_provisioning as sp
+        from dazzle.http.runtime.auth import scim_provisioning as sp
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
@@ -656,7 +656,7 @@ def test_groups_crud_and_member_patch(scim_client) -> None:
 
     @router.get("/scim/v2/Groups/{group_id}")
     async def scim_get_group(group_id: str, request: Request) -> Any:
-        from dazzle.back.runtime.auth import scim_provisioning as sp
+        from dazzle.http.runtime.auth import scim_provisioning as sp
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
@@ -669,7 +669,7 @@ def test_groups_crud_and_member_patch(scim_client) -> None:
 
     @router.get("/scim/v2/Groups")
     async def scim_list_groups(request: Request) -> Any:
-        from dazzle.back.runtime.auth import scim_provisioning as sp
+        from dazzle.http.runtime.auth import scim_provisioning as sp
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
@@ -691,7 +691,7 @@ def test_groups_crud_and_member_patch(scim_client) -> None:
 
     @router.put("/scim/v2/Groups/{group_id}")
     async def scim_put_group(group_id: str, request: Request) -> Any:
-        from dazzle.back.runtime.auth import scim_provisioning as sp
+        from dazzle.http.runtime.auth import scim_provisioning as sp
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
@@ -709,7 +709,7 @@ def test_groups_crud_and_member_patch(scim_client) -> None:
 
     @router.patch("/scim/v2/Groups/{group_id}")
     async def scim_patch_group(group_id: str, request: Request) -> Any:
-        from dazzle.back.runtime.auth import scim_provisioning as sp
+        from dazzle.http.runtime.auth import scim_provisioning as sp
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
@@ -733,7 +733,7 @@ def test_groups_crud_and_member_patch(scim_client) -> None:
 
     @router.delete("/scim/v2/Groups/{group_id}", status_code=204)
     async def scim_delete_group(group_id: str, request: Request) -> Any:
-        from dazzle.back.runtime.auth import scim_provisioning as sp
+        from dazzle.http.runtime.auth import scim_provisioning as sp
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
@@ -755,7 +755,7 @@ Add imports at the top of `scim_routes.py` if missing: `from fastapi import Resp
 ## Task 8: `GET /Users/{id}` echoes read-only groups
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/scim_routes.py` (the User serializer / GET handler)
+- Modify: `src/dazzle/http/runtime/auth/scim_routes.py` (the User serializer / GET handler)
 - Test: `tests/integration/test_scim_routes.py`
 
 - [ ] **Step 1: Write the failing test** — GET a User who is in a group → the response `groups` array contains the group's display name/value (read-only reflection).

@@ -24,7 +24,7 @@ from playwright.sync_api import sync_playwright  # noqa: E402
 @pytest.fixture(scope="module")
 def server():
     """Start a simple HTTP server for the test harness."""
-    static_dir = "src/dazzle/ui/runtime/static"
+    static_dir = "src/dazzle/page/runtime/static"
     proc = subprocess.Popen(
         ["python3", "-m", "http.server", "8766", "--directory", static_dir],
         stdout=subprocess.DEVNULL,

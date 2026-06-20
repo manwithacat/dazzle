@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from dazzle.back.runtime.auth import AuthStore
+from dazzle.http.runtime.auth import AuthStore
 
 pytestmark = pytest.mark.e2e
 

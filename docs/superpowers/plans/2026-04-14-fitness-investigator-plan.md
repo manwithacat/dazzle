@@ -1233,7 +1233,7 @@ def _finding(
 
 
 def _cluster(
-    locus: str = "src/dazzle_ui/templates/form.html",
+    locus: str = "src/dazzle_page/templates/form.html",
     sample_id: str = "f_001",
     cluster_size: int = 3,
 ) -> Cluster:
@@ -1263,7 +1263,7 @@ def test_build_case_file_happy_path(tmp_path: Path) -> None:
         ],
     )
 
-    locus_dir = tmp_path / "src" / "dazzle_ui" / "templates"
+    locus_dir = tmp_path / "src" / "dazzle_page" / "templates"
     locus_dir.mkdir(parents=True)
     locus_file = locus_dir / "form.html"
     locus_file.write_text(

@@ -20,7 +20,7 @@ import datetime as _dt
 
 import pytest
 
-from dazzle.back.runtime import workspace_card_data as _wcd
+from dazzle.http.runtime import workspace_card_data as _wcd
 
 
 @pytest.fixture

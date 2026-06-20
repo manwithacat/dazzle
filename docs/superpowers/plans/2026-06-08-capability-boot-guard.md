@@ -15,16 +15,16 @@ subsystem (pool open by then). Loud-log only; never aborts boot.
 
 ## File Structure
 
-- Create `src/dazzle/back/runtime/auth/capability_guard.py` — pure mapping + warnings.
-- Modify `src/dazzle/back/runtime/auth/store.py` — `connection_type_counts()`.
-- Modify `src/dazzle/back/runtime/subsystems/auth.py` — register the startup hook.
+- Create `src/dazzle/http/runtime/auth/capability_guard.py` — pure mapping + warnings.
+- Modify `src/dazzle/http/runtime/auth/store.py` — `connection_type_counts()`.
+- Modify `src/dazzle/http/runtime/subsystems/auth.py` — register the startup hook.
 - Create `tests/unit/test_capability_guard.py`; modify `tests/integration/test_connections_pg.py`.
 
 ---
 
 ### Task 1: Pure mapping + warnings
 
-**Files:** Create `src/dazzle/back/runtime/auth/capability_guard.py`
+**Files:** Create `src/dazzle/http/runtime/auth/capability_guard.py`
 
 - [ ] **Step 1: Write the failing test** `tests/unit/test_capability_guard.py`:
 
@@ -33,7 +33,7 @@ subsystem (pool open by then). Loud-log only; never aborts boot.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.auth.capability_guard import capability_boot_warnings
+from dazzle.http.runtime.auth.capability_guard import capability_boot_warnings
 
 
 def _active(*ids):
@@ -77,7 +77,7 @@ def test_mixed_active_and_inactive() -> None:
 
 - [ ] **Step 2: Run** `pytest tests/unit/test_capability_guard.py -q` → FAIL (no module).
 
-- [ ] **Step 3: Implement** `src/dazzle/back/runtime/auth/capability_guard.py`:
+- [ ] **Step 3: Implement** `src/dazzle/http/runtime/auth/capability_guard.py`:
 
 ```python
 """Capability boot guard (#1344): warn when connection rows exist for a protocol whose
@@ -124,7 +124,7 @@ def capability_boot_warnings(
 
 ### Task 2: `AuthStore.connection_type_counts()`
 
-**Files:** Modify `src/dazzle/back/runtime/auth/store.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/store.py`
 
 - [ ] **Step 1: Write the failing PG test** (append to `tests/integration/test_connections_pg.py`):
 
@@ -139,7 +139,7 @@ def test_connection_type_counts(store_url: str) -> None:
 
 def test_connection_type_counts_missing_table_returns_empty(store_url: str) -> None:
     # A store whose schema was never initialised must not break boot — return {}.
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     bare = AuthStore(database_url=store_url)  # no _init_db()
     assert bare.connection_type_counts() == {}
@@ -169,7 +169,7 @@ confirm no regression.)
 
 ### Task 3: Register the lifespan startup hook
 
-**Files:** Modify `src/dazzle/back/runtime/subsystems/auth.py`
+**Files:** Modify `src/dazzle/http/runtime/subsystems/auth.py`
 
 - [ ] **Step 1: Register the hook** — in the auth subsystem's `startup`, immediately after
 `self._mount_enterprise_capabilities(ctx)` (~line 271), add a call
@@ -182,8 +182,8 @@ confirm no regression.)
         capability isn't active (#1344). A startup hook (not build-time) because the DB pool
         only opens at lifespan startup; loud-log only (the lifespan registry swallows
         exceptions and the mismatch is safe — aborting would crash-loop a safe deploy)."""
-        from dazzle.back.runtime.auth.capability_guard import capability_boot_warnings
-        from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+        from dazzle.http.runtime.auth.capability_guard import capability_boot_warnings
+        from dazzle.http.runtime.lifespan_hooks import register_lifespan_hook
 
         store = ctx.auth_store
         caps = ctx.capabilities

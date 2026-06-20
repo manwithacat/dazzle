@@ -27,7 +27,7 @@ class TestImplementsBindingParses:
     """S3.1 — the binding header parses into implements_entity/op/via."""
 
     def test_implements_header_populates_descriptor(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import discover_route_overrides
+        from dazzle.http.runtime.route_overrides import discover_route_overrides
 
         _write_route(
             tmp_path,
@@ -41,7 +41,7 @@ class TestImplementsBindingParses:
         assert (d.implements_entity, d.implements_op, d.implements_via) == ("Task", "update", "id")
 
     def test_no_implements_header_leaves_binding_none(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import discover_route_overrides
+        from dazzle.http.runtime.route_overrides import discover_route_overrides
 
         _write_route(tmp_path, "task_post", "# dazzle:route-override POST /tasks")
         d = discover_route_overrides(tmp_path)[0]
@@ -50,7 +50,7 @@ class TestImplementsBindingParses:
 
 
 def _desc(method: str, path: str, *, entity=None, op=None, via=None):
-    from dazzle.back.runtime.route_overrides import RouteOverrideDescriptor
+    from dazzle.http.runtime.route_overrides import RouteOverrideDescriptor
 
     return RouteOverrideDescriptor(
         method=method,
@@ -69,20 +69,20 @@ class TestConformanceCheck:
     _GENERATED = {("PUT", "/tasks/{id}"), ("POST", "/tasks"), ("GET", "/tasks")}
 
     def test_unbound_shadowing_override_is_violation(self) -> None:
-        from dazzle.back.runtime.route_overrides import find_unbound_shadowing_overrides
+        from dazzle.http.runtime.route_overrides import find_unbound_shadowing_overrides
 
         v = find_unbound_shadowing_overrides([_desc("PUT", "/tasks/{id}")], self._GENERATED)
         assert len(v) == 1
         assert "PUT /tasks/{id}" in v[0]
 
     def test_bound_shadowing_override_is_ok(self) -> None:
-        from dazzle.back.runtime.route_overrides import find_unbound_shadowing_overrides
+        from dazzle.http.runtime.route_overrides import find_unbound_shadowing_overrides
 
         bound = _desc("PUT", "/tasks/{id}", entity="Task", op="update", via="id")
         assert find_unbound_shadowing_overrides([bound], self._GENERATED) == []
 
     def test_unbound_non_shadowing_override_is_ok(self) -> None:
-        from dazzle.back.runtime.route_overrides import find_unbound_shadowing_overrides
+        from dazzle.http.runtime.route_overrides import find_unbound_shadowing_overrides
 
         # A custom /reports route that doesn't shadow any generated entity route.
         assert find_unbound_shadowing_overrides([_desc("GET", "/reports")], self._GENERATED) == []
@@ -92,7 +92,7 @@ class TestRawDbScanner:
     """S3.3 / ADR-0040 D4 — the residue lint: raw DB access in a custom handler."""
 
     def test_raw_sql_execute_is_flagged(self) -> None:
-        from dazzle.back.runtime.route_overrides import scan_handler_for_raw_db
+        from dazzle.http.runtime.route_overrides import scan_handler_for_raw_db
 
         src = (
             "async def handler(request, id: str):\n"
@@ -102,7 +102,7 @@ class TestRawDbScanner:
         assert scan_handler_for_raw_db(src)  # non-empty → flagged
 
     def test_direct_repository_construction_is_flagged(self) -> None:
-        from dazzle.back.runtime.route_overrides import scan_handler_for_raw_db
+        from dazzle.http.runtime.route_overrides import scan_handler_for_raw_db
 
         src = (
             "async def handler(request):\n    repo = Repository(Task, db)\n    return repo.list()\n"
@@ -110,10 +110,10 @@ class TestRawDbScanner:
         assert scan_handler_for_raw_db(src)
 
     def test_check_entity_op_handler_is_clean(self) -> None:
-        from dazzle.back.runtime.route_overrides import scan_handler_for_raw_db
+        from dazzle.http.runtime.route_overrides import scan_handler_for_raw_db
 
         src = (
-            "from dazzle.back.runtime.policy import check_entity_op\n"
+            "from dazzle.http.runtime.policy import check_entity_op\n"
             "async def handler(request, id: str):\n"
             "    await check_entity_op(request, 'Task', 'delete', row_id=id)\n"
             "    return {'ok': True}\n"
@@ -131,7 +131,7 @@ class TestMatrixCompleteness:
         )
 
     def test_unbound_shadowing_override_is_incomplete(self) -> None:
-        from dazzle.back.runtime.route_overrides import verify_route_matrix_completeness
+        from dazzle.http.runtime.route_overrides import verify_route_matrix_completeness
 
         v = verify_route_matrix_completeness(
             self._appspec("Task"), [_desc("PUT", "/tasks/{id}")], {("PUT", "/tasks/{id}")}
@@ -139,20 +139,20 @@ class TestMatrixCompleteness:
         assert v  # unbound shadow → no matrix row
 
     def test_bound_to_known_entity_op_is_complete(self) -> None:
-        from dazzle.back.runtime.route_overrides import verify_route_matrix_completeness
+        from dazzle.http.runtime.route_overrides import verify_route_matrix_completeness
 
         bound = _desc("PUT", "/tasks/{id}", entity="Task", op="update", via="id")
         assert verify_route_matrix_completeness(self._appspec("Task"), [bound], set()) == []
 
     def test_bound_to_unknown_entity_is_violation(self) -> None:
-        from dazzle.back.runtime.route_overrides import verify_route_matrix_completeness
+        from dazzle.http.runtime.route_overrides import verify_route_matrix_completeness
 
         bad = _desc("PUT", "/ghosts/{id}", entity="Ghost", op="update", via="id")
         v = verify_route_matrix_completeness(self._appspec("Task"), [bad], set())
         assert any("Ghost" in x for x in v)
 
     def test_bound_to_unknown_op_is_violation(self) -> None:
-        from dazzle.back.runtime.route_overrides import verify_route_matrix_completeness
+        from dazzle.http.runtime.route_overrides import verify_route_matrix_completeness
 
         bad = _desc("POST", "/tasks/x", entity="Task", op="frobnicate", via="id")
         v = verify_route_matrix_completeness(self._appspec("Task"), [bad], set())

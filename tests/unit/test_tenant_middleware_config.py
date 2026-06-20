@@ -27,7 +27,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from dazzle.back.runtime.tenant_middleware import HeaderResolver, TenantMiddleware
+from dazzle.http.runtime.tenant_middleware import HeaderResolver, TenantMiddleware
 
 
 @dataclass

@@ -11,12 +11,12 @@ from dazzle.core import ir
 from dazzle.core.ir import EntitySpec, FieldTypeKind
 from dazzle.core.ir.fields import FieldSpec, FieldType
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
-from dazzle.render.filters import _basename_or_url_filter
-from dazzle.ui.converters.template_compiler import (
+from dazzle.page.converters.template_compiler import (
     _build_form_fields,
     _field_type_to_form_type,
     _file_accept_attr,
 )
+from dazzle.render.filters import _basename_or_url_filter
 
 
 class TestFieldTypeToFormType:

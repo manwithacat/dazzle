@@ -21,8 +21,8 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from dazzle.back.runtime.approvals_explorer import create_approvals_routes
 from dazzle.core.ir.approvals import ApprovalSpec
+from dazzle.http.runtime.approvals_explorer import create_approvals_routes
 
 
 def _row(row_id: str, **fields: Any) -> dict[str, Any]:

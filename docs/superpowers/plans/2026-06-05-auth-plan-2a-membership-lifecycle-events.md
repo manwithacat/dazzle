@@ -18,9 +18,9 @@
 
 | File | Responsibility |
 |------|----------------|
-| `src/dazzle/back/runtime/auth/membership_events.py` (**create**) | The `MembershipEvent` dataclass, `MembershipEventType` constants, the `membership_events` DDL constant, canonical-payload + hash-chain helpers, the in-cursor `record_membership_event(cur, ...)` writer, and `verify_membership_event_chain(conn)`. Self-contained; no import cycle with `store.py`. |
-| `src/dazzle/back/runtime/auth/store.py` (**modify**) | Add the `membership_events` table to `_init_db`; add a `_transaction()` context manager (atomic multi-statement); wire `create_membership` to emit a `PROVISIONED` event in-transaction; add `update_membership_roles` / `suspend_membership` / `reactivate_membership` / `remove_membership`; add `get_membership_events` query + `verify_membership_event_chain` passthrough. |
-| `src/dazzle/back/alembic/versions/0009_membership_events.py` (**create**) | Idempotent migration creating `membership_events` (mirrors `0008_organizations.py`). |
+| `src/dazzle/http/runtime/auth/membership_events.py` (**create**) | The `MembershipEvent` dataclass, `MembershipEventType` constants, the `membership_events` DDL constant, canonical-payload + hash-chain helpers, the in-cursor `record_membership_event(cur, ...)` writer, and `verify_membership_event_chain(conn)`. Self-contained; no import cycle with `store.py`. |
+| `src/dazzle/http/runtime/auth/store.py` (**modify**) | Add the `membership_events` table to `_init_db`; add a `_transaction()` context manager (atomic multi-statement); wire `create_membership` to emit a `PROVISIONED` event in-transaction; add `update_membership_roles` / `suspend_membership` / `reactivate_membership` / `remove_membership`; add `get_membership_events` query + `verify_membership_event_chain` passthrough. |
+| `src/dazzle/http/alembic/versions/0009_membership_events.py` (**create**) | Idempotent migration creating `membership_events` (mirrors `0008_organizations.py`). |
 | `tests/unit/test_membership_event_hash.py` (**create**) | Pure-Python tests for canonical payload determinism + chain hashing (no DB). |
 | `tests/integration/test_membership_events_pg.py` (**create**) | Real-PG: each mutation writes the right event atomically; the chain verifies and detects tampering; the JML query filters by tenant/identity/time; a removed membership's event survives. |
 
@@ -29,7 +29,7 @@
 ## Task 1: The `membership_events` module (dataclass, constants, DDL, hash helpers)
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/membership_events.py`
+- Create: `src/dazzle/http/runtime/auth/membership_events.py`
 - Test: `tests/unit/test_membership_event_hash.py`
 
 - [ ] **Step 1: Write the failing unit test**
@@ -38,7 +38,7 @@
 # tests/unit/test_membership_event_hash.py
 """Pure-Python hash-chain helpers for membership_events (auth Plan 2a)."""
 
-from dazzle.back.runtime.auth.membership_events import (
+from dazzle.http.runtime.auth.membership_events import (
     MembershipEventType,
     _canonical_event_payload,
     compute_event_hash,
@@ -95,12 +95,12 @@ def test_event_types_are_the_five_jml_kinds() -> None:
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `python -m pytest tests/unit/test_membership_event_hash.py -q`
-Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle.back.runtime.auth.membership_events'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle.http.runtime.auth.membership_events'`
 
 - [ ] **Step 3: Create the module**
 
 ```python
-# src/dazzle/back/runtime/auth/membership_events.py
+# src/dazzle/http/runtime/auth/membership_events.py
 """Durable, tamper-evident membership lifecycle events (auth Plan 2a).
 
 Every membership lifecycle change (provision / role-change / suspend / reactivate
@@ -333,9 +333,9 @@ Expected: PASS (3 tests)
 - [ ] **Step 5: Lint + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/membership_events.py tests/unit/test_membership_event_hash.py --fix
-ruff format src/dazzle/back/runtime/auth/membership_events.py tests/unit/test_membership_event_hash.py
-git add src/dazzle/back/runtime/auth/membership_events.py tests/unit/test_membership_event_hash.py
+ruff check src/dazzle/http/runtime/auth/membership_events.py tests/unit/test_membership_event_hash.py --fix
+ruff format src/dazzle/http/runtime/auth/membership_events.py tests/unit/test_membership_event_hash.py
+git add src/dazzle/http/runtime/auth/membership_events.py tests/unit/test_membership_event_hash.py
 git commit -m "feat(auth): membership_events module — typed lifecycle events + hash chain (Plan 2a)"
 ```
 
@@ -344,7 +344,7 @@ git commit -m "feat(auth): membership_events module — typed lifecycle events +
 ## Task 2: `_init_db` table + `_transaction` helper + emit on `create_membership` + queries
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py` (`_init_db` ~line 1015–1033; `create_membership` ~line 714–762; add helpers near `_execute` ~line 1108)
+- Modify: `src/dazzle/http/runtime/auth/store.py` (`_init_db` ~line 1015–1033; `create_membership` ~line 714–762; add helpers near `_execute` ~line 1108)
 - Test: `tests/integration/test_membership_events_pg.py` (created here; extended in Task 3)
 
 - [ ] **Step 1: Write the failing integration test**
@@ -395,7 +395,7 @@ def store_url() -> Iterator[str]:
 
 
 def _store(store_url: str):
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=store_url)
     store._init_db()
@@ -425,12 +425,12 @@ Expected: FAIL — `AttributeError: 'AuthStore' object has no attribute 'get_mem
 
 - [ ] **Step 3: Add the table to `_init_db`**
 
-In `src/dazzle/back/runtime/auth/store.py`, inside `_init_db`, immediately after the `organizations` table block (the `CREATE TABLE IF NOT EXISTS organizations (...)` ending ~line 1058), add:
+In `src/dazzle/http/runtime/auth/store.py`, inside `_init_db`, immediately after the `organizations` table block (the `CREATE TABLE IF NOT EXISTS organizations (...)` ending ~line 1058), add:
 
 ```python
             # auth Plan 2a: append-only, hash-chained membership lifecycle events
             # (compliance evidence). Mirrors alembic 0009_membership_events.
-            from dazzle.back.runtime.auth.membership_events import (
+            from dazzle.http.runtime.auth.membership_events import (
                 MEMBERSHIP_EVENTS_DDL,
                 MEMBERSHIP_EVENTS_INDEXES,
             )
@@ -494,7 +494,7 @@ Replace the body of `create_membership` (the `self._execute("INSERT INTO members
         """
         import json
 
-        from dazzle.back.runtime.auth.membership_events import (
+        from dazzle.http.runtime.auth.membership_events import (
             MEMBERSHIP_EVENTS_LOCK_KEY,
             MembershipEventType,
             record_membership_event,
@@ -554,7 +554,7 @@ In `store.py`, after `get_memberships_for_identity` (~line 773), add:
     def _row_to_event(self, row: dict[str, Any]) -> "MembershipEvent":  # noqa: F821
         import json
 
-        from dazzle.back.runtime.auth.membership_events import MembershipEvent
+        from dazzle.http.runtime.auth.membership_events import MembershipEvent
 
         return MembershipEvent(
             id=row["id"],
@@ -613,7 +613,7 @@ In `store.py`, after `get_memberships_for_identity` (~line 773), add:
 
     def verify_membership_event_chain(self) -> "EventChainResult":  # noqa: F821
         """Verify the append-only membership_events hash-chain (tamper-evidence)."""
-        from dazzle.back.runtime.auth.membership_events import (
+        from dazzle.http.runtime.auth.membership_events import (
             verify_membership_event_chain as _verify,
         )
 
@@ -632,9 +632,9 @@ Expected: PASS
 - [ ] **Step 8: Lint + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/store.py tests/integration/test_membership_events_pg.py --fix
-ruff format src/dazzle/back/runtime/auth/store.py tests/integration/test_membership_events_pg.py
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_membership_events_pg.py
+ruff check src/dazzle/http/runtime/auth/store.py tests/integration/test_membership_events_pg.py --fix
+ruff format src/dazzle/http/runtime/auth/store.py tests/integration/test_membership_events_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_membership_events_pg.py
 git commit -m "feat(auth): membership_events table + emit on create + JML query (Plan 2a)"
 ```
 
@@ -643,7 +643,7 @@ git commit -m "feat(auth): membership_events table + emit on create + JML query 
 ## Task 3: Mutation methods — role change, suspend, reactivate, remove
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py` (add methods after `create_membership`)
+- Modify: `src/dazzle/http/runtime/auth/store.py` (add methods after `create_membership`)
 - Test: `tests/integration/test_membership_events_pg.py` (extend)
 
 - [ ] **Step 1: Write the failing tests**
@@ -763,7 +763,7 @@ In `store.py`, after `create_membership` (~line 762), add. Each reads current st
         """
         import json
 
-        from dazzle.back.runtime.auth.membership_events import (
+        from dazzle.http.runtime.auth.membership_events import (
             MEMBERSHIP_EVENTS_LOCK_KEY,
             MembershipEventType,
             record_membership_event,
@@ -809,7 +809,7 @@ In `store.py`, after `create_membership` (~line 762), add. Each reads current st
         No-op (no event) when the membership is not in ``from_status`` — keeps the
         evidence stream free of duplicate/contradictory transitions.
         """
-        from dazzle.back.runtime.auth.membership_events import (
+        from dazzle.http.runtime.auth.membership_events import (
             MEMBERSHIP_EVENTS_LOCK_KEY,
             record_membership_event,
         )
@@ -842,7 +842,7 @@ In `store.py`, after `create_membership` (~line 762), add. Each reads current st
         self, membership_id: str, *, actor_id: str | None = None, reason: str | None = None
     ) -> MembershipRecord | None:
         """Suspend an active membership (leaver-ish) + emit a SUSPENDED event."""
-        from dazzle.back.runtime.auth.membership_events import MembershipEventType
+        from dazzle.http.runtime.auth.membership_events import MembershipEventType
 
         return self._transition_membership_status(
             membership_id,
@@ -857,7 +857,7 @@ In `store.py`, after `create_membership` (~line 762), add. Each reads current st
         self, membership_id: str, *, actor_id: str | None = None, reason: str | None = None
     ) -> MembershipRecord | None:
         """Reactivate a suspended membership (mover) + emit a REACTIVATED event."""
-        from dazzle.back.runtime.auth.membership_events import MembershipEventType
+        from dazzle.http.runtime.auth.membership_events import MembershipEventType
 
         return self._transition_membership_status(
             membership_id,
@@ -877,7 +877,7 @@ In `store.py`, after `create_membership` (~line 762), add. Each reads current st
         persists in ``membership_events`` — the leaver evidence survives. Returns
         ``True`` if a membership was deleted, ``False`` if it did not exist.
         """
-        from dazzle.back.runtime.auth.membership_events import (
+        from dazzle.http.runtime.auth.membership_events import (
             MEMBERSHIP_EVENTS_LOCK_KEY,
             MembershipEventType,
             record_membership_event,
@@ -912,9 +912,9 @@ Expected: PASS (all 7 tests)
 - [ ] **Step 5: Lint + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/store.py tests/integration/test_membership_events_pg.py --fix
-ruff format src/dazzle/back/runtime/auth/store.py tests/integration/test_membership_events_pg.py
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_membership_events_pg.py
+ruff check src/dazzle/http/runtime/auth/store.py tests/integration/test_membership_events_pg.py --fix
+ruff format src/dazzle/http/runtime/auth/store.py tests/integration/test_membership_events_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_membership_events_pg.py
 git commit -m "feat(auth): membership role-change/suspend/reactivate/remove + lifecycle events (Plan 2a)"
 ```
 
@@ -923,7 +923,7 @@ git commit -m "feat(auth): membership role-change/suspend/reactivate/remove + li
 ## Task 4: Alembic migration `0009_membership_events`
 
 **Files:**
-- Create: `src/dazzle/back/alembic/versions/0009_membership_events.py`
+- Create: `src/dazzle/http/alembic/versions/0009_membership_events.py`
 - Test: `tests/integration/test_membership_events_pg.py` (add a migration-applies test)
 
 - [ ] **Step 1: Write the failing test**
@@ -936,7 +936,7 @@ def test_migration_0009_creates_membership_events(store_url: str) -> None:
     from alembic.config import Config
 
     cfg = Config()
-    cfg.set_main_option("script_location", "src/dazzle/back/alembic")
+    cfg.set_main_option("script_location", "src/dazzle/http/alembic")
     cfg.set_main_option("sqlalchemy.url", store_url.replace("postgresql://", "postgresql+psycopg://"))
     command.upgrade(cfg, "0009_membership_events")
 
@@ -955,7 +955,7 @@ Expected: FAIL — `KeyError`/`CommandError`: revision `0009_membership_events` 
 - [ ] **Step 3: Create the migration (mirrors `0008_organizations.py`)**
 
 ```python
-# src/dazzle/back/alembic/versions/0009_membership_events.py
+# src/dazzle/http/alembic/versions/0009_membership_events.py
 """Add membership_events table (auth Plan 2a — lifecycle compliance evidence).
 
 Append-only, hash-chained record of membership JML changes (provision /
@@ -1027,7 +1027,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/alembic/versions/0009_membership_events.py tests/integration/test_membership_events_pg.py
+git add src/dazzle/http/alembic/versions/0009_membership_events.py tests/integration/test_membership_events_pg.py
 git commit -m "feat(auth): alembic 0009 membership_events table (Plan 2a)"
 ```
 

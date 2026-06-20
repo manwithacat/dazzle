@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from dazzle.back.runtime.workspace_card_data import _build_day_timeline_slots
 from dazzle.core.ir.workspaces import DayTimelineConfig
+from dazzle.http.runtime.workspace_card_data import _build_day_timeline_slots
 
 _NOW = _dt.datetime(2026, 5, 10, 11, 0, tzinfo=_dt.UTC)
 

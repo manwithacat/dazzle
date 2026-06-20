@@ -6,7 +6,7 @@
 
 **Architecture:** Connect three existing-but-disconnected pieces of infra. The HLESS framework `EventBus` is already wired and started by `EventsSubsystem`. We (1) make `CRUDService` lifecycle callbacks publish a nudge envelope to the canonical `entity.{created,updated,deleted}` bus topics, (2) mount the already-built `SSEStreamManager` + `/_ops/sse/events` route against that bus, independent of the ops dashboard, and (3) populate `WorkspaceContext.sse_url` when `live`, which activates the already-wired client `sse-connect` + `sse:entity.*` triggers. Nudge-only: events carry no row data; the card re-fetches via its existing scope-gated endpoint.
 
-**Tech Stack:** Python 3.12+, FastAPI/Starlette `StreamingResponse`, psycopg3, Pydantic, HLESS event framework (`dazzle.back.events`), pytest.
+**Tech Stack:** Python 3.12+, FastAPI/Starlette `StreamingResponse`, psycopg3, Pydantic, HLESS event framework (`dazzle.http.events`), pytest.
 
 ## Global Constraints
 
@@ -26,10 +26,10 @@
 |---|---|---|
 | `src/dazzle/core/ir/workspaces.py` | `WorkspaceSpec.live` IR field | Modify |
 | `src/dazzle/core/dsl_parser_impl/workspace.py` | `live: on` keyword parse | Modify |
-| `src/dazzle/back/runtime/sse_wiring.py` | Build + register nudge-publishing lifecycle callbacks | **Create** |
-| `src/dazzle/back/runtime/server.py` | Call sse-wiring; mount SSE manager + routes when any workspace is live | Modify |
-| `src/dazzle/back/runtime/sse_stream.py` | `/events` derives tenant from request (hardening) | Modify |
-| `src/dazzle/ui/runtime/workspace_renderer.py` | Populate `WorkspaceContext.sse_url` when `live` | Modify |
+| `src/dazzle/http/runtime/sse_wiring.py` | Build + register nudge-publishing lifecycle callbacks | **Create** |
+| `src/dazzle/http/runtime/server.py` | Call sse-wiring; mount SSE manager + routes when any workspace is live | Modify |
+| `src/dazzle/http/runtime/sse_stream.py` | `/events` derives tenant from request (hardening) | Modify |
+| `src/dazzle/page/runtime/workspace_renderer.py` | Populate `WorkspaceContext.sse_url` when `live` | Modify |
 | `examples/ops_dashboard/dsl/*.dsl` | Exercise `live: on` (coverage) | Modify |
 | `docs/reference/grammar.md`, `CHANGELOG.md` | Docs + drift | Modify |
 | `tests/unit/test_workspace_live_push_1399.py` | Unit tests for parser/IR/wiring/renderer | **Create** |
@@ -207,11 +207,11 @@ git commit -m "feat(parser): live: on workspace keyword (#1399)"
 ### Task 3: SSE nudge-publishing callbacks (`sse_wiring.py`)
 
 **Files:**
-- Create: `src/dazzle/back/runtime/sse_wiring.py`
+- Create: `src/dazzle/http/runtime/sse_wiring.py`
 - Test: `tests/unit/test_workspace_live_push_1399.py`
 
 **Interfaces:**
-- Consumes: the framework `EventBus` (`dazzle.back.events.bus.EventBus`) with `async publish(topic, envelope)`; `EventEnvelope.create(event_type, key, payload, *, headers, producer)`; `CRUDService.on_created/on_updated/on_deleted(cb)` where `cb(entity_name: str, entity_id: str, entity_data: dict, old_data: dict | None)`.
+- Consumes: the framework `EventBus` (`dazzle.http.events.bus.EventBus`) with `async publish(topic, envelope)`; `EventEnvelope.create(event_type, key, payload, *, headers, producer)`; `CRUDService.on_created/on_updated/on_deleted(cb)` where `cb(entity_name: str, entity_id: str, entity_data: dict, old_data: dict | None)`.
 - Produces: `register_sse_callbacks(services: dict[str, Any], bus: EventBus) -> int` — registers nudge publishers on every `CRUDService`, returns the count wired. Publishes to topics `entity.created` / `entity.updated` / `entity.deleted` with `event_type` matching the topic (so `SSEStreamManager.STREAM_TOPICS` routes it and the SSE `event:` field equals the client trigger name `entity.<action>`).
 
 - [ ] **Step 1: Write the failing test**
@@ -245,7 +245,7 @@ class _FakeCRUDService:
 
 class TestSseWiring:
     def test_created_callback_publishes_nudge(self) -> None:
-        from dazzle.back.runtime.sse_wiring import register_sse_callbacks
+        from dazzle.http.runtime.sse_wiring import register_sse_callbacks
 
         bus = _RecordingBus()
         svc = _FakeCRUDService("Job")
@@ -270,7 +270,7 @@ class TestSseWiring:
         assert env.payload["entity"] == "Job"
 
     def test_no_bus_wires_nothing(self) -> None:
-        from dazzle.back.runtime.sse_wiring import register_sse_callbacks
+        from dazzle.http.runtime.sse_wiring import register_sse_callbacks
         svc = _FakeCRUDService("Job")
         assert register_sse_callbacks({"Job": svc}, None, _is_target=lambda s: True) == 0
         assert svc._created == []
@@ -284,7 +284,7 @@ Expected: FAIL — `sse_wiring` module does not exist (ImportError).
 - [ ] **Step 3: Implement `sse_wiring.py`**
 
 ```python
-# src/dazzle/back/runtime/sse_wiring.py
+# src/dazzle/http/runtime/sse_wiring.py
 """#1399 slice 1 — SSE live-push nudge wiring.
 
 Registers entity-lifecycle callbacks on every CRUDService that publish a
@@ -300,7 +300,7 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
-from dazzle.back.events.envelope import EventEnvelope
+from dazzle.http.events.envelope import EventEnvelope
 
 logger = logging.getLogger("dazzle.server")
 
@@ -314,7 +314,7 @@ _TOPICS = {
 
 
 def _default_is_target(service: Any) -> bool:
-    from dazzle.back.runtime.service_generator import CRUDService
+    from dazzle.http.runtime.service_generator import CRUDService
 
     return isinstance(service, CRUDService)
 
@@ -335,7 +335,7 @@ def _make_nudge_callback(bus: Any, action: str) -> Callable[..., Any]:
             key=str(entity_id),
             payload={"entity": entity_name, "id": str(entity_id)},
             headers=headers,
-            producer="dazzle.ui.live",
+            producer="dazzle.page.live",
         )
         try:
             await bus.publish(topic, envelope)
@@ -374,13 +374,13 @@ Expected: PASS (2 passed).
 
 - [ ] **Step 5: Lint + type**
 
-Run: `ruff check src/dazzle/back/runtime/sse_wiring.py --fix && mypy src/dazzle/back/runtime/sse_wiring.py`
+Run: `ruff check src/dazzle/http/runtime/sse_wiring.py --fix && mypy src/dazzle/http/runtime/sse_wiring.py`
 Expected: clean.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/sse_wiring.py tests/unit/test_workspace_live_push_1399.py
+git add src/dazzle/http/runtime/sse_wiring.py tests/unit/test_workspace_live_push_1399.py
 git commit -m "feat(runtime): SSE nudge-publish lifecycle callbacks (#1399)"
 ```
 
@@ -389,8 +389,8 @@ git commit -m "feat(runtime): SSE nudge-publish lifecycle callbacks (#1399)"
 ### Task 4: Wire callbacks + mount SSE routes in `server.py`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/server.py` (the `CRUDService` wiring loop ~line 1232-1255; the router-mount region ~line 1540)
-- Modify: `src/dazzle/back/runtime/sse_stream.py` (`/events` endpoint: prefer request-resolved tenant)
+- Modify: `src/dazzle/http/runtime/server.py` (the `CRUDService` wiring loop ~line 1232-1255; the router-mount region ~line 1540)
+- Modify: `src/dazzle/http/runtime/sse_stream.py` (`/events` endpoint: prefer request-resolved tenant)
 - Test: `tests/unit/test_workspace_live_push_1399.py`
 
 **Interfaces:**
@@ -403,7 +403,7 @@ git commit -m "feat(runtime): SSE nudge-publish lifecycle callbacks (#1399)"
 # append to tests/unit/test_workspace_live_push_1399.py
 class TestSseMountGate:
     def test_any_live_predicate(self) -> None:
-        from dazzle.back.runtime.server import _any_workspace_live  # helper added in Step 3
+        from dazzle.http.runtime.server import _any_workspace_live  # helper added in Step 3
 
         live = [SimpleNamespace(live=True), SimpleNamespace(live=False)]
         none = [SimpleNamespace(live=False)]
@@ -419,7 +419,7 @@ Expected: FAIL — `_any_workspace_live` not defined (ImportError).
 
 - [ ] **Step 3: Add the predicate + wiring + mount**
 
-In `src/dazzle/back/runtime/server.py`, add the module-level helper:
+In `src/dazzle/http/runtime/server.py`, add the module-level helper:
 
 ```python
 def _any_workspace_live(workspaces: list[Any]) -> bool:
@@ -437,7 +437,7 @@ After the audit/job/notification wiring block (right after `register_audit_callb
             framework = getattr(services_state, "event_framework", None)
             bus = framework.get_bus() if framework is not None else None
             if bus is not None:
-                from dazzle.back.runtime.sse_wiring import register_sse_callbacks
+                from dazzle.http.runtime.sse_wiring import register_sse_callbacks
 
                 register_sse_callbacks(self._services, bus)
                 self._sse_bus = bus  # stash for the mount step below
@@ -452,8 +452,8 @@ In the router-mount region (near the existing `self._app.include_router(...)` ca
         # dashboard) when a workspace is live and a bus was wired above.
         sse_bus = getattr(self, "_sse_bus", None)
         if sse_bus is not None:
-            from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
-            from dazzle.back.runtime.sse_stream import SSEStreamManager, create_sse_routes
+            from dazzle.http.runtime.lifespan_hooks import register_lifespan_hook
+            from dazzle.http.runtime.sse_stream import SSEStreamManager, create_sse_routes
 
             sse_manager = SSEStreamManager(event_bus=sse_bus)
             self._app.include_router(create_sse_routes(sse_manager))
@@ -476,7 +476,7 @@ In the router-mount region (near the existing `self._app.include_router(...)` ca
 
 - [ ] **Step 4: Harden the `/events` tenant filter**
 
-In `src/dazzle/back/runtime/sse_stream.py`, the `/events` endpoint currently trusts the `tenant_id` query param. Prefer a request-resolved tenant when present (TenantResolutionMiddleware sets `request.state.tenant_id`), falling back to the query param:
+In `src/dazzle/http/runtime/sse_stream.py`, the `/events` endpoint currently trusts the `tenant_id` query param. Prefer a request-resolved tenant when present (TenantResolutionMiddleware sets `request.state.tenant_id`), falling back to the query param:
 
 ```python
     @router.get("/events")
@@ -502,13 +502,13 @@ In `src/dazzle/back/runtime/sse_stream.py`, the `/events` endpoint currently tru
 
 Run: `pytest tests/unit/test_workspace_live_push_1399.py::TestSseMountGate -v`
 Expected: PASS.
-Run: `ruff check src/dazzle/back/runtime/server.py src/dazzle/back/runtime/sse_stream.py --fix && mypy src/dazzle`
+Run: `ruff check src/dazzle/http/runtime/server.py src/dazzle/http/runtime/sse_stream.py --fix && mypy src/dazzle`
 Expected: clean.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/server.py src/dazzle/back/runtime/sse_stream.py tests/unit/test_workspace_live_push_1399.py
+git add src/dazzle/http/runtime/server.py src/dazzle/http/runtime/sse_stream.py tests/unit/test_workspace_live_push_1399.py
 git commit -m "feat(runtime): wire + mount SSE live push when a workspace is live (#1399)"
 ```
 
@@ -517,7 +517,7 @@ git commit -m "feat(runtime): wire + mount SSE live push when a workspace is liv
 ### Task 5: Renderer — populate `WorkspaceContext.sse_url` when live
 
 **Files:**
-- Modify: `src/dazzle/ui/runtime/workspace_renderer.py` (`build_workspace_context`, the `WorkspaceContext(...)` return at ~line 741)
+- Modify: `src/dazzle/page/runtime/workspace_renderer.py` (`build_workspace_context`, the `WorkspaceContext(...)` return at ~line 741)
 - Test: `tests/unit/test_workspace_live_push_1399.py`
 
 **Interfaces:**
@@ -530,7 +530,7 @@ git commit -m "feat(runtime): wire + mount SSE live push when a workspace is liv
 # append to tests/unit/test_workspace_live_push_1399.py
 class TestRendererSseUrl:
     def _ctx_for(self, dsl: str):
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
         spec = parse_dsl(dsl)
         ws = next(w for w in spec.workspaces if w.name == "ops")
         return build_workspace_context(ws, spec)
@@ -545,7 +545,7 @@ class TestRendererSseUrl:
 ```
 
 > Implementer note: confirm `build_workspace_context`'s exact parameter names/order
-> with `sed -n '444,470p' src/dazzle/ui/runtime/workspace_renderer.py` and adjust the
+> with `sed -n '444,470p' src/dazzle/page/runtime/workspace_renderer.py` and adjust the
 > call (`build_workspace_context(ws, spec)`) to match.
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -574,7 +574,7 @@ Expected: PASS (no regression — the dashboard renderer already emits `sse-conn
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/ui/runtime/workspace_renderer.py tests/unit/test_workspace_live_push_1399.py
+git add src/dazzle/page/runtime/workspace_renderer.py tests/unit/test_workspace_live_push_1399.py
 git commit -m "feat(ui): populate sse_url when workspace is live (#1399)"
 ```
 

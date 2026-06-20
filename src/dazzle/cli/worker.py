@@ -91,12 +91,12 @@ async def _run_worker(
     redis_key: str,
 ) -> None:
     """Main async entry — picks queue, wires signals, runs all loops."""
-    from dazzle.back.runtime.job_loop import run_worker_loop
-    from dazzle.back.runtime.job_scheduler import (
+    from dazzle.http.runtime.job_loop import run_worker_loop
+    from dazzle.http.runtime.job_scheduler import (
         parse_scheduled_jobs,
         run_scheduler_loop,
     )
-    from dazzle.back.runtime.retention_loop import run_retention_loop
+    from dazzle.http.runtime.retention_loop import run_retention_loop
 
     queue, queue_kind = _build_queue(redis_key)
     typer.echo(f"Queue backing: {queue_kind}")
@@ -190,7 +190,7 @@ async def _build_services(appspec: Any) -> tuple[dict[str, Any], Any | None]:
         return {}, None
 
     try:
-        from dazzle.back.runtime.worker_services import build_worker_services
+        from dazzle.http.runtime.worker_services import build_worker_services
 
         return build_worker_services(appspec, db_url)
     except Exception as exc:
@@ -206,10 +206,10 @@ def _build_queue(redis_key: str) -> tuple[Any, str]:
     """
     redis_url = os.environ.get("REDIS_URL", "")
     if redis_url:
-        from dazzle.back.runtime.redis_job_queue import RedisJobQueue
+        from dazzle.http.runtime.redis_job_queue import RedisJobQueue
 
         return RedisJobQueue(redis_url, key=redis_key), f"Redis ({redis_key})"
-    from dazzle.back.runtime.job_queue import InMemoryJobQueue
+    from dazzle.http.runtime.job_queue import InMemoryJobQueue
 
     return InMemoryJobQueue(), "in-memory (set REDIS_URL for persistence)"
 

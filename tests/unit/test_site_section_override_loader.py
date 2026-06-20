@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from dazzle.back.runtime.renderers.site_section_builder import render_typed_section
-from dazzle.back.runtime.renderers.site_section_override_loader import (
+from dazzle.http.runtime.renderers.site_section_builder import render_typed_section
+from dazzle.http.runtime.renderers.site_section_override_loader import (
     SectionOverrideRegistry,
     discover_section_overrides,
     write_section_overrides_readme,

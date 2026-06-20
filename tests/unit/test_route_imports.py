@@ -13,20 +13,20 @@ import pytest
 # Modules that define FastAPI route handlers or exception handlers.
 # These are the ones where Pydantic/FastAPI introspects annotations at runtime.
 ROUTE_MODULES = [
-    "dazzle.back.runtime.auth",
-    "dazzle.back.runtime.exception_handlers",
-    "dazzle.back.runtime.site_routes",
-    "dazzle.back.runtime.surface_access",
-    "dazzle.back.runtime.tenant_middleware",
-    "dazzle.back.runtime.debug_routes",
-    "dazzle.back.runtime.event_explorer",
-    "dazzle.back.runtime.route_generator",
-    "dazzle.back.runtime.audit_routes",
-    "dazzle.back.runtime.fragment_routes",
-    "dazzle.back.runtime.realtime_routes",
-    "dazzle.back.runtime.task_routes",
-    "dazzle.back.runtime.test_routes",
-    "dazzle.back.runtime.page_routes",
+    "dazzle.http.runtime.auth",
+    "dazzle.http.runtime.exception_handlers",
+    "dazzle.http.runtime.site_routes",
+    "dazzle.http.runtime.surface_access",
+    "dazzle.http.runtime.tenant_middleware",
+    "dazzle.http.runtime.debug_routes",
+    "dazzle.http.runtime.event_explorer",
+    "dazzle.http.runtime.route_generator",
+    "dazzle.http.runtime.audit_routes",
+    "dazzle.http.runtime.fragment_routes",
+    "dazzle.http.runtime.realtime_routes",
+    "dazzle.http.runtime.task_routes",
+    "dazzle.http.runtime.test_routes",
+    "dazzle.http.runtime.page_routes",
 ]
 
 

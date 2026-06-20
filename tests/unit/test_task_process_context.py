@@ -11,14 +11,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle.back.runtime.task_routes import (
+from dazzle.core.ir.process import ProcessSpec, ProcessStepSpec, StepKind
+from dazzle.core.process.adapter import ProcessTask, TaskStatus
+from dazzle.http.runtime.task_routes import (
     ProcessStepContext,
     _build_process_context,
     _task_to_detail,
     _task_to_summary,
 )
-from dazzle.core.ir.process import ProcessSpec, ProcessStepSpec, StepKind
-from dazzle.core.process.adapter import ProcessTask, TaskStatus
 
 
 def _make_process_spec(
@@ -229,7 +229,7 @@ class TestEndpointProcessContext:
 
     @staticmethod
     def _make_services(manager: MagicMock) -> MagicMock:
-        from dazzle.back.runtime.services import RuntimeServices
+        from dazzle.http.runtime.services import RuntimeServices
 
         services = RuntimeServices()
         services.process_manager = manager
@@ -237,7 +237,7 @@ class TestEndpointProcessContext:
 
     @pytest.mark.asyncio
     async def test_list_tasks_includes_context(self, _setup_manager: tuple) -> None:
-        from dazzle.back.runtime.task_routes import list_tasks
+        from dazzle.http.runtime.task_routes import list_tasks
 
         manager, _task = _setup_manager
         services = self._make_services(manager)
@@ -252,7 +252,7 @@ class TestEndpointProcessContext:
 
     @pytest.mark.asyncio
     async def test_get_task_includes_context(self, _setup_manager: tuple) -> None:
-        from dazzle.back.runtime.task_routes import get_task
+        from dazzle.http.runtime.task_routes import get_task
 
         manager, _task = _setup_manager
         services = self._make_services(manager)
@@ -270,7 +270,7 @@ class TestEndpointProcessContext:
         manager.get_run = AsyncMock(return_value=None)
 
         services = self._make_services(manager)
-        from dazzle.back.runtime.task_routes import list_tasks
+        from dazzle.http.runtime.task_routes import list_tasks
 
         result = await list_tasks(assignee_id=None, status=None, limit=100, services=services)
         assert result.tasks[0].process_context is None

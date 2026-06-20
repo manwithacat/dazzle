@@ -11,7 +11,7 @@ AegisMark (a Dazzle consumer project) built a three-loop autonomous quality syst
 ## Design Principles
 
 1. **Library first, CLI second** — composable Python functions in `src/dazzle/qa/`, thin CLI wrappers on top
-2. **Black-box testing** — the QA package treats the running app as opaque (HTTP + Playwright), no imports from `dazzle_back` or `dazzle_ui`
+2. **Black-box testing** — the QA package treats the running app as opaque (HTTP + Playwright), no imports from `dazzle_http` or `dazzle_page`
 3. **Pluggable evaluator** — interface for LLM evaluation, Claude Sonnet as default via `[llm]` extra
 4. **Tiered cost** — cheap checks first (DSL lint), expensive checks last (LLM visual), `/improve` manages the progression
 5. **AegisMark-proven taxonomy** — 8 visual quality categories battle-tested against real workspace UIs

@@ -37,7 +37,7 @@ and group→persona mapping (default-deny). **No routes/startup wiring here — 
 
 ## Task 1: the kernel + tests
 
-**Files:** Create `src/dazzle/back/runtime/auth/enterprise_login.py`,
+**Files:** Create `src/dazzle/http/runtime/auth/enterprise_login.py`,
 `tests/unit/test_enterprise_login.py`.
 
 - `EnterpriseLoginError(reason, message)`, `_email_domain`, `map_groups_to_roles`,

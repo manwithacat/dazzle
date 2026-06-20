@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.social_auth import (
+from dazzle.http.runtime.social_auth import (
     SocialAuthConfig,
     SocialAuthError,
     SocialAuthService,

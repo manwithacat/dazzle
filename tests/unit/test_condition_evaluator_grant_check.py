@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from dazzle.back.runtime.condition_evaluator import evaluate_condition
+from dazzle.http.runtime.condition_evaluator import evaluate_condition
 
 
 def _make_grant(relation: str, scope_id: str, expires_at=None):

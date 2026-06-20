@@ -19,9 +19,9 @@
 | `src/dazzle/render/fragment/primitives/forms.py` (modify) | Add `RefPicker` frozen dataclass next to Combobox |
 | `src/dazzle/render/fragment/primitives/_base.py` (modify) | Add `RefPicker` to the `Fragment` union |
 | `src/dazzle/render/fragment/renderer.py` (modify) | Add render branch for `RefPicker` |
-| `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css` (modify) | `.dz-ref-picker` rules (parallel to `.dz-combobox`) |
-| `src/dazzle_back/runtime/renderers/fragment_adapter.py` (modify) | `_field_to_primitive` routes REF → RefPicker |
-| `src/dazzle_ui/runtime/page_routes.py` (modify) | `_build_dispatch_ctx` threads `ref_api` from FieldContext into field dict |
+| `src/dazzle_page/runtime/static/css/components/fragment-primitives.css` (modify) | `.dz-ref-picker` rules (parallel to `.dz-combobox`) |
+| `src/dazzle_http/runtime/renderers/fragment_adapter.py` (modify) | `_field_to_primitive` routes REF → RefPicker |
+| `src/dazzle_page/runtime/page_routes.py` (modify) | `_build_dispatch_ctx` threads `ref_api` from FieldContext into field dict |
 | `src/dazzle/render/fragment/coverage.py` (modify) | Remove `"ref"` from `_UNSUPPORTED_FIELD_TYPES` |
 | `tests/unit/test_fragment_primitive_css.py` (modify) | Add `dz-ref-picker` to `_REQUIRED_CLASSES` |
 | `tests/integration/test_examples_fragment_http.py` (modify) | Add HTTP test asserting REF form renders RefPicker chrome |
@@ -56,7 +56,7 @@ class RefPicker:
     (sufficient for enum), RefPicker carries a `ref_api` URL pointing
     at the related entity's list endpoint. Options are populated
     client-side at render time by the existing dz.filterRefSelect
-    machinery (`src/dazzle_ui/runtime/static/js/dz-alpine.js:2196`).
+    machinery (`src/dazzle_page/runtime/static/js/dz-alpine.js:2196`).
 
     `initial_label` lets EDIT forms display the currently-selected
     record's display field without an extra round-trip on render —
@@ -349,7 +349,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ## Task 4: CSS for RefPicker
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`
+- Modify: `src/dazzle_page/runtime/static/css/components/fragment-primitives.css`
 - Modify: `tests/unit/test_fragment_primitive_css.py`
 
 - [ ] **Step 1: Add RefPicker CSS rules**
@@ -404,7 +404,7 @@ Expected: all parametrised cases pass, including the three new classes.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/css/components/fragment-primitives.css tests/unit/test_fragment_primitive_css.py
+git add src/dazzle_page/runtime/static/css/components/fragment-primitives.css tests/unit/test_fragment_primitive_css.py
 git commit -m "style(fragment): CSS for RefPicker (Plan 14 T4)
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
@@ -415,12 +415,12 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ## Task 5: Adapter routes REF → RefPicker
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/renderers/fragment_adapter.py`
+- Modify: `src/dazzle_http/runtime/renderers/fragment_adapter.py`
 
 - [ ] **Step 1: Read the current `_field_to_primitive`**
 
 ```bash
-grep -n "_field_to_primitive\|kind == \"enum\"\|kind == \"ref\"" src/dazzle_back/runtime/renderers/fragment_adapter.py
+grep -n "_field_to_primitive\|kind == \"enum\"\|kind == \"ref\"" src/dazzle_http/runtime/renderers/fragment_adapter.py
 ```
 
 The function has an `if kind == "enum"` branch returning Combobox, then a generic `Field` fallthrough. REF currently falls through.
@@ -433,7 +433,7 @@ Add to `tests/integration/test_simple_task_render_fragment.py` (or create a new 
 """Adapter: REF fields map to RefPicker (Plan 14)."""
 
 from dazzle.render.fragment.primitives.forms import RefPicker
-from dazzle_back.runtime.renderers.fragment_adapter import _field_to_primitive
+from dazzle_http.runtime.renderers.fragment_adapter import _field_to_primitive
 
 
 def test_ref_field_with_ref_api_produces_refpicker() -> None:
@@ -514,7 +514,7 @@ Expected: both pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/fragment_adapter.py tests/unit/test_fragment_adapter_ref.py
+git add src/dazzle_http/runtime/renderers/fragment_adapter.py tests/unit/test_fragment_adapter_ref.py
 git commit -m "feat(adapter): route REF fields to RefPicker (Plan 14 T5)
 
 REF fields with a ref_api in the field dict now produce a RefPicker
@@ -530,14 +530,14 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ## Task 6: Page route ctx threads ref_api
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/page_routes.py`
+- Modify: `src/dazzle_page/runtime/page_routes.py`
 
 The form-ctx builder at `_build_dispatch_ctx` line ~1092 already iterates `form.fields`. For each field, it copies a few attributes into a dict for the adapter. Add `ref_api` and `initial_label` to the copy.
 
 - [ ] **Step 1: Read the form ctx loop**
 
 ```bash
-sed -n '1090,1125p' src/dazzle_ui/runtime/page_routes.py
+sed -n '1090,1125p' src/dazzle_page/runtime/page_routes.py
 ```
 
 Note the existing pattern: `getattr(field, "options", None)` then conditionally added to the entry dict. We mirror that for `ref_api`.
@@ -560,7 +560,7 @@ The adapter (Task 5) reads both keys; if absent, it falls back gracefully.
 - [ ] **Step 3: Verify the existing FieldContext exposes these attributes**
 
 ```bash
-grep -n "ref_api\|initial_label" src/dazzle_ui/runtime/template_context.py
+grep -n "ref_api\|initial_label" src/dazzle_page/runtime/template_context.py
 ```
 
 `ref_api` exists (`template_context.py:82`). `initial_label` may not. If absent, this iteration ships with `initial_label=""` and EDIT forms show the FK value in the placeholder until the lazy fetch resolves — not ideal, but acceptable for Plan 14. Adding `initial_label` to FieldContext is a separate concern.
@@ -576,7 +576,7 @@ Expected: still 7 pass — the existing tests don't yet assert RefPicker chrome.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/page_routes.py
+git add src/dazzle_page/runtime/page_routes.py
 git commit -m "feat(page-routes): thread ref_api into Fragment form dispatch ctx (Plan 14 T6)
 
 The Fragment adapter's RefPicker branch (Plan 14 T5) reads
@@ -740,7 +740,7 @@ Add to `## [Unreleased]` in `CHANGELOG.md`:
 ```bash
 ruff check src/ tests/ --fix && ruff format src/ tests/
 mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'
-mypy src/dazzle_back/ --ignore-missing-imports
+mypy src/dazzle_http/ --ignore-missing-imports
 pytest tests/ -m "not e2e" -q
 ```
 

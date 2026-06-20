@@ -7,7 +7,7 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from dazzle.back.runtime.tenant_middleware import HeaderResolver, TenantMiddleware
+from dazzle.http.runtime.tenant_middleware import HeaderResolver, TenantMiddleware
 
 
 def _make_app(registry_records: dict[str, MagicMock] | None = None) -> Starlette:
@@ -81,7 +81,7 @@ class TestMiddlewareErrors:
 
 class TestRegistryCache:
     def test_cache_hit_avoids_second_lookup(self) -> None:
-        from dazzle.back.runtime.tenant_middleware import _RegistryCache
+        from dazzle.http.runtime.tenant_middleware import _RegistryCache
 
         registry = MagicMock()
         record = MagicMock(slug="cyfuture", status="active")
@@ -96,7 +96,7 @@ class TestRegistryCache:
         assert registry.get.call_count == 1  # only one DB call
 
     def test_cache_miss_returns_none(self) -> None:
-        from dazzle.back.runtime.tenant_middleware import _RegistryCache
+        from dazzle.http.runtime.tenant_middleware import _RegistryCache
 
         registry = MagicMock()
         registry.get.return_value = None
@@ -107,7 +107,7 @@ class TestRegistryCache:
     def test_expired_entry_triggers_fresh_lookup(self) -> None:
         import time
 
-        from dazzle.back.runtime.tenant_middleware import _RegistryCache
+        from dazzle.http.runtime.tenant_middleware import _RegistryCache
 
         registry = MagicMock()
         record = MagicMock(slug="cyfuture", status="active")

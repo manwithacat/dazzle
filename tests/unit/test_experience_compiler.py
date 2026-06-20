@@ -8,8 +8,8 @@ from dazzle.core.ir.experiences import (
     StepTransition,
 )
 from dazzle.core.ir.surfaces import SurfaceMode
-from dazzle.ui.converters.experience_compiler import compile_experience_context
-from dazzle.ui.runtime.experience_state import ExperienceState
+from dazzle.page.converters.experience_compiler import compile_experience_context
+from dazzle.page.runtime.experience_state import ExperienceState
 
 
 def _make_entity(name: str = "Client") -> EntitySpec:

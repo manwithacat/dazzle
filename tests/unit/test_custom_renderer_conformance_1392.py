@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from dazzle.back.runtime.services import RuntimeServices
+from dazzle.http.runtime.services import RuntimeServices
 from dazzle.testing.custom_renderer_conformance import check_custom_renderer_conformance
 
 

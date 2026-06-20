@@ -4,7 +4,7 @@ import socket
 
 import pytest
 
-from dazzle.back.runtime.auth.saml_metadata import (
+from dazzle.http.runtime.auth.saml_metadata import (
     SamlMetadataError,
     fetch_idp_metadata,
     validate_metadata_url,
@@ -118,7 +118,7 @@ def test_fetch_size_capped(monkeypatch) -> None:
 def test_fetch_at_exactly_the_cap_is_allowed(monkeypatch) -> None:
     # Boundary: a body of EXACTLY the cap is OK; only > cap is rejected. (Pins the `>` vs
     # `>=` boundary — a mutation-testing survivor, #1342 fuzz-leverage #5.)
-    from dazzle.back.runtime.auth.saml_metadata import _MAX_METADATA_BYTES
+    from dazzle.http.runtime.auth.saml_metadata import _MAX_METADATA_BYTES
 
     monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: _addrinfo("93.184.216.34"))
     import httpx
@@ -173,7 +173,7 @@ _IDP_METADATA_XML = """<?xml version="1.0"?>
 
 def test_parse_extracts_config() -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_metadata import parse_idp_metadata_xml
+    from dazzle.http.runtime.auth.saml_metadata import parse_idp_metadata_xml
 
     cfg = parse_idp_metadata_xml(_IDP_METADATA_XML)
     assert cfg["idp_entity_id"] == "https://idp.example/idp"
@@ -184,10 +184,10 @@ def test_parse_extracts_config() -> None:
 
 def test_parse_incomplete_raises() -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_metadata import (
+    from dazzle.http.runtime.auth.saml_metadata import (
         SamlMetadataError as _Err,
     )
-    from dazzle.back.runtime.auth.saml_metadata import (
+    from dazzle.http.runtime.auth.saml_metadata import (
         parse_idp_metadata_xml,
     )
 
@@ -202,10 +202,10 @@ def test_parse_incomplete_raises() -> None:
 
 def test_parse_malformed_raises() -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_metadata import (
+    from dazzle.http.runtime.auth.saml_metadata import (
         SamlMetadataError as _Err,
     )
-    from dazzle.back.runtime.auth.saml_metadata import (
+    from dazzle.http.runtime.auth.saml_metadata import (
         parse_idp_metadata_xml,
     )
 

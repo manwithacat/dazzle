@@ -30,7 +30,7 @@ import pathlib
 import re
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-PROD_DIRS = ("src/dazzle", "src/dazzle/back", "src/dazzle/ui")
+PROD_DIRS = ("src/dazzle", "src/dazzle/http", "src/dazzle/page")
 
 # Patterns that strongly indicate a backward-compat shim comment.
 SHIM_PATTERNS = [

@@ -187,9 +187,9 @@ These items from #625 are acknowledged but deferred to future work:
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_back/runtime/alembic_env.py` | Create | Programmatic Alembic environment |
-| `src/dazzle_back/runtime/migrations.py` | Modify | Retire MigrationPlanner, add SAFE_CASTS |
-| `src/dazzle_back/runtime/sa_schema.py` | Keep | Authoritative schema bridge (already fixed in #624) |
+| `src/dazzle_http/runtime/alembic_env.py` | Create | Programmatic Alembic environment |
+| `src/dazzle_http/runtime/migrations.py` | Modify | Retire MigrationPlanner, add SAFE_CASTS |
+| `src/dazzle_http/runtime/sa_schema.py` | Keep | Authoritative schema bridge (already fixed in #624) |
 | `src/dazzle/cli/db.py` | Modify | Add `migrate`, `rollback` subcommands |
 | `src/dazzle/cli/runtime_impl/serve.py` | Modify | Integrate auto-migrate on dev startup |
 | `pyproject.toml` | Modify | Add `alembic` dependency |

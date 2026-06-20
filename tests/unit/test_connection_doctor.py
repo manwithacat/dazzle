@@ -6,8 +6,8 @@ Pure: build a connection + the three env flags, assert the structured checks,
 
 from datetime import datetime
 
-from dazzle.back.runtime.auth.connection_doctor import Check, diagnose_connection
-from dazzle.back.runtime.auth.connections import ConnectionRecord
+from dazzle.http.runtime.auth.connection_doctor import Check, diagnose_connection
+from dazzle.http.runtime.auth.connections import ConnectionRecord
 
 
 def _conn(**over) -> ConnectionRecord:

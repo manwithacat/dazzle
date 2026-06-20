@@ -16,7 +16,7 @@
 
 ## Core finding
 
-**The biggest gap is not missing components — it's uncontracted components.** A full inventory pass across `src/dazzle_ui/templates/` reveals ~18 shipped template files that have no matching ux-architect contract in `~/.claude/skills/ux-architect/components/`. The code works; the DSL drives it (in some cases); but without a contract there's no regression gate, no consistent token usage, no discoverability for future DSL authors or for LLM agents trying to propose UX.
+**The biggest gap is not missing components — it's uncontracted components.** A full inventory pass across `src/dazzle_page/templates/` reveals ~18 shipped template files that have no matching ux-architect contract in `~/.claude/skills/ux-architect/components/`. The code works; the DSL drives it (in some cases); but without a contract there's no regression gate, no consistent token usage, no discoverability for future DSL authors or for LLM agents trying to propose UX.
 
 Bringing these under governance is higher-leverage than inventing new primitives, because:
 - The substrate already exists and works

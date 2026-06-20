@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from dazzle.back.events.inbox import EventInbox
+from dazzle.http.events.inbox import EventInbox
 
 pytestmark = pytest.mark.postgres
 
@@ -32,7 +32,7 @@ class TestInboxCreateTable:
     @pytest.mark.asyncio
     async def test_postgres_table_sql_uses_now(self) -> None:
         """Postgres CREATE TABLE should use now()::text, not datetime('now')."""
-        from dazzle.back.events.inbox import CREATE_INBOX_TABLE
+        from dazzle.http.events.inbox import CREATE_INBOX_TABLE
 
         assert "now()::text" in CREATE_INBOX_TABLE
         assert "datetime('now')" not in CREATE_INBOX_TABLE

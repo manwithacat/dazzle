@@ -316,7 +316,7 @@ class Page:
     # the intended priority: a 4-name list like `base, framework, app, overrides`
     # would cause `dazzle.min.css`'s own `components` and `utilities` layers
     # to land *after* `overrides` and win the cascade. The list below mirrors
-    # `src/dazzle/ui/runtime/static/css/dazzle.css:22` plus the project-level
+    # `src/dazzle/page/runtime/static/css/dazzle.css:22` plus the project-level
     # `framework` and `app` slots, placed between `components` and `overrides`
     # so project component CSS can target framework primitives without losing
     # to the framework bundle's own component rules.

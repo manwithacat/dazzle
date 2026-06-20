@@ -5,7 +5,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from dazzle.back.pra.cli import (
+from dazzle.http.pra.cli import (
     compare_results,
     format_comparison,
     format_comparison_markdown,

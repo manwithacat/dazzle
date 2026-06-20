@@ -209,7 +209,7 @@ class AggregateRef(BaseModel):
        ``entity`` is optional (cross-entity expressions are valid when
        every column ref inside ``expression`` shares the same prefix).
        Compiled to safe SQL with parametrised literals — see
-       :func:`dazzle.back.runtime.aggregate_expression.compile_aggregate_expression`.
+       :func:`dazzle.http.runtime.aggregate_expression.compile_aggregate_expression`.
 
     The ``where:`` clause is a structured :class:`ConditionExpr` — the same
     type scope rules and view filters compile to — not a string. The legacy

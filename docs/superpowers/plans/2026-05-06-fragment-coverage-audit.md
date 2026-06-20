@@ -739,7 +739,7 @@ import typer
 from dazzle.core.dsl_parser_impl import parse_modules
 from dazzle.core.linker import build_appspec
 from dazzle.render.fragment.coverage import audit_appspec
-from dazzle_back.runtime.renderers.init import default_renderer_names
+from dazzle_http.runtime.renderers.init import default_renderer_names
 
 app = typer.Typer(help="Audit Fragment-rendering coverage across an AppSpec.")
 

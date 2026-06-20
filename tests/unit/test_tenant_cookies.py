@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.tenant.cookies import (
+from dazzle.http.runtime.tenant.cookies import (
     apex_cookie_name,
     choose_session_cookie_name,
     host_cookie_name,

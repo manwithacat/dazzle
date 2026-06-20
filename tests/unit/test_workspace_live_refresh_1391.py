@@ -175,7 +175,7 @@ class TestTerminalStateStop:
         return SimpleNamespace(items=items, total=len(items) if total is None else total)
 
     def _complete(self, ctx, fetched):
-        from dazzle.back.runtime.workspace_region_handler import _region_polling_complete
+        from dazzle.http.runtime.workspace_region_handler import _region_polling_complete
 
         return _region_polling_complete(ctx, fetched)
 
@@ -219,7 +219,7 @@ class TestRegionResponseBuild:
     when complete; a plain innerHTML body otherwise."""
 
     def _build(self, ctx, fetched, html_body, hx_target):
-        from dazzle.back.runtime.workspace_region_handler import _build_region_response
+        from dazzle.http.runtime.workspace_region_handler import _build_region_response
 
         return _build_region_response(ctx, fetched, html_body, hx_target)
 

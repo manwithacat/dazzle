@@ -62,7 +62,7 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
     # The real prod order: _init_db builds the base schema, then alembic upgrade head runs as
     # guarded ALTERs/creates. This must succeed (no "column already exists" / no missing table)
     # — proving the mirror migrations (incl. 0013/0014/0015) are correctly guarded.
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     AuthStore(database_url=scratch_url)  # _init_db
     _alembic_head(scratch_url)  # must NOT raise
@@ -90,7 +90,7 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
 
 def test_alembic_head_on_empty_after_init_db_is_idempotent(scratch_url: str) -> None:
     # Running upgrade head twice (re-deploy) must stay clean.
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     AuthStore(database_url=scratch_url)
     _alembic_head(scratch_url)

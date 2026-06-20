@@ -139,7 +139,7 @@ def _build_server_state_stub(project_root: Path | None) -> _StubServer:
 def _resolve(stub: object):
     """Invoke the unbound method against a stub. The method only
     touches ``self._project_root`` and stateless imports."""
-    from dazzle.back.runtime.server import DazzleBackendApp
+    from dazzle.http.runtime.server import DazzleBackendApp
 
     return DazzleBackendApp._resolve_pdf_branding(stub)  # type: ignore[arg-type]
 

@@ -12,7 +12,9 @@ from pathlib import Path
 
 import pytest
 
-DZ_ALPINE_JS = Path(__file__).resolve().parents[2] / "src/dazzle/ui/runtime/static/js/dz-alpine.js"
+DZ_ALPINE_JS = (
+    Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/js/dz-alpine.js"
+)
 
 
 @pytest.fixture(scope="module")
@@ -93,7 +95,7 @@ def test_directive_present_in_dist_bundle() -> None:
     """css_loader / build_dist must bundle the new directive into
     dazzle.min.js."""
     dist_js = (
-        Path(__file__).resolve().parents[2] / "src/dazzle/ui/runtime/static/dist/dazzle.min.js"
+        Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/dist/dazzle.min.js"
     )
     if not dist_js.is_file():
         pytest.skip("dist/dazzle.min.js not built — run scripts/build_dist.py")

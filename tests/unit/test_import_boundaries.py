@@ -4,54 +4,54 @@ plus the render/ purity rule (ADR-0038).
 Four structural rules locked in by the #1086 sub-workstream sequence and
 ADR-0038:
 
-1. ``dazzle.back/`` must not import from the modules that workstreams
+1. ``dazzle.http/`` must not import from the modules that workstreams
    A/B/D explicitly migrated to ``dazzle.render``:
 
-   - ``dazzle.ui.runtime.template_context`` (PageContext + friends — #1091)
-   - ``dazzle.ui.runtime.surface_access`` (pure access types — #1091)
+   - ``dazzle.page.runtime.template_context`` (PageContext + friends — #1091)
+   - ``dazzle.page.runtime.surface_access`` (pure access types — #1091)
 
    (``template_renderer`` came off this list in the 2026-06-20 smells round: its
    filter helpers moved to ``render.filters`` in #1090, but ``render_page`` — the
    page-orchestration entry point — legitimately stays there, and the server-runtime
    page handlers that moved ui→back this round call it as the normal http→page
    call-down. The authoritative ``ui ↛ back`` import-linter contract still holds.)
-   - ``dazzle.back.runtime.renderers.page_builder`` (dispatch — #1094)
-   - ``dazzle.back.runtime.renderers.dispatch`` (dispatch — #1094)
-   - ``dazzle.back.runtime.access_evaluator`` (now ``render.access_evaluator`` — #1094)
+   - ``dazzle.http.runtime.renderers.page_builder`` (dispatch — #1094)
+   - ``dazzle.http.runtime.renderers.dispatch`` (dispatch — #1094)
+   - ``dazzle.http.runtime.access_evaluator`` (now ``render.access_evaluator`` — #1094)
 
    New code that needs these helpers should import from ``dazzle.render``.
 
-   Note: a broader ``back/`` ↛ ``dazzle.ui.*`` ban remains aspirational
+   Note: a broader ``back/`` ↛ ``dazzle.page.*`` ban remains aspirational
    — back/ still imports ui-side helpers like ``theme``, ``css_loader``,
    ``asset_fingerprint``, ``htmx``, ``app_chrome``, ``site_renderer``,
    ``workspace_renderer``, etc. Those need their own migrate-to-``render``
    workstreams; tracked as future work in the #1086 plan. (``condition_eval``
    came off this list in ADR-0038 — relocated ui→core.)
 
-2. ``dazzle.ui/`` must not import from ``dazzle.back.*`` — no exceptions.
+2. ``dazzle.page/`` must not import from ``dazzle.http.*`` — no exceptions.
    (The lone former exception, the back+ui composition root, relocated from
    ``ui/runtime/combined_server.py`` to ``back/runtime/combined_server.py`` in
    the 2026-06-19 smells round — the composition root lives in back, which may
    import both layers; this also drove the import-linter ``ui ↛ back`` allow-list
    to zero.)
 
-3. ``dazzle.back/`` must not import from the three banned
+3. ``dazzle.http/`` must not import from the three banned
    ``dazzle.core.ir.*`` submodules (``appspec``, ``surfaces``,
    ``domain``). Use the ``dazzle.core.ir`` re-export facade or the
    ``dazzle.core.ir.protocols`` adapter layer instead — adding new
    concrete-submodule imports under ``back/`` defeats the work that
    landed in #1092 and #1093.
 
-4. ``dazzle.render/`` must not import from ``dazzle.back.*`` or
-   ``dazzle.ui.*`` — at module top level OR inside functions (ADR-0038).
+4. ``dazzle.render/`` must not import from ``dazzle.http.*`` or
+   ``dazzle.page.*`` — at module top level OR inside functions (ADR-0038).
    render/ is the pure AppSpec→Fragment→HTML layer; it imports only
    ``render``/``core``/stdlib. Lazy in-function imports don't launder a
    layer violation — the scanner's ``^\\s*`` prefix catches indented
    imports too. Shared code needed by render/ moves *down* to
    ``render`` or ``core``, never *up*.
 
-Gates run against any ``.py`` file under ``src/dazzle/back/`` or
-``src/dazzle/ui/`` (production AND test code in those subtrees).
+Gates run against any ``.py`` file under ``src/dazzle/http/`` or
+``src/dazzle/page/`` (production AND test code in those subtrees).
 ``tests/`` at the repo root is intentionally out of scope — unit
 tests there sometimes need concrete IR classes for fixtures.
 """
@@ -71,20 +71,20 @@ _UI_TO_BACK_EXEMPT: frozenset[str] = frozenset()
 # during #1090, #1091, #1094. New back/ code referencing these paths
 # is a regression and must move to the dazzle.render replacement.
 _BACK_BANNED_FROM_UI_MIGRATED = re.compile(
-    r"^\s*from dazzle\.ui\.runtime\.(template_context|surface_access)\b"
+    r"^\s*from dazzle\.page\.runtime\.(template_context|surface_access)\b"
 )
 _BACK_BANNED_FROM_BACK_RENDERERS = re.compile(
-    r"^\s*from dazzle\.back\.runtime\."
+    r"^\s*from dazzle\.http\.runtime\."
     r"(renderers\.page_builder|renderers\.dispatch|access_evaluator)\b"
 )
 
-_UI_FROM_BACK = re.compile(r"^\s*from dazzle\.back[\.\s]")
+_UI_FROM_BACK = re.compile(r"^\s*from dazzle\.http[\.\s]")
 _BACK_FROM_BANNED_IR = re.compile(r"^\s*from dazzle\.core\.ir\.(appspec|surfaces|domain)\b")
 
 # ADR-0038: render/ is the pure rendering layer. It must not import from the
 # higher layers (back/ or ui/) — top-level OR lazy/in-function. Matches both
-# ``from dazzle.back …`` / ``from dazzle.ui …`` and ``import dazzle.back…`` /
-# ``import dazzle.ui…``; the ``^\s*`` prefix catches indented (lazy) imports.
+# ``from dazzle.http …`` / ``from dazzle.page …`` and ``import dazzle.http…`` /
+# ``import dazzle.page…``; the ``^\s*`` prefix catches indented (lazy) imports.
 _RENDER_FROM_HIGHER = re.compile(r"^\s*(?:from|import)\s+dazzle\.(?:back|ui)[\.\s]")
 
 
@@ -113,7 +113,7 @@ def test_back_does_not_import_migrated_render_modules() -> None:
     ``renderers.dispatch``, and ``back.runtime.access_evaluator``.
     All are now in ``dazzle.render``.
     """
-    back_root = REPO_ROOT / "src" / "dazzle" / "back"
+    back_root = REPO_ROOT / "src" / "dazzle" / "http"
     offenders = _scan(back_root, _BACK_BANNED_FROM_UI_MIGRATED) + _scan(
         back_root, _BACK_BANNED_FROM_BACK_RENDERERS
     )
@@ -125,12 +125,12 @@ def test_back_does_not_import_migrated_render_modules() -> None:
 
 
 def test_ui_does_not_import_from_back() -> None:
-    """``dazzle.ui/`` must not import from ``dazzle.back.*`` (#1086).
+    """``dazzle.page/`` must not import from ``dazzle.http.*`` (#1086).
 
     No exceptions since the 2026-06-19 smells round: the back+ui composition
     root relocated from ui/ to ``back/runtime/combined_server.py``.
     """
-    offenders = _scan(REPO_ROOT / "src" / "dazzle" / "ui", _UI_FROM_BACK)
+    offenders = _scan(REPO_ROOT / "src" / "dazzle" / "page", _UI_FROM_BACK)
     offenders = [
         line
         for line in offenders
@@ -143,8 +143,8 @@ def test_ui_does_not_import_from_back() -> None:
 
 
 def test_render_does_not_import_back_or_ui() -> None:
-    """``dazzle.render/`` must not import from ``dazzle.back.*`` or
-    ``dazzle.ui.*`` (ADR-0038).
+    """``dazzle.render/`` must not import from ``dazzle.http.*`` or
+    ``dazzle.page.*`` (ADR-0038).
 
     render/ is the pure AppSpec→Fragment→HTML layer: it imports only
     ``render``, ``core``, and stdlib/third-party. Imports of a higher
@@ -162,7 +162,7 @@ def test_render_does_not_import_back_or_ui() -> None:
 
 
 def test_back_does_not_import_concrete_ir_submodules() -> None:
-    """``dazzle.back/`` must not import from ``dazzle.core.ir.appspec``,
+    """``dazzle.http/`` must not import from ``dazzle.core.ir.appspec``,
     ``surfaces``, or ``domain`` directly (#1086 pattern P5).
 
     These three modules were the 30+-importer fan-in that the smells
@@ -173,7 +173,7 @@ def test_back_does_not_import_concrete_ir_submodules() -> None:
       adapter when only a few attrs are needed.
     """
     offenders = _scan(
-        REPO_ROOT / "src" / "dazzle" / "back",
+        REPO_ROOT / "src" / "dazzle" / "http",
         _BACK_FROM_BANNED_IR,
     )
     assert not offenders, (

@@ -16,8 +16,8 @@ from typing import Any
 
 from psycopg import sql
 
-from dazzle.back.runtime.sa_schema import scoped_entity_names
 from dazzle.core.ir.fk_graph import FKGraph
+from dazzle.http.runtime.sa_schema import scoped_entity_names
 
 
 class ExcisionError(RuntimeError):

@@ -43,50 +43,50 @@ class TestValidateParamValue:
         ],
     )
     def test_valid_value_returns_no_errors(self, param_type: str, value) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         assert validate_param_value(_spec(param_type=param_type), value) == []
 
     def test_int_rejects_bool(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         errors = validate_param_value(_spec(param_type="int"), True)
         assert errors
 
     def test_int_rejects_str(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         errors = validate_param_value(_spec(param_type="int"), "hello")
         assert errors
 
     def test_bool_passes(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         assert validate_param_value(_spec(param_type="bool"), True) == []
         assert validate_param_value(_spec(param_type="bool"), False) == []
 
     def test_bool_rejects_int(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         errors = validate_param_value(_spec(param_type="bool"), 0)
         assert errors
 
     def test_list_float_type(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         assert validate_param_value(_spec(param_type="list[float]"), [1.0, 2, 3.5]) == []
         errors = validate_param_value(_spec(param_type="list[float]"), [1, "x"])
         assert errors
 
     def test_list_str_type(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         assert validate_param_value(_spec(param_type="list[str]"), ["a", "b"]) == []
         errors = validate_param_value(_spec(param_type="list[str]"), ["a", 1])
         assert errors
 
     def test_min_max_value(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         c = ParamConstraints(min_value=0, max_value=100)
         spec = _spec(param_type="int", constraints=c)
@@ -95,7 +95,7 @@ class TestValidateParamValue:
         assert validate_param_value(spec, 101) != []
 
     def test_min_max_length(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         c = ParamConstraints(min_length=2, max_length=4)
         spec = _spec(param_type="list[float]", default=[], constraints=c)
@@ -104,7 +104,7 @@ class TestValidateParamValue:
         assert validate_param_value(spec, [1.0, 2.0, 3.0, 4.0, 5.0]) != []
 
     def test_ordered_ascending(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         c = ParamConstraints(ordered="ascending")
         spec = _spec(param_type="list[float]", default=[], constraints=c)
@@ -112,7 +112,7 @@ class TestValidateParamValue:
         assert validate_param_value(spec, [3.0, 1.0]) != []
 
     def test_ordered_descending(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         c = ParamConstraints(ordered="descending")
         spec = _spec(param_type="list[float]", default=[], constraints=c)
@@ -120,7 +120,7 @@ class TestValidateParamValue:
         assert validate_param_value(spec, [1.0, 3.0]) != []
 
     def test_range_constraint(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         c = ParamConstraints(range=[0.0, 1.0])
         spec = _spec(param_type="list[float]", default=[], constraints=c)
@@ -128,7 +128,7 @@ class TestValidateParamValue:
         assert validate_param_value(spec, [0.0, 1.5]) != []
 
     def test_valid_returns_empty(self) -> None:
-        from dazzle.back.runtime.param_store import validate_param_value
+        from dazzle.http.runtime.param_store import validate_param_value
 
         assert validate_param_value(_spec(param_type="int"), 10) == []
 
@@ -140,7 +140,7 @@ class TestValidateParamValue:
 
 class TestParamResolver:
     def test_resolve_default(self) -> None:
-        from dazzle.back.runtime.param_store import ParamResolver
+        from dazzle.http.runtime.param_store import ParamResolver
 
         specs = {"k": _spec(default=42)}
         r = ParamResolver(specs)
@@ -149,7 +149,7 @@ class TestParamResolver:
         assert src == "default"
 
     def test_resolve_tenant_override(self) -> None:
-        from dazzle.back.runtime.param_store import ParamResolver
+        from dazzle.http.runtime.param_store import ParamResolver
 
         specs = {"k": _spec(default=42)}
         r = ParamResolver(specs, overrides={("k", "tenant", "t1"): 99})
@@ -158,7 +158,7 @@ class TestParamResolver:
         assert src == "tenant/t1"
 
     def test_resolve_cascade_user_over_tenant(self) -> None:
-        from dazzle.back.runtime.param_store import ParamResolver
+        from dazzle.http.runtime.param_store import ParamResolver
 
         specs = {"k": _spec(default=0)}
         r = ParamResolver(
@@ -173,7 +173,7 @@ class TestParamResolver:
         assert src == "user/u1"
 
     def test_resolve_cascade_system(self) -> None:
-        from dazzle.back.runtime.param_store import ParamResolver
+        from dazzle.http.runtime.param_store import ParamResolver
 
         specs = {"k": _spec(default=0)}
         r = ParamResolver(specs, overrides={("k", "system", "system"): 77})
@@ -183,7 +183,7 @@ class TestParamResolver:
 
     def test_resolve_cascade_full(self) -> None:
         """user > tenant > system > default."""
-        from dazzle.back.runtime.param_store import ParamResolver
+        from dazzle.http.runtime.param_store import ParamResolver
 
         specs = {"k": _spec(default=0)}
         overrides = {
@@ -203,14 +203,14 @@ class TestParamResolver:
         assert val == 1 and src == "system"
 
     def test_resolve_unknown_key_raises(self) -> None:
-        from dazzle.back.runtime.param_store import ParamResolver
+        from dazzle.http.runtime.param_store import ParamResolver
 
         r = ParamResolver({})
         with pytest.raises(KeyError):
             r.resolve("missing")
 
     def test_set_override_validates(self) -> None:
-        from dazzle.back.runtime.param_store import ParamResolver
+        from dazzle.http.runtime.param_store import ParamResolver
 
         specs = {"k": _spec(param_type="int", default=0)}
         r = ParamResolver(specs)
@@ -220,7 +220,7 @@ class TestParamResolver:
         assert val == 10
 
     def test_set_override_rejects_invalid(self) -> None:
-        from dazzle.back.runtime.param_store import ParamResolver
+        from dazzle.http.runtime.param_store import ParamResolver
 
         specs = {"k": _spec(param_type="int", default=0)}
         r = ParamResolver(specs)
@@ -235,13 +235,13 @@ class TestParamResolver:
 
 class TestResolveValue:
     def test_passthrough_literal(self) -> None:
-        from dazzle.back.runtime.param_store import resolve_value
+        from dazzle.http.runtime.param_store import resolve_value
 
         assert resolve_value(42, None) == 42
         assert resolve_value("hello", None) == "hello"
 
     def test_resolves_param_ref(self) -> None:
-        from dazzle.back.runtime.param_store import ParamResolver, resolve_value
+        from dazzle.http.runtime.param_store import ParamResolver, resolve_value
 
         ref = ParamRef(key="k", param_type="int", default=5)
         specs = {"k": _spec(default=5)}
@@ -249,7 +249,7 @@ class TestResolveValue:
         assert resolve_value(ref, r) == 99
 
     def test_param_ref_default_when_no_resolver(self) -> None:
-        from dazzle.back.runtime.param_store import resolve_value
+        from dazzle.http.runtime.param_store import resolve_value
 
         ref = ParamRef(key="k", param_type="int", default=5)
         assert resolve_value(ref, None) == 5

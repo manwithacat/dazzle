@@ -530,7 +530,7 @@ System for converting diverse external API errors into a consistent format for G
 ### Syntax
 
 ```dsl
-from dazzle.back.graphql.adapters import (
+from dazzle.http.graphql.adapters import (
     normalize_error,
     NormalizedError,
     ErrorCategory,
@@ -543,7 +543,7 @@ normalized = normalize_error(error, service_name="hmrc")
 ### Example
 
 ```dsl
-from dazzle.back.graphql.adapters import (
+from dazzle.http.graphql.adapters import (
     normalize_error,
     ErrorCategory,
     ErrorSeverity,
@@ -613,7 +613,7 @@ Abstract base class for integrating with external APIs (HMRC, banks, payment pro
 ### Syntax
 
 ```dsl
-from dazzle.back.graphql.adapters import (
+from dazzle.http.graphql.adapters import (
     BaseExternalAdapter,
     AdapterConfig,
     AdapterResult,
@@ -627,7 +627,7 @@ class MyServiceAdapter(BaseExternalAdapter[AdapterConfig]):
 ### Example
 
 ```dsl
-from dazzle.back.graphql.adapters import (
+from dazzle.http.graphql.adapters import (
     BaseExternalAdapter,
     AdapterConfig,
     RetryConfig,
@@ -676,7 +676,7 @@ Backend-for-Frontend using GraphQL as the API layer between UI and backend servi
 # $ dazzle serve --graphql
 
 # Mount GraphQL endpoint in your app:
-from dazzle.back.graphql import mount_graphql
+from dazzle.http.graphql import mount_graphql
 mount_graphql(app, backend_spec)
 
 # Query example:

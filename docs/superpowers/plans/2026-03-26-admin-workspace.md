@@ -16,7 +16,7 @@
 |------|--------|----------------|
 | `src/dazzle/core/admin_builder.py` | Create | Synthetic entity + surface + workspace builders |
 | `src/dazzle/core/linker.py` | Modify (lines 126-143) | Call `build_admin_infrastructure()` in build_appspec |
-| `src/dazzle_back/runtime/system_entity_store.py` | Create | Read adapter for virtual entities (health, metrics, processes) |
+| `src/dazzle_http/runtime/system_entity_store.py` | Create | Read adapter for virtual entities (health, metrics, processes) |
 | `tests/unit/test_admin_builder.py` | Create | Unit tests for entity/surface/workspace generation |
 | `tests/unit/test_system_entity_store.py` | Create | Unit tests for virtual entity store routing |
 
@@ -1224,7 +1224,7 @@ git commit -m "feat: wire admin workspace builder into linker (#686)"
 ### Task 7: SystemEntityStore
 
 **Files:**
-- Create: `src/dazzle_back/runtime/system_entity_store.py`
+- Create: `src/dazzle_http/runtime/system_entity_store.py`
 - Create: `tests/unit/test_system_entity_store.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -1238,7 +1238,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 from datetime import datetime, timezone
 
-from dazzle_back.runtime.system_entity_store import SystemEntityStore
+from dazzle_http.runtime.system_entity_store import SystemEntityStore
 
 
 class TestSystemEntityStoreHealth:
@@ -1357,7 +1357,7 @@ Expected: FAIL with `ModuleNotFoundError`
 
 - [ ] **Step 3: Implement SystemEntityStore**
 
-Create `src/dazzle_back/runtime/system_entity_store.py`:
+Create `src/dazzle_http/runtime/system_entity_store.py`:
 
 ```python
 """
@@ -1489,7 +1489,7 @@ Expected: All PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/system_entity_store.py tests/unit/test_system_entity_store.py
+git add src/dazzle_http/runtime/system_entity_store.py tests/unit/test_system_entity_store.py
 git commit -m "feat: SystemEntityStore — virtual entity read adapter (#686)"
 ```
 
@@ -1501,7 +1501,7 @@ git commit -m "feat: SystemEntityStore — virtual entity read adapter (#686)"
 
 - [ ] **Step 1: Run ruff**
 
-Run: `ruff check src/dazzle/core/admin_builder.py src/dazzle/core/ir/admin_entities.py src/dazzle_back/runtime/system_entity_store.py --fix && ruff format src/dazzle/core/admin_builder.py src/dazzle/core/ir/admin_entities.py src/dazzle_back/runtime/system_entity_store.py`
+Run: `ruff check src/dazzle/core/admin_builder.py src/dazzle/core/ir/admin_entities.py src/dazzle_http/runtime/system_entity_store.py --fix && ruff format src/dazzle/core/admin_builder.py src/dazzle/core/ir/admin_entities.py src/dazzle_http/runtime/system_entity_store.py`
 Expected: Clean or auto-fixed
 
 - [ ] **Step 2: Run mypy**
@@ -1528,8 +1528,8 @@ git commit -m "chore: lint + type fixes for admin workspace (#686)"
 ### Task 9: Deprecation Headers on Console Routes
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/ops_routes.py`
-- Modify: `src/dazzle_back/runtime/console_routes.py`
+- Modify: `src/dazzle_http/runtime/ops_routes.py`
+- Modify: `src/dazzle_http/runtime/console_routes.py`
 
 - [ ] **Step 1: Write failing test**
 
@@ -1543,7 +1543,7 @@ import pytest
 
 def test_ops_routes_have_deprecation_header():
     """Ops routes should include X-Dazzle-Deprecated header."""
-    from dazzle_back.runtime.ops_routes import DEPRECATION_HEADER_KEY, DEPRECATION_HEADER_VALUE
+    from dazzle_http.runtime.ops_routes import DEPRECATION_HEADER_KEY, DEPRECATION_HEADER_VALUE
 
     assert DEPRECATION_HEADER_KEY == "X-Dazzle-Deprecated"
     assert "admin workspace" in DEPRECATION_HEADER_VALUE.lower()
@@ -1551,7 +1551,7 @@ def test_ops_routes_have_deprecation_header():
 
 def test_console_routes_have_deprecation_header():
     """Console routes should include X-Dazzle-Deprecated header."""
-    from dazzle_back.runtime.console_routes import DEPRECATION_HEADER_KEY, DEPRECATION_HEADER_VALUE
+    from dazzle_http.runtime.console_routes import DEPRECATION_HEADER_KEY, DEPRECATION_HEADER_VALUE
 
     assert DEPRECATION_HEADER_KEY == "X-Dazzle-Deprecated"
     assert "admin workspace" in DEPRECATION_HEADER_VALUE.lower()
@@ -1595,7 +1595,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/ops_routes.py src/dazzle_back/runtime/console_routes.py tests/unit/test_console_deprecation.py
+git add src/dazzle_http/runtime/ops_routes.py src/dazzle_http/runtime/console_routes.py tests/unit/test_console_deprecation.py
 git commit -m "feat: deprecation headers on console routes (#686)"
 ```
 

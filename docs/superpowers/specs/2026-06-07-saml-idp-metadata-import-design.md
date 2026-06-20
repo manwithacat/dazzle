@@ -31,7 +31,7 @@ This is feature 1 of the SAML cluster (independent; no SP keypair). The other th
 A new `onelogin`-free-where-possible module does the fetch + guard + parse; the CLI merges the
 parsed values with any explicit flags and stores the same `config` keys it does today.
 
-### New module `src/dazzle/back/runtime/auth/saml_metadata.py`
+### New module `src/dazzle/http/runtime/auth/saml_metadata.py`
 
 ```python
 class SamlMetadataError(RuntimeError):
@@ -127,7 +127,7 @@ It is NOT a bare `except: pass` — it re-raises a typed error with the cause, s
 
 | File | Change |
 |------|--------|
-| `src/dazzle/back/runtime/auth/saml_metadata.py` | NEW — `validate_metadata_url`, `fetch_idp_metadata`, `parse_idp_metadata_xml`, `SamlMetadataError` |
+| `src/dazzle/http/runtime/auth/saml_metadata.py` | NEW — `validate_metadata_url`, `fetch_idp_metadata`, `parse_idp_metadata_xml`, `SamlMetadataError` |
 | `src/dazzle/cli/auth_connection.py` | `create-saml`: metadata flags, optional idp flags, merge + validate |
 | `tests/unit/test_saml_metadata.py` | NEW — URL validator (local) + parse/CLI (importorskip onelogin) |
 | `tests/unit/test_auth_connection_cli.py` | `create-saml` metadata-file path + missing-args error |

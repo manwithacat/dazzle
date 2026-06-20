@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from dazzle.back.graphql.adapters.base import (
+from dazzle.http.graphql.adapters.base import (
     AdapterConfig,
     AdapterError,
     AdapterResponse,
@@ -19,7 +19,7 @@ from dazzle.back.graphql.adapters.base import (
     TimeoutError,
     ValidationError,
 )
-from dazzle.back.graphql.adapters.errors import (
+from dazzle.http.graphql.adapters.errors import (
     ErrorCategory,
     ErrorSeverity,
     NormalizedError,

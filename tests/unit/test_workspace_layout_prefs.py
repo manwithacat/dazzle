@@ -13,7 +13,7 @@ class TestColSpanDefaults:
 
     def test_stage_col_span_defaults(self) -> None:
         """Cover focus_metric, dual_pane_flow, scanner_table, monitor_wall, command_center, no-stage."""
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         cases = [
             ("focus_metric", 3, [12, 6, 6]),
@@ -30,7 +30,7 @@ class TestColSpanDefaults:
 
     def test_kanban_always_full_width(self) -> None:
         """Kanban regions should be col_span=12 regardless of stage defaults."""
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("command_center", region_count=4)
         # Override region 3 (which would normally get col_span=4) to KANBAN
@@ -43,13 +43,13 @@ class TestApplyLayoutPreferences:
     """apply_layout_preferences merges user layout delta with DSL defaults."""
 
     def _make_ctx(self, region_count: int = 3) -> object:
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("scanner_table", region_count=region_count)
         return build_workspace_context(ws)
 
     def test_no_preference_returns_unchanged(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         result = apply_layout_preferences(ctx, {})
@@ -58,7 +58,7 @@ class TestApplyLayoutPreferences:
     def test_reorder_regions(self) -> None:
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         original_names = [r.name for r in ctx.regions]
@@ -71,7 +71,7 @@ class TestApplyLayoutPreferences:
         """v1 hidden regions are dropped during auto-migration to v2."""
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         prefs = {f"workspace.{ctx.name}.layout": json.dumps({"hidden": ["region_1"]})}
@@ -82,7 +82,7 @@ class TestApplyLayoutPreferences:
     def test_width_overrides(self) -> None:
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         prefs = {
@@ -96,7 +96,7 @@ class TestApplyLayoutPreferences:
     def test_deleted_dsl_region_dropped(self) -> None:
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(2)
         prefs = {
@@ -110,7 +110,7 @@ class TestApplyLayoutPreferences:
     def test_new_dsl_region_appended(self) -> None:
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         prefs = {f"workspace.{ctx.name}.layout": json.dumps({"order": ["region_0", "region_1"]})}
@@ -121,7 +121,7 @@ class TestApplyLayoutPreferences:
         """Hidden regions are dropped in v2 migration; fold_count unchanged."""
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         prefs = {f"workspace.{ctx.name}.layout": json.dumps({"hidden": ["region_0"]})}
@@ -134,7 +134,7 @@ class TestApplyLayoutPreferences:
         """v1 layout auto-migrates to v2; hidden regions are dropped."""
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         layout = {
@@ -161,7 +161,7 @@ class TestLayoutV2:
     """v2 layout schema — card-instance model."""
 
     def _make_ctx(self, region_count: int = 3) -> object:
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("scanner_table", region_count=region_count)
         return build_workspace_context(ws)
@@ -170,7 +170,7 @@ class TestLayoutV2:
         """v2 cards list determines region order."""
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         layout = {
@@ -190,7 +190,7 @@ class TestLayoutV2:
         """Same DSL region can appear multiple times in v2."""
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(2)
         layout = {
@@ -212,7 +212,7 @@ class TestLayoutV2:
         """Cards referencing non-existent DSL regions are skipped."""
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(2)
         layout = {
@@ -231,7 +231,7 @@ class TestLayoutV2:
         """col_span=3 is valid in v2 (quarter-width cards)."""
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(2)
         layout = {
@@ -249,7 +249,7 @@ class TestLayoutV2:
         """Invalid col_span keeps the DSL default."""
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(2)
         layout = {
@@ -269,7 +269,7 @@ class TestCatalogBuilder:
 
     def test_catalog_returns_regions_with_full_metadata(self) -> None:
         """Catalog returns all regions with name, title, display, and entity fields populated."""
-        from dazzle.ui.runtime.workspace_renderer import build_catalog, build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_catalog, build_workspace_context
 
         ws = _make_workspace("scanner_table", region_count=3)
         ctx = build_workspace_context(ws)
@@ -285,7 +285,7 @@ class TestV1ToV2Migration:
     """migrate_v1_to_v2 converts old layout format to card instances."""
 
     def test_order_and_width_preserved(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import migrate_v1_to_v2
+        from dazzle.page.runtime.workspace_renderer import migrate_v1_to_v2
 
         v1 = {"order": ["b", "a"], "hidden": [], "widths": {"b": 6, "a": 4}}
         result = migrate_v1_to_v2(v1, ["a", "b"])
@@ -301,7 +301,7 @@ class TestV1ToV2Migration:
 
     def test_hidden_ghost_dropped_and_new_dsl_appended(self) -> None:
         """v1→v2 drops hidden+ghost regions and appends DSL-only regions; ids are unique."""
-        from dazzle.ui.runtime.workspace_renderer import migrate_v1_to_v2
+        from dazzle.page.runtime.workspace_renderer import migrate_v1_to_v2
 
         # hidden cards dropped
         v1 = {"order": ["a", "b", "c"], "hidden": ["b"], "widths": {}}
@@ -330,13 +330,13 @@ class TestDashboardRoundTrip:
     """Full round-trip: default → add card → reorder → resize → persist."""
 
     def _make_ctx(self, region_count: int = 3) -> object:
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("scanner_table", region_count=region_count)
         return build_workspace_context(ws)
 
     def test_default_layout_matches_dsl(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         result = apply_layout_preferences(ctx, {})
@@ -345,7 +345,7 @@ class TestDashboardRoundTrip:
     def test_add_duplicate_card_and_persist(self) -> None:
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(2)
         layout = {
@@ -367,7 +367,7 @@ class TestDashboardRoundTrip:
     def test_remove_card_persists(self) -> None:
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         layout = {
@@ -385,7 +385,7 @@ class TestDashboardRoundTrip:
     def test_resize_snap_values_respected(self) -> None:
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(1)
         for span in [3, 4, 6, 8, 12]:
@@ -400,7 +400,7 @@ class TestDashboardRoundTrip:
     def test_invalid_span_uses_default(self) -> None:
         import json
 
-        from dazzle.ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle.page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(1)
         layout = {

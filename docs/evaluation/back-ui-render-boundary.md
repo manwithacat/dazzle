@@ -5,7 +5,7 @@ Worktree: `.claude/worktrees/htmx4-eval` @ `841ecb9e7` (current `main`)
 Method: static import-topology audit. No code changed. Companion to `htmx4-evaluation.md` — the
 question arose because the htmx footprint is smeared across all three packages.
 
-> Question being answered: *Is the `dazzle/back` vs `dazzle/ui` split meaningful for a server-side
+> Question being answered: *Is the `dazzle/http` vs `dazzle/page` split meaningful for a server-side
 > rendering framework, and does it help coding agents?*
 
 ## Verdict
@@ -71,7 +71,7 @@ Because the pure render layer needs that pure-but-mis-homed code, `render/` impo
 That is the **entire** violation set: 3 files, 5 lazy imports. Lazy in-function import is the canonical
 "we have a circular dependency and are hiding it" smell; `render/context.py:413` even carries a comment
 about dodging a "render→ui import cycle." The team clearly *knows* the layer rule (it's written verbatim
-in `render/onboarding/__init__.py`: *"`dazzle.ui.*` must not import `dazzle.back.*`"*, and `render/
+in `render/onboarding/__init__.py`: *"`dazzle.page.*` must not import `dazzle.http.*`"*, and `render/
 onboarding` was deliberately split out of `back` to honor it) — there is just nothing stopping
 regressions, so a few crept back.
 
@@ -108,7 +108,7 @@ abandoning.**
 
 2. **Add a layering drift-test (zero new deps).** Matches the project's existing drift-test idiom
    (`test_api_surface_drift.py`, `test_vendor_hash_drift.py`, `test_docs_drift.py`). A `pytest` that
-   walks the AST of `src/dazzle/render/**` and `src/dazzle/ui/**` and **fails on any import** of a
+   walks the AST of `src/dazzle/render/**` and `src/dazzle/page/**` and **fails on any import** of a
    higher layer:
    - `render/` may import: `render`, `core`, stdlib/3p. **Not** `ui`, **not** `back`.
    - `ui/` may import: `ui`, `render`, `core`, stdlib/3p. **Not** `back`.

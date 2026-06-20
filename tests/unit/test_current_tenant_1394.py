@@ -23,16 +23,16 @@ from typing import Any
 
 import pytest
 
-from dazzle.back.runtime.predicate_compiler import (
-    CurrentTenantRef,
-    _compile_value_ref,
-)
-from dazzle.back.runtime.rls_schema import HOST_TENANT_GUC, TENANT_GUC
-from dazzle.back.runtime.tenant_render_context import inject_current_tenant
 from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir.predicate_builder import build_scope_predicate
 from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
+from dazzle.http.runtime.predicate_compiler import (
+    CurrentTenantRef,
+    _compile_value_ref,
+)
+from dazzle.http.runtime.rls_schema import HOST_TENANT_GUC, TENANT_GUC
+from dazzle.http.runtime.tenant_render_context import inject_current_tenant
 
 # ──────────────────────────── IR / builder ────────────────────────────
 
@@ -111,7 +111,7 @@ class TestMarkerResolutionFailsClosed:
     def test_scope_filter_denies_without_host_tenant(self) -> None:
         # No host tenant bound in the context var → the filter must deny (return
         # None), never emit an unfenced query.
-        from dazzle.back.runtime import scope_filters
+        from dazzle.http.runtime import scope_filters
 
         pred = ColumnCheck(field="org", op=CompOp.EQ, value=ValueRef(current_tenant=True))
         result = scope_filters._resolve_predicate_filters(
@@ -125,8 +125,8 @@ class TestMarkerResolutionFailsClosed:
         assert result is None  # deny
 
     def test_scope_filter_binds_host_tenant_when_present(self) -> None:
-        from dazzle.back.runtime import scope_filters
-        from dazzle.back.runtime.tenant_isolation import (
+        from dazzle.http.runtime import scope_filters
+        from dazzle.http.runtime.tenant_isolation import (
             _current_host_tenant_id,
             set_current_host_tenant_id,
         )
@@ -158,8 +158,8 @@ class TestCreateScopeFailsClosed:
     the security review caught)."""
 
     def test_resolve_value_denies_without_host_tenant(self) -> None:
-        from dazzle.back.runtime.scope_create_eval import _CT_DENY, _compare, _resolve_value
         from dazzle.core.ir.predicates import CompOp
+        from dazzle.http.runtime.scope_create_eval import _CT_DENY, _compare, _resolve_value
 
         # No host tenant in context → sentinel, not None.
         resolved = _resolve_value(ValueRef(current_tenant=True), "u1", {})
@@ -172,12 +172,12 @@ class TestCreateScopeFailsClosed:
         assert _compare(None, CompOp.NEQ, resolved) is False
 
     def test_resolve_value_binds_host_tenant_when_present(self) -> None:
-        from dazzle.back.runtime.scope_create_eval import _compare, _resolve_value
-        from dazzle.back.runtime.tenant_isolation import (
+        from dazzle.core.ir.predicates import CompOp
+        from dazzle.http.runtime.scope_create_eval import _compare, _resolve_value
+        from dazzle.http.runtime.tenant_isolation import (
             _current_host_tenant_id,
             set_current_host_tenant_id,
         )
-        from dazzle.core.ir.predicates import CompOp
 
         token = set_current_host_tenant_id("tenant-A")
         try:
@@ -210,7 +210,7 @@ def _fake_request(tenant_id: str | None, *, slug: str = "acme", kind: str = "tru
 @pytest.fixture(autouse=True)
 def _reset_host_tenant() -> Any:
     """Keep the host-tenant context var from leaking across tests."""
-    from dazzle.back.runtime.tenant_isolation import _current_host_tenant_id
+    from dazzle.http.runtime.tenant_isolation import _current_host_tenant_id
 
     token = _current_host_tenant_id.set(None)
     yield
@@ -224,7 +224,7 @@ class TestCurrentTenantDisplayGate:
     def _ctx(self, kind: str) -> dict:
         # #1394 review Finding 2: display injection is gated on the SAME host
         # context var as scope, so bind it before injecting.
-        from dazzle.back.runtime.tenant_isolation import set_current_host_tenant_id
+        from dazzle.http.runtime.tenant_isolation import set_current_host_tenant_id
 
         set_current_host_tenant_id(_TID)
         ctx: dict = {}
@@ -257,7 +257,7 @@ class TestCurrentTenantDisplayGate:
 
 class TestInjectCurrentTenant:
     def test_populates_id_and_attrs(self) -> None:
-        from dazzle.back.runtime.tenant_isolation import set_current_host_tenant_id
+        from dazzle.http.runtime.tenant_isolation import set_current_host_tenant_id
 
         set_current_host_tenant_id("abc")
         ctx: dict = {}
@@ -274,7 +274,7 @@ class TestInjectCurrentTenant:
     def test_request_tenant_mismatch_exposes_id_only(self) -> None:
         # Host var binds tenant X but request.state.tenant is Y → expose id only
         # (the authoritative scope binding), never Y's slug/kind.
-        from dazzle.back.runtime.tenant_isolation import set_current_host_tenant_id
+        from dazzle.http.runtime.tenant_isolation import set_current_host_tenant_id
 
         set_current_host_tenant_id("X")
         ctx: dict = {}

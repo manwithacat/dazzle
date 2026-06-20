@@ -29,7 +29,7 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from dazzle.back.runtime.audit_history_routes import (
+from dazzle.http.runtime.audit_history_routes import (
     _extract_personas,
     create_audit_history_routes,
 )

@@ -2,8 +2,8 @@
 
 import pytest
 
-from dazzle.back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
+from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.fragment import Heading, Region, Surface, Table
 
 

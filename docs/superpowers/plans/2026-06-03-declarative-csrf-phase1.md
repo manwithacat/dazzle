@@ -20,18 +20,18 @@
 
 ## Files
 
-- **Modify** `src/dazzle/back/runtime/auth/models.py` (`SessionRecord`, ~line 40) — add `csrf_secret` field.
-- **Create** `src/dazzle/back/alembic/versions/0005_session_csrf_secret.py` — add the column.
-- **Modify** `src/dazzle/back/runtime/auth/store.py` — bootstrap `CREATE TABLE` (~675), `create_session` INSERT (~462), `get_session` SELECT mapping (~491); add `regenerate_session_csrf`.
-- **Modify** `src/dazzle/back/runtime/auth/routes.py` — set `dazzle_csrf` at login (~137), clear at logout (~174).
-- **Test** `src/dazzle/back/tests/test_auth.py` (store/model tests) and a new `tests/unit/test_csrf_session_binding_phase1.py` (cookie behaviour).
+- **Modify** `src/dazzle/http/runtime/auth/models.py` (`SessionRecord`, ~line 40) — add `csrf_secret` field.
+- **Create** `src/dazzle/http/alembic/versions/0005_session_csrf_secret.py` — add the column.
+- **Modify** `src/dazzle/http/runtime/auth/store.py` — bootstrap `CREATE TABLE` (~675), `create_session` INSERT (~462), `get_session` SELECT mapping (~491); add `regenerate_session_csrf`.
+- **Modify** `src/dazzle/http/runtime/auth/routes.py` — set `dazzle_csrf` at login (~137), clear at logout (~174).
+- **Test** `src/dazzle/http/tests/test_auth.py` (store/model tests) and a new `tests/unit/test_csrf_session_binding_phase1.py` (cookie behaviour).
 
 ---
 
 ### Task 1: Add `csrf_secret` to `SessionRecord`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/models.py:40-50`
+- Modify: `src/dazzle/http/runtime/auth/models.py:40-50`
 - Test: `tests/unit/test_csrf_session_binding_phase1.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -43,7 +43,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from dazzle.back.runtime.auth.models import SessionRecord
+from dazzle.http.runtime.auth.models import SessionRecord
 
 
 def _session() -> SessionRecord:
@@ -89,7 +89,7 @@ Expected: PASS (2 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/models.py tests/unit/test_csrf_session_binding_phase1.py
+git add src/dazzle/http/runtime/auth/models.py tests/unit/test_csrf_session_binding_phase1.py
 git commit -m "feat(csrf): session-bound csrf_secret on SessionRecord (Phase 1)"
 ```
 
@@ -98,8 +98,8 @@ git commit -m "feat(csrf): session-bound csrf_secret on SessionRecord (Phase 1)"
 ### Task 2: Alembic migration + idempotent bootstrap for the column
 
 **Files:**
-- Create: `src/dazzle/back/alembic/versions/0005_session_csrf_secret.py`
-- Modify: `src/dazzle/back/runtime/auth/store.py:675-682` (bootstrap `CREATE TABLE`)
+- Create: `src/dazzle/http/alembic/versions/0005_session_csrf_secret.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py:675-682` (bootstrap `CREATE TABLE`)
 - Test: `tests/unit/test_csrf_session_binding_phase1.py`
 
 - [ ] **Step 1: Write the failing test (migration is idempotent + adds the column)**
@@ -116,7 +116,7 @@ import sqlalchemy as sa
 def _load_migration():
     path = (
         Path(__file__).resolve().parents[2]
-        / "src/dazzle/back/alembic/versions/0005_session_csrf_secret.py"
+        / "src/dazzle/http/alembic/versions/0005_session_csrf_secret.py"
     )
     spec = importlib.util.spec_from_file_location("m0005", path)
     assert spec and spec.loader
@@ -161,7 +161,7 @@ Expected: FAIL — migration file does not exist.
 - [ ] **Step 3: Create the migration**
 
 ```python
-# src/dazzle/back/alembic/versions/0005_session_csrf_secret.py
+# src/dazzle/http/alembic/versions/0005_session_csrf_secret.py
 """Add csrf_secret to sessions (declarative-CSRF Phase 1).
 
 Revision ID: 0005_session_csrf_secret
@@ -239,8 +239,8 @@ Expected: PASS (2 passed).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/alembic/versions/0005_session_csrf_secret.py \
-        src/dazzle/back/runtime/auth/store.py \
+git add src/dazzle/http/alembic/versions/0005_session_csrf_secret.py \
+        src/dazzle/http/runtime/auth/store.py \
         tests/unit/test_csrf_session_binding_phase1.py
 git commit -m "feat(csrf): alembic 0005 + bootstrap add sessions.csrf_secret (Phase 1)"
 ```
@@ -250,14 +250,14 @@ git commit -m "feat(csrf): alembic 0005 + bootstrap add sessions.csrf_secret (Ph
 ### Task 3: Persist and load `csrf_secret` in the store
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py:462-484` (`create_session` INSERT)
-- Modify: `src/dazzle/back/runtime/auth/store.py:486-500` (`get_session` SELECT mapping)
-- Modify: `src/dazzle/back/runtime/auth/store.py` (new `regenerate_session_csrf`)
-- Test: `src/dazzle/back/tests/test_auth.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py:462-484` (`create_session` INSERT)
+- Modify: `src/dazzle/http/runtime/auth/store.py:486-500` (`get_session` SELECT mapping)
+- Modify: `src/dazzle/http/runtime/auth/store.py` (new `regenerate_session_csrf`)
+- Test: `src/dazzle/http/tests/test_auth.py`
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `src/dazzle/back/tests/test_auth.py` (follow the existing store-fixture pattern in that file; it already constructs a store against a test DB):
+Add to `src/dazzle/http/tests/test_auth.py` (follow the existing store-fixture pattern in that file; it already constructs a store against a test DB):
 
 ```python
 def test_create_session_persists_csrf_secret(auth_store, sample_user):
@@ -279,7 +279,7 @@ def test_regenerate_session_csrf_changes_secret(auth_store, sample_user):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest src/dazzle/back/tests/test_auth.py -k csrf -v`
+Run: `python -m pytest src/dazzle/http/tests/test_auth.py -k csrf -v`
 Expected: FAIL — `get_session` returns a record whose `csrf_secret` came from the model default (mismatch), and `regenerate_session_csrf` does not exist.
 
 - [ ] **Step 3: Wire the INSERT**
@@ -344,13 +344,13 @@ Add this method to the store class (next to `get_session`):
 
 - [ ] **Step 6: Run tests**
 
-Run: `python -m pytest src/dazzle/back/tests/test_auth.py -k csrf -v`
+Run: `python -m pytest src/dazzle/http/tests/test_auth.py -k csrf -v`
 Expected: PASS (2 passed).
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/store.py src/dazzle/back/tests/test_auth.py
+git add src/dazzle/http/runtime/auth/store.py src/dazzle/http/tests/test_auth.py
 git commit -m "feat(csrf): persist+load+regenerate sessions.csrf_secret in store (Phase 1)"
 ```
 
@@ -359,18 +359,18 @@ git commit -m "feat(csrf): persist+load+regenerate sessions.csrf_secret in store
 ### Task 4: Derive the `dazzle_csrf` cookie from the session at login; clear at logout
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/routes.py:137-145` (login `set_cookie`)
-- Modify: `src/dazzle/back/runtime/auth/routes.py:151-175` (`_logout`)
+- Modify: `src/dazzle/http/runtime/auth/routes.py:137-145` (login `set_cookie`)
+- Modify: `src/dazzle/http/runtime/auth/routes.py:151-175` (`_logout`)
 - Test: `tests/unit/test_csrf_session_binding_phase1.py`
 
 - [ ] **Step 1: Read the login handler to find the `session` and `response` in scope**
 
-Run: `sed -n '108,150p' src/dazzle/back/runtime/auth/routes.py`
+Run: `sed -n '108,150p' src/dazzle/http/runtime/auth/routes.py`
 Confirm the handler has built `session` (the `SessionRecord` from `create_session`) and a `response` object before line 137. Use those exact names.
 
 - [ ] **Step 2: Write the failing test (login sets dazzle_csrf to the session secret; logout clears it)**
 
-Add to `tests/unit/test_csrf_session_binding_phase1.py`. Use the project's existing app-boot/test-client fixture for the auth routes (search `tests/` and `src/dazzle/back/tests/` for the FastAPI `TestClient` auth fixture — e.g. `client` / `app_client` — and reuse it rather than constructing a new app):
+Add to `tests/unit/test_csrf_session_binding_phase1.py`. Use the project's existing app-boot/test-client fixture for the auth routes (search `tests/` and `src/dazzle/http/tests/` for the FastAPI `TestClient` auth fixture — e.g. `client` / `app_client` — and reuse it rather than constructing a new app):
 
 ```python
 class TestLoginCookie:
@@ -397,7 +397,7 @@ class TestLoginCookie:
         assert resp.cookies.get("dazzle_csrf", "") == ""
 ```
 
-(Match the real fixture names — `auth_client`, `registered_user`, and the cookie-name accessor — to whatever the auth test module already exposes. If the project has no such fixture, model it on the `TestClient` setup in `src/dazzle/back/tests/test_auth.py`.)
+(Match the real fixture names — `auth_client`, `registered_user`, and the cookie-name accessor — to whatever the auth test module already exposes. If the project has no such fixture, model it on the `TestClient` setup in `src/dazzle/http/tests/test_auth.py`.)
 
 - [ ] **Step 3: Run test to verify it fails**
 
@@ -437,7 +437,7 @@ Expected: PASS (2 passed).
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/routes.py tests/unit/test_csrf_session_binding_phase1.py
+git add src/dazzle/http/runtime/auth/routes.py tests/unit/test_csrf_session_binding_phase1.py
 git commit -m "feat(csrf): login sets dazzle_csrf from session secret, logout clears it (Phase 1)"
 ```
 
@@ -500,4 +500,4 @@ These depend on Phase 1's concrete `csrf_secret` shape and on each other, so the
 - **Spec coverage (Phase 1 slice of §4.3):** session-bound secret ✓ (Task 1/3), persisted via Alembic per ADR-0017 ✓ (Task 2), cookie derived at login + cleared at logout ✓ (Task 4), rotation primitive ✓ (Task 3). Mid-session privilege rotation explicitly deferred with rationale (Scope boundary).
 - **Type consistency:** `csrf_secret: str` used identically in model, INSERT, SELECT mapping, migration, and cookie value; `regenerate_session_csrf(session_id: str) -> str` referenced once (Task 3) and pointed at by Phase 4.
 - **No placeholders:** every code step shows real code; fixture-name caveats are explicit instructions to match existing conventions, not TBDs.
-- **Risk:** the auth-route test fixtures (`auth_client`, `registered_user`, cookie-name accessor) must match what `src/dazzle/back/tests/test_auth.py` already provides — Task 4 Step 1 instructs reading the handler first to bind the exact `session`/`response`/`deps` names in scope.
+- **Risk:** the auth-route test fixtures (`auth_client`, `registered_user`, cookie-name accessor) must match what `src/dazzle/http/tests/test_auth.py` already provides — Task 4 Step 1 instructs reading the handler first to bind the exact `session`/`response`/`deps` names in scope.

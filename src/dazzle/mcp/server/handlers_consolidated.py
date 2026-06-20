@@ -211,7 +211,7 @@ _MOD_DSL_FIDELITY = "dazzle.mcp.server.handlers.fidelity"
 
 
 def _dsl_list_fragments(project_path: Path, args: dict[str, Any]) -> str:
-    from dazzle.ui.runtime.fragment_registry import get_fragment_registry
+    from dazzle.page.runtime.fragment_registry import get_fragment_registry
 
     return json.dumps({"fragments": get_fragment_registry()}, indent=2)
 

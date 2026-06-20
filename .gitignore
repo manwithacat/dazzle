@@ -19,7 +19,7 @@ parts/
 sdist/
 # Root build output dir — `python -m build` default --outdir. Anchored with a
 # leading slash so it does NOT shadow the deliberately-tracked nested bundle
-# dir src/dazzle/ui/runtime/static/dist/ (#1373).
+# dir src/dazzle/page/runtime/static/dist/ (#1373).
 /dist/
 var/
 wheels/
@@ -54,13 +54,13 @@ build/
 # added ~3 large binary diffs that buried real changes. Now built by CI
 # before the test job (.github/workflows/ci.yml "Build dist bundles" step)
 # and by the wheel-publish workflow before twine upload.
-src/dazzle_ui/runtime/static/dist/dazzle.min.css
-src/dazzle_ui/runtime/static/dist/dazzle.min.js
-src/dazzle_ui/runtime/static/dist/dazzle-icons.min.js
+src/dazzle_page/runtime/static/dist/dazzle.min.css
+src/dazzle_page/runtime/static/dist/dazzle.min.js
+src/dazzle_page/runtime/static/dist/dazzle-icons.min.js
 # gzipped variants emitted by build_dist.py at the same time:
-src/dazzle_ui/runtime/static/dist/dazzle.min.css.gz
-src/dazzle_ui/runtime/static/dist/dazzle.min.js.gz
-src/dazzle_ui/runtime/static/dist/dazzle-icons.min.js.gz
+src/dazzle_page/runtime/static/dist/dazzle.min.css.gz
+src/dazzle_page/runtime/static/dist/dazzle.min.js.gz
+src/dazzle_page/runtime/static/dist/dazzle-icons.min.js.gz
 
 # Test artifacts
 .coverage

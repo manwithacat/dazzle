@@ -14,7 +14,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.lifespan_hooks import (
+from dazzle.http.runtime.lifespan_hooks import (
     init_lifespan_registry,
     register_lifespan_hook,
     run_shutdown_hooks,
@@ -117,7 +117,7 @@ def test_no_on_event_calls_remain_in_runtime_source() -> None:
     import re
     from pathlib import Path
 
-    import dazzle.back.runtime as runtime_pkg
+    import dazzle.http.runtime as runtime_pkg
 
     root = Path(runtime_pkg.__file__).parent
     pattern = re.compile(r"\.on_event\s*\(")  # a FastAPI on_event CALL (not the DSL field)
@@ -157,7 +157,7 @@ class TestLegacyRouterEvents:
 
     @pytest.mark.asyncio
     async def test_startup_handlers_run_in_order(self, caplog) -> None:
-        from dazzle.back.runtime.lifespan_hooks import run_legacy_router_events
+        from dazzle.http.runtime.lifespan_hooks import run_legacy_router_events
 
         app, calls = self._app_with_handlers()
         with caplog.at_level(logging.WARNING):
@@ -169,7 +169,7 @@ class TestLegacyRouterEvents:
 
     @pytest.mark.asyncio
     async def test_shutdown_handlers_run(self) -> None:
-        from dazzle.back.runtime.lifespan_hooks import run_legacy_router_events
+        from dazzle.http.runtime.lifespan_hooks import run_legacy_router_events
 
         app, calls = self._app_with_handlers()
         await run_legacy_router_events(app, "shutdown")
@@ -182,7 +182,7 @@ class TestLegacyRouterEvents:
         # registry hooks deliberately swallow; host hooks deliberately don't.)
         from types import SimpleNamespace
 
-        from dazzle.back.runtime.lifespan_hooks import run_legacy_router_events
+        from dazzle.http.runtime.lifespan_hooks import run_legacy_router_events
 
         def boom() -> None:
             raise RuntimeError("pool init failed")
@@ -196,7 +196,7 @@ class TestLegacyRouterEvents:
         # Defensive: a future FastAPI may drop the deprecated lists entirely.
         from types import SimpleNamespace
 
-        from dazzle.back.runtime.lifespan_hooks import run_legacy_router_events
+        from dazzle.http.runtime.lifespan_hooks import run_legacy_router_events
 
         await run_legacy_router_events(SimpleNamespace(router=SimpleNamespace()), "startup")
         await run_legacy_router_events(SimpleNamespace(), "startup")  # no router at all
@@ -205,7 +205,7 @@ class TestLegacyRouterEvents:
 def test_register_lifespan_hook_is_a_public_lazy_export() -> None:
     """#1366: the supported path must be reachable as `dazzle.register_lifespan_hook`."""
     import dazzle
-    from dazzle.back.runtime.lifespan_hooks import register_lifespan_hook
+    from dazzle.http.runtime.lifespan_hooks import register_lifespan_hook
 
     assert dazzle.register_lifespan_hook is register_lifespan_hook
     assert "register_lifespan_hook" in dazzle.__all__

@@ -660,7 +660,7 @@ class TestFeedbackReportPutEndpoint:
 
     def test_put_endpoint_registered(self) -> None:
         """feedback_edit surface produces a PUT endpoint at /feedbackreports/{id}."""
-        from dazzle.back.converters.surface_converter import (
+        from dazzle.http.converters.surface_converter import (
             convert_surfaces_to_services,
         )
 
@@ -676,7 +676,7 @@ class TestFeedbackReportPutEndpoint:
 
     def test_update_service_created(self) -> None:
         """feedback_edit surface produces an UPDATE service for FeedbackReport."""
-        from dazzle.back.converters.surface_converter import (
+        from dazzle.http.converters.surface_converter import (
             convert_surfaces_to_services,
         )
 

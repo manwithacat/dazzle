@@ -51,7 +51,7 @@ modification path that:
 # After changing entity fields in DSL or framework code:
 dazzle db revision -m "describe the change"   # autogenerates migration
 dazzle db upgrade                              # applies to local DB
-git add src/dazzle/back/alembic/versions/      # commit the migration file
+git add src/dazzle/http/alembic/versions/      # commit the migration file
 ```
 
 ### What `create_all()` still does

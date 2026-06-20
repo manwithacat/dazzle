@@ -26,9 +26,9 @@ from pathlib import Path
 # the 6-phase handler lives in workspace_region_handler.py.
 # These source-grep tests sweep all four files so the invariants follow the
 # code, not the filename.
-WS_HANDLERS = Path("src/dazzle/back/runtime/workspace_handlers.py")
-WS_FETCH = Path("src/dazzle/back/runtime/workspace_region_fetch.py")
-WS_HANDLER = Path("src/dazzle/back/runtime/workspace_region_handler.py")
+WS_HANDLERS = Path("src/dazzle/http/runtime/workspace_handlers.py")
+WS_FETCH = Path("src/dazzle/http/runtime/workspace_region_fetch.py")
+WS_HANDLER = Path("src/dazzle/http/runtime/workspace_region_handler.py")
 
 
 def _read() -> str:

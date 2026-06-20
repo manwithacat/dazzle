@@ -31,8 +31,8 @@ _PG_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
 def test_current_tenant_guc_filters_and_fails_closed() -> None:
     import psycopg
 
-    from dazzle.back.runtime.pg_backend import _set_host_tenant_context
-    from dazzle.back.runtime.predicate_compiler import _guc_read_host_tenant
+    from dazzle.http.runtime.pg_backend import _set_host_tenant_context
+    from dazzle.http.runtime.predicate_compiler import _guc_read_host_tenant
 
     tenant_a = str(uuid.uuid4())
     tenant_b = str(uuid.uuid4())
@@ -139,10 +139,10 @@ def _compile_doc_scope(op_suffix: str, schema: str) -> str:
     import tempfile
     from pathlib import Path
 
-    from dazzle.back.runtime.predicate_compiler import compile_predicate_policy
     from dazzle.core.ir.fk_graph import FKGraph
     from dazzle.core.linker import build_appspec
     from dazzle.core.parser import parse_modules
+    from dazzle.http.runtime.predicate_compiler import compile_predicate_policy
 
     d = Path(tempfile.mkdtemp()) / "h.dsl"
     d.write_text(_HIER_DSL)
@@ -164,7 +164,7 @@ def test_current_tenant_hierarchy_aggregate_vs_single() -> None:
     """
     import psycopg
 
-    from dazzle.back.runtime.pg_backend import _set_host_tenant_context
+    from dazzle.http.runtime.pg_backend import _set_host_tenant_context
 
     schema = f"_cth_{uuid.uuid4().hex[:8]}"
     read_where = _compile_doc_scope("read", schema)

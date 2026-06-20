@@ -17,7 +17,7 @@ ADAPTERS = [
             "Request/response logging",
             "Health check endpoint",
         ],
-        "import": "from dazzle.back.graphql.adapters import BaseExternalAdapter",
+        "import": "from dazzle.http.graphql.adapters import BaseExternalAdapter",
     },
     {
         "name": "AdapterResult",
@@ -29,7 +29,7 @@ ADAPTERS = [
             "map() for transformations",
             "No exception throwing for expected errors",
         ],
-        "import": "from dazzle.back.graphql.adapters import AdapterResult",
+        "import": "from dazzle.http.graphql.adapters import AdapterResult",
     },
     {
         "name": "NormalizedError",
@@ -42,7 +42,7 @@ ADAPTERS = [
             "Developer details for debugging",
             "GraphQL extensions format",
         ],
-        "import": "from dazzle.back.graphql.adapters import normalize_error, NormalizedError",
+        "import": "from dazzle.http.graphql.adapters import normalize_error, NormalizedError",
     },
 ]
 
@@ -93,7 +93,7 @@ ADAPTER_GUIDES = {
             "FORBIDDEN",
             "NOT_SIGNED_UP_TO_MTD",
         ],
-        "example": '''from dazzle.back.graphql.adapters import (
+        "example": '''from dazzle.http.graphql.adapters import (
     BaseExternalAdapter,
     AdapterConfig,
     RetryConfig,
@@ -130,7 +130,7 @@ class HMRCAdapter(BaseExternalAdapter[AdapterConfig]):
         "service": "Payment Provider",
         "description": "Generic payment processing integration",
         "auth_type": "API Key",
-        "example": '''from dazzle.back.graphql.adapters import (
+        "example": '''from dazzle.http.graphql.adapters import (
     BaseExternalAdapter,
     AdapterConfig,
     AdapterResult,
@@ -164,7 +164,7 @@ class PaymentAdapter(BaseExternalAdapter[AdapterConfig]):
     "generic": {
         "service": "Generic External API",
         "description": "Template for any external API integration",
-        "example": '''from dazzle.back.graphql.adapters import (
+        "example": '''from dazzle.http.graphql.adapters import (
     BaseExternalAdapter,
     AdapterConfig,
     RetryConfig,

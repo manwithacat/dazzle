@@ -13,7 +13,7 @@
 
 ## Problem statement
 
-The framework ships **UI templates** in `src/dazzle_ui/templates/` that have **no production consumer**. Cycle 302's orphan_lint_rule surfaced 7 such templates (after cycle 304's scanner hardening). They fall into **two distinct sub-classes with different severity profiles**:
+The framework ships **UI templates** in `src/dazzle_page/templates/` that have **no production consumer**. Cycle 302's orphan_lint_rule surfaced 7 such templates (after cycle 304's scanner hardening). They fall into **two distinct sub-classes with different severity profiles**:
 
 ### Sub-class A: Primitive dormancy (low severity, high ambiguity)
 

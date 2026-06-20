@@ -1,9 +1,9 @@
 """Phase-5 parity test: simple_task.task_list renders via Fragment with
 the same observable behaviour as the Jinja path."""
 
-from dazzle.back.runtime.renderers.init import register_default_renderers
-from dazzle.back.runtime.services import RuntimeServices
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
+from dazzle.http.runtime.renderers.init import register_default_renderers
+from dazzle.http.runtime.services import RuntimeServices
 from dazzle.render.dispatch import dispatch_render
 
 

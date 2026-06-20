@@ -289,7 +289,7 @@ created (approval: none)      → active → expired
 
 ### Grant store API
 
-New file: `src/dazzle_back/runtime/grant_store.py`
+New file: `src/dazzle_http/runtime/grant_store.py`
 
 ```python
 class GrantStore:

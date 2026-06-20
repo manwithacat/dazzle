@@ -40,19 +40,19 @@
 
 | File | Responsibility | Change |
 |---|---|---|
-| `src/dazzle/back/runtime/auth/org_activation.py` | Pure activation resolver + outcome types + request/store glue | **Create** |
-| `src/dazzle/back/runtime/auth/org_context_views.py` | Typed-Fragment `build_select_org_view` + `build_no_orgs_view` | **Create** |
-| `src/dazzle/back/runtime/auth/org_context_routes.py` | `GET/POST /auth/select-org`, `POST /auth/switch-org`, `GET /auth/no-orgs` | **Create** |
-| `src/dazzle/back/runtime/auth/store.py` | `set_session_active_membership` (ownership-checked) | **Modify** |
-| `src/dazzle/back/runtime/auth/password_login_routes.py` | Activate at login + signup; thread `active_membership_id`; picker/no-orgs/403 | **Modify** |
-| `src/dazzle/back/runtime/auth/magic_link_routes.py` | Activate at magic-link login | **Modify** |
-| `src/dazzle/back/runtime/auth/sso_routes.py` | Activate at SSO callback | **Modify** |
-| `src/dazzle/back/runtime/auth/two_factor_form_routes.py` | Activate at 2FA completion | **Modify** |
-| `src/dazzle/back/runtime/subsystems/auth.py` | Mount `org_context_routes` | **Modify** |
-| `src/dazzle/back/runtime/site_routes.py` | Serve `GET /auth/select-org` + `/auth/no-orgs` views (if not co-located) | **(see Task 8 — routes live in `org_context_routes.py`)** |
-| `src/dazzle/back/runtime/route_generator.py` | Cedar/permit + scope role source → `effective_roles` | **Modify** |
-| `src/dazzle/back/runtime/policy.py` | `check_entity_op` role source → `effective_roles` | **Modify** |
-| `src/dazzle/back/runtime/server.py` | atomic-flow `user_role_extractor` → `effective_roles` | **Modify** |
+| `src/dazzle/http/runtime/auth/org_activation.py` | Pure activation resolver + outcome types + request/store glue | **Create** |
+| `src/dazzle/http/runtime/auth/org_context_views.py` | Typed-Fragment `build_select_org_view` + `build_no_orgs_view` | **Create** |
+| `src/dazzle/http/runtime/auth/org_context_routes.py` | `GET/POST /auth/select-org`, `POST /auth/switch-org`, `GET /auth/no-orgs` | **Create** |
+| `src/dazzle/http/runtime/auth/store.py` | `set_session_active_membership` (ownership-checked) | **Modify** |
+| `src/dazzle/http/runtime/auth/password_login_routes.py` | Activate at login + signup; thread `active_membership_id`; picker/no-orgs/403 | **Modify** |
+| `src/dazzle/http/runtime/auth/magic_link_routes.py` | Activate at magic-link login | **Modify** |
+| `src/dazzle/http/runtime/auth/sso_routes.py` | Activate at SSO callback | **Modify** |
+| `src/dazzle/http/runtime/auth/two_factor_form_routes.py` | Activate at 2FA completion | **Modify** |
+| `src/dazzle/http/runtime/subsystems/auth.py` | Mount `org_context_routes` | **Modify** |
+| `src/dazzle/http/runtime/site_routes.py` | Serve `GET /auth/select-org` + `/auth/no-orgs` views (if not co-located) | **(see Task 8 — routes live in `org_context_routes.py`)** |
+| `src/dazzle/http/runtime/route_generator.py` | Cedar/permit + scope role source → `effective_roles` | **Modify** |
+| `src/dazzle/http/runtime/policy.py` | `check_entity_op` role source → `effective_roles` | **Modify** |
+| `src/dazzle/http/runtime/server.py` | atomic-flow `user_role_extractor` → `effective_roles` | **Modify** |
 | `tests/unit/test_org_activation.py` | Pure resolver + glue tests | **Create** |
 | `tests/unit/test_role_source_effective.py` | Role-switch unit tests (route_generator + policy) | **Create** |
 | `tests/integration/test_auth_activation_pg.py` | Real-PG: activation, picker, switch, host-pin | **Create** |
@@ -62,7 +62,7 @@
 ## Task 1: Activation resolver + outcome types (`org_activation.py`)
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/org_activation.py`
+- Create: `src/dazzle/http/runtime/auth/org_activation.py`
 - Test: `tests/unit/test_org_activation.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -71,8 +71,8 @@
 # tests/unit/test_org_activation.py
 """Pure two-phase activation resolver (auth Plan 1b)."""
 
-from dazzle.back.runtime.auth.models import MembershipRecord
-from dazzle.back.runtime.auth.org_activation import (
+from dazzle.http.runtime.auth.models import MembershipRecord
+from dazzle.http.runtime.auth.org_activation import (
     Activated,
     HostForbidden,
     NeedsPicker,
@@ -132,12 +132,12 @@ class TestResolveActivation:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/unit/test_org_activation.py -q`
-Expected: FAIL — `ModuleNotFoundError: dazzle.back.runtime.auth.org_activation`.
+Expected: FAIL — `ModuleNotFoundError: dazzle.http.runtime.auth.org_activation`.
 
 - [ ] **Step 3: Write the resolver**
 
 ```python
-# src/dazzle/back/runtime/auth/org_activation.py
+# src/dazzle/http/runtime/auth/org_activation.py
 """Two-phase auth: Phase-2 org-context activation (auth Plan 1b).
 
 Phase 1 (prove identity) lives in the existing login routes. This module is
@@ -155,7 +155,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from dazzle.back.runtime.auth.models import MembershipRecord
+from dazzle.http.runtime.auth.models import MembershipRecord
 
 
 @dataclass(frozen=True)
@@ -235,7 +235,7 @@ Expected: PASS (7 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/org_activation.py tests/unit/test_org_activation.py
+git add src/dazzle/http/runtime/auth/org_activation.py tests/unit/test_org_activation.py
 git commit -m "feat(auth): pure two-phase activation resolver (Plan 1b)"
 ```
 
@@ -253,7 +253,7 @@ git commit -m "feat(auth): pure two-phase activation resolver (Plan 1b)"
 # append to tests/unit/test_org_activation.py
 from types import SimpleNamespace
 
-from dazzle.back.runtime.auth.org_activation import (
+from dazzle.http.runtime.auth.org_activation import (
     activate_session_for_login,
     host_tenant_id_from_request,
 )
@@ -318,7 +318,7 @@ git commit -m "test(auth): pin activation request/store glue (Plan 1b)"
 ## Task 3: `AuthStore.set_session_active_membership` (ownership-checked)
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py`
 - Test: `tests/integration/test_auth_activation_pg.py`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -373,7 +373,7 @@ def scratch_url() -> Iterator[str]:
 
 
 def _seed_user(store, email: str = "a@b.test") -> str:
-    from dazzle.back.runtime.auth.models import UserRecord
+    from dazzle.http.runtime.auth.models import UserRecord
 
     user = UserRecord(email=email, password_hash="x")
     store.create_user(user)
@@ -381,7 +381,7 @@ def _seed_user(store, email: str = "a@b.test") -> str:
 
 
 def test_set_session_active_membership_happy_path(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -399,7 +399,7 @@ def test_set_session_active_membership_happy_path(scratch_url: str) -> None:
 
 
 def test_set_session_active_membership_rejects_foreign_membership(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -418,7 +418,7 @@ def test_set_session_active_membership_rejects_foreign_membership(scratch_url: s
 
 
 def test_set_session_active_membership_rejects_suspended(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -443,7 +443,7 @@ Expected: FAIL — `AuthStore` has no `set_session_active_membership`.
 
 - [ ] **Step 3: Add the method**
 
-In `src/dazzle/back/runtime/auth/store.py`, add near `regenerate_session_csrf` / the session methods:
+In `src/dazzle/http/runtime/auth/store.py`, add near `regenerate_session_csrf` / the session methods:
 
 ```python
     def set_session_active_membership(
@@ -482,7 +482,7 @@ Expected: PASS (3 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_auth_activation_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_auth_activation_pg.py
 git commit -m "feat(auth): ownership-checked set_session_active_membership (Plan 1b)"
 ```
 
@@ -491,7 +491,7 @@ git commit -m "feat(auth): ownership-checked set_session_active_membership (Plan
 ## Task 4: Activate at password login + signup
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/password_login_routes.py`
+- Modify: `src/dazzle/http/runtime/auth/password_login_routes.py`
 - Test: `tests/integration/test_auth_activation_pg.py` (append — uses an in-process FastAPI app)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -502,7 +502,7 @@ def _app_with_store(store):
     """Minimal FastAPI app wiring the password-login router to `store`."""
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.auth.password_login_routes import (
+    from dazzle.http.runtime.auth.password_login_routes import (
         create_password_login_routes,
     )
 
@@ -520,7 +520,7 @@ def _client(app):
 
 
 def test_password_login_single_membership_auto_activates(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -541,7 +541,7 @@ def test_password_login_single_membership_auto_activates(scratch_url: str) -> No
 
 
 def test_password_login_multi_membership_redirects_to_picker(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -560,7 +560,7 @@ def test_password_login_multi_membership_redirects_to_picker(scratch_url: str) -
 
 
 def test_password_login_no_membership_redirects_to_no_orgs(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -582,10 +582,10 @@ Expected: FAIL — login currently always redirects to `/app` and never sets `ac
 
 - [ ] **Step 3: Thread activation into both handlers**
 
-In `src/dazzle/back/runtime/auth/password_login_routes.py`, add a shared helper above `create_password_login_routes`:
+In `src/dazzle/http/runtime/auth/password_login_routes.py`, add a shared helper above `create_password_login_routes`:
 
 ```python
-from dazzle.back.runtime.auth.org_activation import (
+from dazzle.http.runtime.auth.org_activation import (
     Activated,
     HostForbidden,
     NeedsPicker,
@@ -645,7 +645,7 @@ Expected: PASS (3 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/password_login_routes.py tests/integration/test_auth_activation_pg.py
+git add src/dazzle/http/runtime/auth/password_login_routes.py tests/integration/test_auth_activation_pg.py
 git commit -m "feat(auth): two-phase activation at password login/signup (Plan 1b)"
 ```
 
@@ -654,20 +654,20 @@ git commit -m "feat(auth): two-phase activation at password login/signup (Plan 1
 ## Task 5: Activate at magic-link login
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/magic_link_routes.py`
+- Modify: `src/dazzle/http/runtime/auth/magic_link_routes.py`
 - Test: covered by the in-process route test in Task 13 (magic-link needs a verified token; the unit-level proof is the shared helper from Task 4).
 
 - [ ] **Step 1: Read the current success block**
 
-In `src/dazzle/back/runtime/auth/magic_link_routes.py` around line 97, the handler creates `session = auth_store.create_session(user)` then sets the cookie and redirects. Identify the `user`, `request`, and the redirect target variable.
+In `src/dazzle/http/runtime/auth/magic_link_routes.py` around line 97, the handler creates `session = auth_store.create_session(user)` then sets the cookie and redirects. Identify the `user`, `request`, and the redirect target variable.
 
 - [ ] **Step 2: Apply activation**
 
 Replace `session = auth_store.create_session(user)` and the subsequent redirect-target computation with the same pattern as Task 4 — import the helpers at the top of the file:
 
 ```python
-from dazzle.back.runtime.auth.org_activation import activate_session_for_login
-from dazzle.back.runtime.auth.password_login_routes import _login_redirect_for_outcome
+from dazzle.http.runtime.auth.org_activation import activate_session_for_login
+from dazzle.http.runtime.auth.password_login_routes import _login_redirect_for_outcome
 ```
 
 and in the handler:
@@ -694,7 +694,7 @@ Expected: PASS (no regression in existing magic-link tests).
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/magic_link_routes.py src/dazzle/back/runtime/auth/org_activation.py src/dazzle/back/runtime/auth/password_login_routes.py
+git add src/dazzle/http/runtime/auth/magic_link_routes.py src/dazzle/http/runtime/auth/org_activation.py src/dazzle/http/runtime/auth/password_login_routes.py
 git commit -m "feat(auth): two-phase activation at magic-link login (Plan 1b)"
 ```
 
@@ -703,7 +703,7 @@ git commit -m "feat(auth): two-phase activation at magic-link login (Plan 1b)"
 ## Task 6: Activate at SSO callback + 2FA-form completion
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/sso_routes.py` (line ~205), `src/dazzle/back/runtime/auth/two_factor_form_routes.py` (line ~103)
+- Modify: `src/dazzle/http/runtime/auth/sso_routes.py` (line ~205), `src/dazzle/http/runtime/auth/two_factor_form_routes.py` (line ~103)
 - Test: covered by Task 13 end-to-end; here, no-regression on existing SSO/2FA tests.
 
 - [ ] **Step 1: SSO callback**
@@ -724,7 +724,7 @@ Expected: PASS (existing auth-route tests stay green).
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/sso_routes.py src/dazzle/back/runtime/auth/two_factor_form_routes.py src/dazzle/back/runtime/auth/routes.py
+git add src/dazzle/http/runtime/auth/sso_routes.py src/dazzle/http/runtime/auth/two_factor_form_routes.py src/dazzle/http/runtime/auth/routes.py
 git commit -m "feat(auth): two-phase activation at SSO + 2FA + JSON login (Plan 1b)"
 ```
 
@@ -738,8 +738,8 @@ git commit -m "feat(auth): two-phase activation at SSO + 2FA + JSON login (Plan 
 ## Task 7: Org-context router — `/auth/select-org`, `/auth/switch-org`, `/auth/no-orgs`
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/org_context_views.py`
-- Create: `src/dazzle/back/runtime/auth/org_context_routes.py`
+- Create: `src/dazzle/http/runtime/auth/org_context_views.py`
+- Create: `src/dazzle/http/runtime/auth/org_context_routes.py`
 - Test: `tests/integration/test_auth_activation_pg.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -749,7 +749,7 @@ git commit -m "feat(auth): two-phase activation at SSO + 2FA + JSON login (Plan 
 def _app_with_org_routes(store):
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.auth.org_context_routes import create_org_context_routes
+    from dazzle.http.runtime.auth.org_context_routes import create_org_context_routes
 
     app = FastAPI()
     app.state.auth_store = store
@@ -770,7 +770,7 @@ def _login_session(store, email: str, n_orgs: int) -> tuple[str, str, list[str]]
 
 
 def test_select_org_post_activates_owned_membership(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -786,7 +786,7 @@ def test_select_org_post_activates_owned_membership(scratch_url: str) -> None:
 
 
 def test_switch_org_rotates_active_membership_and_csrf(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -805,7 +805,7 @@ def test_switch_org_rotates_active_membership_and_csrf(scratch_url: str) -> None
 
 
 def test_select_org_rejects_unowned_membership(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -829,7 +829,7 @@ Expected: FAIL — `create_org_context_routes` does not exist.
 - [ ] **Step 3a: Write the views**
 
 ```python
-# src/dazzle/back/runtime/auth/org_context_views.py
+# src/dazzle/http/runtime/auth/org_context_views.py
 """Typed-Fragment views for Phase-2 org context (auth Plan 1b).
 
 `build_select_org_view` lists the identity's active memberships as a radio-style
@@ -925,7 +925,7 @@ def build_no_orgs_view(
 - [ ] **Step 3b: Write the routes**
 
 ```python
-# src/dazzle/back/runtime/auth/org_context_routes.py
+# src/dazzle/http/runtime/auth/org_context_routes.py
 """Phase-2 org-context routes (auth Plan 1b): pick / switch / no-orgs.
 
 `/auth/select-org`   GET  — picker (a session with no active membership yet)
@@ -946,9 +946,9 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from dazzle.back.runtime.auth.cookie_name import read_session_id
-from dazzle.back.runtime.auth.crypto import cookie_secure
-from dazzle.back.runtime.auth.redirect_safety import is_safe_redirect_path
+from dazzle.http.runtime.auth.cookie_name import read_session_id
+from dazzle.http.runtime.auth.crypto import cookie_secure
+from dazzle.http.runtime.auth.redirect_safety import is_safe_redirect_path
 
 
 def _product_name(request: Request) -> str:
@@ -991,7 +991,7 @@ def create_org_context_routes() -> APIRouter:
 
     @router.get("/auth/select-org", response_class=HTMLResponse, include_in_schema=False)
     async def select_org_page(request: Request, next: Annotated[str, Query()] = "/app") -> str:
-        from dazzle.back.runtime.auth.org_context_views import build_select_org_view
+        from dazzle.http.runtime.auth.org_context_views import build_select_org_view
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         auth_store = request.app.state.auth_store
@@ -1032,7 +1032,7 @@ def create_org_context_routes() -> APIRouter:
 
     @router.get("/auth/no-orgs", response_class=HTMLResponse, include_in_schema=False)
     async def no_orgs_page(request: Request) -> str:
-        from dazzle.back.runtime.auth.org_context_views import build_no_orgs_view
+        from dazzle.http.runtime.auth.org_context_views import build_no_orgs_view
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         return FragmentRenderer().render(build_no_orgs_view(product_name=_product_name(request)))
@@ -1050,7 +1050,7 @@ Expected: PASS (3 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/org_context_views.py src/dazzle/back/runtime/auth/org_context_routes.py tests/integration/test_auth_activation_pg.py
+git add src/dazzle/http/runtime/auth/org_context_views.py src/dazzle/http/runtime/auth/org_context_routes.py tests/integration/test_auth_activation_pg.py
 git commit -m "feat(auth): org-context routes — select/switch/no-orgs (Plan 1b)"
 ```
 
@@ -1059,19 +1059,19 @@ git commit -m "feat(auth): org-context routes — select/switch/no-orgs (Plan 1b
 ## Task 8: Mount the org-context router
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py`
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py`
 - Test: `tests/integration/test_auth_activation_pg.py` (append — boot-wiring smoke is covered by Task 13; here, assert the router is included on a real app factory if feasible, else a unit include check)
 
 - [ ] **Step 1: Mount it next to the password-login router**
 
-In `src/dazzle/back/runtime/subsystems/auth.py`, after the `password_login_router` include (line ~139), add:
+In `src/dazzle/http/runtime/subsystems/auth.py`, after the `password_login_router` include (line ~139), add:
 
 ```python
         # Phase-2 org-context routes (auth Plan 1b): /auth/select-org,
         # /auth/switch-org, /auth/no-orgs. Mounted unconditionally — they
         # no-op (redirect to /login) for unauthenticated callers and only
         # matter once an identity has >1 membership.
-        from dazzle.back.runtime.auth.org_context_routes import (
+        from dazzle.http.runtime.auth.org_context_routes import (
             create_org_context_routes,
         )
 
@@ -1084,7 +1084,7 @@ In `src/dazzle/back/runtime/subsystems/auth.py`, after the `password_login_route
 # append to tests/integration/test_auth_activation_pg.py
 def test_org_context_routes_are_mountable() -> None:
     """The router exposes the four Phase-2 paths."""
-    from dazzle.back.runtime.auth.org_context_routes import create_org_context_routes
+    from dazzle.http.runtime.auth.org_context_routes import create_org_context_routes
 
     paths = {r.path for r in create_org_context_routes().routes}
     assert {"/auth/select-org", "/auth/switch-org", "/auth/no-orgs"} <= paths
@@ -1100,7 +1100,7 @@ Expected: PASS.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/subsystems/auth.py tests/integration/test_auth_activation_pg.py
+git add src/dazzle/http/runtime/subsystems/auth.py tests/integration/test_auth_activation_pg.py
 git commit -m "feat(auth): mount org-context router (Plan 1b)"
 ```
 
@@ -1109,7 +1109,7 @@ git commit -m "feat(auth): mount org-context router (Plan 1b)"
 ## Task 9: Switch route_generator Cedar/permit role source → `effective_roles`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/route_generator.py`
+- Modify: `src/dazzle/http/runtime/route_generator.py`
 - Test: `tests/unit/test_role_source_effective.py`
 
 The authorization-decision sites currently read `auth_context.user.roles`. Each has `auth_context` in scope; switch them to `auth_context.effective_roles` (membership-first per 1a), keeping the existing `_normalize_role` wrapping (membership roles are bare DSL names, so normalization is a no-op on them; the legacy fallback stays normalized).
@@ -1120,7 +1120,7 @@ The authorization-decision sites currently read `auth_context.user.roles`. Each 
 # tests/unit/test_role_source_effective.py
 """Authorization sites source roles from active membership (Plan 1b)."""
 
-from dazzle.back.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
+from dazzle.http.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
 
 
 def _ctx_with_membership(membership_roles: list[str], user_roles: list[str]) -> AuthContext:
@@ -1135,7 +1135,7 @@ def _ctx_with_membership(membership_roles: list[str], user_roles: list[str]) -> 
 
 
 def test_build_access_runtime_context_uses_membership_roles() -> None:
-    from dazzle.back.runtime.route_generator import _build_access_runtime_context
+    from dazzle.http.runtime.route_generator import _build_access_runtime_context
 
     # Membership says admin; legacy user.roles says nothing — admin must win.
     ctx = _ctx_with_membership(membership_roles=["admin"], user_roles=[])
@@ -1147,7 +1147,7 @@ def test_cedar_row_filters_use_membership_roles() -> None:
     """A role-gated unrestricted permit is recognised from membership roles."""
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.route_generator import _extract_cedar_row_filters
+    from dazzle.http.runtime.route_generator import _extract_cedar_row_filters
 
     spec = SimpleNamespace(
         permissions=[
@@ -1173,7 +1173,7 @@ Expected: FAIL — the sites read `user.roles` (empty here) so `admin` is absent
 
 - [ ] **Step 3: Switch the gate sites**
 
-In `src/dazzle/back/runtime/route_generator.py`, make these exact edits (line numbers approximate — match on the surrounding text):
+In `src/dazzle/http/runtime/route_generator.py`, make these exact edits (line numbers approximate — match on the surrounding text):
 
 1. **`_extract_cedar_row_filters` (~line 859–866):** replace the role-collection loop
    ```python
@@ -1261,7 +1261,7 @@ Expected: PASS (no regression).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/route_generator.py tests/unit/test_role_source_effective.py
+git add src/dazzle/http/runtime/route_generator.py tests/unit/test_role_source_effective.py
 git commit -m "feat(auth): route_generator permit/scope roles from effective_roles (Plan 1b)"
 ```
 
@@ -1270,7 +1270,7 @@ git commit -m "feat(auth): route_generator permit/scope roles from effective_rol
 ## Task 10: Switch `policy.py` + `server.py` atomic extractor role source
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/policy.py` (`check_entity_op`, ~line 179), `src/dazzle/back/runtime/server.py` (~line 1636)
+- Modify: `src/dazzle/http/runtime/policy.py` (`check_entity_op`, ~line 179), `src/dazzle/http/runtime/server.py` (~line 1636)
 - Test: `tests/unit/test_role_source_effective.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -1284,7 +1284,7 @@ def test_policy_check_entity_op_sources_membership_roles(monkeypatch) -> None:
 
     captured: dict[str, object] = {}
 
-    import dazzle.back.runtime.policy as policy_mod
+    import dazzle.http.runtime.policy as policy_mod
 
     def _fake_permit_passes(spec, op, user_roles, user_id):  # noqa: ANN001
         captured["roles"] = list(user_roles)
@@ -1317,7 +1317,7 @@ Expected: FAIL — `_permit_passes` receives `["legacy"]` (from `user.roles`).
 
 - [ ] **Step 3a: Switch `policy.py`**
 
-In `src/dazzle/back/runtime/policy.py`, line ~179, replace
+In `src/dazzle/http/runtime/policy.py`, line ~179, replace
 ```python
 user_roles_raw = list(getattr(user, "roles", []) or [])
 ```
@@ -1332,7 +1332,7 @@ user_roles_raw = list(getattr(auth_ctx, "effective_roles", None) or getattr(user
 
 - [ ] **Step 3b: Switch `server.py` atomic extractor**
 
-In `src/dazzle/back/runtime/server.py`, line ~1636, replace
+In `src/dazzle/http/runtime/server.py`, line ~1636, replace
 ```python
 user_role_extractor=lambda user: list(getattr(user, "roles", []) or []),
 ```
@@ -1359,7 +1359,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/policy.py src/dazzle/back/runtime/server.py tests/unit/test_role_source_effective.py
+git add src/dazzle/http/runtime/policy.py src/dazzle/http/runtime/server.py tests/unit/test_role_source_effective.py
 git commit -m "feat(auth): policy + atomic-flow roles from effective_roles (Plan 1b)"
 ```
 
@@ -1379,9 +1379,9 @@ Proves the full Phase-2 host-pin path: a host-pinned login activates *only* the 
 def test_host_pin_activates_matching_org_and_403s_on_mismatch(scratch_url: str) -> None:
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.org_activation import activate_session_for_login
-    from dazzle.back.runtime.auth.org_activation import Activated, HostForbidden
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.org_activation import activate_session_for_login
+    from dazzle.http.runtime.auth.org_activation import Activated, HostForbidden
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()

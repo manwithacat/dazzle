@@ -88,16 +88,16 @@ Rationale: reuses the existing magic link crypto (32-byte token, one-time use, e
 
 | Layer | File | Action |
 |---|---|---|
-| Backend | `src/dazzle_back/runtime/auth/magic_link_routes.py` | Create — `GET /auth/magic/{token}` |
-| Backend | `src/dazzle_back/runtime/auth/__init__.py` (or auth router setup) | Modify — register consumer route |
-| Backend | `src/dazzle_back/runtime/qa_routes.py` | Create — `POST /qa/magic-link` dev-gated |
-| Backend | FastAPI app factory (grep for `include_router` + `auth` in `src/dazzle_back/runtime/`) | Modify — conditionally include qa_router with the env gate |
+| Backend | `src/dazzle_http/runtime/auth/magic_link_routes.py` | Create — `GET /auth/magic/{token}` |
+| Backend | `src/dazzle_http/runtime/auth/__init__.py` (or auth router setup) | Modify — register consumer route |
+| Backend | `src/dazzle_http/runtime/qa_routes.py` | Create — `POST /qa/magic-link` dev-gated |
+| Backend | FastAPI app factory (grep for `include_router` + `auth` in `src/dazzle_http/runtime/`) | Modify — conditionally include qa_router with the env gate |
 | CLI | `src/dazzle/cli/runtime_impl/serve.py` | Modify — call `_provision_dev_personas()`, set `DAZZLE_QA_MODE=1`, print startup banner |
 | CLI | `src/dazzle/cli/runtime_impl/dev_personas.py` | Create — persona enumeration + idempotent user creation |
-| Site | `src/dazzle_ui/specs/sitespec.py` | Modify — add `qa_personas` section type |
-| Site | `src/dazzle_ui/runtime/template_context.py` | Modify — `QAPersonaCard`, `QAPersonasSection` models |
-| Site | `src/dazzle_ui/templates/site/sections/qa_personas.html` | Create — card grid template |
-| Site | `src/dazzle_ui/runtime/page_routes.py` (landing renderer) | Modify — runtime-inject QA section when env flag is set |
+| Site | `src/dazzle_page/specs/sitespec.py` | Modify — add `qa_personas` section type |
+| Site | `src/dazzle_page/runtime/template_context.py` | Modify — `QAPersonaCard`, `QAPersonasSection` models |
+| Site | `src/dazzle_page/templates/site/sections/qa_personas.html` | Create — card grid template |
+| Site | `src/dazzle_page/runtime/page_routes.py` (landing renderer) | Modify — runtime-inject QA section when env flag is set |
 | Tests | `tests/unit/test_magic_link_routes.py` | Create — consumer endpoint tests |
 | Tests | `tests/unit/test_qa_routes.py` | Create — generator endpoint tests (gated + un-gated behaviour) |
 | Tests | `tests/unit/test_dev_personas.py` | Create — provisioning tests |
@@ -210,7 +210,7 @@ def _derive_stories(appspec: AppSpec, persona_id: str) -> list[str]:
 
 ### Backend: magic link consumer
 
-New file `src/dazzle_back/runtime/auth/magic_link_routes.py`:
+New file `src/dazzle_http/runtime/auth/magic_link_routes.py`:
 
 ```python
 """HTTP routes for magic link authentication.
@@ -224,7 +224,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
-from dazzle_back.runtime.auth.magic_link import validate_magic_link
+from dazzle_http.runtime.auth.magic_link import validate_magic_link
 
 router = APIRouter(tags=["auth"])
 
@@ -268,7 +268,7 @@ async def consume_magic_link(token: str, request: Request) -> RedirectResponse:
 
 ### Backend: dev-gated generator
 
-New file `src/dazzle_back/runtime/qa_routes.py`:
+New file `src/dazzle_http/runtime/qa_routes.py`:
 
 ```python
 """Dev-only QA mode endpoints. Never mount in production.
@@ -286,7 +286,7 @@ import os
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from dazzle_back.runtime.auth.magic_link import create_magic_link
+from dazzle_http.runtime.auth.magic_link import create_magic_link
 
 router = APIRouter(tags=["qa"])
 
@@ -340,11 +340,11 @@ async def generate_qa_magic_link(
 
 ### Site: sitespec section type
 
-Modify `src/dazzle_ui/specs/sitespec.py` to add `qa_personas` to the section enum. This doesn't need to be author-declarable — it's runtime-injected — but the section type must be registered so the template renderer can dispatch to the right template.
+Modify `src/dazzle_page/specs/sitespec.py` to add `qa_personas` to the section enum. This doesn't need to be author-declarable — it's runtime-injected — but the section type must be registered so the template renderer can dispatch to the right template.
 
 ### Site: template
 
-New file `src/dazzle_ui/templates/site/sections/qa_personas.html`:
+New file `src/dazzle_page/templates/site/sections/qa_personas.html`:
 
 ```html
 {# QA Personas section — rendered only in local dev mode when DAZZLE_QA_MODE=1 #}

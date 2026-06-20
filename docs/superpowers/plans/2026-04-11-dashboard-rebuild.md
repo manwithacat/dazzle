@@ -24,12 +24,12 @@
 
 | File | Action | Responsibility |
 |---|---|---|
-| `src/dazzle_ui/runtime/static/js/dashboard-builder.js` | Rewrite | Alpine controller: cards, drag, resize, save lifecycle, undo |
-| `src/dazzle_ui/templates/workspace/_content.html` | Rewrite | Grid markup, card chrome, toolbar, keyboard a11y |
-| `src/dazzle_ui/templates/workspace/_card_picker.html` | Rewrite | Pure Tailwind card picker popover (remove DaisyUI classes) |
-| `src/dazzle_ui/templates/base.html` | Modify line 46 | Remove SortableJS `<script>` tag |
-| `src/dazzle_ui/runtime/static/css/dz.css` | Modify lines 254-261 | Remove `.sortable-ghost` and `.sortable-chosen` rules |
-| `src/dazzle_ui/runtime/static/vendor/sortable.min.js` | Delete | No remaining consumers |
+| `src/dazzle_page/runtime/static/js/dashboard-builder.js` | Rewrite | Alpine controller: cards, drag, resize, save lifecycle, undo |
+| `src/dazzle_page/templates/workspace/_content.html` | Rewrite | Grid markup, card chrome, toolbar, keyboard a11y |
+| `src/dazzle_page/templates/workspace/_card_picker.html` | Rewrite | Pure Tailwind card picker popover (remove DaisyUI classes) |
+| `src/dazzle_page/templates/base.html` | Modify line 46 | Remove SortableJS `<script>` tag |
+| `src/dazzle_page/runtime/static/css/dz.css` | Modify lines 254-261 | Remove `.sortable-ghost` and `.sortable-chosen` rules |
+| `src/dazzle_page/runtime/static/vendor/sortable.min.js` | Delete | No remaining consumers |
 
 **Unchanged:** `workspace_renderer.py`, `page_routes.py`, all 17 region templates, layout JSON format, preference API.
 
@@ -38,26 +38,26 @@
 ### Task 1: Remove SortableJS Dependency
 
 **Files:**
-- Delete: `src/dazzle_ui/runtime/static/vendor/sortable.min.js`
-- Modify: `src/dazzle_ui/templates/base.html:46`
-- Modify: `src/dazzle_ui/runtime/static/css/dz.css:254-261`
+- Delete: `src/dazzle_page/runtime/static/vendor/sortable.min.js`
+- Modify: `src/dazzle_page/templates/base.html:46`
+- Modify: `src/dazzle_page/runtime/static/css/dz.css:254-261`
 
 - [ ] **Step 1: Delete the vendored SortableJS file**
 
 ```bash
-rm src/dazzle_ui/runtime/static/vendor/sortable.min.js
+rm src/dazzle_page/runtime/static/vendor/sortable.min.js
 ```
 
 - [ ] **Step 2: Remove the SortableJS script tag from base.html**
 
-In `src/dazzle_ui/templates/base.html`, remove line 46:
+In `src/dazzle_page/templates/base.html`, remove line 46:
 ```html
   <script defer src="{{ 'vendor/sortable.min.js' | static_url }}"></script>
 ```
 
 - [ ] **Step 3: Remove SortableJS CSS rules from dz.css**
 
-In `src/dazzle_ui/runtime/static/css/dz.css`, remove lines 254-261:
+In `src/dazzle_page/runtime/static/css/dz.css`, remove lines 254-261:
 ```css
 /* Dashboard builder: SortableJS drag feedback */
 .sortable-ghost {
@@ -72,7 +72,7 @@ In `src/dazzle_ui/runtime/static/css/dz.css`, remove lines 254-261:
 - [ ] **Step 4: Verify no other files reference SortableJS**
 
 ```bash
-rg -i "sortable" src/dazzle_ui --type js --type html --type css -l
+rg -i "sortable" src/dazzle_page --type js --type html --type css -l
 ```
 
 Expected: only `dashboard-builder.js` and `_content.html` (which we rewrite in later tasks). The `task_inbox.py` and `template_compiler.py` references to `sortable` are the table column sort attribute — unrelated.
@@ -80,7 +80,7 @@ Expected: only `dashboard-builder.js` and `_content.html` (which we rewrite in l
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A src/dazzle_ui/runtime/static/vendor/sortable.min.js src/dazzle_ui/templates/base.html src/dazzle_ui/runtime/static/css/dz.css
+git add -A src/dazzle_page/runtime/static/vendor/sortable.min.js src/dazzle_page/templates/base.html src/dazzle_page/runtime/static/css/dz.css
 git commit -m "chore: remove SortableJS vendor dependency
 
 No remaining consumers after dashboard rewrite. The 'sortable'
@@ -93,13 +93,13 @@ is unrelated — it controls server-side sort, not SortableJS."
 ### Task 2: Rewrite Alpine Controller — Core State and Save Lifecycle
 
 **Files:**
-- Rewrite: `src/dazzle_ui/runtime/static/js/dashboard-builder.js`
+- Rewrite: `src/dazzle_page/runtime/static/js/dashboard-builder.js`
 
 This task writes the controller skeleton with card data loading, save lifecycle (clean/dirty/saving/saved/error), and undo stack. Drag and resize are added in Tasks 3 and 4.
 
 - [ ] **Step 1: Write the new controller**
 
-Replace the entire contents of `src/dazzle_ui/runtime/static/js/dashboard-builder.js` with:
+Replace the entire contents of `src/dazzle_page/runtime/static/js/dashboard-builder.js` with:
 
 ```js
 /**
@@ -292,7 +292,7 @@ Open the workspace page. The dashboard should render cards (without drag/resize 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/js/dashboard-builder.js
+git add src/dazzle_page/runtime/static/js/dashboard-builder.js
 git commit -m "feat(dashboard): rewrite Alpine controller with save lifecycle and undo
 
 Replaces SortableJS-based controller with native Alpine state.
@@ -305,7 +305,7 @@ Undo stack with Cmd+Z support. Drag and resize added next."
 ### Task 3: Implement Drag-and-Drop Primitive
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/js/dashboard-builder.js`
+- Modify: `src/dazzle_page/runtime/static/js/dashboard-builder.js`
 
 Adds the drag-and-drop reordering system using native Pointer Events, following the phases in `ux-architect/primitives/drag-and-drop.md`.
 
@@ -547,7 +547,7 @@ Open `ops_dashboard` workspace. Verify:
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/js/dashboard-builder.js
+git add src/dazzle_page/runtime/static/js/dashboard-builder.js
 git commit -m "feat(dashboard): implement drag-and-drop with pointer events
 
 Native pointer event drag replacing SortableJS. 5-phase model:
@@ -561,7 +561,7 @@ Screen reader announcements via aria-live region."
 ### Task 4: Implement Resize Primitive
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/js/dashboard-builder.js`
+- Modify: `src/dazzle_page/runtime/static/js/dashboard-builder.js`
 
 Adds col-span resize following `ux-architect/primitives/resize.md`.
 
@@ -755,7 +755,7 @@ Open `ops_dashboard`. Verify:
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/js/dashboard-builder.js
+git add src/dazzle_page/runtime/static/js/dashboard-builder.js
 git commit -m "feat(dashboard): implement col-span resize with pointer events
 
 Resize handle snaps to grid points {3,4,6,8,12}. Keyboard resize
@@ -767,14 +767,14 @@ via R key + arrow keys. Follows ux-architect/primitives/resize.md."
 ### Task 5: Rewrite Template — Card Chrome and Grid
 
 **Files:**
-- Rewrite: `src/dazzle_ui/templates/workspace/_content.html`
-- Rewrite: `src/dazzle_ui/templates/workspace/_card_picker.html`
+- Rewrite: `src/dazzle_page/templates/workspace/_content.html`
+- Rewrite: `src/dazzle_page/templates/workspace/_card_picker.html`
 
 Rewrites both templates to pure Tailwind utilities with spec-governed card chrome. No DaisyUI component classes. Preserves the detail drawer (lines 119-189 of current file) and context selector (lines 4-50) unchanged.
 
 - [ ] **Step 1: Rewrite _content.html**
 
-Replace the entire contents of `src/dazzle_ui/templates/workspace/_content.html` with:
+Replace the entire contents of `src/dazzle_page/templates/workspace/_content.html` with:
 
 ```html
 {# Layout JSON embedded as a data island (#635) #}
@@ -1029,7 +1029,7 @@ Replace the entire contents of `src/dazzle_ui/templates/workspace/_content.html`
 
 - [ ] **Step 2: Rewrite _card_picker.html**
 
-Replace the entire contents of `src/dazzle_ui/templates/workspace/_card_picker.html` with:
+Replace the entire contents of `src/dazzle_page/templates/workspace/_card_picker.html` with:
 
 ```html
 {# Card picker popover — lists available regions from the catalog #}
@@ -1081,7 +1081,7 @@ Open `ops_dashboard` workspace. Verify all functionality:
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/workspace/_content.html src/dazzle_ui/templates/workspace/_card_picker.html
+git add src/dazzle_page/templates/workspace/_content.html src/dazzle_page/templates/workspace/_card_picker.html
 git commit -m "feat(dashboard): rewrite templates to pure Tailwind with spec-governed chrome
 
 Removes all DaisyUI component classes (card, btn, badge, dropdown).
@@ -1153,12 +1153,12 @@ All 5 quality gates from ux-architect/components/dashboard-grid.md verified:
 ### Task 7: Clean Up and Final Verification
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/css/dz.css` (verify no stale references)
+- Modify: `src/dazzle_page/runtime/static/css/dz.css` (verify no stale references)
 
 - [ ] **Step 1: Verify no remaining DaisyUI classes in dashboard templates**
 
 ```bash
-rg "btn-|badge-|card-body|card-title|dropdown-|menu |base-100|base-200|base-300|rounded-box" src/dazzle_ui/templates/workspace/
+rg "btn-|badge-|card-body|card-title|dropdown-|menu |base-100|base-200|base-300|rounded-box" src/dazzle_page/templates/workspace/
 ```
 
 Expected: No matches in `_content.html` or `_card_picker.html`. Region templates in `regions/` will still have DaisyUI classes — that's expected and correct (they're not spec-governed yet).
@@ -1166,7 +1166,7 @@ Expected: No matches in `_content.html` or `_card_picker.html`. Region templates
 - [ ] **Step 2: Verify no remaining SortableJS references**
 
 ```bash
-rg -i "sortable" src/dazzle_ui/runtime/static/ --type js --type css
+rg -i "sortable" src/dazzle_page/runtime/static/ --type js --type css
 ```
 
 Expected: No matches.

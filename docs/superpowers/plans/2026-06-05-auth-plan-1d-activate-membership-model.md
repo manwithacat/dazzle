@@ -36,11 +36,11 @@
 
 | File | Responsibility | Change |
 |---|---|---|
-| `src/dazzle/back/runtime/route_generator.py` | `_resolve_user_attribute` membership-first for `tenant_id` | **Modify** |
+| `src/dazzle/http/runtime/route_generator.py` | `_resolve_user_attribute` membership-first for `tenant_id` | **Modify** |
 | `src/dazzle/core/manifest.py` | `AuthConfig.auto_provision_single_org` | **Modify** |
-| `src/dazzle/back/runtime/app_factory.py` | thread the flag into `ServerConfig` | **Modify** |
+| `src/dazzle/http/runtime/app_factory.py` | thread the flag into `ServerConfig` | **Modify** |
 | `src/dazzle/db/provision.py` | `provision_single_org` + `ProvisionError` (1:1 org↔root mirror) | **Create** |
-| `src/dazzle/back/runtime/auth/store.py` | `ensure_single_org_membership` routes through `provision_single_org` when an appspec+root is available | **Modify** |
+| `src/dazzle/http/runtime/auth/store.py` | `ensure_single_org_membership` routes through `provision_single_org` when an appspec+root is available | **Modify** |
 | `tests/unit/test_resolve_tenant_membership_first.py` | scope-attr resolution unit test | **Create** |
 | `tests/integration/test_membership_rls_activation_pg.py` | canonical non-superuser RLS-fence proof | **Create** |
 
@@ -49,7 +49,7 @@
 ## Task 1: `current_user.tenant_id` resolves membership-first
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/route_generator.py` (`_resolve_user_attribute`, ~line 1046)
+- Modify: `src/dazzle/http/runtime/route_generator.py` (`_resolve_user_attribute`, ~line 1046)
 - Test: `tests/unit/test_resolve_tenant_membership_first.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -58,8 +58,8 @@
 # tests/unit/test_resolve_tenant_membership_first.py
 """current_user.tenant_id resolves from the active membership first (Plan 1d)."""
 
-from dazzle.back.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
-from dazzle.back.runtime.route_generator import _resolve_user_attribute
+from dazzle.http.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
+from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
 
 def _ctx(*, membership_tid=None, prefs_tid=None):
@@ -103,7 +103,7 @@ Expected: FAIL on `test_tenant_id_prefers_active_membership` — current resolut
 
 - [ ] **Step 3: Make `tenant_id` membership-first**
 
-In `src/dazzle/back/runtime/route_generator.py`, at the top of `_resolve_user_attribute` (after the `auth_context is None` guard, before the user/preferences resolution), add:
+In `src/dazzle/http/runtime/route_generator.py`, at the top of `_resolve_user_attribute` (after the `auth_context is None` guard, before the user/preferences resolution), add:
 
 ```python
     # auth Plan 1d: tenant_id is sourced from the active membership first (the
@@ -132,7 +132,7 @@ Expected: PASS (membership-less contexts unchanged — fallback path intact).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/route_generator.py tests/unit/test_resolve_tenant_membership_first.py
+git add src/dazzle/http/runtime/route_generator.py tests/unit/test_resolve_tenant_membership_first.py
 git commit -m "feat(auth): current_user.tenant_id resolves membership-first, prefs fallback (Plan 1d)"
 ```
 
@@ -142,7 +142,7 @@ git commit -m "feat(auth): current_user.tenant_id resolves membership-first, pre
 
 **Files:**
 - Modify: `src/dazzle/core/manifest.py` (`AuthConfig`)
-- Modify: `src/dazzle/back/runtime/app_factory.py` (the `ServerConfig(...)` build)
+- Modify: `src/dazzle/http/runtime/app_factory.py` (the `ServerConfig(...)` build)
 - Test: `tests/unit/test_resolve_tenant_membership_first.py` (append a tiny manifest-default check) or a focused manifest test
 
 - [ ] **Step 1: Write the failing test**
@@ -152,7 +152,7 @@ git commit -m "feat(auth): current_user.tenant_id resolves membership-first, pre
 """auto_provision_single_org flows manifest -> ServerConfig (Plan 1d)."""
 
 from dazzle.core.manifest import AuthConfig
-from dazzle.back.runtime.server import ServerConfig
+from dazzle.http.runtime.server import ServerConfig
 
 
 def test_authconfig_default_off() -> None:
@@ -183,7 +183,7 @@ In `src/dazzle/core/manifest.py`, in the `AuthConfig` dataclass (next to `allow_
     auto_provision_single_org: bool = False
 ```
 
-In `src/dazzle/back/runtime/app_factory.py`, in the `ServerConfig(...)` call (~line 665), add the kwarg (sourcing from the resolved `auth_config`):
+In `src/dazzle/http/runtime/app_factory.py`, in the `ServerConfig(...)` call (~line 665), add the kwarg (sourcing from the resolved `auth_config`):
 
 ```python
         auto_provision_single_org=bool(
@@ -201,7 +201,7 @@ Expected: PASS (3 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/core/manifest.py src/dazzle/back/runtime/app_factory.py tests/unit/test_auth_autoprovision_manifest.py
+git add src/dazzle/core/manifest.py src/dazzle/http/runtime/app_factory.py tests/unit/test_auth_autoprovision_manifest.py
 git commit -m "feat(auth): manifest [auth] auto_provision_single_org -> ServerConfig (Plan 1d)"
 ```
 
@@ -266,8 +266,8 @@ def scratch_url() -> Iterator[str]:
 
 
 def _appspec_and_md():
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 
     from dazzle.core.appspec_loader import load_project_appspec
 
@@ -281,7 +281,7 @@ def _appspec_and_md():
 def test_provision_single_org_mirrors_tenant_root_id(scratch_url: str) -> None:
     """provision_single_org creates a Workspace row + an organizations row with
     the SAME id (the 1:1 mirror)."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
     from dazzle.db.provision import provision_single_org
 
     appspec, md, _pk, _scoped = _appspec_and_md()
@@ -450,7 +450,7 @@ git commit -m "feat(db): provision_single_org — 1:1 org<->tenant-root id mirro
 ## Task 4: route `ensure_single_org_membership` through `provision_single_org` for archetype apps
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py` (`ensure_single_org_membership`)
+- Modify: `src/dazzle/http/runtime/auth/store.py` (`ensure_single_org_membership`)
 - Test: `tests/integration/test_membership_rls_activation_pg.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -460,7 +460,7 @@ git commit -m "feat(db): provision_single_org — 1:1 org<->tenant-root id mirro
 def test_ensure_membership_uses_mirrored_org_for_archetype_app(scratch_url: str) -> None:
     """For an is_tenant_root app, the auto-provisioned membership's tenant_id is
     the SHARED Workspace/org id (not a fresh framework-only org id)."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
     from dazzle.db.provision import provision_single_org
 
     appspec, md, _pk, _scoped = _appspec_and_md()
@@ -484,7 +484,7 @@ Expected: FAIL — `ensure_single_org_membership` has no `appspec` param / creat
 
 - [ ] **Step 3: Add the `appspec` route-through**
 
-In `src/dazzle/back/runtime/auth/store.py`, modify `ensure_single_org_membership` to accept an optional `appspec` and, when given (and it has a tenant root), provision via `provision_single_org` on the store's own connection so the org id mirrors the seeded tenant-root row:
+In `src/dazzle/http/runtime/auth/store.py`, modify `ensure_single_org_membership` to accept an optional `appspec` and, when given (and it has a tenant root), provision via `provision_single_org` on the store's own connection so the org id mirrors the seeded tenant-root row:
 
 ```python
     def ensure_single_org_membership(
@@ -537,7 +537,7 @@ def _appspec_has_tenant_root(appspec: Any) -> bool:
     return False
 ```
 
-Then thread the appspec at the live activation call site — in `src/dazzle/back/runtime/auth/org_activation.py` `activate_session_for_login`, pass `appspec=getattr(getattr(request, "app", None), "state", None) and getattr(request.app.state, "appspec", None)` into `ensure_single_org_membership`:
+Then thread the appspec at the live activation call site — in `src/dazzle/http/runtime/auth/org_activation.py` `activate_session_for_login`, pass `appspec=getattr(getattr(request, "app", None), "state", None) and getattr(request.app.state, "appspec", None)` into `ensure_single_org_membership`:
 
 ```python
         app_state = getattr(getattr(request, "app", None), "state", None)
@@ -560,7 +560,7 @@ Expected: PASS (1c's rootless behaviour unchanged — its fake stores pass `apps
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/store.py src/dazzle/back/runtime/auth/org_activation.py tests/integration/test_membership_rls_activation_pg.py
+git add src/dazzle/http/runtime/auth/store.py src/dazzle/http/runtime/auth/org_activation.py tests/integration/test_membership_rls_activation_pg.py
 git commit -m "feat(auth): ensure_single_org_membership mirrors org<->tenant-root for archetype apps (Plan 1d)"
 ```
 
@@ -586,8 +586,8 @@ _APP_PW = "app-pw"  # noqa: S105 — fixture-local
 
 
 def test_membership_fences_rls_data_as_non_superuser(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
-    from dazzle.back.runtime.rls_schema import build_rls_policy_ddl
+    from dazzle.http.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.rls_schema import build_rls_policy_ddl
     from dazzle.db.provision import provision_single_org
 
     appspec, md, pk, scoped = _appspec_and_md()

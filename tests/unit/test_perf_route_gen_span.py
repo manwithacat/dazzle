@@ -22,7 +22,7 @@ def test_route_gen_span_lands_during_app_build(tmp_path: Path) -> None:
     db = tmp_path / "run.db"
     configure_tracer(run_id="r1", db_path=db, batch=False)
     try:
-        from dazzle.back.runtime.route_generator import RouteGenerator
+        from dazzle.http.runtime.route_generator import RouteGenerator
 
         rg = RouteGenerator(services={}, models={})
         rg.generate_all_routes([])

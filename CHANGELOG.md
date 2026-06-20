@@ -9,13 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.35] - 2026-06-20
+
+### Changed
+- **Layer rename `back/` → `http/`, `ui/` → `page/` — structural-comprehensibility phase 4 of 4, the capstone** (ADR-0041). The runtime is a four-layer stack (ADR-0038) whose names predate server-side rendering and actively mislead — a FastAPI router lived at `ui/runtime/page_routes.py` ("sounded like UI, was backend"), HTML was produced under `back/runtime/`. After the v0.83.32–34 cleanups (naming sweep, `route_generator` cycle break, server-runtime relocation), the **names** were the last vestige. The two layer packages are renamed so they match the topology — **`http → page → render → core`**: `src/dazzle/back/` → `src/dazzle/http/`, `src/dazzle/ui/` → `src/dazzle/page/` (`render/`/`core/` unchanged). One word-bounded tree-wide rewrite (~1000 `.py` files + tests + configs + package-data keys + the mypy-override list + the import-linter contracts + regenerated api-surface & complexity drift baselines + docs/ADRs). The import-linter contracts and `tests/unit/test_import_boundaries.py` enforce the **same** rules under the new names (`core ↛ http/page`, `page ↛ http`, `render ↛ http/page`, `http` is Postgres-only). Verified: full non-e2e suite, mypy (1346 files), `lint-imports`, `dazzle serve` boot, **wheel build + package-data inspection** (static assets → `dazzle.page`, alembic → `dazzle.http` — no stale paths leaked), and `mkdocs build --strict`. Clean break (ADR-0003): **no `back`/`ui` compatibility shims** — the public package (`dazzle-dsl`) and import root (`dazzle`) are unchanged, but direct imports of `dazzle.back.*`/`dazzle.ui.*` are gone; use `dazzle.http.*`/`dazzle.page.*`.
+
+  ### Agent Guidance
+  - **Layer names are now `http → page → render → core`** (ADR-0041, renamed from `back`/`ui`). `http/` = FastAPI runtime (routes/auth/DB/handlers); `page/` = page-orchestration renderers + converters + static assets; `render/` = pure AppSpec→Fragment→HTML; `core/` = parser/IR. Import from `dazzle.http.*` / `dazzle.page.*`. Routing rule: change a route/data/auth → `http/`; change page orchestration → `page/`; change markup/primitives → `render/`. There are **no** `dazzle.back`/`dazzle.ui` modules — a clean break, no shims.
+
 ## [0.83.34] - 2026-06-20
 
 ### Changed
 - **Relocated server-runtime page handlers ui→back — structural-comprehensibility phase 3 of 4** (smells round — honest layers). The ui-inventory found that the two largest files in `ui/` were not UI at all: `page_routes.py` (3052 LOC) and `experience_routes.py` (789 LOC) are FastAPI `APIRouter` factories — server-runtime that `back/` *imported upward into*, an inverted dependency that was pure pre-SSR accident (the #1055 merge commit itself noted `page_routes.py` "sounded like UI, was backend"). Moved `page_routes`, `experience_routes`, and `htmx` (the `HtmxDetails`/HX-response helpers `back/runtime/htmx_response` already re-exported) from `ui/runtime/` → `back/runtime/` (48 files repointed). `page_routes` now routes its IR imports through the `core.ir` facade (back's import rule) and calls `template_renderer.render_page` as the legitimate http→page call-down (the hand-rolled `test_import_boundaries` rule was narrowed: `render_page` is page-orchestration that *stayed* in ui — only `template_context`/`surface_access` genuinely migrated to `render/`). `theme.py` was **deliberately not moved** — it's mixed (its middleware is server-runtime, but `get_sidebar_state` is consumed by `ui`-resident `template_renderer`); a wholesale move would create a fresh `ui↛back` violation, so it needs a split, not a relocation (tracked follow-up). Verified: 3 import contracts KEPT, full non-e2e suite + `dazzle serve` boot green. `ui/` shrinks toward its real role (page-orchestration rendering + assets).
 
   ### Agent Guidance
-  - **Server-runtime page handlers live in `back/runtime/`, not `ui/`.** `page_routes`/`experience_routes`/`htmx` import from `dazzle.back.runtime.*`. Back route-handlers legitimately call *down* into the page layer (`ui.runtime.template_renderer.render_page`) — that's the http→page direction; only `ui ↛ back` is forbidden.
+  - **Server-runtime page handlers live in `back/runtime/`, not `ui/`.** `page_routes`/`experience_routes`/`htmx` import from `dazzle.http.runtime.*`. Back route-handlers legitimately call *down* into the page layer (`ui.runtime.template_renderer.render_page`) — that's the http→page direction; only `ui ↛ back` is forbidden.
 
 ## [0.83.33] - 2026-06-20
 
@@ -23,20 +31,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Broke the `route_generator` import cycle — structural-comprehensibility phase 2 of 4** (smells round). The CRUD route-generation cluster (`route_generator` + `scope_filters`, `audit_wrap`, `htmx_render`, `handlers/{read,write,list}_handlers`) was the **only genuine import cycle in `back/runtime/`** — a 7-module SCC that forced ~24 in-function ("lazy") imports to dodge it (the investigation found ~91% of `back/runtime`'s deferred imports were this kind of cycle-dodging or cargo-cult). Extracted the shared leaf surface the cluster reaches for — the `RouteSpec`/`HandlerConfig` dispatch contracts and the `_normalize_role`/`_set_handler_annotations`/`_is_htmx_request`/`_wants_html`/`_htmx_current_url`/`_htmx_parent_url`/`_extract_result_id` helpers — into a new **leaf module `back/runtime/route_support.py`** (depends only on fastapi/stdlib/`auth`/`render`, never on the cluster). The satellites now import *down* into the leaf at top level instead of *up* into `route_generator`, dissolving the SCC; the ~24 forced-lazy imports became plain top-level imports. `route_generator` re-exports the leaf surface for back-compat importers + patch points (`route_generator.<name>` still resolves). Verified: full non-e2e suite (18801 passed), `dazzle serve` boots, the SCC is gone (leaf invariant + zero satellite→`route_generator` imports asserted).
 
   ### Agent Guidance
-  - **CRUD route-dispatch contracts/helpers live in `route_support` (the leaf), not `route_generator`.** Import `RouteSpec`/`HandlerConfig`/`_normalize_role`/etc. from `dazzle.back.runtime.route_support`. `route_generator` re-exports them for back-compat, but new code should import from the leaf. The handler/scope/audit modules must never import `route_generator` (it imports *them*) — that was the cycle.
+  - **CRUD route-dispatch contracts/helpers live in `route_support` (the leaf), not `route_generator`.** Import `RouteSpec`/`HandlerConfig`/`_normalize_role`/etc. from `dazzle.http.runtime.route_support`. `route_generator` re-exports them for back-compat, but new code should import from the leaf. The handler/scope/audit modules must never import `route_generator` (it imports *them*) — that was the cycle.
 
 ## [0.83.32] - 2026-06-20
 
 ### Changed
-- **Structural-comprehensibility cleanup, phase 1 of 4** (smells round — naming + dead structure; behavior-neutral). From a four-agent investigation into whether the `back/`↔`ui/` split is vestigial (it's a sound four-layer stack `back→ui→render→core`; the names are the vestige — see `docs/evaluation/back-ui-render-boundary.md`): (1) **swept 46 stale `dazzle_back`/`dazzle_ui` doc references** → `dazzle.back`/`dazzle.ui` across 45 files — the packages were renamed at the #1055 merge, so these comment/docstring pointers were *wrong* (grepping the named path found nothing); real `import … as dazzle_back` aliases were left intact. (2) **Deleted the empty `back/core/` placeholder package** (zero importers, collided conceptually with top-level `core/`). (3) **Renamed `back/runtime/renderers/dual_path.py` → `html_normalise.py`** — the dual-path renderer it was named for was retired in v0.67.59; only two HTML byte-equivalence test helpers survived, so the name was a lie. (4) **Fixed stale "Jinja2 templates" docstrings** in `template_compiler.py` + `site_context.py` (Jinja was removed framework-wide at #1042/ADR-0023). (5) **Corrected the #1055-vs-#1056 merge attribution** in the smells command/workflow (#1055 was the package merge; #1056 the follow-on mypy burndown). (6) **Added a three-rendering-homes module-map** to `render/__init__.py` so a reader can route "where is X rendered?" by layer. No behavior change; all structural gates + boot smoke green.
+- **Structural-comprehensibility cleanup, phase 1 of 4** (smells round — naming + dead structure; behavior-neutral). From a four-agent investigation into whether the `back/`↔`ui/` split is vestigial (it's a sound four-layer stack `back→ui→render→core`; the names are the vestige — see `docs/evaluation/back-ui-render-boundary.md`): (1) **swept 46 stale `dazzle_http`/`dazzle_page` doc references** → `dazzle.http`/`dazzle.page` across 45 files — the packages were renamed at the #1055 merge, so these comment/docstring pointers were *wrong* (grepping the named path found nothing); real `import … as dazzle_http` aliases were left intact. (2) **Deleted the empty `back/core/` placeholder package** (zero importers, collided conceptually with top-level `core/`). (3) **Renamed `back/runtime/renderers/dual_path.py` → `html_normalise.py`** — the dual-path renderer it was named for was retired in v0.67.59; only two HTML byte-equivalence test helpers survived, so the name was a lie. (4) **Fixed stale "Jinja2 templates" docstrings** in `template_compiler.py` + `site_context.py` (Jinja was removed framework-wide at #1042/ADR-0023). (5) **Corrected the #1055-vs-#1056 merge attribution** in the smells command/workflow (#1055 was the package merge; #1056 the follow-on mypy burndown). (6) **Added a three-rendering-homes module-map** to `render/__init__.py` so a reader can route "where is X rendered?" by layer. No behavior change; all structural gates + boot smoke green.
 
 ## [0.83.31] - 2026-06-19
 
 ### Changed
-- **Relocated the back+ui composition root `combined_server` from `ui/runtime/` to `back/runtime/`** (smells round — import allow-list shrink). It was the *only* `dazzle.ui ↛ dazzle.back` violator (`run_unified_server`/`run_backend_only` glue both layers), held open by a 6-entry import-linter allow-list. Moving it to where it belongs — the composition root lives in `back`, which may legitimately import both layers (there is no `back ↛ ui` contract) — **drives the `ui ↛ back` import contract's allow-list to zero** (total `ignore_imports` 9 → 3). All its back imports were already deferred, so no module-level cycle. Callers updated: `cli/runtime_impl/serve.py` (the live serve path) + the `dazzle.ui.runtime` re-export removed; the test moved to `back/tests/` (where it now actually runs — `ui/tests/` isn't in `testpaths`) and two stale signature pins it carried (drifted while uncollected: `db_path` removed, `storage_defs`/`workers`/`local_assets`/`tenant_config` added) were corrected. `test_import_boundaries.py`'s ui→back exemption emptied; complexity baseline regenerated for the moved path. Verified: 3 import contracts KEPT, `dazzle serve` boots through the new path.
+- **Relocated the back+ui composition root `combined_server` from `ui/runtime/` to `back/runtime/`** (smells round — import allow-list shrink). It was the *only* `dazzle.page ↛ dazzle.http` violator (`run_unified_server`/`run_backend_only` glue both layers), held open by a 6-entry import-linter allow-list. Moving it to where it belongs — the composition root lives in `back`, which may legitimately import both layers (there is no `back ↛ ui` contract) — **drives the `ui ↛ back` import contract's allow-list to zero** (total `ignore_imports` 9 → 3). All its back imports were already deferred, so no module-level cycle. Callers updated: `cli/runtime_impl/serve.py` (the live serve path) + the `dazzle.page.runtime` re-export removed; the test moved to `back/tests/` (where it now actually runs — `ui/tests/` isn't in `testpaths`) and two stale signature pins it carried (drifted while uncollected: `db_path` removed, `storage_defs`/`workers`/`local_assets`/`tenant_config` added) were corrected. `test_import_boundaries.py`'s ui→back exemption emptied; complexity baseline regenerated for the moved path. Verified: 3 import contracts KEPT, `dazzle serve` boots through the new path.
 
   ### Agent Guidance
-  - **Composition roots live in `back/`, not `ui/`.** Code that must wire both layers together (a server that mounts back routes + ui pages) belongs under `back/runtime/` — `back` may import `ui`, but `ui` must never import `back` (now gated absolutely, zero allow-list). `run_unified_server`/`run_backend_only` import from `dazzle.back.runtime.combined_server`.
+  - **Composition roots live in `back/`, not `ui/`.** Code that must wire both layers together (a server that mounts back routes + ui pages) belongs under `back/runtime/` — `back` may import `ui`, but `ui` must never import `back` (now gated absolutely, zero allow-list). `run_unified_server`/`run_backend_only` import from `dazzle.http.runtime.combined_server`.
 
 ## [0.83.30] - 2026-06-19
 
@@ -49,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.83.29] - 2026-06-19
 
 ### Changed
-- **Retired three duplicated footgun classes into shared helpers + gates** (smells round 2026-06-19, "safe dedup" track). (1) The copy-pasted `if x is None: raise HTTPException(404, "Not found")` fetch-or-404 guard → `dazzle.back.runtime.http_errors.require_found(value)` (5 sites; the 404 contract now lives in one place + type-narrows). (2) `getattr(x, "name", None) or getattr(x, "id", …)` identity fallback → `dazzle.core.ir.identity.spec_display_id(spec)` (6 sites). (3) `s if isinstance(s, str) else s.name` state normalisation → `dazzle.core.ir.state_machine.state_name(s)` / `StateMachineSpec.state_names()` (6 sites). Each is locked by `tests/unit/test_dedup_footgun_gates.py` (forbids the inline form returning, with a pointer to the helper), now wired into the `/ship` pre-flight. The two CLAUDE.md "PersonaSpec identity" / "State machine states" gotchas now point at the helpers instead of endorsing the inline idiom. Zero behaviour change (helpers do exactly what the inline code did; state helpers use the free-function form so they stay duck-type/mock-compatible).
+- **Retired three duplicated footgun classes into shared helpers + gates** (smells round 2026-06-19, "safe dedup" track). (1) The copy-pasted `if x is None: raise HTTPException(404, "Not found")` fetch-or-404 guard → `dazzle.http.runtime.http_errors.require_found(value)` (5 sites; the 404 contract now lives in one place + type-narrows). (2) `getattr(x, "name", None) or getattr(x, "id", …)` identity fallback → `dazzle.core.ir.identity.spec_display_id(spec)` (6 sites). (3) `s if isinstance(s, str) else s.name` state normalisation → `dazzle.core.ir.state_machine.state_name(s)` / `StateMachineSpec.state_names()` (6 sites). Each is locked by `tests/unit/test_dedup_footgun_gates.py` (forbids the inline form returning, with a pointer to the helper), now wired into the `/ship` pre-flight. The two CLAUDE.md "PersonaSpec identity" / "State machine states" gotchas now point at the helpers instead of endorsing the inline idiom. Zero behaviour change (helpers do exactly what the inline code did; state helpers use the free-function form so they stay duck-type/mock-compatible).
 
   ### Agent Guidance
   - **Three footguns now have one home each, gated.** Fetch-or-404 → `require_found`; spec/node display id (PersonaSpec is `.id` not `.name`) → `spec_display_id`; state-name normalisation → `state_name` / `StateMachineSpec.state_names()`. Re-inlining any of the three fails `test_dedup_footgun_gates.py`.
@@ -171,7 +179,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Conformant custom routes** (#1420 slice 3, ADR-0040 — completes the governed-API-surface invariant). A project's hand-written route-override that touches a domain entity should carry the security model, not bypass it. Slices 1–2 governed generated routes; this governs custom ones. The binding is the existing static `# dazzle:implements <Entity>.<op> via <param>` header (#1126) — it already wraps the handler with `policy.check_entity_op` (fail-closed permit/scope before the body), and being a scannable header (not a runtime decorator) it's analyzable. New: (1) a **boot-time conformance check** — a route-override that shadows a generated entity route (same method+path) but declares no binding is surfaced as a loud warning (`find_unbound_shadowing_overrides`); (2) a **`raw-db-in-custom-route` counter-prior** + `scan_handler_for_raw_db` scanner flagging the residue a binding can't constrain — raw SQL / a hand-built `Repository` in the handler body (the RBAC-bypass cousin of raw-sql-string-building), surfaced at authoring time. No new IR or DSL keyword (reuses #1126).
 
   ### Agent Guidance
-  - **A custom route handler that touches a domain entity must bind to it.** Add `# dazzle:implements <Entity>.<op> via <id-param>` (the framework runs permit/scope before your handler) or call `dazzle.back.runtime.policy.check_entity_op(...)` in the body. Never reach the DB directly (raw SQL / a hand-built `Repository`) from a route handler — that bypasses RBAC entirely. To remove an unwanted generated route, use the entity's `expose:` allowlist (#1420 slice 2), don't shadow it with an un-gated override.
+  - **A custom route handler that touches a domain entity must bind to it.** Add `# dazzle:implements <Entity>.<op> via <id-param>` (the framework runs permit/scope before your handler) or call `dazzle.http.runtime.policy.check_entity_op(...)` in the body. Never reach the DB directly (raw SQL / a hand-built `Repository`) from a route handler — that bypasses RBAC entirely. To remove an unwanted generated route, use the entity's `expose:` allowlist (#1420 slice 2), don't shadow it with an un-gated override.
 
 
 ## [0.83.11] - 2026-06-19
@@ -258,7 +266,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Layering enforcement: `tests/unit/test_import_boundaries.py` now gates `render/` purity (ADR-0038 D3)** — `render/ ↛ {back, ui}`, top-level *and* lazy in-function imports. Zero new deps.
-- **`src/dazzle/ui/runtime/static/js/dz-toast.js`** — OOB-toast auto-dismiss bridge (replaces the htmx-2 remove-me extension).
+- **`src/dazzle/page/runtime/static/js/dz-toast.js`** — OOB-toast auto-dismiss bridge (replaces the htmx-2 remove-me extension).
 - **ADR-0038** + evaluation docs (`docs/evaluation/{htmx4-evaluation,back-ui-render-boundary,htmx4-browser-baseline}.md`); htmx-4 note on ADR-0011.
 
   ### Agent Guidance
@@ -406,7 +414,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.82.78] - 2026-06-15
 
 ### Changed
-- **Host-pin login denial now returns a branded HTML 403, not a bare JSON error (#1393 branded-403 slice).** When a proven identity logs in on a host pinned to an organisation it isn't a member of, the five browser login flows (password login + signup, magic-link, SSO callback, 2FA verify) previously surfaced the `HostForbidden` → `FORBIDDEN_SENTINEL` denial as a raw `HTTPException(403, "no membership for this organization")` — a JSON error page in the browser. They now `return forbidden_org_response(request)`: a branded "This isn't your organisation" page (new `build_forbidden_org_view`, typed-Fragment, distinct from the no-orgs-*anywhere* page) rendered at HTTP 403. The JSON API login path (`routes._json_active_membership_id`) **deliberately keeps the JSON 403** — an API client wants the machine-readable error. Single shared helper `dazzle.back.runtime.auth.forbidden_org.forbidden_org_response`.
+- **Host-pin login denial now returns a branded HTML 403, not a bare JSON error (#1393 branded-403 slice).** When a proven identity logs in on a host pinned to an organisation it isn't a member of, the five browser login flows (password login + signup, magic-link, SSO callback, 2FA verify) previously surfaced the `HostForbidden` → `FORBIDDEN_SENTINEL` denial as a raw `HTTPException(403, "no membership for this organization")` — a JSON error page in the browser. They now `return forbidden_org_response(request)`: a branded "This isn't your organisation" page (new `build_forbidden_org_view`, typed-Fragment, distinct from the no-orgs-*anywhere* page) rendered at HTTP 403. The JSON API login path (`routes._json_active_membership_id`) **deliberately keeps the JSON 403** — an API client wants the machine-readable error. Single shared helper `dazzle.http.runtime.auth.forbidden_org.forbidden_org_response`.
 
   ### Agent Guidance
   - The browser login routes now render a branded 403 page (not JSON) when a non-member hits a host-pinned login. The JSON `/auth` API still returns JSON 403. Phases B (apex discovery), C (declarative membership relation), and D (email-domain routing) of #1393 remain open and ADR-gated.
@@ -796,7 +804,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Agent Guidance
 - New apps that demonstrate a *framework capability* (not a fictional business) belong in
   `fixtures/`, not `examples/`. Every `examples/` app must be a kayfabe product and (from
-  later phases) carry per-persona guides. Note `src/dazzle/back/pra/` is the framework
+  later phases) carry per-persona guides. Note `src/dazzle/http/pra/` is the framework
   perf-harness module — unrelated to `fixtures/pra/` (the corpus) and never moves with it.
 
 ## [0.82.48] - 2026-06-13
@@ -1037,7 +1045,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   untracked `app.db` stray at the repo root (Postgres-only project, nothing creates or references it).
   Added an **anchored** `/dist/` entry to `.gitignore` (`python -m build`'s default `--outdir`) so a local
   build can't leave committable wheels — anchored deliberately so it does not shadow the tracked nested
-  bundle dir `src/dazzle/ui/runtime/static/dist/`. (Premise correction vs the issue: `app.db` was never
+  bundle dir `src/dazzle/page/runtime/static/dist/`. (Premise correction vs the issue: `app.db` was never
   tracked, just an ignored stray.)
 
 ## [0.82.33] - 2026-06-12
@@ -1048,9 +1056,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/ux-converge` as standalone commands — converted to `/improve` lane phrasing (dependency graph,
   termination prose, self-observation, signal-promotion, and the `/loop` cadence examples) while keeping
   the historical 2026-04-25 consolidation note; (2) `.claude/hooks/subagent_context.py` injected the
-  pre-move `src/dazzle_back/`/`src/dazzle_ui/` paths into every subagent's context — corrected to
-  `src/dazzle/back/` (FastAPI runtime) and `src/dazzle/ui/` (UI runtime); (3) `.claude/CLAUDE.md`'s
-  ADR-0008 bullet carried the same `src/dazzle_back/` path. ADR-0008 also gained a dated status banner
+  pre-move `src/dazzle_http/`/`src/dazzle_page/` paths into every subagent's context — corrected to
+  `src/dazzle/http/` (FastAPI runtime) and `src/dazzle/page/` (UI runtime); (3) `.claude/CLAUDE.md`'s
+  ADR-0008 bullet carried the same `src/dazzle_http/` path. ADR-0008 also gained a dated status banner
   (mirroring ADR-0011's pattern) noting the `asyncpg`→psycopg3 single-driver migration (#1341, v0.81.27),
   with the Implementation section's driver line updated. ADR-0011's Jinja2 banner was already present (no
   change needed).
@@ -1184,7 +1192,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **`dazzle.register_lifespan_hook` is now a public, documented API** (#1366). The supported host-app
-  startup/shutdown path existed since v0.81.59 but was buried at `dazzle.back.runtime.lifespan_hooks` and
+  startup/shutdown path existed since v0.81.59 but was buried at `dazzle.http.runtime.lifespan_hooks` and
   undocumented — which is *why* downstream reached for the familiar (broken) `@app.on_event` idiom.
   Re-exported at the top level via lazy `__getattr__` (zero import cost — `import dazzle` stays light),
   documented in `docs/reference/deployment.md` ("Host-App Lifecycle Hooks"); public-helpers api-surface
@@ -1265,9 +1273,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runtime DDL create ~25 more (users, sessions, memberships, organizations, `_dazzle_audit_log`, grants,
   files, SCIM/SAML tables, …) — all absent from the DSL-derived metadata, so autogenerate against a live DB
   emitted a destructive drop for every one. A canonical registry
-  (`src/dazzle/back/alembic/framework_tables.py`: explicit names + `_dazzle_`/`_grant`/`_ops_` prefixes +
+  (`src/dazzle/http/alembic/framework_tables.py`: explicit names + `_dazzle_`/`_grant`/`_ops_` prefixes +
   `alembic_version`) now drives `include_object`, with a drift gate that scrapes every
-  `CREATE TABLE IF NOT EXISTS` in `src/dazzle/back/` and fails when a new runtime table isn't registered.
+  `CREATE TABLE IF NOT EXISTS` in `src/dazzle/http/` and fails when a new runtime table isn't registered.
   Reflected-only runtime-managed indexes (`idx_` prefix — FTS GIN indexes, framework-table indexes) are
   skipped too; metadata-emitted `ix_*` indexes still diff normally. `compare_type` stays on — real DSL type
   changes still autogenerate (residual VARCHAR/NUMERIC-equivalence churn is a possible follow-up).
@@ -2082,7 +2090,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **SAML IdP-metadata auto-import (#1342, SAML cluster 1/4).** `dazzle auth connection create-saml` gains `--idp-metadata-url <https>` and `--idp-metadata-file <path>`, which parse the IdP's published SAML metadata into the connection config (`idp_entity_id` / `idp_sso_url` / `idp_x509_cert`, plus `idp_slo_url` when present) instead of three hand-transcribed flags. The three `--idp-*` flags are now optional and override the parsed values. The URL fetch is **SSRF-guarded** (https-only; host must resolve to public IPs — private/loopback/link-local/reserved/multicast/unspecified rejected; `follow_redirects=False`; bounded timeout; 1 MiB cap; the validator runs before any network call). XML parsing is delegated to python3-saml's `OneLogin_Saml2_IdPMetadataParser` (no hand-rolled XML — XXE safety). New module `src/dazzle/back/runtime/auth/saml_metadata.py`.
+- **SAML IdP-metadata auto-import (#1342, SAML cluster 1/4).** `dazzle auth connection create-saml` gains `--idp-metadata-url <https>` and `--idp-metadata-file <path>`, which parse the IdP's published SAML metadata into the connection config (`idp_entity_id` / `idp_sso_url` / `idp_x509_cert`, plus `idp_slo_url` when present) instead of three hand-transcribed flags. The three `--idp-*` flags are now optional and override the parsed values. The URL fetch is **SSRF-guarded** (https-only; host must resolve to public IPs — private/loopback/link-local/reserved/multicast/unspecified rejected; `follow_redirects=False`; bounded timeout; 1 MiB cap; the validator runs before any network call). XML parsing is delegated to python3-saml's `OneLogin_Saml2_IdPMetadataParser` (no hand-rolled XML — XXE safety). New module `src/dazzle/http/runtime/auth/saml_metadata.py`.
 
 #### Agent Guidance
 
@@ -2116,7 +2124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **SCIM discovery — `/scim/v2/ResourceTypes` + `/scim/v2/Schemas` (#1342 Phase 3).** Bearer-authenticated, capability-gated (`auth.enterprise.scim`) discovery so an IdP can self-configure (RFC 7643 §6–7): list + single-fetch for both `ResourceTypes` (User, Group) and `Schemas`, with a SCIM 404 on unknown id. The published schemas are a **faithful subset** — they advertise only the attributes Dazzle honors (`User`: userName/active/emails(readOnly)/groups(readOnly); `Group`: displayName/members), never an attribute the runtime ignores. Static content lives in the new pure module `src/dazzle/back/runtime/auth/scim_discovery.py`.
+- **SCIM discovery — `/scim/v2/ResourceTypes` + `/scim/v2/Schemas` (#1342 Phase 3).** Bearer-authenticated, capability-gated (`auth.enterprise.scim`) discovery so an IdP can self-configure (RFC 7643 §6–7): list + single-fetch for both `ResourceTypes` (User, Group) and `Schemas`, with a SCIM 404 on unknown id. The published schemas are a **faithful subset** — they advertise only the attributes Dazzle honors (`User`: userName/active/emails(readOnly)/groups(readOnly); `Group`: displayName/members), never an attribute the runtime ignores. Static content lives in the new pure module `src/dazzle/http/runtime/auth/scim_discovery.py`.
 
 #### Agent Guidance
 
@@ -2219,7 +2227,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`auth_routes` subsystem no longer crashes on boot — JWT token endpoints mount (#1343).** Two handlers in `src/dazzle/back/runtime/auth/routes_jwt.py` annotated their request param as the union `request: "FastAPIRequest | None" = None`. FastAPI only injects the request when the annotation is *exactly* `Request`; the union defeats that special-casing, so FastAPI tried to build a Pydantic field for `starlette.requests.Request` and raised `Invalid args for response field!` at route registration — aborting the `auth_routes` subsystem (so `/auth/token`, `/auth/token/refresh` 404'd). Latent since v0.67.123 (`37a43e34` string-wrapped the annotation), surfaced by v0.81.59 (`6c92db5`) reviving subsystem `on_event` hooks under custom lifespan. Fix: bare `request: FastAPIRequest` (reordered ahead of defaulted params in `_login_for_token`; simplified the now-redundant `if request` guards). Added a version-independent regression guard in `test_auth_subsystem_jwt_wiring.py` that fails if any handler param resolves to a Request union/Optional rather than exactly `Request` — the prior wiring tests mocked the route factory and never exercised FastAPI's field analysis.
+- **`auth_routes` subsystem no longer crashes on boot — JWT token endpoints mount (#1343).** Two handlers in `src/dazzle/http/runtime/auth/routes_jwt.py` annotated their request param as the union `request: "FastAPIRequest | None" = None`. FastAPI only injects the request when the annotation is *exactly* `Request`; the union defeats that special-casing, so FastAPI tried to build a Pydantic field for `starlette.requests.Request` and raised `Invalid args for response field!` at route registration — aborting the `auth_routes` subsystem (so `/auth/token`, `/auth/token/refresh` 404'd). Latent since v0.67.123 (`37a43e34` string-wrapped the annotation), surfaced by v0.81.59 (`6c92db5`) reviving subsystem `on_event` hooks under custom lifespan. Fix: bare `request: FastAPIRequest` (reordered ahead of defaulted params in `_login_for_token`; simplified the now-redundant `if request` guards). Added a version-independent regression guard in `test_auth_subsystem_jwt_wiring.py` that fails if any handler param resolves to a Request union/Optional rather than exactly `Request` — the prior wiring tests mocked the route factory and never exercised FastAPI's field analysis.
 
 ## [0.81.65] - 2026-06-06
 
@@ -2281,7 +2289,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Subsystem startup/shutdown hooks were silently dead** (the `on_event` deprecation was the symptom of a real bug). `DazzleServer` builds the app with a custom `lifespan`, and FastAPI/Starlette **ignore `@app.on_event` handlers entirely when a custom lifespan is set** (confirmed on FastAPI 0.122) — so the runtime startup/shutdown work registered by the seed, events, llm_queue, sla, process, and channels subsystems (start the event framework, the LLM queue worker, SLA monitors, process schedulers, channel processors; run seed templates) **never ran at server boot**. New `dazzle.back.runtime.lifespan_hooks` registry: subsystems call `register_lifespan_hook(ctx.app, startup=…, shutdown=…)` and the server's `_lifespan` runs them (startup after the DB pool opens; shutdown in reverse order before the pool closes). Hooks are resilient — a failing/misconfigured hook is logged and skipped, never aborting boot (these were dead until now, so restoring them must not turn a working deploy into a crash loop). All `@on_event` call sites migrated; the `on_event` deprecation warnings are gone. Reviewed (code-reviewer): no CRITICAL/HIGH — ordering, resilience, and the 1:1 migration confirmed sound.
+- **Subsystem startup/shutdown hooks were silently dead** (the `on_event` deprecation was the symptom of a real bug). `DazzleServer` builds the app with a custom `lifespan`, and FastAPI/Starlette **ignore `@app.on_event` handlers entirely when a custom lifespan is set** (confirmed on FastAPI 0.122) — so the runtime startup/shutdown work registered by the seed, events, llm_queue, sla, process, and channels subsystems (start the event framework, the LLM queue worker, SLA monitors, process schedulers, channel processors; run seed templates) **never ran at server boot**. New `dazzle.http.runtime.lifespan_hooks` registry: subsystems call `register_lifespan_hook(ctx.app, startup=…, shutdown=…)` and the server's `_lifespan` runs them (startup after the DB pool opens; shutdown in reverse order before the pool closes). Hooks are resilient — a failing/misconfigured hook is logged and skipped, never aborting boot (these were dead until now, so restoring them must not turn a working deploy into a crash loop). All `@on_event` call sites migrated; the `on_event` deprecation warnings are gone. Reviewed (code-reviewer): no CRITICAL/HIGH — ordering, resilience, and the 1:1 migration confirmed sound.
 
 ### Agent Guidance
 
@@ -2291,11 +2299,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Alembic migrations no longer silence the host app's loggers** (`src/dazzle/back/alembic/env.py`). `fileConfig(config.config_file_name)` defaulted to `disable_existing_loggers=True`, so running a migration in-process disabled every already-configured logger (e.g. `dazzle.back.runtime.auth.store`). Now passes `disable_existing_loggers=False`. This was a real bug for any in-process `dazzle db upgrade`, and it turned CI red: the `-m postgres` job runs many test files in one process, and a migration test (running Alembic) silenced the store logger so a *later* caplog-based session test (`test_get_session_warns_on_null_csrf_secret`) saw no warning and failed (`assert False`). The 315-test PostgreSQL job is green again.
+- **Alembic migrations no longer silence the host app's loggers** (`src/dazzle/http/alembic/env.py`). `fileConfig(config.config_file_name)` defaulted to `disable_existing_loggers=True`, so running a migration in-process disabled every already-configured logger (e.g. `dazzle.http.runtime.auth.store`). Now passes `disable_existing_loggers=False`. This was a real bug for any in-process `dazzle db upgrade`, and it turned CI red: the `-m postgres` job runs many test files in one process, and a migration test (running Alembic) silenced the store logger so a *later* caplog-based session test (`test_get_session_warns_on_null_csrf_secret`) saw no warning and failed (`assert False`). The 315-test PostgreSQL job is green again.
 
 ### Agent Guidance
 
-- **Pre-ship scope gap (process):** `pytest tests/ -m "not e2e"` (the local pre-ship slice) does **not** run `src/dazzle/back/tests/` nor the CI `-m "postgres"` selection — a migration-vs-caplog cross-file pollution only surfaced in CI. When a change touches Alembic/migrations, logging config, or anything a `-m postgres` test exercises, also run `DATABASE_URL=… pytest -m "postgres"` locally before pushing.
+- **Pre-ship scope gap (process):** `pytest tests/ -m "not e2e"` (the local pre-ship slice) does **not** run `src/dazzle/http/tests/` nor the CI `-m "postgres"` selection — a migration-vs-caplog cross-file pollution only surfaced in CI. When a change touches Alembic/migrations, logging config, or anything a `-m postgres` test exercises, also run `DATABASE_URL=… pytest -m "postgres"` locally before pushing.
 
 ## [0.81.57] - 2026-06-06
 
@@ -2401,7 +2409,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Auth Plan 4b.ii — enterprise JIT identity-join kernel** (plan `docs/superpowers/plans/2026-06-05-auth-plan-4b-ii-enterprise-jit-join.md`; spec §5). `provision_enterprise_login(store, connection, asserted)` (`src/dazzle/back/runtime/auth/enterprise_login.py`) turns a `ConnectionProvider` callback's `AssertedIdentity` into a `(global Identity, org Membership)` pair — the security-critical step where an org IdP's assertion becomes platform access — mirroring the proven `accept_invitation` verified-email→membership path. **Anti-hijack (load-bearing):** the asserted email's domain MUST be in `connection.verified_domains` (an org IdP can only assert identities within domains it has proven it controls — a connection with no verified domains can assert nobody; exact-match, so subdomain/trailing-dot/multi-`@` tricks fail closed). **Differential trust:** a non-`id_token` `claims_source` (the unsigned UserInfo-endpoint fallback from 4b.i) must carry `email_verified=true` (`is not True` → rejects missing/None/truthy-non-True; the validated id_token path tolerates a missing claim). Resolves/creates the global Identity by verified email (passwordless), **marks it `email_verified`** (the IdP vouched within a controlled domain — keeps SSO-proven identities from lingering unverified for downstream gates), reuses an existing membership for (identity, org) or JIT-creates one (gated by `config["jit_provisioning"]`, default `True`) with roles mapped from IdP groups via `connection.group_mapping` (**default-deny** — unmapped groups grant nothing), and re-resolves cleanly on a concurrent-create `UniqueViolation`. No routes/startup wiring yet — that's **4b.iii** (the kernel is reviewed in isolation first). Adversarially reviewed (silent-failure-hunter, account-takeover surface): **no CRITICAL/HIGH** — domain-pinned anti-hijack, differential trust, exact-match identity join, tenant-scoped membership reuse, and default-deny roles all confirmed sound; the email-verification consistency note (M1) folded in.
+- **Auth Plan 4b.ii — enterprise JIT identity-join kernel** (plan `docs/superpowers/plans/2026-06-05-auth-plan-4b-ii-enterprise-jit-join.md`; spec §5). `provision_enterprise_login(store, connection, asserted)` (`src/dazzle/http/runtime/auth/enterprise_login.py`) turns a `ConnectionProvider` callback's `AssertedIdentity` into a `(global Identity, org Membership)` pair — the security-critical step where an org IdP's assertion becomes platform access — mirroring the proven `accept_invitation` verified-email→membership path. **Anti-hijack (load-bearing):** the asserted email's domain MUST be in `connection.verified_domains` (an org IdP can only assert identities within domains it has proven it controls — a connection with no verified domains can assert nobody; exact-match, so subdomain/trailing-dot/multi-`@` tricks fail closed). **Differential trust:** a non-`id_token` `claims_source` (the unsigned UserInfo-endpoint fallback from 4b.i) must carry `email_verified=true` (`is not True` → rejects missing/None/truthy-non-True; the validated id_token path tolerates a missing claim). Resolves/creates the global Identity by verified email (passwordless), **marks it `email_verified`** (the IdP vouched within a controlled domain — keeps SSO-proven identities from lingering unverified for downstream gates), reuses an existing membership for (identity, org) or JIT-creates one (gated by `config["jit_provisioning"]`, default `True`) with roles mapped from IdP groups via `connection.group_mapping` (**default-deny** — unmapped groups grant nothing), and re-resolves cleanly on a concurrent-create `UniqueViolation`. No routes/startup wiring yet — that's **4b.iii** (the kernel is reviewed in isolation first). Adversarially reviewed (silent-failure-hunter, account-takeover surface): **no CRITICAL/HIGH** — domain-pinned anti-hijack, differential trust, exact-match identity join, tenant-scoped membership reuse, and default-deny roles all confirmed sound; the email-verification consistency note (M1) folded in.
 
 ### Agent Guidance
 
@@ -2411,7 +2419,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Auth Plan 4b.i — native OIDC ConnectionProvider** (plan `docs/superpowers/plans/2026-06-05-auth-plan-4b-oidc-provider.md`; spec §5). Fills the empty 4a `ConnectionProvider` registry with `NativeOIDCProvider` (`src/dazzle/back/runtime/auth/oidc_provider.py`) — native enterprise OIDC built on **authlib** (the `[sso]` extra, lazy-imported). It memoizes a per-connection `StarletteOAuth2App` built from the connection's non-secret `config` (issuer / discovery URL / client_id) + the decrypted `client_secret`, and exposes the seam's `initiate` (→ IdP authorize URL, one stable redirect URI `/auth/enterprise/callback` per app) and `callback` (→ `AssertedIdentity`). **id_token validation is delegated to authlib's `authorize_access_token`** (signature/iss/aud/exp/nonce against the discovery `jwks_uri`) — no hand-rolled token crypto. Identity invariants enforced on top: email required + normalized (empty → refuse), explicit `email_verified: false` → refuse (missing tolerated), group claim coerced from `config["groups_claim"]` (default `groups`). The seam's `initiate`/`callback` became `async` (4a's registry was empty — clean break). Adversarially reviewed (silent-failure-hunter, security-sensitive): **no CRITICAL** — token-crypto delegation, empty-email/`email_verified` refusals, per-connection client isolation, and no-secret-leakage all confirmed; the two findings fixed in-slice — (1) the client cache now keys on `connection.updated_at` so a rotated `client_secret`/repointed issuer rebuilds instead of silently reusing stale credentials, and (2) `AssertedIdentity.claims_source` records `id_token` vs `userinfo_endpoint` provenance so 4b.ii's identity-join can apply differential trust to the unsigned UserInfo-endpoint fallback.
+- **Auth Plan 4b.i — native OIDC ConnectionProvider** (plan `docs/superpowers/plans/2026-06-05-auth-plan-4b-oidc-provider.md`; spec §5). Fills the empty 4a `ConnectionProvider` registry with `NativeOIDCProvider` (`src/dazzle/http/runtime/auth/oidc_provider.py`) — native enterprise OIDC built on **authlib** (the `[sso]` extra, lazy-imported). It memoizes a per-connection `StarletteOAuth2App` built from the connection's non-secret `config` (issuer / discovery URL / client_id) + the decrypted `client_secret`, and exposes the seam's `initiate` (→ IdP authorize URL, one stable redirect URI `/auth/enterprise/callback` per app) and `callback` (→ `AssertedIdentity`). **id_token validation is delegated to authlib's `authorize_access_token`** (signature/iss/aud/exp/nonce against the discovery `jwks_uri`) — no hand-rolled token crypto. Identity invariants enforced on top: email required + normalized (empty → refuse), explicit `email_verified: false` → refuse (missing tolerated), group claim coerced from `config["groups_claim"]` (default `groups`). The seam's `initiate`/`callback` became `async` (4a's registry was empty — clean break). Adversarially reviewed (silent-failure-hunter, security-sensitive): **no CRITICAL** — token-crypto delegation, empty-email/`email_verified` refusals, per-connection client isolation, and no-secret-leakage all confirmed; the two findings fixed in-slice — (1) the client cache now keys on `connection.updated_at` so a rotated `client_secret`/repointed issuer rebuilds instead of silently reusing stale credentials, and (2) `AssertedIdentity.claims_source` records `id_token` vs `userinfo_endpoint` provenance so 4b.ii's identity-join can apply differential trust to the unsigned UserInfo-endpoint fallback.
 
 ### Agent Guidance
 
@@ -2564,7 +2572,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Agent Guidance
 
-- **QA-auth is secret-gated + DB-contained (ADR-0035).** The `/qa/secure/mint` route is mounted only when `QA_AUTH_SECRET` is set (self-disabling; never in prod-by-default). It mints a session ONLY into a `qa-`-namespaced, `is_test=true`, run-matched org the signed user belongs to — the QA secret can never reach a real tenant (`is_test` is an unforgeable column, resolved from the DB via the signed `run_id`, not request input). Provision with `dazzle.back.runtime.auth.qa_provision.provision_test_tenant(store, run_id)`; tear down with `teardown_test_tenant(appspec, org_id, conn=...)` (E.1 excise). Sign tokens with `auth.qa_sign.sign_qa_token(email, run_id, secret=, now=)`. The HMAC channel is `NA_SIGNATURE` — no CSRF token needed. **RLS Phase E is now complete** (#1338 excision + #1339 QA-auth); the auth identity model's Plan 1 + Phase E thread is done — remaining auth work is Plan 1d (app migration) + Plan 2 (compliance evidence).
+- **QA-auth is secret-gated + DB-contained (ADR-0035).** The `/qa/secure/mint` route is mounted only when `QA_AUTH_SECRET` is set (self-disabling; never in prod-by-default). It mints a session ONLY into a `qa-`-namespaced, `is_test=true`, run-matched org the signed user belongs to — the QA secret can never reach a real tenant (`is_test` is an unforgeable column, resolved from the DB via the signed `run_id`, not request input). Provision with `dazzle.http.runtime.auth.qa_provision.provision_test_tenant(store, run_id)`; tear down with `teardown_test_tenant(appspec, org_id, conn=...)` (E.1 excise). Sign tokens with `auth.qa_sign.sign_qa_token(email, run_id, secret=, now=)`. The HMAC channel is `NA_SIGNATURE` — no CSRF token needed. **RLS Phase E is now complete** (#1338 excision + #1339 QA-auth); the auth identity model's Plan 1 + Phase E thread is done — remaining auth work is Plan 1d (app migration) + Plan 2 (compliance evidence).
 
 ## [0.81.31] - 2026-06-05
 
@@ -2594,7 +2602,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Runtime `permit:` / `scope:` role decisions now source the active membership's roles** (`effective_roles`), not the global `user.roles`. The switchover covers `route_generator` (Cedar runtime context, mutation auth, scoped pre-read, admin-persona bypass, forbidden-detail), `policy.check_entity_op` (the override permit/scope gate), and the atomic-flow `user_role_extractor`. A new membership-first `dazzle.back.runtime.auth.models.effective_roles_of(auth_context)` is the single duck-typed accessor (an active membership wins — even an empty role list, so it never leaks `user.roles`; otherwise the legacy roles, matching the 1a transition). Audit *attribution* still records the actor's global roles (per-membership attribution is Plan 2).
+- **Runtime `permit:` / `scope:` role decisions now source the active membership's roles** (`effective_roles`), not the global `user.roles`. The switchover covers `route_generator` (Cedar runtime context, mutation auth, scoped pre-read, admin-persona bypass, forbidden-detail), `policy.check_entity_op` (the override permit/scope gate), and the atomic-flow `user_role_extractor`. A new membership-first `dazzle.http.runtime.auth.models.effective_roles_of(auth_context)` is the single duck-typed accessor (an active membership wins — even an empty role list, so it never leaks `user.roles`; otherwise the legacy roles, matching the 1a transition). Audit *attribution* still records the actor's global roles (per-membership attribution is Plan 2).
 
 ### Agent Guidance
 
@@ -2702,7 +2710,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Agent Guidance
 
 - **Test tenants are identified by the queryable `is_test` column, never by a slug prefix.** Filter on `is_test`; the `qa-`/`qa_` namespace is a human-visible reservation and belt-and-suspenders, not the source of truth.
-- **New columns on the `public.tenants` registry table need both paths:** a hand-authored framework migration in `src/dazzle/back/alembic/versions/` (mirror `0005`/`0006` — idempotent, dialect-agnostic, guarded on existence) **and** the `CREATE TABLE` + idempotent boot-time `ALTER` in `tenant/registry.py`. That table is bootstrapped by `ensure_table()`, not Alembic's DSL metadata, so the two convergent paths are both required (each guards on existence). The column DDL must match across both (`BOOLEAN NOT NULL DEFAULT false`) so `dazzle db verify` sees no drift.
+- **New columns on the `public.tenants` registry table need both paths:** a hand-authored framework migration in `src/dazzle/http/alembic/versions/` (mirror `0005`/`0006` — idempotent, dialect-agnostic, guarded on existence) **and** the `CREATE TABLE` + idempotent boot-time `ALTER` in `tenant/registry.py`. That table is bootstrapped by `ensure_table()`, not Alembic's DSL metadata, so the two convergent paths are both required (each guards on existence). The column DDL must match across both (`BOOLEAN NOT NULL DEFAULT false`) so `dazzle db verify` sees no drift.
 
 ## [0.81.19] - 2026-06-04
 
@@ -2772,7 +2780,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- **`dazzle.back.runtime.asset_manifest` (`collect_required_assets`) deleted (#1336).** It derived per-surface vendor-asset keys for the pre-#1042 `base.html` conditional-script blocks, which no longer exist — the function had no live caller (only its own test) and misleadingly looked like the thing that should load vendor JS. Vendor JS now loads unconditionally via `AppChrome` (see Fixed above).
+- **`dazzle.http.runtime.asset_manifest` (`collect_required_assets`) deleted (#1336).** It derived per-surface vendor-asset keys for the pre-#1042 `base.html` conditional-script blocks, which no longer exist — the function had no live caller (only its own test) and misleadingly looked like the thing that should load vendor JS. Vendor JS now loads unconditionally via `AppChrome` (see Fixed above).
 
 ### Agent Guidance
 
@@ -2927,7 +2935,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       Class
       Manuscript when: tenant_config.beta_features
   ```
-  New IR fields `NavGroupSpec.when` / `NavItemIR.when` (`ConditionExpr | None`). The parser threads `when:` into both the group header (before the block-opening colon) and item lines (after the optional `icon=`). New condition vocabulary `tenant_config.<key>`: a comparison field with that prefix resolves from `context["tenant_config"]` in the UI condition evaluator (`dazzle.ui.utils.condition_eval`); a bare flag (`when: tenant_config.mis_connected`) parses to an implicit `= true` truthy comparison. `validate_nav_curation` (FR-6) gains a WARNING when a nav `when` references a `tenant_config.<key>` not declared in `tenancy.per_tenant_config`. **Visibility only — NOT access control** (the RBAC matrix still gates reachability). **Inert this slice**: the field is parsed but not yet read by the renderer; rendered nav is UNCHANGED until slice B wires the render filter. Regenerated the `ir-types` API-surface baseline for the two new fields.
+  New IR fields `NavGroupSpec.when` / `NavItemIR.when` (`ConditionExpr | None`). The parser threads `when:` into both the group header (before the block-opening colon) and item lines (after the optional `icon=`). New condition vocabulary `tenant_config.<key>`: a comparison field with that prefix resolves from `context["tenant_config"]` in the UI condition evaluator (`dazzle.page.utils.condition_eval`); a bare flag (`when: tenant_config.mis_connected`) parses to an implicit `= true` truthy comparison. `validate_nav_curation` (FR-6) gains a WARNING when a nav `when` references a `tenant_config.<key>` not declared in `tenancy.per_tenant_config`. **Visibility only — NOT access control** (the RBAC matrix still gates reachability). **Inert this slice**: the field is parsed but not yet read by the renderer; rendered nav is UNCHANGED until slice B wires the render filter. Regenerated the `ir-types` API-surface baseline for the two new fields.
 
 ### Agent Guidance
 
@@ -3361,7 +3369,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **`dazzle db upgrade` no longer silently no-ops in development mode (#1308 bug 1).** With the database URL declared only under `[environments.development]` in `dazzle.toml`, `dazzle db upgrade` (and `current`/`history`/`status`) operated on the **wrong database** and reported success while applying nothing — `alembic_version` never advanced. Root cause: the db CLI resolved the URL via `get_active_env()`, which defaults to `""` ("no profile"), so `resolve_database_url` skipped the `[environments.*]` branch entirely and fell through to the hardcoded default `postgresql://localhost:5432/dazzle` (typically already at head → no-op, exit 0). The app and `dazzle serve` were unaffected because they use `get_dazzle_env()` (defaults to `development`). Fix: when no `--env`/`DAZZLE_ENV` is set, `dazzle db` now targets the same environment the app uses — but only when `dazzle.toml` declares that `[environments.<name>]` profile (projects without profiles keep the legacy DATABASE_URL → `[database].url` → default resolution). `dazzle db upgrade` additionally now **prints the (redacted) target database** and reports the **actual revision transition** (`Upgraded: <before> → <after>`, or an honest `Already at <rev> — no pending migrations` on a no-op) instead of a blind `Upgraded to: head` — so a misresolved connection can never again masquerade as success. The explicit-`--env`/`DAZZLE_ENV=production` path (used by the Heroku release phase) is unchanged.
-- **Alembic migration assets are now shipped in the wheel (#1308 bug 2).** `script.py.mako`, `alembic.ini`, and — critically — the framework's own `0001–0004` baseline migrations under `src/dazzle/back/alembic/versions/` were **absent from every published wheel**. `versions/` has no `__init__.py`, so `[tool.setuptools.packages.find]` with `namespaces = false` never discovered it, and there was no `package-data` entry to ship the files as data. Result: `dazzle db revision --autogenerate` failed (missing template) and a fresh `pip install dazzle-dsl` had no framework migrations at all (invisible to local dev because the repo install is editable). Fix: added a `"dazzle.back.alembic" = ["*.mako", "*.ini", "versions/*.py"]` package-data entry plus a matching `MANIFEST.in` recursive-include. Verified by building a wheel and confirming all assets are present under `dazzle/back/alembic/`. Gated by `tests/unit/test_alembic_assets_packaging_1308.py` (config invariants + runtime-path existence) and `tests/unit/test_db_cli_env_resolution_1308.py`.
+- **Alembic migration assets are now shipped in the wheel (#1308 bug 2).** `script.py.mako`, `alembic.ini`, and — critically — the framework's own `0001–0004` baseline migrations under `src/dazzle/http/alembic/versions/` were **absent from every published wheel**. `versions/` has no `__init__.py`, so `[tool.setuptools.packages.find]` with `namespaces = false` never discovered it, and there was no `package-data` entry to ship the files as data. Result: `dazzle db revision --autogenerate` failed (missing template) and a fresh `pip install dazzle-dsl` had no framework migrations at all (invisible to local dev because the repo install is editable). Fix: added a `"dazzle.http.alembic" = ["*.mako", "*.ini", "versions/*.py"]` package-data entry plus a matching `MANIFEST.in` recursive-include. Verified by building a wheel and confirming all assets are present under `dazzle/http/alembic/`. Gated by `tests/unit/test_alembic_assets_packaging_1308.py` (config invariants + runtime-path existence) and `tests/unit/test_db_cli_env_resolution_1308.py`.
 
 ### Agent Guidance
 
@@ -3430,11 +3438,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`convert_entities` now propagates `display_field` to the back-runtime `EntitySpec` (#1302) — completing #1299.** #1299 added a `source_display_field` fallback so a self-referential `member_via: id` cohort_strip cell labels from the source entity's `display_field` instead of the raw UUID. But the fix was defeated one layer up: the back-runtime `EntitySpec` (built by `dazzle.back.converters.entity_converter.convert_entities`) didn't carry `display_field` at all, so the `getattr(ctx.entity_spec, "display_field", "")` at the call site always resolved to `""` and the priority-3 fallback never fired — `member_via: id` still rendered the UUID at runtime. Added `display_field` to the back `EntitySpec` and propagated it in `convert_entities`. This is the general fix: any runtime consumer reading `entity_spec.display_field` (not just cohort_strip) now sees the declared value. Verified end-to-end — the workspace ctx's `entity_spec` is name-matched from the converted-entity list, so the value now reaches the #1299 call site. Covered by `tests/unit/test_entity_converter_display_field_1302.py`.
+- **`convert_entities` now propagates `display_field` to the back-runtime `EntitySpec` (#1302) — completing #1299.** #1299 added a `source_display_field` fallback so a self-referential `member_via: id` cohort_strip cell labels from the source entity's `display_field` instead of the raw UUID. But the fix was defeated one layer up: the back-runtime `EntitySpec` (built by `dazzle.http.converters.entity_converter.convert_entities`) didn't carry `display_field` at all, so the `getattr(ctx.entity_spec, "display_field", "")` at the call site always resolved to `""` and the priority-3 fallback never fired — `member_via: id` still rendered the UUID at runtime. Added `display_field` to the back `EntitySpec` and propagated it in `convert_entities`. This is the general fix: any runtime consumer reading `entity_spec.display_field` (not just cohort_strip) now sees the declared value. Verified end-to-end — the workspace ctx's `entity_spec` is name-matched from the converted-entity list, so the value now reaches the #1299 call site. Covered by `tests/unit/test_entity_converter_display_field_1302.py`.
 
 ### Agent Guidance
 
-- **The back-runtime `EntitySpec` (`dazzle.back.specs.entity`) is a *converted* projection of the IR `EntitySpec`, not the IR type itself** — fields exist only if `convert_entities` explicitly copies them. When a runtime consumer reads `entity_spec.<attr>` and gets an empty/missing value despite the DSL declaring it, check that `convert_entities` propagates that attr (the #1302 class of bug). Prefer fixing the converter (general) over re-deriving the value at each call site.
+- **The back-runtime `EntitySpec` (`dazzle.http.specs.entity`) is a *converted* projection of the IR `EntitySpec`, not the IR type itself** — fields exist only if `convert_entities` explicitly copies them. When a runtime consumer reads `entity_spec.<attr>` and gets an empty/missing value despite the DSL declaring it, check that `convert_entities` propagates that attr (the #1302 class of bug). Prefer fixing the converter (general) over re-deriving the value at each call site.
 
 ## [0.80.50] - 2026-05-30
 
@@ -3484,17 +3492,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Agent Guidance
 
-- **Rate limiting is live on generated entity API routes (since #1196), keyed per-user (#1296), at the profile `api_limit` — `standard` is now 300/min (#1298).** To tune for an app whose SSR pages fan out many client XHRs, set `DAZZLE_RATE_LIMIT_API=<N>/minute` (and `_AUTH` / `_UPLOAD` / `_2FA`) per-deploy rather than switching to `basic` (which strips CSP/HSTS/auth/CORS). Do **not** reach for the per-entity `rate_limit:` DSL field — it is parsed into the IR but not consumed by the route generator. Limits live in `dazzle.back.runtime.rate_limit`; the knobs are env-resolved at server boot in `apply_rate_limiting`.
+- **Rate limiting is live on generated entity API routes (since #1196), keyed per-user (#1296), at the profile `api_limit` — `standard` is now 300/min (#1298).** To tune for an app whose SSR pages fan out many client XHRs, set `DAZZLE_RATE_LIMIT_API=<N>/minute` (and `_AUTH` / `_UPLOAD` / `_2FA`) per-deploy rather than switching to `basic` (which strips CSP/HSTS/auth/CORS). Do **not** reach for the per-entity `rate_limit:` DSL field — it is parsed into the IR but not consumed by the route generator. Limits live in `dazzle.http.runtime.rate_limit`; the knobs are env-resolved at server boot in `apply_rate_limiting`.
 
 ## [0.80.47] - 2026-05-30
 
 ### Added
 
-- **Custom per-entity detail viewers can now delegate to the generic detail rendering (#1297).** A `render: <name>` renderer on a `mode: view` surface already routes `/app/<entity>/{id}` detail pages through the project's registered handler (wired by "Plans 3+8", tested since #1028) — but the handler received only a flattened ctx dict, so it couldn't *fall through* to the standard field-section layout (the old Jinja `{% include "dz://components/detail_view.html" %}` move). The VIEW dispatch ctx now carries the original `DetailContext` under `ctx["detail_context"]`, and `render_detail_view` is exported from `dazzle.ui.runtime` as the canonical delegation helper. A viewer renders its bespoke chrome, then `render_detail_view(ctx["detail_context"])` for the generic body — lazy, so a full replacement costs nothing. Worked example: `examples/custom_renderer/app/render/feedback_detail.py` (+ a `mode: view` `feedback_detail` surface and `register_all`). Covered by 2 new tests appended to `tests/unit/test_dispatch_ctx_detail_view.py`.
+- **Custom per-entity detail viewers can now delegate to the generic detail rendering (#1297).** A `render: <name>` renderer on a `mode: view` surface already routes `/app/<entity>/{id}` detail pages through the project's registered handler (wired by "Plans 3+8", tested since #1028) — but the handler received only a flattened ctx dict, so it couldn't *fall through* to the standard field-section layout (the old Jinja `{% include "dz://components/detail_view.html" %}` move). The VIEW dispatch ctx now carries the original `DetailContext` under `ctx["detail_context"]`, and `render_detail_view` is exported from `dazzle.page.runtime` as the canonical delegation helper. A viewer renders its bespoke chrome, then `render_detail_view(ctx["detail_context"])` for the generic body — lazy, so a full replacement costs nothing. Worked example: `examples/custom_renderer/app/render/feedback_detail.py` (+ a `mode: view` `feedback_detail` surface and `register_all`). Covered by 2 new tests appended to `tests/unit/test_dispatch_ctx_detail_view.py`.
 
 ### Fixed
 
-- **Corrected the stale "Template Overrides" docs that sent #1297 down a dead end.** `docs/reference/htmx-templates.md` still documented the removed (ADR-0023 / #1042) Jinja `ChoiceLoader` + `dz://` + `{# dazzle:override … #}` mechanism and a non-existent `dazzle overrides scan|check|list` CLI as if usable — the exact recipe AegisMark followed to override `components/detail_view.html`, which silently became dead code. Replaced that section with the current extension points (custom renderers + `@primitive` registry) and a per-entity detail-viewer recipe. Also fixed the `dazzle.ui.runtime` module docstring's "Jinja2 templates" claim.
+- **Corrected the stale "Template Overrides" docs that sent #1297 down a dead end.** `docs/reference/htmx-templates.md` still documented the removed (ADR-0023 / #1042) Jinja `ChoiceLoader` + `dz://` + `{# dazzle:override … #}` mechanism and a non-existent `dazzle overrides scan|check|list` CLI as if usable — the exact recipe AegisMark followed to override `components/detail_view.html`, which silently became dead code. Replaced that section with the current extension points (custom renderers + `@primitive` registry) and a per-entity detail-viewer recipe. Also fixed the `dazzle.page.runtime` module docstring's "Jinja2 templates" claim.
 
 ### Agent Guidance
 
@@ -3509,7 +3517,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Agent Guidance
 
-- **Deploying the #1296 fix on Heroku/single-dyno:** the entity-page 404/empty-list bug is fixed **automatically** on upgrade (the loopback self-fetch exemption needs no config). To *also* get correct per-user rate limiting behind the proxy, set `DAZZLE_RATE_LIMIT_TRUSTED_PROXIES=1` (Heroku router / Cloudflare = 1 hop). Leaving it at 0 is safe (no spoofing) but keeps external users bucketed by the proxy IP. The limiter's key func lives in `dazzle.back.runtime.rate_limit.make_rate_limit_key`; it replaced slowapi's `get_remote_address`. Note slowapi's `exempt_when()` receives no request, so per-request exemption must go through the `key_func` (which does receive the request) — hence the unique-key approach rather than a request filter.
+- **Deploying the #1296 fix on Heroku/single-dyno:** the entity-page 404/empty-list bug is fixed **automatically** on upgrade (the loopback self-fetch exemption needs no config). To *also* get correct per-user rate limiting behind the proxy, set `DAZZLE_RATE_LIMIT_TRUSTED_PROXIES=1` (Heroku router / Cloudflare = 1 hop). Leaving it at 0 is safe (no spoofing) but keeps external users bucketed by the proxy IP. The limiter's key func lives in `dazzle.http.runtime.rate_limit.make_rate_limit_key`; it replaced slowapi's `get_remote_address`. Note slowapi's `exempt_when()` receives no request, so per-request exemption must go through the `key_func` (which does receive the request) — hence the unique-key approach rather than a request filter.
 
 ## [0.80.45] - 2026-05-30
 
@@ -3699,7 +3707,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Consolidated the `_is_safe_redirect_path` open-redirect validator, which was duplicated (logic-identical) across 5 auth route modules (password_login, magic_link, sso, email_verification, two_factor_form). One shared implementation now lives in `dazzle/back/runtime/auth/redirect_safety.py:is_safe_redirect_path`; each module imports it under the same local name, so all call sites and test imports are unchanged. Eliminates the risk of one copy drifting into a real open redirect.
+- Consolidated the `_is_safe_redirect_path` open-redirect validator, which was duplicated (logic-identical) across 5 auth route modules (password_login, magic_link, sso, email_verification, two_factor_form). One shared implementation now lives in `dazzle/http/runtime/auth/redirect_safety.py:is_safe_redirect_path`; each module imports it under the same local name, so all call sites and test imports are unchanged. Eliminates the risk of one copy drifting into a real open redirect.
 
 ### Security
 
@@ -3742,7 +3750,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Refreshed the `.claude/commands/` playbooks after the #1056 `dazzle_back`/`dazzle_ui` → `dazzle/` merge and the #1042 Jinja2 removal. Fixed dead `src/dazzle_back/` and `src/dazzle_ui/templates/` path references in `smells.md` (4 greps that silently passed by scanning deleted dirs), `check.md`, `cimonitor.md`, `framework-ux.md`, and `ux-converge.md`. Converged the mypy gate to the CI-matching `mypy src/dazzle` across `/check`, `/ship`, and `/cimonitor` (was a narrow `src/dazzle/core …` scope in `/check` that missed `render/ ui/ back/runtime/`). Corrected `/ship`'s commit attribution to Opus 4.8 and removed dead `improve/references/*.md` pointers from `framework-ux.md`. Updated `improve.md`'s migration note to reflect completed consolidation.
+- Refreshed the `.claude/commands/` playbooks after the #1056 `dazzle_http`/`dazzle_page` → `dazzle/` merge and the #1042 Jinja2 removal. Fixed dead `src/dazzle_http/` and `src/dazzle_page/templates/` path references in `smells.md` (4 greps that silently passed by scanning deleted dirs), `check.md`, `cimonitor.md`, `framework-ux.md`, and `ux-converge.md`. Converged the mypy gate to the CI-matching `mypy src/dazzle` across `/check`, `/ship`, and `/cimonitor` (was a narrow `src/dazzle/core …` scope in `/check` that missed `render/ ui/ back/runtime/`). Corrected `/ship`'s commit attribution to Opus 4.8 and removed dead `improve/references/*.md` pointers from `framework-ux.md`. Updated `improve.md`'s migration note to reflect completed consolidation.
 
 ### Agent Guidance
 
@@ -3768,7 +3776,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Per-request session cookie naming for `tenant_host:` apps (#1289 slice 4 follow-up). New `dazzle.back.runtime.auth.cookie_name` module exposes three helpers: `select_write_name(request, user_roles, default)` for issuing the right cookie on login/signup/2FA-verify/SSO/password-change/password-reset; `read_session_id(request, default)` for reading the session id from whichever recognised cookie is present (legacy preferred during the rollout window so existing sessions don't get logged out); `names_to_clear(request, default)` for logout flows that need to remove every possible name. Wired through every write surface: `password_login_routes.py`, `magic_link_routes.py`, `routes_2fa.py`, `sso_routes.py`, `routes.py` (JSON login/register/logout/change-password/reset-password). Wired through every read surface: `dependencies.py:get_current_user` / `create_deny_dependency` / `create_optional_auth_dependency`, `current.py:_resolve_auth`. 16 unit tests in `test_auth_cookie_name.py` cover both legacy and tenant_host modes including the canonical-host + super-admin → apex-cookie path.
+- Per-request session cookie naming for `tenant_host:` apps (#1289 slice 4 follow-up). New `dazzle.http.runtime.auth.cookie_name` module exposes three helpers: `select_write_name(request, user_roles, default)` for issuing the right cookie on login/signup/2FA-verify/SSO/password-change/password-reset; `read_session_id(request, default)` for reading the session id from whichever recognised cookie is present (legacy preferred during the rollout window so existing sessions don't get logged out); `names_to_clear(request, default)` for logout flows that need to remove every possible name. Wired through every write surface: `password_login_routes.py`, `magic_link_routes.py`, `routes_2fa.py`, `sso_routes.py`, `routes.py` (JSON login/register/logout/change-password/reset-password). Wired through every read surface: `dependencies.py:get_current_user` / `create_deny_dependency` / `create_optional_auth_dependency`, `current.py:_resolve_auth`. 16 unit tests in `test_auth_cookie_name.py` cover both legacy and tenant_host modes including the canonical-host + super-admin → apex-cookie path.
 
 ### Security
 
@@ -3782,7 +3790,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Cross-tenant guard wired into the auth dependency (#1289 slice 5 follow-up). New `dazzle.back.runtime.tenant.guard_wiring.enforce_cross_tenant(request, auth_context)` bridges the framework-free `check_cross_tenant()` truth table to FastAPI: sniffs `__Host-<app>_session` / `__Secure-<app>_admin` cookies to classify cookie kind, normalises `AuthContext.roles` (with optional `role_` prefix stripped) to a single `user_role`, and translates the three typed guard exceptions to `HTTPException(403)`. Called from `create_auth_dependency.get_current_user` after session validation. No-op on apps without a `tenant_host:` block (and on apps that haven't adopted the new cookie names yet) — the wiring is dormant until the cookie-naming follow-up threads the new names through the login routes. 8 unit tests cover legacy app pass-through, host/apex cookie classification, and the full 403 matrix. `tests/unit/fixtures/ir_reader_baseline.json` updated to remove 6 `TenantHostSpec` fields that now have readers (canonical_hosts, expired_template, history_entity, not_found_template, slug_field, super_admin_role).
+- Cross-tenant guard wired into the auth dependency (#1289 slice 5 follow-up). New `dazzle.http.runtime.tenant.guard_wiring.enforce_cross_tenant(request, auth_context)` bridges the framework-free `check_cross_tenant()` truth table to FastAPI: sniffs `__Host-<app>_session` / `__Secure-<app>_admin` cookies to classify cookie kind, normalises `AuthContext.roles` (with optional `role_` prefix stripped) to a single `user_role`, and translates the three typed guard exceptions to `HTTPException(403)`. Called from `create_auth_dependency.get_current_user` after session validation. No-op on apps without a `tenant_host:` block (and on apps that haven't adopted the new cookie names yet) — the wiring is dormant until the cookie-naming follow-up threads the new names through the login routes. 8 unit tests cover legacy app pass-through, host/apex cookie classification, and the full 403 matrix. `tests/unit/fixtures/ir_reader_baseline.json` updated to remove 6 `TenantHostSpec` fields that now have readers (canonical_hosts, expired_template, history_entity, not_found_template, slug_field, super_admin_role).
 
 ### Agent Guidance
 
@@ -3802,7 +3810,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Cross-tenant session guard truth table (#1289 slice 5, partial). New `dazzle.back.runtime.tenant.guard` module exposes `check_cross_tenant()` + typed exceptions (`CrossTenantForbidden`, `HostCookieMissingTenant`, `ApexCookieNotSuperAdmin`). Applies the truth table from the design spec: host cookie + matching tenant → pass; host cookie + mismatch → forbidden; host cookie on apex → missing tenant; apex cookie + super-admin → pass; apex cookie + non-admin → forbidden; no cookie → pass-through. 7 unit tests cover every row. Auth-dependency wiring deferred to follow-up.
+- Cross-tenant session guard truth table (#1289 slice 5, partial). New `dazzle.http.runtime.tenant.guard` module exposes `check_cross_tenant()` + typed exceptions (`CrossTenantForbidden`, `HostCookieMissingTenant`, `ApexCookieNotSuperAdmin`). Applies the truth table from the design spec: host cookie + matching tenant → pass; host cookie + mismatch → forbidden; host cookie on apex → missing tenant; apex cookie + super-admin → pass; apex cookie + non-admin → forbidden; no cookie → pass-through. 7 unit tests cover every row. Auth-dependency wiring deferred to follow-up.
 - Public `dazzle.tenant.bust(slug)` cache invalidation API (#1289 slice 6, partial). The app_factory tenant mount now registers each `TenantHostBinding.cache` with the public registry, so project code can call `dazzle.tenant.bust(slug)` after raw-SQL renames or migration fixups that bypass Repository. 3 unit tests. Auto-bust hook on `Repository.update` deferred to follow-up (the careful surgery on a 1500-line module sits better outside the bundled slice ship).
 
 ### Deferred to follow-up
@@ -3815,7 +3823,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Tenant cookie naming helpers + state marker (#1289 slice 4, partial). New `dazzle.back.runtime.tenant.cookies` module exposes `normalise_app_name`, `host_cookie_name`, `apex_cookie_name`, and `choose_session_cookie_name` per the spec's `__Host-<app>_session` / `__Secure-<app>_admin` convention. `app_factory._stash_tenant_state_marker` attaches a frozen `(app_name, canonical_hosts, super_admin_role)` marker to `app.state.tenant_host` so slice 5's cross-tenant guard can read it. 9 unit tests on the helpers.
+- Tenant cookie naming helpers + state marker (#1289 slice 4, partial). New `dazzle.http.runtime.tenant.cookies` module exposes `normalise_app_name`, `host_cookie_name`, `apex_cookie_name`, and `choose_session_cookie_name` per the spec's `__Host-<app>_session` / `__Secure-<app>_admin` convention. `app_factory._stash_tenant_state_marker` attaches a frozen `(app_name, canonical_hosts, super_admin_role)` marker to `app.state.tenant_host` so slice 5's cross-tenant guard can read it. 9 unit tests on the helpers.
 
 ### Deferred to follow-up
 
@@ -3825,7 +3833,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `tenant_host:` runtime now wires end-to-end (#1289 Slice 3 of 7). Replaced the slice-1 `NotImplementedError` stub with the real `TenantResolutionMiddleware` — Host parsing, slug validation, NEGATIVE-cache short-circuit, async Resolver lookup, 200 / 301 / 410 / 404 / 400 / 502 dispatch. `dazzle.back.runtime.app_factory._mount_tenant_resolution_middleware` walks `AppSpec.domain.entities` for `tenant_host:` blocks, groups by `domain:`, and adds one middleware per domain. The middleware's `lookup_fn` and `history_lookup_fn` delegate to the existing Repository layer (system-context, no per-tenant scoping — we are *resolving* which tenant the request belongs to). Resolver promoted to async to await Repository coroutines via a `_maybe_await` helper that accepts sync or async callables (keeps existing unit tests valid). Framework default 404 / 410 pages ship in `dazzle.back.runtime.tenant.templates`; projects override per-block via the dotted-path `not_found_template:` / `expired_template:` sub-fields. 17 unit tests across `test_tenant_middleware.py` (5), `test_tenant_resolver.py` (9), `test_tenant_cache.py` (7).
+- `tenant_host:` runtime now wires end-to-end (#1289 Slice 3 of 7). Replaced the slice-1 `NotImplementedError` stub with the real `TenantResolutionMiddleware` — Host parsing, slug validation, NEGATIVE-cache short-circuit, async Resolver lookup, 200 / 301 / 410 / 404 / 400 / 502 dispatch. `dazzle.http.runtime.app_factory._mount_tenant_resolution_middleware` walks `AppSpec.domain.entities` for `tenant_host:` blocks, groups by `domain:`, and adds one middleware per domain. The middleware's `lookup_fn` and `history_lookup_fn` delegate to the existing Repository layer (system-context, no per-tenant scoping — we are *resolving* which tenant the request belongs to). Resolver promoted to async to await Repository coroutines via a `_maybe_await` helper that accepts sync or async callables (keeps existing unit tests valid). Framework default 404 / 410 pages ship in `dazzle.http.runtime.tenant.templates`; projects override per-block via the dotted-path `not_found_template:` / `expired_template:` sub-fields. 17 unit tests across `test_tenant_middleware.py` (5), `test_tenant_resolver.py` (9), `test_tenant_cache.py` (7).
 
 ### Agent Guidance
 
@@ -3835,7 +3843,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Tenant resolution Cache + Resolver pure-logic modules (#1289 Slice 2 of 7). New `dazzle.back.runtime.tenant.cache.TenantCache` — thread-safe LRU with TTL + `NEGATIVE` sentinel for memoised cache-misses + `bust(slug)` for invalidation. New `dazzle.back.runtime.tenant.resolver.Resolver` — walks `EntityProbe` list in order, falls through to optional `HistoryProbe` lookup, returns one of `ResolvedTenant` / `HistoryHit` / `ExpiredHistoryHit` / `None`. Lookup is delegated via injected callables so the module is testable without DB fixtures. 16 unit tests across both modules. Still not wired to the middleware — that lands in Slice 3.
+- Tenant resolution Cache + Resolver pure-logic modules (#1289 Slice 2 of 7). New `dazzle.http.runtime.tenant.cache.TenantCache` — thread-safe LRU with TTL + `NEGATIVE` sentinel for memoised cache-misses + `bust(slug)` for invalidation. New `dazzle.http.runtime.tenant.resolver.Resolver` — walks `EntityProbe` list in order, falls through to optional `HistoryProbe` lookup, returns one of `ResolvedTenant` / `HistoryHit` / `ExpiredHistoryHit` / `None`. Lookup is delegated via injected callables so the module is testable without DB fixtures. 16 unit tests across both modules. Still not wired to the middleware — that lands in Slice 3.
 
 ## [0.80.12] - 2026-05-28
 
@@ -3859,7 +3867,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Agent Guidance
 
-- Use `slug` (not `str(40)`) for any URL-safe identifier field. The bare type carries length and format validation automatically. Don't reimplement the regex in project code — the canonical helper is `dazzle.back.runtime.slug_validator.validate_slug`. Reserved-word lists stay project-side (per the issue's "Out of scope") and are layered via #1290's `pipeline/serve/app_init.py` if needed.
+- Use `slug` (not `str(40)`) for any URL-safe identifier field. The bare type carries length and format validation automatically. Don't reimplement the regex in project code — the canonical helper is `dazzle.http.runtime.slug_validator.validate_slug`. Reserved-word lists stay project-side (per the issue's "Out of scope") and are layered via #1290's `pipeline/serve/app_init.py` if needed.
 
 ## [0.80.10] - 2026-05-28
 
@@ -4010,7 +4018,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **#1283 phase 4** — Three deliverables wire the `signable: true` primitive into a usable end-to-end experience:
   - **`dazzle signing init` CLI** — new subcommand at `src/dazzle/cli/signing.py`. Mints a project-level CA + signing cert chain (ECDSA P-256, 10y / 1y validity per phase 1 decisions), emits PKCS#12 base64 + password + a fresh `SIGNING_TOKEN_SECRET` to stdout. Flags: `--project-name` (defaults to `name` in `dazzle.toml`, then CWD basename), `--country` (default `GB`), `--heroku-app NAME` (adds `heroku config:set` invocation hints), `--force` (override the `SIGNING_CERT_PFX_B64`-already-set refusal during cert rotation).
-  - **Signing-pad Island JS** — new ES module at `src/dazzle/ui/runtime/static/js/islands/signing-pad.js`, served via the framework's `/static` mount. Mounts via the existing `data-island="signing_pad"` + `data-island-src="/static/js/islands/signing-pad.js"` convention from `dz-islands.js`. Builds a `signature_pad` canvas + authority-declaration checkbox + sign/decline action buttons via `createElement`/`textContent` (no `innerHTML` with dynamic data). POSTs JSON `{token, signatory_name, signature_png_b64}` to `/api/sign/{entity}/{record}` and triggers a download of the returned signed PDF. The host page (`_signing_page`) now includes the `signature_pad@5` UMD script + `dz-islands.js` so the Island bootstraps without project-side wiring.
+  - **Signing-pad Island JS** — new ES module at `src/dazzle/page/runtime/static/js/islands/signing-pad.js`, served via the framework's `/static` mount. Mounts via the existing `data-island="signing_pad"` + `data-island-src="/static/js/islands/signing-pad.js"` convention from `dz-islands.js`. Builds a `signature_pad` canvas + authority-declaration checkbox + sign/decline action buttons via `createElement`/`textContent` (no `innerHTML` with dynamic data). POSTs JSON `{token, signatory_name, signature_png_b64}` to `/api/sign/{entity}/{record}` and triggers a download of the returned signed PDF. The host page (`_signing_page`) now includes the `signature_pad@5` UMD script + `dz-islands.js` so the Island bootstraps without project-side wiring.
   - **File persistence to `signed_document` column** — `create_signing_routes` accepts an optional `file_service` parameter. When supplied, the signed PDF is persisted via `FileService.upload(...)` and the entity row's `signed_document` field is patched with the returned URL. `ServerState` threads `self._file_service` through automatically. When the project has file uploads disabled, the PDF is still returned inline and `signed_document` stays null — graceful degradation.
 
 ### Agent Guidance
@@ -4027,8 +4035,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `GET /sign/{entity_name}/{record_id}?token=...` — validates the HMAC token, looks up the entity row, transitions `status: sent → viewed` on first access (stamping `viewed_at` / `signer_ip` / `signer_user_agent`), and returns an HTML page carrying the signing-pad placeholder. Terminal statuses (`signed`, `declined`, `expired`, `superseded`) short-circuit to a friendly message page with no row write.
   - `POST /api/sign/{entity_name}/{record_id}` — validates the token, runs the optional `signing_validator:` hook (project-supplied dotted-path callable that can raise `SigningError` to block), generates the PDF, applies the PKCS#7 + RFC 3161 timestamp signature, transitions `status: viewed → signed`, and returns the signed PDF inline (`application/pdf`). A `decline: true` body short-circuits to `status: declined`. The signing flow uses pyhanko's async API throughout (`async_sign_pdf`) so it composes cleanly with FastAPI's event loop.
 - **`dazzle.signing.service.async_sign_pdf`** — async variant of `sign_pdf` for in-loop callers. The sync `sign_pdf` wraps pyhanko's blocking entry point (`asyncio.run` internally); the async variant calls `signers.async_sign_pdf` directly so route handlers don't hit "asyncio.run() cannot be called from a running event loop". Both call into a new private `_build_signing_inputs` helper that lifts the shared pyhanko object graph.
-- **Auto-mount in `ServerState`** — `src/dazzle/back/runtime/server.py` includes the signing router conditionally on `self._repositories and self._appspec.domain` (same gating shape the bulk-routes mount uses). The router factory's `None`-return-when-no-signable-entity contract means apps that never use the primitive get a clean OpenAPI surface and the heavy crypto deps stay un-imported.
-- **API-surface scanner extension** — `dazzle.api_surface.runtime_urls` now walks `EXTRA_ROUTE_FILES` alongside `src/dazzle/back/runtime/*_routes.py`. First entry: `src/dazzle/signing/routes.py`. The runtime-urls baseline picks up the two new endpoints (`signing_routes` module) so the drift gate covers them.
+- **Auto-mount in `ServerState`** — `src/dazzle/http/runtime/server.py` includes the signing router conditionally on `self._repositories and self._appspec.domain` (same gating shape the bulk-routes mount uses). The router factory's `None`-return-when-no-signable-entity contract means apps that never use the primitive get a clean OpenAPI surface and the heavy crypto deps stay un-imported.
+- **API-surface scanner extension** — `dazzle.api_surface.runtime_urls` now walks `EXTRA_ROUTE_FILES` alongside `src/dazzle/http/runtime/*_routes.py`. First entry: `src/dazzle/signing/routes.py`. The runtime-urls baseline picks up the two new endpoints (`signing_routes` module) so the drift gate covers them.
 - **17 unit tests** at `tests/unit/test_signing/test_routes.py`: router-factory short-circuit, all GET error paths (400 missing token, 403 invalid token / token mismatch, 404 unknown record, terminal status short-circuit), GET status transition (sent→viewed, viewed→viewed no-op), POST decline path, POST validator block, POST invalid validator path, 409 on terminal-status POST, full happy-path sign-and-download (gated on `[signing]` extra).
 
 ### Security
@@ -4411,10 +4419,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — DNR docstring sweep across source files + api-reference regeneration
 
-- **Source-file DNR docstring leakage cleaned across ~60 files** in `src/dazzle/back/`, `src/dazzle/ui/`, `src/dazzle/mcp/`, `src/dazzle/core/`, and `src/dazzle_e2e/`. Docstrings, comments, log strings, and user-visible banner text (`combined_server.py` startup banners) now refer to "the Dazzle runtime", "Dazzle backend runtime", "Dazzle UI runtime" instead of "DNR" / "Dazzle Native Runtime". The auto-generated `docs/api-reference/files/` pages were down to 137 DNR-bearing files; after the source sweep + regen, only one remains — and that one is intentional (see preservation note below).
-- **JS API surface PRESERVED.** `src/dazzle/ui/runtime/realtime_client.py` emits browser JavaScript that uses `global.DNR` / `window.DNR` / `DNRRealtime` / `DNR.createRealtimeClient` as load-bearing identifiers — the `dnr-ui/` browser-side runtime module defines `const DNR = {...}` and assigns it to `window.DNR`. Renaming those JS identifiers would break consumers, so they're left in place. Only the Python module docstring + the JS-emission section labels are rewritten; everything that crosses into the generated JS keeps the `DNR` namespace name.
-- **`scripts/reference_docs.config.json` cleaned of dead include paths.** The config still listed `src/dazzle_back/**/*.py` and `src/dazzle_ui/**/*.py` (paths that haven't existed since the package moved inside `src/dazzle/`). Pruned to the live paths.
-- **Orphan api-reference pages pruned.** 293 `*.py.md` entries pointed at source files that have been moved or deleted; deleted. Two orphan module summaries (`modules/dazzle_back.md`, `modules/dazzle_ui.md`) linking to non-existent `src/dazzle_back/**` paths also removed — they were the source of 171 mkdocs strict-mode broken-link warnings. `mkdocs build --strict` is clean again.
+- **Source-file DNR docstring leakage cleaned across ~60 files** in `src/dazzle/http/`, `src/dazzle/page/`, `src/dazzle/mcp/`, `src/dazzle/core/`, and `src/dazzle_e2e/`. Docstrings, comments, log strings, and user-visible banner text (`combined_server.py` startup banners) now refer to "the Dazzle runtime", "Dazzle backend runtime", "Dazzle UI runtime" instead of "DNR" / "Dazzle Native Runtime". The auto-generated `docs/api-reference/files/` pages were down to 137 DNR-bearing files; after the source sweep + regen, only one remains — and that one is intentional (see preservation note below).
+- **JS API surface PRESERVED.** `src/dazzle/page/runtime/realtime_client.py` emits browser JavaScript that uses `global.DNR` / `window.DNR` / `DNRRealtime` / `DNR.createRealtimeClient` as load-bearing identifiers — the `dnr-ui/` browser-side runtime module defines `const DNR = {...}` and assigns it to `window.DNR`. Renaming those JS identifiers would break consumers, so they're left in place. Only the Python module docstring + the JS-emission section labels are rewritten; everything that crosses into the generated JS keeps the `DNR` namespace name.
+- **`scripts/reference_docs.config.json` cleaned of dead include paths.** The config still listed `src/dazzle_http/**/*.py` and `src/dazzle_page/**/*.py` (paths that haven't existed since the package moved inside `src/dazzle/`). Pruned to the live paths.
+- **Orphan api-reference pages pruned.** 293 `*.py.md` entries pointed at source files that have been moved or deleted; deleted. Two orphan module summaries (`modules/dazzle_http.md`, `modules/dazzle_page.md`) linking to non-existent `src/dazzle_http/**` paths also removed — they were the source of 171 mkdocs strict-mode broken-link warnings. `mkdocs build --strict` is clean again.
 
 ## [0.74.3] - 2026-05-25
 
@@ -4428,7 +4436,7 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 - **`docs_gen.py` gains a third page shape: `auto_source`.** Pages declaring `auto_source = "<key>"` in `doc_pages.toml` dispatch to a generator function that introspects live code. First registered generator: `mcp_tools`. Adding new live inventories is a two-step change (TOML page declaration + generator function in `_generate_auto_source`).
 - **README MCP section** swapped the stale "26 tools with 170+ operations" claim for a link to the live inventory page plus a build-time count.
 - **DNR / "Dazzle Native Runtime" retired across user-facing docs.** Renamed in `docs/architecture/overview.md` (status banner explaining the rename), `docs/architecture/dsl-to-appspec.md`, `docs/architecture/mcp-server.md`, `docs/contributing/testing.md`, `docs/contributing/dev-setup.md`, `docs/guides/observability.md`, `docs/examples/support-tickets.md`, `docs/examples/fieldtest-hub.md`, plus the KB source `src/dazzle/mcp/semantics_kb/testing.toml` so regenerated reference pages stay clean. The only remaining DNR mentions in user-facing docs are in the architecture/overview.md status banner that *documents* the rename.
-- **Package-path refresh: `src/dazzle_back/` → `src/dazzle/back/`, `src/dazzle_ui/` → `src/dazzle/ui/`.** The package was moved inside the main `dazzle` namespace; docs hadn't caught up. Swept across `docs/llms.txt`, `docs/CSS_MIGRATION_GUIDE.md`, `docs/typed-fragment-pilot-guide.md`, every ADR that mentioned the old paths (0005, 0008, 0011, 0012, 0014, 0017, 0021, 0022), `docs/contributing/*.md`, `docs/guides/marketing-conformance.md`, `docs/reference/card-safety-invariants.md`, the recent counter-priors, and the doc-infra plan.
+- **Package-path refresh: `src/dazzle_http/` → `src/dazzle/http/`, `src/dazzle_page/` → `src/dazzle/page/`.** The package was moved inside the main `dazzle` namespace; docs hadn't caught up. Swept across `docs/llms.txt`, `docs/CSS_MIGRATION_GUIDE.md`, `docs/typed-fragment-pilot-guide.md`, every ADR that mentioned the old paths (0005, 0008, 0011, 0012, 0014, 0017, 0021, 0022), `docs/contributing/*.md`, `docs/guides/marketing-conformance.md`, `docs/reference/card-safety-invariants.md`, the recent counter-priors, and the doc-infra plan.
 - **Tests**: `test_docs_gen.py` updated for 21 pages (added `mcp-tools`); two new tests pin the `auto_source` shape (`test_mcp_tools_page_is_auto_source`) and the registry-derived count (`test_inventory_counts_match_registry`).
 
 ## [0.74.1] - 2026-05-25
@@ -4491,8 +4499,8 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Fixed (#1251 — auth_routes startup failed under non-basic security profiles)
 
-- **`safe_limit(limit_str)` helper** at `src/dazzle/back/runtime/rate_limit.py:56` wraps `Limiter.limit(...)` in a way that's robust to `functools.partial` handlers. slowapi's real `Limiter.limit()` introspects `handler.__name__` to register the limit; partials don't have `__name__`, so the direct decorator chain (which the auth + 2FA routers used) raised `AttributeError` at module-import time as soon as the real Limiter was wired. Latent on `basic` profile (where `_NoOpLimiter` ignored the partial entirely) and surfaced by #1235 in v0.72.8 when DSL-declared profiles started reaching the runtime.
-- **5 call sites converted** to `safe_limit`: login / register / forgot-password / reset-password (`src/dazzle/back/runtime/auth/routes.py`) and 2FA verify (`src/dazzle/back/runtime/auth/routes_2fa.py`). Other partial-bound handlers in the same files are not rate-limited and were unaffected.
+- **`safe_limit(limit_str)` helper** at `src/dazzle/http/runtime/rate_limit.py:56` wraps `Limiter.limit(...)` in a way that's robust to `functools.partial` handlers. slowapi's real `Limiter.limit()` introspects `handler.__name__` to register the limit; partials don't have `__name__`, so the direct decorator chain (which the auth + 2FA routers used) raised `AttributeError` at module-import time as soon as the real Limiter was wired. Latent on `basic` profile (where `_NoOpLimiter` ignored the partial entirely) and surfaced by #1235 in v0.72.8 when DSL-declared profiles started reaching the runtime.
+- **5 call sites converted** to `safe_limit`: login / register / forgot-password / reset-password (`src/dazzle/http/runtime/auth/routes.py`) and 2FA verify (`src/dazzle/http/runtime/auth/routes_2fa.py`). Other partial-bound handlers in the same files are not rate-limited and were unaffected.
 - **Deliberately uses bare `handler.__name__ = handler.func.__name__`**, not `functools.update_wrapper`. `update_wrapper` also sets `__wrapped__` on the partial, which makes FastAPI's `add_api_route` traverse past the partial to the underlying function and try to wire the pre-bound `deps` argument as a request parameter — breaking every partial-bound auth handler. (Caught by the user-preferences tests on first attempt; documented inline in `safe_limit`'s docstring.)
 - **5 new tests** at `tests/unit/test_rate_limit_safe_partial_1251.py` pin: safe_limit unblocks the partial, the plain-function path is unchanged, a synthetic strict limiter survives introspection, the raw partial without the helper still raises (negative regression confirming the test infrastructure), and `__wrapped__` is NOT set on the partial.
 
@@ -4543,27 +4551,27 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Fixed (#1232 — task_inbox source filter resolves dotted FK paths)
 
-- **`entity_ref_targets` threaded into `WorkspaceRegionContext`** at `src/dazzle/back/runtime/workspace_context.py:50`. The map (`entity_name → {fk_field: target_entity}`) is built once at app boot (already lived in `ServerConfig.entity_ref_targets`) and is now flowed through `subsystems/system_routes.py` → `WorkspaceRouteBuilder.__init__` → both `WorkspaceRegionContext` construction sites in `workspace_route_builder.py`.
+- **`entity_ref_targets` threaded into `WorkspaceRegionContext`** at `src/dazzle/http/runtime/workspace_context.py:50`. The map (`entity_name → {fk_field: target_entity}`) is built once at app boot (already lived in `ServerConfig.entity_ref_targets`) and is now flowed through `subsystems/system_routes.py` → `WorkspaceRouteBuilder.__init__` → both `WorkspaceRegionContext` construction sites in `workspace_route_builder.py`.
 - **`_fetch_task_inbox_items_per_source` consumes the source entity's FK map** at `workspace_card_fetchers.py:226` and passes it to `_extract_condition_filters`. Without this, any dotted left-side path (`teacher.user = current_user`) fell through as a literal `teacher.user` filter key the repository layer couldn't recognise — so per-source filters were silently inert for any source that needed a one-hop FK JOIN.
 - **2 new tests** in `tests/unit/test_task_inbox_fan_out.py` pin: with ref_targets, the dotted path resolves to a `*__in_subquery` filter carrying the right target table; without ref_targets (the pre-fix shape), the path falls through as a literal key — regression boundary.
 - Gap 2 from the issue (two-hop FK chains like `teacher.user.id`) is out of scope here — `_build_fk_path_subquery` itself only handles one-hop paths and is tracked separately.
 
 ### Fixed (#1231 — cohort_strip aggregate cells render for scoped personas)
 
-- **`_strip_scope_predicate` helper** at `src/dazzle/back/runtime/workspace_region_computes.py` removes the `__scope_predicate` slot from `scope_filters` before the `share:` / `via:` paths compose the aggregate query. The raw scope predicate is qualified by source-entity name (e.g. `"ClassEnrolment"."school" = $N`), but the source table isn't in either bespoke FROM clause — for `via:` only `a JOIN j` appears; for `share:` the source is aliased `s`. The IN clause (`s."id" IN (...)` or `j.{member_col} IN (...)`) already enforces source-row scoping (only members whose source row passed RBAC are in `member_ids`), so the predicate is redundant and was the source of the `UndefinedTable` failure that boot-time silently caught.
+- **`_strip_scope_predicate` helper** at `src/dazzle/http/runtime/workspace_region_computes.py` removes the `__scope_predicate` slot from `scope_filters` before the `share:` / `via:` paths compose the aggregate query. The raw scope predicate is qualified by source-entity name (e.g. `"ClassEnrolment"."school" = $N`), but the source table isn't in either bespoke FROM clause — for `via:` only `a JOIN j` appears; for `share:` the source is aliased `s`. The IN clause (`s."id" IN (...)` or `j.{member_col} IN (...)`) already enforces source-row scoping (only members whose source row passed RBAC are in `member_ids`), so the predicate is redundant and was the source of the `UndefinedTable` failure that boot-time silently caught.
 - Pre-fix symptom: cohort_strip cells silently rendered empty for any non-admin persona with a scope rule on the source entity (only the WARNING in the server log hinted at the failure). The `where:` predicate on the aggregated entity still flows through normally and is retargeted to the FROM alias (#1229).
 - **2 new tests** in `tests/unit/test_cohort_aggregate_compute.py` pin both `share:` and `via:` paths strip the source-entity scope predicate.
 
 ### Fixed (#1235 — DSL-declared `security_profile:` now reaches the runtime)
 
-- **`build_server_config()` now threads `appspec.security.profile.value` into `ServerConfig.security_profile`** at `src/dazzle/back/runtime/app_factory.py:331`. The DSL field parsed correctly into `SecurityConfig` since #1196, but the build_server_config seam never read it back — so the rate-limit decorator (#1196) and CSRF policy stayed at `"basic"` (no-op) on every DSL-only consumer regardless of what the DSL declared.
+- **`build_server_config()` now threads `appspec.security.profile.value` into `ServerConfig.security_profile`** at `src/dazzle/http/runtime/app_factory.py:331`. The DSL field parsed correctly into `SecurityConfig` since #1196, but the build_server_config seam never read it back — so the rate-limit decorator (#1196) and CSRF policy stayed at `"basic"` (no-op) on every DSL-only consumer regardless of what the DSL declared.
 - **`DAZZLE_SECURITY_PROFILE` env-var override** wired into both `create_app_factory()` (`app_factory.py:855`) and the two `combined_server.py` call sites. Mirrors the `DAZZLE_AUDIT_INTEGRITY` pattern from #1206.
 - **Fail-loud at the build boundary**: an unknown profile value (e.g. typo `"stric"`) now raises `ValueError` instead of silently shipping the default.
 - **3 new tests** in `tests/unit/test_security.py` pin: DSL value flows through, explicit kwarg overrides, invalid profiles rejected.
 
 ### Refactored (#1239 — Repository.py subtype-path tidy-ups)
 
-- **`_translate_integrity_error(exc, table_name)` helper** extracted at `src/dazzle/back/runtime/repository.py:465`. Collapses four ~19-line copies of the integrity-error → `ConstraintViolationError` translation block (in `Repository.create`, `Repository.update`, `create_subtype`, `update_subtype`) into one shared helper. No behaviour change — all four sites raise the same `ConstraintViolationError` shape, only now from one source of truth.
+- **`_translate_integrity_error(exc, table_name)` helper** extracted at `src/dazzle/http/runtime/repository.py:465`. Collapses four ~19-line copies of the integrity-error → `ConstraintViolationError` translation block (in `Repository.create`, `Repository.update`, `create_subtype`, `update_subtype`) into one shared helper. No behaviour change — all four sites raise the same `ConstraintViolationError` shape, only now from one source of truth.
 - **Removed `_subtype_kind_value` single-use wrapper**. The one call site (`create_subtype`) now inlines `_to_snake_case(child_spec.name)` directly, matching the existing `pg_backend.py` convention.
 
 ### Added (#1238 — project-KG indexes subtype polymorphism relations)
@@ -4579,7 +4587,7 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Fixed (#1229 — cohort_strip `share:`/`via:` + aggregate `where:` retargets predicate to FROM alias)
 
-- **`_retarget_scope_predicate_to_alias` helper** at `src/dazzle/back/runtime/workspace_region_computes.py` rewrites entity-name-qualified column refs in a composed `__scope_predicate` SQL fragment to the FROM-clause alias. The `share:` / `via:` cohort aggregate paths alias the aggregated table to `a` in their bespoke FROM clauses, but `_build_aggregate_filters` compiles the typed `where:` predicate against the aggregated *entity name* — emitting `"MarkingResult"."col"` qualifiers that Postgres rejects (UndefinedTable) in the aliased scope.
+- **`_retarget_scope_predicate_to_alias` helper** at `src/dazzle/http/runtime/workspace_region_computes.py` rewrites entity-name-qualified column refs in a composed `__scope_predicate` SQL fragment to the FROM-clause alias. The `share:` / `via:` cohort aggregate paths alias the aggregated table to `a` in their bespoke FROM clauses, but `_build_aggregate_filters` compiles the typed `where:` predicate against the aggregated *entity name* — emitting `"MarkingResult"."col"` qualifiers that Postgres rejects (UndefinedTable) in the aliased scope.
 - **Wired into `_batched_share_cohort_aggregate` and `_batched_via_cohort_aggregate`** so any consumer of `share:` or `via:` with an aggregate `where:` clause now produces executable SQL. Without the fix, the exception was swallowed downstream and the cells silently rendered empty.
 - **2 new tests** in `tests/unit/test_cohort_aggregate_compute.py` (`test_share_with_where_clause_uses_alias_not_table_name`, `test_via_with_where_clause_uses_alias_not_table_name`) pin: composed `where:` SQL must reference `"a"."col"`, never `"<EntityName>"."col"`.
 
@@ -4590,7 +4598,7 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Fixed (#1237 — Repository.list() subtype JOIN coercion)
 
-- **`Repository.list()` now routes through the dict-coercion path when a subtype JOIN is active** at `src/dazzle/back/runtime/repository.py:1157`. Mirrors the `Repository.read()` fix shipped in v0.72.0 (see commit `e23ef886`). Without this, `list()` on a polymorphic-child entity would JOIN to the base table at the SQL level (correct) but then map each row through `self._row_to_model(...)`, dropping `acquired_at` / `location` / `kind` and any other base column under Pydantic's default `extra='ignore'`. Not yet symptomatic in any shipping list surface — list-mode renderers were reaching for child-only columns — but it would have bitten the moment a list surface tried to surface a base column, and is structurally required for parity with `read()`.
+- **`Repository.list()` now routes through the dict-coercion path when a subtype JOIN is active** at `src/dazzle/http/runtime/repository.py:1157`. Mirrors the `Repository.read()` fix shipped in v0.72.0 (see commit `e23ef886`). Without this, `list()` on a polymorphic-child entity would JOIN to the base table at the SQL level (correct) but then map each row through `self._row_to_model(...)`, dropping `acquired_at` / `location` / `kind` and any other base column under Pydantic's default `extra='ignore'`. Not yet symptomatic in any shipping list surface — list-mode renderers were reaching for child-only columns — but it would have bitten the moment a list surface tried to surface a base column, and is structurally required for parity with `read()`.
 - **1 new test** at `tests/unit/test_subtype_of_query.py::test_list_on_child_returns_dicts_with_base_columns` pins: child `list()` returns items as dicts (not stripped models) carrying `kind`, `location`, and child columns.
 
 ### Fixed (#1234 — `day_timeline as_of: today` unparseable)
@@ -4603,7 +4611,7 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Added (#1217 Phase 3(e) feature-complete — `Repository.read()` JOIN parity)
 
-- **`Repository.read()` JOIN parity for polymorphic-child entities** at `src/dazzle/back/runtime/repository.py:752`. When `self._subtype_join_sql` is set, read() now emits `SELECT {table}.*, <base cols> FROM {table} JOIN "Base" ON {table}."id" = "Base"."id" WHERE {table}."id" = ?` and returns a dict (extending the existing dict-return gate that already handles `include` / `latest_one` / traversal cases). Without this, the renderer wiring shipped in v0.71.186 would silently return empty for polymorphic detail views — a single-row fetch returns only the child's columns under Pydantic's default `extra='ignore'`. Defensive assert ensures soft_delete + temporal clauses remain unreachable on subtype children (linker rules `E_SUBTYPE_SOFT_DELETE_ON_CHILD` + temporal-on-base convention). Non-subtype `else` branch byte-for-byte unchanged.
+- **`Repository.read()` JOIN parity for polymorphic-child entities** at `src/dazzle/http/runtime/repository.py:752`. When `self._subtype_join_sql` is set, read() now emits `SELECT {table}.*, <base cols> FROM {table} JOIN "Base" ON {table}."id" = "Base"."id" WHERE {table}."id" = ?` and returns a dict (extending the existing dict-return gate that already handles `include` / `latest_one` / traversal cases). Without this, the renderer wiring shipped in v0.71.186 would silently return empty for polymorphic detail views — a single-row fetch returns only the child's columns under Pydantic's default `extra='ignore'`. Defensive assert ensures soft_delete + temporal clauses remain unreachable on subtype children (linker rules `E_SUBTYPE_SOFT_DELETE_ON_CHILD` + temporal-on-base convention). Non-subtype `else` branch byte-for-byte unchanged.
 - **3 new tests** at `tests/unit/test_subtype_read_join.py` pin: (a) child read emits JOIN + extra base cols + source-qualified id predicate + `{table}.*` (not bare `*`); (b) base read uses unchanged plain `SELECT *` shape; (c) child read returns a dict carrying `kind` / `location` so the renderer can dispatch.
 - **Phase 3(e) bumped to MINOR** (0.71.x → 0.72.0) to mark feature completion. `subtype_of:` now flows end-to-end: DSL author → parser → linker (11 rules) → DDL with FK + cascade + trigger → atomic CRUD → subtype-aware list AND read JOIN → subtype_panel section dispatch in the dispatch ctx builder → renderer (unchanged). KB + validator + inline guidance steer toward alternatives. The asset_registry fixture is the canonical worked example.
 
@@ -4620,8 +4628,8 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Added (#1217 follow-up — `subtype_panel:` renderer wiring)
 
-- **Subtype-panel dispatch in `_build_dispatch_ctx`** at `src/dazzle/ui/runtime/page_routes.py:1245`. The detail-branch field builder now walks `surface.sections` for any with `subtype_panel:`, resolves the per-subtype surface via `resolve_subtype_panel_surface(section, row_kind, appspec)` when `item["kind"]` matches a branch, and appends the resolved surface's section elements as additional ctx fields. The fragment renderer stays section-ignorant — augmentation lives one layer up where the appspec is reachable, the row is in hand, and the field list is being built anyway.
-- **`RuntimeServices.app_spec: Any = None`** field added so the parsed AppSpec is reachable from anywhere services flows. Set at server boot (`src/dazzle/back/runtime/server.py:468` neighbourhood) immediately before `app.state.services = services`. Documented in the RuntimeServices "Optional services" docstring section as the polymorphic-surface lookup point.
+- **Subtype-panel dispatch in `_build_dispatch_ctx`** at `src/dazzle/page/runtime/page_routes.py:1245`. The detail-branch field builder now walks `surface.sections` for any with `subtype_panel:`, resolves the per-subtype surface via `resolve_subtype_panel_surface(section, row_kind, appspec)` when `item["kind"]` matches a branch, and appends the resolved surface's section elements as additional ctx fields. The fragment renderer stays section-ignorant — augmentation lives one layer up where the appspec is reachable, the row is in hand, and the field list is being built anyway.
+- **`RuntimeServices.app_spec: Any = None`** field added so the parsed AppSpec is reachable from anywhere services flows. Set at server boot (`src/dazzle/http/runtime/server.py:468` neighbourhood) immediately before `app.state.services = services`. Documented in the RuntimeServices "Optional services" docstring section as the polymorphic-surface lookup point.
 - **`_build_dispatch_ctx(render_ctx, surface, *, services=None)`** — new optional `services` kwarg threads through from the single dispatch call site at `page_routes.py:1581`. Defaults to None so existing positional callers (and the implicit-None test stubs) keep working unchanged; the augmentation gates on `app_spec is not None` so the behaviour is opt-in and graceful when wiring is incomplete.
 - **6-test dispatch suite** at `tests/unit/test_subtype_panel_dispatch_ctx.py` pins every path: vehicle/building branch resolution, value pulled from item dict, unknown-kind no-op, missing-kind no-op, no-services graceful fallback, surface-without-panel unaffected.
 
@@ -4685,7 +4693,7 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Added (#1217 Phase 3e.iv — subtype query JOIN + `asset_registry` fixture)
 
-- **Subtype auto-JOIN in `Repository.list`** at `src/dazzle/back/runtime/repository.py:614-628`. Polymorphic-child entities now query the JOIN of their child table + base table on the shared `id`: `SELECT "Vehicle".*, "Asset"."acquired_at" AS "acquired_at", "Asset"."kind" AS "kind", … FROM "Vehicle" JOIN "Asset" ON "Vehicle"."id" = "Asset"."id" WHERE …`. The JOIN spec is cached at Repository `__init__` time (not rebuilt per call) and threaded through `RepositoryFactory` via a new optional `base_entity_spec: EntitySpec | None` kwarg.
+- **Subtype auto-JOIN in `Repository.list`** at `src/dazzle/http/runtime/repository.py:614-628`. Polymorphic-child entities now query the JOIN of their child table + base table on the shared `id`: `SELECT "Vehicle".*, "Asset"."acquired_at" AS "acquired_at", "Asset"."kind" AS "kind", … FROM "Vehicle" JOIN "Asset" ON "Vehicle"."id" = "Asset"."id" WHERE …`. The JOIN spec is cached at Repository `__init__` time (not rebuilt per call) and threaded through `RepositoryFactory` via a new optional `base_entity_spec: EntitySpec | None` kwarg.
 - **`_field_types` merge** so `_row_to_model` correctly coerces the base columns pulled in by the JOIN (e.g., `date` → `datetime.date` for `acquired_at`). Child fields shadow base fields via `setdefault` — matches OO subtype-override semantics.
 - **`group_by: kind` aggregate** works against polymorphic bases via the existing `aggregate.py` path — the synthesised `kind` field is just a regular column on the base. Pinned by a regression test that drives the real `build_aggregate_sql`.
 - **`fixtures/asset_registry/`** — framework-validation fixture exercising the escape hatch end-to-end. Asset is the polymorphic base; Vehicle / Building / Equipment are subtypes. The README explicitly frames this as the escape hatch (NOT a recommended modelling pattern) and points at ADR-0026 + the inference KB. Workspaces cover both polymorphic (`asset_registry` workspace lists all assets with a `kind` badge column) and subtype-specific (`fleet` workspace lists only Vehicles, auto-JOINing to pull base columns). Scope rules on Vehicle (`scope: fuel_type = electric as fleet_admin`) exercise per-table RBAC composition.
@@ -4710,14 +4718,14 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Added (#1217 Phase 3e.iii — `subtype_of:` runtime — DDL + triggers + atomic CRUD)
 
-- **TPT (table-per-type) DDL emission** in `src/dazzle/back/runtime/sa_schema.py:363-394`. When `EntitySpec.subtype_of` is set, `build_metadata` emits a child table containing only subtype-specific fields; the `id` column is BOTH `primary_key=True` AND a `sa.ForeignKey("<base>.id", ondelete="CASCADE")`. Base-table emission is unchanged — the `kind` enum column rides through from the linker pass (slice 3e.ii). The TPT branch sits at the top of the per-entity loop with an early `continue`, so the normal-emission path is never re-entered for children.
-- **Back-layer EntitySpec threading**: `dazzle.back.specs.entity.EntitySpec` (separate from the IR-layer EntitySpec) gains `subtype_of: str | None` and `subtype_children: tuple[str, ...]` fields plus `is_polymorphic_base` / `is_polymorphic_child` helper properties. `convert_entities` at `src/dazzle/back/converters/entity_converter.py:792-793` passes the fields through alongside soft_delete and temporal.
-- **Cross-row consistency trigger emitters** in new module `src/dazzle/back/runtime/triggers.py`:
+- **TPT (table-per-type) DDL emission** in `src/dazzle/http/runtime/sa_schema.py:363-394`. When `EntitySpec.subtype_of` is set, `build_metadata` emits a child table containing only subtype-specific fields; the `id` column is BOTH `primary_key=True` AND a `sa.ForeignKey("<base>.id", ondelete="CASCADE")`. Base-table emission is unchanged — the `kind` enum column rides through from the linker pass (slice 3e.ii). The TPT branch sits at the top of the per-entity loop with an early `continue`, so the normal-emission path is never re-entered for children.
+- **Back-layer EntitySpec threading**: `dazzle.http.specs.entity.EntitySpec` (separate from the IR-layer EntitySpec) gains `subtype_of: str | None` and `subtype_children: tuple[str, ...]` fields plus `is_polymorphic_base` / `is_polymorphic_child` helper properties. `convert_entities` at `src/dazzle/http/converters/entity_converter.py:792-793` passes the fields through alongside soft_delete and temporal.
+- **Cross-row consistency trigger emitters** in new module `src/dazzle/http/runtime/triggers.py`:
   - `build_assert_subtype_kind_function()` — declares the shared plpgsql function called from per-child triggers. Uses `format('SELECT kind::text FROM %I WHERE id = $1', base_table)` for safe identifier interpolation.
   - `build_child_kind_trigger(*, child_table, base_table, expected_kind)` — emits `BEFORE INSERT OR UPDATE` trigger DDL with PascalCase identifiers double-quoted for case preservation.
 - **Framework Alembic revision** `0003_subtype_kind_function.py` registers the `assert_subtype_kind` plpgsql function once at deploy time. Per-child triggers are NOT in this migration — they're applied per-project at runtime DB bootstrap because the trigger declarations depend on parsed AppSpec.
-- **Per-child trigger application** in `pg_backend.create_all_tables` at `src/dazzle/back/runtime/pg_backend.py:444+`. After `metadata.create_all`, the bootstrap installs `assert_subtype_kind()` via `CREATE OR REPLACE` (idempotent) and applies per-child `DROP TRIGGER IF EXISTS ... ; CREATE TRIGGER ...` for each entity with `subtype_of` set. Mirrors the existing FK-index installation pattern.
-- **`create_subtype` repository method** at `src/dazzle/back/runtime/repository.py:1575+` replaces the 3e.i stub. Atomic INSERT of base + child rows sharing one uuid PK in a single transaction. The `kind` discriminator is auto-populated from the snake_case child name; the caller MUST NOT supply `kind` (rejected with a clear ValueError citing ADR-0026). Integrity errors translate to `ConstraintViolationError` mirroring `Repository.create()`.
+- **Per-child trigger application** in `pg_backend.create_all_tables` at `src/dazzle/http/runtime/pg_backend.py:444+`. After `metadata.create_all`, the bootstrap installs `assert_subtype_kind()` via `CREATE OR REPLACE` (idempotent) and applies per-child `DROP TRIGGER IF EXISTS ... ; CREATE TRIGGER ...` for each entity with `subtype_of` set. Mirrors the existing FK-index installation pattern.
+- **`create_subtype` repository method** at `src/dazzle/http/runtime/repository.py:1575+` replaces the 3e.i stub. Atomic INSERT of base + child rows sharing one uuid PK in a single transaction. The `kind` discriminator is auto-populated from the snake_case child name; the caller MUST NOT supply `kind` (rejected with a clear ValueError citing ADR-0026). Integrity errors translate to `ConstraintViolationError` mirroring `Repository.create()`.
 - **`update_subtype` repository method** splits the payload by field-ownership into per-table UPDATEs in one transaction. `kind` in payload is rejected — to change a subtype, callers must DELETE + INSERT (the id will change). Partial payloads cleanly skip the side with no fields rather than emit malformed SQL.
 - **Cascade DELETE**: the existing `Repository.delete()` handles subtype deletion for free — the child's FK to base has `ON DELETE CASCADE` from Task 12, so `DELETE FROM "Asset" WHERE id = ?` removes the matching child row automatically. No `delete_subtype` wrapper added.
 - **Tests**: 17 new mock-based unit tests across `test_subtype_of_ddl.py` (3), `test_subtype_of_triggers.py` (3), `test_subtype_alembic_revision.py` (3), and `test_subtype_of_runtime.py` (11) — pin DDL shape, trigger SQL contracts, Alembic revision wiring, and `create_subtype` / `update_subtype` SQL emission + kind-immutability guards.
@@ -4758,7 +4766,7 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 - **`EntitySpec.subtype_of: str | None`** and **`EntitySpec.subtype_children: tuple[str, ...]`** fields in `src/dazzle/core/ir/domain.py`, plus helper properties `is_polymorphic_base` and `is_polymorphic_child`. `subtype_of` is parser-time; `subtype_children` is a linker-time back-pointer (empty in raw parser output — populated in slice 3e.ii).
 - **Entity parser dispatch** for `subtype_of: <Identifier>` in `src/dazzle/core/dsl_parser_impl/entity.py`. Single identifier only — comma-separated lists are rejected at parse time with a clear `ParseError` ("Multiple inheritance is not supported in v1"). New helper `_parse_entity_subtype_of()` mirrors the structure of `_parse_entity_extends`.
 - **Grammar reference** updated (`src/dazzle/core/grammar_gen.py` + `docs/reference/grammar.md`) with the new rule + a sub-section under "Entity Constructs" describing the escape-hatch framing.
-- **`create_subtype(child_entity, payload)` runtime stub** in `src/dazzle/back/runtime/repository.py` — raises `NotImplementedError("subtype_of: not wired yet (Phase 3e.iii). …")` until DB schema + atomic insert lands. Acts as a fence against silent no-ops or surprise failures if a downstream caller tries to use the construct before slice 3e.iii.
+- **`create_subtype(child_entity, payload)` runtime stub** in `src/dazzle/http/runtime/repository.py` — raises `NotImplementedError("subtype_of: not wired yet (Phase 3e.iii). …")` until DB schema + atomic insert lands. Acts as a fence against silent no-ops or surprise failures if a downstream caller tries to use the construct before slice 3e.iii.
 - **ADR-0026** (`docs/adr/0026-subtype-polymorphism-tpt.md`) pins the design: table-per-type storage, flat hierarchy (no multi-level), immutable discriminator (no Vehicle → Building mutation). Records STI / TPC / multi-level as rejected alternatives.
 - **5 parser tests** in `tests/unit/test_subtype_of_parser.py` (parse path, co-existence with `extends:`, multi-identifier rejection, missing-identifier rejection, runtime stub raises).
 
@@ -4794,7 +4802,7 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Added (#1228 Phase 3c.ii — atomic-flow runtime executor)
 
-- **`execute_atomic_flow(flow, inputs, db_manager)`** in new `src/dazzle/back/runtime/atomic_flow_executor.py`. Executes a parsed `AtomicFlowSpec`'s creates inside a single transaction on a shared connection. Returns `{EntityName: generated UUID}` for each create.
+- **`execute_atomic_flow(flow, inputs, db_manager)`** in new `src/dazzle/http/runtime/atomic_flow_executor.py`. Executes a parsed `AtomicFlowSpec`'s creates inside a single transaction on a shared connection. Returns `{EntityName: generated UUID}` for each create.
 - **`AtomicFlowError`** wraps any create failure with `failed_at` (the entity that errored) and the original DB exception as `__cause__`. The pool's connection-context exit handler rolls back the transaction automatically when an exception bubbles out of the `with`-block.
 - **Reference resolution** at runtime:
   - `input.<name>` → looks up `inputs[name]`
@@ -4840,7 +4848,7 @@ The v0.74.2 git tag was created before the commit landed, so it pointed at the v
 
 ### Changed (#1226 — back-side EntitySpec now carries `soft_delete` + `temporal`)
 
-- **Two new fields on `dazzle.back.specs.entity.EntitySpec`:** `soft_delete: bool = False` (was IR-only since #1218) and `temporal: ir_domain.TemporalSpec | None = None` (was IR-only since #1223). The TemporalSpec type is imported from IR rather than duplicated — same shape, no semantic divergence.
+- **Two new fields on `dazzle.http.specs.entity.EntitySpec`:** `soft_delete: bool = False` (was IR-only since #1218) and `temporal: ir_domain.TemporalSpec | None = None` (was IR-only since #1223). The TemporalSpec type is imported from IR rather than duplicated — same shape, no semantic divergence.
 - **`convert_entity` now threads both fields through** from IR to back-side. Previously the converter silently dropped them, forcing 11 runtime sites to use `getattr(entity, "...", default)` to handle the IR-vs-back-side type drift.
 - **11 defensive `getattr` sites collapsed** to direct attribute access:
   - `repository.py` ×6 (read/list/aggregate tombstone + temporal filter paths)
@@ -5388,7 +5396,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Fixed
 
-- **`entity_card` cross-entity sections (`mini_bars` / `stamps` / `thread_summary`) no longer crash with `AttributeError` on Pydantic-model rows (#1215).** `_safe_fetch` in `src/dazzle/back/runtime/workspace_card_fetchers.py` previously returned the items list from `repo.list(...)` as-is. When `include=None` (the path the cross-entity section fetchers take), the repository serialised rows via the `_row_to_model` code path — handing back Pydantic v2 model instances. The three render helpers `_render_mini_bars_body`, `_render_stamps_body`, and `_render_thread_summary_body` then called `row.get(field)`, a `dict` method that does not exist on Pydantic models, returning HTTP 500 and blocking the entity_card "360-degree" use case (pupil profile, customer profile, asset record). The fix normalises every row through `r.model_dump() if hasattr(r, "model_dump") else dict(r)` before returning — mirroring the same normalisation in `workspace_region_fetch.py:185`. The primary modes (`halo`, `flags`, `quick_actions`) were unaffected because they read primary-record fields through a different path. Closes #1215.
+- **`entity_card` cross-entity sections (`mini_bars` / `stamps` / `thread_summary`) no longer crash with `AttributeError` on Pydantic-model rows (#1215).** `_safe_fetch` in `src/dazzle/http/runtime/workspace_card_fetchers.py` previously returned the items list from `repo.list(...)` as-is. When `include=None` (the path the cross-entity section fetchers take), the repository serialised rows via the `_row_to_model` code path — handing back Pydantic v2 model instances. The three render helpers `_render_mini_bars_body`, `_render_stamps_body`, and `_render_thread_summary_body` then called `row.get(field)`, a `dict` method that does not exist on Pydantic models, returning HTTP 500 and blocking the entity_card "360-degree" use case (pupil profile, customer profile, asset record). The fix normalises every row through `r.model_dump() if hasattr(r, "model_dump") else dict(r)` before returning — mirroring the same normalisation in `workspace_region_fetch.py:185`. The primary modes (`halo`, `flags`, `quick_actions`) were unaffected because they read primary-record fields through a different path. Closes #1215.
 
 ## [0.71.146] - 2026-05-23
 
@@ -5448,7 +5456,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Security
 
-- **Tenant schema migration failures now fail boot under `isolation = "schema"` (#1209).** `_migrate_tenant_schemas` in `src/dazzle/back/runtime/server.py` previously caught every per-tenant migration exception in a bare `except Exception`, logged a single `WARNING`, and `continue`d — boot proceeded and the failed tenant was silently served from the `public` schema, a direct violation of the declared isolation posture. Three behaviour changes wired in this release: (1) per-tenant failures are accumulated into a local `failed_tenants: list[tuple[str, str]]` (schema name + one-line error excerpt) rather than dropped; (2) the log level for each per-tenant failure is raised from `WARNING` to `ERROR` so operators see it; (3) after the loop, if any failures accumulated, a `RuntimeError` is raised naming every failed schema and its error excerpt, halting boot. All tenants are still attempted before the raise, so operators see the full failure surface (not just the first one). Mirrors the audit-trail fail-closed invariant at #1172. **Backward-incompatible** for apps that were silently relying on the warning-only behaviour. Closes #1209.
+- **Tenant schema migration failures now fail boot under `isolation = "schema"` (#1209).** `_migrate_tenant_schemas` in `src/dazzle/http/runtime/server.py` previously caught every per-tenant migration exception in a bare `except Exception`, logged a single `WARNING`, and `continue`d — boot proceeded and the failed tenant was silently served from the `public` schema, a direct violation of the declared isolation posture. Three behaviour changes wired in this release: (1) per-tenant failures are accumulated into a local `failed_tenants: list[tuple[str, str]]` (schema name + one-line error excerpt) rather than dropped; (2) the log level for each per-tenant failure is raised from `WARNING` to `ERROR` so operators see it; (3) after the loop, if any failures accumulated, a `RuntimeError` is raised naming every failed schema and its error excerpt, halting boot. All tenants are still attempted before the raise, so operators see the full failure surface (not just the first one). Mirrors the audit-trail fail-closed invariant at #1172. **Backward-incompatible** for apps that were silently relying on the warning-only behaviour. Closes #1209.
 
 ### Agent Guidance
 
@@ -5484,7 +5492,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Fixed
 
-- **`htmx:targetError` on every `filterable_table` filter change (#1205).** `_build_dispatch_ctx` in `src/dazzle/ui/runtime/page_routes.py` was threading `table.table_id` (e.g. `dt-device_list`) into `region_name`, so the FilterBar emitted `hx-target="#region-dt-device_list"` while the workspace region container actually had `id="region-device_list"` — one-prefix mismatch that fired `htmx:targetError` on every dropdown change and visibly broke the filter. Fix: prefer `surface.name`, fall back to `table_id` only if surface has no name (defensive). Closes #1205.
+- **`htmx:targetError` on every `filterable_table` filter change (#1205).** `_build_dispatch_ctx` in `src/dazzle/page/runtime/page_routes.py` was threading `table.table_id` (e.g. `dt-device_list`) into `region_name`, so the FilterBar emitted `hx-target="#region-dt-device_list"` while the workspace region container actually had `id="region-device_list"` — one-prefix mismatch that fired `htmx:targetError` on every dropdown change and visibly broke the filter. Fix: prefer `surface.name`, fall back to `table_id` only if surface has no name (defensive). Closes #1205.
 
 ## [0.71.136] - 2026-05-23
 
@@ -5523,7 +5531,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Agent Guidance
 
-- **Retry-event accumulator is IN-PROCESS and VOLATILE (#1194).** The `/_dazzle/integrations/{name}/retries` surface reads from `dazzle.back.runtime.retry_accumulator.get_default_accumulator()` — a process-wide singleton capped at 100 entries per integration (FIFO). It is deliberately not persisted to `ops_db`. State resets on every restart. The response payload carries a load-bearing `volatile: true` flag; do not build operational alerting against this endpoint's contents. Alert on the DLQ, `JobRun` status distribution, or the integration provider's own logs instead. Durable retry history is an explicit non-goal of this surface.
+- **Retry-event accumulator is IN-PROCESS and VOLATILE (#1194).** The `/_dazzle/integrations/{name}/retries` surface reads from `dazzle.http.runtime.retry_accumulator.get_default_accumulator()` — a process-wide singleton capped at 100 entries per integration (FIFO). It is deliberately not persisted to `ops_db`. State resets on every restart. The response payload carries a load-bearing `volatile: true` flag; do not build operational alerting against this endpoint's contents. Alert on the DLQ, `JobRun` status distribution, or the integration provider's own logs instead. Durable retry history is an explicit non-goal of this surface.
 - **New ops surfaces register conditionally.** `SystemRoutesSubsystem._setup_optional_features` only includes the approvals router when `ctx.appspec.approvals` is non-empty and the integrations-retries router when `ctx.appspec.integrations` is non-empty. The factories themselves are tolerant of empty inputs, but the registration site is the gating check.
 
 ## [0.71.131] - 2026-05-23
@@ -5712,7 +5720,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Fixed
 
-- **`dazzle db baseline` crash on a fresh example app** — `env.py` accessed `context.config` at module level before Alembic bound the context, causing `AttributeError: 'NoneType' object has no attribute 'config'`. Fixed by extracting a `metadata_loader.py` helper and deferring all DSL loading into the migration functions (`src/dazzle/cli/db.py`, new `src/dazzle/back/alembic/metadata_loader.py`).
+- **`dazzle db baseline` crash on a fresh example app** — `env.py` accessed `context.config` at module level before Alembic bound the context, causing `AttributeError: 'NoneType' object has no attribute 'config'`. Fixed by extracting a `metadata_loader.py` helper and deferring all DSL loading into the migration functions (`src/dazzle/cli/db.py`, new `src/dazzle/http/alembic/metadata_loader.py`).
 
 ### Agent Guidance
 
@@ -6047,7 +6055,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 ### Agent Guidance
 
 - **Two audit modules, one production trail.**
-  `dazzle.back.runtime.audit_log.AuditLogger` is the production
+  `dazzle.http.runtime.audit_log.AuditLogger` is the production
   access-decision trail — `_dazzle_audit_log` table, fail-open bounded
   queue, wired into every CRUD route via `_log_audit_decision`.
   `dazzle.rbac.audit` is a *verification-layer observability seam*
@@ -6370,7 +6378,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 - **`route.gen` span now actually emitted** (#1159). The `boot_cost`
   finding's `route_gen_ms` reads from this span; previously nothing
   in the framework called it and the field was always 0. Wrapped
-  `generate_all_routes` in `src/dazzle/back/runtime/route_generator.py`
+  `generate_all_routes` in `src/dazzle/http/runtime/route_generator.py`
   to fix.
 
 ## [0.71.70] - 2026-05-19
@@ -6602,7 +6610,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
   `avg(A.x / B.y)` and `avg(A.x / y)` are rejected at parse time
   with a precise diagnostic.
 
-- **`dazzle.back.runtime.aggregate_expression.compile_aggregate_expression`** —
+- **`dazzle.http.runtime.aggregate_expression.compile_aggregate_expression`** —
   compiles an `AggregateExpr` to `(sql_fragment, params)`. Every
   column identifier is wrapped in `quote_identifier` (rejected at
   compile if the name fails `validate_sql_identifier`); every numeric
@@ -6628,7 +6636,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
   `entity:` for the aggregate and qualify every column the same way.
 - New SQL functions or cast targets need a deliberate change to
   the whitelists in `src/dazzle/core/ir/aggregates.py` and
-  `src/dazzle/back/runtime/aggregate_expression.py`. The parser will
+  `src/dazzle/http/runtime/aggregate_expression.py`. The parser will
   reject anything outside the current sets with a precise error
   message; do not work around this by stringifying the SQL.
 
@@ -6638,7 +6646,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 - **Vendor hash manifest + CI drift gate** for supply-chain defense
   on bundled JS/CSS. New `scripts/vendor_hashes.json` pins a SHA-256
-  for every file under `src/dazzle/ui/runtime/static/vendor/` (21
+  for every file under `src/dazzle/page/runtime/static/vendor/` (21
   files at v0.71.62 — htmx + 4 htmx extensions, idiomorph, lucide,
   alpine + 4 alpine plugins, flatpickr, tom-select, etc.). The
   drift gate at `tests/unit/test_vendor_hash_drift.py` recomputes
@@ -6678,7 +6686,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Agent Guidance
 
-- **Never edit a file under `src/dazzle/ui/runtime/static/vendor/`
+- **Never edit a file under `src/dazzle/page/runtime/static/vendor/`
   without updating the manifest.** Either go through
   `scripts/update_vendors.py` (auto-update set) or
   `scripts/update_vendor_hashes.py` (manual). The CI drift gate
@@ -7806,7 +7814,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
   this as a sibling of the original #841 SLA bug — the eventbus adapter
   was introduced after #841 landed and copied the pre-fix pattern.
   Fix: new `_resolve_param_ref` helper (mirrors the `_tier_seconds`
-  pattern in `dazzle.back.runtime.sla_manager`) applied at both
+  pattern in `dazzle.http.runtime.sla_manager`) applied at both
   storage call sites. Also upgraded the bare
   `logger.warning("Scheduler loop error: %s", e)` to log with
   `exc_info=True` (issue ask #1) so the next regression of this class
@@ -7841,7 +7849,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 - **Public policy gate for route overrides — closes #1126.** Closes the remaining write-op authorisation gap: framework-generated CRUD routes have evaluated `permit:` + `scope:` rules since v0.71.19/v0.71.22, but `# dazzle:route-override` handlers had no public path back into the same machinery. AegisMark's security audit of their 10 override files found 5 that hand-rolled the textbook ownership check (correct, but drifts independently of the DSL) and 5 with real gaps including two HIGH-severity IDORs. This release exposes the framework's enforcement primitives so overrides can declare "this route implements `<Entity>.<op>`" and inherit the same gate.
 - **Declarative form — `# dazzle:implements <Entity>.<op> via <param>`.** Companion header to `# dazzle:route-override`. Framework wraps the handler so permit + scope evaluation runs BEFORE dispatch against the row at the named path parameter. Drift-free: when the DSL rule changes, the gate's behaviour changes automatically.
-- **Imperative form — `dazzle.back.runtime.policy.check_entity_op(request, entity, op, row_id=...)`.** Same primitive, called from the handler body for routes that don't fit the `via <path_param>` shape (body-bound IDs, payload-conditional auth, multi-entity writes). For `create`, pass `payload=` instead of `row_id=`.
+- **Imperative form — `dazzle.http.runtime.policy.check_entity_op(request, entity, op, row_id=...)`.** Same primitive, called from the handler body for routes that don't fit the `via <path_param>` shape (body-bound IDs, payload-conditional auth, multi-entity writes). For `create`, pass `payload=` instead of `row_id=`.
 - **`PolicyRegistry` on `app.state.policy_registry`** — per-entity bundle of (access_spec, fk_graph, admin_personas, service) built once at app boot from the same inputs the route generator consumes. Both surfaces above use this; project code can reach it directly when the public helpers don't cover a use case.
 
 ### Changed
@@ -7907,7 +7915,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Added — Module
 
-- **`dazzle.back.runtime.scope_create_eval`** — narrow Python walker over the predicate algebra. No SQL, no DB roundtrip; pure IR introspection against a payload dict. Public API: `check_create_predicate(predicate, payload, user_id=, user_attrs=) -> bool` and `ScopeCreateUnsupportedError` (defensive backstop for shapes that bypassed the linker).
+- **`dazzle.http.runtime.scope_create_eval`** — narrow Python walker over the predicate algebra. No SQL, no DB roundtrip; pure IR introspection against a payload dict. Public API: `check_create_predicate(predicate, payload, user_id=, user_attrs=) -> bool` and `ScopeCreateUnsupportedError` (defensive backstop for shapes that bypassed the linker).
 
 ### Changed
 
@@ -7939,7 +7947,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Agent Guidance
 
-- When writing a custom renderer / primitive / route override and unsure what's reachable through `services`, **read the `RuntimeServices` class docstring** (in `src/dazzle/back/runtime/services.py`) — that's the authoritative public-contract reference now. Don't reach for attributes not listed there; if you need to, file an issue rather than depending on framework internals.
+- When writing a custom renderer / primitive / route override and unsure what's reachable through `services`, **read the `RuntimeServices` class docstring** (in `src/dazzle/http/runtime/services.py`) — that's the authoritative public-contract reference now. Don't reach for attributes not listed there; if you need to, file an issue rather than depending on framework internals.
 - The required-vs-optional split matters for portability: `event_framework`, `metrics_collector`, `system_collector`, `metrics_emitter`, `process_manager` may all be `None` depending on how the host configured the deployment. Branch on `None` before using them.
 
 ## [0.71.20] - 2026-05-17
@@ -8099,13 +8107,13 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Fixed
 
-- **`mcp__dazzle__dsl(operation="fidelity")` no longer returns a misleading "`dazzle.ui not installed`" error with a phantom `pip install -e '.[dazzle-ui]'` hint — closes #1114.** The handler in `src/dazzle/mcp/server/handlers/fidelity.py` wrapped `from dazzle.ui.converters.template_compiler import compile_appspec_to_templates` and `from dazzle.ui.runtime.template_renderer import render_page` in a bare `except ImportError`. Any ImportError from anywhere inside `dazzle.ui.*` — a renamed sibling symbol, stale bytecode after a Dazzle bump, a broken transitive dep — got reported as "dazzle.ui not installed", and the remediation hint pointed at an extras key (`dazzle-ui`) that doesn't exist in `pyproject.toml`. Downstream apps following the hint got an `Extras 'dazzle-ui' not provided` warning from pip and concluded the framework was broken when the actual problem was usually a stale in-memory module. The handler now splits the `except` into two branches: if `importlib.util.find_spec("dazzle.ui")` returns None **and** the ImportError names a `dazzle.ui[.*]` module, it hints at `pip install --force-reinstall dazzle-dsl`; otherwise it surfaces the real `ImportError` text in a `raw` field plus hints at restarting the MCP server (the most common real cause).
+- **`mcp__dazzle__dsl(operation="fidelity")` no longer returns a misleading "`dazzle.page not installed`" error with a phantom `pip install -e '.[dazzle-ui]'` hint — closes #1114.** The handler in `src/dazzle/mcp/server/handlers/fidelity.py` wrapped `from dazzle.page.converters.template_compiler import compile_appspec_to_templates` and `from dazzle.page.runtime.template_renderer import render_page` in a bare `except ImportError`. Any ImportError from anywhere inside `dazzle.page.*` — a renamed sibling symbol, stale bytecode after a Dazzle bump, a broken transitive dep — got reported as "dazzle.page not installed", and the remediation hint pointed at an extras key (`dazzle-ui`) that doesn't exist in `pyproject.toml`. Downstream apps following the hint got an `Extras 'dazzle-ui' not provided` warning from pip and concluded the framework was broken when the actual problem was usually a stale in-memory module. The handler now splits the `except` into two branches: if `importlib.util.find_spec("dazzle.page")` returns None **and** the ImportError names a `dazzle.page[.*]` module, it hints at `pip install --force-reinstall dazzle-dsl`; otherwise it surfaces the real `ImportError` text in a `raw` field plus hints at restarting the MCP server (the most common real cause).
 
 ### Tests
 
 - Two new tests in `tests/unit/mcp/test_fidelity_handlers.py::TestScoreFidelityHandler`:
   - `test_internal_import_error_surfaces_real_cause_not_phantom_extras` — pokes `sys.modules` to make a sub-module raise on import, asserts the returned payload contains a `raw` field with the actual exception text and the "Restart the MCP server" hint, and asserts the phantom `[dazzle-ui]` extras string is absent from the payload.
-  - `test_ui_root_missing_uses_reinstall_hint` — monkeypatches `importlib.util.find_spec` so `dazzle.ui` reads as absent, asserts the payload uses the `force-reinstall dazzle-dsl` hint rather than the phantom extras hint.
+  - `test_ui_root_missing_uses_reinstall_hint` — monkeypatches `importlib.util.find_spec` so `dazzle.page` reads as absent, asserts the payload uses the `force-reinstall dazzle-dsl` hint rather than the phantom extras hint.
 
 ### Agent Guidance
 
@@ -8141,11 +8149,11 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Fixed
 
-- **Workspace 422 / OpenAPI 500 regression — closes #1112 (follow-up to #1034).** The v0.67.1 closure-factory fix landed for `_workspace_handler` + `_page_handler` but missed four sibling `functools.partial(_h, deps)` bindings where `_h` had a `request: Request` parameter: three in `src/dazzle/ui/runtime/experience_routes.py` (`_experience_entry`, `_experience_step_get`, `_experience_step_post`) and one in `src/dazzle/ui/runtime/page_routes.py` (`_root_redirect`). `functools.partial` strips type annotations from `inspect.signature`, so FastAPI saw `request` as unannotated, defaulted it to `Query(...)`, and pydantic >= 2.13 then hard-failed building a `TypeAdapter[Annotated[Request, Query(...)]]` — poisoning the shared adapter cache and cascading 422s onto every workspace landing plus 500s on `/openapi.json`, even when the DSL had no `experience` blocks (the router is mounted unconditionally). Replaced all four bindings with `_make_experience_entry_handler` / `_make_experience_step_get_handler` / `_make_experience_step_post_handler` / `_make_root_redirect_handler` closure factories that wrap the inner handler in an `async def handler(request: Request, ...)` preserving the annotation through introspection. Removed the now-unused `from functools import partial` import from both files.
+- **Workspace 422 / OpenAPI 500 regression — closes #1112 (follow-up to #1034).** The v0.67.1 closure-factory fix landed for `_workspace_handler` + `_page_handler` but missed four sibling `functools.partial(_h, deps)` bindings where `_h` had a `request: Request` parameter: three in `src/dazzle/page/runtime/experience_routes.py` (`_experience_entry`, `_experience_step_get`, `_experience_step_post`) and one in `src/dazzle/page/runtime/page_routes.py` (`_root_redirect`). `functools.partial` strips type annotations from `inspect.signature`, so FastAPI saw `request` as unannotated, defaulted it to `Query(...)`, and pydantic >= 2.13 then hard-failed building a `TypeAdapter[Annotated[Request, Query(...)]]` — poisoning the shared adapter cache and cascading 422s onto every workspace landing plus 500s on `/openapi.json`, even when the DSL had no `experience` blocks (the router is mounted unconditionally). Replaced all four bindings with `_make_experience_entry_handler` / `_make_experience_step_get_handler` / `_make_experience_step_post_handler` / `_make_root_redirect_handler` closure factories that wrap the inner handler in an `async def handler(request: Request, ...)` preserving the annotation through introspection. Removed the now-unused `from functools import partial` import from both files.
 
 ### Tests
 
-- **`tests/unit/test_workspace_handler_signature.py`** extended with four signature-preservation tests for the new factories plus a durable AST-based lint gate (`test_no_partial_bound_request_handlers`) that walks `src/dazzle/ui/runtime/` and `src/dazzle/back/runtime/` for `partial(_handler, ...)` calls where `_handler`'s signature has `request: Request`. AST-based rather than regex so docstring references explaining the historical bug don't trip the gate. This is the gate v0.67.1 lacked, which is why #1112 was needed at all.
+- **`tests/unit/test_workspace_handler_signature.py`** extended with four signature-preservation tests for the new factories plus a durable AST-based lint gate (`test_no_partial_bound_request_handlers`) that walks `src/dazzle/page/runtime/` and `src/dazzle/http/runtime/` for `partial(_handler, ...)` calls where `_handler`'s signature has `request: Request`. AST-based rather than regex so docstring references explaining the historical bug don't trip the gate. This is the gate v0.67.1 lacked, which is why #1112 was needed at all.
 
 ### Agent Guidance
 
@@ -8160,8 +8168,8 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Changed
 
-- **`src/dazzle/ui/runtime/site_renderer.get_shared_head_html` docstring now describes its actual responsibilities honestly:** the function still emits DaisyUI + Tailwind CDN tags because `site_section_builder` continues to emit legacy class names (`stat-value`, `stat-title`, `bg-base-*`) used by site/marketing pages. The workspace runtime no longer loads either library. Removing the CDN tags is a pending cleanup tracked alongside the broader site-pages migration.
-- **`.claude/CLAUDE.md` ADR-0008 gloss now scopes the SQLite ban correctly:** the ADR forbids SQLite in `src/dazzle_back/` (the FastAPI app runtime). The MCP server's knowledge-graph DB and `src/dazzle/core/process/version_manager.py` are outside that scope and legitimately use SQLite. Previous gloss read as a blanket project-wide ban.
+- **`src/dazzle/page/runtime/site_renderer.get_shared_head_html` docstring now describes its actual responsibilities honestly:** the function still emits DaisyUI + Tailwind CDN tags because `site_section_builder` continues to emit legacy class names (`stat-value`, `stat-title`, `bg-base-*`) used by site/marketing pages. The workspace runtime no longer loads either library. Removing the CDN tags is a pending cleanup tracked alongside the broader site-pages migration.
+- **`.claude/CLAUDE.md` ADR-0008 gloss now scopes the SQLite ban correctly:** the ADR forbids SQLite in `src/dazzle_http/` (the FastAPI app runtime). The MCP server's knowledge-graph DB and `src/dazzle/core/process/version_manager.py` are outside that scope and legitimately use SQLite. Previous gloss read as a blanket project-wide ban.
 - **Stale docstrings cleaned across `back/runtime/response_helpers.py`, `back/runtime/renderers/site_section_builder.py`, `core/fidelity_scorer.py`, `testing/ux/contract_checker.py`** — references to DaisyUI/Tailwind that no longer reflect the implementation.
 - **`src/dazzle/layout/variants.py` and `src/dazzle/testing/viewport_suggestions.py`** now carry a `DEPRECATED (concept-drift sweep)` note in their module docstrings — both modules still expose Tailwind class strings (`variants.py` carries them in `VariantConfig.tailwind_classes`, `viewport_suggestions.py` returns them as `suggest_fix` hints) that no longer apply because the runtime has moved off Tailwind. `variants.py` has no consumers outside its own package; `viewport_suggestions.py` is still called by `viewport_runner` but its hints are inert. A follow-up cycle should either delete them or repurpose them onto the Dazzle-native primitives.
 - **`docs/reference/access-control.md`, `docs/reference/rbac-verification.md`, `docs/adr/0010-permit-scope-separation.md` updated to the post-#998 `as:` syntax.** ADR-0010 gets a 2026-05-17 note clarifying the rename without rewriting the historical decision text.
@@ -8171,14 +8179,14 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 ### Agent Guidance
 
 - The persona-binding keyword on `scope:` rules is **`as:`**, not `for:`. The rename happened in #998 and has been documented inconsistently since. When generating DSL, always write `scope: <condition> as: <persona>` — `for:` will fail at parse time.
-- ADR-0008's SQLite ban applies to `src/dazzle_back/` specifically. The MCP server (knowledge-graph DB) and `core/process/version_manager.py` legitimately use SQLite — those are not app-data paths.
+- ADR-0008's SQLite ban applies to `src/dazzle_http/` specifically. The MCP server (knowledge-graph DB) and `core/process/version_manager.py` legitimately use SQLite — those are not app-data paths.
 - The workspace runtime uses Dazzle-native CSS (tokens + components from `/styles/dazzle.css`); site/marketing pages still load DaisyUI + Tailwind via CDN for back-compat (`stat-value`, `bg-base-*` class names emitted by `site_section_builder`). When adding new UI primitives, target the workspace runtime path and the Dazzle-native token vocabulary in `docs/CSS_MIGRATION_GUIDE.md`.
 
 ## [0.71.9] - 2026-05-17
 
 ### Added
 
-- **Onboarding overlay CSS (`src/dazzle/ui/runtime/static/css/components/onboarding.css`).** All eight step kinds — `popover`, `spotlight`, `inline_card`, `empty_state`, `banner`, `checklist_item`, `blocking_task`, `nudge` — now have styling. Prior releases shipped the renderer + DSL + linker without CSS, so the overlays rendered unstyled. Wired into the bundled stylesheet via `css_loader.py` (layered `components`) and `scripts/build_dist.py` (the dist-bundle manifest).
+- **Onboarding overlay CSS (`src/dazzle/page/runtime/static/css/components/onboarding.css`).** All eight step kinds — `popover`, `spotlight`, `inline_card`, `empty_state`, `banner`, `checklist_item`, `blocking_task`, `nudge` — now have styling. Prior releases shipped the renderer + DSL + linker without CSS, so the overlays rendered unstyled. Wired into the bundled stylesheet via `css_loader.py` (layered `components`) and `scripts/build_dist.py` (the dist-bundle manifest).
 - **Playwright visual smoke test (`tests/visual/test_onboarding_visual_smoke.py`, marker `visual`).** Renders each of the eight kinds standalone, loads them in Chromium, asserts bounding box + non-transparent background + dismiss + CTA + no console errors, and captures one PNG per kind for human review. Marker registered in `pyproject.toml`. Artifacts written to `tests/visual/_artifacts/` (gitignored).
 
 ### Fixed
@@ -8245,13 +8253,13 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Added
 
-- **`dz-onboarding.js` client-side runtime** at `src/dazzle/ui/runtime/static/js/dz-onboarding.js` — vanilla JS (zero deps beyond htmx), ~2 KB minified. Wires up the four behaviours the renderer can't express declaratively:
+- **`dz-onboarding.js` client-side runtime** at `src/dazzle/page/runtime/static/js/dz-onboarding.js` — vanilla JS (zero deps beyond htmx), ~2 KB minified. Wires up the four behaviours the renderer can't express declaratively:
   - **Auto-dismiss timer** for `data-kind="nudge"` — reads `data-autodismiss-ms`, fires the dismiss POST (`fetch` with `credentials: same-origin`) after the delay, removes the DOM node either way. Network errors are non-fatal.
   - **Focus management** for `data-kind="blocking_task"` — moves focus to the first tabbable element inside the `<dialog>` so screen-reader users land in-context. Native `<dialog open>` does this on most browsers; this is defense-in-depth.
   - **Optional anchored positioning** for `popover` and `spotlight` — when a page element carries `data-onboarding-anchor="<guide>.<step>"`, the overlay's primary card positions against its bounding rect (top/bottom/left/right/center placements). Anchors are opt-in; surfaces that don't emit them fall back to the CSS-default position (no JS errors, just static placement).
   - **htmx swap re-arming** — re-runs init on `htmx:afterSwap`. Fragment-injected overlays get wired the same as initial-render siblings. `data-dz-wired` guard prevents double-arming the same element.
   - CSS.escape polyfill for older browsers + the anchor-selector path.
-- **Chrome auto-mount** in `dazzle.ui.runtime.app_chrome.resolve_app_chrome` — when an AppSpec declares any `guide` block, `/static/js/dz-onboarding.js` is appended to `chrome.js_scripts` AFTER the framework bundle (so htmx is defined before our `afterSwap` listener registers). Apps without guides don't pay the ~2 KB cost.
+- **Chrome auto-mount** in `dazzle.page.runtime.app_chrome.resolve_app_chrome` — when an AppSpec declares any `guide` block, `/static/js/dz-onboarding.js` is appended to `chrome.js_scripts` AFTER the framework bundle (so htmx is defined before our `afterSwap` listener registers). Apps without guides don't pay the ~2 KB cost.
 
 ### Tests
 
@@ -8315,9 +8323,9 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Changed
 
-- **Pure-Python onboarding code relocated to `dazzle.render.onboarding`.** The architectural boundary check (#1086) forbids `dazzle.ui.*` from importing `dazzle.back.*`. To let `page_routes.py` reach the renderer + resolver cleanly:
+- **Pure-Python onboarding code relocated to `dazzle.render.onboarding`.** The architectural boundary check (#1086) forbids `dazzle.page.*` from importing `dazzle.http.*`. To let `page_routes.py` reach the renderer + resolver cleanly:
   - `renderer.py`, `resolver.py`, and the new `state.py` (containing the `OnboardingProgress` dataclass) now live under `src/dazzle/render/onboarding/`.
-  - The DB-bound `state_repository.py` and FastAPI `routes.py` stay under `src/dazzle/back/runtime/onboarding/`.
+  - The DB-bound `state_repository.py` and FastAPI `routes.py` stay under `src/dazzle/http/runtime/onboarding/`.
   - `back.runtime.onboarding.__init__` re-exports the render helpers for backwards-compatibility — existing imports keep working.
   - The resolver no longer types `repo` as `OnboardingStateRepository`; instead it accepts an `OnboardingStateLookup` `Protocol` defined locally, so the render layer carries no back-imports even at type-check time.
 
@@ -8329,16 +8337,16 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 ### Agent Guidance
 
 - The v0.71.x guided-onboarding loop is now end-to-end functional. A project that declares any `guide` block + has `DATABASE_URL` set will see popover overlays render to authenticated users on the matching surface, with htmx-backed complete + dismiss endpoints. v0.71.4+ adds the other step kinds (spotlight, inline_card, empty_state, banner, checklist_item — all additive renderer builders), MCP `guide` tool, and `dazzle guide narrate` CLI.
-- New pure-Python onboarding code goes under `dazzle.render.onboarding/`. DB/FastAPI-bound code goes under `dazzle.back.runtime.onboarding/`. The split is what lets `ui/` import the rendering pieces without violating the architectural boundary.
+- New pure-Python onboarding code goes under `dazzle.render.onboarding/`. DB/FastAPI-bound code goes under `dazzle.http.runtime.onboarding/`. The split is what lets `ui/` import the rendering pieces without violating the architectural boundary.
 
 ## [0.71.2] - 2026-05-17
 
 ### Added
 
-- **Guide-step renderer** (`src/dazzle/back/runtime/onboarding/renderer.py`) — `render_step(step, *, guide_name) -> str`. v0.71.2 ships the **popover** kind only; spotlight/inline_card/empty_state/banner/checklist_item are deferred to v0.71.3 (same dispatcher, additive). Other kinds raise `UnknownStepKindError` with the supported-list in the message; callers should pre-filter via `has_builder(kind)`. Popover emits a self-contained `<dz-onboarding-step>` custom element with htmx hooks for completion (`POST /api/onboarding/<guide>/<step>/complete`) and dismissal (`POST .../dismiss`); both swap `outerHTML` so the overlay removes itself on response. Title + body + cta_label HTML-escaped; CTA href derived from `cta_target` when set.
-- **Active-step resolver** (`src/dazzle/back/runtime/onboarding/resolver.py`) — `resolve_active_step(*, user_id, user_persona, surface_name, app, repo) -> (GuideSpec, GuideStep) | None`. Walks guides in declaration order; first audience-matching guide whose next un-resolved step targets the current surface wins. v0.71.2 audience matcher recognises the `persona = <id>` shape (full predicate compilation in v0.71.x); predicates without persona clauses match conservatively. Skips guides where progression is complete.
-- **Completion + dismissal routes** (`src/dazzle/back/runtime/onboarding/routes.py`) — `create_onboarding_routes()` returns an `APIRouter` with `POST /api/onboarding/{guide}/{step}/complete` and `POST .../dismiss`. Both 401 on anonymous traffic; 503 when the repository isn't configured. Auto-mounted by `AuthSubsystem` when the AppSpec declares guides AND `DATABASE_URL` is set.
-- Re-exports added to `dazzle.back.runtime.onboarding`: `render_step`, `has_builder`, `UnknownStepKindError`, `resolve_active_step`, `create_onboarding_routes`.
+- **Guide-step renderer** (`src/dazzle/http/runtime/onboarding/renderer.py`) — `render_step(step, *, guide_name) -> str`. v0.71.2 ships the **popover** kind only; spotlight/inline_card/empty_state/banner/checklist_item are deferred to v0.71.3 (same dispatcher, additive). Other kinds raise `UnknownStepKindError` with the supported-list in the message; callers should pre-filter via `has_builder(kind)`. Popover emits a self-contained `<dz-onboarding-step>` custom element with htmx hooks for completion (`POST /api/onboarding/<guide>/<step>/complete`) and dismissal (`POST .../dismiss`); both swap `outerHTML` so the overlay removes itself on response. Title + body + cta_label HTML-escaped; CTA href derived from `cta_target` when set.
+- **Active-step resolver** (`src/dazzle/http/runtime/onboarding/resolver.py`) — `resolve_active_step(*, user_id, user_persona, surface_name, app, repo) -> (GuideSpec, GuideStep) | None`. Walks guides in declaration order; first audience-matching guide whose next un-resolved step targets the current surface wins. v0.71.2 audience matcher recognises the `persona = <id>` shape (full predicate compilation in v0.71.x); predicates without persona clauses match conservatively. Skips guides where progression is complete.
+- **Completion + dismissal routes** (`src/dazzle/http/runtime/onboarding/routes.py`) — `create_onboarding_routes()` returns an `APIRouter` with `POST /api/onboarding/{guide}/{step}/complete` and `POST .../dismiss`. Both 401 on anonymous traffic; 503 when the repository isn't configured. Auto-mounted by `AuthSubsystem` when the AppSpec declares guides AND `DATABASE_URL` is set.
+- Re-exports added to `dazzle.http.runtime.onboarding`: `render_step`, `has_builder`, `UnknownStepKindError`, `resolve_active_step`, `create_onboarding_routes`.
 
 ### Tests
 
@@ -8357,7 +8365,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 ### Added
 
 - **`OnboardingState` framework entity** — auto-injected when the project declares any `guide` block. One row per `(user_id, guide_name, guide_version)`. Self-only `scope:` (user reads/writes own rows; admins see all). Excluded from `dazzle spec status` by default (added to the framework-injected list, same treatment as `AIJob`/`FeedbackReport`/etc.). Schema flows through the standard Dazzle migration pipeline — projects run `dazzle db revision -m "add onboarding state"` then `dazzle db upgrade` per ADR-0017.
-- **`OnboardingStateRepository`** at `src/dazzle/back/runtime/onboarding/state_repository.py`. Five operations: `get`, `upsert` (INSERT ... ON CONFLICT on the composite natural key), `mark_step_completed` (idempotent append to `completed_steps`), `mark_step_dismissed`, `mark_completed`. All writes are idempotent — repeating an operation leaves the row stable. Postgres-only per ADR-0008. Table name inlined in every SQL string (semgrep's SQL-injection rule flags f-string interpolation even on class constants — design note in the module).
+- **`OnboardingStateRepository`** at `src/dazzle/http/runtime/onboarding/state_repository.py`. Five operations: `get`, `upsert` (INSERT ... ON CONFLICT on the composite natural key), `mark_step_completed` (idempotent append to `completed_steps`), `mark_step_dismissed`, `mark_completed`. All writes are idempotent — repeating an operation leaves the row stable. Postgres-only per ADR-0008. Table name inlined in every SQL string (semgrep's SQL-injection rule flags f-string interpolation even on class constants — design note in the module).
 - **`OnboardingProgress` dataclass** + `is_complete` property — in-memory view of one row. JSON columns (`completed_steps`/`dismissed_steps`/`metadata`) parse defensively: malformed/empty values default to empty list / `None` rather than raising.
 
 ### Tests
@@ -8407,7 +8415,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 ### Added
 
 - **#1110: Overridable sitespec section fragments + 5 new SaaS marketing primitives.** Shipped as a single release (Parts A + B together).
-- **Part A — Override loader.** New `src/dazzle/back/runtime/renderers/site_section_override_loader.py` mirrors the proven `pitch/generators/plugin_loader.py` pattern. Drop `build_<type>_section(section: dict) -> str` callables under `<project_root>/site_sections/*.py`; the registry discovers them at boot and shadows the framework default at dispatch time. Falls through when no override is registered. `render_typed_section(section, *, overrides=…)` accepts the registry; `site_routes.py` wires it through both render paths. Broken plugin files log a warning and skip without crashing the boot. `write_section_overrides_readme(project_root)` lays down the convention README — idempotent.
+- **Part A — Override loader.** New `src/dazzle/http/runtime/renderers/site_section_override_loader.py` mirrors the proven `pitch/generators/plugin_loader.py` pattern. Drop `build_<type>_section(section: dict) -> str` callables under `<project_root>/site_sections/*.py`; the registry discovers them at boot and shadows the framework default at dispatch time. Falls through when no override is registered. `render_typed_section(section, *, overrides=…)` accepts the registry; `site_routes.py` wires it through both render paths. Broken plugin files log a warning and skip without crashing the boot. `write_section_overrides_readme(project_root)` lays down the convention README — idempotent.
 - **Part B — 5 new section types.** All registered in `TYPED_SECTION_TYPES`:
   - `social_proof_strip` — horizontal count + label items (e.g. "10,000+ active users", "$2M ARR"). Denser than `stats`.
   - `integration_grid` — rectangular tiles with logo + name + optional href.
@@ -8527,7 +8535,7 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 - **#1101: 100 `Route conflict` warnings on boot.** Two distinct duplicate-mount bugs were producing the boot noise on projects with `routes/*.py` overrides (94 conflicts) plus a handful of multi-surface-same-shape entities (6 conflicts):
   - `RouteGenerator.generate_all_routes` now accepts a `claimed_routes: set[tuple[str, str]]` parameter and skips any endpoint whose `(method, path)` is already mounted. `server.py` walks `self._app.routes` after the override + extension routers have been included and passes the collected set in. The generic CRUD mount on a path the project already overrides is skipped with a one-line INFO log instead of producing a `WARNING` on every boot.
-  - `convert_surfaces_to_services` (`src/dazzle/back/converters/surface_converter.py`) deduplicates its `EndpointSpec` output by `(method, path)` before returning. Two surfaces that compile to the same HTTP shape (e.g. an EDIT + admin-EDIT on one entity) now produce one endpoint, not two. First registration wins; the dropped surface is logged at INFO.
+  - `convert_surfaces_to_services` (`src/dazzle/http/converters/surface_converter.py`) deduplicates its `EndpointSpec` output by `(method, path)` before returning. Two surfaces that compile to the same HTTP shape (e.g. an EDIT + admin-EDIT on one entity) now produce one endpoint, not two. First registration wins; the dropped surface is logged at INFO.
 - Net effect on a 94-override project: 100 boot warnings → 0. Functional behaviour unchanged — overrides always took precedence anyway (FastAPI first-match-wins, and `routes/*.py` registers before generated CRUD); the previous noise was purely the framework duplicate-mounting.
 
 ### Added
@@ -8542,15 +8550,15 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 ### Fixed
 
-- **#1102: `/openapi.json` 500 — `TypeAdapter has no _type_adapter for ForwardRef`.** Removed `from __future__ import annotations` from 17 files under `src/dazzle/back/runtime/` that define Depends-injected callables or route handlers. The future import made every annotation a string at runtime, so FastAPI's `Depends(...)` saw `ForwardRef('Request')` instead of the real class and the openapi schema build crashed. Files touched: `app_factory`, `audit_history_routes`, `device_registry`, `email_templates`, `integration_manager`, `llm_routes`, `rate_limit`, `realtime_routes`, `social_auth`, `services`, `locale_routes`, `test_routes`, `task_routes`, `fts_routes`, `consent_routes`, `jwt_middleware`, `auth/sso_routes`. TYPE_CHECKING-only references (FastAPI, IR specs, vendor modules) are now string-quoted at the annotation site so the future import isn't needed to defer them.
+- **#1102: `/openapi.json` 500 — `TypeAdapter has no _type_adapter for ForwardRef`.** Removed `from __future__ import annotations` from 17 files under `src/dazzle/http/runtime/` that define Depends-injected callables or route handlers. The future import made every annotation a string at runtime, so FastAPI's `Depends(...)` saw `ForwardRef('Request')` instead of the real class and the openapi schema build crashed. Files touched: `app_factory`, `audit_history_routes`, `device_registry`, `email_templates`, `integration_manager`, `llm_routes`, `rate_limit`, `realtime_routes`, `social_auth`, `services`, `locale_routes`, `test_routes`, `task_routes`, `fts_routes`, `consent_routes`, `jwt_middleware`, `auth/sso_routes`. TYPE_CHECKING-only references (FastAPI, IR specs, vendor modules) are now string-quoted at the annotation site so the future import isn't needed to defer them.
 
 ### Added
 
-- **`tests/unit/test_no_future_annotations_in_routes.py`** — ADR-0014 drift gate. Any file under `src/dazzle/back/runtime/` that defines a `Depends(` call site OR a route-handler decorator MUST NOT use `from __future__ import annotations`. Scoping is intentional: ADR-0014 only targets the specific failure mode (#1102); pure type-only modules can keep the future import.
+- **`tests/unit/test_no_future_annotations_in_routes.py`** — ADR-0014 drift gate. Any file under `src/dazzle/http/runtime/` that defines a `Depends(` call site OR a route-handler decorator MUST NOT use `from __future__ import annotations`. Scoping is intentional: ADR-0014 only targets the specific failure mode (#1102); pure type-only modules can keep the future import.
 
 ### Agent Guidance
 
-- When adding a new route file under `src/dazzle/back/runtime/`, do NOT use `from __future__ import annotations`. Python 3.12+ supports `X | Y` and `list[X]` natively. If you hit a circular-import problem with a TYPE_CHECKING-only import, use a string-literal annotation (`foo: "EntitySpec"`) on the specific parameter — not module-wide deferred evaluation.
+- When adding a new route file under `src/dazzle/http/runtime/`, do NOT use `from __future__ import annotations`. Python 3.12+ supports `X | Y` and `list[X]` natively. If you hit a circular-import problem with a TYPE_CHECKING-only import, use a string-literal annotation (`foo: "EntitySpec"`) on the specific parameter — not module-wide deferred evaluation.
 
 ## [0.70.37] - 2026-05-16
 
@@ -8599,9 +8607,9 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 ### Fixed
 
 - **CI mypy gate: 6 long-standing errors resolved.** Local `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp` (per CLAUDE.md ship discipline) missed them; CI runs `mypy src/dazzle` (broader scope) and had been red since v0.70.10's `_PageDeps` refactor (#1094). Specifics:
-  - `src/dazzle/back/runtime/{workspace_aggregation,workspace_region_computes,workspace_handlers,workspace_region_fetch}.py`: replaced `from dazzle.back.runtime.workspace_card_data import _resolve_display_name / _inject_display_names` with direct imports from `dazzle.render.display_names`. The underscore-prefixed re-exports through `workspace_card_data` tripped mypy's implicit-reexport check — sourcing them directly from the defining module is the cleaner contract anyway.
+  - `src/dazzle/http/runtime/{workspace_aggregation,workspace_region_computes,workspace_handlers,workspace_region_fetch}.py`: replaced `from dazzle.http.runtime.workspace_card_data import _resolve_display_name / _inject_display_names` with direct imports from `dazzle.render.display_names`. The underscore-prefixed re-exports through `workspace_card_data` tripped mypy's implicit-reexport check — sourcing them directly from the defining module is the cleaner contract anyway.
   - `src/dazzle/render/dispatch.py:74`: pinned the `handler.render` return type as `str` via an intermediate annotation (the protocol callsite's `Any` return needed narrowing for the function's `str` declaration).
-  - `src/dazzle/ui/runtime/page_routes.py:668`: removed stray `prc.` prefix on `evaluate_permission` — module-level function, not a `_PageRequestContext` method. Pre-existing typo bug, not just a mypy false-positive.
+  - `src/dazzle/page/runtime/page_routes.py:668`: removed stray `prc.` prefix on `evaluate_permission` — module-level function, not a `_PageRequestContext` method. Pre-existing typo bug, not just a mypy false-positive.
 
 ### Agent Guidance
 
@@ -8827,15 +8835,15 @@ The hr_records `time_machine` workspace from SPEC.md flow 7 can now be authored 
 
 - **#1095: import-boundary enforcement gate (`tests/unit/test_import_boundaries.py`).** Final workstream of the #1086 sequence. Three pytest gates that lock in the structural wins from #1090, #1091, #1092, #1093, #1094:
 
-  1. `test_back_does_not_import_migrated_render_modules` — `back/` cannot import from `dazzle.ui.runtime.template_renderer`, `template_context`, `surface_access`, or the now-deleted `back.runtime.renderers.page_builder` / `dispatch` / `access_evaluator` paths. New code that needs these helpers imports from `dazzle.render.*`.
-  2. `test_ui_does_not_import_from_back` — `ui/` cannot import from `dazzle.back.*`, with the one documented exemption `ui/runtime/combined_server.py` (entry-point glue per the #1086 plan).
+  1. `test_back_does_not_import_migrated_render_modules` — `back/` cannot import from `dazzle.page.runtime.template_renderer`, `template_context`, `surface_access`, or the now-deleted `back.runtime.renderers.page_builder` / `dispatch` / `access_evaluator` paths. New code that needs these helpers imports from `dazzle.render.*`.
+  2. `test_ui_does_not_import_from_back` — `ui/` cannot import from `dazzle.http.*`, with the one documented exemption `ui/runtime/combined_server.py` (entry-point glue per the #1086 plan).
   3. `test_back_does_not_import_concrete_ir_submodules` — `back/` cannot import from `dazzle.core.ir.appspec`, `surfaces`, or `domain` directly. Use the `dazzle.core.ir` re-export facade or the `dazzle.core.ir.protocols` adapter.
 
   All three pass on commit `45ccf2f6`. Sanity-checked by injecting a fake violation and confirming the gate fails.
 
 ### Scope Notes
 
-- A broader `back/` ↛ `dazzle.ui.*` ban remains aspirational. Back still imports ui-side helpers like `theme`, `css_loader`, `asset_fingerprint`, `htmx`, `app_chrome`, `site_renderer`, `workspace_renderer`, `condition_eval`, etc. These need their own migrate-to-`render` workstreams — they fall outside the scope of #1086's original A/B/D plan, which targeted the rendering-pipeline path (filters, dispatch, page_builder, context, surface_access). Tracked as future work; the gate's docstring documents the carve-out.
+- A broader `back/` ↛ `dazzle.page.*` ban remains aspirational. Back still imports ui-side helpers like `theme`, `css_loader`, `asset_fingerprint`, `htmx`, `app_chrome`, `site_renderer`, `workspace_renderer`, `condition_eval`, etc. These need their own migrate-to-`render` workstreams — they fall outside the scope of #1086's original A/B/D plan, which targeted the rendering-pipeline path (filters, dispatch, page_builder, context, surface_access). Tracked as future work; the gate's docstring documents the carve-out.
 
 ### Closing #1086
 
@@ -8860,7 +8868,7 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
   Done criteria from #1093:
   ```
   grep -rn "from dazzle.core.ir.appspec\|from dazzle.core.ir.surfaces\|from dazzle.core.ir.domain" \
-          src/dazzle/back/ --include='*.py'
+          src/dazzle/http/ --include='*.py'
   ```
   returns empty.
 
@@ -8890,7 +8898,7 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
   Done criteria from #1092:
   ```
   grep -rn "from dazzle.core.ir.surfaces\|from dazzle.core.ir.appspec" \
-          src/dazzle/back/runtime/renderers/ --include='*.py'
+          src/dazzle/http/runtime/renderers/ --include='*.py'
   ```
   returns empty.
 
@@ -8898,7 +8906,7 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
 
 ### Agent Guidance
 
-- IR consumers outside `dazzle.core/` and `dazzle.back/specs/` should import from `dazzle.core.ir.protocols` rather than the concrete `core.ir.*` modules. When adding a new protocol, scope it to the attrs you actually read — don't restate the whole concrete class.
+- IR consumers outside `dazzle.core/` and `dazzle.http/specs/` should import from `dazzle.core.ir.protocols` rather than the concrete `core.ir.*` modules. When adding a new protocol, scope it to the attrs you actually read — don't restate the whole concrete class.
 - `SurfaceMode` (and other value enums that are part of an IR contract) live in `core.ir.protocols` for downstream import. Adding a new `*Like` protocol that uses an enum? Re-export the enum from `protocols` too.
 
 ## [0.70.9] - 2026-05-15
@@ -8914,15 +8922,15 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
   - `_inject_display_names` + `_resolve_display_name` → `render.display_names`.
   - `_forbidden_detail` → `render.access_messages`.
 
-  `dazzle.ui.runtime.page_routes._PageDeps` deleted. Renamed `_PageRouterConfig` covers the same config-bag role but no longer carries the `evaluate_permission` / `inject_display_names` callable fields — those helpers are now imported directly from `dazzle.render` at the call site.
+  `dazzle.page.runtime.page_routes._PageDeps` deleted. Renamed `_PageRouterConfig` covers the same config-bag role but no longer carries the `evaluate_permission` / `inject_display_names` callable fields — those helpers are now imported directly from `dazzle.render` at the call site.
 
-  `dazzle.ui.runtime.page_routes.create_page_routes` signature: `evaluate_permission_fn` and `inject_display_names_fn` parameters removed. `back.runtime.app_factory` no longer passes them.
+  `dazzle.page.runtime.page_routes.create_page_routes` signature: `evaluate_permission_fn` and `inject_display_names_fn` parameters removed. `back.runtime.app_factory` no longer passes them.
 
   `back.runtime.workspace_card_data.py` and `back.runtime.route_generator.py` keep tiny re-exports of the moved helpers so back-internal callers keep working without further surgery; those re-exports can be deleted in a follow-up.
 
   Done criteria from #1094:
   - `grep -rn "_PageDeps" src/dazzle/` returns empty.
-  - `grep -n "from dazzle.back" src/dazzle/ui/runtime/page_routes.py src/dazzle/ui/runtime/template_renderer.py` returns empty.
+  - `grep -n "from dazzle.http" src/dazzle/page/runtime/page_routes.py src/dazzle/page/runtime/template_renderer.py` returns empty.
 
   `combined_server.py` retains its `back/` imports — that module's job is to glue both layers together at the entry point. The #1086 plan and the #1095 enforcement gate both document this exemption.
 
@@ -8937,14 +8945,14 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
 
 - **#1096: access-rule spec types moved from `back.specs.auth` to `dazzle.core.access`.** Prerequisite (a.k.a. workstream A-prime) for the #1094 `_PageDeps` shim removal. The 9 pure types — `AccessComparisonKind`, `AccessLogicalKind`, `AccessAuthContext`, `AccessPolicyEffect` (4 StrEnums) and `AccessConditionSpec`, `VisibilityRuleSpec`, `PermissionRuleSpec`, `ScopeRuleSpec`, `EntityAccessSpec` (5 BaseModels) — are all pure Pydantic value classes with no back-specific dependencies. They already imported `AccessOperationKind` from `dazzle.core.access`, so half the layering was already correct; they lived under `back/specs/` purely for historical reasons.
 
-  Now `dazzle.core.access` is the canonical home for the entire access-rule type vocabulary. `back/specs/auth.py` re-exports the names so existing `from dazzle.back.specs import …` / `from dazzle.back.specs.auth import …` imports continue to work — new code should import directly from `dazzle.core.access`.
+  Now `dazzle.core.access` is the canonical home for the entire access-rule type vocabulary. `back/specs/auth.py` re-exports the names so existing `from dazzle.http.specs import …` / `from dazzle.http.specs.auth import …` imports continue to work — new code should import directly from `dazzle.core.access`.
 
   Why now: `evaluate_permission` (in `back/runtime/access_evaluator.py`) couldn't move to a neutral location until these signature types lived in `core/`. With this landed, #1094 (kill `_PageDeps` callable-injection shim) is unblocked.
 
   Done criteria from #1096:
   - All 9 class definitions are in `dazzle/core/access.py`.
-  - None remain in `dazzle/back/specs/auth.py`.
-  - `dazzle/back/runtime/access_evaluator.py` no longer imports from `dazzle.back.specs.auth` — imports directly from `dazzle.core.access`.
+  - None remain in `dazzle/http/specs/auth.py`.
+  - `dazzle/http/runtime/access_evaluator.py` no longer imports from `dazzle.http.specs.auth` — imports directly from `dazzle.core.access`.
 
 ### Agent Guidance
 
@@ -8955,16 +8963,16 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
 ### Changed (BREAKING)
 
 - **#1091: `PageContext` + surface-access pure types moved to `dazzle.render`.** Second workstream of the #1086 back↔ui cycle break.
-  - `dazzle.ui.runtime.template_context` → `dazzle.render.context`. The full module (all `*Context` Pydantic models — `PageContext`, `TableContext`, `FormContext`, `DetailContext`, `PdfViewerContext`, `ColumnContext`, `FieldContext`, `NavItemContext`, `RelatedTabContext`, `RelatedGroupContext`, etc.) moved without behavioural change. The old `template_context.py` deleted outright.
-  - `dazzle.ui.runtime.surface_access` → `dazzle.render.surface_access`. Pure types (`SurfaceAccessConfig`, `SurfaceAccessDenied`, `check_surface_access`) moved. The old `surface_access.py` under `ui/runtime/` deleted outright.
-  - `dazzle.back.runtime.surface_access` is **no longer a re-export wrapper** — it now only owns the FastAPI middleware (`create_access_check_handler`, `create_access_denied_handler`, `get_user_personas_from_membership`). The pure types it used to re-export must now be imported from `dazzle.render.surface_access`.
+  - `dazzle.page.runtime.template_context` → `dazzle.render.context`. The full module (all `*Context` Pydantic models — `PageContext`, `TableContext`, `FormContext`, `DetailContext`, `PdfViewerContext`, `ColumnContext`, `FieldContext`, `NavItemContext`, `RelatedTabContext`, `RelatedGroupContext`, etc.) moved without behavioural change. The old `template_context.py` deleted outright.
+  - `dazzle.page.runtime.surface_access` → `dazzle.render.surface_access`. Pure types (`SurfaceAccessConfig`, `SurfaceAccessDenied`, `check_surface_access`) moved. The old `surface_access.py` under `ui/runtime/` deleted outright.
+  - `dazzle.http.runtime.surface_access` is **no longer a re-export wrapper** — it now only owns the FastAPI middleware (`create_access_check_handler`, `create_access_denied_handler`, `get_user_personas_from_membership`). The pure types it used to re-export must now be imported from `dazzle.render.surface_access`.
   - All 36 import sites updated (4 in `back/`, 9 in `ui/`, 22 test files, 1 in `back/runtime/surface_access.py`).
-  - No backward-compat shim — downstream code importing from the old `dazzle.ui.runtime.template_context` or `dazzle.ui.runtime.surface_access` paths fails at import time.
+  - No backward-compat shim — downstream code importing from the old `dazzle.page.runtime.template_context` or `dazzle.page.runtime.surface_access` paths fails at import time.
 
   Done criteria from #1091:
   ```
-  grep -rn 'from dazzle.ui.runtime.template_context\|from dazzle.ui.runtime.surface_access' \
-          src/dazzle/back/ --include='*.py'
+  grep -rn 'from dazzle.page.runtime.template_context\|from dazzle.page.runtime.surface_access' \
+          src/dazzle/http/ --include='*.py'
   ```
   returns empty.
 
@@ -8977,11 +8985,11 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
 
 ### Changed
 
-- **#1090: Jinja-filter helpers moved from `dazzle.ui.runtime.template_renderer` into new `dazzle.render.filters` module.** First workstream of the #1086 back↔ui cycle break. 15 pure value-formatting helpers (`_currency_filter`, `_date_filter`, `_metric_number_filter`, `_badge_tone_filter`, `_bool_icon_filter`, `_timeago_filter`, `_slugify_filter`, `_basename_or_url_filter`, `_humanize_filter`, `_ref_display_name`, `_ref_display_filter`, `_resolve_fk_id_filter`, `_truncate_filter`, `_gettext`, `_pagination_pages`) plus the `_STATUS_TONE_MAP` constant now live in `dazzle.render` — neutral location that neither `back/` nor `ui/` "imports up" from. `template_renderer.py` keeps only `render_page` and `_render_typed_body` (the actual page-rendering entry points). All 15 call sites updated (8 in `back/runtime/`, 1 in `ui/runtime/detail_renderer.py`, 2 in `render/`, plus 7 test files).
+- **#1090: Jinja-filter helpers moved from `dazzle.page.runtime.template_renderer` into new `dazzle.render.filters` module.** First workstream of the #1086 back↔ui cycle break. 15 pure value-formatting helpers (`_currency_filter`, `_date_filter`, `_metric_number_filter`, `_badge_tone_filter`, `_bool_icon_filter`, `_timeago_filter`, `_slugify_filter`, `_basename_or_url_filter`, `_humanize_filter`, `_ref_display_name`, `_ref_display_filter`, `_resolve_fk_id_filter`, `_truncate_filter`, `_gettext`, `_pagination_pages`) plus the `_STATUS_TONE_MAP` constant now live in `dazzle.render` — neutral location that neither `back/` nor `ui/` "imports up" from. `template_renderer.py` keeps only `render_page` and `_render_typed_body` (the actual page-rendering entry points). All 15 call sites updated (8 in `back/runtime/`, 1 in `ui/runtime/detail_renderer.py`, 2 in `render/`, plus 7 test files).
 
   Done criteria from #1090:
   ```
-  grep -rn 'from dazzle.ui.runtime.template_renderer' src/dazzle/back/ --include='*.py'
+  grep -rn 'from dazzle.page.runtime.template_renderer' src/dazzle/http/ --include='*.py'
   ```
   returns empty.
 
@@ -8989,7 +8997,7 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
 
 ### Agent Guidance
 
-- Pure value-formatting helpers (the kind that take an IR/data value and return a string or `Markup`) live in `dazzle.render.filters`, not `dazzle.ui.runtime.template_renderer`. New helpers in that style should go straight to `render/filters.py`.
+- Pure value-formatting helpers (the kind that take an IR/data value and return a string or `Markup`) live in `dazzle.render.filters`, not `dazzle.page.runtime.template_renderer`. New helpers in that style should go straight to `render/filters.py`.
 
 ## [0.70.5] - 2026-05-15
 
@@ -9037,7 +9045,7 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
 
   Done criteria from #1087:
   ```
-  grep -rn 'httpx\.AsyncClient(' src/dazzle/back/ src/dazzle/mcp/ src/dazzle/cli/ --include='*.py' \
+  grep -rn 'httpx\.AsyncClient(' src/dazzle/http/ src/dazzle/mcp/ src/dazzle/cli/ --include='*.py' \
     | grep -v 'async_retrying_request\|#.*noqa'
   ```
   returns empty.
@@ -9078,7 +9086,7 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
 - **#1089: 3 dead backward-compat aliases removed (ADR-0003).** Pattern P10 from the 2026-05-15 smells run.
   - `dazzle.mcp.server.handlers.common.handler_error_json` / `async_handler_error_json` — zero importers; deleted outright.
   - `dazzle.core.ir.LayoutArchetype` (alias for `Stage`) — alias deleted, the 9 call sites in `src/dazzle/layout/` updated to use `Stage` directly. Also removed from `dazzle.core.ir.__all__` and `dazzle.layout.types.__all__`.
-  - `dazzle.back.runtime.exception_handlers.register_site_404_handler` (alias for `register_site_error_handlers`) — alias deleted; sole caller in `app_factory.py:695` updated.
+  - `dazzle.http.runtime.exception_handlers.register_site_404_handler` (alias for `register_site_error_handlers`) — alias deleted; sole caller in `app_factory.py:695` updated.
 - `tests/unit/test_no_shims.py` `ALLOWED_PATHS` entries for `core/ir/layout.py` and `core/ir/__init__.py` removed (the aliases they covered are gone, so the gate now enforces no-shim on those files too).
 - `docs/api-surface/ir-types.txt` baseline regenerated — enum count went 141 → 140 (the `LayoutArchetype` alias entry is no longer in `__all__`; `Stage` is unchanged).
 
@@ -9090,7 +9098,7 @@ The umbrella issue #1086 is now structurally complete: the **back↔ui cycle is 
 
 ### Changed
 
-- **#1084: `dazzle.core` no longer imports from `dazzle.back`.** Pattern P2 from the 2026-05-15 smells run. `default_renderer_names()` and the `_DEFAULT_RENDERERS` tuple moved from `dazzle.back.runtime.renderers.init` into new `dazzle.core.renderer_registry`. The runtime `register_default_renderers()` helper stays in `back/runtime/renderers/init.py` (it depends on `RuntimeServices` + `FragmentSurfaceRenderer`) but now imports `_DEFAULT_RENDERERS` from `core` to keep the link-time validator and runtime registry in sync. All 11 call sites updated (5 in `core`/`cli`/`lsp`, 6 elsewhere). The most dangerous coupling in the codebase — one more downward import would have transitively pulled FastAPI into the DSL parser. No backward-compat shim per ADR-0003.
+- **#1084: `dazzle.core` no longer imports from `dazzle.http`.** Pattern P2 from the 2026-05-15 smells run. `default_renderer_names()` and the `_DEFAULT_RENDERERS` tuple moved from `dazzle.http.runtime.renderers.init` into new `dazzle.core.renderer_registry`. The runtime `register_default_renderers()` helper stays in `back/runtime/renderers/init.py` (it depends on `RuntimeServices` + `FragmentSurfaceRenderer`) but now imports `_DEFAULT_RENDERERS` from `core` to keep the link-time validator and runtime registry in sync. All 11 call sites updated (5 in `core`/`cli`/`lsp`, 6 elsewhere). The most dangerous coupling in the codebase — one more downward import would have transitively pulled FastAPI into the DSL parser. No backward-compat shim per ADR-0003.
 
 ### Agent Guidance
 
@@ -9196,7 +9204,7 @@ No new functional changes beyond v0.67.160. Minor-version bump marks the conclus
 - **#1070** — linker dropped `domain_services` during merge (v0.67.147). Affected every Dazzle app silently.
 - **#1072 Bug B** — `ux verify --contracts --managed` emitted empty `ReadTimeout` errors. Diagnostic instrumentation revealed Bug A (v0.67.148).
 - **#1075** — linker dropped 18 additional shared `ModuleFragment`/`AppSpec` fields (channels, messages, subscriptions, projections, etc.) — 11 confirmed-dropping in real DSL. Proactive audit prompted by v0.67.147 Agent Guidance. Parametrised regression test added (v0.67.149).
-- **#1076** — `dazzle.back.print_schema` returned a string but the name implied stdout output. Renamed `format_schema` (v0.67.150).
+- **#1076** — `dazzle.http.print_schema` returned a string but the name implied stdout output. Renamed `format_schema` (v0.67.150).
 - **#1074** — 4 MCP project-* tools collapsed into one `project` tool with `operation` enum, matching every other tool in the registry (v0.67.151).
 - **#1073** — qa trial dedup post-processor missed near-duplicates split across categories. Added second-pass collapse on shared evidence (v0.67.152).
 - **#1072 Bug A** — managed-mode contract verifier hung with `subprocess.PIPE` buffer deadlock. Two defensive layers (v0.67.153 / v0.67.154) plus the real root-cause fix (v0.67.156).
@@ -9345,7 +9353,7 @@ API-002 (`NavDefinitionSpec` → `NavSpec`) was attempted in this release but **
 
 1. `src/dazzle/core/ir/sitespec/__init__.py` → marketing-page site nav
 2. `src/dazzle/core/ir/workspaces.py` → workspace-level nav (the proposed rename target)
-3. `src/dazzle/ui/specs/shell.py` → UI shell nav
+3. `src/dazzle/page/specs/shell.py` → UI shell nav
 
 The rename would create unresolvable import collisions. The existing `NavDefinitionSpec` name actually disambiguates well from the three other "Nav*" concepts. Recommend either:
 
@@ -9413,7 +9421,7 @@ Mirror `ModeRunner`'s pattern: write subprocess output to a log file (unbounded 
 
 Verified end-to-end: **3 consecutive `dazzle ux verify --contracts --managed` runs against ops_dashboard all pass 18/0/12.** Previously failed 2 of 2 with `ReadTimeout` on `rbac:Alert:ops_engineer:list` and `rbac:Alert:ops_engineer:create`.
 
-Bonus: `dazzle.back.events.outbox.create_table` now sets `lock_timeout=5s` before each `CREATE INDEX IF NOT EXISTS` and swallows lock-timeout errors. Protects against the secondary failure mode where a leaked subprocess from a previous run holds `idle in transaction` on `_dazzle_event_outbox` and the new subprocess hangs on `CREATE INDEX`. The IF NOT EXISTS contract means the index probably already exists from a prior clean boot anyway.
+Bonus: `dazzle.http.events.outbox.create_table` now sets `lock_timeout=5s` before each `CREATE INDEX IF NOT EXISTS` and swallows lock-timeout errors. Protects against the secondary failure mode where a leaked subprocess from a previous run holds `idle in transaction` on `_dazzle_event_outbox` and the new subprocess hangs on `CREATE INDEX`. The IF NOT EXISTS contract means the index probably already exists from a prior clean boot anyway.
 
 ### Investigation arc
 
@@ -9573,18 +9581,18 @@ Discovered by `/improve` cycle 126 (`api_surface_audit` of mcp-tools); filed as 
 
 ## [0.67.150] - 2026-05-14
 
-### Changed — `dazzle.back.print_schema` → `format_schema` — closes #1076
+### Changed — `dazzle.http.print_schema` → `format_schema` — closes #1076
 
 Misleading-verb rename. The function returns a GraphQL SDL string; it doesn't write to stdout. The previous name implied side-effect output, inconsistent with its companion `inspect_schema` (returns dict, correctly named).
 
 ```diff
-- from dazzle.back import print_schema
-+ from dazzle.back import format_schema
+- from dazzle.http import print_schema
++ from dazzle.http import format_schema
 ```
 
 **Touch points** (all updated in one commit per ADR-0003 "no backward compat shims"):
-- `src/dazzle/back/graphql/integration.py:423` — function definition + docstring note
-- `src/dazzle/back/__init__.py` — `_LOADERS` mapping + lazy loader + TYPE_CHECKING import
+- `src/dazzle/http/graphql/integration.py:423` — function definition + docstring note
+- `src/dazzle/http/__init__.py` — `_LOADERS` mapping + lazy loader + TYPE_CHECKING import
 - `src/dazzle/mcp/runtime_tools/handlers.py:464` — MCP schema-inspect handler
 - `src/dazzle/cli/runtime_impl/inspect.py:383` — `dazzle inspect` CLI command
 - `tests/unit/test_graphql.py:395` — test renamed to `test_format_schema`
@@ -9708,9 +9716,9 @@ Discovered by `/improve` cycle 116 (initial repro), cycle 121 (fix).
 
 ### Fixed — `make test-ux-deep` Makefile rot (companion to v0.67.145)
 
-After v0.67.145 repaired `test-ux-preflight`, an audit of the parent `test-ux-deep` target found the same shape of rot — line 135 mypy'd `src/dazzle_back/` which no longer exists (merged into `src/dazzle/back/` at v0.67.98 / #1055).
+After v0.67.145 repaired `test-ux-preflight`, an audit of the parent `test-ux-deep` target found the same shape of rot — line 135 mypy'd `src/dazzle_http/` which no longer exists (merged into `src/dazzle/http/` at v0.67.98 / #1055).
 
-Fix: `src/dazzle_back/` → `src/dazzle/back/`. The rest of the target's paths (`src/dazzle/core`, `src/dazzle/cli`, `src/dazzle/mcp`, `tests/unit/audit_internals.py`) were verified to still exist. Added a path-note comment documenting the rename so future readers don't bring back the stale form.
+Fix: `src/dazzle_http/` → `src/dazzle/http/`. The rest of the target's paths (`src/dazzle/core`, `src/dazzle/cli`, `src/dazzle/mcp`, `tests/unit/audit_internals.py`) were verified to still exist. Added a path-note comment documenting the rename so future readers don't bring back the stale form.
 
 Verified: `make test-ux-deep` green — 12 passed + 11 skipped (preflight), mypy clean (60 + 726 source files).
 
@@ -9720,12 +9728,12 @@ This and v0.67.145 together restore the autonomous-improvement loop's preflight 
 
 ### Fixed — `make test-ux-preflight` Makefile rot
 
-Speculative `/improve` cycle found `make test-ux-preflight` failing at Step 0b. 5 of 9 referenced tests no longer exist (`test_template_orphan_scan`, `test_page_route_coverage`, `test_daisyui_python_lint`, `test_dom_snapshots`, `test_card_safety_invariants` — all deleted during the Jinja retirement / Phase 4 deletion sweep, beginning v0.67.52). The mypy target `src/dazzle_ui/` also no longer exists — the package merged into `src/dazzle/ui/` at v0.67.98 (#1055).
+Speculative `/improve` cycle found `make test-ux-preflight` failing at Step 0b. 5 of 9 referenced tests no longer exist (`test_template_orphan_scan`, `test_page_route_coverage`, `test_daisyui_python_lint`, `test_dom_snapshots`, `test_card_safety_invariants` — all deleted during the Jinja retirement / Phase 4 deletion sweep, beginning v0.67.52). The mypy target `src/dazzle_page/` also no longer exists — the package merged into `src/dazzle/page/` at v0.67.98 (#1055).
 
 Updated `test-ux-preflight`:
 - Pruned the 5 deleted tests; kept the 4 real invariant guards (`test_canonical_pointer_lint`, `test_template_none_safety`, `test_external_resource_lint`, `test_ir_field_reader_parity`)
 - Added `test_typed_runtime_no_jinja` — the canonical structural anchor that replaced most of the deleted ones
-- Switched mypy target to `src/dazzle/ui/`
+- Switched mypy target to `src/dazzle/page/`
 
 Verified green: 12 passed, 11 skipped, mypy clean (60 files).
 
@@ -9996,7 +10004,7 @@ Tests: 13,982 passed (full not-e2e), 191 region-adapter-direct.
 
 ### Agent Guidance
 
-- The mixin-per-family pattern in `src/dazzle/back/runtime/renderers/region_adapter/` is now the canonical template for splitting fat dispatch classes. When the next 2,000+ line `_dispatcher`-style file emerges (e.g. `route_generator.py` if its README isn't enough — see #1066), mirror this layout: family mixins in `_builders_<family>.py`, cross-cutting helpers in `_shared.py`, dispatch tables stay in `_dispatcher.py`. Public re-exports live in `__init__.py`.
+- The mixin-per-family pattern in `src/dazzle/http/runtime/renderers/region_adapter/` is now the canonical template for splitting fat dispatch classes. When the next 2,000+ line `_dispatcher`-style file emerges (e.g. `route_generator.py` if its README isn't enough — see #1066), mirror this layout: family mixins in `_builders_<family>.py`, cross-cutting helpers in `_shared.py`, dispatch tables stay in `_dispatcher.py`. Public re-exports live in `__init__.py`.
 
 ## [0.67.134] - 2026-05-14
 
@@ -10147,9 +10155,9 @@ Tests: 13,982 passed (full not-e2e), 191 region-adapter-direct tests passed.
 
 ### Changed — region_adapter.py converted to a package (progress on #1065)
 
-First of 6+ PRs decomposing `src/dazzle/back/runtime/renderers/region_adapter.py` (2,871 lines, friction-168 in the 30-day stall-log sweep) into per-display-family modules.
+First of 6+ PRs decomposing `src/dazzle/http/runtime/renderers/region_adapter.py` (2,871 lines, friction-168 in the 30-day stall-log sweep) into per-display-family modules.
 
-**This PR**: pure refactor with zero behavioural change. Renamed the file to `region_adapter/_dispatcher.py` (preserves git history via `git mv`) and added `region_adapter/__init__.py` that re-exports `WorkspaceRegionAdapter` + `_render_status_badge_html`. Every existing `from dazzle.back.runtime.renderers.region_adapter import ...` call site keeps working unchanged — verified across the 6 external importers (renderer.py × 4 sites, workspace_region_render.py × 1, tests × 2).
+**This PR**: pure refactor with zero behavioural change. Renamed the file to `region_adapter/_dispatcher.py` (preserves git history via `git mv`) and added `region_adapter/__init__.py` that re-exports `WorkspaceRegionAdapter` + `_render_status_badge_html`. Every existing `from dazzle.http.runtime.renderers.region_adapter import ...` call site keeps working unchanged — verified across the 6 external importers (renderer.py × 4 sites, workspace_region_render.py × 1, tests × 2).
 
 Tests: 13,982 passed, 191 region-adapter-direct tests passed.
 
@@ -10157,7 +10165,7 @@ Tests: 13,982 passed, 191 region-adapter-direct tests passed.
 
 ### Agent Guidance
 
-- New package layout: `src/dazzle/back/runtime/renderers/region_adapter/` is a directory, not a file. Public surface is in `__init__.py`; implementation in `_dispatcher.py`. When per-family files land they'll be `_builders_<family>.py`.
+- New package layout: `src/dazzle/http/runtime/renderers/region_adapter/` is a directory, not a file. Public surface is in `__init__.py`; implementation in `_dispatcher.py`. When per-family files land they'll be `_builders_<family>.py`.
 
 ## [0.67.127] - 2026-05-14
 
@@ -10179,11 +10187,11 @@ This bump itself was applied with the new skill — first dogfood. Expected impa
 
 Three landed-together AX improvements derived from `scripts/stall_log_mine.py` (the 30-day stall-log sweep at 74a6b6d6).
 
-**#1066 — route_generator.py section-map docstring.** Replaced the 4-line module-top docstring on `src/dazzle/back/runtime/route_generator.py` (4,257 lines) with a 35-line section map. 16 logical sections line-anchored (HTMX renderers, Cedar RBAC, audit, auth wrapper, list/read/write handlers, graph subsystem, ref injection, RouteGenerator class). Closes the friction-148 measurement without any code restructuring; mining showed 135 repeat reads in the window against a 4-line docstring vs `renderer.py`'s multi-paragraph docstring producing 84 repeat reads on a comparable-size file.
+**#1066 — route_generator.py section-map docstring.** Replaced the 4-line module-top docstring on `src/dazzle/http/runtime/route_generator.py` (4,257 lines) with a 35-line section map. 16 logical sections line-anchored (HTMX renderers, Cedar RBAC, audit, auth wrapper, list/read/write handlers, graph subsystem, ref injection, RouteGenerator class). Closes the friction-148 measurement without any code restructuring; mining showed 135 repeat reads in the window against a 4-line docstring vs `renderer.py`'s multi-paragraph docstring producing 84 repeat reads on a comparable-size file.
 
 **#1067 — forward-pointer comments on transit-point files.** Added 5 one-line forward-pointers:
 
-- `src/dazzle/ui/runtime/page_routes.py` — entry-point note (app_factory mounts), `_resolve_backend_url` cross-caller note (experience_routes), `_check_surface_access` mirror note (template_compiler), `create_page_routes` sibling-factory note (site_routes).
+- `src/dazzle/page/runtime/page_routes.py` — entry-point note (app_factory mounts), `_resolve_backend_url` cross-caller note (experience_routes), `_check_surface_access` mirror note (template_compiler), `create_page_routes` sibling-factory note (site_routes).
 - `src/dazzle/core/dsl_parser_impl/workspace.py` — mixin-composition + IR-type pointer in module docstring, `_parse_workspace_access` runtime-enforcement pointer.
 
 Each pointer maps to a grep round-trip the stall miner had logged. Estimated to cut ~30% of navigational repeat-reads on these two files.
@@ -10206,7 +10214,7 @@ The `Install Playwright chromium` step downloaded the ~150MB browser binary on e
 
 ### Fixed — promote `fastapi` to core dep so PyPI smoke-test passes
 
-`fastapi` was in the `[serve]` extras but `dazzle.core.appspec_loader` transitively imports `dazzle.back.runtime` whose `server.py` / `file_routes.py` / `search_routes.py` / `qa_routes.py` / etc. all have unconditional `from fastapi import …` at module load. The PyPI smoke-test installs only core deps and immediately crashes with `ModuleNotFoundError: No module named 'fastapi'` on `dazzle --help`. That's been red on every release since at least v0.67.70 (confirmed via `gh run list --workflow="Publish to PyPI"`).
+`fastapi` was in the `[serve]` extras but `dazzle.core.appspec_loader` transitively imports `dazzle.http.runtime` whose `server.py` / `file_routes.py` / `search_routes.py` / `qa_routes.py` / etc. all have unconditional `from fastapi import …` at module load. The PyPI smoke-test installs only core deps and immediately crashes with `ModuleNotFoundError: No module named 'fastapi'` on `dazzle --help`. That's been red on every release since at least v0.67.70 (confirmed via `gh run list --workflow="Publish to PyPI"`).
 
 Promoted `fastapi>=0.100.0` from `[serve]` to core dependencies. `[serve]` keeps `uvicorn`, `httpx`, `python-multipart` (those genuinely are runtime-only). `[dev]` keeps `fastapi` for documentation; pip dedupes.
 
@@ -10216,7 +10224,7 @@ After this lands, v0.67.119–123 changes will be combined into the v0.67.124 wh
 
 ### Fixed — wheel-import crash when FastAPI not installed (release CI red)
 
-`src/dazzle/back/runtime/auth/routes_jwt.py:35,82` had
+`src/dazzle/http/runtime/auth/routes_jwt.py:35,82` had
 
 ```python
 request: FastAPIRequest | None = None,
@@ -10310,7 +10318,7 @@ url = ref_route.replace("{id}", id_value)  # or fall back to concat
 
 **Bug 2 — SUMMARY region renders empty.** `display: summary` is an alias for `display: metrics` (handled by `WorkspaceRegionAdapter._ALIASES`), but `SUMMARY` was missing from `_TYPED_REGION_DISPLAYS` / `_CARD_FAMILY` in `workspace_region_render.py`. Without family-membership the dispatch skipped the typed-primitive build and returned just the `<div data-dz-region…></div>` wrapper. Added `SUMMARY` to `_CARD_FAMILY` and extended the METRICS branch to handle both display values.
 
-Both regressions were caught by `INTERACTION_WALK` once it finally ran on green upstream jobs after v0.67.117 — gated for 2+ days behind the dazzle_back/dazzle_ui merge fallout.
+Both regressions were caught by `INTERACTION_WALK` once it finally ran on green upstream jobs after v0.67.117 — gated for 2+ days behind the dazzle_http/dazzle_page merge fallout.
 
 ### Result
 
@@ -10349,7 +10357,7 @@ Audited 19 open CodeQL alerts. Triage:
 
 ### Removed — workspace_rendering decomposition (cut 17 — shim deletion, closes #1057)
 
-- **`src/dazzle/back/runtime/workspace_rendering.py` deleted.** The back-compat re-export shim that survived after cut 16 is gone — every test site that imported from it has been migrated to the canonical sibling module (17 test files, ~65 import statements rewritten).
+- **`src/dazzle/http/runtime/workspace_rendering.py` deleted.** The back-compat re-export shim that survived after cut 16 is gone — every test site that imported from it has been migrated to the canonical sibling module (17 test files, ~65 import statements rewritten).
 
 - **Migration was mechanical**: a one-shot script mapped each symbol (`_compute_aggregate_metrics`, `WorkspaceRegionContext`, `_render_csv_response`, etc.) to its canonical home (`workspace_aggregation`, `workspace_context`, `workspace_csv`, …) and rewrote single-line + parenthesised-multi-line imports in place.
 
@@ -10357,7 +10365,7 @@ Audited 19 open CodeQL alerts. Triage:
   - `test_workspace_region_error_visibility`: now sweeps `workspace_region_handler` + `workspace_handlers` + `workspace_region_fetch` (the three places the structured ERROR log lines live).
   - `test_typed_runtime_no_jinja`: the typed-only invariant expanded from one file to 16 sibling modules — every module the handler delegates to is now jinja2-free by contract.
 
-- **`test_bar_chart_bucketed_aggregate`**: `caplog.at_level(logger="dazzle.back.runtime.workspace_rendering")` rebased to `dazzle.back.runtime.workspace_aggregation` (where `_compute_pivot_buckets` logs from now).
+- **`test_bar_chart_bucketed_aggregate`**: `caplog.at_level(logger="dazzle.http.runtime.workspace_rendering")` rebased to `dazzle.http.runtime.workspace_aggregation` (where `_compute_pivot_buckets` logs from now).
 
 ### Agent Guidance
 
@@ -10392,7 +10400,7 @@ After **17 cuts**: `workspace_rendering.py` 4,483 → **0 lines (file deleted, -
 
 ### Changed — workspace_rendering decomposition (cut 16 — final code motion)
 
-- **Moved `_workspace_region_handler` itself to its own module** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New `src/dazzle/back/runtime/workspace_region_handler.py` (94 lines) hosts the 6-phase async orchestration spine; `workspace_rendering.py` is now a pure re-export shim.
+- **Moved `_workspace_region_handler` itself to its own module** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New `src/dazzle/http/runtime/workspace_region_handler.py` (94 lines) hosts the 6-phase async orchestration spine; `workspace_rendering.py` is now a pure re-export shim.
 
 - **`workspace_rendering.py`** trimmed from 141 → **79 lines** — entirely re-export imports with a self-documenting "where things live now" docstring. Zero logic remains. The 4,483-line monolith is gone; this file exists only so the ~50 test sites that import names from `workspace_rendering` keep resolving.
 
@@ -10415,7 +10423,7 @@ After 16 cuts: `workspace_rendering.py` 4,483 → **79 lines (-4,404, -98%)**. 1
 
 ### Changed — workspace_rendering decomposition (cut 15 of N)
 
-- **Extracted Phase 4-5 of the region handler — compute orchestration** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/back/runtime/workspace_region_orchestration.py` (361 lines): `compute_region_render_inputs()` — async function that runs every aggregate / bucketed / per-display compute call and returns a fully-populated `RegionRenderInputs` dataclass.
+- **Extracted Phase 4-5 of the region handler — compute orchestration** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/http/runtime/workspace_region_orchestration.py` (361 lines): `compute_region_render_inputs()` — async function that runs every aggregate / bucketed / per-display compute call and returns a fully-populated `RegionRenderInputs` dataclass.
 
 - **`_workspace_region_handler`** trimmed from 541 → **141 lines** (-400 in this cut). The ~340-line aggregate + per-display compute orchestration is now a single `await compute_region_render_inputs(...)` call.
 
@@ -10476,7 +10484,7 @@ After 14 cuts: `workspace_rendering.py` still 541 lines (no change this cut — 
 
 ### Changed — workspace_rendering decomposition (cut 13 of N)
 
-- **Extracted Phase 6 of the region handler — typed-primitive render tail** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/back/runtime/workspace_region_render.py` (432 lines):
+- **Extracted Phase 6 of the region handler — typed-primitive render tail** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/http/runtime/workspace_region_render.py` (432 lines):
   - `RegionRenderInputs` dataclass — 30 fields bundling every shape phases 1-5 produce (items, columns, totals, metrics, per-display pre-computes). Single typed contract between the orchestration handler and the render tail.
   - `render_region_html()` async function — runs the 34-branch display dispatch, calls `WorkspaceRegionAdapter().build()` + `FragmentRenderer().render()`, wraps in `<div data-dz-region>` chrome.
   - `_TYPED_REGION_DISPLAYS` whitelist (34 entries) — adding a new display is still one entry here plus one `elif` branch in `render_region_html`.
@@ -10500,7 +10508,7 @@ The remaining 541 lines are the orchestration spine — Phase 2's `fetched = ...
 
 ### Changed — workspace_rendering decomposition (cut 12 of N)
 
-- **Extracted Phase 2 of the region handler — source query** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/back/runtime/workspace_region_fetch.py` (206 lines):
+- **Extracted Phase 2 of the region handler — source query** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/http/runtime/workspace_region_fetch.py` (206 lines):
   - `RegionItemsResult` dataclass — phase 2 output (items, total, scope_only_filters, scope_denied)
   - `fetch_region_items()` — async function that builds filters from IR + query params + date range, applies scope predicates, calls `repo.list`, injects FK display names, and fail-closes on any exception
 
@@ -10525,7 +10533,7 @@ After 12 cuts: `workspace_rendering.py` 4,483 → **909 lines (-3,574, -80%)**. 
 
 ### Changed — workspace_rendering decomposition (cut 11 of N)
 
-- **Extracted Phase 1 of the region handler — auth + identity prelude** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/back/runtime/workspace_region_prelude.py` (159 lines):
+- **Extracted Phase 1 of the region handler — auth + identity prelude** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). New module `src/dazzle/http/runtime/workspace_region_prelude.py` (159 lines):
   - `RequestUserContext` dataclass — phase 1 output (user_id, user_entity, auth_ctx_for_filters, filter_context)
   - `resolve_request_user_context()` — async function that runs auth gate → user resolution → filter-context build → grant pre-fetch, returning the dataclass
 
@@ -10618,7 +10626,7 @@ After 8 cuts: `workspace_rendering.py` 4,483 → 1,355 lines (-3,128, -70%). Sam
 
 ### Changed — workspace_rendering decomposition (cut 7 of N)
 
-- **First refactor inside `_workspace_region_handler` itself** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). Extracted 5 pure leaf data builders from the 1,455-line dispatcher to a new `src/dazzle/back/runtime/workspace_region_computes.py` (240 lines):
+- **First refactor inside `_workspace_region_handler` itself** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). Extracted 5 pure leaf data builders from the 1,455-line dispatcher to a new `src/dazzle/http/runtime/workspace_region_computes.py` (240 lines):
   - `compute_heatmap`: pivot flat items into a row/column matrix (HEATMAP display)
   - `compute_progress`: count items per stage and compute completion pct (PROGRESS display)
   - `compute_tree`: build nested hierarchy from flat items via a parent FK (TREE display)
@@ -10648,7 +10656,7 @@ After 7 cuts: `workspace_rendering.py` 4,483 → 1,430 lines (-3,053, -68%). Ele
 
 ### Changed — workspace_rendering decomposition (cut 6 of N)
 
-- **Extracted the 3 sibling request handlers to `src/dazzle/back/runtime/workspace_handlers.py`** (301 lines) — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). All three reuse `_workspace_region_handler` underneath but wrap it for different response shapes:
+- **Extracted the 3 sibling request handlers to `src/dazzle/http/runtime/workspace_handlers.py`** (301 lines) — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). All three reuse `_workspace_region_handler` underneath but wrap it for different response shapes:
   - `_fetch_region_json`: single-region JSON re-fetch path.
   - `_workspace_batch_handler`: N-regions-per-request batch with shared scope-filter computation.
   - `_workspace_stats_handler`: workspace-level KPI rollup (metrics-only).
@@ -10657,7 +10665,7 @@ After 7 cuts: `workspace_rendering.py` 4,483 → 1,430 lines (-3,053, -68%). Ele
 
 - **`server.py`** and **`workspace_route_builder.py`** updated to import the handlers from their new home directly.
 
-- **5 test imports** in `test_workspace_rendering.py` updated to `from dazzle.back.runtime.workspace_handlers import _workspace_stats_handler` (rather than maintaining a back-import shim that would have re-introduced circularity).
+- **5 test imports** in `test_workspace_rendering.py` updated to `from dazzle.http.runtime.workspace_handlers import _workspace_stats_handler` (rather than maintaining a back-import shim that would have re-introduced circularity).
 
 - **`test_workspace_region_error_visibility.py`** updated to source-grep both `workspace_rendering.py` AND `workspace_handlers.py` so the structured-logging invariants follow the code rather than pinning to one file.
 
@@ -10703,7 +10711,7 @@ What's left in `workspace_rendering.py`: the 1,455-line `_workspace_region_handl
 
 ### Changed — workspace_rendering decomposition (cut 4 of N)
 
-- **Extracted the aggregation machinery to `src/dazzle/back/runtime/workspace_aggregation.py`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). The full SQL aggregation path used by chart, pivot, histogram, box-plot, KPI, and bucketed bar/line regions:
+- **Extracted the aggregation machinery to `src/dazzle/http/runtime/workspace_aggregation.py`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). The full SQL aggregation path used by chart, pivot, histogram, box-plot, KPI, and bucketed bar/line regions:
   - `_AGGREGATE_RE`, `_format_bucket_label`, `_parse_simple_where`, `_build_aggregate_filters`
   - `_fetch_count_metric`, `_fetch_scalar_metric` — scalar dispatchers
   - `_resolve_fk_target_spec`, `_compute_pivot_buckets`, `_aggregate_via_groupby`, `_enumerate_distinct_buckets`
@@ -10727,7 +10735,7 @@ After 4 cuts: `workspace_rendering.py` 4,483 → 2,377 lines (-2,106, -47%). Fou
 
 ### Changed — workspace_rendering decomposition (cut 3 of N)
 
-- **Extracted 11 pure card-data shapers + display-name helpers to `src/dazzle/back/runtime/workspace_card_data.py`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). All synchronous, no I/O, no IR dispatch:
+- **Extracted 11 pure card-data shapers + display-name helpers to `src/dazzle/http/runtime/workspace_card_data.py`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). All synchronous, no I/O, no IR dispatch:
   - `_CARD_TEMPLATE_RE` regex + `_resolve_path` + `_initials_from`
   - `_build_cohort_cells` (cohort_strip), `_build_day_timeline_slots` (day_timeline), `_build_task_inbox_payload` + `_resolve_task_inbox_multi_source` (task_inbox), `_items_from_template` (profile_card)
   - `_coerce_urgency`, `_coerce_pipeline_progress`, `_interpolate_card_template`
@@ -10752,7 +10760,7 @@ After 3 cuts: `workspace_rendering.py` 4,483 → 3,549 lines (-934, -21%). Three
 
 ### Changed — workspace_rendering decomposition (cut 2 of N)
 
-- **Extracted 5 entity-card section body renderers to `src/dazzle/back/runtime/workspace_card_bodies.py`** — progress on [#1057](https://github.com/manwithacat/dazzle/issues/1057). The four `entity_card` display-mode body builders (`_render_thread_summary_body`, `_render_stamps_body`, `_render_mini_bars_body`, `_render_quick_actions_body`) and their shared HTML escape helper (`_dazzle_html_escape`) are pure string composers — no I/O, no DB, no IR access. They take resolved row dicts in and return raw HTML strings out, dispatched to from `_build_entity_card_sections`.
+- **Extracted 5 entity-card section body renderers to `src/dazzle/http/runtime/workspace_card_bodies.py`** — progress on [#1057](https://github.com/manwithacat/dazzle/issues/1057). The four `entity_card` display-mode body builders (`_render_thread_summary_body`, `_render_stamps_body`, `_render_mini_bars_body`, `_render_quick_actions_body`) and their shared HTML escape helper (`_dazzle_html_escape`) are pure string composers — no I/O, no DB, no IR access. They take resolved row dicts in and return raw HTML strings out, dispatched to from `_build_entity_card_sections`.
 
 - **`workspace_rendering.py`** trimmed from 4,292 → 4,004 lines (-288). The 5 functions are imported back into the module so the dispatcher in `_build_entity_card_sections` continues to work. No external call sites — zero re-exports needed for back-compat, this cluster was fully encapsulated.
 
@@ -10767,7 +10775,7 @@ After 3 cuts: `workspace_rendering.py` 4,483 → 3,549 lines (-934, -21%). Three
 
 ### Changed — workspace_rendering decomposition (cut 1 of N)
 
-- **Extracted 3 column-metadata builders to `src/dazzle/back/runtime/workspace_columns.py`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). The 4,483-line `workspace_rendering.py` mega-module loses its first ~190 lines as a self-contained concern: `field_kind_to_col_type`, `build_surface_columns`, `build_entity_columns`. The new module is 209 lines, takes IR specs in, returns plain dicts out, has no request/response coupling.
+- **Extracted 3 column-metadata builders to `src/dazzle/http/runtime/workspace_columns.py`** — progress on [#1057](https://github.com/manwithacat/gh-issue/1057). The 4,483-line `workspace_rendering.py` mega-module loses its first ~190 lines as a self-contained concern: `field_kind_to_col_type`, `build_surface_columns`, `build_entity_columns`. The new module is 209 lines, takes IR specs in, returns plain dicts out, has no request/response coupling.
 
 - **`workspace_rendering.py`** trimmed from 4,483 → 4,292 lines. Re-exports the 3 functions under their old underscore-prefixed names for back-compat (`_field_kind_to_col_type`, etc.), so existing test imports continue to work without touching ~20 call sites in `tests/unit/test_workspace_rendering.py`.
 
@@ -10819,7 +10827,7 @@ Each is a clean per-concern extraction. The new sub-modules naturally name thems
 
 ### Changed
 
-- **`.github/workflows/ci.yml` mypy step**: replaced piecemeal `mypy src/dazzle/core src/dazzle/cli ... && mypy src/dazzle_back/ ...` (post-package-merge anachronism) with a single `mypy src/dazzle`. CI now fails on any mypy error — no baseline allowed.
+- **`.github/workflows/ci.yml` mypy step**: replaced piecemeal `mypy src/dazzle/core src/dazzle/cli ... && mypy src/dazzle_http/ ...` (post-package-merge anachronism) with a single `mypy src/dazzle`. CI now fails on any mypy error — no baseline allowed.
 
 ### Why this matters
 
@@ -10836,57 +10844,57 @@ mypy is now a useful PR gate. Pre-v0.67.99: "is this PR clean?" meant "is this P
 
 ### Changed — package merge
 
-- **`dazzle_back` and `dazzle_ui` merged into `dazzle/`** — closes [#1055](https://github.com/manwithacat/gh-issue/1055). The framework now ships a single top-level package (`dazzle/`) instead of three siblings (`dazzle/`, `dazzle_back/`, `dazzle_ui/`). The `dazzle_back` and `dazzle_ui` contents are now nested as `dazzle.back` and `dazzle.ui` subpackages.
+- **`dazzle_http` and `dazzle_page` merged into `dazzle/`** — closes [#1055](https://github.com/manwithacat/gh-issue/1055). The framework now ships a single top-level package (`dazzle/`) instead of three siblings (`dazzle/`, `dazzle_http/`, `dazzle_page/`). The `dazzle_http` and `dazzle_page` contents are now nested as `dazzle.http` and `dazzle.page` subpackages.
 
   Layout change:
 
   | Before | After |
   |--------|-------|
-  | `src/dazzle_back/runtime/app_factory.py` | `src/dazzle/back/runtime/app_factory.py` |
-  | `src/dazzle_ui/runtime/template_renderer.py` | `src/dazzle/ui/runtime/template_renderer.py` |
-  | `from dazzle_back.X import Y` | `from dazzle.back.X import Y` |
-  | `from dazzle_ui.X import Y` | `from dazzle.ui.X import Y` |
-  | `import dazzle_back` | `from dazzle import back as dazzle_back` |
-  | `import dazzle_ui` | `from dazzle import ui as dazzle_ui` |
-  | `top_level.txt`: `dazzle, dazzle_back, dazzle_ui, dazzle_e2e` | `top_level.txt`: `dazzle, dazzle_e2e` |
+  | `src/dazzle_http/runtime/app_factory.py` | `src/dazzle/http/runtime/app_factory.py` |
+  | `src/dazzle_page/runtime/template_renderer.py` | `src/dazzle/page/runtime/template_renderer.py` |
+  | `from dazzle_http.X import Y` | `from dazzle.http.X import Y` |
+  | `from dazzle_page.X import Y` | `from dazzle.page.X import Y` |
+  | `import dazzle_http` | `from dazzle import http as dazzle_http` |
+  | `import dazzle_page` | `from dazzle import page as dazzle_page` |
+  | `top_level.txt`: `dazzle, dazzle_http, dazzle_page, dazzle_e2e` | `top_level.txt`: `dazzle, dazzle_e2e` |
 
   `dazzle_e2e` (Playwright test harness) stays separate — it's the one boundary that's genuinely independent.
 
-- **`dazzle.ui.layout_engine` renamed to `dazzle.layout`** — the existing `dazzle.ui` (semantic layout engine, archetypes, attention adjustment) was relocated to `dazzle.layout/` so the new `dazzle.ui` (former `dazzle_ui`) takes its natural home. Only the layout module itself imported from this path; rename is mechanical.
+- **`dazzle.page.layout_engine` renamed to `dazzle.layout`** — the existing `dazzle.page` (semantic layout engine, archetypes, attention adjustment) was relocated to `dazzle.layout/` so the new `dazzle.page` (former `dazzle_page`) takes its natural home. Only the layout module itself imported from this path; rename is mechanical.
 
-- **585 Python files** had their imports rewritten (mostly mechanical regex pass — `from dazzle_back` → `from dazzle.back`, etc.). **96 files** had string-literal references (e.g. `pytest.importorskip("dazzle_back")`, package-data keys in pyproject) rewritten to the new dotted paths. **15 files** had non-Path string-pair concatenations (`"dazzle" / "back"`) collapsed back to `"dazzle.back"` after the path-component split heuristic over-applied. **12 files** had Path-chain `/ "dazzle.ui"` re-split to `/ "dazzle" / "ui"` so pathlib resolves them correctly. **56 files** had repo-relative path strings (`"src/dazzle_back/..."`) rewritten.
+- **585 Python files** had their imports rewritten (mostly mechanical regex pass — `from dazzle_http` → `from dazzle.http`, etc.). **96 files** had string-literal references (e.g. `pytest.importorskip("dazzle_http")`, package-data keys in pyproject) rewritten to the new dotted paths. **15 files** had non-Path string-pair concatenations (`"dazzle" / "back"`) collapsed back to `"dazzle.http"` after the path-component split heuristic over-applied. **12 files** had Path-chain `/ "dazzle.page"` re-split to `/ "dazzle" / "ui"` so pathlib resolves them correctly. **56 files** had repo-relative path strings (`"src/dazzle_http/..."`) rewritten.
 
-- **`pyproject.toml`** updated: `[tool.setuptools.package-data]` keys now reference `dazzle.ui.runtime.static` etc.; `[tool.pytest.ini_options].testpaths` updated to `src/dazzle/back/tests`; `[[tool.mypy.overrides]].module` list updated.
+- **`pyproject.toml`** updated: `[tool.setuptools.package-data]` keys now reference `dazzle.page.runtime.static` etc.; `[tool.pytest.ini_options].testpaths` updated to `src/dazzle/http/tests`; `[[tool.mypy.overrides]].module` list updated.
 
-- **`MANIFEST.in`** updated to `recursive-include src/dazzle/ui/runtime/static *.js *.css`.
+- **`MANIFEST.in`** updated to `recursive-include src/dazzle/page/runtime/static *.js *.css`.
 
 - **`docs/api-surface/runtime-urls.txt`** and **`public-helpers.txt`** baselines regenerated to reflect the new module paths.
 
 ### Why this matters
 
-Pre-merge: 20 bidirectional cross-package imports (`dazzle_ui` ↔ `dazzle_back`) made the boundary fiction. The folder names also misled — `dazzle_ui/runtime/page_routes.py` was a FastAPI router (2,189 lines, sounded like UI, was backend); `dazzle_back/runtime/audit_region.py` rendered HTML (sounded like backend, was UI). After this merge an agent searching for "where does X live?" pays a single tree traversal instead of three.
+Pre-merge: 20 bidirectional cross-package imports (`dazzle_page` ↔ `dazzle_http`) made the boundary fiction. The folder names also misled — `dazzle_page/runtime/page_routes.py` was a FastAPI router (2,189 lines, sounded like UI, was backend); `dazzle_http/runtime/audit_region.py` rendered HTML (sounded like backend, was UI). After this merge an agent searching for "where does X live?" pays a single tree traversal instead of three.
 
 ### Breaking Changes
 
 Downstream consumers that imported via the old paths must rewrite:
 
-- `from dazzle_back.X import Y` → `from dazzle.back.X import Y`
-- `from dazzle_ui.X import Y` → `from dazzle.ui.X import Y`
-- `import dazzle_back` → `from dazzle import back as dazzle_back` (or rewrite usages to `dazzle.back.*`)
-- `import dazzle_ui` → `from dazzle import ui as dazzle_ui` (or rewrite usages to `dazzle.ui.*`)
-- Path strings like `Path("src/dazzle_back/...")` → `Path("src/dazzle/back/...")`
-- pyproject extras / package-data references to `dazzle_back` / `dazzle_ui` → `dazzle.back` / `dazzle.ui`
+- `from dazzle_http.X import Y` → `from dazzle.http.X import Y`
+- `from dazzle_page.X import Y` → `from dazzle.page.X import Y`
+- `import dazzle_http` → `from dazzle import http as dazzle_http` (or rewrite usages to `dazzle.http.*`)
+- `import dazzle_page` → `from dazzle import page as dazzle_page` (or rewrite usages to `dazzle.page.*`)
+- Path strings like `Path("src/dazzle_http/...")` → `Path("src/dazzle/http/...")`
+- pyproject extras / package-data references to `dazzle_http` / `dazzle_page` → `dazzle.http` / `dazzle.page`
 
 ### Test Results
 
 - `pytest tests/ -m "not e2e"`: 13,982 passed, 153 skipped, **0 failed**.
-- mypy baseline: 46 errors (unchanged from pre-merge; same set of pre-existing type issues now under `dazzle.ui.*` paths instead of `dazzle_ui.*`).
+- mypy baseline: 46 errors (unchanged from pre-merge; same set of pre-existing type issues now under `dazzle.page.*` paths instead of `dazzle_page.*`).
 - ruff: clean after `--fix` autofixed 188 import-organisation issues.
 
 ### Agent Guidance
 
 - The single top-level `dazzle` package is the canonical search root for everything except the e2e test harness. Tab-completing `from dazzle.` shows every subsystem.
-- The `dazzle.back` and `dazzle.ui` namespaces are documentation-only distinctions — file new modules under whichever subpackage best matches their role, knowing the bidirectional dependency between them is expected (and was the original reason the sibling-package layout was misleading).
+- The `dazzle.http` and `dazzle.page` namespaces are documentation-only distinctions — file new modules under whichever subpackage best matches their role, knowing the bidirectional dependency between them is expected (and was the original reason the sibling-package layout was misleading).
 
 ## [0.67.97] - 2026-05-12
 
@@ -10945,12 +10953,12 @@ The framework now ships with a fully-green test suite — "failed" once again me
   Now gitignored and built on demand:
   - **CI** (`.github/workflows/ci.yml`): new `Build asset bundles` step runs `python scripts/build_dist.py` immediately after `pip install` in `python-tests`, `integration`, and `postgres-tests` jobs.
   - **Publish workflow** (`.github/workflows/publish-pypi.yml`): already built bundles before `twine upload`; unchanged.
-  - **Wheel build**: `MANIFEST.in`'s `recursive-include src/dazzle_ui/runtime/static *.js *.css` rule picks up the freshly-built files; `pip install dazzle-dsl` still ships the bundle.
+  - **Wheel build**: `MANIFEST.in`'s `recursive-include src/dazzle_page/runtime/static *.js *.css` rule picks up the freshly-built files; `pip install dazzle-dsl` still ships the bundle.
   - **Local dev**: run `python scripts/build_dist.py` once after clone, or any time you touch a `static/css/*.css` source.
 
 ### Agent Guidance
 
-- The framework's bundle artefacts live under `src/dazzle_ui/runtime/static/dist/` but are no longer in version control. To rebuild locally: `python scripts/build_dist.py`. The artefacts are required for `dazzle serve` (the FastAPI static mount serves them at `/static/dist/...`) but not for `pytest` (tests reference URLs as strings, not files).
+- The framework's bundle artefacts live under `src/dazzle_page/runtime/static/dist/` but are no longer in version control. To rebuild locally: `python scripts/build_dist.py`. The artefacts are required for `dazzle serve` (the FastAPI static mount serves them at `/static/dist/...`) but not for `pytest` (tests reference URLs as strings, not files).
 
 ## [0.67.94] - 2026-05-12
 
@@ -10967,10 +10975,10 @@ Migrated files:
 - `src/dazzle/agent/journey_reporter.py`
 - `src/dazzle/compliance/analytics/consent_banner.py`
 - `src/dazzle/compliance/analytics/provider_html.py`
-- `src/dazzle_ui/runtime/detail_renderer.py`
-- `src/dazzle_ui/runtime/form_renderer.py`
-- `src/dazzle_ui/runtime/pdf_viewer_renderer.py`
-- `src/dazzle_ui/runtime/table_renderer.py`
+- `src/dazzle_page/runtime/detail_renderer.py`
+- `src/dazzle_page/runtime/form_renderer.py`
+- `src/dazzle_page/runtime/pdf_viewer_renderer.py`
+- `src/dazzle_page/runtime/table_renderer.py`
 
 ### Not Changed
 
@@ -10992,7 +11000,7 @@ The pre-existing 7 local helpers all used `_esc(value, *, quote=False)` with ~15
 
 ### Added
 
-- **`src/dazzle_ui/runtime/app_chrome.py`** — typed `AppChrome` dataclass + `resolve_app_chrome(appspec, project_root, manifest)` resolver. Replaces the Jinja env globals (`_app_theme`, `_app_theme_url_chain`, `_app_theme_map`, `_app_theme_font_preconnect`, `_use_cdn`, `_favicon`, `_feedback_widget_enabled`) retired with v0.67.92. Theme name resolution order is unchanged: `DAZZLE_OVERRIDE_THEME` env var > `app foo: theme:` DSL > `[ui] theme = "..."` in dazzle.toml > framework default.
+- **`src/dazzle_page/runtime/app_chrome.py`** — typed `AppChrome` dataclass + `resolve_app_chrome(appspec, project_root, manifest)` resolver. Replaces the Jinja env globals (`_app_theme`, `_app_theme_url_chain`, `_app_theme_map`, `_app_theme_font_preconnect`, `_use_cdn`, `_favicon`, `_feedback_widget_enabled`) retired with v0.67.92. Theme name resolution order is unchanged: `DAZZLE_OVERRIDE_THEME` env var > `app foo: theme:` DSL > `[ui] theme = "..."` in dazzle.toml > framework default.
 - **`Page.font_preconnect: tuple[str, ...]`** field — emits one `<link rel="preconnect" href="..." crossorigin>` per origin in `<head>`, positioned before the framework bundle's `<link rel="stylesheet">` so the TCP+TLS handshake overlaps with stylesheet parsing.
 - **13 new tests**:
   - `tests/unit/test_app_chrome.py` (9 tests) — defaults, manifest favicon override, CDN toggle, feedback-widget threading, missing-theme graceful degradation, env theme precedence, use_cdn-is-informational
@@ -11031,21 +11039,21 @@ Theme support that was inert post-#1042 (v0.67.92) is back:
 
 Closes Phase C of [#1044](https://github.com/manwithacat/gh-issue/1044) **and** the long-running umbrella [#1042](https://github.com/manwithacat/gh-issue/1042). The framework no longer ships **any** Jinja templates and `jinja2` is dropped from `pyproject.toml`.
 
-- **15 remaining templates deleted**: 6 active fragments (`fragments/table_rows`, `table_pagination`, `inline_edit`, `form_errors`, `detail_fields`, `table_sentinel`), 4 macros (`macros/a11y`, `locale_switcher`, `region_wrapper`, `status_badge`), 3 workspace templates (`workspace/_content`, `_card_picker`, `regions/_typed_primitive`), `base.html`, `layouts/app_shell.html`. The entire `src/dazzle_ui/templates/` directory is gone.
+- **15 remaining templates deleted**: 6 active fragments (`fragments/table_rows`, `table_pagination`, `inline_edit`, `form_errors`, `detail_fields`, `table_sentinel`), 4 macros (`macros/a11y`, `locale_switcher`, `region_wrapper`, `status_badge`), 3 workspace templates (`workspace/_content`, `_card_picker`, `regions/_typed_primitive`), `base.html`, `layouts/app_shell.html`. The entire `src/dazzle_page/templates/` directory is gone.
 - **65 jinja-dependent test files deleted** (~12,000 lines):
   - 42 unit tests under `tests/unit/` that imported `render_fragment` / `get_jinja_env` / `create_jinja_env` or read template files from disk (parity tests for workspace regions, dashboard, drawer, picker, base shell, etc.)
   - 2 integration tests (`test_examples_fragment_smoke`, `test_cyfuture_workspaces_zero_jinja_when_chrome_on`)
   - 21 follow-on template-reading tests that the broader sweep made redundant (`test_template_orphan_scan`, `test_dz_richtext`, `test_dz_debug`, `test_asset_bundle`, `test_dashboard_builder_triggers`, etc.)
-- **`get_jinja_env`, `create_jinja_env`, `configure_project_templates`, `add_theme_template_dirs`, `render_fragment`** functions removed from `src/dazzle_ui/runtime/template_renderer.py`. `TEMPLATES_DIR` constant removed.
+- **`get_jinja_env`, `create_jinja_env`, `configure_project_templates`, `add_theme_template_dirs`, `render_fragment`** functions removed from `src/dazzle_page/runtime/template_renderer.py`. `TEMPLATES_DIR` constant removed.
 - **`Environment` / `FileSystemLoader` / `ChoiceLoader` / `PrefixLoader`** imports gone — `markupsafe` stays for the `_bool_icon_filter` HTML emission.
-- **Theme + CDN + feedback-widget Jinja-globals plumbing** in `src/dazzle_back/runtime/subsystems/system_routes.py` (~165 lines), `src/dazzle_ui/runtime/combined_server.py`, and `src/dazzle_ui/runtime/hot_reload.py` deleted — these populated globals consumed only by the now-retired `base.html` / `layouts/app_shell.html`.
+- **Theme + CDN + feedback-widget Jinja-globals plumbing** in `src/dazzle_http/runtime/subsystems/system_routes.py` (~165 lines), `src/dazzle_page/runtime/combined_server.py`, and `src/dazzle_page/runtime/hot_reload.py` deleted — these populated globals consumed only by the now-retired `base.html` / `layouts/app_shell.html`.
 - **`jinja2>=3.1` removed** from `pyproject.toml` `[project].dependencies`. **`djlint>=1.34` removed** from `[project.optional-dependencies].dev` along with the `[tool.djlint]` config block.
 
 ### Changed
 
-- **`src/dazzle_ui/runtime/template_renderer.py`** trimmed from 782 → 313 lines. The pure-Python value-formatting helpers (`_currency_filter`, `_date_filter`, `_badge_tone_filter`, `_metric_number_filter`, `_bool_icon_filter`, `_timeago_filter`, `_slugify_filter`, `_basename_or_url_filter`, `_humanize_filter`, `_ref_display_name`, `_ref_display_filter`, `_resolve_fk_id_filter`, `_truncate_filter`, `_gettext`, `_pagination_pages`) all survive — they're imported directly by `form_renderer.py` / `detail_renderer.py` / `table_renderer.py`. `render_page` and `_render_typed_body` are the entire public API now.
+- **`src/dazzle_page/runtime/template_renderer.py`** trimmed from 782 → 313 lines. The pure-Python value-formatting helpers (`_currency_filter`, `_date_filter`, `_badge_tone_filter`, `_metric_number_filter`, `_bool_icon_filter`, `_timeago_filter`, `_slugify_filter`, `_basename_or_url_filter`, `_humanize_filter`, `_ref_display_name`, `_ref_display_filter`, `_resolve_fk_id_filter`, `_truncate_filter`, `_gettext`, `_pagination_pages`) all survive — they're imported directly by `form_renderer.py` / `detail_renderer.py` / `table_renderer.py`. `render_page` and `_render_typed_body` are the entire public API now.
 - **`fragment_registry.py`** rewritten — entries now point at the Python `module` that emits each fragment instead of a `template` filesystem path. The registry is informational metadata for MCP `status` / `coverage` tooling; nothing is rendered through it.
-- **`test_typed_runtime_no_jinja.py::_TYPED_ONLY_MODULES`** extended with the final 6 modules now confirmed jinja-free: `core/expander.py`, `compliance/renderer.py`, `dazzle_ui/runtime/template_renderer.py`, `combined_server.py`, `hot_reload.py`, `dazzle_back/runtime/subsystems/system_routes.py`.
+- **`test_typed_runtime_no_jinja.py::_TYPED_ONLY_MODULES`** extended with the final 6 modules now confirmed jinja-free: `core/expander.py`, `compliance/renderer.py`, `dazzle_page/runtime/template_renderer.py`, `combined_server.py`, `hot_reload.py`, `dazzle_http/runtime/subsystems/system_routes.py`.
 
 ### Behavioural Notes
 
@@ -11054,7 +11062,7 @@ Closes Phase C of [#1044](https://github.com/manwithacat/gh-issue/1044) **and** 
 
 ### Breaking Changes
 
-1. **`from dazzle_ui.runtime.template_renderer import render_fragment / get_jinja_env / configure_project_templates / add_theme_template_dirs / create_jinja_env / TEMPLATES_DIR`** → `ImportError`. There is no replacement — downstream rendering composes typed `Page` / `AppShell` primitives and calls `dispatch_render_page(...)` directly.
+1. **`from dazzle_page.runtime.template_renderer import render_fragment / get_jinja_env / configure_project_templates / add_theme_template_dirs / create_jinja_env / TEMPLATES_DIR`** → `ImportError`. There is no replacement — downstream rendering composes typed `Page` / `AppShell` primitives and calls `dispatch_render_page(...)` directly.
 2. **`pip install dazzle-dsl`** no longer pulls in `jinja2`. Downstream projects that import `jinja2` need to add it to their own dependencies.
 3. **Theme switching via DSL `app foo: theme:` or `[ui] theme = "..."` in dazzle.toml is currently inert.** Themes will return via typed primitive config in a follow-up.
 
@@ -11072,9 +11080,9 @@ Closes Phase C of [#1044](https://github.com/manwithacat/gh-issue/1044) **and** 
 ### Removed
 
 - **3 Jinja analytics-provider templates** retired (Phase B of [#1044](https://github.com/manwithacat/dazzle/issues/1044)):
-  - `src/dazzle_ui/templates/site/includes/analytics/gtm_head.html`
-  - `src/dazzle_ui/templates/site/includes/analytics/gtm_noscript.html`
-  - `src/dazzle_ui/templates/site/includes/analytics/plausible_head.html`
+  - `src/dazzle_page/templates/site/includes/analytics/gtm_head.html`
+  - `src/dazzle_page/templates/site/includes/analytics/gtm_noscript.html`
+  - `src/dazzle_page/templates/site/includes/analytics/plausible_head.html`
   - The `site/includes/analytics/` and `site/` directories were emptied and removed.
 
 ### Added
@@ -11127,7 +11135,7 @@ After those retire: delete `get_jinja_env()` + `render_fragment` from `template_
 
 ### Progress on #1042 (drop jinja2 umbrella) + #1044 (template inventory triage)
 
-`src/dazzle_ui/templates/` now contains ~18 templates (was 37 pre-ship). Phase B work to retire the remaining and drop `jinja2`:
+`src/dazzle_page/templates/` now contains ~18 templates (was 37 pre-ship). Phase B work to retire the remaining and drop `jinja2`:
 - 3 analytics partials (`site/includes/analytics/gtm_head.html`, `gtm_noscript.html`, `plausible_head.html`) — port to Python alongside the consent banner work in #1051
 - 3 workspace parity templates (`workspace/_content.html`, `_card_picker.html`, `regions/_typed_primitive.html`) — referenced by `test_workspace_*.py` parity tests
 - 4 macro templates (`macros/a11y.html`, `locale_switcher.html`, `region_wrapper.html`, `status_badge.html`) — adopter-opt-in helpers
@@ -11167,7 +11175,7 @@ Note: zero `.dsl` files in `examples/` or `fixtures/` actually invoked vocab via
 
 All 5 sub-issues now closed (#1047, #1048, #1049, #1050, #1051). Production source code no longer imports `jinja2` anywhere except the one remaining test-only path:
 
-- `src/dazzle_ui/runtime/template_renderer.py` — framework-internal `render_fragment` helper for the parking-lot fragment test suite (~284 references across 23 test files). Goes away with #1044 (template inventory triage) which retires the parking-lot fragments as a group.
+- `src/dazzle_page/runtime/template_renderer.py` — framework-internal `render_fragment` helper for the parking-lot fragment test suite (~284 references across 23 test files). Goes away with #1044 (template inventory triage) which retires the parking-lot fragments as a group.
 
 After #1044 closes, the final steps to drop `jinja2>=3.0` from `pyproject.toml` are:
 1. Delete `render_fragment` and `get_jinja_env` from `template_renderer.py`
@@ -11183,7 +11191,7 @@ After #1044 closes, the final steps to drop `jinja2>=3.0` from `pyproject.toml` 
 
 ### Removed
 
-- **`jinja2` import retired from `src/dazzle_back/runtime/llm_executor.py`** — closes [#1048](https://github.com/manwithacat/gh-issue/1048). LLM prompt templates now use stdlib `string.Template` (`$var` / `${var}` syntax) instead of Jinja2 (`{{ var }}`).
+- **`jinja2` import retired from `src/dazzle_http/runtime/llm_executor.py`** — closes [#1048](https://github.com/manwithacat/gh-issue/1048). LLM prompt templates now use stdlib `string.Template` (`$var` / `${var}` syntax) instead of Jinja2 (`{{ var }}`).
 
 ### Changed
 
@@ -11211,7 +11219,7 @@ Downstream DSL files with `llm_intent` blocks using `{{ input.field }}` syntax w
 
 4 of 5 sub-issues closed (#1048, #1049, #1050, #1051). Remaining:
 - **#1047** — `src/dazzle/core/expander.py` (DSL vocab macros) — the trickiest because user-authored vocab manifests use Jinja filters (`| lower`, `| title`) and conditionals heavily. No example `.dsl` file actually invokes vocab via `@use` though, so migration impact is bounded.
-- `src/dazzle_ui/runtime/template_renderer.py` — internal `render_fragment` helper for parking-lot fragment test suite (goes away with #1044)
+- `src/dazzle_page/runtime/template_renderer.py` — internal `render_fragment` helper for parking-lot fragment test suite (goes away with #1044)
 - Theme globals on Jinja env in `system_routes.py` + `combined_server.py` + `hot_reload.py` — become dead code once `get_jinja_env` is gone
 
 ### Agent Guidance
@@ -11239,8 +11247,8 @@ Downstream DSL files with `llm_intent` blocks using `{{ input.field }}` syntax w
 
 Three of the original 5 sub-issues closed (#1049, #1050, #1051). Remaining:
 - `src/dazzle/core/expander.py` (#1047 — DSL vocab macros, user-authored templates)
-- `src/dazzle_back/runtime/llm_executor.py` (#1048 — LLM prompts, user-authored templates)
-- `src/dazzle_ui/runtime/template_renderer.py` — internal `render_fragment` helper for parking-lot test suite (goes away with #1044)
+- `src/dazzle_http/runtime/llm_executor.py` (#1048 — LLM prompts, user-authored templates)
+- `src/dazzle_page/runtime/template_renderer.py` — internal `render_fragment` helper for parking-lot test suite (goes away with #1044)
 - Theme globals on Jinja env in `system_routes.py` + `combined_server.py` + `hot_reload.py` — become dead code once `get_jinja_env` is gone
 
 ### Agent Guidance
@@ -11258,9 +11266,9 @@ Three of the original 5 sub-issues closed (#1049, #1050, #1051). Remaining:
 ### Progress on #1042 (drop jinja2 umbrella)
 
 One fewer jinja2 user. Remaining users:
-- `src/dazzle_ui/runtime/template_renderer.py` — internal `render_fragment` helper for parking-lot fragment test suite (#1044)
+- `src/dazzle_page/runtime/template_renderer.py` — internal `render_fragment` helper for parking-lot fragment test suite (#1044)
 - `src/dazzle/core/expander.py` (#1047 — DSL vocab macros)
-- `src/dazzle_back/runtime/llm_executor.py` (#1048 — LLM prompts)
+- `src/dazzle_http/runtime/llm_executor.py` (#1048 — LLM prompts)
 - `src/dazzle/services/agent_commands/renderer.py` (#1049 — slash-command markdown)
 - Theme globals on the Jinja env in `system_routes.py` + `combined_server.py` + `hot_reload.py` — become dead code once `get_jinja_env` goes away
 
@@ -11268,15 +11276,15 @@ One fewer jinja2 user. Remaining users:
 
 ### Removed
 
-- **`render_fragment` and `render_surface` retired from the public API** — closes [#1051](https://github.com/manwithacat/gh-issue/1051). The downstream-facing Jinja-fragment helpers are no longer exported from `dazzle_ui.runtime`. Adopters compose typed `Page` + `AppShell` primitives directly. `render_fragment` remains as a framework-internal helper for the parking-lot fragment template test suite; it goes away with those templates (tracked under #1044).
-- **`JinjaRenderer` adapter retired entirely** — `src/dazzle_back/runtime/renderers/jinja.py` deleted. The renderer registry's default set is now just `{"fragment"}`. Surface `render:` clauses that named `"jinja"` will fail link-time validation. The dispatcher's fallback when `surface.render` is unset switched from `"jinja"` to `"fragment"`.
+- **`render_fragment` and `render_surface` retired from the public API** — closes [#1051](https://github.com/manwithacat/gh-issue/1051). The downstream-facing Jinja-fragment helpers are no longer exported from `dazzle_page.runtime`. Adopters compose typed `Page` + `AppShell` primitives directly. `render_fragment` remains as a framework-internal helper for the parking-lot fragment template test suite; it goes away with those templates (tracked under #1044).
+- **`JinjaRenderer` adapter retired entirely** — `src/dazzle_http/runtime/renderers/jinja.py` deleted. The renderer registry's default set is now just `{"fragment"}`. Surface `render:` clauses that named `"jinja"` will fail link-time validation. The dispatcher's fallback when `surface.render` is unset switched from `"jinja"` to `"fragment"`.
 - **`override_registry` retired entirely** — closes the `dazzle:override` declaration-header pattern for downstream Jinja-template authoring. Deleted:
-  - `src/dazzle_ui/runtime/override_registry.py` (246 lines)
+  - `src/dazzle_page/runtime/override_registry.py` (246 lines)
   - `src/dazzle/cli/overrides.py` (135 lines — the `dazzle overrides` CLI)
   - `tests/unit/test_override_registry.py`
-  - Auto-build hook in `dazzle_back/runtime/subsystems/system_routes.py`
+  - Auto-build hook in `dazzle_http/runtime/subsystems/system_routes.py`
 - **`tests/unit/runtime/test_jinja_renderer_adapter.py`** deleted — the entire test file targeted the now-retired adapter.
-- **`src/dazzle_ui/templates/site/includes/consent_banner.html`** deleted — the consent banner now renders via `src/dazzle/compliance/analytics/consent_banner.render_consent_banner` (Python).
+- **`src/dazzle_page/templates/site/includes/consent_banner.html`** deleted — the consent banner now renders via `src/dazzle/compliance/analytics/consent_banner.render_consent_banner` (Python).
 
 ### Added
 
@@ -11284,39 +11292,39 @@ One fewer jinja2 user. Remaining users:
 
 ### Changed
 
-- **`src/dazzle_back/runtime/consent_routes.py`** — `GET /dz/consent/banner` no longer instantiates `Jinja2Templates(env=get_jinja_env())`; it calls `render_consent_banner(...)` and returns an `HTMLResponse` (the variable interpolation is `html.escape`'d at the renderer, and the only URL parameters come from server config not request input).
-- **`src/dazzle_back/runtime/renderers/dispatch.py`** — fallback renderer name when `surface.render` is unset changed from `"jinja"` to `"fragment"`.
-- **`src/dazzle_back/runtime/renderers/init.py`** — `_DEFAULT_RENDERERS` is now `("fragment",)` only.
+- **`src/dazzle_http/runtime/consent_routes.py`** — `GET /dz/consent/banner` no longer instantiates `Jinja2Templates(env=get_jinja_env())`; it calls `render_consent_banner(...)` and returns an `HTMLResponse` (the variable interpolation is `html.escape`'d at the renderer, and the only URL parameters come from server config not request input).
+- **`src/dazzle_http/runtime/renderers/dispatch.py`** — fallback renderer name when `surface.render` is unset changed from `"jinja"` to `"fragment"`.
+- **`src/dazzle_http/runtime/renderers/init.py`** — `_DEFAULT_RENDERERS` is now `("fragment",)` only.
 
 ### Breaking Change Notice
 
 Three downstream-facing affordances retired in this release:
 
-1. **`from dazzle_ui.runtime import render_fragment` → ImportError.** Adopters that rendered HTMX partial fragments via `render_fragment("fragments/foo.html", **vars)` must compose the equivalent HTML via Python (e.g. mirror the framework's `form_renderer` / `detail_renderer` pattern) and return it as a string.
+1. **`from dazzle_page.runtime import render_fragment` → ImportError.** Adopters that rendered HTMX partial fragments via `render_fragment("fragments/foo.html", **vars)` must compose the equivalent HTML via Python (e.g. mirror the framework's `form_renderer` / `detail_renderer` pattern) and return it as a string.
 2. **Surface DSL `render: jinja` → link-time validation failure.** Update surfaces to `render: fragment` (or omit the field — `fragment` is the new default).
 3. **`dazzle overrides` CLI removed.** Downstream projects authoring Jinja templates with `{# dazzle:override layouts/app_shell.html #}` + `{# dazzle:blocks ... #}` declaration headers had this CLI to track block hashes across framework upgrades. The whole pattern is retired; projects should migrate templates to typed primitives.
 
 ### Progress on #1042 (drop jinja2 umbrella)
 
 Public Jinja-fragment API surface is gone. Remaining `jinja2` users:
-1. `src/dazzle_ui/runtime/template_renderer.py` — `get_jinja_env()` + framework-internal `render_fragment` helper (kept for the parking-lot fragment test suite; goes away with #1044)
+1. `src/dazzle_page/runtime/template_renderer.py` — `get_jinja_env()` + framework-internal `render_fragment` helper (kept for the parking-lot fragment test suite; goes away with #1044)
 2. `src/dazzle/core/expander.py` (#1047)
-3. `src/dazzle_back/runtime/llm_executor.py` (#1048)
+3. `src/dazzle_http/runtime/llm_executor.py` (#1048)
 4. `src/dazzle/services/agent_commands/renderer.py` (#1049)
 5. `src/dazzle/compliance/renderer.py` (#1050)
-6. `src/dazzle_back/runtime/subsystems/system_routes.py` + `combined_server.py` + `hot_reload.py` — set theme/feedback globals on the Jinja env. Become dead code once `get_jinja_env` is gone; cleanup will land alongside #1044.
+6. `src/dazzle_http/runtime/subsystems/system_routes.py` + `combined_server.py` + `hot_reload.py` — set theme/feedback globals on the Jinja env. Become dead code once `get_jinja_env` is gone; cleanup will land alongside #1044.
 
 ### Agent Guidance
 
 - The renderer registry default is `fragment`. New surface adapters register under the `fragment` family or define their own (e.g. `cytoscape_3d` for graph visualisations).
-- Downstream projects rendering custom HTML no longer extend Jinja templates. The supported pattern is composing typed `Page` + `AppShell` primitives and calling `dispatch_render_page(page_ctx, inner_html, ...)` from `dazzle_back.runtime.renderers.page_builder` — same pattern used internally by all framework routes since v0.67.55.
+- Downstream projects rendering custom HTML no longer extend Jinja templates. The supported pattern is composing typed `Page` + `AppShell` primitives and calling `dispatch_render_page(page_ctx, inner_html, ...)` from `dazzle_http.runtime.renderers.page_builder` — same pattern used internally by all framework routes since v0.67.55.
 
 ## [0.67.84] - 2026-05-12
 
 ### Removed
 
 - **`render_in_app_shell()` retired entirely** (Path A) — closes [#1040](https://github.com/manwithacat/dazzle/issues/1040). The downstream-facing helper for rendering a project Jinja template inside the framework app chrome is gone. Project authors now compose `Page` + `AppShell` typed primitives directly — the pattern already used by every framework-internal route since v0.67.55. Files removed:
-  - `src/dazzle_back/runtime/shell.py` (411 lines — `render_in_app_shell`, `ShellState` dataclass, `build_shell_state`, `register_shell_state`, `get_shell_state`, `_is_boosted_main_content_swap`)
+  - `src/dazzle_http/runtime/shell.py` (411 lines — `render_in_app_shell`, `ShellState` dataclass, `build_shell_state`, `register_shell_state`, `get_shell_state`, `_is_boosted_main_content_swap`)
   - `tests/unit/test_shell_helper.py` (280 lines)
   - `tests/unit/runtime/test_render_in_app_shell_boost.py` (208 lines)
 
@@ -11329,9 +11337,9 @@ Public Jinja-fragment API surface is gone. Remaining `jinja2` users:
 ### Progress on #1042 (drop jinja2 umbrella)
 
 The framework's render path no longer imports `jinja2`. The remaining `jinja2` users are:
-1. `src/dazzle_ui/runtime/template_renderer.py` — owns `get_jinja_env()` for the `render_fragment()` / `render_surface()` helpers + the `override_registry`'s `dz://` extends affordance
+1. `src/dazzle_page/runtime/template_renderer.py` — owns `get_jinja_env()` for the `render_fragment()` / `render_surface()` helpers + the `override_registry`'s `dz://` extends affordance
 2. `src/dazzle/core/expander.py` — DSL string interpolation (could swap to `string.Template`)
-3. `src/dazzle_back/runtime/llm_executor.py` — prompt template rendering (could swap to `string.Template`)
+3. `src/dazzle_http/runtime/llm_executor.py` — prompt template rendering (could swap to `string.Template`)
 4. `src/dazzle/services/agent_commands/renderer.py` — markdown template rendering
 5. `src/dazzle/compliance/renderer.py` — compliance report rendering
 
@@ -11339,7 +11347,7 @@ Migrating items 2–5 is the path to actually dropping `jinja2` from `pyproject.
 
 ### Breaking Change Notice
 
-Downstream projects calling `from dazzle_back.runtime.shell import render_in_app_shell` will see `ImportError` on upgrade. The migration is to construct an `AppShell` + `Page` typed primitive directly and call `dispatch_render_page(...)` from `dazzle_back.runtime.renderers.page_builder`. See `src/dazzle_back/runtime/site_routes.py` for an idiomatic example.
+Downstream projects calling `from dazzle_http.runtime.shell import render_in_app_shell` will see `ImportError` on upgrade. The migration is to construct an `AppShell` + `Page` typed primitive directly and call `dispatch_render_page(...)` from `dazzle_http.runtime.renderers.page_builder`. See `src/dazzle_http/runtime/site_routes.py` for an idiomatic example.
 
 ### Agent Guidance
 
@@ -11358,7 +11366,7 @@ Downstream projects calling `from dazzle_back.runtime.shell import render_in_app
 ### Notes on remaining Phase 4 work
 
 - **`base.html` + `layouts/app_shell.html` kept on disk** — they are the override-extension affordance for downstream adopters via `override_registry` (`{% extends "dz://layouts/app_shell.html" %}`). Their fate is tracked under #1040 (decide the Jinja-extends downstream contract) and #1044 (template inventory triage).
-- **jinja2 dependency stays** until #1040 closes — `render_in_app_shell` in `dazzle_back.runtime.shell` is the next blocker for #1042 (drop jinja2 umbrella).
+- **jinja2 dependency stays** until #1040 closes — `render_in_app_shell` in `dazzle_http.runtime.shell` is the next blocker for #1042 (drop jinja2 umbrella).
 
 ### Agent Guidance
 
@@ -11368,7 +11376,7 @@ Downstream projects calling `from dazzle_back.runtime.shell import render_in_app
 
 ### Removed
 
-- **`components/pdf_viewer_page.html` (29 lines) + `components/pdf_viewer.html` (298 lines)** — closes [#1045](https://github.com/manwithacat/dazzle/issues/1045). Both Jinja templates retired in favour of `src/dazzle_ui/runtime/pdf_viewer_renderer.py` — a pure-Python port mirroring `form_renderer`, `detail_renderer`, and `table_renderer`. All chrome (header + back button, sibling nav, embed slot, panels, footer keyboard legend, help dialog) emits via `html.escape` + string composition. The `data-dz-widget="pdf-viewer"` bridge contract is preserved byte-for-byte so `static/js/pdf-viewer.js` mounts unchanged.
+- **`components/pdf_viewer_page.html` (29 lines) + `components/pdf_viewer.html` (298 lines)** — closes [#1045](https://github.com/manwithacat/dazzle/issues/1045). Both Jinja templates retired in favour of `src/dazzle_page/runtime/pdf_viewer_renderer.py` — a pure-Python port mirroring `form_renderer`, `detail_renderer`, and `table_renderer`. All chrome (header + back button, sibling nav, embed slot, panels, footer keyboard legend, help dialog) emits via `html.escape` + string composition. The `data-dz-widget="pdf-viewer"` bridge contract is preserved byte-for-byte so `static/js/pdf-viewer.js` mounts unchanged.
 
 ### Added
 
@@ -11395,10 +11403,10 @@ After this ship, the Jinja template-driven path in `render_page` fires for **zer
 
 - **`SurfaceMode.REVIEW` retired** — closes [#1046](https://github.com/manwithacat/dazzle/issues/1046). The REVIEW surface mode was fully wired (enum value, compile branch, runtime handler, queue navigation, transition action mapping, template, dedicated test file) but **zero example apps or fixtures** declared `mode: review`. The audit across `examples/` and `fixtures/` confirmed the feature was dormant. Path A (retire) chosen over Path B (port to typed primitive). Files removed:
   - `SurfaceMode.REVIEW = "review"` enum entry in `src/dazzle/core/ir/surfaces.py`
-  - `_compile_review_surface()` and `SurfaceMode.REVIEW` route mapping in `src/dazzle_ui/converters/template_compiler.py`
-  - `ReviewContext` and `ReviewActionContext` Pydantic models in `src/dazzle_ui/runtime/template_context.py` (including `PageContext.review` field)
-  - `_handle_review()` and its dispatch in `src/dazzle_ui/runtime/page_routes.py`
-  - `src/dazzle_ui/templates/components/review_queue.html` (160 lines)
+  - `_compile_review_surface()` and `SurfaceMode.REVIEW` route mapping in `src/dazzle_page/converters/template_compiler.py`
+  - `ReviewContext` and `ReviewActionContext` Pydantic models in `src/dazzle_page/runtime/template_context.py` (including `PageContext.review` field)
+  - `_handle_review()` and its dispatch in `src/dazzle_page/runtime/page_routes.py`
+  - `src/dazzle_page/templates/components/review_queue.html` (160 lines)
   - `tests/unit/test_review_surface.py` (248 lines)
   - REVIEW-specific assertions trimmed from `tests/unit/test_template_html.py` and `tests/unit/test_page_purpose_wiring.py`
 
@@ -11456,7 +11464,7 @@ These 2 templates are the last gating consumers for #1039.
 ### Changed
 
 - **`journey_reporter.render_report` inline-rendered** — closes [#1041](https://github.com/manwithacat/dazzle/issues/1041). The Jinja env + `FileSystemLoader` import is gone; the self-contained HTML report (including all `<style>` CSS) emits via stdlib `html.escape` + Python string composition. All sections preserved: verdict summary, per-persona sessions (with collapsible details + step table), cross-persona patterns (with severity badges + evidence lists), dead ends, navigation breaks, recommendations table.
-- **`reports/` template directory retired** — `src/dazzle_ui/templates/reports/e2e_journey.html` (341 lines) deleted. The `DYNAMIC_DIRECTORY_EXEMPTIONS["reports/"]` exemption in `test_template_orphan_scan.py` removed (now empty dict).
+- **`reports/` template directory retired** — `src/dazzle_page/templates/reports/e2e_journey.html` (341 lines) deleted. The `DYNAMIC_DIRECTORY_EXEMPTIONS["reports/"]` exemption in `test_template_orphan_scan.py` removed (now empty dict).
 
 ### Added
 
@@ -11501,7 +11509,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Added
 
-- **`dazzle_ui.runtime.table_renderer` module** — Python port of `components/filterable_table.html` (318 lines) plus 3 toolbar fragments: `fragments/search_input.html`, `fragments/filter_bar.html`, `fragments/bulk_actions.html`. Public surface: `render_filterable_table(table, *, page_title="")`. The full dzTable Alpine controller wiring (loading, colMenuOpen, isColumnVisible, toggleColumn, toggleSort, ariaSortDir, sortIcon, toggleSelectAll, bulkCount, startColumnResize, bulkDelete, clearSelection, dzFilterRefSelect) preserved verbatim.
+- **`dazzle_page.runtime.table_renderer` module** — Python port of `components/filterable_table.html` (318 lines) plus 3 toolbar fragments: `fragments/search_input.html`, `fragments/filter_bar.html`, `fragments/bulk_actions.html`. Public surface: `render_filterable_table(table, *, page_title="")`. The full dzTable Alpine controller wiring (loading, colMenuOpen, isColumnVisible, toggleColumn, toggleSort, ariaSortDir, sortIcon, toggleSelectAll, bulkCount, startColumnResize, bulkDelete, clearSelection, dzFilterRefSelect) preserved verbatim.
 
 ### Removed
 
@@ -11520,13 +11528,13 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Agent Guidance
 
-- The framework's Python-side render path is essentially Jinja-free. `render_fragment` and the Jinja env (`get_jinja_env`) remain in `template_renderer.py` solely for: (a) `render_page` (which renders base.html / layouts/single_column.html / etc.), (b) `render_in_app_shell` in `dazzle_back.runtime.shell`, (c) journey_reporter's `reports/*.html` dynamic dispatch, (d) PDF viewer page, (e) downstream-project Jinja extension via `extends "layouts/app_shell.html"`. Dropping `jinja2` as a dependency now requires migrating those remaining paths — but the experience-cluster work that motivated this whole effort is complete.
+- The framework's Python-side render path is essentially Jinja-free. `render_fragment` and the Jinja env (`get_jinja_env`) remain in `template_renderer.py` solely for: (a) `render_page` (which renders base.html / layouts/single_column.html / etc.), (b) `render_in_app_shell` in `dazzle_http.runtime.shell`, (c) journey_reporter's `reports/*.html` dynamic dispatch, (d) PDF viewer page, (e) downstream-project Jinja extension via `extends "layouts/app_shell.html"`. Dropping `jinja2` as a dependency now requires migrating those remaining paths — but the experience-cluster work that motivated this whole effort is complete.
 
 ## [0.67.75] - 2026-05-12
 
 ### Added
 
-- **`dazzle_ui.runtime.detail_renderer` module** — Python port of `components/detail_view.html` (191 lines) plus 3 related-display fragments (`related_status_cards.html`, `related_file_list.html`, `related_table_group.html`) and the `status_badge.html` include shim. Public surface: `render_detail_view(detail)`. Field-type dispatch covers badge / bool / checkbox / date / currency / money / file / ref / enum / default with byte-equivalent CSS class names (`dz-detail-*`, `dz-related-*`, `dz-badge`).
+- **`dazzle_page.runtime.detail_renderer` module** — Python port of `components/detail_view.html` (191 lines) plus 3 related-display fragments (`related_status_cards.html`, `related_file_list.html`, `related_table_group.html`) and the `status_badge.html` include shim. Public surface: `render_detail_view(detail)`. Field-type dispatch covers badge / bool / checkbox / date / currency / money / file / ref / enum / default with byte-equivalent CSS class names (`dz-detail-*`, `dz-related-*`, `dz-badge`).
 
 ### Removed
 
@@ -11551,7 +11559,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Added
 
-- **`dazzle_ui.runtime.form_renderer` module** — Python port of `macros/form_field.html` + `fragments/search_select.html` + `fragments/form_stepper.html`. Public surface: `render_form_field(field, values, errors)`, `render_form_stepper(form_ctx)`. All 12 widget branches + 8 field-type branches preserved with byte-equivalent CSS class names (dz-form-*, dz-file-upload-*, dz-form-color-*, dz-form-money-*, dz-form-slider-*, dz-form-richtext, dz-search-select-*, dz-form-stepper-*).
+- **`dazzle_page.runtime.form_renderer` module** — Python port of `macros/form_field.html` + `fragments/search_select.html` + `fragments/form_stepper.html`. Public surface: `render_form_field(field, values, errors)`, `render_form_stepper(form_ctx)`. All 12 widget branches + 8 field-type branches preserved with byte-equivalent CSS class names (dz-form-*, dz-file-upload-*, dz-form-color-*, dz-form-money-*, dz-form-slider-*, dz-form-richtext, dz-search-select-*, dz-form-stepper-*).
 
 ### Removed
 
@@ -11574,7 +11582,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Agent Guidance
 
-- New form-field variants should land in `dazzle_ui.runtime.form_renderer` as additional branches in `render_form_field`. Keep the CSS class names matching the legacy template family so existing styles continue to apply.
+- New form-field variants should land in `dazzle_page.runtime.form_renderer` as additional branches in `render_form_field`. Keep the CSS class names matching the legacy template family so existing styles continue to apply.
 - The form-step rendering in experience flows is now end-to-end Python — no Jinja consumed for form surfaces. Detail-step and table-step branches still call `render_fragment` for `components/detail_view.html` (191 lines) and `components/filterable_table.html` (318 lines) — last two remaining Jinja templates in the experience cluster.
 
 ## [0.67.73] - 2026-05-11
@@ -11589,13 +11597,13 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Fixed
 
-- **Restore experience_renderer.py + experience/_step_form.html** that should have shipped in v0.67.71 — both files were untracked at commit time. Without them, `import dazzle_ui.runtime.experience_renderer` would fail at runtime. This release lands the actual files.
+- **Restore experience_renderer.py + experience/_step_form.html** that should have shipped in v0.67.71 — both files were untracked at commit time. Without them, `import dazzle_page.runtime.experience_renderer` would fail at runtime. This release lands the actual files.
 
 ## [0.67.71] - 2026-05-11
 
 ### Added
 
-- **`dazzle_ui.runtime.experience_renderer` module** — owns the experience-flow inner HTML rendering: outer shell (title, step progress indicator, container divs, transition action buttons), simple branches (ready, placeholder, non-surface step), and step-body dispatch. Rich step bodies (form / detail / table) call `render_fragment` for their sub-templates; the orchestration is Python.
+- **`dazzle_page.runtime.experience_renderer` module** — owns the experience-flow inner HTML rendering: outer shell (title, step progress indicator, container divs, transition action buttons), simple branches (ready, placeholder, non-surface step), and step-body dispatch. Rich step bodies (form / detail / table) call `render_fragment` for their sub-templates; the orchestration is Python.
 - **`experience/_step_form.html` template** — extracted from the now-retired `experience/_content.html` so the form-step branch can still render through the form_field + form_stepper + form_errors macro chain pending the form_field migration.
 
 ### Removed
@@ -11644,7 +11652,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
   - `site/includes/footer.html` (marketing footer columns)
   - `site/includes/theme_toggle.html` (dark-mode toggle)
   - `site/sections/_helpers.html`, `site/sections/generic.html`, and the 17 named-type section templates (hero, cta, card_grid, comparison, faq, features, logo_cloud, markdown, pricing, qa_personas, split_content, stats, steps, team, testimonials, trust_bar, value_highlight)
-- **`render_site_page` function retired** from `dazzle_ui.runtime.template_renderer` — no live consumer remained after the migration.
+- **`render_site_page` function retired** from `dazzle_page.runtime.template_renderer` — no live consumer remained after the migration.
 
 ### Changed
 
@@ -11656,8 +11664,8 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Agent Guidance
 
-- Marketing pages no longer touch Jinja. To add a new marketing section type: implement a builder in `dazzle_back.runtime.renderers.site_section_builder`, register it in `TYPED_SECTION_TYPES`, and the orchestrator will pick it up automatically.
-- The `dark_mode_toggle_enabled()` Jinja global is now imported from `dazzle_ui.runtime.theme.is_dark_mode_toggle_enabled` for Python use.
+- Marketing pages no longer touch Jinja. To add a new marketing section type: implement a builder in `dazzle_http.runtime.renderers.site_section_builder`, register it in `TYPED_SECTION_TYPES`, and the orchestrator will pick it up automatically.
+- The `dark_mode_toggle_enabled()` Jinja global is now imported from `dazzle_page.runtime.theme.is_dark_mode_toggle_enabled` for Python use.
 
 ## [0.67.68] - 2026-05-11
 
@@ -11728,7 +11736,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Changed
 
-- **`_render_detail_html` migrated to inline + typed Page wrap** — the auto-generated read-handler's HTMX/browser content-negotiation path (`dazzle_back.runtime.route_generator`) no longer goes through Jinja. The full-page browser path wraps the inline-rendered detail-fields HTML in a typed `Page` via `dispatch_render_page(chrome=False)` — no more `env.from_string("{%% extends 'layouts/single_column.html' %%}...")` string-built Jinja-extends pattern.
+- **`_render_detail_html` migrated to inline + typed Page wrap** — the auto-generated read-handler's HTMX/browser content-negotiation path (`dazzle_http.runtime.route_generator`) no longer goes through Jinja. The full-page browser path wraps the inline-rendered detail-fields HTML in a typed `Page` via `dispatch_render_page(chrome=False)` — no more `env.from_string("{%% extends 'layouts/single_column.html' %%}...")` string-built Jinja-extends pattern.
 - **Replaces 3 Jinja deps**: `fragments/detail_fields.html`, `layouts/single_column.html`, and `macros/status_badge.html`. The macro's Yes/No boolean badge rendering is inlined; long-string truncation (200 chars + ellipsis) and the underscore-to-space + title-case key formatting are preserved.
 
 ### Agent Guidance
@@ -11762,8 +11770,8 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Changed
 
-- **`htmx_error_response` inline-rendered** — the HTMX-aware form-validation-error helper (`dazzle_ui.runtime.htmx`) no longer goes through Jinja. The template `fragments/form_errors.html` STAYS on disk — it has Jinja `{% include %}` consumers in `components/form.html` and `experience/_content.html` — but the Python-level call inlines the same `dz-form-errors*` markup so existing CSS continues to apply. The legacy "ImportError fallback" simple-HTML branch (which emitted `alert alert-error` Tailwind classes that no longer exist) was removed; the inline render IS the path.
-- **`dazzle_ui.runtime.htmx` added to `test_typed_runtime_no_jinja.py` allowlist** — locked as Jinja2-free.
+- **`htmx_error_response` inline-rendered** — the HTMX-aware form-validation-error helper (`dazzle_page.runtime.htmx`) no longer goes through Jinja. The template `fragments/form_errors.html` STAYS on disk — it has Jinja `{% include %}` consumers in `components/form.html` and `experience/_content.html` — but the Python-level call inlines the same `dz-form-errors*` markup so existing CSS continues to apply. The legacy "ImportError fallback" simple-HTML branch (which emitted `alert alert-error` Tailwind classes that no longer exist) was removed; the inline render IS the path.
+- **`dazzle_page.runtime.htmx` added to `test_typed_runtime_no_jinja.py` allowlist** — locked as Jinja2-free.
 
 ### Removed
 
@@ -11771,13 +11779,13 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Agent Guidance
 
-- When adding HTMX-aware Python-level fragment renderers, use stdlib `html.escape` (or the existing `_escape` helper in `dazzle_ui.runtime.htmx`) and emit canonical `dz-*` CSS class names. Reserve Jinja `{% include %}` for shared partials authored within template chains.
+- When adding HTMX-aware Python-level fragment renderers, use stdlib `html.escape` (or the existing `_escape` helper in `dazzle_page.runtime.htmx`) and emit canonical `dz-*` CSS class names. Reserve Jinja `{% include %}` for shared partials authored within template chains.
 
 ## [0.67.60] - 2026-05-11
 
 ### Removed
 
-- **`dazzle_back.runtime.renderers.legacy_ctx` retired entirely** (319 lines of translator + 305 lines of tests, ~624 lines total). The `legacy_ctx_to_adapter_ctx` translator was build-out infrastructure for the v0.67.52 DISPLAY_TEMPLATE_MAP flip — it reshaped legacy Jinja-template kwargs into typed-adapter ctx for the `render_via_typed` byte-equivalence harness. After v0.67.59 removed `render_via_typed`, the translator had zero production consumers; its own test file was the only importer.
+- **`dazzle_http.runtime.renderers.legacy_ctx` retired entirely** (319 lines of translator + 305 lines of tests, ~624 lines total). The `legacy_ctx_to_adapter_ctx` translator was build-out infrastructure for the v0.67.52 DISPLAY_TEMPLATE_MAP flip — it reshaped legacy Jinja-template kwargs into typed-adapter ctx for the `render_via_typed` byte-equivalence harness. After v0.67.59 removed `render_via_typed`, the translator had zero production consumers; its own test file was the only importer.
 
 ### Agent Guidance
 
@@ -11795,7 +11803,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Agent Guidance
 
-- For new typed-vs-typed byte-equivalence comparisons, import `diff_summary` and `normalise_html` from `dazzle_back.runtime.renderers.dual_path`. Do not reintroduce `render_via_legacy` / `render_via_typed` — the legacy Jinja templates they dispatched to are mostly retired.
+- For new typed-vs-typed byte-equivalence comparisons, import `diff_summary` and `normalise_html` from `dazzle_http.runtime.renderers.dual_path`. Do not reintroduce `render_via_legacy` / `render_via_typed` — the legacy Jinja templates they dispatched to are mostly retired.
 
 ## [0.67.58] - 2026-05-11
 
@@ -11813,7 +11821,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Changed
 
-- **CI Jinja2 regression gate extended (5 new modules)** — `test_typed_runtime_no_jinja.py` now CI-locks the following modules as Jinja2-free, preventing future regressions: `dazzle_back.runtime.exception_handlers`, `dazzle_back.runtime.renderers.page_builder`, `dazzle_back.runtime.shell`, `dazzle_ui.runtime.page_routes`, `dazzle_ui.runtime.workspace_renderer`. These five completed the typed migration in Phase 4 (v0.67.42–v0.67.56); the gate ensures they stay that way.
+- **CI Jinja2 regression gate extended (5 new modules)** — `test_typed_runtime_no_jinja.py` now CI-locks the following modules as Jinja2-free, preventing future regressions: `dazzle_http.runtime.exception_handlers`, `dazzle_http.runtime.renderers.page_builder`, `dazzle_http.runtime.shell`, `dazzle_page.runtime.page_routes`, `dazzle_page.runtime.workspace_renderer`. These five completed the typed migration in Phase 4 (v0.67.42–v0.67.56); the gate ensures they stay that way.
 - **`workspace_renderer.render_workspace_content_typed` docstring** rephrased — the legacy call-syntax reference (`render_fragment("workspace/_content.html", ...)`) was triggering the typed-only gate's regex even though it was documentation, not live code. Rewrote to "Mirror of the legacy `workspace/_content.html` Jinja render call" with parameter-list prose.
 
 ### Agent Guidance
@@ -11844,7 +11852,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Changed
 
-- **`render_in_app_shell` migrated to typed AppShell** — the public helper for rendering project-side routes inside the framework chrome (`dazzle_back.runtime.shell`) no longer walks the legacy `layouts/app_shell.html` Jinja chain. The full-page render path now extracts the project template's `{% block content %}` body and wraps it in a typed `Page` + `AppShell` via `dispatch_render_page`, mirroring the v0.67.43 (marketing), v0.67.44 (entity surfaces), and v0.67.54 (experience routes) patterns. The boosted-swap path (HX-Target=main-content) was already content-block-only and is unchanged.
+- **`render_in_app_shell` migrated to typed AppShell** — the public helper for rendering project-side routes inside the framework chrome (`dazzle_http.runtime.shell`) no longer walks the legacy `layouts/app_shell.html` Jinja chain. The full-page render path now extracts the project template's `{% block content %}` body and wraps it in a typed `Page` + `AppShell` via `dispatch_render_page`, mirroring the v0.67.43 (marketing), v0.67.44 (entity surfaces), and v0.67.54 (experience routes) patterns. The boosted-swap path (HX-Target=main-content) was already content-block-only and is unchanged.
 - **Breaking (project templates)**: project content-only — chrome rendered inside the project template's content block (sidebars/navs/topbars the project tried to provide itself outside `{% block content %}`) is dropped. The framework owns the chrome.
 - **Breaking (page `<title>` format)**: the typed `Page` builds `<title>` as `"{page_title} — {app_name}"`. Project routes that asserted exact-match titles need to update accordingly.
 
@@ -11866,7 +11874,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Agent Guidance
 
-- **`layouts/app_shell.html` deletion is one step closer**: experience-routes was one of two remaining live consumers. The other is `dazzle_back.runtime.shell.render_in_app_shell` — a documented downstream-API for project authors to render custom pages inside the framework app shell via Jinja `{% extends "layouts/app_shell.html" %}`. Retiring `app_shell.html` requires either retiring `render_in_app_shell` (breaking change for downstream apps that use it) or migrating its implementation to construct a typed AppShell directly. Decoupling that takes its own ship.
+- **`layouts/app_shell.html` deletion is one step closer**: experience-routes was one of two remaining live consumers. The other is `dazzle_http.runtime.shell.render_in_app_shell` — a documented downstream-API for project authors to render custom pages inside the framework app shell via Jinja `{% extends "layouts/app_shell.html" %}`. Retiring `app_shell.html` requires either retiring `render_in_app_shell` (breaking change for downstream apps that use it) or migrating its implementation to construct a typed AppShell directly. Decoupling that takes its own ship.
 
 ## [0.67.53] - 2026-05-11
 
@@ -11984,7 +11992,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Agent Guidance
 
-- **Region migration cadence.** Each region template under `src/dazzle_ui/templates/workspace/regions/` gets graduated to the typed path by (a) adding its uppercase display value to `_TYPED_REGION_DISPLAYS` and (b) populating the adapter context with whatever the typed builder reads. The data is usually already computed in `workspace_rendering.py` — wiring is mostly tuple-entry-plus-dict-assignment.
+- **Region migration cadence.** Each region template under `src/dazzle_page/templates/workspace/regions/` gets graduated to the typed path by (a) adding its uppercase display value to `_TYPED_REGION_DISPLAYS` and (b) populating the adapter context with whatever the typed builder reads. The data is usually already computed in `workspace_rendering.py` — wiring is mostly tuple-entry-plus-dict-assignment.
 - **Per-region adapter contracts are documented in `region_adapter.py` docstrings.** Each `_build_<kind>` method describes the `ctx` shape it consumes (primary + legacy-fallback paths where present). Reading the docstring tells you which keys to populate in `adapter_ctx` before extending the whitelist.
 - **`workspace/regions/<kind>.html` deletion happens when its display value is on the whitelist AND no tests render it directly.** Both conditions need confirming before retiring the Jinja file. The `progress.html` template stays on disk this ship; its retirement is the next ship.
 
@@ -12064,7 +12072,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 - **The marketing-page path is typed-Fragment-only.** Adding new section types means adding them to `TYPED_SECTION_TYPES` + writing a typed builder in `site_section_builder.py`. The Jinja section partials (`site/sections/*.html`) still exist but are reached only when a section's type is NOT in `TYPED_SECTION_TYPES`; migrating each one moves us closer to deleting that whole directory.
 - **`site_base.html` and `og_meta.html` are kept on disk but orphaned.** Downstream apps may still import them from custom Jinja routes. The framework no longer reaches either. Phase 5 (drop the `jinja2` dep entirely) is blocked on retiring these too, plus the in-app `page_routes.py` consumers.
-- **Remaining `fragment_chrome` flag sites**: `src/dazzle_ui/runtime/page_routes.py` (4 references — in-app surfaces), `src/dazzle_back/runtime/server.py` (initialization), `src/dazzle/core/manifest.py` (config schema), `src/dazzle/cli/runtime_impl/build.py` (build-time decision). All depend on the app-shell typed migration which is the largest remaining substrate piece.
+- **Remaining `fragment_chrome` flag sites**: `src/dazzle_page/runtime/page_routes.py` (4 references — in-app surfaces), `src/dazzle_http/runtime/server.py` (initialization), `src/dazzle/core/manifest.py` (config schema), `src/dazzle/cli/runtime_impl/build.py` (build-time decision). All depend on the app-shell typed migration which is the largest remaining substrate piece.
 
 ## [0.67.42] - 2026-05-11
 
@@ -12072,7 +12080,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 - **Phase 4 first slice — chrome=on OG-tag parity.** The chrome=on marketing-page path was silently dropping Open Graph + Twitter card `<meta>` tags. This ship closes the gap, unblocking future removal of the `fragment_chrome` flag (which can't reasonably become the default while it regresses social-card metadata).
 - **`Page.og_meta`** new field on the typed `Page` primitive. Tuple of `(property, content)` pairs rendered as `<meta property="og:title" content="...">` etc. The existing `Page.meta` field continues to render `<meta name="...">` tags — Twitter cards (which use `name="twitter:*"`) keep flowing through `meta`.
-- **`build_page` / `build_app_chrome_page` / `dispatch_render_page`** in `src/dazzle_back/runtime/renderers/page_builder.py` gained an `og_meta=` kwarg threading the field through. Default empty tuple preserves backward compatibility with every existing caller.
+- **`build_page` / `build_app_chrome_page` / `dispatch_render_page`** in `src/dazzle_http/runtime/renderers/page_builder.py` gained an `og_meta=` kwarg threading the field through. Default empty tuple preserves backward compatibility with every existing caller.
 - **`_og_meta_pairs` helper** in `_render_site_page_chromed`: splits `SitePageContext.og_meta` into the `name=`/`property=` halves that mirror the legacy Jinja `site/includes/og_meta.html` partial. Twitter card name-tags, the OG property tags, and the plain `name="description"` tag are all populated when a hero section is present.
 - **9 unit tests** at `tests/unit/test_page_og_meta.py` cover default empty, `property=` vs `name=` rendering, escape safety on both attribute names and content values, ordering preservation (for `og:image` candidate lists), and the `build_page` integration.
 - **4 integration tests** appended to `tests/integration/test_sitespec_chrome_gate_flip.py` — chrome=on now emits all the OG / Twitter / description tags the chrome=off path does, and the SET parity is asserted directly against chrome=off as the baseline.
@@ -12114,7 +12122,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Added
 
-- **Jinja2 Retirement Phase 2.B full — typed in-app error views.** Closes the error retirement. `build_app_403_view`, `build_app_404_view`, and `build_app_500_view` in `src/dazzle_back/runtime/app_error_views.py` replace the legacy `app/403.html` and `app/404.html` Jinja templates and add a typed 500 path (which had no template before — `/app/*` unhandled exceptions used to fall through to Starlette's plain-text default).
+- **Jinja2 Retirement Phase 2.B full — typed in-app error views.** Closes the error retirement. `build_app_403_view`, `build_app_404_view`, and `build_app_500_view` in `src/dazzle_http/runtime/app_error_views.py` replace the legacy `app/403.html` and `app/404.html` Jinja templates and add a typed 500 path (which had no template before — `/app/*` unhandled exceptions used to fall through to Starlette's plain-text default).
 - **`build_app_403_view`** renders the `#808` structured disclosure inline (`entity`, `operation`, `permitted_personas`, `current_roles`) so the user can self-diagnose. Empty `current_roles` shows "(none)".
 - **`build_app_404_view`** renders the `#811` "Did you mean…" suggestion list when present, and skips malformed entries silently (missing `url` or `label`).
 - **`build_app_500_view`** is CWE-209 hardened: the signature deliberately does NOT accept a `message=` kwarg, so handlers can't accidentally leak exception text to the response body. The user gets a generic apology + back-to-dashboard CTA.
@@ -12122,14 +12130,14 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Removed
 
-- **`src/dazzle_ui/templates/app/403.html`** and **`src/dazzle_ui/templates/app/404.html`** — replaced by typed views. The `app/` template directory is now empty (and removed).
+- **`src/dazzle_page/templates/app/403.html`** and **`src/dazzle_page/templates/app/404.html`** — replaced by typed views. The `app/` template directory is now empty (and removed).
 - **`PAGE_TEMPLATE_PATTERNS['app/*.html']`** in `tests/unit/test_page_route_coverage.py` — matching zero templates after the directory was retired.
 
 ### Changed
 
 - **`_render_app_shell_error`** in `exception_handlers.py` rewritten to dispatch to the typed views. The `template_name` kwarg is gone — callers pass only the `status_code` (403/404/500) and the renderer picks the right view. The function signature is otherwise compatible with the existing call sites (forbidden_detail, suggestions, message).
 - **In-app 500 path now uses the typed view.** The pre-Phase-2.B-full handler explicitly skipped `/app/*` requests when rendering the typed 500; that path-prefix guard is gone. Browsers under `/app/*` hitting an uncaught exception now get the typed `build_app_500_view` (with the same CWE-209 leak protection as the marketing variant).
-- **`test_typed_runtime_no_jinja.py`** allow-list extended with `src/dazzle_back/runtime/app_error_views.py`. Retired-template list extended with `app/403.html` and `app/404.html`.
+- **`test_typed_runtime_no_jinja.py`** allow-list extended with `src/dazzle_http/runtime/app_error_views.py`. Retired-template list extended with `app/403.html` and `app/404.html`.
 
 ### Agent Guidance
 
@@ -12142,9 +12150,9 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 ### Added
 
 - **Jinja2 Retirement Phase 1.C — SSO via Authlib (Google + Microsoft).** Same-domain callback only per the locked Phase 1 design decision (Q3). End-to-end OIDC flow: `GET /auth/sso/{provider}` initiates, `GET /auth/sso/{provider}/callback` consumes the code, creates a passwordless user (or matches an existing one by email), and signs them in.
-- **`src/dazzle_back/runtime/auth/sso_config.py`** — `SsoProviderConfig` dataclass + `load_sso_providers_from_env()` loader. Recognises `DAZZLE_SSO_{GOOGLE,MICROSOFT}_CLIENT_ID` / `_CLIENT_SECRET` / `_SCOPES` env vars. A provider is enabled only when both id + secret are set; missing either silently omits the provider so the deployment doesn't have to know which envs are populated.
-- **`src/dazzle_back/runtime/auth/sso_routes.py`** — initiation + callback handlers. Authlib's `StarletteOAuth2App` is built lazily (first hit) so the optional `authlib` dependency doesn't import in deployments that don't use SSO. The OAuth client cache lives on `app.state._sso_clients`.
-- **`src/dazzle_back/runtime/auth/sso_views.py`** — `build_sso_button_row(providers, next_url)` returns a tuple of typed-Fragment children rendering "Continue with <provider>" links plus an "or continue with" divider. Empty tuple when no providers are configured.
+- **`src/dazzle_http/runtime/auth/sso_config.py`** — `SsoProviderConfig` dataclass + `load_sso_providers_from_env()` loader. Recognises `DAZZLE_SSO_{GOOGLE,MICROSOFT}_CLIENT_ID` / `_CLIENT_SECRET` / `_SCOPES` env vars. A provider is enabled only when both id + secret are set; missing either silently omits the provider so the deployment doesn't have to know which envs are populated.
+- **`src/dazzle_http/runtime/auth/sso_routes.py`** — initiation + callback handlers. Authlib's `StarletteOAuth2App` is built lazily (first hit) so the optional `authlib` dependency doesn't import in deployments that don't use SSO. The OAuth client cache lives on `app.state._sso_clients`.
+- **`src/dazzle_http/runtime/auth/sso_views.py`** — `build_sso_button_row(providers, next_url)` returns a tuple of typed-Fragment children rendering "Continue with <provider>" links plus an "or continue with" divider. Empty tuple when no providers are configured.
 - **`build_login_magic_link_view` and `build_login_password_view`** in `auth_views.py` now accept an `sso_providers=` kwarg. When non-empty, the button row renders above the email/password form. Default empty tuple preserves backward compatibility with every existing caller.
 - **`/login` GET handler** in `site_routes.py` reads `app.state.sso_providers` and passes it to the view builder. New error-message branches for `?error=sso_failed` / `sso_no_email` / `sso_email_unverified` / `sso_provider_unknown`.
 - **`AuthSubsystem.start`** registers `SessionMiddleware` and the SSO router when at least one provider is configured. Session secret defaults to a random per-process value; production deployments should set `DAZZLE_SESSION_SECRET` so the cookie survives restarts.
@@ -12179,7 +12187,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 ### Agent Guidance
 
 - **Don't import `jinja2` or call `render_site_page` / `render_fragment` in the typed-only modules.** The list of locked-down files lives in `_TYPED_ONLY_MODULES` in the new gate test. Adding Jinja2 back to one of those files is a regression — either the new code belongs in a different module, or the retirement plan is being deliberately rolled back (which needs a CHANGELOG entry under Removed/Changed and an explicit removal from the allow-list).
-- **New auth surfaces are typed-Fragment views.** If you're tempted to create `src/dazzle_ui/templates/site/auth/<anything>.html`, the gate will fail — that directory is sealed. New auth flows extend `dazzle_back.runtime.auth.{auth_views,two_factor_views}` and reuse the form-encoded route modules in the same package.
+- **New auth surfaces are typed-Fragment views.** If you're tempted to create `src/dazzle_page/templates/site/auth/<anything>.html`, the gate will fail — that directory is sealed. New auth flows extend `dazzle_http.runtime.auth.{auth_views,two_factor_views}` and reuse the form-encoded route modules in the same package.
 - **The gate is permissive about the rest of the codebase.** Jinja2 is still used for the marketing site renderer, the app shell, workspace regions, etc. — those migrations are Phase 4 work. The gate's scope is narrow on purpose: it locks in the completed migrations without blocking unrelated work.
 
 ## [0.67.37] - 2026-05-11
@@ -12187,17 +12195,17 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 ### Added
 
 - **Jinja2 Retirement Phase 1.D.2 — typed 2FA setup + settings views.** Closes the auth Jinja retirement. The `site/auth/` directory is now empty.
-- **`build_2fa_setup_view`** and **`build_2fa_settings_view`** in `src/dazzle_back/runtime/auth/two_factor_views.py`. Both use `RawHTML` to render the DOM scaffold (preserving every element ID the client JS reads) and reference the extracted client behavior via `Page.js_scripts`.
-- **`src/dazzle_ui/runtime/static/js/dz-2fa-setup.js`** — extracted from the inline `<script>` in `2fa_setup.html`. Plain ES2015+ IIFE; same fetch-driven flow (POST `/auth/2fa/setup/totp` → QR + secret → POST `/auth/2fa/verify/totp` → recovery codes; POST `/auth/2fa/setup/email-otp`). Wrapped null-checks added on every `getElementById(...)` so the script no-ops cleanly if the DOM contract drifts.
-- **`src/dazzle_ui/runtime/static/js/dz-2fa-settings.js`** — extracted from the inline `<script>` in `2fa_settings.html`. Same load-status + enable/disable + regenerate-codes flow against `/auth/2fa/status`, `/auth/2fa/totp`, `/auth/2fa/email-otp`, and `/auth/2fa/recovery/regenerate`.
+- **`build_2fa_setup_view`** and **`build_2fa_settings_view`** in `src/dazzle_http/runtime/auth/two_factor_views.py`. Both use `RawHTML` to render the DOM scaffold (preserving every element ID the client JS reads) and reference the extracted client behavior via `Page.js_scripts`.
+- **`src/dazzle_page/runtime/static/js/dz-2fa-setup.js`** — extracted from the inline `<script>` in `2fa_setup.html`. Plain ES2015+ IIFE; same fetch-driven flow (POST `/auth/2fa/setup/totp` → QR + secret → POST `/auth/2fa/verify/totp` → recovery codes; POST `/auth/2fa/setup/email-otp`). Wrapped null-checks added on every `getElementById(...)` so the script no-ops cleanly if the DOM contract drifts.
+- **`src/dazzle_page/runtime/static/js/dz-2fa-settings.js`** — extracted from the inline `<script>` in `2fa_settings.html`. Same load-status + enable/disable + regenerate-codes flow against `/auth/2fa/status`, `/auth/2fa/totp`, `/auth/2fa/email-otp`, and `/auth/2fa/recovery/regenerate`.
 - **18 view-builder unit tests** at `tests/unit/test_two_factor_views.py` covering both new views: DOM-contract element IDs (the JS depends on these by name), external JS reference, no inline `<script>`, TOTP input attributes, escape safety on `product_name`, and the initially-hidden state of `dz-recovery-section` and `dz-totp-verify`.
 
 ### Removed
 
-- **`src/dazzle_ui/templates/site/auth/2fa_setup.html`** and **`src/dazzle_ui/templates/site/auth/2fa_settings.html`** — replaced by typed-Fragment views. The `site/auth/` template directory is now empty (and removed).
-- **`src/dazzle_ui/templates/macros/auth_page_wrapper.html`** — no more callers. The macro lived from cycle 298 through Phase 1.E; with all 2FA templates retired, the last consumer is gone.
+- **`src/dazzle_page/templates/site/auth/2fa_setup.html`** and **`src/dazzle_page/templates/site/auth/2fa_settings.html`** — replaced by typed-Fragment views. The `site/auth/` template directory is now empty (and removed).
+- **`src/dazzle_page/templates/macros/auth_page_wrapper.html`** — no more callers. The macro lived from cycle 298 through Phase 1.E; with all 2FA templates retired, the last consumer is gone.
 - **`tests/unit/test_auth_page_wrapper.py`** — the regression tests for the macro (`#842` cycle) no longer have a target. Coverage moved to `tests/unit/test_two_factor_views.py` (DOM contract on the typed scaffolds).
-- **`build_site_auth_context`** in `src/dazzle_ui/runtime/site_context.py` — no production code path constructs it. The `SiteAuthContext` Pydantic model in `template_context.py` is preserved for now because `template_renderer`'s Union type still references it; that's a Phase 4 cleanup target.
+- **`build_site_auth_context`** in `src/dazzle_page/runtime/site_context.py` — no production code path constructs it. The `SiteAuthContext` Pydantic model in `template_context.py` is preserved for now because `template_renderer`'s Union type still references it; that's a Phase 4 cleanup target.
 - **`TestAuth2FAFlow` class body** in `tests/unit/test_workspace_routes.py` reduced to just the CSRF-exemption gate (which spans the whole `/auth/` prefix, not any single surface). The 8 template-source-reading gates now have no template to read.
 - **`"site/auth/*.html"`** glob from `PAGE_TEMPLATE_PATTERNS` in `tests/unit/test_page_route_coverage.py` — matching zero templates after the directory was removed.
 
@@ -12209,16 +12217,16 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Agent Guidance
 
-- **The `site/auth/` Jinja directory is empty.** All auth + 2FA surfaces — login, signup, forgot, reset, 2fa-challenge, 2fa-setup, 2fa-settings — are typed-Fragment views in `dazzle_back.runtime.auth.{auth_views,two_factor_views}`.
+- **The `site/auth/` Jinja directory is empty.** All auth + 2FA surfaces — login, signup, forgot, reset, 2fa-challenge, 2fa-setup, 2fa-settings — are typed-Fragment views in `dazzle_http.runtime.auth.{auth_views,two_factor_views}`.
 - **RawHTML is the right tool for "DOM contract" migrations.** When the legacy Jinja template carries inline JS that targets specific element IDs, the typed view emits the DOM scaffold via `RawHTML(...)` and references the extracted JS via `Page.js_scripts`. Audit-counted escape hatches; each one represents a UI pattern that doesn't yet have native primitive coverage. Acceptable for high-interactivity surfaces (2FA setup); not for forms that fit cleanly into FormStack.
-- **Extracted JS files live under `src/dazzle_ui/runtime/static/js/`** with the `dz-` prefix. They run as IIFEs so global state doesn't leak; every `getElementById(...)` is wrapped in a null-check so the same script can be loaded on pages that don't carry the full DOM contract without erroring.
+- **Extracted JS files live under `src/dazzle_page/runtime/static/js/`** with the `dz-` prefix. They run as IIFEs so global state doesn't leak; every `getElementById(...)` is wrapped in a null-check so the same script can be loaded on pages that don't carry the full DOM contract without erroring.
 
 ## [0.67.36] - 2026-05-11
 
 ### Added
 
 - **Jinja2 Retirement Phase 2.B partial — typed 500 view + global exception handler.** Pre-2.B the framework relied on Starlette's plain-text "Internal Server Error" response for unhandled exceptions, which leaked nothing useful and skipped the framework's CSS chrome entirely. This ship adds a typed-Fragment 500 page and a global handler that catches unhandled exceptions and dispatches to it.
-- **`build_site_500_view`** in `src/dazzle_back/runtime/error_views.py`. Same composition shape as the Phase 2.A 404/403 views — Stack of Link, Heading, Text, plus two CTAs ("Try again" and "Go Home"). Accepts a `message=` kwarg for forward symmetry with the 403 signature but deliberately does NOT render it into the page body — surfacing exception details leaks internals (CWE-209) and the call-site message is usually a raw `str(exc)` that exposes implementation strings.
+- **`build_site_500_view`** in `src/dazzle_http/runtime/error_views.py`. Same composition shape as the Phase 2.A 404/403 views — Stack of Link, Heading, Text, plus two CTAs ("Try again" and "Go Home"). Accepts a `message=` kwarg for forward symmetry with the 403 signature but deliberately does NOT render it into the page body — surfacing exception details leaks internals (CWE-209) and the call-site message is usually a raw `str(exc)` that exposes implementation strings.
 - **Global `Exception` handler in `register_site_error_handlers`** catches uncaught exceptions, logs them via `dazzle.errors`, and renders the typed 500 page for browser requests on marketing paths. In debug mode (when `app.debug=True`), the exception is re-raised so test failures still surface tracebacks.
 - **`StarletteHTTPException(500)` branch** in the existing `custom_http_error_handler` for handlers that explicitly `raise HTTPException(500, ...)` — same typed render, same path-prefix routing.
 - **7 view-builder unit tests** at `tests/unit/test_error_views.py`: shape, CTA links, generic-apology copy, no-form rendering, escape safety on `product_name`, and the deliberate non-leak of `message=` payload into the body.
@@ -12239,21 +12247,21 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 ### Added
 
 - **Jinja2 Retirement Phase 1.D.1 — typed 2FA challenge view + form-encoded verify endpoint.** The mid-login 2FA challenge page (where a user lands after submitting login when their account has TOTP / email-OTP / recovery codes enabled) is now rendered via the typed-Fragment substrate. No JS — the form submits natively.
-- **`build_2fa_challenge_view`** in `src/dazzle_back/runtime/auth/two_factor_views.py`. Supports three modes (`totp`, `email_otp`, `recovery`); mode switching happens via plain links to `/2fa/challenge?session=<token>&mode=<other>` rather than client-side toggles. When mode=`email_otp` and the code hasn't been sent yet, renders a "Send code to email" form-button that posts to `/auth/2fa/email-otp-send/submit`; after delivery, the view re-renders with the verify form.
-- **`src/dazzle_back/runtime/auth/two_factor_form_routes.py`** — two form-encoded endpoints:
-  1. `POST /auth/2fa/verify/submit` — accepts session_token + method + code, reuses the validation primitives backing the JSON `_verify_2fa` (TOTP via `dazzle_back.runtime.totp.verify_totp`, email-OTP and recovery via the optional `otp_store` / `recovery_store` on the auth store). On success: consume pending session, create full session (7-day default lifetime), set `dazzle_session` cookie, 303 to safe `?next=` or `/app`. On failure: 303 to `/2fa/challenge?session=...&method=...&error=invalid_code`.
+- **`build_2fa_challenge_view`** in `src/dazzle_http/runtime/auth/two_factor_views.py`. Supports three modes (`totp`, `email_otp`, `recovery`); mode switching happens via plain links to `/2fa/challenge?session=<token>&mode=<other>` rather than client-side toggles. When mode=`email_otp` and the code hasn't been sent yet, renders a "Send code to email" form-button that posts to `/auth/2fa/email-otp-send/submit`; after delivery, the view re-renders with the verify form.
+- **`src/dazzle_http/runtime/auth/two_factor_form_routes.py`** — two form-encoded endpoints:
+  1. `POST /auth/2fa/verify/submit` — accepts session_token + method + code, reuses the validation primitives backing the JSON `_verify_2fa` (TOTP via `dazzle_http.runtime.totp.verify_totp`, email-OTP and recovery via the optional `otp_store` / `recovery_store` on the auth store). On success: consume pending session, create full session (7-day default lifetime), set `dazzle_session` cookie, 303 to safe `?next=` or `/app`. On failure: 303 to `/2fa/challenge?session=...&method=...&error=invalid_code`.
   2. `POST /auth/2fa/email-otp-send/submit` — triggers `otp_store.send_otp(user_id, method="email_otp")` for the pending login session, 303s to `/2fa/challenge?session=...&mode=email_otp&sent=1` so the verify form renders.
 - **18 view-builder unit tests** at `tests/unit/test_two_factor_views.py` covering all three modes (totp/email_otp/recovery), the email-OTP send-vs-verify toggle, error rendering, mode-switch link visibility, and escape safety on user-supplied input.
 - **AuthSubsystem wiring**: `AuthSubsystem.start` now includes `create_two_factor_form_routes()` alongside the other form-encoded route modules so the new endpoints are mounted on every Dazzle app.
 
 ### Removed
 
-- **`src/dazzle_ui/templates/site/auth/2fa_challenge.html`** — replaced by the typed-Fragment view. The inline `<script>` block (4 fetch-driven event handlers) is gone; the same behaviors now go through native form posts + server-side mode switching.
+- **`src/dazzle_page/templates/site/auth/2fa_challenge.html`** — replaced by the typed-Fragment view. The inline `<script>` block (4 fetch-driven event handlers) is gone; the same behaviors now go through native form posts + server-side mode switching.
 - **6 cross-source tests** in `tests/unit/test_workspace_routes.py::TestAuth2FAFlow` that read `2fa_challenge.html` directly (one per assertion target). The remaining two "cross-surface" gate tests (`*_have_iife_script`, `no_alpine_or_htmx_directives`, `*_have_contract_pointer`) now iterate only over the surviving `2fa_setup.html` and `2fa_settings.html` templates.
 
 ### Changed
 
-- **`/2fa/challenge` GET handler** in `src/dazzle_back/runtime/site_routes.py` renders `build_2fa_challenge_view` instead of the Jinja template. The legacy `method=` query parameter is still accepted (as an alias for `mode=`) so links from older bookmarks keep working. `?sent=1` flag from the email-OTP send endpoint flips the view from send-button to verify-form mode.
+- **`/2fa/challenge` GET handler** in `src/dazzle_http/runtime/site_routes.py` renders `build_2fa_challenge_view` instead of the Jinja template. The legacy `method=` query parameter is still accepted (as an alias for `mode=`) so links from older bookmarks keep working. `?sent=1` flag from the email-OTP send endpoint flips the view from send-button to verify-form mode.
 - **`tests/unit/test_2fa_page_routes.py::test_challenge_context_carries_session_token`** flipped from testing the deleted `build_site_auth_context("2fa_challenge", ...)` dispatcher to testing the new typed view directly.
 
 ### Agent Guidance
@@ -12266,21 +12274,21 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Added
 
-- **Jinja2 Retirement Phase 2.A — marketing-site error pages on typed-Fragment.** `build_site_404_view` and `build_site_403_view` in `src/dazzle_back/runtime/error_views.py` replace the now-deleted `site/404.html` and `site/403.html` templates. Same composition shape as the Phase 1 auth views (Stack of Link, Heading, Text, EmptyState — no template inheritance).
+- **Jinja2 Retirement Phase 2.A — marketing-site error pages on typed-Fragment.** `build_site_404_view` and `build_site_403_view` in `src/dazzle_http/runtime/error_views.py` replace the now-deleted `site/404.html` and `site/403.html` templates. Same composition shape as the Phase 1 auth views (Stack of Link, Heading, Text, EmptyState — no template inheritance).
 - **`_typed_error_assets(request)` helper** in `exception_handlers.py` mirrors the `_typed_chrome_assets` helper from `site_routes.py` — pulls CSS/JS from `app.state.fragment_chrome_css_links` and `app.state.fragment_chrome_js_scripts` overrides, falling back to the framework-default minified bundles.
 - **15 view-builder unit tests** at `tests/unit/test_error_views.py`: shape, default vs custom message rendering, CTA-link targets, escape safety, and the no-op `forbidden_detail` kwarg on the marketing 403 (persona disclosure lives in the app-shell `app/403.html` variant only).
 - **11 integration tests** at `tests/integration/test_site_error_handler.py`: marketing 404/403 typed rendering, JSON branch still returns JSON, app-shell branch still renders Jinja `app/404.html` / `app/403.html` (out of scope until that migration), per-deployment CSS override threading.
 
 ### Removed
 
-- **`src/dazzle_ui/templates/site/404.html`** and **`src/dazzle_ui/templates/site/403.html`** — replaced by typed-Fragment views.
-- **`build_site_404_context`** and **`build_site_error_context`** in `src/dazzle_ui/runtime/site_context.py` — no longer called by any framework code path.
-- **`Site404Context`** and **`SiteErrorContext`** Pydantic models in `src/dazzle_ui/runtime/template_context.py` — both dataclasses backed the now-deleted templates.
+- **`src/dazzle_page/templates/site/404.html`** and **`src/dazzle_page/templates/site/403.html`** — replaced by typed-Fragment views.
+- **`build_site_404_context`** and **`build_site_error_context`** in `src/dazzle_page/runtime/site_context.py` — no longer called by any framework code path.
+- **`Site404Context`** and **`SiteErrorContext`** Pydantic models in `src/dazzle_page/runtime/template_context.py` — both dataclasses backed the now-deleted templates.
 - **`TestBuildSite404Context`** + **`TestSite404Template`** classes in `tests/unit/test_site_templates.py`, and the `site_404` param from `TestCustomCssOverride.test_render_page_passes_custom_css` in `tests/unit/test_auth_password_reset.py` — all directly rendered the deleted templates.
 
 ### Changed
 
-- **`register_site_error_handlers`** in `src/dazzle_back/runtime/exception_handlers.py`: the marketing-site branches (non-`/app/*` paths) now render typed `Page` Fragments via `FragmentRenderer`. The app-shell branches (`/app/*` paths) still render `app/404.html` / `app/403.html` Jinja templates — that migration depends on the broader `layouts/app_shell.html` typed-Fragment work and is out of scope for this ship.
+- **`register_site_error_handlers`** in `src/dazzle_http/runtime/exception_handlers.py`: the marketing-site branches (non-`/app/*` paths) now render typed `Page` Fragments via `FragmentRenderer`. The app-shell branches (`/app/*` paths) still render `app/404.html` / `app/403.html` Jinja templates — that migration depends on the broader `layouts/app_shell.html` typed-Fragment work and is out of scope for this ship.
 - **`app_name` lookup** in `register_site_error_handlers` now prefers `sitespec.brand.product_name` (the canonical key used everywhere else in the framework) over the legacy flat `product_name` / `name` top-level keys. Pre-2.A code path fell back to `"Dazzle"` in nearly every deployment because the sitespec stores the product name under `brand.product_name`, not at top level.
 - **`tests/unit/test_exception_handlers.py::test_404_on_marketing_path_renders_site`** now pins typed-view markers (`dz-empty-state`, `dz-stack`) instead of the legacy `dz-404-*` class family that was specific to the Jinja template.
 
@@ -12295,19 +12303,19 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 ### Removed
 
 - **Jinja2 Retirement Phase 1.E — legacy auth templates deleted.** With the typed-Fragment login / signup / forgot-password / reset-password views now end-to-end live (Phases 1.A–1.B.3), the Jinja path that backed those four surfaces is gone.
-- `src/dazzle_ui/templates/site/auth/login.html`
-- `src/dazzle_ui/templates/site/auth/signup.html`
-- `src/dazzle_ui/templates/site/auth/forgot_password.html`
-- `src/dazzle_ui/templates/site/auth/reset_password.html`
-- `src/dazzle_ui/templates/site/auth/_auth_form_script.html`
-- `src/dazzle_ui/templates/site/auth/_forgot_password_script.html`
-- `src/dazzle_ui/templates/site/auth/_reset_password_script.html`
+- `src/dazzle_page/templates/site/auth/login.html`
+- `src/dazzle_page/templates/site/auth/signup.html`
+- `src/dazzle_page/templates/site/auth/forgot_password.html`
+- `src/dazzle_page/templates/site/auth/reset_password.html`
+- `src/dazzle_page/templates/site/auth/_auth_form_script.html`
+- `src/dazzle_page/templates/site/auth/_forgot_password_script.html`
+- `src/dazzle_page/templates/site/auth/_reset_password_script.html`
 - `TestAuthTemplates` class in `tests/unit/test_site_templates.py`, `TestAuthPageRenderers` class in `tests/unit/test_auth_password_reset.py`, and the `auth_login` / `auth_forgot_password` / `auth_reset_password` param IDs in `TestCustomCssOverride.test_render_page_passes_custom_css` — all of which directly rendered the now-deleted templates.
 
 ### Changed
 
-- **`build_site_auth_context`** in `src/dazzle_ui/runtime/site_context.py`: the `login` / `signup` / `forgot_password` / `reset_password` config blocks are removed. The function still dispatches on `2fa_setup` / `2fa_settings` / `2fa_challenge` for the 2FA pages (Phase 1.D will migrate those onto the typed substrate). The default fallback is now `2fa_setup` instead of `login`.
-- **7 auth GET handlers in `src/dazzle_back/runtime/site_routes.py`** (`/login`, `/login/sent`, `/signup`, `/forgot-password`, `/forgot-password/sent`, `/reset-password`, `/reset-password/done`) no longer consult the `fragment_chrome` flag — they unconditionally render the typed view. A small helper `_typed_chrome_assets(app_state)` centralises the per-deployment CSS/JS override lookup that every handler shares.
+- **`build_site_auth_context`** in `src/dazzle_page/runtime/site_context.py`: the `login` / `signup` / `forgot_password` / `reset_password` config blocks are removed. The function still dispatches on `2fa_setup` / `2fa_settings` / `2fa_challenge` for the 2FA pages (Phase 1.D will migrate those onto the typed substrate). The default fallback is now `2fa_setup` instead of `login`.
+- **7 auth GET handlers in `src/dazzle_http/runtime/site_routes.py`** (`/login`, `/login/sent`, `/signup`, `/forgot-password`, `/forgot-password/sent`, `/reset-password`, `/reset-password/done`) no longer consult the `fragment_chrome` flag — they unconditionally render the typed view. A small helper `_typed_chrome_assets(app_state)` centralises the per-deployment CSS/JS override lookup that every handler shares.
 - **7 chrome=off integration tests** flipped to assert "chrome=off also renders the typed view" (was: "chrome=off keeps legacy Jinja"). Same coverage shape, opposite assertion direction — these now guard against accidental re-introduction of a Jinja fallback rather than against accidental loss of one.
 - **`tests/unit/test_auth_page_wrapper.py`** now exercises `2fa_setup.html` (which still uses the `auth_page_wrapper` macro) instead of the deleted `login.html`. The macro's contract (no nested min-h-screen wrapper, .dz-auth-card on the inner div) hasn't changed; only the host template did.
 
@@ -12324,7 +12332,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 - **Jinja2 Retirement Phase 1.B.3 — opt-in password mode for `/login` and `/signup`.** Closes Phase 1.B. Deployments that prefer email+password authentication over passwordless magic-links can now flip a single startup flag and get the typed-Fragment password forms.
 - **`build_login_password_view`** in `auth_views.py`: email + password fields, posts to `/auth/login/password`. "Forgot password?" link to `/forgot-password` + "Create an account" crosslink to `/signup`. Threads `?next=` through the form action so the post-login redirect lands the user on the originally-requested page.
 - **`build_signup_password_view`**: name + email + password + confirm_password (4 fields). Posts to `/auth/signup/password`. "Already have an account? Sign in" crosslink to `/login`.
-- **`src/dazzle_back/runtime/auth/password_login_routes.py`** — new module with form-encoded endpoints:
+- **`src/dazzle_http/runtime/auth/password_login_routes.py`** — new module with form-encoded endpoints:
   1. `POST /auth/login/password` — authenticates credentials, creates a session, sets the `dazzle_session` cookie, redirects to safe `?next=` (or `/app`). 2FA-enabled accounts redirect to `/2fa/challenge?session=<pending_id>` with the pending session created. Failures redirect back to `/login?error=invalid_credentials` (preserving safe `?next=`).
   2. `POST /auth/signup/password` — server-side `password == confirm_password` check (no JS in the typed form), validates email shape, rejects already-registered emails, creates the user via `auth_store.create_user`, creates a session, redirects to `?next=` (or `/app`). Failure paths: `?error=mismatch`, `?error=invalid_email`, `?error=already_registered`, `?error=create_failed`.
   3. Both endpoints reject unsafe `?next=` values (scheme/netloc/backslash) via the same `_is_safe_redirect_path` helper used in `magic_link_routes.py`.
@@ -12353,7 +12361,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 - **`build_forgot_password_sent_view`** — account-enumeration-safe confirmation page ("If an account exists for that address…"). Used by `/forgot-password/sent`.
 - **`build_reset_password_view`** — two password fields + readonly hidden token field. Posts to `/auth/reset-password/submit`. Renders friendly error messages for `?error=mismatch` and `?error=invalid` query params.
 - **`build_reset_password_done_view`** — post-success page with a direct `/login` link.
-- **`src/dazzle_back/runtime/auth/password_reset_routes.py`** — new module with form-encoded endpoints:
+- **`src/dazzle_http/runtime/auth/password_reset_routes.py`** — new module with form-encoded endpoints:
   1. `POST /auth/forgot-password/submit` — issues a reset token for known/active emails via `auth_store.create_password_reset_token`, dispatches the reset URL through the `MagicLinkMailer` protocol (reused — the contract is identical). Account-enumeration safe: same `303 → /forgot-password/sent` redirect for unknown/inactive/empty emails.
   2. `POST /auth/reset-password/submit` — server-side equality check on new_password vs confirm_password (no JS in the typed form), validates the token via the auth store, updates the password, consumes the token, deletes existing sessions, redirects to `/reset-password/done`. Mismatched passwords → `/reset-password?token=…&error=mismatch`. Invalid/expired token → `/reset-password?error=invalid`.
 - **Four new chrome-flag gates in `site_routes.py`**: `GET /forgot-password`, `GET /forgot-password/sent`, `GET /reset-password`, `GET /reset-password/done`. Chrome=on renders the typed views; chrome=off keeps the legacy Jinja path (or a minimal HTML shell for the new `/sent` + `/done` endpoints, which have no Jinja templates). All four chrome=off branches removed in Phase 1.E.
@@ -12363,7 +12371,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Changed
 
-- **`docs/api-surface/runtime-urls.txt`** — regenerated to include `/forgot-password/sent` and `/reset-password/done`. The two new POST submit endpoints live in `src/dazzle_back/runtime/auth/password_reset_routes.py` (nested under `auth/`); the runtime-urls inspector currently walks only top-level `*_routes.py`, so they're not in the baseline yet — same scanner limitation that already exists for the `/auth/login/magic-link` and `/auth/signup/magic-link` POSTs shipped in Phase 1.A/B.
+- **`docs/api-surface/runtime-urls.txt`** — regenerated to include `/forgot-password/sent` and `/reset-password/done`. The two new POST submit endpoints live in `src/dazzle_http/runtime/auth/password_reset_routes.py` (nested under `auth/`); the runtime-urls inspector currently walks only top-level `*_routes.py`, so they're not in the baseline yet — same scanner limitation that already exists for the `/auth/login/magic-link` and `/auth/signup/magic-link` POSTs shipped in Phase 1.A/B.
 
 ### Agent Guidance
 
@@ -12376,7 +12384,7 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 ### Added
 
 - **Jinja2 Retirement Phase 1.B (partial) — signup magic-link typed view + MagicLinkMailer Protocol.** Companion to v0.67.29's `/login` migration; mirrors the shape for `/signup` and introduces the email-delivery seam.
-- **`src/dazzle_back/runtime/auth/mailer.py`** — new module. `MagicLinkMailer` is a runtime-checkable Protocol with one method `send_magic_link(*, to_email, link_url)`. Default `LogMailer` writes link URLs to the application log at INFO level (sufficient for development and CI; production deployments register a real mailer on `app.state.magic_link_mailer`). `get_mailer(app_state)` resolves the registered mailer or falls back to LogMailer; the runtime check rejects non-Protocol objects with an AssertionError so misconfigured deployments fail loud.
+- **`src/dazzle_http/runtime/auth/mailer.py`** — new module. `MagicLinkMailer` is a runtime-checkable Protocol with one method `send_magic_link(*, to_email, link_url)`. Default `LogMailer` writes link URLs to the application log at INFO level (sufficient for development and CI; production deployments register a real mailer on `app.state.magic_link_mailer`). `get_mailer(app_state)` resolves the registered mailer or falls back to LogMailer; the runtime check rejects non-Protocol objects with an AssertionError so misconfigured deployments fail loud.
 - **`build_signup_magic_link_view`** in `auth_views.py`. Two-field form (name + email, no password). Posts to `/auth/signup/magic-link`. Includes an "Already have an account? Sign in" crosslink to `/login` for accidental returning users.
 - **`POST /auth/signup/magic-link`** issuance endpoint. Create-or-login behavior:
   1. Existing email → silently issue a sign-in magic link (treat as login). Friendly UX: signup form doesn't need to know whether the email is new or returning.
@@ -12403,8 +12411,8 @@ After this ship, only 2 of 5 remaining Jinja env users are left:
 
 ### Added
 
-- **Jinja2 Retirement Phase 1.A — `/login` magic-link typed view + issuance endpoint.** First module of the auth-surface migration to typed-Fragment. Establishes the v1 default flow (email-link passwordless) by consolidating with the existing `magic_link.create_magic_link` token primitive (`src/dazzle_back/runtime/auth/magic_link.py`).
-- **`src/dazzle_back/runtime/auth/auth_views.py`** — new module. `build_login_magic_link_view` returns a typed `Page` with email-only form posting to `/auth/login/magic-link` (preserves `?next=` for post-login redirect, renders `?error=invalid_magic_link` as a `danger`-tone Text block when bounced from a stale token). `build_login_sent_view` returns the "check your inbox" confirmation page with account-enumeration-safe default copy.
+- **Jinja2 Retirement Phase 1.A — `/login` magic-link typed view + issuance endpoint.** First module of the auth-surface migration to typed-Fragment. Establishes the v1 default flow (email-link passwordless) by consolidating with the existing `magic_link.create_magic_link` token primitive (`src/dazzle_http/runtime/auth/magic_link.py`).
+- **`src/dazzle_http/runtime/auth/auth_views.py`** — new module. `build_login_magic_link_view` returns a typed `Page` with email-only form posting to `/auth/login/magic-link` (preserves `?next=` for post-login redirect, renders `?error=invalid_magic_link` as a `danger`-tone Text block when bounced from a stale token). `build_login_sent_view` returns the "check your inbox" confirmation page with account-enumeration-safe default copy.
 - **`POST /auth/login/magic-link`** issuance endpoint added to `magic_link_routes.py`. Looks up user by email (lowercased + stripped), issues a 15-minute token via `create_magic_link`, logs the link URL at INFO level so dev environments can copy-paste from the server log (real email send is the Phase 1.B follow-on). Account-enumeration guard: returns the same `303 → /login/sent` redirect whether the email matches a real user or not.
 - **`GET /login/sent`** confirmation page route. chrome=on renders the typed view; chrome=off serves a minimal HTML shell so the magic-link form's redirect doesn't 404.
 - **Chrome-flag gate at `GET /login`**: when `app.state.fragment_chrome=True`, renders the typed view; otherwise falls through to the legacy Jinja `site/auth/login.html` (removed in Phase 4.C). Same shape every other migrated route uses.
@@ -12489,7 +12497,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 ### Added
 
 - **#1037 follow-on — typed `hero` sitespec section.** First section migrated to the typed-Fragment substrate. The `chrome=on` sitespec render path now produces hero-section HTML via the new `_build_hero_section` builder instead of routing through `site/sections/hero.html`. Visual parity with the Jinja partial: same class names (`dz-section-hero`, `dz-hero-text`, `dz-cta-group`, `dz-button-primary`, `dz-button-outline`, `dz-hero-with-media`, `dz-hero-media`, `dz-hero-image`), same conditional blocks (subhead, primary/secondary CTAs, media), same id-attr derivation (explicit `id` → slugified headline → omitted).
-- **`src/dazzle_back/runtime/renderers/site_section_builder.py`** — new module that holds typed-section builders. `TYPED_SECTION_TYPES: frozenset[str]` exposes the migrated set; `render_typed_section(section)` dispatches to the right builder. The wiring in `_render_site_page_chromed` walks `ctx.sections`, replaces migrated dicts with `{"type": "_typed", "_typed_html": "..."}` markers, and `inner_only.html` emits the `_typed_html` raw via `| safe`.
+- **`src/dazzle_http/runtime/renderers/site_section_builder.py`** — new module that holds typed-section builders. `TYPED_SECTION_TYPES: frozenset[str]` exposes the migrated set; `render_typed_section(section)` dispatches to the right builder. The wiring in `_render_site_page_chromed` walks `ctx.sections`, replaces migrated dicts with `{"type": "_typed", "_typed_html": "..."}` markers, and `inner_only.html` emits the `_typed_html` raw via `| safe`.
 - **`_slugify` / `_section_id_attr`** internal helpers in the builder module — minimal port of the `slugify` Jinja filter + `section_id_attr` macro from `_helpers.html` so id-attr output matches.
 - **24 unit tests** at `tests/unit/test_site_section_hero_builder.py`: full shape coverage (section wrapper, headline, subhead conditional, CTA group conditional, primary/secondary CTA defaults, media block conditional, id-attr fallback chain), all HTML escape paths (headline, subhead, CTA label/href injection, media src/alt injection, explicit id injection), dispatch entrypoint behaviour.
 - **3 integration tests** added to `tests/integration/test_sitespec_chrome_gate_flip.py`: chrome=on dispatches via `inner_only.html`, chrome=off uses the legacy chain, response under chrome=on carries the `dz-section-hero` / `dz-hero-text` class names + the headline text from the sitespec.
@@ -12506,14 +12514,14 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 
 ### Added
 
-- **#1037 — Sitespec/marketing pages chrome gate flip (partial ship of full migration).** The `create_site_page_routes` handler in `src/dazzle_back/runtime/site_routes.py` now branches on `request.app.state.fragment_chrome` for every page-render call site (4 sites total: dynamic page, legacy page fallback, terms, privacy). Per the sequencing options in the issue investigation, this is **option 1 — gate flip only**: the document chrome lands on the typed-Fragment substrate, but section bodies still render via Jinja partials. Full section-by-section migration to typed primitives (option 2 — `SiteSection` primitive family + 19 section translators) is the planned multi-cycle follow-on; this ship lands the architectural seam.
+- **#1037 — Sitespec/marketing pages chrome gate flip (partial ship of full migration).** The `create_site_page_routes` handler in `src/dazzle_http/runtime/site_routes.py` now branches on `request.app.state.fragment_chrome` for every page-render call site (4 sites total: dynamic page, legacy page fallback, terms, privacy). Per the sequencing options in the issue investigation, this is **option 1 — gate flip only**: the document chrome lands on the typed-Fragment substrate, but section bodies still render via Jinja partials. Full section-by-section migration to typed primitives (option 2 — `SiteSection` primitive family + 19 section translators) is the planned multi-cycle follow-on; this ship lands the architectural seam.
 - **`_render_site_page_chromed(request, ctx)`** helper at the top of `create_site_page_routes`. When `fragment_chrome=True`: renders the section body via the new `site/inner_only.html` template (no `extends site_base.html`), wraps in a typed `Page` primitive via `build_page` + `FragmentRenderer.render`, supplies `css_links` / `js_scripts` / `theme` from `app.state.fragment_chrome_*` overrides (default to `/static/dist/dazzle.min.{css,js}`). When `fragment_chrome=False`: unchanged Jinja `site/page.html` path. Single seam = no four-way drift.
-- **`src/dazzle_ui/templates/site/inner_only.html`** — new sitespec template that mirrors the `body` block of `site/page.html` but does NOT extend `site_base.html`. The typed `Page` primitive provides the document chrome instead, so the inner-only template just emits nav + main + sections + footer. Section partials still render via their existing Jinja templates (no per-section migration in this ship).
+- **`src/dazzle_page/templates/site/inner_only.html`** — new sitespec template that mirrors the `body` block of `site/page.html` but does NOT extend `site_base.html`. The typed `Page` primitive provides the document chrome instead, so the inner-only template just emits nav + main + sections + footer. Section partials still render via their existing Jinja templates (no per-section migration in this ship).
 - **7 regression tests** at `tests/integration/test_sitespec_chrome_gate_flip.py`: source-level seam checks (helper exists, reads `fragment_chrome` from `app.state`, uses inner-only template, legacy fallback path still present, inner-only template doesn't extend `site_base.html`), live-render contract checks (chrome=off → entry template is `site/page.html`, chrome=on → entry template is `site/inner_only.html`, chrome=on response carries `<!DOCTYPE html>` from the typed Page).
 
 ### Known Limitations
 
-- **Sections still render via Jinja under chrome=on.** The 19 section partials (hero, pricing-table, faq, features, cta, footer, etc.) under `src/dazzle_ui/templates/site/sections/` haven't been migrated. cyfuture's stop condition (`zero Jinja Template.render() calls under fragment_chrome=true`) is not yet met by this ship — `jinja2` retirement is still blocked. The follow-on ship that migrates sections will close that gap.
+- **Sections still render via Jinja under chrome=on.** The 19 section partials (hero, pricing-table, faq, features, cta, footer, etc.) under `src/dazzle_page/templates/site/sections/` haven't been migrated. cyfuture's stop condition (`zero Jinja Template.render() calls under fragment_chrome=true`) is not yet met by this ship — `jinja2` retirement is still blocked. The follow-on ship that migrates sections will close that gap.
 
 ### Agent Guidance
 
@@ -12538,7 +12546,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 
 ### Added
 
-- **#1038 — `dazzle build-css` re-introduced as a no-op CLI command.** The build implementation was removed in v0.62 (Phase 4 teardown — Tailwind JIT bundle no longer needed) but downstream `bin/post_compile` deploy hooks (e.g. cyfuture's) had been silently failing with typer's "No such command" since then. The pre-built CSS bundle ships in the wheel at `src/dazzle_ui/runtime/static/dist/dazzle.min.css`, so the post-compile is genuinely obsolete; the no-op lets deploy hooks keep invoking `dazzle build-css` until they're cleaned up.
+- **#1038 — `dazzle build-css` re-introduced as a no-op CLI command.** The build implementation was removed in v0.62 (Phase 4 teardown — Tailwind JIT bundle no longer needed) but downstream `bin/post_compile` deploy hooks (e.g. cyfuture's) had been silently failing with typer's "No such command" since then. The pre-built CSS bundle ships in the wheel at `src/dazzle_page/runtime/static/dist/dazzle.min.css`, so the post-compile is genuinely obsolete; the no-op lets deploy hooks keep invoking `dazzle build-css` until they're cleaned up.
   - Invocation prints a one-shot migration note pointing at the new asset path + exits 0.
   - The build behaviour itself remains removed — this is purely an invocation-ergonomics change, not a backward-compat re-shim of the build pipeline.
 - **`build_css_command`** in `src/dazzle/cli/runtime_impl/build.py` (~25 lines), exported from `runtime_impl.__init__`, registered under `name="build-css"` in `cli/__init__.py`. Tombstone comment that previously sat where the command used to be is replaced by the new function.
@@ -12575,7 +12583,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 ### Added
 
 - **#1017 — `entity_card` `thread_summary` mode body renderer.** Final of the four entity_card per-mode renderers. With this ship, all six section modes (halo / flags / mini_bars / stamps / thread_summary / quick_actions) have working body renderers; the entity_card primitive is feature-complete from DSL declaration through to live rendering.
-- **`_render_thread_summary_body(rows, timestamp_field, sender_field, subject_field, snippet_field)`** helper at `src/dazzle_back/runtime/workspace_rendering.py`. Picks the SINGLE most-recent row from the pre-fetched set (sorted by `fields[0]` timestamp) and renders an `<article class="dz-thread-summary">` with header (sender + time), subject `<h4>`, and snippet `<p>`. Distinct from `stamps` (chronological list) — designed for "what's the latest from parents?" kind of summary where the user wants ONE row, not a list.
+- **`_render_thread_summary_body(rows, timestamp_field, sender_field, subject_field, snippet_field)`** helper at `src/dazzle_http/runtime/workspace_rendering.py`. Picks the SINGLE most-recent row from the pre-fetched set (sorted by `fields[0]` timestamp) and renders an `<article class="dz-thread-summary">` with header (sender + time), subject `<h4>`, and snippet `<p>`. Distinct from `stamps` (chronological list) — designed for "what's the latest from parents?" kind of summary where the user wants ONE row, not a list.
 - **Snippet truncation:** long bodies cap at ~140 chars at a word boundary with a `…` ellipsis suffix. The user drills into the full thread via the surface link the section's parent card carries (deferred wiring).
 - **Field convention:** `fields[0]` = timestamp (required), `fields[1]` = sender, `fields[2]` = subject, `fields[3]` = body/snippet. Section omits when there are no rows, no timestamp field is configured, or the timestamp is the only required input the row provides (other fields render as optional spans/elements when populated).
 - **9 thread_summary tests** appended to `tests/unit/test_entity_card_data_resolution.py` (now 43 tests total): most-recent thread selection across mixed input order, ISO timestamp + humanised visible text, snippet truncation at word boundary, omit paths (no rows / no timestamp), optional fields render only when configured, HTML escape across all four text fields, sidebar column placement, short snippet not truncated.
@@ -12593,7 +12601,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 ### Added
 
 - **#1017 — `entity_card` `stamps` mode body renderer.** Third of the four entity_card per-mode renderers (after halo/flags MVP, quick_actions v0.67.17, mini_bars v0.67.18). Reuses the per-section source fan-out shape established in v0.67.18; adds only a body builder + an `elif` branch.
-- **`_render_stamps_body(rows, timestamp_field, label_field, detail_field)`** helper at `src/dazzle_back/runtime/workspace_rendering.py`. Renders a chronological event list as `<ol class="dz-entity-card-stamps">` with one `<li class="dz-stamp">` per row. Each `<li>` carries:
+- **`_render_stamps_body(rows, timestamp_field, label_field, detail_field)`** helper at `src/dazzle_http/runtime/workspace_rendering.py`. Renders a chronological event list as `<ol class="dz-entity-card-stamps">` with one `<li class="dz-stamp">` per row. Each `<li>` carries:
   - a `<time class="dz-stamp-time" datetime="<iso>">` element with the parsed ISO-8601 timestamp + a humanised visible date (`YYYY-MM-DD HH:MM`)
   - an optional `<span class="dz-stamp-label">` with the label field value
   - an optional `<span class="dz-stamp-detail">` with the secondary field value
@@ -12611,7 +12619,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 ### Added
 
 - **#1017 — `entity_card` `mini_bars` mode + per-section source fan-out.** Second of the four entity_card per-mode renderers; first one to use the per-section fan-out shape. Sections that declare their own `source:` now have their rows pre-fetched in parallel via the same `dataclasses.replace + _apply_workspace_scope_filters + _safe_fetch + asyncio.gather` pattern v0.67.16 established for task_inbox heterogeneous sources.
-- **`_fetch_entity_card_section_rows`** async helper at `src/dazzle_back/runtime/workspace_rendering.py`. For each section with a `source:` (mini_bars / stamps / thread_summary), looks up the section entity's repository + access spec, synthesizes a per-section context, evaluates RBAC scope against the section entity's own rules, applies the section's `filter:` ConditionExpr, and fetches up to `section.limit` rows. Sections without `source:` (halo / flags / quick_actions) skip the fan-out — those modes operate on the scoped record directly.
+- **`_fetch_entity_card_section_rows`** async helper at `src/dazzle_http/runtime/workspace_rendering.py`. For each section with a `source:` (mini_bars / stamps / thread_summary), looks up the section entity's repository + access spec, synthesizes a per-section context, evaluates RBAC scope against the section entity's own rules, applies the section's `filter:` ConditionExpr, and fetches up to `section.limit` rows. Sections without `source:` (halo / flags / quick_actions) skip the fan-out — those modes operate on the scoped record directly.
 - **`_render_mini_bars_body(rows, value_field, label_field)`** helper. Compact horizontal bar row with value normalisation: each bar's width is relative to the max value seen in the row set so the widest bar fills 100%. Non-numeric values render as 0-width bars (defensive), all-zero data renders zero-width bars (no divide-by-zero), section omits when there are no rows or no `value_field` is configured. Values render as int when whole, otherwise 1 decimal place.
 - **`_build_entity_card_sections` gains `rows_per_section: dict[int, list[dict]] | None = None` kwarg** — same shape as task_inbox's `items_per_source`. Plumbed through from the handler when fan-out runs; tests pass it directly to exercise the multi-source path without a database.
 - **9 mini_bars tests** appended to `tests/unit/test_entity_card_data_resolution.py` (now 26 total): bar row rendering with normalised widths, optional label field, value formatting (int/float), defensive paths (non-numeric values, missing fields, empty rows, all-zero data, no value field), HTML escaping in labels.
@@ -12636,7 +12644,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 ### Added
 
 - **#1017 — `entity_card` `quick_actions` mode body renderer.** First of the four entity_card per-mode compact renderers to land. The data-resolution helper now produces real HTML for `quick_actions` sections instead of an empty body. Each declared action id renders as a `<button type="button" class="dz-quick-action" data-dz-action="<id>">` with the humanised action label as visible text. Project JS hooks `[data-dz-action]` to open the matching surface as a modal flow via the existing surface-modal machinery.
-- **`_render_quick_actions_body(actions)`** helper at `src/dazzle_back/runtime/workspace_rendering.py`. Pure config-to-HTML — no DB query, no per-section fan-out. Each action id gets HTML-escaped in both the `data-dz-action` attribute and the visible label so DSL-supplied action ids can't inject into the rendered markup. Empty list returns empty string and the caller flags `is_omitted=True` so the section drops entirely (rather than rendering an empty button row).
+- **`_render_quick_actions_body(actions)`** helper at `src/dazzle_http/runtime/workspace_rendering.py`. Pure config-to-HTML — no DB query, no per-section fan-out. Each action id gets HTML-escaped in both the `data-dz-action` attribute and the visible label so DSL-supplied action ids can't inject into the rendered markup. Empty list returns empty string and the caller flags `is_omitted=True` so the section drops entirely (rather than rendering an empty button row).
 - **5 quick_actions tests** appended to `tests/unit/test_entity_card_data_resolution.py` (now 17 tests total): renders button row with all action ids + humanised labels, omits section when actions list is empty, button-type="button" prevents accidental form submission, html-escapes action ids defensively against injection.
 
 ### Changed
@@ -12652,7 +12660,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 ### Added
 
 - **#1015 — `task_inbox` upstream fan-out wiring.** Closes the gap from v0.67.15. The `_workspace_region_handler` now fans out one query per declared source, scopes each against its own entity-level access spec, and gathers results in parallel via `asyncio.gather`. Each source's results land in `items_per_source[idx]` which the helper API (v0.67.15) consumes to produce typed items + real chip counts.
-- **`_fetch_task_inbox_items_per_source`** async helper at `src/dazzle_back/runtime/workspace_rendering.py`. Per-source resolution:
+- **`_fetch_task_inbox_items_per_source`** async helper at `src/dazzle_http/runtime/workspace_rendering.py`. Per-source resolution:
   - Look up the source entity's repository (`ctx.repositories[src.source]`) and access spec (`ctx.entity_access_specs[src.source]`).
   - Synthesize a per-source `WorkspaceRegionContext` via `dataclasses.replace` so `_apply_workspace_scope_filters` evaluates RBAC against the source entity's own scope rules, not the region's primary entity.
   - Convert the source's `filter:` ConditionExpr to a repo filter dict via the existing `_extract_condition_filters` from `route_generator`.
@@ -12690,7 +12698,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 ### Added
 
 - **#1015–#1017 — Data resolution layers for `day_timeline`, `task_inbox`, `entity_card`.** Companion ship to v0.67.13's cohort_strip resolution; closes the four-primitive data-resolution arc. All four region kinds now produce real adapter ctx dicts from already-scoped source rows. The DSL → IR → adapter → renderer pipeline is end-to-end live for every primitive in the quartet.
-- **`_build_day_timeline_slots(items, config, now)`** at `src/dazzle_back/runtime/workspace_rendering.py`. Compares `now` against each row's [starts_at, ends_at] window to assign positions: at most one slot is `"active"`, earlier rows are `"before"`, later rows are `"after"`. Accepts both `datetime` instances and ISO-8601 strings; naive datetimes coerce to UTC; rows with unparseable timestamps or missing ids are skipped. Slot label falls back through `name` → `title` → `message` → ISO timestamp.
+- **`_build_day_timeline_slots(items, config, now)`** at `src/dazzle_http/runtime/workspace_rendering.py`. Compares `now` against each row's [starts_at, ends_at] window to assign positions: at most one slot is `"active"`, earlier rows are `"before"`, later rows are `"after"`. Accepts both `datetime` instances and ISO-8601 strings; naive datetimes coerce to UTC; rows with unparseable timestamps or missing ids are skipped. Slot label falls back through `name` → `title` → `message` → ISO timestamp.
 - **`_build_task_inbox_payload(items, config) → (items, chips)`** — MVP single-source path. Folds the region's primary `items` list against the FIRST `as_task` source it finds, building one task item per row (icon + interpolated title/meta via the existing `_interpolate_card_template` Jinja-style `{{ field }}` substitutor). Urgency resolves from `urgency` / `severity` / `priority` row fields with sensible aliases (critical/high → overdue, medium → due, low → soon). One chip per `count_as` source — the chip count is 0 in the MVP because per-source filter eval requires a multi-fetch upstream; flagged for a follow-on ship that fans out one query per source.
 - **`_build_entity_card_sections(items, config)`** — composes one section dict per IR section. `halo` and `flags` modes render minimal `<dl>` grids of named field values from the scoped record (HTML-escaped via the new `_dazzle_html_escape` helper since the typed renderer trusts the body kwarg). Other modes (`mini_bars`, `stamps`, `thread_summary`, `quick_actions`) emit empty bodies pending per-mode compact renderer ships. Optional sections that resolved no field values flag as `is_omitted=True` so the adapter drops them entirely.
 - **`_coerce_urgency`** helper for the task_inbox pipeline — maps free-form severity/priority strings to the four task_inbox bands.
@@ -12712,7 +12720,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 ### Added
 
 - **#1018 — `cohort_strip` data resolution layer.** First of the four data-resolution ships. The `_workspace_region_handler` now reads `WorkspaceRegion.cohort_strip_config`, resolves the active lens (URL `?lens=` query param → `config.default_lens` → first declared lens), shapes already-scoped source rows into the typed cell-dict shape the adapter consumes, and threads them through to the typed-Fragment substrate. The cohort_strip primitive is now end-to-end live with real data, not the empty/unconfigured state.
-- **`_build_cohort_cells(items, config, active_lens_id)`** helper at `src/dazzle_back/runtime/workspace_rendering.py`. Per-row resolution:
+- **`_build_cohort_cells(items, config, active_lens_id)`** helper at `src/dazzle_http/runtime/workspace_rendering.py`. Per-row resolution:
   - **Member name**: FK display dict's `__display__` → `<member_via>_display` sibling key → `<member_via>` scalar → row's own `name` field → empty.
   - **Primary value**: `_resolve_path(item, lens.primary)` — supports nested-FK field paths (e.g. `profile.attendance_pct`).
   - **Tone derivation**: when the active lens declares a numeric `threshold`, the cell tints relative to it — `>= threshold` → `"good"`, `>= threshold × 0.9` → `"warn"`, below that → `"bad"`. Above-good polarity (suits completion %, attendance %, SLA score). Reversing for below-good metrics is deferred until a real consumer needs it.
@@ -12837,7 +12845,7 @@ Cyfuture's "zero `Template.render()` calls under `fragment_chrome=true`" stop co
 
 ### Agent Guidance
 
-- **Primitive adapter dispatch pattern:** New region primitives need three wiring touch-points before they're "live": (1) `_BUILDERS` entry in `src/dazzle_back/runtime/renderers/region_adapter.py`, (2) builder method on the same class, (3) entry in `_SUPPORTED_DISPLAYS` in `src/dazzle/render/fragment/coverage.py`. The IR fields the builder reads come off the orphan baseline at the same time. The data-resolution layer (`workspace_rendering.py`) is a separate ship: the adapter consumes pre-resolved ctx dicts so the primitive layer stays unit-testable without a database. Same split as the existing `_build_action_grid` / `action_card_data` pair.
+- **Primitive adapter dispatch pattern:** New region primitives need three wiring touch-points before they're "live": (1) `_BUILDERS` entry in `src/dazzle_http/runtime/renderers/region_adapter.py`, (2) builder method on the same class, (3) entry in `_SUPPORTED_DISPLAYS` in `src/dazzle/render/fragment/coverage.py`. The IR fields the builder reads come off the orphan baseline at the same time. The data-resolution layer (`workspace_rendering.py`) is a separate ship: the adapter consumes pre-resolved ctx dicts so the primitive layer stays unit-testable without a database. Same split as the existing `_build_action_grid` / `action_card_data` pair.
 
 ## [0.67.6] - 2026-05-10
 
@@ -13083,7 +13091,7 @@ This is Phase 3 of 7 for issue #1029. Remaining: custom empty messages (Phase 4)
 - **`Pagination` primitive** (`dazzle.render.fragment.Pagination`) — page-by-page footer matching legacy `table_pagination.html` byte-equivalent shape: left summary (`<total> rows`) + right page-button row with bounded-width ellipsis (max ~9 entries via the `_pagination_pages` helper, see #984). Each button carries `hx-get="{endpoint}?page=N&page_size=M[&extra_query]"` + `hx-target="#{region_name}-body"` + `hx-swap="morph:innerHTML"`. Active page gets `is-current` class + `aria-current="page"`. Constructor validates `region_name` non-empty, `page >= 1`, `page_size >= 1`, `total >= 0`.
 - **`extra_query` field** on `Pagination` — opaque pre-encoded query string (e.g. `"&sort=name&dir=asc"`) appended to every page link. Phases 5 (search/filter) and 6 (sort) will populate this so page hops preserve the active sort/filter/search state.
 - **`FragmentSurfaceAdapter._build_list`** appends a `Pagination` after the `Table` (wrapped in a `Stack`) when `total > page_size` AND endpoint + region_name are configured. No-op on small datasets — single-page lists stay clean.
-- **`FragmentRenderer._pagination_pages` static helper** — mirrors `dazzle_ui.runtime.template_renderer._pagination_pages`. Bounded ellipsis-collapsed page list keeps the rendered row width constant regardless of total page count.
+- **`FragmentRenderer._pagination_pages` static helper** — mirrors `dazzle_page.runtime.template_renderer._pagination_pages`. Bounded ellipsis-collapsed page list keeps the rendered row width constant regardless of total page count.
 - **Twelve regression tests** at `tests/unit/test_dispatch_ctx_list_pagination.py` pin: list-with-pagination shape, total ≤ page_size omits, missing-endpoint omits, active-page accessibility, hx-get with page params, first/last page always shown, ellipsis when total pages large, primitive validation, empty render below threshold, extra_query threading, helper bounded-output + small-total no-ellipsis.
 
 ### Phase plan
@@ -13171,7 +13179,7 @@ This is Phase 1 of 7 for issue #1029. See `dev_docs/2026-05-09-issue-1029-list-a
 
 ### Fixed
 
-- **#1028 — Fragment detail (VIEW) surfaces always rendered EmptyState.** `_build_dispatch_ctx` in `src/dazzle_ui/runtime/page_routes.py` iterated `getattr(detail, "sections", [])` (which doesn't exist on `DetailContext`) and read `getattr(f, "value", "")` (which doesn't exist on `FieldContext`) — `fields_out` was always empty, so the fragment adapter rendered EmptyState on every detail surface. Fix iterates the flat `detail.fields` list and pulls values from `detail.item` keyed by field.name, matching the legacy `detail_view.html` template's `detail.item.get(field.name, "")` pattern. Six regression tests at `tests/unit/test_dispatch_ctx_detail_view.py` pin the contract: flat-fields iteration, item-dict value source, label fallback, missing/None values → empty string, related_groups thread.
+- **#1028 — Fragment detail (VIEW) surfaces always rendered EmptyState.** `_build_dispatch_ctx` in `src/dazzle_page/runtime/page_routes.py` iterated `getattr(detail, "sections", [])` (which doesn't exist on `DetailContext`) and read `getattr(f, "value", "")` (which doesn't exist on `FieldContext`) — `fields_out` was always empty, so the fragment adapter rendered EmptyState on every detail surface. Fix iterates the flat `detail.fields` list and pulls values from `detail.item` keyed by field.name, matching the legacy `detail_view.html` template's `detail.item.get(field.name, "")` pattern. Six regression tests at `tests/unit/test_dispatch_ctx_detail_view.py` pin the contract: flat-fields iteration, item-dict value source, label fallback, missing/None values → empty string, related_groups thread.
 
 ### Agent Guidance
 
@@ -13194,7 +13202,7 @@ This is Phase 1 of 7 for issue #1029. See `dev_docs/2026-05-09-issue-1029-list-a
 
 ### Added — Phase 4B.5.c follow-on — opt-in typed render in workspace handler + 17-app real-world sweep
 
-- **`render_workspace_content_typed(workspace, catalog, fold_count, primary_actions)`** — production-shape adapter in `dazzle_ui/runtime/workspace_renderer.py` that consumes a real `WorkspaceContext` and returns the same HTML the legacy `render_fragment("workspace/_content.html", ...)` produces. Maps `RegionContext` → `DashboardCard` (incl. notice band, eyebrow, css_class, eager/lazy fold-count split, SSE flag), `catalog` → `CardPicker` entries, `primary_actions` dicts → `WorkspacePrimaryAction` tuples, and threads the optional context selector when `workspace.context_options_url` is set.
+- **`render_workspace_content_typed(workspace, catalog, fold_count, primary_actions)`** — production-shape adapter in `dazzle_page/runtime/workspace_renderer.py` that consumes a real `WorkspaceContext` and returns the same HTML the legacy `render_fragment("workspace/_content.html", ...)` produces. Maps `RegionContext` → `DashboardCard` (incl. notice band, eyebrow, css_class, eager/lazy fold-count split, SSE flag), `catalog` → `CardPicker` entries, `primary_actions` dicts → `WorkspacePrimaryAction` tuples, and threads the optional context selector when `workspace.context_options_url` is set.
 - **`DAZZLE_TYPED_RENDER=1` env-var toggle** in `page_routes.py` (`/app/workspace/<name>` HTMX-fragment branch). When set, the handler renders via the typed substrate; otherwise the legacy Jinja path runs. Lets a deployment flip the renderer with no code change once byte-equivalence holds for its corpus.
 - **17-app real-world sweep test** at `tests/unit/render/fragment/test_workspace_content_real_apps.py` parameterizes over every workspace in every example app (`simple_task`, `ops_dashboard`, `support_tickets`, `contact_manager`, `fieldtest_hub`) — 17 workspaces, 0 to 22 regions each, mixed display modes. The typed render is byte-equivalent against the legacy Jinja render for **every single one**, including the 22-region `command_center` and the 17-region `engineering_dashboard`.
 
@@ -13400,7 +13408,7 @@ All inner pieces of `_content.html` are now typed primitives with byte-equivalen
 **32 of 32 displays byte-equivalent (100%).** Wave 4 complete. Next: Phase 4B.5 — workspace chrome port (page shell, sidebar, topbar, dashboard slot, filter bar around regions). Then Phase 4B.6 — decommission `DISPLAY_TEMPLATE_MAP` and delete the 32 Jinja region templates.
 
 ### Agent Guidance
-- **`Diagram.mermaid_source` is the canonical runtime path.** The structural node/edge list rendering remains for unit tests and any consumer that holds the IR shape directly, but the production runtime computes Mermaid `erDiagram` syntax via `_build_diagram_data` in `src/dazzle_ui/runtime/workspace_renderer.py` and passes it as `ctx['diagram_data']` — adapter forwards as `Diagram.mermaid_source`. When bumping the pinned Mermaid version (currently `11.14.0`), update BOTH the legacy `workspace/regions/diagram.html` template AND the `_DIAGRAM_MERMAID_SCRIPT` constant in `src/dazzle/render/fragment/renderer.py`. The dual-path test `test_diagram_mermaid_source_byte_equivalence` will catch any drift.
+- **`Diagram.mermaid_source` is the canonical runtime path.** The structural node/edge list rendering remains for unit tests and any consumer that holds the IR shape directly, but the production runtime computes Mermaid `erDiagram` syntax via `_build_diagram_data` in `src/dazzle_page/runtime/workspace_renderer.py` and passes it as `ctx['diagram_data']` — adapter forwards as `Diagram.mermaid_source`. When bumping the pinned Mermaid version (currently `11.14.0`), update BOTH the legacy `workspace/regions/diagram.html` template AND the `_DIAGRAM_MERMAID_SCRIPT` constant in `src/dazzle/render/fragment/renderer.py`. The dual-path test `test_diagram_mermaid_source_byte_equivalence` will catch any drift.
 - **Wave 4 is closed; the `_BUILDERS` table is now feature-complete.** Going into Phase 4B.5, every display value from `DISPLAY_TEMPLATE_MAP` resolves to a typed adapter producing byte-equivalent HTML against its Jinja sibling. The remaining work to ship the typed-Fragment substrate as the canonical renderer is workspace chrome (Phase 4B.5) and decommissioning the Jinja templates (Phase 4B.6).
 
 ## [0.66.117] - 2026-05-09
@@ -13874,13 +13882,13 @@ All inner pieces of `_content.html` are now typed primitives with byte-equivalen
 ## [0.66.100] - 2026-05-08
 
 ### Added — Phase 4B.3 — dual-path validation harness (foundation)
-- **New module `src/dazzle_back/runtime/renderers/dual_path.py`** — primitives for rendering a workspace region via both paths (legacy Jinja vs typed-Fragment adapter) and comparing the outputs. Threads through Phase 4B.2's translator so both paths consume the same legacy ctx; the diff captures only rendering-strategy differences, not ctx-shape gymnastics.
+- **New module `src/dazzle_http/runtime/renderers/dual_path.py`** — primitives for rendering a workspace region via both paths (legacy Jinja vs typed-Fragment adapter) and comparing the outputs. Threads through Phase 4B.2's translator so both paths consume the same legacy ctx; the diff captures only rendering-strategy differences, not ctx-shape gymnastics.
 - **Public API:**
-  - `render_via_legacy(display, **legacy_ctx) -> str` — invokes the matching Jinja template via `render_fragment`. Lazy import of `dazzle_ui.runtime.template_renderer` so harness consumers that only need the typed path don't pay the Jinja env cost.
+  - `render_via_legacy(display, **legacy_ctx) -> str` — invokes the matching Jinja template via `render_fragment`. Lazy import of `dazzle_page.runtime.template_renderer` so harness consumers that only need the typed path don't pay the Jinja env cost.
   - `render_via_typed(display, legacy_ctx, *, region_name="r") -> str` — runs `legacy_ctx_to_adapter_ctx` → `WorkspaceRegionAdapter.build` → `FragmentRenderer.render`. Returns the full Surface output (chrome + body), matching what gets emitted on-page.
   - `normalise_html(html) -> str` — collapses inter-tag whitespace + multi-space runs to a canonical form for byte-equivalence comparison. Does NOT reorder attributes (FragmentRenderer + Jinja both emit deterministic order today).
   - `diff_summary(legacy_html, typed_html) -> str | None` — returns None when normalised outputs match, else a short string locating the first divergence with surrounding context.
-- **Display→template map** mirrors `dazzle_ui.runtime.workspace_renderer.DISPLAY_TEMPLATE_MAP` but keyed by the lowercase form the adapter / translator use, so the harness drives off the same display-name vocabulary as the rest of Phase 4B.
+- **Display→template map** mirrors `dazzle_page.runtime.workspace_renderer.DISPLAY_TEMPLATE_MAP` but keyed by the lowercase form the adapter / translator use, so the harness drives off the same display-name vocabulary as the rest of Phase 4B.
 
 ### Why a foundation ship vs full validation gate
 - The discovery doc envisions Phase 4B.3 as "render every region of every example app". That requires standing up a workspace handler harness with seeded DB state — significantly larger scope than a single ship. This foundation ship delivers the primitives needed for that gate, plus smoke coverage of the chart family with synthetic ctx, so Phase 4B.4's per-display port can adopt the harness incrementally as displays come online.
@@ -13906,7 +13914,7 @@ All inner pieces of `_content.html` are now typed primitives with byte-equivalen
 ## [0.66.99] - 2026-05-08
 
 ### Added — Phase 4B.2 — `legacy_ctx_to_adapter_ctx` translator (foundation)
-- **New module `src/dazzle_back/runtime/renderers/legacy_ctx.py`** — translates the legacy Jinja-template ctx (the kwargs passed to `render_fragment(template, **kwargs)` in `workspace_rendering.py`) into the shape that `WorkspaceRegionAdapter._build_*` expects. Per-display dispatch via `_DISPATCH: dict[str, Callable]`. Untranslated displays fall back to passthrough so the runtime can adopt the typed-Fragment path incrementally.
+- **New module `src/dazzle_http/runtime/renderers/legacy_ctx.py`** — translates the legacy Jinja-template ctx (the kwargs passed to `render_fragment(template, **kwargs)` in `workspace_rendering.py`) into the shape that `WorkspaceRegionAdapter._build_*` expects. Per-display dispatch via `_DISPATCH: dict[str, Callable]`. Untranslated displays fall back to passthrough so the runtime can adopt the typed-Fragment path incrementally.
 - **First wave of translators** covers the displays whose adapter ctx contracts are stable as of Phase 4B.1.c:
   - **Chart family (10 displays):** `bar_chart`, `funnel_chart`, `histogram` (`bucketed_metrics`/`histogram_bins` → `buckets`); `line_chart` / `area_chart` / `sparkline` (`bucketed_metrics` → `points`); `radar` (`bucketed_metrics` → `axes`); `box_plot` (`box_plot_stats` → `groups`, drops n/iqr/whisker/outliers); `bar_track` (passthrough — adapter already consumes the legacy shape directly).
   - **Detail / metric (4 displays):** `metrics` / `summary` (rename `delta_direction` → `trend`, drop extended delta fields); `detail` (rename `columns` → `fields`); `activity_feed` (pick activity-shaped `description` / `created_at` field names).
@@ -14439,7 +14447,7 @@ Queue transition buttons differ from regular buttons only in HTMX wiring (PUT me
 
 ### Added — Phase 4B.1.a — METRICS extended deltas
 - **`MetricTile` Fragment primitive** — richer than KPI: carries `tone`, `delta_direction` (up/down/flat), `delta_sentiment` (positive_up = "up is good", positive_down = "up is bad"), `delta_value` string, `delta_pct` float, `delta_period_label`. Renders to match the legacy `workspace/regions/metrics.html` HTML byte-for-byte: `dz-metric-tile` wrapper with snake-cased `data-dz-metric-key`, optional `data-dz-tone`, label + already-formatted value, and conditional delta block with `data-dz-delta-tone` (positive/destructive/neutral) computed from `(direction, sentiment)`, arrow (↑/↓/→), sign (+/empty), pct chunk, "vs <period>" label.
-- **`_build_metrics` extended to produce MetricTile** — values pass through `_metric_number_filter` from `dazzle_ui.runtime.template_renderer` so the typed-Fragment path produces the same K/M-suffixed string the Jinja path produces (1234 → "1,234", True → "Yes", None → "0"). Tone, direction, and sentiment values that don't match the primitive's whitelist silently fall back to defaults (defensive — strict primitive would raise).
+- **`_build_metrics` extended to produce MetricTile** — values pass through `_metric_number_filter` from `dazzle_page.runtime.template_renderer` so the typed-Fragment path produces the same K/M-suffixed string the Jinja path produces (1234 → "1,234", True → "Yes", None → "0"). Tone, direction, and sentiment values that don't match the primitive's whitelist silently fall back to defaults (defensive — strict primitive would raise).
 - 6 new primitive tests + 5 new adapter tests; baselines updated.
 - KPI primitive remains in the public API for non-METRICS use cases (typed dashboards that want a simple label + value + trend); `_build_metrics` no longer dispatches to it.
 
@@ -14470,7 +14478,7 @@ Queue transition buttons differ from regular buttons only in HTMX wiring (PUT me
   - `ref` → Link(`{ref_route}/{value}`) with display name; falls back to plain Text when `ref_route` is empty
   - default → Text(str(value)) with em-dash for None / empty string
 - **`_build_detail` extended to use the helper** — replaces the prior `Text(str(value))` for every field. Type info from the legacy `columns` ctx now flows into the typed-Fragment path losslessly.
-- Reuses existing `_currency_filter`, `_date_filter`, `_badge_tone_filter` from `dazzle_ui.runtime.template_renderer` so Jinja and adapter paths produce byte-equivalent strings (cross-package import; same precedent as `static_files.py` etc.).
+- Reuses existing `_currency_filter`, `_date_filter`, `_badge_tone_filter` from `dazzle_page.runtime.template_renderer` so Jinja and adapter paths produce byte-equivalent strings (cross-package import; same precedent as `static_files.py` etc.).
 - 7 new adapter tests covering each type's render path + the no-ref-route fallback + the em-dash default.
 
 ### Phase 4B.1 progress
@@ -14479,7 +14487,7 @@ Queue transition buttons differ from regular buttons only in HTMX wiring (PUT me
 
 ### Agent Guidance
 - The `_render_typed_value` helper is the canonical place to extend type-aware rendering. New column types (e.g. `markdown`, `relative_time`, `link_array`) plug in here, not in each adapter method that consumes columns.
-- Cross-package import from `dazzle_back` to `dazzle_ui.runtime.template_renderer` is **acceptable for filter functions** (pure value→string conversion). It avoids duplicating formatting logic and keeps the Jinja and Fragment paths consistent. If/when those filters are extracted to `dazzle.render.formatters` (core), update both call sites in lockstep.
+- Cross-package import from `dazzle_http` to `dazzle_page.runtime.template_renderer` is **acceptable for filter functions** (pure value→string conversion). It avoids duplicating formatting logic and keeps the Jinja and Fragment paths consistent. If/when those filters are extracted to `dazzle.render.formatters` (core), update both call sites in lockstep.
 
 ## [0.66.76] - 2026-05-08
 
@@ -14535,7 +14543,7 @@ Queue transition buttons differ from regular buttons only in HTMX wiring (PUT me
 
 ### Smells review (2026-05-08, paired with this release)
 - Ran the `/smells` four-subagent review against the fragment substrate. Verdict: no god classes, no harmful coupling, no mutable globals, no swallowed exceptions. The patterns this release closes were the top-3 priorities surfaced by the review.
-- Remaining finding documented but **not** fixed: parallel display dispatch in `src/dazzle_back/runtime/workspace_rendering.py` (1,138-line function, uppercase enum strings) operates alongside `WorkspaceRegionAdapter` rather than delegating to it. That's Phase 4B work — a port, not a hotfix.
+- Remaining finding documented but **not** fixed: parallel display dispatch in `src/dazzle_http/runtime/workspace_rendering.py` (1,138-line function, uppercase enum strings) operates alongside `WorkspaceRegionAdapter` rather than delegating to it. That's Phase 4B work — a port, not a hotfix.
 
 ### Agent Guidance
 - Adding a new region display mode now means: (1) add an entry to `_BUILDERS` in `region_adapter.py`, (2) add the same string to `_SUPPORTED_DISPLAYS` in `coverage.py`, (3) implement `_build_<name>`. The drift gate fails fast if you forget step 2. The dispatch table also makes the legal display set visible at a glance — no scrolling through an `if/elif` chain to see what's supported.
@@ -15018,7 +15026,7 @@ Every example app's `dazzle.toml` now opts into Fragment chrome (`[ui] fragment_
 
 ### Added
 - **Page primitive (P17 P1).** `dazzle.render.fragment.Page` — frozen dataclass for typed HTML-document chrome (`<html>`/`<head>`/`<body>`). Carries title, lang, theme, css_links, js_scripts, custom meta tags, cascade-layer order, and toggleable body slots (toast container, modal slot, page announcer). The renderer emits a complete `<!DOCTYPE html>...</html>` document; the body slot composes whatever Fragment the caller supplies (typically a `Surface`). 18 unit tests pin construction invariants, escaping, and slot rendering.
-- **PageBuilder (P17 P2).** `dazzle_back.runtime.renderers.page_builder.build_page(ctx, inner_html, ...)` translates `PageContext` + an already-rendered surface body into a `Page` primitive. `dispatch_render_page` is the build+render convenience wrapper. 8 unit tests pin shape end-to-end.
+- **PageBuilder (P17 P2).** `dazzle_http.runtime.renderers.page_builder.build_page(ctx, inner_html, ...)` translates `PageContext` + an already-rendered surface body into a `Page` primitive. `dispatch_render_page` is the build+render convenience wrapper. 8 unit tests pin shape end-to-end.
 - **Fragment-chrome opt-in (P17 P3).** `_render_response` consults `app.state.fragment_chrome`; when truthy AND we're rendering a full document (not htmx partial / drawer / fragment) AND the surface produced inner_html via dispatch, the response goes through `dispatch_render_page` instead of Jinja `render_page`. **Default off** — existing deployments unchanged. 6 HTTP integration tests pin the chrome-on path end-to-end against `simple_task` (DOCTYPE, `dz-page` body class, bundled CSS/JS, inner surface composition, body slots, and the default-off backward-compat case).
 
 ### Agent Guidance
@@ -15033,7 +15041,7 @@ Every example app's `dazzle.toml` now opts into Fragment chrome (`[ui] fragment_
 - **Plan 15 UUID-readonly and JSON-textarea adapter branches** were unreachable from production (page route never passed DSL `kind="uuid"`/`"json"`) — removed alongside the widget-mapping fix. UUID and JSON DSL fields still render acceptably via their FieldContext.type widget mappings (typically text input and textarea respectively); a future plan can reintroduce specialised handling when a real consumer surfaces a need.
 
 ### Agent Guidance
-- The fragment adapter operates on **widget kinds** (matching `FieldContext.type` from `dazzle_ui.runtime.template_context` — text/textarea/select/checkbox/number/date/datetime/email/url/money/file), not DSL FieldType.kind values. When adding a new field type to the DSL, the route from DSL → rendered HTML is: (1) FieldType.kind in IR, (2) runtime compiler produces a FieldContext with `type=<widget>`, (3) `_build_dispatch_ctx` passes `field_dict["kind"]=<widget>`, (4) `_field_to_primitive` matches on widget kind to produce a primitive. Test additions should pin step (4) at the HTTP layer (see `test_simple_task_create_form_*` patterns).
+- The fragment adapter operates on **widget kinds** (matching `FieldContext.type` from `dazzle_page.runtime.template_context` — text/textarea/select/checkbox/number/date/datetime/email/url/money/file), not DSL FieldType.kind values. When adding a new field type to the DSL, the route from DSL → rendered HTML is: (1) FieldType.kind in IR, (2) runtime compiler produces a FieldContext with `type=<widget>`, (3) `_build_dispatch_ctx` passes `field_dict["kind"]=<widget>`, (4) `_field_to_primitive` matches on widget kind to produce a primitive. Test additions should pin step (4) at the HTTP layer (see `test_simple_task_create_form_*` patterns).
 
 ## [0.66.44] - 2026-05-06
 
@@ -15690,12 +15698,12 @@ shape. Project-side code that constructed handlers manually needs the
 update; framework-internal generated code is migrated.
 
 ### Added
-- **`RouteSpec` dataclass** in `src/dazzle_back/runtime/route_generator.py`
+- **`RouteSpec` dataclass** in `src/dazzle_http/runtime/route_generator.py`
   (#1011 closeout — Target 2). Per-route bundle wrapping `HandlerConfig`
   + `service` + cross-verb resource fields (`input_schema`,
   `response_schema`, `auto_include`, `storage_bindings`,
   `include_field_changes`). Distinct from
-  `dazzle_back.specs.endpoint.EndpointSpec` (the static URL/method
+  `dazzle_http.specs.endpoint.EndpointSpec` (the static URL/method
   spec); `RouteSpec` is the runtime handler bundle one layer below.
   Documented as the convergence point matching DRF ViewSet
   attributes / Rails before_action / Spring `@PreAuthorize` /
@@ -15737,7 +15745,7 @@ update; framework-internal generated code is migrated.
   resource/schema/selection-shaped. Don't expand per-factory
   signatures.
 - The naming convention: `EndpointSpec` (existing in
-  `dazzle_back.specs.endpoint`) is the *static* URL/method/service
+  `dazzle_http.specs.endpoint`) is the *static* URL/method/service
   declaration. `RouteSpec` (new in `runtime.route_generator`) is the
   *runtime* handler bundle that knows how to actually construct the
   FastAPI handler. Don't confuse them.
@@ -15764,8 +15772,8 @@ update; framework-internal generated code is migrated.
 
 ### Agent Guidance
 - When adding a new `ScalarType` enum member to
-  `dazzle_back/specs/entity.py`, also add an explicit entry to
-  `_scalar_type_to_python` in `dazzle_back/runtime/model_generator.py`.
+  `dazzle_http/specs/entity.py`, also add an explicit entry to
+  `_scalar_type_to_python` in `dazzle_http/runtime/model_generator.py`.
   The `mapping.get(scalar_type, str)` fallback is a footgun — it lets
   new types silently produce string-typed pydantic models. The new
   regression test fails loudly when this happens.
@@ -15773,7 +15781,7 @@ update; framework-internal generated code is migrated.
 ## [0.65.18] - 2026-05-04
 
 ### Added
-- **`HandlerConfig` dataclass** in `src/dazzle_back/runtime/route_generator.py`
+- **`HandlerConfig` dataclass** in `src/dazzle_http/runtime/route_generator.py`
   (#1011) — frozen dataclass bundling the six auth/authz/audit fields shared
   across CRUD handler factories: `auth_dep`, `optional_auth_dep`,
   `require_auth_by_default`, `entity_name`, `cedar_access_spec`,
@@ -15867,7 +15875,7 @@ update; framework-internal generated code is migrated.
   callers and 1 production caller is mechanical but bigger than this
   cycle.
 - `LayoutArchetype = Stage` alias in `core/ir/layout.py` is used by
-  60+ sites in `dazzle/ui/layout_engine/` and tests, with semantic
+  60+ sites in `dazzle/page/layout_engine/` and tests, with semantic
   intent (UI domain alias). The smells finding is contested — keeping
   the alias is defensible. Existing `test_no_shims.py` allow-lists it.
 
@@ -16250,7 +16258,7 @@ update; framework-internal generated code is migrated.
 
 ### Agent Guidance
 - When removing a vendored asset (Quill, Pickr, etc.), grep
-  `src/dazzle_ui/runtime/static/css/` for `@import` lines AND for
+  `src/dazzle_page/runtime/static/css/` for `@import` lines AND for
   any `.<vendor-prefix>-*` rule blocks — vendor stylesheets usually
   ship both the loader and theme overrides, and removing one
   without the other leaves a 404 + dead CSS shipping silently.
@@ -16462,7 +16470,7 @@ update; framework-internal generated code is migrated.
   `field.type.kind in _SEARCHABLE_KINDS` where the allowlist held
   dazzle-IR `FieldTypeKind` enum values. The runtime calls
   `build_search_index_ddl` with backend-converted entities
-  (`dazzle_back.specs.entity`) where `field.type.kind` is the shape
+  (`dazzle_http.specs.entity`) where `field.type.kind` is the shape
   category `"scalar"` and the actual scalar identity lives in
   `field.type.scalar_type`. The check never matched the backend
   shape.
@@ -16570,7 +16578,7 @@ update; framework-internal generated code is migrated.
     pattern; INLINE_ALLOW / BLOCK_ALLOW pulled into Python sets and
     asserted equal to the IR frozensets.
   - **Server-side `RichTextField`** — `clean_rich_text(raw, max_length=)`
-    in `src/dazzle_back/runtime/richtext_field.py`. Uses `bleach`
+    in `src/dazzle_http/runtime/richtext_field.py`. Uses `bleach`
     (added as a runtime dep, ≥ 6.0) with the IR allowlist; href
     re-validated through `is_safe_href` in the attribute callback;
     raises `ValueError` on length overflow. Handles every paste-XSS
@@ -16703,13 +16711,13 @@ update; framework-internal generated code is migrated.
   five-cycle plan with Quill removal in cycle 4.
 
   Cycle 1 ships:
-  - `src/dazzle_ui/runtime/static/js/dz-richtext.js` — toolbar
+  - `src/dazzle_page/runtime/static/js/dz-richtext.js` — toolbar
     (`role="toolbar"` + roving tabindex), bold/italic/underline
     (cmd-keys Ctrl+B/I/U), schema-closed emit pass, persisted-value
     ingestion via `DOMParser` + closed-tag walker (no untrusted
     `innerHTML` writes into the live tree), focus-stable mousedown
     handling, `aria-live` announcer.
-  - `src/dazzle_ui/runtime/static/css/components/richtext.css` —
+  - `src/dazzle_page/runtime/static/css/components/richtext.css` —
     layered styling that reuses the existing `.dz-form-richtext`
     shell from `form_field.html`.
   - Bridge registers as `richtext-native`; coexists with the Quill
@@ -17060,9 +17068,9 @@ update; framework-internal generated code is migrated.
   **Cycle 5** — `[ui] haptic = true` opts the framework JS into
   `navigator.vibrate(...)` calls on key events:
   - Manifest field added (`ProjectManifest.haptic`, off by default).
-  - `dazzle_ui.runtime.theme.configure_haptic()` mirrors the
+  - `dazzle_page.runtime.theme.configure_haptic()` mirrors the
     dark-mode-toggle pattern; wired from both
-    `dazzle_back.runtime.app_factory` and `dazzle.cli.runtime_impl.serve`.
+    `dazzle_http.runtime.app_factory` and `dazzle.cli.runtime_impl.serve`.
   - `base.html` emits `<meta name="dz-haptic" content="on">` when
     enabled; framework JS reads it at boot and self-registers.
   - Auto-fires on `showToast` (success vs error pattern), swipe-left /
@@ -17334,7 +17342,7 @@ update; framework-internal generated code is migrated.
     is the new method that builds the SQL. Uses `websearch_to_tsquery`
     (user-friendly query syntax — quotes, OR, exclusions) over the
     stored `search_vector` column with `ts_rank`-based ordering.
-  - `dazzle_back/runtime/fts_routes.py` mounts the FastAPI router
+  - `dazzle_http/runtime/fts_routes.py` mounts the FastAPI router
     when `appspec.searches` is non-empty. 404s for unknown entities;
     auth required.
   - Scope-aware filtering reuses the same predicate compiler the
@@ -17389,7 +17397,7 @@ update; framework-internal generated code is migrated.
 ### Added
 - **#954 cycle 2 — `SearchSpec` → tsvector + GIN index DDL bridge.**
   Cycle 1 shipped the IR + parser but the runtime never read it.
-  `dazzle_back.runtime.search_schema.build_search_index_ddl` now
+  `dazzle_http.runtime.search_schema.build_search_index_ddl` now
   walks every `SearchSpec` in the AppSpec and emits the DDL the
   runtime needs:
 
@@ -17689,7 +17697,7 @@ update; framework-internal generated code is migrated.
   cycle-2 dispatcher existed but project code had to call
   `dispatcher.dispatch(spec, payload)` manually for every event.
 
-  New `dazzle_back/runtime/notification_wiring.py` mirrors the
+  New `dazzle_http/runtime/notification_wiring.py` mirrors the
   `job_triggers.py` and `audit_wiring.py` shape: register a service
   callback per notification spec, then the cycle-2 dispatcher fires
   automatically on entity events. Server boots the dispatcher from
@@ -17860,7 +17868,7 @@ update; framework-internal generated code is migrated.
   two loops touch it. Without `DATABASE_URL`, the worker still runs
   but degrades to log-only behaviour with a clear startup banner.
 
-  New helper: `dazzle_back.runtime.worker_services.build_worker_services`.
+  New helper: `dazzle_http.runtime.worker_services.build_worker_services`.
   Pairs with #991 (CRUD HTTP routes on `AuditEntry` / `JobRun`) —
   with both shipped, audit history is now writable from the worker
   process and externally inspectable via the FastAPI server.
@@ -18056,7 +18064,7 @@ update; framework-internal generated code is migrated.
 ### Added
 - **#953 cycle 12 / #956 cycle 12 — `run_retention_loop` async
   task wired into `dazzle worker` CLI.** New
-  `dazzle_back.runtime.retention_loop.run_retention_loop` wraps
+  `dazzle_http.runtime.retention_loop.run_retention_loop` wraps
   cycle-11's orchestrator in an async tick that fires daily on
   a configurable cron (default `"0 3 * * *"` = 03:00 UTC).
   Reuses cycle-7's `parse_cron` + `cron_matches` for the same
@@ -18127,7 +18135,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#953 cycle 10 — generic `sweep_old_rows` retention helper.**
-  New `dazzle_back.runtime.retention.sweep_old_rows(service, *,
+  New `dazzle_http.runtime.retention.sweep_old_rows(service, *,
   date_field, older_than_days, page_size=200)` async helper —
   bulk-deletes rows from any framework system entity older than
   the threshold via the standard service `list` + `delete`
@@ -18215,7 +18223,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#953 cycle 8 — `RedisJobQueue` (production queue backing).**
-  New `dazzle_back.runtime.redis_job_queue.RedisJobQueue`
+  New `dazzle_http.runtime.redis_job_queue.RedisJobQueue`
   satisfies the cycle-3 `JobQueue` Protocol, so the cycle-5
   worker loop and cycle-7b scheduler swap from in-memory to
   Redis-backed without code changes — picks per `REDIS_URL`
@@ -18252,7 +18260,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#953 cycle 7b — async cron scheduler loop.** New
-  `dazzle_back.runtime.job_scheduler` module wraps cycle-7's
+  `dazzle_http.runtime.job_scheduler` module wraps cycle-7's
   pure cron primitives in a long-running async tick:
 
   - `parse_scheduled_jobs(jobs)` — extracts
@@ -18280,7 +18288,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#953 cycle 7 — minimal cron parser + matcher.** New
-  `dazzle_back.runtime.cron` module providing the pure
+  `dazzle_http.runtime.cron` module providing the pure
   primitives the cycle-7b scheduler loop will use to decide when
   to enqueue purely-scheduled jobs:
 
@@ -18351,7 +18359,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#953 cycle 5 — `run_worker_loop` async pump.** New
-  `dazzle_back.runtime.job_loop.run_worker_loop` wraps cycle-4's
+  `dazzle_http.runtime.job_loop.run_worker_loop` wraps cycle-4's
   `process_one` in a long-running async loop with graceful
   shutdown via `asyncio.Event`. Defensive against queue-side
   exceptions (Redis-down etc.) and per-message worker plumbing
@@ -18370,7 +18378,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#953 cycle 4 — `process_one` worker function (single-job
-  lifecycle).** New `dazzle_back.runtime.job_worker.process_one`
+  lifecycle).** New `dazzle_http.runtime.job_worker.process_one`
   ties the cycle-3 queue + handler resolver together with the
   cycle-2 `JobRun` status state machine:
 
@@ -18410,13 +18418,13 @@ update; framework-internal generated code is migrated.
   new modules ship the queue / dispatch primitives the cycle-4
   worker loop will pull from:
 
-  - `dazzle_back.runtime.job_queue` — `JobMessage` (frozen
+  - `dazzle_http.runtime.job_queue` — `JobMessage` (frozen
     dataclass: job_name, payload, attempt, job_run_id), `JobQueue`
     Protocol, and `InMemoryJobQueue` (asyncio.Queue-backed). Cycle
     4 will add a `RedisJobQueue` satisfying the same Protocol so
     the worker swaps without code changes. Submit returns the
     fresh `JobRun.id` so callers can poll.
-  - `dazzle_back.runtime.job_handler` — `resolve_handler(run_path)`
+  - `dazzle_http.runtime.job_handler` — `resolve_handler(run_path)`
     turns `JobSpec.run` into a callable. Supports both
     `module:attr` (entry-point convention) and `module.attr`
     forms. File paths and non-callable attrs are rejected with
@@ -18513,7 +18521,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#956 cycle 9 — `render_audit_history_region` integration helper.**
-  New `dazzle_back.runtime.audit_region.render_audit_history_region`
+  New `dazzle_http.runtime.audit_region.render_audit_history_region`
   combines cycles 7 (RBAC + load_history) and 8 (template) into a
   single async callable. Returns a rendered HTML string that the
   detail-page renderer can drop into the surface body.
@@ -18546,7 +18554,7 @@ update; framework-internal generated code is migrated.
   - Parser support for `show_history: true|false` inside surface
     blocks. Validates against bare `true` / `false` tokens; other
     values raise a parse error.
-  - `src/dazzle_ui/templates/workspace/regions/audit_history.html`
+  - `src/dazzle_page/templates/workspace/regions/audit_history.html`
     — Jinja template that renders a `HistoryChange` list with
     create / update / delete variants, the system-write fallback
     label, and an empty-state message.
@@ -18561,7 +18569,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#956 cycle 7 — audit visibility gate + load_history loader.** New
-  `dazzle_back.runtime.audit_visibility` module wires the cycle-1
+  `dazzle_http.runtime.audit_visibility` module wires the cycle-1
   ``show_to:`` declaration into a runtime RBAC gate and provides the
   end-to-end orchestrator the cycle-8 region renderer will call:
 
@@ -18587,7 +18595,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#956 cycle 6 — audit history reader.** New
-  `dazzle_back.runtime.audit_history` module with the read-side
+  `dazzle_http.runtime.audit_history` module with the read-side
   primitives the cycle-7 ``history`` region template will consume:
 
   - `HistoryEntry` — one decoded audit row ready for display
@@ -18637,11 +18645,11 @@ update; framework-internal generated code is migrated.
   + per-request user_id ContextVar.** Two new modules complete the
   audit-write integration:
 
-  - `dazzle_back.runtime.audit_context` — ContextVar
+  - `dazzle_http.runtime.audit_context` — ContextVar
     `current_user_id` (None default), with set/get/reset helpers.
     Cycle 5 will populate it from the auth dependency; until then
     `AuditEntry.by_user_id` is None for every row.
-  - `dazzle_back.runtime.audit_wiring.register_audit_callbacks` —
+  - `dazzle_http.runtime.audit_wiring.register_audit_callbacks` —
     iterates `appspec.audits`, looks up each entity's service, and
     registers cycle-3's emitter callbacks (on_created / on_updated /
     on_deleted) against it. The writer closure dispatches each diff
@@ -18661,7 +18669,7 @@ update; framework-internal generated code is migrated.
 
 ### Added
 - **#956 cycle 3 — audit-trail diff computation + emitter callbacks.**
-  New `dazzle_back.runtime.audit_emitter` module with two pieces:
+  New `dazzle_http.runtime.audit_emitter` module with two pieces:
 
   - `compute_diff(...)` — pure function; emits one
     AuditEntry-shaped dict per tracked field that changed. Handles
@@ -19162,7 +19170,7 @@ update; framework-internal generated code is migrated.
       msgid, **kwargs)\` on the global singleton.
     - \`locale_ctxvar\` / \`get_current_locale()\` — request-scoped
       \`ContextVar\` mirroring the \`theme_variant\` pattern from
-      \`dazzle_ui.runtime.theme\`. Set by \`LocaleMiddleware\` on
+      \`dazzle_page.runtime.theme\`. Set by \`LocaleMiddleware\` on
       dispatch, reset on the way out (even on exception).
     - Primary-subtag fallback: \`en-GB\` lookups walk to \`en\` when
       only the latter is registered.
@@ -19259,7 +19267,7 @@ update; framework-internal generated code is migrated.
       default = "fr"
       supported = ["fr", "en", "de"]
       \`\`\`
-    - \`LocaleMiddleware\` (\`dazzle_back/runtime/locale_middleware.py\`)
+    - \`LocaleMiddleware\` (\`dazzle_http/runtime/locale_middleware.py\`)
       sets \`request.state.locale\` from cookie → \`Accept-Language\`
       → default. Quality-weighted parsing per RFC 9110, primary-subtag
       fallback (\`en-GB\` → \`en\` when only \`en\` is supported),
@@ -19383,18 +19391,18 @@ update; framework-internal generated code is migrated.
   whole real surface in every browser the framework supports.
   Bundle saving: ~36 KB shipped per form page that has a colour
   widget (~12 KB gzipped). Touched files:
-  - \`src/dazzle_ui/templates/macros/form_field.html\` — \`widget=color\`
+  - \`src/dazzle_page/templates/macros/form_field.html\` — \`widget=color\`
     now emits a \`<input type="color">\` with an Alpine \`x-model\`
     binding to keep the hex display in sync.
-  - \`src/dazzle_ui/runtime/static/js/dz-widget-registry.js\` — removed
+  - \`src/dazzle_page/runtime/static/js/dz-widget-registry.js\` — removed
     the \`colorpicker\` bridge entry (~30 LOC of Pickr glue).
-  - \`src/dazzle_back/runtime/asset_manifest.py\` — \`widget=color\` no
+  - \`src/dazzle_http/runtime/asset_manifest.py\` — \`widget=color\` no
     longer maps to any vendor asset key.
-  - \`src/dazzle_ui/templates/base.html\`, \`runtime/css_loader.py\`,
+  - \`src/dazzle_page/templates/base.html\`, \`runtime/css_loader.py\`,
     \`runtime/static/css/dazzle.css\`, \`runtime/static/css/dz-widgets.css\`
     — removed \`pickr\` conditional asset block + CSS imports + theme
     overrides.
-  - \`src/dazzle_ui/runtime/static/css/components/form.css\` — \`.dz-form-color-*\`
+  - \`src/dazzle_page/runtime/static/css/components/form.css\` — \`.dz-form-color-*\`
     rules now target the native \`<input type="color">\` chrome
     (cross-browser \`::-webkit-color-swatch\` + \`::-moz-color-swatch\`
     selectors).
@@ -19496,7 +19504,7 @@ update; framework-internal generated code is migrated.
 
 ### Security
 - **CodeQL `py/stack-trace-exposure` (#82, #83) — storage upload-ticket
-  routes.** `src/dazzle_back/runtime/storage/routes.py` was
+  routes.** `src/dazzle_http/runtime/storage/routes.py` was
   interpolating raw exception text into JSON error bodies for
   `storage unavailable` (line 91) and `failed to mint upload ticket`
   (line 114). Both now `logger.exception(...)` server-side and return
@@ -19598,8 +19606,8 @@ update; framework-internal generated code is migrated.
   - **Action 1 (1.1 bare `except Exception: pass`)**: 28 → 0 production sites.
     Replaced with `with suppress(Exception):` for cleanup contexts and
     `except Exception: logger.debug(..., exc_info=True)` for sites with a
-    logger. Touched 19 modules across `src/dazzle/`, `src/dazzle_back/`,
-    `src/dazzle_ui/`.
+    logger. Touched 19 modules across `src/dazzle/`, `src/dazzle_http/`,
+    `src/dazzle_page/`.
   - **Action 2 (P6 ADR-0003 shims)**: removed 2/3 named live shims:
     - `src/dazzle/mcp/server/state.py` — deleted the `_StateModule` proxy
       and `_LEGACY_ATTR_MAP`. Tests that read/wrote `state._knowledge_graph`
@@ -19652,7 +19660,7 @@ update; framework-internal generated code is migrated.
 
 ### Changed
 - /ship drift gate `test_htmx_undefined_guards.py` extended to
-  scan inline `<script>` blocks in `src/dazzle_ui/templates/**`
+  scan inline `<script>` blocks in `src/dazzle_page/templates/**`
   (not just dz JS files). Catches the round-1-missed code path
   mechanically. Total: 99 tests.
 
@@ -19925,7 +19933,7 @@ update; framework-internal generated code is migrated.
 - **Linter for ADR-0022 — `<template x-for>` with Alpine-bound
   children.** New drift gate at
   `tests/unit/test_template_xfor_alpine_children.py` walks every
-  `*.html` under `src/dazzle_ui/templates/`, finds every
+  `*.html` under `src/dazzle_page/templates/`, finds every
   `<template x-for=...>` block, and fails if its first-child
   element carries any Alpine-style attribute (`x-*`, `:`, or `@`
   prefixed). Verified end-to-end against a synthetic regression —
@@ -20273,7 +20281,7 @@ update; framework-internal generated code is migrated.
 ### Added
 - **#961 cycle 5 — runtime-URLs API-surface snapshot.** New
   `dazzle inspect-api runtime-urls` subcommand walks
-  `src/dazzle_back/runtime/*_routes.py` via AST and snapshots every
+  `src/dazzle_http/runtime/*_routes.py` via AST and snapshots every
   `@router.<method>(...)` decoration: HTTP method, path template,
   handler name, full parameter signature. Static analysis (no app
   build, no DB connection). Baseline at
@@ -20282,7 +20290,7 @@ update; framework-internal generated code is migrated.
 
 ### Agent Guidance
 - After any change to a route definition in
-  `src/dazzle_back/runtime/*_routes.py` — adding/removing a route,
+  `src/dazzle_http/runtime/*_routes.py` — adding/removing a route,
   changing path template, HTTP method, handler name, or signature
   — the `test_runtime_urls_match_baseline` gate fires. Regenerate
   via `dazzle inspect-api runtime-urls --write`.
@@ -20292,13 +20300,13 @@ update; framework-internal generated code is migrated.
 ### Added
 - **#961 cycle 4 — public-helpers API-surface snapshot.** New
   `dazzle inspect-api public-helpers` subcommand walks the
-  top-level `__init__.py` of `dazzle`, `dazzle_back`, `dazzle_ui`
+  top-level `__init__.py` of `dazzle`, `dazzle_http`, `dazzle_page`
   and snapshots every public attribute (resolved via `__all__` or
   the `_LOADERS` lazy convention) with category + signature.
   Baseline at `docs/api-surface/public-helpers.txt`.
 - 17 public exports total: 7 `dazzle` (errors + ir module +
-  version), 9 `dazzle_back` (lazy-loaded converters / runtime),
-  1 `dazzle_ui` (UISpec).
+  version), 9 `dazzle_http` (lazy-loaded converters / runtime),
+  1 `dazzle_page` (UISpec).
 
 ### Agent Guidance
 - After any change to `__all__` or `_LOADERS` in a top-level
@@ -20395,7 +20403,7 @@ update; framework-internal generated code is migrated.
 ### Changed
 - **Generic `tojson`-in-double-quoted-attribute lint** added to
   `tests/unit/test_card_picker_attributes.py::TestNoDoubleQuotedTojsonAcrossTemplates`.
-  Walks every `*.html` under `src/dazzle_ui/templates/` and fails
+  Walks every `*.html` under `src/dazzle_page/templates/` and fails
   if any attribute is double-quoted with a `tojson` filter inside.
   Convention: single-quote the attribute when the value carries
   `tojson`.
@@ -20519,7 +20527,7 @@ checkpoint, not the destination.
   with one call:
 
   ```python
-  from dazzle_back.runtime.shell import render_in_app_shell
+  from dazzle_http.runtime.shell import render_in_app_shell
 
   @register_route("GET", "/fastmark/upload")
   async def handler(request: Request):
@@ -20540,7 +20548,7 @@ checkpoint, not the destination.
   `{% extends "layouts/app_shell.html" %}` and a
   `{% block content %}…{% endblock %}` body.
 
-  Three exports in `dazzle_back.runtime.shell`:
+  Three exports in `dazzle_http.runtime.shell`:
   - `ShellState` — dataclass carrying nav + auth callables, attached
     to `app.state.shell_state` at framework boot
   - `build_shell_state(appspec, ...)` — computes a `ShellState`
@@ -20628,11 +20636,11 @@ checkpoint, not the destination.
   `/static/dist/dazzle.min.{js,css}` in bundled mode, but the
   bundle build (`scripts/build_dist.py`) was writing to repo-root
   `dist/`. The wheel only ships
-  `src/dazzle_ui/runtime/static/**/*.{js,css}` (per
+  `src/dazzle_page/runtime/static/**/*.{js,css}` (per
   `[tool.setuptools.package-data]`), so the bundle never made it
   to projects on `pip install dazzle-dsl`. The framework's
   `/static/` mount looks at
-  `dazzle_ui/runtime/static/` only — `/static/dist/...` returned 404.
+  `dazzle_page/runtime/static/` only — `/static/dist/...` returned 404.
 
   **This was a default-on regression for any project running
   `DAZZLE_ENV=production`** — the resolver defaults `[ui] assets`
@@ -20641,7 +20649,7 @@ checkpoint, not the destination.
   htmx/Alpine never loaded.
 
   **Fix**: `build_dist.py`'s `DIST_DIR` now points at
-  `src/dazzle_ui/runtime/static/dist/` so:
+  `src/dazzle_page/runtime/static/dist/` so:
   1. The wheel ships the bundle (recursive include picks it up)
   2. The existing `/static/` FastAPI mount serves it as
      `/static/dist/dazzle.min.{js,css}` — no new mount required
@@ -20655,7 +20663,7 @@ checkpoint, not the destination.
 
 ### Agent Guidance
 - Any framework asset that needs to be served at runtime must live
-  under `src/dazzle_ui/runtime/static/` so the wheel ships it AND
+  under `src/dazzle_page/runtime/static/` so the wheel ships it AND
   the existing `/static/` mount serves it. Repo-root `dist/` is
   not packaged. The new `static/dist/` location is the canonical
   place for build-time bundle outputs.
@@ -21297,10 +21305,10 @@ checkpoint, not the destination.
   the `Repository.list` filter / sort grammar AND the ID of the
   adjacent row — both of which the framework already understands.
 
-  New helper at `dazzle_back.runtime.sibling_nav.sibling_urls`:
+  New helper at `dazzle_http.runtime.sibling_nav.sibling_urls`:
 
   ```python
-  from dazzle_back.runtime.sibling_nav import sibling_urls
+  from dazzle_http.runtime.sibling_nav import sibling_urls
 
   prev_url, next_url = await sibling_urls(
       repo=manuscript_repo,
@@ -21943,7 +21951,7 @@ checkpoint, not the destination.
 ### Added
 - **#940 — contract test: vendor-mounted `data-dz-widget` cannot
   co-exist with `x-data` on the same element.** Lexical scan over
-  every Jinja template in `src/dazzle_ui/templates/`; fails CI when
+  every Jinja template in `src/dazzle_page/templates/`; fails CI when
   a node carries both a bridge-mounted widget kind (combobox,
   multiselect, tags, datepicker, daterange, colorpicker, richtext,
   range-tooltip) AND `x-data`. Pure-Alpine markers like
@@ -22092,7 +22100,7 @@ checkpoint, not the destination.
   flags only the input.
 
   CI gate: framework `lint` job now runs the scanner against
-  `src/dazzle_ui/runtime/static/css/**/*.css` and fails on any
+  `src/dazzle_page/runtime/static/css/**/*.css` and fails on any
   finding. Current baseline: zero. New rules introducing a clip will
   fail framework CI rather than ship to projects.
 
@@ -22219,8 +22227,8 @@ checkpoint, not the destination.
   is project-side for v1**. The clean pattern is ~30 lines:
   ```python
   # routes/cohort_finalize.py
-  from dazzle_back.runtime.auth import current_user_id, require_auth
-  from dazzle_back.runtime.storage import StorageRegistry  # accessible via app state
+  from dazzle_http.runtime.auth import current_user_id, require_auth
+  from dazzle_http.runtime.storage import StorageRegistry  # accessible via app state
 
   @require_auth(roles=["teacher"])
   async def handler(request, auth):
@@ -22253,7 +22261,7 @@ checkpoint, not the destination.
     routing per-storage; falls back to `aws_config.endpoint_url`
     when not set. Encodes `content-length-range` constraint up to
     `max_bytes` and a `Content-Type` lock on the policy.
-  - **`FakeStorageProvider`** in `dazzle_back.runtime.storage.testing`
+  - **`FakeStorageProvider`** in `dazzle_http.runtime.storage.testing`
     — in-memory dict-backed implementation. Exposes the same
     protocol surface plus test-only `put_object`, `objects()`, and
     `reset()`. Tests construct one directly — no fixtures, no
@@ -22276,7 +22284,7 @@ checkpoint, not the destination.
 
 ### Agent Guidance
 - For unit tests that need an upload primitive, use
-  `from dazzle_back.runtime.storage import FakeStorageProvider`.
+  `from dazzle_http.runtime.storage import FakeStorageProvider`.
   For integration tests that exercise the real boto3 surface,
   install with `pip install -e ".[dev,aws-test]"` and use moto's
   `mock_aws()` context manager around a `boto3.client("s3")` you
@@ -22313,7 +22321,7 @@ checkpoint, not the destination.
       entity Doc:
         source_pdf_url: file storage=cohort_pdfs
 
-  **Protocol** — `dazzle_back.runtime.storage.StorageProvider`
+  **Protocol** — `dazzle_http.runtime.storage.StorageProvider`
   Protocol with four methods (`render_prefix`, `mint_upload_ticket`,
   `head_object`) + `UploadTicket` / `ObjectMetadata` value types.
   Cycle-2 backend implementations (real S3, in-memory fake) satisfy
@@ -22510,7 +22518,7 @@ checkpoint, not the destination.
 
 ### Agent Guidance
 - For project route overrides that need auth, prefer
-  `from dazzle_back.runtime.auth import current_user_id, require_auth`
+  `from dazzle_http.runtime.auth import current_user_id, require_auth`
   over hand-rolling `SELECT user_id FROM sessions ...`. The
   framework's session validation handles expiry + token rotation
   correctly and a hand-rolled query won't.
@@ -22777,7 +22785,7 @@ checkpoint, not the destination.
 ## [0.61.86] - 2026-04-28
 
 ### Fixed
-- **`src/dazzle_ui/runtime/workspace_renderer.py`** — closes #916.
+- **`src/dazzle_page/runtime/workspace_renderer.py`** — closes #916.
   When `display: heatmap` (or any region) declares `action: <name>`,
   the action-resolution loop now checks `app_spec.workspaces` BEFORE
   `app_spec.surfaces`. If `<name>` matches a workspace, the URL
@@ -22878,16 +22886,16 @@ two `<link rel="stylesheet" href="…dazzle-bundle.css">` references in
   the Tailwind+theme combo.
 
 ### Removed
-- **`src/dazzle_ui/build_css.py`** — the standalone Tailwind CLI
+- **`src/dazzle_page/build_css.py`** — the standalone Tailwind CLI
   wrapper + binary download/cache logic (226 LOC).
 - **`dazzle build-css` CLI command** — registration in
   `src/dazzle/cli/__init__.py`, the `build_css_command` symbol from
   `runtime_impl/__init__.py` and `build.py`.
 - **Tailwind+DaisyUI build invocation** in
-  `src/dazzle_ui/runtime/combined_server.py`. `bundled_css` parameter
+  `src/dazzle_page/runtime/combined_server.py`. `bundled_css` parameter
   now carries only theme override CSS.
 - **`_tailwind_bundled` Jinja global** + the per-request filesystem
-  existence check in `src/dazzle_ui/runtime/template_renderer.py`.
+  existence check in `src/dazzle_page/runtime/template_renderer.py`.
 - **`<link rel="stylesheet" href="…dazzle-bundle.css">`** in
   `templates/base.html` and `templates/site/site_base.html`.
 - **Three publish-workflow steps** in
@@ -22955,7 +22963,7 @@ two `<link rel="stylesheet" href="…dazzle-bundle.css">` references in
 Patch bump. **Fix #912** — v0.61.79's #911 progress-bar work landed the parser, IR, runtime helper, and template — but silently dropped the `progress` field at the IR→template-context boundary in `workspace_renderer.py`. Result: parser parsed `progress: 100` fine, IR carried it, but the rendered template never saw `stage.progress` so the bar never appeared. Same bug shape as #910 — data drops at a boundary.
 
 ### Fixed
-- **`src/dazzle_ui/runtime/workspace_renderer.py`** — `pipeline_stages` boundary now includes `"progress": s.progress` in each dict alongside `label`, `caption`, `value`. The runtime then reads `_stage.get("progress")` and the template's `{% if stage.progress is not none %}` finally evaluates true.
+- **`src/dazzle_page/runtime/workspace_renderer.py`** — `pipeline_stages` boundary now includes `"progress": s.progress` in each dict alongside `label`, `caption`, `value`. The runtime then reads `_stage.get("progress")` and the template's `{% if stage.progress is not none %}` finally evaluates true.
 
 ### Tests
 - **`test_workspace_pipeline_steps.py::TestProgressFlowsThroughBoundary`** — 4 new tests pinning the full IR→context→template flow:
@@ -22975,7 +22983,7 @@ The pre-fix template-wiring test only checked the template *source* for `stage.p
 Patch bump. **Fix #910 (second attempt)** — v0.61.78 fixed the predicate compiler so scope filters now correctly emit `school_id` for relation-name shorthand. That restored real items for AegisMark's `pupil_identity` profile_card region (sibling regions all returning 200 confirmed the predicate compiler is now correct). But the same region kept returning 500 because there was a second, distinct bug in the profile_card render path itself — masked for the entire lifetime of `display: profile_card` because it never had non-empty items in any production test.
 
 ### Fixed
-- **`src/dazzle_back/runtime/workspace_rendering.py`** — the PROFILE_CARD branch built `profile_card_data["stats"]` via attribute access (`_stat.label`, `_stat.value`) on items pulled from `ctx.ctx_region.profile_stats`. That attribute is `list[dict[str, str]]` per the IR→template-context boundary in `workspace_renderer.py` (line 569: `profile_stats=[{"label": s.label, "value": s.value} for s in ...]`). On any non-empty `items` list, the comprehension raised `AttributeError: 'dict' object has no attribute 'label'` and surfaced as a 500. Switched to dict access — `_stat["label"]` / `_stat["value"]` — matching the boundary shape.
+- **`src/dazzle_http/runtime/workspace_rendering.py`** — the PROFILE_CARD branch built `profile_card_data["stats"]` via attribute access (`_stat.label`, `_stat.value`) on items pulled from `ctx.ctx_region.profile_stats`. That attribute is `list[dict[str, str]]` per the IR→template-context boundary in `workspace_renderer.py` (line 569: `profile_stats=[{"label": s.label, "value": s.value} for s in ...]`). On any non-empty `items` list, the comprehension raised `AttributeError: 'dict' object has no attribute 'label'` and surfaced as a 500. Switched to dict access — `_stat["label"]` / `_stat["value"]` — matching the boundary shape.
 
 ### Tests
 - **`test_workspace_profile_card.py::TestProfileCardStatsBuildFromDicts`** — 3 new tests:
@@ -22994,8 +23002,8 @@ Patch bump. **Add #911** — `display: pipeline_steps` regions now accept a per-
 ### Added
 - **`src/dazzle/core/ir/workspaces.py`** — `PipelineStageSpec.progress: str = ""`. Default empty preserves the v0.61.56 shape — existing pipelines render unchanged. Field shape mirrors `value:` so the parser + runtime can reuse the same dispatcher.
 - **`src/dazzle/core/dsl_parser_impl/workspace.py`** — `_parse_pipeline_stages` accepts `progress:` alongside `caption:` and `value:` inside each stage block. Same literal-or-aggregate acceptor (quoted string OR unquoted multi-token aggregate expression). Unknown-key error now lists `progress` as a valid key.
-- **`src/dazzle_back/runtime/workspace_rendering.py`** — `_coerce_pipeline_progress` helper clamps numeric input to 0-100 and returns `(int|None, overshoot_bool)`. None / empty / unparseable → `(None, False)` so the template renders no bar (preserves existing layout). Overshoot (>100) → `(100, True)`. The PIPELINE_STEPS branch dispatches both `value` and `progress` per stage through a single `_queue_stage_field` helper that gathers async count tasks; literals short-circuit. Cross-entity scope warning is parameterised over field name so `progress` aggregates surface the same audit log line as `value` aggregates.
-- **`src/dazzle_ui/templates/workspace/regions/pipeline_steps.html`** — new conditional progress block beneath each stage's headline value. Renders only when `stage.progress is not none`. Emits `data-dz-progress="{n}"`, `data-dz-progress-overshoot="true"` when clamped, ARIA `progressbar` role + `aria-valuenow`. Inline `style="width: {n}%;"` on the fill so themes don't need to compute it; `data-dz-progress` carries the bound number for tone-keyed CSS.
+- **`src/dazzle_http/runtime/workspace_rendering.py`** — `_coerce_pipeline_progress` helper clamps numeric input to 0-100 and returns `(int|None, overshoot_bool)`. None / empty / unparseable → `(None, False)` so the template renders no bar (preserves existing layout). Overshoot (>100) → `(100, True)`. The PIPELINE_STEPS branch dispatches both `value` and `progress` per stage through a single `_queue_stage_field` helper that gathers async count tasks; literals short-circuit. Cross-entity scope warning is parameterised over field name so `progress` aggregates surface the same audit log line as `value` aggregates.
+- **`src/dazzle_page/templates/workspace/regions/pipeline_steps.html`** — new conditional progress block beneath each stage's headline value. Renders only when `stage.progress is not none`. Emits `data-dz-progress="{n}"`, `data-dz-progress-overshoot="true"` when clamped, ARIA `progressbar` role + `aria-valuenow`. Inline `style="width: {n}%;"` on the fill so themes don't need to compute it; `data-dz-progress` carries the bound number for tone-keyed CSS.
 
 ### Tests
 - **`test_workspace_pipeline_steps.py`** — 15 new tests across four classes:
@@ -23013,7 +23021,7 @@ Patch bump. **Add #911** — `display: pipeline_steps` regions now accept a per-
 Patch bump. **Fix #910** — v0.61.77's #909 fix qualified scope predicate columns with the source entity table (`"StudentProfile"."school" = %s`). That was correct for the JOIN-ambiguity case but broke any DSL where the author wrote a *relation name* as shorthand for the FK column. AegisMark's `school = current_user.school` pre-fix bound (incorrectly) to the User-join's `school` column; post-fix Postgres errored with `column "StudentProfile"."school" does not exist` because the actual column is `school_id`. `display: profile_card` regions on `pupil_dashboard` returned 500 instead of the previous (wrong but non-crashing) empty state.
 
 ### Fixed
-- **`src/dazzle_back/runtime/predicate_compiler.py`** — `_qualify_column` now mirrors the `_compile_path_check` heuristic: when the bare field name doesn't exist on the source entity, try `<field>_id`; if neither exists fall back to the bare ref so legitimate edge cases (entity not in the FK graph, ad-hoc tests) don't 500. `fk_graph` is threaded through `_compile_column_check`, `_compile_user_attr_check`, and `_compile_column_ref_check` so every leaf can resolve. Same effect when `fk_graph` is `None` — bare-name passthrough — preserving the v0.61.77 behaviour for callers that don't supply the graph.
+- **`src/dazzle_http/runtime/predicate_compiler.py`** — `_qualify_column` now mirrors the `_compile_path_check` heuristic: when the bare field name doesn't exist on the source entity, try `<field>_id`; if neither exists fall back to the bare ref so legitimate edge cases (entity not in the FK graph, ad-hoc tests) don't 500. `fk_graph` is threaded through `_compile_column_check`, `_compile_user_attr_check`, and `_compile_column_ref_check` so every leaf can resolve. Same effect when `fk_graph` is `None` — bare-name passthrough — preserving the v0.61.77 behaviour for callers that don't supply the graph.
 
 ### Tests
 - **`test_predicate_qualified_columns.py`** — 7 new tests in `TestRelationNameResolvesToFkColumn`: relation-name → FK-id resolution for `UserAttrCheck` + `ColumnCheck`; field-exists-as-is keeps the bare name (no clobbering scalar columns); neither form exists falls through (genuine schema errors still surface); no FK graph disables resolution; `BoolComposite` threads the graph to every leaf; `ColumnRefCheck` resolves both sides. Plus a small helper that builds an `FKGraph` from a single entity spec for compact test cases.
@@ -23029,7 +23037,7 @@ Patch bump. **Fix #909** — RBAC scope predicates emitted unqualified column re
 The user reported the symptom as a `display: profile_card` vs `display: summary` divergence; the actual root cause is in the predicate compiler. The summary path "worked" only because it bypassed the region's `filter:` declaration entirely (a separate, broken-but-invisible bug surfaced in the analysis comment on #909 — to be addressed in a follow-up).
 
 ### Fixed
-- **`src/dazzle_back/runtime/predicate_compiler.py`** — `_compile_column_check`, `_compile_user_attr_check`, and `_compile_column_ref_check` now qualify column references with the source entity table (e.g. `"StudentProfile"."school" = %s` instead of `"school" = %s`). Schema qualification flows through when set. The dispatch in `compile_predicate` threads `entity_name` + `schema` to all three leaf compilers; `_compile_bool_composite` already recursed via `compile_predicate` so no change needed there. Empty `entity_name` (callers that pre-date the fix) falls back to bare column ref for compatibility.
+- **`src/dazzle_http/runtime/predicate_compiler.py`** — `_compile_column_check`, `_compile_user_attr_check`, and `_compile_column_ref_check` now qualify column references with the source entity table (e.g. `"StudentProfile"."school" = %s` instead of `"school" = %s`). Schema qualification flows through when set. The dispatch in `compile_predicate` threads `entity_name` + `schema` to all three leaf compilers; `_compile_bool_composite` already recursed via `compile_predicate` so no change needed there. Empty `entity_name` (callers that pre-date the fix) falls back to bare column ref for compatibility.
 
 ### Tests
 - **`test_predicate_qualified_columns.py`** — 9 new tests across four classes: `UserAttrCheck` qualification (the #909 case + schema variant + fallback compatibility), `ColumnCheck` qualification (literal-value comparisons + IS NULL), `ColumnRefCheck` qualification (both sides), `BoolComposite` recursive qualification (AND/OR), and a full WHERE-clause integration that simulates the AegisMark scenario (StudentProfile + FK display join + scope predicate + user `id` filter) and asserts both sides end up qualified to `"StudentProfile"`.
@@ -23047,7 +23055,7 @@ Patch bump. **Fix #908** — `status_list` authored regions rendered "No data av
 This is the second forwarding bug in the same render path inside 24h (#908 sibling to the AegisMark-reported `confirm_action_panel` and similar). The unit-tier template binding tests passed because they checked the template SOURCE for the right Jinja constructs but never actually rendered the template through `render_fragment` with a realistic kwargs payload.
 
 ### Fixed
-- **`src/dazzle_back/runtime/workspace_rendering.py`** — `render_fragment(...)` call now includes `status_entries=getattr(ctx.ctx_region, "status_entries", [])` alongside the other authored-display payloads (`action_card_data`, `pipeline_stage_data`, `confirmations`, `profile_card_data`).
+- **`src/dazzle_http/runtime/workspace_rendering.py`** — `render_fragment(...)` call now includes `status_entries=getattr(ctx.ctx_region, "status_entries", [])` alongside the other authored-display payloads (`action_card_data`, `pipeline_stage_data`, `confirmations`, `profile_card_data`).
 
 ### Tests
 - **`test_workspace_status_list.py`** extended with `TestStatusListRendersAuthoredEntries` — three tests that actually render the template through `render_fragment(...)`: positive (entries present → entries render, empty-state suppressed), negative (no entries → empty-state fires correctly), and a defensive string-match guard pinning the forwarding line in `workspace_rendering.py` so a future refactor doesn't drop it again.
@@ -23063,7 +23071,7 @@ Patch bump. **Fix #907** — `WorkspaceRouteBuilder.init_workspace_routes` short
 The parser-level bodyless-region exemption (added in #891 for action_grid and extended through each subsequent bodyless mode) made the regions *parse* without a source, but the route-builder kept its source-required check unchanged. Two parallel exemption surfaces, only one was kept in sync.
 
 ### Fixed
-- **`src/dazzle_back/runtime/workspace_route_builder.py`** — bodyless display modes now register routes even with no source. Allowlist is the four named modes (`ACTION_GRID`, `PIPELINE_STEPS`, `STATUS_LIST`, `CONFIRM_ACTION_PANEL`); other display modes still require a source as before. The downstream handler short-circuits the items fetch when source is None and renders the template from the IR's authored config.
+- **`src/dazzle_http/runtime/workspace_route_builder.py`** — bodyless display modes now register routes even with no source. Allowlist is the four named modes (`ACTION_GRID`, `PIPELINE_STEPS`, `STATUS_LIST`, `CONFIRM_ACTION_PANEL`); other display modes still require a source as before. The downstream handler short-circuits the items fetch when source is None and renders the template from the IR's authored config.
 
 ### Tests
 - **`test_workspace_route_builder_bodyless.py`** — 6 new tests: one per bodyless display mode (action_grid, pipeline_steps, status_list, confirm_action_panel) parsing a sourceless DSL and asserting the route exists in `app.routes`; one positive guard (sourced LIST still registers); one negative guard (sourceless LIST is still skipped — only the four named modes are exempt).
@@ -23114,7 +23122,7 @@ This completes the AegisMark UX patterns roadmap (Phases 1-3, items #1-#7). Five
 - **`DisplayMode.CONFIRM_ACTION_PANEL`** + `workspace/regions/confirm_action_panel.html`. Renders the AegisMark "Final authorisation" shape: checklist of obligations + dual button (primary commit / secondary draft) + audit footer. Branches on resolved `state_value`: `off`/`pending`/`draft` → checklist + dual-button; `live`/`active` → "Currently live" summary + revoke; `revoked` → audit + re-enable.
 - **`ConfirmationItemSpec` IR type** (`src/dazzle/core/ir/workspaces.py`) with `title: str`, `caption: str = ""`, `required: bool = True`. Required items must all be ticked for the primary action to enable; optional items are advisory.
 - **DSL keywords**: `confirmations:` block, `state_field:` (entity column driving panel mode), `revoke:` (action surface for the live state). `primary_action:` / `secondary_action:` use IDENTIFIER string-match (avoiding clash with profile_card's `primary:` / `secondary:` which mean entity-field names there). `required:` on individual confirmations stays an IDENTIFIER (NOT a lexer keyword) so the field-modifier parser elsewhere keeps working.
-- **`dzConfirmGate` Alpine component** (`src/dazzle_ui/runtime/static/js/dz-alpine.js`) — counts required-checkbox toggles and exposes `enabled` (true when all required boxes are ticked). Template binds `:href` and `:class` on the primary button to the `enabled` getter so the disabled state is purely visual + click-blocking.
+- **`dzConfirmGate` Alpine component** (`src/dazzle_page/runtime/static/js/dz-alpine.js`) — counts required-checkbox toggles and exposes `enabled` (true when all required boxes are ticked). Template binds `:href` and `:class` on the primary button to the `enabled` getter so the disabled state is purely visual + click-blocking.
 - **Audit footer auto-detection** — when the source entity has an `audit:` block declared, the renderer sets `audit_enabled=true` upstream and the template emits the "recorded in audit log with your account, IP address, and timestamp" disclosure. Authors don't write the copy by hand.
 - **`examples/ops_dashboard`** new `Integration` entity (`audit: all`, status enum) + `integration_authorise` region in the `incident_review` workspace exercising the full panel — all three confirmations, dual button, revoke, audit footer.
 
@@ -23132,7 +23140,7 @@ This completes the AegisMark UX patterns roadmap (Phases 1-3, items #1-#7). Five
 Patch bump. **AegisMark UX patterns roadmap item #5** — `pair_strip` workspace stage layout. AegisMark's SIMS-sync-opt-in prototype's `consent-grid` pattern is a stack of explicit `(info, action)` pairs; pair_strip is the framework primitive that gives DSL authors the same shape via a one-line stage declaration. Mobile fallback piggybacks on the existing 12-column responsive grid — no framework JS, no per-region template branching.
 
 ### Added
-- **`pair_strip` stage value** in `STAGE_DEFAULT_SPANS` and `STAGE_FOLD_COUNTS` (`src/dazzle_ui/runtime/workspace_renderer.py`). Every region under a `stage: "pair_strip"` workspace gets `col_span=6`; CSS grid auto-flow stacks them into rows of two. Sibling to `dual_pane_flow` but reads more naturally for multi-pair flows. Eager-loads six regions above the fold (three pairs).
+- **`pair_strip` stage value** in `STAGE_DEFAULT_SPANS` and `STAGE_FOLD_COUNTS` (`src/dazzle_page/runtime/workspace_renderer.py`). Every region under a `stage: "pair_strip"` workspace gets `col_span=6`; CSS grid auto-flow stacks them into rows of two. Sibling to `dual_pane_flow` but reads more naturally for multi-pair flows. Eager-loads six regions above the fold (three pairs).
 - **`examples/ops_dashboard`** `incident_review` workspace demonstrates pair_strip with four regions = two pairs (`alert_summary` + `recent_alerts`, `system_overview` + `review_checklist`). Exercises the new stage alongside metrics tones (#2), notice band (#7), and status_list (#3) — full UX vocabulary in one workspace.
 
 ### Tests
@@ -23148,7 +23156,7 @@ Patch bump. **AegisMark UX patterns roadmap item #5** — `pair_strip` workspace
 Patch bump. **Fix #906** — tone tints on `metrics` tiles, `notice` bands, and `status_list` pills/icons no longer rely on dynamic Tailwind arbitrary-value classes that the JIT can't observe at build time. Three components shipped with this bug across v0.61.65 / v0.61.68 / v0.61.69; AegisMark deployments saw transparent tiles + uncoloured pills despite the data attributes being correct.
 
 ### Added
-- **`src/dazzle_ui/runtime/static/css/dz-tones.css`** — static tint rules keyed off `[data-dz-tone]` (metrics), `[data-dz-notice-tone]` (notice band), and `[data-dz-state]` (status_list pill + icon). All tints route through HSL design-system slots so theming applies. Wired into `dazzle-framework.css`, `css_loader.py` `CSS_UNLAYERED_FILES`, and `build_dist.py` `CSS_SOURCES` so it ships with every install shape.
+- **`src/dazzle_page/runtime/static/css/dz-tones.css`** — static tint rules keyed off `[data-dz-tone]` (metrics), `[data-dz-notice-tone]` (notice band), and `[data-dz-state]` (status_list pill + icon). All tints route through HSL design-system slots so theming applies. Wired into `dazzle-framework.css`, `css_loader.py` `CSS_UNLAYERED_FILES`, and `build_dist.py` `CSS_SOURCES` so it ships with every install shape.
 
 ### Fixed
 - **#906**: `metrics.html`, `_content.html` (notice band), and `status_list.html` no longer build dynamic class strings like `bg-[hsl(var(--primary)/0.10)]`. Templates emit only the data attributes; `dz-tones.css` provides the matching rules. Templates kept their always-applied static fallback class (e.g. `bg-[hsl(var(--muted)/0.4)]` on every metric tile) so neutral entries render unchanged.
@@ -23192,8 +23200,8 @@ Patch bump. **AegisMark UX patterns roadmap item #7** — region-level `notice:`
 ### Added
 - **`notice:` field on workspace regions** (`src/dazzle/core/lexer.py` already had `NOTICE` from the surface-side `attention notice:` block; reused here in workspace context). Two parser shapes: shorthand `notice: "Title text"` (title-only, neutral tone) and block form with `title:` / `body:` / `tone:` keys. Tone tokens reuse the action_grid + metrics vocabulary (positive / warning / destructive / accent / neutral).
 - **`NoticeSpec` IR type** (`src/dazzle/core/ir/workspaces.py`) — frozen Pydantic model with `title: str`, `body: str = ""`, `tone: str = "neutral"`. Exported from `dazzle.core.ir`.
-- **Notice band template** (`src/dazzle_ui/templates/workspace/_content.html`) — sits between the card header (drag handle + title + actions) and the HTMX-loaded body. Tinted background + left rail via design-system HSL slots (`var(--success)`, `var(--warning)`, etc.) so the active theme applies. Hidden via `x-show` when no notice is configured — existing dashboard frames render unchanged.
-- **Renderer wiring** (`src/dazzle_ui/runtime/workspace_renderer.py`, `src/dazzle_ui/runtime/page_routes.py`) — `RegionContext.notice: dict[str, str]` carries the band; `cards_for_json` includes the entry on every card payload. Empty dict when omitted.
+- **Notice band template** (`src/dazzle_page/templates/workspace/_content.html`) — sits between the card header (drag handle + title + actions) and the HTMX-loaded body. Tinted background + left rail via design-system HSL slots (`var(--success)`, `var(--warning)`, etc.) so the active theme applies. Hidden via `x-show` when no notice is configured — existing dashboard frames render unchanged.
+- **Renderer wiring** (`src/dazzle_page/runtime/workspace_renderer.py`, `src/dazzle_page/runtime/page_routes.py`) — `RegionContext.notice: dict[str, str]` carries the band; `cards_for_json` includes the entry on every card payload. Empty dict when omitted.
 - **`examples/ops_dashboard`** Health Summary region picks up an accent-toned notice ("Status as of last sync / Counts refresh every 30s; alert deltas use the prior 24h window.") to demonstrate.
 
 ### Tests
@@ -23209,7 +23217,7 @@ Patch bump. **AegisMark UX patterns roadmap item #7** — region-level `notice:`
 Patch bump. **Fix #905** — `display: summary` and `display: metrics` regions no longer render the underlying items table inside the hero tile. AegisMark's teacher_workspace was rendering a 600-row Manuscript table under the "Marked overnight" hero, and an 82,568-row MarkingResult table under "Class average" — both crowded prototype-tight hero strips with ~400px of vertical waste per tile.
 
 ### Removed
-- **Items+columns block in `metrics.html`** (`src/dazzle_ui/templates/workspace/regions/metrics.html`) — deleted the `<div class="overflow-x-auto"><table>...</table></div>` block, the divider `<div class="h-px ... my-3"></div>` above it, the `for item in items` / `for col in columns` iterations, the `_attention` row tinting, and the unused `render_status_badge` macro import. Summary/metrics regions are about the headline number; authors who want both metric tiles AND a list should declare two regions (one METRICS, one LIST).
+- **Items+columns block in `metrics.html`** (`src/dazzle_page/templates/workspace/regions/metrics.html`) — deleted the `<div class="overflow-x-auto"><table>...</table></div>` block, the divider `<div class="h-px ... my-3"></div>` above it, the `for item in items` / `for col in columns` iterations, the `_attention` row tinting, and the unused `render_status_badge` macro import. Summary/metrics regions are about the headline number; authors who want both metric tiles AND a list should declare two regions (one METRICS, one LIST).
 
 ### Changed
 - `tests/unit/test_workspace_routes.py::TestMetricsRegionTemplate::test_drill_down_table_renders_when_items_and_columns` renamed and inverted to `test_no_drill_down_table_rendered_even_with_items` — pins the new contract: even when `items` and `columns` are populated, no table renders.
@@ -23231,7 +23239,7 @@ Patch bump. **AegisMark UX patterns roadmap item #4** — generalise `pipeline_s
 - **`PipelineStageSpec.aggregate_expr` renamed `value`** — single source of truth, matches the DSL field name. All call sites updated in the same commit (parser, runtime, renderer, tests, ops_dashboard example).
 
 ### Added
-- **Literal-string render path in `pipeline_steps` runtime** (`src/dazzle_back/runtime/workspace_rendering.py`) — non-aggregate values short-circuit the query path entirely. They're stashed into `_stage_literals` during the dispatch loop and re-attached to the build output, so they render verbatim alongside count-driven siblings. Honours the scope-deny gate (literals still render even when scope-denied — they don't depend on row visibility).
+- **Literal-string render path in `pipeline_steps` runtime** (`src/dazzle_http/runtime/workspace_rendering.py`) — non-aggregate values short-circuit the query path entirely. They're stashed into `_stage_literals` during the dispatch loop and re-attached to the build output, so they render verbatim alongside count-driven siblings. Honours the scope-deny gate (literals still render even when scope-denied — they don't depend on row visibility).
 - **`examples/ops_dashboard` `alert_pipeline`** picked up a literal-value stage ("Audit / Daily 02:00 UTC") to demonstrate mixed-shape pipelines.
 
 ### Tests
@@ -23249,7 +23257,7 @@ Patch bump. **AegisMark UX patterns roadmap item #2** — per-tile `tone:` on `d
 ### Added
 - **`tones:` block on workspace regions** (`src/dazzle/core/lexer.py`, `src/dazzle/core/dsl_parser_impl/workspace.py`, `src/dazzle/core/ir/workspaces.py`) — sibling to `aggregate:`. Maps metric name → tone token. Pure presentation hook with no impact on data, scope, or semantics.
 - **Per-tile background tint in `metrics.html`** — branches on `metric.tone` with five render paths (positive / warning / destructive / accent / default). All tones map to design-system HSL slots so the active theme applies; no hard-coded colours. Untoned tiles render unchanged (default muted bg). A `data-dz-tone` attribute is emitted when a tone is set, for downstream test/styling hooks.
-- **Renderer wiring** (`src/dazzle_back/runtime/workspace_rendering.py`, `src/dazzle_ui/runtime/workspace_renderer.py`) — `_compute_aggregate_metrics` accepts a `tones=` kwarg and attaches `tone` to each output metric dict whose name has an entry. The two render paths that build `metrics` for HTMX responses pass it through; the stats-only path (used by the workspace JSON endpoint) intentionally skips it.
+- **Renderer wiring** (`src/dazzle_http/runtime/workspace_rendering.py`, `src/dazzle_page/runtime/workspace_renderer.py`) — `_compute_aggregate_metrics` accepts a `tones=` kwarg and attaches `tone` to each output metric dict whose name has an entry. The two render paths that build `metrics` for HTMX responses pass it through; the stats-only path (used by the workspace JSON endpoint) intentionally skips it.
 - **`examples/ops_dashboard`** Health Summary region demonstrates per-tile tones — `healthy_count: positive`, `critical_count: destructive`. Real-app coverage so the new field is exercised in a working DSL.
 
 ### Tests
@@ -23265,7 +23273,7 @@ Patch bump. **AegisMark UX patterns roadmap item #2** — per-tile `tone:` on `d
 Patch bump. **Fix #904** — `display: summary` + `aggregate: avg(field)` rendered "Avg Score 0" because the scalar-aggregate path through `Repository.aggregate` was broken in two compounding ways. AegisMark's class-average tile showed 0 despite ~82,000 visible MarkingResult rows with non-zero scores.
 
 ### Fixed
-- **`build_aggregate_sql` no-dimension path** (`src/dazzle_back/runtime/aggregate.py`) — pre-fix, `if not dimensions: return "", []` short-circuited to empty SQL, which `_fetch_scalar_metric` saw as `buckets=[]` and returned 0. Now emits `SELECT <measures> FROM <table> [WHERE...] LIMIT N` (no GROUP BY) for the scalar-aggregate path. The `_fetch_scalar_metric` helper that #888 Phase 1 introduced for region-level avg/sum/min/max tiles now actually fires its query.
+- **`build_aggregate_sql` no-dimension path** (`src/dazzle_http/runtime/aggregate.py`) — pre-fix, `if not dimensions: return "", []` short-circuited to empty SQL, which `_fetch_scalar_metric` saw as `buckets=[]` and returned 0. Now emits `SELECT <measures> FROM <table> [WHERE...] LIMIT N` (no GROUP BY) for the scalar-aggregate path. The `_fetch_scalar_metric` helper that #888 Phase 1 introduced for region-level avg/sum/min/max tiles now actually fires its query.
 - **`rows_to_buckets` Decimal handling** — pre-fix: `int(Decimal("0.834"))` truncated to 0 (the secondary half of the #904 symptom). Now `Decimal` / `str` numeric values cast through `float()` so fractional means render correctly. `None` → 0 (empty filtered set).
 
 ### Tests
@@ -23327,7 +23335,7 @@ Patch bump. **Fix #902** — multi-section `mode: create` surfaces emitted Alpin
 Patch bump. **Fix #901** — `action_grid` and `pipeline_steps` per-card / per-stage `count_aggregate` queries silently returned 0 when the per-card entity differed from the region's `source:` entity. AegisMark's cross-entity action cards (e.g. an `action_grid` whose source is `MarkingResult` but with a card counting `AssessmentEvent`) were all showing zero counts.
 
 ### Fixed
-- **`action_grid` per-card scope gate** in `src/dazzle_back/runtime/workspace_rendering.py` — `_card_scope = _scope_only_filters if _entity_name == ctx.source else None`. Pre-fix, `_scope_only_filters` (resolved against the source entity's columns) was unconditionally passed to a different-entity repo, causing silent SQL failures (caught + swallowed) and 0 counts.
+- **`action_grid` per-card scope gate** in `src/dazzle_http/runtime/workspace_rendering.py` — `_card_scope = _scope_only_filters if _entity_name == ctx.source else None`. Pre-fix, `_scope_only_filters` (resolved against the source entity's columns) was unconditionally passed to a different-entity repo, causing silent SQL failures (caught + swallowed) and 0 counts.
 - **`pipeline_steps` per-stage scope gate** — same shape: `_stage_scope = _scope_only_filters if _entity_name == ctx.source else None`. The user verified empirically that all 4 stages of AegisMark's `ingestion_journey` showed 0 because of this same root cause.
 - **Operator audit signal** — both branches now log a warning when scope is dropped: "cross-entity count is unscoped — destination entity's own RBAC at navigation time still applies, but the count badge shows ALL rows the runtime can read". Operators see this in their server logs and can choose to add explicit per-entity scoping if needed.
 
@@ -23353,9 +23361,9 @@ Patch bump. **AegisMark UX patterns roadmap — item #1 (`eyebrow:` field on reg
 - **`WorkspaceRegion.eyebrow: str | None`** — kicker line rendered above the region title in the dashboard slot's panel header. Default `None`. Pure presentation hook — no impact on data, scope, or aggregates.
 - **Lexer token** `EYEBROW = "eyebrow"` in `src/dazzle/core/lexer.py`. Added to `KEYWORD_AS_IDENTIFIER_TYPES` per the #899 fix pattern so `eyebrow` remains usable as a field name (e.g. `entity Article: eyebrow: str(60)`) and enum value (e.g. `enum[heading, eyebrow, body, caption]`).
 - **Parser branch** in `src/dazzle/core/dsl_parser_impl/workspace.py` — quoted-string-only (eyebrow text typically contains spaces). Sibling pattern to `purpose:` and other meta-text fields.
-- **`RegionContext.eyebrow: str = ""`** in `src/dazzle_ui/runtime/workspace_renderer.py` — flows IR to render context.
-- **`cards_for_json` payload extension** in `src/dazzle_ui/runtime/page_routes.py` — each card carries `eyebrow` so the Alpine card-grid template binds it via `x-text`.
-- **Template binding** in `src/dazzle_ui/templates/workspace/_content.html` — `<span x-show="card.eyebrow" x-text="card.eyebrow">` rendered above the title `<h3>`. Empty eyebrow → no element, so existing dashboards render unchanged.
+- **`RegionContext.eyebrow: str = ""`** in `src/dazzle_page/runtime/workspace_renderer.py` — flows IR to render context.
+- **`cards_for_json` payload extension** in `src/dazzle_page/runtime/page_routes.py` — each card carries `eyebrow` so the Alpine card-grid template binds it via `x-text`.
+- **Template binding** in `src/dazzle_page/templates/workspace/_content.html` — `<span x-show="card.eyebrow" x-text="card.eyebrow">` rendered above the title `<h3>`. Empty eyebrow → no element, so existing dashboards render unchanged.
 
 ### Tests
 - **`tests/unit/test_workspace_region_eyebrow.py`** (new) — 13 cases:
@@ -23376,7 +23384,7 @@ Patch bump. **AegisMark UX patterns roadmap — item #1 (`eyebrow:` field on reg
 Patch bump. **Fix #900** — region `class:` field landed in card data JSON but Alpine binding silently dropped the string element on the rendered DOM. AegisMark's `class: "action-band"` and `class: "journey-row"` weren't applying to the actual element classNames despite being on the wire.
 
 ### Fixed
-- **Alpine `:class` binding** in `src/dazzle_ui/templates/workspace/_content.html` — array form `[obj, str]` was unreliable for the `card.css_class` string element. Replaced with explicit string output: `[card.css_class, transitionExpr].filter(Boolean).join(' ')`. Alpine now sets the className to a single concatenated string, unambiguous.
+- **Alpine `:class` binding** in `src/dazzle_page/templates/workspace/_content.html` — array form `[obj, str]` was unreliable for the `card.css_class` string element. Replaced with explicit string output: `[card.css_class, transitionExpr].filter(Boolean).join(' ')`. Alpine now sets the className to a single concatenated string, unambiguous.
 
 ### Tests
 - **`test_workspace_region_class.py`** extended to 20 cases (was 18): two new `TestCssClassTemplateBinding` cases — `test_template_binding_uses_string_concat_pattern` (static guard pinning the `.filter(Boolean).join(' ')` pattern) and `test_alpine_binding_simulation_includes_css_class` (pure-Python simulation of the binding evaluation that catches the `card.css_class` getting dropped at the test level).
@@ -23453,8 +23461,8 @@ Patch bump. **Fix #890** — `display: pipeline_steps`. Sequential-stage workflo
 - **`_parse_pipeline_stages_block`** in `src/dazzle/core/dsl_parser_impl/workspace.py` — same dash-list shape as `actions:`. Each entry leads with `label:`; `caption:` and `aggregate:` are optional.
 - **`stages:` shape dispatch** — the existing `STAGES` lexer token now triggers two parser paths based on the next token: `LBRACKET` → legacy progress-mode bracketed list (`stages: [a, b, c]`), `INDENT` → new pipeline_steps indented dash-list. **Backwards compatible** with all existing `progress` regions.
 - **`RegionContext.pipeline_stages`** — list of dicts (`{label, caption, aggregate_expr}`) for the runtime branch to consume.
-- **Runtime branch** in `src/dazzle_back/runtime/workspace_rendering.py` — fires one `_fetch_count_metric` per stage with non-empty `aggregate_expr` via `asyncio.gather`. Honours the #887 scope-deny gate. Stages with unsupported aggregates (median, avg, sum, min, max) render `—` in the MVP — only `count(...)` is wired through. Mirrors the action_grid pattern (#891).
-- **Template** `src/dazzle_ui/templates/workspace/regions/pipeline_steps.html` — flex row of stage cards with SVG chevron connectors between (desktop) / vertical chevrons (mobile). Token-coloured. `region_card` macro wrapper for card safety.
+- **Runtime branch** in `src/dazzle_http/runtime/workspace_rendering.py` — fires one `_fetch_count_metric` per stage with non-empty `aggregate_expr` via `asyncio.gather`. Honours the #887 scope-deny gate. Stages with unsupported aggregates (median, avg, sum, min, max) render `—` in the MVP — only `count(...)` is wired through. Mirrors the action_grid pattern (#891).
+- **Template** `src/dazzle_page/templates/workspace/regions/pipeline_steps.html` — flex row of stage cards with SVG chevron connectors between (desktop) / vertical chevrons (mobile). Token-coloured. `region_card` macro wrapper for card safety.
 - **Region-bodyless validation exemption** extended — `pipeline_stages` joins `action_cards` as a region body (no `source:`/`aggregate:` required at the top level when the region has its own stage-level aggregates).
 - **`PipelineStageSpec`** exported from `dazzle.core.ir.__init__`.
 
@@ -23491,12 +23499,12 @@ Patch bump. **Fix #892** — `display: profile_card`. Single-record identity pan
   - `facts: list[str]` — bulleted-list templates (interpolated)
 - **Lexer tokens** `AVATAR_FIELD`, `PRIMARY`, `SECONDARY`, `STATS`, `FACTS` in `src/dazzle/core/lexer.py`.
 - **`_parse_profile_stats_block`** + **`_parse_facts_block`** in `src/dazzle/core/dsl_parser_impl/workspace.py` — same dash-list shape as `actions:`.
-- **Tiny safe interpolator** in `src/dazzle_back/runtime/workspace_rendering.py`:
+- **Tiny safe interpolator** in `src/dazzle_http/runtime/workspace_rendering.py`:
   - `_resolve_path(item, path)` — walks dotted paths against an item dict
   - `_initials_from(name)` — first-letter-of-up-to-2-words fallback for the avatar
   - `_interpolate_card_template(tmpl, item)` — `re.sub` over `{{ IDENT(.IDENT)* }}` only. **No Jinja eval, no expressions, no filters.** FK dicts auto-resolve via the `__display__` chain (mirrors heatmap/box_plot). Unresolved paths render empty.
 - **Runtime branch** for `display == "PROFILE_CARD"` — takes the first item from the standard fetch, builds `profile_card_data` dict (avatar_url, initials, primary, secondary, stats, facts) for the template.
-- **Template** `src/dazzle_ui/templates/workspace/regions/profile_card.html` — flex identity row + grid stats (1 col mobile / 3 col desktop) + bulleted facts list, all design-token colours, `region_card` wrapper for card safety.
+- **Template** `src/dazzle_page/templates/workspace/regions/profile_card.html` — flex identity row + grid stats (1 col mobile / 3 col desktop) + bulleted facts list, all design-token colours, `region_card` wrapper for card safety.
 - **`ProfileCardStatSpec`** exported from `dazzle.core.ir.__init__` for downstream consumers.
 
 ### Tests
@@ -23527,8 +23535,8 @@ Patch bump. **Fix #891** — `display: action_grid`. CTA cards on dashboards: ea
 - **`_parse_action_cards_block`** in `src/dazzle/core/dsl_parser_impl/workspace.py` — indented dash-list parser mirroring `_parse_overlay_series_block`. Each entry must lead with `label:`. Sub-keys: `icon` (string), `count_aggregate` (token-stream), `action` (string OR identifier — string required for URLs containing `?`/`/`/`=`), `tone` (whitelisted to {positive, warning, destructive, neutral, accent}).
 - **`_action_to_url(action: str)`** helper in `workspace_renderer.py` — bare identifiers slugify to `/app/<slug>` (with optional `?query` preserved); paths starting with `/` pass through verbatim.
 - **`RegionContext.action_cards`** — list of dicts (`{label, icon, count_aggregate, url, tone}`) with `url` pre-resolved at context build time.
-- **Runtime branch** in `src/dazzle_back/runtime/workspace_rendering.py` — fires one `_fetch_count_metric` per card with non-empty `count_aggregate` via `asyncio.gather` (single batched query is a future optimisation). Honours scope-deny gate from #887: when scope denies, cards still render but counts are suppressed.
-- **Template** `src/dazzle_ui/templates/workspace/regions/action_grid.html` — responsive 1/2/3 grid of token-coloured cards with Lucide icon (`data-lucide="<name>"`) + count badge. Region-bodyless validation exemption added to parser (#891-aware: action_cards counts as a body alongside source/aggregate).
+- **Runtime branch** in `src/dazzle_http/runtime/workspace_rendering.py` — fires one `_fetch_count_metric` per card with non-empty `count_aggregate` via `asyncio.gather` (single batched query is a future optimisation). Honours scope-deny gate from #887: when scope denies, cards still render but counts are suppressed.
+- **Template** `src/dazzle_page/templates/workspace/regions/action_grid.html` — responsive 1/2/3 grid of token-coloured cards with Lucide icon (`data-lucide="<name>"`) + count badge. Region-bodyless validation exemption added to parser (#891-aware: action_cards counts as a body alongside source/aggregate).
 - **`ActionCardSpec`** exported from `dazzle.core.ir.__init__` for downstream consumers.
 
 ### Tests
@@ -23561,9 +23569,9 @@ Patch bump. **Fix #893** — `display: bar_track`. Compact horizontal value bars
 - **`WorkspaceRegion.track_max: float | None`** — fill denominator. `None` means auto (max of bucketed values, falls back to 1.0 for the all-zero edge case to avoid div-by-zero).
 - **`WorkspaceRegion.track_format: str | None`** — Python format spec applied server-side via `format()` or `str.format()`. Accepts both styles transparently: `".0%"` (bare spec, passed to `format()`) and `"{:.0%}"` (str.format template, used as-is). Authors can copy from f-string code without re-learning vocabulary.
 - **Lexer tokens** `TRACK_MAX` + `TRACK_FORMAT` in `src/dazzle/core/lexer.py`. Parser branches accept numeric for `track_max:` and quoted-string-only for `track_format:` (format specs commonly contain `:` and `{}` that don't tokenise as bare identifiers).
-- **`RegionContext.track_max` / `track_format`** in `src/dazzle_ui/runtime/workspace_renderer.py` — flows IR → render context.
-- **Runtime branch** in `src/dazzle_back/runtime/workspace_rendering.py` — adds `BAR_TRACK` to `_single_dim_chart_modes` so the existing `_compute_bucketed_aggregates` machinery fires unchanged. Post-processes `bucketed_metrics` into `bar_track_rows` with `fill_pct` (clamped to [0, 100] — values above max clamp; negatives clamp to 0) and `formatted_value` (format spec applied with graceful fallback to raw `str()` on malformed spec).
-- **Template** `src/dazzle_ui/templates/workspace/regions/bar_track.html` — pill-shaped track using design tokens (`hsl(var(--muted))` + `hsl(var(--primary))`), ARIA `progressbar` semantics, server-rendered formatted values. Card safety: zero chrome + zero title — wrapped in the `region_card` macro per the dashboard slot contract.
+- **`RegionContext.track_max` / `track_format`** in `src/dazzle_page/runtime/workspace_renderer.py` — flows IR → render context.
+- **Runtime branch** in `src/dazzle_http/runtime/workspace_rendering.py` — adds `BAR_TRACK` to `_single_dim_chart_modes` so the existing `_compute_bucketed_aggregates` machinery fires unchanged. Post-processes `bucketed_metrics` into `bar_track_rows` with `fill_pct` (clamped to [0, 100] — values above max clamp; negatives clamp to 0) and `formatted_value` (format spec applied with graceful fallback to raw `str()` on malformed spec).
+- **Template** `src/dazzle_page/templates/workspace/regions/bar_track.html` — pill-shaped track using design tokens (`hsl(var(--muted))` + `hsl(var(--primary))`), ARIA `progressbar` semantics, server-rendered formatted values. Card safety: zero chrome + zero title — wrapped in the `region_card` macro per the dashboard slot contract.
 
 ### Tests
 - **`tests/unit/test_workspace_bar_track.py`** (new) — 23 cases across 3 classes:
@@ -23585,9 +23593,9 @@ Patch bump. **Fix #894** — region-level `class:` field. DSL authors can now at
 - **`WorkspaceRegion.css_class: str | None`** in `src/dazzle/core/ir/workspaces.py` — IR field. Default `None`. Naming follows the `from`/`to` → `from_value`/`to_value` precedent on `ReferenceBand`: user-facing keyword is `class:` (matches HTML); Python field name is `css_class` to avoid the keyword collision.
 - **`TokenType.CSS_CLASS = "class"`** in `src/dazzle/core/lexer.py` — lexer token for the new keyword.
 - **Parser branch** in `src/dazzle/core/dsl_parser_impl/workspace.py` — accepts both bare-identifier (`class: highlight`) and quoted-string (`class: "metrics-strip dense"`) forms. Quoted form required for kebab-case / multi-class — bare form constrained to Python-identifier shapes (lexer treats `-` as operator everywhere in the DSL).
-- **`RegionContext.css_class: str = ""`** in `src/dazzle_ui/runtime/workspace_renderer.py` — flows the value from IR to the rendering context. Empty string when not set.
-- **`cards_for_json` payload extension** in `src/dazzle_ui/runtime/page_routes.py` — each card dict now carries `css_class` so the Alpine card-grid template can bind it without import dance.
-- **Template binding** in `src/dazzle_ui/templates/workspace/_content.html` — the outer card wrapper's `:class` array now includes `card.css_class || ''`, composing with the existing transition/drag-state binding rather than replacing it.
+- **`RegionContext.css_class: str = ""`** in `src/dazzle_page/runtime/workspace_renderer.py` — flows the value from IR to the rendering context. Empty string when not set.
+- **`cards_for_json` payload extension** in `src/dazzle_page/runtime/page_routes.py` — each card dict now carries `css_class` so the Alpine card-grid template can bind it without import dance.
+- **Template binding** in `src/dazzle_page/templates/workspace/_content.html` — the outer card wrapper's `:class` array now includes `card.css_class || ''`, composing with the existing transition/drag-state binding rather than replacing it.
 
 ### Tests
 - **`tests/unit/test_workspace_region_class.py`** (new) — 18 cases across 4 classes:
@@ -23609,7 +23617,7 @@ Patch bump. **Fix #888 (Phase 1)** — reporting predicate algebra unification. 
 ### Added
 - **`ColumnRefCheck` predicate node** in `src/dazzle/core/ir/predicates.py` — same-row column-vs-column comparison (e.g. `latest_grade >= target_grade`). Distinct from `ColumnCheck` (column vs literal) and `UserAttrCheck` (column vs subject attribute) — neither covers same-row column pairs. Not used by RBAC scope rules; reporting-only.
 - **`_compile_column_ref_check` in the predicate compiler** — emits `"f1" op "f2"` with no parameters (both sides are quoted identifiers — same SQL safety as `ColumnCheck`).
-- **`src/dazzle_back/runtime/aggregate_where_parser.py`** — recursive-descent parser. Grammar: `expr := or_expr; or_expr := and_expr ('or' and_expr)*; and_expr := not_expr ('and' not_expr)*; not_expr := 'not' atom | atom; atom := '(' expr ')' | comparison`. Disambiguates column-vs-column from column-vs-literal by checking the RHS identifier against known entity columns.
+- **`src/dazzle_http/runtime/aggregate_where_parser.py`** — recursive-descent parser. Grammar: `expr := or_expr; or_expr := and_expr ('or' and_expr)*; and_expr := not_expr ('and' not_expr)*; not_expr := 'not' atom | atom; atom := '(' expr ')' | comparison`. Disambiguates column-vs-column from column-vs-literal by checking the RHS identifier against known entity columns.
 - **`_build_aggregate_filters` helper** in `workspace_rendering.py` — orchestrator: parse → compile → AND-compose with existing `__scope_predicate` → return filter dict ready for `Repository.list` / `Repository.aggregate`. Falls back to legacy `_parse_simple_where` for clauses the new grammar doesn't accept (e.g. hyphenated UUIDs from `current_bucket` substitution), preserving all pre-existing behaviour.
 - **`_fetch_scalar_metric`** — routes `sum/avg/min/max` aggregates through `Repository.aggregate` with no dimensions and a single non-count measure. Pre-fix, scalar aggregates with where-clauses silently produced 0 in `_compute_aggregate_metrics`.
 
@@ -23872,7 +23880,7 @@ Patch bump. Phase B Patch 1 of the design-system formalisation work — adds a t
 
 ### Added
 - **`themes/<name>.toml`** for the three shipped themes — declarative metadata sibling to the CSS file. Loader synthesises sensible defaults when a TOML is absent so legacy / quick-iteration CSS-only themes still load.
-- **`dazzle_ui.themes.app_theme_registry`** module with:
+- **`dazzle_page.themes.app_theme_registry`** module with:
   - `AppThemeManifest` (frozen dataclass): `name`, `description`, `inspired_by`, `default_color_scheme` (light/dark/auto), `font_preconnect` (tuple of Google Fonts URLs), `tags` (tuple), `css_path`, `source` (framework/project)
   - `discover_themes(project_root: Path | None = None)` — returns dict keyed by theme name; framework themes first, then project-local themes from `<project>/themes/` (which override shipped themes of the same name so projects can tweak `linear-dark` without forking)
   - `get_theme(name, project_root=None)` — single-theme lookup, returns None when not found
@@ -23896,7 +23904,7 @@ Patch bump. Phase B Patch 1 of the design-system formalisation work — adds a t
 Patch bump. Closes #886 — three runtime call sites passed the cwd Path as the second arg to `build_appspec` instead of the module name. Symptom: every `dazzle db revision`, `dazzle db upgrade`, and process-worker startup raised `LinkError: Root module '/abs/path/to/project' not found. Available modules: ['myapp.core', 'stories']`. Knock-on from #885 — once that fixed the import, this surfaced.
 
 ### Fixed
-- **`src/dazzle_back/alembic/env.py`** — `_load_target_metadata()` now passes `manifest.project_root` (the module name string) instead of `str(project_root)` (the cwd Path). Restores `dazzle db revision -m`, `dazzle db upgrade`, autogenerate.
+- **`src/dazzle_http/alembic/env.py`** — `_load_target_metadata()` now passes `manifest.project_root` (the module name string) instead of `str(project_root)` (the cwd Path). Restores `dazzle db revision -m`, `dazzle db upgrade`, autogenerate.
 - **`src/dazzle/cli/migrate.py`** — `deploy_command()` DSL validation step. Same fix.
 - **`src/dazzle/process/worker.py`** — Temporal worker startup. Same fix.
 
@@ -23934,7 +23942,7 @@ Patch bump. Phase A continued — adds the second and third app-shell themes (`p
 Patch bump. Phase A of the design-system formalisation work — adds an app-shell theme mechanism so projects can override the default shadcn-zinc tokens with an alternate `:root` block by setting `[ui] theme = "<name>"` in `dazzle.toml`. Ships **`linear-dark`** as the first preset (Linear-vocabulary cool slate ramp + cyan accent + dense type) applied to `examples/ops_dashboard` as the proof.
 
 ### Added
-- **`[ui] theme = "<name>"`** field in `dazzle.toml` — resolves to `src/dazzle_ui/runtime/static/css/themes/<name>.css`. Loaded after `dazzle-bundle.css` so the theme's `@layer overrides` block wins over the default tokens. The alias `[ui] app_theme = "..."` also works (avoids the keyword overlap with the existing `[theme]` section that controls site/marketing-page tokens). `None` (the default) keeps the shipped shadcn-zinc tokens.
+- **`[ui] theme = "<name>"`** field in `dazzle.toml` — resolves to `src/dazzle_page/runtime/static/css/themes/<name>.css`. Loaded after `dazzle-bundle.css` so the theme's `@layer overrides` block wins over the default tokens. The alias `[ui] app_theme = "..."` also works (avoids the keyword overlap with the existing `[theme]` section that controls site/marketing-page tokens). `None` (the default) keeps the shipped shadcn-zinc tokens.
 - **`themes/linear-dark.css`** — first shipped preset. Borrows Linear's vocabulary (228° cool slate ramp, 205° cyan accent, dense 4px-base spacing, 100–150ms ease-out motion, minimal shadows + 1px borders, dark-first with a cooler-than-default light variant). Templates stay theme-agnostic — every `hsl(var(--*))` site picks up the new values automatically.
 - **`ProjectManifest.app_theme`** field on the dataclass.
 
@@ -23950,7 +23958,7 @@ Patch bump. Phase A of the design-system formalisation work — adds an app-shel
   - base.html wiring (3): theme link present when `_app_theme` set; absent when not; renders AFTER the bundle (cascade order matters).
 
 ### Agent Guidance
-- **Adding a new theme**: drop `<name>.css` in `src/dazzle_ui/runtime/static/css/themes/`, structured as a single `@layer overrides { :root, [data-theme="dark"] { ... } [data-theme="light"] { ... } }` block. Override the same shadcn-shape token names (`--background` / `--foreground` / `--primary` / etc.) that `design-system.css` defines. **Don't** introduce new token names — templates only know about the canonical set, so a new token wouldn't be consumed.
+- **Adding a new theme**: drop `<name>.css` in `src/dazzle_page/runtime/static/css/themes/`, structured as a single `@layer overrides { :root, [data-theme="dark"] { ... } [data-theme="light"] { ... } }` block. Override the same shadcn-shape token names (`--background` / `--foreground` / `--primary` / etc.) that `design-system.css` defines. **Don't** introduce new token names — templates only know about the canonical set, so a new token wouldn't be consumed.
 - **Theme vs ThemeSpec**: the legacy `[theme]` section + `ThemeConfig` dataclass + `ThemeSpec` presets cover **site/marketing-page** tokens (`--dz-hero-*`, `--dz-section-*`, `--dz-footer-*`). The new `[ui] theme` field covers **app-shell** tokens (the shadcn-shape `--primary` / `--card` / etc.). They're orthogonal — a project can set both. Phase B will probably consolidate them once we've felt the shape with more themes.
 - **Cascade order is load-bearing**. The theme `<link>` MUST come after the bundle so `@layer overrides` resolves higher. If you add a new global stylesheet between them, audit the layer declarations.
 - **One-line rollback** — comment out `theme = "linear-dark"` in `examples/ops_dashboard/dazzle.toml` and the app reverts to default tokens. No template changes needed.
@@ -23964,7 +23972,7 @@ Patch bump. Two more CI-restoring fixes that surfaced once v0.61.34 unblocked th
 - **`RegionContext.delta` field added**. v0.61.25 (#884) wired `_compute_aggregate_metrics(delta=ctx.ctx_region.delta, …)` into `workspace_rendering.py:736` but never extended the template-facing `RegionContext` Pydantic model to carry the field. Result: any workspace region with `aggregates:` 500'd at runtime with `AttributeError: 'RegionContext' object has no attribute 'delta'`. Surfaced in CI when the `INTERACTION_WALK` + `UX Contracts (support_tickets)` jobs hit `/api/workspaces/ticket_queue/regions/queue_metrics` and returned 500. Added `delta: Any | None = None` to `RegionContext` and threaded `delta=getattr(region, "delta", None)` through `build_workspace_context`.
 
 ### Agent Guidance
-- **When adding a new region-block field that the runtime reads via `ctx.ctx_region.<name>`, extend `RegionContext` AND `build_workspace_context`**. The IR `WorkspaceRegion` model is parser-facing; `RegionContext` is template/runtime-facing. They aren't the same object — the latter is built from the former in `dazzle_ui/runtime/workspace_renderer.py`. Unit tests typically exercise the IR path, so a missing thread-through silently passes pytest and only blows up at e2e time.
+- **When adding a new region-block field that the runtime reads via `ctx.ctx_region.<name>`, extend `RegionContext` AND `build_workspace_context`**. The IR `WorkspaceRegion` model is parser-facing; `RegionContext` is template/runtime-facing. They aren't the same object — the latter is built from the former in `dazzle_page/runtime/workspace_renderer.py`. Unit tests typically exercise the IR path, so a missing thread-through silently passes pytest and only blows up at e2e time.
 - **Adding a new lexer keyword**: always check whether it could appear as an identifier elsewhere (enum values, field names). If so, add to `KEYWORD_AS_IDENTIFIER_TYPES` in `src/dazzle/core/dsl_parser_impl/base.py`. Today's reserved-as-strict list is `{from, to, into}` and a handful of operators — most other keywords double as identifiers.
 
 ## [0.61.34] - 2026-04-25
@@ -24107,7 +24115,7 @@ Patch bump. Closes #881 — new `display: box_plot` mode renders per-group quart
   Reuses the legacy `heatmap_value` IR field as the value column (same overload as histogram). `group_by` enumerates one box per bucket.
 - **IR**: `DisplayMode.BOX_PLOT` enum entry + `WorkspaceRegion.show_outliers: bool = True`.
 - **Lexer**: new `TokenType.SHOW_OUTLIERS = "show_outliers"` keyword.
-- **Runtime**: `_compute_box_plot_stats(items, value_field, group_by, show_outliers)` in `dazzle_back.runtime.workspace_rendering`. Quartiles via NumPy-default linear interpolation (R "type 7": Q at position `(n-1)*p`, fractional positions interpolate linearly between adjacent order statistics). Whiskers terminate at the furthest data point inside `[Q1 − 1.5·IQR, Q3 + 1.5·IQR]`; everything outside that fence is an outlier (Tukey). Skips items where the value is None or non-numeric. Returns `{label, n, min, q1, median, q3, max, iqr, whisker_low, whisker_high, outliers}` per group.
+- **Runtime**: `_compute_box_plot_stats(items, value_field, group_by, show_outliers)` in `dazzle_http.runtime.workspace_rendering`. Quartiles via NumPy-default linear interpolation (R "type 7": Q at position `(n-1)*p`, fractional positions interpolate linearly between adjacent order statistics). Whiskers terminate at the furthest data point inside `[Q1 − 1.5·IQR, Q3 + 1.5·IQR]`; everything outside that fence is an outlier (Tukey). Skips items where the value is None or non-numeric. Returns `{label, n, min, q1, median, q3, max, iqr, whisker_low, whisker_high, outliers}` per group.
 - **Template**: new `box_plot.html` — SVG with shared y-axis across boxes for direct comparability, primary-tint Q1–Q3 box, bold median line, whisker stem + caps, outlier dots, group labels below the axis. Reuses `reference_lines` from #883 as horizontal markers (target/grade-boundary lines map naturally to the y-axis here).
 
 ### Tests
@@ -24174,7 +24182,7 @@ Patch bump. Closes #882 — new `display: histogram` mode renders a continuous-v
   `bins: auto` selects bin count via Sturges' rule (`⌈log2(N) + 1⌉`, clamped to [1, 50]); explicit `bins: 20` forces 20 equal-width bins. The `value:` key reuses the legacy `heatmap_value` IR field as a generic "value column" — rename deferred to keep this patch focused.
 - **IR**: `WorkspaceRegion.bin_count: int | None = None` (None = Sturges) + new `DisplayMode.HISTOGRAM`. Exported from `dazzle.core.ir`.
 - **Lexer**: new `TokenType.BINS = "bins"` keyword.
-- **Runtime**: `_compute_histogram_bins(items, value_field, bin_count)` in `dazzle_back.runtime.workspace_rendering` bins raw values into equal-width buckets. Final bin is closed on the right so the global max isn't dropped. Skips items where the value is None or non-numeric. Returns `[{label, count, low, high}, ...]` to the template. Triggered when `display=HISTOGRAM` and `value:` is set.
+- **Runtime**: `_compute_histogram_bins(items, value_field, bin_count)` in `dazzle_http.runtime.workspace_rendering` bins raw values into equal-width buckets. Final bin is closed on the right so the global max isn't dropped. Skips items where the value is None or non-numeric. Returns `[{label, count, low, high}, ...]` to the template. Triggered when `display=HISTOGRAM` and `value:` is set.
 - **Template**: new `histogram.html` renders SVG bars with primary fill, vertical reference lines (`stroke-dasharray` per `style:`) clipped to the data range so out-of-range markers don't spill off the canvas. Each bin + ref line carries an `<svg:title>` for hover/screen-reader text. Sparse x-axis tick labels (first/last + every Nth) so dense binnings stay readable.
 
 ### Tests
@@ -24232,7 +24240,7 @@ Patch bump. Closes #883 (lines + bands portion) — `line_chart` and `area_chart
 Patch bump. Closes #885 — three runtime call sites still imported `parse_modules` from the removed `dazzle.core.dsl_parser` module (split into `dazzle.core.parser` + `dazzle.core.dsl_parser_impl/` package). Failures only surfaced when downstream users actually ran `dazzle db migrate`, the migrate CLI, or the Temporal worker — silently skipping the test suite. Restores schema-migration capability for v0.61.20+ users.
 
 ### Fixed
-- **`src/dazzle_back/alembic/env.py`** — `_load_target_metadata()` now imports `parse_modules` from `dazzle.core.parser`. Restores `dazzle db migrate`, `dazzle db migrate --check`, and `dazzle db migrate --sql` for downstream projects.
+- **`src/dazzle_http/alembic/env.py`** — `_load_target_metadata()` now imports `parse_modules` from `dazzle.core.parser`. Restores `dazzle db migrate`, `dazzle db migrate --check`, and `dazzle db migrate --sql` for downstream projects.
 - **`src/dazzle/cli/migrate.py`** — `deploy_command()` now imports from `dazzle.core.parser`. Restores `dazzle migrate deploy`.
 - **`src/dazzle/process/worker.py`** — `main()` now imports from `dazzle.core.parser`. Restores `python -m dazzle.process.worker` (Temporal worker entry point).
 
@@ -24260,7 +24268,7 @@ Patch bump. Closes #884 — summary/metrics tiles can now declare a `delta:` blo
   ```
 - **IR**: `dazzle.core.ir.workspaces.DeltaSpec` (frozen Pydantic model) — `period_seconds: int`, `sentiment: str`, `date_field: str | None`, `period_label: str`. Exported from `dazzle.core.ir`.
 - **Lexer**: new `TokenType.DELTA = "delta"` keyword.
-- **Runtime**: `_compute_aggregate_metrics` (in `dazzle_back.runtime.workspace_rendering`) now accepts an optional `delta: DeltaSpec` parameter. When set, it fires a second aggregate query per metric over the prior window (`[now() - 2*period, now() - period]`) and decorates each metric dict with `delta`, `delta_pct`, `delta_direction` (up|down|flat), `delta_sentiment`, `delta_period_label`. Wired through the workspace handler at the main UI rendering path.
+- **Runtime**: `_compute_aggregate_metrics` (in `dazzle_http.runtime.workspace_rendering`) now accepts an optional `delta: DeltaSpec` parameter. When set, it fires a second aggregate query per metric over the prior window (`[now() - 2*period, now() - period]`) and decorates each metric dict with `delta`, `delta_pct`, `delta_direction` (up|down|flat), `delta_sentiment`, `delta_period_label`. Wired through the workspace handler at the main UI rendering path.
 - **Template**: `workspace/regions/metrics.html` renders an arrow + signed delta + percent + comparison-period label below the value when `delta_direction` is present. Sentiment maps `up + positive_up` (or `down + positive_down`) → green, the inverse → destructive red, flat → muted.
 
 ### Tests
@@ -24298,7 +24306,7 @@ Total fidelity gaps across all 5 example apps: 17 → 7 (Option A closes 10 fals
 Patch bump. Closes #878 — `dazzle dsl operation=fidelity` flagged every search_select-rendered field as `incorrect_input_type` (severity major) because the wrapper template lacked a widget marker AND the scorer had no equivalence entry for the widget. The hidden value carrier is intentional (it pairs with a visible search input), but the structural check only saw `<input type="hidden">` against a `str` field and reported it as a mismatch. Practical impact: every `field X "..." source=...` declaration in any DSL produced 2 false-positive gaps per surface (×2 across create + edit). fieldtest_hub's `manufacturer` field (declared via `source=companies_house_lookup.search_companies`) was the canonical repro.
 
 ### Fixed
-- **`src/dazzle_ui/templates/fragments/search_select.html`** — added `data-dz-widget="search_select"` to the wrapper div so `_iter_inputs_with_widget_context` (in `dazzle.core.fidelity_scorer`) can attribute the widget kind to the inner hidden input. Mirrors the existing convention used by `combobox`, `datepicker`, `daterange`, etc. in `macros/form_field.html`.
+- **`src/dazzle_page/templates/fragments/search_select.html`** — added `data-dz-widget="search_select"` to the wrapper div so `_iter_inputs_with_widget_context` (in `dazzle.core.fidelity_scorer`) can attribute the widget kind to the inner hidden input. Mirrors the existing convention used by `combobox`, `datepicker`, `daterange`, etc. in `macros/form_field.html`.
 - **`src/dazzle/core/fidelity_scorer.py`** — added `"search_select": {"hidden": {"text"}}` to `_WIDGET_TYPE_EQUIVALENCES`. Mirrors the existing `richtext: {"hidden": {"text", "textarea", "select"}}` entry — both widgets render as a hidden form-submission carrier alongside a separate visible editor.
 
 ### Tests
@@ -24318,8 +24326,8 @@ fieldtest_hub fidelity gaps drop 7 → 5 (the 2 `incorrect_input_type` false pos
 Patch bump. Closes the JavaScript-warning class Aegismark's QA tester observed on teacher routes — recommendation rows containing names like `O'Brien` broke inline editing. Four templates were interpolating per-record values into single-quoted JS string literals via `'{{ value | e }}'`. The Jinja `| e` filter HTML-escapes apostrophes to `&#39;`, but the browser HTML-decodes the entity back to `'` before Alpine sees the attribute value — terminating the surrounding JS string mid-word and turning `:value="editing ? editing.originalValue : 'O'Brien'"` into a JS syntax error. Alpine bailed on the binding for those records; double-quote / backslash / newline values were already silently broken in the same way.
 
 ### Fixed
-- **`src/dazzle_ui/templates/fragments/inline_edit.html`** — text-input branch (line 11) and date-input branch (line 75) — replaced `'{{ edit_value | e }}'` with `{{ edit_value | tojson }}` and switched the outer `:value` attribute to single-quoted so it doesn't clash with `tojson`'s `"` delimiters. Inline-cell editing now works for any value containing `'`, `"`, `\`, or control characters.
-- **`src/dazzle_ui/templates/macros/form_field.html`** — combobox `x-data` (line 74) `current:` initial value and file-upload `x-init` (line 471) `filename =` assignment — same fix applied. Combobox initialisation and file-upload preview no longer break for stored values containing apostrophes.
+- **`src/dazzle_page/templates/fragments/inline_edit.html`** — text-input branch (line 11) and date-input branch (line 75) — replaced `'{{ edit_value | e }}'` with `{{ edit_value | tojson }}` and switched the outer `:value` attribute to single-quoted so it doesn't clash with `tojson`'s `"` delimiters. Inline-cell editing now works for any value containing `'`, `"`, `\`, or control characters.
+- **`src/dazzle_page/templates/macros/form_field.html`** — combobox `x-data` (line 74) `current:` initial value and file-upload `x-init` (line 471) `filename =` assignment — same fix applied. Combobox initialisation and file-upload preview no longer break for stored values containing apostrophes.
 
 ### Tests
 - **`test_inline_js_quote_safety.py::TestInlineJsQuoteSafety`** — five source-grep cases: (1) parametrised over both fixed templates asserting the broken `'{{ X | e }}'` regex never reappears, (2) inline_edit's two `:value` lines both contain `tojson`, (3) combobox `x-data` `current` uses `tojson`, (4) file-upload filename `x-init` uses `tojson`. Source-level assertions (no rendering) so the test doesn't depend on a Jinja runtime in the test process.
@@ -24334,7 +24342,7 @@ Patch bump. Closes the JavaScript-warning class Aegismark's QA tester observed o
 Patch bump. Closes the production-startup gap introduced by `97ac3f65` ("gate startup schema creation on environment"). That commit correctly stopped `metadata.create_all()` and `CREATE TABLE IF NOT EXISTS _dazzle_params` from running when `DAZZLE_ENV=production`, but shipped the `verify_dazzle_params_table()` check without the corresponding Alembic baseline migration that creates the table — meaning every production startup raised `MigrationError("_dazzle_params table is missing. Run 'dazzle db upgrade' before startup.")` even AFTER running `dazzle db upgrade` (no-op against an empty `versions/` directory). The hint was misleading; following it didn't unblock the failure. ADR-0017 (Alembic owns schema in production) is now actually shippable.
 
 ### Added
-- **`src/dazzle_back/alembic/versions/0001_framework_baseline.py`** — root Alembic revision that creates `_dazzle_params` (key TEXT, scope TEXT, scope_id TEXT default '', value_json JSONB, updated_by TEXT, updated_at TIMESTAMPTZ default now(), PK on key+scope+scope_id). DDL matches `ensure_dazzle_params_table()` in `runtime/migrations.py:127-141` exactly so dev (which still calls `CREATE TABLE IF NOT EXISTS`) and production (which runs this migration) land on the same schema.
+- **`src/dazzle_http/alembic/versions/0001_framework_baseline.py`** — root Alembic revision that creates `_dazzle_params` (key TEXT, scope TEXT, scope_id TEXT default '', value_json JSONB, updated_by TEXT, updated_at TIMESTAMPTZ default now(), PK on key+scope+scope_id). DDL matches `ensure_dazzle_params_table()` in `runtime/migrations.py:127-141` exactly so dev (which still calls `CREATE TABLE IF NOT EXISTS`) and production (which runs this migration) land on the same schema.
 
 ### Tests
 - **`test_runtime_schema_startup.py::TestFrameworkBaselineMigration`** — two cases: (1) migration module loads with the expected revision id + callable upgrade/downgrade; (2) `upgrade()` against a sqlite sandbox produces the expected table with the expected columns + PK constraint. JSONB is patched to JSON for the sandbox; PostgreSQL-specific behaviour is exercised in any real environment.
@@ -24349,7 +24357,7 @@ Patch bump. Closes the production-startup gap introduced by `97ac3f65` ("gate st
 Patch bump. Closes #875 — clicking the active workspace nav link triggered an HTMX morph that landed `dzDashboardBuilder` in degraded state: empty card grid, "No widgets available" picker, and all five `saveState` labels rendered simultaneously. `alpine:init` only fires once per component instance, but idiomorph keeps the existing `x-data` element across same-route nav re-clicks — so `init()` doesn't re-run, and `cards` / `catalog` / `workspaceName` / `foldCount` stay stale while the data island below them has been replaced with fresh JSON. Compounded #866's cold-load fix by exposing the re-entry path.
 
 ### Fixed
-- **`src/dazzle_ui/runtime/static/js/dashboard-builder.js` — `init` + `_hydrateFromLayout` + `destroy`** — extracted the JSON-island read into `_hydrateFromLayout()` and called it from both `init()` and a new `htmx:afterSwap` listener that fires when the swap target contains the `#dz-workspace-layout` data island. The listener filter avoids re-hydration on every region-card swap. Reset `saveState = "clean"`, clear `undoStack`, cancel any pending `_savedTimer` on re-hydrate so the multi-state labels don't stack visibly. The listener is torn down in `destroy()` to match the `#797`/`#795` pattern (no leaks across navigations).
+- **`src/dazzle_page/runtime/static/js/dashboard-builder.js` — `init` + `_hydrateFromLayout` + `destroy`** — extracted the JSON-island read into `_hydrateFromLayout()` and called it from both `init()` and a new `htmx:afterSwap` listener that fires when the swap target contains the `#dz-workspace-layout` data island. The listener filter avoids re-hydration on every region-card swap. Reset `saveState = "clean"`, clear `undoStack`, cancel any pending `_savedTimer` on re-hydrate so the multi-state labels don't stack visibly. The listener is torn down in `destroy()` to match the `#797`/`#795` pattern (no leaks across navigations).
 
 ### Tests
 - **`test_dashboard_builder_triggers.py::TestRehydrateOnHtmxAfterSwap`** — six source-grep cases pinning: helper extracted, init calls helper, htmx:afterSwap listener installed, swap filter targets the data island, listener torn down in destroy, saveState reset to clean inside the helper.
@@ -24364,7 +24372,7 @@ Patch bump. Closes #875 — clicking the active workspace nav link triggered an 
 Patch bump. Closes #874 — entity-list pages rendered duplicate sidebar items: every entity that appeared in a workspace's `nav_group` ALSO appeared as a flat auto-discovered item, producing the "Recommendations / Recommendations" stutter Tom Davies saw on /app/teachingrecommendation. Workspace pages already filtered via `_build_visible_nav` (#661); the entity-list path through `_inject_auth_context` had no equivalent dedup.
 
 ### Fixed
-- **`src/dazzle_ui/runtime/page_routes.py` — `_inject_auth_context`** — after persona-filtering `nav_items` and `nav_groups`, drop any flat nav item whose route also appears as a child route in a `nav_group`. Extracted as `_dedupe_nav_items_against_groups` for testability — mirrors the same shape that `_build_visible_nav` already uses on the workspace-page path.
+- **`src/dazzle_page/runtime/page_routes.py` — `_inject_auth_context`** — after persona-filtering `nav_items` and `nav_groups`, drop any flat nav item whose route also appears as a child route in a `nav_group`. Extracted as `_dedupe_nav_items_against_groups` for testability — mirrors the same shape that `_build_visible_nav` already uses on the workspace-page path.
 
 ### Tests
 - **`test_entity_page_nav_groups.py::TestDedupeNavItemsAgainstGroups`** — three cases: dedup drops overlapping routes; non-overlapping items pass through; empty groups pass through.
@@ -24377,7 +24385,7 @@ Patch bump. Closes #874 — entity-list pages rendered duplicate sidebar items: 
 Patch bump. Closes #876 — clicking a sidebar nav entry triggered an HTMX morph that preserved the previous page's scroll offset, landing the new page's heading above the viewport. Users had to scroll back up after every cross-page nav. Idiomorph's `morph:innerHTML` strategy preserves DOM state including scroll position, but doesn't reset the document/main-content scroll for cross-route navigation.
 
 ### Fixed
-- **`src/dazzle_ui/templates/layouts/app_shell.html`** — added `scroll:#main-content:top` to the `hx-swap` directive on both the ungrouped sidebar nav anchors and the grouped child anchors. HTMX scrolls `#main-content` to the top after the morph completes, so the new page's heading lands at the top of the viewport.
+- **`src/dazzle_page/templates/layouts/app_shell.html`** — added `scroll:#main-content:top` to the `hx-swap` directive on both the ungrouped sidebar nav anchors and the grouped child anchors. HTMX scrolls `#main-content` to the top after the morph completes, so the new page's heading lands at the top of the viewport.
 
 ### Tests
 - **`test_template_html.py::test_sidebar_nav_scrolls_to_top_on_morph`** — pins the modifier on both nav anchor variants in app_shell.html.
@@ -24390,8 +24398,8 @@ Patch bump. Closes #876 — clicking a sidebar nav entry triggered an HTMX morph
 Patch bump. Closes #873 — workspaces auto-discovered ungrouped region sources into the sidebar nav even when the author explicitly declared a `nav_group`. Junction/admin entities used purely as data sources (e.g. `ClassEnrolment`, `QuestionTopic`, `BehaviourStudent`) leaked in as flat nav items, exposing schema-shaped vocabulary to personas (e.g. teachers) who shouldn't see those standalone list pages. Authors had no clean opt-out — drop the entity's list surface entirely (loses /app/<entity> for everyone) or accept the noisy nav.
 
 ### Fixed
-- **`src/dazzle_ui/runtime/page_routes.py` — `ws_entity_nav` builder** — when a workspace declares any `nav_group`, skip auto-discovery of its region sources entirely. The author has explicitly curated the entity nav by hand; ungrouped sources stay out.
-- **`src/dazzle_ui/converters/template_compiler.py` — `_entity_nav_items` builder** — mirror the same guard so entity-list pages (`/app/<entity>`) inherit the same nav shape as workspace pages. Workspaces with no `nav_groups` keep the legacy zero-config auto-discovery path.
+- **`src/dazzle_page/runtime/page_routes.py` — `ws_entity_nav` builder** — when a workspace declares any `nav_group`, skip auto-discovery of its region sources entirely. The author has explicitly curated the entity nav by hand; ungrouped sources stay out.
+- **`src/dazzle_page/converters/template_compiler.py` — `_entity_nav_items` builder** — mirror the same guard so entity-list pages (`/app/<entity>`) inherit the same nav shape as workspace pages. Workspaces with no `nav_groups` keep the legacy zero-config auto-discovery path.
 
 ### Tests
 - **`test_entity_page_nav_groups.py::TestNavGroupsSuppressAutoDiscovery`** — two cases: ungrouped region source NOT in entity nav when `nav_group` declared; zero-config workspace still auto-discovers (regression guard).
@@ -24405,7 +24413,7 @@ Patch bump. Closes #873 — workspaces auto-discovered ungrouped region sources 
 Patch bump. Closes #871 — workspace region filters threw `psycopg.errors.AmbiguousColumn` on Postgres when the source entity had a scope rule that traversed FKs (so the compiled SQL JOINed in tables with same-named columns) AND the region's `filter:` named one of those columns. Affected combos included `is_current` (boolean on multiple joined tables), `teaching_group` (FK that shares its name with the joined target table), `status`, `school`, `department` etc. AegisMark's teacher_workspace lost all six `current_context`-filtered regions to this — fully empty landing page.
 
 ### Fixed
-- **`src/dazzle_back/runtime/query_builder.py` — `build_where_clause`** — when `self.joins` is non-empty, qualify every user-authored filter and search column reference with the source table alias (`"ClassEnrolment"."is_current" = $1` instead of bare `"is_current" = $1`). The scope-predicate SQL was already qualified by the predicate compiler; the gap was specifically in the user-authored filter and search paths.
+- **`src/dazzle_http/runtime/query_builder.py` — `build_where_clause`** — when `self.joins` is non-empty, qualify every user-authored filter and search column reference with the source table alias (`"ClassEnrolment"."is_current" = $1` instead of bare `"is_current" = $1`). The scope-predicate SQL was already qualified by the predicate compiler; the gap was specifically in the user-authored filter and search paths.
 
 ### Tests
 - **`test_fk_display_join.py::TestFilterTableQualification`** — three cases: filter qualified when joins present; filter NOT qualified when no joins (no noise); search qualified when joins present.
@@ -24418,7 +24426,7 @@ Patch bump. Closes #871 — workspace region filters threw `psycopg.errors.Ambig
 Patch bump. Closes #870 — workspaces with a `context_selector` rendered fully empty on first load for users with no saved preference. The selector defaulted to the hard-coded "All" entry, and any region filtering on `current_context` rendered its empty state. AegisMark's teacher_workspace landed on six stacked empty states for fresh users — the selector wasn't communicated as the gate.
 
 ### Fixed
-- **`src/dazzle_ui/templates/workspace/_content.html`** — when no saved `workspace.<name>.context` preference exists, fall through to `sel.options[1]` (the first real option after the hard-coded "All" entry) instead of staying on "All". The change → dispatch logic is unchanged; only the default selection differs.
+- **`src/dazzle_page/templates/workspace/_content.html`** — when no saved `workspace.<name>.context` preference exists, fall through to `sel.options[1]` (the first real option after the hard-coded "All" entry) instead of staying on "All". The change → dispatch logic is unchanged; only the default selection differs.
 
 ### Tests
 - **`test_template_html.py::TestDashboardRegionCompositeShapes::test_context_selector_defaults_to_first_option`** — pins the `sel.options[1]` fallback in the template body.
@@ -24431,8 +24439,8 @@ Patch bump. Closes #870 — workspaces with a `context_selector` rendered fully 
 Patch bump. Closes #872 — workspace list region columns ignored field-level `visible:` predicates, so every persona saw the full column set regardless of role-gated visibility on the source surface. Detail surfaces honour `visible:` correctly via `ColumnContext.visible_condition` + per-request evaluation in `page_routes.py`; workspace regions never carried the predicate through `_build_surface_columns` (column dicts), so the per-request filter had nothing to evaluate. Result: admin-scoped fields (e.g. `academic_year`, `is_current`) leaked into teacher-persona workspace cards as columns with empty cells.
 
 ### Fixed
-- **`src/dazzle_back/runtime/workspace_rendering.py` — `_build_surface_columns`** — capture each surface element's `visible:` predicate (falling back to the section-level predicate, matching `template_compiler.py`) and store it as `visible_condition` on the column dict.
-- **`src/dazzle_back/runtime/workspace_rendering.py` — `_workspace_region_handler`** — when any precomputed column carries a `visible_condition`, evaluate it per-request against the current persona's roles via `dazzle_ui.utils.condition_eval.evaluate_condition` and produce a fresh filtered list (never mutate the shared startup list).
+- **`src/dazzle_http/runtime/workspace_rendering.py` — `_build_surface_columns`** — capture each surface element's `visible:` predicate (falling back to the section-level predicate, matching `template_compiler.py`) and store it as `visible_condition` on the column dict.
+- **`src/dazzle_http/runtime/workspace_rendering.py` — `_workspace_region_handler`** — when any precomputed column carries a `visible_condition`, evaluate it per-request against the current persona's roles via `dazzle_page.utils.condition_eval.evaluate_condition` and produce a fresh filtered list (never mutate the shared startup list).
 
 ### Tests
 - **`test_workspace_rendering.py::TestSurfaceColumnsVisibleCondition`** — three cases pinning the contract: element-level `visible:` attaches; section-level `visible:` falls through to columns; element overrides section.
@@ -24460,7 +24468,7 @@ Patch bump. Closes #869 — the feedback widget's "Your feedback has been resolv
 Patch bump. Closes #868 — the consent banner served correctly after #867, but every button click (Accept all / Reject all / Save choices) 403'd on `POST /dz/consent` with `{"detail":"CSRF token missing or invalid"}`. Anonymous marketing-page visitors don't carry a `dazzle_csrf` cookie (the cookie is issued on first app-page visit, not on the site template), and `site_base.html` doesn't render a `<meta name="csrf-token">` tag, so there's no client-side token to forward. The banner rendered, looked interactive, and did nothing.
 
 ### Fixed
-- **`src/dazzle_back/runtime/csrf.py`** — added `/dz/consent`, `/dz/consent/banner`, `/dz/consent/state` to `CSRFConfig.exempt_paths`. The endpoints are idempotent cookie-setters with no authority-escalating side effects; same-origin is still enforced by the `credentials: "same-origin"` policy in `dz-consent.js`. This matches the existing exemption pattern for `/feedbackreports` (also issued from anon pages).
+- **`src/dazzle_http/runtime/csrf.py`** — added `/dz/consent`, `/dz/consent/banner`, `/dz/consent/state` to `CSRFConfig.exempt_paths`. The endpoints are idempotent cookie-setters with no authority-escalating side effects; same-origin is still enforced by the `credentials: "same-origin"` policy in `dz-consent.js`. This matches the existing exemption pattern for `/feedbackreports` (also issued from anon pages).
 
 ### Tests
 - **`test_consent_csrf_exempt.py`** — 5 tests pin the contract: default `CSRFConfig` lists all three paths as exempt, `POST /dz/consent` without any CSRF token returns 204 (not 403), `GET /dz/consent/state` returns 200, `GET /dz/consent/banner` returns 200/204, and a control test confirms a *non-exempt* POST still 403s (sanity: middleware not globally disabled).
@@ -24471,16 +24479,16 @@ Patch bump. Closes #868 — the consent banner served correctly after #867, but 
 
 ## [0.61.11] - 2026-04-24
 
-Patch bump. Closes #867 — the v0.61.0 consent banner + analytics JS files were packaged under `src/dazzle_ui/static/js/`, but `site_base.html` references them via the `static_url` filter which resolves to `/static/*` served from `src/dazzle_ui/runtime/static/`. Every app declaring an `analytics:` block 404'd on `dz-consent.js` and `dz-analytics.js`, leaving the consent banner rendered but its buttons inert (no JS attached ⇒ clicks did nothing ⇒ GTM never initialised). Worse than no banner at all for visitors outside EEA who'd otherwise auto-grant.
+Patch bump. Closes #867 — the v0.61.0 consent banner + analytics JS files were packaged under `src/dazzle_page/static/js/`, but `site_base.html` references them via the `static_url` filter which resolves to `/static/*` served from `src/dazzle_page/runtime/static/`. Every app declaring an `analytics:` block 404'd on `dz-consent.js` and `dz-analytics.js`, leaving the consent banner rendered but its buttons inert (no JS attached ⇒ clicks did nothing ⇒ GTM never initialised). Worse than no banner at all for visitors outside EEA who'd otherwise auto-grant.
 
 ### Fixed
-- **Moved `src/dazzle_ui/static/js/dz-consent.js` and `dz-analytics.js` to `src/dazzle_ui/runtime/static/js/`** — same directory as every other framework JS file (`dz-alpine.js`, `dz-a11y.js`, `feedback-widget.js`, …). Site template references via `static_url` now resolve and the scripts serve correctly. No code changes; pure file relocation.
+- **Moved `src/dazzle_page/static/js/dz-consent.js` and `dz-analytics.js` to `src/dazzle_page/runtime/static/js/`** — same directory as every other framework JS file (`dz-alpine.js`, `dz-a11y.js`, `feedback-widget.js`, …). Site template references via `static_url` now resolve and the scripts serve correctly. No code changes; pure file relocation.
 
 ### Tests
-- **`test_analytics_js_location.py`** — 4 regression tests pin the shape: `dz-consent.js` and `dz-analytics.js` live under the runtime static root, the legacy `dazzle_ui/static/js/` only carries `site.js` (which has a bespoke `/site.js` route handler), and `site_base.html` still references both scripts via `static_url`.
+- **`test_analytics_js_location.py`** — 4 regression tests pin the shape: `dz-consent.js` and `dz-analytics.js` live under the runtime static root, the legacy `dazzle_page/static/js/` only carries `site.js` (which has a bespoke `/site.js` route handler), and `site_base.html` still references both scripts via `static_url`.
 
 ### Agent Guidance
-- **Framework JS goes in `src/dazzle_ui/runtime/static/js/`** — that's the directory the runtime mounts at `/static/*`. The `src/dazzle_ui/static/` directory only exists for `site.js`, which is read by a custom route handler (`site_renderer.get_site_js`) and served at `/site.js` directly.
+- **Framework JS goes in `src/dazzle_page/runtime/static/js/`** — that's the directory the runtime mounts at `/static/*`. The `src/dazzle_page/static/` directory only exists for `site.js`, which is read by a custom route handler (`site_renderer.get_site_js`) and served at `/site.js` directly.
 - **When adding a new JS file referenced via `static_url`**: put it in `runtime/static/js/`. The source-grep test above now catches regressions.
 
 ## [0.61.10] - 2026-04-24
@@ -24489,7 +24497,7 @@ Patch bump. Closes #858 — the `via EntityName(...)` scope-rule form required f
 
 ### Fixed
 - **`src/dazzle/core/dsl_parser_impl/entity.py`** — `_parse_via_condition` now accumulates dotted segments on the junction-field side via a `while self.match(TokenType.DOT)` loop that mirrors the existing pattern in `_parse_comparison`. The full dotted path is stored verbatim on `ViaBinding.junction_field`.
-- **`src/dazzle_back/runtime/predicate_compiler.py`** — new `_compile_dotted_junction_predicate` helper expands a dotted path into a nested `IN (SELECT id FROM ...)` chain that walks the junction's FK graph segment-by-segment. The innermost subquery holds the `<final_col> <op> <value>` comparison; each wrap selects `id` from the entity that *owns* the next FK (not its target — the initial implementation had this reversed). `_compile_exists_check` grew a `fk_graph` parameter and routes dotted bindings through the new helper while flat bindings keep the single-column shape.
+- **`src/dazzle_http/runtime/predicate_compiler.py`** — new `_compile_dotted_junction_predicate` helper expands a dotted path into a nested `IN (SELECT id FROM ...)` chain that walks the junction's FK graph segment-by-segment. The innermost subquery holds the `<final_col> <op> <value>` comparison; each wrap selects `id` from the entity that *owns* the next FK (not its target — the initial implementation had this reversed). `_compile_exists_check` grew a `fk_graph` parameter and routes dotted bindings through the new helper while flat bindings keep the single-column shape.
 - **`src/dazzle/core/validator.py`** — `_validate_predicate_node` validates dotted junction fields against the FK graph: each intermediate segment must resolve as an FK hop and the terminal segment must exist as a column on the final entity. Unknown segments produce a clear `dazzle validate` error naming the bad hop.
 
 ### Tests
@@ -24505,10 +24513,10 @@ Patch bump. Closes #858 — the `via EntityName(...)` scope-rule form required f
 Patch bump. Closes #865 — workspace list regions issued one follow-up `SELECT *` per FK relation via the batched `_load_to_one` path. For AegisMark's teacher workspace (14 regions × 3-5 FKs) that's ~50+ round-trips per page load. The FK-display fast path now collapses each region's FK display resolution into a single LEFT JOIN'd query, matching the single-SQL-statement approach the issue proposed.
 
 ### Fixed
-- **`src/dazzle_back/runtime/relation_loader.py`** — new `build_display_join_plan(entity_name, include)` returns `(joins, extra_cols, fallback_relations)`: LEFT JOINs for each to-one relation whose target entity has a registered `display_field`, aliased select columns pulling `{target}.{display_field} AS "{rel}__display"`, and a fallback list for relations that didn't qualify. Paired with `apply_display_joins_to_rows` which folds the projected display columns into the same `{id: ..., __display__: ...}` FK-dict shape the batched path produces — downstream consumers (`_inject_display_names`) work unchanged.
-- **`src/dazzle_back/runtime/query_builder.py`** — `QueryBuilder` gains `extra_select_cols: list[str]` alongside the existing `joins: list[str]` field (which was declared but never emitted). `build_select` now appends joins between the FROM and WHERE clauses and merges `extra_select_cols` into the SELECT list. The base columns switch from `*` to `{table}.*` when JOINs are present so the aliased display columns don't collide with the base table's fields.
-- **`src/dazzle_back/runtime/repository.py`** — `Repository.list` gains an opt-in `fk_display_only: bool = False` parameter. When enabled with `include`, it invokes the new display-join plan and reshapes rows via `apply_display_joins_to_rows`; relations that didn't qualify (no display_field, to-many) fall through to the existing batched `_load_to_one` path. Other callers (nested entity endpoints that want full related rows) are unaffected.
-- **`src/dazzle_back/runtime/workspace_rendering.py`** — both workspace-region call sites (`render_page` fetch + `fetch_region_data` batch path) pass `fk_display_only=True` so workspace lists consume the fast path.
+- **`src/dazzle_http/runtime/relation_loader.py`** — new `build_display_join_plan(entity_name, include)` returns `(joins, extra_cols, fallback_relations)`: LEFT JOINs for each to-one relation whose target entity has a registered `display_field`, aliased select columns pulling `{target}.{display_field} AS "{rel}__display"`, and a fallback list for relations that didn't qualify. Paired with `apply_display_joins_to_rows` which folds the projected display columns into the same `{id: ..., __display__: ...}` FK-dict shape the batched path produces — downstream consumers (`_inject_display_names`) work unchanged.
+- **`src/dazzle_http/runtime/query_builder.py`** — `QueryBuilder` gains `extra_select_cols: list[str]` alongside the existing `joins: list[str]` field (which was declared but never emitted). `build_select` now appends joins between the FROM and WHERE clauses and merges `extra_select_cols` into the SELECT list. The base columns switch from `*` to `{table}.*` when JOINs are present so the aliased display columns don't collide with the base table's fields.
+- **`src/dazzle_http/runtime/repository.py`** — `Repository.list` gains an opt-in `fk_display_only: bool = False` parameter. When enabled with `include`, it invokes the new display-join plan and reshapes rows via `apply_display_joins_to_rows`; relations that didn't qualify (no display_field, to-many) fall through to the existing batched `_load_to_one` path. Other callers (nested entity endpoints that want full related rows) are unaffected.
+- **`src/dazzle_http/runtime/workspace_rendering.py`** — both workspace-region call sites (`render_page` fetch + `fetch_region_data` batch path) pass `fk_display_only=True` so workspace lists consume the fast path.
 
 ### Tests
 - **`test_fk_display_join.py`** — 9 tests pin the contract: JOIN plan emits correctly-quoted identifiers, no-display-field falls back, to-many falls back, mixed includes split correctly, row folding produces FK-dicts, null FKs become `None`, missing display columns pass through unchanged, QueryBuilder emits joins + extra cols, bare SELECT still uses `*`.
@@ -24525,8 +24533,8 @@ Patch bump. Closes #865 — workspace list regions issued one follow-up `SELECT 
 Patch bump. Closes #857 — a workspace region declaring `filter: <fk> = current_context` silently misfired because `_extract_condition_filters` had no handling for the `current_context` sentinel. The selected-entity id was already wired from the URL query param into `_filter_context["current_context"]` in `workspace_rendering.py`, but never threaded into the SQL-filter extractor — so the literal string `"current_context"` fell through to the "plain literal" branch and was applied as the filter value verbatim, resulting in zero matches. Region queries ignored the selector entirely.
 
 ### Fixed
-- **`src/dazzle_back/runtime/route_generator.py`** — `_extract_condition_filters` gains an optional `context_id: str | None = None` kwarg. Both the AccessConditionSpec path (line ~508) and the IR ConditionExpr path (line ~586) now recognise the `current_context` sentinel and resolve it to `context_id` when a selection is active. When the selector is cleared (`context_id is None`), the filter is skipped so the existing persona scope applies unfiltered — matching the intent from #857. The literal-string fallback now also excludes `"current_context"` so it can't collide with the new sentinel.
-- **`src/dazzle_back/runtime/workspace_rendering.py`** — both `_extract_condition_filters` call sites (top-level region fetch + `fetch_region_data` batch path) now pass `context_id=_context_id` (or `filter_context.get("current_context")`), threading the query-param value through to the filter evaluator.
+- **`src/dazzle_http/runtime/route_generator.py`** — `_extract_condition_filters` gains an optional `context_id: str | None = None` kwarg. Both the AccessConditionSpec path (line ~508) and the IR ConditionExpr path (line ~586) now recognise the `current_context` sentinel and resolve it to `context_id` when a selection is active. When the selector is cleared (`context_id is None`), the filter is skipped so the existing persona scope applies unfiltered — matching the intent from #857. The literal-string fallback now also excludes `"current_context"` so it can't collide with the new sentinel.
+- **`src/dazzle_http/runtime/workspace_rendering.py`** — both `_extract_condition_filters` call sites (top-level region fetch + `fetch_region_data` batch path) now pass `context_id=_context_id` (or `filter_context.get("current_context")`), threading the query-param value through to the filter evaluator.
 
 ### Tests
 - **`test_current_context_filter.py`** — 7 tests covering the new behaviour: AccessConditionSpec + IR ConditionExpr paths, context-present vs context-cleared, literal-string non-regression, combined `current_user` AND `current_context`, and backwards compatibility for callers that don't pass the new kwarg.
@@ -24540,8 +24548,8 @@ Patch bump. Closes #857 — a workspace region declaring `filter: <fk> = current
 Patch bump. Closes #861 — a workspace region sourced from entity A declaring `action: <surface>` where that surface is bound to a different entity B silently misfired at runtime when the action URL expected the FK on A referencing B. Three symptoms in one: (1) row endpoints expanded FK dicts into `{id: ..., display: ...}` and `action_id_field` wasn't forwarded to the template, so `item[id]|string` produced `{'id': '...'}`; (2) template fragments hard-coded `item.id` instead of honouring the region's `action_id_field`; (3) `dazzle validate` produced no signal when the FK probe would return zero or multiple matches.
 
 ### Fixed
-- **`src/dazzle_ui/runtime/template_renderer.py`** — new `resolve_fk_id` Jinja filter robustly extracts the id from a FK value regardless of whether it's been expanded into a dict by the FK joiner or left as a scalar UUID/string. Registered globally so every region template can use it.
-- **`src/dazzle_back/runtime/workspace_rendering.py`** — `render_fragment(...)` now forwards `action_id_field` from the `RegionContext` into the per-item template render context; previously the field never crossed the render boundary.
+- **`src/dazzle_page/runtime/template_renderer.py`** — new `resolve_fk_id` Jinja filter robustly extracts the id from a FK value regardless of whether it's been expanded into a dict by the FK joiner or left as a scalar UUID/string. Registered globally so every region template can use it.
+- **`src/dazzle_http/runtime/workspace_rendering.py`** — `render_fragment(...)` now forwards `action_id_field` from the `RegionContext` into the per-item template render context; previously the field never crossed the render boundary.
 - **Region templates** (`list`, `grid`, `kanban`, `queue`, `activity_feed`, `timeline`, `metrics`, `tab_data`, `tree`) — switched from `item[action_id_field|default('id')]|string` (which breaks on dict-valued FKs) to `item[action_id_field|default('id')]|resolve_fk_id`. Tree template applies the same fix to `node[...]`.
 - **`src/dazzle/core/validator.py`** — new `validate_workspace_region_actions` check errors at validate time when a cross-entity `action:` has zero FK candidates ("no FK field referencing 'Target'") or multiple candidates ("ambiguous FK — runtime cannot pick one automatically"). Wired into the main `lint_appspec` flow so `dazzle validate` catches the misconfiguration before the app ships.
 
@@ -24574,9 +24582,9 @@ Patch bump. Closes #859 — feedback widget polled `GET /feedbackreports?reporte
 Patch bump. Closes #863 — entity-list pages (`/app/<entity>`) showed a reduced sidebar compared to workspace pages because the entity-list code path (`template_compiler.py`) never populated `PageContext.nav_groups`. `app_shell.html` was already rendering `nav_groups | default([])` — the field simply wasn't set, collapsing the sidebar's group structure whenever the user navigated between an entity and its workspace.
 
 ### Fixed
-- **`src/dazzle_ui/runtime/template_context.py`** — `PageContext` gains `nav_groups` + `nav_groups_by_persona` fields (default empty list / dict).
-- **`src/dazzle_ui/converters/template_compiler.py`** — builds workspace `nav_group` declarations into the same dict shape `page_routes.py` already produces for workspace pages. Assigns them to every entity-surface context + the `/` fallback. Dedupes by label so two workspaces declaring the same group name don't produce sidebar duplicates.
-- **`src/dazzle_ui/runtime/page_routes.py`** — mirrors the per-persona resolution path: when a user's role matches a persona in `nav_groups_by_persona`, the request-scoped `nav_groups` is replaced with the persona's subset. Matches the existing `nav_items` / `nav_by_persona` pattern.
+- **`src/dazzle_page/runtime/template_context.py`** — `PageContext` gains `nav_groups` + `nav_groups_by_persona` fields (default empty list / dict).
+- **`src/dazzle_page/converters/template_compiler.py`** — builds workspace `nav_group` declarations into the same dict shape `page_routes.py` already produces for workspace pages. Assigns them to every entity-surface context + the `/` fallback. Dedupes by label so two workspaces declaring the same group name don't produce sidebar duplicates.
+- **`src/dazzle_page/runtime/page_routes.py`** — mirrors the per-persona resolution path: when a user's role matches a persona in `nav_groups_by_persona`, the request-scoped `nav_groups` is replaced with the persona's subset. Matches the existing `nav_items` / `nav_by_persona` pattern.
 
 ### Tests
 - **`test_entity_page_nav_groups.py`** — 5 tests pin the contract: entity-list ctx inherits nav_groups, children have correct routes, workspace + entity pages share the same group structure, duplicates collapse, field always exists.
@@ -24591,10 +24599,10 @@ Patch bump. Closes #863 — entity-list pages (`/app/<entity>`) showed a reduced
 Patch bump. Closes #860 — vendored minified libraries (tom-select, quill, pickr) shipped with trailing `//# sourceMappingURL=...` comments pointing at `.map` files that aren't part of the vendor directory. Any developer opening DevTools saw five 404s per page: `tom-select.complete.min.js.map`, `tom-select.min.css.map`, `quill.js.map`, `quill.snow.css.map`, `pickr.min.js.map`. Noisy in logs, distracting during debugging.
 
 ### Fixed
-- Stripped the trailing `sourceMappingURL` comment from the five affected vendor files in `src/dazzle_ui/runtime/static/vendor/`. Files stay valid minified JS/CSS — the sourcemap reference was the only removed content. Node's `--check` parser confirms all three JS bundles still parse cleanly.
+- Stripped the trailing `sourceMappingURL` comment from the five affected vendor files in `src/dazzle_page/runtime/static/vendor/`. Files stay valid minified JS/CSS — the sourcemap reference was the only removed content. Node's `--check` parser confirms all three JS bundles still parse cleanly.
 
 ### Tests
-- **`test_vendor_sourcemap_refs.py`** — regression guard: every file in `src/dazzle_ui/runtime/static/vendor/` is scanned for `sourceMappingURL` references, and any reference pointing at a `.map` file not shipped in the vendor dir fails the test. Catches regressions when a vendor library is re-fetched from upstream without running the strip step.
+- **`test_vendor_sourcemap_refs.py`** — regression guard: every file in `src/dazzle_page/runtime/static/vendor/` is scanned for `sourceMappingURL` references, and any reference pointing at a `.map` file not shipped in the vendor dir fails the test. Catches regressions when a vendor library is re-fetched from upstream without running the strip step.
 
 ### Agent Guidance
 - **Vendoring a new minified library**: strip `sourceMappingURL` comments from the bundled file, or commit the matching `.map` alongside it. The test catches both failure modes — don't work around it.
@@ -24604,8 +24612,8 @@ Patch bump. Closes #860 — vendored minified libraries (tom-select, quill, pick
 Patch bump. Closes #862 — Safari renders the CSV export inline instead of triggering a download. Root cause: `<a href="...?format=csv" download>` + `Content-Disposition: attachment` isn't enough on Safari for same-origin `text/csv` responses — Safari honours its own inline-render heuristic over the header. User loses their workspace context to a full tab navigation.
 
 ### Fixed
-- **`src/dazzle_ui/runtime/static/js/dz-alpine.js`** — new `window.dz.downloadCsv(endpoint, filename)` helper. Fetches via `credentials: "same-origin"`, converts response to a Blob, creates a transient object-URL + synthetic `<a download>`, programmatically clicks to force the download, then revokes the URL. Failures surface via `window.dz.toast` + console.error.
-- **`src/dazzle_ui/templates/workspace/regions/list.html`** — the CSV export anchor is now a button that calls `window.dz.downloadCsv` with the endpoint and filename from `data-dz-csv-*` attributes. Works on Safari + every other browser; the workspace context is preserved (no tab navigation).
+- **`src/dazzle_page/runtime/static/js/dz-alpine.js`** — new `window.dz.downloadCsv(endpoint, filename)` helper. Fetches via `credentials: "same-origin"`, converts response to a Blob, creates a transient object-URL + synthetic `<a download>`, programmatically clicks to force the download, then revokes the URL. Failures surface via `window.dz.toast` + console.error.
+- **`src/dazzle_page/templates/workspace/regions/list.html`** — the CSV export anchor is now a button that calls `window.dz.downloadCsv` with the endpoint and filename from `data-dz-csv-*` attributes. Works on Safari + every other browser; the workspace context is preserved (no tab navigation).
 
 ### Tests
 - **`test_dz_alpine_csv_download.py`** — new source-regression tests pin the helper's contract (fetch + Blob, download attribute, revoke URL, toast-on-error).
@@ -24619,9 +24627,9 @@ Patch bump. Closes #862 — Safari renders the CSV export inline instead of trig
 Patch bump. Closes #864 — every above-fold workspace region fetched twice on first paint because the template emitted `hx-trigger="load, intersect once"` for every card. `load` fires when HTMX processes the element; `intersect once` fires once the IntersectionObserver reports the element visible (which, for above-fold cards, happens in the same paint cycle). Result: ~20% wasted backend work per login on production workspaces.
 
 ### Fixed
-- **`src/dazzle_ui/runtime/page_routes.py`** — `fold_count` now threaded into the workspace layout data island (previously only on the server-side WorkspaceContext).
-- **`src/dazzle_ui/runtime/static/js/dashboard-builder.js`** — new `foldCount` state + `isEagerCard(card)` + `cardHxTrigger(card, sseEnabled)` helpers. Above-fold cards get `hx-trigger="load"`; below-fold cards get `"intersect once"`. SSE triggers are appended when `sseEnabled=true`.
-- **`src/dazzle_ui/templates/workspace/_content.html`** — static `hx-trigger="load, intersect once..."` replaced with Alpine-bound `:hx-trigger="cardHxTrigger(card, ...)"`.
+- **`src/dazzle_page/runtime/page_routes.py`** — `fold_count` now threaded into the workspace layout data island (previously only on the server-side WorkspaceContext).
+- **`src/dazzle_page/runtime/static/js/dashboard-builder.js`** — new `foldCount` state + `isEagerCard(card)` + `cardHxTrigger(card, sseEnabled)` helpers. Above-fold cards get `hx-trigger="load"`; below-fold cards get `"intersect once"`. SSE triggers are appended when `sseEnabled=true`.
+- **`src/dazzle_page/templates/workspace/_content.html`** — static `hx-trigger="load, intersect once..."` replaced with Alpine-bound `:hx-trigger="cardHxTrigger(card, ...)"`.
 
 ### Changed
 - **Workspace region double-fetch eliminated**. Each region fetches exactly once on first paint.
@@ -24636,8 +24644,8 @@ Patch bump. Closes #864 — every above-fold workspace region fetched twice on f
 Patch bump. Closes #866 — dashboard builder rendered in degraded state when Alpine's `alpine:init` didn't fire (HTMX morph race, layout-JSON parse error, etc.). Pure template fix: `x-cloak` added to five status-label spans inside the save button in `_content.html` and the "No widgets available" div in `_card_picker.html`. The existing `[x-cloak] { display: none }` rule in `dazzle-layer.css` hides these elements until Alpine takes control; failed init now produces a blank control panel rather than five stacked status labels + ghost catalog.
 
 ### Fixed
-- **`src/dazzle_ui/templates/workspace/_content.html`** — 5 `x-show="saveState === '...'"` spans gain `x-cloak`.
-- **`src/dazzle_ui/templates/workspace/_card_picker.html`** — `x-show="catalog.length === 0"` gains `x-cloak`.
+- **`src/dazzle_page/templates/workspace/_content.html`** — 5 `x-show="saveState === '...'"` spans gain `x-cloak`.
+- **`src/dazzle_page/templates/workspace/_card_picker.html`** — `x-show="catalog.length === 0"` gains `x-cloak`.
 
 ## [0.61.0] - 2026-04-24
 
@@ -24805,7 +24813,7 @@ Phase 2 of the **Analytics, Consent & Privacy** design: consent banner, Consent 
 
 - **Consent state model** — `ConsentState` + `ConsentDefaults` in `dazzle.compliance.analytics.consent`. Four Dazzle-native categories (`analytics`, `advertising`, `personalization`, `functional`), mapped internally to Consent Mode v2 signals (`analytics_storage`, `ad_storage`, `ad_user_data`, `ad_personalization`, `functionality_storage`, `personalization_storage`, `security_storage`). EU/UK/EEA tenants default to `denied`; others to `granted`; `functional` is always granted (essential for service). Cookie named `dz_consent_v2` with 13-month Max-Age.
 
-- **Consent banner** — `src/dazzle_ui/templates/site/includes/consent_banner.html` + `src/dazzle_ui/static/js/dz-consent.js` + `dz-consent-*` styles in `site-sections.css`. Accept-all / Reject-non-essential / Customise flow with focus trap, keyboard nav, ARIA landmarks. Reopen hook (`dzConsent.reopen()`) for footer "Manage cookies" links.
+- **Consent banner** — `src/dazzle_page/templates/site/includes/consent_banner.html` + `src/dazzle_page/static/js/dz-consent.js` + `dz-consent-*` styles in `site-sections.css`. Accept-all / Reject-non-essential / Customise flow with focus trap, keyboard nav, ARIA landmarks. Reopen hook (`dzConsent.reopen()`) for footer "Manage cookies" links.
 
 - **Consent HTTP routes** — `POST /dz/consent` (write choices), `GET /dz/consent/state` (read resolved state), `GET /dz/consent/banner` (reopen). Wired into `app_factory.assemble_post_build_routes`. Configurable via `dazzle.toml` `[analytics]` section (`default_jurisdiction`, `consent_override`, `privacy_page_url`, `cookie_policy_url`).
 
@@ -24899,7 +24907,7 @@ Patch bump. Closes four open CodeQL alerts (#63, #64, #65, #66) — all `py/inco
 Patch bump. Unblocks the `type-check` CI job — replaces a boolean flag `_gb_is_bucket` with direct `isinstance(group_by, BucketRef)` so mypy narrows the union type correctly. Same behaviour, mypy-friendlier. Introduced during cycle 28 time-bucketing work; v0.60.6 cleared pytest + docs but mypy was still failing on this one line.
 
 ### Fixed
-- **`src/dazzle_back/runtime/workspace_rendering.py:1006`** — `group_by.field if _gb_is_bucket else group_by` became `group_by.field if isinstance(group_by, _BucketRef) else group_by`. mypy can't narrow through a separately-computed boolean; inlining the check lets it prove `group_by.field` is safe.
+- **`src/dazzle_http/runtime/workspace_rendering.py:1006`** — `group_by.field if _gb_is_bucket else group_by` became `group_by.field if isinstance(group_by, _BucketRef) else group_by`. mypy can't narrow through a separately-computed boolean; inlining the check lets it prove `group_by.field` is safe.
 
 ### CI status after this bump
 All four required checks expected green: `CI` (pytest + mypy + lint), `docs`, `CodeQL`, `Homebrew Formula Validation`.
@@ -24939,7 +24947,7 @@ Patch bump. Observability fixes toward #854 — the pivot_table empty-buckets bu
 Patch bump. Fixes #855 — marketing `site_base.html` hardcoded three `/static/...` asset references, bypassing the `static_url` fingerprinting filter that the authenticated `base.html` already uses correctly. CDN-fronted apps served stale CSS / JS after every deploy because the URL never changed.
 
 ### Fixed
-- **`src/dazzle_ui/templates/site/site_base.html`** now routes `css/dazzle-bundle.css`, `css/custom.css`, and `vendor/lucide.min.js` through the `static_url` filter, matching the pattern in `base.html`. The asset paths themselves are unchanged — only the URL-rewriting layer differs, so local dev behaves identically.
+- **`src/dazzle_page/templates/site/site_base.html`** now routes `css/dazzle-bundle.css`, `css/custom.css`, and `vendor/lucide.min.js` through the `static_url` filter, matching the pattern in `base.html`. The asset paths themselves are unchanged — only the URL-rewriting layer differs, so local dev behaves identically.
 - **Regression guard** added in `tests/unit/test_asset_fingerprint.py::TestTemplatesUseStaticUrl` — scans `site_base.html` for hardcoded `/static/` `href` / `src` attributes (allowing Jinja `default()` fallbacks for override params). Existing `test_build_css.py::test_site_base_uses_vendor` updated to require the filter pattern.
 
 ### Agent Guidance
@@ -24973,7 +24981,7 @@ Patch bump. Trial scenario design — `starting_url` field lets a trial target a
 Patch bump. Trial-validation fix — the v0.60.0 BucketRef IR type was rejected by the pydantic `RegionContext` (template-facing context), which coerced `group_by` to `str`. Surfaced when `dazzle qa trial` couldn't boot the ops_dashboard server. Framework-level tests all passed; the regression only fired on a full app boot.
 
 ### Fixed
-- **`BucketRef` now serializes cleanly through `RegionContext`.** `src/dazzle_ui/runtime/workspace_renderer.py` introduces `_flatten_group_by(value)` which reduces `str | BucketRef | None` to a plain string field name for templates. The typed IR form survives on `WorkspaceRegionContext.ir_region` so runtime routing can still branch on `isinstance(..., BucketRef)`.
+- **`BucketRef` now serializes cleanly through `RegionContext`.** `src/dazzle_page/runtime/workspace_renderer.py` introduces `_flatten_group_by(value)` which reduces `str | BucketRef | None` to a plain string field name for templates. The typed IR form survives on `WorkspaceRegionContext.ir_region` so runtime routing can still branch on `isinstance(..., BucketRef)`.
 - **Runtime reads group_by from ir_region, not ctx_region.** `_compute_pivot_buckets`, `_aggregate_via_groupby`, and the chart-mode dispatcher in `workspace_rendering.py` now consult the untyped IR region for `group_by` + `group_by_dims`. The pydantic `RegionContext` stays str-only — safe for Jinja consumption.
 
 ### Verified
@@ -25078,7 +25086,7 @@ Patch bump. One UX bug fix from /trial-cycle 15 (#853).
 Patch bump. One framework bug fix from /trial-cycle 15 (#852).
 
 ### Fixed
-- **`activity_feed` region no longer 500s when source rows have tz-aware timestamps (#852).** `_timeago_filter` in `src/dazzle_ui/runtime/template_renderer.py` mixed `datetime.now()` (naive local) with the tz-aware datetimes Postgres returns for `TIMESTAMP WITH TIME ZONE` columns, raising `TypeError: can't subtract offset-naive and offset-aware datetimes` and bubbling up as a 500 on every region render that used the filter (e.g. `comment_activity` on `agent_dashboard` in support_tickets). Fix: when a tz-aware value arrives, convert it to local-naive (`dt.astimezone().replace(tzinfo=None)`) before the subtraction. Existing call sites that pass naive local values keep working unchanged. The ISO string parser also now handles the `Z` suffix (`fromisoformat` rejected it on Python <3.11).
+- **`activity_feed` region no longer 500s when source rows have tz-aware timestamps (#852).** `_timeago_filter` in `src/dazzle_page/runtime/template_renderer.py` mixed `datetime.now()` (naive local) with the tz-aware datetimes Postgres returns for `TIMESTAMP WITH TIME ZONE` columns, raising `TypeError: can't subtract offset-naive and offset-aware datetimes` and bubbling up as a 500 on every region render that used the filter (e.g. `comment_activity` on `agent_dashboard` in support_tickets). Fix: when a tz-aware value arrives, convert it to local-naive (`dt.astimezone().replace(tzinfo=None)`) before the subtraction. Existing call sites that pass naive local values keep working unchanged. The ISO string parser also now handles the `Z` suffix (`fromisoformat` rejected it on Python <3.11).
 - **`activity_feed` template no longer fails the nested-card-chrome invariant.** With the timeago crash fixed, the previously-skipped composite shape test ran and surfaced an inner item `<div>` carrying both `border` and `rounded-[4px]` — flagged as nested chrome by `find_nested_chromes`. Removed the full border on the inner item div; visual grouping comes from the muted background only. The `tests/unit/test_dom_snapshots.py` baseline for `activity_feed` is now seeded for the first time.
 
 ### Tests
@@ -25095,7 +25103,7 @@ Minor bump. Strategy C aggregate primitive — closes the bar_chart bug class (#
 
 ### Added
 - **`Repository.aggregate(group_by, measures, filters, fk_table, fk_display_field, limit)`.** New repo method that runs `SELECT <dim>, COUNT(*) FROM src LEFT JOIN <fk> WHERE <scope> GROUP BY <dim>` in one round-trip. Supports `count`, `sum:<col>`, `avg:<col>`, `min:<col>`, `max:<col>` measures. FK group_by joins the target entity once and returns the display field as `<col>_label` in the bucket — no per-bucket round-trip, no enumeration phase.
-- **`dazzle_back.runtime.aggregate` module.** SQL builder (`build_aggregate_sql`), measure dispatcher (`measure_to_sql`), FK display-field probe (`resolve_fk_display_field`), row-to-bucket converter (`rows_to_buckets`), and the `AggregateBucket` dataclass. Exposed as a separate module so the SQL composition is unit-testable without a repo.
+- **`dazzle_http.runtime.aggregate` module.** SQL builder (`build_aggregate_sql`), measure dispatcher (`measure_to_sql`), FK display-field probe (`resolve_fk_display_field`), row-to-bucket converter (`rows_to_buckets`), and the `AggregateBucket` dataclass. Exposed as a separate module so the SQL composition is unit-testable without a repo.
 - **`alerts_by_system` region in `examples/ops_dashboard`** — exercises the FK group_by fast path so `/trial-cycle` validates the new aggregate primitive in production-equivalent rendering.
 
 ### Changed
@@ -25132,7 +25140,7 @@ Patch bump. Two follow-on fixes to #849 (#850).
 Patch bump. Two follow-on bug fixes (#849).
 
 ### Fixed
-- **Bar-chart FK `group_by` enumerates buckets from the full source entity, not the region's first items page (#849 Bug B).** New `_enumerate_distinct_buckets` in `src/dazzle_back/runtime/workspace_rendering.py` pages through the source repo (cap 1000 rows, 200/page), dedupes by bucket key via the same `_bucket_key_label` used elsewhere, and applies scope filters so users can't see buckets they wouldn't be allowed to see rows for. The items-page derivation remains as the fallback when the source repo isn't available or the enumeration fails.
+- **Bar-chart FK `group_by` enumerates buckets from the full source entity, not the region's first items page (#849 Bug B).** New `_enumerate_distinct_buckets` in `src/dazzle_http/runtime/workspace_rendering.py` pages through the source repo (cap 1000 rows, 200/page), dedupes by bucket key via the same `_bucket_key_label` used elsewhere, and applies scope filters so users can't see buckets they wouldn't be allowed to see rows for. The items-page derivation remains as the fallback when the source repo isn't available or the enumeration fails.
 - **Per-bucket aggregate filter is now built as a dict, bypassing `_parse_simple_where` for the auto-augmented case (#849 Bug A).** Pre-fix the auto-augment built a SQL fragment string (`"<group_by> = <bucket_key>"`) and round-tripped it through `_parse_simple_where`, which made the per-bucket query brittle to any oddity in the bucket key (UUIDs with dashes, whitespace, etc.) and harder to keep in sync with the REST list endpoint. The `current_bucket` sentinel path still parses the where clause for backward compat with author-written expressions. Per-bucket exceptions now log + return zero instead of breaking the whole region. 8 new regression tests in `tests/unit/test_bar_chart_bucketed_aggregate.py` (3 covering the dict-shape + scope merge + failure isolation, 5 covering source-entity enumeration with pagination + fallback paths).
 
 ### Agent Guidance
@@ -25156,7 +25164,7 @@ Patch bump. One feature/fix (#847).
 - **Bar-chart regions now honour `aggregate:` per bucket (#847).** Authors can express true distributions like "students per grade band" by combining `display: bar_chart`, `group_by: <field>`, and an `aggregate:` block. The runtime evaluates the first aggregate expression once per bucket — substituting the new `current_bucket` sentinel into the where clause when present, or otherwise auto-augmenting the where clause with `<group_by> = <bucket>`. Bucket values come from the field's enum / state-machine first (so empty-but-defined buckets render as zero bars), falling back to distinct values from the source items.
 
 ### Fixed
-- **Bar-chart no longer silently drops `aggregate:` (#847).** Pre-fix, the template ignored the metrics list when `items + group_by` were both set and rendered raw row counts per bucket — so `count(Manuscript where ...)` came back as a single bar with the count of source rows, not the per-bucket totals authors meant to express. New `_compute_bucketed_aggregates` in `src/dazzle_back/runtime/workspace_rendering.py` runs the per-bucket queries concurrently (one `asyncio.gather` per region) and merges scope filters into each query so row-level security still applies. The template `src/dazzle_ui/templates/workspace/regions/bar_chart.html` prefers `bucketed_metrics` when present and falls through to the existing count/metrics paths otherwise. 7 regression tests in `tests/unit/test_bar_chart_bucketed_aggregate.py`.
+- **Bar-chart no longer silently drops `aggregate:` (#847).** Pre-fix, the template ignored the metrics list when `items + group_by` were both set and rendered raw row counts per bucket — so `count(Manuscript where ...)` came back as a single bar with the count of source rows, not the per-bucket totals authors meant to express. New `_compute_bucketed_aggregates` in `src/dazzle_http/runtime/workspace_rendering.py` runs the per-bucket queries concurrently (one `asyncio.gather` per region) and merges scope filters into each query so row-level security still applies. The template `src/dazzle_page/templates/workspace/regions/bar_chart.html` prefers `bucketed_metrics` when present and falls through to the existing count/metrics paths otherwise. 7 regression tests in `tests/unit/test_bar_chart_bucketed_aggregate.py`.
 
 ### Agent Guidance
 - **Use `current_bucket` to write per-bucket aggregate expressions.** Example: `aggregate: students: count(Manuscript where computed_grade = current_bucket)`. The runtime substitutes the sentinel with each enum value or state-machine state from the `group_by` field. If the sentinel is omitted, the runtime auto-augments the where clause with `<group_by> = <bucket>` — works when the source entity and the count entity share the same field name. Only the *first* aggregate is rendered as the bar value; secondary aggregates are still computed via the metrics path.
@@ -25166,7 +25174,7 @@ Patch bump. One feature/fix (#847).
 Patch bump. One UI fix (#845).
 
 ### Fixed
-- **Heatmap row labels are now clickable (#845).** `src/dazzle_ui/templates/workspace/regions/heatmap.html` attached `hx-get` / `cursor-pointer` / `hover:opacity-80` only to the value `<td>` cells, so the leftmost row-label `<td>` was a dead zone — clicking it did nothing. Moved the HTMX attributes + pointer affordance up to the `<tr>` (gated on `action_url`), so the whole row is now the click target. Removed the per-cell `hx-get` to avoid double-fire when the `<tr>` swap would otherwise compete with the per-cell one. Threshold-colour classes still live on each `<td>` as before. Regression coverage in `tests/unit/test_heatmap_row_click.py` (3 tests).
+- **Heatmap row labels are now clickable (#845).** `src/dazzle_page/templates/workspace/regions/heatmap.html` attached `hx-get` / `cursor-pointer` / `hover:opacity-80` only to the value `<td>` cells, so the leftmost row-label `<td>` was a dead zone — clicking it did nothing. Moved the HTMX attributes + pointer affordance up to the `<tr>` (gated on `action_url`), so the whole row is now the click target. Removed the per-cell `hx-get` to avoid double-fire when the `<tr>` swap would otherwise compete with the per-cell one. Threshold-colour classes still live on each `<td>` as before. Regression coverage in `tests/unit/test_heatmap_row_click.py` (3 tests).
 
 ## [0.58.17] - 2026-04-22
 
@@ -25180,14 +25188,14 @@ Patch bump. One UI fix (#846).
 Patch bump. One UI fix (#844).
 
 ### Fixed
-- **Workspace card grid rows no longer stretch to the tallest card (#844).** `src/dazzle_ui/templates/workspace/_content.html` used `class="grid grid-cols-1 md:grid-cols-12 gap-4"` with no `align-items` override — CSS Grid's default is `align-items: stretch`, which sized every row to the tallest card and left shorter cards with hundreds of pixels of dead whitespace. Added `items-start` so each grid cell collapses to its intrinsic content height. `dashboard-builder.js` only manipulates `grid-column` spans, so drag/resize behaviour is unaffected. Regression coverage in `tests/unit/test_workspace_grid_align.py`.
+- **Workspace card grid rows no longer stretch to the tallest card (#844).** `src/dazzle_page/templates/workspace/_content.html` used `class="grid grid-cols-1 md:grid-cols-12 gap-4"` with no `align-items` override — CSS Grid's default is `align-items: stretch`, which sized every row to the tallest card and left shorter cards with hundreds of pixels of dead whitespace. Added `items-start` so each grid cell collapses to its intrinsic content height. `dashboard-builder.js` only manipulates `grid-column` spans, so drag/resize behaviour is unaffected. Regression coverage in `tests/unit/test_workspace_grid_align.py`.
 
 ## [0.58.15] - 2026-04-22
 
 Patch bump. One release-packaging fix (#843).
 
 ### Fixed
-- **PyPI wheels now ship a fresh `dazzle-bundle.css` built from the tagged commit's templates (#843).** `src/dazzle_ui/runtime/static/css/dazzle-bundle.css` is gitignored (it's a Tailwind build artifact) and nothing in `publish-pypi.yml` rebuilt it before `python -m build`. On a fresh CI checkout the file was absent, so the wheel shipped a bundle that was either stale (carried over from a previous run) or missing entirely — new Tailwind classes added in template refactors silently dropped from downstream installs. The incident that surfaced this was the UX-031 app-shell refactor (cycle 0.57 → 0.58): classes like `lg:pl-64`, `inset-y-0`, `translate-x-0`, `-translate-x-full` never made it into CyFuture's wheel, collapsing the left sidebar on every workspace page. Fix: `publish-pypi.yml` now installs the package editable, runs `dazzle build-css --output src/dazzle_ui/runtime/static/css/dazzle-bundle.css` against the committed templates, then proceeds to `python -m build`. A post-build guard (`python -m zipfile -l py_dist/dazzle_dsl-*.whl | grep dazzle-bundle.css`) fails the release if the artifact isn't inside the wheel. Regression coverage in `tests/unit/test_publish_workflow.py` pins the step ordering + the grep guard.
+- **PyPI wheels now ship a fresh `dazzle-bundle.css` built from the tagged commit's templates (#843).** `src/dazzle_page/runtime/static/css/dazzle-bundle.css` is gitignored (it's a Tailwind build artifact) and nothing in `publish-pypi.yml` rebuilt it before `python -m build`. On a fresh CI checkout the file was absent, so the wheel shipped a bundle that was either stale (carried over from a previous run) or missing entirely — new Tailwind classes added in template refactors silently dropped from downstream installs. The incident that surfaced this was the UX-031 app-shell refactor (cycle 0.57 → 0.58): classes like `lg:pl-64`, `inset-y-0`, `translate-x-0`, `-translate-x-full` never made it into CyFuture's wheel, collapsing the left sidebar on every workspace page. Fix: `publish-pypi.yml` now installs the package editable, runs `dazzle build-css --output src/dazzle_page/runtime/static/css/dazzle-bundle.css` against the committed templates, then proceeds to `python -m build`. A post-build guard (`python -m zipfile -l py_dist/dazzle_dsl-*.whl | grep dazzle-bundle.css`) fails the release if the artifact isn't inside the wheel. Regression coverage in `tests/unit/test_publish_workflow.py` pins the step ordering + the grep guard.
 
 ### Agent Guidance
 - **Don't remove the `dazzle build-css` step from `publish-pypi.yml` without a replacement.** Wheels need the bundle; the `**/*.css` glob in `pyproject.toml` picks it up only when the file exists on disk at packaging time. The `test_runs_build_css_before_python_build` ratchet fires if someone re-orders or deletes the step.
@@ -25224,7 +25232,7 @@ Patch bump. One UI fix (#842).
 Patch bump. One orphan-wiring fix (#838).
 
 ### Fixed
-- **`TwoFactorConfig` IR type is now composed into `SecurityConfig` and read by the runtime (#838).** The type declared 5 policy fields (`enabled`, `methods`, `otp_length`, `otp_expiry_seconds`, `recovery_code_count`, `enforce_for_roles`) but nothing in `src/` referenced it — same defect shape as #834 and #839. `SecurityConfig` now carries `two_factor: TwoFactorConfig = TwoFactorConfig()`. `dazzle_back.runtime.auth.routes_2fa.create_2fa_routes` accepts a `two_factor_config` parameter and stashes it on `_TwoFaDeps`; the three `generate_recovery_codes()` call sites (TOTP enrolment, email-OTP enrolment, regenerate-codes endpoint) now read `deps.two_factor_config.recovery_code_count` instead of the previous hardcoded 8. `AuthSubsystem` in `src/dazzle_back/runtime/subsystems/auth.py` resolves `ctx.appspec.security.two_factor` at startup and threads it through, falling back to framework defaults when no `SecurityConfig` is present on the AppSpec. IR field-reader-parity baseline in `tests/unit/fixtures/ir_reader_baseline.json` shrinks by one (`recovery_code_count` is no longer orphan). 9 new regression tests in `tests/unit/test_two_factor_config_wiring.py` pin the composition, the create_2fa_routes signature, and the structural ratchet that the handlers read from the config.
+- **`TwoFactorConfig` IR type is now composed into `SecurityConfig` and read by the runtime (#838).** The type declared 5 policy fields (`enabled`, `methods`, `otp_length`, `otp_expiry_seconds`, `recovery_code_count`, `enforce_for_roles`) but nothing in `src/` referenced it — same defect shape as #834 and #839. `SecurityConfig` now carries `two_factor: TwoFactorConfig = TwoFactorConfig()`. `dazzle_http.runtime.auth.routes_2fa.create_2fa_routes` accepts a `two_factor_config` parameter and stashes it on `_TwoFaDeps`; the three `generate_recovery_codes()` call sites (TOTP enrolment, email-OTP enrolment, regenerate-codes endpoint) now read `deps.two_factor_config.recovery_code_count` instead of the previous hardcoded 8. `AuthSubsystem` in `src/dazzle_http/runtime/subsystems/auth.py` resolves `ctx.appspec.security.two_factor` at startup and threads it through, falling back to framework defaults when no `SecurityConfig` is present on the AppSpec. IR field-reader-parity baseline in `tests/unit/fixtures/ir_reader_baseline.json` shrinks by one (`recovery_code_count` is no longer orphan). 9 new regression tests in `tests/unit/test_two_factor_config_wiring.py` pin the composition, the create_2fa_routes signature, and the structural ratchet that the handlers read from the config.
 
 ### Agent Guidance
 - **DSL-level 2FA configuration is the next step.** The parser currently has no `two_factor:` clause — downstream apps configure 2FA policy by constructing a `TwoFactorConfig` in Python and threading it through `AppSpec.security`. A DSL parser clause (e.g. `app my_app: security: two_factor: recovery_code_count: 12`) is a natural follow-up and would slot into `src/dazzle/core/dsl_parser_impl/` plus the linker's `_build_security_config` path.
@@ -25234,7 +25242,7 @@ Patch bump. One orphan-wiring fix (#838).
 Patch bump. One security hardening (#833 Phase 3 of external-resource hardening, closes the phase series).
 
 ### Security
-- **CSP defaults now align with the bundled templates, and the `standard` profile emits CSP (#833).** `src/dazzle_back/runtime/security_middleware.py::_build_csp_header` previously defaulted `script-src`/`style-src`/`font-src` to `'self' 'unsafe-inline'` only — which meant every deployment using `security_profile="strict"` saw broken pages because the bundled shells load from Google Fonts (+ jsdelivr for the mermaid lazy-load in `workspace/regions/diagram.html`). Defaults now whitelist exactly the origins the post-#832 templates actually reach: `fonts.googleapis.com` (style-src), `fonts.gstatic.com` (font-src), `cdn.jsdelivr.net` (script-src). `SecurityHeadersConfig` gains a `csp_report_only: bool` flag; when set, the middleware emits `Content-Security-Policy-Report-Only` instead of the enforcing header so browsers surface violations without breaking pages. The `standard` profile flips from `enable_csp=False` (historical "CSP can break many apps" comment) to `enable_csp=True, csp_report_only=True` — a stepping-stone for apps graduating to `strict` (which is now enforcing, not report-only). IR-level `SecurityConfig.from_profile` (`src/dazzle/core/ir/security.py`) updated in lockstep. 8 new tests in `tests/unit/test_security.py` pin the default directives, the Report-Only behaviour, and the profile-level flags.
+- **CSP defaults now align with the bundled templates, and the `standard` profile emits CSP (#833).** `src/dazzle_http/runtime/security_middleware.py::_build_csp_header` previously defaulted `script-src`/`style-src`/`font-src` to `'self' 'unsafe-inline'` only — which meant every deployment using `security_profile="strict"` saw broken pages because the bundled shells load from Google Fonts (+ jsdelivr for the mermaid lazy-load in `workspace/regions/diagram.html`). Defaults now whitelist exactly the origins the post-#832 templates actually reach: `fonts.googleapis.com` (style-src), `fonts.gstatic.com` (font-src), `cdn.jsdelivr.net` (script-src). `SecurityHeadersConfig` gains a `csp_report_only: bool` flag; when set, the middleware emits `Content-Security-Policy-Report-Only` instead of the enforcing header so browsers surface violations without breaking pages. The `standard` profile flips from `enable_csp=False` (historical "CSP can break many apps" comment) to `enable_csp=True, csp_report_only=True` — a stepping-stone for apps graduating to `strict` (which is now enforcing, not report-only). IR-level `SecurityConfig.from_profile` (`src/dazzle/core/ir/security.py`) updated in lockstep. 8 new tests in `tests/unit/test_security.py` pin the default directives, the Report-Only behaviour, and the profile-level flags.
 
 ### Agent Guidance
 - **When adding new template loads, extend the default CSP directives in one place.** `_build_csp_header` is the single source of truth. The external-resource lint in `tests/unit/test_external_resource_lint.py` plus the CSP-default tests together ratchet both sides — a new CDN load without a matching directive (or vice versa) fails CI.
@@ -25255,7 +25263,7 @@ Patch bump. One orphan-wiring fix (#839).
 Patch bump. One orphan-wiring fix (#834).
 
 ### Fixed
-- **`HotReloadManager` is now wired into `run_unified_server()` (#834).** `src/dazzle_ui/runtime/hot_reload.py` was authored behind the `enable_watch` + `watch_source` config flags but never imported from any runtime path — the flags were marked `# noqa: F841 — reserved for future use` since the Vite→CSS refactor and nothing actually instantiated the manager. `combined_server.py` now constructs a manager when `enable_watch=True` and a single worker is configured, registers the current `(appspec, ui_spec)` pair, starts the file watcher, and tears it down in the `finally` block of the uvicorn loop. The manager is stashed on `app.state.hot_reload_manager` so later SSE endpoints can register reload clients. Multi-worker mode prints a warning and skips the watcher (fork conflict). Regression coverage in `tests/unit/test_hot_reload.py` (10 tests) pins the watcher lifecycle, SSE registration, and the structural fact that `combined_server` imports `HotReloadManager` without `F841` suppressions.
+- **`HotReloadManager` is now wired into `run_unified_server()` (#834).** `src/dazzle_page/runtime/hot_reload.py` was authored behind the `enable_watch` + `watch_source` config flags but never imported from any runtime path — the flags were marked `# noqa: F841 — reserved for future use` since the Vite→CSS refactor and nothing actually instantiated the manager. `combined_server.py` now constructs a manager when `enable_watch=True` and a single worker is configured, registers the current `(appspec, ui_spec)` pair, starts the file watcher, and tears it down in the `finally` block of the uvicorn loop. The manager is stashed on `app.state.hot_reload_manager` so later SSE endpoints can register reload clients. Multi-worker mode prints a warning and skips the watcher (fork conflict). Regression coverage in `tests/unit/test_hot_reload.py` (10 tests) pins the watcher lifecycle, SSE registration, and the structural fact that `combined_server` imports `HotReloadManager` without `F841` suppressions.
 
 ### Agent Guidance
 - **`enable_watch` is now live — multi-worker deployments must keep `workers=1` for the watcher to run.** If you see `--watch is ignored when --workers > 1` at startup, that is expected: fork-based multi-worker mode can't share watcher threads.
@@ -25265,28 +25273,28 @@ Patch bump. One orphan-wiring fix (#834).
 Patch bump. One security hardening (#830 Phase 1 of external-resource hardening).
 
 ### Security
-- **SRI integrity on the remaining CDN load (#830).** `src/dazzle_ui/templates/workspace/regions/diagram.html` dynamically injects mermaid via `document.createElement('script')`. The load is now pinned to `mermaid@11.14.0` (was `mermaid@11`, a floating major-version URL) and carries `script.integrity = "sha384-1CMXl090wj8Dd6YfnzSQUOgWbE6suWCaenYG7pox5AX7apTpY3PmJMeS2oPql4Gk"` + `script.crossOrigin = "anonymous"`. Any corruption on the CDN path or intermediate MITM now fails the integrity check and the browser refuses to execute. Google Fonts CSS (still loaded in both shells) is exempted from SRI because the response is dynamically generated per-User-Agent — documented in `_SRI_EXEMPT_ORIGINS` with a citation to the gap doc. Post-#832, this was the only pinned cross-origin JS load remaining in the shipped templates. Preventive lint extended: `tests/unit/test_external_resource_lint.py` gains three new tests — `test_every_script_link_has_sri`, `test_every_js_injected_script_has_sri`, and `test_every_sri_exempt_entry_has_citation` — which fire if a new cross-origin load lands without SRI or without a documented exemption.
+- **SRI integrity on the remaining CDN load (#830).** `src/dazzle_page/templates/workspace/regions/diagram.html` dynamically injects mermaid via `document.createElement('script')`. The load is now pinned to `mermaid@11.14.0` (was `mermaid@11`, a floating major-version URL) and carries `script.integrity = "sha384-1CMXl090wj8Dd6YfnzSQUOgWbE6suWCaenYG7pox5AX7apTpY3PmJMeS2oPql4Gk"` + `script.crossOrigin = "anonymous"`. Any corruption on the CDN path or intermediate MITM now fails the integrity check and the browser refuses to execute. Google Fonts CSS (still loaded in both shells) is exempted from SRI because the response is dynamically generated per-User-Agent — documented in `_SRI_EXEMPT_ORIGINS` with a citation to the gap doc. Post-#832, this was the only pinned cross-origin JS load remaining in the shipped templates. Preventive lint extended: `tests/unit/test_external_resource_lint.py` gains three new tests — `test_every_script_link_has_sri`, `test_every_js_injected_script_has_sri`, and `test_every_sri_exempt_entry_has_citation` — which fire if a new cross-origin load lands without SRI or without a documented exemption.
 
 ### Agent Guidance
-- **Bumping mermaid requires regenerating the SRI hash.** Compute via `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A` and update both the URL and the `script.integrity` string in `src/dazzle_ui/templates/workspace/regions/diagram.html`. The `test_every_js_injected_script_has_sri` lint will fail if only one is updated.
+- **Bumping mermaid requires regenerating the SRI hash.** Compute via `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A` and update both the URL and the `script.integrity` string in `src/dazzle_page/templates/workspace/regions/diagram.html`. The `test_every_js_injected_script_has_sri` lint will fail if only one is updated.
 
 ## [0.58.6] - 2026-04-22
 
 Patch bump. One security hardening (#832 Phase 2 of external-resource hardening).
 
 ### Security
-- **Removed Tailwind CDN + jsdelivr-mirror-of-GitHub loads from page shells (#832).** Phase 2 of the cycle 300 external-resource-integrity gap doc. `src/dazzle_ui/templates/base.html` and `src/dazzle_ui/templates/site/site_base.html` previously loaded (a) the Tailwind browser JIT runtime as executable JS via `cdn.tailwindcss.com` / `cdn.jsdelivr.net/npm/@tailwindcss/browser@4`, and (b) Dazzle's own compiled dist via `cdn.jsdelivr.net/gh/manwithacat/dazzle@v<version>/dist/...` — both are now removed. `dazzle-bundle.css` (produced by `scripts/build_css.py`) is served from `/static/css/` unconditionally, and the Dazzle design-system CSS / lucide icons come from the local static routes. The `_tailwind_bundled` / `_use_cdn` Jinja globals are no longer consulted by any shipped template (kept set for compatibility with downstream apps that may read them). External-resource allowlist in `tests/unit/test_external_resource_lint.py` narrowed: `cdn.tailwindcss.com` removed entirely; `cdn.jsdelivr.net` reason updated to cite only the remaining consumer (mermaid lazy-load in `workspace/regions/diagram.html`, still Phase 1 SRI territory tracked by #830). The `test_every_allowlist_entry_has_hits` guard ratchets this — any future reintroduction fails CI.
+- **Removed Tailwind CDN + jsdelivr-mirror-of-GitHub loads from page shells (#832).** Phase 2 of the cycle 300 external-resource-integrity gap doc. `src/dazzle_page/templates/base.html` and `src/dazzle_page/templates/site/site_base.html` previously loaded (a) the Tailwind browser JIT runtime as executable JS via `cdn.tailwindcss.com` / `cdn.jsdelivr.net/npm/@tailwindcss/browser@4`, and (b) Dazzle's own compiled dist via `cdn.jsdelivr.net/gh/manwithacat/dazzle@v<version>/dist/...` — both are now removed. `dazzle-bundle.css` (produced by `scripts/build_css.py`) is served from `/static/css/` unconditionally, and the Dazzle design-system CSS / lucide icons come from the local static routes. The `_tailwind_bundled` / `_use_cdn` Jinja globals are no longer consulted by any shipped template (kept set for compatibility with downstream apps that may read them). External-resource allowlist in `tests/unit/test_external_resource_lint.py` narrowed: `cdn.tailwindcss.com` removed entirely; `cdn.jsdelivr.net` reason updated to cite only the remaining consumer (mermaid lazy-load in `workspace/regions/diagram.html`, still Phase 1 SRI territory tracked by #830). The `test_every_allowlist_entry_has_hits` guard ratchets this — any future reintroduction fails CI.
 
 ### Agent Guidance
-- **Do not re-introduce CDN loads in page shells.** Tailwind must be compiled via `build_css.py`; any new vendored JS must live under `src/dazzle_ui/runtime/static/vendor/` and be referenced by the `static_url` filter. The external-resource lint in `tests/unit/test_external_resource_lint.py` enforces this — new allowlist entries require a citation (filed issue, gap doc, or cycle number).
-- **`dazzle-bundle.css` is now a hard prerequisite, not a fallback.** Running `dazzle serve` from a source checkout requires `dazzle build-css` to have emitted `src/dazzle_ui/runtime/static/css/dazzle-bundle.css` (gitignored, built on demand). PyPI installs ship the bundle via `package_data`. Missing bundle → unstyled pages, no runtime crash, no CDN fallback.
+- **Do not re-introduce CDN loads in page shells.** Tailwind must be compiled via `build_css.py`; any new vendored JS must live under `src/dazzle_page/runtime/static/vendor/` and be referenced by the `static_url` filter. The external-resource lint in `tests/unit/test_external_resource_lint.py` enforces this — new allowlist entries require a citation (filed issue, gap doc, or cycle number).
+- **`dazzle-bundle.css` is now a hard prerequisite, not a fallback.** Running `dazzle serve` from a source checkout requires `dazzle build-css` to have emitted `src/dazzle_page/runtime/static/css/dazzle-bundle.css` (gitignored, built on demand). PyPI installs ship the bundle via `package_data`. Missing bundle → unstyled pages, no runtime crash, no CDN fallback.
 
 ## [0.58.5] - 2026-04-22
 
 Patch bump. One bug fix (#831).
 
 ### Fixed
-- **2FA page routes now exist (#831).** `src/dazzle_ui/templates/site/auth/2fa_challenge.html`, `2fa_setup.html`, and `2fa_settings.html` shipped in an earlier cycle as styled templates but no Python page route served them — users could configure 2FA at the backend but had no URL to reach the UI. `create_auth_page_routes` in `src/dazzle_back/runtime/site_routes.py` now registers `GET /2fa/setup`, `GET /2fa/settings`, and `GET /2fa/challenge`. Setup/settings redirect unauthenticated requests to `/login?next=<path>`; the mid-login challenge is public and accepts the pre-login session token via `?session=<token>`. `SiteAuthContext` gains `session_token`, `default_method`, and `methods` fields; `build_site_auth_context` handles three new page types. `create_auth_page_routes` now accepts an optional `get_auth_context` callable, threaded through from `app_factory.py`. Orphan and page-route ratchets in `tests/unit/test_template_orphan_scan.py` and `tests/unit/test_page_route_coverage.py` no longer allowlist the three templates. Regression coverage in `tests/unit/test_2fa_page_routes.py`.
+- **2FA page routes now exist (#831).** `src/dazzle_page/templates/site/auth/2fa_challenge.html`, `2fa_setup.html`, and `2fa_settings.html` shipped in an earlier cycle as styled templates but no Python page route served them — users could configure 2FA at the backend but had no URL to reach the UI. `create_auth_page_routes` in `src/dazzle_http/runtime/site_routes.py` now registers `GET /2fa/setup`, `GET /2fa/settings`, and `GET /2fa/challenge`. Setup/settings redirect unauthenticated requests to `/login?next=<path>`; the mid-login challenge is public and accepts the pre-login session token via `?session=<token>`. `SiteAuthContext` gains `session_token`, `default_method`, and `methods` fields; `build_site_auth_context` handles three new page types. `create_auth_page_routes` now accepts an optional `get_auth_context` callable, threaded through from `app_factory.py`. Orphan and page-route ratchets in `tests/unit/test_template_orphan_scan.py` and `tests/unit/test_page_route_coverage.py` no longer allowlist the three templates. Regression coverage in `tests/unit/test_2fa_page_routes.py`.
 
 ## [0.58.4] - 2026-04-22
 
@@ -25303,14 +25311,14 @@ Patch bump. One framework-correctness fix (#835).
 Patch bump. One security fix (#829).
 
 ### Security
-- **TOTP enrollment no longer leaks the shared secret to a third-party QR service (#829).** The 2FA setup flow previously handed the full `otpauth://` URI — including the base32 TOTP seed — to `api.qrserver.com` via a client-side `<img src=…>`, so every enrollment transmitted the secret to that service in the clear query string. Fix: `_setup_totp` in `src/dazzle_back/runtime/auth/routes_2fa.py` now renders the QR server-side with `segno` and returns it as an inline `data:image/png;base64,…` URI alongside `secret`/`uri`. Template `src/dazzle_ui/templates/site/auth/2fa_setup.html` reads `data.qr_data_uri` directly — the secret never leaves the server. `segno>=1.5` added as a required dependency (pure-Python, zero transitive deps). External-resource allowlist entry for `api.qrserver.com` removed; regression test in `test_2fa_auth.py::TestLoginFlowAsync::test_setup_totp_returns_server_rendered_qr_data_uri` pins the new shape.
+- **TOTP enrollment no longer leaks the shared secret to a third-party QR service (#829).** The 2FA setup flow previously handed the full `otpauth://` URI — including the base32 TOTP seed — to `api.qrserver.com` via a client-side `<img src=…>`, so every enrollment transmitted the secret to that service in the clear query string. Fix: `_setup_totp` in `src/dazzle_http/runtime/auth/routes_2fa.py` now renders the QR server-side with `segno` and returns it as an inline `data:image/png;base64,…` URI alongside `secret`/`uri`. Template `src/dazzle_page/templates/site/auth/2fa_setup.html` reads `data.qr_data_uri` directly — the secret never leaves the server. `segno>=1.5` added as a required dependency (pure-Python, zero transitive deps). External-resource allowlist entry for `api.qrserver.com` removed; regression test in `test_2fa_auth.py::TestLoginFlowAsync::test_setup_totp_returns_server_rendered_qr_data_uri` pins the new shape.
 
 ## [0.58.2] - 2026-04-21
 
 Patch bump. One UI bug fixed (#837).
 
 ### Fixed
-- **filterable_table loading overlay no longer flashes on initial navigation (#837).** Added `x-cloak` attribute to the overlay container in `src/dazzle_ui/templates/components/filterable_table.html`. Previously the SSR'd HTML arrived with the overlay at its default Tailwind `flex` display; Alpine would take ~169ms to hydrate and apply `x-show="loading"` → `display: none`, producing a visible loading flash that agent-QA tools (LLM + Playwright `browser_snapshot`) consistently captured as "stuck Loading". The `[x-cloak]` CSS rule in `dazzle-layer.css` already existed for this exact pattern — the overlay just missed the sweep that added `x-cloak` to the other Alpine-gated components (`search_input`, `search_select`, `table_pagination`, `bulk_actions`). Zero CSS change required. Surfaced by an AegisMark `dazzle qa trial` run.
+- **filterable_table loading overlay no longer flashes on initial navigation (#837).** Added `x-cloak` attribute to the overlay container in `src/dazzle_page/templates/components/filterable_table.html`. Previously the SSR'd HTML arrived with the overlay at its default Tailwind `flex` display; Alpine would take ~169ms to hydrate and apply `x-show="loading"` → `display: none`, producing a visible loading flash that agent-QA tools (LLM + Playwright `browser_snapshot`) consistently captured as "stuck Loading". The `[x-cloak]` CSS rule in `dazzle-layer.css` already existed for this exact pattern — the overlay just missed the sweep that added `x-cloak` to the other Alpine-gated components (`search_input`, `search_select`, `table_pagination`, `bulk_actions`). Zero CSS change required. Surfaced by an AegisMark `dazzle qa trial` run.
 
 ## [0.58.1] - 2026-04-20
 
@@ -25343,7 +25351,7 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
 - **Workspace + surface lint skips framework-synthesised names (#824).** `_lint_workspace_personas`, `_lint_workspace_access_declarations`, and `_lint_list_surface_ux` all skip names starting with `_` — `_platform_admin`, `_admin_metrics`, `_admin_sessions`, etc. Adopters can't fix these from their DSL.
 - **Admin builder produces sortable/filterable defaults (#824 bonus).** `_TIMESTAMP_SUFFIXES` gained `_start`/`_end` so `bucket_start` gets a newest-first sort. New `_CATEGORICAL_FIELD_NAMES` set makes `event_type`, `component`, `topic`, `process_name` recognised as filter candidates.
 - **3 example-app blueprints: 19 strategy-type errors → 0.** simple_task (3), support_tickets (4 + 1 length-cap warning), fieldtest_hub (12). Pattern: `date_relative`/`free_text_lorem`/`uuid_generate` on `ref` → `foreign_key`; `date_relative` on numeric fields → `numeric_range`; `date_relative` on `str` → `static_list`. `dazzle demo verify` on all three: "Blueprint looks healthy." `qa trial --fresh-db` can now actually run against these apps.
-- **`src/dazzle_ui/` fully mypy-clean (28 → 0 errors).** Narrow correctness wraps in `page_routes.py` (`bool()` cast + preference-dict narrowing), `expression_eval.py` (6 comparison returns), `experience_routes.py` (RedirectResponse/HTMLResponse rebind `# type: ignore[assignment]`), `hot_reload.py` (tuple→list). Module-level mypy-plugin suppression on `surface_converter.py` for a Pydantic `populate_by_name=True` false positive (17 sites → 1 annotation).
+- **`src/dazzle_page/` fully mypy-clean (28 → 0 errors).** Narrow correctness wraps in `page_routes.py` (`bool()` cast + preference-dict narrowing), `expression_eval.py` (6 comparison returns), `experience_routes.py` (RedirectResponse/HTMLResponse rebind `# type: ignore[assignment]`), `hot_reload.py` (tuple→list). Module-level mypy-plugin suppression on `surface_converter.py` for a Pydantic `populate_by_name=True` false positive (17 sites → 1 annotation).
 - **`src/dazzle/testing/` fully mypy-clean (7 → 0 errors).**
 
 ### Changed
@@ -25357,7 +25365,7 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
 
 ### Added
 - **Surface `purpose` + per-persona override wiring (EX-048 partial closure).** DSL authors have been writing `ux.purpose: "..."` on surfaces (and `for <persona>: purpose:` inside persona-variant blocks) for many cycles, but the field was silently dropped at compile time — 14+ declarations across contact_manager + fieldtest_hub were invisible at render. This release closes the gap:
-  - `PageContext.page_purpose: str` + `PageContext.persona_purposes: dict[str, str]` added to `src/dazzle_ui/runtime/template_context.py`.
+  - `PageContext.page_purpose: str` + `PageContext.persona_purposes: dict[str, str]` added to `src/dazzle_page/runtime/template_context.py`.
   - New `_extract_surface_purpose()` helper in `template_compiler.py` threaded through all six `return PageContext(...)` sites (list / create / edit / view / review / custom).
   - Request-time persona override resolved in `page_routes._render_response` using the same compile-dict-then-resolve pattern proven for `empty_message` (cycle 240) and `persona_hide` (243) — walks `user_roles` in order, first match wins.
   - `app_shell.html` renders `<p class="dz-page-purpose text-[13px] text-[hsl(var(--muted-foreground))] ..." data-dazzle-purpose>{{ page_purpose }}</p>` as a muted subtitle above the content block when `page_purpose` is truthy; emits nothing when empty.
@@ -25382,16 +25390,16 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
 ## [0.57.97] - 2026-04-19
 
 ### Fixed
-- **Eliminated theme flash-of-light on first paint for returning dark-mode users (UX-056 Q1).** `<html data-theme="light">` was hardcoded in both `site/site_base.html` and `base.html`; `site.js` ran `initTheme()` before `DOMContentLoaded` but the browser had already committed at least one paint with the wrong attribute. Returning dark-mode users saw a brief white flash on every page load. Fix threads theme through the server: `ThemeVariantMiddleware` in `src/dazzle_ui/runtime/theme.py` reads a validated `dz_theme` cookie into a `ContextVar`; `template_renderer.create_jinja_env` registers the reader as the `theme_variant` Jinja global; both layout templates now emit `<html data-theme="{{ theme_variant() }}">`. Unknown/malformed cookie values fall back to `"light"` so a bad cookie can never inject arbitrary attribute strings.
+- **Eliminated theme flash-of-light on first paint for returning dark-mode users (UX-056 Q1).** `<html data-theme="light">` was hardcoded in both `site/site_base.html` and `base.html`; `site.js` ran `initTheme()` before `DOMContentLoaded` but the browser had already committed at least one paint with the wrong attribute. Returning dark-mode users saw a brief white flash on every page load. Fix threads theme through the server: `ThemeVariantMiddleware` in `src/dazzle_page/runtime/theme.py` reads a validated `dz_theme` cookie into a `ContextVar`; `template_renderer.create_jinja_env` registers the reader as the `theme_variant` Jinja global; both layout templates now emit `<html data-theme="{{ theme_variant() }}">`. Unknown/malformed cookie values fall back to `"light"` so a bad cookie can never inject arbitrary attribute strings.
 - **Cross-shell theme sync (UX-048 Q1).** Marketing shell (`site.js` `localStorage.dz-theme-variant`) and in-app shell (Alpine `$persist` `localStorage.dz-dark-mode`) stored theme state in separate keys, so toggling dark on `/` and signing in reverted to light. Both shells now write the shared `dz_theme` cookie on every toggle (marketing: `storePreference()`; in-app: `app_shell.html` Alpine `applyDark()`), and both read the cookie server-side on the next request. Legacy `localStorage` keys remain for backward compatibility but no longer drive cross-shell inconsistency — the cookie is the cross-shell source of truth.
 
 ### Added
-- **`src/dazzle_ui/runtime/theme.py`** — `ThemeVariantMiddleware`, `theme_variant_ctxvar`, `get_theme_variant()`, `install_theme_middleware()`. The cookie name is `dz_theme`; accepted values are `{"light", "dark"}` only; unknown values fall back to `"light"`; the ctxvar resets between requests via `reset(token)` in the middleware's `finally` block so values don't leak across nested Starlette test clients.
+- **`src/dazzle_page/runtime/theme.py`** — `ThemeVariantMiddleware`, `theme_variant_ctxvar`, `get_theme_variant()`, `install_theme_middleware()`. The cookie name is `dz_theme`; accepted values are `{"light", "dark"}` only; unknown values fall back to `"light"`; the ctxvar resets between requests via `reset(token)` in the middleware's `finally` block so values don't leak across nested Starlette test clients.
 - **`tests/unit/test_theme_variant_middleware.py`** — 13 tests covering ContextVar defaults, middleware behaviour over HTTP (default without cookie, `dark`/`light` cookie reads, malformed-cookie rejection, unknown-variant rejection, ctxvar-reset-between-requests), Jinja global registration, site_base.html + base.html template integration, and the `_htmx_partial` branch that skips the `<html>` wrapper entirely.
 
 ### Agent Guidance
 - **Add `<html data-theme="{{ theme_variant() }}">` to any new layout template.** The `theme_variant` Jinja global is registered in `template_renderer.create_jinja_env` and resolves to the per-request variant from `ThemeVariantMiddleware`. Never hardcode `data-theme="light"` — it produces a flash-of-light regression for returning dark-mode users.
-- **JS toggles MUST write the `dz_theme` cookie** alongside any `localStorage` writes. Pattern: `document.cookie = 'dz_theme=<variant>; path=/; max-age=31536000; SameSite=Lax'`. See `src/dazzle_ui/static/js/site.js::storePreference` (marketing) and `src/dazzle_ui/templates/layouts/app_shell.html` Alpine `applyDark()` (in-app) for the canonical shapes.
+- **JS toggles MUST write the `dz_theme` cookie** alongside any `localStorage` writes. Pattern: `document.cookie = 'dz_theme=<variant>; path=/; max-age=31536000; SameSite=Lax'`. See `src/dazzle_page/static/js/site.js::storePreference` (marketing) and `src/dazzle_page/templates/layouts/app_shell.html` Alpine `applyDark()` (in-app) for the canonical shapes.
 
 ## [0.57.96] - 2026-04-19
 
@@ -25407,10 +25415,10 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
   - `site/sections/features.html:8` — `card ... shadow-sm` → canonical card chrome.
 
 ### Added
-- **`tests/unit/test_no_daisyui_residuals.py`** — durable CI lint rule scanning every non-exempt `.html` under `src/dazzle_ui/templates/` for banned DaisyUI tokens inside `class="..."` attributes. Bans the canonical DaisyUI vocabulary (`card`, `menu`, `btn`, `hero`, `skeleton`, `alert`, `badge`, `collapse`, `input`, `link`, `navbar`, `rounded-box`, `bg-base-*`, `text-base-content`) plus their variant prefixes. Explicit exemption for `templates/reports/` (internal dev artefact). 6 tests — 1 scanner + 5 sanity checks (dir exists, ban list self-consistent, `dz-*` always allowed, detector fires on known inputs, exempt paths exist). Runs in ~0.25s. Any future DaisyUI reintroduction fails CI at PR time.
+- **`tests/unit/test_no_daisyui_residuals.py`** — durable CI lint rule scanning every non-exempt `.html` under `src/dazzle_page/templates/` for banned DaisyUI tokens inside `class="..."` attributes. Bans the canonical DaisyUI vocabulary (`card`, `menu`, `btn`, `hero`, `skeleton`, `alert`, `badge`, `collapse`, `input`, `link`, `navbar`, `rounded-box`, `bg-base-*`, `text-base-content`) plus their variant prefixes. Explicit exemption for `templates/reports/` (internal dev artefact). 6 tests — 1 scanner + 5 sanity checks (dir exists, ban list self-consistent, `dz-*` always allowed, detector fires on known inputs, exempt paths exist). Runs in ~0.25s. Any future DaisyUI reintroduction fails CI at PR time.
 
 ### Agent Guidance
-- **No new DaisyUI classes in `src/dazzle_ui/templates/*.html`.** The new lint rule at `tests/unit/test_no_daisyui_residuals.py` enforces this. Use `.dz-*` canonical markers + HSL-variable Tailwind arbitrary values (e.g. `bg-[hsl(var(--card))]`) instead. The ban list is the source of truth in that file — update it (with tests) when adding new tokens to the regime.
+- **No new DaisyUI classes in `src/dazzle_page/templates/*.html`.** The new lint rule at `tests/unit/test_no_daisyui_residuals.py` enforces this. Use `.dz-*` canonical markers + HSL-variable Tailwind arbitrary values (e.g. `bg-[hsl(var(--card))]`) instead. The ban list is the source of truth in that file — update it (with tests) when adding new tokens to the regime.
 
 ## [0.57.95] - 2026-04-19
 
@@ -25486,7 +25494,7 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
 - Fix: the fall-through now builds a `HX-Trigger-After-Swap: {"dz:titleUpdate": page_title}` header whenever the response is a partial and `page_title` is set. Symmetric with the existing `wants_drawer` path. Full-document responses (history-restore) still update the title natively via the `<title>` element.
 
 ### Agent Guidance
-- **The partial-response path sets `HX-Trigger-After-Swap`.** When adding new HTMX page flows, pattern-match the existing `wants_fragment` / `wants_drawer` / fall-through branches in `src/dazzle_ui/runtime/page_routes.py:_page_handler` — all three now emit `dz:titleUpdate` so the browser tab title tracks navigation.
+- **The partial-response path sets `HX-Trigger-After-Swap`.** When adding new HTMX page flows, pattern-match the existing `wants_fragment` / `wants_drawer` / fall-through branches in `src/dazzle_page/runtime/page_routes.py:_page_handler` — all three now emit `dz:titleUpdate` so the browser tab title tracks navigation.
 
 ## [0.57.88] - 2026-04-19
 
@@ -25588,7 +25596,7 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
 
 ### Fixed
 - **403 responses now disclose role requirements (#808).** Previously the framework raised `HTTPException(status_code=403, detail="Forbidden")` and rendered a dead-end 403 page with no actionable information. Dan (SRE persona) in `dazzle qa trial` repeatedly reported this as his worst UX moment — *"I can't recommend a tool where the core alert management functionality simply doesn't work"*, when the real problem was an RBAC-scope mismatch he had no way to diagnose.
-- New helper `_forbidden_detail()` in `dazzle_back.runtime.route_generator` builds a structured detail dict with `entity`, `operation`, `permitted_personas`, and `current_roles` — reading them from the `cedar_access_spec` that's already in scope at each raise site. Three raise sites updated: the per-entity API gate (route_generator.py:910), the list-gate (route_generator.py:1479), and the page-level entity Cedar check (page_routes.py:622 — previously bypassed the exception handler entirely by returning a plain JSONResponse).
+- New helper `_forbidden_detail()` in `dazzle_http.runtime.route_generator` builds a structured detail dict with `entity`, `operation`, `permitted_personas`, and `current_roles` — reading them from the `cedar_access_spec` that's already in scope at each raise site. Three raise sites updated: the per-entity API gate (route_generator.py:910), the list-gate (route_generator.py:1479), and the page-level entity Cedar check (page_routes.py:622 — previously bypassed the exception handler entirely by returning a plain JSONResponse).
 - The exception handler unpacks the dict and passes it to `app/403.html`, which now renders a disclosure panel: *"Entity: Alert · Operation: list · Allowed for: admin, ops_engineer · Your roles: customer"*. A page that was a dead-end is now a signpost.
 - HTMX-triggered 403s get `HX-Retarget: #main-content` + `HX-Reswap: innerHTML` + `HX-Push-Url`, so a 403 from an inline fragment fetch now renders the error page at the page level rather than silently being swallowed (HTMX's default non-2xx handling).
 - 9 unit tests in `test_forbidden_detail.py` pin the helper's behaviour including edge cases (string vs enum operation, dedup across rules, defensive handling of malformed specs).
@@ -25612,7 +25620,7 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
 - **Demo seed data now reads as realistic business data (#809).** The UX seed-payload generator (`dazzle/testing/ux/fixtures.py`) and the Playwright form-filler (`dazzle/testing/ux/runner.py`) previously emitted obviously artificial strings — `"Test first_name 1"`, `"UX first_name 2f828c"`, `"UX Edited Value"` — which trials consistently flagged as *unprofessional*. Both now route through a new shared helper `realistic_str()` in `dazzle/testing/ux/seed_values.py` that uses `faker` with field-name hints: `first_name` → `"Alice"`, `email` → a real-shape email, `title` → a short sentence, `description` → a paragraph. A `realistic_email(entity_name, index)` helper gives emails with a plausible faker-generated local part but pins the domain to `<entity>.test` so per-entity rows remain visually distinct.
 
 ### Changed
-- **`faker>=20.0` is now a required runtime dependency.** Previously conditionally imported in `dazzle_back/demo_data/generator.py`; the same library is now load-bearing for both demo data AND the UX-verify seed/form-fill paths. Treating it as core removes a whole class of "works on my machine" surprises.
+- **`faker>=20.0` is now a required runtime dependency.** Previously conditionally imported in `dazzle_http/demo_data/generator.py`; the same library is now load-bearing for both demo data AND the UX-verify seed/form-fill paths. Treating it as core removes a whole class of "works on my machine" surprises.
 
 ### Agent Guidance
 - Need realistic seed values elsewhere? Import from `dazzle.testing.ux.seed_values` — `realistic_str(field_name, index)` and `realistic_email(entity_name, index)`. Faker is now a hard dep so you can assume it's available.
@@ -25977,7 +25985,7 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
 ### Changed
 - **Honest fragment coverage: 19/19 (not the misleading 31/31).** Audit of the 15 parking-lot fragments registered in `FRAGMENT_REGISTRY` in v0.57.35 revealed that 12 had zero runtime call sites — they were counted as "covered" purely because the scanner was matching their names inside `fragment_registry.py` itself. Only `detail_fields`, `select_result`, and `table_sentinel` had real Python renderers. Two fixes restored honesty:
   1. The coverage scanner now excludes `fragment_registry.py` from the search — enumeration is not rendering.
-  2. A new `PARKING_LOT_FRAGMENTS` frozenset in `src/dazzle_ui/runtime/fragment_registry.py` lists the 12 opt-in primitives (accordion, alert_banner, breadcrumbs, command_palette, context_menu, popover, skeleton_patterns, slide_over, steps_indicator, toast, toggle_group, tooltip_rich). The coverage tool excludes these from the denominator so the metric reflects only fragments the framework actually renders.
+  2. A new `PARKING_LOT_FRAGMENTS` frozenset in `src/dazzle_page/runtime/fragment_registry.py` lists the 12 opt-in primitives (accordion, alert_banner, breadcrumbs, command_palette, context_menu, popover, skeleton_patterns, slide_over, steps_indicator, toast, toggle_group, tooltip_rich). The coverage tool excludes these from the denominator so the metric reflects only fragments the framework actually renders.
 - Overall coverage moves from 71/71 (partially gamed) to **59/59 (honest)**. Category breakdown: display_modes 17/17, dsl_constructs 23/23, fragment_templates 19/19. The CI gate established in v0.57.39 continues to pass because nothing falsely counted has landed between then and now.
 
 ### Added
@@ -26054,13 +26062,13 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
 - **15 parking-lot fragments registered.** Every canonical renderer under `templates/fragments/` (accordion, alert_banner, breadcrumbs, command_palette, context_menu, detail_fields, popover, select_result, skeleton_patterns, slide_over, steps_indicator, table_sentinel, toast, toggle_group, tooltip_rich) now has a `FRAGMENT_REGISTRY` entry so it's discoverable via `get_fragment_info()` and counted as live.
 
 ### Changed
-- **`dazzle coverage` scanner broadened.** Now walks `src/dazzle_ui/`, `src/dazzle_back/`, and `src/dazzle/` — fragments rendered by backend routes (e.g. `select_result.html` from `fragment_routes.py`) are no longer falsely flagged as orphan. Header match now accepts `keyword:` as well as `keyword ` so config-style blocks like `feedback_widget: enabled` register. The curated construct list drops `view`, `graph_edge`, and `graph_node` — those are sub-keywords nested inside other constructs, not top-level dispatchable keywords, and were inflating the denominator with un-closable gaps.
+- **`dazzle coverage` scanner broadened.** Now walks `src/dazzle_page/`, `src/dazzle_http/`, and `src/dazzle/` — fragments rendered by backend routes (e.g. `select_result.html` from `fragment_routes.py`) are no longer falsely flagged as orphan. Header match now accepts `keyword:` as well as `keyword ` so config-style blocks like `feedback_widget: enabled` register. The curated construct list drops `view`, `graph_edge`, and `graph_node` — those are sub-keywords nested inside other constructs, not top-level dispatchable keywords, and were inflating the denominator with un-closable gaps.
 
 ### Fixed
 - **Parser: `display: map` no longer rejected.** `TokenType.MAP` is now in `KEYWORD_AS_IDENTIFIER_TYPES`, so `map` is accepted as an identifier in value position (same treatment as `list`, `grid`, `timeline`, `detail`). The `map()` aggregate continues to parse as before — aggregate detection uses a separate path. This unblocks `DisplayMode.MAP` from being exercised in example DSL.
 
 ### Agent Guidance
-- **Closing coverage gaps means wiring, not just documenting.** When a fragment is orphan, register it in `FRAGMENT_REGISTRY` (`src/dazzle_ui/runtime/fragment_registry.py`) so it's discoverable; that's a real integration point, not a cosmetic fix. When a DSL construct has zero example coverage, add it to the most natural example app — not a fixture under `fixtures/` — so it rides the live QA loop.
+- **Closing coverage gaps means wiring, not just documenting.** When a fragment is orphan, register it in `FRAGMENT_REGISTRY` (`src/dazzle_page/runtime/fragment_registry.py`) so it's discoverable; that's a real integration point, not a cosmetic fix. When a DSL construct has zero example coverage, add it to the most natural example app — not a fixture under `fixtures/` — so it rides the live QA loop.
 - **`dazzle coverage --fail-on-uncovered`** is ready as a CI gate. Once wired, it locks the "every shipped artefact has a live consumer" invariant — any new framework primitive must land with an example using it, or the build fails.
 
 ## [0.57.34] - 2026-04-17
@@ -26120,7 +26128,7 @@ Minor bump. Consolidates a day of fixes shipped since v0.57.98: four GitHub issu
 - **`/smells` check 1.8.** New regression check in `.claude/commands/smells.md` for declarative Alpine `@<event>.window` bindings in templates — each hit is a latent HTMX-morph lifecycle bug waiting to surface (root cause of issue #795).
 
 ### Fixed
-- **Preventive fix: workspace dashboard drag/resize listeners.** `src/dazzle_ui/templates/workspace/_content.html` + `src/dazzle_ui/runtime/static/js/dashboard-builder.js`. Same `@pointermove.window`/`@pointerup.window` pattern as issue #795 (fixed in 007f779e for dzTable). Moved to imperative `addEventListener`/`removeEventListener` pairs in the dashboard component's `init()`/`destroy()`.
+- **Preventive fix: workspace dashboard drag/resize listeners.** `src/dazzle_page/templates/workspace/_content.html` + `src/dazzle_page/runtime/static/js/dashboard-builder.js`. Same `@pointermove.window`/`@pointerup.window` pattern as issue #795 (fixed in 007f779e for dzTable). Moved to imperative `addEventListener`/`removeEventListener` pairs in the dashboard component's `init()`/`destroy()`.
 
 ## [0.57.28] - 2026-04-17
 
@@ -26893,7 +26901,7 @@ See individual patch changelogs below for per-commit detail.
   menagerie mini-arc (cycles 238-242 per the roadmap at
   `dev_docs/framework-gaps/2026-04-15-component-menagerie-roadmap.md`). New
   canonical `render_status_badge` Jinja macro at
-  `src/dazzle_ui/templates/macros/status_badge.html` is now the single source
+  `src/dazzle_page/templates/macros/status_badge.html` is now the single source
   of truth for every enum/state/status rendering across the framework: 5
   semantic tones (`neutral | success | warning | info | destructive`), 2
   sizes (`md` default, `sm` for dense regions), optional bordered variant
@@ -26914,7 +26922,7 @@ See individual patch changelogs below for per-commit detail.
   to the canonical macro: `table_rows.html`, `related_status_cards.html`,
   `related_table_group.html`, `detail_fields.html`, and workspace regions
   `list`, `grid`, `timeline`, `queue`, `bar_chart`, `kanban` (2×), `detail`,
-  `tab_data`, `metrics`. `grep -rn badge_class src/dazzle_ui/templates/`
+  `tab_data`, `metrics`. `grep -rn badge_class src/dazzle_page/templates/`
   returns zero call sites. Cross-app verified on all 5 example apps: zero
   legacy `badge-{ghost,success,warning,info,error}` classes remain in
   rendered output. Closes part of EX-001.
@@ -26945,9 +26953,9 @@ See individual patch changelogs below for per-commit detail.
   `<input type="text">` on every app, because the form-field template had no branch
   for `field.type == "ref"`. Fix: added `ref_entity` + `ref_api` to `FieldContext`,
   auto-populated them in `_build_form_fields` and `_build_form_sections` at
-  `src/dazzle_ui/converters/template_compiler.py` for REF/BELONGS_TO fields with no
+  `src/dazzle_page/converters/template_compiler.py` for REF/BELONGS_TO fields with no
   explicit `source:` override, and added a new `{% elif field.ref_entity %}` branch
-  in `src/dazzle_ui/templates/macros/form_field.html` that renders an Alpine-hydrated
+  in `src/dazzle_page/templates/macros/form_field.html` that renders an Alpine-hydrated
   `<select>` fetching options from the entity's list endpoint (mirrors the existing
   `filter_bar.html` pattern, no new backend route needed). Cross-app verified on all
   5 example apps: simple_task/User, support_tickets/User (agent + customer),
@@ -27016,7 +27024,7 @@ See individual patch changelogs below for per-commit detail.
 - When adding a DSL ref field, there is now a **single** source of
   truth for the relation name surfaced at runtime:
   ``RelationRegistry.from_entities`` in
-  ``src/dazzle_back/runtime/relation_loader.py``. It strips a single
+  ``src/dazzle_http/runtime/relation_loader.py``. It strips a single
   trailing ``_id`` from the field name to produce the relation key and
   keeps the raw field name as ``foreign_key_field``. The entity
   converter no longer emits ``RelationSpec`` entries from ref fields —
@@ -27044,7 +27052,7 @@ See individual patch changelogs below for per-commit detail.
   ``/ux-cycle`` autonomous loop.
 
   The fix introduces ``workspace_allowed_personas`` in
-  ``src/dazzle_ui/converters/workspace_converter.py`` as the **single
+  ``src/dazzle_page/converters/workspace_converter.py`` as the **single
   source of truth** for "who can see this workspace". Both the
   enforcement path in ``page_routes.py`` and the sidebar nav generator
   in ``template_compiler.py`` now call it, so they agree byte-for-byte.
@@ -27086,7 +27094,7 @@ See individual patch changelogs below for per-commit detail.
   include `created_by` would produce a pydantic "Field required"
   validation error on a field the user was never shown. The fix adds
   `inject_current_user_refs` helper in
-  `src/dazzle_back/runtime/route_generator.py` and a new
+  `src/dazzle_http/runtime/route_generator.py` and a new
   `user_ref_fields` parameter on `create_create_handler`. The call site
   in `RouteGenerator.generate_route` computes `user_ref_fields` from
   the existing `entity_ref_targets` map (filtering to targets named
@@ -27182,7 +27190,7 @@ focus order for the next framework work.
   `templates/app/403.html` — which extend `layouts/app_shell.html`
   and render the error markup inside the authenticated sidebar +
   navbar chrome. The exception handler in
-  `src/dazzle_back/runtime/exception_handlers.py` now inspects
+  `src/dazzle_http/runtime/exception_handlers.py` now inspects
   `request.url.path`: if it starts with `/app/` (or is exactly
   `/app`), the in-app variant is rendered; otherwise the existing
   marketing-site variant is rendered. API requests still return JSON
@@ -27316,7 +27324,7 @@ focus order for the next framework work.
   uncontracted patterns to this persona because (a) the seed is empty,
   (b) ops_dashboard's DSL only uses `list` mode regions and not the
   richer region templates (heatmap, funnel, timeline, tree, metrics,
-  progress, diagram, bar_chart) that `src/dazzle_ui/templates/workspace/regions/`
+  progress, diagram, bar_chart) that `src/dazzle_page/templates/workspace/regions/`
   ships with.
 - **Cross-app convergence #3 on the sidebar-403 pattern.** EX-010 in
   ops_dashboard joins EX-002 (support_tickets) and a similar finding
@@ -28313,7 +28321,7 @@ if the session counter is exhausted).
 
 ### Changed
 - **`auth_store` on `app.state`:** The auth subsystem now stashes `auth_store` on `app.state.auth_store` during startup. Route handlers can access the auth store without dependency injection gymnastics. Existing routes that receive auth_store via constructor are unchanged.
-- **UX-036 auth-page series complete — all 7 `site/auth/` templates under macro governance.** Every template in `src/dazzle_ui/templates/site/auth/` now consumes the `auth_page_card` macro from `macros/auth_page_wrapper.html`. Dropped DaisyUI tokens across the series: `card`/`card-body`/`card-title`, `form-control`/`label-text`/`input-bordered`, `btn-primary`/`btn-outline`/`btn-ghost`/`btn-error`/`btn-sm`, `alert-error`/`alert-success`/`alert-warning`, `bg-base-*`, `divider`, `link-primary`/`link-secondary`, `badge badge-lg badge-outline`. Pure Tailwind replacements use HSL CSS variables from `design-system.css`. Inline JS in `2fa_settings.html` and `2fa_setup.html` extracts button class strings into named constants (`BTN_PRIMARY` / `BTN_DESTRUCTIVE` / `BTN_OUTLINE`, `RECOVERY_CODE_CLASSES`) so future tweaks touch one place. Submission handlers now all use CSRF-header-based JS fetches; `method="POST"` removed from form tags.
+- **UX-036 auth-page series complete — all 7 `site/auth/` templates under macro governance.** Every template in `src/dazzle_page/templates/site/auth/` now consumes the `auth_page_card` macro from `macros/auth_page_wrapper.html`. Dropped DaisyUI tokens across the series: `card`/`card-body`/`card-title`, `form-control`/`label-text`/`input-bordered`, `btn-primary`/`btn-outline`/`btn-ghost`/`btn-error`/`btn-sm`, `alert-error`/`alert-success`/`alert-warning`, `bg-base-*`, `divider`, `link-primary`/`link-secondary`, `badge badge-lg badge-outline`. Pure Tailwind replacements use HSL CSS variables from `design-system.css`. Inline JS in `2fa_settings.html` and `2fa_setup.html` extracts button class strings into named constants (`BTN_PRIMARY` / `BTN_DESTRUCTIVE` / `BTN_OUTLINE`, `RECOVERY_CODE_CLASSES`) so future tweaks touch one place. Submission handlers now all use CSRF-header-based JS fetches; `method="POST"` removed from form tags.
 
 ### Agent Guidance
 - **QA Mode workflow**: When building or modifying example apps for human QA testing, the landing page renders a dev-only Personas panel with "Log in as X" buttons. The flow uses real magic links (no auth backdoor). Persona emails follow `{persona_id}@example.test`. Passwords are not set — magic-link login only. See `docs/superpowers/specs/2026-04-12-qa-mode-design.md` for the full security model.
@@ -28408,7 +28416,7 @@ if the session counter is exhausted).
 - **Test suite**: `tests/unit/test_js_quality.py` with ESLint + dist syntax checks, skips gracefully if node/npx unavailable.
 
 ### Fixed
-- **vitest.config.js**: Fixed typo `dazzle_dnr_ui` → `dazzle_ui` in include path.
+- **vitest.config.js**: Fixed typo `dazzle_dnr_ui` → `dazzle_page` in include path.
 
 ## [0.51.13] - 2026-03-29
 
@@ -28553,7 +28561,7 @@ if the session counter is exhausted).
   - `modal.html` component: general-purpose server-loaded modal using native `<dialog>` element
 
 ### Agent Guidance
-- Use `build_breadcrumb_trail(path, overrides)` from `dazzle_back.runtime.breadcrumbs` to derive breadcrumb trails. Pass the result as `crumbs` to the breadcrumbs fragment.
+- Use `build_breadcrumb_trail(path, overrides)` from `dazzle_http.runtime.breadcrumbs` to derive breadcrumb trails. Pass the result as `crumbs` to the breadcrumbs fragment.
 - For accordion lazy-loading, set `endpoint` on a section to trigger HTMX fetch on first open; leave it `None` for static content.
 - Skeleton macros are importable: `{% from "fragments/skeleton_patterns.html" import skeleton_table_rows, skeleton_card, skeleton_detail %}`.
 
@@ -28569,7 +28577,7 @@ if the session counter is exhausted).
   - `base.html`: `#dz-toast-container`, `#dz-modal-slot`, `#dz-dynamic-assets` container elements; conditional vendor asset loading block
 
 ### Agent Guidance
-- Use `with_toast(response, message, level)` from `dazzle_back.runtime.response_helpers` to append auto-dismissing toast notifications to any HTMX response. Use `with_oob()` for generic OOB swaps.
+- Use `with_toast(response, message, level)` from `dazzle_http.runtime.response_helpers` to append auto-dismissing toast notifications to any HTMX response. Use `with_oob()` for generic OOB swaps.
 - Vendor widget libraries register via `window.dz.bridge.registerWidget(type, { mount, unmount })`. The bridge handles HTMX swap lifecycle automatically.
 - `collect_required_assets(surface)` from `asset_manifest.py` returns the set of vendor asset keys a page needs. Pass as `required_assets` in template context.
 
@@ -28738,7 +28746,7 @@ if the session counter is exhausted).
 
 ### Fixed
 - `grammar_gen.write_grammar()`, `docs_gen.write_reference_docs()`, and `docs_gen.inject_readme_feature_table()` now write to project directory (CWD) instead of package directory (ADR-0018, #725)
-- `tenant/provisioner.py` locates alembic dir via `import dazzle_back` for pip install compatibility (#725)
+- `tenant/provisioner.py` locates alembic dir via `import dazzle_http` for pip install compatibility (#725)
 
 ## [0.49.5] - 2026-03-27
 
@@ -28764,7 +28772,7 @@ if the session counter is exhausted).
 ### Fixed
 - `dazzle db revision` now writes migration files to project directory (`.dazzle/migrations/versions/`) instead of the framework's package directory (#724)
 - Alembic config uses `version_locations` to chain framework + project migrations — upgrade/downgrade discovers both
-- Framework alembic directory located via `dazzle_back` package path (works with pip installs, not just editable dev mode)
+- Framework alembic directory located via `dazzle_http` package path (works with pip installs, not just editable dev mode)
 
 ### Agent Guidance
 - **Migration output path**: `dazzle db revision` writes to `.dazzle/migrations/versions/` in the project directory. Framework migrations and project migrations are chained via Alembic's `version_locations`. Never write to the Python package directory.
@@ -28904,7 +28912,7 @@ if the session counter is exhausted).
 ## [0.48.9] - 2026-03-25
 
 ### Changed
-- 6 HIGH-risk module-level mutable singletons in `dazzle_back` consolidated into `RuntimeServices` dataclass on `app.state.services` (#673)
+- 6 HIGH-risk module-level mutable singletons in `dazzle_http` consolidated into `RuntimeServices` dataclass on `app.state.services` (#673)
 - Route handlers access services via `Depends(get_services)`, middleware via `request.app.state.services` (#673)
 - Tests use pytest fixtures creating fresh instances instead of global reset functions (#673)
 
@@ -29031,7 +29039,7 @@ if the session counter is exhausted).
 ## [0.48.0] - 2026-03-24
 
 ### Agent Guidance
-- **Grant-based RBAC**: GrantStore is now PostgreSQL-only with atomic state transitions. Use `has_grant()` in state machine guards. See `src/dazzle_back/runtime/grant_routes.py` for the HTTP API.
+- **Grant-based RBAC**: GrantStore is now PostgreSQL-only with atomic state transitions. Use `has_grant()` in state machine guards. See `src/dazzle_http/runtime/grant_routes.py` for the HTTP API.
 - **Template overrides**: Use `{% extends "dz://base.html" %}` to extend framework templates from project overrides. Plain `{% extends "base.html" %}` causes infinite recursion.
 
 ### Changed
@@ -29112,7 +29120,7 @@ if the session counter is exhausted).
 ## [0.46.5] - 2026-03-23
 
 ### Fixed
-- 77 mypy type errors across `dazzle_back` and `dazzle.core` (Redis async unions, bare `dict` params, missing `column` arg in `make_parse_error`, missing `_build_graph_filter_sql`)
+- 77 mypy type errors across `dazzle_http` and `dazzle.core` (Redis async unions, bare `dict` params, missing `column` arg in `make_parse_error`, missing `_build_graph_filter_sql`)
 - Gitignore `.claude/projects/` local session data
 
 ## [0.46.4] - 2026-03-22
@@ -29129,7 +29137,7 @@ if the session counter is exhausted).
 - `dazzle deploy compose` — generates production docker-compose.yml
 
 ### Removed
-- Container runtime (`dazzle_ui.runtime.container`) — replaced by `dazzle serve --production`
+- Container runtime (`dazzle_page.runtime.container`) — replaced by `dazzle serve --production`
 - `DockerRunner` and Docker template generation — replaced by `dazzle deploy`
 - `dazzle rebuild` command — prints migration message directing to `dazzle deploy dockerfile`
 
@@ -29211,7 +29219,7 @@ if the session counter is exhausted).
 - Workspace action URL interpolation with cross-entity FK fields (#614)
 - Lucide sourcemap 404 in Safari stripped
 - Security test updated for CSRF middleware class rename
-- `/check` and `/ship` mypy targets aligned with CI (src/dazzle_back/)
+- `/check` and `/ship` mypy targets aligned with CI (src/dazzle_http/)
 
 ### Added
 - 15 runtime contract KB entries (display_field, scope, CSRF, request lifecycle, etc.)
@@ -29293,7 +29301,7 @@ if the session counter is exhausted).
 - **`server.py` subsystem migration** — reduced from 2,214 to 936 lines; `IntegrationManager` and `WorkspaceRouteBuilder` moved to standalone modules; circular import with `app_factory.py` eliminated (#535)
 - **Route factory extraction** — all 13 route factory mega-functions (300-784L each) refactored: handlers extracted to module level with `_XxxDeps` dataclasses, factories shrunk to route registration (#536)
 - **Parser nesting depth** — top 4 offenders flattened: `execute_step` (depth 24→dispatch), `_parse_single_step` (22→field parsers), `parse_type_spec` (20→sub-parsers), `handle_runtime_tool` (18→dispatch table) (#537)
-- **`dazzle_back` public API** — `__init__.py` exports 11 symbols via lazy loaders; CLI/MCP no longer reach into `dazzle_back.runtime.*` internals (#539)
+- **`dazzle_http` public API** — `__init__.py` exports 11 symbols via lazy loaders; CLI/MCP no longer reach into `dazzle_http.runtime.*` internals (#539)
 - Duplicated `error_response`/`unknown_op_response` in `handlers_consolidated.py` removed
 - 8 `Any` annotations replaced with concrete `TYPE_CHECKING` types
 - `ViaBinding` and `ViaCondition` added to `ir.__init__.__all__`
@@ -29325,7 +29333,7 @@ if the session counter is exhausted).
 - SQL table name validation in control_plane `_delete_all_rows()` (#519)
 
 ### Changed
-- 14 code smells fixed from systematic analysis (#504–#518): `_sessions` race condition locked, `__self_service__` monkey-patch removed, comparison logic deduplicated across 3 evaluators, 6 `_generate_field_value` implementations consolidated, FastAPI import guards centralized, HTTP error responses standardized, mutable globals protected with locks, core→backend layer boundary restored, dazzle_ui→dazzle_back dependency made one-directional, subsystem plugin infrastructure created, deep nesting reduced in parser/tokenizer/test runner
+- 14 code smells fixed from systematic analysis (#504–#518): `_sessions` race condition locked, `__self_service__` monkey-patch removed, comparison logic deduplicated across 3 evaluators, 6 `_generate_field_value` implementations consolidated, FastAPI import guards centralized, HTTP error responses standardized, mutable globals protected with locks, core→backend layer boundary restored, dazzle_page→dazzle_http dependency made one-directional, subsystem plugin infrastructure created, deep nesting reduced in parser/tokenizer/test runner
 - `DazzleBackendApp` partially decomposed into subsystem plugins (9 modules, 6 dead `_init_*` methods removed)
 
 ### Removed
@@ -29476,8 +29484,8 @@ if the session counter is exhausted).
 
 ### Added
 - `events` extras group (`pip install dazzle-dsl[events]`) for optional event system dependency (aiosqlite)
-- `NullBus` and `NullEventFramework` no-op implementations in `dazzle_back.events.null` — always importable regardless of extras
-- `dazzle_back.events.api` public API boundary module for alternative event bus implementations
+- `NullBus` and `NullEventFramework` no-op implementations in `dazzle_http.events.null` — always importable regardless of extras
+- `dazzle_http.events.api` public API boundary module for alternative event bus implementations
 - Wire `EventEmittingMixin.set_event_framework()` at server startup (fixes dead code bug)
 - Event system imports gated behind `EVENTS_AVAILABLE` flag — apps without event extras stay lean
 
@@ -29522,7 +29530,7 @@ if the session counter is exhausted).
 ## [0.34.0] - 2026-02-23
 
 ### Added
-- `ApiResponseCache` — async Redis cache for external API responses with scoped keys, dedup locking, and lazy connection (`dazzle_back.runtime.api_cache`)
+- `ApiResponseCache` — async Redis cache for external API responses with scoped keys, dedup locking, and lazy connection (`dazzle_http.runtime.api_cache`)
 - `cache:` keyword in integration mapping blocks — per-mapping TTL (e.g. `cache: "24h"`) parsed via `parse_duration()`
 - Fragment route caching — search (5 min TTL) and select (1 hour TTL) endpoints use shared `ApiResponseCache`
 - `cache_ttl` values for all API pack foreign models — data-volatility-appropriate defaults across all 10 packs
@@ -29581,7 +29589,7 @@ if the session counter is exhausted).
 - Polymorphic FK detection for related entity tabs (#321)
 
 ### Changed
-- HTMX utilities (`HtmxDetails`, `htmx_error_response`) moved from `dazzle_back` to `dazzle_ui.runtime.htmx` — correct layer ownership (#329)
+- HTMX utilities (`HtmxDetails`, `htmx_error_response`) moved from `dazzle_http` to `dazzle_page.runtime.htmx` — correct layer ownership (#329)
 - Backward compatibility policy: clean breaks preferred over shims; breaking changes communicated via CHANGELOG (#329)
 
 ### Removed
@@ -29591,7 +29599,7 @@ if the session counter is exhausted).
 
 ### Fixed
 - Last 2 swallowed exceptions in `workspace_rendering.py` now log at WARNING level (#329)
-- Expression evaluator duplication eliminated — shared `dazzle_ui.utils.expression_eval` module (#327)
+- Expression evaluator duplication eliminated — shared `dazzle_page.utils.expression_eval` module (#327)
 - Reduced MCP handler inner catches from 71 to 38 (#327)
 
 ## [0.32.0] - 2026-02-17

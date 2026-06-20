@@ -38,7 +38,7 @@ class TestCombinedStaticFilesLookup:
     """Test lookup_path resolution order."""
 
     def test_resolves_project_file_first(self, project_dir: Path, framework_dir: Path) -> None:
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         combined = CombinedStaticFiles(directories=[project_dir, framework_dir])
         full_path, stat = combined.lookup_path("images/hero.webp")
@@ -48,7 +48,7 @@ class TestCombinedStaticFilesLookup:
         assert full_path == str(project_dir / "images" / "hero.webp")
 
     def test_falls_back_to_framework(self, project_dir: Path, framework_dir: Path) -> None:
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         combined = CombinedStaticFiles(directories=[project_dir, framework_dir])
         full_path, stat = combined.lookup_path("js/dz.js")
@@ -57,7 +57,7 @@ class TestCombinedStaticFilesLookup:
         assert "framework" in full_path
 
     def test_project_shadows_framework(self, project_dir: Path, framework_dir: Path) -> None:
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         combined = CombinedStaticFiles(directories=[project_dir, framework_dir])
         full_path, stat = combined.lookup_path("override.css")
@@ -70,7 +70,7 @@ class TestCombinedStaticFilesLookup:
     def test_nonexistent_file_returns_none_stat(
         self, project_dir: Path, framework_dir: Path
     ) -> None:
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         combined = CombinedStaticFiles(directories=[project_dir, framework_dir])
         _full_path, stat = combined.lookup_path("does-not-exist.txt")
@@ -78,7 +78,7 @@ class TestCombinedStaticFilesLookup:
         assert stat is None
 
     def test_favicon_accessible(self, project_dir: Path, framework_dir: Path) -> None:
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         combined = CombinedStaticFiles(directories=[project_dir, framework_dir])
         full_path, stat = combined.lookup_path("assets/dazzle-favicon.svg")
@@ -88,7 +88,7 @@ class TestCombinedStaticFilesLookup:
 
     def test_skips_nonexistent_extra_dir(self, framework_dir: Path, tmp_path: Path) -> None:
         """Non-existent project dir should be silently skipped."""
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         missing = tmp_path / "does-not-exist"
         combined = CombinedStaticFiles(directories=[missing, framework_dir])
@@ -99,7 +99,7 @@ class TestCombinedStaticFilesLookup:
 
     def test_single_directory(self, framework_dir: Path) -> None:
         """Works with just one directory (no extras)."""
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         combined = CombinedStaticFiles(directories=[framework_dir])
         full_path, stat = combined.lookup_path("js/dz.js")
@@ -107,7 +107,7 @@ class TestCombinedStaticFilesLookup:
         assert stat is not None
 
     def test_leading_slash_stripped(self, project_dir: Path, framework_dir: Path) -> None:
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         combined = CombinedStaticFiles(directories=[project_dir, framework_dir])
         full_path, stat = combined.lookup_path("/images/hero.webp")
@@ -121,7 +121,7 @@ class TestExtraStaticDirsPriority:
 
     def test_extra_dir_shadows_framework(self, tmp_path: Path, framework_dir: Path) -> None:
         """A consumer-supplied static dir should win over framework files."""
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         consumer = tmp_path / "consumer" / "static"
         consumer.mkdir(parents=True)
@@ -137,7 +137,7 @@ class TestExtraStaticDirsPriority:
         self, tmp_path: Path, project_dir: Path, framework_dir: Path
     ) -> None:
         """Priority order: extra_static_dirs > project > framework (issue #793)."""
-        from dazzle.back.runtime.static_files import CombinedStaticFiles
+        from dazzle.http.runtime.static_files import CombinedStaticFiles
 
         consumer = tmp_path / "consumer" / "static"
         consumer.mkdir(parents=True)

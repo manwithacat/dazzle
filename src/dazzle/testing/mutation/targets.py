@@ -33,7 +33,7 @@ class MutationTarget:
 #   connection_crypto 83% | rbac/matrix 69% | csrf 84% | rls_schema 60% | predicate 45%
 SECURITY_TARGETS: tuple[MutationTarget, ...] = (
     MutationTarget(
-        module="src/dazzle/back/runtime/auth/connection_crypto.py",
+        module="src/dazzle/http/runtime/auth/connection_crypto.py",
         tests=(
             "tests/unit/test_connection_crypto.py",
             "tests/unit/test_fuzz_small_parsers.py::TestConnectionCryptoRoundTrip",
@@ -48,7 +48,7 @@ SECURITY_TARGETS: tuple[MutationTarget, ...] = (
         note="static RBAC matrix",
     ),
     MutationTarget(
-        module="src/dazzle/back/runtime/csrf.py",
+        module="src/dazzle/http/runtime/csrf.py",
         tests=(
             "tests/unit/test_csrf_session_binding_phase1.py",
             "tests/unit/test_csrf_origin_gate_phase2.py",
@@ -64,7 +64,7 @@ SECURITY_TARGETS: tuple[MutationTarget, ...] = (
         note="CSRF middleware",
     ),
     MutationTarget(
-        module="src/dazzle/back/runtime/rls_schema.py",
+        module="src/dazzle/http/runtime/rls_schema.py",
         tests=(
             "tests/unit/test_rls_schema.py",
             "tests/integration/test_rls_enforcement_pg.py",
@@ -76,7 +76,7 @@ SECURITY_TARGETS: tuple[MutationTarget, ...] = (
         note="RLS DDL generation (PG-pinned)",
     ),
     MutationTarget(
-        module="src/dazzle/back/runtime/predicate_compiler.py",
+        module="src/dazzle/http/runtime/predicate_compiler.py",
         tests=(
             "tests/unit/test_predicate_compiler.py",
             "tests/integration/test_scope_runtime_pg.py",

@@ -57,8 +57,8 @@
 
 ## Smells Run — 2026-05-28 (first Workflow-based run)
 - Method: `/smells` Workflow (`.claude/workflows/smells.js`), 4 parallel finders, schema-validated. 217k tokens, ~4.5 min.
-- Regressions: 1.2/1.4 clean; 1.1 + 1.5a are grep-count FAILs exonerated by their own details (test-only / all-intentional); 1.5b/1.6/1.7 TRACK. 2 genuine production FAILs: 1.3 (core→mcp function-local import in `core/docs_gen.py:389`), 1.8 (Alpine `@window` bindings in `ui/runtime/static/test-data-table.html` — **was hidden by the old stale `dazzle_ui/templates/` scan path**).
-- New patterns: 15 (top concern: silent IO/JSON-decode swallow, 119 instances). Notable systemic: `back/`→`dazzle.ui.*` coupling (17), `_fastapi_compat` guard duplication (13), enum/state normalization idioms (53 combined), oversized funcs (582)/deep nesting (395)/god classes (56).
+- Regressions: 1.2/1.4 clean; 1.1 + 1.5a are grep-count FAILs exonerated by their own details (test-only / all-intentional); 1.5b/1.6/1.7 TRACK. 2 genuine production FAILs: 1.3 (core→mcp function-local import in `core/docs_gen.py:389`), 1.8 (Alpine `@window` bindings in `ui/runtime/static/test-data-table.html` — **was hidden by the old stale `dazzle_page/templates/` scan path**).
+- New patterns: 15 (top concern: silent IO/JSON-decode swallow, 119 instances). Notable systemic: `back/`→`dazzle.page.*` coupling (17), `_fastapi_compat` guard duplication (13), enum/state normalization idioms (53 combined), oversized funcs (582)/deep nesting (395)/god classes (56).
 - Recommended next 3: (1) 1.3 core→mcp import, (2) `_fastapi_compat` consolidation + AST gate, (3) `load_json_or` util for the 119-instance silent-swallow class.
 - Calibration note for `smells.js`: regression finder should set PASS when all grep hits are test-only/intentional (1.1, 1.5a over-reported FAIL).
 - Commit: 0bcd50ce

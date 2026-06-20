@@ -2,8 +2,8 @@
 
 import pytest
 
-from dazzle.back.runtime.app_factory import build_entity_filter_fields, build_entity_search_fields
-from dazzle.back.runtime.query_builder import QueryBuilder
+from dazzle.http.runtime.app_factory import build_entity_filter_fields, build_entity_search_fields
+from dazzle.http.runtime.query_builder import QueryBuilder
 
 # =============================================================================
 # QueryBuilder search tests

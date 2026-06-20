@@ -259,7 +259,7 @@ class TestBarTrackTemplateWiring:
     the runtime branch to find `bar_track.html`."""
 
     def test_template_map_includes_bar_track(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+        from dazzle.page.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
         assert "BAR_TRACK" in DISPLAY_TEMPLATE_MAP
         assert DISPLAY_TEMPLATE_MAP["BAR_TRACK"] == "workspace/regions/_typed_primitive.html"
@@ -267,7 +267,7 @@ class TestBarTrackTemplateWiring:
     def test_template_file_exists(self) -> None:
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/bar_track.html"
+            / "src/dazzle/page/templates/workspace/regions/bar_track.html"
         )
         assert path.is_file(), "bar_track.html template missing"
 
@@ -277,21 +277,21 @@ class TestBarTrackTemplateWiring:
         slot, not the region itself."""
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/bar_track.html"
+            / "src/dazzle/page/templates/workspace/regions/bar_track.html"
         )
         contents = path.read_text()
         assert "region_card" in contents, "bar_track.html missing region_card wrapper"
         assert "{% call region_card" in contents, "region_card not invoked"
 
     def test_region_context_carries_bar_track_fields(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import RegionContext
+        from dazzle.page.runtime.workspace_renderer import RegionContext
 
         ctx = RegionContext(name="r", track_max=1.0, track_format="{:.0%}")
         assert ctx.track_max == 1.0
         assert ctx.track_format == "{:.0%}"
 
     def test_region_context_defaults(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import RegionContext
+        from dazzle.page.runtime.workspace_renderer import RegionContext
 
         ctx = RegionContext(name="r")
         assert ctx.track_max is None
@@ -304,7 +304,7 @@ class TestBarTrackTemplateWiring:
         from the set, the bar_track region would silently render
         with zero buckets."""
         src = (
-            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_rendering.py"
+            Path(__file__).resolve().parents[2] / "src/dazzle/http/runtime/workspace_rendering.py"
         ).read_text()
         # The set literal must mention BAR_TRACK as a single-dim mode.
         assert '"BAR_TRACK"' in src, "BAR_TRACK missing from single-dim chart modes"

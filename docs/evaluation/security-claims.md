@@ -98,7 +98,7 @@ stated limits) · **Roadmap** (not yet built).
   generated route applies the role's `scope:` predicate as a SQL filter (or a
   pre-read for single-id ops). A row outside the caller's scope yields 404 on a
   single-id op — row existence stays opaque.
-- **Enforced where:** `src/dazzle/back/runtime/audit_wrap.py`
+- **Enforced where:** `src/dazzle/http/runtime/audit_wrap.py`
   (`_build_cedar_handler`) and `scope_filters.py` (`_scoped_pre_read`),
   assembled by `route_generator.py` — the #1361 god-file split extracted
   these handler/filter clusters out of `route_generator.py`.
@@ -130,7 +130,7 @@ stated limits) · **Roadmap** (not yet built).
 - **What it means:** The runtime `AuditLogger` records each access decision
   (allow and deny, with matched policy, user, evaluation time) to the
   `_dazzle_audit_log` PostgreSQL table for entities under `audit:`/`audit_trail`.
-- **Enforced where:** `src/dazzle/back/runtime/audit_log.py`; route hooks in
+- **Enforced where:** `src/dazzle/http/runtime/audit_log.py`; route hooks in
   `route_generator.py`.
 - **Tested where:** `tests/unit/test_audit_log.py`, `test_rbac_audit.py`,
   `test_rbac_audit_integration.py`.
@@ -147,7 +147,7 @@ stated limits) · **Roadmap** (not yet built).
   CSRF token plus an Origin/Referer gate, with the disposition (enforce, exempt,
   report) derived from each route's auth class rather than hand-wired per route.
   The resulting policy is auditable.
-- **Enforced where:** `src/dazzle/back/runtime/csrf.py`; design recorded in
+- **Enforced where:** `src/dazzle/http/runtime/csrf.py`; design recorded in
   ADR-0033 (CSRF as an auth-class disposition).
 - **Tested where:** `tests/unit/test_csrf_disposition_phase3.py`,
   `test_csrf_origin_gate_phase2.py`, `test_csrf_exempt_paths.py`,
@@ -163,7 +163,7 @@ stated limits) · **Roadmap** (not yet built).
   these routes. SAML supports IdP-metadata import, SP-signed AuthnRequests,
   encrypted assertions, and Single-Logout; SCIM supports the /Users, /Groups,
   /ResourceTypes, and /Schemas endpoints.
-- **Enforced where:** `src/dazzle/back/runtime/auth/saml_provider.py`,
+- **Enforced where:** `src/dazzle/http/runtime/auth/saml_provider.py`,
   `saml_routes.py`, `scim_provisioning.py`, `scim_routes.py`; opt-in gate in
   `auth/capability_guard.py`.
 - **Tested where:** `tests/integration/test_saml_routes.py`,
@@ -179,7 +179,7 @@ stated limits) · **Roadmap** (not yet built).
   Membership, with the active membership binding the request's `tenant_id`.
   PostgreSQL row-level security keyed on that discriminator fences tenant rows;
   fencing has been proven against a real database as a non-superuser.
-- **Enforced where:** `src/dazzle/back/runtime/auth/` (membership +
+- **Enforced where:** `src/dazzle/http/runtime/auth/` (membership +
   `current.py`); RLS binding derived from the active membership. The QA-auth
   containment invariant is recorded in ADR-0035.
 - **Tested where:** `tests/integration/test_membership_rls_activation_pg.py`,

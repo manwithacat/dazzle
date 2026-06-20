@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle.back.runtime.workspace_card_data import (
+from dazzle.http.runtime.workspace_card_data import (
     _inject_display_names,
     _resolve_display_name,
 )

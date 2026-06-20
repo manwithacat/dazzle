@@ -13,8 +13,8 @@ from uuid import UUID
 
 import pytest
 
-from dazzle.back.runtime.repository import create_subtype, update_subtype
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+from dazzle.http.runtime.repository import create_subtype, update_subtype
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 
 def _mock_db_manager() -> MagicMock:

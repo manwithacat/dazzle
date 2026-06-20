@@ -1,11 +1,11 @@
-"""Tests for dazzle_back.runtime.totp — TOTP generation and verification."""
+"""Tests for dazzle_http.runtime.totp — TOTP generation and verification."""
 
 import base64
 import re
 
 import pytest
 
-from dazzle.back.runtime.totp import (
+from dazzle.http.runtime.totp import (
     generate_totp,
     generate_totp_secret,
     get_totp_uri,

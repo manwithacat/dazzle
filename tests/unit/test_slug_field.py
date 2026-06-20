@@ -14,22 +14,22 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from dazzle.back.converters.entity_converter import _extract_validators
-from dazzle.back.runtime.model_generator import generate_create_schema
-from dazzle.back.runtime.slug_validator import (
+from dazzle.core import ir
+from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.http.converters.entity_converter import _extract_validators
+from dazzle.http.runtime.model_generator import generate_create_schema
+from dazzle.http.runtime.slug_validator import (
     SLUG_MAX_LEN,
     SLUG_MIN_LEN,
     validate_slug,
 )
-from dazzle.back.specs.entity import (
+from dazzle.http.specs.entity import (
     EntitySpec,
     FieldSpec,
     FieldType,
     ScalarType,
     ValidatorKind,
 )
-from dazzle.core import ir
-from dazzle.core.dsl_parser_impl import parse_dsl
 
 # ---------------------------------------------------------------------------
 # Parser

@@ -37,7 +37,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_CSS_ROOTS = [Path("src/dazzle_ui/runtime/static/css")]
+DEFAULT_CSS_ROOTS = [Path("src/dazzle_page/runtime/static/css")]
 TOLERANCE_PX = 0.5
 REM_BASE_PX = 16.0
 NORMAL_LINE_HEIGHT_MULTIPLIER = 1.2

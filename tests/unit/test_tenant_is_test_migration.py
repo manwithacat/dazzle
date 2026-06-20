@@ -15,7 +15,7 @@ from alembic.operations import Operations
 from sqlalchemy import inspect as sa_inspect
 
 _MIGRATION = (
-    Path(__file__).resolve().parents[2] / "src/dazzle/back/alembic/versions/0006_tenant_is_test.py"
+    Path(__file__).resolve().parents[2] / "src/dazzle/http/alembic/versions/0006_tenant_is_test.py"
 )
 
 

@@ -214,7 +214,7 @@ workspace dash "Dash":
 )
 class TestConfirmActionPanelRuntimeWiring:
     def test_display_template_map_includes_confirm_action_panel(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+        from dazzle.page.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
         assert "CONFIRM_ACTION_PANEL" in DISPLAY_TEMPLATE_MAP
         assert (
@@ -225,12 +225,12 @@ class TestConfirmActionPanelRuntimeWiring:
     def test_template_file_exists(self) -> None:
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/confirm_action_panel.html"
+            / "src/dazzle/page/templates/workspace/regions/confirm_action_panel.html"
         )
         assert path.is_file()
 
     def test_region_context_default_empty(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import RegionContext
+        from dazzle.page.runtime.workspace_renderer import RegionContext
 
         ctx = RegionContext(name="r")
         assert ctx.confirmations == []
@@ -242,7 +242,7 @@ class TestConfirmActionPanelRuntimeWiring:
         assert ctx.audit_enabled is False
 
     def test_region_context_carries_fields(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import RegionContext
+        from dazzle.page.runtime.workspace_renderer import RegionContext
 
         ctx = RegionContext(
             name="r",
@@ -268,7 +268,7 @@ class TestConfirmActionPanelTemplateBranches:
     def _text(self) -> str:
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/confirm_action_panel.html"
+            / "src/dazzle/page/templates/workspace/regions/confirm_action_panel.html"
         )
         return path.read_text()
 
@@ -310,7 +310,7 @@ class TestConfirmActionPanelTemplateBranches:
         assert "dzConfirmGate" in text
         # And the JS component must be registered
         js_path = (
-            Path(__file__).resolve().parents[2] / "src/dazzle/ui/runtime/static/js/dz-alpine.js"
+            Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/js/dz-alpine.js"
         )
         js_text = js_path.read_text()
         assert 'Alpine.data("dzConfirmGate"' in js_text

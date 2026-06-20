@@ -933,12 +933,12 @@ class BaselineManager:
                 from importlib import resources
 
                 with resources.as_file(
-                    resources.files("dazzle_back") / "alembic.ini"
+                    resources.files("dazzle_http") / "alembic.ini"
                 ) as path:
                     alembic_ini = Path(str(path))
             except Exception as e:
                 raise BaselineKeyError(
-                    f"no alembic.ini in project and dazzle_back fallback failed: {e}"
+                    f"no alembic.ini in project and dazzle_http fallback failed: {e}"
                 ) from e
 
         try:

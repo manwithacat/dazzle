@@ -25,8 +25,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-pytest.importorskip("dazzle.back.runtime.site_routes")
-from dazzle.back.runtime.site_routes import create_site_page_routes  # noqa: E402
+pytest.importorskip("dazzle.http.runtime.site_routes")
+from dazzle.http.runtime.site_routes import create_site_page_routes  # noqa: E402
 
 _MIN_SITESPEC = {
     "version": 1,
@@ -82,9 +82,9 @@ def test_legacy_page_html_template_is_retired() -> None:
     no longer consults the flag — it always uses the typed path."""
     from pathlib import Path
 
-    page_html = Path("src/dazzle/ui/templates/site/page.html")
+    page_html = Path("src/dazzle/page/templates/site/page.html")
     assert not page_html.exists()
-    src = Path("src/dazzle/back/runtime/site_routes.py").read_text(encoding="utf-8")
+    src = Path("src/dazzle/http/runtime/site_routes.py").read_text(encoding="utf-8")
     assert 'render_site_page("site/page.html"' not in src
 
 

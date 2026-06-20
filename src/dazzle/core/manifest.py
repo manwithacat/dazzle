@@ -677,7 +677,7 @@ class ProjectManifest:
     # first paint regardless of any stale cookie state.
     app_theme: str | None = None  # v0.61.36: app-shell theme preset (overrides
     # the default shadcn-zinc tokens with an alternate :root block). One of
-    # the presets shipped in src/dazzle/ui/runtime/static/css/themes/<name>.css
+    # the presets shipped in src/dazzle/page/runtime/static/css/themes/<name>.css
     # — e.g. "linear-dark", "paper", "stripe". None = default theme.
     # Distinct from [theme] which covers site/marketing-page tokens.
     haptic: bool = False  # #958 cycle 5 — haptic opt-in. When True, the

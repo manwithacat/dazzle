@@ -191,7 +191,7 @@ class TestVisibleConditionEvaluation:
         ],
     )
     def test_evaluate_visible_condition(self, cond_dict: dict, ctx: dict, expected: bool) -> None:
-        from dazzle.back.runtime.condition_evaluator import evaluate_condition
+        from dazzle.http.runtime.condition_evaluator import evaluate_condition
 
         assert evaluate_condition(cond_dict, {}, ctx) is expected
 
@@ -222,7 +222,7 @@ class TestRelatedTabVisibility:
 
     def test_tab_hidden_when_role_mismatch(self):
         """Tab with visible_condition is hidden for unauthorized roles."""
-        from dazzle.back.runtime.condition_evaluator import evaluate_condition
+        from dazzle.http.runtime.condition_evaluator import evaluate_condition
         from dazzle.render.context import RelatedTabContext
 
         cond = {"role_check": {"role_name": "admin"}}
@@ -246,7 +246,7 @@ class TestRelatedTabVisibility:
 
     def test_tab_visible_when_role_matches(self):
         """Tab with visible_condition stays visible for authorized roles."""
-        from dazzle.back.runtime.condition_evaluator import evaluate_condition
+        from dazzle.http.runtime.condition_evaluator import evaluate_condition
         from dazzle.render.context import RelatedTabContext
 
         cond = {"role_check": {"role_name": "admin"}}

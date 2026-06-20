@@ -1,6 +1,6 @@
 """Tests for breadcrumb trail derivation."""
 
-from dazzle.back.runtime.breadcrumbs import Crumb, build_breadcrumb_trail
+from dazzle.http.runtime.breadcrumbs import Crumb, build_breadcrumb_trail
 
 
 class TestBuildBreadcrumbTrail:

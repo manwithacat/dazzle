@@ -50,8 +50,8 @@ class TestTokenStoreInit:
         ],
     )
     def test_init(self, kwargs: dict, attr: str, expected) -> None:
-        with patch("dazzle.back.runtime.token_store.TokenStore._init_db"):
-            from dazzle.back.runtime.token_store import TokenStore
+        with patch("dazzle.http.runtime.token_store.TokenStore._init_db"):
+            from dazzle.http.runtime.token_store import TokenStore
 
             store = TokenStore(**kwargs)
             assert getattr(store, attr) == expected
@@ -71,8 +71,8 @@ class TestTokenStorePostgresInit:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("dazzle.back.runtime.token_store.TokenStore._init_db"):
-            from dazzle.back.runtime.token_store import TokenStore
+        with patch("dazzle.http.runtime.token_store.TokenStore._init_db"):
+            from dazzle.http.runtime.token_store import TokenStore
 
             store = TokenStore(database_url="postgresql://localhost/test")
 
@@ -90,8 +90,8 @@ class TestTokenStorePostgresInit:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("dazzle.back.runtime.token_store.TokenStore._init_db"):
-            from dazzle.back.runtime.token_store import TokenStore
+        with patch("dazzle.http.runtime.token_store.TokenStore._init_db"):
+            from dazzle.http.runtime.token_store import TokenStore
 
             store = TokenStore(database_url="postgresql://localhost/test")
 
@@ -109,8 +109,8 @@ class TestTokenStorePostgresInit:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("dazzle.back.runtime.token_store.TokenStore._init_db"):
-            from dazzle.back.runtime.token_store import TokenStore
+        with patch("dazzle.http.runtime.token_store.TokenStore._init_db"):
+            from dazzle.http.runtime.token_store import TokenStore
 
             store = TokenStore(database_url="postgresql://localhost/test")
 

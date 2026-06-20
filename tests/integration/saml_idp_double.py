@@ -36,7 +36,7 @@ class SamlIdpDouble:
     ``idp_x509_cert`` so the SP validates these messages for real."""
 
     def __init__(self, *, entity_id: str, slo_url: str) -> None:
-        from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+        from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
         self.entity_id = entity_id
         self.slo_url = slo_url

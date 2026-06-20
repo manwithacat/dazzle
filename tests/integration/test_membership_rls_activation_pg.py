@@ -48,9 +48,9 @@ def scratch_url() -> Iterator[str]:
 
 
 def _appspec_and_md():
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
     from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 
     appspec = load_project_appspec(_PROJECT_ROOT)
     pk = appspec.tenancy.isolation.partition_key
@@ -62,7 +62,7 @@ def _appspec_and_md():
 
 
 def _make(scratch_url: str):
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     appspec, md, pk, scoped = _appspec_and_md()
     engine = sa.create_engine(
@@ -127,7 +127,7 @@ def _conn_url(scratch_url: str, role: str, password: str) -> str:
 
 
 def test_membership_fences_rls_data_as_non_superuser(scratch_url: str) -> None:
-    from dazzle.back.runtime.rls_schema import build_rls_policy_ddl
+    from dazzle.http.runtime.rls_schema import build_rls_policy_ddl
 
     appspec, _md, pk, scoped, store = _make(scratch_url)
 

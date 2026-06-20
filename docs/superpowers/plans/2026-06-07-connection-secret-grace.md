@@ -24,7 +24,7 @@ then an independent adversarial review before ship (security-sensitive auth).
 ### Task 1: `secret_rotation.py` — duration parser, event constants, audit DDL
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/secret_rotation.py`
+- Create: `src/dazzle/http/runtime/auth/secret_rotation.py`
 - Test: `tests/unit/test_secret_rotation.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -37,7 +37,7 @@ from datetime import timedelta
 
 import pytest
 
-from dazzle.back.runtime.auth.secret_rotation import parse_grace_duration
+from dazzle.http.runtime.auth.secret_rotation import parse_grace_duration
 
 
 def test_parse_grace_duration_units() -> None:
@@ -60,7 +60,7 @@ Run: `pytest tests/unit/test_secret_rotation.py -q`
 - [ ] **Step 3: Implement the module**
 
 ```python
-# src/dazzle/back/runtime/auth/secret_rotation.py
+# src/dazzle/http/runtime/auth/secret_rotation.py
 """Connection secret-rotation helpers (#1342 — grace window + audit).
 
 Pure, store-free: the grace-duration parser used by the rotate CLI, the audit
@@ -127,7 +127,7 @@ Run: `pytest tests/unit/test_secret_rotation.py -q`
 
 ### Task 2: `ConnectionSecretEvent` dataclass
 
-**Files:** Modify `src/dazzle/back/runtime/auth/connections.py` (after `ConnectionRecord`).
+**Files:** Modify `src/dazzle/http/runtime/auth/connections.py` (after `ConnectionRecord`).
 
 - [ ] **Step 1: Add the frozen dataclass**
 
@@ -152,7 +152,7 @@ class ConnectionSecretEvent:
 
 ### Task 3: Alembic `0012_connection_grace_secret`
 
-**Files:** Create `src/dazzle/back/alembic/versions/0012_connection_grace_secret.py`
+**Files:** Create `src/dazzle/http/alembic/versions/0012_connection_grace_secret.py`
 
 - [ ] **Step 1: Write the migration (idempotent, mirrors 0009/0011)**
 
@@ -225,7 +225,7 @@ def downgrade() -> None:
         op.drop_column("connections", "previous_encrypted_secret")
 ```
 
-- [ ] **Step 2: Verify the head chains** — `cd src/dazzle/back/alembic && python -c "import os;print([f for f in os.listdir('versions') if '0012' in f])"` (sanity); the migration test (Task 7) proves apply.
+- [ ] **Step 2: Verify the head chains** — `cd src/dazzle/http/alembic && python -c "import os;print([f for f in os.listdir('versions') if '0012' in f])"` (sanity); the migration test (Task 7) proves apply.
 
 - [ ] **Step 3: Commit** — `feat(db): alembic 0012 connection grace secret + rotation audit (#1342)`
 
@@ -233,8 +233,8 @@ def downgrade() -> None:
 
 ### Task 4: `_init_db` mirror + `CONNECTIONS_DDL`
 
-**Files:** Modify `src/dazzle/back/runtime/auth/connections.py` (DDL) and
-`src/dazzle/back/runtime/auth/store.py` (`_init_db`).
+**Files:** Modify `src/dazzle/http/runtime/auth/connections.py` (DDL) and
+`src/dazzle/http/runtime/auth/store.py` (`_init_db`).
 
 - [ ] **Step 1: Add the two columns to `CONNECTIONS_DDL`** (connections.py) — append after
 `encrypted_secret TEXT,`:
@@ -264,7 +264,7 @@ def downgrade() -> None:
                         exc_info=True,
                     )
             # #1342 rotation audit (append-only). Mirrors alembic 0012.
-            from dazzle.back.runtime.auth.secret_rotation import (
+            from dazzle.http.runtime.auth.secret_rotation import (
                 CONNECTION_SECRET_EVENTS_DDL,
                 CONNECTION_SECRET_EVENTS_INDEXES,
             )
@@ -285,7 +285,7 @@ explicit literal statements.)
 
 ### Task 5: Store methods + grace-aware verification + rewrap
 
-**Files:** Modify `src/dazzle/back/runtime/auth/store.py`. Test:
+**Files:** Modify `src/dazzle/http/runtime/auth/store.py`. Test:
 `tests/integration/test_connections_pg.py`.
 
 - [ ] **Step 1: Write the failing PG integration tests** (append to test_connections_pg.py).
@@ -404,8 +404,8 @@ Run: `DATABASE_URL=postgresql://localhost/dazzle_dev pytest tests/integration/te
         ``rotated`` audit event (non-secret detail). Returns True if a row changed."""
         import json
 
-        from dazzle.back.runtime.auth.connection_crypto import encrypt_secret
-        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_ROTATED
+        from dazzle.http.runtime.auth.connection_crypto import encrypt_secret
+        from dazzle.http.runtime.auth.secret_rotation import SECRET_EVENT_ROTATED
 
         now_dt = datetime.now(UTC)
         now = now_dt.isoformat()
@@ -454,7 +454,7 @@ Run: `DATABASE_URL=postgresql://localhost/dazzle_dev pytest tests/integration/te
     ) -> bool:
         """Clear the grace (previous) secret immediately + audit. Returns True iff a
         previous secret was present (idempotent: False when there's nothing to revoke)."""
-        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_REVOKED_PREVIOUS
+        from dazzle.http.runtime.auth.secret_rotation import SECRET_EVENT_REVOKED_PREVIOUS
 
         now = datetime.now(UTC).isoformat()
         with self._transaction() as cur:
@@ -488,7 +488,7 @@ Run: `DATABASE_URL=postgresql://localhost/dazzle_dev pytest tests/integration/te
     ) -> "list[ConnectionSecretEvent]":  # noqa: F821
         import json
 
-        from dazzle.back.runtime.auth.connections import ConnectionSecretEvent
+        from dazzle.http.runtime.auth.connections import ConnectionSecretEvent
 
         rows = self._execute(
             "SELECT * FROM connection_secret_events WHERE connection_id = %s ORDER BY seq DESC",
@@ -504,7 +504,7 @@ Run: `DATABASE_URL=postgresql://localhost/dazzle_dev pytest tests/integration/te
         ]
 ```
 
-Add `from dazzle.back.runtime.auth.connections import ConnectionSecretEvent` to the
+Add `from dazzle.http.runtime.auth.connections import ConnectionSecretEvent` to the
 TYPE_CHECKING block (mirrors how `RewrapResult`/`ConnectionRecord` are imported).
 
 - [ ] **Step 4: Extend `get_scim_connection_by_bearer` for grace.** After the current-bearer
@@ -515,7 +515,7 @@ compare inside the loop, add:
             prev_blob = row.get("previous_encrypted_secret")
             prev_exp = row.get("previous_secret_expires_at")
             if prev_blob and prev_exp:
-                from dazzle.back.runtime.auth.connection_crypto import (
+                from dazzle.http.runtime.auth.connection_crypto import (
                     ConnectionSecretError,
                     decrypt_secret,
                 )
@@ -551,7 +551,7 @@ Rewrite the loop to select + rewrap both blobs and write a `encryption_key_rewra
 per connection actually rewrapped:
 
 ```python
-        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_KEY_REWRAPPED
+        from dazzle.http.runtime.auth.secret_rotation import SECRET_EVENT_KEY_REWRAPPED
         ...
         for row in self._execute(
             "SELECT id, tenant_id, encrypted_secret, previous_encrypted_secret "
@@ -694,7 +694,7 @@ Inside the body, after the type dispatch builds `new_secrets`/`new_bearer`:
                           "OIDC client_secret; recreate SAML).[/red]")
             raise typer.Exit(code=1)
         try:
-            from dazzle.back.runtime.auth.secret_rotation import parse_grace_duration
+            from dazzle.http.runtime.auth.secret_rotation import parse_grace_duration
             grace_td = parse_grace_duration(grace)
         except ValueError as exc:
             console.print(f"[red]Invalid --grace: {exc}[/red]")

@@ -20,10 +20,10 @@ LogoutResponse; advertises the SLS in SP metadata. No schema change.
 
 ## File Structure
 
-- Modify `src/dazzle/back/runtime/auth/saml_provider.py` — `SamlLogout` result, `_sls_url`,
+- Modify `src/dazzle/http/runtime/auth/saml_provider.py` — `SamlLogout` result, `_sls_url`,
   `_slo_settings`, `process_logout`, `_logout_request_nameid` seam, SLS in
   `_sp_only_settings`.
-- Modify `src/dazzle/back/runtime/auth/saml_routes.py` — the `/auth/saml/sls` route.
+- Modify `src/dazzle/http/runtime/auth/saml_routes.py` — the `/auth/saml/sls` route.
 - Modify `tests/unit/test_saml_provider.py`, `tests/integration/test_saml_routes.py`,
   `tests/unit/test_saml_metadata.py` (or provider metadata test).
 
@@ -31,7 +31,7 @@ LogoutResponse; advertises the SLS in SP metadata. No schema change.
 
 ### Task 1: Provider — SLO settings, process_logout, NameID seam
 
-**Files:** Modify `src/dazzle/back/runtime/auth/saml_provider.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/saml_provider.py`
 
 - [ ] **Step 1: Add the result type + SLS path constant** near the top (after `_ACS_PATH`
 / the other module constants):
@@ -211,7 +211,7 @@ Run it → PASS.
 
 ### Task 2: Route — `/auth/saml/sls`
 
-**Files:** Modify `src/dazzle/back/runtime/auth/saml_routes.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/saml_routes.py`
 
 - [ ] **Step 1: Write failing route tests** (append to
 `tests/integration/test_saml_routes.py`; follow the existing faked-provider pattern in that
@@ -228,7 +228,7 @@ def test_sls_kills_org_sessions_for_nameid(monkeypatch, saml_app_client) -> None
     monkeypatch.setattr(store, "delete_sessions_for_membership", lambda mid: killed.append(mid))
     # fake the provider so no real signed XML is needed
     monkeypatch.setattr(
-        "dazzle.back.runtime.auth.saml_routes.resolve_provider",
+        "dazzle.http.runtime.auth.saml_routes.resolve_provider",
         lambda c: _FakeLogoutProvider(name_id="jane@acme.test", redirect="https://idp/slo?x"),
     )
     r = client.get(f"/auth/saml/sls?connection={conn.id}&SAMLRequest=abc", follow_redirects=False)
@@ -242,7 +242,7 @@ def test_sls_validation_error_kills_nothing(monkeypatch, saml_app_client) -> Non
     killed: list = []
     monkeypatch.setattr(store, "delete_sessions_for_membership", lambda mid: killed.append(mid))
     monkeypatch.setattr(
-        "dazzle.back.runtime.auth.saml_routes.resolve_provider",
+        "dazzle.http.runtime.auth.saml_routes.resolve_provider",
         lambda c: _FakeLogoutProvider(raises=True),
     )
     r = client.get(f"/auth/saml/sls?connection={conn.id}&SAMLRequest=forged",
@@ -312,7 +312,7 @@ the helpers already present rather than re-inventing them.)
         response.delete_cookie("dazzle_csrf")
         return response
 ```
-Add imports at the top of `saml_routes.py`: `from dazzle.back.runtime.auth.cookie_name import
+Add imports at the top of `saml_routes.py`: `from dazzle.http.runtime.auth.cookie_name import
 names_to_clear` (confirm the symbol; it is used by the local logout) and ensure `Response`,
 `RedirectResponse`, `Query`, `Annotated` are imported (most already are).
 

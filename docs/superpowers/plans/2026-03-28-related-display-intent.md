@@ -20,12 +20,12 @@
 | Modify | `src/dazzle/core/dsl_parser_impl/surface.py` | Parse `related` blocks |
 | Modify | `src/dazzle/core/linker_impl.py` | Validate related group references |
 | Modify | `src/dazzle/core/ir/triples.py` | Add `related_groups` to `VerifiableTriple` |
-| Modify | `src/dazzle_ui/runtime/template_context.py` | Add `RelatedGroupContext`, update `DetailContext` |
-| Modify | `src/dazzle_ui/converters/template_compiler.py` | Group related tabs into `RelatedGroupContext` |
-| Modify | `src/dazzle_ui/templates/components/detail_view.html` | Two-level group/mode dispatch |
-| Create | `src/dazzle_ui/templates/fragments/related_table_group.html` | Extracted tab-switching table (existing behavior) |
-| Create | `src/dazzle_ui/templates/fragments/related_status_cards.html` | Status card grid fragment |
-| Create | `src/dazzle_ui/templates/fragments/related_file_list.html` | File list fragment |
+| Modify | `src/dazzle_page/runtime/template_context.py` | Add `RelatedGroupContext`, update `DetailContext` |
+| Modify | `src/dazzle_page/converters/template_compiler.py` | Group related tabs into `RelatedGroupContext` |
+| Modify | `src/dazzle_page/templates/components/detail_view.html` | Two-level group/mode dispatch |
+| Create | `src/dazzle_page/templates/fragments/related_table_group.html` | Extracted tab-switching table (existing behavior) |
+| Create | `src/dazzle_page/templates/fragments/related_status_cards.html` | Status card grid fragment |
+| Create | `src/dazzle_page/templates/fragments/related_file_list.html` | File list fragment |
 | Modify | `tests/unit/test_parser.py` | Parser + IR type tests for `related` blocks |
 | Modify | `tests/unit/test_template_compiler.py` | Linker validation, triple, and template compiler tests |
 
@@ -752,14 +752,14 @@ git commit -m "feat(triples): add related_groups to VerifiableTriple"
 ### Task 6: Add `RelatedGroupContext` and update `DetailContext`
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/template_context.py:142-196` (add new model, update `DetailContext`)
+- Modify: `src/dazzle_page/runtime/template_context.py:142-196` (add new model, update `DetailContext`)
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 def test_related_group_context_model(self):
     """RelatedGroupContext wraps RelatedTabContext with display mode."""
-    from dazzle_ui.runtime.template_context import RelatedGroupContext, RelatedTabContext
+    from dazzle_page.runtime.template_context import RelatedGroupContext, RelatedTabContext
 
     tab = RelatedTabContext(
         tab_id="tab-tax-return",
@@ -787,7 +787,7 @@ Expected: FAIL with `ImportError: cannot import name 'RelatedGroupContext'`
 
 - [ ] **Step 3: Add `RelatedGroupContext` to `template_context.py`**
 
-In `src/dazzle_ui/runtime/template_context.py`, after `RelatedTabContext` (around line 161), add:
+In `src/dazzle_page/runtime/template_context.py`, after `RelatedTabContext` (around line 161), add:
 
 ```python
 class RelatedGroupContext(BaseModel):
@@ -822,7 +822,7 @@ Expected: PASS
 - [ ] **Step 6: Commit (tests will be broken — template compiler and existing tests still use `related_tabs`)**
 
 ```bash
-git add src/dazzle_ui/runtime/template_context.py tests/unit/test_template_compiler.py
+git add src/dazzle_page/runtime/template_context.py tests/unit/test_template_compiler.py
 git commit -m "feat(context): add RelatedGroupContext, update DetailContext"
 ```
 
@@ -831,8 +831,8 @@ git commit -m "feat(context): add RelatedGroupContext, update DetailContext"
 ### Task 7: Update template compiler to produce `RelatedGroupContext`
 
 **Files:**
-- Modify: `src/dazzle_ui/converters/template_compiler.py:18-33` (imports)
-- Modify: `src/dazzle_ui/converters/template_compiler.py:778-865` (grouping logic)
+- Modify: `src/dazzle_page/converters/template_compiler.py:18-33` (imports)
+- Modify: `src/dazzle_page/converters/template_compiler.py:778-865` (grouping logic)
 - Modify: `tests/unit/test_template_compiler.py` (update existing tests)
 
 - [ ] **Step 1: Write the failing test — surface with related groups**
@@ -904,10 +904,10 @@ Expected: FAIL
 
 - [ ] **Step 4: Update template compiler imports**
 
-In `src/dazzle_ui/converters/template_compiler.py`, update the import block (line 18):
+In `src/dazzle_page/converters/template_compiler.py`, update the import block (line 18):
 
 ```python
-from dazzle_ui.runtime.template_context import (
+from dazzle_page.runtime.template_context import (
     ColumnContext,
     DetailContext,
     ExternalLinkAction,
@@ -1003,7 +1003,7 @@ Expected: All PASS
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/dazzle_ui/converters/template_compiler.py tests/unit/test_template_compiler.py
+git add src/dazzle_page/converters/template_compiler.py tests/unit/test_template_compiler.py
 git commit -m "feat(compiler): group related tabs into RelatedGroupContext"
 ```
 
@@ -1012,8 +1012,8 @@ git commit -m "feat(compiler): group related tabs into RelatedGroupContext"
 ### Task 8: Extract table group fragment template
 
 **Files:**
-- Create: `src/dazzle_ui/templates/fragments/related_table_group.html`
-- Modify: `src/dazzle_ui/templates/components/detail_view.html`
+- Create: `src/dazzle_page/templates/fragments/related_table_group.html`
+- Modify: `src/dazzle_page/templates/components/detail_view.html`
 
 - [ ] **Step 1: Create `related_table_group.html`**
 
@@ -1263,10 +1263,10 @@ Expected: All PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/components/detail_view.html \
-        src/dazzle_ui/templates/fragments/related_table_group.html \
-        src/dazzle_ui/templates/fragments/related_status_cards.html \
-        src/dazzle_ui/templates/fragments/related_file_list.html
+git add src/dazzle_page/templates/components/detail_view.html \
+        src/dazzle_page/templates/fragments/related_table_group.html \
+        src/dazzle_page/templates/fragments/related_status_cards.html \
+        src/dazzle_page/templates/fragments/related_file_list.html
 git commit -m "feat(templates): group dispatch for related display modes"
 ```
 

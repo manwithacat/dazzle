@@ -14,10 +14,6 @@ from typing import Any
 
 import pytest
 
-from dazzle.back.runtime.security_middleware import (
-    _build_csp_header,
-    _resolve_request_providers,
-)
 from dazzle.compliance.analytics import (
     TenantAnalyticsConfig,
     clear_tenant_analytics_resolvers,
@@ -31,6 +27,10 @@ from dazzle.core.ir import (
     AnalyticsConsentSpec,
     AnalyticsProviderInstance,
     AnalyticsSpec,
+)
+from dazzle.http.runtime.security_middleware import (
+    _build_csp_header,
+    _resolve_request_providers,
 )
 
 

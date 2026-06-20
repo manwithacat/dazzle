@@ -274,7 +274,7 @@ These are read-only operations that let Claude Code inspect database state witho
 ## Dependencies on Existing Infrastructure
 
 - **AppSpec**: `appspec.entities` for entity list, field types, relationships
-- **DatabaseManager**: `dazzle_back.runtime.repository.DatabaseManager` for database connections
+- **DatabaseManager**: `dazzle_http.runtime.repository.DatabaseManager` for database connections
 - **Entity dependency graph**: Compute from `ref` fields in `appspec.entities` (topological sort)
 - **dazzle.toml**: `[database]` section for provider config (new section)
 

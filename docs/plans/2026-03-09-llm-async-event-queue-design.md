@@ -149,16 +149,16 @@ PARALLEL, WAIT, FOREACH, HUMAN_TASK deferred to future work.
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/dazzle/back/runtime/llm_queue.py` | CREATE | Job queue, token bucket, semaphore, workers |
-| `src/dazzle/back/runtime/llm_trigger.py` | CREATE | Entity event -> intent trigger matcher + write-back |
-| `src/dazzle/back/runtime/process_executor.py` | CREATE | Linear checkpointed process executor |
+| `src/dazzle/http/runtime/llm_queue.py` | CREATE | Job queue, token bucket, semaphore, workers |
+| `src/dazzle/http/runtime/llm_trigger.py` | CREATE | Entity event -> intent trigger matcher + write-back |
+| `src/dazzle/http/runtime/process_executor.py` | CREATE | Linear checkpointed process executor |
 | `src/dazzle/core/ir/llm.py` | MODIFY | LLMTriggerSpec, LLMTriggerEvent, concurrency |
 | `src/dazzle/core/ir/process.py` | MODIFY | LLM_INTENT step kind, llm_intent/input_map fields |
 | `src/dazzle/core/dsl_parser_impl/` | MODIFY | Parse trigger clause, concurrency, llm_intent steps |
-| `src/dazzle/back/runtime/event_bus.py` | MODIFY | LLMEventType, LLM event emission |
-| `src/dazzle/back/runtime/llm_routes.py` | MODIFY | Async endpoint, job polling |
-| `src/dazzle/back/runtime/llm_executor.py` | MODIFY | entity_type/entity_id on AIJob |
-| `src/dazzle/back/runtime/server.py` | MODIFY | Wire queue, trigger matcher, process executor |
+| `src/dazzle/http/runtime/event_bus.py` | MODIFY | LLMEventType, LLM event emission |
+| `src/dazzle/http/runtime/llm_routes.py` | MODIFY | Async endpoint, job polling |
+| `src/dazzle/http/runtime/llm_executor.py` | MODIFY | entity_type/entity_id on AIJob |
+| `src/dazzle/http/runtime/server.py` | MODIFY | Wire queue, trigger matcher, process executor |
 | `src/dazzle/mcp/server/handlers/graph.py` | MODIFY | triggers operation |
 | `src/dazzle/mcp/server/tools_consolidated.py` | MODIFY | triggers in graph tool |
 | `src/dazzle/mcp/server/handlers_consolidated.py` | MODIFY | Register triggers handler |

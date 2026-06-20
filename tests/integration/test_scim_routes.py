@@ -15,8 +15,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.auth.connections import ConnectionRecord
-from dazzle.back.runtime.auth.scim_routes import create_scim_routes
+from dazzle.http.runtime.auth.connections import ConnectionRecord
+from dazzle.http.runtime.auth.scim_routes import create_scim_routes
 
 
 def _conn(cid, tenant, bearer, *, verified=("acme.test",), group_mapping=None) -> ConnectionRecord:

@@ -1,6 +1,6 @@
 """Tests for the admin-capability authorization value object (#1342-adjacent)."""
 
-from dazzle.back.runtime.auth.admin_policy import (
+from dazzle.http.runtime.auth.admin_policy import (
     CAPABILITIES,
     AdminPolicy,
     unknown_admin_personas,
@@ -63,7 +63,7 @@ def test_empty_role_list_in_map_falls_back_not_locks_out():
 def test_request_policy_uses_wired_policy_when_present():
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.admin_policy import request_policy
+    from dazzle.http.runtime.auth.admin_policy import request_policy
 
     wired = AdminPolicy.from_config(org_admin_roles=["x"], admin_capabilities={})
     request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(admin_policy=wired)))
@@ -73,7 +73,7 @@ def test_request_policy_uses_wired_policy_when_present():
 def test_request_policy_falls_back_to_org_admin_roles():
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.admin_policy import request_policy
+    from dazzle.http.runtime.auth.admin_policy import request_policy
 
     # only org_admin_roles exposed (no admin_policy) → back-compat fallback
     request = SimpleNamespace(

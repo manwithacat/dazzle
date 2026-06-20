@@ -136,15 +136,15 @@ recompute for the affected memberships.
 
 ## Files
 
-- `src/dazzle/back/runtime/auth/store.py` — `_init_db` tables + store methods:
+- `src/dazzle/http/runtime/auth/store.py` — `_init_db` tables + store methods:
   `create_scim_group`, `get_scim_group`, `list_scim_groups`(+filter),
   `rename_scim_group`, `delete_scim_group`, `add_group_member`,
   `remove_group_member`, `replace_group_members`, `get_member_group_names`.
-- `src/dazzle/back/runtime/auth/scim_provisioning.py` — group CRUD domain logic +
+- `src/dazzle/http/runtime/auth/scim_provisioning.py` — group CRUD domain logic +
   `recompute_membership_roles`; drop the role-mapping in `provision_scim_user`.
-- `src/dazzle/back/runtime/auth/scim_routes.py` — the Groups REST endpoints + the
+- `src/dazzle/http/runtime/auth/scim_routes.py` — the Groups REST endpoints + the
   PATCH parser + Group JSON serialisation.
-- `src/dazzle/back/tests/test_auth.py` / `tests/integration/test_scim_routes.py`
+- `src/dazzle/http/tests/test_auth.py` / `tests/integration/test_scim_routes.py`
   (or a new `test_scim_groups.py`) — tests.
 
 ## Testing

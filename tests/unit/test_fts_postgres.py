@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.fts_manager import FTSConfig, FTSManager, create_fts_manager
-from dazzle.back.runtime.fts_postgres import PostgresFTSBackend
+from dazzle.http.runtime.fts_manager import FTSConfig, FTSManager, create_fts_manager
+from dazzle.http.runtime.fts_postgres import PostgresFTSBackend
 
 pytestmark = pytest.mark.postgres
 
@@ -29,7 +29,7 @@ def _make_mock_conn(fetchone_val=None, fetchall_val=None):
 
 def _make_entity_spec(name: str, fields: list[str]) -> MagicMock:
     """Create a mock EntitySpec with text fields."""
-    from dazzle.back.specs.entity import ScalarType
+    from dazzle.http.specs.entity import ScalarType
 
     spec = MagicMock()
     spec.name = name

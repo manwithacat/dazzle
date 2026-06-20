@@ -47,13 +47,13 @@ def scratch_url() -> Iterator[str]:
 
 def _setup(scratch_url: str):
     """Schema + auth tables + a MemberProfile Repository over the fixture."""
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.auth.store import AuthStore
-    from dazzle.back.runtime.model_generator import generate_all_entity_models
-    from dazzle.back.runtime.pg_backend import PostgresBackend
-    from dazzle.back.runtime.repository import RepositoryFactory
-    from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
     from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.model_generator import generate_all_entity_models
+    from dazzle.http.runtime.pg_backend import PostgresBackend
+    from dazzle.http.runtime.repository import RepositoryFactory
+    from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 
     appspec = load_project_appspec(_PROJECT_ROOT)
     pk = appspec.tenancy.isolation.partition_key
@@ -75,7 +75,7 @@ def _setup(scratch_url: str):
 def _app(store, appspec, repos):
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.auth.profile_routes import create_profile_routes
+    from dazzle.http.runtime.auth.profile_routes import create_profile_routes
 
     app = FastAPI()
     app.state.auth_store = store

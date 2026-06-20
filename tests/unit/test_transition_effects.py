@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from dazzle.back.runtime.side_effect_executor import EffectContext, EffectResult
-from dazzle.back.runtime.transition_effects import (
+from dazzle.core.ir.process import EffectAction, FieldAssignment, StepEffect
+from dazzle.http.runtime.side_effect_executor import EffectContext, EffectResult
+from dazzle.http.runtime.transition_effects import (
     MAX_CASCADE_DEPTH,
     TransitionEffectRunner,
     _cascade_depth,
 )
-from dazzle.core.ir.process import EffectAction, FieldAssignment, StepEffect
 
 
 def _make_effect(action: str = "create", entity: str = "Task") -> StepEffect:

@@ -19,10 +19,10 @@
 | `src/dazzle/core/ir/domain.py` | Modify | Add `ScopeRule` dataclass, extend `AccessSpec` with `scopes` field |
 | `src/dazzle/core/lexer.py` | Modify | Add `SCOPE` token type if not already present |
 | `src/dazzle/core/dsl_parser_impl/entity.py` | Modify | Parse `scope:` blocks, reject field conditions in `permit:` |
-| `src/dazzle_back/specs/auth.py` | Modify | Add `ScopeRuleSpec`, extend `EntityAccessSpec` |
-| `src/dazzle_back/converters/entity_converter.py` | Modify | Convert `ScopeRule` → `ScopeRuleSpec` |
-| `src/dazzle_back/runtime/route_generator.py` | Modify | Simplify gate (permit-only), add scope filter resolution |
-| `src/dazzle_ui/runtime/page_routes.py` | Modify | Propagate scope to page data fetch |
+| `src/dazzle_http/specs/auth.py` | Modify | Add `ScopeRuleSpec`, extend `EntityAccessSpec` |
+| `src/dazzle_http/converters/entity_converter.py` | Modify | Convert `ScopeRule` → `ScopeRuleSpec` |
+| `src/dazzle_http/runtime/route_generator.py` | Modify | Simplify gate (permit-only), add scope filter resolution |
+| `src/dazzle_page/runtime/page_routes.py` | Modify | Propagate scope to page data fetch |
 | `src/dazzle/rbac/matrix.py` | Modify | Add `PERMIT_SCOPED`, `PERMIT_NO_SCOPE` decisions |
 | `examples/shapes_validation/dsl/entities.dsl` | Modify | Migrate to scope: blocks |
 | `src/dazzle/mcp/semantics_kb/logic.toml` | Modify | Update access_rules concept |
@@ -351,8 +351,8 @@ git commit -m "feat: parse scope: blocks with for: clauses, reject field conditi
 ### Task 3: Backend Specs — `ScopeRuleSpec` and Converter
 
 **Files:**
-- Modify: `src/dazzle_back/specs/auth.py`
-- Modify: `src/dazzle_back/converters/entity_converter.py:648-675`
+- Modify: `src/dazzle_http/specs/auth.py`
+- Modify: `src/dazzle_http/converters/entity_converter.py:648-675`
 - Modify: `tests/unit/test_scope_rules.py`
 
 - [ ] **Step 1: Write failing test**
@@ -366,7 +366,7 @@ class TestScopeRuleConversion:
         from dazzle.core.ir.conditions import (
             Comparison, ComparisonOperator, ConditionExpr, ConditionValue,
         )
-        from dazzle_back.converters.entity_converter import _convert_scope_rule
+        from dazzle_http.converters.entity_converter import _convert_scope_rule
 
         ir_rule = ScopeRule(
             operation=PermissionKind.LIST,
@@ -387,7 +387,7 @@ class TestScopeRuleConversion:
 
     def test_convert_scope_rule_all(self):
         from dazzle.core.ir.domain import PermissionKind, ScopeRule
-        from dazzle_back.converters.entity_converter import _convert_scope_rule
+        from dazzle_http.converters.entity_converter import _convert_scope_rule
 
         ir_rule = ScopeRule(
             operation=PermissionKind.LIST,
@@ -403,7 +403,7 @@ class TestScopeRuleConversion:
 
 - [ ] **Step 3: Add ScopeRuleSpec to auth.py**
 
-In `src/dazzle_back/specs/auth.py`, after `PermissionRuleSpec`:
+In `src/dazzle_http/specs/auth.py`, after `PermissionRuleSpec`:
 
 ```python
 class ScopeRuleSpec(BaseModel):
@@ -423,7 +423,7 @@ class EntityAccessSpec(BaseModel):
 
 - [ ] **Step 4: Add converter function**
 
-In `src/dazzle_back/converters/entity_converter.py`, after `_convert_permission_rule`:
+In `src/dazzle_http/converters/entity_converter.py`, after `_convert_permission_rule`:
 
 ```python
 def _convert_scope_rule(rule: ir.ScopeRule) -> ScopeRuleSpec:
@@ -459,7 +459,7 @@ Run: `pytest tests/unit/test_scope_rules.py -v`
 - [ ] **Step 6: Lint and commit**
 
 ```bash
-git add src/dazzle_back/specs/auth.py src/dazzle_back/converters/entity_converter.py tests/unit/test_scope_rules.py
+git add src/dazzle_http/specs/auth.py src/dazzle_http/converters/entity_converter.py tests/unit/test_scope_rules.py
 git commit -m "feat: add ScopeRuleSpec backend type and converter"
 ```
 
@@ -468,7 +468,7 @@ git commit -m "feat: add ScopeRuleSpec backend type and converter"
 ### Task 4: Enforcement — Simplified Gate + Scope Filter Resolution
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py:139-214, 945-1024`
+- Modify: `src/dazzle_http/runtime/route_generator.py:139-214, 945-1024`
 - Modify: `tests/unit/test_rbac_enforcement.py`
 
 - [ ] **Step 1: Write failing enforcement tests**
@@ -548,7 +548,7 @@ Run: `pytest tests/unit/test_rbac_enforcement.py -v`
 - [ ] **Step 4: Lint and commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py tests/unit/test_rbac_enforcement.py
+git add src/dazzle_http/runtime/route_generator.py tests/unit/test_rbac_enforcement.py
 git commit -m "feat: scope-aware enforcement — simplified gate + scope filter resolution (#526)"
 ```
 
@@ -557,7 +557,7 @@ git commit -m "feat: scope-aware enforcement — simplified gate + scope filter 
 ### Task 5: Page Routes — Propagate Scope to UI
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/page_routes.py:195-340`
+- Modify: `src/dazzle_page/runtime/page_routes.py:195-340`
 
 - [ ] **Step 1: Update page route Cedar gate to scope-aware logic**
 
@@ -574,7 +574,7 @@ Run: `pytest tests/unit/test_rbac_enforcement.py -v`
 - [ ] **Step 3: Lint and commit**
 
 ```bash
-git add src/dazzle_ui/runtime/page_routes.py
+git add src/dazzle_page/runtime/page_routes.py
 git commit -m "feat: propagate scope: rules to UI page route enforcement"
 ```
 

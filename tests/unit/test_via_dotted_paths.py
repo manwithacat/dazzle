@@ -111,9 +111,9 @@ class TestParserAcceptsDottedVia:
 class TestCompilerExpandsDottedPath:
     def test_emits_nested_in_subquery(self) -> None:
         """The compiled SQL for the dotted binding walks junction FK hops."""
-        from dazzle.back.runtime.predicate_compiler import compile_predicate
         from dazzle.core.ir.fk_graph import FKGraph
         from dazzle.core.ir.predicates import ExistsBinding, ExistsCheck
+        from dazzle.http.runtime.predicate_compiler import compile_predicate
 
         # FK graph: ClassEnrolment.teaching_group → TeachingGroup,
         # TeachingGroup.teacher → StaffMember, StaffMember.user → User
@@ -155,9 +155,9 @@ class TestCompilerExpandsDottedPath:
 
     def test_flat_via_binding_still_works(self) -> None:
         """Non-dotted bindings keep the flat single-column shape."""
-        from dazzle.back.runtime.predicate_compiler import compile_predicate
         from dazzle.core.ir.fk_graph import FKGraph
         from dazzle.core.ir.predicates import ExistsBinding, ExistsCheck
+        from dazzle.http.runtime.predicate_compiler import compile_predicate
 
         fk_graph = FKGraph()
         predicate = ExistsCheck(

@@ -9,14 +9,15 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from dazzle.back.channels import (
+from dazzle.core.ir import ChannelKind, ChannelSpec
+from dazzle.http.channels import (
     ChannelConfigError,
     ChannelResolution,
     ChannelResolver,
     DetectionResult,
     ProviderStatus,
 )
-from dazzle.back.channels.providers import (
+from dazzle.http.channels.providers import (
     FileEmailDetector,
     InMemoryQueueDetector,
     InMemoryStreamDetector,
@@ -25,7 +26,6 @@ from dazzle.back.channels.providers import (
     RedisDetector,
     SendGridDetector,
 )
-from dazzle.core.ir import ChannelKind, ChannelSpec
 
 
 class TestDetectionResult:
@@ -102,7 +102,7 @@ class TestMailpitDetector:
         }
 
         with patch(
-            "dazzle.back.channels.providers.email.check_docker_container",
+            "dazzle.http.channels.providers.email.check_docker_container",
             new_callable=AsyncMock,
             return_value=mock_container,
         ):
@@ -120,12 +120,12 @@ class TestMailpitDetector:
         detector = MailpitDetector()
 
         with patch(
-            "dazzle.back.channels.providers.email.check_docker_container",
+            "dazzle.http.channels.providers.email.check_docker_container",
             new_callable=AsyncMock,
             return_value=None,
         ):
             with patch(
-                "dazzle.back.channels.providers.email.check_port",
+                "dazzle.http.channels.providers.email.check_port",
                 new_callable=AsyncMock,
                 return_value=True,
             ):
@@ -144,12 +144,12 @@ class TestMailpitDetector:
         detector = MailpitDetector()
 
         with patch(
-            "dazzle.back.channels.providers.email.check_docker_container",
+            "dazzle.http.channels.providers.email.check_docker_container",
             new_callable=AsyncMock,
             return_value=None,
         ):
             with patch(
-                "dazzle.back.channels.providers.email.check_port",
+                "dazzle.http.channels.providers.email.check_port",
                 new_callable=AsyncMock,
                 return_value=False,
             ):

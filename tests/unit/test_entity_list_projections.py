@@ -3,7 +3,7 @@
 import pytest
 
 import dazzle.core.ir as ir
-from dazzle.back.runtime.app_factory import build_entity_list_projections
+from dazzle.http.runtime.app_factory import build_entity_list_projections
 
 
 def _entity(name: str, fields: list[ir.FieldSpec]) -> ir.EntitySpec:

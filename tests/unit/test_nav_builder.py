@@ -2,8 +2,7 @@ from pathlib import Path
 
 from dazzle.core.linker import build_appspec
 from dazzle.core.parser import parse_modules
-from dazzle.rbac.matrix import PolicyDecision
-from dazzle.ui.converters.nav_builder import (
+from dazzle.page.converters.nav_builder import (
     NavGroup,
     NavLink,
     NavModel,
@@ -11,6 +10,7 @@ from dazzle.ui.converters.nav_builder import (
     build_anon_nav,
     build_persona_nav,
 )
+from dazzle.rbac.matrix import PolicyDecision
 
 
 def test_nav_model_is_frozen_and_holds_groups():

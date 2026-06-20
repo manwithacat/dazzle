@@ -18,15 +18,15 @@ This is a test of the skill's ability to support autonomous agent work — the s
 
 | File | Change |
 |---|---|
-| `src/dazzle_ui/runtime/static/js/dashboard-builder.js` | Full rewrite — native pointer events, Alpine-only state, no SortableJS |
-| `src/dazzle_ui/templates/workspace/_content.html` | Full rewrite — pure Tailwind utilities, semantic HTML, spec-governed card chrome |
-| `src/dazzle_ui/runtime/asset_manifest.py` | Remove SortableJS from vendor asset list |
+| `src/dazzle_page/runtime/static/js/dashboard-builder.js` | Full rewrite — native pointer events, Alpine-only state, no SortableJS |
+| `src/dazzle_page/templates/workspace/_content.html` | Full rewrite — pure Tailwind utilities, semantic HTML, spec-governed card chrome |
+| `src/dazzle_page/runtime/asset_manifest.py` | Remove SortableJS from vendor asset list |
 
 **What is deleted:**
 
 | File | Reason |
 |---|---|
-| `src/dazzle_ui/runtime/static/vendor/sortable.min.js` | No remaining consumers after dashboard rewrite |
+| `src/dazzle_page/runtime/static/vendor/sortable.min.js` | No remaining consumers after dashboard rewrite |
 
 **What stays the same:**
 

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-CSS_ROOT = Path(__file__).resolve().parents[2] / "src/dazzle/ui/runtime/static/css"
+CSS_ROOT = Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/css"
 TOUCH_CSS = CSS_ROOT / "components/touch-targets.css"
 TOKENS_CSS = CSS_ROOT / "tokens.css"
 
@@ -117,7 +117,7 @@ def test_present_in_dist_bundle() -> None:
     touch-targets.css landed in the dist .min.css. If the loader
     misses it, mobile users silently get desktop hit areas."""
     dist_css = (
-        Path(__file__).resolve().parents[2] / "src/dazzle/ui/runtime/static/dist/dazzle.min.css"
+        Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/dist/dazzle.min.css"
     )
     if not dist_css.is_file():
         pytest.skip("dist/dazzle.min.css not built — run scripts/build_dist.py")

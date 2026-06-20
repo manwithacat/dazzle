@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from dazzle.back.runtime.auth.profile_routes import _editable_scalar_fields
+from dazzle.http.runtime.auth.profile_routes import _editable_scalar_fields
 
 
 def _f(name: str, kind: str):

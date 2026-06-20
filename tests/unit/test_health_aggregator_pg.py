@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.health_aggregator import (
+from dazzle.http.runtime.health_aggregator import (
     ComponentType,
     HealthStatus,
     create_database_check,

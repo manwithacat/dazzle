@@ -7,16 +7,16 @@ Why this exists:
     the enum.
 
 What this catches:
-    A new ``ScalarType`` member added to ``dazzle_back/specs/entity.py``
+    A new ``ScalarType`` member added to ``dazzle_http/specs/entity.py``
     that doesn't get an explicit mapping in
-    ``dazzle_back/runtime/model_generator.py``. The fallback would silently
+    ``dazzle_http/runtime/model_generator.py``. The fallback would silently
     type the field as ``str``; this test fails loudly instead.
 """
 
 from __future__ import annotations
 
-from dazzle.back.runtime.model_generator import _scalar_type_to_python
-from dazzle.back.specs.entity import ScalarType
+from dazzle.http.runtime.model_generator import _scalar_type_to_python
+from dazzle.http.specs.entity import ScalarType
 
 # Members that genuinely should map to ``str`` (URLs, emails, opaque tokens).
 _STR_MEMBERS: frozenset[ScalarType] = frozenset(

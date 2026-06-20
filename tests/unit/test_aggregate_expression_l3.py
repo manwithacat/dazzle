@@ -23,12 +23,12 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from dazzle.back.runtime.aggregate import build_aggregate_sql
-from dazzle.back.runtime.aggregate_expression import compile_aggregate_expression
 from dazzle.core.dsl_parser_impl import Parser
 from dazzle.core.errors import ParseError
 from dazzle.core.ir import AggregateExpr, AggregateRef
 from dazzle.core.lexer import tokenize
+from dazzle.http.runtime.aggregate import build_aggregate_sql
+from dazzle.http.runtime.aggregate_expression import compile_aggregate_expression
 
 
 def _parse(src: str) -> AggregateRef:

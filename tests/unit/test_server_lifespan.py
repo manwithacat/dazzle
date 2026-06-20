@@ -13,8 +13,8 @@ from __future__ import annotations
 import warnings
 from unittest.mock import AsyncMock, MagicMock
 
-from dazzle.back.runtime.server import DazzleBackendApp, ServerConfig
 from dazzle.core import ir
+from dazzle.http.runtime.server import DazzleBackendApp, ServerConfig
 
 
 def _make_appspec() -> ir.AppSpec:

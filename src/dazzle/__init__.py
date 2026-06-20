@@ -39,7 +39,7 @@ def __getattr__(name: str) -> object:
     # importing back.runtime pulls FastAPI (~350ms) — `import dazzle` and
     # `dazzle --help` must stay light (the v0.80.8 lesson).
     if name == "register_lifespan_hook":
-        from .back.runtime.lifespan_hooks import register_lifespan_hook
+        from .http.runtime.lifespan_hooks import register_lifespan_hook
 
         return register_lifespan_hook
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

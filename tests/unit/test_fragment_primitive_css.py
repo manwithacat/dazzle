@@ -2,7 +2,7 @@
 
 Every CSS class the Fragment renderer emits MUST have a matching rule
 in the bundled stylesheet. New primitive styling lives in
-`src/dazzle/ui/runtime/static/css/components/fragment-primitives.css`.
+`src/dazzle/page/runtime/static/css/components/fragment-primitives.css`.
 
 This is a presence test, not a styling-correctness test. Visual
 correctness is verified manually in a browser; this test catches the
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_CSS_DIR = _REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "css"
+_CSS_DIR = _REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "css"
 
 
 # Classes the Fragment renderer emits for surfaces simple_task.task_list

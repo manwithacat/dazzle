@@ -8,8 +8,8 @@ so #1299's fix was defeated one layer up. This pins that the converted
 back-runtime spec carries `display_field` through.
 """
 
-from dazzle.back.converters.entity_converter import convert_entities
 from dazzle.core.ir import EntitySpec, FieldModifier, FieldSpec, FieldType, FieldTypeKind
+from dazzle.http.converters.entity_converter import convert_entities
 
 
 def _ir_entity(name: str, display_field: str | None) -> EntitySpec:

@@ -78,7 +78,7 @@ The loop surfaced **three framework-level defects** that every example app exhib
 
 Every example app hit a 404 or 403 during exploration. Every time the error page rendered with `Home | Sign In | Get Started` nav bar, dropping the logged-in user back to the public marketing landing with no sidebar, persona badge, or logout.
 
-**Root cause:** `src/dazzle_back/runtime/exception_handlers.py` unconditionally rendered `site/404.html` and `site/403.html` which extend the marketing layout. No URL-prefix dispatch.
+**Root cause:** `src/dazzle_http/runtime/exception_handlers.py` unconditionally rendered `site/404.html` and `site/403.html` which extend the marketing layout. No URL-prefix dispatch.
 
 **Fix (cycle 219):** Added `templates/app/404.html` + `templates/app/403.html` extending `layouts/app_shell.html`. `_is_app_path()` helper + dispatch logic routes `/app/*` paths to the in-app variant. Plus a context-aware back-affordance computed from the path (`/app/contact/{bad-id}` → Back to List; `/app/workspaces/{bad-ws}` → Back to Dashboard). 14 new unit tests.
 

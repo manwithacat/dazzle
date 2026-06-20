@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from dazzle.back.runtime.auth.connections import (
+from dazzle.http.runtime.auth.connections import (
     AssertedIdentity,
     ConnectionError,
     ConnectionRecord,
@@ -66,6 +66,6 @@ def test_register_then_resolve() -> None:
         prov = resolve_provider(_Conn())
         assert prov.initiate(_Conn(), None) == "/redirect"
     finally:
-        from dazzle.back.runtime.auth.connections import _PROVIDERS
+        from dazzle.http.runtime.auth.connections import _PROVIDERS
 
         _PROVIDERS.pop(("oidc", "native"), None)  # don't leak into other tests

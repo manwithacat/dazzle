@@ -11,8 +11,6 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.back.converters.entity_converter import _convert_scope_rule
-from dazzle.back.specs.auth import AccessOperationKind, ScopeRuleSpec
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
 from dazzle.core.ir.conditions import (
@@ -22,6 +20,8 @@ from dazzle.core.ir.conditions import (
     ConditionValue,
 )
 from dazzle.core.ir.domain import AccessSpec, PermissionKind, ScopeRule
+from dazzle.http.converters.entity_converter import _convert_scope_rule
+from dazzle.http.specs.auth import AccessOperationKind, ScopeRuleSpec
 
 
 def _make_condition() -> ConditionExpr:
@@ -632,9 +632,9 @@ class TestResolvePredicateFilters:
     def test_tautology_returns_empty(self):
         """Tautology predicate produces empty filters (no filtering needed)."""
         pytest.importorskip("fastapi")
-        from dazzle.back.runtime.route_generator import _resolve_predicate_filters
         from dazzle.core.ir.fk_graph import FKGraph
         from dazzle.core.ir.predicates import Tautology
+        from dazzle.http.runtime.route_generator import _resolve_predicate_filters
 
         result = _resolve_predicate_filters(Tautology(), "Task", FKGraph(), "user-1", None)
         assert result == {}
@@ -642,9 +642,9 @@ class TestResolvePredicateFilters:
     def test_user_attr_check_produces_scope_predicate(self):
         """UserAttrCheck produces __scope_predicate with resolved SQL."""
         pytest.importorskip("fastapi")
-        from dazzle.back.runtime.route_generator import _resolve_predicate_filters
         from dazzle.core.ir.fk_graph import FKGraph
         from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle.http.runtime.route_generator import _resolve_predicate_filters
 
         pred = UserAttrCheck(field="school_id", user_attr="school", op=CompOp.EQ)
 
@@ -665,9 +665,9 @@ class TestResolvePredicateFilters:
     def test_current_user_ref_resolved(self):
         """CurrentUserRef in predicate params resolves to entity_id or user_id."""
         pytest.importorskip("fastapi")
-        from dazzle.back.runtime.route_generator import _resolve_predicate_filters
         from dazzle.core.ir.fk_graph import FKGraph
         from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
+        from dazzle.http.runtime.route_generator import _resolve_predicate_filters
 
         pred = ColumnCheck(
             field="owner_id",
@@ -684,9 +684,9 @@ class TestResolvePredicateFilters:
     def test_contradiction_produces_false(self):
         """Contradiction predicate produces SQL 'FALSE'."""
         pytest.importorskip("fastapi")
-        from dazzle.back.runtime.route_generator import _resolve_predicate_filters
         from dazzle.core.ir.fk_graph import FKGraph
         from dazzle.core.ir.predicates import Contradiction
+        from dazzle.http.runtime.route_generator import _resolve_predicate_filters
 
         result = _resolve_predicate_filters(Contradiction(), "Task", FKGraph(), "user-1", None)
         assert "__scope_predicate" in result
@@ -713,9 +713,9 @@ class TestResolveScopeFiltersPredicatePath:
     def test_predicate_path_used_when_available(self):
         """When predicate and fk_graph are available, predicate pipeline is used."""
         pytest.importorskip("fastapi")
-        from dazzle.back.runtime.route_generator import _resolve_scope_filters
         from dazzle.core.ir.fk_graph import FKGraph
         from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle.http.runtime.route_generator import _resolve_scope_filters
 
         pred = UserAttrCheck(field="school_id", user_attr="school", op=CompOp.EQ)
 
@@ -742,8 +742,8 @@ class TestResolveScopeFiltersPredicatePath:
     def test_legacy_fallback_when_no_fk_graph(self):
         """Without fk_graph, falls back to legacy condition extraction."""
         pytest.importorskip("fastapi")
-        from dazzle.back.runtime.route_generator import _resolve_scope_filters
         from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle.http.runtime.route_generator import _resolve_scope_filters
 
         pred = UserAttrCheck(field="school_id", user_attr="school", op=CompOp.EQ)
         spec = self._make_scope_spec_with_predicate(pred)
@@ -764,7 +764,7 @@ class TestQueryBuilderScopePredicate:
 
     def test_scope_predicate_injected_into_where(self):
         """__scope_predicate key is extracted and injected into WHERE clause."""
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         builder = QueryBuilder(table_name="Task")
         builder.add_filters(
@@ -782,7 +782,7 @@ class TestQueryBuilderScopePredicate:
 
     def test_scope_predicate_alone(self):
         """Scope predicate works as the only filter."""
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         builder = QueryBuilder(table_name="Student")
         builder.add_filters({"__scope_predicate": ('"owner" = %s', ["u1"])})
@@ -794,7 +794,7 @@ class TestQueryBuilderScopePredicate:
 
     def test_empty_scope_predicate_ignored(self):
         """Empty scope predicate SQL does not add a WHERE fragment."""
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         builder = QueryBuilder(table_name="Task")
         builder.add_filters({"__scope_predicate": ("", [])})
@@ -809,8 +809,8 @@ class TestScopeRuleSpecPredicate:
 
     def test_scope_rule_spec_carries_predicate(self):
         """ScopeRuleSpec.predicate is set when converting from IR ScopeRule."""
-        from dazzle.back.converters.entity_converter import _convert_scope_rule
         from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle.http.converters.entity_converter import _convert_scope_rule
 
         pred = UserAttrCheck(field="school_id", user_attr="school", op=CompOp.EQ)
         ir_rule = ScopeRule(
@@ -825,7 +825,7 @@ class TestScopeRuleSpecPredicate:
 
     def test_scope_rule_spec_predicate_none_by_default(self):
         """ScopeRuleSpec.predicate defaults to None."""
-        from dazzle.back.converters.entity_converter import _convert_scope_rule
+        from dazzle.http.converters.entity_converter import _convert_scope_rule
 
         ir_rule = ScopeRule(
             operation=PermissionKind.LIST,

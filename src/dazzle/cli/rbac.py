@@ -385,12 +385,12 @@ def routes_cmd(
     matrix row), and bindings naming an entity/op the AppSpec lacks (dangling).
     Run ``dazzle rbac routes --strict`` in CI to fail the build on any escape.
     """
-    from dazzle.back.converters.surface_converter import convert_surfaces_to_services
-    from dazzle.back.runtime.route_overrides import (
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.converters.surface_converter import convert_surfaces_to_services
+    from dazzle.http.runtime.route_overrides import (
         discover_route_overrides,
         verify_route_matrix_completeness,
     )
-    from dazzle.core.appspec_loader import load_project_appspec
 
     root = resolve_project(manifest)
     appspec = load_project_appspec(root)
@@ -499,8 +499,8 @@ def access_review_cmd(
     import json
     from datetime import UTC, datetime
 
-    from dazzle.back.runtime.auth.store import AuthStore
     from dazzle.cli.db import _resolve_url
+    from dazzle.http.runtime.auth.store import AuthStore
     from dazzle.rbac.access_evidence import build_access_review
     from dazzle.rbac.report import render_access_review_markdown
 

@@ -1,7 +1,7 @@
-"""Access control value types — shared between dazzle.back and dazzle.ui.
+"""Access control value types — shared between dazzle.http and dazzle.page.
 
 These types have NO backend dependencies. They exist in dazzle.core so both
-dazzle.back (which implements access evaluation) and dazzle.ui (which consumes
+dazzle.http (which implements access evaluation) and dazzle.page (which consumes
 access decisions for UI filtering) can import them without circular deps.
 
 #1096 (parent #1086): the access-rule spec types (AccessConditionSpec,
@@ -339,7 +339,7 @@ def workspace_allowed_personas(
     of the autonomous ``/ux-cycle`` loop.
 
     It lives in :mod:`dazzle.core.access` (relocated from
-    ``dazzle.ui.converters.workspace_converter`` in #1324 FR-6 follow-up) so
+    ``dazzle.page.converters.workspace_converter`` in #1324 FR-6 follow-up) so
     that core consumers — notably :func:`dazzle.core.validator.validate_nav_curation`
     — can call it without core depending on the ui layer. The
     ``workspace_converter`` module re-exports it for existing ui/testing callers.

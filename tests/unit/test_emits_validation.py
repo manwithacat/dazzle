@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dazzle.back.runtime.route_overrides import RouteOverrideDescriptor, verify_emits_paths
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import ModuleIR
 from dazzle.core.linker import build_appspec
 from dazzle.core.validation.ux import validate_emits_targets
+from dazzle.http.runtime.route_overrides import RouteOverrideDescriptor, verify_emits_paths
 
 
 def _appspec(dsl: str):

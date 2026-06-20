@@ -8,7 +8,7 @@ The `dazzle db` CLI loads Alembic assets BY FILE PATH (`script_location` /
   - `alembic.ini`     — base Alembic config
   - `versions/000*.py` — the framework BASELINE migrations
 
-`src/dazzle/back/alembic/versions/` has no `__init__.py`, so
+`src/dazzle/http/alembic/versions/` has no `__init__.py`, so
 `[tool.setuptools.packages.find]` with `namespaces = false` never discovers it
 as a package — without an explicit `package-data` entry the `.mako`, `.ini`, and
 EVERY framework migration were dropped from the built wheel. Every `pip install
@@ -17,7 +17,7 @@ because the repo install is editable).
 
 These tests pin the config invariants. The actual wheel inclusion was verified
 manually by building a wheel and confirming `script.py.mako`, `alembic.ini`, and
-`versions/0001_framework_baseline.py` are present under `dazzle/back/alembic/`.
+`versions/0001_framework_baseline.py` are present under `dazzle/http/alembic/`.
 """
 
 from __future__ import annotations
@@ -25,16 +25,16 @@ from __future__ import annotations
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_ALEMBIC_DIR = _REPO_ROOT / "src/dazzle/back/alembic"
+_ALEMBIC_DIR = _REPO_ROOT / "src/dazzle/http/alembic"
 
 
 def test_pyproject_declares_alembic_package_data() -> None:
     """`pyproject.toml` must ship the alembic assets via package-data — the
     `versions/*.py` glob is load-bearing because `versions/` is not a package."""
     pyproject = (_REPO_ROOT / "pyproject.toml").read_text()
-    assert '"dazzle.back.alembic"' in pyproject, (
+    assert '"dazzle.http.alembic"' in pyproject, (
         "pyproject.toml [tool.setuptools.package-data] missing the "
-        "'dazzle.back.alembic' entry — script.py.mako, alembic.ini, and the "
+        "'dazzle.http.alembic' entry — script.py.mako, alembic.ini, and the "
         "framework baseline migrations get dropped from the wheel (issue #1308)."
     )
     # The versions/*.py glob is the part that ships the (non-package) migrations.
@@ -49,8 +49,8 @@ def test_manifest_includes_alembic_assets() -> None:
     """MANIFEST.in must recursive-include the alembic dir so the sdist carries
     the same assets as the wheel."""
     manifest = (_REPO_ROOT / "MANIFEST.in").read_text()
-    assert "src/dazzle/back/alembic" in manifest, (
-        "MANIFEST.in missing a recursive-include for src/dazzle/back/alembic — "
+    assert "src/dazzle/http/alembic" in manifest, (
+        "MANIFEST.in missing a recursive-include for src/dazzle/http/alembic — "
         "the sdist would omit the migration assets (issue #1308)."
     )
 

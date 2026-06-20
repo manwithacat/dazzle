@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 _TEMPLATE_PATH = (
-    Path(__file__).resolve().parents[2] / "src/dazzle/ui/templates/workspace/regions/metrics.html"
+    Path(__file__).resolve().parents[2] / "src/dazzle/page/templates/workspace/regions/metrics.html"
 )
 
 

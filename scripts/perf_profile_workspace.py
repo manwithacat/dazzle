@@ -34,7 +34,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 def _make_workspace_ctx(n_regions: int):
     """Build a synthetic WorkspaceContext with N regions for profiling."""
-    from dazzle_ui.runtime.workspace_renderer import RegionContext, WorkspaceContext
+    from dazzle_page.runtime.workspace_renderer import RegionContext, WorkspaceContext
 
     regions = []
     for i in range(n_regions):
@@ -66,7 +66,7 @@ def _make_workspace_ctx(n_regions: int):
 def _bench_jinja_render(n_regions: int, iterations: int = 20) -> dict:
     """Render `workspace/_content.html` `iterations` times with `n_regions`
     regions and return timing stats."""
-    from dazzle_ui.runtime.template_renderer import render_fragment
+    from dazzle_page.runtime.template_renderer import render_fragment
 
     ws = _make_workspace_ctx(n_regions)
     fold_count = min(3, n_regions)
@@ -116,7 +116,7 @@ def _bench_browser_harness(
     except ImportError:
         return None
 
-    static_dir = REPO_ROOT / "src/dazzle_ui/runtime/static"
+    static_dir = REPO_ROOT / "src/dazzle_page/runtime/static"
     proc = subprocess.Popen(
         [
             "python3",

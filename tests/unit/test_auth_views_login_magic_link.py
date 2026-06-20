@@ -9,7 +9,7 @@ Jinja templates during the migration.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.auth.auth_views import (
+from dazzle.http.runtime.auth.auth_views import (
     build_login_magic_link_view,
     build_login_sent_view,
 )

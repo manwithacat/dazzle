@@ -79,7 +79,7 @@ def test_security_config_combined() -> None:
 def test_cors_config_combined() -> None:
     """Combined configure_cors_for_profile contract for all 3 profiles
     + custom-origins override + credentials toggling."""
-    from dazzle.back.runtime.security_middleware import configure_cors_for_profile
+    from dazzle.http.runtime.security_middleware import configure_cors_for_profile
 
     # BASIC — wildcard origins forbid credentials.
     basic = configure_cors_for_profile("basic")
@@ -110,7 +110,7 @@ def test_cors_config_combined() -> None:
 
 def test_headers_config_combined() -> None:
     """Combined configure_headers_for_profile contract for all 3 profiles."""
-    from dazzle.back.runtime.security_middleware import configure_headers_for_profile
+    from dazzle.http.runtime.security_middleware import configure_headers_for_profile
 
     # BASIC — minimal: no HSTS/CSP, frame=SAMEORIGIN.
     basic = configure_headers_for_profile("basic")
@@ -230,7 +230,7 @@ class TestTenantIsolation:
 
     def test_context_var_set_and_get(self) -> None:
         """Test tenant context var lifecycle."""
-        from dazzle.back.runtime.tenant_isolation import (
+        from dazzle.http.runtime.tenant_isolation import (
             _current_tenant_schema,
             get_current_tenant_schema,
             set_current_tenant_schema,
@@ -402,10 +402,10 @@ def test_build_server_config_threads_security_profile_from_appspec() -> None:
     Pre-fix the field stayed at the default "basic" regardless of the DSL value."""
     from pathlib import Path
 
-    from dazzle.back.runtime.app_factory import build_server_config
     from dazzle.core.dsl_parser_impl import parse_dsl
     from dazzle.core.ir.module import ModuleIR
     from dazzle.core.linker import build_appspec
+    from dazzle.http.runtime.app_factory import build_server_config
 
     dsl = """
 module sp_test
@@ -440,10 +440,10 @@ def test_build_server_config_explicit_security_profile_wins() -> None:
     """#1235 — env-var path: explicit `security_profile=` overrides the DSL value."""
     from pathlib import Path
 
-    from dazzle.back.runtime.app_factory import build_server_config
     from dazzle.core.dsl_parser_impl import parse_dsl
     from dazzle.core.ir.module import ModuleIR
     from dazzle.core.linker import build_appspec
+    from dazzle.http.runtime.app_factory import build_server_config
 
     dsl = """
 module sp_test
@@ -479,10 +479,10 @@ def test_build_server_config_rejects_invalid_security_profile() -> None:
 
     import pytest
 
-    from dazzle.back.runtime.app_factory import build_server_config
     from dazzle.core.dsl_parser_impl import parse_dsl
     from dazzle.core.ir.module import ModuleIR
     from dazzle.core.linker import build_appspec
+    from dazzle.http.runtime.app_factory import build_server_config
 
     dsl = """
 module sp_test
@@ -541,7 +541,7 @@ class TestCSPDefaults:
     """Default CSP directives must align with what the bundled shells load."""
 
     def test_defaults_allow_google_fonts(self) -> None:
-        from dazzle.back.runtime.security_middleware import _build_csp_header
+        from dazzle.http.runtime.security_middleware import _build_csp_header
 
         tokens = _csp_all_tokens(_build_csp_header(None))
         assert "https://fonts.googleapis.com" in tokens
@@ -549,7 +549,7 @@ class TestCSPDefaults:
 
     def test_defaults_allow_jsdelivr_for_mermaid(self) -> None:
         """diagram.html lazy-loads mermaid from jsdelivr — CSP must permit it."""
-        from dazzle.back.runtime.security_middleware import _build_csp_header
+        from dazzle.http.runtime.security_middleware import _build_csp_header
 
         csp = _build_csp_header(None)
         script_src = _csp_tokens(csp, "script-src")
@@ -557,13 +557,13 @@ class TestCSPDefaults:
 
     def test_defaults_do_not_allow_tailwind_cdn(self) -> None:
         """Post-#832, cdn.tailwindcss.com must NOT be in the defaults."""
-        from dazzle.back.runtime.security_middleware import _build_csp_header
+        from dazzle.http.runtime.security_middleware import _build_csp_header
 
         tokens = _csp_all_tokens(_build_csp_header(None))
         assert not any("cdn.tailwindcss.com" in t for t in tokens)
 
     def test_custom_directives_override_defaults(self) -> None:
-        from dazzle.back.runtime.security_middleware import _build_csp_header
+        from dazzle.http.runtime.security_middleware import _build_csp_header
 
         csp = _build_csp_header({"script-src": "'self'"})
         directives = {d.split(" ", 1)[0]: d for d in csp.split("; ")}
@@ -576,7 +576,7 @@ def test_csp_report_only_combined() -> None:
     - create_security_headers_middleware constructs from enforcing config.
     - STANDARD profile uses Report-Only; STRICT enforces.
     """
-    from dazzle.back.runtime.security_middleware import (
+    from dazzle.http.runtime.security_middleware import (
         SecurityHeadersConfig,
         configure_headers_for_profile,
         create_security_headers_middleware,

@@ -320,8 +320,8 @@ After the server boots against the scratch DB (Task 4), the verifier needs one u
 
 Before writing code, read these so the seeding mirrors the real flow:
 - `src/dazzle/cli/rbac.py:138-186` — `_login()`: how `verify-scope` POSTs to `/auth/login` (JSON body, `{"email", "password"}`, returns cookies). Reuse this exact helper — import it: `from dazzle.cli.rbac import _login`.
-- The framework user/admin entity + how a superuser is created at boot. Check `src/dazzle/back/runtime/` for the bootstrap admin (search: `grep -rn "is_superuser\|bootstrap.*admin\|create.*admin" src/dazzle/back/runtime/`). The verifier authenticates as that bootstrap superuser to seed.
-- The user-management API route for creating users with roles (search: `grep -rn "user_management\|/api/users\|create_user" src/dazzle/back/runtime/`).
+- The framework user/admin entity + how a superuser is created at boot. Check `src/dazzle/http/runtime/` for the bootstrap admin (search: `grep -rn "is_superuser\|bootstrap.*admin\|create.*admin" src/dazzle/http/runtime/`). The verifier authenticates as that bootstrap superuser to seed.
+- The user-management API route for creating users with roles (search: `grep -rn "user_management\|/api/users\|create_user" src/dazzle/http/runtime/`).
 
 Record the exact superuser email/password the test-mode boot creates — Task 4 needs it.
 
@@ -423,7 +423,7 @@ A context manager that boots the `DazzleServer` ASGI app against a given databas
 
 - [ ] **Step 1: Read the app-construction entrypoint**
 
-Read `src/dazzle/back/runtime/server.py` — find how `dazzle serve --local` builds the app. Identify the constructor/factory that yields a FastAPI/ASGI app given a `database_url` and `project_root`. Confirm: (a) the kwarg name for the DB URL, (b) whether boot is sync or async, (c) the test-mode flag that auto-creates the schema and a bootstrap superuser (the `--test-mode` path `dazzle serve` uses; see `_should_create_schema_on_startup`).
+Read `src/dazzle/http/runtime/server.py` — find how `dazzle serve --local` builds the app. Identify the constructor/factory that yields a FastAPI/ASGI app given a `database_url` and `project_root`. Confirm: (a) the kwarg name for the DB URL, (b) whether boot is sync or async, (c) the test-mode flag that auto-creates the schema and a bootstrap superuser (the `--test-mode` path `dazzle serve` uses; see `_should_create_schema_on_startup`).
 
 - [ ] **Step 2: Implement `_verifier_app_context`**
 

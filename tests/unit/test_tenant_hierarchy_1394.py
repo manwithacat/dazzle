@@ -253,8 +253,8 @@ def test_write_scope_stays_single_leaf_check(tmp_path) -> None:
 
 
 def test_read_disjunction_compiles_to_failclosed_policy_sql(tmp_path) -> None:
-    from dazzle.back.runtime.predicate_compiler import compile_predicate_policy
     from dazzle.core.ir.fk_graph import FKGraph
+    from dazzle.http.runtime.predicate_compiler import compile_predicate_policy
 
     appspec = _hier_appspec(tmp_path)
     fk = FKGraph.from_entities(list(appspec.domain.entities))

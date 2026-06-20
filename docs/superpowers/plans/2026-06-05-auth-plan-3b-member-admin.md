@@ -18,12 +18,12 @@
 
 | File | Responsibility |
 |------|----------------|
-| `src/dazzle/back/runtime/auth/member_admin.py` (**create**) | Pure authz/guard helpers: `active_admins(roster, org_admin_roles)`, `would_orphan_org(roster, target_id, *, new_roles, org_admin_roles)`. Unit-testable without a DB. |
-| `src/dazzle/back/runtime/auth/member_admin_views.py` (**create**) | `build_members_view(...)` — the roster page (members + per-member action controls + pending invites + invite form). |
-| `src/dazzle/back/runtime/auth/member_admin_routes.py` (**create**) | `create_member_admin_routes()`: `GET /auth/members` + `POST /auth/members/roles|suspend|reactivate|remove`. The shared gate (admin + cross-org + last-admin) lives here. |
-| `src/dazzle/back/runtime/auth/store.py` | (no change — uses existing 2a/2b mutations + `get_user_by_id`.) |
-| `src/dazzle/back/runtime/subsystems/auth.py` (**modify**) | Mount `create_member_admin_routes()`. |
-| `src/dazzle/back/runtime/csrf.py` (**modify**) | `protected_paths += /auth/members/roles, /auth/members/suspend, /auth/members/reactivate, /auth/members/remove`. |
+| `src/dazzle/http/runtime/auth/member_admin.py` (**create**) | Pure authz/guard helpers: `active_admins(roster, org_admin_roles)`, `would_orphan_org(roster, target_id, *, new_roles, org_admin_roles)`. Unit-testable without a DB. |
+| `src/dazzle/http/runtime/auth/member_admin_views.py` (**create**) | `build_members_view(...)` — the roster page (members + per-member action controls + pending invites + invite form). |
+| `src/dazzle/http/runtime/auth/member_admin_routes.py` (**create**) | `create_member_admin_routes()`: `GET /auth/members` + `POST /auth/members/roles|suspend|reactivate|remove`. The shared gate (admin + cross-org + last-admin) lives here. |
+| `src/dazzle/http/runtime/auth/store.py` | (no change — uses existing 2a/2b mutations + `get_user_by_id`.) |
+| `src/dazzle/http/runtime/subsystems/auth.py` (**modify**) | Mount `create_member_admin_routes()`. |
+| `src/dazzle/http/runtime/csrf.py` (**modify**) | `protected_paths += /auth/members/roles, /auth/members/suspend, /auth/members/reactivate, /auth/members/remove`. |
 | `tests/unit/test_member_admin.py` (**create**) | `active_admins` + `would_orphan_org` (removal, suspension, demotion, non-admin target). |
 | `tests/integration/test_member_admin_pg.py` (**create**) | Real-PG route tests: roster page renders; each mutation works; non-admin 403; cross-org target 403/404; last-admin block on remove/suspend/demote. |
 
@@ -32,7 +32,7 @@
 ## Task 1: Last-admin guard logic (`member_admin.py`)
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/member_admin.py`
+- Create: `src/dazzle/http/runtime/auth/member_admin.py`
 - Test: `tests/unit/test_member_admin.py`
 
 - [ ] **Step 1: Write the failing unit test**
@@ -41,7 +41,7 @@
 # tests/unit/test_member_admin.py
 """Last-admin orphan guard + admin-count helpers (auth Plan 3b)."""
 
-from dazzle.back.runtime.auth.member_admin import active_admins, would_orphan_org
+from dazzle.http.runtime.auth.member_admin import active_admins, would_orphan_org
 
 # roster rows: (membership_id, roles, status)
 _ADMIN_ROLES = ["owner", "admin"]
@@ -96,12 +96,12 @@ def test_no_guard_when_org_already_has_no_admins() -> None:
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `python -m pytest tests/unit/test_member_admin.py -q`
-Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle.back.runtime.auth.member_admin'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle.http.runtime.auth.member_admin'`
 
 - [ ] **Step 3: Create the module**
 
 ```python
-# src/dazzle/back/runtime/auth/member_admin.py
+# src/dazzle/http/runtime/auth/member_admin.py
 """Member-admin authorization + orphan-guard helpers (auth Plan 3b).
 
 Pure functions over a roster (a list of ``(membership_id, roles, status)``
@@ -163,9 +163,9 @@ Expected: PASS (7 tests)
 - [ ] **Step 5: Lint + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/member_admin.py tests/unit/test_member_admin.py --fix
-ruff format src/dazzle/back/runtime/auth/member_admin.py tests/unit/test_member_admin.py
-git add src/dazzle/back/runtime/auth/member_admin.py tests/unit/test_member_admin.py
+ruff check src/dazzle/http/runtime/auth/member_admin.py tests/unit/test_member_admin.py --fix
+ruff format src/dazzle/http/runtime/auth/member_admin.py tests/unit/test_member_admin.py
+git add src/dazzle/http/runtime/auth/member_admin.py tests/unit/test_member_admin.py
 git commit -m "feat(auth): member-admin last-admin orphan guard helpers (Plan 3b)"
 ```
 
@@ -174,10 +174,10 @@ git commit -m "feat(auth): member-admin last-admin orphan guard helpers (Plan 3b
 ## Task 2: Member-admin routes (the security core)
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/member_admin_routes.py`
-- Create: `src/dazzle/back/runtime/auth/member_admin_views.py`
-- Modify: `src/dazzle/back/runtime/csrf.py` (protected_paths)
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py` (mount)
+- Create: `src/dazzle/http/runtime/auth/member_admin_routes.py`
+- Create: `src/dazzle/http/runtime/auth/member_admin_views.py`
+- Modify: `src/dazzle/http/runtime/csrf.py` (protected_paths)
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py` (mount)
 - Test: `tests/integration/test_member_admin_pg.py`
 
 - [ ] **Step 1: Add the CSRF protected paths** — in `csrf.py`, the `protected_paths` default list (after the 3a `/auth/invite`, `/auth/accept-invite` entries):
@@ -192,7 +192,7 @@ git commit -m "feat(auth): member-admin last-admin orphan guard helpers (Plan 3b
 - [ ] **Step 2: Create the views** — `member_admin_views.py`. Reuse the SAME Fragment primitives 3a used (`Page(body=Stack(children=tuple))`, `FormStack(action=URL, fields, submit)`, `Field`, `Heading(body=, level=)`, `Text(body=, tone=)`, `Link`, `Submit`) plus `Button` (htmx action) and `Badge`:
 
 ```python
-# src/dazzle/back/runtime/auth/member_admin_views.py
+# src/dazzle/http/runtime/auth/member_admin_views.py
 """Typed-Fragment member-admin page (auth Plan 3b)."""
 
 from __future__ import annotations
@@ -323,7 +323,7 @@ def build_members_view(
 - [ ] **Step 3: Create the routes** — `member_admin_routes.py`. The shared gate is the security core:
 
 ```python
-# src/dazzle/back/runtime/auth/member_admin_routes.py
+# src/dazzle/http/runtime/auth/member_admin_routes.py
 """Member-admin routes (auth Plan 3b): roster + role/suspend/reactivate/remove.
 
 Every mutation runs the same gate:
@@ -340,7 +340,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from dazzle.back.runtime.auth.cookie_name import read_session_id
+from dazzle.http.runtime.auth.cookie_name import read_session_id
 
 
 def _product_name(request: Request) -> str:
@@ -361,8 +361,8 @@ def create_member_admin_routes() -> APIRouter:
 
     def _gate(request: Request):
         """Return (store, ctx, org_id) if the caller may manage members, else None."""
-        from dazzle.back.runtime.auth.invitations import may_manage_members
-        from dazzle.back.runtime.auth.models import effective_roles_of
+        from dazzle.http.runtime.auth.invitations import may_manage_members
+        from dazzle.http.runtime.auth.models import effective_roles_of
 
         store = request.app.state.auth_store
         session_id = read_session_id(request)
@@ -389,9 +389,9 @@ def create_member_admin_routes() -> APIRouter:
 
     @router.get("/auth/members", response_class=HTMLResponse, include_in_schema=False)
     async def members_page(request: Request) -> HTMLResponse:
-        from dazzle.back.runtime.auth.invitations import list_pending_invitations
-        from dazzle.back.runtime.auth.member_admin import active_admins
-        from dazzle.back.runtime.auth.member_admin_views import build_members_view
+        from dazzle.http.runtime.auth.invitations import list_pending_invitations
+        from dazzle.http.runtime.auth.member_admin import active_admins
+        from dazzle.http.runtime.auth.member_admin_views import build_members_view
         from dazzle.render.fragment.renderer import FragmentRenderer
         from uuid import UUID
 
@@ -435,7 +435,7 @@ def create_member_admin_routes() -> APIRouter:
         membership_id: Annotated[str, Query()] = "",
         roles: Annotated[str, Form()] = "",
     ) -> Response:
-        from dazzle.back.runtime.auth.member_admin import would_orphan_org
+        from dazzle.http.runtime.auth.member_admin import would_orphan_org
 
         gated = _gate(request)
         if gated is None:
@@ -458,7 +458,7 @@ def create_member_admin_routes() -> APIRouter:
     async def suspend(
         request: Request, membership_id: Annotated[str, Query()] = ""
     ) -> Response:
-        from dazzle.back.runtime.auth.member_admin import would_orphan_org
+        from dazzle.http.runtime.auth.member_admin import would_orphan_org
 
         gated = _gate(request)
         if gated is None:
@@ -494,7 +494,7 @@ def create_member_admin_routes() -> APIRouter:
     async def remove(
         request: Request, membership_id: Annotated[str, Query()] = ""
     ) -> Response:
-        from dazzle.back.runtime.auth.member_admin import would_orphan_org
+        from dazzle.http.runtime.auth.member_admin import would_orphan_org
 
         gated = _gate(request)
         if gated is None:
@@ -520,7 +520,7 @@ def create_member_admin_routes() -> APIRouter:
 - [ ] **Step 4: Mount it** — in `subsystems/auth.py`, right after the 3a invitation-routes mount:
 
 ```python
-        from dazzle.back.runtime.auth.member_admin_routes import create_member_admin_routes
+        from dazzle.http.runtime.auth.member_admin_routes import create_member_admin_routes
 
         ctx.app.include_router(create_member_admin_routes())
 ```
@@ -573,7 +573,7 @@ def store_url() -> Iterator[str]:
 
 
 def _store(store_url: str):
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=store_url)
     store._init_db()
@@ -583,7 +583,7 @@ def _store(store_url: str):
 def _app(store, org_admin_roles):
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.auth.member_admin_routes import create_member_admin_routes
+    from dazzle.http.runtime.auth.member_admin_routes import create_member_admin_routes
 
     app = FastAPI()
     app.state.auth_store = store
@@ -699,8 +699,8 @@ def test_cannot_remove_or_demote_last_admin(store_url: str) -> None:
 - [ ] **Step 6: Run + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/member_admin_routes.py src/dazzle/back/runtime/auth/member_admin_views.py src/dazzle/back/runtime/subsystems/auth.py src/dazzle/back/runtime/csrf.py tests/integration/test_member_admin_pg.py --fix
-ruff format src/dazzle/back/runtime/auth/member_admin_routes.py src/dazzle/back/runtime/auth/member_admin_views.py src/dazzle/back/runtime/subsystems/auth.py src/dazzle/back/runtime/csrf.py tests/integration/test_member_admin_pg.py
+ruff check src/dazzle/http/runtime/auth/member_admin_routes.py src/dazzle/http/runtime/auth/member_admin_views.py src/dazzle/http/runtime/subsystems/auth.py src/dazzle/http/runtime/csrf.py tests/integration/test_member_admin_pg.py --fix
+ruff format src/dazzle/http/runtime/auth/member_admin_routes.py src/dazzle/http/runtime/auth/member_admin_views.py src/dazzle/http/runtime/subsystems/auth.py src/dazzle/http/runtime/csrf.py tests/integration/test_member_admin_pg.py
 TEST_DATABASE_URL="postgresql://localhost:5432/postgres" python -m pytest tests/integration/test_member_admin_pg.py -q
 git add -A
 git commit -m "feat(auth): member-admin surface — roster + role/suspend/remove routes (Plan 3b)"

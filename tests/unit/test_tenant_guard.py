@@ -6,14 +6,14 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.runtime.tenant.guard import (
+from dazzle.http.runtime.tenant.guard import (
     ApexCookieNotSuperAdmin,
     CrossTenantForbidden,
     GuardOutcome,
     HostCookieMissingTenant,
     check_cross_tenant,
 )
-from dazzle.back.runtime.tenant.resolver import ResolvedTenant
+from dazzle.http.runtime.tenant.resolver import ResolvedTenant
 
 
 def _tenant(slug: str = "acme") -> ResolvedTenant:

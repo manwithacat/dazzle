@@ -2,8 +2,8 @@
 
 import pytest
 
+from dazzle.page.utils.expression_eval import evaluate_when_expr
 from dazzle.render.context import FieldContext
-from dazzle.ui.utils.expression_eval import evaluate_when_expr
 
 # =============================================================================
 # evaluate_when_expr tests
@@ -121,7 +121,7 @@ class TestBuildFormFieldsWhenExpr:
     def test_when_expr_propagated(self) -> None:
         from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
         from dazzle.core.ir.surfaces import SurfaceElement, SurfaceSection, SurfaceSpec
-        from dazzle.ui.converters.template_compiler import _build_form_fields
+        from dazzle.page.converters.template_compiler import _build_form_fields
 
         when = BinaryExpr(
             op=BinaryOp.EQ,
@@ -153,7 +153,7 @@ class TestBuildFormFieldsWhenExpr:
 
     def test_no_when_expr(self) -> None:
         from dazzle.core.ir.surfaces import SurfaceElement, SurfaceSection, SurfaceSpec
-        from dazzle.ui.converters.template_compiler import _build_form_fields
+        from dazzle.page.converters.template_compiler import _build_form_fields
 
         surface = SurfaceSpec(
             name="task_detail",

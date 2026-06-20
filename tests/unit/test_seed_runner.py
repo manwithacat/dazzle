@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle.back.runtime.seed_runner import _find_uuid_pk_field, run_seed_templates
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.seed import SeedFieldTemplate, SeedTemplateSpec
+from dazzle.http.runtime.seed_runner import _find_uuid_pk_field, run_seed_templates
 
 # ---------------------------------------------------------------------------
 # Helpers

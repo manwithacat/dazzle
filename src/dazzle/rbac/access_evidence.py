@@ -27,7 +27,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-from dazzle.back.runtime.auth.membership_events import MembershipEvent, MembershipEventType
+from dazzle.http.runtime.auth.membership_events import MembershipEvent, MembershipEventType
 
 
 def _normalize_instant(value: str | None) -> str | None:

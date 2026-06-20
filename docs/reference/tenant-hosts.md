@@ -54,7 +54,7 @@ for the full truth table and lifecycle.
   sessions and `__Secure-<app>_admin` for canonical-host super-admin
   sessions, where `<app>` is the `app <name>` declaration lowercased
   with non-alphanumerics collapsed to underscore. The naming helpers
-  ship in `dazzle.back.runtime.tenant.cookies`; the login-flow
+  ship in `dazzle.http.runtime.tenant.cookies`; the login-flow
   integration is staged for a follow-up.
 
 ## Cache busting
@@ -92,7 +92,7 @@ It warns on:
 
 ## Cross-tenant guard
 
-`dazzle.back.runtime.tenant.guard.check_cross_tenant()` enforces the
+`dazzle.http.runtime.tenant.guard.check_cross_tenant()` enforces the
 truth table from the spec: tenant-bound cookies can't be reused on a
 different tenant's host, and apex super-admin cookies can't be
 presented on a tenant host without the super-admin role. The

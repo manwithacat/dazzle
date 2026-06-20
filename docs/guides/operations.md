@@ -105,7 +105,7 @@ dazzle serve --local --workers 4
 For production, use the Procfile with `WEB_CONCURRENCY`:
 
 ```
-web: uvicorn dazzle_back.runtime.app_factory:create_app_factory --factory --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-4}
+web: uvicorn dazzle_http.runtime.app_factory:create_app_factory --factory --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-4}
 ```
 
 Each worker runs in a separate process with its own connection pool.

@@ -490,7 +490,7 @@ has_field_conditions = any(_is_field_condition(r.condition) for r in list_rules)
 | Compliance report | `src/dazzle/rbac/report.py` |
 | CLI commands | `src/dazzle/cli/rbac.py` |
 | Shapes validation app | `examples/shapes_validation/` |
-| Audit sink wiring | `src/dazzle_back/runtime/access_evaluator.py` (instrumentation) |
+| Audit sink wiring | `src/dazzle_http/runtime/access_evaluator.py` (instrumentation) |
 | Verification report storage | `.dazzle/rbac-verify-report.json` |
 
 ## Non-goals

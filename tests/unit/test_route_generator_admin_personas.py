@@ -38,7 +38,7 @@ def stub_route_generator_args():
     ],
 )
 def test_admin_personas_storage(stub_route_generator_args, kwargs: dict, expected: list):
-    from dazzle.back.runtime.route_generator import RouteGenerator
+    from dazzle.http.runtime.route_generator import RouteGenerator
 
     rg = RouteGenerator(**kwargs, **stub_route_generator_args)
     assert rg.admin_personas == expected
@@ -46,7 +46,7 @@ def test_admin_personas_storage(stub_route_generator_args, kwargs: dict, expecte
 
 def test_admin_personas_copy_not_alias(stub_route_generator_args):
     """Mutating the caller's list must not bleed into the route generator."""
-    from dazzle.back.runtime.route_generator import RouteGenerator
+    from dazzle.http.runtime.route_generator import RouteGenerator
 
     src = ["super_admin"]
     rg = RouteGenerator(admin_personas=src, **stub_route_generator_args)

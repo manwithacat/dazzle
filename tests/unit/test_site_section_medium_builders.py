@@ -10,7 +10,7 @@ sitespec author's custom types — fall through to the Jinja partial.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.renderers.site_section_builder import (
+from dazzle.http.runtime.renderers.site_section_builder import (
     TYPED_SECTION_TYPES,
     _build_card_grid_section,
     _build_comparison_section,

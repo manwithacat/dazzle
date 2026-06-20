@@ -29,7 +29,7 @@ class TestCrossEntityScopeGate:
         # compute_pipeline_steps). Same invariants, new home.
         return (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/back/runtime/workspace_region_computes.py"
+            / "src/dazzle/http/runtime/workspace_region_computes.py"
         ).read_text()
 
     def test_action_grid_per_card_gates_scope_on_entity_match(self) -> None:

@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from dazzle.back.converters.entity_converter import convert_entities
-from dazzle.back.runtime.model_generator import generate_create_schema, generate_update_schema
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.http.converters.entity_converter import convert_entities
+from dazzle.http.runtime.model_generator import generate_create_schema, generate_update_schema
 
 
 def _project_entity():

@@ -16,9 +16,9 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_back/runtime/graph_serializer.py` | Create | `GraphSerializer` — pure data transformation (edges + nodes → Cytoscape/D3 JSON) |
-| `src/dazzle_back/runtime/route_generator.py` | Modify | Pass graph metadata to list handler; add format branching in `_list_handler_body()` |
-| `src/dazzle_back/runtime/server.py` | Modify | Build `entity_graph_specs` dict from IR and pass to `RouteGenerator` |
+| `src/dazzle_http/runtime/graph_serializer.py` | Create | `GraphSerializer` — pure data transformation (edges + nodes → Cytoscape/D3 JSON) |
+| `src/dazzle_http/runtime/route_generator.py` | Modify | Pass graph metadata to list handler; add format branching in `_list_handler_body()` |
+| `src/dazzle_http/runtime/server.py` | Modify | Build `entity_graph_specs` dict from IR and pass to `RouteGenerator` |
 | `tests/unit/test_graph_serializer.py` | Create | Unit tests for `GraphSerializer` |
 | `tests/unit/test_graph_format_api.py` | Create | Integration tests for `?format=` parameter |
 
@@ -27,7 +27,7 @@
 ### Task 1: GraphSerializer — Cytoscape Format
 
 **Files:**
-- Create: `src/dazzle_back/runtime/graph_serializer.py`
+- Create: `src/dazzle_http/runtime/graph_serializer.py`
 - Test: `tests/unit/test_graph_serializer.py`
 
 - [ ] **Step 1: Write failing tests for Cytoscape serialization**
@@ -37,7 +37,7 @@ Create `tests/unit/test_graph_serializer.py`:
 ```python
 """Tests for GraphSerializer — graph-shaped API responses (#619 Phase 2)."""
 
-from dazzle_back.runtime.graph_serializer import GraphSerializer
+from dazzle_http.runtime.graph_serializer import GraphSerializer
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec
 
 
@@ -161,7 +161,7 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement GraphSerializer**
 
-Create `src/dazzle_back/runtime/graph_serializer.py`:
+Create `src/dazzle_http/runtime/graph_serializer.py`:
 
 ```python
 """Graph-shaped API response serializer (#619 Phase 2).
@@ -246,7 +246,7 @@ Expected: All PASSED.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/graph_serializer.py tests/unit/test_graph_serializer.py
+git add src/dazzle_http/runtime/graph_serializer.py tests/unit/test_graph_serializer.py
 git commit -m "feat: GraphSerializer with Cytoscape format (#619)"
 ```
 
@@ -332,12 +332,12 @@ git commit -m "test: D3 format serialization tests (#619)"
 ### Task 3: Wire Graph Metadata into RouteGenerator
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py` (add `entity_graph_specs` param)
-- Modify: `src/dazzle_back/runtime/server.py` (build and pass `entity_graph_specs`)
+- Modify: `src/dazzle_http/runtime/route_generator.py` (add `entity_graph_specs` param)
+- Modify: `src/dazzle_http/runtime/server.py` (build and pass `entity_graph_specs`)
 
 - [ ] **Step 1: Add `entity_graph_specs` to RouteGenerator**
 
-In `src/dazzle_back/runtime/route_generator.py`:
+In `src/dazzle_http/runtime/route_generator.py`:
 
 Add to `RouteGenerator.__init__()` parameter list (after `fk_graph`):
 
@@ -367,7 +367,7 @@ Add `graph_spec` parameter to `create_list_handler()` signature:
 
 - [ ] **Step 2: Build entity_graph_specs in server.py**
 
-In `src/dazzle_back/runtime/server.py`, before the `RouteGenerator(...)` call, build the graph specs dict from the IR:
+In `src/dazzle_http/runtime/server.py`, before the `RouteGenerator(...)` call, build the graph specs dict from the IR:
 
 ```python
         # Build graph metadata for edge entities (#619 Phase 2)
@@ -404,7 +404,7 @@ Expected: All pass.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py src/dazzle_back/runtime/server.py
+git add src/dazzle_http/runtime/route_generator.py src/dazzle_http/runtime/server.py
 git commit -m "feat: wire graph metadata from IR into route generator (#619)"
 ```
 
@@ -413,7 +413,7 @@ git commit -m "feat: wire graph metadata from IR into route generator (#619)"
 ### Task 4: Format Parameter Handling in List Handler
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py` (`_list_handler_body` and `create_list_handler`)
+- Modify: `src/dazzle_http/runtime/route_generator.py` (`_list_handler_body` and `create_list_handler`)
 
 - [ ] **Step 1: Add format branching in _list_handler_body**
 
@@ -445,7 +445,7 @@ Add the format handling block:
                 status_code=400,
             )
 
-        from dazzle_back.runtime.graph_serializer import GraphSerializer
+        from dazzle_http.runtime.graph_serializer import GraphSerializer
 
         graph_edge_spec, node_specs = graph_spec
         serializer = GraphSerializer(graph_edge=graph_edge_spec)
@@ -526,7 +526,7 @@ Expected: All pass.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py
+git add src/dazzle_http/runtime/route_generator.py
 git commit -m "feat: format parameter handling in list handler (#619)"
 ```
 
@@ -547,7 +547,7 @@ Create `tests/unit/test_graph_format_api.py`:
 """Integration tests for ?format= parameter on graph edge entities (#619 Phase 2)."""
 
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec
-from dazzle_back.runtime.graph_serializer import GraphSerializer
+from dazzle_http.runtime.graph_serializer import GraphSerializer
 
 
 class TestFormatValidation:
@@ -685,7 +685,7 @@ Expected: All pass.
 
 - [ ] **Step 4: Run linting**
 
-Run: `ruff check src/dazzle_back/runtime/graph_serializer.py src/dazzle_back/runtime/route_generator.py src/dazzle_back/runtime/server.py tests/unit/test_graph_serializer.py tests/unit/test_graph_format_api.py --fix && ruff format src/dazzle_back/runtime/graph_serializer.py tests/unit/test_graph_serializer.py tests/unit/test_graph_format_api.py`
+Run: `ruff check src/dazzle_http/runtime/graph_serializer.py src/dazzle_http/runtime/route_generator.py src/dazzle_http/runtime/server.py tests/unit/test_graph_serializer.py tests/unit/test_graph_format_api.py --fix && ruff format src/dazzle_http/runtime/graph_serializer.py tests/unit/test_graph_serializer.py tests/unit/test_graph_format_api.py`
 Expected: Clean.
 
 - [ ] **Step 5: Commit**

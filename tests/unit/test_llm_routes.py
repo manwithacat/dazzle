@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.llm_executor import ExecutionResult, LLMIntentExecutor
-from dazzle.back.runtime.llm_routes import create_llm_routes
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.domain import DomainSpec
 from dazzle.core.ir.llm import LLMConfigSpec, LLMIntentSpec, LLMModelSpec, LLMProvider
+from dazzle.http.runtime.llm_executor import ExecutionResult, LLMIntentExecutor
+from dazzle.http.runtime.llm_routes import create_llm_routes
 
 
 def _make_app() -> tuple[FastAPI, LLMIntentExecutor]:

@@ -305,11 +305,11 @@ status: proposed
 rationale: |
   <multi-line overall rationale>
 fixes:
-  - file_path: src/dazzle_ui/templates/macros/form_field.html
+  - file_path: src/dazzle_page/templates/macros/form_field.html
     line_range: [47, 52]
     rationale: "<per-fix reasoning>"
     confidence: 0.85
-  - file_path: src/dazzle_ui/templates/macros/form_field.html
+  - file_path: src/dazzle_page/templates/macros/form_field.html
     line_range: [64, 66]
     rationale: "<per-fix reasoning>"
     confidence: 0.90
@@ -319,10 +319,10 @@ alternatives_considered:
   - "<alternative 1 — one line — why rejected>"
   - "<alternative 2 — one line — why rejected>"
 evidence_paths:
-  - src/dazzle_ui/templates/macros/form_field.html
+  - src/dazzle_page/templates/macros/form_field.html
   - src/dazzle/fitness/semantics_kb/core.toml
 tool_calls_summary:
-  - "read_file(src/dazzle_ui/templates/macros/form_field.html)"
+  - "read_file(src/dazzle_page/templates/macros/form_field.html)"
   - "query_dsl(Ticket)"
   - "search_spec(aria-describedby)"
   - "propose_fix(2 fixes)"

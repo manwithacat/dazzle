@@ -25,12 +25,12 @@ from typing import Any
 
 import pytest
 
-from dazzle.back.runtime.storage import (
+from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.http.runtime.storage import (
     FakeStorageProvider,
     StorageRegistry,
     register_storage_proxy_routes,
 )
-from dazzle.core.dsl_parser_impl import parse_dsl
 
 fastapi = pytest.importorskip("fastapi", reason="needs fastapi")
 
@@ -80,8 +80,8 @@ def _authed_client(app: FastAPI, user_id: str = "user-abc") -> TestClient:
     from unittest.mock import MagicMock
     from uuid import UUID
 
-    from dazzle.back.runtime.auth import register_auth_store
-    from dazzle.back.runtime.auth.models import AuthContext, UserRecord
+    from dazzle.http.runtime.auth import register_auth_store
+    from dazzle.http.runtime.auth.models import AuthContext, UserRecord
 
     user = UserRecord(
         id=UUID("12345678-1234-5678-1234-567812345678"),
@@ -100,7 +100,7 @@ def _authed_client(app: FastAPI, user_id: str = "user-abc") -> TestClient:
 
 @pytest.fixture(autouse=True)
 def _reset_auth_store() -> Any:
-    from dazzle.back.runtime.auth import register_auth_store
+    from dazzle.http.runtime.auth import register_auth_store
 
     yield
     register_auth_store(None)

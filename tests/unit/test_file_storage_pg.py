@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dazzle.back.runtime.file_storage import FileMetadataStore
+from dazzle.http.runtime.file_storage import FileMetadataStore
 
 pytestmark = pytest.mark.postgres
 

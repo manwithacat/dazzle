@@ -106,7 +106,7 @@ If `requires-python` is not set, default to `3.10` (conservative — flags most 
 The agent scans the user's project code, not framework code:
 - Include: `app/`, `scripts/`, root-level `*.py`, any directories in `dazzle.toml` `[modules].paths`
 - Exclude: `__pycache__/`, `.venv/`, `node_modules/`, `.dazzle/`, files matching `# AUTO-GENERATED`
-- Exclude: `src/dazzle/`, `src/dazzle_back/`, `src/dazzle_ui/` (framework code — audited separately)
+- Exclude: `src/dazzle/`, `src/dazzle_http/`, `src/dazzle_page/` (framework code — audited separately)
 
 Scope is relative to the project root (from manifest).
 

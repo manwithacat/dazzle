@@ -24,8 +24,8 @@ from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from dazzle.back.runtime.services import RuntimeServices
     from dazzle.core.ir.protocols import SurfaceLike
+    from dazzle.http.runtime.services import RuntimeServices
 
 
 # Words too common to give signal in a small example.

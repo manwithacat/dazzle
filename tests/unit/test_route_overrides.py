@@ -15,7 +15,7 @@ class TestDiscoverRouteOverrides:
     """discover_route_overrides() parses declaration headers."""
 
     def test_discovers_get_override(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import discover_route_overrides
+        from dazzle.http.runtime.route_overrides import discover_route_overrides
 
         routes_dir = tmp_path / "routes"
         routes_dir.mkdir()
@@ -31,7 +31,7 @@ class TestDiscoverRouteOverrides:
         assert callable(result[0].handler)
 
     def test_discovers_post_override(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import discover_route_overrides
+        from dazzle.http.runtime.route_overrides import discover_route_overrides
 
         routes_dir = tmp_path / "routes"
         routes_dir.mkdir()
@@ -46,7 +46,7 @@ class TestDiscoverRouteOverrides:
         assert result[0].path == "/_dazzle/tasks"
 
     def test_case_insensitive_method(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import discover_route_overrides
+        from dazzle.http.runtime.route_overrides import discover_route_overrides
 
         routes_dir = tmp_path / "routes"
         routes_dir.mkdir()
@@ -106,7 +106,7 @@ class TestDiscoverRouteOverrides:
         ],
     )
     def test_discover_count(self, tmp_path: Path, setup, expected_len) -> None:
-        from dazzle.back.runtime.route_overrides import discover_route_overrides
+        from dazzle.http.runtime.route_overrides import discover_route_overrides
 
         if setup is None:
             assert discover_route_overrides(Path("/nonexistent")) == []
@@ -123,7 +123,7 @@ class TestBuildOverrideRouter:
     """build_override_router() creates a FastAPI router from overrides."""
 
     def test_returns_none_for_empty_dir(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import build_override_router
+        from dazzle.http.runtime.route_overrides import build_override_router
 
         routes_dir = tmp_path / "routes"
         routes_dir.mkdir()
@@ -131,7 +131,7 @@ class TestBuildOverrideRouter:
         assert result is None
 
     def test_builds_router_with_routes(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import build_override_router
+        from dazzle.http.runtime.route_overrides import build_override_router
 
         routes_dir = tmp_path / "routes"
         routes_dir.mkdir()
@@ -146,7 +146,7 @@ class TestBuildOverrideRouter:
         assert len(router.routes) == 1
 
     def test_supports_all_http_methods(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import build_override_router
+        from dazzle.http.runtime.route_overrides import build_override_router
 
         routes_dir = tmp_path / "routes"
         routes_dir.mkdir()
@@ -159,7 +159,7 @@ class TestBuildOverrideRouter:
         assert len(router.routes) == 5
 
     def test_returns_none_for_nonexistent_dir(self) -> None:
-        from dazzle.back.runtime.route_overrides import build_override_router
+        from dazzle.http.runtime.route_overrides import build_override_router
 
         result = build_override_router(Path("/nonexistent"))
         assert result is None
@@ -169,12 +169,12 @@ class TestLoadExtensionRouters:
     """load_extension_routers() imports APIRouters declared in dazzle.toml (#786)."""
 
     def test_empty_spec_list_returns_empty(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import load_extension_routers
+        from dazzle.http.runtime.route_overrides import load_extension_routers
 
         assert load_extension_routers(tmp_path, []) == []
 
     def test_loads_valid_router(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import load_extension_routers
+        from dazzle.http.runtime.route_overrides import load_extension_routers
 
         pkg = tmp_path / "ext_pkg_valid"
         pkg.mkdir()
@@ -191,7 +191,7 @@ class TestLoadExtensionRouters:
         assert any(r.path == "/ext/ping" for r in routers[0].routes)
 
     def test_skips_invalid_spec_format(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import load_extension_routers
+        from dazzle.http.runtime.route_overrides import load_extension_routers
 
         # No colon separator
         assert load_extension_routers(tmp_path, ["app.routes.router"]) == []
@@ -201,7 +201,7 @@ class TestLoadExtensionRouters:
         assert load_extension_routers(tmp_path, [":router"]) == []
 
     def test_rejects_path_traversal_in_module(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import load_extension_routers
+        from dazzle.http.runtime.route_overrides import load_extension_routers
 
         # Slashes, dashes, semicolons — all rejected by the whitelist regex.
         specs = [
@@ -213,7 +213,7 @@ class TestLoadExtensionRouters:
         assert load_extension_routers(tmp_path, specs) == []
 
     def test_skips_missing_module(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import load_extension_routers
+        from dazzle.http.runtime.route_overrides import load_extension_routers
 
         assert load_extension_routers(tmp_path, ["nonexistent_pkg_xyz.mod:router"]) == []
 
@@ -235,7 +235,7 @@ class TestLoadExtensionRouters:
         ],
     )
     def test_skips_bad_attribute(self, tmp_path: Path, pkg_name: str, routes_content: str) -> None:
-        from dazzle.back.runtime.route_overrides import load_extension_routers
+        from dazzle.http.runtime.route_overrides import load_extension_routers
 
         pkg = tmp_path / pkg_name
         pkg.mkdir()
@@ -246,7 +246,7 @@ class TestLoadExtensionRouters:
         assert routers == []
 
     def test_loads_multiple_routers(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import load_extension_routers
+        from dazzle.http.runtime.route_overrides import load_extension_routers
 
         pkg = tmp_path / "ext_multi"
         pkg.mkdir()
@@ -264,7 +264,7 @@ class TestLoadExtensionRouters:
         assert len(routers) == 2
 
     def test_one_broken_spec_doesnt_block_others(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.route_overrides import load_extension_routers
+        from dazzle.http.runtime.route_overrides import load_extension_routers
 
         pkg = tmp_path / "ext_mixed"
         pkg.mkdir()

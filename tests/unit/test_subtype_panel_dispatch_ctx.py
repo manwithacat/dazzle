@@ -106,7 +106,7 @@ def _get_surface(appspec: ir.AppSpec, name: str) -> ir.SurfaceSpec:
 
 class TestSubtypePanelDispatchAugmentation:
     def test_vehicle_kind_appends_vehicle_detail_fields(self, appspec_with_subtype_panel) -> None:
-        from dazzle.back.runtime.page_routes import _build_dispatch_ctx
+        from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 
         surface = _get_surface(appspec_with_subtype_panel, "asset_card")
         render_ctx = _make_render_ctx(
@@ -133,7 +133,7 @@ class TestSubtypePanelDispatchAugmentation:
         assert wheels_field["value"] == 4
 
     def test_building_kind_appends_building_detail_fields(self, appspec_with_subtype_panel) -> None:
-        from dazzle.back.runtime.page_routes import _build_dispatch_ctx
+        from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 
         surface = _get_surface(appspec_with_subtype_panel, "asset_card")
         render_ctx = _make_render_ctx(
@@ -154,7 +154,7 @@ class TestSubtypePanelDispatchAugmentation:
         assert "vin" not in field_keys
 
     def test_unknown_kind_no_augmentation(self, appspec_with_subtype_panel) -> None:
-        from dazzle.back.runtime.page_routes import _build_dispatch_ctx
+        from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 
         surface = _get_surface(appspec_with_subtype_panel, "asset_card")
         render_ctx = _make_render_ctx({"id": "abc", "kind": "ufo"})
@@ -165,7 +165,7 @@ class TestSubtypePanelDispatchAugmentation:
         assert field_keys == ["acquired_at", "location"]
 
     def test_missing_kind_no_augmentation(self, appspec_with_subtype_panel) -> None:
-        from dazzle.back.runtime.page_routes import _build_dispatch_ctx
+        from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 
         surface = _get_surface(appspec_with_subtype_panel, "asset_card")
         render_ctx = _make_render_ctx({"id": "abc"})  # no kind
@@ -175,7 +175,7 @@ class TestSubtypePanelDispatchAugmentation:
         assert "wheels" not in field_keys
 
     def test_no_services_graceful_fallback(self, appspec_with_subtype_panel) -> None:
-        from dazzle.back.runtime.page_routes import _build_dispatch_ctx
+        from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 
         surface = _get_surface(appspec_with_subtype_panel, "asset_card")
         render_ctx = _make_render_ctx({"id": "abc", "kind": "vehicle"})
@@ -185,7 +185,7 @@ class TestSubtypePanelDispatchAugmentation:
         assert "wheels" not in field_keys
 
     def test_surface_without_panel_unaffected(self, appspec_with_subtype_panel) -> None:
-        from dazzle.back.runtime.page_routes import _build_dispatch_ctx
+        from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 
         surface = _get_surface(appspec_with_subtype_panel, "vehicle_detail")
         render_ctx = _make_render_ctx({"id": "abc", "kind": "vehicle", "wheels": 4})

@@ -1,7 +1,7 @@
 """Integration tests: evaluate_permission emits audit records via the sink."""
 
-from dazzle.back.specs import AccessOperationKind, AccessPolicyEffect, EntityAccessSpec
-from dazzle.back.specs.auth import AccessConditionSpec, PermissionRuleSpec
+from dazzle.http.specs import AccessOperationKind, AccessPolicyEffect, EntityAccessSpec
+from dazzle.http.specs.auth import AccessConditionSpec, PermissionRuleSpec
 from dazzle.rbac.audit import InMemoryAuditSink, get_audit_sink, set_audit_sink
 from dazzle.render.access_evaluator import (
     AccessRuntimeContext,

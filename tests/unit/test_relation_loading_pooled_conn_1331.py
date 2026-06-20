@@ -20,9 +20,9 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from dazzle.back.runtime.relation_loader import RelationLoader, RelationRegistry
-from dazzle.back.runtime.repository import Repository
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+from dazzle.http.runtime.relation_loader import RelationLoader, RelationRegistry
+from dazzle.http.runtime.repository import Repository
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 
 def _contact_spec() -> EntitySpec:

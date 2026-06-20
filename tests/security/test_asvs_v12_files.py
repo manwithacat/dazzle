@@ -8,7 +8,7 @@ class TestFileSizeLimits:
 
     def test_content_length_check_exists(self):
         """V12.1.1: Upload endpoint must check Content-Length header."""
-        from dazzle.back.runtime.file_routes import _upload_file
+        from dazzle.http.runtime.file_routes import _upload_file
 
         source = inspect.getsource(_upload_file)
         assert "content-length" in source.lower()
@@ -17,7 +17,7 @@ class TestFileSizeLimits:
     def test_upload_size_limits_by_profile(self):
         """V12.1.2: Upload size limits must vary by security profile."""
         # Basic: 50MB, Standard: 10MB, Strict: 5MB
-        from dazzle.back.runtime.file_routes import create_file_routes
+        from dazzle.http.runtime.file_routes import create_file_routes
 
         source = inspect.getsource(create_file_routes)
         assert "max_upload_size" in source
@@ -28,12 +28,12 @@ class TestFileValidation:
 
     def test_file_validation_class_exists(self):
         """V12.2.1: File validation infrastructure must exist."""
-        from dazzle.back.runtime.file_storage import FileValidator
+        from dazzle.http.runtime.file_storage import FileValidator
 
         assert callable(FileValidator)
 
     def test_file_validation_error_type(self):
         """V12.2.2: File validation errors must be typed."""
-        from dazzle.back.runtime.file_storage import FileValidationError
+        from dazzle.http.runtime.file_storage import FileValidationError
 
         assert issubclass(FileValidationError, Exception)

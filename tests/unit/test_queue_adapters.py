@@ -6,13 +6,13 @@ Tests queue adapters: RabbitMQAdapter, InMemoryQueueAdapter.
 
 import pytest
 
-from dazzle.back.channels.adapters.base import SendStatus
-from dazzle.back.channels.adapters.queue import (
+from dazzle.http.channels.adapters.base import SendStatus
+from dazzle.http.channels.adapters.queue import (
     InMemoryQueueAdapter,
     RabbitMQAdapter,
 )
-from dazzle.back.channels.detection import DetectionResult, ProviderStatus
-from dazzle.back.channels.outbox import OutboxMessage, OutboxStatus
+from dazzle.http.channels.detection import DetectionResult, ProviderStatus
+from dazzle.http.channels.outbox import OutboxMessage, OutboxStatus
 
 
 @pytest.fixture
@@ -257,7 +257,7 @@ class TestQueueAdapterIntegration:
 
     def test_adapter_registered_in_manager(self):
         """Test queue adapters are registered in ChannelManager."""
-        from dazzle.back.channels.adapters import (
+        from dazzle.http.channels.adapters import (
             InMemoryQueueAdapter,
             RabbitMQAdapter,
         )

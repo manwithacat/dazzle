@@ -72,7 +72,7 @@ HTMX triggers return rendered HTML partials from the same Jinja2 layer. No JSON 
 
 ### Neutral
 
-- Static assets (CSS, icons) served from `dazzle_ui/static/` without a bundler
+- Static assets (CSS, icons) served from `dazzle_page/static/` without a bundler
 - JavaScript islands remain available for complex widgets via `<script>` tags
 
 ## Alternatives Considered
@@ -97,4 +97,4 @@ Independent deployment of UI and API with a CDN in front.
 
 ## Implementation
 
-Templates live in `src/dazzle/ui/templates/`. HTMX is loaded from CDN or vendored into `src/dazzle/ui/static/`. FastAPI route handlers in `src/dazzle/back/` return `TemplateResponse` objects backed by Jinja2.
+Templates live in `src/dazzle/page/templates/`. HTMX is loaded from CDN or vendored into `src/dazzle/page/static/`. FastAPI route handlers in `src/dazzle/http/` return `TemplateResponse` objects backed by Jinja2.

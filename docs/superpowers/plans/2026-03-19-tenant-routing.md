@@ -16,10 +16,10 @@
 
 | File | Responsibility |
 |------|---------------|
-| `src/dazzle_back/runtime/tenant_isolation.py` | **Rewrite** — context vars (`_current_tenant_schema`), helpers (`get_current_tenant_schema`, `set_current_tenant_schema`) |
-| `src/dazzle_back/runtime/tenant_middleware.py` | **Rewrite** — `TenantResolver` protocol, 3 resolver implementations, `TenantMiddleware` class, registry cache |
-| `src/dazzle_back/runtime/pg_backend.py` | **Modify** — `connection()` reads context var; `table_exists`/`get_table_columns`/`get_column_info` accept schema param |
-| `src/dazzle_back/runtime/server.py` | **Modify** — wire tenant middleware in `_create_app()` |
+| `src/dazzle_http/runtime/tenant_isolation.py` | **Rewrite** — context vars (`_current_tenant_schema`), helpers (`get_current_tenant_schema`, `set_current_tenant_schema`) |
+| `src/dazzle_http/runtime/tenant_middleware.py` | **Rewrite** — `TenantResolver` protocol, 3 resolver implementations, `TenantMiddleware` class, registry cache |
+| `src/dazzle_http/runtime/pg_backend.py` | **Modify** — `connection()` reads context var; `table_exists`/`get_table_columns`/`get_column_info` accept schema param |
+| `src/dazzle_http/runtime/server.py` | **Modify** — wire tenant middleware in `_create_app()` |
 | `src/dazzle/core/manifest.py` | **Modify** — add `base_domain` to `TenantConfig` + parsing |
 | `src/dazzle/cli/db.py` | **Modify** — add `--tenant` option to status/verify/reset/cleanup |
 | `tests/unit/test_tenant_resolvers.py` | **Create** — resolver unit tests |
@@ -31,7 +31,7 @@
 ## Task 1: Context Variables + Manifest Update
 
 **Files:**
-- Rewrite: `src/dazzle_back/runtime/tenant_isolation.py`
+- Rewrite: `src/dazzle_http/runtime/tenant_isolation.py`
 - Modify: `src/dazzle/core/manifest.py`
 - Create: `tests/unit/test_tenant_connection.py` (initial)
 
@@ -50,12 +50,12 @@ import pytest
 
 class TestTenantContextVars:
     def test_default_is_none(self) -> None:
-        from dazzle_back.runtime.tenant_isolation import get_current_tenant_schema
+        from dazzle_http.runtime.tenant_isolation import get_current_tenant_schema
 
         assert get_current_tenant_schema() is None
 
     def test_set_and_get(self) -> None:
-        from dazzle_back.runtime.tenant_isolation import (
+        from dazzle_http.runtime.tenant_isolation import (
             get_current_tenant_schema,
             set_current_tenant_schema,
         )
@@ -64,12 +64,12 @@ class TestTenantContextVars:
         try:
             assert get_current_tenant_schema() == "tenant_cyfuture"
         finally:
-            from dazzle_back.runtime.tenant_isolation import _current_tenant_schema
+            from dazzle_http.runtime.tenant_isolation import _current_tenant_schema
 
             _current_tenant_schema.reset(token)
 
     def test_reset_clears(self) -> None:
-        from dazzle_back.runtime.tenant_isolation import (
+        from dazzle_http.runtime.tenant_isolation import (
             _current_tenant_schema,
             get_current_tenant_schema,
             set_current_tenant_schema,
@@ -117,7 +117,7 @@ Expected: FAIL — imports fail or fields missing
 Read the existing file first, then replace its contents entirely:
 
 ```python
-# src/dazzle_back/runtime/tenant_isolation.py
+# src/dazzle_http/runtime/tenant_isolation.py
 """Tenant schema context — per-request schema routing via context vars.
 
 The middleware sets the current tenant schema, and pg_backend.connection()
@@ -163,7 +163,7 @@ Expected: All PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/tenant_isolation.py src/dazzle/core/manifest.py tests/unit/test_tenant_connection.py
+git add src/dazzle_http/runtime/tenant_isolation.py src/dazzle/core/manifest.py tests/unit/test_tenant_connection.py
 git commit -m "feat(tenant): rewrite tenant_isolation.py to context vars + add base_domain (#531)"
 ```
 
@@ -202,28 +202,28 @@ def _make_request(*, host: str = "localhost", headers: dict | None = None, cooki
 
 class TestSubdomainResolver:
     def test_extracts_slug_from_subdomain(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import SubdomainResolver
+        from dazzle_http.runtime.tenant_middleware import SubdomainResolver
 
         resolver = SubdomainResolver(base_domain="app.example.com")
         request = _make_request(host="cyfuture.app.example.com")
         assert resolver.resolve(request) == "cyfuture"
 
     def test_returns_none_for_bare_domain(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import SubdomainResolver
+        from dazzle_http.runtime.tenant_middleware import SubdomainResolver
 
         resolver = SubdomainResolver(base_domain="app.example.com")
         request = _make_request(host="app.example.com")
         assert resolver.resolve(request) is None
 
     def test_returns_none_for_localhost(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import SubdomainResolver
+        from dazzle_http.runtime.tenant_middleware import SubdomainResolver
 
         resolver = SubdomainResolver(base_domain="app.example.com")
         request = _make_request(host="localhost")
         assert resolver.resolve(request) is None
 
     def test_multi_level_subdomain(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import SubdomainResolver
+        from dazzle_http.runtime.tenant_middleware import SubdomainResolver
 
         resolver = SubdomainResolver(base_domain="app.example.com")
         request = _make_request(host="deep.cyfuture.app.example.com")
@@ -234,21 +234,21 @@ class TestSubdomainResolver:
 
 class TestHeaderResolver:
     def test_extracts_from_header(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import HeaderResolver
+        from dazzle_http.runtime.tenant_middleware import HeaderResolver
 
         resolver = HeaderResolver(header_name="X-Tenant-ID")
         request = _make_request(headers={"x-tenant-id": "cyfuture"})
         assert resolver.resolve(request) == "cyfuture"
 
     def test_returns_none_when_missing(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import HeaderResolver
+        from dazzle_http.runtime.tenant_middleware import HeaderResolver
 
         resolver = HeaderResolver(header_name="X-Tenant-ID")
         request = _make_request()
         assert resolver.resolve(request) is None
 
     def test_custom_header_name(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import HeaderResolver
+        from dazzle_http.runtime.tenant_middleware import HeaderResolver
 
         resolver = HeaderResolver(header_name="X-Custom")
         request = _make_request(headers={"x-custom": "myco"})
@@ -257,14 +257,14 @@ class TestHeaderResolver:
 
 class TestSessionResolver:
     def test_extracts_from_cookie(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import SessionResolver
+        from dazzle_http.runtime.tenant_middleware import SessionResolver
 
         resolver = SessionResolver()
         request = _make_request(cookies={"dazzle_tenant": "cyfuture"})
         assert resolver.resolve(request) == "cyfuture"
 
     def test_returns_none_when_no_cookie(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import SessionResolver
+        from dazzle_http.runtime.tenant_middleware import SessionResolver
 
         resolver = SessionResolver()
         request = _make_request()
@@ -273,7 +273,7 @@ class TestSessionResolver:
 
 class TestBuildResolver:
     def test_builds_subdomain_resolver(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import build_resolver
+        from dazzle_http.runtime.tenant_middleware import build_resolver
         from dazzle.core.manifest import TenantConfig
 
         config = TenantConfig(resolver="subdomain", base_domain="app.example.com")
@@ -281,7 +281,7 @@ class TestBuildResolver:
         assert resolver is not None
 
     def test_builds_header_resolver(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import build_resolver
+        from dazzle_http.runtime.tenant_middleware import build_resolver
         from dazzle.core.manifest import TenantConfig
 
         config = TenantConfig(resolver="header", header_name="X-My-Tenant")
@@ -299,7 +299,7 @@ Expected: FAIL — classes don't exist yet
 Read the existing `tenant_middleware.py`, then rewrite with:
 
 ```python
-# src/dazzle_back/runtime/tenant_middleware.py
+# src/dazzle_http/runtime/tenant_middleware.py
 """Tenant middleware — resolves tenant from request, routes to schema.
 
 Resolver protocol + implementations (subdomain, header, session).
@@ -480,7 +480,7 @@ Expected: All PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/tenant_middleware.py tests/unit/test_tenant_resolvers.py
+git add src/dazzle_http/runtime/tenant_middleware.py tests/unit/test_tenant_resolvers.py
 git commit -m "feat(tenant): rewrite tenant_middleware with resolver protocol + cache (#531)"
 ```
 
@@ -509,7 +509,7 @@ from starlette.applications import Starlette
 from starlette.routing import Route
 from starlette.responses import PlainTextResponse
 
-from dazzle_back.runtime.tenant_middleware import TenantMiddleware, HeaderResolver
+from dazzle_http.runtime.tenant_middleware import TenantMiddleware, HeaderResolver
 
 
 def _make_app(registry_records: dict[str, MagicMock] | None = None) -> Starlette:
@@ -581,7 +581,7 @@ class TestMiddlewareErrors:
 
 class TestRegistryCache:
     def test_cache_hit_avoids_second_lookup(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import _RegistryCache
+        from dazzle_http.runtime.tenant_middleware import _RegistryCache
 
         registry = MagicMock()
         record = MagicMock(slug="cyfuture", status="active")
@@ -596,7 +596,7 @@ class TestRegistryCache:
         assert registry.get.call_count == 1  # only one DB call
 
     def test_cache_miss_returns_none(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import _RegistryCache
+        from dazzle_http.runtime.tenant_middleware import _RegistryCache
 
         registry = MagicMock()
         registry.get.return_value = None
@@ -605,7 +605,7 @@ class TestRegistryCache:
         assert cache.get("nonexistent") is None
 
     def test_expired_entry_triggers_fresh_lookup(self) -> None:
-        from dazzle_back.runtime.tenant_middleware import _RegistryCache
+        from dazzle_http.runtime.tenant_middleware import _RegistryCache
         import time
 
         registry = MagicMock()
@@ -647,7 +647,7 @@ git commit -m "test(tenant): add middleware dispatch tests (#531)"
 ## Task 4: pg_backend Connection Routing
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/pg_backend.py`
+- Modify: `src/dazzle_http/runtime/pg_backend.py`
 - Modify: `tests/unit/test_tenant_connection.py` (add pg_backend tests)
 
 Modify `connection()` to read the `_current_tenant_schema` context var. Fix hardcoded `public` schema in introspection queries.
@@ -661,7 +661,7 @@ class TestPgBackendTenantRouting:
     def test_connection_uses_context_var_for_search_path(self) -> None:
         """When context var is set, connection() should SET search_path with that schema."""
         from unittest.mock import MagicMock, patch
-        from dazzle_back.runtime.tenant_isolation import (
+        from dazzle_http.runtime.tenant_isolation import (
             _current_tenant_schema,
             set_current_tenant_schema,
         )
@@ -670,7 +670,7 @@ class TestPgBackendTenantRouting:
         try:
             # We can't easily test the full connection() without a real DB,
             # but we verify the context var is readable from within an async context
-            from dazzle_back.runtime.tenant_isolation import get_current_tenant_schema
+            from dazzle_http.runtime.tenant_isolation import get_current_tenant_schema
 
             assert get_current_tenant_schema() == "tenant_cyfuture"
             # The pg_backend.connection() implementation should call:
@@ -680,19 +680,19 @@ class TestPgBackendTenantRouting:
 
     def test_no_context_var_returns_none(self) -> None:
         """Without context var, get_current_tenant_schema returns None."""
-        from dazzle_back.runtime.tenant_isolation import get_current_tenant_schema
+        from dazzle_http.runtime.tenant_isolation import get_current_tenant_schema
 
         assert get_current_tenant_schema() is None
 ```
 
 - [ ] **Step 2: Modify pg_backend.py connection()**
 
-Read `src/dazzle_back/runtime/pg_backend.py`. The `connection()` context manager has **TWO branches** that both set `search_path` — the pool path and the direct-connect fallback. Both must be patched.
+Read `src/dazzle_http/runtime/pg_backend.py`. The `connection()` context manager has **TWO branches** that both set `search_path` — the pool path and the direct-connect fallback. Both must be patched.
 
 At the very start of `connection()`, determine the effective search_path:
 
 ```python
-from dazzle_back.runtime.tenant_isolation import get_current_tenant_schema
+from dazzle_http.runtime.tenant_isolation import get_current_tenant_schema
 
 effective_search_path = get_current_tenant_schema() or self.search_path
 ```
@@ -713,7 +713,7 @@ In `table_exists()`, `get_table_columns()`, `get_column_info()`, replace hardcod
 
 ```python
 def table_exists(self, table_name: str) -> bool:
-    from dazzle_back.runtime.tenant_isolation import get_current_tenant_schema
+    from dazzle_http.runtime.tenant_isolation import get_current_tenant_schema
 
     schema = get_current_tenant_schema() or self.search_path or "public"
     # Use schema in the query instead of hardcoded 'public'
@@ -727,7 +727,7 @@ Expected: All PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/pg_backend.py tests/unit/test_tenant_connection.py
+git add src/dazzle_http/runtime/pg_backend.py tests/unit/test_tenant_connection.py
 git commit -m "feat(tenant): pg_backend reads tenant schema context var (#531)"
 ```
 
@@ -736,7 +736,7 @@ git commit -m "feat(tenant): pg_backend reads tenant schema context var (#531)"
 ## Task 5: Server Wiring
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/server.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 
 Wire `TenantMiddleware` into the app when `TenantConfig.isolation == "schema"`.
 
@@ -757,7 +757,7 @@ Find where middleware is added (around line 1365-1408) and where the manifest/co
         # Tenant isolation middleware (schema-per-tenant)
         tenant_config = getattr(self._config, "tenant_config", None)
         if tenant_config and tenant_config.isolation == "schema":
-            from dazzle_back.runtime.tenant_middleware import (
+            from dazzle_http.runtime.tenant_middleware import (
                 TenantMiddleware,
                 build_resolver,
             )
@@ -783,7 +783,7 @@ Expected: All PASS
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/server.py
+git add src/dazzle_http/runtime/server.py
 git commit -m "feat(tenant): wire TenantMiddleware into server when isolation=schema (#531)"
 ```
 
@@ -928,7 +928,7 @@ Expected: All PASS
 
 - [ ] **Step 3: Lint and type check**
 
-Run: `ruff check src/dazzle_back/runtime/tenant_middleware.py src/dazzle_back/runtime/tenant_isolation.py src/dazzle_back/runtime/pg_backend.py --fix && ruff format src/dazzle_back/runtime/tenant_middleware.py src/dazzle_back/runtime/tenant_isolation.py src/dazzle_back/runtime/pg_backend.py`
+Run: `ruff check src/dazzle_http/runtime/tenant_middleware.py src/dazzle_http/runtime/tenant_isolation.py src/dazzle_http/runtime/pg_backend.py --fix && ruff format src/dazzle_http/runtime/tenant_middleware.py src/dazzle_http/runtime/tenant_isolation.py src/dazzle_http/runtime/pg_backend.py`
 
 - [ ] **Step 4: Commit**
 

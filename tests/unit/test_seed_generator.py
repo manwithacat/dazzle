@@ -237,9 +237,9 @@ class TestSeedRunner:
     async def test_creates_missing_rows(self) -> None:
         from unittest.mock import AsyncMock
 
-        from dazzle.back.runtime.seed_runner import run_seed_templates
         from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
         from dazzle.core.ir.seed import SeedFieldTemplate, SeedTemplateSpec
+        from dazzle.http.runtime.seed_runner import run_seed_templates
 
         entity = MagicMock()
         entity.name = "AcademicYear"
@@ -271,9 +271,9 @@ class TestSeedRunner:
     async def test_skips_existing_rows(self) -> None:
         from unittest.mock import AsyncMock
 
-        from dazzle.back.runtime.seed_runner import run_seed_templates
         from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
         from dazzle.core.ir.seed import SeedFieldTemplate, SeedTemplateSpec
+        from dazzle.http.runtime.seed_runner import run_seed_templates
 
         entity = MagicMock()
         entity.name = "AcademicYear"

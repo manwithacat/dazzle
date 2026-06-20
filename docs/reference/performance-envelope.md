@@ -41,7 +41,7 @@ deployments add network latency on top of these numbers.
 **Two schema configs.** Every probe is run against two schemas:
 
 - **`default`** — the framework-generated schema exactly as
-  `src/dazzle/back/runtime/sa_schema.py` emits it: primary-key indexes, FK
+  `src/dazzle/http/runtime/sa_schema.py` emits it: primary-key indexes, FK
   *constraints*, and unique constraints. No index on `tenant_id` or FK columns.
 - **`indexed`** — the `default` schema plus
   [`benchmarks/indexes.sql`](https://github.com/manwithacat/dazzle/blob/main/benchmarks/indexes.sql):

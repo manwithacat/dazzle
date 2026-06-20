@@ -11,10 +11,10 @@ except ImportError:
 
 pytestmark = pytest.mark.skipif(not HAS_NX, reason="networkx not installed")
 
-from dazzle.back.runtime.graph_algorithms import connected_components, shortest_path  # noqa: E402
-from dazzle.back.runtime.graph_materializer import GraphMaterializer  # noqa: E402
-from dazzle.back.runtime.graph_serializer import GraphSerializer  # noqa: E402
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec  # noqa: E402
+from dazzle.http.runtime.graph_algorithms import connected_components, shortest_path  # noqa: E402
+from dazzle.http.runtime.graph_materializer import GraphMaterializer  # noqa: E402
+from dazzle.http.runtime.graph_serializer import GraphSerializer  # noqa: E402
 
 
 class TestShortestPathPipeline:
@@ -111,7 +111,7 @@ class TestDomainFiltering:
     def test_extract_domain_filters(self) -> None:
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import _extract_domain_filters
+        from dazzle.http.runtime.route_generator import _extract_domain_filters
 
         request = MagicMock()
         request.query_params = {"work_id": "w1", "format": "cytoscape", "extra": "ignored"}
@@ -123,7 +123,7 @@ class TestDomainFiltering:
     def test_bracket_filter_syntax(self) -> None:
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import _extract_domain_filters
+        from dazzle.http.runtime.route_generator import _extract_domain_filters
 
         request = MagicMock()
         request.query_params = {"filter[work_id]": "w1"}
@@ -133,7 +133,7 @@ class TestDomainFiltering:
     def test_no_filter_fields(self) -> None:
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import _extract_domain_filters
+        from dazzle.http.runtime.route_generator import _extract_domain_filters
 
         request = MagicMock()
         request.query_params = {"work_id": "w1"}

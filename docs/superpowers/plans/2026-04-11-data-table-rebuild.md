@@ -24,25 +24,25 @@
 
 | File | Action | Responsibility |
 |---|---|---|
-| `src/dazzle_back/runtime/route_generator.py` | Modify (after line 2985) | Add PATCH field + bulk-delete endpoints |
-| `src/dazzle_ui/converters/template_compiler.py` | Modify (lines 711-754) | Populate `inline_editable`, set `bulk_actions=True` |
-| `src/dazzle_ui/runtime/static/js/dz-alpine.js` | Modify (lines 139-266) | Rewrite `dzTable`: column resize, inline edit, loading, config param |
-| `src/dazzle_ui/templates/components/filterable_table.html` | Rewrite (149 lines) | Pure Tailwind table chrome, semantic HTML, `<colgroup>`, sticky header |
-| `src/dazzle_ui/templates/fragments/table_rows.html` | Rewrite (78 lines) | Inline-editable cells, row states, spec-governed chrome |
-| `src/dazzle_ui/templates/fragments/table_pagination.html` | Rewrite (18 lines) | Pure Tailwind pagination |
-| `src/dazzle_ui/templates/fragments/inline_edit.html` | Rewrite (40 lines) | Phase-based cell editing per inline-edit primitive |
-| `src/dazzle_ui/templates/fragments/bulk_actions.html` | Rewrite (38 lines) | Pure Tailwind, delete-only with confirmation |
-| `src/dazzle_ui/templates/fragments/search_input.html` | Restyle (38 lines) | Pure Tailwind, same HTMX wiring |
-| `src/dazzle_ui/templates/fragments/filter_bar.html` | Restyle (80 lines) | Pure Tailwind, same HTMX wiring |
+| `src/dazzle_http/runtime/route_generator.py` | Modify (after line 2985) | Add PATCH field + bulk-delete endpoints |
+| `src/dazzle_page/converters/template_compiler.py` | Modify (lines 711-754) | Populate `inline_editable`, set `bulk_actions=True` |
+| `src/dazzle_page/runtime/static/js/dz-alpine.js` | Modify (lines 139-266) | Rewrite `dzTable`: column resize, inline edit, loading, config param |
+| `src/dazzle_page/templates/components/filterable_table.html` | Rewrite (149 lines) | Pure Tailwind table chrome, semantic HTML, `<colgroup>`, sticky header |
+| `src/dazzle_page/templates/fragments/table_rows.html` | Rewrite (78 lines) | Inline-editable cells, row states, spec-governed chrome |
+| `src/dazzle_page/templates/fragments/table_pagination.html` | Rewrite (18 lines) | Pure Tailwind pagination |
+| `src/dazzle_page/templates/fragments/inline_edit.html` | Rewrite (40 lines) | Phase-based cell editing per inline-edit primitive |
+| `src/dazzle_page/templates/fragments/bulk_actions.html` | Rewrite (38 lines) | Pure Tailwind, delete-only with confirmation |
+| `src/dazzle_page/templates/fragments/search_input.html` | Restyle (38 lines) | Pure Tailwind, same HTMX wiring |
+| `src/dazzle_page/templates/fragments/filter_bar.html` | Restyle (80 lines) | Pure Tailwind, same HTMX wiring |
 | `tests/quality_gates/test_data_table_gates.py` | Create | Unit + Playwright integration tests |
-| `src/dazzle_ui/runtime/static/test-data-table.html` | Create | Static test harness (no backend needed for unit gates) |
+| `src/dazzle_page/runtime/static/test-data-table.html` | Create | Static test harness (no backend needed for unit gates) |
 
 ---
 
 ### Task 1: Backend — PATCH Field Endpoint
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py` (insert after line 2985)
+- Modify: `src/dazzle_http/runtime/route_generator.py` (insert after line 2985)
 - Test: `tests/unit/test_patch_field.py`
 
 The PATCH endpoint updates a single field on an entity and returns the updated row as an HTML `<tr>` fragment.
@@ -137,7 +137,7 @@ pytest tests/unit/test_patch_field.py -v
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py tests/unit/test_patch_field.py
+git add src/dazzle_http/runtime/route_generator.py tests/unit/test_patch_field.py
 git commit -m "feat(api): add PATCH field and bulk-delete endpoints for data table inline edit"
 ```
 
@@ -146,7 +146,7 @@ git commit -m "feat(api): add PATCH field and bulk-delete endpoints for data tab
 ### Task 2: Compiler — Populate inline_editable and bulk_actions
 
 **Files:**
-- Modify: `src/dazzle_ui/converters/template_compiler.py` (lines 711-754)
+- Modify: `src/dazzle_page/converters/template_compiler.py` (lines 711-754)
 
 - [ ] **Step 1: Read `_compile_list_surface` and `_field_type_to_column_type`**
 
@@ -187,7 +187,7 @@ print('OK')
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/converters/template_compiler.py
+git add src/dazzle_page/converters/template_compiler.py
 git commit -m "feat(compiler): populate inline_editable from field types and enable bulk_actions"
 ```
 
@@ -196,7 +196,7 @@ git commit -m "feat(compiler): populate inline_editable from field types and ena
 ### Task 3: Alpine Controller — Rewrite dzTable
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/js/dz-alpine.js` (lines 139-266)
+- Modify: `src/dazzle_page/runtime/static/js/dz-alpine.js` (lines 139-266)
 
 This is the largest JS task. Rewrite the `dzTable` component with the new state shape from the spec.
 
@@ -263,7 +263,7 @@ Load any page that renders a table. Check browser console for registration error
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/js/dz-alpine.js
+git add src/dazzle_page/runtime/static/js/dz-alpine.js
 git commit -m "feat(table): rewrite dzTable Alpine controller with resize, inline edit, bulk actions
 
 Column resize via pointer events + colgroup. Inline edit with
@@ -276,7 +276,7 @@ Config object replaces positional args. Loading state explicit."
 ### Task 4: Template — Rewrite filterable_table.html
 
 **Files:**
-- Rewrite: `src/dazzle_ui/templates/components/filterable_table.html` (149 lines)
+- Rewrite: `src/dazzle_page/templates/components/filterable_table.html` (149 lines)
 
 - [ ] **Step 1: Read the ux-architect data-table component contract**
 
@@ -303,7 +303,7 @@ Key requirements:
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/components/filterable_table.html
+git add src/dazzle_page/templates/components/filterable_table.html
 git commit -m "feat(table): rewrite main table template to pure Tailwind with colgroup and sticky header"
 ```
 
@@ -312,8 +312,8 @@ git commit -m "feat(table): rewrite main table template to pure Tailwind with co
 ### Task 5: Template — Rewrite table_rows.html with inline edit
 
 **Files:**
-- Rewrite: `src/dazzle_ui/templates/fragments/table_rows.html` (78 lines)
-- Rewrite: `src/dazzle_ui/templates/fragments/inline_edit.html` (40 lines)
+- Rewrite: `src/dazzle_page/templates/fragments/table_rows.html` (78 lines)
+- Rewrite: `src/dazzle_page/templates/fragments/inline_edit.html` (40 lines)
 
 - [ ] **Step 1: Read the inline-edit primitive spec**
 
@@ -354,7 +354,7 @@ The inline edit fragment renders inside a `<td>` when a cell is being edited:
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/fragments/table_rows.html src/dazzle_ui/templates/fragments/inline_edit.html
+git add src/dazzle_page/templates/fragments/table_rows.html src/dazzle_page/templates/fragments/inline_edit.html
 git commit -m "feat(table): rewrite row template with inline edit support
 
 Phase-based inline editing: double-click to edit, Enter/Tab to commit,
@@ -367,10 +367,10 @@ hover, selected, pending, error."
 ### Task 6: Template — Rewrite supporting fragments
 
 **Files:**
-- Rewrite: `src/dazzle_ui/templates/fragments/table_pagination.html` (18 lines)
-- Rewrite: `src/dazzle_ui/templates/fragments/bulk_actions.html` (38 lines)
-- Restyle: `src/dazzle_ui/templates/fragments/search_input.html` (38 lines)
-- Restyle: `src/dazzle_ui/templates/fragments/filter_bar.html` (80 lines)
+- Rewrite: `src/dazzle_page/templates/fragments/table_pagination.html` (18 lines)
+- Rewrite: `src/dazzle_page/templates/fragments/bulk_actions.html` (38 lines)
+- Restyle: `src/dazzle_page/templates/fragments/search_input.html` (38 lines)
+- Restyle: `src/dazzle_page/templates/fragments/filter_bar.html` (80 lines)
 
 - [ ] **Step 1: Rewrite table_pagination.html**
 
@@ -408,7 +408,7 @@ Same HTMX wiring and filter logic, pure Tailwind classes:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/fragments/table_pagination.html src/dazzle_ui/templates/fragments/bulk_actions.html src/dazzle_ui/templates/fragments/search_input.html src/dazzle_ui/templates/fragments/filter_bar.html
+git add src/dazzle_page/templates/fragments/table_pagination.html src/dazzle_page/templates/fragments/bulk_actions.html src/dazzle_page/templates/fragments/search_input.html src/dazzle_page/templates/fragments/filter_bar.html
 git commit -m "feat(table): rewrite supporting fragments to pure Tailwind
 
 Pagination, bulk actions, search, and filter bar — all DaisyUI
@@ -422,11 +422,11 @@ structural tokens from Linear token sheet."
 
 **Files:**
 - Create: `tests/quality_gates/test_data_table_gates.py`
-- Create: `src/dazzle_ui/runtime/static/test-data-table.html`
+- Create: `src/dazzle_page/runtime/static/test-data-table.html`
 
 - [ ] **Step 1: Create the test harness**
 
-Create `src/dazzle_ui/runtime/static/test-data-table.html` — a standalone HTML page that loads Alpine + the `dzTable` component with mock data. Include:
+Create `src/dazzle_page/runtime/static/test-data-table.html` — a standalone HTML page that loads Alpine + the `dzTable` component with mock data. Include:
 - A `<table>` with 4 columns (title:text, status:badge, amount:currency, due_date:date)
 - 10 mock rows with `data-dz-row-id` attributes
 - `<colgroup>` with `<col data-col="...">` per column
@@ -460,7 +460,7 @@ from playwright.sync_api import sync_playwright
 
 @pytest.fixture(scope="module")
 def server():
-    static_dir = "src/dazzle_ui/runtime/static"
+    static_dir = "src/dazzle_page/runtime/static"
     proc = subprocess.Popen(
         ["python3", "-m", "http.server", "8768", "--directory", static_dir],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -581,7 +581,7 @@ Expected: All unit gates pass. Integration gates may need adjustment based on ac
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tests/quality_gates/test_data_table_gates.py src/dazzle_ui/runtime/static/test-data-table.html
+git add tests/quality_gates/test_data_table_gates.py src/dazzle_page/runtime/static/test-data-table.html
 git commit -m "test(table): add unit + Playwright integration quality gate tests
 
 5 unit gates from ux-architect/components/data-table.md +
@@ -599,7 +599,7 @@ wiring bugs that unit tests miss."
 - [ ] **Step 1: Verify no remaining DaisyUI classes in table templates**
 
 ```bash
-rg "btn-|badge |table-zebra|checkbox-sm|join-item|dropdown-content|rounded-box|bg-base-|select-bordered" src/dazzle_ui/templates/components/filterable_table.html src/dazzle_ui/templates/fragments/table_rows.html src/dazzle_ui/templates/fragments/table_pagination.html src/dazzle_ui/templates/fragments/bulk_actions.html src/dazzle_ui/templates/fragments/search_input.html src/dazzle_ui/templates/fragments/filter_bar.html src/dazzle_ui/templates/fragments/inline_edit.html
+rg "btn-|badge |table-zebra|checkbox-sm|join-item|dropdown-content|rounded-box|bg-base-|select-bordered" src/dazzle_page/templates/components/filterable_table.html src/dazzle_page/templates/fragments/table_rows.html src/dazzle_page/templates/fragments/table_pagination.html src/dazzle_page/templates/fragments/bulk_actions.html src/dazzle_page/templates/fragments/search_input.html src/dazzle_page/templates/fragments/filter_bar.html src/dazzle_page/templates/fragments/inline_edit.html
 ```
 
 Expected: No matches.

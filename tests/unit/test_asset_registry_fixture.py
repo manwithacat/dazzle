@@ -59,8 +59,8 @@ class TestAssetRegistryFixture:
         `id` is BOTH primary key AND a FK to the base's id with ON DELETE
         CASCADE.
         """
-        from dazzle.back.converters.entity_converter import convert_entities
-        from dazzle.back.runtime.sa_schema import build_metadata
+        from dazzle.http.converters.entity_converter import convert_entities
+        from dazzle.http.runtime.sa_schema import build_metadata
 
         appspec = _load_fixture()
         entities = convert_entities(appspec.domain.entities)

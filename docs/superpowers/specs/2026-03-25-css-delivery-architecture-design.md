@@ -41,7 +41,7 @@ Design tokens use CSS custom properties which don't participate in cascade speci
 
 ### New File: `dazzle-framework.css`
 
-Location: `src/dazzle_ui/runtime/static/css/dazzle-framework.css`
+Location: `src/dazzle_page/runtime/static/css/dazzle-framework.css`
 
 ```css
 /* Dazzle framework semantic layer — load order is authoritative.
@@ -106,7 +106,7 @@ Key changes:
 
 ### Template Changes: `site_base.html`
 
-`src/dazzle_ui/templates/site/site_base.html` gets the same treatment:
+`src/dazzle_page/templates/site/site_base.html` gets the same treatment:
 
 ```html
 {# Layer order declaration #}
@@ -232,16 +232,16 @@ The weekly `update-vendors.yml` keeps its dist rebuild step (vendor JS updates c
 
 | File | Change |
 |------|--------|
-| `src/dazzle_ui/runtime/static/css/dazzle-framework.css` | **New** — entry point with `@import` + layer assignments |
-| `src/dazzle_ui/runtime/static/css/feedback-widget.css` | Wrap content in `@layer framework { }` |
-| `src/dazzle_ui/templates/base.html` | Layer declaration, simplified CSS loading, `_use_cdn` default flip |
-| `src/dazzle_ui/templates/site/site_base.html` | Layer declaration, `_use_cdn` default flip |
-| `src/dazzle_ui/runtime/template_renderer.py` | `_use_cdn` default → `False` |
-| `src/dazzle_ui/runtime/css_loader.py` | Canonical file order, add `dz.css`, `@layer` wrappers |
+| `src/dazzle_page/runtime/static/css/dazzle-framework.css` | **New** — entry point with `@import` + layer assignments |
+| `src/dazzle_page/runtime/static/css/feedback-widget.css` | Wrap content in `@layer framework { }` |
+| `src/dazzle_page/templates/base.html` | Layer declaration, simplified CSS loading, `_use_cdn` default flip |
+| `src/dazzle_page/templates/site/site_base.html` | Layer declaration, `_use_cdn` default flip |
+| `src/dazzle_page/runtime/template_renderer.py` | `_use_cdn` default → `False` |
+| `src/dazzle_page/runtime/css_loader.py` | Canonical file order, add `dz.css`, `@layer` wrappers |
 | `src/dazzle/core/manifest.py` | `cdn` default → `False` (both dataclass and parser) |
 | `scripts/build_dist.py` | Layer-aware concatenation with `@layer` wrappers, canonical order |
 | `.github/workflows/publish-pypi.yml` | Add dist build step before publish |
-| `src/dazzle_ui/build_css.py` | Add `--sourcemap` flag to Tailwind CLI invocation |
+| `src/dazzle_page/build_css.py` | Add `--sourcemap` flag to Tailwind CLI invocation |
 | `tests/unit/test_template_rendering.py` | Update `test_use_cdn_global` assertion to `False` |
 
 ## Testing
@@ -307,6 +307,6 @@ parts.append(f"/*# sourceMappingURL=data:application/json;base64,{map_b64} */")
 
 | File | Source map change |
 |------|-----------------|
-| `src/dazzle_ui/build_css.py` | Add `--sourcemap` to Tailwind CLI args |
-| `src/dazzle_ui/runtime/css_loader.py` | Generate inline source map in `get_bundled_css()` |
+| `src/dazzle_page/build_css.py` | Add `--sourcemap` to Tailwind CLI args |
+| `src/dazzle_page/runtime/css_loader.py` | Generate inline source map in `get_bundled_css()` |
 | `MANIFEST.in` | Add `global-exclude *.map` (currently excluded by omission; make explicit) |

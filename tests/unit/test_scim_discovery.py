@@ -1,6 +1,6 @@
 """Unit tests for the SCIM discovery documents (#1342 Phase 3)."""
 
-from dazzle.back.runtime.auth import scim_discovery as d
+from dazzle.http.runtime.auth import scim_discovery as d
 
 BASE = "https://app.test"
 

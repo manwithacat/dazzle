@@ -26,9 +26,9 @@
 | `/Volumes/SSD/Dazzle/src/dazzle/core/tenancy_inject.py` | Uniform partition-key injection (IR) | **Create** — `inject_partition_key(entities, tenancy, *, legacy_archetype_fallback)` |
 | `/Volumes/SSD/Dazzle/src/dazzle/core/archetype_expander.py` | Archetype expansion | **Modify** — remove the Stage-5 `_inject_tenant_fk` call (line 44-47); keep `_inject_tenant_fk`/`_find_tenant_entity` as importable helpers |
 | `/Volumes/SSD/Dazzle/src/dazzle/core/linker.py` | Link pipeline | **Modify** — add the post-merge injection stage (~line 212, after signable injection, before FK-graph build at 217) |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/sa_schema.py` | EntitySpec → SA metadata | **Modify** — `build_metadata` gains tenancy awareness; emit `UNIQUE(tenant_id,id)`, composite FKs, tenant-scoped uniqueness, leading index |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/alembic/metadata_loader.py` | Alembic target metadata | **Modify** — pass `appspec.tenancy` into `build_metadata` |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/server.py` | Runtime schema create | **Modify** — pass `appspec.tenancy` into the two `build_metadata` calls (`_setup_database`, `_migrate_tenant_schemas`) |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/sa_schema.py` | EntitySpec → SA metadata | **Modify** — `build_metadata` gains tenancy awareness; emit `UNIQUE(tenant_id,id)`, composite FKs, tenant-scoped uniqueness, leading index |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/alembic/metadata_loader.py` | Alembic target metadata | **Modify** — pass `appspec.tenancy` into `build_metadata` |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/server.py` | Runtime schema create | **Modify** — pass `appspec.tenancy` into the two `build_metadata` calls (`_setup_database`, `_migrate_tenant_schemas`) |
 | `/Volumes/SSD/Dazzle/tests/unit/test_tenancy_partition_inject.py` | Injection unit tests | **Create** |
 | `/Volumes/SSD/Dazzle/tests/unit/test_sa_schema_tenant_constraints.py` | Construction-rule unit tests | **Create** |
 | `/Volumes/SSD/Dazzle/fixtures/tenant_rls/` | Shared-schema fixture (no hand-declared tenant_id) | **Create** |
@@ -256,7 +256,7 @@ git commit -m "feat(tenancy): framework-owned uniform tenant_id injection under 
 ## Task 2: Construction rules in schema generation
 
 **Files:**
-- Modify: `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/sa_schema.py`, `/Volumes/SSD/Dazzle/src/dazzle/back/alembic/metadata_loader.py`, `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/server.py`
+- Modify: `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/sa_schema.py`, `/Volumes/SSD/Dazzle/src/dazzle/http/alembic/metadata_loader.py`, `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/server.py`
 - Test: `/Volumes/SSD/Dazzle/tests/unit/test_sa_schema_tenant_constraints.py`
 
 **Design:** `build_metadata` gains a keyword `partition_key: str | None = None` and `tenant_scoped: set[str] | None = None` (the set of entity names that carry the discriminator). When an entity is in `tenant_scoped`, the table-assembly loop additionally emits: (a) `UNIQUE(<partition_key>, id)`; (b) for each ref field whose target is also in `tenant_scoped`, a **table-level composite FK** `(<partition_key>, <fk>) → <target>(<partition_key>, id)` and the column's own single-column FK is **suppressed**; (c) author unique keys are rewritten to lead with `<partition_key>`; (d) a `(<partition_key>, id)` index. Refs to non-tenant-scoped (global) targets stay single-column.
@@ -271,8 +271,8 @@ Create `/Volumes/SSD/Dazzle/tests/unit/test_sa_schema_tenant_constraints.py`:
 from __future__ import annotations
 
 from dazzle.core import ir
-from dazzle.back.converters.entity_converter import convert_entities
-from dazzle.back.runtime.sa_schema import build_metadata
+from dazzle.http.converters.entity_converter import convert_entities
+from dazzle.http.runtime.sa_schema import build_metadata
 
 
 def _e(name: str, *fields: ir.FieldSpec, **kw) -> ir.EntitySpec:
@@ -355,11 +355,11 @@ def test_non_tenant_app_unchanged() -> None:
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `pytest tests/unit/test_sa_schema_tenant_constraints.py -v`
-Expected: FAIL — `build_metadata` does not accept `partition_key`/`tenant_scoped`. (Before implementing, read `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/sa_schema.py:149-197` (`_field_to_column`) and `:336-432` (`build_metadata`) and `/Volumes/SSD/Dazzle/src/dazzle/back/converters/entity_converter.py` to confirm the converted-entity field/modifier accessors — the converted entities feed `build_metadata`, so the construction logic reads the *converted* field shapes, not raw IR. Adjust attribute access to match `convert_entities` output.)
+Expected: FAIL — `build_metadata` does not accept `partition_key`/`tenant_scoped`. (Before implementing, read `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/sa_schema.py:149-197` (`_field_to_column`) and `:336-432` (`build_metadata`) and `/Volumes/SSD/Dazzle/src/dazzle/http/converters/entity_converter.py` to confirm the converted-entity field/modifier accessors — the converted entities feed `build_metadata`, so the construction logic reads the *converted* field shapes, not raw IR. Adjust attribute access to match `convert_entities` output.)
 
 - [ ] **Step 3: Implement the construction rules**
 
-In `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/sa_schema.py`:
+In `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/sa_schema.py`:
 
 (a) Change `_field_to_column` (line 149) to accept `suppress_fk: bool = False` and skip building `fk_args` when `suppress_fk` is True (the composite FK is added at table level instead). Also stop setting `kwargs["unique"] = True` when the caller will tenant-scope it — add a `suppress_unique: bool = False` param that skips the column-level `unique`.
 
@@ -388,7 +388,7 @@ Keep the non-tenant path (when `partition_key is None` or entity not scoped) **b
 
 - [ ] **Step 4: Thread tenancy into the call sites**
 
-`/Volumes/SSD/Dazzle/src/dazzle/back/alembic/metadata_loader.py` — change the final call to:
+`/Volumes/SSD/Dazzle/src/dazzle/http/alembic/metadata_loader.py` — change the final call to:
 
 ```python
     tenancy = appspec.tenancy
@@ -400,7 +400,7 @@ Keep the non-tenant path (when `partition_key is None` or entity not scoped) **b
     return build_metadata(entities, surfaces=list(appspec.surfaces))
 ```
 
-`/Volumes/SSD/Dazzle/src/dazzle/back/runtime/server.py` — apply the same branch at both `build_metadata(self._entities, surfaces=...)` call sites (`_setup_database` ~line 720 and `_migrate_tenant_schemas` ~line 628), deriving `partition_key`/`tenant_scoped` from `self._appspec.tenancy`. Factor a small helper `_tenancy_metadata_kwargs(appspec)` to avoid duplicating the branch.
+`/Volumes/SSD/Dazzle/src/dazzle/http/runtime/server.py` — apply the same branch at both `build_metadata(self._entities, surfaces=...)` call sites (`_setup_database` ~line 720 and `_migrate_tenant_schemas` ~line 628), deriving `partition_key`/`tenant_scoped` from `self._appspec.tenancy`. Factor a small helper `_tenancy_metadata_kwargs(appspec)` to avoid duplicating the branch.
 
 - [ ] **Step 5: Run the tests + the broader schema/runtime unit slice**
 
@@ -410,7 +410,7 @@ Expected: PASS. The `tenant_scoped` derivation (entity has the partition_key fie
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/sa_schema.py src/dazzle/back/alembic/metadata_loader.py src/dazzle/back/runtime/server.py tests/unit/test_sa_schema_tenant_constraints.py
+git add src/dazzle/http/runtime/sa_schema.py src/dazzle/http/alembic/metadata_loader.py src/dazzle/http/runtime/server.py tests/unit/test_sa_schema_tenant_constraints.py
 git commit -m "feat(schema): tenant-scoped constraints (composite FK, UNIQUE(tenant_id,id), scoped uniqueness, index) (RLS Phase A)"
 ```
 
@@ -489,8 +489,8 @@ def engine():
 
 def _build_fixture_metadata():
     from dazzle.core.appspec_loader import load_project_appspec
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import build_metadata
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata
     from dazzle.core import ir
 
     appspec = load_project_appspec(Path("fixtures/tenant_rls"))

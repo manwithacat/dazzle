@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from dazzle.back.runtime.auth.membership_events import MembershipEvent, MembershipEventType
+from dazzle.http.runtime.auth.membership_events import MembershipEvent, MembershipEventType
 from dazzle.rbac.access_evidence import (
     ACCESS_EVIDENCE_CONTROLS,
     classify_jml,

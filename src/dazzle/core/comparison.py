@@ -1,5 +1,5 @@
 """
-Canonical comparison utilities shared across dazzle.back and dazzle.ui.
+Canonical comparison utilities shared across dazzle.http and dazzle.page.
 
 Provides common value normalization and operator dispatch used by
 condition_evaluator, access_evaluator, invariant_evaluator, and the

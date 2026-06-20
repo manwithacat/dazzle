@@ -37,7 +37,7 @@ The framework has **at least three independent code paths** that derive names, r
 
 - Contract-verification tooling expects a DOM attribute the template compiler never emits
 - Sidebar nav hrefs point at routes the route generator never registers
-- An entire template directory (`src/dazzle_ui/templates/workspace/regions/`) has no ux-architect contracts because it was never systematically scanned
+- An entire template directory (`src/dazzle_page/templates/workspace/regions/`) has no ux-architect contracts because it was never systematically scanned
 
 Each of these looks like a different defect on the surface. They share a root cause: **workspace regions are identified by at least three different strings in three different subsystems, and nothing enforces their consistency**.
 
@@ -48,7 +48,7 @@ Each of these looks like a different defect on the surface. They share a root ca
 | **EX-013** | 217 | fieldtest_hub | Nav generator | Sidebar 'Issue Board' link 404. Tried 4 slug variants (`issue_board`, `issue_report`, `issue_reports`, `issue_report_list`) — none resolve. DSL declares `surface issue_report_list "Issue Board"` but the runtime exposes no working URL. Nav href does not match route registration. |
 | **EX-025** | 220 | simple_task | Contract generator ↔ template compiler | 4 `workspace:*` Phase A contracts FAIL because rendered workspace HTML does not emit `data-region-name="<name>"` on region wrappers. 15 region names affected across `task_board`, `admin_dashboard`, `team_overview`, `_platform_admin`. Contract generator expects an attribute the templates don't produce. |
 | **EX-033** | 222 | ops_dashboard | Nav generator | Platform Admin workspace sidebar lists `Health` (`/app/health`), `Deploys` (`/app/deploys`), `App Map` (`/app/app-map`) — **all 404**. Real surfaces live at `/app/systemhealth` and `/app/deployhistory`. Slug mangling mismatch: `system_health` → `systemhealth` in routes, but nav generator emits `health`. |
-| **PROP-047** | 222 | ops_dashboard | Template scan coverage | `workspace-metrics-region` — KPI grid responsive layout with attention-level row colouring. Lives in `src/dazzle_ui/templates/workspace/regions/metrics.html`. No contract. |
+| **PROP-047** | 222 | ops_dashboard | Template scan coverage | `workspace-metrics-region` — KPI grid responsive layout with attention-level row colouring. Lives in `src/dazzle_page/templates/workspace/regions/metrics.html`. No contract. |
 | **PROP-048** | 222 | ops_dashboard | Template scan coverage | `workspace-tree-region` — native `<details>/<summary>` recursive hierarchy with child-count badges, HTMX drawer-load on click. Lives in `workspace/regions/tree.html`. No contract. |
 | **PROP-049** | 222 | ops_dashboard | Template scan coverage | `workspace-diagram-region` — Mermaid.js CDN lazy-load + overflow wrapper. Lives in `workspace/regions/diagram.html`. No contract. |
 
@@ -62,11 +62,11 @@ Canonical region identifier from the DSL source. Everything else should derive f
 
 ### Path B — Route generator → URL slug
 
-`src/dazzle_back/runtime/route_generator.py` produces routes for entity surfaces at `/app/<entity_slug>` where `<entity_slug>` appears to be `entity.name.lower().replace('_', '')` — camelCase flattened. That's why `system_health` → `systemhealth`. This collapsing is irreversible without knowing the original.
+`src/dazzle_http/runtime/route_generator.py` produces routes for entity surfaces at `/app/<entity_slug>` where `<entity_slug>` appears to be `entity.name.lower().replace('_', '')` — camelCase flattened. That's why `system_health` → `systemhealth`. This collapsing is irreversible without knowing the original.
 
 ### Path C — Nav generator → sidebar href
 
-`src/dazzle_ui/converters/template_compiler.py` (or wherever sidebar nav is built) emits `/app/<surface_slug>` hrefs from the surface declarations — but **uses a different slug rule than Path B**. Some surfaces keep underscores (`_platform_admin` → `/app/workspaces/_platform_admin` works), some collapse (`issue_report_list` → tried multiple variants, none work), some get truncated (`system_health` → `/app/health`).
+`src/dazzle_page/converters/template_compiler.py` (or wherever sidebar nav is built) emits `/app/<surface_slug>` hrefs from the surface declarations — but **uses a different slug rule than Path B**. Some surfaces keep underscores (`_platform_admin` → `/app/workspaces/_platform_admin` works), some collapse (`issue_report_list` → tried multiple variants, none work), some get truncated (`system_health` → `/app/health`).
 
 ### Path D — Contract generator → DOM attribute expectation
 
@@ -78,7 +78,7 @@ The `missing_contracts` scan in cycle 17 read template files looking for DaisyUI
 
 ## Fix sketch (single canonicalising helper + test)
 
-Introduce a single **`workspace_region_identity(spec, region)`** function in `src/dazzle_ui/converters/workspace_converter.py` (alongside `workspace_allowed_personas`, continuing that "single source of truth" pattern):
+Introduce a single **`workspace_region_identity(spec, region)`** function in `src/dazzle_page/converters/workspace_converter.py` (alongside `workspace_allowed_personas`, continuing that "single source of truth" pattern):
 
 ```python
 @dataclass(frozen=True)
@@ -119,7 +119,7 @@ The single helper unifies Paths B, C, D at their source. The regression test pre
 
 **Confirmed affected apps:** fieldtest_hub (EX-013), simple_task (EX-025), ops_dashboard (EX-033, PROP-047/48/49)
 **Likely affected:** every Dazzle app with workspace regions declared — that's 4 of 5 example apps (all except `contact_manager`, which has no workspaces).
-**Non-trivial migration cost:** the existing templates emit HTML without `data-region-name`. Adding the attribute is a one-line template edit, but confirming no existing CSS/JS relies on the absence requires a grep across Alpine controllers in `src/dazzle_ui/runtime/static/js/dz-alpine.js`.
+**Non-trivial migration cost:** the existing templates emit HTML without `data-region-name`. Adding the attribute is a one-line template edit, but confirming no existing CSS/JS relies on the absence requires a grep across Alpine controllers in `src/dazzle_page/runtime/static/js/dz-alpine.js`.
 
 ## Open questions
 
@@ -131,6 +131,6 @@ The single helper unifies Paths B, C, D at their source. The regression test pre
 ## Recommended follow-up
 
 - **Immediately:** File a GitHub issue titled "Workspace region naming drift — unify route/nav/contract/template under workspace_region_identity helper". Link all 6 EX/PROP rows as evidence.
-- **Next `finding_investigation` cycle (high-leverage):** Reproduce EX-013 on fieldtest_hub to confirm the mechanism. Trace sidebar nav href → route-generator registration path in `src/dazzle_back/runtime/route_generator.py`. That single investigation will answer Open Question #1 and #3 simultaneously and unblock the helper design.
-- **Parallel:** A dedicated `missing_contracts` cycle scanning **only** `src/dazzle_ui/templates/workspace/regions/` should pick up heatmap, funnel_chart, bar_chart, timeline, metrics (already proposed), and any other uncontracted region types. Budget 10 helper calls, proposals-only.
+- **Next `finding_investigation` cycle (high-leverage):** Reproduce EX-013 on fieldtest_hub to confirm the mechanism. Trace sidebar nav href → route-generator registration path in `src/dazzle_http/runtime/route_generator.py`. That single investigation will answer Open Question #1 and #3 simultaneously and unblock the helper design.
+- **Parallel:** A dedicated `missing_contracts` cycle scanning **only** `src/dazzle_page/templates/workspace/regions/` should pick up heatmap, funnel_chart, bar_chart, timeline, metrics (already proposed), and any other uncontracted region types. Budget 10 helper calls, proposals-only.
 - **After the helper lands:** Re-run Phase A contract verification on all 4 workspace-having example apps. EX-025's 4 failing `workspace:*` contracts should flip to PASS.

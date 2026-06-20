@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle.back.events.outbox import EventOutbox
+from dazzle.http.events.outbox import EventOutbox
 
 pytestmark = pytest.mark.postgres
 

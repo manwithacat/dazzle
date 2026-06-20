@@ -93,7 +93,7 @@ In `src/dazzle/mcp/server/handlers/bootstrap.py`, add feedback_widget to the gen
 
 ### 6. CSRF — Extend Exemption to Sub-paths
 
-The exact path `/feedbackreports` is already in `exempt_paths` (covers `POST /feedbackreports`). Add `/feedbackreports/` to `exempt_path_prefixes` in `src/dazzle_back/runtime/csrf.py` so that `PUT /feedbackreports/{id}` and `DELETE /feedbackreports/{id}` are also exempt. The MCP tool and CLI call these endpoints over HTTP without browser CSRF tokens (they authenticate via session cookies obtained from the `/__test__/` or `/auth/login` endpoints).
+The exact path `/feedbackreports` is already in `exempt_paths` (covers `POST /feedbackreports`). Add `/feedbackreports/` to `exempt_path_prefixes` in `src/dazzle_http/runtime/csrf.py` so that `PUT /feedbackreports/{id}` and `DELETE /feedbackreports/{id}` are also exempt. The MCP tool and CLI call these endpoints over HTTP without browser CSRF tokens (they authenticate via session cookies obtained from the `/__test__/` or `/auth/login` endpoints).
 
 ### 7. State Machine — Add `triaged→resolved` Shortcut
 

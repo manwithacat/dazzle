@@ -18,7 +18,7 @@ Tests below pin the contract by inspecting the source of
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-REDIS_BUS = ROOT / "src" / "dazzle" / "back" / "events" / "redis_bus.py"
+REDIS_BUS = ROOT / "src" / "dazzle" / "http" / "events" / "redis_bus.py"
 
 
 def test_socket_timeout_exceeds_block_ms() -> None:

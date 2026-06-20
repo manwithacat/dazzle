@@ -10,7 +10,7 @@ import logging
 import pytest
 from fastapi import FastAPI
 
-from dazzle.back.runtime.route_validator import validate_routes
+from dazzle.http.runtime.route_validator import validate_routes
 
 
 def _app_with_one_conflict() -> FastAPI:

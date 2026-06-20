@@ -52,10 +52,10 @@ Skip if contract is already `DONE`.
 ### 3. REFACTOR (only if impl is PENDING or PARTIAL)
 
 Apply contract to Dazzle code. Typical files:
-- `src/dazzle/render/fragment/...` + `src/dazzle/ui/runtime/static/css/design-system.css` — Fragment renderers + design-system HSL variables (no Jinja2 templates since #1042)
-- `src/dazzle/ui/runtime/static/js/dz-alpine.js` — Alpine controllers aligning with contract's state grammar
+- `src/dazzle/render/fragment/...` + `src/dazzle/page/runtime/static/css/design-system.css` — Fragment renderers + design-system HSL variables (no Jinja2 templates since #1042)
+- `src/dazzle/page/runtime/static/js/dz-alpine.js` — Alpine controllers aligning with contract's state grammar
 - Backend endpoints for new server APIs
-- `src/dazzle/ui/converters/template_compiler.py` — new context fields
+- `src/dazzle/page/converters/template_compiler.py` — new context fields
 
 Follow rules from `~/.claude/skills/ux-architect/stack-adapters/htmx-alpine-tailwind.md`.
 

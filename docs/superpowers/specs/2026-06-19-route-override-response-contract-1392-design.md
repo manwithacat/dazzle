@@ -51,7 +51,7 @@ Two lines, communicated explicitly to authoring agents (docs + counter-prior + A
 ### 1. `build_app_page_context(request)` (prerequisite extraction)
 
 The nav/persona/tenant-config `PageContext` assembly currently **inline** in `_page_handler`
-(`src/dazzle/ui/runtime/page_routes.py` ~L2376 — `_resolve_nav_model` + `PageContext(...)` +
+(`src/dazzle/page/runtime/page_routes.py` ~L2376 — `_resolve_nav_model` + `PageContext(...)` +
 chrome css/js/theme/favicon resolution) is extracted into a reusable, request-only function
 returning the `PageContext` **and** the chrome asset tuples (`css_links`, `js_scripts`, `theme`,
 `favicon`, `font_preconnect`) that `dispatch_render_page` needs. `_page_handler` is refactored to

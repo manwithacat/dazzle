@@ -97,7 +97,7 @@ class TestRenderWorkspaceContentTypedGating:
         # Build a minimal WorkspaceContext with one region. We import
         # locally because the workspace_renderer module is heavy and
         # tests that don't need it shouldn't pay the import cost.
-        from dazzle.ui.runtime.workspace_renderer import WorkspaceContext
+        from dazzle.page.runtime.workspace_renderer import WorkspaceContext
 
         # Construct via dict — WorkspaceContext is a pydantic model.
         return WorkspaceContext(
@@ -118,7 +118,7 @@ class TestRenderWorkspaceContentTypedGating:
         )
 
     def test_default_no_remove_buttons(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import (
+        from dazzle.page.runtime.workspace_renderer import (
             render_workspace_content_typed,
         )
 
@@ -135,7 +135,7 @@ class TestRenderWorkspaceContentTypedGating:
         assert 'data-grid-editable="false"' in html
 
     def test_can_edit_layout_false_no_remove_buttons(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import (
+        from dazzle.page.runtime.workspace_renderer import (
             render_workspace_content_typed,
         )
 
@@ -151,7 +151,7 @@ class TestRenderWorkspaceContentTypedGating:
         assert 'data-grid-editable="false"' in html
 
     def test_can_edit_layout_true_emits_remove_buttons(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import (
+        from dazzle.page.runtime.workspace_renderer import (
             render_workspace_content_typed,
         )
 

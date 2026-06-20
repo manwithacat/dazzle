@@ -17,7 +17,7 @@ to the CSS cascade rule).
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DZ_ISLANDS = REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "js" / "dz-islands.js"
+DZ_ISLANDS = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "js" / "dz-islands.js"
 
 
 def test_strip_in_before_swap() -> None:

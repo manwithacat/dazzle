@@ -14,7 +14,7 @@ def _make_user_and_session() -> tuple[Any, Any]:
     from datetime import UTC, datetime, timedelta
     from uuid import uuid4
 
-    from dazzle.back.runtime.auth.models import SessionRecord, UserRecord
+    from dazzle.http.runtime.auth.models import SessionRecord, UserRecord
 
     user = UserRecord(
         id=uuid4(),
@@ -35,14 +35,14 @@ class TestLoadDomainUserAttributes:
     """Test AuthStore._load_domain_user_attributes."""
 
     def test_returns_empty_when_no_table_configured(self) -> None:
-        from dazzle.back.runtime.auth.store import AuthStore
+        from dazzle.http.runtime.auth.store import AuthStore
 
         with patch.object(AuthStore, "_init_db"):
             store = AuthStore(database_url="postgresql://localhost/test")
         assert store._load_domain_user_attributes("test@example.com") == {}
 
     def test_returns_scalar_fields_from_domain_row(self) -> None:
-        from dazzle.back.runtime.auth.store import AuthStore
+        from dazzle.http.runtime.auth.store import AuthStore
 
         with patch.object(AuthStore, "_init_db"):
             store = AuthStore(
@@ -80,7 +80,7 @@ class TestLoadDomainUserAttributes:
         """UUID objects from psycopg3 must be converted to strings (#684)."""
         from uuid import UUID, uuid4
 
-        from dazzle.back.runtime.auth.store import AuthStore
+        from dazzle.http.runtime.auth.store import AuthStore
 
         with patch.object(AuthStore, "_init_db"):
             store = AuthStore(
@@ -110,7 +110,7 @@ class TestLoadDomainUserAttributes:
         assert result["name"] == "Teacher"
 
     def test_returns_empty_when_no_domain_row_found(self) -> None:
-        from dazzle.back.runtime.auth.store import AuthStore
+        from dazzle.http.runtime.auth.store import AuthStore
 
         with patch.object(AuthStore, "_init_db"):
             store = AuthStore(
@@ -122,7 +122,7 @@ class TestLoadDomainUserAttributes:
         assert result == {}
 
     def test_returns_empty_on_db_error(self) -> None:
-        from dazzle.back.runtime.auth.store import AuthStore
+        from dazzle.http.runtime.auth.store import AuthStore
 
         with patch.object(AuthStore, "_init_db"):
             store = AuthStore(
@@ -138,7 +138,7 @@ class TestValidateSessionMergesDomainAttrs:
     """Test that validate_session merges domain user attributes into preferences."""
 
     def test_domain_attrs_merged_into_preferences(self) -> None:
-        from dazzle.back.runtime.auth.store import AuthStore
+        from dazzle.http.runtime.auth.store import AuthStore
 
         with patch.object(AuthStore, "_init_db"):
             store = AuthStore(
@@ -174,7 +174,7 @@ class TestValidateSessionMergesDomainAttrs:
         assert ctx.preferences.get("department") == "maths"
 
     def test_explicit_preferences_take_priority(self) -> None:
-        from dazzle.back.runtime.auth.store import AuthStore
+        from dazzle.http.runtime.auth.store import AuthStore
 
         with patch.object(AuthStore, "_init_db"):
             store = AuthStore(
@@ -208,7 +208,7 @@ class TestResolveUserAttributeWithPreferences:
     """Test that _resolve_user_attribute picks up domain attrs via preferences."""
 
     def test_resolves_school_from_preferences(self) -> None:
-        from dazzle.back.runtime.route_generator import _resolve_user_attribute
+        from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
         auth_context = MagicMock()
         auth_context.user = MagicMock()
@@ -220,7 +220,7 @@ class TestResolveUserAttributeWithPreferences:
         assert result == "school-uuid-456"
 
     def test_returns_rbac_deny_when_not_found(self) -> None:
-        from dazzle.back.runtime.route_generator import _resolve_user_attribute
+        from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
         auth_context = MagicMock()
         auth_context.user = MagicMock()
@@ -234,7 +234,7 @@ class TestResolveUserAttributeWithPreferences:
 
     def test_resolves_entity_id_from_preferences(self) -> None:
         """current_user in via clauses should resolve to DSL entity ID (#534)."""
-        from dazzle.back.runtime.route_generator import _resolve_user_attribute
+        from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
         auth_context = MagicMock()
         auth_context.user = MagicMock()
@@ -246,7 +246,7 @@ class TestResolveUserAttributeWithPreferences:
 
     def test_uuid_preference_resolves_not_deny(self) -> None:
         """UUID FK attrs stored as strings must resolve, not produce __RBAC_DENY__ (#684)."""
-        from dazzle.back.runtime.route_generator import _resolve_user_attribute
+        from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
         auth_context = MagicMock()
         auth_context.user = MagicMock()
@@ -277,8 +277,8 @@ class TestPositiveAuthResolution:
         """
         from uuid import UUID, uuid4
 
-        from dazzle.back.runtime.auth.store import AuthStore
-        from dazzle.back.runtime.route_generator import _resolve_user_attribute
+        from dazzle.http.runtime.auth.store import AuthStore
+        from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
         with patch.object(AuthStore, "_init_db"):
             store = AuthStore(
@@ -324,7 +324,7 @@ class TestPositiveAuthResolution:
 
     def test_string_attrs_still_resolve(self) -> None:
         """Non-UUID scalar attrs (str, int, bool) continue to work."""
-        from dazzle.back.runtime.route_generator import _resolve_user_attribute
+        from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
         auth_context = MagicMock()
         auth_context.user = MagicMock()
@@ -336,7 +336,7 @@ class TestPositiveAuthResolution:
 
     def test_missing_attr_returns_deny(self) -> None:
         """When the user lacks the required attr, __RBAC_DENY__ is correct."""
-        from dazzle.back.runtime.route_generator import _resolve_user_attribute
+        from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
         auth_context = MagicMock()
         auth_context.user = MagicMock()

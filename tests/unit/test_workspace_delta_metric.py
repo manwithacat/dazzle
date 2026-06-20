@@ -220,7 +220,7 @@ class TestComputeAggregateMetricsDelta:
         return repo
 
     def _run(self, current: int, prior: int, *, sentiment: str = "positive_up") -> dict:
-        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
+        from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         repo = self._make_repo(current, prior)
         delta = DeltaSpec(period_seconds=86400, sentiment=sentiment, period_label="yesterday")
@@ -278,7 +278,7 @@ class TestComputeAggregateMetricsDelta:
         assert m["delta_direction"] == "up"
 
     def test_no_delta_keys_when_spec_absent(self) -> None:
-        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
+        from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         repo = self._make_repo(current_total=42, prior_total=999)
         result = asyncio.run(

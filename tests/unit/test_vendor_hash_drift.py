@@ -1,6 +1,6 @@
 """CI drift gate for vendored JS/CSS.
 
-For every file under ``src/dazzle/ui/runtime/static/vendor/``, recompute
+For every file under ``src/dazzle/page/runtime/static/vendor/``, recompute
 the SHA-256 and assert it matches the value pinned in
 ``scripts/vendor_hashes.json``.
 

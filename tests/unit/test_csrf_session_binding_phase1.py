@@ -14,7 +14,7 @@ from uuid import uuid4
 import pytest
 import sqlalchemy as sa
 
-from dazzle.back.runtime.auth.models import SessionRecord
+from dazzle.http.runtime.auth.models import SessionRecord
 
 
 def _session() -> SessionRecord:
@@ -36,7 +36,7 @@ class TestSessionRecordCsrfSecret:
 def _load_migration():
     path = (
         Path(__file__).resolve().parents[2]
-        / "src/dazzle/back/alembic/versions/0005_session_csrf_secret.py"
+        / "src/dazzle/http/alembic/versions/0005_session_csrf_secret.py"
     )
     spec = importlib.util.spec_from_file_location("m0005", path)
     assert spec and spec.loader
@@ -88,7 +88,7 @@ class TestLoginCsrfCookie:
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
 
-        from dazzle.back.runtime.auth import create_auth_routes
+        from dazzle.http.runtime.auth import create_auth_routes
 
         store = _mock_store()
         app = FastAPI()
@@ -153,7 +153,7 @@ class TestLoginCsrfCookie:
         client, store = setup
         self._login(client, store)
         monkeypatch.setattr(
-            "dazzle.back.runtime.auth.saml_logout.saml_slo_redirect_url",
+            "dazzle.http.runtime.auth.saml_logout.saml_slo_redirect_url",
             lambda store, request, *, session_id: "https://idp.example/slo?SAMLRequest=x",
         )
         logout = client.post(
@@ -169,7 +169,7 @@ class TestLoginCsrfCookie:
         client, store = setup
         self._login(client, store)
         monkeypatch.setattr(
-            "dazzle.back.runtime.auth.saml_logout.saml_slo_redirect_url",
+            "dazzle.http.runtime.auth.saml_logout.saml_slo_redirect_url",
             lambda store, request, *, session_id: None,
         )
         logout = client.post(
@@ -184,7 +184,7 @@ class TestLoginCsrfCookie:
         client, store = setup
         self._login(client, store)
         monkeypatch.setattr(
-            "dazzle.back.runtime.auth.saml_logout.saml_slo_redirect_url",
+            "dazzle.http.runtime.auth.saml_logout.saml_slo_redirect_url",
             lambda store, request, *, session_id: "https://idp.example/slo?SAMLRequest=x",
         )
         logout = client.post("/auth/logout", headers={"hx-request": "true"})
@@ -202,10 +202,10 @@ class TestLoginCsrfCookie:
 
 @contextmanager
 def _mock_totp_module(verify_return: bool) -> Iterator[MagicMock]:
-    """Inject a mock `dazzle.back.runtime.totp` so 2FA verify can run."""
+    """Inject a mock `dazzle.http.runtime.totp` so 2FA verify can run."""
     mock_module = MagicMock()
     mock_module.verify_totp = MagicMock(return_value=verify_return)
-    key = "dazzle.back.runtime.totp"
+    key = "dazzle.http.runtime.totp"
     original = sys.modules.get(key)
     sys.modules[key] = mock_module
     try:
@@ -218,7 +218,7 @@ def _mock_totp_module(verify_return: bool) -> Iterator[MagicMock]:
 
 
 def _make_user(email: str = "user@example.com", **kwargs: Any) -> Any:
-    from dazzle.back.runtime.auth import UserRecord, hash_password
+    from dazzle.http.runtime.auth import UserRecord, hash_password
 
     return UserRecord(email=email, password_hash=hash_password("password"), **kwargs)
 
@@ -232,7 +232,7 @@ def _make_session(user: Any, sid: str | None = None) -> Any:
 
 
 def _make_auth_context(user: Any, session: Any) -> Any:
-    from dazzle.back.runtime.auth import AuthContext
+    from dazzle.http.runtime.auth import AuthContext
 
     return AuthContext(user=user, session=session, is_authenticated=True, roles=user.roles)
 
@@ -272,7 +272,7 @@ class TestCsrfCookieAtSiblingSites:
     # --- routes_2fa.py: JSON 2FA verification (_verify_2fa) ----------------
 
     def test_json_2fa_verify_sets_csrf_from_session(self) -> None:
-        from dazzle.back.runtime.auth import create_2fa_routes
+        from dazzle.http.runtime.auth import create_2fa_routes
 
         store = _mock_store()
         client = self._app(create_2fa_routes(store), store)
@@ -299,7 +299,7 @@ class TestCsrfCookieAtSiblingSites:
     # --- two_factor_form_routes.py: form 2FA verification (303) -----------
 
     def test_form_2fa_verify_sets_csrf_from_session(self) -> None:
-        from dazzle.back.runtime.auth.two_factor_form_routes import (
+        from dazzle.http.runtime.auth.two_factor_form_routes import (
             create_two_factor_form_routes,
         )
 
@@ -328,7 +328,7 @@ class TestCsrfCookieAtSiblingSites:
     # --- password_login_routes.py: form login + signup (303) -------------
 
     def test_form_login_sets_csrf_from_session(self) -> None:
-        from dazzle.back.runtime.auth.password_login_routes import (
+        from dazzle.http.runtime.auth.password_login_routes import (
             create_password_login_routes,
         )
 
@@ -352,7 +352,7 @@ class TestCsrfCookieAtSiblingSites:
         assert "httponly" not in header.lower()
 
     def test_form_signup_sets_csrf_from_session(self) -> None:
-        from dazzle.back.runtime.auth.password_login_routes import (
+        from dazzle.http.runtime.auth.password_login_routes import (
             create_password_login_routes,
         )
 
@@ -385,7 +385,7 @@ class TestCsrfCookieAtSiblingSites:
         """A 2FA-enabled form login redirects to the challenge with only a
         pending (pre-auth) session — it must NOT mint a session-bound CSRF
         cookie, since the user is not yet authenticated."""
-        from dazzle.back.runtime.auth.password_login_routes import (
+        from dazzle.http.runtime.auth.password_login_routes import (
             create_password_login_routes,
         )
 
@@ -409,8 +409,8 @@ class TestCsrfCookieAtSiblingSites:
     # --- magic_link_routes.py: magic-link consumption (303) --------------
 
     def test_magic_link_consume_sets_csrf_from_session(self) -> None:
-        from dazzle.back.runtime.auth import magic_link_routes as mlr
-        from dazzle.back.runtime.auth.magic_link_routes import (
+        from dazzle.http.runtime.auth import magic_link_routes as mlr
+        from dazzle.http.runtime.auth.magic_link_routes import (
             create_magic_link_routes,
         )
 
@@ -445,8 +445,8 @@ class TestCsrfCookieAtSiblingSites:
         from fastapi.testclient import TestClient
         from starlette.middleware.sessions import SessionMiddleware
 
-        from dazzle.back.runtime.auth.sso_config import SsoProviderConfig
-        from dazzle.back.runtime.auth.sso_routes import create_sso_routes
+        from dazzle.http.runtime.auth.sso_config import SsoProviderConfig
+        from dazzle.http.runtime.auth.sso_routes import create_sso_routes
 
         user = _make_user("sso@example.com")
         session = _make_session(user, sid="sso-session-B")
@@ -503,7 +503,7 @@ class TestEverySessionSiteSetsCsrfCookie:
         import re
         from pathlib import Path
 
-        auth_dir = Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/auth"
+        auth_dir = Path(__file__).resolve().parents[2] / "src/dazzle/http/runtime/auth"
         offenders = []
         for py in sorted(auth_dir.glob("*.py")):
             src = py.read_text(encoding="utf-8")

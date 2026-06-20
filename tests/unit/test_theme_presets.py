@@ -6,7 +6,7 @@ Tests the theme system including presets, CSS generation, and resolution.
 
 import pytest
 
-from dazzle.ui.themes import (
+from dazzle.page.themes import (
     CORPORATE_THEME,
     DOCS_THEME,
     MINIMAL_THEME,

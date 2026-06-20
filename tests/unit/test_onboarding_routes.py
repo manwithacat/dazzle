@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.onboarding.routes import create_onboarding_routes
+from dazzle.http.runtime.onboarding.routes import create_onboarding_routes
 
 
 def _app(repo: MagicMock | None, *, user_id: str | None = "u1") -> FastAPI:

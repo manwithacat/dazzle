@@ -41,7 +41,7 @@ class TestCurrentContextAccessConditionSpec:
     """AccessConditionSpec path: `current_context` resolves via context_id kwarg."""
 
     def test_resolves_current_context_to_selected_id(self) -> None:
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _cmp("teaching_group", "current_context")
         filters: dict[str, Any] = {}
@@ -60,7 +60,7 @@ class TestCurrentContextAccessConditionSpec:
 
     def test_no_context_skips_filter(self) -> None:
         """Selector cleared ⇒ filter drops out so persona scope applies unfiltered."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _cmp("teaching_group", "current_context")
         filters: dict[str, Any] = {}
@@ -79,7 +79,7 @@ class TestCurrentContextAccessConditionSpec:
 
     def test_literal_string_unchanged(self) -> None:
         """Plain literal equals-another-string still works (no current_context regression)."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _cmp("status", "active")
         filters: dict[str, Any] = {}
@@ -99,7 +99,7 @@ class TestCurrentContextIRConditionExpr:
     """IR ConditionExpr path: same resolution."""
 
     def test_resolves_current_context_to_selected_id(self) -> None:
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _ir_cmp("teaching_group", "current_context")
         filters: dict[str, Any] = {}
@@ -117,7 +117,7 @@ class TestCurrentContextIRConditionExpr:
         assert filters == {"teaching_group": "tg-xyz"}
 
     def test_no_context_skips_filter(self) -> None:
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _ir_cmp("teaching_group", "current_context")
         filters: dict[str, Any] = {}
@@ -134,7 +134,7 @@ class TestCurrentContextIRConditionExpr:
 
     def test_combined_with_current_user(self) -> None:
         """An AND of `current_user` + `current_context` resolves both sides."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         left = _ir_cmp("owner", "current_user")
         right = _ir_cmp("teaching_group", "current_context")
@@ -163,7 +163,7 @@ class TestBackwardsCompatibility:
     """Callers that don't pass context_id still work (kwarg is optional)."""
 
     def test_without_context_id_kwarg_is_safe(self) -> None:
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _cmp("status", "active")
         filters: dict[str, Any] = {}
@@ -193,7 +193,7 @@ class TestCurrentContextMultiHop1304:
     _ALL_REF_TARGETS = {"AssessmentEvent": {"teaching_group_id": "TeachingGroup"}}
 
     def test_two_hop_dotted_current_context_builds_id_subquery(self) -> None:
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         # `assessment_event.teaching_group = current_context` on a Manuscript
         # region: assessment_event is an FK to AssessmentEvent; teaching_group
@@ -223,7 +223,7 @@ class TestCurrentContextMultiHop1304:
         """A target field that is NOT an FK on the target entity (e.g. a
         scalar `user` column) must stay bare — a blanket `_id` suffix would
         break the working `teacher.user = current_user` case (#1232)."""
-        from dazzle.back.runtime.route_generator import _build_fk_path_subquery
+        from dazzle.http.runtime.route_generator import _build_fk_path_subquery
 
         result = _build_fk_path_subquery(
             "teacher.user",
@@ -237,7 +237,7 @@ class TestCurrentContextMultiHop1304:
         assert "user_id" not in sql
 
     def test_explicit_id_suffix_not_double_suffixed(self) -> None:
-        from dazzle.back.runtime.route_generator import _build_fk_path_subquery
+        from dazzle.http.runtime.route_generator import _build_fk_path_subquery
 
         result = _build_fk_path_subquery(
             "assessment_event.teaching_group_id",
@@ -253,7 +253,7 @@ class TestCurrentContextMultiHop1304:
     def test_two_hop_without_ref_targets_does_not_build_subquery(self) -> None:
         """Without ref_targets the dotted path can't resolve — documents that
         the fetch path MUST thread ref_targets (the #1304 root gap)."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _ir_cmp("assessment_event.teaching_group", "current_context")
         filters: dict[str, Any] = {}
@@ -293,7 +293,7 @@ class TestContextOnlyExtraction1305:
         """`teaching_group = current_context and status = "marked"` under
         context_only must yield ONLY the context term — the literal `status`
         is the row-level filter #887 keeps out of aggregates."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _and(
             _ir_cmp("teaching_group", "current_context"),
@@ -315,7 +315,7 @@ class TestContextOnlyExtraction1305:
         """`owner = current_user and teaching_group = current_context` under
         context_only keeps only the context term (current_user is a scope-ish
         predicate already applied to the aggregate via scope_only_filters)."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _and(
             _ir_cmp("owner", "current_user"),
@@ -336,7 +336,7 @@ class TestContextOnlyExtraction1305:
     def test_context_only_two_hop_builds_subquery_only(self) -> None:
         """The 2-hop dotted context term (the #1305 core) still resolves to an
         FK-path `__in_subquery` under context_only; the AND'd literal drops."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _and(
             _ir_cmp("assessment_event.teaching_group", "current_context"),
@@ -363,7 +363,7 @@ class TestContextOnlyExtraction1305:
     def test_context_only_no_context_term_is_empty(self) -> None:
         """A filter with no current_context term yields no context filters —
         the aggregate then uses scope_only_filters unchanged."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _and(_ir_cmp("owner", "current_user"), _ir_cmp("status", "marked"))
         filters: dict[str, Any] = {}
@@ -381,7 +381,7 @@ class TestContextOnlyExtraction1305:
     def test_context_only_no_context_id_is_empty(self) -> None:
         """Selector cleared (context_id=None) ⇒ no context filter even with a
         current_context term, so the aggregate stays unbound on that axis."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = _ir_cmp("teaching_group", "current_context")
         filters: dict[str, Any] = {}

@@ -24,12 +24,12 @@ from dataclasses import dataclass
 from typing import Any
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.audit_context import (
+from dazzle.http.runtime.audit_context import (
     get_current_user_id,
     reset_current_user_id,
     set_current_user_id,
 )
-from dazzle.back.runtime.audit_wiring import register_audit_callbacks
+from dazzle.http.runtime.audit_wiring import register_audit_callbacks
 
 # ---------------------------------------------------------------------------
 # audit_context

@@ -26,7 +26,7 @@ does not change how responses are validated.
 
 ## Architecture
 
-### New module `src/dazzle/back/runtime/auth/saml_sp_keys.py` (onelogin-free)
+### New module `src/dazzle/http/runtime/auth/saml_sp_keys.py` (onelogin-free)
 
 ```python
 def generate_sp_keypair(common_name: str) -> tuple[str, str]:
@@ -124,10 +124,10 @@ IdP. `disable`: `store.disable_connection_request_signing(...)`; report.
 
 | File | Change |
 |------|--------|
-| `src/dazzle/back/runtime/auth/saml_sp_keys.py` | NEW — `generate_sp_keypair` |
-| `src/dazzle/back/runtime/auth/store.py` | `enable_/disable_connection_request_signing` |
-| `src/dazzle/back/runtime/auth/saml_provider.py` | `_settings` signing branch; `sp_metadata(connection=)` + a connection-aware SP-only settings builder |
-| `src/dazzle/back/runtime/auth/saml_routes.py` | `/auth/saml/metadata?connection=<id>` |
+| `src/dazzle/http/runtime/auth/saml_sp_keys.py` | NEW — `generate_sp_keypair` |
+| `src/dazzle/http/runtime/auth/store.py` | `enable_/disable_connection_request_signing` |
+| `src/dazzle/http/runtime/auth/saml_provider.py` | `_settings` signing branch; `sp_metadata(connection=)` + a connection-aware SP-only settings builder |
+| `src/dazzle/http/runtime/auth/saml_routes.py` | `/auth/saml/metadata?connection=<id>` |
 | `src/dazzle/cli/auth_connection.py` | `enable-/disable-request-signing` |
 | `tests/unit/test_saml_sp_keys.py` | NEW — keypair generation (local) |
 | `tests/unit/test_saml_provider.py` | `_settings` signing branch; connection-aware metadata (CI onelogin) |

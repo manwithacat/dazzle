@@ -32,7 +32,7 @@ Cycles 226 and 228 closed 2 of the 4 axes this gap doc originally identified. Th
 
 ### Closed axes (continued)
 
-3. **Empty-state CTAs — closed in cycle 234 as VERIFIED_FALSE_POSITIVE.** Applied Heuristic 1 at the HTTP layer. Fetched rendered region HTML for all three observations (EX-011 ops_dashboard/ops_engineer, EX-030 support_tickets/customer, EX-037 fieldtest_hub/tester). **Framework is already correct.** `src/dazzle_ui/templates/fragments/empty_state.html:7-9` gates the Create-first CTA button on `create_url` being set, and for unauthorised personas `create_url` is None — so the button is correctly withheld in every case. Zero `btn-primary` links observed in any of the three rendered regions. The original subagent reports conflated "action-oriented words in the DSL-authored empty copy" with "a clickable affordance". The copy is DSL-authored (e.g. fieldtest_hub's Device surface declares `empty: "Add your first device..."` at `app.dsl:298`) and the framework renders it verbatim. **The residual defect is at the DSL layer** — per-persona override for `empty:` copy doesn't exist. Filed as **EX-046** with a DSL schema evolution proposal (add `empty:` inside the existing `for <persona>:` block). EX-011, EX-030, EX-037 are all marked VERIFIED_FALSE_POSITIVE against the framework-bug framing.
+3. **Empty-state CTAs — closed in cycle 234 as VERIFIED_FALSE_POSITIVE.** Applied Heuristic 1 at the HTTP layer. Fetched rendered region HTML for all three observations (EX-011 ops_dashboard/ops_engineer, EX-030 support_tickets/customer, EX-037 fieldtest_hub/tester). **Framework is already correct.** `src/dazzle_page/templates/fragments/empty_state.html:7-9` gates the Create-first CTA button on `create_url` being set, and for unauthorised personas `create_url` is None — so the button is correctly withheld in every case. Zero `btn-primary` links observed in any of the three rendered regions. The original subagent reports conflated "action-oriented words in the DSL-authored empty copy" with "a clickable affordance". The copy is DSL-authored (e.g. fieldtest_hub's Device surface declares `empty: "Add your first device..."` at `app.dsl:298`) and the framework renders it verbatim. **The residual defect is at the DSL layer** — per-persona override for `empty:` copy doesn't exist. Filed as **EX-046** with a DSL schema evolution proposal (add `empty:` inside the existing `for <persona>:` block). EX-011, EX-030, EX-037 are all marked VERIFIED_FALSE_POSITIVE against the framework-bug framing.
 
 ### Closed axes (continued — cycle 258 retrospective)
 
@@ -57,7 +57,7 @@ Both are ~15-minute fixes once the template-compiler dispatch is confirmed. Good
 
 The framework renders UI affordances — navigation links, bulk action buttons, empty-state CTAs, form fields — **without consulting whether the current persona is permitted to use them**. The result is a consistent cross-cycle defect pattern: personas see buttons they can't click, links that return 403/404, empty states advertising actions they can't perform, and create forms exposing ref fields they can't populate.
 
-The v0.55.34 fix for #775 (`workspace_allowed_personas` helper in `src/dazzle_ui/converters/workspace_converter.py`) introduced a **single-source-of-truth** for workspace-level navigation filtering. It's the right pattern — but only one axis. The same approach needs to generalise to entity-level destructive actions, empty-state CTAs, create form field visibility, and (apparently) the workspace-access fallback case itself.
+The v0.55.34 fix for #775 (`workspace_allowed_personas` helper in `src/dazzle_page/converters/workspace_converter.py`) introduced a **single-source-of-truth** for workspace-level navigation filtering. It's the right pattern — but only one axis. The same approach needs to generalise to entity-level destructive actions, empty-state CTAs, create form field visibility, and (apparently) the workspace-access fallback case itself.
 
 ## Evidence
 
@@ -78,21 +78,21 @@ The v0.55.34 `workspace_allowed_personas` helper establishes the right pattern f
 
 ### 1. Bulk-action bar (highest blast radius)
 
-`src/dazzle_ui/templates/components/bulk_action_bar.html` (or wherever the `<div>` with the "Delete X items" button lives) renders the destructive action **unconditionally** when an entity list view has a `delete` operation declared in the DSL. It does not consult whether the current persona is permitted to perform that delete on that entity.
+`src/dazzle_page/templates/components/bulk_action_bar.html` (or wherever the `<div>` with the "Delete X items" button lives) renders the destructive action **unconditionally** when an entity list view has a `delete` operation declared in the DSL. It does not consult whether the current persona is permitted to perform that delete on that entity.
 
-**Fix location:** the template needs a guard — either an `{% if persona_can_delete %}` wrapper, or the context variable itself needs filtering by the template compiler. The cleanest shape: `src/dazzle_ui/converters/template_compiler.py` computes `persona_permitted_actions = [op for op in entity.ops if access_rules_permit(persona, entity, op)]` and the template iterates only over that.
+**Fix location:** the template needs a guard — either an `{% if persona_can_delete %}` wrapper, or the context variable itself needs filtering by the template compiler. The cleanest shape: `src/dazzle_page/converters/template_compiler.py` computes `persona_permitted_actions = [op for op in entity.ops if access_rules_permit(persona, entity, op)]` and the template iterates only over that.
 
 ### 2. Empty-state CTAs
 
 Empty-state templates (`region.empty_state` for workspace regions; `list.empty_state` for standalone entity lists) hardcode copy like "Add your first device" without consulting whether the current persona can create. The copy is DSL-authored or convention-derived but is rendered without persona filtering.
 
-**Fix location:** `src/dazzle_ui/converters/template_compiler.py` should compute `persona_can_create = entity_access(persona, entity, 'create')` and pass it to the empty-state template. The template then branches: if `persona_can_create`, show the CTA; otherwise, show a read-only-friendly message ("No items yet" with no action).
+**Fix location:** `src/dazzle_page/converters/template_compiler.py` should compute `persona_can_create = entity_access(persona, entity, 'create')` and pass it to the empty-state template. The template then branches: if `persona_can_create`, show the CTA; otherwise, show a read-only-friendly message ("No items yet" with no action).
 
 ### 3. Create form field visibility
 
 When a create form is generated for entity E, the template compiler iterates all fields in `E.input_schema` and renders form controls for each. It does not consult persona access on individual fields. Customer sees `assigned_to` on Ticket create (EX-029) because no field-level filter is applied.
 
-**Fix location:** form generation in `src/dazzle_ui/converters/template_compiler.py` should filter out fields where the persona is not permitted to write. This needs a DSL extension (field-level access rules, or an inferred default like "ref User fields are writable only by personas that can list User"). The simplest starting point: omit any field declared as `ref <Entity>` if the current persona cannot list `<Entity>`.
+**Fix location:** form generation in `src/dazzle_page/converters/template_compiler.py` should filter out fields where the persona is not permitted to write. This needs a DSL extension (field-level access rules, or an inferred default like "ref User fields are writable only by personas that can list User"). The simplest starting point: omit any field declared as `ref <Entity>` if the current persona cannot list `<Entity>`.
 
 ### 4. Workspace access fallback — the `workspace_allowed_personas` bug EX-028 surfaced
 
@@ -108,7 +108,7 @@ But this is a breaking change for any app that relies on the current permissive 
 
 ## Fix sketch (unified helper)
 
-Extract a general **`affordance_visible(persona, action, target)`** helper in a new file `src/dazzle_ui/converters/persona_visibility.py`, with specialisations:
+Extract a general **`affordance_visible(persona, action, target)`** helper in a new file `src/dazzle_page/converters/persona_visibility.py`, with specialisations:
 
 ```python
 def workspace_visible(persona: PersonaSpec, workspace: WorkspaceSpec) -> bool: ...

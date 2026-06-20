@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from dazzle.back.runtime.tenant.cache import TenantCache
+from dazzle.http.runtime.tenant.cache import TenantCache
 
 _REGISTERED_CACHES: list[TenantCache] = []
 _TENANT_HOST_SLUG_FIELDS: dict[str, str] = {}

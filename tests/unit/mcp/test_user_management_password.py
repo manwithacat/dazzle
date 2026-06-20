@@ -8,7 +8,7 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _mock_dazzle_back():
-    """Provide a mock dazzle_back so handler imports don't fail."""
+    """Provide a mock dazzle_http so handler imports don't fail."""
     mock_auth = MagicMock()
     mock_runtime = MagicMock()
     mock_runtime.auth = mock_auth
@@ -33,7 +33,7 @@ def _mock_dazzle_back():
     mock_auth.AuthStore.return_value = store
 
     saved = {}
-    for mod_name in ["dazzle.back", "dazzle.back.runtime", "dazzle.back.runtime.auth"]:
+    for mod_name in ["dazzle.http", "dazzle.http.runtime", "dazzle.http.runtime.auth"]:
         saved[mod_name] = sys.modules.get(mod_name)
         sys.modules[mod_name] = (
             mock_runtime
@@ -43,10 +43,10 @@ def _mock_dazzle_back():
             else MagicMock()
         )
 
-    # Fix: make dazzle_back.runtime.auth.AuthStore resolve correctly
-    sys.modules["dazzle.back.runtime.auth"] = mock_auth
-    sys.modules["dazzle.back.runtime"] = mock_runtime
-    sys.modules["dazzle.back"] = MagicMock()
+    # Fix: make dazzle_http.runtime.auth.AuthStore resolve correctly
+    sys.modules["dazzle.http.runtime.auth"] = mock_auth
+    sys.modules["dazzle.http.runtime"] = mock_runtime
+    sys.modules["dazzle.http"] = MagicMock()
 
     yield store, fake_user
 

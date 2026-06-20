@@ -21,11 +21,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-pytest.importorskip("dazzle.back.runtime.site_routes")
-from dazzle.back.runtime.auth.magic_link_routes import (  # noqa: E402
+pytest.importorskip("dazzle.http.runtime.site_routes")
+from dazzle.http.runtime.auth.magic_link_routes import (  # noqa: E402
     create_magic_link_routes,
 )
-from dazzle.back.runtime.site_routes import create_auth_page_routes  # noqa: E402
+from dazzle.http.runtime.site_routes import create_auth_page_routes  # noqa: E402
 
 _MIN_SITESPEC = {
     "version": 1,

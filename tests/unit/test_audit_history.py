@@ -21,7 +21,7 @@ from datetime import datetime
 
 import pytest
 
-from dazzle.back.runtime.audit_history import (
+from dazzle.http.runtime.audit_history import (
     HistoryChange,
     HistoryEntry,
     decode_audit_row,

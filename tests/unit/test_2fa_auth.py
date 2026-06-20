@@ -26,7 +26,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from dazzle.back.runtime.auth import (
+from dazzle.core.ir.security import TwoFactorConfig, TwoFactorMethod
+from dazzle.http.runtime.auth import (
     AuthContext,
     SessionRecord,
     TwoFactorMixin,
@@ -35,7 +36,6 @@ from dazzle.back.runtime.auth import (
     create_auth_routes,
     hash_password,
 )
-from dazzle.core.ir.security import TwoFactorConfig, TwoFactorMethod
 
 try:
     import httpx  # noqa: F401
@@ -47,20 +47,20 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Helper: mock the dazzle_back.runtime.totp module which may not exist yet
+# Helper: mock the dazzle_http.runtime.totp module which may not exist yet
 # ---------------------------------------------------------------------------
 
 
 @contextmanager
 def _mock_totp_module(verify_return: bool) -> Iterator[MagicMock]:
-    """Temporarily inject a mock ``dazzle_back.runtime.totp`` into sys.modules.
+    """Temporarily inject a mock ``dazzle_http.runtime.totp`` into sys.modules.
 
     The ``verify_totp`` callable on the mock is set to return *verify_return*.
     After the context exits the original module state is restored.
     """
     mock_module = MagicMock()
     mock_module.verify_totp = MagicMock(return_value=verify_return)
-    key = "dazzle.back.runtime.totp"
+    key = "dazzle.http.runtime.totp"
     original = sys.modules.get(key)
     sys.modules[key] = mock_module
     try:

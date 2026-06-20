@@ -47,7 +47,7 @@ from pathlib import Path
 
 # CSS roots scanned by default. Token files + theme overrides are
 # the legitimate places to reference raw ramps; components are not.
-COMPONENT_CSS_ROOT = Path("src/dazzle_ui/runtime/static/css/components")
+COMPONENT_CSS_ROOT = Path("src/dazzle_page/runtime/static/css/components")
 
 # Files that may legitimately reference raw ramps (they BUILD the
 # semantic tokens from ramps, or are theme overrides binding the

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.system_entity_store import SystemEntityStore
+from dazzle.http.runtime.system_entity_store import SystemEntityStore
 
 
 class TestSystemEntityStoreHealth:

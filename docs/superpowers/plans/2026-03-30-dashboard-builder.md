@@ -15,7 +15,7 @@
 ### Task 1: v1→v2 Layout Migration + v2 Schema Support
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/workspace_renderer.py:395-445`
+- Modify: `src/dazzle_page/runtime/workspace_renderer.py:395-445`
 - Modify: `tests/unit/test_workspace_layout_prefs.py`
 
 This task updates `apply_layout_preferences()` to handle v2 layouts and auto-migrate v1 layouts.
@@ -29,7 +29,7 @@ class TestLayoutV2:
     """apply_layout_preferences handles v2 card-instance layouts."""
 
     def _make_ctx(self, region_count: int = 3) -> object:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle_page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("scanner_table", region_count=region_count)
         return build_workspace_context(ws)
@@ -37,7 +37,7 @@ class TestLayoutV2:
     def test_v2_layout_applies_card_order(self) -> None:
         import json
 
-        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         layout = {
@@ -56,7 +56,7 @@ class TestLayoutV2:
     def test_v2_duplicate_region_creates_multiple_cards(self) -> None:
         import json
 
-        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(2)
         layout = {
@@ -75,7 +75,7 @@ class TestLayoutV2:
     def test_v2_ghost_region_skipped(self) -> None:
         import json
 
-        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(2)
         layout = {
@@ -93,7 +93,7 @@ class TestLayoutV2:
     def test_v2_col_span_3_allowed(self) -> None:
         import json
 
-        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(1)
         layout = {
@@ -121,7 +121,7 @@ class TestV1ToV2Migration:
     """v1 layouts auto-migrate to v2 format."""
 
     def test_migrate_preserves_order_and_widths(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+        from dazzle_page.runtime.workspace_renderer import migrate_v1_to_v2
 
         v1 = {
             "order": ["region_2", "region_0", "region_1"],
@@ -138,7 +138,7 @@ class TestV1ToV2Migration:
         assert v2["cards"][1]["col_span"] == 6
 
     def test_migrate_drops_hidden(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+        from dazzle_page.runtime.workspace_renderer import migrate_v1_to_v2
 
         v1 = {
             "order": ["region_0", "region_1"],
@@ -150,14 +150,14 @@ class TestV1ToV2Migration:
         assert v2["cards"][0]["region"] == "region_0"
 
     def test_migrate_ghost_region_dropped(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+        from dazzle_page.runtime.workspace_renderer import migrate_v1_to_v2
 
         v1 = {"order": ["region_0", "ghost"], "hidden": [], "widths": {}}
         v2 = migrate_v1_to_v2(v1, ["region_0"])
         assert len(v2["cards"]) == 1
 
     def test_migrate_assigns_unique_ids(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+        from dazzle_page.runtime.workspace_renderer import migrate_v1_to_v2
 
         v1 = {"order": ["r0", "r1"], "hidden": [], "widths": {}}
         v2 = migrate_v1_to_v2(v1, ["r0", "r1"])
@@ -172,7 +172,7 @@ Expected: FAIL — `migrate_v1_to_v2` not defined
 
 - [ ] **Step 5: Implement `migrate_v1_to_v2` and update `apply_layout_preferences`**
 
-In `src/dazzle_ui/runtime/workspace_renderer.py`, add the migration function before `apply_layout_preferences` and update that function to handle both schemas:
+In `src/dazzle_page/runtime/workspace_renderer.py`, add the migration function before `apply_layout_preferences` and update that function to handle both schemas:
 
 ```python
 def migrate_v1_to_v2(
@@ -250,7 +250,7 @@ def test_hidden_regions_flagged(self) -> None:
     """v1 hidden regions are dropped during migration (not flagged)."""
     import json
 
-    from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+    from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
     ctx = self._make_ctx(3)
     prefs = {f"workspace.{ctx.name}.layout": json.dumps({"hidden": ["region_1"]})}
@@ -267,7 +267,7 @@ Expected: All PASS
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/workspace_renderer.py tests/unit/test_workspace_layout_prefs.py
+git add src/dazzle_page/runtime/workspace_renderer.py tests/unit/test_workspace_layout_prefs.py
 git commit -m "feat: v2 layout schema with card instances and v1 auto-migration"
 ```
 
@@ -276,8 +276,8 @@ git commit -m "feat: v2 layout schema with card instances and v1 auto-migration"
 ### Task 2: Catalog Endpoint
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/workspace_renderer.py`
-- Modify: `src/dazzle_ui/runtime/page_routes.py:897-912`
+- Modify: `src/dazzle_page/runtime/workspace_renderer.py`
+- Modify: `src/dazzle_page/runtime/page_routes.py:897-912`
 - Test: `tests/unit/test_workspace_layout_prefs.py`
 
 - [ ] **Step 1: Write failing test for catalog builder**
@@ -289,7 +289,7 @@ class TestCatalogBuilder:
     """build_catalog returns available regions for widget picker."""
 
     def test_returns_all_regions(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle_page.runtime.workspace_renderer import (
             build_catalog,
             build_workspace_context,
         )
@@ -302,7 +302,7 @@ class TestCatalogBuilder:
         assert catalog[0]["title"] == "Region 0"
 
     def test_includes_display_and_entity(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle_page.runtime.workspace_renderer import (
             build_catalog,
             build_workspace_context,
         )
@@ -321,7 +321,7 @@ Expected: FAIL — `build_catalog` not defined
 
 - [ ] **Step 3: Implement `build_catalog`**
 
-Add to `src/dazzle_ui/runtime/workspace_renderer.py`:
+Add to `src/dazzle_page/runtime/workspace_renderer.py`:
 
 ```python
 def build_catalog(ctx: WorkspaceContext) -> list[dict[str, str]]:
@@ -344,10 +344,10 @@ Expected: PASS
 
 - [ ] **Step 5: Update layout_json in page_routes.py to include v2 data**
 
-In `src/dazzle_ui/runtime/page_routes.py`, update the `layout_json` block (around line 900) to include catalog and v2 card data:
+In `src/dazzle_page/runtime/page_routes.py`, update the `layout_json` block (around line 900) to include catalog and v2 card data:
 
 ```python
-    from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences, build_catalog
+    from dazzle_page.runtime.workspace_renderer import apply_layout_preferences, build_catalog
 
     render_ws_ctx = apply_layout_preferences(ws_context, user_preferences)
     catalog = build_catalog(ws_context)
@@ -374,7 +374,7 @@ In `src/dazzle_ui/runtime/page_routes.py`, update the `layout_json` block (aroun
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/workspace_renderer.py src/dazzle_ui/runtime/page_routes.py tests/unit/test_workspace_layout_prefs.py
+git add src/dazzle_page/runtime/workspace_renderer.py src/dazzle_page/runtime/page_routes.py tests/unit/test_workspace_layout_prefs.py
 git commit -m "feat: workspace catalog builder and v2 layout JSON for dashboard"
 ```
 
@@ -383,26 +383,26 @@ git commit -m "feat: workspace catalog builder and v2 layout JSON for dashboard"
 ### Task 3: Vendor SortableJS + Update Base Template
 
 **Files:**
-- Create: `src/dazzle_ui/runtime/static/vendor/sortable.min.js`
-- Remove: `src/dazzle_ui/runtime/static/vendor/alpine-sort.min.js`
-- Modify: `src/dazzle_ui/templates/base.html:47,53`
+- Create: `src/dazzle_page/runtime/static/vendor/sortable.min.js`
+- Remove: `src/dazzle_page/runtime/static/vendor/alpine-sort.min.js`
+- Modify: `src/dazzle_page/templates/base.html:47,53`
 
 - [ ] **Step 1: Download and vendor SortableJS**
 
 ```bash
-curl -L -o src/dazzle_ui/runtime/static/vendor/sortable.min.js \
+curl -L -o src/dazzle_page/runtime/static/vendor/sortable.min.js \
   "https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"
 ```
 
 Verify the file is non-empty and contains `Sortable`:
 
 ```bash
-head -c 100 src/dazzle_ui/runtime/static/vendor/sortable.min.js
+head -c 100 src/dazzle_page/runtime/static/vendor/sortable.min.js
 ```
 
 - [ ] **Step 2: Update base.html script tags**
 
-In `src/dazzle_ui/templates/base.html`, replace:
+In `src/dazzle_page/templates/base.html`, replace:
 ```html
   <script defer src="{{ 'vendor/alpine-sort.min.js' | static_url }}"></script>
 ```
@@ -423,13 +423,13 @@ with:
 - [ ] **Step 3: Remove old Alpine Sort plugin**
 
 ```bash
-rm src/dazzle_ui/runtime/static/vendor/alpine-sort.min.js
+rm src/dazzle_page/runtime/static/vendor/alpine-sort.min.js
 ```
 
 - [ ] **Step 4: Verify no remaining references to alpine-sort**
 
 ```bash
-grep -r "alpine-sort" src/dazzle_ui/ tests/
+grep -r "alpine-sort" src/dazzle_page/ tests/
 ```
 
 Expected: No matches (the old `workspace-editor.js` references it but we'll replace that file in Task 4).
@@ -437,8 +437,8 @@ Expected: No matches (the old `workspace-editor.js` references it but we'll repl
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/vendor/sortable.min.js src/dazzle_ui/templates/base.html
-git rm src/dazzle_ui/runtime/static/vendor/alpine-sort.min.js
+git add src/dazzle_page/runtime/static/vendor/sortable.min.js src/dazzle_page/templates/base.html
+git rm src/dazzle_page/runtime/static/vendor/alpine-sort.min.js
 git commit -m "feat: vendor SortableJS, remove Alpine Sort plugin"
 ```
 
@@ -447,14 +447,14 @@ git commit -m "feat: vendor SortableJS, remove Alpine Sort plugin"
 ### Task 4: Dashboard Builder JS Component
 
 **Files:**
-- Create: `src/dazzle_ui/runtime/static/js/dashboard-builder.js`
-- Remove: `src/dazzle_ui/runtime/static/js/workspace-editor.js`
+- Create: `src/dazzle_page/runtime/static/js/dashboard-builder.js`
+- Remove: `src/dazzle_page/runtime/static/js/workspace-editor.js`
 
 This is the core JS component — Alpine.js data component backed by SortableJS for drag-reorder, custom resize handler for snap-grid, add/remove card management, and auto-save.
 
 - [ ] **Step 1: Write `dashboard-builder.js`**
 
-Create `src/dazzle_ui/runtime/static/js/dashboard-builder.js`:
+Create `src/dazzle_page/runtime/static/js/dashboard-builder.js`:
 
 ```javascript
 /**
@@ -631,13 +631,13 @@ document.addEventListener("alpine:init", () => {
 - [ ] **Step 2: Remove old workspace-editor.js**
 
 ```bash
-rm src/dazzle_ui/runtime/static/js/workspace-editor.js
+rm src/dazzle_page/runtime/static/js/workspace-editor.js
 ```
 
 - [ ] **Step 3: Verify no remaining references to workspace-editor or dzWorkspaceEditor**
 
 ```bash
-grep -r "workspace-editor\|dzWorkspaceEditor" src/dazzle_ui/ tests/
+grep -r "workspace-editor\|dzWorkspaceEditor" src/dazzle_page/ tests/
 ```
 
 Expected: Only `_content.html` (which we'll rewrite in Task 5).
@@ -645,8 +645,8 @@ Expected: Only `_content.html` (which we'll rewrite in Task 5).
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/js/dashboard-builder.js
-git rm src/dazzle_ui/runtime/static/js/workspace-editor.js
+git add src/dazzle_page/runtime/static/js/dashboard-builder.js
+git rm src/dazzle_page/runtime/static/js/workspace-editor.js
 git commit -m "feat: dashboard-builder.js with SortableJS, snap-resize, add/remove"
 ```
 
@@ -655,12 +655,12 @@ git commit -m "feat: dashboard-builder.js with SortableJS, snap-resize, add/remo
 ### Task 5: Rewrite Workspace Template
 
 **Files:**
-- Modify: `src/dazzle_ui/templates/workspace/_content.html`
-- Create: `src/dazzle_ui/templates/workspace/_card_picker.html`
+- Modify: `src/dazzle_page/templates/workspace/_content.html`
+- Create: `src/dazzle_page/templates/workspace/_card_picker.html`
 
 - [ ] **Step 1: Create the card picker popover template**
 
-Create `src/dazzle_ui/templates/workspace/_card_picker.html`:
+Create `src/dazzle_page/templates/workspace/_card_picker.html`:
 
 ```html
 {# Card picker popover — lists available regions from the catalog #}
@@ -682,7 +682,7 @@ Create `src/dazzle_ui/templates/workspace/_card_picker.html`:
 
 - [ ] **Step 2: Rewrite `_content.html` for dashboard builder**
 
-Replace the full contents of `src/dazzle_ui/templates/workspace/_content.html`:
+Replace the full contents of `src/dazzle_page/templates/workspace/_content.html`:
 
 ```html
 {# Layout JSON embedded as a data island (#635) #}
@@ -879,7 +879,7 @@ Replace the full contents of `src/dazzle_ui/templates/workspace/_content.html`:
 - [ ] **Step 3: Verify no remaining references to old component**
 
 ```bash
-grep -r "dzWorkspaceEditor\|workspace-editor\|alpine-sort\|x-sort" src/dazzle_ui/
+grep -r "dzWorkspaceEditor\|workspace-editor\|alpine-sort\|x-sort" src/dazzle_page/
 ```
 
 Expected: No matches.
@@ -887,7 +887,7 @@ Expected: No matches.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/workspace/_content.html src/dazzle_ui/templates/workspace/_card_picker.html
+git add src/dazzle_page/templates/workspace/_content.html src/dazzle_page/templates/workspace/_card_picker.html
 git commit -m "feat: rewrite workspace template for dashboard builder"
 ```
 
@@ -896,11 +896,11 @@ git commit -m "feat: rewrite workspace template for dashboard builder"
 ### Task 6: CSS for Resize Handles + Drag Feedback
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/css/dz.css`
+- Modify: `src/dazzle_page/runtime/static/css/dz.css`
 
 - [ ] **Step 1: Add dashboard builder styles**
 
-Append to `src/dazzle_ui/runtime/static/css/dz.css`:
+Append to `src/dazzle_page/runtime/static/css/dz.css`:
 
 ```css
 /* Dashboard builder: SortableJS drag feedback */
@@ -929,7 +929,7 @@ Check for and remove any existing `.sortable-drag` rule that was for the old Alp
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/css/dz.css
+git add src/dazzle_page/runtime/static/css/dz.css
 git commit -m "feat: CSS for dashboard builder drag and resize feedback"
 ```
 
@@ -949,13 +949,13 @@ class TestDashboardRoundTrip:
     """Full round-trip: default → add card → reorder → resize → persist."""
 
     def _make_ctx(self, region_count: int = 3) -> object:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle_page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("scanner_table", region_count=region_count)
         return build_workspace_context(ws)
 
     def test_default_layout_matches_dsl(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         result = apply_layout_preferences(ctx, {})
@@ -964,7 +964,7 @@ class TestDashboardRoundTrip:
     def test_add_duplicate_card_and_persist(self) -> None:
         import json
 
-        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(2)
         # Simulate user adding a duplicate of region_0
@@ -988,7 +988,7 @@ class TestDashboardRoundTrip:
     def test_remove_card_persists(self) -> None:
         import json
 
-        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(3)
         # Simulate user removing middle card
@@ -1007,7 +1007,7 @@ class TestDashboardRoundTrip:
     def test_resize_snap_values_respected(self) -> None:
         import json
 
-        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(1)
         for span in [3, 4, 6, 8, 12]:
@@ -1022,7 +1022,7 @@ class TestDashboardRoundTrip:
     def test_invalid_span_uses_default(self) -> None:
         import json
 
-        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+        from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
         ctx = self._make_ctx(1)
         layout = {
@@ -1061,14 +1061,14 @@ git commit -m "test: dashboard builder round-trip integration tests"
 - [ ] **Step 1: Run ruff**
 
 ```bash
-ruff check src/dazzle_ui/ tests/unit/test_workspace_layout_prefs.py --fix
-ruff format src/dazzle_ui/ tests/unit/test_workspace_layout_prefs.py
+ruff check src/dazzle_page/ tests/unit/test_workspace_layout_prefs.py --fix
+ruff format src/dazzle_page/ tests/unit/test_workspace_layout_prefs.py
 ```
 
 - [ ] **Step 2: Run mypy**
 
 ```bash
-mypy src/dazzle_ui/runtime/workspace_renderer.py
+mypy src/dazzle_page/runtime/workspace_renderer.py
 ```
 
 Expected: No errors

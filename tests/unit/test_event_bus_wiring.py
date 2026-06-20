@@ -9,12 +9,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle.back.runtime.event_bus import EntityEvent, EntityEventBus, EntityEventType
+from dazzle.http.runtime.event_bus import EntityEvent, EntityEventBus, EntityEventType
 
 
 def _make_mock_ctx(service_names: list[str] | None = None) -> Any:
     """Create a mock SubsystemContext with mock CRUD services."""
-    from dazzle.back.runtime.service_generator import CRUDService
+    from dazzle.http.runtime.service_generator import CRUDService
 
     if service_names is None:
         service_names = ["Company"]
@@ -47,7 +47,7 @@ class TestWireEntityEventsToBus:
 
     def test_callbacks_registered_on_services(self) -> None:
         """Services get on_created/on_updated/on_deleted callbacks."""
-        from dazzle.back.runtime.subsystems.system_routes import SystemRoutesSubsystem
+        from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         ctx, services = _make_mock_ctx(["Company", "Contact"])
 
@@ -64,7 +64,7 @@ class TestWireEntityEventsToBus:
     @pytest.mark.asyncio
     async def test_created_callback_emits_to_bus(self) -> None:
         """on_created callback emits entity:created event to bus."""
-        from dazzle.back.runtime.subsystems.system_routes import SystemRoutesSubsystem
+        from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         ctx, services = _make_mock_ctx(["Company"])
 
@@ -88,7 +88,7 @@ class TestWireEntityEventsToBus:
     @pytest.mark.asyncio
     async def test_updated_callback_emits_to_bus(self) -> None:
         """on_updated callback emits entity:updated event to bus."""
-        from dazzle.back.runtime.subsystems.system_routes import SystemRoutesSubsystem
+        from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         ctx, services = _make_mock_ctx(["Company"])
 
@@ -117,7 +117,7 @@ class TestWireEntityEventsToBus:
     @pytest.mark.asyncio
     async def test_updated_callback_no_previous_state_when_unchanged(self) -> None:
         """No _previous_state when status hasn't changed."""
-        from dazzle.back.runtime.subsystems.system_routes import SystemRoutesSubsystem
+        from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         ctx, services = _make_mock_ctx(["Company"])
 
@@ -143,7 +143,7 @@ class TestWireEntityEventsToBus:
     @pytest.mark.asyncio
     async def test_deleted_callback_emits_to_bus(self) -> None:
         """on_deleted callback emits entity:deleted event to bus."""
-        from dazzle.back.runtime.subsystems.system_routes import SystemRoutesSubsystem
+        from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         ctx, services = _make_mock_ctx(["Company"])
 
@@ -165,7 +165,7 @@ class TestWireEntityEventsToBus:
 
     def test_no_services_no_error(self) -> None:
         """Wiring with empty services dict doesn't raise."""
-        from dazzle.back.runtime.subsystems.system_routes import SystemRoutesSubsystem
+        from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         ctx = MagicMock()
         ctx.services = {}
@@ -178,7 +178,7 @@ class TestWireEntityEventsToBus:
     @pytest.mark.asyncio
     async def test_updated_with_no_old_data(self) -> None:
         """on_updated with None old_data still emits event."""
-        from dazzle.back.runtime.subsystems.system_routes import SystemRoutesSubsystem
+        from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         ctx, services = _make_mock_ctx(["Company"])
 

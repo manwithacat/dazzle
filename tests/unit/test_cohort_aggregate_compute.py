@@ -15,7 +15,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle.back.runtime.workspace_region_computes import compute_cohort_aggregate_primary
 from dazzle.core.ir import AggregateRef
 from dazzle.core.ir.conditions import (
     Comparison,
@@ -29,6 +28,7 @@ from dazzle.core.ir.workspaces import (
     CohortStripLens,
     LensAggregatePrimary,
 )
+from dazzle.http.runtime.workspace_region_computes import compute_cohort_aggregate_primary
 
 
 def _make_aggregated_repo(per_member: dict[str, float]) -> MagicMock:

@@ -437,9 +437,9 @@ The framework's template layer adds these `data-dz-*` attributes to rendered act
 
 ### Architecture
 
-Existing components: Dazzle has an event bus (`src/dazzle_back/events/`) with outbox pattern for reliable delivery. Subscribers live in `src/dazzle_back/events/subscribers/`.
+Existing components: Dazzle has an event bus (`src/dazzle_http/events/`) with outbox pattern for reliable delivery. Subscribers live in `src/dazzle_http/events/subscribers/`.
 
-New: `src/dazzle_back/analytics/sinks/` — per-provider server-side sinks.
+New: `src/dazzle_http/analytics/sinks/` — per-provider server-side sinks.
 
 ```python
 class AnalyticsSink(Protocol):
@@ -520,7 +520,7 @@ Never a blanket opt-in at app level — too easy to ship accidentally.
 
 ### Template
 
-Shipped at `src/dazzle_ui/templates/compliance/privacy_page.html.j2`:
+Shipped at `src/dazzle_page/templates/compliance/privacy_page.html.j2`:
 
 ```jinja
 # Privacy Policy
@@ -793,8 +793,8 @@ Used by the trial-cycle loop to qualitative-test the full flow.
 - ADR-0011 (no SPA frameworks) — analytics integration must not require SPA patterns; htmx hooks are the right shape.
 - ADR-0017 (schema via Alembic) — tenant entity extension requires a migration.
 - `docs/reference/compliance.md` (if exists) — privacy artefacts extend the compliance pipeline.
-- `src/dazzle_back/runtime/security_middleware.py` — CSP host.
-- `src/dazzle_back/events/` — event bus substrate for server-side sink.
+- `src/dazzle_http/runtime/security_middleware.py` — CSP host.
+- `src/dazzle_http/events/` — event bus substrate for server-side sink.
 - `docs/reference/workspaces.md` — workspace + surface definitions drive page-view events.
 
 ## Next step

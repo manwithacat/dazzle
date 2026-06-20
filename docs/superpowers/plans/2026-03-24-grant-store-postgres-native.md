@@ -16,8 +16,8 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_back/runtime/grant_store.py` | Rewrite | PostgreSQL-native grant store with proper types and atomic transitions |
-| `src/dazzle_back/runtime/grant_routes.py` | Modify | Drop placeholder, UUID validation at HTTP boundary, cancel endpoint |
+| `src/dazzle_http/runtime/grant_store.py` | Rewrite | PostgreSQL-native grant store with proper types and atomic transitions |
+| `src/dazzle_http/runtime/grant_routes.py` | Modify | Drop placeholder, UUID validation at HTTP boundary, cancel endpoint |
 | `tests/unit/test_grant_store.py` | Rewrite | PostgreSQL-backed tests: state machine, concurrency, types |
 | `tests/unit/test_grant_integration.py` | Modify | Swap SQLite for PostgreSQL in integration pipeline test |
 
@@ -86,7 +86,7 @@ git commit -m "test(grants): add PostgreSQL fixtures for grant store tests"
 ### Task 2: Rewrite GrantStore — DDL and Constructor
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/grant_store.py`
+- Modify: `src/dazzle_http/runtime/grant_store.py`
 - Test: `tests/unit/test_grant_store.py`
 
 Replace the entire `__init__` and `_ensure_tables` with PostgreSQL-native DDL. Remove `_sql()` helper, `placeholder` parameter, and `import sqlite3`.
@@ -94,7 +94,7 @@ Replace the entire `__init__` and `_ensure_tables` with PostgreSQL-native DDL. R
 - [ ] **Step 1: Write the failing test for table creation**
 
 ```python
-from dazzle_back.runtime.grant_store import GrantStore
+from dazzle_http.runtime.grant_store import GrantStore
 
 class TestGrantStoreInit:
     def test_tables_created(self, pg_conn):
@@ -246,7 +246,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/grant_store.py tests/unit/test_grant_store.py
+git add src/dazzle_http/runtime/grant_store.py tests/unit/test_grant_store.py
 git commit -m "feat(grants): rewrite GrantStore DDL for PostgreSQL-native types
 
 UUID, TIMESTAMPTZ, JSONB columns. CHECK constraints on status and
@@ -258,7 +258,7 @@ event_type. Partial index on expiry. FK index on grant_events."
 ### Task 3: Core Methods — `_record_event`, `_get_grant`, `create_grant`
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/grant_store.py`
+- Modify: `src/dazzle_http/runtime/grant_store.py`
 - Test: `tests/unit/test_grant_store.py`
 
 Implement the foundational methods that all transitions depend on.
@@ -416,7 +416,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/grant_store.py tests/unit/test_grant_store.py
+git add src/dazzle_http/runtime/grant_store.py tests/unit/test_grant_store.py
 git commit -m "feat(grants): implement create_grant with UUID/TIMESTAMPTZ types"
 ```
 
@@ -425,7 +425,7 @@ git commit -m "feat(grants): implement create_grant with UUID/TIMESTAMPTZ types"
 ### Task 4: State Transitions — approve, reject, cancel, revoke
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/grant_store.py`
+- Modify: `src/dazzle_http/runtime/grant_store.py`
 - Test: `tests/unit/test_grant_store.py`
 
 Implement all four transitions using the atomic `UPDATE WHERE status + rowcount` pattern.
@@ -643,7 +643,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/grant_store.py tests/unit/test_grant_store.py
+git add src/dazzle_http/runtime/grant_store.py tests/unit/test_grant_store.py
 git commit -m "feat(grants): atomic state transitions with optimistic concurrency
 
 approve, reject, cancel, revoke use UPDATE WHERE status + rowcount.
@@ -655,7 +655,7 @@ Shared _transition() helper eliminates TOCTOU race conditions."
 ### Task 5: Query Methods — `has_active_grant`, `list_grants`, `expire_stale_grants`
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/grant_store.py`
+- Modify: `src/dazzle_http/runtime/grant_store.py`
 - Test: `tests/unit/test_grant_store.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -866,7 +866,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/grant_store.py tests/unit/test_grant_store.py
+git add src/dazzle_http/runtime/grant_store.py tests/unit/test_grant_store.py
 git commit -m "feat(grants): has_active_grant, list_grants, expire_stale_grants
 
 Dynamic WHERE for list_grants (replaces IS NULL OR anti-pattern).
@@ -966,7 +966,7 @@ Two connections racing on the same grant — exactly one succeeds."
 ### Task 7: Update `grant_routes.py`
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/grant_routes.py`
+- Modify: `src/dazzle_http/runtime/grant_routes.py`
 
 Drop placeholder parameter, add UUID validation at HTTP boundary, add cancel endpoint.
 
@@ -1035,13 +1035,13 @@ async def cancel_grant(
 
 - [ ] **Step 5: Run lint and type checks**
 
-Run: `ruff check src/dazzle_back/runtime/grant_routes.py src/dazzle_back/runtime/grant_store.py --fix && mypy src/dazzle_back/runtime/grant_store.py src/dazzle_back/runtime/grant_routes.py`
+Run: `ruff check src/dazzle_http/runtime/grant_routes.py src/dazzle_http/runtime/grant_store.py --fix && mypy src/dazzle_http/runtime/grant_store.py src/dazzle_http/runtime/grant_routes.py`
 Expected: No errors
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/grant_routes.py
+git add src/dazzle_http/runtime/grant_routes.py
 git commit -m "feat(grants): update grant_routes for PostgreSQL-only store
 
 Drop placeholder param, add UUID validation, add cancel endpoint,
@@ -1068,8 +1068,8 @@ from uuid import uuid4
 
 import pytest
 from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle_back.runtime.condition_evaluator import evaluate_condition
-from dazzle_back.runtime.grant_store import GrantStore
+from dazzle_http.runtime.condition_evaluator import evaluate_condition
+from dazzle_http.runtime.grant_store import GrantStore
 
 
 @pytest.fixture
@@ -1188,12 +1188,12 @@ Run full lint, type check, and test suite to ensure nothing is broken.
 
 - [ ] **Step 1: Run ruff**
 
-Run: `ruff check src/dazzle_back/runtime/grant_store.py src/dazzle_back/runtime/grant_routes.py tests/unit/test_grant_store.py tests/unit/test_grant_integration.py --fix && ruff format src/dazzle_back/runtime/grant_store.py src/dazzle_back/runtime/grant_routes.py tests/unit/test_grant_store.py tests/unit/test_grant_integration.py`
+Run: `ruff check src/dazzle_http/runtime/grant_store.py src/dazzle_http/runtime/grant_routes.py tests/unit/test_grant_store.py tests/unit/test_grant_integration.py --fix && ruff format src/dazzle_http/runtime/grant_store.py src/dazzle_http/runtime/grant_routes.py tests/unit/test_grant_store.py tests/unit/test_grant_integration.py`
 Expected: No errors
 
 - [ ] **Step 2: Run mypy**
 
-Run: `mypy src/dazzle_back/runtime/grant_store.py src/dazzle_back/runtime/grant_routes.py`
+Run: `mypy src/dazzle_http/runtime/grant_store.py src/dazzle_http/runtime/grant_routes.py`
 Expected: No errors (or only pre-existing unrelated warnings)
 
 - [ ] **Step 3: Run all grant tests**
@@ -1208,7 +1208,7 @@ Expected: All pass. Grant tests that need PostgreSQL skip cleanly when `TEST_DAT
 
 - [ ] **Step 5: Verify no sqlite3 imports remain in grant code**
 
-Run: `grep -rn "sqlite" src/dazzle_back/runtime/grant_store.py src/dazzle_back/runtime/grant_routes.py`
+Run: `grep -rn "sqlite" src/dazzle_http/runtime/grant_store.py src/dazzle_http/runtime/grant_routes.py`
 Expected: No output
 
 - [ ] **Step 6: Commit any final fixups**

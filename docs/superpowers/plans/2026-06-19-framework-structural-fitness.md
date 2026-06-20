@@ -25,7 +25,7 @@
 - `tests/unit/fixtures/complexity_baseline.json` (committed baseline).
 - `tests/unit/test_complexity_ratchet.py`, `tests/unit/test_import_contracts.py`.
 - `pyproject.toml` — `dev` deps (`radon`, `import-linter`) + `[tool.importlinter]` contracts.
-- Fix: `src/dazzle/core/process/eventbus_adapter.py` (core→back leak), `src/dazzle/ui/runtime/combined_server.py` (ui→back leak).
+- Fix: `src/dazzle/core/process/eventbus_adapter.py` (core→back leak), `src/dazzle/page/runtime/combined_server.py` (ui→back leak).
 
 ---
 
@@ -262,9 +262,9 @@ git commit -m "feat(fitness): complexity ratchet — radon MI/CC drift gate (A2)
 
 ## Task 3 (P3): import contracts + fix the 2 boundary leaks (B)
 
-**Files:** `pyproject.toml` (`[tool.importlinter]`); Create `tests/unit/test_import_contracts.py`; Fix `src/dazzle/core/process/eventbus_adapter.py`, `src/dazzle/ui/runtime/combined_server.py`.
+**Files:** `pyproject.toml` (`[tool.importlinter]`); Create `tests/unit/test_import_contracts.py`; Fix `src/dazzle/core/process/eventbus_adapter.py`, `src/dazzle/page/runtime/combined_server.py`.
 
-- [x] **Step 1: Investigate the 2 violations.** `grep -nE "dazzle\.back" src/dazzle/core/process/eventbus_adapter.py src/dazzle/ui/runtime/combined_server.py`. For each: is the `back` import load-bearing, or a leak?
+- [x] **Step 1: Investigate the 2 violations.** `grep -nE "dazzle\.back" src/dazzle/core/process/eventbus_adapter.py src/dazzle/page/runtime/combined_server.py`. For each: is the `back` import load-bearing, or a leak?
   - `core/process/eventbus_adapter.py` — `core` importing `back` is a layering inversion. Likely the adapter should accept the back dependency by injection (a callable/protocol passed in) rather than importing it, OR the adapter belongs in `back`. Choose the minimal correct fix (dependency injection if the import is a single call; relocate if it's tightly coupled).
   - `ui/runtime/combined_server.py` — the unified ASGI server lives in `ui/` but wires `back`. It almost certainly belongs in `back/runtime/` (or a neutral top-level). Relocate it + update the import site(s); or, if relocation is large, defer it to a documented allow-list entry and gate the rest `absolute`.
 
@@ -289,18 +289,18 @@ root_packages = ["dazzle"]
 name = "core stays backend/UI-agnostic"
 type = "forbidden"
 source_modules = ["dazzle.core"]
-forbidden_modules = ["dazzle.back", "dazzle.ui"]
+forbidden_modules = ["dazzle.http", "dazzle.page"]
 
 [[tool.importlinter.contracts]]
 name = "ui must not reach into the runtime"
 type = "forbidden"
-source_modules = ["dazzle.ui"]
-forbidden_modules = ["dazzle.back"]
+source_modules = ["dazzle.page"]
+forbidden_modules = ["dazzle.http"]
 
 [[tool.importlinter.contracts]]
 name = "back is Postgres-only (ADR-0008)"
 type = "forbidden"
-source_modules = ["dazzle.back"]
+source_modules = ["dazzle.http"]
 forbidden_modules = ["sqlite3", "aiosqlite"]
 ```
 

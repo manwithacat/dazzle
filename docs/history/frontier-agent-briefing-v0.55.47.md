@@ -231,9 +231,9 @@ Three latent XSS vectors were closed:
 
 If you need to wire a new PersonaVariant field through to the runtime:
 
-1. **Add a dict** to `TableContext` (or `FormContext`) in `src/dazzle_ui/runtime/template_context.py`
-2. **Populate it** in `_compile_list_surface` (or `_compile_form_surface`) from `ux.persona_variants` in `src/dazzle_ui/converters/template_compiler.py`
-3. **Resolve it** in `_apply_persona_overrides` (tables) or `_apply_persona_form_overrides` (forms) in `src/dazzle_ui/runtime/page_routes.py`
+1. **Add a dict** to `TableContext` (or `FormContext`) in `src/dazzle_page/runtime/template_context.py`
+2. **Populate it** in `_compile_list_surface` (or `_compile_form_surface`) from `ux.persona_variants` in `src/dazzle_page/converters/template_compiler.py`
+3. **Resolve it** in `_apply_persona_overrides` (tables) or `_apply_persona_form_overrides` (forms) in `src/dazzle_page/runtime/page_routes.py`
 
 Both helpers use first-wins role matching with `role_` prefix stripping. The pattern is documented in the helper docstrings.
 
@@ -260,16 +260,16 @@ When building apps on v0.55.47:
 | Concern | File |
 |---|---|
 | Component contracts | `~/.claude/skills/ux-architect/components/*.md` |
-| Design tokens | `src/dazzle_ui/runtime/static/css/design-system.css` |
-| Status badge macro | `src/dazzle_ui/templates/macros/status_badge.html` |
-| Empty state fragment | `src/dazzle_ui/templates/fragments/empty_state.html` |
-| Region wrapper macro | `src/dazzle_ui/templates/macros/region_wrapper.html` |
-| Persona resolver (tables) | `src/dazzle_ui/runtime/page_routes.py` → `_apply_persona_overrides` |
-| Persona resolver (forms) | `src/dazzle_ui/runtime/page_routes.py` → `_apply_persona_form_overrides` |
-| Backed-by auto-injection | `src/dazzle_back/runtime/route_generator.py` → `resolve_backed_entity_refs` |
-| Badge tone map | `src/dazzle_ui/runtime/template_renderer.py` → `_STATUS_TONE_MAP` |
-| Metric number formatter | `src/dazzle_ui/runtime/template_renderer.py` → `_metric_number_filter` |
-| Aggregate display inference | `src/dazzle_ui/runtime/workspace_renderer.py` line ~260 |
+| Design tokens | `src/dazzle_page/runtime/static/css/design-system.css` |
+| Status badge macro | `src/dazzle_page/templates/macros/status_badge.html` |
+| Empty state fragment | `src/dazzle_page/templates/fragments/empty_state.html` |
+| Region wrapper macro | `src/dazzle_page/templates/macros/region_wrapper.html` |
+| Persona resolver (tables) | `src/dazzle_page/runtime/page_routes.py` → `_apply_persona_overrides` |
+| Persona resolver (forms) | `src/dazzle_page/runtime/page_routes.py` → `_apply_persona_form_overrides` |
+| Backed-by auto-injection | `src/dazzle_http/runtime/route_generator.py` → `resolve_backed_entity_refs` |
+| Badge tone map | `src/dazzle_page/runtime/template_renderer.py` → `_STATUS_TONE_MAP` |
+| Metric number formatter | `src/dazzle_page/runtime/template_renderer.py` → `_metric_number_filter` |
+| Aggregate display inference | `src/dazzle_page/runtime/workspace_renderer.py` line ~260 |
 | PersonaVariant IR | `src/dazzle/core/ir/ux.py` → `PersonaVariant` |
 | PersonaSpec IR | `src/dazzle/core/ir/personas.py` → `PersonaSpec` |
 | Linker validation | `src/dazzle/core/validator.py` → `_validate_persona_backed_by` |

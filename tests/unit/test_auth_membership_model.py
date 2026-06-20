@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from dazzle.back.runtime.auth.models import (
+from dazzle.http.runtime.auth.models import (
     AuthContext,
     MembershipRecord,
     OrganizationRecord,

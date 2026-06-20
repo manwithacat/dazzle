@@ -41,8 +41,8 @@ from dazzle.core.ir.onboarding import (  # noqa: E402  (after importorskip)
     GuideStep,
     GuideStepKind,
 )
+from dazzle.page.runtime.css_loader import get_bundled_css  # noqa: E402
 from dazzle.render.onboarding.renderer import render_step  # noqa: E402
-from dazzle.ui.runtime.css_loader import get_bundled_css  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ARTIFACTS_DIR = REPO_ROOT / "tests" / "visual" / "_artifacts"

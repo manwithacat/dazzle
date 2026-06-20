@@ -217,7 +217,7 @@ def test_verify_domain_already_owned_elsewhere(monkeypatch) -> None:
 
 
 def test_verify_domain_success(monkeypatch) -> None:
-    from dazzle.back.runtime.auth import domain_verification
+    from dazzle.http.runtime.auth import domain_verification
 
     conn = _Conn("conn-1")
     store = _Store(conn=conn)
@@ -235,7 +235,7 @@ def test_verify_domain_success(monkeypatch) -> None:
 
 
 def test_verify_domain_not_found_prints_record(monkeypatch) -> None:
-    from dazzle.back.runtime.auth import domain_verification
+    from dazzle.http.runtime.auth import domain_verification
 
     conn = _Conn("conn-1")
     _patch_store(monkeypatch, _Store(conn=conn))
@@ -262,7 +262,7 @@ def test_show_verification(monkeypatch) -> None:
 
 
 def _oidc_conn(**over):
-    from dazzle.back.runtime.auth.connections import ConnectionRecord
+    from dazzle.http.runtime.auth.connections import ConnectionRecord
 
     base = {
         "id": "conn-1",
@@ -331,7 +331,7 @@ def test_doctor_missing_connection(monkeypatch) -> None:
 def _stub_probe(monkeypatch, checks):
     """Stub connection_probe.probe_connection (the CLI does a call-time local import, so
     patching the module attribute is picked up) + record whether it was invoked."""
-    from dazzle.back.runtime.auth import connection_probe
+    from dazzle.http.runtime.auth import connection_probe
 
     seen = {"called": False}
 
@@ -344,7 +344,7 @@ def _stub_probe(monkeypatch, checks):
 
 
 def _probe_check(status="ok", name="idp_sso_reachable", detail="reachable (HTTP 200)"):
-    from dazzle.back.runtime.auth.connection_doctor import Check
+    from dazzle.http.runtime.auth.connection_doctor import Check
 
     return Check(name=name, level="recommended", status=status, detail=detail)
 
@@ -405,7 +405,7 @@ def test_scaffold_prints_sequence(monkeypatch) -> None:
 def test_doctor_rotated_key_json_parity(monkeypatch) -> None:
     # Key present (flags say so) but get_connection raises ConnectionSecretError
     # (wrong/rotated key). With --json the agent must still get JSON, not markup.
-    from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError
+    from dazzle.http.runtime.auth.connection_crypto import ConnectionSecretError
 
     class _RaisingStore:
         def get_connection(self, cid, *, tenant_id=None):
@@ -586,7 +586,7 @@ def test_secret_history_empty(monkeypatch) -> None:
 def test_environment_flags_reports_key_presence(monkeypatch) -> None:
     import base64
 
-    from dazzle.back.runtime.auth.connection_doctor import environment_flags
+    from dazzle.http.runtime.auth.connection_doctor import environment_flags
 
     monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", base64.b64encode(b"k" * 32).decode())
     secret_ok, _sso, _dns = environment_flags()

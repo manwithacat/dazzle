@@ -17,7 +17,7 @@ from fastapi import FastAPI
 
 
 def test_instrumentation_skipped_when_env_unset() -> None:
-    from dazzle.back.runtime.server import _maybe_instrument_for_perf
+    from dazzle.http.runtime.server import _maybe_instrument_for_perf
 
     app = FastAPI()
     with patch.dict(os.environ, {}, clear=True):
@@ -26,7 +26,7 @@ def test_instrumentation_skipped_when_env_unset() -> None:
 
 
 def test_instrumentation_runs_when_env_set() -> None:
-    from dazzle.back.runtime.server import _maybe_instrument_for_perf
+    from dazzle.http.runtime.server import _maybe_instrument_for_perf
 
     app = FastAPI()
     called: list[FastAPI] = []
@@ -90,7 +90,7 @@ def test_tracer_skipped_when_env_unset() -> None:
 
 def test_server_maybe_configure_tracer_delegates_to_bootstrap() -> None:
     """server._maybe_configure_tracer delegates to perf.bootstrap."""
-    from dazzle.back.runtime.server import _maybe_configure_tracer
+    from dazzle.http.runtime.server import _maybe_configure_tracer
 
     called: list[bool] = []
 

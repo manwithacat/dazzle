@@ -27,7 +27,7 @@ Concretely: a Dazzle-back user who sets `security_profile="strict"` today will d
 
 ### External-resource loads in templates (cycle 300 scan)
 
-All found via `grep -rnE "https?://api\.|cdn\.|unpkg\.|googleapis\.|jsdelivr\." src/dazzle_ui/templates/`:
+All found via `grep -rnE "https?://api\.|cdn\.|unpkg\.|googleapis\.|jsdelivr\." src/dazzle_page/templates/`:
 
 | Template | Line | Resource | Risk | Has SRI? |
 |----------|------|----------|------|----------|
@@ -47,7 +47,7 @@ All found via `grep -rnE "https?://api\.|cdn\.|unpkg\.|googleapis\.|jsdelivr\." 
 
 ### CSP configuration gap
 
-`src/dazzle_back/runtime/security_middleware.py`:
+`src/dazzle_http/runtime/security_middleware.py`:
 
 ```python
 # Lines 38, 156-171:
@@ -76,7 +76,7 @@ Every template external load violates these defaults. If `strict` profile is ena
 
 ### SRI absence
 
-`grep -rnE "integrity=" src/dazzle_ui/templates/` → **zero hits.** No template includes SRI hashes. All external loads are trusted blindly.
+`grep -rnE "integrity=" src/dazzle_page/templates/` → **zero hits.** No template includes SRI hashes. All external loads are trusted blindly.
 
 ### Cross-cycle reinforcement
 
@@ -114,7 +114,7 @@ Scope: ~10 lines of HTML. Doesn't require CSP changes. Immediate defense against
 ### Phase 2 — vendor the highest-risk assets
 
 - **Tailwind CDN**: Dazzle already has a CSS build pipeline (`build_css.py`). The CDN is likely a prototype/dev affordance. Switching to the locally-built `dazzle-bundle.css` removes the external load entirely.
-- **Dazzle own dist from jsdelivr/gh**: This is strange — Dazzle ships as a Python package; its UI assets should ship via the same package, not via a jsdelivr-of-GitHub URL. PyPI distribution already includes `src/dazzle_ui/runtime/static/`. Migrating to `/static/` self-hosted loads removes the CDN dep entirely.
+- **Dazzle own dist from jsdelivr/gh**: This is strange — Dazzle ships as a Python package; its UI assets should ship via the same package, not via a jsdelivr-of-GitHub URL. PyPI distribution already includes `src/dazzle_page/runtime/static/`. Migrating to `/static/` self-hosted loads removes the CDN dep entirely.
 - **Mermaid**: Harder to vendor (~1MB library). SRI (Phase 1) is the pragmatic fix here.
 
 ### Phase 3 — fix the CSP defaults + make strict actually work

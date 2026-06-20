@@ -41,7 +41,7 @@ npm test
 
 # Type check
 mypy src/dazzle
-npx tsc --noEmit -p src/dazzle/ui/runtime/static/js/
+npx tsc --noEmit -p src/dazzle/page/runtime/static/js/
 ```
 
 ## Project Structure
@@ -191,7 +191,7 @@ pre-commit run --all-files -v
 ### JavaScript type errors
 
 ```bash
-npx tsc --noEmit -p src/dazzle/ui/runtime/static/js/
+npx tsc --noEmit -p src/dazzle/page/runtime/static/js/
 ```
 
 ## See Also

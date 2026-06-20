@@ -7,7 +7,7 @@ kwarg on the 403 marketing variant.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.error_views import (
+from dazzle.http.runtime.error_views import (
     build_site_403_view,
     build_site_404_view,
     build_site_500_view,

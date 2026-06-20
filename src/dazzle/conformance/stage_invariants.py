@@ -113,7 +113,7 @@ def verify_sql_compilation(
         StageVerification with pass/fail.
     """
     try:
-        from dazzle.back.runtime.predicate_compiler import compile_predicate
+        from dazzle.http.runtime.predicate_compiler import compile_predicate
 
         sql, params = compile_predicate(predicate, entity_name, fk_graph)
 
@@ -229,7 +229,7 @@ def verify_round_trip(
 
     # Stage 3: Marker resolution (optional)
     if user_context is not None:
-        from dazzle.back.runtime.predicate_compiler import compile_predicate
+        from dazzle.http.runtime.predicate_compiler import compile_predicate
 
         _sql, params = compile_predicate(predicate, entity_name, fk_graph)
         stage3 = verify_marker_resolution(
@@ -250,7 +250,7 @@ def _resolve_markers(params: list[Any], user_context: dict[str, Any]) -> list[An
     Returns:
         New list with markers replaced by concrete values.
     """
-    from dazzle.back.runtime.predicate_compiler import CurrentUserRef, UserAttrRef
+    from dazzle.http.runtime.predicate_compiler import CurrentUserRef, UserAttrRef
 
     resolved: list[Any] = []
     for p in params:

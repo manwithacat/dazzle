@@ -21,7 +21,7 @@ from app.render.feedback_detail import register_with_app as register_feedback_de
 from app.render.word_cloud import register_with_app as register_word_cloud
 
 if TYPE_CHECKING:
-    from dazzle.back.runtime.services import RuntimeServices
+    from dazzle.http.runtime.services import RuntimeServices
 
 
 def register_all(services: RuntimeServices) -> None:

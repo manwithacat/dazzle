@@ -155,7 +155,7 @@ jobs:
     - name: Run bandit security scanner
       run: |
         uv pip install bandit[toml]
-        bandit -c pyproject.toml -r src/dazzle_back/runtime/ --severity-level medium
+        bandit -c pyproject.toml -r src/dazzle_http/runtime/ --severity-level medium
 
     - name: Run pip-audit (hard-fail on findings)
       # Hard-fails the build on any known vulnerability in the resolved

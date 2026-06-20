@@ -12,8 +12,8 @@ Sub-project 1 created the tenant registry and CLI for managing tenant schemas. B
 ## Existing Code
 
 Two files from v0.11.0 (Dec 2025) implement aspirational tenant middleware:
-- `src/dazzle_back/runtime/tenant_middleware.py` — middleware factory (header/cookie/query resolution)
-- `src/dazzle_back/runtime/tenant_isolation.py` — `TenantDatabaseManager`, context vars
+- `src/dazzle_http/runtime/tenant_middleware.py` — middleware factory (header/cookie/query resolution)
+- `src/dazzle_http/runtime/tenant_isolation.py` — `TenantDatabaseManager`, context vars
 
 These predate the registry, `TenantConfig`, scope blocks, and the RBAC model. Nothing imports them — they're completely unwired. This sub-project refactors them to integrate with the sub-project 1 registry and the current runtime architecture.
 
@@ -156,10 +156,10 @@ All error responses use FastAPI's standard `{"detail": "..."}` shape with `conte
 
 | File | Responsibility |
 |------|---------------|
-| `src/dazzle_back/runtime/tenant_middleware.py` | **Rewrite** — `TenantMiddleware`, resolver protocol, three resolver implementations, registry cache |
-| `src/dazzle_back/runtime/tenant_isolation.py` | **Rewrite** — context vars for current tenant schema, helper to read tenant from request state |
-| `src/dazzle_back/runtime/pg_backend.py` | **Modify** — read `_current_tenant_schema` context var in `connection()` |
-| `src/dazzle_back/runtime/server.py` | **Modify** — wire middleware in `_create_app()` when tenant mode enabled |
+| `src/dazzle_http/runtime/tenant_middleware.py` | **Rewrite** — `TenantMiddleware`, resolver protocol, three resolver implementations, registry cache |
+| `src/dazzle_http/runtime/tenant_isolation.py` | **Rewrite** — context vars for current tenant schema, helper to read tenant from request state |
+| `src/dazzle_http/runtime/pg_backend.py` | **Modify** — read `_current_tenant_schema` context var in `connection()` |
+| `src/dazzle_http/runtime/server.py` | **Modify** — wire middleware in `_create_app()` when tenant mode enabled |
 | `src/dazzle/core/manifest.py` | **Modify** — add `base_domain` field to `TenantConfig` |
 | `src/dazzle/cli/db.py` | **Modify** — add `--tenant` option to status/verify/reset/cleanup |
 | `tests/unit/test_tenant_resolvers.py` | Resolver unit tests |

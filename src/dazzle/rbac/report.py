@@ -198,7 +198,7 @@ def generate_report(report: VerificationReport, format: str = "markdown") -> str
     # Lazy import: report.py imports only from dazzle.rbac at module level
     # (see header). Keep the back-runtime symbol local to avoid pulling the
     # FastAPI runtime into the rbac import graph at module load.
-    from dazzle.back.runtime.csrf import CSRFConfig, render_csrf_policy
+    from dazzle.http.runtime.csrf import CSRFConfig, render_csrf_policy
 
     lines.extend(_render_summary(report))
     lines.extend(_render_matrix_table(report))

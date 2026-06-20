@@ -10,8 +10,8 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from dazzle.back.runtime.auth.models import MembershipRecord
-from dazzle.back.runtime.tenant.apex_middleware import ApexDiscoveryMiddleware
+from dazzle.http.runtime.auth.models import MembershipRecord
+from dazzle.http.runtime.tenant.apex_middleware import ApexDiscoveryMiddleware
 
 
 class _FakeRepo:
@@ -39,7 +39,7 @@ def _build(monkeypatch, *, uid: str | None, memberships, memberships_required=Tr
     )
     app.state.auth_store = SimpleNamespace(get_memberships_for_identity=lambda _id: memberships)
     app.state.memberships_required = memberships_required
-    monkeypatch.setattr("dazzle.back.runtime.auth.current.current_user_id", lambda _request: uid)
+    monkeypatch.setattr("dazzle.http.runtime.auth.current.current_user_id", lambda _request: uid)
     return TestClient(app)
 
 

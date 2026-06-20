@@ -241,7 +241,7 @@ async def _run_measure(
     repo = built.builder.repositories.get("Invoice")
     assert repo is not None, "Invoice repository not found in built app"
 
-    from dazzle.back.runtime.aggregate import Dimension
+    from dazzle.http.runtime.aggregate import Dimension
 
     status_dim = Dimension(name="status")
 

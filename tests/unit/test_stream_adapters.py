@@ -6,14 +6,14 @@ Tests stream adapters: RedisStreamAdapter, KafkaAdapter, InMemoryStreamAdapter.
 
 import pytest
 
-from dazzle.back.channels.adapters.base import SendStatus
-from dazzle.back.channels.adapters.stream import (
+from dazzle.http.channels.adapters.base import SendStatus
+from dazzle.http.channels.adapters.stream import (
     InMemoryStreamAdapter,
     KafkaAdapter,
     RedisStreamAdapter,
 )
-from dazzle.back.channels.detection import DetectionResult, ProviderStatus
-from dazzle.back.channels.outbox import OutboxMessage, OutboxStatus
+from dazzle.http.channels.detection import DetectionResult, ProviderStatus
+from dazzle.http.channels.outbox import OutboxMessage, OutboxStatus
 
 
 @pytest.fixture
@@ -358,7 +358,7 @@ class TestStreamAdapterIntegration:
 
     def test_adapters_registered_in_manager(self):
         """Test stream adapters are registered in ChannelManager."""
-        from dazzle.back.channels.adapters import (
+        from dazzle.http.channels.adapters import (
             InMemoryStreamAdapter,
             KafkaAdapter,
             RedisStreamAdapter,
@@ -371,7 +371,7 @@ class TestStreamAdapterIntegration:
 
     def test_adapters_exported_from_package(self):
         """Test adapters are exported from adapters package."""
-        from dazzle.back.channels.adapters import (
+        from dazzle.http.channels.adapters import (
             InMemoryStreamAdapter,
             KafkaAdapter,
             RedisStreamAdapter,

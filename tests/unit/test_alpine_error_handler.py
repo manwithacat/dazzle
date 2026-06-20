@@ -18,7 +18,7 @@ failing expression text itself becomes diagnostic.
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DZ_ALPINE = REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "js" / "dz-alpine.js"
+DZ_ALPINE = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "js" / "dz-alpine.js"
 
 
 def test_custom_alpine_error_handler_installed() -> None:

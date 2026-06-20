@@ -83,7 +83,7 @@ def _hx_attrs(
 
 
 def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | None]:
-    """Mirror of `dazzle.ui.runtime.template_renderer._pagination_pages`
+    """Mirror of `dazzle.page.runtime.template_renderer._pagination_pages`
     (#984). Returns a bounded ellipsis-collapsed page list.
 
     Examples (window=2):

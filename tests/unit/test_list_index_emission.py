@@ -14,14 +14,6 @@ regress.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.sa_schema import _list_index_specs, build_metadata
-from dazzle.back.specs.entity import (
-    EntityAccessSpec,
-    EntitySpec,
-    FieldSpec,
-    FieldType,
-    ScalarType,
-)
 from dazzle.core.access import AccessOperationKind, ScopeRuleSpec
 from dazzle.core.ir.predicates import (
     BoolComposite,
@@ -34,6 +26,14 @@ from dazzle.core.ir.predicates import (
 )
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.core.ir.ux import SortSpec, UXSpec
+from dazzle.http.runtime.sa_schema import _list_index_specs, build_metadata
+from dazzle.http.specs.entity import (
+    EntityAccessSpec,
+    EntitySpec,
+    FieldSpec,
+    FieldType,
+    ScalarType,
+)
 
 # =============================================================================
 # Helpers

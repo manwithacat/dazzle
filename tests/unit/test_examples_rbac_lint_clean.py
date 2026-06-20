@@ -102,8 +102,8 @@ def test_example_routes_are_matrix_complete(example_name: str) -> None:
     that escapes the RBAC matrix (an unbound override shadowing a generated route,
     or a `# dazzle:implements` binding naming an entity/op the AppSpec lacks).
     The framework-side form of the `dazzle rbac routes --strict` CI gate."""
-    from dazzle.back.converters.surface_converter import convert_surfaces_to_services
-    from dazzle.back.runtime.route_overrides import (
+    from dazzle.http.converters.surface_converter import convert_surfaces_to_services
+    from dazzle.http.runtime.route_overrides import (
         discover_route_overrides,
         verify_route_matrix_completeness,
     )

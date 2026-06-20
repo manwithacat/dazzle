@@ -326,13 +326,13 @@ class TestSideEffectExecutor:
 
     @pytest.fixture
     def executor(self, mock_service):
-        from dazzle.back.runtime.side_effect_executor import SideEffectExecutor
+        from dazzle.http.runtime.side_effect_executor import SideEffectExecutor
 
         return SideEffectExecutor(services={"Task": mock_service})
 
     @pytest.fixture
     def effect_context(self):
-        from dazzle.back.runtime.side_effect_executor import EffectContext
+        from dazzle.http.runtime.side_effect_executor import EffectContext
 
         return EffectContext(
             trigger_entity={"id": "trigger-123", "name": "Test Order"},
@@ -377,7 +377,7 @@ class TestSideEffectExecutor:
 
     @pytest.mark.asyncio
     async def test_execute_effect_missing_service(self, effect_context):
-        from dazzle.back.runtime.side_effect_executor import SideEffectExecutor
+        from dazzle.http.runtime.side_effect_executor import SideEffectExecutor
 
         executor = SideEffectExecutor(services={})
         effect = StepEffect(

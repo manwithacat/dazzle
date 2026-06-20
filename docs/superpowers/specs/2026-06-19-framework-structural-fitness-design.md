@@ -65,10 +65,10 @@ existing `--write` + CHANGELOG-on-drift discipline.
 ### B — import contracts (gates boundary erosion)
 
 Add `import-linter` (new dev dep, uv-pinned) with a `[tool.importlinter]` block in `pyproject.toml`:
-- **`core/` independence** — `dazzle.core` must not import `dazzle.back` or `dazzle.ui` (the IR/parser
+- **`core/` independence** — `dazzle.core` must not import `dazzle.http` or `dazzle.page` (the IR/parser
   stays backend-agnostic — the load-bearing boundary).
 - **`ui/ ↛ back/`** — the render/UI layer must not reach into the runtime.
-- **`back/ ↛ sqlite`** (ADR-0008) — forbid `sqlite3` + `aiosqlite` imports in `dazzle.back`
+- **`back/ ↛ sqlite`** (ADR-0008) — forbid `sqlite3` + `aiosqlite` imports in `dazzle.http`
   (legitimately-SQLite MCP KG + `core/process/version_manager` are *outside* `back/`, so the scope
   is exactly right).
 
@@ -102,7 +102,7 @@ the same change per the uv-canonical-toolchain rule). Both are maintained, pure-
   dropped, or a new CC-20 function) fails it; `--write` then re-greens it. The baseline is valid JSON
   (the v0.83.16 lesson — never run `ruff format` over it).
 - **B:** `test_import_contracts.py` passes with the 2 violations fixed; a synthetic `core/` file
-  importing `dazzle.back` fails it.
+  importing `dazzle.http` fails it.
 
 ## Phases (for writing-plans)
 

@@ -29,7 +29,7 @@ Each fix was sound but local. The pattern is general enough to memorialise as po
 
 When an element will be inside an htmx-morphed region, **prefer server-rendered static HTML over Alpine bindings** wherever possible. When Alpine reactivity is genuinely needed, prefer **direct DOM manipulation in `x-init`** over declarative bindings on morphable children.
 
-Specifically, in framework templates (`src/dazzle/ui/templates/**`):
+Specifically, in framework templates (`src/dazzle/page/templates/**`):
 
 | Pattern | Status | Rationale |
 |---------|--------|-----------|
@@ -84,7 +84,7 @@ But the same shape can recur in any new template. The drift gates protect the *k
 ### Existing controls
 
 - `dz-alpine.js:patchIdiomorphForAlpineDirectives` (post-#964) installs a `beforeAttributeUpdated` callback on `Idiomorph.defaults.callbacks` that returns `false` for any `@`-prefixed attribute name. Required for any framework or project code using `@click` etc. inside a morphable region.
-- `TestNoDoubleQuotedTojsonAcrossTemplates` walks every `*.html` under `src/dazzle/ui/templates/` and fails if any double-quoted attribute interpolates `tojson`.
+- `TestNoDoubleQuotedTojsonAcrossTemplates` walks every `*.html` under `src/dazzle/page/templates/` and fails if any double-quoted attribute interpolates `tojson`.
 - Per-bug drift gates listed above.
 
 ### New work this ADR implies
@@ -149,7 +149,7 @@ The simplest answer to "Alpine has structural problems with idiomorph" is "don't
 ## See also
 
 - ADR-0011 — SSR + HTMX architecture
-- `src/dazzle/ui/runtime/static/js/dz-alpine.js` — patched idiomorph callback (#964) and `dzFilterRefSelect` (#970) helper
+- `src/dazzle/page/runtime/static/js/dz-alpine.js` — patched idiomorph callback (#964) and `dzFilterRefSelect` (#970) helper
 - `tests/unit/test_idiomorph_alpine_patch.py` — drift gate for the `@`-attribute skip
 - `tests/unit/test_filter_bar_no_xfor.py` — drift gate for the `<template x-for>` ban in filter_bar
 - `tests/unit/test_card_picker_attributes.py::TestNoDoubleQuotedTojsonAcrossTemplates` — drift gate for tojson-in-double-quoted-attribute pattern

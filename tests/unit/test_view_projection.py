@@ -203,14 +203,14 @@ class TestQueryBuilderProjection:
     """QueryBuilder uses select_fields for projection."""
 
     def test_default_select_star(self) -> None:
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         builder = QueryBuilder(table_name="Company")
         sql, _params = builder.build_select()
         assert "SELECT *" in sql
 
     def test_select_with_fields(self) -> None:
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         builder = QueryBuilder(table_name="Company")
         builder.select_fields = ["id", "name", "status"]
@@ -222,7 +222,7 @@ class TestQueryBuilderProjection:
         assert "*" not in sql
 
     def test_select_count_ignores_fields(self) -> None:
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         builder = QueryBuilder(table_name="Company")
         builder.select_fields = ["id", "name"]
@@ -262,7 +262,7 @@ class TestListHandlerProjection:
                 pass
 
         try:
-            from dazzle.back.runtime.route_generator import (
+            from dazzle.http.runtime.route_generator import (
                 HandlerConfig,
                 RouteSpec,
                 create_list_handler,
@@ -310,7 +310,7 @@ class TestListHandlerProjection:
                 pass
 
         try:
-            from dazzle.back.runtime.route_generator import (
+            from dazzle.http.runtime.route_generator import (
                 HandlerConfig,
                 RouteSpec,
                 create_list_handler,
@@ -363,7 +363,7 @@ class TestAutoInclude:
                 pass
 
         try:
-            from dazzle.back.runtime.route_generator import (
+            from dazzle.http.runtime.route_generator import (
                 HandlerConfig,
                 RouteSpec,
                 create_list_handler,
@@ -412,7 +412,7 @@ class TestAutoInclude:
                 pass
 
         try:
-            from dazzle.back.runtime.route_generator import (
+            from dazzle.http.runtime.route_generator import (
                 HandlerConfig,
                 RouteSpec,
                 create_list_handler,
@@ -471,7 +471,7 @@ class TestListHandlerDisplayFieldInjection:
                 pass
 
         try:
-            from dazzle.back.runtime.route_generator import (
+            from dazzle.http.runtime.route_generator import (
                 HandlerConfig,
                 RouteSpec,
                 create_list_handler,
@@ -523,7 +523,7 @@ class TestListHandlerDisplayFieldInjection:
                 pass
 
         try:
-            from dazzle.back.runtime.route_generator import (
+            from dazzle.http.runtime.route_generator import (
                 HandlerConfig,
                 RouteSpec,
                 create_list_handler,
@@ -580,7 +580,7 @@ class TestListHandlerDisplayFieldInjection:
                 pass
 
         try:
-            from dazzle.back.runtime.route_generator import (
+            from dazzle.http.runtime.route_generator import (
                 HandlerConfig,
                 RouteSpec,
                 create_list_handler,
@@ -631,7 +631,7 @@ class TestListHandlerDisplayFieldInjection:
                 pass
 
         try:
-            from dazzle.back.runtime.route_generator import (
+            from dazzle.http.runtime.route_generator import (
                 HandlerConfig,
                 RouteSpec,
                 create_list_handler,

@@ -68,7 +68,7 @@ excise_tenant(root_entity, root_id, *, conn, dry_run=False) -> ExcisionResult
 
 ### Slice 2 — #1339 QA auth + ephemeral provisioning (large; security-critical)
 
-**Route module** — a **new** `src/dazzle/back/runtime/qa_secure_routes.py`, physically separate from the dev-only `qa_routes.py` (keeps the "dev route untouched" promise visibly true and gives the secret-gated tier its own auditable boundary). **Self-disabling:** the router is **not mounted** when `QA_AUTH_SECRET` is unset → prod-off-by-default with no runtime branch to misconfigure. The `/qa/` prefix is already CSRF-exempt.
+**Route module** — a **new** `src/dazzle/http/runtime/qa_secure_routes.py`, physically separate from the dev-only `qa_routes.py` (keeps the "dev route untouched" promise visibly true and gives the secret-gated tier its own auditable boundary). **Self-disabling:** the router is **not mounted** when `QA_AUTH_SECRET` is unset → prod-off-by-default with no runtime branch to misconfigure. The `/qa/` prefix is already CSRF-exempt.
 
 **Signer** — stdlib `hmac` (already imported in `auth/crypto.py`; no new dependency): sign/verify `persona:timestamp`, reject outside a ~60s replay window. (`itsdangerous` was considered and rejected for dependency hygiene.)
 

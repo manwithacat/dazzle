@@ -7,7 +7,7 @@ is suppressed by the source entity's `expose:` allowlist.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.workspace_route_builder import _workspace_route_methods
+from dazzle.http.runtime.workspace_route_builder import _workspace_route_methods
 
 
 class TestWorkspaceRouteMethods:

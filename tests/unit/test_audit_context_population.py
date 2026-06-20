@@ -19,12 +19,12 @@ import asyncio
 from types import SimpleNamespace
 from uuid import uuid4
 
-from dazzle.back.runtime.audit_context import (
+from dazzle.http.runtime.audit_context import (
     get_current_user_id,
     reset_current_user_id,
     set_current_user_id,
 )
-from dazzle.back.runtime.route_generator import _build_access_context
+from dazzle.http.runtime.route_generator import _build_access_context
 
 
 def _auth(user) -> SimpleNamespace:

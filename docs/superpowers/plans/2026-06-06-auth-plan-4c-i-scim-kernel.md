@@ -39,7 +39,7 @@ API, the 4a connection substrate.
 
 ## Task 2: the kernel + tests
 
-**Files:** Create `src/dazzle/back/runtime/auth/scim_provisioning.py`,
+**Files:** Create `src/dazzle/http/runtime/auth/scim_provisioning.py`,
 `tests/unit/test_scim_provisioning.py`.
 
 - `ScimError(reason, message)`, `ScimResult`, `provision_scim_user`, `set_scim_user_active`,

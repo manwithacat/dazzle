@@ -25,11 +25,11 @@ from uuid import UUID
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.atomic_flow_routes import (
+from dazzle.core import ir
+from dazzle.http.runtime.atomic_flow_routes import (
     build_atomic_flow_router,
     build_input_model,
 )
-from dazzle.core import ir
 
 
 def _simple_flow() -> ir.AtomicFlowSpec:

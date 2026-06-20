@@ -548,8 +548,8 @@ def rls_command(
 
     # convert_entities gives the back-spec entities describe_rls_policies needs
     # (the scoped-vs-flat partition iterates these, mirroring build_all_rls_ddl).
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.rls_schema import describe_rls_policies
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.rls_schema import describe_rls_policies
 
     entities = convert_entities(appspec.domain.entities)
     descriptors = describe_rls_policies(appspec, entities)
@@ -806,7 +806,7 @@ def _boot_app(project_root: Path) -> Any:
         return f"failed to load AppSpec: {exc!r}"
 
     try:
-        from dazzle.back.runtime.app_factory import create_app
+        from dazzle.http.runtime.app_factory import create_app
 
         # database_url=None lets the factory default to env / fallbacks;
         # boot may still fail if PG isn't reachable, in which case we

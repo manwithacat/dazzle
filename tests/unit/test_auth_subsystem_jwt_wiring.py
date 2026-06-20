@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
 
 def _make_ctx(*, database_url: str | None, oauth_providers: list[object] | None = None) -> object:
@@ -47,7 +47,7 @@ def test_jwt_routes_build_and_mount() -> None:
     """
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.auth.routes_jwt import create_jwt_auth_routes
+    from dazzle.http.runtime.auth.routes_jwt import create_jwt_auth_routes
 
     router = create_jwt_auth_routes(
         auth_store=MagicMock(name="auth_store"),
@@ -81,7 +81,7 @@ def test_no_handler_param_uses_optional_request_annotation() -> None:
 
     from starlette.requests import Request as StarletteRequest
 
-    from dazzle.back.runtime.auth import routes_jwt as m
+    from dazzle.http.runtime.auth import routes_jwt as m
 
     handlers = [
         obj
@@ -112,9 +112,9 @@ def test_register_jwt_routes_mounts_when_database_url_set() -> None:
     ctx = _make_ctx(database_url="postgresql://localhost/test", oauth_providers=None)
 
     with (
-        patch("dazzle.back.runtime.auth.create_jwt_auth_routes") as factory,
-        patch("dazzle.back.runtime.jwt_auth.JWTService") as jwt_service_cls,
-        patch("dazzle.back.runtime.token_store.TokenStore") as token_store_cls,
+        patch("dazzle.http.runtime.auth.create_jwt_auth_routes") as factory,
+        patch("dazzle.http.runtime.jwt_auth.JWTService") as jwt_service_cls,
+        patch("dazzle.http.runtime.token_store.TokenStore") as token_store_cls,
     ):
         factory.return_value = MagicMock(name="jwt_router")
         jwt_service_cls.return_value = MagicMock(name="jwt_service")
@@ -133,7 +133,7 @@ def test_register_jwt_routes_skipped_without_database_url() -> None:
     sub = AuthSubsystem()
     ctx = _make_ctx(database_url=None, oauth_providers=None)
 
-    with patch("dazzle.back.runtime.auth.create_jwt_auth_routes") as factory:
+    with patch("dazzle.http.runtime.auth.create_jwt_auth_routes") as factory:
         sub._register_jwt_routes(ctx)  # type: ignore[arg-type]
 
     factory.assert_not_called()
@@ -147,8 +147,8 @@ def test_ensure_jwt_service_is_idempotent() -> None:
     ctx = _make_ctx(database_url="postgresql://localhost/test")
 
     with (
-        patch("dazzle.back.runtime.jwt_auth.JWTService") as jwt_service_cls,
-        patch("dazzle.back.runtime.token_store.TokenStore") as token_store_cls,
+        patch("dazzle.http.runtime.jwt_auth.JWTService") as jwt_service_cls,
+        patch("dazzle.http.runtime.token_store.TokenStore") as token_store_cls,
     ):
         jwt_service_cls.return_value = MagicMock(name="jwt_service")
         token_store_cls.return_value = MagicMock(name="token_store")
@@ -178,8 +178,8 @@ def test_jwt_routes_mount_after_social_auth_reuses_service() -> None:
     sub._token_store = pre_built_token
 
     with (
-        patch("dazzle.back.runtime.auth.create_jwt_auth_routes") as factory,
-        patch("dazzle.back.runtime.jwt_auth.JWTService") as jwt_service_cls,
+        patch("dazzle.http.runtime.auth.create_jwt_auth_routes") as factory,
+        patch("dazzle.http.runtime.jwt_auth.JWTService") as jwt_service_cls,
     ):
         factory.return_value = MagicMock(name="jwt_router")
         sub._register_jwt_routes(ctx)  # type: ignore[arg-type]
@@ -270,7 +270,7 @@ def test_register_jwt_routes_skipped_without_pyjwt() -> None:
         return real_import(name, *args, **kwargs)
 
     with (
-        patch("dazzle.back.runtime.auth.create_jwt_auth_routes") as factory,
+        patch("dazzle.http.runtime.auth.create_jwt_auth_routes") as factory,
         patch("builtins.__import__", side_effect=_no_jwt),
         patch.dict(sys.modules) as mods,
     ):

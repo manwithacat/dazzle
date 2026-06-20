@@ -20,11 +20,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi import HTTPException, Request
 
-from dazzle.back.runtime.policy import (
+from dazzle.http.runtime.policy import (
     EntityPolicyInfo,
     PolicyRegistry,
 )
-from dazzle.back.runtime.route_overrides import (
+from dazzle.http.runtime.route_overrides import (
     _wrap_with_policy_gate,
     discover_route_overrides,
 )

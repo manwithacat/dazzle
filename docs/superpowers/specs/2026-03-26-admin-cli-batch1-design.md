@@ -59,7 +59,7 @@ dazzle auth impersonate teacher@school.uk --ttl 5m  # Short-lived session
 3. URL mode (`--url`): Create magic link, print URL
 4. Log audit event: `"CLI impersonation of {email} by {hostname}"`
 
-**Magic link primitive** (`src/dazzle_back/runtime/auth/magic_link.py`):
+**Magic link primitive** (`src/dazzle_http/runtime/auth/magic_link.py`):
 
 New module with:
 - `create_magic_link(store, user_id, ttl, created_by) -> str` — generates token, stores in `magic_links` table, returns token
@@ -131,8 +131,8 @@ Flow:
 | File | Action | Content |
 |------|--------|---------|
 | `src/dazzle/cli/auth.py` | Modify | Add flush-sessions, impersonate, rotate-passwords commands |
-| `src/dazzle_back/runtime/auth/store.py` | Modify | Add `delete_all_sessions()` method to SessionStoreMixin |
-| `src/dazzle_back/runtime/auth/magic_link.py` | Create | Magic link token creation, validation, table DDL |
+| `src/dazzle_http/runtime/auth/store.py` | Modify | Add `delete_all_sessions()` method to SessionStoreMixin |
+| `src/dazzle_http/runtime/auth/magic_link.py` | Create | Magic link token creation, validation, table DDL |
 | `src/dazzle/cli/dbshell.py` | Create | dbshell command |
 | `src/dazzle/cli/__init__.py` | Modify | Register dbshell command |
 | `tests/unit/test_admin_commands.py` | Create | Tests for flush-sessions, impersonate, rotate-passwords |

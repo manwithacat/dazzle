@@ -16,13 +16,13 @@
 
 | File | Action | Responsibility |
 |------|--------|---------------|
-| `src/dazzle_ui/runtime/workspace_renderer.py` | Modify | Add `col_span` field, remove `grid_class`, add `apply_layout_preferences()`, update `build_workspace_context()` |
-| `src/dazzle_ui/templates/workspace/_content.html` | Modify | Alpine `x-data` wrapper, 12-col grid, edit mode UI, floating toolbar |
-| `src/dazzle_ui/runtime/static/js/workspace-editor.js` | Create | `dzWorkspaceEditor` Alpine component |
-| `src/dazzle_ui/runtime/static/vendor/alpine.min.js` | Create | Vendored Alpine.js |
-| `src/dazzle_ui/runtime/static/vendor/sortable.min.js` | Create | Vendored SortableJS |
-| `src/dazzle_ui/runtime/static/vendor/alpine-sort.min.js` | Create | Vendored alpine-sort plugin |
-| `src/dazzle_ui/templates/base.html` | Modify | Add Alpine.js + plugin script tags |
+| `src/dazzle_page/runtime/workspace_renderer.py` | Modify | Add `col_span` field, remove `grid_class`, add `apply_layout_preferences()`, update `build_workspace_context()` |
+| `src/dazzle_page/templates/workspace/_content.html` | Modify | Alpine `x-data` wrapper, 12-col grid, edit mode UI, floating toolbar |
+| `src/dazzle_page/runtime/static/js/workspace-editor.js` | Create | `dzWorkspaceEditor` Alpine component |
+| `src/dazzle_page/runtime/static/vendor/alpine.min.js` | Create | Vendored Alpine.js |
+| `src/dazzle_page/runtime/static/vendor/sortable.min.js` | Create | Vendored SortableJS |
+| `src/dazzle_page/runtime/static/vendor/alpine-sort.min.js` | Create | Vendored alpine-sort plugin |
+| `src/dazzle_page/templates/base.html` | Modify | Add Alpine.js + plugin script tags |
 | `tests/unit/test_workspace_layout_prefs.py` | Create | Unit tests for merge logic, col_span defaults, round-trip |
 
 ---
@@ -30,10 +30,10 @@
 ### Task 1: Add `col_span` to RegionContext and compute defaults from stage
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/workspace_renderer.py:47-79` (RegionContext model)
-- Modify: `src/dazzle_ui/runtime/workspace_renderer.py:82-96` (WorkspaceContext model)
-- Modify: `src/dazzle_ui/runtime/workspace_renderer.py:102-145` (stage maps)
-- Modify: `src/dazzle_ui/runtime/workspace_renderer.py:200-216` (build_workspace_context grid_class assignment)
+- Modify: `src/dazzle_page/runtime/workspace_renderer.py:47-79` (RegionContext model)
+- Modify: `src/dazzle_page/runtime/workspace_renderer.py:82-96` (WorkspaceContext model)
+- Modify: `src/dazzle_page/runtime/workspace_renderer.py:102-145` (stage maps)
+- Modify: `src/dazzle_page/runtime/workspace_renderer.py:200-216` (build_workspace_context grid_class assignment)
 - Test: `tests/unit/test_workspace_layout_prefs.py`
 
 - [ ] **Step 1: Write failing tests for col_span defaults**
@@ -57,7 +57,7 @@ class TestColSpanDefaults:
     """Each stage assigns correct default col_span values."""
 
     def test_focus_metric_first_region_full_width(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle_page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("focus_metric", region_count=3)
         ctx = build_workspace_context(ws)
@@ -66,7 +66,7 @@ class TestColSpanDefaults:
         assert ctx.regions[2].col_span == 6
 
     def test_dual_pane_flow_all_half(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle_page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("dual_pane_flow", region_count=2)
         ctx = build_workspace_context(ws)
@@ -74,7 +74,7 @@ class TestColSpanDefaults:
         assert ctx.regions[1].col_span == 6
 
     def test_scanner_table_all_full(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle_page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("scanner_table", region_count=2)
         ctx = build_workspace_context(ws)
@@ -82,7 +82,7 @@ class TestColSpanDefaults:
         assert ctx.regions[1].col_span == 12
 
     def test_monitor_wall_all_half(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle_page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("monitor_wall", region_count=4)
         ctx = build_workspace_context(ws)
@@ -90,7 +90,7 @@ class TestColSpanDefaults:
             assert r.col_span == 6
 
     def test_command_center_cycle(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle_page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("command_center", region_count=6)
         ctx = build_workspace_context(ws)
@@ -98,7 +98,7 @@ class TestColSpanDefaults:
         assert spans == [12, 6, 6, 4, 4, 4]
 
     def test_no_stage_defaults_to_12(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle_page.runtime.workspace_renderer import build_workspace_context
 
         ws = _make_workspace("", region_count=2)
         ctx = build_workspace_context(ws)
@@ -106,7 +106,7 @@ class TestColSpanDefaults:
             assert r.col_span == 12
 
     def test_grid_class_removed_from_region(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import RegionContext
+        from dazzle_page.runtime.workspace_renderer import RegionContext
 
         r = RegionContext(name="test")
         assert not hasattr(r, "grid_class")
@@ -161,7 +161,7 @@ Expected: FAIL — `grid_class` still exists on RegionContext, `col_span` does n
 
 - [ ] **Step 3: Update RegionContext — add `col_span`, `hidden`; remove `grid_class`**
 
-In `src/dazzle_ui/runtime/workspace_renderer.py`, modify `RegionContext` (line 47):
+In `src/dazzle_page/runtime/workspace_renderer.py`, modify `RegionContext` (line 47):
 
 Remove the `grid_class: str = ""` field (line 78). Add:
 
@@ -219,7 +219,7 @@ Also remove `grid_class=grid_class` from the `WorkspaceContext(...)` constructor
 - [ ] **Step 5: Fix any callers of `grid_class` across the codebase**
 
 Search for `grid_class` usage and update all references. Key files:
-- `src/dazzle_ui/templates/workspace/_content.html` (lines 52, 58, 62) — update in Task 5
+- `src/dazzle_page/templates/workspace/_content.html` (lines 52, 58, 62) — update in Task 5
 - Any test files referencing `grid_class` — update assertions
 
 Run: `grep -rn "grid_class" src/ tests/ --include="*.py" | grep -v __pycache__`
@@ -236,7 +236,7 @@ Run: `pytest tests/ -m "not e2e" -x -q` to check for regressions.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/workspace_renderer.py tests/unit/test_workspace_layout_prefs.py
+git add src/dazzle_page/runtime/workspace_renderer.py tests/unit/test_workspace_layout_prefs.py
 git commit -m "refactor: replace grid_class with col_span on RegionContext, stage-based defaults"
 ```
 
@@ -245,7 +245,7 @@ git commit -m "refactor: replace grid_class with col_span on RegionContext, stag
 ### Task 2: Implement `apply_layout_preferences()` merge logic
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/workspace_renderer.py`
+- Modify: `src/dazzle_page/runtime/workspace_renderer.py`
 - Test: `tests/unit/test_workspace_layout_prefs.py`
 
 - [ ] **Step 1: Write failing tests for merge logic**
@@ -257,7 +257,7 @@ class TestApplyLayoutPreferences:
     """Merge user layout preferences with DSL defaults."""
 
     def test_no_preference_returns_unchanged(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle_page.runtime.workspace_renderer import (
             apply_layout_preferences,
             build_workspace_context,
         )
@@ -270,7 +270,7 @@ class TestApplyLayoutPreferences:
         assert [r.name for r in result.regions] == original_order
 
     def test_reorder_regions(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle_page.runtime.workspace_renderer import (
             apply_layout_preferences,
             build_workspace_context,
         )
@@ -283,7 +283,7 @@ class TestApplyLayoutPreferences:
         assert [r.name for r in result.regions] == ["region_2", "region_0", "region_1"]
 
     def test_hidden_regions_flagged(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle_page.runtime.workspace_renderer import (
             apply_layout_preferences,
             build_workspace_context,
         )
@@ -297,7 +297,7 @@ class TestApplyLayoutPreferences:
         assert result.regions[0].hidden is False
 
     def test_width_overrides(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle_page.runtime.workspace_renderer import (
             apply_layout_preferences,
             build_workspace_context,
         )
@@ -311,7 +311,7 @@ class TestApplyLayoutPreferences:
         assert result.regions[1].col_span == 4
 
     def test_deleted_dsl_region_dropped(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle_page.runtime.workspace_renderer import (
             apply_layout_preferences,
             build_workspace_context,
         )
@@ -324,7 +324,7 @@ class TestApplyLayoutPreferences:
         assert [r.name for r in result.regions] == ["region_0", "region_1"]
 
     def test_new_dsl_region_appended(self) -> None:
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle_page.runtime.workspace_renderer import (
             apply_layout_preferences,
             build_workspace_context,
         )
@@ -339,7 +339,7 @@ class TestApplyLayoutPreferences:
 
     def test_fold_count_skips_hidden_regions(self) -> None:
         """Hidden regions should not count toward fold_count."""
-        from dazzle_ui.runtime.workspace_renderer import (
+        from dazzle_page.runtime.workspace_renderer import (
             apply_layout_preferences,
             build_workspace_context,
         )
@@ -374,7 +374,7 @@ Expected: FAIL — `apply_layout_preferences` does not exist.
 
 - [ ] **Step 3: Implement `apply_layout_preferences()`**
 
-Add to `src/dazzle_ui/runtime/workspace_renderer.py`:
+Add to `src/dazzle_page/runtime/workspace_renderer.py`:
 
 ```python
 def apply_layout_preferences(
@@ -438,7 +438,7 @@ Expected: All tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/workspace_renderer.py tests/unit/test_workspace_layout_prefs.py
+git add src/dazzle_page/runtime/workspace_renderer.py tests/unit/test_workspace_layout_prefs.py
 git commit -m "feat: apply_layout_preferences merges user layout delta with DSL defaults"
 ```
 
@@ -447,12 +447,12 @@ git commit -m "feat: apply_layout_preferences merges user layout delta with DSL 
 ### Task 3: Wire layout preferences into workspace page rendering
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/page_routes.py` (where workspace pages render)
-- Modify: `src/dazzle_ui/templates/workspace/_content.html`
+- Modify: `src/dazzle_page/runtime/page_routes.py` (where workspace pages render)
+- Modify: `src/dazzle_page/templates/workspace/_content.html`
 
 - [ ] **Step 1: Find where workspace pages are rendered per-request**
 
-Run: `grep -n "build_workspace_context\|_workspace_handler\|workspace_page" src/dazzle_ui/runtime/page_routes.py`
+Run: `grep -n "build_workspace_context\|_workspace_handler\|workspace_page" src/dazzle_page/runtime/page_routes.py`
 
 **Important:** `build_workspace_context()` is called once at startup and the result is captured in a closure. `apply_layout_preferences()` must be called *per-request* inside the handler function (e.g. `_workspace_handler`) so that each user gets their own layout. This mirrors the `ctx.table.model_copy(deep=True)` pattern from #587.
 
@@ -461,7 +461,7 @@ Run: `grep -n "build_workspace_context\|_workspace_handler\|workspace_page" src/
 Inside the workspace page handler, after getting the auth context but before rendering:
 
 ```python
-from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+from dazzle_page.runtime.workspace_renderer import apply_layout_preferences
 
 # ws_ctx was built at startup — apply per-user layout preferences
 user_prefs = auth_ctx.preferences if auth_ctx else {}
@@ -502,7 +502,7 @@ Run: `pytest tests/ -m "not e2e" -x -q`
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/page_routes.py src/dazzle_ui/templates/workspace/_content.html
+git add src/dazzle_page/runtime/page_routes.py src/dazzle_page/templates/workspace/_content.html
 git commit -m "feat: wire layout preferences into workspace rendering, 12-col grid"
 ```
 
@@ -511,22 +511,22 @@ git commit -m "feat: wire layout preferences into workspace rendering, 12-col gr
 ### Task 4: Vendor Alpine.js, SortableJS, and alpine-sort
 
 **Files:**
-- Create: `src/dazzle_ui/runtime/static/vendor/alpine.min.js`
-- Create: `src/dazzle_ui/runtime/static/vendor/sortable.min.js`
-- Create: `src/dazzle_ui/runtime/static/vendor/alpine-sort.min.js`
-- Modify: `src/dazzle_ui/templates/base.html`
+- Create: `src/dazzle_page/runtime/static/vendor/alpine.min.js`
+- Create: `src/dazzle_page/runtime/static/vendor/sortable.min.js`
+- Create: `src/dazzle_page/runtime/static/vendor/alpine-sort.min.js`
+- Modify: `src/dazzle_page/templates/base.html`
 
 - [ ] **Step 1: Download vendored libraries**
 
 ```bash
 # Alpine.js (v3.x latest)
-curl -sL https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js -o src/dazzle_ui/runtime/static/vendor/alpine.min.js
+curl -sL https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js -o src/dazzle_page/runtime/static/vendor/alpine.min.js
 
 # SortableJS
-curl -sL https://cdn.jsdelivr.net/npm/sortablejs@1/Sortable.min.js -o src/dazzle_ui/runtime/static/vendor/sortable.min.js
+curl -sL https://cdn.jsdelivr.net/npm/sortablejs@1/Sortable.min.js -o src/dazzle_page/runtime/static/vendor/sortable.min.js
 
 # alpine-sort (requires SortableJS)
-curl -sL https://cdn.jsdelivr.net/npm/@alpinejs/sort@3/dist/cdn.min.js -o src/dazzle_ui/runtime/static/vendor/alpine-sort.min.js
+curl -sL https://cdn.jsdelivr.net/npm/@alpinejs/sort@3/dist/cdn.min.js -o src/dazzle_page/runtime/static/vendor/alpine-sort.min.js
 ```
 
 Verify each file downloaded correctly (check file size > 0, contains JS).
@@ -551,10 +551,10 @@ Start a dev server (`dazzle serve --local`) and check browser console for errors
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/vendor/alpine.min.js \
-        src/dazzle_ui/runtime/static/vendor/sortable.min.js \
-        src/dazzle_ui/runtime/static/vendor/alpine-sort.min.js \
-        src/dazzle_ui/templates/base.html
+git add src/dazzle_page/runtime/static/vendor/alpine.min.js \
+        src/dazzle_page/runtime/static/vendor/sortable.min.js \
+        src/dazzle_page/runtime/static/vendor/alpine-sort.min.js \
+        src/dazzle_page/templates/base.html
 git commit -m "feat: vendor Alpine.js, SortableJS, alpine-sort"
 ```
 
@@ -563,11 +563,11 @@ git commit -m "feat: vendor Alpine.js, SortableJS, alpine-sort"
 ### Task 5: Build the Alpine workspace editor component
 
 **Files:**
-- Create: `src/dazzle_ui/runtime/static/js/workspace-editor.js`
+- Create: `src/dazzle_page/runtime/static/js/workspace-editor.js`
 
 - [ ] **Step 1: Write the `dzWorkspaceEditor` Alpine component**
 
-Create `src/dazzle_ui/runtime/static/js/workspace-editor.js`:
+Create `src/dazzle_page/runtime/static/js/workspace-editor.js`:
 
 ```javascript
 /**
@@ -659,7 +659,7 @@ After the dz.js script tags (around line 38-40):
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/js/workspace-editor.js src/dazzle_ui/templates/base.html
+git add src/dazzle_page/runtime/static/js/workspace-editor.js src/dazzle_page/templates/base.html
 git commit -m "feat: dzWorkspaceEditor Alpine component for layout customization"
 ```
 
@@ -668,7 +668,7 @@ git commit -m "feat: dzWorkspaceEditor Alpine component for layout customization
 ### Task 6: Build the edit mode template UI
 
 **Files:**
-- Modify: `src/dazzle_ui/templates/workspace/_content.html`
+- Modify: `src/dazzle_page/templates/workspace/_content.html`
 
 - [ ] **Step 1: Wrap workspace in Alpine `x-data` and add edit mode UI**
 
@@ -809,7 +809,7 @@ Start dev server, navigate to a workspace. Verify:
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/workspace/_content.html
+git add src/dazzle_page/templates/workspace/_content.html
 git commit -m "feat: workspace edit mode UI — drag handles, width selector, visibility toggle"
 ```
 
@@ -828,7 +828,7 @@ ruff check src/ tests/ --fix && ruff format src/ tests/
 - [ ] **Step 2: Type check**
 
 ```bash
-mypy src/dazzle_ui/runtime/workspace_renderer.py
+mypy src/dazzle_page/runtime/workspace_renderer.py
 ```
 
 - [ ] **Step 3: Full test suite**

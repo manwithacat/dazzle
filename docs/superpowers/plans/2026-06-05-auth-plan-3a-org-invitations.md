@@ -18,15 +18,15 @@
 
 | File | Responsibility |
 |------|----------------|
-| `src/dazzle/back/runtime/auth/invitations.py` (**create**) | `InvitationRecord`, `InvitationError(reason)`, `INVITATIONS_DDL`/`INVITATIONS_INDEXES`, and the store-taking functions `create_invitation`, `get_invitation`, `accept_invitation`, `list_pending_invitations`. The security core (token lifecycle + verified-email join + already-member guard). |
-| `src/dazzle/back/runtime/auth/invitation_routes.py` (**create**) | `create_invitation_routes() -> APIRouter`: `POST /auth/invite` (authz-gated), `GET /auth/accept-invite/{token}` (accept page), `POST /auth/accept-invite` (redeem). |
-| `src/dazzle/back/runtime/auth/invitation_views.py` (**create**) | `build_accept_invite_view(...)` + `build_invite_result_view(...)` — typed Fragment pages (mirror `org_context_views`). |
-| `src/dazzle/back/runtime/auth/mailer.py` (**modify**) | Add `InvitationMailer` Protocol + `LogMailer.send_invitation` + `get_invitation_mailer`. |
-| `src/dazzle/back/runtime/auth/store.py` (**modify**) | Add `INVITATIONS_DDL`/indexes to `_init_db`. |
+| `src/dazzle/http/runtime/auth/invitations.py` (**create**) | `InvitationRecord`, `InvitationError(reason)`, `INVITATIONS_DDL`/`INVITATIONS_INDEXES`, and the store-taking functions `create_invitation`, `get_invitation`, `accept_invitation`, `list_pending_invitations`. The security core (token lifecycle + verified-email join + already-member guard). |
+| `src/dazzle/http/runtime/auth/invitation_routes.py` (**create**) | `create_invitation_routes() -> APIRouter`: `POST /auth/invite` (authz-gated), `GET /auth/accept-invite/{token}` (accept page), `POST /auth/accept-invite` (redeem). |
+| `src/dazzle/http/runtime/auth/invitation_views.py` (**create**) | `build_accept_invite_view(...)` + `build_invite_result_view(...)` — typed Fragment pages (mirror `org_context_views`). |
+| `src/dazzle/http/runtime/auth/mailer.py` (**modify**) | Add `InvitationMailer` Protocol + `LogMailer.send_invitation` + `get_invitation_mailer`. |
+| `src/dazzle/http/runtime/auth/store.py` (**modify**) | Add `INVITATIONS_DDL`/indexes to `_init_db`. |
 | `src/dazzle/core/manifest.py` (**modify**) | `AuthConfig.org_admin_roles: list[str]` + parse `auth_data.get("org_admin_roles", [])`. |
-| `src/dazzle/back/runtime/subsystems/auth.py` (**modify**) | Set `app.state.org_admin_roles`; mount the invitation router. |
-| `src/dazzle/back/runtime/csrf.py` (**modify**) | Add `/auth/invite` + `/auth/accept-invite` to `protected_paths` (authenticated `/auth/` POSTs must not fall into NA_PREAUTH). |
-| `src/dazzle/back/alembic/versions/0010_invitations.py` (**create**) | Idempotent `invitations` table migration (mirror `0009`). |
+| `src/dazzle/http/runtime/subsystems/auth.py` (**modify**) | Set `app.state.org_admin_roles`; mount the invitation router. |
+| `src/dazzle/http/runtime/csrf.py` (**modify**) | Add `/auth/invite` + `/auth/accept-invite` to `protected_paths` (authenticated `/auth/` POSTs must not fall into NA_PREAUTH). |
+| `src/dazzle/http/alembic/versions/0010_invitations.py` (**create**) | Idempotent `invitations` table migration (mirror `0009`). |
 | `tests/unit/test_invitations.py` (**create**) | Pure-ish: `InvitationError` reasons, `org_admin_roles` authz predicate. |
 | `tests/integration/test_org_invitations_pg.py` (**create**) | Real-PG: full invite→accept happy path; authz gate (non-admin 403); verified-email join (email mismatch / unverified rejected); expiry + single-use; already-member guard; accept emits a `provisioned` event with `invited_by`. |
 
@@ -35,8 +35,8 @@
 ## Task 1: Invitation token substrate (`invitations.py`)
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/invitations.py`
-- Modify: `src/dazzle/back/runtime/auth/store.py` (`_init_db`, after the `membership_events` block ~line 1037)
+- Create: `src/dazzle/http/runtime/auth/invitations.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py` (`_init_db`, after the `membership_events` block ~line 1037)
 - Test: `tests/integration/test_org_invitations_pg.py`
 
 - [ ] **Step 1: Write the failing integration test** (happy path)
@@ -87,7 +87,7 @@ def store_url() -> Iterator[str]:
 
 
 def _store(store_url: str):
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=store_url)
     store._init_db()
@@ -95,7 +95,7 @@ def _store(store_url: str):
 
 
 def test_invite_then_accept_creates_active_membership(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         accept_invitation,
         create_invitation,
     )
@@ -123,7 +123,7 @@ def test_invite_then_accept_creates_active_membership(store_url: str) -> None:
     assert [e.event_type for e in events] == ["provisioned"]
     assert events[0].actor_id == str(inviter.id)
     # The token is now single-use (accepting again raises).
-    from dazzle.back.runtime.auth.invitations import InvitationError
+    from dazzle.http.runtime.auth.invitations import InvitationError
 
     with pytest.raises(InvitationError):
         accept_invitation(
@@ -135,12 +135,12 @@ def test_invite_then_accept_creates_active_membership(store_url: str) -> None:
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `TEST_DATABASE_URL="postgresql://localhost:5432/postgres" python -m pytest tests/integration/test_org_invitations_pg.py::test_invite_then_accept_creates_active_membership -q`
-Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle.back.runtime.auth.invitations'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle.http.runtime.auth.invitations'`
 
 - [ ] **Step 3: Create the module**
 
 ```python
-# src/dazzle/back/runtime/auth/invitations.py
+# src/dazzle/http/runtime/auth/invitations.py
 """Organization invitations (auth Plan 3a).
 
 An org admin invites a person by *email* + roles; the membership is created when
@@ -315,7 +315,7 @@ def accept_invitation(
 ```python
             # auth Plan 3a: org invitation tokens (email-addressed, accept-time
             # membership creation). Mirrors alembic 0010_invitations.
-            from dazzle.back.runtime.auth.invitations import (
+            from dazzle.http.runtime.auth.invitations import (
                 INVITATIONS_DDL,
                 INVITATIONS_INDEXES,
             )
@@ -333,9 +333,9 @@ Expected: PASS
 - [ ] **Step 6: Lint + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/invitations.py src/dazzle/back/runtime/auth/store.py tests/integration/test_org_invitations_pg.py --fix
-ruff format src/dazzle/back/runtime/auth/invitations.py src/dazzle/back/runtime/auth/store.py tests/integration/test_org_invitations_pg.py
-git add src/dazzle/back/runtime/auth/invitations.py src/dazzle/back/runtime/auth/store.py tests/integration/test_org_invitations_pg.py
+ruff check src/dazzle/http/runtime/auth/invitations.py src/dazzle/http/runtime/auth/store.py tests/integration/test_org_invitations_pg.py --fix
+ruff format src/dazzle/http/runtime/auth/invitations.py src/dazzle/http/runtime/auth/store.py tests/integration/test_org_invitations_pg.py
+git add src/dazzle/http/runtime/auth/invitations.py src/dazzle/http/runtime/auth/store.py tests/integration/test_org_invitations_pg.py
 git commit -m "feat(auth): org invitation token substrate + verified-email accept (Plan 3a)"
 ```
 
@@ -350,7 +350,7 @@ git commit -m "feat(auth): org invitation token substrate + verified-email accep
 
 ```python
 def test_accept_rejects_email_mismatch(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError, accept_invitation, create_invitation,
     )
 
@@ -370,7 +370,7 @@ def test_accept_rejects_email_mismatch(store_url: str) -> None:
 
 
 def test_accept_rejects_unverified_email(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError, accept_invitation, create_invitation,
     )
 
@@ -389,7 +389,7 @@ def test_accept_rejects_unverified_email(store_url: str) -> None:
 
 
 def test_accept_rejects_expired(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError, accept_invitation, create_invitation,
     )
 
@@ -409,7 +409,7 @@ def test_accept_rejects_expired(store_url: str) -> None:
 
 
 def test_accept_rejects_already_member(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError, accept_invitation, create_invitation,
     )
 
@@ -429,7 +429,7 @@ def test_accept_rejects_already_member(store_url: str) -> None:
 
 
 def test_list_pending_invitations_excludes_accepted_and_expired(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         accept_invitation, create_invitation, list_pending_invitations,
     )
 
@@ -472,7 +472,7 @@ git commit -m "test(auth): invitation accept edge cases — join rule, expiry, d
 
 **Files:**
 - Modify: `src/dazzle/core/manifest.py` (`AuthConfig` ~line 160; parsing ~line 855)
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py` (set `app.state.org_admin_roles` ~line 66)
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py` (set `app.state.org_admin_roles` ~line 66)
 - Create: the predicate in `invitations.py`
 - Test: `tests/unit/test_invitations.py`
 
@@ -482,7 +482,7 @@ git commit -m "test(auth): invitation accept edge cases — join rule, expiry, d
 # tests/unit/test_invitations.py
 """org_admin_roles authorization predicate + InvitationError (auth Plan 3a)."""
 
-from dazzle.back.runtime.auth.invitations import InvitationError, may_manage_members
+from dazzle.http.runtime.auth.invitations import InvitationError, may_manage_members
 
 
 def test_may_manage_members_requires_active_membership_role_in_admin_set() -> None:
@@ -553,9 +553,9 @@ Expected: PASS
 - [ ] **Step 7: Lint + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/invitations.py src/dazzle/core/manifest.py src/dazzle/back/runtime/subsystems/auth.py tests/unit/test_invitations.py --fix
-ruff format src/dazzle/back/runtime/auth/invitations.py src/dazzle/core/manifest.py src/dazzle/back/runtime/subsystems/auth.py tests/unit/test_invitations.py
-git add src/dazzle/back/runtime/auth/invitations.py src/dazzle/core/manifest.py src/dazzle/back/runtime/subsystems/auth.py tests/unit/test_invitations.py
+ruff check src/dazzle/http/runtime/auth/invitations.py src/dazzle/core/manifest.py src/dazzle/http/runtime/subsystems/auth.py tests/unit/test_invitations.py --fix
+ruff format src/dazzle/http/runtime/auth/invitations.py src/dazzle/core/manifest.py src/dazzle/http/runtime/subsystems/auth.py tests/unit/test_invitations.py
+git add src/dazzle/http/runtime/auth/invitations.py src/dazzle/core/manifest.py src/dazzle/http/runtime/subsystems/auth.py tests/unit/test_invitations.py
 git commit -m "feat(auth): org_admin_roles config + may_manage_members predicate (Plan 3a)"
 ```
 
@@ -564,8 +564,8 @@ git commit -m "feat(auth): org_admin_roles config + may_manage_members predicate
 ## Task 4: Mailer + views
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/mailer.py`
-- Create: `src/dazzle/back/runtime/auth/invitation_views.py`
+- Modify: `src/dazzle/http/runtime/auth/mailer.py`
+- Create: `src/dazzle/http/runtime/auth/invitation_views.py`
 
 - [ ] **Step 1: Add the `InvitationMailer`** to `mailer.py` (after `VerificationMailer`):
 
@@ -603,7 +603,7 @@ def get_invitation_mailer(app_state: object) -> InvitationMailer:
 - [ ] **Step 2: Create the views** — `invitation_views.py` (mirror `org_context_views.py`'s Fragment usage):
 
 ```python
-# src/dazzle/back/runtime/auth/invitation_views.py
+# src/dazzle/http/runtime/auth/invitation_views.py
 """Typed-Fragment pages for org invitations (auth Plan 3a)."""
 
 from __future__ import annotations
@@ -661,15 +661,15 @@ def build_invite_result_view(*, product_name: str, message: str) -> Page:
 
 - [ ] **Step 3: Verify the views import + render** (smoke):
 
-Run: `python -c "from dazzle.back.runtime.auth.invitation_views import build_accept_invite_view; from dazzle.render.fragment.renderer import FragmentRenderer; print('OK' if 'Join' in FragmentRenderer().render(build_accept_invite_view(product_name='X', org_name='Acme', roles=['member'], token='t', signed_in_email='b@x.test')) else 'FAIL')"`
+Run: `python -c "from dazzle.http.runtime.auth.invitation_views import build_accept_invite_view; from dazzle.render.fragment.renderer import FragmentRenderer; print('OK' if 'Join' in FragmentRenderer().render(build_accept_invite_view(product_name='X', org_name='Acme', roles=['member'], token='t', signed_in_email='b@x.test')) else 'FAIL')"`
 Expected: `OK`
 
 - [ ] **Step 4: Commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/mailer.py src/dazzle/back/runtime/auth/invitation_views.py --fix
-ruff format src/dazzle/back/runtime/auth/mailer.py src/dazzle/back/runtime/auth/invitation_views.py
-git add src/dazzle/back/runtime/auth/mailer.py src/dazzle/back/runtime/auth/invitation_views.py
+ruff check src/dazzle/http/runtime/auth/mailer.py src/dazzle/http/runtime/auth/invitation_views.py --fix
+ruff format src/dazzle/http/runtime/auth/mailer.py src/dazzle/http/runtime/auth/invitation_views.py
+git add src/dazzle/http/runtime/auth/mailer.py src/dazzle/http/runtime/auth/invitation_views.py
 git commit -m "feat(auth): invitation mailer seam + accept-page views (Plan 3a)"
 ```
 
@@ -678,9 +678,9 @@ git commit -m "feat(auth): invitation mailer seam + accept-page views (Plan 3a)"
 ## Task 5: Invitation routes + mounting + CSRF
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/invitation_routes.py`
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py` (mount the router)
-- Modify: `src/dazzle/back/runtime/csrf.py` (`protected_paths`)
+- Create: `src/dazzle/http/runtime/auth/invitation_routes.py`
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py` (mount the router)
+- Modify: `src/dazzle/http/runtime/csrf.py` (`protected_paths`)
 - Test: `tests/integration/test_org_invitations_pg.py` (CLI/route-level — optional in-process app test)
 
 - [ ] **Step 1: Add the paths to CSRF `protected_paths`** — in `csrf.py`, the `protected_paths` default list (~line 123) currently has `"/auth/select-org"`, `"/auth/switch-org"`. Add:
@@ -693,7 +693,7 @@ git commit -m "feat(auth): invitation mailer seam + accept-page views (Plan 3a)"
 - [ ] **Step 2: Create the routes** — `invitation_routes.py`:
 
 ```python
-# src/dazzle/back/runtime/auth/invitation_routes.py
+# src/dazzle/http/runtime/auth/invitation_routes.py
 """Org invitation routes (auth Plan 3a): invite / accept.
 
 ``POST /auth/invite``               — an org admin invites email+roles into their
@@ -719,7 +719,7 @@ def _product_name(request: Request) -> str:
 
 
 def create_invitation_routes() -> APIRouter:
-    from dazzle.back.runtime.auth.cookie_name import read_session_id
+    from dazzle.http.runtime.auth.cookie_name import read_session_id
 
     router = APIRouter(tags=["auth"])
 
@@ -729,10 +729,10 @@ def create_invitation_routes() -> APIRouter:
         email: Annotated[str, Form()] = "",
         roles: Annotated[str, Form()] = "",  # comma-separated personas
     ) -> HTMLResponse:
-        from dazzle.back.runtime.auth.invitation_views import build_invite_result_view
-        from dazzle.back.runtime.auth.invitations import create_invitation, may_manage_members
-        from dazzle.back.runtime.auth.mailer import get_invitation_mailer
-        from dazzle.back.runtime.auth.models import effective_roles_of
+        from dazzle.http.runtime.auth.invitation_views import build_invite_result_view
+        from dazzle.http.runtime.auth.invitations import create_invitation, may_manage_members
+        from dazzle.http.runtime.auth.mailer import get_invitation_mailer
+        from dazzle.http.runtime.auth.models import effective_roles_of
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         store = request.app.state.auth_store
@@ -767,8 +767,8 @@ def create_invitation_routes() -> APIRouter:
 
     @router.get("/auth/accept-invite/{token}", response_class=HTMLResponse, include_in_schema=False)
     async def accept_page(request: Request, token: str) -> str:
-        from dazzle.back.runtime.auth.invitation_views import build_accept_invite_view
-        from dazzle.back.runtime.auth.invitations import get_invitation
+        from dazzle.http.runtime.auth.invitation_views import build_accept_invite_view
+        from dazzle.http.runtime.auth.invitations import get_invitation
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         store = request.app.state.auth_store
@@ -800,8 +800,8 @@ def create_invitation_routes() -> APIRouter:
     async def accept_submit(
         request: Request, token: Annotated[str, Form()] = ""
     ) -> HTMLResponse | RedirectResponse:
-        from dazzle.back.runtime.auth.crypto import cookie_secure
-        from dazzle.back.runtime.auth.invitations import InvitationError, accept_invitation
+        from dazzle.http.runtime.auth.crypto import cookie_secure
+        from dazzle.http.runtime.auth.invitations import InvitationError, accept_invitation
 
         store = request.app.state.auth_store
         session_id = read_session_id(request)
@@ -832,7 +832,7 @@ def create_invitation_routes() -> APIRouter:
 - [ ] **Step 3: Mount the router** — in `subsystems/auth.py`, near `create_org_context_routes()` mount (search for `create_org_context_routes`), add:
 
 ```python
-        from dazzle.back.runtime.auth.invitation_routes import create_invitation_routes
+        from dazzle.http.runtime.auth.invitation_routes import create_invitation_routes
 
         ctx.app.include_router(create_invitation_routes())
 ```
@@ -844,7 +844,7 @@ def create_invitation_routes() -> APIRouter:
 ```python
 def test_invite_route_denies_non_admin(store_url: str) -> None:
     # The route gate: a member whose roles don't intersect org_admin_roles gets 403.
-    from dazzle.back.runtime.auth.invitations import may_manage_members
+    from dazzle.http.runtime.auth.invitations import may_manage_members
 
     # Unit-level guard already covers may_manage_members; this asserts the empty
     # (fail-closed) default denies even an "owner".
@@ -856,8 +856,8 @@ def test_invite_route_denies_non_admin(store_url: str) -> None:
 - [ ] **Step 5: Run + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/invitation_routes.py src/dazzle/back/runtime/subsystems/auth.py src/dazzle/back/runtime/csrf.py --fix
-ruff format src/dazzle/back/runtime/auth/invitation_routes.py src/dazzle/back/runtime/subsystems/auth.py src/dazzle/back/runtime/csrf.py
+ruff check src/dazzle/http/runtime/auth/invitation_routes.py src/dazzle/http/runtime/subsystems/auth.py src/dazzle/http/runtime/csrf.py --fix
+ruff format src/dazzle/http/runtime/auth/invitation_routes.py src/dazzle/http/runtime/subsystems/auth.py src/dazzle/http/runtime/csrf.py
 TEST_DATABASE_URL="postgresql://localhost:5432/postgres" python -m pytest tests/integration/test_org_invitations_pg.py -q
 git add -A
 git commit -m "feat(auth): invitation routes (invite/accept) + mount + CSRF protect (Plan 3a)"
@@ -868,7 +868,7 @@ git commit -m "feat(auth): invitation routes (invite/accept) + mount + CSRF prot
 ## Task 6: Alembic migration `0010_invitations`
 
 **Files:**
-- Create: `src/dazzle/back/alembic/versions/0010_invitations.py`
+- Create: `src/dazzle/http/alembic/versions/0010_invitations.py`
 - Test: `tests/integration/test_org_invitations_pg.py` (migration-applies test)
 
 - [ ] **Step 1: Write the failing test** (mirror `test_membership_events_pg.test_migration_0009_*`):
@@ -902,7 +902,7 @@ def test_migration_0010_creates_invitations(store_url: str) -> None:
 - [ ] **Step 2: Run to verify it fails** (revision not found), then create the migration:
 
 ```python
-# src/dazzle/back/alembic/versions/0010_invitations.py
+# src/dazzle/http/alembic/versions/0010_invitations.py
 """Add invitations table (auth Plan 3a — org invitation tokens).
 
 Email-addressed invitation tokens; the membership is created at accept time
@@ -952,7 +952,7 @@ def downgrade() -> None:
 
 ```bash
 TEST_DATABASE_URL="postgresql://localhost:5432/postgres" python -m pytest tests/integration/test_org_invitations_pg.py::test_migration_0010_creates_invitations -q
-git add src/dazzle/back/alembic/versions/0010_invitations.py tests/integration/test_org_invitations_pg.py
+git add src/dazzle/http/alembic/versions/0010_invitations.py tests/integration/test_org_invitations_pg.py
 git commit -m "feat(auth): alembic 0010 invitations table (Plan 3a)"
 ```
 

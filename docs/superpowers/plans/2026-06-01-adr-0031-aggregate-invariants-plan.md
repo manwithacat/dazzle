@@ -11,9 +11,9 @@
 **Canonical references (read before starting):**
 - `docs/adr/0031-flow-level-aggregate-invariants.md` — the accepted decision.
 - `docs/adr/0029-atomic-flows-transactional-intent-substrate.md` invariants 6/8 — fail-closed + analyzability.
-- `src/dazzle/back/runtime/atomic_flow_executor.py` — the executor this extends; note `_acquire_scope_parent_share_locks` (#1316) for the lock idiom and the `with db_manager.connection() as conn` commit block.
+- `src/dazzle/http/runtime/atomic_flow_executor.py` — the executor this extends; note `_acquire_scope_parent_share_locks` (#1316) for the lock idiom and the `with db_manager.connection() as conn` commit block.
 - `src/dazzle/core/dsl_parser_impl/atomic_flow.py` — the `atomic` block parser (the `audit:`/`on_failure:` branches show the keyword-field pattern).
-- `src/dazzle/back/runtime/predicate_compiler.py:618` `compile_predicate` — compile an IR `ScopePredicate` to `WHERE` SQL.
+- `src/dazzle/http/runtime/predicate_compiler.py:618` `compile_predicate` — compile an IR `ScopePredicate` to `WHERE` SQL.
 - `src/dazzle/core/dsl_parser_impl/entity.py:1327` `_parse_scope_rule` — how a `scope:` condition is parsed into IR (reuse its condition-parsing for the `where`).
 
 ---
@@ -50,8 +50,8 @@ Shape: `invariant:` `<sum|count>` `(` `<Entity>` [`.` `<field>`] `where` `<predi
 | `src/dazzle/core/dsl_parser_impl/atomic_flow.py` | parse the `invariant:` line into a *raw* `FlowInvariant` (predicate as a parsed condition) | Modify |
 | `src/dazzle/core/linker.py` | resolve each invariant's filter → compiled `ScopePredicate`, derive the anchor, attach to the flow | Modify |
 | `src/dazzle/core/validator.py` (`validate_atomic_flows`) | reject unknown entity/field, unanchored aggregate, type-mismatched RHS, sum-without-field | Modify |
-| `src/dazzle/back/runtime/atomic_flow_invariants.py` | **new** — `enforce_flow_invariants(conn, flow, inputs, fk_graph)`: lock anchors, run aggregates, compare, raise | Create |
-| `src/dazzle/back/runtime/atomic_flow_executor.py` | call `enforce_flow_invariants` after the step loop, before commit | Modify |
+| `src/dazzle/http/runtime/atomic_flow_invariants.py` | **new** — `enforce_flow_invariants(conn, flow, inputs, fk_graph)`: lock anchors, run aggregates, compare, raise | Create |
+| `src/dazzle/http/runtime/atomic_flow_executor.py` | call `enforce_flow_invariants` after the step loop, before commit | Modify |
 | `src/dazzle/rbac/matrix.py` | project `flow.invariants` into the matrix JSON/table (analyzability) | Modify |
 | `docs/api-surface/ir-types.txt` | regenerated baseline (new IR types) | Regenerate |
 | `fixtures/scope_runtime/dsl/*.dsl` | a `balanced_ledger`-style flow that declares an invariant | Modify |
@@ -327,14 +327,14 @@ Checks (each its own `errors.append`): (a) `entity` exists; (b) `sum` has a `fie
 ### Task 6: Aggregate-SQL builder (pure, unit-tested)
 
 **Files:**
-- Create: `src/dazzle/back/runtime/atomic_flow_invariants.py`
+- Create: `src/dazzle/http/runtime/atomic_flow_invariants.py`
 - Test: `tests/unit/test_atomic_flow_invariants.py`
 
 - [ ] **Step 1: Write the failing test** (pure SQL assembly, no DB):
 
 ```python
 def test_build_invariant_sql_sum():
-    from dazzle.back.runtime.atomic_flow_invariants import build_invariant_sql
+    from dazzle.http.runtime.atomic_flow_invariants import build_invariant_sql
     # Given a compiled filter SQL fragment + params, assemble the aggregate query.
     sql, _params = build_invariant_sql(
         agg_fn="sum", entity="Posting", field="amount",
@@ -351,8 +351,8 @@ def test_build_invariant_sql_sum():
 ### Task 7: `enforce_flow_invariants` — lock, query, compare
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/atomic_flow_invariants.py`
-- Modify: `src/dazzle/back/runtime/atomic_flow_executor.py`
+- Modify: `src/dazzle/http/runtime/atomic_flow_invariants.py`
+- Modify: `src/dazzle/http/runtime/atomic_flow_executor.py`
 - Test: `tests/integration/test_scope_runtime_pg.py`
 
 `enforce_flow_invariants(conn, flow, inputs, fk_graph)`: for each invariant, in deterministic order — (1) `SELECT "id" FROM "<anchor_entity>" WHERE "id" = %s FOR UPDATE` with `inputs[anchor_input]` (reuse the single-row-lock shape from `_acquire_scope_parent_share_locks`; FOR UPDATE, not FOR SHARE — we're gating writes to the set); (2) compile the filter via `compile_predicate` + resolve params from `inputs`; (3) run `build_invariant_sql`; (4) resolve the RHS (literal, or `SELECT "<field>" FROM "<input entity>" WHERE id=%s` for an anchor-field); (5) compare with the `CompOp`; (6) on failure raise `AtomicFlowError(flow.name, f"invariant violated: {agg}({entity}…) {op} {rhs}")`. Called in `execute_atomic_flow` inside the `with conn` block, **after** the step loop, **before** the block exits (alongside the #1317 strict-audit write — invariants first so a violation rolls back the audit too).

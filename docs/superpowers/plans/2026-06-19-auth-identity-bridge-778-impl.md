@@ -33,10 +33,10 @@ psycopg3 (`deps.db_manager.connection()`), pytest.
 - `src/dazzle/core/lexer.py` — `AUTH_IDENTITY = "auth_identity"` TokenType.
 - `src/dazzle/core/dsl_parser_impl/entity.py` — `_parse_entity_auth_identity()` + dispatch arm + ctx field.
 - `src/dazzle/core/validation/entities.py` — `validate_auth_identity_binding(appspec)`.
-- `src/dazzle/back/runtime/auth_identity_mirror.py` (new) — `mirror_auth_user_to_domain(deps, identity, binding)`.
-- `src/dazzle/back/runtime/test_routes.py` — call the shared helper (delete the divergent copy).
-- `src/dazzle/back/runtime/auth/store.py` — production mirror hook in/after `create_user`.
-- `src/dazzle/back/runtime/route_generator.py` (~L561) — `link_via` resolution for declared-binding `ref User`.
+- `src/dazzle/http/runtime/auth_identity_mirror.py` (new) — `mirror_auth_user_to_domain(deps, identity, binding)`.
+- `src/dazzle/http/runtime/test_routes.py` — call the shared helper (delete the divergent copy).
+- `src/dazzle/http/runtime/auth/store.py` — production mirror hook in/after `create_user`.
+- `src/dazzle/http/runtime/route_generator.py` (~L561) — `link_via` resolution for declared-binding `ref User`.
 
 ---
 

@@ -218,7 +218,7 @@ The `dazzle demo propose` command is extended to generate this file with credent
 
 ### Report generation
 
-HTML report from Jinja2 template at `src/dazzle_ui/templates/reports/e2e_journey.html`. The AegisMark report at `/Volumes/SSD/AegisMark/.dazzle/test_sessions/2026-03-20/report.html` is the reference design — dark theme, per-persona collapsible timelines, verdict colour coding, cross-persona pattern cards with severity, inline screenshots.
+HTML report from Jinja2 template at `src/dazzle_page/templates/reports/e2e_journey.html`. The AegisMark report at `/Volumes/SSD/AegisMark/.dazzle/test_sessions/2026-03-20/report.html` is the reference design — dark theme, per-persona collapsible timelines, verdict colour coding, cross-persona pattern cards with severity, inline screenshots.
 
 ## Section 4: Cross-Persona Pattern Analysis
 
@@ -275,7 +275,7 @@ When `dazzle demo propose` generates demo user records, it also writes `.dazzle/
 - `src/dazzle/agent/journey_analyser.py` — cross-persona pattern detection
 - `src/dazzle/agent/journey_writer.py` — session directory, JSONL streaming, screenshot management
 - `src/dazzle/agent/journey_reporter.py` — Jinja2 template rendering
-- `src/dazzle_ui/templates/reports/e2e_journey.html` — HTML report template
+- `src/dazzle_page/templates/reports/e2e_journey.html` — HTML report template
 - `tests/unit/test_journey_models.py`
 - `tests/unit/test_journey_analyser.py`
 - `tests/unit/test_journey_writer.py`

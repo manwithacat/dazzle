@@ -35,8 +35,8 @@ limitations = """
   display_field, never FK fields.
 """
 implemented_by = [
-    {fn = "dazzle_back.runtime.relation_loader._resolve_display_name", purpose = "resolves display_field to a scalar value via the fallback chain"},
-    {fn = "dazzle_back.runtime.relation_loader.expand_relations", purpose = "expands FK references on query results, calling _resolve_display_name"},
+    {fn = "dazzle_http.runtime.relation_loader._resolve_display_name", purpose = "resolves display_field to a scalar value via the fallback chain"},
+    {fn = "dazzle_http.runtime.relation_loader.expand_relations", purpose = "expands FK references on query results, calling _resolve_display_name"},
 ]
 known_issues = ["#590: FK display_field resolves to UUID at depth > 1"]
 syntax = """
@@ -87,11 +87,11 @@ limitations = """
   is not yet implemented — only scope:all override works for dual-role
 """
 implemented_by = [
-    {fn = "dazzle_back.runtime.route_generator._resolve_scope_filters", purpose = "collects matching scope rules, returns most-permissive filter or None for deny"},
-    {fn = "dazzle_back.runtime.route_generator._resolve_predicate_filters", purpose = "compiles ScopePredicate to SQL and resolves UserAttrRef markers"},
-    {fn = "dazzle_back.runtime.route_generator._list_handler_body", purpose = "applies scope filters to entity list API queries"},
-    {fn = "dazzle_back.runtime.workspace_rendering._apply_workspace_scope_filters", purpose = "applies scope filters to workspace region data queries"},
-    {fn = "dazzle_back.runtime.predicate_compiler.compile_predicate", purpose = "converts ScopePredicate tree to (sql, params) WHERE fragment"},
+    {fn = "dazzle_http.runtime.route_generator._resolve_scope_filters", purpose = "collects matching scope rules, returns most-permissive filter or None for deny"},
+    {fn = "dazzle_http.runtime.route_generator._resolve_predicate_filters", purpose = "compiles ScopePredicate to SQL and resolves UserAttrRef markers"},
+    {fn = "dazzle_http.runtime.route_generator._list_handler_body", purpose = "applies scope filters to entity list API queries"},
+    {fn = "dazzle_http.runtime.workspace_rendering._apply_workspace_scope_filters", purpose = "applies scope filters to workspace region data queries"},
+    {fn = "dazzle_http.runtime.predicate_compiler.compile_predicate", purpose = "converts ScopePredicate tree to (sql, params) WHERE fragment"},
     {fn = "dazzle.core.ir.predicate_builder.build_scope_predicate", purpose = "converts DSL ConditionExpr to typed ScopePredicate algebra"},
 ]
 known_issues = [
@@ -148,8 +148,8 @@ Evaluation order (per entity × operation):
 After permit gate passes, scope rules are evaluated for row filtering.
 """
 implemented_by = [
-    "dazzle_back.runtime.route_generator._extract_cedar_row_filters",
-    "dazzle_back.runtime.route_generator._extract_condition_filters",
+    "dazzle_http.runtime.route_generator._extract_cedar_row_filters",
+    "dazzle_http.runtime.route_generator._extract_condition_filters",
 ]
 
 [concepts.visible_directive]
@@ -175,8 +175,8 @@ from being returned in the API JSON response. For API-level field hiding,
 use view-based projections (select_fields).
 """
 implemented_by = [
-    "dazzle_ui.converters.template_compiler._should_show_element",
-    "dazzle_ui.runtime.page_routes._build_table_columns",
+    "dazzle_page.converters.template_compiler._should_show_element",
+    "dazzle_page.runtime.page_routes._build_table_columns",
 ]
 known_issues = [
     "#585: visible: on list columns renders for all roles (not enforced)",
@@ -218,8 +218,8 @@ Client integration:
 - httpx/requests: use a Session to persist cookies across requests
 """
 implemented_by = [
-    "dazzle_back.runtime.csrf.CSRFMiddleware",
-    "dazzle_back.runtime.csrf.apply_csrf_protection",
+    "dazzle_http.runtime.csrf.CSRFMiddleware",
+    "dazzle_http.runtime.csrf.apply_csrf_protection",
 ]
 known_issues = [
     "#606: BaseHTTPMiddleware consumed body (fixed: pure ASGI rewrite)",
@@ -251,8 +251,8 @@ The sort key: (-segment_count, 0 if static else 1)
 - /tasks (1 segment) → sorted last
 """
 implemented_by = [
-    "dazzle_back.runtime.route_generator.RouteGenerator.generate_all_routes",
-    "dazzle_back.runtime.route_generator.RouteGenerator.generate_route",
+    "dazzle_http.runtime.route_generator.RouteGenerator.generate_all_routes",
+    "dazzle_http.runtime.route_generator.RouteGenerator.generate_route",
 ]
 known_issues = ["#598: /create parsed as UUID (fixed: guard routes first)"]
 
@@ -297,10 +297,10 @@ Workspace context:
 - empty_message: str — from DSL or default
 """
 implemented_by = [
-    "dazzle_ui.runtime.template_context.PageContext",
-    "dazzle_ui.runtime.page_routes._build_table_context",
-    "dazzle_ui.runtime.page_routes._build_detail_context",
-    "dazzle_ui.converters.template_compiler._compile_form_surface",
+    "dazzle_page.runtime.template_context.PageContext",
+    "dazzle_page.runtime.page_routes._build_table_context",
+    "dazzle_page.runtime.page_routes._build_detail_context",
+    "dazzle_page.converters.template_compiler._compile_form_surface",
 ]
 
 # =============================================================================
@@ -351,15 +351,15 @@ Workspace region render:
       → template.render(region_context)
 """
 implemented_by = [
-    "dazzle_back.runtime.csrf.CSRFMiddleware",
-    "dazzle_back.runtime.route_generator.create_list_handler",
-    "dazzle_back.runtime.route_generator._list_handler_body",
-    "dazzle_back.runtime.route_generator.create_detail_handler",
-    "dazzle_back.runtime.route_generator.create_create_handler",
-    "dazzle_back.runtime.service_generator.CRUDService.execute",
-    "dazzle_back.runtime.repository.DazzleRepository.list",
-    "dazzle_back.runtime.relation_loader.expand_relations",
-    "dazzle_ui.runtime.page_routes.workspace_handler",
+    "dazzle_http.runtime.csrf.CSRFMiddleware",
+    "dazzle_http.runtime.route_generator.create_list_handler",
+    "dazzle_http.runtime.route_generator._list_handler_body",
+    "dazzle_http.runtime.route_generator.create_detail_handler",
+    "dazzle_http.runtime.route_generator.create_create_handler",
+    "dazzle_http.runtime.service_generator.CRUDService.execute",
+    "dazzle_http.runtime.repository.DazzleRepository.list",
+    "dazzle_http.runtime.relation_loader.expand_relations",
+    "dazzle_page.runtime.page_routes.workspace_handler",
 ]
 
 # =============================================================================
@@ -396,8 +396,8 @@ A missing CSRF token returns 403 before the auth layer even checks
 whether the user is logged in.
 """
 implemented_by = [
-    "dazzle_back.runtime.server.DazzleBackendApp._setup_security",
-    "dazzle_back.runtime.csrf.apply_csrf_protection",
+    "dazzle_http.runtime.server.DazzleBackendApp._setup_security",
+    "dazzle_http.runtime.csrf.apply_csrf_protection",
 ]
 
 # =============================================================================
@@ -442,10 +442,10 @@ Stage 5: SQL execution
 implemented_by = [
     "dazzle.core.ir.predicate_builder.build_scope_predicate",
     "dazzle.core.ir.predicates (ScopePredicate algebra types)",
-    "dazzle_back.runtime.predicate_compiler.compile_predicate",
-    "dazzle_back.runtime.predicate_compiler.UserAttrRef",
-    "dazzle_back.runtime.predicate_compiler.CurrentUserRef",
-    "dazzle_back.runtime.route_generator._resolve_predicate_filters",
+    "dazzle_http.runtime.predicate_compiler.compile_predicate",
+    "dazzle_http.runtime.predicate_compiler.UserAttrRef",
+    "dazzle_http.runtime.predicate_compiler.CurrentUserRef",
+    "dazzle_http.runtime.route_generator._resolve_predicate_filters",
 ]
 
 # =============================================================================
@@ -490,8 +490,8 @@ Backward compatibility:
   window.dz.toast(message, type) — global function preserved as shim
 """
 implemented_by = [
-    "dazzle_ui.runtime.static.js.dz-alpine.js",
-    "dazzle_ui.templates.base.html (script loading order)",
+    "dazzle_page.runtime.static.js.dz-alpine.js",
+    "dazzle_page.templates.base.html (script loading order)",
 ]
 
 # =============================================================================
@@ -536,9 +536,9 @@ limitations = """
   roles available, but list column setup may not (route setup vs request).
 """
 implemented_by = [
-    {fn = "dazzle_ui.converters.template_compiler._should_show_element", purpose = "evaluates visible: condition on individual form/detail fields"},
-    {fn = "dazzle_ui.runtime.page_routes._build_table_columns", purpose = "filters list columns by visible: condition at route setup"},
-    {fn = "dazzle_ui.converters.template_compiler._compile_form_surface", purpose = "iterates sections and calls _should_show_element per field"},
+    {fn = "dazzle_page.converters.template_compiler._should_show_element", purpose = "evaluates visible: condition on individual form/detail fields"},
+    {fn = "dazzle_page.runtime.page_routes._build_table_columns", purpose = "filters list columns by visible: condition at route setup"},
+    {fn = "dazzle_page.converters.template_compiler._compile_form_surface", purpose = "iterates sections and calls _should_show_element per field"},
 ]
 known_issues = [
     "#585: visible: on list columns rendered for all roles (not enforced)",
@@ -591,11 +591,11 @@ limitations = """
   to have a FK field pointing at the target entity
 """
 implemented_by = [
-    {fn = "dazzle_ui.runtime.workspace_renderer.build_workspace_context", purpose = "builds RegionContext list from workspace spec and appspec"},
-    {fn = "dazzle_ui.runtime.workspace_renderer._entity_to_app_url", purpose = "generates /app/{slug}/{id} URL pattern for entity detail"},
-    {fn = "dazzle_ui.runtime.workspace_renderer._resolve_fk_field", purpose = "finds FK field linking source entity to target for cross-entity actions"},
-    {fn = "dazzle_back.runtime.workspace_rendering._apply_workspace_scope_filters", purpose = "applies scope predicates to region data queries"},
-    {fn = "dazzle_back.runtime.workspace_rendering._fetch_region_data", purpose = "fetches paginated data for a single region"},
+    {fn = "dazzle_page.runtime.workspace_renderer.build_workspace_context", purpose = "builds RegionContext list from workspace spec and appspec"},
+    {fn = "dazzle_page.runtime.workspace_renderer._entity_to_app_url", purpose = "generates /app/{slug}/{id} URL pattern for entity detail"},
+    {fn = "dazzle_page.runtime.workspace_renderer._resolve_fk_field", purpose = "finds FK field linking source entity to target for cross-entity actions"},
+    {fn = "dazzle_http.runtime.workspace_rendering._apply_workspace_scope_filters", purpose = "applies scope predicates to region data queries"},
+    {fn = "dazzle_http.runtime.workspace_rendering._fetch_region_data", purpose = "fetches paginated data for a single region"},
 ]
 known_issues = [
     "#614: action URLs showed {manuscript} literal (fixed: action_id_field)",
@@ -657,9 +657,9 @@ limitations = """
   wrapper — variables set in <head> blocks are not available.
 """
 implemented_by = [
-    {fn = "dazzle_ui.runtime.template_context.PageContext", purpose = "base template context with app-wide variables"},
-    {fn = "dazzle_ui.runtime.page_routes._build_table_context", purpose = "builds TableContext for entity list pages"},
-    {fn = "dazzle_ui.runtime.page_routes._build_detail_context", purpose = "builds DetailContext for entity detail pages"},
-    {fn = "dazzle_ui.converters.template_compiler._compile_form_surface", purpose = "builds FormContext for create/edit pages"},
-    {fn = "dazzle_back.runtime.workspace_rendering._build_region_template_context", purpose = "builds variable dict for individual region HTMX responses"},
+    {fn = "dazzle_page.runtime.template_context.PageContext", purpose = "base template context with app-wide variables"},
+    {fn = "dazzle_page.runtime.page_routes._build_table_context", purpose = "builds TableContext for entity list pages"},
+    {fn = "dazzle_page.runtime.page_routes._build_detail_context", purpose = "builds DetailContext for entity detail pages"},
+    {fn = "dazzle_page.converters.template_compiler._compile_form_surface", purpose = "builds FormContext for create/edit pages"},
+    {fn = "dazzle_http.runtime.workspace_rendering._build_region_template_context", purpose = "builds variable dict for individual region HTMX responses"},
 ]

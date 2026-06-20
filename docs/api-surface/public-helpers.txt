@@ -6,7 +6,7 @@
 #
 # Resolution order per package:
 #   1. `__all__` if defined
-#   2. `_LOADERS` keys (lazy __getattr__ convention used by dazzle_back)
+#   2. `_LOADERS` keys (lazy __getattr__ convention used by dazzle_http)
 #   3. all non-underscore module attributes (fallback)
 #
 # Adding/removing a name in `__all__` or `_LOADERS`, changing a function
@@ -31,7 +31,7 @@ package: dazzle
   - ir: module (dazzle.core.ir)
   - register_lifespan_hook: function (app: 'Any', *, startup: 'LifespanHook | None' = None, shutdown: 'LifespanHook | None' = None) -> 'None'
 
-package: dazzle.back
+package: dazzle.http
   source: _LOADERS
   count: 9
   exports:
@@ -40,13 +40,13 @@ package: dazzle.back
   - PostgresBackend: class (database_url: str, search_path: str | None = None)
   - build_metadata: function (entities: 'list[EntitySpec]', surfaces: 'list[SurfaceSpec] | None' = None, *, partition_key: 'str | None' = None, tenant_scoped: 'set[str] | None' = None) -> 'sqlalchemy.MetaData'
   - convert_appspec_to_backend: function (appspec: 'ir.AppSpec') -> 'BackendSpec'
-  - convert_entities: function (dazzle_entities: list[dazzle.core.ir.domain.EntitySpec]) -> list[dazzle.back.specs.entity.EntitySpec]
+  - convert_entities: function (dazzle_entities: list[dazzle.core.ir.domain.EntitySpec]) -> list[dazzle.http.specs.entity.EntitySpec]
   - create_bus: function (config: 'TierConfig | None' = None) -> 'EventBus'
   - format_schema: function (spec: 'BackendSpec') -> 'str'
   - inspect_schema: function (spec: 'BackendSpec') -> 'dict[str, Any]'
 
-package: dazzle.ui
+package: dazzle.page
   source: __all__
   count: 1
   exports:
-  - UISpec: class (bases=[BaseModel]) (*, name: str, version: str = '1.0.0', description: str | None = None, shell: dazzle.ui.specs.shell.ShellSpec = <factory>, workspaces: list[dazzle.ui.specs.workspace.WorkspaceSpec] = <factory>, components: list[dazzle.ui.specs.component.ComponentSpec] = <factory>, themes: list[dazzle.ui.specs.theme.ThemeSpec] = <factory>, default_workspace: str | None = None, default_theme: str | None = None, metadata: dict[str, typing.Any] = <factory>) -> None
+  - UISpec: class (bases=[BaseModel]) (*, name: str, version: str = '1.0.0', description: str | None = None, shell: dazzle.page.specs.shell.ShellSpec = <factory>, workspaces: list[dazzle.page.specs.workspace.WorkspaceSpec] = <factory>, components: list[dazzle.page.specs.component.ComponentSpec] = <factory>, themes: list[dazzle.page.specs.theme.ThemeSpec] = <factory>, default_workspace: str | None = None, default_theme: str | None = None, metadata: dict[str, typing.Any] = <factory>) -> None

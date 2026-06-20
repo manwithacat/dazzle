@@ -26,7 +26,7 @@ from unittest.mock import MagicMock
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_FRAMEWORK_ALEMBIC = _REPO_ROOT / "src/dazzle/back/alembic"
+_FRAMEWORK_ALEMBIC = _REPO_ROOT / "src/dazzle/http/alembic"
 
 
 # ---------------------------------------------------------------------------

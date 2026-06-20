@@ -28,9 +28,9 @@
 
 | File | Change | Responsibility |
 |---|---|---|
-| `src/dazzle_back/runtime/renderers/fragment_adapter.py` | Modify | `_build_view` appends related-group Regions to the detail body when `surface.related_groups` is populated |
-| `src/dazzle_ui/runtime/page_routes.py` | Modify | `_build_dispatch_ctx` passes `surface.related_groups` info into the VIEW ctx |
-| `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css` | Modify | Add `.dz-region--kind-related` rules |
+| `src/dazzle_http/runtime/renderers/fragment_adapter.py` | Modify | `_build_view` appends related-group Regions to the detail body when `surface.related_groups` is populated |
+| `src/dazzle_page/runtime/page_routes.py` | Modify | `_build_dispatch_ctx` passes `surface.related_groups` info into the VIEW ctx |
+| `src/dazzle_page/runtime/static/css/components/fragment-primitives.css` | Modify | Add `.dz-region--kind-related` rules |
 | `src/dazzle/render/fragment/coverage.py` | Modify | Remove `"related_groups"` from `_UNSUPPORTED_FEATURES` |
 | `tests/unit/runtime/test_fragment_surface_adapter.py` | Modify | Append related-group rendering tests |
 | `tests/unit/test_fragment_primitive_css.py` | Modify | Append `dz-region--kind-related` to `_REQUIRED_CLASSES` |
@@ -50,7 +50,7 @@
 ## Task 1: Adapter renders related groups as appended regions
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/renderers/fragment_adapter.py`
+- Modify: `src/dazzle_http/runtime/renderers/fragment_adapter.py`
 - Modify: `tests/unit/runtime/test_fragment_surface_adapter.py`
 
 When a VIEW surface has `related_groups`, the adapter wraps the existing field stack and the related-group regions in a Stack, so the detail body is field-stack + per-group regions.
@@ -126,7 +126,7 @@ Expected: FAIL — current `_build_view` doesn't read `related_groups`.
 
 - [ ] **Step 3: Implement related-group rendering**
 
-In `src/dazzle_back/runtime/renderers/fragment_adapter.py`, update imports to include `Skeleton`:
+In `src/dazzle_http/runtime/renderers/fragment_adapter.py`, update imports to include `Skeleton`:
 
 ```python
 from dazzle.render.fragment import (
@@ -230,7 +230,7 @@ Expected: all PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/fragment_adapter.py tests/unit/runtime/test_fragment_surface_adapter.py
+git add src/dazzle_http/runtime/renderers/fragment_adapter.py tests/unit/runtime/test_fragment_surface_adapter.py
 git commit -m "feat(render): _build_view appends related-group Regions when present"
 ```
 
@@ -239,14 +239,14 @@ git commit -m "feat(render): _build_view appends related-group Regions when pres
 ## Task 2: page_routes threads related_groups into VIEW ctx
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/page_routes.py`
+- Modify: `src/dazzle_page/runtime/page_routes.py`
 
 The `_build_dispatch_ctx` builds the VIEW shape from `render_ctx.detail`. Extract `related_groups` from the surface IR (not from runtime data) and pass them through.
 
 - [ ] **Step 1: Locate the VIEW branch**
 
 ```bash
-grep -n "detail = getattr(render_ctx" src/dazzle_ui/runtime/page_routes.py
+grep -n "detail = getattr(render_ctx" src/dazzle_page/runtime/page_routes.py
 ```
 
 - [ ] **Step 2: Update the VIEW branch to include related_groups**
@@ -313,7 +313,7 @@ Expected: no regressions.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/page_routes.py
+git add src/dazzle_page/runtime/page_routes.py
 git commit -m "feat(runtime): _build_dispatch_ctx threads related_groups for VIEW surfaces"
 ```
 
@@ -322,9 +322,9 @@ git commit -m "feat(runtime): _build_dispatch_ctx threads related_groups for VIE
 ## Task 3: CSS for `.dz-region--kind-related`
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`
+- Modify: `src/dazzle_page/runtime/static/css/components/fragment-primitives.css`
 - Modify: `tests/unit/test_fragment_primitive_css.py`
-- Modify: `src/dazzle_ui/runtime/static/dist/dazzle.min.css` (regenerated)
+- Modify: `src/dazzle_page/runtime/static/dist/dazzle.min.css` (regenerated)
 
 - [ ] **Step 1: Add presence-test entry**
 
@@ -332,7 +332,7 @@ Append `"dz-region--kind-related"` to `_REQUIRED_CLASSES` in `tests/unit/test_fr
 
 - [ ] **Step 2: Add CSS rules**
 
-In `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`, after the `.dz-region--kind-form` block:
+In `src/dazzle_page/runtime/static/css/components/fragment-primitives.css`, after the `.dz-region--kind-form` block:
 
 ```css
   /* Related-group region — appended to detail surfaces. Each group is
@@ -355,7 +355,7 @@ In `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`, after 
 ```bash
 pytest tests/unit/test_fragment_primitive_css.py -q 2>&1 | tail -3
 python scripts/build_dist.py 2>&1 | tail -3
-grep -c "dz-region--kind-related" src/dazzle_ui/runtime/static/dist/dazzle.min.css
+grep -c "dz-region--kind-related" src/dazzle_page/runtime/static/dist/dazzle.min.css
 ```
 
 Expected: PASS; rebuild reports new CSS in bundle (≥ 1).
@@ -363,7 +363,7 @@ Expected: PASS; rebuild reports new CSS in bundle (≥ 1).
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/css/components/fragment-primitives.css tests/unit/test_fragment_primitive_css.py src/dazzle_ui/runtime/static/dist/
+git add src/dazzle_page/runtime/static/css/components/fragment-primitives.css tests/unit/test_fragment_primitive_css.py src/dazzle_page/runtime/static/dist/
 git commit -m "feat(ui): CSS for dz-region--kind-related"
 ```
 

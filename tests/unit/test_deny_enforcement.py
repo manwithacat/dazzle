@@ -10,8 +10,8 @@ import pytest
 
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.auth import create_deny_dependency
-from dazzle.back.specs.endpoint import EndpointSpec, HttpMethod
+from dazzle.http.runtime.auth import create_deny_dependency
+from dazzle.http.specs.endpoint import EndpointSpec, HttpMethod
 
 # =============================================================================
 # create_deny_dependency
@@ -26,7 +26,7 @@ class TestCreateDenyDependency:
 
     @pytest.mark.asyncio
     async def test_allows_user_without_denied_role(self) -> None:
-        from dazzle.back.runtime.auth import AuthContext
+        from dazzle.http.runtime.auth import AuthContext
 
         auth_store = MagicMock()
         # validate_session is sync and returns AuthContext
@@ -49,7 +49,7 @@ class TestCreateDenyDependency:
     async def test_denies_user_with_denied_role(self) -> None:
         from fastapi import HTTPException
 
-        from dazzle.back.runtime.auth import AuthContext
+        from dazzle.http.runtime.auth import AuthContext
 
         auth_store = MagicMock()
         auth_store.validate_session = MagicMock(
@@ -70,7 +70,7 @@ class TestCreateDenyDependency:
     @pytest.mark.asyncio
     async def test_allows_unauthenticated(self) -> None:
         """Unauthenticated users pass through (no denied role to check)."""
-        from dazzle.back.runtime.auth import AuthContext
+        from dazzle.http.runtime.auth import AuthContext
 
         auth_store = MagicMock()
         auth_store.validate_session = MagicMock(return_value=AuthContext(is_authenticated=False))
@@ -117,13 +117,13 @@ class TestEndpointDenyRoles:
 class TestSurfaceDenyPropagation:
     def test_deny_personas_to_deny_roles(self) -> None:
         """Surface access.deny_personas should propagate to EndpointSpec.deny_roles."""
-        from dazzle.back.converters.surface_converter import convert_surface_to_endpoint
         from dazzle.core.ir import (
             SurfaceMode,
             SurfaceSection,
             SurfaceSpec,
         )
         from dazzle.core.ir.surfaces import SurfaceAccessSpec
+        from dazzle.http.converters.surface_converter import convert_surface_to_endpoint
 
         surface = SurfaceSpec(
             name="task_list",

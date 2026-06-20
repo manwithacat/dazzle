@@ -2,7 +2,7 @@
 
 import asyncio
 
-from dazzle.back.runtime.csrf import CSRFConfig, CSRFMiddleware, origin_disposition
+from dazzle.http.runtime.csrf import CSRFConfig, CSRFMiddleware, origin_disposition
 
 
 def _h(**kw) -> list[tuple[bytes, bytes]]:

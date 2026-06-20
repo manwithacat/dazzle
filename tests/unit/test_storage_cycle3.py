@@ -18,14 +18,14 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.back.runtime.storage import (
+from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.manifest import StorageConfig
+from dazzle.core.validator import validate_storage_refs
+from dazzle.http.runtime.storage import (
     FakeStorageProvider,
     StorageRegistry,
     register_upload_ticket_routes,
 )
-from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.manifest import StorageConfig
-from dazzle.core.validator import validate_storage_refs
 
 # ---------------------------------------------------------------------------
 # Validator
@@ -186,8 +186,8 @@ def _authed_client(app: FastAPI, user_id: str = "user-abc") -> TestClient:
     from unittest.mock import MagicMock
     from uuid import UUID
 
-    from dazzle.back.runtime.auth import register_auth_store
-    from dazzle.back.runtime.auth.models import AuthContext, UserRecord
+    from dazzle.http.runtime.auth import register_auth_store
+    from dazzle.http.runtime.auth.models import AuthContext, UserRecord
 
     user = UserRecord(
         id=UUID("00000000-0000-0000-0000-" + user_id.encode().hex().ljust(12, "0")[:12])
@@ -212,7 +212,7 @@ def _authed_client(app: FastAPI, user_id: str = "user-abc") -> TestClient:
 
 @pytest.fixture(autouse=True)
 def _reset_auth_store():
-    from dazzle.back.runtime.auth import register_auth_store
+    from dazzle.http.runtime.auth import register_auth_store
 
     yield
     register_auth_store(None)
@@ -452,9 +452,9 @@ class TestStorageDefsPropagation:
 
     def test_server_config_and_build_server_config_storage_defs(self) -> None:
         """ServerConfig carries storage_defs (or empty by default); build_server_config threads them through (or empty)."""
-        from dazzle.back.runtime.app_factory import build_server_config
-        from dazzle.back.runtime.server import ServerConfig
         from dazzle.core import ir
+        from dazzle.http.runtime.app_factory import build_server_config
+        from dazzle.http.runtime.server import ServerConfig
 
         # ServerConfig with explicit storage_defs
         defs = {"cohort_pdfs": _config("cohort_pdfs")}
@@ -472,8 +472,8 @@ class TestStorageDefsPropagation:
         """The load-bearing path: caller passes storage_defs via
         ``ServerConfig`` (which is how ``_serve_combined`` does it), not
         as a kwarg. v0.61.106 ignored the config field entirely."""
-        from dazzle.back.runtime.server import DazzleBackendApp, ServerConfig
         from dazzle.core import ir
+        from dazzle.http.runtime.server import DazzleBackendApp, ServerConfig
 
         spec = ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[]))
         defs = {"cohort_pdfs": _config("cohort_pdfs")}
@@ -481,8 +481,8 @@ class TestStorageDefsPropagation:
         assert "cohort_pdfs" in builder._storage_defs
 
     def test_kwarg_storage_defs_takes_precedence_over_config(self) -> None:
-        from dazzle.back.runtime.server import DazzleBackendApp, ServerConfig
         from dazzle.core import ir
+        from dazzle.http.runtime.server import DazzleBackendApp, ServerConfig
 
         spec = ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[]))
         cfg_defs = {"from_config": _config("from_config")}

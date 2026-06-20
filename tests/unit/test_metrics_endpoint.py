@@ -23,11 +23,11 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from dazzle.back.metrics.system_collector import (
+from dazzle.http.metrics.system_collector import (
     ComponentType,
     SystemMetricsCollector,
 )
-from dazzle.back.runtime.metrics_routes import (
+from dazzle.http.runtime.metrics_routes import (
     PROMETHEUS_CONTENT_TYPE,
     create_metrics_routes,
 )

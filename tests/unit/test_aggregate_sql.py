@@ -22,7 +22,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dazzle.back.runtime.aggregate import (
+from dazzle.http.runtime.aggregate import (
     AggregateBucket,
     Dimension,
     build_aggregate_sql,
@@ -552,7 +552,7 @@ def _raise_on_connect() -> None:
 
 def _make_repo(*, fields: list[str] | None = None, raise_on_connect: bool = False):
     """Build a minimal Repository with only the bits explain_aggregate reads."""
-    from dazzle.back.runtime.repository import Repository
+    from dazzle.http.runtime.repository import Repository
 
     field_specs = [SimpleNamespace(name=n) for n in (fields or [])]
     db = SimpleNamespace(placeholder="%s")

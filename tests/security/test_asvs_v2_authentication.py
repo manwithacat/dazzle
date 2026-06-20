@@ -10,14 +10,14 @@ class TestPasswordStorage:
 
     def test_pbkdf2_hash_algorithm(self):
         """V2.4.1: Passwords are hashed with PBKDF2."""
-        from dazzle.back.runtime.auth.crypto import hash_password
+        from dazzle.http.runtime.auth.crypto import hash_password
 
         source = inspect.getsource(hash_password)
         assert "pbkdf2_hmac" in source
 
     def test_unique_salt_per_hash(self):
         """V2.4.2: Each password hash uses a unique salt."""
-        from dazzle.back.runtime.auth.crypto import hash_password
+        from dazzle.http.runtime.auth.crypto import hash_password
 
         h1 = hash_password("test_password")
         h2 = hash_password("test_password")
@@ -27,7 +27,7 @@ class TestPasswordStorage:
 
     def test_minimum_iteration_count(self):
         """V2.4.3: Iteration count is at least 100,000 for PBKDF2."""
-        from dazzle.back.runtime.auth.crypto import hash_password
+        from dazzle.http.runtime.auth.crypto import hash_password
 
         source = inspect.getsource(hash_password)
         # Extract iteration count — must be >= 100000
@@ -35,7 +35,7 @@ class TestPasswordStorage:
 
     def test_timing_safe_comparison(self):
         """V2.4.4: Password verification uses constant-time comparison."""
-        from dazzle.back.runtime.auth.crypto import verify_password
+        from dazzle.http.runtime.auth.crypto import verify_password
 
         source = inspect.getsource(verify_password)
         assert "hmac.compare_digest" in source or "compare_digest" in source
@@ -46,7 +46,7 @@ class TestCredentialRecovery:
 
     def test_forgot_password_no_enumeration(self):
         """V2.5.2: Forgot password returns same response whether user exists or not."""
-        from dazzle.back.runtime.auth.routes import _forgot_password
+        from dazzle.http.runtime.auth.routes import _forgot_password
 
         source = inspect.getsource(_forgot_password)
         # The function should always return success to prevent user enumeration
@@ -58,7 +58,7 @@ class TestJWTSecurity:
 
     def test_none_algorithm_blocked(self):
         """V2.7.1: 'none' algorithm must be blocked."""
-        from dazzle.back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle.http.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(algorithm="none", secret_key="x" * 32)
         with pytest.raises(ValueError, match="(?i)blocked"):
@@ -66,14 +66,14 @@ class TestJWTSecurity:
 
     def test_algorithm_whitelist(self):
         """V2.7.2: Only approved algorithms are accepted."""
-        from dazzle.back.runtime.jwt_auth import JWTService
+        from dazzle.http.runtime.jwt_auth import JWTService
 
         source = inspect.getsource(JWTService._validate_config)
         assert "ALLOWED_ALGORITHMS" in source or "blocked" in source.lower()
 
     def test_minimum_key_length(self):
         """V2.7.3: HMAC keys must be at least 32 bytes."""
-        from dazzle.back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle.http.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(secret_key="short")
         with pytest.raises(ValueError, match="(?i)(short|length|weak|32)"):

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import asyncio
 
-from dazzle.back.runtime.csrf import CSRFConfig, CSRFMiddleware
+from dazzle.http.runtime.csrf import CSRFConfig, CSRFMiddleware
 
 
 async def _drive_collecting_set_cookies(

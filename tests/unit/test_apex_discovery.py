@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from dazzle.back.runtime.auth.apex_discovery import (
+from dazzle.http.runtime.auth.apex_discovery import (
     NO_ORGS_PATH,
     PICKER_PATH,
     resolve_apex_redirect,
 )
-from dazzle.back.runtime.auth.models import MembershipRecord
+from dazzle.http.runtime.auth.models import MembershipRecord
 
 
 def _m(mid: str, tid: str, status: str = "active") -> MembershipRecord:

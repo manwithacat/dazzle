@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from dazzle.back.runtime.service_loader import (
+from dazzle.core.ir.money import Money
+from dazzle.core.ir.services import ServiceFieldSpec
+from dazzle.http.runtime.service_loader import (
     LoadedService,
     ServiceInputCoercionError,
     ServiceInvocationError,
@@ -16,8 +18,6 @@ from dazzle.back.runtime.service_loader import (
     coerce_service_inputs,
     create_service_loader,
 )
-from dazzle.core.ir.money import Money
-from dazzle.core.ir.services import ServiceFieldSpec
 
 if TYPE_CHECKING:
     pass

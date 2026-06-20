@@ -73,8 +73,8 @@ If you are evaluating whether to trust that model, start with the skeptical walk
 graph LR
     DSL[DSL Files] --> Parser
     Parser --> IR[AppSpec IR]
-    IR --> Back[FastAPI Runtime<br/>dazzle/back]
-    IR --> UI[Server-rendered UI<br/>dazzle/ui · typed Fragments + HTMX]
+    IR --> Back[FastAPI Runtime<br/>dazzle/http]
+    IR --> UI[Server-rendered UI<br/>dazzle/page · typed Fragments + HTMX]
     IR --> Derived[Derived artefacts]
     Derived --> OAS[OpenAPI / AsyncAPI specs]
     Derived --> Tests[Generated tests]

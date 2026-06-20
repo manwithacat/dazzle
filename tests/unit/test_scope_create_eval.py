@@ -1,4 +1,4 @@
-"""Unit tests for `dazzle.back.runtime.scope_create_eval` (#1124, #1311).
+"""Unit tests for `dazzle.http.runtime.scope_create_eval` (#1124, #1311).
 
 The simple-predicate subset (ColumnCheck, UserAttrCheck, PathCheck
 depth 1, Tautology / Contradiction, BoolComposite over those) is
@@ -15,10 +15,6 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.scope_create_eval import (
-    ScopeCreateUnsupportedError,
-    check_create_predicate,
-)
 from dazzle.core.ir.predicates import (
     BoolComposite,
     BoolOp,
@@ -31,6 +27,10 @@ from dazzle.core.ir.predicates import (
     Tautology,
     UserAttrCheck,
     ValueRef,
+)
+from dazzle.http.runtime.scope_create_eval import (
+    ScopeCreateUnsupportedError,
+    check_create_predicate,
 )
 
 # ---------------------------------------------------------------------------

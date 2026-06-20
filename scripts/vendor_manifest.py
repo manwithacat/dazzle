@@ -1,7 +1,7 @@
 """Shared helpers for the vendored-JS hash manifest.
 
 The manifest at ``scripts/vendor_hashes.json`` pins a SHA-256 of every
-file under ``src/dazzle/ui/runtime/static/vendor/``. It is consulted by:
+file under ``src/dazzle/page/runtime/static/vendor/``. It is consulted by:
 
   - ``tests/unit/test_vendor_hash_drift.py`` — drift gate; fails CI if any
     on-disk file diverges from the manifest. This is the layer that
@@ -37,7 +37,7 @@ from pathlib import Path
 
 # Resolves the repo root regardless of where this module is imported from.
 REPO_ROOT = Path(__file__).resolve().parent.parent
-VENDOR_DIR = REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "vendor"
+VENDOR_DIR = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "vendor"
 MANIFEST_PATH = REPO_ROOT / "scripts" / "vendor_hashes.json"
 
 HASH_PREFIX = "sha256:"

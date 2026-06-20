@@ -215,7 +215,7 @@ def _dsl_construct_coverage(repo_root: Path) -> CategoryCoverage:
 
 
 def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
-    """Which fragment templates are included somewhere under src/dazzle/ui/.
+    """Which fragment templates are included somewhere under src/dazzle/page/.
 
     Orphan fragments (no include site) can't possibly be rendered, so
     any regression in them is invisible until someone hand-includes.
@@ -223,7 +223,7 @@ def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
     cat = CategoryCoverage(
         name="fragment_templates",
         description=(
-            "Standalone fragment templates in src/dazzle/ui/templates/fragments/ "
+            "Standalone fragment templates in src/dazzle/page/templates/fragments/ "
             "that the framework actively renders. A fragment with no include "
             "site in any template or Python renderer is dead code. Parking-lot "
             "primitives (see fragment_registry.PARKING_LOT_FRAGMENTS) are "
@@ -231,29 +231,29 @@ def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
             "runtime caller, so they're not counted against the gate."
         ),
     )
-    frag_dir = repo_root / "src" / "dazzle" / "ui" / "templates" / "fragments"
+    frag_dir = repo_root / "src" / "dazzle" / "page" / "templates" / "fragments"
     if not frag_dir.is_dir():
         return cat
-    # Fragments can be included by any template (dazzle.ui) or rendered
-    # directly by any Python handler (dazzle.ui, dazzle.back, dazzle).
+    # Fragments can be included by any template (dazzle.page) or rendered
+    # directly by any Python handler (dazzle.page, dazzle.http, dazzle).
     # Scan all three roots — a fragment rendered by a route is every bit
     # as "covered" as one included in a template.
     search_roots = [
-        repo_root / "src" / "dazzle" / "ui",
-        repo_root / "src" / "dazzle" / "back",
+        repo_root / "src" / "dazzle" / "page",
+        repo_root / "src" / "dazzle" / "http",
         repo_root / "src" / "dazzle",
     ]
     # The registry file enumerates fragments — it lists them but doesn't
     # render them, so its mention is not evidence of coverage. Exclude
     # it from the scan so only real template includes and real Python
     # render calls count.
-    registry_path = repo_root / "src" / "dazzle" / "ui" / "runtime" / "fragment_registry.py"
+    registry_path = repo_root / "src" / "dazzle" / "page" / "runtime" / "fragment_registry.py"
     # Parking-lot primitives (see fragment_registry.PARKING_LOT_FRAGMENTS)
     # are framework-shipped but intentionally opt-in — no runtime caller
     # by default. Skip them from the coverage denominator so the metric
     # reflects only fragments the framework actually renders.
     try:
-        from dazzle.ui.runtime.fragment_registry import PARKING_LOT_FRAGMENTS
+        from dazzle.page.runtime.fragment_registry import PARKING_LOT_FRAGMENTS
     except ImportError:
         PARKING_LOT_FRAGMENTS = frozenset()
     all_fragments = sorted(p.stem for p in frag_dir.glob("*.html"))

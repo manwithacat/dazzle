@@ -6,7 +6,7 @@
 
 **Architecture:** A pure guard function decides, from `(enable_auth, is_production, allow_insecure_ack)`, whether the config is a fail-closed violation; it raises `InsecureAuthConfigError` at build time when production + auth-off + not-acknowledged. It is invoked at the top of `DazzleBackendApp._setup_auth`, before any auth/DB state is touched. The dev/prod signal reuses the existing `dazzle.core.environment.is_production()` (`DAZZLE_ENV`, default `development`), so local dev with auth off stays ergonomic. The escape hatch is an explicit, auditable env var.
 
-**Tech Stack:** Python 3.12+, FastAPI runtime (`src/dazzle/back/`), `DAZZLE_ENV` environment convention, pytest.
+**Tech Stack:** Python 3.12+, FastAPI runtime (`src/dazzle/http/`), `DAZZLE_ENV` environment convention, pytest.
 
 ## Global Constraints
 
@@ -21,8 +21,8 @@
 
 | File | Responsibility | Action |
 |---|---|---|
-| `src/dazzle/back/runtime/auth/insecure_guard.py` | Pure guard logic + exception + env-ack reader | **Create** |
-| `src/dazzle/back/runtime/server.py` | Invoke the guard at the top of `_setup_auth` | Modify (`_setup_auth`, ~line 1458) |
+| `src/dazzle/http/runtime/auth/insecure_guard.py` | Pure guard logic + exception + env-ack reader | **Create** |
+| `src/dazzle/http/runtime/server.py` | Invoke the guard at the top of `_setup_auth` | Modify (`_setup_auth`, ~line 1458) |
 | `tests/unit/test_insecure_auth_guard_1420.py` | Unit (pure fn + env reader) + wiring test | **Create** |
 | `CHANGELOG.md` | Security Fixed entry | Modify |
 
@@ -31,7 +31,7 @@
 ### Task 1: Pure fail-closed guard function
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/insecure_guard.py`
+- Create: `src/dazzle/http/runtime/auth/insecure_guard.py`
 - Test: `tests/unit/test_insecure_auth_guard_1420.py`
 
 **Interfaces:**
@@ -51,7 +51,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.auth.insecure_guard import (
+from dazzle.http.runtime.auth.insecure_guard import (
     INSECURE_ACK_VAR,
     InsecureAuthConfigError,
     assert_secure_auth_config,
@@ -97,12 +97,12 @@ class TestInsecureAckFromEnv:
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `uv run pytest tests/unit/test_insecure_auth_guard_1420.py -q`
-Expected: FAIL — `ModuleNotFoundError: dazzle.back.runtime.auth.insecure_guard`.
+Expected: FAIL — `ModuleNotFoundError: dazzle.http.runtime.auth.insecure_guard`.
 
 - [ ] **Step 3: Implement the module**
 
 ```python
-# src/dazzle/back/runtime/auth/insecure_guard.py
+# src/dazzle/http/runtime/auth/insecure_guard.py
 """#1420 Slice 1 — fail-closed guard for auth-disabled production deploys.
 
 `enable_auth=False` makes `_setup_auth` return no auth dependency, so generated
@@ -158,13 +158,13 @@ Expected: PASS (all tests).
 
 - [ ] **Step 5: Lint + type**
 
-Run: `uv run ruff check src/dazzle/back/runtime/auth/insecure_guard.py tests/unit/test_insecure_auth_guard_1420.py && uv run mypy src/dazzle/back/runtime/auth/insecure_guard.py`
+Run: `uv run ruff check src/dazzle/http/runtime/auth/insecure_guard.py tests/unit/test_insecure_auth_guard_1420.py && uv run mypy src/dazzle/http/runtime/auth/insecure_guard.py`
 Expected: clean.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/insecure_guard.py tests/unit/test_insecure_auth_guard_1420.py
+git add src/dazzle/http/runtime/auth/insecure_guard.py tests/unit/test_insecure_auth_guard_1420.py
 git commit -m "feat(auth): fail-closed guard for auth-disabled production (#1420 slice 1)"
 ```
 
@@ -173,7 +173,7 @@ git commit -m "feat(auth): fail-closed guard for auth-disabled production (#1420
 ### Task 2: Wire the guard into the boot path
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/server.py` (`_setup_auth`, the method starting ~line 1458)
+- Modify: `src/dazzle/http/runtime/server.py` (`_setup_auth`, the method starting ~line 1458)
 - Test: `tests/unit/test_insecure_auth_guard_1420.py` (append wiring test)
 
 **Interfaces:**
@@ -189,7 +189,7 @@ class TestSetupAuthWiring:
     so it needs no database."""
 
     def _app(self, *, enable_auth: bool):
-        from dazzle.back.runtime.server import DazzleBackendApp
+        from dazzle.http.runtime.server import DazzleBackendApp
         from tests.unit.test_build_server_config import _appspec  # minimal AppSpec helper
 
         return DazzleBackendApp(_appspec(), enable_auth=enable_auth)
@@ -226,7 +226,7 @@ Expected: FAIL — `test_prod_auth_off_build_raises` does not raise (guard not w
 
 - [ ] **Step 3: Wire the guard at the top of `_setup_auth`**
 
-In `src/dazzle/back/runtime/server.py`, `_setup_auth` currently begins:
+In `src/dazzle/http/runtime/server.py`, `_setup_auth` currently begins:
 
 ```python
     def _setup_auth(self) -> tuple[Any, Any]:
@@ -246,7 +246,7 @@ Insert the guard as the first statements of the method body (before `auth_dep = 
         # #1420 Slice 1 — fail closed: auth disabled in production is a critical
         # misconfiguration (generated CRUD would be world-writable). Runs before
         # any auth/DB state is touched.
-        from dazzle.back.runtime.auth.insecure_guard import (
+        from dazzle.http.runtime.auth.insecure_guard import (
             assert_secure_auth_config,
             insecure_ack_from_env,
         )
@@ -279,7 +279,7 @@ Expected: PASS (guard is a no-op in the default dev env these tests run under).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/server.py tests/unit/test_insecure_auth_guard_1420.py
+git add src/dazzle/http/runtime/server.py tests/unit/test_insecure_auth_guard_1420.py
 git commit -m "feat(auth): wire fail-closed guard into _setup_auth (#1420 slice 1)"
 ```
 

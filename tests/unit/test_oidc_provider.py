@@ -10,13 +10,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from dazzle.back.runtime.auth.connections import (
+from dazzle.http.runtime.auth.connections import (
     AssertedIdentity,
     ConnectionError,
     ConnectionRecord,
     resolve_provider,
 )
-from dazzle.back.runtime.auth.oidc_provider import (
+from dazzle.http.runtime.auth.oidc_provider import (
     NativeOIDCProvider,
     _coerce_groups,
     register_native_oidc,
@@ -216,7 +216,7 @@ def test_coerce_groups_shapes() -> None:
 
 
 def test_register_native_oidc_resolves() -> None:
-    from dazzle.back.runtime.auth.connections import _PROVIDERS
+    from dazzle.http.runtime.auth.connections import _PROVIDERS
 
     register_native_oidc()
     try:

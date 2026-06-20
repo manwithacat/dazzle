@@ -82,8 +82,8 @@ def test_migration_0007_applies_on_a_pre_0007_db(scratch_url: str) -> None:
     from alembic import command
     from alembic.config import Config
 
-    from dazzle.back.runtime.auth.store import AuthStore
     from dazzle.cli.db import _get_framework_alembic_dir
+    from dazzle.http.runtime.auth.store import AuthStore
 
     # Realistic pre-0007 deployed DB: auth tables present, 0007's additions absent.
     store = AuthStore(database_url=scratch_url)
@@ -118,7 +118,7 @@ def test_migration_0007_applies_on_a_pre_0007_db(scratch_url: str) -> None:
 def test_init_db_creates_memberships_and_active_membership_col(scratch_url: str) -> None:
     """The dev `_init_db` path creates the full shape (memberships +
     sessions.active_membership_id), interchangeable with migration 0007."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -132,7 +132,7 @@ def test_init_db_creates_memberships_and_active_membership_col(scratch_url: str)
 
 
 def test_membership_crud_round_trip(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -160,7 +160,7 @@ def test_membership_crud_round_trip(scratch_url: str) -> None:
 
 
 def test_create_session_persists_active_membership_id(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -182,7 +182,7 @@ def test_create_session_persists_active_membership_id(scratch_url: str) -> None:
 
 
 def test_validate_session_populates_active_membership(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -203,7 +203,7 @@ def test_validate_session_populates_active_membership(scratch_url: str) -> None:
 def test_suspended_membership_does_not_source_the_fence(scratch_url: str) -> None:
     """A non-active membership must NOT scope the session (security: a suspended
     user stops seeing the org's data). validate_session drops it to None."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -222,7 +222,7 @@ def test_suspended_membership_does_not_source_the_fence(scratch_url: str) -> Non
 
 def test_create_membership_rejects_unknown_identity(scratch_url: str) -> None:
     """No DB FK to users → create_membership guards against orphan memberships."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -232,7 +232,7 @@ def test_create_membership_rejects_unknown_identity(scratch_url: str) -> None:
 
 def test_validate_session_no_membership_is_backward_compatible(scratch_url: str) -> None:
     """A session with no active membership still authenticates (legacy path)."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -253,9 +253,9 @@ def test_membership_drives_tenant_binding_end_to_end(scratch_url: str) -> None:
     """DB membership -> validate_session -> _bind_rls_tenant_id sets the tenant
     contextvar to the membership's tenant_id (which pg_backend reads to set the
     `dazzle.tenant_id` GUC; fence enforcement is proven in test_rls_enforcement_pg)."""
-    from dazzle.back.runtime import tenant_isolation
-    from dazzle.back.runtime.auth.dependencies import _bind_rls_tenant_id
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime import tenant_isolation
+    from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()

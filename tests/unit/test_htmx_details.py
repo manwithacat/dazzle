@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dazzle.back.runtime.htmx_response import HtmxDetails
+from dazzle.http.runtime.htmx_response import HtmxDetails
 
 
 def _fake_request(**headers: str) -> SimpleNamespace:
@@ -203,7 +203,7 @@ class TestBackwardCompat:
     """is_htmx_request() still works as before."""
 
     def test_delegates_to_htmx_details(self) -> None:
-        from dazzle.back.runtime.htmx_response import is_htmx_request
+        from dazzle.http.runtime.htmx_response import is_htmx_request
 
         assert is_htmx_request(_fake_request(**{"HX-Request": "true"})) is True
         assert is_htmx_request(_fake_request()) is False

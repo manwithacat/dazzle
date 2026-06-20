@@ -36,7 +36,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.auth import (
+from dazzle.http.runtime.auth import (
     AuthContext,
     SessionRecord,
     UserRecord,
@@ -52,10 +52,10 @@ from dazzle.back.runtime.auth import (
 
 @contextmanager
 def _mock_totp_module(verify_return: bool) -> Iterator[MagicMock]:
-    """Inject a mock `dazzle.back.runtime.totp` so verify_2fa can run."""
+    """Inject a mock `dazzle.http.runtime.totp` so verify_2fa can run."""
     mock_module = MagicMock()
     mock_module.verify_totp = MagicMock(return_value=verify_return)
-    key = "dazzle.back.runtime.totp"
+    key = "dazzle.http.runtime.totp"
     original = sys.modules.get(key)
     sys.modules[key] = mock_module
     try:
@@ -341,7 +341,7 @@ class TestFormPasswordLoginRegenerate:
 
     @pytest.fixture
     def setup(self) -> tuple[Any, MagicMock]:
-        from dazzle.back.runtime.auth.password_login_routes import (
+        from dazzle.http.runtime.auth.password_login_routes import (
             create_password_login_routes,
         )
 
@@ -418,7 +418,7 @@ class TestMagicLinkRegenerate:
 
     @pytest.fixture
     def setup(self) -> tuple[Any, MagicMock]:
-        from dazzle.back.runtime.auth.magic_link_routes import (
+        from dazzle.http.runtime.auth.magic_link_routes import (
             create_magic_link_routes,
         )
 
@@ -434,7 +434,7 @@ class TestMagicLinkRegenerate:
         new_session = _make_session(user, sid="new-session-B")
 
         # Patch the module-level helper instead of inserting into the store.
-        from dazzle.back.runtime.auth import magic_link_routes as mlr
+        from dazzle.http.runtime.auth import magic_link_routes as mlr
 
         original_validate = mlr.validate_magic_link
         mlr.validate_magic_link = MagicMock(return_value=user.id)
@@ -455,7 +455,7 @@ class TestMagicLinkRegenerate:
         user = _make_user("magic@example.com")
         new_session = _make_session(user, sid="new-session-B")
 
-        from dazzle.back.runtime.auth import magic_link_routes as mlr
+        from dazzle.http.runtime.auth import magic_link_routes as mlr
 
         original_validate = mlr.validate_magic_link
         mlr.validate_magic_link = MagicMock(return_value=user.id)
@@ -481,7 +481,7 @@ class TestForm2faVerifyRegenerate:
 
     @pytest.fixture
     def setup(self) -> tuple[Any, MagicMock]:
-        from dazzle.back.runtime.auth.two_factor_form_routes import (
+        from dazzle.http.runtime.auth.two_factor_form_routes import (
             create_two_factor_form_routes,
         )
 

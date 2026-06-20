@@ -6,7 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.event_bus import EntityEventBus, EntityEventType
+from dazzle.http.runtime.event_bus import EntityEventBus, EntityEventType
 
 
 def _make_app_with_callbacks(
@@ -25,7 +25,7 @@ def _make_app_with_callbacks(
     metadata.created_at = MagicMock(isoformat=lambda: "2026-01-01T00:00:00")
     file_service.upload = AsyncMock(return_value=metadata)
 
-    from dazzle.back.runtime.file_routes import create_file_routes
+    from dazzle.http.runtime.file_routes import create_file_routes
 
     create_file_routes(
         app,
@@ -120,6 +120,6 @@ async def test_event_bus_file_uploaded_event():
 
 
 def test_hook_registry_accepts_post_upload():
-    from dazzle.back.runtime.hook_registry import VALID_HOOK_POINTS
+    from dazzle.http.runtime.hook_registry import VALID_HOOK_POINTS
 
     assert "entity.post_upload" in VALID_HOOK_POINTS

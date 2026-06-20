@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Eliminate 6 HIGH-risk module-level mutable singletons in `dazzle_back` by consolidating them into a `RuntimeServices` dataclass on `app.state`.
+**Goal:** Eliminate 6 HIGH-risk module-level mutable singletons in `dazzle_http` by consolidating them into a `RuntimeServices` dataclass on `app.state`.
 
 **Architecture:** Create `RuntimeServices` dataclass holding event_bus, presence_tracker, event_framework, metrics. Attach to `app.state.services` at startup. Route handlers access via `Depends(get_services)`, middleware via `request.app.state.services`. Delete all `get_X()` / `set_X()` / `reset_X()` global functions. Tests use pytest fixtures creating fresh instances.
 
@@ -16,24 +16,24 @@
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/dazzle_back/runtime/services.py` | Create | `RuntimeServices` dataclass + `get_services()` dependency |
-| `src/dazzle_back/runtime/event_bus.py` | Modify | Delete global singleton section; update `RealtimeRepositoryMixin` |
-| `src/dazzle_back/runtime/presence_tracker.py` | Modify | Delete global singleton section |
-| `src/dazzle_back/events/framework.py` | Modify | Delete `_framework` global, `get_framework()`, `init_framework()`, `shutdown_framework()` |
-| `src/dazzle_back/events/__init__.py` | Modify | Remove framework singleton re-exports |
-| `src/dazzle_back/metrics/collector.py` | Modify | Delete `_collector` global and getter/setter |
-| `src/dazzle_back/metrics/system_collector.py` | Modify | Delete `_system_collector` global and getter/setter |
-| `src/dazzle_back/metrics/__init__.py` | Modify | Remove singleton re-exports |
-| `src/dazzle_back/runtime/metrics/emitter.py` | Modify | Delete `_emitter` global, `get_emitter()`, `emit()` |
-| `src/dazzle_back/runtime/metrics/__init__.py` | Modify | Remove singleton re-exports |
-| `src/dazzle_back/runtime/metrics/middleware.py` | Modify | Use `request.app.state.services.metrics_emitter` |
-| `src/dazzle_back/runtime/server.py` | Modify | Create and attach `RuntimeServices` |
-| `src/dazzle_back/runtime/subsystems/system_routes.py` | Modify | Use services for event_bus |
-| `src/dazzle_back/runtime/subsystems/events.py` | Modify | Store framework on `app.state.services` |
-| `src/dazzle_back/runtime/auth/events.py` | Modify | Replace `get_framework()` with services access |
-| `src/dazzle_back/runtime/realtime_routes.py` | Modify | Use services for presence_tracker |
-| `src/dazzle_back/tests/test_event_bus.py` | Modify | Fixture-based isolation, delete singleton tests |
-| `src/dazzle_back/tests/test_presence_tracker.py` | Modify | Fixture-based isolation, delete singleton tests |
+| `src/dazzle_http/runtime/services.py` | Create | `RuntimeServices` dataclass + `get_services()` dependency |
+| `src/dazzle_http/runtime/event_bus.py` | Modify | Delete global singleton section; update `RealtimeRepositoryMixin` |
+| `src/dazzle_http/runtime/presence_tracker.py` | Modify | Delete global singleton section |
+| `src/dazzle_http/events/framework.py` | Modify | Delete `_framework` global, `get_framework()`, `init_framework()`, `shutdown_framework()` |
+| `src/dazzle_http/events/__init__.py` | Modify | Remove framework singleton re-exports |
+| `src/dazzle_http/metrics/collector.py` | Modify | Delete `_collector` global and getter/setter |
+| `src/dazzle_http/metrics/system_collector.py` | Modify | Delete `_system_collector` global and getter/setter |
+| `src/dazzle_http/metrics/__init__.py` | Modify | Remove singleton re-exports |
+| `src/dazzle_http/runtime/metrics/emitter.py` | Modify | Delete `_emitter` global, `get_emitter()`, `emit()` |
+| `src/dazzle_http/runtime/metrics/__init__.py` | Modify | Remove singleton re-exports |
+| `src/dazzle_http/runtime/metrics/middleware.py` | Modify | Use `request.app.state.services.metrics_emitter` |
+| `src/dazzle_http/runtime/server.py` | Modify | Create and attach `RuntimeServices` |
+| `src/dazzle_http/runtime/subsystems/system_routes.py` | Modify | Use services for event_bus |
+| `src/dazzle_http/runtime/subsystems/events.py` | Modify | Store framework on `app.state.services` |
+| `src/dazzle_http/runtime/auth/events.py` | Modify | Replace `get_framework()` with services access |
+| `src/dazzle_http/runtime/realtime_routes.py` | Modify | Use services for presence_tracker |
+| `src/dazzle_http/tests/test_event_bus.py` | Modify | Fixture-based isolation, delete singleton tests |
+| `src/dazzle_http/tests/test_presence_tracker.py` | Modify | Fixture-based isolation, delete singleton tests |
 | `tests/unit/test_auth_events.py` | Modify | Update `get_framework` patches |
 | `tests/unit/test_runtime_services.py` | Create | Tests for `RuntimeServices` |
 
@@ -42,7 +42,7 @@
 ### Task 1: Create `RuntimeServices` Dataclass + Tests
 
 **Files:**
-- Create: `src/dazzle_back/runtime/services.py`
+- Create: `src/dazzle_http/runtime/services.py`
 - Create: `tests/unit/test_runtime_services.py`
 
 - [ ] **Step 1: Write the tests**
@@ -56,7 +56,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.services import RuntimeServices
 
 
 class TestRuntimeServices:
@@ -90,11 +90,11 @@ class TestRuntimeServices:
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/unit/test_runtime_services.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle_back.runtime.services'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle_http.runtime.services'`
 
 - [ ] **Step 3: Create `services.py`**
 
-Create `src/dazzle_back/runtime/services.py`:
+Create `src/dazzle_http/runtime/services.py`:
 
 ```python
 """Runtime service container — replaces module-level singletons.
@@ -110,14 +110,14 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import Request
 
-from dazzle_back.runtime.event_bus import EntityEventBus
-from dazzle_back.runtime.presence_tracker import PresenceTracker
+from dazzle_http.runtime.event_bus import EntityEventBus
+from dazzle_http.runtime.presence_tracker import PresenceTracker
 
 if TYPE_CHECKING:
-    from dazzle_back.events.framework import EventFramework
-    from dazzle_back.metrics.collector import MetricsCollector
-    from dazzle_back.metrics.system_collector import SystemMetricsCollector
-    from dazzle_back.runtime.metrics.emitter import MetricsEmitter
+    from dazzle_http.events.framework import EventFramework
+    from dazzle_http.metrics.collector import MetricsCollector
+    from dazzle_http.metrics.system_collector import SystemMetricsCollector
+    from dazzle_http.runtime.metrics.emitter import MetricsEmitter
 
 
 @dataclass
@@ -150,7 +150,7 @@ Expected: PASS (5 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/services.py tests/unit/test_runtime_services.py
+git add src/dazzle_http/runtime/services.py tests/unit/test_runtime_services.py
 git commit -m "feat(runtime): create RuntimeServices container (#673)"
 ```
 
@@ -159,11 +159,11 @@ git commit -m "feat(runtime): create RuntimeServices container (#673)"
 ### Task 2: Delete Event Bus Global Singleton + Update `RealtimeRepositoryMixin`
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/event_bus.py`
+- Modify: `src/dazzle_http/runtime/event_bus.py`
 
 - [ ] **Step 1: Delete the global singleton section**
 
-In `src/dazzle_back/runtime/event_bus.py`, delete lines 367-393 (the entire `# Global Event Bus` section including `_global_event_bus`, `get_event_bus()`, `set_event_bus()`, `reset_event_bus()`).
+In `src/dazzle_http/runtime/event_bus.py`, delete lines 367-393 (the entire `# Global Event Bus` section including `_global_event_bus`, `get_event_bus()`, `set_event_bus()`, `reset_event_bus()`).
 
 - [ ] **Step 2: Update `RealtimeRepositoryMixin.get_event_bus()`**
 
@@ -192,13 +192,13 @@ Check the file's import block and remove any self-referencing import of `get_eve
 
 - [ ] **Step 4: Verify the file is syntactically valid**
 
-Run: `python -c "import dazzle_back.runtime.event_bus"`
+Run: `python -c "import dazzle_http.runtime.event_bus"`
 Expected: No error
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/event_bus.py
+git add src/dazzle_http/runtime/event_bus.py
 git commit -m "refactor(runtime): delete event bus global singleton (#673)"
 ```
 
@@ -207,7 +207,7 @@ git commit -m "refactor(runtime): delete event bus global singleton (#673)"
 ### Task 3: Delete Presence Tracker Global Singleton
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/presence_tracker.py`
+- Modify: `src/dazzle_http/runtime/presence_tracker.py`
 
 - [ ] **Step 1: Delete the global singleton section**
 
@@ -217,13 +217,13 @@ Keep `create_presence_tracker()` — it's a factory function used by `realtime_r
 
 - [ ] **Step 2: Verify**
 
-Run: `python -c "import dazzle_back.runtime.presence_tracker"`
+Run: `python -c "import dazzle_http.runtime.presence_tracker"`
 Expected: No error
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/presence_tracker.py
+git add src/dazzle_http/runtime/presence_tracker.py
 git commit -m "refactor(runtime): delete presence tracker global singleton (#673)"
 ```
 
@@ -232,8 +232,8 @@ git commit -m "refactor(runtime): delete presence tracker global singleton (#673
 ### Task 4: Delete Event Framework Global Singleton + Update Re-exports
 
 **Files:**
-- Modify: `src/dazzle_back/events/framework.py`
-- Modify: `src/dazzle_back/events/__init__.py`
+- Modify: `src/dazzle_http/events/framework.py`
+- Modify: `src/dazzle_http/events/__init__.py`
 
 - [ ] **Step 1: Delete framework globals from `framework.py`**
 
@@ -243,17 +243,17 @@ Keep the `EventFramework` class and `EventFrameworkConfig` — only the singleto
 
 - [ ] **Step 2: Update `events/__init__.py` re-exports**
 
-In `src/dazzle_back/events/__init__.py`, remove `get_framework`, `init_framework`, `shutdown_framework` from both the import block (lines 50-52) and `__all__` list (lines 179-181).
+In `src/dazzle_http/events/__init__.py`, remove `get_framework`, `init_framework`, `shutdown_framework` from both the import block (lines 50-52) and `__all__` list (lines 179-181).
 
 - [ ] **Step 3: Verify**
 
-Run: `python -c "from dazzle_back.events import EventFramework"`
+Run: `python -c "from dazzle_http.events import EventFramework"`
 Expected: No error
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_back/events/framework.py src/dazzle_back/events/__init__.py
+git add src/dazzle_http/events/framework.py src/dazzle_http/events/__init__.py
 git commit -m "refactor(events): delete event framework global singleton (#673)"
 ```
 
@@ -262,11 +262,11 @@ git commit -m "refactor(events): delete event framework global singleton (#673)"
 ### Task 5: Delete Metrics Globals + Update Re-exports
 
 **Files:**
-- Modify: `src/dazzle_back/metrics/collector.py`
-- Modify: `src/dazzle_back/metrics/system_collector.py`
-- Modify: `src/dazzle_back/metrics/__init__.py`
-- Modify: `src/dazzle_back/runtime/metrics/emitter.py`
-- Modify: `src/dazzle_back/runtime/metrics/__init__.py`
+- Modify: `src/dazzle_http/metrics/collector.py`
+- Modify: `src/dazzle_http/metrics/system_collector.py`
+- Modify: `src/dazzle_http/metrics/__init__.py`
+- Modify: `src/dazzle_http/runtime/metrics/emitter.py`
+- Modify: `src/dazzle_http/runtime/metrics/__init__.py`
 
 - [ ] **Step 1: Delete collector globals from `collector.py`**
 
@@ -301,13 +301,13 @@ __all__ = [
 
 - [ ] **Step 6: Verify**
 
-Run: `python -c "from dazzle_back.metrics import MetricsCollector, SystemMetricsCollector; from dazzle_back.runtime.metrics import MetricsEmitter"`
+Run: `python -c "from dazzle_http.metrics import MetricsCollector, SystemMetricsCollector; from dazzle_http.runtime.metrics import MetricsEmitter"`
 Expected: No error
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle_back/metrics/collector.py src/dazzle_back/metrics/system_collector.py src/dazzle_back/metrics/__init__.py src/dazzle_back/runtime/metrics/emitter.py src/dazzle_back/runtime/metrics/__init__.py
+git add src/dazzle_http/metrics/collector.py src/dazzle_http/metrics/system_collector.py src/dazzle_http/metrics/__init__.py src/dazzle_http/runtime/metrics/emitter.py src/dazzle_http/runtime/metrics/__init__.py
 git commit -m "refactor(metrics): delete metrics global singletons (#673)"
 ```
 
@@ -316,19 +316,19 @@ git commit -m "refactor(metrics): delete metrics global singletons (#673)"
 ### Task 6: Wire `RuntimeServices` into App Startup
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/server.py`
-- Modify: `src/dazzle_back/runtime/subsystems/events.py`
+- Modify: `src/dazzle_http/runtime/server.py`
+- Modify: `src/dazzle_http/runtime/subsystems/events.py`
 
 - [ ] **Step 1: Read `server.py` to find where the app is assembled**
 
-Read `src/dazzle_back/runtime/server.py` to find the function that creates the FastAPI app and where `get_event_bus()` is called at line 933.
+Read `src/dazzle_http/runtime/server.py` to find the function that creates the FastAPI app and where `get_event_bus()` is called at line 933.
 
 - [ ] **Step 2: Create and attach `RuntimeServices` at app creation**
 
 Add near the top of the app assembly function:
 
 ```python
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.services import RuntimeServices
 
 services = RuntimeServices()
 app.state.services = services
@@ -338,7 +338,7 @@ app.state.services = services
 
 Change:
 ```python
-from dazzle_back.runtime.event_bus import get_event_bus
+from dazzle_http.runtime.event_bus import get_event_bus
 _upload_bus = get_event_bus()
 ```
 to:
@@ -348,7 +348,7 @@ _upload_bus = app.state.services.event_bus
 
 - [ ] **Step 4: Update `EventsSubsystem` to store framework on services**
 
-In `src/dazzle_back/runtime/subsystems/events.py`, after the framework is created and assigned to `ctx.event_framework` (line 45), also store it on services:
+In `src/dazzle_http/runtime/subsystems/events.py`, after the framework is created and assigned to `ctx.event_framework` (line 45), also store it on services:
 
 ```python
         ctx.event_framework = self._framework
@@ -360,13 +360,13 @@ In `src/dazzle_back/runtime/subsystems/events.py`, after the framework is create
 
 - [ ] **Step 5: Verify server still starts**
 
-Run: `python -c "from dazzle_back.runtime.server import create_app; print('OK')"`
+Run: `python -c "from dazzle_http.runtime.server import create_app; print('OK')"`
 Expected: No import error (actual server start requires config)
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/server.py src/dazzle_back/runtime/subsystems/events.py
+git add src/dazzle_http/runtime/server.py src/dazzle_http/runtime/subsystems/events.py
 git commit -m "feat(runtime): wire RuntimeServices into app startup (#673)"
 ```
 
@@ -375,16 +375,16 @@ git commit -m "feat(runtime): wire RuntimeServices into app startup (#673)"
 ### Task 7: Migrate Remaining Production Callers
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/subsystems/system_routes.py`
-- Modify: `src/dazzle_back/runtime/metrics/middleware.py`
-- Modify: `src/dazzle_back/runtime/auth/events.py`
-- Modify: `src/dazzle_back/runtime/realtime_routes.py`
+- Modify: `src/dazzle_http/runtime/subsystems/system_routes.py`
+- Modify: `src/dazzle_http/runtime/metrics/middleware.py`
+- Modify: `src/dazzle_http/runtime/auth/events.py`
+- Modify: `src/dazzle_http/runtime/realtime_routes.py`
 
 - [ ] **Step 1: Update `system_routes.py`**
 
 Read the file. At line 170-173, replace:
 ```python
-from dazzle_back.runtime.event_bus import get_event_bus
+from dazzle_http.runtime.event_bus import get_event_bus
 event_bus = get_event_bus()
 ```
 with:
@@ -414,7 +414,7 @@ At lines 115-118, the `_publish()` function calls `get_framework()`. This functi
 
 ```python
     try:
-        from dazzle_back.events.framework import get_framework
+        from dazzle_http.events.framework import get_framework
 
         framework = get_framework()
         bus = framework.get_bus() if framework else None
@@ -459,7 +459,7 @@ The key change: replace `create_event_bus()` with `EntityEventBus()` and `create
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/subsystems/system_routes.py src/dazzle_back/runtime/metrics/middleware.py src/dazzle_back/runtime/auth/events.py src/dazzle_back/runtime/realtime_routes.py
+git add src/dazzle_http/runtime/subsystems/system_routes.py src/dazzle_http/runtime/metrics/middleware.py src/dazzle_http/runtime/auth/events.py src/dazzle_http/runtime/realtime_routes.py
 git commit -m "refactor(runtime): migrate callers to RuntimeServices (#673)"
 ```
 
@@ -468,8 +468,8 @@ git commit -m "refactor(runtime): migrate callers to RuntimeServices (#673)"
 ### Task 8: Migrate Test Files
 
 **Files:**
-- Modify: `src/dazzle_back/tests/test_event_bus.py`
-- Modify: `src/dazzle_back/tests/test_presence_tracker.py`
+- Modify: `src/dazzle_http/tests/test_event_bus.py`
+- Modify: `src/dazzle_http/tests/test_presence_tracker.py`
 - Modify: `tests/unit/test_auth_events.py`
 
 - [ ] **Step 1: Update `test_event_bus.py` fixtures**
@@ -511,24 +511,24 @@ Same pattern: remove `reset_presence_tracker` autouse fixture, remove imports of
 
 - [ ] **Step 5: Update `test_auth_events.py` patches**
 
-There are ~11 patches of `dazzle_back.events.framework.get_framework`. These need to change to patch the new module-level variable. If Task 7 introduced `configure_auth_events()` with a `_event_framework` module-level var in `auth/events.py`, the patches change to:
+There are ~11 patches of `dazzle_http.events.framework.get_framework`. These need to change to patch the new module-level variable. If Task 7 introduced `configure_auth_events()` with a `_event_framework` module-level var in `auth/events.py`, the patches change to:
 
 ```python
-with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
+with patch("dazzle_http.runtime.auth.events._event_framework", mock_framework):
     await emit_user_registered(user, session_id="sess_abc")
 ```
 
 - [ ] **Step 6: Run all affected tests**
 
 ```bash
-pytest src/dazzle_back/tests/test_event_bus.py src/dazzle_back/tests/test_presence_tracker.py tests/unit/test_auth_events.py -v
+pytest src/dazzle_http/tests/test_event_bus.py src/dazzle_http/tests/test_presence_tracker.py tests/unit/test_auth_events.py -v
 ```
 Expected: ALL PASS
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle_back/tests/test_event_bus.py src/dazzle_back/tests/test_presence_tracker.py tests/unit/test_auth_events.py
+git add src/dazzle_http/tests/test_event_bus.py src/dazzle_http/tests/test_presence_tracker.py tests/unit/test_auth_events.py
 git commit -m "test(runtime): migrate tests to fixture-based isolation (#673)"
 ```
 
@@ -543,12 +543,12 @@ Expected: ALL PASS
 
 - [ ] **Step 2: Check global keyword count**
 
-Run: `grep -rn "^    global " src/dazzle_back/ --include="*.py" | grep -v examples | wc -l`
+Run: `grep -rn "^    global " src/dazzle_http/ --include="*.py" | grep -v examples | wc -l`
 Expected: ≤ 4 (down from ~20)
 
 - [ ] **Step 3: Verify no deleted functions remain as imports**
 
-Run: `grep -rn "get_event_bus\|set_event_bus\|reset_event_bus\|get_presence_tracker\|set_presence_tracker\|reset_presence_tracker\|get_framework\|get_collector\|reset_collector\|get_system_collector\|reset_system_collector\|get_emitter" src/dazzle_back/ --include="*.py" | grep -v "test_\|\.pyc\|def get_event_bus\|def get_services"'`
+Run: `grep -rn "get_event_bus\|set_event_bus\|reset_event_bus\|get_presence_tracker\|set_presence_tracker\|reset_presence_tracker\|get_framework\|get_collector\|reset_collector\|get_system_collector\|reset_system_collector\|get_emitter" src/dazzle_http/ --include="*.py" | grep -v "test_\|\.pyc\|def get_event_bus\|def get_services"'`
 Expected: 0 matches (or only in comments/docstrings)
 
 - [ ] **Step 4: Lint**
@@ -558,7 +558,7 @@ Expected: Clean
 
 - [ ] **Step 5: Type check**
 
-Run: `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_back/ --ignore-missing-imports`
+Run: `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_http/ --ignore-missing-imports`
 Expected: Clean or no new errors
 
 - [ ] **Step 6: Final commit if lint/format changes**

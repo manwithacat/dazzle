@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dazzle.back.converters.surface_converter import convert_surfaces_to_services
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import ModuleIR
 from dazzle.core.linker import build_appspec
+from dazzle.http.converters.surface_converter import convert_surfaces_to_services
 
 _BASE = """module t
 app t "Test"

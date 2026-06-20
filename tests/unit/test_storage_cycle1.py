@@ -18,7 +18,9 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.back.runtime.storage import (
+from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.manifest import StorageConfig, _parse_storage_configs
+from dazzle.http.runtime.storage import (
     EnvVarMissingError,
     ObjectMetadata,
     StorageProvider,
@@ -26,8 +28,6 @@ from dazzle.back.runtime.storage import (
     extract_env_var_refs,
     interpolate_env_vars,
 )
-from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.manifest import StorageConfig, _parse_storage_configs
 
 # ---------------------------------------------------------------------------
 # Manifest config parsing

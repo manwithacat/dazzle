@@ -67,7 +67,7 @@ tests/unit/render/
 
 23 source files, 18 test files. Each source file has one clear responsibility; each test file pins behaviour for one source file (or one primitive cluster).
 
-**Boundary discipline:** nothing in this package imports from `src/dazzle_back/`, `src/dazzle_ui/`, or `src/dazzle/core/ir/`. The package takes IR-shaped inputs as plain dataclass arguments at the boundary (the renderer's input is a `Fragment`, not an `AppSpec`). This isolation is what makes Plan 2's integration cheap.
+**Boundary discipline:** nothing in this package imports from `src/dazzle_http/`, `src/dazzle_page/`, or `src/dazzle/core/ir/`. The package takes IR-shaped inputs as plain dataclass arguments at the boundary (the renderer's input is a `Fragment`, not an `AppSpec`). This isolation is what makes Plan 2's integration cheap.
 
 ---
 
@@ -4194,7 +4194,7 @@ After Task 24 is committed:
 - [ ] Run `mypy src/dazzle/render --strict` — clean.
 - [ ] Run `mypy src/dazzle --ignore-missing-imports` — no new errors elsewhere.
 - [ ] Run `ruff check src/dazzle tests/ && ruff format --check src/dazzle tests/` — clean.
-- [ ] Confirm `src/dazzle/render/` is a leaf package: `grep -r "from dazzle_back\|from dazzle_ui\|from dazzle.core.ir" src/dazzle/render/` should return nothing. The render package must not import from those modules; integration happens in Plan 2.
+- [ ] Confirm `src/dazzle/render/` is a leaf package: `grep -r "from dazzle_http\|from dazzle_page\|from dazzle.core.ir" src/dazzle/render/` should return nothing. The render package must not import from those modules; integration happens in Plan 2.
 - [ ] Confirm `dazzle serve` on `examples/simple_task` still works unchanged — the new package is import-only and does not affect serving.
 
 When all green: ship per `/ship`. End state — the typed Fragment library exists, is fully tested, can construct and render every framework primitive to valid HTML, and is completely isolated from Dazzle's serving path. Plan 2 wires it up.

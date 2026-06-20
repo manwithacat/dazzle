@@ -7,7 +7,7 @@ Evaluates ConditionExpr from IR AccessSpec at runtime for:
 
 This is the pure evaluation subset of condition_evaluator — it contains
 only the runtime evaluation logic and none of the SQL filter generation.
-dazzle.back.runtime.condition_evaluator re-exports evaluate_condition from
+dazzle.http.runtime.condition_evaluator re-exports evaluate_condition from
 here so both packages share one implementation.
 """
 

@@ -23,7 +23,7 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-CSS_DIR = ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "css"
+CSS_DIR = ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "css"
 
 
 def _live_lines(text: str) -> list[str]:

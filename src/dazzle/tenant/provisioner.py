@@ -59,11 +59,11 @@ class TenantProvisioner:
         from alembic.config import Config as AlembicConfig
 
         try:
-            from dazzle import back as dazzle_back
+            from dazzle import http as dazzle_http
 
-            alembic_dir = Path(dazzle_back.__file__).resolve().parent / "alembic"
+            alembic_dir = Path(dazzle_http.__file__).resolve().parent / "alembic"
         except (ImportError, AttributeError):
-            alembic_dir = Path(__file__).resolve().parents[2] / "dazzle" / "back" / "alembic"
+            alembic_dir = Path(__file__).resolve().parents[2] / "dazzle" / "http" / "alembic"
         cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
         cfg.set_main_option("script_location", str(alembic_dir))
         cfg.set_main_option("sqlalchemy.url", self._db_url)

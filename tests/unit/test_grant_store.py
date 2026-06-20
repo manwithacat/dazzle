@@ -10,7 +10,7 @@ import psycopg
 import pytest
 from psycopg.rows import dict_row
 
-from dazzle.back.runtime.grant_store import GrantStatus, GrantStore
+from dazzle.http.runtime.grant_store import GrantStatus, GrantStore
 
 pytestmark = pytest.mark.postgres
 

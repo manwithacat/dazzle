@@ -47,10 +47,10 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TEMPLATES_ROOT = REPO_ROOT / "src" / "dazzle" / "ui" / "templates"
+TEMPLATES_ROOT = REPO_ROOT / "src" / "dazzle" / "page" / "templates"
 
 # Jinja filters that handle None explicitly (verified by reading
-# ``src/dazzle/ui/runtime/template_renderer.py`` — each contains an
+# ``src/dazzle/page/runtime/template_renderer.py`` — each contains an
 # ``if value is None: return <safe>`` guard or equivalent).
 _NONE_SAFE_FILTERS = frozenset(
     {
@@ -147,7 +147,7 @@ class TestTemplateNoneSafety:
     without a None-safe downstream filter is forbidden."""
 
     def test_no_bare_default_filter_without_none_safe_downstream(self) -> None:
-        """Scan every .html template under src/dazzle/ui/templates/ and
+        """Scan every .html template under src/dazzle/page/templates/ and
         assert no unsafe ``| default()`` usages exist.
 
         This guards against re-introducing the EX-051 drift class. If

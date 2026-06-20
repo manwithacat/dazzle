@@ -115,7 +115,7 @@ Record: actual field names, the observer/executor attachment mechanism, and how 
 
 - [ ] **Step 2: Verify DB pool access path**
 
-Run: `grep -rn "asyncpg.create_pool\|Pool" src/dazzle/core/runtime_services.py src/dazzle_back/ | head -30`
+Run: `grep -rn "asyncpg.create_pool\|Pool" src/dazzle/core/runtime_services.py src/dazzle_http/ | head -30`
 Expected: finds the canonical place to get an asyncpg pool for a running example app.
 
 Record: is the pool accessible via `RuntimeServices.db_pool()` or another path? Is there a read-only pool for snapshot work?

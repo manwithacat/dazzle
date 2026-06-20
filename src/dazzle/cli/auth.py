@@ -508,7 +508,7 @@ def impersonate(
     import socket
     from datetime import timedelta
 
-    from dazzle.back.runtime.auth.magic_link import create_magic_link
+    from dazzle.http.runtime.auth.magic_link import create_magic_link
 
     store = _get_auth_store()
     user = _resolve_user(store, identifier)
@@ -746,7 +746,7 @@ def rotate_encryption_key() -> None:
     """
     import os
 
-    from dazzle.back.runtime.auth.connection_crypto import (
+    from dazzle.http.runtime.auth.connection_crypto import (
         _ENV_KEY_OLD,
         ConnectionSecretError,
         _load_key,

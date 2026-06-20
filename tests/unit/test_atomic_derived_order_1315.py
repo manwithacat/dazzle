@@ -123,7 +123,7 @@ atomic touch "Touch":
 
 
 def test_executor_runs_in_derived_order() -> None:
-    from dazzle.back.runtime.atomic_flow_executor import execute_atomic_flow
+    from dazzle.http.runtime.atomic_flow_executor import execute_atomic_flow
 
     # A 2-create flow whose derived order reverses the declared order.
     flow = ir.AtomicFlowSpec(

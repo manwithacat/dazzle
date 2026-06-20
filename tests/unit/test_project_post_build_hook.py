@@ -8,7 +8,7 @@ import types
 
 import pytest
 
-from dazzle.back.runtime.app_factory import (
+from dazzle.http.runtime.app_factory import (
     _PROJECT_INIT_MODULE,
     _invoke_project_post_build_hook,
     _resolve_project_page_auth_context,
@@ -42,7 +42,7 @@ def _install_project_module(register_middleware=None, **extra_attrs):
 
 def test_no_project_module_is_silent_noop(cleanup_project_module, caplog):
     """Most projects don't ship pipeline.serve.app_init; absence is a no-op."""
-    caplog.set_level(logging.DEBUG, logger="dazzle.back.runtime.app_factory")
+    caplog.set_level(logging.DEBUG, logger="dazzle.http.runtime.app_factory")
     sentinel_app = object()
     _invoke_project_post_build_hook(sentinel_app)  # type: ignore[arg-type]
     assert any("No project post-build hook" in r.message for r in caplog.records)
@@ -50,7 +50,7 @@ def test_no_project_module_is_silent_noop(cleanup_project_module, caplog):
 
 def test_module_without_register_middleware_is_noop(cleanup_project_module, caplog):
     """Module exists but doesn't expose the hook callable — debug log, no crash."""
-    caplog.set_level(logging.DEBUG, logger="dazzle.back.runtime.app_factory")
+    caplog.set_level(logging.DEBUG, logger="dazzle.http.runtime.app_factory")
     _install_project_module(register_middleware=None, other_attr=lambda: None)
     sentinel_app = object()
     _invoke_project_post_build_hook(sentinel_app)  # type: ignore[arg-type]
@@ -111,7 +111,7 @@ def test_page_auth_context_present_is_returned(cleanup_project_module):
 
 def test_page_auth_context_non_callable_is_ignored(cleanup_project_module, caplog):
     """A non-callable attribute is ignored (warn), never returned."""
-    caplog.set_level(logging.WARNING, logger="dazzle.back.runtime.app_factory")
+    caplog.set_level(logging.WARNING, logger="dazzle.http.runtime.app_factory")
     _install_project_module(page_auth_context="not-callable")
     assert _resolve_project_page_auth_context() is None
     assert any("not callable" in r.message for r in caplog.records)

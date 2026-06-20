@@ -4,14 +4,14 @@
 
 **Goal:** Replace the hand-rolled `MigrationPlanner` with Alembic-based migrations, adding safe type casting, empty revision suppression, and user-friendly CLI commands.
 
-**Architecture:** Alembic is already scaffolded (`src/dazzle_back/alembic/env.py`, `alembic.ini`, CLI commands). The work is: (1) add safe-cast registry, (2) enhance `env.py` with `compare_type=True`, `process_revision_directives` (suppress empties + inject USING clauses), (3) add `dazzle db migrate`/`rollback` commands, (4) replace `auto_migrate()` with Alembic in server startup + production guard, (5) retire ~400 lines of hand-rolled code.
+**Architecture:** Alembic is already scaffolded (`src/dazzle_http/alembic/env.py`, `alembic.ini`, CLI commands). The work is: (1) add safe-cast registry, (2) enhance `env.py` with `compare_type=True`, `process_revision_directives` (suppress empties + inject USING clauses), (3) add `dazzle db migrate`/`rollback` commands, (4) replace `auto_migrate()` with Alembic in server startup + production guard, (5) retire ~400 lines of hand-rolled code.
 
 **Tech Stack:** Python 3.12, Alembic >= 1.13, SQLAlchemy >= 2.0, Typer CLI
 
 **Spec:** `docs/superpowers/specs/2026-03-23-alembic-migrations-design.md`
 
 **Deviations from spec (deliberate):**
-- Spec says create `src/dazzle_back/runtime/alembic_env.py` — we modify the existing `src/dazzle_back/alembic/env.py` instead (already scaffolded)
+- Spec says create `src/dazzle_http/runtime/alembic_env.py` — we modify the existing `src/dazzle_http/alembic/env.py` instead (already scaffolded)
 - Spec says `SAFE_CASTS` in `migrations.py` — we create a separate `safe_casts.py` (cleaner separation)
 - Spec says no `alembic.ini` — we keep it (already exists, simpler than programmatic config)
 
@@ -21,13 +21,13 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_back/runtime/safe_casts.py` | Create | SAFE_CASTS registry, lookup, validation |
-| `src/dazzle_back/alembic/env.py` | Modify | Add `compare_type=True`, `process_revision_directives` hook |
+| `src/dazzle_http/runtime/safe_casts.py` | Create | SAFE_CASTS registry, lookup, validation |
+| `src/dazzle_http/alembic/env.py` | Modify | Add `compare_type=True`, `process_revision_directives` hook |
 | `src/dazzle/cli/db.py` | Modify | Add `migrate`, `rollback` wrapper commands |
-| `src/dazzle_back/runtime/server.py` | Modify | Replace `auto_migrate()` with Alembic upgrade |
+| `src/dazzle_http/runtime/server.py` | Modify | Replace `auto_migrate()` with Alembic upgrade |
 | `src/dazzle/cli/runtime_impl/serve.py` | Modify | Add production guard for pending migrations |
-| `src/dazzle_back/runtime/migrations.py` | Modify | Retire MigrationPlanner/Executor/History |
-| `src/dazzle_back/__init__.py` | Modify | Remove `auto_migrate`/`plan_migrations` exports |
+| `src/dazzle_http/runtime/migrations.py` | Modify | Retire MigrationPlanner/Executor/History |
+| `src/dazzle_http/__init__.py` | Modify | Remove `auto_migrate`/`plan_migrations` exports |
 | `tests/unit/test_safe_casts.py` | Create | Test safe cast registry |
 | `tests/unit/test_circular_fk_migration.py` | Delete | Tests for retired MigrationPlanner |
 | `pyproject.toml` | Modify | Add `alembic>=1.13` to dependencies |
@@ -38,7 +38,7 @@
 ### Task 1: Add alembic dependency and safe cast registry
 
 **Files:**
-- Create: `src/dazzle_back/runtime/safe_casts.py`
+- Create: `src/dazzle_http/runtime/safe_casts.py`
 - Create: `tests/unit/test_safe_casts.py`
 - Modify: `pyproject.toml`
 
@@ -63,7 +63,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle_back.runtime.safe_casts import SAFE_CASTS, get_using_clause, is_safe_cast
+from dazzle_http.runtime.safe_casts import SAFE_CASTS, get_using_clause, is_safe_cast
 
 
 class TestSafeCastRegistry:
@@ -123,7 +123,7 @@ Expected: FAIL — `ModuleNotFoundError`
 
 - [ ] **Step 4: Implement safe_casts.py**
 
-Create `src/dazzle_back/runtime/safe_casts.py`:
+Create `src/dazzle_http/runtime/safe_casts.py`:
 
 ```python
 """Safe cast registry for Alembic type change migrations.
@@ -135,7 +135,7 @@ auto-migration. Unknown casts are skipped with a warning.
 
 from __future__ import annotations
 
-from dazzle_back.runtime.query_builder import quote_identifier
+from dazzle_http.runtime.query_builder import quote_identifier
 
 # (from_type, to_type) → USING template or "" for no-op widening.
 # Types are uppercase Postgres type names as returned by information_schema.
@@ -179,7 +179,7 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/safe_casts.py tests/unit/test_safe_casts.py pyproject.toml
+git add src/dazzle_http/runtime/safe_casts.py tests/unit/test_safe_casts.py pyproject.toml
 git commit -m "feat: add safe cast registry for Alembic type migrations (#625)"
 ```
 
@@ -188,7 +188,7 @@ git commit -m "feat: add safe cast registry for Alembic type migrations (#625)"
 ### Task 2: Enhance Alembic env.py
 
 **Files:**
-- Modify: `src/dazzle_back/alembic/env.py`
+- Modify: `src/dazzle_http/alembic/env.py`
 
 This task adds three things to the existing Alembic environment:
 1. `compare_type=True` to detect type changes
@@ -226,7 +226,7 @@ def _process_revision_directives(context, revision, directives):
 
     # Inject USING clauses for safe type casts
     try:
-        from dazzle_back.runtime.safe_casts import is_safe_cast, get_using_clause
+        from dazzle_http.runtime.safe_casts import is_safe_cast, get_using_clause
     except ImportError:
         return
 
@@ -274,13 +274,13 @@ In `run_migrations_online()`, update `context.configure()`:
 
 - [ ] **Step 3: Run lint and verify**
 
-Run: `ruff check src/dazzle_back/alembic/env.py --fix`
-Run: `python -c "from dazzle_back.alembic import env; print('OK')"`
+Run: `ruff check src/dazzle_http/alembic/env.py --fix`
+Run: `python -c "from dazzle_http.alembic import env; print('OK')"`
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_back/alembic/env.py
+git add src/dazzle_http/alembic/env.py
 git commit -m "feat: add compare_type and safe-cast injection to Alembic env (#625)"
 ```
 
@@ -427,12 +427,12 @@ git commit -m "feat: add dazzle db migrate and rollback wrapper commands (#625)"
 ### Task 4: Replace auto_migrate with Alembic in server and add production guard
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/server.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 - Modify: `src/dazzle/cli/runtime_impl/serve.py`
 
 - [ ] **Step 1: Replace auto_migrate in server.py _setup_database**
 
-In `src/dazzle_back/runtime/server.py`, the `_setup_database` method calls `auto_migrate()` at line ~493. Replace with:
+In `src/dazzle_http/runtime/server.py`, the `_setup_database` method calls `auto_migrate()` at line ~493. Replace with:
 
 ```python
         # Auto-migrate via Alembic
@@ -456,11 +456,11 @@ In `src/dazzle_back/runtime/server.py`, the `_setup_database` method calls `auto
 
 Update the import at the top of `server.py` — change:
 ```python
-from dazzle_back.runtime.migrations import MigrationPlan, auto_migrate
+from dazzle_http.runtime.migrations import MigrationPlan, auto_migrate
 ```
 to:
 ```python
-from dazzle_back.runtime.migrations import MigrationPlan
+from dazzle_http.runtime.migrations import MigrationPlan
 ```
 
 Also replace `_migrate_tenant_schemas()` (line ~435) — it calls `auto_migrate()` which is being deleted. Replace the `auto_migrate()` call with Alembic:
@@ -495,7 +495,7 @@ In `src/dazzle/cli/runtime_impl/serve.py`, inside the `if production:` block (ad
             from alembic.util.exc import CommandError
             from pathlib import Path as _Path
 
-            alembic_dir = _Path(__file__).resolve().parents[3] / "dazzle_back" / "alembic"
+            alembic_dir = _Path(__file__).resolve().parents[3] / "dazzle_http" / "alembic"
             cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
             cfg.set_main_option("script_location", str(alembic_dir))
             cfg.set_main_option("sqlalchemy.url", database_url)
@@ -521,7 +521,7 @@ Expected: All pass (server startup code only exercised in integration tests)
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/server.py src/dazzle/cli/runtime_impl/serve.py
+git add src/dazzle_http/runtime/server.py src/dazzle/cli/runtime_impl/serve.py
 git commit -m "feat: replace auto_migrate with Alembic, add production guard (#625)"
 ```
 
@@ -530,15 +530,15 @@ git commit -m "feat: replace auto_migrate with Alembic, add production guard (#6
 ### Task 5: Retire hand-rolled migration code
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/migrations.py`
-- Modify: `src/dazzle_back/__init__.py`
-- Modify: `src/dazzle_back/runtime/__init__.py`
+- Modify: `src/dazzle_http/runtime/migrations.py`
+- Modify: `src/dazzle_http/__init__.py`
+- Modify: `src/dazzle_http/runtime/__init__.py`
 - Delete: `tests/unit/test_circular_fk_migration.py`
-- Delete: `src/dazzle_back/tests/test_migrations.py`
+- Delete: `src/dazzle_http/tests/test_migrations.py`
 
 - [ ] **Step 1: Delete MigrationPlanner, MigrationExecutor, MigrationHistory, auto_migrate**
 
-In `src/dazzle_back/runtime/migrations.py`:
+In `src/dazzle_http/runtime/migrations.py`:
 
 **Keep:**
 - Module docstring (update to reflect new role)
@@ -565,20 +565,20 @@ Update the module docstring:
 """
 Migration support types and schema introspection for Dazzle.
 
-Migrations are managed by Alembic (see src/dazzle_back/alembic/).
+Migrations are managed by Alembic (see src/dazzle_http/alembic/).
 This module retains schema introspection utilities and type definitions
 used by the MCP db tools and CLI reporting.
 """
 ```
 
-- [ ] **Step 2: Update dazzle_back/__init__.py**
+- [ ] **Step 2: Update dazzle_http/__init__.py**
 
 Remove `auto_migrate` and `plan_migrations` from the lazy imports:
 - Remove lines referencing `_get_auto_migrate`, `_get_plan_migrations`
 - Remove entries from the `__getattr__` dispatch dict
 - Remove from `__all__` if present
 
-Also update `src/dazzle_back/runtime/__init__.py`:
+Also update `src/dazzle_http/runtime/__init__.py`:
 - Remove `MigrationPlanner`, `auto_migrate`, `plan_migrations` from imports (lines 45-48)
 - Remove from `__all__` (lines 120-125)
 
@@ -586,7 +586,7 @@ Also update `src/dazzle_back/runtime/__init__.py`:
 
 ```bash
 rm tests/unit/test_circular_fk_migration.py
-rm src/dazzle_back/tests/test_migrations.py
+rm src/dazzle_http/tests/test_migrations.py
 ```
 
 Both test files import `MigrationPlanner` which is being deleted. The circular FK handling is now Alembic's responsibility via `sa_schema.py`'s `_find_circular_refs()`.
@@ -609,7 +609,7 @@ Expected: All pass
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/migrations.py src/dazzle_back/__init__.py tests/unit/test_circular_fk_migration.py
+git add src/dazzle_http/runtime/migrations.py src/dazzle_http/__init__.py tests/unit/test_circular_fk_migration.py
 git commit -m "refactor: retire MigrationPlanner/Executor/History (~400 lines) in favor of Alembic (#625)"
 ```
 
@@ -644,11 +644,11 @@ Add under `## [Unreleased]`:
 
 - [ ] **Step 2: Run lint**
 
-Run: `ruff check src/dazzle_back/runtime/safe_casts.py src/dazzle_back/runtime/migrations.py src/dazzle/cli/db.py src/dazzle_back/alembic/env.py src/dazzle_back/runtime/server.py --fix`
+Run: `ruff check src/dazzle_http/runtime/safe_casts.py src/dazzle_http/runtime/migrations.py src/dazzle/cli/db.py src/dazzle_http/alembic/env.py src/dazzle_http/runtime/server.py --fix`
 
 - [ ] **Step 3: Run mypy**
 
-Run: `mypy src/dazzle_back/runtime/safe_casts.py src/dazzle_back/runtime/migrations.py src/dazzle/cli/db.py --ignore-missing-imports`
+Run: `mypy src/dazzle_http/runtime/safe_casts.py src/dazzle_http/runtime/migrations.py src/dazzle/cli/db.py --ignore-missing-imports`
 
 - [ ] **Step 4: Run full test suite**
 

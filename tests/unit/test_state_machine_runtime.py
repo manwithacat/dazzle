@@ -10,13 +10,13 @@ Verifies that TransitionValidator correctly handles:
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-from dazzle.back.runtime.state_machine import (
+from dazzle.http.runtime.state_machine import (
     GuardNotSatisfiedError,
     InvalidTransitionError,
     TransitionValidator,
     validate_status_update,
 )
-from dazzle.back.specs.entity import (
+from dazzle.http.specs.entity import (
     StateMachineSpec,
     StateTransitionSpec,
     TransitionGuardSpec,
@@ -243,7 +243,7 @@ class TestEvalFuncHasGrant:
         }
 
     def test_has_grant_returns_true_when_active(self) -> None:
-        from dazzle.back.runtime.state_machine import evaluate_guard_expr
+        from dazzle.http.runtime.state_machine import evaluate_guard_expr
 
         store = MagicMock()
         store.has_active_grant.return_value = True
@@ -255,7 +255,7 @@ class TestEvalFuncHasGrant:
         store.has_active_grant.assert_called_once()
 
     def test_has_grant_returns_false_when_no_store(self) -> None:
-        from dazzle.back.runtime.state_machine import evaluate_guard_expr
+        from dazzle.http.runtime.state_machine import evaluate_guard_expr
 
         scope = uuid4()
         result = evaluate_guard_expr(
@@ -265,7 +265,7 @@ class TestEvalFuncHasGrant:
         assert result is False
 
     def test_has_grant_returns_false_when_no_active_grant(self) -> None:
-        from dazzle.back.runtime.state_machine import evaluate_guard_expr
+        from dazzle.http.runtime.state_machine import evaluate_guard_expr
 
         store = MagicMock()
         store.has_active_grant.return_value = False
@@ -277,7 +277,7 @@ class TestEvalFuncHasGrant:
 
     def test_has_grant_single_arg_infers_scope_from_entity_id(self) -> None:
         """DSL guard: has_grant(approve_letter) — 1 arg, scope_id from data['id']."""
-        from dazzle.back.runtime.state_machine import evaluate_guard_expr
+        from dazzle.http.runtime.state_machine import evaluate_guard_expr
 
         store = MagicMock()
         store.has_active_grant.return_value = True

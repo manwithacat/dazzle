@@ -14,7 +14,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from dazzle.back.runtime.handlers.write_handlers import resolve_backed_entity_refs
+from dazzle.http.runtime.handlers.write_handlers import resolve_backed_entity_refs
 
 
 class _Create(BaseModel):

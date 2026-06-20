@@ -10,7 +10,7 @@ def quote_id(name: str) -> str:
     """Quote a SQL identifier (table or column name).
 
     Dazzle uses PascalCase entity names as table names, quoted with double-quotes.
-    Re-implements the logic from dazzle.back.runtime.query_builder.quote_identifier
+    Re-implements the logic from dazzle.http.runtime.query_builder.quote_identifier
     to avoid importing the runtime package (which has heavier dependencies).
     """
     escaped = name.replace('"', '""')

@@ -18,13 +18,13 @@ from dazzle.core.ir.predicates import (
 
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.predicate_compiler import (
+from dazzle.core.ir.fk_graph import FKEdge, FKGraph
+from dazzle.http.runtime.predicate_compiler import (
     _field_type_to_pg,
     collect_user_attr_refs,
     compile_predicate,
     compile_predicate_policy,
 )
-from dazzle.core.ir.fk_graph import FKEdge, FKGraph
 
 
 def _simple_graph() -> FKGraph:
@@ -75,7 +75,7 @@ class TestUserAttrCheck:
         # Params contain a UserAttrRef marker that the route handler resolves
         # at request time via _resolve_user_attribute(attr_name, auth_context).
         assert len(params) == 1
-        from dazzle.back.runtime.predicate_compiler import UserAttrRef
+        from dazzle.http.runtime.predicate_compiler import UserAttrRef
 
         assert isinstance(params[0], UserAttrRef)
         assert params[0].attr_name == "school"
@@ -347,7 +347,7 @@ class TestResidualBranches:
         # resolve to a PayloadFieldRef param (the root row isn't persisted yet), NOT a
         # `"<entity>"."id"` column ref. A `payload_mode=True`→`False` flip would emit the
         # column ref against a row that doesn't exist.
-        from dazzle.back.runtime.predicate_compiler import (
+        from dazzle.http.runtime.predicate_compiler import (
             PayloadFieldRef,
             compile_exists_check_probe,
         )

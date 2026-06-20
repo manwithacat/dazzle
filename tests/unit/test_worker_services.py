@@ -47,10 +47,10 @@ def test_no_jobrun_or_auditentry_returns_empty_services(parse_dsl, tmp_path):
         """,
         tmp_path,
     )
-    from dazzle.back.runtime.worker_services import build_worker_services
+    from dazzle.http.runtime.worker_services import build_worker_services
 
     fake_pg = MagicMock()
-    with patch("dazzle.back.runtime.worker_services.PostgresBackend", return_value=fake_pg):
+    with patch("dazzle.http.runtime.worker_services.PostgresBackend", return_value=fake_pg):
         services, db = build_worker_services(appspec, "postgresql://x")
     assert services == {}
     # We still hand back a live db_manager so caller's shutdown is uniform.
@@ -74,10 +74,10 @@ def test_audit_block_yields_auditentry_service(parse_dsl, tmp_path):
         """,
         tmp_path,
     )
-    from dazzle.back.runtime.worker_services import build_worker_services
+    from dazzle.http.runtime.worker_services import build_worker_services
 
     fake_pg = MagicMock()
-    with patch("dazzle.back.runtime.worker_services.PostgresBackend", return_value=fake_pg):
+    with patch("dazzle.http.runtime.worker_services.PostgresBackend", return_value=fake_pg):
         services, _ = build_worker_services(appspec, "postgresql://x")
 
     assert "AuditEntry" in services
@@ -99,10 +99,10 @@ def test_job_block_yields_jobrun_service(parse_dsl, tmp_path):
         """,
         tmp_path,
     )
-    from dazzle.back.runtime.worker_services import build_worker_services
+    from dazzle.http.runtime.worker_services import build_worker_services
 
     fake_pg = MagicMock()
-    with patch("dazzle.back.runtime.worker_services.PostgresBackend", return_value=fake_pg):
+    with patch("dazzle.http.runtime.worker_services.PostgresBackend", return_value=fake_pg):
         services, _ = build_worker_services(appspec, "postgresql://x")
 
     assert "JobRun" in services
@@ -129,10 +129,10 @@ def test_both_blocks_yield_both_services(parse_dsl, tmp_path):
         """,
         tmp_path,
     )
-    from dazzle.back.runtime.worker_services import build_worker_services
+    from dazzle.http.runtime.worker_services import build_worker_services
 
     fake_pg = MagicMock()
-    with patch("dazzle.back.runtime.worker_services.PostgresBackend", return_value=fake_pg):
+    with patch("dazzle.http.runtime.worker_services.PostgresBackend", return_value=fake_pg):
         services, _ = build_worker_services(appspec, "postgresql://x")
 
     assert {"JobRun", "AuditEntry"} <= set(services.keys())
@@ -158,10 +158,10 @@ def test_services_have_repository_wired(parse_dsl, tmp_path):
         """,
         tmp_path,
     )
-    from dazzle.back.runtime.worker_services import build_worker_services
+    from dazzle.http.runtime.worker_services import build_worker_services
 
     fake_pg = MagicMock()
-    with patch("dazzle.back.runtime.worker_services.PostgresBackend", return_value=fake_pg):
+    with patch("dazzle.http.runtime.worker_services.PostgresBackend", return_value=fake_pg):
         services, _ = build_worker_services(appspec, "postgresql://x")
 
     job_service = services["JobRun"]

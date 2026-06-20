@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.core.ir.surfaces import SurfaceMode
+from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.fragment import URL, FragmentRenderer, Pagination
 from dazzle.render.fragment.renderer._helpers import _pagination_pages
 

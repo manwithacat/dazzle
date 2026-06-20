@@ -10,7 +10,7 @@ Tests the runtime evaluation of access rules including:
 
 import pytest
 
-from dazzle.back.specs import (
+from dazzle.http.specs import (
     AccessComparisonKind,
     AccessConditionSpec,
     AccessLogicalKind,
@@ -19,7 +19,7 @@ from dazzle.back.specs import (
     PermissionRuleSpec,
     VisibilityRuleSpec,
 )
-from dazzle.back.specs.auth import AccessAuthContext
+from dazzle.http.specs.auth import AccessAuthContext
 from dazzle.render.access_evaluator import (
     AccessRuntimeContext,
     can_create,

@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.core.ir.surfaces import SurfaceMode
+from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.fragment import URL, CreateButton, FragmentRenderer
 
 

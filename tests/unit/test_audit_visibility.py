@@ -27,7 +27,7 @@ from typing import Any
 
 import pytest
 
-from dazzle.back.runtime.audit_visibility import (
+from dazzle.http.runtime.audit_visibility import (
     can_view_audit_history,
     find_audit_spec,
     load_history,

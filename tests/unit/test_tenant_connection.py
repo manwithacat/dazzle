@@ -5,12 +5,12 @@ import pytest
 
 class TestTenantContextVars:
     def test_default_is_none(self) -> None:
-        from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
+        from dazzle.http.runtime.tenant_isolation import get_current_tenant_schema
 
         assert get_current_tenant_schema() is None
 
     def test_set_and_get(self) -> None:
-        from dazzle.back.runtime.tenant_isolation import (
+        from dazzle.http.runtime.tenant_isolation import (
             _current_tenant_schema,
             get_current_tenant_schema,
             set_current_tenant_schema,
@@ -23,7 +23,7 @@ class TestTenantContextVars:
             _current_tenant_schema.reset(token)
 
     def test_reset_clears(self) -> None:
-        from dazzle.back.runtime.tenant_isolation import (
+        from dazzle.http.runtime.tenant_isolation import (
             _current_tenant_schema,
             get_current_tenant_schema,
             set_current_tenant_schema,
@@ -66,7 +66,7 @@ class TestManifestBaseDomain:
 class TestPgBackendTenantRouting:
     def test_context_var_readable(self) -> None:
         """When context var is set, it should be readable from pg_backend's perspective."""
-        from dazzle.back.runtime.tenant_isolation import (
+        from dazzle.http.runtime.tenant_isolation import (
             _current_tenant_schema,
             get_current_tenant_schema,
             set_current_tenant_schema,
@@ -80,6 +80,6 @@ class TestPgBackendTenantRouting:
 
     def test_no_context_var_returns_none(self) -> None:
         """Without context var, get_current_tenant_schema returns None."""
-        from dazzle.back.runtime.tenant_isolation import get_current_tenant_schema
+        from dazzle.http.runtime.tenant_isolation import get_current_tenant_schema
 
         assert get_current_tenant_schema() is None

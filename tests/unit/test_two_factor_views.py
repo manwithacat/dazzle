@@ -8,7 +8,7 @@ safety on user-supplied input.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.auth.two_factor_views import (
+from dazzle.http.runtime.auth.two_factor_views import (
     build_2fa_challenge_view,
     build_2fa_settings_view,
     build_2fa_setup_view,

@@ -13,8 +13,8 @@ class TestProcessManagerScheduleRegistration:
         """Schedule specs are passed to adapter on initialize."""
         from unittest.mock import AsyncMock
 
-        from dazzle.back.runtime.process_manager import ProcessManager
         from dazzle.core.ir.process import ScheduleSpec
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         sched = ScheduleSpec(
             name="daily_check",
@@ -36,8 +36,8 @@ class TestProcessManagerScheduleRegistration:
         """Multiple schedule specs are all registered."""
         from unittest.mock import AsyncMock
 
-        from dazzle.back.runtime.process_manager import ProcessManager
         from dazzle.core.ir.process import ScheduleSpec
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         scheds = [
             ScheduleSpec(name="daily", process="daily_job", cron="0 8 * * *"),

@@ -30,10 +30,10 @@ For Phase 5, the revised stop condition is:
 
 | File | Change | Responsibility |
 |---|---|---|
-| `src/dazzle_back/runtime/renderers/jinja.py` | Modify | Replace the stub with a real adapter that delegates to the existing Jinja rendering path |
-| `src/dazzle_back/runtime/renderers/fragment_adapter.py` | Create | `FragmentSurfaceAdapter` — IR-to-Fragment translator for `mode: list` |
-| `src/dazzle_back/runtime/renderers/dispatch.py` | Create | `dispatch_render(surface, *, ctx, fallback)` helper consulted by the request path |
-| `src/dazzle_ui/runtime/page_routes.py` | Modify | Insert `dispatch_render` at the surface-render call site; default behaviour unchanged when `surface.render is None` |
+| `src/dazzle_http/runtime/renderers/jinja.py` | Modify | Replace the stub with a real adapter that delegates to the existing Jinja rendering path |
+| `src/dazzle_http/runtime/renderers/fragment_adapter.py` | Create | `FragmentSurfaceAdapter` — IR-to-Fragment translator for `mode: list` |
+| `src/dazzle_http/runtime/renderers/dispatch.py` | Create | `dispatch_render(surface, *, ctx, fallback)` helper consulted by the request path |
+| `src/dazzle_page/runtime/page_routes.py` | Modify | Insert `dispatch_render` at the surface-render call site; default behaviour unchanged when `surface.render is None` |
 | `examples/simple_task/dsl/app.dsl` | Modify | Add `render: fragment` to the `task_list` surface declaration |
 | `tests/unit/runtime/test_jinja_renderer_adapter.py` | Create | Verify the JinjaRenderer adapter produces the same HTML as the legacy direct path for a fixture surface |
 | `tests/unit/runtime/test_fragment_surface_adapter.py` | Create | Per-method tests for the IR-to-Fragment translator |
@@ -46,9 +46,9 @@ For Phase 5, the revised stop condition is:
 
 - **TDD throughout.** Failing test → minimal implementation → commit.
 - **Lint after each task:** `ruff check src/ tests/ --fix && ruff format src/ tests/`
-- **Type check after each task:** `mypy src/dazzle/render --strict` and `mypy src/dazzle_back --ignore-missing-imports`. No new errors over the pre-existing baseline.
+- **Type check after each task:** `mypy src/dazzle/render --strict` and `mypy src/dazzle_http --ignore-missing-imports`. No new errors over the pre-existing baseline.
 - **Commit messages:** `feat(render): <subject>` for new behaviour; `feat(runtime): <subject>` for runtime wiring; `test(render): <subject>` for tests.
-- **No new `__future__` imports in render package.** `dazzle_back` follows its existing convention.
+- **No new `__future__` imports in render package.** `dazzle_http` follows its existing convention.
 
 ---
 
@@ -57,15 +57,15 @@ For Phase 5, the revised stop condition is:
 The Plan 2 `JinjaRenderer` stub raises `NotImplementedError`. Replace with a real adapter that delegates to the existing Jinja rendering path so the dispatcher can route through it.
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/renderers/jinja.py`
+- Modify: `src/dazzle_http/runtime/renderers/jinja.py`
 - Create: `tests/unit/runtime/test_jinja_renderer_adapter.py`
 
-The existing render path lives in `src/dazzle_ui/runtime/template_renderer.py` (and downstream). The adapter takes a `(surface_spec, render_context)` pair and returns the same HTML the legacy path would have produced.
+The existing render path lives in `src/dazzle_page/runtime/template_renderer.py` (and downstream). The adapter takes a `(surface_spec, render_context)` pair and returns the same HTML the legacy path would have produced.
 
 - [ ] **Step 1: Read the existing Jinja entry point**
 
 ```bash
-grep -n "def render\|def get_template\|class .*Renderer" src/dazzle_ui/runtime/template_renderer.py | head -10
+grep -n "def render\|def get_template\|class .*Renderer" src/dazzle_page/runtime/template_renderer.py | head -10
 ```
 
 Identify the function that takes a surface IR + context and returns rendered HTML (or a TemplateResponse-like wrapper). The exact name varies; the adapter calls it.
@@ -77,7 +77,7 @@ Identify the function that takes a surface IR + context and returns rendered HTM
 """JinjaRenderer adapter: same HTML as the legacy direct path."""
 
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
-from dazzle_back.runtime.renderers.jinja import JinjaRenderer
+from dazzle_http.runtime.renderers.jinja import JinjaRenderer
 
 
 def test_jinja_renderer_renders_a_minimal_list_surface() -> None:
@@ -115,7 +115,7 @@ Expected: FAIL — `JinjaRenderer.render` raises `NotImplementedError`.
 
 - [ ] **Step 4: Implement the adapter**
 
-In `src/dazzle_back/runtime/renderers/jinja.py`, replace the stub with:
+In `src/dazzle_http/runtime/renderers/jinja.py`, replace the stub with:
 
 ```python
 """Jinja renderer adapter — wraps the existing template-rendering path.
@@ -123,7 +123,7 @@ In `src/dazzle_back/runtime/renderers/jinja.py`, replace the stub with:
 Consumed by the registry; the dispatcher routes here when a surface has
 `render: jinja` (or no render: clause and the framework default falls
 through to Jinja). Delegates to the legacy Jinja machinery in
-`dazzle_ui.runtime.template_renderer` so the actual template selection,
+`dazzle_page.runtime.template_renderer` so the actual template selection,
 context preparation, and rendering happen exactly as before.
 """
 
@@ -144,7 +144,7 @@ class JinjaRenderer:
     def render(self, surface: SurfaceSpec, ctx: Any) -> str:
         # Deferred import — keeps the adapter package import-light and
         # avoids any circular-import surprises at module load.
-        from dazzle_ui.runtime.template_renderer import render_surface
+        from dazzle_page.runtime.template_renderer import render_surface
 
         return render_surface(surface, ctx)
 ```
@@ -177,7 +177,7 @@ The Plan 2 default-registration test asserted `JinjaRenderer.render is not yet w
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/jinja.py tests/unit/runtime/test_jinja_renderer_adapter.py
+git add src/dazzle_http/runtime/renderers/jinja.py tests/unit/runtime/test_jinja_renderer_adapter.py
 git commit -m "feat(render): JinjaRenderer adapter wraps legacy template path"
 ```
 
@@ -190,7 +190,7 @@ The `FragmentRenderer` from Plan 1 takes a `Fragment` (typed dataclass tree). Th
 This task ships the minimum-viable adapter for `mode: list` only — enough to render `simple_task.task_list`. Other modes raise `NotImplementedError` and are added in subsequent plans.
 
 **Files:**
-- Create: `src/dazzle_back/runtime/renderers/fragment_adapter.py`
+- Create: `src/dazzle_http/runtime/renderers/fragment_adapter.py`
 - Create: `tests/unit/runtime/test_fragment_surface_adapter.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -203,7 +203,7 @@ import pytest
 
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.render.fragment import Fragment, Surface, Heading, Region, Table
-from dazzle_back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+from dazzle_http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 
 
 def test_list_mode_produces_surface_with_heading_and_region() -> None:
@@ -276,7 +276,7 @@ Expected: FAIL — `ModuleNotFoundError`.
 - [ ] **Step 3: Implement the adapter**
 
 ```python
-# src/dazzle_back/runtime/renderers/fragment_adapter.py
+# src/dazzle_http/runtime/renderers/fragment_adapter.py
 """IR-to-Fragment translator for surface rendering.
 
 Takes a SurfaceSpec + render context (rows, columns, etc. — same shape
@@ -361,8 +361,8 @@ Expected: 4 PASS.
 - [ ] **Step 5: Lint and types**
 
 ```bash
-ruff check src/dazzle_back/runtime/renderers tests/unit/runtime --fix && ruff format src/dazzle_back/runtime/renderers tests/unit/runtime
-mypy src/dazzle_back/runtime/renderers --ignore-missing-imports
+ruff check src/dazzle_http/runtime/renderers tests/unit/runtime --fix && ruff format src/dazzle_http/runtime/renderers tests/unit/runtime
+mypy src/dazzle_http/runtime/renderers --ignore-missing-imports
 ```
 
 Both clean.
@@ -370,7 +370,7 @@ Both clean.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/fragment_adapter.py tests/unit/runtime/test_fragment_surface_adapter.py
+git add src/dazzle_http/runtime/renderers/fragment_adapter.py tests/unit/runtime/test_fragment_surface_adapter.py
 git commit -m "feat(render): FragmentSurfaceAdapter — IR-to-Fragment for mode: list"
 ```
 
@@ -381,7 +381,7 @@ git commit -m "feat(render): FragmentSurfaceAdapter — IR-to-Fragment for mode:
 Centralised dispatch logic: given a surface and a render context, pick the right renderer based on `surface.render` and produce HTML. Default fallback is Jinja so untouched surfaces behave exactly as before.
 
 **Files:**
-- Create: `src/dazzle_back/runtime/renderers/dispatch.py`
+- Create: `src/dazzle_http/runtime/renderers/dispatch.py`
 - Create: `tests/unit/runtime/test_dispatch_render.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -396,9 +396,9 @@ import pytest
 
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.render.fragment.errors import FragmentError
-from dazzle_back.runtime.renderers.dispatch import dispatch_render
-from dazzle_back.runtime.renderers.init import register_default_renderers
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.renderers.dispatch import dispatch_render
+from dazzle_http.runtime.renderers.init import register_default_renderers
+from dazzle_http.runtime.services import RuntimeServices
 
 
 def _make_services() -> RuntimeServices:
@@ -453,7 +453,7 @@ Expected: FAIL — `ModuleNotFoundError`.
 - [ ] **Step 3: Implement the helper**
 
 ```python
-# src/dazzle_back/runtime/renderers/dispatch.py
+# src/dazzle_http/runtime/renderers/dispatch.py
 """Dispatch helper: route a surface render through the right renderer.
 
 Consumed at the request-time call site (page_routes.py / workspace_renderer
@@ -471,8 +471,8 @@ from typing import Any
 
 from dazzle.core.ir.surfaces import SurfaceSpec
 from dazzle.render.fragment.errors import FragmentError
-from dazzle_back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+from dazzle_http.runtime.services import RuntimeServices
 
 
 def dispatch_render(
@@ -519,7 +519,7 @@ Expected: 3 PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/dispatch.py tests/unit/runtime/test_dispatch_render.py
+git add src/dazzle_http/runtime/renderers/dispatch.py tests/unit/runtime/test_dispatch_render.py
 git commit -m "feat(render): dispatch_render helper — routes by surface.render with Jinja fallback"
 ```
 
@@ -530,13 +530,13 @@ git commit -m "feat(render): dispatch_render helper — routes by surface.render
 Currently the request path calls Jinja rendering directly. Replace those calls with `dispatch_render(surface, ctx=ctx, services=services)`. The behaviour change is invisible — Jinja still produces the same output for unflipped surfaces — but now `render: fragment` actually routes.
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/page_routes.py` (and possibly `workspace_renderer.py`)
+- Modify: `src/dazzle_page/runtime/page_routes.py` (and possibly `workspace_renderer.py`)
 
 - [ ] **Step 1: Locate the surface-render call sites**
 
 ```bash
-grep -rn "render_template\|TemplateResponse" src/dazzle_ui/runtime/page_routes.py src/dazzle_ui/runtime/workspace_renderer.py 2>/dev/null | head -20
-grep -rn "render_in_app_shell" src/dazzle_ui/runtime/ 2>/dev/null | head -10
+grep -rn "render_template\|TemplateResponse" src/dazzle_page/runtime/page_routes.py src/dazzle_page/runtime/workspace_renderer.py 2>/dev/null | head -20
+grep -rn "render_in_app_shell" src/dazzle_page/runtime/ 2>/dev/null | head -10
 ```
 
 The primary call site is in `page_routes.py` where surface routes are constructed. The actual template selection happens deeper (in `template_renderer.py`). This task only modifies the *outermost* call — the one that takes a SurfaceSpec and produces an HTML response — to route through `dispatch_render` instead of going straight to Jinja.
@@ -544,7 +544,7 @@ The primary call site is in `page_routes.py` where surface routes are constructe
 If the existing call structure is `render_in_app_shell(request, template, context)` (where `template` is already chosen from the surface mode), the refactor is:
 
 ```python
-from dazzle_back.runtime.renderers.dispatch import dispatch_render
+from dazzle_http.runtime.renderers.dispatch import dispatch_render
 
 # In the route handler:
 services = request.app.state.services
@@ -614,8 +614,8 @@ pytest tests/ -m "not e2e" -k "render or surface or workspace" -q 2>&1 | tail -1
 - [ ] **Step 6: Lint and types**
 
 ```bash
-ruff check src/dazzle_ui/runtime --fix && ruff format src/dazzle_ui/runtime
-mypy src/dazzle_back --ignore-missing-imports
+ruff check src/dazzle_page/runtime --fix && ruff format src/dazzle_page/runtime
+mypy src/dazzle_http --ignore-missing-imports
 ```
 
 Clean.
@@ -623,7 +623,7 @@ Clean.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/page_routes.py tests/integration/test_request_path_smoke.py
+git add src/dazzle_page/runtime/page_routes.py tests/integration/test_request_path_smoke.py
 # plus any other modified files
 git commit -m "feat(runtime): route surface rendering through dispatch_render"
 ```
@@ -715,9 +715,9 @@ Both renderers should produce structurally-equivalent HTML for the same IR + con
 the same observable behaviour as the Jinja path."""
 
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
-from dazzle_back.runtime.renderers.dispatch import dispatch_render
-from dazzle_back.runtime.renderers.init import register_default_renderers
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.renderers.dispatch import dispatch_render
+from dazzle_http.runtime.renderers.init import register_default_renderers
+from dazzle_http.runtime.services import RuntimeServices
 
 
 def _make_services() -> RuntimeServices:
@@ -828,7 +828,7 @@ Expected: all pass.
 
 ```bash
 mypy src/dazzle/render --strict
-mypy src/dazzle src/dazzle_back --ignore-missing-imports
+mypy src/dazzle src/dazzle_http --ignore-missing-imports
 ```
 
 Expected: no new errors.
@@ -885,7 +885,7 @@ After Task 7:
 - [ ] `pytest tests/unit/runtime/ tests/integration/ -v` — all pass.
 - [ ] `pytest tests/ -m "not e2e"` — no regressions outside the new tests.
 - [ ] `mypy src/dazzle/render --strict` — clean.
-- [ ] `mypy src/dazzle src/dazzle_back --ignore-missing-imports` — no new errors.
+- [ ] `mypy src/dazzle src/dazzle_http --ignore-missing-imports` — no new errors.
 - [ ] `ruff check src/ tests/ && ruff format --check src/ tests/` — clean.
 - [ ] `dazzle serve --local` on `examples/simple_task` boots; task_list surface returns 200.
 - [ ] `git status` clean.

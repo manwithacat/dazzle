@@ -151,7 +151,7 @@ def test_emitted_records_reach_the_attached_handler(_clean_loggers, capsys) -> N
     the helper is that this works on a bare-uvicorn boot."""
     _clean_loggers()
     ensure_dazzle_logging_configured()
-    child = logging.getLogger("dazzle.back.runtime.page_routes")
+    child = logging.getLogger("dazzle.http.runtime.page_routes")
     child.info("onboarding.inject:rendered surface=x guide=g step=s")
     captured = capsys.readouterr()
     assert "onboarding.inject:rendered" in captured.err

@@ -2,7 +2,7 @@
 Public-helpers API surface snapshot — cycle 4 of #961.
 
 Walks the top-level package `__init__.py` of each public package
-(`dazzle`, `dazzle_back`, `dazzle_ui`) and snapshots the resolved public
+(`dazzle`, `dazzle_http`, `dazzle_page`) and snapshots the resolved public
 attributes — explicit `__all__` plus lazy `_LOADERS`-style re-exports.
 
 Each resolved attribute is rendered with a category + signature so renames,
@@ -25,17 +25,17 @@ def _load_packages() -> list[tuple[str, types.ModuleType]]:
     public package to the snapshot is a code change, not a config change.
     """
     import dazzle
-    from dazzle import back as dazzle_back
-    from dazzle import ui as dazzle_ui
+    from dazzle import http as dazzle_http
+    from dazzle import page as dazzle_page
 
     return [
         ("dazzle", dazzle),
-        ("dazzle.back", dazzle_back),
-        ("dazzle.ui", dazzle_ui),
+        ("dazzle.http", dazzle_http),
+        ("dazzle.page", dazzle_page),
     ]
 
 
-PACKAGE_NAMES = ["dazzle", "dazzle.back", "dazzle.ui"]
+PACKAGE_NAMES = ["dazzle", "dazzle.http", "dazzle.page"]
 
 
 def _public_names(module: types.ModuleType) -> list[str]:
@@ -43,7 +43,7 @@ def _public_names(module: types.ModuleType) -> list[str]:
 
     Resolution order:
       1. `__all__` — if defined, that is the canonical list.
-      2. `_LOADERS` — the lazy `__getattr__` convention used by dazzle.back.
+      2. `_LOADERS` — the lazy `__getattr__` convention used by dazzle.http.
       3. Otherwise: all module-level non-underscore attributes (a noisy
          fallback; only applied when both 1 and 2 are absent).
     """
@@ -122,7 +122,7 @@ def snapshot_public_helpers() -> str:
     lines.append("#")
     lines.append("# Resolution order per package:")
     lines.append("#   1. `__all__` if defined")
-    lines.append("#   2. `_LOADERS` keys (lazy __getattr__ convention used by dazzle_back)")
+    lines.append("#   2. `_LOADERS` keys (lazy __getattr__ convention used by dazzle_http)")
     lines.append("#   3. all non-underscore module attributes (fallback)")
     lines.append("#")
     lines.append("# Adding/removing a name in `__all__` or `_LOADERS`, changing a function")

@@ -6,14 +6,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from dazzle.back.runtime.rls_schema import (
+from dazzle.core.ir import TenancyMode
+from dazzle.http.runtime.rls_schema import (
     build_all_rls_ddl,
     build_rls_policy_ddl,
     build_rls_role_ddl,
     build_rls_scope_policy_ddl,
     describe_rls_policies,
 )
-from dazzle.core.ir import TenancyMode
 
 
 def test_fence_is_restrictive_with_missing_ok_current_setting() -> None:

@@ -107,11 +107,11 @@ def ensure_dazzle_logging_configured(level: str | int | None = None) -> bool:
     Call this once at framework entry-point boot — before any framework
     code path logs. Common entry points:
 
-    - ``dazzle.back.runtime.app_factory.create_app`` (FastAPI runtime)
+    - ``dazzle.http.runtime.app_factory.create_app`` (FastAPI runtime)
     - ``dazzle.cli`` command handlers (one-shot CLI runs)
     - ``dazzle.mcp.server`` (MCP server boot)
     - ``dazzle.lsp.server`` (LSP server boot)
-    - ``dazzle.back.alembic.env`` (migration env)
+    - ``dazzle.http.alembic.env`` (migration env)
 
     Args:
         level: Log level to set on the ``dazzle`` logger. If ``None``,

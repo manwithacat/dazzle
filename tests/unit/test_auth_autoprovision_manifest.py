@@ -1,7 +1,7 @@
 """auto_provision_single_org flows manifest -> ServerConfig (Plan 1d)."""
 
-from dazzle.back.runtime.server import ServerConfig
 from dazzle.core.manifest import AuthConfig
+from dazzle.http.runtime.server import ServerConfig
 
 
 def test_authconfig_default_off() -> None:

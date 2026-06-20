@@ -13,13 +13,13 @@ Two scenarios:
 
 from fastapi import APIRouter, FastAPI
 
-from dazzle.back.converters.surface_converter import (
+from dazzle.core import ir
+from dazzle.http.converters.surface_converter import (
     _dedupe_endpoints,
     convert_surfaces_to_services,
 )
-from dazzle.back.runtime.route_validator import validate_routes
-from dazzle.back.specs import EndpointSpec, HttpMethod
-from dazzle.core import ir
+from dazzle.http.runtime.route_validator import validate_routes
+from dazzle.http.specs import EndpointSpec, HttpMethod
 
 
 def _make_edit_surface(name: str, entity: str) -> ir.SurfaceSpec:
@@ -59,7 +59,7 @@ def test_generate_all_routes_skips_claimed_routes() -> None:
     """A claimed (method, path) is skipped by generate_all_routes — `generate_route` never sees it."""
     from unittest.mock import patch
 
-    from dazzle.back.runtime.route_generator import RouteGenerator
+    from dazzle.http.runtime.route_generator import RouteGenerator
 
     generator = RouteGenerator(
         services={},
@@ -97,7 +97,7 @@ def test_app_with_override_emits_zero_conflicts() -> None:
 
     # Build a tiny CRUD router via generate_all_routes, with the claimed set
     # the server.py wiring would produce.
-    from dazzle.back.runtime.route_generator import RouteGenerator
+    from dazzle.http.runtime.route_generator import RouteGenerator
 
     generator = RouteGenerator(
         services={},

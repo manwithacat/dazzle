@@ -87,4 +87,4 @@ JVM-based migration tools.
 
 ## Implementation
 
-See `src/dazzle/back/migrations/` for Alembic environment. `env.py` imports the DSL-derived SQLAlchemy `MetaData` to enable autogenerate. Safe type casts are registered in `alembic/cast_rules.py`.
+See `src/dazzle/http/migrations/` for Alembic environment. `env.py` imports the DSL-derived SQLAlchemy `MetaData` to enable autogenerate. Safe type casts are registered in `alembic/cast_rules.py`.

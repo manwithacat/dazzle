@@ -4,9 +4,6 @@ import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from dazzle.back.runtime.api_cache import ApiResponseCache
-from dazzle.back.runtime.event_bus import EntityEventBus
-from dazzle.back.runtime.mapping_executor import MappingExecutor
 from dazzle.core.ir.integrations import (
     Expression,
     HttpMethod,
@@ -17,6 +14,9 @@ from dazzle.core.ir.integrations import (
     MappingTriggerSpec,
     MappingTriggerType,
 )
+from dazzle.http.runtime.api_cache import ApiResponseCache
+from dazzle.http.runtime.event_bus import EntityEventBus
+from dazzle.http.runtime.mapping_executor import MappingExecutor
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -90,7 +90,7 @@ def _mock_http_response(data: dict[str, Any], status: int = 200) -> MagicMock:
 
 
 class TestCacheHit:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_get_cached_on_success(self, mock_client_cls: MagicMock) -> None:
         """Successful GET response is cached."""
         mock_client_cls.return_value = _mock_http_response({"company_name": "Acme"})
@@ -110,7 +110,7 @@ class TestCacheHit:
         put_args = cache.put.call_args
         assert put_args[0][0] == "ch_api:lookup"  # scope
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_cache_hit_skips_http(self, mock_client_cls: MagicMock) -> None:
         """On cache hit, HTTP call is not made."""
         cache = _make_cache_mock()
@@ -131,7 +131,7 @@ class TestCacheHit:
 
 
 class TestPostNotCached:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_post_request_not_cached(self, mock_client_cls: MagicMock) -> None:
         """POST requests are never cached."""
         mock_client_cls.return_value = _mock_http_response({"id": "new-1"}, status=201)
@@ -151,7 +151,7 @@ class TestPostNotCached:
 
 
 class TestForceRefresh:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_force_refresh_bypasses_cache(self, mock_client_cls: MagicMock) -> None:
         """force_refresh=True skips cache read."""
         mock_client_cls.return_value = _mock_http_response({"company_name": "Fresh"})
@@ -175,7 +175,7 @@ class TestForceRefresh:
         # Cache get should NOT be called because force_refresh skips the check
         cache.get.assert_not_called()
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_force_refresh_bypasses_dedup_lock(self, mock_client_cls: MagicMock) -> None:
         """force_refresh=True also bypasses the dedup lock."""
         mock_client_cls.return_value = _mock_http_response({"company_name": "Fresh"})
@@ -200,7 +200,7 @@ class TestForceRefresh:
 
 
 class TestLockRelease:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_lock_released_after_request(self, mock_client_cls: MagicMock) -> None:
         """Dedup lock is released after HTTP response."""
         mock_client_cls.return_value = _mock_http_response({"company_name": "Acme"})
@@ -216,7 +216,7 @@ class TestLockRelease:
 
         cache.release_lock.assert_called_once()
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_lock_released_on_failure(self, mock_client_cls: MagicMock) -> None:
         """Dedup lock is released even if request fails."""
         mock_client_cls.return_value = _mock_http_response({"error": "not found"}, status=404)
@@ -234,7 +234,7 @@ class TestLockRelease:
 
 
 class TestCacheTtl:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_mapping_cache_ttl_used(self, mock_client_cls: MagicMock) -> None:
         """When mapping has cache_ttl, it should be passed to cache.put."""
         mock_client_cls.return_value = _mock_http_response({"company_name": "Acme"})
@@ -251,7 +251,7 @@ class TestCacheTtl:
         put_kwargs = cache.put.call_args
         assert put_kwargs[1]["ttl"] == 300
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_default_ttl_when_no_cache_ttl(self, mock_client_cls: MagicMock) -> None:
         """When mapping has no cache_ttl, default 86400 is used."""
         mock_client_cls.return_value = _mock_http_response({"company_name": "Acme"})
@@ -270,7 +270,7 @@ class TestCacheTtl:
 
 
 class TestPackTtlFallback:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_pack_ttl_used_when_mapping_has_none(self, mock_client_cls: MagicMock) -> None:
         """When mapping.cache_ttl is None, pack foreign_model cache_ttl is used."""
         mock_client_cls.return_value = _mock_http_response({"company_name": "Acme"})
@@ -300,7 +300,7 @@ class TestPackTtlFallback:
         # companies_house_lookup Company model has cache_ttl=86400
         assert put_kwargs[1]["ttl"] == 86400
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_mapping_ttl_takes_precedence_over_pack(self, mock_client_cls: MagicMock) -> None:
         """mapping.cache_ttl should take precedence over pack cache_ttl."""
         mock_client_cls.return_value = _mock_http_response({"company_name": "Acme"})
@@ -328,7 +328,7 @@ class TestPackTtlFallback:
 
 
 class TestNoCacheProvided:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_no_cache_no_caching(self, mock_client_cls: MagicMock) -> None:
         """When cache=None, no caching is attempted."""
         mock_client_cls.return_value = _mock_http_response({"company_name": "Acme"})

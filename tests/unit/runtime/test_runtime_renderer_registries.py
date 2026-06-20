@@ -1,6 +1,6 @@
 """RuntimeServices carries the renderer and primitive registries."""
 
-from dazzle.back.runtime.services import RuntimeServices
+from dazzle.http.runtime.services import RuntimeServices
 from dazzle.render.fragment.registry import PrimitiveRegistry, RendererRegistry
 
 

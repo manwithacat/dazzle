@@ -98,7 +98,7 @@ class TestComputePathDispatches:
         import asyncio
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.workspace_region_computes import (
+        from dazzle.http.runtime.workspace_region_computes import (
             compute_cohort_aggregate_primary,
         )
 

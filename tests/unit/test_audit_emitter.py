@@ -26,7 +26,7 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.runtime.audit_emitter import build_audit_callbacks, compute_diff
+from dazzle.http.runtime.audit_emitter import build_audit_callbacks, compute_diff
 
 # ---------------------------------------------------------------------------
 # compute_diff

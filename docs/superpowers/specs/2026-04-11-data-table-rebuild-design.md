@@ -16,16 +16,16 @@ Rewrite Dazzle's data table (template + JS + backend endpoints) to conform to th
 
 | Layer | File | Change |
 |---|---|---|
-| JS | `src/dazzle_ui/runtime/static/js/dz-alpine.js` | Rewrite `dzTable` component: column resize, inline edit, enhanced bulk select, loading state |
-| Template | `src/dazzle_ui/templates/components/filterable_table.html` | Rewrite: pure Tailwind, semantic `<table>`, `<colgroup>`, spec-governed chrome |
-| Template | `src/dazzle_ui/templates/fragments/table_rows.html` | Rewrite: inline-editable cells, row states (hover/selected/editing/pending/error) |
-| Template | `src/dazzle_ui/templates/fragments/table_pagination.html` | Rewrite: pure Tailwind pagination controls |
-| Template | `src/dazzle_ui/templates/fragments/inline_edit.html` | Rewrite: phase-based cell editing per inline-edit primitive |
-| Template | `src/dazzle_ui/templates/fragments/bulk_actions.html` | Rewrite: pure Tailwind, delete-only bulk action with confirmation |
-| Template | `src/dazzle_ui/templates/fragments/search_input.html` | Restyle: pure Tailwind (same HTMX wiring) |
-| Template | `src/dazzle_ui/templates/fragments/filter_bar.html` | Restyle: pure Tailwind (same HTMX wiring) |
-| Python | `src/dazzle_ui/converters/template_compiler.py` | Modify: populate `inline_editable` from field types, set `bulk_actions=True` |
-| Python | `src/dazzle_back/runtime/page_routes.py` or entity route builder | Add: PATCH field endpoint, POST bulk-delete endpoint |
+| JS | `src/dazzle_page/runtime/static/js/dz-alpine.js` | Rewrite `dzTable` component: column resize, inline edit, enhanced bulk select, loading state |
+| Template | `src/dazzle_page/templates/components/filterable_table.html` | Rewrite: pure Tailwind, semantic `<table>`, `<colgroup>`, spec-governed chrome |
+| Template | `src/dazzle_page/templates/fragments/table_rows.html` | Rewrite: inline-editable cells, row states (hover/selected/editing/pending/error) |
+| Template | `src/dazzle_page/templates/fragments/table_pagination.html` | Rewrite: pure Tailwind pagination controls |
+| Template | `src/dazzle_page/templates/fragments/inline_edit.html` | Rewrite: phase-based cell editing per inline-edit primitive |
+| Template | `src/dazzle_page/templates/fragments/bulk_actions.html` | Rewrite: pure Tailwind, delete-only bulk action with confirmation |
+| Template | `src/dazzle_page/templates/fragments/search_input.html` | Restyle: pure Tailwind (same HTMX wiring) |
+| Template | `src/dazzle_page/templates/fragments/filter_bar.html` | Restyle: pure Tailwind (same HTMX wiring) |
+| Python | `src/dazzle_page/converters/template_compiler.py` | Modify: populate `inline_editable` from field types, set `bulk_actions=True` |
+| Python | `src/dazzle_http/runtime/page_routes.py` or entity route builder | Add: PATCH field endpoint, POST bulk-delete endpoint |
 | Tests | `tests/quality_gates/test_data_table_gates.py` | New: unit + Playwright integration tests for 5 quality gates |
 
 ### Files Unchanged

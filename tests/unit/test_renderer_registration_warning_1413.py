@@ -14,7 +14,7 @@ import logging
 from pathlib import Path
 from types import SimpleNamespace
 
-from dazzle.back.runtime.server import DazzleBackendApp
+from dazzle.http.runtime.server import DazzleBackendApp
 
 _FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "custom_renderer"
 

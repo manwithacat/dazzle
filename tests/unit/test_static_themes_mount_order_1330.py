@@ -19,7 +19,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from dazzle.back.runtime.subsystems.system_routes import _mount_static_files
+from dazzle.http.runtime.subsystems.system_routes import _mount_static_files
 
 
 def _make_project(tmp_path: Path) -> Path:

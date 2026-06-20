@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from dazzle.back.runtime.auth.saml_logout import saml_slo_redirect_url
+from dazzle.http.runtime.auth.saml_logout import saml_slo_redirect_url
 
 
 def _session(membership_id="mem-1"):
@@ -48,7 +48,7 @@ def _install_provider(monkeypatch, *, url="https://idp.example/slo?SAMLRequest=a
             captured["name_id"] = name_id
             return url
 
-    monkeypatch.setattr("dazzle.back.runtime.auth.connections.resolve_provider", lambda c: _Prov())
+    monkeypatch.setattr("dazzle.http.runtime.auth.connections.resolve_provider", lambda c: _Prov())
     return captured
 
 

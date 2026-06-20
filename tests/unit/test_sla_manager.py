@@ -6,12 +6,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from dazzle.back.runtime.sla_manager import (
-    SLAManager,
-    SLATimer,
-    business_seconds,
-    parse_schedule,
-)
 from dazzle.core.ir.process import FieldAssignment
 from dazzle.core.ir.sla import (
     BusinessHoursSpec,
@@ -19,6 +13,12 @@ from dazzle.core.ir.sla import (
     SLAConditionSpec,
     SLASpec,
     SLATierSpec,
+)
+from dazzle.http.runtime.sla_manager import (
+    SLAManager,
+    SLATimer,
+    business_seconds,
+    parse_schedule,
 )
 
 # ---------------------------------------------------------------------------

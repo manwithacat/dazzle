@@ -51,7 +51,7 @@ A guarded action **MUST NOT** rely on a denormalized, client-settable scope key 
 ## Consequences
 
 - **Positive:** the capability lands within the existing formal model — guards stay statically validated and matrix-visible; no keyword overload; no second "transactional op" construct; the incidental update-destination security gap gets fixed on its own merits.
-- **Negative:** the capability is gated on #1124 v2 (FK-path create-scope), which was deferred "until adoption signal" — #1310 *is* that signal, but it is non-trivial (a payload-time SQL probe). Until it lands, projects either denormalize **and** validate FK-consistency server-side, or hand-roll a route that follows the rules above (a `dazzle.back.runtime.guarded_action` helper for the auth + transaction + optimistic-concurrency + fail-closed boilerplate is a reasonable bridge, framed as interim — not the destination).
+- **Negative:** the capability is gated on #1124 v2 (FK-path create-scope), which was deferred "until adoption signal" — #1310 *is* that signal, but it is non-trivial (a payload-time SQL probe). Until it lands, projects either denormalize **and** validate FK-consistency server-side, or hand-roll a route that follows the rules above (a `dazzle.http.runtime.guarded_action` helper for the auth + transaction + optimistic-concurrency + fail-closed boilerplate is a reasonable bridge, framed as interim — not the destination).
 - **Neutral:** `atomic` becomes the home for guarded multi-entity mutations; its current invisibility to `rbac/`/`testing/`/`specs/` is a pre-existing gap that this work closes.
 
 ## Alternatives Considered

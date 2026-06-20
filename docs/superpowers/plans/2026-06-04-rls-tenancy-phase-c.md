@@ -13,7 +13,7 @@
 ## Context the implementer needs
 
 - **Builds on Phase B (v0.81.22):** `rls_schema.py` (`build_rls_policy_ddl` emits ENABLE/FORCE + restrictive `tenant_fence` reading the fixed `TENANT_GUC="dazzle.tenant_id"` + permissive `tenant_baseline`); runtime `_set_tenant_context` (parameterised `set_config(...,true)`) in `pg_backend.connection()`, bound per-request in `auth/dependencies.py`; `_apply_rls_policies` post-create_all. Companion `/Volumes/SSD/Dazzle/docs/superpowers/specs/2026-06-04-rls-tenancy-generation-rules.md` §1.4 (per-verb permissive policies; verb coverage; **a fenced table needs ≥1 permissive policy per permitted verb or that verb is denied**), §1.5 (combination), §2.1 (read+list both → SELECT, OR'd; app keeps the read/list split), §6 (GUC context). Companion is authoritative for emitted DDL.
-- **Predicate compiler** `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/predicate_compiler.py`: `compile_predicate(predicate, entity_name, fk_graph, *, schema)` → `(sql, params)` with `%s` + markers (`UserAttrRef`/`CurrentUserRef`/`PayloadFieldRef`) + literals. 8 variants: Tautology, Contradiction, ColumnCheck, ColumnRefCheck, UserAttrCheck, PathCheck, ExistsCheck, BoolComposite. `_compile_value_ref` (L117) is the central value emit point; per-variant emit points noted in the compiler.
+- **Predicate compiler** `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/predicate_compiler.py`: `compile_predicate(predicate, entity_name, fk_graph, *, schema)` → `(sql, params)` with `%s` + markers (`UserAttrRef`/`CurrentUserRef`/`PayloadFieldRef`) + literals. 8 variants: Tautology, Contradiction, ColumnCheck, ColumnRefCheck, UserAttrCheck, PathCheck, ExistsCheck, BoolComposite. `_compile_value_ref` (L117) is the central value emit point; per-variant emit points noted in the compiler.
 - **Per-verb scope rules:** `entity.access.scopes: list[ScopeRule]`, each `.operation` (PermissionKind create/read/update/delete/list) + `.predicate` (compiled `ScopePredicate`, set by the linker's `_compile_scope_predicates`). `read` + `list` both map to SQL `SELECT` and must be **OR-unioned** into one `scope_select` policy (companion §2.1).
 - **No type info on ValueRef** (`core/ir/predicates.py`): casts must come from the column's `FieldSpec.type`. Reuse/mirror the FieldType→SQL-type mapping in `sa_schema.py` (`_field_type_to_sa`) to produce a pg type name for `current_setting(...)::<type>`. **Casting decision (resolved): cast the GUC to the column's IR type** (correct for equality, IN, and ordering) — not a text-compare (which breaks ordering). When the type can't be resolved, fail policy generation loudly (don't emit a wrong-typed policy).
 - **No safe SQL-literal renderer exists** — add one (SQL-standard single-quote escaping for strings; `true/false`; numeric as-is; `NULL`). Scope-rule literals are author/IR-controlled, but render them safely regardless.
@@ -25,10 +25,10 @@
 
 | File | Responsibility | Change |
 |------|----------------|--------|
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/predicate_compiler.py` | Predicate → SQL | **Modify** — add a policy-body mode (param-free; GUC + inlined literals + casts) threaded through the emit points; add `collect_user_attr_refs`; add a safe inline-literal renderer |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/rls_schema.py` | Policy DDL | **Modify** — `build_rls_scope_policy_ddl(...)`: per-verb scope policies; baseline dropped for scoped entities, kept for tenant-flat |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/server.py` | Apply hook | **Modify** — `_apply_rls_policies` now also emits scope policies for scoped entities |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/tenant_isolation.py` + `pg_backend.py` + `auth/dependencies.py` | Runtime user-attr GUCs | **Modify** — set `dazzle.user_<attr>` per request for the app-wide attr set |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/predicate_compiler.py` | Predicate → SQL | **Modify** — add a policy-body mode (param-free; GUC + inlined literals + casts) threaded through the emit points; add `collect_user_attr_refs`; add a safe inline-literal renderer |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/rls_schema.py` | Policy DDL | **Modify** — `build_rls_scope_policy_ddl(...)`: per-verb scope policies; baseline dropped for scoped entities, kept for tenant-flat |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/server.py` | Apply hook | **Modify** — `_apply_rls_policies` now also emits scope policies for scoped entities |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/tenant_isolation.py` + `pg_backend.py` + `auth/dependencies.py` | Runtime user-attr GUCs | **Modify** — set `dazzle.user_<attr>` per request for the app-wide attr set |
 | `/Volumes/SSD/Dazzle/tests/unit/test_predicate_policy_mode.py` | Policy-body compiler tests | **Create** |
 | `/Volumes/SSD/Dazzle/tests/unit/test_rls_scope_policies.py` | Per-verb policy DDL tests | **Create** |
 | `/Volumes/SSD/Dazzle/fixtures/tenant_rls/` | Add a scoped entity + scope rules | **Modify** |
@@ -59,7 +59,7 @@ Add a param-free "policy mode" that renders a `ScopePredicate` to a self-contain
 - [ ] **Step 2: Run → fail.**
 - [ ] **Step 3: Implement** the renderer + collector + policy-mode threading.
 - [ ] **Step 4: Run → pass.** Also run `pytest tests/unit/ -k "predicate_compiler or scope or predicate_policy" -q` to confirm the **param-mode path is unchanged** (Phase B + route tests still green).
-- [ ] **Step 5:** ruff + `mypy src/dazzle/back/runtime/predicate_compiler.py` clean. Commit `feat(rls): policy-body mode for the scope predicate compiler (GUC + inlined literals + casts) (Phase C)`.
+- [ ] **Step 5:** ruff + `mypy src/dazzle/http/runtime/predicate_compiler.py` clean. Commit `feat(rls): policy-body mode for the scope predicate compiler (GUC + inlined literals + casts) (Phase C)`.
 
 ---
 

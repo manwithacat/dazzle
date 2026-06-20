@@ -6,7 +6,7 @@ from pathlib import Path
 from dazzle.core.ir.workspaces import DisplayMode
 from dazzle.core.lexer import Lexer, TokenType
 from dazzle.core.parser import parse_dsl
-from dazzle.ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+from dazzle.page.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
 
 class TestDisplayModeTree:

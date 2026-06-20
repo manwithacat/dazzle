@@ -152,7 +152,7 @@ Info-level warnings:
 
 ## Cache contract
 
-- New `dazzle.back.runtime.tenant.cache.TenantCache` — module-level singleton, configurable via env or `app_init.py`.
+- New `dazzle.http.runtime.tenant.cache.TenantCache` — module-level singleton, configurable via env or `app_init.py`.
 - Defaults: `max_entries = 1024`, `ttl_seconds = 60`.
 - Stores positive `ResolvedTenant | HistoryHit | ExpiredHistoryHit` and a `NEGATIVE` sentinel for cache-miss memoisation.
 - Auto-bust: the framework wraps `Repository.update()` (post-commit) for any entity carrying `tenant_host:`. When the row's slug-field value changes, `cache.bust(old_slug)` runs, and `cache.bust(new_slug)` runs to clear any negative entry on the new value.
@@ -183,11 +183,11 @@ def render_expired(old_slug: str, new_slug: str, ttl_remaining_days: int) -> str
     return f"<!doctype html>... moved to {new_slug}; this link expired ..."
 ```
 
-Framework defaults ship in `dazzle.back.runtime.tenant.templates` and produce minimal branded pages using the app name from the IR. Projects override per-block via the dotted-path sub-fields.
+Framework defaults ship in `dazzle.http.runtime.tenant.templates` and produce minimal branded pages using the app name from the IR. Projects override per-block via the dotted-path sub-fields.
 
 ## Module layout
 
-New package: `src/dazzle/back/runtime/tenant/`
+New package: `src/dazzle/http/runtime/tenant/`
 
 | File | Purpose |
 |---|---|

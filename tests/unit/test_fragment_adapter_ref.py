@@ -6,7 +6,7 @@ that earlier versions assumed DSL kinds — silently swapping str↔text and
 mis-rendering enum/bool. v0.66.45 fixed the mapping.
 """
 
-from dazzle.back.runtime.renderers.fragment_adapter import _field_to_primitive
+from dazzle.http.runtime.renderers.fragment_adapter import _field_to_primitive
 from dazzle.render.fragment.primitives.forms import Combobox, Field, RefPicker
 
 # ─────────────────────────── REF ──────────────────────────────────────

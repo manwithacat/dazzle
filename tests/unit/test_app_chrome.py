@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from dazzle.ui.runtime.app_chrome import AppChrome, resolve_app_chrome
+from dazzle.page.runtime.app_chrome import AppChrome, resolve_app_chrome
 
 
 class TestResolveAppChrome:

@@ -30,7 +30,7 @@ def test_safe_limit_routes_partial_through_underlying_name() -> None:
     `limiter.limit(...)` raised AttributeError because partials lack
     `__name__`. `safe_limit` copies the underlying function's `__name__`
     onto the partial first."""
-    from dazzle.back.runtime import rate_limit as _rl
+    from dazzle.http.runtime import rate_limit as _rl
 
     handler = partial(_plain_handler, "fake-deps")
     assert not hasattr(handler, "__name__")  # partial has no __name__
@@ -52,7 +52,7 @@ def test_safe_limit_does_not_set_wrapped_attribute() -> None:
     as a request parameter — breaking every partial-bound auth handler.
     The fix uses bare `__name__` assignment instead. This test pins that
     `__wrapped__` is NOT set on the partial after safe_limit."""
-    from dazzle.back.runtime import rate_limit as _rl
+    from dazzle.http.runtime import rate_limit as _rl
 
     handler = partial(_plain_handler, "fake-deps")
     _rl.safe_limit("10/minute")(handler)
@@ -68,7 +68,7 @@ def test_safe_limit_does_not_set_wrapped_attribute() -> None:
 def test_safe_limit_passes_through_plain_function_unchanged() -> None:
     """Non-partial handlers must flow through unchanged — safe_limit is
     additive only, no behavioural change for the common case."""
-    from dazzle.back.runtime import rate_limit as _rl
+    from dazzle.http.runtime import rate_limit as _rl
 
     async def my_handler(request: Any) -> str:
         return "ok"
@@ -87,7 +87,7 @@ def test_safe_limit_survives_real_limiter_introspection() -> None:
     This is the load-bearing test — it pins the regression cause without
     requiring slowapi to be installed in the test env.
     """
-    from dazzle.back.runtime import rate_limit as _rl
+    from dazzle.http.runtime import rate_limit as _rl
 
     introspections: list[str] = []
 
@@ -118,7 +118,7 @@ def test_safe_limit_raw_partial_without_helper_still_breaks() -> None:
     """Negative regression: the bare partial-vs-strict-limiter path still
     raises AttributeError — confirms the test infrastructure faithfully
     reproduces the v0.72.x boot failure when safe_limit is bypassed."""
-    from dazzle.back.runtime import rate_limit as _rl
+    from dazzle.http.runtime import rate_limit as _rl
 
     class _StrictLimiter:
         def limit(self, _limit_str: str) -> Any:
@@ -148,7 +148,7 @@ def test_test_harness_secret_bypasses_real_limiter_1252(monkeypatch: Any) -> Non
     `/__test__/*` schema-wipe endpoints — strictly smaller blast
     radius than the schema endpoints the secret already unlocks.
     """
-    from dazzle.back.runtime import rate_limit as _rl
+    from dazzle.http.runtime import rate_limit as _rl
 
     class _StubApp:
         class _State:
@@ -181,7 +181,7 @@ def test_real_limiter_active_without_test_secret_1252(monkeypatch: Any) -> None:
     the bypass is gated on the env var, not unconditionally on profile.
     """
     pytest.importorskip("slowapi")
-    from dazzle.back.runtime import rate_limit as _rl
+    from dazzle.http.runtime import rate_limit as _rl
 
     class _StubApp:
         class _State:

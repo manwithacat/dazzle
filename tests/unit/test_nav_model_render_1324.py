@@ -21,10 +21,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.page_routes import _inject_auth_context, _resolve_nav_model
+from dazzle.http.runtime.page_routes import _inject_auth_context, _resolve_nav_model
+from dazzle.page.converters.nav_builder import NavGroup, NavLink, NavModel
 from dazzle.render.context import NavItemContext, PageContext
 from dazzle.render.dispatch import _build_sidebar_from_ctx, _sidebar_from_nav_model
-from dazzle.ui.converters.nav_builder import NavGroup, NavLink, NavModel
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -204,9 +204,9 @@ def test_reconcile_maps_entity_and_workspace_routes_to_runtime_shape() -> None:
     /workspaces/<name>); the renderer reconciles them to the real runtime
     routes (<app_prefix>/<slug>, <app_prefix>/workspaces/<name>) so active-
     state highlighting (current_route == href) works."""
-    from dazzle.back.runtime.page_routes import _reconcile_nav_model
     from dazzle.core import ir
     from dazzle.core.ir.workspaces import WorkspaceSpec
+    from dazzle.http.runtime.page_routes import _reconcile_nav_model
 
     appspec = ir.AppSpec(
         name="app",
@@ -395,8 +395,8 @@ _WHEN_NAV = NavModel(
 def test_reconcile_preserves_when_on_groups_and_links() -> None:
     """FR-4 layer 2: `_reconcile_nav_model` must copy `when` through (the
     reconciler rebuilds NavGroup/NavLink and would otherwise drop it)."""
-    from dazzle.back.runtime.page_routes import _reconcile_nav_model
     from dazzle.core import ir
+    from dazzle.http.runtime.page_routes import _reconcile_nav_model
 
     appspec = ir.AppSpec(
         name="app",

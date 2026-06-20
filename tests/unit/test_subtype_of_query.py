@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.runtime.query_builder import QueryBuilder
+from dazzle.http.runtime.query_builder import QueryBuilder
 
 
 class TestQueryBuilderJoins:
@@ -46,10 +46,10 @@ class TestQueryBuilderJoins:
 
 def _build_subtype_back_entities() -> dict[str, Any]:
     """Parse + link Asset/Vehicle DSL; return back-layer entities (post-conversion)."""
-    from dazzle.back.converters import convert_entities
     from dazzle.core import ir
     from dazzle.core.dsl_parser_impl import parse_dsl
     from dazzle.core.linker import build_appspec
+    from dazzle.http.converters import convert_entities
 
     dsl = """\
 module test
@@ -112,7 +112,7 @@ class TestRepositoryListSubtypeJoin:
 
         from pydantic import BaseModel
 
-        from dazzle.back.runtime.repository import Repository
+        from dazzle.http.runtime.repository import Repository
 
         entities = _build_subtype_back_entities()
         asset_spec = entities["Asset"]
@@ -159,7 +159,7 @@ class TestRepositoryListSubtypeJoin:
         """A plain entity (no subtype_of) must not gain a JOIN."""
         from pydantic import BaseModel
 
-        from dazzle.back.runtime.repository import Repository
+        from dazzle.http.runtime.repository import Repository
 
         entities = _build_subtype_back_entities()
         asset_spec = entities["Asset"]
@@ -197,7 +197,7 @@ class TestRepositoryListSubtypeJoin:
         default `extra='ignore'` on the child model."""
         from pydantic import BaseModel
 
-        from dazzle.back.runtime.repository import Repository
+        from dazzle.http.runtime.repository import Repository
 
         entities = _build_subtype_back_entities()
         asset_spec = entities["Asset"]
@@ -245,7 +245,7 @@ class TestAggregateByKind:
     """
 
     def test_aggregate_group_by_kind_emits_standard_group_by_sql(self) -> None:
-        from dazzle.back.runtime.aggregate import Dimension, build_aggregate_sql
+        from dazzle.http.runtime.aggregate import Dimension, build_aggregate_sql
 
         # group_by: kind against the Asset base table.
         sql, _params = build_aggregate_sql(

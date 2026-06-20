@@ -163,7 +163,7 @@ def derive_triples(
 ) -> list[VerifiableTriple]:
 ```
 
-Takes raw lists, not an AppSpec. This is because triple derivation runs in the linker before AppSpec is constructed (step 10b). The function is pure — no side effects, no imports from `dazzle_ui`.
+Takes raw lists, not an AppSpec. This is because triple derivation runs in the linker before AppSpec is constructed (step 10b). The function is pure — no side effects, no imports from `dazzle_page`.
 
 ## Integration Points
 

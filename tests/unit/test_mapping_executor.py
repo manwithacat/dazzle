@@ -6,8 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.event_bus import EntityEvent, EntityEventBus, EntityEventType
-from dazzle.back.runtime.mapping_executor import MappingExecutor
 from dazzle.core.ir.integrations import (
     AuthSpec,
     AuthType,
@@ -22,6 +20,8 @@ from dazzle.core.ir.integrations import (
     MappingTriggerSpec,
     MappingTriggerType,
 )
+from dazzle.http.runtime.event_bus import EntityEvent, EntityEventBus, EntityEventType
+from dazzle.http.runtime.mapping_executor import MappingExecutor
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -416,7 +416,7 @@ class TestBaseUrlResolution:
 
 
 class TestEventHandling:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_on_create_triggers_mapping(self, mock_client_cls: MagicMock) -> None:
         """Entity created event triggers an ON_CREATE mapping."""
         mock_resp = MagicMock()
@@ -454,7 +454,7 @@ class TestEventHandling:
         assert executor.results[0].mapped_fields == {"external_id": "ext-1"}
         update_fn.assert_called_once()
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_on_update_triggers_mapping(self, mock_client_cls: MagicMock) -> None:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -525,7 +525,7 @@ class TestEventHandling:
 
 
 class TestRequestMappingIntegration:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_request_body_built_from_mapping(self, mock_client_cls: MagicMock) -> None:
         mock_resp = MagicMock()
         mock_resp.status_code = 201
@@ -577,7 +577,7 @@ class TestRequestMappingIntegration:
 
 
 class TestErrorStrategy:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_ignore_error(self, mock_client_cls: MagicMock) -> None:
         mock_resp = MagicMock()
         mock_resp.status_code = 500
@@ -606,7 +606,7 @@ class TestErrorStrategy:
         assert len(executor.results) == 1
         assert executor.results[0].success is False
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_set_fields_on_error(self, mock_client_cls: MagicMock) -> None:
         mock_resp = MagicMock()
         mock_resp.status_code = 422
@@ -640,7 +640,7 @@ class TestErrorStrategy:
         # set_fields should have been applied
         update_fn.assert_called_once_with("Company", "abc-123", {"kyc_status": "error"})
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_revert_transition(self, mock_client_cls: MagicMock) -> None:
         mock_resp = MagicMock()
         mock_resp.status_code = 500
@@ -685,7 +685,7 @@ class TestErrorStrategy:
         # Should revert status to previous state
         update_fn.assert_any_call("Company", "abc-123", {"status": "reviewed"})
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_retry_on_failure(self, mock_client_cls: MagicMock) -> None:
         """Retry should attempt up to 3 times."""
         mock_resp = MagicMock()
@@ -710,7 +710,7 @@ class TestErrorStrategy:
         executor.register_all()
 
         # Patch sleep to speed up test
-        with patch("dazzle.back.runtime.mapping_executor.asyncio.sleep", new_callable=AsyncMock):
+        with patch("dazzle.http.runtime.mapping_executor.asyncio.sleep", new_callable=AsyncMock):
             event = _make_event()
             _run(executor.handle_event(event))
 
@@ -718,7 +718,7 @@ class TestErrorStrategy:
         assert mock_client.request.call_count == 3
         assert executor.results[0].success is False
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_retry_succeeds_on_second_attempt(self, mock_client_cls: MagicMock) -> None:
         fail_resp = MagicMock()
         fail_resp.status_code = 503
@@ -746,7 +746,7 @@ class TestErrorStrategy:
         executor = MappingExecutor(appspec, bus)
         executor.register_all()
 
-        with patch("dazzle.back.runtime.mapping_executor.asyncio.sleep", new_callable=AsyncMock):
+        with patch("dazzle.http.runtime.mapping_executor.asyncio.sleep", new_callable=AsyncMock):
             event = _make_event()
             _run(executor.handle_event(event))
 
@@ -783,7 +783,7 @@ class TestNoBaseUrl:
 
 
 class TestManualExecution:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_execute_manual(self, mock_client_cls: MagicMock) -> None:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -830,7 +830,7 @@ class TestManualExecution:
 
 
 class TestTransitionTrigger:
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_transition_match(self, mock_client_cls: MagicMock) -> None:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -868,7 +868,7 @@ class TestTransitionTrigger:
         assert len(executor.results) == 1
         assert executor.results[0].success is True
 
-    @patch("dazzle.back.runtime.mapping_executor.httpx.AsyncClient")
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_transition_no_match(self, mock_client_cls: MagicMock) -> None:
         mapping = _make_mapping(
             triggers=[

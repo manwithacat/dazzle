@@ -386,7 +386,7 @@ def _start_docker_infrastructure(ctx: _ServeContext) -> None:
         return
 
     try:
-        from dazzle.ui.runtime.docker.utils import is_docker_available
+        from dazzle.page.runtime.docker.utils import is_docker_available
 
         if is_docker_available():
             from dazzle.cli.runtime_impl.docker import (
@@ -443,7 +443,7 @@ def _validate_and_finalize_infra(ctx: _ServeContext) -> None:
 def _load_appspec_and_subsystems(ctx: _ServeContext) -> None:
     """Import runtime, load AppSpec, start vendor mocks, load SiteSpec."""
     try:
-        import dazzle.back.runtime  # noqa: F401
+        import dazzle.http.runtime  # noqa: F401
     except ImportError as e:
         typer.echo(f"Dazzle runtime not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-dsl[serve]", err=True)
@@ -508,7 +508,7 @@ def _start_vendor_mocks(ctx: _ServeContext) -> None:
 
 def _serve_ui_only(ctx: _ServeContext) -> None:
     """Serve UI-only static preview files."""
-    from dazzle.ui.runtime.static_preview import generate_preview_files
+    from dazzle.page.runtime.static_preview import generate_preview_files
 
     with tempfile.TemporaryDirectory() as tmpdir:
         preview_files = generate_preview_files(ctx.appspec, tmpdir)
@@ -533,7 +533,7 @@ def _serve_ui_only(ctx: _ServeContext) -> None:
 
 def _serve_backend_only(ctx: _ServeContext) -> None:
     """Serve backend API only (no frontend UI)."""
-    from dazzle.back.runtime.combined_server import run_backend_only
+    from dazzle.http.runtime.combined_server import run_backend_only
 
     typer.echo(f"Starting Dazzle backend for '{ctx.appspec.name}'...")
     typer.echo(f"  • {len(ctx.appspec.domain.entities)} entities")
@@ -568,8 +568,8 @@ def _serve_backend_only(ctx: _ServeContext) -> None:
 
 def _serve_combined(ctx: _ServeContext) -> None:
     """Serve full combined API + UI server."""
-    from dazzle.back.runtime.combined_server import run_unified_server
-    from dazzle.ui.converters import compute_persona_default_routes, convert_appspec_to_ui
+    from dazzle.http.runtime.combined_server import run_unified_server
+    from dazzle.page.converters import compute_persona_default_routes, convert_appspec_to_ui
 
     appspec = ctx.appspec
     mf = ctx.mf
@@ -582,7 +582,7 @@ def _serve_combined(ctx: _ServeContext) -> None:
     # the same flag, and a stale `dz_theme=dark` cookie can't trap a
     # newly opted-out project's users in dark-mode.
     # #958 cycle 5 — same wiring for `[ui] haptic`.
-    from dazzle.ui.runtime.theme import configure_dark_mode_toggle, configure_haptic
+    from dazzle.page.runtime.theme import configure_dark_mode_toggle, configure_haptic
 
     configure_dark_mode_toggle(mf.dark_mode_toggle)
     configure_haptic(mf.haptic)
@@ -683,7 +683,7 @@ def _serve_combined(ctx: _ServeContext) -> None:
     _active_theme = _env_override_theme or _dsl_theme or mf.app_theme
     _theme_preset = mf.theme.preset
     if _active_theme:
-        from dazzle.ui.themes.app_theme_registry import resolve_site_config
+        from dazzle.page.themes.app_theme_registry import resolve_site_config
 
         _site_preset, _site_overrides = resolve_site_config(
             _active_theme, project_root=ctx.project_root
@@ -878,7 +878,7 @@ def serve_command(
     # dazzle.toml > DAZZLE_ENV. Set production-mode default to bundle.
     import os as _os
 
-    from dazzle.ui.runtime.asset_bundle import should_bundle_assets
+    from dazzle.page.runtime.asset_bundle import should_bundle_assets
 
     _assets_mode = getattr(ctx.mf, "assets", "auto") if ctx.mf is not None else "auto"
     _cli_override: str | None

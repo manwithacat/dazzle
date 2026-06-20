@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dazzle.back.runtime.auth.capability_guard import capability_boot_warnings
+from dazzle.http.runtime.auth.capability_guard import capability_boot_warnings
 
 
 def _active(*ids):
@@ -47,8 +47,8 @@ def test_mixed_active_and_inactive() -> None:
 def test_boot_guard_hook_logs_for_inactive_capability(caplog) -> None:
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.lifespan_hooks import _STARTUP_ATTR
-    from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+    from dazzle.http.runtime.lifespan_hooks import _STARTUP_ATTR
+    from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
     app = SimpleNamespace(state=SimpleNamespace())
     store = SimpleNamespace(connection_type_counts=lambda: {"saml": 2})
@@ -66,8 +66,8 @@ def test_boot_guard_hook_logs_for_inactive_capability(caplog) -> None:
 def test_boot_guard_hook_silent_when_capability_active(caplog) -> None:
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.lifespan_hooks import _STARTUP_ATTR
-    from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+    from dazzle.http.runtime.lifespan_hooks import _STARTUP_ATTR
+    from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
     app = SimpleNamespace(state=SimpleNamespace())
     store = SimpleNamespace(connection_type_counts=lambda: {"saml": 1})
@@ -83,8 +83,8 @@ def test_boot_guard_hook_silent_when_capability_active(caplog) -> None:
 def test_boot_guard_not_registered_without_store() -> None:
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.lifespan_hooks import _STARTUP_ATTR
-    from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+    from dazzle.http.runtime.lifespan_hooks import _STARTUP_ATTR
+    from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
     app = SimpleNamespace(state=SimpleNamespace())
     ctx = SimpleNamespace(app=app, auth_store=None, capabilities=None)

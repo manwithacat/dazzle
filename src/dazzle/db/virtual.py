@@ -4,7 +4,7 @@
 ``EventTrace`` are synthetic platform entities whose data lives in
 Redis or in-memory buffers, not in Postgres. They appear in the
 AppSpec (so the admin workspace can render them) but they have no
-SQL table — :func:`dazzle.back.runtime.sa_schema.build_metadata`
+SQL table — :func:`dazzle.http.runtime.sa_schema.build_metadata`
 filters them out, and :func:`dazzle.db.reset.db_reset_impl` must do
 the same (#814).
 

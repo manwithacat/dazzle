@@ -3,7 +3,7 @@
 
 [meta]
 category = "Core Constructs"
-version = "0.83.34"
+version = "0.83.35"
 
 [concepts.entity]
 category = "Core Construct"
@@ -99,9 +99,9 @@ v0_28_3_changes = "Added sensitive modifier for PII masking and audit compliance
 implemented_by = [
     "dazzle.core.dsl_parser_impl.entities.EntityParserMixin (parsing)",
     "dazzle.core.ir.domain.EntitySpec (IR model)",
-    "dazzle_back.runtime.pg_backend.PostgresBackend.create_table (DDL)",
-    "dazzle_back.runtime.repository.DazzleRepository (CRUD operations)",
-    "dazzle_back.runtime.route_generator.RouteGenerator.generate_route (API routes)",
+    "dazzle_http.runtime.pg_backend.PostgresBackend.create_table (DDL)",
+    "dazzle_http.runtime.repository.DazzleRepository (CRUD operations)",
+    "dazzle_http.runtime.route_generator.RouteGenerator.generate_route (API routes)",
 ]
 
 
@@ -159,9 +159,9 @@ v0_30_0_changes = "Added when: clause on surface fields for conditional visibili
 implemented_by = [
     "dazzle.core.dsl_parser_impl.surfaces.SurfaceParserMixin (parsing)",
     "dazzle.core.ir.surfaces.SurfaceSpec (IR model)",
-    "dazzle_ui.converters.template_compiler._compile_list_surface (list rendering)",
-    "dazzle_ui.converters.template_compiler._compile_form_surface (form rendering)",
-    "dazzle_ui.runtime.page_routes.create_page_routes (UI route generation)",
+    "dazzle_page.converters.template_compiler._compile_list_surface (list rendering)",
+    "dazzle_page.converters.template_compiler._compile_form_surface (form rendering)",
+    "dazzle_page.runtime.page_routes.create_page_routes (UI route generation)",
 ]
 
 

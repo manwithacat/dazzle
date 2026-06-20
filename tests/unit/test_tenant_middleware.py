@@ -7,13 +7,13 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.tenant.cache import TenantCache
-from dazzle.back.runtime.tenant.middleware import (
+from dazzle.http.runtime.tenant.cache import TenantCache
+from dazzle.http.runtime.tenant.middleware import (
     TenantHostBinding,
     TenantResolutionMiddleware,
 )
-from dazzle.back.runtime.tenant.resolver import EntityProbe, Resolver
-from dazzle.back.runtime.tenant.templates import (
+from dazzle.http.runtime.tenant.resolver import EntityProbe, Resolver
+from dazzle.http.runtime.tenant.templates import (
     render_default_404,
     render_default_410,
 )
@@ -147,8 +147,8 @@ def test_mount_tenant_resolution_middleware_is_idempotent():
     """
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.app_factory import _mount_tenant_resolution_middleware
     from dazzle.core import ir
+    from dazzle.http.runtime.app_factory import _mount_tenant_resolution_middleware
 
     entity = SimpleNamespace(
         name="Trust",
@@ -178,8 +178,8 @@ def test_mount_tenant_resolution_middleware_dedups_via_stack_when_marker_absent(
     middleware in the stack is detected and re-mount is skipped."""
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.app_factory import _mount_tenant_resolution_middleware
     from dazzle.core import ir
+    from dazzle.http.runtime.app_factory import _mount_tenant_resolution_middleware
 
     entity = SimpleNamespace(
         name="Trust",

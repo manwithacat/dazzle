@@ -127,9 +127,9 @@ Output: `./docker-compose.yml` (requires Dockerfile from `dazzle deploy dockerfi
 
 | File/Directory | Lines | Reason |
 |---|---|---|
-| `src/dazzle_ui/runtime/container/` | ~1000 | Entire container runtime — replaced by real runtime |
-| `src/dazzle_ui/runtime/docker/runner.py` | 357 | DockerRunner build/run logic — replaced by `dazzle deploy` |
-| `src/dazzle_ui/runtime/docker/templates.py` | 123 | Dockerfile templates — replaced by `dazzle deploy dockerfile` |
+| `src/dazzle_page/runtime/container/` | ~1000 | Entire container runtime — replaced by real runtime |
+| `src/dazzle_page/runtime/docker/runner.py` | 357 | DockerRunner build/run logic — replaced by `dazzle deploy` |
+| `src/dazzle_page/runtime/docker/templates.py` | 123 | Dockerfile templates — replaced by `dazzle deploy dockerfile` |
 | `--rebuild` flag on `dazzle serve` | — | No longer needed |
 
 **Total removed:** ~1500 lines of vestigial code.
@@ -158,7 +158,7 @@ Output: `./docker-compose.yml` (requires Dockerfile from `dazzle deploy dockerfi
 |------|--------|----------------|
 | `src/dazzle/cli/runtime_impl/serve.py` | Modify | Add `--production` flag handling |
 | `src/dazzle/cli/deploy.py` | Create | `dazzle deploy dockerfile\|heroku\|compose` commands |
-| `src/dazzle_ui/runtime/container/` | Delete | Retired container runtime |
-| `src/dazzle_ui/runtime/docker/runner.py` | Delete | Retired DockerRunner |
-| `src/dazzle_ui/runtime/docker/templates.py` | Delete | Retired templates |
+| `src/dazzle_page/runtime/container/` | Delete | Retired container runtime |
+| `src/dazzle_page/runtime/docker/runner.py` | Delete | Retired DockerRunner |
+| `src/dazzle_page/runtime/docker/templates.py` | Delete | Retired templates |
 | `examples/*/build/Dockerfile` | Modify | Update to new pattern |

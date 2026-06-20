@@ -11,10 +11,10 @@ import pytest
 # Skip if FastAPI not installed
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.server import DazzleBackendApp, ServerConfig  # noqa: E402
 from dazzle.core.ir.appspec import AppSpec  # noqa: E402
 from dazzle.core.ir.domain import DomainSpec, EntitySpec  # noqa: E402
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind  # noqa: E402
+from dazzle.http.runtime.server import DazzleBackendApp, ServerConfig  # noqa: E402
 
 
 def _create_minimal_appspec() -> AppSpec:
@@ -100,7 +100,7 @@ class TestDazzleBackendAppSitespec:
 
         assert app_builder._sitespec_data is None
 
-    @patch("dazzle.back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
     def test_site_routes_registered_when_sitespec_provided(self, mock_pg: MagicMock) -> None:
         """Test that /_site/* routes are registered when sitespec_data provided."""
         spec = _create_minimal_appspec()
@@ -125,7 +125,7 @@ class TestDazzleBackendAppSitespec:
         assert "/_site/pages" in route_paths, "/_site/pages route should be registered"
         assert "/_site/page/{route:path}" in route_paths, "/_site/page route should be registered"
 
-    @patch("dazzle.back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
     def test_site_routes_not_registered_when_no_sitespec(self, mock_pg: MagicMock) -> None:
         """Test that /_site/* routes are NOT registered when no sitespec_data."""
         spec = _create_minimal_appspec()

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from dazzle.back.runtime.tenant.cache import NEGATIVE, TenantCache
+from dazzle.http.runtime.tenant.cache import NEGATIVE, TenantCache
 
 
 def test_set_and_get_round_trip():

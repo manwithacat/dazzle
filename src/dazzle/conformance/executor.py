@@ -53,8 +53,8 @@ class ConformanceExecutor:
         """Boot the app, create tables, seed fixtures, acquire auth tokens."""
         import httpx
 
-        from dazzle.back.runtime.app_factory import create_app
         from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.http.runtime.app_factory import create_app
 
         if not self.database_url:
             raise RuntimeError(

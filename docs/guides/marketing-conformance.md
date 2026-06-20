@@ -8,7 +8,7 @@ This guide walks a Dazzle project through bringing its public-facing surface (ma
 
 ## What's at stake
 
-The framework's site_routes (`src/dazzle/back/runtime/site_routes.py`) carefully maintain three invariants on marketing GETs:
+The framework's site_routes (`src/dazzle/http/runtime/site_routes.py`) carefully maintain three invariants on marketing GETs:
 
 1. **Cookie discipline** — never call `set_cookie` / `delete_cookie` on `dazzle_session` or `dazzle_csrf`
 2. **CSRF middleware compatibility** — preserve framework-injected Set-Cookie headers
@@ -90,7 +90,7 @@ If you have public-path overrides that genuinely cannot be expressed in sitespec
 |---|---|
 | Doesn't call `response.set_cookie` or `response.delete_cookie` | `grep -n "set_cookie\|delete_cookie" routes/<file>.py` should return zero hits |
 | Doesn't construct a fresh `Response()` that drops inbound headers | If using `Response()` constructor, copy `request.headers` carefully or use `HTMLResponse(content=...)` |
-| Reads auth via `current_user_id(request)` from `dazzle_back.runtime.auth` | Don't roll your own session lookup |
+| Reads auth via `current_user_id(request)` from `dazzle_http.runtime.auth` | Don't roll your own session lookup |
 | Renders auth-aware nav (logged-in vs logged-out) | Use `render_in_app_shell(...)` if the page is auth-required, or sitespec's auth-aware nav if public |
 
 If any check fails, that's likely the source of cookie-clearing or auth-state inconsistency.
@@ -99,7 +99,7 @@ If any check fails, that's likely the source of cookie-clearing or auth-state in
 
 Routes like `/preferences`, `/settings`, `/help` that need auth but aren't `/app/*` paths require care:
 
-- **Use `render_in_app_shell`** (from `dazzle_back.runtime.shell`) so the page picks up the framework's sidebar / topbar / auth chrome
+- **Use `render_in_app_shell`** (from `dazzle_http.runtime.shell`) so the page picks up the framework's sidebar / topbar / auth chrome
 - **Redirect unauth via `RedirectResponse(url="/login?next=<path>", status_code=302)`** — match the framework's auth-redirect pattern exactly
 - **Never** call `current_user.delete_cookie(...)` or similar — if you need to log the user out, link to `/auth/logout`
 
@@ -107,8 +107,8 @@ Example of a conforming `/preferences` stub:
 
 ```python
 # dazzle:route-override GET /preferences
-from dazzle_back.runtime.auth import current_user_id
-from dazzle_back.runtime.shell import render_in_app_shell
+from dazzle_http.runtime.auth import current_user_id
+from dazzle_http.runtime.shell import render_in_app_shell
 from fastapi import Request
 from fastapi.responses import RedirectResponse
 
@@ -228,6 +228,6 @@ Then redeploy and run your site-fuzz / persona harness — the 403-on-marketing-
 
 - ADR-0021 — Marketing pages via sitespec (the policy this guide implements)
 - ADR-0011 — SSR + HTMX architecture
-- `src/dazzle/back/runtime/site_routes.py` — framework site router (the code path your sitespec entries flow through)
-- `src/dazzle/back/runtime/shell.py` — `render_in_app_shell` for auth-required non-app pages
+- `src/dazzle/http/runtime/site_routes.py` — framework site router (the code path your sitespec entries flow through)
+- `src/dazzle/http/runtime/shell.py` — `render_in_app_shell` for auth-required non-app pages
 - [#969](https://github.com/manwithacat/dazzle/issues/969) — the regression that surfaced this guide

@@ -10,7 +10,7 @@ deferred until last per CHANGELOG agent guidance.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.renderers.site_section_builder import (
+from dazzle.http.runtime.renderers.site_section_builder import (
     TYPED_SECTION_TYPES,
     _build_cta_section,
     _build_generic_section,

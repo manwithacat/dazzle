@@ -96,7 +96,7 @@ entity Trust:
 
 def test_middleware_class_is_importable():
     """The middleware class is importable (slice 3 supersedes the slice-1 stub)."""
-    from dazzle.back.runtime.tenant.middleware import TenantResolutionMiddleware
+    from dazzle.http.runtime.tenant.middleware import TenantResolutionMiddleware
 
     assert TenantResolutionMiddleware is not None
 

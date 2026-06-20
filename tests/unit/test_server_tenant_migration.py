@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.server import DazzleBackendApp
+from dazzle.http.runtime.server import DazzleBackendApp
 
 
 @dataclass
@@ -91,12 +91,12 @@ def _patched_run(
 
     # 2. Patch build_metadata at its source module — the production code
     #    imports it locally inside ``_migrate_tenant_schemas``, so the
-    #    patch must target ``dazzle.back.runtime.sa_schema``.
+    #    patch must target ``dazzle.http.runtime.sa_schema``.
     fake_metadata = MagicMock()
     fake_metadata.create_all.side_effect = counter.create_all
     stack.enter_context(
         patch(
-            "dazzle.back.runtime.sa_schema.build_metadata",
+            "dazzle.http.runtime.sa_schema.build_metadata",
             return_value=fake_metadata,
         )
     )

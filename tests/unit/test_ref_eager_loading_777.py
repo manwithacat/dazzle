@@ -25,8 +25,6 @@ from typing import Any
 
 import pytest
 
-from dazzle.back.converters.entity_converter import convert_entity
-from dazzle.back.runtime.relation_loader import RelationRegistry
 from dazzle.core.ir import (
     EntitySpec as IREntitySpec,
 )
@@ -36,6 +34,8 @@ from dazzle.core.ir import (
     FieldType,
     FieldTypeKind,
 )
+from dazzle.http.converters.entity_converter import convert_entity
+from dazzle.http.runtime.relation_loader import RelationRegistry
 
 
 def _task_with_ref(field_name: str) -> IREntitySpec:

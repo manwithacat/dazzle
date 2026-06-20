@@ -21,8 +21,8 @@ import pytest
 
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.route_generator import RouteGenerator  # noqa: E402
-from dazzle.back.specs import EndpointSpec, HttpMethod  # noqa: E402
+from dazzle.http.runtime.route_generator import RouteGenerator  # noqa: E402
+from dazzle.http.specs import EndpointSpec, HttpMethod  # noqa: E402
 
 
 def _generator() -> RouteGenerator:
@@ -78,7 +78,7 @@ def test_duplicate_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
 
     with (
         patch.object(generator, "generate_route"),
-        caplog.at_level(logging.WARNING, logger="dazzle.back.runtime.route_generator"),
+        caplog.at_level(logging.WARNING, logger="dazzle.http.runtime.route_generator"),
     ):
         generator.generate_all_routes([a, b], service_specs={})
 

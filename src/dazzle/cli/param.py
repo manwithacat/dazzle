@@ -40,8 +40,8 @@ def validate_command(
     project_root: Path = typer.Option(Path("."), "--project", help="Project root"),
 ) -> None:
     """Validate all parameter declarations against their defaults."""
-    from dazzle.back.runtime.param_store import validate_param_value
     from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.runtime.param_store import validate_param_value
 
     appspec = load_project_appspec(project_root.resolve())
     params = getattr(appspec, "params", [])

@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dazzle.back.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
+from dazzle.http.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
 
 
 def _ctx_with_membership(membership_roles: list[str], user_roles: list[str]) -> AuthContext:
@@ -25,7 +25,7 @@ def _ctx_with_membership(membership_roles: list[str], user_roles: list[str]) -> 
 
 
 def test_build_access_context_uses_membership_roles() -> None:
-    from dazzle.back.runtime.route_generator import _build_access_context
+    from dazzle.http.runtime.route_generator import _build_access_context
 
     # Membership says admin; legacy user.roles is empty — admin must win.
     ctx = _ctx_with_membership(membership_roles=["admin"], user_roles=[])
@@ -34,7 +34,7 @@ def test_build_access_context_uses_membership_roles() -> None:
 
 
 def test_build_access_context_unauthenticated_has_no_roles() -> None:
-    from dazzle.back.runtime.route_generator import _build_access_context
+    from dazzle.http.runtime.route_generator import _build_access_context
 
     _user, runtime_ctx = _build_access_context(AuthContext())
     assert list(runtime_ctx.roles) == []
@@ -42,7 +42,7 @@ def test_build_access_context_unauthenticated_has_no_roles() -> None:
 
 def test_cedar_row_filters_use_membership_roles() -> None:
     """A role-gated unrestricted permit is recognised from membership roles."""
-    from dazzle.back.runtime.route_generator import _extract_cedar_row_filters
+    from dazzle.http.runtime.route_generator import _extract_cedar_row_filters
 
     spec = SimpleNamespace(
         permissions=[
@@ -60,7 +60,7 @@ def test_cedar_row_filters_use_membership_roles() -> None:
 
 
 def test_should_bypass_tenant_filter_uses_membership_roles() -> None:
-    from dazzle.back.runtime.route_generator import _should_bypass_tenant_filter
+    from dazzle.http.runtime.route_generator import _should_bypass_tenant_filter
 
     ctx = _ctx_with_membership(membership_roles=["admin"], user_roles=[])
     # admin is an admin_persona → bypass applies, sourced from membership roles.
@@ -75,7 +75,7 @@ def test_policy_check_entity_op_sources_membership_roles(monkeypatch) -> None:
     auth_context (membership-first), not the global user.roles."""
     import asyncio
 
-    import dazzle.back.runtime.policy as policy_mod
+    import dazzle.http.runtime.policy as policy_mod
 
     captured: dict[str, object] = {}
 
@@ -111,8 +111,8 @@ def test_list_403_detail_reports_effective_roles_not_global() -> None:
 
     from fastapi import HTTPException
 
-    from dazzle.back.runtime.handlers.list_handlers import _list_handler_body
-    from dazzle.back.specs.auth import (
+    from dazzle.http.runtime.handlers.list_handlers import _list_handler_body
+    from dazzle.http.specs.auth import (
         AccessConditionSpec,
         AccessOperationKind,
         AccessPolicyEffect,

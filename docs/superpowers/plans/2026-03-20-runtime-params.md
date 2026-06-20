@@ -543,7 +543,7 @@ git commit -m "feat(linker): merge runtime params into AppSpec (#572)"
 Storage layer for runtime parameter overrides with scope cascade.
 
 **Files:**
-- Create: `src/dazzle_back/runtime/param_store.py`
+- Create: `src/dazzle_http/runtime/param_store.py`
 - Test: `tests/unit/test_param_store.py`
 
 - [ ] **Step 1: Write tests**
@@ -562,7 +562,7 @@ Use in-memory dicts for store in tests (no DB needed).
 
 - [ ] **Step 3: Implement ParamStore and ParamResolver**
 
-Create `src/dazzle_back/runtime/param_store.py`:
+Create `src/dazzle_http/runtime/param_store.py`:
 
 ```python
 """Runtime parameter storage and resolution."""
@@ -689,14 +689,14 @@ git commit -m "feat(runtime): param store + resolver with scope cascade (#572)"
 Connect the resolver to the workspace region handler so `ParamRef` values in heatmap thresholds are resolved at request time.
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/server.py`
-- Modify: `src/dazzle_back/runtime/workspace_rendering.py`
-- Modify: `src/dazzle_back/runtime/migrations.py`
+- Modify: `src/dazzle_http/runtime/server.py`
+- Modify: `src/dazzle_http/runtime/workspace_rendering.py`
+- Modify: `src/dazzle_http/runtime/migrations.py`
 - Test: `tests/unit/test_param_integration.py`
 
 - [ ] **Step 0: Add `_dazzle_params` table migration**
 
-In `src/dazzle_back/runtime/migrations.py`, add a function alongside the existing `MigrationHistory._ensure_table()` pattern:
+In `src/dazzle_http/runtime/migrations.py`, add a function alongside the existing `MigrationHistory._ensure_table()` pattern:
 
 ```python
 def ensure_dazzle_params_table(db_manager: DatabaseBackend) -> None:
@@ -736,11 +736,11 @@ Tests:
 
 - [ ] **Step 3: Create ParamResolver at server startup**
 
-In `src/dazzle_back/runtime/server.py`, in `_setup_database()` after migrations, create the resolver:
+In `src/dazzle_http/runtime/server.py`, in `_setup_database()` after migrations, create the resolver:
 
 ```python
 # Build param resolver from AppSpec (#572)
-from dazzle_back.runtime.param_store import ParamResolver
+from dazzle_http.runtime.param_store import ParamResolver
 param_specs = {p.key: p for p in self._appspec.params} if hasattr(self._appspec, 'params') else {}
 self._param_resolver = ParamResolver(specs=param_specs)
 ```
@@ -749,10 +749,10 @@ Pass it to the workspace rendering context.
 
 - [ ] **Step 4: Resolve ParamRef in heatmap thresholds**
 
-In `src/dazzle_back/runtime/workspace_rendering.py`, in the heatmap section (~line 633):
+In `src/dazzle_http/runtime/workspace_rendering.py`, in the heatmap section (~line 633):
 
 ```python
-from dazzle_back.runtime.param_store import resolve_value
+from dazzle_http.runtime.param_store import resolve_value
 
 # Replace:
 heatmap_thresholds = list(getattr(ctx.ctx_region, "heatmap_thresholds", None) or [])
@@ -842,7 +842,7 @@ git commit -m "feat(mcp+cli): param list/get/set commands (#572)"
 Validate stored overrides at startup and update documentation.
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/server.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 - Modify: `CHANGELOG.md`
 - Test: extend `tests/unit/test_param_store.py`
 

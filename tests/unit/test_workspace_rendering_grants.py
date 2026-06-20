@@ -8,7 +8,7 @@ invariants, new home.
 
 import inspect
 
-from dazzle.back.runtime import workspace_region_prelude
+from dazzle.http.runtime import workspace_region_prelude
 
 
 class TestGrantPreFetchingWiring:

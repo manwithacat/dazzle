@@ -10,12 +10,12 @@ role checking, including:
 
 import pytest
 
-from dazzle.back.converters.surface_converter import (
+from dazzle.core.ir.surfaces import SurfaceAccessSpec, SurfaceMode, SurfaceSpec
+from dazzle.http.converters.surface_converter import (
     convert_surface_to_endpoint,
     convert_surfaces_to_services,
 )
-from dazzle.back.specs.endpoint import EndpointSpec, HttpMethod
-from dazzle.core.ir.surfaces import SurfaceAccessSpec, SurfaceMode, SurfaceSpec
+from dazzle.http.specs.endpoint import EndpointSpec, HttpMethod
 
 # =============================================================================
 # Surface Converter: require_roles propagation
@@ -207,8 +207,8 @@ class TestRouteGeneratorRBAC:
         """Endpoint with require_roles gets a FastAPI dependency that checks roles."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import RouteGenerator
-        from dazzle.back.specs.service import DomainOperation, OperationKind, ServiceSpec
+        from dazzle.http.runtime.route_generator import RouteGenerator
+        from dazzle.http.specs.service import DomainOperation, OperationKind, ServiceSpec
 
         # Create a mock service
         mock_service = MagicMock()
@@ -261,8 +261,8 @@ class TestRouteGeneratorRBAC:
         """Endpoint without require_roles does not get a role-checking dependency."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import RouteGenerator
-        from dazzle.back.specs.service import DomainOperation, OperationKind, ServiceSpec
+        from dazzle.http.runtime.route_generator import RouteGenerator
+        from dazzle.http.specs.service import DomainOperation, OperationKind, ServiceSpec
 
         mock_service = MagicMock()
         mock_auth_store = MagicMock()
@@ -311,8 +311,8 @@ class TestBackendSpecPersonas:
 
     def test_backend_spec_includes_personas(self) -> None:
         """BackendSpec accepts a list of personas."""
-        from dazzle.back.specs import BackendSpec
         from dazzle.core.ir.personas import PersonaSpec
+        from dazzle.http.specs import BackendSpec
 
         personas = [
             PersonaSpec(id="admin", label="Administrator"),
@@ -330,7 +330,7 @@ class TestBackendSpecPersonas:
 
     def test_backend_spec_defaults_to_empty_personas(self) -> None:
         """BackendSpec defaults to empty personas list."""
-        from dazzle.back.specs import BackendSpec
+        from dazzle.http.specs import BackendSpec
 
         spec = BackendSpec(name="test_app")
         assert spec.personas == []
@@ -348,8 +348,8 @@ class TestConverterPersonas:
         """convert_appspec_to_backend includes personas in BackendSpec."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.converters import convert_appspec_to_backend
         from dazzle.core.ir.personas import PersonaSpec
+        from dazzle.http.converters import convert_appspec_to_backend
 
         # Build a minimal AppSpec mock
         appspec = MagicMock()
@@ -387,7 +387,7 @@ class TestAuthDependencyRoleCheck:
         """Auth dependency allows user with a matching role."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.auth import AuthContext, UserRecord, create_auth_dependency
+        from dazzle.http.runtime.auth import AuthContext, UserRecord, create_auth_dependency
 
         # Create a mock auth_store that returns a user with admin role
         mock_store = MagicMock()
@@ -421,7 +421,7 @@ class TestAuthDependencyRoleCheck:
 
         from fastapi import HTTPException
 
-        from dazzle.back.runtime.auth import AuthContext, UserRecord, create_auth_dependency
+        from dazzle.http.runtime.auth import AuthContext, UserRecord, create_auth_dependency
 
         mock_store = MagicMock()
         user = UserRecord(
@@ -450,7 +450,7 @@ class TestAuthDependencyRoleCheck:
         """Auth dependency allows user with any one of the required roles."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.auth import AuthContext, UserRecord, create_auth_dependency
+        from dazzle.http.runtime.auth import AuthContext, UserRecord, create_auth_dependency
 
         mock_store = MagicMock()
         user = UserRecord(
@@ -478,7 +478,7 @@ class TestAuthDependencyRoleCheck:
         """Auth dependency without require_roles allows any authenticated user."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.auth import AuthContext, UserRecord, create_auth_dependency
+        from dazzle.http.runtime.auth import AuthContext, UserRecord, create_auth_dependency
 
         mock_store = MagicMock()
         user = UserRecord(
@@ -527,7 +527,7 @@ class TestNormalizeRole:
         ],
     )
     def test_normalize_role(self, role: str, expected: str) -> None:
-        from dazzle.back.runtime.route_support import _normalize_role
+        from dazzle.http.runtime.route_support import _normalize_role
 
         assert _normalize_role(role) == expected
 
@@ -544,7 +544,7 @@ class TestBuildAccessContext:
         """Database roles with role_ prefix are normalized for Cedar evaluation."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import _build_access_context
+        from dazzle.http.runtime.route_generator import _build_access_context
 
         auth_ctx = MagicMock()
         auth_ctx.is_authenticated = True
@@ -560,7 +560,7 @@ class TestBuildAccessContext:
         """Roles without role_ prefix pass through unchanged."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import _build_access_context
+        from dazzle.http.runtime.route_generator import _build_access_context
 
         auth_ctx = MagicMock()
         auth_ctx.is_authenticated = True
@@ -576,7 +576,7 @@ class TestBuildAccessContext:
         """Unauthenticated context produces empty roles."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import _build_access_context
+        from dazzle.http.runtime.route_generator import _build_access_context
 
         auth_ctx = MagicMock()
         auth_ctx.is_authenticated = False
@@ -602,8 +602,8 @@ class TestListPermissionGate:
 
         from fastapi import HTTPException
 
-        from dazzle.back.runtime.route_generator import _list_handler_body
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _list_handler_body
+        from dazzle.http.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,
@@ -655,8 +655,8 @@ class TestListPermissionGate:
         """User with required role gets a successful list response."""
         from unittest.mock import AsyncMock, MagicMock
 
-        from dazzle.back.runtime.route_generator import _list_handler_body
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _list_handler_body
+        from dazzle.http.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,
@@ -708,8 +708,8 @@ class TestListPermissionGate:
         gate and are enforced as row-level filters at query time (#503)."""
         from unittest.mock import AsyncMock, MagicMock
 
-        from dazzle.back.runtime.route_generator import _list_handler_body
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _list_handler_body
+        from dazzle.http.specs.auth import (
             AccessComparisonKind,
             AccessConditionSpec,
             AccessOperationKind,
@@ -787,8 +787,8 @@ class TestListGateRoleCheckCondition:
 
         from fastapi import HTTPException
 
-        from dazzle.back.runtime.route_generator import _list_handler_body
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _list_handler_body
+        from dazzle.http.specs.auth import (
             AccessConditionSpec,
             AccessOperationKind,
             EntityAccessSpec,
@@ -848,8 +848,8 @@ class TestListGateRoleCheckCondition:
         """DSL rule with role_check condition allows access when user has the role."""
         from unittest.mock import AsyncMock, MagicMock
 
-        from dazzle.back.runtime.route_generator import _list_handler_body
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _list_handler_body
+        from dazzle.http.specs.auth import (
             AccessConditionSpec,
             AccessOperationKind,
             EntityAccessSpec,
@@ -908,8 +908,8 @@ class TestListGateRoleCheckCondition:
         """Mixed OR condition (role_check | comparison) skips gate — field condition present."""
         from unittest.mock import AsyncMock, MagicMock
 
-        from dazzle.back.runtime.route_generator import _list_handler_body
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _list_handler_body
+        from dazzle.http.specs.auth import (
             AccessComparisonKind,
             AccessConditionSpec,
             AccessLogicalKind,
@@ -993,7 +993,7 @@ class TestResolveUserAttribute:
         """
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import _resolve_user_attribute
+        from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
         # Built-in UserRecord field resolved directly
         ctx_builtin = MagicMock()
@@ -1044,8 +1044,8 @@ class TestExtractConditionFiltersDottedAttr:
 
     def test_comparison_condition_resolves_dotted_attr_from_preferences(self) -> None:
         """AccessConditionSpec comparison with current_user.school is resolved."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
-        from dazzle.back.specs.auth import AccessComparisonKind, AccessConditionSpec
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.specs.auth import AccessComparisonKind, AccessConditionSpec
 
         condition = AccessConditionSpec(
             kind="comparison",
@@ -1062,8 +1062,8 @@ class TestExtractConditionFiltersDottedAttr:
 
     def test_comparison_condition_injects_deny_when_attr_missing(self) -> None:
         """Missing user attribute produces impossible subquery — secure by default (#580)."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
-        from dazzle.back.specs.auth import AccessComparisonKind, AccessConditionSpec
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.specs.auth import AccessComparisonKind, AccessConditionSpec
 
         condition = AccessConditionSpec(
             kind="comparison",
@@ -1084,8 +1084,8 @@ class TestExtractConditionFiltersDottedAttr:
 
     def test_and_logical_condition_threads_auth_context(self) -> None:
         """AND logical condition threads auth_context through to child comparisons."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.specs.auth import (
             AccessComparisonKind,
             AccessConditionSpec,
             AccessLogicalKind,
@@ -1117,8 +1117,8 @@ class TestExtractConditionFiltersDottedAttr:
 
     def test_no_filter_injected_for_non_dotted_current_user(self) -> None:
         """Plain ``current_user`` (no dot) still maps to user_id as before."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
-        from dazzle.back.specs.auth import AccessComparisonKind, AccessConditionSpec
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.specs.auth import AccessComparisonKind, AccessConditionSpec
 
         condition = AccessConditionSpec(
             kind="comparison",
@@ -1146,8 +1146,8 @@ class TestScopeEnforcement:
         """Scope rule with matching role returns SQL filters."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.route_generator import _resolve_scope_filters
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _resolve_scope_filters
+        from dazzle.http.specs.auth import (
             AccessComparisonKind,
             AccessConditionSpec,
             AccessOperationKind,
@@ -1184,8 +1184,8 @@ class TestScopeEnforcement:
         Combined: scope_filters_all, scope_filters_no_match, scope_filters_wildcard,
         scope_filters_empty_scopes_passes_through (#607).
         """
-        from dazzle.back.runtime.route_generator import _resolve_scope_filters
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _resolve_scope_filters
+        from dazzle.http.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             ScopeRuleSpec,
@@ -1236,8 +1236,8 @@ class TestScopeEnforcement:
         """
         from unittest.mock import AsyncMock, MagicMock
 
-        from dazzle.back.runtime.route_generator import _list_handler_body
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _list_handler_body
+        from dazzle.http.specs.auth import (
             AccessOperationKind,
             EntityAccessSpec,
             PermissionRuleSpec,
@@ -1300,8 +1300,8 @@ class TestScopeEnforcement:
         """_list_handler_body applies SQL filter from scope rule for matching role."""
         from unittest.mock import AsyncMock, MagicMock
 
-        from dazzle.back.runtime.route_generator import _list_handler_body
-        from dazzle.back.specs.auth import (
+        from dazzle.http.runtime.route_generator import _list_handler_body
+        from dazzle.http.specs.auth import (
             AccessComparisonKind,
             AccessConditionSpec,
             AccessOperationKind,

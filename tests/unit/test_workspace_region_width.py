@@ -76,7 +76,7 @@ class TestWidthFlowsToColSpan:
     explicit value should win regardless."""
 
     def _render_card_col_span(self, src: str) -> int:
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         module = _parse(src)
         workspace = module.workspaces[0]

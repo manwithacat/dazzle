@@ -25,7 +25,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.page_routes import _inject_auth_context
 from dazzle.core import ir
 from dazzle.core.ir.personas import PersonaSpec
 from dazzle.core.ir.workspaces import (
@@ -33,8 +32,9 @@ from dazzle.core.ir.workspaces import (
     WorkspaceAccessSpec,
     WorkspaceSpec,
 )
+from dazzle.http.runtime.page_routes import _inject_auth_context
+from dazzle.page.converters.template_compiler import compile_appspec_to_templates
 from dazzle.render.context import NavItemContext, PageContext
-from dazzle.ui.converters.template_compiler import compile_appspec_to_templates
 
 # ---------------------------------------------------------------------------
 # Compile-time: nav_items_anon / nav_groups_anon population

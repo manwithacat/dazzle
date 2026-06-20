@@ -889,7 +889,7 @@ def _assert_scope_create_predicate_depth_bounded(
     """Walk a scope:create: predicate and enforce the FK-path depth cap.
 
     As of #1311 (ADR-0028) the runtime evaluator
-    (``dazzle.back.runtime.scope_create_eval``) resolves FK-path
+    (``dazzle.http.runtime.scope_create_eval``) resolves FK-path
     (depth > 1) and junction-table (ExistsCheck / NotExistsCheck)
     create-scope predicates via a payload-time SQL probe, so those
     shapes are accepted. The only remaining link-time rejection is a
@@ -1223,7 +1223,7 @@ def _build_onboarding_state_entity() -> ir.EntitySpec:
 
     Auto-injected when the project declares any ``guide`` block. Stores
     one row per ``(user_id, guide_name, guide_version)`` — the
-    repository layer (``dazzle.back.runtime.onboarding``) owns the
+    repository layer (``dazzle.http.runtime.onboarding``) owns the
     UPSERT logic that enforces the composite uniqueness.
 
     Access policy: a user reads / writes only their own rows; admins

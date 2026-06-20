@@ -6,7 +6,7 @@
 
 **Architecture:** Mount each example app's page routes onto a bare FastAPI app via `create_page_routes(appspec, backend_url=<stub>)` (the existing pattern from `tests/integration/test_template_pages.py`), wrap with `TestClient`, GET the primary list / detail / create URL of each app, and assert: (1) 200 status, (2) Fragment-chrome CSS classes present in body. The stub backend URL means data calls fail gracefully into the empty-state path — which is exactly what we want to verify renders cleanly through Fragment.
 
-**Tech Stack:** Python 3.12, FastAPI TestClient, pytest, `dazzle_ui.runtime.page_routes.create_page_routes`.
+**Tech Stack:** Python 3.12, FastAPI TestClient, pytest, `dazzle_page.runtime.page_routes.create_page_routes`.
 
 **Pre-flight:** Plan 11 closed the surface flip; `tests/integration/test_examples_fragment_smoke.py` pins DSL-level state. Plan 12 closes the gap between "DSL says fragment" and "the HTTP response actually came through the Fragment renderer."
 
@@ -56,8 +56,8 @@ from fastapi.testclient import TestClient
 
 from dazzle.core.appspec_loader import load_project_appspec
 
-pytest.importorskip("dazzle_ui.runtime.page_routes")
-from dazzle_ui.runtime.page_routes import create_page_routes  # noqa: E402
+pytest.importorskip("dazzle_page.runtime.page_routes")
+from dazzle_page.runtime.page_routes import create_page_routes  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _EXAMPLES = _REPO_ROOT / "examples"
@@ -125,7 +125,7 @@ pytest tests/integration/test_examples_fragment_http.py -v
 
 Expected (best case): all 5 pass — the production path is already wired correctly because Plans 1–11 set it up. If any fail, the failure message reveals the gap. Most likely failure modes:
 
-- **404 on `/task` etc.**: route generation uses a different URL convention. Read `src/dazzle_ui/runtime/page_routes.py` for the primary-list URL pattern and update `_APPS` accordingly.
+- **404 on `/task` etc.**: route generation uses a different URL convention. Read `src/dazzle_page/runtime/page_routes.py` for the primary-list URL pattern and update `_APPS` accordingly.
 - **500**: the route-handler raised. Body will include the trace; investigate and either fix in this task or file an issue.
 - **200 but missing `dz-surface`**: the Fragment path didn't actually run. Check the renderer registry wiring and the dispatch logic in `_maybe_dispatch_inner_html`.
 
@@ -137,7 +137,7 @@ If the test fails on 404, find the actual URL pattern. Quickest probe — print 
 python -c "
 from pathlib import Path
 from dazzle.core.appspec_loader import load_project_appspec
-from dazzle_ui.runtime.page_routes import create_page_routes
+from dazzle_page.runtime.page_routes import create_page_routes
 from fastapi import FastAPI
 appspec = load_project_appspec(Path('examples/simple_task'))
 app = FastAPI()
@@ -311,7 +311,7 @@ Add to `## [Unreleased]` in `CHANGELOG.md`:
 ```bash
 ruff check src/ tests/ --fix && ruff format src/ tests/
 mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'
-mypy src/dazzle_back/ --ignore-missing-imports
+mypy src/dazzle_http/ --ignore-missing-imports
 pytest tests/ -m "not e2e" -q
 ```
 

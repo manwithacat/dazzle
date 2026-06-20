@@ -28,12 +28,12 @@ from pathlib import Path
 
 from fastapi import Request
 
-from dazzle.back.runtime.experience_routes import (
+from dazzle.http.runtime.experience_routes import (
     _make_experience_entry_handler,
     _make_experience_step_get_handler,
     _make_experience_step_post_handler,
 )
-from dazzle.back.runtime.page_routes import (
+from dazzle.http.runtime.page_routes import (
     _make_page_handler,
     _make_root_redirect_handler,
     _make_workspace_handler,
@@ -205,8 +205,8 @@ def test_no_partial_bound_request_handlers() -> None:
     import ast
 
     runtime_roots = (
-        Path("src/dazzle/ui/runtime"),
-        Path("src/dazzle/back/runtime"),
+        Path("src/dazzle/page/runtime"),
+        Path("src/dazzle/http/runtime"),
     )
     offenders: list[str] = []
     for root in runtime_roots:

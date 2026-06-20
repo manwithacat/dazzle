@@ -6,8 +6,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.consent_routes import create_consent_routes
 from dazzle.compliance.analytics.consent import CONSENT_COOKIE_NAME
+from dazzle.http.runtime.consent_routes import create_consent_routes
 
 
 @pytest.fixture

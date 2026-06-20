@@ -39,7 +39,7 @@ org_id)`, so every new read is org-fenced for free.
 ### 1. Readiness panel — reuse `connection_doctor`
 
 - Extract the CLI's `_env_flags()` into a shared **`environment_flags() -> tuple[bool, bool,
-  bool]`** in `src/dazzle/back/runtime/auth/connection_doctor.py` (runtime). The CLI
+  bool]`** in `src/dazzle/http/runtime/auth/connection_doctor.py` (runtime). The CLI
   `_env_flags()` becomes a thin call to it (single source of truth; the route can't import the
   CLI, so the shared helper must live in the runtime module).
 - The handler computes `flags = environment_flags()` **once** before the loop, then per
@@ -102,11 +102,11 @@ connections_page (RBAC gate → org_id)
 
 | File | Change |
 |------|--------|
-| `src/dazzle/back/runtime/auth/connection_doctor.py` | add `environment_flags()` (moved from CLI) |
+| `src/dazzle/http/runtime/auth/connection_doctor.py` | add `environment_flags()` (moved from CLI) |
 | `src/dazzle/cli/auth_connection.py` | `_env_flags()` → calls shared `environment_flags()` |
-| `src/dazzle/back/runtime/auth/store.py` | add `get_connection_grace_status()` |
-| `src/dazzle/back/runtime/auth/connection_admin_routes.py` | gather readiness/events/grace per connection |
-| `src/dazzle/back/runtime/auth/connection_admin_views.py` | render readiness panel + audit list + grace badge |
+| `src/dazzle/http/runtime/auth/store.py` | add `get_connection_grace_status()` |
+| `src/dazzle/http/runtime/auth/connection_admin_routes.py` | gather readiness/events/grace per connection |
+| `src/dazzle/http/runtime/auth/connection_admin_views.py` | render readiness panel + audit list + grace badge |
 | `tests/integration/test_connection_admin_routes.py` | new tests (below) |
 | `docs/reference/enterprise-sso.md`, `CHANGELOG.md` | docs + changelog; `/bump patch` → v0.81.79 |
 

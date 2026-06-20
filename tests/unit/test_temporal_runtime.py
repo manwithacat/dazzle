@@ -29,7 +29,7 @@ def _id_field() -> ir.FieldSpec:
 
 def _make_employment_repo(*, default_filter: str = "active") -> MagicMock:
     """Build a partially-mocked Repository for the Employment entity."""
-    from dazzle.back.runtime.repository import Repository
+    from dazzle.http.runtime.repository import Repository
 
     entity_spec = ir.EntitySpec(
         name="Employment",
@@ -136,7 +136,7 @@ class TestListTombstone:
                 return original(self, filters)
             return None
 
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         original = QueryBuilder.add_filters
 
@@ -155,7 +155,7 @@ class TestListTombstone:
         repo = _make_employment_repo()
         captured: dict = {}
 
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         original = QueryBuilder.add_filters
 
@@ -177,7 +177,7 @@ class TestSoftDeleteAndTemporalCompose:
         import asyncio
         from uuid import uuid4
 
-        from dazzle.back.runtime.repository import Repository
+        from dazzle.http.runtime.repository import Repository
 
         entity_spec = ir.EntitySpec(
             name="Employment",
@@ -255,7 +255,7 @@ class TestPartialUniqueIndexSQL:
         instead inspect the structural pieces (identifiers + SQL
         fragments) which is what matters for safety + correctness.
         """
-        from dazzle.back.runtime.pg_backend import _create_temporal_unique_index_sql
+        from dazzle.http.runtime.pg_backend import _create_temporal_unique_index_sql
 
         composed = _create_temporal_unique_index_sql(
             entity_name="Employment",
@@ -275,7 +275,7 @@ class TestPartialUniqueIndexSQL:
 
     def test_index_name_uses_key_field(self) -> None:
         """The index name carries the key_field for grep-ability."""
-        from dazzle.back.runtime.pg_backend import _create_temporal_unique_index_sql
+        from dazzle.http.runtime.pg_backend import _create_temporal_unique_index_sql
 
         composed = _create_temporal_unique_index_sql(
             entity_name="ManagerLink",
@@ -294,7 +294,7 @@ class TestAsOfHelper:
     def test_predicate_shape(self) -> None:
         from datetime import date
 
-        from dazzle.back.runtime.repository import _build_temporal_as_of_predicate
+        from dazzle.http.runtime.repository import _build_temporal_as_of_predicate
 
         sql, params = _build_temporal_as_of_predicate("start_date", "end_date", date(2026, 5, 24))
         # Open-interval test: must have started by as_of AND not yet ended.
@@ -346,7 +346,7 @@ class TestListAsOf:
         repo = _make_employment_repo()
         captured_filters: dict = {}
 
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         original = QueryBuilder.add_filters
 
@@ -413,7 +413,7 @@ class TestLatestOneResolverHelper:
         return db
 
     def test_attaches_resolved_row_when_match(self) -> None:
-        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+        from dazzle.http.runtime.repository import _resolve_latest_one_fields
 
         person = self._person_entity_with_current_employment()
         rows = [{"id": "p1", "legal_name": "Alice"}]
@@ -429,7 +429,7 @@ class TestLatestOneResolverHelper:
         }
 
     def test_attaches_none_when_no_active_row(self) -> None:
-        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+        from dazzle.http.runtime.repository import _resolve_latest_one_fields
 
         person = self._person_entity_with_current_employment()
         rows = [{"id": "p1", "legal_name": "Alice"}]
@@ -439,7 +439,7 @@ class TestLatestOneResolverHelper:
         assert result[0]["current_employment"] is None
 
     def test_query_shape_uses_via_field_and_end_field_tombstone(self) -> None:
-        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+        from dazzle.http.runtime.repository import _resolve_latest_one_fields
 
         person = self._person_entity_with_current_employment()
         rows = [{"id": "p1"}, {"id": "p2"}]
@@ -452,7 +452,7 @@ class TestLatestOneResolverHelper:
         assert params == ["p1", "p2"]
 
     def test_no_op_when_entity_has_no_latest_one_fields(self) -> None:
-        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+        from dazzle.http.runtime.repository import _resolve_latest_one_fields
 
         plain_person = ir.EntitySpec(
             name="Person",
@@ -475,7 +475,7 @@ class TestLatestOneResolverHelper:
     def test_as_of_composes_with_open_interval_predicate(self) -> None:
         from datetime import date
 
-        from dazzle.back.runtime.repository import _resolve_latest_one_fields
+        from dazzle.http.runtime.repository import _resolve_latest_one_fields
 
         person = self._person_entity_with_current_employment()
         rows = [{"id": "p1"}]
@@ -517,7 +517,7 @@ class TestIncludeClosedURLParam:
         repo = _make_employment_repo()
         captured: dict = {}
 
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         original = QueryBuilder.add_filters
 

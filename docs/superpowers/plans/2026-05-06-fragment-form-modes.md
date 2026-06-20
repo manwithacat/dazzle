@@ -31,10 +31,10 @@
 
 | File | Change | Responsibility |
 |---|---|---|
-| `src/dazzle_back/runtime/renderers/fragment_adapter.py` | Modify | Add `_build_form(surface, ctx, *, mode)`; route CREATE+EDIT to it; add `_field_to_primitive` helper for type→widget mapping |
-| `src/dazzle_ui/runtime/template_renderer.py` | Modify | Extend `render_surface` minimal path to handle CREATE/EDIT (HTML form for parity testing) |
-| `src/dazzle_ui/runtime/page_routes.py` | Modify | `_build_dispatch_ctx` extracts form ctx (fields, action URL, method, submit label) |
-| `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css` | Modify | Add `.dz-region--kind-form` rules + `.dz-form-stack`, `.dz-field`, `.dz-combobox`, `.dz-submit` styling |
+| `src/dazzle_http/runtime/renderers/fragment_adapter.py` | Modify | Add `_build_form(surface, ctx, *, mode)`; route CREATE+EDIT to it; add `_field_to_primitive` helper for type→widget mapping |
+| `src/dazzle_page/runtime/template_renderer.py` | Modify | Extend `render_surface` minimal path to handle CREATE/EDIT (HTML form for parity testing) |
+| `src/dazzle_page/runtime/page_routes.py` | Modify | `_build_dispatch_ctx` extracts form ctx (fields, action URL, method, submit label) |
+| `src/dazzle_page/runtime/static/css/components/fragment-primitives.css` | Modify | Add `.dz-region--kind-form` rules + `.dz-form-stack`, `.dz-field`, `.dz-combobox`, `.dz-submit` styling |
 | `src/dazzle/render/fragment/coverage.py` | Modify | Capability matrix: add `create`, `edit` to `_SUPPORTED_MODES`; add `_UNSUPPORTED_FIELD_TYPES = {"ref", "uuid", "json", "file"}` |
 | `tests/unit/runtime/test_fragment_surface_adapter.py` | Modify | Append CREATE + EDIT mode tests |
 | `tests/unit/runtime/test_jinja_renderer_adapter.py` | Modify | Append CREATE + EDIT minimal-path tests |
@@ -53,7 +53,7 @@
 
 - **TDD throughout.** Failing test → minimal implementation → commit.
 - **Lint after each task:** `ruff check src/ tests/ --fix && ruff format src/ tests/`
-- **Type check:** `mypy src/dazzle/render --strict` and `mypy src/dazzle_back --ignore-missing-imports` clean.
+- **Type check:** `mypy src/dazzle/render --strict` and `mypy src/dazzle_http --ignore-missing-imports` clean.
 - **Verify after Task 7:** `python -m dazzle.cli fragment-audit examples/simple_task` shows zero CREATE/EDIT blockers; cumulative coverage hit 96%.
 
 ---
@@ -61,7 +61,7 @@
 ## Task 1: FragmentSurfaceAdapter handles CREATE + EDIT
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/renderers/fragment_adapter.py`
+- Modify: `src/dazzle_http/runtime/renderers/fragment_adapter.py`
 - Modify: `tests/unit/runtime/test_fragment_surface_adapter.py`
 
 The bundled adapter method handles both modes. Internally branches only on initial-value source and Submit label/action.
@@ -198,7 +198,7 @@ Expected: existing tests PASS; new tests FAIL (NotImplementedError for CREATE/ED
 
 - [ ] **Step 3: Implement `_build_form` + helper**
 
-In `src/dazzle_back/runtime/renderers/fragment_adapter.py`, update imports and add the form path:
+In `src/dazzle_http/runtime/renderers/fragment_adapter.py`, update imports and add the form path:
 
 ```python
 # Update the imports to include FormStack/Field/Combobox/Submit:
@@ -351,7 +351,7 @@ Expected: all PASS. Update `test_unsupported_mode_raises` if it was using CREATE
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/fragment_adapter.py tests/unit/runtime/test_fragment_surface_adapter.py
+git add src/dazzle_http/runtime/renderers/fragment_adapter.py tests/unit/runtime/test_fragment_surface_adapter.py
 git commit -m "feat(render): FragmentSurfaceAdapter handles CREATE+EDIT (form modes)"
 ```
 
@@ -360,7 +360,7 @@ git commit -m "feat(render): FragmentSurfaceAdapter handles CREATE+EDIT (form mo
 ## Task 2: render_surface (Jinja adapter) handles CREATE + EDIT minimal path
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/template_renderer.py`
+- Modify: `src/dazzle_page/runtime/template_renderer.py`
 - Modify: `tests/unit/runtime/test_jinja_renderer_adapter.py`
 
 For parity testing only. Production CREATE/EDIT request paths stay on `form.html`.
@@ -428,7 +428,7 @@ Expected: 2 new FAIL with NotImplementedError.
 
 - [ ] **Step 3: Extend render_surface**
 
-In `src/dazzle_ui/runtime/template_renderer.py`, find the existing mode dispatch in `render_surface` and add CREATE/EDIT before the LIST-only fallback:
+In `src/dazzle_page/runtime/template_renderer.py`, find the existing mode dispatch in `render_surface` and add CREATE/EDIT before the LIST-only fallback:
 
 ```python
     if mode in (SurfaceMode.CREATE, SurfaceMode.EDIT):
@@ -516,7 +516,7 @@ Expected: all PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/template_renderer.py tests/unit/runtime/test_jinja_renderer_adapter.py
+git add src/dazzle_page/runtime/template_renderer.py tests/unit/runtime/test_jinja_renderer_adapter.py
 git commit -m "feat(render): render_surface handles CREATE+EDIT for parity testing"
 ```
 
@@ -525,21 +525,21 @@ git commit -m "feat(render): render_surface handles CREATE+EDIT for parity testi
 ## Task 3: page_routes builds form ctx for CREATE/EDIT surfaces
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/page_routes.py`
+- Modify: `src/dazzle_page/runtime/page_routes.py`
 
 The existing `_build_dispatch_ctx` handles LIST (`table`) and VIEW (`detail`) shapes. Add a `form` branch for CREATE/EDIT.
 
 - [ ] **Step 1: Locate the form context shape**
 
 ```bash
-grep -rn "form_context\|FormContext\|render_ctx.form\|class FormContext" src/dazzle_ui/runtime/ 2>/dev/null | head -5
+grep -rn "form_context\|FormContext\|render_ctx.form\|class FormContext" src/dazzle_page/runtime/ 2>/dev/null | head -5
 ```
 
 Find the existing form-rendering context. The Jinja form template gets its data from somewhere; that's the structure to translate.
 
 - [ ] **Step 2: Add form branch to _build_dispatch_ctx**
 
-In `src/dazzle_ui/runtime/page_routes.py`, in `_build_dispatch_ctx`, after the `detail` branch:
+In `src/dazzle_page/runtime/page_routes.py`, in `_build_dispatch_ctx`, after the `detail` branch:
 
 ```python
     form = getattr(render_ctx, "form", None)
@@ -592,7 +592,7 @@ Expected: no regressions.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/page_routes.py
+git add src/dazzle_page/runtime/page_routes.py
 git commit -m "feat(runtime): _build_dispatch_ctx handles CREATE/EDIT (form context)"
 ```
 
@@ -601,9 +601,9 @@ git commit -m "feat(runtime): _build_dispatch_ctx handles CREATE/EDIT (form cont
 ## Task 4: CSS for `.dz-region--kind-form` + form primitives
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`
+- Modify: `src/dazzle_page/runtime/static/css/components/fragment-primitives.css`
 - Modify: `tests/unit/test_fragment_primitive_css.py`
-- Modify: `src/dazzle_ui/runtime/static/dist/dazzle.min.css` (regenerated)
+- Modify: `src/dazzle_page/runtime/static/dist/dazzle.min.css` (regenerated)
 
 - [ ] **Step 1: Add new classes to the presence test**
 
@@ -628,7 +628,7 @@ Expected: 5 new FAILs.
 
 - [ ] **Step 3: Add CSS rules**
 
-In `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`, append before the closing `} /* @layer components */`:
+In `src/dazzle_page/runtime/static/css/components/fragment-primitives.css`, append before the closing `} /* @layer components */`:
 
 ```css
   /* Form kind — vertical stack of fields with label-above-input layout. */
@@ -727,7 +727,7 @@ Expected: all PASS (10 existing + new classes).
 
 ```bash
 python scripts/build_dist.py 2>&1 | tail -3
-grep -c "dz-region--kind-form\|dz-form-stack" src/dazzle_ui/runtime/static/dist/dazzle.min.css
+grep -c "dz-region--kind-form\|dz-form-stack" src/dazzle_page/runtime/static/dist/dazzle.min.css
 ```
 
 Expected: ≥ 2.
@@ -735,7 +735,7 @@ Expected: ≥ 2.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/css/components/fragment-primitives.css tests/unit/test_fragment_primitive_css.py src/dazzle_ui/runtime/static/dist/
+git add src/dazzle_page/runtime/static/css/components/fragment-primitives.css tests/unit/test_fragment_primitive_css.py src/dazzle_page/runtime/static/dist/
 git commit -m "feat(ui): CSS for form-mode region + form primitives"
 ```
 

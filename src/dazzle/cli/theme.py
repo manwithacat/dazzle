@@ -37,7 +37,7 @@ def list_command(
     ),
 ) -> None:
     """List shipped + project-local themes with metadata."""
-    from dazzle.ui.themes.app_theme_registry import discover_themes
+    from dazzle.page.themes.app_theme_registry import discover_themes
 
     themes = discover_themes(project_root=project_root)
     rows = sorted(themes.values(), key=lambda m: m.name)
@@ -112,7 +112,7 @@ def init_command(
     working baseline. Edit the resulting CSS to customise; activate via
     [ui] theme = "<name>" in dazzle.toml.
     """
-    from dazzle.ui.themes.app_theme_registry import discover_themes
+    from dazzle.page.themes.app_theme_registry import discover_themes
 
     # Validate name
     if not name or not name.replace("-", "").replace("_", "").isalnum():
@@ -201,7 +201,7 @@ def preview_command(
     import os
     import sys
 
-    from dazzle.ui.themes.app_theme_registry import discover_themes
+    from dazzle.page.themes.app_theme_registry import discover_themes
 
     # Validate theme exists before exec'ing — otherwise the user gets a
     # 404 mid-session and won't know why.

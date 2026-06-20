@@ -15,7 +15,7 @@ import pytest
 
 def _render(template: str, context_model: Any) -> str:
     """Helper to render a site template with a context model."""
-    from dazzle.ui.runtime.template_renderer import render_site_page
+    from dazzle.page.runtime.template_renderer import render_site_page
 
     return render_site_page(template, context_model)
 
@@ -29,7 +29,7 @@ class TestBuildSitePageContext:
     """Tests for build_site_page_context()."""
 
     def test_basic_context(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {
             "brand": {"product_name": "TestApp"},
@@ -50,7 +50,7 @@ class TestBuildSitePageContext:
         poll (`<500`) read as "never bound" → the llm_ticket_classifier GUIDE_WALK CI
         timeout. `or`-fallbacks make null fields degrade to the product name.
         """
-        from dazzle.ui.runtime.site_context import (
+        from dazzle.page.runtime.site_context import (
             _build_copyright_text,
             build_site_page_context,
         )
@@ -79,7 +79,7 @@ class TestBuildSitePageContext:
         assert ctx.product_name == "AI Ticket Classifier"
 
     def test_nav_items_extracted(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {
             "brand": {"product_name": "App"},
@@ -101,7 +101,7 @@ class TestBuildSitePageContext:
         assert ctx.nav_cta.label == "Sign Up"
 
     def test_footer_columns_extracted(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {
             "brand": {"product_name": "App"},
@@ -123,7 +123,7 @@ class TestBuildSitePageContext:
         assert len(ctx.footer_columns[0].links) == 1
 
     def test_sections_from_page_data(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {
             "brand": {"product_name": "App"},
@@ -141,7 +141,7 @@ class TestBuildSitePageContext:
         assert ctx.page_title == "Home"
 
     def test_feature_grid_normalized_to_features(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         page_data = {
@@ -152,7 +152,7 @@ class TestBuildSitePageContext:
         assert ctx.sections[0]["type"] == "features"
 
     def test_og_meta_from_hero(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {"product_name": "App"}, "layout": {}}
         page_data = {
@@ -164,14 +164,14 @@ class TestBuildSitePageContext:
         assert ctx.og_meta.description == "World"
 
     def test_custom_css_flag(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         ctx = build_site_page_context(sitespec, "/", custom_css=True)
         assert ctx.custom_css is True
 
     def test_auto_alternate_backgrounds(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {
             "brand": {},
@@ -191,7 +191,7 @@ class TestBuildSitePageContext:
         assert ctx.sections[2]["background"] == "default"
 
     def test_explicit_background_preserved(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {
             "brand": {},
@@ -244,7 +244,7 @@ class TestSitePageTemplate:
     """Tests for site/page.html template rendering."""
 
     def test_renders_hero_section(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {"product_name": "TestApp"}, "layout": {}}
         page_data = {
@@ -268,7 +268,7 @@ class TestSitePageTemplate:
         assert "dz-section-hero" in html
 
     def test_renders_features_section(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {"product_name": "App"}, "layout": {}}
         page_data = {
@@ -293,7 +293,7 @@ class TestSitePageTemplate:
         assert "Secure" in html
 
     def test_renders_faq_section(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         page_data = {
@@ -315,7 +315,7 @@ class TestSitePageTemplate:
         assert "dz-faq-list" in html
 
     def test_renders_pricing_section(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         page_data = {
@@ -349,7 +349,7 @@ class TestSitePageTemplate:
         assert "bg-[hsl(var(--background))]" in html or "Buy Now" in html
 
     def test_renders_card_grid_section(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         page_data = {
@@ -378,7 +378,7 @@ class TestSitePageTemplate:
         assert "Learn More" in html
 
     def test_renders_split_content_reversed(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         page_data = {
@@ -403,7 +403,7 @@ class TestSitePageTemplate:
     def test_renders_misc_sections(self) -> None:
         """Combined: trust_bar, value_highlight, comparison, logo_cloud each render
         the canonical class + content."""
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         cases: list[tuple[dict[str, Any], list[str]]] = [
             # trust_bar
@@ -462,7 +462,7 @@ class TestSitePageTemplate:
                 assert needle in html, f"missing {needle!r} in section type={section['type']}"
 
     def test_renders_multiple_sections(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         page_data = {
@@ -481,7 +481,7 @@ class TestSitePageTemplate:
         assert "99%" in html
 
     def test_empty_sections_shows_loading(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         ctx = build_site_page_context(sitespec, "/")
@@ -490,7 +490,7 @@ class TestSitePageTemplate:
         assert "dz-loading" in html
 
     def test_generic_fallback_for_unknown_type(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         page_data = {
@@ -506,7 +506,7 @@ class TestSitePageTemplate:
         assert "Mystery Section" in html
 
     def test_nav_and_footer_present(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {
             "brand": {"product_name": "NavTest"},
@@ -538,7 +538,7 @@ class TestSitePageTemplate:
     # both covered by other integration tests.
 
     def test_custom_css_excluded_by_default(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
         ctx = build_site_page_context(sitespec, "/")
@@ -547,7 +547,7 @@ class TestSitePageTemplate:
         assert "/static/css/custom.css" not in html
 
     def test_renders_team_section(self) -> None:
-        from dazzle.ui.runtime.site_context import build_site_page_context
+        from dazzle.page.runtime.site_context import build_site_page_context
 
         sitespec: dict[str, Any] = {"brand": {"product_name": "App"}, "layout": {}}
         page_data = {

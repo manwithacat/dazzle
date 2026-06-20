@@ -61,7 +61,7 @@ When `feedback_widget` is enabled and no `FeedbackReport` entity is explicitly d
 
 ### 4. Base Template Widget Injection
 
-**Modify:** `src/dazzle_ui/templates/base.html`
+**Modify:** `src/dazzle_page/templates/base.html`
 
 The base template already has three extension blocks:
 - `{% block head_extra %}` (line 90) — for CSS
@@ -84,8 +84,8 @@ The `_feedback_widget_enabled` and `_current_user_role` template variables need 
 ### 5. Static Assets
 
 **New files:**
-- `src/dazzle_ui/static/js/feedback-widget.js`
-- `src/dazzle_ui/static/css/feedback-widget.css`
+- `src/dazzle_page/static/js/feedback-widget.js`
+- `src/dazzle_page/static/css/feedback-widget.css`
 
 See the AegisMark plan (Tasks 7-8) for the full JS and CSS. Key points:
 
@@ -108,7 +108,7 @@ See the AegisMark plan (Tasks 7-8) for the full JS and CSS. Key points:
 
 ### 6. Template Context Injection
 
-**Modify:** wherever the base template context is assembled (likely in `src/dazzle_back/runtime/route_generator.py` or a template context middleware).
+**Modify:** wherever the base template context is assembled (likely in `src/dazzle_http/runtime/route_generator.py` or a template context middleware).
 
 When the AppSpec has `feedback_widget.enabled == True`:
 - Set `_feedback_widget_enabled = True` in template context
@@ -153,10 +153,10 @@ From CLAUDE.md:
 | Parser mixin pattern | `src/dazzle/core/dsl_parser_impl/workspace.py` |
 | IR model pattern | `src/dazzle/core/ir/workspace.py` (or similar) |
 | AppSpec registration | `src/dazzle/core/ir/appspec.py` |
-| Base template | `src/dazzle_ui/templates/base.html` |
-| Static JS pattern | `src/dazzle_ui/static/js/dz-islands.js` |
-| Static CSS pattern | `src/dazzle_ui/static/css/dz.css` |
-| Template context | `src/dazzle_back/runtime/route_generator.py` |
+| Base template | `src/dazzle_page/templates/base.html` |
+| Static JS pattern | `src/dazzle_page/static/js/dz-islands.js` |
+| Static CSS pattern | `src/dazzle_page/static/css/dz.css` |
+| Template context | `src/dazzle_http/runtime/route_generator.py` |
 | Parser tests | `tests/unit/test_parser.py` |
 | Design spec | `docs/superpowers/specs/2026-03-23-feedback-widget-design.md` |
 | Full plan (AegisMark) | `docs/superpowers/plans/2026-03-23-feedback-widget.md` |

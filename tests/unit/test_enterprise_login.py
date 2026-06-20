@@ -11,8 +11,8 @@ from types import SimpleNamespace
 import pytest
 from psycopg.errors import UniqueViolation
 
-from dazzle.back.runtime.auth.connections import AssertedIdentity, ConnectionRecord
-from dazzle.back.runtime.auth.enterprise_login import (
+from dazzle.http.runtime.auth.connections import AssertedIdentity, ConnectionRecord
+from dazzle.http.runtime.auth.enterprise_login import (
     EnterpriseLoginError,
     map_groups_to_roles,
     provision_enterprise_login,

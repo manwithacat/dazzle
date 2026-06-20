@@ -31,8 +31,8 @@ cd examples/simple_task && dazzle serve
 | `src/dazzle/agent/` | Mission-driven agent framework |
 | `src/dazzle/compliance/` | ISO 27001 + SOC 2 compliance pipeline |
 | `src/dazzle/rbac/` | Provable RBAC — static matrix, dynamic verification, audit trail |
-| `src/dazzle/back/` | FastAPI runtime (CRUD, auth, events, grants) |
-| `src/dazzle/ui/` | Server-rendered UI runtime — typed Fragment substrate + HTMX |
+| `src/dazzle/http/` | FastAPI runtime (CRUD, auth, events, grants) |
+| `src/dazzle/page/` | Server-rendered UI runtime — typed Fragment substrate + HTMX |
 | `docs/reference/` | DSL reference documentation |
 | `examples/` | Runnable example applications |
 

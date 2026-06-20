@@ -20,8 +20,6 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.runtime.process_manager import ProcessManager
-from dazzle.back.runtime.side_effect_executor import EffectContext, SideEffectExecutor
 from dazzle.core.ir.process import (
     EffectAction,
     FieldAssignment,
@@ -33,6 +31,8 @@ from dazzle.core.ir.process import (
     StepKind,
 )
 from dazzle.core.process.context import ProcessContext
+from dazzle.http.runtime.process_manager import ProcessManager
+from dazzle.http.runtime.side_effect_executor import EffectContext, SideEffectExecutor
 
 # ---------------------------------------------------------------------------
 # Fix 1: trigger_entity population

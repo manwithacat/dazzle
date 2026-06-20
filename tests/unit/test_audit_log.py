@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.audit_log import (
+from dazzle.http.runtime.audit_log import (
     AuditLogger,
     create_audit_context_from_request,
     measure_evaluation_time,
@@ -402,7 +402,7 @@ class TestHelpers:
     @pytest.mark.asyncio
     async def test_log_audit_decision_passes_evaluation_time(self) -> None:
         """_log_audit_decision should forward evaluation_time_us to log_decision."""
-        from dazzle.back.runtime.route_generator import _log_audit_decision
+        from dazzle.http.runtime.route_generator import _log_audit_decision
 
         mock_logger = AsyncMock()
         mock_request = MagicMock()
@@ -444,7 +444,7 @@ class TestPerEntityAuditFiltering:
     def _make_route_generator(
         self, audit_logger, entity_audit_configs=None, cedar_access_specs=None
     ):
-        from dazzle.back.runtime.route_generator import RouteGenerator
+        from dazzle.http.runtime.route_generator import RouteGenerator
 
         return RouteGenerator(
             services={},
@@ -541,7 +541,7 @@ class TestListAuditLogging:
     @pytest.mark.asyncio
     async def test_list_handler_calls_audit_logger(self) -> None:
         """create_list_handler should log list access when audit_logger is provided."""
-        from dazzle.back.runtime.route_generator import _list_handler_body
+        from dazzle.http.runtime.route_generator import _list_handler_body
 
         mock_logger = AsyncMock()
         mock_service = AsyncMock()
@@ -578,7 +578,7 @@ class TestListAuditLogging:
     @pytest.mark.asyncio
     async def test_list_handler_no_audit_when_logger_none(self) -> None:
         """create_list_handler should not crash when audit_logger is None."""
-        from dazzle.back.runtime.route_generator import _list_handler_body
+        from dazzle.http.runtime.route_generator import _list_handler_body
 
         mock_service = AsyncMock()
         mock_service.execute.return_value = {"items": [], "total": 0}
@@ -625,8 +625,8 @@ class TestScopeDenyAuditLogging:
 
         from fastapi import HTTPException
 
-        from dazzle.back.runtime import audit_wrap
-        from dazzle.back.runtime.audit_wrap import _build_cedar_handler
+        from dazzle.http.runtime import audit_wrap
+        from dazzle.http.runtime.audit_wrap import _build_cedar_handler
 
         mock_logger = AsyncMock()
         row_id = uuid4()
@@ -677,8 +677,8 @@ class TestScopeDenyAuditLogging:
 
         from fastapi import HTTPException
 
-        from dazzle.back.runtime import audit_wrap
-        from dazzle.back.runtime.audit_wrap import _build_cedar_handler
+        from dazzle.http.runtime import audit_wrap
+        from dazzle.http.runtime.audit_wrap import _build_cedar_handler
 
         row_id = uuid4()
         mock_request = MagicMock()
@@ -720,7 +720,7 @@ class TestAuditTrailGlobalSwitch:
 
     def test_audit_trail_on_backend_spec(self):
         """BackendSpec should have audit_trail field."""
-        from dazzle.back.specs import BackendSpec
+        from dazzle.http.specs import BackendSpec
 
         fields = BackendSpec.model_fields
         assert "audit_trail" in fields
@@ -775,7 +775,7 @@ class TestFieldChanges:
 
     def test_audit_decision_has_field_changes(self):
         """AuditDecision should have a field_changes field."""
-        from dazzle.back.runtime.audit_log import AuditDecision
+        from dazzle.http.runtime.audit_log import AuditDecision
 
         d = AuditDecision(
             operation="update",
@@ -790,7 +790,7 @@ class TestFieldChanges:
 
     def test_audit_decision_field_changes_default_none(self):
         """AuditDecision.field_changes should default to None."""
-        from dazzle.back.runtime.audit_log import AuditDecision
+        from dazzle.http.runtime.audit_log import AuditDecision
 
         d = AuditDecision(
             operation="read",
@@ -806,7 +806,7 @@ class TestFieldChanges:
         """_compute_field_changes should detect changed fields."""
         import json
 
-        from dazzle.back.runtime.route_generator import _compute_field_changes
+        from dazzle.http.runtime.route_generator import _compute_field_changes
 
         before = {"title": "Old Title", "status": "todo", "id": "1"}
         after = {"title": "New Title", "status": "todo", "id": "1"}
@@ -821,7 +821,7 @@ class TestFieldChanges:
 
     def test_compute_field_changes_returns_none_when_equal(self):
         """_compute_field_changes should return None when nothing changed."""
-        from dazzle.back.runtime.route_generator import _compute_field_changes
+        from dazzle.http.runtime.route_generator import _compute_field_changes
 
         record = {"title": "Same", "status": "todo"}
         result = _compute_field_changes(record, record)
@@ -831,7 +831,7 @@ class TestFieldChanges:
         """_compute_field_changes with empty after should capture all fields."""
         import json
 
-        from dazzle.back.runtime.route_generator import _compute_field_changes
+        from dazzle.http.runtime.route_generator import _compute_field_changes
 
         before = {"title": "Task", "status": "done"}
         result = _compute_field_changes(before, {})
@@ -848,7 +848,7 @@ class TestFieldChanges:
 
         from pydantic import BaseModel
 
-        from dazzle.back.runtime.route_generator import _compute_field_changes
+        from dazzle.http.runtime.route_generator import _compute_field_changes
 
         class Task(BaseModel):
             title: str
@@ -906,7 +906,7 @@ class TestFieldChanges:
     @pytest.mark.asyncio
     async def test_log_audit_decision_forwards_field_changes(self):
         """_log_audit_decision should forward field_changes to log_decision."""
-        from dazzle.back.runtime.route_generator import _log_audit_decision
+        from dazzle.http.runtime.route_generator import _log_audit_decision
 
         mock_logger = MagicMock()
         mock_logger.log_decision = AsyncMock()

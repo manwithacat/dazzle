@@ -49,7 +49,7 @@
 This task extracts and extends the topological sort logic from `src/dazzle/demo_data/loader.py` into a reusable module. The new module provides both parent-first order (for schema creation) and leaf-first order (for truncation/deletion).
 
 **Important codebase facts (apply to all tasks):**
-- Tables use **quoted PascalCase** names: `"StaffMember"`, not `staff_member`. Use `quote_identifier()` from `dazzle_back.runtime.query_builder`.
+- Tables use **quoted PascalCase** names: `"StaffMember"`, not `staff_member`. Use `quote_identifier()` from `dazzle_http.runtime.query_builder`.
 - FK columns use the **field name directly** (e.g., `school`), not `school_id`. See `relation_loader.py:130-136`.
 - Only `FieldTypeKind.REF` fields create FK columns on the entity. `has_many`, `has_one`, `embeds`, `belongs_to` do NOT — filter them out.
 - Auth integrity and baseline validation from the spec are deferred to a follow-up (Layer A-plus). This plan covers FK integrity only.
@@ -456,7 +456,7 @@ def quote_id(name: str) -> str:
     """Quote a SQL identifier (table or column name).
 
     Dazzle uses PascalCase entity names as table names, quoted with double-quotes.
-    Re-implements the logic from dazzle_back.runtime.query_builder.quote_identifier
+    Re-implements the logic from dazzle_http.runtime.query_builder.quote_identifier
     to avoid importing the runtime package (which has heavier dependencies).
     """
     escaped = name.replace('"', '""')

@@ -20,8 +20,8 @@ from typing import Any
 
 import pytest
 
-from dazzle.back.runtime.repository import Repository
 from dazzle.core.ir.search import SearchField, SearchSpec
+from dazzle.http.runtime.repository import Repository
 
 # ---------------------------------------------------------------------------
 # Stub connection — captures SQL + returns canned rows

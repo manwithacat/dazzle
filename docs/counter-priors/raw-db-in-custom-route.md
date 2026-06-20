@@ -65,7 +65,7 @@ async def handler(request, id: str):
 …or call the imperative gate in the body (for body-shaped ops / composite ids):
 
 ```python
-from dazzle.back.runtime.policy import check_entity_op
+from dazzle.http.runtime.policy import check_entity_op
 
 async def handler(request, id: str):
     await check_entity_op(request, "Encumbrance", "delete", row_id=id)  # 403/404 on denial

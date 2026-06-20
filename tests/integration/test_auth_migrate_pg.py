@@ -50,10 +50,10 @@ def scratch_url() -> Iterator[str]:
 
 def _setup(scratch_url: str):
     """tenant_rls schema + auth tables; seed 2 tenants, domain Members, auth users."""
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.auth.store import AuthStore
-    from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
     from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 
     appspec = load_project_appspec(_PROJECT_ROOT)
     pk = appspec.tenancy.isolation.partition_key

@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import pytest
 
-from dazzle.back.runtime.auth.sso_config import (
+from dazzle.http.runtime.auth.sso_config import (
     SsoProviderConfig,
     get_provider,
     load_sso_providers_from_env,

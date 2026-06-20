@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.back.runtime.auth import AuthStore
+from dazzle.http.runtime.auth import AuthStore
 
 
 @pytest.fixture
@@ -108,14 +108,14 @@ class TestAuthMiddlewareExclusions:
 
     def test_forgot_password_excluded(self, auth_store: AuthStore) -> None:
         """Test that /auth/forgot-password is in the middleware exclude list."""
-        from dazzle.back.runtime.auth import AuthMiddleware
+        from dazzle.http.runtime.auth import AuthMiddleware
 
         middleware = AuthMiddleware(auth_store)
         assert middleware.is_excluded_path("/auth/forgot-password")
 
     def test_reset_password_excluded(self, auth_store: AuthStore) -> None:
         """Test that /auth/reset-password is in the middleware exclude list."""
-        from dazzle.back.runtime.auth import AuthMiddleware
+        from dazzle.http.runtime.auth import AuthMiddleware
 
         middleware = AuthMiddleware(auth_store)
         assert middleware.is_excluded_path("/auth/reset-password")
@@ -147,7 +147,7 @@ class TestCustomCssOverride:
 
     def test_get_shared_head_html_includes_custom_css_when_enabled(self) -> None:
         """custom_css=True adds a link to /static/css/custom.css."""
-        from dazzle.ui.runtime.site_renderer import get_shared_head_html
+        from dazzle.page.runtime.site_renderer import get_shared_head_html
 
         html = get_shared_head_html("Test Page", custom_css=True)
         assert "/static/css/custom.css" in html
@@ -158,7 +158,7 @@ class TestCustomCssOverride:
 
     def test_get_shared_head_html_no_custom_css_by_default(self) -> None:
         """custom_css defaults to False — no custom.css link."""
-        from dazzle.ui.runtime.site_renderer import get_shared_head_html
+        from dazzle.page.runtime.site_renderer import get_shared_head_html
 
         html = get_shared_head_html("Test Page")
         assert "/static/css/custom.css" not in html
@@ -174,7 +174,7 @@ class TestCustomCssOverride:
     def test_create_site_page_routes_detects_custom_css(self, tmp_path: Path) -> None:
         """create_site_page_routes enables custom_css when file exists."""
 
-        from dazzle.back.runtime.site_routes import create_site_page_routes
+        from dazzle.http.runtime.site_routes import create_site_page_routes
 
         # Create the custom.css file
         css_dir = tmp_path / "static" / "css"
@@ -205,7 +205,7 @@ class TestCustomCssOverride:
 
     def test_create_site_page_routes_no_custom_css_without_file(self, tmp_path: Path) -> None:
         """create_site_page_routes omits custom_css when file doesn't exist."""
-        from dazzle.back.runtime.site_routes import create_site_page_routes
+        from dazzle.http.runtime.site_routes import create_site_page_routes
 
         sitespec: dict = {
             "brand": {"product_name": "TestApp"},

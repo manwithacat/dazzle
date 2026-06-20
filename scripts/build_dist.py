@@ -19,10 +19,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # repo-root `dist/`, which the wheel didn't include — projects on
 # `[ui] assets = "auto"` (default) hard-404'd in production once
 # DAZZLE_ENV=production tipped them into bundled mode.
-DIST_DIR = REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "dist"
+DIST_DIR = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "dist"
 
-STATIC = REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static"
-SITE_STATIC = REPO_ROOT / "src" / "dazzle" / "ui" / "static"
+STATIC = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static"
+SITE_STATIC = REPO_ROOT / "src" / "dazzle" / "page" / "static"
 
 # Order mirrors static/css/dazzle.css and css_loader.CSS_SOURCE_FILES.
 # Each entry is (layer_name, path). Pre-#920 this list was stale and

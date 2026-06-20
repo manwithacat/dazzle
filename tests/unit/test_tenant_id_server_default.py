@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from dazzle.back.converters.entity_converter import convert_entities
-from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.http.converters.entity_converter import convert_entities
+from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 
 
 def test_scoped_partition_key_has_current_setting_default() -> None:

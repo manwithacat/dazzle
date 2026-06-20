@@ -19,17 +19,6 @@ import pytest
 
 pytest.importorskip("fastapi")  # predicate_compiler imports the back-runtime stack
 
-from dazzle.back.runtime.predicate_compiler import (
-    CurrentUserRef,
-    PayloadFieldRef,
-    UserAttrRef,
-    compile_exists_check_probe,
-    compile_path_check_probe,
-)
-from dazzle.back.runtime.scope_create_eval import (
-    ScopeCreateUnsupportedError,
-    check_create_predicate,
-)
 from dazzle.core.ir.fk_graph import FKEdge, FKGraph
 from dazzle.core.ir.predicates import (
     BoolComposite,
@@ -40,6 +29,17 @@ from dazzle.core.ir.predicates import (
     ExistsCheck,
     PathCheck,
     ValueRef,
+)
+from dazzle.http.runtime.predicate_compiler import (
+    CurrentUserRef,
+    PayloadFieldRef,
+    UserAttrRef,
+    compile_exists_check_probe,
+    compile_path_check_probe,
+)
+from dazzle.http.runtime.scope_create_eval import (
+    ScopeCreateUnsupportedError,
+    check_create_predicate,
 )
 
 

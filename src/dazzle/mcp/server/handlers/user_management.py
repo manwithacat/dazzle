@@ -17,7 +17,7 @@ from ..state import get_active_project_path
 from .common import extract_progress
 
 if TYPE_CHECKING:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
 
 def _generate_temp_password(length: int = 16) -> str:
@@ -33,8 +33,8 @@ def _get_auth_store(project_path: Path | None = None) -> AuthStore:
     Resolves the database URL from dazzle.toml [database] section,
     DATABASE_URL env var, or falls back to the default.
     """
-    from dazzle.back import AuthStore
     from dazzle.core.manifest import load_manifest, resolve_database_url
+    from dazzle.http import AuthStore
 
     if project_path is None:
         project_path = get_active_project_path()

@@ -111,7 +111,7 @@ class TenantRecord:
     updated_at: str
 ```
 
-The registry uses synchronous `psycopg` (v3) connections with `dict_row` factory — the same pattern as the existing `AuthStore` in `src/dazzle_back/runtime/auth/store.py`. CLI commands are synchronous.
+The registry uses synchronous `psycopg` (v3) connections with `dict_row` factory — the same pattern as the existing `AuthStore` in `src/dazzle_http/runtime/auth/store.py`. CLI commands are synchronous.
 
 ---
 
@@ -139,7 +139,7 @@ Provisioning steps:
 
 **Idempotency:** If the registry row exists but the schema is missing (partial failure), re-running `create` provisions the schema. If both exist, reports "already exists."
 
-**All DDL uses `quote_id()` from `dazzle.db.sql`** for schema and table names — no string interpolation of user-provided values into SQL. This avoids importing from `dazzle_back.runtime.query_builder` (which has heavier dependencies).
+**All DDL uses `quote_id()` from `dazzle.db.sql`** for schema and table names — no string interpolation of user-provided values into SQL. This avoids importing from `dazzle_http.runtime.query_builder` (which has heavier dependencies).
 
 ---
 

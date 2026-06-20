@@ -189,7 +189,7 @@ class TestDbStampCommand:
 
 class TestDbBaselineCommand:
     @patch("alembic.command.revision")
-    @patch("dazzle.back.alembic.metadata_loader.load_target_metadata")
+    @patch("dazzle.http.alembic.metadata_loader.load_target_metadata")
     @patch("dazzle.cli.db._get_alembic_cfg")
     @patch("dazzle.cli.db._resolve_url", return_value="")
     def test_baseline_metadata_path_no_alembic_context_crash(
@@ -202,11 +202,11 @@ class TestDbBaselineCommand:
         """`dazzle db baseline` loads DSL metadata without an active Alembic context.
 
         Regression for the AttributeError crash: importing
-        ``dazzle.back.alembic.env`` runs ``config = context.config`` at module
+        ``dazzle.http.alembic.env`` runs ``config = context.config`` at module
         level, which fails outside an Alembic run. ``baseline_command`` must
         instead call the side-effect-free ``metadata_loader``. This test fails
         if anyone re-introduces the ``env`` import — the patch target
-        ``dazzle.back.alembic.metadata_loader.load_target_metadata`` would no
+        ``dazzle.http.alembic.metadata_loader.load_target_metadata`` would no
         longer intercept the call.
         """
         # Fake metadata with one table — the non-empty path.
@@ -226,7 +226,7 @@ class TestDbBaselineCommand:
         mock_load_metadata.assert_called_once()
 
     @patch("alembic.command.revision")
-    @patch("dazzle.back.alembic.metadata_loader.load_target_metadata")
+    @patch("dazzle.http.alembic.metadata_loader.load_target_metadata")
     @patch("dazzle.cli.db._get_alembic_cfg")
     @patch("dazzle.cli.db._resolve_url", return_value="")
     def test_baseline_real_dsl_error_stops_command(
@@ -333,7 +333,7 @@ class TestMigration0004WidensVersionNum1282:
             repo_root
             / "src"
             / "dazzle"
-            / "back"
+            / "http"
             / "alembic"
             / "versions"
             / "0004_widen_alembic_version_num.py"

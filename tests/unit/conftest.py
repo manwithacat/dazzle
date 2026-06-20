@@ -29,7 +29,7 @@ _TRACKED_PREFIXES = (
     "dazzle.mcp.",
     "dazzle.mcp",
     "dazzle.api_kb",
-    "dazzle.back.runtime.control_plane",
+    "dazzle.http.runtime.control_plane",
     "dazzle.core.sitespec_loader",
     "dazzle.core.copy_parser",
     "dazzle.core.site_coherence",
@@ -166,7 +166,7 @@ def _reset_rls_user_attr_registry() -> Any:
     """Reset the Phase C app-wide RLS user-attr registry around every unit test.
 
     ``register_rls_user_attr_names`` writes a module-global in
-    ``dazzle.back.runtime.tenant_isolation`` (the app-wide set of scope-referenced
+    ``dazzle.http.runtime.tenant_isolation`` (the app-wide set of scope-referenced
     ``current_user`` attrs, set at app startup). Tests that build a
     ``DazzleBackendApp`` or call the registry directly would otherwise leak that
     set into later test modules. Not a production risk (one app per process), but
@@ -174,7 +174,7 @@ def _reset_rls_user_attr_registry() -> Any:
     a test opts in — so the registry can't surprise an unrelated test. Lazy import
     keeps this independent of the sys.modules-mock machinery above.
     """
-    from dazzle.back.runtime.tenant_isolation import register_rls_user_attr_names
+    from dazzle.http.runtime.tenant_isolation import register_rls_user_attr_names
 
     register_rls_user_attr_names(set())
     try:

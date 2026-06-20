@@ -11,8 +11,8 @@ graph TD
     IR --> Linker
     Linker --> Validator
     Validator --> Runtime{Runtime}
-    Runtime --> Back[FastAPI Runtime<br/>dazzle/back]
-    Runtime --> UI[Server-rendered UI<br/>dazzle/ui · typed Fragments + HTMX]
+    Runtime --> Back[FastAPI Runtime<br/>dazzle/http]
+    Runtime --> UI[Server-rendered UI<br/>dazzle/page · typed Fragments + HTMX]
     Back --> API[FastAPI App]
     UI --> HTML[HTML + hx-* attributes]
 ```
@@ -95,10 +95,10 @@ Validation checks:
 
 The validated AppSpec feeds into runtime generators:
 
-### Backend (`dazzle/back`)
+### Backend (`dazzle/http`)
 
 ```python
-from dazzle.back.converters import convert_appspec_to_backend
+from dazzle.http.converters import convert_appspec_to_backend
 
 backend_spec = convert_appspec_to_backend(appspec)
 ```
@@ -109,10 +109,10 @@ Produces:
 - Services from ServiceSpec
 - FastAPI routes from EndpointSpec
 
-### Frontend (`dazzle/ui`)
+### Frontend (`dazzle/page`)
 
 ```python
-from dazzle.ui.converters import convert_appspec_to_ui
+from dazzle.page.converters import convert_appspec_to_ui
 
 ui_spec = convert_appspec_to_ui(appspec)
 ```

@@ -22,7 +22,7 @@ independent review focused on the SSRF guard + XML-parse delegation.
 ### Task 1: `saml_metadata.py` — SSRF-guarded URL validation + fetch
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/saml_metadata.py`
+- Create: `src/dazzle/http/runtime/auth/saml_metadata.py`
 - Test: `tests/unit/test_saml_metadata.py`
 
 - [ ] **Step 1: Write the failing tests (local — no onelogin)**
@@ -35,7 +35,7 @@ import socket
 
 import pytest
 
-from dazzle.back.runtime.auth.saml_metadata import (
+from dazzle.http.runtime.auth.saml_metadata import (
     SamlMetadataError,
     fetch_idp_metadata,
     validate_metadata_url,
@@ -272,7 +272,7 @@ _IDP_METADATA_XML = """<?xml version="1.0"?>
 
 def test_parse_extracts_config() -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_metadata import parse_idp_metadata_xml
+    from dazzle.http.runtime.auth.saml_metadata import parse_idp_metadata_xml
 
     cfg = parse_idp_metadata_xml(_IDP_METADATA_XML)
     assert cfg["idp_entity_id"] == "https://idp.example/idp"
@@ -283,7 +283,7 @@ def test_parse_extracts_config() -> None:
 
 def test_parse_incomplete_raises() -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_metadata import (
+    from dazzle.http.runtime.auth.saml_metadata import (
         SamlMetadataError,
         parse_idp_metadata_xml,
     )
@@ -297,7 +297,7 @@ def test_parse_incomplete_raises() -> None:
 
 def test_parse_malformed_raises() -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_metadata import (
+    from dazzle.http.runtime.auth.saml_metadata import (
         SamlMetadataError,
         parse_idp_metadata_xml,
     )
@@ -435,7 +435,7 @@ def create_saml(
     """
     from pathlib import Path
 
-    from dazzle.back.runtime.auth.saml_metadata import (
+    from dazzle.http.runtime.auth.saml_metadata import (
         SamlMetadataError,
         fetch_idp_metadata,
         parse_idp_metadata_xml,

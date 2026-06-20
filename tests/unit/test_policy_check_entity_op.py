@@ -1,4 +1,4 @@
-"""Tests for `dazzle.back.runtime.policy.check_entity_op` (#1126).
+"""Tests for `dazzle.http.runtime.policy.check_entity_op` (#1126).
 
 The public policy gate for route overrides + arbitrary project code.
 Mirrors the framework's CRUD-route enforcement so overrides can opt
@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi import HTTPException
 
-from dazzle.back.runtime.policy import (
+from dazzle.http.runtime.policy import (
     EntityPolicyInfo,
     PolicyRegistry,
     check_entity_op,

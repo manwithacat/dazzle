@@ -97,7 +97,7 @@ test-fast:
 # Runs the 4 horizontal-discipline lints + snapshot tests + card-safety invariants
 # + mypy on the UI subtree. Budget <6s. Catches the drift class that accumulated
 # for ~40 cycles before cycle 311 surfaced 9 red tests in the full suite, AND
-# the hypothesized 4th class (type-error drift in dazzle_ui/) that cycle 313 flagged.
+# the hypothesized 4th class (type-error drift in dazzle_page/) that cycle 313 flagged.
 test-ux-preflight:
 	@# 5 of 9 prior preflight tests removed during the Jinja retirement
 	@# (Phase 4 deletion sweep, v0.67.X): test_template_orphan_scan,
@@ -113,8 +113,8 @@ test-ux-preflight:
 	       tests/unit/test_ir_field_reader_parity.py \
 	       tests/unit/test_typed_runtime_no_jinja.py \
 	       -q
-	@# src/dazzle_ui/ merged into src/dazzle/ui/ in v0.67.98 (#1055).
-	uv run mypy src/dazzle/ui/ --ignore-missing-imports
+	@# src/dazzle_page/ merged into src/dazzle/page/ in v0.67.98 (#1055).
+	uv run mypy src/dazzle/page/ --ignore-missing-imports
 	@# Non-blocking dist/ drift warning (cycle 319, silent-drift class 3).
 	@# Cycle 317 gap doc flagged dist/ accumulating across ~20 cycles; this
 	@# surfaces it on every preflight but doesn't fail the cycle — runs
@@ -126,15 +126,15 @@ test-ux-preflight:
 		echo "  Rebuild + commit before /ship to keep the wheel fresh."; \
 	fi
 
-# Deeper drift audit for cycles touching framework Python beyond src/dazzle/ui/
+# Deeper drift audit for cycles touching framework Python beyond src/dazzle/page/
 # (cycle 320). Superset of test-ux-preflight plus mypy across core + cli +
-# mcp + dazzle/back. Takes ~7s — not part of the per-cron-tick preflight,
+# mcp + dazzle/http. Takes ~7s — not part of the per-cron-tick preflight,
 # but recommended before /ship or after any cross-subtree edit. Complements
 # /ship's own mypy which only runs on push.
 #
-# Path note: src/dazzle_back/ → src/dazzle/back/ at v0.67.98 (#1055).
+# Path note: src/dazzle_http/ → src/dazzle/http/ at v0.67.98 (#1055).
 test-ux-deep: test-ux-preflight
-	uv run mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle/back/ \
+	uv run mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle/http/ \
 	     --ignore-missing-imports --exclude 'eject'
 
 # On-demand half-finished-internals audit. Not part of preflight — regenerates

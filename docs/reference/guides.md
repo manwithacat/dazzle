@@ -158,6 +158,6 @@ advances state. Server-rendered + HTMX — no SPA. Inspect guides with the `guid
 - Parser: `src/dazzle/core/dsl_parser_impl/onboarding.py`
 - Concordance (validate-time): `src/dazzle/core/guide_concordance.py`
 - Render: `src/dazzle/render/onboarding/` (resolver, renderer) + `ui/runtime/static/{js/dz-onboarding.js,css/components/onboarding.css}`
-- State: `src/dazzle/back/runtime/onboarding/` (Postgres `OnboardingState`)
+- State: `src/dazzle/http/runtime/onboarding/` (Postgres `OnboardingState`)
 - Quality bar gate: `tests/unit/test_example_guide_bar.py`
 - E2E oracle: `dazzle ux verify --guides` (`src/dazzle/testing/ux/interactions/guide_walk.py`)

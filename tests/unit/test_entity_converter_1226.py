@@ -10,9 +10,9 @@ through, so runtime can use direct attribute access.
 
 from __future__ import annotations
 
-from dazzle.back.converters.entity_converter import convert_entity
-from dazzle.back.specs.entity import EntitySpec as BackEntitySpec
 from dazzle.core import ir
+from dazzle.http.converters.entity_converter import convert_entity
+from dazzle.http.specs.entity import EntitySpec as BackEntitySpec
 
 
 def _id_field() -> ir.FieldSpec:

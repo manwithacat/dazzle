@@ -22,20 +22,20 @@ from unittest.mock import patch
 
 import pytest
 
-from dazzle.back.runtime import job_worker
-from dazzle.back.runtime.job_queue import InMemoryJobQueue, JobMessage
-from dazzle.back.runtime.job_worker import (
-    MAX_BACKOFF_SECONDS,
-    WorkerOutcome,
-    _compute_backoff_delay,
-    process_one,
-)
 from dazzle.core.ir.jobs import JobBackoff
 from dazzle.core.process import step_executor
 from dazzle.core.process.step_executor import (
     MAX_STEP_BACKOFF_SECONDS,
     _compute_step_backoff,
     execute_step,
+)
+from dazzle.http.runtime import job_worker
+from dazzle.http.runtime.job_queue import InMemoryJobQueue, JobMessage
+from dazzle.http.runtime.job_worker import (
+    MAX_BACKOFF_SECONDS,
+    WorkerOutcome,
+    _compute_backoff_delay,
+    process_one,
 )
 
 # ===========================================================================

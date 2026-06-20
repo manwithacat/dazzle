@@ -13,8 +13,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.page.converters.nav_builder import build_persona_nav
 from dazzle.rbac.matrix import generate_access_matrix
-from dazzle.ui.converters.nav_builder import build_persona_nav
 
 EXAMPLE_ROOT = Path(__file__).resolve().parents[2] / "examples" / "contact_manager"
 

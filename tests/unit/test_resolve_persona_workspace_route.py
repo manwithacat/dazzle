@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from dazzle.ui.converters.workspace_converter import (
+from dazzle.page.converters.workspace_converter import (
     resolve_persona_workspace_route,
 )
 

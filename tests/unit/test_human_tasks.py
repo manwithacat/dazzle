@@ -25,7 +25,7 @@ class TestTaskContext:
 
     def test_task_context_creation(self) -> None:
         """Test creating a TaskContext."""
-        from dazzle.ui.runtime.task_context import TaskContext, TaskOutcome
+        from dazzle.page.runtime.task_context import TaskContext, TaskOutcome
 
         outcomes = [
             TaskOutcome(name="approve", label="Approve", style="primary"),
@@ -53,7 +53,7 @@ class TestTaskContext:
 
     def test_is_overdue_false(self) -> None:
         """Test is_overdue returns False for future due date."""
-        from dazzle.ui.runtime.task_context import TaskContext
+        from dazzle.page.runtime.task_context import TaskContext
 
         context = TaskContext(
             task_id="task-1",
@@ -71,7 +71,7 @@ class TestTaskContext:
 
     def test_is_overdue_true(self) -> None:
         """Test is_overdue returns True for past due date."""
-        from dazzle.ui.runtime.task_context import TaskContext
+        from dazzle.page.runtime.task_context import TaskContext
 
         context = TaskContext(
             task_id="task-1",
@@ -89,7 +89,7 @@ class TestTaskContext:
 
     def test_time_remaining_days(self) -> None:
         """Test time_remaining returns days format."""
-        from dazzle.ui.runtime.task_context import TaskContext
+        from dazzle.page.runtime.task_context import TaskContext
 
         context = TaskContext(
             task_id="task-1",
@@ -108,7 +108,7 @@ class TestTaskContext:
 
     def test_time_remaining_hours(self) -> None:
         """Test time_remaining returns hours format."""
-        from dazzle.ui.runtime.task_context import TaskContext
+        from dazzle.page.runtime.task_context import TaskContext
 
         context = TaskContext(
             task_id="task-1",
@@ -140,7 +140,7 @@ class TestTaskContext:
         ],
     )
     def test_due_at_derived(self, due_offset: timedelta, attr: str, expected: str) -> None:
-        from dazzle.ui.runtime.task_context import TaskContext
+        from dazzle.page.runtime.task_context import TaskContext
 
         context = TaskContext(
             task_id="task-1",
@@ -157,7 +157,7 @@ class TestTaskContext:
 
     def test_to_dict(self) -> None:
         """Test TaskContext.to_dict() serialization."""
-        from dazzle.ui.runtime.task_context import TaskContext, TaskOutcome
+        from dazzle.page.runtime.task_context import TaskContext, TaskOutcome
 
         outcomes = [TaskOutcome(name="approve", label="Approve", style="primary")]
 
@@ -193,7 +193,7 @@ class TestTaskInboxConverter:
 
     def test_default_config(self) -> None:
         """Test TaskInboxConfig default values."""
-        from dazzle.ui.converters.task_inbox import TaskInboxConfig
+        from dazzle.page.converters.task_inbox import TaskInboxConfig
 
         config = TaskInboxConfig()
 
@@ -204,7 +204,7 @@ class TestTaskInboxConverter:
 
     def test_convert_default(self) -> None:
         """Test converting with default config."""
-        from dazzle.ui.converters.task_inbox import TaskInboxConverter
+        from dazzle.page.converters.task_inbox import TaskInboxConverter
 
         converter = TaskInboxConverter()
         spec = converter.convert()
@@ -217,7 +217,7 @@ class TestTaskInboxConverter:
 
     def test_convert_with_custom_filter(self) -> None:
         """Test converting with custom filter config."""
-        from dazzle.ui.converters.task_inbox import TaskInboxConverter
+        from dazzle.page.converters.task_inbox import TaskInboxConverter
 
         converter = TaskInboxConverter()
         spec = converter.convert(
@@ -232,7 +232,7 @@ class TestTaskInboxConverter:
 
     def test_generate_task_inbox_html(self) -> None:
         """Test generating task inbox HTML."""
-        from dazzle.ui.converters.task_inbox import (
+        from dazzle.page.converters.task_inbox import (
             TaskInboxConverter,
             generate_task_inbox_html,
         )
@@ -257,15 +257,15 @@ class TestSiteRendererTaskContext:
 
     def test_render_task_context_script_none(self) -> None:
         """Test render_task_context_script returns empty for None."""
-        from dazzle.ui.runtime.site_renderer import render_task_context_script
+        from dazzle.page.runtime.site_renderer import render_task_context_script
 
         result = render_task_context_script(None)
         assert result == ""
 
     def test_render_task_context_script(self) -> None:
         """Test render_task_context_script generates script tag."""
-        from dazzle.ui.runtime.site_renderer import render_task_context_script
-        from dazzle.ui.runtime.task_context import TaskContext, TaskOutcome
+        from dazzle.page.runtime.site_renderer import render_task_context_script
+        from dazzle.page.runtime.task_context import TaskContext, TaskOutcome
 
         outcomes = [TaskOutcome(name="approve", label="Approve", style="primary")]
 
@@ -289,8 +289,8 @@ class TestSiteRendererTaskContext:
 
     def test_render_task_surface_page(self) -> None:
         """Test render_task_surface_page generates full page."""
-        from dazzle.ui.runtime.site_renderer import render_task_surface_page
-        from dazzle.ui.runtime.task_context import TaskContext, TaskOutcome
+        from dazzle.page.runtime.site_renderer import render_task_surface_page
+        from dazzle.page.runtime.task_context import TaskContext, TaskOutcome
 
         outcomes = [TaskOutcome(name="approve", label="Approve", style="primary")]
 
@@ -341,7 +341,7 @@ class TestProcessManagerTasks:
 
     def test_process_manager_init(self, mock_adapter: MagicMock) -> None:
         """Test ProcessManager initialization without AppSpec."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         manager = ProcessManager(adapter=mock_adapter)
 
@@ -351,7 +351,7 @@ class TestProcessManagerTasks:
     @pytest.mark.asyncio
     async def test_list_tasks_no_filter(self, mock_adapter: MagicMock) -> None:
         """Test listing tasks without filter."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         mock_adapter.list_tasks = AsyncMock(return_value=[])
         manager = ProcessManager(adapter=mock_adapter)
@@ -364,7 +364,7 @@ class TestProcessManagerTasks:
     @pytest.mark.asyncio
     async def test_list_tasks_with_status_filter(self, mock_adapter: MagicMock) -> None:
         """Test listing tasks with status filter."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         # Create mock tasks
         pending_task = MagicMock()
@@ -384,7 +384,7 @@ class TestProcessManagerTasks:
     @pytest.mark.asyncio
     async def test_complete_task(self, mock_adapter: MagicMock) -> None:
         """Test completing a task."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         manager = ProcessManager(adapter=mock_adapter)
 
@@ -401,7 +401,7 @@ class TestProcessManagerTasks:
     @pytest.mark.asyncio
     async def test_reassign_task(self, mock_adapter: MagicMock) -> None:
         """Test reassigning a task."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         manager = ProcessManager(adapter=mock_adapter)
 
@@ -415,7 +415,7 @@ class TestProcessManagerTasks:
 
     def test_get_process_spec_not_found(self, mock_adapter: MagicMock) -> None:
         """Test get_process_spec returns None when not found."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         manager = ProcessManager(adapter=mock_adapter)
 

@@ -529,7 +529,7 @@ Create `templates/base_override.html` that:
 - Conditionally loads `feedback-widget.js` only for authenticated users (`{% if current_user %}`)
 - Sets `document.body.dataset.userRole` from the current user's role for the widget to read
 
-**Before executing:** Run `mcp__dazzle__dsl operation=inspect_entity name=User` or check the Dazzle base template (`python3 -c "import dazzle_back; print(dazzle_back.__file__)"` then find `templates/base.html`) to discover available template blocks.
+**Before executing:** Run `mcp__dazzle__dsl operation=inspect_entity name=User` or check the Dazzle base template (`python3 -c "import dazzle_http; print(dazzle_http.__file__)"` then find `templates/base.html`) to discover available template blocks.
 
 **Fallback approaches if `extra_head`/`extra_body` blocks don't exist:**
 1. **Custom route middleware** — create `routes/feedback_widget.py` that hooks into Dazzle's response pipeline and appends `<link>` and `<script>` tags before `</head>` and `</body>` respectively in all HTML responses

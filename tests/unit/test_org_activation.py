@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from dazzle.back.runtime.auth.models import MembershipRecord
-from dazzle.back.runtime.auth.org_activation import (
+from dazzle.http.runtime.auth.models import MembershipRecord
+from dazzle.http.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
     Activated,
     HostForbidden,
@@ -317,7 +317,7 @@ class TestJsonApiHostForbiddenGate:
     def test_gated_app_raises_403(self) -> None:
         from fastapi import HTTPException
 
-        from dazzle.back.runtime.auth.routes import _json_active_membership_id
+        from dazzle.http.runtime.auth.routes import _json_active_membership_id
 
         user = SimpleNamespace(id="u-1")
         with pytest.raises(HTTPException) as ei:
@@ -327,7 +327,7 @@ class TestJsonApiHostForbiddenGate:
         assert ei.value.status_code == 403
 
     def test_ungated_app_proceeds_membership_less(self) -> None:
-        from dazzle.back.runtime.auth.routes import _json_active_membership_id
+        from dazzle.http.runtime.auth.routes import _json_active_membership_id
 
         user = SimpleNamespace(id="u-1")
         result = _json_active_membership_id(

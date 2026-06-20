@@ -21,7 +21,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.tenant_isolation import (
+from dazzle.http.runtime.tenant_isolation import (
     _current_rls_user_attrs,
     _current_tenant_id,
     get_current_rls_user_attrs,
@@ -72,7 +72,7 @@ def test_attr_name_registry_roundtrip() -> None:
 
 
 def test_set_rls_user_attrs_emits_parameterised_set_config() -> None:
-    from dazzle.back.runtime.pg_backend import _set_rls_user_attrs
+    from dazzle.http.runtime.pg_backend import _set_rls_user_attrs
 
     conn = MagicMock()
     _set_rls_user_attrs(conn, {"id": "u1", "school_id": "s1"})
@@ -97,7 +97,7 @@ def test_set_rls_user_attrs_emits_parameterised_set_config() -> None:
 
 def test_set_rls_user_attrs_value_is_bind_param_not_in_sql() -> None:
     """Adversarial: a value that looks like SQL must never reach the query string."""
-    from dazzle.back.runtime.pg_backend import _set_rls_user_attrs
+    from dazzle.http.runtime.pg_backend import _set_rls_user_attrs
 
     conn = MagicMock()
     evil = "'; DROP TABLE users; --"
@@ -111,7 +111,7 @@ def test_set_rls_user_attrs_value_is_bind_param_not_in_sql() -> None:
 
 
 def test_set_rls_user_attrs_noop_when_empty() -> None:
-    from dazzle.back.runtime.pg_backend import _set_rls_user_attrs
+    from dazzle.http.runtime.pg_backend import _set_rls_user_attrs
 
     conn = MagicMock()
     _set_rls_user_attrs(conn, {})
@@ -119,7 +119,7 @@ def test_set_rls_user_attrs_noop_when_empty() -> None:
 
 
 def test_set_rls_user_attrs_noop_when_none() -> None:
-    from dazzle.back.runtime.pg_backend import _set_rls_user_attrs
+    from dazzle.http.runtime.pg_backend import _set_rls_user_attrs
 
     conn = MagicMock()
     _set_rls_user_attrs(conn, None)
@@ -132,7 +132,7 @@ def test_bind_resolves_registered_attrs_into_contextvar(monkeypatch) -> None:
     Mirrors Phase B's tenant-id bind: ``__RBAC_DENY__``/None resolutions are
     skipped (their GUC stays unset → fail-closed).
     """
-    from dazzle.back.runtime.auth import dependencies as deps
+    from dazzle.http.runtime.auth import dependencies as deps
 
     register_rls_user_attr_names({"id", "school_id", "absent_attr"})
     try:
@@ -147,7 +147,7 @@ def test_bind_resolves_registered_attrs_into_contextvar(monkeypatch) -> None:
             return resolved[attr]
 
         monkeypatch.setattr(
-            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
+            "dazzle.http.runtime.scope_filters._resolve_user_attribute",
             fake_resolve,
         )
 
@@ -158,7 +158,7 @@ def test_bind_resolves_registered_attrs_into_contextvar(monkeypatch) -> None:
         deps._bind_rls_tenant_id(auth_ctx)
 
         # tenant_id bound (Phase B behaviour preserved)
-        from dazzle.back.runtime.tenant_isolation import get_current_tenant_id
+        from dazzle.http.runtime.tenant_isolation import get_current_tenant_id
 
         assert get_current_tenant_id() == "t1"
         # user attrs keyed by bare attr name: resolvable → set; DENY → omitted.
@@ -176,7 +176,7 @@ def test_bind_omits_empty_string_value(monkeypatch) -> None:
     a hard ``::uuid`` cast error in the scope policy — so it must be dropped, same
     as ``__RBAC_DENY__`` (fail-closed: the predicate denies on the missing GUC).
     """
-    from dazzle.back.runtime.auth import dependencies as deps
+    from dazzle.http.runtime.auth import dependencies as deps
 
     register_rls_user_attr_names({"id"})
     try:
@@ -185,7 +185,7 @@ def test_bind_omits_empty_string_value(monkeypatch) -> None:
             return "t1" if attr == "tenant_id" else ""
 
         monkeypatch.setattr(
-            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
+            "dazzle.http.runtime.scope_filters._resolve_user_attribute",
             fake_resolve,
         )
 
@@ -206,7 +206,7 @@ def test_bind_noop_when_no_registered_attrs(monkeypatch) -> None:
     must not bind a user-attr map, so ``get_current_rls_user_attrs()`` stays ``{}``
     (proving the dep left it alone — not that it actively set ``{}``).
     """
-    from dazzle.back.runtime.auth import dependencies as deps
+    from dazzle.http.runtime.auth import dependencies as deps
 
     register_rls_user_attr_names(set())
 
@@ -214,7 +214,7 @@ def test_bind_noop_when_no_registered_attrs(monkeypatch) -> None:
         return "t1" if attr == "tenant_id" else "should-not-be-called"
 
     monkeypatch.setattr(
-        "dazzle.back.runtime.scope_filters._resolve_user_attribute",
+        "dazzle.http.runtime.scope_filters._resolve_user_attribute",
         fake_resolve,
     )
 
@@ -228,8 +228,8 @@ def test_bind_noop_when_no_registered_attrs(monkeypatch) -> None:
 
 def test_compute_app_wide_user_attr_names_union() -> None:
     """The app-wide set is the union of collect_user_attr_refs over every scope rule."""
-    from dazzle.back.runtime.server import _compute_rls_user_attr_names
     from dazzle.core.ir.predicates import ColumnCheck, ValueRef
+    from dazzle.http.runtime.server import _compute_rls_user_attr_names
 
     # Two entities, each with one scope rule referencing a different attr.
     rule_a = MagicMock()

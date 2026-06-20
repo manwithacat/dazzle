@@ -1,8 +1,8 @@
 """Pure-Python helpers for guided onboarding (v0.71.3).
 
-Split out of ``dazzle.back.runtime.onboarding`` so the UI layer can
+Split out of ``dazzle.http.runtime.onboarding`` so the UI layer can
 import them without crossing the architectural boundary
-(``dazzle.ui.*`` must not import ``dazzle.back.*``). The DB-bound
+(``dazzle.page.*`` must not import ``dazzle.http.*``). The DB-bound
 repository + FastAPI routes stay in ``back``.
 
 Contents:

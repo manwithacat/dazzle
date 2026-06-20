@@ -27,7 +27,7 @@ def test_no_inline_404_guard() -> None:
     ]
     assert not hits, (
         "Inline fetch-or-404 guard found — use "
-        "`dazzle.back.runtime.http_errors.require_found(value)` instead:\n  " + "\n  ".join(hits)
+        "`dazzle.http.runtime.http_errors.require_found(value)` instead:\n  " + "\n  ".join(hits)
     )
 
 

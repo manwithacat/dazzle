@@ -42,7 +42,7 @@ def store_url() -> Iterator[str]:
 
 
 def _store(store_url: str):
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=store_url)
     store._init_db()
@@ -50,7 +50,7 @@ def _store(store_url: str):
 
 
 def test_invite_then_accept_creates_active_membership(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError,
         accept_invitation,
         create_invitation,
@@ -97,7 +97,7 @@ def test_invite_then_accept_creates_active_membership(store_url: str) -> None:
 
 
 def test_accept_rejects_email_mismatch(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError,
         accept_invitation,
         create_invitation,
@@ -121,7 +121,7 @@ def test_accept_rejects_email_mismatch(store_url: str) -> None:
 
 
 def test_accept_rejects_unverified_email(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError,
         accept_invitation,
         create_invitation,
@@ -145,7 +145,7 @@ def test_accept_rejects_unverified_email(store_url: str) -> None:
 
 
 def test_accept_rejects_expired(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError,
         accept_invitation,
         create_invitation,
@@ -174,7 +174,7 @@ def test_accept_rejects_expired(store_url: str) -> None:
 
 
 def test_accept_rejects_already_member(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError,
         accept_invitation,
         create_invitation,
@@ -230,7 +230,7 @@ def test_accept_unique_violation_maps_to_already_member(store_url: str) -> None:
     # concurrent winner) must surface as a clean already_member, not a 500/raw
     # UniqueViolation. Simulate by monkeypatching get_memberships_for_identity to
     # report "no membership" while the row in fact already exists.
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         InvitationError,
         accept_invitation,
         create_invitation,
@@ -259,7 +259,7 @@ def test_accept_unique_violation_maps_to_already_member(store_url: str) -> None:
 def _invite_app(store, org_admin_roles):
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.auth.invitation_routes import create_invitation_routes
+    from dazzle.http.runtime.auth.invitation_routes import create_invitation_routes
 
     app = FastAPI()
     app.state.auth_store = store
@@ -272,7 +272,7 @@ def _invite_app(store, org_admin_roles):
 def test_invite_route_authz_gate(store_url: str) -> None:
     from fastapi.testclient import TestClient
 
-    from dazzle.back.runtime.auth.invitations import list_pending_invitations
+    from dazzle.http.runtime.auth.invitations import list_pending_invitations
 
     store = _store(store_url)
     inviter = store.create_user(email="boss@acme.test", password="pw123456", roles=[])
@@ -301,7 +301,7 @@ def test_invite_route_authz_gate(store_url: str) -> None:
 
 
 def test_list_pending_invitations_excludes_accepted_and_expired(store_url: str) -> None:
-    from dazzle.back.runtime.auth.invitations import (
+    from dazzle.http.runtime.auth.invitations import (
         accept_invitation,
         create_invitation,
         list_pending_invitations,

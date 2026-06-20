@@ -8,9 +8,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.renderers.init import register_default_renderers
-from dazzle.back.runtime.services import RuntimeServices
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
+from dazzle.http.runtime.renderers.init import register_default_renderers
+from dazzle.http.runtime.services import RuntimeServices
 from dazzle.render.dispatch import dispatch_render
 from dazzle.render.fragment.errors import FragmentError
 

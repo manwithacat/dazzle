@@ -12,7 +12,7 @@ idempotency.
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-ROUTES = REPO_ROOT / "src" / "dazzle" / "back" / "runtime" / "auth" / "routes.py"
+ROUTES = REPO_ROOT / "src" / "dazzle" / "http" / "runtime" / "auth" / "routes.py"
 
 
 def test_delete_preference_returns_204_response() -> None:

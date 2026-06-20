@@ -36,7 +36,7 @@ Starlette `SessionMiddleware`, the existing cookie/redirect-safety helpers.
 
 ## Task 1: routes module
 
-**Files:** Create `src/dazzle/back/runtime/auth/enterprise_routes.py`,
+**Files:** Create `src/dazzle/http/runtime/auth/enterprise_routes.py`,
 `tests/integration/test_enterprise_routes.py`.
 
 - `create_enterprise_sso_routes(*, cookie_name="dazzle_session")` → `APIRouter` with
@@ -49,7 +49,7 @@ Starlette `SessionMiddleware`, the existing cookie/redirect-safety helpers.
 
 ## Task 2: subsystem wiring
 
-**Files:** Modify `src/dazzle/back/runtime/subsystems/auth.py`
+**Files:** Modify `src/dazzle/http/runtime/subsystems/auth.py`
 
 - Gate enterprise on `find_spec("authlib")`. When global SSO configured OR enterprise
   enabled → add `SessionMiddleware` once (lift it out of the `if configured` block). When

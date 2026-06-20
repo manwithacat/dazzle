@@ -12,20 +12,20 @@ group's `external_id` (GUID) OR `display_name`, with `externalId` captured + ech
 
 ## File Structure
 
-- Modify `src/dazzle/back/runtime/auth/saml_provider.py` — `_extract_groups` overage check.
-- Modify `src/dazzle/back/runtime/auth/models.py` — `ScimGroupRecord.external_id`.
-- Modify `src/dazzle/back/runtime/auth/store.py` — `create_scim_group`/`_row_to_scim_group`
+- Modify `src/dazzle/http/runtime/auth/saml_provider.py` — `_extract_groups` overage check.
+- Modify `src/dazzle/http/runtime/auth/models.py` — `ScimGroupRecord.external_id`.
+- Modify `src/dazzle/http/runtime/auth/store.py` — `create_scim_group`/`_row_to_scim_group`
   external_id; new `get_member_group_keys`.
-- Modify `src/dazzle/back/runtime/auth/scim_provisioning.py` — `create_group(external_id)`;
+- Modify `src/dazzle/http/runtime/auth/scim_provisioning.py` — `create_group(external_id)`;
   `recompute_membership_roles` uses `get_member_group_keys`.
-- Modify `src/dazzle/back/runtime/auth/scim_routes.py` — POST passes `externalId`; `_group_to_scim` echoes it.
+- Modify `src/dazzle/http/runtime/auth/scim_routes.py` — POST passes `externalId`; `_group_to_scim` echoes it.
 - Tests: `test_saml_provider.py`, a provisioning unit test, `test_connections_pg.py`.
 
 ---
 
 ### Task 1: Gap 3 — SAML overage fail-safe
 
-**Files:** Modify `src/dazzle/back/runtime/auth/saml_provider.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/saml_provider.py`
 
 - [ ] **Step 1: Failing tests** (append to `tests/unit/test_saml_provider.py`):
 
@@ -75,7 +75,7 @@ overage indicator (any attribute key ending `groups.link`, case-insensitive):
 
 ### Task 2: Gap 2 storage — `ScimGroupRecord.external_id` + store
 
-**Files:** Modify `src/dazzle/back/runtime/auth/models.py`, `store.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/models.py`, `store.py`
 
 - [ ] **Step 1: Model** — add to `ScimGroupRecord` (after `connection_id`):
 ```python
@@ -88,7 +88,7 @@ overage indicator (any attribute key ending `groups.link`, case-insensitive):
         self, connection_id: str, display_name: str, external_id: str | None = None
     ) -> "ScimGroupRecord":  # noqa: F821
         from uuid import uuid4
-        from dazzle.back.runtime.auth.models import ScimGroupRecord
+        from dazzle.http.runtime.auth.models import ScimGroupRecord
 
         now = datetime.now(UTC).isoformat()
         gid = str(uuid4())
@@ -198,7 +198,7 @@ def test_scim_group_external_id_drives_roles(store_url: str) -> None:
     g = store.create_scim_group(conn.id, "Year 7 Teachers", "99999999-aaaa")
     store.add_group_member(g.id, m.id)
 
-    from dazzle.back.runtime.auth.scim_provisioning import recompute_membership_roles
+    from dazzle.http.runtime.auth.scim_provisioning import recompute_membership_roles
     recompute_membership_roles(store, conn, m.id)
     assert "teacher" in store.get_membership(m.id).roles  # matched by GUID, not display_name
 

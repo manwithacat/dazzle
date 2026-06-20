@@ -4,7 +4,7 @@
 
 **Goal:** Implement issue #1289 — a `tenant_host:` per-entity DSL keyword that auto-mounts Host-header tenant resolution, an LRU cache, history 301/410 redirects, a cross-tenant auth guard, and `__Host-` / `__Secure-` cookie wiring. Replaces five project-side modules in AegisMark phase 1.
 
-**Architecture:** Per-entity `TenantHostSpec` IR; new `dazzle.back.runtime.tenant` package containing pure-logic cache + resolver + cookies + guard + templates plus a `TenantResolutionMiddleware`. App factory auto-mounts middleware when any entity declares `tenant_host:`. Auth dependency injects the cross-tenant guard. Cookie names switch convention only for `tenant_host`-using apps. Slug-history table is project-provided per the spec (the slug field's history sub-field is #1288 Phase 3, deferred).
+**Architecture:** Per-entity `TenantHostSpec` IR; new `dazzle.http.runtime.tenant` package containing pure-logic cache + resolver + cookies + guard + templates plus a `TenantResolutionMiddleware`. App factory auto-mounts middleware when any entity declares `tenant_host:`. Auth dependency injects the cross-tenant guard. Cookie names switch convention only for `tenant_host`-using apps. Slug-history table is project-provided per the spec (the slug field's history sub-field is #1288 Phase 3, deferred).
 
 **Tech Stack:** Python 3.12, FastAPI, Starlette `BaseHTTPMiddleware`, Pydantic v2, the existing Dazzle Repository layer, pytest.
 
@@ -19,8 +19,8 @@
 **Purpose:** Land the `tenant_host:` block in the DSL so it parses and validates. Middleware is a stub that raises `NotImplementedError` if mounted, so the validator pass can light up without runtime risk.
 
 **Files in this slice:**
-- Create: `src/dazzle/back/runtime/tenant/__init__.py`
-- Create: `src/dazzle/back/runtime/tenant/middleware.py` (stub only)
+- Create: `src/dazzle/http/runtime/tenant/__init__.py`
+- Create: `src/dazzle/http/runtime/tenant/middleware.py` (stub only)
 - Modify: `src/dazzle/core/ir/domain.py` (add `TenantHostSpec`, attach to `EntitySpec`)
 - Modify: `src/dazzle/core/ir/__init__.py` (export `TenantHostSpec`)
 - Modify: `src/dazzle/core/lexer.py` (`TENANT_HOST` token)
@@ -686,8 +686,8 @@ git commit -m "Validate tenant_host: hard-error rules (#1289 slice 1)"
 ### Task 1.5 — Stub middleware module
 
 **Files:**
-- Create: `src/dazzle/back/runtime/tenant/__init__.py`
-- Create: `src/dazzle/back/runtime/tenant/middleware.py`
+- Create: `src/dazzle/http/runtime/tenant/__init__.py`
+- Create: `src/dazzle/http/runtime/tenant/middleware.py`
 
 - [ ] **Step 1: Write the failing import test**
 
@@ -695,7 +695,7 @@ Append to `tests/unit/test_tenant_host_parser.py`:
 
 ```python
 def test_stub_middleware_raises_not_implemented():
-    from dazzle.back.runtime.tenant.middleware import TenantResolutionMiddleware
+    from dazzle.http.runtime.tenant.middleware import TenantResolutionMiddleware
     with pytest.raises(NotImplementedError, match="slice 3"):
         TenantResolutionMiddleware(app=None)  # type: ignore[arg-type]
 ```
@@ -707,7 +707,7 @@ Expected: FAIL — module does not exist.
 
 - [ ] **Step 3: Create the package**
 
-Create `src/dazzle/back/runtime/tenant/__init__.py` with a docstring only:
+Create `src/dazzle/http/runtime/tenant/__init__.py` with a docstring only:
 
 ```python
 """Host-header tenant routing (#1289).
@@ -716,7 +716,7 @@ See docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md.
 """
 ```
 
-Create `src/dazzle/back/runtime/tenant/middleware.py`:
+Create `src/dazzle/http/runtime/tenant/middleware.py`:
 
 ```python
 """TenantResolutionMiddleware stub for #1289 slice 1.
@@ -745,7 +745,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/tenant/__init__.py src/dazzle/back/runtime/tenant/middleware.py tests/unit/test_tenant_host_parser.py
+git add src/dazzle/http/runtime/tenant/__init__.py src/dazzle/http/runtime/tenant/middleware.py tests/unit/test_tenant_host_parser.py
 git commit -m "Stub TenantResolutionMiddleware (#1289 slice 1)"
 ```
 
@@ -840,8 +840,8 @@ If `/cimonitor` reports a red badge, fix and re-ship as a patch bump.
 **Purpose:** Land `TenantCache` (LRU + ttl + NEGATIVE sentinel + bust API) and `Resolver` (lookup chain across entities + history fallback) as standalone units with full unit coverage. Zero integration with the middleware yet.
 
 **Files in this slice:**
-- Create: `src/dazzle/back/runtime/tenant/cache.py`
-- Create: `src/dazzle/back/runtime/tenant/resolver.py`
+- Create: `src/dazzle/http/runtime/tenant/cache.py`
+- Create: `src/dazzle/http/runtime/tenant/resolver.py`
 - Test: `tests/unit/test_tenant_cache.py`
 - Test: `tests/unit/test_tenant_resolver.py`
 
@@ -850,7 +850,7 @@ If `/cimonitor` reports a red badge, fix and re-ship as a patch bump.
 ### Task 2.1 — `TenantCache` LRU with NEGATIVE sentinel
 
 **Files:**
-- Create: `src/dazzle/back/runtime/tenant/cache.py`
+- Create: `src/dazzle/http/runtime/tenant/cache.py`
 - Test: `tests/unit/test_tenant_cache.py`
 
 - [ ] **Step 1: Write the failing cache tests**
@@ -863,7 +863,7 @@ from __future__ import annotations
 
 import time
 
-from dazzle.back.runtime.tenant.cache import NEGATIVE, TenantCache
+from dazzle.http.runtime.tenant.cache import NEGATIVE, TenantCache
 
 
 def test_set_and_get_round_trip():
@@ -920,7 +920,7 @@ Expected: import error — `TenantCache` does not exist.
 
 - [ ] **Step 3: Implement `TenantCache`**
 
-Create `src/dazzle/back/runtime/tenant/cache.py`:
+Create `src/dazzle/http/runtime/tenant/cache.py`:
 
 ```python
 """In-process LRU cache for tenant resolution lookups (#1289).
@@ -996,7 +996,7 @@ Expected: 7 PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/tenant/cache.py tests/unit/test_tenant_cache.py
+git add src/dazzle/http/runtime/tenant/cache.py tests/unit/test_tenant_cache.py
 git commit -m "TenantCache LRU + NEGATIVE sentinel + bust API (#1289 slice 2)"
 ```
 
@@ -1005,7 +1005,7 @@ git commit -m "TenantCache LRU + NEGATIVE sentinel + bust API (#1289 slice 2)"
 ### Task 2.2 — `Resolver` result types
 
 **Files:**
-- Create: `src/dazzle/back/runtime/tenant/resolver.py`
+- Create: `src/dazzle/http/runtime/tenant/resolver.py`
 - Test: `tests/unit/test_tenant_resolver.py`
 
 - [ ] **Step 1: Write the failing resolver-type tests**
@@ -1020,7 +1020,7 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.runtime.tenant.resolver import (
+from dazzle.http.runtime.tenant.resolver import (
     ExpiredHistoryHit,
     HistoryHit,
     Resolver,
@@ -1052,7 +1052,7 @@ Expected: FAIL — module missing.
 
 - [ ] **Step 3: Implement result dataclasses**
 
-Create `src/dazzle/back/runtime/tenant/resolver.py`:
+Create `src/dazzle/http/runtime/tenant/resolver.py`:
 
 ```python
 """Tenant lookup chain (#1289 slice 2).
@@ -1176,7 +1176,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/tenant/resolver.py tests/unit/test_tenant_resolver.py
+git add src/dazzle/http/runtime/tenant/resolver.py tests/unit/test_tenant_resolver.py
 git commit -m "Resolver result dataclasses (#1289 slice 2)"
 ```
 
@@ -1194,7 +1194,7 @@ Append to `tests/unit/test_tenant_resolver.py`:
 ```python
 from datetime import datetime, timedelta, timezone
 
-from dazzle.back.runtime.tenant.resolver import (
+from dazzle.http.runtime.tenant.resolver import (
     EntityProbe,
     HistoryProbe,
     Resolver,
@@ -1309,9 +1309,9 @@ mkdocs build --strict
 **Purpose:** Replace the stub `TenantResolutionMiddleware` with the real impl. Wire app_factory to mount it whenever any entity carries `tenant_host:`. Ship framework default 404 / 410 pages so apps without project overrides still get sensible UX.
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/tenant/middleware.py` (replace stub with full impl)
-- Create: `src/dazzle/back/runtime/tenant/templates.py` (framework defaults)
-- Modify: `src/dazzle/back/runtime/app_factory.py` (conditional auto-mount)
+- Modify: `src/dazzle/http/runtime/tenant/middleware.py` (replace stub with full impl)
+- Create: `src/dazzle/http/runtime/tenant/templates.py` (framework defaults)
+- Modify: `src/dazzle/http/runtime/app_factory.py` (conditional auto-mount)
 - Test: `tests/unit/test_tenant_middleware.py`
 
 ---
@@ -1319,7 +1319,7 @@ mkdocs build --strict
 ### Task 3.1 — Framework default templates
 
 **Files:**
-- Create: `src/dazzle/back/runtime/tenant/templates.py`
+- Create: `src/dazzle/http/runtime/tenant/templates.py`
 - Test: `tests/unit/test_tenant_middleware.py` (new file)
 
 - [ ] **Step 1: Write the failing template tests**
@@ -1330,7 +1330,7 @@ Create `tests/unit/test_tenant_middleware.py`:
 """Tests for the tenant middleware + default templates (#1289 slice 3)."""
 from __future__ import annotations
 
-from dazzle.back.runtime.tenant.templates import render_default_404, render_default_410
+from dazzle.http.runtime.tenant.templates import render_default_404, render_default_410
 
 
 def test_default_404_includes_host():
@@ -1354,7 +1354,7 @@ Expected: import error.
 
 - [ ] **Step 3: Implement default templates**
 
-Create `src/dazzle/back/runtime/tenant/templates.py`:
+Create `src/dazzle/http/runtime/tenant/templates.py`:
 
 ```python
 """Framework default 404 / 410 pages for tenant_host: (#1289 slice 3).
@@ -1404,7 +1404,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/tenant/templates.py tests/unit/test_tenant_middleware.py
+git add src/dazzle/http/runtime/tenant/templates.py tests/unit/test_tenant_middleware.py
 git commit -m "Framework default 404/410 templates for tenant_host (#1289 slice 3)"
 ```
 
@@ -1413,7 +1413,7 @@ git commit -m "Framework default 404/410 templates for tenant_host (#1289 slice 
 ### Task 3.2 — Real `TenantResolutionMiddleware`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/tenant/middleware.py` (replace stub)
+- Modify: `src/dazzle/http/runtime/tenant/middleware.py` (replace stub)
 - Modify: `tests/unit/test_tenant_middleware.py`
 
 - [ ] **Step 1: Write the failing middleware tests**
@@ -1428,12 +1428,12 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.tenant.cache import TenantCache
-from dazzle.back.runtime.tenant.middleware import (
+from dazzle.http.runtime.tenant.cache import TenantCache
+from dazzle.http.runtime.tenant.middleware import (
     TenantHostBinding,
     TenantResolutionMiddleware,
 )
-from dazzle.back.runtime.tenant.resolver import (
+from dazzle.http.runtime.tenant.resolver import (
     EntityProbe,
     Resolver,
     ResolvedTenant,
@@ -1542,7 +1542,7 @@ Expected: import error or NotImplementedError from the stub.
 
 - [ ] **Step 3: Implement the real middleware**
 
-Replace `src/dazzle/back/runtime/tenant/middleware.py` entirely:
+Replace `src/dazzle/http/runtime/tenant/middleware.py` entirely:
 
 ```python
 """TenantResolutionMiddleware (#1289 slice 3).
@@ -1561,9 +1561,9 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, Response
 from starlette.types import ASGIApp
 
-from dazzle.back.runtime.slug_validator import validate_slug
-from dazzle.back.runtime.tenant.cache import NEGATIVE, TenantCache
-from dazzle.back.runtime.tenant.resolver import (
+from dazzle.http.runtime.slug_validator import validate_slug
+from dazzle.http.runtime.tenant.cache import NEGATIVE, TenantCache
+from dazzle.http.runtime.tenant.resolver import (
     ExpiredHistoryHit,
     HistoryHit,
     ResolvedTenant,
@@ -1649,7 +1649,7 @@ Expected: all 5 PASS (plus the 2 from Task 3.1).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/tenant/middleware.py tests/unit/test_tenant_middleware.py
+git add src/dazzle/http/runtime/tenant/middleware.py tests/unit/test_tenant_middleware.py
 git commit -m "TenantResolutionMiddleware real implementation (#1289 slice 3)"
 ```
 
@@ -1658,7 +1658,7 @@ git commit -m "TenantResolutionMiddleware real implementation (#1289 slice 3)"
 ### Task 3.3 — App factory auto-mount
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/app_factory.py`
+- Modify: `src/dazzle/http/runtime/app_factory.py`
 
 - [ ] **Step 1: Write the failing auto-mount test**
 
@@ -1685,7 +1685,7 @@ Note: this skip is intentional — the auto-mount wiring is exercised end-to-end
 
 - [ ] **Step 2: Wire the auto-mount**
 
-In `src/dazzle/back/runtime/app_factory.py`, after `assemble_post_build_routes(...)` and the `_invoke_project_post_build_hook(app)` line added in #1290 (slice landed in v0.80.10), add:
+In `src/dazzle/http/runtime/app_factory.py`, after `assemble_post_build_routes(...)` and the `_invoke_project_post_build_hook(app)` line added in #1290 (slice landed in v0.80.10), add:
 
 ```python
     _mount_tenant_resolution_middleware(app, appspec)
@@ -1709,17 +1709,17 @@ def _mount_tenant_resolution_middleware(app: "FastAPI", appspec: AppSpec) -> Non
     for e in tenant_entities:
         by_domain[e.tenant_host.domain].append(e)
 
-    from dazzle.back.runtime.tenant.cache import TenantCache
-    from dazzle.back.runtime.tenant.middleware import (
+    from dazzle.http.runtime.tenant.cache import TenantCache
+    from dazzle.http.runtime.tenant.middleware import (
         TenantHostBinding,
         TenantResolutionMiddleware,
     )
-    from dazzle.back.runtime.tenant.resolver import (
+    from dazzle.http.runtime.tenant.resolver import (
         EntityProbe,
         HistoryProbe,
         Resolver,
     )
-    from dazzle.back.runtime.tenant.templates import (
+    from dazzle.http.runtime.tenant.templates import (
         render_default_404,
         render_default_410,
     )
@@ -1795,7 +1795,7 @@ Expected: 6 PASS, 1 SKIPPED.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/app_factory.py tests/unit/test_tenant_middleware.py
+git add src/dazzle/http/runtime/app_factory.py tests/unit/test_tenant_middleware.py
 git commit -m "app_factory: auto-mount TenantResolutionMiddleware (#1289 slice 3)"
 ```
 
@@ -1804,12 +1804,12 @@ git commit -m "app_factory: auto-mount TenantResolutionMiddleware (#1289 slice 3
 ### Task 3.4 — System-context Repository lookup
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/app_factory.py` (replace `_make_system_lookup_fn` stubs with real impl)
+- Modify: `src/dazzle/http/runtime/app_factory.py` (replace `_make_system_lookup_fn` stubs with real impl)
 - Test: `tests/integration/test_tenant_host_end_to_end.py` (new file)
 
 - [ ] **Step 1: Inspect the existing Repository to find system-context API**
 
-Run: `grep -n "system_context\|admin_context\|unscoped\|class Repository" src/dazzle/back/runtime/repository.py | head -20`
+Run: `grep -n "system_context\|admin_context\|unscoped\|class Repository" src/dazzle/http/runtime/repository.py | head -20`
 
 Note the existing pattern — Dazzle's Repository is normally tenant-scoped. The middleware runs before tenancy is known, so we need an unscoped (system) read path. The exact method/flag name varies; the implementer should adopt whatever the codebase already exposes (e.g. `Repository.system_context()` or constructing a fresh `Repository(session, scope=SystemScope())`). If no such API exists, add a `Repository.find_by_slug_system(entity_name, slug)` thin helper that bypasses tenant scoping but otherwise routes through the same query path.
 
@@ -1855,12 +1855,12 @@ def test_tenant_host_resolves_via_postgresql(database_url, seeded_trust_factory)
 
 - [ ] **Step 3: Implement system lookup against Repository**
 
-In `src/dazzle/back/runtime/app_factory.py`, replace the two `NotImplementedError` stubs from Task 3.3 with the actual Repository lookup, using whatever system-context API the codebase exposes after Step 1's inspection. Example shape (adapt to actual API):
+In `src/dazzle/http/runtime/app_factory.py`, replace the two `NotImplementedError` stubs from Task 3.3 with the actual Repository lookup, using whatever system-context API the codebase exposes after Step 1's inspection. Example shape (adapt to actual API):
 
 ```python
 def _make_system_lookup_fn(app: "FastAPI"):
     async def _lookup(entity_name: str, slug: str):
-        from dazzle.back.runtime.repository import system_repository_for
+        from dazzle.http.runtime.repository import system_repository_for
         repo = system_repository_for(app, entity_name)
         return await repo.find_one_by(slug_field=slug)  # or whichever method exists
     return _lookup
@@ -1880,7 +1880,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/app_factory.py src/dazzle/back/runtime/repository.py tests/integration/test_tenant_host_end_to_end.py
+git add src/dazzle/http/runtime/app_factory.py src/dazzle/http/runtime/repository.py tests/integration/test_tenant_host_end_to_end.py
 git commit -m "System-context Repository lookup + end-to-end integration (#1289 slice 3)"
 ```
 
@@ -1913,11 +1913,11 @@ mkdocs build --strict
 **Purpose:** Switch the session cookie naming convention from `dazzle_session` to `__Host-<app>_session` (for tenant-bound requests) and `__Secure-<app>_admin` (for canonical-host super-admin sessions) — but only for apps that use `tenant_host:`. Non-tenant_host apps keep `dazzle_session` unchanged.
 
 **Files:**
-- Create: `src/dazzle/back/runtime/tenant/cookies.py`
-- Modify: `src/dazzle/back/runtime/auth/password_login_routes.py`
-- Modify: `src/dazzle/back/runtime/auth/sso_routes.py`
-- Modify: `src/dazzle/back/runtime/auth/routes_2fa.py`
-- Modify: `src/dazzle/back/runtime/app_factory.py` (pass tenant-cookie naming through to auth wiring)
+- Create: `src/dazzle/http/runtime/tenant/cookies.py`
+- Modify: `src/dazzle/http/runtime/auth/password_login_routes.py`
+- Modify: `src/dazzle/http/runtime/auth/sso_routes.py`
+- Modify: `src/dazzle/http/runtime/auth/routes_2fa.py`
+- Modify: `src/dazzle/http/runtime/app_factory.py` (pass tenant-cookie naming through to auth wiring)
 - Test: `tests/unit/test_tenant_cookies.py`
 
 ---
@@ -1925,7 +1925,7 @@ mkdocs build --strict
 ### Task 4.1 — `cookies.py` name helpers
 
 **Files:**
-- Create: `src/dazzle/back/runtime/tenant/cookies.py`
+- Create: `src/dazzle/http/runtime/tenant/cookies.py`
 - Test: `tests/unit/test_tenant_cookies.py`
 
 - [ ] **Step 1: Write the failing cookie-name tests**
@@ -1938,7 +1938,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.tenant.cookies import (
+from dazzle.http.runtime.tenant.cookies import (
     apex_cookie_name,
     host_cookie_name,
     normalise_app_name,
@@ -1972,7 +1972,7 @@ Expected: import error.
 
 - [ ] **Step 3: Implement the helpers**
 
-Create `src/dazzle/back/runtime/tenant/cookies.py`:
+Create `src/dazzle/http/runtime/tenant/cookies.py`:
 
 ```python
 """Cookie name conventions for tenant_host: apps (#1289 slice 4)."""
@@ -2012,7 +2012,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/tenant/cookies.py tests/unit/test_tenant_cookies.py
+git add src/dazzle/http/runtime/tenant/cookies.py tests/unit/test_tenant_cookies.py
 git commit -m "Tenant cookie name helpers (#1289 slice 4)"
 ```
 
@@ -2021,14 +2021,14 @@ git commit -m "Tenant cookie name helpers (#1289 slice 4)"
 ### Task 4.2 — Thread cookie-name choice into login flow
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/password_login_routes.py`
-- Modify: `src/dazzle/back/runtime/auth/sso_routes.py`
-- Modify: `src/dazzle/back/runtime/auth/routes_2fa.py`
-- Modify: `src/dazzle/back/runtime/app_factory.py`
+- Modify: `src/dazzle/http/runtime/auth/password_login_routes.py`
+- Modify: `src/dazzle/http/runtime/auth/sso_routes.py`
+- Modify: `src/dazzle/http/runtime/auth/routes_2fa.py`
+- Modify: `src/dazzle/http/runtime/app_factory.py`
 
 - [ ] **Step 1: Inspect existing cookie injection points**
 
-Run: `grep -n "set_cookie\|cookie_name" src/dazzle/back/runtime/auth/*.py`
+Run: `grep -n "set_cookie\|cookie_name" src/dazzle/http/runtime/auth/*.py`
 
 Note every site that sets the session cookie. They share a `cookie_name: str = "dazzle_session"` argument. We need each such site to take a `cookie_name_resolver(request)` callable instead of a hard-coded string when tenant_host is in play.
 
@@ -2037,7 +2037,7 @@ Note every site that sets the session cookie. They share a `cookie_name: str = "
 Append to `tests/unit/test_tenant_cookies.py`:
 
 ```python
-from dazzle.back.runtime.tenant.cookies import choose_session_cookie_name
+from dazzle.http.runtime.tenant.cookies import choose_session_cookie_name
 
 
 def test_choose_session_cookie_falls_to_host_when_tenant_present():
@@ -2073,7 +2073,7 @@ def test_choose_session_cookie_falls_back_to_host_for_non_admin_on_canonical():
 
 - [ ] **Step 3: Add `choose_session_cookie_name` to `cookies.py`**
 
-Append to `src/dazzle/back/runtime/tenant/cookies.py`:
+Append to `src/dazzle/http/runtime/tenant/cookies.py`:
 
 ```python
 def choose_session_cookie_name(
@@ -2096,7 +2096,7 @@ Expected: 6 PASS total.
 
 - [ ] **Step 5: Thread the resolver into the auth routes**
 
-In `src/dazzle/back/runtime/auth/password_login_routes.py`, `sso_routes.py`, and `routes_2fa.py`, locate every `set_cookie(...)` and every place a `cookie_name` is read. Add a `cookie_name_for_request(request, user)` argument to each `create_*_routes` factory function and use it instead of the bare `cookie_name`. The resolver is constructed in `app_factory.py` from the AppSpec.
+In `src/dazzle/http/runtime/auth/password_login_routes.py`, `sso_routes.py`, and `routes_2fa.py`, locate every `set_cookie(...)` and every place a `cookie_name` is read. Add a `cookie_name_for_request(request, user)` argument to each `create_*_routes` factory function and use it instead of the bare `cookie_name`. The resolver is constructed in `app_factory.py` from the AppSpec.
 
 In `app_factory.py`, add a helper that returns the right resolver:
 
@@ -2109,7 +2109,7 @@ def _build_session_cookie_resolver(appspec: AppSpec):
         # Legacy apps keep dazzle_session unchanged.
         return lambda request, user: "dazzle_session"
 
-    from dazzle.back.runtime.tenant.cookies import choose_session_cookie_name
+    from dazzle.http.runtime.tenant.cookies import choose_session_cookie_name
 
     canonical_hosts: set[str] = set()
     super_admin_role = "super_admin"
@@ -2141,7 +2141,7 @@ Expected: PASS. If any existing test breaks because of the new resolver signatur
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/tenant/cookies.py src/dazzle/back/runtime/auth/*.py src/dazzle/back/runtime/app_factory.py tests/unit/test_tenant_cookies.py
+git add src/dazzle/http/runtime/tenant/cookies.py src/dazzle/http/runtime/auth/*.py src/dazzle/http/runtime/app_factory.py tests/unit/test_tenant_cookies.py
 git commit -m "Login-flow cookie name resolver for tenant_host apps (#1289 slice 4)"
 ```
 
@@ -2174,8 +2174,8 @@ mkdocs build --strict
 **Purpose:** Enforce the truth table from the spec so a tenant-bound cookie can't be reused on a different tenant's host, and an apex super-admin cookie can't be presented on a tenant host without the super-admin role.
 
 **Files:**
-- Create: `src/dazzle/back/runtime/tenant/guard.py`
-- Modify: `src/dazzle/back/runtime/auth/dependencies.py` (or whichever module holds the existing `current_user` dependency)
+- Create: `src/dazzle/http/runtime/tenant/guard.py`
+- Modify: `src/dazzle/http/runtime/auth/dependencies.py` (or whichever module holds the existing `current_user` dependency)
 - Test: `tests/unit/test_tenant_guard.py`
 
 ---
@@ -2183,7 +2183,7 @@ mkdocs build --strict
 ### Task 5.1 — Implement the truth table
 
 **Files:**
-- Create: `src/dazzle/back/runtime/tenant/guard.py`
+- Create: `src/dazzle/http/runtime/tenant/guard.py`
 - Test: `tests/unit/test_tenant_guard.py`
 
 - [ ] **Step 1: Write the failing guard tests**
@@ -2198,14 +2198,14 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.runtime.tenant.guard import (
+from dazzle.http.runtime.tenant.guard import (
     ApexCookieNotSuperAdmin,
     CrossTenantForbidden,
     GuardOutcome,
     HostCookieMissingTenant,
     check_cross_tenant,
 )
-from dazzle.back.runtime.tenant.resolver import ResolvedTenant
+from dazzle.http.runtime.tenant.resolver import ResolvedTenant
 
 
 def _tenant(slug="acme"):
@@ -2268,7 +2268,7 @@ Expected: import error.
 
 - [ ] **Step 3: Implement the guard**
 
-Create `src/dazzle/back/runtime/tenant/guard.py`:
+Create `src/dazzle/http/runtime/tenant/guard.py`:
 
 ```python
 """Cross-tenant session guard (#1289 slice 5).
@@ -2283,7 +2283,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
-from dazzle.back.runtime.tenant.resolver import ResolvedTenant
+from dazzle.http.runtime.tenant.resolver import ResolvedTenant
 
 
 class GuardOutcome(Enum):
@@ -2346,7 +2346,7 @@ Expected: 6 PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/tenant/guard.py tests/unit/test_tenant_guard.py
+git add src/dazzle/http/runtime/tenant/guard.py tests/unit/test_tenant_guard.py
 git commit -m "Cross-tenant guard truth table (#1289 slice 5)"
 ```
 
@@ -2355,12 +2355,12 @@ git commit -m "Cross-tenant guard truth table (#1289 slice 5)"
 ### Task 5.2 — Wire guard into auth dependency
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/dependencies.py` (or whichever module owns `get_current_user`)
+- Modify: `src/dazzle/http/runtime/auth/dependencies.py` (or whichever module owns `get_current_user`)
 - Modify: `tests/unit/test_tenant_guard.py`
 
 - [ ] **Step 1: Inspect the existing auth dependency**
 
-Run: `grep -rn "def get_current_user\|def current_user\|Depends.get_current_user" src/dazzle/back/runtime/auth/ | head -10`
+Run: `grep -rn "def get_current_user\|def current_user\|Depends.get_current_user" src/dazzle/http/runtime/auth/ | head -10`
 
 Note the function signature and where requests flow through it. Pick the smallest hook point — usually right after the user is loaded from the session.
 
@@ -2390,11 +2390,11 @@ In the existing `get_current_user` (or equivalent) dependency, after the user is
 
 ```python
 # #1289 slice 5: enforce cross-tenant cookie binding.
-from dazzle.back.runtime.tenant.cookies import (
+from dazzle.http.runtime.tenant.cookies import (
     apex_cookie_name,
     host_cookie_name,
 )
-from dazzle.back.runtime.tenant.guard import (
+from dazzle.http.runtime.tenant.guard import (
     ApexCookieNotSuperAdmin,
     CrossTenantForbidden,
     HostCookieMissingTenant,
@@ -2439,7 +2439,7 @@ Expected: 7 PASS (or 6 PASS + 1 SKIPPED in a unit-only environment).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/dependencies.py src/dazzle/back/runtime/app_factory.py tests/unit/test_tenant_guard.py
+git add src/dazzle/http/runtime/auth/dependencies.py src/dazzle/http/runtime/app_factory.py tests/unit/test_tenant_guard.py
 git commit -m "Wire cross-tenant guard into auth dependency (#1289 slice 5)"
 ```
 
@@ -2472,7 +2472,7 @@ mkdocs build --strict
 **Purpose:** Repository.update() on any entity carrying `tenant_host:` must auto-bust the cache for the row's old and new slug values post-commit. Also expose a public `dazzle.tenant.bust(slug)` helper for raw-SQL renames.
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/repository.py` (post-commit hook)
+- Modify: `src/dazzle/http/runtime/repository.py` (post-commit hook)
 - Modify: `src/dazzle/__init__.py` (re-export `dazzle.tenant.bust`)
 - Create: `src/dazzle/tenant.py` (thin public-API module)
 - Test: `tests/unit/test_tenant_bust_hook.py`
@@ -2494,7 +2494,7 @@ Create `tests/unit/test_tenant_bust_hook.py`:
 """Tests for the auto-bust hook + public dazzle.tenant.bust API (#1289 slice 6)."""
 from __future__ import annotations
 
-from dazzle.back.runtime.tenant.cache import TenantCache
+from dazzle.http.runtime.tenant.cache import TenantCache
 
 
 def test_public_bust_clears_module_cache(monkeypatch):
@@ -2529,7 +2529,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from dazzle.back.runtime.tenant.cache import TenantCache
+from dazzle.http.runtime.tenant.cache import TenantCache
 
 _REGISTERED_CACHES: list[TenantCache] = []
 
@@ -2551,7 +2551,7 @@ def bust(slug: str) -> None:
 
 - [ ] **Step 4: Wire app_factory to register caches**
 
-In `src/dazzle/back/runtime/app_factory.py`, inside `_mount_tenant_resolution_middleware`, after constructing each `TenantHostBinding(...)` (slice 3), call:
+In `src/dazzle/http/runtime/app_factory.py`, inside `_mount_tenant_resolution_middleware`, after constructing each `TenantHostBinding(...)` (slice 3), call:
 
 ```python
 from dazzle.tenant import _register_cache
@@ -2576,7 +2576,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle/tenant.py src/dazzle/__init__.py src/dazzle/back/runtime/app_factory.py tests/unit/test_tenant_bust_hook.py
+git add src/dazzle/tenant.py src/dazzle/__init__.py src/dazzle/http/runtime/app_factory.py tests/unit/test_tenant_bust_hook.py
 git commit -m "Public dazzle.tenant.bust API + cache registration (#1289 slice 6)"
 ```
 
@@ -2585,7 +2585,7 @@ git commit -m "Public dazzle.tenant.bust API + cache registration (#1289 slice 6
 ### Task 6.2 — Auto-bust on Repository.update
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/repository.py`
+- Modify: `src/dazzle/http/runtime/repository.py`
 - Modify: `tests/unit/test_tenant_bust_hook.py`
 
 - [ ] **Step 1: Write the failing auto-bust test**
@@ -2613,7 +2613,7 @@ async def test_repository_update_auto_busts_old_and_new_slug(
 
 - [ ] **Step 2: Add the auto-bust hook to Repository.update**
 
-Locate `Repository.update` (around `src/dazzle/back/runtime/repository.py:865`). After the row is committed and just before returning, add:
+Locate `Repository.update` (around `src/dazzle/http/runtime/repository.py:865`). After the row is committed and just before returning, add:
 
 ```python
 # #1289 slice 6: auto-bust tenant cache on slug-field updates.
@@ -2643,7 +2643,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/repository.py tests/unit/test_tenant_bust_hook.py
+git add src/dazzle/http/runtime/repository.py tests/unit/test_tenant_bust_hook.py
 git commit -m "Repository.update auto-busts tenant cache on slug change (#1289 slice 6)"
 ```
 

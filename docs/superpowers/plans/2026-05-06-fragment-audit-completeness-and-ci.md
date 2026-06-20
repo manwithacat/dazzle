@@ -565,7 +565,7 @@ Add to `## [Unreleased]` in `CHANGELOG.md`:
 ```bash
 ruff check src/ tests/ --fix && ruff format src/ tests/
 mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'
-mypy src/dazzle_back/ --ignore-missing-imports
+mypy src/dazzle_http/ --ignore-missing-imports
 pytest tests/ -m "not e2e" -q
 ```
 

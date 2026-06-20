@@ -20,7 +20,7 @@ from typing import Any
 
 import pytest
 
-from dazzle.back.runtime.notification_wiring import (
+from dazzle.http.runtime.notification_wiring import (
     build_trigger_callbacks,
     register_notification_triggers,
     should_fire,

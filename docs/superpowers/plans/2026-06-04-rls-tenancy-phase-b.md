@@ -14,9 +14,9 @@
 
 - **Authoritative DDL:** `/Volumes/SSD/Dazzle/docs/superpowers/specs/2026-06-04-rls-tenancy-generation-rules.md` — §1.2 (ENABLE/FORCE), §1.3 (the restrictive fence — note `current_setting('dazzle.tenant_id', true)` with the **missing-ok `true` arg**, required for fail-closed), §1.4 (the **permissive baseline** — a fenced table with no permissive policy is **deny-all**), §1.5 (combination), §3 (role model), §6 (runtime context: `set_config(...,true)`, fail-closed, transactions mandatory, empty-string is a hard error), §9 (the test list). Where this plan and the companion differ on emitted SQL, **the companion wins**.
 - **Decisions (locked with @manwithacat):**
-  - **Emission = runtime-apply** (a `_apply_rls_policies(engine)` post-`create_all`, mirroring `_apply_search_indexes` at `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/server.py:684`). Idempotent DDL. NOT an Alembic migration (versioning/verification comes from Phase D's drift gate). App-layer scope filters remain in Phase B, so a skipped apply cannot leak.
+  - **Emission = runtime-apply** (a `_apply_rls_policies(engine)` post-`create_all`, mirroring `_apply_search_indexes` at `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/server.py:684`). Idempotent DDL. NOT an Alembic migration (versioning/verification comes from Phase D's drift gate). App-layer scope filters remain in Phase B, so a skipped apply cannot leak.
   - **Role model = generate roles + docs; tests connect as `dazzle_app`; dev runs unenforced.** Superusers bypass RLS even under FORCE, so RLS only enforces when the app connects as a non-superuser non-owner (`dazzle_app`). In local dev (superuser DATABASE_URL) RLS is bypassed and app-layer filters enforce — acceptable; prod connects as `dazzle_app`. Role-creation DDL is for the **test fixture + deploy docs**, NOT the per-boot apply (roles are cluster-level).
-- **Scope — fence tenant-scoped DOMAIN entities only.** Use `scoped_entity_names(appspec.domain.entities, partition_key)` (Phase A, `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/sa_schema.py:333`) + `appspec.tenancy.isolation.mode == TenancyMode.SHARED_SCHEMA` + `.partition_key`. The framework `users`/`sessions`/auth tables are raw-SQL in `public` (not EntitySpecs) and are **NOT fenced** here — login keeps working; user-table fencing + "auth resolves tenant first" is the separate auth-store-rework phase.
+- **Scope — fence tenant-scoped DOMAIN entities only.** Use `scoped_entity_names(appspec.domain.entities, partition_key)` (Phase A, `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/sa_schema.py:333`) + `appspec.tenancy.isolation.mode == TenancyMode.SHARED_SCHEMA` + `.partition_key`. The framework `users`/`sessions`/auth tables are raw-SQL in `public` (not EntitySpecs) and are **NOT fenced** here — login keeps working; user-table fencing + "auth resolves tenant first" is the separate auth-store-rework phase.
 - **Greenfield only.** No migration of existing deployed schemas.
 - **Out of scope (later phases):** intra-tenant per-verb scope policies + the `predicate_compiler` GUC retarget (Phase C); `dazzle inspect rls` + drift gate + provable-RBAC-vs-pg_policies (Phase D); excision/provisioning/containment (Phase E); auth-store tenant-scoping (its own phase). Do NOT build these.
 - **No existing RLS** anywhere in the tree (greenfield — verified).
@@ -25,11 +25,11 @@
 
 | File | Responsibility | Change |
 |------|----------------|--------|
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/rls_schema.py` | Generate RLS policy + role DDL from the IR | **Create** — `build_rls_policy_ddl(...)`, `build_rls_role_ddl(...)` |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/tenant_isolation.py` | Tenant context vars | **Modify** — add `_current_tenant_id` contextvar (get/set/reset) |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/pg_backend.py` | Connection lifecycle | **Modify** — `_set_tenant_context(conn, tenant_id)` + call it in `connection()` after `_set_search_path` |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/tenant_middleware.py` | Per-request tenant context | **Modify** — set `_current_tenant_id` from the authenticated user's tenant (see Task 2 integration note) |
-| `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/server.py` | Startup schema/DDL | **Modify** — `_apply_rls_policies(engine)` after `_apply_search_indexes`, gated on `shared_schema` |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/rls_schema.py` | Generate RLS policy + role DDL from the IR | **Create** — `build_rls_policy_ddl(...)`, `build_rls_role_ddl(...)` |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/tenant_isolation.py` | Tenant context vars | **Modify** — add `_current_tenant_id` contextvar (get/set/reset) |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/pg_backend.py` | Connection lifecycle | **Modify** — `_set_tenant_context(conn, tenant_id)` + call it in `connection()` after `_set_search_path` |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/tenant_middleware.py` | Per-request tenant context | **Modify** — set `_current_tenant_id` from the authenticated user's tenant (see Task 2 integration note) |
+| `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/server.py` | Startup schema/DDL | **Modify** — `_apply_rls_policies(engine)` after `_apply_search_indexes`, gated on `shared_schema` |
 | `/Volumes/SSD/Dazzle/tests/unit/test_rls_schema.py` | DDL generator unit tests | **Create** |
 | `/Volumes/SSD/Dazzle/tests/unit/test_rls_runtime_context.py` | Context/apply unit tests | **Create** |
 | `/Volumes/SSD/Dazzle/tests/integration/test_rls_enforcement_pg.py` | Adversarial real-PG tests (as `dazzle_app`) | **Create** |
@@ -40,7 +40,7 @@
 
 ## Task 1: RLS DDL generator (`rls_schema.py`)
 
-**Files:** Create `/Volumes/SSD/Dazzle/src/dazzle/back/runtime/rls_schema.py`; test `/Volumes/SSD/Dazzle/tests/unit/test_rls_schema.py`.
+**Files:** Create `/Volumes/SSD/Dazzle/src/dazzle/http/runtime/rls_schema.py`; test `/Volumes/SSD/Dazzle/tests/unit/test_rls_schema.py`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -48,7 +48,7 @@
 """Unit tests for RLS policy + role DDL generation (RLS tenancy Phase B)."""
 from __future__ import annotations
 
-from dazzle.back.runtime.rls_schema import build_rls_policy_ddl, build_rls_role_ddl
+from dazzle.http.runtime.rls_schema import build_rls_policy_ddl, build_rls_role_ddl
 
 
 def test_fence_is_restrictive_with_missing_ok_current_setting() -> None:
@@ -102,11 +102,11 @@ def test_role_ddl_three_roles_idempotent_no_bypass_on_app() -> None:
 
 - [ ] **Step 3: Implement `rls_schema.py`**
 
-Follow the companion §1.2-1.4 + §3 exactly. `build_rls_policy_ddl(tenant_scoped_names, *, partition_key)` returns a list of idempotent SQL strings; for each entity emit (in order): `ENABLE`, `FORCE`, `DROP POLICY IF EXISTS tenant_fence` + `CREATE POLICY tenant_fence ... AS RESTRICTIVE FOR ALL USING (...) WITH CHECK (...)`, `DROP POLICY IF EXISTS tenant_baseline` + `CREATE POLICY tenant_baseline ... AS PERMISSIVE FOR ALL USING (true) WITH CHECK (true)`. Quote identifiers with the existing `quote_identifier` (from `dazzle.back.runtime.query_builder`). The fence body is `{quote(partition_key)} = current_setting('dazzle.{partition_key}', true)::uuid` for both USING and WITH CHECK. `build_rls_role_ddl()` returns the §3 role DDL (dazzle_owner NOLOGIN; dazzle_app LOGIN, no BYPASSRLS; dazzle_bypass LOGIN BYPASSRLS; grants), each guarded idempotently (a `DO $$ ... IF NOT EXISTS (SELECT FROM pg_roles ...) $$` block — passwords are NOT embedded; use `CREATE ROLE ... LOGIN` and let deploy set passwords, or accept a password param for the test fixture). Note: role DDL is for tests + deploy docs, **not** auto-run on boot.
+Follow the companion §1.2-1.4 + §3 exactly. `build_rls_policy_ddl(tenant_scoped_names, *, partition_key)` returns a list of idempotent SQL strings; for each entity emit (in order): `ENABLE`, `FORCE`, `DROP POLICY IF EXISTS tenant_fence` + `CREATE POLICY tenant_fence ... AS RESTRICTIVE FOR ALL USING (...) WITH CHECK (...)`, `DROP POLICY IF EXISTS tenant_baseline` + `CREATE POLICY tenant_baseline ... AS PERMISSIVE FOR ALL USING (true) WITH CHECK (true)`. Quote identifiers with the existing `quote_identifier` (from `dazzle.http.runtime.query_builder`). The fence body is `{quote(partition_key)} = current_setting('dazzle.{partition_key}', true)::uuid` for both USING and WITH CHECK. `build_rls_role_ddl()` returns the §3 role DDL (dazzle_owner NOLOGIN; dazzle_app LOGIN, no BYPASSRLS; dazzle_bypass LOGIN BYPASSRLS; grants), each guarded idempotently (a `DO $$ ... IF NOT EXISTS (SELECT FROM pg_roles ...) $$` block — passwords are NOT embedded; use `CREATE ROLE ... LOGIN` and let deploy set passwords, or accept a password param for the test fixture). Note: role DDL is for tests + deploy docs, **not** auto-run on boot.
 
 Pure string generation — no DB. No business logic, only the closed templated DDL (ADR tenet).
 
-- [ ] **Step 4: Run → pass.** ruff + `mypy src/dazzle/back/runtime/rls_schema.py` clean.
+- [ ] **Step 4: Run → pass.** ruff + `mypy src/dazzle/http/runtime/rls_schema.py` clean.
 
 - [ ] **Step 5: Commit** — `feat(rls): RLS policy + role DDL generator — tenant fence + baseline + FORCE (Phase B)`
 
@@ -116,7 +116,7 @@ Pure string generation — no DB. No business logic, only the closed templated D
 
 **Files:** Modify `tenant_isolation.py`, `pg_backend.py`, `tenant_middleware.py`, `server.py`; test `/Volumes/SSD/Dazzle/tests/unit/test_rls_runtime_context.py`.
 
-> **Integration note (load-bearing — read before coding).** The fence reads `current_setting('dazzle.tenant_id')`, which must be set per transaction to the **authenticated user's tenant id**. In `shared_schema` row mode the request's tenant = `current_user.tenant_id` (users are single-tenant). The value is resolvable via the existing `_resolve_user_attribute("tenant_id", auth_context)` (`/Volumes/SSD/Dazzle/src/dazzle/back/runtime/route_generator.py:1046`). The hook must set a `_current_tenant_id` contextvar **after auth resolves current_user and before DB queries run**, and `pg_backend.connection()` reads it (mirroring `_set_search_path` reading `_current_tenant_schema`). **Trace the auth→request→DB ordering first:** confirm where `auth_context`/current_user becomes available (a middleware vs a per-route dependency) and set the contextvar there. If auth is a per-route dependency (resolved after `TenantMiddleware`), set the contextvar in that dependency (or a thin wrapper), NOT in `TenantMiddleware` alone. **Fallback if ordering is awkward:** set it lazily — have `connection()` read the current `auth_context` contextvar (if one exists) and resolve `tenant_id` at lease time. Pick whichever cleanly guarantees the GUC is set within the same transaction as the query. Report which you used. Fail-closed: if no tenant id is resolvable, leave the GUC unset (the fence then denies — correct for unauthenticated/no-tenant requests against fenced tables).
+> **Integration note (load-bearing — read before coding).** The fence reads `current_setting('dazzle.tenant_id')`, which must be set per transaction to the **authenticated user's tenant id**. In `shared_schema` row mode the request's tenant = `current_user.tenant_id` (users are single-tenant). The value is resolvable via the existing `_resolve_user_attribute("tenant_id", auth_context)` (`/Volumes/SSD/Dazzle/src/dazzle/http/runtime/route_generator.py:1046`). The hook must set a `_current_tenant_id` contextvar **after auth resolves current_user and before DB queries run**, and `pg_backend.connection()` reads it (mirroring `_set_search_path` reading `_current_tenant_schema`). **Trace the auth→request→DB ordering first:** confirm where `auth_context`/current_user becomes available (a middleware vs a per-route dependency) and set the contextvar there. If auth is a per-route dependency (resolved after `TenantMiddleware`), set the contextvar in that dependency (or a thin wrapper), NOT in `TenantMiddleware` alone. **Fallback if ordering is awkward:** set it lazily — have `connection()` read the current `auth_context` contextvar (if one exists) and resolve `tenant_id` at lease time. Pick whichever cleanly guarantees the GUC is set within the same transaction as the query. Report which you used. Fail-closed: if no tenant id is resolvable, leave the GUC unset (the fence then denies — correct for unauthenticated/no-tenant requests against fenced tables).
 
 - [ ] **Step 1: Write the failing tests** (`/Volumes/SSD/Dazzle/tests/unit/test_rls_runtime_context.py`)
 
@@ -126,7 +126,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.tenant_isolation import (
+from dazzle.http.runtime.tenant_isolation import (
     get_current_tenant_id, set_current_tenant_id, _current_tenant_id,
 )
 
@@ -142,7 +142,7 @@ def test_tenant_id_contextvar_roundtrip() -> None:
 
 
 def test_set_tenant_context_emits_set_config_when_id_present() -> None:
-    from dazzle.back.runtime.pg_backend import _set_tenant_context
+    from dazzle.http.runtime.pg_backend import _set_tenant_context
     conn = MagicMock()
     _set_tenant_context(conn, "abc")
     # parameterised set_config(..., true); never SET LOCAL string-interpolation
@@ -155,7 +155,7 @@ def test_set_tenant_context_emits_set_config_when_id_present() -> None:
 
 
 def test_set_tenant_context_noop_when_id_none() -> None:
-    from dazzle.back.runtime.pg_backend import _set_tenant_context
+    from dazzle.http.runtime.pg_backend import _set_tenant_context
     conn = MagicMock()
     _set_tenant_context(conn, None)
     assert not conn.execute.called  # unset → fail-closed (fence denies), nothing set

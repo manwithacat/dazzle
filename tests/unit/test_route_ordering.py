@@ -9,11 +9,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.specs.endpoint import EndpointSpec, HttpMethod
+from dazzle.http.specs.endpoint import EndpointSpec, HttpMethod
 
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.route_generator import RouteGenerator  # noqa: E402
+from dazzle.http.runtime.route_generator import RouteGenerator  # noqa: E402
 
 
 def _make_endpoint(name: str, method: HttpMethod, path: str) -> EndpointSpec:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle.back.runtime.auth.qa_sign import (
+from dazzle.http.runtime.auth.qa_sign import (
     QaTokenError,
     sign_qa_token,
     verify_qa_token,

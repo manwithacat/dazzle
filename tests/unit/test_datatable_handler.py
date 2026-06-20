@@ -48,7 +48,7 @@ def _make_service(items: list[dict[str, Any]] | None = None) -> AsyncMock:
 
 pytest.importorskip("fastapi", reason="FastAPI required for handler tests")
 
-from dazzle.back.runtime.route_generator import (  # noqa: E402
+from dazzle.http.runtime.route_generator import (  # noqa: E402
     HandlerConfig,
     RouteSpec,
     create_list_handler,

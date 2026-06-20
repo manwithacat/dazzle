@@ -160,7 +160,7 @@ become errors.
    dormant primitives from accumulating silently.
 5. **How many other PR #600 primitives are dormant?** Cycle 287's
    targeted scan only checked `components/alpine/*.html`. A broader
-   sweep across `src/dazzle_ui/runtime/static/js/dz-alpine.js` could
+   sweep across `src/dazzle_page/runtime/static/js/dz-alpine.js` could
    find Alpine data components with zero `x-data="…"` consumers — the
    same class of dead-interface that `dzConfirm` exemplifies.
 6. **Cost of keeping vs. deleting** — keeping dormant primitives

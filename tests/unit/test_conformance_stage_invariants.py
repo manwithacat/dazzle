@@ -231,7 +231,7 @@ class TestVerifyMarkerResolution:
         assert result.passed
 
     def test_user_attr_ref(self) -> None:
-        from dazzle.back.runtime.predicate_compiler import UserAttrRef
+        from dazzle.http.runtime.predicate_compiler import UserAttrRef
 
         result = verify_marker_resolution(
             [UserAttrRef("school_id")],
@@ -241,7 +241,7 @@ class TestVerifyMarkerResolution:
         assert result.passed
 
     def test_current_user_ref(self) -> None:
-        from dazzle.back.runtime.predicate_compiler import CurrentUserRef
+        from dazzle.http.runtime.predicate_compiler import CurrentUserRef
 
         result = verify_marker_resolution(
             [CurrentUserRef()],
@@ -251,21 +251,21 @@ class TestVerifyMarkerResolution:
         assert result.passed
 
     def test_missing_attr_fails(self) -> None:
-        from dazzle.back.runtime.predicate_compiler import UserAttrRef
+        from dazzle.http.runtime.predicate_compiler import UserAttrRef
 
         result = verify_marker_resolution([UserAttrRef("missing_field")], {"id": "u1"})
         assert not result.passed
         assert "missing attribute" in (result.error or "")
 
     def test_missing_id_fails(self) -> None:
-        from dazzle.back.runtime.predicate_compiler import CurrentUserRef
+        from dazzle.http.runtime.predicate_compiler import CurrentUserRef
 
         result = verify_marker_resolution([CurrentUserRef()], {})
         assert not result.passed
         assert "missing 'id'" in (result.error or "")
 
     def test_wrong_resolved_value_fails(self) -> None:
-        from dazzle.back.runtime.predicate_compiler import UserAttrRef
+        from dazzle.http.runtime.predicate_compiler import UserAttrRef
 
         result = verify_marker_resolution(
             [UserAttrRef("school_id")],

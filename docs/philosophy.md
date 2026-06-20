@@ -40,7 +40,7 @@ AppSpec (frozen Pydantic IR — src/dazzle/core/ir/)
    ▼
 validated AppSpec
    │
-   ├─→ Runtime (src/dazzle/back/, src/dazzle/ui/)  — FastAPI + typed Fragments + HTMX
+   ├─→ Runtime (src/dazzle/http/, src/dazzle/page/)  — FastAPI + typed Fragments + HTMX
    ├─→ Specs   (src/dazzle/specs/)                — OpenAPI, AsyncAPI
    ├─→ MCP     (src/dazzle/mcp/)                  — knowledge, validation, queries
    ├─→ LSP     (src/dazzle/lsp/)                  — editor diagnostics
@@ -131,7 +131,7 @@ Dazzle had three knowledge systems (semantic KB, inference KB, project KG). It n
 |---|---|
 | Understand the DSL grammar | `docs/reference/grammar.md` |
 | Add a DSL construct | `CLAUDE.md` § "Extending" + the parser mixin pattern in `src/dazzle/core/dsl_parser_impl/` |
-| Understand a runtime behaviour | Find the surface in IR (`src/dazzle/core/ir/`) → trace through `dazzle_back` route → check `scope` predicate compilation |
+| Understand a runtime behaviour | Find the surface in IR (`src/dazzle/core/ir/`) → trace through `dazzle_http` route → check `scope` predicate compilation |
 | Audit the public API | `docs/api-surface/` (five baselines, drift-tested) |
 | Decide if a change needs an ADR | If it would change a "What we deliberately don't do" answer above: yes |
 | Understand an architectural choice | `docs/adr/INDEX.md` |

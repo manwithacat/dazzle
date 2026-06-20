@@ -47,7 +47,7 @@ def _resolve_param_ref(value: Any) -> Any:
     ``AttributeError: 'ParamRef' object has no attribute 'split'``
     (same shape as the original #841 SLA bug). Mirrors the
     ``_tier_seconds`` resolution pattern in
-    ``dazzle.back.runtime.sla_manager``.
+    ``dazzle.http.runtime.sla_manager``.
     """
     if hasattr(value, "default"):
         return value.default
@@ -373,7 +373,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         (e.g., in unit tests or when running without the full stack).
 
         The event bus integration is loaded lazily to avoid a hard dependency
-        on ``dazzle.back`` from the ``dazzle.core`` layer.
+        on ``dazzle.http`` from the ``dazzle.core`` layer.
         """
         try:
             publish_fn = self._get_publish_fn()
@@ -395,12 +395,12 @@ class EventBusProcessAdapter(ProcessAdapter):
 
         Returns ``None`` when the event framework is not available (e.g.
         in unit tests or CLI-only usage).  The import is deferred so that
-        ``dazzle.core`` never has a module-level dependency on ``dazzle.back``.
+        ``dazzle.core`` never has a module-level dependency on ``dazzle.http``.
         """
         try:
             # fmt: off
-            import dazzle.back.events.envelope as _env_mod  # noqa: PLC0415
-            import dazzle.back.runtime.auth.events as _auth_mod  # noqa: PLC0415
+            import dazzle.http.events.envelope as _env_mod  # noqa: PLC0415
+            import dazzle.http.runtime.auth.events as _auth_mod  # noqa: PLC0415
             # fmt: on
         except ImportError:
             return None

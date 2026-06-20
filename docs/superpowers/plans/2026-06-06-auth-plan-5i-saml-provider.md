@@ -39,14 +39,14 @@ lazy-imported; the construction is behind `_build_auth` so tests mock it (no xml
 
 ## Task 1: trust-model generalization
 
-**Files:** Modify `src/dazzle/back/runtime/auth/enterprise_login.py` (+ test).
+**Files:** Modify `src/dazzle/http/runtime/auth/enterprise_login.py` (+ test).
 
 - `_VALIDATED_CLAIMS_SOURCES = frozenset({"id_token", "saml_assertion"})`; the differential-trust
   check uses `claims_source not in _VALIDATED_CLAIMS_SOURCES`.
 
 ## Task 2: the provider
 
-**Files:** Create `src/dazzle/back/runtime/auth/saml_provider.py`, `tests/unit/test_saml_provider.py`.
+**Files:** Create `src/dazzle/http/runtime/auth/saml_provider.py`, `tests/unit/test_saml_provider.py`.
 Add `[saml]` extra (`python3-saml`) to `pyproject.toml`.
 
 - `NativeSAMLProvider` (`_settings`, `_request_data`, `_build_auth`, async `initiate`/`callback`,

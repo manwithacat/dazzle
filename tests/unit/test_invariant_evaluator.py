@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
-from dazzle.back.runtime.invariant_evaluator import (
+from dazzle.http.runtime.invariant_evaluator import (
     InvariantViolationError,
     check_invariants_for_create,
     check_invariants_for_update,
@@ -13,7 +13,7 @@ from dazzle.back.runtime.invariant_evaluator import (
     validate_invariant,
     validate_invariants,
 )
-from dazzle.back.specs.entity import (
+from dazzle.http.specs.entity import (
     DurationUnitKind,
     InvariantComparisonKind,
     InvariantExprSpec,

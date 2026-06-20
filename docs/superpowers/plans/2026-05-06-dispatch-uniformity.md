@@ -24,9 +24,9 @@
 
 | File | Change | Responsibility |
 |---|---|---|
-| `src/dazzle_back/runtime/renderers/fragment.py` | Modify | Replace the trivial re-export with a `FragmentSurfaceRenderer` adapter class that wraps `FragmentRenderer` and exposes `render(surface, ctx) -> str` |
-| `src/dazzle_back/runtime/renderers/init.py` | Modify | Register `FragmentSurfaceRenderer` instead of bare `FragmentRenderer` |
-| `src/dazzle_back/runtime/renderers/dispatch.py` | Modify | Remove the `if renderer_name == "fragment"` branch — single uniform call |
+| `src/dazzle_http/runtime/renderers/fragment.py` | Modify | Replace the trivial re-export with a `FragmentSurfaceRenderer` adapter class that wraps `FragmentRenderer` and exposes `render(surface, ctx) -> str` |
+| `src/dazzle_http/runtime/renderers/init.py` | Modify | Register `FragmentSurfaceRenderer` instead of bare `FragmentRenderer` |
+| `src/dazzle_http/runtime/renderers/dispatch.py` | Modify | Remove the `if renderer_name == "fragment"` branch — single uniform call |
 | `src/dazzle/render/fragment/registry.py` | Modify | Tighten `Renderer` protocol to `render(surface: SurfaceSpec, ctx: dict[str, Any]) -> str` |
 | `tests/unit/runtime/test_renderer_default_registration.py` | Modify | Update assertion that the registered fragment handler is `FragmentSurfaceRenderer` (not `FragmentRenderer` directly) |
 | `tests/unit/runtime/test_fragment_surface_renderer.py` | Create | Adapter contract test: builds a Fragment tree and renders it for `(surface, ctx)` input |
@@ -41,7 +41,7 @@
 
 - **TDD throughout.** Failing test → minimal implementation → commit.
 - **Lint after each task:** `ruff check src/ tests/ --fix && ruff format src/ tests/`
-- **Type check after each task:** `mypy src/dazzle/render --strict` and `mypy src/dazzle_back --ignore-missing-imports`. No new errors over the pre-existing baseline.
+- **Type check after each task:** `mypy src/dazzle/render --strict` and `mypy src/dazzle_http --ignore-missing-imports`. No new errors over the pre-existing baseline.
 - **Commit messages:** `feat(render): <subject>` or `refactor(render): <subject>` for source; `test(render): <subject>` for tests.
 
 ---
@@ -49,7 +49,7 @@
 ## Task 1: Create FragmentSurfaceRenderer adapter
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/renderers/fragment.py`
+- Modify: `src/dazzle_http/runtime/renderers/fragment.py`
 - Create: `tests/unit/runtime/test_fragment_surface_renderer.py`
 
 The current `fragment.py` is a one-line re-export of `FragmentRenderer`. Replace with an adapter class that wraps it.
@@ -62,7 +62,7 @@ Create `tests/unit/runtime/test_fragment_surface_renderer.py`:
 """FragmentSurfaceRenderer adapter — uniform (surface, ctx) interface."""
 
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
-from dazzle_back.runtime.renderers.fragment import FragmentSurfaceRenderer
+from dazzle_http.runtime.renderers.fragment import FragmentSurfaceRenderer
 
 
 def test_fragment_surface_renderer_renders_a_minimal_list_surface() -> None:
@@ -94,7 +94,7 @@ def test_fragment_surface_renderer_renders_a_minimal_list_surface() -> None:
 def test_fragment_surface_renderer_signature_matches_jinja_adapter() -> None:
     """Both adapters share the (surface, ctx) -> str signature so the
     dispatcher can call them uniformly."""
-    from dazzle_back.runtime.renderers.jinja import JinjaRenderer
+    from dazzle_http.runtime.renderers.jinja import JinjaRenderer
 
     fragment_render = FragmentSurfaceRenderer.render
     jinja_render = JinjaRenderer.render
@@ -116,7 +116,7 @@ Expected: FAIL — `cannot import name 'FragmentSurfaceRenderer'`.
 
 - [ ] **Step 3: Implement the adapter**
 
-Replace `src/dazzle_back/runtime/renderers/fragment.py` content:
+Replace `src/dazzle_http/runtime/renderers/fragment.py` content:
 
 ```python
 """Fragment renderer adapter — uniform (surface, ctx) interface.
@@ -148,7 +148,7 @@ class FragmentSurfaceRenderer:
     def __init__(self) -> None:
         # Deferred import — fragment_adapter imports SurfaceSpec, no cycle
         # but matches the convention used by other adapter modules.
-        from dazzle_back.runtime.renderers.fragment_adapter import (
+        from dazzle_http.runtime.renderers.fragment_adapter import (
             FragmentSurfaceAdapter,
         )
 
@@ -177,7 +177,7 @@ Expected: 2 PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/fragment.py tests/unit/runtime/test_fragment_surface_renderer.py
+git add src/dazzle_http/runtime/renderers/fragment.py tests/unit/runtime/test_fragment_surface_renderer.py
 git commit -m "feat(render): FragmentSurfaceRenderer adapter for uniform (surface, ctx) shape"
 ```
 
@@ -186,7 +186,7 @@ git commit -m "feat(render): FragmentSurfaceRenderer adapter for uniform (surfac
 ## Task 2: Register FragmentSurfaceRenderer in defaults
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/renderers/init.py`
+- Modify: `src/dazzle_http/runtime/renderers/init.py`
 - Modify: `tests/unit/runtime/test_renderer_default_registration.py`
 
 - [ ] **Step 1: Update the failing test first**
@@ -199,7 +199,7 @@ The Plan 2 test asserts the registered fragment handler is a `FragmentRenderer`.
 #   ...
 #   assert isinstance(handler, FragmentRenderer)
 # to:
-#   from dazzle_back.runtime.renderers.fragment import FragmentSurfaceRenderer
+#   from dazzle_http.runtime.renderers.fragment import FragmentSurfaceRenderer
 #   ...
 #   assert isinstance(handler, FragmentSurfaceRenderer)
 ```
@@ -223,19 +223,19 @@ Expected: 1 PASS, 1 FAIL — the test that asserts `isinstance(handler, Fragment
 Read the file first:
 
 ```bash
-cat src/dazzle_back/runtime/renderers/init.py
+cat src/dazzle_http/runtime/renderers/init.py
 ```
 
 Replace the import and registration:
 
 ```python
 # OLD:
-# from dazzle_back.runtime.renderers.fragment import FragmentRenderer
+# from dazzle_http.runtime.renderers.fragment import FragmentRenderer
 # ...
 # services.renderer_registry.register(name="fragment", handler=FragmentRenderer())
 
 # NEW:
-from dazzle_back.runtime.renderers.fragment import FragmentSurfaceRenderer
+from dazzle_http.runtime.renderers.fragment import FragmentSurfaceRenderer
 # ...
 services.renderer_registry.register(name="fragment", handler=FragmentSurfaceRenderer())
 ```
@@ -259,7 +259,7 @@ Expected: all pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/init.py tests/unit/runtime/test_renderer_default_registration.py
+git add src/dazzle_http/runtime/renderers/init.py tests/unit/runtime/test_renderer_default_registration.py
 git commit -m "refactor(render): register FragmentSurfaceRenderer adapter (was bare FragmentRenderer)"
 ```
 
@@ -268,7 +268,7 @@ git commit -m "refactor(render): register FragmentSurfaceRenderer adapter (was b
 ## Task 3: Simplify dispatch_render
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/renderers/dispatch.py`
+- Modify: `src/dazzle_http/runtime/renderers/dispatch.py`
 - Modify: `tests/unit/runtime/test_dispatch_render.py`
 
 Remove the `if renderer_name == "fragment"` branch. With both adapters now exposing `(surface, ctx) -> str`, the dispatcher can call them uniformly.
@@ -292,9 +292,9 @@ def test_dispatch_calls_handler_with_surface_and_ctx_for_both_renderers() -> Non
     checking each handler was called with the same argument shape."""
     from unittest.mock import MagicMock
     from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
-    from dazzle_back.runtime.renderers.dispatch import dispatch_render
-    from dazzle_back.runtime.renderers.init import register_default_renderers
-    from dazzle_back.runtime.services import RuntimeServices
+    from dazzle_http.runtime.renderers.dispatch import dispatch_render
+    from dazzle_http.runtime.renderers.init import register_default_renderers
+    from dazzle_http.runtime.services import RuntimeServices
 
     services = RuntimeServices()
     register_default_renderers(services)
@@ -334,7 +334,7 @@ Expected: FAIL — the current dispatcher's `if renderer_name == "fragment"` bra
 
 - [ ] **Step 3: Simplify dispatch.py**
 
-Replace the entire content of `src/dazzle_back/runtime/renderers/dispatch.py`:
+Replace the entire content of `src/dazzle_http/runtime/renderers/dispatch.py`:
 
 ```python
 """Dispatch helper: route a surface render through the right renderer.
@@ -350,7 +350,7 @@ from typing import Any
 
 from dazzle.core.ir.surfaces import SurfaceSpec
 from dazzle.render.fragment.errors import FragmentError
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.services import RuntimeServices
 
 
 def dispatch_render(
@@ -396,8 +396,8 @@ Expected: 3 PASS. The parity test is the load-bearing verification that Fragment
 - [ ] **Step 6: Lint and types**
 
 ```bash
-ruff check src/dazzle_back/runtime/renderers tests/unit/runtime --fix && ruff format src/dazzle_back/runtime/renderers tests/unit/runtime
-mypy src/dazzle_back --ignore-missing-imports
+ruff check src/dazzle_http/runtime/renderers tests/unit/runtime --fix && ruff format src/dazzle_http/runtime/renderers tests/unit/runtime
+mypy src/dazzle_http --ignore-missing-imports
 ```
 
 Expected: clean.
@@ -405,7 +405,7 @@ Expected: clean.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/dispatch.py tests/unit/runtime/test_dispatch_render.py
+git add src/dazzle_http/runtime/renderers/dispatch.py tests/unit/runtime/test_dispatch_render.py
 git commit -m "refactor(render): dispatch_render — uniform handler call, no shape branching"
 ```
 
@@ -433,7 +433,7 @@ class Renderer(Protocol):
 
     Renderers exist in two shapes — Fragment-tree consumers (FragmentRenderer)
     and IR+context consumers (JinjaRenderer, future PDF/native adapters).
-    The dispatcher (`dispatch_render` in `dazzle_back.runtime.renderers.dispatch`)
+    The dispatcher (`dispatch_render` in `dazzle_http.runtime.renderers.dispatch`)
     knows which signature each registered handler uses; the protocol stays
     flexible to accommodate both shapes."""
 
@@ -527,13 +527,13 @@ Expected: all pass.
 The stop condition: `dispatch_render` no longer special-cases any renderer name. Verify by reading the final state:
 
 ```bash
-cat src/dazzle_back/runtime/renderers/dispatch.py
+cat src/dazzle_http/runtime/renderers/dispatch.py
 ```
 
 Expected: NO `if renderer_name == ...` branch. The function ends with `return handler.render(surface, ctx)`.
 
 ```bash
-grep -n "if renderer_name" src/dazzle_back/runtime/renderers/dispatch.py
+grep -n "if renderer_name" src/dazzle_http/runtime/renderers/dispatch.py
 ```
 
 Expected: no output (the line is gone).
@@ -552,7 +552,7 @@ git commit -m "docs(changelog): note Plan 5 dispatch uniformity"
 - [ ] `pytest tests/unit/runtime/ tests/integration/test_simple_task_render_fragment.py -v` — all pass.
 - [ ] `pytest tests/ -m "not e2e"` — no regressions.
 - [ ] `mypy src/dazzle/render --strict` — clean.
-- [ ] `mypy src/dazzle src/dazzle_back --ignore-missing-imports` — no new errors over baseline.
+- [ ] `mypy src/dazzle src/dazzle_http --ignore-missing-imports` — no new errors over baseline.
 - [ ] `ruff check src/ tests/ && ruff format --check src/ tests/` — clean.
 - [ ] `git status` clean.
 - [ ] **Stop condition met:** `dispatch_render` has no `if renderer_name ==` branch; both renderers go through the same uniform call.

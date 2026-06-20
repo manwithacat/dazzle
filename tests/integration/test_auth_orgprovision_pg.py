@@ -58,7 +58,7 @@ def _columns(url: str, table: str) -> set[str]:
 
 
 def test_init_db_creates_organizations(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -75,8 +75,8 @@ def test_migration_0008_applies_on_a_pre_0008_db(scratch_url: str) -> None:
     from alembic import command
     from alembic.config import Config
 
-    from dazzle.back.runtime.auth.store import AuthStore
     from dazzle.cli.db import _get_framework_alembic_dir
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -102,7 +102,7 @@ def test_migration_0008_applies_on_a_pre_0008_db(scratch_url: str) -> None:
 
 
 def test_get_or_create_default_organization_is_idempotent(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -117,7 +117,7 @@ def test_get_or_create_default_organization_is_idempotent(scratch_url: str) -> N
 def test_create_organization_slug_unique(scratch_url: str) -> None:
     import pytest
 
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -130,7 +130,7 @@ def test_create_organization_slug_unique(scratch_url: str) -> None:
 
 
 def test_ensure_single_org_membership_first_and_second_user(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -155,11 +155,11 @@ def test_ensure_single_org_membership_first_and_second_user(scratch_url: str) ->
 def test_activation_provisions_and_auto_activates(scratch_url: str) -> None:
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.org_activation import (
+    from dazzle.http.runtime.auth.org_activation import (
         Activated,
         activate_session_for_login,
     )
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -180,11 +180,11 @@ def test_host_pin_does_not_auto_provision(scratch_url: str) -> None:
     must not paper over it."""
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.org_activation import (
+    from dazzle.http.runtime.auth.org_activation import (
         HostForbidden,
         activate_session_for_login,
     )
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -204,7 +204,7 @@ def test_host_pin_does_not_auto_provision(scratch_url: str) -> None:
 
 def test_server_config_defaults_auto_provision_off() -> None:
     """Non-breaking default: existing apps don't auto-provision (no DB needed)."""
-    from dazzle.back.runtime.server import ServerConfig
+    from dazzle.http.runtime.server import ServerConfig
 
     assert ServerConfig().auto_provision_single_org is False
 
@@ -217,8 +217,8 @@ def test_provisioned_membership_binds_fence(scratch_url: str) -> None:
     fence returns only that org's rows (mirrors the 1a keystone)."""
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.org_activation import activate_session_for_login
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.org_activation import activate_session_for_login
+    from dazzle.http.runtime.auth.store import AuthStore
 
     ddl = [
         'CREATE TABLE "Note" (tenant_id TEXT NOT NULL, id TEXT PRIMARY KEY, body TEXT)',

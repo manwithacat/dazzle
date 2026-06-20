@@ -47,8 +47,8 @@ class TestSitePageRouteCallSitesUnique:
         belongs solely to app_factory.py where the auth/persona/analytics
         context is in scope."""
         files = [
-            ROOT / "src" / "dazzle" / "back" / "runtime" / "app_factory.py",
-            ROOT / "src" / "dazzle" / "back" / "runtime" / "subsystems" / "system_routes.py",
+            ROOT / "src" / "dazzle" / "http" / "runtime" / "app_factory.py",
+            ROOT / "src" / "dazzle" / "http" / "runtime" / "subsystems" / "system_routes.py",
         ]
         total = sum(_count_calls(p.read_text(), "create_site_page_routes") for p in files)
         assert total == 1, (
@@ -65,7 +65,7 @@ class TestSitePageRouteCallSitesUnique:
         — that endpoint set (`/api/site/*`) doesn't conflict with the
         page handlers and is a separate concern."""
         text = (
-            ROOT / "src" / "dazzle" / "back" / "runtime" / "subsystems" / "system_routes.py"
+            ROOT / "src" / "dazzle" / "http" / "runtime" / "subsystems" / "system_routes.py"
         ).read_text()
         assert "create_site_routes(" in text
         assert "create_site_page_routes(" not in text

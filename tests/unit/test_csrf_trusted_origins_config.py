@@ -1,6 +1,6 @@
 """Phase 2: csrf_trusted_origins threads ServerConfig -> CSRFConfig."""
 
-from dazzle.back.runtime.csrf import configure_csrf_for_profile
+from dazzle.http.runtime.csrf import configure_csrf_for_profile
 
 
 class TestConfigThreading:

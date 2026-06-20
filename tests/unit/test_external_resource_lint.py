@@ -10,7 +10,7 @@ CDN load slipping in during routine template work.
 ## What this lints
 
 Every external URL (`https://...` or `http://...`) in a template under
-`src/dazzle/ui/templates/**/*.html` must belong to an **origin** in
+`src/dazzle/page/templates/**/*.html` must belong to an **origin** in
 `ALLOWED_EXTERNAL_ORIGINS` with a reason citing either (a) a filed
 GitHub issue, (b) a gap doc, or (c) a cycle number documenting the
 deferral rationale.
@@ -42,7 +42,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TEMPLATES_ROOT = REPO_ROOT / "src" / "dazzle" / "ui" / "templates"
+TEMPLATES_ROOT = REPO_ROOT / "src" / "dazzle" / "page" / "templates"
 
 # URL detection. Uses a conservative regex: http(s)://<origin>/... where
 # origin is hostname[:port] with reasonable punctuation. Deliberately

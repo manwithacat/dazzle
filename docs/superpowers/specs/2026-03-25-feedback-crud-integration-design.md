@@ -33,11 +33,11 @@ When `feedback_widget: enabled`, alongside the existing `_build_feedback_report_
 
 Both surfaces follow the same `ir.SurfaceSpec` structure as DSL-declared surfaces. The linker code sits next to the existing `_build_feedback_report_entity()` function.
 
-### 2. CSRF — `src/dazzle_back/runtime/csrf.py`
+### 2. CSRF — `src/dazzle_http/runtime/csrf.py`
 
 Add `/feedbackreports` to `exempt_paths`. The route validates session auth via the normal access evaluator. The widget JS doesn't have access to the CSRF token (no meta tag rendered in base template).
 
-### 3. System Routes Cleanup — `src/dazzle_back/runtime/subsystems/system_routes.py`
+### 3. System Routes Cleanup — `src/dazzle_http/runtime/subsystems/system_routes.py`
 
 Remove the TODO comment and any hand-coded feedback route code. The surfaces handle everything.
 

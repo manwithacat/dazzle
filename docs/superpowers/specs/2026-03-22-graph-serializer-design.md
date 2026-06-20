@@ -25,7 +25,7 @@ Node entity endpoints are unaffected. `?format=raw` or no format param returns t
 
 ### GraphSerializer
 
-A pure function class in `src/dazzle_back/runtime/graph_serializer.py`. No DB access, no request handling — just data transformation.
+A pure function class in `src/dazzle_http/runtime/graph_serializer.py`. No DB access, no request handling — just data transformation.
 
 **Input:**
 - `edges`: list of dicts (edge entity records from the list query)
@@ -51,7 +51,7 @@ class GraphSerializer:
 
 ### Route Generator Integration
 
-In `_list_handler_body()` in `src/dazzle_back/runtime/route_generator.py`, after the list query returns and before content negotiation:
+In `_list_handler_body()` in `src/dazzle_http/runtime/route_generator.py`, after the list query returns and before content negotiation:
 
 1. Check `format` query param
 2. If `format` is `cytoscape` or `d3` and entity has `graph_edge:`:
@@ -158,7 +158,7 @@ Graph format responses are paginated by edges. Page 2 returns edges 21–40 and 
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_back/runtime/graph_serializer.py` | Create | GraphSerializer class — pure data transformation |
-| `src/dazzle_back/runtime/route_generator.py` | Modify | Wire format param, node fetch, serializer call |
+| `src/dazzle_http/runtime/graph_serializer.py` | Create | GraphSerializer class — pure data transformation |
+| `src/dazzle_http/runtime/route_generator.py` | Modify | Wire format param, node fetch, serializer call |
 | `tests/unit/test_graph_serializer.py` | Create | Unit tests for GraphSerializer |
 | `tests/unit/test_graph_api.py` | Create | Integration tests for format param on list endpoints |

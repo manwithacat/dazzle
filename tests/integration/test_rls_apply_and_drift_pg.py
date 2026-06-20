@@ -60,10 +60,10 @@ def _load_appspec_and_entities() -> tuple[Any, list[Any], str, list[str]]:
 
     Returns ``(appspec, entities, partition_key, sorted_scoped_names)``.
     """
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import scoped_entity_names
     from dazzle.core.appspec_loader import load_project_appspec
     from dazzle.core.ir.governance import TenancyMode
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import scoped_entity_names
 
     appspec = load_project_appspec(_PROJECT_ROOT)
     assert appspec.tenancy is not None, "fixture must declare a tenancy block"
@@ -77,7 +77,7 @@ def _load_appspec_and_entities() -> tuple[Any, list[Any], str, list[str]]:
 
 
 def _build_metadata(appspec: Any, entities: list[Any], pk: str, scoped: list[str]) -> sa.MetaData:
-    from dazzle.back.runtime.sa_schema import build_metadata
+    from dazzle.http.runtime.sa_schema import build_metadata
 
     return build_metadata(entities, partition_key=pk, tenant_scoped=scoped)
 

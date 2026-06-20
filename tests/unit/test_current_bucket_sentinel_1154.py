@@ -15,10 +15,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dazzle.back.runtime.workspace_aggregation import (
-    _condition_references_current_bucket,
-    _substitute_current_bucket,
-)
 from dazzle.core.dsl_parser_impl import Parser
 from dazzle.core.ir import (
     Comparison,
@@ -27,6 +23,10 @@ from dazzle.core.ir import (
     ConditionValue,
 )
 from dazzle.core.lexer import tokenize
+from dazzle.http.runtime.workspace_aggregation import (
+    _condition_references_current_bucket,
+    _substitute_current_bucket,
+)
 
 
 def _parse_aggregate(src: str):

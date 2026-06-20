@@ -282,7 +282,7 @@ including a **per-entity detail viewer** on a `mode: view` surface. The
 handler can delegate back to the framework's generic rendering:
 
 ```python
-from dazzle.ui.runtime import render_detail_view
+from dazzle.page.runtime import render_detail_view
 
 class ManuscriptViewer:
     def render(self, surface, ctx) -> str:

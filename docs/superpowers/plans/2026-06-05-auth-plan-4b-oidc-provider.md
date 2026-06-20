@@ -40,14 +40,14 @@ routes + org-resolution + JIT membership + group→persona mapping + session act
 
 ## Task 1: Refine the seam to async
 
-**Files:** Modify `src/dazzle/back/runtime/auth/connections.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/connections.py`
 
 - Change `ConnectionProvider.initiate`/`callback` to `async def` (registry is empty in 4a —
   no callers break). Update the docstring.
 
 ## Task 2: NativeOIDCProvider
 
-**Files:** Create `src/dazzle/back/runtime/auth/oidc_provider.py`
+**Files:** Create `src/dazzle/http/runtime/auth/oidc_provider.py`
 
 - `NativeOIDCProvider` with `CALLBACK_PATH = "/auth/enterprise/callback"`, lazy per-connection
   authlib client (`_client`), `async initiate` (→ authorize redirect URL str), `async callback`

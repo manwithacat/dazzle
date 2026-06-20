@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.workspace_card_data import _build_cohort_cells
 from dazzle.core.ir.workspaces import (
     CohortStripConfig,
     CohortStripLens,
     ToneBandSpec,
 )
+from dazzle.http.runtime.workspace_card_data import _build_cohort_cells
 
 
 def _config(*, lens: CohortStripLens) -> CohortStripConfig:

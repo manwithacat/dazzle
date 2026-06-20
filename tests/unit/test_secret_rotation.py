@@ -4,7 +4,7 @@ from datetime import timedelta
 
 import pytest
 
-from dazzle.back.runtime.auth.secret_rotation import parse_grace_duration
+from dazzle.http.runtime.auth.secret_rotation import parse_grace_duration
 
 
 def test_parse_grace_duration_units() -> None:

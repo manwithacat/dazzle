@@ -184,10 +184,10 @@ def _build_default_subsystems(self) -> list[Any]:
 
 ```python
 # DELETE these:
-from dazzle_back.runtime.app_factory import create_app, run_app, ...
+from dazzle_http.runtime.app_factory import create_app, run_app, ...
 ```
 
-**Update callers:** `grep -rn "from dazzle_back.runtime.server import create_app\|run_app"` and change imports to `from dazzle_back.runtime.app_factory import ...`.
+**Update callers:** `grep -rn "from dazzle_http.runtime.server import create_app\|run_app"` and change imports to `from dazzle_http.runtime.app_factory import ...`.
 
 ---
 
@@ -221,14 +221,14 @@ The `_upload_callbacks` plumbing stays on `DazzleBackendApp` — file route crea
 
 | File | Change |
 |------|--------|
-| `src/dazzle_back/runtime/subsystems/__init__.py` | Add new `SubsystemContext` fields |
-| `src/dazzle_back/runtime/subsystems/auth.py` | **Create** — auth routes subsystem |
-| `src/dazzle_back/runtime/subsystems/integrations.py` | **Create** — integration subsystem |
-| `src/dazzle_back/runtime/subsystems/workspaces.py` | **Create** — workspace subsystem |
-| `src/dazzle_back/runtime/subsystems/fragments.py` | **Create** — fragment routes subsystem |
-| `src/dazzle_back/runtime/subsystems/transitions.py` | **Create** — transition effects subsystem |
-| `src/dazzle_back/runtime/subsystems/system_routes.py` | **Create** — system routes subsystem |
-| `src/dazzle_back/runtime/server.py` | **Reduce** — extract methods, rename `_setup_auth` → `_setup_auth_deps`, simplify `_setup_routes`, remove re-exports |
+| `src/dazzle_http/runtime/subsystems/__init__.py` | Add new `SubsystemContext` fields |
+| `src/dazzle_http/runtime/subsystems/auth.py` | **Create** — auth routes subsystem |
+| `src/dazzle_http/runtime/subsystems/integrations.py` | **Create** — integration subsystem |
+| `src/dazzle_http/runtime/subsystems/workspaces.py` | **Create** — workspace subsystem |
+| `src/dazzle_http/runtime/subsystems/fragments.py` | **Create** — fragment routes subsystem |
+| `src/dazzle_http/runtime/subsystems/transitions.py` | **Create** — transition effects subsystem |
+| `src/dazzle_http/runtime/subsystems/system_routes.py` | **Create** — system routes subsystem |
+| `src/dazzle_http/runtime/server.py` | **Reduce** — extract methods, rename `_setup_auth` → `_setup_auth_deps`, simplify `_setup_routes`, remove re-exports |
 | Callers of `server.py` re-exports | **Update** — import from `app_factory` instead |
 
 ## Implementation approach

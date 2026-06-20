@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.ops_database import (
+from dazzle.http.runtime.ops_database import (
     OpsDatabase,
     RetentionConfig,
 )

@@ -615,7 +615,7 @@ class TestProcessManagerEntityMeta:
         """ProcessManager.initialize() registers metadata with status_field=None when no SM, and the status_field name when an SM exists."""
         from unittest.mock import AsyncMock
 
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         # Case 1: entity without state machine
         adapter = AsyncMock()

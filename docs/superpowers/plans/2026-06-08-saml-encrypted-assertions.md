@@ -19,10 +19,10 @@ KeyDescriptor in SP metadata.
 
 ## File Structure
 
-- Modify `src/dazzle/back/runtime/auth/secret_rotation.py` — 2 new audit-event constants.
-- Modify `src/dazzle/back/runtime/auth/store.py` — keypair-lifecycle helpers + refactor
+- Modify `src/dazzle/http/runtime/auth/secret_rotation.py` — 2 new audit-event constants.
+- Modify `src/dazzle/http/runtime/auth/store.py` — keypair-lifecycle helpers + refactor
   signing enable/disable + 2 new encryption methods.
-- Modify `src/dazzle/back/runtime/auth/saml_provider.py` — `_settings` +
+- Modify `src/dazzle/http/runtime/auth/saml_provider.py` — `_settings` +
   `_sp_only_settings` encryption wiring.
 - Modify `src/dazzle/cli/auth_connection.py` — 2 new commands.
 - Modify `tests/unit/test_saml_provider.py`, `tests/unit/test_auth_connection_cli.py`,
@@ -32,7 +32,7 @@ KeyDescriptor in SP metadata.
 
 ### Task 1: Audit-event constants
 
-**Files:** Modify `src/dazzle/back/runtime/auth/secret_rotation.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/secret_rotation.py`
 
 - [ ] **Step 1: Add the constants** after `SECRET_EVENT_SIGNING_DISABLED` (line 19):
 
@@ -41,13 +41,13 @@ SECRET_EVENT_ENCRYPTION_ENABLED = "sp_encryption_enabled"
 SECRET_EVENT_ENCRYPTION_DISABLED = "sp_encryption_disabled"
 ```
 
-- [ ] **Step 2: Verify** `python -c "from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_ENCRYPTION_ENABLED"`
+- [ ] **Step 2: Verify** `python -c "from dazzle.http.runtime.auth.secret_rotation import SECRET_EVENT_ENCRYPTION_ENABLED"`
 
 ---
 
 ### Task 2: Store — shared keypair lifecycle + encryption methods
 
-**Files:** Modify `src/dazzle/back/runtime/auth/store.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/store.py`
 
 - [ ] **Step 1: Write the failing test** (PG round-trip — append to
 `tests/integration/test_connections_pg.py`). This pins the lifecycle decoupling, the core
@@ -55,7 +55,7 @@ regression risk:
 
 ```python
 def test_encryption_and_signing_share_one_keypair(store_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(store_url)
     conn = store.create_connection(
@@ -155,7 +155,7 @@ owns that now.)
         """Persist SAML assertion-encryption material (#1342 feature B): set
         ``encrypt_assertions='true'`` and ensure the shared SP keypair. Returns True if a
         row changed. SAML-only; tenant-fenced when given."""
-        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_ENCRYPTION_ENABLED
+        from dazzle.http.runtime.auth.secret_rotation import SECRET_EVENT_ENCRYPTION_ENABLED
 
         with self._transaction() as cur:
             config, secrets, ten, conn_type = self._load_config_secrets(
@@ -193,7 +193,7 @@ owns that now.)
     ) -> bool:
         """Remove ``encrypt_assertions`` and drop the shared SP keypair iff signing is also
         off (one transaction). Returns True iff encryption was on."""
-        from dazzle.back.runtime.auth.secret_rotation import SECRET_EVENT_ENCRYPTION_DISABLED
+        from dazzle.http.runtime.auth.secret_rotation import SECRET_EVENT_ENCRYPTION_DISABLED
 
         with self._transaction() as cur:
             config, secrets, ten, conn_type = self._load_config_secrets(
@@ -224,7 +224,7 @@ confirm the refactor didn't regress C:
 
 ### Task 3: Provider settings — wantAssertionsEncrypted + metadata cert
 
-**Files:** Modify `src/dazzle/back/runtime/auth/saml_provider.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/saml_provider.py`
 
 - [ ] **Step 1: Write failing tests** (append to `tests/unit/test_saml_provider.py`):
 
@@ -379,7 +379,7 @@ def enable_assertion_encryption(
     metadata (printed URL) so it has the SP encryption cert. WARNING: once on, a response
     carrying a plaintext (unencrypted) assertion is rejected — enable the IdP side first.
     """
-    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+    from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
     store = _store()
     conn = store.get_connection(connection_id)

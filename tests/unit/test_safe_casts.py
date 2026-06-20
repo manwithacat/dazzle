@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle.back.runtime.safe_casts import get_using_clause, is_safe_cast
+from dazzle.http.runtime.safe_casts import get_using_clause, is_safe_cast
 
 
 class TestSafeCastRegistry:

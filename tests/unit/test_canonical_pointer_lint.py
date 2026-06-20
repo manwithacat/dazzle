@@ -46,7 +46,7 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TEMPLATES_ROOT = REPO_ROOT / "src" / "dazzle" / "ui" / "templates"
+TEMPLATES_ROOT = REPO_ROOT / "src" / "dazzle" / "page" / "templates"
 
 # Canonical shape. Spec:
 # - Literal prefix `{# Contract: ~/.claude/skills/ux-architect/components/`

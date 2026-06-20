@@ -1,0 +1,120 @@
+"""Subsystem plugin architecture for DazzleBackendApp.
+
+Each subsystem encapsulates a discrete feature (channels, events, SLA, etc.)
+behind a common ``SubsystemPlugin`` protocol.  ``DazzleBackendApp.build()``
+iterates ``self.subsystems`` in order, calling ``startup()`` on each, then
+calls ``shutdown()`` in reverse order on app teardown.
+
+Startup errors are caught by each plugin individually — a failing subsystem
+logs a warning but never aborts the overall startup sequence.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
+    from dazzle.core.ir import AppSpec
+    from dazzle.http.runtime.server import ServerConfig
+    from dazzle.http.runtime.service_generator import CRUDService
+
+
+@dataclass
+class SubsystemContext:
+    """Shared runtime state passed to every subsystem plugin.
+
+    Subsystems receive this object at startup time. They may read any field and
+    may write back references to objects they own (e.g. ``channel_manager``,
+    ``process_manager``) so that sibling subsystems or callers can inspect them.
+    """
+
+    app: FastAPI
+    appspec: AppSpec
+    config: ServerConfig
+    services: dict[str, Any]
+    repositories: dict[str, Any]
+    entities: list[Any]
+    channels: list[Any]
+    # Database manager — set by DazzleBackendApp after _setup_database()
+    db_manager: Any | None = None
+    # Mutable outputs — subsystems write these so other subsystems can read them
+    channel_manager: Any | None = None
+    event_framework: Any | None = None
+    process_manager: Any | None = None
+    process_adapter: Any | None = None
+    sla_manager: Any | None = None
+    llm_queue: Any | None = None
+    # Auth middleware — set by DazzleBackendApp before subsystem startup
+    auth_middleware: Any | None = None
+    # Misc flags forwarded from config for convenience
+    enable_auth: bool = False
+    enable_test_mode: bool = False
+
+    # Auth — set by DazzleBackendApp._setup_auth() before subsystems run
+    auth_store: Any | None = None
+    auth_dep: Any | None = None  # FastAPI Depends for required auth
+    optional_auth_dep: Any | None = None  # FastAPI Depends for optional auth
+    auth_config: Any | None = None  # AuthConfig from manifest
+    database_url: str = ""  # for subsystems needing DB access
+
+    # Integration — set by integrations subsystem
+    integration_mgr: Any | None = None
+
+    # Workspace — set by workspace subsystem
+    workspace_builder: Any | None = None
+
+    # Audit — set by DazzleBackendApp._setup_routes, read by system_routes subsystem
+    audit_logger: Any | None = None
+
+    # Migration plan — set by DazzleBackendApp._setup_database(), read by system_routes subsystem
+    last_migration: Any | None = None
+
+    # Fields that may differ from config when passed as DazzleBackendApp constructor kwargs
+    sitespec_data: Any | None = None  # None → no public site; populated from self._sitespec_data
+    enable_files: bool = False  # populated from self._enable_files
+    files_path: Any | None = None  # populated from self._files_path
+    services_dir: Any | None = None  # populated from self._services_dir
+
+    # Config forwarded from ServerConfig
+    security_profile: str = "basic"
+    project_root: Any | None = None
+
+    # Resolved opt-in capabilities (#1342) — set by DazzleBackendApp before
+    # subsystem startup. A `ResolvedCapabilities`; query with
+    # `.is_active("auth.enterprise.oidc")`. None when no manifest was resolved.
+    capabilities: Any = None
+
+    # Extra static directories to prepend to the framework's /static mount.
+    # Consumer apps that mount their own /static AFTER .build() used to be
+    # silently shadowed by the framework's /static mount (issue #793).
+    # Pass these here and they'll be checked before framework static files.
+    extra_static_dirs: list[Any] | None = None
+
+
+@runtime_checkable
+class SubsystemPlugin(Protocol):
+    """Protocol implemented by every subsystem module.
+
+    ``name`` is used only for logging.  ``startup()`` is called once during
+    ``DazzleBackendApp.build()`` (synchronously — it must not be a coroutine). For
+    async startup/shutdown WORK that runs when the server boots, register via
+    ``lifespan_hooks.register_lifespan_hook(ctx.app, startup=…, shutdown=…)`` — NOT
+    the deprecated ``on_event`` decorator, which FastAPI silently ignores under the
+    server's custom lifespan.  ``shutdown()`` is the sync subsystem teardown.
+    """
+
+    name: str
+
+    def startup(self, ctx: SubsystemContext) -> None:
+        """Initialise this subsystem.  Must not raise — log and return on error."""
+        ...
+
+    def shutdown(self) -> None:
+        """Tear down this subsystem (optional — prefer a registered lifespan hook)."""
+        ...
+
+
+__all__ = ["SubsystemContext", "SubsystemPlugin"]

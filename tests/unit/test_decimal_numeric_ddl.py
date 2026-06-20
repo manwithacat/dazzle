@@ -12,9 +12,9 @@ MONEY is deliberately NOT covered here: it is expanded into an integer
 reaches these mappers as a decimal and is unaffected by the bug.
 """
 
-from dazzle.back.runtime.pg_backend import _field_type_to_postgres
-from dazzle.back.runtime.sa_schema import _field_type_to_sa
-from dazzle.back.specs.entity import FieldType, ScalarType
+from dazzle.http.runtime.pg_backend import _field_type_to_postgres
+from dazzle.http.runtime.sa_schema import _field_type_to_sa
+from dazzle.http.specs.entity import FieldType, ScalarType
 
 
 def _decimal(precision: int | None = None, scale: int | None = None) -> FieldType:

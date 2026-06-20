@@ -12,8 +12,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.param_store import ParamResolver, resolve_value
 from dazzle.core.ir.params import ParamRef, ParamSpec
+from dazzle.http.runtime.param_store import ParamResolver, resolve_value
 
 # ---------------------------------------------------------------------------
 # resolve_value tests
@@ -74,7 +74,7 @@ class TestEnsureDazzleParamsTable:
     """Migration function creates _dazzle_params table (mock DB)."""
 
     def test_creates_table(self) -> None:
-        from dazzle.back.runtime.migrations import ensure_dazzle_params_table
+        from dazzle.http.runtime.migrations import ensure_dazzle_params_table
 
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
@@ -129,7 +129,7 @@ class TestWorkspaceHeatmapThresholdsStatic:
 
     def test_workspace_region_context_has_param_fields(self) -> None:
         """WorkspaceRegionContext accepts param_resolver and tenant_id."""
-        from dazzle.back.runtime.workspace_context import WorkspaceRegionContext
+        from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 
         ctx = WorkspaceRegionContext(
             ctx_region=MagicMock(),
@@ -172,6 +172,6 @@ class TestParamRefInRegionContext:
         ],
     )
     def test_resolve_thresholds(self, input_factory: Any, expected: list[float]) -> None:
-        from dazzle.ui.runtime.workspace_renderer import _resolve_thresholds
+        from dazzle.page.runtime.workspace_renderer import _resolve_thresholds
 
         assert _resolve_thresholds(input_factory()) == expected

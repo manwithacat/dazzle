@@ -18,7 +18,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from dazzle.back.events import (
+from dazzle.http.events import (
     ConsumerConfig,
     DevBusMemory,
     EventEnvelope,
@@ -949,7 +949,7 @@ class TestEventFramework:
         assert not framework.is_running
 
         with (
-            patch("dazzle.back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -973,7 +973,7 @@ class TestEventFramework:
 
         framework = EventFramework(config)
         with (
-            patch("dazzle.back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -998,7 +998,7 @@ class TestEventFramework:
         framework = EventFramework(config)
 
         with (
-            patch("dazzle.back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -1037,7 +1037,7 @@ class TestEventFramework:
             pass
 
         with (
-            patch("dazzle.back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -1124,7 +1124,7 @@ class TestConnectFnInjection:
 
         framework = EventFramework(config)
         with (
-            patch("dazzle.back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -1172,7 +1172,7 @@ class TestRedisBusSignature:
         """RedisBus.start_consumer_loop signature includes poll_interval."""
         import inspect
 
-        from dazzle.back.events.redis_bus import RedisBus
+        from dazzle.http.events.redis_bus import RedisBus
 
         sig = inspect.signature(RedisBus.start_consumer_loop)
         assert "poll_interval" in sig.parameters

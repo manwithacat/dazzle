@@ -54,9 +54,9 @@ def scratch_url() -> Iterator[str]:
 
 
 def _load_appspec_and_metadata():
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
     from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 
     appspec = load_project_appspec(_PROJECT_ROOT)
     pk = appspec.tenancy.isolation.partition_key
@@ -97,7 +97,7 @@ def _seed_domain(engine: sa.Engine, md: sa.MetaData) -> tuple[str, str]:
 def _seed_auth(scratch_url: str, a: str, b: str) -> tuple[str, str]:
     """Seed orgs (id=A,B), one A-only identity + one identity shared across A,B.
     Returns (only_a_id, shared_id)."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -200,7 +200,7 @@ def test_excise_missing_org_refuses(scratch_url: str) -> None:
         scratch_url.replace("postgresql://", "postgresql+psycopg://"), future=True
     )
     md.create_all(engine)
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     AuthStore(database_url=scratch_url)._init_db()  # tables exist, no org rows
 

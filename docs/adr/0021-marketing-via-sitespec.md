@@ -7,7 +7,7 @@
 
 ## Context
 
-A Dazzle project's public-facing surface (marketing site, legal pages, blog) lives on the same domain as the authenticated app — same hostname, same cookie scope. The framework provides a declarative path for these pages: `sitespec.yaml` declares pages with framework page types (`landing`, `markdown`, `legal`), and `src/dazzle/back/runtime/site_routes.py` registers route handlers that:
+A Dazzle project's public-facing surface (marketing site, legal pages, blog) lives on the same domain as the authenticated app — same hostname, same cookie scope. The framework provides a declarative path for these pages: `sitespec.yaml` declares pages with framework page types (`landing`, `markdown`, `legal`), and `src/dazzle/http/runtime/site_routes.py` registers route handlers that:
 
 - Render the page via `render_site_page("site/page.html", ctx)`
 - Resolve auth state via `_resolve_auth(request)` (read-only, never writes cookies)
@@ -115,6 +115,6 @@ A future framework lint check could scan project `routes/*.py` files for `# dazz
 ## See also
 
 - `docs/guides/marketing-conformance.md` — the project-facing conformance checklist
-- `src/dazzle/back/runtime/site_routes.py` — framework site router (source of truth for cookie / auth / consent discipline)
+- `src/dazzle/http/runtime/site_routes.py` — framework site router (source of truth for cookie / auth / consent discipline)
 - ADR-0011 — SSR + HTMX (the broader architecture this fits into)
 - [#969](https://github.com/manwithacat/dazzle/issues/969) — the regression that surfaced the policy

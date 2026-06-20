@@ -2,7 +2,7 @@
 --
 -- WHAT THIS IS
 -- ---------------------
--- The Dazzle schema builder (src/dazzle/back/runtime/sa_schema.py) emits only
+-- The Dazzle schema builder (src/dazzle/http/runtime/sa_schema.py) emits only
 -- PK constraints and unique constraints (i.e. the "id" column index and any
 -- "unique" field indexes from the DSL).  It does NOT create indexes on:
 --   • tenant_id columns  — every list/read scope predicate filters on this

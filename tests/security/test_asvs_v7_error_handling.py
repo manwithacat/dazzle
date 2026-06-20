@@ -8,14 +8,14 @@ class TestErrorMessages:
 
     def test_exception_handlers_registered(self):
         """V7.4.1: Custom exception handlers should be registered."""
-        from dazzle.back.runtime.exception_handlers import register_exception_handlers
+        from dazzle.http.runtime.exception_handlers import register_exception_handlers
 
         # Should be a callable that registers handlers on an app
         assert callable(register_exception_handlers)
 
     def test_generic_error_in_auth(self):
         """V7.4.2: Auth errors should use generic messages to prevent enumeration."""
-        from dazzle.back.runtime.auth.routes import _login
+        from dazzle.http.runtime.auth.routes import _login
 
         source = inspect.getsource(_login)
         # Login should not reveal whether email or password was wrong
@@ -23,7 +23,7 @@ class TestErrorMessages:
 
     def test_forgot_password_generic_response(self):
         """V7.4.3: Forgot password always returns same message."""
-        from dazzle.back.runtime.auth.routes import _forgot_password
+        from dazzle.http.runtime.auth.routes import _forgot_password
 
         source = inspect.getsource(_forgot_password)
         assert "If an account with that email exists" in source

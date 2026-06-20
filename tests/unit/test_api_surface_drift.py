@@ -121,7 +121,7 @@ def test_mcp_tools_includes_known_tools():
 
 def test_public_helpers_includes_known_packages():
     snapshot = helpers_mod.snapshot_public_helpers()
-    for pkg in ("dazzle", "dazzle.back", "dazzle.ui"):
+    for pkg in ("dazzle", "dazzle.http", "dazzle.page"):
         assert f"package: {pkg}\n" in snapshot, f"Missing package: {pkg}"
     for export in ("DazzleError", "ParseError", "UISpec"):
         assert export in snapshot, f"Missing export: {export}"

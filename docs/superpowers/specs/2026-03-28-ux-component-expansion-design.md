@@ -190,7 +190,7 @@ Phase 4: Bridge (deferred, after Phase 3)
 **Conditional loading via server-side manifest.** The rendering layer walks the surface spec and collects widget requirements:
 
 ```python
-# src/dazzle_back/runtime/asset_manifest.py
+# src/dazzle_http/runtime/asset_manifest.py
 required_assets: set[str] = set()
 for field in surface.fields:
     if field.widget == "rich_text":

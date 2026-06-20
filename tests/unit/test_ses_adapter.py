@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from dazzle.back.channels.adapters.base import SendStatus
-from dazzle.back.channels.detection import DetectionResult, ProviderStatus
-from dazzle.back.channels.outbox import OutboxMessage
-from dazzle.back.channels.ses_webhooks import (
+from dazzle.http.channels.adapters.base import SendStatus
+from dazzle.http.channels.detection import DetectionResult, ProviderStatus
+from dazzle.http.channels.outbox import OutboxMessage
+from dazzle.http.channels.ses_webhooks import (
     _handle_bounce,
     _handle_complaint,
     _handle_delivery,
@@ -109,7 +109,7 @@ class TestSESDetector:
         monkeypatch.delenv("AWS_SES_ENABLED", raising=False)
         monkeypatch.delenv("DAZZLE_SES_FROM_ADDRESS", raising=False)
 
-        from dazzle.back.channels.providers.email import SESDetector
+        from dazzle.http.channels.providers.email import SESDetector
 
         detector = SESDetector()
         result = await detector.detect()
@@ -127,7 +127,7 @@ class TestSESDetector:
 
         with (
             patch(
-                "dazzle.back.channels.providers.email.get_env_var",
+                "dazzle.http.channels.providers.email.get_env_var",
                 side_effect=lambda name, default=None: {
                     "DAZZLE_EMAIL_PROVIDER": "ses",
                     "DAZZLE_SES_REGION": None,
@@ -136,11 +136,11 @@ class TestSESDetector:
                 }.get(name, default),
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=fake_cfg,
             ),
         ):
-            from dazzle.back.channels.providers.email import SESDetector
+            from dazzle.http.channels.providers.email import SESDetector
 
             detector = SESDetector()
             result = await detector.detect()
@@ -157,7 +157,7 @@ class TestSESDetector:
 
         with (
             patch(
-                "dazzle.back.channels.providers.email.get_env_var",
+                "dazzle.http.channels.providers.email.get_env_var",
                 side_effect=lambda name, default=None: {
                     "DAZZLE_EMAIL_PROVIDER": None,
                     "AWS_SES_ENABLED": "true",
@@ -167,11 +167,11 @@ class TestSESDetector:
                 }.get(name, default),
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=fake_cfg,
             ),
         ):
-            from dazzle.back.channels.providers.email import SESDetector
+            from dazzle.http.channels.providers.email import SESDetector
 
             detector = SESDetector()
             result = await detector.detect()
@@ -187,7 +187,7 @@ class TestSESDetector:
 
         with (
             patch(
-                "dazzle.back.channels.providers.email.get_env_var",
+                "dazzle.http.channels.providers.email.get_env_var",
                 side_effect=lambda name, default=None: {
                     "DAZZLE_EMAIL_PROVIDER": None,
                     "AWS_SES_ENABLED": "",
@@ -197,11 +197,11 @@ class TestSESDetector:
                 }.get(name, default),
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=fake_cfg,
             ),
         ):
-            from dazzle.back.channels.providers.email import SESDetector
+            from dazzle.http.channels.providers.email import SESDetector
 
             detector = SESDetector()
             result = await detector.detect()
@@ -217,7 +217,7 @@ class TestSESDetector:
 
         with (
             patch(
-                "dazzle.back.channels.providers.email.get_env_var",
+                "dazzle.http.channels.providers.email.get_env_var",
                 side_effect=lambda name, default=None: {
                     "DAZZLE_EMAIL_PROVIDER": "ses",
                     "DAZZLE_SES_REGION": None,
@@ -226,11 +226,11 @@ class TestSESDetector:
                 }.get(name, default),
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=fake_cfg,
             ),
         ):
-            from dazzle.back.channels.providers.email import SESDetector
+            from dazzle.http.channels.providers.email import SESDetector
 
             detector = SESDetector()
             result = await detector.detect()
@@ -247,7 +247,7 @@ class TestSESDetector:
 
         with (
             patch(
-                "dazzle.back.channels.providers.email.get_env_var",
+                "dazzle.http.channels.providers.email.get_env_var",
                 side_effect=lambda name, default=None: {
                     "DAZZLE_EMAIL_PROVIDER": "ses",
                     "DAZZLE_SES_REGION": None,
@@ -256,11 +256,11 @@ class TestSESDetector:
                 }.get(name, default),
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=fake_cfg,
             ),
         ):
-            from dazzle.back.channels.providers.email import SESDetector
+            from dazzle.http.channels.providers.email import SESDetector
 
             detector = SESDetector()
             result = await detector.detect()
@@ -275,7 +275,7 @@ class TestSESDetector:
 
         with (
             patch(
-                "dazzle.back.channels.providers.email.get_env_var",
+                "dazzle.http.channels.providers.email.get_env_var",
                 side_effect=lambda name, default=None: {
                     "DAZZLE_EMAIL_PROVIDER": "ses",
                     "DAZZLE_SES_REGION": "eu-central-1",
@@ -284,11 +284,11 @@ class TestSESDetector:
                 }.get(name, default),
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=fake_cfg,
             ),
         ):
-            from dazzle.back.channels.providers.email import SESDetector
+            from dazzle.http.channels.providers.email import SESDetector
 
             detector = SESDetector()
             result = await detector.detect()
@@ -304,7 +304,7 @@ class TestSESDetector:
 
         with (
             patch(
-                "dazzle.back.channels.providers.email.get_env_var",
+                "dazzle.http.channels.providers.email.get_env_var",
                 side_effect=lambda name, default=None: {
                     "DAZZLE_EMAIL_PROVIDER": "ses",
                     "DAZZLE_SES_REGION": None,
@@ -313,11 +313,11 @@ class TestSESDetector:
                 }.get(name, default),
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=fake_cfg,
             ),
         ):
-            from dazzle.back.channels.providers.email import SESDetector
+            from dazzle.http.channels.providers.email import SESDetector
 
             detector = SESDetector()
             result = await detector.detect()
@@ -345,7 +345,7 @@ class TestSESAdapter:
                 "configuration_set": "tracking-set",
             }
         )
-        from dazzle.back.channels.adapters.email import SESAdapter
+        from dazzle.http.channels.adapters.email import SESAdapter
 
         adapter = SESAdapter(dr)
 
@@ -356,7 +356,7 @@ class TestSESAdapter:
     def test_constructor_defaults(self) -> None:
         """Constructor falls back to defaults when metadata is sparse."""
         dr = _make_detection_result(metadata={})
-        from dazzle.back.channels.adapters.email import SESAdapter
+        from dazzle.http.channels.adapters.email import SESAdapter
 
         adapter = SESAdapter(dr)
 
@@ -379,15 +379,15 @@ class TestSESAdapter:
 
         with (
             patch(
-                "dazzle.back.runtime.aws_config.get_aioboto3_session",
+                "dazzle.http.runtime.aws_config.get_aioboto3_session",
                 return_value=mock_session,
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=_fake_aws_config(),
             ),
         ):
-            from dazzle.back.channels.adapters.email import SESAdapter
+            from dazzle.http.channels.adapters.email import SESAdapter
 
             adapter = SESAdapter(ses_detection_result)
             result = await adapter.send(outbox_message)
@@ -433,15 +433,15 @@ class TestSESAdapter:
 
         with (
             patch(
-                "dazzle.back.runtime.aws_config.get_aioboto3_session",
+                "dazzle.http.runtime.aws_config.get_aioboto3_session",
                 return_value=mock_session,
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=_fake_aws_config(),
             ),
         ):
-            from dazzle.back.channels.adapters.email import SESAdapter
+            from dazzle.http.channels.adapters.email import SESAdapter
 
             adapter = SESAdapter(ses_detection_result)
             result = await adapter.send(msg)
@@ -473,15 +473,15 @@ class TestSESAdapter:
 
         with (
             patch(
-                "dazzle.back.runtime.aws_config.get_aioboto3_session",
+                "dazzle.http.runtime.aws_config.get_aioboto3_session",
                 return_value=mock_session,
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=_fake_aws_config(),
             ),
         ):
-            from dazzle.back.channels.adapters.email import SESAdapter
+            from dazzle.http.channels.adapters.email import SESAdapter
 
             adapter = SESAdapter(dr)
             result = await adapter.send(outbox_message)
@@ -507,15 +507,15 @@ class TestSESAdapter:
 
         with (
             patch(
-                "dazzle.back.runtime.aws_config.get_aioboto3_session",
+                "dazzle.http.runtime.aws_config.get_aioboto3_session",
                 return_value=mock_session,
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=_fake_aws_config(),
             ),
         ):
-            from dazzle.back.channels.adapters.email import SESAdapter
+            from dazzle.http.channels.adapters.email import SESAdapter
 
             adapter = SESAdapter(ses_detection_result)
             result = await adapter.send(outbox_message)
@@ -539,15 +539,15 @@ class TestSESAdapter:
 
         with (
             patch(
-                "dazzle.back.runtime.aws_config.get_aioboto3_session",
+                "dazzle.http.runtime.aws_config.get_aioboto3_session",
                 return_value=mock_session,
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=_fake_aws_config(),
             ),
         ):
-            from dazzle.back.channels.adapters.email import SESAdapter
+            from dazzle.http.channels.adapters.email import SESAdapter
 
             adapter = SESAdapter(ses_detection_result)
             result = await adapter.send(outbox_message)
@@ -571,15 +571,15 @@ class TestSESAdapter:
 
         with (
             patch(
-                "dazzle.back.runtime.aws_config.get_aioboto3_session",
+                "dazzle.http.runtime.aws_config.get_aioboto3_session",
                 return_value=mock_session,
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=_fake_aws_config(),
             ),
         ):
-            from dazzle.back.channels.adapters.email import SESAdapter
+            from dazzle.http.channels.adapters.email import SESAdapter
 
             adapter = SESAdapter(ses_detection_result)
             result = await adapter.send(outbox_message)
@@ -599,15 +599,15 @@ class TestSESAdapter:
 
         with (
             patch(
-                "dazzle.back.runtime.aws_config.get_aioboto3_session",
+                "dazzle.http.runtime.aws_config.get_aioboto3_session",
                 return_value=mock_session,
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=_fake_aws_config(),
             ),
         ):
-            from dazzle.back.channels.adapters.email import SESAdapter
+            from dazzle.http.channels.adapters.email import SESAdapter
 
             adapter = SESAdapter(ses_detection_result)
             healthy = await adapter.health_check()
@@ -630,15 +630,15 @@ class TestSESAdapter:
 
         with (
             patch(
-                "dazzle.back.runtime.aws_config.get_aioboto3_session",
+                "dazzle.http.runtime.aws_config.get_aioboto3_session",
                 return_value=mock_session,
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=_fake_aws_config(),
             ),
         ):
-            from dazzle.back.channels.adapters.email import SESAdapter
+            from dazzle.http.channels.adapters.email import SESAdapter
 
             adapter = SESAdapter(ses_detection_result)
             healthy = await adapter.health_check()
@@ -660,15 +660,15 @@ class TestSESAdapter:
 
         with (
             patch(
-                "dazzle.back.runtime.aws_config.get_aioboto3_session",
+                "dazzle.http.runtime.aws_config.get_aioboto3_session",
                 return_value=mock_session,
             ),
             patch(
-                "dazzle.back.runtime.aws_config.get_aws_config",
+                "dazzle.http.runtime.aws_config.get_aws_config",
                 return_value=_fake_aws_config(),
             ),
         ):
-            from dazzle.back.channels.adapters.email import SESAdapter
+            from dazzle.http.channels.adapters.email import SESAdapter
 
             adapter = SESAdapter(ses_detection_result)
             healthy = await adapter.health_check()

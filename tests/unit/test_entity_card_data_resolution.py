@@ -9,12 +9,12 @@ empty bodies pending the per-mode compact renderer ship.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.workspace_card_fetchers import _build_entity_card_sections
 from dazzle.core.ir.workspaces import (
     EntityCardConfig,
     EntityCardSection,
     EntityCardSectionMode,
 )
+from dazzle.http.runtime.workspace_card_fetchers import _build_entity_card_sections
 
 
 def _section(
@@ -816,7 +816,7 @@ def test_safe_fetch_normalises_pydantic_rows_to_dicts() -> None:
 
     from pydantic import BaseModel
 
-    from dazzle.back.runtime.workspace_card_fetchers import _safe_fetch
+    from dazzle.http.runtime.workspace_card_fetchers import _safe_fetch
 
     class FakeRow(BaseModel):
         id: str
@@ -837,7 +837,7 @@ def test_safe_fetch_handles_plain_dict_rows() -> None:
     """Repos that already return dicts must pass through unchanged."""
     import asyncio
 
-    from dazzle.back.runtime.workspace_card_fetchers import _safe_fetch
+    from dazzle.http.runtime.workspace_card_fetchers import _safe_fetch
 
     class FakeRepo:
         async def list(self, **_kwargs):

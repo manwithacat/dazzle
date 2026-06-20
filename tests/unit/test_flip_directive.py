@@ -16,7 +16,9 @@ from pathlib import Path
 
 import pytest
 
-DZ_ALPINE_JS = Path(__file__).resolve().parents[2] / "src/dazzle/ui/runtime/static/js/dz-alpine.js"
+DZ_ALPINE_JS = (
+    Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/js/dz-alpine.js"
+)
 
 
 @pytest.fixture(scope="module")

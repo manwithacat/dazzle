@@ -147,7 +147,7 @@ class TestParkingLotFragmentExclusion:
 
     def test_parking_lot_fragments_are_excluded_from_coverage(self) -> None:
         from dazzle.cli.coverage import _find_repo_root, _fragment_template_coverage
-        from dazzle.ui.runtime.fragment_registry import PARKING_LOT_FRAGMENTS
+        from dazzle.page.runtime.fragment_registry import PARKING_LOT_FRAGMENTS
 
         cat = _fragment_template_coverage(_find_repo_root())
         # None of the parking-lot names should appear in the coverage map.
@@ -174,7 +174,7 @@ class TestParkingLotFragmentExclusion:
     def test_registry_enumerates_parking_lot_fragments(self) -> None:
         # Sanity: every name in PARKING_LOT_FRAGMENTS must also be in
         # FRAGMENT_REGISTRY. A name in one but not the other is a drift bug.
-        from dazzle.ui.runtime.fragment_registry import (
+        from dazzle.page.runtime.fragment_registry import (
             FRAGMENT_REGISTRY,
             PARKING_LOT_FRAGMENTS,
         )

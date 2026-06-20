@@ -652,7 +652,7 @@ git commit -m "feat(ir): add FK graph for scope path validation (#556)"
 Compile predicate trees to parameterised SQL WHERE fragments.
 
 **Files:**
-- Create: `src/dazzle_back/runtime/predicate_compiler.py`
+- Create: `src/dazzle_http/runtime/predicate_compiler.py`
 - Test: `tests/unit/test_predicate_compiler.py`
 
 - [ ] **Step 1: Write tests for SQL compilation of each predicate type**
@@ -679,7 +679,7 @@ from dazzle.core.ir.predicates import (
 pytest.importorskip("fastapi")
 
 from dazzle.core.ir.fk_graph import FKGraph, FKEdge
-from dazzle_back.runtime.predicate_compiler import compile_predicate
+from dazzle_http.runtime.predicate_compiler import compile_predicate
 
 
 def _simple_graph() -> FKGraph:
@@ -730,7 +730,7 @@ class TestUserAttrCheck:
         # Params contain a UserAttrRef marker that the route handler resolves
         # at request time via _resolve_user_attribute(attr_name, auth_context).
         assert len(params) == 1
-        from dazzle_back.runtime.predicate_compiler import UserAttrRef
+        from dazzle_http.runtime.predicate_compiler import UserAttrRef
         assert isinstance(params[0], UserAttrRef)
         assert params[0].attr_name == "school"
 
@@ -828,7 +828,7 @@ Expected: ImportError.
 
 - [ ] **Step 3: Implement predicate compiler**
 
-Create `src/dazzle_back/runtime/predicate_compiler.py` with `compile_predicate()` function that pattern-matches on predicate kind and emits parameterised SQL. Use `quote_identifier` from `query_builder.py` for safe identifier quoting.
+Create `src/dazzle_http/runtime/predicate_compiler.py` with `compile_predicate()` function that pattern-matches on predicate kind and emits parameterised SQL. Use `quote_identifier` from `query_builder.py` for safe identifier quoting.
 
 Key implementation points:
 - `ColumnCheck` → `"field" op %s` with NULL handling for IS/IS_NOT
@@ -852,7 +852,7 @@ Expected: No regressions.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/predicate_compiler.py tests/unit/test_predicate_compiler.py
+git add src/dazzle_http/runtime/predicate_compiler.py tests/unit/test_predicate_compiler.py
 git commit -m "feat(runtime): predicate compiler — ScopePredicate to SQL (#556)"
 ```
 
@@ -973,7 +973,7 @@ git commit -m "feat(linker): build FK graph and compile scope predicates at link
 Replace `_extract_condition_filters` and filter-dict pipeline in the route generator with `compile_predicate`.
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py`
+- Modify: `src/dazzle_http/runtime/route_generator.py`
 - Modify: `tests/unit/test_scope_via.py`
 - Modify: `tests/unit/test_dotted_scope_path.py`
 - Modify: `tests/unit/test_cedar_row_filters.py`
@@ -1020,7 +1020,7 @@ Expected: No new errors.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py src/dazzle_back/runtime/query_builder.py tests/unit/test_scope_via.py tests/unit/test_dotted_scope_path.py tests/unit/test_cedar_row_filters.py
+git add src/dazzle_http/runtime/route_generator.py src/dazzle_http/runtime/query_builder.py tests/unit/test_scope_via.py tests/unit/test_dotted_scope_path.py tests/unit/test_cedar_row_filters.py
 git commit -m "refactor: replace filter-dict pipeline with predicate compiler (#556)"
 ```
 
@@ -1170,7 +1170,7 @@ Expected: All pass.
 
 - [ ] **Step 3: Run mypy on all modified packages**
 
-Run: `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_back/ --ignore-missing-imports`
+Run: `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_http/ --ignore-missing-imports`
 Expected: No errors.
 
 - [ ] **Step 4: Run lint**

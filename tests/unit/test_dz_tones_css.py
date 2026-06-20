@@ -27,8 +27,8 @@ from pathlib import Path
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_CSS_DIR = _REPO_ROOT / "src/dazzle/ui/runtime/static/css"
-_TPL_DIR = _REPO_ROOT / "src/dazzle/ui/templates"
+_CSS_DIR = _REPO_ROOT / "src/dazzle/page/runtime/static/css"
+_TPL_DIR = _REPO_ROOT / "src/dazzle/page/templates"
 
 
 # ───────────────────────── dz-tones.css presence ──────────────────────────
@@ -102,7 +102,7 @@ class TestDzTonesCssLoadOrder:
         assert '@import "dz-tones.css"' in text
 
     def test_in_css_loader_unlayered_files(self) -> None:
-        text = (_REPO_ROOT / "src/dazzle/ui/runtime/css_loader.py").read_text()
+        text = (_REPO_ROOT / "src/dazzle/page/runtime/css_loader.py").read_text()
         assert "dz-tones.css" in text, (
             "css_loader.py must include dz-tones.css in CSS_UNLAYERED_FILES"
         )

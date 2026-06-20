@@ -190,25 +190,25 @@ No edit mode toggle. Drag handles visible on hover, resize handles always active
 
 | File | Purpose |
 |------|---------|
-| `src/dazzle_ui/runtime/static/js/dashboard-builder.js` | New Alpine component replacing `workspace-editor.js` |
-| `src/dazzle_ui/runtime/static/vendor/sortable.min.js` | Vendored SortableJS |
-| `src/dazzle_ui/templates/workspace/_card_picker.html` | Popover template for "Add Card" widget picker |
+| `src/dazzle_page/runtime/static/js/dashboard-builder.js` | New Alpine component replacing `workspace-editor.js` |
+| `src/dazzle_page/runtime/static/vendor/sortable.min.js` | Vendored SortableJS |
+| `src/dazzle_page/templates/workspace/_card_picker.html` | Popover template for "Add Card" widget picker |
 
 ### Modify
 
 | File | Changes |
 |------|---------|
-| `src/dazzle_ui/templates/workspace/_content.html` | Rewrite: SortableJS grid, resize handles, add-card button, remove edit-mode gating |
-| `src/dazzle_ui/runtime/workspace_renderer.py` | v2 schema in `apply_layout_preferences()`, v1→v2 migration, catalog data builder |
-| `src/dazzle_ui/runtime/page_routes.py` | Register `/api/workspaces/{name}/catalog` route |
-| `src/dazzle_ui/templates/base.html` | Replace `alpine-sort.min.js` script tag with `sortable.min.js` |
+| `src/dazzle_page/templates/workspace/_content.html` | Rewrite: SortableJS grid, resize handles, add-card button, remove edit-mode gating |
+| `src/dazzle_page/runtime/workspace_renderer.py` | v2 schema in `apply_layout_preferences()`, v1→v2 migration, catalog data builder |
+| `src/dazzle_page/runtime/page_routes.py` | Register `/api/workspaces/{name}/catalog` route |
+| `src/dazzle_page/templates/base.html` | Replace `alpine-sort.min.js` script tag with `sortable.min.js` |
 
 ### Remove
 
 | File | Reason |
 |------|--------|
-| `src/dazzle_ui/runtime/static/vendor/alpine-sort.min.js` | Replaced by SortableJS |
-| `src/dazzle_ui/runtime/static/js/workspace-editor.js` | Replaced by `dashboard-builder.js` |
+| `src/dazzle_page/runtime/static/vendor/alpine-sort.min.js` | Replaced by SortableJS |
+| `src/dazzle_page/runtime/static/js/workspace-editor.js` | Replaced by `dashboard-builder.js` |
 
 ## Testing
 

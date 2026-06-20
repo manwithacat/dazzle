@@ -24,11 +24,11 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from dazzle.back.runtime.csrf import CSRFConfig, CSRFMiddleware
+from dazzle.http.runtime.csrf import CSRFConfig, CSRFMiddleware
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_DIST_JS = _REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "dist" / "dazzle.min.js"
-_CSRF_JS = _REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "js" / "dz-csrf.js"
+_DIST_JS = _REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "dist" / "dazzle.min.js"
+_CSRF_JS = _REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "js" / "dz-csrf.js"
 
 
 async def _drive(

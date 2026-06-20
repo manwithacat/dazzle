@@ -2,7 +2,7 @@
 
 The single, DB-bound apply path shared by ``dazzle db apply-rls`` and the
 ``dazzle db upgrade`` hook. It runs the DB-free DDL set from
-:func:`dazzle.back.runtime.rls_schema.build_all_rls_ddl` against a connection.
+:func:`dazzle.http.runtime.rls_schema.build_all_rls_ddl` against a connection.
 
 **CRITICAL — owner role.** ``ENABLE``/``FORCE ROW LEVEL SECURITY`` and
 ``CREATE POLICY`` require table OWNERSHIP. The runtime connects as the non-owner
@@ -47,7 +47,7 @@ async def apply_rls_policies(conn: Any, appspec: Any, entities: list[Any]) -> in
         ValueError: A scoped entity carries scope rules but ``appspec.fk_graph``
             is missing (propagated from :func:`build_all_rls_ddl`).
     """
-    from dazzle.back.runtime.rls_schema import build_all_rls_ddl
+    from dazzle.http.runtime.rls_schema import build_all_rls_ddl
 
     statements = build_all_rls_ddl(appspec, entities)
     for stmt in statements:

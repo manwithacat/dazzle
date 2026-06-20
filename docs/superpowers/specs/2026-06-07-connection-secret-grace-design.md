@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS connection_secret_events (
      `sessions.csrf_secret` / `active_membership_id` columns.
    - `CREATE TABLE IF NOT EXISTS connection_secret_events …` + its index.
 
-## New module `src/dazzle/back/runtime/auth/secret_rotation.py`
+## New module `src/dazzle/http/runtime/auth/secret_rotation.py`
 
 Pure, store-free helpers + constants:
 

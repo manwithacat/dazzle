@@ -42,7 +42,7 @@ def store_url() -> Iterator[str]:
 
 
 def _store(store_url: str):
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=store_url)
     store._init_db()
@@ -52,7 +52,7 @@ def _store(store_url: str):
 def _app(store, org_admin_roles):
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.auth.member_admin_routes import create_member_admin_routes
+    from dazzle.http.runtime.auth.member_admin_routes import create_member_admin_routes
 
     app = FastAPI()
     app.state.auth_store = store

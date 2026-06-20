@@ -116,16 +116,16 @@ class BaselineManager:
             try:
                 import importlib.util
 
-                spec = importlib.util.find_spec("dazzle.back")
+                spec = importlib.util.find_spec("dazzle.http")
                 if spec is None or spec.origin is None:
-                    raise FileNotFoundError("dazzle.back package not found")
+                    raise FileNotFoundError("dazzle.http package not found")
                 pkg_dir = Path(spec.origin).parent
                 alembic_ini = pkg_dir / "alembic.ini"
                 if not alembic_ini.exists():
                     raise FileNotFoundError(f"alembic.ini not found in {pkg_dir}")
             except Exception as e:
                 raise BaselineKeyError(
-                    f"no alembic.ini in project and dazzle.back fallback failed: {e}"
+                    f"no alembic.ini in project and dazzle.http fallback failed: {e}"
                 ) from e
 
         try:

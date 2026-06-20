@@ -48,7 +48,7 @@ role_lists = st.lists(
 @pytest.fixture
 def secure_jwt_service():
     """Create a secure JWT service for testing."""
-    from dazzle.back.runtime.jwt_auth import JWTConfig, JWTService
+    from dazzle.http.runtime.jwt_auth import JWTConfig, JWTService
 
     config = JWTConfig(secret_key="this-is-a-secure-secret-key-for-fuzzing-at-least-32-bytes")
     return JWTService(config)
@@ -66,7 +66,7 @@ class TestTokenVerificationFuzzing:
     @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
     def test_verify_arbitrary_text_no_crash(self, token: str) -> None:
         """Token verification should never crash on arbitrary input."""
-        from dazzle.back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle.http.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         config = JWTConfig(secret_key="x" * 32)
         service = JWTService(config)
@@ -84,7 +84,7 @@ class TestTokenVerificationFuzzing:
     @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
     def test_verify_jwt_like_strings_no_crash(self, token: str) -> None:
         """Token verification should not crash on JWT-like strings."""
-        from dazzle.back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle.http.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         config = JWTConfig(secret_key="x" * 32)
         service = JWTService(config)
@@ -102,7 +102,7 @@ class TestTokenVerificationFuzzing:
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_verify_binary_data_no_crash(self, token: bytes) -> None:
         """Token verification should not crash on binary data."""
-        from dazzle.back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle.http.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         config = JWTConfig(secret_key="x" * 32)
         service = JWTService(config)
@@ -139,7 +139,7 @@ class TestTokenCreationFuzzing:
     ) -> None:
         """Token creation should handle various email and role combinations."""
         pytest.importorskip("jwt")
-        from dazzle.back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle.http.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(secret_key="x" * 32)
         service = JWTService(config)
@@ -164,7 +164,7 @@ class TestTokenCreationFuzzing:
     def test_create_token_with_tenant_id(self, tenant_id: str | None) -> None:
         """Token creation should handle various tenant IDs."""
         pytest.importorskip("jwt")
-        from dazzle.back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle.http.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(secret_key="x" * 32)
         service = JWTService(config)
@@ -191,7 +191,7 @@ class TestConfigurationFuzzing:
     @settings(max_examples=100)
     def test_random_algorithm_handled_safely(self, algorithm: str) -> None:
         """Random algorithm names should either work or raise ValueError."""
-        from dazzle.back.runtime.jwt_auth import ALLOWED_ALGORITHMS, JWTConfig, JWTService
+        from dazzle.http.runtime.jwt_auth import ALLOWED_ALGORITHMS, JWTConfig, JWTService
 
         config = JWTConfig(
             algorithm=algorithm,
@@ -217,7 +217,7 @@ class TestConfigurationFuzzing:
     @settings(max_examples=100)
     def test_random_secret_key_length_validation(self, secret: str) -> None:
         """Secret key length should be validated."""
-        from dazzle.back.runtime.jwt_auth import MIN_HMAC_SECRET_LENGTH, JWTConfig, JWTService
+        from dazzle.http.runtime.jwt_auth import MIN_HMAC_SECRET_LENGTH, JWTConfig, JWTService
 
         config = JWTConfig(algorithm="HS256", secret_key=secret)
 
@@ -251,7 +251,7 @@ class TestPayloadFuzzing:
     ) -> None:
         """Verification should handle crafted payloads without crashing."""
         jwt_module = pytest.importorskip("jwt")
-        from dazzle.back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle.http.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         secret = "x" * 32
         config = JWTConfig(secret_key=secret)
@@ -293,7 +293,7 @@ class TestHeaderFuzzing:
     def test_forged_header_algorithm(self, alg: str) -> None:
         """Forged algorithm headers should be rejected."""
         pytest.importorskip("jwt")
-        from dazzle.back.runtime.jwt_auth import (
+        from dazzle.http.runtime.jwt_auth import (
             JWTConfig,
             JWTError,
             JWTService,
@@ -346,7 +346,7 @@ class TestHeaderFuzzing:
     def test_extra_header_fields(self, extra_header: dict) -> None:
         """Extra header fields should not bypass security."""
         pytest.importorskip("jwt")
-        from dazzle.back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle.http.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         secret = "x" * 32
         config = JWTConfig(secret_key=secret)
@@ -398,7 +398,7 @@ class TestTokenStoreFuzzing:
     @settings(max_examples=100, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_validate_random_token_no_crash(self, token: str) -> None:
         """Token store should handle random validation queries."""
-        from dazzle.back.runtime.token_store import TokenStore
+        from dazzle.http.runtime.token_store import TokenStore
 
         store = TokenStore(database_url="postgresql://mock/test")
         result = store.validate_token(token)
@@ -418,8 +418,8 @@ class TestTokenStoreFuzzing:
         device: str | None,
     ) -> None:
         """Token creation should handle various metadata combinations."""
-        from dazzle.back.runtime.auth import UserRecord
-        from dazzle.back.runtime.token_store import TokenStore
+        from dazzle.http.runtime.auth import UserRecord
+        from dazzle.http.runtime.token_store import TokenStore
 
         store = TokenStore(database_url="postgresql://mock/test")
         user = UserRecord(

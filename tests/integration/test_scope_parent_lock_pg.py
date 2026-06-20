@@ -33,7 +33,7 @@ _PG_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
 def test_for_share_blocks_concurrent_update() -> None:
     import psycopg
 
-    from dazzle.back.runtime.atomic_flow_executor import _acquire_scope_parent_share_locks
+    from dazzle.http.runtime.atomic_flow_executor import _acquire_scope_parent_share_locks
 
     table = f"_lock_test_{uuid.uuid4().hex[:8]}"
     qtable = f'"{table}"'  # the already-quoted shape `_path_check_subquery` emits

@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from dazzle.back.runtime.tenant.resolver import (
+from dazzle.http.runtime.tenant.resolver import (
     EntityProbe,
     ExpiredHistoryHit,
     HistoryHit,

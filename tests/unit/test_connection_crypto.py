@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from dazzle.back.runtime.auth.connection_crypto import (
+from dazzle.http.runtime.auth.connection_crypto import (
     ConnectionSecretError,
     decrypt_secret,
     encrypt_secret,
@@ -63,7 +63,7 @@ _KEY_B = base64.b64encode(b"b" * 32).decode()
 def test_decrypts_with_rotation_old_key(monkeypatch) -> None:
     # Encrypt under key A, then rotate: primary=B, old=A. Decryption still works via the
     # old key, and reports key_index 1 (not the primary).
-    from dazzle.back.runtime.auth.connection_crypto import decrypt_secret_with_key_index
+    from dazzle.http.runtime.auth.connection_crypto import decrypt_secret_with_key_index
 
     monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", _KEY_A)
     token = encrypt_secret("rotate-me")
@@ -74,7 +74,7 @@ def test_decrypts_with_rotation_old_key(monkeypatch) -> None:
 
 
 def test_primary_key_reports_index_0(monkeypatch) -> None:
-    from dazzle.back.runtime.auth.connection_crypto import decrypt_secret_with_key_index
+    from dazzle.http.runtime.auth.connection_crypto import decrypt_secret_with_key_index
 
     monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", _KEY_B)
     monkeypatch.setenv("DAZZLE_CONNECTION_SECRET_OLD", _KEY_A)

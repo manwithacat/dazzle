@@ -3,11 +3,11 @@
 **Issue:** #673 — 32 module-level mutable singletons across 18 files
 **Date:** 2026-03-25
 **Status:** Approved
-**Scope:** Phase 1 — `dazzle_back` runtime singletons only
+**Scope:** Phase 1 — `dazzle_http` runtime singletons only
 
 ## Problem
 
-Six HIGH-risk module-level singletons in `dazzle_back` use the `global` keyword to mutate shared state. In multi-tenant deployments (one process, multiple tenants), these create:
+Six HIGH-risk module-level singletons in `dazzle_http` use the `global` keyword to mutate shared state. In multi-tenant deployments (one process, multiple tenants), these create:
 
 - **Cross-tenant data leakage** — event bus broadcasts to all WebSocket clients regardless of tenant
 - **Cross-test pollution** — tests mutate global state without reliable teardown
@@ -26,7 +26,7 @@ def get_event_bus() -> EntityEventBus:
 
 ## Scope
 
-**In scope (Phase 1 — 6 HIGH-risk singletons in `dazzle_back`):**
+**In scope (Phase 1 — 6 HIGH-risk singletons in `dazzle_http`):**
 
 | File | Variable | Risk |
 |------|----------|------|
@@ -53,7 +53,7 @@ Consolidate the 6 singletons into a `RuntimeServices` dataclass attached to `app
 
 ### `RuntimeServices` Dataclass
 
-New file: `src/dazzle_back/runtime/services.py`
+New file: `src/dazzle_http/runtime/services.py`
 
 ```python
 from __future__ import annotations
@@ -61,14 +61,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from dazzle_back.runtime.event_bus import EntityEventBus
-from dazzle_back.runtime.presence_tracker import PresenceTracker
+from dazzle_http.runtime.event_bus import EntityEventBus
+from dazzle_http.runtime.presence_tracker import PresenceTracker
 
 if TYPE_CHECKING:
-    from dazzle_back.events.framework import EventFramework
-    from dazzle_back.metrics.collector import MetricsCollector
-    from dazzle_back.metrics.system_collector import SystemMetricsCollector
-    from dazzle_back.runtime.metrics.emitter import MetricsEmitter
+    from dazzle_http.events.framework import EventFramework
+    from dazzle_http.metrics.collector import MetricsCollector
+    from dazzle_http.metrics.system_collector import SystemMetricsCollector
+    from dazzle_http.runtime.metrics.emitter import MetricsEmitter
 
 from fastapi import Request
 
@@ -100,7 +100,7 @@ def get_services(request: Request) -> RuntimeServices:
 In app startup (wherever the FastAPI app is assembled), create and attach:
 
 ```python
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.services import RuntimeServices
 
 services = RuntimeServices()
 app.state.services = services
@@ -124,7 +124,7 @@ All callers replace `get_X()` calls with `services.X` access. The access pattern
 
 **Route handlers** — via `Depends()`:
 ```python
-from dazzle_back.runtime.services import RuntimeServices, get_services
+from dazzle_http.runtime.services import RuntimeServices, get_services
 
 @router.post("/api/things")
 async def create_thing(services: RuntimeServices = Depends(get_services)):
@@ -220,24 +220,24 @@ The global singleton tests (`test_set_event_bus`, `test_reset_event_bus`, `test_
 
 | File | Change |
 |------|--------|
-| `src/dazzle_back/runtime/services.py` | **New** — `RuntimeServices` dataclass + `get_services()` |
-| `src/dazzle_back/runtime/event_bus.py` | Delete global singleton functions; `RealtimeRepositoryMixin` takes `event_bus` as constructor arg |
-| `src/dazzle_back/runtime/presence_tracker.py` | Delete global singleton functions; keep `PresenceTracker` class and `create_presence_tracker()` |
-| `src/dazzle_back/events/framework.py` | Delete `_framework` global, `get_framework()`, `init_framework()`, `shutdown_framework()` |
-| `src/dazzle_back/events/__init__.py` | Remove re-exports of `get_framework`, `init_framework`, `shutdown_framework` |
-| `src/dazzle_back/metrics/collector.py` | Delete `_collector` global and getter/setter |
-| `src/dazzle_back/metrics/system_collector.py` | Delete `_system_collector` global and getter/setter |
-| `src/dazzle_back/metrics/__init__.py` | Remove re-exports of `get_system_collector`, `reset_system_collector` |
-| `src/dazzle_back/runtime/metrics/emitter.py` | Delete `_emitter` global, `get_emitter()`, `emit()`; move `atexit` shutdown to FastAPI lifecycle |
-| `src/dazzle_back/runtime/metrics/__init__.py` | Remove re-exports of `get_emitter`, `emit` |
-| `src/dazzle_back/runtime/metrics/middleware.py` | Access emitter via `request.app.state.services` |
-| `src/dazzle_back/runtime/server.py` | Create `RuntimeServices`, attach to `app.state`; replace `get_event_bus()` |
-| `src/dazzle_back/runtime/subsystems/system_routes.py` | Replace `get_event_bus()` with services access |
-| `src/dazzle_back/runtime/subsystems/events.py` | Store framework on `services.event_framework` |
-| `src/dazzle_back/runtime/auth/events.py` | Replace `get_framework()` with services access |
-| `src/dazzle_back/runtime/realtime_routes.py` | Replace `create_presence_tracker()` fallback with `services.presence_tracker` |
-| `src/dazzle_back/tests/test_event_bus.py` | Replace global get/set/reset with fixture-based instances |
-| `src/dazzle_back/tests/test_presence_tracker.py` | Replace global get/set/reset with fixture-based instances |
+| `src/dazzle_http/runtime/services.py` | **New** — `RuntimeServices` dataclass + `get_services()` |
+| `src/dazzle_http/runtime/event_bus.py` | Delete global singleton functions; `RealtimeRepositoryMixin` takes `event_bus` as constructor arg |
+| `src/dazzle_http/runtime/presence_tracker.py` | Delete global singleton functions; keep `PresenceTracker` class and `create_presence_tracker()` |
+| `src/dazzle_http/events/framework.py` | Delete `_framework` global, `get_framework()`, `init_framework()`, `shutdown_framework()` |
+| `src/dazzle_http/events/__init__.py` | Remove re-exports of `get_framework`, `init_framework`, `shutdown_framework` |
+| `src/dazzle_http/metrics/collector.py` | Delete `_collector` global and getter/setter |
+| `src/dazzle_http/metrics/system_collector.py` | Delete `_system_collector` global and getter/setter |
+| `src/dazzle_http/metrics/__init__.py` | Remove re-exports of `get_system_collector`, `reset_system_collector` |
+| `src/dazzle_http/runtime/metrics/emitter.py` | Delete `_emitter` global, `get_emitter()`, `emit()`; move `atexit` shutdown to FastAPI lifecycle |
+| `src/dazzle_http/runtime/metrics/__init__.py` | Remove re-exports of `get_emitter`, `emit` |
+| `src/dazzle_http/runtime/metrics/middleware.py` | Access emitter via `request.app.state.services` |
+| `src/dazzle_http/runtime/server.py` | Create `RuntimeServices`, attach to `app.state`; replace `get_event_bus()` |
+| `src/dazzle_http/runtime/subsystems/system_routes.py` | Replace `get_event_bus()` with services access |
+| `src/dazzle_http/runtime/subsystems/events.py` | Store framework on `services.event_framework` |
+| `src/dazzle_http/runtime/auth/events.py` | Replace `get_framework()` with services access |
+| `src/dazzle_http/runtime/realtime_routes.py` | Replace `create_presence_tracker()` fallback with `services.presence_tracker` |
+| `src/dazzle_http/tests/test_event_bus.py` | Replace global get/set/reset with fixture-based instances |
+| `src/dazzle_http/tests/test_presence_tracker.py` | Replace global get/set/reset with fixture-based instances |
 | `tests/unit/test_auth_events.py` | Update 11 `get_framework` patches to use services |
 | `tests/unit/test_runtime_services.py` | **New** — tests for `RuntimeServices` dataclass |
 
@@ -248,7 +248,7 @@ The global singleton tests (`test_set_event_bus`, `test_reset_event_bus`, `test_
 - Test `get_services()` dependency returns `app.state.services`
 - Test event bus fixture isolation (two tests don't share bus state)
 - Test presence tracker fixture isolation
-- Verify `global` keyword count in `src/dazzle_back/` drops from ~20 to ≤4
+- Verify `global` keyword count in `src/dazzle_http/` drops from ~20 to ≤4
 
 ### Manual
 - `dazzle serve --local` — verify event bus, presence tracker, metrics all function
@@ -256,7 +256,7 @@ The global singleton tests (`test_set_event_bus`, `test_reset_event_bus`, `test_
 
 ## Success Criteria
 
-- `grep -rn "^    global " src/dazzle_back/ --include="*.py" | wc -l` ≤ 4 (down from ~20)
+- `grep -rn "^    global " src/dazzle_http/ --include="*.py" | wc -l` ≤ 4 (down from ~20)
 - No `get_event_bus()`, `get_presence_tracker()`, or similar global getters remain
 - All runtime services accessed via `RuntimeServices` container
 - Tests use fixtures, not global reset functions

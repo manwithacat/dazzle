@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
 
 # These imports are safe - they only depend on Pydantic
-from dazzle.back.runtime.test_routes import (
+from dazzle.http.runtime.test_routes import (
     AuthenticateRequest,
     AuthenticateResponse,
     FixtureData,
@@ -226,7 +226,7 @@ class TestSeedFieldFiltering:
         """
         import inspect
 
-        from dazzle.back.runtime.test_routes import _seed_fixtures
+        from dazzle.http.runtime.test_routes import _seed_fixtures
 
         source = inspect.getsource(_seed_fixtures)
         assert "known_fields" in source, (
@@ -327,7 +327,7 @@ class TestTestRoutesIntegration:
         """Create a shared test client for the class (reused across tests)."""
         from fastapi.testclient import TestClient
 
-        from dazzle.back.runtime.app_factory import create_app
+        from dazzle.http.runtime.app_factory import create_app
 
         app = create_app(
             appspec,
@@ -579,7 +579,7 @@ class TestTestModeDisabled:
         """Create a test client WITHOUT test mode enabled."""
         from fastapi.testclient import TestClient
 
-        from dazzle.back.runtime.app_factory import create_app
+        from dazzle.http.runtime.app_factory import create_app
 
         app = create_app(
             appspec,

@@ -10,7 +10,7 @@ at commit), mirroring MEMBERSHIP_EVENTS_LOCK_KEY / CONNECTION_DOMAIN_LOCK_KEY.
 
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.auth.store import AUTH_DDL_LOCK_KEY, AuthStore
+from dazzle.http.runtime.auth.store import AUTH_DDL_LOCK_KEY, AuthStore
 
 
 def _store_with_recording_conn() -> tuple[AuthStore, MagicMock]:

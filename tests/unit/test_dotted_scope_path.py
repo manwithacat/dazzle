@@ -15,7 +15,7 @@ class TestBuildFkPathSubquery:
     """_build_fk_path_subquery generates correct SQL subquery for FK traversal."""
 
     def test_simple_dotted_path(self) -> None:
-        from dazzle.back.runtime.route_generator import _build_fk_path_subquery
+        from dazzle.http.runtime.route_generator import _build_fk_path_subquery
 
         ref_targets = {"manuscript_id": "Manuscript"}
         result = _build_fk_path_subquery("manuscript.student_id", "user-123", ref_targets)
@@ -29,7 +29,7 @@ class TestBuildFkPathSubquery:
 
     def test_relation_name_without_id_suffix(self) -> None:
         """Field named 'manuscript' (no _id) should try manuscript_id first."""
-        from dazzle.back.runtime.route_generator import _build_fk_path_subquery
+        from dazzle.http.runtime.route_generator import _build_fk_path_subquery
 
         ref_targets = {"manuscript_id": "Manuscript"}
         result = _build_fk_path_subquery("manuscript.student", "user-123", ref_targets)
@@ -38,20 +38,20 @@ class TestBuildFkPathSubquery:
         assert fk_field == "manuscript_id"
 
     def test_no_ref_targets_returns_none(self) -> None:
-        from dazzle.back.runtime.route_generator import _build_fk_path_subquery
+        from dazzle.http.runtime.route_generator import _build_fk_path_subquery
 
         result = _build_fk_path_subquery("manuscript.student", "user-123", {})
         assert result is None
 
     def test_unknown_relation_returns_none(self) -> None:
-        from dazzle.back.runtime.route_generator import _build_fk_path_subquery
+        from dazzle.http.runtime.route_generator import _build_fk_path_subquery
 
         ref_targets = {"order_id": "Order"}
         result = _build_fk_path_subquery("manuscript.student", "user-123", ref_targets)
         assert result is None
 
     def test_non_dotted_path_returns_none(self) -> None:
-        from dazzle.back.runtime.route_generator import _build_fk_path_subquery
+        from dazzle.http.runtime.route_generator import _build_fk_path_subquery
 
         ref_targets = {"manuscript_id": "Manuscript"}
         result = _build_fk_path_subquery("student_id", "user-123", ref_targets)
@@ -73,7 +73,7 @@ class TestExtractConditionFiltersWithDottedPath:
     def test_dotted_path_generates_subquery(self) -> None:
         import logging
 
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = self._make_comparison_condition("manuscript.student_id", "current_user")
         ref_targets = {"manuscript_id": "Manuscript"}
@@ -99,7 +99,7 @@ class TestExtractConditionFiltersWithDottedPath:
         """Non-dotted fields still work as direct column filters."""
         import logging
 
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = self._make_comparison_condition("student_id", "current_user")
         ref_targets = {"manuscript_id": "Manuscript"}
@@ -121,7 +121,7 @@ class TestExtractConditionFiltersWithDottedPath:
         """Without ref_targets, dotted path falls through to literal column name."""
         import logging
 
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         cond = self._make_comparison_condition("manuscript.student_id", "current_user")
         filters: dict[str, Any] = {}

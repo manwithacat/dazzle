@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.qa_routes import create_qa_routes
+from dazzle.http.runtime.qa_routes import create_qa_routes
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ class TestQAMagicLinkGenerator:
             clear=False,
         ):
             with patch(
-                "dazzle.back.runtime.qa_routes.create_magic_link",
+                "dazzle.http.runtime.qa_routes.create_magic_link",
                 return_value="dev_token_xyz",
             ):
                 resp = client.post(
@@ -104,7 +104,7 @@ class TestQAMagicLinkGenerator:
             clear=False,
         ):
             with patch(
-                "dazzle.back.runtime.qa_routes.create_magic_link",
+                "dazzle.http.runtime.qa_routes.create_magic_link",
                 return_value="tok",
             ):
                 client.post("/qa/magic-link", json={"persona_id": "accountant"})
@@ -121,7 +121,7 @@ class TestQAMagicLinkGenerator:
             clear=False,
         ):
             with patch(
-                "dazzle.back.runtime.qa_routes.create_magic_link",
+                "dazzle.http.runtime.qa_routes.create_magic_link",
                 return_value="tok",
             ) as mock_cml:
                 client.post("/qa/magic-link", json={"persona_id": "admin"})

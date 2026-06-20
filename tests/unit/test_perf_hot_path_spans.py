@@ -28,17 +28,17 @@ def _names(db: Path) -> set[str]:
 
 
 def test_aggregate_expression_compile_emits_span(trace_db: Path) -> None:
-    from dazzle.back.runtime.aggregate_expression import (
+    from dazzle.core.ir import AggregateExpr
+    from dazzle.http.runtime.aggregate_expression import (
         compile_aggregate_expression,
     )
-    from dazzle.core.ir import AggregateExpr
 
     compile_aggregate_expression(AggregateExpr(column_name="score"))
     assert "aggregate.expression.compile" in _names(trace_db)
 
 
 def test_build_aggregate_sql_emits_span(trace_db: Path) -> None:
-    from dazzle.back.runtime.aggregate import build_aggregate_sql
+    from dazzle.http.runtime.aggregate import build_aggregate_sql
 
     build_aggregate_sql(
         table_name="t",

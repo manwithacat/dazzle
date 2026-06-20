@@ -6,7 +6,7 @@ Tests ActionPurity enum and purity-based action classification.
 
 import pytest
 
-from dazzle.ui.specs.actions import (
+from dazzle.page.specs.actions import (
     ActionPurity,
     ActionSpec,
     FetchEffect,

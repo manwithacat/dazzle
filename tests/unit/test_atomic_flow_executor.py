@@ -19,11 +19,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.atomic_flow_executor import (
+from dazzle.core import ir
+from dazzle.http.runtime.atomic_flow_executor import (
     AtomicFlowError,
     execute_atomic_flow,
 )
-from dazzle.core import ir
 
 
 def _make_db(*, raise_on_execute: bool = False) -> MagicMock:
@@ -261,7 +261,7 @@ class TestUpdateStepExecution:
         assert exc.value.status_code == 404
 
     def test_update_routed_through_scope_when_enforcing(self, monkeypatch: Any) -> None:
-        import dazzle.back.runtime.scope_filters as sf
+        import dazzle.http.runtime.scope_filters as sf
 
         seen: list[tuple[str, bool]] = []
 
@@ -297,7 +297,7 @@ class TestPerStepScopeEnforcement:
         return SimpleNamespace(user=SimpleNamespace(id="u-1"), roles=["admin"])
 
     def test_each_create_is_routed_through_scope(self, monkeypatch: Any) -> None:
-        import dazzle.back.runtime.scope_filters as sf
+        import dazzle.http.runtime.scope_filters as sf
 
         seen: list[str] = []
 
@@ -319,7 +319,7 @@ class TestPerStepScopeEnforcement:
     def test_scope_denial_rolls_back_before_insert(self, monkeypatch: Any) -> None:
         from fastapi import HTTPException
 
-        import dazzle.back.runtime.scope_filters as sf
+        import dazzle.http.runtime.scope_filters as sf
 
         def _deny(**kwargs: Any) -> None:
             raise HTTPException(status_code=403, detail="scope_create_denied")
@@ -340,7 +340,7 @@ class TestPerStepScopeEnforcement:
 
     def test_no_enforcement_without_principal_or_specs(self, monkeypatch: Any) -> None:
         """Legacy/test wiring (no auth_context or access_specs) runs unguarded."""
-        import dazzle.back.runtime.scope_filters as sf
+        import dazzle.http.runtime.scope_filters as sf
 
         def _boom(**kwargs: Any) -> None:
             raise AssertionError("enforcement must not run without auth_context+access_specs")
@@ -385,7 +385,7 @@ class TestCollectPathCheckParentLocks:
     def test_depth2_create_collects_root_target(self) -> None:
         from types import SimpleNamespace
 
-        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+        from dazzle.http.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
 
         spec = SimpleNamespace(scopes=[self._create_rule("create")])
         group_id = "11111111-1111-1111-1111-111111111111"
@@ -404,7 +404,7 @@ class TestCollectPathCheckParentLocks:
     def test_operation_filter_excludes_other_ops(self) -> None:
         from types import SimpleNamespace
 
-        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+        from dazzle.http.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
 
         spec = SimpleNamespace(scopes=[self._create_rule("create")])
         # Asking for update locks must not pick up the create rule.
@@ -424,7 +424,7 @@ class TestCollectPathCheckParentLocks:
         # payload — keyed off the existing DB column value — not just new_values.
         from types import SimpleNamespace
 
-        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+        from dazzle.http.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
 
         spec = SimpleNamespace(scopes=[self._create_rule("update")])
         existing_fk = "22222222-2222-2222-2222-222222222222"
@@ -445,7 +445,7 @@ class TestCollectPathCheckParentLocks:
     def test_missing_payload_fk_collects_nothing(self) -> None:
         from types import SimpleNamespace
 
-        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+        from dazzle.http.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
 
         spec = SimpleNamespace(scopes=[self._create_rule("create")])
         # Payload omits the FK → nothing to lock (the probe fail-closes anyway).
@@ -459,7 +459,7 @@ class TestCollectPathCheckParentLocks:
         assert locks == {}
 
     def test_no_access_spec_returns_empty(self) -> None:
-        from dazzle.back.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
+        from dazzle.http.runtime.atomic_flow_executor import _collect_pathcheck_parent_locks
 
         assert (
             _collect_pathcheck_parent_locks(
@@ -486,7 +486,7 @@ class TestStrictAtomicAuditWrite:
     def test_write_with_null_principal_uses_null_user_fields(self) -> None:
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.atomic_flow_executor import _write_strict_atomic_audit
+        from dazzle.http.runtime.atomic_flow_executor import _write_strict_atomic_audit
 
         cur = MagicMock()
         _write_strict_atomic_audit(
@@ -512,7 +512,7 @@ class TestStrictAtomicAuditWrite:
     def test_write_one_row_per_committed_step(self) -> None:
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.atomic_flow_executor import _write_strict_atomic_audit
+        from dazzle.http.runtime.atomic_flow_executor import _write_strict_atomic_audit
 
         cur = MagicMock()
         _write_strict_atomic_audit(
@@ -532,7 +532,7 @@ class TestExecuteOnConn:
     caller-provided connection (so a transition can share its transaction)."""
 
     def test_runs_on_provided_conn_without_opening_one(self) -> None:
-        from dazzle.back.runtime.atomic_flow_executor import execute_atomic_flow_on_conn
+        from dazzle.http.runtime.atomic_flow_executor import execute_atomic_flow_on_conn
 
         cursor = MagicMock()
         conn = MagicMock()

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.tenant_isolation import (
+from dazzle.http.runtime.tenant_isolation import (
     _current_tenant_id,
     get_current_tenant_id,
     set_current_tenant_id,
@@ -22,7 +22,7 @@ def test_tenant_id_contextvar_roundtrip() -> None:
 
 
 def test_set_tenant_context_emits_set_config_when_id_present() -> None:
-    from dazzle.back.runtime.pg_backend import _set_tenant_context
+    from dazzle.http.runtime.pg_backend import _set_tenant_context
 
     conn = MagicMock()
     _set_tenant_context(conn, "abc")
@@ -38,7 +38,7 @@ def test_set_tenant_context_emits_set_config_when_id_present() -> None:
 
 
 def test_set_tenant_context_noop_when_id_none() -> None:
-    from dazzle.back.runtime.pg_backend import _set_tenant_context
+    from dazzle.http.runtime.pg_backend import _set_tenant_context
 
     conn = MagicMock()
     _set_tenant_context(conn, None)
@@ -47,7 +47,7 @@ def test_set_tenant_context_noop_when_id_none() -> None:
 
 def test_apply_rls_policies_noop_when_no_tenancy() -> None:
     """_apply_rls_policies must not touch the engine when tenancy is None."""
-    from dazzle.back.runtime.server import DazzleBackendApp
+    from dazzle.http.runtime.server import DazzleBackendApp
 
     app = MagicMock(spec=DazzleBackendApp)
     app._appspec = MagicMock()
@@ -62,8 +62,8 @@ def test_apply_rls_policies_noop_when_no_tenancy() -> None:
 
 def test_apply_rls_policies_noop_when_not_shared_schema() -> None:
     """_apply_rls_policies must no-op for non-shared_schema isolation modes."""
-    from dazzle.back.runtime.server import DazzleBackendApp
     from dazzle.core.ir import TenancyMode
+    from dazzle.http.runtime.server import DazzleBackendApp
 
     app = MagicMock(spec=DazzleBackendApp)
     app._appspec = MagicMock()
@@ -85,7 +85,7 @@ def test_apply_rls_failure_propagates_out_of_setup_database() -> None:
 
     import pytest
 
-    from dazzle.back.runtime.server import DazzleBackendApp
+    from dazzle.http.runtime.server import DazzleBackendApp
 
     app = MagicMock(spec=DazzleBackendApp)
     app._database_url = "postgresql://localhost/x"
@@ -97,10 +97,10 @@ def test_apply_rls_failure_propagates_out_of_setup_database() -> None:
     app._should_create_schema_on_startup.return_value = True
 
     with (
-        patch("dazzle.back.runtime.pg_backend.PostgresBackend"),
+        patch("dazzle.http.runtime.pg_backend.PostgresBackend"),
         patch("sqlalchemy.create_engine"),
-        patch("dazzle.back.runtime.sa_schema.build_metadata"),
-        patch("dazzle.back.runtime.server._tenancy_metadata_kwargs", return_value={}),
+        patch("dazzle.http.runtime.sa_schema.build_metadata"),
+        patch("dazzle.http.runtime.server._tenancy_metadata_kwargs", return_value={}),
         pytest.raises(RuntimeError, match="fence DDL failed"),
     ):
         DazzleBackendApp._setup_database(app)

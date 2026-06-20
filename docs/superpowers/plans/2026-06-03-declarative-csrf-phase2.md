@@ -6,7 +6,7 @@
 
 **Architecture:** A pure `origin_disposition(headers, host, config)` function returns admit / reject / no-signal from the request's `Sec-Fetch-Site` (primary) and `Origin`-vs-`Host` (secondary) signals. `CSRFMiddleware` consults it after the existing exemption + Bearer checks and before token validation: admit → pass; reject → 403; no-signal → fall through to the existing token check. A `trusted_origins` allowlist covers the same-site/embedder case and is threaded from `ServerConfig` like `csrf_exempt_paths`.
 
-**Tech Stack:** Pure ASGI middleware (`src/dazzle/back/runtime/csrf.py`), FastAPI/Starlette, pytest.
+**Tech Stack:** Pure ASGI middleware (`src/dazzle/http/runtime/csrf.py`), FastAPI/Starlette, pytest.
 
 **Spec:** `docs/superpowers/specs/2026-06-03-declarative-csrf-design.md` §4.2. **Depends on:** Phase 1 (the session-bound token it falls back to), shipped v0.81.15.
 
@@ -20,8 +20,8 @@
 
 ## Files
 
-- **Modify** `src/dazzle/back/runtime/csrf.py` — add `CSRFConfig.trusted_origins`; add the module-level `origin_disposition` helper; wire it into `CSRFMiddleware.__call__`; thread `extra_trusted_origins` through `configure_csrf_for_profile` / `apply_csrf_protection`.
-- **Modify** `src/dazzle/back/runtime/server.py` — add `ServerConfig.csrf_trusted_origins` and pass it into `apply_csrf_protection` (mirror `csrf_exempt_paths`, server.py:152/319/495).
+- **Modify** `src/dazzle/http/runtime/csrf.py` — add `CSRFConfig.trusted_origins`; add the module-level `origin_disposition` helper; wire it into `CSRFMiddleware.__call__`; thread `extra_trusted_origins` through `configure_csrf_for_profile` / `apply_csrf_protection`.
+- **Modify** `src/dazzle/http/runtime/server.py` — add `ServerConfig.csrf_trusted_origins` and pass it into `apply_csrf_protection` (mirror `csrf_exempt_paths`, server.py:152/319/495).
 - **Test** `tests/unit/test_csrf_origin_gate_phase2.py` (new) — the `origin_disposition` truth table + middleware-level behavior via an ASGI driver.
 
 ---
@@ -29,7 +29,7 @@
 ### Task 1: `origin_disposition` helper + `trusted_origins` config
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/csrf.py` (add `trusted_origins` to `CSRFConfig`; add `origin_disposition` + a small `_origin_host` parser near the other module helpers `_parse_cookies`/`_get_header`)
+- Modify: `src/dazzle/http/runtime/csrf.py` (add `trusted_origins` to `CSRFConfig`; add `origin_disposition` + a small `_origin_host` parser near the other module helpers `_parse_cookies`/`_get_header`)
 - Test: `tests/unit/test_csrf_origin_gate_phase2.py`
 
 - [ ] **Step 1: Write the failing test (the truth table)**
@@ -38,7 +38,7 @@
 # tests/unit/test_csrf_origin_gate_phase2.py
 """Phase 2: Sec-Fetch-Site + Origin admission gate (spec §4.2)."""
 
-from dazzle.back.runtime.csrf import CSRFConfig, origin_disposition
+from dazzle.http.runtime.csrf import CSRFConfig, origin_disposition
 
 
 def _h(**kw) -> list[tuple[bytes, bytes]]:
@@ -197,7 +197,7 @@ Expected: all PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/csrf.py tests/unit/test_csrf_origin_gate_phase2.py
+git add src/dazzle/http/runtime/csrf.py tests/unit/test_csrf_origin_gate_phase2.py
 git commit -m "feat(csrf): origin_disposition gate helper + trusted_origins config (Phase 2)"
 ```
 
@@ -206,7 +206,7 @@ git commit -m "feat(csrf): origin_disposition gate helper + trusted_origins conf
 ### Task 2: Wire the gate into `CSRFMiddleware`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/csrf.py` (`CSRFMiddleware.__call__`)
+- Modify: `src/dazzle/http/runtime/csrf.py` (`CSRFMiddleware.__call__`)
 - Test: `tests/unit/test_csrf_origin_gate_phase2.py`
 
 - [ ] **Step 1: Write the failing middleware test**
@@ -216,7 +216,7 @@ Append to `tests/unit/test_csrf_origin_gate_phase2.py`. Model the ASGI driver on
 ```python
 import asyncio
 
-from dazzle.back.runtime.csrf import CSRFMiddleware
+from dazzle.http.runtime.csrf import CSRFMiddleware
 
 
 async def _drive(config, *, method, path, headers_extra):
@@ -353,7 +353,7 @@ Expected: all PASS. **Note:** if any existing test posted with a token but no or
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/csrf.py tests/unit/test_csrf_origin_gate_phase2.py
+git add src/dazzle/http/runtime/csrf.py tests/unit/test_csrf_origin_gate_phase2.py
 git commit -m "feat(csrf): origin-primary admission gate in CSRFMiddleware (Phase 2)"
 ```
 
@@ -362,8 +362,8 @@ git commit -m "feat(csrf): origin-primary admission gate in CSRFMiddleware (Phas
 ### Task 3: Thread `csrf_trusted_origins` from `ServerConfig`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/csrf.py` (`configure_csrf_for_profile`, `apply_csrf_protection` — add `extra_trusted_origins`)
-- Modify: `src/dazzle/back/runtime/server.py` (`ServerConfig.csrf_trusted_origins`; pass through at the `apply_csrf_protection` call)
+- Modify: `src/dazzle/http/runtime/csrf.py` (`configure_csrf_for_profile`, `apply_csrf_protection` — add `extra_trusted_origins`)
+- Modify: `src/dazzle/http/runtime/server.py` (`ServerConfig.csrf_trusted_origins`; pass through at the `apply_csrf_protection` call)
 - Test: `tests/unit/test_csrf_origin_gate_phase2.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -371,13 +371,13 @@ git commit -m "feat(csrf): origin-primary admission gate in CSRFMiddleware (Phas
 ```python
 class TestConfigThreading:
     def test_extra_trusted_origins_merged(self) -> None:
-        from dazzle.back.runtime.csrf import configure_csrf_for_profile
+        from dazzle.http.runtime.csrf import configure_csrf_for_profile
 
         cfg = configure_csrf_for_profile("standard", extra_trusted_origins=["https://embed.partner.com"])
         assert "https://embed.partner.com" in cfg.trusted_origins
 
     def test_no_extra_trusted_origins_is_empty(self) -> None:
-        from dazzle.back.runtime.csrf import configure_csrf_for_profile
+        from dazzle.http.runtime.csrf import configure_csrf_for_profile
 
         cfg = configure_csrf_for_profile("standard")
         assert cfg.trusted_origins == []
@@ -441,7 +441,7 @@ Expected: all PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/csrf.py src/dazzle/back/runtime/server.py tests/unit/test_csrf_origin_gate_phase2.py
+git add src/dazzle/http/runtime/csrf.py src/dazzle/http/runtime/server.py tests/unit/test_csrf_origin_gate_phase2.py
 git commit -m "feat(csrf): thread csrf_trusted_origins from ServerConfig (Phase 2)"
 ```
 

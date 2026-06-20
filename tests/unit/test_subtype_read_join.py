@@ -17,10 +17,10 @@ import pytest
 
 def _build_subtype_back_entities() -> dict[str, Any]:
     """Parse + link Asset/Vehicle DSL; return back-layer entities by name."""
-    from dazzle.back.converters import convert_entities
     from dazzle.core import ir
     from dazzle.core.dsl_parser_impl import parse_dsl
     from dazzle.core.linker import build_appspec
+    from dazzle.http.converters import convert_entities
 
     dsl = """\
 module test
@@ -85,7 +85,7 @@ class TestSubtypeReadJoin:
     async def test_read_on_child_emits_join_and_pulls_base_columns(self) -> None:
         from pydantic import BaseModel
 
-        from dazzle.back.runtime.repository import Repository
+        from dazzle.http.runtime.repository import Repository
 
         entities = _build_subtype_back_entities()
         asset_spec = entities["Asset"]
@@ -127,7 +127,7 @@ class TestSubtypeReadJoin:
         """A base or plain entity (no subtype_of) must not gain a JOIN."""
         from pydantic import BaseModel
 
-        from dazzle.back.runtime.repository import Repository
+        from dazzle.http.runtime.repository import Repository
 
         entities = _build_subtype_back_entities()
         asset_spec = entities["Asset"]  # base, NOT a child
@@ -162,7 +162,7 @@ class TestSubtypeReadJoin:
         subtype_panel renderer can read `kind` and dispatch."""
         from pydantic import BaseModel
 
-        from dazzle.back.runtime.repository import Repository
+        from dazzle.http.runtime.repository import Repository
 
         entities = _build_subtype_back_entities()
         asset_spec = entities["Asset"]

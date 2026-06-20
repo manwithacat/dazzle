@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.auth.magic_link import create_magic_link, validate_magic_link
+from dazzle.http.runtime.auth.magic_link import create_magic_link, validate_magic_link
 
 
 class TestCreateMagicLink:

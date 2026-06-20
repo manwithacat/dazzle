@@ -60,11 +60,11 @@
 |---|---|
 | `pyproject.toml` | Add `perf` extra carrying OTel SDK + three instrumentation packages. |
 | `src/dazzle/cli/__init__.py` | Register the new `perf` Typer sub-app. |
-| `src/dazzle/back/runtime/server.py:400-415` | Call `instrument_app(self._app)` when the `DAZZLE_PERF_ENABLED=1` env var is set (set by `dazzle perf trace` before launching the runtime). |
-| `src/dazzle/back/runtime/predicate_compiler.py` | Wrap `compile_predicate` body with `dazzle_span("predicate.compile", expr=...)`. |
-| `src/dazzle/back/runtime/aggregate_expression.py` | Wrap `compile_aggregate_expression` with `dazzle_span("aggregate.expression.compile", expr=...)`. |
-| `src/dazzle/back/runtime/aggregate.py` | Wrap `build_aggregate_sql` with `dazzle_span("aggregate.build_sql", measures=..., dimension_count=...)`. |
-| `src/dazzle/back/runtime/repository.py` | Wrap `Repository.aggregate` with `dazzle_span("repo.aggregate", entity=..., dim_count=...)`. |
+| `src/dazzle/http/runtime/server.py:400-415` | Call `instrument_app(self._app)` when the `DAZZLE_PERF_ENABLED=1` env var is set (set by `dazzle perf trace` before launching the runtime). |
+| `src/dazzle/http/runtime/predicate_compiler.py` | Wrap `compile_predicate` body with `dazzle_span("predicate.compile", expr=...)`. |
+| `src/dazzle/http/runtime/aggregate_expression.py` | Wrap `compile_aggregate_expression` with `dazzle_span("aggregate.expression.compile", expr=...)`. |
+| `src/dazzle/http/runtime/aggregate.py` | Wrap `build_aggregate_sql` with `dazzle_span("aggregate.build_sql", measures=..., dimension_count=...)`. |
+| `src/dazzle/http/runtime/repository.py` | Wrap `Repository.aggregate` with `dazzle_span("repo.aggregate", entity=..., dim_count=...)`. |
 | `src/dazzle/render/fragment/renderer/_render_dashboard.py` | Wrap region render with `dazzle_span("region.render", kind=...)` (one outermost site only — region-internal nesting is observed via auto-instrumentation). |
 | `src/dazzle/render/fragment/renderer/_emit.py` | Wrap fragment emit with `dazzle_span("fragment.emit", kind=...)`. |
 | `src/dazzle/core/dsl_parser.py` | Wrap top-level `parse_dsl` with `dazzle_span("dsl.parse", path=...)`. |
@@ -2867,10 +2867,10 @@ git commit -m "feat(perf): Markdown + JSON findings formatters"
 ## Task 15: Hot-path span decorators in framework code
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/predicate_compiler.py`
-- Modify: `src/dazzle/back/runtime/aggregate_expression.py`
-- Modify: `src/dazzle/back/runtime/aggregate.py`
-- Modify: `src/dazzle/back/runtime/repository.py`
+- Modify: `src/dazzle/http/runtime/predicate_compiler.py`
+- Modify: `src/dazzle/http/runtime/aggregate_expression.py`
+- Modify: `src/dazzle/http/runtime/aggregate.py`
+- Modify: `src/dazzle/http/runtime/repository.py`
 - Modify: `src/dazzle/render/fragment/renderer/_emit.py`
 - Modify: `src/dazzle/render/fragment/renderer/_render_dashboard.py`
 - Modify: `src/dazzle/core/dsl_parser.py`
@@ -2914,7 +2914,7 @@ def _names(db: Path) -> set[str]:
 
 
 def test_aggregate_expression_compile_emits_span(trace_db: Path) -> None:
-    from dazzle.back.runtime.aggregate_expression import (
+    from dazzle.http.runtime.aggregate_expression import (
         compile_aggregate_expression,
     )
     from dazzle.core.ir import AggregateExpr
@@ -2924,7 +2924,7 @@ def test_aggregate_expression_compile_emits_span(trace_db: Path) -> None:
 
 
 def test_build_aggregate_sql_emits_span(trace_db: Path) -> None:
-    from dazzle.back.runtime.aggregate import build_aggregate_sql
+    from dazzle.http.runtime.aggregate import build_aggregate_sql
 
     build_aggregate_sql(
         table_name="t",
@@ -2943,7 +2943,7 @@ Expected: FAIL — the spans aren't emitted yet.
 
 - [ ] **Step 3: Wrap `compile_aggregate_expression`**
 
-Open `src/dazzle/back/runtime/aggregate_expression.py` and replace the body of `compile_aggregate_expression`:
+Open `src/dazzle/http/runtime/aggregate_expression.py` and replace the body of `compile_aggregate_expression`:
 
 ```python
 def compile_aggregate_expression(
@@ -2970,7 +2970,7 @@ def compile_aggregate_expression(
 
 - [ ] **Step 4: Wrap `build_aggregate_sql`**
 
-In `src/dazzle/back/runtime/aggregate.py`, add an import near the top:
+In `src/dazzle/http/runtime/aggregate.py`, add an import near the top:
 
 ```python
 from dazzle.perf.tracer import dazzle_span
@@ -2980,7 +2980,7 @@ Wrap the body of `build_aggregate_sql` so the existing implementation runs insid
 
 - [ ] **Step 5: Wrap `compile_predicate`**
 
-In `src/dazzle/back/runtime/predicate_compiler.py`, wrap the body of `compile_predicate` with:
+In `src/dazzle/http/runtime/predicate_compiler.py`, wrap the body of `compile_predicate` with:
 
 ```python
 from dazzle.perf.tracer import dazzle_span
@@ -2994,7 +2994,7 @@ def compile_predicate(...):
 
 - [ ] **Step 6: Wrap `Repository.aggregate`**
 
-In `src/dazzle/back/runtime/repository.py`, wrap the body of `aggregate()` (line 600+) with `dazzle_span("repo.aggregate", entity=self.table_name, dimension_count=len(dimensions), measure_count=len(measures))`.
+In `src/dazzle/http/runtime/repository.py`, wrap the body of `aggregate()` (line 600+) with `dazzle_span("repo.aggregate", entity=self.table_name, dimension_count=len(dimensions), measure_count=len(measures))`.
 
 - [ ] **Step 7: Wrap fragment emit + dashboard region render**
 
@@ -3019,7 +3019,7 @@ Expected: PASS (~15,480 tests). Note: parser-corpus snapshot tests may need rege
 - [ ] **Step 11: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/predicate_compiler.py src/dazzle/back/runtime/aggregate_expression.py src/dazzle/back/runtime/aggregate.py src/dazzle/back/runtime/repository.py src/dazzle/render/fragment/renderer/_emit.py src/dazzle/render/fragment/renderer/_render_dashboard.py src/dazzle/core/dsl_parser.py tests/unit/test_perf_hot_path_spans.py
+git add src/dazzle/http/runtime/predicate_compiler.py src/dazzle/http/runtime/aggregate_expression.py src/dazzle/http/runtime/aggregate.py src/dazzle/http/runtime/repository.py src/dazzle/render/fragment/renderer/_emit.py src/dazzle/render/fragment/renderer/_render_dashboard.py src/dazzle/core/dsl_parser.py tests/unit/test_perf_hot_path_spans.py
 git commit -m "feat(perf): wrap framework hot paths in dazzle_span()"
 ```
 
@@ -3028,7 +3028,7 @@ git commit -m "feat(perf): wrap framework hot paths in dazzle_span()"
 ## Task 16: Wire instrumentation into the runtime server
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/server.py:400-415`
+- Modify: `src/dazzle/http/runtime/server.py:400-415`
 - Test: `tests/unit/test_perf_server_integration.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -3048,7 +3048,7 @@ from fastapi import FastAPI
 
 
 def test_instrumentation_skipped_when_env_unset() -> None:
-    from dazzle.back.runtime.server import _maybe_instrument_for_perf
+    from dazzle.http.runtime.server import _maybe_instrument_for_perf
 
     app = FastAPI()
     with patch.dict(os.environ, {}, clear=True):
@@ -3057,7 +3057,7 @@ def test_instrumentation_skipped_when_env_unset() -> None:
 
 
 def test_instrumentation_runs_when_env_set() -> None:
-    from dazzle.back.runtime.server import _maybe_instrument_for_perf
+    from dazzle.http.runtime.server import _maybe_instrument_for_perf
 
     app = FastAPI()
     called: list[FastAPI] = []
@@ -3080,7 +3080,7 @@ Expected: FAIL with `ImportError: cannot import name '_maybe_instrument_for_perf
 
 - [ ] **Step 3: Implement**
 
-In `src/dazzle/back/runtime/server.py`, just before the line `def _create_app(self)` (around line 400), add:
+In `src/dazzle/http/runtime/server.py`, just before the line `def _create_app(self)` (around line 400), add:
 
 ```python
 def _maybe_instrument_for_perf(app: Any) -> None:
@@ -3112,7 +3112,7 @@ Expected: PASS (2 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/server.py tests/unit/test_perf_server_integration.py
+git add src/dazzle/http/runtime/server.py tests/unit/test_perf_server_integration.py
 git commit -m "feat(perf): server-side env-gated instrumentation"
 ```
 
@@ -3546,7 +3546,7 @@ git commit -m "feat(perf): dazzle perf trace (boot + drive + capture)"
 ## Task 19: Tracer auto-init when the runtime sees `DAZZLE_PERF_DB`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/server.py`
+- Modify: `src/dazzle/http/runtime/server.py`
 - Test: extend `tests/unit/test_perf_server_integration.py`
 
 - [ ] **Step 1: Extend the test**
@@ -3558,7 +3558,7 @@ def test_tracer_initialised_when_perf_db_env_set(tmp_path: Path) -> None:
     import os
     from unittest.mock import patch
 
-    from dazzle.back.runtime.server import _maybe_configure_tracer
+    from dazzle.http.runtime.server import _maybe_configure_tracer
 
     db = tmp_path / "run.db"
     env = {
@@ -3584,7 +3584,7 @@ def test_tracer_skipped_when_env_unset() -> None:
     import os
     from unittest.mock import patch
 
-    from dazzle.back.runtime.server import _maybe_configure_tracer
+    from dazzle.http.runtime.server import _maybe_configure_tracer
 
     called = False
 
@@ -3607,7 +3607,7 @@ Expected: FAIL with `ImportError: cannot import name '_maybe_configure_tracer'`
 
 - [ ] **Step 3: Implement**
 
-In `src/dazzle/back/runtime/server.py`, alongside `_maybe_instrument_for_perf`, add:
+In `src/dazzle/http/runtime/server.py`, alongside `_maybe_instrument_for_perf`, add:
 
 ```python
 def _maybe_configure_tracer() -> None:
@@ -3649,7 +3649,7 @@ Expected: PASS (4 tests total now)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/server.py tests/unit/test_perf_server_integration.py
+git add src/dazzle/http/runtime/server.py tests/unit/test_perf_server_integration.py
 git commit -m "feat(perf): server-side tracer auto-init from env vars"
 ```
 

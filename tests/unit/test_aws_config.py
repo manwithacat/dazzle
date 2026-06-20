@@ -1,4 +1,4 @@
-"""Tests for dazzle_back.runtime.aws_config."""
+"""Tests for dazzle_http.runtime.aws_config."""
 
 import sys
 from types import ModuleType
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.aws_config import (
+from dazzle.http.runtime.aws_config import (
     AWSConfig,
     get_aioboto3_session,
     get_aws_config,

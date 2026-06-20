@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture()
 def _pg_backend():
     """Create a PostgresBackend with a fake URL (no real DB needed)."""
-    from dazzle.back.runtime.pg_backend import PostgresBackend
+    from dazzle.http.runtime.pg_backend import PostgresBackend
 
     return PostgresBackend("postgresql://localhost:5432/test_db")
 
@@ -145,28 +145,28 @@ class TestSaUrl:
 
     def test_postgresql_scheme_gets_psycopg_driver(self) -> None:
         """postgresql:// → postgresql+psycopg://."""
-        from dazzle.back.runtime.pg_backend import PostgresBackend
+        from dazzle.http.runtime.pg_backend import PostgresBackend
 
         backend = PostgresBackend("postgresql://user:pass@host/db")
         assert backend._sa_url == "postgresql+psycopg://user:pass@host/db"
 
     def test_postgres_scheme_alias_normalized(self) -> None:
         """postgres:// (Heroku alias) → postgresql+psycopg://."""
-        from dazzle.back.runtime.pg_backend import PostgresBackend
+        from dazzle.http.runtime.pg_backend import PostgresBackend
 
         backend = PostgresBackend("postgres://user:pass@host/db")
         assert backend._sa_url == "postgresql+psycopg://user:pass@host/db"
 
     def test_postgres_localhost_normalized(self) -> None:
         """postgres://localhost/db (common dev URL) → postgresql+psycopg://localhost/db."""
-        from dazzle.back.runtime.pg_backend import PostgresBackend
+        from dazzle.http.runtime.pg_backend import PostgresBackend
 
         backend = PostgresBackend("postgres://localhost/postgres")
         assert backend._sa_url == "postgresql+psycopg://localhost/postgres"
 
     def test_already_psycopg_driver_unchanged(self) -> None:
         """postgresql+psycopg:// passes through unchanged."""
-        from dazzle.back.runtime.pg_backend import PostgresBackend
+        from dazzle.http.runtime.pg_backend import PostgresBackend
 
         backend = PostgresBackend("postgresql+psycopg://user:pass@host/db")
         assert backend._sa_url == "postgresql+psycopg://user:pass@host/db"

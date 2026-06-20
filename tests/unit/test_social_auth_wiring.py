@@ -51,21 +51,21 @@ def minimal_appspec() -> AppSpec:
 
 # Shared decorator stack for tests that call .build() with auth enabled
 _MOCK_BUILD_AUTH = [
-    patch("dazzle.back.runtime.auth.AuthStore._init_db"),
-    patch("dazzle.back.runtime.pg_backend.PostgresBackend"),
+    patch("dazzle.http.runtime.auth.AuthStore._init_db"),
+    patch("dazzle.http.runtime.pg_backend.PostgresBackend"),
 ]
 
 # Shared decorator stack for tests that call .build() without auth
 _MOCK_BUILD = [
-    patch("dazzle.back.runtime.pg_backend.PostgresBackend"),
+    patch("dazzle.http.runtime.pg_backend.PostgresBackend"),
 ]
 
 
 class TestSocialAuthWiring:
     """Tests for social auth route wiring."""
 
-    @patch("dazzle.back.runtime.auth.AuthStore._init_db")
-    @patch("dazzle.back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle.http.runtime.auth.AuthStore._init_db")
+    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
     def test_no_oauth_config_no_social_routes(
         self,
         _mock_pg,
@@ -74,7 +74,7 @@ class TestSocialAuthWiring:
         tmp_path,
     ) -> None:
         """Server starts normally without OAuth config."""
-        from dazzle.back.runtime.server import DazzleBackendApp
+        from dazzle.http.runtime.server import DazzleBackendApp
 
         app_builder = DazzleBackendApp(
             minimal_appspec,
@@ -89,8 +89,8 @@ class TestSocialAuthWiring:
         social_routes = [r for r in routes if "/auth/social" in r]
         assert len(social_routes) == 0, "Social routes should not be present"
 
-    @patch("dazzle.back.runtime.auth.AuthStore._init_db")
-    @patch("dazzle.back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle.http.runtime.auth.AuthStore._init_db")
+    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
     def test_empty_oauth_providers_no_social_routes(
         self,
         _mock_pg,
@@ -99,7 +99,7 @@ class TestSocialAuthWiring:
         tmp_path,
     ) -> None:
         """Server starts normally with empty oauth_providers list."""
-        from dazzle.back.runtime.server import DazzleBackendApp
+        from dazzle.http.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -119,9 +119,9 @@ class TestSocialAuthWiring:
         social_routes = [r for r in routes if "/auth/social" in r]
         assert len(social_routes) == 0, "Social routes should not be present"
 
-    @patch("dazzle.back.runtime.token_store.TokenStore._init_db")
-    @patch("dazzle.back.runtime.auth.AuthStore._init_db")
-    @patch("dazzle.back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle.http.runtime.token_store.TokenStore._init_db")
+    @patch("dazzle.http.runtime.auth.AuthStore._init_db")
+    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
     def test_oauth_config_with_env_vars_creates_social_routes(
         self,
         _mock_pg,
@@ -131,7 +131,7 @@ class TestSocialAuthWiring:
         tmp_path,
     ) -> None:
         """Social routes are created when OAuth is configured with valid env vars."""
-        from dazzle.back.runtime.server import DazzleBackendApp
+        from dazzle.http.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -159,9 +159,9 @@ class TestSocialAuthWiring:
             social_routes = [r for r in routes if "/auth/social" in r]
             assert len(social_routes) > 0, "Social routes should be present"
 
-    @patch("dazzle.back.runtime.token_store.TokenStore._init_db")
-    @patch("dazzle.back.runtime.auth.AuthStore._init_db")
-    @patch("dazzle.back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle.http.runtime.token_store.TokenStore._init_db")
+    @patch("dazzle.http.runtime.auth.AuthStore._init_db")
+    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
     def test_missing_env_vars_logs_warning_but_does_not_crash(
         self,
         _mock_pg,
@@ -172,7 +172,7 @@ class TestSocialAuthWiring:
         caplog,
     ) -> None:
         """Missing env vars log warning but server still starts."""
-        from dazzle.back.runtime.server import DazzleBackendApp
+        from dazzle.http.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -200,9 +200,9 @@ class TestSocialAuthWiring:
             # Server should still be usable
             assert app is not None
 
-    @patch("dazzle.back.runtime.token_store.TokenStore._init_db")
-    @patch("dazzle.back.runtime.auth.AuthStore._init_db")
-    @patch("dazzle.back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle.http.runtime.token_store.TokenStore._init_db")
+    @patch("dazzle.http.runtime.auth.AuthStore._init_db")
+    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
     def test_multiple_providers_configured(
         self,
         _mock_pg,
@@ -212,7 +212,7 @@ class TestSocialAuthWiring:
         tmp_path,
     ) -> None:
         """Multiple OAuth providers can be configured."""
-        from dazzle.back.runtime.server import DazzleBackendApp
+        from dazzle.http.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -250,12 +250,12 @@ class TestSocialAuthWiring:
             social_routes = [r for r in routes if "/auth/social" in r]
             assert len(social_routes) > 0, "Social routes should be present"
 
-    @patch("dazzle.back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
     def test_auth_disabled_no_social_routes(
         self, _mock_pg, minimal_appspec: AppSpec, tmp_path
     ) -> None:
         """When auth is disabled, no social routes even if OAuth is configured."""
-        from dazzle.back.runtime.server import DazzleBackendApp
+        from dazzle.http.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -288,7 +288,7 @@ class TestBuildSocialAuthConfig:
 
     def test_google_provider_extracts_client_id(self, tmp_path) -> None:
         """Google provider correctly extracts client_id from env."""
-        from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+        from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
         subsystem = AuthSubsystem()
 
@@ -308,7 +308,7 @@ class TestBuildSocialAuthConfig:
 
     def test_github_provider_extracts_id_and_secret(self, tmp_path) -> None:
         """GitHub provider correctly extracts client_id and secret from env."""
-        from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+        from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
         subsystem = AuthSubsystem()
 
@@ -333,7 +333,7 @@ class TestBuildSocialAuthConfig:
 
     def test_returns_none_when_no_providers_configured(self, tmp_path) -> None:
         """Returns None when no providers have valid credentials."""
-        from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+        from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
         subsystem = AuthSubsystem()
 

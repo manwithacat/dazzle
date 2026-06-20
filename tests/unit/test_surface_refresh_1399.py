@@ -75,13 +75,13 @@ class TestSurfaceRefreshRender:
         )
 
     def test_tbody_trigger_polls_when_set(self) -> None:
-        from dazzle.ui.runtime.table_renderer import render_filterable_table
+        from dazzle.page.runtime.table_renderer import render_filterable_table
 
         html = render_filterable_table(self._table(refresh_interval=30))
         assert 'hx-trigger="load, every 30s"' in html
 
     def test_tbody_trigger_no_poll_by_default(self) -> None:
-        from dazzle.ui.runtime.table_renderer import render_filterable_table
+        from dazzle.page.runtime.table_renderer import render_filterable_table
 
         html = render_filterable_table(self._table())
         assert 'hx-trigger="load"' in html

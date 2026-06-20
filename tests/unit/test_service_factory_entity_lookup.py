@@ -8,8 +8,8 @@
 
 from pydantic import BaseModel
 
-from dazzle.back.runtime.service_generator import CRUDService, ServiceFactory
-from dazzle.back.specs.service import DomainOperation, OperationKind, ServiceSpec
+from dazzle.http.runtime.service_generator import CRUDService, ServiceFactory
+from dazzle.http.specs.service import DomainOperation, OperationKind, ServiceSpec
 
 
 class _Invoice(BaseModel):

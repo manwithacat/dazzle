@@ -34,12 +34,12 @@ def _get_framework_alembic_dir() -> Path:
     """Locate the framework's alembic directory (env.py, templates, INI)."""
     # Works both in editable installs and pip-installed packages
     try:
-        from dazzle import back as dazzle_back
+        from dazzle import http as dazzle_http
 
-        return (Path(dazzle_back.__file__).resolve().parent / "alembic").resolve()
+        return (Path(dazzle_http.__file__).resolve().parent / "alembic").resolve()
     except (ImportError, AttributeError):
         # Fallback for dev layout
-        return (Path(__file__).resolve().parents[2] / "dazzle" / "back" / "alembic").resolve()
+        return (Path(__file__).resolve().parents[2] / "dazzle" / "http" / "alembic").resolve()
 
 
 def _get_project_versions_dir() -> Path:
@@ -423,8 +423,8 @@ def _apply_rls_after_upgrade(resolved_url: str) -> None:
     if not _is_shared_schema(appspec):
         return
 
-    from dazzle.back.converters.entity_converter import convert_entities
     from dazzle.db.rls_apply import apply_rls_policies
+    from dazzle.http.converters.entity_converter import convert_entities
 
     entities = convert_entities(appspec.domain.entities)
 
@@ -567,7 +567,7 @@ def audit_atomic_command(
     import psycopg
     from psycopg.rows import dict_row
 
-    from dazzle.back.runtime.atomic_flow_executor import query_atomic_audit
+    from dazzle.http.runtime.atomic_flow_executor import query_atomic_audit
 
     url = _resolve_url(database_url)
     if not url:
@@ -652,12 +652,12 @@ def baseline_command(
 
     # Validate that DSL metadata is loadable and non-empty.
     # NOTE: import the side-effect-free metadata_loader, NOT
-    # dazzle.back.alembic.env — that module executes
+    # dazzle.http.alembic.env — that module executes
     # ``config = context.config`` at import time, which raises
     # AttributeError when alembic.context has no active config (i.e. any
     # direct Python import outside an Alembic run).
     try:
-        from dazzle.back.alembic.metadata_loader import load_target_metadata
+        from dazzle.http.alembic.metadata_loader import load_target_metadata
 
         metadata = load_target_metadata()
         table_count = len(metadata.tables)
@@ -1035,7 +1035,7 @@ def verify_command(
     # only needed when row-level tenancy is in play.
     rls_entities: list[Any] = []
     if _is_shared_schema(appspec):
-        from dazzle.back.converters.entity_converter import convert_entities
+        from dazzle.http.converters.entity_converter import convert_entities
 
         rls_entities = convert_entities(appspec.domain.entities)
 
@@ -1247,8 +1247,8 @@ def apply_rls_command(
             console.print(f"[dim]{msg}[/dim]")
         return
 
-    from dazzle.back.converters.entity_converter import convert_entities
     from dazzle.db.rls_apply import apply_rls_policies
+    from dazzle.http.converters.entity_converter import convert_entities
 
     entities = convert_entities(appspec.domain.entities)
     url = _resolve_url(database_url)
@@ -1558,12 +1558,12 @@ def explain_aggregate_command(
     row-level security is applied at request time. Add ``--scope`` later
     if we need to simulate a persona's predicate.
     """
-    from dazzle.back.runtime.aggregate import (
+    from dazzle.core.ir.fields import FieldTypeKind
+    from dazzle.http.runtime.aggregate import (
         Dimension,
         build_aggregate_sql,
         resolve_fk_display_field,
     )
-    from dazzle.core.ir.fields import FieldTypeKind
 
     project_root = Path.cwd().resolve()
     appspec = load_project_appspec(project_root)

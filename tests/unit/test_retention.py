@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from dazzle.back.runtime.retention import sweep_old_rows
+from dazzle.http.runtime.retention import sweep_old_rows
 
 # ---------------------------------------------------------------------------
 # Stubs

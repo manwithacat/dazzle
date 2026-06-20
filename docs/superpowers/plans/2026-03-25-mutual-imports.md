@@ -1,8 +1,8 @@
-# Eliminate dazzle_ui → dazzle_back Imports
+# Eliminate dazzle_page → dazzle_http Imports
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Break the `dazzle_ui → dazzle_back` import cycle by moving pure value types to `dazzle.core.access` and injecting backend callables via `_PageDeps`.
+**Goal:** Break the `dazzle_page → dazzle_http` import cycle by moving pure value types to `dazzle.core.access` and injecting backend callables via `_PageDeps`.
 
 **Architecture:** Extract `AccessOperationKind`, `AccessRuntimeContext`, `AccessDecision` to `dazzle.core.access` (zero backend deps). Add 3 callable fields to `_PageDeps` for `evaluate_permission`, `convert_entity`, `inject_display_names`. Wire concrete implementations from `server.py` where `create_page_routes()` is called.
 
@@ -17,11 +17,11 @@
 | File | Action | Purpose |
 |------|--------|---------|
 | `src/dazzle/core/access.py` | Create | Pure value types: `AccessOperationKind`, `AccessRuntimeContext`, `AccessDecision` |
-| `src/dazzle_back/runtime/access_evaluator.py` | Modify | Import types from `dazzle.core.access`, delete local definitions |
-| `src/dazzle_back/specs/auth.py` | Modify | Delete `AccessOperationKind`, re-export from `dazzle.core.access` |
-| `src/dazzle_ui/runtime/page_routes.py` | Modify | Import from `dazzle.core.access`, use `_PageDeps` callables |
-| `src/dazzle_ui/runtime/combined_server.py` | Modify | Wire callables into `create_page_routes()` |
-| `src/dazzle_back/runtime/subsystems/system_routes.py` | Modify | Wire callables into `create_page_routes()` |
+| `src/dazzle_http/runtime/access_evaluator.py` | Modify | Import types from `dazzle.core.access`, delete local definitions |
+| `src/dazzle_http/specs/auth.py` | Modify | Delete `AccessOperationKind`, re-export from `dazzle.core.access` |
+| `src/dazzle_page/runtime/page_routes.py` | Modify | Import from `dazzle.core.access`, use `_PageDeps` callables |
+| `src/dazzle_page/runtime/combined_server.py` | Modify | Wire callables into `create_page_routes()` |
+| `src/dazzle_http/runtime/subsystems/system_routes.py` | Modify | Wire callables into `create_page_routes()` |
 
 ---
 
@@ -35,10 +35,10 @@
 Create `src/dazzle/core/access.py`:
 
 ```python
-"""Access control value types — shared between dazzle_back and dazzle_ui.
+"""Access control value types — shared between dazzle_http and dazzle_page.
 
 These types have NO backend dependencies. They exist in dazzle.core so both
-dazzle_back (which implements access evaluation) and dazzle_ui (which consumes
+dazzle_http (which implements access evaluation) and dazzle_page (which consumes
 access decisions for UI filtering) can import them without circular deps.
 """
 
@@ -126,14 +126,14 @@ git commit -m "refactor: extract access value types to dazzle.core.access (#679)
 ### Task 2: Migrate `access_evaluator.py` and `specs/auth.py` to Import from Core
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/access_evaluator.py`
-- Modify: `src/dazzle_back/specs/auth.py`
+- Modify: `src/dazzle_http/runtime/access_evaluator.py`
+- Modify: `src/dazzle_http/specs/auth.py`
 
 - [ ] **Step 1: Read both files**
 
-Read `src/dazzle_back/runtime/access_evaluator.py` to find where `AccessDecision` (lines 38-57) and `AccessRuntimeContext` (lines 65-99) are defined.
+Read `src/dazzle_http/runtime/access_evaluator.py` to find where `AccessDecision` (lines 38-57) and `AccessRuntimeContext` (lines 65-99) are defined.
 
-Read `src/dazzle_back/specs/auth.py` to find `AccessOperationKind` (lines 174-181).
+Read `src/dazzle_http/specs/auth.py` to find `AccessOperationKind` (lines 174-181).
 
 - [ ] **Step 2: Replace definitions with imports in `access_evaluator.py`**
 
@@ -153,47 +153,47 @@ Delete the `AccessOperationKind` class (lines 174-181). Replace with:
 from dazzle.core.access import AccessOperationKind
 ```
 
-Keep the re-export so existing `from dazzle_back.specs.auth import AccessOperationKind` callers still work (backward compat here is free — it's just a re-export, not a shim).
+Keep the re-export so existing `from dazzle_http.specs.auth import AccessOperationKind` callers still work (backward compat here is free — it's just a re-export, not a shim).
 
-- [ ] **Step 4: Update all internal `dazzle_back` importers**
+- [ ] **Step 4: Update all internal `dazzle_http` importers**
 
 Search for files importing these types from the old locations:
 
 ```bash
-grep -rn "from dazzle_back.runtime.access_evaluator import.*AccessRuntimeContext\|from dazzle_back.runtime.access_evaluator import.*AccessDecision\|from dazzle_back.specs.auth import.*AccessOperationKind" src/dazzle_back/ --include="*.py"
+grep -rn "from dazzle_http.runtime.access_evaluator import.*AccessRuntimeContext\|from dazzle_http.runtime.access_evaluator import.*AccessDecision\|from dazzle_http.specs.auth import.*AccessOperationKind" src/dazzle_http/ --include="*.py"
 ```
 
 Update each to import from `dazzle.core.access` instead. The re-exports in `access_evaluator.py` and `specs/auth.py` provide backward compat, but it's cleaner to update direct callers.
 
 - [ ] **Step 5: Verify**
 
-Run: `python -c "from dazzle_back.runtime.access_evaluator import evaluate_permission, AccessRuntimeContext; print('OK')"`
-Run: `python -c "from dazzle_back.specs.auth import AccessOperationKind; print('OK')"`
+Run: `python -c "from dazzle_http.runtime.access_evaluator import evaluate_permission, AccessRuntimeContext; print('OK')"`
+Run: `python -c "from dazzle_http.specs.auth import AccessOperationKind; print('OK')"`
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/access_evaluator.py src/dazzle_back/specs/auth.py
+git add src/dazzle_http/runtime/access_evaluator.py src/dazzle_http/specs/auth.py
 git commit -m "refactor: import access types from dazzle.core.access (#679)"
 ```
 
 ---
 
-### Task 3: Add Callable Fields to `_PageDeps` and Eliminate dazzle_back Imports
+### Task 3: Add Callable Fields to `_PageDeps` and Eliminate dazzle_http Imports
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/page_routes.py`
+- Modify: `src/dazzle_page/runtime/page_routes.py`
 
 - [ ] **Step 1: Read the full file for context**
 
-Read `src/dazzle_ui/runtime/page_routes.py` — particularly `_PageDeps` (line 318), `_user_can_mutate` (line 190), `_filter_nav_by_entity_access` (line 249), the detail page handler (line 492), and `create_page_routes` (line 986).
+Read `src/dazzle_page/runtime/page_routes.py` — particularly `_PageDeps` (line 318), `_user_can_mutate` (line 190), `_filter_nav_by_entity_access` (line 249), the detail page handler (line 492), and `create_page_routes` (line 986).
 
 - [ ] **Step 2: Add callable fields to `_PageDeps`**
 
 In the `_PageDeps` dataclass (line 318), add:
 
 ```python
-    # Callables injected from dazzle_back — breaks circular import (#679)
+    # Callables injected from dazzle_http — breaks circular import (#679)
     evaluate_permission: Callable[..., Any] | None = None
     convert_entity: Callable[..., Any] | None = None
     inject_display_names: Callable[..., Any] | None = None
@@ -204,11 +204,11 @@ In the `_PageDeps` dataclass (line 318), add:
 Replace the deferred imports at lines 206-210:
 
 ```python
-        from dazzle_back.runtime.access_evaluator import (
+        from dazzle_http.runtime.access_evaluator import (
             AccessRuntimeContext,
             evaluate_permission,
         )
-        from dazzle_back.specs.auth import AccessOperationKind
+        from dazzle_http.specs.auth import AccessOperationKind
 ```
 
 With:
@@ -234,7 +234,7 @@ Same pattern — import types from `dazzle.core.access`, use `deps.evaluate_perm
 
 Change:
 ```python
-            from dazzle_back.runtime.workspace_rendering import _inject_display_names
+            from dazzle_http.runtime.workspace_rendering import _inject_display_names
             req_detail.item = _inject_display_names(req_detail.item)
 ```
 To:
@@ -247,7 +247,7 @@ To:
 
 Change:
 ```python
-        from dazzle_back.converters.entity_converter import convert_entity
+        from dazzle_http.converters.entity_converter import convert_entity
 ```
 To:
 ```python
@@ -293,16 +293,16 @@ Use `convert_entity_fn` for building `entity_cedar_specs` (replacing the deferre
                     entity_cedar_specs[_entity.name] = _converted.access
 ```
 
-- [ ] **Step 7: Verify no dazzle_back imports remain**
+- [ ] **Step 7: Verify no dazzle_http imports remain**
 
-Run: `grep -rn "from dazzle_back\|import dazzle_back" src/dazzle_ui/runtime/page_routes.py`
+Run: `grep -rn "from dazzle_http\|import dazzle_http" src/dazzle_page/runtime/page_routes.py`
 Expected: 0 matches
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/page_routes.py
-git commit -m "refactor: eliminate dazzle_back imports from page_routes via DI (#679)"
+git add src/dazzle_page/runtime/page_routes.py
+git commit -m "refactor: eliminate dazzle_http imports from page_routes via DI (#679)"
 ```
 
 ---
@@ -310,8 +310,8 @@ git commit -m "refactor: eliminate dazzle_back imports from page_routes via DI (
 ### Task 4: Wire Callables from Server-Side Callers
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/combined_server.py` (if it calls `create_page_routes`)
-- Modify: `src/dazzle_back/runtime/subsystems/system_routes.py` (if it calls `create_page_routes`)
+- Modify: `src/dazzle_page/runtime/combined_server.py` (if it calls `create_page_routes`)
+- Modify: `src/dazzle_http/runtime/subsystems/system_routes.py` (if it calls `create_page_routes`)
 
 - [ ] **Step 1: Find all callers of `create_page_routes`**
 
@@ -322,9 +322,9 @@ Run: `grep -rn "create_page_routes" src/ --include="*.py"`
 At each call site, add:
 
 ```python
-from dazzle_back.runtime.access_evaluator import evaluate_permission
-from dazzle_back.converters.entity_converter import convert_entity
-from dazzle_back.runtime.workspace_rendering import _inject_display_names
+from dazzle_http.runtime.access_evaluator import evaluate_permission
+from dazzle_http.converters.entity_converter import convert_entity
+from dazzle_http.runtime.workspace_rendering import _inject_display_names
 
 router = create_page_routes(
     appspec,
@@ -335,13 +335,13 @@ router = create_page_routes(
 )
 ```
 
-If the caller is in `dazzle_ui` (e.g., `combined_server.py`), wrap in try/except ImportError since `dazzle_back` may not be installed:
+If the caller is in `dazzle_page` (e.g., `combined_server.py`), wrap in try/except ImportError since `dazzle_http` may not be installed:
 
 ```python
 try:
-    from dazzle_back.runtime.access_evaluator import evaluate_permission
-    from dazzle_back.converters.entity_converter import convert_entity
-    from dazzle_back.runtime.workspace_rendering import _inject_display_names
+    from dazzle_http.runtime.access_evaluator import evaluate_permission
+    from dazzle_http.converters.entity_converter import convert_entity
+    from dazzle_http.runtime.workspace_rendering import _inject_display_names
 except ImportError:
     evaluate_permission = None
     convert_entity = None
@@ -350,14 +350,14 @@ except ImportError:
 
 - [ ] **Step 3: Verify**
 
-Run: `python -c "from dazzle_ui.runtime.page_routes import create_page_routes; print('OK')"`
-Run: `grep -rn "from dazzle_back\|import dazzle_back" src/dazzle_ui/runtime/page_routes.py | wc -l`
+Run: `python -c "from dazzle_page.runtime.page_routes import create_page_routes; print('OK')"`
+Run: `grep -rn "from dazzle_http\|import dazzle_http" src/dazzle_page/runtime/page_routes.py | wc -l`
 Expected: 0
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/combined_server.py src/dazzle_back/runtime/subsystems/system_routes.py
+git add src/dazzle_page/runtime/combined_server.py src/dazzle_http/runtime/subsystems/system_routes.py
 git commit -m "refactor: wire access callables into create_page_routes (#679)"
 ```
 
@@ -370,9 +370,9 @@ git commit -m "refactor: wire access callables into create_page_routes (#679)"
 Run: `pytest tests/ -m "not e2e" -x -q`
 Expected: ALL PASS
 
-- [ ] **Step 2: Verify zero dazzle_back imports in page_routes.py**
+- [ ] **Step 2: Verify zero dazzle_http imports in page_routes.py**
 
-Run: `grep -rn "from dazzle_back\|import dazzle_back" src/dazzle_ui/runtime/page_routes.py | wc -l`
+Run: `grep -rn "from dazzle_http\|import dazzle_http" src/dazzle_page/runtime/page_routes.py | wc -l`
 Expected: 0
 
 - [ ] **Step 3: Lint**
@@ -381,7 +381,7 @@ Run: `ruff check src/ tests/ --fix && ruff format src/ tests/`
 
 - [ ] **Step 4: Type check**
 
-Run: `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_back/ --ignore-missing-imports`
+Run: `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_http/ --ignore-missing-imports`
 
 - [ ] **Step 5: Commit if lint/format changes**
 

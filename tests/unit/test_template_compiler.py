@@ -5,7 +5,7 @@ import pytest
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
 from dazzle.core.ir.fields import FieldModifier
-from dazzle.ui.converters.template_compiler import (
+from dazzle.page.converters.template_compiler import (
     _build_entity_columns,
     _build_form_fields,
     compile_appspec_to_templates,
@@ -999,7 +999,7 @@ class TestEnumFilterLabels:
 
     def test_inline_enum_filter_labels_title_cased(self):
         """Inline enum values get snake_case converted to Title Case."""
-        from dazzle.ui.converters.template_compiler import _infer_filter_type
+        from dazzle.page.converters.template_compiler import _infer_filter_type
 
         field = ir.FieldSpec(
             name="status",
@@ -1015,7 +1015,7 @@ class TestEnumFilterLabels:
 
     def test_named_enum_filter_labels_use_titles(self):
         """Named EnumSpec titles override mechanical title-casing."""
-        from dazzle.ui.converters.template_compiler import _infer_filter_type
+        from dazzle.page.converters.template_compiler import _infer_filter_type
 
         enum_spec = ir.EnumSpec(
             name="Priority",
@@ -1038,7 +1038,7 @@ class TestEnumFilterLabels:
 
     def test_named_enum_fallback_when_no_title(self):
         """Values without titles in EnumSpec fall back to title-casing."""
-        from dazzle.ui.converters.template_compiler import _infer_filter_type
+        from dazzle.page.converters.template_compiler import _infer_filter_type
 
         enum_spec = ir.EnumSpec(
             name="Status",
@@ -1078,7 +1078,7 @@ class TestRefFilterType:
     )
     def test_fk_field_returns_select_filter_type(self, kind, field_name, ref_entity):
         """REF/BELONGS_TO fields should infer filter_type 'select' with empty options."""
-        from dazzle.ui.converters.template_compiler import _infer_filter_type
+        from dazzle.page.converters.template_compiler import _infer_filter_type
 
         field = ir.FieldSpec(
             name=field_name,
@@ -1090,7 +1090,7 @@ class TestRefFilterType:
 
     def test_ref_column_has_ref_entity_and_api(self):
         """ColumnContext for a filterable ref field includes ref entity name and API URL."""
-        from dazzle.ui.converters.template_compiler import _build_columns
+        from dazzle.page.converters.template_compiler import _build_columns
 
         entity = ir.EntitySpec(
             name="Task",

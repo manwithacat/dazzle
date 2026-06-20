@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.storage import (
+from dazzle.core.manifest import StorageConfig
+from dazzle.http.runtime.storage import (
     EnvVarMissingError,
     FakeStorageProvider,
     ObjectMetadata,
@@ -26,7 +27,6 @@ from dazzle.back.runtime.storage import (
     StorageRegistry,
     UploadTicket,
 )
-from dazzle.core.manifest import StorageConfig
 
 # ---------------------------------------------------------------------------
 # FakeStorageProvider
@@ -207,14 +207,14 @@ class _StubS3Client:
 
 class TestS3ProviderWithStub:
     def test_render_prefix(self) -> None:
-        from dazzle.back.runtime.storage.s3_provider import S3Provider
+        from dazzle.http.runtime.storage.s3_provider import S3Provider
 
         cfg = _config("x", prefix_template="uploads/{user_id}/{record_id}/")
         prov = S3Provider(cfg, client=_StubS3Client())
         assert prov.render_prefix(user_id="alice", record_id="r1") == "uploads/alice/r1/"
 
     def test_mint_ticket_encodes_constraints(self) -> None:
-        from dazzle.back.runtime.storage.s3_provider import S3Provider
+        from dazzle.http.runtime.storage.s3_provider import S3Provider
 
         cfg = _config("x", bucket="my-bucket", max_bytes=200_000_000, ticket_ttl_seconds=600)
         client = _StubS3Client()
@@ -233,7 +233,7 @@ class TestS3ProviderWithStub:
         assert ticket.expires_in_seconds == 600
 
     def test_head_object_returns_metadata(self) -> None:
-        from dazzle.back.runtime.storage.s3_provider import S3Provider
+        from dazzle.http.runtime.storage.s3_provider import S3Provider
 
         cfg = _config("x", bucket="my-bucket")
         client = _StubS3Client()
@@ -250,14 +250,14 @@ class TestS3ProviderWithStub:
         assert meta.etag == "abc123"  # quotes stripped
 
     def test_head_object_404_returns_none(self) -> None:
-        from dazzle.back.runtime.storage.s3_provider import S3Provider
+        from dazzle.http.runtime.storage.s3_provider import S3Provider
 
         cfg = _config("x")
         prov = S3Provider(cfg, client=_StubS3Client())
         assert prov.head_object("missing") is None
 
     def test_no_client_raises_when_used(self) -> None:
-        from dazzle.back.runtime.storage.s3_provider import S3Provider
+        from dazzle.http.runtime.storage.s3_provider import S3Provider
 
         cfg = _config("x")
         prov = S3Provider(cfg, client=None)
@@ -304,7 +304,7 @@ class TestS3ProviderWithMoto:
     range condition encoding."""
 
     def test_generate_presigned_post_via_real_boto3(self, mocked_s3_client) -> None:
-        from dazzle.back.runtime.storage.s3_provider import S3Provider
+        from dazzle.http.runtime.storage.s3_provider import S3Provider
 
         cfg = _config("x", bucket="moto-test-bucket", max_bytes=1024 * 1024)
         prov = S3Provider(cfg, client=mocked_s3_client)
@@ -316,14 +316,14 @@ class TestS3ProviderWithMoto:
         assert ticket.s3_key == "t/k.pdf"
 
     def test_head_object_404_via_real_boto3(self, mocked_s3_client) -> None:
-        from dazzle.back.runtime.storage.s3_provider import S3Provider
+        from dazzle.http.runtime.storage.s3_provider import S3Provider
 
         cfg = _config("x", bucket="moto-test-bucket")
         prov = S3Provider(cfg, client=mocked_s3_client)
         assert prov.head_object("does/not/exist") is None
 
     def test_head_object_existing_via_real_boto3(self, mocked_s3_client) -> None:
-        from dazzle.back.runtime.storage.s3_provider import S3Provider
+        from dazzle.http.runtime.storage.s3_provider import S3Provider
 
         mocked_s3_client.put_object(
             Bucket="moto-test-bucket",

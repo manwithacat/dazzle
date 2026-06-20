@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.back.runtime.route_overrides import discover_route_overrides
+from dazzle.http.runtime.route_overrides import discover_route_overrides
 
 
 def _write(tmp_path: Path, body: str, name: str = "ov.py") -> Path:
@@ -73,8 +73,8 @@ from typing import Any  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 from starlette.responses import HTMLResponse, JSONResponse  # noqa: E402
 
-from dazzle.back.runtime.page_routes import build_app_page_context  # noqa: E402
-from dazzle.back.runtime.route_overrides import (  # noqa: E402
+from dazzle.http.runtime.page_routes import build_app_page_context  # noqa: E402
+from dazzle.http.runtime.route_overrides import (  # noqa: E402
     _wrap_with_response_contract,
     build_override_router,
 )
@@ -163,14 +163,14 @@ def test_json_passthrough() -> None:
 
 
 def test_undeclared_app_html_nudges_once(caplog) -> None:
-    from dazzle.back.runtime import route_overrides
+    from dazzle.http.runtime import route_overrides
 
     route_overrides._RESPONSE_CONTRACT_NUDGED.discard("/app/undeclared")
 
     async def h(request):
         return "<div>x</div>"
 
-    with caplog.at_level(logging.WARNING, logger="dazzle.back.runtime.route_overrides"):
+    with caplog.at_level(logging.WARNING, logger="dazzle.http.runtime.route_overrides"):
         _call(h, kind=None, path="/app/undeclared", builder=_builder, request=_fake_request())
         _call(h, kind=None, path="/app/undeclared", builder=_builder, request=_fake_request())
     nudges = [r for r in caplog.records if "declares no `# dazzle:returns`" in r.message]

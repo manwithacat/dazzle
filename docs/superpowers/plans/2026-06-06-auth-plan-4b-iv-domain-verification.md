@@ -36,7 +36,7 @@ connection store API, Typer.
 
 ## Task 1: domain-verification kernel
 
-**Files:** Create `src/dazzle/back/runtime/auth/domain_verification.py`,
+**Files:** Create `src/dazzle/http/runtime/auth/domain_verification.py`,
 `tests/unit/test_domain_verification.py`. Add `set_connection_domains` to `store.py`.
 
 - `DomainVerificationError(reason, message)`, `verification_token`, `txt_record`,

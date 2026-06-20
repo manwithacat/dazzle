@@ -14,8 +14,8 @@ Two-pronged fix:
 
 from dazzle.core import ir
 from dazzle.core.fidelity_scorer import _check_form_structure, parse_html
+from dazzle.page.runtime.template_renderer import _render_typed_body
 from dazzle.render.context import FieldContext, FormContext, PageContext
-from dazzle.ui.runtime.template_renderer import _render_typed_body
 
 
 def _create_surface() -> ir.SurfaceSpec:

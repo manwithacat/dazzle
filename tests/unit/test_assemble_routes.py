@@ -11,8 +11,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.app_factory import assemble_post_build_routes
 from dazzle.core.ir.process import ScheduleSpec
+from dazzle.http.runtime.app_factory import assemble_post_build_routes
 
 pytest.importorskip("fastapi")
 

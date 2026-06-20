@@ -12,8 +12,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle.back.converters import _convert_channels
-from dazzle.back.specs.channel import ChannelSpec, SendOperationSpec
 from dazzle.core.ir.messaging import (
     ChannelKind,
     EntityEvent,
@@ -26,6 +24,8 @@ from dazzle.core.ir.messaging import (
 from dazzle.core.ir.messaging import (
     SendOperationSpec as IRSendOperationSpec,
 )
+from dazzle.http.converters import _convert_channels
+from dazzle.http.specs.channel import ChannelSpec, SendOperationSpec
 
 # =============================================================================
 # Channel conversion tests
@@ -186,7 +186,7 @@ def _make_process_subsystem(
     process_adapter: Any = None,
 ) -> Any:
     """Create a ProcessSubsystem with pre-set internals for testing."""
-    from dazzle.back.runtime.subsystems.process import ProcessSubsystem
+    from dazzle.http.runtime.subsystems.process import ProcessSubsystem
 
     subsystem = ProcessSubsystem()
     subsystem._adapter = process_adapter
@@ -259,7 +259,7 @@ def _make_channels_subsystem_ctx(
     channel_mgr: Any = None,
 ) -> Any:
     """Build a SubsystemContext mock for ChannelsSubsystem tests."""
-    from dazzle.back.runtime.subsystems import SubsystemContext
+    from dazzle.http.runtime.subsystems import SubsystemContext
 
     ctx = SubsystemContext(
         app=MagicMock(),
@@ -279,7 +279,7 @@ class TestWireEntityEventsToChannels:
 
     def test_skip_branches_no_chmgr_or_no_services(self) -> None:
         """No channel_mgr OR no services dict ⇒ silently skip wiring."""
-        from dazzle.back.runtime.subsystems.channels import ChannelsSubsystem
+        from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
 
         # No channel manager
         ctx = _make_channels_subsystem_ctx(channel_mgr=None)
@@ -291,7 +291,7 @@ class TestWireEntityEventsToChannels:
         ChannelsSubsystem()._wire_entity_events_to_channels(ctx)
 
     def test_no_triggers_skips(self) -> None:
-        from dazzle.back.runtime.subsystems.channels import ChannelsSubsystem
+        from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="emails",
@@ -313,8 +313,8 @@ class TestWireEntityEventsToChannels:
         service.on_created.assert_not_called()
 
     def test_registers_callbacks_for_triggered_entity(self) -> None:
-        from dazzle.back.runtime.service_generator import CRUDService
-        from dazzle.back.runtime.subsystems.channels import ChannelsSubsystem
+        from dazzle.http.runtime.service_generator import CRUDService
+        from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",
@@ -349,8 +349,8 @@ class TestWireEntityEventsToChannels:
         service.on_deleted.assert_called_once()
 
     def test_skips_non_triggered_entities(self) -> None:
-        from dazzle.back.runtime.service_generator import CRUDService
-        from dazzle.back.runtime.subsystems.channels import ChannelsSubsystem
+        from dazzle.http.runtime.service_generator import CRUDService
+        from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",
@@ -385,8 +385,8 @@ class TestWireEntityEventsToChannels:
 
     @pytest.mark.asyncio
     async def test_callback_dispatches_correct_event(self) -> None:
-        from dazzle.back.runtime.service_generator import CRUDService
-        from dazzle.back.runtime.subsystems.channels import ChannelsSubsystem
+        from dazzle.http.runtime.service_generator import CRUDService
+        from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",
@@ -441,8 +441,8 @@ class TestWireEntityEventsToChannels:
     @pytest.mark.asyncio
     async def test_callback_only_fires_for_matching_event(self) -> None:
         """on_updated callback should not dispatch 'created' triggers."""
-        from dazzle.back.runtime.service_generator import CRUDService
-        from dazzle.back.runtime.subsystems.channels import ChannelsSubsystem
+        from dazzle.http.runtime.service_generator import CRUDService
+        from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",
@@ -485,8 +485,8 @@ class TestWireEntityEventsToChannels:
     @pytest.mark.asyncio
     async def test_channel_send_failure_does_not_propagate(self) -> None:
         """Channel send errors should be logged, not raised."""
-        from dazzle.back.runtime.service_generator import CRUDService
-        from dazzle.back.runtime.subsystems.channels import ChannelsSubsystem
+        from dazzle.http.runtime.service_generator import CRUDService
+        from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",

@@ -18,7 +18,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `src/dazzle/back/runtime/auth/store.py` (**modify**) | Add `get_memberships_for_tenant(tenant_id)` — the current-roster query (mirrors `get_memberships_for_identity`). |
+| `src/dazzle/http/runtime/auth/store.py` (**modify**) | Add `get_memberships_for_tenant(tenant_id)` — the current-roster query (mirrors `get_memberships_for_identity`). |
 | `src/dazzle/rbac/access_evidence.py` (**create**) | Evidence dataclasses (`MemberSnapshot`, `OrgAccessSnapshot`, `JmlEntry`, `AccessReview`), the point-in-time replay (`build_org_snapshot`), JML classification (`build_jml_stream`), the `ACCESS_EVIDENCE_CONTROLS` spec-§6 map, and `build_access_review`. Pure builders — the replay takes a list of events so it is unit-testable without a DB. |
 | `src/dazzle/rbac/report.py` (**modify**) | Add `render_access_review_markdown(review)` — the human-readable evidence pack (roster table + JML table + control coverage + chain attestation). |
 | `src/dazzle/cli/rbac.py` (**modify**) | Add `dazzle rbac access-review` subcommand: resolve live DB URL → `AuthStore` → `build_access_review` → markdown or JSON. |
@@ -30,7 +30,7 @@
 ## Task 1: `get_memberships_for_tenant` (current roster query)
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py` (after `get_memberships_for_identity`, ~line 778)
+- Modify: `src/dazzle/http/runtime/auth/store.py` (after `get_memberships_for_identity`, ~line 778)
 - Test: `tests/integration/test_access_review_pg.py` (created here)
 
 - [ ] **Step 1: Write the failing integration test**
@@ -81,7 +81,7 @@ def store_url() -> Iterator[str]:
 
 
 def _store(store_url: str):
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=store_url)
     store._init_db()
@@ -128,9 +128,9 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/store.py tests/integration/test_access_review_pg.py --fix
-ruff format src/dazzle/back/runtime/auth/store.py tests/integration/test_access_review_pg.py
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_access_review_pg.py
+ruff check src/dazzle/http/runtime/auth/store.py tests/integration/test_access_review_pg.py --fix
+ruff format src/dazzle/http/runtime/auth/store.py tests/integration/test_access_review_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_access_review_pg.py
 git commit -m "feat(auth): get_memberships_for_tenant current-roster query (Plan 2b)"
 ```
 
@@ -150,7 +150,7 @@ git commit -m "feat(auth): get_memberships_for_tenant current-roster query (Plan
 
 from datetime import UTC, datetime
 
-from dazzle.back.runtime.auth.membership_events import MembershipEvent, MembershipEventType
+from dazzle.http.runtime.auth.membership_events import MembershipEvent, MembershipEventType
 from dazzle.rbac.access_evidence import (
     ACCESS_EVIDENCE_CONTROLS,
     classify_jml,
@@ -264,7 +264,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any
 
-from dazzle.back.runtime.auth.membership_events import MembershipEvent, MembershipEventType
+from dazzle.http.runtime.auth.membership_events import MembershipEvent, MembershipEventType
 
 # spec §6 — membership lifecycle event (and the roster itself) → control ids.
 # SOC 2 CC6.x (logical access) + ISO 27001 A.5.15–18 (access control / identity /
@@ -727,7 +727,7 @@ def access_review_cmd(
     import json
     from datetime import UTC, datetime
 
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
     from dazzle.cli.db import _resolve_url
     from dazzle.rbac.access_evidence import build_access_review
     from dazzle.rbac.report import render_access_review_markdown

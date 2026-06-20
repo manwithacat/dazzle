@@ -67,7 +67,7 @@ class TestActionWorkspaceRouting:
     def _heatmap_action_url(self, src: str) -> str:
         from types import SimpleNamespace
 
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         module = _parse(src)
         teacher = next(ws for ws in module.workspaces if ws.name == "teacher_workspace")

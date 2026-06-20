@@ -45,6 +45,6 @@ This is idempotent for the SCIM/OIDC/SAML JIT paths (they already lowercase) and
 
 ## Verification
 
-- `pytest src/dazzle/back/tests/test_auth.py -m postgres` (reworked + new normalization tests, against real PG).
+- `pytest src/dazzle/http/tests/test_auth.py -m postgres` (reworked + new normalization tests, against real PG).
 - `pytest tests/integration/test_authstore_alembic_parity_pg.py -m postgres` (head 0015 + index present).
 - Pre-ship drift/policy gates + the auth-store↔alembic completeness gate.

@@ -81,7 +81,7 @@ class BuildService:
 
     def generate_preview_files(self, appspec: Any, output_dir: str) -> list[str]:
         """Generate static preview HTML files from AppSpec."""
-        from dazzle.ui.runtime.static_preview import generate_preview_files
+        from dazzle.page.runtime.static_preview import generate_preview_files
 
         return [str(p) for p in generate_preview_files(appspec, output_dir)]
 

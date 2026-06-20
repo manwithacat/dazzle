@@ -8,8 +8,8 @@ The real-PG end-to-end proof (apply + idempotency + drift-detected) lives in
 
 from __future__ import annotations
 
-from dazzle.back.runtime.rls_schema import PolicyDescriptor
 from dazzle.db.rls_drift import compare_table_policies
+from dazzle.http.runtime.rls_schema import PolicyDescriptor
 
 
 def _fence() -> PolicyDescriptor:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle.back.runtime.richtext_processor import (
+from dazzle.http.runtime.richtext_processor import (
     HTMLProcessor,
     MarkdownProcessor,
     RichTextService,

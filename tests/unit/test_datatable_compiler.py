@@ -2,7 +2,7 @@
 
 from dazzle.core import ir
 from dazzle.core.ir import FieldModifier, FieldTypeKind, SurfaceMode
-from dazzle.ui.converters.template_compiler import compile_surface_to_context
+from dazzle.page.converters.template_compiler import compile_surface_to_context
 
 # ---------------------------------------------------------------------------
 # Helpers

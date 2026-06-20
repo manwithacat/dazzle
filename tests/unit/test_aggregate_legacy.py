@@ -60,7 +60,7 @@ def test_compound_or() -> None:
 def test_round_trip_via_parse_aggregate_where() -> None:
     """The legacy stringifier's output must parse cleanly through
     ``parse_aggregate_where`` — that's the whole point of the bridge."""
-    from dazzle.back.runtime.aggregate_where_parser import parse_aggregate_where
+    from dazzle.http.runtime.aggregate_where_parser import parse_aggregate_where
 
     out = _where_from_dsl("count(Task where status = open and priority = high)")
     assert out is not None

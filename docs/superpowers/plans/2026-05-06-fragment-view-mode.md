@@ -28,11 +28,11 @@
 
 | File | Change | Responsibility |
 |---|---|---|
-| `src/dazzle_back/runtime/renderers/fragment_adapter.py` | Modify | Add `_build_view(surface, ctx)` method; route SurfaceMode.VIEW to it |
-| `src/dazzle_ui/runtime/template_renderer.py` | Modify | Extend `render_surface(surface, ctx) -> str` to handle SurfaceMode.VIEW |
-| `src/dazzle_ui/runtime/page_routes.py` | Modify | `_build_dispatch_ctx` populates the right ctx shape for VIEW surfaces |
-| `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css` | Modify | Add `.dz-region--kind-detail` definition-list-shaped rules |
-| `src/dazzle_ui/runtime/static/dist/dazzle.min.css` | Modify | Rebuilt bundle including new rules |
+| `src/dazzle_http/runtime/renderers/fragment_adapter.py` | Modify | Add `_build_view(surface, ctx)` method; route SurfaceMode.VIEW to it |
+| `src/dazzle_page/runtime/template_renderer.py` | Modify | Extend `render_surface(surface, ctx) -> str` to handle SurfaceMode.VIEW |
+| `src/dazzle_page/runtime/page_routes.py` | Modify | `_build_dispatch_ctx` populates the right ctx shape for VIEW surfaces |
+| `src/dazzle_page/runtime/static/css/components/fragment-primitives.css` | Modify | Add `.dz-region--kind-detail` definition-list-shaped rules |
+| `src/dazzle_page/runtime/static/dist/dazzle.min.css` | Modify | Rebuilt bundle including new rules |
 | `src/dazzle/render/fragment/coverage.py` | Modify | Remove `"view"` if added optimistically; otherwise no change — the audit re-detects automatically once the adapter accepts VIEW (single-source-of-truth: `_SUPPORTED_MODES`) |
 | `tests/unit/runtime/test_fragment_surface_adapter.py` | Modify | Append tests for `_build_view` |
 | `tests/unit/runtime/test_jinja_renderer_adapter.py` | Modify | Append a test confirming render_surface handles VIEW |
@@ -50,7 +50,7 @@
 
 - **TDD throughout.** Failing test → minimal implementation → commit.
 - **Lint after each task:** `ruff check src/ tests/ --fix && ruff format src/ tests/`
-- **Type check:** `mypy src/dazzle/render --strict` and `mypy src/dazzle_back --ignore-missing-imports` clean.
+- **Type check:** `mypy src/dazzle/render --strict` and `mypy src/dazzle_http --ignore-missing-imports` clean.
 - **Verify after Task 7:** `python -m dazzle.cli fragment-audit examples/simple_task` shows the audit-derived coverage delta.
 
 ---
@@ -58,7 +58,7 @@
 ## Task 1: FragmentSurfaceAdapter handles VIEW mode
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/renderers/fragment_adapter.py`
+- Modify: `src/dazzle_http/runtime/renderers/fragment_adapter.py`
 - Modify: `tests/unit/runtime/test_fragment_surface_adapter.py`
 
 The current adapter raises `NotImplementedError` for VIEW. Add a `_build_view` method that produces a Surface with header + Region(kind="detail") containing a Stack of (label, value) Rows.
@@ -154,7 +154,7 @@ If the unsupported-mode test references VIEW, change it to `SurfaceMode.CREATE` 
 
 - [ ] **Step 3: Implement `_build_view`**
 
-In `src/dazzle_back/runtime/renderers/fragment_adapter.py`:
+In `src/dazzle_http/runtime/renderers/fragment_adapter.py`:
 
 a) Update the dispatch in `build`:
 
@@ -229,7 +229,7 @@ Expected: 7 PASS (4 existing + 3 new).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers/fragment_adapter.py tests/unit/runtime/test_fragment_surface_adapter.py
+git add src/dazzle_http/runtime/renderers/fragment_adapter.py tests/unit/runtime/test_fragment_surface_adapter.py
 git commit -m "feat(render): FragmentSurfaceAdapter handles SurfaceMode.VIEW"
 ```
 
@@ -240,7 +240,7 @@ git commit -m "feat(render): FragmentSurfaceAdapter handles SurfaceMode.VIEW"
 The minimal `render_surface(surface, ctx) -> str` in `template_renderer.py` (added in Plan 3 Task 1) currently only handles LIST. The parity test (Task 6) needs both renderers to produce HTML for the same VIEW-shape ctx.
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/template_renderer.py`
+- Modify: `src/dazzle_page/runtime/template_renderer.py`
 - Modify: `tests/unit/runtime/test_jinja_renderer_adapter.py`
 
 - [ ] **Step 1: Write failing test**
@@ -282,10 +282,10 @@ Expected: FAIL with NotImplementedError from `render_surface`.
 
 - [ ] **Step 3: Extend render_surface**
 
-In `src/dazzle_ui/runtime/template_renderer.py`, find `render_surface`:
+In `src/dazzle_page/runtime/template_renderer.py`, find `render_surface`:
 
 ```bash
-grep -n "def render_surface\|SurfaceMode.LIST\|NotImplementedError" src/dazzle_ui/runtime/template_renderer.py | head -10
+grep -n "def render_surface\|SurfaceMode.LIST\|NotImplementedError" src/dazzle_page/runtime/template_renderer.py | head -10
 ```
 
 Locate the LIST-only branch and add a VIEW branch. The minimal path emits a `<dl>`-shaped HTML directly — just enough for parity testing. Production VIEW request paths stay on the legacy detail_view template.
@@ -328,7 +328,7 @@ Expected: all PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/template_renderer.py tests/unit/runtime/test_jinja_renderer_adapter.py
+git add src/dazzle_page/runtime/template_renderer.py tests/unit/runtime/test_jinja_renderer_adapter.py
 git commit -m "feat(render): render_surface handles VIEW mode for parity testing"
 ```
 
@@ -339,12 +339,12 @@ git commit -m "feat(render): render_surface handles VIEW mode for parity testing
 The existing `_build_dispatch_ctx` builds the LIST shape (`items`, `columns`, `endpoint`, etc.). For VIEW surfaces, the shape is `fields` (list of `{key, label, value}` dicts).
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/page_routes.py`
+- Modify: `src/dazzle_page/runtime/page_routes.py`
 
 - [ ] **Step 1: Locate and inspect the current ctx-builder**
 
 ```bash
-grep -n "_build_dispatch_ctx\|_maybe_dispatch_inner_html" src/dazzle_ui/runtime/page_routes.py | head -10
+grep -n "_build_dispatch_ctx\|_maybe_dispatch_inner_html" src/dazzle_page/runtime/page_routes.py | head -10
 ```
 
 - [ ] **Step 2: Add VIEW shape extraction**
@@ -385,7 +385,7 @@ Expected: existing tests pass. Parity test for VIEW comes in Task 6.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/page_routes.py
+git add src/dazzle_page/runtime/page_routes.py
 git commit -m "feat(runtime): _build_dispatch_ctx handles VIEW surfaces"
 ```
 
@@ -394,9 +394,9 @@ git commit -m "feat(runtime): _build_dispatch_ctx handles VIEW surfaces"
 ## Task 4: CSS for dz-region--kind-detail
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`
+- Modify: `src/dazzle_page/runtime/static/css/components/fragment-primitives.css`
 - Modify: `tests/unit/test_fragment_primitive_css.py`
-- Modify: `src/dazzle_ui/runtime/static/dist/dazzle.min.css` (regenerated)
+- Modify: `src/dazzle_page/runtime/static/dist/dazzle.min.css` (regenerated)
 
 - [ ] **Step 1: Add the new class to the presence test**
 
@@ -417,7 +417,7 @@ Expected: previous PASS, new `dz-region--kind-detail` case FAILS.
 
 - [ ] **Step 2: Add CSS rules**
 
-In `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`, after the `.dz-region--kind-list` block, add:
+In `src/dazzle_page/runtime/static/css/components/fragment-primitives.css`, after the `.dz-region--kind-list` block, add:
 
 ```css
   /* Detail kind — definition-list-shaped layout. Each child Row
@@ -463,7 +463,7 @@ Expected: all PASS.
 
 ```bash
 python scripts/build_dist.py 2>&1 | tail -5
-grep -c "dz-region--kind-detail" src/dazzle_ui/runtime/static/dist/dazzle.min.css
+grep -c "dz-region--kind-detail" src/dazzle_page/runtime/static/dist/dazzle.min.css
 ```
 
 Expected: ≥ 1.
@@ -471,7 +471,7 @@ Expected: ≥ 1.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/css/components/fragment-primitives.css tests/unit/test_fragment_primitive_css.py src/dazzle_ui/runtime/static/dist/
+git add src/dazzle_page/runtime/static/css/components/fragment-primitives.css tests/unit/test_fragment_primitive_css.py src/dazzle_page/runtime/static/dist/
 git commit -m "feat(ui): CSS for dz-region--kind-detail (definition-list layout)"
 ```
 

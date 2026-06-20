@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.locale_middleware import (
+from dazzle.http.runtime.locale_middleware import (
     LocaleMiddleware,
     _normalise_locale,
     _pick_supported,

@@ -224,7 +224,7 @@ entity Task "Task":
 def _seed(conn, appspec) -> None:
     """Create the domain + auth tables and seed tenants A and B with descendants,
     memberships, orgs, and identities (one identity shared across A and B)."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     # Domain tables (mirror the injected shape: scoped entities carry tenant_id).
     conn.execute('CREATE TABLE "Workspace" (id TEXT PRIMARY KEY, name TEXT)')
@@ -273,7 +273,7 @@ def test_excise_removes_tenant_a_and_leaves_b(scratch_url: str) -> None:
     from dazzle.db.excision import excise_tenant
 
     appspec = _build_appspec()
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     # --- seed (inline so AuthStore gets the scratch_url directly) ---
     with psycopg.connect(scratch_url) as conn:
@@ -335,7 +335,7 @@ def test_excise_removes_tenant_a_and_leaves_b(scratch_url: str) -> None:
 
 
 def test_excise_dry_run_deletes_nothing(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
     from dazzle.db.excision import excise_tenant
 
     appspec = _build_appspec()
@@ -390,8 +390,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from dazzle.back.runtime.query_builder import quote_identifier
-from dazzle.back.runtime.sa_schema import scoped_entity_names
+from dazzle.http.runtime.query_builder import quote_identifier
+from dazzle.http.runtime.sa_schema import scoped_entity_names
 from dazzle.core.ir.fk_graph import FKGraph
 
 

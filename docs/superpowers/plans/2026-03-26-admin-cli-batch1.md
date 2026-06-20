@@ -14,8 +14,8 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_back/runtime/auth/store.py` | Modify | Add `delete_all_sessions()` to SessionStoreMixin |
-| `src/dazzle_back/runtime/auth/magic_link.py` | Create | Magic link token creation + validation + table DDL |
+| `src/dazzle_http/runtime/auth/store.py` | Modify | Add `delete_all_sessions()` to SessionStoreMixin |
+| `src/dazzle_http/runtime/auth/magic_link.py` | Create | Magic link token creation + validation + table DDL |
 | `src/dazzle/cli/auth.py` | Modify | Add flush-sessions, impersonate, rotate-passwords commands |
 | `src/dazzle/cli/dbshell.py` | Create | Top-level dbshell command |
 | `src/dazzle/cli/__init__.py` | Modify | Register dbshell |
@@ -29,7 +29,7 @@
 ### Task 1: `delete_all_sessions()` on AuthStore
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/auth/store.py`
+- Modify: `src/dazzle_http/runtime/auth/store.py`
 - Test: `tests/unit/test_flush_sessions.py`
 
 - [ ] **Step 1: Write failing test**
@@ -51,7 +51,7 @@ class TestDeleteAllSessions:
 
     def test_delete_all_sessions_returns_count(self):
         """delete_all_sessions() calls DELETE FROM sessions and returns count."""
-        from dazzle_back.runtime.auth.store import SessionStoreMixin
+        from dazzle_http.runtime.auth.store import SessionStoreMixin
 
         mixin = SessionStoreMixin.__new__(SessionStoreMixin)
         mixin._execute_modify = MagicMock(return_value=5)
@@ -73,7 +73,7 @@ Expected: FAIL with `AttributeError: type object 'SessionStoreMixin' has no attr
 
 - [ ] **Step 3: Implement `delete_all_sessions`**
 
-Add to `src/dazzle_back/runtime/auth/store.py` in `SessionStoreMixin`, after `cleanup_expired_sessions()` (around line 571):
+Add to `src/dazzle_http/runtime/auth/store.py` in `SessionStoreMixin`, after `cleanup_expired_sessions()` (around line 571):
 
 ```python
     def delete_all_sessions(self) -> int:
@@ -89,7 +89,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/auth/store.py tests/unit/test_flush_sessions.py
+git add src/dazzle_http/runtime/auth/store.py tests/unit/test_flush_sessions.py
 git commit -m "feat: add delete_all_sessions() to SessionStoreMixin (#695)"
 ```
 
@@ -233,8 +233,8 @@ git commit -m "feat: dazzle auth flush-sessions command (#695)"
 ### Task 3: Magic Link Primitive
 
 **Files:**
-- Create: `src/dazzle_back/runtime/auth/magic_link.py`
-- Modify: `src/dazzle_back/runtime/auth/store.py` (add table to `_init_db`)
+- Create: `src/dazzle_http/runtime/auth/magic_link.py`
+- Modify: `src/dazzle_http/runtime/auth/store.py` (add table to `_init_db`)
 - Test: `tests/unit/test_magic_link.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -247,7 +247,7 @@ Create `tests/unit/test_magic_link.py`:
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
-from dazzle_back.runtime.auth.magic_link import create_magic_link, validate_magic_link
+from dazzle_http.runtime.auth.magic_link import create_magic_link, validate_magic_link
 
 
 class TestCreateMagicLink:
@@ -320,7 +320,7 @@ Expected: FAIL with `ModuleNotFoundError`
 
 - [ ] **Step 3: Implement magic_link.py**
 
-Create `src/dazzle_back/runtime/auth/magic_link.py`:
+Create `src/dazzle_http/runtime/auth/magic_link.py`:
 
 ```python
 """Magic link tokens for one-time authentication.
@@ -410,11 +410,11 @@ def validate_magic_link(store: Any, token: str) -> str | None:
 
 - [ ] **Step 4: Add magic_links table to AuthStore._init_db**
 
-In `src/dazzle_back/runtime/auth/store.py`, in `_init_db()`, after the `password_reset_tokens` CREATE TABLE block, add:
+In `src/dazzle_http/runtime/auth/store.py`, in `_init_db()`, after the `password_reset_tokens` CREATE TABLE block, add:
 
 ```python
             # Magic link tokens for one-time authentication (#695)
-            from dazzle_back.runtime.auth.magic_link import MAGIC_LINKS_DDL
+            from dazzle_http.runtime.auth.magic_link import MAGIC_LINKS_DDL
 
             cursor.execute(MAGIC_LINKS_DDL)
 ```
@@ -427,7 +427,7 @@ Expected: All PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/auth/magic_link.py src/dazzle_back/runtime/auth/store.py tests/unit/test_magic_link.py
+git add src/dazzle_http/runtime/auth/magic_link.py src/dazzle_http/runtime/auth/store.py tests/unit/test_magic_link.py
 git commit -m "feat: magic link primitive — one-time login tokens (#695)"
 ```
 
@@ -534,7 +534,7 @@ Expected: FAIL
 Add to `src/dazzle/cli/auth.py`. First add the import near the top (after existing imports):
 
 ```python
-from dazzle_back.runtime.auth.magic_link import create_magic_link
+from dazzle_http.runtime.auth.magic_link import create_magic_link
 ```
 
 Then add the command:
@@ -980,12 +980,12 @@ git commit -m "feat: dazzle dbshell — zero-config psql access (#695)"
 
 - [ ] **Step 1: Run ruff**
 
-Run: `ruff check src/dazzle/cli/auth.py src/dazzle/cli/dbshell.py src/dazzle_back/runtime/auth/magic_link.py src/dazzle_back/runtime/auth/store.py --fix && ruff format src/dazzle/cli/auth.py src/dazzle/cli/dbshell.py src/dazzle_back/runtime/auth/magic_link.py src/dazzle_back/runtime/auth/store.py`
+Run: `ruff check src/dazzle/cli/auth.py src/dazzle/cli/dbshell.py src/dazzle_http/runtime/auth/magic_link.py src/dazzle_http/runtime/auth/store.py --fix && ruff format src/dazzle/cli/auth.py src/dazzle/cli/dbshell.py src/dazzle_http/runtime/auth/magic_link.py src/dazzle_http/runtime/auth/store.py`
 Expected: Clean
 
 - [ ] **Step 2: Run mypy**
 
-Run: `mypy src/dazzle/cli/auth.py src/dazzle/cli/dbshell.py src/dazzle_back/runtime/auth/magic_link.py --ignore-missing-imports`
+Run: `mypy src/dazzle/cli/auth.py src/dazzle/cli/dbshell.py src/dazzle_http/runtime/auth/magic_link.py --ignore-missing-imports`
 Expected: No errors
 
 - [ ] **Step 3: Run full test suite**

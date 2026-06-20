@@ -18,7 +18,13 @@ from pathlib import Path
 import pytest
 
 VENDOR_DIR = (
-    Path(__file__).resolve().parents[2] / "src" / "dazzle" / "ui" / "runtime" / "static" / "vendor"
+    Path(__file__).resolve().parents[2]
+    / "src"
+    / "dazzle"
+    / "page"
+    / "runtime"
+    / "static"
+    / "vendor"
 )
 
 # Every vendored file whose map we know is not shipped. Add to this list

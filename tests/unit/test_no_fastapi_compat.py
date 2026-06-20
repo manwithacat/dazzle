@@ -25,7 +25,7 @@ def _py_files() -> list[pathlib.Path]:
 
 
 def test_no_fastapi_compat_module() -> None:
-    shim = SRC / "back" / "runtime" / "_fastapi_compat.py"
+    shim = SRC / "http" / "runtime" / "_fastapi_compat.py"
     assert not shim.exists(), "delete _fastapi_compat.py — FastAPI is a required core dep"
 
 

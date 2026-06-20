@@ -139,7 +139,7 @@ god-file branching on `entity_name`:
    old `{% include "dz://components/detail_view.html" %}` fall-through:
 
    ```python
-   from dazzle.ui.runtime import render_detail_view
+   from dazzle.page.runtime import render_detail_view
 
    class ManuscriptViewer:
        def render(self, surface, ctx) -> str:
@@ -169,7 +169,7 @@ this pattern.
 - **DB integration.** A production word-cloud renderer would query
   Feedback rows from the repository — this example reads from
   `ctx.get("rows", [])` so it stays focused on the protocol shape.
-  See `src/dazzle/back/runtime/repository.py` for the repository
+  See `src/dazzle/http/runtime/repository.py` for the repository
   helpers a real renderer would use.
 - **Tests.** Renderer-level tests look like
   `tests/unit/test_*_renderer.py` in the framework tree —
@@ -194,7 +194,7 @@ recipe at the moment you hit the wall.
   function and the `_DEFAULT_RENDERERS` constant.
 - `src/dazzle/render/dispatch.py` — `dispatch_render`, the registry
   lookup that picks your handler at request time.
-- `src/dazzle/back/runtime/renderers/fragment.py` — the framework's
+- `src/dazzle/http/runtime/renderers/fragment.py` — the framework's
   own fragment renderer. Read this for the canonical example of how
   an adapter wraps a richer underlying renderer behind the
   `(surface, ctx) -> str` protocol.

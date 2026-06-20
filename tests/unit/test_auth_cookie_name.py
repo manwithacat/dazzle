@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from dazzle.back.runtime.auth.cookie_name import (
+from dazzle.http.runtime.auth.cookie_name import (
     LEGACY_NAME,
     names_to_clear,
     read_session_id,
     select_write_name,
 )
-from dazzle.back.runtime.tenant.cookies import apex_cookie_name, host_cookie_name
+from dazzle.http.runtime.tenant.cookies import apex_cookie_name, host_cookie_name
 
 APP_NAME = "AegisMark"
 HOST_COOKIE = host_cookie_name(APP_NAME)

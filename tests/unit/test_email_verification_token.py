@@ -8,7 +8,7 @@ record via ``store.mark_email_verified``.
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.auth.email_verification import (
+from dazzle.http.runtime.auth.email_verification import (
     create_email_verification_token,
     validate_email_verification_token,
 )

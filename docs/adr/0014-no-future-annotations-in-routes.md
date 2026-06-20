@@ -9,7 +9,7 @@ PEP 563 (`from __future__ import annotations`) defers annotation evaluation, tur
 
 When a route handler file has `from __future__ import annotations`, Pydantic v2's `TypeAdapter` encounters `ForwardRef('Request')` or `ForwardRef('Response')` instead of the actual classes. It cannot resolve these forward references, causing `/openapi.json` and `/docs` to return 500.
 
-This was discovered after 23 files across `dazzle_back` had accumulated the import by copy-paste. The bug was latent until auth was enabled on the `simple_task` example, which added enough route handlers to trigger the schema generation failure.
+This was discovered after 23 files across `dazzle_http` had accumulated the import by copy-paste. The bug was latent until auth was enabled on the `simple_task` example, which added enough route handlers to trigger the schema generation failure.
 
 ## Decision
 
@@ -57,4 +57,4 @@ Simply don't use the import in files that FastAPI inspects.
 
 ## Implementation
 
-Removed `from __future__ import annotations` from 23 files in `src/dazzle/back/` that define route handlers, middleware, or dependencies. CI badge went green after being red for 24 hours.
+Removed `from __future__ import annotations` from 23 files in `src/dazzle/http/` that define route handlers, middleware, or dependencies. CI badge went green after being red for 24 hours.

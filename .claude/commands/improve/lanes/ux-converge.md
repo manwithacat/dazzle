@@ -69,7 +69,7 @@ Read `diagnosis.levers` for specific DSL construct + suggested value.
 |----------|---------------|--------|
 | **DSL fix** | `ACTION_MISSING`, `PERMISSION_GAP`, `SURFACE_MISSING`, `WIDGET_MISMATCH` | Apply `diagnosis.levers` to DSL |
 | **Contract calibration** | `ACTION_UNEXPECTED`, `FIELD_MISSING` | Fix contract generation or checker |
-| **Template bug** | `TEMPLATE_BUG` | Fix template/fragment in `src/dazzle/ui/`, or file GitHub issue (framework-level) |
+| **Template bug** | `TEMPLATE_BUG` | Fix template/fragment in `src/dazzle/page/`, or file GitHub issue (framework-level) |
 
 If reconciler doesn't produce useful diagnosis (empty levers for non-template issue): manual investigation — boot app, hit URL, compare expected vs actual, decide.
 

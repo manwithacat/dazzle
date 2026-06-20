@@ -260,7 +260,7 @@ class TestDelayedEventEnvelope:
     """Test deliver_at on EventEnvelope."""
 
     def test_create_delayed(self):
-        from dazzle.back.events.envelope import EventEnvelope
+        from dazzle.http.events.envelope import EventEnvelope
 
         future = datetime.now(UTC) + timedelta(hours=1)
         envelope = EventEnvelope.create_delayed(
@@ -273,7 +273,7 @@ class TestDelayedEventEnvelope:
         assert envelope.event_type == "process.task.timeout"
 
     def test_deliver_at_serialization(self):
-        from dazzle.back.events.envelope import EventEnvelope
+        from dazzle.http.events.envelope import EventEnvelope
 
         future = datetime.now(UTC) + timedelta(hours=1)
         envelope = EventEnvelope.create_delayed(
@@ -291,7 +291,7 @@ class TestDelayedEventEnvelope:
         assert abs((restored.deliver_at - future).total_seconds()) < 1
 
     def test_normal_envelope_no_deliver_at(self):
-        from dazzle.back.events.envelope import EventEnvelope
+        from dazzle.http.events.envelope import EventEnvelope
 
         envelope = EventEnvelope.create(
             event_type="app.Order.created",
@@ -557,8 +557,8 @@ class TestAppIntegration:
         """ProcessSubsystem.startup() should create EventBusProcessAdapter when REDIS_URL is set."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.subsystems import SubsystemContext
-        from dazzle.back.runtime.subsystems.process import ProcessSubsystem
+        from dazzle.http.runtime.subsystems import SubsystemContext
+        from dazzle.http.runtime.subsystems.process import ProcessSubsystem
 
         app_mock = MagicMock()
         config_mock = MagicMock()
@@ -584,8 +584,8 @@ class TestAppIntegration:
         with (
             patch.dict("os.environ", {"REDIS_URL": "redis://localhost:6379/0"}),
             patch("dazzle.core.process.eventbus_adapter.ProcessStateStore"),
-            patch("dazzle.back.runtime.process_manager.ProcessManager"),
-            patch("dazzle.back.runtime.task_routes.router"),
+            patch("dazzle.http.runtime.process_manager.ProcessManager"),
+            patch("dazzle.http.runtime.task_routes.router"),
         ):
             subsystem.startup(ctx)
 
@@ -597,8 +597,8 @@ class TestAppIntegration:
         """ProcessSubsystem.startup() should skip init without REDIS_URL."""
         from unittest.mock import MagicMock
 
-        from dazzle.back.runtime.subsystems import SubsystemContext
-        from dazzle.back.runtime.subsystems.process import ProcessSubsystem
+        from dazzle.http.runtime.subsystems import SubsystemContext
+        from dazzle.http.runtime.subsystems.process import ProcessSubsystem
 
         app_mock = MagicMock()
         config_mock = MagicMock()

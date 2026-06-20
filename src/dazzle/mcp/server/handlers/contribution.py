@@ -118,7 +118,7 @@ _EXAMPLES: dict[str, Any] = {
             ],
             "expected": "Stay on current page after clearing filter",
             "actual": "Page resets to 1",
-            "files_changed": ["src/dazzle/ui/runtime/static/js/components.js"],
+            "files_changed": ["src/dazzle/page/runtime/static/js/components.js"],
             "testing_notes": "Verified fix on simple_task example",
         },
     },

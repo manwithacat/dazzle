@@ -9,8 +9,8 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.events.envelope import EventEnvelope
-from dazzle.back.runtime.auth.events import (
+from dazzle.http.events.envelope import EventEnvelope
+from dazzle.http.runtime.auth.events import (
     AUTH_USER_LOGGED_IN,
     AUTH_USER_PASSWORD_CHANGED,
     AUTH_USER_REGISTERED,
@@ -19,7 +19,7 @@ from dazzle.back.runtime.auth.events import (
     emit_user_password_changed,
     emit_user_registered,
 )
-from dazzle.back.runtime.auth.models import UserRecord
+from dazzle.http.runtime.auth.models import UserRecord
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -64,7 +64,7 @@ class TestEmitUserRegistered:
     async def test_creates_correct_envelope(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_registered(user, session_id="sess_abc")
 
         mock_bus.assert_awaited_once()
@@ -84,7 +84,7 @@ class TestEmitUserRegistered:
     async def test_without_session_id(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_registered(user)
 
         envelope = mock_bus.await_args.args[1]
@@ -96,7 +96,7 @@ class TestEmitUserLoggedIn:
     async def test_creates_correct_envelope(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_logged_in(user, session_id="sess_xyz", method="password")
 
         mock_bus.assert_awaited_once()
@@ -114,7 +114,7 @@ class TestEmitUserLoggedIn:
     async def test_2fa_method(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_logged_in(user, session_id="s", method="2fa")
 
         envelope = mock_bus.await_args.args[1]
@@ -124,7 +124,7 @@ class TestEmitUserLoggedIn:
     async def test_default_method_is_password(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_logged_in(user)
 
         envelope = mock_bus.await_args.args[1]
@@ -136,7 +136,7 @@ class TestEmitUserPasswordChanged:
     async def test_creates_correct_envelope(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_password_changed(user)
 
         mock_bus.assert_awaited_once()
@@ -159,7 +159,7 @@ class TestPublishResilience:
     @pytest.mark.asyncio
     async def test_swallows_framework_not_initialized(self) -> None:
         """_publish should not raise when framework is not initialized."""
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", None):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", None):
             # Should not raise
             envelope = EventEnvelope.create(
                 event_type="auth.user.registered",
@@ -173,7 +173,7 @@ class TestPublishResilience:
         """_publish should not raise when bus.publish fails."""
         mock_framework.get_bus().publish = AsyncMock(side_effect=ConnectionError("redis down"))
 
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             envelope = EventEnvelope.create(
                 event_type="auth.user.registered",
                 key="test",
@@ -187,7 +187,7 @@ class TestPublishResilience:
         fw = MagicMock()
         fw.get_bus.return_value = None
 
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", fw):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", fw):
             envelope = EventEnvelope.create(
                 event_type="auth.user.registered",
                 key="test",
@@ -207,7 +207,7 @@ class TestEnvelopeShape:
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
         """Event type 'auth.user.registered' should derive topic 'auth.user'."""
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_registered(user)
 
         envelope: EventEnvelope = mock_bus.await_args.args[1]
@@ -219,7 +219,7 @@ class TestEnvelopeShape:
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
         """All emitted envelopes should be JSON-serializable."""
-        with patch("dazzle.back.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
+        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_registered(user)
             await emit_user_logged_in(user, session_id="s1")
             await emit_user_password_changed(user)

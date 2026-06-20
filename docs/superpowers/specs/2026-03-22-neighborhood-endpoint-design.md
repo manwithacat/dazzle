@@ -115,7 +115,7 @@ If a node is reachable via the CTE but hidden by node scope, it's excluded from 
 
 ### NeighborhoodQueryBuilder
 
-`src/dazzle_back/runtime/neighborhood.py` — pure SQL generation, no execution.
+`src/dazzle_http/runtime/neighborhood.py` — pure SQL generation, no execution.
 
 ```python
 class NeighborhoodQueryBuilder:
@@ -221,8 +221,8 @@ Same interface, same `GraphSerializer` output. Just slower for high fan-out.
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_back/runtime/neighborhood.py` | Create | `NeighborhoodQueryBuilder` — recursive CTE SQL generation |
-| `src/dazzle_back/runtime/route_generator.py` | Modify | Register `/{slug}/{id}/graph` endpoint for graph_node entities |
-| `src/dazzle_back/runtime/server.py` | Modify | Pass graph metadata for node entities to route generator |
+| `src/dazzle_http/runtime/neighborhood.py` | Create | `NeighborhoodQueryBuilder` — recursive CTE SQL generation |
+| `src/dazzle_http/runtime/route_generator.py` | Modify | Register `/{slug}/{id}/graph` endpoint for graph_node entities |
+| `src/dazzle_http/runtime/server.py` | Modify | Pass graph metadata for node entities to route generator |
 | `tests/unit/test_neighborhood_query.py` | Create | Unit tests for SQL generation |
 | `tests/unit/test_neighborhood_api.py` | Create | Integration tests with test DB |

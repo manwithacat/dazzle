@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from dazzle.back.runtime.csrf import CSRFConfig, configure_csrf_for_profile
+from dazzle.http.runtime.csrf import CSRFConfig, configure_csrf_for_profile
 
 
 class TestDefaultExemptListPreserved:
@@ -24,7 +24,7 @@ class TestDefaultExemptListPreserved:
         """Sanity-check: the framework's default exempt entries are still
         present after the #1212 refactor."""
         config = CSRFConfig()
-        # A handful of stable defaults from src/dazzle/back/runtime/csrf.py.
+        # A handful of stable defaults from src/dazzle/http/runtime/csrf.py.
         for exact in ("/health", "/docs", "/_dazzle/consent"):
             assert exact in config.exempt_paths, exact
         for prefix in ("/auth/", "/_dazzle/i18n/"):

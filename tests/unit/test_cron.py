@@ -19,7 +19,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from dazzle.back.runtime.cron import (
+from dazzle.http.runtime.cron import (
     CronParseError,
     cron_matches,
     due_jobs,

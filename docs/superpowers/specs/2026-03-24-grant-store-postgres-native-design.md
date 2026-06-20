@@ -237,8 +237,8 @@ backed by PostgreSQL.
 
 | File | Change |
 |------|--------|
-| `src/dazzle_back/runtime/grant_store.py` | Full rewrite — PG-native, proper types, atomic transitions, cancel_grant |
-| `src/dazzle_back/runtime/grant_routes.py` | Drop placeholder, add UUID validation, fix docstring, add cancel endpoint |
+| `src/dazzle_http/runtime/grant_store.py` | Full rewrite — PG-native, proper types, atomic transitions, cancel_grant |
+| `src/dazzle_http/runtime/grant_routes.py` | Drop placeholder, add UUID validation, fix docstring, add cancel endpoint |
 | `tests/unit/test_grant_store.py` | PG fixtures, concurrency tests, type tests, cancel tests |
 | `tests/unit/test_grant_integration.py` | Swap SQLite for PostgreSQL |
 

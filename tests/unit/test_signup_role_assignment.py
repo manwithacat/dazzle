@@ -14,7 +14,7 @@ from uuid import uuid4
 import fastapi
 from starlette.testclient import TestClient
 
-from dazzle.back.runtime.auth import (
+from dazzle.http.runtime.auth import (
     SessionRecord,
     UserRecord,
     create_auth_routes,

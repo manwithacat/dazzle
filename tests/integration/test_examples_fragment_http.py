@@ -22,8 +22,8 @@ from fastapi.testclient import TestClient
 
 from dazzle.core.appspec_loader import load_project_appspec
 
-pytest.importorskip("dazzle.back.runtime.page_routes")
-from dazzle.back.runtime.page_routes import create_page_routes  # noqa: E402
+pytest.importorskip("dazzle.http.runtime.page_routes")
+from dazzle.http.runtime.page_routes import create_page_routes  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _EXAMPLES = _REPO_ROOT / "examples"
@@ -52,8 +52,8 @@ def _client_for(app_name: str) -> TestClient:
     to verify. This mirrors what `DazzleBackendApp.build()` does in
     production (server.py:405-407).
     """
-    from dazzle.back.runtime.renderers.init import register_default_renderers
-    from dazzle.back.runtime.services import RuntimeServices
+    from dazzle.http.runtime.renderers.init import register_default_renderers
+    from dazzle.http.runtime.services import RuntimeServices
 
     appspec = load_project_appspec(_EXAMPLES / app_name)
     fastapi_app = FastAPI()
@@ -215,8 +215,8 @@ def _client_with_fragment_chrome(app_name: str) -> TestClient:
 
     Mirrors `_client_for` but enables the P17 P3 chrome dispatch.
     """
-    from dazzle.back.runtime.renderers.init import register_default_renderers
-    from dazzle.back.runtime.services import RuntimeServices
+    from dazzle.http.runtime.renderers.init import register_default_renderers
+    from dazzle.http.runtime.services import RuntimeServices
 
     appspec = load_project_appspec(_EXAMPLES / app_name)
     fastapi_app = FastAPI()
@@ -353,8 +353,8 @@ def _client_with_chrome_assets(
     """Like `_client_with_fragment_chrome` but lets the test set
     custom asset URLs / theme on app.state. For P17 P10 — proves
     chrome assets are configurable, not hardcoded."""
-    from dazzle.back.runtime.renderers.init import register_default_renderers
-    from dazzle.back.runtime.services import RuntimeServices
+    from dazzle.http.runtime.renderers.init import register_default_renderers
+    from dazzle.http.runtime.services import RuntimeServices
 
     appspec = load_project_appspec(_EXAMPLES / app_name)
     fastapi_app = FastAPI()

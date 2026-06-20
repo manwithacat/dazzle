@@ -25,7 +25,7 @@ def _make_app(
     metadata.created_at = MagicMock(isoformat=lambda: "2026-01-01T00:00:00")
     file_service.upload = AsyncMock(return_value=metadata)
 
-    from dazzle.back.runtime.file_routes import create_file_routes
+    from dazzle.http.runtime.file_routes import create_file_routes
 
     create_file_routes(
         app,

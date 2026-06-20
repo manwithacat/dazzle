@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from dazzle.back.runtime.services import RuntimeServices
+from dazzle.http.runtime.services import RuntimeServices
 
 
 def test_every_field_is_mentioned_in_the_docstring() -> None:

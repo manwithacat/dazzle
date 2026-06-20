@@ -38,7 +38,7 @@ count drives the "N connection(s)" in the message.
 
 ### 2. Pure mapping/warning logic (DB-independent, unit-testable)
 
-In a small pure module (e.g. `src/dazzle/back/runtime/auth/capability_guard.py`):
+In a small pure module (e.g. `src/dazzle/http/runtime/auth/capability_guard.py`):
 
 ```python
 # connection.type -> the capability that must be active for its routes to mount.

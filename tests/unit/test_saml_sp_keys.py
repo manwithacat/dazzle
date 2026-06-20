@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
 
-from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
 
 def test_generate_sp_keypair_shapes() -> None:

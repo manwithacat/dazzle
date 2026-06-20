@@ -86,7 +86,7 @@ async def login_as_persona(page: Any, persona_id: str, api_url: str) -> None:
         )
 
     magic_link_payload = await response.json()
-    # QA endpoint (dazzle.back/runtime/qa_routes.py:79) returns
+    # QA endpoint (dazzle.http/runtime/qa_routes.py:79) returns
     # MagicLinkResponse(url=f"/auth/magic/{token}") — a server-relative path.
     magic_link_path = magic_link_payload["url"]
 

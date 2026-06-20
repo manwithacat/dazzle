@@ -121,8 +121,8 @@ empty work here** — confirm-and-close, do not budget for it.
 **Runtime annotation introspection: 8 sites — all are `__annotations__` *assignments*, not reads:**
 
 ```
-src/dazzle/back/runtime/route_generator.py:191, 2006, 2059, 4281, 4308
-src/dazzle/back/graphql/integration.py:323, 361, 394
+src/dazzle/http/runtime/route_generator.py:191, 2006, 2059, 4281, 4308
+src/dazzle/http/graphql/integration.py:323, 361, 394
 ```
 
 These dynamically build FastAPI/GraphQL handler signatures by **setting** `fn.__annotations__ = {…}`. Under PEP 649
@@ -136,7 +136,7 @@ own annotation *reading* of these synthetic handlers changes. **Classify as "rev
 |---|---|---|
 | total `src/dazzle/**.py` | 669 | Pervasive; load-bearing for forward refs, **not** a uniform 3.12 compat shim |
 | `*_routes.py` | 7 | **ADR-0014 forbids `from __future__ import annotations` in FastAPI route files** (runtime needs real annotations at import). Removal here is *banned*, not "dead shim cleanup". |
-| `src/dazzle/back/**` | 228 | The runtime layer where annotation-resolution timing actually bites |
+| `src/dazzle/http/**` | 228 | The runtime layer where annotation-resolution timing actually bites |
 
 → **The plan's Phase 3 "remove now-dead compatibility shims (e.g. `from __future__ import annotations`)" is unsafe
 as written for this codebase.** It is a 669-file diff that collides with ADR-0014 and changes runtime annotation
@@ -155,14 +155,14 @@ decision — never a mechanical sweep.
 Most read paths are DSL/template/config file reads (`core/`, parser, loaders) where UTF-8 is the intended
 encoding — so the 3.15 change is mostly *benign* but should be made *explicit*. This is **fully portable to 3.12**
 and the cheapest independent win (plan §9). Recommend scheduling it standalone, decoupled from any floor move.
-(Raw grep also flags `open(` inside `src/dazzle/ui/runtime/static/dist/*.min.js` — vendored htmx, **false positives**,
+(Raw grep also flags `open(` inside `src/dazzle/page/runtime/static/dist/*.min.js` — vendored htmx, **false positives**,
 excluded from the counts above.)
 
 ## 6. Deployment / runtime pins (cross-check vs guardrail "do not drop a version the runtime still pins")
 
 | File | Content | Issue |
 |---|---|---|
-| `Procfile` | `web: uvicorn dazzle_back.runtime.app_factory:create_app_factory --factory …` | fine |
+| `Procfile` | `web: uvicorn dazzle_http.runtime.app_factory:create_app_factory --factory …` | fine |
 | `runtime.txt` | `python-3.11.11` | **Conflicts with `requires-python>=3.12`.** Either stale or deploys on a pinned 3.11. Heroku also **deprecated `runtime.txt`** in favour of `.python-version`. |
 | `.python-version` | `dazzle-dev` | pyenv venv name, not a version. Fine for local pyenv; **would break Heroku's `.python-version` / uv path**, which needs `3.12` (or `3.13`). |
 

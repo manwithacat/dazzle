@@ -16,9 +16,9 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_back/runtime/neighborhood.py` | Create | `NeighborhoodQueryBuilder` — recursive CTE SQL generation |
-| `src/dazzle_back/runtime/route_generator.py` | Modify | Register `/{slug}/{id}/graph` endpoint for graph_node entities |
-| `src/dazzle_back/runtime/server.py` | Modify | Build node graph metadata and pass to RouteGenerator |
+| `src/dazzle_http/runtime/neighborhood.py` | Create | `NeighborhoodQueryBuilder` — recursive CTE SQL generation |
+| `src/dazzle_http/runtime/route_generator.py` | Modify | Register `/{slug}/{id}/graph` endpoint for graph_node entities |
+| `src/dazzle_http/runtime/server.py` | Modify | Build node graph metadata and pass to RouteGenerator |
 | `tests/unit/test_neighborhood_query.py` | Create | Unit tests for SQL generation |
 | `tests/unit/test_neighborhood_api.py` | Create | Integration tests for endpoint |
 
@@ -27,7 +27,7 @@
 ### Task 1: NeighborhoodQueryBuilder — CTE SQL Generation
 
 **Files:**
-- Create: `src/dazzle_back/runtime/neighborhood.py`
+- Create: `src/dazzle_http/runtime/neighborhood.py`
 - Create: `tests/unit/test_neighborhood_query.py`
 
 - [ ] **Step 1: Write failing tests for directed CTE**
@@ -38,7 +38,7 @@ Create `tests/unit/test_neighborhood_query.py`:
 """Tests for NeighborhoodQueryBuilder — recursive CTE SQL generation (#619 Phase 3)."""
 
 from dazzle.core.ir import GraphEdgeSpec
-from dazzle_back.runtime.neighborhood import NeighborhoodQueryBuilder
+from dazzle_http.runtime.neighborhood import NeighborhoodQueryBuilder
 
 
 class TestDirectedCTE:
@@ -147,7 +147,7 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement NeighborhoodQueryBuilder**
 
-Create `src/dazzle_back/runtime/neighborhood.py`:
+Create `src/dazzle_http/runtime/neighborhood.py`:
 
 ```python
 """Neighborhood query builder — recursive CTE SQL generation (#619 Phase 3).
@@ -266,7 +266,7 @@ Expected: All PASSED.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/neighborhood.py tests/unit/test_neighborhood_query.py
+git add src/dazzle_http/runtime/neighborhood.py tests/unit/test_neighborhood_query.py
 git commit -m "feat: NeighborhoodQueryBuilder for recursive CTE traversal (#619)"
 ```
 
@@ -275,7 +275,7 @@ git commit -m "feat: NeighborhoodQueryBuilder for recursive CTE traversal (#619)
 ### Task 2: Neighborhood Route Handler
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py`
+- Modify: `src/dazzle_http/runtime/route_generator.py`
 
 - [ ] **Step 1: Add neighborhood handler factory**
 
@@ -375,8 +375,8 @@ async def _neighborhood_handler_body(
     """Execute neighborhood CTE and return graph-formatted response."""
     from starlette.responses import JSONResponse
 
-    from dazzle_back.runtime.graph_serializer import GraphSerializer
-    from dazzle_back.runtime.neighborhood import NeighborhoodQueryBuilder
+    from dazzle_http.runtime.graph_serializer import GraphSerializer
+    from dazzle_http.runtime.neighborhood import NeighborhoodQueryBuilder
 
     # Validate format
     if format_param not in ("cytoscape", "d3", "raw"):
@@ -449,7 +449,7 @@ Expected: All pass.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py
+git add src/dazzle_http/runtime/route_generator.py
 git commit -m "feat: neighborhood handler for graph traversal endpoint (#619)"
 ```
 
@@ -458,8 +458,8 @@ git commit -m "feat: neighborhood handler for graph traversal endpoint (#619)"
 ### Task 3: Route Registration for Graph Nodes
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py` (route registration in `generate_route`)
-- Modify: `src/dazzle_back/runtime/server.py` (pass node metadata to RouteGenerator)
+- Modify: `src/dazzle_http/runtime/route_generator.py` (route registration in `generate_route`)
+- Modify: `src/dazzle_http/runtime/server.py` (pass node metadata to RouteGenerator)
 
 - [ ] **Step 1: Add node_graph_specs to RouteGenerator**
 
@@ -509,7 +509,7 @@ In `generate_route()`, after the LIST route is registered (after `self._add_rout
 
 - [ ] **Step 3: Build node_graph_specs in server.py**
 
-In `src/dazzle_back/runtime/server.py`, before the `RouteGenerator(...)` call, build:
+In `src/dazzle_http/runtime/server.py`, before the `RouteGenerator(...)` call, build:
 
 ```python
         # Build node graph metadata for neighborhood endpoints (#619 Phase 3)
@@ -544,7 +544,7 @@ Expected: All pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py src/dazzle_back/runtime/server.py
+git add src/dazzle_http/runtime/route_generator.py src/dazzle_http/runtime/server.py
 git commit -m "feat: register /graph neighborhood endpoint on graph_node entities (#619)"
 ```
 
@@ -565,8 +565,8 @@ Create `tests/unit/test_neighborhood_api.py`:
 """Integration tests for neighborhood endpoint (#619 Phase 3)."""
 
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec
-from dazzle_back.runtime.graph_serializer import GraphSerializer
-from dazzle_back.runtime.neighborhood import NeighborhoodQueryBuilder
+from dazzle_http.runtime.graph_serializer import GraphSerializer
+from dazzle_http.runtime.neighborhood import NeighborhoodQueryBuilder
 
 
 class TestNeighborhoodPipeline:
@@ -688,7 +688,7 @@ Expected: All pass.
 
 - [ ] **Step 3: Run linting**
 
-Run: `ruff check src/dazzle_back/runtime/neighborhood.py src/dazzle_back/runtime/route_generator.py src/dazzle_back/runtime/server.py tests/unit/test_neighborhood_query.py tests/unit/test_neighborhood_api.py --fix && ruff format src/dazzle_back/runtime/neighborhood.py tests/unit/test_neighborhood_query.py tests/unit/test_neighborhood_api.py`
+Run: `ruff check src/dazzle_http/runtime/neighborhood.py src/dazzle_http/runtime/route_generator.py src/dazzle_http/runtime/server.py tests/unit/test_neighborhood_query.py tests/unit/test_neighborhood_api.py --fix && ruff format src/dazzle_http/runtime/neighborhood.py tests/unit/test_neighborhood_query.py tests/unit/test_neighborhood_api.py`
 Expected: Clean.
 
 - [ ] **Step 4: Commit**

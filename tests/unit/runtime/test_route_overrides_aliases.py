@@ -91,7 +91,7 @@ def test_route_override_aliases_via_reexport_resolve_to_separate_routes(
     project_root, aliases = project_with_aliases
     routes = project_root / "routes"
 
-    from dazzle.back.runtime.route_overrides import discover_route_overrides
+    from dazzle.http.runtime.route_overrides import discover_route_overrides
 
     overrides = discover_route_overrides(routes)
 
@@ -143,7 +143,7 @@ def test_route_override_aliases_register_distinct_fastapi_routes(
     project_root, aliases = project_with_aliases
     routes = project_root / "routes"
 
-    from dazzle.back.runtime.route_overrides import build_override_router
+    from dazzle.http.runtime.route_overrides import build_override_router
 
     router = build_override_router(routes)
     assert router is not None
@@ -175,7 +175,7 @@ def test_route_override_alias_handler_invokes_underlying(
     project_root, aliases = project_with_aliases
     routes = project_root / "routes"
 
-    from dazzle.back.runtime.route_overrides import discover_route_overrides
+    from dazzle.http.runtime.route_overrides import discover_route_overrides
 
     overrides = discover_route_overrides(routes)
     by_path = {o.path: o for o in overrides}

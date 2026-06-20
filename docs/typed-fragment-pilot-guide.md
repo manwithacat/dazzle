@@ -187,8 +187,8 @@ CSS classes follow `dz-<primitive>` (e.g. `.dz-ref-picker`, `.dz-region--kind-fo
 |---|---|
 | `src/dazzle/render/fragment/primitives/` | the 34 primitives, grouped by category |
 | `src/dazzle/render/fragment/coverage.py` | the audit logic — capability matrix in `_SUPPORTED_MODES`, `_UNSUPPORTED_FEATURES`, `_UNSUPPORTED_FIELD_TYPES` |
-| `src/dazzle/back/runtime/renderers/fragment_adapter.py` | `_field_to_primitive` — the type→primitive map |
-| `src/dazzle/ui/runtime/static/css/components/fragment-primitives.css` | per-primitive CSS rules |
+| `src/dazzle/http/runtime/renderers/fragment_adapter.py` | `_field_to_primitive` — the type→primitive map |
+| `src/dazzle/page/runtime/static/css/components/fragment-primitives.css` | per-primitive CSS rules |
 | `scripts/flip_to_fragment.py` | the idempotent flip helper |
 | `docs/superpowers/plans/migration-roadmap.md` | the framework's own migration history |
 | `CHANGELOG.md` | per-release agent guidance |

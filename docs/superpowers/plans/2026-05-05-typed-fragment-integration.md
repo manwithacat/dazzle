@@ -27,11 +27,11 @@
 | `src/dazzle/core/dsl_parser_impl/workspace.py` | Modify | Handle `render: <name>` clause inside `parse_workspace_region` |
 | `src/dazzle/render/fragment/registry.py` | Modify | Add `RendererRegistry` class alongside existing `PrimitiveRegistry` |
 | `src/dazzle/core/linker.py` | Modify | Validate that any `render:` reference resolves to a registered renderer |
-| `src/dazzle_back/runtime/services.py` | Modify | Add `renderer_registry` and `primitive_registry` fields on `RuntimeServices` |
-| `src/dazzle_back/runtime/renderers/__init__.py` | Create | Renderer adapter package |
-| `src/dazzle_back/runtime/renderers/jinja.py` | Create | Thin wrapper around the existing Jinja rendering path; registers under name `"jinja"` |
-| `src/dazzle_back/runtime/renderers/fragment.py` | Create | Wraps `FragmentRenderer` from Plan 1; registers under name `"fragment"` |
-| `src/dazzle_back/runtime/renderers/init.py` | Create | `register_default_renderers(services)` called at startup |
+| `src/dazzle_http/runtime/services.py` | Modify | Add `renderer_registry` and `primitive_registry` fields on `RuntimeServices` |
+| `src/dazzle_http/runtime/renderers/__init__.py` | Create | Renderer adapter package |
+| `src/dazzle_http/runtime/renderers/jinja.py` | Create | Thin wrapper around the existing Jinja rendering path; registers under name `"jinja"` |
+| `src/dazzle_http/runtime/renderers/fragment.py` | Create | Wraps `FragmentRenderer` from Plan 1; registers under name `"fragment"` |
+| `src/dazzle_http/runtime/renderers/init.py` | Create | `register_default_renderers(services)` called at startup |
 | `tests/unit/core/test_render_clause_parsing.py` | Create | Parser-level tests for `render:` on surfaces and regions |
 | `tests/unit/core/test_render_clause_linking.py` | Create | Linker validation tests (unknown renderer name fails) |
 | `tests/unit/render/fragment/test_renderer_registry.py` | Create | RendererRegistry contract tests |
@@ -47,7 +47,7 @@
 - **TDD throughout.** Failing test → minimal implementation → commit.
 - **Test command:** `pytest tests/<path> -v`.
 - **Lint after each task:** `ruff check src/ tests/ --fix && ruff format src/ tests/`.
-- **Type check after each task:** `mypy src/dazzle/render --strict` (the render package keeps strict). For the broader `src/dazzle` and `src/dazzle_back`, run plain `mypy --ignore-missing-imports` and ensure no new errors are introduced over the pre-existing baseline.
+- **Type check after each task:** `mypy src/dazzle/render --strict` (the render package keeps strict). For the broader `src/dazzle` and `src/dazzle_http`, run plain `mypy --ignore-missing-imports` and ensure no new errors are introduced over the pre-existing baseline.
 - **Commit messages:** `feat(<area>): <subject>` for new behaviour; `test(<area>): <subject>` for test-only; `chore(<area>): <subject>` for scaffolding.
 
 ---
@@ -716,7 +716,7 @@ git commit -m "feat(linker): validate render: references against known renderer 
 ### Task 8: Add registries to RuntimeServices
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/services.py`
+- Modify: `src/dazzle_http/runtime/services.py`
 - Test: `tests/unit/runtime/test_runtime_renderer_registries.py` (new)
 
 - [ ] **Step 1: Write failing test**
@@ -727,7 +727,7 @@ Create `tests/unit/runtime/test_runtime_renderer_registries.py`:
 """RuntimeServices carries the renderer and primitive registries."""
 
 from dazzle.render.fragment.registry import PrimitiveRegistry, RendererRegistry
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.services import RuntimeServices
 
 
 def test_runtime_services_has_renderer_registry() -> None:
@@ -760,7 +760,7 @@ Expected: FAIL — `RuntimeServices` has no `renderer_registry` attribute.
 
 - [ ] **Step 3: Add the fields**
 
-In `src/dazzle_back/runtime/services.py`:
+In `src/dazzle_http/runtime/services.py`:
 
 a) Add the imports at the top (after the existing imports):
 
@@ -786,7 +786,7 @@ Expected: 3 PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/services.py tests/unit/runtime/test_runtime_renderer_registries.py tests/unit/runtime/__init__.py
+git add src/dazzle_http/runtime/services.py tests/unit/runtime/test_runtime_renderer_registries.py tests/unit/runtime/__init__.py
 git commit -m "feat(runtime): renderer + primitive registries on RuntimeServices"
 ```
 
@@ -795,10 +795,10 @@ git commit -m "feat(runtime): renderer + primitive registries on RuntimeServices
 ### Task 9: Default renderer adapters + startup registration
 
 **Files:**
-- Create: `src/dazzle_back/runtime/renderers/__init__.py`
-- Create: `src/dazzle_back/runtime/renderers/jinja.py`
-- Create: `src/dazzle_back/runtime/renderers/fragment.py`
-- Create: `src/dazzle_back/runtime/renderers/init.py`
+- Create: `src/dazzle_http/runtime/renderers/__init__.py`
+- Create: `src/dazzle_http/runtime/renderers/jinja.py`
+- Create: `src/dazzle_http/runtime/renderers/fragment.py`
+- Create: `src/dazzle_http/runtime/renderers/init.py`
 - Test: `tests/unit/runtime/test_renderer_default_registration.py` (new)
 
 These are thin adapters. The Jinja adapter wraps the existing rendering path (it doesn't replace it — Jinja stays the actual default in Plan 2). The Fragment adapter wraps `FragmentRenderer` from Plan 1. Both register against `services.renderer_registry`.
@@ -811,8 +811,8 @@ Create `tests/unit/runtime/test_renderer_default_registration.py`:
 """Default Jinja and Fragment renderers register at startup."""
 
 from dazzle.render.fragment.renderer import FragmentRenderer
-from dazzle_back.runtime.renderers.init import register_default_renderers
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.renderers.init import register_default_renderers
+from dazzle_http.runtime.services import RuntimeServices
 
 
 def test_register_default_renderers_adds_jinja_and_fragment() -> None:
@@ -844,17 +844,17 @@ def test_default_registration_is_idempotent_in_practice() -> None:
 pytest tests/unit/runtime/test_renderer_default_registration.py -v
 ```
 
-Expected: FAIL with `ModuleNotFoundError: No module named 'dazzle_back.runtime.renderers'`.
+Expected: FAIL with `ModuleNotFoundError: No module named 'dazzle_http.runtime.renderers'`.
 
 - [ ] **Step 3: Create the adapter package**
 
 ```python
-# src/dazzle_back/runtime/renderers/__init__.py
+# src/dazzle_http/runtime/renderers/__init__.py
 """Renderer adapters that plug into RuntimeServices.renderer_registry."""
 ```
 
 ```python
-# src/dazzle_back/runtime/renderers/jinja.py
+# src/dazzle_http/runtime/renderers/jinja.py
 """Jinja renderer adapter — wraps the existing template-rendering path.
 
 This adapter exists so that the renderer registry has a uniform interface
@@ -886,7 +886,7 @@ class JinjaRenderer:
 ```
 
 ```python
-# src/dazzle_back/runtime/renderers/fragment.py
+# src/dazzle_http/runtime/renderers/fragment.py
 """Fragment renderer adapter — wraps `dazzle.render.fragment.renderer.FragmentRenderer`.
 
 Re-exported here so the registration site has a stable adapter import even
@@ -901,7 +901,7 @@ __all__ = ["FragmentRenderer"]
 ```
 
 ```python
-# src/dazzle_back/runtime/renderers/init.py
+# src/dazzle_http/runtime/renderers/init.py
 """Default renderer registration — called once at app startup.
 
 `register_default_renderers(services)` populates the renderer registry with
@@ -910,9 +910,9 @@ the framework defaults: Jinja (legacy path, stub adapter) and Fragment
 after this call (e.g. Penny Dreadful's `cytoscape_3d`).
 """
 
-from dazzle_back.runtime.renderers.fragment import FragmentRenderer
-from dazzle_back.runtime.renderers.jinja import JinjaRenderer
-from dazzle_back.runtime.services import RuntimeServices
+from dazzle_http.runtime.renderers.fragment import FragmentRenderer
+from dazzle_http.runtime.renderers.jinja import JinjaRenderer
+from dazzle_http.runtime.services import RuntimeServices
 
 
 def register_default_renderers(services: RuntimeServices) -> None:
@@ -938,7 +938,7 @@ Expected: 3 PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/renderers tests/unit/runtime/test_renderer_default_registration.py
+git add src/dazzle_http/runtime/renderers tests/unit/runtime/test_renderer_default_registration.py
 git commit -m "feat(runtime): default Jinja+Fragment renderer registration"
 ```
 
@@ -949,15 +949,15 @@ git commit -m "feat(runtime): default Jinja+Fragment renderer registration"
 **Files:**
 - Modify: the runtime startup path that constructs `RuntimeServices`. Search for the call site:
   ```bash
-  grep -rn "RuntimeServices()" src/dazzle_back/ src/dazzle/cli/ 2>/dev/null
+  grep -rn "RuntimeServices()" src/dazzle_http/ src/dazzle/cli/ 2>/dev/null
   ```
-  Typical sites: `src/dazzle_back/runtime/server.py` or `src/dazzle/cli/serve.py`. Use whichever is the canonical app-startup entry.
+  Typical sites: `src/dazzle_http/runtime/server.py` or `src/dazzle/cli/serve.py`. Use whichever is the canonical app-startup entry.
 
 - [ ] **Step 1: Locate the construction site**
 
 Run:
 ```bash
-grep -rn "RuntimeServices()" src/dazzle_back/ src/dazzle/cli/ src/dazzle_back/runtime/
+grep -rn "RuntimeServices()" src/dazzle_http/ src/dazzle/cli/ src/dazzle_http/runtime/
 ```
 
 Identify the file where `RuntimeServices` is constructed and attached to `app.state`. There may be more than one (test fixtures, etc.) — focus on the production path.
@@ -967,7 +967,7 @@ Identify the file where `RuntimeServices` is constructed and attached to `app.st
 After `services = RuntimeServices()`, add:
 
 ```python
-from dazzle_back.runtime.renderers.init import register_default_renderers
+from dazzle_http.runtime.renderers.init import register_default_renderers
 register_default_renderers(services)
 ```
 
@@ -1092,7 +1092,7 @@ Expected: 3 PASS. If the simple_task DSL load fails (path or skipping), debug th
 - [ ] **Step 3: Find and update production link-time call site**
 
 ```bash
-grep -rn "build_appspec(" src/dazzle_back/ src/dazzle/cli/ src/dazzle/agent/ src/dazzle/mcp/ 2>/dev/null
+grep -rn "build_appspec(" src/dazzle_http/ src/dazzle/cli/ src/dazzle/agent/ src/dazzle/mcp/ 2>/dev/null
 ```
 
 For each call site that runs at request-time or app-boot-time (NOT call sites in tests, validators, or read-only tools), pass the populated registry names:
@@ -1137,7 +1137,7 @@ After Task 11 is committed:
 - [ ] `pytest tests/unit/render/ tests/unit/core/test_render_clause_*.py tests/unit/runtime/ tests/integration/test_render_default_unchanged.py -v` — all pass.
 - [ ] `pytest tests/ -m "not e2e"` — no regressions outside the new tests.
 - [ ] `mypy src/dazzle/render --strict` — clean.
-- [ ] `mypy src/dazzle src/dazzle_back --ignore-missing-imports` — no new errors over the pre-existing baseline.
+- [ ] `mypy src/dazzle src/dazzle_http --ignore-missing-imports` — no new errors over the pre-existing baseline.
 - [ ] `ruff check src/ tests/ && ruff format --check src/ tests/` — clean.
 - [ ] Boot `examples/simple_task` via `dazzle serve --local` (or equivalent fast smoke); confirm the UI renders unchanged. Default render path is still Jinja; no surface has flipped.
 - [ ] Confirm `git status` clean.

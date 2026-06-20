@@ -49,7 +49,7 @@ def scratch_url() -> Iterator[str]:
 
 
 def test_set_session_active_membership_happy_path(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -66,7 +66,7 @@ def test_set_session_active_membership_happy_path(scratch_url: str) -> None:
 
 
 def test_set_session_active_membership_rejects_foreign_membership(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -83,7 +83,7 @@ def test_set_session_active_membership_rejects_foreign_membership(scratch_url: s
 
 
 def test_set_session_active_membership_rejects_suspended(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -105,7 +105,7 @@ def _app_with_store(store):
     """Minimal FastAPI app wiring the password-login router to `store`."""
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.auth.password_login_routes import (
+    from dazzle.http.runtime.auth.password_login_routes import (
         create_password_login_routes,
     )
 
@@ -123,7 +123,7 @@ def _client(app):
 
 
 def test_password_login_single_membership_auto_activates(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -143,7 +143,7 @@ def test_password_login_single_membership_auto_activates(scratch_url: str) -> No
 
 
 def test_password_login_multi_membership_redirects_to_picker(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -165,7 +165,7 @@ def test_password_login_no_membership_proceeds_by_default(scratch_url: str) -> N
     """Pre-1c transition: a zero-membership identity logs in to a membership-less
     session and proceeds normally (legacy fence). No /auth/no-orgs interception
     until the app opts into the membership model."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -184,7 +184,7 @@ def test_password_login_no_membership_proceeds_by_default(scratch_url: str) -> N
 def test_password_login_no_membership_redirects_to_no_orgs_when_required(scratch_url: str) -> None:
     """When the app opts into memberships (Plan 1c gate), a zero-membership
     identity is routed to the "no orgs yet" page."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -205,7 +205,7 @@ def test_password_login_no_membership_redirects_to_no_orgs_when_required(scratch
 def _app_with_org_routes(store):
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.auth.org_context_routes import create_org_context_routes
+    from dazzle.http.runtime.auth.org_context_routes import create_org_context_routes
 
     app = FastAPI()
     app.state.auth_store = store
@@ -226,7 +226,7 @@ def _login_session(store, email: str, n_orgs: int) -> tuple[str, str, list[str]]
 
 
 def test_select_org_post_activates_owned_membership(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -242,7 +242,7 @@ def test_select_org_post_activates_owned_membership(scratch_url: str) -> None:
 
 
 def test_switch_org_rotates_active_membership_and_csrf(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -260,7 +260,7 @@ def test_switch_org_rotates_active_membership_and_csrf(scratch_url: str) -> None
 
 
 def test_select_org_rejects_unowned_membership(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -278,7 +278,7 @@ def test_select_org_rejects_unowned_membership(scratch_url: str) -> None:
 
 def test_org_context_routes_are_mountable() -> None:
     """The router exposes the four Phase-2 paths (no DB needed)."""
-    from dazzle.back.runtime.auth.org_context_routes import create_org_context_routes
+    from dazzle.http.runtime.auth.org_context_routes import create_org_context_routes
 
     paths = {r.path for r in create_org_context_routes().routes}
     assert {"/auth/select-org", "/auth/switch-org", "/auth/no-orgs"} <= paths
@@ -290,12 +290,12 @@ def test_org_context_routes_are_mountable() -> None:
 def test_host_pin_activates_matching_org_and_403s_on_mismatch(scratch_url: str) -> None:
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.org_activation import (
+    from dazzle.http.runtime.auth.org_activation import (
         Activated,
         HostForbidden,
         activate_session_for_login,
     )
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -324,11 +324,11 @@ def test_host_pin_uuid_discriminator_round_trips(scratch_url: str) -> None:
     from types import SimpleNamespace
     from uuid import uuid4
 
-    from dazzle.back.runtime.auth.org_activation import (
+    from dazzle.http.runtime.auth.org_activation import (
         Activated,
         activate_session_for_login,
     )
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()

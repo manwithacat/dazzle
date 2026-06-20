@@ -14,7 +14,6 @@ source-bound rows).
 
 from __future__ import annotations
 
-from dazzle.back.runtime.workspace_card_data import _build_cohort_cells
 from dazzle.core.ir.conditions import (
     Comparison,
     ComparisonOperator,
@@ -26,6 +25,7 @@ from dazzle.core.ir.workspaces import (
     CohortStripLens,
     RowActionSpec,
 )
+from dazzle.http.runtime.workspace_card_data import _build_cohort_cells
 
 
 def _lens() -> CohortStripLens:

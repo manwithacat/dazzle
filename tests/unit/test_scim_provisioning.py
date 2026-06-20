@@ -8,8 +8,8 @@ from datetime import datetime
 
 import pytest
 
-from dazzle.back.runtime.auth.connections import ConnectionRecord
-from dazzle.back.runtime.auth.scim_provisioning import (
+from dazzle.http.runtime.auth.connections import ConnectionRecord
+from dazzle.http.runtime.auth.scim_provisioning import (
     ScimError,
     deprovision_scim_user,
     provision_scim_user,
@@ -305,7 +305,7 @@ def test_deprovision_idempotent_when_absent() -> None:
 
 
 def test_parse_group_patch_ops() -> None:
-    from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+    from dazzle.http.runtime.auth.scim_provisioning import parse_group_patch
 
     ops = parse_group_patch(
         {
@@ -322,7 +322,7 @@ def test_parse_group_patch_ops() -> None:
 
 
 def test_parse_group_patch_remove_all_and_replace_members() -> None:
-    from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+    from dazzle.http.runtime.auth.scim_provisioning import parse_group_patch
 
     ops = parse_group_patch(
         {
@@ -339,7 +339,7 @@ def test_parse_group_patch_remove_all_and_replace_members() -> None:
 
 
 def test_parse_group_patch_skips_unknown_ops() -> None:
-    from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+    from dazzle.http.runtime.auth.scim_provisioning import parse_group_patch
 
     assert (
         parse_group_patch({"Operations": [{"op": "add", "path": "externalId", "value": "x"}]}) == []

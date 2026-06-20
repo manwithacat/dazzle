@@ -1,6 +1,6 @@
 """Last-admin orphan guard + admin-count helpers (auth Plan 3b)."""
 
-from dazzle.back.runtime.auth.member_admin import active_admins, would_orphan_org
+from dazzle.http.runtime.auth.member_admin import active_admins, would_orphan_org
 
 # roster rows: (membership_id, roles, status)
 _ADMIN_ROLES = ["owner", "admin"]

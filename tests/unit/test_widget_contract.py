@@ -9,7 +9,7 @@ hit us at #927 and was removed at the source by #939. This test
 prevents the pattern from re-appearing as new widgets are added.
 
 The check is purely lexical — it scans every ``.html`` template in
-``src/dazzle/ui/templates`` for any element that has BOTH
+``src/dazzle/page/templates`` for any element that has BOTH
 ``data-dz-widget`` and ``x-data`` attributes. Either is fine on its
 own; the framework just shouldn't run two reactive controllers over
 the same DOM node.
@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "src/dazzle/ui/templates"
+TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "src/dazzle/page/templates"
 
 # Widget kinds that mount a *vendor* instance via the bridge —
 # combining these with ``x-data`` on the same node is the lifecycle
@@ -50,8 +50,8 @@ _BRIDGE_MOUNTED_WIDGET_KINDS = frozenset(
 )
 
 _BRIDGE_REGISTRY_PATHS = (
-    "src/dazzle/ui/runtime/static/js/dz-widget-registry.js",
-    "src/dazzle/ui/runtime/static/js/dz-richtext.js",
+    "src/dazzle/page/runtime/static/js/dz-widget-registry.js",
+    "src/dazzle/page/runtime/static/js/dz-richtext.js",
 )
 
 # An "element opening tag" is `<` ... `>` with no nested `<` or `>`.

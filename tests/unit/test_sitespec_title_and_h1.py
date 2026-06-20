@@ -12,7 +12,7 @@
   violate the single-h1 WCAG rule).
 
 The fixes live in
-``src/dazzle/back/runtime/site_routes.py::_render_site_inner_html``
+``src/dazzle/http/runtime/site_routes.py::_render_site_inner_html``
 and the surrounding ``PageContext`` build site, both inside the
 ``build_pages_router`` closure. The cleanest test is a content gate
 on the source — the refactor to expose the function as module-level
@@ -22,7 +22,7 @@ is intentionally not in scope here.
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SITE_ROUTES = ROOT / "src" / "dazzle" / "back" / "runtime" / "site_routes.py"
+SITE_ROUTES = ROOT / "src" / "dazzle" / "http" / "runtime" / "site_routes.py"
 
 
 def test_app_name_probes_product_name_before_dazzle_fallback() -> None:

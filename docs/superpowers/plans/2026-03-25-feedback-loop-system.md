@@ -27,7 +27,7 @@
 | `src/dazzle/mcp/knowledge_graph/seed.py` | Bump `SEED_SCHEMA_VERSION` |
 | `src/dazzle/mcp/server/handlers/bootstrap.py` | Add feedback_widget recommendation step |
 | `src/dazzle/cli/__init__.py` | Register feedback command group |
-| `src/dazzle_back/runtime/csrf.py` | Add `/feedbackreports/` prefix exemption |
+| `src/dazzle_http/runtime/csrf.py` | Add `/feedbackreports/` prefix exemption |
 | `tests/unit/test_feedback_widget.py` | EDIT surface + state machine tests |
 | `tests/integration/test_runtime_e2e.py` | PUT, DELETE, lifecycle E2E tests |
 
@@ -169,12 +169,12 @@ git commit -m "feat(feedback): add EDIT surface + triaged→resolved shortcut (#
 ### Task 2: CSRF Prefix Exemption + E2E Tests for PUT/DELETE
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/csrf.py`
+- Modify: `src/dazzle_http/runtime/csrf.py`
 - Modify: `tests/integration/test_runtime_e2e.py`
 
 - [ ] **Step 1: Add CSRF prefix exemption**
 
-In `src/dazzle_back/runtime/csrf.py`, add `"/feedbackreports/"` to `exempt_path_prefixes`:
+In `src/dazzle_http/runtime/csrf.py`, add `"/feedbackreports/"` to `exempt_path_prefixes`:
 
 ```python
 exempt_path_prefixes: list[str] = field(
@@ -288,7 +288,7 @@ Expected: All 6 feedback tests PASS
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/csrf.py tests/integration/test_runtime_e2e.py
+git add src/dazzle_http/runtime/csrf.py tests/integration/test_runtime_e2e.py
 git commit -m "feat(feedback): CSRF prefix exemption + PUT/DELETE E2E tests (#685)"
 ```
 

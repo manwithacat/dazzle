@@ -21,7 +21,7 @@ import asyncio
 from typing import Any
 from unittest.mock import patch
 
-from dazzle.back.runtime.retention_loop import run_retention_loop
+from dazzle.http.runtime.retention_loop import run_retention_loop
 
 
 def _run(coro):
@@ -85,7 +85,7 @@ class TestCronFiring:
             loop = asyncio.get_running_loop()
             loop.call_later(0.15, stop.set)
             with patch(
-                "dazzle.back.runtime.retention_loop.run_retention_sweep",
+                "dazzle.http.runtime.retention_loop.run_retention_sweep",
                 side_effect=_stub_sweep,
             ):
                 return await run_retention_loop(
@@ -114,7 +114,7 @@ class TestCronFiring:
             loop = asyncio.get_running_loop()
             loop.call_later(0.2, stop.set)
             with patch(
-                "dazzle.back.runtime.retention_loop.run_retention_sweep",
+                "dazzle.http.runtime.retention_loop.run_retention_sweep",
                 side_effect=_counting_sweep,
             ):
                 await run_retention_loop(
@@ -139,7 +139,7 @@ class TestCronFiring:
             loop = asyncio.get_running_loop()
             loop.call_later(0.15, stop.set)
             with patch(
-                "dazzle.back.runtime.retention_loop.run_retention_sweep",
+                "dazzle.http.runtime.retention_loop.run_retention_sweep",
                 side_effect=_stub_sweep,
             ):
                 return await run_retention_loop(
@@ -170,7 +170,7 @@ class TestResilience:
             loop = asyncio.get_running_loop()
             loop.call_later(0.15, stop.set)
             with patch(
-                "dazzle.back.runtime.retention_loop.run_retention_sweep",
+                "dazzle.http.runtime.retention_loop.run_retention_sweep",
                 side_effect=_broken_sweep,
             ):
                 return await run_retention_loop(
@@ -231,7 +231,7 @@ class TestStatsShape:
             loop = asyncio.get_running_loop()
             loop.call_later(0.12, stop.set)
             with patch(
-                "dazzle.back.runtime.retention_loop.run_retention_sweep",
+                "dazzle.http.runtime.retention_loop.run_retention_sweep",
                 side_effect=_sweep_with_stats,
             ):
                 return await run_retention_loop(

@@ -574,7 +574,7 @@ If "Lessons learned" surfaced any small fixes you made during the flip, also not
 ```bash
 ruff check src/ tests/ scripts/ --fix && ruff format src/ tests/ scripts/
 mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'
-mypy src/dazzle_back/ --ignore-missing-imports
+mypy src/dazzle_http/ --ignore-missing-imports
 pytest tests/ -m "not e2e" -q
 ```
 

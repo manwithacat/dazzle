@@ -10,7 +10,7 @@ H2s render left-aligned at body sizes.
 
 from pathlib import Path
 
-CSS_PATH = Path("src/dazzle/ui/runtime/static/css/site-sections.css")
+CSS_PATH = Path("src/dazzle/page/runtime/static/css/site-sections.css")
 
 
 class TestSectionMarkdownTypography:

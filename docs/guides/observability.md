@@ -357,7 +357,7 @@ job send_notification "Send Notification":
 ```
 
 is processed with `max_attempts = retry + 1 = 4`. The worker
-(`src/dazzle/back/runtime/job_worker.py`) computes this as:
+(`src/dazzle/http/runtime/job_worker.py`) computes this as:
 
 ```python
 max_attempts = max(1, getattr(spec, "retry", 0) + 1)
@@ -395,7 +395,7 @@ The DSL accepts a `retry_backoff:` keyword on job definitions. **At
 runtime, this field is currently ignored.** Failed jobs are re-enqueued
 immediately without any delay between attempts.
 
-The comment in `src/dazzle/back/runtime/job_worker.py` (line ~184):
+The comment in `src/dazzle/http/runtime/job_worker.py` (line ~184):
 
 ```python
 # The cycle-7 retry-backoff sleep would go here when the timer is
@@ -532,7 +532,7 @@ Series surfaced today include `dazzle_uptime_seconds`,
 `dazzle_component_health{component="..."}`, per-component counters
 (suffixed `_total`), gauges, and histograms exported as summaries with
 0.5 / 0.95 / 0.99 quantile labels. See
-`src/dazzle/back/metrics/system_collector.py` for the full schema.
+`src/dazzle/http/metrics/system_collector.py` for the full schema.
 
 ### OTLP push export
 

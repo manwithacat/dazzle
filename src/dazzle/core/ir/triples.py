@@ -12,7 +12,7 @@ This module provides:
 - resolve_surface_actions(): derives the set of actions for a surface
 
 The widget mapping mirrors the form-type logic in
-``dazzle.ui/converters/template_compiler.py`` but lives in the IR layer
+``dazzle.page/converters/template_compiler.py`` but lives in the IR layer
 with no UI-layer imports, making it available to static analysis, testing
 and the contract verification layer.
 

@@ -64,7 +64,7 @@ Then 3 productive post-resume cycles:
 | external-resource | 324 + 370 | `test_external_resource_lint.py` | #4 |
 | **ir-field-reader-parity** | **367** | **`test_ir_field_reader_parity.py`** | **#2** |
 
-Plus `test_dom_snapshots.py`, `test_card_safety_invariants.py`, and `mypy src/dazzle_ui/`. `make test-ux-deep` extends to core/cli/mcp/back mypy. `make audit-internals` generates `dev_docs/audit-internals.md` as advisory shape-#3 output.
+Plus `test_dom_snapshots.py`, `test_card_safety_invariants.py`, and `mypy src/dazzle_page/`. `make test-ux-deep` extends to core/cli/mcp/back mypy. `make audit-internals` generates `dev_docs/audit-internals.md` as advisory shape-#3 output.
 
 ## Silent-drift coverage
 

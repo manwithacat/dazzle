@@ -6,7 +6,7 @@
 
 **Architecture:** Two pure functions — `csrf_disposition(method, path, headers, config) -> Disposition` (classify from auth-class signals + disposition-labeled config rules) and `csrf_admits(disposition, headers, host, csrf_token, config) -> bool` (admit/reject). `CSRFMiddleware.__call__` is refactored to `classify → admit?`, behavior-preserving. A pure `render_csrf_policy(config)` emits the disposition rules as a compliance-report section.
 
-**Tech Stack:** Pure ASGI middleware (`src/dazzle/back/runtime/csrf.py`), `src/dazzle/rbac/report.py`, pytest.
+**Tech Stack:** Pure ASGI middleware (`src/dazzle/http/runtime/csrf.py`), `src/dazzle/rbac/report.py`, pytest.
 
 **Spec:** `docs/superpowers/specs/2026-06-03-declarative-csrf-design.md` §4.1, §4.5, §6. **Depends on:** Phase 1 (v0.81.15) + Phase 2 (v0.81.16).
 
@@ -18,7 +18,7 @@
 
 ## Files
 
-- **Modify** `src/dazzle/back/runtime/csrf.py` — `Disposition` enum; `na_signature_prefixes`/`na_signature_regexes` config fields (webhooks + sign moved here from the generic lists); `csrf_disposition` + `csrf_admits`; refactor `CSRFMiddleware.__call__`; `render_csrf_policy`.
+- **Modify** `src/dazzle/http/runtime/csrf.py` — `Disposition` enum; `na_signature_prefixes`/`na_signature_regexes` config fields (webhooks + sign moved here from the generic lists); `csrf_disposition` + `csrf_admits`; refactor `CSRFMiddleware.__call__`; `render_csrf_policy`.
 - **Modify** `src/dazzle/rbac/report.py` — add a `_render_csrf_policy` section to `generate_report`.
 - **Modify** `tests/unit/test_csrf_exempt_paths.py` — update for webhooks/sign moving to the signature fields (same paths, new field names).
 - **Test** `tests/unit/test_csrf_disposition_phase3.py` (new), `tests/unit/test_csrf_policy_report_phase3.py` (new).
@@ -28,7 +28,7 @@
 ### Task 1: `Disposition` enum + signature config fields + `csrf_disposition` / `csrf_admits`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/csrf.py`
+- Modify: `src/dazzle/http/runtime/csrf.py`
 - Test: `tests/unit/test_csrf_disposition_phase3.py`
 
 - [ ] **Step 1: Write the failing test (classification truth table + admits)**
@@ -37,7 +37,7 @@
 # tests/unit/test_csrf_disposition_phase3.py
 """Phase 3: CSRF disposition model (spec §4.1)."""
 
-from dazzle.back.runtime.csrf import (
+from dazzle.http.runtime.csrf import (
     CSRFConfig,
     Disposition,
     csrf_admits,
@@ -262,7 +262,7 @@ def csrf_admits(
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/csrf.py tests/unit/test_csrf_disposition_phase3.py
+git add src/dazzle/http/runtime/csrf.py tests/unit/test_csrf_disposition_phase3.py
 git commit -m "feat(csrf): Disposition enum + csrf_disposition/csrf_admits predicate (Phase 3)"
 ```
 
@@ -271,7 +271,7 @@ git commit -m "feat(csrf): Disposition enum + csrf_disposition/csrf_admits predi
 ### Task 2: Refactor `CSRFMiddleware.__call__` onto the predicate (behavior-preserving)
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/csrf.py` (`CSRFMiddleware.__call__`, `__init__`)
+- Modify: `src/dazzle/http/runtime/csrf.py` (`CSRFMiddleware.__call__`, `__init__`)
 - Modify: `tests/unit/test_csrf_exempt_paths.py` (webhooks/sign now in `na_signature_*`)
 - Test: existing CSRF suites are the equivalence oracle.
 
@@ -310,7 +310,7 @@ Expected: ALL pass. Any failure means the refactor changed behavior — fix the 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/csrf.py tests/unit/test_csrf_exempt_paths.py
+git add src/dazzle/http/runtime/csrf.py tests/unit/test_csrf_exempt_paths.py
 git commit -m "refactor(csrf): middleware __call__ onto csrf_disposition/csrf_admits (Phase 3)"
 ```
 
@@ -319,7 +319,7 @@ git commit -m "refactor(csrf): middleware __call__ onto csrf_disposition/csrf_ad
 ### Task 3: Static CSRF policy audit in the compliance report
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/csrf.py` (add `render_csrf_policy`)
+- Modify: `src/dazzle/http/runtime/csrf.py` (add `render_csrf_policy`)
 - Modify: `src/dazzle/rbac/report.py` (call it from `generate_report`)
 - Test: `tests/unit/test_csrf_policy_report_phase3.py`
 
@@ -329,7 +329,7 @@ git commit -m "refactor(csrf): middleware __call__ onto csrf_disposition/csrf_ad
 # tests/unit/test_csrf_policy_report_phase3.py
 """Phase 3: the CSRF disposition policy is auditable in the compliance report."""
 
-from dazzle.back.runtime.csrf import CSRFConfig, render_csrf_policy
+from dazzle.http.runtime.csrf import CSRFConfig, render_csrf_policy
 
 
 class TestRenderCsrfPolicy:
@@ -394,10 +394,10 @@ def render_csrf_policy(config: CSRFConfig) -> list[str]:
     return lines
 ```
 
-- [ ] **Step 4: Wire it into the compliance report.** In `src/dazzle/rbac/report.py`, import `render_csrf_policy` and `CSRFConfig` (lazy import inside `generate_report` to avoid a back-runtime import at module load if that's the existing convention — check the file's imports; if `report.py` already imports from `dazzle.back.runtime`, follow suit, else lazy-import). Add, after `_render_methodology()` (or before it), a CSRF section. Since `generate_report` takes a `VerificationReport` (no CSRFConfig), render the policy from a **default** `CSRFConfig(enabled=True)` (the framework defaults are what the audit documents) unless a config is threaded later:
+- [ ] **Step 4: Wire it into the compliance report.** In `src/dazzle/rbac/report.py`, import `render_csrf_policy` and `CSRFConfig` (lazy import inside `generate_report` to avoid a back-runtime import at module load if that's the existing convention — check the file's imports; if `report.py` already imports from `dazzle.http.runtime`, follow suit, else lazy-import). Add, after `_render_methodology()` (or before it), a CSRF section. Since `generate_report` takes a `VerificationReport` (no CSRFConfig), render the policy from a **default** `CSRFConfig(enabled=True)` (the framework defaults are what the audit documents) unless a config is threaded later:
 
 ```python
-    from dazzle.back.runtime.csrf import CSRFConfig, render_csrf_policy
+    from dazzle.http.runtime.csrf import CSRFConfig, render_csrf_policy
 
     lines.extend(render_csrf_policy(CSRFConfig(enabled=True)))
 ```
@@ -412,7 +412,7 @@ Expected: pass; the existing report tests should still pass (a new section appen
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/csrf.py src/dazzle/rbac/report.py tests/unit/test_csrf_policy_report_phase3.py
+git add src/dazzle/http/runtime/csrf.py src/dazzle/rbac/report.py tests/unit/test_csrf_policy_report_phase3.py
 git commit -m "feat(csrf): static CSRF disposition policy in the compliance report (Phase 3)"
 ```
 

@@ -17,13 +17,13 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.middleware.sessions import SessionMiddleware
 
-from dazzle.back.runtime.auth.connections import (
+from dazzle.http.runtime.auth.connections import (
     AssertedIdentity,
     ConnectionError,
     ConnectionRecord,
     register_provider,
 )
-from dazzle.back.runtime.auth.saml_routes import create_saml_routes
+from dazzle.http.runtime.auth.saml_routes import create_saml_routes
 
 
 def _conn(**over) -> ConnectionRecord:
@@ -157,7 +157,7 @@ class _FakeProvider:
 
 @pytest.fixture
 def saml_provider():
-    from dazzle.back.runtime.auth.connections import _PROVIDERS
+    from dazzle.http.runtime.auth.connections import _PROVIDERS
 
     def _install(provider: _FakeProvider) -> None:
         register_provider("saml", "native", provider)
@@ -272,7 +272,7 @@ def test_acs_session_fixation_deletes_pre_auth_sid(saml_provider) -> None:
 def test_metadata_serves_sp_xml(monkeypatch) -> None:
     """GET /auth/saml/metadata returns the SP metadata XML with the SAML metadata
     content type (the IdP imports this)."""
-    import dazzle.back.runtime.auth.saml_provider as sp
+    import dazzle.http.runtime.auth.saml_provider as sp
 
     monkeypatch.setattr(
         sp.NativeSAMLProvider,
@@ -289,7 +289,7 @@ def test_metadata_serves_sp_xml(monkeypatch) -> None:
 
 def test_metadata_503_when_generation_fails(monkeypatch) -> None:
     """Generation failure (e.g. [saml] extra absent) → 503, never a 500 stack leak."""
-    import dazzle.back.runtime.auth.saml_provider as sp
+    import dazzle.http.runtime.auth.saml_provider as sp
 
     def _boom(self, request, connection=None):
         raise RuntimeError("python3-saml not installed")
@@ -302,7 +302,7 @@ def test_metadata_503_when_generation_fails(monkeypatch) -> None:
 def test_metadata_connection_param_advertises_signing_cert() -> None:
     """?connection=<id> with request signing on → metadata carries the signing cert."""
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+    from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
     key, cert = generate_sp_keypair("https://app.test/auth/saml/acs")
     conn = _conn(
@@ -341,7 +341,7 @@ def _seed_user_in_two_orgs(store: _Store) -> _User:
 
 
 def test_sls_kills_only_the_connections_org_sessions(saml_provider) -> None:
-    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+    from dazzle.http.runtime.auth.saml_provider import SamlLogout
 
     store = _Store(connections=[_conn()])  # conn-1 is in org-1
     _seed_user_in_two_orgs(store)
@@ -370,7 +370,7 @@ def test_sls_validation_error_kills_nothing(saml_provider) -> None:
 
 
 def test_sls_no_redirect_returns_200(saml_provider) -> None:
-    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+    from dazzle.http.runtime.auth.saml_provider import SamlLogout
 
     store = _Store(connections=[_conn()])
     _seed_user_in_two_orgs(store)
@@ -390,7 +390,7 @@ def test_sls_unresolvable_connection_is_400(saml_provider) -> None:
 
 
 def test_sls_unknown_email_kills_nothing(saml_provider) -> None:
-    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+    from dazzle.http.runtime.auth.saml_provider import SamlLogout
 
     store = _Store(connections=[_conn()])  # no users seeded
     saml_provider(_FakeProvider(logout=SamlLogout(name_id="ghost@acme.test", redirect_url=None)))
@@ -404,7 +404,7 @@ def test_sls_unknown_email_kills_nothing(saml_provider) -> None:
 def test_sls_oversized_saml_request_is_rejected_before_processing(saml_provider) -> None:
     # A huge SAMLRequest is rejected by the length gate BEFORE python3-saml decompresses it
     # (zip-bomb DoS guard) — the provider is never even called.
-    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+    from dazzle.http.runtime.auth.saml_provider import SamlLogout
 
     store = _Store(connections=[_conn()])
     _seed_user_in_two_orgs(store)
@@ -429,7 +429,7 @@ def test_sls_oversized_saml_request_is_rejected_before_processing(saml_provider)
 
 
 def test_sls_logout_response_completes_without_kill(saml_provider) -> None:
-    from dazzle.back.runtime.auth.saml_provider import SamlLogout
+    from dazzle.http.runtime.auth.saml_provider import SamlLogout
 
     store = _Store(connections=[_conn()])
     _seed_user_in_two_orgs(store)
@@ -493,7 +493,7 @@ def test_idp_double_message_validates_against_real_process_slo() -> None:
     # Foundational proof: a double-minted SIGNED LogoutRequest passes the SP's REAL process_slo
     # (signature validated for real). Pins the double's Redirect-binding encoding.
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from dazzle.http.runtime.auth.saml_provider import NativeSAMLProvider
     from tests.integration.saml_idp_double import FakeSlsRequest, SamlIdpDouble
 
     sls = "https://app.test/auth/saml/sls"
@@ -509,7 +509,7 @@ def test_idp_double_message_validates_against_real_process_slo() -> None:
 
 def test_idp_double_tampered_signature_is_rejected() -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from dazzle.http.runtime.auth.saml_provider import NativeSAMLProvider
     from tests.integration.saml_idp_double import FakeSlsRequest, SamlIdpDouble
 
     sls = "https://app.test/auth/saml/sls"
@@ -525,7 +525,7 @@ def test_sls_real_signed_logout_request_kills_org_sessions(saml_provider) -> Non
     # Retro-hardens feature A: a GENUINELY-signed IdP LogoutRequest through the real route +
     # real provider → org-scoped kill fires (the seam-faked A tests can't prove the crypto).
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from dazzle.http.runtime.auth.saml_provider import NativeSAMLProvider
     from tests.integration.saml_idp_double import SamlIdpDouble
 
     idp = SamlIdpDouble(entity_id="https://idp.example/entity", slo_url="https://idp.example/slo")
@@ -545,7 +545,7 @@ def test_sls_real_signed_logout_request_kills_org_sessions(saml_provider) -> Non
 
 def test_sls_real_signed_logout_response_completes_no_kill(saml_provider) -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from dazzle.http.runtime.auth.saml_provider import NativeSAMLProvider
     from tests.integration.saml_idp_double import SamlIdpDouble
 
     idp = SamlIdpDouble(entity_id="https://idp.example/entity", slo_url="https://idp.example/slo")

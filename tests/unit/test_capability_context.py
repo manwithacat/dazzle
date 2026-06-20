@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.subsystems import SubsystemContext
 from dazzle.core.capabilities.models import ResolvedCapabilities
+from dazzle.http.runtime.subsystems import SubsystemContext
 
 
 def _ctx(**kw):

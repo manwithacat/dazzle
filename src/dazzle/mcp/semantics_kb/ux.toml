@@ -227,7 +227,7 @@ implemented_by = [
     "dazzle.core.dsl_parser_impl.entity._parse_scope_rule (entity-level parsing)",
     "dazzle.core.dsl_parser_impl.ux._pv_kw_scope (ux persona-variant parsing)",
     "dazzle.core.ir.domain.ScopeRule (IR model)",
-    "dazzle.back.runtime.route_generator._resolve_scope_filters (runtime evaluation)",
+    "dazzle.http.runtime.route_generator._resolve_scope_filters (runtime evaluation)",
 ]
 
 [concepts.ux_block]

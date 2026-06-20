@@ -17,7 +17,7 @@ class TestHookDiscovery:
     """discover_hooks() parses declaration headers in Python files."""
 
     def test_discovers_hook_with_declaration(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.hook_registry import discover_hooks
+        from dazzle.http.runtime.hook_registry import discover_hooks
 
         hooks_dir = tmp_path / "hooks"
         hooks_dir.mkdir()
@@ -62,7 +62,7 @@ class TestHookDiscovery:
         ],
     )
     def test_discover_returns_empty(self, tmp_path: Path, filename: str, content: str) -> None:
-        from dazzle.back.runtime.hook_registry import discover_hooks
+        from dazzle.http.runtime.hook_registry import discover_hooks
 
         hooks_dir = tmp_path / "hooks"
         hooks_dir.mkdir()
@@ -71,7 +71,7 @@ class TestHookDiscovery:
         assert result == []
 
     def test_hook_without_entity_filter(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.hook_registry import discover_hooks
+        from dazzle.http.runtime.hook_registry import discover_hooks
 
         hooks_dir = tmp_path / "hooks"
         hooks_dir.mkdir()
@@ -84,7 +84,7 @@ class TestHookDiscovery:
         assert result[0].entity_filter == ""
 
     def test_nonexistent_dir_returns_empty(self) -> None:
-        from dazzle.back.runtime.hook_registry import discover_hooks
+        from dazzle.http.runtime.hook_registry import discover_hooks
 
         result = discover_hooks(Path("/nonexistent"))
         assert result == []
@@ -94,7 +94,7 @@ class TestHookRegistry:
     """HookRegistry registration and filtering."""
 
     def test_register_and_retrieve(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.hook_registry import HookDescriptor, HookRegistry
+        from dazzle.http.runtime.hook_registry import HookDescriptor, HookRegistry
 
         registry = HookRegistry()
         desc = HookDescriptor(
@@ -109,7 +109,7 @@ class TestHookRegistry:
         assert len(hooks) == 1
 
     def test_entity_filter_excludes_non_matching(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.hook_registry import HookDescriptor, HookRegistry
+        from dazzle.http.runtime.hook_registry import HookDescriptor, HookRegistry
 
         registry = HookRegistry()
         desc = HookDescriptor(
@@ -124,7 +124,7 @@ class TestHookRegistry:
         assert len(hooks) == 0
 
     def test_global_hook_matches_all_entities(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.hook_registry import HookDescriptor, HookRegistry
+        from dazzle.http.runtime.hook_registry import HookDescriptor, HookRegistry
 
         registry = HookRegistry()
         desc = HookDescriptor(
@@ -138,7 +138,7 @@ class TestHookRegistry:
         assert len(hooks) == 1
 
     def test_summary(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.hook_registry import HookDescriptor, HookRegistry
+        from dazzle.http.runtime.hook_registry import HookDescriptor, HookRegistry
 
         registry = HookRegistry()
         for point in ["entity.pre_create", "entity.pre_create", "entity.post_update"]:
@@ -159,7 +159,7 @@ class TestBuildRegistry:
     """build_registry() end-to-end."""
 
     def test_builds_from_hooks_dir(self, tmp_path: Path) -> None:
-        from dazzle.back.runtime.hook_registry import build_registry
+        from dazzle.http.runtime.hook_registry import build_registry
 
         hooks_dir = tmp_path / "hooks"
         hooks_dir.mkdir()
@@ -193,7 +193,7 @@ class TestCRUDServicePreHooks:
     """Pre-hooks in CRUDService modify data or cancel operations."""
 
     def _make_service(self) -> Any:
-        from dazzle.back.runtime.service_generator import CRUDService
+        from dazzle.http.runtime.service_generator import CRUDService
 
         return CRUDService(
             entity_name="Task",

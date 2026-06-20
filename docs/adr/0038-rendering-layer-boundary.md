@@ -63,7 +63,7 @@ route/data/auth → `back/`."
 ### D1 — `render/` is the single home for pure rendering; it imports only `render`, `core`, stdlib/3p
 
 No HTML-producing code that lacks an I/O reason lives in `back/` or `ui/`. `render/` must not import
-`dazzle.ui` or `dazzle.back` — at module top level **or** inside functions. Lazy imports do not launder
+`dazzle.page` or `dazzle.http` — at module top level **or** inside functions. Lazy imports do not launder
 a layer violation; they hide it.
 
 ### D2 — Relocate the misplaced subsystems into `render/` (and pure helpers to their layer)

@@ -3,12 +3,12 @@
 import pytest
 from pydantic import ValidationError
 
-from dazzle.back.runtime.model_generator import (
+from dazzle.http.runtime.model_generator import (
     generate_create_schema,
     generate_entity_model,
     generate_update_schema,
 )
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 
 def _make_entity_with_enum() -> EntitySpec:

@@ -416,7 +416,7 @@ def radar_svg(
 
     # Match Jinja's `{{ max_val | metric_number }}` rendering — K/M
     # suffixes for large values, plain int repr otherwise. Late import
-    # to avoid the SVG module pulling dazzle.ui at module load.
+    # to avoid the SVG module pulling dazzle.page at module load.
     # Pre-narrow to int when whole so the filter renders "9" not "9.0".
     from dazzle.render.filters import _metric_number_filter
 

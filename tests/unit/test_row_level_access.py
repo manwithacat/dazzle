@@ -13,7 +13,7 @@ pytest.importorskip("fastapi")
 
 from pydantic import BaseModel
 
-from dazzle.back.runtime.route_generator import (
+from dazzle.http.runtime.route_generator import (
     HandlerConfig,
     RouteSpec,
     create_create_handler,
@@ -21,7 +21,7 @@ from dazzle.back.runtime.route_generator import (
     create_read_handler,
     create_update_handler,
 )
-from dazzle.back.specs.auth import (
+from dazzle.http.specs.auth import (
     AccessConditionSpec,
     AccessOperationKind,
     AccessPolicyEffect,
@@ -134,7 +134,7 @@ def _role_check(role_name):
 
 
 def _owner_check():
-    from dazzle.back.specs.auth import AccessComparisonKind
+    from dazzle.http.specs.auth import AccessComparisonKind
 
     return AccessConditionSpec(
         kind="comparison",
@@ -268,7 +268,7 @@ class TestCreateHandlerCedar:
     @pytest.mark.asyncio
     async def test_create_compound_or_allowed(self) -> None:
         """Compound role(A) or role(B) permit allows CREATE for matching role (#594)."""
-        from dazzle.back.specs.auth import AccessLogicalKind
+        from dazzle.http.specs.auth import AccessLogicalKind
 
         service = _make_service()
         auth_ctx = _make_auth_context(roles=["manager"])
@@ -301,7 +301,7 @@ class TestCreateHandlerCedar:
         """Compound role(A) or role(B) permit denies CREATE for non-matching role (#594)."""
         from fastapi import HTTPException
 
-        from dazzle.back.specs.auth import AccessLogicalKind
+        from dazzle.http.specs.auth import AccessLogicalKind
 
         service = _make_service()
         auth_ctx = _make_auth_context(roles=["viewer"])

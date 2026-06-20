@@ -24,7 +24,7 @@ class TestValidationErrorHandler:
     @pytest.fixture
     def handler(self) -> Any:
         """Extract the validation_error_handler from register_exception_handlers."""
-        from dazzle.back.runtime.exception_handlers import register_exception_handlers
+        from dazzle.http.runtime.exception_handlers import register_exception_handlers
 
         app = MagicMock()
         handlers: dict[type, Any] = {}
@@ -91,24 +91,24 @@ class TestIsAppPath:
     """The _is_app_path helper decides which error template to render."""
 
     def test_root_is_not_app_path(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _is_app_path
+        from dazzle.http.runtime.exception_handlers import _is_app_path
 
         assert _is_app_path("/") is False
 
     def test_public_marketing_is_not_app_path(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _is_app_path
+        from dazzle.http.runtime.exception_handlers import _is_app_path
 
         assert _is_app_path("/about") is False
         assert _is_app_path("/pricing") is False
         assert _is_app_path("/login") is False
 
     def test_exact_app_root_is_app_path(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _is_app_path
+        from dazzle.http.runtime.exception_handlers import _is_app_path
 
         assert _is_app_path("/app") is True
 
     def test_app_subroute_is_app_path(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _is_app_path
+        from dazzle.http.runtime.exception_handlers import _is_app_path
 
         assert _is_app_path("/app/contact") is True
         assert _is_app_path("/app/contact/123") is True
@@ -116,7 +116,7 @@ class TestIsAppPath:
 
     def test_appfoo_is_not_app_path(self) -> None:
         """/application, /app_config etc. should NOT be treated as in-app."""
-        from dazzle.back.runtime.exception_handlers import _is_app_path
+        from dazzle.http.runtime.exception_handlers import _is_app_path
 
         assert _is_app_path("/application") is False
         assert _is_app_path("/app_config") is False
@@ -126,34 +126,34 @@ class TestComputeBackAffordance:
     """The _compute_back_affordance helper builds parent-surface breadcrumbs."""
 
     def test_non_app_path_returns_none(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _compute_back_affordance
+        from dazzle.http.runtime.exception_handlers import _compute_back_affordance
 
         assert _compute_back_affordance("/") is None
         assert _compute_back_affordance("/about") is None
 
     def test_app_root_returns_none(self) -> None:
         """No parent above /app itself."""
-        from dazzle.back.runtime.exception_handlers import _compute_back_affordance
+        from dazzle.http.runtime.exception_handlers import _compute_back_affordance
 
         assert _compute_back_affordance("/app") is None
 
     def test_surface_root_falls_back_to_dashboard(self) -> None:
         """/app/contact → parent is /app."""
-        from dazzle.back.runtime.exception_handlers import _compute_back_affordance
+        from dazzle.http.runtime.exception_handlers import _compute_back_affordance
 
         result = _compute_back_affordance("/app/contact")
         assert result == ("/app", "Back to Dashboard")
 
     def test_surface_record_falls_back_to_surface_list(self) -> None:
         """/app/contact/{id} → parent is /app/contact."""
-        from dazzle.back.runtime.exception_handlers import _compute_back_affordance
+        from dazzle.http.runtime.exception_handlers import _compute_back_affordance
 
         result = _compute_back_affordance("/app/contact/abc-123")
         assert result == ("/app/contact", "Back to List")
 
     def test_workspace_sub_falls_back_to_dashboard(self) -> None:
         """/app/workspaces/{foo} → parent is /app (not /app/workspaces)."""
-        from dazzle.back.runtime.exception_handlers import _compute_back_affordance
+        from dazzle.http.runtime.exception_handlers import _compute_back_affordance
 
         result = _compute_back_affordance("/app/workspaces/my_tickets")
         assert result == ("/app", "Back to Dashboard")
@@ -163,18 +163,18 @@ class TestLevenshtein:
     """Pure helper — shaves off a dependency on python-Levenshtein."""
 
     def test_equal_strings_distance_zero(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _levenshtein
+        from dazzle.http.runtime.exception_handlers import _levenshtein
 
         assert _levenshtein("task", "task") == 0
 
     def test_empty_strings_return_length(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _levenshtein
+        from dazzle.http.runtime.exception_handlers import _levenshtein
 
         assert _levenshtein("", "task") == 4
         assert _levenshtein("task", "") == 4
 
     def test_single_edit(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _levenshtein
+        from dazzle.http.runtime.exception_handlers import _levenshtein
 
         assert _levenshtein("task", "tasks") == 1
         assert _levenshtein("task", "tosk") == 1
@@ -182,7 +182,7 @@ class TestLevenshtein:
 
     def test_transposition_is_two_edits(self) -> None:
         """Pure Levenshtein treats a transposition as 2 ops (del + insert)."""
-        from dazzle.back.runtime.exception_handlers import _levenshtein
+        from dazzle.http.runtime.exception_handlers import _levenshtein
 
         assert _levenshtein("contact", "conatct") == 2
 
@@ -215,7 +215,7 @@ class TestCompute404Suggestions:
         ],
     )
     def test_suggestion_output(self, path: str, entity_slugs: list, expected: list) -> None:
-        from dazzle.back.runtime.exception_handlers import _compute_404_suggestions
+        from dazzle.http.runtime.exception_handlers import _compute_404_suggestions
 
         assert (
             _compute_404_suggestions(path, entity_slugs=entity_slugs, workspace_slugs=[])
@@ -223,7 +223,7 @@ class TestCompute404Suggestions:
         )
 
     def test_dashboard_alias_redirects_to_app_root(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _compute_404_suggestions
+        from dazzle.http.runtime.exception_handlers import _compute_404_suggestions
 
         assert _compute_404_suggestions("/dashboard", [], []) == [
             {"url": "/app", "label": "Dashboard"}
@@ -233,7 +233,7 @@ class TestCompute404Suggestions:
         ]
 
     def test_fuzzy_match_catches_typo(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _compute_404_suggestions
+        from dazzle.http.runtime.exception_handlers import _compute_404_suggestions
 
         out = _compute_404_suggestions(
             "/app/conatct", entity_slugs=["contact", "task"], workspace_slugs=[]
@@ -241,7 +241,7 @@ class TestCompute404Suggestions:
         assert {"url": "/app/contact", "label": "Contact"} in out
 
     def test_workspace_fuzzy_match(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _compute_404_suggestions
+        from dazzle.http.runtime.exception_handlers import _compute_404_suggestions
 
         out = _compute_404_suggestions(
             "/app/workspaces/command_cnter",
@@ -251,7 +251,7 @@ class TestCompute404Suggestions:
         assert any(s["url"] == "/app/workspaces/command_center" for s in out)
 
     def test_results_are_capped_at_three(self) -> None:
-        from dazzle.back.runtime.exception_handlers import _compute_404_suggestions
+        from dazzle.http.runtime.exception_handlers import _compute_404_suggestions
 
         # Five entity slugs all within edit distance 2 of "tas"
         out = _compute_404_suggestions(
@@ -267,7 +267,7 @@ class TestErrorHandlerDispatch:
 
     @pytest.fixture
     def handler(self) -> Any:
-        from dazzle.back.runtime.exception_handlers import register_site_error_handlers
+        from dazzle.http.runtime.exception_handlers import register_site_error_handlers
 
         app = MagicMock()
         handlers: dict[type, Any] = {}

@@ -15,7 +15,7 @@ class AuthService:
     """
 
     def __init__(self, db_url: str) -> None:
-        from dazzle.back import AuthStore
+        from dazzle.http import AuthStore
 
         self._store = AuthStore(database_url=db_url)
 

@@ -14,7 +14,7 @@ these rules, update this doc first and make the reasoning explicit.
 !!! note "Enforcement moved to the typed Fragment substrate (post-#1042)"
     The invariants below are unchanged and load-bearing. But several **Enforcement**
     bullets were written for the Jinja era and name artefacts that no longer exist —
-    `src/dazzle/ui/templates/.../*.html`, the `region_card` macro, `_fetch_region_html`
+    `src/dazzle/page/templates/.../*.html`, the `region_card` macro, `_fetch_region_html`
     in `workspace_rendering.py`, and the `test_template_html.py` /
     `TestDashboardRegionCompositeShapes` test classes. Jinja2 was retired in #1042
     (v0.67.92, [ADR-0023](../adr/0023-template-emission-patterns.md)); rendering now goes
@@ -209,7 +209,7 @@ Scanner._is_card`.
 ### INV-6: Region templates emit zero chrome
 
 **Rule**: Every template under
-`src/dazzle/ui/templates/workspace/regions/*.html`, and the shared
+`src/dazzle/page/templates/workspace/regions/*.html`, and the shared
 `macros/region_wrapper.html::region_card`, must emit **no** card
 chrome (no rounded + full border + bg on any block container).
 Items inside a region (rows, tiles, events) must also be bare —

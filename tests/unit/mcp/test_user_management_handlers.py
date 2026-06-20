@@ -98,7 +98,7 @@ def database_url():
 @pytest.fixture
 def auth_store(database_url):
     """Create an AuthStore instance for testing."""
-    from dazzle.back.runtime.auth import AuthStore
+    from dazzle.http.runtime.auth import AuthStore
 
     store = AuthStore(database_url=database_url)
     return store
@@ -590,7 +590,7 @@ class TestHelperFunctions:
 
     def test_user_to_dict(self):
         """Test user record to dict conversion."""
-        from dazzle.back.runtime.auth import UserRecord
+        from dazzle.http.runtime.auth import UserRecord
 
         user = UserRecord(
             email="test@example.com",
@@ -608,7 +608,7 @@ class TestHelperFunctions:
 
     def test_user_to_dict_with_hash(self):
         """Test user record to dict with password hash included."""
-        from dazzle.back.runtime.auth import UserRecord
+        from dazzle.http.runtime.auth import UserRecord
 
         user = UserRecord(
             email="test@example.com",

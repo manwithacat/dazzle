@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.migrations import MigrationError, verify_dazzle_params_table
-from dazzle.back.runtime.server import DazzleBackendApp, ServerConfig
 from dazzle.core import ir
+from dazzle.http.runtime.migrations import MigrationError, verify_dazzle_params_table
+from dazzle.http.runtime.server import DazzleBackendApp, ServerConfig
 
 
 def _make_appspec() -> ir.AppSpec:
@@ -48,9 +48,9 @@ class TestRuntimeSchemaStartup:
 
         with (
             patch.dict(os.environ, {"DAZZLE_ENV": "development"}, clear=True),
-            patch("dazzle.back.runtime.pg_backend.PostgresBackend"),
-            patch("dazzle.back.runtime.migrations.ensure_dazzle_params_table") as ensure_params,
-            patch("dazzle.back.runtime.migrations.verify_dazzle_params_table") as verify_params,
+            patch("dazzle.http.runtime.pg_backend.PostgresBackend"),
+            patch("dazzle.http.runtime.migrations.ensure_dazzle_params_table") as ensure_params,
+            patch("dazzle.http.runtime.migrations.verify_dazzle_params_table") as verify_params,
             patch("sqlalchemy.create_engine", return_value=engine) as create_engine,
         ):
             builder._setup_database()
@@ -65,9 +65,9 @@ class TestRuntimeSchemaStartup:
 
         with (
             patch.dict(os.environ, {"DAZZLE_ENV": "production"}, clear=True),
-            patch("dazzle.back.runtime.pg_backend.PostgresBackend"),
-            patch("dazzle.back.runtime.migrations.ensure_dazzle_params_table") as ensure_params,
-            patch("dazzle.back.runtime.migrations.verify_dazzle_params_table") as verify_params,
+            patch("dazzle.http.runtime.pg_backend.PostgresBackend"),
+            patch("dazzle.http.runtime.migrations.ensure_dazzle_params_table") as ensure_params,
+            patch("dazzle.http.runtime.migrations.verify_dazzle_params_table") as verify_params,
             patch("sqlalchemy.create_engine") as create_engine,
         ):
             builder._setup_database()
@@ -110,7 +110,7 @@ class TestFrameworkBaselineMigration:
         """Migration module imports cleanly and exports the expected shape."""
         import importlib
 
-        mod = importlib.import_module("dazzle.back.alembic.versions.0001_framework_baseline")
+        mod = importlib.import_module("dazzle.http.alembic.versions.0001_framework_baseline")
         assert mod.revision == "0001_framework_baseline"
         assert mod.down_revision is None  # this is the root revision
         assert callable(mod.upgrade)
@@ -127,7 +127,7 @@ class TestFrameworkBaselineMigration:
         from sqlalchemy import create_engine
         from sqlalchemy.pool import StaticPool
 
-        mod = importlib.import_module("dazzle.back.alembic.versions.0001_framework_baseline")
+        mod = importlib.import_module("dazzle.http.alembic.versions.0001_framework_baseline")
 
         # Use sqlite as a structural-validity sandbox — only verifies the
         # migration module produces well-formed Alembic ops. PostgreSQL-only

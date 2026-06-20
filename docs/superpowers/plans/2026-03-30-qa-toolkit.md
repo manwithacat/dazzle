@@ -1430,7 +1430,7 @@ Add to the ENHANCE section:
 
 ```markdown
 **Visual quality finding** → Determine fix type from the finding's category and suggestion:
-- `data_quality` findings → Usually a template or filter fix in `src/dazzle_ui/`
+- `data_quality` findings → Usually a template or filter fix in `src/dazzle_page/`
 - `title_formatting` findings → Template HTML structure fix
 - `alignment`/`column_layout` findings → CSS or template fix
 - `empty_state` findings → Add empty state messaging to templates

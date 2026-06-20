@@ -12,10 +12,10 @@ to the IdP SLO; returns to `/auth/saml/sls`). Local logout always happens first.
 
 ## File Structure
 
-- Modify `src/dazzle/back/runtime/auth/saml_provider.py` — `initiate_logout` + `_post_logout_url`.
-- Create `src/dazzle/back/runtime/auth/saml_logout.py` — `saml_slo_redirect_url(...)` helper.
-- Modify `src/dazzle/back/runtime/auth/routes.py` — `_logout` integration.
-- Modify `src/dazzle/back/runtime/auth/saml_routes.py` — SLS: guard `SAMLResponse`; don't-400 a
+- Modify `src/dazzle/http/runtime/auth/saml_provider.py` — `initiate_logout` + `_post_logout_url`.
+- Create `src/dazzle/http/runtime/auth/saml_logout.py` — `saml_slo_redirect_url(...)` helper.
+- Modify `src/dazzle/http/runtime/auth/routes.py` — `_logout` integration.
+- Modify `src/dazzle/http/runtime/auth/saml_routes.py` — SLS: guard `SAMLResponse`; don't-400 a
   returning user on a *response* error.
 - Create `tests/integration/saml_idp_double.py` — the real-crypto IdP test double.
 - Modify `tests/unit/test_saml_provider.py`, `tests/integration/test_saml_routes.py`; create
@@ -25,7 +25,7 @@ to the IdP SLO; returns to `/auth/saml/sls`). Local logout always happens first.
 
 ### Task 1: Provider — `initiate_logout`
 
-**Files:** Modify `src/dazzle/back/runtime/auth/saml_provider.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/saml_provider.py`
 
 - [ ] **Step 1: Failing tests** (append to `tests/unit/test_saml_provider.py`):
 
@@ -74,7 +74,7 @@ def test_initiate_logout_without_idp_slo_url_raises() -> None:
 
 ### Task 2: SAML logout helper
 
-**Files:** Create `src/dazzle/back/runtime/auth/saml_logout.py`
+**Files:** Create `src/dazzle/http/runtime/auth/saml_logout.py`
 
 - [ ] **Step 1: Failing tests** `tests/unit/test_saml_logout.py` (seam — fake store + provider):
 
@@ -134,7 +134,7 @@ def saml_slo_redirect_url(store: Any, request: Any, *, session_id: str) -> str |
         user = store.get_user_by_id(UUID(str(membership.identity_id)))
         if user is None or not getattr(user, "email", ""):
             return None
-        from dazzle.back.runtime.auth.connections import resolve_provider
+        from dazzle.http.runtime.auth.connections import resolve_provider
 
         provider = resolve_provider(conn)
         return provider.initiate_logout(conn, request, name_id=user.email)
@@ -151,7 +151,7 @@ attr-defined like the SLS route, or call via `getattr`.)
 
 ### Task 3: Generic logout integration
 
-**Files:** Modify `src/dazzle/back/runtime/auth/routes.py` (`_logout`)
+**Files:** Modify `src/dazzle/http/runtime/auth/routes.py` (`_logout`)
 
 - [ ] **Step 1: Failing test** — extend an existing logout test (or add one) asserting: a SAML
 session → `/logout` returns a redirect/HX-Redirect to the IdP SLO url (helper faked to return a url);
@@ -165,7 +165,7 @@ prefer it after clearing cookies:
 
     slo_url = None
     if session_id:
-        from dazzle.back.runtime.auth.saml_logout import saml_slo_redirect_url
+        from dazzle.http.runtime.auth.saml_logout import saml_slo_redirect_url
         slo_url = saml_slo_redirect_url(deps.auth_store, request, session_id=session_id)
         deps.auth_store.delete_session(session_id)
 
@@ -187,7 +187,7 @@ IdP can never keep a session alive. JSON/API callers stay local (SP-SLO is a bro
 
 ### Task 4: SLS — handle the returning LogoutResponse cleanly
 
-**Files:** Modify `src/dazzle/back/runtime/auth/saml_routes.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/saml_routes.py`
 
 - [ ] **Step 1: Failing tests** (append to `tests/integration/test_saml_routes.py`, seam-level):
 a `SAMLResponse` (LogoutResponse, faked provider → `SamlLogout(name_id=None, redirect_url=None)`) →
@@ -218,7 +218,7 @@ test FIRST and iterate `saml_idp_double` until it passes (this pins the encoding
 def test_idp_double_message_validates_against_real_process_slo() -> None:
     pytest.importorskip("onelogin")
     from tests.integration.saml_idp_double import SamlIdpDouble
-    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from dazzle.http.runtime.auth.saml_provider import NativeSAMLProvider
 
     sls = "https://app.test/auth/saml/sls"
     idp = SamlIdpDouble(entity_id="https://idp.example/entity", slo_url="https://idp.example/slo")
@@ -238,7 +238,7 @@ class SamlIdpDouble:
     LogoutRequest / LogoutResponse so the SP's real process_slo / validate_binary_sign runs. No infra."""
     def __init__(self, *, entity_id: str, slo_url: str):
         # generate RSA-2048 + a self-signed cert (reuse generate_sp_keypair from saml_sp_keys)
-        from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+        from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
         self.entity_id, self.slo_url = entity_id, slo_url
         self._key_pem, self._cert_pem = generate_sp_keypair(entity_id)
     @property

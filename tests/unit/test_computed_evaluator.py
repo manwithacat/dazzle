@@ -4,13 +4,13 @@ from decimal import Decimal
 
 import pytest
 
-from dazzle.back.runtime.computed_evaluator import (
+from dazzle.http.runtime.computed_evaluator import (
     enrich_record_with_computed_fields,
     enrich_records_with_computed_fields,
     evaluate_computed_fields,
     evaluate_expression,
 )
-from dazzle.back.specs.entity import (
+from dazzle.http.specs.entity import (
     AggregateFunctionKind,
     ArithmeticOperatorKind,
     ComputedExprSpec,

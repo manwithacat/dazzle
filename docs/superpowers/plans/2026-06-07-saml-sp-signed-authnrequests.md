@@ -23,7 +23,7 @@ independent review (crypto + key-at-rest + trust-path).
 ### Task 1: `saml_sp_keys.generate_sp_keypair`
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/saml_sp_keys.py`
+- Create: `src/dazzle/http/runtime/auth/saml_sp_keys.py`
 - Test: `tests/unit/test_saml_sp_keys.py`
 
 - [ ] **Step 1: Write the failing test (local — cryptography only, no onelogin)**
@@ -37,7 +37,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
 
-from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
 
 def test_generate_sp_keypair_shapes() -> None:
@@ -63,7 +63,7 @@ def test_generate_sp_keypair_unique() -> None:
 - [ ] **Step 3: Implement**
 
 ```python
-# src/dazzle/back/runtime/auth/saml_sp_keys.py
+# src/dazzle/http/runtime/auth/saml_sp_keys.py
 """SP keypair generation for SAML SP-signed AuthnRequests / encrypted assertions (#1342).
 
 A per-connection RSA-2048 keypair + self-signed X.509 cert. The IdP imports the cert (SP
@@ -120,7 +120,7 @@ def generate_sp_keypair(common_name: str) -> tuple[str, str]:
 ### Task 2: Store enable/disable signing material
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py`
 - Test: `tests/integration/test_connections_pg.py`
 
 - [ ] **Step 1: Write failing PG tests** (append)
@@ -193,7 +193,7 @@ helper to read+merge:
     ) -> None:
         import json
 
-        from dazzle.back.runtime.auth.connection_crypto import encrypt_secret
+        from dazzle.http.runtime.auth.connection_crypto import encrypt_secret
 
         encrypted = encrypt_secret(json.dumps(secrets)) if secrets else None
         cur.execute(
@@ -206,7 +206,7 @@ helper to read+merge:
         """(config, secrets) dicts for a connection inside a tx, or (None, None)."""
         import json
 
-        from dazzle.back.runtime.auth.connection_crypto import decrypt_secret
+        from dazzle.http.runtime.auth.connection_crypto import decrypt_secret
 
         if tenant_id is not None:
             cur.execute(
@@ -270,7 +270,7 @@ helper to read+merge:
 ### Task 3: `_settings` signing branch + connection-aware metadata
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/saml_provider.py`
+- Modify: `src/dazzle/http/runtime/auth/saml_provider.py`
 - Test: `tests/unit/test_saml_provider.py` (CI onelogin) + a settings-shape test that needs no onelogin
 
 - [ ] **Step 1: Add the `_settings` branch.** Before `return {...}` is built, capture the dict
@@ -334,7 +334,7 @@ folds in the signing cert, and thread `connection` through `sp_metadata`:
 ```python
 def test_settings_signs_requests_when_enabled() -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+    from dazzle.http.runtime.auth.saml_provider import NativeSAMLProvider
     conn = _conn(config={..., "sign_requests": "true", "sp_cert": "CERT"}, secrets={"sp_private_key": "KEY"})
     s = NativeSAMLProvider()._settings(conn, _req())
     assert s["security"]["authnRequestsSigned"] is True
@@ -367,14 +367,14 @@ locally too, since the venv has python3-saml).
 
 ### Task 4: Metadata route `?connection=<id>`
 
-**Files:** Modify `src/dazzle/back/runtime/auth/saml_routes.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/saml_routes.py`
 
 - [ ] **Step 1: Thread the optional connection param** into `saml_metadata`:
 
 ```python
     @router.get("/auth/saml/metadata")
     async def saml_metadata(request: Request, connection: str = "") -> Response:
-        from dazzle.back.runtime.auth.saml_provider import NativeSAMLProvider
+        from dazzle.http.runtime.auth.saml_provider import NativeSAMLProvider
 
         conn = None
         if connection:
@@ -450,7 +450,7 @@ def enable_request_signing(
 
     Re-import the connection's metadata at the IdP afterwards (see the printed URL) so it
     trusts the SP signing cert. Re-run after disabling to rotate the key."""
-    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+    from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
     store = _store()
     conn = store.get_connection(connection_id)

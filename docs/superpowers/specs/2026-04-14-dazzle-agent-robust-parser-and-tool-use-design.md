@@ -531,7 +531,7 @@ This project is done when:
 2. `_parse_action` handles the exact cycle 147 prose-before-JSON pattern and extracts the action cleanly.
 3. The investigator can emit `propose_fix` with a nested `changes` array via Anthropic tool use and the proposal lands in `.dazzle/fitness-proposals/` (validated by the integration test with mocks).
 4. All existing tests still pass (no regressions in journey testing, UX quality, discovery, fitness strategy, contract walks).
-5. `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp` and `mypy src/dazzle_back/` clean.
+5. `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp` and `mypy src/dazzle_http/` clean.
 6. `ruff check src/ tests/` and `ruff format src/ tests/` clean.
 7. The cycle 188 action item list is updated to mark Bug 5a and Bug 5b as resolved, with a note pointing to this spec.
 

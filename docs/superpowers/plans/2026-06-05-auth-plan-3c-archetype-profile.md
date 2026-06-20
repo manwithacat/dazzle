@@ -6,7 +6,7 @@
 
 **Architecture:** A profile is a normal **tenant-scoped domain entity** (it gets the framework `tenant_id` injected by tenancy Phase A). The archetype expander injects an `identity_id` (uuid) column marked `unique`, which the schema generator rewrites to a tenant-scoped `UNIQUE(tenant_id, identity_id)` — so each member has exactly one profile per org, matching the membership's natural key. No cross-world FK (membership lives in the auth-store raw-SQL world); the link is by shared key. An `is_profile` flag rides the IR → back EntitySpec (mirroring `is_tenant_root`) so a future runtime can resolve "the current member's profile" by `(active_membership.tenant_id, current_user.id)`.
 
-**Tech Stack:** Python 3.12, the IR/parser/linker (`src/dazzle/core/`), the back converter + `sa_schema` (`src/dazzle/back/`), Alembic not involved (profile is a DSL/domain entity, schema via `build_metadata`), pytest. **Staged IR-first** (project pattern): 3c ships the DSL + IR + expander + converter + schema; the runtime profile-resolution route/surface is a follow-on.
+**Tech Stack:** Python 3.12, the IR/parser/linker (`src/dazzle/core/`), the back converter + `sa_schema` (`src/dazzle/http/`), Alembic not involved (profile is a DSL/domain entity, schema via `build_metadata`), pytest. **Staged IR-first** (project pattern): 3c ships the DSL + IR + expander + converter + schema; the runtime profile-resolution route/surface is a follow-on.
 
 **Spec:** `docs/superpowers/specs/2026-06-05-auth-identity-model-design.md` §7 (Tier 1) + §10 (the profile↔membership linkage open question — **resolved here as keyed-by-`(tenant_id, identity_id)`**). Slice **3c** of Plan 3 (3a invitations v0.81.41, 3b member-admin v0.81.42 shipped). The `tenancy: multi_org:` flag is deferred to **3c.ii**.
 
@@ -23,8 +23,8 @@
 | `src/dazzle/core/dsl_parser_impl/entity.py` (**modify**) | Map the `"profile"` archetype keyword → `ArchetypeKind.PROFILE`. |
 | `src/dazzle/core/archetype_expander.py` (**modify**) | `_expand_profile_archetype` (inject `identity_id` uuid required unique; set `is_profile=True`) + dispatch. |
 | `src/dazzle/core/validator.py` (**modify**) | Validate `archetype: profile` requires `tenancy: mode: shared_schema` (else no `tenant_id` → the `(tenant_id, identity_id)` key is broken). |
-| `src/dazzle/back/specs/entity.py` (**modify**) | Add `is_profile: bool` to the back `EntitySpec`. |
-| `src/dazzle/back/converters/entity_converter.py` (**modify**) | Pass `is_profile` through `convert_entity`. |
+| `src/dazzle/http/specs/entity.py` (**modify**) | Add `is_profile: bool` to the back `EntitySpec`. |
+| `src/dazzle/http/converters/entity_converter.py` (**modify**) | Pass `is_profile` through `convert_entity`. |
 | `fixtures/tenant_rls/dsl/entities.dsl` (**modify**) | Add a `MemberProfile` profile entity to exercise it end-to-end. |
 | `docs/reference/grammar.md` (**modify**) | Document the `profile` archetype kind + the `(tenant_id, identity_id)` linkage. |
 | `tests/unit/test_archetype_profile.py` (**create**) | Parser (profile→PROFILE+is_profile), expander (identity_id injected, unique), converter passthrough, validation. |
@@ -295,8 +295,8 @@ git commit -m "feat(validator): archetype: profile requires shared_schema tenanc
 ## Task 5: Converter — carry `is_profile` to the back EntitySpec
 
 **Files:**
-- Modify: `src/dazzle/back/specs/entity.py` (~line 648, near `is_tenant_root`)
-- Modify: `src/dazzle/back/converters/entity_converter.py` (~line 795)
+- Modify: `src/dazzle/http/specs/entity.py` (~line 648, near `is_tenant_root`)
+- Modify: `src/dazzle/http/converters/entity_converter.py` (~line 795)
 - Test: `tests/unit/test_archetype_profile.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -305,7 +305,7 @@ git commit -m "feat(validator): archetype: profile requires shared_schema tenanc
 def test_is_profile_survives_conversion_and_identity_id_is_present() -> None:
     from pathlib import Path
 
-    from dazzle.back.converters.entity_converter import convert_entities
+    from dazzle.http.converters.entity_converter import convert_entities
     from dazzle.core.appspec_loader import load_project_appspec
 
     app = load_project_appspec(Path("fixtures/tenant_rls"))  # after Task 6 adds MemberProfile
@@ -335,7 +335,7 @@ def test_is_profile_survives_conversion_and_identity_id_is_present() -> None:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/specs/entity.py src/dazzle/back/converters/entity_converter.py tests/unit/test_archetype_profile.py
+git add src/dazzle/http/specs/entity.py src/dazzle/http/converters/entity_converter.py tests/unit/test_archetype_profile.py
 git commit -m "feat(converter): carry is_profile to the back EntitySpec (Plan 3c)"
 ```
 
@@ -376,8 +376,8 @@ pytestmark = [pytest.mark.e2e, pytest.mark.postgres]
 
 
 def test_profile_table_has_tenant_identity_unique() -> None:
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
     from dazzle.core.appspec_loader import load_project_appspec
 
     app = load_project_appspec(Path("fixtures/tenant_rls"))

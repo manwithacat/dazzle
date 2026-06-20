@@ -3,11 +3,11 @@
 **Issue:** #673 — 32 module-level mutable singletons across 18 files
 **Date:** 2026-03-25
 **Status:** Approved
-**Scope:** Phase 2 — dazzle_back additions + dazzle MCP singletons + Phase 3 annotations
+**Scope:** Phase 2 — dazzle_http additions + dazzle MCP singletons + Phase 3 annotations
 
 ## Problem
 
-Phase 1 (v0.48.9) eliminated 6 HIGH-risk `dazzle_back` runtime singletons. 24 `global` invocations remain across 18 files. Four are real singleton problems; the rest are acceptable patterns (lazy imports, caches, system-wide resources) that need annotation.
+Phase 1 (v0.48.9) eliminated 6 HIGH-risk `dazzle_http` runtime singletons. 24 `global` invocations remain across 18 files. Four are real singleton problems; the rest are acceptable patterns (lazy imports, caches, system-wide resources) that need annotation.
 
 ## Scope
 
@@ -15,8 +15,8 @@ Phase 1 (v0.48.9) eliminated 6 HIGH-risk `dazzle_back` runtime singletons. 24 `g
 
 | File | Variable(s) | Risk | Pattern |
 |------|-------------|------|---------|
-| `dazzle_back/runtime/task_routes.py` | `_process_manager` | MEDIUM-HIGH | Add to `RuntimeServices`, use `Depends()` |
-| `dazzle_back/runtime/rate_limit.py` | `limiter`, `auth_limit`, etc. | MEDIUM | Move config to `RuntimeServices`, limiter already on `app.state` |
+| `dazzle_http/runtime/task_routes.py` | `_process_manager` | MEDIUM-HIGH | Add to `RuntimeServices`, use `Depends()` |
+| `dazzle_http/runtime/rate_limit.py` | `limiter`, `auth_limit`, etc. | MEDIUM | Move config to `RuntimeServices`, limiter already on `app.state` |
 | `dazzle/mcp/runtime_tools/state.py` | `_appspec_data`, `_ui_spec` | HIGH | Move onto `ServerState` |
 | `dazzle/api_kb/loader.py` | `_pack_cache`, `_packs_loaded`, `_project_root` | MEDIUM-HIGH | Move onto `ServerState` |
 
@@ -26,10 +26,10 @@ Every remaining `global` statement gets `# noqa: PLW0603  # <reason>`.
 
 | File | Variable | Reason |
 |------|----------|--------|
-| `dazzle_back/pra/tigerbeetle_client.py` | `_tb_module` | Lazy import for optional dependency |
-| `dazzle_back/runtime/logging.py` | `_log_dir`, `_file_handler` | System-wide, init-only, thread-safe |
-| `dazzle_back/runtime/sa_schema.py` | `_sa_imported`, `_sa` | Lazy import for optional dependency |
-| `dazzle_back/runtime/auth/events.py` | `_event_framework` | Clean setter from Phase 1 |
+| `dazzle_http/pra/tigerbeetle_client.py` | `_tb_module` | Lazy import for optional dependency |
+| `dazzle_http/runtime/logging.py` | `_log_dir`, `_file_handler` | System-wide, init-only, thread-safe |
+| `dazzle_http/runtime/sa_schema.py` | `_sa_imported`, `_sa` | Lazy import for optional dependency |
+| `dazzle_http/runtime/auth/events.py` | `_event_framework` | Clean setter from Phase 1 |
 | `dazzle/rbac/audit.py` | `_current_sink` | Thread-safe, good test isolation design |
 | `dazzle/mcp/server/handlers/stories.py` | `_TRIGGER_MAP` | Lazy-init, immutable once created |
 | `dazzle/mcp/server/state.py` | `_state` | Well-designed centralized MCP state |
@@ -38,8 +38,8 @@ Every remaining `global` statement gets `# noqa: PLW0603  # <reason>`.
 | `dazzle/cli/auth.py` | `_database_url_override` | CLI callback storage, per-invocation |
 | `dazzle/cli/testing.py` | `_ASSERTION_HANDLERS` | Lazy-init handler registry, immutable |
 | `dazzle/testing/browser_gate.py` | `_gate` | Process-bounded resource, thread-safe |
-| `dazzle_ui/runtime/realtime_client.py` | `_REALTIME_JS_CACHED` | Static asset cache |
-| `dazzle_ui/runtime/template_renderer.py` | `_env` | Single-project runtime, lazy-init |
+| `dazzle_page/runtime/realtime_client.py` | `_REALTIME_JS_CACHED` | Static asset cache |
+| `dazzle_page/runtime/template_renderer.py` | `_env` | Single-project runtime, lazy-init |
 
 ## Design
 
@@ -57,7 +57,7 @@ class RuntimeServices:
 Wire from `ProcessSubsystem.startup()`:
 
 ```python
-# In src/dazzle_back/runtime/subsystems/process.py
+# In src/dazzle_http/runtime/subsystems/process.py
 if hasattr(ctx.app.state, "services"):
     ctx.app.state.services.process_manager = self._manager
 ```
@@ -152,11 +152,11 @@ Delete module-level `_pack_cache`, `_packs_loaded`, `_project_root`, `_packs_loc
 
 | File | Change |
 |------|--------|
-| `src/dazzle_back/runtime/services.py` | Add `process_manager`, `rate_limit_config` fields |
-| `src/dazzle_back/runtime/task_routes.py` | Delete globals, use `Depends(get_services)` |
-| `src/dazzle_back/runtime/subsystems/process.py` | Wire process_manager to services |
-| `src/dazzle_back/runtime/rate_limit.py` | Delete globals, populate services config |
-| `src/dazzle_back/runtime/file_routes.py` | Update rate limit decorator references |
+| `src/dazzle_http/runtime/services.py` | Add `process_manager`, `rate_limit_config` fields |
+| `src/dazzle_http/runtime/task_routes.py` | Delete globals, use `Depends(get_services)` |
+| `src/dazzle_http/runtime/subsystems/process.py` | Wire process_manager to services |
+| `src/dazzle_http/runtime/rate_limit.py` | Delete globals, populate services config |
+| `src/dazzle_http/runtime/file_routes.py` | Update rate limit decorator references |
 | `src/dazzle/mcp/server/state.py` | Add `appspec_data`, `ui_spec`, `pack_cache`, `packs_loaded` to `ServerState` |
 | `src/dazzle/mcp/runtime_tools/state.py` | **Delete** — migrate to ServerState |
 | `src/dazzle/mcp/runtime_tools/handlers.py` | Update imports to ServerState |

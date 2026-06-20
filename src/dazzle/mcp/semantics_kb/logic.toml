@@ -124,9 +124,9 @@ implemented_by = [
     "dazzle.core.dsl_parser_impl.access.AccessParserMixin (parsing)",
     "dazzle.core.ir.domain.AccessSpec (IR model)",
     "dazzle.core.ir.predicate_builder.build_scope_predicate (scope → predicate)",
-    "dazzle_back.runtime.route_generator._extract_cedar_row_filters (permit evaluation)",
-    "dazzle_back.runtime.route_generator._resolve_scope_filters (scope evaluation)",
-    "dazzle_back.runtime.predicate_compiler.compile_predicate (predicate → SQL)",
+    "dazzle_http.runtime.route_generator._extract_cedar_row_filters (permit evaluation)",
+    "dazzle_http.runtime.route_generator._resolve_scope_filters (scope evaluation)",
+    "dazzle_http.runtime.predicate_compiler.compile_predicate (predicate → SQL)",
     "dazzle.conformance.derivation.derive_conformance_cases (conformance testing)",
 ]
 

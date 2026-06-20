@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.auth.insecure_guard import (
+from dazzle.http.runtime.auth.insecure_guard import (
     INSECURE_ACK_VAR,
     InsecureAuthConfigError,
     assert_secure_auth_config,
@@ -103,7 +103,7 @@ class TestSetupAuthWiring:
     so it needs no database."""
 
     def _app(self, *, enable_auth: bool):
-        from dazzle.back.runtime.server import DazzleBackendApp
+        from dazzle.http.runtime.server import DazzleBackendApp
         from tests.unit.test_build_server_config import _appspec  # minimal AppSpec helper
 
         return DazzleBackendApp(_appspec(), enable_auth=enable_auth)

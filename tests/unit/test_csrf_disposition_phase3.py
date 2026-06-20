@@ -1,6 +1,6 @@
 """Phase 3: CSRF disposition model (spec §4.1)."""
 
-from dazzle.back.runtime.csrf import (
+from dazzle.http.runtime.csrf import (
     CSRFConfig,
     Disposition,
     csrf_admits,

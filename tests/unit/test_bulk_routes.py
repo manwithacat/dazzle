@@ -126,7 +126,7 @@ class TestCreateBulkRoutes:
         ],
     )
     def test_returns_none(self, surfaces: list, repositories: dict) -> None:
-        from dazzle.back.runtime.bulk_routes import create_bulk_routes
+        from dazzle.http.runtime.bulk_routes import create_bulk_routes
 
         assert (
             create_bulk_routes(
@@ -143,7 +143,7 @@ class TestCreateBulkRoutes:
 
 class TestBulkEndpointHandler:
     def _build(self, rows: list[dict[str, Any]]) -> TestClient:
-        from dazzle.back.runtime.bulk_routes import create_bulk_routes
+        from dazzle.http.runtime.bulk_routes import create_bulk_routes
 
         # optional_auth_dep=None — exercises the no-auth-app path.
         router = create_bulk_routes(
@@ -374,7 +374,7 @@ class TestBulkEndpointRBAC:
         auth_context: Any,
         fk_graph: Any = None,
     ) -> tuple[TestClient, _Repo]:
-        from dazzle.back.runtime.bulk_routes import create_bulk_routes
+        from dazzle.http.runtime.bulk_routes import create_bulk_routes
 
         repo = _Repo(rows)
         router = create_bulk_routes(

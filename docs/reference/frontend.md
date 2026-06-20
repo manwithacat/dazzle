@@ -137,7 +137,7 @@ Out-of-band swap pattern (hx-swap-oob) for updating multiple DOM elements from a
 
 ```dsl
 # Python endpoint returning OOB response
-from dazzle.back.runtime.htmx import render_oob_fields
+from dazzle.http.runtime.htmx import render_oob_fields
 
 @router.get("/select/{id}")
 async def select_company(id: str):

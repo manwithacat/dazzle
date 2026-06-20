@@ -11,9 +11,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from dazzle.back.runtime import rate_limit as _rl
-from dazzle.back.runtime.route_generator import RouteGenerator
-from dazzle.back.specs.endpoint import HttpMethod
+from dazzle.http.runtime import rate_limit as _rl
+from dazzle.http.runtime.route_generator import RouteGenerator
+from dazzle.http.specs.endpoint import HttpMethod
 
 
 def test_security_profile_defaults_to_basic() -> None:

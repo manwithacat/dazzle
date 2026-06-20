@@ -85,7 +85,7 @@ def _specs_for_parent() -> tuple[list[Any], dict[str, Any]]:
 
 class TestBuildParentGraphRoutes:
     def test_returns_none_without_parent_field(self) -> None:
-        from dazzle.back.runtime.graph_routes import build_parent_graph_routes
+        from dazzle.http.runtime.graph_routes import build_parent_graph_routes
 
         graph_edge = GraphEdgeSpec(source="source", target="target")
         graph_node = GraphNodeSpec(edge_entity="NodeEdge", display="title")
@@ -101,14 +101,14 @@ class TestBuildParentGraphRoutes:
         assert router is None
 
     def test_returns_none_without_repos(self) -> None:
-        from dazzle.back.runtime.graph_routes import build_parent_graph_routes
+        from dazzle.http.runtime.graph_routes import build_parent_graph_routes
 
         entities, specs = _specs_for_parent()
         router = build_parent_graph_routes(specs, entities=entities, repositories={})
         assert router is None
 
     def test_returns_router_when_configured(self) -> None:
-        from dazzle.back.runtime.graph_routes import build_parent_graph_routes
+        from dazzle.http.runtime.graph_routes import build_parent_graph_routes
 
         entities, specs = _specs_for_parent()
         repos = {
@@ -124,7 +124,7 @@ class TestParentGraphEndpoint:
     def _build(
         self, works: list[dict[str, Any]], nodes: list[dict[str, Any]], edges: list[dict[str, Any]]
     ) -> TestClient:
-        from dazzle.back.runtime.graph_routes import build_parent_graph_routes
+        from dazzle.http.runtime.graph_routes import build_parent_graph_routes
 
         entities, specs = _specs_for_parent()
         repos = {

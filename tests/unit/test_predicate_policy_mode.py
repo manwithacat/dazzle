@@ -28,14 +28,14 @@ from dazzle.core.ir.predicates import (
 
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.predicate_compiler import (
+from dazzle.core.ir.fk_graph import FKEdge, FKGraph
+from dazzle.http.runtime.predicate_compiler import (
     _inline_sql_literal,
     build_entity_type_resolver,
     collect_user_attr_refs,
     compile_predicate_policy,
 )
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
-from dazzle.core.ir.fk_graph import FKEdge, FKGraph
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 
 def _simple_graph() -> FKGraph:

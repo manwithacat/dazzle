@@ -16,10 +16,10 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_back/runtime/graph_materializer.py` | Create | Load nodes + edges from DB into `nx.Graph`/`nx.DiGraph`, with filter support |
-| `src/dazzle_back/runtime/graph_algorithms.py` | Create | Shortest path + connected components on materialized graph |
-| `src/dazzle_back/runtime/route_generator.py` | Modify | Register algorithm endpoints on graph_node entities |
-| `src/dazzle_back/runtime/server.py` | Modify | Pass filter_fields to algorithm route registration |
+| `src/dazzle_http/runtime/graph_materializer.py` | Create | Load nodes + edges from DB into `nx.Graph`/`nx.DiGraph`, with filter support |
+| `src/dazzle_http/runtime/graph_algorithms.py` | Create | Shortest path + connected components on materialized graph |
+| `src/dazzle_http/runtime/route_generator.py` | Modify | Register algorithm endpoints on graph_node entities |
+| `src/dazzle_http/runtime/server.py` | Modify | Pass filter_fields to algorithm route registration |
 | `pyproject.toml` | Modify | Add `graph` optional extra with networkx |
 | `tests/unit/test_graph_materializer.py` | Create | Unit tests for materializer |
 | `tests/unit/test_graph_algorithms.py` | Create | Unit tests for algorithm functions |
@@ -63,7 +63,7 @@ git commit -m "feat: add networkx as optional graph extra (#619)"
 ### Task 2: GraphMaterializer
 
 **Files:**
-- Create: `src/dazzle_back/runtime/graph_materializer.py`
+- Create: `src/dazzle_http/runtime/graph_materializer.py`
 - Create: `tests/unit/test_graph_materializer.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -84,7 +84,7 @@ except ImportError:
 pytestmark = pytest.mark.skipif(not HAS_NX, reason="networkx not installed")
 
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec
-from dazzle_back.runtime.graph_materializer import GraphMaterializer
+from dazzle_http.runtime.graph_materializer import GraphMaterializer
 
 
 class TestGraphMaterializer:
@@ -167,7 +167,7 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement GraphMaterializer**
 
-Create `src/dazzle_back/runtime/graph_materializer.py`:
+Create `src/dazzle_http/runtime/graph_materializer.py`:
 
 ```python
 """Graph materializer — DB records → NetworkX graph (#619 Phase 4).
@@ -241,7 +241,7 @@ Expected: All PASSED.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/graph_materializer.py tests/unit/test_graph_materializer.py
+git add src/dazzle_http/runtime/graph_materializer.py tests/unit/test_graph_materializer.py
 git commit -m "feat: GraphMaterializer builds NetworkX graph from records (#619)"
 ```
 
@@ -250,7 +250,7 @@ git commit -m "feat: GraphMaterializer builds NetworkX graph from records (#619)
 ### Task 3: Graph Algorithm Functions
 
 **Files:**
-- Create: `src/dazzle_back/runtime/graph_algorithms.py`
+- Create: `src/dazzle_http/runtime/graph_algorithms.py`
 - Create: `tests/unit/test_graph_algorithms.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -270,7 +270,7 @@ except ImportError:
 
 pytestmark = pytest.mark.skipif(not HAS_NX, reason="networkx not installed")
 
-from dazzle_back.runtime.graph_algorithms import shortest_path, connected_components
+from dazzle_http.runtime.graph_algorithms import shortest_path, connected_components
 
 
 class TestShortestPath:
@@ -385,7 +385,7 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement algorithm functions**
 
-Create `src/dazzle_back/runtime/graph_algorithms.py`:
+Create `src/dazzle_http/runtime/graph_algorithms.py`:
 
 ```python
 """Graph algorithm functions (#619 Phase 4).
@@ -469,7 +469,7 @@ Expected: All PASSED.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/graph_algorithms.py tests/unit/test_graph_algorithms.py
+git add src/dazzle_http/runtime/graph_algorithms.py tests/unit/test_graph_algorithms.py
 git commit -m "feat: shortest_path and connected_components algorithms (#619)"
 ```
 
@@ -478,8 +478,8 @@ git commit -m "feat: shortest_path and connected_components algorithms (#619)"
 ### Task 4: Algorithm Endpoint Handlers + Route Registration
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py`
-- Modify: `src/dazzle_back/runtime/server.py`
+- Modify: `src/dazzle_http/runtime/route_generator.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 
 - [ ] **Step 1: Add algorithm handler factories to route_generator.py**
 
@@ -503,7 +503,7 @@ async def _materialize_graph(
     filters: dict[str, Any] | None = None,
 ) -> Any:
     """Load nodes + edges from DB and build a NetworkX graph."""
-    from dazzle_back.runtime.graph_materializer import GraphMaterializer
+    from dazzle_http.runtime.graph_materializer import GraphMaterializer
 
     # Build filter WHERE clause
     filter_sql = ""
@@ -577,8 +577,8 @@ def create_shortest_path_handler(
     ) -> Any:
         from starlette.responses import JSONResponse
 
-        from dazzle_back.runtime.graph_algorithms import shortest_path
-        from dazzle_back.runtime.graph_serializer import GraphSerializer
+        from dazzle_http.runtime.graph_algorithms import shortest_path
+        from dazzle_http.runtime.graph_serializer import GraphSerializer
 
         if format not in _VALID_GRAPH_FORMATS:
             raise HTTPException(status_code=400, detail=f"Invalid format. Supported: {', '.join(sorted(_VALID_GRAPH_FORMATS))}")
@@ -640,7 +640,7 @@ def create_components_handler(
     ) -> Any:
         from starlette.responses import JSONResponse
 
-        from dazzle_back.runtime.graph_algorithms import connected_components
+        from dazzle_http.runtime.graph_algorithms import connected_components
 
         if format not in _VALID_GRAPH_FORMATS:
             raise HTTPException(status_code=400, detail=f"Invalid format. Supported: {', '.join(sorted(_VALID_GRAPH_FORMATS))}")
@@ -657,7 +657,7 @@ def create_components_handler(
             return JSONResponse(content=result)
 
         # For cytoscape/d3, return full graph with component metadata
-        from dazzle_back.runtime.graph_serializer import GraphSerializer
+        from dazzle_http.runtime.graph_serializer import GraphSerializer
 
         serializer = GraphSerializer(graph_edge=graph_edge_spec, graph_node=graph_node_spec)
         if format == "cytoscape":
@@ -740,13 +740,13 @@ Expected: All pass.
 
 - [ ] **Step 4: Run linting**
 
-Run: `ruff check src/dazzle_back/runtime/graph_materializer.py src/dazzle_back/runtime/graph_algorithms.py src/dazzle_back/runtime/route_generator.py --fix && ruff format src/dazzle_back/runtime/graph_materializer.py src/dazzle_back/runtime/graph_algorithms.py`
+Run: `ruff check src/dazzle_http/runtime/graph_materializer.py src/dazzle_http/runtime/graph_algorithms.py src/dazzle_http/runtime/route_generator.py --fix && ruff format src/dazzle_http/runtime/graph_materializer.py src/dazzle_http/runtime/graph_algorithms.py`
 Expected: Clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py
+git add src/dazzle_http/runtime/route_generator.py
 git commit -m "feat: shortest-path and components algorithm endpoints (#619)"
 ```
 
@@ -775,9 +775,9 @@ except ImportError:
 pytestmark = pytest.mark.skipif(not HAS_NX, reason="networkx not installed")
 
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec
-from dazzle_back.runtime.graph_algorithms import shortest_path, connected_components
-from dazzle_back.runtime.graph_materializer import GraphMaterializer
-from dazzle_back.runtime.graph_serializer import GraphSerializer
+from dazzle_http.runtime.graph_algorithms import shortest_path, connected_components
+from dazzle_http.runtime.graph_materializer import GraphMaterializer
+from dazzle_http.runtime.graph_serializer import GraphSerializer
 
 
 class TestShortestPathPipeline:
@@ -889,7 +889,7 @@ class TestDomainFiltering:
     """Domain-scope filter extraction."""
 
     def test_extract_domain_filters(self) -> None:
-        from dazzle_back.runtime.route_generator import _extract_domain_filters
+        from dazzle_http.runtime.route_generator import _extract_domain_filters
         from unittest.mock import MagicMock
 
         request = MagicMock()
@@ -901,7 +901,7 @@ class TestDomainFiltering:
         assert "extra" not in filters
 
     def test_bracket_filter_syntax(self) -> None:
-        from dazzle_back.runtime.route_generator import _extract_domain_filters
+        from dazzle_http.runtime.route_generator import _extract_domain_filters
         from unittest.mock import MagicMock
 
         request = MagicMock()
@@ -911,7 +911,7 @@ class TestDomainFiltering:
         assert filters == {"work_id": "w1"}
 
     def test_no_filter_fields(self) -> None:
-        from dazzle_back.runtime.route_generator import _extract_domain_filters
+        from dazzle_http.runtime.route_generator import _extract_domain_filters
         from unittest.mock import MagicMock
 
         request = MagicMock()
@@ -933,7 +933,7 @@ Expected: All pass.
 
 - [ ] **Step 4: Run linting**
 
-Run: `ruff check src/dazzle_back/runtime/ tests/unit/test_graph_*.py --fix && ruff format src/dazzle_back/runtime/graph_materializer.py src/dazzle_back/runtime/graph_algorithms.py tests/unit/test_graph_materializer.py tests/unit/test_graph_algorithms.py tests/unit/test_graph_algo_integration.py`
+Run: `ruff check src/dazzle_http/runtime/ tests/unit/test_graph_*.py --fix && ruff format src/dazzle_http/runtime/graph_materializer.py src/dazzle_http/runtime/graph_algorithms.py tests/unit/test_graph_materializer.py tests/unit/test_graph_algorithms.py tests/unit/test_graph_algo_integration.py`
 Expected: Clean.
 
 - [ ] **Step 5: Commit**

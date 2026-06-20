@@ -1,0 +1,604 @@
+"""
+Relation loader for nested data fetching.
+
+Handles loading related entities and building nested response objects.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+from dazzle.http.runtime.query_builder import quote_identifier
+
+if TYPE_CHECKING:
+    from dazzle.http.specs.entity import EntitySpec, RelationSpec
+
+
+@dataclass
+class RelationInfo:
+    """Information about a relation between entities."""
+
+    name: str
+    from_entity: str
+    to_entity: str
+    kind: str  # "one_to_many", "many_to_one", "many_to_many", "one_to_one"
+    foreign_key_field: str  # The FK field on the "many" side
+    backref: str | None = None
+    on_delete: str = "restrict"  # restrict, cascade, set_null
+
+    @property
+    def is_to_one(self) -> bool:
+        """Check if this is a to-one relation (FK holder side)."""
+        return self.kind in ("many_to_one", "one_to_one")
+
+    @property
+    def is_to_many(self) -> bool:
+        """Check if this is a to-many relation."""
+        return self.kind in ("one_to_many", "many_to_many")
+
+
+@dataclass
+class RelationRegistry:
+    """
+    Registry of relations between entities.
+
+    Tracks all relations and provides lookup methods.
+    """
+
+    _relations: dict[str, list[RelationInfo]] = field(default_factory=dict)
+    _by_name: dict[tuple[str, str], RelationInfo] = field(default_factory=dict)
+    # v0.44.0: entity name → display_field for FK display resolution
+    display_fields: dict[str, str] = field(default_factory=dict)
+
+    def register(self, entity_name: str, relation: RelationInfo) -> None:
+        """Register a relation for an entity."""
+        if entity_name not in self._relations:
+            self._relations[entity_name] = []
+        self._relations[entity_name].append(relation)
+        self._by_name[(entity_name, relation.name)] = relation
+
+    def get_relations(self, entity_name: str) -> list[RelationInfo]:
+        """Get all relations for an entity."""
+        return self._relations.get(entity_name, [])
+
+    def get_relation(self, entity_name: str, relation_name: str) -> RelationInfo | None:
+        """Get a specific relation by name."""
+        return self._by_name.get((entity_name, relation_name))
+
+    def has_relation(self, entity_name: str, relation_name: str) -> bool:
+        """Check if a relation exists."""
+        return (entity_name, relation_name) in self._by_name
+
+    @classmethod
+    def from_entities(cls, entities: list[EntitySpec]) -> RelationRegistry:
+        """
+        Build a relation registry from entity specifications.
+
+        Args:
+            entities: List of entity specs
+
+        Returns:
+            Populated RelationRegistry
+        """
+        registry = cls()
+
+        for entity in entities:
+            # Register explicit relations (if EntitySpec has .relations)
+            for rel in getattr(entity, "relations", []):
+                info = RelationInfo(
+                    name=rel.name,
+                    from_entity=entity.name,
+                    to_entity=rel.to_entity,
+                    kind=rel.kind.value if hasattr(rel.kind, "value") else str(rel.kind),
+                    foreign_key_field=_infer_fk_field(rel, entity.name),
+                    backref=rel.backref,
+                    on_delete=rel.on_delete.value
+                    if hasattr(rel.on_delete, "value")
+                    else str(rel.on_delete),
+                )
+                registry.register(entity.name, info)
+
+            # Register implicit relations from ref/belongs_to fields
+            for field_spec in entity.fields:
+                if field_spec.type.kind in ("ref", "belongs_to") and field_spec.type.ref_entity:
+                    ref_entity = field_spec.type.ref_entity
+
+                    # Check if we already have an explicit relation for this
+                    existing = any(
+                        r.foreign_key_field == field_spec.name
+                        for r in registry.get_relations(entity.name)
+                    )
+                    if existing:
+                        continue
+
+                    # Create implicit relation
+                    info = RelationInfo(
+                        name=field_spec.name.replace("_id", ""),
+                        from_entity=entity.name,
+                        to_entity=ref_entity,
+                        kind="many_to_one",
+                        foreign_key_field=field_spec.name,
+                        on_delete="restrict",
+                    )
+                    registry.register(entity.name, info)
+
+        return registry
+
+
+def _infer_fk_field(relation: RelationSpec, entity_name: str) -> str:
+    """Infer the foreign key field name from a relation.
+
+    For many_to_one/one_to_one, the FK column is the relation name itself
+    (e.g. ``assigned_to: ref User`` creates column ``assigned_to``).
+    For one_to_many, the FK lives on the *other* entity as ``{entity}_id``.
+    """
+    if relation.kind.value in ("many_to_one", "one_to_one"):
+        # FK is on this entity — column name matches the relation/field name
+        return relation.name
+    else:
+        # FK is on the other entity
+        return f"{entity_name.lower()}_id"
+
+
+@dataclass
+class RelationLoader:
+    """
+    Loads related entities for nested data fetching.
+
+    Supports eager loading via JOINs or batched loading.
+    """
+
+    registry: RelationRegistry
+    entity_map: dict[str, EntitySpec]
+    _placeholder: str = "%s"
+
+    def __init__(
+        self,
+        registry: RelationRegistry,
+        entities: list[EntitySpec],
+        placeholder: str = "%s",
+    ):
+        """
+        Initialize the relation loader.
+
+        Args:
+            registry: Relation registry
+            entities: List of entity specs
+            placeholder: SQL placeholder style (default "%s" for PostgreSQL)
+
+        Note (#1331): the loader no longer owns a connection factory. Callers
+        MUST pass a live ``conn`` to :meth:`load_relations` — and that conn
+        should be a short-lived, pooled connection (``db.connection()``), never
+        the shared app-lifetime ``get_persistent_connection()``. A reused
+        non-autocommit connection that only ran ``SELECT``s parks
+        ``idle in transaction`` holding ``ACCESS SHARE`` and blocks DDL.
+        """
+        self.registry = registry
+        self.entity_map = {e.name: e for e in entities}
+        self._placeholder = placeholder
+
+    def load_relations(
+        self,
+        entity_name: str,
+        rows: list[dict[str, Any]],
+        include: list[str],
+        conn: Any,
+    ) -> list[dict[str, Any]]:
+        """
+        Load relations for a list of entity rows.
+
+        Args:
+            entity_name: Name of the entity
+            rows: List of entity data dicts
+            include: List of relation names to include
+            conn: Live database connection. MUST be a short-lived, pooled
+                connection (`db.connection()`); never the shared app-lifetime
+                `get_persistent_connection()` — see the class docstring (#1331).
+
+        Returns:
+            Rows with nested relation data
+        """
+        if not include or not rows:
+            return rows
+
+        if conn is None:
+            raise ValueError(
+                "load_relations requires a live `conn`; pass a pooled "
+                "db.connection() (see #1331 — the conn_factory fallback was "
+                "removed because a reused connection leaks idle-in-transaction)."
+            )
+
+        result = [dict(row) for row in rows]
+
+        for relation_name in include:
+            relation = self.registry.get_relation(entity_name, relation_name)
+            if not relation:
+                continue
+
+            if relation.is_to_one:
+                result = self._load_to_one(relation, result, conn)
+            else:
+                result = self._load_to_many(relation, result, conn)
+
+        return result
+
+    def _load_to_one(
+        self,
+        relation: RelationInfo,
+        rows: list[dict[str, Any]],
+        conn: Any,
+    ) -> list[dict[str, Any]]:
+        """
+        Load a to-one relation (many-to-one or one-to-one).
+
+        Uses batched loading to avoid N+1 queries.
+        """
+        # Collect all foreign key values
+        fk_field = relation.foreign_key_field
+        fk_values = {str(row.get(fk_field)) for row in rows if row.get(fk_field)}
+
+        if not fk_values:
+            # No FKs to load
+            for row in rows:
+                row[relation.name] = None
+            return rows
+
+        # Batch load related entities
+        placeholders = ", ".join(self._placeholder for _ in fk_values)
+        table = quote_identifier(relation.to_entity)
+        sql = f"SELECT * FROM {table} WHERE id IN ({placeholders})"
+
+        # `table` is a quote_identifier()'d entity name from the relation
+        # registry (framework-controlled); `placeholders` are %s markers and the
+        # fk values are passed as bound params — no user input is concatenated.
+        cursor = conn.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
+            sql, list(fk_values)
+        )
+        related_rows = cursor.fetchall()
+
+        # Build lookup by ID, injecting __display__ if entity has display_field
+        _display_key = self.registry.display_fields.get(relation.to_entity)
+        related_map: dict[str, dict[str, Any]] = {}
+        # Collect FK UUIDs that need nested display resolution (#590)
+        _nested_fk_ids: set[str] = set()
+        _nested_entity: str | None = None
+        for r in related_rows:
+            d = dict(r)
+            if _display_key and _display_key in d:
+                val = d[_display_key]
+                # Check if display_field points to a FK (UUID value, not a scalar)
+                nested_rel = self.registry.get_relation(relation.to_entity, _display_key)
+                if nested_rel and isinstance(val, str) and len(val) == 36 and "-" in val:
+                    _nested_fk_ids.add(val)
+                    _nested_entity = nested_rel.to_entity
+                else:
+                    d["__display__"] = val
+            related_map[str(d["id"])] = d
+
+        # Resolve nested FK display names in a single batch query (#590)
+        if _nested_fk_ids and _nested_entity:
+            _nested_display_key = self.registry.display_fields.get(_nested_entity)
+            if _nested_display_key:
+                _nested_table = quote_identifier(_nested_entity)
+                _nested_placeholders = ", ".join(self._placeholder for _ in _nested_fk_ids)
+                _nested_sql = f"SELECT id, {quote_identifier(_nested_display_key)} FROM {_nested_table} WHERE id IN ({_nested_placeholders})"
+                # Identifiers are quote_identifier()'d (registry-controlled);
+                # ids are bound params — no user input concatenated.
+                _nested_cursor = conn.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
+                    _nested_sql, list(_nested_fk_ids)
+                )
+                _nested_map = {
+                    str(nr["id"]): nr[_nested_display_key] for nr in _nested_cursor.fetchall()
+                }
+                for d in related_map.values():
+                    if "__display__" not in d and _display_key and _display_key in d:
+                        fk_val = str(d[_display_key])
+                        d["__display__"] = _nested_map.get(fk_val, fk_val)
+
+        # Attach to rows
+        for row in rows:
+            fk_value = row.get(fk_field)
+            if fk_value:
+                row[relation.name] = related_map.get(str(fk_value))
+            else:
+                row[relation.name] = None
+
+        return rows
+
+    def _load_to_many(
+        self,
+        relation: RelationInfo,
+        rows: list[dict[str, Any]],
+        conn: Any,
+    ) -> list[dict[str, Any]]:
+        """
+        Load a to-many relation (one-to-many or many-to-many).
+
+        Uses batched loading.
+        """
+        # Collect all IDs
+        ids = {str(row.get("id")) for row in rows if row.get("id")}
+
+        if not ids:
+            for row in rows:
+                row[relation.name] = []
+            return rows
+
+        # The FK on the related entity points back to us
+        fk_field = relation.foreign_key_field
+        placeholders = ", ".join(self._placeholder for _ in ids)
+        table = quote_identifier(relation.to_entity)
+        fk_col = quote_identifier(fk_field)
+        sql = f"SELECT * FROM {table} WHERE {fk_col} IN ({placeholders})"
+
+        # `table`/`fk_col` are quote_identifier()'d (registry-controlled);
+        # ids are bound params — no user input concatenated.
+        cursor = conn.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
+            sql, list(ids)
+        )
+        related_rows = cursor.fetchall()
+
+        # Group by FK
+        related_map: dict[str, list[dict[str, Any]]] = {}
+        for r in related_rows:
+            r_dict = dict(r)
+            fk_value = str(r_dict.get(fk_field))
+            if fk_value not in related_map:
+                related_map[fk_value] = []
+            related_map[fk_value].append(r_dict)
+
+        # Attach to rows
+        for row in rows:
+            row_id = str(row.get("id"))
+            row[relation.name] = related_map.get(row_id, [])
+
+        return rows
+
+    def build_join_sql(
+        self,
+        entity_name: str,
+        include: list[str],
+    ) -> tuple[str, list[str]]:
+        """
+        Build JOIN clauses for eager loading.
+
+        Args:
+            entity_name: Base entity name
+            include: List of relations to join
+
+        Returns:
+            Tuple of (join_sql, select_columns)
+        """
+        joins = []
+        columns = [f"{entity_name}.*"]
+
+        for relation_name in include:
+            relation = self.registry.get_relation(entity_name, relation_name)
+            if not relation or not relation.is_to_one:
+                continue
+
+            alias = f"_{relation_name}"
+            fk_field = relation.foreign_key_field
+
+            join = (
+                f"LEFT JOIN {relation.to_entity} AS {alias} "
+                f"ON {entity_name}.{fk_field} = {alias}.id"
+            )
+            joins.append(join)
+
+            # Add related columns with alias prefix
+            related_entity = self.entity_map.get(relation.to_entity)
+            if related_entity:
+                for field in related_entity.fields:
+                    columns.append(f"{alias}.{field.name} AS {alias}_{field.name}")
+                # Add id if not in fields
+                if not any(f.name == "id" for f in related_entity.fields):
+                    columns.append(f"{alias}.id AS {alias}_id")
+
+        return " ".join(joins), columns
+
+    def parse_joined_row(
+        self,
+        row: dict[str, Any],
+        entity_name: str,
+        include: list[str],
+    ) -> dict[str, Any]:
+        """
+        Parse a row from a JOIN query into nested objects.
+
+        Args:
+            row: Raw row dict from JOIN query
+            entity_name: Base entity name
+            include: List of included relations
+
+        Returns:
+            Dict with nested relation objects
+        """
+        result = {}
+        nested: dict[str, dict[str, Any]] = {}
+
+        for key, value in row.items():
+            if key.startswith("_"):
+                # This is a nested field: _owner_name -> owner.name
+                parts = key[1:].split("_", 1)
+                if len(parts) == 2:
+                    relation_name, field_name = parts
+                    if relation_name not in nested:
+                        nested[relation_name] = {}
+                    nested[relation_name][field_name] = value
+            else:
+                result[key] = value
+
+        # Attach nested objects
+        for relation_name in include:
+            if relation_name in nested:
+                # Check if nested has any non-None values (null join)
+                if any(v is not None for v in nested[relation_name].values()):
+                    result[relation_name] = nested[relation_name]
+                else:
+                    result[relation_name] = None
+            else:
+                result[relation_name] = None
+
+        return result
+
+    def build_display_join_plan(
+        self,
+        entity_name: str,
+        include: list[str],
+    ) -> tuple[list[str], list[str], list[str]]:
+        """Build LEFT JOIN clauses + SELECT columns for FK display resolution (#865).
+
+        For each to-one relation in ``include`` whose target entity has a known
+        ``display_field``, emit a LEFT JOIN and add ``target.{display_field}
+        AS "{fk}__display"`` to the SELECT list. Relations without a display
+        field are returned in ``fallback`` and must still be loaded via the
+        batched ``_load_to_one`` path.
+
+        Returns ``(joins, extra_cols, fallback_relations)``. All three lists
+        are empty when nothing qualifies for the fast path.
+        """
+        joins: list[str] = []
+        extra_cols: list[str] = []
+        fallback: list[str] = []
+        base = quote_identifier(entity_name)
+
+        for relation_name in include:
+            relation = self.registry.get_relation(entity_name, relation_name)
+            if not relation or not relation.is_to_one:
+                fallback.append(relation_name)
+                continue
+            display_field = self.registry.display_fields.get(relation.to_entity)
+            if not display_field:
+                fallback.append(relation_name)
+                continue
+            alias = f"_fkd_{relation_name}"
+            fk_col = quote_identifier(relation.foreign_key_field)
+            target = quote_identifier(relation.to_entity)
+            display_col = quote_identifier(display_field)
+            joins.append(f'LEFT JOIN {target} AS "{alias}" ON "{alias}".id = {base}.{fk_col}')
+            extra_cols.append(f'"{alias}".{display_col} AS "{relation_name}__display"')
+        return joins, extra_cols, fallback
+
+    def apply_display_joins_to_rows(
+        self,
+        rows: list[dict[str, Any]],
+        entity_name: str,
+        include: list[str],
+    ) -> list[dict[str, Any]]:
+        """Fold `{rel}__display` columns into FK dict shape (#865).
+
+        The JOIN path puts display values into sibling columns on each row;
+        this helper reshapes them into ``row[rel] = {id, __display__}`` dicts
+        matching what the batched ``_load_to_one`` path produces, so
+        downstream consumers (``_inject_display_names``) don't need changes.
+        """
+        for row in rows:
+            for relation_name in include:
+                relation = self.registry.get_relation(entity_name, relation_name)
+                if not relation or not relation.is_to_one:
+                    continue
+                display_key = f"{relation_name}__display"
+                if display_key not in row:
+                    continue
+                display_val = row.pop(display_key)
+                fk_id = row.get(relation.foreign_key_field)
+                if fk_id is None:
+                    row[relation_name] = None
+                else:
+                    row[relation_name] = {"id": fk_id, "__display__": display_val}
+        return rows
+
+
+# =============================================================================
+# Foreign Key Management
+# =============================================================================
+
+
+def build_foreign_key_constraint(
+    relation: RelationInfo,
+    entity_name: str,
+) -> str:
+    """
+    Build a FOREIGN KEY constraint for a relation.
+
+    Args:
+        relation: Relation info
+        entity_name: Entity that holds the FK
+
+    Returns:
+        SQL constraint string
+    """
+    on_delete_map = {
+        "restrict": "RESTRICT",
+        "cascade": "CASCADE",
+        "nullify": "SET NULL",
+        "set_null": "SET NULL",
+        "set_default": "SET DEFAULT",
+    }
+
+    on_delete = on_delete_map.get(relation.on_delete.lower(), "RESTRICT")
+
+    return (
+        f"FOREIGN KEY ({quote_identifier(relation.foreign_key_field)}) "
+        f"REFERENCES {quote_identifier(relation.to_entity)}({quote_identifier('id')}) ON DELETE {on_delete}"
+    )
+
+
+def get_foreign_key_constraints(
+    entity: EntitySpec,
+    registry: RelationRegistry,
+    exclude_edges: set[tuple[str, str]] | None = None,
+) -> list[str]:
+    """
+    Get all FK constraints for an entity.
+
+    Args:
+        entity: Entity spec
+        registry: Relation registry
+        exclude_edges: Optional set of (entity, ref_entity) edges to skip
+            (used to defer circular FK constraints to ALTER TABLE).
+
+    Returns:
+        List of FK constraint SQL strings
+    """
+    constraints = []
+
+    for relation in registry.get_relations(entity.name):
+        if relation.is_to_one:
+            # Skip circular FK constraints — they'll be added via ALTER TABLE
+            if exclude_edges and (entity.name, relation.to_entity) in exclude_edges:
+                continue
+            constraint = build_foreign_key_constraint(relation, entity.name)
+            constraints.append(constraint)
+
+    return constraints
+
+
+def get_foreign_key_indexes(
+    entity: EntitySpec,
+    registry: RelationRegistry,
+) -> list[str]:
+    """
+    Get index creation statements for FK columns.
+
+    Args:
+        entity: Entity spec
+        registry: Relation registry
+
+    Returns:
+        List of CREATE INDEX SQL statements
+    """
+    indexes = []
+
+    for relation in registry.get_relations(entity.name):
+        if relation.is_to_one:
+            idx_name = f"idx_{entity.name}_{relation.foreign_key_field}"
+            sql = (
+                f"CREATE INDEX IF NOT EXISTS {idx_name} "
+                f"ON {quote_identifier(entity.name)}({quote_identifier(relation.foreign_key_field)})"
+            )
+            indexes.append(sql)
+
+    return indexes

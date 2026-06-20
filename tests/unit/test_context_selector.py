@@ -60,27 +60,27 @@ class TestContextSelectorSpec:
 
 class TestCurrentContextResolution:
     def test_literal_current_context(self) -> None:
-        from dazzle.back.runtime.condition_evaluator import _resolve_value
+        from dazzle.http.runtime.condition_evaluator import _resolve_value
 
         ctx = {"current_context": "school-123"}
         result = _resolve_value({"literal": "current_context"}, ctx)
         assert result == "school-123"
 
     def test_identifier_current_context(self) -> None:
-        from dazzle.back.runtime.condition_evaluator import _resolve_value
+        from dazzle.http.runtime.condition_evaluator import _resolve_value
 
         ctx = {"current_context": "school-456"}
         result = _resolve_value({"kind": "identifier", "value": "current_context"}, ctx)
         assert result == "school-456"
 
     def test_current_context_missing_returns_none(self) -> None:
-        from dazzle.back.runtime.condition_evaluator import _resolve_value
+        from dazzle.http.runtime.condition_evaluator import _resolve_value
 
         result = _resolve_value({"literal": "current_context"}, {})
         assert result is None
 
     def test_evaluate_condition_with_current_context(self) -> None:
-        from dazzle.back.runtime.condition_evaluator import evaluate_condition
+        from dazzle.http.runtime.condition_evaluator import evaluate_condition
 
         condition = {
             "comparison": {
@@ -94,7 +94,7 @@ class TestCurrentContextResolution:
         assert evaluate_condition(condition, record, ctx) is True
 
     def test_evaluate_condition_current_context_mismatch(self) -> None:
-        from dazzle.back.runtime.condition_evaluator import evaluate_condition
+        from dazzle.http.runtime.condition_evaluator import evaluate_condition
 
         condition = {
             "comparison": {
@@ -108,7 +108,7 @@ class TestCurrentContextResolution:
         assert evaluate_condition(condition, record, ctx) is False
 
     def test_sql_filter_with_current_context(self) -> None:
-        from dazzle.back.runtime.condition_evaluator import condition_to_sql_filter
+        from dazzle.http.runtime.condition_evaluator import condition_to_sql_filter
 
         condition = {
             "comparison": {
@@ -141,7 +141,7 @@ class TestWorkspaceContextSelector:
         return ws
 
     def test_no_context_selector(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         ws = self._make_workspace()
         ctx = build_workspace_context(ws)
@@ -150,7 +150,7 @@ class TestWorkspaceContextSelector:
 
     def test_with_context_selector(self) -> None:
         from dazzle.core.ir.workspaces import ContextSelectorSpec
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         sel = ContextSelectorSpec(entity="School")
         ws = self._make_workspace(name="school_dashboard", context_selector=sel)

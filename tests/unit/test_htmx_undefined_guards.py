@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-JS_DIR = REPO_ROOT / "src" / "dazzle" / "ui" / "runtime" / "static" / "js"
+JS_DIR = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "js"
 
 # Match `htmx.X(` calls (htmx.ajax, htmx.process, htmx.swap, etc.).
 # Skip the property-access form `htmx.config` since it's a read, not a call.
@@ -109,7 +109,7 @@ def test_htmx_calls_in_dashboard_builder_are_guarded() -> None:
 # ───────────────────────── #980 round 2: templates ─────────────────────────
 
 
-_TEMPLATES_DIR = REPO_ROOT / "src" / "dazzle" / "ui" / "templates"
+_TEMPLATES_DIR = REPO_ROOT / "src" / "dazzle" / "page" / "templates"
 
 # Match an inline <script>...</script> block (not src=... loads).
 #

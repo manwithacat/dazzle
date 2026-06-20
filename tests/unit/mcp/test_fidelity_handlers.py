@@ -205,27 +205,27 @@ paths = ["./dsl"]
     def test_internal_import_error_surfaces_real_cause_not_phantom_extras(
         self, temp_project, monkeypatch
     ) -> None:
-        """When dazzle.ui is installed but a nested import inside it
+        """When dazzle.page is installed but a nested import inside it
         breaks (e.g. stale bytecode after a rename), the handler must
         report the real ImportError instead of the misleading
         `pip install '.[dazzle-ui]'` hint (#1114).
 
         Simulated by poisoning sys.modules for one of the modules the
         handler imports — the next `from … import …` raises ImportError
-        with a name that points inside dazzle.ui.*, not at the root."""
-        # Sanity-check dazzle.ui is actually importable in this env —
+        with a name that points inside dazzle.page.*, not at the root."""
+        # Sanity-check dazzle.page is actually importable in this env —
         # without that, this test wouldn't be exercising the branch we
         # care about.
         import importlib.util
 
-        assert importlib.util.find_spec("dazzle.ui") is not None, (
-            "test precondition: dazzle.ui must be installed"
+        assert importlib.util.find_spec("dazzle.page") is not None, (
+            "test precondition: dazzle.page must be installed"
         )
 
         # Force the second import to fail at a sub-symbol level —
         # mimics the stale-bytecode-after-rename failure mode from the
         # AegisMark repro.
-        target = "dazzle.ui.runtime.template_renderer"
+        target = "dazzle.page.runtime.template_renderer"
         monkeypatch.setitem(sys.modules, target, None)
 
         result = score_fidelity_handler(temp_project, {})
@@ -243,24 +243,24 @@ paths = ["./dsl"]
         assert "Restart the MCP server" in data["hint"]
 
     def test_ui_root_missing_uses_reinstall_hint(self, temp_project, monkeypatch) -> None:
-        """When `dazzle.ui` itself is genuinely absent (find_spec
-        returns None AND the ImportError names dazzle.ui as the
+        """When `dazzle.page` itself is genuinely absent (find_spec
+        returns None AND the ImportError names dazzle.page as the
         missing module), the handler must hint at a reinstall — not
         the phantom `.[dazzle-ui]` extras."""
-        # Pretend find_spec can't locate dazzle.ui.
+        # Pretend find_spec can't locate dazzle.page.
         import importlib.util as _il
 
         real_find_spec = _il.find_spec
 
         def _fake_find_spec(name, *args, **kwargs):
-            if name == "dazzle.ui":
+            if name == "dazzle.page":
                 return None
             return real_find_spec(name, *args, **kwargs)
 
         monkeypatch.setattr(_il, "find_spec", _fake_find_spec)
         # Force the actual import to raise with a name pointing at
-        # dazzle.ui — sys.modules trick again, but at the root.
-        monkeypatch.setitem(sys.modules, "dazzle.ui.converters.template_compiler", None)
+        # dazzle.page — sys.modules trick again, but at the root.
+        monkeypatch.setitem(sys.modules, "dazzle.page.converters.template_compiler", None)
 
         result = score_fidelity_handler(temp_project, {})
         data = json.loads(result)

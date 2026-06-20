@@ -22,8 +22,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.page_routes import _maybe_dispatch_inner_html
 from dazzle.core.ir.surfaces import SurfaceMode
+from dazzle.http.runtime.page_routes import _maybe_dispatch_inner_html
 
 
 def _make_surface(name: str, mode: SurfaceMode, render: str | None) -> SimpleNamespace:

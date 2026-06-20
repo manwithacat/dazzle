@@ -82,7 +82,7 @@ class TestSseWiring:
     def test_created_callback_publishes_nudge(self) -> None:
         import asyncio
 
-        from dazzle.back.runtime.sse_wiring import register_sse_callbacks
+        from dazzle.http.runtime.sse_wiring import register_sse_callbacks
 
         bus = _RecordingBus()
         svc = _FakeCRUDService("Job")
@@ -105,7 +105,7 @@ class TestSseWiring:
     def test_updated_and_deleted_topics(self) -> None:
         import asyncio
 
-        from dazzle.back.runtime.sse_wiring import register_sse_callbacks
+        from dazzle.http.runtime.sse_wiring import register_sse_callbacks
 
         bus = _RecordingBus()
         svc = _FakeCRUDService("Job")
@@ -119,7 +119,7 @@ class TestSseWiring:
         assert bus.published[0][1].headers == {}
 
     def test_no_bus_wires_nothing(self) -> None:
-        from dazzle.back.runtime.sse_wiring import register_sse_callbacks
+        from dazzle.http.runtime.sse_wiring import register_sse_callbacks
 
         svc = _FakeCRUDService("Job")
         assert register_sse_callbacks({"Job": svc}, None, _is_target=lambda s: True) == 0
@@ -130,7 +130,7 @@ class TestLazyFrameworkBus:
     def test_publish_drops_when_bus_not_ready(self) -> None:
         import asyncio
 
-        from dazzle.back.runtime.sse_wiring import LazyFrameworkBus
+        from dazzle.http.runtime.sse_wiring import LazyFrameworkBus
 
         framework = SimpleNamespace(get_bus=lambda: None)
         lazy = LazyFrameworkBus(framework)
@@ -140,7 +140,7 @@ class TestLazyFrameworkBus:
     def test_publish_delegates_when_bus_ready(self) -> None:
         import asyncio
 
-        from dazzle.back.runtime.sse_wiring import LazyFrameworkBus
+        from dazzle.http.runtime.sse_wiring import LazyFrameworkBus
 
         real = _RecordingBus()
         framework = SimpleNamespace(get_bus=lambda: real)
@@ -154,7 +154,7 @@ class TestLazyFrameworkBus:
         # The proxy must resolve via `.bus` instead of treating it as not-ready.
         import asyncio
 
-        from dazzle.back.runtime.sse_wiring import LazyFrameworkBus
+        from dazzle.http.runtime.sse_wiring import LazyFrameworkBus
 
         real = _RecordingBus()
         framework = SimpleNamespace(bus=real)  # no get_bus attribute
@@ -165,7 +165,7 @@ class TestLazyFrameworkBus:
 
 class TestRendererSseUrl:
     def _ctx(self, dsl: str) -> object:
-        from dazzle.ui.runtime.workspace_renderer import build_workspace_context
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
 
         module = parse_dsl(dsl, Path("test.dsl"))[5]
         ws = next(w for w in module.workspaces if w.name == "ops")
@@ -181,7 +181,7 @@ class TestRendererSseUrl:
 
 class TestSseMountGate:
     def test_any_workspace_live(self) -> None:
-        from dazzle.back.runtime.server import _any_workspace_live
+        from dazzle.http.runtime.server import _any_workspace_live
 
         assert (
             _any_workspace_live([SimpleNamespace(live=True), SimpleNamespace(live=False)]) is True
@@ -202,7 +202,7 @@ class TestSseDeliveryIntegration:
     """
 
     async def _nudge_envelope(self, tenant: str | None) -> object:
-        from dazzle.back.runtime.sse_wiring import register_sse_callbacks
+        from dazzle.http.runtime.sse_wiring import register_sse_callbacks
 
         bus = _RecordingBus()
         svc = _FakeCRUDService("Job")
@@ -211,7 +211,7 @@ class TestSseDeliveryIntegration:
         return bus.published[0][1]
 
     async def test_nudge_reaches_matching_subscriber(self) -> None:
-        from dazzle.back.runtime.sse_stream import SSEStreamManager, StreamType
+        from dazzle.http.runtime.sse_stream import SSEStreamManager, StreamType
 
         envelope = await self._nudge_envelope("t1")
         manager = SSEStreamManager(event_bus=_RecordingBus())
@@ -224,7 +224,7 @@ class TestSseDeliveryIntegration:
         assert msg.data.get("entity") == "Job"
 
     async def test_nudge_isolated_across_tenants(self) -> None:
-        from dazzle.back.runtime.sse_stream import SSEStreamManager, StreamType
+        from dazzle.http.runtime.sse_stream import SSEStreamManager, StreamType
 
         envelope = await self._nudge_envelope("t1")
         manager = SSEStreamManager(event_bus=_RecordingBus())

@@ -32,7 +32,7 @@ class TestPairStripStageRegistered:
     count."""
 
     def test_in_default_spans(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import STAGE_DEFAULT_SPANS
+        from dazzle.page.runtime.workspace_renderer import STAGE_DEFAULT_SPANS
 
         assert "pair_strip" in STAGE_DEFAULT_SPANS, (
             "pair_strip stage missing from STAGE_DEFAULT_SPANS — #5 lost"
@@ -41,7 +41,7 @@ class TestPairStripStageRegistered:
         assert STAGE_DEFAULT_SPANS["pair_strip"] == 6
 
     def test_in_fold_counts(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import STAGE_FOLD_COUNTS
+        from dazzle.page.runtime.workspace_renderer import STAGE_FOLD_COUNTS
 
         assert "pair_strip" in STAGE_FOLD_COUNTS
         # Three pairs = six regions eagerly loaded above the fold
@@ -54,12 +54,12 @@ class TestPairStripDefaultColSpan:
     then arranges them into rows of two."""
 
     def test_first_region_half_width(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import _default_col_span
+        from dazzle.page.runtime.workspace_renderer import _default_col_span
 
         assert _default_col_span("pair_strip", 0) == 6
 
     def test_subsequent_regions_also_half_width(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import _default_col_span
+        from dazzle.page.runtime.workspace_renderer import _default_col_span
 
         for idx in range(1, 8):
             assert _default_col_span("pair_strip", idx) == 6, (
@@ -70,7 +70,7 @@ class TestPairStripDefaultColSpan:
     def test_unrelated_stage_unaffected(self) -> None:
         """Regression guard — adding pair_strip mustn't change the
         col_span behaviour of any other stage."""
-        from dazzle.ui.runtime.workspace_renderer import _default_col_span
+        from dazzle.page.runtime.workspace_renderer import _default_col_span
 
         # focus_metric: [12, 6] — first region full-width, rest half
         assert _default_col_span("focus_metric", 0) == 12
@@ -130,7 +130,7 @@ class TestPairStripResponsiveBehaviour:
     lives in CSS, not the renderer."""
 
     def test_no_mobile_specific_branching_in_renderer(self) -> None:
-        from dazzle.ui.runtime import workspace_renderer
+        from dazzle.page.runtime import workspace_renderer
 
         src = Path(workspace_renderer.__file__).read_text()
         # The string `pair_strip` should only appear in the two stage

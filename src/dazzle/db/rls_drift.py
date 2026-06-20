@@ -11,7 +11,7 @@ a clean apply. Instead this compares the *policy SET* per table:
 
 - the expected policy NAMES (``tenant_fence`` / ``tenant_baseline`` /
   ``scope_<verb>``) — the shared source of truth from
-  :func:`dazzle.back.runtime.rls_schema.describe_rls_policies`;
+  :func:`dazzle.http.runtime.rls_schema.describe_rls_policies`;
 - each policy's ``cmd`` (``ALL`` / ``SELECT`` / ``INSERT`` / ``UPDATE`` /
   ``DELETE``);
 - each policy's permissive/restrictive flag;
@@ -171,7 +171,7 @@ async def detect_rls_drift(conn: Any, appspec: Any, entities: list[Any]) -> list
     Returns:
         A list of drift entries, ordered by entity name; empty = no drift.
     """
-    from dazzle.back.runtime.rls_schema import describe_rls_policies
+    from dazzle.http.runtime.rls_schema import describe_rls_policies
 
     descriptors = describe_rls_policies(appspec, entities)
     if not descriptors:

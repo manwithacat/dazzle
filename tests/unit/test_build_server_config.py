@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from dazzle.back.runtime.app_factory import build_server_config
 from dazzle.core.ir import (
     AppSpec,
     DomainSpec,
@@ -21,6 +20,7 @@ from dazzle.core.ir import (
 )
 from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
 from dazzle.core.ir.state_machine import StateMachineSpec
+from dazzle.http.runtime.app_factory import build_server_config
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -145,7 +145,7 @@ class TestBuildServerConfig:
         assert len(config.schedule_specs) == 1
         assert config.schedule_specs[0].name == "daily_sync"
 
-    @patch("dazzle.back.runtime.app_factory.build_fragment_sources", return_value={"stripe": {}})
+    @patch("dazzle.http.runtime.app_factory.build_fragment_sources", return_value={"stripe": {}})
     def test_computes_fragment_sources_when_not_provided(self, mock_bfs: Any) -> None:
         config = build_server_config(_appspec())
         assert config.fragment_sources == {"stripe": {}}

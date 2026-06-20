@@ -36,7 +36,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = REPO_ROOT / "src"
 IR_ROOT = SRC_ROOT / "dazzle" / "core" / "ir"
-SCAN_ROOTS = (SRC_ROOT / "dazzle", SRC_ROOT / "dazzle" / "back", SRC_ROOT / "dazzle" / "ui")
+SCAN_ROOTS = (SRC_ROOT / "dazzle", SRC_ROOT / "dazzle" / "http", SRC_ROOT / "dazzle" / "page")
 REPORT_PATH = REPO_ROOT / "dev_docs" / "audit-internals.md"
 
 JINJA_ATTR_RE = re.compile(r"\.([A-Za-z_][A-Za-z0-9_]*)")

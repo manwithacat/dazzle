@@ -7,11 +7,11 @@ that convert Cedar permission rules to SQL-compatible row filters.
 
 from typing import Any
 
-from dazzle.back.runtime.route_generator import (
+from dazzle.http.runtime.route_generator import (
     _extract_cedar_row_filters,
     _extract_condition_filters,
 )
-from dazzle.back.specs.auth import (
+from dazzle.http.specs.auth import (
     AccessComparisonKind,
     AccessConditionSpec,
     AccessLogicalKind,

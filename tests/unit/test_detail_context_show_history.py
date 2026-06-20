@@ -74,7 +74,7 @@ def _make_surface(*, show_history: bool) -> SurfaceSpec:
 
 @pytest.fixture()
 def compile_view():
-    from dazzle.ui.converters.template_compiler import _compile_view_surface
+    from dazzle.page.converters.template_compiler import _compile_view_surface
 
     def _compile(*, show_history: bool):
         return _compile_view_surface(

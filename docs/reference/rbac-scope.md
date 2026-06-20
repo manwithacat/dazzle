@@ -485,7 +485,7 @@ For overrides that take the ID in the body, write to multiple entities,
 or need authorisation after some payload computation:
 
 ```python
-from dazzle.back.runtime.policy import check_entity_op
+from dazzle.http.runtime.policy import check_entity_op
 
 async def handler(request: Request):
     body = await request.json()

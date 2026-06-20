@@ -6,7 +6,7 @@ preserves every existing import path by re-exporting the public surface.
 
 External importers (current — keep this list in sync if you add more):
 
-  src/dazzle/back/runtime/workspace_region_render.py
+  src/dazzle/http/runtime/workspace_region_render.py
     → WorkspaceRegionAdapter (lazy import)
 
   src/dazzle/render/fragment/renderer.py

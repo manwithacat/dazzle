@@ -167,7 +167,7 @@ def create_saml(
     """
     from pathlib import Path
 
-    from dazzle.back.runtime.auth.saml_metadata import (
+    from dazzle.http.runtime.auth.saml_metadata import (
         SamlMetadataError,
         fetch_idp_metadata,
         parse_idp_metadata_xml,
@@ -265,7 +265,7 @@ def enable_request_signing(
     SP signing cert. The Response signature is still the trust anchor. Rotate the key by
     running disable-request-signing then this again.
     """
-    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+    from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
     store = _store()
     conn = store.get_connection(connection_id)
@@ -375,7 +375,7 @@ def enable_assertion_encryption(
     metadata (printed URL) so it has the SP encryption cert. WARNING: once on, a response
     carrying a plaintext (unencrypted) assertion is rejected — enable the IdP side first.
     """
-    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+    from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
     store = _store()
     conn = store.get_connection(connection_id)
@@ -489,7 +489,7 @@ def rotate_secret(
                 "arbitrated by the IdP, so an overlap window can't help).[/red]"
             )
             raise typer.Exit(code=1)
-        from dazzle.back.runtime.auth.secret_rotation import parse_grace_duration
+        from dazzle.http.runtime.auth.secret_rotation import parse_grace_duration
 
         try:
             grace_td = parse_grace_duration(grace)
@@ -584,7 +584,7 @@ def add_domain(
     domain: Annotated[str, typer.Argument(help="Domain to claim (e.g. acme.test)")],
 ) -> None:
     """Claim a domain for a connection and print the DNS TXT record to publish."""
-    from dazzle.back.runtime.auth.domain_verification import txt_record
+    from dazzle.http.runtime.auth.domain_verification import txt_record
 
     store = _store()
     conn = store.get_connection(connection_id)
@@ -604,7 +604,7 @@ def show_verification(
     domain: Annotated[str, typer.Argument(help="Domain")],
 ) -> None:
     """Print the DNS TXT record a domain must publish to verify (no DNS lookup)."""
-    from dazzle.back.runtime.auth.domain_verification import txt_record
+    from dazzle.http.runtime.auth.domain_verification import txt_record
 
     norm = domain.strip().lower().rstrip(".")
     console.print(f'{norm}  IN TXT  "{txt_record(connection_id, norm)}"')
@@ -616,7 +616,7 @@ def verify_domain_cmd(
     domain: Annotated[str, typer.Argument(help="Domain to verify")],
 ) -> None:
     """Verify domain ownership via DNS TXT; on success the domain starts routing."""
-    from dazzle.back.runtime.auth.domain_verification import (
+    from dazzle.http.runtime.auth.domain_verification import (
         DnspythonResolver,
         DomainVerificationError,
         txt_record,
@@ -660,7 +660,7 @@ def delete(
 def _env_flags() -> tuple[bool, bool, bool]:
     """(secret_key_ok, sso_extra_ok, dns_extra_ok) for the doctor — shared with the
     org-admin readiness panel via the runtime helper (single source of truth)."""
-    from dazzle.back.runtime.auth.connection_doctor import environment_flags
+    from dazzle.http.runtime.auth.connection_doctor import environment_flags
 
     return environment_flags()
 
@@ -690,8 +690,8 @@ def doctor(
     """
     import json as _json
 
-    from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError
-    from dazzle.back.runtime.auth.connection_doctor import diagnose_connection
+    from dazzle.http.runtime.auth.connection_crypto import ConnectionSecretError
+    from dazzle.http.runtime.auth.connection_doctor import diagnose_connection
 
     secret_key_ok, sso_extra_ok, dns_extra_ok = _env_flags()
 
@@ -748,7 +748,7 @@ def doctor(
     # affects the exit code, which stays bound to config-readiness (diag.ready).
     probe_checks: tuple[Any, ...] = ()
     if probe:
-        from dazzle.back.runtime.auth.connection_probe import probe_connection
+        from dazzle.http.runtime.auth.connection_probe import probe_connection
 
         probe_checks = probe_connection(conn)
 

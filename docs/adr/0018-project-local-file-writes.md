@@ -18,7 +18,7 @@ reports) into those same directories. This is wrong for three reasons:
    write into the same framework directory
 
 Issue #724 exposed this: `dazzle db revision` wrote Alembic migrations into
-`site-packages/dazzle_back/alembic/versions/` instead of the user's project.
+`site-packages/dazzle_http/alembic/versions/` instead of the user's project.
 
 ## Decision
 
@@ -29,8 +29,8 @@ Two rules:
 1. **Read framework assets** (templates, env.py, TOML data, static files) via package
    import paths:
    ```python
-   import dazzle_back
-   framework_dir = Path(dazzle_back.__file__).parent / "alembic"
+   import dazzle_http
+   framework_dir = Path(dazzle_http.__file__).parent / "alembic"
    ```
    Or use `importlib.resources` for assets that need to survive wheel packaging.
 

@@ -36,9 +36,9 @@
 
 | File | Responsibility | Change |
 |---|---|---|
-| `src/dazzle/back/runtime/sa_schema.py` | `server_default` (cast) on the scoped partition-key column | **Modify** |
-| `src/dazzle/back/runtime/model_generator.py` | exclude the partition key from create/update input | **Modify** |
-| `src/dazzle/back/runtime/repository.py` | `RETURNING` the server-filled partition key into the response | **Modify** |
+| `src/dazzle/http/runtime/sa_schema.py` | `server_default` (cast) on the scoped partition-key column | **Modify** |
+| `src/dazzle/http/runtime/model_generator.py` | exclude the partition key from create/update input | **Modify** |
+| `src/dazzle/http/runtime/repository.py` | `RETURNING` the server-filled partition key into the response | **Modify** |
 | `tests/unit/test_tenant_id_server_default.py` | sa_schema emits the cast default for scoped entities | **Create** |
 | `tests/unit/test_create_schema_excludes_tenant_id.py` | create/update input omits the partition key | **Create** |
 | `tests/integration/test_create_time_tenant_injection_pg.py` | non-superuser create-fence proof (the keystone) | **Create** |
@@ -48,7 +48,7 @@
 ## Task 1: sa_schema — cast `server_default` on the scoped partition-key column
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/sa_schema.py` (`build_metadata`, the scoped-entity column loop ~560–570; set after the loop builds `columns`, before `sa.Table(...)`)
+- Modify: `src/dazzle/http/runtime/sa_schema.py` (`build_metadata`, the scoped-entity column loop ~560–570; set after the loop builds `columns`, before `sa.Table(...)`)
 - Test: `tests/unit/test_tenant_id_server_default.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -57,8 +57,8 @@
 # tests/unit/test_tenant_id_server_default.py
 """The injected tenant_id column gets a current_setting server_default (Plan 1d)."""
 
-from dazzle.back.converters.entity_converter import convert_entities
-from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
+from dazzle.http.converters.entity_converter import convert_entities
+from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 from dazzle.core.appspec_loader import load_project_appspec
 
 
@@ -89,7 +89,7 @@ Expected: FAIL — `col.server_default is None` (no default emitted yet).
 
 - [ ] **Step 3: Emit the cast default**
 
-In `src/dazzle/back/runtime/sa_schema.py`, after the `for field in entity.fields:` column-build loop (after line ~570, before the index/tenant_args block builds the `sa.Table`), add — gated on `is_tenant_scoped`:
+In `src/dazzle/http/runtime/sa_schema.py`, after the `for field in entity.fields:` column-build loop (after line ~570, before the index/tenant_args block builds the `sa.Table`), add — gated on `is_tenant_scoped`:
 
 ```python
         if is_tenant_scoped:
@@ -119,7 +119,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/sa_schema.py tests/unit/test_tenant_id_server_default.py
+git add src/dazzle/http/runtime/sa_schema.py tests/unit/test_tenant_id_server_default.py
 git commit -m "feat(rls): tenant_id column default = current_setting(dazzle.tenant_id) cast (Plan 1d)"
 ```
 
@@ -128,7 +128,7 @@ git commit -m "feat(rls): tenant_id column default = current_setting(dazzle.tena
 ## Task 2: model_generator — exclude the partition key from create/update input
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/model_generator.py` (`_auto_excluded_fields` + `generate_create_schema` / `generate_update_schema` to pass the partition key/scoped flag)
+- Modify: `src/dazzle/http/runtime/model_generator.py` (`_auto_excluded_fields` + `generate_create_schema` / `generate_update_schema` to pass the partition key/scoped flag)
 - Test: `tests/unit/test_create_schema_excludes_tenant_id.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -137,7 +137,7 @@ git commit -m "feat(rls): tenant_id column default = current_setting(dazzle.tena
 # tests/unit/test_create_schema_excludes_tenant_id.py
 """Create/update input schemas omit the framework-managed partition key (Plan 1d)."""
 
-from dazzle.back.runtime.model_generator import generate_create_schema, generate_update_schema
+from dazzle.http.runtime.model_generator import generate_create_schema, generate_update_schema
 from dazzle.core.appspec_loader import load_project_appspec
 
 
@@ -208,7 +208,7 @@ Expected: PASS (non-scoped + non-tenant apps unchanged — defaults keep the fie
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/model_generator.py tests/unit/test_create_schema_excludes_tenant_id.py
+git add src/dazzle/http/runtime/model_generator.py tests/unit/test_create_schema_excludes_tenant_id.py
 git commit -m "feat(auth): exclude framework partition key from create/update input (Plan 1d)"
 ```
 
@@ -217,7 +217,7 @@ git commit -m "feat(auth): exclude framework partition key from create/update in
 ## Task 3: repository.create — RETURNING the server-filled partition key
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/repository.py` (`create`, ~696–732)
+- Modify: `src/dazzle/http/runtime/repository.py` (`create`, ~696–732)
 - Test: covered by the Task 4 integration proof (the returned model must carry `tenant_id`).
 
 - [ ] **Step 1: Add RETURNING + merge**
@@ -257,7 +257,7 @@ Expected: PASS (no `RETURNING` for full-data creates → unchanged path).
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/repository.py
+git add src/dazzle/http/runtime/repository.py
 git commit -m "feat(runtime): repository.create RETURNING server-filled columns (Plan 1d)"
 ```
 

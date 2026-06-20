@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 from fastapi.responses import HTMLResponse
 
-from dazzle.back.runtime.auth.forbidden_org import forbidden_org_response
-from dazzle.back.runtime.auth.org_context_views import build_forbidden_org_view
+from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
+from dazzle.http.runtime.auth.org_context_views import build_forbidden_org_view
 
 
 def _request_with_brand(product_name: str | None) -> SimpleNamespace:

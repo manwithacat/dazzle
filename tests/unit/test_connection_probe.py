@@ -8,7 +8,7 @@ reused, not re-tested here.
 import json
 from types import SimpleNamespace
 
-from dazzle.back.runtime.auth.connection_probe import ProbeError, probe_connection
+from dazzle.http.runtime.auth.connection_probe import ProbeError, probe_connection
 
 
 def _conn(conn_type, **config):

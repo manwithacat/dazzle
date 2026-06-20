@@ -92,21 +92,21 @@ def _empty_appspec() -> object:
 
 
 def test_build_server_config_threads_audit_integrity() -> None:
-    from dazzle.back.runtime.app_factory import build_server_config
+    from dazzle.http.runtime.app_factory import build_server_config
 
     config = build_server_config(_empty_appspec(), audit_integrity="hash_chain")
     assert config.audit_integrity == "hash_chain"
 
 
 def test_build_server_config_default_is_none() -> None:
-    from dazzle.back.runtime.app_factory import build_server_config
+    from dazzle.http.runtime.app_factory import build_server_config
 
     config = build_server_config(_empty_appspec())
     assert config.audit_integrity == "none"
 
 
 def test_build_server_config_rejects_invalid() -> None:
-    from dazzle.back.runtime.app_factory import build_server_config
+    from dazzle.http.runtime.app_factory import build_server_config
 
     with pytest.raises(ValueError, match="audit_integrity"):
         build_server_config(_empty_appspec(), audit_integrity="bogus")
@@ -114,7 +114,7 @@ def test_build_server_config_rejects_invalid() -> None:
 
 def test_build_server_config_rejects_hyphen_typo() -> None:
     """The specific real-world bug class the validation catches."""
-    from dazzle.back.runtime.app_factory import build_server_config
+    from dazzle.http.runtime.app_factory import build_server_config
 
     with pytest.raises(ValueError, match="audit_integrity"):
         build_server_config(_empty_appspec(), audit_integrity="hash-chain")
@@ -163,8 +163,8 @@ def test_build_server_config_validation_matches_audit_logger() -> None:
     must agree — a value that one accepts and the other rejects would be a
     correctness bug. Drift guard for the {none, hash_chain} pair.
     """
-    from dazzle.back.runtime.app_factory import build_server_config
-    from dazzle.back.runtime.audit_log import AuditLogger
+    from dazzle.http.runtime.app_factory import build_server_config
+    from dazzle.http.runtime.audit_log import AuditLogger
 
     # Accept both valid values
     for mode in ("none", "hash_chain"):

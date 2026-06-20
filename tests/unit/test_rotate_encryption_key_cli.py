@@ -23,7 +23,7 @@ def _patch(monkeypatch, result):
 
 
 def _result(rewrapped, already_current, failed):
-    from dazzle.back.runtime.auth.connections import RewrapResult
+    from dazzle.http.runtime.auth.connections import RewrapResult
 
     return RewrapResult(rewrapped=rewrapped, already_current=already_current, failed=failed)
 

@@ -45,8 +45,8 @@ except ImportError:
     ConsoleMessage = None
 
 # Skip if Dazzle is not available
-pytest.importorskip("dazzle.back")
-pytest.importorskip("dazzle.ui")
+pytest.importorskip("dazzle.http")
+pytest.importorskip("dazzle.page")
 
 # Configuration
 SERVER_STARTUP_TIMEOUT = 60

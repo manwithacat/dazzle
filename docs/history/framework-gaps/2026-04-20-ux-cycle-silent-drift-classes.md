@@ -20,7 +20,7 @@ The `/ux-cycle` autonomous loop commits framework code changes ~every 10 minutes
 | # | Drift class | Surfaced cycle | Gap duration | Detection mechanism | Status |
 |---|---|---|---|---|---|
 | 1 | **Syrupy baseline drift** — contract_audit cycles add canonical class markers to templates; `test_dom_snapshots.py` baselines don't regenerate | 311 | ~40 cycles (271-311) | `test_dom_snapshots.py` (existing, previously unrun) | **Gated** (cycle 312 preflight) |
-| 2 | **UI type-error drift** — hypothetical; no empirical accumulation observed because preflight was added preemptively | 313 (hypothesised) / 314 (gated) | 0 cycles | `mypy src/dazzle_ui/` | **Gated** (cycle 314 preflight) |
+| 2 | **UI type-error drift** — hypothetical; no empirical accumulation observed because preflight was added preemptively | 313 (hypothesised) / 314 (gated) | 0 cycles | `mypy src/dazzle_page/` | **Gated** (cycle 314 preflight) |
 | 3 | **Dist/ build artifact drift** — source changes to CSS/JS don't propagate to `dist/` until someone manually rebuilds | 313 | ≥20 cycles (297 → 313 footer CSS var) | `git status` (manual) | **Manual** — no automated gate |
 | 4 | **Canonical-helper bypass** — file-local helper wraps raw responses for static-analysis discrimination; some call sites use raw constructor instead | 315 | Unknown (likely years) | Grep-style audit (manual) | **Manual** — one-time cycle fix, no lint |
 | 5 | **DaisyUI tokens in Python-embedded HTML** — cycle 17 swept templates; Python string-literal HTML wasn't in scope | 316 | ~300 cycles (17 → 316) | Grep for DaisyUI class names (manual) | **Manual** — one-time cycle fix, no lint |
@@ -41,14 +41,14 @@ Three compounding factors:
 
 The `/ship` skill runs `ruff check`, `ruff format`, and `mypy` on the entire relevant framework subtree before every push. The `/ux-cycle` skill commits but doesn't push — and (pre-cycle-312) ran no pytest or mypy at all. The cron-fired loop could ship framework code through git for hours before anyone invoked `/ship`, by which point the damage was done.
 
-Cycle 312's preflight gate closed the largest leak (lints + snapshots + card-safety), and cycle 314 added mypy(dazzle_ui). But the gate is deliberately **scoped to <10s** to not balloon the 10-minute cron cadence, which means:
-- Broader mypy (dazzle_back, core, cli, mcp) is not in the gate
+Cycle 312's preflight gate closed the largest leak (lints + snapshots + card-safety), and cycle 314 added mypy(dazzle_page). But the gate is deliberately **scoped to <10s** to not balloon the 10-minute cron cadence, which means:
+- Broader mypy (dazzle_http, core, cli, mcp) is not in the gate
 - `git status` / dist/ rebuild isn't checked
 - Linting of Python string literals for embedded HTML class names isn't checked
 
 ### 2. Manual sweeps have naming-pattern limitations
 
-Cycle 17's "DaisyUI token sweep" (EX-001) closed at 62 template files. Cycle 316 found 6 more sites in Python string literals. The cycle 17 sweep matched `**/*.html` — it was implicitly scoped. Same pattern for cycle 302's `test_template_orphan_scan.py` — it only finds orphans under `src/dazzle_ui/templates/`, not equivalent orphan Python modules.
+Cycle 17's "DaisyUI token sweep" (EX-001) closed at 62 template files. Cycle 316 found 6 more sites in Python string literals. The cycle 17 sweep matched `**/*.html` — it was implicitly scoped. Same pattern for cycle 302's `test_template_orphan_scan.py` — it only finds orphans under `src/dazzle_page/templates/`, not equivalent orphan Python modules.
 
 **When a sweep's scope is file-extension-based, drift accumulates in adjacent file types using the same pattern.**
 
@@ -63,8 +63,8 @@ Two-axis strategy:
 ### Axis A — Close remaining gates
 
 **A1: Add broader mypy to a separate, slower gate.**
-- Create `make test-ux-deep` target running `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle_back/runtime` (~13s total). Not part of preflight (keeps cron-cadence tight) but runnable manually or as a pre-commit hook for cycles that touch framework Python.
-- Alternative: add dazzle_back/runtime to preflight, accept ~13s gate. Trade-off: 4s extra per cycle = ~24s/hour = 10 minutes/day. Probably worth it given cron cadence is 10 minutes.
+- Create `make test-ux-deep` target running `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle_http/runtime` (~13s total). Not part of preflight (keeps cron-cadence tight) but runnable manually or as a pre-commit hook for cycles that touch framework Python.
+- Alternative: add dazzle_http/runtime to preflight, accept ~13s gate. Trade-off: 4s extra per cycle = ~24s/hour = 10 minutes/day. Probably worth it given cron cadence is 10 minutes.
 
 **A2: Add `dist/` drift detection.**
 - Git-status check as preflight's last step: if `dist/` has uncommitted changes, log a warning (non-blocking, to avoid blocking cycles that happen while a build is in progress).
@@ -101,7 +101,7 @@ Affected apps: all 5 example apps load `dist/dazzle.min.css` for runtime styling
 
 ## Open questions
 
-1. **Is the `/ux-cycle` preflight gate the right escalation path?** The cycle 312 addition fits naturally (runs on every cycle), but the trade-off is latency: every added check eats into the 10-minute cron cadence. At what point does the gate's cost exceed its value? Cycle 314 already decided 9s was acceptable; cycle 317's recommendation to add dazzle_back/runtime mypy would push to ~13s. Is there a "gate cycle" vs "fast cycle" distinction worth introducing?
+1. **Is the `/ux-cycle` preflight gate the right escalation path?** The cycle 312 addition fits naturally (runs on every cycle), but the trade-off is latency: every added check eats into the 10-minute cron cadence. At what point does the gate's cost exceed its value? Cycle 314 already decided 9s was acceptable; cycle 317's recommendation to add dazzle_http/runtime mypy would push to ~13s. Is there a "gate cycle" vs "fast cycle" distinction worth introducing?
 
 2. **Should `test_canonical_pointer_lint.py` grow to cover Python-embedded HTML?** The cycle 310 lint is template-scoped. An analogous Python lint that checks "inline HTML strings in Python should use canonical helpers + canonical tokens" would catch classes 4 + 5 automatically. Scope estimate: ~100 LOC, AST walk for string literals starting with `<` (roughly).
 
@@ -109,7 +109,7 @@ Affected apps: all 5 example apps load `dist/dazzle.min.css` for runtime styling
 
 4. **Is Heuristic 1 enough to prevent this class of accumulation?** Heuristic 1 is "try the real thing at raw layer before writing framework code." It's aimed at INVESTIGATION cycles. The silent-drift cases here weren't investigations — they were routine IMPLEMENTATION cycles (contract_audit adds class markers) that forgot a hygiene step. Maybe Heuristic 5: "after template/Python edits, run `make test-ux-preflight` before commit." Candidate for promotion.
 
-5. **Can we teach the gate the concept of "relevant"?** Cycle 314's mypy runs on ALL 54 files of dazzle_ui regardless of whether this cycle touched them. Incremental mypy could restrict to changed files. Faster gate, same coverage. But mypy's module-graph resolution makes "changed files" nonobvious — imports from unchanged files still matter. Practical budget: probably not worth the engineering cost right now.
+5. **Can we teach the gate the concept of "relevant"?** Cycle 314's mypy runs on ALL 54 files of dazzle_page regardless of whether this cycle touched them. Incremental mypy could restrict to changed files. Faster gate, same coverage. But mypy's module-graph resolution makes "changed files" nonobvious — imports from unchanged files still matter. Practical budget: probably not worth the engineering cost right now.
 
 ## Recommendation
 
@@ -138,7 +138,7 @@ Cross-refs:
 - cycle 311 log — snapshot debt discovery + cleanup
 - cycle 312 log — test-ux-preflight shipped
 - cycle 313 log — dist/ drift flagged; 4 flavours of silent drift enumerated
-- cycle 314 log — mypy(dazzle_ui) added to gate
+- cycle 314 log — mypy(dazzle_page) added to gate
 - cycle 315 log — helper_audit on HTMLResponse bypass
 - cycle 316 log — DaisyUI Python sweep
 - `tests/unit/test_dom_snapshots.py` — the syrupy catcher

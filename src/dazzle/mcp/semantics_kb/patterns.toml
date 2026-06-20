@@ -470,7 +470,7 @@ category = "Integration (v0.6)"
 doc_page = "patterns"
 definition = "System for converting diverse external API errors into a consistent format for GraphQL responses."
 syntax = '''
-from dazzle.back.graphql.adapters import (
+from dazzle.http.graphql.adapters import (
     normalize_error,
     NormalizedError,
     ErrorCategory,
@@ -480,7 +480,7 @@ from dazzle.back.graphql.adapters import (
 normalized = normalize_error(error, service_name="hmrc")
 '''
 example = '''
-from dazzle.back.graphql.adapters import (
+from dazzle.http.graphql.adapters import (
     normalize_error,
     ErrorCategory,
     ErrorSeverity,
@@ -541,7 +541,7 @@ doc_page = "patterns"
 parse_check = false
 definition = "Abstract base class for integrating with external APIs (HMRC, banks, payment providers, etc.) with built-in retry logic, rate limiting, and error normalization."
 syntax = '''
-from dazzle.back.graphql.adapters import (
+from dazzle.http.graphql.adapters import (
     BaseExternalAdapter,
     AdapterConfig,
     AdapterResult,
@@ -552,7 +552,7 @@ class MyServiceAdapter(BaseExternalAdapter[AdapterConfig]):
         return await self._get(f"/api/data/{id}")
 '''
 example = '''
-from dazzle.back.graphql.adapters import (
+from dazzle.http.graphql.adapters import (
     BaseExternalAdapter,
     AdapterConfig,
     RetryConfig,
@@ -601,7 +601,7 @@ example = '''
 # $ dazzle serve --graphql
 
 # Mount GraphQL endpoint in your app:
-from dazzle.back.graphql import mount_graphql
+from dazzle.http.graphql import mount_graphql
 mount_graphql(app, backend_spec)
 
 # Query example:

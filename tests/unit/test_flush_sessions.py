@@ -9,7 +9,7 @@ runner = CliRunner()
 
 class TestDeleteAllSessions:
     def test_delete_all_sessions_returns_count(self):
-        from dazzle.back.runtime.auth.store import SessionStoreMixin
+        from dazzle.http.runtime.auth.store import SessionStoreMixin
 
         mixin = SessionStoreMixin.__new__(SessionStoreMixin)
         mixin._execute_modify = MagicMock(return_value=5)

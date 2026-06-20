@@ -20,11 +20,11 @@
 | `src/dazzle/cli/runtime_impl/production.py` | Create | Production mode helpers (validate env, configure logging) |
 | `src/dazzle/cli/deploy.py` | Modify | Add `dockerfile\|heroku\|compose` commands alongside existing AWS CDK commands |
 | `src/dazzle/cli/runtime_impl/lifecycle.py` | Modify | Replace `rebuild_command` with deprecation message |
-| `src/dazzle_ui/runtime/docker/runner.py` | Delete | Retired DockerRunner |
-| `src/dazzle_ui/runtime/docker/templates.py` | Delete | Retired templates |
-| `src/dazzle_ui/runtime/docker/__init__.py` | Modify | Remove runner/templates exports |
-| `src/dazzle_ui/runtime/__init__.py` | Modify | Remove Docker runner exports |
-| `src/dazzle_ui/runtime/container/` | Delete | Entire retired container runtime (11 files) |
+| `src/dazzle_page/runtime/docker/runner.py` | Delete | Retired DockerRunner |
+| `src/dazzle_page/runtime/docker/templates.py` | Delete | Retired templates |
+| `src/dazzle_page/runtime/docker/__init__.py` | Modify | Remove runner/templates exports |
+| `src/dazzle_page/runtime/__init__.py` | Modify | Remove Docker runner exports |
+| `src/dazzle_page/runtime/container/` | Delete | Entire retired container runtime (11 files) |
 | `tests/unit/test_production_mode.py` | Create | Tests for `--production` flag behavior |
 | `tests/unit/test_deploy_commands.py` | Create | Tests for `dazzle deploy dockerfile\|heroku\|compose` |
 | `tests/unit/test_container_auth.py` | Delete | Tests for retired container runtime |
@@ -763,30 +763,30 @@ git commit -m "feat: deprecate rebuild command with migration message"
 ### Task 5: Delete container runtime and DockerRunner
 
 **Files:**
-- Delete: `src/dazzle_ui/runtime/container/` (entire directory)
-- Delete: `src/dazzle_ui/runtime/docker/runner.py`
-- Delete: `src/dazzle_ui/runtime/docker/templates.py`
-- Modify: `src/dazzle_ui/runtime/docker/__init__.py`
-- Modify: `src/dazzle_ui/runtime/__init__.py`
+- Delete: `src/dazzle_page/runtime/container/` (entire directory)
+- Delete: `src/dazzle_page/runtime/docker/runner.py`
+- Delete: `src/dazzle_page/runtime/docker/templates.py`
+- Modify: `src/dazzle_page/runtime/docker/__init__.py`
+- Modify: `src/dazzle_page/runtime/__init__.py`
 - Delete: `tests/unit/test_container_auth.py`
 - Modify: `src/dazzle/cli/runtime_impl/lifecycle.py` (remove `run_in_docker` import)
 
 - [ ] **Step 1: Delete the container runtime directory**
 
 ```bash
-rm -rf src/dazzle_ui/runtime/container/
+rm -rf src/dazzle_page/runtime/container/
 ```
 
 - [ ] **Step 2: Delete runner.py and templates.py**
 
 ```bash
-rm src/dazzle_ui/runtime/docker/runner.py
-rm src/dazzle_ui/runtime/docker/templates.py
+rm src/dazzle_page/runtime/docker/runner.py
+rm src/dazzle_page/runtime/docker/templates.py
 ```
 
 - [ ] **Step 3: Update docker/__init__.py**
 
-Replace `src/dazzle_ui/runtime/docker/__init__.py` with:
+Replace `src/dazzle_page/runtime/docker/__init__.py` with:
 
 ```python
 """
@@ -807,17 +807,17 @@ __all__ = [
 
 - [ ] **Step 4: Update runtime/__init__.py**
 
-In `src/dazzle_ui/runtime/__init__.py`, remove the Docker runner imports and exports.
+In `src/dazzle_page/runtime/__init__.py`, remove the Docker runner imports and exports.
 
-Remove lines 35–41 (the `from dazzle_ui.runtime.docker import ...` block).
+Remove lines 35–41 (the `from dazzle_page.runtime.docker import ...` block).
 
 Remove from `__all__`: `"DockerRunner"`, `"DockerRunConfig"`, `"is_docker_available"`, `"run_in_docker"`, `"stop_docker_container"`.
 
-Keep the `is_docker_available` import if needed elsewhere — but `serve.py` imports it directly from `dazzle_ui.runtime.docker.utils`, so the re-export can be removed.
+Keep the `is_docker_available` import if needed elsewhere — but `serve.py` imports it directly from `dazzle_page.runtime.docker.utils`, so the re-export can be removed.
 
 - [ ] **Step 5: Remove run_in_docker import from lifecycle.py**
 
-In `src/dazzle/cli/runtime_impl/lifecycle.py`, the `rebuild_command` function body was already replaced in Task 4. The old lazy import `from dazzle_ui.runtime import is_docker_available, run_in_docker` inside that function is gone. No change needed.
+In `src/dazzle/cli/runtime_impl/lifecycle.py`, the `rebuild_command` function body was already replaced in Task 4. The old lazy import `from dazzle_page.runtime import is_docker_available, run_in_docker` inside that function is gone. No change needed.
 
 - [ ] **Step 6: Delete container auth tests**
 
@@ -838,7 +838,7 @@ Check for any import errors related to the deleted modules.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/ tests/unit/test_container_auth.py
+git add src/dazzle_page/runtime/ tests/unit/test_container_auth.py
 git commit -m "refactor: retire container runtime and DockerRunner (~1500 lines removed)"
 ```
 
@@ -909,7 +909,7 @@ Add under `## [Unreleased]`:
 - `dazzle deploy compose` — generates production docker-compose.yml
 
 ### Removed
-- Container runtime (`dazzle_ui.runtime.container`) — replaced by `dazzle serve --production`
+- Container runtime (`dazzle_page.runtime.container`) — replaced by `dazzle serve --production`
 - `DockerRunner` and Docker template generation — replaced by `dazzle deploy`
 - `dazzle rebuild` command — prints migration message directing to `dazzle deploy dockerfile`
 ```

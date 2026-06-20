@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.renderers.fragment_adapter import _field_to_primitive
+from dazzle.http.runtime.renderers.fragment_adapter import _field_to_primitive
 from dazzle.render.fragment import URL, FileUpload, FragmentRenderer
 from dazzle.render.fragment.coverage import _UNSUPPORTED_FIELD_TYPES
 

@@ -9,16 +9,16 @@ External importers (current — keep this list in sync if you add more):
   src/dazzle/render/fragment/__init__.py
     → FragmentRenderer
 
-  src/dazzle/back/runtime/exception_handlers.py
+  src/dazzle/http/runtime/exception_handlers.py
     → FragmentRenderer (2 lazy import sites)
 
-  src/dazzle/back/runtime/site_routes.py
+  src/dazzle/http/runtime/site_routes.py
     → FragmentRenderer (11 lazy import sites)
 
-  src/dazzle/back/runtime/renderers/page_builder.py
+  src/dazzle/http/runtime/renderers/page_builder.py
     → FragmentRenderer (lazy)
 
-  src/dazzle/back/runtime/renderers/fragment.py
+  src/dazzle/http/runtime/renderers/fragment.py
     → FragmentRenderer (module-level)
 
   src/dazzle/documents/api.py

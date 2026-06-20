@@ -10,11 +10,11 @@ class), reaching neither create_all nor the alembic metadata.
 import re
 from pathlib import Path
 
-from dazzle.back.alembic.framework_tables import include_object as _include_object
-from dazzle.back.alembic.framework_tables import is_framework_table
+from dazzle.http.alembic.framework_tables import include_object as _include_object
+from dazzle.http.alembic.framework_tables import is_framework_table
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BACK_DIR = REPO_ROOT / "src" / "dazzle" / "back"
+BACK_DIR = REPO_ROOT / "src" / "dazzle" / "http"
 
 # Table name followed by an opening paren (possibly on the next line) — the
 # paren requirement excludes prose mentions in comments.
@@ -35,7 +35,7 @@ def test_every_runtime_created_table_is_registered() -> None:
     assert not unregistered, (
         f"Runtime-created tables missing from the framework-table registry: "
         f"{sorted(unregistered)}.\nAdd them to "
-        f"src/dazzle/back/alembic/framework_tables.py — otherwise "
+        f"src/dazzle/http/alembic/framework_tables.py — otherwise "
         f"`dazzle db revision --autogenerate` will propose DROPPING them "
         f"against a live database (#1357)."
     )
@@ -63,9 +63,9 @@ def test_include_object_skips_reflected_runtime_indexes() -> None:
 def test_entity_constraints_reach_sqlalchemy_metadata(tmp_path: Path) -> None:
     # End-to-end: DSL `unique`/`index` constraint lines → IR → converter →
     # back EntitySpec → build_metadata table args.
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import build_metadata
     from dazzle.core.parser import parse_modules
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata
 
     dsl = (
         "module c1357\n\n"

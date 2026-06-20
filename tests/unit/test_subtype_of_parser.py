@@ -105,7 +105,7 @@ class TestRuntimeStubsWiredIn3eIII:
     def test_create_subtype_is_importable(self) -> None:
         # Pin that the symbol survives the 3e.iii rewrite and is no longer
         # a NotImplementedError stub.
-        from dazzle.back.runtime.repository import create_subtype, update_subtype
+        from dazzle.http.runtime.repository import create_subtype, update_subtype
 
         assert callable(create_subtype)
         assert callable(update_subtype)

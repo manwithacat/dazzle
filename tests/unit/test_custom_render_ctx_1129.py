@@ -17,7 +17,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.page_routes import _collect_request_params
+from dazzle.http.runtime.page_routes import _collect_request_params
 from dazzle.render.context import CustomRenderCtx
 
 # ---------------------------------------------------------------------------

@@ -15,7 +15,7 @@ Why this exists:
     from the affected files. This gate keeps them from creeping back.
 
 What this enforces:
-    Modules under ``src/dazzle/back/runtime/`` that contain a
+    Modules under ``src/dazzle/http/runtime/`` that contain a
     ``Depends(`` call site OR a route-handler decorator (``@router.get``,
     ``@router.post``, ``@app.get``, etc.) MUST NOT use
     ``from __future__ import annotations``. These are the file shapes
@@ -46,7 +46,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-RUNTIME_DIR = REPO_ROOT / "src" / "dazzle" / "back" / "runtime"
+RUNTIME_DIR = REPO_ROOT / "src" / "dazzle" / "http" / "runtime"
 
 # Patterns that mark a file as runtime-introspected by FastAPI. A file
 # triggers ADR-0014 if it has any of:

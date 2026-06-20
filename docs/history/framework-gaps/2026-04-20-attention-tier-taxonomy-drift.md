@@ -51,7 +51,7 @@ The attention signal taxonomy was introduced organically as each region template
 - `queue.html:54-56` — border + tint
 - `list.html:78-80` — tint only
 
-The compiler produces the `_attention` envelope at `src/dazzle_back/runtime/workspace_rendering.py` (grep for `_attention` confirms shared production site), so the source-of-truth for the tier semantics IS canonical. The drift is entirely at the rendering layer.
+The compiler produces the `_attention` envelope at `src/dazzle_http/runtime/workspace_rendering.py` (grep for `_attention` confirms shared production site), so the source-of-truth for the tier semantics IS canonical. The drift is entirely at the rendering layer.
 
 This is a **Heuristic 4 (defaults-propagation)** class defect: canonical intent declared, canonical resolver correct, but rendering consumers each implemented their own branch logic without a shared macro.
 
@@ -137,7 +137,7 @@ Note: if default is also `--primary`, the fix is cosmetic (both render the same 
 ## Implementation sketch
 
 **Order of operations**:
-1. Write `src/dazzle_ui/templates/macros/attention_accent.html` with the 4 style variants.
+1. Write `src/dazzle_page/templates/macros/attention_accent.html` with the 4 style variants.
 2. Migrate `grid.html:15-18` → `attention_classes(attn, 'border')`.
 3. Migrate `timeline.html:13-15` → `attention_classes(attn, 'bullet')`.
 4. Migrate `queue.html:54-56` → `attention_classes(attn, 'both')`.

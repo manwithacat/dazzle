@@ -19,8 +19,8 @@
 The condition evaluator silently returns `True` for `role_check` conditions (falls through the `if` chain to `return True` at line 50 of `condition_evaluator.py`). This must be fixed before grant work begins because `granted_by` expressions use `role()`.
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/condition_evaluator.py:19-50` (`evaluate_condition`)
-- Modify: `src/dazzle_back/runtime/condition_evaluator.py:244-300` (`condition_to_sql_filter`)
+- Modify: `src/dazzle_http/runtime/condition_evaluator.py:19-50` (`evaluate_condition`)
+- Modify: `src/dazzle_http/runtime/condition_evaluator.py:244-300` (`condition_to_sql_filter`)
 - Test: `tests/unit/test_condition_evaluator_role_check.py` (new)
 
 - [ ] **Step 1: Write failing tests for role_check evaluation**
@@ -29,7 +29,7 @@ The condition evaluator silently returns `True` for `role_check` conditions (fal
 # tests/unit/test_condition_evaluator_role_check.py
 """Tests for role_check evaluation in condition evaluator."""
 
-from dazzle_back.runtime.condition_evaluator import evaluate_condition
+from dazzle_http.runtime.condition_evaluator import evaluate_condition
 
 
 class TestRoleCheckEvaluation:
@@ -134,7 +134,7 @@ Expected: Multiple FAILs — `test_role_check_false_*` tests fail because `evalu
 
 - [ ] **Step 3: Implement role_check evaluation**
 
-In `src/dazzle_back/runtime/condition_evaluator.py`, add `role_check` handling to `evaluate_condition()` between the compound condition handling (line 43) and the comparison handling (line 46):
+In `src/dazzle_http/runtime/condition_evaluator.py`, add `role_check` handling to `evaluate_condition()` between the compound condition handling (line 43) and the comparison handling (line 46):
 
 ```python
     # Handle role check
@@ -178,7 +178,7 @@ The SQL filter path is used for list queries. Without handling `role_check`, lis
 Add tests to `tests/unit/test_condition_evaluator_role_check.py`:
 
 ```python
-from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
+from dazzle_http.runtime.condition_evaluator import condition_to_sql_filter
 
 
 class TestRoleCheckSqlFilter:
@@ -258,7 +258,7 @@ Expected: No regressions
 - [ ] **Step 8: Commit**
 
 ```bash
-git add tests/unit/test_condition_evaluator_role_check.py src/dazzle_back/runtime/condition_evaluator.py
+git add tests/unit/test_condition_evaluator_role_check.py src/dazzle_http/runtime/condition_evaluator.py
 git commit -m "fix: evaluate role_check conditions instead of silently passing
 
 role_check conditions in both evaluate_condition() and
@@ -1608,7 +1608,7 @@ Part of grant_schema runtime RBAC infrastructure."
 Create the runtime grant store with `_grants` and `_grant_events` tables, status transitions, and query API.
 
 **Files:**
-- Create: `src/dazzle_back/runtime/grant_store.py`
+- Create: `src/dazzle_http/runtime/grant_store.py`
 - Test: `tests/unit/test_grant_store.py` (new)
 
 - [ ] **Step 1: Write failing tests**
@@ -1623,7 +1623,7 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle_back.runtime.grant_store import GrantStore, GrantStatus
+from dazzle_http.runtime.grant_store import GrantStore, GrantStatus
 
 
 @pytest.fixture
@@ -1940,7 +1940,7 @@ Expected: FAIL — `grant_store.py` doesn't exist.
 - [ ] **Step 3: Implement GrantStore**
 
 ```python
-# src/dazzle_back/runtime/grant_store.py
+# src/dazzle_http/runtime/grant_store.py
 """
 Runtime grant store for dynamic RBAC grants.
 
@@ -2204,12 +2204,12 @@ Expected: No regressions
 
 - [ ] **Step 6: Lint**
 
-Run: `ruff check src/dazzle_back/runtime/grant_store.py --fix && ruff format src/dazzle_back/runtime/grant_store.py`
+Run: `ruff check src/dazzle_http/runtime/grant_store.py --fix && ruff format src/dazzle_http/runtime/grant_store.py`
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/grant_store.py tests/unit/test_grant_store.py
+git add src/dazzle_http/runtime/grant_store.py tests/unit/test_grant_store.py
 git commit -m "feat(runtime): add GrantStore with CRUD, status transitions, and audit events
 
 Synchronous SQLite-backed grant store with:
@@ -2231,7 +2231,7 @@ Part of grant_schema runtime RBAC infrastructure."
 Add `has_grant()` evaluation using pre-fetched grants in the filter context.
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/condition_evaluator.py:19-50` (add grant_check handling)
+- Modify: `src/dazzle_http/runtime/condition_evaluator.py:19-50` (add grant_check handling)
 - Test: `tests/unit/test_condition_evaluator_grant_check.py` (new)
 
 - [ ] **Step 1: Write failing tests**
@@ -2242,7 +2242,7 @@ Add `has_grant()` evaluation using pre-fetched grants in the filter context.
 
 from datetime import UTC, datetime, timedelta
 
-from dazzle_back.runtime.condition_evaluator import evaluate_condition
+from dazzle_http.runtime.condition_evaluator import evaluate_condition
 
 
 def _make_grant(relation: str, scope_id: str, expires_at=None):
@@ -2359,7 +2359,7 @@ Expected: FAIL — `grant_check` falls through to `return True`.
 
 - [ ] **Step 3: Add grant_check evaluation**
 
-In `src/dazzle_back/runtime/condition_evaluator.py`, add grant_check handling to `evaluate_condition()` after the role_check handling added in Task 0:
+In `src/dazzle_http/runtime/condition_evaluator.py`, add grant_check handling to `evaluate_condition()` after the role_check handling added in Task 0:
 
 ```python
     # Handle grant check
@@ -2425,7 +2425,7 @@ Expected: No regressions
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/condition_evaluator.py \
+git add src/dazzle_http/runtime/condition_evaluator.py \
   tests/unit/test_condition_evaluator_grant_check.py
 git commit -m "feat(evaluator): add grant_check evaluation with pre-fetched grants
 
@@ -2443,7 +2443,7 @@ Part of grant_schema runtime RBAC infrastructure."
 The SQL filter path is used for list queries. Without `has_grant()` SQL filter support, list views with grant-based access rules would silently include all rows. This generates a subquery clause for the repository layer.
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/condition_evaluator.py:244-300` (`condition_to_sql_filter`)
+- Modify: `src/dazzle_http/runtime/condition_evaluator.py:244-300` (`condition_to_sql_filter`)
 - Test: `tests/unit/test_condition_evaluator_grant_sql.py` (new)
 
 - [ ] **Step 1: Write failing tests**
@@ -2452,7 +2452,7 @@ The SQL filter path is used for list queries. Without `has_grant()` SQL filter s
 # tests/unit/test_condition_evaluator_grant_sql.py
 """Tests for grant_check SQL filter generation in condition_to_sql_filter."""
 
-from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
+from dazzle_http.runtime.condition_evaluator import condition_to_sql_filter
 
 
 class TestGrantCheckSqlFilter:
@@ -2521,7 +2521,7 @@ Expected: FAIL — `grant_check` not handled in `condition_to_sql_filter`.
 
 - [ ] **Step 3: Add grant_check handling to condition_to_sql_filter**
 
-In `src/dazzle_back/runtime/condition_evaluator.py`, add `grant_check` handling to `condition_to_sql_filter()` before the comparison handling:
+In `src/dazzle_http/runtime/condition_evaluator.py`, add `grant_check` handling to `condition_to_sql_filter()` before the comparison handling:
 
 ```python
     # Handle grant check — generate subquery metadata for repository layer
@@ -2563,7 +2563,7 @@ Expected: No regressions
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/condition_evaluator.py \
+git add src/dazzle_http/runtime/condition_evaluator.py \
   tests/unit/test_condition_evaluator_grant_sql.py
 git commit -m "feat(evaluator): add grant_check SQL filter generation
 
@@ -2581,7 +2581,7 @@ Part of grant_schema runtime RBAC infrastructure."
 Wire grant pre-fetching into the workspace rendering context so `has_grant()` conditions can evaluate.
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/workspace_rendering.py` (add grant pre-fetching)
+- Modify: `src/dazzle_http/runtime/workspace_rendering.py` (add grant pre-fetching)
 - Test: `tests/unit/test_workspace_rendering_grants.py` (new)
 
 - [ ] **Step 1: Write failing test**
@@ -2592,7 +2592,7 @@ Wire grant pre-fetching into the workspace rendering context so `has_grant()` co
 
 import inspect
 
-from dazzle_back.runtime import workspace_rendering
+from dazzle_http.runtime import workspace_rendering
 
 
 class TestGrantPreFetchingWiring:
@@ -2621,7 +2621,7 @@ Expected: FAIL — no `active_grants` reference in workspace_rendering.py yet.
 
 - [ ] **Step 3: Add grant pre-fetching to workspace rendering**
 
-Read `src/dazzle_back/runtime/workspace_rendering.py` to find where `_filter_context` is populated (near where `current_user_entity` is set). Add grant pre-fetching after the current_user_entity population:
+Read `src/dazzle_http/runtime/workspace_rendering.py` to find where `_filter_context` is populated (near where `current_user_entity` is set). Add grant pre-fetching after the current_user_entity population:
 
 ```python
 # Pre-fetch active grants for has_grant() condition evaluation
@@ -2654,7 +2654,7 @@ Expected: No regressions
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/workspace_rendering.py \
+git add src/dazzle_http/runtime/workspace_rendering.py \
   tests/unit/test_workspace_rendering_grants.py
 git commit -m "feat(runtime): pre-fetch active grants into workspace filter context
 
@@ -2685,8 +2685,8 @@ from pathlib import Path
 from uuid import uuid4
 
 from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle_back.runtime.condition_evaluator import evaluate_condition
-from dazzle_back.runtime.grant_store import GrantStore
+from dazzle_http.runtime.condition_evaluator import evaluate_condition
+from dazzle_http.runtime.grant_store import GrantStore
 
 
 class TestGrantPipelineIntegration:

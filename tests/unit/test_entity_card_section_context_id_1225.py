@@ -57,7 +57,7 @@ def _make_ctx_with_repo(entity_name: str) -> _MockCtx:
 def test_context_id_threaded_into_extract_condition_filters() -> None:
     """The fix: context_id flows from caller → fetcher →
     _extract_condition_filters."""
-    from dazzle.back.runtime.workspace_card_fetchers import (
+    from dazzle.http.runtime.workspace_card_fetchers import (
         _fetch_entity_card_section_rows,
     )
 
@@ -79,15 +79,15 @@ def test_context_id_threaded_into_extract_condition_filters() -> None:
 
     with (
         patch(
-            "dazzle.back.runtime.scope_filters._extract_condition_filters",
+            "dazzle.http.runtime.scope_filters._extract_condition_filters",
             side_effect=_capture,
         ),
         patch(
-            "dazzle.back.runtime.workspace_card_fetchers._apply_workspace_scope_filters",
+            "dazzle.http.runtime.workspace_card_fetchers._apply_workspace_scope_filters",
             return_value=({}, False),
         ),
         patch(
-            "dazzle.back.runtime.workspace_card_fetchers._safe_fetch",
+            "dazzle.http.runtime.workspace_card_fetchers._safe_fetch",
             return_value=[],
         ),
     ):
@@ -113,7 +113,7 @@ def test_context_id_defaults_to_none_for_backward_compat() -> None:
     """When the caller doesn't pass context_id (older invocation),
     the fetcher still works — passes None through (matches pre-fix
     behaviour for the no-context-id branch)."""
-    from dazzle.back.runtime.workspace_card_fetchers import (
+    from dazzle.http.runtime.workspace_card_fetchers import (
         _fetch_entity_card_section_rows,
     )
 
@@ -135,15 +135,15 @@ def test_context_id_defaults_to_none_for_backward_compat() -> None:
 
     with (
         patch(
-            "dazzle.back.runtime.scope_filters._extract_condition_filters",
+            "dazzle.http.runtime.scope_filters._extract_condition_filters",
             side_effect=_capture,
         ),
         patch(
-            "dazzle.back.runtime.workspace_card_fetchers._apply_workspace_scope_filters",
+            "dazzle.http.runtime.workspace_card_fetchers._apply_workspace_scope_filters",
             return_value=({}, False),
         ),
         patch(
-            "dazzle.back.runtime.workspace_card_fetchers._safe_fetch",
+            "dazzle.http.runtime.workspace_card_fetchers._safe_fetch",
             return_value=[],
         ),
     ):

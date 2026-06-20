@@ -11,8 +11,8 @@ to `memberships` + `scim_groups` in BOTH mechanisms, and add a drift gate enforc
 
 ## File Structure
 
-- Create `src/dazzle/back/alembic/versions/0013_scim_groups_and_external_ids.py`.
-- Modify `src/dazzle/back/runtime/auth/store.py` — `_init_db` adds the two `external_id` columns.
+- Create `src/dazzle/http/alembic/versions/0013_scim_groups_and_external_ids.py`.
+- Modify `src/dazzle/http/runtime/auth/store.py` — `_init_db` adds the two `external_id` columns.
 - Create `tests/integration/test_authstore_alembic_parity_pg.py` — the drift gate.
 - Modify `tests/integration/test_connections_pg.py` — column-existence check.
 
@@ -20,7 +20,7 @@ to `memberships` + `scim_groups` in BOTH mechanisms, and add a drift gate enforc
 
 ### Task 1: `_init_db` — the two `external_id` columns
 
-**Files:** Modify `src/dazzle/back/runtime/auth/store.py`
+**Files:** Modify `src/dazzle/http/runtime/auth/store.py`
 
 - [ ] **Step 1:** In `_init_db`, alongside the existing `ALTER TABLE … ADD COLUMN IF NOT
 EXISTS` block (near the `sessions`/`connections` alters), add:
@@ -51,7 +51,7 @@ def test_external_id_columns_present(store_url: str) -> None:
 
 ### Task 2: Alembic `0013` — mirror scim_groups + external_id columns
 
-**Files:** Create `src/dazzle/back/alembic/versions/0013_scim_groups_and_external_ids.py`
+**Files:** Create `src/dazzle/http/alembic/versions/0013_scim_groups_and_external_ids.py`
 
 - [ ] **Step 1: Write the migration** (guarded, mirrors `_init_db`, DDL matches exactly):
 
@@ -234,7 +234,7 @@ def _alembic_head(url: str) -> None:
 
 def test_authstore_alembic_parity(two_scratch_dbs) -> None:
     a_url, b_url = two_scratch_dbs
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     AuthStore(database_url=a_url)  # _init_db builds schema A
     _alembic_head(b_url)  # alembic head builds schema B

@@ -53,13 +53,13 @@ The widget contracts exist. The vendored JS/CSS exists. The form-field template 
 
 ## Root cause hypothesis
 
-The form-field template macro at `src/dazzle_ui/templates/macros/form_field.html` is dispatched per-field by `src/dazzle_ui/converters/template_compiler.py`'s form generation path. The dispatch uses some form of type-string → widget-name mapping. Three candidate mechanisms for the gap:
+The form-field template macro at `src/dazzle_page/templates/macros/form_field.html` is dispatched per-field by `src/dazzle_page/converters/template_compiler.py`'s form generation path. The dispatch uses some form of type-string → widget-name mapping. Three candidate mechanisms for the gap:
 
 ### 1. Widget dispatch table incomplete
 
 The most likely cause: there's a `FIELD_TYPE_TO_WIDGET` mapping (or equivalent switch) somewhere in the compiler that covers some types but not others. If `ref` isn't in that table — or is mapped to a fallback `<input type="text">` instead of `widget-search-select` — every ref field silently degrades. Same for `date` if there's no `date → widget-datepicker` entry.
 
-**Verify by**: `grep -rn 'widget-search-select\|widget-datepicker\|FIELD_TYPE_TO_WIDGET' src/dazzle_ui/converters/template_compiler.py src/dazzle_ui/templates/macros/form_field.html` and walk the switch.
+**Verify by**: `grep -rn 'widget-search-select\|widget-datepicker\|FIELD_TYPE_TO_WIDGET' src/dazzle_page/converters/template_compiler.py src/dazzle_page/templates/macros/form_field.html` and walk the switch.
 
 ### 2. Widget requires an `ir.FieldSpec` attribute that isn't being populated
 
@@ -84,7 +84,7 @@ Most likely: candidate **#1** (dispatch table incomplete / no default). Easy to 
 **Step 2 — add missing mappings**. Likely one-line additions per field type:
 
 ```python
-# src/dazzle_ui/converters/template_compiler.py (or wherever the dispatch lives)
+# src/dazzle_page/converters/template_compiler.py (or wherever the dispatch lives)
 FIELD_TYPE_TO_WIDGET = {
     FieldTypeKind.DATE: "widget-datepicker",
     FieldTypeKind.DATETIME: "widget-datepicker",

@@ -365,7 +365,7 @@ The phase-4 surface covers the canonical happy path. Known gaps:
 - `src/dazzle/signing/` — the runtime package (tokens, cert, service,
   routes).
 - `src/dazzle/cli/signing.py` — `dazzle signing init`.
-- `src/dazzle/ui/runtime/static/js/islands/signing-pad.js` — the
+- `src/dazzle/page/runtime/static/js/islands/signing-pad.js` — the
   browser-side Island.
 
 ## QA trial harness

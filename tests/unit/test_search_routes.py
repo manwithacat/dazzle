@@ -46,12 +46,12 @@ def _mount(router: Any) -> TestClient:
 
 class TestCreateSearchRoutes:
     def test_no_searchable_entities_returns_none(self) -> None:
-        from dazzle.back.runtime.search_routes import create_search_routes
+        from dazzle.http.runtime.search_routes import create_search_routes
 
         assert create_search_routes(repositories={}, entity_search_fields={}) is None
 
     def test_empty_fields_filtered(self) -> None:
-        from dazzle.back.runtime.search_routes import create_search_routes
+        from dazzle.http.runtime.search_routes import create_search_routes
 
         router = create_search_routes(
             repositories={"Work": _FakeRepo([])},
@@ -60,7 +60,7 @@ class TestCreateSearchRoutes:
         assert router is None
 
     def test_returns_router_when_any_entity_searchable(self) -> None:
-        from dazzle.back.runtime.search_routes import create_search_routes
+        from dazzle.http.runtime.search_routes import create_search_routes
 
         router = create_search_routes(
             repositories={"Work": _FakeRepo([])},
@@ -71,7 +71,7 @@ class TestCreateSearchRoutes:
 
 class TestCrossEntitySearchHandler:
     def test_query_groups_results_by_entity(self) -> None:
-        from dazzle.back.runtime.search_routes import create_search_routes
+        from dazzle.http.runtime.search_routes import create_search_routes
 
         work_repo = _FakeRepo(
             [
@@ -105,7 +105,7 @@ class TestCrossEntitySearchHandler:
         assert node_result["items"][0]["id"] == "n1"
 
     def test_entity_param_restricts_scope(self) -> None:
-        from dazzle.back.runtime.search_routes import create_search_routes
+        from dazzle.http.runtime.search_routes import create_search_routes
 
         router = create_search_routes(
             repositories={
@@ -122,7 +122,7 @@ class TestCrossEntitySearchHandler:
         assert [r["entity"] for r in body["results"]] == ["Work"]
 
     def test_unknown_entity_param_falls_back_to_all(self) -> None:
-        from dazzle.back.runtime.search_routes import create_search_routes
+        from dazzle.http.runtime.search_routes import create_search_routes
 
         router = create_search_routes(
             repositories={"Work": _FakeRepo([{"id": "w1", "title": "Hello"}])},
@@ -136,7 +136,7 @@ class TestCrossEntitySearchHandler:
         assert [r["entity"] for r in body["results"]] == ["Work"]
 
     def test_repo_failure_does_not_break_other_entities(self) -> None:
-        from dazzle.back.runtime.search_routes import create_search_routes
+        from dazzle.http.runtime.search_routes import create_search_routes
 
         class BrokenRepo:
             async def list(self, **kwargs: Any) -> Any:
@@ -158,7 +158,7 @@ class TestCrossEntitySearchHandler:
         assert [r["entity"] for r in body["results"]] == ["Work"]
 
     def test_limit_respected(self) -> None:
-        from dazzle.back.runtime.search_routes import create_search_routes
+        from dazzle.http.runtime.search_routes import create_search_routes
 
         repo = _FakeRepo([{"id": f"w{i}", "title": "match"} for i in range(20)])
         router = create_search_routes(
@@ -173,7 +173,7 @@ class TestCrossEntitySearchHandler:
         assert len(body["results"][0]["items"]) == 5
 
     def test_empty_q_rejected(self) -> None:
-        from dazzle.back.runtime.search_routes import create_search_routes
+        from dazzle.http.runtime.search_routes import create_search_routes
 
         router = create_search_routes(
             repositories={"Work": _FakeRepo([])},
@@ -230,7 +230,7 @@ class TestBuildEntitySearchFieldsFallback:
     def test_build_entity_search_fields(
         self, call_kwargs: dict, expected: dict[str, list[str]]
     ) -> None:
-        from dazzle.back.runtime.app_factory import build_entity_search_fields
+        from dazzle.http.runtime.app_factory import build_entity_search_fields
 
         surfaces = [self._surface(*s) for s in call_kwargs["surfaces"]]
         if call_kwargs["entities"] is None:

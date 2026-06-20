@@ -29,7 +29,7 @@ The probe **reuses `validate_metadata_url`** for its SSRF gate. Same documented 
 
 ## Architecture
 
-New module `src/dazzle/back/runtime/auth/connection_probe.py`:
+New module `src/dazzle/http/runtime/auth/connection_probe.py`:
 
 - `probe_connection(connection, *, http_get=_default_http_get) -> tuple[Check, ...]` — returns `connection_doctor.Check` records (reused dataclass, for output consistency). `http_get` is **injected** so tests need no network. All probe checks are `level="recommended"` — a transient IdP outage must not flip the activation-ready/exit-0 gate, which means *config* completeness. Reachability is supplementary live evidence.
 - `_default_http_get(url, *, timeout=10.0) -> tuple[int, bytes]` — `validate_metadata_url(url)` (SSRF gate) then httpx GET, `follow_redirects=False`, `Accept-Encoding: identity`, streaming size-cap (1 MiB), returns `(status_code, body)`. Does **not** `raise_for_status` (the caller decides what a status means — reachability vs content). Connect/DNS errors and `SamlMetadataError` (SSRF reject) propagate as a typed `ProbeError`.

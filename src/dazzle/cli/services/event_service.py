@@ -20,7 +20,7 @@ class EventService:
     @asynccontextmanager
     async def _broker(self) -> AsyncIterator[Any]:
         """Get an event bus via the tier system."""
-        from dazzle.back import create_bus
+        from dazzle.http import create_bus
 
         bus = create_bus()
         if hasattr(bus, "connect"):
@@ -100,7 +100,7 @@ class EventService:
 
     async def outbox_status(self) -> dict[str, Any]:
         """Get outbox stats (pending, publishing, published, failed, oldest_pending)."""
-        from dazzle.back.events import EventOutbox
+        from dazzle.http.events import EventOutbox
 
         conn = await self._get_outbox_connection()
         try:
@@ -112,7 +112,7 @@ class EventService:
 
     async def outbox_failed_entries(self, limit: int = 20) -> list[Any]:
         """List failed outbox entries."""
-        from dazzle.back.events import EventOutbox
+        from dazzle.http.events import EventOutbox
 
         conn = await self._get_outbox_connection()
         try:
@@ -123,7 +123,7 @@ class EventService:
 
     async def outbox_drain(self, timeout: float = 30.0) -> int:
         """Drain pending events from the outbox. Returns count drained."""
-        from dazzle.back.events import EventOutbox, OutboxPublisher
+        from dazzle.http.events import EventOutbox, OutboxPublisher
 
         db_url = os.environ.get("DATABASE_URL")
         if not db_url:

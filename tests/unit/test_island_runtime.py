@@ -113,7 +113,7 @@ class TestIslandLoaderJS:
             Path(__file__).parent.parent.parent
             / "src"
             / "dazzle"
-            / "ui"
+            / "page"
             / "runtime"
             / "static"
             / "js"
@@ -127,7 +127,7 @@ class TestIslandLoaderJS:
             Path(__file__).parent.parent.parent
             / "src"
             / "dazzle"
-            / "ui"
+            / "page"
             / "runtime"
             / "static"
             / "js"
@@ -145,7 +145,7 @@ class TestIslandLoaderJS:
             Path(__file__).parent.parent.parent
             / "src"
             / "dazzle"
-            / "ui"
+            / "page"
             / "runtime"
             / "static"
             / "js"
@@ -160,18 +160,18 @@ class TestIslandRoutes:
 
     def test_routes_module_importable(self):
         """Test that island_routes module can be imported."""
-        from dazzle.back.runtime.island_routes import create_island_routes  # noqa: F401
+        from dazzle.http.runtime.island_routes import create_island_routes  # noqa: F401
 
     def test_create_routes_empty_islands(self):
         """Test route creation with no islands."""
-        from dazzle.back.runtime.island_routes import create_island_routes
+        from dazzle.http.runtime.island_routes import create_island_routes
 
         router = create_island_routes(islands=[], services={})
         assert router.prefix == "/_dazzle/islands"
 
     def test_create_routes_with_entity_island(self):
         """Test route creation for island with entity binding."""
-        from dazzle.back.runtime.island_routes import create_island_routes
+        from dazzle.http.runtime.island_routes import create_island_routes
 
         island = IslandSpec(name="task_chart", entity="Task")
         router = create_island_routes(islands=[island], services={"Task": object()})
@@ -181,7 +181,7 @@ class TestIslandRoutes:
 
     def test_create_routes_skips_no_entity(self):
         """Test that islands without entity don't generate routes."""
-        from dazzle.back.runtime.island_routes import create_island_routes
+        from dazzle.http.runtime.island_routes import create_island_routes
 
         island = IslandSpec(name="confetti")
         router = create_island_routes(islands=[island], services={})
@@ -191,7 +191,7 @@ class TestIslandRoutes:
 
     def test_auth_dependency_applied(self):
         """Test that auth dependency is applied to island routes."""
-        from dazzle.back.runtime.island_routes import create_island_routes
+        from dazzle.http.runtime.island_routes import create_island_routes
 
         def mock_auth():
             pass

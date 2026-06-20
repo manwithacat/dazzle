@@ -148,7 +148,7 @@ class WorkspaceContract(Contract):
     with ``expected_present`` indicating whether that persona should be allowed.
     The generator derives ``expected_present`` from
     ``workspace_allowed_personas`` — the single source of truth for workspace
-    visibility (see #835 / ``src/dazzle/ui/converters/workspace_converter.py``).
+    visibility (see #835 / ``src/dazzle/page/converters/workspace_converter.py``).
     """
 
     workspace: str = ""
@@ -393,7 +393,7 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
     # per workspace with no persona field, which falsely flagged
     # persona-scoped workspaces as framework bugs whenever the admin driver
     # was redirected to 403.
-    from dazzle.ui.converters.workspace_converter import workspace_allowed_personas
+    from dazzle.page.converters.workspace_converter import workspace_allowed_personas
 
     all_persona_ids = [p.id for p in appspec.personas]
     for workspace in appspec.workspaces:

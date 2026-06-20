@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 
 JS_SOURCE_DIRS = [
-    Path(__file__).resolve().parents[2] / "src" / "dazzle" / "ui" / "static" / "js",
-    Path(__file__).resolve().parents[2] / "src" / "dazzle" / "ui" / "runtime" / "static" / "js",
+    Path(__file__).resolve().parents[2] / "src" / "dazzle" / "page" / "static" / "js",
+    Path(__file__).resolve().parents[2] / "src" / "dazzle" / "page" / "runtime" / "static" / "js",
 ]
 DIST_DIR = Path(__file__).resolve().parents[2] / "dist"
 
@@ -19,7 +19,7 @@ class TestJsLinting:
         """Source JS files pass ESLint structural checks."""
         project_root = Path(__file__).resolve().parents[2]
         result = subprocess.run(
-            ["npx", "eslint", "src/dazzle/ui/**/js/*.js", "--no-warn-ignored"],
+            ["npx", "eslint", "src/dazzle/page/**/js/*.js", "--no-warn-ignored"],
             capture_output=True,
             text=True,
             cwd=project_root,

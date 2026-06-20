@@ -6,21 +6,21 @@ Tests ComponentRole and role-based classification of components.
 
 import pytest
 
-from dazzle.ui.specs.actions import (
+from dazzle.page.specs.actions import (
     ActionSpec,
     FetchEffect,
     PatchOp,
     PatchSpec,
     TransitionSpec,
 )
-from dazzle.ui.specs.component import (
+from dazzle.page.specs.component import (
     ComponentCategory,
     ComponentRole,
     ComponentSpec,
     PropFieldSpec,
     PropsSchema,
 )
-from dazzle.ui.specs.state import StateScope, StateSpec
+from dazzle.page.specs.state import StateScope, StateSpec
 
 
 class TestComponentRoleEnum:

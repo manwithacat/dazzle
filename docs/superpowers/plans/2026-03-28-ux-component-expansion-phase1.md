@@ -16,17 +16,17 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_ui/runtime/static/vendor/htmx-ext-remove-me.js` | Create | HTMX remove-me extension |
-| `src/dazzle_ui/runtime/static/vendor/htmx-ext-class-tools.js` | Create | HTMX class-tools extension |
-| `src/dazzle_ui/runtime/static/vendor/htmx-ext-multi-swap.js` | Create | HTMX multi-swap extension |
-| `src/dazzle_ui/runtime/static/vendor/htmx-ext-path-deps.js` | Create | HTMX path-deps extension |
-| `src/dazzle_ui/runtime/static/vendor/alpine-anchor.min.js` | Create | Alpine anchor plugin |
-| `src/dazzle_ui/runtime/static/vendor/alpine-collapse.min.js` | Create | Alpine collapse plugin |
-| `src/dazzle_ui/runtime/static/vendor/alpine-focus.min.js` | Create | Alpine focus plugin |
-| `src/dazzle_ui/runtime/static/js/dz-component-bridge.js` | Create | HTMX lifecycle bridge for vendored widgets |
-| `src/dazzle_back/runtime/response_helpers.py` | Create | OOB swap helpers (with_toast, with_oob) |
-| `src/dazzle_back/runtime/asset_manifest.py` | Create | Derives required JS assets from surface specs |
-| `src/dazzle_ui/templates/base.html` | Modify | Add containers, extensions, conditional loading |
+| `src/dazzle_page/runtime/static/vendor/htmx-ext-remove-me.js` | Create | HTMX remove-me extension |
+| `src/dazzle_page/runtime/static/vendor/htmx-ext-class-tools.js` | Create | HTMX class-tools extension |
+| `src/dazzle_page/runtime/static/vendor/htmx-ext-multi-swap.js` | Create | HTMX multi-swap extension |
+| `src/dazzle_page/runtime/static/vendor/htmx-ext-path-deps.js` | Create | HTMX path-deps extension |
+| `src/dazzle_page/runtime/static/vendor/alpine-anchor.min.js` | Create | Alpine anchor plugin |
+| `src/dazzle_page/runtime/static/vendor/alpine-collapse.min.js` | Create | Alpine collapse plugin |
+| `src/dazzle_page/runtime/static/vendor/alpine-focus.min.js` | Create | Alpine focus plugin |
+| `src/dazzle_page/runtime/static/js/dz-component-bridge.js` | Create | HTMX lifecycle bridge for vendored widgets |
+| `src/dazzle_http/runtime/response_helpers.py` | Create | OOB swap helpers (with_toast, with_oob) |
+| `src/dazzle_http/runtime/asset_manifest.py` | Create | Derives required JS assets from surface specs |
+| `src/dazzle_page/templates/base.html` | Modify | Add containers, extensions, conditional loading |
 | `tests/unit/test_response_helpers.py` | Create | Tests for OOB swap helpers |
 | `tests/unit/test_asset_manifest.py` | Create | Tests for asset derivation |
 | `tests/unit/test_component_bridge.py` | Create | Tests for bridge script output |
@@ -36,17 +36,17 @@
 ### Task 1: Vendor HTMX Extensions
 
 **Files:**
-- Create: `src/dazzle_ui/runtime/static/vendor/htmx-ext-remove-me.js`
-- Create: `src/dazzle_ui/runtime/static/vendor/htmx-ext-class-tools.js`
-- Create: `src/dazzle_ui/runtime/static/vendor/htmx-ext-multi-swap.js`
-- Create: `src/dazzle_ui/runtime/static/vendor/htmx-ext-path-deps.js`
+- Create: `src/dazzle_page/runtime/static/vendor/htmx-ext-remove-me.js`
+- Create: `src/dazzle_page/runtime/static/vendor/htmx-ext-class-tools.js`
+- Create: `src/dazzle_page/runtime/static/vendor/htmx-ext-multi-swap.js`
+- Create: `src/dazzle_page/runtime/static/vendor/htmx-ext-path-deps.js`
 
 - [ ] **Step 1: Download the four HTMX extensions**
 
 Download from the official HTMX extensions repo. These are small, self-contained JS files.
 
 ```bash
-cd /Volumes/SSD/Dazzle/src/dazzle_ui/runtime/static/vendor
+cd /Volumes/SSD/Dazzle/src/dazzle_page/runtime/static/vendor
 
 # remove-me: auto-removes elements after a delay
 curl -sL "https://unpkg.com/htmx-ext-remove-me@2.0.0/remove-me.js" -o htmx-ext-remove-me.js
@@ -78,10 +78,10 @@ Expected: Each file starts with a comment or IIFE containing the extension logic
 - [ ] **Step 3: Commit vendored extensions**
 
 ```bash
-git add src/dazzle_ui/runtime/static/vendor/htmx-ext-remove-me.js \
-        src/dazzle_ui/runtime/static/vendor/htmx-ext-class-tools.js \
-        src/dazzle_ui/runtime/static/vendor/htmx-ext-multi-swap.js \
-        src/dazzle_ui/runtime/static/vendor/htmx-ext-path-deps.js
+git add src/dazzle_page/runtime/static/vendor/htmx-ext-remove-me.js \
+        src/dazzle_page/runtime/static/vendor/htmx-ext-class-tools.js \
+        src/dazzle_page/runtime/static/vendor/htmx-ext-multi-swap.js \
+        src/dazzle_page/runtime/static/vendor/htmx-ext-path-deps.js
 git commit -m "vendor: add HTMX extensions (remove-me, class-tools, multi-swap, path-deps)"
 ```
 
@@ -90,14 +90,14 @@ git commit -m "vendor: add HTMX extensions (remove-me, class-tools, multi-swap, 
 ### Task 2: Vendor Alpine.js Plugins
 
 **Files:**
-- Create: `src/dazzle_ui/runtime/static/vendor/alpine-anchor.min.js`
-- Create: `src/dazzle_ui/runtime/static/vendor/alpine-collapse.min.js`
-- Create: `src/dazzle_ui/runtime/static/vendor/alpine-focus.min.js`
+- Create: `src/dazzle_page/runtime/static/vendor/alpine-anchor.min.js`
+- Create: `src/dazzle_page/runtime/static/vendor/alpine-collapse.min.js`
+- Create: `src/dazzle_page/runtime/static/vendor/alpine-focus.min.js`
 
 - [ ] **Step 1: Download the three Alpine plugins**
 
 ```bash
-cd /Volumes/SSD/Dazzle/src/dazzle_ui/runtime/static/vendor
+cd /Volumes/SSD/Dazzle/src/dazzle_page/runtime/static/vendor
 
 # @alpinejs/anchor — Floating UI positioning for popovers/tooltips
 curl -sL "https://cdn.jsdelivr.net/npm/@alpinejs/anchor@3.x.x/dist/cdn.min.js" -o alpine-anchor.min.js
@@ -123,9 +123,9 @@ Expected: anchor ~4KB, collapse ~2KB, focus ~3KB. If any file is suspiciously sm
 - [ ] **Step 3: Commit vendored plugins**
 
 ```bash
-git add src/dazzle_ui/runtime/static/vendor/alpine-anchor.min.js \
-        src/dazzle_ui/runtime/static/vendor/alpine-collapse.min.js \
-        src/dazzle_ui/runtime/static/vendor/alpine-focus.min.js
+git add src/dazzle_page/runtime/static/vendor/alpine-anchor.min.js \
+        src/dazzle_page/runtime/static/vendor/alpine-collapse.min.js \
+        src/dazzle_page/runtime/static/vendor/alpine-focus.min.js
 git commit -m "vendor: add Alpine.js plugins (anchor, collapse, focus)"
 ```
 
@@ -134,7 +134,7 @@ git commit -m "vendor: add Alpine.js plugins (anchor, collapse, focus)"
 ### Task 3: Wire New Extensions and Plugins into base.html
 
 **Files:**
-- Modify: `src/dazzle_ui/templates/base.html`
+- Modify: `src/dazzle_page/templates/base.html`
 
 - [ ] **Step 1: Add HTMX extensions to the script block**
 
@@ -223,7 +223,7 @@ Note: The actual vendor files for Tom Select, Flatpickr, Pickr, and Quill will b
 ```bash
 cd /Volumes/SSD/Dazzle
 python -c "
-from dazzle_ui.runtime.template_renderer import create_jinja_env
+from dazzle_page.runtime.template_renderer import create_jinja_env
 env = create_jinja_env()
 tmpl = env.get_template('base.html')
 html = tmpl.render(
@@ -247,7 +247,7 @@ Expected: `OK: base.html renders with all new elements`
 - [ ] **Step 7: Commit base.html changes**
 
 ```bash
-git add src/dazzle_ui/templates/base.html
+git add src/dazzle_page/templates/base.html
 git commit -m "feat(ui): wire HTMX extensions + Alpine plugins + container elements into base.html"
 ```
 
@@ -256,7 +256,7 @@ git commit -m "feat(ui): wire HTMX extensions + Alpine plugins + container eleme
 ### Task 4: Build the Component Lifecycle Bridge
 
 **Files:**
-- Create: `src/dazzle_ui/runtime/static/js/dz-component-bridge.js`
+- Create: `src/dazzle_page/runtime/static/js/dz-component-bridge.js`
 - Create: `tests/unit/test_component_bridge.py`
 
 - [ ] **Step 1: Write the test for bridge script existence and structure**
@@ -272,7 +272,7 @@ import pytest
 BRIDGE_PATH = (
     pathlib.Path(__file__).resolve().parents[2]
     / "src"
-    / "dazzle_ui"
+    / "dazzle_page"
     / "runtime"
     / "static"
     / "js"
@@ -313,7 +313,7 @@ Expected: FAIL — `test_bridge_script_exists` fails because the file doesn't ex
 - [ ] **Step 3: Write the component bridge script**
 
 ```javascript
-// src/dazzle_ui/runtime/static/js/dz-component-bridge.js
+// src/dazzle_page/runtime/static/js/dz-component-bridge.js
 /**
  * Dazzle Component Bridge — manages vendored widget lifecycle across HTMX swaps.
  *
@@ -422,9 +422,9 @@ In `base.html`, add the bridge script after `dz-islands.js` (currently line 50):
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/js/dz-component-bridge.js \
+git add src/dazzle_page/runtime/static/js/dz-component-bridge.js \
         tests/unit/test_component_bridge.py \
-        src/dazzle_ui/templates/base.html
+        src/dazzle_page/templates/base.html
 git commit -m "feat(ui): add component lifecycle bridge for vendored widgets"
 ```
 
@@ -433,7 +433,7 @@ git commit -m "feat(ui): add component lifecycle bridge for vendored widgets"
 ### Task 5: Build Response Helpers
 
 **Files:**
-- Create: `src/dazzle_back/runtime/response_helpers.py`
+- Create: `src/dazzle_http/runtime/response_helpers.py`
 - Create: `tests/unit/test_response_helpers.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -445,7 +445,7 @@ git commit -m "feat(ui): add component lifecycle bridge for vendored widgets"
 import pytest
 from starlette.responses import HTMLResponse
 
-from dazzle_back.runtime.response_helpers import with_oob, with_toast
+from dazzle_http.runtime.response_helpers import with_oob, with_toast
 
 
 class TestWithToast:
@@ -521,12 +521,12 @@ class TestWithOob:
 pytest tests/unit/test_response_helpers.py -v
 ```
 
-Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle_back.runtime.response_helpers'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle_http.runtime.response_helpers'`
 
 - [ ] **Step 3: Implement response helpers**
 
 ```python
-# src/dazzle_back/runtime/response_helpers.py
+# src/dazzle_http/runtime/response_helpers.py
 """
 HTMX OOB swap response helpers.
 
@@ -614,7 +614,7 @@ Expected: All 9 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/response_helpers.py \
+git add src/dazzle_http/runtime/response_helpers.py \
         tests/unit/test_response_helpers.py
 git commit -m "feat(runtime): add HTMX OOB response helpers (with_toast, with_oob)"
 ```
@@ -624,7 +624,7 @@ git commit -m "feat(runtime): add HTMX OOB response helpers (with_toast, with_oo
 ### Task 6: Build Asset Manifest
 
 **Files:**
-- Create: `src/dazzle_back/runtime/asset_manifest.py`
+- Create: `src/dazzle_http/runtime/asset_manifest.py`
 - Create: `tests/unit/test_asset_manifest.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -635,7 +635,7 @@ git commit -m "feat(runtime): add HTMX OOB response helpers (with_toast, with_oo
 
 import pytest
 
-from dazzle_back.runtime.asset_manifest import collect_required_assets
+from dazzle_http.runtime.asset_manifest import collect_required_assets
 
 
 class _FakeField:
@@ -725,12 +725,12 @@ class TestCollectRequiredAssets:
 pytest tests/unit/test_asset_manifest.py -v
 ```
 
-Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle_back.runtime.asset_manifest'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle_http.runtime.asset_manifest'`
 
 - [ ] **Step 3: Implement asset manifest**
 
 ```python
-# src/dazzle_back/runtime/asset_manifest.py
+# src/dazzle_http/runtime/asset_manifest.py
 """
 Conditional JS asset derivation from surface field specs.
 
@@ -800,7 +800,7 @@ Expected: All 13 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/asset_manifest.py \
+git add src/dazzle_http/runtime/asset_manifest.py \
         tests/unit/test_asset_manifest.py
 git commit -m "feat(runtime): add asset manifest — derives vendor JS deps from surface specs"
 ```
@@ -822,8 +822,8 @@ Expected: All ~3399+ existing tests pass. The new files don't modify any existin
 - [ ] **Step 2: Run linting**
 
 ```bash
-ruff check src/dazzle_back/runtime/response_helpers.py src/dazzle_back/runtime/asset_manifest.py tests/unit/test_response_helpers.py tests/unit/test_asset_manifest.py tests/unit/test_component_bridge.py --fix
-ruff format src/dazzle_back/runtime/response_helpers.py src/dazzle_back/runtime/asset_manifest.py tests/unit/test_response_helpers.py tests/unit/test_asset_manifest.py tests/unit/test_component_bridge.py
+ruff check src/dazzle_http/runtime/response_helpers.py src/dazzle_http/runtime/asset_manifest.py tests/unit/test_response_helpers.py tests/unit/test_asset_manifest.py tests/unit/test_component_bridge.py --fix
+ruff format src/dazzle_http/runtime/response_helpers.py src/dazzle_http/runtime/asset_manifest.py tests/unit/test_response_helpers.py tests/unit/test_asset_manifest.py tests/unit/test_component_bridge.py
 ```
 
 Expected: No errors, or auto-fixed formatting.
@@ -831,7 +831,7 @@ Expected: No errors, or auto-fixed formatting.
 - [ ] **Step 3: Run mypy on new modules**
 
 ```bash
-mypy src/dazzle_back/runtime/response_helpers.py src/dazzle_back/runtime/asset_manifest.py
+mypy src/dazzle_http/runtime/response_helpers.py src/dazzle_http/runtime/asset_manifest.py
 ```
 
 Expected: No type errors.

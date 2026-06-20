@@ -10,9 +10,9 @@ pytestmark = [pytest.mark.e2e, pytest.mark.postgres]
 
 
 def _profile_table():
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
     from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 
     app = load_project_appspec(Path("fixtures/tenant_rls"))
     pk = app.tenancy.isolation.partition_key
@@ -42,8 +42,8 @@ def test_profile_table_has_tenant_identity_unique() -> None:
 
 
 def test_is_profile_survives_conversion() -> None:
-    from dazzle.back.converters.entity_converter import convert_entities
     from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.converters.entity_converter import convert_entities
 
     app = load_project_appspec(Path("fixtures/tenant_rls"))
     prof = next(e for e in convert_entities(app.domain.entities) if e.name == "MemberProfile")

@@ -23,7 +23,7 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from dazzle.back.runtime.job_explorer import create_job_explorer_routes
+from dazzle.http.runtime.job_explorer import create_job_explorer_routes
 
 # ---------------------------------------------------------------------------
 # Fixtures — a minimal JobRun CRUD-service stub

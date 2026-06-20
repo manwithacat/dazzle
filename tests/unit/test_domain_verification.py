@@ -10,9 +10,9 @@ from datetime import datetime
 
 import pytest
 
-from dazzle.back.runtime.auth.connection_crypto import ConnectionSecretError
-from dazzle.back.runtime.auth.connections import ConnectionRecord
-from dazzle.back.runtime.auth.domain_verification import (
+from dazzle.http.runtime.auth.connection_crypto import ConnectionSecretError
+from dazzle.http.runtime.auth.connections import ConnectionRecord
+from dazzle.http.runtime.auth.domain_verification import (
     DomainVerificationError,
     txt_record,
     verification_token,

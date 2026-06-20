@@ -11,7 +11,7 @@ Covers:
 
 import pytest
 
-from dazzle.back.runtime.condition_evaluator import (
+from dazzle.http.runtime.condition_evaluator import (
     condition_to_sql_filter,
     evaluate_condition,
 )

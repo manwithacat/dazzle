@@ -10,12 +10,12 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from dazzle.back.runtime.otp_store import OTPStore
-from dazzle.back.runtime.recovery_codes import (
+from dazzle.http.runtime.otp_store import OTPStore
+from dazzle.http.runtime.recovery_codes import (
     RecoveryCodeStore,
     generate_recovery_codes,
 )
-from dazzle.back.runtime.recovery_codes import (
+from dazzle.http.runtime.recovery_codes import (
     _hash_code as recovery_hash_code,
 )
 

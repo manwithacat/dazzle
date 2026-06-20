@@ -1,7 +1,7 @@
 # tests/unit/test_condition_evaluator_grant_sql.py
 """Tests for grant_check SQL filter generation in condition_to_sql_filter."""
 
-from dazzle.back.runtime.condition_evaluator import condition_to_sql_filter
+from dazzle.http.runtime.condition_evaluator import condition_to_sql_filter
 
 
 class TestGrantCheckSqlFilter:

@@ -316,15 +316,15 @@ The mode-switch on a single parameter is deliberate: all four modes are reachabl
 def pick_start_path(persona_spec: PersonaSpec, app_spec: AppSpec) -> str:
     """Compute the start URL path for exploring as persona_spec.
 
-    Delegates to dazzle_ui.converters.workspace_converter.
+    Delegates to dazzle_page.converters.workspace_converter.
     compute_persona_default_routes, falling back to '/app' if the
     helper returns no route (pathological DSL with no workspaces).
     """
 ```
 
-Thin wrapper around the existing 5-step resolution chain in `compute_persona_default_routes` (`src/dazzle_ui/converters/workspace_converter.py:467`). No logic duplication — the FastAPI login flow and the persona switcher already converge on this helper, so explore uses it too.
+Thin wrapper around the existing 5-step resolution chain in `compute_persona_default_routes` (`src/dazzle_page/converters/workspace_converter.py:467`). No logic duplication — the FastAPI login flow and the persona switcher already converge on this helper, so explore uses it too.
 
-**Cross-package import note:** `explore_strategy` lives under `src/dazzle/cli/` and imports from `src/dazzle_ui/converters/`. `fitness_strategy.py` already imports from `dazzle_back.runtime.pg_backend` so cross-package imports from `cli/runtime_impl/` are an established pattern, not a new layering violation.
+**Cross-package import note:** `explore_strategy` lives under `src/dazzle/cli/` and imports from `src/dazzle_page/converters/`. `fitness_strategy.py` already imports from `dazzle_http.runtime.pg_backend` so cross-package imports from `cli/runtime_impl/` are an established pattern, not a new layering violation.
 
 **4c. Fan-out and dedup in `run_explore_strategy`:**
 

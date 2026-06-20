@@ -3,7 +3,7 @@ ThemeSpec YAML IR types for declarative theme configuration.
 
 Defines the structure of themespec.yaml which sits between sitespec.yaml
 and the CSS generation pipeline. A ThemeSpecYAML produces a ThemeSpec
-(from dazzle.ui.specs.theme) that the existing CSS pipeline consumes.
+(from dazzle.page.specs.theme) that the existing CSS pipeline consumes.
 
 Eight sections: palette, typography, spacing, shape, attention_map,
 layout, imagery, meta.
@@ -372,7 +372,7 @@ class ThemeMetaSpec(BaseModel):
 class ThemeSpecYAML(BaseModel):
     """Root ThemeSpec YAML configuration.
 
-    Named ThemeSpecYAML to avoid collision with ThemeSpec in dazzle.ui.specs.theme.
+    Named ThemeSpecYAML to avoid collision with ThemeSpec in dazzle.page.specs.theme.
     This model represents the user-facing themespec.yaml file that drives
     deterministic theme generation.
     """

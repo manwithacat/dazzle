@@ -7,8 +7,8 @@ autogenerate cannot reconcile by name and therefore re-emits on every
 ``dazzle db revision`` run.
 """
 
-from dazzle.back.converters.entity_converter import convert_field
 from dazzle.core.ir import FieldModifier, FieldSpec, FieldType, FieldTypeKind
+from dazzle.http.converters.entity_converter import convert_field
 
 
 def test_pk_field_not_marked_unique() -> None:

@@ -7,7 +7,7 @@
 
 ## Context
 
-Dazzle targets cloud deployments where apps are built from high-level DSL specifications and served by the FastAPI runtime (`src/dazzle/back/`). The runtime requires:
+Dazzle targets cloud deployments where apps are built from high-level DSL specifications and served by the FastAPI runtime (`src/dazzle/http/`). The runtime requires:
 
 - **Real-time event delivery** via database-level pub/sub
 - **Concurrent writes** from multiple request workers
@@ -26,7 +26,7 @@ PostgreSQL is the sole supported production database. All code paths target Post
 - `TIMESTAMPTZ` for all timestamps — no naïve `DATETIME`
 - `JSONB` for structured payloads in the event system and grant store
 - `LISTEN`/`NOTIFY` for real-time channel delivery
-- No SQLite imports, drivers, or conditional branches anywhere in `src/dazzle/back/`
+- No SQLite imports, drivers, or conditional branches anywhere in `src/dazzle/http/`
 
 Local development uses PostgreSQL via the default `dazzle serve` Docker stack. No SQLite fallback is provided.
 
@@ -73,7 +73,7 @@ Use SQLite locally and switch to PG in CI and production.
 
 ## Implementation
 
-- `src/dazzle/back/` uses `psycopg3` directly (originally `asyncpg`; migrated in #1341, see the status note above); no SQLAlchemy dialect switching
+- `src/dazzle/http/` uses `psycopg3` directly (originally `asyncpg`; migrated in #1341, see the status note above); no SQLAlchemy dialect switching
 - All migrations in `alembic/` target PG dialect
 - `pytest` fixtures spin up a PG test database via the Docker Compose test profile
 - `dazzle db status|verify|reset` commands are PG-only

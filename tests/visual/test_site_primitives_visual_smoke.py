@@ -36,7 +36,7 @@ sync_playwright_module = pytest.importorskip("playwright.sync_api")
 sync_playwright = sync_playwright_module.sync_playwright
 Page = sync_playwright_module.Page
 
-from dazzle.ui.runtime.css_loader import get_bundled_css  # noqa: E402
+from dazzle.page.runtime.css_loader import get_bundled_css  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ARTIFACTS_DIR = REPO_ROOT / "tests" / "visual" / "_artifacts"

@@ -11,7 +11,7 @@ _SRC = Path("src/dazzle")
 
 def test_compute_complexity_on_a_known_module() -> None:
     cx = compute_complexity(_SRC)
-    key = next(k for k in cx if k.endswith("back/runtime/route_overrides.py"))
+    key = next(k for k in cx if k.endswith("http/runtime/route_overrides.py"))
     assert cx[key]["mi_rank"] in ("A", "B", "C")
     assert cx[key]["max_cc"] >= 1
     assert isinstance(cx[key]["functions"], dict) and cx[key]["functions"]

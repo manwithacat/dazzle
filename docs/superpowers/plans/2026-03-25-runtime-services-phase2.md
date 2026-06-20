@@ -16,11 +16,11 @@
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/dazzle_back/runtime/services.py` | Modify | Add `process_manager` field |
-| `src/dazzle_back/runtime/task_routes.py` | Modify | Delete globals, use `Depends(get_services)` |
-| `src/dazzle_back/runtime/subsystems/process.py` | Modify | Wire process_manager to services |
-| `src/dazzle_back/runtime/rate_limit.py` | Modify | Replace 5 globals with `_Limits` dataclass |
-| `src/dazzle_back/runtime/file_routes.py` | Modify | Update rate limit decorator references |
+| `src/dazzle_http/runtime/services.py` | Modify | Add `process_manager` field |
+| `src/dazzle_http/runtime/task_routes.py` | Modify | Delete globals, use `Depends(get_services)` |
+| `src/dazzle_http/runtime/subsystems/process.py` | Modify | Wire process_manager to services |
+| `src/dazzle_http/runtime/rate_limit.py` | Modify | Replace 5 globals with `_Limits` dataclass |
+| `src/dazzle_http/runtime/file_routes.py` | Modify | Update rate limit decorator references |
 | `src/dazzle/mcp/server/state.py` | Modify | Add `appspec_data`, `ui_spec`, `pack_cache`, `packs_loaded` |
 | `src/dazzle/mcp/runtime_tools/state.py` | Delete | Migrated to ServerState |
 | `src/dazzle/mcp/runtime_tools/handlers.py` | Modify | Import from ServerState |
@@ -33,9 +33,9 @@
 ### Task 1: Add `process_manager` to `RuntimeServices` + Migrate Task Routes
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/services.py`
-- Modify: `src/dazzle_back/runtime/task_routes.py`
-- Modify: `src/dazzle_back/runtime/subsystems/process.py`
+- Modify: `src/dazzle_http/runtime/services.py`
+- Modify: `src/dazzle_http/runtime/task_routes.py`
+- Modify: `src/dazzle_http/runtime/subsystems/process.py`
 - Modify: `tests/unit/test_runtime_services.py`
 
 - [ ] **Step 1: Add test for new field**
@@ -55,7 +55,7 @@ Expected: FAIL — `TypeError: __init__() got an unexpected keyword argument` or
 
 - [ ] **Step 3: Add `process_manager` to `RuntimeServices`**
 
-In `src/dazzle_back/runtime/services.py`, add after the `metrics_emitter` field (line 37):
+In `src/dazzle_http/runtime/services.py`, add after the `metrics_emitter` field (line 37):
 
 ```python
     process_manager: Any = None  # ProcessManager | None
@@ -68,7 +68,7 @@ Expected: PASS (6 tests)
 
 - [ ] **Step 5: Delete globals from `task_routes.py`**
 
-In `src/dazzle_back/runtime/task_routes.py`, delete lines 115-129 (the `_process_manager` variable, `set_process_manager()`, and `get_process_manager()` functions).
+In `src/dazzle_http/runtime/task_routes.py`, delete lines 115-129 (the `_process_manager` variable, `set_process_manager()`, and `get_process_manager()` functions).
 
 - [ ] **Step 6: Add `Depends(get_services)` to task route handlers**
 
@@ -76,7 +76,7 @@ Add import at top of `task_routes.py`:
 
 ```python
 from fastapi import Depends
-from dazzle_back.runtime.services import RuntimeServices, get_services
+from dazzle_http.runtime.services import RuntimeServices, get_services
 ```
 
 Update all 5 route handlers. Each one currently has `manager = get_process_manager()` inside the function body. Replace with a `services` parameter + inline check. Example for `list_tasks` (line 253):
@@ -111,11 +111,11 @@ Apply the same pattern to all 5 handlers:
 
 - [ ] **Step 7: Wire process_manager from subsystem**
 
-In `src/dazzle_back/runtime/subsystems/process.py`, replace the `set_process_manager` call (line 62):
+In `src/dazzle_http/runtime/subsystems/process.py`, replace the `set_process_manager` call (line 62):
 
 Before:
 ```python
-from dazzle_back.runtime.task_routes import set_process_manager
+from dazzle_http.runtime.task_routes import set_process_manager
 ...
 set_process_manager(self._manager)
 ```
@@ -131,14 +131,14 @@ Remove the `set_process_manager` import.
 
 - [ ] **Step 8: Verify import and run affected tests**
 
-Run: `python -c "from dazzle_back.runtime.task_routes import router; print('OK')"`
+Run: `python -c "from dazzle_http.runtime.task_routes import router; print('OK')"`
 Run: `pytest tests/unit/test_runtime_services.py -v`
 Expected: Both pass
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/services.py src/dazzle_back/runtime/task_routes.py src/dazzle_back/runtime/subsystems/process.py tests/unit/test_runtime_services.py
+git add src/dazzle_http/runtime/services.py src/dazzle_http/runtime/task_routes.py src/dazzle_http/runtime/subsystems/process.py tests/unit/test_runtime_services.py
 git commit -m "refactor(runtime): migrate process_manager to RuntimeServices (#673)"
 ```
 
@@ -147,12 +147,12 @@ git commit -m "refactor(runtime): migrate process_manager to RuntimeServices (#6
 ### Task 2: Replace Rate Limit Globals with Dataclass Container
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/rate_limit.py`
-- Modify: `src/dazzle_back/runtime/file_routes.py`
+- Modify: `src/dazzle_http/runtime/rate_limit.py`
+- Modify: `src/dazzle_http/runtime/file_routes.py`
 
 - [ ] **Step 1: Replace 5 module-level globals with a `_Limits` dataclass**
 
-In `src/dazzle_back/runtime/rate_limit.py`, replace lines 37-48:
+In `src/dazzle_http/runtime/rate_limit.py`, replace lines 37-48:
 
 Before:
 ```python
@@ -227,7 +227,7 @@ After:
 
 - [ ] **Step 3: Update `file_routes.py` decorator references**
 
-In `src/dazzle_back/runtime/file_routes.py`, update the decorator (line 406):
+In `src/dazzle_http/runtime/file_routes.py`, update the decorator (line 406):
 
 Before:
 ```python
@@ -243,13 +243,13 @@ Search the file for any other `_rl.limiter` or `_rl.auth_limit` etc. references 
 
 - [ ] **Step 4: Verify import**
 
-Run: `python -c "from dazzle_back.runtime.rate_limit import limits; print(limits.auth_limit)"`
+Run: `python -c "from dazzle_http.runtime.rate_limit import limits; print(limits.auth_limit)"`
 Expected: `10/minute`
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/rate_limit.py src/dazzle_back/runtime/file_routes.py
+git add src/dazzle_http/runtime/rate_limit.py src/dazzle_http/runtime/file_routes.py
 git commit -m "refactor(runtime): replace rate limit globals with dataclass container (#673)"
 ```
 
@@ -473,27 +473,27 @@ git commit -m "refactor(mcp): move api_kb pack cache to ServerState (#673)"
 
 Add `  # noqa: PLW0603  # <reason>` to each line. The exact edits:
 
-**`src/dazzle_back/pra/tigerbeetle_client.py:32`:**
+**`src/dazzle_http/pra/tigerbeetle_client.py:32`:**
 ```python
     global _tb_module  # noqa: PLW0603  # lazy import for optional dependency
 ```
 
-**`src/dazzle_back/runtime/logging.py:187`:**
+**`src/dazzle_http/runtime/logging.py:187`:**
 ```python
     global _log_dir, _file_handler  # noqa: PLW0603  # system-wide logging, init-only
 ```
 
-**`src/dazzle_back/runtime/sa_schema.py:36`:**
+**`src/dazzle_http/runtime/sa_schema.py:36`:**
 ```python
     global _sa_imported, _sa  # noqa: PLW0603  # lazy import for optional sqlalchemy
 ```
 
-**`src/dazzle_back/runtime/auth/events.py:39`:**
+**`src/dazzle_http/runtime/auth/events.py:39`:**
 ```python
     global _event_framework  # noqa: PLW0603  # clean setter called once at startup
 ```
 
-**`src/dazzle_back/runtime/task_routes.py`:** (if any `global` remains after Task 1 — should be none)
+**`src/dazzle_http/runtime/task_routes.py`:** (if any `global` remains after Task 1 — should be none)
 
 **`src/dazzle/rbac/audit.py:92`:**
 ```python
@@ -545,17 +545,17 @@ Add `  # noqa: PLW0603  # <reason>` to each line. The exact edits:
     global _gate  # noqa: PLW0603  # browser gate reconfiguration at startup
 ```
 
-**`src/dazzle_ui/runtime/realtime_client.py:911`:**
+**`src/dazzle_page/runtime/realtime_client.py:911`:**
 ```python
     global _REALTIME_JS_CACHED  # noqa: PLW0603  # static asset cache, immutable once loaded
 ```
 
-**`src/dazzle_ui/runtime/template_renderer.py:318`:**
+**`src/dazzle_page/runtime/template_renderer.py:318`:**
 ```python
     global _env  # noqa: PLW0603  # single-project Jinja2 env, lazy-init
 ```
 
-**`src/dazzle_ui/runtime/template_renderer.py:330`:**
+**`src/dazzle_page/runtime/template_renderer.py:330`:**
 ```python
     global _env  # noqa: PLW0603  # project template override at startup
 ```
@@ -591,7 +591,7 @@ Expected: 0 (none unannotated)
 
 - [ ] **Step 3: Verify deleted functions don't remain as imports**
 
-Run: `grep -rn "get_process_manager\|set_process_manager" src/dazzle_back/ --include="*.py" | grep -v "test_\|\.pyc"`
+Run: `grep -rn "get_process_manager\|set_process_manager" src/dazzle_http/ --include="*.py" | grep -v "test_\|\.pyc"`
 Expected: 0 matches
 
 Run: `grep -rn "from.*runtime_tools.state import\|from.*runtime_tools import state" src/ --include="*.py"`
@@ -604,7 +604,7 @@ Expected: Clean
 
 - [ ] **Step 5: Type check**
 
-Run: `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_back/ --ignore-missing-imports`
+Run: `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_http/ --ignore-missing-imports`
 Expected: Clean
 
 - [ ] **Step 6: Final commit if lint/format changes**

@@ -5,7 +5,7 @@ import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from dazzle.back.runtime.api_cache import ApiResponseCache
+from dazzle.http.runtime.api_cache import ApiResponseCache
 
 
 def _run(coro: Any) -> Any:

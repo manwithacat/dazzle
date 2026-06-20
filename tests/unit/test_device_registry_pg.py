@@ -24,16 +24,16 @@ class TestDeviceRegistryInit:
 
     def test_normalizes_heroku_postgres_url(self):
         """Verify postgres:// is normalized to postgresql://."""
-        with patch("dazzle.back.runtime.device_registry.DeviceRegistry._init_db"):
-            from dazzle.back.runtime.device_registry import DeviceRegistry
+        with patch("dazzle.http.runtime.device_registry.DeviceRegistry._init_db"):
+            from dazzle.http.runtime.device_registry import DeviceRegistry
 
             reg = DeviceRegistry(database_url="postgres://user:pass@host/db")
             assert reg._database_url == "postgresql://user:pass@host/db"
 
     def test_postgresql_url_unchanged(self):
         """Verify postgresql:// URLs are not modified."""
-        with patch("dazzle.back.runtime.device_registry.DeviceRegistry._init_db"):
-            from dazzle.back.runtime.device_registry import DeviceRegistry
+        with patch("dazzle.http.runtime.device_registry.DeviceRegistry._init_db"):
+            from dazzle.http.runtime.device_registry import DeviceRegistry
 
             reg = DeviceRegistry(database_url="postgresql://user:pass@host/db")
             assert reg._database_url == "postgresql://user:pass@host/db"
@@ -53,8 +53,8 @@ class TestDeviceRegistryPostgresInit:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("dazzle.back.runtime.device_registry.DeviceRegistry._init_db"):
-            from dazzle.back.runtime.device_registry import DeviceRegistry
+        with patch("dazzle.http.runtime.device_registry.DeviceRegistry._init_db"):
+            from dazzle.http.runtime.device_registry import DeviceRegistry
 
             reg = DeviceRegistry(database_url="postgresql://localhost/test")
 
@@ -71,8 +71,8 @@ class TestDeviceRegistryPostgresInit:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("dazzle.back.runtime.device_registry.DeviceRegistry._init_db"):
-            from dazzle.back.runtime.device_registry import DeviceRegistry
+        with patch("dazzle.http.runtime.device_registry.DeviceRegistry._init_db"):
+            from dazzle.http.runtime.device_registry import DeviceRegistry
 
             reg = DeviceRegistry(database_url="postgresql://localhost/test")
 
@@ -91,8 +91,8 @@ class TestDeviceRegistryPostgresInit:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("dazzle.back.runtime.device_registry.DeviceRegistry._init_db"):
-            from dazzle.back.runtime.device_registry import DeviceRegistry
+        with patch("dazzle.http.runtime.device_registry.DeviceRegistry._init_db"):
+            from dazzle.http.runtime.device_registry import DeviceRegistry
 
             reg = DeviceRegistry(database_url="postgresql://localhost/test")
 
@@ -110,8 +110,8 @@ class TestDeviceRegistryPostgresInit:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("dazzle.back.runtime.device_registry.DeviceRegistry._init_db"):
-            from dazzle.back.runtime.device_registry import DeviceRegistry
+        with patch("dazzle.http.runtime.device_registry.DeviceRegistry._init_db"):
+            from dazzle.http.runtime.device_registry import DeviceRegistry
 
             reg = DeviceRegistry(database_url="postgresql://localhost/test")
 

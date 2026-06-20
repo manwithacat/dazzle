@@ -113,13 +113,13 @@ entity Skin:
 
 class TestTonesRuntimeWiring:
     def test_region_context_default_empty_dict(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import RegionContext
+        from dazzle.page.runtime.workspace_renderer import RegionContext
 
         ctx = RegionContext(name="r")
         assert ctx.tones == {}
 
     def test_region_context_carries_tones(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import RegionContext
+        from dazzle.page.runtime.workspace_renderer import RegionContext
 
         ctx = RegionContext(name="r", tones={"active": "positive"})
         assert ctx.tones == {"active": "positive"}
@@ -133,7 +133,7 @@ class TestComputeAggregateMetricsTones:
 
     @pytest.mark.asyncio
     async def test_metrics_get_tone_when_configured(self) -> None:
-        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
+        from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         metrics = await _compute_aggregate_metrics(
             aggregates={"active": "count", "resolved": "count"},
@@ -148,7 +148,7 @@ class TestComputeAggregateMetricsTones:
 
     @pytest.mark.asyncio
     async def test_metric_without_tone_omits_key(self) -> None:
-        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
+        from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         metrics = await _compute_aggregate_metrics(
             aggregates={"active": "count", "untoned": "count"},
@@ -166,7 +166,7 @@ class TestComputeAggregateMetricsTones:
 
     @pytest.mark.asyncio
     async def test_no_tones_dict_leaves_metrics_untouched(self) -> None:
-        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
+        from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         metrics = await _compute_aggregate_metrics(
             aggregates={"active": "count"},
@@ -189,7 +189,7 @@ class TestTonesTemplateBinding:
     def _template_text(self) -> str:
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/metrics.html"
+            / "src/dazzle/page/templates/workspace/regions/metrics.html"
         )
         return path.read_text()
 
@@ -222,7 +222,7 @@ class TestTonesIsPresentationOnly:
     def test_tones_does_not_change_metric_value(self) -> None:
         import asyncio
 
-        from dazzle.back.runtime.workspace_aggregation import _compute_aggregate_metrics
+        from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
 
         async def run() -> tuple[list[dict], list[dict]]:
             with_tones = await _compute_aggregate_metrics(

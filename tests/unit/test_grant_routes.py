@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.grant_routes import create_grant_routes
+from dazzle.http.runtime.grant_routes import create_grant_routes
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -99,7 +99,7 @@ class TestExtractRoles:
 
     def test_simple_role(self):
         """Single role(X) expression extracts one role."""
-        from dazzle.back.runtime.grant_routes import create_grant_routes
+        from dazzle.http.runtime.grant_routes import create_grant_routes
 
         # We need to test _extract_roles which is a closure.
         # Test it indirectly via the route logic.

@@ -80,9 +80,9 @@ def _build_fixture_metadata() -> tuple[sa.MetaData, str, list[str]]:
 
     Returns ``(metadata, partition_key, sorted_scoped_entity_names)``.
     """
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
     from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 
     appspec = load_project_appspec(_PROJECT_ROOT)
     assert appspec.tenancy is not None, "fixture must declare a tenancy block"
@@ -147,7 +147,7 @@ def harness() -> Iterator[_RlsHarness]:
     if not _PG_URL:
         pytest.skip("no TEST_DATABASE_URL/DATABASE_URL")
 
-    from dazzle.back.runtime.rls_schema import build_rls_policy_ddl
+    from dazzle.http.runtime.rls_schema import build_rls_policy_ddl
 
     suffix = uuid.uuid4().hex[:8]
     scratch = f"dazzle_rls_enf_{suffix}"

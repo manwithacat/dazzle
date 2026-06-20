@@ -37,11 +37,11 @@
 
 | File | Responsibility | Change |
 |---|---|---|
-| `src/dazzle/back/runtime/auth/qa_provision.py` | `provision_test_tenant` + `teardown_test_tenant` + `ProvisionedTestTenant` | **Create** |
-| `src/dazzle/back/runtime/auth/qa_sign.py` | `sign_qa_token` / `verify_qa_token` + `QaTokenClaims`/`QaTokenError` | **Create** |
-| `src/dazzle/back/runtime/auth/store.py` | `get_organization(org_id)` (by id, for the mint) | **Modify** |
-| `src/dazzle/back/runtime/qa_secure_routes.py` | self-disabling mint route + containment invariant | **Create** |
-| `src/dazzle/back/runtime/subsystems/auth.py` | mount when `QA_AUTH_SECRET` set | **Modify** |
+| `src/dazzle/http/runtime/auth/qa_provision.py` | `provision_test_tenant` + `teardown_test_tenant` + `ProvisionedTestTenant` | **Create** |
+| `src/dazzle/http/runtime/auth/qa_sign.py` | `sign_qa_token` / `verify_qa_token` + `QaTokenClaims`/`QaTokenError` | **Create** |
+| `src/dazzle/http/runtime/auth/store.py` | `get_organization(org_id)` (by id, for the mint) | **Modify** |
+| `src/dazzle/http/runtime/qa_secure_routes.py` | self-disabling mint route + containment invariant | **Create** |
+| `src/dazzle/http/runtime/subsystems/auth.py` | mount when `QA_AUTH_SECRET` set | **Modify** |
 | `docs/adr/0035-qa-auth-containment-invariant.md` | the security ADR | **Create** |
 | `docs/adr/INDEX.md` | ADR index entry | **Modify** |
 | `tests/unit/test_qa_sign.py` | signer round-trip + tamper/expiry | **Create** |
@@ -53,7 +53,7 @@
 ## Task 1: `provision_test_tenant` + `teardown_test_tenant`
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/qa_provision.py`
+- Create: `src/dazzle/http/runtime/auth/qa_provision.py`
 - Test: `tests/integration/test_qa_auth_containment_pg.py`
 
 - [ ] **Step 1: Write the failing integration test (real PG)**
@@ -104,8 +104,8 @@ def scratch_url() -> Iterator[str]:
 
 
 def test_provision_test_tenant_creates_qa_org_admin_membership(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -128,7 +128,7 @@ Expected: FAIL — `ModuleNotFoundError: ...qa_provision`.
 - [ ] **Step 3: Write the module**
 
 ```python
-# src/dazzle/back/runtime/auth/qa_provision.py
+# src/dazzle/http/runtime/auth/qa_provision.py
 """Ephemeral QA test-tenant provisioning + teardown (RLS Phase E.2, #1339).
 
 A QA test tenant is a framework ``organizations`` row (``slug=qa-<run_id>``,
@@ -196,7 +196,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/qa_provision.py tests/integration/test_qa_auth_containment_pg.py
+git add src/dazzle/http/runtime/auth/qa_provision.py tests/integration/test_qa_auth_containment_pg.py
 git commit -m "feat(auth): provision_test_tenant + teardown (Phase E.2)"
 ```
 
@@ -205,7 +205,7 @@ git commit -m "feat(auth): provision_test_tenant + teardown (Phase E.2)"
 ## Task 2: HMAC QA token signer
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/qa_sign.py`
+- Create: `src/dazzle/http/runtime/auth/qa_sign.py`
 - Test: `tests/unit/test_qa_sign.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -216,7 +216,7 @@ git commit -m "feat(auth): provision_test_tenant + teardown (Phase E.2)"
 
 import pytest
 
-from dazzle.back.runtime.auth.qa_sign import (
+from dazzle.http.runtime.auth.qa_sign import (
     QaTokenError,
     sign_qa_token,
     verify_qa_token,
@@ -276,7 +276,7 @@ Expected: FAIL — module missing.
 - [ ] **Step 3: Write the signer**
 
 ```python
-# src/dazzle/back/runtime/auth/qa_sign.py
+# src/dazzle/http/runtime/auth/qa_sign.py
 """Signed QA-auth tokens (RLS Phase E.2, #1339).
 
 A token is ``<email>:<run_id>:<issued_ts>.<hmac_hex>`` — an HMAC-SHA256 over the
@@ -354,7 +354,7 @@ Expected: PASS (6 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/qa_sign.py tests/unit/test_qa_sign.py
+git add src/dazzle/http/runtime/auth/qa_sign.py tests/unit/test_qa_sign.py
 git commit -m "feat(auth): HMAC QA token signer (~60s window, constant-time) (Phase E.2)"
 ```
 
@@ -363,7 +363,7 @@ git commit -m "feat(auth): HMAC QA token signer (~60s window, constant-time) (Ph
 ## Task 3: `get_organization(org_id)` store accessor
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py`
 - Test: `tests/integration/test_qa_auth_containment_pg.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -371,7 +371,7 @@ git commit -m "feat(auth): HMAC QA token signer (~60s window, constant-time) (Ph
 ```python
 # append to tests/integration/test_qa_auth_containment_pg.py
 def test_get_organization_by_id(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -388,7 +388,7 @@ Expected: FAIL — no `get_organization`.
 
 - [ ] **Step 3: Add the method**
 
-In `src/dazzle/back/runtime/auth/store.py`, next to `get_organization_by_slug`:
+In `src/dazzle/http/runtime/auth/store.py`, next to `get_organization_by_slug`:
 
 ```python
     def get_organization(self, org_id: str) -> "OrganizationRecord | None":
@@ -404,7 +404,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_qa_auth_containment_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_qa_auth_containment_pg.py
 git commit -m "feat(auth): AuthStore.get_organization by id (Phase E.2)"
 ```
 
@@ -413,7 +413,7 @@ git commit -m "feat(auth): AuthStore.get_organization by id (Phase E.2)"
 ## Task 4: `qa_secure_routes.py` — self-disabling mint + containment invariant
 
 **Files:**
-- Create: `src/dazzle/back/runtime/qa_secure_routes.py`
+- Create: `src/dazzle/http/runtime/qa_secure_routes.py`
 - Test: `tests/unit/test_qa_secure_routes_disabled.py` + `tests/integration/test_qa_auth_containment_pg.py` (append)
 
 - [ ] **Step 1: Write the failing self-disable unit test**
@@ -422,7 +422,7 @@ git commit -m "feat(auth): AuthStore.get_organization by id (Phase E.2)"
 # tests/unit/test_qa_secure_routes_disabled.py
 """qa_secure_routes is self-disabling without QA_AUTH_SECRET (Phase E.2)."""
 
-from dazzle.back.runtime.qa_secure_routes import create_qa_secure_routes
+from dazzle.http.runtime.qa_secure_routes import create_qa_secure_routes
 
 
 def test_router_is_none_without_secret(monkeypatch) -> None:
@@ -445,7 +445,7 @@ Expected: FAIL — module missing.
 - [ ] **Step 3: Write the route**
 
 ```python
-# src/dazzle/back/runtime/qa_secure_routes.py
+# src/dazzle/http/runtime/qa_secure_routes.py
 """Secret-gated, contained QA-auth mint (RLS Phase E.2, #1339).
 
 Physically separate from the dev-only `qa_routes.py` (the "dev route stays dev"
@@ -465,9 +465,9 @@ import time
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 
-from dazzle.back.runtime.auth.crypto import cookie_secure
-from dazzle.back.runtime.auth.qa_provision import QA_SLUG_PREFIX
-from dazzle.back.runtime.auth.qa_sign import QaTokenError, verify_qa_token
+from dazzle.http.runtime.auth.crypto import cookie_secure
+from dazzle.http.runtime.auth.qa_provision import QA_SLUG_PREFIX
+from dazzle.http.runtime.auth.qa_sign import QaTokenError, verify_qa_token
 
 logger = logging.getLogger(__name__)
 
@@ -567,7 +567,7 @@ import time as _time
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.auth.qa_sign import sign_qa_token
+from dazzle.http.runtime.auth.qa_sign import sign_qa_token
 
 _SECRET = "qa-int-secret"
 
@@ -576,7 +576,7 @@ def _app(store, monkeypatch_env: bool = True):
     import os
 
     os.environ["QA_AUTH_SECRET"] = _SECRET
-    from dazzle.back.runtime.qa_secure_routes import create_qa_secure_routes
+    from dazzle.http.runtime.qa_secure_routes import create_qa_secure_routes
 
     app = FastAPI()
     app.state.auth_store = store
@@ -587,8 +587,8 @@ def _app(store, monkeypatch_env: bool = True):
 
 
 def test_mint_happy_path_scopes_session_to_test_org(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -607,7 +607,7 @@ def test_mint_happy_path_scopes_session_to_test_org(scratch_url: str) -> None:
 def test_mint_refuses_real_non_test_org(scratch_url: str) -> None:
     """The containment crux: even a validly-signed token cannot mint into a
     real (non-test) org — the DB is_test gate refuses."""
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -622,8 +622,8 @@ def test_mint_refuses_real_non_test_org(scratch_url: str) -> None:
 
 
 def test_mint_rejects_expired_token(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -635,8 +635,8 @@ def test_mint_rejects_expired_token(scratch_url: str) -> None:
 
 
 def test_mint_rejects_bad_signature(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -649,8 +649,8 @@ def test_mint_rejects_bad_signature(scratch_url: str) -> None:
 
 def test_mint_rejects_run_mismatch(scratch_url: str) -> None:
     """A token whose run_id doesn't resolve to a provisioned qa- org → 403."""
-    from dazzle.back.runtime.auth.qa_provision import provision_test_tenant
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.qa_provision import provision_test_tenant
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -670,7 +670,7 @@ Expected: all PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/qa_secure_routes.py tests/unit/test_qa_secure_routes_disabled.py tests/integration/test_qa_auth_containment_pg.py
+git add src/dazzle/http/runtime/qa_secure_routes.py tests/unit/test_qa_secure_routes_disabled.py tests/integration/test_qa_auth_containment_pg.py
 git commit -m "feat(auth): qa_secure_routes — contained QA-auth mint + DB containment invariant (Phase E.2)"
 ```
 
@@ -679,18 +679,18 @@ git commit -m "feat(auth): qa_secure_routes — contained QA-auth mint + DB cont
 ## Task 5: Mount the secure router when `QA_AUTH_SECRET` is set
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py`
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py`
 - Test: covered by the self-disable unit test + boot smoke; here a wiring import check.
 
 - [ ] **Step 1: Mount it (near the dev qa_routes / password-login mounts)**
 
-In `src/dazzle/back/runtime/subsystems/auth.py`, add (after the org-context router mount from 1b, or near where `qa_routes` is mounted):
+In `src/dazzle/http/runtime/subsystems/auth.py`, add (after the org-context router mount from 1b, or near where `qa_routes` is mounted):
 
 ```python
         # Phase E.2 — secret-gated contained QA-auth mint. Self-disabling: the
         # factory returns None unless QA_AUTH_SECRET is set, so prod is off by
         # default with no request-time flag to misconfigure.
-        from dazzle.back.runtime.qa_secure_routes import create_qa_secure_routes
+        from dazzle.http.runtime.qa_secure_routes import create_qa_secure_routes
 
         _qa_secure = create_qa_secure_routes()
         if _qa_secure is not None:
@@ -705,13 +705,13 @@ In `src/dazzle/back/runtime/subsystems/auth.py`, add (after the org-context rout
 
 - [ ] **Step 2: Import smoke**
 
-Run: `python -c "import dazzle.back.runtime.subsystems.auth; print('ok')"`
+Run: `python -c "import dazzle.http.runtime.subsystems.auth; print('ok')"`
 Expected: `ok`.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/subsystems/auth.py
+git add src/dazzle/http/runtime/subsystems/auth.py
 git commit -m "feat(auth): mount secret-gated QA mint when QA_AUTH_SECRET set (Phase E.2)"
 ```
 

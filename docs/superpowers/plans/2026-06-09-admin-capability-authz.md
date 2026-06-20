@@ -14,14 +14,14 @@
 
 | File | Responsibility |
 |---|---|
-| `src/dazzle/back/runtime/auth/admin_policy.py` (create) | `CAPABILITIES` tuple + `AdminPolicy` value object (`from_config`, `may`, `roles_for`) + `unknown_admin_personas` helper. Pure, no I/O. |
+| `src/dazzle/http/runtime/auth/admin_policy.py` (create) | `CAPABILITIES` tuple + `AdminPolicy` value object (`from_config`, `may`, `roles_for`) + `unknown_admin_personas` helper. Pure, no I/O. |
 | `src/dazzle/core/manifest.py` (modify) | `AuthConfig.admin_capabilities` field + parse it in the auth loader. |
-| `src/dazzle/back/runtime/subsystems/auth.py` (modify) | Build `app.state.admin_policy`; log a warning for unknown personas. |
-| `src/dazzle/back/runtime/auth/member_admin.py` (modify) | Re-target `active_admins`/`would_orphan_org` param to the resolved `manage_members` persona set. |
-| `src/dazzle/back/runtime/auth/member_admin_routes.py` (modify) | Gate on `manage_members` via `AdminPolicy`. |
-| `src/dazzle/back/runtime/auth/invitation_routes.py` (modify) | Gate on `manage_members` via `AdminPolicy`. |
-| `src/dazzle/back/runtime/auth/connection_admin_routes.py` (modify) | Gate on `manage_connections` via `AdminPolicy`. |
-| `src/dazzle/back/runtime/auth/invitations.py` (modify) | Remove `may_manage_members` (clean break, ADR-0003). |
+| `src/dazzle/http/runtime/subsystems/auth.py` (modify) | Build `app.state.admin_policy`; log a warning for unknown personas. |
+| `src/dazzle/http/runtime/auth/member_admin.py` (modify) | Re-target `active_admins`/`would_orphan_org` param to the resolved `manage_members` persona set. |
+| `src/dazzle/http/runtime/auth/member_admin_routes.py` (modify) | Gate on `manage_members` via `AdminPolicy`. |
+| `src/dazzle/http/runtime/auth/invitation_routes.py` (modify) | Gate on `manage_members` via `AdminPolicy`. |
+| `src/dazzle/http/runtime/auth/connection_admin_routes.py` (modify) | Gate on `manage_connections` via `AdminPolicy`. |
+| `src/dazzle/http/runtime/auth/invitations.py` (modify) | Remove `may_manage_members` (clean break, ADR-0003). |
 | `tests/unit/test_admin_policy.py` (create) | AdminPolicy unit tests. |
 | `tests/unit/test_admin_capability_drift.py` (create) | Drift gate: every capability consumed + invariants. |
 
@@ -30,7 +30,7 @@
 ## Task 1: `AdminPolicy` core
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/admin_policy.py`
+- Create: `src/dazzle/http/runtime/auth/admin_policy.py`
 - Test: `tests/unit/test_admin_policy.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -39,7 +39,7 @@
 # tests/unit/test_admin_policy.py
 """Tests for the admin-capability authorization value object (#1342-adjacent)."""
 
-from dazzle.back.runtime.auth.admin_policy import (
+from dazzle.http.runtime.auth.admin_policy import (
     CAPABILITIES,
     AdminPolicy,
     unknown_admin_personas,
@@ -109,12 +109,12 @@ def test_unknown_admin_personas_flags_typos():
 - [ ] **Step 2: Run to verify failure**
 
 Run: `python -m pytest tests/unit/test_admin_policy.py -q`
-Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle.back.runtime.auth.admin_policy'`.
+Expected: FAIL — `ModuleNotFoundError: No module named 'dazzle.http.runtime.auth.admin_policy'`.
 
 - [ ] **Step 3: Implement the module**
 
 ```python
-# src/dazzle/back/runtime/auth/admin_policy.py
+# src/dazzle/http/runtime/auth/admin_policy.py
 """Administrative-capability authorization for the framework's org-admin surfaces.
 
 Generalizes the flat ``org_admin_roles`` gate: the framework names a small fixed set of admin
@@ -193,7 +193,7 @@ Expected: PASS (8 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/admin_policy.py tests/unit/test_admin_policy.py
+git add src/dazzle/http/runtime/auth/admin_policy.py tests/unit/test_admin_policy.py
 git commit -m "feat(auth): AdminPolicy capability value object (admin-authz core)"
 ```
 
@@ -297,7 +297,7 @@ git commit -m "feat(auth): manifest [auth.admin_capabilities] map"
 ## Task 3: Boot wiring + unknown-persona warning
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py:71` (after the `org_admin_roles` line)
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py:71` (after the `org_admin_roles` line)
 
 - [ ] **Step 1: Add the wiring**
 
@@ -306,7 +306,7 @@ After `ctx.app.state.org_admin_roles = list(getattr(_auth_cfg, "org_admin_roles"
 ```python
         # Admin-capability policy (manage_members / manage_connections). org_admin_roles is the
         # default for any unlisted capability, so apps that set only org_admin_roles are unchanged.
-        from dazzle.back.runtime.auth.admin_policy import AdminPolicy, unknown_admin_personas
+        from dazzle.http.runtime.auth.admin_policy import AdminPolicy, unknown_admin_personas
 
         _admin_caps = dict(getattr(_auth_cfg, "admin_capabilities", {}) or {})
         ctx.app.state.admin_policy = AdminPolicy.from_config(
@@ -326,17 +326,17 @@ After `ctx.app.state.org_admin_roles = list(getattr(_auth_cfg, "org_admin_roles"
             )
 ```
 
-> Confirm `logger` is module-level in `subsystems/auth.py` (`grep -n "^logger" src/dazzle/back/runtime/subsystems/auth.py`). If it's named differently (e.g. `_log`/`LOGGER`), use that name.
+> Confirm `logger` is module-level in `subsystems/auth.py` (`grep -n "^logger" src/dazzle/http/runtime/subsystems/auth.py`). If it's named differently (e.g. `_log`/`LOGGER`), use that name.
 
 - [ ] **Step 2: Verify it boots + the subsystem wiring test still passes**
 
-Run: `python -m pytest src/dazzle/back/tests/test_auth.py -k "subsystem or wiring" -q`
+Run: `python -m pytest src/dazzle/http/tests/test_auth.py -k "subsystem or wiring" -q`
 Expected: PASS (the fake-ctx wiring test from earlier work tolerates the new attr; if a test asserts an exact `app.state` attr set, update it to include `admin_policy`).
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/subsystems/auth.py
+git add src/dazzle/http/runtime/subsystems/auth.py
 git commit -m "feat(auth): build app.state.admin_policy at boot + unknown-persona warning"
 ```
 
@@ -345,7 +345,7 @@ git commit -m "feat(auth): build app.state.admin_policy at boot + unknown-person
 ## Task 4: Re-target the member-admin orphan guards
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/member_admin.py`
+- Modify: `src/dazzle/http/runtime/auth/member_admin.py`
 - Test: `tests/unit/test_member_admin.py`
 
 The two pure functions currently take `org_admin_roles: list[str]`. Rename the parameter to
@@ -360,7 +360,7 @@ In `tests/unit/test_member_admin.py`, change every `org_admin_roles=` keyword pa
 
 ```python
 def test_guards_accept_a_frozenset_admin_set():
-    from dazzle.back.runtime.auth.member_admin import active_admins, would_orphan_org
+    from dazzle.http.runtime.auth.member_admin import active_admins, would_orphan_org
 
     roster = [("m1", ["it_admin"], "active"), ("m2", ["member"], "active")]
     assert active_admins(roster, frozenset({"it_admin"})) == ["m1"]
@@ -421,7 +421,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/member_admin.py tests/unit/test_member_admin.py
+git add src/dazzle/http/runtime/auth/member_admin.py tests/unit/test_member_admin.py
 git commit -m "refactor(auth): orphan guards take the resolved manage_members set"
 ```
 
@@ -440,7 +440,7 @@ matching the existing local `_org_admin_roles` pattern):
 def _admin_policy(request: Request):
     """The app's AdminPolicy, falling back to an org_admin_roles-only policy when not wired
     (the back-compat default + keeps existing tests that set only app.state.org_admin_roles green)."""
-    from dazzle.back.runtime.auth.admin_policy import AdminPolicy
+    from dazzle.http.runtime.auth.admin_policy import AdminPolicy
 
     policy = getattr(request.app.state, "admin_policy", None)
     if policy is None:
@@ -458,7 +458,7 @@ In `tests/integration/test_connection_admin_routes.py`, the `_client(...)` helpe
 
 ```python
 def _client_with_policy(store, *, manage_connections, manage_members=("admin",)):
-    from dazzle.back.runtime.auth.admin_policy import AdminPolicy
+    from dazzle.http.runtime.auth.admin_policy import AdminPolicy
 
     app = FastAPI()
     app.include_router(create_connection_admin_routes())
@@ -510,7 +510,7 @@ Expected: FAIL — `test_connection_surface_gated_on_manage_connections` returns
 In `_gate` (lines ~68-84), replace the `may_manage_members` check:
 
 ```python
-        from dazzle.back.runtime.auth.models import effective_roles_of
+        from dazzle.http.runtime.auth.models import effective_roles_of
 
         store = request.app.state.auth_store
         session_id = read_session_id(request)
@@ -543,7 +543,7 @@ Replace the two guard call sites:
   → `admins = set(active_admins(roster, _admin_policy(request).roles_for("manage_members")))`
 - `would_orphan_org(_roster_rows(store, org_id), membership_id, new_roles=..., org_admin_roles=_org_admin_roles(request))`
   → `... admin_roles=_admin_policy(request).roles_for("manage_members"))` (run
-  `grep -n "would_orphan_org" src/dazzle/back/runtime/auth/member_admin_routes.py` to find all call
+  `grep -n "would_orphan_org" src/dazzle/http/runtime/auth/member_admin_routes.py` to find all call
   sites — there may be two, change_roles and remove). Add the `_admin_policy` helper; remove the
   `may_manage_members` import. Keep `_org_admin_roles` only if still referenced (it isn't after this).
 
@@ -552,7 +552,7 @@ Replace the two guard call sites:
 Replace (line ~61-62):
 
 ```python
-        from dazzle.back.runtime.auth.models import effective_roles_of
+        from dazzle.http.runtime.auth.models import effective_roles_of
 
         if not _admin_policy(request).may("manage_members", list(effective_roles_of(ctx))):
             return HTMLResponse("Forbidden", status_code=403)  # keep the existing failure shape
@@ -564,21 +564,21 @@ Add the `_admin_policy` helper; remove the `may_manage_members` import and the l
 
 - [ ] **Step 6: Remove `may_manage_members` (clean break, ADR-0003)**
 
-Delete the `may_manage_members` function from `src/dazzle/back/runtime/auth/invitations.py`. Run
+Delete the `may_manage_members` function from `src/dazzle/http/runtime/auth/invitations.py`. Run
 `grep -rn "may_manage_members" src/ tests/` — every remaining hit must be removed/migrated. If a
 unit test targeted `may_manage_members` directly, delete it (its coverage moved to
 `test_admin_policy.py`'s `may` tests).
 
 - [ ] **Step 7: Run the route + auth suites**
 
-Run: `python -m pytest tests/integration/test_connection_admin_routes.py tests/unit/test_member_admin.py src/dazzle/back/tests/test_auth.py -q`
+Run: `python -m pytest tests/integration/test_connection_admin_routes.py tests/unit/test_member_admin.py src/dazzle/http/tests/test_auth.py -q`
 Expected: PASS (incl. the new separation + back-compat tests). Also run
 `grep -rn "may_manage_members" src/ tests/` → no output.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/member_admin_routes.py src/dazzle/back/runtime/auth/invitation_routes.py src/dazzle/back/runtime/auth/connection_admin_routes.py src/dazzle/back/runtime/auth/invitations.py tests/integration/test_connection_admin_routes.py
+git add src/dazzle/http/runtime/auth/member_admin_routes.py src/dazzle/http/runtime/auth/invitation_routes.py src/dazzle/http/runtime/auth/connection_admin_routes.py src/dazzle/http/runtime/auth/invitations.py tests/integration/test_connection_admin_routes.py
 git commit -m "feat(auth): gate org-admin surfaces on admin capabilities; drop may_manage_members"
 ```
 
@@ -598,9 +598,9 @@ default-deny / fail-closed invariants. Catches an orphaned capability or a regre
 
 from pathlib import Path
 
-from dazzle.back.runtime.auth.admin_policy import CAPABILITIES, AdminPolicy
+from dazzle.http.runtime.auth.admin_policy import CAPABILITIES, AdminPolicy
 
-_AUTH_DIR = Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/auth"
+_AUTH_DIR = Path(__file__).resolve().parents[2] / "src/dazzle/http/runtime/auth"
 
 
 def test_every_capability_is_consumed_by_a_route_or_guard():

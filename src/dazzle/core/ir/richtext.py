@@ -2,9 +2,9 @@
 
 Spec: dev_docs/2026-05-04-dz-richtext-spec.md (#977 cycle 4 §13.3).
 
-The dz-richtext editor (`src/dazzle/ui/runtime/static/js/dz-richtext.js`)
+The dz-richtext editor (`src/dazzle/page/runtime/static/js/dz-richtext.js`)
 and the server-side `RichTextField` validator
-(`src/dazzle/back/runtime/fields/richtext.py`) both read from this
+(`src/dazzle/http/runtime/fields/richtext.py`) both read from this
 module. Drift between client and server is caught by
 `tests/unit/test_richtext_allowlist_parity.py`.
 

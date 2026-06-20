@@ -39,7 +39,7 @@ DeployHistory is the exception — it uses PostgreSQL because deploy records are
 
 #### SystemEntityStore
 
-New file: `src/dazzle_back/runtime/system_entity_store.py`
+New file: `src/dazzle_http/runtime/system_entity_store.py`
 
 Implements the same read/list interface as the PostgreSQL entity store. The workspace renderer calls `store.list(entity_name, filters, sort, limit)` and `store.get(entity_name, id)` without knowing the backing store.
 
@@ -145,7 +145,7 @@ Three sections per workspace:
 1. Mark console routes with `X-Dazzle-Deprecated: use admin workspace` header
 2. Remove `enable_console` from ServerConfig
 3. Remove ConsoleSubsystem from subsystem startup order
-4. Delete: `src/dazzle_back/control_plane/`, `runtime/ops_routes.py`, `runtime/console_routes.py`, `templates/console/`
+4. Delete: `src/dazzle_http/control_plane/`, `runtime/ops_routes.py`, `runtime/console_routes.py`, `templates/console/`
 
 ## Testing Strategy
 

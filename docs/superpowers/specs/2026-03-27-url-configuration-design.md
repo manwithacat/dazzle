@@ -50,9 +50,9 @@ Every hardcoded `localhost:3000` or `localhost:8000` in `src/` gets replaced wit
 **Critical (user-facing):**
 - `src/dazzle/cli/auth.py` — magic link URL
 - `src/dazzle/specs/openapi.py` — OpenAPI server URL
-- `src/dazzle_back/runtime/app_factory.py` — backend URL default
-- `src/dazzle_ui/runtime/page_routes.py` — backend URL
-- `src/dazzle_ui/runtime/experience_routes.py` — backend URL
+- `src/dazzle_http/runtime/app_factory.py` — backend URL default
+- `src/dazzle_page/runtime/page_routes.py` — backend URL
+- `src/dazzle_page/runtime/experience_routes.py` — backend URL
 
 **Testing:**
 - `src/dazzle/testing/viewport_runner.py`

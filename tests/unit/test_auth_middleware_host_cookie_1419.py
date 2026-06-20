@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from dazzle.back.runtime.auth.middleware import AuthMiddleware
+from dazzle.http.runtime.auth.middleware import AuthMiddleware
 
 
 class _Store:
@@ -80,7 +80,7 @@ class TestJwtMiddlewareSessionFallbackHostCookie:
     """#1419 audit: the JWT middleware's session fallback had the same single-name bug."""
 
     def test_session_fallback_resolves_host_cookie(self) -> None:
-        from dazzle.back.runtime.jwt_middleware import DualAuthMiddleware
+        from dazzle.http.runtime.jwt_middleware import DualAuthMiddleware
 
         store = _SessionStore()
         mw = DualAuthMiddleware(_NoJWT(), store)

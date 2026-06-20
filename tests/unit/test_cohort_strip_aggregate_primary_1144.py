@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.workspace_card_data import _build_cohort_cells
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
 from dazzle.core.ir import AggregateRef
@@ -25,6 +24,7 @@ from dazzle.core.ir.workspaces import (
     CompositePrimarySpec,
     LensAggregatePrimary,
 )
+from dazzle.http.runtime.workspace_card_data import _build_cohort_cells
 
 
 def _parse_lens(lens_body: str) -> object:

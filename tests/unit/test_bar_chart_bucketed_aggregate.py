@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle.back.runtime.workspace_aggregation import (
+from dazzle.http.runtime.workspace_aggregation import (
     _bucket_key_label,
     _compute_bucketed_aggregates,
 )
@@ -564,7 +564,7 @@ class TestPerBucketIncludesGroupBy:
 
 def _make_aggregate_repo(buckets_payload):
     """Repo whose .aggregate returns the given list of AggregateBucket objects."""
-    from dazzle.back.runtime.aggregate import AggregateBucket
+    from dazzle.http.runtime.aggregate import AggregateBucket
 
     repo = MagicMock()
     repo.entity_spec = SimpleNamespace(
@@ -737,8 +737,8 @@ class TestPivotBuckets:
 
     @pytest.mark.asyncio()
     async def test_two_dim_pivot_returns_rows(self) -> None:
-        from dazzle.back.runtime.aggregate import AggregateBucket
-        from dazzle.back.runtime.workspace_aggregation import _compute_pivot_buckets
+        from dazzle.http.runtime.aggregate import AggregateBucket
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
 
         # Source repo with one FK field (system → System) + one scalar (severity).
         source_repo = MagicMock()
@@ -807,7 +807,7 @@ class TestPivotBuckets:
 
     @pytest.mark.asyncio()
     async def test_no_aggregates_returns_empty(self) -> None:
-        from dazzle.back.runtime.workspace_aggregation import _compute_pivot_buckets
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
 
         rows, specs = await _compute_pivot_buckets(
             {},
@@ -823,7 +823,7 @@ class TestPivotBuckets:
     @pytest.mark.asyncio()
     async def test_cross_entity_count_skips_pivot_path(self) -> None:
         """count(OtherEntity ...) is not a same-entity GROUP BY — skip cleanly."""
-        from dazzle.back.runtime.workspace_aggregation import _compute_pivot_buckets
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
 
         source_repo = MagicMock()
         source_repo.entity_spec = SimpleNamespace(name="Alert", fields=[])
@@ -843,7 +843,7 @@ class TestPivotBuckets:
     @pytest.mark.asyncio()
     async def test_aggregate_failure_returns_empty_with_dim_specs(self) -> None:
         """Errors during the aggregate call don't crash the region — empty rows + specs preserved."""
-        from dazzle.back.runtime.workspace_aggregation import _compute_pivot_buckets
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
 
         source_repo = MagicMock()
         source_repo.entity_spec = SimpleNamespace(
@@ -878,9 +878,9 @@ class TestTimeBucketedAggregates:
     async def test_single_dim_time_bucket_formats_labels(self) -> None:
         import datetime as dt
 
-        from dazzle.back.runtime.aggregate import AggregateBucket
-        from dazzle.back.runtime.workspace_aggregation import _aggregate_via_groupby
         from dazzle.core.ir import BucketRef
+        from dazzle.http.runtime.aggregate import AggregateBucket
+        from dazzle.http.runtime.workspace_aggregation import _aggregate_via_groupby
 
         agg_repo = MagicMock()
         agg_repo.aggregate = AsyncMock(
@@ -932,9 +932,9 @@ class TestTimeBucketedAggregates:
         both the ISO week id and a human-readable week label."""
         import datetime as dt
 
-        from dazzle.back.runtime.aggregate import AggregateBucket
-        from dazzle.back.runtime.workspace_aggregation import _compute_pivot_buckets
         from dazzle.core.ir import BucketRef
+        from dazzle.http.runtime.aggregate import AggregateBucket
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
 
         source_repo = MagicMock()
         source_repo.entity_spec = SimpleNamespace(
@@ -981,7 +981,7 @@ class TestTimeBucketedAggregates:
         now logs at ERROR with the dim + filter detail needed to reproduce."""
         import logging
 
-        from dazzle.back.runtime.workspace_aggregation import _compute_pivot_buckets
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
 
         source_repo = MagicMock()
         source_repo.entity_spec = SimpleNamespace(
@@ -990,7 +990,7 @@ class TestTimeBucketedAggregates:
         )
         source_repo.aggregate = AsyncMock(side_effect=RuntimeError("column does not exist"))
 
-        with caplog.at_level(logging.ERROR, logger="dazzle.back.runtime.workspace_aggregation"):
+        with caplog.at_level(logging.ERROR, logger="dazzle.http.runtime.workspace_aggregation"):
             rows, specs = await _compute_pivot_buckets(
                 {"count": agg("count(MarkingResult)")},
                 {"MarkingResult": source_repo},
@@ -1011,7 +1011,7 @@ class TestTimeBucketedAggregates:
     def test_format_bucket_label_every_unit(self) -> None:
         import datetime as dt
 
-        from dazzle.back.runtime.workspace_aggregation import _format_bucket_label
+        from dazzle.http.runtime.workspace_aggregation import _format_bucket_label
 
         d = dt.datetime(2026, 5, 18, 14, 30)  # Monday, week 21
         assert _format_bucket_label(d, "day") == "2026-05-18"

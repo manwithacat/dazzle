@@ -7,7 +7,7 @@ Verifies type mapping, FK handling, self-references, and topological ordering.
 import pytest
 from sqlalchemy import JSON, Boolean, Date, DateTime, Integer, Numeric, Text, Uuid
 
-from dazzle.back.runtime.sa_schema import (
+from dazzle.http.runtime.sa_schema import (
     _field_type_to_sa,
     _find_circular_refs,
     _scalar_type_to_sa,
@@ -15,7 +15,7 @@ from dazzle.back.runtime.sa_schema import (
     get_circular_ref_edges,
     get_sorted_table_names,
 )
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 # =============================================================================
 # Helpers

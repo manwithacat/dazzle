@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.audit_log import (
+from dazzle.http.runtime.audit_log import (
     _AUDIT_ROW_COLUMNS,
     AuditLogger,
     ChainVerifyResult,

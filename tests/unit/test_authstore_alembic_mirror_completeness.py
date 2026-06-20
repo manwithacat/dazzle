@@ -14,8 +14,8 @@ import re
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
-_STORE = _REPO / "src/dazzle/back/runtime/auth/store.py"
-_ALEMBIC = _REPO / "src/dazzle/back/alembic/versions"
+_STORE = _REPO / "src/dazzle/http/runtime/auth/store.py"
+_ALEMBIC = _REPO / "src/dazzle/http/alembic/versions"
 
 # Tables _init_db creates INLINE (`CREATE TABLE IF NOT EXISTS`) that alembic deliberately does
 # NOT mirror yet — the deferred full-consolidation set. (magic_links / email_verification_tokens

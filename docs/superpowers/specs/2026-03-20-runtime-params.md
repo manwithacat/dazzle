@@ -375,6 +375,6 @@ Rule of thumb: if changing the value would require re-parsing DSL or re-running 
 - `src/dazzle/core/lexer.py` — add `PARAM` token
 - `src/dazzle/core/dsl_parser_impl/` — param declaration + param() reference parsing
 - `src/dazzle/core/ir/workspaces.py` — `heatmap_thresholds: list[float] | ParamRef`
-- `src/dazzle_back/runtime/workspace_rendering.py` — resolve ParamRef before use
-- `src/dazzle_back/runtime/server.py` — create ParamResolver at startup
-- `src/dazzle_back/runtime/migrations.py` — create `_dazzle_params` table
+- `src/dazzle_http/runtime/workspace_rendering.py` — resolve ParamRef before use
+- `src/dazzle_http/runtime/server.py` — create ParamResolver at startup
+- `src/dazzle_http/runtime/migrations.py` — create `_dazzle_params` table

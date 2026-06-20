@@ -12,7 +12,7 @@ The Dazzle runtime accumulated service state in module-level mutable singletons 
 
 Additionally, the MCP server maintained its own parallel globals (`_server_state`, `_project_root`) with no disciplined boundary between runtime and MCP concerns.
 
-The runtime services implementation plan (issue #673) identified 11 module-level mutable singletons across `src/dazzle/back/` and `src/dazzle/mcp/`.
+The runtime services implementation plan (issue #673) identified 11 module-level mutable singletons across `src/dazzle/http/` and `src/dazzle/mcp/`.
 
 ## Decision
 
@@ -20,7 +20,7 @@ Consolidate all FastAPI runtime service objects into a single **`RuntimeServices
 
 Rules going forward:
 
-- No new module-level mutable singletons in `src/dazzle/back/` or `src/dazzle/mcp/`.
+- No new module-level mutable singletons in `src/dazzle/http/` or `src/dazzle/mcp/`.
 - All existing necessary module-level globals annotated with `# noqa: PLW0603` as a forcing function for future elimination.
 - Route handlers and middleware receive services via `request.app.state.services` or FastAPI `Depends()` — never via module imports.
 - Tests construct a fresh `RuntimeServices` instance per test; no teardown of globals required.

@@ -792,7 +792,7 @@ def derive_triples(
 ) -> list[VerifiableTriple]:
     """Derive all verifiable triples from entities, surfaces, and personas.
 
-    Pure function — no side effects, no imports from dazzle_ui.
+    Pure function — no side effects, no imports from dazzle_page.
     """
     # Index: entity name → surfaces
     entity_surfaces: dict[str, list[SurfaceSpec]] = {}
@@ -1606,7 +1606,7 @@ diagnosis = reconcile(contract, triple, html, appspec.domain.entities, appspec.s
 |----------|---------------|--------|
 | **DSL fix** | `WIDGET_MISMATCH`, `ACTION_MISSING`, `PERMISSION_GAP`, `SURFACE_MISSING` | Apply `diagnosis.levers` suggestion to DSL file |
 | **Contract calibration** | `ACTION_UNEXPECTED`, `FIELD_MISSING` | Fix contract generation or checker |
-| **Template bug** | `TEMPLATE_BUG` | Fix template in `src/dazzle_ui/`, or file GitHub issue |
+| **Template bug** | `TEMPLATE_BUG` | Fix template in `src/dazzle_page/`, or file GitHub issue |
 
 The reconciler replaces manual classification. Read `diagnosis.levers` for the specific DSL construct and suggested value.
 ```

@@ -24,8 +24,10 @@ from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
 
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.predicate_compiler import build_entity_type_resolver
-from dazzle.back.runtime.rls_schema import (
+from dazzle.core.access import AccessOperationKind, EntityAccessSpec, ScopeRuleSpec
+from dazzle.core.ir.fk_graph import FKGraph
+from dazzle.http.runtime.predicate_compiler import build_entity_type_resolver
+from dazzle.http.runtime.rls_schema import (
     build_rls_policy_ddl,
     build_rls_scope_policy_ddl,
 )
@@ -34,9 +36,7 @@ from dazzle.back.runtime.rls_schema import (
 # (``self._entities``), so the test builds the same shape: a back-spec
 # ``EntitySpec`` whose ``access.scopes`` are ``ScopeRuleSpec`` carrying the
 # compiled ScopePredicate, keyed by ``AccessOperationKind``.
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
-from dazzle.core.access import AccessOperationKind, EntityAccessSpec, ScopeRuleSpec
-from dazzle.core.ir.fk_graph import FKGraph
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 # ---------------------------------------------------------------------------
 # Fixtures: a synthetic scoped entity + its FK graph + type resolver

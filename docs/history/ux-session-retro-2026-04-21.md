@@ -17,7 +17,7 @@ so the operator gets a clean handoff.
 
 | Shape | What | Commit |
 |---|---|---|
-| #1 | Widened `test_page_route_coverage.py` to cover `workspace/` / `experience/` / `reports/` families; added `render_fragment` + `env.get_template` patterns; scan `src/dazzle/` in addition to dazzle_ui/dazzle_back | `8d076dc6` |
+| #1 | Widened `test_page_route_coverage.py` to cover `workspace/` / `experience/` / `reports/` families; added `render_fragment` + `env.get_template` patterns; scan `src/dazzle/` in addition to dazzle_page/dazzle_http | `8d076dc6` |
 | #2 | New `test_ir_field_reader_parity.py` ratchet lint + 186-entry JSON baseline; AST-based reader scan over `.attr` accesses, `getattr` literals, and Jinja `.attr` refs | `95a23c4a` |
 | #3 | New `tests/unit/audit_internals.py` + `make audit-internals` target; two-section report (IR orphans + module orphans) with re-export propagation | `fc8a2096` |
 | #4 | Extended external-resource lint with a canonical-registry assertion: every allowlisted origin must cite a replacement path (#NNN / gap doc / cycle) | `e101fef7` |

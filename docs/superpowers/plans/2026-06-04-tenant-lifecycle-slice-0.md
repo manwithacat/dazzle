@@ -12,10 +12,10 @@
 
 ## Context the implementer needs
 
-- **There are two unrelated `validate_slug` functions.** This slice touches **only** `src/dazzle/tenant/config.py:validate_slug` (the schema-isolation registry slug; grammar `^[a-z][a-z0-9_]{1,55}$`, hyphens forbidden, becomes a PG schema name). Do **not** touch `src/dazzle/back/runtime/slug_validator.py` (a different DSL-field validator that *allows* hyphens). Existing tests in `tests/unit/test_tenant_config.py` and `tests/unit/test_security.py` already assert `my-tenant` / `smith-co` raise `"Slug must match"` — those must keep passing.
+- **There are two unrelated `validate_slug` functions.** This slice touches **only** `src/dazzle/tenant/config.py:validate_slug` (the schema-isolation registry slug; grammar `^[a-z][a-z0-9_]{1,55}$`, hyphens forbidden, becomes a PG schema name). Do **not** touch `src/dazzle/http/runtime/slug_validator.py` (a different DSL-field validator that *allows* hyphens). Existing tests in `tests/unit/test_tenant_config.py` and `tests/unit/test_security.py` already assert `my-tenant` / `smith-co` raise `"Slug must match"` — those must keep passing.
 - **Why reserve both `qa-` and `qa_`:** the spec text says "reserved `qa-` namespace", but the registry grammar already forbids hyphens, so a normal create can *never* produce `qa-foo` (it fails the pattern). The actually-reachable hole is the underscore form `qa_foo`, which is a valid slug today. Reserving **both** separators honours the spec's human-visible `qa-` marker *and* closes the real `qa_` hole. The load-bearing new rejection is `qa_*`.
 - **`public.tenants` is NOT in Alembic's `target_metadata`.** It is created by raw `CREATE TABLE IF NOT EXISTS` in `TenantRegistry.ensure_table()` (`src/dazzle/tenant/registry.py`), and the `config` column was added by an idempotent raw `ALTER ... ADD COLUMN IF NOT EXISTS` in the same method (`_ALTER_ADD_CONFIG_SQL`). We follow that established precedent for `is_test` **and** add the Alembic migration the spec asks for. The two paths are convergent (each guards on existence), exactly like the dual fresh-install/migration convergence documented in `0005_session_csrf_secret.py`.
-- **Framework migrations are hand-authored** directly into `src/dazzle/back/alembic/versions/NNNN_*.py` (see `0005_session_csrf_secret.py`). Do **not** use `dazzle db revision` for this — that command writes into the *project* versions dir, not the framework tree. The next revision id is `0006_tenant_is_test`, `down_revision = "0005_session_csrf_secret"`.
+- **Framework migrations are hand-authored** directly into `src/dazzle/http/alembic/versions/NNNN_*.py` (see `0005_session_csrf_secret.py`). Do **not** use `dazzle db revision` for this — that command writes into the *project* versions dir, not the framework tree. The next revision id is `0006_tenant_is_test`, `down_revision = "0005_session_csrf_secret"`.
 - **Alembic migrations here must be dialect-agnostic.** They run against the PostgreSQL runtime *and* a SQLite structural-test sandbox. Mirror `0005`: use `sqlalchemy.inspect(bind)` (the dialect-agnostic inspector), guard every DDL op on existence, and use **unqualified** table names (`"tenants"`, not `schema="public"` — schema qualification breaks the SQLite path).
 - **Current version:** `0.81.19`. A local Postgres is reachable at `localhost:5432` for execution-time verification (create a disposable DB; don't touch the existing `dazzle*` DBs).
 - **Out of scope for Slice 0 (do not build):** the excision engine, `provision_test_tenant`, QA-auth routes, the `allow_reserved=True` *call site* (the provisioner is Slice 2 — we add the parameter seam now, but nothing calls it with `True` yet), and any `isolation="row"` mode (recorded non-goal). The `is_test` parameter on `create()` and `allow_reserved` on `validate_slug` are seams added now and exercised by tests; their production callers arrive in Slices 1–2.
@@ -26,7 +26,7 @@
 |------|----------------|--------|
 | `src/dazzle/tenant/config.py` | Slug grammar + reserved-namespace guard | Modify `validate_slug` — add `allow_reserved` kwarg + reserved-prefix rejection; add `RESERVED_SLUG_PREFIXES` constant |
 | `src/dazzle/tenant/registry.py` | CRUD on `public.tenants` | Modify — add `is_test` to `TenantRecord`, `_CREATE_TABLE_SQL`, `_INSERT_SQL`, all `SELECT`/`UPDATE` column lists, `_row_to_record`; add `_ALTER_ADD_IS_TEST_SQL` to `ensure_table()`; add `is_test` kwarg to `create()` |
-| `src/dazzle/back/alembic/versions/0006_tenant_is_test.py` | Canonical schema-change path (ADR-0017) for existing trees | Create — hand-authored, mirrors `0005` |
+| `src/dazzle/http/alembic/versions/0006_tenant_is_test.py` | Canonical schema-change path (ADR-0017) for existing trees | Create — hand-authored, mirrors `0005` |
 | `tests/unit/test_tenant_config.py` | Slug-validation unit tests | Modify — add reserved-namespace cases |
 | `tests/unit/test_tenant_registry.py` | Registry unit tests (mocked psycopg) | Modify — add `is_test` round-trip + `create(is_test=True)` cases |
 | `tests/unit/test_tenant_is_test_migration.py` | Migration upgrade/downgrade unit test (SQLite, dialect-agnostic) | Create |
@@ -394,7 +394,7 @@ git commit -m "feat(tenant): is_test column on the tenant registry record (#1339
 ## Task 3: Framework Alembic migration `0006_tenant_is_test`
 
 **Files:**
-- Create: `src/dazzle/back/alembic/versions/0006_tenant_is_test.py`
+- Create: `src/dazzle/http/alembic/versions/0006_tenant_is_test.py`
 - Test: `tests/unit/test_tenant_is_test_migration.py`
 
 - [ ] **Step 1: Write the failing migration unit test (SQLite, dialect-agnostic)**
@@ -418,7 +418,7 @@ from sqlalchemy import inspect as sa_inspect
 
 _MIGRATION = (
     Path(__file__).resolve().parents[2]
-    / "src/dazzle/back/alembic/versions/0006_tenant_is_test.py"
+    / "src/dazzle/http/alembic/versions/0006_tenant_is_test.py"
 )
 
 
@@ -482,7 +482,7 @@ Expected: FAIL — the migration file does not exist yet (`spec` is `None` / imp
 
 - [ ] **Step 3: Hand-author the migration (mirror `0005`)**
 
-Create `src/dazzle/back/alembic/versions/0006_tenant_is_test.py`:
+Create `src/dazzle/http/alembic/versions/0006_tenant_is_test.py`:
 
 ```python
 """Add is_test to public.tenants (ephemeral test-tenant lifecycle, #1339 slice 0).
@@ -548,15 +548,15 @@ Expected: PASS (all three cases).
 
 - [ ] **Step 5: Verify the migration chain has a single head**
 
-Run: `cd src/dazzle/back/alembic && python -c "from alembic.config import Config; from alembic.script import ScriptDirectory; s=ScriptDirectory.from_config(Config('alembic.ini')); print('heads:', s.get_heads())"`
+Run: `cd src/dazzle/http/alembic && python -c "from alembic.config import Config; from alembic.script import ScriptDirectory; s=ScriptDirectory.from_config(Config('alembic.ini')); print('heads:', s.get_heads())"`
 Expected: exactly one head, `0006_tenant_is_test`. If it prints two heads, the `down_revision` linkage is wrong — fix it to `"0005_session_csrf_secret"`.
 
-(If `alembic.ini` needs a project context to load, fall back to: `grep -l "down_revision" src/dazzle/back/alembic/versions/*.py | xargs grep -H "^revision\|^down_revision"` and confirm `0006` chains off `0005` and nothing else points at `0006`.)
+(If `alembic.ini` needs a project context to load, fall back to: `grep -l "down_revision" src/dazzle/http/alembic/versions/*.py | xargs grep -H "^revision\|^down_revision"` and confirm `0006` chains off `0005` and nothing else points at `0006`.)
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/alembic/versions/0006_tenant_is_test.py tests/unit/test_tenant_is_test_migration.py
+git add src/dazzle/http/alembic/versions/0006_tenant_is_test.py tests/unit/test_tenant_is_test_migration.py
 git commit -m "feat(db): 0006 migration adds is_test to public.tenants (#1339 slice 0, ADR-0017)"
 ```
 
@@ -605,7 +605,7 @@ pytestmark_skip = pytest.mark.skipif(not _PG_URL, reason="no TEST_DATABASE_URL/D
 
 _MIGRATION = (
     Path(__file__).resolve().parents[2]
-    / "src/dazzle/back/alembic/versions/0006_tenant_is_test.py"
+    / "src/dazzle/http/alembic/versions/0006_tenant_is_test.py"
 )
 
 
@@ -745,7 +745,7 @@ Add a new version section at the top of `CHANGELOG.md` (above the current latest
 - Test tenants are marked by the **queryable `is_test` column**, never by a slug prefix — filter
   on `is_test`, not on the name. The `qa-`/`qa_` namespace is a human-visible reservation only.
 - New columns on the `public.tenants` registry table go via a framework migration in
-  `src/dazzle/back/alembic/versions/` (hand-authored, mirror `0005`/`0006`) **and** the
+  `src/dazzle/http/alembic/versions/` (hand-authored, mirror `0005`/`0006`) **and** the
   `CREATE TABLE` / idempotent boot-time `ALTER` in `tenant/registry.py` — that table is owned by
   `ensure_table()`, not Alembic's DSL metadata, so both convergent paths are required.
 ```

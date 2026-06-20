@@ -16,15 +16,15 @@
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/dazzle_ui/runtime/static/css/dazzle-framework.css` | Create | Entry point with `@import ... layer()` |
-| `src/dazzle_ui/runtime/static/css/feedback-widget.css` | Modify | Wrap in `@layer framework {}` |
-| `src/dazzle_ui/templates/base.html` | Modify | Layer declaration, local-first CSS, default flip |
-| `src/dazzle_ui/templates/site/site_base.html` | Modify | Layer declaration, default flip |
-| `src/dazzle_ui/runtime/template_renderer.py` | Modify | `_use_cdn = False` |
+| `src/dazzle_page/runtime/static/css/dazzle-framework.css` | Create | Entry point with `@import ... layer()` |
+| `src/dazzle_page/runtime/static/css/feedback-widget.css` | Modify | Wrap in `@layer framework {}` |
+| `src/dazzle_page/templates/base.html` | Modify | Layer declaration, local-first CSS, default flip |
+| `src/dazzle_page/templates/site/site_base.html` | Modify | Layer declaration, default flip |
+| `src/dazzle_page/runtime/template_renderer.py` | Modify | `_use_cdn = False` |
 | `src/dazzle/core/manifest.py` | Modify | `cdn` default → `False` |
-| `src/dazzle_ui/runtime/css_loader.py` | Modify | Canonical order, `dz.css`, `@layer` wrappers, source map |
+| `src/dazzle_page/runtime/css_loader.py` | Modify | Canonical order, `dz.css`, `@layer` wrappers, source map |
 | `scripts/build_dist.py` | Modify | Canonical order, `@layer` wrappers |
-| `src/dazzle_ui/build_css.py` | Modify | `--sourcemap` flag (if supported) |
+| `src/dazzle_page/build_css.py` | Modify | `--sourcemap` flag (if supported) |
 | `MANIFEST.in` | Modify | Add `global-exclude *.map` |
 | `.github/workflows/publish-pypi.yml` | Modify | Add dist rebuild job |
 | `tests/unit/test_template_rendering.py` | Modify | Fix `_use_cdn` assertion |
@@ -35,7 +35,7 @@
 ### Task 1: Create `dazzle-framework.css` Entry Point
 
 **Files:**
-- Create: `src/dazzle_ui/runtime/static/css/dazzle-framework.css`
+- Create: `src/dazzle_page/runtime/static/css/dazzle-framework.css`
 - Test: `tests/unit/test_css_delivery.py`
 
 - [ ] **Step 1: Write the test for the new file**
@@ -49,7 +49,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-STATIC_CSS = Path(__file__).resolve().parent.parent.parent / "src" / "dazzle_ui" / "runtime" / "static" / "css"
+STATIC_CSS = Path(__file__).resolve().parent.parent.parent / "src" / "dazzle_page" / "runtime" / "static" / "css"
 
 # Canonical order — must match dazzle-framework.css, css_loader.py, build_dist.py
 CANONICAL_ORDER = ["dazzle-layer.css", "design-system.css", "dz.css", "site-sections.css"]
@@ -85,7 +85,7 @@ Expected: FAIL — file does not exist
 
 - [ ] **Step 3: Create the entry point file**
 
-Create `src/dazzle_ui/runtime/static/css/dazzle-framework.css`:
+Create `src/dazzle_page/runtime/static/css/dazzle-framework.css`:
 
 ```css
 /* Dazzle framework semantic layer — load order is authoritative.
@@ -105,7 +105,7 @@ Expected: PASS (4 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/css/dazzle-framework.css tests/unit/test_css_delivery.py
+git add src/dazzle_page/runtime/static/css/dazzle-framework.css tests/unit/test_css_delivery.py
 git commit -m "feat(css): create dazzle-framework.css entry point with cascade layers (#671)"
 ```
 
@@ -114,7 +114,7 @@ git commit -m "feat(css): create dazzle-framework.css entry point with cascade l
 ### Task 2: Wrap `feedback-widget.css` in `@layer framework`
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/static/css/feedback-widget.css`
+- Modify: `src/dazzle_page/runtime/static/css/feedback-widget.css`
 - Test: `tests/unit/test_css_delivery.py`
 
 - [ ] **Step 1: Write the test**
@@ -139,7 +139,7 @@ Expected: FAIL — no `@layer framework {` in file
 
 - [ ] **Step 3: Wrap the file content**
 
-In `src/dazzle_ui/runtime/static/css/feedback-widget.css`, wrap the entire content:
+In `src/dazzle_page/runtime/static/css/feedback-widget.css`, wrap the entire content:
 
 ```css
 @layer framework {
@@ -161,7 +161,7 @@ Expected: PASS (2 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/css/feedback-widget.css tests/unit/test_css_delivery.py
+git add src/dazzle_page/runtime/static/css/feedback-widget.css tests/unit/test_css_delivery.py
 git commit -m "feat(css): wrap feedback-widget.css in @layer framework (#671)"
 ```
 
@@ -170,7 +170,7 @@ git commit -m "feat(css): wrap feedback-widget.css in @layer framework (#671)"
 ### Task 3: Flip `_use_cdn` Default in Backend
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/template_renderer.py:287`
+- Modify: `src/dazzle_page/runtime/template_renderer.py:287`
 - Modify: `src/dazzle/core/manifest.py:341,540`
 - Modify: `tests/unit/test_template_rendering.py:807-809`
 - Test: `tests/unit/test_css_delivery.py`
@@ -240,7 +240,7 @@ cdn_enabled = ui_data.get("cdn", False)
 
 - [ ] **Step 5: Update `template_renderer.py` default**
 
-In `src/dazzle_ui/runtime/template_renderer.py:287`, change:
+In `src/dazzle_page/runtime/template_renderer.py:287`, change:
 
 ```python
 env.globals["_use_cdn"] = True  # default; overridden from [ui] cdn in dazzle.toml
@@ -274,7 +274,7 @@ Expected: PASS (4 tests)
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/dazzle/core/manifest.py src/dazzle_ui/runtime/template_renderer.py tests/unit/test_template_rendering.py tests/unit/test_css_delivery.py
+git add src/dazzle/core/manifest.py src/dazzle_page/runtime/template_renderer.py tests/unit/test_template_rendering.py tests/unit/test_css_delivery.py
 git commit -m "feat(css): flip _use_cdn default to False — local-first delivery (#671)"
 ```
 
@@ -283,11 +283,11 @@ git commit -m "feat(css): flip _use_cdn default to False — local-first deliver
 ### Task 4: Update `base.html` Template
 
 **Files:**
-- Modify: `src/dazzle_ui/templates/base.html`
+- Modify: `src/dazzle_page/templates/base.html`
 
 - [ ] **Step 1: Add layer declaration and update CSS section**
 
-In `src/dazzle_ui/templates/base.html`, replace lines 14-47 (the CSS + JS loading section between the Inter font link and the CSRF block) with:
+In `src/dazzle_page/templates/base.html`, replace lines 14-47 (the CSS + JS loading section between the Inter font link and the CSRF block) with:
 
 ```html
   {# CSS Cascade Layer order — defines priority: base < framework < app < overrides #}
@@ -358,7 +358,7 @@ Expected: PASS
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/base.html
+git add src/dazzle_page/templates/base.html
 git commit -m "feat(css): update base.html with cascade layers + local-first delivery (#671)"
 ```
 
@@ -367,7 +367,7 @@ git commit -m "feat(css): update base.html with cascade layers + local-first del
 ### Task 5: Update `site_base.html` Template
 
 **Files:**
-- Modify: `src/dazzle_ui/templates/site/site_base.html`
+- Modify: `src/dazzle_page/templates/site/site_base.html`
 
 - [ ] **Step 1: Add layer declaration**
 
@@ -395,7 +395,7 @@ Line 31:
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/site/site_base.html
+git add src/dazzle_page/templates/site/site_base.html
 git commit -m "feat(css): update site_base.html with cascade layers + local-first (#671)"
 ```
 
@@ -404,7 +404,7 @@ git commit -m "feat(css): update site_base.html with cascade layers + local-firs
 ### Task 6: Update `css_loader.py` — Canonical Order + Layer Wrappers + Source Map
 
 **Files:**
-- Modify: `src/dazzle_ui/runtime/css_loader.py`
+- Modify: `src/dazzle_page/runtime/css_loader.py`
 - Test: `tests/unit/test_css_delivery.py`
 
 - [ ] **Step 1: Write the tests**
@@ -414,28 +414,28 @@ Append to `tests/unit/test_css_delivery.py`:
 ```python
 class TestCssLoader:
     def test_canonical_order(self) -> None:
-        from dazzle_ui.runtime.css_loader import CSS_SOURCE_FILES
+        from dazzle_page.runtime.css_loader import CSS_SOURCE_FILES
         assert CSS_SOURCE_FILES == CANONICAL_ORDER
 
     def test_output_contains_layer_declaration(self) -> None:
-        from dazzle_ui.runtime.css_loader import get_bundled_css
+        from dazzle_page.runtime.css_loader import get_bundled_css
         css = get_bundled_css()
         assert "@layer base, framework, app, overrides;" in css
 
     def test_output_wraps_files_in_layer_framework(self) -> None:
-        from dazzle_ui.runtime.css_loader import get_bundled_css
+        from dazzle_page.runtime.css_loader import get_bundled_css
         css = get_bundled_css()
         assert css.count("@layer framework {") == len(CANONICAL_ORDER)
 
     def test_output_contains_source_map(self) -> None:
-        from dazzle_ui.runtime.css_loader import get_bundled_css
+        from dazzle_page.runtime.css_loader import get_bundled_css
         css = get_bundled_css()
         assert "sourceMappingURL=data:application/json;base64," in css
 
     def test_source_map_lists_all_sources(self) -> None:
         import base64
         import json
-        from dazzle_ui.runtime.css_loader import get_bundled_css
+        from dazzle_page.runtime.css_loader import get_bundled_css
         css = get_bundled_css()
         # Extract base64 source map from the comment
         marker = "sourceMappingURL=data:application/json;base64,"
@@ -455,7 +455,7 @@ Expected: FAIL — `CSS_SOURCE_FILES` is different, no `@layer` wrappers
 
 - [ ] **Step 3: Update `css_loader.py`**
 
-Replace the entire content of `src/dazzle_ui/runtime/css_loader.py`:
+Replace the entire content of `src/dazzle_page/runtime/css_loader.py`:
 
 ```python
 """
@@ -544,7 +544,7 @@ Expected: PASS (5 tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/css_loader.py tests/unit/test_css_delivery.py
+git add src/dazzle_page/runtime/css_loader.py tests/unit/test_css_delivery.py
 git commit -m "feat(css): update css_loader with canonical order, @layer wrappers, source map (#671)"
 ```
 
@@ -644,17 +644,17 @@ git commit -m "feat(css): layer-aware build_dist.py with canonical order (#671)"
 ### Task 8: Tailwind Source Map in `build_css.py`
 
 **Files:**
-- Modify: `src/dazzle_ui/build_css.py:191-202`
+- Modify: `src/dazzle_page/build_css.py:191-202`
 
 - [ ] **Step 1: Check if `--sourcemap` is supported**
 
-Run: `python -c "from dazzle_ui.build_css import _find_or_download_tailwind; tw = _find_or_download_tailwind(); print(tw)"` to get the binary path, then run it with `--help` to check for `--sourcemap` support.
+Run: `python -c "from dazzle_page.build_css import _find_or_download_tailwind; tw = _find_or_download_tailwind(); print(tw)"` to get the binary path, then run it with `--help` to check for `--sourcemap` support.
 
 If `--sourcemap` is NOT supported, skip this task and commit a note.
 
 - [ ] **Step 2: Add `--sourcemap` flag**
 
-In `src/dazzle_ui/build_css.py`, after the `--minify` append (line 202), add:
+In `src/dazzle_page/build_css.py`, after the `--minify` append (line 202), add:
 
 ```python
         if minify:
@@ -666,13 +666,13 @@ In `src/dazzle_ui/build_css.py`, after the `--minify` append (line 202), add:
 
 - [ ] **Step 3: Verify the build still works**
 
-Run: `python -c "from dazzle_ui.build_css import build_css; result = build_css(); print(result)"`
+Run: `python -c "from dazzle_page.build_css import build_css; result = build_css(); print(result)"`
 Expected: Path to output CSS file, no errors. Check if `.map` file was created alongside it.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/build_css.py
+git add src/dazzle_page/build_css.py
 git commit -m "feat(css): add --sourcemap to Tailwind CLI build (#671)"
 ```
 

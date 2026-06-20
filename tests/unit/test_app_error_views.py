@@ -7,7 +7,7 @@ CWE-209 leak prevention (500), and escape safety.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.app_error_views import (
+from dazzle.http.runtime.app_error_views import (
     build_app_403_view,
     build_app_404_view,
     build_app_500_view,

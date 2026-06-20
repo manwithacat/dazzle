@@ -29,8 +29,9 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle/compliance/` | Compliance pipeline — ISO 27001 + SOC 2 evidence extraction, taxonomy, compiler |
 | `src/dazzle/rbac/` | Provable RBAC — static matrix, dynamic verification, audit trail, compliance report |
 | `src/dazzle/testing/` | Test infrastructure (agent E2E wrapper, browser gate) |
-| `src/dazzle/back/` | FastAPI runtime (API, auth, channels, events, grants) |
-| `src/dazzle/ui/` | UI runtime — typed Fragment substrate (frozen-dataclass primitive tree → HTML via `dazzle.render.html.esc`) + static JS/CSS assets. No Jinja2 since #1042 (v0.67.92, ADR-0023). |
+| `src/dazzle/http/` | **HTTP runtime** (FastAPI: API, auth, channels, events, grants). Renamed from `back/` in ADR-0041 (2026-06-20). |
+| `src/dazzle/page/` | **Page-orchestration layer** — page/route renderers (`*_renderer.py`), converters, + static JS/CSS assets. Calls *down* into `render/` (the typed Fragment substrate → HTML via `dazzle.render.html.esc`). No Jinja2 since #1042 (ADR-0023). Renamed from `ui/` in ADR-0041. |
+| `src/dazzle/render/` | Pure rendering: AppSpec → Fragment → HTML, no I/O (serverless-testable). The four-layer stack is `http → page → render → core` (ADR-0038/0041). |
 
 ## Project Layout Convention
 
@@ -321,7 +322,7 @@ dazzle contribution templates|create|validate|examples
 
 See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No new singletons** — use `RuntimeServices` or `ServerState` (ADR-0005)
-- **No SQLite in the app runtime** — `src/dazzle/back/` is PostgreSQL-only (ADR-0008). The MCP server's knowledge-graph DB and `core/process/version_manager.py` are outside that scope and may use SQLite.
+- **No SQLite in the app runtime** — `src/dazzle/http/` is PostgreSQL-only (ADR-0008). The MCP server's knowledge-graph DB and `core/process/version_manager.py` are outside that scope and may use SQLite.
 - **No SPA frameworks** — server-side rendering + HTMX (ADR-0011); rendering is the typed Fragment substrate since #1042 (ADR-0023), not Jinja2
 - **No field conditions in `permit:`** — use `scope:` with `as:` (ADR-0010; `as:` formerly `for:`, renamed in #998)
 - **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)
@@ -372,4 +373,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.83.34 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.83.35 | **Python**: 3.12+ | **Status**: Production Ready

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.83.34"
+version = "0.83.35"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -90,7 +90,7 @@ dependencies = [
     # install; pure-Python, no transitive deps beyond typing.
     "PyJWT>=2.8.0",
     # fastapi was historically in the [serve] extras, but dazzle.core
-    # transitively imports dazzle.back.runtime (via appspec_loader →
+    # transitively imports dazzle.http.runtime (via appspec_loader →
     # back.runtime.renderers.init → back.runtime/server.py → file_routes,
     # search_routes, etc.) which all have unconditional `from fastapi
     # import ...` at module level. Without fastapi in core deps, even
@@ -152,16 +152,16 @@ sso = [
     # by Starlette's SessionMiddleware whether or not authlib is
     # installed. Kept here for documentation; pip dedupes.
     # cryptography: AES-GCM secret-at-rest for enterprise Connections
-    # (auth Plan 4a, dazzle.back.runtime.auth.connection_crypto) — lazy-imported,
+    # (auth Plan 4a, dazzle.http.runtime.auth.connection_crypto) — lazy-imported,
     # so core installs without [sso] are unaffected until a connection is used.
     "cryptography>=41.0.0",
     # dnspython: DNS-TXT domain-ownership verification for enterprise Connections
-    # (auth Plan 4b.iv, dazzle.back.runtime.auth.domain_verification) — lazy-imported
+    # (auth Plan 4b.iv, dazzle.http.runtime.auth.domain_verification) — lazy-imported
     # inside DnspythonResolver, so core installs are unaffected until verify-domain runs.
     "dnspython>=2.0",
 ]
 saml = [
-    # python3-saml drives SP-initiated SAML 2.0 (auth Plan 5, dazzle.back.runtime.auth.
+    # python3-saml drives SP-initiated SAML 2.0 (auth Plan 5, dazzle.http.runtime.auth.
     # saml_provider) — it owns all XML parsing + signature validation (XXE / signature-
     # wrapping defenses), imported lazily inside NativeSAMLProvider._build_auth.
     # SEPARATE from [sso] because it needs the native libxmlsec1 (python-xmlsec / lxml):
@@ -327,7 +327,7 @@ i18n = [
 ]
 # moto-based S3 mocks for storage primitive integration tests (#932 cycle 2).
 # Pulled into the dev install via `pip install -e ".[dev,aws-test]"`. The
-# in-memory FakeStorageProvider in dazzle_back.runtime.storage.testing
+# in-memory FakeStorageProvider in dazzle_http.runtime.storage.testing
 # covers most unit tests without this dep — moto is only needed for the
 # small set of integration tests that exercise the real boto3 surface.
 aws-test = [
@@ -366,7 +366,7 @@ dazzle = ["py.typed"]
 # `__init__.py`, so `packages.find` with `namespaces=false` never discovers it —
 # every pip install was missing 0001–0004). The `versions/*.py` glob ships them
 # as data files regardless of package status.
-"dazzle.back.alembic" = ["*.mako", "*.ini", "versions/*.py"]
+"dazzle.http.alembic" = ["*.mako", "*.ini", "versions/*.py"]
 "dazzle.compliance" = ["css/*.css", "templates/*.html", "frameworks/*.yaml"]
 "dazzle.lsp" = ["grammars/*.json"]
 # Workspace chrome static assets — literal HTML+JS blobs the typed
@@ -374,13 +374,13 @@ dazzle = ["py.typed"]
 # IIFE script). Read at module-import time, then cached.
 "dazzle.render.fragment.static" = ["*.html"]
 # Dazzle UI runtime static files (JS, CSS). Post-#1055 (v0.67.98) the
-# `dazzle_ui` top-level package was nested as `dazzle.ui` so all
+# `dazzle_page` top-level package was nested as `dazzle.page` so all
 # package-data keys reference the new path.
-"dazzle.ui" = ["static/**/*.js", "static/**/*.css"]
-"dazzle.ui.runtime.static" = ["**/*.js", "**/*.css"]
+"dazzle.page" = ["static/**/*.js", "static/**/*.css"]
+"dazzle.page.runtime.static" = ["**/*.js", "**/*.css"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "src/dazzle/back/tests"]
+testpaths = ["tests", "src/dazzle/http/tests"]
 pythonpath = ["src"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
@@ -513,20 +513,20 @@ disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = [
-    "dazzle.back.runtime.island_routes",
-    "dazzle.back.runtime.debug_routes",
-    "dazzle.back.runtime.event_explorer",
-    "dazzle.back.runtime.audit_routes",
-    "dazzle.back.runtime.test_routes",
-    "dazzle.back.runtime.social_auth",
-    "dazzle.back.runtime.jwt_middleware",
-    "dazzle.back.runtime.route_generator",
+    "dazzle.http.runtime.island_routes",
+    "dazzle.http.runtime.debug_routes",
+    "dazzle.http.runtime.event_explorer",
+    "dazzle.http.runtime.audit_routes",
+    "dazzle.http.runtime.test_routes",
+    "dazzle.http.runtime.social_auth",
+    "dazzle.http.runtime.jwt_middleware",
+    "dazzle.http.runtime.route_generator",
     # #1361 final slice: the CRUD/graph handler factories moved out of
     # route_generator into handlers/* — the override moves with the code.
-    "dazzle.back.runtime.handlers.*",
-    "dazzle.back.runtime.auth.routes",
-    "dazzle.back.runtime.auth.routes_2fa",
-    "dazzle.back.runtime.auth.routes_jwt",
+    "dazzle.http.runtime.handlers.*",
+    "dazzle.http.runtime.auth.routes",
+    "dazzle.http.runtime.auth.routes_2fa",
+    "dazzle.http.runtime.auth.routes_jwt",
 ]
 # FastAPI app.get/post decorators on closure-scoped routes are untyped (app: Any),
 # and the create/update route factories annotate the request body with dynamically
@@ -615,39 +615,40 @@ include_external_packages = true
 # Framework structural-fitness (B): lock the layer boundaries while they're still nearly
 # clean. New cross-layer imports fail CI; the 2 pre-existing structural edges are
 # allow-listed as documented known-debt (relocations tracked via the hotspot queue).
+# Layer names: http → page → render → core (ADR-0041, renamed from back/ui 2026-06-20).
 [[tool.importlinter.contracts]]
-name = "core stays backend- and UI-agnostic"
+name = "core stays http- and page-agnostic"
 type = "forbidden"
 source_modules = ["dazzle.core"]
-forbidden_modules = ["dazzle.back", "dazzle.ui"]
-# DIRECT imports only: dazzle/__init__.py eagerly imports back, so a transitive path
-# back exists from everything — the meaningful rule is "no core MODULE imports back/ui".
+forbidden_modules = ["dazzle.http", "dazzle.page"]
+# DIRECT imports only: dazzle/__init__.py eagerly imports http, so a transitive path
+# exists from everything — the meaningful rule is "no core MODULE imports http/page".
 allow_indirect_imports = "true"
 # core.process is the ADR-0008 runtime-bridge subsystem (not the pure IR/parser core);
-# its eventbus adapter bridges to back's event framework. Tracked debt: inject instead.
+# its eventbus adapter bridges to http's event framework. Tracked debt: inject instead.
 ignore_imports = [
-    "dazzle.core.process.eventbus_adapter -> dazzle.back.events.envelope",
-    "dazzle.core.process.eventbus_adapter -> dazzle.back.runtime.auth.events",
+    "dazzle.core.process.eventbus_adapter -> dazzle.http.events.envelope",
+    "dazzle.core.process.eventbus_adapter -> dazzle.http.runtime.auth.events",
 ]
 
 [[tool.importlinter.contracts]]
-name = "ui must not reach into the runtime"
+name = "page must not reach into the http runtime"
 type = "forbidden"
-source_modules = ["dazzle.ui"]
-forbidden_modules = ["dazzle.back"]
+source_modules = ["dazzle.page"]
+forbidden_modules = ["dazzle.http"]
 allow_indirect_imports = "true"
 # Allow-list driven to ZERO in the 2026-06-19 smells round: the lone violator,
-# combined_server (the back+ui composition root), relocated to back/runtime/ where it
-# belongs (the composition root may import both layers). ui ↛ back now holds absolutely.
+# combined_server (the http+page composition root), relocated to http/runtime/ where it
+# belongs (the composition root may import both layers). page ↛ http now holds absolutely.
 
 [[tool.importlinter.contracts]]
-name = "back is Postgres-only (ADR-0008)"
+name = "http is Postgres-only (ADR-0008)"
 type = "forbidden"
-source_modules = ["dazzle.back"]
+source_modules = ["dazzle.http"]
 forbidden_modules = ["sqlite3", "aiosqlite"]
-# ADR-0008 forbids SQLite in back's RUNTIME, not transitive reaches into the MCP
+# ADR-0008 forbids SQLite in http's RUNTIME, not transitive reaches into the MCP
 # knowledge-graph / perf tracer / core.process.version_manager (which legitimately use
 # SQLite for their own stores, explicitly outside the app-data scope). So only DIRECT
-# back imports of sqlite are a violation. The one direct hit is a back test module.
+# http imports of sqlite are a violation. The one direct hit is a http test module.
 allow_indirect_imports = "true"
-ignore_imports = ["dazzle.back.tests.test_relations -> sqlite3"]
+ignore_imports = ["dazzle.http.tests.test_relations -> sqlite3"]

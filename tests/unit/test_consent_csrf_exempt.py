@@ -17,8 +17,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.consent_routes import create_consent_routes
-from dazzle.back.runtime.csrf import CSRFConfig, CSRFMiddleware
+from dazzle.http.runtime.consent_routes import create_consent_routes
+from dazzle.http.runtime.csrf import CSRFConfig, CSRFMiddleware
 
 
 class TestCSRFExemptPaths:

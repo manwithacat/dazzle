@@ -43,7 +43,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # Per-request locale (mirrors the theme_variant ContextVar pattern in
-# `dazzle.ui.runtime.theme`). Set by :class:`LocaleMiddleware` on
+# `dazzle.page.runtime.theme`). Set by :class:`LocaleMiddleware` on
 # ingress; read by the ``_()`` Jinja filter at render time so templates
 # never have to thread the locale through their context arguments.
 DEFAULT_LOCALE = "en"

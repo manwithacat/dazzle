@@ -55,7 +55,7 @@ def main() -> int:
         }
         # 2a. Initialise the auth stack BEFORE boot, so the auth middleware /
         #     RBAC scope enforcement wires up at startup (tables present at boot).
-        from dazzle.back.runtime.auth.store import AuthStore
+        from dazzle.http.runtime.auth.store import AuthStore
 
         AuthStore(database_url=DB_URL)._init_db()
 

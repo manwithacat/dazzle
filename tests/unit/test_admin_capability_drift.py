@@ -3,9 +3,9 @@ default-deny / fail-closed invariants. Catches an orphaned capability or a regre
 
 from pathlib import Path
 
-from dazzle.back.runtime.auth.admin_policy import CAPABILITIES, AdminPolicy
+from dazzle.http.runtime.auth.admin_policy import CAPABILITIES, AdminPolicy
 
-_AUTH_DIR = Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/auth"
+_AUTH_DIR = Path(__file__).resolve().parents[2] / "src/dazzle/http/runtime/auth"
 
 
 def test_every_capability_is_consumed_by_a_route_or_guard():

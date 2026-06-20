@@ -19,9 +19,9 @@
 - **Create** `src/dazzle/core/capabilities/registry.py` — process registry + the three enterprise-auth capabilities + `resolve_capabilities()`.
 - **Create** `tests/unit/test_capabilities.py` — model/registry/resolution tests.
 - **Modify** `src/dazzle/core/manifest.py` — add `CapabilitiesConfig` + `capabilities` field + `[capabilities]` parse in `load_manifest`.
-- **Modify** `src/dazzle/back/runtime/subsystems/__init__.py` — add `capabilities` field to `SubsystemContext`.
-- **Modify** `src/dazzle/back/runtime/server.py:462` — compute + attach resolved capabilities.
-- **Modify** `src/dazzle/back/runtime/subsystems/auth.py:236-307` — gate enterprise routes on `caps.active(...)`; add the connection boot guard.
+- **Modify** `src/dazzle/http/runtime/subsystems/__init__.py` — add `capabilities` field to `SubsystemContext`.
+- **Modify** `src/dazzle/http/runtime/server.py:462` — compute + attach resolved capabilities.
+- **Modify** `src/dazzle/http/runtime/subsystems/auth.py:236-307` — gate enterprise routes on `caps.active(...)`; add the connection boot guard.
 - **Create** `src/dazzle/cli/capability.py` — `dazzle capability list/enable/disable/status`.
 - **Modify** `src/dazzle/cli/__init__.py` — register the `capability` typer.
 - **Modify** `src/dazzle/cli/validate` path (the `validate_command`) — surface unknown/unavailable capability diagnostics.
@@ -525,8 +525,8 @@ git commit -m "feat(validate): reject unknown [capabilities] ids with suggestion
 ## Task 5: Thread resolved capabilities onto `SubsystemContext`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/subsystems/__init__.py` (add field after `security_profile` ~line 80)
-- Modify: `src/dazzle/back/runtime/server.py:462` (`_build_subsystem_context`)
+- Modify: `src/dazzle/http/runtime/subsystems/__init__.py` (add field after `security_profile` ~line 80)
+- Modify: `src/dazzle/http/runtime/server.py:462` (`_build_subsystem_context`)
 - Test: `tests/unit/test_capability_context.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -579,7 +579,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/subsystems/__init__.py src/dazzle/back/runtime/server.py tests/unit/test_capability_context.py
+git add src/dazzle/http/runtime/subsystems/__init__.py src/dazzle/http/runtime/server.py tests/unit/test_capability_context.py
 git commit -m "feat(runtime): resolve + thread capabilities onto SubsystemContext (#1342)"
 ```
 
@@ -588,7 +588,7 @@ git commit -m "feat(runtime): resolve + thread capabilities onto SubsystemContex
 ## Task 6: Gate enterprise auth routes on capabilities
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py:236-307`
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py:236-307`
 - Test: `tests/unit/test_auth_capability_gating.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -616,7 +616,7 @@ def test_no_capabilities_mounts_no_enterprise_routes(monkeypatch):
 
     monkeypatch.setattr(reg, "find_spec", lambda name: object())  # available...
     caps = resolve_capabilities([])  # ...but nothing declared
-    from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+    from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
     sub = AuthSubsystem()
     with patch.object(sub, "_mount_enterprise_sso") as oidc, patch.object(
@@ -633,7 +633,7 @@ def test_declared_oidc_mounts_only_oidc(monkeypatch):
 
     monkeypatch.setattr(reg, "find_spec", lambda name: object())
     caps = resolve_capabilities(["auth.enterprise.oidc"])
-    from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+    from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
     sub = AuthSubsystem()
     with patch.object(sub, "_mount_enterprise_sso") as oidc, patch.object(
@@ -697,21 +697,21 @@ Add the helper methods:
             self._mount_scim(ctx)
 
     def _mount_enterprise_sso(self, ctx: Any) -> None:
-        from dazzle.back.runtime.auth.enterprise_routes import create_enterprise_sso_routes
-        from dazzle.back.runtime.auth.oidc_provider import register_native_oidc
+        from dazzle.http.runtime.auth.enterprise_routes import create_enterprise_sso_routes
+        from dazzle.http.runtime.auth.oidc_provider import register_native_oidc
 
         register_native_oidc()
         ctx.app.include_router(create_enterprise_sso_routes())
 
     def _mount_saml(self, ctx: Any) -> None:
-        from dazzle.back.runtime.auth.saml_provider import register_native_saml
-        from dazzle.back.runtime.auth.saml_routes import create_saml_routes
+        from dazzle.http.runtime.auth.saml_provider import register_native_saml
+        from dazzle.http.runtime.auth.saml_routes import create_saml_routes
 
         register_native_saml()
         ctx.app.include_router(create_saml_routes())
 
     def _mount_scim(self, ctx: Any) -> None:
-        from dazzle.back.runtime.auth.scim_routes import create_scim_routes
+        from dazzle.http.runtime.auth.scim_routes import create_scim_routes
 
         ctx.app.include_router(create_scim_routes())
 ```
@@ -721,7 +721,7 @@ Delete the old unconditional SCIM mount (lines 301-307) and the `find_spec`-base
 - [ ] **Step 3b: Gate the org-admin connection surface** — the `/auth/connections` admin surface mounts unconditionally at `auth.py:185-189`. Gate it on any active enterprise capability. Replace:
 
 ```python
-        from dazzle.back.runtime.auth.connection_admin_routes import (
+        from dazzle.http.runtime.auth.connection_admin_routes import (
             create_connection_admin_routes,
         )
 
@@ -737,7 +737,7 @@ with:
             ctx.capabilities.is_active(c)
             for c in ("auth.enterprise.oidc", "auth.enterprise.saml", "auth.enterprise.scim")
         ):
-            from dazzle.back.runtime.auth.connection_admin_routes import (
+            from dazzle.http.runtime.auth.connection_admin_routes import (
                 create_connection_admin_routes,
             )
 
@@ -751,7 +751,7 @@ def test_admin_surface_gated(monkeypatch):
     import dazzle.core.capabilities.registry as reg
 
     monkeypatch.setattr(reg, "find_spec", lambda name: object())
-    from dazzle.back.runtime.subsystems.auth import AuthSubsystem
+    from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
     # With no enterprise capability active, the admin-surface guard is False.
     caps_off = resolve_capabilities([])
@@ -774,7 +774,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/subsystems/auth.py tests/unit/test_auth_capability_gating.py
+git add src/dazzle/http/runtime/subsystems/auth.py tests/unit/test_auth_capability_gating.py
 git commit -m "feat(auth): gate enterprise OIDC/SAML/SCIM routes on capabilities (#1342)"
 ```
 
@@ -783,8 +783,8 @@ git commit -m "feat(auth): gate enterprise OIDC/SAML/SCIM routes on capabilities
 ## Task 7: Existing-connections boot guard
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/connection_guard.py`
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py` (call the guard before `_mount_enterprise_capabilities`)
+- Create: `src/dazzle/http/runtime/auth/connection_guard.py`
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py` (call the guard before `_mount_enterprise_capabilities`)
 - Test: `tests/unit/test_connection_boot_guard.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -793,7 +793,7 @@ git commit -m "feat(auth): gate enterprise OIDC/SAML/SCIM routes on capabilities
 # tests/unit/test_connection_boot_guard.py
 import pytest
 
-from dazzle.back.runtime.auth.connection_guard import (
+from dazzle.http.runtime.auth.connection_guard import (
     UndeclaredConnectionError,
     check_connections_match_capabilities,
 )
@@ -826,7 +826,7 @@ Expected: FAIL — `ModuleNotFoundError: ...connection_guard`.
 - [ ] **Step 3: Implement the guard**
 
 ```python
-# src/dazzle/back/runtime/auth/connection_guard.py
+# src/dazzle/http/runtime/auth/connection_guard.py
 """Boot guard: existing connection rows must have their capability declared (#1342)."""
 
 _TYPE_TO_CAPABILITY = {
@@ -866,7 +866,7 @@ async def present_connection_types(db: object) -> set[str]:
 
     Uses the project psycopg3 helpers (fetchall, %s params, dict rows).
     """
-    from dazzle.back.runtime.connection import fetchall
+    from dazzle.http.runtime.connection import fetchall
 
     rows = await fetchall(db, "SELECT DISTINCT type FROM connections")
     return {r["type"] for r in rows}
@@ -878,7 +878,7 @@ async def present_connection_types(db: object) -> set[str]:
 
 ```python
         if ctx.capabilities is not None and ctx.database_url:
-            from dazzle.back.runtime.auth.connection_guard import (
+            from dazzle.http.runtime.auth.connection_guard import (
                 check_connections_match_capabilities,
                 present_connection_types,
             )
@@ -895,7 +895,7 @@ async def present_connection_types(db: object) -> set[str]:
 Run: `pytest tests/unit/test_connection_boot_guard.py -v` → PASS.
 
 ```bash
-git add src/dazzle/back/runtime/auth/connection_guard.py src/dazzle/back/runtime/subsystems/auth.py tests/unit/test_connection_boot_guard.py
+git add src/dazzle/http/runtime/auth/connection_guard.py src/dazzle/http/runtime/subsystems/auth.py tests/unit/test_connection_boot_guard.py
 git commit -m "feat(auth): boot guard — existing connections require declared capability (#1342)"
 ```
 
@@ -1167,7 +1167,7 @@ git commit -m "feat(capabilities): contract test + enterprise-sso opt-in header 
 
 ## Notes for the implementer
 
-- **psycopg3 helpers:** the boot-guard query uses the `fetchall` helper added in the asyncpg→psycopg3 migration (`%s` params, dict rows). Confirm the exact import in `src/dazzle/back/runtime/connection.py`.
+- **psycopg3 helpers:** the boot-guard query uses the `fetchall` helper added in the asyncpg→psycopg3 migration (`%s` params, dict rows). Confirm the exact import in `src/dazzle/http/runtime/connection.py`.
 - **`auth.py` is async:** `startup` is `async`; the boot guard call must be `await`ed (already shown).
 - **Don't gate the CLI** `dazzle auth connection …` — it stays available so an operator can configure before/while enabling the capability.
 - **Phase 2 (cognition gating) and Phase 3 (#1342 backlog items) are out of scope here** — this plan closes the runtime/surface leak and ships the model.

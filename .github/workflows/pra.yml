@@ -25,9 +25,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/dazzle/back/pra/**'
-      - 'src/dazzle/back/events/**'
-      - 'src/dazzle/back/metrics/**'
+      - 'src/dazzle/http/pra/**'
+      - 'src/dazzle/http/events/**'
+      - 'src/dazzle/http/metrics/**'
 
   # Weekly comprehensive test
   schedule:
@@ -63,8 +63,8 @@ jobs:
         python -c "
         import asyncio
         import sys
-        from dazzle.back.pra import run_quick_test, StressHarness, ScenarioType
-        from dazzle.back.metrics.reporter import ReportFormat
+        from dazzle.http.pra import run_quick_test, StressHarness, ScenarioType
+        from dazzle.http.metrics.reporter import ReportFormat
 
         async def main():
             harness = StressHarness()
@@ -118,8 +118,8 @@ jobs:
         import json
         import sys
         from pathlib import Path
-        from dazzle.back.pra import StressHarness, ScenarioType
-        from dazzle.back.metrics.reporter import ReportFormat
+        from dazzle.http.pra import StressHarness, ScenarioType
+        from dazzle.http.metrics.reporter import ReportFormat
 
         async def main():
             scenario = ScenarioType('${SCENARIO}')
@@ -148,7 +148,7 @@ jobs:
           python -c "
         import json
         from pathlib import Path
-        from dazzle.back.pra.cli import compare_results, format_comparison_markdown
+        from dazzle.http.pra.cli import compare_results, format_comparison_markdown
 
         baseline = json.loads(Path('baseline/results.json').read_text())
         current = json.loads(Path('results.json').read_text())
@@ -241,8 +241,8 @@ jobs:
         import json
         import sys
         from pathlib import Path
-        from dazzle.back.pra import StressHarness, ScenarioType, list_scenarios
-        from dazzle.back.metrics.reporter import ReportFormat
+        from dazzle.http.pra import StressHarness, ScenarioType, list_scenarios
+        from dazzle.http.metrics.reporter import ReportFormat
 
         async def main():
             harness = StressHarness()

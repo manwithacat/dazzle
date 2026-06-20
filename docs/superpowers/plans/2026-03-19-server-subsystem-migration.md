@@ -18,21 +18,21 @@
 
 | File | Responsibility |
 |------|---------------|
-| `src/dazzle_back/runtime/subsystems/__init__.py` | **Modify** — add new `SubsystemContext` fields |
-| `src/dazzle_back/runtime/subsystems/auth.py` | **Create** — auth routes (social, 2FA, JWT) |
-| `src/dazzle_back/runtime/subsystems/integrations.py` | **Create** — integration + mapping executors |
-| `src/dazzle_back/runtime/subsystems/workspaces.py` | **Create** — workspace route builder + routes |
-| `src/dazzle_back/runtime/subsystems/fragments.py` | **Create** — fragment source routes |
-| `src/dazzle_back/runtime/subsystems/transitions.py` | **Create** — state machine transition effects |
-| `src/dazzle_back/runtime/subsystems/system_routes.py` | **Create** — health, debug, audit, file, system routes |
-| `src/dazzle_back/runtime/server.py` | **Reduce** — delete extracted methods, update `build()` |
+| `src/dazzle_http/runtime/subsystems/__init__.py` | **Modify** — add new `SubsystemContext` fields |
+| `src/dazzle_http/runtime/subsystems/auth.py` | **Create** — auth routes (social, 2FA, JWT) |
+| `src/dazzle_http/runtime/subsystems/integrations.py` | **Create** — integration + mapping executors |
+| `src/dazzle_http/runtime/subsystems/workspaces.py` | **Create** — workspace route builder + routes |
+| `src/dazzle_http/runtime/subsystems/fragments.py` | **Create** — fragment source routes |
+| `src/dazzle_http/runtime/subsystems/transitions.py` | **Create** — state machine transition effects |
+| `src/dazzle_http/runtime/subsystems/system_routes.py` | **Create** — health, debug, audit, file, system routes |
+| `src/dazzle_http/runtime/server.py` | **Reduce** — delete extracted methods, update `build()` |
 
 ---
 
 ## Task 1: SubsystemContext Additions
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/subsystems/__init__.py`
+- Modify: `src/dazzle_http/runtime/subsystems/__init__.py`
 
 - [ ] **Step 1: Add new fields to SubsystemContext**
 
@@ -94,7 +94,7 @@ In `build()` (line ~2076), change the sequence so `_build_subsystem_context` rec
         self._run_subsystems()
         self._setup_system_routes()  # stays for now, extracted in Task 6
         # Validate routes
-        from dazzle_back.runtime.route_validator import validate_routes
+        from dazzle_http.runtime.route_validator import validate_routes
         assert self._app is not None
         validate_routes(self._app)
         return self._app
@@ -110,7 +110,7 @@ Expected: All pass (no behavior change yet)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/subsystems/__init__.py src/dazzle_back/runtime/server.py
+git add src/dazzle_http/runtime/subsystems/__init__.py src/dazzle_http/runtime/server.py
 git commit -m "refactor(server): add SubsystemContext fields for migration (#535)"
 ```
 
@@ -119,8 +119,8 @@ git commit -m "refactor(server): add SubsystemContext fields for migration (#535
 ## Task 2: Extract Auth Routes Subsystem
 
 **Files:**
-- Create: `src/dazzle_back/runtime/subsystems/auth.py`
-- Modify: `src/dazzle_back/runtime/server.py`
+- Create: `src/dazzle_http/runtime/subsystems/auth.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 
 - [ ] **Step 1: Read auth methods in server.py**
 
@@ -131,7 +131,7 @@ Read these methods:
 
 - [ ] **Step 2: Create `subsystems/auth.py`**
 
-Create `src/dazzle_back/runtime/subsystems/auth.py` following the pattern in `channels.py`:
+Create `src/dazzle_http/runtime/subsystems/auth.py` following the pattern in `channels.py`:
 
 ```python
 """Auth routes subsystem.
@@ -146,7 +146,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from dazzle_back.runtime.subsystems import SubsystemContext
+from dazzle_http.runtime.subsystems import SubsystemContext
 
 logger = logging.getLogger("dazzle.server")
 
@@ -204,9 +204,9 @@ Expected: All pass
 - [ ] **Step 7: Lint and commit**
 
 ```bash
-ruff check src/dazzle_back/runtime/subsystems/auth.py src/dazzle_back/runtime/server.py --fix
-ruff format src/dazzle_back/runtime/subsystems/auth.py src/dazzle_back/runtime/server.py
-git add src/dazzle_back/runtime/subsystems/auth.py src/dazzle_back/runtime/server.py
+ruff check src/dazzle_http/runtime/subsystems/auth.py src/dazzle_http/runtime/server.py --fix
+ruff format src/dazzle_http/runtime/subsystems/auth.py src/dazzle_http/runtime/server.py
+git add src/dazzle_http/runtime/subsystems/auth.py src/dazzle_http/runtime/server.py
 git commit -m "refactor(server): extract auth routes to AuthSubsystem (#535)"
 ```
 
@@ -215,8 +215,8 @@ git commit -m "refactor(server): extract auth routes to AuthSubsystem (#535)"
 ## Task 3: Extract System Routes Subsystem
 
 **Files:**
-- Create: `src/dazzle_back/runtime/subsystems/system_routes.py`
-- Modify: `src/dazzle_back/runtime/server.py`
+- Create: `src/dazzle_http/runtime/subsystems/system_routes.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 
 - [ ] **Step 1: Read system route methods in server.py**
 
@@ -238,7 +238,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from dazzle_back.runtime.subsystems import SubsystemContext
+from dazzle_http.runtime.subsystems import SubsystemContext
 
 logger = logging.getLogger("dazzle.server")
 
@@ -276,9 +276,9 @@ Add `SystemRoutesSubsystem()` at the end of `_build_default_subsystems`.
 
 ```bash
 pytest tests/ -m "not e2e" -x --timeout=120 -q
-ruff check src/dazzle_back/runtime/subsystems/system_routes.py src/dazzle_back/runtime/server.py --fix
-ruff format src/dazzle_back/runtime/subsystems/system_routes.py src/dazzle_back/runtime/server.py
-git add src/dazzle_back/runtime/subsystems/system_routes.py src/dazzle_back/runtime/server.py
+ruff check src/dazzle_http/runtime/subsystems/system_routes.py src/dazzle_http/runtime/server.py --fix
+ruff format src/dazzle_http/runtime/subsystems/system_routes.py src/dazzle_http/runtime/server.py
+git add src/dazzle_http/runtime/subsystems/system_routes.py src/dazzle_http/runtime/server.py
 git commit -m "refactor(server): extract system routes to SystemRoutesSubsystem (#535)"
 ```
 
@@ -287,8 +287,8 @@ git commit -m "refactor(server): extract system routes to SystemRoutesSubsystem 
 ## Task 4: Extract Workspace Subsystem
 
 **Files:**
-- Create: `src/dazzle_back/runtime/subsystems/workspaces.py`
-- Modify: `src/dazzle_back/runtime/server.py`
+- Create: `src/dazzle_http/runtime/subsystems/workspaces.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 
 - [ ] **Step 1: Read workspace code in server.py**
 
@@ -309,7 +309,7 @@ Delete `WorkspaceRouteBuilder`, `_init_workspace_routes`, `_init_workspace_entit
 
 ```bash
 pytest tests/ -m "not e2e" -x --timeout=120 -q
-git add src/dazzle_back/runtime/subsystems/workspaces.py src/dazzle_back/runtime/server.py
+git add src/dazzle_http/runtime/subsystems/workspaces.py src/dazzle_http/runtime/server.py
 git commit -m "refactor(server): extract WorkspaceRouteBuilder to WorkspacesSubsystem (#535)"
 ```
 
@@ -318,8 +318,8 @@ git commit -m "refactor(server): extract WorkspaceRouteBuilder to WorkspacesSubs
 ## Task 5: Extract Integrations Subsystem
 
 **Files:**
-- Create: `src/dazzle_back/runtime/subsystems/integrations.py`
-- Modify: `src/dazzle_back/runtime/server.py`
+- Create: `src/dazzle_http/runtime/subsystems/integrations.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 
 - [ ] **Step 1: Read integration methods in server.py**
 
@@ -337,7 +337,7 @@ Move all four methods. The subsystem `startup()` calls them in order.
 
 ```bash
 pytest tests/ -m "not e2e" -x --timeout=120 -q
-git add src/dazzle_back/runtime/subsystems/integrations.py src/dazzle_back/runtime/server.py
+git add src/dazzle_http/runtime/subsystems/integrations.py src/dazzle_http/runtime/server.py
 git commit -m "refactor(server): extract integration executor to IntegrationsSubsystem (#535)"
 ```
 
@@ -346,8 +346,8 @@ git commit -m "refactor(server): extract integration executor to IntegrationsSub
 ## Task 6: Extract Transitions Subsystem
 
 **Files:**
-- Create: `src/dazzle_back/runtime/subsystems/transitions.py`
-- Modify: `src/dazzle_back/runtime/server.py`
+- Create: `src/dazzle_http/runtime/subsystems/transitions.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 
 - [ ] **Step 1: Read `_init_transition_effects()` in server.py** (line ~1323)
 
@@ -359,7 +359,7 @@ Move `_init_transition_effects` verbatim.
 
 ```bash
 pytest tests/ -m "not e2e" -x --timeout=120 -q
-git add src/dazzle_back/runtime/subsystems/transitions.py src/dazzle_back/runtime/server.py
+git add src/dazzle_http/runtime/subsystems/transitions.py src/dazzle_http/runtime/server.py
 git commit -m "refactor(server): extract transition effects to TransitionsSubsystem (#535)"
 ```
 
@@ -368,8 +368,8 @@ git commit -m "refactor(server): extract transition effects to TransitionsSubsys
 ## Task 7: Extract Fragments Subsystem
 
 **Files:**
-- Create: `src/dazzle_back/runtime/subsystems/fragments.py`
-- Modify: `src/dazzle_back/runtime/server.py`
+- Create: `src/dazzle_http/runtime/subsystems/fragments.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 
 - [ ] **Step 1: Read `_init_fragment_routes()` in server.py** (line ~1079)
 
@@ -383,7 +383,7 @@ Move `_init_fragment_routes` verbatim. Use `ctx.appspec.integrations` and `ctx.c
 
 ```bash
 pytest tests/ -m "not e2e" -x --timeout=120 -q
-git add src/dazzle_back/runtime/subsystems/fragments.py src/dazzle_back/runtime/server.py
+git add src/dazzle_http/runtime/subsystems/fragments.py src/dazzle_http/runtime/server.py
 git commit -m "refactor(server): extract fragment routes to FragmentsSubsystem (#535)"
 ```
 
@@ -392,22 +392,22 @@ git commit -m "refactor(server): extract fragment routes to FragmentsSubsystem (
 ## Task 8: Fix Circular Import
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/server.py`
+- Modify: `src/dazzle_http/runtime/server.py`
 - Modify: callers that import re-exports from server.py
 
 - [ ] **Step 1: Find all callers of re-exported symbols**
 
 ```bash
-grep -rn "from dazzle_back.runtime.server import create_app\|from dazzle_back.runtime.server import run_app\|from dazzle_back.runtime.server import build_server_config\|from dazzle_back.runtime.server import create_app_factory\|from dazzle_back.runtime.server import assemble_post_build_routes\|from dazzle_back.runtime.server import build_entity" src/ tests/ --include="*.py"
+grep -rn "from dazzle_http.runtime.server import create_app\|from dazzle_http.runtime.server import run_app\|from dazzle_http.runtime.server import build_server_config\|from dazzle_http.runtime.server import create_app_factory\|from dazzle_http.runtime.server import assemble_post_build_routes\|from dazzle_http.runtime.server import build_entity" src/ tests/ --include="*.py"
 ```
 
 - [ ] **Step 2: Update each caller**
 
-Change imports from `dazzle_back.runtime.server` to `dazzle_back.runtime.app_factory` for: `create_app`, `run_app`, `build_server_config`, `create_app_factory`, `assemble_post_build_routes`, `build_entity_list_projections`, `build_entity_search_fields`.
+Change imports from `dazzle_http.runtime.server` to `dazzle_http.runtime.app_factory` for: `create_app`, `run_app`, `build_server_config`, `create_app_factory`, `assemble_post_build_routes`, `build_entity_list_projections`, `build_entity_search_fields`.
 
 - [ ] **Step 3: Remove re-exports from server.py**
 
-Delete lines ~2190-2214 (the `from dazzle_back.runtime.app_factory import ...` block and the `__all__` list that includes those names).
+Delete lines ~2190-2214 (the `from dazzle_http.runtime.app_factory import ...` block and the `__all__` list that includes those names).
 
 Update `__all__` to only export `DazzleBackendApp` and `ServerConfig`.
 
@@ -424,13 +424,13 @@ git commit -m "refactor(server): remove re-exports, fix circular import with app
 ## Task 9: Final Cleanup + Verification
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/server.py` (final cleanup)
+- Modify: `src/dazzle_http/runtime/server.py` (final cleanup)
 
 - [ ] **Step 1: Count lines and methods**
 
 ```bash
-wc -l src/dazzle_back/runtime/server.py
-grep -c "def " src/dazzle_back/runtime/server.py
+wc -l src/dazzle_http/runtime/server.py
+grep -c "def " src/dazzle_http/runtime/server.py
 ```
 
 Target: ~600 lines, ~12 methods.
@@ -438,7 +438,7 @@ Target: ~600 lines, ~12 methods.
 - [ ] **Step 2: Verify no remaining `_init_` methods that should be subsystems**
 
 ```bash
-grep "def _init_" src/dazzle_back/runtime/server.py
+grep "def _init_" src/dazzle_http/runtime/server.py
 ```
 
 Should return empty (all `_init_*` methods moved to subsystems).
@@ -452,7 +452,7 @@ pytest tests/ -m "not e2e" -x --timeout=120 -q
 - [ ] **Step 4: Type check**
 
 ```bash
-mypy src/dazzle_back/runtime/server.py src/dazzle_back/runtime/subsystems/ --ignore-missing-imports
+mypy src/dazzle_http/runtime/server.py src/dazzle_http/runtime/subsystems/ --ignore-missing-imports
 ```
 
 - [ ] **Step 5: Push**

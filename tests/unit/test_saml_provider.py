@@ -11,13 +11,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from dazzle.back.runtime.auth.connections import (
+from dazzle.http.runtime.auth.connections import (
     AssertedIdentity,
     ConnectionError,
     ConnectionRecord,
     resolve_provider,
 )
-from dazzle.back.runtime.auth.saml_provider import (
+from dazzle.http.runtime.auth.saml_provider import (
     NativeSAMLProvider,
     register_native_saml,
 )
@@ -367,7 +367,7 @@ async def test_callback_custom_groups_attribute() -> None:
 
 
 def test_register_native_saml_resolves() -> None:
-    from dazzle.back.runtime.auth.connections import _PROVIDERS
+    from dazzle.http.runtime.auth.connections import _PROVIDERS
 
     register_native_saml()
     try:
@@ -472,7 +472,7 @@ def test_settings_signing_ignored_without_keypair() -> None:
 
 def test_metadata_advertises_signing_cert() -> None:
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+    from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
     key, cert = generate_sp_keypair("https://app.test/auth/saml/acs")
     conn = _conn(config={"sign_requests": "true", "sp_cert": cert}, secrets={"sp_private_key": key})
@@ -534,7 +534,7 @@ def test_metadata_advertises_encryption_cert_for_encryption_only() -> None:
     # End-to-end: an encryption-only connection (no signing) emits a use="encryption"
     # KeyDescriptor in the real metadata XML, and never the private key.
     pytest.importorskip("onelogin")
-    from dazzle.back.runtime.auth.saml_sp_keys import generate_sp_keypair
+    from dazzle.http.runtime.auth.saml_sp_keys import generate_sp_keypair
 
     key, cert = generate_sp_keypair("https://app.test/auth/saml/acs")
     conn = _conn(

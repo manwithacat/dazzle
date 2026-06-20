@@ -4,7 +4,7 @@ Each builder is a pure function `dict -> str`; tests assert HTML
 structure + escaping + tooltip union-shape handling.
 """
 
-from dazzle.back.runtime.renderers.site_section_builder import (
+from dazzle.http.runtime.renderers.site_section_builder import (
     TYPED_SECTION_TYPES,
     _render_compliance_tooltip,
     render_typed_section,

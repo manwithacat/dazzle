@@ -22,8 +22,8 @@ pytest.importorskip("fastapi")
 
 from fastapi import HTTPException
 
-from dazzle.back.runtime.route_generator import _enforce_update_scope
 from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+from dazzle.http.runtime.route_generator import _enforce_update_scope
 
 
 def _spec(rules: list) -> SimpleNamespace:

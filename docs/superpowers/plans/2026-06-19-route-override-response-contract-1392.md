@@ -16,8 +16,8 @@
 - Ship discipline: per-phase gate green → `/bump patch` + commit + push; full `pytest -m "not e2e"` before each main push.
 
 ## File map
-- `src/dazzle/ui/runtime/page_routes.py` — new `build_app_page_context(request, *, deps, current_route, inner_html_title=None) -> tuple[PageContext, _ChromeAssets]`; refactor the two inline `PageContext` sites (L2447 workspace, L2376 entity) to consume the shared chrome-asset + nav-model helpers (behavior-preserving).
-- `src/dazzle/back/runtime/route_overrides.py` — `_RETURNS_RE`, `RouteOverrideDescriptor.returns_kind`, parse in `discover_route_overrides`, `_VALID_RETURN_KINDS`, `_wrap_with_response_contract`, advisory nudge; apply in the mount loop (L466) outside `_wrap_with_policy_gate`.
+- `src/dazzle/page/runtime/page_routes.py` — new `build_app_page_context(request, *, deps, current_route, inner_html_title=None) -> tuple[PageContext, _ChromeAssets]`; refactor the two inline `PageContext` sites (L2447 workspace, L2376 entity) to consume the shared chrome-asset + nav-model helpers (behavior-preserving).
+- `src/dazzle/http/runtime/route_overrides.py` — `_RETURNS_RE`, `RouteOverrideDescriptor.returns_kind`, parse in `discover_route_overrides`, `_VALID_RETURN_KINDS`, `_wrap_with_response_contract`, advisory nudge; apply in the mount loop (L466) outside `_wrap_with_policy_gate`.
 - `docs/counter-priors/custom-route-undeclared-response.md` + INDEX — the guardrail counter-prior.
 - `docs/reference/` — route-override contract section.
 - `fixtures/custom_renderer/` (or a routes/ fixture) — dogfood a `fragment` + a `page` override.
@@ -27,14 +27,14 @@
 
 ## Task 1 (P1): extract `build_app_page_context`
 
-**Files:** Modify `src/dazzle/ui/runtime/page_routes.py`; Test `tests/unit/test_build_app_page_context.py`.
+**Files:** Modify `src/dazzle/page/runtime/page_routes.py`; Test `tests/unit/test_build_app_page_context.py`.
 
 **Interfaces — Produces:** `build_app_page_context(request, *, deps: _PageRouterConfig, current_route: str) -> tuple[PageContext, _ChromeAssets]` where `_ChromeAssets` is a frozen dataclass `(css_links, js_scripts, theme, font_preconnect, favicon)`. Reuses `_resolve_nav_model` (L711) + the app-state chrome-asset resolution (currently inline at L2462-2480).
 
 - [ ] **Step 1: Write the failing test** (`tests/unit/test_build_app_page_context.py`) — assert the builder returns a `PageContext` with the app nav + the chrome assets from `request.app.state`, for a synthetic request + minimal `_PageRouterConfig`:
 ```python
 from types import SimpleNamespace
-from dazzle.ui.runtime.page_routes import build_app_page_context, _PageRouterConfig
+from dazzle.page.runtime.page_routes import build_app_page_context, _PageRouterConfig
 
 def _req(app_state):
     return SimpleNamespace(app=SimpleNamespace(state=app_state), state=SimpleNamespace(tenant_config={}), cookies={})
@@ -63,10 +63,10 @@ def test_builder_returns_context_and_chrome_assets():
 
 - [ ] **Step 7: ruff + mypy + commit (local).**
 ```bash
-.venv/bin/ruff format src/dazzle/ui/runtime/page_routes.py tests/unit/test_build_app_page_context.py
-.venv/bin/ruff check src/dazzle/ui/runtime/page_routes.py tests/unit/test_build_app_page_context.py --fix
-.venv/bin/mypy src/dazzle/ui/runtime/page_routes.py
-git add src/dazzle/ui/runtime/page_routes.py tests/unit/test_build_app_page_context.py
+.venv/bin/ruff format src/dazzle/page/runtime/page_routes.py tests/unit/test_build_app_page_context.py
+.venv/bin/ruff check src/dazzle/page/runtime/page_routes.py tests/unit/test_build_app_page_context.py --fix
+.venv/bin/mypy src/dazzle/page/runtime/page_routes.py
+git add src/dazzle/page/runtime/page_routes.py tests/unit/test_build_app_page_context.py
 git commit -m "refactor(ui): extract build_app_page_context + _resolve_chrome_assets (#1392 item 2 P1)"
 ```
 
@@ -74,14 +74,14 @@ git commit -m "refactor(ui): extract build_app_page_context + _resolve_chrome_as
 
 ## Task 2 (P2): `# dazzle:returns` marker
 
-**Files:** Modify `src/dazzle/back/runtime/route_overrides.py`; Test `tests/unit/test_route_override_response_contract.py`.
+**Files:** Modify `src/dazzle/http/runtime/route_overrides.py`; Test `tests/unit/test_route_override_response_contract.py`.
 
 **Interfaces — Produces:** `RouteOverrideDescriptor.returns_kind: str | None`; `_VALID_RETURN_KINDS = frozenset({"page","fragment","partial","json"})`.
 
 - [ ] **Step 1: Write the failing test:**
 ```python
 from pathlib import Path
-from dazzle.back.runtime.route_overrides import discover_route_overrides
+from dazzle.http.runtime.route_overrides import discover_route_overrides
 
 def test_returns_kind_parsed(tmp_path):
     routes = tmp_path / "routes"; routes.mkdir()
@@ -112,7 +112,7 @@ def test_unknown_returns_kind_is_error(tmp_path):
 
 ## Task 3 (P3): `_wrap_with_response_contract` + advisory nudge
 
-**Files:** Modify `src/dazzle/back/runtime/route_overrides.py` (+ pass the nav `deps`/builder in at mount); Test extends `tests/unit/test_route_override_response_contract.py`.
+**Files:** Modify `src/dazzle/http/runtime/route_overrides.py` (+ pass the nav `deps`/builder in at mount); Test extends `tests/unit/test_route_override_response_contract.py`.
 
 **Interfaces — Consumes:** `returns_kind` (P2), `build_app_page_context` (P1). **Produces:** `_wrap_with_response_contract(handler, *, returns_kind, path, page_ctx_builder)`.
 

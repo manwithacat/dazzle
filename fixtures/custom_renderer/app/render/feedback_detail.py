@@ -30,8 +30,8 @@ import html as _html
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from dazzle.back.runtime.services import RuntimeServices
     from dazzle.core.ir.protocols import SurfaceLike
+    from dazzle.http.runtime.services import RuntimeServices
 
 # Sentiment → (label, accent colour) for the bespoke banner this viewer
 # adds above the standard field layout. A real per-entity viewer would
@@ -89,7 +89,7 @@ class FeedbackDetailRenderer:
         if detail is None:
             generic_body = '<p class="dz-empty">No detail context available.</p>'  # defensive
         else:
-            from dazzle.ui.runtime import render_detail_view
+            from dazzle.page.runtime import render_detail_view
 
             generic_body = render_detail_view(detail)
 

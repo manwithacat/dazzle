@@ -2116,7 +2116,7 @@ Expected: all pass.
 ruff check src/ tests/ --fix
 ruff format src/ tests/
 mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'
-mypy src/dazzle_back/ --ignore-missing-imports
+mypy src/dazzle_http/ --ignore-missing-imports
 ```
 Expected: all pass, no errors.
 

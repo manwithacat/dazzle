@@ -1,6 +1,6 @@
 """Phase 3: the CSRF disposition policy is auditable in the compliance report."""
 
-from dazzle.back.runtime.csrf import CSRFConfig, render_csrf_policy
+from dazzle.http.runtime.csrf import CSRFConfig, render_csrf_policy
 
 
 class TestRenderCsrfPolicy:

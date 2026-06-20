@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.rate_limit import (
+from dazzle.http.runtime.rate_limit import (
     RateLimitConfig,
     _apply_env_limit_overrides,
     _normalize_rate_string,

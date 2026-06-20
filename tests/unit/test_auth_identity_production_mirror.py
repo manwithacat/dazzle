@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dazzle.back.runtime.auth_identity_mirror import mirror_auth_user_to_domain
 from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.http.runtime.auth_identity_mirror import mirror_auth_user_to_domain
 
 
 def _user(dsl: str):

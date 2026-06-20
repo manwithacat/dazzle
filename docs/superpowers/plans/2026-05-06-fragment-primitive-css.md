@@ -24,7 +24,7 @@
 
 | File | Change | Responsibility |
 |---|---|---|
-| `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css` | Create | All CSS rules for Fragment renderer output |
+| `src/dazzle_page/runtime/static/css/components/fragment-primitives.css` | Create | All CSS rules for Fragment renderer output |
 | `scripts/build_dist.py` | Modify | Register `fragment-primitives.css` in the bundle order |
 | `tests/unit/test_fragment_primitive_css.py` | Create | Asserts each Fragment-emitted class has a CSS rule somewhere in the bundled stylesheet |
 | `CHANGELOG.md` | Modify | Remove the "Known limitation" warning, add an "Added" entry |
@@ -58,7 +58,7 @@ Test-first — write the test that asserts each Fragment-emitted class has a mat
 
 Every CSS class the Fragment renderer emits MUST have a matching rule
 in the bundled stylesheet. New primitive styling lives in
-`src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`.
+`src/dazzle_page/runtime/static/css/components/fragment-primitives.css`.
 
 This is a presence test, not a styling-correctness test. Visual
 correctness is verified manually in a browser; this test catches the
@@ -72,7 +72,7 @@ import pytest
 
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_CSS_DIR = _REPO_ROOT / "src" / "dazzle_ui" / "runtime" / "static" / "css"
+_CSS_DIR = _REPO_ROOT / "src" / "dazzle_page" / "runtime" / "static" / "css"
 
 
 # Classes the Fragment renderer emits for surfaces simple_task.task_list
@@ -150,19 +150,19 @@ This commits a failing test deliberately — Tasks 2-4 add the CSS to make it pa
 Add CSS rules for every class the test in Task 1 requires. Use design tokens (`var(--colour-*)`, `var(--space-*)`, `var(--radius-*)`) consistently.
 
 **Files:**
-- Create: `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css`
+- Create: `src/dazzle_page/runtime/static/css/components/fragment-primitives.css`
 
 - [ ] **Step 1: Read existing tokens to use the right names**
 
 ```bash
-grep -E "^\s*--colour-|--space-|--radius-|--text-" src/dazzle_ui/runtime/static/css/tokens.css | head -30
+grep -E "^\s*--colour-|--space-|--radius-|--text-" src/dazzle_page/runtime/static/css/tokens.css | head -30
 ```
 
 Identify the canonical token names (e.g. `--colour-surface`, `--colour-text`, `--space-md`, `--radius-md`). Use the ones that the Jinja-path components already use — see `regions.css`, `table.css`, `detail.css` for examples.
 
 - [ ] **Step 2: Write the CSS file**
 
-Create `src/dazzle_ui/runtime/static/css/components/fragment-primitives.css` with this content:
+Create `src/dazzle_page/runtime/static/css/components/fragment-primitives.css` with this content:
 
 ```css
 /*
@@ -333,7 +333,7 @@ Expected: PASS for every parametrised case. If any case still fails, the corresp
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/dazzle_ui/runtime/static/css/components/fragment-primitives.css
+git add src/dazzle_page/runtime/static/css/components/fragment-primitives.css
 git commit -m "feat(ui): CSS for Fragment renderer primitives (Surface, Heading, Region, Text, Table)"
 ```
 
@@ -368,10 +368,10 @@ In `scripts/build_dist.py`, find the components block. Add this entry — keep t
 python scripts/build_dist.py 2>&1 | tail -10
 ```
 
-Expected: success message. The dist files (`src/dazzle_ui/runtime/static/dist/dazzle.min.css`) are regenerated. Confirm via grep:
+Expected: success message. The dist files (`src/dazzle_page/runtime/static/dist/dazzle.min.css`) are regenerated. Confirm via grep:
 
 ```bash
-grep -c "dz-surface__header\|dz-heading--level-1\|dz-region--kind-list" src/dazzle_ui/runtime/static/dist/dazzle.min.css
+grep -c "dz-surface__header\|dz-heading--level-1\|dz-region--kind-list" src/dazzle_page/runtime/static/dist/dazzle.min.css
 ```
 
 Expected: `>= 3` (at least one match per class).
@@ -379,7 +379,7 @@ Expected: `>= 3` (at least one match per class).
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/build_dist.py src/dazzle_ui/runtime/static/dist/
+git add scripts/build_dist.py src/dazzle_page/runtime/static/dist/
 git commit -m "chore(build): register fragment-primitives.css + rebuild dist bundle"
 ```
 

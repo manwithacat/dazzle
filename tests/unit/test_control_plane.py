@@ -69,10 +69,10 @@ class TestControlPlaneIntegration:
 
         from fastapi.testclient import TestClient
 
-        from dazzle.back.runtime.app_factory import create_app
+        from dazzle.http.runtime.app_factory import create_app
 
         with (
-            patch("dazzle.back.runtime.pg_backend.PostgresBackend"),
+            patch("dazzle.http.runtime.pg_backend.PostgresBackend"),
         ):
             app = create_app(
                 appspec,
@@ -160,10 +160,10 @@ class TestDevModeDisabled:
 
         from fastapi.testclient import TestClient
 
-        from dazzle.back.runtime.app_factory import create_app
+        from dazzle.http.runtime.app_factory import create_app
 
         with (
-            patch("dazzle.back.runtime.pg_backend.PostgresBackend"),
+            patch("dazzle.http.runtime.pg_backend.PostgresBackend"),
         ):
             app = create_app(
                 appspec,

@@ -15,8 +15,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.auth.connection_admin_routes import create_connection_admin_routes
-from dazzle.back.runtime.auth.connections import ConnectionRecord
+from dazzle.http.runtime.auth.connection_admin_routes import create_connection_admin_routes
+from dazzle.http.runtime.auth.connections import ConnectionRecord
 
 
 @pytest.fixture(autouse=True)
@@ -249,7 +249,7 @@ def test_add_domain_forbidden_for_non_admin() -> None:
 
 
 def test_verify_domain_success(monkeypatch) -> None:
-    from dazzle.back.runtime.auth import domain_verification
+    from dazzle.http.runtime.auth import domain_verification
 
     store = _Store(connections=[_conn(domains=["acme.test"])])
 
@@ -382,7 +382,7 @@ def test_create_saml_explicit_fields() -> None:
 
 
 def test_create_saml_metadata_url_fetched(monkeypatch) -> None:
-    from dazzle.back.runtime.auth import connection_admin_routes as car
+    from dazzle.http.runtime.auth import connection_admin_routes as car
 
     monkeypatch.setattr(
         car,
@@ -404,8 +404,8 @@ def test_create_saml_metadata_url_fetched(monkeypatch) -> None:
 
 
 def test_create_saml_metadata_error_is_400(monkeypatch) -> None:
-    from dazzle.back.runtime.auth import connection_admin_routes as car
-    from dazzle.back.runtime.auth.connection_create_form import CreateFormError
+    from dazzle.http.runtime.auth import connection_admin_routes as car
+    from dazzle.http.runtime.auth.connection_create_form import CreateFormError
 
     def _boom(url):
         raise CreateFormError("IdP metadata import failed (private_ip): blocked")
@@ -479,7 +479,7 @@ def test_create_saml_works_without_at_rest_key(monkeypatch) -> None:
 
 
 def test_create_path_is_csrf_protected() -> None:
-    from dazzle.back.runtime.csrf import CSRFConfig
+    from dazzle.http.runtime.csrf import CSRFConfig
 
     assert "/auth/connections/create" in CSRFConfig().protected_paths
 
@@ -488,7 +488,7 @@ def test_create_path_is_csrf_protected() -> None:
 
 
 def _client_with_policy(store, *, manage_connections, manage_members=("admin",)) -> TestClient:
-    from dazzle.back.runtime.auth.admin_policy import AdminPolicy
+    from dazzle.http.runtime.auth.admin_policy import AdminPolicy
 
     app = FastAPI()
     app.include_router(create_connection_admin_routes())

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.back.runtime.pg_backend import PgConnectionWrapper
+from dazzle.http.runtime.pg_backend import PgConnectionWrapper
 
 pytestmark = pytest.mark.postgres
 
@@ -86,7 +86,7 @@ class TestOutboxPlaceholder:
 
     def test_outbox_create_uses_placeholder(self) -> None:
         """OutboxRepository.create() uses db.placeholder for INSERT."""
-        from dazzle.back.channels.outbox import (
+        from dazzle.http.channels.outbox import (
             OutboxRepository,
             create_outbox_message,
         )
@@ -119,7 +119,7 @@ class TestOutboxPlaceholder:
 
     def test_outbox_get_uses_placeholder(self) -> None:
         """OutboxRepository.get() uses db.placeholder."""
-        from dazzle.back.channels.outbox import OutboxRepository
+        from dazzle.http.channels.outbox import OutboxRepository
 
         mock_db = MagicMock()
         mock_db.placeholder = "%s"
@@ -151,14 +151,14 @@ class TestRelationLoaderPlaceholder:
 
     def test_default_placeholder_is_percent_s(self) -> None:
         """Default placeholder is %s for PostgreSQL."""
-        from dazzle.back.runtime.relation_loader import RelationLoader, RelationRegistry
+        from dazzle.http.runtime.relation_loader import RelationLoader, RelationRegistry
 
         loader = RelationLoader(RelationRegistry(), [])
         assert loader._placeholder == "%s"
 
     def test_custom_placeholder(self) -> None:
         """Placeholder can be overridden."""
-        from dazzle.back.runtime.relation_loader import RelationLoader, RelationRegistry
+        from dazzle.http.runtime.relation_loader import RelationLoader, RelationRegistry
 
         loader = RelationLoader(RelationRegistry(), [], placeholder="$1")
         assert loader._placeholder == "$1"
@@ -174,7 +174,7 @@ class TestEventInboxPlaceholder:
 
     def test_inbox_sql_uses_percent_s(self) -> None:
         """EventInbox SQL statements use %s (PostgreSQL placeholder)."""
-        from dazzle.back.events.inbox import EventInbox
+        from dazzle.http.events.inbox import EventInbox
 
         inbox = EventInbox()
         assert "%s" in inbox._sql_mark_processed

@@ -380,7 +380,7 @@ def determine_scope(path: Path) -> str:
 
     if parts[0] == "src":
         if len(parts) > 1:
-            return parts[1]  # e.g., "dazzle", "dazzle_back"
+            return parts[1]  # e.g., "dazzle", "dazzle_http"
     return "unknown"
 
 
@@ -599,8 +599,8 @@ Auto-generated reference documentation for the Dazzle codebase.
 - **IR Types**: [dazzle/core/ir/](modules/dazzle.md#coreir)
 - **Validator**: [dazzle/core/validator.py](files/src/dazzle/core/validator.py.md)
 - **CLI**: [dazzle/cli/](modules/dazzle.md#cli)
-- **Backend Runtime**: [dazzle/back/runtime/](modules/dazzle.md#backruntime)
-- **UI Components**: [dazzle/ui/runtime/](modules/dazzle.md#uiruntime)
+- **Backend Runtime**: [dazzle/http/runtime/](modules/dazzle.md#backruntime)
+- **UI Components**: [dazzle/page/runtime/](modules/dazzle.md#uiruntime)
 """
 
     return content, module_pages

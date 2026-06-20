@@ -319,10 +319,10 @@ def test_renderer_escapes_drill_urls_and_region_name() -> None:
 def _regions_css() -> str:
     from pathlib import Path
 
-    import dazzle.ui as dazzle_ui
+    import dazzle.page as dazzle_page
 
     css_path = (
-        Path(dazzle_ui.__file__).parent
+        Path(dazzle_page.__file__).parent
         / "runtime"
         / "static"
         / "css"

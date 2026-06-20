@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.auth.magic_link_routes import (
+from dazzle.http.runtime.auth.magic_link_routes import (
     _is_safe_redirect_path,
     create_magic_link_routes,
 )
@@ -48,7 +48,7 @@ class TestMagicLinkConsumer:
         """Valid token → 303 redirect with session cookie set."""
         _setup_valid_flow(mock_auth_store)
         with patch(
-            "dazzle.back.runtime.auth.magic_link_routes.validate_magic_link",
+            "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value="user-123",
         ):
             resp = client.get("/auth/magic/valid_token", follow_redirects=False)
@@ -61,7 +61,7 @@ class TestMagicLinkConsumer:
     def test_invalid_token_redirects_to_login_with_error(self, client, mock_auth_store):
         """Invalid/expired/used token → redirect to login with error query param."""
         with patch(
-            "dazzle.back.runtime.auth.magic_link_routes.validate_magic_link",
+            "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value=None,
         ):
             resp = client.get("/auth/magic/bad_token", follow_redirects=False)
@@ -74,7 +74,7 @@ class TestMagicLinkConsumer:
         """Valid token but user no longer exists → redirect to login with error."""
         mock_auth_store.get_user_by_id = MagicMock(return_value=None)
         with patch(
-            "dazzle.back.runtime.auth.magic_link_routes.validate_magic_link",
+            "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value="ghost-user",
         ):
             resp = client.get("/auth/magic/valid_token", follow_redirects=False)
@@ -86,7 +86,7 @@ class TestMagicLinkConsumer:
         """?next=/foo redirects to /foo after session creation."""
         _setup_valid_flow(mock_auth_store)
         with patch(
-            "dazzle.back.runtime.auth.magic_link_routes.validate_magic_link",
+            "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value="user-123",
         ):
             resp = client.get(
@@ -101,7 +101,7 @@ class TestMagicLinkConsumer:
         """?next=https://evil.com should be rejected and redirect to /."""
         _setup_valid_flow(mock_auth_store)
         with patch(
-            "dazzle.back.runtime.auth.magic_link_routes.validate_magic_link",
+            "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value="user-123",
         ):
             resp = client.get(
@@ -116,7 +116,7 @@ class TestMagicLinkConsumer:
         """?next=//evil.com (protocol-relative) should also be rejected."""
         _setup_valid_flow(mock_auth_store)
         with patch(
-            "dazzle.back.runtime.auth.magic_link_routes.validate_magic_link",
+            "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value="user-123",
         ):
             resp = client.get(
@@ -236,7 +236,7 @@ class TestMagicLinkBackslashBypass:
         """Any of the known URL-redirect bypass attacks must fall back to /."""
         _setup_valid_flow(mock_auth_store)
         with patch(
-            "dazzle.back.runtime.auth.magic_link_routes.validate_magic_link",
+            "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value="user-123",
         ):
             resp = client.get(
@@ -297,7 +297,7 @@ class TestNextParamQueryInjection132:
         assert "&inject=" not in location, f"Query injection via &: location={location!r} (#132)"
 
 
-_MAGIC_LOGGER = "dazzle.back.runtime.auth.magic_link_routes"
+_MAGIC_LOGGER = "dazzle.http.runtime.auth.magic_link_routes"
 
 
 class TestMisencodedBodyWarning:

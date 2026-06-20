@@ -16,7 +16,7 @@ class TestDarkModeCSSClasses:
         """Test that toggle button CSS classes are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle/ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         # Check toggle button styles exist
@@ -32,7 +32,7 @@ class TestDarkModeCSSClasses:
 
         # Header/logo/nav dark mode is now handled by token overrides
         # in design-system.css rather than explicit selectors in site-sections.css
-        ds_path = Path("src/dazzle/ui/runtime/static/css/design-system.css")
+        ds_path = Path("src/dazzle/page/runtime/static/css/design-system.css")
         ds_content = ds_path.read_text()
 
         assert "--dz-header-bg:" in ds_content
@@ -40,7 +40,7 @@ class TestDarkModeCSSClasses:
         assert "--dz-text-body:" in ds_content
 
         # Base rules in site-sections.css consume these tokens
-        css_path = Path("src/dazzle/ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         assert "var(--dz-header-bg)" in css_content
@@ -51,7 +51,7 @@ class TestDarkModeCSSClasses:
         """Test that dark mode section styles are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle/ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         # Check dark mode section styles
@@ -64,7 +64,7 @@ class TestDarkModeCSSClasses:
         """Test that dark mode card styles are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle/ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         # Check dark mode card styles (flat classes, not BEM)
@@ -75,7 +75,7 @@ class TestDarkModeCSSClasses:
         """Test that dark mode auth page styles are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle/ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         # Check dark mode auth styles
@@ -90,19 +90,19 @@ class TestSitePageToggleButton:
         "path,tokens",
         [
             (
-                "src/dazzle/back/runtime/site_routes.py",
+                "src/dazzle/http/runtime/site_routes.py",
                 ["dz-theme-toggle", "Toggle dark mode"],
             ),
             (
-                "src/dazzle/back/runtime/site_routes.py",
+                "src/dazzle/http/runtime/site_routes.py",
                 ["dz-theme-toggle__sun", "dz-theme-toggle__moon"],
             ),
             (
-                "src/dazzle/ui/static/js/site.js",
+                "src/dazzle/page/static/js/site.js",
                 ["initTheme()", "toggleTheme()"],
             ),
             (
-                "src/dazzle/ui/static/js/site.js",
+                "src/dazzle/page/static/js/site.js",
                 ["prefers-color-scheme", "addEventListener"],
             ),
         ],
@@ -122,7 +122,7 @@ class TestSitePageToggleButton:
 
     def test_site_js_uses_storage_key(self):
         """Test that site.js uses the same storage key."""
-        js_path = Path("src/dazzle/ui/static/js/site.js")
+        js_path = Path("src/dazzle/page/static/js/site.js")
         js_content = js_path.read_text()
 
         # Check for storage key in site.js

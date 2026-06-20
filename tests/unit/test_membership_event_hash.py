@@ -1,6 +1,6 @@
 """Pure-Python hash-chain helpers for membership_events (auth Plan 2a)."""
 
-from dazzle.back.runtime.auth.membership_events import (
+from dazzle.http.runtime.auth.membership_events import (
     MembershipEventType,
     _canonical_event_payload,
     compute_event_hash,

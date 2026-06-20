@@ -1,8 +1,8 @@
 {
   "_schema": {
-    "description": "SHA-256 of every file in src/dazzle/ui/runtime/static/vendor/. CI gate test_vendor_hashes.py recomputes these and fails on drift; scripts/update_vendors.py regenerates entries it touches (htmx core + 4 extensions, idiomorph, lucide) as part of its auto-update PR. Other entries (alpine, flatpickr, tom-select, etc.) are vendored manually \u2014 to update one of those, run scripts/update_vendor_hashes.py after replacing the file.",
+    "description": "SHA-256 of every file in src/dazzle/page/runtime/static/vendor/. CI gate test_vendor_hashes.py recomputes these and fails on drift; scripts/update_vendors.py regenerates entries it touches (htmx core + 4 extensions, idiomorph, lucide) as part of its auto-update PR. Other entries (alpine, flatpickr, tom-select, etc.) are vendored manually \u2014 to update one of those, run scripts/update_vendor_hashes.py after replacing the file.",
     "algorithm": "sha256",
-    "covers": "every .js and .css file under src/dazzle/ui/runtime/static/vendor/"
+    "covers": "every .js and .css file under src/dazzle/page/runtime/static/vendor/"
   },
   "files": {
     "alpine-anchor.min.js": "sha256:0a6f42b49db459a8fe4aee31bf7a4c907d664ccb735d500f63c81eb60e010030",

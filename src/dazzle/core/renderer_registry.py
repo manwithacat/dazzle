@@ -4,7 +4,7 @@ The set of default renderer names lives in `core` because link-time
 validation (`build_appspec(..., known_renderers=...)`) happens during DSL
 parsing, before any `RuntimeServices` container is constructed. The
 runtime registration helper (`register_default_renderers` in
-`dazzle.back.runtime.renderers.init`) imports `_DEFAULT_RENDERERS` from
+`dazzle.http.runtime.renderers.init`) imports `_DEFAULT_RENDERERS` from
 here so the link-time validator and runtime registry stay in sync.
 
 Projects extend the validator's known set via `[renderers] extra=[…]`

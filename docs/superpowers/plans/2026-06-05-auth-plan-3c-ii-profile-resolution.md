@@ -18,10 +18,10 @@
 
 | File | Responsibility |
 |------|----------------|
-| `src/dazzle/back/runtime/subsystems/auth.py` (**modify**) | Expose `ctx.app.state.repositories = ctx.repositories`; mount the profile route. |
-| `src/dazzle/back/runtime/auth/profile_routes.py` (**create**) | `create_profile_routes()`: `GET /me/profile` + `POST /me/profile`. Finds the profile entity + repo, binds RLS, get-or-creates the current member's profile over scalar fields. |
-| `src/dazzle/back/runtime/auth/profile_views.py` (**create**) | `build_my_profile_view(...)` — a form of the editable scalar fields, prefilled with the current profile. |
-| `src/dazzle/back/runtime/csrf.py` (**modify**) | `protected_paths += /me/profile`. |
+| `src/dazzle/http/runtime/subsystems/auth.py` (**modify**) | Expose `ctx.app.state.repositories = ctx.repositories`; mount the profile route. |
+| `src/dazzle/http/runtime/auth/profile_routes.py` (**create**) | `create_profile_routes()`: `GET /me/profile` + `POST /me/profile`. Finds the profile entity + repo, binds RLS, get-or-creates the current member's profile over scalar fields. |
+| `src/dazzle/http/runtime/auth/profile_views.py` (**create**) | `build_my_profile_view(...)` — a form of the editable scalar fields, prefilled with the current profile. |
+| `src/dazzle/http/runtime/csrf.py` (**modify**) | `protected_paths += /me/profile`. |
 | `tests/integration/test_profile_resolution_pg.py` (**create**) | Real-PG: GET empty → form; POST creates (tenant_id auto-injected, identity_id = caller); POST again updates (no duplicate); a second member in the same org gets their own profile (identity-scoped); cross-tenant isolation (RLS). |
 
 ---
@@ -29,8 +29,8 @@
 ## Task 1: Expose repositories + a profile-entity finder
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py`
-- Create: `src/dazzle/back/runtime/auth/profile_routes.py` (the finder helper first)
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py`
+- Create: `src/dazzle/http/runtime/auth/profile_routes.py` (the finder helper first)
 - Test: `tests/integration/test_profile_resolution_pg.py`
 
 - [ ] **Step 1: Expose repositories on app.state** — in `subsystems/auth.py`, near `ctx.app.state.appspec = ctx.appspec`:
@@ -120,7 +120,7 @@ def test_get_my_profile_empty_renders_form(scratch_url: str) -> None:
 - [ ] **Step 3: Add the profile-entity finder** to `profile_routes.py`:
 
 ```python
-# src/dazzle/back/runtime/auth/profile_routes.py
+# src/dazzle/http/runtime/auth/profile_routes.py
 """Member profile-resolution route (auth Plan 3c.ii).
 
 `GET /me/profile`  — the current member's profile (a form, prefilled).
@@ -165,7 +165,7 @@ def _editable_scalar_fields(entity: Any) -> list[Any]:
 - [ ] **Commit** (after Tasks 1–3 land together, since the test needs the routes):
 
 ```bash
-git add src/dazzle/back/runtime/subsystems/auth.py src/dazzle/back/runtime/auth/profile_routes.py ...
+git add src/dazzle/http/runtime/subsystems/auth.py src/dazzle/http/runtime/auth/profile_routes.py ...
 git commit -m "feat(auth): expose repositories + profile-entity finder (Plan 3c.ii)"
 ```
 
@@ -174,10 +174,10 @@ git commit -m "feat(auth): expose repositories + profile-entity finder (Plan 3c.
 ## Task 2: The routes (GET view + POST upsert) + RLS binding
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/profile_routes.py`
-- Create: `src/dazzle/back/runtime/auth/profile_views.py`
-- Modify: `src/dazzle/back/runtime/csrf.py` (`protected_paths += "/me/profile"`)
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py` (mount)
+- Modify: `src/dazzle/http/runtime/auth/profile_routes.py`
+- Create: `src/dazzle/http/runtime/auth/profile_views.py`
+- Modify: `src/dazzle/http/runtime/csrf.py` (`protected_paths += "/me/profile"`)
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py` (mount)
 
 - [ ] **Step 1: Add `/me/profile` to CSRF `protected_paths`** (after the 3b member paths):
 
@@ -188,7 +188,7 @@ git commit -m "feat(auth): expose repositories + profile-entity finder (Plan 3c.
 - [ ] **Step 2: Views** — `profile_views.py` (reuse the 3a/3b Fragment primitives; render a Field per editable scalar, prefilled):
 
 ```python
-# src/dazzle/back/runtime/auth/profile_views.py
+# src/dazzle/http/runtime/auth/profile_views.py
 """Typed-Fragment view for the member's own profile (auth Plan 3c.ii)."""
 
 from __future__ import annotations
@@ -249,7 +249,7 @@ def create_profile_routes() -> "APIRouter":  # noqa: F821
     from fastapi import APIRouter, Request
     from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-    from dazzle.back.runtime.auth.cookie_name import read_session_id
+    from dazzle.http.runtime.auth.cookie_name import read_session_id
 
     router = APIRouter(tags=["auth"])
 
@@ -284,8 +284,8 @@ def create_profile_routes() -> "APIRouter":  # noqa: F821
 
     @router.get("/me/profile", response_class=HTMLResponse, include_in_schema=False)
     async def my_profile(request: Request) -> HTMLResponse:
-        from dazzle.back.runtime.auth.dependencies import _bind_rls_tenant_id
-        from dazzle.back.runtime.auth.profile_views import build_my_profile_view
+        from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
+        from dazzle.http.runtime.auth.profile_views import build_my_profile_view
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         gated = _ctx_and_repo(request)
@@ -309,7 +309,7 @@ def create_profile_routes() -> "APIRouter":  # noqa: F821
 
     @router.post("/me/profile", include_in_schema=False)
     async def upsert_my_profile(request: Request) -> Response:
-        from dazzle.back.runtime.auth.dependencies import _bind_rls_tenant_id
+        from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
 
         gated = _ctx_and_repo(request)
         if gated is None:
@@ -344,7 +344,7 @@ def _kind_of(field: Any) -> str:
 - [ ] **Step 4: Mount** — in `subsystems/auth.py`, after the 3b member-admin mount:
 
 ```python
-        from dazzle.back.runtime.auth.profile_routes import create_profile_routes
+        from dazzle.http.runtime.auth.profile_routes import create_profile_routes
 
         ctx.app.include_router(create_profile_routes())
 ```

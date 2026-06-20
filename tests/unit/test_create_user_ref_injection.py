@@ -18,7 +18,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from dazzle.back.runtime.route_generator import inject_current_user_refs
+from dazzle.http.runtime.route_generator import inject_current_user_refs
 
 
 class _TicketCreate(BaseModel):

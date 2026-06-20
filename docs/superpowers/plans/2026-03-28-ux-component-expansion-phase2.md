@@ -16,14 +16,14 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `src/dazzle_ui/templates/fragments/toast.html` | Create | Auto-dismissing toast fragment |
-| `src/dazzle_ui/templates/fragments/alert_banner.html` | Create | Full-width alert/banner |
-| `src/dazzle_ui/templates/fragments/breadcrumbs.html` | Create | Breadcrumb trail |
-| `src/dazzle_ui/templates/fragments/steps_indicator.html` | Create | Visual stepper |
-| `src/dazzle_ui/templates/fragments/accordion.html` | Create | Collapsible sections with optional lazy-load |
-| `src/dazzle_ui/templates/fragments/skeleton_patterns.html` | Create | Skeleton presets (table row, card, detail) |
-| `src/dazzle_ui/templates/components/modal.html` | Create | General-purpose server-loaded modal |
-| `src/dazzle_back/runtime/breadcrumbs.py` | Create | Route-to-breadcrumb derivation |
+| `src/dazzle_page/templates/fragments/toast.html` | Create | Auto-dismissing toast fragment |
+| `src/dazzle_page/templates/fragments/alert_banner.html` | Create | Full-width alert/banner |
+| `src/dazzle_page/templates/fragments/breadcrumbs.html` | Create | Breadcrumb trail |
+| `src/dazzle_page/templates/fragments/steps_indicator.html` | Create | Visual stepper |
+| `src/dazzle_page/templates/fragments/accordion.html` | Create | Collapsible sections with optional lazy-load |
+| `src/dazzle_page/templates/fragments/skeleton_patterns.html` | Create | Skeleton presets (table row, card, detail) |
+| `src/dazzle_page/templates/components/modal.html` | Create | General-purpose server-loaded modal |
+| `src/dazzle_http/runtime/breadcrumbs.py` | Create | Route-to-breadcrumb derivation |
 | `tests/unit/test_breadcrumbs.py` | Create | Breadcrumb derivation tests |
 | `tests/unit/test_phase2_fragments.py` | Create | Template rendering tests for all new fragments |
 
@@ -32,7 +32,7 @@
 ### Task 1: Toast Fragment
 
 **Files:**
-- Create: `src/dazzle_ui/templates/fragments/toast.html`
+- Create: `src/dazzle_page/templates/fragments/toast.html`
 
 - [ ] **Step 1: Create the toast fragment**
 
@@ -50,7 +50,7 @@ This fragment is rendered server-side by `with_toast()` from `response_helpers.p
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/fragments/toast.html
+git add src/dazzle_page/templates/fragments/toast.html
 git commit -m "feat(ui): add toast fragment with remove-me auto-dismiss"
 ```
 
@@ -59,7 +59,7 @@ git commit -m "feat(ui): add toast fragment with remove-me auto-dismiss"
 ### Task 2: Alert Banner Fragment
 
 **Files:**
-- Create: `src/dazzle_ui/templates/fragments/alert_banner.html`
+- Create: `src/dazzle_page/templates/fragments/alert_banner.html`
 
 - [ ] **Step 1: Create the alert banner fragment**
 
@@ -83,7 +83,7 @@ git commit -m "feat(ui): add toast fragment with remove-me auto-dismiss"
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/fragments/alert_banner.html
+git add src/dazzle_page/templates/fragments/alert_banner.html
 git commit -m "feat(ui): add alert banner fragment with dismissible support"
 ```
 
@@ -92,8 +92,8 @@ git commit -m "feat(ui): add alert banner fragment with dismissible support"
 ### Task 3: Breadcrumbs Fragment + Server Module
 
 **Files:**
-- Create: `src/dazzle_ui/templates/fragments/breadcrumbs.html`
-- Create: `src/dazzle_back/runtime/breadcrumbs.py`
+- Create: `src/dazzle_page/templates/fragments/breadcrumbs.html`
+- Create: `src/dazzle_http/runtime/breadcrumbs.py`
 - Create: `tests/unit/test_breadcrumbs.py`
 
 - [ ] **Step 1: Write breadcrumb tests**
@@ -102,7 +102,7 @@ git commit -m "feat(ui): add alert banner fragment with dismissible support"
 # tests/unit/test_breadcrumbs.py
 """Tests for breadcrumb trail derivation."""
 
-from dazzle_back.runtime.breadcrumbs import Crumb, build_breadcrumb_trail
+from dazzle_http.runtime.breadcrumbs import Crumb, build_breadcrumb_trail
 
 
 class TestBuildBreadcrumbTrail:
@@ -156,7 +156,7 @@ pytest tests/unit/test_breadcrumbs.py -v
 - [ ] **Step 3: Implement breadcrumbs module**
 
 ```python
-# src/dazzle_back/runtime/breadcrumbs.py
+# src/dazzle_http/runtime/breadcrumbs.py
 """
 Breadcrumb trail derivation from URL paths.
 
@@ -240,10 +240,10 @@ pytest tests/unit/test_breadcrumbs.py -v
 - [ ] **Step 6: Lint and commit**
 
 ```bash
-ruff check src/dazzle_back/runtime/breadcrumbs.py tests/unit/test_breadcrumbs.py --fix
-ruff format src/dazzle_back/runtime/breadcrumbs.py tests/unit/test_breadcrumbs.py
-git add src/dazzle_ui/templates/fragments/breadcrumbs.html \
-        src/dazzle_back/runtime/breadcrumbs.py \
+ruff check src/dazzle_http/runtime/breadcrumbs.py tests/unit/test_breadcrumbs.py --fix
+ruff format src/dazzle_http/runtime/breadcrumbs.py tests/unit/test_breadcrumbs.py
+git add src/dazzle_page/templates/fragments/breadcrumbs.html \
+        src/dazzle_http/runtime/breadcrumbs.py \
         tests/unit/test_breadcrumbs.py
 git commit -m "feat(ui): add breadcrumb fragment and server-side trail builder"
 ```
@@ -253,7 +253,7 @@ git commit -m "feat(ui): add breadcrumb fragment and server-side trail builder"
 ### Task 4: Steps Indicator Fragment
 
 **Files:**
-- Create: `src/dazzle_ui/templates/fragments/steps_indicator.html`
+- Create: `src/dazzle_page/templates/fragments/steps_indicator.html`
 
 - [ ] **Step 1: Create the steps indicator fragment**
 
@@ -274,7 +274,7 @@ git commit -m "feat(ui): add breadcrumb fragment and server-side trail builder"
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/fragments/steps_indicator.html
+git add src/dazzle_page/templates/fragments/steps_indicator.html
 git commit -m "feat(ui): add steps indicator fragment for wizard flows"
 ```
 
@@ -283,7 +283,7 @@ git commit -m "feat(ui): add steps indicator fragment for wizard flows"
 ### Task 5: Accordion Fragment
 
 **Files:**
-- Create: `src/dazzle_ui/templates/fragments/accordion.html`
+- Create: `src/dazzle_page/templates/fragments/accordion.html`
 
 - [ ] **Step 1: Create the accordion fragment**
 
@@ -321,7 +321,7 @@ git commit -m "feat(ui): add steps indicator fragment for wizard flows"
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/fragments/accordion.html
+git add src/dazzle_page/templates/fragments/accordion.html
 git commit -m "feat(ui): add accordion fragment with lazy-load support"
 ```
 
@@ -330,7 +330,7 @@ git commit -m "feat(ui): add accordion fragment with lazy-load support"
 ### Task 6: Skeleton Patterns Fragment
 
 **Files:**
-- Create: `src/dazzle_ui/templates/fragments/skeleton_patterns.html`
+- Create: `src/dazzle_page/templates/fragments/skeleton_patterns.html`
 
 - [ ] **Step 1: Create skeleton patterns as Jinja2 macros**
 
@@ -387,7 +387,7 @@ git commit -m "feat(ui): add accordion fragment with lazy-load support"
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/fragments/skeleton_patterns.html
+git add src/dazzle_page/templates/fragments/skeleton_patterns.html
 git commit -m "feat(ui): add skeleton pattern macros (table, card, detail)"
 ```
 
@@ -396,7 +396,7 @@ git commit -m "feat(ui): add skeleton pattern macros (table, card, detail)"
 ### Task 7: General-Purpose Modal Component
 
 **Files:**
-- Create: `src/dazzle_ui/templates/components/modal.html`
+- Create: `src/dazzle_page/templates/components/modal.html`
 
 - [ ] **Step 1: Create the modal component**
 
@@ -448,7 +448,7 @@ git commit -m "feat(ui): add skeleton pattern macros (table, card, detail)"
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/dazzle_ui/templates/components/modal.html
+git add src/dazzle_page/templates/components/modal.html
 git commit -m "feat(ui): add general-purpose server-loaded modal component"
 ```
 
@@ -469,14 +469,14 @@ import pathlib
 
 import pytest
 
-pytest.importorskip("dazzle_ui.runtime.template_renderer")
+pytest.importorskip("dazzle_page.runtime.template_renderer")
 
-from dazzle_ui.runtime.template_renderer import create_jinja_env  # noqa: E402
+from dazzle_page.runtime.template_renderer import create_jinja_env  # noqa: E402
 
 TEMPLATE_DIR = (
     pathlib.Path(__file__).resolve().parents[2]
     / "src"
-    / "dazzle_ui"
+    / "dazzle_page"
     / "templates"
 )
 
@@ -526,7 +526,7 @@ class TestAlertBanner:
 
 class TestBreadcrumbs:
     def test_renders_breadcrumb_trail(self, jinja_env):
-        from dazzle_back.runtime.breadcrumbs import Crumb
+        from dazzle_http.runtime.breadcrumbs import Crumb
 
         crumbs = [
             Crumb(label="Home", url="/"),
@@ -543,7 +543,7 @@ class TestBreadcrumbs:
         assert 'aria-current="page"' in html
 
     def test_single_crumb_hidden(self, jinja_env):
-        from dazzle_back.runtime.breadcrumbs import Crumb
+        from dazzle_http.runtime.breadcrumbs import Crumb
 
         crumbs = [Crumb(label="Home", url="/")]
         tmpl = jinja_env.from_string(
@@ -668,14 +668,14 @@ pytest tests/ -m "not e2e" -x -q
 - [ ] **Step 3: Run linting on all new files**
 
 ```bash
-ruff check src/dazzle_back/runtime/breadcrumbs.py tests/unit/test_breadcrumbs.py tests/unit/test_phase2_fragments.py --fix
-ruff format src/dazzle_back/runtime/breadcrumbs.py tests/unit/test_breadcrumbs.py tests/unit/test_phase2_fragments.py
+ruff check src/dazzle_http/runtime/breadcrumbs.py tests/unit/test_breadcrumbs.py tests/unit/test_phase2_fragments.py --fix
+ruff format src/dazzle_http/runtime/breadcrumbs.py tests/unit/test_breadcrumbs.py tests/unit/test_phase2_fragments.py
 ```
 
 - [ ] **Step 4: Run mypy on breadcrumbs module**
 
 ```bash
-mypy src/dazzle_back/runtime/breadcrumbs.py
+mypy src/dazzle_http/runtime/breadcrumbs.py
 ```
 
 - [ ] **Step 5: Bump version and ship**

@@ -10,8 +10,8 @@ recursive-include src/dazzle py.typed *.pyi
 recursive-include src/dazzle/templates *.dsl *.toml *.md .gitignore
 
 # Include UI runtime static files (JS, CSS). Path updated by #1055
-# (v0.67.98) — dazzle_ui nested under dazzle.ui.
-recursive-include src/dazzle/ui/runtime/static *.js *.css
+# (v0.67.98) — dazzle_page nested under dazzle.page.
+recursive-include src/dazzle/page/runtime/static *.js *.css
 
 # Include LSP grammar files
 recursive-include src/dazzle/lsp/grammars *.json
@@ -20,7 +20,7 @@ recursive-include src/dazzle/lsp/grammars *.json
 # file path (script.py.mako template, alembic.ini, and the framework baseline
 # migrations under versions/, which is not a Python package). Needed in the
 # sdist; the wheel inclusion is handled by [tool.setuptools.package-data].
-recursive-include src/dazzle/back/alembic *.mako *.ini *.py
+recursive-include src/dazzle/http/alembic *.mako *.ini *.py
 
 # Include test data but not test code
 recursive-include tests/fixtures *.dsl *.toml

@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dazzle.back.runtime.rate_limit import (
+from dazzle.http.runtime.rate_limit import (
     _is_loopback,
     _resolve_trusted_proxies,
     make_rate_limit_key,

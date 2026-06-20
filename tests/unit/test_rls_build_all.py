@@ -25,11 +25,11 @@ from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
 
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.rls_schema import build_all_rls_ddl
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 from dazzle.core.access import AccessOperationKind, EntityAccessSpec, ScopeRuleSpec
 from dazzle.core.ir.fk_graph import FKGraph
 from dazzle.core.ir.governance import TenancyMode
+from dazzle.http.runtime.rls_schema import build_all_rls_ddl
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 # ---------------------------------------------------------------------------
 # Synthetic appspec + back-spec entities (mirror test_rls_scope_policies.py)

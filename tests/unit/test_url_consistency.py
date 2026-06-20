@@ -26,9 +26,9 @@ from dazzle.core.ir import (
     WorkspaceSpec,
 )
 
-pytest.importorskip("dazzle.ui.converters.template_compiler")
+pytest.importorskip("dazzle.page.converters.template_compiler")
 
-from dazzle.ui.converters.template_compiler import (  # noqa: E402
+from dazzle.page.converters.template_compiler import (  # noqa: E402
     compile_appspec_to_templates,
     compile_surface_to_context,
 )
@@ -270,7 +270,7 @@ class TestServerPathsPassAppPrefix:
         import ast
         import inspect
 
-        from dazzle.back.runtime.app_factory import assemble_post_build_routes
+        from dazzle.http.runtime.app_factory import assemble_post_build_routes
 
         source = inspect.getsource(assemble_post_build_routes)
         tree = ast.parse(source)
@@ -297,7 +297,7 @@ class TestServerPathsPassAppPrefix:
         import ast
         import inspect
 
-        from dazzle.back.runtime import combined_server
+        from dazzle.http.runtime import combined_server
 
         source = inspect.getsource(combined_server)
         tree = ast.parse(source)
@@ -320,7 +320,7 @@ class TestServerPathsPassAppPrefix:
         import ast
         import inspect
 
-        from dazzle.back.runtime.app_factory import create_app_factory
+        from dazzle.http.runtime.app_factory import create_app_factory
 
         source = inspect.getsource(create_app_factory)
         tree = ast.parse(source)
@@ -382,8 +382,8 @@ class TestSurfaceContextPrefix:
 
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.htmx_render import _with_htmx_triggers  # noqa: E402
-from dazzle.back.runtime.route_generator import (  # noqa: E402
+from dazzle.http.runtime.htmx_render import _with_htmx_triggers  # noqa: E402
+from dazzle.http.runtime.route_generator import (  # noqa: E402
     HandlerConfig,
     RouteSpec,
     _extract_result_id,
@@ -576,7 +576,7 @@ class TestHtmxParentUrl:
 # 5. Internal fetch cookie forwarding & backend URL resolution
 # ===================================================================
 
-from dazzle.back.runtime.page_routes import (  # noqa: E402
+from dazzle.http.runtime.page_routes import (  # noqa: E402
     _resolve_backend_url,
     _sync_fetch,
 )
@@ -745,7 +745,7 @@ class TestSyncFetchCookies:
 # 6. Integration: _fetch_json across deployment topologies
 # ===================================================================
 
-from dazzle.back.runtime.page_routes import _fetch_json  # noqa: E402
+from dazzle.http.runtime.page_routes import _fetch_json  # noqa: E402
 
 
 class TestFetchJsonTopologies:

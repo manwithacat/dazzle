@@ -263,7 +263,7 @@ class TypeParserMixin:
         Bare ``slug`` only — per-field configuration sub-fields
         (``min_length:``, ``max_length:``, ``reserved_from:``) land in
         Phase 2. The generated Pydantic model carries the regex + length
-        validator (see ``dazzle.back.runtime.slug_validator``).
+        validator (see ``dazzle.http.runtime.slug_validator``).
         """
         self.advance()
         return ir.FieldType(kind=ir.FieldTypeKind.SLUG)

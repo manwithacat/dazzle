@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.back.demo_data.generator import DemoDataGenerator
-from dazzle.back.demo_data.loader import DemoDataLoader
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+from dazzle.http.demo_data.generator import DemoDataGenerator
+from dazzle.http.demo_data.loader import DemoDataLoader
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 
 class TestDemoDataGenerator:

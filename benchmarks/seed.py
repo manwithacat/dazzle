@@ -278,7 +278,7 @@ def ensure_schema(db_url: str) -> None:
     """
     import sqlalchemy
 
-    from dazzle.back.alembic.metadata_loader import load_target_metadata
+    from dazzle.http.alembic.metadata_loader import load_target_metadata
 
     original_cwd = os.getcwd()
     try:

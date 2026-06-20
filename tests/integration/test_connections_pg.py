@@ -44,7 +44,7 @@ def store_url() -> Iterator[str]:
 
 
 def _store(store_url: str):
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     s = AuthStore(database_url=store_url)
     s._init_db()
@@ -593,7 +593,7 @@ def test_connection_type_counts(store_url: str) -> None:
 
 def test_connection_type_counts_missing_table_returns_empty(store_url: str) -> None:
     # A store whose schema was never initialised must not break boot — return {}.
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     bare = AuthStore(database_url=store_url)  # no _init_db()
     assert bare.connection_type_counts() == {}
@@ -631,7 +631,7 @@ def test_scim_group_external_id_drives_roles(store_url: str) -> None:
     g = store.create_scim_group(conn.id, "Year 7 Teachers", "99999999-aaaa")
     store.add_group_member(g.id, m.id)
 
-    from dazzle.back.runtime.auth.scim_provisioning import recompute_membership_roles
+    from dazzle.http.runtime.auth.scim_provisioning import recompute_membership_roles
 
     recompute_membership_roles(store, conn, m.id)
     assert "teacher" in store.get_membership(m.id).roles  # matched by GUID, not display_name
@@ -656,7 +656,7 @@ def test_scim_group_role_by_display_name_still_works(store_url: str) -> None:
     m = store.create_membership(tenant_id="orgN", identity_id=str(user.id), roles=[])
     g = store.create_scim_group(conn.id, "SLT", None)  # no external_id (Google-style)
     store.add_group_member(g.id, m.id)
-    from dazzle.back.runtime.auth.scim_provisioning import recompute_membership_roles
+    from dazzle.http.runtime.auth.scim_provisioning import recompute_membership_roles
 
     recompute_membership_roles(store, conn, m.id)
     assert "leader" in store.get_membership(m.id).roles

@@ -15,8 +15,8 @@ import pytest
 
 pytest.importorskip("fastapi")
 
-from dazzle.back.runtime.route_generator import RouteGenerator  # noqa: E402
-from dazzle.back.specs import EndpointSpec, HttpMethod  # noqa: E402
+from dazzle.http.runtime.route_generator import RouteGenerator  # noqa: E402
+from dazzle.http.specs import EndpointSpec, HttpMethod  # noqa: E402
 
 
 def _generator() -> RouteGenerator:

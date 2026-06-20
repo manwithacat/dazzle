@@ -15,7 +15,7 @@ import pytest
 
 @pytest.fixture(scope="module")
 def migration_module():
-    return importlib.import_module("dazzle.back.alembic.versions.0002_drop_dazzle_migrations")
+    return importlib.import_module("dazzle.http.alembic.versions.0002_drop_dazzle_migrations")
 
 
 def test_revision_constants(migration_module) -> None:

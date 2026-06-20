@@ -21,7 +21,7 @@
   - `layouts/single_column.html:6` (surfaced by the new lint) — `navbar` → explicit flex+padding chrome
   - `site/sections/features.html:8` (surfaced by the new lint) — `card ... shadow-sm` → canonical card chrome
 - **Mechanism B (durable)** — `tests/unit/test_no_daisyui_residuals.py` added
-  with 6 tests. The detection test (`test_no_daisyui_classes_in_user_facing_templates`) scans every non-exempt `.html` under `src/dazzle_ui/templates/` for banned DaisyUI tokens inside `class="..."` attributes. Sanity tests confirm the ban list is self-consistent, `dz-*` tokens are always allowed, the detector actually fires on known-banned inputs, and no exempt-path fragment has gone stale. Runs in ~0.25s; now part of CI via the normal pytest sweep.
+  with 6 tests. The detection test (`test_no_daisyui_classes_in_user_facing_templates`) scans every non-exempt `.html` under `src/dazzle_page/templates/` for banned DaisyUI tokens inside `class="..."` attributes. Sanity tests confirm the ban list is self-consistent, `dz-*` tokens are always allowed, the detector actually fires on known-banned inputs, and no exempt-path fragment has gone stale. Runs in ~0.25s; now part of CI via the normal pytest sweep.
 - **Net:** 8 observations across 6 templates are now zero. Any future DaisyUI reintroduction fails CI at PR time.
 
 ## Problem statement
@@ -127,7 +127,7 @@ the fix is either removing the class or renaming it with a `dz-`
 prefix.
 
 Lint surface: a pytest test in `tests/unit/` that:
-1. Loads every template under `src/dazzle_ui/templates/`.
+1. Loads every template under `src/dazzle_page/templates/`.
 2. Extracts all static string literals (can't render dynamically
    because context is complex; substring matching on the template
    source is sufficient).
@@ -153,7 +153,7 @@ future DaisyUI reintroduction at PR time.
   (UX-031/050/051), `fragments/parking_lot_primitives*.html`
   (UX-040 + parking-lot-primitives omnibus).
 - **Unknown** (not swept): templates outside the sweep this cycle
-  ran. The sweep used `grep -rEn` across `src/dazzle_ui/templates/`
+  ran. The sweep used `grep -rEn` across `src/dazzle_page/templates/`
   which IS comprehensive. Anything NOT in the "likely clean" list
   and NOT a fresh-look subject should be re-swept.
 - **Reports explicitly excluded**: `reports/e2e_journey.html` uses
@@ -194,7 +194,7 @@ future DaisyUI reintroduction at PR time.
    DSL authors writing class tokens in sitespec YAML. The current
    contract family (site-section-family, site-shell) doesn't gate
    DSL-origin class strings. If Mechanism B's lint only covers
-   `src/dazzle_ui/templates/`, DSL-authored class strings via
+   `src/dazzle_page/templates/`, DSL-authored class strings via
    `section.background` or similar escape the sweep. Worth
    extending the sweep to rendered output post-compile for these
    cases.
@@ -211,6 +211,6 @@ future DaisyUI reintroduction at PR time.
    the open question on `reports/e2e_journey.html`. Defer until
    the lint rule is green.
 4. **Re-sweep one cycle after Mechanism B lands.** Confirm zero
-   DaisyUI residuals in the `src/dazzle_ui/templates/` tree
+   DaisyUI residuals in the `src/dazzle_page/templates/` tree
    (excluding `reports/*`). If the sweep passes, close this theme
    as resolved.

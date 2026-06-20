@@ -1,7 +1,7 @@
 """Integration tests for ?format= parameter on graph edge entities (#619 Phase 2)."""
 
-from dazzle.back.runtime.graph_serializer import GraphSerializer
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec
+from dazzle.http.runtime.graph_serializer import GraphSerializer
 
 
 class TestFormatRoundTrip:

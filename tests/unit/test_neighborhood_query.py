@@ -2,8 +2,8 @@
 
 import pytest
 
-from dazzle.back.runtime.neighborhood import NeighborhoodQueryBuilder
 from dazzle.core.ir import GraphEdgeSpec
+from dazzle.http.runtime.neighborhood import NeighborhoodQueryBuilder
 
 
 @pytest.fixture

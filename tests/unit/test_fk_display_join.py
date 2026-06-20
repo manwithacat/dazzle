@@ -14,7 +14,7 @@ is an opt-in optimisation rather than a replacement.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.relation_loader import (
+from dazzle.http.runtime.relation_loader import (
     RelationInfo,
     RelationLoader,
     RelationRegistry,
@@ -167,7 +167,7 @@ class TestApplyDisplayJoinsToRows:
 
 class TestQueryBuilderJoinWiring:
     def test_joins_and_extra_cols_appear_in_select(self) -> None:
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         builder = QueryBuilder(table_name="Order", placeholder_style="%s")
         builder.joins = [
@@ -182,7 +182,7 @@ class TestQueryBuilderJoinWiring:
         assert 'LEFT JOIN "Customer"' in sql
 
     def test_no_joins_base_select_unchanged(self) -> None:
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         builder = QueryBuilder(table_name="Order", placeholder_style="%s")
         sql, _ = builder.build_select()
@@ -196,7 +196,7 @@ class TestFilterTableQualification:
     tables (#871)."""
 
     def test_filter_qualified_when_joins_present(self) -> None:
-        from dazzle.back.runtime.query_builder import FilterCondition, QueryBuilder
+        from dazzle.http.runtime.query_builder import FilterCondition, QueryBuilder
 
         builder = QueryBuilder(table_name="ClassEnrolment", placeholder_style="%s")
         builder.joins = [
@@ -211,7 +211,7 @@ class TestFilterTableQualification:
         )
 
     def test_filter_unqualified_when_no_joins(self) -> None:
-        from dazzle.back.runtime.query_builder import FilterCondition, QueryBuilder
+        from dazzle.http.runtime.query_builder import FilterCondition, QueryBuilder
 
         builder = QueryBuilder(table_name="ClassEnrolment", placeholder_style="%s")
         builder.conditions = [FilterCondition.parse("is_current", True)]
@@ -223,7 +223,7 @@ class TestFilterTableQualification:
         assert '"is_current"' in where
 
     def test_search_qualified_when_joins_present(self) -> None:
-        from dazzle.back.runtime.query_builder import QueryBuilder
+        from dazzle.http.runtime.query_builder import QueryBuilder
 
         builder = QueryBuilder(table_name="ClassEnrolment", placeholder_style="%s")
         builder.joins = [

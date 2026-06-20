@@ -6,12 +6,12 @@ from uuid import UUID
 import pytest
 from pydantic import BaseModel, Field
 
-from dazzle.back.runtime.model_generator import (
+from dazzle.http.runtime.model_generator import (
     generate_create_schema,
     generate_update_schema,
 )
-from dazzle.back.runtime.service_generator import CRUDService
-from dazzle.back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+from dazzle.http.runtime.service_generator import CRUDService
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 
 def _make_entity_with_timestamps() -> EntitySpec:

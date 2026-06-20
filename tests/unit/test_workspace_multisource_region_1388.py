@@ -23,9 +23,9 @@ from __future__ import annotations
 def _build_app_and_init_routes(dsl_src: str, tmp_path):
     from fastapi import FastAPI
 
-    from dazzle.back.runtime.workspace_route_builder import WorkspaceRouteBuilder
     from dazzle.core.linker import build_appspec
     from dazzle.core.parser import parse_modules
+    from dazzle.http.runtime.workspace_route_builder import WorkspaceRouteBuilder
 
     dsl_path = tmp_path / "app.dsl"
     dsl_path.write_text(dsl_src)

@@ -7,9 +7,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.auth.magic_link_routes import create_magic_link_routes
-from dazzle.back.runtime.qa_routes import create_qa_routes
 from dazzle.cli.runtime_impl.dev_personas import provision_dev_personas
+from dazzle.http.runtime.auth.magic_link_routes import create_magic_link_routes
+from dazzle.http.runtime.qa_routes import create_qa_routes
 
 
 @pytest.fixture
@@ -61,11 +61,11 @@ def mock_auth_store_with_real_token_flow():
     # Patch the module-level functions so the routes call our fakes
     with (
         patch(
-            "dazzle.back.runtime.auth.magic_link_routes.validate_magic_link",
+            "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             side_effect=validate_magic_link,
         ),
         patch(
-            "dazzle.back.runtime.qa_routes.create_magic_link",
+            "dazzle.http.runtime.qa_routes.create_magic_link",
             side_effect=create_magic_link,
         ),
     ):
@@ -170,7 +170,7 @@ class TestQAModeEndToEnd:
 
         # Inject a token directly (simulating a token created by some other path)
         with patch(
-            "dazzle.back.runtime.auth.magic_link_routes.validate_magic_link",
+            "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value=user_id,
         ):
             # No QA env flags set — consumer should still work

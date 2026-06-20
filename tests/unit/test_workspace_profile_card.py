@@ -184,7 +184,7 @@ class TestInterpolateCardTemplate:
         ],
     )
     def test_interpolate(self, template: str, item: dict, expected: str) -> None:
-        from dazzle.back.runtime.workspace_card_data import _interpolate_card_template
+        from dazzle.http.runtime.workspace_card_data import _interpolate_card_template
 
         assert _interpolate_card_template(template, item) == expected
 
@@ -201,7 +201,7 @@ class TestInterpolateCardTemplate:
         ``test_card_template_transforms_1145.py`` for the
         registered-transform contract.
         """
-        from dazzle.back.runtime.workspace_card_data import _interpolate_card_template
+        from dazzle.http.runtime.workspace_card_data import _interpolate_card_template
 
         item = {"a": 1}
         # Unknown transform — value rendered raw, transform not applied.
@@ -232,7 +232,7 @@ class TestInitialsFrom:
         ],
     )
     def test_initials_from(self, name: str, expected: str) -> None:
-        from dazzle.back.runtime.workspace_card_data import _initials_from
+        from dazzle.http.runtime.workspace_card_data import _initials_from
 
         assert _initials_from(name) == expected
 
@@ -242,28 +242,28 @@ class TestInitialsFrom:
 
 class TestResolvePath:
     def test_single_segment(self) -> None:
-        from dazzle.back.runtime.workspace_card_data import _resolve_path
+        from dazzle.http.runtime.workspace_card_data import _resolve_path
 
         assert _resolve_path({"name": "X"}, "name") == "X"
 
     def test_dotted_path(self) -> None:
-        from dazzle.back.runtime.workspace_card_data import _resolve_path
+        from dazzle.http.runtime.workspace_card_data import _resolve_path
 
         item = {"tutor": {"name": "Mr Khan"}}
         assert _resolve_path(item, "tutor.name") == "Mr Khan"
 
     def test_missing_segment(self) -> None:
-        from dazzle.back.runtime.workspace_card_data import _resolve_path
+        from dazzle.http.runtime.workspace_card_data import _resolve_path
 
         assert _resolve_path({"a": 1}, "missing") is None
 
     def test_descend_into_non_dict(self) -> None:
-        from dazzle.back.runtime.workspace_card_data import _resolve_path
+        from dazzle.http.runtime.workspace_card_data import _resolve_path
 
         assert _resolve_path({"a": "string"}, "a.b") is None
 
     def test_empty_path(self) -> None:
-        from dazzle.back.runtime.workspace_card_data import _resolve_path
+        from dazzle.http.runtime.workspace_card_data import _resolve_path
 
         assert _resolve_path({"a": 1}, "") is None
 
@@ -276,7 +276,7 @@ class TestResolvePath:
 )
 class TestProfileCardTemplateWiring:
     def test_template_map_includes_profile_card(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+        from dazzle.page.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
         assert "PROFILE_CARD" in DISPLAY_TEMPLATE_MAP
         assert DISPLAY_TEMPLATE_MAP["PROFILE_CARD"] == "workspace/regions/_typed_primitive.html"
@@ -284,20 +284,20 @@ class TestProfileCardTemplateWiring:
     def test_template_file_exists(self) -> None:
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/profile_card.html"
+            / "src/dazzle/page/templates/workspace/regions/profile_card.html"
         )
         assert path.is_file()
 
     def test_template_uses_region_card_macro(self) -> None:
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/profile_card.html"
+            / "src/dazzle/page/templates/workspace/regions/profile_card.html"
         )
         contents = path.read_text()
         assert "{% call region_card" in contents
 
     def test_region_context_carries_profile_card_fields(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import RegionContext
+        from dazzle.page.runtime.workspace_renderer import RegionContext
 
         ctx = RegionContext(
             name="r",
@@ -333,7 +333,7 @@ class TestProfileCardSafety:
         # v0.67.102 (#1057 cut 3): the interpolator moved to
         # workspace_card_data.py — same invariant, different file.
         src = (
-            Path(__file__).resolve().parents[2] / "src/dazzle/back/runtime/workspace_card_data.py"
+            Path(__file__).resolve().parents[2] / "src/dazzle/http/runtime/workspace_card_data.py"
         ).read_text()
         # The interpolator function should appear in the source
         assert "def _interpolate_card_template" in src
@@ -372,7 +372,7 @@ class TestProfileCardStatsBuildFromDicts:
         """
         src = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/back/runtime/workspace_region_computes.py"
+            / "src/dazzle/http/runtime/workspace_region_computes.py"
         ).read_text()
         # The runtime must use dict access (the boundary always converts to dicts)
         assert 'stat["label"]' in src, (
@@ -399,7 +399,7 @@ class TestProfileCardStatsBuildFromDicts:
         If this boundary ever changes to pass models through directly,
         the dict-access fix above must change with it."""
         src = (
-            Path(__file__).resolve().parents[2] / "src/dazzle/ui/runtime/workspace_renderer.py"
+            Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/workspace_renderer.py"
         ).read_text()
         # The boundary line that constructs the dict-of-dicts shape
         assert '{"label": s.label, "value": s.value}' in src
@@ -411,7 +411,7 @@ class TestProfileCardStatsBuildFromDicts:
         same shape the runtime would produce given a non-empty item
         and dict-shaped stats — exercising the exact lines that 500'd."""
         # Mirror of the comprehension in workspace_rendering.py PROFILE_CARD
-        from dazzle.back.runtime.workspace_card_data import _resolve_path
+        from dazzle.http.runtime.workspace_card_data import _resolve_path
 
         item = {
             "id": "abc",

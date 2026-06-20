@@ -37,12 +37,12 @@
 
 | File | Responsibility | Change |
 |---|---|---|
-| `src/dazzle/back/runtime/auth/models.py` | `OrganizationRecord` Pydantic model | **Modify** |
-| `src/dazzle/back/alembic/versions/0008_organizations.py` | `organizations` schema migration | **Create** |
-| `src/dazzle/back/runtime/auth/store.py` | `organizations` DDL in `_init_db`; org CRUD; `ensure_single_org_membership` | **Modify** |
-| `src/dazzle/back/runtime/auth/org_activation.py` | `single_org_auto_provision(request)` + lazy provision in `activate_session_for_login` | **Modify** |
-| `src/dazzle/back/runtime/server.py` | `ServerConfig.auto_provision_single_org` field | **Modify** |
-| `src/dazzle/back/runtime/subsystems/auth.py` | set `app.state.single_org_auto_provision` + `memberships_required` | **Modify** |
+| `src/dazzle/http/runtime/auth/models.py` | `OrganizationRecord` Pydantic model | **Modify** |
+| `src/dazzle/http/alembic/versions/0008_organizations.py` | `organizations` schema migration | **Create** |
+| `src/dazzle/http/runtime/auth/store.py` | `organizations` DDL in `_init_db`; org CRUD; `ensure_single_org_membership` | **Modify** |
+| `src/dazzle/http/runtime/auth/org_activation.py` | `single_org_auto_provision(request)` + lazy provision in `activate_session_for_login` | **Modify** |
+| `src/dazzle/http/runtime/server.py` | `ServerConfig.auto_provision_single_org` field | **Modify** |
+| `src/dazzle/http/runtime/subsystems/auth.py` | set `app.state.single_org_auto_provision` + `memberships_required` | **Modify** |
 | `tests/unit/test_org_activation.py` | provisioning glue unit tests (append) | **Modify** |
 | `tests/integration/test_auth_orgprovision_pg.py` | real-PG provisioning proof | **Create** |
 
@@ -51,14 +51,14 @@
 ## Task 1: `OrganizationRecord` model
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/models.py`
+- Modify: `src/dazzle/http/runtime/auth/models.py`
 - Test: `tests/unit/test_auth_membership_model.py` (append — the existing auth-model unit file from 1a)
 
 - [ ] **Step 1: Write the failing test (append)**
 
 ```python
 # append to tests/unit/test_auth_membership_model.py
-from dazzle.back.runtime.auth.models import OrganizationRecord
+from dazzle.http.runtime.auth.models import OrganizationRecord
 
 
 class TestOrganizationRecord:
@@ -86,7 +86,7 @@ Expected: FAIL — `ImportError: cannot import name 'OrganizationRecord'`.
 
 - [ ] **Step 3: Add the model**
 
-In `src/dazzle/back/runtime/auth/models.py`, after the `MembershipRecord` class, add:
+In `src/dazzle/http/runtime/auth/models.py`, after the `MembershipRecord` class, add:
 
 ```python
 class OrganizationRecord(BaseModel):
@@ -122,7 +122,7 @@ Expected: PASS (2 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/models.py tests/unit/test_auth_membership_model.py
+git add src/dazzle/http/runtime/auth/models.py tests/unit/test_auth_membership_model.py
 git commit -m "feat(auth): OrganizationRecord model (Plan 1c)"
 ```
 
@@ -131,8 +131,8 @@ git commit -m "feat(auth): OrganizationRecord model (Plan 1c)"
 ## Task 2: Alembic `0008_organizations` + `_init_db` DDL parity
 
 **Files:**
-- Create: `src/dazzle/back/alembic/versions/0008_organizations.py`
-- Modify: `src/dazzle/back/runtime/auth/store.py` (`_init_db`)
+- Create: `src/dazzle/http/alembic/versions/0008_organizations.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py` (`_init_db`)
 - Test: `tests/integration/test_auth_orgprovision_pg.py`
 
 - [ ] **Step 1: Write the failing integration test (with the scratch-DB harness)**
@@ -196,7 +196,7 @@ def _columns(url: str, table: str) -> set[str]:
 
 
 def test_init_db_creates_organizations(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -208,13 +208,13 @@ def test_migration_0008_creates_organizations(scratch_url: str) -> None:
     from alembic import command
     from alembic.config import Config
 
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()  # baseline users/sessions/memberships
 
     # Locate alembic.ini the same way tests/integration/test_auth_membership_pg.py does.
-    from dazzle.back.alembic import alembic_ini_path  # if absent, mirror cli/db.py's Config()
+    from dazzle.http.alembic import alembic_ini_path  # if absent, mirror cli/db.py's Config()
 
     cfg = Config(str(alembic_ini_path()))
     cfg.set_main_option(
@@ -224,7 +224,7 @@ def test_migration_0008_creates_organizations(scratch_url: str) -> None:
     assert {"id", "slug", "name", "status", "is_test"} <= _columns(scratch_url, "organizations")
 ```
 
-> If `dazzle.back.alembic.alembic_ini_path` doesn't exist, copy the exact `Config(...)` construction used in `tests/integration/test_auth_membership_pg.py` (1a's migration test) — assertions unchanged.
+> If `dazzle.http.alembic.alembic_ini_path` doesn't exist, copy the exact `Config(...)` construction used in `tests/integration/test_auth_membership_pg.py` (1a's migration test) — assertions unchanged.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -234,7 +234,7 @@ Expected: FAIL — no `organizations` table.
 - [ ] **Step 3a: Write the migration**
 
 ```python
-# src/dazzle/back/alembic/versions/0008_organizations.py
+# src/dazzle/http/alembic/versions/0008_organizations.py
 """Add organizations table (auth Plan 1c — framework Organization registry).
 
 The framework gains an `organizations` join (the tenant root in shared-schema):
@@ -283,7 +283,7 @@ def downgrade() -> None:
 
 - [ ] **Step 3b: Add the DDL to `_init_db`**
 
-In `src/dazzle/back/runtime/auth/store.py`, inside `_init_db`, after the `memberships` table block (added in 1a), add:
+In `src/dazzle/http/runtime/auth/store.py`, inside `_init_db`, after the `memberships` table block (added in 1a), add:
 
 ```python
         # auth Plan 1c: organizations (framework tenant root). Mirrors alembic
@@ -311,7 +311,7 @@ Expected: PASS (2 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/alembic/versions/0008_organizations.py src/dazzle/back/runtime/auth/store.py tests/integration/test_auth_orgprovision_pg.py
+git add src/dazzle/http/alembic/versions/0008_organizations.py src/dazzle/http/runtime/auth/store.py tests/integration/test_auth_orgprovision_pg.py
 git commit -m "feat(auth): organizations table — alembic 0008 + _init_db (Plan 1c)"
 ```
 
@@ -320,7 +320,7 @@ git commit -m "feat(auth): organizations table — alembic 0008 + _init_db (Plan
 ## Task 3: `AuthStore` organization CRUD (race-safe get-or-create)
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py`
 - Test: `tests/integration/test_auth_orgprovision_pg.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -328,7 +328,7 @@ git commit -m "feat(auth): organizations table — alembic 0008 + _init_db (Plan
 ```python
 # append to tests/integration/test_auth_orgprovision_pg.py
 def test_get_or_create_default_organization_is_idempotent(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -343,7 +343,7 @@ def test_get_or_create_default_organization_is_idempotent(scratch_url: str) -> N
 def test_create_organization_slug_unique(scratch_url: str) -> None:
     import pytest
 
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -359,7 +359,7 @@ Expected: FAIL — no `get_or_create_default_organization` / `create_organizatio
 
 - [ ] **Step 3: Add CRUD + row mapper**
 
-In `src/dazzle/back/runtime/auth/store.py`, import `OrganizationRecord` from `.models` alongside the other model imports, and add near the membership methods:
+In `src/dazzle/http/runtime/auth/store.py`, import `OrganizationRecord` from `.models` alongside the other model imports, and add near the membership methods:
 
 ```python
     DEFAULT_ORG_SLUG = "default"
@@ -439,7 +439,7 @@ Expected: PASS (2 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_auth_orgprovision_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_auth_orgprovision_pg.py
 git commit -m "feat(auth): organization CRUD + race-safe get_or_create_default (Plan 1c)"
 ```
 
@@ -448,7 +448,7 @@ git commit -m "feat(auth): organization CRUD + race-safe get_or_create_default (
 ## Task 4: `AuthStore.ensure_single_org_membership`
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py`
+- Modify: `src/dazzle/http/runtime/auth/store.py`
 - Test: `tests/integration/test_auth_orgprovision_pg.py` (append)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -456,7 +456,7 @@ git commit -m "feat(auth): organization CRUD + race-safe get_or_create_default (
 ```python
 # append to tests/integration/test_auth_orgprovision_pg.py
 def test_ensure_single_org_membership_first_and_second_user(scratch_url: str) -> None:
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -482,7 +482,7 @@ Expected: FAIL — no `ensure_single_org_membership`.
 
 - [ ] **Step 3: Add the method**
 
-In `src/dazzle/back/runtime/auth/store.py`, add near `create_membership`:
+In `src/dazzle/http/runtime/auth/store.py`, add near `create_membership`:
 
 ```python
     def ensure_single_org_membership(
@@ -531,7 +531,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_auth_orgprovision_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_auth_orgprovision_pg.py
 git commit -m "feat(auth): ensure_single_org_membership — idempotent per-user join (Plan 1c)"
 ```
 
@@ -540,7 +540,7 @@ git commit -m "feat(auth): ensure_single_org_membership — idempotent per-user 
 ## Task 5: Lazy provisioning at activation
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/org_activation.py`
+- Modify: `src/dazzle/http/runtime/auth/org_activation.py`
 - Test: `tests/unit/test_org_activation.py` (append) + `tests/integration/test_auth_orgprovision_pg.py` (append)
 
 - [ ] **Step 1: Write the failing unit test (append)**
@@ -604,7 +604,7 @@ Expected: FAIL — `activate_session_for_login` doesn't provision (no `single_or
 
 - [ ] **Step 3: Add `single_org_auto_provision` + provisioning step**
 
-In `src/dazzle/back/runtime/auth/org_activation.py`, add the flag helper next to `memberships_required`:
+In `src/dazzle/http/runtime/auth/org_activation.py`, add the flag helper next to `memberships_required`:
 
 ```python
 def single_org_auto_provision(request: Any) -> bool:
@@ -652,11 +652,11 @@ Expected: PASS (3 passed). Also run the full file to confirm no regression: `pyt
 def test_activation_provisions_and_auto_activates(scratch_url: str) -> None:
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.org_activation import (
+    from dazzle.http.runtime.auth.org_activation import (
         Activated,
         activate_session_for_login,
     )
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -678,11 +678,11 @@ def test_host_pin_does_not_auto_provision(scratch_url: str) -> None:
     must not paper over it."""
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.org_activation import (
+    from dazzle.http.runtime.auth.org_activation import (
         HostForbidden,
         activate_session_for_login,
     )
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -704,7 +704,7 @@ Expected: PASS (2 passed).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/auth/org_activation.py tests/unit/test_org_activation.py tests/integration/test_auth_orgprovision_pg.py
+git add src/dazzle/http/runtime/auth/org_activation.py tests/unit/test_org_activation.py tests/integration/test_auth_orgprovision_pg.py
 git commit -m "feat(auth): lazy single-org provisioning at activation, host-pin-guarded (Plan 1c)"
 ```
 
@@ -718,8 +718,8 @@ git commit -m "feat(auth): lazy single-org provisioning at activation, host-pin-
 ## Task 6: Config wiring — `ServerConfig.auto_provision_single_org` → app.state
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/server.py` (`ServerConfig`)
-- Modify: `src/dazzle/back/runtime/subsystems/auth.py`
+- Modify: `src/dazzle/http/runtime/server.py` (`ServerConfig`)
+- Modify: `src/dazzle/http/runtime/subsystems/auth.py`
 - Test: `tests/integration/test_auth_orgprovision_pg.py` (append — flag-default assertion)
 
 - [ ] **Step 1: Write the failing test (append)**
@@ -728,7 +728,7 @@ git commit -m "feat(auth): lazy single-org provisioning at activation, host-pin-
 # append to tests/integration/test_auth_orgprovision_pg.py
 def test_server_config_defaults_auto_provision_off() -> None:
     """Non-breaking default: existing apps don't auto-provision (no DB needed)."""
-    from dazzle.back.runtime.server import ServerConfig
+    from dazzle.http.runtime.server import ServerConfig
 
     assert ServerConfig().auto_provision_single_org is False
 ```
@@ -740,7 +740,7 @@ Expected: FAIL — `ServerConfig` has no `auto_provision_single_org`.
 
 - [ ] **Step 3a: Add the `ServerConfig` field**
 
-In `src/dazzle/back/runtime/server.py`, in the `ServerConfig` dataclass (around line 81), add a field with the others:
+In `src/dazzle/http/runtime/server.py`, in the `ServerConfig` dataclass (around line 81), add a field with the others:
 
 ```python
     # auth Plan 1c: lazily provision a single default Organization + one
@@ -754,7 +754,7 @@ In `src/dazzle/back/runtime/server.py`, in the `ServerConfig` dataclass (around 
 
 - [ ] **Step 3b: Surface it on `app.state` in the auth subsystem**
 
-In `src/dazzle/back/runtime/subsystems/auth.py`, near where `ctx.app.state.auth_store` is set (~line 58), add:
+In `src/dazzle/http/runtime/subsystems/auth.py`, near where `ctx.app.state.auth_store` is set (~line 58), add:
 
 ```python
         # auth Plan 1c — single-org auto-provision + the 1b memberships gate.
@@ -774,7 +774,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/back/runtime/server.py src/dazzle/back/runtime/subsystems/auth.py tests/integration/test_auth_orgprovision_pg.py
+git add src/dazzle/http/runtime/server.py src/dazzle/http/runtime/subsystems/auth.py tests/integration/test_auth_orgprovision_pg.py
 git commit -m "feat(auth): ServerConfig.auto_provision_single_org → app.state flags (Plan 1c)"
 ```
 
@@ -796,8 +796,8 @@ def test_provisioned_membership_binds_fence(scratch_url: str) -> None:
     fence returns only that org's rows (mirrors the 1a keystone)."""
     from types import SimpleNamespace
 
-    from dazzle.back.runtime.auth.org_activation import activate_session_for_login
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.org_activation import activate_session_for_login
+    from dazzle.http.runtime.auth.store import AuthStore
 
     ddl = [
         'CREATE TABLE "Note" (tenant_id TEXT NOT NULL, id TEXT PRIMARY KEY, body TEXT)',

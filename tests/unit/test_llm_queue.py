@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle.back.runtime.llm_queue import LLMJobQueue, TokenBucket
+from dazzle.http.runtime.llm_queue import LLMJobQueue, TokenBucket
 
 # ---------------------------------------------------------------------------
 # Token Bucket

@@ -91,7 +91,7 @@ def main():
 
     try:
         import uvicorn
-        from dazzle.back.runtime import create_app_from_json
+        from dazzle.http.runtime import create_app_from_json
 
         spec_path = Path(__file__).parent / "backend" / "backend-spec.json"
         if not spec_path.exists():
@@ -348,7 +348,7 @@ echo "  Server:   http://$HOST:$PORT"
 echo ""
 
 exec uvicorn \\
-    "dazzle.back.runtime.server:create_app_factory" \\
+    "dazzle.http.runtime.server:create_app_factory" \\
     --factory \\
     --host "$HOST" \\
     --port "$PORT" \\

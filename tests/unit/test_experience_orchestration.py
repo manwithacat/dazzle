@@ -232,8 +232,8 @@ experience simple "Simple":
 
 class TestExperienceCompiler:
     def test_prefill_injects_initial_values(self):
-        from dazzle.ui.converters.experience_compiler import compile_experience_context
-        from dazzle.ui.runtime.experience_state import ExperienceState
+        from dazzle.page.converters.experience_compiler import compile_experience_context
+        from dazzle.page.runtime.experience_state import ExperienceState
 
         appspec = _parse_full_appspec()
         exp = appspec.experiences[0]
@@ -248,19 +248,19 @@ class TestExperienceCompiler:
         assert ctx.page_context.form.initial_values.get("company") == "uuid-123"
 
     def test_prefill_string_literal(self):
-        from dazzle.ui.utils.expression_eval import resolve_prefill_expression
+        from dazzle.page.utils.expression_eval import resolve_prefill_expression
 
         result = resolve_prefill_expression('"director"', {})
         assert result == "director"
 
     def test_prefill_missing_data_no_crash(self):
-        from dazzle.ui.utils.expression_eval import resolve_prefill_expression
+        from dazzle.page.utils.expression_eval import resolve_prefill_expression
 
         result = resolve_prefill_expression("context.company.id", {})
         assert result is None
 
     def test_prefill_nested_field(self):
-        from dazzle.ui.utils.expression_eval import resolve_prefill_expression
+        from dazzle.page.utils.expression_eval import resolve_prefill_expression
 
         data = {"company": {"id": "uuid-123", "address": {"city": "London"}}}
         result = resolve_prefill_expression("context.company.address.city", data)
@@ -274,39 +274,39 @@ class TestExperienceCompiler:
 
 class TestExpressionEval:
     def test_resolve_dotted_path(self):
-        from dazzle.ui.utils.expression_eval import resolve_dotted_path
+        from dazzle.page.utils.expression_eval import resolve_dotted_path
 
         data = {"company": {"id": "uuid-1", "name": "ACME", "is_vat_registered": True}}
         assert resolve_dotted_path("context.company.id", data) == "uuid-1"
         assert resolve_dotted_path("context.company.name", data) == "ACME"
 
     def test_resolve_dotted_path_no_prefix(self):
-        from dazzle.ui.utils.expression_eval import resolve_dotted_path
+        from dazzle.page.utils.expression_eval import resolve_dotted_path
 
         data = {"Company_id": "uuid-1", "company": {"id": "uuid-1", "name": "ACME"}}
         assert resolve_dotted_path("Company_id", data) == "uuid-1"
 
     def test_evaluate_condition_false(self):
-        from dazzle.ui.utils.expression_eval import evaluate_simple_condition
+        from dazzle.page.utils.expression_eval import evaluate_simple_condition
 
         data = {"company": {"is_vat_registered": False}}
         assert evaluate_simple_condition("context.company.is_vat_registered = true", data) is False
 
     def test_evaluate_condition_true(self):
-        from dazzle.ui.utils.expression_eval import evaluate_simple_condition
+        from dazzle.page.utils.expression_eval import evaluate_simple_condition
 
         data = {"company": {"is_vat_registered": True}}
         assert evaluate_simple_condition("context.company.is_vat_registered = true", data) is True
 
     def test_evaluate_condition_not_equals(self):
-        from dazzle.ui.utils.expression_eval import evaluate_simple_condition
+        from dazzle.page.utils.expression_eval import evaluate_simple_condition
 
         data = {"company": {"status": "active"}}
         assert evaluate_simple_condition("context.company.status != active", data) is False
         assert evaluate_simple_condition("context.company.status != inactive", data) is True
 
     def test_evaluate_condition_missing_data(self):
-        from dazzle.ui.utils.expression_eval import evaluate_simple_condition
+        from dazzle.page.utils.expression_eval import evaluate_simple_condition
 
         assert evaluate_simple_condition("context.company.missing = true", {}) is False
 

@@ -18,7 +18,7 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 **Work:**
 
 1. Surveyed cycles 265-270 closure notes. Cumulative DaisyUI drift identified + fixed across 5 items in 5 templates (tab_data ×3, testimonials, island).
-2. Ran a systematic DaisyUI sweep across all `src/dazzle_ui/templates/` with a filtered `grep -rEn 'class="[^"]*\b(card|menu|btn|hero|skeleton|alert|badge|divider)\b[^"]*"'` pattern. After excluding `hsl(var(--card))` noise, `dz-<word>` canonical markers, report-only templates, and `:class=` Alpine bindings: **3 remaining open leaks** surfaced.
+2. Ran a systematic DaisyUI sweep across all `src/dazzle_page/templates/` with a filtered `grep -rEn 'class="[^"]*\b(card|menu|btn|hero|skeleton|alert|badge|divider)\b[^"]*"'` pattern. After excluding `hsl(var(--card))` noise, `dz-<word>` canonical markers, report-only templates, and `:class=` Alpine bindings: **3 remaining open leaks** surfaced.
    - `experience/_content.html:138` — `class="card bg-[hsl(var(--muted))]"` on non-surface step placeholder.
    - `fragments/detail_fields.html:4` — `class="card bg-[hsl(var(--card))] shadow-sm"` on detail fragment.
    - `components/alpine/dropdown.html:13` — `class="... menu p-1 ..."` on generic dropdown.
@@ -105,7 +105,7 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 **Work:**
 
-1. Surveyed the 19 files in `src/dazzle_ui/templates/site/sections/`:
+1. Surveyed the 19 files in `src/dazzle_page/templates/site/sections/`:
    - `_helpers.html` — 16-line macro library (`section_id_attr`, `section_header`, `section_media`).
    - `hero.html` — already governed by UX-054 (excluded).
    - `qa_personas.html` — dev-only panel (#768), uses raw Tailwind utilities, does NOT participate in `dz-section` namespace (explicitly excluded from this family).
@@ -160,11 +160,11 @@ Remaining from cycle 267 scan: **PROP-057 island** — still multi-cycle scope b
 
 **Work:**
 
-1. Located `workspace/regions/tab_data.html` call site: `src/dazzle_back/runtime/workspace_route_builder.py:120-131` swaps the region template to `tab_data.html` for per-source tabs of a `workspace_tabbed_region` with a `source_tabs` list.
+1. Located `workspace/regions/tab_data.html` call site: `src/dazzle_http/runtime/workspace_route_builder.py:120-131` swaps the region template to `tab_data.html` for per-source tabs of a `workspace_tabbed_region` with a `source_tabs` list.
 2. Read the 80-line template and identified three concrete drift items:
    - **Line 6**: `<select class="... border border-[hsl(var(--border))] text-[12px] border border-[hsl(var(--border))]">` — duplicate `border border-[hsl(var(--border))]` in the same class attr.
    - **Line 41**: `{% if action_url %}cursor-pointer hover{% endif %}` — dangling `hover` utility with no target pseudo-class. Sibling `list.html:82` uses `cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]`.
-   - **Line 61**: `<a href="..." class="link link-hover link-primary" ...>` — DaisyUI classes on ref-column anchors. Grep confirmed this was the ONLY remaining DaisyUI `link link-hover link-primary` combination in the entire `src/dazzle_ui/` tree.
+   - **Line 61**: `<a href="..." class="link link-hover link-primary" ...>` — DaisyUI classes on ref-column anchors. Grep confirmed this was the ONLY remaining DaisyUI `link link-hover link-primary` combination in the entire `src/dazzle_page/` tree.
 3. Wrote contract at `~/.claude/skills/ux-architect/components/tab-data-region.md` — 13 quality gates, cell-type dispatch table, HTMX target convention (`#tab-{region}-{source_entity|lower}`), attention-signal tint rules, ref-display fallback chain, pagination-integration hand-off to parent tabbed-region.
 4. Applied fixes in one pass:
    - Added canonical `<div class="dz-tab-data">` outer wrapper (previously absent).
@@ -244,7 +244,7 @@ Two PROPs remain in the marketing-scan backlog: PROP-057 island (hydration proto
 
 **Work:**
 
-1. Mapped the two-file layout: `src/dazzle_ui/templates/site/site_base.html` (47 lines — `<html>`/`<head>`/`<body>` skeleton, asset stack, block grammar) and `src/dazzle_ui/templates/site/page.html` (32 lines — standard body composition: nav + sections + QA-personas + footer). 10 downstream extenders confirmed: page.html, 403.html, 404.html, and 7 auth/* variants.
+1. Mapped the two-file layout: `src/dazzle_page/templates/site/site_base.html` (47 lines — `<html>`/`<head>`/`<body>` skeleton, asset stack, block grammar) and `src/dazzle_page/templates/site/page.html` (32 lines — standard body composition: nav + sections + QA-personas + footer). 10 downstream extenders confirmed: page.html, 403.html, 404.html, and 7 auth/* variants.
 2. Heuristic 1 — empirical verification before writing any contract text. Rendered both templates via `env.get_template(...).render(...)` with minimal and boundary contexts:
    - `site_base.html` with only `product_name` → correct baseline shape
    - `page_title` precedence over `product_name` in `<title>` → ✓
@@ -309,7 +309,7 @@ Why this shipped: my local dev shell has `DAZZLE_TEST_SECRET` pre-exported, so t
 
 ## Cycle 264 — 2026-04-19 — contract_audit: PROP-056 → UX-055 (site-nav)
 
-**Strategy:** `contract_audit` — fourth promotion from the cycle 260 marketing-shell mini-roadmap. Target: `src/dazzle_ui/templates/site/includes/nav.html`, a small 16-line template included unconditionally by every marketing page.
+**Strategy:** `contract_audit` — fourth promotion from the cycle 260 marketing-shell mini-roadmap. Target: `src/dazzle_page/templates/site/includes/nav.html`, a small 16-line template included unconditionally by every marketing page.
 
 **Artefact:** new contract at `~/.claude/skills/ux-architect/components/site-nav.md`. Core model: auth-aware CTA (Dashboard when authenticated, nav_cta when anonymous, omitted when neither). Data-driven nav_items give each app its own middle-link set. The theme-toggle include is the last item in the right-anchored group.
 
@@ -339,7 +339,7 @@ No drift to fix — template uses dz-* classes + inline Tailwind only on the CTA
 
 **Strategy:** `contract_audit` on the highest-leverage remaining PROP: site-hero is a single component but also the **template** for the 15 sibling section fragments (features, pricing, testimonials, faq, …). Contracting it once pays off 16×.
 
-**Target:** `src/dazzle_ui/templates/site/sections/hero.html`
+**Target:** `src/dazzle_page/templates/site/sections/hero.html`
 
 **Drift fixed this cycle:** the secondary-CTA anchor had duplicate `border border-... text-... hover:bg-...` classes (shipped that way pre-263). Deduplicated in the same commit as the contract write-up. Pinned by new quality gate 5 (no duplicate Tailwind classes).
 
@@ -362,7 +362,7 @@ No drift to fix — template uses dz-* classes + inline Tailwind only on the CTA
 
 **Strategy:** `contract_audit` (second marketing-shell promotion; completes the marketing-chrome error-page pair, symmetric with cycle 259 app-403 + cycle 261 site-404).
 
-**Target:** `src/dazzle_ui/templates/site/403.html` — marketing-chrome 403 sibling. Uses the site-sections.css dz-* class library.
+**Target:** `src/dazzle_page/templates/site/403.html` — marketing-chrome 403 sibling. Uses the site-sections.css dz-* class library.
 
 **Artefact:** new contract at `~/.claude/skills/ux-architect/components/site-403-marketing.md`. Key differentiator from UX-052: two-CTA layout (Dashboard primary + Home ghost) rather than the single Go-Home of the 404 — the 403 assumes the user may be authenticated elsewhere. No role-disclosure panel (Cedar enforcement only inside /app/, so all marketing 403s are generic).
 
@@ -385,7 +385,7 @@ No drift to fix — template uses dz-* classes + inline Tailwind only on the CTA
 
 **Strategy:** `contract_audit` on a PROP row I just filed in cycle 260 — promotes a proposal rather than creating another bookkeeping artefact. Delivers actual value (a new governed component) from the new roadmap.
 
-**Target:** `src/dazzle_ui/templates/site/404.html` — marketing-chrome 404, sibling to UX-050 app-404. Template uses the `site-sections.css` `dz-*` class library (not DaisyUI drift — these are legit design-system-provided marketing classes).
+**Target:** `src/dazzle_page/templates/site/404.html` — marketing-chrome 404, sibling to UX-050 app-404. Template uses the `site-sections.css` `dz-*` class library (not DaisyUI drift — these are legit design-system-provided marketing classes).
 
 **Artefact:** new contract at `~/.claude/skills/ux-architect/components/site-404-marketing.md`. Differentiates from app-404 on two axes: (a) marketing chrome replaces app shell; CTA is `Go Home → /` rather than `Go to Dashboard → /app`, (b) no context vars for persona/auth — marketing pages are public/anonymous.
 
@@ -407,7 +407,7 @@ Gate 4 (no auth-adjacent affordances) covered by absence check — no `Sign Out`
 
 **Strategy:** `missing_contracts` (not run in 5+ cycles — overdue per the "rotation for breadth" default). Diversifying from cycles 256-259 (investigation → audit → gap analysis → audit).
 
-**Scan scope:** `src/dazzle_ui/templates/site/` and `src/dazzle_ui/templates/layouts/`. The error-page work (UX-050 404, UX-051 403) contracted the app-shell variants but not the marketing-shell variants. More broadly, the entire marketing-chrome family has ZERO contracts in `~/.claude/skills/ux-architect/components/`:
+**Scan scope:** `src/dazzle_page/templates/site/` and `src/dazzle_page/templates/layouts/`. The error-page work (UX-050 404, UX-051 403) contracted the app-shell variants but not the marketing-shell variants. More broadly, the entire marketing-chrome family has ZERO contracts in `~/.claude/skills/ux-architect/components/`:
 
 - `layouts/site_base.html` — marketing wrapper layout (separate from app_shell.html which has UX-031)
 - `site/sections/*.html` — 16 marketing section fragments (hero, features, pricing, testimonials, faq, cta, trust_bar, stats, steps, team, logo_cloud, split_content, comparison, qa_personas, value_highlight, markdown)
@@ -432,7 +432,7 @@ Gate 4 (no auth-adjacent affordances) covered by absence check — no `Sign Out`
 
 **Strategy:** `contract_audit` (diversifying from cycle 258's `framework_gap_analysis`; natural pair to UX-050 app-404 contracted in cycle 257).
 
-**Target:** in-app 403 page (`src/dazzle_ui/templates/app/403.html`) — shipped in #776, substantially evolved via #808's role-disclosure panel, but no formal contract. Template is pure Tailwind + design-system HSL tokens; no drift to repair.
+**Target:** in-app 403 page (`src/dazzle_page/templates/app/403.html`) — shipped in #776, substantially evolved via #808's role-disclosure panel, but no formal contract. Template is pure Tailwind + design-system HSL tokens; no drift to repair.
 
 **Artefact:** new contract at `~/.claude/skills/ux-architect/components/app-403.md`. Differentiates from app-404 on two axes: (a) the role-disclosure panel replaces the suggestion card, (b) the HTMX handler emits HX-Retarget/HX-Reswap/HX-Push-Url specifically for 403s on HTMX requests so denials land in-content with correct URL. 5 quality gates (403 renders, panel renders when Cedar-origin, panel omitted when legacy, back affordance, dashboard always present). 8 v2 open questions focused on the panel (chip interactivity, operation glossary, long-list overflow, screen-reader announcement, i18n grammar for message template) plus two shared with 404 (telemetry, back treatment).
 
@@ -471,7 +471,7 @@ Gate 3 (panel omitted when no structured detail) and gate 4 (back affordance) co
 
 **Strategy:** `contract_audit` (diversifying from cycle 256's `finding_investigation`). Last `missing_contracts` was >3 cycles ago; rotating onto a concrete new contract instead of another finding.
 
-**Target:** in-app 404 page (`src/dazzle_ui/templates/app/404.html`) — shipped incrementally via #776 (app-shell routing) + #811 (suggestion panel) + #816 (title update), but never given a formal contract. Template is pure Tailwind with design-system HSL tokens; no drift to repair.
+**Target:** in-app 404 page (`src/dazzle_page/templates/app/404.html`) — shipped incrementally via #776 (app-shell routing) + #811 (suggestion panel) + #816 (title update), but never given a formal contract. Template is pure Tailwind with design-system HSL tokens; no drift to repair.
 
 **Work done:**
 - New contract at `~/.claude/skills/ux-architect/components/app-404.md` — anatomy (headline / message / suggestion card / action row), model (server-owned, pure presentation, four context vars: `message`, `back_url`/`back_label`, `suggestions`), interactions (no JS; hx-boost inherited from shell + #816's dz:titleUpdate on destination), grammar (Title Case suggestions, em-dash separator, concrete back labels), 5 quality gates, token-mapping table, 7 v2 open questions (telemetry, ranking, stale-link distinction, Back button treatment, keyboard on suggestions, icon, i18n).
@@ -609,7 +609,7 @@ Proceeding with parking lot items next. First target: **breadcrumbs contract** (
 Grep for `variant.hide` and `ux.hide` across the runtime to confirm the cycle 242 retrospective's claim:
 
 ```
-grep -rn "variant\.hide\|ux\.hide" src/dazzle_ui/ src/dazzle_back/
+grep -rn "variant\.hide\|ux\.hide" src/dazzle_page/ src/dazzle_http/
 ```
 
 Returned **zero matches**. Confirmed: before cycle 243, the `hide` field on `PersonaVariant` existed in the IR, parsed from the DSL, but was literally unreferenced by any runtime code path. Silent drop.
@@ -618,7 +618,7 @@ Also grepped `UXSpec` to confirm `hide` is exclusively a PersonaVariant concept 
 
 ### What shipped
 
-**1. `TableContext.persona_hide: dict[str, list[str]]`** — added to `src/dazzle_ui/runtime/template_context.py` alongside the cycle 240 `persona_empty_messages` field. Compile-time dict keyed by persona id, list of column keys to hide.
+**1. `TableContext.persona_hide: dict[str, list[str]]`** — added to `src/dazzle_page/runtime/template_context.py` alongside the cycle 240 `persona_empty_messages` field. Compile-time dict keyed by persona id, list of column keys to hide.
 
 **2. `_compile_list_surface` collects the dict** — refactored the cycle 240 block in `template_compiler.py` so both `persona_empty_messages` and `persona_hide` are populated in one loop over `ux.persona_variants`. Empty hide lists are not added (keeps the dict tidy).
 
@@ -855,7 +855,7 @@ While modernising the fragment I added `x-cloak` to prevent the tooltip panel fr
 - Added `x-cloak` to prevent first-paint flash (now works because of the CSS rule added in the same commit).
 - **Removed `| safe` from `{{ content }}`** — content is now HTML-escaped by Jinja autoescape. The trigger still uses `| safe` because the trigger is intentionally markup (caller supplies a button with nested icon).
 
-**2. Framework CSS housekeeping** — added `[x-cloak] { display: none !important; }` to `src/dazzle_ui/runtime/static/css/dazzle-layer.css`. Fixes first-paint flash for 5 existing consumers (tooltip, search_input, search_select, table_pagination, bulk_actions) as a single one-line addition.
+**2. Framework CSS housekeeping** — added `[x-cloak] { display: none !important; }` to `src/dazzle_page/runtime/static/css/dazzle-layer.css`. Fixes first-paint flash for 5 existing consumers (tooltip, search_input, search_select, table_pagination, bulk_actions) as a single one-line addition.
 
 **3. Contract doc** at `~/.claude/skills/ux-architect/components/tooltip.md` — 6 quality gates (canonical markers, design-token compliance, autoescape on content, aria-label duplication on icon-only native tooltips, keyboard accessibility via focus triggers, x-cloak CSS rule presence), 7 v2 open questions.
 
@@ -1073,7 +1073,7 @@ Fixed all of them in one mechanical sweep via a small Python regex script: `hsl(
 - Removed dead `metric.description` branch.
 - Pipes `metric.value` through `| metric_number`.
 
-**2. New `metric_number` Jinja filter** at `src/dazzle_ui/runtime/template_renderer.py`:
+**2. New `metric_number` Jinja filter** at `src/dazzle_page/runtime/template_renderer.py`:
 
 - `None` → `"0"`
 - `int` → `f"{value:,}"` (`1234` → `"1,234"`, `1500000` → `"1,500,000"`)
@@ -1117,7 +1117,7 @@ Filed as **EX-047**. Not fixing in cycle 239 because:
 - `test_workspace_routes.py` existing tests: unaffected
 - **Full unit sweep: 10754 pass / 101 skip / 0 fail** (+16 from cycle 238's 10,738)
 - Lint: 1 error (ruff UP042 — `dict()` literal); fixed inline to `{...}`
-- mypy `dazzle/core + cli + mcp + dazzle_back`: clean
+- mypy `dazzle/core + cli + mcp + dazzle_http`: clean
 
 ### Rows touched
 
@@ -1155,11 +1155,11 @@ Spun up simple_task, fetched `/app/task` as admin via `/__test__/authenticate`. 
 
 1. **Legacy DaisyUI class still bolted on.** The status cell rendered with modernised Tailwind layout (`inline-flex items-center px-1.5 py-0.5 rounded-[3px] text-[11px]`) but the colour came from `{{ value | badge_class }}` which returns legacy DaisyUI strings like `badge-ghost`, `badge-success`.
 2. **`.badge-error` was broken.** Defined in design-system.css as `background: hsl(var(--er) / 0.1)` referencing a DaisyUI-legacy `--er` variable instead of the canonical `--destructive`. Every rendered `destructive` badge was silently mis-coloured.
-3. **Seven distinct wrapper-class combinations across 16+ call sites.** `grep -rn badge_class src/dazzle_ui/templates/` returned call sites in `table_rows.html` (2×), `related_status_cards.html`, `related_table_group.html`, `workspace/regions/list.html`, `grid.html`, `timeline.html`, `queue.html`, `bar_chart.html`, `kanban.html` (2×), `detail.html`, `tab_data.html`, `metrics.html`, `detail_fields.html` (2× for bool Yes/No), and two `{% include 'fragments/status_badge.html' %}`-based usages in `detail_view.html` + `review_queue.html`. Every one had slightly different padding / sizing / border styling. Drift you could drive a truck through.
+3. **Seven distinct wrapper-class combinations across 16+ call sites.** `grep -rn badge_class src/dazzle_page/templates/` returned call sites in `table_rows.html` (2×), `related_status_cards.html`, `related_table_group.html`, `workspace/regions/list.html`, `grid.html`, `timeline.html`, `queue.html`, `bar_chart.html`, `kanban.html` (2×), `detail.html`, `tab_data.html`, `metrics.html`, `detail_fields.html` (2× for bool Yes/No), and two `{% include 'fragments/status_badge.html' %}`-based usages in `detail_view.html` + `review_queue.html`. Every one had slightly different padding / sizing / border styling. Drift you could drive a truck through.
 
 ### What I shipped
 
-**1. New canonical macro** at `src/dazzle_ui/templates/macros/status_badge.html`:
+**1. New canonical macro** at `src/dazzle_page/templates/macros/status_badge.html`:
 
 ```jinja
 {{ render_status_badge(value, tone=None, size="md", bordered=False, display=None) }}
@@ -1198,7 +1198,7 @@ Case-insensitive, space-to-underscore normalisation. Returns one of: `neutral | 
 | `workspace/regions/tab_data.html` | legacy `badge badge-sm` | 1× macro |
 | `workspace/regions/metrics.html` | 1× inline | 1× macro |
 
-**Zero `badge_class` call sites remain in templates.** `grep -rn badge_class src/dazzle_ui/templates/` returns empty.
+**Zero `badge_class` call sites remain in templates.** `grep -rn badge_class src/dazzle_page/templates/` returns empty.
 
 **6. 16 new regression tests** in `test_template_rendering.py::TestJinjaFilters`:
 
@@ -1232,7 +1232,7 @@ Written to `~/.claude/skills/ux-architect/components/status-badge.md`. Structure
 - `test_template_rendering.py::test_badge_class_none`: preserved (filter still returns `""` for `None` for legacy back-compat).
 - **Full unit sweep**: 10738 pass / 101 skip / 0 fail (net +15 from baseline 10723).
 - `ruff check + format`: clean (will run in pre-flight)
-- `mypy dazzle/core + cli + mcp + dazzle_back`: clean (will run in pre-flight)
+- `mypy dazzle/core + cli + mcp + dazzle_http`: clean (will run in pre-flight)
 
 ### Rows touched
 
@@ -1264,7 +1264,7 @@ Not armed. User's strategic direction is clear ("increase the menagerie"), cycle
 
 ### Core finding
 
-**The biggest gap is not missing components — it's uncontracted components.** Inventory pass across `src/dazzle_ui/templates/` revealed ~18 shipped template files with no matching `ux-architect` contract. The code works, the DSL drives some of it, but there's no regression gate, no consistent token governance, no discoverability for future DSL authors or for LLM agents trying to propose UX.
+**The biggest gap is not missing components — it's uncontracted components.** Inventory pass across `src/dazzle_page/templates/` revealed ~18 shipped template files with no matching `ux-architect` contract. The code works, the DSL drives some of it, but there's no regression gate, no consistent token governance, no discoverability for future DSL authors or for LLM agents trying to propose UX.
 
 Bringing these under governance is higher-leverage than inventing new primitives.
 
@@ -1354,9 +1354,9 @@ Three reasons to prefer (2) over (1):
 
 ### Code changes
 
-- **`src/dazzle_ui/runtime/template_context.py`**: added `ref_entity: str = ""` and `ref_api: str = ""` fields to `FieldContext`.
-- **`src/dazzle_ui/converters/template_compiler.py`**: in both `_build_form_fields` and `_build_form_sections`, after the existing source_ctx resolution, auto-populate `ref_entity`/`ref_api` from `field_spec.type.ref_entity` + `to_api_plural()` when the field is REF/BELONGS_TO and has no explicit `source:` override. (Also folded the cycle 232 date-default into `_build_form_sections` which was missing it — the wizard path never got the cycle 232 fix.)
-- **`src/dazzle_ui/templates/macros/form_field.html`**: added a new `{% elif field.ref_entity %}` branch between the existing `field.source` branch and the `field.widget == "combobox"` branch. Renders a `<select data-dz-ref-entity="..." data-dz-ref-api="...">` with Alpine `x-init` that fetches `/{entity}?page_size=100` and populates options via the same display-key heuristic (`name || company_name || first+last || title || label || email || id`) used in `filter_bar.html`.
+- **`src/dazzle_page/runtime/template_context.py`**: added `ref_entity: str = ""` and `ref_api: str = ""` fields to `FieldContext`.
+- **`src/dazzle_page/converters/template_compiler.py`**: in both `_build_form_fields` and `_build_form_sections`, after the existing source_ctx resolution, auto-populate `ref_entity`/`ref_api` from `field_spec.type.ref_entity` + `to_api_plural()` when the field is REF/BELONGS_TO and has no explicit `source:` override. (Also folded the cycle 232 date-default into `_build_form_sections` which was missing it — the wizard path never got the cycle 232 fix.)
+- **`src/dazzle_page/templates/macros/form_field.html`**: added a new `{% elif field.ref_entity %}` branch between the existing `field.source` branch and the `field.widget == "combobox"` branch. Renders a `<select data-dz-ref-entity="..." data-dz-ref-api="...">` with Alpine `x-init` that fetches `/{entity}?page_size=100` and populates options via the same display-key heuristic (`name || company_name || first+last || title || label || email || id`) used in `filter_bar.html`.
 - **`tests/unit/test_template_compiler.py::TestRefFieldAutoWiring`**: 3 new regression tests covering the happy path, non-ref fields not getting ref_entity populated, and explicit `source:` override suppressing ref auto-wiring.
 
 ### Pre-existing page_size bug surfaced (noted, not fixed this cycle)
@@ -1386,7 +1386,7 @@ Ran all 5 apps in parallel on their hashed ports, authenticated per-app, probed 
 - `tests/unit/ -k "form or widget or field"`: 1235 passed
 - Full `pytest tests/ -m "not e2e"`: **10723 passed, 101 skipped, 0 failed**
 - `ruff check + format`: clean
-- `mypy dazzle/core + cli + mcp + dazzle_back`: Success (374 + 247 files, 0 issues)
+- `mypy dazzle/core + cli + mcp + dazzle_http`: Success (374 + 247 files, 0 issues)
 
 ### Rows closed
 
@@ -1488,7 +1488,7 @@ The loop's endpoint was ambiguous-by-design; this is a natural pause point where
 
 ### Framework is doing the right thing
 
-All three cases prove the same point: the `empty_state.html` template at `src/dazzle_ui/templates/fragments/empty_state.html` is correctly persona-aware. The `{% if create_url %}` guard on the Create-first CTA means that when `create_url` is None (which happens when the current persona cannot create the entity), the button is withheld. **The framework already implements the persona-aware affordance behaviour that gap doc #2's axis 3 proposed to build.**
+All three cases prove the same point: the `empty_state.html` template at `src/dazzle_page/templates/fragments/empty_state.html` is correctly persona-aware. The `{% if create_url %}` guard on the Create-first CTA means that when `create_url` is None (which happens when the current persona cannot create the entity), the button is withheld. **The framework already implements the persona-aware affordance behaviour that gap doc #2's axis 3 proposed to build.**
 
 The observations were misread. The original subagent reports at cycles 216/221/223 said things like "empty state copy invites action the persona cannot perform" — but the invitation was only in the COPY TEXT, not in a button or other affordance. The subagent conflated "action-oriented words in a sentence" with "a clickable affordance". The framework isn't exposing any clickable affordance; it's rendering DSL-authored text verbatim.
 
@@ -1671,9 +1671,9 @@ Cycle 233 catches EX-041 (wrong fix target — no cascade path exists).
 
 3. **Traced compiler dispatch.**
    - `src/dazzle/core/ir/triples.py:58-59` declares `FIELD_TYPE_TO_WIDGET` mapping: `DATE → DATE_PICKER`, `REF → SEARCH_SELECT`. **The IR intent is clear.**
-   - `src/dazzle_ui/converters/template_compiler.py` has `_field_type_to_form_type` → calls `resolve_widget(field_spec)` → maps to a `form_type` string like `"date"` or `"ref"`. **The form_type is derived from the widget correctly.**
+   - `src/dazzle_page/converters/template_compiler.py` has `_field_type_to_form_type` → calls `resolve_widget(field_spec)` → maps to a `form_type` string like `"date"` or `"ref"`. **The form_type is derived from the widget correctly.**
    - But `_build_form_fields` at line 587-588 populates `field.widget` ONLY from explicit DSL override: `widget_hint = element_options.get("widget")`. For entity-field fallback paths (where DSL doesn't have explicit sections), `widget_hint` is always None.
-   - `src/dazzle_ui/templates/macros/form_field.html` branches on `field.widget == "picker"` (activates Flatpickr), `field.widget == "combobox"` (activates Tom Select with static options), `field.source` (activates external-API search-select). If none match, falls through to the final `field.type` branch which emits plain inputs.
+   - `src/dazzle_page/templates/macros/form_field.html` branches on `field.widget == "picker"` (activates Flatpickr), `field.widget == "combobox"` (activates Tom Select with static options), `field.source` (activates external-API search-select). If none match, falls through to the final `field.type` branch which emits plain inputs.
 
 4. **Root cause (date)**: Form-field context is missing the `widget` hint, so the template falls through to `{% elif field.type == "date" %}` at line 319 and emits `<input type="date">` instead of `data-dz-widget="datepicker"`.
 
@@ -2042,7 +2042,7 @@ Plan for cycle 230: pivot to `framework_gap_analysis` v2 — re-synthesise the b
 
 ### Investigation trace
 
-1. **Located template + compile-time context.** Found `src/dazzle_ui/templates/fragments/bulk_actions.html` (the affordance template, `x-show="bulkCount > 0"`) and the compile-time builder at `src/dazzle_ui/converters/template_compiler.py:767` which sets `bulk_actions=True` **unconditionally** on every list surface.
+1. **Located template + compile-time context.** Found `src/dazzle_page/templates/fragments/bulk_actions.html` (the affordance template, `x-show="bulkCount > 0"`) and the compile-time builder at `src/dazzle_page/converters/template_compiler.py:767` which sets `bulk_actions=True` **unconditionally** on every list surface.
 
 2. **Initial hypothesis check: IR inspection.** Inspected the IR's AccessSpec for fieldtest_hub's Device/IssueReport/TestSession/Task. Surprise: `PermissionRule.operation=DELETE, personas=[]` for all four — "empty = any". That would mean every persona is allowed per the IR.
 
@@ -2056,7 +2056,7 @@ Plan for cycle 230: pivot to `framework_gap_analysis` v2 — re-synthesise the b
 
 ### The fix
 
-**One file changed:** `src/dazzle_ui/runtime/page_routes.py` — inserted a new `if ctx.user_roles is not None and req_table.bulk_actions:` block right after the existing Create-button suppression block, calling the same `_user_can_mutate` helper with `operation='delete'`. 10 lines of code + a 12-line comment explaining the cycle 228 mechanism and the "why per-request not compile-time" decision.
+**One file changed:** `src/dazzle_page/runtime/page_routes.py` — inserted a new `if ctx.user_roles is not None and req_table.bulk_actions:` block right after the existing Create-button suppression block, calling the same `_user_can_mutate` helper with `operation='delete'`. 10 lines of code + a 12-line comment explaining the cycle 228 mechanism and the "why per-request not compile-time" decision.
 
 ### Cross-persona verification on fieldtest_hub
 
@@ -2143,9 +2143,9 @@ Fourth consecutive investigation cycle. Particularly clean because:
 
 **Two files changed:**
 
-1. **`src/dazzle_ui/converters/workspace_converter.py`** — added new public function `resolve_persona_workspace_route(persona, workspaces)`. 4-step resolution (workspace-only fallback chain, skipping the `default_route` trap). Docstring cites both EX-042 and the cycle-227 regression discovery so future maintainers know why there are two nearly-identical helpers.
+1. **`src/dazzle_page/converters/workspace_converter.py`** — added new public function `resolve_persona_workspace_route(persona, workspaces)`. 4-step resolution (workspace-only fallback chain, skipping the `default_route` trap). Docstring cites both EX-042 and the cycle-227 regression discovery so future maintainers know why there are two nearly-identical helpers.
 
-2. **`src/dazzle_ui/runtime/page_routes.py`** — rewrote the `_persona_ws_routes` construction at line 1249 to iterate personas through the new helper. Extensive comment explaining why the workspace-only variant is used instead of the sibling `compute_persona_default_routes`.
+2. **`src/dazzle_page/runtime/page_routes.py`** — rewrote the `_persona_ws_routes` construction at line 1249 to iterate personas through the new helper. Extensive comment explaining why the workspace-only variant is used instead of the sibling `compute_persona_default_routes`.
 
 ### Cross-app verification
 
@@ -2175,7 +2175,7 @@ Specifically verified simple_task end-to-end (which was the regression risk): `a
 - New test file: 11/11 pass
 - Full unit sweep: **10453/10453 pass** (up from 10442 — exactly +11, no existing tests affected)
 - Lint: clean
-- Types (`src/dazzle/core`, `cli`, `mcp`, `dazzle_back`): clean
+- Types (`src/dazzle/core`, `cli`, `mcp`, `dazzle_http`): clean
 
 ### Framework-level implications
 
@@ -2237,8 +2237,8 @@ Textbook investigation cycle. Clean root-cause trace, deliberate regression-avoi
 3. **Traced `workspace_allowed_personas` directly.** For each support_tickets workspace, the helper returns the CORRECT set: `ticket_queue→['agent'], agent_dashboard→['manager'], my_tickets→['customer'], _platform_admin→['admin','super_admin']`. So the helper works perfectly. The defect is upstream: the sidebar nav generator isn't consulting the helper properly.
 
 4. **Grep-traced nav-item build sites.** Found two separate builders:
-   - `src/dazzle_ui/converters/template_compiler.py:1197` — calls `workspace_allowed_personas` correctly (this is what #775 fixed).
-   - `src/dazzle_ui/runtime/page_routes.py:1115` — **does NOT call the helper.** It pulls `allow_personas` directly from raw `ws_access.allow_personas`, which for workspaces with no explicit DSL access returns `[]`.
+   - `src/dazzle_page/converters/template_compiler.py:1197` — calls `workspace_allowed_personas` correctly (this is what #775 fixed).
+   - `src/dazzle_page/runtime/page_routes.py:1115` — **does NOT call the helper.** It pulls `allow_personas` directly from raw `ws_access.allow_personas`, which for workspaces with no explicit DSL access returns `[]`.
 
 5. **Traced the downstream filter.** At `page_routes.py:860`: `not item.get("allow_personas") or any(r in item["allow_personas"] for r in normalized_roles)`. An empty `allow_personas` evaluates falsy → the item is unconditionally shown. So workspaces with implicit access (relying on `persona.default_workspace` claims) leaked into every persona's sidebar.
 
@@ -2250,7 +2250,7 @@ This is a textbook example of **"one fix, two affected paths, only one migrated"
 
 ### The fix
 
-Modified `src/dazzle_ui/runtime/page_routes.py:1115` to call `workspace_allowed_personas` during `ws_nav_items` construction, flattening `None → []` to preserve the existing "empty list = no restriction" convention in the downstream filter. Also removed the duplicate import of `workspace_allowed_personas` further down (line 1221) since the helper is now imported earlier in the same function.
+Modified `src/dazzle_page/runtime/page_routes.py:1115` to call `workspace_allowed_personas` during `ws_nav_items` construction, flattening `None → []` to preserve the existing "empty list = no restriction" convention in the downstream filter. Also removed the duplicate import of `workspace_allowed_personas` further down (line 1221) since the helper is now imported earlier in the same function.
 
 Change: 1 function edit, ~10 lines of semantic changes + extensive comment explaining the cycle 226 mechanism and its relationship to cycle 221 observation + v0.55.34 #775 fix.
 
@@ -2280,7 +2280,7 @@ Change: 1 function edit, ~10 lines of semantic changes + extensive comment expla
 - Full unit sweep: **10442/10442 pass** — no regressions
 - Lint: clean (1 auto-fix applied)
 - Types (on paths /ship checks): clean
-- `dazzle_ui/` mypy errors: 27 pre-existing in 5 files, 2 in `page_routes.py` at lines 242/895, **not near my edit** (line 1115 region)
+- `dazzle_page/` mypy errors: 27 pre-existing in 5 files, 2 in `page_routes.py` at lines 242/895, **not near my edit** (line 1115 region)
 
 ### Framework-level implications
 
@@ -2322,7 +2322,7 @@ Per the promise in cycle 225's log entry, filed EX-042 as a `framework-gap` obse
 
 1. **Hypothesis 1 (HTMX boost intercept).** Grepped templates: `base.html:105` does set `hx-boost="true"` on `<body>`, so error-page anchors are indeed intercepted. Seemed confirmed. But reproducing with curl directly against the backend (bypassing HTMX entirely) still landed on `/app/workspaces/engineering_dashboard` as a 403 — **without HTMX involvement.** So HTMX boost wasn't the cause; the server itself was routing tester to the wrong workspace.
 
-2. **Hypothesis 2 (server-side resolution bug).** Traced `/app` GET → 307 `/app/` → 307 `/app/workspaces/engineering_dashboard` → 403. Found the resolver at `src/dazzle_ui/runtime/page_routes.py:950` `_root_redirect`. It builds a `persona → workspace_url` map from `appspec.personas`, falling back to `workspaces[0].name` when a persona has no entry. So the question became: **why does tester have no entry?**
+2. **Hypothesis 2 (server-side resolution bug).** Traced `/app` GET → 307 `/app/` → 307 `/app/workspaces/engineering_dashboard` → 403. Found the resolver at `src/dazzle_page/runtime/page_routes.py:950` `_root_redirect`. It builds a `persona → workspace_url` map from `appspec.personas`, falling back to `workspaces[0].name` when a persona has no entry. So the question became: **why does tester have no entry?**
 
 3. **Drilled into `appspec.personas` for fieldtest_hub.** `tester.default_workspace = None`. But the DSL at `examples/fieldtest_hub/dsl/app.dsl:37` clearly declares `default_workspace: tester_dashboard`. **The parser is losing the declaration.**
 
@@ -2482,9 +2482,9 @@ Subagent made 22 Playwright helper calls across ~7 minutes and filed **3 proposa
 
 **Proposals — three new workspace region types with no current contract:**
 
-1. **PROP-047 `workspace-metrics-region`** — Responsive KPI tile grid (1/2/4 cols breakpoint-driven) optionally followed by a breakout table with attention-level row colouring. Lives in `src/dazzle_ui/templates/workspace/regions/metrics.html`. Not covered by `dashboard-grid` (layout), `region-wrapper` (frame), `filter-bar`, `data-table`, or `region-toolbar`. This is the actual *content* renderer for `region: kind=metrics` region types, and its attention-level row colouring in particular is a visual primitive worth pinning. Selector hint: `div[class*='grid-cols-4']:has(.text-[18px])`.
+1. **PROP-047 `workspace-metrics-region`** — Responsive KPI tile grid (1/2/4 cols breakpoint-driven) optionally followed by a breakout table with attention-level row colouring. Lives in `src/dazzle_page/templates/workspace/regions/metrics.html`. Not covered by `dashboard-grid` (layout), `region-wrapper` (frame), `filter-bar`, `data-table`, or `region-toolbar`. This is the actual *content* renderer for `region: kind=metrics` region types, and its attention-level row colouring in particular is a visual primitive worth pinning. Selector hint: `div[class*='grid-cols-4']:has(.text-[18px])`.
 
-2. **PROP-048 `workspace-tree-region`** — Recursive collapsible hierarchy rendered with native `<details>`/`<summary>` + chevron rotation on open, child-count badges, and HTMX drawer-load on node click. Lives in `src/dazzle_ui/templates/workspace/regions/tree.html`. Uses no Alpine — pure CSS + native disclosure + HTMX. Contract-worthy because the interaction grammar (keyboard disclosure, depth indicator, HTMX attach point) is load-bearing and currently only documented in the template itself. Selector: `details.group`.
+2. **PROP-048 `workspace-tree-region`** — Recursive collapsible hierarchy rendered with native `<details>`/`<summary>` + chevron rotation on open, child-count badges, and HTMX drawer-load on node click. Lives in `src/dazzle_page/templates/workspace/regions/tree.html`. Uses no Alpine — pure CSS + native disclosure + HTMX. Contract-worthy because the interaction grammar (keyboard disclosure, depth indicator, HTMX attach point) is load-bearing and currently only documented in the template itself. Selector: `details.group`.
 
 3. **PROP-049 `workspace-diagram-region`** — Mermaid.js diagram region with CDN lazy-load, `theme=neutral`, overflow-x scroll wrapper. The only workspace region that brings in a third-party renderer. Lives in `workspace/regions/diagram.html`. Worth a contract both for the CDN load pattern (security, CSP implications) and for the overflow/scroll behaviour which is the only responsive hook on an otherwise-fixed SVG. Selector: `pre.mermaid`.
 
@@ -3595,7 +3595,7 @@ Also extracted a small `makeRow(rowClasses, labelText, button)` helper so the th
 
 **Note on the inline `alert(...)` for recovery-code reveal (line 121 of the JS):** left untouched. It's a runtime UX choice (modal blocking dialog vs in-page reveal) that's outside the scope of token replacement. UX-036 is about DaisyUI sweep, not auth-flow ergonomics.
 
-**Phase A:** N/A — auth pages not in example-app contract surface. **Full-directory grep-sweep** on `src/dazzle_ui/templates/site/auth/` confirms zero DaisyUI tokens remain across all 7 files (the only matches are a comment and an HSL variable reference in the 2fa_challenge divider replacement).
+**Phase A:** N/A — auth pages not in example-app contract surface. **Full-directory grep-sweep** on `src/dazzle_page/templates/site/auth/` confirms zero DaisyUI tokens remain across all 7 files (the only matches are a comment and an HSL variable reference in the 2fa_challenge divider replacement).
 
 **Phase B:** Deferred — no running-app cycle for auth pages yet.
 
@@ -3935,7 +3935,7 @@ Both are decomposable. **PROP-032 workspace_regions** is more architecturally im
 **Phases:**
 - **OBSERVE**: Picked PROP-034 for scope pacing. 17 DaisyUI hits, small file, high reach (every page inherits this template).
 - **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/base-layout.md`. Scope carve-out: the contract documents base.html's role as the outermost Jinja template, the framework containers (dzToast, dzToastContainer, dz-modal-slot, dz-dynamic-assets, dz-page-announcer), the CSRF injection script, `_htmx_partial` mode, and conditional vendor asset loading. **Does NOT remove the DaisyUI framework import** — that's a higher-order decision requiring a full template audit and CSS migration. 5 quality gates.
-- **REFACTOR**: Edited `src/dazzle_ui/templates/base.html`:
+- **REFACTOR**: Edited `src/dazzle_page/templates/base.html`:
   - **Body background:** `bg-base-200` → `bg-[hsl(var(--background))]`. Inherits light/dark mode automatically via the CSS variable.
   - **Client dzToast container:** `class="toast toast-end toast-top"` → `class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"`. Tailwind fixed positioning replaces DaisyUI's `toast` positioning class.
   - **dzToast item template (Alpine `:class` binding):** `'alert alert-' + t.type + (t.leaving ? ' dz-toast-leave' : '')` → full token-driven expression with a 4-branch `t.type` conditional mapping `success`/`error`/`warning`/info to `border-l-*` colours (inline hex for `success` = `hsl(142 76% 36%)` and `warning` = `hsl(38 92% 50%)` since design-system.css doesn't yet have `--success` or `--warning` tokens). Base classes: `flex items-center gap-2 px-3 py-2 rounded-[4px] border border-[hsl(var(--border))] border-l-4 bg-[hsl(var(--popover))] text-[13px] text-[hsl(var(--popover-foreground))] shadow-[0_4px_12px_rgb(0_0_0/0.08)] pointer-events-auto cursor-pointer`.
@@ -4040,7 +4040,7 @@ Leaning toward **PROP-034 base_layout** for smaller scope + continuing the layou
 
 The semgrep post-tool-use hook flagged the logout form pattern (`<form action="/auth/logout" method="post">`) with a Django-specific CSRF warning. Investigation revealed:
 
-1. **Dazzle's CSRF middleware** (`src/dazzle_back/runtime/csrf.py`) uses a cookie-based header-match pattern (`dazzle_csrf` cookie + `X-CSRF-Token` header).
+1. **Dazzle's CSRF middleware** (`src/dazzle_http/runtime/csrf.py`) uses a cookie-based header-match pattern (`dazzle_csrf` cookie + `X-CSRF-Token` header).
 2. **Native form POST** (without `hx-post`) can't inject the header — but `/auth/*` is in `exempt_path_prefixes` of the CSRF config, so the existing logout form works via exemption.
 3. The semgrep rule is **Django-specific** and doesn't understand FastAPI middleware config — it's a false positive from the rule's perspective, but the underlying concern is legitimate (native POST without CSRF protection).
 4. **Nosemgrep comment** on the Jinja side didn't suppress the warning — the rule's pattern matches at HTML-AST level, not line-level.
@@ -4450,7 +4450,7 @@ Total override CSS: ~280 LOC across 3 vendored libraries. Compact compared to th
 
 **Strategy:** `MISSING_CONTRACTS` (odd-numbered explore cycle → Strategy A)
 
-**Deviation from spec:** The canonical strategy dispatches `build_ux_explore_mission` via DazzleAgent with a Playwright observer pointing at a running example app. No running app is available in this cycle's environment, so that dispatch would stagnate. Instead, ran a **static variant** of MISSING_CONTRACTS: scanned `src/dazzle_ui/templates/**/*.html` for DaisyUI token leakage and cross-referenced against existing ux-architect contracts in `~/.claude/skills/ux-architect/components/`.
+**Deviation from spec:** The canonical strategy dispatches `build_ux_explore_mission` via DazzleAgent with a Playwright observer pointing at a running example app. No running app is available in this cycle's environment, so that dispatch would stagnate. Instead, ran a **static variant** of MISSING_CONTRACTS: scanned `src/dazzle_page/templates/**/*.html` for DaisyUI token leakage and cross-referenced against existing ux-architect contracts in `~/.claude/skills/ux-architect/components/`.
 
 **Scanner:** Python script counting occurrences of 60+ DaisyUI tokens (`btn*`, `alert*`, `modal*`, `card*`, `input*`, `textarea*`, `select*`, `checkbox*`, `label-text*`, `bg-base-*`, `text-base-content*`, `rounded-box`, `steps*`, `menu*`, `navbar*`, `badge*`, `join*`, `tab*`, `dropdown*`, `divider*`, `drawer*`, `link*`, `progress*`, `kbd*`, `loading`) across all template files.
 
@@ -4509,7 +4509,7 @@ Total override CSS: ~280 LOC across 3 vendored libraries. Compact compared to th
 - **OBSERVE**: Priority buckets 1–3 empty after Cycle 15 closed out the widget series. Bucket 4 (DONE + qa:PENDING) maps to READY_FOR_QA/NEEDS_HARNESS rows, none of which are actionable without a running app or a harness. Per spec the next step is EXPLORE mode, but EXPLORE dispatches a PlaywrightObserver mission that also needs a running app and would stagnate the same way.
 - **Scope decision**: rather than a useless EXPLORE cycle, recognised that four NEEDS_HARNESS rows (UX-005/013/014/015) share the same unblock — a test harness file in the pattern of existing `static/test-dashboard.html` (253 LOC) and `static/test-data-table.html` (768 LOC). Added a new row **UX-020 widget-harness-set** to the backlog and picked it for this cycle. This is legitimate backlog growth, not a scope deviation.
 - **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-harness-set.md`. Contract-shaped doc (stretches the "component contract" template a bit because a harness isn't a component) describing a unified single-file harness for all four event-triggered widgets. 5 quality gates (HTML5 parses, all four widgets present, no Jinja tags, design tokens block present, relative script paths only).
-- **IMPLEMENT**: Created `src/dazzle_ui/runtime/static/test-event-widgets.html` (252 lines). Sections per widget:
+- **IMPLEMENT**: Created `src/dazzle_page/runtime/static/test-event-widgets.html` (252 lines). Sections per widget:
   - Modal (UX-005): native `<dialog>` + `showModal()` trigger button
   - Toast (UX-013): three level-specific spawn buttons + inline `spawnToast()` JS that mimics the dzToast queue pattern (create → auto-dismiss 5s)
   - Confirm-dialog (UX-014): button that dispatches `dz-confirm` CustomEvent with a safe `/noop` action, intercepted by the dzConfirm Alpine listener
@@ -4718,7 +4718,7 @@ Adjusted: 15 unique component rows + 1 aggregate (UX-004) = 16 originally tracke
 **Phases:**
 - **OBSERVE**: Bucket 2 (MISSING+PENDING) empty. Loose interpretation: picked the fastest remaining shape — UX-018 is MISSING+DONE (dzWizard Alpine component already exists). On inspection, discovered `templates/fragments/form_stepper.html` still uses DaisyUI `steps`/`step-primary`, so this was more than a pure retroactive doc — included a stepper refactor.
 - **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/form-wizard.md`. Documents the existing dzWizard state machine (step/total/next/prev/goToStep/validateStage/isActive/isCurrent), specifies the stepper visual as pure Tailwind, 5 quality gates (no DaisyUI stepper classes, dzWizard signature preserved, advance blocked on required field, backward-jump unconditional, active state via Alpine binding).
-- **REFACTOR**: Rewrote `src/dazzle_ui/templates/fragments/form_stepper.html`:
+- **REFACTOR**: Rewrote `src/dazzle_page/templates/fragments/form_stepper.html`:
   - Replaced DaisyUI `steps steps-horizontal` + `step step-primary` with pure flex layout: `<ol>` + `<li>` + bubble span + title span + connector span
   - Bubbles use `rounded-full h-6 w-6` with Alpine `:class` switching between muted bordered and primary-filled
   - Added inline SVG checkmark for completed stages (`step > N`) via `<template x-if>`
@@ -4742,7 +4742,7 @@ Adjusted: 15 unique component rows + 1 aggregate (UX-004) = 16 originally tracke
 **Phases:**
 - **OBSERVE**: Bucket 2 (PENDING+MISSING+PENDING) matched UX-017 only. Picked.
 - **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/form-field.md`. Explicit scope carve-out: covers `text`, `textarea`, `select`, `number`, `email`, `date`, `datetime`, `checkbox`; explicitly excludes rich widgets (`combobox`, `multi_select`, `tags`, `picker`, `range`, `color`, `rich_text`, `slider`, `money`, `file`, search-select). 5 quality gates (no DaisyUI on core branches, required-marker a11y, error→aria-invalid+destructive border, hint→aria-describedby wiring, checkbox label wraps input).
-- **REFACTOR**: Edited `src/dazzle_ui/templates/macros/form_field.html`:
+- **REFACTOR**: Edited `src/dazzle_page/templates/macros/form_field.html`:
   - Wrapper: `<div class="form-control w-full has-error">` → `<div class="w-full space-y-1">`
   - Checkbox: `label cursor-pointer justify-start gap-3` → `inline-flex items-center gap-2`, `checkbox checkbox-primary` → `h-4 w-4 rounded-[3px] accent-[hsl(var(--primary))]`, `label-text` → plain span
   - Standard label: `<label class="label">...<span class="label-text">` → `<label class="block text-[13px] font-medium text-[hsl(var(--foreground))]">`. Required marker `text-error` → `text-[hsl(var(--destructive))]`
@@ -4770,8 +4770,8 @@ Adjusted: 15 unique component rows + 1 aggregate (UX-004) = 16 originally tracke
 - **OBSERVE**: Priority bucket 2 matched UX-016 and UX-017 (from UX-004 decomposition). Picked UX-016 (form-chrome) — smaller, self-contained, does not depend on form-field.
 - **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/form-chrome.md`. Linear aesthetic, server-driven scaffold delegating fields to UX-017 and wizard to UX-018. 5 quality gates (no DaisyUI, error summary render, submit disable on request, wizard nav visibility by stage, cancel is a real `<a>`).
 - **REFACTOR**:
-  - Rewrote `src/dazzle_ui/templates/components/form.html` — replaced `btn btn-primary` / `btn btn-ghost` with token-driven pure-Tailwind button classes using `hsl(var(--*))` variables; added `htmx-request:opacity-60` for submitting state; added `border-t border-[hsl(var(--border))]` to action bar.
-  - Rewrote `src/dazzle_ui/templates/fragments/form_errors.html` — replaced `alert alert-error` DaisyUI pattern with destructive-token border/background and inline exclamation-triangle SVG.
+  - Rewrote `src/dazzle_page/templates/components/form.html` — replaced `btn btn-primary` / `btn btn-ghost` with token-driven pure-Tailwind button classes using `hsl(var(--*))` variables; added `htmx-request:opacity-60` for submitting state; added `border-t border-[hsl(var(--border))]` to action bar.
+  - Rewrote `src/dazzle_page/templates/fragments/form_errors.html` — replaced `alert alert-error` DaisyUI pattern with destructive-token border/background and inline exclamation-triangle SVG.
   - Jinja parse verified for both.
 - **QA Phase A**: DEFERRED — `dazzle ux verify --contracts` needs a running app on localhost:3000.
 - **QA Phase B**: DEFERRED — same.
@@ -4884,7 +4884,7 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Phases:**
 - **OBSERVE**: After Cycle 1, no rows strictly matched priority bucket 2 (`contract: MISSING` AND `impl: PENDING`). UX-004 BLOCKED, UX-005 status PENDING but work DONE. Remaining rows have either `impl: PARTIAL` (UX-006-008) or `impl: DONE` (UX-009-015). Applied loose interpretation: bucket 2 includes any PENDING + MISSING regardless of impl. Picked UX-013 (toast) as smallest scope for contract-only cycle.
 - **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/toast.md`. Linear aesthetic, server-emitted OOB fragments with client queue via `dzToast` Alpine. 5 quality gates covering auto-dismiss, stacking, pause-on-hover, level distinguishable, accessible aria-live.
-- **REFACTOR**: Rewrote `src/dazzle_ui/templates/fragments/toast.html` from 5 lines of DaisyUI (`alert alert-{level}`) to pure Tailwind with inline SVG icons per level, `border-l-4` accent in level colours, `hsl(var(--*))` design-system variables, aria-live polite/assertive by severity.
+- **REFACTOR**: Rewrote `src/dazzle_page/templates/fragments/toast.html` from 5 lines of DaisyUI (`alert alert-{level}`) to pure Tailwind with inline SVG icons per level, `border-l-4` accent in level colours, `hsl(var(--*))` design-system variables, aria-live polite/assertive by severity.
 - **QA Phase A**: SKIPPED (toast has no stable URL — OOB swap only).
 - **QA Phase B**: DEFERRED (event-triggered, needs a trigger flow).
 
@@ -4903,7 +4903,7 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Phases:**
 - **OBSERVE**: Priority function picked UX-004 (form) as highest PENDING with contract MISSING + impl PENDING. On inspection, form is a composite component (chrome, fields, wizards, validation, 8 widgets) — too large for one cycle. Marked UX-004 BLOCKED with decomposition note. Re-ran priority and picked UX-005 (modal).
 - **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/modal.md`. Linear aesthetic, native `<dialog>` model (server-driven content + client-driven lifecycle), 5 quality gates covering native semantics, Esc, backdrop click, focus restoration, body scroll lock.
-- **REFACTOR**: Rewrote `src/dazzle_ui/templates/components/modal.html` from 35 lines of DaisyUI to pure Tailwind + design-system HSL variables. Uses native `<dialog>` with `open:` variant for enter animation, `::backdrop` pseudo-element for overlay, `<form method="dialog">` for close affordances (no JS handlers needed). Alpine `x-effect` for body scroll lock.
+- **REFACTOR**: Rewrote `src/dazzle_page/templates/components/modal.html` from 35 lines of DaisyUI to pure Tailwind + design-system HSL variables. Uses native `<dialog>` with `open:` variant for enter animation, `::backdrop` pseudo-element for overlay, `<form method="dialog">` for close affordances (no JS handlers needed). Alpine `x-effect` for body scroll lock.
 - **QA Phase A** (HTTP contracts): SKIPPED — modal is not rendered in any landing page; it's fetched via `hx-get` on demand and doesn't have a stable URL for contract verification.
 - **QA Phase B** (Playwright agent): DEFERRED — requires a running Dazzle app with a button flow that opens the modal. No example app currently triggers a standalone modal on a deterministic path.
 
@@ -4925,7 +4925,7 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Phases:** REFACTOR only (impl PARTIAL sweep)
 
 **Actions:**
-- Refactored `src/dazzle_ui/templates/workspace/regions/diagram.html` to use `region_card` macro
+- Refactored `src/dazzle_page/templates/workspace/regions/diagram.html` to use `region_card` macro
 - Replaced `card bg-base-100 shadow-sm` + `card-body` + `card-title` wrapper with `{% call region_card(title) %}`
 - Body text colour tokens: `opacity-60` → `text-[hsl(var(--muted-foreground))]`
 - Preserved mermaid lazy-load script and empty state branch
@@ -4942,7 +4942,7 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Phases:** REFACTOR only
 
 **Actions:**
-- Refactored `src/dazzle_ui/templates/workspace/regions/progress.html` to use `region_card` macro
+- Refactored `src/dazzle_page/templates/workspace/regions/progress.html` to use `region_card` macro
 - Replaced `card bg-base-100 shadow-sm` + `card-body` + `card-title` wrapper
 - `progress progress-primary` → `<progress data-dz-progress class="w-full h-2">` (picks up existing design-system.css override from UX-027 cycle)
 - DaisyUI badges replaced with inline semantic pills: green (success HSL 142), amber (warning HSL 38), muted (neutral tokens). Pills use border + background tinted with opacity for Linear-adjacent aesthetic.
@@ -4960,7 +4960,7 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Phases:** REFACTOR only
 
 **Actions:**
-- Refactored `src/dazzle_ui/templates/workspace/regions/heatmap.html` to use `region_card` macro
+- Refactored `src/dazzle_page/templates/workspace/regions/heatmap.html` to use `region_card` macro
 - `table table-sm` → plain `<table>` with border-collapse + row borders from `hsl(var(--border))`
 - Cell background tints: `bg-error/20`, `bg-warning/20`, `bg-success/20` → inline HSL triplets with 15% alpha for three-threshold and two-threshold branches
 - Text colours on cells: darker variant of same HSL for contrast
@@ -4978,7 +4978,7 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Phases:** REFACTOR only
 
 **Actions:**
-- Refactored `src/dazzle_ui/templates/workspace/regions/detail.html` to use `region_card` macro
+- Refactored `src/dazzle_page/templates/workspace/regions/detail.html` to use `region_card` macro
 - Definition list labels → uppercase tracking-wide muted labels (Linear-adjacent)
 - Badge wrapper span: removed `badge badge-sm`, kept `{{ item[col.key] | badge_class }}` filter output for now (follow-up: `badge_class` filter still returns DaisyUI classes like `badge-success`, so this is a latent coupling — needs a parallel token-driven filter)
 - Ref link: `link link-hover link-primary` → `text-[hsl(var(--primary))] hover:underline`
@@ -4986,7 +4986,7 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 **Outcome:** 14/16 adopters complete. 2 remaining: funnel_chart, tab_data.
 
-**Follow-up:** `badge_class` Jinja filter (in `src/dazzle_ui/runtime/server_impl/templates.py` or similar) currently maps status values to `badge-success`/`badge-warning`/`badge-error` class names. Needs a parallel filter (or inline renaming) to emit token-based classes. Deferred — not blocking this cycle's outcome.
+**Follow-up:** `badge_class` Jinja filter (in `src/dazzle_page/runtime/server_impl/templates.py` or similar) currently maps status values to `badge-success`/`badge-warning`/`badge-error` class names. Needs a parallel filter (or inline renaming) to emit token-based classes. Deferred — not blocking this cycle's outcome.
 
 ---
 
@@ -6135,7 +6135,7 @@ The `/qa/magic-link` POST returns a token, but visiting `/auth/magic/<token>` re
 **Diagnosis correction — the `/app/issue-report/create` 404 is NOT a contract-authoring gap.** Previous cycles (115, 134, 135) marked UX-023/024/025 with notes claiming the contract anchor was wrong because "fieldtest_hub DSL doesn't have an issue_report surface." That diagnosis was **incorrect** on both counts:
 
 1. **fieldtest_hub DSL DOES have `surface issue_report_create "Report Issue"`** (confirmed by `grep "^surface " examples/fieldtest_hub/dsl/`). The surface exists.
-2. **The contract URL format `/app/issue-report/create` IS correct.** Dazzle's URL generator (`src/dazzle_ui/runtime/workspace_renderer.py:28`) does `entity_name.lower().replace("_", "-")`, so `issue_report_create` correctly maps to `/app/issue-report/create` with a hyphen. The contract authors followed the correct convention.
+2. **The contract URL format `/app/issue-report/create` IS correct.** Dazzle's URL generator (`src/dazzle_page/runtime/workspace_renderer.py:28`) does `entity_name.lower().replace("_", "-")`, so `issue_report_create` correctly maps to `/app/issue-report/create` with a hyphen. The contract authors followed the correct convention.
 
 **So what's the actual 404 cause?** Most likely one of:
 - **Persona scoping:** the `issue_report_create` surface may have a `permit:` or `scope:` rule that excludes admin/engineer personas, producing a 403 that the walker/renderer translates into a 404 page.
@@ -6354,7 +6354,7 @@ The cycle falls through to Step 6 EXPLORE. Explore counter is 18 (< 30 budget) a
 
 **Broken-anchor pattern now 3/3 on `/app/issue-report/create`:** UX-023 widget:slider (cycle 115), UX-024 widget:colorpicker (cycle 134), and now UX-025 widget:richtext (cycle 135) all target the same non-existent surface in fieldtest_hub and all produce ~100+ findings dominated by 404-page noise. This is the strongest cluster pattern observed so far. **330 findings across these 3 rows are effectively redundant** — they describe the same missing surface from three different angles.
 
-**Ideal investigator target (once v2 ships):** a single `get_related_clusters(locus="src/dazzle_ui/...")` or cross-referenced `get_related_clusters(axis="coverage", persona="admin")` query against the triage queue would surface all three rows; a single fix (add `issue_report` surface to fieldtest_hub's DSL OR revise the three contract anchors) would resolve ~330 findings in one commit. This is exactly the kind of "wide pattern, shared root cause" scenario the investigator's `get_related_clusters` tool + system-prompt root-cause framing were designed for.
+**Ideal investigator target (once v2 ships):** a single `get_related_clusters(locus="src/dazzle_page/...")` or cross-referenced `get_related_clusters(axis="coverage", persona="admin")` query against the triage queue would surface all three rows; a single fix (add `issue_report` surface to fieldtest_hub's DSL OR revise the three contract anchors) would resolve ~330 findings in one commit. This is exactly the kind of "wide pattern, shared root cause" scenario the investigator's `get_related_clusters` tool + system-prompt root-cause framing were designed for.
 
 **Recommendation for immediate human action (doesn't require investigator):** revise the three contracts in `~/.claude/skills/ux-architect/components/widget-{slider,colorpicker,richtext}.md` to point at an existing fieldtest_hub surface. Candidate surfaces worth checking: `/app/project/create`, `/app/test-session/create`, or whatever form surfaces fieldtest_hub actually has.
 
@@ -6798,7 +6798,7 @@ The 6 tests were written against DaisyUI class output but the templates had sinc
 1. `tests/unit/test_phase2_fragments.py::TestToastFragment::test_renders_alert_with_level` — `alert-success` → `text-[hsl(var(--success))]` + `border-l-[hsl(var(--success))]`
 2. `tests/unit/test_phase2_fragments.py::TestToastFragment::test_default_level_is_info` — `alert-info` → `text-[hsl(var(--primary))]` + `border-l-[hsl(var(--primary))]` (info level now maps to --primary)
 3. `tests/unit/test_phase2_fragments.py::TestModal::test_renders_dialog` — `modal-backdrop` → `backdrop:bg-black` (Tailwind's `backdrop:` prefix, native `<dialog>` ::backdrop pseudo)
-4. `tests/unit/test_phase3_fragments.py::TestPopover::test_renders_with_alpine_data` — required a **template fix** at `src/dazzle_ui/templates/fragments/popover.html`: the `{% block popover_content %}{% endblock %}` slot didn't work with `{% include %}` (blocks only fill via `{% extends %}`), so content passed as a variable was silently dropped. Fixed by adding `{{ content | safe if content else '' }}` inside the block — same pattern `modal.html` uses.
+4. `tests/unit/test_phase3_fragments.py::TestPopover::test_renders_with_alpine_data` — required a **template fix** at `src/dazzle_page/templates/fragments/popover.html`: the `{% block popover_content %}{% endblock %}` slot didn't work with `{% include %}` (blocks only fill via `{% extends %}`), so content passed as a variable was silently dropped. Fixed by adding `{{ content | safe if content else '' }}` inside the block — same pattern `modal.html` uses.
 5. `tests/unit/test_workspace_routes.py::TestWorkspaceRefLinks::test_list_ref_link_rendered` — `link-primary` → `text-[hsl(var(--primary))]`
 6. `tests/unit/test_workspace_routes.py::TestTimelineTemplate::test_timeline_renders_items` — `timeline` class → `pl-4 border-l border-[hsl(var(--border))]` (the vertical rule is how the timeline shape is now expressed)
 
@@ -6861,13 +6861,13 @@ Remaining blockers for **practical** Phase B usefulness are bugs 4 (persona logi
 
 1. Picked progress-region (smallest uncontracted region template at 26 lines, single DSL consumer in support_tickets) as the contract_audit target.
 2. Wrote `~/.claude/skills/ux-architect/components/progress-region.md` — 8 quality gates, 7 v2 open questions, Linear aesthetic, HTMX-only (no Alpine).
-3. **Structural fix landed**: 3 hardcoded HSL literals on `src/dazzle_ui/templates/workspace/regions/progress.html:12` migrated to `hsl(var(--success)/...)`. Same drift class cycle 239 fixed across 9 region templates. Added canonical `.dz-progress-region` / `.dz-progress-header` / `.dz-progress-stages` / `.dz-progress-chip` / `.dz-progress-summary` class markers + Contract pointer header.
+3. **Structural fix landed**: 3 hardcoded HSL literals on `src/dazzle_page/templates/workspace/regions/progress.html:12` migrated to `hsl(var(--success)/...)`. Same drift class cycle 239 fixed across 9 region templates. Added canonical `.dz-progress-region` / `.dz-progress-header` / `.dz-progress-stages` / `.dz-progress-chip` / `.dz-progress-summary` class markers + Contract pointer header.
 4. Added `TestProgressRegionTemplate` in `tests/unit/test_workspace_routes.py` with 8 tests pinning each quality gate (wrapper+bar, chip count, tri-state tokens, negative no-hardcoded-hsl, empty-state role=status, conditional summary footer, DaisyUI absence, PROGRESS routing).
 5. **Backlog housekeeping**: marked PROP-049 SUPERSEDED→UX-042 (duplicate of metrics-region already contracted cycle 239). Decomposed PROP-032 into individual PROP-060..067 rows — 8 successor proposals each pointing at a specific uncontracted region template.
 
 **Phase A/B:** Phase B not run — this was a `contract_audit` cycle, not a widget-QA cycle. Empirical verification was via direct `render_fragment("workspace/regions/progress.html", ...)` calls in 8 unit tests.
 
-**Heuristic 1:** satisfied — before writing the contract, I fetched the current template, traced its context vars back to `src/dazzle_back/runtime/workspace_rendering.py:829-856`, and confirmed the `142_71%_45%` hardcoded literal reproduced in the rendered HTML.
+**Heuristic 1:** satisfied — before writing the contract, I fetched the current template, traced its context vars back to `src/dazzle_http/runtime/workspace_rendering.py:829-856`, and confirmed the `142_71%_45%` hardcoded literal reproduced in the rendered HTML.
 
 **What the 8 new PROPs unlock:** 8 focused future contract_audit cycles, each targetting a single region template (26-123 LOC each). Ordered roughly by size: progress (DONE this cycle) < detail < heatmap < bar_chart < grid < timeline < queue < list. Funnel_chart has a prose "Contract" in its header that's narrative-only and needs ux-architect formalisation.
 
@@ -7104,7 +7104,7 @@ Also pinned: the `event.stopPropagation()` inline handler on ref anchors (requir
 
 ### Region menagerie closure summary
 
-**Cycles 271-279: 9 region contracts shipped.** Every file in `src/dazzle_ui/templates/workspace/regions/` (+ the existing metrics, kanban, tab_data, tree, diagram, activity_feed, tabbed_list contracts) is now under ux-architect governance:
+**Cycles 271-279: 9 region contracts shipped.** Every file in `src/dazzle_page/templates/workspace/regions/` (+ the existing metrics, kanban, tab_data, tree, diagram, activity_feed, tabbed_list contracts) is now under ux-architect governance:
 
 | Region | UX-# | Cycle | Notes |
 |--------|------|-------|-------|
@@ -7138,8 +7138,8 @@ With the region menagerie complete, the recurring /ux-cycle loop will likely piv
 - **`region_menagerie_v2_open_questions`** — each of the 9 cycle-271-279 contracts has 7-10 v2 open questions (~70-80 questions total). Many cluster into framework-level themes (a11y gaps, keyboard affordance missing, tooltip hover-only, date format asymmetry). One or two consolidation cycles could tackle these.
 
 Alternatively, continue the `contract_audit` pattern in other template families:
-- `src/dazzle_ui/templates/fragments/` — many un-audited fragments (empty_state is UX-040 but there's date_range_picker, skeleton_patterns, inline_edit fragments not yet formally governed)
-- `src/dazzle_ui/templates/site/` — marketing shell + sections (most now covered by UX-054/UX-055/UX-056/UX-058/UX-059 but spot-audits may surface gaps)
+- `src/dazzle_page/templates/fragments/` — many un-audited fragments (empty_state is UX-040 but there's date_range_picker, skeleton_patterns, inline_edit fragments not yet formally governed)
+- `src/dazzle_page/templates/site/` — marketing shell + sections (most now covered by UX-054/UX-055/UX-056/UX-058/UX-059 but spot-audits may surface gaps)
 
 ---
 
@@ -7256,7 +7256,7 @@ Both gap docs are self-contained implementation plans. The next `/ux-cycle` that
 
 **Work performed:**
 
-1. **Created `src/dazzle_ui/templates/macros/attention_accent.html`** — a single Jinja macro `attention_classes(attn, style)` with 4 style variants:
+1. **Created `src/dazzle_page/templates/macros/attention_accent.html`** — a single Jinja macro `attention_classes(attn, style)` with 4 style variants:
    - `style='border'` — grid-region pattern (4px left-border accent)
    - `style='tint'` — list-region pattern (0.06 / 0.08 alpha bg tint)
    - `style='both'` — queue-region pattern (border + 0.04 alpha tint)
@@ -7429,7 +7429,7 @@ Drift classes covered by preventive lints now:
 **Chosen this cycle.** After 14 consecutive implementation-heavy cycles (271-284), a breadth scan was overdue. Per the skill's rotation heuristic: `missing_contracts` should run when >3 cycles since the last one. Cycle 267 was the last `missing_contracts` cycle — 18 cycles ago.
 
 **Scan methodology:**
-- Walked every template under `src/dazzle_ui/templates/`
+- Walked every template under `src/dazzle_page/templates/`
 - Checked each for a `Contract:` pointer header (canonical format) or equivalent non-standard reference
 - Cross-referenced each fragment name against the `~/.claude/skills/ux-architect/components/*.md` contract set
 - Distinguished between "referenced by a parent contract" (covered implicitly) vs. "genuinely un-governed"
@@ -7748,7 +7748,7 @@ Queue is now extremely narrow:
 4. **Form branch correctly skips `success` transition**: the submit button IS the success transition, so rendering both would produce two "Continue" buttons. Gate 10 asserts it.
 5. **Deliberately Alpine-free**: this shell is pure server-side, and adding Alpine would duplicate the cookie-backed server state. Gate 15 asserts no Alpine directives survive rendering.
 
-**EX-053 CSRF concern filed.** While writing the contract, the semgrep PostToolUse hook flagged the 4 plain `<form method="post">` transition blocks (lines 101, 114, 128, 145) as CSRF-unprotected. Dazzle's `dazzle_back/runtime/csrf.py` enforces a double-submit-cookie check on unsafe methods via the `X-CSRF-Token` header; plain form submits can't include that header. `/app/experiences/*` paths are NOT in the CSRF exempt list. Either:
+**EX-053 CSRF concern filed.** While writing the contract, the semgrep PostToolUse hook flagged the 4 plain `<form method="post">` transition blocks (lines 101, 114, 128, 145) as CSRF-unprotected. Dazzle's `dazzle_http/runtime/csrf.py` enforces a double-submit-cookie check on unsafe methods via the `X-CSRF-Token` header; plain form submits can't include that header. `/app/experiences/*` paths are NOT in the CSRF exempt list. Either:
 
 - (a) experience transitions are silently being rejected in production (very unlikely — they work in QA trials)
 - (b) a dev profile disables CSRF middleware
@@ -7802,7 +7802,7 @@ Result: `r2 → 403 "CSRF token missing or invalid"`, `r3 → 200 OK`. The defec
 
 **The fix: consolidation + CSRF hardening in one commit.**
 
-1. **New macro** at `src/dazzle_ui/templates/macros/experience_transition.html` — `experience_transition_button(tr)` emits a `<button type="button" hx-post="{{ tr.url }}" hx-target="body" hx-swap="innerHTML">` with the 3-style class logic. Single source of truth.
+1. **New macro** at `src/dazzle_page/templates/macros/experience_transition.html` — `experience_transition_button(tr)` emits a `<button type="button" hx-post="{{ tr.url }}" hx-target="body" hx-swap="innerHTML">` with the 3-style class logic. Single source of truth.
 2. **5 transition-button blocks collapsed to macro calls** in `experience/_content.html` (form-step embedded + detail + table + ready-state + non-surface branches). Before: ~52 lines of near-duplicate template code across 5 locations. After: 5 single-line macro calls.
 3. **CSRF mechanism**: `base.html:63-68`'s global `htmx:configRequest` listener auto-injects `X-CSRF-Token` from the `dazzle_csrf` cookie on every HTMX request. `<button hx-post>` picks this up for free; `<form method="post">` cannot. The fix shifts all 5 branches onto the CSRF-safe path.
 
@@ -8066,7 +8066,7 @@ Queued from prior cycles:
 
 **Chosen this cycle.** Of the 2 remaining PROP candidates from cycle 295 (PROP-068 auth-2fa-flow at 441 LOC, PROP-070 site-footer at 17 LOC), picked the smaller one to ship this cycle. PROP-068's cryptographic-UX scope warrants a dedicated 60-90 min cycle, not a quick one. PROP-070 was marked LOW priority but closing it clears cycle 295's backlog and the drift findings turned out to be concrete.
 
-**Novel pattern: dual-file contract.** Every other shell contract in the catalog (workspace-shell, experience-shell, site-shell, etc.) uses inline Tailwind utilities rendered into the template. Site-footer is the exception — the template is a **class-contract scaffold** (17 LOC, 4 canonical `dz-footer-*` markers + data binding only), with the real design owned by a 57-line CSS block at `src/dazzle_ui/runtime/static/css/site-sections.css:757-813`. Custom properties in the `--dz-footer-*` namespace define colour, spacing, type at two theme levels (light + dark).
+**Novel pattern: dual-file contract.** Every other shell contract in the catalog (workspace-shell, experience-shell, site-shell, etc.) uses inline Tailwind utilities rendered into the template. Site-footer is the exception — the template is a **class-contract scaffold** (17 LOC, 4 canonical `dz-footer-*` markers + data binding only), with the real design owned by a 57-line CSS block at `src/dazzle_page/runtime/static/css/site-sections.css:757-813`. Custom properties in the `--dz-footer-*` namespace define colour, spacing, type at two theme levels (light + dark).
 
 **Why this pattern makes sense here.** The footer is **always-dark chrome** regardless of theme — its background is `oklch(0.15 0.01 260)` in light theme and `oklch(0.08 0.01 260)` in dark theme. Both are nearly-black. That visual decision (marketing hierarchy: page light, footer dark, always) requires its own coherent colour system; inlining theme-independent Tailwind utilities at every element would fragment the design. A dedicated CSS file + `--dz-footer-*` token namespace is the cleaner pattern.
 
@@ -8280,7 +8280,7 @@ Started by grep-scanning templates for `<form method="post">` (cycle 292's class
 
 **Zero `integrity=` SRI attributes in any template.** Every external load is trusted blindly.
 
-**Plus the CSP-integration contradiction.** `src/dazzle_back/runtime/security_middleware.py` has a well-designed `_build_csp_header()` with strict defaults (`default-src 'self'`, `script-src 'self' 'unsafe-inline'`, `font-src 'self'`, `connect-src 'self'` — no CDN whitelist). But CSP is DISABLED in both `basic` (default) and `standard` profiles — only `strict` enables it. The templates and CSP defaults are **mutually incompatible**: enabling CSP breaks the templates; leaving CSP off means the security intent coded into the middleware never runs.
+**Plus the CSP-integration contradiction.** `src/dazzle_http/runtime/security_middleware.py` has a well-designed `_build_csp_header()` with strict defaults (`default-src 'self'`, `script-src 'self' 'unsafe-inline'`, `font-src 'self'`, `connect-src 'self'` — no CDN whitelist). But CSP is DISABLED in both `basic` (default) and `standard` profiles — only `strict` enables it. The templates and CSP defaults are **mutually incompatible**: enabling CSP breaks the templates; leaving CSP off means the security intent coded into the middleware never runs.
 
 **Gap doc** at `dev_docs/framework-gaps/2026-04-20-external-resource-integrity.md`:
 
@@ -8405,14 +8405,14 @@ OPEN EX rows: 0. Open gap-doc phases: 3 (Phases 2-4 of external-resource-integri
 | `site/auth/2fa_setup.html` | **NEW finding — no page route serves this** |
 | `site/auth/2fa_settings.html` | **NEW finding — no page route serves this** |
 
-**EX-055 filed (concerning)** — the 2FA page templates have ZERO Python consumers. Cycle 298's auth-2fa contract assumed production usage but wrote source-level tests (template-text assertions) rather than end-to-end render tests. Those tests passed because the templates EXIST, not because anything serves them. `src/dazzle_back/runtime/site_routes.py:502-520` serves login/signup/forgot/reset pages via `render_site_page()` — but the equivalent `/2fa/setup` page route is absent. Possible interpretations: (a) feature half-shipped, (b) framework starter, user wires own routes, (c) mechanism scan missed. Heuristic 1 raw-layer repro needed in a future `finding_investigation` cycle.
+**EX-055 filed (concerning)** — the 2FA page templates have ZERO Python consumers. Cycle 298's auth-2fa contract assumed production usage but wrote source-level tests (template-text assertions) rather than end-to-end render tests. Those tests passed because the templates EXIST, not because anything serves them. `src/dazzle_http/runtime/site_routes.py:502-520` serves login/signup/forgot/reset pages via `render_site_page()` — but the equivalent `/2fa/setup` page route is absent. Possible interpretations: (a) feature half-shipped, (b) framework starter, user wires own routes, (c) mechanism scan missed. Heuristic 1 raw-layer repro needed in a future `finding_investigation` cycle.
 
 **This discovery alone validates the orphan_lint_rule work.** Without a walk-and-assert mechanism, EX-055 would have continued to hide behind the contract's "the feature works" assumption. Meta-pattern reinforcement: automated lint rules catch class-of-drift issues that per-component contract_audits miss. Cycle 284 (EX-051 None-vs-default lint) and cycle 302 (orphan_lint_rule) are both this same kind of horizontal discipline.
 
 **The lint rule itself** (`tests/unit/test_template_orphan_scan.py`, 200 LOC):
 
-- Walks 112 templates under `src/dazzle_ui/templates/`.
-- Collects references via regex-scan of `{% include/extends/import/from "path" %}` in all `.html` + `["path.html"]` string literals in all `.py` across 3 subtrees (dazzle_ui + dazzle_back + dazzle/core).
+- Walks 112 templates under `src/dazzle_page/templates/`.
+- Collects references via regex-scan of `{% include/extends/import/from "path" %}` in all `.html` + `["path.html"]` string literals in all `.py` across 3 subtrees (dazzle_page + dazzle_http + dazzle/core).
 - **DYNAMIC_DIRECTORY_EXEMPTIONS** table handles whole-directory dynamic dispatch: `site/sections/` (via `site/page.html:15,18`'s concat include) + `reports/` (via `journey_reporter.py:23`'s `env.get_template`).
 - **INDIVIDUAL_ALLOWLIST** table has 7 entries, each with a mandatory reason. Test `test_every_allowlist_entry_has_non_empty_reason` enforces reasons ≥ 20 chars + cite evidence.
 - **5 gates**: (1) every orphan is allowlisted, (2) every allowlist entry is still orphaned (stale-entry detection), (3) allowlist entries exist as real templates, (4) dynamic-dir exemptions match real dirs, (5) every reason is non-empty.
@@ -8505,7 +8505,7 @@ OPEN EX rows: 0.
 
 **Chosen this cycle.** Cycle 302 noted a possible false negative: the orphan scanner claimed `components/alpine/dropdown.html` was referenced, but cycle 286's gap doc said it was dormant. The scanner's output was contradicted by prior evidence — worth a targeted 5-min check. After 3 consecutive FILE-don't-FIX cycles (299/301/303), a pure code-maintenance pivot also provides strategy diversity.
 
-**Root cause found in one grep.** `grep -rnE 'dropdown\.html' src/dazzle_ui` surfaced a self-reference inside a Jinja comment at `components/alpine/dropdown.html:4`:
+**Root cause found in one grep.** `grep -rnE 'dropdown\.html' src/dazzle_page` surfaced a self-reference inside a Jinja comment at `components/alpine/dropdown.html:4`:
 
 ```jinja
 {# Usage: {% include 'components/alpine/dropdown.html' with context %} #}
@@ -8656,7 +8656,7 @@ This convention is narrow but well-defined. Future extensions could use frontmat
 
 **Lint architecture:**
 - `_collect_page_templates()` — walks `PAGE_FAMILY_DIRS`, returns non-underscore `.html` files
-- `_collect_rendered_pages()` — regex-scans all `.py` files under `src/dazzle_back/` + `src/dazzle_ui/` for `render_site_page("<path>")` calls, captures the path
+- `_collect_rendered_pages()` — regex-scans all `.py` files under `src/dazzle_http/` + `src/dazzle_page/` for `render_site_page("<path>")` calls, captures the path
 - `_compute_unserved_pages()` — set difference
 - **6 gates**: (1) every page template served OR allowlisted, (2) stale allowlist detection, (3) allowlist templates exist, (4) allowlist entries are in page-families, (5) reasons ≥ 15 chars non-empty, (6) PAGE_FAMILY_DIRS match real directories
 
@@ -8796,7 +8796,7 @@ Each extension took <15 min of work. The infrastructure accumulates leverage —
 **Outcome:** Meta-finding. The scan surfaced **zero new proposals.** The automated lints shipped cycles 302-308 (orphan_lint_rule + page-route-coverage + layout detection) have made manual breadth scans redundant. Recommending retirement of `missing_contracts` from the default rotation.
 
 **Scan executed:**
-- 112 total .html templates in `src/dazzle_ui/templates/`
+- 112 total .html templates in `src/dazzle_page/templates/`
 - 85 directly referenced via `{% include/extends/import/from %}` or Python string literals
 - 20 covered by dynamic-dir exemptions (`site/sections/`, `reports/`)
 - 7 allowlisted orphans (4 dormant primitives + 3 2FA pages pending #831)
@@ -8916,7 +8916,7 @@ Next-candidate targets expand the same pattern to Python modules (orphan-module 
 
 `test_experience_routes.py::test_detail_step_transitions_use_post_forms` asserted the literal string `'method="post"'` in the rendered experience step page. Cycle 292's CSRF refactor (EX-053 fix) replaced plain `<form method="post">` blocks with `experience_transition_button` macro calls emitting `<button type="button" hx-post="..." hx-headers="...csrf...">` — CSRF header flows via base.html's `htmx:configRequest` listener.
 
-**Heuristic 1 verified at raw layer:** grep of `src/dazzle_ui/templates/experience/_content.html` shows zero `<form>` tags and 5 `experience_transition_button(tr)` macro invocations. The macro at `src/dazzle_ui/templates/macros/experience_transition.html:9` emits `hx-post="{{ tr.url }}"`. No framework bug — just a stale assertion.
+**Heuristic 1 verified at raw layer:** grep of `src/dazzle_page/templates/experience/_content.html` shows zero `<form>` tags and 5 `experience_transition_button(tr)` macro invocations. The macro at `src/dazzle_page/templates/macros/experience_transition.html:9` emits `hx-post="{{ tr.url }}"`. No framework bug — just a stale assertion.
 
 Fix: `'method="post"'` → `'hx-post="/app/experiences/onboarding/review?event='`. Preserves the test's original intent (transitions POST, not GET) while matching the new pattern.
 
@@ -9036,7 +9036,7 @@ Cycle 313's housekeeping check noticed 3 modified dist/ files persisting across 
 
 - **Add mypy to `test-ux-preflight`** — preempts a hypothetical 4th silent-drift class. Run `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'` — measure time (<5s?) and add if fast enough.
 - **Apply orphan_lint pattern to Python modules** — still outstanding; 5th horizontal-discipline lint candidate
-- **helper_audit on canonical rendering helpers** — grep for all `render_*` helpers across `src/dazzle_back/runtime/`; verify each page-rendering call site uses one of them (no raw `HTMLResponse(` bypassing the canonical path)
+- **helper_audit on canonical rendering helpers** — grep for all `render_*` helpers across `src/dazzle_http/runtime/`; verify each page-rendering call site uses one of them (no raw `HTMLResponse(` bypassing the canonical path)
 - **Monitor lint allowlist drift** — opportunistic
 - **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
 - **`row-click-keyboard-affordance-gap`** — parked, browser needed
@@ -9044,19 +9044,19 @@ Cycle 313's housekeeping check noticed 3 modified dist/ files persisting across 
 
 ---
 
-## Cycle 314 — 2026-04-20 — extend test-ux-preflight with mypy(dazzle_ui)
+## Cycle 314 — 2026-04-20 — extend test-ux-preflight with mypy(dazzle_page)
 
 **Strategy:** infrastructure extension — directly implements cycle 313's top "next candidate"
-**Outcome:** Gate now runs lints + snapshots + card-safety + mypy on `src/dazzle_ui/` in ~9s wall-clock (up from 1.7s). Closes the hypothesised 4th silent-drift class before it manifests.
+**Outcome:** Gate now runs lints + snapshots + card-safety + mypy on `src/dazzle_page/` in ~9s wall-clock (up from 1.7s). Closes the hypothesised 4th silent-drift class before it manifests.
 
 **Timing measurement** (Heuristic 1 — measure before committing):
 - Preflight pytest subset alone: 1.7s
 - mypy `src/dazzle/core src/dazzle/cli src/dazzle/mcp`: 7.0s wall (3.8s CPU) — too heavy for preflight
-- mypy `src/dazzle_ui/` (54 files): 3.7s wall (3.0s CPU) — tolerable
-- mypy `src/dazzle_back/runtime` (138 files): 3.8s wall — similar, not added
-- **Final gate: pytest + mypy(dazzle_ui) = ~9s wall, ~6s CPU**
+- mypy `src/dazzle_page/` (54 files): 3.7s wall (3.0s CPU) — tolerable
+- mypy `src/dazzle_http/runtime` (138 files): 3.8s wall — similar, not added
+- **Final gate: pytest + mypy(dazzle_page) = ~9s wall, ~6s CPU**
 
-Scoped decision — mypy on `src/dazzle_ui/` only because that's the subtree `/ux-cycle` cycles most frequently touch (templates, template_context, converters/template_compiler, template macros, static assets). Broader mypy coverage stays with `/ship`'s pre-push gate which runs `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle_back/` already. No coverage regression — this is an early-detection signal, not a replacement.
+Scoped decision — mypy on `src/dazzle_page/` only because that's the subtree `/ux-cycle` cycles most frequently touch (templates, template_context, converters/template_compiler, template macros, static assets). Broader mypy coverage stays with `/ship`'s pre-push gate which runs `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle_http/` already. No coverage regression — this is an early-detection signal, not a replacement.
 
 **Silent-drift defense stack as of cycle 314:**
 
@@ -9068,7 +9068,7 @@ Scoped decision — mypy on `src/dazzle_ui/` only because that's the subtree `/u
 | Pointer-comment malformation | `test_canonical_pointer_lint.py` (310) | <100ms | Forward-looking; 19 pointers locked |
 | Syrupy baseline drift | `test_dom_snapshots.py` | ~500ms | 13 baselines; cycle 311 cleared 8 stale |
 | Card/chrome invariant | `test_card_safety_invariants.py` | ~800ms | 8 invariants |
-| **UI Python type errors** | **mypy src/dazzle_ui/ (NEW cycle 314)** | **~3.7s** | **54 files** |
+| **UI Python type errors** | **mypy src/dazzle_page/ (NEW cycle 314)** | **~3.7s** | **54 files** |
 
 Five classes actively gated. dist/ drift (cycle 313's 3rd class) remains manual — no automated detector cheaper than `git status` itself, and a hook could be disruptive; deferring.
 
@@ -9082,7 +9082,7 @@ Five classes actively gated. dist/ drift (cycle 313's 3rd class) remains manual 
 
 ### Next candidate cycles
 
-- **Measure mypy against `src/dazzle_back/runtime`** — if it adds <3s and a cycle there has appetite, add as a 6th step. Or leave to `/ship`.
+- **Measure mypy against `src/dazzle_http/runtime`** — if it adds <3s and a cycle there has appetite, add as a 6th step. Or leave to `/ship`.
 - **Apply orphan_lint pattern to Python modules** — 5th horizontal-discipline lint. Still outstanding. Highest unsettled candidate.
 - **helper_audit on canonical rendering helpers** — grep `HTMLResponse(` call sites vs `render_site_page` / `_render_app_shell_error` canonical helpers
 - **Monitor lint allowlist drift** — opportunistic
@@ -9095,7 +9095,7 @@ Five classes actively gated. dist/ drift (cycle 313's 3rd class) remains manual 
 ## Cycle 315 — 2026-04-20 — helper_audit: HTMLResponse canonical wrapper in fragment_routes.py
 
 **Strategy:** helper_audit (Heuristic 2) — cycle 313 flagged this candidate; concrete, scoped, low-risk
-**Outcome:** Found 5 sites in `src/dazzle_back/runtime/fragment_routes.py` using raw `HTMLResponse(...)` for inline error HTML while the same file defines `_html(content)` as the canonical wrapper with a docstring explicitly explaining why it exists ("so that static-analysis tools can distinguish template-rendered output from raw string interpolation"). Migrated all 5 to `_html(...)`. Removed the now-unused `HTMLResponse` import. 112 fragment tests pass.
+**Outcome:** Found 5 sites in `src/dazzle_http/runtime/fragment_routes.py` using raw `HTMLResponse(...)` for inline error HTML while the same file defines `_html(content)` as the canonical wrapper with a docstring explicitly explaining why it exists ("so that static-analysis tools can distinguish template-rendered output from raw string interpolation"). Migrated all 5 to `_html(...)`. Removed the now-unused `HTMLResponse` import. 112 fragment tests pass.
 
 **The drift (Heuristic 2 — helper-called-but-bypassed):**
 
@@ -9146,7 +9146,7 @@ Total: 26 call sites scanned, 0 bypasses post-cycle.
 
 - **DaisyUI token sweep in Python-embedded HTML strings** — `text-error` + `text-base-content/50` in fragment_routes.py (≤3 sites). Migrate to `text-[hsl(var(--error))]` + `text-[hsl(var(--muted-foreground))]`. Smaller than a template-file migration; quick win.
 - **Apply orphan_lint pattern to Python modules** — 5th horizontal-discipline lint. Still outstanding.
-- **Measure mypy against `src/dazzle_back/runtime`** — if <3s, add as a 3rd preflight step
+- **Measure mypy against `src/dazzle_http/runtime`** — if <3s, add as a 3rd preflight step
 - **Monitor lint allowlist drift** — opportunistic
 - **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
 - **`row-click-keyboard-affordance-gap`** — parked, browser needed
@@ -9162,7 +9162,7 @@ Total: 26 call sites scanned, 0 bypasses post-cycle.
 **Sweep:**
 
 ```
-grep -rnE "(text-error|text-primary|text-secondary|text-base-content|bg-error|bg-primary|bg-secondary|btn-primary|btn-error|badge-|alert-error|alert-warning|alert-info|alert-success)" src/dazzle_back/ src/dazzle_ui/ --include="*.py"
+grep -rnE "(text-error|text-primary|text-secondary|text-base-content|bg-error|bg-primary|bg-secondary|btn-primary|btn-error|badge-|alert-error|alert-warning|alert-info|alert-success)" src/dazzle_http/ src/dazzle_page/ --include="*.py"
 ```
 
 Found 16 hits. Categorised:
@@ -9208,7 +9208,7 @@ The framework is now **DaisyUI-free in the rendering path.** The three deferred 
 
 - **Apply orphan_lint pattern to Python modules** — 5th horizontal-discipline lint. Still outstanding.
 - **Migrate `template_renderer.py` `badge-*` mapping** — grammar-level change (~20 call sites); warrants contract_audit treatment
-- **Measure mypy against `src/dazzle_back/runtime`** — if <3s, add as a 3rd preflight step
+- **Measure mypy against `src/dazzle_http/runtime`** — if <3s, add as a 3rd preflight step
 - **Monitor lint allowlist drift** — opportunistic
 - **Gap doc Phase 2 as GitHub issue** — external-resource-integrity
 - **`row-click-keyboard-affordance-gap`** — parked, browser needed
@@ -9267,7 +9267,7 @@ Converts the existing preflight gate (a Step 0a of the NEXT cycle) into an outbo
 **Priority order (from gap doc's Axis A recommendations):**
 
 - **Add DaisyUI-token Python lint (5th horizontal-discipline)** — Axis A3. Directly closes Class 5. ~80 LOC, <0.5s preflight cost.
-- **Add `make test-ux-deep` target with broader mypy** — Axis A1. Non-preflight, manual invocation. Low scope, closes type-error drift beyond dazzle_ui.
+- **Add `make test-ux-deep` target with broader mypy** — Axis A1. Non-preflight, manual invocation. Low scope, closes type-error drift beyond dazzle_page.
 - **Add dist/ drift warning to preflight** — Axis A2. Git-status scan; non-blocking. Closes Class 3.
 - **Apply orphan_lint pattern to Python modules** — still outstanding from prior cycles, but gap doc's framing suggests it's narrower-scope than originally planned
 - **Migrate `template_renderer.py` `badge-*` mapping** — grammar-level; warrants contract_audit treatment
@@ -9408,7 +9408,7 @@ Cycle 317's gap doc asked "is there a 'gate cycle' vs 'fast cycle' distinction w
 
 ### Next candidate cycles
 
-- **Add `make test-ux-deep` target** — Axis A1. Broader mypy (dazzle_back/runtime + core + cli + mcp). Not in preflight; manual invocation for deeper audits.
+- **Add `make test-ux-deep` target** — Axis A1. Broader mypy (dazzle_http/runtime + core + cli + mcp). Not in preflight; manual invocation for deeper audits.
 - **Migrate `template_renderer.py` `badge-*` mapping** — grammar-level; contract_audit
 - **Apply orphan_lint pattern to Python modules** — 6th horizontal-discipline lint candidate
 - **Monitor lint allowlist drift** — opportunistic
@@ -9421,15 +9421,15 @@ Cycle 317's gap doc asked "is there a 'gate cycle' vs 'fast cycle' distinction w
 ## Cycle 320 — 2026-04-20 — test-ux-deep target: Axis A1 closes broader-mypy gap
 
 **Strategy:** infrastructure extension — implements the third and final Axis A fix from cycle 317's gap doc
-**Outcome:** Added `make test-ux-deep` target — a superset of `test-ux-preflight` that also runs `mypy` across core + cli + mcp + dazzle_back (631 files). ~15s warm wall time. Complements preflight (which stays at <5s for cron cadence).
+**Outcome:** Added `make test-ux-deep` target — a superset of `test-ux-preflight` that also runs `mypy` across core + cli + mcp + dazzle_http (631 files). ~15s warm wall time. Complements preflight (which stays at <5s for cron cadence).
 
 **Why separate target instead of preflight extension:**
 
-Cycle 314 rejected adding dazzle_back mypy to preflight because it pushed gate cost 9s → 13s. Cycle 320's solution: two-tier gate structure.
+Cycle 314 rejected adding dazzle_http mypy to preflight because it pushed gate cost 9s → 13s. Cycle 320's solution: two-tier gate structure.
 
 | Gate | Scope | Wall time | Invocation |
 |---|---|---|---|
-| `test-ux-preflight` | 43 tests + mypy(dazzle_ui, 54 files) + git status | ~5s | Step 0a.4 of every `/ux-cycle` |
+| `test-ux-preflight` | 43 tests + mypy(dazzle_page, 54 files) + git status | ~5s | Step 0a.4 of every `/ux-cycle` |
 | `test-ux-deep` | preflight + mypy(core+cli+mcp+back, 631 files) | ~15s warm | Manual; recommended before `/ship` |
 
 This matches the cost structure: preflight is paid on every cron tick (6/hour), deep is paid at push-time (~1/hour at most).
@@ -9492,7 +9492,7 @@ Theme has reached a reasonable steady state; future cycles can likely de-emphasi
 The `_badge_filter` function had been deprecated in cycle 238 (docstring: "Retained only for any stragglers that still emit the legacy class names"). Before assuming the migration would touch 20 call sites (cycle 320's estimate), I grepped for `badge_class` filter usage in templates:
 
 ```
-grep -rn "| *badge_class\|badge_class" src/dazzle_ui/templates/
+grep -rn "| *badge_class\|badge_class" src/dazzle_page/templates/
 ```
 
 **Zero template consumers.** The "stragglers" rationale from cycle 238 turned out to be false — no stragglers ever materialised. The filter was dead code for ~80 cycles. Safe to delete outright rather than migrate.
@@ -9592,7 +9592,7 @@ Cycle 322 is the human sign-off on (1) and (2). Next opportunistic audit due ~cy
 | page_route_coverage | `site/auth/2fa_challenge.html` | YES | EX-055 → #831 | VALID |
 | page_route_coverage | `site/auth/2fa_setup.html` | YES | EX-055 → #831 | VALID |
 | page_route_coverage | `site/auth/2fa_settings.html` | YES | EX-055 → #831 | VALID |
-| daisyui_python | `src/dazzle_ui/runtime/htmx.py` | YES | cycle 316 deferral — dev-only fallback | VALID |
+| daisyui_python | `src/dazzle_page/runtime/htmx.py` | YES | cycle 316 deferral — dev-only fallback | VALID |
 
 **Heuristic 1 verification per entry:**
 
@@ -9600,7 +9600,7 @@ Cycle 322 is the human sign-off on (1) and (2). Next opportunistic audit due ~cy
 
 2. **2FA templates (3, referenced twice)** — greppped `src/` for `2fa_challenge.html`, `2fa_setup.html`, `2fa_settings.html` as Python string literals in render-helper calls. Zero matches. Confirmed #831 still OPEN via `gh issue view 831` — title: "Bug: 2FA UI shipped but no page routes serve /2fa/setup, /2fa/settings, /2fa/challenge".
 
-3. **htmx.py fallback (1)** — read `src/dazzle_ui/runtime/htmx.py:165-172`. The `alert alert-error mb-4` fallback still exists at line 168, still gated by `ImportError` catch-block above it. Unreachable in production; deferral rationale intact.
+3. **htmx.py fallback (1)** — read `src/dazzle_page/runtime/htmx.py:165-172`. The `alert alert-error mb-4` fallback still exists at line 168, still gated by `ImportError` catch-block above it. Unreachable in production; deferral rationale intact.
 
 **Meta-observation: the automated tests are the workhorse.**
 
@@ -9632,7 +9632,7 @@ Recommendation: run this audit every ~10 cycles OR whenever a major issue closur
 **Heuristic 1 confirmed at raw layer** before filing:
 
 ```
-grep -nE "cdn\.|jsdelivr|unpkg|googleapis" src/dazzle_ui/templates/{base,site/site_base}.html
+grep -nE "cdn\.|jsdelivr|unpkg|googleapis" src/dazzle_page/templates/{base,site/site_base}.html
 ```
 
 - `base.html:24` — `cdn.tailwindcss.com` still loaded as executable JS
@@ -9700,7 +9700,7 @@ So cycle 324 implements rather than files. Phase 4 marked SHIPPED on the gap doc
 
 **Lint design:**
 
-Scans `src/dazzle_ui/templates/**/*.html` for `https?://` URLs; requires each distinct origin to be in `ALLOWED_EXTERNAL_ORIGINS` with a reason citing a filed issue / gap doc / deferral rationale.
+Scans `src/dazzle_page/templates/**/*.html` for `https?://` URLs; requires each distinct origin to be in `ALLOWED_EXTERNAL_ORIGINS` with a reason citing a filed issue / gap doc / deferral rationale.
 
 Tracked at **origin level** (not full URL) so version bumps like `jsdelivr/npm/mermaid@11` → `@12` don't require lint edits. Semantic meaning: "this CDN is approved as an external load source"; the lint is about SOURCE-of-external-load, not specific asset identities.
 
@@ -9737,7 +9737,7 @@ Tracked at **origin level** (not full URL) so version bumps like `jsdelivr/npm/m
 **Preflight gate evolution:**
 
 - Cycle 312: 3 lints, snapshots, card-safety — total ~3s
-- Cycle 314: +mypy(dazzle_ui) — ~5s
+- Cycle 314: +mypy(dazzle_page) — ~5s
 - Cycle 318: +DaisyUI Python — ~5s
 - Cycle 319: +dist/ warning — ~5s (warning is free)
 - Cycle 324: +external-resource lint — ~5s
@@ -9831,7 +9831,7 @@ Cycles 300/317 produced the gap doc. Cycles 301/323/325 filed each actionable ph
 **The drift:**
 
 The cycle 312 commit shipped the preflight gate with "4 lints + DOM snapshots + card-safety, ~3s". Subsequent cycles grew the gate:
-- Cycle 314: added `mypy src/dazzle_ui/` → ~5s
+- Cycle 314: added `mypy src/dazzle_page/` → ~5s
 - Cycle 318: added DaisyUI-python lint (5th lint)
 - Cycle 319: added non-blocking `git status dist/` warning
 - Cycle 320: added `test-ux-deep` sibling target
@@ -9842,7 +9842,7 @@ But the skill description at Step 0a.4 kept saying "4 lints + ~3s". 14 cycles of
 **The fix:**
 
 Replaced the single-sentence gate description with:
-1. Current numbers (6 lints, ~5s, mypy(dazzle_ui), dist warning)
+1. Current numbers (6 lints, ~5s, mypy(dazzle_page), dist warning)
 2. Per-failure playbook: snapshot drift / CDN-or-DaisyUI / mypy / dist, each with a specific remediation
 3. Pointer to `make test-ux-deep` for before-`/ship` audits (cycle 320 addition)
 
@@ -9873,20 +9873,20 @@ Cycles 311-324 surfaced 6 drift classes in code and gates; cycle 326 closes a 7t
 ## Cycle 327 — 2026-04-20 — Python-module orphan investigation: hot_reload.py FILED→#834
 
 **Strategy:** finding_investigation — Heuristic-1 Python-module orphan scan to explore whether a formal lint is worth building, instead of building the lint directly
-**Outcome:** Scan found 6 candidates → narrowed to 1 real orphan (`src/dazzle_ui/runtime/hot_reload.py`, 463 LOC, zero importers). Filed as [#834](https://github.com/manwithacat/dazzle/issues/834) for delete-vs-wire-up-vs-document decision. Decision on building a formal Python orphan lint: **deferred** until more signal justifies it.
+**Outcome:** Scan found 6 candidates → narrowed to 1 real orphan (`src/dazzle_page/runtime/hot_reload.py`, 463 LOC, zero importers). Filed as [#834](https://github.com/manwithacat/dazzle/issues/834) for delete-vs-wire-up-vs-document decision. Decision on building a formal Python orphan lint: **deferred** until more signal justifies it.
 
 **The scan:**
 
 Naive scan:
-- 54 Python modules under `src/dazzle_ui/`
-- 48 reachable via absolute-import matches (`from dazzle_ui.X import Y` or `import dazzle_ui.X`)
+- 54 Python modules under `src/dazzle_page/`
+- 48 reachable via absolute-import matches (`from dazzle_page.X import Y` or `import dazzle_page.X`)
 - 6 potential orphans
 
 Heuristic 1 verification (relative imports + re-exports):
-- `dazzle_ui.themes.css_generator` → FALSE POSITIVE (`from .css_generator` in themes/__init__.py)
-- `dazzle_ui.themes.presets` → FALSE POSITIVE (`from .presets` in themes/__init__.py + resolver.py)
-- `dazzle_ui.tests` (3 modules) → likely NOT ORPHANED (test files discovered by pytest collection rather than imported)
-- **`dazzle_ui.runtime.hot_reload` → GENUINE ORPHAN** (463 LOC, docstring describes SSE-driven file watcher, no consumer)
+- `dazzle_page.themes.css_generator` → FALSE POSITIVE (`from .css_generator` in themes/__init__.py)
+- `dazzle_page.themes.presets` → FALSE POSITIVE (`from .presets` in themes/__init__.py + resolver.py)
+- `dazzle_page.tests` (3 modules) → likely NOT ORPHANED (test files discovered by pytest collection rather than imported)
+- **`dazzle_page.runtime.hot_reload` → GENUINE ORPHAN** (463 LOC, docstring describes SSE-driven file watcher, no consumer)
 
 **False-positive rate: 83%** (5/6 candidates). This validates cycle 317's warning that Python orphan lints are "MUCH more complex than template orphan" due to relative imports, test discovery, plugin loading, entry points, etc. A naive module-orphan lint would be noisy.
 
@@ -9900,7 +9900,7 @@ Cycle 324's external-resource lint was net-positive because:
 A Python module orphan lint at cycle 327:
 - Complex detection (relative imports, test discovery, dynamic loading, entry points)
 - High false-positive rate (83% from this scan)
-- Allowlist would need ~10 entries just for src/dazzle_ui/tests + pyproject console_scripts
+- Allowlist would need ~10 entries just for src/dazzle_page/tests + pyproject console_scripts
 - **One real finding** after hours of engineering would be a poor ratio
 
 Cheaper path: **file the one real finding as an issue**, defer the lint until signal accumulates. If 3+ similar findings surface across future cycles, revisit. Until then, `/issues` pickup of #834 is the direct path to resolution.
@@ -9917,8 +9917,8 @@ Cycles 302-324 built the horizontal-discipline lint stack — converting acciden
 
 ### Next candidate cycles
 
-- **If #834 closes toward "delete"**, reclaim 463 LOC from dazzle_ui; if "wire up", follow-on issue for the dev-server integration
-- **Re-run Python-module orphan scan across `src/dazzle_back/` + `src/dazzle/`** — may surface more findings, increasing pressure to build the lint (raises the signal:noise ratio)
+- **If #834 closes toward "delete"**, reclaim 463 LOC from dazzle_page; if "wire up", follow-on issue for the dev-server integration
+- **Re-run Python-module orphan scan across `src/dazzle_http/` + `src/dazzle/`** — may surface more findings, increasing pressure to build the lint (raises the signal:noise ratio)
 - **Dormant primitives review** — 4 entries ~35+ cycles dormant. Policy decision due.
 - **`row-click-keyboard-affordance-gap`** — parked, browser needed
 - **`cross-shell title harmonisation`** — design decision
@@ -9927,15 +9927,15 @@ Cycles 302-324 built the horizontal-discipline lint stack — converting acciden
 
 ## Cycle 328 — 2026-04-20 — expanded Python-orphan scan: lint ruled out
 
-**Strategy:** finding_investigation — continuation of cycle 327. Scan broader scope (dazzle_back + dazzle core/cli/mcp/agent) to test whether aggregate signal justifies building the formal lint deferred in cycle 327.
+**Strategy:** finding_investigation — continuation of cycle 327. Scan broader scope (dazzle_http + dazzle core/cli/mcp/agent) to test whether aggregate signal justifies building the formal lint deferred in cycle 327.
 **Outcome:** Scan of 979 modules found ~104 naive orphan candidates but only **3 plausibly-genuine** after Heuristic-1 relative-import + entry-point refinement. Signal:noise got WORSE with broader scope. **Lint decision: ruled out definitively.** The cycle 327 defer is now a cycle 328 permanent decision.
 
 **Scan coverage:**
 
 | Package | Modules | Naive orphans | Notes |
 |---|---|---|---|
-| `dazzle_ui` | 54 | 4 | 1 genuine (cycle 327, filed #834), 3 false positives |
-| `dazzle_back` | 248 | 36 | ~2 plausibly genuine (push_notifications, admin_api_routes), rest relative imports or plugin auto-registration |
+| `dazzle_page` | 54 | 4 | 1 genuine (cycle 327, filed #834), 3 false positives |
+| `dazzle_http` | 248 | 36 | ~2 plausibly genuine (push_notifications, admin_api_routes), rest relative imports or plugin auto-registration |
 | `dazzle.core` | 189 | 23 | Mostly DSL parser mixins (auto-registered via introspection); 0 genuine |
 | `dazzle.cli` | 81 | 2 | Both `__main__` (CLI entry points, false positive) |
 | `dazzle.mcp` | 113 | 19 | Mostly tool handlers (auto-registered); ~0 genuine |
@@ -10034,12 +10034,12 @@ Precedent: cycle 309's retirement of `missing_contracts` strategy — not "we'll
 ## Cycle 330 — 2026-04-20 — EX-005 Heuristic-1 drill: validates existing FIXED_LOCALLY status
 
 **Strategy:** finding_investigation — a concrete raw-layer Heuristic-1 check on a still-sitting EX row (cycle 329 flagged "pick fresh themes", but before a gap-doc synthesis I wanted a concrete investigation to ground the theme-selection)
-**Outcome:** Drilled into EX-005 (drawer "Open full page" allegedly dead `href="#"`). Heuristic-1 reading of `src/dazzle_ui/templates/workspace/_content.html:251-284` confirms framework is correct: element starts `hidden` with no href; `window.dzDrawer.open(url)` assigns `expand.href = url` before showing it; `page_routes.py:1060` always sends a real URL in the `dz:drawerOpen` event. Observer's report was a pre-open-DOM reading artifact. Backlog row already shows `FIXED_LOCALLY` — this cycle is the human-sign-off validating that status.
+**Outcome:** Drilled into EX-005 (drawer "Open full page" allegedly dead `href="#"`). Heuristic-1 reading of `src/dazzle_page/templates/workspace/_content.html:251-284` confirms framework is correct: element starts `hidden` with no href; `window.dzDrawer.open(url)` assigns `expand.href = url` before showing it; `page_routes.py:1060` always sends a real URL in the `dz:drawerOpen` event. Observer's report was a pre-open-DOM reading artifact. Backlog row already shows `FIXED_LOCALLY` — this cycle is the human-sign-off validating that status.
 
 **The investigation trail:**
 
 ```
-grep dz-drawer-expand src/dazzle_ui/
+grep dz-drawer-expand src/dazzle_page/
 → workspace/_content.html:251: <a id="dz-drawer-expand" hidden class="...">
 → workspace/_content.html:263: var expand = document.getElementById('dz-drawer-expand');
 
@@ -10047,7 +10047,7 @@ Read lines 245-305:
   open(url) { if (url && expand) { expand.href = url; expand.hidden = false; } ... }
   dz:drawerOpen listener: window.dzDrawer.open(e.detail.url || '');
 
-grep dz:drawerOpen src/dazzle_ui/:
+grep dz:drawerOpen src/dazzle_page/:
 → page_routes.py:1060: "dz:drawerOpen": {"url": str(prc.request.url)}
 ```
 
@@ -10083,7 +10083,7 @@ Add to observer failure modes: "hidden elements with dynamically-assigned attrib
 
 **Heuristic 1 on EX-023:**
 
-Read `src/dazzle_ui/templates/fragments/bulk_actions.html` + verified `[x-cloak]` CSS at `dazzle-layer.css:25`:
+Read `src/dazzle_page/templates/fragments/bulk_actions.html` + verified `[x-cloak]` CSS at `dazzle-layer.css:25`:
 
 ```html
 <div x-show="bulkCount > 0" x-cloak ...>

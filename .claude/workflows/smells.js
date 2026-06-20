@@ -153,7 +153,7 @@ const DECAY_PROMPT = `Report the framework's standing structural decay from the 
 \`notes\`: one or two sentences — is decay holding flat, and which one file is the single best refactor target this round? Return the DECAY_SCHEMA object.`;
 
 const SCOPE =
-  "Focus on src/dazzle/ (the merged tree — back/, ui/, render/ all live under it since the #1055 package merge). Ignore tests/, examples/, and auto-generated files.";
+  "Focus on src/dazzle/ (the merged tree — http/, page/, render/ all live under it since the #1055 package merge). Ignore tests/, examples/, and auto-generated files.";
 
 const REGRESSION_PROMPT = `Run regression checks on the Dazzle codebase at /Volumes/SSD/Dazzle using Bash and Grep. For each check return status PASS, FAIL, or TRACK plus a one-line details string.
 
@@ -161,11 +161,11 @@ const REGRESSION_PROMPT = `Run regression checks on the Dazzle codebase at /Volu
 1.2 no-redundant-except-tuples — grep src/ for "except (ImportError, Exception)", "except (json.JSONDecodeError, Exception)", "except (JSONDecodeError, Exception)". PASS=0 across all three.
 1.3 core-mcp-isolation — grep -rn "from dazzle\\.mcp" src/dazzle/core/. PASS=0. NOTE: layer isolation is now a LIVE gate — the import-linter \`core stays backend- and UI-agnostic\` contract (\`back\`/\`ui\`) subsumes a superset of this; this grep is the narrower mcp-specific echo. If \`from dazzle.mcp\` appears in core but \`lint-imports\` is green, it's an allow-listed edge — say so.
 1.4 no-project-path-Any — grep -rn "project_path: Any" src/dazzle/mcp/server/handlers/. PASS=0.
-1.5a no-silent-event-handlers — grep -rn "except" src/dazzle/back/events/ src/dazzle/back/channels/ --include="*.py" -A2 | grep -E "pass$|return$". PASS=0.
+1.5a no-silent-event-handlers — grep -rn "except" src/dazzle/http/events/ src/dazzle/http/channels/ --include="*.py" -A2 | grep -E "pass$|return$". PASS=0.
 1.5b getattr-string-literals — count "getattr(" in src/. PASS if <200, else TRACK with the count.
 1.6 complexity-creep (radon) — the crude line-count proxy is SUPERSEDED by the live complexity ratchet. Read \`tests/unit/fixtures/complexity_baseline.json\` and TRACK: count of MI-rank-C files + the single highest-CC function. The ratchet (\`tests/unit/test_complexity_ratchet.py\`) gates NEW CC>15 / MI-rank drops in CI, so this row is the *standing* baseline, not a discovery. (The decay-harness finder owns the full breakdown — keep this to the one-line count.)
 1.7 god-files (radon) — same source: TRACK the count of files at MI rank C from the baseline (the god-class/god-module candidates radon flags by maintainability, not raw line count). Cross-ref the hotspot queue for which are also high-churn.
-1.8 alpine-window-bindings (#795) — grep -rnE '@(pointer|mouse|key|resize|scroll|click|touch)[a-z]*\\.window' src/dazzle/ui/ --include="*.html". PASS=0; each hit is a latent listener-lifecycle bug.
+1.8 alpine-window-bindings (#795) — grep -rnE '@(pointer|mouse|key|resize|scroll|click|touch)[a-z]*\\.window' src/dazzle/page/ --include="*.html". PASS=0; each hit is a latent listener-lifecycle bug.
 1.9 import-contract-allowlist — run \`cd /Volumes/SSD/Dazzle && .venv/bin/lint-imports\`. PASS if it exits 0 (contracts kept); FAIL if broken (a new cross-layer import landed). Then TRACK the size of the \`ignore_imports\` allow-list in the \`[tool.importlinter]\` block of pyproject.toml — the documented load-bearing edges. The ratchet posture is that this list only ever shrinks; flag if it grew since last round.
 
 Calibration: status is about PRODUCTION code. If EVERY hit for a check is in a tests/ fixture, or is a narrow intentional handler (a specific exception type that logs / re-raises / does cleanup), mark that check PASS and say so in details — reserve FAIL for genuine production violations. Use TRACK for the standing-debt counts (1.5b/1.6/1.7) and the allow-list size (1.9). 1.6/1.7 read the radon baseline — do NOT re-count lines by grep.

@@ -6,7 +6,7 @@ shape, action URLs, escape safety, error rendering, next-URL threading.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.auth.auth_views import (
+from dazzle.http.runtime.auth.auth_views import (
     build_login_password_view,
     build_signup_password_view,
 )

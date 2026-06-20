@@ -120,7 +120,7 @@ Every component now has a single semantic root class plus modifiers via `data-dz
 <span class="dz-badge" data-dz-tone="success">Done</span>
 ```
 
-Component CSS lives in `src/dazzle/ui/runtime/static/css/components/<family>.css`. One file per family.
+Component CSS lives in `src/dazzle/page/runtime/static/css/components/<family>.css`. One file per family.
 
 ## Container queries (responsive strategy)
 
@@ -191,5 +191,5 @@ The vendor layer is appended to the cascade order in `dazzle.css`:
 
 - This guide.
 - `dev_docs/css-refactor-2026-04-27.md` (root project plan, in the AegisMark repo for historical reasons).
-- The cascade-layer order in `src/dazzle/ui/runtime/static/css/dazzle.css`.
+- The cascade-layer order in `src/dazzle/page/runtime/static/css/dazzle.css`.
 - `tokens.css` — the design system. Read it first before debugging any colour or spacing question.

@@ -39,7 +39,7 @@
 - `src/dazzle/agent/missions/ux_explore.py` — mission builder is unchanged
 - `src/dazzle/agent/missions/_shared.py` — stagnation criterion unchanged
 - `src/dazzle/cli/runtime_impl/ux_cycle_impl/fitness_strategy.py` — unchanged; must keep working (23 existing tests pass unchanged)
-- `src/dazzle_back/runtime/qa_routes.py` — unchanged
+- `src/dazzle_http/runtime/qa_routes.py` — unchanged
 - `.claude/commands/ux-cycle.md` — runbook unchanged (signature change is documented in CHANGELOG Agent Guidance)
 
 ---
@@ -1289,7 +1289,7 @@ Expected: FAIL with `ImportError: cannot import name 'pick_start_path'`.
 Edit `src/dazzle/cli/runtime_impl/ux_cycle_impl/explore_strategy.py` — add the import near the top (alongside existing imports):
 
 ```python
-from dazzle_ui.converters.workspace_converter import compute_persona_default_routes
+from dazzle_page.converters.workspace_converter import compute_persona_default_routes
 ```
 
 And add the function below `pick_explore_personas`:
@@ -2088,7 +2088,7 @@ capture in outcome artefacts)."
 ruff check src/ tests/ --fix
 ruff format src/ tests/
 mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'
-mypy src/dazzle_back/ --ignore-missing-imports
+mypy src/dazzle_http/ --ignore-missing-imports
 ```
 
 Expected: `All checks passed!` for ruff, `Success: no issues found in ...` for both mypy invocations.

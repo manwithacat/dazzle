@@ -15,9 +15,9 @@ class="dz-form-section">` groupings."""
 
 from __future__ import annotations
 
-from dazzle.back.runtime.page_routes import _build_dispatch_ctx
-from dazzle.back.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.core.ir.surfaces import SurfaceMode
+from dazzle.http.runtime.page_routes import _build_dispatch_ctx
+from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.context import (
     FieldContext,
     FormContext,

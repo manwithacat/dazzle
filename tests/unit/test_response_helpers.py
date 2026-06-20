@@ -2,7 +2,7 @@
 
 from starlette.responses import HTMLResponse
 
-from dazzle.back.runtime.response_helpers import with_oob, with_toast
+from dazzle.http.runtime.response_helpers import with_oob, with_toast
 
 
 class TestWithToast:

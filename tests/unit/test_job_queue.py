@@ -17,8 +17,8 @@ import asyncio
 
 import pytest
 
-from dazzle.back.runtime.job_handler import JobHandlerNotFound, resolve_handler
-from dazzle.back.runtime.job_queue import InMemoryJobQueue, JobMessage
+from dazzle.http.runtime.job_handler import JobHandlerNotFound, resolve_handler
+from dazzle.http.runtime.job_queue import InMemoryJobQueue, JobMessage
 
 # ---------------------------------------------------------------------------
 # JobMessage

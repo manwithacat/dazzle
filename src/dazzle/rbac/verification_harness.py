@@ -33,9 +33,9 @@ from dazzle.rbac.verification_types import (
 if TYPE_CHECKING:
     import httpx
 
-    from dazzle.back.runtime.auth.store import AuthStore
-    from dazzle.back.runtime.server import DazzleBackendApp
     from dazzle.core.ir import AppSpec
+    from dazzle.http.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.server import DazzleBackendApp
 
 _logger = logging.getLogger(__name__)
 
@@ -203,10 +203,10 @@ def _build_asgi_app(root: Path, database_url: str) -> _BuiltApp:
     The caller is responsible for creating the bootstrap superuser in the
     auth store before the first authenticated request.
     """
-    from dazzle.back.runtime.app_factory import build_server_config
-    from dazzle.back.runtime.server import DazzleBackendApp
     from dazzle.core.appspec_loader import load_project_appspec
     from dazzle.core.manifest import load_manifest
+    from dazzle.http.runtime.app_factory import build_server_config
+    from dazzle.http.runtime.server import DazzleBackendApp
 
     manifest = load_manifest(root / "dazzle.toml")
     appspec = load_project_appspec(root)
@@ -538,7 +538,7 @@ def _scope_create_overlay(
 
 
 # CSRF cookie name set by the framework's double-submit middleware
-# (`dazzle.back.runtime.csrf.CSRFConfig`).  State-changing requests must
+# (`dazzle.http.runtime.csrf.CSRFConfig`).  State-changing requests must
 # echo this cookie value back in the X-CSRF-Token header.
 _CSRF_COOKIE = "dazzle_csrf"
 _CSRF_HEADER = "X-CSRF-Token"

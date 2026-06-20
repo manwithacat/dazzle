@@ -6,7 +6,7 @@ BRIDGE_PATH = (
     pathlib.Path(__file__).resolve().parents[2]
     / "src"
     / "dazzle"
-    / "ui"
+    / "page"
     / "runtime"
     / "static"
     / "js"

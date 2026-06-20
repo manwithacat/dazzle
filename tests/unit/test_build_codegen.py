@@ -53,7 +53,7 @@ class TestSQLTarget:
 
     @pytest.fixture(autouse=True)
     def _skip_if_no_backend(self) -> None:
-        pytest.importorskip("dazzle.back")
+        pytest.importorskip("dazzle.http")
 
     def test_sql_file_created(self, tmp_path: Path) -> None:
         from dazzle.cli.runtime_impl.build import _generate_sql_target
@@ -147,7 +147,7 @@ class TestRunCodegenTargets:
 
     @pytest.fixture(autouse=True)
     def _skip_if_no_backend(self) -> None:
-        pytest.importorskip("dazzle.back")
+        pytest.importorskip("dazzle.http")
 
     def test_all_target_generates_all_files(self, tmp_path: Path) -> None:
         from dazzle.cli.runtime_impl.build import _run_codegen_targets

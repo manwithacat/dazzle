@@ -18,10 +18,10 @@
 
 | File | Responsibility |
 |------|----------------|
-| `src/dazzle/back/runtime/auth/connection_crypto.py` (**create**) | `encrypt_secret(plaintext)→token` / `decrypt_secret(token)→plaintext` via AES-GCM; key from `DAZZLE_CONNECTION_SECRET`; fail-closed. Lazy `cryptography` import. |
-| `src/dazzle/back/runtime/auth/connections.py` (**create**) | `ConnectionRecord` dataclass, `CONNECTIONS_DDL`/indexes, the `ConnectionProvider` Protocol, `AssertedIdentity`, the provider registry (`register_provider`/`resolve_provider`), `ConnectionError`. |
-| `src/dazzle/back/runtime/auth/store.py` (**modify**) | `_init_db` table + `create_connection`/`get_connection`/`get_connections_for_tenant`/`get_connection_by_verified_domain`/`update_connection`/`delete_connection` (encrypt on write, decrypt on read). |
-| `src/dazzle/back/alembic/versions/0011_connections.py` (**create**) | Idempotent `connections` table migration (mirror `0010`). |
+| `src/dazzle/http/runtime/auth/connection_crypto.py` (**create**) | `encrypt_secret(plaintext)→token` / `decrypt_secret(token)→plaintext` via AES-GCM; key from `DAZZLE_CONNECTION_SECRET`; fail-closed. Lazy `cryptography` import. |
+| `src/dazzle/http/runtime/auth/connections.py` (**create**) | `ConnectionRecord` dataclass, `CONNECTIONS_DDL`/indexes, the `ConnectionProvider` Protocol, `AssertedIdentity`, the provider registry (`register_provider`/`resolve_provider`), `ConnectionError`. |
+| `src/dazzle/http/runtime/auth/store.py` (**modify**) | `_init_db` table + `create_connection`/`get_connection`/`get_connections_for_tenant`/`get_connection_by_verified_domain`/`update_connection`/`delete_connection` (encrypt on write, decrypt on read). |
+| `src/dazzle/http/alembic/versions/0011_connections.py` (**create**) | Idempotent `connections` table migration (mirror `0010`). |
 | `pyproject.toml` (**modify**) | Add `cryptography>=41.0.0` to the `[sso]` extra. |
 | `tests/unit/test_connection_crypto.py` (**create**) | Round-trip, tamper detection, missing/short key fail-closed, distinct ciphertexts (random nonce). |
 | `tests/unit/test_connection_provider.py` (**create**) | `resolve_provider` raises when unregistered; `register_provider` + resolve round-trips; `AssertedIdentity` shape. |
@@ -32,7 +32,7 @@
 ## Task 1: Secret encryption (`connection_crypto.py`)
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/connection_crypto.py`
+- Create: `src/dazzle/http/runtime/auth/connection_crypto.py`
 - Test: `tests/unit/test_connection_crypto.py`
 
 - [ ] **Step 1: Write the failing unit test**
@@ -46,7 +46,7 @@ import os
 
 import pytest
 
-from dazzle.back.runtime.auth.connection_crypto import (
+from dazzle.http.runtime.auth.connection_crypto import (
     ConnectionSecretError,
     decrypt_secret,
     encrypt_secret,
@@ -106,7 +106,7 @@ def test_decrypt_with_different_key_fails(monkeypatch) -> None:
 - [ ] **Step 3: Create the module**
 
 ```python
-# src/dazzle/back/runtime/auth/connection_crypto.py
+# src/dazzle/http/runtime/auth/connection_crypto.py
 """Secret-at-rest encryption for enterprise connections (auth Plan 4a).
 
 Connection secrets (OIDC ``client_secret``, SCIM bearer) are encrypted with
@@ -182,9 +182,9 @@ def decrypt_secret(token: str) -> str:
 - [ ] **Step 5: Lint + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/connection_crypto.py tests/unit/test_connection_crypto.py --fix
-ruff format src/dazzle/back/runtime/auth/connection_crypto.py tests/unit/test_connection_crypto.py
-git add src/dazzle/back/runtime/auth/connection_crypto.py tests/unit/test_connection_crypto.py
+ruff check src/dazzle/http/runtime/auth/connection_crypto.py tests/unit/test_connection_crypto.py --fix
+ruff format src/dazzle/http/runtime/auth/connection_crypto.py tests/unit/test_connection_crypto.py
+git add src/dazzle/http/runtime/auth/connection_crypto.py tests/unit/test_connection_crypto.py
 git commit -m "feat(auth): AES-GCM secret-at-rest encryption for connections (Plan 4a)"
 ```
 
@@ -193,7 +193,7 @@ git commit -m "feat(auth): AES-GCM secret-at-rest encryption for connections (Pl
 ## Task 2: `ConnectionRecord`, the `ConnectionProvider` seam, registry
 
 **Files:**
-- Create: `src/dazzle/back/runtime/auth/connections.py`
+- Create: `src/dazzle/http/runtime/auth/connections.py`
 - Test: `tests/unit/test_connection_provider.py`
 
 - [ ] **Step 1: Write the failing unit test**
@@ -204,7 +204,7 @@ git commit -m "feat(auth): AES-GCM secret-at-rest encryption for connections (Pl
 
 import pytest
 
-from dazzle.back.runtime.auth.connections import (
+from dazzle.http.runtime.auth.connections import (
     AssertedIdentity,
     ConnectionError,
     register_provider,
@@ -244,7 +244,7 @@ def test_register_then_resolve(monkeypatch) -> None:
         prov = resolve_provider(_Conn())
         assert prov.initiate(_Conn(), None) == "/redirect"
     finally:
-        from dazzle.back.runtime.auth.connections import _PROVIDERS
+        from dazzle.http.runtime.auth.connections import _PROVIDERS
 
         _PROVIDERS.pop(("oidc", "native"), None)  # don't leak into other tests
 ```
@@ -254,7 +254,7 @@ def test_register_then_resolve(monkeypatch) -> None:
 - [ ] **Step 3: Create the module**
 
 ```python
-# src/dazzle/back/runtime/auth/connections.py
+# src/dazzle/http/runtime/auth/connections.py
 """Per-org enterprise connections + the ConnectionProvider seam (auth Plan 4a).
 
 A ``Connection`` is a framework-owned, org-fenced auth-store record (OIDC/SAML/
@@ -374,9 +374,9 @@ def resolve_provider(connection: Any) -> ConnectionProvider:
 - [ ] **Step 5: Lint + commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/connections.py tests/unit/test_connection_provider.py --fix
-ruff format src/dazzle/back/runtime/auth/connections.py tests/unit/test_connection_provider.py
-git add src/dazzle/back/runtime/auth/connections.py tests/unit/test_connection_provider.py
+ruff check src/dazzle/http/runtime/auth/connections.py tests/unit/test_connection_provider.py --fix
+ruff format src/dazzle/http/runtime/auth/connections.py tests/unit/test_connection_provider.py
+git add src/dazzle/http/runtime/auth/connections.py tests/unit/test_connection_provider.py
 git commit -m "feat(auth): Connection record + ConnectionProvider seam + registry (Plan 4a)"
 ```
 
@@ -385,7 +385,7 @@ git commit -m "feat(auth): Connection record + ConnectionProvider seam + registr
 ## Task 3: Store CRUD (encrypt on write, decrypt on read, verified-domain routing)
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/auth/store.py` (`_init_db` + the connection methods)
+- Modify: `src/dazzle/http/runtime/auth/store.py` (`_init_db` + the connection methods)
 - Test: `tests/integration/test_connections_pg.py`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -437,7 +437,7 @@ def store_url() -> Iterator[str]:
 
 
 def _store(store_url: str):
-    from dazzle.back.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.auth.store import AuthStore
 
     s = AuthStore(database_url=store_url)
     s._init_db()
@@ -497,7 +497,7 @@ def test_verified_domain_routing_only_matches_verified(store_url: str) -> None:
 - [ ] **Step 3: Add the table to `_init_db`** (after the `invitations` block):
 
 ```python
-            from dazzle.back.runtime.auth.connections import (
+            from dazzle.http.runtime.auth.connections import (
                 CONNECTIONS_DDL,
                 CONNECTIONS_INDEXES,
             )
@@ -513,8 +513,8 @@ def test_verified_domain_routing_only_matches_verified(store_url: str) -> None:
     def _row_to_connection(self, row: dict[str, Any]) -> "ConnectionRecord":  # noqa: F821
         import json
 
-        from dazzle.back.runtime.auth.connection_crypto import decrypt_secret
-        from dazzle.back.runtime.auth.connections import ConnectionRecord
+        from dazzle.http.runtime.auth.connection_crypto import decrypt_secret
+        from dazzle.http.runtime.auth.connections import ConnectionRecord
 
         enc = row.get("encrypted_secret")
         secrets_dict = json.loads(decrypt_secret(enc)) if enc else {}
@@ -548,7 +548,7 @@ def test_verified_domain_routing_only_matches_verified(store_url: str) -> None:
         """Create a per-org connection; secrets are AES-GCM-encrypted at rest."""
         import json
 
-        from dazzle.back.runtime.auth.connection_crypto import encrypt_secret
+        from dazzle.http.runtime.auth.connection_crypto import encrypt_secret
 
         conn_id = secrets_token()  # secrets.token_urlsafe(24)
         now = datetime.now(UTC).isoformat()
@@ -615,9 +615,9 @@ def test_verified_domain_routing_only_matches_verified(store_url: str) -> None:
 - [ ] **Step 6: Commit**
 
 ```bash
-ruff check src/dazzle/back/runtime/auth/store.py tests/integration/test_connections_pg.py --fix
-ruff format src/dazzle/back/runtime/auth/store.py tests/integration/test_connections_pg.py
-git add src/dazzle/back/runtime/auth/store.py tests/integration/test_connections_pg.py
+ruff check src/dazzle/http/runtime/auth/store.py tests/integration/test_connections_pg.py --fix
+ruff format src/dazzle/http/runtime/auth/store.py tests/integration/test_connections_pg.py
+git add src/dazzle/http/runtime/auth/store.py tests/integration/test_connections_pg.py
 git commit -m "feat(auth): connection store CRUD — encrypt-at-rest + verified-domain routing (Plan 4a)"
 ```
 
@@ -626,7 +626,7 @@ git commit -m "feat(auth): connection store CRUD — encrypt-at-rest + verified-
 ## Task 4: Alembic `0011_connections` + the `[sso]` extra
 
 **Files:**
-- Create: `src/dazzle/back/alembic/versions/0011_connections.py`
+- Create: `src/dazzle/http/alembic/versions/0011_connections.py`
 - Modify: `pyproject.toml`
 - Test: `tests/integration/test_connections_pg.py` (migration-applies test)
 
@@ -658,7 +658,7 @@ def test_migration_0011_creates_connections(store_url: str) -> None:
 - [ ] **Step 2: The migration** (mirror `0010_invitations.py`):
 
 ```python
-# src/dazzle/back/alembic/versions/0011_connections.py
+# src/dazzle/http/alembic/versions/0011_connections.py
 """Add connections table (auth Plan 4a — per-org enterprise auth connections).
 
 Org-fenced OIDC/SAML/SCIM connection config; secret material is stored in
@@ -713,7 +713,7 @@ def downgrade() -> None:
 
 ```bash
 TEST_DATABASE_URL="postgresql://localhost:5432/postgres" python -m pytest tests/integration/test_connections_pg.py -q
-git add src/dazzle/back/alembic/versions/0011_connections.py pyproject.toml tests/integration/test_connections_pg.py
+git add src/dazzle/http/alembic/versions/0011_connections.py pyproject.toml tests/integration/test_connections_pg.py
 git commit -m "feat(auth): alembic 0011 connections + cryptography in [sso] extra (Plan 4a)"
 ```
 

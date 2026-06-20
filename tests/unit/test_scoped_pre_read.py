@@ -29,7 +29,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.route_generator import _scoped_pre_read
+from dazzle.http.runtime.route_generator import _scoped_pre_read
 
 
 def _make_service(read_result: object = None, list_items: list | None = None) -> AsyncMock:
@@ -236,7 +236,7 @@ class TestAdversarialScopeEnforcement:
         spec = _spec_with_scope_rule(op="update", persona="admin", all_rows=False)
 
         with patch(
-            "dazzle.back.runtime.scope_filters._resolve_predicate_filters",
+            "dazzle.http.runtime.scope_filters._resolve_predicate_filters",
             side_effect=RuntimeError("predicate boom"),
         ):
             result = await _scoped_pre_read(
@@ -270,7 +270,7 @@ class TestAdversarialScopeEnforcement:
         spec = SimpleNamespace(scopes=[rule])
 
         with patch(
-            "dazzle.back.runtime.scope_filters._extract_condition_filters",
+            "dazzle.http.runtime.scope_filters._extract_condition_filters",
             side_effect=RuntimeError("condition boom"),
         ):
             result = await _scoped_pre_read(
@@ -304,7 +304,7 @@ class TestAdversarialScopeEnforcement:
         spec = _spec_with_scope_rule(op="update", persona="admin", all_rows=False)
 
         with patch(
-            "dazzle.back.runtime.scope_filters._resolve_predicate_filters",
+            "dazzle.http.runtime.scope_filters._resolve_predicate_filters",
             return_value={"owner_id": "u-1"},
         ):
             result = await _scoped_pre_read(
@@ -329,7 +329,7 @@ class TestAdversarialScopeEnforcement:
         spec = _spec_with_scope_rule(op="update", persona="admin", all_rows=False)
 
         with patch(
-            "dazzle.back.runtime.scope_filters._resolve_predicate_filters",
+            "dazzle.http.runtime.scope_filters._resolve_predicate_filters",
             return_value={"owner_id": "u-1"},
         ):
             result = await _scoped_pre_read(

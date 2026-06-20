@@ -26,13 +26,13 @@ from typing import Any
 
 import pytest
 
-pytest.importorskip("dazzle.ui.runtime.pdf_viewer_renderer")
+pytest.importorskip("dazzle.page.runtime.pdf_viewer_renderer")
 
-from dazzle.ui.runtime.pdf_viewer_renderer import render_pdf_viewer_component  # noqa: E402
+from dazzle.page.runtime.pdf_viewer_renderer import render_pdf_viewer_component  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CSS_PATH = REPO_ROOT / "src/dazzle/ui/runtime/static/css/components/pdf-viewer.css"
-JS_PATH = REPO_ROOT / "src/dazzle/ui/runtime/static/js/pdf-viewer.js"
+CSS_PATH = REPO_ROOT / "src/dazzle/page/runtime/static/css/components/pdf-viewer.css"
+JS_PATH = REPO_ROOT / "src/dazzle/page/runtime/static/js/pdf-viewer.js"
 
 
 def _render(**kwargs: Any) -> str:
@@ -244,8 +244,8 @@ class TestBundleIntegration:
         ("path", "needle"),
         [
             ("scripts/build_dist.py", '"pdf-viewer.css"'),
-            ("src/dazzle/ui/runtime/css_loader.py", "components/pdf-viewer.css"),
-            ("src/dazzle/ui/runtime/static/css/dazzle.css", "components/pdf-viewer.css"),
+            ("src/dazzle/page/runtime/css_loader.py", "components/pdf-viewer.css"),
+            ("src/dazzle/page/runtime/static/css/dazzle.css", "components/pdf-viewer.css"),
             ("scripts/build_dist.py", '"js" / "pdf-viewer.js"'),
             ("scripts/build_dist.py", '"pdf-viewer.js"'),
         ],

@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import BaseModel
 
-from dazzle.back.runtime.service_generator import CRUDService
+from dazzle.http.runtime.service_generator import CRUDService
 
 
 class SampleEntity(BaseModel):
@@ -419,7 +419,7 @@ class TestProcessManagerTriggerRegistration:
     @pytest.mark.asyncio
     async def test_entity_event_trigger_registered(self) -> None:
         """Test that entity_event triggers are registered on initialize."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         proc = _make_process_spec("auto_task", "entity_event", "Order", "created")
         app_spec = _make_app_spec_with_processes([proc])
@@ -437,7 +437,7 @@ class TestProcessManagerTriggerRegistration:
     @pytest.mark.asyncio
     async def test_status_transition_trigger_registered(self) -> None:
         """Test that status transition triggers are registered on initialize."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         proc = _make_process_spec(
             "escalation",
@@ -462,7 +462,7 @@ class TestProcessManagerTriggerRegistration:
     @pytest.mark.asyncio
     async def test_on_entity_created_dispatches(self) -> None:
         """Test that on_entity_created starts matching processes."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         proc = _make_process_spec("on_order_created", "entity_event", "Order", "created")
         app_spec = _make_app_spec_with_processes([proc])
@@ -491,7 +491,7 @@ class TestProcessManagerTriggerRegistration:
     @pytest.mark.asyncio
     async def test_on_entity_created_no_match(self) -> None:
         """Test that no processes start when no triggers match."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         proc = _make_process_spec("on_order_created", "entity_event", "Order", "created")
         app_spec = _make_app_spec_with_processes([proc])
@@ -512,7 +512,7 @@ class TestProcessManagerTriggerRegistration:
     @pytest.mark.asyncio
     async def test_on_entity_updated_detects_status_transition(self) -> None:
         """Test that status transitions are detected and dispatched."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         proc = _make_process_spec(
             "on_task_overdue",
@@ -547,7 +547,7 @@ class TestProcessManagerTriggerRegistration:
     @pytest.mark.asyncio
     async def test_custom_status_field(self) -> None:
         """Test that custom status_field from state machine is used."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         proc = _make_process_spec(
             "on_approval_change",
@@ -582,7 +582,7 @@ class TestProcessManagerTriggerRegistration:
     @pytest.mark.asyncio
     async def test_custom_status_field_ignores_wrong_field(self) -> None:
         """Test that the default 'status' field is ignored when custom field is set."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         proc = _make_process_spec(
             "on_approval_change",
@@ -616,7 +616,7 @@ class TestProcessManagerTriggerRegistration:
     @pytest.mark.asyncio
     async def test_no_app_spec_no_triggers(self) -> None:
         """Test that ProcessManager without app_spec has no triggers."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         adapter = AsyncMock()
         mgr = ProcessManager(adapter=adapter)
@@ -627,7 +627,7 @@ class TestProcessManagerTriggerRegistration:
     @pytest.mark.asyncio
     async def test_adapter_error_logged_not_raised(self) -> None:
         """Test that adapter errors are logged but don't propagate."""
-        from dazzle.back.runtime.process_manager import ProcessManager
+        from dazzle.http.runtime.process_manager import ProcessManager
 
         proc = _make_process_spec("on_order_created", "entity_event", "Order", "created")
         app_spec = _make_app_spec_with_processes([proc])

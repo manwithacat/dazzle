@@ -34,7 +34,7 @@ import ast
 import pathlib
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-PROD_DIRS = ("src/dazzle", "src/dazzle/back", "src/dazzle/ui")
+PROD_DIRS = ("src/dazzle", "src/dazzle/http", "src/dazzle/page")
 
 
 def _is_bare_except_exception(handler: ast.ExceptHandler) -> bool:
@@ -93,7 +93,7 @@ def _walk_python_files() -> list[pathlib.Path]:
         if not root.exists():
             continue
         for p in root.rglob("*.py"):
-            # skip nested test dirs (e.g. dazzle_back/tests/)
+            # skip nested test dirs (e.g. dazzle_http/tests/)
             parts = p.relative_to(REPO_ROOT).parts
             if "tests" in parts:
                 continue

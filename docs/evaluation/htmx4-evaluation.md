@@ -30,11 +30,11 @@ branch with browser-level coverage as the gate.
 
 | Dimension | Reality |
 |---|---|
-| htmx version | **2.0.9**, vendored at `src/dazzle/ui/runtime/static/vendor/htmx.min.js` |
+| htmx version | **2.0.9**, vendored at `src/dazzle/page/runtime/static/vendor/htmx.min.js` |
 | Extensions vendored | 9 + idiomorph, bundled in order via `scripts/build_dist.py` `JS_SOURCES` (77–87) |
 | Version pin | `v2.` hard-pin in `scripts/update_vendors.py:199`; v4 explicitly out-of-scope for cron |
 | Integrity gates | `vendor_hashes.json` SHA-256 pins every vendor file; 3 drift tests in `tests/unit/test_vendor_hash_drift.py` |
-| Server HX-* contract | Centralised in `src/dazzle/ui/runtime/htmx.py` (`HtmxDetails`, response helpers) |
+| Server HX-* contract | Centralised in `src/dazzle/page/runtime/htmx.py` (`HtmxDetails`, response helpers) |
 | Rendering | Typed Fragment substrate (ADR-0023, no Jinja2) — htmx attrs emitted from Python, easy to grep/change |
 | Architectural anchor | ADR-0011 (SSR + htmx, no SPA). Migration does **not** touch this decision |
 
@@ -57,7 +57,7 @@ From the htmx 4 docs (four.htmx.org) cross-checked against our footprint:
 
 ### TIER 1 — load-bearing, the real work
 
-**A. Client-side event renames (30 sites, 9 event names).** All in `src/dazzle/ui/runtime/static/js/`.
+**A. Client-side event renames (30 sites, 9 event names).** All in `src/dazzle/page/runtime/static/js/`.
 Mechanical but wide; no central constant today, so it's 30 hand-edits + re-test.
 
 | Event | Sites | Notable consumers |

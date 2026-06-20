@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-TOKENS_CSS = Path(__file__).resolve().parents[2] / "src/dazzle/ui/runtime/static/css/tokens.css"
+TOKENS_CSS = Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/css/tokens.css"
 
 
 @pytest.fixture(scope="module")

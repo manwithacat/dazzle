@@ -51,9 +51,9 @@ def scratch_url() -> Iterator[str]:
 
 
 def _appspec_and_md():
-    from dazzle.back.converters.entity_converter import convert_entities
-    from dazzle.back.runtime.sa_schema import build_metadata, scoped_entity_names
     from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 
     appspec = load_project_appspec(_PROJECT_ROOT)
     pk = appspec.tenancy.isolation.partition_key
@@ -73,7 +73,7 @@ def _conn_url(scratch_url: str, role: str, password: str) -> str:
 
 def _build_app_role(scratch_url: str, scoped: list[str], pk: str) -> str:
     """Apply RLS + a non-superuser LOGIN role with SELECT/INSERT. Returns the role."""
-    from dazzle.back.runtime.rls_schema import build_rls_policy_ddl
+    from dazzle.http.runtime.rls_schema import build_rls_policy_ddl
 
     role = f"createinj_app_{uuid.uuid4().hex[:8]}"
     with psycopg.connect(scratch_url, autocommit=True) as c:

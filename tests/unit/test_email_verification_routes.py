@@ -11,7 +11,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dazzle.back.runtime.auth.email_verification_routes import (
+from dazzle.http.runtime.auth.email_verification_routes import (
     _build_verify_url,
     _is_safe_redirect_path,
     create_email_verification_routes,
@@ -53,7 +53,7 @@ class TestVerifyEmailConsumer:
         user.email = "alice@example.com"
         mock_auth_store.get_user_by_id = MagicMock(return_value=user)
         with patch(
-            "dazzle.back.runtime.auth.email_verification_routes.validate_email_verification_token",
+            "dazzle.http.runtime.auth.email_verification_routes.validate_email_verification_token",
             return_value="user-123",
         ):
             resp = client.get("/auth/verify-email?token=valid", follow_redirects=False)
@@ -62,7 +62,7 @@ class TestVerifyEmailConsumer:
 
     def test_invalid_token_redirects_to_login_with_error_flag(self, client: TestClient) -> None:
         with patch(
-            "dazzle.back.runtime.auth.email_verification_routes.validate_email_verification_token",
+            "dazzle.http.runtime.auth.email_verification_routes.validate_email_verification_token",
             return_value=None,
         ):
             resp = client.get("/auth/verify-email?token=bad_or_expired", follow_redirects=False)
@@ -84,7 +84,7 @@ class TestVerifyEmailConsumer:
         user.email = "alice@example.com"
         mock_auth_store.get_user_by_id = MagicMock(return_value=user)
         with patch(
-            "dazzle.back.runtime.auth.email_verification_routes.validate_email_verification_token",
+            "dazzle.http.runtime.auth.email_verification_routes.validate_email_verification_token",
             return_value="user-123",
         ):
             resp = client.get(
@@ -100,7 +100,7 @@ class TestVerifyEmailConsumer:
         user.email = "alice@example.com"
         mock_auth_store.get_user_by_id = MagicMock(return_value=user)
         with patch(
-            "dazzle.back.runtime.auth.email_verification_routes.validate_email_verification_token",
+            "dazzle.http.runtime.auth.email_verification_routes.validate_email_verification_token",
             return_value="user-123",
         ):
             resp = client.get(
@@ -140,12 +140,12 @@ class TestSendVerification:
         mock_auth_store.get_user_by_email = MagicMock(return_value=user)
         with (
             patch(
-                "dazzle.back.runtime.auth.email_verification_routes."
+                "dazzle.http.runtime.auth.email_verification_routes."
                 "create_email_verification_token",
                 return_value="generated-token",
             ),
             patch(
-                "dazzle.back.runtime.auth.email_verification_routes.get_verification_mailer"
+                "dazzle.http.runtime.auth.email_verification_routes.get_verification_mailer"
             ) as get_mailer,
         ):
             mailer = MagicMock()
@@ -169,7 +169,7 @@ class TestSendVerification:
         user.email_verified = True
         mock_auth_store.get_user_by_email = MagicMock(return_value=user)
         with patch(
-            "dazzle.back.runtime.auth.email_verification_routes.get_verification_mailer"
+            "dazzle.http.runtime.auth.email_verification_routes.get_verification_mailer"
         ) as get_mailer:
             mailer = MagicMock()
             get_mailer.return_value = mailer
@@ -192,12 +192,12 @@ class TestResendVerificationRateLimit:
         mock_auth_store.get_user_by_email = MagicMock(return_value=user)
         with (
             patch(
-                "dazzle.back.runtime.auth.email_verification_routes."
+                "dazzle.http.runtime.auth.email_verification_routes."
                 "create_email_verification_token",
                 return_value="generated-token",
             ),
             patch(
-                "dazzle.back.runtime.auth.email_verification_routes.get_verification_mailer"
+                "dazzle.http.runtime.auth.email_verification_routes.get_verification_mailer"
             ) as get_mailer,
         ):
             mailer = MagicMock()

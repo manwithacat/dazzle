@@ -4,7 +4,7 @@
   "meta_file": "docs/api-reference/_meta.json",
   "include": [
     "src/dazzle/**/*.py",
-    "src/dazzle/ui/runtime/static/js/**/*.js"
+    "src/dazzle/page/runtime/static/js/**/*.js"
   ],
   "exclude": [
     "**/__pycache__/**",

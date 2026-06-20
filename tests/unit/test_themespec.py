@@ -408,10 +408,10 @@ class TestBridge:
         """Combined: resolve from themespec, dark-mode variant (auto),
         light-mode no variant, existing resolve regression, package export."""
         from dazzle.core.ir.themespec import ColorMode, PaletteSpec, ThemeSpecYAML
-        from dazzle.ui.themes import (
+        from dazzle.page.themes import (
             resolve_theme_from_themespec as pkg_export,
         )
-        from dazzle.ui.themes.resolver import (
+        from dazzle.page.themes.resolver import (
             resolve_theme,
             resolve_theme_from_themespec,
         )

@@ -88,7 +88,7 @@ class SecurityConfig(BaseModel):
     # 2FA policy knobs. Disabled by default; downstream apps opt in by
     # constructing a TwoFactorConfig with enabled=True and threading it
     # here through SecurityConfig.from_profile or a direct SecurityConfig().
-    # Consumed by dazzle.back.runtime.auth.routes_2fa.create_2fa_routes
+    # Consumed by dazzle.http.runtime.auth.routes_2fa.create_2fa_routes
     # via the AuthSubsystem — the recovery-code count, TOTP drift window,
     # and method-gating all read from this struct at request time (#838).
     two_factor: TwoFactorConfig = TwoFactorConfig()

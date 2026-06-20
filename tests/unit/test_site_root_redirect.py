@@ -15,7 +15,7 @@ pytest.importorskip("fastapi")
 from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from dazzle.back.runtime.site_routes import create_site_page_routes  # noqa: E402
+from dazzle.http.runtime.site_routes import create_site_page_routes  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers

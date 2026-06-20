@@ -16,10 +16,10 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from dazzle.ui.runtime.app_chrome import resolve_app_chrome
+from dazzle.page.runtime.app_chrome import resolve_app_chrome
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-JS_PATH = REPO_ROOT / "src/dazzle/ui/runtime/static/js/dz-onboarding.js"
+JS_PATH = REPO_ROOT / "src/dazzle/page/runtime/static/js/dz-onboarding.js"
 
 
 # ---------------------------------------------------------------------------

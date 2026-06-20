@@ -144,7 +144,7 @@ def downgrade() -> None:
     op.drop_column("Invoice", "po_number")
 ```
 
-**Note on types:** `str`, `str(N)`, and `enum[...]` in DSL all map to `sa.Text()` at the database layer (`src/dazzle/back/runtime/sa_schema.py`). The `(N)` length limit and the enum value list are application-layer constraints enforced by Dazzle, not PostgreSQL column types. Migrations always show `sa.Text()` for string columns — that is correct and expected.
+**Note on types:** `str`, `str(N)`, and `enum[...]` in DSL all map to `sa.Text()` at the database layer (`src/dazzle/http/runtime/sa_schema.py`). The `(N)` length limit and the enum value list are application-layer constraints enforced by Dazzle, not PostgreSQL column types. Migrations always show `sa.Text()` for string columns — that is correct and expected.
 
 ---
 

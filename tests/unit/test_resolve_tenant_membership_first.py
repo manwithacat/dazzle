@@ -4,8 +4,8 @@ The legacy preferences/domain-user fallback was removed (clean break): without
 an active membership, tenant_id resolves to the deny sentinel so the scope
 predicate / RLS fence denies (fail-closed)."""
 
-from dazzle.back.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
-from dazzle.back.runtime.route_generator import _resolve_user_attribute
+from dazzle.http.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
+from dazzle.http.runtime.route_generator import _resolve_user_attribute
 
 
 def _ctx(*, membership_tid=None, prefs_tid=None):  # noqa: ANN001

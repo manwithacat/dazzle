@@ -20,9 +20,9 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from dazzle.back.runtime.integrations_retries import create_integrations_retries_routes
-from dazzle.back.runtime.retry_accumulator import RetryAccumulator, RetryEvent
 from dazzle.core.ir.integrations import IntegrationSpec
+from dazzle.http.runtime.integrations_retries import create_integrations_retries_routes
+from dazzle.http.runtime.retry_accumulator import RetryAccumulator, RetryEvent
 
 
 def _make_app(
@@ -212,7 +212,7 @@ async def test_mapping_executor_records_retry_events_into_accumulator() -> None:
     the API surface reads."""
     from unittest.mock import AsyncMock, MagicMock
 
-    from dazzle.back.runtime.mapping_executor import MappingExecutor
+    from dazzle.http.runtime.mapping_executor import MappingExecutor
 
     accumulator = RetryAccumulator()
     appspec = MagicMock(integrations=[])

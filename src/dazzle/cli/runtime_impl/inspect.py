@@ -16,7 +16,7 @@ from dazzle.cli.utils import load_project_appspec
 
 if TYPE_CHECKING:
     from dazzle.core import ir
-    from dazzle.ui.specs import UISpec
+    from dazzle.page.specs import UISpec
 
 
 def schema_command(
@@ -112,7 +112,7 @@ def schema_command(
     ui_spec = None
     try:
         from dazzle.core.manifest import load_manifest
-        from dazzle.ui.converters import convert_appspec_to_ui
+        from dazzle.page.converters import convert_appspec_to_ui
 
         mf = load_manifest(manifest_path)
         ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
@@ -380,7 +380,7 @@ def _inspect_components(ui_spec: UISpec, format_output: str) -> None:
 def _inspect_schema(appspec: ir.AppSpec, format_output: str) -> None:
     """Inspect GraphQL schema."""
     try:
-        from dazzle.back import convert_appspec_to_backend, format_schema, inspect_schema
+        from dazzle.http import convert_appspec_to_backend, format_schema, inspect_schema
     except ImportError:
         typer.echo(
             "GraphQL support not available. Install with: pip install strawberry-graphql",

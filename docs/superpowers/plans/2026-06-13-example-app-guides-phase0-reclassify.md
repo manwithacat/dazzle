@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12+, `uv` toolchain, pytest, ruff/mypy, BSD sed (macOS).
 
-**Scope guard — what does NOT move:** `src/dazzle/back/pra/` is a framework performance-harness module and **stays put**; only the `examples/pra/` *project corpus* moves. `tests/unit/test_pra_cli.py`, `test_pra_harness.py`, `test_pra_load_generator.py` test that framework module — **do not touch them.**
+**Scope guard — what does NOT move:** `src/dazzle/http/pra/` is a framework performance-harness module and **stays put**; only the `examples/pra/` *project corpus* moves. `tests/unit/test_pra_cli.py`, `test_pra_harness.py`, `test_pra_load_generator.py` test that framework module — **do not touch them.**
 
 ---
 
@@ -407,7 +407,7 @@ Run the `/bump patch` skill steps (edits the 6 canonical version lines + moves t
 ### Agent Guidance
 - New apps that demonstrate a *framework capability* (not a fictional business) belong
   in `fixtures/`, not `examples/`. Every `examples/` app must be a kayfabe product and
-  (from later phases) carry per-persona guides. `src/dazzle/back/pra/` is the framework
+  (from later phases) carry per-persona guides. `src/dazzle/http/pra/` is the framework
   perf-harness module and is unrelated to `fixtures/pra/` (the corpus).
 ```
 
@@ -424,7 +424,7 @@ An example is now exclusively a kayfabe business app (and will carry per-persona
 guides); framework artifacts move to fixtures/. Moves 3 dirs + updates live refs
 (framework docstrings/error-messages, asserting tests, list/count gates, MCP
 registry pra removal, CLAUDE.md drift lists, bench script, CI/command comments,
-htmx-templates doc). src/dazzle/back/pra/ (perf harness) unchanged. Frozen history
+htmx-templates doc). src/dazzle/http/pra/ (perf harness) unchanged. Frozen history
 untouched. Examples 14 → 11.
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>

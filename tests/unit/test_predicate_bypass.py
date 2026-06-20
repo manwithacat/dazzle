@@ -21,7 +21,7 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle.back.runtime.route_generator import (
+from dazzle.http.runtime.route_generator import (
     _resolve_predicate_filters,
     _should_bypass_tenant_filter,
 )

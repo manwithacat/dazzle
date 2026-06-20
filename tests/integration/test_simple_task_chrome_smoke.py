@@ -30,8 +30,8 @@ from fastapi.testclient import TestClient
 
 from dazzle.core.appspec_loader import load_project_appspec
 
-pytest.importorskip("dazzle.back.runtime.page_routes")
-from dazzle.back.runtime.page_routes import create_page_routes  # noqa: E402
+pytest.importorskip("dazzle.http.runtime.page_routes")
+from dazzle.http.runtime.page_routes import create_page_routes  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _EXAMPLES = _REPO_ROOT / "examples"
@@ -39,8 +39,8 @@ _BOGUS_UUID = "00000000-0000-0000-0000-000000000000"
 
 
 def _client_chrome_on(app_name: str = "simple_task") -> tuple[TestClient, FastAPI]:
-    from dazzle.back.runtime.renderers.init import register_default_renderers
-    from dazzle.back.runtime.services import RuntimeServices
+    from dazzle.http.runtime.renderers.init import register_default_renderers
+    from dazzle.http.runtime.services import RuntimeServices
 
     appspec = load_project_appspec(_EXAMPLES / app_name)
     fastapi_app = FastAPI()

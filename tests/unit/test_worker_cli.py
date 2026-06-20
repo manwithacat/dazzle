@@ -25,7 +25,7 @@ from dazzle.cli.worker import _build_queue, worker_app
 
 class TestBuildQueue:
     def test_in_memory_when_no_redis_url(self):
-        from dazzle.back.runtime.job_queue import InMemoryJobQueue
+        from dazzle.http.runtime.job_queue import InMemoryJobQueue
 
         with patch.dict(os.environ, {}, clear=True):
             queue, label = _build_queue(redis_key="test:key")
@@ -33,7 +33,7 @@ class TestBuildQueue:
         assert "in-memory" in label
 
     def test_redis_when_url_set(self):
-        from dazzle.back.runtime.redis_job_queue import RedisJobQueue
+        from dazzle.http.runtime.redis_job_queue import RedisJobQueue
 
         with patch.dict(os.environ, {"REDIS_URL": "redis://localhost:6379/0"}):
             queue, label = _build_queue(redis_key="staging:jobs")
@@ -51,7 +51,7 @@ class TestBuildQueue:
     def test_empty_redis_url_treated_as_unset(self):
         # `REDIS_URL=""` (rather than unset) should fall back to
         # in-memory rather than try to connect to nothing.
-        from dazzle.back.runtime.job_queue import InMemoryJobQueue
+        from dazzle.http.runtime.job_queue import InMemoryJobQueue
 
         with patch.dict(os.environ, {"REDIS_URL": ""}):
             queue, _ = _build_queue(redis_key="x")

@@ -165,7 +165,7 @@ def _gather_imports(tree: ast.AST) -> tuple[list[str], list[str]]:
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
             mod = node.module or ""
-            if not mod.startswith(("dazzle", "dazzle_back", "dazzle_ui")):
+            if not mod.startswith(("dazzle", "dazzle_http", "dazzle_page")):
                 continue
             for alias in node.names:
                 name = alias.name

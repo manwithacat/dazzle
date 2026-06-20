@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle.back.runtime.auth.connection_create_form import (
+from dazzle.http.runtime.auth.connection_create_form import (
     CreateFormError,
     assemble_saml_config,
     parse_group_map,

@@ -39,7 +39,7 @@ None of these invalidate the cycle 225 fix; they build on it. The navigation-dea
 
 ## Problem statement
 
-The v0.55.31 fix for #776 introduced in-app error shell templates (`src/dazzle_ui/templates/app/404.html` and `app/403.html`) that extend the authenticated app layout and include back-to-list affordances. The templates render correctly — the 403 page displayed during cycle 223's tester run shows "Back to Dashboard" and "Go to Dashboard" links with `href="/app"`, exactly as intended.
+The v0.55.31 fix for #776 introduced in-app error shell templates (`src/dazzle_page/templates/app/404.html` and `app/403.html`) that extend the authenticated app layout and include back-to-list affordances. The templates render correctly — the 403 page displayed during cycle 223's tester run shows "Back to Dashboard" and "Go to Dashboard" links with `href="/app"`, exactly as intended.
 
 **But the links do not navigate.** When the subagent clicked them, the helper returned `state_changed: false` and the browser stayed on the 403 page. The affordances look clickable but produce no navigation.
 
@@ -57,7 +57,7 @@ Three candidate mechanisms, ranked by likelihood:
 
 ### 1. HTMX boost intercept (most likely)
 
-The app shell layout `src/dazzle_ui/templates/layouts/app_shell.html` very likely has `hx-boost="true"` set at the `<body>` or a wrapping container level, so all `<a>` tags inside it are intercepted by HTMX and converted to `hx-get` ajax requests. When the user is on a 403 error page *inside* the app shell, clicking the back-affordance triggers an HTMX ajax GET to `/app`. The backend responds with the `/app` workspace redirect (HTMX-aware or not), but something in the response pipeline prevents the browser from actually swapping in the new content — possibly:
+The app shell layout `src/dazzle_page/templates/layouts/app_shell.html` very likely has `hx-boost="true"` set at the `<body>` or a wrapping container level, so all `<a>` tags inside it are intercepted by HTMX and converted to `hx-get` ajax requests. When the user is on a 403 error page *inside* the app shell, clicking the back-affordance triggers an HTMX ajax GET to `/app`. The backend responds with the `/app` workspace redirect (HTMX-aware or not), but something in the response pipeline prevents the browser from actually swapping in the new content — possibly:
 
 - The response uses `HX-Redirect` header but HTMX's redirect handling is broken on error-state pages
 - The response body is HTML but HTMX's swap strategy defaults to innerHTML of the wrong target element
@@ -75,7 +75,7 @@ If the user hits `/app` and the server returns a redirect back to the default wo
 
 Extremely unlikely but possible: an Alpine controller attached to the app shell is listening for click events on anchors and preventing default for links that don't start with a recognised prefix. If the anchor has `href="/app"` but the controller expects `href="/app/workspaces/..."`, the handler swallows the click.
 
-**Verify by:** grep Alpine controllers in `src/dazzle_ui/runtime/static/js/dz-alpine.js` for anchor click handlers.
+**Verify by:** grep Alpine controllers in `src/dazzle_page/runtime/static/js/dz-alpine.js` for anchor click handlers.
 
 ### Likelihood ranking
 
@@ -83,7 +83,7 @@ Candidate 1 (HTMX boost intercept) is by far the most likely — the framework d
 
 ## Fix sketch (minimum change under hypothesis 1)
 
-In `src/dazzle_ui/templates/app/404.html` and `app/403.html`, mark the back-affordance links as **opted out of HTMX boost** so they behave as plain browser navigations:
+In `src/dazzle_page/templates/app/404.html` and `app/403.html`, mark the back-affordance links as **opted out of HTMX boost** so they behave as plain browser navigations:
 
 ```html
 <!-- Before -->
@@ -95,7 +95,7 @@ In `src/dazzle_ui/templates/app/404.html` and `app/403.html`, mark the back-affo
 
 This is a two-line template edit (one per file). It does not require any framework code changes. It does require verification via reproduction — which is exactly what the next `finding_investigation` cycle should do.
 
-**If hypothesis 2 turns out to be the real cause**, the fix is in `src/dazzle_back/runtime/exception_handlers.py` or wherever the in-app 403/404 handler routes through — specifically, in how it computes the "back to dashboard" URL. The current template hardcodes `/app`, but the fix might need to compute the persona's actual default workspace URL and use that.
+**If hypothesis 2 turns out to be the real cause**, the fix is in `src/dazzle_http/runtime/exception_handlers.py` or wherever the in-app 403/404 handler routes through — specifically, in how it computes the "back to dashboard" URL. The current template hardcodes `/app`, but the fix might need to compute the persona's actual default workspace URL and use that.
 
 ## Blast radius
 
@@ -107,7 +107,7 @@ This is the kind of defect that's invisible in automated tests (contract verific
 
 ## Open questions
 
-1. Is `hx-boost` set at the app-shell level? Grep `src/dazzle_ui/templates/layouts/app_shell.html` and `base.html`.
+1. Is `hx-boost` set at the app-shell level? Grep `src/dazzle_page/templates/layouts/app_shell.html` and `base.html`.
 2. What does `/app` GET actually return with a valid session cookie? Is it a 302 to the persona's default workspace, or does it render a routing page? If the former, does HTMX handle the 302 correctly?
 3. How do **other** anchor links in the app shell navigate successfully? What's the mechanism that distinguishes the sidebar links (which work) from the error-page back-links (which don't)?
 

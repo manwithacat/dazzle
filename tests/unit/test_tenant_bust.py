@@ -14,8 +14,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 import dazzle.tenant as t
-from dazzle.back.runtime.repository import Repository
-from dazzle.back.runtime.tenant.cache import TenantCache
+from dazzle.http.runtime.repository import Repository
+from dazzle.http.runtime.tenant.cache import TenantCache
 from dazzle.tenant.cache_registry import (
     _register_slug_field,
     slug_field_for,

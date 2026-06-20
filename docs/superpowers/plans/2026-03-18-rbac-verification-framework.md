@@ -16,14 +16,14 @@
 
 | File | Action | Responsibility |
 |------|--------|---------------|
-| `src/dazzle_back/runtime/route_generator.py` | Modify | Fix #520 — `_is_field_condition()` + gate fix |
+| `src/dazzle_http/runtime/route_generator.py` | Modify | Fix #520 — `_is_field_condition()` + gate fix |
 | `tests/unit/test_rbac_enforcement.py` | Modify | Fix broken test, add regression tests |
 | `src/dazzle/rbac/__init__.py` | Create | Package init |
 | `src/dazzle/rbac/matrix.py` | Create | Layer 1 — static access matrix generator |
 | `src/dazzle/rbac/audit.py` | Create | Layer 3 — audit types + sink protocol |
 | `src/dazzle/rbac/verifier.py` | Create | Layer 2 — dynamic verification |
 | `src/dazzle/rbac/report.py` | Create | Compliance report generator |
-| `src/dazzle_back/runtime/access_evaluator.py` | Modify | Instrument evaluate_permission with audit sink |
+| `src/dazzle_http/runtime/access_evaluator.py` | Modify | Instrument evaluate_permission with audit sink |
 | `src/dazzle/cli/rbac.py` | Create | CLI command group |
 | `src/dazzle/cli/__init__.py` | Modify | Register rbac_app |
 | `src/dazzle/mcp/server/handlers/policy.py` | Modify | Add `access_matrix` operation |
@@ -39,7 +39,7 @@
 ### Task 1: Fix #520 — LIST Gate Bug
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/route_generator.py:904-923`
+- Modify: `src/dazzle_http/runtime/route_generator.py:904-923`
 - Modify: `tests/unit/test_rbac_enforcement.py`
 
 - [ ] **Step 1: Write failing test that reproduces #520**
@@ -59,8 +59,8 @@ class TestListGateRoleCheckCondition:
         """Role-check conditions like `list: role(teacher)` must deny at the gate
         when the user doesn't have the role. This is the actual code path the DSL
         parser produces — condition=role_check, personas=[]."""
-        from dazzle_back.runtime.route_generator import _list_handler_body
-        from dazzle_back.specs.auth import (
+        from dazzle_http.runtime.route_generator import _list_handler_body
+        from dazzle_http.specs.auth import (
             AccessConditionSpec,
             AccessOperationKind,
             AccessPolicyEffect,
@@ -108,8 +108,8 @@ class TestListGateRoleCheckCondition:
     @pytest.mark.asyncio
     async def test_list_returns_200_for_role_check_condition_when_role_matches(self):
         """Role-check condition should pass the gate when the user has the role."""
-        from dazzle_back.runtime.route_generator import _list_handler_body
-        from dazzle_back.specs.auth import (
+        from dazzle_http.runtime.route_generator import _list_handler_body
+        from dazzle_http.specs.auth import (
             AccessConditionSpec,
             AccessOperationKind,
             AccessPolicyEffect,
@@ -158,8 +158,8 @@ class TestListGateRoleCheckCondition:
     async def test_list_gate_skips_for_field_condition_with_role_check_in_or(self):
         """Mixed condition: `list: role(teacher) or school = current_user.school`
         has a field condition, so gate should skip (defer to row filter)."""
-        from dazzle_back.runtime.route_generator import _list_handler_body
-        from dazzle_back.specs.auth import (
+        from dazzle_http.runtime.route_generator import _list_handler_body
+        from dazzle_http.specs.auth import (
             AccessConditionSpec,
             AccessLogicalKind,
             AccessOperationKind,
@@ -222,7 +222,7 @@ Expected: `test_list_returns_403_for_role_check_condition_when_role_not_matched`
 
 - [ ] **Step 3: Implement `_is_field_condition` and fix the gate**
 
-In `src/dazzle_back/runtime/route_generator.py`, add before the `_list_handler_body` function:
+In `src/dazzle_http/runtime/route_generator.py`, add before the `_list_handler_body` function:
 
 ```python
 def _is_field_condition(condition: Any) -> bool:
@@ -268,12 +268,12 @@ Expected: ALL PASS
 
 - [ ] **Step 6: Run lint and type check**
 
-Run: `ruff check src/dazzle_back/runtime/route_generator.py --fix && ruff format src/dazzle_back/runtime/route_generator.py && mypy src/dazzle_back/runtime/route_generator.py`
+Run: `ruff check src/dazzle_http/runtime/route_generator.py --fix && ruff format src/dazzle_http/runtime/route_generator.py && mypy src/dazzle_http/runtime/route_generator.py`
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/dazzle_back/runtime/route_generator.py tests/unit/test_rbac_enforcement.py
+git add src/dazzle_http/runtime/route_generator.py tests/unit/test_rbac_enforcement.py
 git commit -m "fix: LIST gate evaluates role-check conditions instead of skipping them (#520)
 
 The gate at route_generator.py:916 treated role_check conditions as field
@@ -548,7 +548,7 @@ git commit -m "feat: add RBAC audit trail types and sinks (Layer 3)"
 ### Task 3: Instrument Access Evaluator with Audit Sink
 
 **Files:**
-- Modify: `src/dazzle_back/runtime/access_evaluator.py:395-487`
+- Modify: `src/dazzle_http/runtime/access_evaluator.py:395-487`
 - Create: `tests/unit/test_rbac_audit_integration.py`
 
 - [ ] **Step 1: Write integration test**
@@ -558,11 +558,11 @@ git commit -m "feat: add RBAC audit trail types and sinks (Layer 3)"
 from unittest.mock import MagicMock
 
 from dazzle.rbac.audit import InMemoryAuditSink, get_audit_sink, set_audit_sink
-from dazzle_back.runtime.access_evaluator import (
+from dazzle_http.runtime.access_evaluator import (
     AccessRuntimeContext,
     evaluate_permission,
 )
-from dazzle_back.specs.auth import (
+from dazzle_http.specs.auth import (
     AccessConditionSpec,
     AccessOperationKind,
     AccessPolicyEffect,
@@ -697,8 +697,8 @@ Expected: ALL PASS
 - [ ] **Step 6: Lint and commit**
 
 ```bash
-ruff check src/dazzle_back/runtime/access_evaluator.py --fix && ruff format src/dazzle_back/runtime/access_evaluator.py
-git add src/dazzle_back/runtime/access_evaluator.py tests/unit/test_rbac_audit_integration.py
+ruff check src/dazzle_http/runtime/access_evaluator.py --fix && ruff format src/dazzle_http/runtime/access_evaluator.py
+git add src/dazzle_http/runtime/access_evaluator.py tests/unit/test_rbac_audit_integration.py
 git commit -m "feat: instrument evaluate_permission with audit trail emission (Layer 3)"
 ```
 

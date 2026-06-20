@@ -1,6 +1,6 @@
-"""Tests for the dazzle_back.events.api public boundary module."""
+"""Tests for the dazzle_http.events.api public boundary module."""
 
-from dazzle.back.events import api
+from dazzle.http.events import api
 
 
 def test_events_available_true_in_dev():
@@ -44,7 +44,7 @@ def test_api_all_exports():
 
 def test_init_exports_null_types():
     """The main events __init__ also exports null types."""
-    from dazzle.back import events
+    from dazzle.http import events
 
     assert hasattr(events, "NullBus")
     assert hasattr(events, "NullEventFramework")

@@ -48,22 +48,22 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     # genuinely absent" from "internal import broke" — #1114. A stale
     # MCP server process across a Dazzle bump is the common real cause
     # (e.g. a renamed sibling symbol fires an ImportError deep inside
-    # dazzle.ui.* and the broad except swallows it as 'ui not installed').
+    # dazzle.page.* and the broad except swallows it as 'ui not installed').
     try:
-        from dazzle.ui.converters.template_compiler import compile_appspec_to_templates
-        from dazzle.ui.runtime.template_renderer import render_page
+        from dazzle.page.converters.template_compiler import compile_appspec_to_templates
+        from dazzle.page.runtime.template_renderer import render_page
     except ImportError as exc:
         import importlib.util
 
         ui_root_missing = (
-            importlib.util.find_spec("dazzle.ui") is None
+            importlib.util.find_spec("dazzle.page") is None
             and exc.name is not None
-            and (exc.name == "dazzle.ui" or exc.name.startswith("dazzle.ui."))
+            and (exc.name == "dazzle.page" or exc.name.startswith("dazzle.page."))
         )
         if ui_root_missing:
             return json.dumps(
                 {
-                    "error": "dazzle.ui subpackage missing — reinstall dazzle-dsl.",
+                    "error": "dazzle.page subpackage missing — reinstall dazzle-dsl.",
                     "hint": "pip install --force-reinstall dazzle-dsl",
                     "raw": f"{type(exc).__name__}: {exc}",
                 }

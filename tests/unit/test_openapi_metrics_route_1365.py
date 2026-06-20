@@ -8,7 +8,7 @@ __globals__) and pydantic's TypeAdapter 500'd OpenAPI generation app-wide.
 
 from fastapi import FastAPI
 
-from dazzle.back.runtime.metrics_routes import create_metrics_routes
+from dazzle.http.runtime.metrics_routes import create_metrics_routes
 
 
 def test_openapi_builds_with_metrics_router_mounted() -> None:

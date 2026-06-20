@@ -21,7 +21,7 @@ class TestParseGraceDuration:
     @given(st.text(max_size=50))
     @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
     def test_arbitrary_text(self, s: str) -> None:
-        from dazzle.back.runtime.auth.secret_rotation import parse_grace_duration
+        from dazzle.http.runtime.auth.secret_rotation import parse_grace_duration
 
         try:
             result = parse_grace_duration(s)
@@ -34,7 +34,7 @@ class TestParseGraceDuration:
     def test_valid_form_including_huge(self, s: str) -> None:
         # A well-formed but astronomically large duration must still be ValueError,
         # not OverflowError (timedelta(weeks=10**30) overflows C int).
-        from dazzle.back.runtime.auth.secret_rotation import parse_grace_duration
+        from dazzle.http.runtime.auth.secret_rotation import parse_grace_duration
 
         try:
             assert isinstance(parse_grace_duration(s), timedelta)
@@ -73,7 +73,7 @@ class TestParseGroupPatch:
     @given(_SCIM_BODY)
     @settings(max_examples=600, suppress_health_check=[HealthCheck.too_slow])
     def test_scim_shaped_body_returns_list_never_crashes(self, body: dict) -> None:
-        from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+        from dazzle.http.runtime.auth.scim_provisioning import parse_group_patch
 
         # Contract: "unknown ops are skipped (SCIM-lenient)" → it must always return a
         # list of (op, arg) tuples and never raise on a malformed/hostile PATCH body.
@@ -92,7 +92,7 @@ class TestParseGroupPatch:
         ],
     )
     def test_malformed_ops_are_skipped_not_crashed(self, body: dict) -> None:
-        from dazzle.back.runtime.auth.scim_provisioning import parse_group_patch
+        from dazzle.http.runtime.auth.scim_provisioning import parse_group_patch
 
         assert isinstance(parse_group_patch(body), list)
 
@@ -108,7 +108,7 @@ class TestConnectionCryptoRoundTrip:
     )
     def test_roundtrip(self, monkeypatch, plaintext: str) -> None:
         monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", base64.b64encode(b"k" * 32).decode())
-        from dazzle.back.runtime.auth.connection_crypto import decrypt_secret, encrypt_secret
+        from dazzle.http.runtime.auth.connection_crypto import decrypt_secret, encrypt_secret
 
         assert decrypt_secret(encrypt_secret(plaintext)) == plaintext
 
@@ -119,7 +119,7 @@ class TestConnectionCryptoRoundTrip:
     )
     def test_tampered_token_never_silently_decrypts(self, monkeypatch, plaintext: str) -> None:
         monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", base64.b64encode(b"k" * 32).decode())
-        from dazzle.back.runtime.auth.connection_crypto import (
+        from dazzle.http.runtime.auth.connection_crypto import (
             ConnectionSecretError,
             decrypt_secret,
             encrypt_secret,
@@ -146,7 +146,7 @@ class TestValidateMetadataUrl:
     def test_arbitrary_url(self, monkeypatch, url: str) -> None:
         import socket
 
-        from dazzle.back.runtime.auth.saml_metadata import (
+        from dazzle.http.runtime.auth.saml_metadata import (
             SamlMetadataError,
             validate_metadata_url,
         )
@@ -174,7 +174,7 @@ class TestParseIdpMetadataXml:
     @settings(max_examples=150, suppress_health_check=[HealthCheck.too_slow])
     def test_arbitrary_text(self, s: str) -> None:
         pytest.importorskip("onelogin")
-        from dazzle.back.runtime.auth.saml_metadata import (
+        from dazzle.http.runtime.auth.saml_metadata import (
             SamlMetadataError,
             parse_idp_metadata_xml,
         )
@@ -233,7 +233,7 @@ class TestParseAggregateWhere:
     @given(_UNICODE_TEXT)
     @settings(max_examples=400, suppress_health_check=[HealthCheck.too_slow])
     def test_arbitrary_clause(self, s: str) -> None:
-        from dazzle.back.runtime.aggregate_where_parser import parse_aggregate_where
+        from dazzle.http.runtime.aggregate_where_parser import parse_aggregate_where
 
         try:
             parse_aggregate_where(s)
@@ -245,7 +245,7 @@ class TestParseAggregateWhere:
     def test_deep_nesting_is_value_error_not_recursion_error(self, k: int) -> None:
         # A clause with k nested parens must raise the documented ValueError (depth cap),
         # never an undocumented RecursionError (a DoS on the report WHERE path).
-        from dazzle.back.runtime.aggregate_where_parser import parse_aggregate_where
+        from dazzle.http.runtime.aggregate_where_parser import parse_aggregate_where
 
         clause = "(" * k + "a = 1" + ")" * k
         try:
@@ -261,7 +261,7 @@ class TestParseSchedule:
     @given(_UNICODE_TEXT)
     @settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
     def test_total_never_raises(self, s: str) -> None:
-        from dazzle.back.runtime.sla_manager import parse_schedule
+        from dazzle.http.runtime.sla_manager import parse_schedule
 
         weekdays, start_hm, end_hm = parse_schedule(s)
         assert isinstance(weekdays, set)
@@ -269,7 +269,7 @@ class TestParseSchedule:
         assert isinstance(end_hm, tuple) and len(end_hm) == 2
 
     def test_valid_schedule_still_parses(self) -> None:
-        from dazzle.back.runtime.sla_manager import parse_schedule
+        from dazzle.http.runtime.sla_manager import parse_schedule
 
         weekdays, start_hm, end_hm = parse_schedule("Mon-Fri 09:00-17:00")
         assert weekdays == {0, 1, 2, 3, 4}

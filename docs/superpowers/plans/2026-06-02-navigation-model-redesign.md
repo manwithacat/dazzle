@@ -21,9 +21,9 @@
 | `src/dazzle/core/ir/personas.py` | `PersonaSpec` gains `nav_ref: str \| None` | 1 |
 | `src/dazzle/core/dsl_parser_impl/scenario.py` | persona block parses `uses nav <name>` → `nav_ref` | 1 |
 | `src/dazzle/core/validator.py` (or the validate module that walks personas) | `persona.nav_ref` must resolve to a declared `nav <name>:` | 1 |
-| `src/dazzle/ui/converters/nav_builder.py` *(new)* | `NavModel` + `build_persona_nav` + `build_all_persona_navs` (pure) | 2 |
-| `src/dazzle/ui/runtime/page_routes.py` | renderers read precomputed persona nav; delete 3 old builders + skip-branch | 3 |
-| `src/dazzle/ui/converters/template_compiler.py` | delete persona-union (`1482-1531`) | 3 |
+| `src/dazzle/page/converters/nav_builder.py` *(new)* | `NavModel` + `build_persona_nav` + `build_all_persona_navs` (pure) | 2 |
+| `src/dazzle/page/runtime/page_routes.py` | renderers read precomputed persona nav; delete 3 old builders + skip-branch | 3 |
+| `src/dazzle/page/converters/template_compiler.py` | delete persona-union (`1482-1531`) | 3 |
 | `src/dazzle/core/ir/workspaces.py` | remove `WorkspaceSpec.nav_groups` + `nav_ref` | 3 |
 | `src/dazzle/core/dsl_parser_impl/workspace.py` | remove workspace `uses nav` + `nav_group` grammar | 3 |
 | `src/dazzle/core/linker_impl.py` | delete nav_ref prepend (`1418-1442`) | 3 |
@@ -270,14 +270,14 @@ Build and fully unit-test the pure builder against synthetic inputs. Not wired t
 ### Task 2.1: `NavModel` types
 
 **Files:**
-- Create: `src/dazzle/ui/converters/nav_builder.py`
+- Create: `src/dazzle/page/converters/nav_builder.py`
 - Test: `tests/unit/test_nav_builder.py`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 # tests/unit/test_nav_builder.py
-from dazzle.ui.converters.nav_builder import NavModel, NavGroup, NavLink
+from dazzle.page.converters.nav_builder import NavModel, NavGroup, NavLink
 
 
 def test_nav_model_is_frozen_and_holds_groups():
@@ -345,14 +345,14 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/ui/converters/nav_builder.py tests/unit/test_nav_builder.py
+git add src/dazzle/page/converters/nav_builder.py tests/unit/test_nav_builder.py
 git commit -m "#1324 NavModel types (nav_builder)"
 ```
 
 ### Task 2.2: `build_persona_nav` — curated path
 
 **Files:**
-- Modify: `src/dazzle/ui/converters/nav_builder.py`
+- Modify: `src/dazzle/page/converters/nav_builder.py`
 - Test: `tests/unit/test_nav_builder.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -441,7 +441,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/dazzle/ui/converters/nav_builder.py tests/unit/test_nav_builder.py
+git add src/dazzle/page/converters/nav_builder.py tests/unit/test_nav_builder.py
 git commit -m "#1324 build_persona_nav: curated path + access filter (FR-3)"
 ```
 
@@ -482,7 +482,7 @@ git commit -am "#1324 test: access-filter drops DENY-listed nav items"
 ### Task 2.4: Auto-discover fallback + `build_all_persona_navs`
 
 **Files:**
-- Modify: `src/dazzle/ui/converters/nav_builder.py` (reuse `workspace_allowed_personas` from `workspace_converter.py:467`)
+- Modify: `src/dazzle/page/converters/nav_builder.py` (reuse `workspace_allowed_personas` from `workspace_converter.py:467`)
 - Test: `tests/unit/test_nav_builder.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -517,7 +517,7 @@ def test_build_all_persona_navs_keys_by_persona_id(make_appspec, permit_all_matr
 - [ ] **Step 3: Implement fallback + the all-personas precompute**
 
 ```python
-from dazzle.ui.converters.workspace_converter import workspace_allowed_personas
+from dazzle.page.converters.workspace_converter import workspace_allowed_personas
 
 
 def _auto_discover(appspec: AppSpec, persona: PersonaSpec, matrix: AccessMatrix) -> list[NavGroup]:
@@ -583,7 +583,7 @@ This is the refactor. It wires the precompute into the runtime, switches both re
 
 ```python
 from dazzle.rbac.matrix import generate_access_matrix
-from dazzle.ui.converters.nav_builder import build_all_persona_navs
+from dazzle.page.converters.nav_builder import build_all_persona_navs
 
 persona_navs = build_all_persona_navs(appspec, generate_access_matrix(appspec))
 # store on the shared context object (e.g. ServerState/RuntimeServices) as `persona_navs`
@@ -600,7 +600,7 @@ git commit -am "#1324 precompute per-persona NavModel at app build (link-time)"
 ### Task 3.2: Workspace-page renderer reads precomputed nav
 
 **Files:**
-- Modify: `src/dazzle/ui/runtime/page_routes.py` — replace the workspace-page nav builder (`:2465+`) and delete the auto-discovery-skip-when-grouped branch (`:2511`).
+- Modify: `src/dazzle/page/runtime/page_routes.py` — replace the workspace-page nav builder (`:2465+`) and delete the auto-discovery-skip-when-grouped branch (`:2511`).
 
 - [ ] **Step 1:** Read `page_routes.py:2455-2560` to see how the built `ws_nav_items`/`ws_entity_nav` dicts feed the sidebar fragment. Identify the sidebar render input contract.
 
@@ -619,8 +619,8 @@ git commit -am "#1324 workspace-page renderer reads precomputed persona nav; dro
 ### Task 3.3: Entity-page renderer reads precomputed nav; delete persona-union
 
 **Files:**
-- Modify: `src/dazzle/ui/runtime/page_routes.py` (`:632-667`)
-- Delete: persona-union in `src/dazzle/ui/converters/template_compiler.py:1482-1531`
+- Modify: `src/dazzle/page/runtime/page_routes.py` (`:632-667`)
+- Delete: persona-union in `src/dazzle/page/converters/template_compiler.py:1482-1531`
 
 - [ ] **Step 1:** Read `page_routes.py:632-667` and `template_compiler.py:1482-1531` to see the entity-page resolution + union it calls.
 

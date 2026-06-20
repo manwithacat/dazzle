@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check for and download latest versions of vendored JS dependencies.
 
-Every byte written to ``src/dazzle/ui/runtime/static/vendor/`` by this
+Every byte written to ``src/dazzle/page/runtime/static/vendor/`` by this
 script also gets hashed and recorded in ``scripts/vendor_hashes.json``
 via the helpers in ``vendor_manifest.py``. The companion drift gate in
 ``tests/unit/test_vendor_hash_drift.py`` then catches any divergence between

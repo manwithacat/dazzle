@@ -24,7 +24,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dazzle.back.runtime.onboarding.state_repository import (
+from dazzle.http.runtime.onboarding.state_repository import (
     OnboardingStateRepository,
     _parse_json_dict,
     _parse_json_list,

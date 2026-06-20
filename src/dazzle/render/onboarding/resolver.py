@@ -28,7 +28,7 @@ Algorithm:
    the renderer or v0.71.3 client JS will act on.
 
 Returns ``(GuideSpec, GuideStep)`` or ``None``. The caller composes
-this with :func:`dazzle.back.runtime.onboarding.renderer.render_step`
+this with :func:`dazzle.http.runtime.onboarding.renderer.render_step`
 to get the HTML.
 """
 
@@ -47,7 +47,7 @@ class OnboardingStateLookup(Protocol):
     """Subset of ``OnboardingStateRepository`` the resolver needs.
 
     Protocol-typed so the render layer doesn't have to import the
-    concrete repository class (which lives in ``dazzle.back``). Any
+    concrete repository class (which lives in ``dazzle.http``). Any
     object with a matching ``get`` method satisfies this contract —
     the real repository, an in-memory test double, or a mock.
     """

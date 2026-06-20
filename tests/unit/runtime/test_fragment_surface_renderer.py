@@ -1,7 +1,7 @@
 """FragmentSurfaceRenderer adapter — uniform (surface, ctx) interface."""
 
-from dazzle.back.runtime.renderers.fragment import FragmentSurfaceRenderer
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
+from dazzle.http.runtime.renderers.fragment import FragmentSurfaceRenderer
 
 
 def test_fragment_surface_renderer_renders_a_minimal_list_surface() -> None:

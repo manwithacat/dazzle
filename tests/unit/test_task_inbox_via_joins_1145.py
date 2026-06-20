@@ -14,8 +14,8 @@ on rows arriving with FK-hydrated sub-dicts.
 
 from __future__ import annotations
 
-from dazzle.back.runtime.workspace_card_data import _items_from_template
 from dazzle.core.ir.workspaces import TaskSourceTemplate
+from dazzle.http.runtime.workspace_card_data import _items_from_template
 
 
 def test_via_alias_resolves_to_fk_hydrated_subdict() -> None:

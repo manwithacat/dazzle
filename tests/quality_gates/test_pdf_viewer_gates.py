@@ -2,7 +2,7 @@
 
 Browser-driven verification of the cycle 1b chrome and keyboard
 shortcuts. Runs Playwright (chromium) against a static harness at
-``src/dazzle/ui/runtime/static/test-pdf-viewer.html`` served via
+``src/dazzle/page/runtime/static/test-pdf-viewer.html`` served via
 Python's ``http.server`` — same pattern as
 ``test_dashboard_gates.py``.
 
@@ -39,7 +39,7 @@ pytest.importorskip("playwright.sync_api")
 from playwright.sync_api import sync_playwright  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-STATIC_DIR = REPO_ROOT / "src/dazzle/ui/runtime/static"
+STATIC_DIR = REPO_ROOT / "src/dazzle/page/runtime/static"
 SCREENSHOT_DIR = REPO_ROOT / "dev_docs/pdf-viewer-screenshots"
 HARNESS_PORT = 8767  # different from dashboard's 8766 — both can run together
 

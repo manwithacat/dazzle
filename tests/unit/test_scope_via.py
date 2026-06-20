@@ -222,7 +222,7 @@ entity Contact "Contact":
 # Query builder tests
 # ---------------------------------------------------------------------------
 
-from dazzle.back.runtime.query_builder import FilterCondition, FilterOperator  # noqa: E402
+from dazzle.http.runtime.query_builder import FilterCondition, FilterOperator  # noqa: E402
 
 
 class TestInSubqueryOperator:
@@ -254,9 +254,9 @@ class TestInSubqueryOperator:
 # Converter tests
 # ---------------------------------------------------------------------------
 
-from dazzle.back.converters.entity_converter import _convert_scope_rule  # noqa: E402
-from dazzle.back.specs.auth import AccessOperationKind  # noqa: E402
 from dazzle.core.ir.domain import PermissionKind, ScopeRule  # noqa: E402
+from dazzle.http.converters.entity_converter import _convert_scope_rule  # noqa: E402
+from dazzle.http.specs.auth import AccessOperationKind  # noqa: E402
 
 
 class TestConvertViaCondition:
@@ -313,7 +313,7 @@ from unittest.mock import MagicMock  # noqa: E402
 
 class TestBuildViaSubquery:
     def test_basic_subquery(self) -> None:
-        from dazzle.back.runtime.route_generator import _build_via_subquery
+        from dazzle.http.runtime.route_generator import _build_via_subquery
 
         bindings = [
             {"junction_field": "agent", "target": "current_user.contact", "operator": "="},
@@ -337,7 +337,7 @@ class TestBuildViaSubquery:
         assert len(params) >= 1
 
     def test_subquery_with_null_filter(self) -> None:
-        from dazzle.back.runtime.route_generator import _build_via_subquery
+        from dazzle.http.runtime.route_generator import _build_via_subquery
 
         bindings = [
             {"junction_field": "agent", "target": "current_user", "operator": "="},
@@ -357,7 +357,7 @@ class TestBuildViaSubquery:
         assert entity_field == "id"
 
     def test_subquery_with_not_null_filter(self) -> None:
-        from dazzle.back.runtime.route_generator import _build_via_subquery
+        from dazzle.http.runtime.route_generator import _build_via_subquery
 
         bindings = [
             {"junction_field": "user", "target": "current_user", "operator": "="},
@@ -379,7 +379,7 @@ class TestBuildViaSubquery:
 
 class TestExtractViaCheckFilters:
     def test_via_check_produces_in_subquery_filter(self) -> None:
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         condition = MagicMock()
         condition.kind = "via_check"
@@ -416,7 +416,7 @@ class TestViaDenyOnNullFK:
     def test_build_via_subquery_returns_empty_on_deny(self) -> None:
         from unittest.mock import patch
 
-        from dazzle.back.runtime.route_generator import _build_via_subquery
+        from dazzle.http.runtime.route_generator import _build_via_subquery
 
         bindings = [
             {"junction_field": "agent", "target": "current_user.school", "operator": "="},
@@ -424,7 +424,7 @@ class TestViaDenyOnNullFK:
         ]
 
         with patch(
-            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
+            "dazzle.http.runtime.scope_filters._resolve_user_attribute",
             return_value="__RBAC_DENY__",
         ):
             entity_field, sql, params = _build_via_subquery(
@@ -442,7 +442,7 @@ class TestViaDenyOnNullFK:
         """Entity binding listed after user binding — entity_field found from bindings scan."""
         from unittest.mock import patch
 
-        from dazzle.back.runtime.route_generator import _build_via_subquery
+        from dazzle.http.runtime.route_generator import _build_via_subquery
 
         # user binding first, entity binding second
         bindings = [
@@ -451,7 +451,7 @@ class TestViaDenyOnNullFK:
         ]
 
         with patch(
-            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
+            "dazzle.http.runtime.scope_filters._resolve_user_attribute",
             return_value="__RBAC_DENY__",
         ):
             entity_field, sql, params = _build_via_subquery(
@@ -468,7 +468,7 @@ class TestViaDenyOnNullFK:
     def test_extract_condition_filters_via_deny_produces_empty_subquery(self) -> None:
         from unittest.mock import patch
 
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         condition = MagicMock()
         condition.kind = "via_check"
@@ -482,7 +482,7 @@ class TestViaDenyOnNullFK:
 
         filters: dict = {}
         with patch(
-            "dazzle.back.runtime.scope_filters._resolve_user_attribute",
+            "dazzle.http.runtime.scope_filters._resolve_user_attribute",
             return_value="__RBAC_DENY__",
         ):
             _extract_condition_filters(
@@ -497,7 +497,7 @@ class TestViaDenyOnNullFK:
 
     def test_set_filter_deny_produces_impossible_subquery(self) -> None:
         """Regular (non-via) scope clause with __RBAC_DENY__ uses impossible subquery."""
-        from dazzle.back.runtime.route_generator import _extract_condition_filters
+        from dazzle.http.runtime.route_generator import _extract_condition_filters
 
         condition = MagicMock()
         condition.kind = "comparison"

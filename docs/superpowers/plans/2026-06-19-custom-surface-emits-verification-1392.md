@@ -19,7 +19,7 @@
 - `src/dazzle/core/ir/surfaces.py` — add `SurfaceSpec.emits: tuple[str, ...] = ()`.
 - `src/dazzle/core/dsl_parser_impl/surface.py` — `_kw_emits` + register in `_SURFACE_IDENT_KEYWORDS`; `_SurfaceState.emits`; wire into `_build_surface`.
 - `src/dazzle/core/validation/ux.py` (or `surfaces.py`) — `validate_emits_targets` (surface-name resolution); wired into the validate/lint pass.
-- `src/dazzle/back/runtime/route_overrides.py` — `_EMITS_RE`, `RouteOverrideDescriptor.emits_paths`, parse in `discover_route_overrides`, `verify_emits_paths(overrides, route_paths)`.
+- `src/dazzle/http/runtime/route_overrides.py` — `_EMITS_RE`, `RouteOverrideDescriptor.emits_paths`, parse in `discover_route_overrides`, `verify_emits_paths(overrides, route_paths)`.
 - `tests/unit/test_emits_*.py` — parser, validator, header-scan, path-resolver.
 - one example/fixture custom surface + `docs/reference/` note + CHANGELOG.
 
@@ -134,7 +134,7 @@ git commit -m "feat(dsl): emits: surface clause IR + parser (#1392 item 3 P1)"
 ## Task 2 (P2): route-override `# dazzle:emits` header scan
 
 **Files:**
-- Modify: `src/dazzle/back/runtime/route_overrides.py` (`_IMPLEMENTS_RE` block ~L43, `RouteOverrideDescriptor` ~L55, `discover_route_overrides` parse ~L210)
+- Modify: `src/dazzle/http/runtime/route_overrides.py` (`_IMPLEMENTS_RE` block ~L43, `RouteOverrideDescriptor` ~L55, `discover_route_overrides` parse ~L210)
 - Test: `tests/unit/test_emits_header_scan.py`
 
 **Interfaces — Consumes:** `RouteOverrideDescriptor`. **Produces:** `RouteOverrideDescriptor.emits_paths: tuple[str, ...]`.
@@ -142,7 +142,7 @@ git commit -m "feat(dsl): emits: surface clause IR + parser (#1392 item 3 P1)"
 - [ ] **Step 1: Write the failing test** (`tests/unit/test_emits_header_scan.py`)
 ```python
 from pathlib import Path
-from dazzle.back.runtime.route_overrides import discover_route_overrides
+from dazzle.http.runtime.route_overrides import discover_route_overrides
 
 _OVERRIDE = '''# dazzle:route-override GET /app/board
 # dazzle:emits /app/tasks/{id}
@@ -196,9 +196,9 @@ Expected: PASS (2 passed).
 
 - [ ] **Step 5: ruff + commit**
 ```bash
-.venv/bin/ruff format src/dazzle/back/runtime/route_overrides.py tests/unit/test_emits_header_scan.py
-.venv/bin/ruff check src/dazzle/back/runtime/route_overrides.py tests/unit/test_emits_header_scan.py --fix
-git add src/dazzle/back/runtime/route_overrides.py tests/unit/test_emits_header_scan.py
+.venv/bin/ruff format src/dazzle/http/runtime/route_overrides.py tests/unit/test_emits_header_scan.py
+.venv/bin/ruff check src/dazzle/http/runtime/route_overrides.py tests/unit/test_emits_header_scan.py --fix
+git add src/dazzle/http/runtime/route_overrides.py tests/unit/test_emits_header_scan.py
 git commit -m "feat(routes): # dazzle:emits header scan into RouteOverrideDescriptor (#1392 item 3 P2)"
 ```
 
@@ -209,7 +209,7 @@ git commit -m "feat(routes): # dazzle:emits header scan into RouteOverrideDescri
 **Files:**
 - Modify: `src/dazzle/core/validation/ux.py` — `validate_emits_targets(appspec)` (DSL surface-name resolution)
 - Modify: `src/dazzle/core/lint.py` — wire `validate_emits_targets` into the validate/lint pass (alongside the existing surface validators)
-- Modify: `src/dazzle/back/runtime/route_overrides.py` — `verify_emits_paths(overrides, route_paths)` (override path resolution, mirrors `verify_route_matrix_completeness`)
+- Modify: `src/dazzle/http/runtime/route_overrides.py` — `verify_emits_paths(overrides, route_paths)` (override path resolution, mirrors `verify_route_matrix_completeness`)
 - Test: `tests/unit/test_emits_validation.py`
 
 **Interfaces — Consumes:** `SurfaceSpec.emits` (Task 1), `RouteOverrideDescriptor.emits_paths` (Task 2).
@@ -305,7 +305,7 @@ def verify_emits_paths(
 
 - [ ] **Step 6: Test the path resolver** — append to `tests/unit/test_emits_validation.py`:
 ```python
-from dazzle.back.runtime.route_overrides import RouteOverrideDescriptor, verify_emits_paths
+from dazzle.http.runtime.route_overrides import RouteOverrideDescriptor, verify_emits_paths
 
 def test_override_emits_path_resolves():
     o = RouteOverrideDescriptor(method="GET", path="/app/board", emits_paths=("/app/tasks/{id}",))
@@ -331,9 +331,9 @@ Expected: PASS (4 passed).
 
 - [ ] **Step 9: ruff + commit**
 ```bash
-.venv/bin/ruff format src/dazzle/core/validation/ux.py src/dazzle/core/lint.py src/dazzle/back/runtime/route_overrides.py tests/unit/test_emits_validation.py
-.venv/bin/ruff check src/dazzle/core/validation/ux.py src/dazzle/core/lint.py src/dazzle/back/runtime/route_overrides.py tests/unit/test_emits_validation.py --fix
-.venv/bin/mypy src/dazzle/core/validation/ux.py src/dazzle/core/lint.py src/dazzle/back/runtime/route_overrides.py
+.venv/bin/ruff format src/dazzle/core/validation/ux.py src/dazzle/core/lint.py src/dazzle/http/runtime/route_overrides.py tests/unit/test_emits_validation.py
+.venv/bin/ruff check src/dazzle/core/validation/ux.py src/dazzle/core/lint.py src/dazzle/http/runtime/route_overrides.py tests/unit/test_emits_validation.py --fix
+.venv/bin/mypy src/dazzle/core/validation/ux.py src/dazzle/core/lint.py src/dazzle/http/runtime/route_overrides.py
 git add -A
 git commit -m "feat(validation): emits-target build gate E_DEAD_EMIT_TARGET (#1392 item 3 P3)"
 ```

@@ -18,7 +18,7 @@ from fastapi import FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
-from dazzle.back.runtime.route_generator import (  # noqa: E402
+from dazzle.http.runtime.route_generator import (  # noqa: E402
     HandlerConfig,
     RouteSpec,
     create_create_handler,

@@ -107,7 +107,7 @@ def _person_with_junction_descendants() -> ir.EntitySpec:
 
 class TestSelfRefDescendantsSQL:
     def test_cte_uses_via_in_anchor_and_recurse(self) -> None:
-        from dazzle.back.runtime.repository import (
+        from dazzle.http.runtime.repository import (
             _resolve_recursive_traversal_fields,
         )
 
@@ -126,7 +126,7 @@ class TestSelfRefDescendantsSQL:
         assert 'JOIN walk w ON t."parent_department" = w.id' in first_sql
 
     def test_attaches_empty_list_when_no_descendants(self) -> None:
-        from dazzle.back.runtime.repository import (
+        from dazzle.http.runtime.repository import (
             _resolve_recursive_traversal_fields,
         )
 
@@ -139,7 +139,7 @@ class TestSelfRefDescendantsSQL:
         assert result[0]["all_descendants"] == []
 
     def test_attaches_resolved_rows_grouped_by_source(self) -> None:
-        from dazzle.back.runtime.repository import (
+        from dazzle.http.runtime.repository import (
             _resolve_recursive_traversal_fields,
         )
 
@@ -165,7 +165,7 @@ class TestSelfRefDescendantsSQL:
 
 class TestSelfRefAncestorsSQL:
     def test_cte_walks_up_via_parent_fk(self) -> None:
-        from dazzle.back.runtime.repository import (
+        from dazzle.http.runtime.repository import (
             _resolve_recursive_traversal_fields,
         )
 
@@ -185,7 +185,7 @@ class TestSelfRefAncestorsSQL:
 
 class TestJunctionMediatedDescendants:
     def test_probes_information_schema_then_uses_junction(self) -> None:
-        from dazzle.back.runtime.repository import (
+        from dazzle.http.runtime.repository import (
             _resolve_recursive_traversal_fields,
         )
 
@@ -216,7 +216,7 @@ class TestJunctionMediatedDescendants:
 
 class TestEdgeCases:
     def test_no_op_when_no_traversal_fields(self) -> None:
-        from dazzle.back.runtime.repository import (
+        from dazzle.http.runtime.repository import (
             _resolve_recursive_traversal_fields,
         )
 
@@ -228,7 +228,7 @@ class TestEdgeCases:
         assert not db._mock_cursor.execute.called
 
     def test_no_op_on_empty_rows(self) -> None:
-        from dazzle.back.runtime.repository import (
+        from dazzle.http.runtime.repository import (
             _resolve_recursive_traversal_fields,
         )
 
@@ -240,7 +240,7 @@ class TestEdgeCases:
         assert not db._mock_cursor.execute.called
 
     def test_rows_without_id_get_empty_lists(self) -> None:
-        from dazzle.back.runtime.repository import (
+        from dazzle.http.runtime.repository import (
             _resolve_recursive_traversal_fields,
         )
 
@@ -255,7 +255,7 @@ class TestEdgeCases:
 
 class TestJunctionChildFKDiscovery:
     def test_discover_returns_first_non_via_non_id_column(self) -> None:
-        from dazzle.back.runtime.repository import _discover_junction_child_fk
+        from dazzle.http.runtime.repository import _discover_junction_child_fk
 
         db = _make_db(
             [
@@ -269,7 +269,7 @@ class TestJunctionChildFKDiscovery:
         assert col == "report"
 
     def test_discover_returns_none_when_no_other_columns(self) -> None:
-        from dazzle.back.runtime.repository import _discover_junction_child_fk
+        from dazzle.http.runtime.repository import _discover_junction_child_fk
 
         db = _make_db(
             [
@@ -281,7 +281,7 @@ class TestJunctionChildFKDiscovery:
         assert col is None
 
     def test_discover_returns_none_on_query_failure(self) -> None:
-        from dazzle.back.runtime.repository import _discover_junction_child_fk
+        from dazzle.http.runtime.repository import _discover_junction_child_fk
 
         cursor = MagicMock()
         cursor.execute = MagicMock(side_effect=RuntimeError("boom"))

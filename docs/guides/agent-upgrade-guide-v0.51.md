@@ -206,7 +206,7 @@ Is the field on a create or edit surface?
 If you're writing custom route handlers or extending the runtime:
 
 ```python
-from dazzle_back.runtime.response_helpers import with_toast, with_oob
+from dazzle_http.runtime.response_helpers import with_toast, with_oob
 
 # Append a toast notification to any HTMX response
 response = with_toast(response, "Task saved", "success")
@@ -216,7 +216,7 @@ response = with_oob(response, "breadcrumb-container", breadcrumb_html)
 ```
 
 ```python
-from dazzle_back.runtime.breadcrumbs import build_breadcrumb_trail
+from dazzle_http.runtime.breadcrumbs import build_breadcrumb_trail
 
 crumbs = build_breadcrumb_trail("/projects/123/tasks", {
     "/projects/123": "Acme Website",
@@ -226,7 +226,7 @@ crumbs = build_breadcrumb_trail("/projects/123/tasks", {
 ```
 
 ```python
-from dazzle_back.runtime.asset_manifest import collect_required_assets
+from dazzle_http.runtime.asset_manifest import collect_required_assets
 
 # Derive which vendor JS needs to load for this surface
 assets = collect_required_assets(surface)

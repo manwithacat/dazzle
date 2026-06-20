@@ -13,7 +13,7 @@ defaults (--text-sm font-size, line-height: 1.4).
 
 from pathlib import Path
 
-CSS_PATH = Path("src/dazzle/ui/runtime/static/css/components/form.css")
+CSS_PATH = Path("src/dazzle/page/runtime/static/css/components/form.css")
 
 
 def _read_block(start_marker: str, max_chars: int = 800) -> str:

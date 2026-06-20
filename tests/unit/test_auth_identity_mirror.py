@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dazzle.back.runtime.auth_identity_mirror import build_domain_user_upsert
 from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.http.runtime.auth_identity_mirror import build_domain_user_upsert
 
 
 def _user(dsl: str):

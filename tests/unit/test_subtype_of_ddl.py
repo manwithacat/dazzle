@@ -14,11 +14,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dazzle.back.converters.entity_converter import convert_entities
-from dazzle.back.runtime.sa_schema import build_metadata
 from dazzle.core import ir
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.linker import build_appspec
+from dazzle.http.converters.entity_converter import convert_entities
+from dazzle.http.runtime.sa_schema import build_metadata
 
 # Canonical Asset / Vehicle / Building shape from test_subtype_of_linker.py.
 _TPT_DSL = """\

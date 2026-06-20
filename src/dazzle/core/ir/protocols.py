@@ -2,7 +2,7 @@
 
 These ``typing.Protocol`` classes expose the narrow attribute subset
 each non-core layer actually reads on an IR object. They exist so that
-``dazzle.back.runtime.*`` and ``dazzle.render.*`` can declare their
+``dazzle.http.runtime.*`` and ``dazzle.render.*`` can declare their
 contracts against the IR without importing the concrete Pydantic
 classes from ``dazzle.core.ir.appspec`` / ``surfaces`` / ``domain`` /
 etc. — a 30-importer fan-in that the smells run (#1086 pattern P5)
@@ -11,7 +11,7 @@ identified as the codebase's biggest change-amplifier.
 Layer policy (enforced by the future #1095 gate):
 
 - Concrete ``dazzle.core.ir.*`` imports are allowed inside
-  ``dazzle.core/`` and ``dazzle.back.specs/`` (the IR→runtime bridge).
+  ``dazzle.core/`` and ``dazzle.http.specs/`` (the IR→runtime bridge).
 - Everywhere else, import from ``dazzle.core.ir.protocols`` instead.
 
 These protocols are structural (no ``@runtime_checkable``) — mypy alone
@@ -44,7 +44,7 @@ class SurfaceLike(Protocol):
     """Minimal read-only surface contract used by renderers.
 
     Currently scoped to the four attrs read by
-    ``dazzle.back.runtime.renderers.fragment`` /
+    ``dazzle.http.runtime.renderers.fragment`` /
     ``fragment_adapter`` and ``dazzle.render.dispatch``. Concrete
     ``dazzle.core.ir.surfaces.SurfaceSpec`` instances satisfy it
     structurally — no inheritance declaration needed.

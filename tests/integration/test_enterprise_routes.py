@@ -16,12 +16,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.middleware.sessions import SessionMiddleware
 
-from dazzle.back.runtime.auth.connections import (
+from dazzle.http.runtime.auth.connections import (
     AssertedIdentity,
     ConnectionRecord,
     register_provider,
 )
-from dazzle.back.runtime.auth.enterprise_routes import create_enterprise_sso_routes
+from dazzle.http.runtime.auth.enterprise_routes import create_enterprise_sso_routes
 
 
 def _conn(**over) -> ConnectionRecord:
@@ -137,7 +137,7 @@ class _FakeProvider:
 @pytest.fixture
 def fake_provider():
     """Register a fake (oidc, native) provider, restoring the registry after."""
-    from dazzle.back.runtime.auth.connections import _PROVIDERS
+    from dazzle.http.runtime.auth.connections import _PROVIDERS
 
     holder: dict[str, _FakeProvider] = {}
 

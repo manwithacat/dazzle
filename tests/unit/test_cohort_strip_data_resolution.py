@@ -11,16 +11,16 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.back.runtime.workspace_card_data import (
-    _apply_format_spec,
-    _build_cohort_cells,
-    _default_round_numeric,
-)
 from dazzle.core.ir.aggregates import AggregateRef
 from dazzle.core.ir.workspaces import (
     CohortStripConfig,
     CohortStripLens,
     LensAggregatePrimary,
+)
+from dazzle.http.runtime.workspace_card_data import (
+    _apply_format_spec,
+    _build_cohort_cells,
+    _default_round_numeric,
 )
 
 

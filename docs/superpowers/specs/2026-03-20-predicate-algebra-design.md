@@ -383,15 +383,15 @@ These are warnings, not errors. Not part of this implementation scope.
 ### New files
 - `src/dazzle/core/ir/predicates.py` — ScopePredicate union type and node classes
 - `src/dazzle/core/ir/fk_graph.py` — FK graph construction and path validation
-- `src/dazzle_back/runtime/predicate_compiler.py` — predicate tree → SQL compilation
+- `src/dazzle_http/runtime/predicate_compiler.py` — predicate tree → SQL compilation
 
 ### Modified files
 - `src/dazzle/core/linker.py` — build FK graph, compile scope conditions to predicate trees
 - `src/dazzle/core/validator.py` — validate predicate trees against FK graph
 - `src/dazzle/core/dsl_parser_impl/entity.py` — parse `not via`, `not (...)`, depth-N paths
 - `src/dazzle/core/ir/conditions.py` — may be superseded by predicates.py for scope rules
-- `src/dazzle_back/runtime/route_generator.py` — replace filter extraction with compile_predicate
-- `src/dazzle_back/runtime/query_builder.py` — simplify or remove filter-dict parsing
+- `src/dazzle_http/runtime/route_generator.py` — replace filter extraction with compile_predicate
+- `src/dazzle_http/runtime/query_builder.py` — simplify or remove filter-dict parsing
 
 ### Removed code
 - `_extract_condition_filters()` — replaced by predicate compiler

@@ -87,7 +87,7 @@ class TestRepositoryTombstoneFilter:
 
     def _make_repo(self, *, soft_delete: bool) -> MagicMock:
         """Build a partially-mocked Repository to capture the SQL it emits."""
-        from dazzle.back.runtime.repository import Repository
+        from dazzle.http.runtime.repository import Repository
 
         entity_spec = ir.EntitySpec(
             name="Document",
@@ -164,14 +164,14 @@ class TestSoftDeleteRouteSpec:
     """
 
     def test_routespec_default_soft_delete_false(self) -> None:
-        from dazzle.back.runtime.route_support import HandlerConfig, RouteSpec
+        from dazzle.http.runtime.route_support import HandlerConfig, RouteSpec
 
         hc = HandlerConfig(entity_name="Document")
         spec = RouteSpec(handler=hc, service=MagicMock())
         assert spec.soft_delete is False
 
     def test_routespec_carries_soft_delete_true(self) -> None:
-        from dazzle.back.runtime.route_support import HandlerConfig, RouteSpec
+        from dazzle.http.runtime.route_support import HandlerConfig, RouteSpec
 
         hc = HandlerConfig(entity_name="Document")
         spec = RouteSpec(handler=hc, service=MagicMock(), soft_delete=True)

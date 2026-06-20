@@ -2,7 +2,7 @@
 
 #977 cycle 4 §13 decision 3 + §8: the allowlist lives in
 `src/dazzle/core/ir/richtext.py` and is consumed by both the client
-(`dz-richtext.js`) and the server (`dazzle_back/runtime/richtext_field.py`).
+(`dz-richtext.js`) and the server (`dazzle_http/runtime/richtext_field.py`).
 If the JS allowlist drifts from the IR, paste/save round-trips would
 desync — content the editor accepts gets stripped on save, or worse,
 content the server allows the editor mangles on display.
@@ -19,17 +19,17 @@ from pathlib import Path
 
 import bleach
 
-from dazzle.back.runtime.richtext_field import clean_rich_text
 from dazzle.core.ir.richtext import (
     RICH_TEXT_ALLOWED_ATTRS,
     RICH_TEXT_PROTOCOL_PATTERN,
 )
+from dazzle.http.runtime.richtext_field import clean_rich_text
 
 JS_PATH = (
     Path(__file__).resolve().parents[2]
     / "src"
     / "dazzle"
-    / "ui"
+    / "page"
     / "runtime"
     / "static"
     / "js"

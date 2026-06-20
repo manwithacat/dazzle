@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from dazzle.back.runtime.services import RuntimeServices
+from dazzle.http.runtime.services import RuntimeServices
 
 
 class TestRuntimeServices:

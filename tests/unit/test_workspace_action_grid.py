@@ -189,12 +189,12 @@ class TestActionToUrl:
     """The helper resolves a card's `action:` value to a URL."""
 
     def test_empty_returns_empty(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import _action_to_url
+        from dazzle.page.runtime.workspace_renderer import _action_to_url
 
         assert _action_to_url("") == ""
 
     def test_bare_identifier_slugifies(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import _action_to_url
+        from dazzle.page.runtime.workspace_renderer import _action_to_url
 
         assert _action_to_url("task_create") == "/app/task-create"
         assert _action_to_url("Parents_Evening_Notes") == "/app/parents-evening-notes"
@@ -202,7 +202,7 @@ class TestActionToUrl:
     def test_literal_url_passes_through(self) -> None:
         """When the value starts with `/` it's used as-is — author's
         explicit choice."""
-        from dazzle.ui.runtime.workspace_renderer import _action_to_url
+        from dazzle.page.runtime.workspace_renderer import _action_to_url
 
         assert (
             _action_to_url("/app/parents-evening/create?step=1")
@@ -212,7 +212,7 @@ class TestActionToUrl:
     def test_bare_with_query_preserves_query(self) -> None:
         """``marking_result_list?status=flagged`` → slugify the name,
         keep the query verbatim."""
-        from dazzle.ui.runtime.workspace_renderer import _action_to_url
+        from dazzle.page.runtime.workspace_renderer import _action_to_url
 
         assert (
             _action_to_url("marking_result_list?status=flagged")
@@ -225,13 +225,13 @@ class TestActionToUrl:
 
 class TestActionGridContext:
     def test_region_context_default_empty(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import RegionContext
+        from dazzle.page.runtime.workspace_renderer import RegionContext
 
         ctx = RegionContext(name="r")
         assert ctx.action_cards == []
 
     def test_region_context_carries_cards(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import RegionContext
+        from dazzle.page.runtime.workspace_renderer import RegionContext
 
         ctx = RegionContext(
             name="r",
@@ -264,7 +264,7 @@ class TestActionGridContext:
 )
 class TestActionGridTemplateWiring:
     def test_template_map_includes_action_grid(self) -> None:
-        from dazzle.ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+        from dazzle.page.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
         assert "ACTION_GRID" in DISPLAY_TEMPLATE_MAP
         assert DISPLAY_TEMPLATE_MAP["ACTION_GRID"] == "workspace/regions/_typed_primitive.html"
@@ -272,14 +272,14 @@ class TestActionGridTemplateWiring:
     def test_template_file_exists(self) -> None:
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/action_grid.html"
+            / "src/dazzle/page/templates/workspace/regions/action_grid.html"
         )
         assert path.is_file()
 
     def test_template_uses_region_card_macro(self) -> None:
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/action_grid.html"
+            / "src/dazzle/page/templates/workspace/regions/action_grid.html"
         )
         contents = path.read_text()
         assert "{% call region_card" in contents
@@ -291,7 +291,7 @@ class TestActionGridTemplateWiring:
         latter; this test pins the safer pattern."""
         path = (
             Path(__file__).resolve().parents[2]
-            / "src/dazzle/ui/templates/workspace/regions/action_grid.html"
+            / "src/dazzle/page/templates/workspace/regions/action_grid.html"
         )
         contents = path.read_text()
         assert "<{{" not in contents, (

@@ -1,11 +1,11 @@
 import tempfile
 from pathlib import Path
 
-from dazzle.back.runtime.atomic_flow_invariants import build_invariant_sql
 from dazzle.core import ir
 from dazzle.core.linker import build_appspec
 from dazzle.core.parser import parse_modules
 from dazzle.core.validator import validate_atomic_flows
+from dazzle.http.runtime.atomic_flow_invariants import build_invariant_sql
 
 _BASE = """\
 module test
