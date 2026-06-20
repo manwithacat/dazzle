@@ -29,6 +29,7 @@ from .events import (
     emit_user_password_changed,
     emit_user_registered,
 )
+from .join_request_routes import create_join_request_routes
 from .middleware import AuthMiddleware
 from .models import (
     AuthContext,
@@ -78,6 +79,7 @@ __all__ = [
     "create_auth_routes",
     "create_deny_dependency",
     "create_email_verification_routes",
+    "create_join_request_routes",
     "create_jwt_auth_routes",
     "create_optional_auth_dependency",
     "current_auth",

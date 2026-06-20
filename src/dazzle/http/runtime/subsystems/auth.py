@@ -184,6 +184,17 @@ class AuthSubsystem:
         password_login_router = create_password_login_routes()
         ctx.app.include_router(password_login_router)
 
+        # #1424 Phase 3 (Task 3.5): generic join-request confirmation page.
+        # Mounted unconditionally — enumeration-safe (no tenant identity
+        # revealed), so it is safe to expose on all deployments. Only
+        # reachable via a 303 redirect from the domain-join evaluation
+        # path; the page itself carries no sensitive state.
+        from dazzle.http.runtime.auth.join_request_routes import (
+            create_join_request_routes,
+        )
+
+        ctx.app.include_router(create_join_request_routes())
+
         # Phase-2 org-context routes (auth Plan 1b): /auth/select-org,
         # /auth/switch-org, /auth/no-orgs. Mounted unconditionally — they
         # no-op (redirect to /login) for unauthenticated callers and only
