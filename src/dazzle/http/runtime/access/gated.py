@@ -21,6 +21,12 @@ class RecordNotFound(Exception):
     """Row is missing or hidden by a scope predicate."""
 
 
+class InvalidTemporalParam(Exception):
+    """A temporal query param (``?as_of=``) was malformed. The message is the
+    client-facing 400 detail. Raised AFTER the permit gate so a denied caller is
+    rejected (403) before any input is validated (the principled order, #1406)."""
+
+
 @dataclass(frozen=True)
 class AccessContext:
     """Everything enforcement needs, bundled once per request."""
@@ -145,4 +151,145 @@ async def gated_read(
         # Permit-denied READ is opaque to the caller (404, not 403) — matches
         # read_handlers.py:194 exactly.
         raise RecordNotFound(access.entity_name)
+    return result
+
+
+async def gated_list(
+    service: Any,
+    access: AccessContext,
+    *,
+    page: int,
+    page_size: int,
+    sort_list: list[str] | None = None,
+    search: str | None = None,
+    user_filters: dict[str, Any] | None = None,
+    select_fields: list[str] | None = None,
+    auto_include: list[str] | None = None,
+    search_fields: list[str] | None = None,
+    access_spec: dict[str, Any] | None = None,
+    ref_targets: dict[str, str] | None = None,
+    temporal_as_of_raw: str | None = None,
+    temporal_include_closed: bool = False,
+) -> dict[str, Any]:
+    """List rows with scope + permit applied, or raise. Returns the
+    ``{items,total,page,page_size}`` page dict (pre-shaping).
+
+    Relocated verbatim from ``list_handlers.py::_list_handler_body`` — the
+    enforcement+data half: the Cedar LIST permit gate (→ ``AccessForbidden``
+    instead of the route's ``HTTPException(403)``), the legacy visibility filter,
+    the Cedar scope merge (scope-default-deny → an EMPTY page, NOT an error — the
+    list's documented shape), the ``service.execute("list", …)`` call, and the
+    OR-condition ``post_filter`` that runs on the result. HTTP concerns stay in
+    the adapter: request-param parsing (the caller passes already-parsed
+    ``user_filters``, incl. any temporal ``__as_of``/``__isnull`` keys, plus
+    ``sort_list``), the success audit, and all output shaping.
+
+    ``is_authenticated``/``user_id`` derive from ``access.auth_context`` exactly
+    as the route handler computes them.
+    """
+    from dazzle.http.runtime.condition_evaluator import (
+        build_visibility_filter,
+        filter_records_by_condition,
+    )
+
+    auth_context = access.auth_context
+    is_authenticated = bool(auth_context and auth_context.is_authenticated)
+    user_id = (
+        str(auth_context.user.id) if auth_context and getattr(auth_context, "user", None) else None
+    )
+    cedar = access.cedar_access_spec
+    entity_name = access.entity_name
+
+    # Gate: Cedar LIST permission — only when ALL list rules are pure role checks.
+    # Rules with field conditions are row-level filters enforced by scope below.
+    if cedar and is_authenticated and auth_context:
+        from dazzle.core.access import AccessOperationKind
+        from dazzle.http.runtime.audit_wrap import _build_access_context
+        from dazzle.http.runtime.condition_evaluator import _is_field_condition
+
+        list_rules = [r for r in cedar.permissions if r.operation == AccessOperationKind.LIST]
+        has_field_conditions = any(_is_field_condition(r.condition) for r in list_rules)
+        if list_rules and not has_field_conditions:
+            from dazzle.render.access_evaluator import evaluate_permission
+
+            _user, _ctx = _build_access_context(auth_context)
+            decision = evaluate_permission(
+                cedar, AccessOperationKind.LIST, None, _ctx, entity_name=entity_name
+            )
+            if not decision.allowed:
+                raise AccessForbidden(entity_name)
+
+    sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
+
+    if cedar and is_authenticated and user_id:
+        from dazzle.http.runtime.auth.models import effective_roles_of
+        from dazzle.http.runtime.policy import _normalize_role
+        from dazzle.http.runtime.scope_filters import _resolve_scope_filters
+
+        _scope_user_roles = {_normalize_role(_r) for _r in effective_roles_of(auth_context)}
+        if getattr(cedar, "scopes", None):
+            scope_result = _resolve_scope_filters(
+                cedar,
+                "list",
+                _scope_user_roles,
+                user_id,
+                auth_context,
+                ref_targets,
+                entity_name=entity_name,
+                fk_graph=access.fk_graph,
+                admin_personas=access.admin_personas,
+            )
+            if scope_result is None:
+                # No scope rule matched this role — default-deny at scope layer.
+                return {"items": [], "total": 0, "page": page, "page_size": page_size}
+            if scope_result:
+                sql_filters = {**(sql_filters or {}), **scope_result}
+
+    # Temporal params (`?as_of=` / `?include_closed=`) are parsed HERE — after the
+    # permit gate + scope — so a denied caller is rejected (403) before any input
+    # validation runs (#1406 order). The repository reads `__as_of` /
+    # `<end>__isnull` as special filter keys.
+    _temporal: dict[str, Any] = {}
+    _entity_spec = getattr(service, "entity_spec", None)
+    _entity_temporal = _entity_spec.temporal if _entity_spec is not None else None
+    if _entity_temporal is not None:
+        if temporal_as_of_raw:
+            from datetime import date as _date
+
+            try:
+                _temporal["__as_of"] = _date.fromisoformat(temporal_as_of_raw)
+            except (ValueError, TypeError):
+                raise InvalidTemporalParam(
+                    f"Invalid {_entity_temporal.as_of_param}={temporal_as_of_raw!r}: "
+                    f"expected YYYY-MM-DD"
+                )
+        if temporal_include_closed:
+            _temporal[f"{_entity_temporal.end_field}__isnull"] = False
+
+    merged_filters: dict[str, Any] | None = None
+    if sql_filters or user_filters or _temporal:
+        merged_filters = {**(sql_filters or {}), **(user_filters or {}), **_temporal}
+
+    result: dict[str, Any] = await service.execute(
+        operation="list",
+        page=page,
+        page_size=page_size,
+        filters=merged_filters,
+        sort=sort_list,
+        search=search,
+        select_fields=select_fields,
+        include=auto_include,
+        search_fields=search_fields,
+    )
+
+    # OR-condition post-filter (visibility enforcement that runs on the result).
+    if post_filter and result and "items" in result:
+        context = {"current_user_id": user_id}
+        items = result["items"]
+        if items and hasattr(items[0], "model_dump"):
+            items = [item.model_dump() for item in items]
+        filtered_items = filter_records_by_condition(items, post_filter, context)
+        result["items"] = filtered_items
+        result["total"] = len(filtered_items)
+
     return result

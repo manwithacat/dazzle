@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
-from dazzle.http.runtime.audit_wrap import _build_access_context, _log_audit_decision
+from dazzle.http.runtime.audit_wrap import _log_audit_decision
 from dazzle.http.runtime.auth import AuthContext
 from dazzle.http.runtime.htmx_render import (
     _render_table_empty,
@@ -46,10 +46,8 @@ from dazzle.http.runtime.htmx_render import (
 from dazzle.http.runtime.route_support import (
     RouteSpec,
     _is_htmx_request,
-    _normalize_role,
     _wants_html,
 )
-from dazzle.http.runtime.scope_filters import _resolve_scope_filters
 from dazzle.render.access_messages import _forbidden_detail
 
 if TYPE_CHECKING:
@@ -238,26 +236,14 @@ def create_list_handler(
     return _noauth_handler
 
 
-def _is_field_condition(condition: Any) -> bool:
-    """Return True if condition requires record data to evaluate.
-
-    Role checks need only the user's roles — evaluable at the gate without a record.
-    Comparisons and grant checks reference entity fields — need record data.
-    Logical nodes recurse: if either branch needs record data, the whole
-    condition is a field condition.
-    """
-    if condition is None:
-        return False
-    kind = getattr(condition, "kind", None)
-    if kind == "role_check":
-        return False
-    if kind in ("comparison", "grant_check", "via_check"):
-        return True
-    if kind == "logical":
-        return _is_field_condition(getattr(condition, "logical_left", None)) or _is_field_condition(
-            getattr(condition, "logical_right", None)
-        )
-    return False
+# `_is_field_condition` was relocated to the clean `condition_evaluator` leaf
+# (#1422) so the transport-agnostic `access.gated.gated_list` can use it without
+# importing back into this FastAPI adapter. Re-imported here so the existing
+# `route_generator` / `handlers` re-export chain (`list_handlers._is_field_condition`)
+# keeps resolving.
+from dazzle.http.runtime.condition_evaluator import (  # noqa: E402
+    _is_field_condition as _is_field_condition,
+)
 
 
 async def _list_handler_body(
@@ -289,92 +275,18 @@ async def _list_handler_body(
     admin_personas: list[str] | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
-    from dazzle.http.runtime.condition_evaluator import (
-        build_visibility_filter,
-        filter_records_by_condition,
-    )
-
-    # Gate: Cedar LIST permission check (entity-level, before row filters).
-    # Only enforced when ALL list rules are pure role checks. Rules with
-    # field conditions (e.g. school = current_user.school) are row-level
-    # filters that can't be evaluated without a record — those pass the gate
-    # and are enforced at query time by scope predicates. (#502, #503)
-    if cedar_access_spec and is_authenticated and auth_context:
-        from dazzle.core.access import AccessOperationKind
-
-        list_rules = [
-            r for r in cedar_access_spec.permissions if r.operation == AccessOperationKind.LIST
-        ]
-        # Only gate when all list rules are pure role checks (no field conditions)
-        has_field_conditions = any(_is_field_condition(r.condition) for r in list_rules)
-        if list_rules and not has_field_conditions:
-            from dazzle.render.access_evaluator import evaluate_permission
-
-            _user, _ctx = _build_access_context(auth_context)
-            decision = evaluate_permission(
-                cedar_access_spec, AccessOperationKind.LIST, None, _ctx, entity_name=entity_name
-            )
-            if not decision.allowed:
-                # auth Plan 1b (#1406): report the *effective* roles the decision
-                # actually used (active membership's roles, else legacy user.roles),
-                # not the global user.roles — which is empty under the per-org model
-                # and made the 403 diagnostic misleading.
-                from dazzle.http.runtime.auth.models import effective_roles_of
-
-                raise HTTPException(
-                    status_code=403,
-                    detail=_forbidden_detail(
-                        entity_name=entity_name,
-                        operation=AccessOperationKind.LIST,
-                        cedar_access_spec=cedar_access_spec,
-                        current_roles=list(effective_roles_of(auth_context)),
-                    ),
-                )
-
-    # Build visibility filters
-    sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
-
-    # Apply scope filters (v0.44 — scope: blocks with predicate-compiled SQL).
-    # When scopes list is non-empty, use _resolve_scope_filters which delegates
-    # to the predicate compiler when predicates are available.
-    if cedar_access_spec and is_authenticated and user_id:
-        # Collect normalized user roles for scope matching. auth Plan 1b:
-        # source from effective_roles (active membership's roles when present,
-        # else legacy user.roles) so membership-scoped sessions match scope
-        # rules — the global user.roles is empty under the per-org model.
-        from dazzle.http.runtime.auth.models import effective_roles_of
-
-        _scope_user_roles: set[str] = {
-            _normalize_role(_r) for _r in effective_roles_of(auth_context)
-        }
-
-        _has_scopes = bool(getattr(cedar_access_spec, "scopes", None))
-        if _has_scopes:
-            scope_result = _resolve_scope_filters(
-                cedar_access_spec,
-                "list",
-                _scope_user_roles,
-                user_id,
-                auth_context,
-                ref_targets,
-                entity_name=entity_name,
-                fk_graph=fk_graph,
-                admin_personas=admin_personas,
-            )
-            if scope_result is None:
-                # No scope rule matched this role — default-deny at scope layer
-                return {
-                    "items": [],
-                    "total": 0,
-                    "page": page,
-                    "page_size": page_size,
-                }
-            if scope_result:
-                sql_filters = {**(sql_filters or {}), **scope_result}
-
-    # Extract filter[field] params from query string
+    # Parse user-supplied filters from the request (HTTP concern). The enforcement
+    # — Cedar LIST permit gate, legacy visibility filter, Cedar scope merge, and
+    # the OR-condition post-filter — plus the data call were relocated VERBATIM to
+    # access.gated.gated_list (#1422); this route now parses params, delegates,
+    # and shapes the result. Permit-deny raises AccessForbidden → mapped to 403
+    # here (with the same _forbidden_detail); scope-default-deny returns an empty
+    # page (handled inside gated_list).
+    # `filters` is the field-only user filter set (filter[field] / bare ?field=) —
+    # kept distinct because the HTMX table renders it as `filter_values` (it must
+    # NOT include the temporal repository keys below). `_gated_filters` is what
+    # gated_list merges over scope: the field filters PLUS any temporal keys.
     filters: dict[str, Any] = {}
-    # Reserved query param names that should never be treated as field filters
     _reserved_params = {"page", "page_size", "sort", "dir", "search", "q", "format"}
     for key, value in request.query_params.items():
         if key.startswith("filter[") and key.endswith("]") and value:
@@ -383,65 +295,76 @@ async def _list_handler_body(
             # Accept bare ?field=value when field is in the DSL-declared filter list (#596)
             filters[key] = value
 
-    # Merge visibility filters with user filters
-    merged_filters: dict[str, Any] | None = None
-    if sql_filters or filters:
-        merged_filters = {**(sql_filters or {}), **filters}
-
-    # #1223 Phase 3a.iv — `?as_of=YYYY-MM-DD` URL parameter for temporal
-    # entities. The Repository layer reads the special `__as_of` filter
-    # dict key and replaces the default tombstone filter with the
-    # open-interval predicate. The URL param name is configurable via
-    # `entity.temporal.as_of_param` (default `as_of`).
+    # #1223 Phase 3a.iv — read the temporal `?as_of=` / `?include_closed=` RAW
+    # values here (HTTP concern), but parse + validate them INSIDE gated_list,
+    # AFTER the permit gate, so a denied caller is rejected (403) before any input
+    # validation runs (#1406 order). Mock-safe: a non-str value just passes through
+    # and is rejected post-gate.
     _entity_spec = getattr(service, "entity_spec", None)
     _entity_temporal = _entity_spec.temporal if _entity_spec is not None else None
-    if _entity_temporal is not None:
-        _as_of_raw = request.query_params.get(_entity_temporal.as_of_param)
-        if _as_of_raw:
-            from datetime import date as _date
-
-            try:
-                _as_of_value = _date.fromisoformat(_as_of_raw)
-            except ValueError:
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        f"Invalid {_entity_temporal.as_of_param}={_as_of_raw!r}: "
-                        f"expected YYYY-MM-DD"
-                    ),
-                )
-            if merged_filters is None:
-                merged_filters = {}
-            merged_filters["__as_of"] = _as_of_value
-
-        # `?include_closed=true` — friendly alias for opting out of the
-        # default "active rows only" filter on a temporal entity. Sets
-        # `<end_field>__isnull=False` which the Repository layer honours
-        # via its setdefault contract: an explicit caller-provided value
-        # for the tombstone key wins over the default.
-        _include_closed_raw = request.query_params.get("include_closed", "").lower()
-        if _include_closed_raw in ("true", "1", "yes"):
-            if merged_filters is None:
-                merged_filters = {}
-            merged_filters[f"{_entity_temporal.end_field}__isnull"] = False
+    _as_of_raw = (
+        request.query_params.get(_entity_temporal.as_of_param)
+        if _entity_temporal is not None
+        else None
+    )
+    _include_closed = (
+        request.query_params.get("include_closed", "").lower() in ("true", "1", "yes")
+        if _entity_temporal is not None
+        else False
+    )
 
     # Build sort list for repository
     sort_list = [f"-{sort}" if dir == "desc" else sort] if sort else None
 
-    # Execute list with filters, sort, and search
-    result = await service.execute(
-        operation="list",
-        page=page,
-        page_size=page_size,
-        filters=merged_filters,
-        sort=sort_list,
-        search=search,
-        select_fields=select_fields,
-        include=auto_include,
-        search_fields=search_fields,
+    # Delegate enforcement + data to the transport-agnostic core (#1422).
+    from dazzle.http.runtime.access.gated import (
+        AccessForbidden,
+        InvalidTemporalParam,
+        access_context_from,
+        gated_list,
     )
 
-    # Audit log the list access
+    _access = access_context_from(
+        auth_context=auth_context,
+        entity_name=entity_name,
+        cedar_access_spec=cedar_access_spec,
+        fk_graph=fk_graph,
+        admin_personas=admin_personas,
+    )
+    try:
+        result = await gated_list(
+            service,
+            _access,
+            page=page,
+            page_size=page_size,
+            sort_list=sort_list,
+            search=search,
+            user_filters=filters or None,
+            select_fields=select_fields,
+            auto_include=auto_include,
+            search_fields=search_fields,
+            access_spec=access_spec,
+            ref_targets=ref_targets,
+            temporal_as_of_raw=_as_of_raw,
+            temporal_include_closed=_include_closed,
+        )
+    except AccessForbidden:
+        from dazzle.core.access import AccessOperationKind
+        from dazzle.http.runtime.auth.models import effective_roles_of
+
+        raise HTTPException(
+            status_code=403,
+            detail=_forbidden_detail(
+                entity_name=entity_name,
+                operation=AccessOperationKind.LIST,
+                cedar_access_spec=cedar_access_spec,
+                current_roles=list(effective_roles_of(auth_context)) if auth_context else [],
+            ),
+        )
+    except InvalidTemporalParam as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    # Audit log the list access (success — the deny path raised above).
     if audit_logger:
         await _log_audit_decision(
             audit_logger,
@@ -454,17 +377,6 @@ async def _list_handler_body(
             policy_effect="permit",
             user=user,
         )
-
-    # Apply post-filtering if needed (for OR conditions)
-    if post_filter and result and "items" in result:
-        context = {"current_user_id": user_id}
-        # Convert Pydantic models to dicts for filtering
-        items = result["items"]
-        if items and hasattr(items[0], "model_dump"):
-            items = [item.model_dump() for item in items]
-        filtered_items = filter_records_by_condition(items, post_filter, context)
-        result["items"] = filtered_items
-        result["total"] = len(filtered_items)
 
     # #928: inject `__display__` on top-level list rows when the entity
     # has a registered `display_field`. The relation_loader does the

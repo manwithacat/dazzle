@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.47] - 2026-06-20
+
+### Changed
+- **REST list route reads through the in-process `gated_list` core** (#1422 option b, plan phase 3). The Cedar LIST enforcement (permit gate, legacy visibility filter, scope merge with scope-default-deny→empty-page, and the OR-condition post-filter) plus the `service.execute("list", …)` data call were **relocated verbatim** out of `list_handlers.py::_list_handler_body` into `access/gated.py::gated_list`. The REST list route is now a thin adapter: parse query params → `gated_list` → shape (audit / `__display__` / graph / projection / HTMX). Permit-deny raises `AccessForbidden` → mapped to 403 with the same `_forbidden_detail` (effective roles, #1406); scope-default-deny returns an empty page. **Byte-faithful** — verified by an adversarial parity review (7 enforcement points, all confirmed) + the full list/RBAC suite (2890 tests) + a new list-scope PG regression lock (`test_rest_list_respects_list_scope_via_gated_list`). Two correctness details preserved: (a) the permit gate runs **before** any input validation — the `?as_of=` temporal parse moved *into* `gated_list` (post-gate) so a denied caller is rejected 403 before a malformed `as_of` could 400 (#1406 order); (b) the HTMX table's `filter_values` shows field-only filters, not the temporal repository keys. Also relocated the pure `_is_field_condition` helper to the `condition_evaluator` leaf so the transport-agnostic core no longer imports back into the FastAPI adapter layer. Next: the page table + related-tabs call `gated_list` (no self-fetch), then writes, then deleting the loopback machinery.
+
+  ### Agent Guidance
+  - **Listing entities inside the runtime?** Call `gated_list(service, access, page=…, page_size=…, user_filters=…, …)` from `dazzle.http.runtime.access.gated` — never self-fetch the list REST endpoint. It applies the LIST permit gate + visibility + scope identically to the REST route. Pass temporal `?as_of=` as `temporal_as_of_raw=` (parsed post-gate; a bad value raises `InvalidTemporalParam` → map to 400). Permit-deny raises `AccessForbidden` (→ 403); scope-default-deny returns an empty page, not an error.
+
+
 ## [0.83.46] - 2026-06-20
 
 ### Changed

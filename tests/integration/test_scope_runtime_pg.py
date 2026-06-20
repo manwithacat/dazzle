@@ -640,3 +640,19 @@ async def test_rest_read_respects_read_scope_via_gated_read(app: _ScopeRuntimeAp
     assert foreign.status_code == 404, (
         f"out-of-scope read must 404 (gated_read denies), got {foreign.status_code}"
     )
+
+
+async def test_rest_list_respects_list_scope_via_gated_list(app: _ScopeRuntimeApp) -> None:
+    """The REST list reads through the relocated `gated_list` core (#1422). A
+    teacher's list returns only own-department enrolments (scope-filtered), not
+    foreign-department ones — proving `gated_list` enforces `scope: list:`
+    (teaching_group.department = current_user.department). The page table now
+    calls this same core in-process."""
+    client = await app.client_as("teacher_math")
+    resp = await client.get("/enrolments")
+    assert resp.status_code == 200, resp.text[:200]
+    ids = {row["id"] for row in resp.json()["items"]}
+    assert app.math_enrolment_id in ids, "own-department enrolment should be listed"
+    assert app.science_enrolment_id not in ids, (
+        "foreign-department enrolment must be scope-filtered out of the list"
+    )

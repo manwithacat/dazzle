@@ -196,3 +196,30 @@ def filter_records_by_condition(
         Filtered list of records
     """
     return [r for r in records if evaluate_condition(condition, r, context)]
+
+
+def _is_field_condition(condition: Any) -> bool:
+    """Return True if condition requires record data to evaluate.
+
+    Role checks need only the user's roles — evaluable at the gate without a record.
+    Comparisons and grant checks reference entity fields — need record data.
+    Logical nodes recurse: if either branch needs record data, the whole
+    condition is a field condition.
+
+    Relocated here from ``handlers/list_handlers`` (#1422) so the transport-
+    agnostic ``access.gated.gated_list`` can use it without importing back into the
+    FastAPI adapter layer. ``list_handlers`` re-imports it to keep the existing
+    ``route_generator`` / ``handlers`` re-export chain resolving.
+    """
+    if condition is None:
+        return False
+    kind = getattr(condition, "kind", None)
+    if kind == "role_check":
+        return False
+    if kind in ("comparison", "grant_check", "via_check"):
+        return True
+    if kind == "logical":
+        return _is_field_condition(getattr(condition, "logical_left", None)) or _is_field_condition(
+            getattr(condition, "logical_right", None)
+        )
+    return False
