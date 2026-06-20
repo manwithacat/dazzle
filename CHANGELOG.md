@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.51] - 2026-06-20
+
+### Changed
+- **#1422 — non-cedar create paths now expose an in-process create invoker.** Both
+  `_build_auth_handler` (auth, no permit) and `_build_noauth_handler` (no auth) now
+  attach an `_inprocess_create(auth_context, request, *, body)` callable, mirroring
+  the cedar path shipped in v0.83.49. `route_generator` already collects the invoker
+  generically, so **every** create route — cedar / auth / noauth — now registers one.
+  This is the precondition for deleting the experience-POST loopback self-fetch
+  fallback (next release): the experience-form POST can now mutate in-process for any
+  creatable entity, eliminating the #1421 tenant-`Host`-loss class on the write path
+  for non-cedar entities too. Locked by `tests/unit/test_inprocess_create_invokers.py`.
+- Regenerated `tests/unit/fixtures/complexity_baseline.json` to include
+  `src/dazzle/http/runtime/access/gated.py` (added in the v0.83.45–.47 #1422 arc but
+  never baselined). `gated_list` carries CC 37 — **relocated** list permit+scope
+  enforcement, not new logic — and is flagged as a follow-on decomposition target.
+
+### Agent Guidance
+- Every create-handler variant (cedar/auth/noauth) exposes `_inprocess_create` with
+  the uniform `(auth_context, request, *, body)` signature. To run an entity create
+  in-process (no loopback), pull the invoker from
+  `request.app.state.entity_create_invokers[<entity>]` rather than self-fetching REST.
+
 ## [0.83.50] - 2026-06-20
 
 ### Removed

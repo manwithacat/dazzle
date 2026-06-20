@@ -455,9 +455,10 @@ class RouteGenerator:
                     user_ref_fields=_user_ref_fields or None,
                     persona_ref_map=_persona_ref_map,
                 )
-                # #1422: register the in-process create invoker (cedar path only;
-                # non-cedar/no-auth creates have no _inprocess_create and keep the
-                # self-fetch fallback in the experience handler).
+                # #1422: register the in-process create invoker. Every create
+                # handler variant (cedar / auth / noauth) now exposes
+                # `_inprocess_create`, so every create route registers an invoker
+                # and the experience-form POST never needs the loopback self-fetch.
                 _inproc = getattr(handler, "_inprocess_create", None)
                 if entity_name and _inproc is not None:
                     self.create_invokers[entity_name] = _inproc

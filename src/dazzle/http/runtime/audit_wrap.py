@@ -483,6 +483,8 @@ def _build_auth_handler(
         id: UUID | None,
         request: Request,
         auth_context: AuthContext,
+        *,
+        body: dict[str, Any] | None = None,
     ) -> Any:
         user = auth_context.user
         current_user = str(user.id) if user else None
@@ -507,6 +509,9 @@ def _build_auth_handler(
             # `auth_context` carries the preferences `scope: create:`
             # predicates resolve `current_user.<attr>` against (#1174).
             auth_context=auth_context,
+            # #1422: pre-parsed body for in-process callers (None for REST → the
+            # core parses the request body). Threaded into core_fn's **_extra.
+            body=body,
         )
 
         _fc = None
@@ -536,6 +541,19 @@ def _build_auth_handler(
             return await _auth_impl(None, request, auth_context)
 
         _set_handler_annotations(_auth_create, with_auth=True)
+
+        # #1422: in-process create invoker for the auth (non-cedar) path — same
+        # shape as the cedar invoker. The experience-form POST calls this with its
+        # already-parsed body instead of self-fetching the REST create endpoint
+        # over loopback HTTP, running the SAME auth gate + create-scope + audit +
+        # service.create path in the original request context (no tenant-Host
+        # loss). Signature: `(auth_context, request, *, body) -> result`.
+        async def _inprocess_create(
+            auth_context: AuthContext, request: Request, *, body: dict[str, Any]
+        ) -> Any:
+            return await _auth_impl(None, request, auth_context, body=body)
+
+        _auth_create._inprocess_create = _inprocess_create  # type: ignore[attr-defined]
         return _auth_create
 
     async def _auth_with_id(
@@ -560,6 +578,18 @@ def _build_noauth_handler(
             return await core_fn(None, request, current_user=None, existing=None)
 
         _set_handler_annotations(_noauth_create)
+
+        # #1422: in-process create invoker for the no-auth path. The experience
+        # POST passes its already-parsed body; `auth_context` is accepted (for a
+        # uniform invoker signature across cedar/auth/noauth) but unused, since a
+        # no-auth entity has no permit/scope gate. Eliminates the last loopback
+        # self-fetch on the write path.
+        async def _inprocess_create(
+            auth_context: "AuthContext | None", request: Request, *, body: dict[str, Any]
+        ) -> Any:
+            return await core_fn(None, request, current_user=None, existing=None, body=body)
+
+        _noauth_create._inprocess_create = _inprocess_create  # type: ignore[attr-defined]
         return _noauth_create
 
     async def _noauth_with_id(id: UUID, request: Request) -> Any:
