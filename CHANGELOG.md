@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.52] - 2026-06-20
+
+### Removed
+- **#1422 — the page→REST loopback self-fetch is gone entirely (clean break, ADR-0003).**
+  Deleted `_proxy_to_backend` + `_sync_post` (experience_routes), `_resolve_backend_url`
+  + the `DAZZLE_BACKEND_URL` / `BACKEND_URL` env overrides (page_routes / app_factory),
+  and the dead `backend_url` field/param threaded through `_PageRouterConfig`,
+  `_ExperienceDeps`, `create_page_routes`, `create_experience_routes`,
+  `assemble_post_build_routes`, and `combined_server`. Page reads/writes are fully
+  in-process now, so there is no backend URL to resolve and no self-fetch to make.
+  (`resolve_api_url` is unaffected — it remains the manifest helper used across the
+  CLI/MCP/testing/specs.) Retired the `TestResolveBackendUrl` topology matrix.
+
+### Changed
+- The experience-form POST now creates **only** via the in-process create invoker —
+  the HTTP-proxy fallback was removed. A missing invoker is a loud `RuntimeError`
+  (provably unreachable: every create route registers one) rather than a silent
+  loopback self-fetch. This structurally eliminates the #1421 tenant-`Host`-loss
+  class on the write path for all entities (cedar / auth / noauth).
+- The rate-limiter's loopback exemption is retained as general defence for genuine
+  loopback-origin callers (health checks, sidecars, platform probes); its comment no
+  longer ties it to the now-removed framework self-fetch.
+
+### Agent Guidance
+- There is no longer any `DAZZLE_BACKEND_URL` / `BACKEND_URL` / `backend_url` plumbing
+  in the HTTP runtime. The page and experience layers never call the app's own REST
+  API over HTTP — they read/write in-process via the entity service map and the
+  `app.state.entity_create_invokers` registry. Do not reintroduce a self-fetch.
+
 ## [0.83.51] - 2026-06-20
 
 ### Changed

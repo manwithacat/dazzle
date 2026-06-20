@@ -7,10 +7,8 @@ Creates FastAPI routes for multi-step experience flows:
 - POST /experiences/{name}/{step}?event=X — process transition
 """
 
-import asyncio
 import json
 import logging
-import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -21,61 +19,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.core import ir
 from dazzle.core.ir.experiences import StepKind
-from dazzle.core.manifest import resolve_api_url
-from dazzle.core.strings import to_api_plural
 from dazzle.page.utils.expression_eval import evaluate_simple_condition
 
 logger = logging.getLogger(__name__)
-
-# =============================================================================
-# Helpers
-# =============================================================================
-
-
-def _sync_post(
-    url: str,
-    body: bytes,
-    cookies: dict[str, str] | None = None,
-    method: str = "POST",
-    timeout: int = 10,
-) -> tuple[int, bytes]:
-    """Synchronous HTTP POST — runs in a thread to avoid blocking the event loop."""
-    req = urllib.request.Request(url, data=body, method=method)
-    req.add_header("Content-Type", "application/json")
-    if cookies:
-        req.add_header("Cookie", "; ".join(f"{k}={v}" for k, v in cookies.items()))
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosemgrep
-            data: bytes = resp.read()
-            return resp.status, data
-    except urllib.error.HTTPError as e:
-        return e.code, e.read()
-
-
-async def _proxy_to_backend(
-    backend_url: str,
-    entity_ref: str,
-    body: dict[str, Any],
-    cookies: dict[str, str] | None = None,
-    method: str = "POST",
-) -> tuple[bool, dict[str, Any]]:
-    """Forward form data to the backend entity API.
-
-    Returns:
-        (success, response_data) — success is True if status is 2xx.
-    """
-    api_path = f"/{to_api_plural(entity_ref)}"
-    url = f"{backend_url}{api_path}"
-    json_body = json.dumps(body).encode("utf-8")
-
-    status, raw = await asyncio.to_thread(_sync_post, url, json_body, cookies, method)
-    try:
-        data: dict[str, Any] = json.loads(raw)
-    except Exception:
-        data = {}
-
-    return 200 <= status < 300, data
-
 
 # =============================================================================
 # Dependencies Container
@@ -85,7 +31,6 @@ async def _proxy_to_backend(
 @dataclass
 class _ExperienceDeps:
     appspec: ir.AppSpec
-    backend_url: str
     theme_css: str
     get_auth_context: Callable[..., Any] | None
     app_prefix: str
@@ -484,7 +429,6 @@ async def _experience_step_post(
     deps: _ExperienceDeps, request: Request, name: str, step: str
 ) -> Response:
     """POST /experiences/{name}/{step}?event=X — process transition."""
-    from dazzle.http.runtime.page_routes import _resolve_backend_url
     from dazzle.page.runtime.experience_state import (
         cookie_name,
         create_initial_state,
@@ -511,11 +455,10 @@ async def _experience_step_post(
     # Determine event from query param
     event = request.query_params.get("event", "success")
 
-    # For form steps, proxy the form data to the backend
-    # Only proxy when there's actually a matching transition (not terminal steps)
+    # For form steps, create the entity IN-PROCESS via the registered create
+    # invoker. Only act when there's actually a matching transition (not terminal
+    # steps).
     has_matching_transition = any(tr.event == event for tr in step_spec.transitions)
-    effective_backend_url = _resolve_backend_url(request, deps.backend_url)
-    _cookies = dict(request.cookies) if request.cookies else None
 
     if step_spec.kind == StepKind.SURFACE and has_matching_transition:
         # Resolve entity_ref from either the surface or the step directly
@@ -548,35 +491,35 @@ async def _experience_step_post(
                 body = {}
 
             # #1422: create IN-PROCESS via the SAME enforced create path (permit
-            # gate + create-scope + ref/persona injection + audit + service.create)
-            # when an in-process invoker is registered for this entity — no loopback
-            # self-fetch (eliminates the #1421 tenant-Host-loss class for writes).
-            # Falls back to the HTTP proxy for entities without a cedar create
-            # invoker (non-cedar / no-auth), preserving existing behaviour.
-            _invoker = getattr(request.app.state, "entity_create_invokers", {}).get(entity_ref)
-            if _invoker is not None:
-                from fastapi import HTTPException as _HTTPExc
-                from fastapi.encoders import jsonable_encoder as _jse
+            # gate + create-scope + ref/persona injection + audit + service.create).
+            # Every create route — cedar / auth / noauth — registers an
+            # `_inprocess_create` invoker (see route_generator + audit_wrap), so
+            # there is no loopback self-fetch on the write path: the #1421
+            # tenant-Host-loss class is structurally eliminated for writes too.
+            from fastapi import HTTPException as _HTTPExc
+            from fastapi.encoders import jsonable_encoder as _jse
 
-                _auth = deps.get_auth_context(request) if deps.get_auth_context else None
-                try:
-                    _created = await _invoker(_auth, request, body=body)
-                    success, resp_data = True, _jse(_created)
-                except _HTTPExc as _e:
-                    # Permit/scope/validation denial → the existing error re-render
-                    # (mirrors what the REST endpoint returned over the proxy).
-                    success = False
-                    resp_data = _e.detail if isinstance(_e.detail, dict) else {"detail": _e.detail}
-            else:
-                success, resp_data = await _proxy_to_backend(
-                    effective_backend_url,
-                    entity_ref,
-                    body,
-                    _cookies,
+            _invoker = getattr(request.app.state, "entity_create_invokers", {}).get(entity_ref)
+            if _invoker is None:
+                # Provably unreachable: an experience step that creates entity X
+                # implies X has a create route, which always registers an invoker.
+                # Fail loud (a framework bug) rather than silently self-fetching.
+                raise RuntimeError(
+                    f"No in-process create invoker registered for entity '{entity_ref}' "
+                    "(experience-form POST). Every create route must register one."
                 )
 
+            _auth = deps.get_auth_context(request) if deps.get_auth_context else None
+            try:
+                _created = await _invoker(_auth, request, body=body)
+                success, resp_data = True, _jse(_created)
+            except _HTTPExc as _e:
+                # Permit/scope/validation denial → re-render the step with the error.
+                success = False
+                resp_data = _e.detail if isinstance(_e.detail, dict) else {"detail": _e.detail}
+
             if not success:
-                # Proxy failed — re-render the step with error
+                # Create denied/failed — re-render the step with error
                 from dazzle.http.runtime.htmx import HtmxDetails, htmx_error_response
 
                 htmx = HtmxDetails.from_request(request)
@@ -698,7 +641,6 @@ async def _experience_step_post(
 
 def create_experience_routes(
     appspec: ir.AppSpec,
-    backend_url: str | None = None,
     theme_css: str = "",
     get_auth_context: Callable[..., Any] | None = None,
     app_prefix: str = "",
@@ -708,7 +650,6 @@ def create_experience_routes(
 
     Args:
         appspec: Complete application specification.
-        backend_url: URL of the backend API for data proxying.
         theme_css: Pre-compiled theme CSS to inject.
         get_auth_context: Optional callable(request) -> AuthContext for user info.
         app_prefix: URL prefix for page routes (e.g. "/app").
@@ -717,9 +658,6 @@ def create_experience_routes(
     Returns:
         FastAPI router with experience routes.
     """
-    if backend_url is None:
-        backend_url = resolve_api_url()
-
     from dazzle.page.runtime.experience_persistence import ExperienceProgressStore
 
     # Durable progress store (file-based, survives cookie expiry)
@@ -784,7 +722,6 @@ def create_experience_routes(
 
     deps = _ExperienceDeps(
         appspec=appspec,
-        backend_url=backend_url,
         theme_css=theme_css,
         get_auth_context=get_auth_context,
         app_prefix=app_prefix,

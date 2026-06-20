@@ -1,10 +1,10 @@
 """Tests for experience flow entity steps — entity:, creates:, defaults: syntax."""
 
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from dazzle.core.dsl_parser_impl import parse_dsl
@@ -775,11 +775,22 @@ def _make_entity_step_appspec() -> AppSpec:
 
 
 @pytest.fixture()
-def entity_step_app() -> FastAPI:
+def company_invoker() -> AsyncMock:
+    """#1422: the in-process create invoker for entity 'Company'. Returns the
+    created entity dict (the experience POST jsonable-encodes it). Tests set
+    `.side_effect = HTTPException(...)` to simulate a permit/validation denial."""
+    return AsyncMock(return_value={"id": "comp-new-1", "name": "Acme"})
+
+
+@pytest.fixture()
+def entity_step_app(company_invoker: AsyncMock) -> FastAPI:
     appspec = _make_entity_step_appspec()
     app = FastAPI()
     router = create_experience_routes(appspec, app_prefix="/app")
     app.include_router(router, prefix="/app")
+    # #1422: the experience-form POST creates IN-PROCESS via the registered
+    # create invoker (no loopback self-fetch). Register one keyed by entity name.
+    app.state.entity_create_invokers = {"Company": company_invoker}
     return app
 
 
@@ -791,13 +802,10 @@ def entity_step_client(entity_step_app: FastAPI) -> TestClient:
 class TestEntityStepRoutes:
     """Verify entity_ref steps work through the route handler."""
 
-    @patch("dazzle.http.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_entity_step_creates_entity(
-        self, mock_proxy: AsyncMock, entity_step_client: TestClient
+        self, company_invoker: AsyncMock, entity_step_client: TestClient
     ) -> None:
-        """POST to an entity_ref step proxies to backend."""
-        mock_proxy.return_value = (True, {"id": "comp-new-1", "name": "Acme"})
-
+        """POST to an entity_ref step creates the entity in-process."""
         state = ExperienceState(step="add_company")
         cname = cookie_name("onboarding")
         entity_step_client.cookies.set(cname, sign_state(state))
@@ -808,17 +816,14 @@ class TestEntityStepRoutes:
         )
         assert resp.status_code == 302
         assert resp.headers["location"] == "/app/experiences/onboarding/add_contact"
-        mock_proxy.assert_called_once()
-        # entity_ref should be "Company"
-        assert mock_proxy.call_args[0][1] == "Company"
+        # The "Company" invoker being called proves entity_ref resolved to Company
+        # (it is the only registered invoker; a wrong ref would 500 with no invoker).
+        company_invoker.assert_called_once()
 
-    @patch("dazzle.http.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_entity_id_stored_in_state(
-        self, mock_proxy: AsyncMock, entity_step_client: TestClient
+        self, company_invoker: AsyncMock, entity_step_client: TestClient
     ) -> None:
         """Created entity data stored under saves_to key in state."""
-        mock_proxy.return_value = (True, {"id": "comp-new-1", "name": "Acme"})
-
         state = ExperienceState(step="add_company")
         cname = cookie_name("onboarding")
         entity_step_client.cookies.set(cname, sign_state(state))
@@ -835,10 +840,7 @@ class TestEntityStepRoutes:
         assert new_state is not None
         assert new_state.data.get("company") == {"id": "comp-new-1", "name": "Acme"}
 
-    @patch("dazzle.http.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
-    def test_id_forwarding_across_steps(
-        self, mock_proxy: AsyncMock, entity_step_client: TestClient
-    ) -> None:
+    def test_id_forwarding_across_steps(self, entity_step_client: TestClient) -> None:
         """Step 2 sees step 1's created entity ID as FK default via prefill."""
         # Simulate state after step 1 completed
         state = ExperienceState(
@@ -855,12 +857,11 @@ class TestEntityStepRoutes:
         # The form should have company_id prefilled with comp-123
         assert "comp-123" in resp.text
 
-    @patch("dazzle.http.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_validation_failure_stays_on_step(
-        self, mock_proxy: AsyncMock, entity_step_client: TestClient
+        self, company_invoker: AsyncMock, entity_step_client: TestClient
     ) -> None:
-        """Backend rejection returns error, no state change."""
-        mock_proxy.return_value = (False, {"detail": "Name is required"})
+        """Create rejection (permit/validation denial) returns error, no state change."""
+        company_invoker.side_effect = HTTPException(status_code=422, detail="Name is required")
 
         state = ExperienceState(step="add_company")
         cname = cookie_name("onboarding")
@@ -885,7 +886,11 @@ class TestExistingSurfaceStepsUnchanged:
     """Verify that existing surface-based steps still work through routes."""
 
     @pytest.fixture()
-    def surface_app(self) -> FastAPI:
+    def client_invoker(self) -> AsyncMock:
+        return AsyncMock(return_value={"id": "new-id-123"})
+
+    @pytest.fixture()
+    def surface_app(self, client_invoker: AsyncMock) -> FastAPI:
         entity = _make_entity("Client")
         surfaces = [
             SurfaceSpec(name="client_form", entity_ref="Client", mode=SurfaceMode.CREATE),
@@ -920,18 +925,16 @@ class TestExistingSurfaceStepsUnchanged:
         app = FastAPI()
         router = create_experience_routes(appspec, app_prefix="/app")
         app.include_router(router, prefix="/app")
+        app.state.entity_create_invokers = {"Client": client_invoker}
         return app
 
     @pytest.fixture()
     def surface_client(self, surface_app: FastAPI) -> TestClient:
         return TestClient(surface_app, follow_redirects=False)
 
-    @patch("dazzle.http.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_surface_step_creates_entity(
-        self, mock_proxy: AsyncMock, surface_client: TestClient
+        self, client_invoker: AsyncMock, surface_client: TestClient
     ) -> None:
-        mock_proxy.return_value = (True, {"id": "new-id-123"})
-
         state = ExperienceState(step="enter_details")
         cname = cookie_name("onboarding")
         surface_client.cookies.set(cname, sign_state(state))

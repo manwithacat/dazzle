@@ -60,7 +60,7 @@ def _client_for(app_name: str) -> TestClient:
     services = RuntimeServices()
     register_default_renderers(services)
     fastapi_app.state.services = services
-    router = create_page_routes(appspec, backend_url="http://127.0.0.1:9999")
+    router = create_page_routes(appspec)
     fastapi_app.include_router(router)
     return TestClient(fastapi_app)
 
@@ -224,7 +224,7 @@ def _client_with_fragment_chrome(app_name: str) -> TestClient:
     register_default_renderers(services)
     fastapi_app.state.services = services
     fastapi_app.state.fragment_chrome = True  # P17 P3 opt-in
-    router = create_page_routes(appspec, backend_url="http://127.0.0.1:9999")
+    router = create_page_routes(appspec)
     fastapi_app.include_router(router)
     return TestClient(fastapi_app)
 
@@ -368,7 +368,7 @@ def _client_with_chrome_assets(
         fastapi_app.state.fragment_chrome_js_scripts = js_scripts
     if theme is not None:
         fastapi_app.state.fragment_chrome_theme = theme
-    router = create_page_routes(appspec, backend_url="http://127.0.0.1:9999")
+    router = create_page_routes(appspec)
     fastapi_app.include_router(router)
     return TestClient(fastapi_app)
 

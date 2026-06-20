@@ -572,89 +572,9 @@ class TestHtmxParentUrl:
 
 
 # ===================================================================
-# 5. Internal fetch cookie forwarding & backend URL resolution
+# 5. Internal fetch cookie forwarding
 # ===================================================================
-
-from dazzle.http.runtime.page_routes import (  # noqa: E402
-    _resolve_backend_url,
-)
-
-
-class TestResolveBackendUrl:
-    """Test _resolve_backend_url across deployment topologies.
-
-    Resolution priority:
-    1. DAZZLE_BACKEND_URL env var (explicit split-service override)
-    2. PORT env var (single-dyno platforms like Heroku)
-    3. request.base_url (same-origin setups)
-    4. fallback parameter (local dev default)
-    """
-
-    def _clean_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Ensure neither env var is set for a clean baseline."""
-        monkeypatch.delenv("DAZZLE_BACKEND_URL", raising=False)
-        monkeypatch.delenv("PORT", raising=False)
-
-    @pytest.mark.parametrize(
-        "backend_url,port,request_base_url,expected",
-        [
-            # --- Topology 1: Local dev (no env vars) ---
-            # Local dev: no env vars, base_url empty → hardcoded fallback
-            (None, None, "", "http://127.0.0.1:8000"),
-            # Local dev: no env vars, base_url available → use it
-            (None, None, "http://localhost:3000/", "http://localhost:3000"),
-            # --- Topology 2: Single dyno (Heroku, Railway) ---
-            # Single dyno: PORT set → localhost with dynamic port
-            (None, "12345", None, "http://127.0.0.1:12345"),
-            # Single dyno: PORT takes priority over request.base_url
-            (None, "5000", "https://myapp.herokuapp.com/", "http://127.0.0.1:5000"),
-            # --- Topology 3: Split services (frontend ≠ backend) ---
-            # Split services: DAZZLE_BACKEND_URL set → use it directly
-            ("https://api.example.com", None, None, "https://api.example.com"),
-            # Trailing slash on DAZZLE_BACKEND_URL is stripped
-            ("https://api.example.com/", None, None, "https://api.example.com"),
-            # DAZZLE_BACKEND_URL takes priority over PORT
-            ("http://backend:9000", "3000", None, "http://backend:9000"),
-            # Split services with internal network URL (AWS VPC, Docker network)
-            ("http://backend.internal:8000", None, None, "http://backend.internal:8000"),
-            # --- Edge cases ---
-            # Empty DAZZLE_BACKEND_URL falls through to next strategy
-            ("", "8080", None, "http://127.0.0.1:8080"),
-        ],
-        ids=[
-            "test_local_dev_uses_fallback",
-            "test_local_dev_uses_base_url",
-            "test_single_dyno_uses_port",
-            "test_single_dyno_port_beats_base_url",
-            "test_split_service_explicit_url",
-            "test_split_service_strips_trailing_slash",
-            "test_split_service_beats_port",
-            "test_split_service_internal_url",
-            "test_empty_dazzle_backend_url_ignored",
-        ],
-    )
-    def test_resolve_backend_url(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        backend_url: str | None,
-        port: str | None,
-        request_base_url: str | None,
-        expected: str,
-    ) -> None:
-        """_resolve_backend_url resolves the correct URL given env/request setup."""
-        self._clean_env(monkeypatch)
-        if backend_url is not None:
-            monkeypatch.setenv("DAZZLE_BACKEND_URL", backend_url)
-        if port is not None:
-            monkeypatch.setenv("PORT", port)
-        request = MagicMock()
-        if request_base_url is not None:
-            request.base_url = request_base_url
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == expected
-
-    def test_base_url_exception_handled(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """If request.base_url raises, fall through gracefully."""
-        self._clean_env(monkeypatch)
-        request = MagicMock()
-        type(request).base_url = property(lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:8000"
+#
+# #1422: `_resolve_backend_url` and the page→REST loopback self-fetch were
+# deleted — page reads/writes are in-process now, so there is no backend URL
+# to resolve. The TestResolveBackendUrl topology matrix retired with them.

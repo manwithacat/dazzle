@@ -41,7 +41,6 @@ def _make_deps(
 
     return _PageRouterConfig(
         appspec=appspec,
-        backend_url="http://localhost:8000",
         theme_css="",
         get_auth_context=None,
         app_prefix="/app",

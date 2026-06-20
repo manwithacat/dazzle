@@ -2,7 +2,7 @@
 
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
@@ -201,6 +201,9 @@ class TestResumeFromFileStore:
         app = FastAPI()
         router = create_experience_routes(appspec, app_prefix="/app", project_root=project_root)
         app.include_router(router, prefix="/app")
+        # #1422: experience POST creates the entity in-process via the registered
+        # create invoker (no loopback self-fetch).
+        app.state.entity_create_invokers = {"Client": AsyncMock(return_value={"id": "new-id"})}
         return TestClient(app, follow_redirects=False)
 
     def test_entry_resumes_from_file_store(self, client: TestClient, project_root: Path) -> None:
@@ -245,13 +248,8 @@ class TestResumeFromFileStore:
         assert loaded is not None
         assert loaded.current_step == "enter_details"
 
-    @patch("dazzle.http.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
-    def test_transition_saves_progress(
-        self, mock_proxy: AsyncMock, client: TestClient, project_root: Path
-    ) -> None:
+    def test_transition_saves_progress(self, client: TestClient, project_root: Path) -> None:
         """Successful transition should save updated progress to file store."""
-        mock_proxy.return_value = (True, {"id": "new-id"})
-
         state = ExperienceState(step="enter_details")
         cname = cookie_name("onboarding")
         client.cookies.set(cname, sign_state(state))

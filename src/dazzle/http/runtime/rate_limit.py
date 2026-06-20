@@ -47,17 +47,17 @@ def make_rate_limit_key(trusted_proxies: int) -> Callable[..., str]:
 
     Two behaviours the default ``slowapi.util.get_remote_address`` lacks:
 
-    * **Exempt the framework's internal loopback self-fetch.** Since #1422 the
-      page READ paths are in-process and no longer self-fetch; the only remaining
-      internal self-fetch is the experience-form POST *fallback* (entities without
-      an in-process create invoker), an internal HTTP call to
-      ``http://127.0.0.1:{PORT}`` (Heroku/Railway single-dyno). That request
-      arrives from a loopback address and carries **no** ``X-Forwarded-For``
-      (``_sync_post`` sends only a Cookie). Without this, those self-fetches for
-      all users share one bucket keyed on ``127.0.0.1`` → saturate → loopback 429.
-      We give such requests a unique-per-request key so they never accumulate
-      toward a limit. External traffic cannot forge a loopback origin (it arrives
-      via the proxy with a real client IP + XFF), so this opens no abuse vector.
+    * **Exempt internal loopback-origin requests.** A request that arrives from a
+      loopback address (``127.0.0.0/8``, ``::1``) carrying **no** ``X-Forwarded-For``
+      is internal — a same-host health check, sidecar, or platform probe (Heroku/
+      Railway single-dyno). Without this exemption such requests share one bucket
+      keyed on ``127.0.0.1`` → saturate → spurious loopback 429. We give them a
+      unique-per-request key so they never accumulate toward a limit. External
+      traffic cannot forge a loopback origin (it arrives via the proxy with a real
+      client IP + XFF), so this opens no abuse vector. (Historically this also
+      covered the framework's own page→REST self-fetch; that self-fetch was removed
+      in #1422 — reads and writes are in-process now — but the exemption remains as
+      general defence for genuine loopback-origin callers.)
     * **Honor ``X-Forwarded-For`` behind trusted proxies.** With
       ``trusted_proxies > 0``, the real client IP is taken ``trusted_proxies``
       hops from the right of XFF (the entry the outermost trusted proxy added)

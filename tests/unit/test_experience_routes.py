@@ -1,9 +1,9 @@
 """Tests for experience flow route handler."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from dazzle.core.ir import AppSpec, DomainSpec, EntitySpec, FieldSpec, FieldType, SurfaceSpec
@@ -81,11 +81,20 @@ def _make_appspec() -> AppSpec:
 
 
 @pytest.fixture()
-def app() -> FastAPI:
+def client_invoker() -> AsyncMock:
+    """#1422: in-process create invoker for entity 'Client'. Returns the created
+    entity dict; tests override `.return_value` / set `.side_effect` for denials."""
+    return AsyncMock(return_value={"id": "new-id-123"})
+
+
+@pytest.fixture()
+def app(client_invoker: AsyncMock) -> FastAPI:
     appspec = _make_appspec()
     app = FastAPI()
     router = create_experience_routes(appspec, app_prefix="/app")
     app.include_router(router, prefix="/app")
+    # #1422: experience POST creates in-process via the registered invoker.
+    app.state.entity_create_invokers = {"Client": client_invoker}
     return app
 
 
@@ -195,10 +204,7 @@ class TestBackNavigation:
 
 
 class TestTransition:
-    @patch("dazzle.http.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
-    def test_successful_transition(self, mock_proxy: AsyncMock, client: TestClient) -> None:
-        mock_proxy.return_value = (True, {"id": "new-id-123"})
-
+    def test_successful_transition(self, client: TestClient) -> None:
         state = ExperienceState(step="enter_details")
         cname = cookie_name("onboarding")
         client.cookies.set(cname, sign_state(state))
@@ -271,12 +277,11 @@ class TestBranching:
         assert resp2.headers["location"] == "/app/experiences/onboarding/enter_details"
 
 
-class TestFormProxy:
-    @patch("dazzle.http.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
-    def test_proxy_success_stores_entity_id(
-        self, mock_proxy: AsyncMock, client: TestClient
+class TestFormCreate:
+    def test_create_success_stores_entity_id(
+        self, client_invoker: AsyncMock, client: TestClient
     ) -> None:
-        mock_proxy.return_value = (True, {"id": "created-456"})
+        client_invoker.return_value = {"id": "created-456"}
 
         state = ExperienceState(step="enter_details")
         cname = cookie_name("onboarding")
@@ -293,11 +298,12 @@ class TestFormProxy:
         assert new_state is not None
         assert new_state.data.get("Client_id") == "created-456"
 
-    @patch("dazzle.http.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
-    def test_proxy_failure_returns_error(self, mock_proxy: AsyncMock, client: TestClient) -> None:
-        mock_proxy.return_value = (
-            False,
-            {"detail": [{"loc": ["body", "name"], "msg": "required"}]},
+    def test_create_failure_returns_error(
+        self, client_invoker: AsyncMock, client: TestClient
+    ) -> None:
+        client_invoker.side_effect = HTTPException(
+            status_code=422,
+            detail=[{"loc": ["body", "name"], "msg": "required"}],
         )
 
         state = ExperienceState(step="enter_details")

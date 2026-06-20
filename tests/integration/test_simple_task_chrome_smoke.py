@@ -48,7 +48,7 @@ def _client_chrome_on(app_name: str = "simple_task") -> tuple[TestClient, FastAP
     register_default_renderers(services)
     fastapi_app.state.services = services
     fastapi_app.state.fragment_chrome = True
-    fastapi_app.include_router(create_page_routes(appspec, backend_url="http://127.0.0.1:9999"))
+    fastapi_app.include_router(create_page_routes(appspec))
     return TestClient(fastapi_app), fastapi_app
 
 

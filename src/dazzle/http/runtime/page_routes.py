@@ -16,7 +16,6 @@ import asyncio
 import inspect
 import json
 import logging
-import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -26,7 +25,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
-from dazzle.core.manifest import resolve_api_url
 from dazzle.page.converters.nav_builder import (
     NavGroup,
     NavLink,
@@ -92,40 +90,6 @@ async def _resolve_auth_context(get_auth_context: Callable[..., Any] | None, req
     if inspect.iscoroutine(result):
         result = await result
     return result
-
-
-# Resolves the backend URL for the experience-form POST's self-fetch fallback
-# (the page READ self-fetch was removed in #1422 — reads are in-process now).
-# Also imported directly by src/dazzle/http/runtime/experience_routes.py
-# — update both call-sites together when changing the resolution rules.
-def _resolve_backend_url(request: Any, fallback: str) -> str:
-    """Derive the backend URL for internal API calls.
-
-    Resolution order (first non-empty wins):
-
-    1. ``DAZZLE_BACKEND_URL`` env var — explicit override for split-service
-       deployments where the frontend can't discover the backend from its
-       own request (e.g. frontend on Cloudflare, backend on AWS).
-    2. ``PORT`` env var — single-dyno platforms (Heroku, Railway) where the
-       port is dynamic.  Stays on localhost to avoid SSL/router overhead.
-    3. ``request.base_url`` — same-origin setups where the page request
-       already hit the correct host:port.
-    4. ``fallback`` — hardcoded default (``http://127.0.0.1:8000``), used
-       during local development.
-    """
-    explicit = os.environ.get("DAZZLE_BACKEND_URL", "").rstrip("/")
-    if explicit:
-        return explicit
-    port = os.environ.get("PORT")
-    if port:
-        return f"http://127.0.0.1:{port}"
-    try:
-        base = str(request.base_url).rstrip("/")
-        if base:
-            return base
-    except Exception:
-        logger.warning("Failed to extract base_url from request", exc_info=True)
-    return fallback
 
 
 def _inject_integration_actions(appspec: ir.AppSpec, page_contexts: dict[str, Any]) -> None:
@@ -502,7 +466,6 @@ class _PageRouterConfig:
     """
 
     appspec: ir.AppSpec
-    backend_url: str
     theme_css: str
     get_auth_context: Callable[..., Any] | None
     app_prefix: str
@@ -2585,7 +2548,6 @@ async def _root_redirect(
 # live in src/dazzle/http/runtime/site_routes.py.
 def create_page_routes(
     appspec: ir.AppSpec,
-    backend_url: str | None = None,
     theme_css: str = "",
     get_auth_context: Callable[..., Any] | None = None,
     app_prefix: str = "",
@@ -2602,7 +2564,6 @@ def create_page_routes(
 
     Args:
         appspec: Complete application specification.
-        backend_url: URL of the backend API for data fetching.
         theme_css: Pre-compiled theme CSS to inject.
         get_auth_context: Optional callable(request) -> AuthContext for user info.
         app_prefix: URL prefix for page routes (e.g. "/app").
@@ -2620,9 +2581,6 @@ def create_page_routes(
     Returns:
         FastAPI router with page routes.
     """
-    if backend_url is None:
-        backend_url = resolve_api_url()
-
     claimed_paths = claimed_paths or set()
 
     from dazzle.page.converters.template_compiler import compile_appspec_to_templates
@@ -2710,7 +2668,6 @@ def create_page_routes(
 
     deps = _PageRouterConfig(
         appspec=appspec,
-        backend_url=backend_url,
         theme_css=theme_css,
         get_auth_context=get_auth_context,
         app_prefix=app_prefix,

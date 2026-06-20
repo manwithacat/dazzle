@@ -311,7 +311,6 @@ def run_unified_server(
         project_root=project_root,
         sitespec_data=sitespec_data,
         theme_css=theme_css,
-        backend_url=f"http://{host}:{port}",
         bundled_css=bundled_css,
     )
 

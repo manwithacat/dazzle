@@ -52,7 +52,7 @@ def _client_for_example(app_name: str) -> tuple[TestClient, FastAPI]:
     services = RuntimeServices()
     register_default_renderers(services)
     fastapi_app.state.services = services
-    fastapi_app.include_router(create_page_routes(appspec, backend_url="http://127.0.0.1:9999"))
+    fastapi_app.include_router(create_page_routes(appspec))
     return TestClient(fastapi_app), fastapi_app
 
 
