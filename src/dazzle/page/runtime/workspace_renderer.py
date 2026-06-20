@@ -18,15 +18,13 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from dazzle.page import app_paths
+
 
 def _entity_to_app_url(entity_name: str) -> str:
-    """Build the /app/ detail URL pattern for an entity.
-
-    Matches the convention in server.py: ``/app/{slug}/{id}``
-    where slug = entity_name.lower().replace("_", "-").
-    """
-    slug = entity_name.lower().replace("_", "-")
-    return f"/app/{slug}/{{id}}"
+    """Build the /app/ detail URL pattern for an entity (``/app/{slug}/{id}``)
+    via the shared #1426 path SSOT (``dazzle.page.app_paths``)."""
+    return app_paths.detail_path("/app", app_paths.entity_slug(entity_name))
 
 
 def _action_to_url(action: str, app_spec: Any | None = None) -> str:
@@ -42,18 +40,17 @@ def _action_to_url(action: str, app_spec: Any | None = None) -> str:
       2. **Surface name** registered in ``app_spec.surfaces`` (e.g.
          ``cohort_analysis_list`` resolved against a surface whose
          ``entity_ref = "CohortAnalysis"``) → ``/app/cohortanalysis``.
-         The slug derives from the *entity*, not from the surface
-         name — entity list routes are registered at
-         ``/app/{entity_name.lower().replace("_", "-")}`` per
-         ``_entity_to_app_url`` and the route generator. Pre-#979
+         The slug derives from the *entity*, not from the surface name,
+         via the shared ``dazzle.page.app_paths`` SSOT (#1426) — the same
+         helper the route generator uses, so link and route agree. Pre-#979
          we slugified the surface name directly, producing
          ``/app/cohort-analysis-list`` which doesn't exist.
 
       3. **Bare slugified fallback** for legacy / literal-path action
          strings (no matching surface, no matching entity). Same
-         transform as before — `name.lower().replace("_", "-")`.
+         ``app_paths.entity_slug`` transform on the action string.
          Preserves backward-compat for action targets that mean
-         "send the user to /app/{whatever-this-is}".
+         "send the user to /app/<whatever-this-is>".
 
     Empty input returns empty string (informational card with no
     click-through).
@@ -77,16 +74,16 @@ def _action_to_url(action: str, app_spec: Any | None = None) -> str:
             if getattr(s, "name", None) == name:
                 entity_ref = getattr(s, "entity_ref", None) or ""
                 if entity_ref:
-                    slug = entity_ref.lower().replace("_", "-")
-                    return f"/app/{slug}?{query}" if query else f"/app/{slug}"
+                    base = app_paths.list_path("/app", app_paths.entity_slug(entity_ref))
+                    return f"{base}?{query}" if query else base
                 # Surface exists but has no entity_ref — fall through
                 # to the legacy slugify path on the surface name.
                 break
 
     # Form 3: legacy slugify fallback. Surface not found — treat the
     # action string as a literal URL fragment to slugify.
-    slug = name.lower().replace("_", "-")
-    return f"/app/{slug}?{query}" if query else f"/app/{slug}"
+    base = app_paths.list_path("/app", app_paths.entity_slug(name))
+    return f"{base}?{query}" if query else base
 
 
 def _flatten_group_by(value: Any) -> str:

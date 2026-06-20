@@ -12551,6 +12551,9 @@
   },
   "dazzle/http/runtime/route_validator.py": {
     "functions": {
+      "_drill_down_entities": 10,
+      "_mounted_get_paths": 5,
+      "validate_app_links": 10,
       "validate_routes": 16
     },
     "mi_rank": "A"
@@ -16432,6 +16435,16 @@
   },
   "dazzle/page/__init__.py": {
     "functions": {},
+    "mi_rank": "A"
+  },
+  "dazzle/page/app_paths.py": {
+    "functions": {
+      "create_path": 1,
+      "detail_path": 1,
+      "edit_path": 1,
+      "entity_slug": 1,
+      "list_path": 1
+    },
     "mi_rank": "A"
   },
   "dazzle/page/converters/__init__.py": {

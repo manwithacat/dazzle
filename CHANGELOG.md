@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.54] - 2026-06-20
+
+### Added
+- **#1426 — `/app` link↔route single source of truth.** New pure leaf
+  `dazzle.page.app_paths` (`entity_slug` + `list_path`/`detail_path`/`create_path`/
+  `edit_path`) is now the **one** place the `/app/<slug>/{id}` path formula lives.
+  Route *registration* and every outbound *link* (`detail_url` / row drill-down /
+  nav href / CTA / create button) derive paths from it, so the slug rule and per-mode
+  path shape can no longer drift between the two derivations — the dead-link footgun
+  class becomes unrepresentable for the path formula. Routed ~20 previously-inlined
+  f-string sites across `template_compiler.py`, `page_routes.py`, and
+  `workspace_renderer.py` through the helper. A drift gate
+  (`test_app_paths_ssot.py`) forbids raw `/app` path f-strings / inline slug rules
+  from re-creeping into the page layer.
+- **#1426 — boot-time link↔route check** (`route_validator.validate_app_links`):
+  every entity whose list surface / workspace region advertises a `/app/<slug>/{id}`
+  drill-down link is verified to have a matching mounted detail route. Warns by
+  default (naming the entity + missing route); `DAZZLE_STRICT_LINKS=1` makes it a hard
+  boot failure. Converts the silent list-only dead-link (mode-1 of #1422) into a boot
+  signal. Verified zero false-positives across 8 example apps (the #1421 detail
+  synthesis already covers them; this is the standing backstop).
+
+### Agent Guidance
+- **Never hand-build an `/app` page path.** Use `dazzle.page.app_paths`
+  (`entity_slug`, `list_path`, `detail_path`, `create_path`, `edit_path`) for both
+  route registration and links — a drift gate enforces this in the page layer. If you
+  add a new `/app` link, `validate_app_links` will warn at boot if its route isn't
+  mounted; run with `DAZZLE_STRICT_LINKS=1` in CI to make that fatal. (#1426 extracted
+  the remaining structural ask from the now-closed #1422.)
+
 ## [0.83.53] - 2026-06-20
 
 ### Changed

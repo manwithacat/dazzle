@@ -1083,9 +1083,12 @@ def assemble_post_build_routes(
 
     # ---- 9. Route validation ----
     try:
-        from dazzle.http.runtime.route_validator import validate_routes
+        from dazzle.http.runtime.route_validator import validate_app_links, validate_routes
 
         validate_routes(app)
+        # #1426: every /app drill-down link must resolve to a mounted detail route.
+        # Warn by default; DAZZLE_STRICT_LINKS makes it a hard boot failure.
+        validate_app_links(app, appspec)
     except ImportError:
         pass
 

@@ -16,6 +16,7 @@ from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
 from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
 from dazzle.core.strings import to_api_plural
+from dazzle.page import app_paths
 from dazzle.render.context import (
     ColumnContext,
     CompanionContext,
@@ -918,7 +919,7 @@ def _compile_list_surface(
     # for this entity?" — passed as `entities_with_create_surface`.
     create_url: str | None = None
     if entities_with_create_surface is None or entity_name in entities_with_create_surface:
-        create_url = f"{app_prefix}/{entity_slug}/create"
+        create_url = app_paths.create_path(app_prefix, entity_slug)
 
     return PageContext(
         page_title=surface.title or f"{entity_name} List",
@@ -933,7 +934,7 @@ def _compile_list_surface(
             columns=columns,
             api_endpoint=api_endpoint,
             create_url=create_url,
-            detail_url_template=f"{app_prefix}/{entity_slug}/{{id}}",
+            detail_url_template=app_paths.detail_path(app_prefix, entity_slug),
             search_enabled=bool(search_fields),
             default_sort_field=default_sort_field,
             default_sort_dir=default_sort_dir,
@@ -1027,7 +1028,7 @@ def _compile_form_surface(
                 action_url=api_endpoint,
                 method="post",
                 mode="create",
-                cancel_url=f"{app_prefix}/{entity_slug}",
+                cancel_url=app_paths.list_path(app_prefix, entity_slug),
                 sections=sections,
                 persona_hide=persona_hide,
                 persona_read_only=persona_read_only,
@@ -1051,7 +1052,7 @@ def _compile_form_surface(
                 action_url=f"{api_endpoint}/{{id}}",
                 method="put",
                 mode="edit",
-                cancel_url=f"{app_prefix}/{entity_slug}/{{id}}",
+                cancel_url=app_paths.detail_path(app_prefix, entity_slug),
                 sections=sections,
                 persona_hide=persona_hide,
                 persona_read_only=persona_read_only,
@@ -1132,7 +1133,7 @@ def _compile_view_surface(
     # Build related entity tabs from reverse references
     related_tabs: list[RelatedTabContext] = []
     for ref_entity_name, fk_field, ref_entity in reverse_refs or []:
-        ref_slug = ref_entity_name.lower().replace("_", "-")
+        ref_slug = app_paths.entity_slug(ref_entity_name)
         ref_api = f"/{to_api_plural(ref_entity_name)}"
         tab_label = (ref_entity.title or ref_entity_name).replace("_", " ")
         # Build columns from the related entity's fields (exclude FK to parent)
@@ -1152,15 +1153,15 @@ def _compile_view_surface(
                 api_endpoint=ref_api,
                 filter_field=fk_field,
                 columns=tab_columns,
-                detail_url_template=f"{app_prefix}/{ref_slug}/{{id}}",
-                create_url=f"{app_prefix}/{ref_slug}/create",
+                detail_url_template=app_paths.detail_path(app_prefix, ref_slug),
+                create_url=app_paths.create_path(app_prefix, ref_slug),
                 visible_condition=_tab_vis,
             )
         )
 
     # Polymorphic FK tabs (#321): entity_type + entity_id pattern
     for src_name, type_field, id_field, type_val, src_entity in poly_refs or []:
-        ref_slug = src_name.lower().replace("_", "-")
+        ref_slug = app_paths.entity_slug(src_name)
         ref_api = f"/{to_api_plural(src_name)}"
         tab_label = (src_entity.title or src_name).replace("_", " ")
         # Exclude both the type and id fields from displayed columns
@@ -1179,8 +1180,8 @@ def _compile_view_surface(
                 api_endpoint=ref_api,
                 filter_field=id_field,
                 columns=tab_columns,
-                detail_url_template=f"{app_prefix}/{ref_slug}/{{id}}",
-                create_url=f"{app_prefix}/{ref_slug}/create",
+                detail_url_template=app_paths.detail_path(app_prefix, ref_slug),
+                create_url=app_paths.create_path(app_prefix, ref_slug),
                 filter_type_field=type_field,
                 filter_type_value=type_val,
                 visible_condition=_poly_vis,
@@ -1269,9 +1270,9 @@ def _compile_view_surface(
             title=surface.title or f"{entity_name} Details",
             fields=fields,
             api_endpoint=f"{api_endpoint}/{{id}}",
-            edit_url=f"{app_prefix}/{entity_slug}/{{id}}/edit",
+            edit_url=app_paths.edit_path(app_prefix, entity_slug),
             delete_url=f"{api_endpoint}/{{id}}",
-            back_url=f"{app_prefix}/{entity_slug}",
+            back_url=app_paths.list_path(app_prefix, entity_slug),
             transitions=transitions,
             status_field=status_field,
             related_groups=related_groups_ctx,
@@ -1327,7 +1328,7 @@ def compile_surface_to_context(
     """
     entity_name = entity.name if entity else (surface.entity_ref or "Item")
     api_endpoint = f"/{to_api_plural(entity_name)}"
-    entity_slug = entity_name.lower().replace("_", "-")
+    entity_slug = app_paths.entity_slug(entity_name)
 
     if surface.mode == SurfaceMode.LIST:
         return _compile_list_surface(
@@ -1456,10 +1457,10 @@ def compile_appspec_to_templates(
                 list_surface = _list_surfaces_by_entity.get(source)
                 if not list_surface:
                     continue
-                entity_slug = source.lower().replace("_", "-")
+                entity_slug = app_paths.entity_slug(source)
                 entity_item = NavItemContext(
                     label=list_surface.title or source.replace("_", " ").title(),
-                    route=f"{app_prefix}/{entity_slug}",
+                    route=app_paths.list_path(app_prefix, entity_slug),
                 )
                 _entity_nav_items[source] = entity_item
                 nav_items.append(entity_item)
@@ -1505,7 +1506,9 @@ def compile_appspec_to_templates(
                 group_children.append(
                     {
                         "label": (surface.title or item.entity.replace("_", " ").title()),
-                        "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
+                        "route": app_paths.list_path(
+                            app_prefix, app_paths.entity_slug(item.entity)
+                        ),
                         "icon": item.icon,
                     }
                 )
@@ -1610,13 +1613,13 @@ def compile_appspec_to_templates(
 
         # Determine the route for this surface
         entity_name = entity.name if entity else (surface.entity_ref or "item")
-        entity_slug = entity_name.lower().replace("_", "-")
+        entity_slug = app_paths.entity_slug(entity_name)
 
         route_map = {
-            SurfaceMode.LIST: f"{app_prefix}/{entity_slug}",
-            SurfaceMode.CREATE: f"{app_prefix}/{entity_slug}/create",
-            SurfaceMode.EDIT: f"{app_prefix}/{entity_slug}/{{id}}/edit",
-            SurfaceMode.VIEW: f"{app_prefix}/{entity_slug}/{{id}}",
+            SurfaceMode.LIST: app_paths.list_path(app_prefix, entity_slug),
+            SurfaceMode.CREATE: app_paths.create_path(app_prefix, entity_slug),
+            SurfaceMode.EDIT: app_paths.edit_path(app_prefix, entity_slug),
+            SurfaceMode.VIEW: app_paths.detail_path(app_prefix, entity_slug),
         }
         route = route_map.get(surface.mode, f"/{surface.name}")
 
@@ -1705,8 +1708,8 @@ def compile_appspec_to_templates(
             _entity = domain.get_entity(_entity_ref)
             if _entity is None:
                 continue
-            _slug = _entity.name.lower().replace("_", "-")
-            _detail_route = f"{app_prefix}/{_slug}/{{id}}"
+            _slug = app_paths.entity_slug(_entity.name)
+            _detail_route = app_paths.detail_path(app_prefix, _slug)
             if _detail_route in contexts:
                 continue  # an explicit VIEW surface already provides it
 

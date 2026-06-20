@@ -25,6 +25,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
+from dazzle.page import app_paths
 from dazzle.page.converters.nav_builder import (
     NavGroup,
     NavLink,
@@ -539,8 +540,7 @@ def _reconcile_nav_route(appspec: ir.AppSpec, app_prefix: str, link: NavLink) ->
         for ws in getattr(appspec, "workspaces", []) or []:
             if ws.name == target:
                 return f"{app_prefix}/workspaces/{ws.name}"
-        slug = target.lower().replace("_", "-")
-        return f"{app_prefix}/{slug}"
+        return app_paths.list_path(app_prefix, app_paths.entity_slug(target))
     return link.route
 
 
@@ -2219,7 +2219,7 @@ def _build_workspace_primary_action_candidates(
             create_surface = create_surfaces_by_entity.get(src)
             if not create_surface:
                 continue
-            entity_slug = src.lower().replace("_", "-")
+            entity_slug = app_paths.entity_slug(src)
             list_surface = list_surfaces_by_entity.get(src)
             label_source = (
                 getattr(list_surface, "title", "") if list_surface else ""
@@ -2229,7 +2229,7 @@ def _build_workspace_primary_action_candidates(
                     "entity": src,
                     "surface": create_surface.name,
                     "label": f"New {label_source}",
-                    "route": f"{app_prefix}/{entity_slug}/create",
+                    "route": app_paths.create_path(app_prefix, entity_slug),
                 }
             )
     return actions
@@ -2273,12 +2273,12 @@ def _resolve_workspace_authored_actions(
         if surface is None:
             continue  # lint already errors on unknown targets; skip defensively
         entity_name = surface.entity_ref or "item"
-        entity_slug = entity_name.lower().replace("_", "-")
+        entity_slug = app_paths.entity_slug(entity_name)
         route_map = {
-            SurfaceMode.LIST: f"{app_prefix}/{entity_slug}",
-            SurfaceMode.CREATE: f"{app_prefix}/{entity_slug}/create",
-            SurfaceMode.EDIT: f"{app_prefix}/{entity_slug}/{{id}}/edit",
-            SurfaceMode.VIEW: f"{app_prefix}/{entity_slug}/{{id}}",
+            SurfaceMode.LIST: app_paths.list_path(app_prefix, entity_slug),
+            SurfaceMode.CREATE: app_paths.create_path(app_prefix, entity_slug),
+            SurfaceMode.EDIT: app_paths.edit_path(app_prefix, entity_slug),
+            SurfaceMode.VIEW: app_paths.detail_path(app_prefix, entity_slug),
         }
         route = route_map.get(surface.mode, f"{app_prefix}/{surface.name}")
         resolved.append({"label": action.label, "route": route})
@@ -2636,8 +2636,8 @@ def create_page_routes(
     # Entity list routes use the pattern /{app_prefix}/{entity-slug}.
     route_entity: dict[str, str] = {}
     for _entity in appspec.domain.entities:
-        _slug = _entity.name.lower().replace("_", "-")
-        route_entity[f"{app_prefix}/{_slug}"] = _entity.name
+        _slug = app_paths.entity_slug(_entity.name)
+        route_entity[app_paths.list_path(app_prefix, _slug)] = _entity.name
 
     # #1324 slice 3b: precompute the per-persona + anon NavModels once at boot.
     # The RBAC matrix is a pure function of the appspec; the runtime did not
@@ -2731,7 +2731,7 @@ def create_page_routes(
         # via the dedicated admin workspace under /_admin/.
         if getattr(_entity, "domain", "") == "platform":
             continue
-        singular_slug = _entity.name.lower().replace("_", "-")
+        singular_slug = app_paths.entity_slug(_entity.name)
         plural_slug = _to_api_plural(_entity.name).replace("_", "-")
         if singular_slug == plural_slug:
             continue
@@ -2756,7 +2756,7 @@ def create_page_routes(
         if singular_reg_path not in _registered_reg_paths:
             continue
 
-        redirect_target = f"{app_prefix}/{singular_slug}"
+        redirect_target = app_paths.list_path(app_prefix, singular_slug)
 
         def _plural_redirect(target: str = redirect_target) -> RedirectResponse:
             return RedirectResponse(url=target, status_code=301)
@@ -2846,11 +2846,11 @@ def create_page_routes(
                         seen_entities.add(src)
                         list_surface = _list_surfaces_by_entity.get(src)
                         if list_surface:
-                            entity_slug = src.lower().replace("_", "-")
+                            entity_slug = app_paths.entity_slug(src)
                             entity_items.append(
                                 {
                                     "label": list_surface.title or src.replace("_", " ").title(),
-                                    "route": f"{app_prefix}/{entity_slug}",
+                                    "route": app_paths.list_path(app_prefix, entity_slug),
                                     "allow_personas": [],
                                 }
                             )
@@ -2908,7 +2908,9 @@ def create_page_routes(
                     children.append(
                         {
                             "label": (surface.title or item.entity.replace("_", " ").title()),
-                            "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
+                            "route": app_paths.list_path(
+                                app_prefix, app_paths.entity_slug(item.entity)
+                            ),
                             "icon": item.icon,
                         }
                     )
