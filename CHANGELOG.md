@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.38] - 2026-06-20
+
+### Changed
+- **Migrated the layer-boundary gates from a hand-rolled regex test to import-linter contracts; retired `test_import_boundaries.py`** (smells backlog B2). The `back→http`/`ui→page` rename exposed that the hand-rolled gate's regexes silently **rot** across renames: 2 of its 4 rules had gone vacuous (rule 4's `dazzle\.(?:back|ui)` regex scanned for packages that no longer exist; rule 1 scanned for migrated-render modules whose old paths are gone), so they passed without enforcing anything. Graph-based import-linter contracts, by contrast, survived the rename automatically. Migrated the two still-real rules into `[tool.importlinter]` — **`render is pure`** (render ↛ http/page, ADR-0038) and **`http uses the core.ir facade`** (http ↛ `core.ir.{appspec,surfaces,domain}`, #1086) — and **the facade contract immediately caught a real violation the regex had missed** (`http/specs/entity.py` imported the `core.ir.domain` submodule via `import domain`, a form the `from … import` regex didn't match) — fixed to use the `dazzle.core.ir` facade. `lint-imports` now enforces all 5 layer rules (run by `test_import_contracts.py`); the fragile 180-line regex gate is deleted, references repointed.
+
+
 ## [0.83.37] - 2026-06-20
 
 ### Changed

@@ -29,7 +29,7 @@ Rename the two layer packages so the names match the topology:
 - **D3.** `render/` and `core/` are unchanged. The stack is now `http → page → render → core`.
 - **D4.** Mechanical, tree-wide: a single word-bounded rewrite of every `dazzle.back`/`dazzle.ui`/`dazzle/back`/`dazzle/ui` reference across code, tests, configs, docs, package-data keys, the mypy-override list, the import-linter contracts, and the drift baselines (regenerated). No behaviour, dependency, or API-surface change — the public package name (`dazzle-dsl`) and import root (`dazzle`) are unchanged; only the two sub-packages move. Clean break (ADR-0003): no `back`/`ui` compatibility shims.
 
-The import-linter contracts and `tests/unit/test_import_boundaries.py` keep enforcing the same rules under the new names: `core ↛ http/page`, `page ↛ http`, `render ↛ http/page`, `http` is Postgres-only.
+The import-linter contracts (`test_import_contracts.py`) keep enforcing the same rules under the new names: `core ↛ http/page`, `page ↛ http`, `render ↛ http/page`, `http` is Postgres-only.
 
 ## Consequences
 

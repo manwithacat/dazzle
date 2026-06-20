@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.83.37"
+version = "0.83.38"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -652,3 +652,30 @@ forbidden_modules = ["sqlite3", "aiosqlite"]
 # http imports of sqlite are a violation. The one direct hit is a http test module.
 allow_indirect_imports = "true"
 ignore_imports = ["dazzle.http.tests.test_relations -> sqlite3"]
+
+[[tool.importlinter.contracts]]
+name = "render is pure (ADR-0038)"
+type = "forbidden"
+source_modules = ["dazzle.render"]
+forbidden_modules = ["dazzle.http", "dazzle.page"]
+# render/ is the pure AppSpec→Fragment→HTML layer: it imports only render/core/stdlib,
+# never up into http/page (top-level OR lazy in-function — grimp's graph catches both).
+# Migrated here from the hand-rolled tests/unit/test_import_boundaries.py rule 4, which the
+# back→http/ui→page rename silently turned VACUOUS (its regex still scanned for the gone
+# `dazzle.back|ui`) — graph-based contracts survive renames; regex gates rot. DIRECT only
+# (the core→http eventbus_adapter allow-list edge gives render a transitive path via core).
+allow_indirect_imports = "true"
+
+[[tool.importlinter.contracts]]
+name = "http uses the core.ir facade, not concrete submodules"
+type = "forbidden"
+source_modules = ["dazzle.http"]
+forbidden_modules = [
+    "dazzle.core.ir.appspec",
+    "dazzle.core.ir.surfaces",
+    "dazzle.core.ir.domain",
+]
+# #1086/#1092/#1093: http must import IR types via the `dazzle.core.ir` re-export facade
+# (or `dazzle.core.ir.protocols`), not the concrete submodules — keeps the IR fan-in
+# decoupled. Migrated from test_import_boundaries.py rule 3 (the one rule still real).
+allow_indirect_imports = "true"
