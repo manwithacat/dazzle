@@ -252,6 +252,7 @@ class _BuildersMetricsMixin:
             (legacy) aggregates: dict[name → resolved value], used as
                 fallback when metrics list isn't supplied
         """
+        from dazzle.core.ir import AggregateRef, DerivedMetricExpr
         from dazzle.render.filters import _metric_number_filter
 
         title = _region_title(region)
@@ -259,9 +260,19 @@ class _BuildersMetricsMixin:
         if not metrics_list:
             agg = ctx.get("aggregates") or getattr(region, "aggregates", {}) or {}
             if isinstance(agg, dict):
+                # Only resolved values become tiles. The sole runtime path that
+                # populates `aggregates` stores the *raw* IR dict (AggregateRef /
+                # DerivedMetricExpr), so on scope-denial — where the orchestrator
+                # correctly leaves `metrics` empty — this fallback would otherwise
+                # stringify the typed IR (`func='count' where=ConditionExpr(...)`)
+                # straight into the tile, leaking the where-clause of an entity the
+                # user can't read (#1425). Drop unresolved IR so the region renders
+                # the clean "No metrics" empty state instead, mirroring
+                # `compute_pipeline_steps`'s None-on-denied handling.
                 metrics_list = [
                     {"label": str(name).replace("_", " ").title(), "value": val}
                     for name, val in agg.items()
+                    if not isinstance(val, (AggregateRef, DerivedMetricExpr))
                 ]
 
         body: Fragment

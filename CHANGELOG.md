@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.55] - 2026-06-20
+
+### Fixed
+- **#1425 — scope-denied `display: metrics` region no longer leaks raw IR.**
+  `_build_metrics`'s empty-`metrics` fallback mapped `ctx['aggregates']` straight to
+  tiles and stringified each value. The only runtime path that populates `aggregates`
+  stores the *raw* IR dict (`AggregateRef` / `DerivedMetricExpr`), so on scope-denial —
+  where the orchestrator correctly leaves `metrics` empty — the fallback emitted the
+  Pydantic repr (`func='count' entity='…' where=ConditionExpr(...)`) into the tile,
+  leaking the where-clause of an entity the user can't read. The fallback now drops
+  unresolved `AggregateRef`/`DerivedMetricExpr` values, so an aggregate-only region with
+  nothing computed renders the clean "No metrics" empty state instead — mirroring
+  `compute_pipeline_steps`'s None-on-denied handling.
+
 ## [0.83.54] - 2026-06-20
 
 ### Added

@@ -457,6 +457,33 @@ def test_metrics_falls_back_to_aggregates_dict() -> None:
     assert "7" in html
 
 
+def test_metrics_scope_denied_aggregates_render_empty_state_not_raw_ir() -> None:
+    """#1425: on scope-denial the orchestrator leaves `metrics` empty but
+    ctx['aggregates'] still holds the *raw* IR (AggregateRef /
+    DerivedMetricExpr). The fallback must drop unresolved IR rather than
+    stringify its Pydantic repr (which leaks the where-clause of an entity
+    the user can't read) — it should render the clean empty state."""
+    from dazzle.core.ir import AggregateRef, DerivedMetricExpr
+
+    adapter = WorkspaceRegionAdapter()
+    raw_agg = {
+        "total_secret": AggregateRef(func="count", entity="SecretEntity"),
+        "ratio": DerivedMetricExpr(metric_name="ratio"),
+    }
+    fragment = adapter.build(
+        _FakeRegion("kpis", display="metrics", empty_message="No access."),
+        {"aggregates": raw_agg},
+    )
+    html = _render(fragment)
+    # The clean empty state renders…
+    assert "No access." in html
+    # …and none of the raw IR repr leaks into the tile.
+    assert "func=" not in html
+    assert "entity=" not in html
+    assert "SecretEntity" not in html
+    assert "metric_name=" not in html
+
+
 def test_metrics_summary_alias_dispatches_same_path() -> None:
     """`display: summary` reuses the metrics adapter — they're spelt
     differently in DSL but render identically."""
