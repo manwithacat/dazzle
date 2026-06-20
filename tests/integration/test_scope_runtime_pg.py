@@ -248,6 +248,11 @@ async def _booted() -> AsyncIterator[_ScopeRuntimeApp]:
             audit_logger=getattr(built.builder, "audit_logger", None),
         )
         _seed(app, auth_store, db_url)
+        # #1422: expose the builder (in-process create invokers) + auth_store + the
+        # ASGI app so the create-invoker parity test can drive the in-process path.
+        app.builder = built.builder
+        app.auth_store = auth_store
+        app.asgi_app = built.app
         try:
             yield app
         finally:
@@ -656,3 +661,49 @@ async def test_rest_list_respects_list_scope_via_gated_list(app: _ScopeRuntimeAp
     assert app.science_enrolment_id not in ids, (
         "foreign-department enrolment must be scope-filtered out of the list"
     )
+
+
+async def test_inprocess_create_invoker_enforces_create_scope(app: _ScopeRuntimeApp) -> None:
+    """#1422 — the in-process CREATE invoker (used by the experience-form POST
+    instead of a loopback self-fetch) runs the SAME enforced create path: a
+    teacher may create an Enrolment in their own department but a foreign-department
+    create is rejected by `scope: create:` (#1311 FK-path probe). Proves the
+    in-process write path enforces create-scope identically to the REST create."""
+    import pytest
+    from fastapi import HTTPException
+    from starlette.requests import Request
+
+    invoker = app.builder.create_invokers.get("Enrolment")
+    assert invoker is not None, "Enrolment should expose an in-process create invoker"
+
+    user = app.auth_store.get_user_by_email("teacher.math@scope.test")
+    session = app.auth_store.create_session(user)
+    auth_ctx = app.auth_store.validate_session(session.id)
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/enrolments",
+        "headers": [],
+        "query_string": b"",
+        "scheme": "http",
+        "server": ("test", 80),
+        "client": ("test", 1),
+        "app": app.asgi_app,
+    }
+    req = Request(scope)
+
+    own = await invoker(
+        auth_ctx,
+        req,
+        body={"label": "via invoker", "teaching_group": app.math_group_id, "status": "active"},
+    )
+    assert own is not None, "own-department create should succeed in-process"
+
+    with pytest.raises(HTTPException) as exc:
+        await invoker(
+            auth_ctx,
+            req,
+            body={"label": "foreign", "teaching_group": app.science_group_id, "status": "active"},
+        )
+    assert exc.value.status_code == 403, "foreign-department create must be scope-denied (403)"

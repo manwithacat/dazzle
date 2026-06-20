@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.49] - 2026-06-20
+
+### Changed
+- **Experience-form POST creates entities IN-PROCESS** (#1422 option b, plan phase 4 — the write path). The experience-step form submission previously POSTed to the app's own REST create endpoint over loopback HTTP (`_proxy_to_backend`); it now mutates **in-process** via the SAME enforced create path — permit gate + `scope: create:` (#1311 FK-path probe) + ref/persona injection + storage-verify + audit + `service.create` — running in the *original* request context (no tenant-`Host` loss, the `#1421` class for writes). Mechanism (lowest-drift, reuses the EXACT REST create path — no orchestration replica): the create core `write_handlers._core` accepts a pre-parsed `body` (with the same empty-string→None normalization the REST parse applies); `audit_wrap._cedar_impl` threads it and exposes an in-process `_inprocess_create` invoker on the cedar create handler; `route_generator` registers these per-entity, surfaced on `app.state.entity_create_invokers`. The experience handler calls the invoker when present and **falls back to the HTTP proxy** for entities without a cedar create invoker (non-cedar / no-auth), so existing behaviour is preserved. **Directly tested**: a new PG test (`test_inprocess_create_invoker_enforces_create_scope`) proves the in-process create enforces `scope: create:` (own-department create succeeds, foreign-department → 403) — confirming the in-process `auth_context` carries `current_user.department`. REST create path unchanged (1032 write/experience tests green).
+
+  ### Agent Guidance
+  - **Mutating in-process inside the runtime?** Use the registered create invoker (`request.app.state.entity_create_invokers[entity]`, signature `(auth_context, request, *, body) -> result`) — it runs the full enforced create path (permit + create-scope + injection + audit). Never self-fetch the REST create endpoint. The REST create core (`write_handlers._core`) takes an optional pre-parsed `body`; pass it for in-process callers (it gets the same empty→None normalization). Entities without a cedar create handler have no invoker — fall back accordingly.
+
+
 ## [0.83.48] - 2026-06-20
 
 ### Changed

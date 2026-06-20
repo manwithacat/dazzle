@@ -547,12 +547,33 @@ async def _experience_step_post(
             except Exception:
                 body = {}
 
-            success, resp_data = await _proxy_to_backend(
-                effective_backend_url,
-                entity_ref,
-                body,
-                _cookies,
-            )
+            # #1422: create IN-PROCESS via the SAME enforced create path (permit
+            # gate + create-scope + ref/persona injection + audit + service.create)
+            # when an in-process invoker is registered for this entity — no loopback
+            # self-fetch (eliminates the #1421 tenant-Host-loss class for writes).
+            # Falls back to the HTTP proxy for entities without a cedar create
+            # invoker (non-cedar / no-auth), preserving existing behaviour.
+            _invoker = getattr(request.app.state, "entity_create_invokers", {}).get(entity_ref)
+            if _invoker is not None:
+                from fastapi import HTTPException as _HTTPExc
+                from fastapi.encoders import jsonable_encoder as _jse
+
+                _auth = deps.get_auth_context(request) if deps.get_auth_context else None
+                try:
+                    _created = await _invoker(_auth, request, body=body)
+                    success, resp_data = True, _jse(_created)
+                except _HTTPExc as _e:
+                    # Permit/scope/validation denial → the existing error re-render
+                    # (mirrors what the REST endpoint returned over the proxy).
+                    success = False
+                    resp_data = _e.detail if isinstance(_e.detail, dict) else {"detail": _e.detail}
+            else:
+                success, resp_data = await _proxy_to_backend(
+                    effective_backend_url,
+                    entity_ref,
+                    body,
+                    _cookies,
+                )
 
             if not success:
                 # Proxy failed — re-render the step with error

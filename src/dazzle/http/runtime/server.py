@@ -376,6 +376,7 @@ class DazzleBackendApp:
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
         self._services: dict[str, Any] = {}
+        self._create_invokers: dict[str, Any] = {}  # #1422: in-process create invokers
         self._service_factory: ServiceFactory | None = None
         self._repositories: dict[str, Any] = {}
         self._db_manager: PostgresBackend | None = None
@@ -1849,6 +1850,12 @@ class DazzleBackendApp:
             claimed_routes=claimed_routes,
         )
         self._app.include_router(router)
+        # #1422: capture the per-entity in-process create invokers populated during
+        # route generation, and expose them on app.state for the experience-form
+        # POST (in-process create, no self-fetch). Set on both this app and (via
+        # app_factory) any separately-constructed served app.
+        self._create_invokers = route_generator.create_invokers
+        self._app.state.entity_create_invokers = self._create_invokers
 
         # v0.71.24 (#1126) — build the public policy registry from the
         # same inputs the route generator just consumed. Project route
@@ -2290,6 +2297,13 @@ class DazzleBackendApp:
         """Per-entity ``auto_include`` relations (#1422 — threaded into the page
         layer so in-process reads hydrate the same relations the REST read does)."""
         return self._entity_auto_includes
+
+    @property
+    def create_invokers(self) -> dict[str, Any]:
+        """Per-entity in-process CREATE invokers (#1422) — the experience-form POST
+        calls these to mutate in-process via the enforced create path instead of
+        self-fetching the REST endpoint."""
+        return self._create_invokers
 
     def get_service(self, name: str) -> Any | None:
         """Get a service by name."""

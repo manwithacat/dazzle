@@ -287,6 +287,8 @@ def _build_cedar_handler(
         id: UUID | None,
         request: Request,
         auth_context: AuthContext,
+        *,
+        body: dict[str, Any] | None = None,
     ) -> Any:
         from dazzle.core.access import AccessDecision
         from dazzle.http.runtime.audit_log import measure_evaluation_time
@@ -393,6 +395,9 @@ def _build_cedar_handler(
             existing=existing,
             user_roles=raw_roles,
             is_superuser=_is_su,
+            # #1422: pre-parsed body for in-process callers (None for REST → the
+            # core parses the request body). Threaded into core_fn's **_extra.
+            body=body,
             # The CREATE core handler needs the full auth context to resolve
             # `current_user.<attr>` in `scope: create:` predicates (#1174):
             # the attributes (`org`, `school`, ...) live in
@@ -432,6 +437,21 @@ def _build_cedar_handler(
             return await _cedar_impl(None, request, auth_context)
 
         _set_handler_annotations(_cedar_create, with_auth=True)
+
+        # #1422: expose the in-process create invoker. The experience-form POST
+        # calls this with its already-parsed body instead of self-fetching the
+        # REST create endpoint over loopback HTTP — running the SAME permit gate +
+        # create-scope + ref/persona injection + audit + service.create path, in
+        # the original request context (no tenant-Host loss). Signature:
+        # `(auth_context, request, *, body) -> result`.
+        async def _inprocess_create(
+            auth_context: AuthContext, request: Request, *, body: dict[str, Any]
+        ) -> Any:
+            return await _cedar_impl(None, request, auth_context, body=body)
+
+        # Dynamic attribute — the in-process create invoker (#1422). route_generator
+        # reads it via getattr to populate its create-invoker registry.
+        _cedar_create._inprocess_create = _inprocess_create  # type: ignore[attr-defined]
         return _cedar_create
 
     async def _cedar_with_id(

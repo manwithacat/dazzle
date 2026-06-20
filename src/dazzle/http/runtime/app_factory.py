@@ -940,6 +940,11 @@ def assemble_post_build_routes(
         app.include_router(page_router, prefix="/app")
         logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))
 
+        # #1422: expose the in-process create invokers on THIS served app's state
+        # (app_factory builds a separate app from the builder) so the experience
+        # POST creates in-process instead of self-fetching the REST endpoint.
+        app.state.entity_create_invokers = getattr(builder, "create_invokers", {})
+
         # ---- 4. Experience routes (/app/experiences/*) ----
         if appspec.experiences:
             try:

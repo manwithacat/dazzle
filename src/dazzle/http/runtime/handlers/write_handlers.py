@@ -259,7 +259,18 @@ def create_create_handler(
         existing: Any = None,
         **_extra: Any,
     ) -> Any:
-        body = await _parse_request_body(request)
+        # #1422: in-process callers (e.g. the experience-form POST) pass an
+        # already-parsed `body` so we reuse this EXACT create orchestration
+        # (ref/persona injection, create-scope, storage-verify, service.create)
+        # without a loopback HTTP self-fetch. REST callers omit it → parse the
+        # request body as before. The pre-parsed body gets the SAME empty-string→
+        # None normalization `_parse_request_body` applies, so the in-process path
+        # is byte-identical to the REST parse path (optional ref/UUID fields).
+        _pre_body = _extra.get("body")
+        if _pre_body is not None:
+            body = {k: (None if v == "" else v) for k, v in _pre_body.items()}
+        else:
+            body = await _parse_request_body(request)
 
         # #932 cycle 4: verify any storage-bound s3_key in the body
         # against the caller's prefix sandbox + object existence. Runs

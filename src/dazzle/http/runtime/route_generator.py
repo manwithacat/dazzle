@@ -307,6 +307,10 @@ class RouteGenerator:
         # Maps entity_name → (persona_id, link_via) for each persona that
         # declares ``backed_by``. Built by the caller from appspec.personas.
         self.persona_backed_entities: dict[str, tuple[str, str]] = {}
+        # #1422: per-entity in-process CREATE invokers (the cedar create handler's
+        # `_inprocess_create`), so the experience-form POST mutates in-process via
+        # the SAME enforced create path instead of self-fetching the REST endpoint.
+        self.create_invokers: dict[str, Any] = {}
         # ADR-0039 D3b (#778/#1398): when the `User` entity declares `auth_identity:`,
         # this holds its `link_via` so `ref User` create-injection resolves the domain
         # `User` row by the link (e.g. email) instead of assuming domain id == auth id
@@ -451,6 +455,12 @@ class RouteGenerator:
                     user_ref_fields=_user_ref_fields or None,
                     persona_ref_map=_persona_ref_map,
                 )
+                # #1422: register the in-process create invoker (cedar path only;
+                # non-cedar/no-auth creates have no _inprocess_create and keep the
+                # self-fetch fallback in the experience handler).
+                _inproc = getattr(handler, "_inprocess_create", None)
+                if entity_name and _inproc is not None:
+                    self.create_invokers[entity_name] = _inproc
                 self._add_route(endpoint, handler, response_model=model)
             else:
                 raise ValueError(f"No create schema for endpoint: {endpoint.name}")
