@@ -1639,7 +1639,7 @@ class DazzleBackendApp:
                 # overrides: chrome the handler's inner HTML in the app shell. deps=None
                 # ⇒ appspec from app.state + shell frame (the item-2 guarantee).
                 async def _ov_page_ctx(request: Any, current_route: str) -> Any:
-                    from dazzle.ui.runtime.page_routes import build_app_page_context
+                    from dazzle.back.runtime.page_routes import build_app_page_context
 
                     return await build_app_page_context(request, current_route=current_route)
 

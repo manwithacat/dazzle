@@ -152,7 +152,7 @@ async def _fetch_url(
     return result
 
 
-# Also imported directly by src/dazzle/ui/runtime/experience_routes.py
+# Also imported directly by src/dazzle/back/runtime/experience_routes.py
 # — update both call-sites together when changing the resolution rules.
 def _resolve_backend_url(request: Any, fallback: str) -> str:
     """Derive the backend URL for internal API calls.
@@ -1905,7 +1905,7 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     # mode: custom surface was never actually called. The early-return
     # for CUSTOM mode below dispatches unconditionally and lets the
     # renderer fetch its own data via `services`.
-    from dazzle.core.ir.surfaces import SurfaceMode
+    from dazzle.core.ir import SurfaceMode
     from dazzle.render.dispatch import dispatch_render
     from dazzle.render.fragment.errors import FragmentError
 
@@ -1972,7 +1972,7 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
 
 def _render_response(prc: _PageRequestContext) -> Response:
     """Build the final HTML response, handling HTMX fragment/drawer/full modes."""
-    from dazzle.ui.runtime.htmx import HtmxDetails
+    from dazzle.back.runtime.htmx import HtmxDetails
     from dazzle.ui.runtime.template_renderer import render_page
 
     htmx = HtmxDetails.from_request(prc.request)
@@ -2405,7 +2405,7 @@ async def _workspace_handler(
                 detail="You don't have permission to access this workspace.",
             )
 
-    from dazzle.ui.runtime.htmx import HtmxDetails
+    from dazzle.back.runtime.htmx import HtmxDetails
 
     htmx = HtmxDetails.from_request(request)
 

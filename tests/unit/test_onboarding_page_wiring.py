@@ -16,8 +16,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+from dazzle.back.runtime.page_routes import _inject_onboarding_step
 from dazzle.render.context import FieldContext, FormContext, PageContext
-from dazzle.ui.runtime.page_routes import _inject_onboarding_step
 from dazzle.ui.runtime.template_renderer import _render_typed_body
 
 # ---------------------------------------------------------------------------
@@ -279,15 +279,15 @@ def test_inject_swallows_repository_errors() -> None:
 def _capture_logs(caplog, level: str = "INFO") -> list[str]:
     """Return the messages emitted to the page_routes logger at or above
     the given level."""
-    caplog.set_level(level, logger="dazzle.ui.runtime.page_routes")
-    return [r.getMessage() for r in caplog.records if r.name == "dazzle.ui.runtime.page_routes"]
+    caplog.set_level(level, logger="dazzle.back.runtime.page_routes")
+    return [r.getMessage() for r in caplog.records if r.name == "dazzle.back.runtime.page_routes"]
 
 
 def test_inject_logs_no_repo_branch(caplog) -> None:
     """The most likely production skip path — guides declared, user
     authenticated, but `app.state.onboarding_state` is None because
     AuthSubsystem.startup didn't wire it. Was silent before #1118."""
-    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    caplog.set_level("INFO", logger="dazzle.back.runtime.page_routes")
     prc = _prc(guides=[MagicMock()], repo=None)
     _inject_onboarding_step(prc)
     msgs = _capture_logs(caplog)
@@ -297,7 +297,7 @@ def test_inject_logs_no_repo_branch(caplog) -> None:
 
 
 def test_inject_logs_not_authenticated_branch(caplog) -> None:
-    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    caplog.set_level("INFO", logger="dazzle.back.runtime.page_routes")
     prc = _prc(guides=[MagicMock()], is_authenticated=False)
     _inject_onboarding_step(prc)
     msgs = _capture_logs(caplog)
@@ -307,7 +307,7 @@ def test_inject_logs_not_authenticated_branch(caplog) -> None:
 
 
 def test_inject_logs_no_surface_name_branch(caplog) -> None:
-    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    caplog.set_level("INFO", logger="dazzle.back.runtime.page_routes")
     prc = _prc(guides=[MagicMock()], repo=MagicMock(), view_name="")
     _inject_onboarding_step(prc)
     msgs = _capture_logs(caplog)
@@ -342,7 +342,7 @@ def test_inject_logs_no_active_step_branch(caplog) -> None:
     repo = MagicMock()
     repo.get = MagicMock(return_value=None)
 
-    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    caplog.set_level("INFO", logger="dazzle.back.runtime.page_routes")
     prc = _prc(guides=[guide], repo=repo, view_name="task_list", user_roles=["role_admin"])
     _inject_onboarding_step(prc)
     msgs = _capture_logs(caplog)
@@ -374,7 +374,7 @@ def test_inject_logs_resolve_failed_branch_at_info_level(caplog) -> None:
     repo = MagicMock()
     repo.get = MagicMock(side_effect=RuntimeError("postgres down"))
 
-    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    caplog.set_level("INFO", logger="dazzle.back.runtime.page_routes")
     prc = _prc(guides=[guide], repo=repo, view_name="task_list")
     _inject_onboarding_step(prc)
     msgs = _capture_logs(caplog)
@@ -406,7 +406,7 @@ def test_inject_logs_rendered_on_happy_path(caplog) -> None:
     repo = MagicMock()
     repo.get = MagicMock(return_value=None)
 
-    caplog.set_level("INFO", logger="dazzle.ui.runtime.page_routes")
+    caplog.set_level("INFO", logger="dazzle.back.runtime.page_routes")
     prc = _prc(guides=[guide], repo=repo, user_roles=["role_admin"], view_name="task_list")
     _inject_onboarding_step(prc)
     msgs = _capture_logs(caplog)
@@ -421,9 +421,9 @@ def test_inject_logs_rendered_on_happy_path(caplog) -> None:
 # #1292 — runtime CTA suppression backstop (_suppress_inaccessible_cta)
 # ---------------------------------------------------------------------------
 
+from dazzle.back.runtime import page_routes  # noqa: E402
+from dazzle.back.runtime.page_routes import _suppress_inaccessible_cta  # noqa: E402
 from dazzle.core import ir  # noqa: E402
-from dazzle.ui.runtime import page_routes  # noqa: E402
-from dazzle.ui.runtime.page_routes import _suppress_inaccessible_cta  # noqa: E402
 
 
 def _cta_step(cta_target: str) -> ir.GuideStep:

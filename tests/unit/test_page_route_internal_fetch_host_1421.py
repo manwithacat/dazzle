@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from dazzle.ui.runtime import page_routes
+from dazzle.back.runtime import page_routes
 
 
 class _FakeResp:
@@ -108,7 +108,7 @@ def test_internal_fetch_http_error_logs_distinct_diagnostic(monkeypatch, caplog)
         raise urllib.error.HTTPError(req.full_url, 400, "Bad Host", {}, None)
 
     monkeypatch.setattr(page_routes.urllib.request, "urlopen", _raise_400)
-    with caplog.at_level(logging.WARNING, logger="dazzle.ui.runtime.page_routes"):
+    with caplog.at_level(logging.WARNING, logger="dazzle.back.runtime.page_routes"):
         # The HTTPError is re-raised by design (the caller provides the 404/empty fallback);
         # pytest.raises asserts that while keeping the gate-forbidden `except: pass` out.
         with pytest.raises(urllib.error.HTTPError):

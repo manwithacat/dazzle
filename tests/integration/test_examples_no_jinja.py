@@ -23,8 +23,8 @@ from fastapi.testclient import TestClient
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.manifest import load_manifest
 
-pytest.importorskip("dazzle.ui.runtime.page_routes")
-from dazzle.ui.runtime.page_routes import create_page_routes  # noqa: E402
+pytest.importorskip("dazzle.back.runtime.page_routes")
+from dazzle.back.runtime.page_routes import create_page_routes  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _EXAMPLES = _REPO_ROOT / "examples"

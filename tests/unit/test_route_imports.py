@@ -26,7 +26,7 @@ ROUTE_MODULES = [
     "dazzle.back.runtime.realtime_routes",
     "dazzle.back.runtime.task_routes",
     "dazzle.back.runtime.test_routes",
-    "dazzle.ui.runtime.page_routes",
+    "dazzle.back.runtime.page_routes",
 ]
 
 

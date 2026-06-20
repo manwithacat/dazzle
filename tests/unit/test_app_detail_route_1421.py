@@ -12,10 +12,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from dazzle.back.runtime.page_routes import create_page_routes
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import ModuleIR
 from dazzle.core.linker import build_appspec
-from dazzle.ui.runtime.page_routes import create_page_routes
 
 
 def _appspec(dsl: str):

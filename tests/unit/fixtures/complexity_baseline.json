@@ -1082,10 +1082,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/back/core/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
   "dazzle/back/data_products/__init__.py": {
     "functions": {},
     "mi_rank": "A"
@@ -3906,6 +3902,25 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/back/runtime/experience_routes.py": {
+    "functions": {
+      "_ExperienceDeps": 1,
+      "_experience_entry": 8,
+      "_experience_step_get": 36,
+      "_experience_step_post": 42,
+      "_get_user_email": 1,
+      "_inject_auth": 9,
+      "_load_state": 5,
+      "_make_experience_entry_handler": 1,
+      "_make_experience_step_get_handler": 1,
+      "_make_experience_step_post_handler": 1,
+      "_persist_progress": 2,
+      "_proxy_to_backend": 2,
+      "_sync_post": 4,
+      "create_experience_routes": 18
+    },
+    "mi_rank": "A"
+  },
   "dazzle/back/runtime/file_routes.py": {
     "functions": {
       "_FileDeps": 1,
@@ -4171,6 +4186,25 @@
       "_load_hook_function": 6,
       "build_registry": 2,
       "discover_hooks": 9
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/back/runtime/htmx.py": {
+    "functions": {
+      "HtmxDetails": 3,
+      "HtmxDetails.from_request": 2,
+      "HtmxDetails.wants_drawer": 2,
+      "HtmxDetails.wants_fragment": 3,
+      "HtmxDetails.wants_partial": 2,
+      "_encode_trigger": 4,
+      "_errors_to_messages": 6,
+      "_escape": 1,
+      "htmx_error_response": 3,
+      "htmx_response": 6,
+      "htmx_toast_error_response": 2,
+      "htmx_trigger_headers": 2,
+      "is_htmx_request": 1,
+      "json_or_htmx_error": 8
     },
     "mi_rank": "A"
   },
@@ -4728,6 +4762,56 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/back/runtime/page_routes.py": {
+    "functions": {
+      "_ChromeAssets": 1,
+      "_PageRequestContext": 1,
+      "_PageRouterConfig": 1,
+      "_apply_anon_nav": 1,
+      "_apply_persona_form_overrides": 20,
+      "_apply_persona_overrides": 16,
+      "_build_dispatch_ctx": 108,
+      "_build_workspace_primary_action_candidates": 9,
+      "_check_entity_cedar_access": 22,
+      "_check_surface_access": 10,
+      "_collect_request_params": 7,
+      "_dedupe_nav_items_against_groups": 7,
+      "_fetch_json": 4,
+      "_fetch_url": 3,
+      "_filter_nav_by_entity_access": 18,
+      "_handle_create_form": 3,
+      "_handle_detail": 37,
+      "_handle_edit_form": 5,
+      "_handle_table": 35,
+      "_inject_auth_context": 26,
+      "_inject_integration_actions": 10,
+      "_inject_onboarding_step": 18,
+      "_is_field_cond": 6,
+      "_make_page_handler": 1,
+      "_make_root_redirect_handler": 1,
+      "_make_workspace_handler": 1,
+      "_maybe_dispatch_inner_html": 14,
+      "_page_handler": 13,
+      "_reconcile_nav_model": 3,
+      "_reconcile_nav_route": 6,
+      "_render_response": 17,
+      "_resolve_auth_context": 3,
+      "_resolve_backend_url": 5,
+      "_resolve_chrome_assets": 4,
+      "_resolve_host_to_forward": 5,
+      "_resolve_nav_model": 5,
+      "_resolve_workspace_authored_actions": 6,
+      "_root_redirect": 8,
+      "_should_suppress_mutations": 11,
+      "_suppress_inaccessible_cta": 11,
+      "_sync_fetch": 5,
+      "_user_can_mutate": 19,
+      "_workspace_handler": 40,
+      "build_app_page_context": 12,
+      "create_page_routes": 78
+    },
+    "mi_rank": "C"
+  },
   "dazzle/back/runtime/param_store.py": {
     "functions": {
       "ParamResolver": 5,
@@ -5067,13 +5151,6 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/back/runtime/renderers/dual_path.py": {
-    "functions": {
-      "diff_summary": 4,
-      "normalise_html": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/back/runtime/renderers/fragment.py": {
     "functions": {
       "FragmentSurfaceRenderer": 2,
@@ -5095,6 +5172,13 @@
       "_field_to_primitive": 15,
       "_format_cell": 2,
       "_pick_empty_state": 6
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/back/runtime/renderers/html_normalise.py": {
+    "functions": {
+      "diff_summary": 4,
+      "normalise_html": 1
     },
     "mi_rank": "A"
   },
@@ -5297,21 +5381,12 @@
   },
   "dazzle/back/runtime/route_generator.py": {
     "functions": {
-      "HandlerConfig": 1,
       "RouteGenerator": 23,
       "RouteGenerator.__init__": 17,
       "RouteGenerator._add_route": 10,
       "RouteGenerator.generate_all_routes": 7,
       "RouteGenerator.generate_route": 76,
       "RouteGenerator.router": 1,
-      "RouteSpec": 1,
-      "_extract_result_id": 4,
-      "_htmx_current_url": 2,
-      "_htmx_parent_url": 3,
-      "_is_htmx_request": 1,
-      "_normalize_role": 1,
-      "_set_handler_annotations": 3,
-      "_wants_html": 3,
       "generate_crud_routes": 3
     },
     "mi_rank": "A"
@@ -5332,6 +5407,20 @@
       "scan_handler_for_raw_db": 3,
       "verify_emits_paths": 4,
       "verify_route_matrix_completeness": 6
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/back/runtime/route_support.py": {
+    "functions": {
+      "HandlerConfig": 1,
+      "RouteSpec": 1,
+      "_extract_result_id": 4,
+      "_htmx_current_url": 2,
+      "_htmx_parent_url": 3,
+      "_is_htmx_request": 1,
+      "_normalize_role": 1,
+      "_set_handler_annotations": 3,
+      "_wants_html": 3
     },
     "mi_rank": "A"
   },
@@ -19599,25 +19688,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/ui/runtime/experience_routes.py": {
-    "functions": {
-      "_ExperienceDeps": 1,
-      "_experience_entry": 8,
-      "_experience_step_get": 36,
-      "_experience_step_post": 42,
-      "_get_user_email": 1,
-      "_inject_auth": 9,
-      "_load_state": 5,
-      "_make_experience_entry_handler": 1,
-      "_make_experience_step_get_handler": 1,
-      "_make_experience_step_post_handler": 1,
-      "_persist_progress": 2,
-      "_proxy_to_backend": 2,
-      "_sync_post": 4,
-      "create_experience_routes": 18
-    },
-    "mi_rank": "A"
-  },
   "dazzle/ui/runtime/experience_state.py": {
     "functions": {
       "ExperienceState": 1,
@@ -19694,81 +19764,12 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/ui/runtime/htmx.py": {
-    "functions": {
-      "HtmxDetails": 3,
-      "HtmxDetails.from_request": 2,
-      "HtmxDetails.wants_drawer": 2,
-      "HtmxDetails.wants_fragment": 3,
-      "HtmxDetails.wants_partial": 2,
-      "_encode_trigger": 4,
-      "_errors_to_messages": 6,
-      "_escape": 1,
-      "htmx_error_response": 3,
-      "htmx_response": 6,
-      "htmx_toast_error_response": 2,
-      "htmx_trigger_headers": 2,
-      "is_htmx_request": 1,
-      "json_or_htmx_error": 8
-    },
-    "mi_rank": "A"
-  },
   "dazzle/ui/runtime/mock_data.py": {
     "functions": {
       "_generate_field_value": 1,
       "generate_mock_records": 9
     },
     "mi_rank": "A"
-  },
-  "dazzle/ui/runtime/page_routes.py": {
-    "functions": {
-      "_ChromeAssets": 1,
-      "_PageRequestContext": 1,
-      "_PageRouterConfig": 1,
-      "_apply_anon_nav": 1,
-      "_apply_persona_form_overrides": 20,
-      "_apply_persona_overrides": 16,
-      "_build_dispatch_ctx": 108,
-      "_build_workspace_primary_action_candidates": 9,
-      "_check_entity_cedar_access": 22,
-      "_check_surface_access": 10,
-      "_collect_request_params": 7,
-      "_dedupe_nav_items_against_groups": 7,
-      "_fetch_json": 4,
-      "_fetch_url": 3,
-      "_filter_nav_by_entity_access": 18,
-      "_handle_create_form": 3,
-      "_handle_detail": 37,
-      "_handle_edit_form": 5,
-      "_handle_table": 35,
-      "_inject_auth_context": 26,
-      "_inject_integration_actions": 10,
-      "_inject_onboarding_step": 18,
-      "_is_field_cond": 6,
-      "_make_page_handler": 1,
-      "_make_root_redirect_handler": 1,
-      "_make_workspace_handler": 1,
-      "_maybe_dispatch_inner_html": 14,
-      "_page_handler": 13,
-      "_reconcile_nav_model": 3,
-      "_reconcile_nav_route": 6,
-      "_render_response": 17,
-      "_resolve_auth_context": 3,
-      "_resolve_backend_url": 5,
-      "_resolve_chrome_assets": 4,
-      "_resolve_host_to_forward": 5,
-      "_resolve_nav_model": 5,
-      "_resolve_workspace_authored_actions": 6,
-      "_root_redirect": 8,
-      "_should_suppress_mutations": 11,
-      "_suppress_inaccessible_cta": 11,
-      "_sync_fetch": 5,
-      "_user_can_mutate": 19,
-      "_workspace_handler": 40,
-      "build_app_page_context": 12,
-      "create_page_routes": 78
-    },
-    "mi_rank": "C"
   },
   "dazzle/ui/runtime/pdf_viewer_renderer.py": {
     "functions": {

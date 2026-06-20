@@ -8,6 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from dazzle.back.runtime.experience_routes import create_experience_routes
 from dazzle.core.ir import AppSpec, DomainSpec, EntitySpec, FieldSpec, FieldType, SurfaceSpec
 from dazzle.core.ir.experiences import (
     ExperienceSpec,
@@ -20,7 +21,6 @@ from dazzle.ui.runtime.experience_persistence import (
     ExperienceProgress,
     ExperienceProgressStore,
 )
-from dazzle.ui.runtime.experience_routes import create_experience_routes
 from dazzle.ui.runtime.experience_state import (
     ExperienceState,
     cookie_name,
@@ -245,7 +245,7 @@ class TestResumeFromFileStore:
         assert loaded is not None
         assert loaded.current_step == "enter_details"
 
-    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.back.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_transition_saves_progress(
         self, mock_proxy: AsyncMock, client: TestClient, project_root: Path
     ) -> None:

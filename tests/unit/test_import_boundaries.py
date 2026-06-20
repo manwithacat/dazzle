@@ -7,9 +7,14 @@ ADR-0038:
 1. ``dazzle.back/`` must not import from the modules that workstreams
    A/B/D explicitly migrated to ``dazzle.render``:
 
-   - ``dazzle.ui.runtime.template_renderer`` (filter helpers — #1090)
    - ``dazzle.ui.runtime.template_context`` (PageContext + friends — #1091)
    - ``dazzle.ui.runtime.surface_access`` (pure access types — #1091)
+
+   (``template_renderer`` came off this list in the 2026-06-20 smells round: its
+   filter helpers moved to ``render.filters`` in #1090, but ``render_page`` — the
+   page-orchestration entry point — legitimately stays there, and the server-runtime
+   page handlers that moved ui→back this round call it as the normal http→page
+   call-down. The authoritative ``ui ↛ back`` import-linter contract still holds.)
    - ``dazzle.back.runtime.renderers.page_builder`` (dispatch — #1094)
    - ``dazzle.back.runtime.renderers.dispatch`` (dispatch — #1094)
    - ``dazzle.back.runtime.access_evaluator`` (now ``render.access_evaluator`` — #1094)
@@ -66,7 +71,7 @@ _UI_TO_BACK_EXEMPT: frozenset[str] = frozenset()
 # during #1090, #1091, #1094. New back/ code referencing these paths
 # is a regression and must move to the dazzle.render replacement.
 _BACK_BANNED_FROM_UI_MIGRATED = re.compile(
-    r"^\s*from dazzle\.ui\.runtime\.(template_renderer|template_context|surface_access)\b"
+    r"^\s*from dazzle\.ui\.runtime\.(template_context|surface_access)\b"
 )
 _BACK_BANNED_FROM_BACK_RENDERERS = re.compile(
     r"^\s*from dazzle\.back\.runtime\."

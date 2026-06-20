@@ -43,7 +43,7 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/render/dispatch.py",  # was back/runtime/renderers/page_builder.py until #1094
     # `shell.py` and `render_in_app_shell` were retired entirely in v0.67.84
     # (closes #1040); the path is gone from disk.
-    "src/dazzle/ui/runtime/page_routes.py",
+    "src/dazzle/back/runtime/page_routes.py",
     "src/dazzle/ui/runtime/workspace_renderer.py",
     # v0.67.58 — audit-history detail-page render inlined via html.escape.
     "src/dazzle/back/runtime/audit_region.py",
@@ -54,7 +54,7 @@ _TYPED_ONLY_MODULES = (
     # v0.67.61 — htmx_error_response inline-rendered (form_errors.html
     # template stays — Jinja `{% include %}` consumers in components/
     # form.html and experience/_content.html still use it).
-    "src/dazzle/ui/runtime/htmx.py",
+    "src/dazzle/back/runtime/htmx.py",
     # v0.67.62 — htmx-fragment endpoints inline-render via html.escape.
     "src/dazzle/back/runtime/fragment_routes.py",
     "src/dazzle/back/runtime/fts_routes.py",
@@ -112,7 +112,7 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/back/runtime/workspace_user.py",
     # v0.67.71 — experience-shell rendering owned by
     # `experience_renderer.render_experience_inner_html` (inline Python).
-    "src/dazzle/ui/runtime/experience_routes.py",
+    "src/dazzle/back/runtime/experience_routes.py",
     # v0.67.74 — form_field/form_stepper/search_select inlined.
     "src/dazzle/ui/runtime/form_renderer.py",
     # v0.67.75 — detail_view + related-* fragments inlined.

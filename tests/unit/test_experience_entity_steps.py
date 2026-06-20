@@ -7,6 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from dazzle.back.runtime.experience_routes import create_experience_routes
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import AppSpec, DomainSpec, EntitySpec, FieldSpec, FieldType, SurfaceSpec
 from dazzle.core.ir.experiences import (
@@ -19,7 +20,6 @@ from dazzle.core.ir.experiences import (
 )
 from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.ui.converters.experience_compiler import compile_experience_context
-from dazzle.ui.runtime.experience_routes import create_experience_routes
 from dazzle.ui.runtime.experience_state import (
     ExperienceState,
     cookie_name,
@@ -791,7 +791,7 @@ def entity_step_client(entity_step_app: FastAPI) -> TestClient:
 class TestEntityStepRoutes:
     """Verify entity_ref steps work through the route handler."""
 
-    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.back.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_entity_step_creates_entity(
         self, mock_proxy: AsyncMock, entity_step_client: TestClient
     ) -> None:
@@ -812,7 +812,7 @@ class TestEntityStepRoutes:
         # entity_ref should be "Company"
         assert mock_proxy.call_args[0][1] == "Company"
 
-    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.back.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_entity_id_stored_in_state(
         self, mock_proxy: AsyncMock, entity_step_client: TestClient
     ) -> None:
@@ -835,7 +835,7 @@ class TestEntityStepRoutes:
         assert new_state is not None
         assert new_state.data.get("company") == {"id": "comp-new-1", "name": "Acme"}
 
-    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.back.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_id_forwarding_across_steps(
         self, mock_proxy: AsyncMock, entity_step_client: TestClient
     ) -> None:
@@ -855,7 +855,7 @@ class TestEntityStepRoutes:
         # The form should have company_id prefilled with comp-123
         assert "comp-123" in resp.text
 
-    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.back.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_validation_failure_stays_on_step(
         self, mock_proxy: AsyncMock, entity_step_client: TestClient
     ) -> None:
@@ -926,7 +926,7 @@ class TestExistingSurfaceStepsUnchanged:
     def surface_client(self, surface_app: FastAPI) -> TestClient:
         return TestClient(surface_app, follow_redirects=False)
 
-    @patch("dazzle.ui.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
+    @patch("dazzle.back.runtime.experience_routes._proxy_to_backend", new_callable=AsyncMock)
     def test_surface_step_creates_entity(
         self, mock_proxy: AsyncMock, surface_client: TestClient
     ) -> None:

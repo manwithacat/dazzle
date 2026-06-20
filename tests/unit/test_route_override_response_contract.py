@@ -73,11 +73,11 @@ from typing import Any  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 from starlette.responses import HTMLResponse, JSONResponse  # noqa: E402
 
+from dazzle.back.runtime.page_routes import build_app_page_context  # noqa: E402
 from dazzle.back.runtime.route_overrides import (  # noqa: E402
     _wrap_with_response_contract,
     build_override_router,
 )
-from dazzle.ui.runtime.page_routes import build_app_page_context  # noqa: E402
 
 
 def _fake_request(*, hx: bool = False) -> Any:

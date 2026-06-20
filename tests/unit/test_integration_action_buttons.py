@@ -1,5 +1,6 @@
 """Tests for integration manual trigger buttons on entity detail pages (#338)."""
 
+from dazzle.back.runtime.page_routes import _inject_integration_actions
 from dazzle.core.ir import AppSpec, DomainSpec, EntitySpec, FieldSpec, FieldType
 from dazzle.core.ir.integrations import (
     IntegrationMapping,
@@ -13,7 +14,6 @@ from dazzle.render.context import (
     IntegrationActionContext,
     PageContext,
 )
-from dazzle.ui.runtime.page_routes import _inject_integration_actions
 
 
 def _make_appspec_with_manual_trigger(

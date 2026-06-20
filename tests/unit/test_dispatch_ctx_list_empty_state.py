@@ -11,6 +11,7 @@ default."""
 
 from __future__ import annotations
 
+from dazzle.back.runtime.page_routes import _build_dispatch_ctx
 from dazzle.back.runtime.renderers.fragment_adapter import (
     FragmentSurfaceAdapter,
     _pick_empty_state,
@@ -18,7 +19,6 @@ from dazzle.back.runtime.renderers.fragment_adapter import (
 from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.render.context import ColumnContext, TableContext
 from dazzle.render.fragment import FragmentRenderer
-from dazzle.ui.runtime.page_routes import _build_dispatch_ctx
 
 
 class _Surface:

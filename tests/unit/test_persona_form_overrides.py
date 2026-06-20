@@ -174,7 +174,7 @@ class TestApplyPersonaFormOverrides:
         )
 
     def test_no_roles_is_noop(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(persona_hide={"customer": ["assigned_to"]})
         aborted = _apply_persona_form_overrides(form, [])
@@ -182,7 +182,7 @@ class TestApplyPersonaFormOverrides:
         assert {f.name for f in form.fields} == {"title", "description", "assigned_to"}
 
     def test_hide_removes_matching_fields(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(persona_hide={"customer": ["assigned_to"]})
         aborted = _apply_persona_form_overrides(form, ["customer"])
@@ -191,7 +191,7 @@ class TestApplyPersonaFormOverrides:
 
     def test_hide_also_strips_initial_values(self) -> None:
         """Hidden fields must not leak through pre-filled initial values."""
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(
             persona_hide={"customer": ["assigned_to"]},
@@ -202,7 +202,7 @@ class TestApplyPersonaFormOverrides:
         assert form.initial_values == {"title": "x"}
 
     def test_hide_also_strips_sections(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(
             persona_hide={"customer": ["assigned_to"]},
@@ -213,14 +213,14 @@ class TestApplyPersonaFormOverrides:
             assert "assigned_to" not in {f.name for f in section.fields}
 
     def test_role_prefix_stripped(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(persona_hide={"customer": ["assigned_to"]})
         _apply_persona_form_overrides(form, ["role_customer"])
         assert "assigned_to" not in {f.name for f in form.fields}
 
     def test_non_matching_role_is_noop(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(persona_hide={"customer": ["assigned_to"]})
         _apply_persona_form_overrides(form, ["admin"])
@@ -228,7 +228,7 @@ class TestApplyPersonaFormOverrides:
         assert {f.name for f in form.fields} == {"title", "description", "assigned_to"}
 
     def test_read_only_returns_abort_signal(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(persona_read_only={"viewer"})
         aborted = _apply_persona_form_overrides(form, ["viewer"])
@@ -238,7 +238,7 @@ class TestApplyPersonaFormOverrides:
 
     def test_read_only_takes_precedence_over_hide(self) -> None:
         """A persona that is both hide-listed and read-only aborts first."""
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(
             persona_hide={"viewer": ["assigned_to"]},
@@ -248,7 +248,7 @@ class TestApplyPersonaFormOverrides:
         assert aborted is True
 
     def test_first_matching_role_wins(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(
             persona_hide={
@@ -263,7 +263,7 @@ class TestApplyPersonaFormOverrides:
         assert "description" in field_names
 
     def test_empty_hide_list_is_noop(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_form_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_form_overrides
 
         form = self._make_form(persona_hide={"customer": []})
         _apply_persona_form_overrides(form, ["customer"])

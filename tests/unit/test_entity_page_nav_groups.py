@@ -176,7 +176,7 @@ class TestDedupeNavItemsAgainstGroups:
     def test_dedupe_drops_overlapping_route(self) -> None:
         from types import SimpleNamespace
 
-        from dazzle.ui.runtime.page_routes import _dedupe_nav_items_against_groups
+        from dazzle.back.runtime.page_routes import _dedupe_nav_items_against_groups
 
         nav_items = [
             SimpleNamespace(route="/app/workspaces/teacher", label="Teacher"),
@@ -198,7 +198,7 @@ class TestDedupeNavItemsAgainstGroups:
     def test_dedupe_no_overlap_returns_unchanged(self) -> None:
         from types import SimpleNamespace
 
-        from dazzle.ui.runtime.page_routes import _dedupe_nav_items_against_groups
+        from dazzle.back.runtime.page_routes import _dedupe_nav_items_against_groups
 
         nav_items = [
             SimpleNamespace(route="/app/workspaces/teacher", label="Teacher"),
@@ -218,7 +218,7 @@ class TestDedupeNavItemsAgainstGroups:
     def test_dedupe_empty_groups_returns_unchanged(self) -> None:
         from types import SimpleNamespace
 
-        from dazzle.ui.runtime.page_routes import _dedupe_nav_items_against_groups
+        from dazzle.back.runtime.page_routes import _dedupe_nav_items_against_groups
 
         nav_items = [SimpleNamespace(route="/app/x", label="X")]
         result = _dedupe_nav_items_against_groups(nav_items, [])

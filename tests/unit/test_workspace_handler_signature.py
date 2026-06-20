@@ -28,12 +28,12 @@ from pathlib import Path
 
 from fastapi import Request
 
-from dazzle.ui.runtime.experience_routes import (
+from dazzle.back.runtime.experience_routes import (
     _make_experience_entry_handler,
     _make_experience_step_get_handler,
     _make_experience_step_post_handler,
 )
-from dazzle.ui.runtime.page_routes import (
+from dazzle.back.runtime.page_routes import (
     _make_page_handler,
     _make_root_redirect_handler,
     _make_workspace_handler,

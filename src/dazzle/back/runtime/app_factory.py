@@ -900,7 +900,7 @@ def assemble_post_build_routes(
     # ---- 3. App page routes (/app/*) ----
     try:
         from dazzle.back.converters.entity_converter import convert_entity
-        from dazzle.ui.runtime.page_routes import create_page_routes
+        from dazzle.back.runtime.page_routes import create_page_routes
 
         # evaluate_permission / _inject_display_names used to be injected
         # into the ui page_routes module via a callable-injection shim
@@ -938,7 +938,7 @@ def assemble_post_build_routes(
         # ---- 4. Experience routes (/app/experiences/*) ----
         if appspec.experiences:
             try:
-                from dazzle.ui.runtime.experience_routes import create_experience_routes
+                from dazzle.back.runtime.experience_routes import create_experience_routes
 
                 experience_router = create_experience_routes(
                     appspec,

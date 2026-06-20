@@ -7,7 +7,7 @@ import asyncio
 from types import SimpleNamespace
 from typing import Any
 
-from dazzle.ui.runtime.page_routes import (
+from dazzle.back.runtime.page_routes import (
     _ChromeAssets,
     _resolve_chrome_assets,
     build_app_page_context,

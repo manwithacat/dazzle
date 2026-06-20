@@ -19,6 +19,7 @@ import pytest
 
 pytest.importorskip("fastapi")
 
+from dazzle.back.runtime.page_routes import create_page_routes  # noqa: E402
 from dazzle.core.ir import (  # noqa: E402
     AppSpec,
     DomainSpec,
@@ -33,7 +34,6 @@ from dazzle.core.ir import (  # noqa: E402
     SurfaceSpec,
     WorkspaceSpec,
 )
-from dazzle.ui.runtime.page_routes import create_page_routes  # noqa: E402
 
 
 def _appspec_with_workspace_and_entity() -> AppSpec:

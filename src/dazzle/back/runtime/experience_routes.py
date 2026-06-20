@@ -391,7 +391,7 @@ async def _experience_step_get(
     # Build template variables
     auth_ctx = _inject_auth(deps, request)
 
-    from dazzle.ui.runtime.htmx import HtmxDetails
+    from dazzle.back.runtime.htmx import HtmxDetails
 
     htmx = HtmxDetails.from_request(request)
     current_route = f"{deps.app_prefix}/experiences/{name}/{step}"
@@ -484,12 +484,12 @@ async def _experience_step_post(
     deps: _ExperienceDeps, request: Request, name: str, step: str
 ) -> Response:
     """POST /experiences/{name}/{step}?event=X — process transition."""
+    from dazzle.back.runtime.page_routes import _resolve_backend_url
     from dazzle.ui.runtime.experience_state import (
         cookie_name,
         create_initial_state,
         sign_state,
     )
-    from dazzle.ui.runtime.page_routes import _resolve_backend_url
 
     experience = deps.experiences_by_name.get(name)
     if not experience:
@@ -556,7 +556,7 @@ async def _experience_step_post(
 
             if not success:
                 # Proxy failed — re-render the step with error
-                from dazzle.ui.runtime.htmx import HtmxDetails, htmx_error_response
+                from dazzle.back.runtime.htmx import HtmxDetails, htmx_error_response
 
                 htmx = HtmxDetails.from_request(request)
                 if htmx.is_htmx:
@@ -606,7 +606,7 @@ async def _experience_step_post(
         if step not in completed:
             completed.append(step)
 
-        from dazzle.ui.runtime.htmx import HtmxDetails
+        from dazzle.back.runtime.htmx import HtmxDetails
 
         htmx = HtmxDetails.from_request(request)
         redirect_url = f"{deps.app_prefix}/"
@@ -642,7 +642,7 @@ async def _experience_step_post(
 
     redirect_url = f"{deps.app_prefix}/experiences/{name}/{next_step}"
 
-    from dazzle.ui.runtime.htmx import HtmxDetails
+    from dazzle.back.runtime.htmx import HtmxDetails
 
     htmx = HtmxDetails.from_request(request)
 

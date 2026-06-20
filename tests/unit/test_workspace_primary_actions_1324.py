@@ -8,11 +8,11 @@ route map the template compiler uses.
 
 from __future__ import annotations
 
-from dazzle.core import ir
-from dazzle.ui.runtime.page_routes import (
+from dazzle.back.runtime.page_routes import (
     _build_workspace_primary_action_candidates,
     _resolve_workspace_authored_actions,
 )
+from dazzle.core import ir
 
 
 def _surface(name: str, mode: ir.SurfaceMode, entity: str) -> ir.SurfaceSpec:

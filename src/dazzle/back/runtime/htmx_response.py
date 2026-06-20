@@ -1,12 +1,12 @@
 """
 HTMX-aware response utilities — re-export shim.
 
-The canonical implementation lives in ``dazzle.ui.runtime.htmx``.
+The canonical implementation lives in ``dazzle.back.runtime.htmx``.
 This module re-exports all public names so existing ``dazzle.back``
 imports continue to work without modification.
 """
 
-from dazzle.ui.runtime.htmx import (
+from dazzle.back.runtime.htmx import (
     HtmxDetails,
     htmx_error_response,
     htmx_response,

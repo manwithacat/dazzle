@@ -1,6 +1,6 @@
 """Surface access control types — pure, no FastAPI dependency.
 
-Used by both `ui/runtime/page_routes.py` (for page-route access checks)
+Used by both `back/runtime/page_routes.py` (for page-route access checks)
 and `back/runtime/surface_access.py` (which adds FastAPI middleware on
 top). Moved to `dazzle.render` in #1091 (parent #1086) to break the
 back↔ui import cycle.

@@ -273,7 +273,7 @@ class TestApplyPersonaOverrides:
         )
 
     def test_no_roles_is_noop(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table(persona_hide={"member": ["assigned_to"]})
         _apply_persona_overrides(table, [])
@@ -282,14 +282,14 @@ class TestApplyPersonaOverrides:
         assert table.empty_message == "No items found."
 
     def test_no_overrides_is_noop(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table()
         _apply_persona_overrides(table, ["member"])
         assert all(not c.hidden for c in table.columns)
 
     def test_hide_applies_for_matching_role(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table(persona_hide={"member": ["assigned_to", "priority"]})
         _apply_persona_overrides(table, ["member"])
@@ -297,7 +297,7 @@ class TestApplyPersonaOverrides:
         assert sorted(hidden_keys) == ["assigned_to", "priority"]
 
     def test_hide_does_not_touch_non_matching_columns(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table(persona_hide={"member": ["assigned_to"]})
         _apply_persona_overrides(table, ["member"])
@@ -306,14 +306,14 @@ class TestApplyPersonaOverrides:
 
     def test_role_prefix_stripped(self) -> None:
         """User roles arrive with ``role_`` prefix from the auth layer."""
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table(persona_hide={"member": ["assigned_to"]})
         _apply_persona_overrides(table, ["role_member"])
         assert next(c for c in table.columns if c.key == "assigned_to").hidden is True
 
     def test_non_matching_role_is_noop(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table(persona_hide={"member": ["assigned_to"]})
         _apply_persona_overrides(table, ["admin"])
@@ -321,7 +321,7 @@ class TestApplyPersonaOverrides:
 
     def test_first_matching_role_wins(self) -> None:
         """Primary persona (first role) wins when multiple match."""
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table(
             persona_hide={
@@ -337,7 +337,7 @@ class TestApplyPersonaOverrides:
 
     def test_empty_message_override_applies(self) -> None:
         """Cycle 240 regression — the pilot still works after refactor."""
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table(persona_empty={"member": "You have no assigned tasks"})
         _apply_persona_overrides(table, ["member"])
@@ -345,7 +345,7 @@ class TestApplyPersonaOverrides:
 
     def test_hide_and_empty_apply_together(self) -> None:
         """Both overrides from a single variant apply atomically."""
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table(
             persona_empty={"member": "You have no assigned tasks"},
@@ -357,7 +357,7 @@ class TestApplyPersonaOverrides:
 
     def test_empty_hide_list_not_processed(self) -> None:
         """Empty list in the dict doesn't accidentally hide all columns."""
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_table(persona_hide={"member": []})
         _apply_persona_overrides(table, ["member"])
@@ -386,7 +386,7 @@ class TestApplyPersonaOverrides:
         )
 
     def test_read_only_suppresses_mutations(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_mutable_table(persona_read_only={"member"})
         _apply_persona_overrides(table, ["member"])
@@ -395,7 +395,7 @@ class TestApplyPersonaOverrides:
         assert table.inline_editable == []
 
     def test_read_only_non_matching_persona_preserves_mutations(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_mutable_table(persona_read_only={"member"})
         _apply_persona_overrides(table, ["admin"])
@@ -405,8 +405,8 @@ class TestApplyPersonaOverrides:
 
     def test_read_only_stacks_with_hide(self) -> None:
         """A persona can be both read-only AND have hide overrides."""
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
         from dazzle.render.context import ColumnContext, TableContext
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
 
         table = TableContext(
             entity_name="Task",
@@ -431,14 +431,14 @@ class TestApplyPersonaOverrides:
         assert table.inline_editable == []
 
     def test_read_only_respects_role_prefix(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_mutable_table(persona_read_only={"member"})
         _apply_persona_overrides(table, ["role_member"])
         assert table.create_url is None
 
     def test_read_only_empty_set_is_noop(self) -> None:
-        from dazzle.ui.runtime.page_routes import _apply_persona_overrides
+        from dazzle.back.runtime.page_routes import _apply_persona_overrides
 
         table = self._make_mutable_table(persona_read_only=set())
         _apply_persona_overrides(table, ["member"])

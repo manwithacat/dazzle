@@ -20,8 +20,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from dazzle.back.runtime.page_routes import _inject_auth_context, _resolve_auth_context
 from dazzle.render.context import PageContext
-from dazzle.ui.runtime.page_routes import _inject_auth_context, _resolve_auth_context
 
 # ---------------------------------------------------------------------------
 # _resolve_auth_context — pure helper

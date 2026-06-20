@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from dazzle.ui.runtime.htmx import json_or_htmx_error
+from dazzle.back.runtime.htmx import json_or_htmx_error
 
 
 def _request(method: str, htmx: bool = True, trigger_name: str | None = "title") -> SimpleNamespace:

@@ -576,7 +576,7 @@ class TestHtmxParentUrl:
 # 5. Internal fetch cookie forwarding & backend URL resolution
 # ===================================================================
 
-from dazzle.ui.runtime.page_routes import (  # noqa: E402
+from dazzle.back.runtime.page_routes import (  # noqa: E402
     _resolve_backend_url,
     _sync_fetch,
 )
@@ -745,7 +745,7 @@ class TestSyncFetchCookies:
 # 6. Integration: _fetch_json across deployment topologies
 # ===================================================================
 
-from dazzle.ui.runtime.page_routes import _fetch_json  # noqa: E402
+from dazzle.back.runtime.page_routes import _fetch_json  # noqa: E402
 
 
 class TestFetchJsonTopologies:

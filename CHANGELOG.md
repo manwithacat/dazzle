@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.34] - 2026-06-20
+
+### Changed
+- **Relocated server-runtime page handlers ui→back — structural-comprehensibility phase 3 of 4** (smells round — honest layers). The ui-inventory found that the two largest files in `ui/` were not UI at all: `page_routes.py` (3052 LOC) and `experience_routes.py` (789 LOC) are FastAPI `APIRouter` factories — server-runtime that `back/` *imported upward into*, an inverted dependency that was pure pre-SSR accident (the #1055 merge commit itself noted `page_routes.py` "sounded like UI, was backend"). Moved `page_routes`, `experience_routes`, and `htmx` (the `HtmxDetails`/HX-response helpers `back/runtime/htmx_response` already re-exported) from `ui/runtime/` → `back/runtime/` (48 files repointed). `page_routes` now routes its IR imports through the `core.ir` facade (back's import rule) and calls `template_renderer.render_page` as the legitimate http→page call-down (the hand-rolled `test_import_boundaries` rule was narrowed: `render_page` is page-orchestration that *stayed* in ui — only `template_context`/`surface_access` genuinely migrated to `render/`). `theme.py` was **deliberately not moved** — it's mixed (its middleware is server-runtime, but `get_sidebar_state` is consumed by `ui`-resident `template_renderer`); a wholesale move would create a fresh `ui↛back` violation, so it needs a split, not a relocation (tracked follow-up). Verified: 3 import contracts KEPT, full non-e2e suite + `dazzle serve` boot green. `ui/` shrinks toward its real role (page-orchestration rendering + assets).
+
+  ### Agent Guidance
+  - **Server-runtime page handlers live in `back/runtime/`, not `ui/`.** `page_routes`/`experience_routes`/`htmx` import from `dazzle.back.runtime.*`. Back route-handlers legitimately call *down* into the page layer (`ui.runtime.template_renderer.render_page`) — that's the http→page direction; only `ui ↛ back` is forbidden.
+
 ## [0.83.33] - 2026-06-20
 
 ### Changed

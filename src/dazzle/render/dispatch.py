@@ -4,7 +4,7 @@ Two entry points:
 
 - ``dispatch_render(surface, ctx, services)`` — looks up the registered
   renderer by ``surface.render`` and invokes its adapter to produce the
-  inner-HTML for one surface. Used by ``ui.runtime.page_routes`` when
+  inner-HTML for one surface. Used by ``back.runtime.page_routes`` when
   building a workspace page.
 
 - ``dispatch_render_page(ctx, inner_html, ...)`` — wraps an already-
