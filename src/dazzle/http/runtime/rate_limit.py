@@ -47,16 +47,17 @@ def make_rate_limit_key(trusted_proxies: int) -> Callable[..., str]:
 
     Two behaviours the default ``slowapi.util.get_remote_address`` lacks:
 
-    * **Exempt the framework's internal loopback self-fetch.** The SSR page
-      handler fetches entity data over an internal HTTP call to
+    * **Exempt the framework's internal loopback self-fetch.** Since #1422 the
+      page READ paths are in-process and no longer self-fetch; the only remaining
+      internal self-fetch is the experience-form POST *fallback* (entities without
+      an in-process create invoker), an internal HTTP call to
       ``http://127.0.0.1:{PORT}`` (Heroku/Railway single-dyno). That request
       arrives from a loopback address and carries **no** ``X-Forwarded-For``
-      (``_sync_fetch`` sends only a Cookie). Without this, every page render's
-      self-fetch for all users shares one bucket keyed on ``127.0.0.1`` →
-      saturates → loopback 429 → entity detail 404 / list empty. We give such
-      requests a unique-per-request key so they never accumulate toward a
-      limit. External traffic cannot forge a loopback origin (it arrives via
-      the proxy with a real client IP + XFF), so this opens no abuse vector.
+      (``_sync_post`` sends only a Cookie). Without this, those self-fetches for
+      all users share one bucket keyed on ``127.0.0.1`` → saturate → loopback 429.
+      We give such requests a unique-per-request key so they never accumulate
+      toward a limit. External traffic cannot forge a loopback origin (it arrives
+      via the proxy with a real client IP + XFF), so this opens no abuse vector.
     * **Honor ``X-Forwarded-For`` behind trusted proxies.** With
       ``trusted_proxies > 0``, the real client IP is taken ``trusted_proxies``
       hops from the right of XFF (the entry the outermost trusted proxy added)

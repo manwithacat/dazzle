@@ -17,9 +17,6 @@ import inspect
 import json
 import logging
 import os
-import urllib.error
-import urllib.parse
-import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -97,61 +94,8 @@ async def _resolve_auth_context(get_auth_context: Callable[..., Any] | None, req
     return result
 
 
-def _sync_fetch(
-    url: str,
-    cookies: dict[str, str] | None = None,
-    host: str | None = None,
-    timeout: int = 5,
-) -> bytes:
-    """Synchronous HTTP GET — runs in a thread to avoid blocking the event loop."""
-    parsed = urllib.parse.urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        raise ValueError(f"Unsupported URL scheme: {parsed.scheme!r}")
-    req = urllib.request.Request(url)
-    if cookies:
-        req.add_header("Cookie", "; ".join(f"{k}={v}" for k, v in cookies.items()))
-    # #1421: this is a server-side self-call to the app's own REST API. The backend
-    # URL is often loopback (`127.0.0.1:$PORT` on Heroku/Railway — see
-    # `_resolve_backend_url`), which drops the tenant subdomain. Forward the original
-    # request's Host so `TenantResolutionMiddleware` re-resolves the SAME tenant on the
-    # internal hop instead of rejecting loopback as "Bad Host" (→ the detail page 404).
-    if host:
-        req.add_header("Host", host)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosemgrep
-        data: bytes = resp.read()
-        return data
-
-
-async def _fetch_url(
-    url: str, cookies: dict[str, str] | None = None, host: str | None = None
-) -> dict[str, Any]:
-    """Async-safe HTTP GET that returns parsed JSON.
-
-    Uses asyncio.to_thread so the blocking urllib call doesn't stall
-    the event loop — critical when the backend runs in the same process.
-    ``host`` forwards the original request's Host on this self-call (#1421).
-    """
-    try:
-        raw = await asyncio.to_thread(_sync_fetch, url, cookies, host)
-    except urllib.error.HTTPError as exc:
-        # #1422: this is a server-side self-call to the app's own REST API. Surface the
-        # upstream status DISTINCTLY — the callers below collapse the failure into a 404 /
-        # empty table, so without this a tenant/Host misroute on the internal hop reads as
-        # a generic "Failed to load". A 400/404 here under host tenancy usually means the
-        # internal hop lost the tenant Host (see #1421), not a genuinely missing row.
-        logger.warning(
-            "Internal page->REST self-fetch to %s returned HTTP %s%s — the page will "
-            "render not-found/empty. Under host tenancy a 400/404 here usually means the "
-            "internal hop lost the tenant Host (#1421/#1422), not a missing record.",
-            url,
-            exc.code,
-            f" (forwarded Host={host})" if host else " (no Host forwarded)",
-        )
-        raise
-    result: dict[str, Any] = json.loads(raw)
-    return result
-
-
+# Resolves the backend URL for the experience-form POST's self-fetch fallback
+# (the page READ self-fetch was removed in #1422 — reads are in-process now).
 # Also imported directly by src/dazzle/http/runtime/experience_routes.py
 # — update both call-sites together when changing the resolution rules.
 def _resolve_backend_url(request: Any, fallback: str) -> str:
@@ -182,58 +126,6 @@ def _resolve_backend_url(request: Any, fallback: str) -> str:
     except Exception:
         logger.warning("Failed to extract base_url from request", exc_info=True)
     return fallback
-
-
-_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
-
-
-def _resolve_host_to_forward(effective_backend_url: str, original_host: str | None) -> str | None:
-    """The Host to forward on an internal self-fetch, or None (#1421).
-
-    Forward the original request's Host **only when the backend target is loopback**
-    (the Heroku/Railway `127.0.0.1:$PORT` shape — see `_resolve_backend_url`), so the
-    tenant re-resolves on the internal hop. For a `DAZZLE_BACKEND_URL` split-service
-    deployment the backend is an *external* host; overriding its `Host` would break that
-    backend's virtual-host routing — so don't. The same-origin `base_url` branch already
-    carries the correct host, so no forward is needed there either.
-    """
-    if original_host is None:
-        return None
-    try:
-        netloc = urllib.parse.urlparse(effective_backend_url).hostname or ""
-    except ValueError:
-        # Malformed backend URL — fail safe (don't forward), but surface it.
-        logger.debug("Could not parse backend URL %r for host-forward gate", effective_backend_url)
-        return None
-    return original_host if netloc in _LOOPBACK_HOSTS else None
-
-
-async def _fetch_json(
-    backend_url: str,
-    api_pattern: str | None,
-    path_id: Any,
-    cookies: dict[str, str] | None = None,
-    host: str | None = None,
-) -> dict[str, Any]:
-    """Fetch a single entity record from the backend API.
-
-    Args:
-        backend_url: Base URL of the backend (e.g. "http://127.0.0.1:8000").
-        api_pattern: URL pattern with ``{id}`` placeholder (e.g. "/contacts/{id}").
-        path_id: The entity ID to substitute.
-        cookies: Optional cookies to forward (e.g. session cookie for auth).
-
-    Returns:
-        Parsed JSON dict, or a fallback dict with ``error`` key on failure.
-    """
-    if not api_pattern or "{id}" not in api_pattern:
-        return {"id": str(path_id), "error": "No API pattern"}
-    url = f"{backend_url}{api_pattern.replace('{id}', str(path_id))}"
-    try:
-        return await _fetch_url(url, cookies, host)
-    except Exception:
-        logger.warning("Failed to fetch entity data from %s", url, exc_info=True)
-        return {"id": str(path_id), "error": "Failed to load"}
 
 
 def _inject_integration_actions(appspec: ir.AppSpec, page_contexts: dict[str, Any]) -> None:
@@ -657,11 +549,7 @@ class _PageRequestContext:
     request: Any  # FastAPI Request
     auth_ctx: Any  # AuthContext | None
     surface_name: str | None
-    effective_backend_url: str
     cookies: dict[str, str] | None
-    # #1421: original request Host, forwarded on internal self-fetches so the tenant
-    # re-resolves on the loopback hop. None when the request carried no Host header.
-    host: str | None
     path_id: Any  # str | None
     ctx_overrides: dict[str, Any] = field(default_factory=dict)
 
@@ -2227,14 +2115,8 @@ async def _page_handler(
     ctx.current_route = route_path
 
     surface_name = view_name or getattr(ctx, "view_name", None)
-    effective_backend_url = _resolve_backend_url(request, deps.backend_url)
     cookies = dict(request.cookies) if request.cookies else None
     path_id = request.path_params.get("id")
-    # #1421: forward the original Host on internal self-fetches so a loopback backend
-    # URL (Heroku/Railway `127.0.0.1:$PORT`) still re-resolves the tenant — but ONLY for
-    # loopback targets (not an external DAZZLE_BACKEND_URL, whose vhost routing this would
-    # break; the review caught that regression).
-    host = _resolve_host_to_forward(effective_backend_url, request.headers.get("host"))
 
     prc = _PageRequestContext(
         deps=deps,
@@ -2242,9 +2124,7 @@ async def _page_handler(
         request=request,
         auth_ctx=None,
         surface_name=surface_name,
-        effective_backend_url=effective_backend_url,
         cookies=cookies,
-        host=host,
         path_id=path_id,
     )
 

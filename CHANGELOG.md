@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.50] - 2026-06-20
+
+### Removed
+- **Deleted the dead page-READ self-fetch machinery** (#1422 option b, plan phase 5). Now that every page read (detail, edit, list, related-tabs) is in-process, the loopback HTTP machinery they used is gone: `_sync_fetch`, `_fetch_url`, `_fetch_json`, `_resolve_host_to_forward` (the #1421 `Host`-forward helper), the `_LOOPBACK_HOSTS` set, and the `effective_backend_url`/`host` fields of `_PageRequestContext` (+ their per-request computation). The `#1421` loopback/tenant-`Host`-loss class is now **structurally impossible** on the read path — there is no self-fetch to lose a `Host` on. Deleted `tests/unit/test_page_route_internal_fetch_host_1421.py` and the `_sync_fetch`/`_fetch_json` cases in `test_url_consistency.py` (the `_resolve_backend_url` cases remain).
+- **Retained (deliberately):** `_resolve_backend_url`, `_sync_post`/`_proxy_to_backend`, and `DAZZLE_BACKEND_URL` — the experience-form POST keeps the HTTP proxy as a **fallback for non-cedar / no-auth entities** (no in-process create invoker). Fully removing these awaits the non-cedar create path migrating in-process (a small follow-on; non-cedar entities have no scope, so the `#1421` tenant risk is largely moot for them). The rate-limit loopback exemption (`rate_limit.py`) stays for that fallback path, with its comment updated to reflect that reads no longer self-fetch.
+
+
 ## [0.83.49] - 2026-06-20
 
 ### Changed
