@@ -18,7 +18,7 @@ Data flow::
 
 Cache layer (optional, requires ``redis`` package and ``REDIS_URL``)::
 
-    Uses :class:`~dazzle_back.runtime.api_cache.ApiResponseCache` for
+    Uses :class:`~dazzle.back.runtime.api_cache.ApiResponseCache` for
     async Redis caching with scoped keys and dedup locking.
 """
 
@@ -110,7 +110,7 @@ class MappingExecutor:
         event_bus: The entity event bus to register on.
         update_entity: Callback to persist entity field updates from
             response mappings. Signature: ``(entity_name, entity_id, fields) -> None``.
-        cache: Optional :class:`~dazzle_back.runtime.api_cache.ApiResponseCache`.
+        cache: Optional :class:`~dazzle.back.runtime.api_cache.ApiResponseCache`.
             When provided, GET request responses are cached and dedup-locked.
             ``None`` (default) = no caching.
     """

@@ -701,7 +701,7 @@ def _get_channel_status(args: dict[str, Any]) -> str:
     try:
         import importlib.util
 
-        # Check if dazzle_back.channels is available
+        # Check if dazzle.back.channels is available
         if importlib.util.find_spec("dazzle.back.channels"):
             # Note: In real usage, this would connect to the running the Dazzle runtime server
             # For now, return the DSL spec with a note about runtime status

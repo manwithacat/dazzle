@@ -125,7 +125,7 @@ class BaselineManager:
                     raise FileNotFoundError(f"alembic.ini not found in {pkg_dir}")
             except Exception as e:
                 raise BaselineKeyError(
-                    f"no alembic.ini in project and dazzle_back fallback failed: {e}"
+                    f"no alembic.ini in project and dazzle.back fallback failed: {e}"
                 ) from e
 
         try:

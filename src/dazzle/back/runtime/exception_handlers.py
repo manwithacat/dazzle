@@ -275,7 +275,7 @@ def _render_app_shell_error(
 
     Phase 2.B full (v0.67.40): replaces the Jinja `app/403.html` /
     `app/404.html` templates (which extended `layouts/app_shell.html`)
-    with typed views in `dazzle_back.runtime.app_error_views`. The
+    with typed views in `dazzle.back.runtime.app_error_views`. The
     legacy templates already rendered with an empty sidebar / empty
     persona chrome because the helper passed empty `nav_items` /
     `user_email`, so the visual UX is comparable — but the rendering

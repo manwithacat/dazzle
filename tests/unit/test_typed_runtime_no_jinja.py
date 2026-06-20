@@ -48,7 +48,7 @@ _TYPED_ONLY_MODULES = (
     # v0.67.58 — audit-history detail-page render inlined via html.escape.
     "src/dazzle/back/runtime/audit_region.py",
     # v0.67.59 — dual_path renderers retired (legacy templates gone).
-    "src/dazzle/back/runtime/renderers/dual_path.py",
+    "src/dazzle/back/runtime/renderers/html_normalise.py",
     # legacy_ctx.py was retired entirely in v0.67.60 (dead code; tests
     # were the only consumer after v0.67.59 removed render_via_typed).
     # v0.67.61 — htmx_error_response inline-rendered (form_errors.html

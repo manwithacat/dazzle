@@ -1,9 +1,10 @@
 """
-Template compiler - converts Dazzle IR to template contexts.
+Context compiler — converts Dazzle IR to typed render contexts.
 
-Replaces the UISpec generation path for server-rendered pages.
-Converts SurfaceSpec + EntitySpec into PageContext/TableContext/FormContext
-that can be directly rendered by Jinja2 templates.
+Converts SurfaceSpec + EntitySpec into the `PageContext`/`TableContext`/`FormContext`
+dataclasses (`dazzle.render.context`) consumed by the typed-Fragment renderers. (Named
+"template_compiler" historically; Jinja2 was removed framework-wide in #1042/ADR-0023,
+so there are no templates — it builds typed contexts, not Jinja contexts.)
 """
 
 from __future__ import annotations

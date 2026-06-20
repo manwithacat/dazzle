@@ -655,6 +655,6 @@ class SiteAuthContext(BaseModel):
     # (v0.67.34) alongside the deletion of `site/404.html` and
     # `site/403.html`. Marketing-site error pages now render via the
     # typed-Fragment views `build_site_404_view` and `build_site_403_view`
-    # in `dazzle_back.runtime.error_views`.
+    # in `dazzle.back.runtime.error_views`.
 
     message: str = ""

@@ -43,7 +43,7 @@ def _public_names(module: types.ModuleType) -> list[str]:
 
     Resolution order:
       1. `__all__` — if defined, that is the canonical list.
-      2. `_LOADERS` — the lazy `__getattr__` convention used by dazzle_back.
+      2. `_LOADERS` — the lazy `__getattr__` convention used by dazzle.back.
       3. Otherwise: all module-level non-underscore attributes (a noisy
          fallback; only applied when both 1 and 2 are absent).
     """

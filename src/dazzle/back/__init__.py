@@ -10,7 +10,7 @@ This package provides:
 
 Public API
 ----------
-CLI and MCP layers import from ``dazzle_back`` directly.  The symbols below
+CLI and MCP layers import from ``dazzle.back`` directly.  The symbols below
 are lazily resolved so that the heavy runtime stack is not loaded at CLI
 startup time.
 """

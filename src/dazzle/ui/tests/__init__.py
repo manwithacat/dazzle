@@ -1,3 +1,3 @@
 """
-Tests for dazzle_ui
+Tests for dazzle.ui
 """

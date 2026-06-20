@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.32] - 2026-06-20
+
+### Changed
+- **Structural-comprehensibility cleanup, phase 1 of 4** (smells round — naming + dead structure; behavior-neutral). From a four-agent investigation into whether the `back/`↔`ui/` split is vestigial (it's a sound four-layer stack `back→ui→render→core`; the names are the vestige — see `docs/evaluation/back-ui-render-boundary.md`): (1) **swept 46 stale `dazzle_back`/`dazzle_ui` doc references** → `dazzle.back`/`dazzle.ui` across 45 files — the packages were renamed at the #1055 merge, so these comment/docstring pointers were *wrong* (grepping the named path found nothing); real `import … as dazzle_back` aliases were left intact. (2) **Deleted the empty `back/core/` placeholder package** (zero importers, collided conceptually with top-level `core/`). (3) **Renamed `back/runtime/renderers/dual_path.py` → `html_normalise.py`** — the dual-path renderer it was named for was retired in v0.67.59; only two HTML byte-equivalence test helpers survived, so the name was a lie. (4) **Fixed stale "Jinja2 templates" docstrings** in `template_compiler.py` + `site_context.py` (Jinja was removed framework-wide at #1042/ADR-0023). (5) **Corrected the #1055-vs-#1056 merge attribution** in the smells command/workflow (#1055 was the package merge; #1056 the follow-on mypy burndown). (6) **Added a three-rendering-homes module-map** to `render/__init__.py` so a reader can route "where is X rendered?" by layer. No behavior change; all structural gates + boot smoke green.
+
 ## [0.83.31] - 2026-06-19
 
 ### Changed

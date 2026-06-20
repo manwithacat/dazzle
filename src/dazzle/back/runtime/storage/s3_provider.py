@@ -27,7 +27,7 @@ class S3Provider:
     The constructor takes a fully-resolved `StorageConfig` (env-var
     interpolation already applied) plus an optional pre-built boto3
     client. In production code the registry constructs the client
-    from `dazzle_back.runtime.aws_config.AWSConfig`; tests inject a
+    from `dazzle.back.runtime.aws_config.AWSConfig`; tests inject a
     moto-backed client directly.
     """
 

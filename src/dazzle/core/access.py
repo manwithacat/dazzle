@@ -1,7 +1,7 @@
-"""Access control value types — shared between dazzle_back and dazzle_ui.
+"""Access control value types — shared between dazzle.back and dazzle.ui.
 
 These types have NO backend dependencies. They exist in dazzle.core so both
-dazzle_back (which implements access evaluation) and dazzle_ui (which consumes
+dazzle.back (which implements access evaluation) and dazzle.ui (which consumes
 access decisions for UI filtering) can import them without circular deps.
 
 #1096 (parent #1086): the access-rule spec types (AccessConditionSpec,

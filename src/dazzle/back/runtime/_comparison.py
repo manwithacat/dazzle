@@ -5,7 +5,7 @@ Provides common value normalization and operator dispatch used by
 condition_evaluator, access_evaluator, and invariant_evaluator.
 
 The canonical implementation lives in dazzle.core.comparison — this module
-re-exports it so that dazzle_back callers continue to work unchanged.
+re-exports it so that dazzle.back callers continue to work unchanged.
 """
 
 from dazzle.core.comparison import eval_comparison_op as eval_comparison_op

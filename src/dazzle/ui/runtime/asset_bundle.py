@@ -14,7 +14,7 @@ CLI overrides:
 
 Heroku-friendly: the framework's `dist/dazzle.min.js` ships in the
 dazzle-dsl wheel. When `pip install dazzle-dsl` runs on Heroku slug
-build, the bundle lands in `site-packages/dazzle_ui/runtime/static/dist/`
+build, the bundle lands in `site-packages/dazzle.ui/runtime/static/dist/`
 and is served alongside the unbundled scripts. No build step at runtime;
 everything is precomputed at framework release time.
 """

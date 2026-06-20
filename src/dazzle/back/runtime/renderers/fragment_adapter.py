@@ -489,7 +489,7 @@ def _field_to_primitive(
     """Map a field-shape dict to the right Fragment form primitive.
 
     The `kind` carried in field_dict is the *widget* kind — matching
-    `FieldContext.type` from `dazzle_ui.runtime.template_context` (text,
+    `FieldContext.type` from `dazzle.ui.runtime.template_context` (text,
     textarea, select, checkbox, number, date, datetime, email, url,
     money, file, etc.) — NOT the DSL FieldType.kind. The page route's
     `_build_dispatch_ctx` reads `field.type` directly off the FieldContext

@@ -372,7 +372,7 @@ class ThemeMetaSpec(BaseModel):
 class ThemeSpecYAML(BaseModel):
     """Root ThemeSpec YAML configuration.
 
-    Named ThemeSpecYAML to avoid collision with ThemeSpec in dazzle_ui.specs.theme.
+    Named ThemeSpecYAML to avoid collision with ThemeSpec in dazzle.ui.specs.theme.
     This model represents the user-facing themespec.yaml file that drives
     deterministic theme generation.
     """

@@ -1,16 +1,13 @@
-"""Phase 4B.3 — dual-path validation harness (residual byte-equivalence comparator).
+"""HTML byte-equivalence helpers (`normalise_html`, `diff_summary`) for tests.
 
-Phase 4 (v0.67.59): the legacy-vs-typed dual-path renderers
-(`render_via_legacy`, `render_via_typed`, `_LEGACY_TEMPLATE`,
-`_StubRegion`) were retired alongside the v0.67.52 DISPLAY_TEMPLATE_MAP
-flip — only 4 region templates remain on disk (`_typed_primitive.html`,
-`audit_history.html`, `radar.html`, `tab_data.html`), so the 30+
-template paths the legacy renderer dispatched to are mostly gone.
+Whitespace-insignificant HTML comparison: collapse runs of whitespace and trim
+around tag boundaries, then diff. Used by typed-Fragment tests to assert two HTML
+outputs are equivalent without caring about formatting.
 
-What's preserved here are the two byte-equivalence helpers
-(`normalise_html`, `diff_summary`) that downstream typed-Fragment
-tests still use to compare two HTML outputs without caring about
-insignificant whitespace.
+History: this file was `dual_path.py`, the residual of the legacy-vs-typed dual-path
+renderer harness (`render_via_legacy`/`render_via_typed`/`_LEGACY_TEMPLATE`) retired
+in v0.67.59 when the Jinja templates were dropped (ADR-0023). Only the two comparison
+helpers survived, so it was renamed to match what it actually is (smells round 2026-06-20).
 """
 
 from __future__ import annotations

@@ -2,7 +2,7 @@
 
 Initialises the Dazzle event framework (pub/sub) and wires ``EventEmittingMixin``
 on CRUD services.  Falls back to ``NullEventFramework`` when the optional
-``dazzle_back.events`` package is unavailable.
+``dazzle.back.events`` package is unavailable.
 """
 
 import logging

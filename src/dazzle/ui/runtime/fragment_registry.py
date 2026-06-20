@@ -4,7 +4,7 @@ Pre-#1044 this listed Jinja templates under
 ``src/dazzle/ui/templates/fragments/`` that downstream agents and
 tooling could discover. After the #1044 jinja2 retirement the
 framework no longer ships any Jinja templates — every fragment is
-emitted by a Python renderer in ``dazzle_ui.runtime``. The registry
+emitted by a Python renderer in ``dazzle.ui.runtime``. The registry
 stays so the MCP ``status`` / ``coverage`` tooling that reads
 ``get_fragment_registry()`` has a stable, queryable list of the
 fragment-rendering call sites.

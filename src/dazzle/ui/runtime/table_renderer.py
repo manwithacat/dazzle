@@ -7,7 +7,7 @@ toolbar fragments:
   - `fragments/bulk_actions.html`
 
 The table rows + pagination + sentinel are already ported in
-`dazzle_back.runtime.route_generator` (v0.67.65 + v0.67.67-v0.67.68);
+`dazzle.back.runtime.route_generator` (v0.67.65 + v0.67.67-v0.67.68);
 this module imports those helpers rather than duplicating them.
 
 All Alpine bindings (`dzTable` controller: loading, colMenuOpen,

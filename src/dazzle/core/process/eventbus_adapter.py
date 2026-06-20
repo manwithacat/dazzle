@@ -373,7 +373,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         (e.g., in unit tests or when running without the full stack).
 
         The event bus integration is loaded lazily to avoid a hard dependency
-        on ``dazzle_back`` from the ``dazzle.core`` layer.
+        on ``dazzle.back`` from the ``dazzle.core`` layer.
         """
         try:
             publish_fn = self._get_publish_fn()
@@ -395,7 +395,7 @@ class EventBusProcessAdapter(ProcessAdapter):
 
         Returns ``None`` when the event framework is not available (e.g.
         in unit tests or CLI-only usage).  The import is deferred so that
-        ``dazzle.core`` never has a module-level dependency on ``dazzle_back``.
+        ``dazzle.core`` never has a module-level dependency on ``dazzle.back``.
         """
         try:
             # fmt: off

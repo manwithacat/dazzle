@@ -1,7 +1,9 @@
-"""Context builders for site page Jinja2 templates.
+"""Context builders for marketing/site pages.
 
-Converts raw sitespec dicts into typed Pydantic context models
-that are passed to Jinja2 templates for rendering.
+Converts raw sitespec dicts into the typed Pydantic context models
+(`dazzle.render.context`) consumed by the typed-Fragment site renderer.
+(Jinja2 was removed framework-wide in #1042/ADR-0023 — these are typed
+contexts, not template contexts.)
 """
 
 from datetime import UTC, datetime
@@ -205,7 +207,7 @@ def build_site_page_context(
 
 # build_site_auth_context retired in Phase 1.D.2 (v0.67.37). All
 # auth-page surfaces now render via typed-Fragment views in
-# `dazzle_back.runtime.auth.{auth_views,two_factor_views}`. The
+# `dazzle.back.runtime.auth.{auth_views,two_factor_views}`. The
 # `SiteAuthContext` Pydantic model in `template_context.py` is kept
 # for now because the template_renderer's Union type still references
 # it, but no production code path constructs it.
@@ -214,4 +216,4 @@ def build_site_page_context(
 # build_site_404_context and build_site_error_context were retired in
 # Phase 2.A (v0.67.34) — see template_context.py for the matching
 # Site404Context / SiteErrorContext removal notes. Marketing-site
-# errors render via `dazzle_back.runtime.error_views.build_site_*_view`.
+# errors render via `dazzle.back.runtime.error_views.build_site_*_view`.

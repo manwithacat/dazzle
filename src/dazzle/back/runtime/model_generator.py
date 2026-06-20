@@ -37,7 +37,7 @@ def _scalar_type_to_python(scalar_type: ScalarType) -> type:
     """Map scalar types to Python types.
 
     Keep this aligned with the runtime ``ScalarType`` enum in
-    ``dazzle_back/specs/entity.py``; the silent ``str`` fallback used to
+    ``dazzle.back/specs/entity.py``; the silent ``str`` fallback used to
     let new types slip through (#1012 — ``FLOAT`` fields produced models
     typed as ``str``, breaking pydantic validation when the DB returned
     an actual float). Money fields are pre-expanded by the entity

@@ -5,8 +5,8 @@ Evaluates ConditionExpr from IR AccessSpec at runtime for:
 - Row-level visibility filtering (converting to SQL WHERE clauses)
 - Permission checks (evaluating against entity records)
 
-The pure evaluation logic lives in dazzle_ui.utils.condition_eval so that
-the UI package can evaluate visible_condition without importing dazzle_back.
+The pure evaluation logic lives in dazzle.ui.utils.condition_eval so that
+the UI package can evaluate visible_condition without importing dazzle.back.
 This module re-exports evaluate_condition from there and adds the SQL
 filter generation helpers that are only needed in the backend.
 """

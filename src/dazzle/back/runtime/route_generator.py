@@ -250,7 +250,7 @@ class RouteSpec:
     universal — the per-route bundle of "what this endpoint is, who
     can use it, what it returns".
 
-    Distinct from :class:`dazzle_back.specs.endpoint.EndpointSpec`,
+    Distinct from :class:`dazzle.back.specs.endpoint.EndpointSpec`,
     which is the static URL/method/service-name spec one layer above.
     ``RouteSpec`` is the runtime handler bundle: how to actually
     construct the FastAPI handler for the URL that ``EndpointSpec``

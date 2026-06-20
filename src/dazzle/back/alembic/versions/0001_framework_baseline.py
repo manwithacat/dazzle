@@ -2,7 +2,7 @@
 
 Creates the framework's `_dazzle_params` table that the runtime expects to
 exist when `DAZZLE_ENV=production` (see ADR-0017 + commit 97ac3f65). DDL
-matches `ensure_dazzle_params_table()` in `dazzle_back/runtime/migrations.py`
+matches `ensure_dazzle_params_table()` in `dazzle.back/runtime/migrations.py`
 exactly so dev (which still calls `CREATE TABLE IF NOT EXISTS`) and
 production (which runs this migration) end up with the same schema.
 

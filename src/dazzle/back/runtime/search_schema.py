@@ -151,7 +151,7 @@ def _resolve_searchable_field(entity: Any, path: str) -> Any | None:
     Accepts either dazzle.core.ir entities (``field.type.kind`` is
     a ``FieldTypeKind`` like ``str``/``text``/``email``) OR
     backend-converted entities from
-    ``dazzle_back.converters.entity_converter`` (where
+    ``dazzle.back.converters.entity_converter`` (where
     ``field.type.kind`` is the shape category ``"scalar"`` and the
     actual scalar lives in ``field.type.scalar_type``). #997 — both
     callers exist and the cycle-2 search check silently rejected the

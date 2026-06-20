@@ -22,7 +22,7 @@ Structural decay is now measured precisely and **gated live in CI** by the frame
 
 ## Scope
 
-Focus on `src/dazzle/` — the merged tree (`back/`, `ui/`, `render/` all live under it since #1056). Ignore `tests/`, `examples/`, and auto-generated files.
+Focus on `src/dazzle/` — the merged tree (`back/`, `ui/`, `render/` all live under it since the #1055 package merge; #1056 was the follow-on mypy burndown). Ignore `tests/`, `examples/`, and auto-generated files.
 
 ## 1. Run the workflow
 

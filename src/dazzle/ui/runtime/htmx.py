@@ -5,7 +5,7 @@ Provides helpers for building HTMLResponse objects with HX-* headers
 for server-client event coordination (triggers, retarget, reswap, redirect).
 
 This is the canonical location for HTMX presentation logic.  The
-``dazzle_back.runtime.htmx_response`` module re-exports from here for
+``dazzle.back.runtime.htmx_response`` module re-exports from here for
 backward compatibility.
 """
 

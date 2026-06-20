@@ -289,7 +289,7 @@ def validate_storage_refs(
 
     Takes ``storage_defs`` separately because the AppSpec is built
     from DSL alone — the manifest is loaded by a different layer.
-    Runtime call site is `dazzle_back.runtime.server` startup, where
+    Runtime call site is `dazzle.back.runtime.server` startup, where
     both surfaces are available.
 
     Returns:

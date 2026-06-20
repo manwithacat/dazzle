@@ -153,7 +153,7 @@ const DECAY_PROMPT = `Report the framework's standing structural decay from the 
 \`notes\`: one or two sentences — is decay holding flat, and which one file is the single best refactor target this round? Return the DECAY_SCHEMA object.`;
 
 const SCOPE =
-  "Focus on src/dazzle/ (the merged tree — back/, ui/, render/ all live under it since #1056). Ignore tests/, examples/, and auto-generated files.";
+  "Focus on src/dazzle/ (the merged tree — back/, ui/, render/ all live under it since the #1055 package merge). Ignore tests/, examples/, and auto-generated files.";
 
 const REGRESSION_PROMPT = `Run regression checks on the Dazzle codebase at /Volumes/SSD/Dazzle using Bash and Grep. For each check return status PASS, FAIL, or TRACK plus a one-line details string.
 

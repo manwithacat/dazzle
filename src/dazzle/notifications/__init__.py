@@ -17,7 +17,7 @@ lands ``NotificationSpec`` in ``AppSpec``. Cycle 2 (this module) adds:
 Shipped in later cycles:
 
   * Cycle 3: :class:`SmtpProvider` — real ``smtplib`` send.
-  * Cycle 4: trigger wiring (``dazzle_back.runtime.notification_wiring``)
+  * Cycle 4: trigger wiring (``dazzle.back.runtime.notification_wiring``)
     — entity-change events auto-dispatch matching specs.
   * Cycle 5: :meth:`NotificationDispatcher.dispatch_async` adds retry
     + :class:`DeliveryRecord` audit log via the ``deliveries`` deque.
@@ -579,7 +579,7 @@ class NotificationDispatcher:
 
     Cycle 2 surface — adopters call ``dispatch(spec, payload)`` directly.
     Cycle 4 wires entity-change events to auto-dispatch via
-    ``dazzle_back.runtime.notification_wiring``.
+    ``dazzle.back.runtime.notification_wiring``.
     Cycle 5 (this version) adds :meth:`dispatch_async` with retry +
     delivery audit log via the ``deliveries`` deque.
 
@@ -667,7 +667,7 @@ class NotificationDispatcher:
         Provider exceptions short-circuit too and record
         :class:`DeliveryOutcome.FAILED_PERMANENT`.
 
-        Used by ``dazzle_back.runtime.notification_wiring`` so the
+        Used by ``dazzle.back.runtime.notification_wiring`` so the
         request handler isn't blocked waiting for retries — the async
         wiring callback awaits this on the event loop.
         """

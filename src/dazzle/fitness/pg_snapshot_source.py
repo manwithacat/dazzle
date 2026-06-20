@@ -22,7 +22,7 @@ class PgSnapshotSource:
         """Wrap an already-constructed ``PostgresBackend``.
 
         Args:
-            backend: A ``dazzle_back.runtime.pg_backend.PostgresBackend`` or
+            backend: A ``dazzle.back.runtime.pg_backend.PostgresBackend`` or
                 any object exposing a ``connection()`` context manager that
                 yields a wrapper with ``.execute(sql, params)``.
         """

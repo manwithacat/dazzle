@@ -234,8 +234,8 @@ def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
     frag_dir = repo_root / "src" / "dazzle" / "ui" / "templates" / "fragments"
     if not frag_dir.is_dir():
         return cat
-    # Fragments can be included by any template (dazzle_ui) or rendered
-    # directly by any Python handler (dazzle_ui, dazzle_back, dazzle).
+    # Fragments can be included by any template (dazzle.ui) or rendered
+    # directly by any Python handler (dazzle.ui, dazzle.back, dazzle).
     # Scan all three roots — a fragment rendered by a route is every bit
     # as "covered" as one included in a template.
     search_roots = [

@@ -1316,7 +1316,7 @@ class Repository[T: BaseModel]:
 
         v2 (cycle 25): supports multi-dimension ``GROUP BY`` for cross-tab
         / pivot rendering. Each dimension is a
-        :class:`dazzle_back.runtime.aggregate.Dimension` — scalar dims
+        :class:`dazzle.back.runtime.aggregate.Dimension` — scalar dims
         bucket by column value; FK dims auto-LEFT JOIN the target and
         pull a display field for the bar/cell label.
 
@@ -1429,7 +1429,7 @@ class Repository[T: BaseModel]:
         call directly from tests / notebooks to inspect compilation.
 
         No side effects: does not hit the database. Uses the same
-        :func:`dazzle_back.runtime.aggregate.build_aggregate_sql` the
+        :func:`dazzle.back.runtime.aggregate.build_aggregate_sql` the
         live path uses, so what this returns is byte-for-byte what
         :meth:`aggregate` would ``cursor.execute``.
 
@@ -1643,7 +1643,7 @@ try:
 except ImportError:
     PostgresBackend = None  # type: ignore[assignment,misc]
     type DatabaseManager = Any  # type: ignore[no-redef]
-"""Deprecated — use :class:`~dazzle_back.runtime.pg_backend.PostgresBackend`."""
+"""Deprecated — use :class:`~dazzle.back.runtime.pg_backend.PostgresBackend`."""
 
 
 # =============================================================================
