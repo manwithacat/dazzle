@@ -1143,12 +1143,15 @@ class SessionStoreMixin:
     DEFAULT_ORG_SLUG = "default"
 
     def _row_to_organization(self, row: dict[str, Any]) -> OrganizationRecord:
+        import json
+
         return OrganizationRecord(
             id=row["id"],
             slug=row["slug"],
             name=row["name"],
             status=row["status"],
             is_test=bool(row["is_test"]),
+            settings=json.loads(row["settings"] or "{}") if row.get("settings") is not None else {},
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
         )
@@ -1157,14 +1160,16 @@ class SessionStoreMixin:
         self, *, slug: str, name: str, is_test: bool = False
     ) -> OrganizationRecord:
         """Create an organization (raises on duplicate slug)."""
+        import json
+
         org = OrganizationRecord(
             id=secrets.token_urlsafe(24), slug=slug, name=name, is_test=is_test
         )
         self._execute(
             """
             INSERT INTO organizations
-                (id, slug, name, status, is_test, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (id, slug, name, status, is_test, settings, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 org.id,
@@ -1172,6 +1177,7 @@ class SessionStoreMixin:
                 org.name,
                 org.status,
                 org.is_test,
+                json.dumps(org.settings),
                 org.created_at.isoformat(),
                 org.updated_at.isoformat(),
             ),
@@ -1185,6 +1191,20 @@ class SessionStoreMixin:
     def get_organization(self, org_id: str) -> OrganizationRecord | None:
         row = self._execute_one("SELECT * FROM organizations WHERE id = %s", (org_id,))
         return self._row_to_organization(row) if row else None
+
+    def get_org_settings(self, tenant_id: str) -> dict[str, Any]:
+        """Return the settings dict for *tenant_id*, or {} if the org doesn't exist."""
+        org = self.get_organization(tenant_id)
+        return dict(org.settings) if org else {}
+
+    def set_org_settings(self, tenant_id: str, settings: dict[str, Any]) -> None:
+        """Persist *settings* for *tenant_id* (full replace)."""
+        import json
+
+        self._execute_modify(
+            "UPDATE organizations SET settings = %s, updated_at = %s WHERE id = %s",
+            (json.dumps(settings), datetime.now(UTC).isoformat(), tenant_id),
+        )
 
     # -- Enterprise connections (auth Plan 4a — per-org OIDC/SAML/SCIM) -------
 
@@ -2459,6 +2479,7 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                     name TEXT NOT NULL,
                     status TEXT NOT NULL DEFAULT 'active',
                     is_test BOOLEAN NOT NULL DEFAULT false,
+                    settings TEXT NOT NULL DEFAULT '{}',
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     CONSTRAINT uq_organizations_slug UNIQUE (slug)
