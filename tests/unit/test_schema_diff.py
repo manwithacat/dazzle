@@ -404,3 +404,56 @@ def test_table_rename_already_applied_noop():
     curr = {"new_tbl": _tbl(a=_COL)}
     hints = {"tables": {"new_tbl": "old_tbl"}, "columns": {}}
     assert diff(prev, curr, hints) == []
+
+
+# ---------------------------------------------------------------------------
+# Task 4.3 follow-on: rename + simultaneous type change in one diff (#1431)
+# ---------------------------------------------------------------------------
+
+
+def test_rename_and_retype_emits_rename_then_alter():
+    """Column renamed AND retyped in one diff → RenameColumn + AlterColumn, in that order."""
+    prev = {"t": _tbl(old_name={**_COL, "type": "text"})}
+    curr = {"t": _tbl(new_name={**_COL, "type": "integer"})}
+    hints = {"tables": {}, "columns": {("t", "new_name"): "old_name"}}
+    ops = diff(prev, curr, hints)
+
+    rename_ops = [o for o in ops if isinstance(o, RenameColumn)]
+    alter_ops = [o for o in ops if isinstance(o, AlterColumn)]
+
+    # Both ops must be present
+    assert len(rename_ops) == 1, f"Expected 1 RenameColumn, got {rename_ops}"
+    assert len(alter_ops) == 1, f"Expected 1 AlterColumn, got {alter_ops}"
+
+    rename = rename_ops[0]
+    alter = alter_ops[0]
+
+    assert rename.old == "old_name"
+    assert rename.new == "new_name"
+    assert alter.name == "new_name"
+    assert alter.old["type"] == "text"
+    assert alter.new["type"] == "integer"
+
+    # RenameColumn must precede AlterColumn
+    rename_pos = ops.index(rename)
+    alter_pos = ops.index(alter)
+    assert rename_pos < alter_pos, "RenameColumn must come before AlterColumn"
+
+    # Must NOT produce spurious DropColumn/AddColumn for the renamed column
+    assert not any(isinstance(o, DropColumn) and o.name == "old_name" for o in ops)
+    assert not any(isinstance(o, AddColumn) and o.name == "new_name" for o in ops)
+    assert not any(isinstance(o, AddColumn) and o.name == "old_name" for o in ops)
+    assert not any(isinstance(o, DropColumn) and o.name == "new_name" for o in ops)
+
+
+def test_pure_rename_no_spurious_alter():
+    """Column renamed with no spec change → only RenameColumn, no AlterColumn."""
+    prev = {"t": _tbl(old_name=_COL)}
+    curr = {"t": _tbl(new_name=_COL)}
+    hints = {"tables": {}, "columns": {("t", "new_name"): "old_name"}}
+    ops = diff(prev, curr, hints)
+
+    assert any(
+        isinstance(o, RenameColumn) and o.old == "old_name" and o.new == "new_name" for o in ops
+    )
+    assert not any(isinstance(o, AlterColumn) for o in ops)

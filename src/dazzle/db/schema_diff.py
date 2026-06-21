@@ -298,6 +298,19 @@ def diff(
                     add_details.append(RenameColumn(table=curr_tname, old=old_cname, new=new_cname))
                     renamed_old_cols.add(old_cname)
                     renamed_new_cols.add(new_cname)
+                    # If the column spec also changed (type/nullable/default/pk),
+                    # emit AlterColumn on the NEW name so it runs after the rename.
+                    prev_col_snap = prev_cols[old_cname]
+                    curr_col_snap = curr_cols[new_cname]
+                    if prev_col_snap != curr_col_snap:
+                        alters.append(
+                            AlterColumn(
+                                table=curr_tname,
+                                name=new_cname,
+                                old=prev_col_snap,
+                                new=curr_col_snap,
+                            )
+                        )
                 elif new_cname in prev_col_names:
                     # Already-applied: new col already exists in prev — no-op
                     renamed_new_cols.add(new_cname)
