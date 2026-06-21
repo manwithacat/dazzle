@@ -149,18 +149,33 @@ def test_drop_table_carries_snap():
     assert dt.snap == snap
 
 
+def test_add_table_fks_roundtrip():
+    """AddTable.fks carries the full col→ref_table mapping from the snapshot."""
+    snap = {
+        "new_t": {
+            "columns": {"owner_id": _COL},
+            "fks": {"owner_id": "users"},
+            "indexes": [],
+            "uniques": [],
+        }
+    }
+    ops = diff({}, snap)
+    at = next(o for o in ops if isinstance(o, AddTable))
+    assert at.fks == {"owner_id": "users"}
+
+
 def test_add_table_frozen():
     """AddTable is frozen and fields are accessible."""
     op = AddTable(
         table="users",
         columns={"id": {"type": "uuid"}, "name": {"type": "varchar"}},
-        fks=[],
+        fks={},
         indexes=[],
         uniques=[],
     )
     assert op.table == "users"
     assert op.columns == {"id": {"type": "uuid"}, "name": {"type": "varchar"}}
-    assert op.fks == []
+    assert op.fks == {}
     assert op.indexes == []
     assert op.uniques == []
 
@@ -321,7 +336,7 @@ def test_drop_unique():
 def test_schema_op_union_types():
     """SchemaOp accepts all op types."""
     ops: list[SchemaOp] = [
-        AddTable("t1", {}, [], [], []),
+        AddTable("t1", {}, {}, [], []),
         DropTable("t2", {}),
         RenameTable("t3", "t3_renamed"),
         AddColumn("t4", "c1", {}),

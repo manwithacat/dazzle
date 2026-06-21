@@ -14,7 +14,7 @@ class AddTable:
 
     table: str
     columns: dict[str, Any]
-    fks: list[str]
+    fks: dict[str, str]
     indexes: list[str]
     uniques: list[str]
 
@@ -190,7 +190,7 @@ def diff(
             AddTable(
                 table=tname,
                 columns=dict(tsnap.get("columns", {})),
-                fks=list(tsnap.get("fks", {}).keys()),
+                fks=dict(tsnap.get("fks", {})),
                 indexes=list(tsnap.get("indexes", [])),
                 uniques=list(tsnap.get("uniques", [])),
             )
