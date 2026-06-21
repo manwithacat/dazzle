@@ -51,7 +51,7 @@ from dazzle.db.schema_diff import (
     RenameTable,
     SchemaOp,
 )
-from dazzle.http.runtime.safe_casts import get_using_clause
+from dazzle.http.runtime.safe_casts import get_using_clause, is_safe_cast
 
 # ---------------------------------------------------------------------------
 # Public type aliases (mirrors schema_diff conventions)
@@ -318,16 +318,16 @@ def _render_alter_column(
 
     up_alter = aops.AlterColumnOp(op.table, op.name, **up_alter_kw)
 
-    # Inject USING clause for safe type casts. A type change with NO safe USING
-    # clause is unsafe (the cast may lose data or fail per-row), so it is wrapped
-    # by a hand-author data-migration seam (Task 5.1).
+    # Inject USING clause for safe type casts. A type change is unsafe only when
+    # the (from, to) pair is absent from SAFE_CASTS entirely — i.e. not a known
+    # safe cast. Safe no-op widenings (USING template = "") are in SAFE_CASTS but
+    # return no USING string; they must NOT trigger the data seam scaffold.
     unsafe_type_change = False
     if type_changed:
         using = get_using_clause(old["type"].upper(), new["type"].upper(), op.name)
         if using:
             up_alter.kw["postgresql_using"] = using
-        else:
-            unsafe_type_change = True
+        unsafe_type_change = not is_safe_cast(old["type"].upper(), new["type"].upper())
 
     # Build the inverse (downgrade) AlterColumnOp
     down_alter_kw: dict[str, Any] = {

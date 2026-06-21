@@ -22,6 +22,7 @@ from dazzle.db.schema_diff import (
     RenameTable,
 )
 from dazzle.db.schema_render import SEAM_MARKER, render
+from dazzle.http.runtime.safe_casts import SAFE_CASTS, is_safe_cast
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -225,6 +226,57 @@ def test_unsafe_type_change_scaffolds_seam():
     assert not _seam_ops(down_flat)
     restore = next(o for o in down_flat if isinstance(o, aops.AlterColumnOp))
     assert restore.modify_type is not None
+
+
+def test_safe_no_op_widening_does_not_scaffold():
+    """A safe widening with an empty USING template must NOT emit a data seam.
+
+    Token-set reachability note: the engine snapshot tokens are lowercase
+    (text/integer/float/uuid/…); SAFE_CASTS keys are uppercase Postgres names.
+    The two empty-template entries ("CHARACTER VARYING","TEXT") and
+    ("DOUBLE PRECISION","NUMERIC") are NOT reachable from the snapshot token
+    set — the snapshot emits "text" (not "CHARACTER VARYING") and "float" (not
+    "DOUBLE PRECISION"). Therefore we test the discriminant at the
+    ``is_safe_cast`` level by constructing an AlterColumn whose old/new types
+    canonicalise to an empty-template SAFE_CASTS entry ("DOUBLE PRECISION" →
+    "NUMERIC"), bypassing _token_to_sa_type mapping, to confirm:
+      1. is_safe_cast returns True for an empty-template pair (pre-condition).
+      2. get_using_clause returns None/falsy for that pair (the old bug trigger).
+      3. render() produces NO ExecuteSQLOp seam and a plain AlterColumnOp.
+    """
+    from dazzle.http.runtime.safe_casts import get_using_clause
+
+    # Confirm the pre-conditions that defined the bug:
+    # the empty-template pair IS in SAFE_CASTS...
+    empty_pairs = [(f, t) for (f, t), v in SAFE_CASTS.items() if v == ""]
+    assert empty_pairs, "SAFE_CASTS must have at least one empty-template entry"
+    from_tok, to_tok = empty_pairs[0]  # e.g. ("DOUBLE PRECISION", "NUMERIC")
+
+    assert is_safe_cast(from_tok, to_tok), "empty-template entry must be is_safe_cast=True"
+    assert not get_using_clause(from_tok, to_tok, "col"), (
+        "empty-template entry must return falsy from get_using_clause (old bug trigger)"
+    )
+
+    # Use the raw uppercase keys as type tokens in the AlterColumn op so the
+    # renderer sees them (it upper-cases before the registry lookup).
+    old = {"type": from_tok.lower(), "nullable": True, "default": None, "pk": False}
+    new = {"type": to_tok.lower(), "nullable": True, "default": None, "pk": False}
+
+    # Patch _render_alter_column's type comparison: old["type"] != new["type"] must
+    # be True, and the uppercase lookup must hit the empty-template entry.  The
+    # tokens are different strings, so type_changed=True.  The renderer uppercases
+    # them for the registry lookup, so ("DOUBLE PRECISION","NUMERIC") is found.
+    up, down = render([AlterColumn("t", "col", old, new)])
+    up_flat = _up_ops(up.ops)
+
+    # The fix: no seam emitted for a safe widening.
+    seams = _seam_ops(up_flat)
+    assert not seams, (
+        f"safe no-op widening {from_tok!r}→{to_tok!r} must NOT emit a data-migration seam; "
+        f"got {len(seams)} seam(s)"
+    )
+    # A plain AlterColumnOp is produced.
+    assert any(isinstance(o, aops.AlterColumnOp) for o in up_flat)
 
 
 # ---------------------------------------------------------------------------
