@@ -165,3 +165,98 @@ def test_cannot_remove_or_demote_last_admin(store_url: str) -> None:
     r = client.post(f"/auth/members/roles?membership_id={am.id}", data={"roles": "member"})
     assert r.status_code == 409
     assert store.get_membership(am.id).roles == ["owner"]  # unchanged
+
+
+# -- Join-requests approval queue (#1424 Task 4.3) --------------------------
+
+
+def _pending_request(store, org, email="newcomer@acme.test"):
+    """A user with a pending join request for ``org``; returns (user, request)."""
+    user = store.create_user(email=email, password="pw123456", roles=[])
+    jr = store.create_join_request(tenant_id=org.id, identity_id=str(user.id), email=email)
+    return user, jr
+
+
+def test_join_requests_queue_lists_pending(store_url: str) -> None:
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    client, _admin, _m = _admin_client(store, org)
+    _user, _jr = _pending_request(store, org)
+
+    r = client.get("/auth/join-requests")
+    assert r.status_code == 200
+    assert "Join requests for Acme" in r.text
+    assert "newcomer@acme.test" in r.text
+
+
+def test_join_requests_queue_denies_non_admin(store_url: str) -> None:
+    from fastapi.testclient import TestClient
+
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    member = store.create_user(email="m@acme.test", password="pw123456", roles=[])
+    m = store.create_membership(tenant_id=org.id, identity_id=str(member.id), roles=["member"])
+    sid = store.create_session(member).id
+    store.set_session_active_membership(sid, m.id, identity_id=str(member.id))
+    client = TestClient(_app(store, org_admin_roles=["owner"]), follow_redirects=False)
+    client.cookies.set("dazzle_session", sid)
+    assert client.get("/auth/join-requests").status_code == 403
+
+
+def test_approve_creates_membership_and_marks_approved(store_url: str) -> None:
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    client, _admin, _m = _admin_client(store, org)
+    user, jr = _pending_request(store, org)
+
+    r = client.post(f"/auth/join-requests/approve?request_id={jr.id}")
+    assert r.status_code in (204, 303)
+    assert store.get_join_request(jr.id).status == "approved"
+    memberships = store.get_memberships_for_identity(str(user.id))
+    assert [m.tenant_id for m in memberships] == [org.id]
+    assert memberships[0].roles == []  # default-deny
+
+
+def test_deny_marks_denied_with_no_membership(store_url: str) -> None:
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    client, _admin, _m = _admin_client(store, org)
+    user, jr = _pending_request(store, org)
+
+    r = client.post(f"/auth/join-requests/deny?request_id={jr.id}")
+    assert r.status_code in (204, 303)
+    assert store.get_join_request(jr.id).status == "denied"
+    assert store.get_memberships_for_identity(str(user.id)) == []
+
+
+def test_double_approve_creates_exactly_one_membership(store_url: str) -> None:
+    """The double-decide guard at the REAL store: a second approve is rejected
+    (409) and the roster still holds exactly one membership."""
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    client, _admin, _m = _admin_client(store, org)
+    user, jr = _pending_request(store, org)
+
+    first = client.post(f"/auth/join-requests/approve?request_id={jr.id}")
+    assert first.status_code in (204, 303)
+    second = client.post(f"/auth/join-requests/approve?request_id={jr.id}")
+    assert second.status_code == 409  # already decided
+
+    memberships = store.get_memberships_for_identity(str(user.id))
+    assert len(memberships) == 1  # exactly one — no duplicate
+
+
+def test_approve_cross_org_request_is_rejected(store_url: str) -> None:
+    store = _store(store_url)
+    org_a = store.create_organization(slug="acme", name="Acme")
+    org_b = store.create_organization(slug="other", name="Other")
+    client, _admin, _m = _admin_client(store, org_a)
+    other = store.create_user(email="x@other.test", password="pw123456", roles=[])
+    jr = store.create_join_request(
+        tenant_id=org_b.id, identity_id=str(other.id), email="x@other.test"
+    )
+
+    r = client.post(f"/auth/join-requests/approve?request_id={jr.id}")
+    assert r.status_code == 404
+    assert store.get_join_request(jr.id).status == "pending"  # untouched
+    assert store.get_memberships_for_identity(str(other.id)) == []

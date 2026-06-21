@@ -137,6 +137,7 @@ def create_connection_admin_routes() -> APIRouter:
             environment_flags,
         )
         from dazzle.http.runtime.auth.domain_verification import txt_record
+        from dazzle.http.runtime.auth.org_settings import OrgSettings
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         flags = environment_flags()
@@ -212,14 +213,16 @@ def create_connection_admin_routes() -> APIRouter:
             )
 
         org = store.get_organization(org_id)
+        org_settings = OrgSettings.from_dict(store.get_org_settings(org_id))
         page = build_connections_view(
             product_name=_product_name(request),
             org_name=org.name if org is not None else org_id,
             connections=connections,
-            new_form=new_form if new_form in ("oidc", "scim", "saml") else "",
+            new_form=new_form if new_form in ("oidc", "scim", "saml", "domain") else "",
             secret_key_ok=flags[0],
             scim_bearer_once=scim_bearer_once,
             base_url=str(request.base_url).rstrip("/"),
+            org_settings=org_settings,
         )
         return HTMLResponse(FragmentRenderer().render(page))
 
@@ -244,6 +247,7 @@ def create_connection_admin_routes() -> APIRouter:
             CONNECTION_TYPES,
             CreateFormError,
             assemble_saml_config,
+            plan_domain,
             plan_oidc,
             plan_saml,
             plan_scim,
@@ -279,6 +283,11 @@ def create_connection_admin_routes() -> APIRouter:
                 plan = plan_scim(group_map=str(form.get("group_map", "")))
                 bearer = _secrets.token_urlsafe(32)
                 secrets_payload = {"scim_bearer": bearer}
+            elif type == "domain":
+                # Provider-less domain connection — no IdP secrets, no at-rest key required.
+                # After creation the existing add-domain / verify-domain actions apply unchanged.
+                plan = plan_domain()
+                secrets_payload = {}
             else:  # saml — no secret (the IdP signing cert is public)
                 # Offload the (bounded, SSRF-guarded) metadata fetch to a thread so a slow IdP
                 # can't block the event loop for the full timeout on this async handler.
@@ -364,6 +373,35 @@ def create_connection_admin_routes() -> APIRouter:
             return HTMLResponse(str(exc), status_code=409)
         # Whether or not the TXT matched yet, redirect back — the page re-renders showing
         # the domain as verified (success) or still pending (publish the TXT, retry).
+        return _back(request)
+
+    @router.post("/auth/connections/policy", include_in_schema=False)
+    async def update_policy_action(request: Request) -> Response:
+        """Persist the org's join-policy settings (domain_join_policy + restrict toggle).
+
+        Gated by ``manage_connections`` (same as every other action on this surface).
+        The org_id is always the caller's active membership — never taken from form input.
+        Unknown policy values are coerced to ``admin_approval`` via ``OrgSettings.from_dict``.
+        """
+        from dazzle.http.runtime.auth.org_settings import OrgSettings
+
+        gated = _gate(request)
+        if gated is None:
+            return HTMLResponse("Forbidden", status_code=403)
+        store, _ctx, org_id = gated
+
+        form = await request.form()
+        raw_policy = str(form.get("domain_join_policy", ""))
+        # HTML checkboxes submit "on" when checked; absent means unchecked.
+        restrict = str(form.get("restrict_membership_to_verified_domains", "")).lower() == "on"
+
+        # Validate + coerce via OrgSettings.from_dict (unknown → admin_approval).
+        coerced = OrgSettings.from_dict({"domain_join_policy": raw_policy})
+        settings = OrgSettings(
+            domain_join_policy=coerced.domain_join_policy,
+            restrict_membership_to_verified_domains=restrict,
+        )
+        store.set_org_settings(org_id, settings.to_dict())
         return _back(request)
 
     return router

@@ -127,3 +127,60 @@ def build_members_view(
         css_links=_CSS,
         js_scripts=_JS,
     )
+
+
+def _join_request_block(*, request_id: str, email: str) -> Stack:
+    """One pending join request: identity + approve/deny action buttons.
+
+    Approve CREATES a membership, so it carries a confirm. Both buttons return an
+    HX-Redirect back to the queue (the ``hx_target`` is required by the Button
+    validator but unused — the route returns an HX-Redirect header).
+    """
+    return Stack(
+        children=(
+            Text(body=email),
+            Button(
+                label="Approve",
+                variant="primary",
+                hx_post=URL(f"/auth/join-requests/approve?request_id={request_id}"),
+                hx_target=TargetSelector("body"),
+                hx_confirm="Approve this join request? This creates a membership.",
+            ),
+            Button(
+                label="Deny",
+                variant="secondary",
+                hx_post=URL(f"/auth/join-requests/deny?request_id={request_id}"),
+                hx_target=TargetSelector("body"),
+                hx_confirm="Deny this join request?",
+            ),
+        )
+    )
+
+
+def build_join_requests_view(
+    *,
+    product_name: str,
+    org_name: str,
+    requests: list[dict[str, Any]],  # {request_id, email}
+) -> Page:
+    """The pending join-requests approval queue for one org.
+
+    Mirrors ``build_members_view``'s list idiom: a heading, then one block per row,
+    with a muted empty-state when the queue is clear.
+    """
+    body: list[Any] = [
+        Link(label=product_name, href=URL("/")),
+        Link(label="← Members", href=URL("/auth/members")),
+        Heading(body=f"Join requests for {org_name}", level=1),
+    ]
+    if not requests:
+        body.append(Text(body="No pending join requests.", tone="muted"))
+    else:
+        for r in requests:
+            body.append(_join_request_block(request_id=r["request_id"], email=r["email"]))
+    return Page(
+        title=f"Join requests — {product_name}",
+        body=Stack(children=tuple(body)),
+        css_links=_CSS,
+        js_scripts=_JS,
+    )

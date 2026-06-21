@@ -34,7 +34,9 @@ from dazzle.core.db_url import normalise_postgres_scheme
 
 from .crypto import hash_password, verify_password
 from .models import (
+    AlreadyDecidedError,
     AuthContext,
+    JoinRequestRecord,
     MembershipRecord,
     OrganizationRecord,
     SessionRecord,
@@ -1143,12 +1145,15 @@ class SessionStoreMixin:
     DEFAULT_ORG_SLUG = "default"
 
     def _row_to_organization(self, row: dict[str, Any]) -> OrganizationRecord:
+        import json
+
         return OrganizationRecord(
             id=row["id"],
             slug=row["slug"],
             name=row["name"],
             status=row["status"],
             is_test=bool(row["is_test"]),
+            settings=json.loads(row["settings"] or "{}") if row.get("settings") is not None else {},
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
         )
@@ -1157,14 +1162,16 @@ class SessionStoreMixin:
         self, *, slug: str, name: str, is_test: bool = False
     ) -> OrganizationRecord:
         """Create an organization (raises on duplicate slug)."""
+        import json
+
         org = OrganizationRecord(
             id=secrets.token_urlsafe(24), slug=slug, name=name, is_test=is_test
         )
         self._execute(
             """
             INSERT INTO organizations
-                (id, slug, name, status, is_test, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (id, slug, name, status, is_test, settings, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 org.id,
@@ -1172,6 +1179,7 @@ class SessionStoreMixin:
                 org.name,
                 org.status,
                 org.is_test,
+                json.dumps(org.settings),
                 org.created_at.isoformat(),
                 org.updated_at.isoformat(),
             ),
@@ -1185,6 +1193,129 @@ class SessionStoreMixin:
     def get_organization(self, org_id: str) -> OrganizationRecord | None:
         row = self._execute_one("SELECT * FROM organizations WHERE id = %s", (org_id,))
         return self._row_to_organization(row) if row else None
+
+    def get_org_settings(self, tenant_id: str) -> dict[str, Any]:
+        """Return the settings dict for *tenant_id*, or {} if the org doesn't exist."""
+        org = self.get_organization(tenant_id)
+        return dict(org.settings) if org else {}
+
+    def set_org_settings(self, tenant_id: str, settings: dict[str, Any]) -> None:
+        """Persist *settings* for *tenant_id* (full replace)."""
+        import json
+
+        self._execute_modify(
+            "UPDATE organizations SET settings = %s, updated_at = %s WHERE id = %s",
+            (json.dumps(settings), datetime.now(UTC).isoformat(), tenant_id),
+        )
+
+    # -- Join requests (verified-domain self-service join, #1424) ---------------
+
+    def _row_to_join_request(self, row: dict[str, Any]) -> JoinRequestRecord:
+        return JoinRequestRecord(
+            id=row["id"],
+            tenant_id=row["tenant_id"],
+            identity_id=row["identity_id"],
+            email=row["email"],
+            status=row["status"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            decided_at=datetime.fromisoformat(row["decided_at"]) if row.get("decided_at") else None,
+            decided_by=row.get("decided_by"),
+        )
+
+    def create_join_request(
+        self,
+        *,
+        tenant_id: str,
+        identity_id: str,
+        email: str,
+    ) -> JoinRequestRecord:
+        """Create a pending join request for (tenant_id, identity_id).
+
+        Idempotent: if a pending row already exists for this (tenant, identity)
+        pair the existing record is returned unchanged (mirrors the
+        ``create_membership`` UniqueViolation re-read pattern).
+        """
+        jr = JoinRequestRecord(
+            id=secrets.token_urlsafe(24),
+            tenant_id=tenant_id,
+            identity_id=identity_id,
+            email=email,
+        )
+        try:
+            self._execute_modify(
+                """
+                INSERT INTO join_requests
+                    (id, tenant_id, identity_id, email, status, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    jr.id,
+                    jr.tenant_id,
+                    jr.identity_id,
+                    jr.email,
+                    jr.status,
+                    jr.created_at.isoformat(),
+                ),
+            )
+        except psycopg.errors.UniqueViolation:
+            # Concurrent create: another request inserted the pending row first.
+            # Re-read the winner; any other DB error must propagate.
+            existing = self._execute_one(
+                "SELECT * FROM join_requests "
+                "WHERE tenant_id = %s AND identity_id = %s AND status = 'pending'",
+                (tenant_id, identity_id),
+            )
+            if existing is None:
+                raise LookupError(
+                    "join_request create hit a unique-violation but no pending row "
+                    f"found for identity={identity_id!r} tenant={tenant_id!r}"
+                ) from None
+            return self._row_to_join_request(existing)
+        return jr
+
+    def get_pending_join_requests(self, tenant_id: str) -> list[JoinRequestRecord]:
+        """Return all pending join requests for a tenant, oldest first."""
+        rows = self._execute(
+            "SELECT * FROM join_requests WHERE tenant_id = %s AND status = 'pending' "
+            "ORDER BY created_at",
+            (tenant_id,),
+        )
+        return [self._row_to_join_request(r) for r in rows]
+
+    def get_join_request(self, request_id: str) -> JoinRequestRecord | None:
+        """Fetch a join request by id, or None if not found."""
+        row = self._execute_one("SELECT * FROM join_requests WHERE id = %s", (request_id,))
+        return self._row_to_join_request(row) if row else None
+
+    def decide_join_request(
+        self,
+        request_id: str,
+        *,
+        status: str,
+        decided_by: str,
+    ) -> JoinRequestRecord:
+        """Atomically transition a *pending* join request to ``approved``/``denied``.
+
+        Pending-only guard (double-decide defence, Task 1.5 review): the UPDATE
+        filters ``status = 'pending'``, so a second approve/deny of an
+        already-decided request matches zero rows. A double-approve therefore
+        cannot overwrite the decision nor create a second membership (the approve
+        helper creates the membership only when this transition succeeds).
+
+        Raises ``AlreadyDecidedError`` when the row is missing or no longer
+        pending (rowcount 0).
+        """
+        now = datetime.now(UTC).isoformat()
+        rowcount = self._execute_modify(
+            "UPDATE join_requests SET status = %s, decided_at = %s, decided_by = %s "
+            "WHERE id = %s AND status = 'pending'",
+            (status, now, decided_by, request_id),
+        )
+        if rowcount == 0:
+            raise AlreadyDecidedError(request_id)
+        row = self._execute_one("SELECT * FROM join_requests WHERE id = %s", (request_id,))
+        assert row is not None  # just updated
+        return self._row_to_join_request(row)
 
     # -- Enterprise connections (auth Plan 4a — per-org OIDC/SAML/SCIM) -------
 
@@ -1296,13 +1427,25 @@ class SessionStoreMixin:
             return {}
         return {str(r["type"]): int(r["n"]) for r in rows}
 
-    def get_connection_by_verified_domain(self, domain: str) -> "ConnectionRecord | None":  # noqa: F821
+    def get_connection_by_verified_domain(  # noqa: F821
+        self,
+        domain: str,
+        *,
+        types: "tuple[str, ...] | None" = None,
+    ) -> "ConnectionRecord | None":
         """Route an email domain to its org's connection — VERIFIED domains only.
 
         Matches against ``verified_domains`` (never the unverified ``domains``
         claim) so org A cannot hijack org B's SSO by claiming its domain (spec §5).
         Returns the first active match; verified-domain uniqueness is owned by the
         domain-verification flow (a later slice).
+
+        When ``types`` is given, only connections whose ``type`` is in that set
+        are considered.  SSO callers pass ``types=("oidc", "saml")`` to prevent a
+        ``type="domain"`` connection (which has no SSO provider) from being handed
+        to the SSO resolver and crashing the login flow.  Callers that need the
+        unfiltered view (e.g. ``domain_verification.verify_domain``) omit the
+        argument.
         """
         import json
 
@@ -1310,6 +1453,8 @@ class SessionStoreMixin:
         for row in self._execute(
             "SELECT * FROM connections WHERE status = 'active' ORDER BY created_at"
         ):
+            if types is not None and row.get("type") not in types:
+                continue
             verified = [x.strip().lower() for x in json.loads(row.get("verified_domains") or "[]")]
             if d in verified:
                 return self._row_to_connection(row)
@@ -2459,6 +2604,7 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                     name TEXT NOT NULL,
                     status TEXT NOT NULL DEFAULT 'active',
                     is_test BOOLEAN NOT NULL DEFAULT false,
+                    settings TEXT NOT NULL DEFAULT '{}',
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     CONSTRAINT uq_organizations_slug UNIQUE (slug)
@@ -2620,6 +2766,28 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             """)
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)"
+            )
+            # Verified-domain self-service join requests (#1424). Mirrors alembic
+            # 0018_join_requests. One pending request per (tenant_id, identity_id)
+            # enforced via a partial unique index on status='pending'.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS join_requests (
+                    id          TEXT PRIMARY KEY,
+                    tenant_id   TEXT NOT NULL,
+                    identity_id TEXT NOT NULL,
+                    email       TEXT NOT NULL,
+                    status      TEXT NOT NULL DEFAULT 'pending',
+                    created_at  TEXT NOT NULL,
+                    decided_at  TEXT,
+                    decided_by  TEXT
+                )
+            """)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS ix_join_requests_tenant ON join_requests(tenant_id)"
+            )
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_join_requests_pending "
+                "ON join_requests(tenant_id, identity_id) WHERE status = 'pending'"
             )
             conn.commit()
         finally:

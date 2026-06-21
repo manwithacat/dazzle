@@ -74,6 +74,15 @@ class _FakeStore:
     def get_user_by_email(self, email):
         return self._users.get(email)
 
+    # #1424 admission gate reads. Default: tenant does NOT restrict, so
+    # assert_domain_admissible is a no-op and these tests exercise the
+    # pre-existing (unrestricted) behaviour.
+    def get_org_settings(self, tenant_id):
+        return {}
+
+    def get_connections_for_tenant(self, tenant_id):
+        return []
+
     def create_user(self, *, email, password, username=None):
         assert password  # passwordless-but-unguessable
         uid = f"uid-{self._next_uid}"

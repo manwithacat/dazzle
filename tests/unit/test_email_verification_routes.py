@@ -21,6 +21,16 @@ from dazzle.http.runtime.auth.email_verification_routes import (
 @pytest.fixture
 def mock_auth_store() -> MagicMock:
     store = MagicMock()
+    # #1424 Task 3.4: the verify-email handler now evaluates a verified-domain
+    # self-service join after marking the email verified. Give the bare MagicMock
+    # store no-op domain-join reads so the join path cleanly resolves to "none"
+    # (no tenant for the domain) instead of following MagicMock truthiness into a
+    # spurious join. Tests that exercise the join itself use a dedicated fake
+    # (see test_email_verify_domain_join.py).
+    store.get_connection_by_verified_domain = MagicMock(return_value=None)
+    store.get_org_settings = MagicMock(return_value={})
+    store.get_connections_for_tenant = MagicMock(return_value=[])
+    store.get_memberships_for_identity = MagicMock(return_value=[])
     return store
 
 

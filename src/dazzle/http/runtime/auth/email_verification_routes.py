@@ -114,6 +114,33 @@ def create_email_verification_routes(
                     exc_info=True,
                 )
 
+            # #1424 Phase 3 (Task 3.4): the email is now verified, so a fresh
+            # signup (created unverified) may be eligible for a self-service
+            # verified-domain join. Fail-closed — apply_domain_join no-ops unless
+            # the email's domain maps to a tenant whose policy admits it. A join
+            # hiccup must NEVER break verification itself (verification has
+            # already succeeded), so guard it exactly like the login path (3.3).
+            try:
+                from dazzle.http.runtime.auth.join_requests import apply_domain_join
+
+                joined = apply_domain_join(
+                    auth_store,
+                    identity_id=str(user_id),
+                    email=user.email,
+                    email_verified=True,
+                )
+                if joined.kind == "pending":
+                    # Admin-approval tenant: surface the awaiting-approval page.
+                    return RedirectResponse(url="/auth/join-requested", status_code=303)
+                # "joined" → the next authenticated request routes via apex
+                # discovery; "none" → unchanged. Both keep the normal redirect.
+            except Exception:  # noqa: BLE001 — join hiccup must never break verification
+                _logger.warning(  # nosemgrep
+                    "Domain-join evaluation failed during email verification; "  # nosemgrep
+                    "continuing without join",
+                    exc_info=True,
+                )
+
         redirect_to = next if _is_safe_redirect_path(next) else "/"
         sep = "&" if "?" in redirect_to else "?"
         return RedirectResponse(url=f"{redirect_to}{sep}verified=ok", status_code=303)

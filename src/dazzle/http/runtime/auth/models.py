@@ -2,6 +2,7 @@
 
 import secrets
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -102,8 +103,43 @@ class OrganizationRecord(BaseModel):
     name: str
     status: str = "active"
     is_test: bool = False
+    settings: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class JoinRequestRecord(BaseModel):
+    """A pending/decided self-service join request (verified-domain join, #1424).
+
+    Created when a verified-email identity hits a tenant whose domain_join_policy
+    is ``admin_approval``. Approval creates the membership; denial is terminal.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    tenant_id: str
+    identity_id: str
+    email: str
+    status: str = "pending"  # pending | approved | denied
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    decided_at: datetime | None = None
+    decided_by: str | None = None
+
+
+class AlreadyDecidedError(RuntimeError):
+    """A join request could not be decided because it is no longer ``pending``.
+
+    Raised by ``AuthStore.decide_join_request`` when its pending-only guard
+    (``UPDATE ... WHERE id = %s AND status = 'pending'``) matches zero rows — the
+    request was already approved/denied (a double-submit) or does not exist. The
+    approve/deny helpers rely on this so a second approve cannot create a duplicate
+    membership; routes map it to a friendly "already decided" message.
+    """
+
+    def __init__(self, request_id: str) -> None:
+        self.request_id = request_id
+        super().__init__(f"join request {request_id!r} is already decided or does not exist")
 
 
 class ScimGroupRecord(BaseModel):

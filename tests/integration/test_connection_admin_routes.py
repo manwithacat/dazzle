@@ -85,6 +85,14 @@ class _Store:
     def set_connection_verified_domains(self, connection_id, verified):
         pass
 
+    def get_org_settings(self, org_id):
+        return getattr(self, "_org_settings", {}).get(org_id, {})
+
+    def set_org_settings(self, org_id, settings):
+        if not hasattr(self, "_org_settings"):
+            self._org_settings = {}
+        self._org_settings[org_id] = settings
+
     def get_connection_secret_events(self, connection_id, *, tenant_id=None):
         return getattr(self, "_events", {}).get(connection_id, [])
 

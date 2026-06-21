@@ -11,15 +11,18 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import quote
 
+from dazzle.http.runtime.auth.org_settings import OrgSettings
 from dazzle.render.fragment import (
     URL,
     Badge,
     Button,
+    Combobox,
     Field,
     FormStack,
     Heading,
     Link,
     Page,
+    RawHTML,
     Stack,
     Submit,
     TargetSelector,
@@ -153,6 +156,7 @@ _CREATE_FORMS = {
     "oidc": ("Create OIDC connection", _OIDC_FIELDS),
     "scim": ("Create SCIM connection", _SCIM_FIELDS),
     "saml": ("Create SAML connection", _SAML_FIELDS),
+    "domain": ("Verify a domain (no SSO)", ()),
 }
 
 
@@ -165,6 +169,7 @@ def _create_area(new_form: str, secret_key_ok: bool) -> list[Any]:
                 Link(label="Add OIDC", href=URL("/auth/connections?new=oidc")),
                 Link(label="Add SCIM", href=URL("/auth/connections?new=scim")),
                 Link(label="Add SAML", href=URL("/auth/connections?new=saml")),
+                Link(label="Verify a domain (no SSO)", href=URL("/auth/connections?new=domain")),
             )
         )
     )
@@ -185,6 +190,27 @@ def _create_area(new_form: str, secret_key_ok: bool) -> list[Any]:
         out.append(
             Text(body="A SCIM bearer token is generated and shown once on creation.", tone="muted")
         )
+    if new_form == "domain":
+        # Domain connections carry no fields — FormStack requires ≥1 field, so emit a
+        # minimal trusted-static form via RawHTML instead.
+        out.append(
+            Text(
+                body="Creates a provider-less connection for domain-ownership verification. "
+                "No SSO IdP is required — use the add-domain and verify-domain actions after "
+                "creation to claim and verify your domain.",
+                tone="muted",
+            )
+        )
+        out.append(
+            RawHTML(
+                html=(
+                    '<form method="POST" action="/auth/connections/create?type=domain">'
+                    f'<button type="submit" class="dz-submit dz-submit--variant-primary">{label}</button>'
+                    "</form>"
+                )
+            )
+        )
+        return out
     out.append(
         FormStack(
             action=URL(f"/auth/connections/create?type={new_form}"),
@@ -194,6 +220,39 @@ def _create_area(new_form: str, secret_key_ok: bool) -> list[Any]:
         )
     )
     return out
+
+
+def _policy_form(org_settings: OrgSettings) -> Stack:
+    """Join-policy admin controls: domain_join_policy select + restrict toggle."""
+    restrict_value = "true" if org_settings.restrict_membership_to_verified_domains else ""
+    return Stack(
+        children=(
+            Heading(body="Join policy", level=2),
+            FormStack(
+                action=URL("/auth/connections/policy"),
+                method="POST",
+                fields=(
+                    Combobox(
+                        name="domain_join_policy",
+                        label="Domain join policy",
+                        options=(
+                            ("off", "Off — no domain-based joining"),
+                            ("admin_approval", "Admin approval required"),
+                            ("auto_join", "Auto-join verified domain members"),
+                        ),
+                        initial_value=org_settings.domain_join_policy,
+                    ),
+                    Field(
+                        name="restrict_membership_to_verified_domains",
+                        label="Restrict membership to verified domains only",
+                        kind="checkbox",
+                        initial_value=restrict_value,
+                    ),
+                ),
+                submit=Submit(label="Save policy", variant="primary"),
+            ),
+        )
+    )
 
 
 def _scim_bearer_banner(bearer: str, base_url: str) -> Stack:
@@ -218,7 +277,10 @@ def build_connections_view(
     secret_key_ok: bool = True,
     scim_bearer_once: str = "",
     base_url: str = "",
+    org_settings: OrgSettings | None = None,
 ) -> Page:
+    if org_settings is None:
+        org_settings = OrgSettings()
     body: list[Any] = [
         Link(label=product_name, href=URL("/")),
         Heading(body=f"SSO connections for {org_name}", level=1),
@@ -228,6 +290,7 @@ def build_connections_view(
             tone="muted",
         ),
     ]
+    body.append(_policy_form(org_settings))
     if scim_bearer_once:
         body.append(_scim_bearer_banner(scim_bearer_once, base_url))
     body.extend(_create_area(new_form, secret_key_ok))

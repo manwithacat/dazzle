@@ -132,6 +132,34 @@ def create_password_login_routes() -> APIRouter:
         )
         if redirect_to == FORBIDDEN_SENTINEL:
             return forbidden_org_response(request)  # #1393: branded host-pin 403
+        # #1424 Phase 3: a verified-email login that resolved no membership may be
+        # eligible for a self-service verified-domain join. Fail-closed: only a
+        # verified email reaches this branch, and apply_domain_join no-ops unless
+        # the email's domain maps to a tenant whose join policy admits it.
+        if membership_id is None and getattr(user, "email_verified", False):
+            from dazzle.http.runtime.auth.join_requests import apply_domain_join
+
+            try:
+                joined = apply_domain_join(
+                    auth_store,
+                    identity_id=str(user.id),
+                    email=normalized_email,
+                    email_verified=True,
+                )
+                if joined.kind == "joined":
+                    # Re-activate so the freshly-created membership binds to the
+                    # session and routes to the host path.
+                    outcome = activate_session_for_login(auth_store, user, request)
+                    membership_id, redirect_to = _login_redirect_for_outcome(
+                        outcome, safe_next, memberships_required=memberships_required(request)
+                    )
+                elif joined.kind == "pending":
+                    redirect_to = "/auth/join-requested"
+            except Exception:  # noqa: BLE001 — join hiccup must never break auth
+                _logger.warning(  # nosemgrep
+                    "Domain-join evaluation failed during login; continuing without join",  # nosemgrep
+                    exc_info=True,
+                )
         session = auth_store.create_session(user, active_membership_id=membership_id)
         if pre_auth_sid and pre_auth_sid != session.id:
             auth_store.delete_session(pre_auth_sid)

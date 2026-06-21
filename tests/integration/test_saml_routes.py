@@ -80,15 +80,22 @@ class _Store:
     def get_connection(self, connection_id, *, tenant_id=None):
         return self._connections.get(connection_id)
 
-    def get_connection_by_verified_domain(self, domain):
+    def get_connection_by_verified_domain(self, domain, *, types=None):
         d = domain.strip().lower()
         for c in self._connections.values():
-            if c.status == "active" and d in {x.lower() for x in c.verified_domains}:
+            if (
+                c.status == "active"
+                and (types is None or c.type in types)
+                and d in {x.lower() for x in c.verified_domains}
+            ):
                 return c
         return None
 
     def get_connections_for_tenant(self, tenant_id):
         return [c for c in self._connections.values() if c.tenant_id == tenant_id]
+
+    def get_org_settings(self, tenant_id):
+        return {}
 
     def get_user_by_email(self, email):
         return self._users.get(email)

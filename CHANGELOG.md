@@ -9,6 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.56] - 2026-06-21
+
+### Added
+- **#1424 — verified-domain self-service join (non-SSO).** A password (non-SSO) user
+  with a DNS-verified email can self-service join the tenant that owns their email
+  domain, governed by a per-tenant policy. Reuses the existing connection + DNS-TXT
+  domain-verification machinery via a new provider-less connection `type="domain"`
+  (created from the `/auth/connections` admin surface; verified via the existing
+  `add-domain`/`verify-domain` flow). Per-tenant settings live on a new
+  `organizations.settings` JSON column: `domain_join_policy` (`off` | `auto_join` |
+  `admin_approval`, default **`admin_approval`**) and
+  `restrict_membership_to_verified_domains` (default `False`). On a verified-email
+  login or email-verification, `auto_join` JIT-creates a membership and routing then
+  resolves to the tenant host; `admin_approval` files a `JoinRequest` that a
+  `manage_members` admin approves from the new `/auth/join-requests` queue (a generic
+  "request submitted" page is shown — no tenant-identity disclosure). Phases 1–5 of
+  the design; the worked-example app + per-persona guides (Gap 2) are tracked as a
+  follow-on.
+- **#1424 — uniform membership admission control.** A new
+  `restrict_membership_to_verified_domains` tenant flag, when on, requires every
+  membership-creating path (invitation-accept, SSO JIT, SCIM provisioning, and the new
+  self-service join) to have an email whose domain is in the tenant's verified set —
+  enforced by a single `assert_domain_admissible` gate. Default-off; inert until a
+  tenant opts in.
+
+### Security
+- **#1424 — self-asserted email never grants access.** Self-service join requires
+  `email_verified == True` (fail-closed at the pure-decision layer and at both call
+  sites), so a self-asserted email cannot route or join. Routing is never a grant
+  (membership is the only grant); a zero-membership identity is never routed to a
+  tenant host (no 403 bounce); and the apex/login surface exposes no
+  tenant-enumeration oracle (a domain that maps to a tenant is indistinguishable from
+  one that does not for an unverified probe). New state-changing admin POSTs
+  (`/auth/connections/policy`, `/auth/join-requests/approve|deny`) are CSRF-protected
+  and capability-gated (`manage_connections` / `manage_members`, fail-closed).
+  SSO domain routing now excludes `type="domain"` connections, and `resolve_provider`
+  fail-louds on them.
+
+### Agent Guidance
+- **Verified-domain join config is tenant-admin, not DSL.** Domains are proven via the
+  existing DNS-TXT `verify-domain` flow on a `type="domain"` connection; the join
+  policy + restrict toggle live on `organizations.settings` (typed via `OrgSettings`)
+  and are edited at `/auth/connections` (`manage_connections`). Approvals are at
+  `/auth/join-requests` (`manage_members`).
+- **Any new membership-creating path must call `assert_domain_admissible`** before
+  `create_membership` (the gate is uniform across invitation/SSO/SCIM/self-service;
+  `qa_provision` + `ensure_single_org_membership` are the only exempt org-bootstrap
+  paths). **Any new store-read added into a shared provisioning function must be added
+  to the route-level test fakes** — three SSO route-test fakes regressed mid-#1424
+  exactly this way.
+
 ## [0.83.55] - 2026-06-20
 
 ### Fixed
