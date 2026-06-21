@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.60] - 2026-06-21
+
+### Added
+- **#1431 (Phases 1–2) — DSL-snapshot migration-engine pure core.** Two new internal
+  modules, no behaviour change yet (`db revision` still uses the #1427 additive-guardrail
+  autogenerate path until the Phase-3 wiring lands):
+  `dazzle.db.schema_snapshot` projects the canonical `load_target_metadata()` SQLAlchemy
+  MetaData into a deterministic relational `Snapshot` (tables = entity name verbatim,
+  columns with type/nullable/default/pk, `fks` as `col→ref_table`, indexes, uniques),
+  renders it as an embeddable `SCHEMA_SNAPSHOT` literal, and reads it back from a
+  revision's project-lineage head; `dazzle.db.schema_diff` is a pure differ
+  (`diff(prev, curr) → [SchemaOp]`) emitting typed add/drop/alter ops, ordered
+  drops-last. Foundation for the snapshot-diff engine (#1431) that will replace
+  metadata-vs-DB autogenerate with DSL-vs-DSL comparison. Phases 3–6 (renderer,
+  `db revision` wiring, `was:` rename grammar, data-migration seam, e2e) to follow.
+
 ## [0.83.59] - 2026-06-21
 
 ### Fixed
