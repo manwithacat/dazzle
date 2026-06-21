@@ -129,6 +129,14 @@ def revision_command(
     the separate revision ``EnvironmentContext`` make template-arg plumbing the
     more fragile of the two — see the task report.
 
+    **Data-migration seam (Task 5.1):** for an *unsafe* schema change — a
+    ``NOT NULL`` column add with no server default, or a type change with no safe
+    cast — the renderer emits the expand→seam→contract scaffold (add nullable →
+    seam → finalize NOT NULL / cast). The seam is carried through the op-tree as a
+    placeholder ``op.execute`` marker and post-write-expanded here into a readable
+    ``# === DATA MIGRATION (hand-author) ===`` block for the author to fill in (see
+    ``_inject_data_seams``).
+
     ``--legacy-autogenerate`` falls back to the metadata-vs-DB autogenerate path,
     scoped to **additive** ops (#1427); set ``DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1``
     there to allow drop/alter ops for one deliberately destructive revision.
@@ -165,6 +173,10 @@ def revision_command(
         # into the generated file (no-op when legacy / suppressed / no snapshot).
         if not legacy_autogenerate:
             _inject_schema_snapshot(rev, cfg.attributes.get("dazzle_schema_snapshot"))
+            # Expand the renderer's data-migration seam markers into readable
+            # hand-author comment blocks (Task 5.1). No-op when the revision has
+            # no unsafe change (no marker present).
+            _inject_data_seams(rev)
         console.print(f"[green]Migration revision created: {message}[/green]")
         console.print(f"[dim]  → {project_versions}/[/dim]")
     except Exception as e:
@@ -208,6 +220,61 @@ def _inject_schema_snapshot(rev: Any, snapshot_literal: str | None) -> None:
         f"SCHEMA_SNAPSHOT = {snapshot_literal}\n"
     )
     path.write_text(text + block, encoding="utf-8")
+
+
+def _inject_data_seams(rev: Any) -> None:
+    """Expand the renderer's seam markers into hand-author comment blocks (Task 5.1).
+
+    For an unsafe schema change (a ``NOT NULL`` add with no default, or a type
+    change with no safe cast), ``schema_render`` emits the expand/contract scaffold
+    with a placeholder ``ExecuteSQLOp`` carrying ``schema_render.SEAM_MARKER``.
+    Alembic renders that as a single ``op.execute('<SEAM_MARKER>')`` line in the
+    generated ``upgrade()`` body. This post-write step replaces each such line with
+    a readable, clearly-marked block the author fills in::
+
+        # === DATA MIGRATION (hand-author) ===
+        # Backfill / transform rows before the column is finalized NOT NULL or
+        # the type cast runs. Replace the example below with the real statement.
+        # op.execute("UPDATE ... SET ... WHERE ...")
+        # === END DATA MIGRATION ===
+
+    Post-write injection (mirroring ``_inject_schema_snapshot``) is the chosen seam
+    mechanism: it keeps ``schema_render`` a pure op-tree transform (unit-testable on
+    the op stream) while landing the comment block verbatim — a comment block is not
+    an Alembic op, so it cannot be carried through ``render_python_code`` directly.
+    The matched line's leading indentation is preserved so the block sits correctly
+    inside ``upgrade()``. No-op when no marker is present (the safe-change case).
+    """
+    from dazzle.db.schema_render import SEAM_MARKER
+
+    if isinstance(rev, list):
+        rev = rev[0] if rev else None
+    if rev is None:
+        return
+    path = Path(rev.path)
+    if not path.exists():
+        return
+
+    text = path.read_text(encoding="utf-8")
+    if SEAM_MARKER not in text:
+        return
+
+    out_lines: list[str] = []
+    for line in text.splitlines(keepends=False):
+        if SEAM_MARKER in line:
+            indent = line[: len(line) - len(line.lstrip())]
+            out_lines.extend(
+                [
+                    f"{indent}# === DATA MIGRATION (hand-author) ===",
+                    f"{indent}# Backfill / transform existing rows here BEFORE the column is",
+                    f"{indent}# finalized NOT NULL or the type cast runs. Replace the example.",
+                    f'{indent}# op.execute("UPDATE my_table SET my_col = ... WHERE my_col IS NULL")',
+                    f"{indent}# === END DATA MIGRATION ===",
+                ]
+            )
+        else:
+            out_lines.append(line)
+    path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
 
 
 #: #1282: Alembic ships `alembic_version.version_num` as `VARCHAR(32)`.

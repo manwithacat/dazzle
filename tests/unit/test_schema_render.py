@@ -21,7 +21,7 @@ from dazzle.db.schema_diff import (
     RenameColumn,
     RenameTable,
 )
-from dazzle.db.schema_render import render
+from dazzle.db.schema_render import SEAM_MARKER, render
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -128,6 +128,103 @@ def test_alter_column_type_change_uses_postgresql_using():
     # USING clause injected for TEXT → UUID safe cast
     assert "postgresql_using" in alter.kw
     assert "col" in alter.kw["postgresql_using"]
+
+
+# ---------------------------------------------------------------------------
+# Task 5.1 — unsafe-change expand/contract scaffold + data seam
+# ---------------------------------------------------------------------------
+
+
+def _seam_ops(up_flat: list) -> list:
+    """The ExecuteSQLOp seam markers present in a flat upgrade-op list."""
+    return [o for o in up_flat if isinstance(o, aops.ExecuteSQLOp) and o.sqltext == SEAM_MARKER]
+
+
+def test_add_not_null_no_default_scaffolds_expand_seam_contract():
+    """Unsafe AddColumn(nullable=False, default=None) → add-nullable, seam, finalize."""
+    unsafe = {"type": "text", "nullable": False, "default": None, "pk": False}
+    up, down = render([AddColumn("t", "x", unsafe)])
+    up_flat = _up_ops(up.ops)
+
+    # 1. add-column NULLABLE first (the expand step — non-blocking)
+    add = next(o for o in up_flat if isinstance(o, aops.AddColumnOp))
+    assert add.column.name == "x"
+    assert add.column.nullable is True, "expand step must add the column NULLABLE"
+
+    # 2. a data-migration seam marker is present between expand and contract
+    seams = _seam_ops(up_flat)
+    assert len(seams) == 1, "exactly one data-migration seam marker expected"
+
+    # 3. finalize — alter_column(nullable=False) (the contract step)
+    alter = next(o for o in up_flat if isinstance(o, aops.AlterColumnOp))
+    assert alter.column_name == "x"
+    assert alter.modify_nullable is False
+
+    # Ordering: add (expand) → seam → alter (contract)
+    add_i = up_flat.index(add)
+    seam_i = up_flat.index(seams[0])
+    alter_i = up_flat.index(alter)
+    assert add_i < seam_i < alter_i
+
+    # Downgrade just drops the added column (no seam).
+    down_flat = _up_ops(down.ops)
+    assert any(isinstance(o, aops.DropColumnOp) and o.column_name == "x" for o in down_flat)
+    assert not _seam_ops(down_flat), "downgrade carries no seam marker"
+
+
+def test_add_nullable_does_not_scaffold():
+    """A NULLABLE AddColumn is safe — plain add, no seam."""
+    safe = {"type": "text", "nullable": True, "default": None, "pk": False}
+    up, _ = render([AddColumn("t", "x", safe)])
+    up_flat = _up_ops(up.ops)
+    assert not _seam_ops(up_flat)
+    assert not any(isinstance(o, aops.AlterColumnOp) for o in up_flat)
+    add = next(o for o in up_flat if isinstance(o, aops.AddColumnOp))
+    assert add.column.nullable is True
+
+
+def test_add_not_null_with_default_does_not_scaffold():
+    """NOT NULL but with a server default is safe (backfill is automatic) — plain add."""
+    safe = {"type": "boolean", "nullable": False, "default": "false", "pk": False}
+    up, _ = render([AddColumn("t", "x", safe)])
+    up_flat = _up_ops(up.ops)
+    assert not _seam_ops(up_flat)
+    add = next(o for o in up_flat if isinstance(o, aops.AddColumnOp))
+    assert add.column.nullable is False, "safe path keeps the single NOT NULL add"
+
+
+def test_safe_type_change_does_not_scaffold():
+    """A type change with an available USING cast (TEXT→UUID) does NOT scaffold."""
+    old = {"type": "text", "nullable": True, "default": None, "pk": False}
+    new = {"type": "uuid", "nullable": True, "default": None, "pk": False}
+    up, _ = render([AlterColumn("t", "col", old, new)])
+    up_flat = _up_ops(up.ops)
+    assert not _seam_ops(up_flat), "safe cast must not emit a seam"
+    alter = next(o for o in up_flat if isinstance(o, aops.AlterColumnOp))
+    assert "postgresql_using" in alter.kw
+
+
+def test_unsafe_type_change_scaffolds_seam():
+    """A type change with NO safe USING cast (TEXT→INTEGER is safe; INTEGER→DATE is not).
+
+    Uses INTEGER→DATE which is absent from SAFE_CASTS → no USING → unsafe → scaffold.
+    """
+    old = {"type": "integer", "nullable": True, "default": None, "pk": False}
+    new = {"type": "date", "nullable": True, "default": None, "pk": False}
+    up, down = render([AlterColumn("t", "col", old, new)])
+    up_flat = _up_ops(up.ops)
+    seams = _seam_ops(up_flat)
+    assert len(seams) == 1, "unsafe type change must emit a data-migration seam"
+    # The alter still occurs (wrapped by the seam) and carries no USING clause.
+    alter = next(o for o in up_flat if isinstance(o, aops.AlterColumnOp))
+    assert "postgresql_using" not in alter.kw
+    # Seam precedes the alter (hand-authored data prep runs before the cast).
+    assert up_flat.index(seams[0]) < up_flat.index(alter)
+    # Downgrade restores the old type and carries no seam.
+    down_flat = _up_ops(down.ops)
+    assert not _seam_ops(down_flat)
+    restore = next(o for o in down_flat if isinstance(o, aops.AlterColumnOp))
+    assert restore.modify_type is not None
 
 
 # ---------------------------------------------------------------------------

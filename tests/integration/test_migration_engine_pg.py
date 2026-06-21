@@ -238,6 +238,50 @@ def test_legacy_autogenerate_path_has_no_snapshot(
     assert "create_table" in text
 
 
+def test_unsafe_not_null_add_renders_data_seam(
+    in_project: tuple[Path, str],
+) -> None:
+    """Task 5.1: adding a NOT NULL field with no default emits the expand/contract
+    scaffold with a hand-author DATA MIGRATION seam in the generated upgrade()."""
+    from dazzle.cli.db import revision_command, upgrade_command
+
+    project, _ = in_project
+
+    # Baseline: create the Task table.
+    revision_command(message="baseline", autogenerate=True, legacy_autogenerate=False)
+    upgrade_command(revision="head", no_rls=True)
+    baseline_files = _project_revision_files(project)
+
+    # Evolve: add a NOT NULL field with NO default (`required`, no `=`) → unsafe.
+    unsafe_dsl = (
+        _BASE_DSL + "  owner: str(120) required\n"  # appended under the Task entity block
+    )
+    (project / "dsl" / "app.dsl").write_text(unsafe_dsl, encoding="utf-8")
+
+    revision_command(message="add owner not null", autogenerate=True, legacy_autogenerate=False)
+
+    files = _project_revision_files(project)
+    new_files = [p for p in files if p not in set(baseline_files)]
+    assert len(new_files) == 1, "exactly one new revision expected"
+    text = new_files[0].read_text(encoding="utf-8")
+
+    # The raw seam marker must be fully expanded (never left in the file).
+    assert "__DAZZLE_DATA_MIGRATION_SEAM__" not in text, "raw seam marker must be expanded"
+    # The hand-author data-migration block is present.
+    assert "# === DATA MIGRATION (hand-author) ===" in text, (
+        f"expected DATA MIGRATION seam in unsafe revision; got:\n{text}"
+    )
+    assert "# === END DATA MIGRATION ===" in text
+    # Expand/contract scaffold: add the column NULLABLE, then finalize NOT NULL.
+    assert "add_column('Task'" in text
+    assert "nullable=True" in text, "expand step adds the column NULLABLE"
+    assert "nullable=False" in text, "contract step finalizes NOT NULL"
+
+    # The scaffold applies cleanly against an EMPTY table (no rows to backfill),
+    # proving the generated migration is runnable as-emitted.
+    upgrade_command(revision="head", no_rls=True)
+
+
 def test_engine_resolves_field_rename_not_drop_add(
     in_project: tuple[Path, str],
 ) -> None:

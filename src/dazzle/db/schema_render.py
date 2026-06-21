@@ -60,6 +60,27 @@ from dazzle.http.runtime.safe_casts import get_using_clause
 ColSnap = dict[str, Any]
 
 # ---------------------------------------------------------------------------
+# Data-migration seam marker (Task 5.1)
+# ---------------------------------------------------------------------------
+
+#: Unique sqltext carried by the placeholder ``ExecuteSQLOp`` the renderer emits
+#: at each unsafe-change data seam. Alembic renders this as a single
+#: ``op.execute('<SEAM_MARKER>')`` line in the generated ``upgrade()`` body;
+#: ``dazzle db revision`` post-write-replaces that line with the human-readable
+#: ``# === DATA MIGRATION (hand-author) ===`` … block (see ``cli/db.py``).
+#: Chosen so the renderer stays a pure op-tree transform (unit-testable on the
+#: op stream) while the actual comment block lands verbatim in the file. The
+#: token is deliberately distinctive so the post-write substitution is exact and
+#: never collides with a real hand-authored ``op.execute``.
+SEAM_MARKER = "__DAZZLE_DATA_MIGRATION_SEAM__"
+
+
+def _seam_op() -> aops.ExecuteSQLOp:
+    """A top-level placeholder op marking a hand-author data-migration seam."""
+    return aops.ExecuteSQLOp(SEAM_MARKER)
+
+
+# ---------------------------------------------------------------------------
 # Token → SA type mapping (inverse of schema_snapshot._sa_type_to_token)
 # ---------------------------------------------------------------------------
 
@@ -183,15 +204,60 @@ def _render_rename_table(
     return up_op, down_op
 
 
+def _is_unsafe_add(col: ColSnap) -> bool:
+    """True when adding *col* would block on a populated table.
+
+    Adding a ``NOT NULL`` column with no server ``default`` to a table that
+    already has rows fails outright (Postgres can't fill the existing rows). That
+    is the canonical expand→backfill→contract case. A nullable column, or one
+    carrying a server default (Postgres backfills automatically), is safe.
+    """
+    return (col.get("nullable", True) is False) and col.get("default") is None
+
+
 def _render_add_column(
     op: AddColumn,
-) -> tuple[aops.ModifyTableOps, aops.ModifyTableOps]:
-    col = _col_snap_to_sa_column(op.name, op.col)
-    add_op = aops.AddColumnOp(op.table, col)
+) -> tuple[list[aops.MigrateOperation], list[aops.MigrateOperation]]:
+    """Render an AddColumn — plain add, or the expand/contract scaffold if unsafe.
+
+    Safe (nullable, or NOT NULL with a default): a single add + inverse drop.
+
+    Unsafe (NOT NULL, no default): the expand→seam→contract scaffold —
+      1. add the column **NULLABLE** (non-blocking expand),
+      2. a marked data-migration seam (hand-author backfill),
+      3. ``alter_column(nullable=False)`` to finalize (contract).
+    The downgrade is just the inverse drop (dropping the column reverts the whole
+    scaffold), so no seam is emitted on the way down.
+    """
+    if not _is_unsafe_add(op.col):
+        col = _col_snap_to_sa_column(op.name, op.col)
+        add_op = aops.AddColumnOp(op.table, col)
+        drop_op = aops.DropColumnOp(op.table, op.name)
+        return (
+            [aops.ModifyTableOps(op.table, [add_op])],
+            [aops.ModifyTableOps(op.table, [drop_op])],
+        )
+
+    # Unsafe: expand (add NULLABLE) → seam → contract (set NOT NULL).
+    nullable_snap = {**op.col, "nullable": True}
+    nullable_col = _col_snap_to_sa_column(op.name, nullable_snap)
+    add_nullable = aops.AddColumnOp(op.table, nullable_col)
+    target_type = _token_to_sa_type(op.col["type"])
+    finalize = aops.AlterColumnOp(
+        op.table,
+        op.name,
+        existing_type=target_type,
+        existing_nullable=True,
+        modify_nullable=False,
+    )
     drop_op = aops.DropColumnOp(op.table, op.name)
     return (
-        aops.ModifyTableOps(op.table, [add_op]),
-        aops.ModifyTableOps(op.table, [drop_op]),
+        [
+            aops.ModifyTableOps(op.table, [add_nullable]),
+            _seam_op(),
+            aops.ModifyTableOps(op.table, [finalize]),
+        ],
+        [aops.ModifyTableOps(op.table, [drop_op])],
     )
 
 
@@ -221,7 +287,7 @@ def _render_rename_column(
 
 def _render_alter_column(
     op: AlterColumn,
-) -> tuple[aops.ModifyTableOps, aops.ModifyTableOps]:
+) -> tuple[list[aops.MigrateOperation], list[aops.MigrateOperation]]:
     old, new = op.old, op.new
 
     # Build the forward (upgrade) AlterColumnOp kwargs
@@ -252,11 +318,16 @@ def _render_alter_column(
 
     up_alter = aops.AlterColumnOp(op.table, op.name, **up_alter_kw)
 
-    # Inject USING clause for safe type casts
+    # Inject USING clause for safe type casts. A type change with NO safe USING
+    # clause is unsafe (the cast may lose data or fail per-row), so it is wrapped
+    # by a hand-author data-migration seam (Task 5.1).
+    unsafe_type_change = False
     if type_changed:
         using = get_using_clause(old["type"].upper(), new["type"].upper(), op.name)
         if using:
             up_alter.kw["postgresql_using"] = using
+        else:
+            unsafe_type_change = True
 
     # Build the inverse (downgrade) AlterColumnOp
     down_alter_kw: dict[str, Any] = {
@@ -275,9 +346,18 @@ def _render_alter_column(
 
     down_alter = aops.AlterColumnOp(op.table, op.name, **down_alter_kw)
 
+    up_ops: list[aops.MigrateOperation]
+    if unsafe_type_change:
+        # Seam first: the hand-authored data prep (e.g. populate a staging value,
+        # validate every row casts) must run before the bare ALTER attempts the
+        # cast. Downgrade reverses the type with no seam.
+        up_ops = [_seam_op(), aops.ModifyTableOps(op.table, [up_alter])]
+    else:
+        up_ops = [aops.ModifyTableOps(op.table, [up_alter])]
+
     return (
-        aops.ModifyTableOps(op.table, [up_alter]),
-        aops.ModifyTableOps(op.table, [down_alter]),
+        up_ops,
+        [aops.ModifyTableOps(op.table, [down_alter])],
     )
 
 
@@ -370,43 +450,63 @@ def render(ops: list[SchemaOp]) -> tuple[aops.UpgradeOps, aops.DowngradeOps]:
     down_ops: list[aops.MigrateOperation] = []
 
     for op in ops:
-        up_op: aops.MigrateOperation
-        down_op: aops.MigrateOperation
+        # AddColumn / AlterColumn may scaffold (expand→seam→contract) and so
+        # return op *lists*; every other renderer returns a single (up, down)
+        # pair. Normalise both shapes to lists before extending.
+        up_part: list[aops.MigrateOperation]
+        down_part: list[aops.MigrateOperation]
 
-        if isinstance(op, AddTable):
-            up_op, down_op = _render_add_table(op)
-        elif isinstance(op, DropTable):
-            up_op, down_op = _render_drop_table(op)
-        elif isinstance(op, RenameTable):
-            up_op, down_op = _render_rename_table(op)
-        elif isinstance(op, AddColumn):
-            up_op, down_op = _render_add_column(op)
-        elif isinstance(op, DropColumn):
-            up_op, down_op = _render_drop_column(op)
-        elif isinstance(op, RenameColumn):
-            up_op, down_op = _render_rename_column(op)
+        if isinstance(op, AddColumn):
+            up_part, down_part = _render_add_column(op)
         elif isinstance(op, AlterColumn):
-            up_op, down_op = _render_alter_column(op)
-        elif isinstance(op, AddForeignKey):
-            up_op, down_op = _render_add_fk(op)
-        elif isinstance(op, DropForeignKey):
-            up_op, down_op = _render_drop_fk(op)
-        elif isinstance(op, AddIndex):
-            up_op, down_op = _render_add_index(op)
-        elif isinstance(op, DropIndex):
-            up_op, down_op = _render_drop_index(op)
-        elif isinstance(op, AddUnique):
-            up_op, down_op = _render_add_unique(op)
-        elif isinstance(op, DropUnique):
-            up_op, down_op = _render_drop_unique(op)
+            up_part, down_part = _render_alter_column(op)
         else:
-            # Future ops — skip rather than raise so the engine stays forward-compatible.
-            continue
+            single = _render_single(op)
+            if single is None:
+                # Future ops — skip rather than raise so the engine stays
+                # forward-compatible.
+                continue
+            up_one, down_one = single
+            up_part, down_part = [up_one], [down_one]
 
-        up_ops.append(up_op)
-        down_ops.append(down_op)
+        up_ops.extend(up_part)
+        # Reverse each op-group's internal order so the group's downgrade runs
+        # last-added-first, then the groups themselves rollback in reverse below.
+        down_ops.extend(reversed(down_part))
 
     return (
         aops.UpgradeOps(ops=up_ops),
         aops.DowngradeOps(ops=list(reversed(down_ops))),
     )
+
+
+def _render_single(
+    op: SchemaOp,
+) -> tuple[aops.MigrateOperation, aops.MigrateOperation] | None:
+    """Render a non-scaffolding SchemaOp to a single (upgrade, downgrade) pair.
+
+    Returns ``None`` for unknown future ops so ``render`` can skip them.
+    """
+    if isinstance(op, AddTable):
+        return _render_add_table(op)
+    if isinstance(op, DropTable):
+        return _render_drop_table(op)
+    if isinstance(op, RenameTable):
+        return _render_rename_table(op)
+    if isinstance(op, DropColumn):
+        return _render_drop_column(op)
+    if isinstance(op, RenameColumn):
+        return _render_rename_column(op)
+    if isinstance(op, AddForeignKey):
+        return _render_add_fk(op)
+    if isinstance(op, DropForeignKey):
+        return _render_drop_fk(op)
+    if isinstance(op, AddIndex):
+        return _render_add_index(op)
+    if isinstance(op, DropIndex):
+        return _render_drop_index(op)
+    if isinstance(op, AddUnique):
+        return _render_add_unique(op)
+    if isinstance(op, DropUnique):
+        return _render_drop_unique(op)
+    return None
