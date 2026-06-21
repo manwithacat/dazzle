@@ -133,6 +133,34 @@ class TestBuildMetadata:
         # The auto-added id should be a primary key
         id_col = table.c.id
         assert id_col.primary_key
+        # Canonical implicit-PK type is UUID (#1432) — must match the type that
+        # `ref`/FK columns target, so a foreign key to this PK is type-consistent.
+        assert isinstance(id_col.type, Uuid), (
+            f"implicit id PK must be Uuid (matches ref FK columns), got {id_col.type!r}"
+        )
+
+    def test_auto_id_pk_type_matches_ref_fk_type(self):
+        """#1432: an implicit-id PK and a `ref` FK pointing at it share one type.
+
+        The latent mismatch this guards against: implicit id was `Text` while the
+        `ref` column targeting it was `Uuid`. Both must be `Uuid`.
+        """
+        entities = [
+            _entity("Author", [_field("name", scalar_type=ScalarType.TEXT)]),  # implicit id
+            _entity(
+                "Book",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("author", kind="ref", ref_entity="Author"),
+                ],
+            ),
+        ]
+        metadata = build_metadata(entities)
+        author_pk = metadata.tables["Author"].c.id
+        book_fk = metadata.tables["Book"].c.author
+        assert isinstance(author_pk.type, Uuid)
+        assert isinstance(book_fk.type, Uuid)
+        assert type(author_pk.type) is type(book_fk.type)
 
     def test_primary_key_on_id_field(self):
         entities = [

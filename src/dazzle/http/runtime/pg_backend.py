@@ -503,9 +503,11 @@ class PostgresBackend:
     def _build_columns(self, entity: EntitySpec, *, registry: Any = None) -> str:
         """Build column definitions for CREATE TABLE."""
         columns = []
+        # Canonical implicit-PK type is UUID (#1432) — matches the ref/FK columns
+        # (_field_type_to_postgres → "UUID"), the #1431 engine, and sa_schema.
         has_id = any(f.name == "id" for f in entity.fields)
         if not has_id:
-            columns.append('"id" TEXT PRIMARY KEY')
+            columns.append('"id" UUID PRIMARY KEY')
 
         for field in entity.fields:
             col_def = self._build_column(field)

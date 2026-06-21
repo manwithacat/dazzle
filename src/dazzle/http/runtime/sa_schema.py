@@ -552,10 +552,15 @@ def build_metadata(
 
         columns = []
 
-        # Ensure an 'id' column exists
+        # Ensure an 'id' column exists. Canonical implicit-PK type is UUID (#1432):
+        # `ref`/FK columns are already `sa.Uuid()` (see _field_type_to_sa), the
+        # #1431 snapshot engine and the committed example baselines already emit
+        # `sa.Uuid()`, and entity ids are uuid4-generated at insert. Defaulting the
+        # implicit id to Text here was the lone outlier — a latent PK/FK type
+        # mismatch on the live-boot path.
         has_id = any(f.name == "id" for f in entity.fields)
         if not has_id:
-            columns.append(sa.Column("id", sa.Text(), primary_key=True))
+            columns.append(sa.Column("id", sa.Uuid(), primary_key=True))
 
         for field in entity.fields:
             columns.append(

@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.66] - 2026-06-21
+
+### Fixed
+- **#1432 — canonical implicit-PK type is now UUID, removing a latent PK/FK type
+  mismatch.** An entity that did not declare an explicit `id` got an implicit `id`
+  column typed `TEXT` (in both the live-boot `sa_schema` emitter and the legacy
+  `pg_backend` emitter), while `ref`/FK columns pointing at that PK were already typed
+  `UUID` — so a foreign key to an implicit-id entity was type-inconsistent. Both emitters
+  now default the implicit `id` to `UUID`, matching the `ref` FK columns, the #1431
+  snapshot engine (which already projects `uuid`), the committed example baselines (already
+  `sa.Uuid()`), and the uuid4-generated ids the create path already produces. No data
+  migration is required: entities almost always declare `id: uuid pk` explicitly (already
+  `UUID`), so the change only affects the rare implicit-id entity, and greenfield tables are
+  created `UUID` from the first boot. Auth-store tables (`users.id` etc.) are a separate,
+  internally-consistent `TEXT`-id subsystem and are intentionally unchanged.
+
+### Agent Guidance
+- **Implicit entity `id` is `UUID`.** An entity with no declared `id` gets a `UUID` primary
+  key (was `TEXT`), consistent with `ref`/FK columns and the migration engine. Declaring
+  `id: str pk` is still honored if you specifically want a text PK.
+
 ## [0.83.65] - 2026-06-21
 
 ### Changed
