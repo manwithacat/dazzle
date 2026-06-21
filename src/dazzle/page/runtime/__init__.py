@@ -30,10 +30,6 @@ from dazzle.page.runtime.dev_server import (
     run_dev_server_from_dict,
     run_dev_server_from_json,
 )
-from dazzle.page.runtime.realtime_client import (
-    generate_realtime_init_js,
-    get_realtime_client_js,
-)
 from dazzle.page.runtime.template_renderer import render_page
 from dazzle.render.context import (
     ColumnContext,
@@ -63,9 +59,6 @@ __all__ = [
     "ColumnContext",
     "FieldContext",
     "NavItemContext",
-    # Realtime client
-    "get_realtime_client_js",
-    "generate_realtime_init_js",
     # Development server
     "DazzleDevServer",
     "run_dev_server",

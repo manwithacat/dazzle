@@ -448,20 +448,6 @@ def evaluate_permission(
     return _result
 
 
-def evaluate_permission_bool(
-    access_spec: EntityAccessSpec,
-    operation: AccessOperationKind,
-    record: dict[str, Any] | None,
-    context: AccessRuntimeContext,
-) -> bool:
-    """
-    Backward-compatible boolean wrapper around evaluate_permission.
-
-    Returns True if operation is permitted, False otherwise.
-    """
-    return evaluate_permission(access_spec, operation, record, context).allowed
-
-
 # =============================================================================
 # Convenience Functions
 # =============================================================================

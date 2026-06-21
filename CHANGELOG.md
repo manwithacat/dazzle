@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.81] - 2026-06-22
+
+### Removed
+- **#1439 (slice 1) — dead backward-compat shims (ADR-0003).**
+  - `render/access_evaluator.evaluate_permission_bool` — a thin "backward-compatible" wrapper
+    around `evaluate_permission(...).allowed` with **zero** production callers (only a test).
+    Deleted with its test.
+  - **`page/runtime/realtime_client.py` (974 lines)** — the headline re-export/duplicate the issue
+    named: a 900+-char `_REALTIME_CLIENT_JS_INLINE` blob, a `REALTIME_CLIENT_JS` alias, and
+    `get_realtime_client_js()` / `generate_realtime_init_js()` wrappers. The HTMX/SSE migration
+    removed `static/js/realtime.js` and the WebSocket client path, orphaning the whole module —
+    `get_realtime_client_js` / `generate_realtime_init_js` had **no** runtime callers (only the
+    package re-export). Deleted the module and its `page/runtime/__init__` re-export. (The issue's
+    "duplicate of static/js/realtime.js" premise was stale — the static file was already gone; the
+    inline was dead, not drifting.)
+
+### Added
+- **#1439 — regression gate `test_no_inlined_js_asset_1439.py`.** No `.py` under `src/dazzle` may
+  embed a ≥4 KB JavaScript program as a string literal — a full client asset belongs in
+  `static/js/` and must be served, not inlined (an inlined copy becomes a second source of truth).
+  Small inline snippets stay under the threshold. Prevents the `realtime_client` class from
+  returning.
+
+### Agent Guidance
+- **#1439 scope note:** the issue's `grep -c 'backward.?compat|deprecated' == 0` done-criteria and
+  the broad "marker on any symbol" gate **over-reach** — most of the 24 docstring matches describe
+  back-compat *behavior* (input tolerance, visibility-first ordering) or are a legitimate *facade*
+  (`core/linker_impl` delegated properties present a flat view over `_domain`/`_ui`; deleting them
+  forces callers into private attributes — worse encapsulation, ~78 call sites). Future slices
+  should target only decidable anti-patterns (pure forwarding wrappers with migratable callers,
+  dead re-export blocks, inlined static assets), not every symbol whose docstring says "backward
+  compat". Slice 1 removed the unambiguous dead shims.
+
 ## [0.83.80] - 2026-06-22
 
 ### Fixed

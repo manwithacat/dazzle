@@ -23,7 +23,6 @@ from dazzle.render.access_evaluator import (
     AccessDecision,
     AccessRuntimeContext,
     evaluate_permission,
-    evaluate_permission_bool,
     evaluate_visibility,
     filter_visible_records,
 )
@@ -401,17 +400,7 @@ class TestLogicalConditions:
 # =============================================================================
 
 
-class TestBackwardCompat:
-    def test_evaluate_permission_bool(self) -> None:
-        """evaluate_permission_bool returns plain bool."""
-        spec = EntityAccessSpec(
-            permissions=[
-                _permit_rule(AccessOperationKind.CREATE, _role_check("admin")),
-            ]
-        )
-        ctx = _ctx(roles=["admin"])
-        assert evaluate_permission_bool(spec, AccessOperationKind.CREATE, None, ctx) is True
-
+class TestVisibilityAndRbac:
     def test_visibility_rules_still_work(self) -> None:
         """Visibility rules remain functional."""
         spec = EntityAccessSpec(
