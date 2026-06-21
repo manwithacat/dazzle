@@ -34,6 +34,7 @@ Snapshot  = dict[str, TableSnap]
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -46,6 +47,8 @@ from dazzle.db.schema_snapshot import (
     project_current,
     render_snapshot_literal,
 )
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Public result type
@@ -193,6 +196,10 @@ def _load_project_appspec_for_hints() -> Any:
     except Exception:
         # A non-project / fresh / half-formed context: degrade to drop+add
         # rather than crashing the revision (matches metadata_loader's policy).
+        logger.debug(
+            "could not load project appspec for rename hints; proceeding without",
+            exc_info=True,
+        )
         return None
 
 
