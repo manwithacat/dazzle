@@ -22,6 +22,7 @@ from dazzle.render.fragment import (
     Heading,
     Link,
     Page,
+    RawHTML,
     Stack,
     Submit,
     TargetSelector,
@@ -155,6 +156,7 @@ _CREATE_FORMS = {
     "oidc": ("Create OIDC connection", _OIDC_FIELDS),
     "scim": ("Create SCIM connection", _SCIM_FIELDS),
     "saml": ("Create SAML connection", _SAML_FIELDS),
+    "domain": ("Verify a domain (no SSO)", ()),
 }
 
 
@@ -167,6 +169,7 @@ def _create_area(new_form: str, secret_key_ok: bool) -> list[Any]:
                 Link(label="Add OIDC", href=URL("/auth/connections?new=oidc")),
                 Link(label="Add SCIM", href=URL("/auth/connections?new=scim")),
                 Link(label="Add SAML", href=URL("/auth/connections?new=saml")),
+                Link(label="Verify a domain (no SSO)", href=URL("/auth/connections?new=domain")),
             )
         )
     )
@@ -187,6 +190,27 @@ def _create_area(new_form: str, secret_key_ok: bool) -> list[Any]:
         out.append(
             Text(body="A SCIM bearer token is generated and shown once on creation.", tone="muted")
         )
+    if new_form == "domain":
+        # Domain connections carry no fields — FormStack requires ≥1 field, so emit a
+        # minimal trusted-static form via RawHTML instead.
+        out.append(
+            Text(
+                body="Creates a provider-less connection for domain-ownership verification. "
+                "No SSO IdP is required — use the add-domain and verify-domain actions after "
+                "creation to claim and verify your domain.",
+                tone="muted",
+            )
+        )
+        out.append(
+            RawHTML(
+                html=(
+                    '<form method="POST" action="/auth/connections/create?type=domain">'
+                    f'<button type="submit" class="dz-submit dz-submit--variant-primary">{label}</button>'
+                    "</form>"
+                )
+            )
+        )
+        return out
     out.append(
         FormStack(
             action=URL(f"/auth/connections/create?type={new_form}"),

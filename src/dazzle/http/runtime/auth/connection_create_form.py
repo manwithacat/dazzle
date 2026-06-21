@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-CONNECTION_TYPES = ("oidc", "scim", "saml")
+CONNECTION_TYPES = ("oidc", "scim", "saml", "domain")
 
 
 @dataclass(frozen=True)
@@ -132,3 +132,14 @@ def plan_saml(
 ) -> CreatePlan:
     """Wrap an already-assembled SAML ``config`` (from ``assemble_saml_config``) into a plan."""
     return CreatePlan(type="saml", config=config, group_mapping=parse_group_map(group_map))
+
+
+def plan_domain() -> CreatePlan:
+    """A provider-less domain connection — no IdP config, no secrets, no group mapping.
+
+    The resulting connection acts as a domain-ownership anchor: once a domain is claimed and
+    verified against it, the org's join-policy (auto_join / admin_approval) governs member
+    access without any SSO IdP in the loop.  The existing add-domain / verify-domain actions
+    apply unchanged after creation.
+    """
+    return CreatePlan(type="domain", config={}, group_mapping={})

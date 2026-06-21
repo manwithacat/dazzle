@@ -218,7 +218,7 @@ def create_connection_admin_routes() -> APIRouter:
             product_name=_product_name(request),
             org_name=org.name if org is not None else org_id,
             connections=connections,
-            new_form=new_form if new_form in ("oidc", "scim", "saml") else "",
+            new_form=new_form if new_form in ("oidc", "scim", "saml", "domain") else "",
             secret_key_ok=flags[0],
             scim_bearer_once=scim_bearer_once,
             base_url=str(request.base_url).rstrip("/"),
@@ -247,6 +247,7 @@ def create_connection_admin_routes() -> APIRouter:
             CONNECTION_TYPES,
             CreateFormError,
             assemble_saml_config,
+            plan_domain,
             plan_oidc,
             plan_saml,
             plan_scim,
@@ -282,6 +283,11 @@ def create_connection_admin_routes() -> APIRouter:
                 plan = plan_scim(group_map=str(form.get("group_map", "")))
                 bearer = _secrets.token_urlsafe(32)
                 secrets_payload = {"scim_bearer": bearer}
+            elif type == "domain":
+                # Provider-less domain connection — no IdP secrets, no at-rest key required.
+                # After creation the existing add-domain / verify-domain actions apply unchanged.
+                plan = plan_domain()
+                secrets_payload = {}
             else:  # saml — no secret (the IdP signing cert is public)
                 # Offload the (bounded, SSRF-guarded) metadata fetch to a thread so a slow IdP
                 # can't block the event loop for the full timeout on this async handler.
