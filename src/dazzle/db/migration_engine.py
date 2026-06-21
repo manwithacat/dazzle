@@ -37,7 +37,7 @@ from typing import Any
 
 from alembic.operations import ops as aops
 
-from dazzle.db.schema_diff import diff
+from dazzle.db.schema_diff import RenameHints, diff
 from dazzle.db.schema_render import render
 from dazzle.db.schema_snapshot import (
     load_head_snapshot,
@@ -77,6 +77,46 @@ class RevisionPlan:
 
 
 # ---------------------------------------------------------------------------
+# Rename hint extraction
+# ---------------------------------------------------------------------------
+
+
+def extract_rename_hints(appspec: Any) -> RenameHints:
+    """Extract rename hints from an ``AppSpec`` into the ``RenameHints`` shape.
+
+    Reads ``EntitySpec.renamed_from`` (table-level) and
+    ``FieldSpec.renamed_from`` (column-level) off every entity in
+    ``appspec.domain.entities``.
+
+    The snapshot stores table keys as ``entity.name`` verbatim and column keys
+    as ``field.name`` verbatim, so the mapping is::
+
+        tables:  {entity.name: entity.renamed_from}
+        columns: {(entity.name, field.name): field.renamed_from}
+
+    Entries where ``renamed_from`` is ``None`` are omitted.
+
+    Parameters
+    ----------
+    appspec:
+        A ``dazzle.core.ir.AppSpec`` instance.  Typed as ``Any`` here to avoid
+        a circular import — the db layer must not import from core.ir at module
+        level.
+    """
+    tables: dict[str, str] = {}
+    columns: dict[tuple[str, str], str] = {}
+
+    for entity in appspec.domain.entities:
+        if entity.renamed_from is not None:
+            tables[entity.name] = entity.renamed_from
+        for field in entity.fields:
+            if field.renamed_from is not None:
+                columns[(entity.name, field.name)] = field.renamed_from
+
+    return {"tables": tables, "columns": columns}
+
+
+# ---------------------------------------------------------------------------
 # Pure core: build_plan
 # ---------------------------------------------------------------------------
 
@@ -84,6 +124,7 @@ class RevisionPlan:
 def build_plan(
     prev: dict[str, Any],
     curr: dict[str, Any],
+    hints: RenameHints | None = None,
 ) -> RevisionPlan:
     """Compute a ``RevisionPlan`` from two plain-dict Snapshots.
 
@@ -92,8 +133,8 @@ def build_plan(
 
     Steps
     -----
-    1. ``diff(prev, curr)``  — ordered list of SchemaOps.
-    2. ``render(delta)``     — (UpgradeOps, DowngradeOps) Alembic op-trees.
+    1. ``diff(prev, curr, hints)``  — ordered list of SchemaOps (rename-aware).
+    2. ``render(delta)``            — (UpgradeOps, DowngradeOps) Alembic op-trees.
     3. ``render_snapshot_literal(curr)`` — deterministic Python literal.
     4. ``is_empty = (delta == [])``
 
@@ -103,8 +144,11 @@ def build_plan(
         The head snapshot (may be ``{}`` for a brand-new project).
     curr:
         The current schema snapshot derived from the target MetaData.
+    hints:
+        Optional rename hints (see ``extract_rename_hints``).  When ``None``
+        the diff treats every name change as a drop+add.
     """
-    delta = diff(prev, curr)
+    delta = diff(prev, curr, hints)
     upgrade_ops, downgrade_ops = render(delta)
     snapshot_literal = render_snapshot_literal(curr)
     return RevisionPlan(
@@ -120,7 +164,7 @@ def build_plan(
 # ---------------------------------------------------------------------------
 
 
-def generate_revision(script_dir: Any) -> RevisionPlan:
+def generate_revision(script_dir: Any, appspec: Any = None) -> RevisionPlan:
     """Orchestrate a full revision cycle against the live project on disk.
 
     This is the thin I/O wrapper consumed by ``dazzle db revision`` (Task 3.3).
@@ -129,16 +173,21 @@ def generate_revision(script_dir: Any) -> RevisionPlan:
 
     Steps
     -----
-    1. ``project_current()``         — project the live target MetaData.
+    1. ``project_current()``              — project the live target MetaData.
     2. ``load_head_snapshot(script_dir)`` — load the head migration's snapshot.
-    3. ``build_plan(prev, curr)``    — pure diff + render.
+    3. ``extract_rename_hints(appspec)``  — extract ``was:`` hints (if appspec given).
+    4. ``build_plan(prev, curr, hints)``  — pure diff + render.
 
     Parameters
     ----------
     script_dir:
         An ``alembic.script.ScriptDirectory`` instance (or a compatible mock).
         Passed directly to ``load_head_snapshot``.
+    appspec:
+        Optional ``AppSpec``.  When supplied, rename hints are extracted and
+        passed to ``build_plan``.  When ``None``, no rename resolution is done.
     """
     curr = project_current()
     prev = load_head_snapshot(script_dir)
-    return build_plan(prev, curr)
+    hints = extract_rename_hints(appspec) if appspec is not None else None
+    return build_plan(prev, curr, hints)

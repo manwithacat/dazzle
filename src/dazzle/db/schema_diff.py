@@ -8,6 +8,16 @@ from dataclasses import dataclass
 from typing import Any
 
 
+class RenameResolutionError(Exception):
+    """Raised when a rename hint references an old name that cannot be found in prev.
+
+    This indicates a ``was:`` annotation whose referenced old name is neither in
+    the previous snapshot (pending rename) nor already absent (already-applied).
+    The entity/field name and the unresolvable old name are both included in the
+    message to make debugging straightforward.
+    """
+
+
 @dataclass(frozen=True)
 class AddTable:
     """Add a new table with columns, foreign keys, indexes, and unique constraints."""
@@ -152,58 +162,120 @@ TableSnap = dict[str, Any]
 #: Snapshot: table-name → TableSnap
 Snapshot = dict[str, TableSnap]
 
-#: Opaque rename hints (consumed by Task 4.x; ignored here)
+#: Rename hints passed to diff().
+#: ``tables``  maps new_table_name  → old_table_name
+#: ``columns`` maps (table_new_name, col_new_name) → col_old_name
 RenameHints = dict[str, Any]
+
+
+def _empty_hints() -> RenameHints:
+    return {"tables": {}, "columns": {}}
 
 
 def diff(
     prev: Snapshot,
     curr: Snapshot,
-    hints: RenameHints | None = None,  # noqa: ARG001  (used in Task 4.x)
+    hints: RenameHints | None = None,
 ) -> list[SchemaOp]:
     """Return a minimal ordered list of SchemaOps to evolve *prev* into *curr*.
 
-    Ordering contract (renames not yet produced here):
-        RenameTable / RenameColumn  (future)
+    Ordering contract:
+        RenameTable
         → AddTable
-        → AddColumn / AddForeignKey / AddIndex / AddUnique
+        → RenameColumn / AddColumn / AddForeignKey / AddIndex / AddUnique
         → AlterColumn
         → DropColumn / DropForeignKey / DropIndex / DropUnique
         → DropTable
 
+    Rename resolution (``hints``):
+    - Table rename: ``hints["tables"][new] = old`` where ``old`` in prev AND
+      ``new`` in curr AND ``new`` not in prev → emit ``RenameTable(old, new)``
+      and diff the table's columns under the new name vs ``prev[old]``.
+      Lifecycle: ``old`` not in prev but ``new`` in prev → already-applied
+      no-op (skip). Neither case → ``RenameResolutionError``.
+    - Column rename: ``hints["columns"][(table, new)] = old`` where ``old`` in
+      ``prev[table].columns`` AND ``new`` in ``curr[table].columns`` AND ``new``
+      not in ``prev[table].columns`` → emit ``RenameColumn(table, old, new)``
+      (no drop+add). Lifecycle: ``old`` not in prev cols but ``new`` in prev
+      cols → already-applied no-op. Neither → ``RenameResolutionError``.
+
     Pure: no DB, no Alembic, no I/O.
-    ``hints`` is accepted but ignored until Task 4.x rename resolution.
     """
+    h = hints or _empty_hints()
+    table_hints: dict[str, str] = h.get("tables", {})
+    col_hints: dict[tuple[str, str], str] = h.get("columns", {})
+
+    rename_ops: list[SchemaOp] = []
     add_tables: list[SchemaOp] = []
     add_details: list[SchemaOp] = []  # AddColumn / AddFK / AddIndex / AddUnique
     alters: list[SchemaOp] = []
     drop_details: list[SchemaOp] = []  # DropColumn / DropFK / DropIndex / DropUnique
     drop_tables: list[SchemaOp] = []
 
+    # --- resolve table renames first ----------------------------------------
+    # Build a mapping: curr_table_name → prev_table_name (after rename resolution)
+    # Tables that are "matched" via rename are excluded from add/drop sets.
+    table_prev_name: dict[str, str] = {}  # new_name → name to look up in prev
+
     prev_tables = set(prev)
     curr_tables = set(curr)
 
-    # --- new tables ---------------------------------------------------------
-    for tname in sorted(curr_tables - prev_tables):
-        tsnap = curr[tname]
-        add_tables.append(
-            AddTable(
-                table=tname,
-                columns=dict(tsnap.get("columns", {})),
-                fks=dict(tsnap.get("fks", {})),
-                indexes=list(tsnap.get("indexes", [])),
-                uniques=list(tsnap.get("uniques", [])),
-            )
-        )
+    # Tables appearing in curr but not prev — check if a rename hint resolves them
+    for new_tname in sorted(curr_tables - prev_tables):
+        if new_tname in table_hints:
+            old_tname = table_hints[new_tname]
+            if old_tname in prev_tables:
+                # Pending rename: old exists in prev, new not in prev
+                rename_ops.append(RenameTable(old=old_tname, new=new_tname))
+                table_prev_name[new_tname] = old_tname
+            elif new_tname in prev_tables:
+                # Already-applied: new is already in prev — no-op (won't reach
+                # here since new_tname is in curr_tables - prev_tables, but guard)
+                table_prev_name[new_tname] = new_tname
+            else:
+                raise RenameResolutionError(
+                    f"Table rename hint for '{new_tname}': old name '{old_tname}' "
+                    f"not found in previous snapshot and '{new_tname}' not already present."
+                )
+        else:
+            # Genuine new table — will be handled in add_tables loop below
+            pass
 
-    # --- dropped tables -----------------------------------------------------
+    # Tables in prev but not curr — check if they were consumed by a rename
+    renamed_old_tables = set(table_prev_name.values())
+
     for tname in sorted(prev_tables - curr_tables):
-        drop_tables.append(DropTable(table=tname, snap=prev[tname]))
+        if tname not in renamed_old_tables:
+            drop_tables.append(DropTable(table=tname, snap=prev[tname]))
 
-    # --- tables present in both: column + index + fk + unique diffs --------
+    # New tables (not resolved via rename)
+    for tname in sorted(curr_tables - prev_tables):
+        if tname not in table_prev_name:
+            tsnap = curr[tname]
+            add_tables.append(
+                AddTable(
+                    table=tname,
+                    columns=dict(tsnap.get("columns", {})),
+                    fks=dict(tsnap.get("fks", {})),
+                    indexes=list(tsnap.get("indexes", [])),
+                    uniques=list(tsnap.get("uniques", [])),
+                )
+            )
+
+    # --- tables present in both (including renamed tables) ------------------
+    # For renamed tables, diff curr[new] vs prev[old].
+    # For unchanged-name tables, diff curr[t] vs prev[t].
+
+    # Build the set of (curr_name, prev_name) pairs to diff
+    common_pairs: list[tuple[str, str]] = []
     for tname in sorted(prev_tables & curr_tables):
-        prev_snap = prev[tname]
-        curr_snap = curr[tname]
+        common_pairs.append((tname, tname))
+    for new_tname, old_tname in sorted(table_prev_name.items()):
+        common_pairs.append((new_tname, old_tname))
+
+    for curr_tname, prev_tname in sorted(common_pairs):
+        prev_snap = prev[prev_tname]
+        curr_snap = curr[curr_tname]
 
         prev_cols: dict[str, ColSnap] = prev_snap.get("columns", {})
         curr_cols: dict[str, ColSnap] = curr_snap.get("columns", {})
@@ -211,25 +283,51 @@ def diff(
         prev_col_names = set(prev_cols)
         curr_col_names = set(curr_cols)
 
-        # added columns
+        # --- resolve column renames within this table -----------------------
+        # col_hints keys use the *current* table name
+        renamed_old_cols: set[str] = set()
+        renamed_new_cols: set[str] = set()
+
+        for new_cname in sorted(curr_col_names - prev_col_names):
+            hint_key = (curr_tname, new_cname)
+            if hint_key in col_hints:
+                old_cname = col_hints[hint_key]
+                if old_cname in prev_col_names:
+                    # Pending rename
+                    add_details.append(RenameColumn(table=curr_tname, old=old_cname, new=new_cname))
+                    renamed_old_cols.add(old_cname)
+                    renamed_new_cols.add(new_cname)
+                elif new_cname in prev_col_names:
+                    # Already-applied: new col already exists in prev — no-op
+                    renamed_new_cols.add(new_cname)
+                else:
+                    raise RenameResolutionError(
+                        f"Column rename hint for '{curr_tname}.{new_cname}': "
+                        f"old name '{old_cname}' not found in previous snapshot "
+                        f"and '{new_cname}' not already present."
+                    )
+
+        # added columns (excluding rename targets)
         for cname in sorted(curr_col_names - prev_col_names):
-            add_details.append(AddColumn(table=tname, name=cname, col=curr_cols[cname]))
+            if cname not in renamed_new_cols:
+                add_details.append(AddColumn(table=curr_tname, name=cname, col=curr_cols[cname]))
 
         # altered columns (same name, different spec)
         for cname in sorted(prev_col_names & curr_col_names):
             if prev_cols[cname] != curr_cols[cname]:
                 alters.append(
                     AlterColumn(
-                        table=tname,
+                        table=curr_tname,
                         name=cname,
                         old=prev_cols[cname],
                         new=curr_cols[cname],
                     )
                 )
 
-        # dropped columns
+        # dropped columns (excluding rename sources)
         for cname in sorted(prev_col_names - curr_col_names):
-            drop_details.append(DropColumn(table=tname, name=cname, col=prev_cols[cname]))
+            if cname not in renamed_old_cols:
+                drop_details.append(DropColumn(table=curr_tname, name=cname, col=prev_cols[cname]))
 
         # FK diffs: fks is dict[col → ref_table]
         prev_fks: dict[str, str] = prev_snap.get("fks", {})
@@ -238,26 +336,26 @@ def diff(
         curr_fk_set = set(curr_fks.items())
 
         for col, ref in sorted(curr_fk_set - prev_fk_set):
-            add_details.append(AddForeignKey(table=tname, column=col, ref_table=ref))
+            add_details.append(AddForeignKey(table=curr_tname, column=col, ref_table=ref))
         for col, ref in sorted(prev_fk_set - curr_fk_set):
-            drop_details.append(DropForeignKey(table=tname, column=col, ref_table=ref))
+            drop_details.append(DropForeignKey(table=curr_tname, column=col, ref_table=ref))
 
         # index diffs: indexes is list[str] (column names)
         prev_indexes = set(prev_snap.get("indexes", []))
         curr_indexes = set(curr_snap.get("indexes", []))
 
         for col in sorted(curr_indexes - prev_indexes):
-            add_details.append(AddIndex(table=tname, column=col))
+            add_details.append(AddIndex(table=curr_tname, column=col))
         for col in sorted(prev_indexes - curr_indexes):
-            drop_details.append(DropIndex(table=tname, column=col))
+            drop_details.append(DropIndex(table=curr_tname, column=col))
 
         # unique diffs: uniques is list[str] (column names)
         prev_uniques = set(prev_snap.get("uniques", []))
         curr_uniques = set(curr_snap.get("uniques", []))
 
         for col in sorted(curr_uniques - prev_uniques):
-            add_details.append(AddUnique(table=tname, column=col))
+            add_details.append(AddUnique(table=curr_tname, column=col))
         for col in sorted(prev_uniques - curr_uniques):
-            drop_details.append(DropUnique(table=tname, column=col))
+            drop_details.append(DropUnique(table=curr_tname, column=col))
 
-    return add_tables + add_details + alters + drop_details + drop_tables
+    return rename_ops + add_tables + add_details + alters + drop_details + drop_tables
