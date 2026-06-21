@@ -94,6 +94,21 @@ class TestPathCheck:
         assert 'SELECT "id" FROM "Manuscript"' in sql
         assert '"student_id" = %s' in sql
 
+    def test_outer_fk_column_table_qualified_param_mode(self) -> None:
+        """#1449: in param mode the OUTER root FK column is TABLE-qualified with the
+        source entity, so it can't collide with a same-named column on an FK-display
+        LEFT JOIN target (a list region that joins Manuscript for display would make a
+        bare ``"manuscript_id"`` ambiguous). TABLE-, not schema-qualified (#1386)."""
+        p = PathCheck(
+            path=["manuscript", "student_id"], op=CompOp.EQ, value=ValueRef(current_user=True)
+        )
+        sql, _ = compile_predicate(p, "Feedback", _simple_graph())
+        assert '"Feedback"."manuscript_id" IN' in sql
+        # schema-qualification is NOT applied to the outer ref (must match FROM).
+        sql_s, _ = compile_predicate(p, "Feedback", _simple_graph(), schema="tenant_x")
+        assert '"Feedback"."manuscript_id" IN' in sql_s
+        assert 'tenant_x"."Feedback"."manuscript_id" IN' not in sql_s
+
     def test_depth_2(self) -> None:
         """manuscript.assessment_event.school_id = current_user.school
         Each subquery SELECTs "id" so parent IN matches PKs, not FK values."""

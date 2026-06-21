@@ -661,7 +661,21 @@ def _compile_path_check(
         predicate, entity_name, fk_graph, schema=schema, policy=policy
     )
     inner_sql = f'SELECT "id" FROM {root_target_table} WHERE {where_body}'
-    return f"{quote_identifier(root_fk_field)} IN ({inner_sql})", params
+    # #1449: in PARAM mode (the app-layer list/read query) TABLE-qualify the outer
+    # root FK column with the source entity table so it can't collide with a same-named
+    # column on an FK-display LEFT JOIN target — e.g. a list region that joins
+    # `Manuscript` for display, which also carries an `ingestion_batch` column, makes
+    # bare `"ingestion_batch"` ambiguous. TABLE-, not SCHEMA-qualified (schema=None):
+    # the ref must match the search_path-resolved FROM table, never a tenant-schema
+    # prefix (#1386). Policy mode (RLS USING/WITH CHECK) has no joins → left unqualified
+    # (byte-for-byte unchanged). Empty entity_name (legacy callers) → bare column,
+    # mirroring `_qualify_column`.
+    outer_col = (
+        f"{_qualify_table(entity_name, None)}.{quote_identifier(root_fk_field)}"
+        if entity_name and policy is None
+        else quote_identifier(root_fk_field)
+    )
+    return f"{outer_col} IN ({inner_sql})", params
 
 
 def compile_path_check_probe(

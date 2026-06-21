@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.75] - 2026-06-21
+
+### Fixed
+- **#1449 — `AmbiguousColumn` on a scoped region whose FK-display joins carry a column the
+  scope predicate also names.** An FK-path scope (`item.school = current_user.school` →
+  `"item" IN (SELECT id FROM Item WHERE …)`) emitted its **outer** root-FK column unqualified,
+  while the region's list query also LEFT JOINs the FK-display targets (`_fkd_manuscript` aliasing
+  `Manuscript`, which has its *own* `ingestion_batch` column). So a bare `"ingestion_batch"` /
+  `"manuscript"` in the WHERE was ambiguous between the source row and the joined target →
+  `column reference is ambiguous`, the region fetch failed, and the board/list rendered empty.
+  The predicate compiler now **TABLE-qualifies** the outer root-FK column with the source entity
+  (`"ClassificationReview"."ingestion_batch"`) in **param mode**. TABLE-, not schema-qualified, so
+  it still matches the search_path-resolved FROM (#1386); RLS **policy** mode (no joins in a USING
+  clause) is left byte-for-byte unchanged. (Corrects the issue's original `group_by` attribution —
+  the collision is the scope WHERE vs the FK-display joins, independent of the display mode.)
+
 ## [0.83.74] - 2026-06-21
 
 ### Changed
