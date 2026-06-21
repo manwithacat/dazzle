@@ -51,6 +51,7 @@ from dazzle.db.schema_diff import (
     RenameTable,
     SchemaOp,
 )
+from dazzle.http.runtime.safe_casts import get_using_clause
 
 # ---------------------------------------------------------------------------
 # Public type aliases (mirrors schema_diff conventions)
@@ -253,14 +254,9 @@ def _render_alter_column(
 
     # Inject USING clause for safe type casts
     if type_changed:
-        try:
-            from dazzle.http.runtime.safe_casts import get_using_clause
-
-            using = get_using_clause(old["type"].upper(), new["type"].upper(), op.name)
-            if using:
-                up_alter.kw["postgresql_using"] = using
-        except ImportError:
-            pass
+        using = get_using_clause(old["type"].upper(), new["type"].upper(), op.name)
+        if using:
+            up_alter.kw["postgresql_using"] = using
 
     # Build the inverse (downgrade) AlterColumnOp
     down_alter_kw: dict[str, Any] = {
