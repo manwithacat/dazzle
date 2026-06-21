@@ -203,6 +203,54 @@ def _load_project_appspec_for_hints() -> Any:
         return None
 
 
+def snapshot_baseline(script_dir: Any, appspec: Any = None) -> RevisionPlan:
+    """Build a ``RevisionPlan`` carrying the current snapshot but NO schema ops.
+
+    This is the engine entry-point for ``dazzle db snapshot-baseline``.  It is
+    called when a project is *adopting* the #1431 engine and the head migration
+    pre-dates ``SCHEMA_SNAPSHOT`` — ``load_head_snapshot`` returns ``{}`` and the
+    next real ``db revision`` would diff against empty, producing a re-create of
+    every table (which fails on an existing DB).
+
+    ``snapshot-baseline`` fixes this by writing an **empty-upgrade** revision —
+    ``def upgrade(): pass`` / ``def downgrade(): pass`` — that carries ONLY the
+    current DSL projection as ``SCHEMA_SNAPSHOT``.  After it is applied, the next
+    real ``db revision`` diffs the live DSL against this baseline and emits only
+    the intentful additive delta.
+
+    Design
+    ------
+    * ``project_current()`` projects the current DSL-backed schema — identical
+      to what ``generate_revision`` uses for its ``curr`` side.
+    * We skip ``load_head_snapshot`` and ``diff`` entirely: there is nothing to
+      diff against; the whole point is to stamp a correct baseline.
+    * The returned ``RevisionPlan`` carries ``is_empty=True`` (no ops were
+      generated) but that flag is *ignored* by the caller (``snapshot_baseline``
+      in ``cli/db.py``) — the CLI always forces a revision write.
+
+    Parameters
+    ----------
+    script_dir:
+        An ``alembic.script.ScriptDirectory`` instance (or a compatible mock).
+        Accepted for API parity with ``generate_revision`` but not used in the
+        pure path (no ``load_head_snapshot`` call).
+    appspec:
+        Unused; accepted for API parity so callers can pass an ``AppSpec``
+        without a conditional.
+    """
+    from alembic.operations import ops as aops
+
+    curr = project_current()
+    snapshot_literal = render_snapshot_literal(curr)
+    # Return a plan with empty op-trees — no schema ops, just the snapshot stamp.
+    return RevisionPlan(
+        upgrade_ops=aops.UpgradeOps(ops=[]),
+        downgrade_ops=aops.DowngradeOps(ops=[]),
+        snapshot_literal=snapshot_literal,
+        is_empty=True,
+    )
+
+
 def generate_revision(script_dir: Any, appspec: Any = None) -> RevisionPlan:
     """Orchestrate a full revision cycle against the live project on disk.
 

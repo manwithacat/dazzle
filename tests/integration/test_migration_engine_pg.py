@@ -397,3 +397,125 @@ entity Task "Task":
         row = conn.execute('SELECT name FROM "Task" LIMIT 1').fetchone()
         assert row is not None, "the pre-rename row must survive the upgrade"
         assert row[0] == "hello", f"row data must survive the rename intact; got name={row[0]!r}"
+
+
+# ---------------------------------------------------------------------------
+# Task 6.2: snapshot-baseline adoption command
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def in_project_no_snapshot(
+    tmp_path: Path, scratch_url: str, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[tuple[Path, str]]:
+    """Project whose HEAD migration was written WITHOUT the engine (no SCHEMA_SNAPSHOT).
+
+    Simulates the adoption scenario: a project that used legacy autogenerate
+    (or hand-authored migrations) before the #1431 engine existed.  The head
+    revision has no ``SCHEMA_SNAPSHOT`` → ``load_head_snapshot`` returns ``{}``.
+    """
+    project = tmp_path / "adopt_proj"
+    project.mkdir()
+    psycopg_url = scratch_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    _write_project(project, _BASE_DSL, psycopg_url)
+    monkeypatch.chdir(project)
+    monkeypatch.setenv("DATABASE_URL", psycopg_url)
+    monkeypatch.delenv("DAZZLE_ENV", raising=False)
+
+    from dazzle.cli.db import stamp_command
+
+    stamp_command(revision="head")
+
+    # Write a legacy (no-snapshot) revision by using --legacy-autogenerate.
+    # This creates a revision with create_table ops but no SCHEMA_SNAPSHOT.
+    from dazzle.cli.db import revision_command, upgrade_command
+
+    revision_command(message="legacy baseline", autogenerate=True, legacy_autogenerate=True)
+    upgrade_command(revision="head", no_rls=True)
+
+    yield project, psycopg_url
+
+
+def test_snapshot_baseline_adoption_scenario(
+    in_project_no_snapshot: tuple[Path, str],
+) -> None:
+    """Task 6.2: snapshot-baseline stamps the current projection as the head snapshot.
+
+    Proves the complete adoption scenario:
+    1. Before snapshot-baseline: ``load_head_snapshot`` returns ``{}`` (legacy head).
+    2. snapshot-baseline writes an empty-upgrade revision carrying SCHEMA_SNAPSHOT.
+    3. The new head snapshot matches the current DSL projection.
+    4. A subsequent ``dazzle db revision`` with unchanged DSL emits NOTHING (empty
+       delta, because the baseline now correctly represents the current schema).
+    """
+    from alembic.script import ScriptDirectory
+
+    from dazzle.cli.db import (
+        _get_alembic_cfg,
+        revision_command,
+        snapshot_baseline_command,
+        upgrade_command,
+    )
+    from dazzle.db.schema_snapshot import load_head_snapshot, project_current
+
+    project, _ = in_project_no_snapshot
+
+    # --- 1. Verify the pre-adoption state: head carries no SCHEMA_SNAPSHOT ---
+    cfg = _get_alembic_cfg()
+    script_dir = ScriptDirectory.from_config(cfg)
+    pre_snapshot = load_head_snapshot(script_dir)
+    assert pre_snapshot == {}, (
+        f"pre-adoption head should have no SCHEMA_SNAPSHOT; got: {list(pre_snapshot)}"
+    )
+
+    before_files = _project_revision_files(project)
+
+    # --- 2. Run snapshot-baseline ---
+    snapshot_baseline_command()
+
+    # --- 3. Exactly one new revision file was written ---
+    after_files = _project_revision_files(project)
+    new_files = [p for p in after_files if p not in set(before_files)]
+    assert len(new_files) == 1, f"expected exactly 1 new revision; got {len(new_files)}"
+
+    baseline_rev_text = new_files[0].read_text(encoding="utf-8")
+
+    # --- 4. New revision carries SCHEMA_SNAPSHOT ---
+    assert "SCHEMA_SNAPSHOT" in baseline_rev_text, (
+        f"snapshot-baseline revision must embed SCHEMA_SNAPSHOT; got:\n{baseline_rev_text}"
+    )
+
+    # --- 5. New revision has an EMPTY upgrade (no schema ops) ---
+    assert "create_table" not in baseline_rev_text, (
+        "snapshot-baseline revision must not contain create_table ops"
+    )
+    assert "add_column" not in baseline_rev_text, (
+        "snapshot-baseline revision must not contain add_column ops"
+    )
+    assert "drop_table" not in baseline_rev_text, (
+        "snapshot-baseline revision must not contain drop_table ops"
+    )
+
+    # --- 6. The embedded snapshot matches the live DSL projection ---
+    # Apply the revision so it becomes the new head in alembic_version.
+    upgrade_command(revision="head", no_rls=True)
+
+    # Now load_head_snapshot should return the embedded snapshot.
+    cfg2 = _get_alembic_cfg()
+    script_dir2 = ScriptDirectory.from_config(cfg2)
+    post_snapshot = load_head_snapshot(script_dir2)
+
+    live = project_current()
+    assert post_snapshot == live, (
+        f"post-adoption head snapshot must match live DSL projection.\n"
+        f"  head keys: {sorted(post_snapshot)}\n"
+        f"  live keys: {sorted(live)}"
+    )
+
+    # --- 7. A subsequent revision with no DSL change emits NOTHING ---
+    revision_command(message="should-be-noop", autogenerate=True, legacy_autogenerate=False)
+    noop_new_files = [p for p in _project_revision_files(project) if p not in set(after_files)]
+    assert noop_new_files == [], (
+        f"engine must emit NO revision when DSL matches snapshot-baseline; "
+        f"got: {[p.name for p in noop_new_files]}"
+    )

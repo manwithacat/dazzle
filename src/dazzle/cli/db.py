@@ -729,6 +729,86 @@ def reconcile_baseline_command() -> None:
     console.print("[dim]  Commit the merge file, then run `dazzle db upgrade head`.[/dim]")
 
 
+@db_app.command(name="snapshot-baseline")
+def snapshot_baseline_command() -> None:
+    """Stamp the current DSL projection as the head migration's baseline snapshot.
+
+    Use this once when adopting the #1431 migration engine on a project whose
+    HEAD migration pre-dates ``SCHEMA_SNAPSHOT``.  Without this step
+    ``load_head_snapshot`` returns ``{}`` and the next ``dazzle db revision``
+    diffs against an empty baseline — re-creating every table, which fails on
+    an existing database.
+
+    This command writes a single empty-upgrade revision (``def upgrade(): pass``
+    / ``def downgrade(): pass``) that carries only ``SCHEMA_SNAPSHOT = <current
+    DSL projection>`` as a module-level constant.  After applying it, the next
+    real ``dazzle db revision`` diffs the live DSL against this snapshot and
+    emits only the intentful additive delta.
+
+    Typical adoption workflow::
+
+        dazzle db snapshot-baseline       # write the baseline stamp revision
+        dazzle db upgrade                 # apply it (no-op upgrade)
+        dazzle db revision -m "add field" # subsequent revisions diff correctly
+
+    The revision is written to the project's ``.dazzle/migrations/versions/``
+    directory. Commit it alongside your other migrations.
+    """
+    from alembic import command
+
+    from dazzle.db.schema_snapshot import project_current, render_snapshot_literal
+
+    cfg = _get_alembic_cfg()
+    project_versions = str(_get_project_versions_dir())
+
+    # Guard: single head required (same as revision_command).
+    heads = _get_heads(cfg)
+    if len(heads) > 1:
+        console.print(
+            f"[red]Cannot create a snapshot-baseline: {len(heads)} migration heads are "
+            f"present ({', '.join(heads)}).[/red]\n"
+            f"[dim]  Run `dazzle db reconcile-baseline` to merge them into a "
+            f"single head first (see #1309).[/dim]"
+        )
+        raise typer.Exit(1)
+
+    # Project the current DSL snapshot upfront so we can report it and inject it.
+    try:
+        curr = project_current()
+        snapshot_literal = render_snapshot_literal(curr)
+    except Exception as e:
+        console.print(f"[red]Failed to project current DSL schema: {e}[/red]")
+        raise typer.Exit(1)
+
+    # Write an empty (no-autogenerate) revision — the _process_revision_directives
+    # hook is NOT triggered here (autogenerate=False), so the suppress-empty path
+    # never fires and we always get a revision file regardless of delta.
+    try:
+        rev = command.revision(
+            cfg,
+            message="snapshot-baseline: stamp current DSL as engine baseline (#1431)",
+            autogenerate=False,
+            version_path=project_versions,
+        )
+    except Exception as e:
+        console.print(f"[red]Failed to create snapshot-baseline revision: {e}[/red]")
+        raise typer.Exit(1)
+
+    # Post-write the SCHEMA_SNAPSHOT constant into the generated file (same
+    # injection path as revision_command / _inject_schema_snapshot).
+    _inject_schema_snapshot(rev, snapshot_literal)
+
+    table_count = len(curr)
+    console.print(
+        f"[green]Snapshot-baseline revision created: {table_count} table(s) stamped.[/green]"
+    )
+    console.print(f"[dim]  → {project_versions}/[/dim]")
+    console.print(
+        "[dim]  Run `dazzle db upgrade` to apply, then subsequent "
+        "`dazzle db revision` invocations will diff from this baseline.[/dim]"
+    )
+
+
 @db_app.command(name="downgrade")
 def downgrade_command(
     revision: str = typer.Argument(
