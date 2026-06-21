@@ -267,3 +267,44 @@ def test_connections_page_shows_restrict_checked_when_enabled() -> None:
     r = _client(store).get("/auth/connections")
     assert r.status_code == 200
     assert "checked" in r.text
+
+
+# ---------------------------------------------------------------------------
+# CSRF registration regression
+# ---------------------------------------------------------------------------
+
+
+def test_policy_path_is_csrf_protected() -> None:
+    """/auth/connections/policy must appear in CSRFConfig.protected_paths."""
+    from dazzle.http.runtime.csrf import CSRFConfig
+
+    assert "/auth/connections/policy" in CSRFConfig().protected_paths
+
+
+# ---------------------------------------------------------------------------
+# Uncheck (disable) restriction: checkbox absent from form → persists False
+# ---------------------------------------------------------------------------
+
+
+def test_policy_restrict_unchecked_persists_false() -> None:
+    """Submitting the policy form WITHOUT the restrict checkbox field → False.
+
+    HTML checkboxes are omitted from POST data when unchecked, so the route
+    must treat a missing field as False, not leave the previous True in place.
+    """
+    store = _Store()
+    # Pre-seed the store so the previous value is True.
+    store._org_settings["org-1"] = {
+        "domain_join_policy": "auto_join",
+        "restrict_membership_to_verified_domains": True,
+    }
+    r = _client(store).post(
+        "/auth/connections/policy",
+        # restrict_membership_to_verified_domains intentionally absent
+        data={"domain_join_policy": "auto_join"},
+        follow_redirects=False,
+    )
+    assert r.status_code in (204, 303)
+    assert len(store.policy_calls) == 1
+    _, saved = store.policy_calls[0]
+    assert saved["restrict_membership_to_verified_domains"] is False

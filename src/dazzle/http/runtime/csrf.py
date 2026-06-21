@@ -140,6 +140,7 @@ class CSRFConfig:
             "/auth/connections/add-domain",
             "/auth/connections/verify-domain",
             "/auth/connections/create",
+            "/auth/connections/policy",
         ]
     )
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /
