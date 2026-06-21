@@ -22,6 +22,7 @@ from pydantic import BaseModel
 
 from dazzle.core import ir
 from dazzle.http.runtime.auth_identity_mirror import mirror_auth_user_to_domain
+from dazzle.http.runtime.http_errors import require_found
 from dazzle.http.runtime.repository import DatabaseManager, Repository
 from dazzle.http.specs.entity import EntitySpec
 
@@ -403,12 +404,7 @@ async def _get_entity_data(deps: _TestDeps, entity_name: str) -> list[dict[str, 
     Returns:
         List of all records
     """
-    sql = deps.entity_sql.get(entity_name)
-    if sql is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Unknown entity: " + entity_name,
-        )
+    sql = require_found(deps.entity_sql.get(entity_name), "Unknown entity: " + entity_name)
 
     with deps.db_manager.connection() as conn:
         try:
@@ -430,12 +426,7 @@ async def _get_entity_count(deps: _TestDeps, entity_name: str) -> dict[str, int]
     Returns:
         Count of records
     """
-    sql = deps.entity_sql.get(entity_name)
-    if sql is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Unknown entity: " + entity_name,
-        )
+    sql = require_found(deps.entity_sql.get(entity_name), "Unknown entity: " + entity_name)
 
     with deps.db_manager.connection() as conn:
         try:
@@ -458,12 +449,7 @@ async def _delete_entity(deps: _TestDeps, entity_name: str, entity_id: str) -> d
     Returns:
         Status message
     """
-    sql = deps.entity_sql.get(entity_name)
-    if sql is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Unknown entity: " + entity_name,
-        )
+    sql = require_found(deps.entity_sql.get(entity_name), "Unknown entity: " + entity_name)
 
     with deps.db_manager.connection() as conn:
         cursor = conn.execute(sql.delete_by_id, (entity_id,))

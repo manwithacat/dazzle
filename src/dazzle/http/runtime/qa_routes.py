@@ -60,9 +60,9 @@ def create_qa_routes() -> APIRouter:
 
         auth_store = request.app.state.auth_store
         email = f"{body.persona_id}@example.test"
-        user = auth_store.get_user_by_email(email)
-        if user is None:
-            raise HTTPException(status_code=404, detail="persona not provisioned")
+        from dazzle.http.runtime.http_errors import require_found
+
+        user = require_found(auth_store.get_user_by_email(email), "persona not provisioned")
 
         token = create_magic_link(
             auth_store,

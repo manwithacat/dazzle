@@ -36,10 +36,15 @@ def test_no_inline_entity_slug() -> None:
 
 
 def test_no_inline_404_guard() -> None:
-    """`if x is None: raise HTTPException(404, "Not found")` → `require_found(x)`."""
-    pat = re.compile(
-        r'if \w+ is None:\s*\n\s*raise HTTPException\(status_code=404, detail="Not found"\)'
-    )
+    """`if x is None: raise HTTPException(404, …)` → `require_found(x, …)` (#1441).
+
+    Matches the fetch-or-404 None-guard shape with ANY detail (custom message or a
+    dict) and either the keyword (`status_code=404`) or positional (`404, …`) form —
+    so domain-specific messages no longer sidestep the gate. Other 404 raises (membership
+    / path-exists / dict-lookup checks) are NOT None-guards and are intentionally
+    out of scope.
+    """
+    pat = re.compile(r"if \w+ is None:\s*\n\s*raise HTTPException\(\s*(?:status_code=)?404\b")
     hits = [
         str(p.relative_to(_SRC.parent.parent))
         for p in _src_files({"http_errors.py"})

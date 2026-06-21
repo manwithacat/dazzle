@@ -42,6 +42,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 from dazzle.core.ir import EntitySpec
+from dazzle.http.runtime.http_errors import require_found
 from dazzle.signing.service import PdfBranding, async_sign_pdf, generate_pdf
 from dazzle.signing.tokens import (
     InvalidTokenError,
@@ -325,9 +326,7 @@ async def _handle_post(
     if verified_id != str(record_id):
         raise HTTPException(status_code=403, detail="Token does not match record")
 
-    row = await repo.read(record_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="Document not found")
+    row = require_found(await repo.read(record_id), "Document not found")
 
     status = _row_get(row, "status")
     if status not in _active_signing_states(entity):
@@ -534,9 +533,7 @@ def _is_expired_but_valid(token: str, record_id: UUID) -> bool:
 
 
 def _lookup_signable(name: str, signable: dict[str, EntitySpec]) -> EntitySpec:
-    entity = signable.get(name)
-    if entity is None:
-        raise HTTPException(status_code=404, detail=f"No signable entity named {name!r}")
+    entity = require_found(signable.get(name), f"No signable entity named {name!r}")
     return entity
 
 

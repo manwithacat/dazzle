@@ -27,8 +27,10 @@ Out of scope here (cycle 4+):
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
+
+from dazzle.http.runtime.http_errors import require_found
 
 logger = logging.getLogger(__name__)
 
@@ -74,18 +76,8 @@ def create_fts_routes(
         ),
         auth_context: Any = Depends(auth_dep),
     ) -> Any:
-        spec = spec_by_entity.get(entity)
-        if spec is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No search spec for entity {entity!r}",
-            )
-        repo = repositories.get(entity)
-        if repo is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No repository for entity {entity!r}",
-            )
+        spec = require_found(spec_by_entity.get(entity), f"No search spec for entity {entity!r}")
+        repo = require_found(repositories.get(entity), f"No repository for entity {entity!r}")
 
         # Compile scope predicate per request — same path the list
         # endpoint takes. Skipped when the entity has no scope rules

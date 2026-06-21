@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.71] - 2026-06-21
+
+### Changed
+- **#1441 — fetch-or-404 None-guards now route through `require_found`; the gate matches
+  any detail/form.** `require_found` + its `test_no_inline_404_guard` only matched the exact
+  `if x is None: raise HTTPException(status_code=404, detail="Not found")` shape, so 13 true
+  None-guards with a domain-specific message (or the positional `HTTPException(404, …)` /
+  multi-line / dict-detail forms) sidestepped it. All 13 (across graph/grant/qa/fts/test/
+  signing/proxy/graph-handler routes) now use `require_found(fetch(), detail)`; `require_found`'s
+  `detail` widens to `Any` (FastAPI's own type) so structured/dict details are supported. The
+  gate regex now matches the None-guard shape with **any** detail and the positional form —
+  while leaving the ~26 other 404 raises (membership / path-exists / dict-lookup / opaque
+  scope-deny checks — *not* fetch-or-404 None-guards) intentionally out of scope.
+
 ## [0.83.70] - 2026-06-21
 
 ### Changed

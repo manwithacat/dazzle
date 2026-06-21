@@ -124,9 +124,9 @@ def _build_proxy_handler(*, storage_name: str, registry: StorageRegistry) -> Any
                     },
                 )
 
-        meta = provider.head_object(key)
-        if meta is None:
-            raise HTTPException(status_code=404, detail={"error": "object_not_found"})
+        from dazzle.http.runtime.http_errors import require_found
+
+        meta = require_found(provider.head_object(key), {"error": "object_not_found"})
 
         try:
             body = provider.get_object(key)

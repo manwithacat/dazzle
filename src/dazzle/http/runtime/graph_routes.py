@@ -119,9 +119,9 @@ def _register_parent_graph_route(router: APIRouter, cfg: dict[str, Any]) -> None
             )
 
         # Validate parent exists so callers get 404 instead of an empty graph
-        parent_record = await parent_repo.read(parent_id)
-        if parent_record is None:
-            raise HTTPException(status_code=404, detail=f"{parent_name} not found")
+        from dazzle.http.runtime.http_errors import require_found
+
+        require_found(await parent_repo.read(parent_id), f"{parent_name} not found")
 
         nodes_page = await node_repo.list(
             page=1,

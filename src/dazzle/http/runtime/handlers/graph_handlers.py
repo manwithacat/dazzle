@@ -192,9 +192,11 @@ async def _neighborhood_handler_body(
         )
 
     # 2. Check seed node exists
-    seed_record = await node_service.execute(operation="read", id=seed_id)
-    if seed_record is None:
-        raise HTTPException(status_code=404, detail=f"{entity_name} not found")
+    from dazzle.http.runtime.http_errors import require_found
+
+    require_found(
+        await node_service.execute(operation="read", id=seed_id), f"{entity_name} not found"
+    )
 
     # 3. Build CTE
     builder = NeighborhoodQueryBuilder(
