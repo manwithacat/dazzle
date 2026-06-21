@@ -1317,6 +1317,105 @@ class SessionStoreMixin:
         assert row is not None  # just updated
         return self._row_to_join_request(row)
 
+    def approve_join_request_atomic(
+        self,
+        request_id: str,
+        *,
+        decided_by: str,
+        roles: list[str] | None = None,
+        reason: str = "verified-domain join approved",
+    ) -> JoinRequestRecord:
+        """Approve a *pending* join request in ONE transaction, lock-serialized (#1430).
+
+        ``SELECT … FOR UPDATE`` on the join_requests row serializes concurrent
+        approvers: the first locks the row, creates the membership and flips the
+        status to ``approved`` under that lock; a concurrent second approver blocks
+        on the lock, then sees the row already non-pending and raises
+        ``AlreadyDecidedError`` — so the membership INSERT never runs twice. This
+        replaces the prior load→create→decide sequence (four independent
+        auto-committed statements) whose double-approve defence rested on the
+        ``memberships (tenant_id, identity_id)`` unique constraint catching the
+        duplicate after the fact.
+
+        The membership INSERT, its PROVISIONED ``membership_events`` row, and the
+        status UPDATE all share this transaction's commit (mirrors
+        ``create_membership``'s Plan-2a atomicity). The membership logic is inlined
+        rather than calling ``create_membership`` — that opens its own separate
+        connection/transaction and would defeat the row lock held here.
+
+        Raises ``AlreadyDecidedError`` when the row is missing or no longer pending,
+        and ``ValueError`` when ``identity_id`` names no existing user (orphan guard,
+        since the auth tables carry no FK — see migration 0007).
+        """
+        import json
+
+        from dazzle.http.runtime.auth.membership_events import (
+            MEMBERSHIP_EVENTS_LOCK_KEY,
+            MembershipEventType,
+            record_membership_event,
+        )
+
+        now = datetime.now(UTC).isoformat()
+        with self._transaction() as cur:
+            cur.execute("SELECT * FROM join_requests WHERE id = %s FOR UPDATE", (request_id,))
+            row = cur.fetchone()
+            if row is None or dict(row).get("status") != "pending":
+                raise AlreadyDecidedError(request_id)
+            jr_row = dict(row)
+            tenant_id = jr_row["tenant_id"]
+            identity_id = jr_row["identity_id"]
+
+            if self.get_user_by_id(UUID(identity_id)) is None:
+                raise ValueError(f"cannot create membership: no user with id {identity_id!r}")
+
+            # Same advisory lock create_membership uses to serialize event sequencing.
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (MEMBERSHIP_EVENTS_LOCK_KEY,))
+            membership = MembershipRecord(
+                id=secrets.token_urlsafe(24),
+                tenant_id=tenant_id,
+                identity_id=identity_id,
+                roles=roles or [],
+            )
+            cur.execute(
+                """
+                INSERT INTO memberships
+                    (id, tenant_id, identity_id, roles, status, invited_by, external_id,
+                     joined_at, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    membership.id,
+                    membership.tenant_id,
+                    membership.identity_id,
+                    json.dumps(membership.roles),
+                    membership.status,
+                    membership.invited_by,
+                    membership.external_id,
+                    membership.joined_at.isoformat(),
+                    membership.created_at.isoformat(),
+                    membership.updated_at.isoformat(),
+                ),
+            )
+            record_membership_event(
+                cur,
+                event_type=MembershipEventType.PROVISIONED,
+                membership_id=membership.id,
+                tenant_id=membership.tenant_id,
+                identity_id=membership.identity_id,
+                actor_id=decided_by,
+                roles_after=membership.roles,
+                status_after=membership.status,
+                reason=reason,
+            )
+            # Flip the (locked, confirmed-pending) request to approved in the same tx.
+            cur.execute(
+                "UPDATE join_requests SET status = %s, decided_at = %s, decided_by = %s "
+                "WHERE id = %s",
+                ("approved", now, decided_by, request_id),
+            )
+            jr_row.update({"status": "approved", "decided_at": now, "decided_by": decided_by})
+            return self._row_to_join_request(jr_row)
+
     # -- Enterprise connections (auth Plan 4a — per-org OIDC/SAML/SCIM) -------
 
     def _row_to_connection(self, row: dict[str, Any]) -> "ConnectionRecord":  # noqa: F821

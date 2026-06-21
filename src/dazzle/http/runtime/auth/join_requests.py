@@ -138,21 +138,22 @@ def approve_join_request(store: Any, request_id: str, *, decided_by: str) -> Any
 
     Security-sensitive — approval CREATES a membership. The ordering matters:
 
-    1. Load the request; ``LookupError``-shaped guards apply — if it is missing or
-       no longer ``pending`` the decision step raises ``AlreadyDecidedError``.
+    1. Load the request (unlocked) and fast-fail with ``AlreadyDecidedError`` if it
+       is missing or no longer ``pending`` — before any admission check.
     2. ``assert_domain_admissible`` — the tenant's verified-domain restriction is
        re-checked at *decision* time (it may have been enabled after the request
        was filed); raises ``DomainNotAdmissibleError`` and creates nothing.
-    3. ``store.create_membership`` with default-deny roles (``[]``).
-    4. ``store.decide_join_request(status="approved")`` — the pending-only guard.
+    3. ``store.approve_join_request_atomic`` — load-with-``FOR UPDATE`` → create the
+       membership (default-deny roles ``[]``) → flip to ``approved``, all in ONE
+       lock-serialized transaction.
 
-    Double-decide defence: a second approve of an already-decided request hits the
-    store's pending-only guard at step 4 → ``AlreadyDecidedError``. Because that
-    guard is the *last* step, a concurrent double-submit could in principle create
-    a membership whose decide loses the race; that path is covered by
-    ``create_membership``'s idempotent (tenant_id, identity_id) unique constraint —
-    so the roster still holds exactly one membership. The single-process
-    double-submit covered by the tests creates exactly one membership.
+    Double-decide defence (#1430): the atomic step locks the join_requests row with
+    ``SELECT … FOR UPDATE``, so two concurrent approvers are serialized — the second
+    blocks on the lock, then sees the row already non-pending and raises
+    ``AlreadyDecidedError`` *before* creating a membership. The roster therefore
+    holds exactly one membership by construction, not by the (tenant_id, identity_id)
+    unique constraint catching a duplicate after the fact. The step-1 pre-check stays
+    as a cheap fast-fail and to load the request for the admission check.
 
     Args:
         store: Auth store (real or fake).
@@ -173,13 +174,7 @@ def approve_join_request(store: Any, request_id: str, *, decided_by: str) -> Any
         # before any admission check or membership write.
         raise AlreadyDecidedError(request_id)
     assert_domain_admissible(store, jr.tenant_id, jr.email)
-    store.create_membership(
-        tenant_id=jr.tenant_id,
-        identity_id=jr.identity_id,
-        roles=[],
-        reason="verified-domain join approved",
-    )
-    return store.decide_join_request(request_id, status="approved", decided_by=decided_by)
+    return store.approve_join_request_atomic(request_id, decided_by=decided_by, roles=[])
 
 
 def deny_join_request(store: Any, request_id: str, *, decided_by: str) -> Any:

@@ -89,6 +89,29 @@ class FakeStore:
         self.memberships.append(m)
         return m
 
+    def approve_join_request_atomic(
+        self,
+        request_id: str,
+        *,
+        decided_by: str,
+        roles: list[str] | None = None,
+        reason: str = "",
+    ) -> JoinRequestRecord:
+        """Mirror the real lock-serialized atomic approve (#1430).
+
+        In-memory there is no row lock, but the re-check-pending → create → decide
+        sequence reproduces the same invariant the real ``SELECT … FOR UPDATE`` path
+        enforces: a second approve of an already-decided request raises
+        ``AlreadyDecidedError`` *before* creating a duplicate membership.
+        """
+        jr = self.join_requests.get(request_id)
+        if jr is None or jr.status != "pending":
+            raise AlreadyDecidedError(request_id)
+        self.create_membership(
+            tenant_id=jr.tenant_id, identity_id=jr.identity_id, roles=roles or [], reason=reason
+        )
+        return self.decide_join_request(request_id, status="approved", decided_by=decided_by)
+
     # -- admission gate deps ------------------------------------------------
     def get_org_settings(self, tenant_id: str) -> dict[str, Any]:
         return self.org_settings.get(tenant_id, {})

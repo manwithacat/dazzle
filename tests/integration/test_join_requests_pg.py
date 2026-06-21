@@ -1,13 +1,18 @@
-"""Real-PG CRUD proof for the join_requests table (#1424)."""
+"""Real-PG CRUD proof for the join_requests table (#1424) + lock-serialized
+concurrent-approve hardening (#1430)."""
 
 from __future__ import annotations
 
 import os
+import threading
 import uuid
 from collections.abc import Iterator
+from typing import Any
 
 import psycopg
 import pytest
+
+from dazzle.http.runtime.auth.join_requests import AlreadyDecidedError
 
 pytestmark = [pytest.mark.e2e, pytest.mark.postgres]
 
@@ -79,3 +84,85 @@ def test_join_request_crud(store_url: str) -> None:
 
     # get_join_request returns None for unknown id
     assert store.get_join_request("does-not-exist") is None
+
+
+# ---------------------------------------------------------------------------
+# #1430 — approve_join_request_atomic: lock-serialized decision
+# ---------------------------------------------------------------------------
+
+
+def _membership_count(store: Any, tenant_id: str, identity_id: str) -> int:
+    rows = store._execute(
+        "SELECT count(*) AS n FROM memberships WHERE tenant_id = %s AND identity_id = %s",
+        (tenant_id, identity_id),
+    )
+    return int(rows[0]["n"])
+
+
+def _user_with_request(store: Any, *, email: str) -> tuple[str, str]:
+    """Create a real user + a pending join request; return (identity_id, request_id)."""
+    user = store.create_user(email=email, password="pw-12345678")
+    jr = store.create_join_request(tenant_id="t1", identity_id=str(user.id), email=email)
+    return str(user.id), jr.id
+
+
+def test_approve_atomic_creates_membership_and_approves(store_url: str) -> None:
+    store = _store(store_url)
+    identity_id, request_id = _user_with_request(store, email="alice@example.com")
+
+    decided = store.approve_join_request_atomic(request_id, decided_by="admin", roles=[])
+
+    assert decided.status == "approved"
+    assert decided.decided_by == "admin"
+    assert decided.decided_at is not None
+    assert _membership_count(store, "t1", identity_id) == 1
+
+
+def test_approve_atomic_sequential_double_rejected_one_membership(store_url: str) -> None:
+    store = _store(store_url)
+    identity_id, request_id = _user_with_request(store, email="alice@example.com")
+
+    store.approve_join_request_atomic(request_id, decided_by="a1", roles=[])
+    with pytest.raises(AlreadyDecidedError):
+        store.approve_join_request_atomic(request_id, decided_by="a2", roles=[])
+
+    assert _membership_count(store, "t1", identity_id) == 1
+
+
+def test_concurrent_double_approve_creates_exactly_one_membership(store_url: str) -> None:
+    """Two approvers (independent connections) race on the same request.
+
+    The ``SELECT … FOR UPDATE`` row lock serializes them: one commits the
+    membership + approval, the other blocks then sees the row already non-pending
+    and raises ``AlreadyDecidedError`` — exactly one membership, by construction.
+    """
+    s1 = _store(store_url)
+    identity_id, request_id = _user_with_request(s1, email="bob@example.com")
+    s2 = _store(store_url)
+
+    barrier = threading.Barrier(2)
+    results: dict[str, str] = {}
+
+    def _approve(name: str, store: Any) -> None:
+        barrier.wait()  # release both threads as simultaneously as possible
+        try:
+            store.approve_join_request_atomic(request_id, decided_by=name, roles=[])
+            results[name] = "ok"
+        except AlreadyDecidedError:
+            results[name] = "already"
+        except Exception as exc:  # surface anything unexpected in the assertion
+            results[name] = f"error:{type(exc).__name__}"
+
+    threads = [
+        threading.Thread(target=_approve, args=("a1", s1)),
+        threading.Thread(target=_approve, args=("a2", s2)),
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert sorted(results.values()) == ["already", "ok"], (
+        f"expected one ok + one already-decided, got {results}"
+    )
+    assert _membership_count(s1, "t1", identity_id) == 1

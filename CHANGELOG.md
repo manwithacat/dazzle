@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.65] - 2026-06-21
+
+### Changed
+- **#1430 — verified-domain join approval is now lock-serialized against concurrent
+  double-approve.** `approve_join_request` previously did load → `create_membership` →
+  `decide_join_request` as independent auto-committed statements; two concurrent workers
+  could both pass the pending pre-check and both create a membership, with the duplicate
+  stopped only by the `memberships (tenant_id, identity_id)` unique constraint after the
+  fact. New `AuthStore.approve_join_request_atomic` does the whole decision in ONE
+  transaction: `SELECT … FOR UPDATE` on the join_requests row, then the membership INSERT
+  + its PROVISIONED `membership_events` row + the status flip to `approved`, all under that
+  lock. A concurrent second approver blocks on the lock, then sees the row already
+  non-pending and raises `AlreadyDecidedError` *before* creating a membership — so the
+  roster holds exactly one membership by construction. Verified against real Postgres with
+  a two-thread concurrent-approve test (`tests/integration/test_join_requests_pg.py`).
+
 ## [0.83.64] - 2026-06-21
 
 ### Removed
