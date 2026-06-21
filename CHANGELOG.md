@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.77] - 2026-06-22
+
+### Fixed
+- **#1450 — the `dz-table-empty` empty-state rendered on every populated list.** The empty-state
+  block is a sibling that *follows* `<table class="dz-table-grid">`, but the CSS guard used the
+  general following-sibling combinator (`.dz-table-empty:not(:has(~ tbody tr[data-dz-row-id]))`).
+  The `tbody` (HTMX-loaded) lives *inside* the preceding table, so there's no following-sibling
+  `tbody` → `:has(...)` was always false → the empty state showed `display: flex` unconditionally,
+  beneath fully populated tables. The guard now keys off the grid
+  (`.dz-table-grid:not(:has(tbody tr td)) ~ .dz-table-empty`) and matches any body cell — dropping
+  the brittle `data-dz-row-id` dependency too. The served `dist/dazzle.min.css` bundle was
+  regenerated (`scripts/build_dist.py`). Since `tbody` is HTMX-loaded, this must be CSS-driven (the
+  server doesn't know the row count at render); a regression test pins both the source and the bundle.
+
 ## [0.83.76] - 2026-06-21
 
 ### Fixed

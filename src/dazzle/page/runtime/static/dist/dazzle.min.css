@@ -1,4 +1,4 @@
-/* dazzle v0.83.0 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.83.77 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -7911,7 +7911,7 @@ gap: var(--space-md);
 padding-block: var(--space-3xl);
 color: var(--colour-text-muted);
 }
-.dz-table-empty:not(:has(~ tbody tr[data-dz-row-id])) {
+.dz-table-grid:not(:has(tbody tr td)) ~ .dz-table-empty {
 display: flex;
 }
 .dz-table-empty-icon {

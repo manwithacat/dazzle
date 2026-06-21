@@ -338,9 +338,14 @@
   color: var(--colour-text-muted);
 }
 
-/* When no data row siblings exist, show the empty state. The :has()
- * selector gates this on a sibling tbody having no rows with data-dz-row-id. */
-.dz-table-empty:not(:has(~ tbody tr[data-dz-row-id])) {
+/* Show the empty state only when the preceding table has no body cells (#1450).
+ * The `tbody` is HTMX-loaded and lives INSIDE the `<table class="dz-table-grid">`,
+ * which is a preceding SIBLING of `.dz-table-empty` — so the guard keys off the
+ * grid (`.dz-table-grid ~ .dz-table-empty`), not a non-existent following-sibling
+ * `tbody`. Using `tbody tr td` (any body cell) also drops the brittle
+ * `data-dz-row-id` dependency the old guard required. Populated → no match → base
+ * `display: none` hides it; empty (or pre-load) → shown. */
+.dz-table-grid:not(:has(tbody tr td)) ~ .dz-table-empty {
   display: flex;
 }
 
