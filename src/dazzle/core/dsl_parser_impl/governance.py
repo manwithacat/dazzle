@@ -723,7 +723,12 @@ def _t_kw_provisioning(parser: Any, state: _TenancyState) -> None:
 
 
 def _t_kw_exclude(parser: Any, state: _TenancyState) -> None:
-    """``exclude: [Entity1, Entity2, ...]`` — list of identifiers."""
+    """``entities_excluded: [Entity1, Entity2, ...]`` — list of identifiers.
+
+    The keyword matches the IR field (``TenancySpec.entities_excluded``) and the
+    runtime reader (``tenancy_inject.inject_partition_key``) — a mismatch here meant
+    the list was silently dropped and "excluded" reference entities got fenced (#1447 B2).
+    """
     parser.advance()
     parser.expect(TokenType.COLON)
     if not parser.match(TokenType.LBRACKET):
@@ -801,6 +806,11 @@ _TENANCY_IDENT_KEYWORDS: dict[str, KeywordParser[_TenancyState]] = {
     "enforce_in_queries": _t_kw_enforce_in_queries,
     "cross_tenant_access": _t_kw_cross_tenant_access,
     "provisioning": _t_kw_provisioning,
+    # #1447 B2: the canonical keyword matches the IR field + runtime reader; the
+    # original parser only knew the short ``exclude`` form, so the natural
+    # ``entities_excluded`` was silently dropped → excluded entities got fenced.
+    # Both spellings are accepted (the short form was the only one previously tested).
+    "entities_excluded": _t_kw_exclude,
     "exclude": _t_kw_exclude,
     "admin_personas": _t_kw_admin_personas,
     "per_tenant_config": _t_kw_per_tenant_config,
@@ -808,7 +818,14 @@ _TENANCY_IDENT_KEYWORDS: dict[str, KeywordParser[_TenancyState]] = {
 
 
 def _on_unknown_tenancy(parser: Any) -> None:
-    """Silently skip unknown keywords (mirrors legacy ``else: self.advance()``)."""
+    """Silently skip a stray token in the ``tenancy:`` block.
+
+    NOTE: this fires for value tokens the keyword handlers leave behind (not only
+    unrecognized keywords), so it can't warn without false positives. The #1447 B2
+    silent-drop was a keyword-name mismatch (the DSL ``entities_excluded`` vs a
+    parser that only knew ``exclude``) — fixed by aligning the dispatch key to the
+    IR field name, so the keyword is now consumed rather than skipped here.
+    """
     parser.advance()
 
 

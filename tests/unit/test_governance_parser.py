@@ -337,6 +337,12 @@ class TestTenancyParser:
                 "tenancy:\n  exclude: [AuditLog]\n",
                 lambda: (lambda f: f.tenancy.entities_excluded, ["AuditLog"]),
             ),
+            (
+                # #1447 B2: the canonical keyword (matches the IR field) must parse —
+                # it was silently dropped before (parser only knew `exclude`).
+                "tenancy:\n  entities_excluded: [GlobalRef, MarkScheme]\n",
+                lambda: (lambda f: f.tenancy.entities_excluded, ["GlobalRef", "MarkScheme"]),
+            ),
         ],
         ids=[
             "test_basic_tenancy_defaults",
@@ -344,6 +350,7 @@ class TestTenancyParser:
             "test_tenancy_topics_namespace_per_tenant",
             "test_tenancy_topics_defaults_to_shared",
             "test_tenancy_exclude_single",
+            "test_tenancy_entities_excluded_canonical",
         ],
     )
     def test_tenancy_attr(self, body: str, extractor_factory) -> None:

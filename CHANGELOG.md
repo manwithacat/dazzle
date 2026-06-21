@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.76] - 2026-06-21
+
+### Fixed
+- **#1447 Blocker 2 — `tenancy.entities_excluded` was silently dropped (excluded entities got
+  fenced).** The tenancy-block parser registered the keyword as `exclude`, but the IR field, the
+  runtime reader (`tenancy_inject.inject_partition_key`), and what users naturally write are all
+  `entities_excluded`. So `entities_excluded: [GlobalRef]` hit the block's silent unknown-keyword
+  skip → the list parsed to `[]` → the "excluded" reference entities received `tenant_id` and were
+  fenced (disappearing cross-tenant). Reproduced at the IR level. The parser now accepts the
+  canonical `entities_excluded` (and keeps the short `exclude` for back-compat). **This closes
+  #1447** — Blocker 1 (apply-rls graceful degradation) shipped in v0.83.72. The reporter's
+  archetype-expander "step 7" attribution was the stale docstring; that injection was removed in
+  RLS Phase A — the real cause was the parser keyword mismatch.
+
 ## [0.83.75] - 2026-06-21
 
 ### Fixed
