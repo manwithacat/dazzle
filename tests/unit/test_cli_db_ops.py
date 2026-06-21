@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 from dazzle.cli.db import (
     ALEMBIC_VERSION_NUM_MAX_LEN,
     _validate_revision_widths,
+    _verify_snapshot_consistency,
     db_app,
 )
 
@@ -351,3 +352,136 @@ class TestPytestImports1282:
 
     def test_cap_matches_migration(self) -> None:
         assert ALEMBIC_VERSION_NUM_MAX_LEN == 128
+
+
+# ---------------------------------------------------------------------------
+# Task 6.1 — post-generation snapshot consistency verification check
+# ---------------------------------------------------------------------------
+
+
+class TestVerifySnapshotConsistency:
+    """``_verify_snapshot_consistency`` is a warn-only internal-consistency check
+    that runs after the engine embeds ``SCHEMA_SNAPSHOT`` into a generated file.
+
+    It compares the snapshot literal stashed on ``cfg.attributes`` (the
+    engine's intended post-state) against ``project_current()`` (the live DSL
+    projection).  A divergence means the engine's embedded post-state doesn't
+    match what the DSL says — i.e. a concurrent DSL change raced the revision,
+    or an engine bug.
+
+    Invariants:
+    - WARNS (logger.warning) when the embedded snapshot differs from project_current().
+    - Does NOT warn on the happy path (snapshots agree).
+    - NEVER raises — always returns None.
+    - NEVER calls project_current() when there is no snapshot on cfg (no-op for
+      legacy / empty / suppressed revisions).
+    """
+
+    def _make_rev(self) -> MagicMock:
+        rev = MagicMock()
+        rev.path = "/fake/versions/abc123_add_task.py"
+        return rev
+
+    def _make_cfg(self, snapshot_literal: str | None) -> MagicMock:
+        cfg = MagicMock()
+        cfg.attributes = {}
+        if snapshot_literal is not None:
+            cfg.attributes["dazzle_schema_snapshot"] = snapshot_literal
+        return cfg
+
+    def test_warns_when_snapshots_diverge(self, caplog: pytest.LogCaptureFixture) -> None:
+        """When the embedded snapshot differs from project_current(), a warning is logged."""
+        import logging
+
+        embedded_literal = "{'Task': {'columns': {'id': {'default': None, 'nullable': False, 'pk': True, 'type': 'uuid'}}, 'fks': {}, 'indexes': [], 'uniques': []}}"
+        # project_current() returns a DIFFERENT snapshot (extra table)
+        live_snapshot = {
+            "Task": {
+                "columns": {
+                    "id": {"default": None, "nullable": False, "pk": True, "type": "uuid"},
+                    "title": {"default": None, "nullable": False, "pk": False, "type": "text"},
+                },
+                "fks": {},
+                "indexes": [],
+                "uniques": [],
+            }
+        }
+
+        with patch(
+            "dazzle.db.schema_snapshot.project_current", return_value=live_snapshot
+        ) as mock_pc:
+            with caplog.at_level(logging.WARNING, logger="dazzle.cli.db"):
+                _verify_snapshot_consistency(self._make_rev(), self._make_cfg(embedded_literal))
+
+        mock_pc.assert_called_once()
+        assert any(
+            "snapshot" in rec.message.lower() and rec.levelno == logging.WARNING
+            for rec in caplog.records
+        ), f"Expected a WARNING about snapshot divergence; got: {caplog.records}"
+
+    def test_no_warn_when_snapshots_agree(self, caplog: pytest.LogCaptureFixture) -> None:
+        """When embedded snapshot matches project_current(), no warning is logged."""
+        import logging
+
+        snapshot_dict = {
+            "Task": {
+                "columns": {"id": {"default": None, "nullable": False, "pk": True, "type": "uuid"}},
+                "fks": {},
+                "indexes": [],
+                "uniques": [],
+            }
+        }
+        from dazzle.db.schema_snapshot import render_snapshot_literal
+
+        embedded_literal = render_snapshot_literal(snapshot_dict)
+
+        with patch("dazzle.db.schema_snapshot.project_current", return_value=snapshot_dict):
+            with caplog.at_level(logging.WARNING, logger="dazzle.cli.db"):
+                _verify_snapshot_consistency(self._make_rev(), self._make_cfg(embedded_literal))
+
+        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records), (
+            f"Unexpected warning on happy path: {caplog.records}"
+        )
+
+    def test_no_op_when_no_snapshot_on_cfg(self, caplog: pytest.LogCaptureFixture) -> None:
+        """When cfg carries no dazzle_schema_snapshot (legacy / suppressed path),
+        project_current() is never called and no warning is logged."""
+        import logging
+
+        with patch("dazzle.db.schema_snapshot.project_current") as mock_pc:
+            with caplog.at_level(logging.WARNING, logger="dazzle.cli.db"):
+                _verify_snapshot_consistency(self._make_rev(), self._make_cfg(None))
+
+        mock_pc.assert_not_called()
+        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+
+    def test_never_raises_on_project_current_failure(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """When project_current() raises (no project / broken DSL), the check
+        swallows the exception and returns None — never blocks db revision."""
+        import logging
+
+        embedded_literal = "{'Task': {}}"
+
+        with patch(
+            "dazzle.db.schema_snapshot.project_current",
+            side_effect=RuntimeError("no dazzle.toml"),
+        ):
+            with caplog.at_level(logging.DEBUG, logger="dazzle.cli.db"):
+                result = _verify_snapshot_consistency(
+                    self._make_rev(), self._make_cfg(embedded_literal)
+                )
+
+        assert result is None
+
+    def test_never_raises_on_none_rev(self, caplog: pytest.LogCaptureFixture) -> None:
+        """When rev is None (Alembic produced no file), the check is a no-op."""
+        import logging
+
+        with patch("dazzle.db.schema_snapshot.project_current") as mock_pc:
+            with caplog.at_level(logging.WARNING, logger="dazzle.cli.db"):
+                result = _verify_snapshot_consistency(None, self._make_cfg("{'x': {}}"))
+
+        mock_pc.assert_not_called()
+        assert result is None

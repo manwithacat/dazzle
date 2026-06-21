@@ -177,11 +177,99 @@ def revision_command(
             # hand-author comment blocks (Task 5.1). No-op when the revision has
             # no unsafe change (no marker present).
             _inject_data_seams(rev)
+            # Warn-only internal-consistency check (Task 6.1): verify that the
+            # SCHEMA_SNAPSHOT just embedded matches the live DSL projection.
+            # Never raises, never blocks the revision.
+            _verify_snapshot_consistency(rev, cfg)
         console.print(f"[green]Migration revision created: {message}[/green]")
         console.print(f"[dim]  → {project_versions}/[/dim]")
     except Exception as e:
         console.print(f"[red]Failed to create revision: {e}[/red]")
         raise typer.Exit(1)
+
+
+def _verify_snapshot_consistency(rev: Any, cfg: Any) -> None:
+    """Warn-only post-generation consistency check (Task 6.1 / #1431).
+
+    After the engine embeds ``SCHEMA_SNAPSHOT`` into a generated revision file,
+    this check verifies that the embedded snapshot literal (the engine's intended
+    post-state, stashed on ``cfg.attributes['dazzle_schema_snapshot']``) agrees
+    with ``project_current()`` — the live DSL-projected schema at the moment the
+    revision was generated.
+
+    **What it verifies:**
+    The engine's embedded post-state (``SCHEMA_SNAPSHOT``) is consistent with
+    the live DSL.  A divergence means either:
+
+    - A concurrent DSL change raced the ``db revision`` invocation (the DSL
+      changed between ``generate_revision()`` projecting ``curr`` and this
+      check running), OR
+    - An engine bug caused ``snapshot_literal`` to encode a different schema
+      than what ``project_current()`` currently projects.
+
+    In either case the revision is still written — this is advisory-only.
+    The check directs the author to inspect and re-run if needed.
+
+    **Limitations (v1):**
+    - Internal consistency only — does NOT compare against the live database.
+      A metadata-vs-DB autogenerate compare would need a DB connection and
+      is too brittle for a warn-only post-generation gate.
+    - The comparison is string-level: the embedded ``snapshot_literal`` is
+      ``eval()``'d back to a dict and compared with the live projection.
+      If ``eval()`` fails (malformed literal), the check is skipped with a
+      DEBUG log.
+    - ``project_current()`` re-imports the live MetaData from the project in
+      the CWD, so it inherits any load failure the engine itself would see.
+      Any exception is caught and logged at DEBUG — never re-raised.
+
+    **Always warn-only, never raises, never blocks ``db revision``.**
+    """
+    # No-op: legacy path / suppressed / empty revision — no snapshot to check.
+    snapshot_literal = (cfg.attributes or {}).get("dazzle_schema_snapshot")
+    if not snapshot_literal:
+        return
+
+    # No-op: Alembic produced no file.
+    if rev is None:
+        return
+
+    try:
+        # Parse the embedded literal back to a dict for comparison.
+        # ast.literal_eval is safe: it only evaluates Python literals (dict,
+        # str, int, bool, None) — no arbitrary code execution.
+        import ast
+
+        from dazzle.db.schema_snapshot import project_current, render_snapshot_literal
+
+        try:
+            embedded: dict[str, Any] = ast.literal_eval(snapshot_literal)
+        except Exception:
+            logger.debug(
+                "post-revision consistency check: could not eval snapshot literal — skipping",
+                exc_info=True,
+            )
+            return
+
+        # Project the live schema from the current DSL.
+        live = project_current()
+
+        # Normalise both sides through render_snapshot_literal so formatting
+        # differences (pprint width, key order) don't produce false positives.
+        embedded_norm = render_snapshot_literal(embedded)
+        live_norm = render_snapshot_literal(live)
+
+        if embedded_norm != live_norm:
+            logger.warning(
+                "post-revision snapshot consistency check: the embedded SCHEMA_SNAPSHOT "
+                "in the generated revision does not match the current DSL projection. "
+                "This may indicate a concurrent DSL change raced `db revision`. "
+                "Inspect the revision and re-run if the schema looks wrong. "
+                "(revision: %s)",
+                getattr(rev, "path", str(rev)),
+            )
+    except Exception:
+        # Swallow all errors — this is advisory only; never block the revision.
+        logger.debug("post-revision snapshot consistency check failed (non-fatal)", exc_info=True)
 
 
 def _inject_schema_snapshot(rev: Any, snapshot_literal: str | None) -> None:
