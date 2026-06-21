@@ -928,7 +928,12 @@ def assemble_post_build_routes(
             # #1422: thread the runtime service map + auto-includes so page
             # handlers read entity data in-process (no REST self-fetch). fk_graph
             # + admin_personas are derived from the appspec inside create_page_routes.
-            entity_services=builder.services,
+            # #1428: page handlers look services up by ENTITY name (`MarkingResult`),
+            # but `builder.services` is keyed by *service* name (`get_markingresult`,
+            # …) — an entity-name lookup against it silently misses for every entity,
+            # so every in-process detail read 404'd and every in-process list went
+            # silently empty. Feed the entity-name-keyed view (same #1181 footgun).
+            entity_services=builder.services_by_entity(),
             entity_auto_includes=builder.entity_auto_includes,
         )
         app.include_router(page_router, prefix="/app")

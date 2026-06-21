@@ -1870,7 +1870,7 @@ class DazzleBackendApp:
         # `_services` is keyed by service name; resolve an entity-keyed view
         # once so both the `service=` lookup and the entity-set enumeration
         # below see entity names, not service names (#1181).
-        _services_by_entity = self._services_by_entity()
+        _services_by_entity = self.services_by_entity()
         policy_registry = PolicyRegistry(
             entities={
                 entity_name: EntityPolicyInfo(
@@ -2182,7 +2182,7 @@ class DazzleBackendApp:
             bulk_router = create_bulk_routes(
                 list(self._appspec.surfaces),
                 repositories=self._repositories,
-                services=self._services_by_entity(),
+                services=self.services_by_entity(),
                 cedar_access_specs=cedar_access_specs,
                 fk_graph=_fk_graph,
                 optional_auth_dep=optional_auth_dep,
@@ -2311,8 +2311,8 @@ class DazzleBackendApp:
         """Get a service by name."""
         return self._services.get(name)
 
-    def _services_by_entity(self) -> dict[str, Any]:
-        """Entity-name-keyed view of the services (#1181).
+    def services_by_entity(self) -> dict[str, Any]:
+        """Entity-name-keyed view of the services (#1181, #1428).
 
         `_services` is keyed by *service* name (`list_invoices`, ...), so an
         entity-name lookup against it silently misses. Delegates to the

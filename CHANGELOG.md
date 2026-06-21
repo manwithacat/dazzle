@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.79] - 2026-06-22
+
+### Fixed
+- **#1428 — every page in-process detail read 404'd and every in-process list went silently
+  empty.** `_read_entity_in_process` / `_list_entity_in_process` (page_routes) look services up by
+  **entity** name (`MarkingResult`), but `app_factory` handed `create_page_routes` the
+  `builder.services` map, which is keyed by **service** name (`get_markingresult`,
+  `list_markingresults`, …). So `entity_services.get("MarkingResult")` was `None` for *every*
+  entity → the detail read bailed at its first guard with `{"error": "not_found"}` (→ 404) and the
+  list returned `{"items": [], "total": 0}` (silent empty) — before scope/auth ever ran. This is
+  the exact #1181 footgun one layer up; the canonical entity-keyed accessor already existed.
+  `DazzleBackendApp._services_by_entity()` is renamed to the public **`services_by_entity()`** and
+  `app_factory` now feeds page routes `builder.services_by_entity()`. The earlier symptom — a
+  scope divergence between REST (200) and page (404) on the *same* `gated_read` — was a red
+  herring: the page never reached `gated_read` at all. Diagnosis from the AegisMark downstream
+  adoption (live three-probe capture pinned the `entity_services` key-namespace miss).
+
+### Changed
+- **`DazzleBackendApp._services_by_entity()` → `services_by_entity()` (now public).** Clean
+  rename, no shim; the two internal callers were updated in the same commit.
+
+### Agent Guidance
+- **Look services up by entity name via `services_by_entity()` / `service_for_entity()`, never
+  `services.get(entity_name)`.** The `services` map is keyed by *service* name (`get_task`,
+  `list_tasks`) — an entity-name lookup against it silently misses (#1181, #1428). Any new
+  consumer that holds an entity name must take the entity-keyed view.
+
 ## [0.83.78] - 2026-06-22
 
 ### Added
