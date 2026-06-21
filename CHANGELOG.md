@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.59] - 2026-06-21
+
+### Fixed
+- **#1427 — `db revision --autogenerate` no longer emits destructive whole-schema
+  rewrites.** Autogenerate diffs the DSL→SQLAlchemy metadata against the live DB with
+  `compare_type=True`, so a type-mapping mismatch (a project's hand-authored `text`
+  PKs vs the DSL's `uuid`) or any schema drift turned a routine revision into a
+  catastrophic `text→uuid` PK rewrite plus live-column/table drops. The autogenerate
+  directive hook now **scopes the upgrade to additive ops by default** (CREATE TABLE /
+  ADD COLUMN / new indexes & constraints), stripping `DropTable` / `DropColumn` /
+  `AlterColumn`, and regenerates the downgrade as the exact inverse of the scoped
+  upgrade. Suppressed ops are logged by name (never silent). Set
+  `DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1` for a deliberately destructive revision (logged
+  loudly). Scoping logic lives in the importable `dazzle.http.alembic.directive_scoping`
+  (env.py can't be unit-imported), unit-tested independently.
+
+### Agent Guidance
+- **`dazzle db revision --autogenerate` is additive-only by default** — it will not
+  drop or retype existing columns/tables; hand-author genuinely destructive migrations
+  (or run once with `DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1`). A deeper DSL-snapshot diff
+  engine (intentful renames + data-migration seam) is planned as a follow-on.
+
 ## [0.83.58] - 2026-06-21
 
 ### Fixed

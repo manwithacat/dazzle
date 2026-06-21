@@ -101,7 +101,15 @@ def revision_command(
         help="Auto-detect schema changes from DSL entities",
     ),
 ) -> None:
-    """Generate a new migration revision into the project directory."""
+    """Generate a new migration revision into the project directory.
+
+    Autogenerate is scoped to **additive** ops (CREATE TABLE / ADD COLUMN / new
+    indexes & constraints): a routine revision can never emit a destructive
+    whole-schema rewrite (e.g. text→uuid PK churn or live-column drops) from
+    metadata-vs-DB diff noise (#1427). Hand-author genuinely destructive changes,
+    or set ``DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1`` to let autogenerate emit
+    drop/alter ops for one deliberately destructive revision.
+    """
     from alembic import command
 
     cfg = _get_alembic_cfg()
