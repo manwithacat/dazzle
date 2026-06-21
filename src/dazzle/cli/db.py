@@ -100,20 +100,46 @@ def revision_command(
         "--autogenerate/--no-autogenerate",
         help="Auto-detect schema changes from DSL entities",
     ),
+    legacy_autogenerate: bool = typer.Option(
+        False,
+        "--legacy-autogenerate",
+        help="Use the pre-#1431 metadata-vs-DB autogenerate path (additive-scoped, "
+        "#1427) instead of the DSL-snapshot diff engine. The default engine emits "
+        "intentful diff-derived ops and embeds a SCHEMA_SNAPSHOT constant.",
+    ),
 ) -> None:
     """Generate a new migration revision into the project directory.
 
-    Autogenerate is scoped to **additive** ops (CREATE TABLE / ADD COLUMN / new
-    indexes & constraints): a routine revision can never emit a destructive
-    whole-schema rewrite (e.g. text→uuid PK churn or live-column drops) from
-    metadata-vs-DB diff noise (#1427). Hand-author genuinely destructive changes,
-    or set ``DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1`` to let autogenerate emit
-    drop/alter ops for one deliberately destructive revision.
+    By default (the #1431 engine), the revision is computed by diffing the head
+    migration's embedded ``SCHEMA_SNAPSHOT`` against the live DSL: the generated
+    ``upgrade()``/``downgrade()`` are the engine's rendered ops, and the file
+    carries the new state as a module-level ``SCHEMA_SNAPSHOT = <literal>`` constant
+    so the *next* revision can diff against it. The engine emits intentful,
+    additive ops only — it never produces the destructive whole-schema rewrite that
+    metadata-vs-DB diff noise can cause.
+
+    **Snapshot embedding seam (Alembic 1.18):** env.py's
+    ``_process_revision_directives`` hook replaces the op-trees with the engine's
+    ops and stashes the snapshot literal on ``cfg.attributes`` (the documented
+    command<->env.py side-channel, already used for ``tenant_schema``). This command
+    then *post-writes* ``SCHEMA_SNAPSHOT = <literal>`` into the generated file. We
+    chose post-write injection over a custom ``script.py.mako`` placeholder because
+    the framework template is shared by the legacy path and tenant migrations
+    (which must not carry the constant), and the dual-lineage ``version_path`` plus
+    the separate revision ``EnvironmentContext`` make template-arg plumbing the
+    more fragile of the two — see the task report.
+
+    ``--legacy-autogenerate`` falls back to the metadata-vs-DB autogenerate path,
+    scoped to **additive** ops (#1427); set ``DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1``
+    there to allow drop/alter ops for one deliberately destructive revision.
     """
     from alembic import command
 
     cfg = _get_alembic_cfg()
     project_versions = str(_get_project_versions_dir())
+
+    # Select the generation strategy for env.py's revision-directive hook.
+    cfg.attributes["dazzle_use_engine"] = not legacy_autogenerate
 
     # #1309: alembic refuses to author a revision when multiple heads exist
     # (it can't pick a parent). Give the actionable reconcile guidance instead
@@ -129,17 +155,59 @@ def revision_command(
         raise typer.Exit(1)
 
     try:
-        command.revision(
+        rev = command.revision(
             cfg,
             message=message,
             autogenerate=autogenerate,
             version_path=project_versions,
         )
+        # Engine path: embed the snapshot literal the hook stashed on cfg.attributes
+        # into the generated file (no-op when legacy / suppressed / no snapshot).
+        if not legacy_autogenerate:
+            _inject_schema_snapshot(rev, cfg.attributes.get("dazzle_schema_snapshot"))
         console.print(f"[green]Migration revision created: {message}[/green]")
         console.print(f"[dim]  → {project_versions}/[/dim]")
     except Exception as e:
         console.print(f"[red]Failed to create revision: {e}[/red]")
         raise typer.Exit(1)
+
+
+def _inject_schema_snapshot(rev: Any, snapshot_literal: str | None) -> None:
+    """Post-write the ``SCHEMA_SNAPSHOT = <literal>`` constant into a revision file.
+
+    The #1431 engine stashes the current snapshot literal on
+    ``cfg.attributes['dazzle_schema_snapshot']`` from within env.py's directive
+    hook; this writes it as a module-level constant so the *next* engine revision
+    can diff against it (``schema_snapshot.load_head_snapshot``). No-op when there
+    is no snapshot (empty/suppressed revision, or the legacy autogenerate path),
+    or when no revision file was produced.
+
+    The constant is appended after the existing module body so it sits alongside
+    the alembic ``revision``/``down_revision`` identifiers and is importable via
+    ``Script.module`` (how ``load_head_snapshot`` reads it back).
+    """
+    if not snapshot_literal:
+        return
+    # command.revision can return Script | list[Script | None]; take the first.
+    if isinstance(rev, list):
+        rev = rev[0] if rev else None
+    if rev is None:
+        return
+    path = Path(rev.path)
+    if not path.exists():
+        return
+
+    text = path.read_text(encoding="utf-8")
+    if "SCHEMA_SNAPSHOT" in text:
+        return  # idempotent — never double-write
+
+    block = (
+        "\n\n# DSL-snapshot embedded by the #1431 migration engine. The next "
+        "`dazzle db revision`\n# diffs the live DSL against this to compute the "
+        "delta. Do not edit by hand.\n"
+        f"SCHEMA_SNAPSHOT = {snapshot_literal}\n"
+    )
+    path.write_text(text + block, encoding="utf-8")
 
 
 #: #1282: Alembic ships `alembic_version.version_num` as `VARCHAR(32)`.
