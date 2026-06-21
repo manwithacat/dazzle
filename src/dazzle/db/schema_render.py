@@ -51,6 +51,7 @@ from dazzle.db.schema_diff import (
     RenameTable,
     SchemaOp,
 )
+from dazzle.http.runtime.query_builder import quote_identifier
 from dazzle.http.runtime.safe_casts import get_using_clause, is_safe_cast
 
 # ---------------------------------------------------------------------------
@@ -129,6 +130,37 @@ def _token_to_sa_type(token: str) -> sa.types.TypeEngine[Any]:
 # ---------------------------------------------------------------------------
 # ColSnap → sa.Column builder
 # ---------------------------------------------------------------------------
+
+
+def _token_to_pg_type_name(token: str) -> str:
+    """Map a canonical snapshot token to its Postgres column-type DDL name.
+
+    Used to render a raw ``ALTER COLUMN ... TYPE <pg_type> USING ...`` statement
+    (see ``_render_alter_column``). The names are the literal Postgres type names
+    accepted in a ``TYPE`` clause. ``numeric(p,s)`` carries its precision/scale
+    through. Unknown tokens fall back to ``text`` (mirrors ``_token_to_sa_type``).
+    """
+    t = token.strip().lower()
+    simple = {
+        "text": "text",
+        "integer": "integer",
+        "bigint": "bigint",
+        "boolean": "boolean",
+        "float": "double precision",
+        "date": "date",
+        "timestamptz": "timestamptz",
+        "uuid": "uuid",
+        "json": "jsonb",
+        "numeric": "numeric",
+    }
+    if t in simple:
+        return simple[t]
+    m = _NUMERIC_RE.match(t)
+    if m:
+        p = m.group(1)
+        s = m.group(2)
+        return f"numeric({p},{s})" if s is not None else f"numeric({p})"
+    return "text"
 
 
 def _col_snap_to_sa_column(name: str, snap: ColSnap) -> sa.Column[Any]:
@@ -302,12 +334,36 @@ def _render_alter_column(
     nullable_changed = old_nullable != new_nullable
     default_changed = old_default != new_default
 
+    # Decide how to render the type change. A non-empty USING clause means the
+    # cast needs an explicit ``USING`` expression — but Alembic's file renderer
+    # (alembic.autogenerate.render._alter_column) only serializes
+    # ``kw["autoincrement"]``, so ``kw["postgresql_using"]`` on an AlterColumnOp
+    # is SILENTLY DROPPED when the op-tree is written to the .py revision file
+    # (#1431). To survive the file round-trip we emit the type change as a raw
+    # ``ExecuteSQLOp`` carrying the full ``ALTER COLUMN ... TYPE ... USING ...``
+    # statement (ExecuteSQLOp's sqltext IS serialized verbatim).
+    using = (
+        get_using_clause(old["type"].upper(), new["type"].upper(), op.name)
+        if type_changed
+        else None
+    )
+    type_via_execute = bool(using)
+    # Unsafe only when the (from, to) pair is absent from SAFE_CASTS entirely.
+    # Safe no-op widenings (USING template = "") are in SAFE_CASTS but return no
+    # USING string; they keep the plain AlterColumnOp and must NOT scaffold.
+    unsafe_type_change = type_changed and not is_safe_cast(old["type"].upper(), new["type"].upper())
+
+    # The AlterColumnOp carries the nullable/default aspects (which DO serialize),
+    # plus the type change ONLY when it is rendered through AlterColumnOp (i.e. not
+    # via the raw ExecuteSQLOp). Existing-type tracks the column's type as the op
+    # sees it: when the type is changed out-of-band by an ExecuteSQLOp first, the
+    # AlterColumnOp's existing_type is the NEW type.
     up_alter_kw: dict[str, Any] = {
-        "existing_type": old_type,
+        "existing_type": new_type if type_via_execute else old_type,
         "existing_nullable": old_nullable,
         "existing_server_default": sa.text(old_default) if old_default is not None else None,
     }
-    if type_changed:
+    if type_changed and not type_via_execute:
         up_alter_kw["modify_type"] = new_type
     if nullable_changed:
         up_alter_kw["modify_nullable"] = new_nullable
@@ -317,25 +373,17 @@ def _render_alter_column(
         )
 
     up_alter = aops.AlterColumnOp(op.table, op.name, **up_alter_kw)
-
-    # Inject USING clause for safe type casts. A type change is unsafe only when
-    # the (from, to) pair is absent from SAFE_CASTS entirely — i.e. not a known
-    # safe cast. Safe no-op widenings (USING template = "") are in SAFE_CASTS but
-    # return no USING string; they must NOT trigger the data seam scaffold.
-    unsafe_type_change = False
-    if type_changed:
-        using = get_using_clause(old["type"].upper(), new["type"].upper(), op.name)
-        if using:
-            up_alter.kw["postgresql_using"] = using
-        unsafe_type_change = not is_safe_cast(old["type"].upper(), new["type"].upper())
+    up_alter_has_work = (
+        (type_changed and not type_via_execute) or nullable_changed or default_changed
+    )
 
     # Build the inverse (downgrade) AlterColumnOp
     down_alter_kw: dict[str, Any] = {
-        "existing_type": new_type,
+        "existing_type": old_type if type_via_execute else new_type,
         "existing_nullable": new_nullable,
         "existing_server_default": sa.text(new_default) if new_default is not None else None,
     }
-    if type_changed:
+    if type_changed and not type_via_execute:
         down_alter_kw["modify_type"] = old_type
     if nullable_changed:
         down_alter_kw["modify_nullable"] = old_nullable
@@ -345,20 +393,59 @@ def _render_alter_column(
         )
 
     down_alter = aops.AlterColumnOp(op.table, op.name, **down_alter_kw)
+    down_alter_has_work = (
+        (type_changed and not type_via_execute) or nullable_changed or default_changed
+    )
 
-    up_ops: list[aops.MigrateOperation]
-    if unsafe_type_change:
+    up_ops: list[aops.MigrateOperation] = []
+    down_ops: list[aops.MigrateOperation] = []
+
+    if type_via_execute:
+        # Emit the type change as raw SQL with the USING clause embedded, so the
+        # USING survives serialization to the .py file. The nullable/default
+        # AlterColumnOp (if any) renders fine and runs after the type change.
+        assert using is not None  # narrows for mypy; type_via_execute == bool(using)
+        new_pg = _token_to_pg_type_name(new["type"])
+        up_ops.append(_type_change_execute_op(op.table, op.name, new_pg, using))
+        if up_alter_has_work:
+            up_ops.append(aops.ModifyTableOps(op.table, [up_alter]))
+
+        # Downgrade: reverse the type. Prefer a registered reverse cast; else a
+        # plain ``"col"::<old_type>`` cast (e.g. uuid→text is lossless & accepted).
+        old_pg = _token_to_pg_type_name(old["type"])
+        reverse_using = get_using_clause(new["type"].upper(), old["type"].upper(), op.name)
+        if not reverse_using:
+            reverse_using = f"{quote_identifier(op.name)}::{old_pg}"
+        if down_alter_has_work:
+            down_ops.append(aops.ModifyTableOps(op.table, [down_alter]))
+        down_ops.append(_type_change_execute_op(op.table, op.name, old_pg, reverse_using))
+    elif unsafe_type_change:
         # Seam first: the hand-authored data prep (e.g. populate a staging value,
         # validate every row casts) must run before the bare ALTER attempts the
         # cast. Downgrade reverses the type with no seam.
         up_ops = [_seam_op(), aops.ModifyTableOps(op.table, [up_alter])]
+        down_ops = [aops.ModifyTableOps(op.table, [down_alter])]
     else:
         up_ops = [aops.ModifyTableOps(op.table, [up_alter])]
+        down_ops = [aops.ModifyTableOps(op.table, [down_alter])]
 
-    return (
-        up_ops,
-        [aops.ModifyTableOps(op.table, [down_alter])],
+    return (up_ops, down_ops)
+
+
+def _type_change_execute_op(
+    table: str, column: str, pg_type: str, using_expr: str
+) -> aops.ExecuteSQLOp:
+    """A raw ``ALTER TABLE ... ALTER COLUMN ... TYPE ... USING ...`` op.
+
+    Carries the full statement (including the USING clause) as ExecuteSQLOp
+    sqltext, which Alembic serializes verbatim — the only reliable way to get a
+    USING clause into the generated revision file (AlterColumnOp drops it).
+    """
+    sql = (
+        f"ALTER TABLE {quote_identifier(table)} "
+        f"ALTER COLUMN {quote_identifier(column)} TYPE {pg_type} USING {using_expr}"
     )
+    return aops.ExecuteSQLOp(sql)
 
 
 def _render_add_fk(

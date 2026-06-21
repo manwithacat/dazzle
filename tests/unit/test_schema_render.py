@@ -120,15 +120,37 @@ def test_alter_column_nullable_change():
 # ---------------------------------------------------------------------------
 
 
-def test_alter_column_type_change_uses_postgresql_using():
+def test_alter_column_type_change_emits_execute_sql_with_using():
+    """A type change WITH a non-empty USING (TEXT→UUID) renders a raw ExecuteSQLOp.
+
+    Alembic's file renderer drops ``kw["postgresql_using"]`` from an AlterColumnOp,
+    so the type change is emitted as a raw ``ALTER COLUMN ... TYPE ... USING ...``
+    statement (ExecuteSQLOp), whose SQL survives serialization verbatim.
+    """
     old = {"type": "text", "nullable": True, "default": None, "pk": False}
     new = {"type": "uuid", "nullable": True, "default": None, "pk": False}
     up, down = render([AlterColumn("t", "col", old, new)])
     up_flat = _up_ops(up.ops)
-    alter = next(o for o in up_flat if isinstance(o, aops.AlterColumnOp))
-    # USING clause injected for TEXT → UUID safe cast
-    assert "postgresql_using" in alter.kw
-    assert "col" in alter.kw["postgresql_using"]
+
+    # No plain AlterColumnOp carries the (dropped) postgresql_using.
+    assert not any(isinstance(o, aops.AlterColumnOp) for o in up_flat), (
+        "type-change-with-USING must NOT use AlterColumnOp (Alembic drops the USING)"
+    )
+    # A raw ExecuteSQLOp with both TYPE and USING is present.
+    execs = [o for o in up_flat if isinstance(o, aops.ExecuteSQLOp)]
+    assert len(execs) == 1, "exactly one ExecuteSQLOp for the type change"
+    sql = execs[0].sqltext
+    assert "TYPE uuid" in sql, f"type change must target uuid; got: {sql}"
+    assert "USING" in sql, f"the USING clause is the whole point; got: {sql}"
+    assert "col" in sql, f"the column must appear in the USING expr; got: {sql}"
+
+    # Downgrade reverses the type with a matching ExecuteSQLOp (uuid→text cast).
+    down_flat = _up_ops(down.ops)
+    down_execs = [o for o in down_flat if isinstance(o, aops.ExecuteSQLOp)]
+    assert len(down_execs) == 1, "exactly one ExecuteSQLOp for the downgrade type revert"
+    down_sql = down_execs[0].sqltext
+    assert "TYPE text" in down_sql, f"downgrade must revert to text; got: {down_sql}"
+    assert "USING" in down_sql, f"downgrade must carry a reverse cast; got: {down_sql}"
 
 
 # ---------------------------------------------------------------------------
@@ -195,14 +217,19 @@ def test_add_not_null_with_default_does_not_scaffold():
 
 
 def test_safe_type_change_does_not_scaffold():
-    """A type change with an available USING cast (TEXT→UUID) does NOT scaffold."""
+    """A safe type change with USING (TEXT→UUID) does NOT emit a data seam.
+
+    It renders as a raw type-change ExecuteSQLOp (carrying USING) — NOT the
+    hand-author data-migration seam marker.
+    """
     old = {"type": "text", "nullable": True, "default": None, "pk": False}
     new = {"type": "uuid", "nullable": True, "default": None, "pk": False}
     up, _ = render([AlterColumn("t", "col", old, new)])
     up_flat = _up_ops(up.ops)
-    assert not _seam_ops(up_flat), "safe cast must not emit a seam"
-    alter = next(o for o in up_flat if isinstance(o, aops.AlterColumnOp))
-    assert "postgresql_using" in alter.kw
+    assert not _seam_ops(up_flat), "safe cast must not emit a data-migration seam"
+    # The type change is a raw ExecuteSQLOp carrying the USING clause.
+    execs = [o for o in up_flat if isinstance(o, aops.ExecuteSQLOp)]
+    assert len(execs) == 1 and "USING" in execs[0].sqltext
 
 
 def test_unsafe_type_change_scaffolds_seam():

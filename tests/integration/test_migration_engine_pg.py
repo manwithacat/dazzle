@@ -875,18 +875,24 @@ def test_sequence_walk_intentful_and_non_destructive(
     # -----------------------------------------------------------------------
     # STEP 5: Type change Task.score str(100) → int  (TEXT → INTEGER, safe USING)
     #
-    # ENGINE DEFECT DETECTED (Task 6.3): schema_render._render_alter_column sets
-    # ``up_alter.kw["postgresql_using"] = using`` on the in-memory AlterColumnOp,
-    # but Alembic's file renderer (_alter_column in alembic/autogenerate/render.py)
-    # only serializes ``kw["autoincrement"]`` — all other kw entries are silently
-    # dropped when the op-tree is written to the .py file. The legacy path avoids
-    # this because _legacy_inject_using_clauses mutates the already-file-destined
-    # op-tree; the engine path replaces the op-tree first, then returns, so the
-    # kw["postgresql_using"] on the engine's rendered op is never in the file.
-    # Result: generated ALTER TABLE ... TYPE INTEGER has no USING clause and fails
-    # at apply time on any non-empty Postgres table. Fix needed in schema_render.py
-    # or env.py (post-write inject the USING clause, mirror how data seams work).
+    # ENGINE DEFECT (Task 6.3, now FIXED): schema_render._render_alter_column used
+    # to set ``kw["postgresql_using"]`` on the in-memory AlterColumnOp, but
+    # Alembic's file renderer only serializes ``kw["autoincrement"]`` — every other
+    # kw entry was silently dropped when the op-tree was written to the .py file, so
+    # the generated ``ALTER ... TYPE INTEGER`` carried no USING and failed with
+    # DatatypeMismatch on a populated table. The fix renders the type change as a
+    # raw ``ExecuteSQLOp('ALTER TABLE ... TYPE ... USING ...')`` whose SQL (incl.
+    # the USING) survives serialization verbatim. This step is the PROOF: it
+    # asserts the USING is in the generated file and applies it cleanly against a
+    # POPULATED column (a row with score='42' seeded just below), and that the row
+    # survives with the new integer type.
     # -----------------------------------------------------------------------
+    # Seed a non-null, castable value into score so the USING cast is exercised on
+    # real data (an empty/NULL column would cast trivially and prove nothing).
+    with psycopg.connect(plain_url) as conn:
+        conn.execute("UPDATE \"Task\" SET score = '42' WHERE label = 'hello'")
+        conn.commit()
+
     (project / "dsl" / "app.dsl").write_text(_SEQ_S5_TYPE_CHANGE, encoding="utf-8")
     revision_command(message="s5-score-type-change", autogenerate=True, legacy_autogenerate=False)
 
@@ -897,9 +903,12 @@ def test_sequence_walk_intentful_and_non_destructive(
 
     s5_upgrade = _upgrade_body(s5_text)
     assert "SCHEMA_SNAPSHOT" in s5_text, "S5: revision must embed SCHEMA_SNAPSHOT"
-    # Intentful op check: alter_column emitted (not drop+add) — these assertions PASS.
-    assert "alter_column" in s5_upgrade, (
-        f"S5: type change must emit alter_column op; got:\n{s5_upgrade}"
+    # Intentful op check: the type change is emitted as a raw ALTER ... TYPE ...
+    # statement (not drop+add) carrying the USING clause.
+    assert "TYPE integer" in s5_upgrade, f"S5: type change must target integer; got:\n{s5_upgrade}"
+    assert "USING" in s5_upgrade, (
+        f"S5: the generated type change MUST carry a USING clause (the whole point of "
+        f"the #1431 fix — Alembic drops kw['postgresql_using']); got:\n{s5_upgrade}"
     )
     assert "drop_column" not in s5_upgrade, (
         "S5: type change upgrade must not use drop_column (destructive!)"
@@ -912,34 +921,25 @@ def test_sequence_walk_intentful_and_non_destructive(
     assert "create_table" not in s5_upgrade, (
         "S5: upgrade must not re-create any table (chaining proof)"
     )
-    # USING clause defect: the generated file should carry postgresql_using but doesn't.
-    # Detect the bug, record whether upgrade can proceed, then continue the walk.
-    s5_using_missing = "postgresql_using" not in s5_upgrade
-    # _s5_upgrade_ok tracks whether the actual apply succeeded so the rest of the
-    # walk can adapt (S6 / chain / downgrade are independent of S5's type).
-    _s5_upgrade_ok = False
-    if not s5_using_missing:
-        upgrade_command(revision="head", no_rls=True)
-        with psycopg.connect(plain_url) as conn:
-            dtype_row = conn.execute(
-                "SELECT data_type FROM information_schema.columns "
-                "WHERE table_schema='public' AND table_name='Task' AND column_name='score'"
-            ).fetchone()
+
+    # Apply the migration against the POPULATED table — this is the regression
+    # proof: pre-fix this raised DatatypeMismatch (no USING).
+    upgrade_command(revision="head", no_rls=True)
+
+    with psycopg.connect(plain_url) as conn:
+        dtype_row = conn.execute(
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_schema='public' AND table_name='Task' AND column_name='score'"
+        ).fetchone()
         assert dtype_row is not None, "S5: Task.score must still exist after type change"
         assert dtype_row[0] == "integer", (
             f"S5: Task.score must be INTEGER after type change; got {dtype_row[0]!r}"
         )
-        _s5_upgrade_ok = True
-    else:
-        # Engine bug: manually apply the DDL + stamp so subsequent steps run
-        # against a consistent DB state. S6/chain/downgrade remain fully exercised
-        # by the engine — only S5's upgrade is bypassed here.
-        with psycopg.connect(plain_url) as conn:
-            conn.execute('ALTER TABLE "Task" ALTER COLUMN score TYPE INTEGER USING score::integer')
-            conn.commit()
-        from dazzle.cli.db import stamp_command
-
-        stamp_command(revision="head")
+        # Data-survival proof: the seeded row's value survived the cast.
+        score_row = conn.execute("SELECT score FROM \"Task\" WHERE label = 'hello'").fetchone()
+        assert score_row is not None and score_row[0] == 42, (
+            f"S5: the populated row must survive the cast as integer 42; got {score_row}"
+        )
 
     # -----------------------------------------------------------------------
     # STEP 6: Drop field Task.completed
@@ -1011,22 +1011,3 @@ def test_sequence_walk_intentful_and_non_destructive(
     assert "completed" in downgraded_col_names, (
         f"DOWNGRADE: Task.completed must be restored after downgrade; got {downgraded_col_names}"
     )
-
-    # -----------------------------------------------------------------------
-    # ENGINE DEFECT SUMMARY: if S5's USING clause was missing, mark xfail so
-    # the defect is visible in the test report without blocking CI green.
-    # All other steps (S1-S4, S6, chain, downgrade) proved fully green above.
-    # -----------------------------------------------------------------------
-    if s5_using_missing:
-        pytest.xfail(
-            "ENGINE BUG (Task 6.3): schema_render._render_alter_column sets "
-            "kw['postgresql_using'] on the in-memory AlterColumnOp but Alembic's "
-            "file renderer (_alter_column in render.py) only serializes "
-            "kw['autoincrement'] — all other kw entries are silently dropped. "
-            "The USING clause never appears in the generated .py file. "
-            "Result: 'ALTER TABLE Task ALTER COLUMN score TYPE INTEGER' (no USING) "
-            "fails with DatatypeMismatch on any non-trivially-castable Postgres column. "
-            "Fix: post-write inject 'postgresql_using=...' into the file after "
-            "Alembic writes it (mirror the data-seam injection approach in cli/db.py), "
-            "or render the cast as an ExecuteSQLOp('ALTER TABLE ... USING ...') directly."
-        )
