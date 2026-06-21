@@ -26,7 +26,7 @@ from .transformer import DataProductTransformer
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec
 
-logger = logging.getLogger("dazzle.data_products.test_generator")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

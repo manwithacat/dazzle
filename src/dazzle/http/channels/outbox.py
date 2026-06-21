@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from dazzle.http.runtime.repository import DatabaseManager
 
-logger = logging.getLogger("dazzle.channels.outbox")
+logger = logging.getLogger(__name__)
 
 
 class OutboxStatus(StrEnum):

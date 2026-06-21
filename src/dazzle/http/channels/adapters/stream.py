@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from ..detection import DetectionResult
     from ..outbox import OutboxMessage
 
-logger = logging.getLogger("dazzle.channels.adapters.stream")
+logger = logging.getLogger(__name__)
 
 
 def _safe_json_loads(raw: bytes) -> dict[str, Any]:

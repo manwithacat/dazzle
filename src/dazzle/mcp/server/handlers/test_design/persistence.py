@@ -9,7 +9,7 @@ from ..common import error_response, extract_progress, wrap_handler_errors
 from ..serializers import serialize_test_design, serialize_test_design_summary
 from .proposals import _parse_test_design_action, _parse_test_design_trigger
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------

@@ -17,7 +17,7 @@ from dazzle.core.paths import project_discovery_dir, project_kg_db
 
 from ..common import error_response
 
-logger = logging.getLogger("dazzle.mcp.handlers.discovery")
+logger = logging.getLogger(__name__)
 
 
 def _populate_kg_for_discovery(

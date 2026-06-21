@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from dazzle.core.ir.sla import SLAConditionSpec, SLATierSpec
 
-logger = logging.getLogger("dazzle.sla")
+logger = logging.getLogger(__name__)
 
 # Day-name to weekday number (Monday=0 … Sunday=6)
 _DAY_MAP: dict[str, int] = {

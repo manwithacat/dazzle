@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-logger = logging.getLogger("dazzle.spec_versioning")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

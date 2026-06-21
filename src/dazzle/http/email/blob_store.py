@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     pass
 
-logger = logging.getLogger("dazzle.email.blob_store")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

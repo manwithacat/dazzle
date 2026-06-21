@@ -8,7 +8,7 @@ import logging
 
 from dazzle.http.runtime.subsystems import SubsystemContext
 
-logger = logging.getLogger("dazzle.server")
+logger = logging.getLogger(__name__)
 
 
 class GraphQLSubsystem:

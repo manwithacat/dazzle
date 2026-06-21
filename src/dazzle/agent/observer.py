@@ -16,7 +16,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from .models import Element, ObserverMode, PageState
 
-logger = logging.getLogger("dazzle.agent.observer")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
     from dazzle.core.ir.e2e import E2ETestSpec
 
-logger = logging.getLogger("dazzle.testing.stress")
+logger = logging.getLogger(__name__)
 
 
 class GapCategory(StrEnum):

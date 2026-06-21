@@ -24,7 +24,7 @@ from ..state import (
 )
 from .common import error_response, extract_progress
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 
 def list_projects() -> str:

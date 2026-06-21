@@ -34,7 +34,7 @@ from .state import (
     set_active_project,
 )
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================

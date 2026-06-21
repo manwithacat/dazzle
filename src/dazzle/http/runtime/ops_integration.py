@@ -244,7 +244,7 @@ class OpsPlatform:
         except Exception:
             import logging
 
-            logging.getLogger("dazzle.ops").debug("Spec versioning not available")
+            logging.getLogger(__name__).debug("Spec versioning not available")
 
         # Initialize deploy history
         try:

@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 _LOCK_FILENAME = "mcp.lock"
 

@@ -18,7 +18,7 @@ from .common import (
     wrap_handler_errors,
 )
 
-logger = logging.getLogger("dazzle.mcp.testing")
+logger = logging.getLogger(__name__)
 
 
 def _resolve_project_root(project_path: str | None) -> Path | str:

@@ -31,7 +31,7 @@ from ._shared import (
     make_stagnation_completion,
 )
 
-logger = logging.getLogger("dazzle.agent.missions.discovery")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

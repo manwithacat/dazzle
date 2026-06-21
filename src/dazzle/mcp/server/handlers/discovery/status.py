@@ -9,7 +9,7 @@ from dazzle.core.paths import project_discovery_dir, project_kg_db
 
 from ..common import load_project_appspec, wrap_handler_errors
 
-logger = logging.getLogger("dazzle.mcp.handlers.discovery")
+logger = logging.getLogger(__name__)
 
 
 def discovery_status_impl(project_path: Path) -> dict[str, Any]:

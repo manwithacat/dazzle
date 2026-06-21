@@ -1026,7 +1026,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     if "fragment_chrome" in ui_data and not _fragment_chrome_warned():
         import logging as _logging
 
-        _logging.getLogger("dazzle.manifest").info(
+        _logging.getLogger(__name__).info(
             "[ui] fragment_chrome is deprecated and ignored — typed-Fragment "
             "is the only render path since v0.67.43. Remove the key from "
             "dazzle.toml."

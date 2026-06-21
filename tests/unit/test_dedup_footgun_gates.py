@@ -56,6 +56,31 @@ def test_no_inline_404_guard() -> None:
     )
 
 
+def test_logger_uses_dunder_name_not_string_bucket() -> None:
+    """`getLogger("dazzle.<...>")` → `getLogger(__name__)` (#1435).
+
+    A hand-written dotted logger name (`getLogger("dazzle.server")`) is a silent
+    footgun: it re-parents records under a shared bucket, so a module rename orphans
+    them and per-module level filtering breaks. Every module logger must derive from
+    `__name__`. Intentional shared channels are allowed only via a *named constant*
+    (the literal `getLogger("dazzle.x")` form is what's forbidden), and the framework
+    root logger (`getLogger("dazzle")`, no dot — configured in `log_setup.py` /
+    `http/runtime/logging.py`) plus third-party library loggers (e.g. `pygls`) are
+    fine since they don't match the dotted-`dazzle.` literal.
+    """
+    pat = re.compile(r"""getLogger\(['\"]dazzle\.""")
+    hits = [
+        str(p.relative_to(_SRC.parent.parent))
+        for p in _src_files(set())
+        if pat.search(p.read_text(encoding="utf-8"))
+    ]
+    assert not hits, (
+        'Logger acquired by a literal `getLogger("dazzle.<...>")` bucket name — use '
+        "`logging.getLogger(__name__)` (or a named constant for a deliberate shared "
+        "channel):\n  " + "\n  ".join(hits)
+    )
+
+
 def test_no_inline_identity_fallback() -> None:
     """`getattr(x,"name",None) or getattr(x,"id",...)` → `spec_display_id(x)`.
 

@@ -134,7 +134,7 @@ class IntegrationManager:
         except ImportError:
             pass
         except Exception as e:
-            logging.getLogger("dazzle.server").warning("Failed to init channels: %s", e)
+            logging.getLogger(__name__).warning("Failed to init channels: %s", e)
 
     def _add_channel_routes(self) -> None:
         """Add channel management routes to the FastAPI app."""
@@ -244,10 +244,10 @@ class IntegrationManager:
                 fragment_sources=self._fragment_sources,
             )
 
-            logging.getLogger("dazzle.server").info("Integration executor initialized")
+            logging.getLogger(__name__).info("Integration executor initialized")
 
         except ImportError as e:
-            logging.getLogger("dazzle.server").debug("Integration executor not available: %s", e)
+            logging.getLogger(__name__).debug("Integration executor not available: %s", e)
 
         except Exception as e:
-            logging.getLogger("dazzle.server").warning("Failed to init integration executor: %s", e)
+            logging.getLogger(__name__).warning("Failed to init integration executor: %s", e)

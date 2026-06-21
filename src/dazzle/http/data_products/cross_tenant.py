@@ -20,7 +20,7 @@ from typing import Any
 
 from dazzle.core.ir.governance import DataProductSpec
 
-logger = logging.getLogger("dazzle.data_products.cross_tenant")
+logger = logging.getLogger(__name__)
 
 
 class CrossTenantPermission(StrEnum):

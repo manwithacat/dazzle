@@ -19,7 +19,7 @@ from typing import Any
 
 from .compiler import CATEGORY_LABELS, Proposal, infer_crud_action
 
-logger = logging.getLogger("dazzle.agent.emitter")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

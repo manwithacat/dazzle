@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .activity_log import ActivityStore
 
-logger = logging.getLogger("dazzle.mcp.progress")
+logger = logging.getLogger(__name__)
 
 
 class ProgressContext:

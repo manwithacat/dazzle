@@ -26,7 +26,7 @@ from .models import ActionResult, ActionType, AgentAction, PageState, Step
 from .observer import Observer
 from .transcript import AgentTranscript, Observation
 
-logger = logging.getLogger("dazzle.agent.core")
+logger = logging.getLogger(__name__)
 
 
 def _extract_first_json_object(text: str) -> tuple[str | None, str]:

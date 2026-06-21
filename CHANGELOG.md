@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.73] - 2026-06-21
+
+### Changed
+- **#1435 — module loggers now derive from `__name__`, not hand-written string buckets.**
+  126 call sites across 117 files used `logging.getLogger("dazzle.server")` /
+  `getLogger("dazzle.mcp")` / per-module string names — a footgun: records get re-parented
+  under a shared bucket, so a module rename orphans them and per-module level filtering
+  breaks. All now use `getLogger(__name__)`; routing is unchanged because every `dazzle.*`
+  logger still inherits the framework root logger's config (`http/runtime/logging.py` sets the
+  level on `getLogger("dazzle")`, which propagates). The intentional string loggers are kept:
+  the root `getLogger("dazzle")` (config, in `log_setup.py` / `http/runtime/logging.py`) and
+  the third-party `pygls` library loggers. New gate `test_logger_uses_dunder_name_not_string_bucket`
+  forbids the literal `getLogger("dazzle.<...>")` form (a deliberate shared channel must use a
+  named constant, not an inline literal).
+
 ## [0.83.72] - 2026-06-21
 
 ### Changed

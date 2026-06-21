@@ -35,7 +35,7 @@ from .sinks import (
 if TYPE_CHECKING:
     from dazzle.core.ir import AnalyticsSpec
 
-logger = logging.getLogger("dazzle.analytics.bridge")
+logger = logging.getLogger(__name__)
 
 
 def match_topic_glob(topic: str, glob: str) -> bool:

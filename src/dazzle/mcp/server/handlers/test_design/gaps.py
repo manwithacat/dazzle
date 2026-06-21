@@ -7,7 +7,7 @@ from typing import Any
 
 from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 
 def _state_transition_flow_covered(flow_id: str, flow_ids: "set[str]") -> bool:

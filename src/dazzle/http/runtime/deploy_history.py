@@ -14,7 +14,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
-logger = logging.getLogger("dazzle.deploy_history")
+logger = logging.getLogger(__name__)
 
 
 class DeployStatus(StrEnum):

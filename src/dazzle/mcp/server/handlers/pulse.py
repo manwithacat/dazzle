@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 from .common import DEFAULT_STEP_TIMEOUT, error_response, extract_progress, wrap_handler_errors
 
-logger = logging.getLogger("dazzle.mcp.handlers.pulse")
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------

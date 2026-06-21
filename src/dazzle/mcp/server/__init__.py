@@ -53,7 +53,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stderr,
 )
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 # Create the MCP server instance
 try:

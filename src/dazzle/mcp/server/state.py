@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from dazzle.mcp.server.activity_log import ActivityLog, ActivityStore
     from dazzle.testing.vendor_mock.orchestrator import MockOrchestrator
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================

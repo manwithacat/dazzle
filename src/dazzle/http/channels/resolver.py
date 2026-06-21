@@ -34,7 +34,7 @@ from .providers import (
 if TYPE_CHECKING:
     from dazzle.core.ir import ChannelSpec
 
-logger = logging.getLogger("dazzle.channels")
+logger = logging.getLogger(__name__)
 
 
 class ChannelConfigError(Exception):

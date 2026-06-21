@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
-logger = logging.getLogger("dazzle.audit")
+logger = logging.getLogger(__name__)
 
 # #1383: per-transaction advisory-lock key that serialises the hash-chain
 # head-read + batch INSERT across concurrent workers. Without it, two workers

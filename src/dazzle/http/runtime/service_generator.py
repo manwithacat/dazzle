@@ -26,7 +26,7 @@ from dazzle.http.specs.service import (
 if TYPE_CHECKING:
     from dazzle.http.runtime.repository import Repository
 
-logger = logging.getLogger("dazzle.service")
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # Type Variables

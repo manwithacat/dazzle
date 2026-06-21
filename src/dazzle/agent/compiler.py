@@ -16,7 +16,7 @@ from typing import Any
 
 from .transcript import Observation
 
-logger = logging.getLogger("dazzle.agent.compiler")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

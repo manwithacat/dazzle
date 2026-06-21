@@ -26,7 +26,7 @@ from typing import IO, TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
 
-logger = logging.getLogger("dazzle.mcp.activity")
+logger = logging.getLogger(__name__)
 
 # ── Defaults ────────────────────────────────────────────────────────────────
 

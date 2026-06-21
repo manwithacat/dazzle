@@ -12,7 +12,7 @@ from dazzle.core.manifest import resolve_api_url
 
 from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------

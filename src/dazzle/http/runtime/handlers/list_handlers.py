@@ -547,7 +547,7 @@ async def _list_handler_body(
         except Exception:
             import logging as _logging
 
-            _logging.getLogger("dazzle.runtime").exception(
+            _logging.getLogger(__name__).exception(
                 "HTMX fragment render failed for %s", entity_name
             )
             # Return an error row so the skeleton resolves with a visible message

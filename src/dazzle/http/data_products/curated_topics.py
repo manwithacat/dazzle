@@ -23,7 +23,7 @@ from dazzle.core.ir.governance import (
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec, EntitySpec
 
-logger = logging.getLogger("dazzle.data_products.curated_topics")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

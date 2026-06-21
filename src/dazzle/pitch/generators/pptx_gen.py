@@ -283,7 +283,7 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
             logger.debug("Chart generation skipped: %s", e)
 
         # Capture warnings from slide builders
-        pitch_logger = logging.getLogger("dazzle.pitch")
+        pitch_logger = logging.getLogger(__name__)
         builder_warnings: list[str] = []
 
         class _WarningCapture(logging.Handler):

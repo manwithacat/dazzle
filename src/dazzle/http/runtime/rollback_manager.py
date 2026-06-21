@@ -12,7 +12,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger("dazzle.rollback")
+logger = logging.getLogger(__name__)
 
 
 class RollbackManager:

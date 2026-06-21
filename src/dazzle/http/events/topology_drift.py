@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec
     from dazzle.http.events.bus import EventBus
 
-logger = logging.getLogger("dazzle.events.topology_drift")
+logger = logging.getLogger(__name__)
 
 
 class DriftType(StrEnum):

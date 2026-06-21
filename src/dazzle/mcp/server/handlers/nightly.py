@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from dazzle.mcp.server.activity_log import ActivityStore
 from .orchestration import QualityStep, aggregate_results, run_step
 
-logger = logging.getLogger("dazzle.mcp.handlers.nightly")
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------

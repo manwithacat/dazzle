@@ -24,7 +24,7 @@ from dazzle.http.runtime.tenant.resolver import (
     Resolver,
 )
 
-logger = logging.getLogger("dazzle.tenant")
+logger = logging.getLogger(__name__)
 
 
 NotFoundRenderer = Callable[[str], str]

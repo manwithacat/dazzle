@@ -539,7 +539,7 @@ def register_site_error_handlers(
         if getattr(app, "debug", False):
             raise exc
 
-        logging.getLogger("dazzle.errors").exception(
+        logging.getLogger(__name__).exception(
             "Unhandled exception on %s %s",
             getattr(request, "method", "?"),
             getattr(getattr(request, "url", None), "path", "?"),

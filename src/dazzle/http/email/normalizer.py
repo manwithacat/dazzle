@@ -33,7 +33,7 @@ from dazzle.core.ir.email import (
     RawMailEvent,
 )
 
-logger = logging.getLogger("dazzle.email.normalizer")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

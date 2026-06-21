@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from dazzle.core.ir.islands import IslandSpec
 
-logger = logging.getLogger("dazzle.islands")
+logger = logging.getLogger(__name__)
 
 
 def _build_entity_service_map(services: dict[str, Any]) -> dict[str, Any]:

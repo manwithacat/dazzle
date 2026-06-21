@@ -16,7 +16,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-logger = logging.getLogger("dazzle.site_routes")
+logger = logging.getLogger(__name__)
 
 
 def create_site_routes(

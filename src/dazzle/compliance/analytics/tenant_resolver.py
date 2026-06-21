@@ -31,7 +31,7 @@ from typing import Any, Protocol
 
 from dazzle.core.ir import AnalyticsProviderInstance, AnalyticsSpec
 
-logger = logging.getLogger("dazzle.analytics.tenant")
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)

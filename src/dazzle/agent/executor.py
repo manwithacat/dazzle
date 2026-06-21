@@ -15,7 +15,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from .models import ActionResult, ActionType, AgentAction
 
-logger = logging.getLogger("dazzle.agent.executor")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

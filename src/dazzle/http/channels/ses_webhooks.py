@@ -12,7 +12,7 @@ import json
 import logging
 from typing import Any
 
-logger = logging.getLogger("dazzle.channels.ses_webhooks")
+logger = logging.getLogger(__name__)
 
 
 def _parse_sns_message(body: bytes) -> dict[str, Any]:

@@ -20,7 +20,7 @@ import httpx
 from dazzle.core.manifest import resolve_api_url
 from dazzle.core.strings import to_api_plural
 
-logger = logging.getLogger("dazzle.demo_data")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

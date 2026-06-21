@@ -21,7 +21,7 @@ from .common import error_response, wrap_handler_errors
 if TYPE_CHECKING:
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 
 def _get_graph() -> KnowledgeGraph | None:

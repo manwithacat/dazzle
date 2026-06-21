@@ -22,7 +22,7 @@ from dazzle.core.ir.governance import DataProductTransform
 
 from .curated_topics import CuratedTopicConfig, FieldFilter
 
-logger = logging.getLogger("dazzle.data_products.transformer")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

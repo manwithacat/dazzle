@@ -11,7 +11,7 @@ from dazzle.core.appspec_loader import load_project_appspec
 from ..common import extract_progress, wrap_handler_errors
 from ._helpers import deserialize_observations, load_report_data
 
-logger = logging.getLogger("dazzle.mcp.handlers.discovery")
+logger = logging.getLogger(__name__)
 
 
 def discovery_emit_impl(

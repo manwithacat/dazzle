@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from dazzle.http.runtime.service_generator import BaseService
     from dazzle.http.specs.auth import EntityAccessSpec
 
-logger = logging.getLogger("dazzle.policy")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

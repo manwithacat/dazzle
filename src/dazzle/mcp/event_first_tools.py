@@ -23,7 +23,7 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 
-logger = logging.getLogger("dazzle.mcp.event_first")
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================

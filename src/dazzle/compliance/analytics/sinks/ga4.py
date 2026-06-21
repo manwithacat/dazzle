@@ -42,7 +42,7 @@ except ImportError:
 
 from .base import AnalyticsEvent, SinkMetrics, SinkResult, TenantContext
 
-logger = logging.getLogger("dazzle.analytics.sinks.ga4")
+logger = logging.getLogger(__name__)
 
 _MP_ENDPOINT = "https://www.google-analytics.com/mp/collect"
 _API_SECRET_ENV = "DAZZLE_GA4_API_SECRET"

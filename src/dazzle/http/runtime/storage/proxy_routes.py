@@ -65,7 +65,7 @@ if TYPE_CHECKING:
     from .registry import StorageRegistry
 
 
-log = logging.getLogger("dazzle.storage.proxy")
+log = logging.getLogger(__name__)
 
 
 def _expected_prefix_pattern(prefix_template: str, user_id: str) -> re.Pattern[str]:

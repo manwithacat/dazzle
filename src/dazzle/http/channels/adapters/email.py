@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from ..detection import DetectionResult
     from ..outbox import OutboxMessage
 
-logger = logging.getLogger("dazzle.channels.adapters.email")
+logger = logging.getLogger(__name__)
 
 
 class MailpitAdapter(EmailAdapter):

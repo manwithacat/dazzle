@@ -34,7 +34,7 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any
 
-logger = logging.getLogger("dazzle.testing.browser_gate")
+logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_BROWSERS = 2
 DEFAULT_HEADLESS = True

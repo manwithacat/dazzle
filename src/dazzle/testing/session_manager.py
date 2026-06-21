@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 from dazzle.core.ir.identity import spec_display_id
 from dazzle.core.manifest import resolve_api_url
 
-logger = logging.getLogger("dazzle.testing.session_manager")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

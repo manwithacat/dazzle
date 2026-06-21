@@ -87,9 +87,7 @@ class WorkspaceRouteBuilder:
 
         workspaces = self._appspec.workspaces
         if not workspaces:
-            logging.getLogger("dazzle.server").debug(
-                "No workspaces in spec — skipping workspace routes"
-            )
+            logging.getLogger(__name__).debug("No workspaces in spec — skipping workspace routes")
             return
 
         try:
@@ -601,7 +599,7 @@ class WorkspaceRouteBuilder:
 
             self._init_workspace_entity_routes(workspaces, app)
 
-            logging.getLogger("dazzle.server").info(
+            logging.getLogger(__name__).info(
                 "Workspace routes initialized for %s workspace(s)",
                 len(workspaces),
             )
@@ -612,13 +610,13 @@ class WorkspaceRouteBuilder:
             # synthetic DSL view.
             from dazzle.core.admin_builder import boot_log_line
 
-            logging.getLogger("dazzle.server").info(boot_log_line(self._appspec))
+            logging.getLogger(__name__).info(boot_log_line(self._appspec))
 
         except ImportError as e:
-            logging.getLogger("dazzle.server").debug("Workspace renderer not available: %s", e)
+            logging.getLogger(__name__).debug("Workspace renderer not available: %s", e)
 
         except Exception:
-            logging.getLogger("dazzle.server").error(
+            logging.getLogger(__name__).error(
                 "Failed to init workspace routes",
                 exc_info=True,
             )

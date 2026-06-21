@@ -23,7 +23,7 @@ from ..detection import (
 if TYPE_CHECKING:
     pass
 
-logger = logging.getLogger("dazzle.channels.queue")
+logger = logging.getLogger(__name__)
 
 
 class RabbitMQDetector(ProviderDetector):

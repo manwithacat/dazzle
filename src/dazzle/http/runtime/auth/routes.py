@@ -409,7 +409,7 @@ async def _forgot_password(
     """
     import logging
 
-    _logger = logging.getLogger("dazzle.auth")
+    _logger = logging.getLogger(__name__)
 
     user = deps.auth_store.get_user_by_email(data.email)
 

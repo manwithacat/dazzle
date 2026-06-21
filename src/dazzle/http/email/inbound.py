@@ -26,7 +26,7 @@ from dazzle.core.http_client import async_retrying_request
 if TYPE_CHECKING:
     from .blob_store import BlobStore
 
-logger = logging.getLogger("dazzle.email.inbound")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

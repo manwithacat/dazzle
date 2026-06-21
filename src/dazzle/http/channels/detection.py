@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     pass
 
-logger = logging.getLogger("dazzle.channels")
+logger = logging.getLogger(__name__)
 
 
 class ProviderStatus(Enum):

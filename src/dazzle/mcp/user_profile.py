@@ -21,7 +21,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-logger = logging.getLogger("dazzle.mcp.user_profile")
+logger = logging.getLogger(__name__)
 
 # Default profile location — global (describes the user, not the project)
 PROFILE_DIR = Path.home() / ".dazzle"

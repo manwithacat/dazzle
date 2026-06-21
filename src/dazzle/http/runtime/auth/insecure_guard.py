@@ -10,7 +10,7 @@ refuses to boot in that case unless the operator explicitly acknowledges it.
 import logging
 import os
 
-logger = logging.getLogger("dazzle.server")
+logger = logging.getLogger(__name__)
 
 INSECURE_ACK_VAR = "DAZZLE_ALLOW_INSECURE_NO_AUTH"
 

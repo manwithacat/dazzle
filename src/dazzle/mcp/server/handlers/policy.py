@@ -34,7 +34,7 @@ from .common import (
     wrap_handler_errors,
 )
 
-logger = logging.getLogger("dazzle.mcp.policy")
+logger = logging.getLogger(__name__)
 
 # All CRUD operations we expect coverage for
 ALL_OPS = list(PermissionKind)

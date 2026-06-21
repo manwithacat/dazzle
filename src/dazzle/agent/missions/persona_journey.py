@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 from ..transcript import Observation
 from ._shared import get_surface_entity, is_step_kind
 
-logger = logging.getLogger("dazzle.agent.missions.persona_journey")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

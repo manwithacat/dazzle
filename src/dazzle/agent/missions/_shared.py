@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
 from ..models import ActionType, AgentAction, Step
 
-logger = logging.getLogger("dazzle.agent.missions")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

@@ -15,7 +15,7 @@ from ._helpers import (
     save_discovery_report,
 )
 
-logger = logging.getLogger("dazzle.mcp.handlers.discovery")
+logger = logging.getLogger(__name__)
 
 
 async def discovery_run_impl(

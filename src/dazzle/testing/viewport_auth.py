@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-logger = logging.getLogger("dazzle.testing.viewport_auth")
+logger = logging.getLogger(__name__)
 
 
 def load_persona_cookies(

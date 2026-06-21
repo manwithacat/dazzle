@@ -67,7 +67,7 @@ try:
 except ImportError:
     pass  # Kafka functionality will raise error when used
 
-logger = logging.getLogger("dazzle.events.kafka")
+logger = logging.getLogger(__name__)
 
 
 def _check_kafka_available() -> None:

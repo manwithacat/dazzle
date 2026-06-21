@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from ..detection import DetectionResult
     from ..outbox import OutboxMessage
 
-logger = logging.getLogger("dazzle.channels.adapters")
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:

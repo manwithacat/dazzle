@@ -38,7 +38,7 @@ from dazzle.agent.observer import PlaywrightObserver
 from dazzle.agent.transcript import AgentTranscript
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
 
-logger = logging.getLogger("dazzle.testing.agent_e2e")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

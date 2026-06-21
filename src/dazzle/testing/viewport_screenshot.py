@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger("dazzle.testing.viewport_screenshot")
+logger = logging.getLogger(__name__)
 
 BASELINES_DIR = ".dazzle/viewport_baselines"
 

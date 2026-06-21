@@ -16,7 +16,7 @@ from dazzle.http.runtime.subsystems import SubsystemContext
 if TYPE_CHECKING:
     pass
 
-logger = logging.getLogger("dazzle.server")
+logger = logging.getLogger(__name__)
 
 
 def _mount_static_files(
@@ -276,7 +276,7 @@ class SystemRoutesSubsystem:
         except Exception as e:
             import logging as _logging
 
-            _logging.getLogger("dazzle.server").warning("Failed to init fragment routes: %s", e)
+            _logging.getLogger(__name__).warning("Failed to init fragment routes: %s", e)
 
     def _init_integration_executor(self, ctx: SubsystemContext) -> None:
         """Initialize integration action executor (delegates to IntegrationManager)."""

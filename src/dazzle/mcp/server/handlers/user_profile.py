@@ -15,7 +15,7 @@ from typing import Any
 
 from .common import error_response, extract_progress, unknown_op_response
 
-logger = logging.getLogger("dazzle.mcp.handlers.user_profile")
+logger = logging.getLogger(__name__)
 
 
 def handle_user_profile(arguments: dict[str, Any]) -> str:

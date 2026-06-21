@@ -31,7 +31,7 @@ from dazzle.qa.models import CapturedScreen
 from dazzle.testing.browser_gate import BrowserGate
 from dazzle.testing.session_manager import SessionManager
 
-logger = logging.getLogger("dazzle.qa.capture")
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================

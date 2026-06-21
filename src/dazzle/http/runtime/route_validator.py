@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
-logger = logging.getLogger("dazzle.routes")
+logger = logging.getLogger(__name__)
 
 
 def validate_routes(app: FastAPI, *, strict: bool = False) -> list[str]:

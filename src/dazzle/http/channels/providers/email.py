@@ -27,7 +27,7 @@ from ..detection import (
 if TYPE_CHECKING:
     pass
 
-logger = logging.getLogger("dazzle.channels.email")
+logger = logging.getLogger(__name__)
 
 
 class MailpitDetector(ProviderDetector):

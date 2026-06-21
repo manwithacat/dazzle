@@ -257,7 +257,7 @@ def _parse_page(data: dict[str, Any]) -> PageSpec:
         if not _PATH_KEY_DEPRECATION_WARNED:
             import logging as _logging
 
-            _logging.getLogger("dazzle.sitespec").warning(
+            _logging.getLogger(__name__).warning(
                 "sitespec.yaml uses deprecated 'path:' key on page %r — "
                 "rename to 'route:' (the canonical key).",
                 route,

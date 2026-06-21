@@ -25,7 +25,7 @@ from uuid import uuid4
 
 from dazzle.render.onboarding.state import OnboardingProgress
 
-logger = logging.getLogger("dazzle.onboarding")
+logger = logging.getLogger(__name__)
 
 __all__ = ["OnboardingProgress", "OnboardingStateRepository"]
 

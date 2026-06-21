@@ -14,7 +14,7 @@ from typing import Any
 
 from .common import error_response, wrap_handler_errors
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 
 @wrap_handler_errors

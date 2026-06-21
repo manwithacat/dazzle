@@ -15,7 +15,7 @@ from typing import Any
 
 from dazzle.http.events.envelope import EventEnvelope
 
-logger = logging.getLogger("dazzle.server")
+logger = logging.getLogger(__name__)
 
 # action -> canonical topic / event_type. Matches SSEStreamManager.STREAM_TOPICS
 # (StreamType.EVENTS) AND the client `sse:entity.<action>` trigger names, so no

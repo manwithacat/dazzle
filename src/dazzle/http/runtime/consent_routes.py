@@ -42,7 +42,7 @@ from dazzle.compliance.analytics.consent import (
 )
 from dazzle.compliance.analytics.consent_banner import render_consent_banner
 
-logger = logging.getLogger("dazzle.consent")
+logger = logging.getLogger(__name__)
 
 
 def create_consent_routes(

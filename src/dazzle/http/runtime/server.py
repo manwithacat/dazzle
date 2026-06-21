@@ -573,7 +573,7 @@ class DazzleBackendApp:
             try:
                 plugin.startup(self._subsystem_ctx)
             except Exception as exc:  # pragma: no cover
-                logging.getLogger("dazzle.server").warning(
+                logging.getLogger(__name__).warning(
                     "Subsystem '%s' startup failed: %s", getattr(plugin, "name", "?"), exc
                 )
         # Sync mutable outputs back to DazzleBackendApp attributes so existing
@@ -1410,7 +1410,7 @@ class DazzleBackendApp:
             return
 
         errors, warnings = validate_storage_refs(self._appspec, self._storage_defs)
-        log = logging.getLogger("dazzle.storage")
+        log = logging.getLogger(__name__)
         for warn in warnings:
             log.warning("storage_validation_warning %s", warn)
         if errors:

@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir import ChannelSpec
     from dazzle.http.runtime.repository import DatabaseManager
 
-logger = logging.getLogger("dazzle.channels")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

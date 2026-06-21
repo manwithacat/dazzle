@@ -178,7 +178,7 @@ async def _challenge_2fa(deps: _TwoFaDeps, data: TwoFactorVerifyRequest) -> dict
         # Log the code (actual email delivery depends on channel integration)
         import logging
 
-        log = logging.getLogger("dazzle.auth.2fa")
+        log = logging.getLogger(__name__)
         log.info("2FA OTP code for %s: %s", user.email, code)
 
         return {"message": "OTP code sent to your email"}

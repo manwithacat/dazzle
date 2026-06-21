@@ -33,7 +33,7 @@ from dazzle.http.events.envelope import EventEnvelope
 if TYPE_CHECKING:
     from dazzle.http.events.bus import EventBus
 
-logger = logging.getLogger("dazzle.events.multi_tenancy")
+logger = logging.getLogger(__name__)
 
 
 class TenancyMode(StrEnum):

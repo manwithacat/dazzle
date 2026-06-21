@@ -30,7 +30,7 @@ from dazzle.core.ir.email import (
 if TYPE_CHECKING:
     from ..channels.adapters.base import EmailAdapter
 
-logger = logging.getLogger("dazzle.email.outbound")
+logger = logging.getLogger(__name__)
 
 
 class EmailSendStatus(StrEnum):

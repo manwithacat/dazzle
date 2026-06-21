@@ -20,7 +20,7 @@ from dazzle.core.appspec_loader import load_project_appspec
 from ..progress import ProgressContext
 from ..progress import noop as _noop_progress
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 # Default per-step timeout in seconds.  Individual callers can override.
 DEFAULT_STEP_TIMEOUT: float = 120.0

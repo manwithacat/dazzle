@@ -8,7 +8,7 @@ from typing import Any
 from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 from ..serializers import serialize_test_design
 
-logger = logging.getLogger("dazzle.mcp")
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
