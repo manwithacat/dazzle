@@ -236,3 +236,120 @@ def test_legacy_autogenerate_path_has_no_snapshot(
     # The legacy path produces an autogenerate diff with NO snapshot constant.
     assert "SCHEMA_SNAPSHOT" not in text
     assert "create_table" in text
+
+
+def test_engine_resolves_field_rename_not_drop_add(
+    in_project: tuple[Path, str],
+) -> None:
+    """MERGE-SAFETY GATE (#1431 P3+4): a was: field rename is a RENAME, not drop+add.
+
+    Proves end-to-end that when a DSL field is renamed with a ``was:`` hint the
+    #1431 snapshot-diff engine emits an ``alter_column`` / ``new_column_name``
+    rename op — NOT ``drop_column`` + ``add_column`` — and that ``dazzle db
+    upgrade`` applies it cleanly, preserving existing row data under the new
+    column name (data-survival proof).
+    """
+    import psycopg
+
+    from dazzle.cli.db import revision_command, upgrade_command
+
+    project, psycopg_url = in_project
+    plain_url = psycopg_url.replace("postgresql+psycopg://", "postgresql://", 1)
+
+    # -----------------------------------------------------------------------
+    # 1. Baseline: project has Task with a `title` field.  Apply the baseline
+    #    migration so the table exists in Postgres with the `title` column.
+    # -----------------------------------------------------------------------
+    revision_command(message="baseline", autogenerate=True, legacy_autogenerate=False)
+    upgrade_command(revision="head", no_rls=True)
+
+    baseline_files = _project_revision_files(project)
+    assert baseline_files, "baseline revision file was not written"
+    baseline_text = baseline_files[-1].read_text(encoding="utf-8")
+    assert "create_table('Task'" in baseline_text, "baseline must create Task table"
+
+    # -----------------------------------------------------------------------
+    # 2. Insert a row so we can prove data survives the rename.
+    # -----------------------------------------------------------------------
+    with psycopg.connect(plain_url) as conn:
+        conn.execute(
+            "INSERT INTO \"Task\" (id, title, completed) VALUES (gen_random_uuid(), 'hello', false)"
+        )
+        conn.commit()
+
+    # -----------------------------------------------------------------------
+    # 3. Rewrite the DSL: rename `title` → `name` with the `was:` hint.
+    #
+    #    Syntax (from the parser — field modifiers then the was: clause):
+    #      name: str(200) required was: title
+    # -----------------------------------------------------------------------
+    renamed_dsl = """\
+module scratch_app
+
+app scratch_app "Scratch App"
+
+entity Task "Task":
+  id: uuid pk
+  name: str(200) required was: title
+  completed: bool=false
+"""
+    (project / "dsl" / "app.dsl").write_text(renamed_dsl, encoding="utf-8")
+
+    # -----------------------------------------------------------------------
+    # 4. Generate the rename revision.
+    # -----------------------------------------------------------------------
+    revision_command(
+        message="rename title to name",
+        autogenerate=True,
+        legacy_autogenerate=False,
+    )
+
+    files = _project_revision_files(project)
+    rename_files = [p for p in files if p not in set(baseline_files)]
+    assert len(rename_files) == 1, (
+        f"exactly one new revision expected for the rename; got {len(rename_files)}"
+    )
+    rename_text = rename_files[0].read_text(encoding="utf-8")
+
+    # -----------------------------------------------------------------------
+    # 5. Assert the generated migration is a RENAME, not drop+add.
+    #
+    #    The engine renders RenameColumn as AlterColumnOp(modify_name=...) which
+    #    Alembic writes to file as:
+    #      op.alter_column('Task', 'title', ..., new_column_name='name')
+    # -----------------------------------------------------------------------
+    assert "new_column_name='name'" in rename_text, (
+        f"expected a rename op (new_column_name='name') in the revision; got:\n{rename_text}"
+    )
+    # The migration must NOT use drop_column or add_column for the renamed field —
+    # that would be data loss (the merge-safety failure this gate catches).
+    assert "drop_column" not in rename_text, (
+        "rename revision must not contain drop_column (data loss!)"
+    )
+    assert "add_column" not in rename_text, (
+        "rename revision must not contain add_column (drop+add instead of rename = data loss!)"
+    )
+    assert "SCHEMA_SNAPSHOT" in rename_text, "rename revision must embed SCHEMA_SNAPSHOT"
+
+    # -----------------------------------------------------------------------
+    # 6. Apply the rename migration and verify data survival.
+    # -----------------------------------------------------------------------
+    upgrade_command(revision="head", no_rls=True)
+
+    with psycopg.connect(plain_url) as conn:
+        # Column `name` must exist; `title` must be gone.
+        cols = conn.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema = 'public' AND table_name = 'Task' "
+            "ORDER BY column_name"
+        ).fetchall()
+        col_names = {r[0] for r in cols}
+        assert "name" in col_names, f"column 'name' must exist after upgrade; got: {col_names}"
+        assert "title" not in col_names, (
+            f"column 'title' must be gone after rename; got: {col_names}"
+        )
+
+        # The previously inserted row must survive with its data intact.
+        row = conn.execute('SELECT name FROM "Task" LIMIT 1').fetchone()
+        assert row is not None, "the pre-rename row must survive the upgrade"
+        assert row[0] == "hello", f"row data must survive the rename intact; got name={row[0]!r}"
