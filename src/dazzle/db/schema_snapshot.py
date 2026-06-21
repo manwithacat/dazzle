@@ -20,6 +20,8 @@ All dict keys and lists are sorted for deterministic comparison.
 
 from __future__ import annotations
 
+import pprint
+from types import ModuleType
 from typing import Any
 
 import sqlalchemy as sa
@@ -177,3 +179,34 @@ def project_current() -> dict[str, Any]:
     from dazzle.http.alembic.metadata_loader import load_target_metadata
 
     return project_schema(load_target_metadata())
+
+
+# ---------------------------------------------------------------------------
+# Serialization and deserialization
+# ---------------------------------------------------------------------------
+
+
+def render_snapshot_literal(snapshot: dict[str, Any]) -> str:
+    """Return a deterministic Python source literal of the snapshot dict.
+
+    Uses ``pprint.pformat()`` with sorted keys and stable formatting
+    (width=88) so that the same input always produces identical output,
+    suitable for embedding as ``SCHEMA_SNAPSHOT = <literal>`` in a migration
+    file.
+
+    The returned string is valid Python that can be ``eval()``'d back to
+    the original dict (in test contexts only; in production, use
+    ``snapshot_from_module()`` to import it).
+    """
+    return pprint.pformat(snapshot, sort_dicts=True, width=88)
+
+
+def snapshot_from_module(module: ModuleType) -> dict[str, Any]:
+    """Extract the SCHEMA_SNAPSHOT attribute from a module.
+
+    Returns the snapshot dict if present, or an empty dict if the module
+    has no ``SCHEMA_SNAPSHOT`` attribute. This is the canonical way to load
+    a snapshot that was rendered via ``render_snapshot_literal()`` into a
+    migration module.
+    """
+    return getattr(module, "SCHEMA_SNAPSHOT", {})

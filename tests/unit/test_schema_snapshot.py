@@ -6,7 +6,12 @@ Tests build a hand-crafted MetaData; no CWD or DB access required.
 import pytest
 import sqlalchemy as sa
 
-from dazzle.db.schema_snapshot import _sa_type_to_token, project_schema
+from dazzle.db.schema_snapshot import (
+    _sa_type_to_token,
+    project_schema,
+    render_snapshot_literal,
+    snapshot_from_module,
+)
 
 
 def _meta() -> sa.MetaData:
@@ -61,3 +66,26 @@ def test_project_schema_is_deterministic() -> None:
 )
 def test_sa_type_to_token(sa_type: sa.types.TypeEngine, expected: str) -> None:
     assert _sa_type_to_token(sa_type) == expected
+
+
+def test_snapshot_literal_roundtrips() -> None:
+    snap = project_schema(_meta())
+    literal = render_snapshot_literal(snap)
+    # The literal is valid Python that evaluates back to the same dict.
+    assert eval(literal) == snap  # noqa: S307 — test-only, trusted input
+    # Deterministic: same input → identical source.
+    assert render_snapshot_literal(snap) == literal
+
+
+def test_snapshot_from_module() -> None:
+    # Create a mock module with SCHEMA_SNAPSHOT.
+    import types
+
+    mod = types.ModuleType("test_mod")
+    snap = project_schema(_meta())
+    mod.SCHEMA_SNAPSHOT = snap  # type: ignore[attr-defined]
+    assert snapshot_from_module(mod) == snap
+
+    # Module without SCHEMA_SNAPSHOT → empty dict.
+    empty_mod = types.ModuleType("empty_mod")
+    assert snapshot_from_module(empty_mod) == {}
