@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.57] - 2026-06-21
+
+### Fixed
+- **#1424 follow-up — alembic-parity PG test pinned the stale head.**
+  `test_authstore_alembic_parity_pg.py` hardcoded the expected alembic head as
+  `0016_saml_consumed_assertions`; the #1424 migrations advanced it to
+  `0018_join_requests`, reddening the `PostgreSQL Tests` CI job (the `-m postgres`
+  suite, which `pytest -m "not e2e"` deselects). Updated the expected head and added
+  assertions for the new `organizations.settings` column + `join_requests` table.
+
 ## [0.83.56] - 2026-06-21
 
 ### Added
