@@ -39,10 +39,13 @@ real-PG test fixture can provision loginable roles).
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from dazzle.http.runtime.query_builder import quote_identifier
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from dazzle.core.ir.fk_graph import FKGraph
@@ -483,12 +486,16 @@ def build_rls_scope_policy_ddl(
     Returns:
         A flat list of idempotent DDL statements.
 
+    A scope rule whose body can't be compiled to a policy (a relational
+    EXISTS-join / dotted-junction ``via`` binding, or an unresolvable GUC cast —
+    not supported in policy mode) does NOT abort (#1447): the verb it governs
+    degrades to a permissive within-tenant policy (fence-only) and a warning is
+    logged, leaving that verb's scope to the app layer. The ``tenant_fence`` always
+    applies, so cross-tenant isolation holds regardless.
+
     Raises:
         ValueError: If *entity* has no scope rules (use
-            :func:`build_rls_policy_ddl` for tenant-flat entities), or if a
-            policy body can't be compiled (e.g. an unresolvable GUC cast type,
-            or a dotted-junction ``via`` binding — not yet supported in policy
-            mode; both fail loud rather than emit a wrong/absent policy).
+            :func:`build_rls_policy_ddl` for tenant-flat entities).
     """
     from dazzle.http.runtime.predicate_compiler import compile_predicate_policy
 
@@ -514,15 +521,38 @@ def build_rls_scope_policy_ddl(
         "update": "UPDATE",
         "delete": "DELETE",
     }
+    # Verbs whose scope is not RLS-policy-expressible (a relational EXISTS-join /
+    # dotted-junction binding, or an unresolvable GUC cast — #1447). Such a verb
+    # degrades to a permissive within-tenant policy (fence-only); its scope stays
+    # app-layer. We can't emit only the *compilable* OR-branches for the verb: RLS
+    # policies are user-agnostic, so dropping the relational branch would wrongly
+    # deny a persona matched ONLY by that branch (e.g. `parent` via ParentContact).
+    degraded_verbs: dict[str, list[str]] = {}
     for rule in access.scopes:
         op = rule.operation
         op_val = op.value if hasattr(op, "value") else str(op)
         verb = _op_value_to_verb.get(op_val)
         if verb is None:  # pragma: no cover - the operation set is closed
             continue
-        body = compile_predicate_policy(
-            rule.predicate, entity.name, fk_graph, entity_types=entity_types
-        )
+        try:
+            body = compile_predicate_policy(
+                rule.predicate, entity.name, fk_graph, entity_types=entity_types
+            )
+        except ValueError as exc:
+            personas = ", ".join(getattr(rule, "personas", None) or []) or "*"
+            degraded_verbs.setdefault(verb, []).append(f"{op_val} (as {personas})")
+            logger.warning(
+                "RLS: scope rule %s.%s (as %s) is not RLS-policy-expressible (%s) — "
+                "deferring the %s-verb scope on %s to the app layer; the tenant_fence "
+                "still applies (cross-tenant isolation holds).",
+                entity.name,
+                op_val,
+                personas,
+                exc,
+                verb,
+                entity.name,
+            )
+            continue
         verb_bodies[verb].append(body)
 
     statements: list[str] = _enable_force_fence(table, partition_key)
@@ -539,6 +569,15 @@ def build_rls_scope_policy_ddl(
         statements.append(
             f"DROP POLICY IF EXISTS {policy_name} ON {table}"
         )  # nosemgrep: closed templated DDL over IR-controlled identifiers, parameterless
+
+        if verb in degraded_verbs:
+            # At least one rule for this verb isn't RLS-expressible (#1447). The
+            # whole verb falls back to a permissive within-tenant policy so the
+            # tenant_fence (restrictive, ANDed) is the only DB gate; the app-layer
+            # scope filter remains the authority for this verb. Permissive-true is
+            # NOT a weakening: cross-tenant rows are still denied by the fence.
+            statements.append(_scope_policy_create(policy_name, table, verb, "true"))
+            continue
 
         bodies = verb_bodies[verb]
         if not bodies:

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
+from dazzle.core.ir.predicates import ColumnCheck, CompOp, ExistsBinding, ExistsCheck, ValueRef
 
 pytest.importorskip("fastapi")
 
@@ -74,6 +74,20 @@ def _status_rule(op: AccessOperationKind, value: str) -> ScopeRuleSpec:
     """``status = <value>`` scope rule for *op* (predicate pre-compiled)."""
     pred = ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal=value))
     return ScopeRuleSpec(operation=op, personas=["*"], predicate=pred)
+
+
+def _relational_rule(op: AccessOperationKind) -> ScopeRuleSpec:
+    """A relational (EXISTS-join) rule whose binding targets an entity column —
+    ``via ParentContact(student = student_profile, parent_user = current_user)`` —
+    which policy mode cannot compile (#1447). App-layer mode handles it fine."""
+    pred = ExistsCheck(
+        target_entity="ParentContact",
+        bindings=[
+            ExistsBinding(junction_field="student", target="student_profile"),
+            ExistsBinding(junction_field="parent_user", target="current_user"),
+        ],
+    )
+    return ScopeRuleSpec(operation=op, personas=["parent"], predicate=pred)
 
 
 def _scoped_entity(scopes: list[ScopeRuleSpec]) -> EntitySpec:
@@ -282,3 +296,49 @@ def test_tenant_flat_entity_keeps_baseline() -> None:
     assert "USING (true)" in ddl
     # No per-verb scope policies for a tenant-flat entity.
     assert "scope_select" not in ddl
+
+
+# ---------------------------------------------------------------------------
+# #1447 — relational (non-RLS-expressible) scopes degrade gracefully, not abort
+# ---------------------------------------------------------------------------
+
+
+def test_relational_scope_degrades_to_permissive_not_abort(caplog) -> None:
+    """A scope rule whose body can't compile to a policy (EXISTS-join entity-column
+    binding) must NOT abort the apply (#1447). The verb it governs degrades to a
+    permissive within-tenant policy (fence-only); a warning is logged."""
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        ddl = _ddl(_scoped_entity([_relational_rule(AccessOperationKind.READ)]))
+
+    # Did not raise; the fence is still emitted (cross-tenant isolation holds).
+    assert 'CREATE POLICY tenant_fence ON "Project"' in ddl
+    assert "AS RESTRICTIVE" in ddl
+    # The SELECT verb degraded to a permissive fence-only policy.
+    assert 'CREATE POLICY scope_select ON "Project"' in ddl
+    assert "FOR SELECT" in ddl
+    assert "USING (true)" in ddl
+    # And a warning names the deferred verb/entity.
+    assert any(
+        "not RLS-policy-expressible" in r.message and "Project" in r.message for r in caplog.records
+    )
+
+
+def test_degradation_is_per_verb_scalar_verbs_still_compile() -> None:
+    """A scalar rule on one verb still compiles to a real RLS policy even when a
+    *different* verb has a relational rule that degrades (#1447, per-verb)."""
+    ddl = _ddl(
+        _scoped_entity(
+            [
+                _owner_rule(AccessOperationKind.UPDATE),  # scalar → real policy
+                _relational_rule(AccessOperationKind.READ),  # relational → permissive
+            ]
+        )
+    )
+    # UPDATE keeps its scalar predicate (not degraded to permissive-true).
+    assert 'CREATE POLICY scope_update ON "Project"' in ddl
+    assert '"Project"."owner_id" = current_setting(\'dazzle.user_id\', true)::uuid' in ddl
+    # SELECT (read) degraded to permissive fence-only.
+    assert 'CREATE POLICY scope_select ON "Project"' in ddl
+    assert "FOR SELECT\n    USING (true)" in ddl

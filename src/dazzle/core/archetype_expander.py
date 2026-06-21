@@ -26,7 +26,12 @@ def expand_archetypes(
     4. Applies tenant_settings archetype (per-tenant singleton)
     5. Applies user archetype (auth fields, admin access)
     6. Applies user_membership archetype (tenant-user-persona relationship)
-    7. Injects tenant FK into non-settings/non-user entities
+
+    NOTE: this function no longer injects the tenant FK. The old per-app-named
+    Stage-5 injection was removed in RLS tenancy Phase A; the uniform partition
+    key (``tenant_id``) is injected post-merge by ``tenancy_inject.inject_partition_key``
+    (called from ``linker.py``) under ``shared_schema``, which honors
+    ``tenancy.entities_excluded``. See the inline note below.
 
     Args:
         entities: List of entity specifications

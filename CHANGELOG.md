@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.72] - 2026-06-21
+
+### Changed
+- **#1447 Blocker 1 — `dazzle db apply-rls` no longer aborts on relational (EXISTS-join)
+  scope predicates; it degrades gracefully.** A scope rule whose body isn't RLS-policy-
+  expressible (a relational `via`/EXISTS binding targeting an entity column, or an
+  unresolvable GUC cast) previously raised and failed the *whole* apply, blocking
+  shared_schema RLS adoption for any app with parent→child / N-hop / OR-of-paths intra-tenant
+  scopes. Now the affected **verb** degrades to a permissive within-tenant policy (fence-only)
+  and a warning is logged, leaving that verb's scope to the app layer; the `tenant_fence`
+  always applies, so cross-tenant isolation holds. Degradation is **per-verb, not per-rule**:
+  emitting only the compilable OR-branches would wrongly deny a persona matched solely by the
+  skipped (relational) branch (RLS policies are user-agnostic). Scalar scopes on other verbs
+  still compile to real GUC-bound RLS policies — which is what lets the in-process page read
+  resolve them (the #1428 linkage). The stale `archetype_expander` "step 7 injects tenant FK"
+  docstring (which mis-pointed #1447 Blocker 2) is corrected. Blocker 2 (entities_excluded)
+  remains open pending a repro.
+
+### Agent Guidance
+- **RLS = fence + best-effort scalar scope; relational scopes stay app-layer.** `apply-rls`
+  emits the `tenant_fence` (hard cross-tenant boundary) + per-verb scalar scope policies, and
+  degrades any verb with a non-RLS-expressible scope to fence-only (warned). The app-layer
+  scope filter remains the authority for those verbs. Don't assume every `scope:` becomes a DB
+  policy.
+
 ## [0.83.71] - 2026-06-21
 
 ### Changed
