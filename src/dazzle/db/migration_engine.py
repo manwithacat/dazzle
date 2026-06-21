@@ -7,14 +7,16 @@ Public API
     Contains the rendered Alembic op-trees, the current snapshot literal, and
     an ``is_empty`` flag the caller uses to suppress a no-op revision.
 
-``build_plan(prev, curr) -> RevisionPlan``
+``build_plan(prev, curr, hints=None) -> RevisionPlan``
     Pure function: diff two plain-dict Snapshots and render the result.
     Fully unit-testable without a project on disk.
 
-``generate_revision(script_dir) -> RevisionPlan``
+``generate_revision(script_dir, appspec=None) -> RevisionPlan``
     Thin I/O wrapper: loads the head snapshot from *script_dir*, projects the
-    current schema via ``project_current()``, then delegates to ``build_plan``.
-    This is the entry-point wired into ``db revision`` (Task 3.3).
+    current schema via ``project_current()``, and self-loads the project's
+    ``AppSpec`` for rename hints when *appspec* is not supplied, then delegates
+    to ``build_plan``.  This is the entry-point wired into ``db revision``
+    (Task 3.3).
 
 Design rationale
 ----------------
@@ -164,6 +166,36 @@ def build_plan(
 # ---------------------------------------------------------------------------
 
 
+def _load_project_appspec_for_hints() -> Any:
+    """Self-load the project's ``AppSpec`` from the CWD for rename-hint extraction.
+
+    Mirrors ``dazzle.http.alembic.metadata_loader.load_target_metadata``: both
+    build the schema from the Dazzle project in ``Path.cwd()`` via the canonical
+    manifest → discover → parse → build pipeline (``load_project_appspec`` is the
+    factored-out form of that exact pipeline).  Loading the AppSpec here therefore
+    yields the *same* AppSpec that backs the projected ``curr`` snapshot, so the
+    rename hints line up with the schema they are resolved against.
+
+    Returns ``None`` (no rename resolution) in the same safe-fallback cases
+    ``load_target_metadata`` returns empty MetaData — no ``dazzle.toml`` in the
+    CWD, or any parse/link/IO failure — so ``db revision`` never crashes when run
+    outside a project or against a half-formed one.
+    """
+    from pathlib import Path
+
+    project_root = Path.cwd()
+    if not (project_root / "dazzle.toml").exists():
+        return None
+    try:
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        return load_project_appspec(project_root)
+    except Exception:
+        # A non-project / fresh / half-formed context: degrade to drop+add
+        # rather than crashing the revision (matches metadata_loader's policy).
+        return None
+
+
 def generate_revision(script_dir: Any, appspec: Any = None) -> RevisionPlan:
     """Orchestrate a full revision cycle against the live project on disk.
 
@@ -175,8 +207,13 @@ def generate_revision(script_dir: Any, appspec: Any = None) -> RevisionPlan:
     -----
     1. ``project_current()``              — project the live target MetaData.
     2. ``load_head_snapshot(script_dir)`` — load the head migration's snapshot.
-    3. ``extract_rename_hints(appspec)``  — extract ``was:`` hints (if appspec given).
-    4. ``build_plan(prev, curr, hints)``  — pure diff + render.
+    3. Resolve the ``AppSpec`` for rename hints: use the explicit *appspec* arg
+       when given, otherwise **self-load** it from the CWD via
+       ``_load_project_appspec_for_hints`` (the env.py path passes no appspec, so
+       without this the real ``db revision`` would lose rename resolution and turn
+       every rename into drop+add — data loss; #1431 Task 4.3).
+    4. ``extract_rename_hints(appspec)``  — extract ``was:`` hints (if resolved).
+    5. ``build_plan(prev, curr, hints)``  — pure diff + render.
 
     Parameters
     ----------
@@ -184,10 +221,15 @@ def generate_revision(script_dir: Any, appspec: Any = None) -> RevisionPlan:
         An ``alembic.script.ScriptDirectory`` instance (or a compatible mock).
         Passed directly to ``load_head_snapshot``.
     appspec:
-        Optional ``AppSpec``.  When supplied, rename hints are extracted and
-        passed to ``build_plan``.  When ``None``, no rename resolution is done.
+        Optional ``AppSpec``.  When supplied, rename hints are extracted from it
+        directly (tests + any caller with an AppSpec in hand).  When ``None``,
+        the AppSpec is self-loaded from the project in the CWD; if no project is
+        present (or it fails to load) rename resolution is skipped and name
+        changes become drop+add.
     """
     curr = project_current()
     prev = load_head_snapshot(script_dir)
+    if appspec is None:
+        appspec = _load_project_appspec_for_hints()
     hints = extract_rename_hints(appspec) if appspec is not None else None
     return build_plan(prev, curr, hints)

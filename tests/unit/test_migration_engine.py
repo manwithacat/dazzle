@@ -200,3 +200,57 @@ class TestGenerateRevision:
 
         recovered = ast.literal_eval(plan.snapshot_literal)
         assert recovered == CURR_WITH_TASK
+
+    def test_generate_revision_self_loads_rename_hints(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The real env.py path calls generate_revision(script_dir) with NO appspec.
+
+        This proves the self-load activates rename resolution end-to-end: with a
+        ``renamed_from`` annotation on a field, a column rename must resolve to a
+        ``RenameColumn`` op (preserving data) rather than drop+add (data loss).
+
+        We monkeypatch:
+          * ``project_current`` → the post-rename schema (column ``name``)
+          * ``load_head_snapshot`` (via the fake script_dir) → the pre-rename
+            schema (column ``title``)
+          * the appspec self-loader → an AppSpec whose ``task.name`` field
+            declares ``renamed_from = "title"``
+        and then call ``generate_revision(script_dir)`` with NO appspec arg.
+        """
+        prev = {"task": _table({"id": _UUID_PK, "title": _TEXT_COL})}
+        curr = {"task": _table({"id": _UUID_PK, "name": _TEXT_COL})}
+
+        monkeypatch.setattr(
+            "dazzle.db.migration_engine.project_current",
+            lambda: curr,
+        )
+
+        # AppSpec stub: appspec.domain.entities[*].{name, renamed_from, fields[*]}
+        # with FieldSpec.{name, renamed_from} — exactly what extract_rename_hints reads.
+        name_field = SimpleNamespace(name="name", renamed_from="title")
+        id_field = SimpleNamespace(name="id", renamed_from=None)
+        task_entity = SimpleNamespace(name="task", renamed_from=None, fields=[id_field, name_field])
+        fake_appspec = SimpleNamespace(domain=SimpleNamespace(entities=[task_entity]))
+
+        # Self-load returns the hint-bearing appspec (no explicit appspec arg passed).
+        monkeypatch.setattr(
+            "dazzle.db.migration_engine._load_project_appspec_for_hints",
+            lambda: fake_appspec,
+        )
+
+        script_dir = self._make_script_dir(prev)
+        plan = generate_revision(script_dir)  # NO appspec arg — the real env.py path
+
+        flat = _flatten_ops(plan.upgrade_ops.ops)
+        rename_ops = [o for o in flat if isinstance(o, aops.AlterColumnOp) and o.modify_name]
+        # AlterColumnOp with a modify_name is how Alembic renders a column rename.
+        assert any(o.column_name == "title" and o.modify_name == "name" for o in rename_ops), (
+            f"expected a RenameColumn title→name, got ops: {flat}"
+        )
+
+        # And it must NOT be a drop+add (which would lose the column's data).
+        drop_ops = [o for o in flat if isinstance(o, aops.DropColumnOp)]
+        add_ops = [o for o in flat if isinstance(o, aops.AddColumnOp)]
+        assert not drop_ops, f"unexpected DropColumnOp (data loss): {drop_ops}"
+        assert not add_ops, f"unexpected AddColumnOp (data loss): {add_ops}"

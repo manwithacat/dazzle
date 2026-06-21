@@ -228,11 +228,12 @@ def diff(
                 # Pending rename: old exists in prev, new not in prev
                 rename_ops.append(RenameTable(old=old_tname, new=new_tname))
                 table_prev_name[new_tname] = old_tname
-            elif new_tname in prev_tables:
-                # Already-applied: new is already in prev — no-op (won't reach
-                # here since new_tname is in curr_tables - prev_tables, but guard)
-                table_prev_name[new_tname] = new_tname
             else:
+                # No already-applied branch here: this loop only sees tables in
+                # (curr - prev), so new_tname is by construction NOT in prev. The
+                # already-applied table rename (new already in both prev & curr)
+                # falls through to the common-table path below, where it diffs to
+                # an empty delta — a correct no-op.
                 raise RenameResolutionError(
                     f"Table rename hint for '{new_tname}': old name '{old_tname}' "
                     f"not found in previous snapshot and '{new_tname}' not already present."
