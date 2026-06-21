@@ -243,7 +243,7 @@ def _verify_snapshot_consistency(rev: Any, cfg: Any) -> None:
 
         try:
             embedded: dict[str, Any] = ast.literal_eval(snapshot_literal)
-        except Exception:
+        except (ValueError, SyntaxError):
             logger.debug(
                 "post-revision consistency check: could not eval snapshot literal — skipping",
                 exc_info=True,
@@ -269,7 +269,11 @@ def _verify_snapshot_consistency(rev: Any, cfg: Any) -> None:
             )
     except Exception:
         # Swallow all errors — this is advisory only; never block the revision.
-        logger.debug("post-revision snapshot consistency check failed (non-fatal)", exc_info=True)
+        logger.warning(
+            "snapshot consistency verification could not run: %s",
+            "see exc_info for detail",
+            exc_info=True,
+        )
 
 
 def _inject_schema_snapshot(rev: Any, snapshot_literal: str | None) -> None:
