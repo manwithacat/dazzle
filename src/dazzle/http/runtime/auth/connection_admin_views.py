@@ -11,10 +11,12 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import quote
 
+from dazzle.http.runtime.auth.org_settings import OrgSettings
 from dazzle.render.fragment import (
     URL,
     Badge,
     Button,
+    Combobox,
     Field,
     FormStack,
     Heading,
@@ -196,6 +198,39 @@ def _create_area(new_form: str, secret_key_ok: bool) -> list[Any]:
     return out
 
 
+def _policy_form(org_settings: OrgSettings) -> Stack:
+    """Join-policy admin controls: domain_join_policy select + restrict toggle."""
+    restrict_value = "true" if org_settings.restrict_membership_to_verified_domains else ""
+    return Stack(
+        children=(
+            Heading(body="Join policy", level=2),
+            FormStack(
+                action=URL("/auth/connections/policy"),
+                method="POST",
+                fields=(
+                    Combobox(
+                        name="domain_join_policy",
+                        label="Domain join policy",
+                        options=(
+                            ("off", "Off — no domain-based joining"),
+                            ("admin_approval", "Admin approval required"),
+                            ("auto_join", "Auto-join verified domain members"),
+                        ),
+                        initial_value=org_settings.domain_join_policy,
+                    ),
+                    Field(
+                        name="restrict_membership_to_verified_domains",
+                        label="Restrict membership to verified domains only",
+                        kind="checkbox",
+                        initial_value=restrict_value,
+                    ),
+                ),
+                submit=Submit(label="Save policy", variant="primary"),
+            ),
+        )
+    )
+
+
 def _scim_bearer_banner(bearer: str, base_url: str) -> Stack:
     """One-time display of a freshly-minted SCIM bearer — shown once, never re-rendered/stored."""
     scim_url = f"{base_url.rstrip('/')}/scim/v2" if base_url else "<base_url>/scim/v2"
@@ -218,7 +253,10 @@ def build_connections_view(
     secret_key_ok: bool = True,
     scim_bearer_once: str = "",
     base_url: str = "",
+    org_settings: OrgSettings | None = None,
 ) -> Page:
+    if org_settings is None:
+        org_settings = OrgSettings()
     body: list[Any] = [
         Link(label=product_name, href=URL("/")),
         Heading(body=f"SSO connections for {org_name}", level=1),
@@ -228,6 +266,7 @@ def build_connections_view(
             tone="muted",
         ),
     ]
+    body.append(_policy_form(org_settings))
     if scim_bearer_once:
         body.append(_scim_bearer_banner(scim_bearer_once, base_url))
     body.extend(_create_area(new_form, secret_key_ok))
