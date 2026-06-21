@@ -19,7 +19,134 @@ from dazzle.db.schema_diff import (
     RenameColumn,
     RenameTable,
     SchemaOp,
+    diff,
 )
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_COL = {"type": "text", "nullable": True, "default": None, "pk": False}
+
+
+def _tbl(**cols):
+    return {"columns": cols, "indexes": [], "uniques": [], "fks": {}}
+
+
+# ---------------------------------------------------------------------------
+# diff() — brief tests (TDD RED→GREEN)
+# ---------------------------------------------------------------------------
+
+
+def test_new_table_is_add_table():
+    ops = diff({}, {"t": _tbl(id={"type": "uuid", "nullable": False, "default": None, "pk": True})})
+    assert any(isinstance(o, AddTable) and o.table == "t" for o in ops)
+
+
+def test_added_column():
+    prev = {"t": _tbl(a=_COL)}
+    curr = {"t": _tbl(a=_COL, b=_COL)}
+    ops = diff(prev, curr)
+    assert [o for o in ops if isinstance(o, AddColumn)][0].name == "b"
+
+
+def test_dropped_column():
+    ops = diff({"t": _tbl(a=_COL, b=_COL)}, {"t": _tbl(a=_COL)})
+    assert [o for o in ops if isinstance(o, DropColumn)][0].name == "b"
+
+
+def test_altered_column_type():
+    prev = {"t": _tbl(a={**_COL, "type": "text"})}
+    curr = {"t": _tbl(a={**_COL, "type": "integer"})}
+    ops = diff(prev, curr)
+    alt = [o for o in ops if isinstance(o, AlterColumn)][0]
+    assert alt.old["type"] == "text" and alt.new["type"] == "integer"
+
+
+def test_dropped_table():
+    ops = diff({"t": _tbl(a=_COL)}, {})
+    assert any(isinstance(o, DropTable) and o.table == "t" for o in ops)
+
+
+def test_no_change_empty_delta():
+    assert diff({"t": _tbl(a=_COL)}, {"t": _tbl(a=_COL)}) == []
+
+
+# ---------------------------------------------------------------------------
+# diff() — extra cases: FK, index, unique, ordering
+# ---------------------------------------------------------------------------
+
+
+def test_add_fk():
+    prev = {"t": _tbl(a=_COL)}
+    curr = {"t": {**_tbl(a=_COL), "fks": {"a": "other"}}}
+    ops = diff(prev, curr)
+    assert any(
+        isinstance(o, AddForeignKey) and o.column == "a" and o.ref_table == "other" for o in ops
+    )
+
+
+def test_drop_fk():
+    prev = {"t": {**_tbl(a=_COL), "fks": {"a": "other"}}}
+    curr = {"t": _tbl(a=_COL)}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, DropForeignKey) and o.column == "a" for o in ops)
+
+
+def test_diff_add_index():
+    prev = {"t": _tbl(a=_COL)}
+    curr = {"t": {**_tbl(a=_COL), "indexes": ["a"]}}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, AddIndex) and o.column == "a" for o in ops)
+
+
+def test_diff_drop_index():
+    prev = {"t": {**_tbl(a=_COL), "indexes": ["a"]}}
+    curr = {"t": _tbl(a=_COL)}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, DropIndex) and o.column == "a" for o in ops)
+
+
+def test_diff_add_unique():
+    prev = {"t": _tbl(a=_COL)}
+    curr = {"t": {**_tbl(a=_COL), "uniques": ["a"]}}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, AddUnique) and o.column == "a" for o in ops)
+
+
+def test_diff_drop_unique():
+    prev = {"t": {**_tbl(a=_COL), "uniques": ["a"]}}
+    curr = {"t": _tbl(a=_COL)}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, DropUnique) and o.column == "a" for o in ops)
+
+
+def test_ordering_add_before_drop():
+    """AddTable ops precede DropTable ops in the returned list."""
+    prev = {"old": _tbl(a=_COL)}
+    curr = {"new": _tbl(b=_COL)}
+    ops = diff(prev, curr)
+    add_pos = next(i for i, o in enumerate(ops) if isinstance(o, AddTable))
+    drop_pos = next(i for i, o in enumerate(ops) if isinstance(o, DropTable))
+    assert add_pos < drop_pos
+
+
+def test_ordering_add_col_before_drop_col():
+    """AddColumn precedes DropColumn within same table diff."""
+    prev = {"t": _tbl(a=_COL, b=_COL)}
+    curr = {"t": _tbl(a=_COL, c=_COL)}
+    ops = diff(prev, curr)
+    add_pos = next(i for i, o in enumerate(ops) if isinstance(o, AddColumn))
+    drop_pos = next(i for i, o in enumerate(ops) if isinstance(o, DropColumn))
+    assert add_pos < drop_pos
+
+
+def test_drop_table_carries_snap():
+    """DropTable.snap carries the prior table snapshot."""
+    snap = _tbl(a=_COL)
+    ops = diff({"t": snap}, {})
+    dt = next(o for o in ops if isinstance(o, DropTable))
+    assert dt.snap == snap
 
 
 def test_add_table_frozen():
