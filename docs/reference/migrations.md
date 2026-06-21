@@ -10,9 +10,30 @@ The worked examples here come from `examples/invoice_ops`, which was evolved thr
 
 ## The model
 
-**DSL is the source of truth.** When you add an entity or change a field in your `.dsl` files, Alembic compares the DSL-derived SQLAlchemy metadata against the live database and generates a migration script. You review and edit the script, then apply it.
+**DSL is the source of truth.** When you add an entity or change a field in your `.dsl` files, Dazzle computes a migration script by comparing the new DSL schema against the last snapshot embedded in the head migration. You review and edit the script, then apply it.
 
 `dazzle db` wraps the Alembic CLI. `dazzle serve` runs `alembic upgrade head` automatically at startup — pending migrations are applied before the app accepts requests.
+
+### The #1431 DSL-snapshot migration engine
+
+As of v0.83.x, `dazzle db revision` uses the **DSL-snapshot engine** by default (#1431). This replaces the previous metadata-vs-live-DB autogenerate path (#1427) that was prone to destructive churn (spurious drops, unnamed-constraint noise).
+
+**How it works:**
+
+1. The engine reads the `SCHEMA_SNAPSHOT` constant embedded in the project's head migration — a plain Python dict encoding the previous DSL's table/column/FK/index shape.
+2. It projects the current DSL through the same SQLAlchemy metadata builder used by Alembic, producing a new snapshot dict.
+3. `diff(prev, curr)` computes a minimal ordered list of `SchemaOp` values (add table, drop column, rename column, etc.). With `was:` rename hints present (see below), renames are detected rather than emitted as drop+add.
+4. `render(ops)` converts those ops to Alembic `UpgradeOps` / `DowngradeOps` op-trees.
+5. The generated migration file carries the new snapshot as `SCHEMA_SNAPSHOT = <literal>` so the _next_ revision can diff against it.
+
+Because the engine diffs snapshot-to-snapshot rather than schema-to-DB, it never produces the destructive whole-schema rewrite that the legacy autogenerate path emits when the DB has already applied the previous migration.
+
+**What stays on the legacy path:**
+
+Only `dazzle db revision` uses the engine. The following commands still use the pre-engine paths:
+- `dazzle db baseline` — initial DB creation; uses metadata-vs-DB autogenerate.
+- `dazzle db migrate` — generate-and-apply in one step; uses metadata-vs-DB autogenerate.
+- Tenant schema migrations — use Alembic's standard autogenerate, scoped to the tenant schema.
 
 ### Project-database resolution
 
@@ -48,18 +69,263 @@ dazzle db upgrade
 
 `dazzle db upgrade` alone (Step 1) applies `0001_framework_baseline` — the framework's own schema. `dazzle db baseline` (Step 2) then introspects your DSL and writes a migration that creates all your DSL-declared tables, revising from `0001_framework_baseline`. Step 3 applies it. After this two-step setup, subsequent changes follow the normal `revision → review → upgrade` loop.
 
-### Normal change loop
+### Normal change loop (engine path)
 
 ```bash
 # 1. Edit your DSL (add field, rename, split entity, etc.)
-# 2. Generate a migration
+# 2. Generate a migration (engine default)
 dazzle db revision -m "describe the change"
 
-# 3. Review and hand-edit the generated file (see patterns below)
+# 3. Review the generated file — see patterns below
 # 4. Apply
 dazzle db upgrade
 
-# 5. Commit the migration file (see "Committing migrations" below)
+# 5. Commit both the DSL change and the migration file
+```
+
+No manual noise-stripping required with the engine path — the `_dazzle_params` drop and unnamed-constraint churn that plagued the legacy autogenerate path are not emitted.
+
+---
+
+## The `was:` rename clause
+
+When you rename a DSL field or entity, annotate the new name with `was: OldName`. The engine reads this hint and generates a SQL `RENAME` operation rather than a destructive drop+add pair — the existing column data is preserved.
+
+### Field rename
+
+```dsl
+entity Invoice "Invoice":
+  id: uuid pk
+  reference_number: str(50) required was: invoice_number
+  # ^ was: tells the engine: rename the DB column "invoice_number" → "reference_number"
+```
+
+The `was:` clause goes at the end of the field line, after all modifiers.
+
+Generated migration (upgrade):
+
+```python
+def upgrade() -> None:
+    with op.batch_alter_table("Invoice") as batch_op:
+        batch_op.alter_column("invoice_number", new_column_name="reference_number")
+```
+
+### Entity rename
+
+For an entity-level rename, add `was: OldName` as a body keyword inside the entity block:
+
+```dsl
+entity PurchaseOrder "Purchase Order":
+  was: Invoice
+  id: uuid pk
+  amount: money required
+```
+
+The engine generates `op.rename_table("Invoice", "PurchaseOrder")` in the upgrade.
+
+### Lifecycle of `was:`
+
+`was:` is **transient**: it is consumed during the revision that performs the rename. After `dazzle db revision` and `dazzle db upgrade` have run, remove the `was:` annotation from the DSL. Leaving it in permanently is harmless on a clean history (the engine detects the already-applied case — the old name is absent from the prev snapshot and the new name is already present), but it makes the DSL harder to read and will produce a `RenameResolutionError` on a fresh clone if the old name appears in a snapshot from before the rename was applied.
+
+**Dangling `was:` is a hard error at diff time** (`RenameResolutionError`): if the hint names an old column/table that is neither in the previous snapshot (meaning it was never applied) nor already absent with the new name present (already-applied), the engine raises immediately with a clear message identifying the field and the unresolvable old name.
+
+`was` is a reserved keyword in the DSL lexer — you cannot use it as a field or entity name.
+
+---
+
+## Unsafe changes and the data-migration seam
+
+Some schema changes cannot be applied directly to a populated table. The engine detects two cases and scaffolds an explicit seam for you to fill in.
+
+### Case 1: NOT NULL column with no default
+
+Adding a `required` field with no default to an entity that already has rows would fail at the DB level — PostgreSQL has no value to put in the existing rows.
+
+The engine generates an **expand → seam → contract** scaffold:
+
+```python
+def upgrade() -> None:
+    # Expand: add the column NULLABLE first (non-blocking)
+    with op.batch_alter_table("LineItem") as batch_op:
+        batch_op.add_column(sa.Column("cost_centre", sa.Text(), nullable=True))
+
+    # === DATA MIGRATION (hand-author) ===
+    # Backfill / transform existing rows here BEFORE the column is
+    # finalized NOT NULL or the type cast runs. Replace the example.
+    # op.execute("UPDATE my_table SET my_col = ... WHERE my_col IS NULL")
+    # === END DATA MIGRATION ===
+
+    # Contract: finalize NOT NULL
+    with op.batch_alter_table("LineItem") as batch_op:
+        batch_op.alter_column("cost_centre", existing_type=sa.Text(), nullable=False)
+```
+
+Fill in the `op.execute(...)` stub between the seam markers with a real backfill statement before applying the migration. Do not remove the seam markers until the backfill is complete and tested.
+
+### Case 2: type change requiring an explicit cast
+
+When you change a column's DSL type (e.g. from `str` to `int`) and the engine does not have a known-safe automatic cast for that pair, it emits a seam before the `ALTER COLUMN TYPE` so you can prepare the data:
+
+```python
+def upgrade() -> None:
+    # === DATA MIGRATION (hand-author) ===
+    # Backfill / transform existing rows here BEFORE the column is
+    # finalized NOT NULL or the type cast runs. Replace the example.
+    # op.execute("UPDATE my_table SET my_col = ... WHERE my_col IS NULL")
+    # === END DATA MIGRATION ===
+
+    with op.batch_alter_table("Product") as batch_op:
+        batch_op.alter_column("quantity",
+            existing_type=sa.Text(), modify_type=sa.Integer())
+```
+
+### Known-safe automatic casts
+
+For the type pairs in the table below, the engine emits a raw `ALTER COLUMN ... TYPE ... USING <cast>` statement automatically — no seam, no manual work:
+
+| From DSL type | To DSL type | USING expression |
+|---|---|---|
+| `str` | `uuid` | `"col"::uuid` |
+| `str` | `date` | `"col"::date` |
+| `str` | `datetime` | `"col"::timestamptz` |
+| `str` | `json` | `"col"::jsonb` |
+| `str` | `bool` | `"col"::boolean` |
+| `str` | `int` | `"col"::integer` |
+| `float` → `decimal` | (widening) | no `USING` needed |
+| `varchar` → `str` | (widening) | no `USING` needed |
+
+Any pair not in this table gets a seam.
+
+> **Known limitation (legacy path only):** on the legacy `--legacy-autogenerate` path, Alembic's file renderer silently drops `postgresql_using` kwargs from `AlterColumnOp`. The engine path works around this by emitting type changes as raw `ExecuteSQLOp` statements (which ARE serialized verbatim). Use the engine path (default) for any type change; do not rely on `--legacy-autogenerate` for type changes.
+
+---
+
+## `--legacy-autogenerate`
+
+Passes the flag `--legacy-autogenerate` to fall back to the pre-engine metadata-vs-DB autogenerate path (Alembic's standard `--autogenerate`). The legacy path also enforces the **additive-only** guardrail from #1427 — it rejects `op.drop_table`, `op.drop_column`, and `op.alter_column` unless `DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1` is set in the environment.
+
+```bash
+# Fall back to the pre-engine autogenerate path
+dazzle db revision -m "additive tweak" --legacy-autogenerate
+
+# Allow destructive ops on the legacy path (e.g. deliberate column drop)
+DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1 dazzle db revision -m "drop legacy column" --legacy-autogenerate
+```
+
+**When to use it:**
+
+- Debugging: to compare what the engine generates vs what metadata-vs-DB autogenerate would emit.
+- Legacy projects where `snapshot-baseline` has not yet been run (the engine would diff against an empty snapshot and try to create every table — use `snapshot-baseline` instead, see below).
+
+The legacy path still emits `_dazzle_params` drops and unnamed-unique-constraint noise that must be stripped by hand (see "Autogenerate noise" below).
+
+---
+
+## Adoption: `dazzle db snapshot-baseline`
+
+If your project's head migration predates the engine (no `SCHEMA_SNAPSHOT` constant), run this **once** before the next `dazzle db revision`:
+
+```bash
+# Write an empty revision that stamps the current DSL as the baseline snapshot
+dazzle db snapshot-baseline
+
+# Apply it (no-op upgrade — the revision has an empty upgrade body)
+dazzle db upgrade
+
+# Subsequent revisions now diff correctly against the snapshot
+dazzle db revision -m "add field"
+```
+
+The command is **idempotent**: if the head migration already carries `SCHEMA_SNAPSHOT`, it prints a message and exits without writing a file.
+
+What `snapshot-baseline` does:
+
+1. Projects the current DSL schema into a snapshot dict.
+2. Writes a revision file with `def upgrade(): pass` / `def downgrade(): pass`.
+3. Post-writes `SCHEMA_SNAPSHOT = <literal>` into the file (the same injection path used by `db revision`).
+
+After `dazzle db upgrade` applies this no-op revision, the next `dazzle db revision` diffs the live DSL against the stamped snapshot and emits only the intentful delta.
+
+---
+
+## Worked runbooks
+
+### Standard change: add a field
+
+```bash
+# 1. Add the field to your DSL
+#    e.g. add  priority: int=0  to entity Task
+
+# 2. Generate the migration
+dazzle db revision -m "add priority to Task"
+
+# 3. Review the generated file in .dazzle/migrations/versions/
+#    The engine emits an AddColumn op — no noise to strip.
+#    For a nullable/default field this is complete; apply it.
+
+# 4. Apply
+dazzle db upgrade
+
+# 5. Commit both the DSL change and the migration file
+```
+
+### Rename: field or entity
+
+```bash
+# 1. Annotate the DSL with was:
+#    Change:  title: str(200) required
+#    To:      name: str(200) required was: title
+
+# 2. Generate the migration
+dazzle db revision -m "rename title to name on Task"
+
+# 3. Review — expect a RenameColumn op (ALTER COLUMN ... RENAME TO ...).
+#    No data loss. Downgrade is the reverse rename.
+
+# 4. Apply
+dazzle db upgrade
+
+# 5. Commit. Then remove the `was: title` annotation from the DSL and commit again.
+```
+
+### Unsafe change: NOT NULL column with backfill
+
+```bash
+# 1. Add the required field to DSL:
+#    region: str(50) required
+
+# 2. Generate the migration
+dazzle db revision -m "add required region to Task"
+
+# 3. Review the generated file. It will contain:
+#    - op.add_column (NULLABLE)
+#    - # === DATA MIGRATION (hand-author) === ... # === END DATA MIGRATION ===
+#    - op.alter_column(nullable=False)
+
+# 4. Fill in the data-migration block:
+#    op.execute("UPDATE \"Task\" SET region = 'default' WHERE region IS NULL")
+
+# 5. Apply
+dazzle db upgrade
+
+# 6. Commit
+```
+
+### Adopting the engine on an existing project
+
+```bash
+# Run once to stamp the current DSL as the snapshot baseline
+dazzle db snapshot-baseline
+
+# Apply the no-op stamp revision
+dazzle db upgrade
+
+# Commit the snapshot-baseline revision file
+git add .dazzle/migrations/versions/
+git commit -m "stamp snapshot-baseline for #1431 engine"
+
+# From now on, db revision uses the engine
+dazzle db revision -m "next change"
 ```
 
 ---
@@ -99,35 +365,29 @@ For your own project, add an equivalent block to the repo `.gitignore` (or to a 
 
 ---
 
-## Autogenerate noise to expect
+## Autogenerate noise (legacy path only)
 
-Every `dazzle db revision` (autogenerate) emits two categories of spurious operations that must be stripped by hand before applying the migration.
+The engine path does not emit the following spurious operations. If you use `--legacy-autogenerate`, you must still strip them by hand.
 
 ### 1. `op.drop_table('_dazzle_params')`
 
 `_dazzle_params` is a framework-internal table owned by `0001_framework_baseline`. Because `build_metadata()` only includes DSL-declared entities, Alembic thinks the table is absent from the target schema and emits a drop. It is not — do not drop it.
 
-The baseline migration (`5c144ea092ef_baseline_create_all_tables.py`) shows the comment that should accompany the strip:
-
-```python
-# NOTE: _dazzle_params is a framework table owned by 0001_framework_baseline.
-# Autogenerate incorrectly flags it as "removed" because build_metadata only
-# includes DSL-declared entities. Do NOT drop it here.
-```
-
 ### 2. Unnamed unique-constraint re-emissions on `id` columns
 
 Alembic cannot reconcile unnamed unique constraints (`UniqueConstraint(None, ...)`) that were created by `create_all()` on `id` columns. It re-emits `op.create_unique_constraint(None, ...)` on every table in every autogenerated migration. Strip these — they are no-ops that will fail at runtime if not removed.
 
-**Rule:** after `dazzle db revision`, always scroll to the bottom of the generated file and remove any `op.drop_table('_dazzle_params')` and any `op.create_unique_constraint(None, ...)` lines before reviewing the substantive change.
+**Rule (legacy path):** after `dazzle db revision --legacy-autogenerate`, always scroll to the bottom of the generated file and remove any `op.drop_table('_dazzle_params')` and any `op.create_unique_constraint(None, ...)` lines before reviewing the substantive change.
 
 ---
 
-## Pattern: additive field
+## Pattern: additive field (legacy path)
 
 **DSL change:** add a new optional field to an existing entity.
 
-**Autogenerate result:** correct — emits `op.add_column`. Strip the noise, no other edits needed.
+**Engine result:** correct — emits `op.add_column`. No noise to strip.
+
+**Legacy autogenerate result:** also correct, but includes noise. Strip the noise, no other edits needed.
 
 **Worked example:** `2026_05_21_08934671d5d5_add_po_number_to_invoice.py` (Change 1)
 
@@ -135,7 +395,7 @@ Alembic cannot reconcile unnamed unique constraints (`UniqueConstraint(None, ...
 def upgrade() -> None:
     # Hand-edited: stripped spurious _dazzle_params drop and unnamed
     # unique-constraint ops emitted by autogenerate. Column type kept as
-    # sa.Text() — Dazzle maps str/str(N) to TEXT (back/runtime/sa_schema.py);
+    # sa.Text() — Dazzle maps str/str(N) to TEXT (http/runtime/sa_schema.py);
     # the (40) length is an application-layer concern, not a DB column type.
     op.add_column("Invoice", sa.Column("po_number", sa.Text(), nullable=True))
 
@@ -148,11 +408,13 @@ def downgrade() -> None:
 
 ---
 
-## Pattern: field rename
+## Pattern: field rename (legacy path only)
 
 **DSL change:** rename a field on an existing entity.
 
-**Autogenerate result:** WRONG — autogenerate cannot detect renames. It emits `op.drop_column` followed by `op.add_column`, which destroys the existing data in that column.
+**Engine result:** use the `was:` clause — the engine detects the rename and emits a safe `ALTER COLUMN ... RENAME TO` automatically. See the `was:` section above.
+
+**Legacy autogenerate result:** WRONG — autogenerate cannot detect renames. It emits `op.drop_column` followed by `op.add_column`, which destroys the existing data in that column.
 
 **Worked example:** `2026_05_21_e3c4b12a8018_rename_supplier_bank_reference_to_bank_.py` (Change 2)
 
@@ -176,7 +438,7 @@ def downgrade() -> None:
     op.alter_column("Supplier", "bank_account_ref", new_column_name="bank_reference")
 ```
 
-**Rule:** whenever you rename a DSL field, discard the autogenerated drop/add pair and replace it with a single `op.alter_column(..., new_column_name=...)` call.
+**Rule (legacy path):** whenever you rename a DSL field, discard the autogenerated drop/add pair and replace it with a single `op.alter_column(..., new_column_name=...)` call. Prefer the engine path with `was:` instead.
 
 ---
 
@@ -184,7 +446,7 @@ def downgrade() -> None:
 
 **DSL change:** add a new value to an existing `enum[...]` field.
 
-**Autogenerate result:** nothing substantive — after stripping the standard noise, the migration body is empty.
+**Result (both paths):** nothing substantive — after stripping noise (legacy path) or from the engine, the migration body is empty.
 
 **Worked example:** `2026_05_21_7cf317f60a5f_add_partially_paid_to_invoice_status.py` (Change 3)
 
@@ -209,7 +471,7 @@ def downgrade() -> None:
 
 **DSL change:** extract fields from an existing entity into a new entity (entity split), where existing rows must have their data migrated to the new table before the old columns are dropped.
 
-**Autogenerate result:** partially correct — emits `op.create_table` and `op.drop_column`, but with no backfill step. Applying it as-is loses the data that was in the dropped column.
+**Engine result:** generates the expand scaffold with a seam marker. You fill in the backfill SQL.
 
 **Worked example:** `2026_05_21_7b4f5f16a753_split_supplierbankaccount_out_of_.py` (Change 4)
 
@@ -267,7 +529,7 @@ def downgrade() -> None:
 
 **DSL change:** modify an `event_model` block — change retention, add or rename an event field, add an event type.
 
-**Autogenerate result:** empty (after stripping noise).
+**Result (both paths):** empty (after stripping noise on the legacy path).
 
 **Worked example:** `2026_05_21_321d3b7c99d8_invoice_events_retention_.py` (Change 5)
 
@@ -317,6 +579,22 @@ Changes in this category:
 | Adding a `schedule` or `webhook` | Resolved at startup from DSL, no new tables |
 
 Even when the migration is an empty pass, generating and committing it is still the right practice — it keeps the revision chain intact and documents that you considered the schema impact and found none.
+
+---
+
+## Out of scope and known limitations
+
+The following are explicitly not handled by the #1431 engine:
+
+**RLS (Row Level Security):** RLS policies are reconciled separately. `dazzle db upgrade` applies RLS automatically after a successful migration in `shared_schema` tenancy mode, or you can run `dazzle db apply-rls` independently. RLS is not part of the `SCHEMA_SNAPSHOT` diff.
+
+**Composite UNIQUE constraints:** the engine's unique-constraint tracking is per-column (single-column uniques). Multi-column `UNIQUE(a, b)` constraints are flattened to per-column entries in the snapshot. A true composite unique constraint declared in the DSL would be tracked as two single-column uniques, not as the joint constraint. File a revision by hand if you need multi-column uniqueness.
+
+**PK type canonicalization:** primary-key type changes (e.g. `int` → `uuid`) are tracked as `AlterColumn` ops but the FK cascade to referencing tables is not auto-resolved. Tracked in #1432.
+
+**Index column order:** the snapshot stores index keys as sorted comma-joined column names, so `(tenant_id, status)` and `(status, tenant_id)` produce the same key. Index column-order changes are not detected.
+
+**`was:` lifecycle validation at lint time:** the engine detects a dangling `was:` at diff time (when `db revision` runs) via `RenameResolutionError`. There is no `dazzle lint` gate that checks for stale `was:` clauses in the DSL before that point.
 
 ---
 
@@ -376,10 +654,10 @@ Use snapshots as a development safety net. In production, rely on your database 
 
 ### Safe migration checklist
 
-Before applying any destructive migration (rename, drop, split):
+Before applying any migration that drops or renames columns or tables:
 
 1. **Back up or snapshot first** — especially in production.
-2. **Review the autogenerate output** — do not apply raw autogenerate on rename or split; hand-edit first.
-3. **Strip noise** — remove `op.drop_table('_dazzle_params')` and any unnamed unique-constraint ops.
+2. **Use the engine path with `was:`** for renames (avoids drop+add entirely).
+3. **Fill in the data-migration seam** for any NOT NULL add — never apply it with an empty stub.
 4. **Test the downgrade path** — run `dazzle db downgrade` and `dazzle db upgrade` on a copy of the database before touching production.
 5. **Commit the migration file** — before deploying, confirm the migration is committed and pushed.
