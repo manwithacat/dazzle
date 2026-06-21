@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.core import ir
 from dazzle.core.ir.experiences import StepKind
+from dazzle.core.strings import entity_slug
 from dazzle.page.utils.expression_eval import evaluate_simple_condition
 
 logger = logging.getLogger(__name__)
@@ -701,7 +702,7 @@ def create_experience_routes(
                                 and _list_surfaces_by_entity[item.entity].title
                                 else item.entity.replace("_", " ").title()
                             ),
-                            "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
+                            "route": f"{app_prefix}/{entity_slug(item.entity)}",
                             "icon": item.icon,
                         }
                         for item in ng.items

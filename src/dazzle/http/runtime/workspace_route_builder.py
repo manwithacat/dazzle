@@ -117,7 +117,7 @@ class WorkspaceRouteBuilder:
             # ``data-dz-row-action-url`` on row_action buttons so the
             # client-side handler can POST without re-deriving the route.
             from dazzle.core.ir import SurfaceMode
-            from dazzle.core.strings import to_api_plural
+            from dazzle.core.strings import entity_slug, to_api_plural
 
             row_action_routes: dict[str, str] = {}
             for _surf in appspec.surfaces:
@@ -132,7 +132,7 @@ class WorkspaceRouteBuilder:
             # the standalone list uses to auto-suppress its Create button.
             # app_prefix is "/app" at the page-route mount (app_factory.py).
             _entity_detail_url_map = {
-                _surf.entity_ref: f"/app/{_surf.entity_ref.lower().replace('_', '-')}/{{id}}"
+                _surf.entity_ref: f"/app/{entity_slug(_surf.entity_ref)}/{{id}}"
                 for _surf in appspec.surfaces
                 if _surf.mode == SurfaceMode.VIEW and _surf.entity_ref
             }

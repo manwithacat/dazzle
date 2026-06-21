@@ -66,7 +66,7 @@ from fastapi import Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
-from dazzle.core.strings import to_api_plural
+from dazzle.core.strings import entity_slug, to_api_plural
 
 # Audit context + access logging + auth wrapping live in audit_wrap.py
 # (#1361 slice 3). Same re-import contract as scope_filters / htmx_render
@@ -357,7 +357,7 @@ class RouteGenerator:
         handler: Callable[..., Any]
 
         # Derive entity slug for post-create redirect
-        _entity_slug = (entity_name or "").lower().replace("_", "-")
+        _entity_slug = entity_slug(entity_name or "")
 
         # Resolve audit logger and Cedar access spec for this entity
         _cedar_spec = self.cedar_access_specs.get(entity_name or "")

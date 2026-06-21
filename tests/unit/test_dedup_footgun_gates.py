@@ -15,6 +15,26 @@ def _src_files(exclude: set[str]) -> list[Path]:
     return [p for p in _SRC.rglob("*.py") if "__pycache__" not in p.parts and p.name not in exclude]
 
 
+def test_no_inline_entity_slug() -> None:
+    """`<name>.lower().replace("_", "-")` → `dazzle.core.strings.entity_slug(name)` (#1440).
+
+    The canonical slug formula lives in ``core.strings`` (re-exported by
+    ``page.app_paths`` as the #1426 link entry point). Re-deriving it inline lets the
+    registration↔link slug rule drift — the #1421/#1426 dead-link footgun class.
+    """
+    pat = re.compile(r"""lower\(\)\.replace\((['"])_\1, (['"])-\2\)""")
+    hits = [
+        str(p.relative_to(_SRC.parent.parent))
+        for p in _src_files({"strings.py", "app_paths.py"})
+        if pat.search(p.read_text(encoding="utf-8"))
+    ]
+    assert not hits, (
+        "Inline entity-slug formula found — use "
+        "`dazzle.core.strings.entity_slug(name)` (or `dazzle.page.app_paths.entity_slug`, "
+        "or the `app_paths.*_path` builders for full /app URLs):\n  " + "\n  ".join(hits)
+    )
+
+
 def test_no_inline_404_guard() -> None:
     """`if x is None: raise HTTPException(404, "Not found")` → `require_found(x)`."""
     pat = re.compile(

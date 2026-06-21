@@ -853,7 +853,9 @@ def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
 
     def _entity_slug(name: str) -> str:
         """Match template_compiler slugification: singular, lowercase, hyphens."""
-        return name.lower().replace("_", "-")
+        from dazzle.core.strings import entity_slug
+
+        return entity_slug(name)
 
     # 1. Surface-derived routes — flat (no workspace prefix), matching
     #    the template compiler's route_map format.

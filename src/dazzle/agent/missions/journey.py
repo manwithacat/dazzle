@@ -29,7 +29,9 @@ def _entity_url_slug(entity_name: str) -> str:
     import re
 
     slug = re.sub(r"([a-z])([A-Z])", r"\1-\2", entity_name)
-    return slug.lower().replace("_", "-")
+    from dazzle.core.strings import entity_slug
+
+    return entity_slug(slug)
 
 
 def _can_access_workspace(workspace: Any, persona_id: str) -> bool:

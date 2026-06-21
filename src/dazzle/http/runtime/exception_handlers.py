@@ -398,7 +398,9 @@ def register_site_error_handlers(
     workspace_slugs: list[str] = []
     if appspec is not None:
         try:
-            entity_slugs = [e.name.lower().replace("_", "-") for e in appspec.domain.entities]
+            from dazzle.core.strings import entity_slug
+
+            entity_slugs = [entity_slug(e.name) for e in appspec.domain.entities]
             workspace_slugs = [w.name for w in getattr(appspec, "workspaces", []) or []]
         except AttributeError:
             pass

@@ -1355,6 +1355,8 @@ class TestRunner:
         except Exception:  # noqa: BLE001 — best-effort URL resolution
             return out
 
+        from dazzle.core.strings import entity_slug
+
         for ws in getattr(appspec, "workspaces", None) or []:
             out[ws.name] = f"/app/workspaces/{ws.name}"
 
@@ -1362,12 +1364,12 @@ class TestRunner:
             entity = getattr(surface, "entity_ref", None)
             if entity is None:
                 continue
-            entity_slug = entity.lower().replace("_", "-")
+            slug = entity_slug(entity)
             mode = getattr(surface, "mode", None)
             if mode == SurfaceMode.LIST:
-                out[surface.name] = f"/app/{entity_slug}"
+                out[surface.name] = f"/app/{slug}"
             elif mode == SurfaceMode.CREATE:
-                out[surface.name] = f"/app/{entity_slug}/create"
+                out[surface.name] = f"/app/{slug}/create"
             # view / edit need a record id — skip; callers see None and
             # fall through to a clear error rather than a wrong URL.
         return out

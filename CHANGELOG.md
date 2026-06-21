@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.70] - 2026-06-21
+
+### Changed
+- **#1440 — the entity→/app slug formula is now one shared function across all layers.**
+  `name.lower().replace("_", "-")` was re-derived inline at 11 sites (http/core/agent/testing)
+  because #1426's `entity_slug` lived in `page.app_paths` and its drift gate only covered the
+  page/template path. The canonical formula moves to `dazzle.core.strings.entity_slug` (the
+  bottom layer, so every layer can share it without an import-contract violation — `core` can't
+  import `page`), and `page.app_paths` re-exports it as the #1426 link entry point. All 11 sites
+  route through it. New gate `test_no_inline_entity_slug` forbids the inline regex anywhere under
+  `src/dazzle` except the helper/re-export modules.
+
 ## [0.83.69] - 2026-06-21
 
 ### Changed

@@ -53,7 +53,9 @@ def generate_preview_files(
             entity = domain.get_entity(surface.entity_ref)
 
         entity_name = entity.name if entity else (surface.entity_ref or "item")
-        slug = entity_name.lower().replace("_", "-")
+        from dazzle.core.strings import entity_slug
+
+        slug = entity_slug(entity_name)
 
         ctx = compile_surface_to_context(surface, entity)
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()

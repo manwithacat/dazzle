@@ -18,10 +18,11 @@ same function yields both a registration template (``/app/task/{id}``) and a
 concrete link (``/app/task/abc-123``).
 """
 
+# The canonical slug rule lives in ``core`` so every layer shares one formula
+# (#1440); re-exported here as the page-link entry point (#1426).
+from dazzle.core.strings import entity_slug  # noqa: E402
 
-def entity_slug(entity_name: str) -> str:
-    """The canonical entity → ``/app`` URL slug rule."""
-    return entity_name.lower().replace("_", "-")
+__all__ = ["create_path", "detail_path", "edit_path", "entity_slug", "list_path"]
 
 
 def list_path(app_prefix: str, slug: str) -> str:

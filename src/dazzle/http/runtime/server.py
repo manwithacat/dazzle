@@ -1697,12 +1697,14 @@ class DazzleBackendApp:
         entity_htmx_meta: dict[str, dict[str, Any]] = {}
         app_prefix = "/app"
         for entity in self._entities:
-            entity_slug = entity.name.lower().replace("_", "-")
+            from dazzle.core.strings import entity_slug as _entity_slug
+
+            slug = _entity_slug(entity.name)
             _ls = _entity_list_surfaces.get(entity.name)
             cols = _build_surface_columns(entity, _ls) if _ls else _build_entity_columns(entity)
             entity_htmx_meta[entity.name] = {
                 "columns": cols,
-                "detail_url": f"{app_prefix}/{entity_slug}/{{id}}",
+                "detail_url": f"{app_prefix}/{slug}/{{id}}",
                 "entity_name": entity.name,
             }
 

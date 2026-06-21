@@ -44,7 +44,9 @@ def _surface_url(surface: Any) -> tuple[str | None, str]:
     # URL — only the default renders there, so a guide rooted on a *secondary*
     # list surface (e.g. a shadowed audit_export) genuinely won't show its overlay;
     # that's a guide-authoring bug the walk correctly surfaces, not a URL error.
-    slug = entity.lower().replace("_", "-")
+    from dazzle.core.strings import entity_slug
+
+    slug = entity_slug(entity)
     if "list" in mode:
         return f"/app/{slug}", mode
     if "create" in mode:

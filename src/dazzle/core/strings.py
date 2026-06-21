@@ -134,3 +134,14 @@ def to_api_plural(entity_name: str) -> str:
         'people'
     """
     return pluralize(entity_name).lower()
+
+
+def entity_slug(entity_name: str) -> str:
+    """The canonical entity-name → ``/app`` URL slug rule (#1426/#1440).
+
+    Lives in ``core`` (the bottom layer) so every layer can share the one formula;
+    ``dazzle.page.app_paths`` re-exports it as the page-link entry point. Re-deriving
+    ``name.lower().replace("_", "-")`` inline is gated by
+    ``tests/unit/test_dedup_footgun_gates.py::test_no_inline_entity_slug``.
+    """
+    return entity_name.lower().replace("_", "-")
