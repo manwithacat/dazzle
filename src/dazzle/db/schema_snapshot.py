@@ -44,10 +44,16 @@ def _sa_type_to_token(sa_type: Any) -> str:
         return "integer"
     if isinstance(sa_type, sa.Boolean):
         return "boolean"
-    if isinstance(sa_type, sa.Numeric):
-        return f"numeric({sa_type.precision},{sa_type.scale})"
     if isinstance(sa_type, sa.Float):
+        # Float is a subclass of Numeric — check it first.
         return "float"
+    if isinstance(sa_type, sa.Numeric):
+        p, s = sa_type.precision, sa_type.scale
+        if p is not None and s is not None:
+            return f"numeric({p},{s})"
+        if p is not None:
+            return f"numeric({p})"
+        return "numeric"
     if isinstance(sa_type, sa.DateTime):
         return "timestamptz"
     if isinstance(sa_type, sa.Date):
@@ -137,6 +143,9 @@ def project_schema(metadata: sa.MetaData) -> dict[str, Any]:
                     unique_cols.add(col.name)
 
         # --- indexes ---
+        # Column names within each index are sorted so that (tenant_id, status)
+        # and (status, tenant_id) produce the same key.  This is an accepted
+        # phase-1 limitation: index column-order changes are not detected.
         index_keys: list[str] = []
         for idx in table.indexes:
             cols_in_idx = [c.name for c in idx.columns]
