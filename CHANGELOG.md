@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.82] - 2026-06-22
+
+### Removed
+- **#1439 (slice 2) — `mcp/knowledge_graph/store` dead dataclass re-export (ADR-0003).** The module
+  re-exported `ActivityEvent`, `Entity`, `PathResult`, `Relation` "for backward compatibility" via
+  `__all__`, but nothing imports them from `store` (callers use `.models` directly), and
+  `ActivityEvent`/`PathResult` weren't even referenced in the module body. Narrowed `__all__` to the
+  module's real public surface (`KnowledgeGraph`) and dropped the two import-only-for-re-export
+  names. `Entity`/`Relation` stay imported (used in the body) but are no longer re-exported.
+
+### Notes
+- **#1439 deferred (not dead — real migrations):** `pitch/pptx_gen`'s ~40 primitive/builder
+  re-exports are imported from `pptx_gen` by `narrative.py` + the 58-test pitch suite (an
+  import-path migration to the canonical `pptx_primitives`/`pptx_slides`, not a removal);
+  `testing/agent_e2e`'s "Legacy Data Models" + `E2EAgent` are a **live** adapter the CLI and MCP
+  handlers call (`run_agent_tests`/`generate_html_report`). Both need deliberate caller migration,
+  not a delete — left for a focused pass.
+
 ## [0.83.81] - 2026-06-22
 
 ### Removed

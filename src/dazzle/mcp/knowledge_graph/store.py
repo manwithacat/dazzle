@@ -22,12 +22,13 @@ from typing import Any
 
 from .activity import KnowledgeGraphActivity
 from .metadata import KnowledgeGraphMetadata
-from .models import ActivityEvent, Entity, PathResult, Relation
+from .models import Entity, Relation  # Entity/Relation used in this module's body
 from .query import KnowledgeGraphQuery
 from .test_results import KnowledgeGraphTestResults
 
-# Re-export dataclasses for backward compatibility
-__all__ = ["ActivityEvent", "Entity", "KnowledgeGraph", "PathResult", "Relation"]
+# `KnowledgeGraph` is this module's public surface. The dataclasses (Entity, Relation,
+# ActivityEvent, PathResult) live in `.models` — import them from there, not via store.
+__all__ = ["KnowledgeGraph"]
 
 
 class KnowledgeGraph(
