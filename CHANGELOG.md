@@ -9,8 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.61] - 2026-06-21
+
 ### Changed
-- **#1431 (Phase 4) — `renamed_from` on core IR types.** Added `renamed_from: str | None = None` to `FieldSpec` and `EntitySpec` (transient `was:` rename hint for the migration-planning pass). `docs/api-surface/ir-types.txt` baseline regenerated.
+- **#1431 (Phases 3–4) — `dazzle db revision` now defaults to the DSL-snapshot
+  migration engine.** Instead of Alembic's metadata-vs-live-DB autogenerate (the #1427
+  destructive-rewrite source), a routine `db revision` now diffs the project-lineage
+  head's embedded `SCHEMA_SNAPSHOT` against the current DSL (DSL-vs-DSL) and renders the
+  intentful delta to Alembic ops, embedding the new `SCHEMA_SNAPSHOT` in the generated
+  revision. Live-DB drift and type-mapping noise can no longer produce spurious
+  destructive ops. The engine is **opt-in per command** — only `db revision` uses it;
+  `db baseline`/`db migrate`/tenant/bare-alembic runs keep the legacy autogenerate path
+  (with the #1427 additive guardrail). Pass **`--legacy-autogenerate`** to force the old
+  path. Renderer owns USING-clause injection; rename+retype-in-one-revision emits
+  `RenameColumn` + `AlterColumn` (no lost alter).
+
+### Added
+- **#1431 (Phase 4) — `was:` field/entity rename grammar.** `field new_name <type> …
+  was: old_name` and an entity-body `was: OldName` clause set `renamed_from` (new on the
+  core IR `FieldSpec`/`EntitySpec`; `docs/api-surface/ir-types.txt` regenerated). The
+  engine resolves a hinted rename as a SQL `RENAME` (not drop+add — data is preserved),
+  proven end-to-end against Postgres incl. row survival. A dangling `was:` (old name not
+  in the prior snapshot and new name not already applied) is a hard `db revision` error.
+
+### Agent Guidance
+- **`dazzle db revision` is now DSL-diff-driven.** It emits exactly what changed in the
+  DSL since the last revision (read from the embedded `SCHEMA_SNAPSHOT`), not a
+  metadata-vs-DB diff. To **rename** a field/entity safely, add `was: <old_name>` to its
+  declaration so the migration is a `RENAME` rather than drop+add; remove the hint after
+  the rename revision is generated. `was` is now a reserved DSL keyword (don't name a
+  field/entity `was`). Use `--legacy-autogenerate` only to fall back to the old
+  metadata-vs-DB autogenerate (with the #1427 additive guardrail). `db baseline`/`db
+  migrate` still use the legacy path — engine adoption there (and the `db
+  snapshot-baseline` adoption command) is a later #1431 phase.
 
 ## [0.83.60] - 2026-06-21
 
