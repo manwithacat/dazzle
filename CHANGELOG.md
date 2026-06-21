@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.58] - 2026-06-21
+
+### Fixed
+- **#1428 — page in-process reads now bind the per-request RLS GUCs.** #1422 removed
+  the page→REST loopback self-fetch and made page detail/edit reads (and list /
+  create / update) run in-process. The REST auth dependency binds
+  `dazzle.tenant_id` / `dazzle.user_<attr>` (via `_bind_rls_tenant_id`) so the leased
+  Postgres connection's RLS sees the caller; the page auth seam
+  (`_resolve_auth_context`) did not, so on a `shared_schema` / RLS app the connection
+  denied every row to in-process page reads → `RecordNotFound` → 404 (while the same
+  row returned 200 over REST). The page seam now performs the same fail-closed bind
+  once per request, covering reads, lists, and mutations. Regression test pins the
+  bind at the seam (the prior `test_scope_runtime_pg` only exercised the REST path).
+
+### Agent Guidance
+- **Any in-process data path that runs outside a REST auth dependency must bind the
+  RLS GUCs itself.** `_bind_rls_tenant_id(auth_ctx)` is the per-request bind the REST
+  dependency does; the page layer now calls it at `_resolve_auth_context`. New
+  transport adapters over the gated data core must do the same or RLS denies all rows.
+
 ## [0.83.57] - 2026-06-21
 
 ### Fixed
