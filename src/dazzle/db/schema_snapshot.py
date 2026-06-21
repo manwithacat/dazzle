@@ -210,3 +210,39 @@ def snapshot_from_module(module: ModuleType) -> dict[str, Any]:
     migration module.
     """
     return getattr(module, "SCHEMA_SNAPSHOT", {})
+
+
+def load_head_snapshot(script_dir: Any) -> dict[str, Any]:
+    """Return the SCHEMA_SNAPSHOT embedded in the project-lineage head revision.
+
+    Resolves the head revision(s) from *script_dir* (an
+    ``alembic.script.ScriptDirectory`` instance), loads their Python modules
+    via ``Script.module``, and returns ``snapshot_from_module()`` for the head
+    that carries ``SCHEMA_SNAPSHOT``.
+
+    Returns ``{}`` in three safe-fallback cases:
+
+    * No head exists (empty or uninitialised versions directory).
+    * The head revision module has no ``SCHEMA_SNAPSHOT`` attribute — meaning
+      the migration pre-dates the engine (Task 1.1) and adoption via the
+      baseline-stamp command (Task 6.2) has not yet run.
+
+    **Multi-head (dual-lineage) rule**: ``dazzle db`` chains the framework
+    versions directory and the project versions directory into one
+    ``ScriptDirectory``, yielding two heads when both lineages have
+    independent roots (see ``_guard_single_head`` in ``dazzle.cli.db``).
+    Only the project-lineage head carries ``SCHEMA_SNAPSHOT``; the framework
+    head never does.  Resolution strategy: iterate all heads, return the
+    ``SCHEMA_SNAPSHOT`` of the *first* head whose module exposes it, or
+    ``{}`` if none does.  A merge migration (single head) is the normal
+    post-``reconcile-baseline`` state and is handled by the same path.
+    """
+    heads: list[str] = list(script_dir.get_heads())
+    for head_rev in heads:
+        script = script_dir.get_revision(head_rev)
+        if script is None:
+            continue
+        snap = snapshot_from_module(script.module)
+        if snap:
+            return snap
+    return {}

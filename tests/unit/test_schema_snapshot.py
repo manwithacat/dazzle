@@ -3,6 +3,8 @@
 Tests build a hand-crafted MetaData; no CWD or DB access required.
 """
 
+from typing import Any
+
 import pytest
 import sqlalchemy as sa
 
@@ -89,3 +91,149 @@ def test_snapshot_from_module() -> None:
     # Module without SCHEMA_SNAPSHOT → empty dict.
     empty_mod = types.ModuleType("empty_mod")
     assert snapshot_from_module(empty_mod) == {}
+
+
+# ---------------------------------------------------------------------------
+# load_head_snapshot — TDD tests (Task 1.3)
+# ---------------------------------------------------------------------------
+
+
+def _make_versions_dir(
+    tmp_path: pytest.TempPathFactory | pytest.FixtureRequest,
+    *,
+    revision: str = "abc001",
+    include_snapshot: bool = True,
+    snapshot_val: dict | None = None,
+) -> "tuple[Any, Any]":
+    """Helper: create a minimal alembic versions dir + ScriptDirectory.
+
+    Returns ``(tmpdir_path, ScriptDirectory)`` so tests can inspect both.
+    The file is written into ``<tmpdir>/versions/<revision>_init.py``.
+    """
+    import textwrap
+    from pathlib import Path
+
+    from alembic.script import ScriptDirectory
+
+    tmpdir = Path(str(tmp_path))
+    versions_dir = tmpdir / "versions"
+    versions_dir.mkdir(parents=True, exist_ok=True)
+
+    if snapshot_val is None:
+        snapshot_val = {
+            "Widget": {
+                "columns": {"id": {"type": "uuid", "nullable": False, "default": None, "pk": True}},
+                "fks": {},
+                "uniques": [],
+                "indexes": [],
+            }
+        }
+
+    snap_line = f"SCHEMA_SNAPSHOT = {snapshot_val!r}" if include_snapshot else ""
+    content = textwrap.dedent(f"""
+        revision = {revision!r}
+        down_revision = None
+        branch_labels = None
+        depends_on = None
+        {snap_line}
+        def upgrade(): pass
+        def downgrade(): pass
+    """).strip()
+
+    (versions_dir / f"{revision}_init.py").write_text(content)
+    sd = ScriptDirectory(str(tmpdir))
+    return tmpdir, sd
+
+
+def test_load_head_snapshot_returns_snapshot(tmp_path: pytest.TempPathFactory) -> None:
+    """Head revision with SCHEMA_SNAPSHOT → load_head_snapshot returns it."""
+    from dazzle.db.schema_snapshot import load_head_snapshot
+
+    snap_val = {
+        "Widget": {
+            "columns": {"id": {"type": "uuid", "nullable": False, "default": None, "pk": True}},
+            "fks": {},
+            "uniques": [],
+            "indexes": [],
+        }
+    }
+    _, sd = _make_versions_dir(
+        tmp_path, revision="snap001", include_snapshot=True, snapshot_val=snap_val
+    )
+    result = load_head_snapshot(sd)
+    assert result == snap_val
+
+
+def test_load_head_snapshot_no_constant_returns_empty(tmp_path: pytest.TempPathFactory) -> None:
+    """Head revision without SCHEMA_SNAPSHOT → load_head_snapshot returns {}."""
+    from dazzle.db.schema_snapshot import load_head_snapshot
+
+    _, sd = _make_versions_dir(tmp_path, revision="nosnap001", include_snapshot=False)
+    result = load_head_snapshot(sd)
+    assert result == {}
+
+
+def test_load_head_snapshot_no_head_returns_empty(tmp_path: pytest.TempPathFactory) -> None:
+    """Empty versions dir (no revisions) → load_head_snapshot returns {}."""
+    from pathlib import Path
+
+    from alembic.script import ScriptDirectory
+
+    from dazzle.db.schema_snapshot import load_head_snapshot
+
+    tmpdir = Path(str(tmp_path))
+    versions_dir = tmpdir / "versions"
+    versions_dir.mkdir(parents=True, exist_ok=True)
+    sd = ScriptDirectory(str(tmpdir))
+    result = load_head_snapshot(sd)
+    assert result == {}
+
+
+def test_load_head_snapshot_multi_head_picks_snapshot_bearer(
+    tmp_path: pytest.TempPathFactory,
+) -> None:
+    """Multi-head (dual-lineage): picks the head whose module has SCHEMA_SNAPSHOT."""
+    import textwrap
+    from pathlib import Path
+
+    from alembic.script import ScriptDirectory
+
+    from dazzle.db.schema_snapshot import load_head_snapshot
+
+    tmpdir = Path(str(tmp_path))
+    versions_dir = tmpdir / "versions"
+    versions_dir.mkdir(parents=True, exist_ok=True)
+
+    snap_val = {"Order": {"columns": {}, "fks": {}, "uniques": [], "indexes": []}}
+
+    # Framework-lineage head: no SCHEMA_SNAPSHOT
+    (versions_dir / "fw001_baseline.py").write_text(
+        textwrap.dedent("""
+            revision = 'fw001'
+            down_revision = None
+            branch_labels = None
+            depends_on = None
+            def upgrade(): pass
+            def downgrade(): pass
+        """).strip()
+    )
+
+    # Project-lineage head: has SCHEMA_SNAPSHOT
+    (versions_dir / "proj001_init.py").write_text(
+        textwrap.dedent(f"""
+            revision = 'proj001'
+            down_revision = None
+            branch_labels = None
+            depends_on = None
+            SCHEMA_SNAPSHOT = {snap_val!r}
+            def upgrade(): pass
+            def downgrade(): pass
+        """).strip()
+    )
+
+    sd = ScriptDirectory(str(tmpdir))
+    heads = sd.get_heads()
+    assert len(heads) == 2, f"Expected 2 heads, got {heads}"
+
+    result = load_head_snapshot(sd)
+    assert result == snap_val
