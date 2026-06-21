@@ -127,6 +127,21 @@ class JoinRequestRecord(BaseModel):
     decided_by: str | None = None
 
 
+class AlreadyDecidedError(RuntimeError):
+    """A join request could not be decided because it is no longer ``pending``.
+
+    Raised by ``AuthStore.decide_join_request`` when its pending-only guard
+    (``UPDATE ... WHERE id = %s AND status = 'pending'``) matches zero rows — the
+    request was already approved/denied (a double-submit) or does not exist. The
+    approve/deny helpers rely on this so a second approve cannot create a duplicate
+    membership; routes map it to a friendly "already decided" message.
+    """
+
+    def __init__(self, request_id: str) -> None:
+        self.request_id = request_id
+        super().__init__(f"join request {request_id!r} is already decided or does not exist")
+
+
 class ScimGroupRecord(BaseModel):
     """A SCIM 2.0 Group, connection-scoped (#1342).
 

@@ -34,6 +34,7 @@ from dazzle.core.db_url import normalise_postgres_scheme
 
 from .crypto import hash_password, verify_password
 from .models import (
+    AlreadyDecidedError,
     AuthContext,
     JoinRequestRecord,
     MembershipRecord,
@@ -1293,17 +1294,25 @@ class SessionStoreMixin:
         status: str,
         decided_by: str,
     ) -> JoinRequestRecord:
-        """Set the decision on a join request (``approved`` or ``denied``).
+        """Atomically transition a *pending* join request to ``approved``/``denied``.
 
-        Raises ``LookupError`` if no such request exists.
+        Pending-only guard (double-decide defence, Task 1.5 review): the UPDATE
+        filters ``status = 'pending'``, so a second approve/deny of an
+        already-decided request matches zero rows. A double-approve therefore
+        cannot overwrite the decision nor create a second membership (the approve
+        helper creates the membership only when this transition succeeds).
+
+        Raises ``AlreadyDecidedError`` when the row is missing or no longer
+        pending (rowcount 0).
         """
         now = datetime.now(UTC).isoformat()
         rowcount = self._execute_modify(
-            "UPDATE join_requests SET status = %s, decided_at = %s, decided_by = %s WHERE id = %s",
+            "UPDATE join_requests SET status = %s, decided_at = %s, decided_by = %s "
+            "WHERE id = %s AND status = 'pending'",
             (status, now, decided_by, request_id),
         )
         if rowcount == 0:
-            raise LookupError(f"no join_request with id {request_id!r}")
+            raise AlreadyDecidedError(request_id)
         row = self._execute_one("SELECT * FROM join_requests WHERE id = %s", (request_id,))
         assert row is not None  # just updated
         return self._row_to_join_request(row)

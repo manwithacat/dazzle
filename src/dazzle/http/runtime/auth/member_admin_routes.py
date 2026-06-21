@@ -37,6 +37,13 @@ def _back_to_members(request: Request) -> Response:
     return RedirectResponse(url="/auth/members", status_code=303)
 
 
+def _back_to_join_requests(request: Request) -> Response:
+    """HX-Redirect (htmx action buttons) / 303 (plain post) back to the queue."""
+    if request.headers.get("HX-Request") == "true":
+        return Response(status_code=204, headers={"HX-Redirect": "/auth/join-requests"})
+    return RedirectResponse(url="/auth/join-requests", status_code=303)
+
+
 def _manage_members_roles(request: Request) -> frozenset[str]:
     """The resolved ``manage_members`` capability persona set (the orphan-guard's admin set)."""
     from dazzle.http.runtime.auth.admin_policy import request_policy
@@ -191,5 +198,84 @@ def create_member_admin_routes() -> APIRouter:
             return HTMLResponse("Cannot remove the last admin", status_code=409)
         store.remove_membership(membership_id, actor_id=str(ctx.user.id))
         return _back_to_members(request)
+
+    # -- Verified-domain join requests (approval queue, #1424 Task 4.3) --------
+    # Approving a request CREATES a membership, so every endpoint runs the same
+    # ``manage_members`` gate as the roster mutations above.
+
+    @router.get("/auth/join-requests", response_class=HTMLResponse, include_in_schema=False)
+    async def join_requests_queue(request: Request) -> HTMLResponse:
+        from dazzle.http.runtime.auth.member_admin_views import build_join_requests_view
+        from dazzle.render.fragment.renderer import FragmentRenderer
+
+        gated = _gate(request)
+        if gated is None:
+            return HTMLResponse("Forbidden", status_code=403)
+        store, _ctx, org_id = gated
+        org = store.get_organization(org_id)
+        requests = [
+            {"request_id": jr.id, "email": jr.email}
+            for jr in store.get_pending_join_requests(org_id)
+        ]
+        page = build_join_requests_view(
+            product_name=_product_name(request),
+            org_name=org.name if org is not None else org_id,
+            requests=requests,
+        )
+        return HTMLResponse(FragmentRenderer().render(page))
+
+    def _resolve_request(store: object, org_id: str, request_id: str) -> Any | None:
+        """The join request IFF it belongs to ``org_id`` (cross-org guard).
+
+        A request_id from another org is rejected — an admin only decides requests
+        for their own active org, exactly like ``_resolve_target`` for memberships.
+        """
+        jr = store.get_join_request(request_id)  # type: ignore[attr-defined]
+        if jr is None or jr.tenant_id != org_id:
+            return None
+        return jr
+
+    @router.post("/auth/join-requests/approve", include_in_schema=False)
+    async def approve_request(
+        request: Request, request_id: Annotated[str, Query()] = ""
+    ) -> Response:
+        from dazzle.http.runtime.auth.domain_join import DomainNotAdmissibleError
+        from dazzle.http.runtime.auth.join_requests import (
+            AlreadyDecidedError,
+            approve_join_request,
+        )
+
+        gated = _gate(request)
+        if gated is None:
+            return HTMLResponse("Forbidden", status_code=403)
+        store, ctx, org_id = gated
+        if _resolve_request(store, org_id, request_id) is None:
+            return HTMLResponse("Not found", status_code=404)
+        try:
+            approve_join_request(store, request_id, decided_by=str(ctx.user.id))
+        except AlreadyDecidedError:
+            return HTMLResponse("This request has already been decided.", status_code=409)
+        except DomainNotAdmissibleError:
+            return HTMLResponse(
+                "This email's domain is no longer admissible for the organization.",
+                status_code=409,
+            )
+        return _back_to_join_requests(request)
+
+    @router.post("/auth/join-requests/deny", include_in_schema=False)
+    async def deny_request(request: Request, request_id: Annotated[str, Query()] = "") -> Response:
+        from dazzle.http.runtime.auth.join_requests import AlreadyDecidedError, deny_join_request
+
+        gated = _gate(request)
+        if gated is None:
+            return HTMLResponse("Forbidden", status_code=403)
+        store, ctx, org_id = gated
+        if _resolve_request(store, org_id, request_id) is None:
+            return HTMLResponse("Not found", status_code=404)
+        try:
+            deny_join_request(store, request_id, decided_by=str(ctx.user.id))
+        except AlreadyDecidedError:
+            return HTMLResponse("This request has already been decided.", status_code=409)
+        return _back_to_join_requests(request)
 
     return router

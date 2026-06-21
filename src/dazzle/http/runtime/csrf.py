@@ -133,6 +133,11 @@ class CSRFConfig:
             "/auth/members/suspend",
             "/auth/members/reactivate",
             "/auth/members/remove",
+            # #1424 Task 4.3: verified-domain join-request approval queue.
+            # Approving CREATES a membership — state-changing POSTs must run the
+            # CSRF gate (else swept into NA_PREAUTH by the /auth/ prefix).
+            "/auth/join-requests/approve",
+            "/auth/join-requests/deny",
             # auth Plan 3c.ii: the member's own profile upsert.
             "/me/profile",
             # org-admin connection surface: authenticated domain-management mutations
