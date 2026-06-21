@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.80] - 2026-06-22
+
+### Fixed
+- **Pitch overflow/truncation warnings silently vanished from `GeneratorResult.warnings`
+  (regression from #1435).** `pptx_gen` attaches a `_WarningCapture` log handler to collect
+  warnings emitted by the slide builders (card/persona/market-driver overflow truncation in
+  `pptx_slides`, plugin-builder failures, bounds-audit findings). #1435's blanket
+  `getLogger("dazzle.pitch")` → `getLogger(__name__)` sweep rescoped that handler to *this*
+  module's own logger — a **sibling** of the builder modules, not an ancestor — so propagation
+  never reached it and every builder warning was lost (a deck could overflow its slide bounds
+  with `warnings == []`). The handler now attaches to the pitch-package ancestor logger via a
+  named constant (`_PITCH_CAPTURE_LOGGER = "dazzle.pitch"`, exempt from the #1435 string-bucket
+  gate as a deliberate shared channel). All three builder truncation sites are captured again;
+  `test_extra_cards_overflow_warns` passes.
+
 ## [0.83.79] - 2026-06-22
 
 ### Fixed

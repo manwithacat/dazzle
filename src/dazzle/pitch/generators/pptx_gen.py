@@ -108,6 +108,15 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+# Deliberate shared channel (named constant — exempt from the #1435 string-bucket
+# gate). Slide builders live in sibling modules (`pptx_slides`, …) and emit through
+# their own `__name__` loggers; the overflow/truncation `_WarningCapture` below must
+# attach to the pitch-package *ancestor* so it catches those records via propagation.
+# #1435 briefly rewrote this to `getLogger(__name__)`, scoping the handler to *this*
+# module — a sibling of the builders, not an ancestor — so it captured nothing and
+# truncation warnings silently vanished from `GeneratorResult.warnings`.
+_PITCH_CAPTURE_LOGGER = "dazzle.pitch"
+
 
 @dataclass
 class GeneratorResult:
@@ -282,8 +291,10 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
         except Exception as e:
             logger.debug("Chart generation skipped: %s", e)
 
-        # Capture warnings from slide builders
-        pitch_logger = logging.getLogger(__name__)
+        # Capture warnings from slide builders. Attach to the pitch-package ancestor
+        # logger so warnings emitted by sibling builder modules (pptx_slides, …)
+        # propagate up into the handler — see _PITCH_CAPTURE_LOGGER (#1435 regression).
+        pitch_logger = logging.getLogger(_PITCH_CAPTURE_LOGGER)
         builder_warnings: list[str] = []
 
         class _WarningCapture(logging.Handler):
