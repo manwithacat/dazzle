@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.68] - 2026-06-21
+
+### Fixed
+- **#1436 — analytics request-path failures reported via `print()` are now logged.**
+  `AnalyticsCollector` reported store/emit failures with `print(f"Failed to ...: {e}")`
+  (lines 492/527) while logging a sibling flush failure correctly with `logger.warning` —
+  so those two errors bypassed log levels/handlers/aggregation and lost their stack trace.
+  Both now use `logger.exception(...)`. New AST gate `test_no_runtime_except_print_1436`
+  forbids `print()` inside an `except` block under `src/dazzle/http`,`src/dazzle/page`,
+  allow-listing only the interactive dev-console modules (`combined_server`, `dev_server`,
+  `hot_reload` — where `print()` is the intended terminal UX).
+
 ## [0.83.67] - 2026-06-21
 
 ### Added

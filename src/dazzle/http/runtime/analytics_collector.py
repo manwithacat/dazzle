@@ -487,9 +487,9 @@ class AnalyticsCollector:
         for event in events:
             try:
                 self.ops_db.record_analytics_event(event)
-            except Exception as e:
-                # Log but don't fail
-                print(f"Failed to store analytics event: {e}")
+            except Exception:
+                # Log but don't fail (matches the _flush_loop handler above).
+                logger.exception("Failed to store analytics event")
 
     async def _flush_loop(self) -> None:
         """Background loop for periodic flushing."""
@@ -523,8 +523,8 @@ class AnalyticsCollector:
                 headers={"tenant_id": event.tenant_id},
             )
             await self.event_bus.publish("ops.analytics", envelope)
-        except Exception as e:
-            print(f"Failed to emit analytics event: {e}")
+        except Exception:
+            logger.exception("Failed to emit analytics event")
 
 
 # =============================================================================

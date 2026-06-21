@@ -1,83 +1,77 @@
-# Code Smells Report — 2026-06-19
+## Code Smells Report — 2026-06-21
 
-Commit: a07c2a09b (v0.83.28)
-Scope: `src/dazzle/` — the merged tree (`back/`, `ui/`, `render/`). `tests/`, `examples/`, auto-generated excluded.
-Method: `/smells` Workflow — 4 parallel finders (regressions + 3 pattern cats + **decay-harness**), schema-validated.
+HEAD: `36d431cf8` · Regressions failed: **0** · New patterns: **15** · Decay: ratchet **clean**, import contracts **kept** (allow-list 3)
 
-## Regression Check Results
+### Regression Check Results
 
 | # | Check | Status | Details |
 |---|-------|--------|---------|
-| 1.1 | no-swallowed-exceptions | **PASS** | Zero `except Exception: pass` in src/. The only `except Exception:`+bare-pass hits are in src/dazzle/http/tests/ (test_e2e.py:197, test_file_storage.py:67/85) — test fixtures, not production code. |
-| 1.2 | no-redundant-except-tuples | **PASS** | Zero hits across all three patterns: `except (ImportError, Exception)`, `except (json.JSONDecodeError, Exception)`, `except (JSONDecodeError, Exception)`. |
-| 1.3 | core-mcp-isolation | **PASS** | Zero `from dazzle.mcp` imports in src/dazzle/core/. Consistent with the live import-linter `core stays backend- and UI-agnostic` contract (KEPT) which subsumes this. |
-| 1.4 | no-project-path-Any | **PASS** | Zero `project_path: Any` in src/dazzle/mcp/server/handlers/. |
-| 1.5a | no-silent-event-handlers | **PASS** | 17 raw `pass`/`return` matches but all are benign narrow handlers: asyncio.CancelledError on task-teardown (base_event_bus/postgres_bus/publisher/kafka_bus/manager), TimeoutError on poll loops (postgres_bus:695, queue adapters), ImportError optional-dep w/ logger.debug (ses_webhooks), FileNotFoundError Docker-absent (detection), ValueError/IndexError on int-parse (stream/queue providers, email:53), plus a class-body `pass` (bus.py:336 EventBusError). No silent generic event swallow. |
-| 1.5b | getattr-string-literals | **TRACK** | 2141 `getattr(` occurrences in src/ — above the <200 PASS threshold, so TRACK with the count (standing-debt baseline). |
-| 1.6 | complexity-creep | **TRACK** | From tests/unit/fixtures/complexity_baseline.json: 22 MI-rank-C files; highest-CC function = dazzle/core/linker_impl.py::validate_references at CC 119. Standing baseline (live ratchet gates new CC>15 / MI drops in CI). |
-| 1.7 | god-files | **TRACK** | 22 files at MI rank C in the baseline: persona_journey.py, auth/store.py, site_section_builder.py, repository.py, server.py, workspace_aggregation.py, test_auth.py, cli/testing.py, parser entity/process/workspace.py, linker_impl.py, validation/extended.py, lsp/server.py, mcp dsl_test/rhythm handlers, pptx_slides.py, python_audit.py, dsl_test_generator.py, test_runner.py, template_compiler.py, page_routes.py. linker_impl.py is both MI-C and high-CC (validate_references=119) so it's the top god-module/hotspot cross-ref. |
-| 1.8 | alpine-window-bindings | **PASS** | Zero `@(pointer\|mouse\|key\|resize\|scroll\|click\|touch)*.window` bindings in src/dazzle/page/ .html templates. |
-| 1.9 | import-contract-allowlist | **PASS** | lint-imports exits 0: 3 contracts KEPT, 0 broken (1465 files / 9084 deps analyzed). TRACK: ignore_imports allowlist = 9 total (core->back: 2 [eventbus_adapter→envelope, eventbus_adapter→auth.events]; ui->back: 6 [all combined_server→back.*]; back->sqlite: 1 [test_relations→sqlite3]). Memory recorded '2 structural edges allow-listed' for core specifically — that core count is unchanged at 2; the 9 is the all-contract total. |
+| 1.1 | no-swallowed-exceptions | PASS | 0 inline `except Exception: pass` in `src/`; the only multi-line except→pass hits are 3 in `http/tests/` (best-effort cleanup) — all test code. |
+| 1.2 | no-redundant-except-tuples | PASS | 0 hits for `(ImportError, Exception)` / `(json.JSONDecodeError, Exception)` / `(JSONDecodeError, Exception)`. |
+| 1.3 | core-mcp-isolation | PASS | 0 `from dazzle.mcp` imports in `core/`; consistent with the live import-linter contract (KEPT). |
+| 1.4 | no-project-path-Any | PASS | 0 `project_path: Any` in `mcp/server/handlers/`. |
+| 1.5a | no-silent-event-handlers | PASS | 17 except+pass/return in `http/events` & `http/channels`, all narrow specific types (CancelledError/TimeoutError/…); no bare `except Exception`. |
+| 1.5b | getattr-string-literals | TRACK | 2165 `getattr(` across `src/` (>200 threshold) — standing defensive dynamic-attr debt. |
+| 1.6 | complexity-creep | TRACK | `complexity_baseline.json`: 22 files at MI-rank C; highest CC `core/linker_impl.py::validate_references` = **119**. Ratchet gates new CC>15/MI drops. |
+| 1.7 | god-files | TRACK | 22 files at MI rank C (incl. `linker_impl`, `http/runtime/{store,page_routes,repository,server,workspace_aggregation}`, `validation/extended`, `template_compiler`, `lsp/server`). |
+| 1.8 | alpine-window-bindings | PASS | 0 `@<event>.window` bindings in `page/` templates. |
+| 1.9 | import-contract-allowlist | PASS | `lint-imports` exit 0 — 5 contracts kept, 0 broken (1482 files, 9183 deps). Allow-list 3 documented edges, no growth. |
 
-**Genuine production regressions (FAIL): 0.** TRACK rows (1.5b/1.6/1.7/1.9) are standing-debt counters, not breakage.
+**0 FAIL-class regressions.** All established rules hold; the TRACK rows are standing baselines the live CI ratchet/contracts already gate.
 
-## New Patterns Found
+### New Patterns Found
 
-Ordered by category severity × instance count.
+Ordered by severity × instance count.
 
-| Pattern | Category | Inst. | Root cause | Canonical fix |
-|---------|----------|-------|-----------|---------------|
-| Debug-level-only exception swallows (except Exception -> logger.debug, no re-raise / no er | Error handling | 209 | A house style of 'catch everything, log at debug, carry on' has spread as the default defensive idiom for any code path the author was unsur… | Decide intent per site: (a) if the exception is expected and benign, catch the SPECIFIC type and document why it is safe; (b) if it is unexp… |
-| Broad silent exception swallows (except Exception/ImportError -> pass\|continue with no log | Error handling | 36 | Optional-feature degradation (`except ImportError: pass`, 29 of 36) and best-effort side-paths are written as fire-and-forget. There is no s… | Never let a broad `except` body be only `pass`/`continue`. For optional imports, gate on the dependency explicitly (try/except ImportError a… |
-| Intra-layer deferred (in-function) imports to dodge circular dependencies | Coupling | 485 | back/runtime modules have grown bidirectional dependencies (server.py <-> app_factory <-> subsystems <-> store, etc.). Rather than extractin… | Break the cycle structurally, not lexically: extract the shared types/protocols into a leaf module (e.g. a `*_protocols.py` or `*_types.py` … |
-| Weakened typing (field/param annotated `Any`/`object` solely to avoid an import cycle) | Coupling | 14 | Core IR dataclasses (appspec.py, domain.py, fields.py, triples.py, conditions.py, access.py) cross-reference each other, forming cycles amon… | Use `if TYPE_CHECKING:` imports plus string/forward-ref annotations (PEP 563-style) so the real type is visible to mypy without a runtime im… |
-| Backward-compat shims and dual-signature wrapper functions (violate ADR-0003 clean-break r | Coupling | 8 | Despite ADR-0003 ('no backward compat shims — clean breaks, update all callers in same commit'), the tree carries pure re-export modules (pp… | Per ADR-0003, delete the shim and migrate all callers in the same commit. For dual-signature wrappers, pick the config-object form, convert … |
-| Mislocated cross-layer module: ui/runtime/combined_server.py imports dazzle.http (ui->back | Coupling | 6 | combined_server.py is the unified back+ui composition entrypoint but physically lives under dazzle.page, so it must reach down into dazzle.bac… | Relocate combined_server.py to its real layer — a composition root at or above back/runtime (e.g. back/runtime/combined_server.py, or a new … |
-| Untyped `ctx: dict[str, Any]` threaded through every region builder | Type safety | 33 | The Fragment substrate (#1042, ADR-0023) was sold as a fully *typed* primitive tree, but the render-context the builders consume is still a … | Define a single `RegionContext` TypedDict (or frozen dataclass) capturing the keys the builders actually read (rows, columns, endpoint, regi… |
-| `# type: ignore[arg-type]` masking str→Literal narrowing at Fragment-primitive boundaries | Type safety | 12 | Fragment primitives (FormStack.method/mode, Field.kind, SortHeader.current_direction, Dimension.truncate, ConsentDefaults override) declare … | At each boundary, narrow instead of ignore: type the lookup dict's values as the Literal (`widget_to_field_kind: dict[str, FieldKind]` then … |
-| Inline `HTTPException(status_code=404, detail="Not found")` 404-guard copy-paste | Duplication | 13 | Every read/update/delete handler ends with the same `if result is None: raise HTTPException(status_code=404, detail="Not found")` guard, cop… | Add one helper in the handlers package, e.g. `def require_found(value: T \| None, detail: str = "Not found") -> T: if value is None: raise HT… |
-| Repeated PersonaSpec / node identity fallback `getattr(x, "name", None) or getattr(x, "id" | Duplication | 7 | PersonaSpec identity is `.id`, not `.name` (documented as a Gotcha in CLAUDE.md), so callers defensively write `getattr(p, "name", None) or … | Add `def spec_display_id(spec: object, default: str = "unknown") -> str: return getattr(spec, "name", None) or getattr(spec, "id", default)`… |
-| Repeated state-machine state normalisation `s if isinstance(s, str) else s.name` | Duplication | 6 | `StateMachineSpec.states` (and transition from_state/to_state) is a heterogeneous `list[str \| StateSpec]` with no normalising accessor, so e… | Add a method/property on StateMachineSpec, e.g. `def state_names(self) -> list[str]` and `def name_of(state: str \| StateSpec) -> str`, and h… |
-| Long if/elif keyword chains and hand-rolled INDENT/while-DEDENT/`if key=="..."` scaffolds  | Complexity | 14 | Each DSL construct's parser mixin grew its own copy of the same block-scanner skeleton (consume INDENT, loop until DEDENT, read key token, e… | Introduce one reusable block-parser helper: parse_kv_block(spec) where spec maps key-name -> (value-parser, target-field), driving the INDEN… |
-| Scattered parallel ScalarType-to-representation maps re-hand-rolled in every consumer (and | Complexity | 6 | There is no single owner of 'how a ScalarType maps to a representation'. Each subsystem that needs a projection of ScalarType (SQLAlchemy ty… | Define the mappings as data next to the ScalarType enum (or a small registry module) — one table per target representation, keyed by ScalarT… |
-| God methods / god classes in the runtime: wide constructors and mega-orchestrator methods  | Complexity | 5 | DazzleBackendApp and Repository are the two seams where AppSpec is turned into a live FastAPI app and into SQL. Every new framework feature … | Extract each cohesive build phase into a named collaborator with a single public method that takes an explicit context and returns its artif… |
-| Deeply nested control flow (4-8 levels) concentrated in parser sub-block bodies and the pa | Complexity | 4 | This is the downstream symptom of the copy-pasted KV-block scaffold plus inline validation: a method opens with the INDENT guard, loops unti… | Flatten with early-return/guard clauses and lift per-key validation into named predicate helpers (validate_tone, validate_mode) invoked afte… |
-| Hidden process-wide configuration singletons mutated via global rebind (or a class-attr wr | Mutable globals | 6 | Several runtime flags and references (dark-mode toggle, haptic, RLS user-attr names, retry accumulator, task-store backend, the AuthStore re… | Route these through the sanctioned dependency carriers (RuntimeServices / ServerState / request.app.state) so the value is an explicit depen… |
-| Compat shim: dual legacy string representation maintained alongside the typed predicate al | Mutable globals | 2 | aggregate_legacy.py keeps a string-based 'legacy where' format and condition_expr_to_legacy_where converters that exist purely to translate … | Per the no-backward-compat-shims rule (ADR-0003), delete aggregate_legacy.py and update the remaining workspace_aggregation.py call sites to… |
+| Pattern | Category | Inst. | Root cause (short) | Canonical fix |
+|---------|----------|-------|--------------------|---------------|
+| Logger acquired by string literal instead of `__name__` | Error handling | 131 | 281 modules use `getLogger(__name__)`, 131 hand-write `getLogger('dazzle.server')`; rename re-parents records under wrong logger, breaks per-module filtering. | `getLogger(__name__)` everywhere; reserve string names for deliberate shared channels, defined once as a constant. |
+| Runtime error reporting via `print()` not the logger | Error handling | 4 | `analytics_collector.py` logs a flush failure with `logger.warning(exc_info=True)` but `print()`s store/emit failures in the same path; `hot_reload.py` same. Errors invisible to operators, stack trace lost. | Replace error `print()` in `http/*`,`page/*` with `logger.exception/warning`; keep `print()` only for the serve banner / `__main__`. |
+| Outbound network I/O bypasses the retry helper | Error handling | 5 | `core/http_client.request_with_retries` exists & is used by domain call sites, but `agent/*` + `http/runtime/{api_middleware,health_aggregator,api_tracker}` issue raw httpx/requests — opt-in helper, so new calls default to no-retry. | Make retry the default transport: construct the AsyncClient with the backoff transport at the composition root and inject it. |
+| Deferred (function-body) `dazzle.*` imports as cycle avoidance | Coupling | 2218 | `dazzle/__init__` eagerly imports `http` → transitive cycles, so top-level imports trip a real cycle; function-level import is the workaround. Hides the dep graph, defers ImportError to first-call. Concentrated in `server.py` (105), `auth/store.py` (41), `app_factory.py` (40). | Break the cycle (leaf extraction à la #1426/#1055), hoist imports to top; true plugin boundaries → injected via RuntimeServices (ADR-0005). |
+| Backward-compat shims / wrappers despite ADR-0003 | Coupling | 25 | `evaluate_permission_bool` wrapper; ~6 linker delegated `@property` shims; fragment/region builder legacy aliases — kept because migrating all callers is locally costly. Two ways to call the same thing. | Per ADR-0003: delete the shim, migrate all callers in the same commit. |
+| BC re-export / fallback shims (second source of truth) | Duplication | 6 | `pptx_gen` re-exports ~40 primitives "for backwards compatibility"; `realtime_client.py` keeps a 900+-line `_REALTIME_CLIENT_JS_INLINE` duplicate of `static/js/realtime.js`; `mcp/knowledge_graph/store` re-exports for compat. | Migrate importers in one commit, delete the re-export/inline duplicate; serve the real static asset or fail loud. |
+| Inline entity-slug `name.lower().replace('_','-')` re-derived | Duplication | 10 | #1426 made `page.app_paths.entity_slug` the ONE formula + a drift gate, but the gate only guards the page/template path; callers in http/core/agent/testing re-type the one-liner. | Import & call `entity_slug()` (or the `*_path` builders); delete the inline form. |
+| Raw `raise HTTPException(404, …)` instead of `require_found` | Duplication | 34 | `require_found` + `test_no_inline_404_guard` exist, but the gate regex only matches the EXACT default `"Not found"` message; domain-specific messages and positional `HTTPException(404, …)` sidestep it (34 raw vs 9 helper). | Use `require_found(fetch(), "<Thing> not found")` — takes custom detail + narrows `T|None`→`T`. |
+| Inline id-first identity fallback `getattr(x,'id',None) or getattr(x,'name',…)` | Duplication | 8 | `spec_display_id` + its gate only handle `name`-then-`id`; PersonaSpec is `.id`-first, so id-first sites re-inline and evade the gate (`lsp/server.py`, `persona_journey.py`). | Add `spec_display_id(spec, prefer='id')` / a `persona_display_id` sibling; route id-first sites through it. |
+| IR-typed params annotated `Any` (appspec/workspace/entity/surface) | Type safety | 27 | Renderer-stack functions take known IR objects but annotate `Any` (leftover cycle-dodge); masks attr typos, kills mypy on the most-passed objects. | Annotate with the concrete `dazzle.core.ir` type (core is the bottom layer — no cycle); use a Protocol if only a subset is needed. |
+| Parser match-ladder in `entity.py`/`workspace.py` never adopted `parse_block_with_dispatch` | Complexity | 2 | The table-driven dispatch helper was adopted by 16 mixins; the two largest/oldest block parsers (`parse_entity` 3021 LOC / 86 elif arms; `_dispatch_workspace_keyword` 24-arm ladder) were never migrated — each new keyword appends an arm → unbounded growth, MI-rank C (#2 & #5 hotspots). | Migrate both to `parse_block_with_dispatch[StateT]` with an `_EntityState`/`_WorkspaceState` accumulator; collapse the elif chain to a lookup. |
+| Lazy module-level mutable cache + `global` + test-only `reset_*` | Mutable globals | 5 | `_signer_cache`, `_WIDGET_KIND_TO_FORM_TYPE`, `_dispatch_cache`, `_sa`, `_fingerprint_cache` — `_X=None` rebound via `global`, paired with a `reset_*` whose existence is the shared-state tell. Mostly unsynchronized (boot/render race). `# noqa: PLW0603` licenses it. | `functools.cache` for pure idempotent values (tests call `cache_clear`); RuntimeServices/ServerState for lifetime-bound state. Delete global + reset. |
+| Self-rolled `get_default_*()/set_*()` singleton (ADR-0005 violation) | Mutable globals | 2 | `_DEFAULT_ACCUMULATOR` (retry_accumulator) and `_DEFAULT_BACKEND` (task_store) — docstrings admit "process-wide singleton … not any FastAPI app", and `set_task_store` admits "swapping mid-flight strands in-flight tasks". | Move onto RuntimeServices/ServerState as injected fields; delete the module global + get/set free functions + reset helper. |
+| Boot-time boolean config flag via `configure_*()` + Jinja getter | Mutable globals | 2 | `_DARK_MODE_TOGGLE_ENABLED` / `_HAPTIC_ENABLED` in `theme.py` are copy-paste module booleans, while the same file correctly uses ContextVar one screen up. Blocks per-tenant override, makes tests order-dependent. | Store on manifest/ServerState (frozen UIChrome field), bind into the Jinja env like `theme_variant()` reads the ContextVar. |
+| God class — `TestRunner` / `DazzleClient` mega-classes | Complexity | 2 | `DazzleClient` (25 methods) mixes transport/CSRF/auth/CRUD/FK-cleanup/residue/data-gen; `TestRunner` (44 methods) orchestrates on top. Each new capability is one more method (responsibility accretion), MI-rank C (#7 hotspot). | Split into transport / EntityClient / CleanupManager / DataGenerator collaborators that TestRunner composes via injection. |
 
-## Structural Decay (live harness)
+### Structural Decay (live harness)
 
-The CI ratchet + import contracts gate *new* decay; this is the standing baseline.
+The CI complexity ratchet + import contracts gate *new* decay; this is the standing baseline.
 
-- **Ratchet:** clean   **Import contracts:** kept, allow-list size 9
-- **Priority refactor targets** (high-churn × MI-rank-C): `dazzle/http/runtime/server.py`, `dazzle/core/dsl_parser_impl/workspace.py`, `dazzle/core/dsl_parser_impl/entity.py`, `dazzle/testing/test_runner.py`, `dazzle/http/runtime/auth/store.py`, `dazzle/cli/testing.py`, `dazzle/core/linker_impl.py`
+- **Ratchet:** `clean` (no regressions vs baseline)   **Import contracts:** `kept` (5/5), allow-list size **3** (unchanged — no growth)
+- **Priority refactor targets** (high-churn × MI-rank-C): `dsl_parser_impl/workspace.py`, `dsl_parser_impl/entity.py`, `testing/test_runner.py`, `cli/testing.py`, `core/linker_impl.py`
 
 | Rank | Hotspot file | Score | Churn | MI |
 |------|--------------|-------|-------|----|
-| 1 | `dazzle/mcp/server/handlers_consolidated.py` | 8343.9 | 111 | A |
-| 2 | `dazzle/http/runtime/server.py` | 6800 | 68 | C |
-| 3 | `dazzle/core/dsl_parser_impl/workspace.py` | 6000 | 60 | C |
-| 4 | `dazzle/core/lexer.py` | 5583.2 | 78 | A |
-| 5 | `dazzle/core/ir/workspaces.py` | 5415.7 | 64 | B |
-| 6 | `dazzle/core/dsl_parser_impl/entity.py` | 5200 | 52 | C |
-| 7 | `dazzle/render/fragment/primitives/data.py` | 5107.2 | 60 | B |
-| 8 | `dazzle/testing/test_runner.py` | 4900 | 49 | C |
-| 9 | `dazzle/core/linker.py` | 4504.8 | 61 | A |
-| 10 | `dazzle/http/runtime/auth/store.py` | 4200 | 42 | C |
+| 1 | `mcp/server/handlers_consolidated.py` | 8343.9 | 111 | A |
+| 2 | `core/dsl_parser_impl/workspace.py` | 6100 | 61 | **C** |
+| 3 | `core/lexer.py` | 5649.3 | 79 | A |
+| 4 | `core/ir/workspaces.py` | 5415.7 | 64 | B |
+| 5 | `core/dsl_parser_impl/entity.py` | 5200 | 52 | **C** |
+| 6 | `render/fragment/primitives/data.py` | 5107.2 | 60 | B |
+| 7 | `testing/test_runner.py` | 4900 | 49 | **C** |
+| 8 | `core/linker.py` | 4578.7 | 62 | A |
 
-Highest-CC functions: `linker_impl.py:validate_references` (cc 119); `server.py:DazzleBackendApp._setup_routes` (cc 115); `page_routes.py:_build_dispatch_ctx` (cc 108); `list_handlers.py:_list_handler_body` (cc 106); `template_compiler.py:compile_appspec_to_templates` (cc 101)
+Highest-CC functions: `linker_impl.py:validate_references (cc 119)`, `page_routes.py:_build_dispatch_ctx (cc 108)`, `template_compiler.py:compile_appspec_to_templates (cc 101)`, `render/fragment/renderer/_emit.py:FragmentRenderer._emit (cc 98)`, `page_routes.py:create_page_routes (cc 84)`.
 
-> Decay is holding flat: the complexity ratchet passes clean against the committed baseline, all 3 import contracts are KEPT, and the cross-layer allow-list is still at 9 (no growth). The single best refactor target this round is dazzle/http/runtime/server.py — it is the #2 churn hotspot, MI rank C, and houses the second-highest-CC function in the tree (DazzleBackendApp._setup_routes, cc 115), so a route-setup decomposition buys the most. (linker_impl.py:validate_references at cc 119 is the highest single function but its file ranks #12, lower churn.)
+Note: decay is holding flat — ratchet passes clean, all 5 contracts kept, allow-list still 3 edges. Best single refactor target: `dsl_parser_impl/workspace.py` (#2 hotspot, MI-rank C) — directly overlaps the **parser match-ladder** semantic pattern above (migrate to `parse_block_with_dispatch`). `linker_impl.py` is a close second (priority queue + owns the CC-119 function).
 
-## Recommended Next Actions
+### Recommended Next Actions
 
-1. **Debug-only broad exception swallows (209 instances)** — the dominant *semantic* finding the harness can't see. Decide intent per site: narrow the exception type, or raise it to `warning`/`exception` so prod isn't blind. Reserve `except Exception → logger.debug` for genuinely cosmetic best-effort, with an inline comment. Enforce via the sentinel `python_audit` agent.
-2. **`back/runtime` god-modules via 485 deferred in-function imports** (server.py alone = 70) — the cycle-dodge that hides the tangle. Break it structurally: extract shared types/abstractions to leaf modules so top-level imports restore. Pairs with the harness's #1 priority target.
-3. **Refactor `server.py` (the harness's top target)** — #2 churn hotspot, MI-rank-C, houses `DazzleBackendApp._setup_routes` (cc 115). Decompose route setup into per-area sub-builders; the complexity ratchet then locks the gain.
+1. **Logger-by-string-literal (131 sites).** Highest-instance semantic smell the harness can't see; a real operability footgun (rename → orphaned logger, broken per-module filtering). Fix = mechanical `getLogger(__name__)` + a drift gate mirroring `test_no_regex_in_parser`. Best ROI this round.
+2. **Broaden two near-miss dedup gates that are being evaded** — `require_found` (34 raw `HTTPException(404)` sidestep the exact-message regex) and the id-first identity fallback (8 sites evade the name-first gate). Both helpers already exist; the fix is widening the gate regex + the id-first ordering, then migrating callers. Cheap, stops silent regrowth.
+3. **`dsl_parser_impl/workspace.py` → `parse_block_with_dispatch`** (the one decay target where a finder named a concrete smell). Migrating the two unconverted parser ladders (workspace + entity) attacks the #2 and #5 hotspots at their root and stops the per-keyword ladder growth.
 
-## Comparison with Previous Round (2026-05-28, v0.80.22)
+### Comparison with Previous Round (2026-06-19, a07c2a09b / v0.83.28)
 
-- **Regressions: 2 → 0.** Both genuine production FAILs from last round are **RESOLVED**: 1.3 core→mcp function-local import (`core/docs_gen.py:389`) is gone (and now double-locked by the live import-linter `core` contract); 1.8 Alpine `@window` bindings (`test-data-table.html`) are gone.
-- **Calibration fix landed.** 1.1 and 1.5a — previously over-reported as grep-count FAILs — now correctly read **PASS** (the finder applies the test-only/intentional calibration).
-- **New patterns: 15 → 17.** New framings this round: debug-only swallow (209) split out from the silent-swallow class; untyped `ctx: dict[str,Any]` region-builder thread (33); inline 404-guard copy-paste (13). The deferred-import coupling count jumped 22 → 485 as the finder broadened from 'circular-dep workaround only' to all intra-layer deferred dazzle imports.
-- **Decay delta:** ratchet **clean**, contracts **kept**, allow-list flat at **9** (no growth — the ratchet posture holds). `getattr()` count rose 1,855 → 2,141. No file climbed into a *new* C-rank vs the committed baseline (the ratchet guarantees this). Top hotspot/target unchanged: `server.py`.
+- **Regressions:** 0 failed both rounds — all established rules still hold.
+- **New patterns:** 15 this round vs 13 prior — similar surface; the recurring spine (deferred imports, ADR-0003 shims, IR-typed `Any`, god classes, 404-guard / identity-fallback dedup) persists.
+- **Resolved/shifted since last round:** the prior "inline `HTTPException(404, "Not found")`" and "identity fallback" patterns were *partially* closed — the `require_found` and `spec_display_id` helpers + gates now exist, so this round's findings are specifically **gate-evasion variants** (custom-detail 404s; id-first identity order) — a narrower, more accurate diagnosis. The prior "state-machine state normalisation" pattern did not resurface (helper adopted). New this round: logger-by-string-literal, retry-helper bypass, the `print()`-not-logger split, and the mutable-globals cluster (lazy caches / self-rolled singletons / boot config flags) called out individually.
+- **Decay delta:** ratchet still `clean`; import allow-list still **3** (no growth — good). Hotspot ranking stable; `workspace.py`/`entity.py`/`test_runner.py` remain the MI-rank-C priority targets. No file newly *climbed* into the C-rank set vs the prior table.

@@ -70,3 +70,10 @@
 - Decay: ratchet **clean**, contracts **kept**, allow-list **9** (flat); top target **server.py** (#2 hotspot, MI-C, _setup_routes cc=115). linker_impl.py::validate_references cc=119 is highest single fn but low-churn (#12).
 - Recommended next 3: (1) debug-only swallow audit via sentinel python_audit, (2) break back/runtime deferred-import cycles, (3) decompose server.py _setup_routes.
 - Commit: a07c2a09b
+
+## Smells Run — 2026-06-21
+- Regressions: 9/9 checks passed (0 FAIL; 1.5b/1.6/1.7 standing TRACK)
+- New patterns: 15 found
+- Top concern: Logger acquired by string literal instead of __name__ (131 sites) — operability footgun, harness-blind
+- Decay: ratchet clean, import contracts kept (5/5), allow-list 3 (no growth); top target dsl_parser_impl/workspace.py (#2 hotspot, MI-C — overlaps the unmigrated parse_block_with_dispatch ladder)
+- Commit: 36d431cf8
