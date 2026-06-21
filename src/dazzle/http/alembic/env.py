@@ -15,7 +15,6 @@ from typing import Any
 
 import sqlalchemy
 from alembic import context
-from alembic.operations import ops as alembic_ops
 
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 
@@ -162,7 +161,8 @@ def _process_revision_directives(context: Any, revision: Any, directives: list[A
     * **Legacy autogenerate (default; also ``--legacy-autogenerate``):**
       1. Suppress empty revisions (no-op when DSL hasn't changed).
       2. Scope to additive ops by default (no destructive whole-schema rewrite, #1427).
-      3. Inject postgresql_using clauses for safe type casts.
+      (No USING injection — type changes are stripped by step 2; the #1431 engine is
+      the canonical path for type-changes-with-USING. See ``_process_legacy_autogenerate``.)
     """
     if not directives:
         return
@@ -225,45 +225,28 @@ def _legacy_scope_to_additive(script: Any, directives: list[Any]) -> bool:
     return False
 
 
-def _legacy_inject_using_clauses(script: Any) -> None:
-    """Inject ``postgresql_using`` clauses for safe type casts (legacy path)."""
-    try:
-        from dazzle.http.runtime.safe_casts import get_using_clause
-    except ImportError:
-        return
-
-    for op in script.upgrade_ops.ops:
-        if not isinstance(op, alembic_ops.ModifyTableOps):
-            continue
-        for sub_op in op.ops:
-            if not isinstance(sub_op, alembic_ops.AlterColumnOp):
-                continue
-            if sub_op.modify_type is None or sub_op.existing_type is None:
-                continue
-            # Get Postgres type names from SA types
-            from_name = sub_op.existing_type.__class__.__name__.upper()
-            to_name = sub_op.modify_type.__class__.__name__.upper()
-            using = get_using_clause(from_name, to_name, sub_op.column_name)
-            if using:
-                sub_op.kw["postgresql_using"] = using
-
-
 def _process_legacy_autogenerate(script: Any, directives: list[Any]) -> None:
     """The pre-#1431 metadata-vs-DB autogenerate path (``--legacy-autogenerate``).
 
     1. Suppress empty revisions (no-op when DSL hasn't changed).
     2. Scope to additive ops by default (no destructive whole-schema rewrite, #1427).
-    3. Inject postgresql_using clauses for safe type casts.
+
+    Note: this path does NOT inject ``postgresql_using`` clauses for type changes.
+    The #1427 additive scoping (step 2) strips every ``AlterColumnOp`` *before* any
+    USING handling could run, so the old ``_legacy_inject_using_clauses`` only ever
+    fired under ``DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1`` — and even then it set
+    ``kw["postgresql_using"]``, which Alembic's file renderer silently drops (#1433).
+    Removed in v0.83.64: the #1431 engine (``dazzle db revision`` sans
+    ``--legacy-autogenerate``) is the canonical path for type changes with a USING
+    cast; an operator who bypasses both the engine and the destructive guardrail
+    owns their own casts (hand-author the ``USING`` in the generated revision).
     """
     # Suppress empty migrations
     if script.upgrade_ops.is_empty():
         directives[:] = []
         return
 
-    if _legacy_scope_to_additive(script, directives):
-        return
-
-    _legacy_inject_using_clauses(script)
+    _legacy_scope_to_additive(script, directives)
 
 
 # ---------------------------------------------------------------------------

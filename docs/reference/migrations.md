@@ -196,7 +196,7 @@ For the type pairs in the table below, the engine emits a raw `ALTER COLUMN ... 
 
 Any pair not in this table gets a seam.
 
-> **Known limitation (legacy path only):** on the legacy `--legacy-autogenerate` path, Alembic's file renderer silently drops `postgresql_using` kwargs from `AlterColumnOp`. The engine path works around this by emitting type changes as raw `ExecuteSQLOp` statements (which ARE serialized verbatim). Use the engine path (default) for any type change; do not rely on `--legacy-autogenerate` for type changes.
+> **Type changes need the engine path (default), not `--legacy-autogenerate`.** The engine emits type changes as raw `ExecuteSQLOp` statements, so the `USING` cast is serialized into the revision file verbatim. The legacy path does **not** apply `USING` casts: the #1427 additive scoping strips every `AlterColumnOp` before any cast handling, and Alembic's file renderer silently drops `postgresql_using` kwargs from an `AlterColumnOp` anyway. (The vestigial legacy USING injection — only ever reachable under `DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1`, and broken by the render-drop — was removed in v0.83.64, #1433.) On `--legacy-autogenerate`, hand-author any `USING` clause in the generated revision.
 
 ---
 

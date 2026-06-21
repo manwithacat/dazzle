@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.64] - 2026-06-21
+
+### Removed
+- **#1433 — the vestigial legacy `postgresql_using` injection (`_legacy_inject_using_clauses`).**
+  Tracing reachability showed it was near-dead and broken: in the legacy
+  `--legacy-autogenerate` / `db migrate` / `db baseline` path, the #1427 additive scoping
+  strips every `AlterColumnOp` *before* the injection could run, so it only ever fired
+  under `DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1` — and even then it set `kw["postgresql_using"]`,
+  which Alembic 1.18's file renderer silently drops, so the generated type change failed
+  with `DatatypeMismatch` on a populated column anyway. Rather than keep a half-working
+  feature for a contradictory stance (raw destructive autogenerate *and* babied casts),
+  it's removed: the #1431 engine (`dazzle db revision`, default) is the canonical path for
+  type-changes-with-`USING`. An operator on `--legacy-autogenerate` who needs a `USING`
+  cast hand-authors it in the generated revision.
+
+### Agent Guidance
+- **Type changes need the engine path.** `dazzle db revision` (default, #1431 engine) emits
+  type changes as raw `ExecuteSQLOp` so the `USING` cast survives render. `--legacy-autogenerate`
+  no longer applies `USING` casts at all — hand-author them. See `docs/reference/migrations.md`.
+
 ## [0.83.63] - 2026-06-21
 
 ### Fixed
