@@ -215,9 +215,9 @@ def _verify_snapshot_consistency(rev: Any, cfg: Any) -> None:
       A metadata-vs-DB autogenerate compare would need a DB connection and
       is too brittle for a warn-only post-generation gate.
     - The comparison is string-level: the embedded ``snapshot_literal`` is
-      ``eval()``'d back to a dict and compared with the live projection.
-      If ``eval()`` fails (malformed literal), the check is skipped with a
-      DEBUG log.
+      parsed back to a dict with ``ast.literal_eval`` (safe — literals only,
+      never arbitrary code) and compared with the live projection. If the
+      parse fails (malformed literal), the check is skipped with a DEBUG log.
     - ``project_current()`` re-imports the live MetaData from the project in
       the CWD, so it inherits any load failure the engine itself would see.
       Any exception is caught and logged at DEBUG — never re-raised.
