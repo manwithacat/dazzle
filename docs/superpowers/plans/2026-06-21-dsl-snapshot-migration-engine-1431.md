@@ -35,7 +35,7 @@
 **Modified:**
 - `src/dazzle/cli/db.py` — `revision_command` routes through the engine; `--legacy-autogenerate` flag; `snapshot-baseline` subcommand; post-gen verification.
 - `src/dazzle/core/dsl_parser_impl/_lexical.py` + the entity/field parser mixin — `was:` clause.
-- `src/dazzle/http/specs/entity.py` — `FieldSpec.renamed_from` / `EntitySpec.renamed_from`.
+- `src/dazzle/core/ir/fields.py` + `src/dazzle/core/ir/domain.py` — `FieldSpec.renamed_from` / `EntitySpec.renamed_from` (core.ir types the parser populates).
 - `docs/reference/grammar.md`, `tests/unit/test_docs_drift.py` — `was:` clause.
 - `src/dazzle/http/alembic/env.py` — engine injects rendered ops + embeds the snapshot via `process_revision_directives` (legacy guardrail stays for the `--legacy-autogenerate` path).
 
@@ -327,12 +327,12 @@ def test_add_column_renders_add_and_inverse_drop():
 ### Task 4.1: IR — `renamed_from` on field/entity specs
 
 **Files:**
-- Modify: `src/dazzle/http/specs/entity.py` (`FieldSpec`, `EntitySpec`)
-- Test: `tests/unit/test_schema_diff.py` (or a spec test)
+- **Correction (verified):** `renamed_from` goes on the **core.ir** types the PARSER populates and that `extract_rename_hints(appspec)` reads off `appspec.domain.entities` — NOT the converted `http/specs/entity.py` runtime types. Modify `src/dazzle/core/ir/fields.py` (`FieldSpec`, line ~164) and `src/dazzle/core/ir/domain.py` (`EntitySpec`, line ~433).
+- Test: `tests/unit/test_parser.py` or a core.ir spec test (construct the core.ir `FieldSpec`/`EntitySpec`).
 
-**Interfaces:** `FieldSpec.renamed_from: str | None = None`, `EntitySpec.renamed_from: str | None = None`.
+**Interfaces:** `dazzle.core.ir.fields.FieldSpec.renamed_from: str | None = None`, `dazzle.core.ir.domain.EntitySpec.renamed_from: str | None = None`.
 
-- [ ] **Step 1: Failing test** — construct `FieldSpec(..., renamed_from="old")`; assert the attr.
+- [ ] **Step 1: Failing test** — construct `dazzle.core.ir.fields.FieldSpec(..., renamed_from="old")` and `dazzle.core.ir.domain.EntitySpec(..., renamed_from="Old")`; assert the attr.
 - [ ] **Step 2–4:** add the fields (default None); RED→GREEN; confirm no IR-surface drift test breaks (update `docs/api-surface/ir-types` baseline via `dazzle inspect api ir-types --write` if needed + a CHANGELOG note).
 - [ ] **Step 5: Commit** `feat(ir): renamed_from on field/entity specs (#1431 phase 4)`
 
