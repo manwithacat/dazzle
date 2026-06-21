@@ -69,53 +69,60 @@ Plain dicts make the embedded `SCHEMA_SNAPSHOT = {...}` literal trivial to rende
 - Test: `tests/unit/test_schema_snapshot.py`
 
 **Interfaces:**
-- Consumes: `appspec.domain.entities: list[EntitySpec]`; `EntitySpec.name`, `.fields: list[FieldSpec]`; `FieldSpec.name`, `.type: FieldType` (`.kind` ∈ scalar/enum/ref, `.scalar_type`, `.max_length`, `.precision`, `.scale`, `.ref_entity`), `.required`, `.default`, `.indexed`, `.unique`. Table name = the entity's table name (mirror `to_api_plural`/the existing entity→table rule — read `sa_schema.py` `_entity_to_table` or equivalent and reuse it; do NOT re-derive).
-- Produces: `project_schema(appspec: Any) -> Snapshot` (the plain-dict shape above), `_canonical_type(field_type) -> str`.
+- **Critical design correction (verified against the code):** do NOT re-derive entity→table / field→column mapping rules. Tables are named `entity.name` *verbatim* (`sa.Table(entity.name, ...)`, sa_schema.py:632 — e.g. `"Invoice"`, NOT `"invoices"`), FK columns are `field.name` *verbatim* (not `<name>_id`), and shared_schema injects `tenant_id` + composite FKs + indexes. The single source of truth is `dazzle.http.alembic.metadata_loader.load_target_metadata() -> sqlalchemy.MetaData` (importable, side-effect-free; the SAME builder Alembic's autogenerate target uses; it loads the project appspec from CWD and calls `sa_schema.build_metadata` with the right `partition_key`/`tenant_scoped`/`surfaces`). The projection **introspects that MetaData** → the snapshot is definitionally aligned with the real schema.
+- Consumes: `sqlalchemy.MetaData` (`.sorted_tables`; per `sa.Table`: `.name`, `.columns` → `sa.Column(.name, .type, .nullable, .server_default, .primary_key)`, `.foreign_keys` → `fk.column.table.name`, `.indexes`, unique constraints); `metadata_loader.load_target_metadata`.
+- Produces:
+  - `project_schema(metadata: sqlalchemy.MetaData) -> Snapshot` — **pure introspection** (unit-testable with a hand-built MetaData; no DB, no CWD dependency).
+  - `project_current() -> Snapshot` — thin wrapper: `project_schema(load_target_metadata())`.
+  - `_sa_type_to_token(sa_type: Any) -> str` — map a SQLAlchemy type instance → the canonical token (`Text→"text"`, `Integer→"integer"`, `BigInteger→"bigint"`, `Boolean→"boolean"`, `Numeric→f"numeric({p},{s})"`, `Float→"float"`, `Date→"date"`, `DateTime→"timestamptz"`, `Uuid→"uuid"`, `JSON→"json"`; fallback `str(sa_type).lower()`).
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing test** (pure introspection — build a small MetaData by hand)
 
 ```python
+import sqlalchemy as sa
 from dazzle.db.schema_snapshot import project_schema
 
 
-class _F:  # minimal FieldSpec stand-in matching attrs project_schema reads
-    def __init__(self, name, type_, required=False, default=None, indexed=False, unique=False):
-        self.name, self.type, self.required = name, type_, required
-        self.default, self.indexed, self.unique = default, indexed, unique
+def _meta():
+    md = sa.MetaData()
+    sa.Table("Customer", md, sa.Column("id", sa.Uuid(), primary_key=True),
+             sa.Column("name", sa.Text(), nullable=False))
+    sa.Table("Invoice", md, sa.Column("id", sa.Uuid(), primary_key=True),
+             sa.Column("total", sa.Integer(), nullable=True),
+             sa.Column("customer", sa.Uuid(), sa.ForeignKey("Customer.id")))
+    return md
 
 
-class _T:
-    def __init__(self, kind, scalar_type=None, ref_entity=None, max_length=None, precision=None, scale=None):
-        self.kind, self.scalar_type, self.ref_entity = kind, scalar_type, ref_entity
-        self.max_length, self.precision, self.scale = max_length, precision, scale
+def test_project_schema_introspects_metadata():
+    snap = project_schema(_meta())
+    # Table names are the entity names VERBATIM (not pluralised/lowercased).
+    assert set(snap) == {"Customer", "Invoice"}
+    inv = snap["Invoice"]
+    assert inv["columns"]["total"]["type"] == "integer"
+    assert inv["columns"]["total"]["nullable"] is True
+    assert inv["columns"]["id"]["pk"] is True
+    # FK column is the field name VERBATIM; target is the referenced table name.
+    assert inv["fks"]["customer"] == "Customer"
 
 
-def test_project_schema_basic_entity(simple_appspec):
-    snap = project_schema(simple_appspec)
-    assert "invoices" in snap
-    cols = snap["invoices"]["columns"]
-    assert cols["total"]["type"] == "integer"
-    assert cols["total"]["nullable"] is True
-    # a ref field becomes an FK column -> referenced table
-    assert snap["invoices"]["fks"]["customer_id"] == "customers"
+def test_project_schema_is_deterministic():
+    assert project_schema(_meta()) == project_schema(_meta())  # sorted, stable
 ```
-
-(Build `simple_appspec` as a `SimpleNamespace(domain=SimpleNamespace(entities=[...]))` with two entities — `Invoice{total:int, customer: ref Customer}`, `Customer{name:str}` — using `_F`/`_T`. Match the real `EntitySpec` table-naming + ref→`<name>_id` column rule by reading `sa_schema.py`; if the real rule is `to_api_plural(entity.name)`, the test entity names must produce `invoices`/`customers`.)
 
 - [ ] **Step 2: Run to verify it fails** — `pytest tests/unit/test_schema_snapshot.py -v` → ImportError.
 
-- [ ] **Step 3: Implement `project_schema`** — iterate `appspec.domain.entities`; per entity build a `TableSnap`:
-  - table name via the reused entity→table helper;
-  - for each `FieldSpec`: `ColSnap` with `_canonical_type(field.type)`, `nullable = not field.required` (the implicit `id` → `pk=True, nullable=False`; mirror `_field_to_column`'s id handling), `default = repr(field.default) if field.default is not None else None`, `pk = (field.name == "id")`;
-  - `unique` list from fields with `.unique`; `indexes` list from fields with `.indexed`;
-  - `fks`: for `field.type.kind == "ref"`, column `f"{field.name}_id"` → table-of(`field.type.ref_entity`).
-  - `_canonical_type` maps `FieldType` → the canonical token (mirror `_scalar_type_to_sa`'s mapping but emit the canonical *string* tokens, not SA objects; `numeric(p,s)` when precision set).
-  - **Exclude** computed fields, validators, state-machine, relations-without-FK, and any framework-injected implicit columns *other than* `id` (decision: project the author-declared columns + `id`; `tenant_id`/timestamps are framework-injected and excluded — confirm against `sa_schema`/`pg_backend` injection and document the choice in the module docstring).
-  - Sort all dict keys + lists for determinism.
+- [ ] **Step 3: Implement `project_schema`** — pure introspection of `metadata.sorted_tables`:
+  - table key = `table.name`;
+  - per `sa.Column`: `ColSnap` = `{"type": _sa_type_to_token(col.type), "nullable": bool(col.nullable), "default": _render_server_default(col.server_default), "pk": bool(col.primary_key)}` (`_render_server_default` → the SQL text string or `None`);
+  - `fks`: `{col.name: fk.column.table.name for col in table.columns for fk in col.foreign_keys}`;
+  - `uniques`: column names with `col.unique` plus single-column `UniqueConstraint` columns;
+  - `indexes`: sorted column names covered by `table.indexes` (single-column indexes; composite indexes recorded as the tuple-joined key — keep simple: list each index's column-name list joined by `,`);
+  - sort every dict key + list for determinism.
+  Then `project_current()` = `project_schema(load_target_metadata())`, and `_sa_type_to_token` per the mapping above. Document in the module docstring that the snapshot is whatever `load_target_metadata` produces (incl. shared_schema `tenant_id`/composite-FK/index injection) — so it is always consistent with the canonical schema, no exclusion list needed.
 
 - [ ] **Step 4: Run to verify it passes.**
 
-- [ ] **Step 5: Commit** `feat(db): project_schema AppSpec→relational snapshot (#1431 phase 1)`
+- [ ] **Step 5: Commit** `feat(db): project_schema by introspecting canonical MetaData (#1431 phase 1)`
 
 ### Task 1.2: Snapshot literal render + round-trip
 
