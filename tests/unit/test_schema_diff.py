@@ -188,7 +188,7 @@ def test_drop_table_with_snap():
     """DropTable carries prior table snapshot for downgrade."""
     prior_snap = {
         "columns": {"id": {"type": "uuid"}, "name": {"type": "varchar"}},
-        "fks": [],
+        "fks": {},
         "indexes": [],
         "uniques": [],
     }

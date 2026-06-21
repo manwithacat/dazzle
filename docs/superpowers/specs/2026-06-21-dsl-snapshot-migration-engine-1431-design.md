@@ -49,10 +49,12 @@ indexes, and the implicit framework columns.
 
 ### 3.1 Snapshot projection + storage
 - A pure **relational-schema projection** of the AppSpec: per *project* entity →
-  `{table, columns: {name → {type, nullable, length, default, unique, pk}}, fks: [...],
-  indexes: [...]}`, deterministically ordered (sorted keys), excluding all UI/non-schema
-  fields. This is a stable, diffable shape — NOT a raw `EntitySpec.model_dump` (which
-  carries UI hints, validators, etc.).
+  `{table, columns: {name → {type, nullable, default, pk}}, fks: {col → ref_table},
+  indexes: [...], uniques: [...]}`, deterministically ordered (sorted keys), excluding all
+  UI/non-schema fields. `fks` is a `dict[str, str]` (column name → referenced table name);
+  `uniques` is a flat list of column names (not a per-column attribute on ColSnap — see §6
+  for the composite-unique limitation). This is a stable, diffable shape — NOT a raw
+  `EntitySpec.model_dump` (which carries UI hints, validators, etc.).
 - Emitted as a `SCHEMA_SNAPSHOT = {...}` constant embedded in each generated revision
   `.py` (the snapshot is atomic with the migration that produced it and travels through
   git with it).
@@ -161,7 +163,18 @@ project-lineage head revision.SCHEMA_SNAPSHOT ─► prev Snapshot │
 - **First project revision** — no prior snapshot → full create of all project tables.
 - **Empty diff** — no DSL schema change → no revision emitted (existing empty-suppression).
 - **Framework vs project entities** — only project entities are projected/diffed; framework tables are baseline + their own lineage.
-- **Implicit framework columns** (id, tenant_id, timestamps) — projected consistently (or consistently excluded) so they never appear as spurious adds/drops. Decision: **exclude** framework-injected implicit columns from the project projection (they're framework-owned and created by the framework baseline / `_init_db`); the engine diffs only author-declared columns. (Confirm during impl against how `sa_schema`/`pg_backend` inject them.)
+- **Implicit framework columns** (id, tenant_id, timestamps) — the projection does NOT
+  exclude framework columns. It introspects whatever `load_target_metadata` produces,
+  including shared-schema `tenant_id`, composite-FK columns, and indexes that the framework
+  injects. Because the same introspection runs for both `prev` and `curr` snapshots,
+  framework-injected columns appear in both sides of the diff and cancel out — producing no
+  spurious adds or drops. This is simpler and more robust than maintaining an exclusion
+  list that must track every column `sa_schema`/`pg_backend` inject.
+- **Composite UNIQUE constraints** — currently flattened to per-column entries in the
+  `uniques` list. A `UNIQUE(tenant_id, email)` composite constraint cannot be distinguished
+  from two independent single-column uniques in this shape. Phase-3 (renderer) should
+  address fidelity here, following the composite-index pattern; for now, composite uniques
+  are a known approximation.
 - **Dual-lineage multi-head** — resolve the project-lineage head for the snapshot; error clearly if the project head is ambiguous (mirror the existing `_guard_single_head` behavior).
 - **Hand-edited / legacy migrations without `SCHEMA_SNAPSHOT`** — if the project head has no embedded snapshot (pre-engine migration), fall back to treating prev as unknown: either (a) require a one-time `dazzle db snapshot-baseline` to stamp the current AppSpec as the baseline snapshot, or (b) prev = current (emit nothing, stamp snapshot). Choose (a) — explicit baseline stamping — so the first engine revision after adoption is correct. Documented in the migration runbook.
 
