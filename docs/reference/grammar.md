@@ -42,7 +42,7 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **Additional v0.2 keywords**: `defaults`, `focus`, `group_by`, `where`, `filter_map`
 
-**v0.34.0 Platform Capability Keywords**: `soft_delete`, `signable`, `signing_validator`, `signing_template`, `tenant_host`, `managed_by`, `temporal`, `subtype_of`, `subtype_panel`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `job`, `retry_backoff`, `dead_letter`, `ranking`, `highlight`, `tokenizer`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`, `expose`
+**v0.34.0 Platform Capability Keywords**: `soft_delete`, `signable`, `signing_validator`, `signing_template`, `tenant_host`, `managed_by`, `temporal`, `subtype_of`, `subtype_panel`, `was`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `job`, `retry_backoff`, `dead_letter`, `ranking`, `highlight`, `tokenizer`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`, `expose`
 
 **v0.44.0 Heatmap / Progress / Activity Feed region keywords**: `activity_feed`, `tree`, `rows`, `columns`, `value`, `thresholds`, `stages`, `complete_at`
 
@@ -288,12 +288,19 @@ entity_metadata ::= "intent" ":" STRING NEWLINE
                   | "patterns" ":" IDENT ("," IDENT)* NEWLINE
                   | "extends" ":" IDENT ("," IDENT)* NEWLINE
                   | "subtype_of" ":" IDENT NEWLINE
+                  | "was" ":" IDENT NEWLINE        (* #1431 rename hint *)
                   | "archetype" ":" IDENT NEWLINE ;
 
 field_line    ::= IDENT ":" field_def NEWLINE ;
 
-field_def     ::= type_spec field_modifier*
+field_def     ::= type_spec field_modifier* rename_hint?
                 | "computed" computed_expr ;
+
+(* #1431 migration engine: `was: old_name` marks a renamed field/entity so the
+   migration planner emits a RENAME instead of drop+add. Transient — never
+   persisted to the schema. On a field it trails the modifiers; on an entity it
+   is a body keyword (entity_metadata above). *)
+rename_hint   ::= "was" ":" IDENT ;
 
 field_modifier ::= "required"
                  | "optional"

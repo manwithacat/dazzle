@@ -37,6 +37,8 @@ class _EntityParseContext:
     signing_template: str | None = None
     # Subtype-of polymorphism (v0.71.180, #1217 Phase 3e.i)
     subtype_of: str | None = None
+    # #1431 migration engine (Task 4.2): entity-level `was: OldName` rename hint
+    renamed_from: str | None = None
     # Temporal / effective-dated spec (v0.71.161 / #1223 Phase 3a.i)
     temporal: ir.TemporalSpec | None = None
     # Tenant host routing spec (v0.80.7, #1289 slice 1)
@@ -171,6 +173,8 @@ class EntityParserMixin:
                 ctx.temporal = self._parse_entity_temporal()
             elif self.match(TokenType.SUBTYPE_OF):
                 ctx.subtype_of = self._parse_entity_subtype_of()
+            elif self.match(TokenType.WAS):
+                ctx.renamed_from = self._parse_was_hint()
             elif self.match(TokenType.BULK):
                 ctx.bulk_config = self._parse_entity_bulk()
             elif self.match(TokenType.GRAPH_EDGE):
@@ -1192,6 +1196,10 @@ class EntityParserMixin:
         else:
             field_type = self.parse_type_spec()
             modifiers, default, default_expr, pii, storage = self.parse_field_modifiers()
+            # #1431 (Task 4.2): optional trailing `was: old_name` rename hint.
+            # Placed after modifiers so it composes with them on one field line:
+            #   title: str(200) required was: name
+            renamed_from = self._parse_was_hint() if self.match(TokenType.WAS) else None
             ctx.fields.append(
                 ir.FieldSpec(
                     name=field_name,
@@ -1201,10 +1209,41 @@ class EntityParserMixin:
                     default_expr=default_expr,
                     pii=pii,
                     storage=storage,
+                    renamed_from=renamed_from,
                 )
             )
 
         self.skip_newlines()
+
+    def _parse_was_hint(self) -> str:
+        """Parse a ``was: old_name`` rename hint, returning ``old_name`` (#1431).
+
+        Shared by the field-level (trailing on a field line) and entity-level
+        (a body keyword) rename hints. Consumes the ``WAS`` token + ``COLON``,
+        then validates the following identifier via the deterministic
+        :func:`is_rename_hint_name` recogniser (no re, ADR-0024). A bare
+        ``was:`` with no name is a clear parse error.
+        """
+        from ._lexical import is_rename_hint_name
+
+        self.expect(TokenType.WAS)
+        self.expect(TokenType.COLON)
+        tok = self.current_token()
+        if tok.type in (
+            TokenType.COLON,
+            TokenType.NEWLINE,
+            TokenType.INDENT,
+            TokenType.DEDENT,
+            TokenType.EOF,
+        ) or not is_rename_hint_name(str(tok.value)):
+            raise make_parse_error(
+                f"`was:` rename hint expects an identifier (the previous name), got {tok.value!r}.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()
+        return str(tok.value)
 
     # ------------------------------------------------------------------
     # Entity construction
@@ -1304,6 +1343,7 @@ class EntityParserMixin:
             managed_by=ctx.managed_by,
             api_expose=ctx.api_expose,
             auth_identity=ctx.auth_identity,
+            renamed_from=ctx.renamed_from,
             source=loc,
         )
 
