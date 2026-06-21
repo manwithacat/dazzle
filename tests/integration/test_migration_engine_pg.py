@@ -100,6 +100,32 @@ def _versions_dir(root: Path) -> Path:
     return root / ".dazzle" / "migrations" / "versions"
 
 
+def _upgrade_body(revision_text: str) -> str:
+    """Extract the text of the ``def upgrade():`` function from a revision file.
+
+    Assertions about *forward* migration ops (non-destructive, no spurious ops)
+    must target the upgrade body only — the downgrade legitimately contains
+    ``drop_table``/``drop_column``/``add_column`` as inverses of forward ops.
+    Returns the full file text as a fallback if the function boundary can't be
+    parsed (so assertions stay conservative rather than silently passing on a
+    missing upgrade function).
+    """
+    try:
+        # Find the start of def upgrade():
+        start = revision_text.index("def upgrade()")
+        # Find the next top-level def or class after upgrade (or end of file)
+        tail = revision_text[start:]
+        # The next top-level function/class starts after the first newline
+        next_def = tail.find("\ndef ", 1)
+        if next_def == -1:
+            next_def = tail.find("\nclass ", 1)
+        if next_def == -1:
+            return tail  # upgrade is the last definition
+        return tail[:next_def]
+    except ValueError:
+        return revision_text  # conservative fallback
+
+
 def _project_revision_files(root: Path) -> list[Path]:
     """Project revision files, newest LAST (by mtime).
 
@@ -238,6 +264,50 @@ def test_legacy_autogenerate_path_has_no_snapshot(
     assert "create_table" in text
 
 
+def test_unsafe_not_null_add_renders_data_seam(
+    in_project: tuple[Path, str],
+) -> None:
+    """Task 5.1: adding a NOT NULL field with no default emits the expand/contract
+    scaffold with a hand-author DATA MIGRATION seam in the generated upgrade()."""
+    from dazzle.cli.db import revision_command, upgrade_command
+
+    project, _ = in_project
+
+    # Baseline: create the Task table.
+    revision_command(message="baseline", autogenerate=True, legacy_autogenerate=False)
+    upgrade_command(revision="head", no_rls=True)
+    baseline_files = _project_revision_files(project)
+
+    # Evolve: add a NOT NULL field with NO default (`required`, no `=`) → unsafe.
+    unsafe_dsl = (
+        _BASE_DSL + "  owner: str(120) required\n"  # appended under the Task entity block
+    )
+    (project / "dsl" / "app.dsl").write_text(unsafe_dsl, encoding="utf-8")
+
+    revision_command(message="add owner not null", autogenerate=True, legacy_autogenerate=False)
+
+    files = _project_revision_files(project)
+    new_files = [p for p in files if p not in set(baseline_files)]
+    assert len(new_files) == 1, "exactly one new revision expected"
+    text = new_files[0].read_text(encoding="utf-8")
+
+    # The raw seam marker must be fully expanded (never left in the file).
+    assert "__DAZZLE_DATA_MIGRATION_SEAM__" not in text, "raw seam marker must be expanded"
+    # The hand-author data-migration block is present.
+    assert "# === DATA MIGRATION (hand-author) ===" in text, (
+        f"expected DATA MIGRATION seam in unsafe revision; got:\n{text}"
+    )
+    assert "# === END DATA MIGRATION ===" in text
+    # Expand/contract scaffold: add the column NULLABLE, then finalize NOT NULL.
+    assert "add_column('Task'" in text
+    assert "nullable=True" in text, "expand step adds the column NULLABLE"
+    assert "nullable=False" in text, "contract step finalizes NOT NULL"
+
+    # The scaffold applies cleanly against an EMPTY table (no rows to backfill),
+    # proving the generated migration is runnable as-emitted.
+    upgrade_command(revision="head", no_rls=True)
+
+
 def test_engine_resolves_field_rename_not_drop_add(
     in_project: tuple[Path, str],
 ) -> None:
@@ -353,3 +423,591 @@ entity Task "Task":
         row = conn.execute('SELECT name FROM "Task" LIMIT 1').fetchone()
         assert row is not None, "the pre-rename row must survive the upgrade"
         assert row[0] == "hello", f"row data must survive the rename intact; got name={row[0]!r}"
+
+
+# ---------------------------------------------------------------------------
+# Task 6.2: snapshot-baseline adoption command
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def in_project_no_snapshot(
+    tmp_path: Path, scratch_url: str, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[tuple[Path, str]]:
+    """Project whose HEAD migration was written WITHOUT the engine (no SCHEMA_SNAPSHOT).
+
+    Simulates the adoption scenario: a project that used legacy autogenerate
+    (or hand-authored migrations) before the #1431 engine existed.  The head
+    revision has no ``SCHEMA_SNAPSHOT`` → ``load_head_snapshot`` returns ``{}``.
+    """
+    project = tmp_path / "adopt_proj"
+    project.mkdir()
+    psycopg_url = scratch_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    _write_project(project, _BASE_DSL, psycopg_url)
+    monkeypatch.chdir(project)
+    monkeypatch.setenv("DATABASE_URL", psycopg_url)
+    monkeypatch.delenv("DAZZLE_ENV", raising=False)
+
+    from dazzle.cli.db import stamp_command
+
+    stamp_command(revision="head")
+
+    # Write a legacy (no-snapshot) revision by using --legacy-autogenerate.
+    # This creates a revision with create_table ops but no SCHEMA_SNAPSHOT.
+    from dazzle.cli.db import revision_command, upgrade_command
+
+    revision_command(message="legacy baseline", autogenerate=True, legacy_autogenerate=True)
+    upgrade_command(revision="head", no_rls=True)
+
+    yield project, psycopg_url
+
+
+def test_snapshot_baseline_adoption_scenario(
+    in_project_no_snapshot: tuple[Path, str],
+) -> None:
+    """Task 6.2: snapshot-baseline stamps the current projection as the head snapshot.
+
+    Proves the complete adoption scenario:
+    1. Before snapshot-baseline: ``load_head_snapshot`` returns ``{}`` (legacy head).
+    2. snapshot-baseline writes an empty-upgrade revision carrying SCHEMA_SNAPSHOT.
+    3. The new head snapshot matches the current DSL projection.
+    4. A subsequent ``dazzle db revision`` with unchanged DSL emits NOTHING (empty
+       delta, because the baseline now correctly represents the current schema).
+    """
+    from alembic.script import ScriptDirectory
+
+    from dazzle.cli.db import (
+        _get_alembic_cfg,
+        revision_command,
+        snapshot_baseline_command,
+        upgrade_command,
+    )
+    from dazzle.db.schema_snapshot import load_head_snapshot, project_current
+
+    project, _ = in_project_no_snapshot
+
+    # --- 1. Verify the pre-adoption state: head carries no SCHEMA_SNAPSHOT ---
+    cfg = _get_alembic_cfg()
+    script_dir = ScriptDirectory.from_config(cfg)
+    pre_snapshot = load_head_snapshot(script_dir)
+    assert pre_snapshot == {}, (
+        f"pre-adoption head should have no SCHEMA_SNAPSHOT; got: {list(pre_snapshot)}"
+    )
+
+    before_files = _project_revision_files(project)
+
+    # --- 2. Run snapshot-baseline ---
+    snapshot_baseline_command()
+
+    # --- 3. Exactly one new revision file was written ---
+    after_files = _project_revision_files(project)
+    new_files = [p for p in after_files if p not in set(before_files)]
+    assert len(new_files) == 1, f"expected exactly 1 new revision; got {len(new_files)}"
+
+    baseline_rev_text = new_files[0].read_text(encoding="utf-8")
+
+    # --- 4. New revision carries SCHEMA_SNAPSHOT ---
+    assert "SCHEMA_SNAPSHOT" in baseline_rev_text, (
+        f"snapshot-baseline revision must embed SCHEMA_SNAPSHOT; got:\n{baseline_rev_text}"
+    )
+
+    # --- 5. New revision has an EMPTY upgrade (no schema ops) ---
+    assert "create_table" not in baseline_rev_text, (
+        "snapshot-baseline revision must not contain create_table ops"
+    )
+    assert "add_column" not in baseline_rev_text, (
+        "snapshot-baseline revision must not contain add_column ops"
+    )
+    assert "drop_table" not in baseline_rev_text, (
+        "snapshot-baseline revision must not contain drop_table ops"
+    )
+
+    # --- 6. The embedded snapshot matches the live DSL projection ---
+    # Apply the revision so it becomes the new head in alembic_version.
+    upgrade_command(revision="head", no_rls=True)
+
+    # Now load_head_snapshot should return the embedded snapshot.
+    cfg2 = _get_alembic_cfg()
+    script_dir2 = ScriptDirectory.from_config(cfg2)
+    post_snapshot = load_head_snapshot(script_dir2)
+
+    live = project_current()
+    assert post_snapshot == live, (
+        f"post-adoption head snapshot must match live DSL projection.\n"
+        f"  head keys: {sorted(post_snapshot)}\n"
+        f"  live keys: {sorted(live)}"
+    )
+
+    # --- 7. A subsequent revision with no DSL change emits NOTHING ---
+    revision_command(message="should-be-noop", autogenerate=True, legacy_autogenerate=False)
+    noop_new_files = [p for p in _project_revision_files(project) if p not in set(after_files)]
+    assert noop_new_files == [], (
+        f"engine must emit NO revision when DSL matches snapshot-baseline; "
+        f"got: {[p.name for p in noop_new_files]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Task 6.3: End-to-end sequence-walk (intentful + non-destructive detector)
+# ---------------------------------------------------------------------------
+
+# DSL states for the six-step sequence walk.
+# Each constant is the COMPLETE DSL at that step (not a delta).
+
+_SEQ_S1_BASELINE = """\
+module seq_app
+
+app seq_app "Sequence Walk App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  completed: bool=false
+
+entity Project "Project":
+  id: uuid pk
+  name: str(200) required
+"""
+
+_SEQ_S2_ADD_NOTE = (
+    _SEQ_S1_BASELINE
+    + """\
+
+entity Note "Note":
+  id: uuid pk
+  body: str(500) required
+"""
+)
+
+_SEQ_S3_ADD_FIELD = """\
+module seq_app
+
+app seq_app "Sequence Walk App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  completed: bool=false
+  score: str(100)
+
+entity Project "Project":
+  id: uuid pk
+  name: str(200) required
+
+entity Note "Note":
+  id: uuid pk
+  body: str(500) required
+"""
+
+_SEQ_S4_RENAME = """\
+module seq_app
+
+app seq_app "Sequence Walk App"
+
+entity Task "Task":
+  id: uuid pk
+  label: str(200) required was: title
+  completed: bool=false
+  score: str(100)
+
+entity Project "Project":
+  id: uuid pk
+  name: str(200) required
+
+entity Note "Note":
+  id: uuid pk
+  body: str(500) required
+"""
+
+_SEQ_S5_TYPE_CHANGE = """\
+module seq_app
+
+app seq_app "Sequence Walk App"
+
+entity Task "Task":
+  id: uuid pk
+  label: str(200) required
+  completed: bool=false
+  score: int
+
+entity Project "Project":
+  id: uuid pk
+  name: str(200) required
+
+entity Note "Note":
+  id: uuid pk
+  body: str(500) required
+"""
+
+_SEQ_S6_DROP_FIELD = """\
+module seq_app
+
+app seq_app "Sequence Walk App"
+
+entity Task "Task":
+  id: uuid pk
+  label: str(200) required
+  score: int
+
+entity Project "Project":
+  id: uuid pk
+  name: str(200) required
+
+entity Note "Note":
+  id: uuid pk
+  body: str(500) required
+"""
+
+
+def _write_seq_project(root: Path, dsl: str, db_url: str) -> None:
+    """Write a minimal Dazzle project for the sequence-walk (module name: seq_app)."""
+    (root / "dazzle.toml").write_text(
+        f"""
+[project]
+name = "seq_app"
+title = "Sequence Walk App"
+version = "0.1.0"
+root = "seq_app"
+
+[dsl]
+entry = "dsl/app.dsl"
+
+[database]
+url = "{db_url}"
+""",
+        encoding="utf-8",
+    )
+    dsl_dir = root / "dsl"
+    dsl_dir.mkdir(exist_ok=True)
+    (dsl_dir / "app.dsl").write_text(dsl, encoding="utf-8")
+
+
+@pytest.fixture
+def in_seq_project(
+    tmp_path: Path, scratch_url: str, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[tuple[Path, str]]:
+    """Scratch project bootstrapped for the six-step sequence walk.
+
+    Uses the same lifecycle as ``in_project`` but starts from ``_SEQ_S1_BASELINE``
+    (two entities: Task + Project) and uses module name ``seq_app`` to avoid
+    clashing with the ``scratch_app`` module name used by the shared ``in_project``
+    fixture.
+    """
+    project = tmp_path / "seq_proj"
+    project.mkdir()
+    psycopg_url = scratch_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    _write_seq_project(project, _SEQ_S1_BASELINE, psycopg_url)
+    monkeypatch.chdir(project)
+    monkeypatch.setenv("DATABASE_URL", psycopg_url)
+    monkeypatch.delenv("DAZZLE_ENV", raising=False)
+
+    from dazzle.cli.db import stamp_command
+
+    stamp_command(revision="head")
+    yield project, psycopg_url
+
+
+def test_sequence_walk_intentful_and_non_destructive(
+    in_seq_project: tuple[Path, str],
+) -> None:
+    """Task 6.3 capstone: six-step schema evolution proves intentful + non-destructive.
+
+    Walks a realistic multi-revision evolution on a single scratch DB, asserting at
+    each step that:
+    - ONLY the intended op is emitted for the changed entity/column.
+    - No spurious ops appear for unrelated tables/columns.
+    - ``dazzle db upgrade`` applies the revision cleanly.
+    - Each revision file carries ``SCHEMA_SNAPSHOT`` (chaining proof — the next
+      step diffs against the embedded snapshot, never a full recreation).
+
+    Sequence
+    --------
+    S1  Baseline     – 2 entities (Task, Project); snapshot chain starts.
+    S2  Add entity   – add Note; ONLY ``create_table('Note'``; Task/Project untouched.
+    S3  Add field    – add Task.score (nullable text); ONLY AddColumn Task; Note/Project
+                       untouched.
+    S4  Rename field – Task.title → Task.label (was:); RENAME not drop+add; data
+                       preserved (row seeded before this step).
+    S5  Type change  – Task.score str→int (TEXT→INTEGER, SAFE_CASTS USING clause);
+                       AlterColumn emitted; no drop+add; NOTE: score values are NULL
+                       so USING cast applies cleanly.
+    S6  Drop field   – drop Task.completed (bool); ONLY DropColumn Task.completed;
+                       label/score/Project/Note untouched.
+
+    If any step emits spurious or destructive ops, a real engine defect is reported
+    via an assertion failure — do NOT weaken assertions to paper over engine bugs.
+    """
+    from dazzle.cli.db import downgrade_command, revision_command, upgrade_command
+
+    project, psycopg_url = in_seq_project
+    plain_url = psycopg_url.replace("postgresql+psycopg://", "postgresql://", 1)
+
+    # -----------------------------------------------------------------------
+    # STEP 1: Baseline — 2 entities (Task, Project)
+    # -----------------------------------------------------------------------
+    revision_command(message="s1-baseline", autogenerate=True, legacy_autogenerate=False)
+    upgrade_command(revision="head", no_rls=True)
+
+    s1_files = _project_revision_files(project)
+    assert s1_files, "S1: baseline revision must be written"
+    s1_text = s1_files[-1].read_text(encoding="utf-8")
+    assert "SCHEMA_SNAPSHOT" in s1_text, "S1: baseline must embed SCHEMA_SNAPSHOT"
+    assert "create_table('Task'" in s1_text, "S1: baseline must create Task table"
+    assert "create_table('Project'" in s1_text, "S1: baseline must create Project table"
+
+    # Seed a Task row BEFORE the rename step so data-survival can be verified later.
+    with psycopg.connect(plain_url) as conn:
+        conn.execute(
+            "INSERT INTO \"Task\" (id, title, completed) VALUES (gen_random_uuid(), 'hello', false)"
+        )
+        conn.commit()
+
+    # -----------------------------------------------------------------------
+    # STEP 2: Add entity Note
+    # -----------------------------------------------------------------------
+    (project / "dsl" / "app.dsl").write_text(_SEQ_S2_ADD_NOTE, encoding="utf-8")
+    revision_command(message="s2-add-note", autogenerate=True, legacy_autogenerate=False)
+
+    s2_files = _project_revision_files(project)
+    s2_new = [f for f in s2_files if f not in set(s1_files)]
+    assert len(s2_new) == 1, f"S2: expected exactly 1 new revision; got {len(s2_new)}"
+    s2_text = s2_new[0].read_text(encoding="utf-8")
+
+    s2_upgrade = _upgrade_body(s2_text)
+    assert "SCHEMA_SNAPSHOT" in s2_text, "S2: revision must embed SCHEMA_SNAPSHOT"
+    assert "create_table('Note'" in s2_upgrade, "S2: must create Note table"
+    # No spurious ops on unrelated tables (checked in upgrade body only —
+    # the downgrade legitimately has drop_table('Note') as the inverse).
+    assert "create_table('Task'" not in s2_upgrade, "S2: must NOT re-create Task (spurious)"
+    assert "create_table('Project'" not in s2_upgrade, "S2: must NOT re-create Project (spurious)"
+    assert "drop_table" not in s2_upgrade, "S2: upgrade must contain no drop_table ops"
+    assert "drop_column" not in s2_upgrade, "S2: upgrade must contain no drop_column ops"
+
+    upgrade_command(revision="head", no_rls=True)
+
+    # Verify Note table physically exists
+    with psycopg.connect(plain_url) as conn:
+        row = conn.execute("SELECT to_regclass('public.\"Note\"')").fetchone()
+    assert row is not None and row[0] is not None, "S2: Note table must exist after upgrade"
+
+    # -----------------------------------------------------------------------
+    # STEP 3: Add field Task.score (nullable text)
+    # -----------------------------------------------------------------------
+    (project / "dsl" / "app.dsl").write_text(_SEQ_S3_ADD_FIELD, encoding="utf-8")
+    revision_command(message="s3-add-score", autogenerate=True, legacy_autogenerate=False)
+
+    s3_files = _project_revision_files(project)
+    s3_new = [f for f in s3_files if f not in set(s2_files)]
+    assert len(s3_new) == 1, f"S3: expected exactly 1 new revision; got {len(s3_new)}"
+    s3_text = s3_new[0].read_text(encoding="utf-8")
+
+    s3_upgrade = _upgrade_body(s3_text)
+    assert "SCHEMA_SNAPSHOT" in s3_text, "S3: revision must embed SCHEMA_SNAPSHOT"
+    assert "add_column('Task'" in s3_upgrade, "S3: must AddColumn for Task.score"
+    # No spurious ops on Project, Note, or other Task columns (upgrade body only —
+    # the downgrade has drop_column('Task', 'score') as the inverse).
+    assert "drop_column" not in s3_upgrade, "S3: upgrade must not drop any column"
+    assert "drop_table" not in s3_upgrade, "S3: upgrade must not drop any table"
+    assert "create_table" not in s3_upgrade, (
+        "S3: upgrade must not re-create any table (chaining proof: Note/Task/Project unchanged)"
+    )
+
+    upgrade_command(revision="head", no_rls=True)
+
+    # Verify Task.score column exists
+    with psycopg.connect(plain_url) as conn:
+        cols = conn.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema='public' AND table_name='Task'"
+        ).fetchall()
+    task_cols = {r[0] for r in cols}
+    assert "score" in task_cols, f"S3: Task.score must exist after upgrade; got {task_cols}"
+
+    # -----------------------------------------------------------------------
+    # STEP 4: Rename Task.title → Task.label (was:)
+    # -----------------------------------------------------------------------
+    (project / "dsl" / "app.dsl").write_text(_SEQ_S4_RENAME, encoding="utf-8")
+    revision_command(message="s4-rename-title-label", autogenerate=True, legacy_autogenerate=False)
+
+    s4_files = _project_revision_files(project)
+    s4_new = [f for f in s4_files if f not in set(s3_files)]
+    assert len(s4_new) == 1, f"S4: expected exactly 1 new revision; got {len(s4_new)}"
+    s4_text = s4_new[0].read_text(encoding="utf-8")
+
+    s4_upgrade = _upgrade_body(s4_text)
+    assert "SCHEMA_SNAPSHOT" in s4_text, "S4: revision must embed SCHEMA_SNAPSHOT"
+    # Rename must appear as alter_column new_column_name, not drop+add
+    assert "new_column_name='label'" in s4_text, (
+        f"S4: must emit RENAME op (new_column_name='label'); got:\n{s4_text}"
+    )
+    assert "drop_column" not in s4_upgrade, (
+        "S4: rename upgrade must not contain drop_column (data loss!)"
+    )
+    assert "add_column" not in s4_upgrade, (
+        "S4: rename upgrade must not contain add_column (drop+add instead of rename = data loss!)"
+    )
+    # No spurious ops on Project or Note (upgrade body only)
+    assert "drop_table" not in s4_upgrade, "S4: upgrade must not drop any table"
+    assert "create_table" not in s4_upgrade, (
+        "S4: upgrade must not re-create any table (chaining proof)"
+    )
+
+    upgrade_command(revision="head", no_rls=True)
+
+    # Verify data survived the rename
+    with psycopg.connect(plain_url) as conn:
+        cols_after = conn.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema='public' AND table_name='Task'"
+        ).fetchall()
+        col_names_after = {r[0] for r in cols_after}
+        assert "label" in col_names_after, (
+            f"S4: column 'label' must exist after rename; got {col_names_after}"
+        )
+        assert "title" not in col_names_after, (
+            f"S4: column 'title' must be gone after rename; got {col_names_after}"
+        )
+        row = conn.execute('SELECT label FROM "Task" LIMIT 1').fetchone()
+        assert row is not None and row[0] == "hello", (
+            f"S4: row data must survive rename; got label={row[0] if row else None!r}"
+        )
+
+    # -----------------------------------------------------------------------
+    # STEP 5: Type change Task.score str(100) → int  (TEXT → INTEGER, safe USING)
+    #
+    # ENGINE DEFECT (Task 6.3, now FIXED): schema_render._render_alter_column used
+    # to set ``kw["postgresql_using"]`` on the in-memory AlterColumnOp, but
+    # Alembic's file renderer only serializes ``kw["autoincrement"]`` — every other
+    # kw entry was silently dropped when the op-tree was written to the .py file, so
+    # the generated ``ALTER ... TYPE INTEGER`` carried no USING and failed with
+    # DatatypeMismatch on a populated table. The fix renders the type change as a
+    # raw ``ExecuteSQLOp('ALTER TABLE ... TYPE ... USING ...')`` whose SQL (incl.
+    # the USING) survives serialization verbatim. This step is the PROOF: it
+    # asserts the USING is in the generated file and applies it cleanly against a
+    # POPULATED column (a row with score='42' seeded just below), and that the row
+    # survives with the new integer type.
+    # -----------------------------------------------------------------------
+    # Seed a non-null, castable value into score so the USING cast is exercised on
+    # real data (an empty/NULL column would cast trivially and prove nothing).
+    with psycopg.connect(plain_url) as conn:
+        conn.execute("UPDATE \"Task\" SET score = '42' WHERE label = 'hello'")
+        conn.commit()
+
+    (project / "dsl" / "app.dsl").write_text(_SEQ_S5_TYPE_CHANGE, encoding="utf-8")
+    revision_command(message="s5-score-type-change", autogenerate=True, legacy_autogenerate=False)
+
+    s5_files = _project_revision_files(project)
+    s5_new = [f for f in s5_files if f not in set(s4_files)]
+    assert len(s5_new) == 1, f"S5: expected exactly 1 new revision; got {len(s5_new)}"
+    s5_text = s5_new[0].read_text(encoding="utf-8")
+
+    s5_upgrade = _upgrade_body(s5_text)
+    assert "SCHEMA_SNAPSHOT" in s5_text, "S5: revision must embed SCHEMA_SNAPSHOT"
+    # Intentful op check: the type change is emitted as a raw ALTER ... TYPE ...
+    # statement (not drop+add) carrying the USING clause.
+    assert "TYPE integer" in s5_upgrade, f"S5: type change must target integer; got:\n{s5_upgrade}"
+    assert "USING" in s5_upgrade, (
+        f"S5: the generated type change MUST carry a USING clause (the whole point of "
+        f"the #1431 fix — Alembic drops kw['postgresql_using']); got:\n{s5_upgrade}"
+    )
+    assert "drop_column" not in s5_upgrade, (
+        "S5: type change upgrade must not use drop_column (destructive!)"
+    )
+    assert "add_column" not in s5_upgrade, (
+        "S5: type change upgrade must not use add_column (drop+add instead of alter = destructive!)"
+    )
+    # No spurious ops on Project, Note, or other Task columns (upgrade body only)
+    assert "drop_table" not in s5_upgrade, "S5: upgrade must not drop any table"
+    assert "create_table" not in s5_upgrade, (
+        "S5: upgrade must not re-create any table (chaining proof)"
+    )
+
+    # Apply the migration against the POPULATED table — this is the regression
+    # proof: pre-fix this raised DatatypeMismatch (no USING).
+    upgrade_command(revision="head", no_rls=True)
+
+    with psycopg.connect(plain_url) as conn:
+        dtype_row = conn.execute(
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_schema='public' AND table_name='Task' AND column_name='score'"
+        ).fetchone()
+        assert dtype_row is not None, "S5: Task.score must still exist after type change"
+        assert dtype_row[0] == "integer", (
+            f"S5: Task.score must be INTEGER after type change; got {dtype_row[0]!r}"
+        )
+        # Data-survival proof: the seeded row's value survived the cast.
+        score_row = conn.execute("SELECT score FROM \"Task\" WHERE label = 'hello'").fetchone()
+        assert score_row is not None and score_row[0] == 42, (
+            f"S5: the populated row must survive the cast as integer 42; got {score_row}"
+        )
+
+    # -----------------------------------------------------------------------
+    # STEP 6: Drop field Task.completed
+    # -----------------------------------------------------------------------
+    (project / "dsl" / "app.dsl").write_text(_SEQ_S6_DROP_FIELD, encoding="utf-8")
+    revision_command(message="s6-drop-completed", autogenerate=True, legacy_autogenerate=False)
+
+    s6_files = _project_revision_files(project)
+    s6_new = [f for f in s6_files if f not in set(s5_files)]
+    assert len(s6_new) == 1, f"S6: expected exactly 1 new revision; got {len(s6_new)}"
+    s6_text = s6_new[0].read_text(encoding="utf-8")
+
+    s6_upgrade = _upgrade_body(s6_text)
+    assert "SCHEMA_SNAPSHOT" in s6_text, "S6: revision must embed SCHEMA_SNAPSHOT"
+    assert "drop_column" in s6_upgrade, "S6: upgrade must emit drop_column for Task.completed"
+    # No spurious ops on Project, Note, or surviving Task columns (upgrade body only —
+    # the downgrade legitimately has add_column to restore completed).
+    assert "drop_table" not in s6_upgrade, "S6: upgrade must not drop any table"
+    assert "create_table" not in s6_upgrade, (
+        "S6: upgrade must not re-create any table (chaining proof)"
+    )
+    assert "add_column" not in s6_upgrade, "S6: upgrade must not add any column (spurious)"
+    # The surviving columns (label, score) must not be altered in the upgrade
+    assert "alter_column" not in s6_upgrade, "S6: upgrade must not alter any surviving column"
+
+    upgrade_command(revision="head", no_rls=True)
+
+    # Verify Task.completed is gone; label and score survive
+    with psycopg.connect(plain_url) as conn:
+        final_cols = conn.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema='public' AND table_name='Task'"
+        ).fetchall()
+    final_col_names = {r[0] for r in final_cols}
+    assert "completed" not in final_col_names, (
+        f"S6: Task.completed must be gone after drop; got {final_col_names}"
+    )
+    assert "label" in final_col_names, (
+        f"S6: Task.label must survive the drop; got {final_col_names}"
+    )
+    assert "score" in final_col_names, (
+        f"S6: Task.score must survive the drop; got {final_col_names}"
+    )
+
+    # -----------------------------------------------------------------------
+    # CHAINING PROOF: re-run revision with no DSL change → no new file written.
+    # This proves each step's embedded SCHEMA_SNAPSHOT correctly represents the
+    # live schema so the engine sees no delta and suppresses the no-op revision.
+    # -----------------------------------------------------------------------
+    revision_command(message="s7-chain-noop", autogenerate=True, legacy_autogenerate=False)
+    s7_files = _project_revision_files(project)
+    assert s7_files == s6_files, (
+        "CHAIN PROOF: engine must suppress no-op revision after all 6 steps; "
+        f"unexpected new files: {[f.name for f in s7_files if f not in set(s6_files)]}"
+    )
+
+    # -----------------------------------------------------------------------
+    # OPTIONAL DOWNGRADE: roll back one step (S6 drop-field) to verify the
+    # downgrade restores Task.completed.
+    # -----------------------------------------------------------------------
+    downgrade_command(revision="-1")
+
+    with psycopg.connect(plain_url) as conn:
+        downgrade_cols = conn.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema='public' AND table_name='Task'"
+        ).fetchall()
+    downgraded_col_names = {r[0] for r in downgrade_cols}
+    assert "completed" in downgraded_col_names, (
+        f"DOWNGRADE: Task.completed must be restored after downgrade; got {downgraded_col_names}"
+    )

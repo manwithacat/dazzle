@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.62] - 2026-06-21
+
+### Added
+- **#1431 (Phases 5–6) — migration engine completion: data-migration seam, adoption
+  command, verification.** This finishes the DSL-snapshot engine (Phases 1–4 shipped in
+  v0.83.60/.61):
+  - **Unsafe-change data seam.** When `db revision` must add a `NOT NULL` column with no
+    default, or apply a type change needing a backfill, the engine renders an
+    **expand → `# === DATA MIGRATION (hand-author) ===` → contract** scaffold (add
+    nullable → marked `op.execute(...)` stub → finalize) instead of a bare destructive
+    op. Safe type changes with a known cast render the `USING` as raw SQL (Alembic drops
+    `kw[postgresql_using]` on file render, so the engine emits `op.execute("ALTER … TYPE
+    … USING …")` — proven to apply on a populated column with row survival).
+  - **`dazzle db snapshot-baseline`** — stamps the current DSL as the head's baseline
+    `SCHEMA_SNAPSHOT` (no schema ops) so a project adopting the engine, whose head
+    migration predates the snapshot, diffs correctly on the next `db revision` instead of
+    trying to recreate everything. Idempotent (no-op if the head already carries one).
+  - **Warn-only post-generation verification** — after an engine revision, a cheap
+    internal-consistency check warns if the embedded `SCHEMA_SNAPSHOT` diverges from the
+    live DSL projection. Never raises or blocks `db revision`.
+  - Runbook: `docs/reference/migrations.md` documents the engine, `was:` renames, the
+    data seam, `snapshot-baseline` adoption, and `--legacy-autogenerate`.
+
+### Agent Guidance
+- **Unsafe schema changes generate a hand-author data seam.** A `NOT NULL` column add (no
+  default) or a backfill-needing type change produces an expand→seam→contract migration
+  with a `# === DATA MIGRATION (hand-author) ===` block — fill the `op.execute(...)` stub
+  before `db upgrade`. Safe type changes get an automatic `USING` cast. Adopting the
+  engine on an existing project: run `dazzle db snapshot-baseline` once before the first
+  `db revision`. (RLS stays a separate `dazzle db apply-rls` reconcile; PK-type
+  canonicalization is tracked in #1432.)
+
 ## [0.83.61] - 2026-06-21
 
 ### Changed

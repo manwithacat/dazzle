@@ -21,7 +21,8 @@ from dazzle.db.schema_diff import (
     RenameColumn,
     RenameTable,
 )
-from dazzle.db.schema_render import render
+from dazzle.db.schema_render import SEAM_MARKER, render
+from dazzle.http.runtime.safe_casts import SAFE_CASTS, is_safe_cast
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -119,15 +120,190 @@ def test_alter_column_nullable_change():
 # ---------------------------------------------------------------------------
 
 
-def test_alter_column_type_change_uses_postgresql_using():
+def test_alter_column_type_change_emits_execute_sql_with_using():
+    """A type change WITH a non-empty USING (TEXT→UUID) renders a raw ExecuteSQLOp.
+
+    Alembic's file renderer drops ``kw["postgresql_using"]`` from an AlterColumnOp,
+    so the type change is emitted as a raw ``ALTER COLUMN ... TYPE ... USING ...``
+    statement (ExecuteSQLOp), whose SQL survives serialization verbatim.
+    """
     old = {"type": "text", "nullable": True, "default": None, "pk": False}
     new = {"type": "uuid", "nullable": True, "default": None, "pk": False}
     up, down = render([AlterColumn("t", "col", old, new)])
     up_flat = _up_ops(up.ops)
+
+    # No plain AlterColumnOp carries the (dropped) postgresql_using.
+    assert not any(isinstance(o, aops.AlterColumnOp) for o in up_flat), (
+        "type-change-with-USING must NOT use AlterColumnOp (Alembic drops the USING)"
+    )
+    # A raw ExecuteSQLOp with both TYPE and USING is present.
+    execs = [o for o in up_flat if isinstance(o, aops.ExecuteSQLOp)]
+    assert len(execs) == 1, "exactly one ExecuteSQLOp for the type change"
+    sql = execs[0].sqltext
+    assert "TYPE uuid" in sql, f"type change must target uuid; got: {sql}"
+    assert "USING" in sql, f"the USING clause is the whole point; got: {sql}"
+    assert "col" in sql, f"the column must appear in the USING expr; got: {sql}"
+
+    # Downgrade reverses the type with a matching ExecuteSQLOp (uuid→text cast).
+    down_flat = _up_ops(down.ops)
+    down_execs = [o for o in down_flat if isinstance(o, aops.ExecuteSQLOp)]
+    assert len(down_execs) == 1, "exactly one ExecuteSQLOp for the downgrade type revert"
+    down_sql = down_execs[0].sqltext
+    assert "TYPE text" in down_sql, f"downgrade must revert to text; got: {down_sql}"
+    assert "USING" in down_sql, f"downgrade must carry a reverse cast; got: {down_sql}"
+
+
+# ---------------------------------------------------------------------------
+# Task 5.1 — unsafe-change expand/contract scaffold + data seam
+# ---------------------------------------------------------------------------
+
+
+def _seam_ops(up_flat: list) -> list:
+    """The ExecuteSQLOp seam markers present in a flat upgrade-op list."""
+    return [o for o in up_flat if isinstance(o, aops.ExecuteSQLOp) and o.sqltext == SEAM_MARKER]
+
+
+def test_add_not_null_no_default_scaffolds_expand_seam_contract():
+    """Unsafe AddColumn(nullable=False, default=None) → add-nullable, seam, finalize."""
+    unsafe = {"type": "text", "nullable": False, "default": None, "pk": False}
+    up, down = render([AddColumn("t", "x", unsafe)])
+    up_flat = _up_ops(up.ops)
+
+    # 1. add-column NULLABLE first (the expand step — non-blocking)
+    add = next(o for o in up_flat if isinstance(o, aops.AddColumnOp))
+    assert add.column.name == "x"
+    assert add.column.nullable is True, "expand step must add the column NULLABLE"
+
+    # 2. a data-migration seam marker is present between expand and contract
+    seams = _seam_ops(up_flat)
+    assert len(seams) == 1, "exactly one data-migration seam marker expected"
+
+    # 3. finalize — alter_column(nullable=False) (the contract step)
     alter = next(o for o in up_flat if isinstance(o, aops.AlterColumnOp))
-    # USING clause injected for TEXT → UUID safe cast
-    assert "postgresql_using" in alter.kw
-    assert "col" in alter.kw["postgresql_using"]
+    assert alter.column_name == "x"
+    assert alter.modify_nullable is False
+
+    # Ordering: add (expand) → seam → alter (contract)
+    add_i = up_flat.index(add)
+    seam_i = up_flat.index(seams[0])
+    alter_i = up_flat.index(alter)
+    assert add_i < seam_i < alter_i
+
+    # Downgrade just drops the added column (no seam).
+    down_flat = _up_ops(down.ops)
+    assert any(isinstance(o, aops.DropColumnOp) and o.column_name == "x" for o in down_flat)
+    assert not _seam_ops(down_flat), "downgrade carries no seam marker"
+
+
+def test_add_nullable_does_not_scaffold():
+    """A NULLABLE AddColumn is safe — plain add, no seam."""
+    safe = {"type": "text", "nullable": True, "default": None, "pk": False}
+    up, _ = render([AddColumn("t", "x", safe)])
+    up_flat = _up_ops(up.ops)
+    assert not _seam_ops(up_flat)
+    assert not any(isinstance(o, aops.AlterColumnOp) for o in up_flat)
+    add = next(o for o in up_flat if isinstance(o, aops.AddColumnOp))
+    assert add.column.nullable is True
+
+
+def test_add_not_null_with_default_does_not_scaffold():
+    """NOT NULL but with a server default is safe (backfill is automatic) — plain add."""
+    safe = {"type": "boolean", "nullable": False, "default": "false", "pk": False}
+    up, _ = render([AddColumn("t", "x", safe)])
+    up_flat = _up_ops(up.ops)
+    assert not _seam_ops(up_flat)
+    add = next(o for o in up_flat if isinstance(o, aops.AddColumnOp))
+    assert add.column.nullable is False, "safe path keeps the single NOT NULL add"
+
+
+def test_safe_type_change_does_not_scaffold():
+    """A safe type change with USING (TEXT→UUID) does NOT emit a data seam.
+
+    It renders as a raw type-change ExecuteSQLOp (carrying USING) — NOT the
+    hand-author data-migration seam marker.
+    """
+    old = {"type": "text", "nullable": True, "default": None, "pk": False}
+    new = {"type": "uuid", "nullable": True, "default": None, "pk": False}
+    up, _ = render([AlterColumn("t", "col", old, new)])
+    up_flat = _up_ops(up.ops)
+    assert not _seam_ops(up_flat), "safe cast must not emit a data-migration seam"
+    # The type change is a raw ExecuteSQLOp carrying the USING clause.
+    execs = [o for o in up_flat if isinstance(o, aops.ExecuteSQLOp)]
+    assert len(execs) == 1 and "USING" in execs[0].sqltext
+
+
+def test_unsafe_type_change_scaffolds_seam():
+    """A type change with NO safe USING cast (TEXT→INTEGER is safe; INTEGER→DATE is not).
+
+    Uses INTEGER→DATE which is absent from SAFE_CASTS → no USING → unsafe → scaffold.
+    """
+    old = {"type": "integer", "nullable": True, "default": None, "pk": False}
+    new = {"type": "date", "nullable": True, "default": None, "pk": False}
+    up, down = render([AlterColumn("t", "col", old, new)])
+    up_flat = _up_ops(up.ops)
+    seams = _seam_ops(up_flat)
+    assert len(seams) == 1, "unsafe type change must emit a data-migration seam"
+    # The alter still occurs (wrapped by the seam) and carries no USING clause.
+    alter = next(o for o in up_flat if isinstance(o, aops.AlterColumnOp))
+    assert "postgresql_using" not in alter.kw
+    # Seam precedes the alter (hand-authored data prep runs before the cast).
+    assert up_flat.index(seams[0]) < up_flat.index(alter)
+    # Downgrade restores the old type and carries no seam.
+    down_flat = _up_ops(down.ops)
+    assert not _seam_ops(down_flat)
+    restore = next(o for o in down_flat if isinstance(o, aops.AlterColumnOp))
+    assert restore.modify_type is not None
+
+
+def test_safe_no_op_widening_does_not_scaffold():
+    """A safe widening with an empty USING template must NOT emit a data seam.
+
+    Token-set reachability note: the engine snapshot tokens are lowercase
+    (text/integer/float/uuid/…); SAFE_CASTS keys are uppercase Postgres names.
+    The two empty-template entries ("CHARACTER VARYING","TEXT") and
+    ("DOUBLE PRECISION","NUMERIC") are NOT reachable from the snapshot token
+    set — the snapshot emits "text" (not "CHARACTER VARYING") and "float" (not
+    "DOUBLE PRECISION"). Therefore we test the discriminant at the
+    ``is_safe_cast`` level by constructing an AlterColumn whose old/new types
+    canonicalise to an empty-template SAFE_CASTS entry ("DOUBLE PRECISION" →
+    "NUMERIC"), bypassing _token_to_sa_type mapping, to confirm:
+      1. is_safe_cast returns True for an empty-template pair (pre-condition).
+      2. get_using_clause returns None/falsy for that pair (the old bug trigger).
+      3. render() produces NO ExecuteSQLOp seam and a plain AlterColumnOp.
+    """
+    from dazzle.http.runtime.safe_casts import get_using_clause
+
+    # Confirm the pre-conditions that defined the bug:
+    # the empty-template pair IS in SAFE_CASTS...
+    empty_pairs = [(f, t) for (f, t), v in SAFE_CASTS.items() if v == ""]
+    assert empty_pairs, "SAFE_CASTS must have at least one empty-template entry"
+    from_tok, to_tok = empty_pairs[0]  # e.g. ("DOUBLE PRECISION", "NUMERIC")
+
+    assert is_safe_cast(from_tok, to_tok), "empty-template entry must be is_safe_cast=True"
+    assert not get_using_clause(from_tok, to_tok, "col"), (
+        "empty-template entry must return falsy from get_using_clause (old bug trigger)"
+    )
+
+    # Use the raw uppercase keys as type tokens in the AlterColumn op so the
+    # renderer sees them (it upper-cases before the registry lookup).
+    old = {"type": from_tok.lower(), "nullable": True, "default": None, "pk": False}
+    new = {"type": to_tok.lower(), "nullable": True, "default": None, "pk": False}
+
+    # Patch _render_alter_column's type comparison: old["type"] != new["type"] must
+    # be True, and the uppercase lookup must hit the empty-template entry.  The
+    # tokens are different strings, so type_changed=True.  The renderer uppercases
+    # them for the registry lookup, so ("DOUBLE PRECISION","NUMERIC") is found.
+    up, down = render([AlterColumn("t", "col", old, new)])
+    up_flat = _up_ops(up.ops)
+
+    # The fix: no seam emitted for a safe widening.
+    seams = _seam_ops(up_flat)
+    assert not seams, (
+        f"safe no-op widening {from_tok!r}→{to_tok!r} must NOT emit a data-migration seam; "
+        f"got {len(seams)} seam(s)"
+    )
+    # A plain AlterColumnOp is produced.
+    assert any(isinstance(o, aops.AlterColumnOp) for o in up_flat)
 
 
 # ---------------------------------------------------------------------------
