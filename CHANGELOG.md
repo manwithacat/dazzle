@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.63] - 2026-06-21
+
+### Fixed
+- **#1434 — `text → json` migration falls through to the unsafe data seam instead of an
+  automatic `::jsonb` USING cast.** The DSL `json` scalar canonicalises to the snapshot
+  token `json`, but `SAFE_CASTS` keys on the Postgres type name (`("TEXT","JSONB")`), so
+  the migration engine's `_type_change_disposition` lookup never matched and scaffolded a
+  (safe-but-unnecessary) hand-author data seam. Both lookup sites now normalise each token
+  through `_token_to_pg_type_name` before the registry lookup, so `text → json` renders an
+  automatic `ALTER … TYPE jsonb USING "col"::jsonb` and the reverse `jsonb → text` revert
+  matches too. Side benefit: the empty-template safe widening `float → numeric` is now
+  reachable from real snapshot tokens (previously only via pg-name-as-token test inputs).
+
 ## [0.83.62] - 2026-06-21
 
 ### Added

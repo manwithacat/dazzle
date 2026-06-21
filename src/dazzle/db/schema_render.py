@@ -331,11 +331,15 @@ def _type_change_disposition(
     A non-empty ``using_clause`` takes precedence: the change is emitted via
     ``ExecuteSQLOp`` regardless of ``unsafe`` (the USING clause is the cast).
     """
-    using = get_using_clause(old_type_token.upper(), new_type_token.upper(), column_name)
+    # SAFE_CASTS keys on Postgres type names (e.g. "JSONB"), not DSL tokens
+    # (e.g. "json"). Normalise both ends through the token→pg-name map before
+    # the lookup, else a token whose name differs from its pg type (json→jsonb)
+    # never matches its safe-cast entry and falls through to the unsafe seam.
+    old_pg = _token_to_pg_type_name(old_type_token).upper()
+    new_pg = _token_to_pg_type_name(new_type_token).upper()
+    using = get_using_clause(old_pg, new_pg, column_name)
     type_via_execute = bool(using)
-    unsafe = not type_via_execute and not is_safe_cast(
-        old_type_token.upper(), new_type_token.upper()
-    )
+    unsafe = not type_via_execute and not is_safe_cast(old_pg, new_pg)
     return using, unsafe
 
 
@@ -397,7 +401,9 @@ def _render_type_via_execute(
     new_pg = _token_to_pg_type_name(op.new["type"])
     old_pg = _token_to_pg_type_name(op.old["type"])
 
-    reverse_using = get_using_clause(op.new["type"].upper(), op.old["type"].upper(), op.name)
+    # Look up the reverse cast on pg type names (new_pg/old_pg), not raw tokens —
+    # get_using_clause uppercases internally, so a jsonb→text reverse matches.
+    reverse_using = get_using_clause(new_pg, old_pg, op.name)
     if not reverse_using:
         reverse_using = f"{quote_identifier(op.name)}::{old_pg}"
 

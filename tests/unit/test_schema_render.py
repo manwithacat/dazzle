@@ -22,7 +22,7 @@ from dazzle.db.schema_diff import (
     RenameTable,
 )
 from dazzle.db.schema_render import SEAM_MARKER, render
-from dazzle.http.runtime.safe_casts import SAFE_CASTS, is_safe_cast
+from dazzle.http.runtime.safe_casts import is_safe_cast
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -232,6 +232,33 @@ def test_safe_type_change_does_not_scaffold():
     assert len(execs) == 1 and "USING" in execs[0].sqltext
 
 
+def test_text_to_json_is_safe_cast_not_seam():
+    """Regression (#1434): the DSL ``json`` token canonicalises to pg ``jsonb``.
+
+    SAFE_CASTS keys on the pg type name (``("TEXT","JSONB")``), so the lookup
+    must normalise ``json``→``jsonb`` before matching — otherwise ``text → json``
+    falls through to the unsafe data-migration seam instead of an automatic
+    ``::jsonb`` USING cast.
+    """
+    old = {"type": "text", "nullable": True, "default": None, "pk": False}
+    new = {"type": "json", "nullable": True, "default": None, "pk": False}
+    up, down = render([AlterColumn("t", "payload", old, new)])
+    up_flat = _up_ops(up.ops)
+
+    assert not _seam_ops(up_flat), "text→json is a safe cast — must not scaffold a seam"
+    execs = [o for o in up_flat if isinstance(o, aops.ExecuteSQLOp)]
+    assert len(execs) == 1, "exactly one ExecuteSQLOp for the type change"
+    sql = execs[0].sqltext
+    assert "TYPE jsonb" in sql, f"json token must render the jsonb pg type; got: {sql}"
+    assert "::jsonb" in sql, f"the safe USING cast must be ::jsonb; got: {sql}"
+
+    # Downgrade reverts jsonb→text with a matching reverse cast.
+    down_flat = _up_ops(down.ops)
+    down_execs = [o for o in down_flat if isinstance(o, aops.ExecuteSQLOp)]
+    assert len(down_execs) == 1, "exactly one ExecuteSQLOp for the downgrade revert"
+    assert "TYPE text" in down_execs[0].sqltext
+
+
 def test_unsafe_type_change_scaffolds_seam():
     """A type change with NO safe USING cast (TEXT→INTEGER is safe; INTEGER→DATE is not).
 
@@ -258,48 +285,30 @@ def test_unsafe_type_change_scaffolds_seam():
 def test_safe_no_op_widening_does_not_scaffold():
     """A safe widening with an empty USING template must NOT emit a data seam.
 
-    Token-set reachability note: the engine snapshot tokens are lowercase
-    (text/integer/float/uuid/…); SAFE_CASTS keys are uppercase Postgres names.
-    The two empty-template entries ("CHARACTER VARYING","TEXT") and
-    ("DOUBLE PRECISION","NUMERIC") are NOT reachable from the snapshot token
-    set — the snapshot emits "text" (not "CHARACTER VARYING") and "float" (not
-    "DOUBLE PRECISION"). Therefore we test the discriminant at the
-    ``is_safe_cast`` level by constructing an AlterColumn whose old/new types
-    canonicalise to an empty-template SAFE_CASTS entry ("DOUBLE PRECISION" →
-    "NUMERIC"), bypassing _token_to_sa_type mapping, to confirm:
-      1. is_safe_cast returns True for an empty-template pair (pre-condition).
-      2. get_using_clause returns None/falsy for that pair (the old bug trigger).
-      3. render() produces NO ExecuteSQLOp seam and a plain AlterColumnOp.
+    The empty-template entry ``("DOUBLE PRECISION","NUMERIC")`` is reachable from
+    the real snapshot token ``float`` (#1434): ``_type_change_disposition`` now
+    normalises each token through ``_token_to_pg_type_name`` before the SAFE_CASTS
+    lookup, so ``float→numeric`` → ``("DOUBLE PRECISION","NUMERIC")`` → an empty
+    USING template → a plain ``AlterColumnOp``, NOT a data-migration seam.
     """
     from dazzle.http.runtime.safe_casts import get_using_clause
 
-    # Confirm the pre-conditions that defined the bug:
-    # the empty-template pair IS in SAFE_CASTS...
-    empty_pairs = [(f, t) for (f, t), v in SAFE_CASTS.items() if v == ""]
-    assert empty_pairs, "SAFE_CASTS must have at least one empty-template entry"
-    from_tok, to_tok = empty_pairs[0]  # e.g. ("DOUBLE PRECISION", "NUMERIC")
-
-    assert is_safe_cast(from_tok, to_tok), "empty-template entry must be is_safe_cast=True"
-    assert not get_using_clause(from_tok, to_tok, "col"), (
+    # Pre-condition: the empty-template pair IS in SAFE_CASTS and yields no USING.
+    assert is_safe_cast("DOUBLE PRECISION", "NUMERIC"), "empty-template entry must be safe"
+    assert not get_using_clause("DOUBLE PRECISION", "NUMERIC", "col"), (
         "empty-template entry must return falsy from get_using_clause (old bug trigger)"
     )
 
-    # Use the raw uppercase keys as type tokens in the AlterColumn op so the
-    # renderer sees them (it upper-cases before the registry lookup).
-    old = {"type": from_tok.lower(), "nullable": True, "default": None, "pk": False}
-    new = {"type": to_tok.lower(), "nullable": True, "default": None, "pk": False}
-
-    # Patch _render_alter_column's type comparison: old["type"] != new["type"] must
-    # be True, and the uppercase lookup must hit the empty-template entry.  The
-    # tokens are different strings, so type_changed=True.  The renderer uppercases
-    # them for the registry lookup, so ("DOUBLE PRECISION","NUMERIC") is found.
+    # float → numeric: the snapshot tokens normalise to the empty-template entry.
+    old = {"type": "float", "nullable": True, "default": None, "pk": False}
+    new = {"type": "numeric", "nullable": True, "default": None, "pk": False}
     up, down = render([AlterColumn("t", "col", old, new)])
     up_flat = _up_ops(up.ops)
 
     # The fix: no seam emitted for a safe widening.
     seams = _seam_ops(up_flat)
     assert not seams, (
-        f"safe no-op widening {from_tok!r}→{to_tok!r} must NOT emit a data-migration seam; "
+        "safe no-op widening float→numeric must NOT emit a data-migration seam; "
         f"got {len(seams)} seam(s)"
     )
     # A plain AlterColumnOp is produced.
