@@ -1,0 +1,353 @@
+"""Tests for schema diff operations."""
+
+from dataclasses import FrozenInstanceError
+
+import pytest
+
+from dazzle.db.schema_diff import (
+    AddColumn,
+    AddForeignKey,
+    AddIndex,
+    AddTable,
+    AddUnique,
+    AlterColumn,
+    DropColumn,
+    DropForeignKey,
+    DropIndex,
+    DropTable,
+    DropUnique,
+    RenameColumn,
+    RenameTable,
+    SchemaOp,
+    diff,
+)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_COL = {"type": "text", "nullable": True, "default": None, "pk": False}
+
+
+def _tbl(**cols):
+    return {"columns": cols, "indexes": [], "uniques": [], "fks": {}}
+
+
+# ---------------------------------------------------------------------------
+# diff() — brief tests (TDD RED→GREEN)
+# ---------------------------------------------------------------------------
+
+
+def test_new_table_is_add_table():
+    ops = diff({}, {"t": _tbl(id={"type": "uuid", "nullable": False, "default": None, "pk": True})})
+    assert any(isinstance(o, AddTable) and o.table == "t" for o in ops)
+
+
+def test_added_column():
+    prev = {"t": _tbl(a=_COL)}
+    curr = {"t": _tbl(a=_COL, b=_COL)}
+    ops = diff(prev, curr)
+    assert [o for o in ops if isinstance(o, AddColumn)][0].name == "b"
+
+
+def test_dropped_column():
+    ops = diff({"t": _tbl(a=_COL, b=_COL)}, {"t": _tbl(a=_COL)})
+    assert [o for o in ops if isinstance(o, DropColumn)][0].name == "b"
+
+
+def test_altered_column_type():
+    prev = {"t": _tbl(a={**_COL, "type": "text"})}
+    curr = {"t": _tbl(a={**_COL, "type": "integer"})}
+    ops = diff(prev, curr)
+    alt = [o for o in ops if isinstance(o, AlterColumn)][0]
+    assert alt.old["type"] == "text" and alt.new["type"] == "integer"
+
+
+def test_dropped_table():
+    ops = diff({"t": _tbl(a=_COL)}, {})
+    assert any(isinstance(o, DropTable) and o.table == "t" for o in ops)
+
+
+def test_no_change_empty_delta():
+    assert diff({"t": _tbl(a=_COL)}, {"t": _tbl(a=_COL)}) == []
+
+
+# ---------------------------------------------------------------------------
+# diff() — extra cases: FK, index, unique, ordering
+# ---------------------------------------------------------------------------
+
+
+def test_add_fk():
+    prev = {"t": _tbl(a=_COL)}
+    curr = {"t": {**_tbl(a=_COL), "fks": {"a": "other"}}}
+    ops = diff(prev, curr)
+    assert any(
+        isinstance(o, AddForeignKey) and o.column == "a" and o.ref_table == "other" for o in ops
+    )
+
+
+def test_drop_fk():
+    prev = {"t": {**_tbl(a=_COL), "fks": {"a": "other"}}}
+    curr = {"t": _tbl(a=_COL)}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, DropForeignKey) and o.column == "a" for o in ops)
+
+
+def test_diff_add_index():
+    prev = {"t": _tbl(a=_COL)}
+    curr = {"t": {**_tbl(a=_COL), "indexes": ["a"]}}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, AddIndex) and o.column == "a" for o in ops)
+
+
+def test_diff_drop_index():
+    prev = {"t": {**_tbl(a=_COL), "indexes": ["a"]}}
+    curr = {"t": _tbl(a=_COL)}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, DropIndex) and o.column == "a" for o in ops)
+
+
+def test_diff_add_unique():
+    prev = {"t": _tbl(a=_COL)}
+    curr = {"t": {**_tbl(a=_COL), "uniques": ["a"]}}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, AddUnique) and o.column == "a" for o in ops)
+
+
+def test_diff_drop_unique():
+    prev = {"t": {**_tbl(a=_COL), "uniques": ["a"]}}
+    curr = {"t": _tbl(a=_COL)}
+    ops = diff(prev, curr)
+    assert any(isinstance(o, DropUnique) and o.column == "a" for o in ops)
+
+
+def test_ordering_add_before_drop():
+    """AddTable ops precede DropTable ops in the returned list."""
+    prev = {"old": _tbl(a=_COL)}
+    curr = {"new": _tbl(b=_COL)}
+    ops = diff(prev, curr)
+    add_pos = next(i for i, o in enumerate(ops) if isinstance(o, AddTable))
+    drop_pos = next(i for i, o in enumerate(ops) if isinstance(o, DropTable))
+    assert add_pos < drop_pos
+
+
+def test_ordering_add_col_before_drop_col():
+    """AddColumn precedes DropColumn within same table diff."""
+    prev = {"t": _tbl(a=_COL, b=_COL)}
+    curr = {"t": _tbl(a=_COL, c=_COL)}
+    ops = diff(prev, curr)
+    add_pos = next(i for i, o in enumerate(ops) if isinstance(o, AddColumn))
+    drop_pos = next(i for i, o in enumerate(ops) if isinstance(o, DropColumn))
+    assert add_pos < drop_pos
+
+
+def test_drop_table_carries_snap():
+    """DropTable.snap carries the prior table snapshot."""
+    snap = _tbl(a=_COL)
+    ops = diff({"t": snap}, {})
+    dt = next(o for o in ops if isinstance(o, DropTable))
+    assert dt.snap == snap
+
+
+def test_add_table_fks_roundtrip():
+    """AddTable.fks carries the full col→ref_table mapping from the snapshot."""
+    snap = {
+        "new_t": {
+            "columns": {"owner_id": _COL},
+            "fks": {"owner_id": "users"},
+            "indexes": [],
+            "uniques": [],
+        }
+    }
+    ops = diff({}, snap)
+    at = next(o for o in ops if isinstance(o, AddTable))
+    assert at.fks == {"owner_id": "users"}
+
+
+def test_add_table_frozen():
+    """AddTable is frozen and fields are accessible."""
+    op = AddTable(
+        table="users",
+        columns={"id": {"type": "uuid"}, "name": {"type": "varchar"}},
+        fks={},
+        indexes=[],
+        uniques=[],
+    )
+    assert op.table == "users"
+    assert op.columns == {"id": {"type": "uuid"}, "name": {"type": "varchar"}}
+    assert op.fks == {}
+    assert op.indexes == []
+    assert op.uniques == []
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.table = "other_users"
+
+
+def test_drop_table_with_snap():
+    """DropTable carries prior table snapshot for downgrade."""
+    prior_snap = {
+        "columns": {"id": {"type": "uuid"}, "name": {"type": "varchar"}},
+        "fks": {},
+        "indexes": [],
+        "uniques": [],
+    }
+    op = DropTable(table="users", snap=prior_snap)
+    assert op.table == "users"
+    assert op.snap == prior_snap
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.table = "other_users"
+
+
+def test_rename_table():
+    """RenameTable has old and new table names."""
+    op = RenameTable(old="users", new="accounts")
+    assert op.old == "users"
+    assert op.new == "accounts"
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.old = "members"
+
+
+def test_add_column():
+    """AddColumn specifies table, column name, and column spec."""
+    col_spec = {"type": "varchar", "nullable": False}
+    op = AddColumn(table="users", name="email", col=col_spec)
+    assert op.table == "users"
+    assert op.name == "email"
+    assert op.col == col_spec
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.table = "accounts"
+
+
+def test_drop_column_with_snap():
+    """DropColumn carries prior column snapshot for downgrade."""
+    col_snap = {"type": "varchar", "nullable": True}
+    op = DropColumn(table="users", name="email", col=col_snap)
+    assert op.table == "users"
+    assert op.name == "email"
+    assert op.col == col_snap
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.name = "phone"
+
+
+def test_rename_column():
+    """RenameColumn specifies table and old/new column names."""
+    op = RenameColumn(table="users", old="user_name", new="username")
+    assert op.table == "users"
+    assert op.old == "user_name"
+    assert op.new == "username"
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.table = "accounts"
+
+
+def test_alter_column():
+    """AlterColumn specifies table, column, and old/new specs."""
+    old_spec = {"type": "varchar", "nullable": True}
+    new_spec = {"type": "varchar", "nullable": False}
+    op = AlterColumn(table="users", name="email", old=old_spec, new=new_spec)
+    assert op.table == "users"
+    assert op.name == "email"
+    assert op.old == old_spec
+    assert op.new == new_spec
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.name = "phone"
+
+
+def test_add_foreign_key():
+    """AddForeignKey specifies table, column, and referenced table."""
+    op = AddForeignKey(table="orders", column="user_id", ref_table="users")
+    assert op.table == "orders"
+    assert op.column == "user_id"
+    assert op.ref_table == "users"
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.table = "invoices"
+
+
+def test_drop_foreign_key():
+    """DropForeignKey specifies table, column, and referenced table."""
+    op = DropForeignKey(table="orders", column="user_id", ref_table="users")
+    assert op.table == "orders"
+    assert op.column == "user_id"
+    assert op.ref_table == "users"
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.column = "account_id"
+
+
+def test_add_index():
+    """AddIndex specifies table and column."""
+    op = AddIndex(table="users", column="email")
+    assert op.table == "users"
+    assert op.column == "email"
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.table = "accounts"
+
+
+def test_drop_index():
+    """DropIndex specifies table and column."""
+    op = DropIndex(table="users", column="email")
+    assert op.table == "users"
+    assert op.column == "email"
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.column = "username"
+
+
+def test_add_unique():
+    """AddUnique specifies table and column."""
+    op = AddUnique(table="users", column="email")
+    assert op.table == "users"
+    assert op.column == "email"
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.table = "accounts"
+
+
+def test_drop_unique():
+    """DropUnique specifies table and column."""
+    op = DropUnique(table="users", column="email")
+    assert op.table == "users"
+    assert op.column == "email"
+
+    # Assert frozen
+    with pytest.raises(FrozenInstanceError):
+        op.column = "username"
+
+
+def test_schema_op_union_types():
+    """SchemaOp accepts all op types."""
+    ops: list[SchemaOp] = [
+        AddTable("t1", {}, {}, [], []),
+        DropTable("t2", {}),
+        RenameTable("t3", "t3_renamed"),
+        AddColumn("t4", "c1", {}),
+        DropColumn("t5", "c2", {}),
+        RenameColumn("t6", "c3", "c3_renamed"),
+        AlterColumn("t7", "c4", {}, {}),
+        AddForeignKey("t8", "c5", "t_ref"),
+        DropForeignKey("t9", "c6", "t_ref"),
+        AddIndex("t10", "c7"),
+        DropIndex("t11", "c8"),
+        AddUnique("t12", "c9"),
+        DropUnique("t13", "c10"),
+    ]
+    assert len(ops) == 13
