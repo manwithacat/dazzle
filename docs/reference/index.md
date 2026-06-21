@@ -42,6 +42,7 @@
 | [RBAC Verification Framework](rbac-verification.md) | The three-layer access-control verification system that proves DSL-declared security policies hold. |
 | [Security Profiles](security-profiles.md) | The security profile every app declares in its `app` block, and what each profile enforces. |
 | [Enterprise SSO & Provisioning](enterprise-sso.md) | Native per-org enterprise connections (OIDC, SAML, SCIM) behind the opt-in capability registry. |
+| [Verified-Domain Join](verified-domain-join.md) | The non-SSO self-service join: a tenant proves its email domain (DNS-TXT), then verified-email users self-join under a per-tenant policy (#1424). |
 | [PII & Privacy Primitives](pii-privacy.md) | Analytics, consent, and privacy primitives for marking and handling personally identifiable data. |
 | [Document Signing](document-signing.md) | Native PAdES B-T document signing as a first-class DSL primitive via `signable: true`. |
 | [Multi-Tenant Hosts](tenant-hosts.md) | The `tenant_host:` sub-block that auto-mounts Host-header-based tenant routing (#1289). |

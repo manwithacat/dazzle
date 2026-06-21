@@ -223,7 +223,7 @@ Drift gate: `tests/unit/test_api_surface_drift.py` (21 tests). Adding `--write` 
 
 ## Examples
 
-Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`, `project_tracker`, `design_studio`, `llm_ticket_classifier`, `acme_billing`, `hr_records`, `invoice_ops`
+Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`, `project_tracker`, `design_studio`, `llm_ticket_classifier`, `acme_billing`, `hr_records`, `invoice_ops`, `domain_join_co`
 
 Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract probes used only by `tests/`): `shapes_validation`, `rbac_validation`, `investigator_smoke`, `asset_registry`, `shared_parent_aggregate`, `signing_validation`, `tenant_rls`, `transition_atomic`, `scope_runtime`, `pra`, `custom_renderer`, `component_showcase`, `tenant_hierarchy` (FK-path/EXISTS create-scope #1311 + update-destination #1312 verified against real Postgres via `tests/integration/test_scope_runtime_pg.py`; `pra` = parser-conformance corpus, `custom_renderer` = renderer-extension demo, `component_showcase` = component gallery — reclassified from examples/ 2026-06-13; `tenant_hierarchy` = ADR-0036/0037 hierarchy + membership worked example)
 
@@ -373,4 +373,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.83.66 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.83.67 | **Python**: 3.12+ | **Status**: Production Ready

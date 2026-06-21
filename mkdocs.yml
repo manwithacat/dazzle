@@ -73,6 +73,7 @@ nav:
       - Compliance: reference/compliance.md
       - RBAC Verification: reference/rbac-verification.md
       - Enterprise SSO (OIDC/SAML/SCIM): reference/enterprise-sso.md
+      - Verified-Domain Join: reference/verified-domain-join.md
       - RBAC Scope Rules: reference/rbac-scope.md
       - Testing: reference/testing.md
       - Frontend & Templates: reference/frontend.md

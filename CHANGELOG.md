@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.67] - 2026-06-21
+
+### Added
+- **#1429 / #1424 Gap 2 — `examples/domain_join_co` worked example + per-persona guides +
+  CLI runbook for verified-domain self-service join.** A kayfabe app exercising the #1424
+  flow end-to-end: a `tenant_host:` + `membership:` `Workspace` (the verified-domain a
+  company joins under) plus a tenant-scoped `Announcement` entity whose
+  `workspace = current_tenant` scope is what a join unlocks. Two per-persona onboarding
+  guides (Workspace Admin, Team Member) clear the guide quality bar and the
+  `dazzle ux verify --guides` runtime oracle — domain_join_co is the first `tenant_host:`
+  app in the blocking GUIDE_WALK matrix. New runbook `docs/reference/verified-domain-join.md`
+  documents the full operator loop and the CLI-vs-admin-console split (domain verify is
+  `dazzle auth connection {add-domain,verify-domain}`; connection-create / join-policy /
+  approval are capability-gated admin-console actions). Closes #1424 (all phases).
+
+### Agent Guidance
+- **Verified-domain join is configured at runtime, not in DSL.** The example's DSL is just a
+  `tenant_host:` + `membership:` workspace; the domain connection (`type="domain"`), join
+  policy, and approval queue live in the admin console / `dazzle auth` CLI. See
+  `docs/reference/verified-domain-join.md` and `examples/domain_join_co/README.md`.
+
 ## [0.83.66] - 2026-06-21
 
 ### Fixed

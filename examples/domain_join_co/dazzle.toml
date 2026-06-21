@@ -1,0 +1,29 @@
+[project]
+name = "domain_join_co"
+version = "0.1.0"
+root = "domain_join_co.core"
+title = "Domain Join Co"
+description = "Worked example of verified-domain self-service join (#1424) — a company proves its email domain, then verified-email employees self-join the workspace under a per-tenant policy."
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
+
+[auth]
+enabled = true
+provider = "session"
+# Self-service signup is on: an employee signs up with their work email, verifies
+# it, and (per the workspace's domain_join_policy) joins or requests to join. The
+# verified-domain machinery itself is configured at runtime via the admin console
+# / `dazzle auth` CLI — see docs/reference/verified-domain-join.md.
+allow_registration = true
+
+[ui]
+
+# Dev-time cognition (qa trial, spec analysis) bills the Claude subscription via
+# the Claude Code CLI — no API key needed. Deploys need ANTHROPIC_API_KEY +
+# "anthropic-api" (docs/reference/llm-drivers.md).
+[llm]
+driver = "claude-cli"

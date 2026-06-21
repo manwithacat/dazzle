@@ -37,6 +37,7 @@ _APPS_WITH_GUIDES = [
     "acme_billing",
     "hr_records",
     "invoice_ops",
+    "domain_join_co",
 ]
 
 

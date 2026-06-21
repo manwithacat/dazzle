@@ -47,6 +47,11 @@ _KNOWN_EXAMPLES = [
     # adversarial isolation suite in
     # tests/integration/test_invoice_ops_tenant_isolation.py.
     "invoice_ops",
+    # #1424 — verified-domain self-service join worked example. Teaches the
+    # canonical write-op scope idiom via `Announcement` (create/update scoped
+    # `workspace = current_tenant as: admin`) on a `tenant_host:` + `membership:`
+    # workspace. RBAC machinery for the join itself is runtime/admin-UX, not DSL.
+    "domain_join_co",
 ]
 
 # Examples that live under `examples/` but are NOT covered by the dogfood
