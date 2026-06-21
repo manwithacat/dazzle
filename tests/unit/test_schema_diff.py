@@ -17,6 +17,7 @@ from dazzle.db.schema_diff import (
     DropTable,
     DropUnique,
     RenameColumn,
+    RenameResolutionError,
     RenameTable,
     SchemaOp,
     diff,
@@ -351,3 +352,108 @@ def test_schema_op_union_types():
         DropUnique("t13", "c10"),
     ]
     assert len(ops) == 13
+
+
+# ---------------------------------------------------------------------------
+# Task 4.3: rename resolution via hints
+# ---------------------------------------------------------------------------
+
+
+def test_was_hint_renders_rename_not_drop_add():
+    prev = {"t": _tbl(old_name=_COL)}
+    curr = {"t": _tbl(new_name=_COL)}
+    hints = {"tables": {}, "columns": {("t", "new_name"): "old_name"}}
+    ops = diff(prev, curr, hints)
+    assert any(
+        isinstance(o, RenameColumn) and o.old == "old_name" and o.new == "new_name" for o in ops
+    )
+    # Must NOT produce drop+add for the renamed pair
+    assert not any(isinstance(o, DropColumn) and o.name == "old_name" for o in ops)
+    assert not any(isinstance(o, AddColumn) and o.name == "new_name" for o in ops)
+
+
+def test_already_applied_rename_is_noop():
+    prev = {"t": _tbl(new_name=_COL)}  # already renamed
+    curr = {"t": _tbl(new_name=_COL)}
+    hints = {"tables": {}, "columns": {("t", "new_name"): "old_name"}}
+    assert diff(prev, curr, hints) == []
+
+
+def test_dangling_rename_raises():
+    prev = {"t": _tbl(a=_COL)}
+    curr = {"t": _tbl(b=_COL)}
+    hints = {"tables": {}, "columns": {("t", "b"): "nonexistent"}}
+    with pytest.raises(RenameResolutionError):
+        diff(prev, curr, hints)
+
+
+def test_table_rename_hint():
+    prev = {"old_tbl": _tbl(a=_COL)}
+    curr = {"new_tbl": _tbl(a=_COL)}
+    hints = {"tables": {"new_tbl": "old_tbl"}, "columns": {}}
+    ops = diff(prev, curr, hints)
+    assert any(
+        isinstance(o, RenameTable) and o.old == "old_tbl" and o.new == "new_tbl" for o in ops
+    )
+    assert not any(isinstance(o, AddTable) and o.table == "new_tbl" for o in ops)
+    assert not any(isinstance(o, DropTable) and o.table == "old_tbl" for o in ops)
+
+
+def test_table_rename_already_applied_noop():
+    prev = {"new_tbl": _tbl(a=_COL)}
+    curr = {"new_tbl": _tbl(a=_COL)}
+    hints = {"tables": {"new_tbl": "old_tbl"}, "columns": {}}
+    assert diff(prev, curr, hints) == []
+
+
+# ---------------------------------------------------------------------------
+# Task 4.3 follow-on: rename + simultaneous type change in one diff (#1431)
+# ---------------------------------------------------------------------------
+
+
+def test_rename_and_retype_emits_rename_then_alter():
+    """Column renamed AND retyped in one diff → RenameColumn + AlterColumn, in that order."""
+    prev = {"t": _tbl(old_name={**_COL, "type": "text"})}
+    curr = {"t": _tbl(new_name={**_COL, "type": "integer"})}
+    hints = {"tables": {}, "columns": {("t", "new_name"): "old_name"}}
+    ops = diff(prev, curr, hints)
+
+    rename_ops = [o for o in ops if isinstance(o, RenameColumn)]
+    alter_ops = [o for o in ops if isinstance(o, AlterColumn)]
+
+    # Both ops must be present
+    assert len(rename_ops) == 1, f"Expected 1 RenameColumn, got {rename_ops}"
+    assert len(alter_ops) == 1, f"Expected 1 AlterColumn, got {alter_ops}"
+
+    rename = rename_ops[0]
+    alter = alter_ops[0]
+
+    assert rename.old == "old_name"
+    assert rename.new == "new_name"
+    assert alter.name == "new_name"
+    assert alter.old["type"] == "text"
+    assert alter.new["type"] == "integer"
+
+    # RenameColumn must precede AlterColumn
+    rename_pos = ops.index(rename)
+    alter_pos = ops.index(alter)
+    assert rename_pos < alter_pos, "RenameColumn must come before AlterColumn"
+
+    # Must NOT produce spurious DropColumn/AddColumn for the renamed column
+    assert not any(isinstance(o, DropColumn) and o.name == "old_name" for o in ops)
+    assert not any(isinstance(o, AddColumn) and o.name == "new_name" for o in ops)
+    assert not any(isinstance(o, AddColumn) and o.name == "old_name" for o in ops)
+    assert not any(isinstance(o, DropColumn) and o.name == "new_name" for o in ops)
+
+
+def test_pure_rename_no_spurious_alter():
+    """Column renamed with no spec change → only RenameColumn, no AlterColumn."""
+    prev = {"t": _tbl(old_name=_COL)}
+    curr = {"t": _tbl(new_name=_COL)}
+    hints = {"tables": {}, "columns": {("t", "new_name"): "old_name"}}
+    ops = diff(prev, curr, hints)
+
+    assert any(
+        isinstance(o, RenameColumn) and o.old == "old_name" and o.new == "new_name" for o in ops
+    )
+    assert not any(isinstance(o, AlterColumn) for o in ops)

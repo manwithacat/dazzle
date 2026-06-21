@@ -208,6 +208,12 @@ class FieldSpec(BaseModel):
     # mints presigned forms against `storage[0]`. Single-binding fields
     # are simply tuples of length one.
     storage: tuple[str, ...] = Field(default_factory=tuple)
+    # #1431 migration engine: `was: OldName` rename hint (transient — present only
+    # during the migration-planning pass; not persisted to the DB schema).
+    renamed_from: str | None = Field(
+        default=None,
+        description="Previous field name declared via `was:` rename hint (#1431, transient).",
+    )
 
     model_config = ConfigDict(frozen=True)
 

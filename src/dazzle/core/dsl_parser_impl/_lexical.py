@@ -30,6 +30,13 @@ Public surface:
   parsing. Returns the matched prefix or ``None``. The shape is:
   initial uppercase letter, identifier characters, ``.``, initial
   lowercase letter, identifier characters.
+
+- :func:`is_rename_hint_name` — predicate for the identifier that
+  follows a ``was:`` rename hint (#1431, Task 4.2). True when the
+  value is a non-empty DSL identifier: leading ASCII letter or
+  underscore, then ASCII letters/digits/underscores. Used by the
+  field/entity parsers to reject a bare ``was:`` (no name) without
+  re.
 """
 
 from __future__ import annotations
@@ -134,6 +141,27 @@ def extract_entity_field_prefix(text: str) -> str | None:
     while j < len(text) and _is_ident_char(text[j]):
         j += 1
     return text[:j]
+
+
+def is_rename_hint_name(value: str) -> bool:
+    """True when ``value`` is a valid ``was:`` rename-hint identifier (#1431).
+
+    Shape (deterministic char-walk, no re per ADR-0024):
+      - non-empty
+      - first char: ASCII letter or underscore
+      - subsequent chars: ASCII letter, digit, or underscore
+
+    Used by the field/entity parsers to validate the token following a
+    ``was:`` clause — a bare ``was:`` (next token is ``COLON``/``NEWLINE``/
+    a non-identifier) returns False, so the caller raises a clear parse
+    error instead of mis-binding an old name.
+    """
+    if not value:
+        return False
+    first = value[0]
+    if not (_is_ascii_upper(first) or _is_ascii_lower(first) or first == "_"):
+        return False
+    return all(_is_ident_char(c) for c in value[1:])
 
 
 def _is_ascii_upper(c: str) -> bool:

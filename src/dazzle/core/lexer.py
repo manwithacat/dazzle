@@ -204,6 +204,10 @@ class TokenType(Enum):
     TEMPORAL = "temporal"
     # v0.71.162 (#1217 Phase 3e.i): subtype polymorphism for entities
     SUBTYPE_OF = "subtype_of"
+    # #1431 migration engine (Task 4.2): `was: OldName` rename hint on a field or
+    # entity. Transient — drives the migration planner's RENAME detection; never
+    # persisted to the schema. Auto-keyworded via KEYWORDS (see below).
+    WAS = "was"
     # v0.71.184 (#1217 Phase 3e.v): per-subtype dispatch panel inside a section
     SUBTYPE_PANEL = "subtype_panel"
     DISPLAY_FIELD = "display_field"

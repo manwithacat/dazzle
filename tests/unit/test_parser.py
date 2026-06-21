@@ -3997,5 +3997,103 @@ surface doc_create "Upload":
         assert names == ["a", "b", "c"]
 
 
+class TestWasRenameHint:
+    """`was:` rename-hint grammar (#1431 migration engine, Task 4.2).
+
+    A field- and entity-level `was: OldName` clause populates
+    ``FieldSpec.renamed_from`` / ``EntitySpec.renamed_from`` so the migration
+    planner can emit a RENAME instead of a drop+add. The hint is transient —
+    it never reaches the persisted schema.
+    """
+
+    def test_field_was_populates_renamed_from(self):
+        """`field new_name <type> ... was: old_name` → FieldSpec.renamed_from."""
+        dsl = """
+module test_was_field
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required was: name
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        task = fragment.entities[0]
+        title_field = next(f for f in task.fields if f.name == "title")
+        assert title_field.renamed_from == "name"
+        # Modifiers parsed normally — the hint is additive, not a replacement.
+        from dazzle.core.ir.fields import FieldModifier
+
+        assert FieldModifier.REQUIRED in title_field.modifiers
+        # Fields without `was:` stay None.
+        id_field = next(f for f in task.fields if f.name == "id")
+        assert id_field.renamed_from is None
+
+    def test_field_was_without_modifiers(self):
+        """`was:` works directly after the type (no intervening modifiers)."""
+        dsl = """
+module test_was_field_bare
+
+entity Task "Task":
+  id: uuid pk
+  body: text was: description
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        body_field = next(f for f in fragment.entities[0].fields if f.name == "body")
+        assert body_field.renamed_from == "description"
+
+    def test_entity_was_populates_renamed_from(self):
+        """`was: OldName` inside the entity body → EntitySpec.renamed_from."""
+        dsl = """
+module test_was_entity
+
+entity Task "Task":
+  was: TodoItem
+  id: uuid pk
+  title: str(200) required
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        task = fragment.entities[0]
+        assert task.name == "Task"
+        assert task.renamed_from == "TodoItem"
+
+    def test_entity_without_was_is_none(self):
+        """Absent `was:` leaves EntitySpec.renamed_from as None."""
+        dsl = """
+module test_no_was
+
+entity Task "Task":
+  id: uuid pk
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert fragment.entities[0].renamed_from is None
+
+    def test_field_was_missing_identifier_errors(self):
+        """`was:` with no following identifier is a clear parse error."""
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test_was_field_err
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) was:
+"""
+        with pytest.raises(ParseError):
+            parse_dsl(dsl, Path("test.dsl"))
+
+    def test_entity_was_missing_identifier_errors(self):
+        """Entity-level `was:` with no following identifier is a parse error."""
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test_was_entity_err
+
+entity Task "Task":
+  was:
+  id: uuid pk
+"""
+        with pytest.raises(ParseError):
+            parse_dsl(dsl, Path("test.dsl"))
+
+
 if __name__ == "__main__":
     main()

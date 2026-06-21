@@ -784,6 +784,7 @@ ir_class: EntitySpec
     - membership: MembershipSpec | None = None
     - patterns: list[str] = []
     - publishes: list[PublishSpec] = []
+    - renamed_from: str | None = None
     - seed_template: SeedTemplateSpec | None = None
     - signable: bool = False
     - signing_template: str | None = None
@@ -992,6 +993,7 @@ ir_class: FieldSpec
     - default_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
     - modifiers: list[FieldModifier] = []
     - pii: PIIAnnotation | None = None
+    - renamed_from: str | None = None
     - storage: tuple[str, Ellipsis] = <factory:tuple>
 
 ir_class: FieldType

@@ -49,6 +49,7 @@
               ]),
               'name': 'id',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -75,6 +76,7 @@
               ]),
               'name': 'title',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -100,6 +102,7 @@
               ]),
               'name': 'description',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -125,6 +128,7 @@
               ]),
               'name': 'status',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -155,6 +159,7 @@
               ]),
               'name': 'created_at',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -191,6 +196,7 @@
           ]),
           'publishes': list([
           ]),
+          'renamed_from': None,
           'seed_template': None,
           'signable': False,
           'signing_template': None,
@@ -264,6 +270,7 @@
               ]),
               'name': 'id',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -290,6 +297,7 @@
               ]),
               'name': 'component',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -316,6 +324,7 @@
               ]),
               'name': 'status',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -345,6 +354,7 @@
               ]),
               'name': 'message',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -370,6 +380,7 @@
               ]),
               'name': 'latency_ms',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -395,6 +406,7 @@
               ]),
               'name': 'checked_at',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -433,6 +445,7 @@
           ]),
           'publishes': list([
           ]),
+          'renamed_from': None,
           'seed_template': None,
           'signable': False,
           'signing_template': None,
@@ -502,6 +515,7 @@
               ]),
               'name': 'id',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -528,6 +542,7 @@
               ]),
               'name': 'name',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -554,6 +569,7 @@
               ]),
               'name': 'value',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -579,6 +595,7 @@
               ]),
               'name': 'unit',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -604,6 +621,7 @@
               ]),
               'name': 'tags',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -629,6 +647,7 @@
               ]),
               'name': 'bucket_start',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -654,6 +673,7 @@
               ]),
               'name': 'resolution',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -692,6 +712,7 @@
           ]),
           'publishes': list([
           ]),
+          'renamed_from': None,
           'seed_template': None,
           'signable': False,
           'signing_template': None,
@@ -761,6 +782,7 @@
               ]),
               'name': 'id',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -787,6 +809,7 @@
               ]),
               'name': 'version',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -812,6 +835,7 @@
               ]),
               'name': 'previous_version',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -837,6 +861,7 @@
               ]),
               'name': 'deployed_by',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -862,6 +887,7 @@
               ]),
               'name': 'deployed_at',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -887,6 +913,7 @@
               ]),
               'name': 'status',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -918,6 +945,7 @@
               ]),
               'name': 'rollback_of',
               'pii': None,
+              'renamed_from': None,
               'storage': tuple(
               ),
               'type': dict({
@@ -956,6 +984,7 @@
           ]),
           'publishes': list([
           ]),
+          'renamed_from': None,
           'seed_template': None,
           'signable': False,
           'signing_template': None,
