@@ -545,6 +545,12 @@ class EntitySpec(BaseModel):
     # bridge — provision the domain row on auth-user creation + resolve `ref User` FKs
     # by `link_via`. None = no bridge (behaves exactly as today; D5/D7).
     auth_identity: AuthIdentitySpec | None = None
+    # #1431 migration engine: `was: OldName` rename hint (transient — present only
+    # during the migration-planning pass; not persisted to the DB schema).
+    renamed_from: str | None = Field(
+        default=None,
+        description="Previous entity name declared via `was:` rename hint (#1431, transient).",
+    )
 
     model_config = ConfigDict(frozen=True)
 

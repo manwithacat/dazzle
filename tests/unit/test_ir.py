@@ -359,6 +359,53 @@ def test_module_ir():
     print("✓ ModuleIR works correctly")
 
 
+def test_renamed_from_on_field_and_entity_spec():
+    """#1431 phase 4: renamed_from rename-hint on FieldSpec and EntitySpec."""
+    # FieldSpec with renamed_from
+    field = ir.FieldSpec(
+        name="full_name",
+        type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
+        renamed_from="name",
+    )
+    assert field.renamed_from == "name"
+
+    # FieldSpec without renamed_from defaults to None
+    plain_field = ir.FieldSpec(
+        name="email",
+        type=ir.FieldType(kind=ir.FieldTypeKind.EMAIL),
+    )
+    assert plain_field.renamed_from is None
+
+    # EntitySpec with renamed_from
+    entity = ir.EntitySpec(
+        name="Member",
+        fields=[
+            ir.FieldSpec(
+                name="id",
+                type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                modifiers=[ir.FieldModifier.PK],
+            ),
+        ],
+        renamed_from="User",
+    )
+    assert entity.renamed_from == "User"
+
+    # EntitySpec without renamed_from defaults to None
+    plain_entity = ir.EntitySpec(
+        name="Task",
+        fields=[
+            ir.FieldSpec(
+                name="id",
+                type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                modifiers=[ir.FieldModifier.PK],
+            ),
+        ],
+    )
+    assert plain_entity.renamed_from is None
+
+    print("✓ renamed_from on FieldSpec and EntitySpec works correctly")
+
+
 def main():
     """Run all tests."""
     print("=" * 60)

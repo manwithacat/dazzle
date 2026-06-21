@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **#1431 (Phase 4) — `renamed_from` on core IR types.** Added `renamed_from: str | None = None` to `FieldSpec` and `EntitySpec` (transient `was:` rename hint for the migration-planning pass). `docs/api-surface/ir-types.txt` baseline regenerated.
+
 ## [0.83.60] - 2026-06-21
 
 ### Added
