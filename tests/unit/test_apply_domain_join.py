@@ -150,8 +150,19 @@ def test_no_tenant_is_none():
 
 
 def test_unverified_email_is_none():
-    """Caller passes email_verified=False → Noop → "none" (fail-closed)."""
-    store = _AutoJoinStore()
+    """Caller passes email_verified=False → short-circuit before any tenant lookup → "none".
+
+    The store's get_connection_by_verified_domain raises if called, proving the
+    early return fires before the DB round-trip (M2 hardening, #1424).
+    """
+
+    class _RaisesOnLookupStore(_AutoJoinStore):
+        def get_connection_by_verified_domain(self, domain: str) -> None:  # type: ignore[override]
+            raise AssertionError(
+                "get_connection_by_verified_domain must not be called for unverified email"
+            )
+
+    store = _RaisesOnLookupStore()
     res = apply_domain_join(store, identity_id="u1", email="a@bigcorp.com", email_verified=False)
     assert res.kind == "none"
 

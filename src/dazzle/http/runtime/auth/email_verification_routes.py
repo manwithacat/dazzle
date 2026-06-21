@@ -138,6 +138,7 @@ def create_email_verification_routes(
                 _logger.warning(  # nosemgrep
                     "Domain-join evaluation failed during email verification; "  # nosemgrep
                     "continuing without join",
+                    exc_info=True,
                 )
 
         redirect_to = next if _is_safe_redirect_path(next) else "/"

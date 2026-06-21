@@ -94,6 +94,9 @@ def apply_domain_join(
             verified domains and the email's domain is not among them (even
             for ``auto_join`` policy).
     """
+    if not email_verified:
+        return ApplyResult(kind="none")
+
     tenant_id = resolve_domain_tenant(store, email)
     if tenant_id is None:
         return ApplyResult(kind="none")

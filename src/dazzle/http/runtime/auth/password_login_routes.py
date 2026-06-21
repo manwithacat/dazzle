@@ -158,6 +158,7 @@ def create_password_login_routes() -> APIRouter:
             except Exception:  # noqa: BLE001 — join hiccup must never break auth
                 _logger.warning(  # nosemgrep
                     "Domain-join evaluation failed during login; continuing without join",  # nosemgrep
+                    exc_info=True,
                 )
         session = auth_store.create_session(user, active_membership_id=membership_id)
         if pre_auth_sid and pre_auth_sid != session.id:
