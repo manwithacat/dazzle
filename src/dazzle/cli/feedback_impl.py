@@ -65,7 +65,7 @@ async def feedback_list(
     if severity:
         params["severity"] = severity
 
-    async with httpx.AsyncClient(timeout=30.0) as client:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
+    async with httpx.AsyncClient(timeout=30.0) as client:  # DZ-HTTP-NORETRY  one-shot CLI
         resp = await async_retrying_request(
             client,
             "GET",
@@ -83,7 +83,7 @@ async def feedback_get(
 ) -> dict[str, Any]:
     """Get a single feedback report by ID."""
     url = _get_server_url(project_root)
-    async with httpx.AsyncClient(timeout=30.0) as client:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
+    async with httpx.AsyncClient(timeout=30.0) as client:  # DZ-HTTP-NORETRY  one-shot CLI
         resp = await async_retrying_request(
             client,
             "GET",
@@ -112,7 +112,7 @@ async def feedback_triage(
     if assigned_to:
         payload["assigned_to"] = assigned_to
 
-    async with httpx.AsyncClient(timeout=30.0) as client:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
+    async with httpx.AsyncClient(timeout=30.0) as client:  # DZ-HTTP-NORETRY  one-shot CLI
         resp = await async_retrying_request(
             client,
             "PUT",
@@ -139,7 +139,7 @@ async def feedback_resolve(
     if resolved_by:
         payload["resolved_by"] = resolved_by
 
-    async with httpx.AsyncClient(timeout=30.0) as client:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
+    async with httpx.AsyncClient(timeout=30.0) as client:  # DZ-HTTP-NORETRY  one-shot CLI
         resp = await async_retrying_request(
             client,
             "PUT",
@@ -157,7 +157,7 @@ async def feedback_delete(
 ) -> bool:
     """Delete a feedback report. Returns True on success."""
     url = _get_server_url(project_root)
-    async with httpx.AsyncClient(timeout=30.0) as client:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
+    async with httpx.AsyncClient(timeout=30.0) as client:  # DZ-HTTP-NORETRY  one-shot CLI
         resp = await async_retrying_request(
             client,
             "DELETE",

@@ -382,7 +382,9 @@ class MappingExecutor:
                         )
                     )
 
-                async with httpx.AsyncClient(timeout=30.0) as client:  # noqa: DZ-HTTP-NORETRY  retry via async_retrying_request below
+                async with httpx.AsyncClient(
+                    timeout=30.0
+                ) as client:  # DZ-HTTP-NORETRY  retry via async_retrying_request below
                     resp = await async_retrying_request(
                         client,
                         method,

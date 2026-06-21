@@ -309,7 +309,7 @@ def _run_contracts(
                     with suppress(Exception):
                         import httpx
 
-                        async with httpx.AsyncClient() as http:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
+                        async with httpx.AsyncClient() as http:  # DZ-HTTP-NORETRY  one-shot CLI
                             id_resp = await http.get(
                                 f"{site_url}/__test__/entity/{ent_name}",
                                 timeout=10,

@@ -64,7 +64,7 @@ def _default_http_get(url: str) -> tuple[int, bytes]:
     chunks: list[bytes] = []
     total = 0
     try:
-        with httpx.stream(
+        with httpx.stream(  # DZ-HTTP-NORETRY  one-shot capped probe stream
             "GET",
             url,
             timeout=_PROBE_TIMEOUT,

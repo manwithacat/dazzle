@@ -1276,7 +1276,7 @@ def qa_trial(
                     # protocol _authenticate_persona_on_context uses,
                     # but awaitable).
                     headers = {"X-Test-Secret": test_secret_val} if test_secret_val else {}
-                    async with httpx.AsyncClient() as http:  # noqa: DZ-HTTP-NORETRY  one-shot CLI
+                    async with httpx.AsyncClient() as http:  # DZ-HTTP-NORETRY  one-shot CLI
                         resp = await http.post(
                             f"{site_url}/__test__/authenticate",
                             json={"role": login_persona, "username": login_persona},

@@ -656,7 +656,7 @@ class BaseExternalAdapter[ConfigT: AdapterConfig](ABC):
         from dazzle.core.http_client import async_retrying_request
 
         try:
-            async with httpx.AsyncClient(timeout=self.config.timeout) as client:  # noqa: E501  see async_retrying_request below
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:  # noqa: E501  DZ-HTTP-NORETRY driven by async_retrying_request below
                 response = await async_retrying_request(
                     client,
                     method,

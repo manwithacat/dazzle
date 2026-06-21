@@ -416,7 +416,9 @@ def create_external_api_check(
 
         start = time.monotonic()
         try:
-            async with httpx.AsyncClient() as client:  # noqa: DZ-HTTP-NORETRY  health check must not mask transient failures
+            async with (
+                httpx.AsyncClient() as client
+            ):  # DZ-HTTP-NORETRY  health check must not mask transient failures
                 response = await client.get(url, timeout=timeout_seconds)
                 latency = (time.monotonic() - start) * 1000
 

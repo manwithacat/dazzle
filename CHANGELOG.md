@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.78] - 2026-06-22
+
+### Added
+- **#1437 — `DZ-HTTP-NORETRY` retry convention is now an enforcement gate.** Every production
+  outbound request in `src/dazzle/http` and `src/dazzle/agent` already routes through the retry
+  helper (`dazzle.core.http_client.async_retrying_request` / `retrying_request`); the smells round
+  asked for a guard so a *new* un-retried `httpx.*` / `requests.*` call can't land silently. New
+  AST gate `tests/unit/test_no_unretried_http_1437.py` scans those two layers for client-creation
+  and request calls (`AsyncClient`/`Client`/`get`/`post`/`put`/`delete`/`patch`/`request`/`stream`)
+  and fails unless each carries a `# DZ-HTTP-NORETRY <reason>` marker — so deliberate one-shot,
+  stream, test-agent, or "driven by `async_retrying_request` below" calls must declare themselves.
+  Annotated the existing deliberate sites (`social_auth`, `saml_metadata`, `connection_probe`,
+  `email/inbound`, `agent/client_factory`, `graphql/adapters/base`) and migrated the 15 stale
+  `# noqa: DZ-HTTP-NORETRY` comments to the plain marker (ruff strips `DZ-HTTP-NORETRY` as an
+  invalid lint code under `noqa:`). The retry helper itself lives in `dazzle.core.http_client`,
+  outside the scanned layers.
+
+### Agent Guidance
+- **Outbound HTTP in `http/`/`agent/` must declare its retry posture.** Route new outbound calls
+  through `dazzle.core.http_client.async_retrying_request`/`retrying_request`, or add a plain
+  `# DZ-HTTP-NORETRY <reason>` comment (NOT `# noqa: DZ-HTTP-NORETRY` — ruff strips it). The
+  `test_no_unretried_http_1437.py` gate enforces this.
+
 ## [0.83.77] - 2026-06-22
 
 ### Fixed

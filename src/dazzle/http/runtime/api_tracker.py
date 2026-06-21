@@ -387,7 +387,9 @@ class TrackedHttpxClient:
         self.service_name = service_name
         self.base_url = base_url
         self.tenant_id = tenant_id
-        self._client = httpx.AsyncClient(base_url=base_url, **httpx_kwargs)  # noqa: DZ-HTTP-NORETRY  persistent client; retry policy decided by caller
+        self._client = httpx.AsyncClient(
+            base_url=base_url, **httpx_kwargs
+        )  # DZ-HTTP-NORETRY  persistent client; retry policy decided by caller
 
     async def request(
         self,

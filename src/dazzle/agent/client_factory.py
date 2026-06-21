@@ -52,4 +52,6 @@ def create_persona_client(
         except ImportError:
             pass
 
-    return httpx.AsyncClient(timeout=timeout, cookies=cookies)
+    return httpx.AsyncClient(  # DZ-HTTP-NORETRY  QA test-agent client; tests must not mask transient failures
+        timeout=timeout, cookies=cookies
+    )

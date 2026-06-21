@@ -99,7 +99,7 @@ async def discovery_run_impl(
 
     t0 = time.monotonic()
 
-    async with httpx.AsyncClient(  # noqa: DZ-HTTP-NORETRY  one-shot MCP exploration
+    async with httpx.AsyncClient(  # DZ-HTTP-NORETRY  one-shot MCP exploration
         base_url=base_url,
         cookies=cookies,
         follow_redirects=True,

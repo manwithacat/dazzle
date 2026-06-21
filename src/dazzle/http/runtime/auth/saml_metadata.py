@@ -81,7 +81,7 @@ def fetch_idp_metadata(url: str, *, timeout: float = 10.0) -> str:
     chunks: list[bytes] = []
     total = 0
     try:
-        with httpx.stream(
+        with httpx.stream(  # DZ-HTTP-NORETRY  one-shot capped metadata stream
             "GET",
             url,
             timeout=timeout,

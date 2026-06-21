@@ -98,7 +98,9 @@ def create_fragment_router(
                 data = await cache.get(scope, full_url)
 
             if data is None:
-                async with httpx.AsyncClient(timeout=10.0) as client:  # noqa: DZ-HTTP-NORETRY  retry via async_retrying_request below
+                async with httpx.AsyncClient(
+                    timeout=10.0
+                ) as client:  # DZ-HTTP-NORETRY  retry via async_retrying_request below
                     resp = await async_retrying_request(
                         client,
                         "GET",
@@ -193,7 +195,9 @@ def create_fragment_router(
                 record = await cache.get(scope, full_url)
 
             if record is None:
-                async with httpx.AsyncClient(timeout=10.0) as client:  # noqa: DZ-HTTP-NORETRY  retry via async_retrying_request below
+                async with httpx.AsyncClient(
+                    timeout=10.0
+                ) as client:  # DZ-HTTP-NORETRY  retry via async_retrying_request below
                     resp = await async_retrying_request(client, "GET", full_url, headers=headers)
                     resp.raise_for_status()
                     record = resp.json()
