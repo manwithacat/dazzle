@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.69] - 2026-06-21
+
+### Changed
+- **#1442 — id-first identity fallback now routes through `spec_display_id`.** The
+  `spec_display_id` helper + its `test_no_inline_identity_fallback` gate only covered the
+  `.name`-then-`.id` order, so 6 sites that must try `.id` first (the PersonaSpec
+  orientation — `lsp/server.py`, `agent/missions/persona_journey.py`,
+  `mcp/server/handlers/policy.py`, `testing/session_manager.py`,
+  `fitness/missions/free_roam.py`) re-inlined `getattr(x,"id",None) or getattr(x,"name",…)`
+  and evaded the gate. `spec_display_id` gains a `prefer="id"` option (with overloads so a
+  str default still types as `str`); all id-first sites route through it; the gate regex now
+  matches both orderings.
+
 ## [0.83.68] - 2026-06-21
 
 ### Fixed

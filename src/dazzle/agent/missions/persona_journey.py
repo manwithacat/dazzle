@@ -1289,4 +1289,6 @@ def run_headless_discovery(
 
 def _persona_id(persona: Any) -> str:
     """Extract persona ID, handling both .id and .name attributes."""
-    return str(getattr(persona, "id", None) or getattr(persona, "name", None) or "unknown")
+    from dazzle.core.ir.identity import spec_display_id
+
+    return spec_display_id(persona, prefer="id")

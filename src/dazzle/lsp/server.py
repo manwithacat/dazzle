@@ -317,11 +317,11 @@ def _build_name_index(appspec: ir.AppSpec) -> dict[str, tuple[str, Any]]:
         if sid:
             index[sid] = ("story", story)
     for persona in appspec.personas:
-        pid = getattr(persona, "id", None) or getattr(persona, "name", None)
+        pid = spec_display_id(persona, None, prefer="id")
         if pid:
             index[pid] = ("persona", persona)
     for scenario in appspec.scenarios:
-        sid = getattr(scenario, "id", None) or getattr(scenario, "name", None)
+        sid = spec_display_id(scenario, None, prefer="id")
         if sid:
             index[sid] = ("scenario", scenario)
     for ledger in appspec.ledgers:

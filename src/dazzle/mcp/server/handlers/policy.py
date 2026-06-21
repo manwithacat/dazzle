@@ -218,8 +218,10 @@ def _coverage_matrix(appspec: AppSpec, entity_names: list[str] | None) -> dict[s
 
     # Collect all persona IDs
     persona_ids: list[str] = []
+    from dazzle.core.ir.identity import spec_display_id
+
     for p in appspec.personas:
-        pid: str = getattr(p, "id", None) or getattr(p, "name", None) or "unknown"
+        pid: str = spec_display_id(p, prefer="id")
         persona_ids.append(pid)
 
     if not persona_ids:

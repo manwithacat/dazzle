@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any
 
 from dazzle.agent.core import Mission
+from dazzle.core.ir.identity import spec_display_id
 
 _SYSTEM_PROMPT_TEMPLATE = """You are acting as a human proxy for the following \
 persona: {persona_id}.
@@ -46,7 +47,7 @@ def build_free_roam_mission(
     step_budget: int,
 ) -> Mission:
     """Build a free-roam :class:`Mission` for a given persona and intent."""
-    persona_id = getattr(persona, "id", None) or getattr(persona, "name", None) or "unknown"
+    persona_id = spec_display_id(persona, prefer="id")
     system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(
         persona_id=persona_id,
         intent=intent,

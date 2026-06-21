@@ -24,6 +24,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field
 
+from dazzle.core.ir.identity import spec_display_id
 from dazzle.core.manifest import resolve_api_url
 
 logger = logging.getLogger("dazzle.testing.session_manager")
@@ -216,7 +217,7 @@ class SessionManager:
         headers = {"X-Test-Secret": test_secret} if test_secret else {}
         async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
             for persona in personas:
-                pid = str(getattr(persona, "id", None) or getattr(persona, "name", "unknown"))
+                pid = spec_display_id(persona, prefer="id")
                 try:
                     session = await self.create_session(pid, client=client)
                     manifest.sessions[pid] = session

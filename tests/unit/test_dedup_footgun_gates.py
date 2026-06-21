@@ -32,8 +32,15 @@ def test_no_inline_404_guard() -> None:
 
 
 def test_no_inline_identity_fallback() -> None:
-    """`getattr(x,"name",None) or getattr(x,"id",...)` → `spec_display_id(x)`."""
-    pat = re.compile(r'getattr\(\w+, "name", None\) or getattr\(\w+, "id"')
+    """`getattr(x,"name",None) or getattr(x,"id",...)` → `spec_display_id(x)`.
+
+    Both orderings are gated (#1442): name-first → `spec_display_id(x)`, and the
+    id-first PersonaSpec orientation → `spec_display_id(x, prefer="id")`.
+    """
+    pat = re.compile(
+        r'getattr\(\w+, "name", None\) or getattr\(\w+, "id"'  # name-first
+        r'|getattr\(\w+, "id", None\) or getattr\(\w+, "name"'  # id-first (#1442)
+    )
     hits = [
         str(p.relative_to(_SRC.parent.parent))
         for p in _src_files({"identity.py"})
@@ -41,7 +48,8 @@ def test_no_inline_identity_fallback() -> None:
     ]
     assert not hits, (
         "Inline name/id identity fallback found — use "
-        "`dazzle.core.ir.identity.spec_display_id(spec)` instead:\n  " + "\n  ".join(hits)
+        '`dazzle.core.ir.identity.spec_display_id(spec)` (add `prefer="id"` for the '
+        "PersonaSpec id-first order) instead:\n  " + "\n  ".join(hits)
     )
 
 
