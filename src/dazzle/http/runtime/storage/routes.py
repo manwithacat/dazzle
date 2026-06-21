@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from dazzle.core import ir
 from dazzle.http.runtime.auth import current_user_id
 
 if TYPE_CHECKING:
@@ -149,7 +150,7 @@ def _build_upload_ticket_handler(
 def register_upload_ticket_routes(
     *,
     app: Any,
-    appspec: Any,
+    appspec: ir.AppSpec,
     registry: "StorageRegistry",
 ) -> list[str]:
     """Walk `appspec.domain.entities` and register a

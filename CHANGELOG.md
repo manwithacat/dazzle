@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.74] - 2026-06-21
+
+### Changed
+- **#1443 — renderer-stack params typed with concrete IR types instead of `Any` (27 sites).**
+  Page/render/http functions that take `AppSpec`/`WorkspaceSpec`/`SurfaceSpec`/`EntitySpec`/
+  `SearchSpec`/`NotificationSpec`/`JobSpec` objects annotated them `Any` (a leftover cycle-dodge),
+  masking attribute typos and dropping mypy coverage on the most-passed objects in the renderer
+  stack. All 27 now carry the concrete `ir.*` type (or the back-spec `EntitySpec` for `rls_schema`).
+  Tightening the types surfaced — and this change **fixes** — 10 latent imprecisions the `Any` hid:
+  a `display_mode` enum→str variable reused across types, a loop variable reused as both `SortSpec`
+  and `SurfaceSpec`, and three missing `None`-narrowings on `region.notice` / `appspec.app_config`.
+  Full `mypy src/dazzle` is clean (1361 files) with no call-site breakage.
+
+### Fixed
+- Stale `test_cli_sweep` example-count assertion (11 → 12) after `domain_join_co` shipped (#1429).
+
 ## [0.83.73] - 2026-06-21
 
 ### Changed

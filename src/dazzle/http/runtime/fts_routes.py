@@ -30,6 +30,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 
+from dazzle.core import ir
 from dazzle.http.runtime.http_errors import require_found
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 def create_fts_routes(
     *,
-    appspec: Any,
+    appspec: ir.AppSpec,
     repositories: dict[str, Any],
     fk_graph: Any,
     auth_dep: Any,

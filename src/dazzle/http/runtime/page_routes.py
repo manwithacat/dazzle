@@ -1546,7 +1546,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
 
 def _build_dispatch_ctx(
     render_ctx: Any,
-    surface: Any = None,
+    surface: ir.SurfaceSpec | None = None,
     *,
     services: Any = None,
 ) -> dict[str, Any]:
@@ -2194,7 +2194,7 @@ def _make_workspace_handler(
 
 
 def _build_workspace_primary_action_candidates(
-    workspace: Any,
+    workspace: ir.WorkspaceSpec,
     *,
     app_prefix: str,
     create_surfaces_by_entity: dict[str, Any],
@@ -2249,7 +2249,7 @@ def _build_workspace_primary_action_candidates(
 
 
 def _resolve_workspace_authored_actions(
-    workspace: Any,
+    workspace: ir.WorkspaceSpec,
     *,
     app_prefix: str,
     surfaces_by_name: dict[str, Any],

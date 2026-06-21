@@ -30,6 +30,7 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
+from dazzle.core import ir
 from dazzle.core.ir.jobs import JobBackoff
 from dazzle.http.runtime.job_handler import JobHandlerNotFound, resolve_handler
 from dazzle.http.runtime.job_queue import JobMessage, JobQueue
@@ -195,7 +196,7 @@ async def process_one(
 
 async def _handle_failure(
     *,
-    spec: Any,
+    spec: ir.JobSpec,
     message: JobMessage,
     job_service: Any,
     queue: JobQueue,

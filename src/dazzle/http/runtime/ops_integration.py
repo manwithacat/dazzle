@@ -16,6 +16,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core import ir
 from dazzle.http.runtime.analytics_collector import (
     AnalyticsCollector,
     AnalyticsConfig,
@@ -413,7 +414,7 @@ def mount_ops_platform(
     event_bus: EventBus | None = None,
     ws_manager: WebSocketManager | None = None,
     app_db_path: str | None = None,
-    appspec: Any = None,
+    appspec: ir.AppSpec | None = None,
 ) -> OpsPlatform:
     """
     Mount the Operations Platform on a FastAPI app.

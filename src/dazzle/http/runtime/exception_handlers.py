@@ -17,6 +17,8 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.responses import Response
 
+from dazzle.core import ir
+
 
 def register_exception_handlers(app: FastAPI) -> None:
     """
@@ -344,7 +346,7 @@ def register_site_error_handlers(
     app: FastAPI,
     sitespec_data: dict[str, Any],
     project_root: Path | None = None,
-    appspec: Any = None,
+    appspec: ir.AppSpec | None = None,
 ) -> None:
     """
     Register custom HTTP error handlers for site pages.

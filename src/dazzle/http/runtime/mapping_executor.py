@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from dazzle.core import ir
 from dazzle.core.http_client import async_retrying_request
 from dazzle.core.ir.integrations import (
     AuthType,
@@ -117,7 +118,7 @@ class MappingExecutor:
 
     def __init__(
         self,
-        appspec: Any,
+        appspec: ir.AppSpec,
         event_bus: EntityEventBus,
         *,
         update_entity: Any | None = None,

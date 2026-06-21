@@ -20,6 +20,7 @@ from typing import Any
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from dazzle.core import ir
 from dazzle.http.runtime.query_builder import quote_identifier, validate_sql_identifier
 from dazzle.http.runtime.repository import DatabaseManager
 from dazzle.http.specs.entity import EntitySpec
@@ -89,7 +90,7 @@ class SpecInfo(BaseModel):
 
 @dataclass
 class _DebugDeps:
-    appspec: Any
+    appspec: ir.AppSpec
     db_manager: DatabaseManager
     entities: list[EntitySpec]
     start_time: datetime
@@ -313,7 +314,7 @@ async def _list_tables(deps: _DebugDeps) -> dict[str, Any]:
 
 
 def create_debug_routes(
-    appspec: Any,
+    appspec: ir.AppSpec,
     db_manager: DatabaseManager,
     entities: list[EntitySpec],
     start_time: datetime,

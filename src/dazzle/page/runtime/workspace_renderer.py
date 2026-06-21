@@ -18,6 +18,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from dazzle.core import ir
 from dazzle.page import app_paths
 
 
@@ -439,8 +440,8 @@ def _resolve_thresholds(raw: object) -> list[float]:
 
 
 def build_workspace_context(
-    workspace: Any,
-    app_spec: Any | None = None,
+    workspace: ir.WorkspaceSpec,
+    app_spec: ir.AppSpec | None = None,
 ) -> WorkspaceContext:
     """Build a WorkspaceContext from a WorkspaceSpec IR object.
 
@@ -468,10 +469,9 @@ def build_workspace_context(
     ws_regions = workspace.regions
 
     for idx, region in enumerate(ws_regions):
-        display_mode = region.display
-        if hasattr(display_mode, "value"):
-            display_mode = display_mode.value
-        display_mode = str(display_mode).upper()
+        raw_display = region.display
+        display_mode: str = raw_display.value if hasattr(raw_display, "value") else str(raw_display)
+        display_mode = display_mode.upper()
 
         # Cycle 246 — EX-047 aggregate display-mode inference.
         # When a region declares `aggregate: { ... }` but omits an
@@ -544,9 +544,9 @@ def build_workspace_context(
 
             if not action_url:
                 surfaces = app_spec.surfaces
-                for s in surfaces:
-                    if s.name == action_name:
-                        entity_ref = s.entity_ref or ""
+                for surf in surfaces:
+                    if surf.name == action_name:
+                        entity_ref = surf.entity_ref or ""
                         if entity_ref:
                             if entity_ref == source_name:
                                 # Same entity — use row id
@@ -680,11 +680,11 @@ def build_workspace_context(
                 tones=dict(getattr(region, "tones", None) or {}),  # v0.61.65
                 notice=(
                     {
-                        "title": region.notice.title,
-                        "body": region.notice.body,
-                        "tone": region.notice.tone,
+                        "title": _notice.title,
+                        "body": _notice.body,
+                        "tone": _notice.tone,
                     }
-                    if getattr(region, "notice", None)
+                    if (_notice := getattr(region, "notice", None)) is not None
                     else {}
                 ),  # v0.61.68 #7
                 status_entries=[
@@ -994,7 +994,7 @@ def render_workspace_content_typed(
 def _resolve_fk_field(
     source_entity: str,
     target_entity: str,
-    app_spec: Any,
+    app_spec: ir.AppSpec,
 ) -> str | None:
     """Find the FK field in *source_entity* that references *target_entity*.
 

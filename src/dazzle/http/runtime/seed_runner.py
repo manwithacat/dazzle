@@ -9,6 +9,8 @@ import logging
 from typing import Any
 from uuid import uuid4
 
+from dazzle.core import ir
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +25,7 @@ def _find_uuid_pk_field(entity: Any) -> str | None:
 
 
 async def run_seed_templates(
-    appspec: Any,
+    appspec: ir.AppSpec,
     repositories: dict[str, Any],
 ) -> int:
     """Generate and upsert seed rows for all entities with seed templates.

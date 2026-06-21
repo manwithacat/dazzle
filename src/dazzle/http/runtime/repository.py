@@ -18,6 +18,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from dazzle.core import ir
 from dazzle.http.runtime.query_builder import quote_identifier
 from dazzle.http.specs.entity import (
     ComputedFieldSpec,
@@ -1489,7 +1490,7 @@ class Repository[T: BaseModel]:
 
     async def fts_search(
         self,
-        spec: Any,  # SearchSpec — typed Any to avoid IR import cycle
+        spec: ir.SearchSpec,
         q: str,
         *,
         page: int = 1,

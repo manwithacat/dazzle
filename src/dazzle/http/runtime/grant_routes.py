@@ -15,13 +15,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from dazzle.core import ir
 from dazzle.http.runtime.auth import AuthContext
 
 
 def create_grant_routes(
     *,
     db_manager: Any,
-    appspec: Any,
+    appspec: ir.AppSpec,
     auth_dep: Any = None,
 ) -> APIRouter:
     """Create grant management routes.

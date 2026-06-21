@@ -26,6 +26,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from dazzle.core import ir
 from dazzle.http.converters.entity_converter import convert_entities
 from dazzle.http.runtime.model_generator import generate_all_entity_models
 from dazzle.http.runtime.pg_backend import PostgresBackend
@@ -44,7 +45,7 @@ when the DSL declares any `job:` or `audit on …` block.
 
 
 def build_worker_services(
-    appspec: Any,
+    appspec: ir.AppSpec,
     database_url: str,
     *,
     pool_min: int = 1,

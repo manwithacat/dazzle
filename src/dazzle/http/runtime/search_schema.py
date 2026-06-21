@@ -39,6 +39,8 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
+from dazzle.core import ir
+
 logger = logging.getLogger(__name__)
 
 
@@ -179,8 +181,8 @@ def _resolve_searchable_field(entity: Any, path: str) -> Any | None:
 
 
 def _build_concat_expression(
-    entity: Any,
-    spec: Any,
+    entity: ir.EntitySpec,
+    spec: ir.SearchSpec,
     config: str,
 ) -> str | None:
     """Build the inner expression for the GENERATED column.

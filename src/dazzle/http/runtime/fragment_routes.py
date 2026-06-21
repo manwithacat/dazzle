@@ -11,6 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Query, Request
 from starlette.responses import Response
 
+from dazzle.core import ir
 from dazzle.core.http_client import async_retrying_request
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def _html(content: str) -> Response:
 
 def create_fragment_router(
     fragment_sources: dict[str, dict[str, Any]] | None = None,
-    app_spec: Any | None = None,
+    app_spec: ir.AppSpec | None = None,
     cache: Any | None = None,
 ) -> APIRouter:
     """Create the fragment routes router.

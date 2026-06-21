@@ -128,10 +128,10 @@ class TestSweepIntegration:
         payload = json.loads(result.stdout)
         assert "apps" in payload
         assert "coverage" in payload
-        # 11 examples (kayfabe business apps only; pra, custom_renderer,
+        # 12 examples (kayfabe business apps only; pra, custom_renderer,
         # component_showcase were reclassified to fixtures/ in the 2026-06-13
         # example-guides Phase 0): contact_manager, fieldtest_hub,
         # ops_dashboard, simple_task, support_tickets, design_studio,
         # llm_ticket_classifier, project_tracker, acme_billing (#1174),
-        # invoice_ops (#1184), hr_records (#1217).
-        assert len(payload["apps"]) == 11
+        # invoice_ops (#1184), hr_records (#1217), domain_join_co (#1429).
+        assert len(payload["apps"]) == 12

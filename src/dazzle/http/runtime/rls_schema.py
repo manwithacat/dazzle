@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from dazzle.core.ir.fk_graph import FKGraph
     from dazzle.http.runtime.predicate_compiler import EntityTypeResolver
+    from dazzle.http.specs.entity import EntitySpec as _BackEntitySpec
 
 # Fixed framework GUC name for the per-transaction tenant context (companion §6).
 # This is deliberately INDEPENDENT of the app's partition_key column: the runtime
@@ -443,7 +444,7 @@ _SCOPE_POLICY_NAME: dict[str, str] = {
 
 
 def build_rls_scope_policy_ddl(
-    entity: Any,
+    entity: _BackEntitySpec,
     fk_graph: FKGraph,
     entity_types: EntityTypeResolver,
     *,

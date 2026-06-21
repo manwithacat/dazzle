@@ -28,6 +28,8 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from dazzle.core import ir
+
 logger = logging.getLogger(__name__)
 
 
@@ -99,7 +101,7 @@ def should_fire(
 
 def build_trigger_callbacks(
     *,
-    spec: Any,  # NotificationSpec
+    spec: ir.NotificationSpec,
     dispatcher: Any,  # NotificationDispatcher
 ) -> dict[str, Callable[..., Awaitable[None]]]:
     """Build on_created / on_updated / on_deleted callbacks for one

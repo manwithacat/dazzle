@@ -22,6 +22,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from dazzle.core import ir
+
 logger = logging.getLogger(__name__)
 
 
@@ -122,7 +124,7 @@ def _dedup_preserving_order(items: list[str]) -> tuple[str, ...]:
 
 
 def resolve_app_chrome(
-    appspec: Any,
+    appspec: ir.AppSpec,
     *,
     project_root: Path | None = None,
     manifest: Any = None,
@@ -161,12 +163,9 @@ def resolve_app_chrome(
     # Theme name: env > DSL > manifest > None.
     env_theme = os.environ.get("DAZZLE_OVERRIDE_THEME") or None
     dsl_theme: str | None = None
-    if (
-        appspec is not None
-        and getattr(appspec, "app_config", None) is not None
-        and getattr(appspec.app_config, "theme", None)
-    ):
-        dsl_theme = str(appspec.app_config.theme)
+    app_config = getattr(appspec, "app_config", None) if appspec is not None else None
+    if app_config is not None and getattr(app_config, "theme", None):
+        dsl_theme = str(app_config.theme)
     leaf_theme = env_theme or dsl_theme or manifest_theme
 
     # Default CSS / JS chain — framework bundle always first.

@@ -28,6 +28,8 @@ from typing import Any
 
 from fastapi import APIRouter
 
+from dazzle.core import ir
+
 logger = logging.getLogger(__name__)
 
 # Declaration header pattern: # dazzle:route-override METHOD /path
@@ -144,7 +146,7 @@ def verify_emits_paths(
 
 
 def verify_route_matrix_completeness(
-    appspec: Any,
+    appspec: ir.AppSpec,
     overrides: list[RouteOverrideDescriptor],
     generated_paths: set[tuple[str, str]],
 ) -> list[str]:

@@ -20,6 +20,8 @@ import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core import ir
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -65,7 +67,7 @@ class IntegrationExecutor:
 
     def __init__(
         self,
-        app_spec: Any | None = None,
+        app_spec: ir.AppSpec | None = None,
         fragment_sources: dict[str, dict[str, Any]] | None = None,
     ) -> None:
         self._app_spec = app_spec

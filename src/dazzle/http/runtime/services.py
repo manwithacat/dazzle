@@ -9,6 +9,7 @@ from typing import Any
 
 from fastapi import Request
 
+from dazzle.core import ir
 from dazzle.http.runtime.event_bus import EntityEventBus
 from dazzle.http.runtime.presence_tracker import PresenceTracker
 from dazzle.render.fragment.registry import PrimitiveRegistry, RendererRegistry
@@ -103,7 +104,7 @@ class RuntimeServices:
     system_collector: Any = None  # SystemCollector | None
     metrics_emitter: Any = None  # MetricsEmitter | None
     process_manager: Any = None  # ProcessManager | None
-    app_spec: Any = (
+    app_spec: ir.AppSpec | None = (
         None  # ir.AppSpec | None — populated at boot, used by renderer dispatch ctx builder
     )
 
