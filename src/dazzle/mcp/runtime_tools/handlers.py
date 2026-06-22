@@ -4,6 +4,7 @@ the Dazzle runtime MCP tool handlers.
 Implementations for backend, UI, and GraphQL BFF tool calls.
 """
 
+import functools
 import json
 from collections.abc import Callable
 from typing import Any
@@ -19,17 +20,15 @@ from .components import (
     get_valid_layout_kinds,
 )
 
-# Dispatch table lazily built on first use (see _build_dispatch_table at the
-# bottom of this module). The previous module-scope `.update(...)` call was an
-# ADR-0005 violation — import order affected state.
-_dispatch_cache: dict[str, Callable[[dict[str, Any]], str]] | None = None
 
-
+# Dispatch table built once on first use (see _build_dispatch_table at the bottom of
+# this module). `functools.cache` on a parameterless loader replaces the old
+# module-scope `global _dispatch_cache` lazy init — no hidden mutable global, and the
+# build is thread-safe. The previous module-scope `.update(...)` was an ADR-0005
+# violation (import order affected state).
+@functools.cache
 def _get_dispatch() -> dict[str, Callable[[dict[str, Any]], str]]:
-    global _dispatch_cache  # noqa: PLW0603  # one-time lazy init, replaces module-scope mutation
-    if _dispatch_cache is None:
-        _dispatch_cache = _build_dispatch_table()
-    return _dispatch_cache
+    return _build_dispatch_table()
 
 
 def handle_runtime_tool(name: str, arguments: dict[str, Any]) -> str:

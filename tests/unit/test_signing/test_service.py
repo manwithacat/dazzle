@@ -15,9 +15,9 @@ import pytest
 
 from dazzle.signing.service import (
     PdfBranding,
+    _get_signer,
     _sanitize_html_for_pdf,
     generate_pdf,
-    reset_signer_cache,
     sign_pdf,
 )
 from dazzle.signing.tokens import SigningError
@@ -64,7 +64,7 @@ def test_generate_pdf_raises_friendly_error_when_fpdf2_missing():
 
 def test_sign_pdf_raises_friendly_error_when_pyhanko_missing(monkeypatch):
     monkeypatch.setenv("SIGNING_CERT_PFX_B64", "irrelevant")
-    reset_signer_cache()
+    _get_signer.cache_clear()
     with patch.dict(
         "sys.modules",
         {"pyhanko": None, "pyhanko.sign": None, "pyhanko.sign.signers": None},
@@ -75,7 +75,7 @@ def test_sign_pdf_raises_friendly_error_when_pyhanko_missing(monkeypatch):
 
 def test_sign_pdf_raises_when_cert_env_missing(monkeypatch):
     monkeypatch.delenv("SIGNING_CERT_PFX_B64", raising=False)
-    reset_signer_cache()
+    _get_signer.cache_clear()
     pyhanko = pytest.importorskip("pyhanko")
     del pyhanko
     with pytest.raises(SigningError, match="SIGNING_CERT_PFX_B64"):
@@ -125,7 +125,7 @@ def test_sign_pdf_round_trip(monkeypatch, tmp_path):
     b64, password = generate_cert_chain_b64("Acme Ltd")
     monkeypatch.setenv("SIGNING_CERT_PFX_B64", b64)
     monkeypatch.setenv("SIGNING_CERT_PASSWORD", password)
-    reset_signer_cache()
+    _get_signer.cache_clear()
 
     branding = PdfBranding(organisation="Acme Ltd")
     pdf = generate_pdf("<p>Body</p>", "Alice", branding)

@@ -27,6 +27,7 @@ downstream can supply its own header/footer.
 from __future__ import annotations
 
 import base64
+import functools
 import io
 import logging
 import os
@@ -42,8 +43,6 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 DEFAULT_TSA_URL = "http://timestamp.digicert.com"
-
-_signer_cache: SimpleSigner | None = None
 
 
 @dataclass(frozen=True)
@@ -175,12 +174,15 @@ def generate_pdf(
     return bytes(pdf.output())
 
 
+@functools.cache
 def _get_signer() -> SimpleSigner:
-    """Load and cache the PKCS#12 signer from env."""
-    global _signer_cache
-    if _signer_cache is not None:
-        return _signer_cache
+    """Load and cache the PKCS#12 signer from env.
 
+    `functools.cache` memoises the loaded signer (one-time, thread-safe) with no
+    module-level `global` (ADR-0005). A raised `SigningError` is not cached, so a
+    later call retries once the env is configured. Tests that mutate the signing env
+    call `_get_signer.cache_clear()` to force a re-load.
+    """
     pfx_b64 = os.environ.get("SIGNING_CERT_PFX_B64", "")
     password = os.environ.get("SIGNING_CERT_PASSWORD", "")
 
@@ -204,14 +206,7 @@ def _get_signer() -> SimpleSigner:
     except Exception as exc:
         raise SigningError(f"Failed to load signing certificate: {exc}") from exc
 
-    _signer_cache = signer
     return signer
-
-
-def reset_signer_cache() -> None:
-    """Clear the cached PKCS#12 signer. Test-only entry point."""
-    global _signer_cache
-    _signer_cache = None
 
 
 def _build_signing_inputs(

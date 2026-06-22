@@ -7,6 +7,7 @@ up). The DSL `render: <name>` clause resolves through the registry.
 """
 
 import dataclasses
+import functools
 import hashlib
 import pathlib
 from collections.abc import Callable
@@ -223,18 +224,15 @@ class RendererRegistry:
         base = asset_url(renderer_name, filename)
         if cache != "fingerprint":
             return base
-        key = (renderer_name, filename)
-        if key in _fingerprint_cache:
-            return f"{base}?v={_fingerprint_cache[key]}"
         path = self._asset_path(renderer_name, filename)
         if path is None or not path.exists():
             # Unknown asset or missing file — return bare URL. A
             # registered asset whose file vanishes is an operator
             # error, but it shouldn't crash render.
             return base
-        digest = _content_hash(path)
-        _fingerprint_cache[key] = digest
-        return f"{base}?v={digest}"
+        # `_content_hash` is `functools.cache`d (keyed by path) — first request
+        # hashes the file once; subsequent requests return the memoised digest.
+        return f"{base}?v={_content_hash(path)}"
 
     def _asset_path(self, renderer_name: str, filename: str) -> pathlib.Path | None:
         """Look up the on-disk path for a (renderer, filename) pair."""
@@ -310,13 +308,12 @@ def asset_url(renderer_name: str, filename: str) -> str:
     return f"/static/dazzle-renderers/{renderer_name}/{filename}"
 
 
-# #1137: module-level memoisation. Keyed by (renderer_name, filename)
-# so a renderer's first request hashes the file once; every subsequent
-# request returns the cached digest. Cache is process-lifetime — assets
-# don't change without a restart.
-_fingerprint_cache: dict[tuple[str, str], str] = {}
-
-
+# #1137/#1445: per-path memoisation via functools.cache (no module-level mutable
+# dict + reset helper). First request for a path hashes the file once; subsequent
+# requests return the memoised digest. Cache is process-lifetime — assets don't
+# change without a restart. A test that mutates a fixture file calls
+# `_content_hash.cache_clear()` to force a re-hash.
+@functools.cache
 def _content_hash(path: pathlib.Path) -> str:
     """SHA-256 of file contents, truncated to 8 hex chars.
 
@@ -331,13 +328,3 @@ def _content_hash(path: pathlib.Path) -> str:
         for chunk in iter(lambda: f.read(65536), b""):
             h.update(chunk)
     return h.hexdigest()[:8]
-
-
-def reset_fingerprint_cache() -> None:
-    """Test-only: clear the module-level hash memoisation.
-
-    Useful when a test mutates a fixture file and needs the next
-    ``asset_url`` call to re-hash. Production code should never
-    call this — asset content doesn't change without a restart.
-    """
-    _fingerprint_cache.clear()

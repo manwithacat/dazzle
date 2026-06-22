@@ -13,6 +13,7 @@ The module deliberately uses **SQLAlchemy Core only** — no ORM, no Session.
 
 from __future__ import annotations
 
+import functools
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
@@ -30,25 +31,22 @@ logger = logging.getLogger(__name__)
 # Lazy imports — sqlalchemy is an optional dependency (postgres extra)
 # ---------------------------------------------------------------------------
 
-_sa_imported = False
-_sa: Any = None  # sqlalchemy module
 
-
+@functools.cache
 def _ensure_sa() -> Any:
-    """Import sqlalchemy on first use and return the module."""
-    global _sa_imported, _sa  # noqa: PLW0603  # lazy import for optional sqlalchemy
-    if not _sa_imported:
-        try:
-            import sqlalchemy
+    """Import sqlalchemy on first use and return the module.
 
-            _sa = sqlalchemy
-        except ImportError as exc:
-            raise RuntimeError(
-                "sqlalchemy is required for the SA schema bridge.  "
-                "Install it with:  pip install dazzle"
-            ) from exc
-        _sa_imported = True
-    return _sa
+    `functools.cache` memoises the successful import (one-time, thread-safe) with no
+    module-level `global` — a raised RuntimeError is *not* cached, so a later call
+    retries the import once the optional `postgres` extra is installed.
+    """
+    try:
+        import sqlalchemy
+    except ImportError as exc:
+        raise RuntimeError(
+            "sqlalchemy is required for the SA schema bridge.  Install it with:  pip install dazzle"
+        ) from exc
+    return sqlalchemy
 
 
 # ---------------------------------------------------------------------------

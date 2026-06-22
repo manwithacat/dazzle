@@ -14,7 +14,7 @@ import pathlib
 import re
 
 from dazzle.render.fragment import RendererAsset, RendererRegistry
-from dazzle.render.fragment.registry import reset_fingerprint_cache
+from dazzle.render.fragment.registry import _content_hash
 
 
 class _RendererWithAssets:
@@ -31,7 +31,7 @@ class _RendererWithAssets:
 def _make_registry(
     tmp_path: pathlib.Path, contents: bytes = b"init();"
 ) -> tuple[RendererRegistry, pathlib.Path]:
-    reset_fingerprint_cache()
+    _content_hash.cache_clear()
     js = tmp_path / "init.js"
     js.write_bytes(contents)
     reg = RendererRegistry()
@@ -53,7 +53,7 @@ def test_asset_url_appends_content_hash_when_fingerprint(tmp_path) -> None:
 def test_hash_changes_when_file_contents_change(tmp_path) -> None:
     reg, js = _make_registry(tmp_path, b"a")
     url_a = reg.asset_url("brand_analytics", "init.js")
-    reset_fingerprint_cache()
+    _content_hash.cache_clear()
     js.write_bytes(b"b")
     url_b = reg.asset_url("brand_analytics", "init.js")
     assert url_a != url_b
@@ -78,7 +78,7 @@ def test_immutable_returns_bare_url(tmp_path) -> None:
 def test_unknown_renderer_falls_back_to_bare_url(tmp_path) -> None:
     """A renderer not registered → can't hash → bare URL.
     Render must not hard-fail because of a missing registration."""
-    reset_fingerprint_cache()
+    _content_hash.cache_clear()
     reg = RendererRegistry()
     url = reg.asset_url("nonexistent", "init.js")
     assert url == "/static/dazzle-renderers/nonexistent/init.js"
@@ -87,7 +87,7 @@ def test_unknown_renderer_falls_back_to_bare_url(tmp_path) -> None:
 def test_missing_file_falls_back_to_bare_url(tmp_path) -> None:
     """A registered asset whose file vanished → bare URL, no crash.
     Operator error, but page rendering keeps going."""
-    reset_fingerprint_cache()
+    _content_hash.cache_clear()
     js = tmp_path / "gone.js"
     js.write_bytes(b"x")
     reg = RendererRegistry()
@@ -119,7 +119,7 @@ def test_filename_with_subpath_not_supported_yet(tmp_path) -> None:
     Documents current behaviour — if subpath-aware lookup is needed,
     extend the registry's key format. Bare URL is the fallback,
     which is fine for static-mount scenarios."""
-    reset_fingerprint_cache()
+    _content_hash.cache_clear()
     reg = RendererRegistry()
     js = tmp_path / "lib.js"
     js.write_bytes(b"x")

@@ -146,9 +146,9 @@ def signing_cert_env(monkeypatch: pytest.MonkeyPatch) -> None:
     b64, password = generate_cert_chain_b64("Test Org")
     monkeypatch.setenv("SIGNING_CERT_PFX_B64", b64)
     monkeypatch.setenv("SIGNING_CERT_PASSWORD", password)
-    from dazzle.signing.service import reset_signer_cache
+    from dazzle.signing.service import _get_signer
 
-    reset_signer_cache()
+    _get_signer.cache_clear()
 
 
 # ---------------------------------------------------------------------

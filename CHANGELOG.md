@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.84] - 2026-06-22
+
+### Changed
+- **#1445 (slice 1 — shape (a)) — 5 lazy module caches replaced with `functools.cache` (ADR-0005).**
+  Each was a module-level mutable global behind a `global … # noqa: PLW0603` lazy init (a
+  first-touch race under concurrent boot/render), several paired with a test-only `reset_*` helper —
+  the tell that it was shared mutable state, not a constant. Converted to a `functools.cache`d
+  parameterless loader (or per-arg memoiser), deleting the global + `reset_*`:
+  - `mcp/runtime_tools/handlers._dispatch_cache` → `@cache _get_dispatch()`
+  - `http/runtime/sa_schema._sa`/`_sa_imported` → `@cache _ensure_sa()` (a raised RuntimeError isn't
+    cached, so it retries once the optional `postgres` extra is installed)
+  - `page/converters/template_compiler._WIDGET_KIND_TO_FORM_TYPE` → `@cache _widget_kind_to_form_type()`
+  - `signing/service._signer_cache` → `@cache _get_signer()`; deleted `reset_signer_cache` (tests call
+    `_get_signer.cache_clear()`)
+  - `render/fragment/registry._fingerprint_cache` → `@cache _content_hash(path)` (now keyed by path —
+    dedups across renderers); deleted `reset_fingerprint_cache` (tests call `_content_hash.cache_clear()`)
+
+### Notes
+- **#1445 remaining:** shape (b) self-rolled singletons (`retry_accumulator._DEFAULT_ACCUMULATOR`,
+  `core/process/task_store._DEFAULT_BACKEND`) and shape (c) boot config flags
+  (`page/runtime/theme._DARK_MODE_TOGGLE_ENABLED`/`_HAPTIC_ENABLED`) are DI/ServerState moves, and the
+  ratchet enforcement gate (allow-list of legitimate globals like `mcp/server/state._state`, logging
+  init-only, CLI per-invocation) lands with the final slice once (b)/(c) settle the keep-set.
+
 ## [0.83.83] - 2026-06-22
 
 ### Changed

@@ -9,6 +9,7 @@ so there are no templates — it builds typed contexts, not Jinja contexts.)
 
 from __future__ import annotations
 
+import functools
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -163,35 +164,29 @@ def _file_accept_attr(field_spec: ir.FieldSpec) -> str:
     return "*/*"
 
 
-_WIDGET_KIND_TO_FORM_TYPE: dict[str, str] = {}  # WidgetKind → form type string
+@functools.cache
+def _widget_kind_to_form_type() -> dict[str, str]:
+    """The WidgetKind→form-type mapping, built once on first use.
 
-
-def _init_widget_form_map() -> None:
-    """Lazily initialise the WidgetKind→form-type mapping.
-
-    Deferred to first call so that the import of ``triples`` happens after
-    all IR modules are fully initialised.
+    `functools.cache` defers the build to first call (so the `triples` import lands
+    after all IR modules initialise) and memoises it — no module-level mutable global
+    + lazy-init `global` (ADR-0005). The returned dict must be treated read-only.
     """
-    global _WIDGET_KIND_TO_FORM_TYPE  # noqa: PLW0603
-    if _WIDGET_KIND_TO_FORM_TYPE:
-        return
     from dazzle.core.ir.triples import WidgetKind
 
-    _WIDGET_KIND_TO_FORM_TYPE.update(
-        {
-            WidgetKind.TEXT_INPUT: "text",
-            WidgetKind.TEXTAREA: "textarea",
-            WidgetKind.NUMBER_INPUT: "number",
-            WidgetKind.CHECKBOX: "checkbox",
-            WidgetKind.DATE_PICKER: "date",
-            WidgetKind.DATETIME_PICKER: "datetime",
-            WidgetKind.ENUM_SELECT: "select",
-            WidgetKind.SEARCH_SELECT: "ref",
-            WidgetKind.EMAIL_INPUT: "email",
-            WidgetKind.MONEY_INPUT: "money",
-            WidgetKind.FILE_UPLOAD: "file",
-        }
-    )
+    return {
+        WidgetKind.TEXT_INPUT: "text",
+        WidgetKind.TEXTAREA: "textarea",
+        WidgetKind.NUMBER_INPUT: "number",
+        WidgetKind.CHECKBOX: "checkbox",
+        WidgetKind.DATE_PICKER: "date",
+        WidgetKind.DATETIME_PICKER: "datetime",
+        WidgetKind.ENUM_SELECT: "select",
+        WidgetKind.SEARCH_SELECT: "ref",
+        WidgetKind.EMAIL_INPUT: "email",
+        WidgetKind.MONEY_INPUT: "money",
+        WidgetKind.FILE_UPLOAD: "file",
+    }
 
 
 def _field_type_to_form_type(field_spec: ir.FieldSpec | None) -> str:
@@ -200,9 +195,8 @@ def _field_type_to_form_type(field_spec: ir.FieldSpec | None) -> str:
         return "text"
     from dazzle.core.ir.triples import resolve_widget
 
-    _init_widget_form_map()
     widget = resolve_widget(field_spec, has_source=False)
-    return _WIDGET_KIND_TO_FORM_TYPE.get(widget, "text")
+    return _widget_kind_to_form_type().get(widget, "text")
 
 
 def _get_field_spec(entity: ir.EntitySpec | None, field_name: str) -> ir.FieldSpec | None:
