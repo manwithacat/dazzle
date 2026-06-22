@@ -13,14 +13,12 @@ import pytest
 
 from dazzle.core import ir
 from dazzle.core.errors import LinkError
-from dazzle.core.ir.admin_entities import (
-    ADMIN_ENTITY_DEFS,
-    VIRTUAL_ENTITY_NAMES,
-)
+from dazzle.core.ir.admin_entities import ADMIN_ENTITY_DEFS
 from dazzle.core.ir.feedback_widget import FeedbackWidgetSpec
 from dazzle.core.ir.module import AppConfigSpec
 from dazzle.core.ir.security import SecurityConfig, SecurityProfile
 from dazzle.core.ir.surfaces import SurfaceMode
+from dazzle.db.virtual import VIRTUAL_ENTITY_NAMES
 
 # ---------------------------------------------------------------------------
 # Helper

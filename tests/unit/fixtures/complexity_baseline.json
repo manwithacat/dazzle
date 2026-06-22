@@ -2183,6 +2183,7 @@
       "_build_regions": 12,
       "_check_collisions": 2,
       "_default_admin_ux": 10,
+      "_framework_supplied_names": 4,
       "_is_injected_entity": 1,
       "_is_injected_surface": 1,
       "_is_injected_workspace": 1,
@@ -2191,7 +2192,7 @@
       "_parse_field_type": 17,
       "appspec_injected_summary": 7,
       "boot_log_line": 4,
-      "build_admin_infrastructure": 9,
+      "build_admin_infrastructure": 11,
       "format_injected_as_dsl": 24,
       "get_region_actions": 1,
       "get_row_actions": 1
@@ -5533,8 +5534,10 @@
       "_build_job_run_admin_surface": 2,
       "_build_job_run_entity": 3,
       "_build_onboarding_state_entity": 5,
+      "_build_process_run_entity": 4,
       "_build_security_config": 3,
       "_compile_scope_predicates": 9,
+      "_derive_aijob_subject_targets": 10,
       "_derive_atomic_step_orders": 11,
       "_derive_flow_invariant_anchors": 7,
       "_inject_signable_fields": 7,
@@ -5544,7 +5547,7 @@
       "_unknown_renderer_message": 1,
       "_validate_render_references": 8,
       "_validate_subtype_panels": 13,
-      "build_appspec": 36
+      "build_appspec": 41
     },
     "mi_rank": "A"
   },
@@ -6351,6 +6354,7 @@
     "functions": {
       "validate_audit_config": 13,
       "validate_governance_policies": 16,
+      "validate_llm_subject_surface": 10,
       "validate_sensitive_fields": 6
     },
     "mi_rank": "A"
@@ -6378,13 +6382,12 @@
   },
   "dazzle/core/validation/rbac.py": {
     "functions": {
-      "_contains_poly_path": 4,
       "_find_user_role_enum": 9,
       "_validate_predicate_node": 42,
       "validate_admin_personas_scope_conflict": 8,
       "validate_rbac_matrix_diagnostics": 4,
       "validate_role_references_against_enum": 8,
-      "validate_scope_predicates": 11,
+      "validate_scope_predicates": 8,
       "validate_visibility_bool_field_scope_coverage": 15
     },
     "mi_rank": "A"
@@ -6655,7 +6658,9 @@
     "mi_rank": "A"
   },
   "dazzle/db/virtual.py": {
-    "functions": {},
+    "functions": {
+      "is_virtual_entity": 4
+    },
     "mi_rank": "A"
   },
   "dazzle/demo_data/__init__.py": {
@@ -11812,7 +11817,7 @@
       "LLMIntentExecutor._record_job": 7,
       "LLMIntentExecutor._render_prompt": 1,
       "LLMIntentExecutor._resolve_model": 6,
-      "LLMIntentExecutor.execute": 12,
+      "LLMIntentExecutor.execute": 14,
       "LLMIntentExecutor.list_intents": 3,
       "LLMIntentExecutor.list_models": 2
     },
@@ -11821,7 +11826,7 @@
   "dazzle/http/runtime/llm_queue.py": {
     "functions": {
       "LLMJob": 1,
-      "LLMJobQueue": 5,
+      "LLMJobQueue": 6,
       "LLMJobQueue.__init__": 5,
       "LLMJobQueue._emit_event": 6,
       "LLMJobQueue._execute_job": 10,
@@ -11830,7 +11835,7 @@
       "LLMJobQueue.pending_count": 1,
       "LLMJobQueue.shutdown": 3,
       "LLMJobQueue.start": 3,
-      "LLMJobQueue.submit": 5,
+      "LLMJobQueue.submit": 7,
       "TokenBucket": 3,
       "TokenBucket.__init__": 1,
       "TokenBucket._refill": 1,
@@ -11840,9 +11845,6 @@
   },
   "dazzle/http/runtime/llm_routes.py": {
     "functions": {
-      "AsyncJobResponse": 1,
-      "IntentExecuteRequest": 1,
-      "IntentExecuteResponse": 1,
       "create_llm_routes": 1
     },
     "mi_rank": "A"
@@ -12262,6 +12264,7 @@
       "collect_user_attr_refs": 1,
       "compile_exists_check_probe": 1,
       "compile_path_check_probe": 1,
+      "compile_poly_path_check_probe": 2,
       "compile_predicate": 1,
       "compile_predicate_policy": 2
     },
@@ -12304,9 +12307,11 @@
       "ProcessExecutor": 6,
       "ProcessExecutor.__init__": 4,
       "ProcessExecutor._execute_condition_step": 7,
-      "ProcessExecutor._execute_llm_step": 8,
+      "ProcessExecutor._execute_llm_step": 9,
       "ProcessExecutor._execute_service_step": 6,
       "ProcessExecutor._execute_step": 5,
+      "ProcessExecutor._finish_process_run": 6,
+      "ProcessExecutor._start_process_run": 6,
       "ProcessExecutor.execute": 7,
       "ProcessExecutor.get_checkpoint_data": 1,
       "ProcessResult": 1,
@@ -12824,10 +12829,10 @@
       "ScopeCreateUnsupportedError": 1,
       "_compare": 20,
       "_payload_value": 5,
-      "_resolve_marker": 6,
+      "_resolve_marker": 8,
       "_resolve_value": 6,
       "_run_probe": 2,
-      "_walk": 19,
+      "_walk": 23,
       "check_create_predicate": 2
     },
     "mi_rank": "A"

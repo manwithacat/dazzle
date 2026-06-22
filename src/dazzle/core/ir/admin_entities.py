@@ -96,20 +96,9 @@ SESSION_INFO_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...] = 
     ("is_active", "bool", (), "true"),
 )
 
-# ---------------------------------------------------------------------------
-# Virtual entity set — entities with no backing DB table (read from runtime
-# state rather than persisted rows).  Used by the linker to skip migrations.
-# ---------------------------------------------------------------------------
-
-VIRTUAL_ENTITY_NAMES: frozenset[str] = frozenset(
-    {
-        "SystemHealth",
-        "SystemMetric",
-        "ProcessRun",
-        "LogEntry",
-        "EventTrace",
-    }
-)
+# Virtual entity set (entities with no backing DB table) is the single source of
+# truth in ``dazzle.db.virtual`` — use ``is_virtual_entity`` (EntitySpec-aware,
+# #1454) rather than the bare name set, since the governed ProcessRun is real.
 
 # ---------------------------------------------------------------------------
 # Consolidated entity definitions

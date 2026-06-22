@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.110] - 2026-06-22
+
+### Changed
+- **#1459 cleanup (#1454 follow-on):** removed the duplicate `VIRTUAL_ENTITY_NAMES` in `core/ir/admin_entities.py` — the canonical set lives in `dazzle.db.virtual`, and call sites use the EntitySpec-aware `is_virtual_entity` (the governed `ProcessRun` is a real table). Repointed `test_admin_builder.py` to import it from `dazzle.db.virtual`, and regenerated `complexity_baseline.json` (drops the deleted `llm_routes` class ghost entries, records the #1454 functions).
+
 ## [0.83.109] - 2026-06-22
 
 ### Added
