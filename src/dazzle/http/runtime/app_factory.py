@@ -1121,7 +1121,7 @@ def create_app_factory(
         process_adapter_class: Custom ProcessAdapter class.
             Can also be set via DAZZLE_PROCESS_ADAPTER env var:
             - "eventbus" -> EventBusProcessAdapter (recommended with REDIS_URL)
-            - "celery" or "redis" -> CeleryProcessAdapter (legacy)
+            - "temporal" -> TemporalAdapter
 
     Environment Variables:
         DAZZLE_PROJECT_ROOT: Project root directory (default: current directory)
@@ -1131,7 +1131,7 @@ def create_app_factory(
         DAZZLE_ENV: Environment name (development/staging/production)
         DAZZLE_SECRET_KEY: Secret key for sessions/tokens
         DAZZLE_ENABLE_PROCESSES: Enable/disable process workflows (default: "true")
-        DAZZLE_PROCESS_ADAPTER: Process adapter type ("eventbus", "celery", "temporal")
+        DAZZLE_PROCESS_ADAPTER: Process adapter type ("eventbus", "temporal")
         DAZZLE_AUDIT_INTEGRITY: Audit-log tamper-evidence mode (#1206).
             "none" (default) | "hash_chain". Overrides `[audit] integrity`
             in `dazzle.toml`. See `docs/guides/security.md` T5.
@@ -1269,16 +1269,6 @@ def create_app_factory(
                 logger.info("Using EventBusProcessAdapter (DAZZLE_PROCESS_ADAPTER=eventbus)")
             except ImportError:
                 logger.warning("EventBusProcessAdapter requested but not available (install redis)")
-        elif adapter_env in ("celery", "redis"):
-            try:
-                from dazzle.core.process import CeleryProcessAdapter
-
-                resolved_adapter_class = CeleryProcessAdapter
-                logger.info("Using CeleryProcessAdapter (DAZZLE_PROCESS_ADAPTER=celery)")
-            except ImportError:
-                logger.warning(
-                    "CeleryProcessAdapter requested but not available (install celery+redis)"
-                )
         elif adapter_env == "temporal":
             try:
                 from dazzle.core.process import TemporalAdapter

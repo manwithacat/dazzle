@@ -6,7 +6,6 @@ ProcessSpec and ScheduleSpec definitions from the DSL.
 
 Runtime Modes:
 - EventBusProcessAdapter: Production execution using native event bus + Redis
-- CeleryProcessAdapter: Legacy execution using Celery/Redis (deprecated)
 - TemporalAdapter: Production execution using Temporal
 
 Factory:
@@ -67,14 +66,6 @@ try:
     __all__.append("EventBusProcessAdapter")
 except ImportError:
     pass  # Redis not installed
-
-# Optional Celery adapter (requires: pip install dazzle[celery] or celery + redis)
-try:
-    from .celery_adapter import CeleryProcessAdapter
-
-    __all__.append("CeleryProcessAdapter")
-except ImportError:
-    pass  # Celery/Redis not installed
 
 # Optional Temporal adapter (requires: pip install dazzle[temporal])
 try:

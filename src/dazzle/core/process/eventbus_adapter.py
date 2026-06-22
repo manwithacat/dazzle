@@ -1,6 +1,6 @@
 """EventBusProcessAdapter - ProcessAdapter using native event bus.
 
-Replaces Celery with the Dazzle event bus for process orchestration.
+Process orchestration via the Dazzle event bus.
 Uses event-driven patterns instead of task queue polling:
 
 - Process execution: publish to ``process.execute`` topic, consumer picks up
@@ -8,8 +8,8 @@ Uses event-driven patterns instead of task queue polling:
 - Task completion: subscriber on ``process.task_completed`` resumes process
 - Scheduled triggers: lightweight cron publisher loop
 
-Requires Redis (for both event bus and state store). Eliminates the need
-for Celery worker processes, Beat scheduler, and Flower monitoring.
+Requires Redis (for both event bus and state store). No separate worker
+processes, scheduler, or queue-monitoring sidecar are needed.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from dazzle.core.process.adapter import (
     ProcessTask,
     TaskStatus,
 )
-from dazzle.core.process.celery_state import ProcessStateStore
+from dazzle.core.process.process_state import ProcessStateStore
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
@@ -65,7 +65,7 @@ SCHEDULE_TRIGGER = "process.schedule.triggered"
 class EventBusProcessAdapter(ProcessAdapter):
     """ProcessAdapter using the native Dazzle event bus.
 
-    This adapter publishes events instead of queuing Celery tasks.
+    This adapter publishes events to drive process execution.
     A background consumer loop processes events and executes steps.
 
     Architecture:

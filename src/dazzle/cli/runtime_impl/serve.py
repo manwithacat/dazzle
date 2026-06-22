@@ -632,7 +632,7 @@ def _serve_combined(ctx: _ServeContext) -> None:
     # Infrastructure banner
     if ctx.redis_url:
         event_tier = "Redis Streams"
-        process_backend = "Celery + Beat"
+        process_backend = "EventBus"
     elif ctx.database_url:
         event_tier = "PostgreSQL"
         process_backend = "EventBus (PostgreSQL)"

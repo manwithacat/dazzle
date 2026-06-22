@@ -5794,89 +5794,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/core/process/celery_adapter.py": {
-    "functions": {
-      "CeleryProcessAdapter": 3,
-      "CeleryProcessAdapter.__init__": 2,
-      "CeleryProcessAdapter._find_run_by_idempotency_key": 3,
-      "CeleryProcessAdapter._update_beat_schedule": 7,
-      "CeleryProcessAdapter.cancel_process": 3,
-      "CeleryProcessAdapter.complete_task": 5,
-      "CeleryProcessAdapter.count_active_runs_by_version": 1,
-      "CeleryProcessAdapter.get_run": 1,
-      "CeleryProcessAdapter.get_task": 1,
-      "CeleryProcessAdapter.initialize": 2,
-      "CeleryProcessAdapter.list_runs": 1,
-      "CeleryProcessAdapter.list_runs_by_version": 1,
-      "CeleryProcessAdapter.list_tasks": 1,
-      "CeleryProcessAdapter.reassign_task": 2,
-      "CeleryProcessAdapter.register_entity_meta": 1,
-      "CeleryProcessAdapter.register_process": 1,
-      "CeleryProcessAdapter.register_schedule": 2,
-      "CeleryProcessAdapter.resume_process": 4,
-      "CeleryProcessAdapter.shutdown": 1,
-      "CeleryProcessAdapter.signal_process": 5,
-      "CeleryProcessAdapter.start_process": 5,
-      "CeleryProcessAdapter.suspend_process": 3,
-      "CeleryProcessAdapter.sync_schedules_from_appspec": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/process/celery_state.py": {
-    "functions": {
-      "ProcessStateStore": 4,
-      "ProcessStateStore.__init__": 2,
-      "ProcessStateStore._deserialize_run": 2,
-      "ProcessStateStore._deserialize_task": 3,
-      "ProcessStateStore._serialize_step": 8,
-      "ProcessStateStore.count_active_runs_by_version": 4,
-      "ProcessStateStore.get_entity_meta": 2,
-      "ProcessStateStore.get_process_spec": 2,
-      "ProcessStateStore.get_run": 2,
-      "ProcessStateStore.get_schedule_spec": 2,
-      "ProcessStateStore.get_task": 2,
-      "ProcessStateStore.list_runs": 10,
-      "ProcessStateStore.list_runs_by_version": 3,
-      "ProcessStateStore.list_schedule_specs": 3,
-      "ProcessStateStore.list_tasks": 10,
-      "ProcessStateStore.register_process": 2,
-      "ProcessStateStore.register_schedule": 1,
-      "ProcessStateStore.save_entity_meta": 1,
-      "ProcessStateStore.save_run": 3,
-      "ProcessStateStore.save_task": 7,
-      "ProcessStateStore.set_schedule_last_run": 1,
-      "_ProcessEncoder": 6,
-      "_ProcessEncoder.default": 5,
-      "_get_redis_client": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/process/celery_tasks.py": {
-    "functions": {
-      "_builtin_create": 7,
-      "_builtin_delete": 3,
-      "_builtin_read": 7,
-      "_builtin_transition": 6,
-      "_builtin_update": 9,
-      "_execute_builtin_entity_op": 9,
-      "_execute_foreach_step": 10,
-      "_execute_human_task_step": 1,
-      "_execute_query_step": 21,
-      "_execute_send_step": 1,
-      "_execute_service_step": 8,
-      "_execute_step": 13,
-      "_execute_wait_step": 1,
-      "_fail_run": 1,
-      "_get_db_connection": 2,
-      "_get_store": 1,
-      "_run_compensation": 7,
-      "check_human_task_timeout": 6,
-      "execute_process": 8,
-      "resume_process_after_task": 4,
-      "trigger_scheduled_process": 3
-    },
-    "mi_rank": "A"
-  },
   "dazzle/core/process/context.py": {
     "functions": {
       "ProcessContext": 4,
@@ -5940,17 +5857,44 @@
   },
   "dazzle/core/process/factory.py": {
     "functions": {
-      "CeleryConfig": 1,
       "EventBusConfig": 1,
       "ProcessConfig": 1,
       "TemporalConfig": 1,
-      "_create_celery_adapter": 3,
-      "_create_eventbus_adapter": 3,
+      "_create_eventbus_adapter": 2,
       "_create_temporal_adapter": 3,
-      "_detect_backend": 6,
+      "_detect_backend": 5,
       "_temporal_available": 2,
-      "create_adapter": 5,
-      "get_backend_info": 4
+      "create_adapter": 4,
+      "get_backend_info": 3
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/core/process/process_state.py": {
+    "functions": {
+      "ProcessStateStore": 4,
+      "ProcessStateStore.__init__": 2,
+      "ProcessStateStore._deserialize_run": 2,
+      "ProcessStateStore._deserialize_task": 3,
+      "ProcessStateStore._serialize_step": 8,
+      "ProcessStateStore.count_active_runs_by_version": 4,
+      "ProcessStateStore.get_entity_meta": 2,
+      "ProcessStateStore.get_process_spec": 2,
+      "ProcessStateStore.get_run": 2,
+      "ProcessStateStore.get_schedule_spec": 2,
+      "ProcessStateStore.get_task": 2,
+      "ProcessStateStore.list_runs": 10,
+      "ProcessStateStore.list_runs_by_version": 3,
+      "ProcessStateStore.list_schedule_specs": 3,
+      "ProcessStateStore.list_tasks": 10,
+      "ProcessStateStore.register_process": 2,
+      "ProcessStateStore.register_schedule": 1,
+      "ProcessStateStore.save_entity_meta": 1,
+      "ProcessStateStore.save_run": 3,
+      "ProcessStateStore.save_task": 7,
+      "ProcessStateStore.set_schedule_last_run": 1,
+      "_ProcessEncoder": 6,
+      "_ProcessEncoder.default": 5,
+      "_get_redis_client": 3
     },
     "mi_rank": "A"
   },
@@ -6352,9 +6296,10 @@
   },
   "dazzle/core/validation/governance.py": {
     "functions": {
+      "_validate_aijob_subject_target": 9,
       "validate_audit_config": 13,
       "validate_governance_policies": 16,
-      "validate_llm_subject_surface": 10,
+      "validate_llm_subject_surface": 12,
       "validate_sensitive_fields": 6
     },
     "mi_rank": "A"
@@ -9306,8 +9251,6 @@
       "SystemMetricsCollector._collect_event_bus_metrics": 6,
       "SystemMetricsCollector.inc_counter": 1,
       "SystemMetricsCollector.record_cache_operation": 3,
-      "SystemMetricsCollector.record_celery_queue_depth": 1,
-      "SystemMetricsCollector.record_celery_task": 1,
       "SystemMetricsCollector.record_db_query": 3,
       "SystemMetricsCollector.record_error": 3,
       "SystemMetricsCollector.record_event_bus_backlog": 1,
@@ -9900,7 +9843,7 @@
       "build_fragment_sources": 10,
       "build_server_config": 32,
       "create_app": 1,
-      "create_app_factory": 21,
+      "create_app_factory": 19,
       "run_app": 2
     },
     "mi_rank": "A"

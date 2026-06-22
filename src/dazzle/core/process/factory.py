@@ -18,19 +18,12 @@ from .adapter import ProcessAdapter
 logger = logging.getLogger(__name__)
 
 
-BackendType = Literal["auto", "celery", "eventbus", "temporal"]
+BackendType = Literal["auto", "eventbus", "temporal"]
 
 
 @dataclass
 class EventBusConfig:
     """Configuration for EventBusProcessAdapter."""
-
-    redis_url: str | None = None  # Defaults to REDIS_URL env var
-
-
-@dataclass
-class CeleryConfig:
-    """Configuration for CeleryProcessAdapter."""
 
     redis_url: str | None = None  # Defaults to REDIS_URL env var
 
@@ -66,7 +59,6 @@ class ProcessConfig:
 
     backend: BackendType = "auto"
     eventbus: EventBusConfig = field(default_factory=EventBusConfig)
-    celery: CeleryConfig = field(default_factory=CeleryConfig)
     temporal: TemporalConfig = field(default_factory=TemporalConfig)
 
     # Project root for database paths
@@ -103,8 +95,6 @@ def create_adapter(config: ProcessConfig) -> ProcessAdapter:
         return _create_temporal_adapter(config)
     elif backend == "eventbus":
         return _create_eventbus_adapter(config)
-    elif backend == "celery":
-        return _create_celery_adapter(config)
     else:
         raise ValueError(f"Unknown process backend: {backend}")
 
@@ -135,10 +125,10 @@ def _detect_backend(config: ProcessConfig) -> BackendType:
     except ImportError:
         logger.debug("Temporal SDK not installed")
 
-    # Check for Redis → EventBus (preferred over Celery)
-    redis_url = config.eventbus.redis_url or config.celery.redis_url or os.environ.get("REDIS_URL")
+    # Check for Redis → EventBus
+    redis_url = config.eventbus.redis_url or os.environ.get("REDIS_URL")
     if redis_url:
-        logger.debug("REDIS_URL set, using EventBus backend (native event-driven)")
+        logger.debug("REDIS_URL set, using EventBus backend")
         return "eventbus"
 
     raise ValueError(
@@ -196,22 +186,8 @@ def _create_eventbus_adapter(config: ProcessConfig) -> ProcessAdapter:
     """Create EventBusProcessAdapter with configuration."""
     from .eventbus_adapter import EventBusProcessAdapter
 
-    redis_url = config.eventbus.redis_url or config.celery.redis_url or os.environ.get("REDIS_URL")
+    redis_url = config.eventbus.redis_url or os.environ.get("REDIS_URL")
     return EventBusProcessAdapter(redis_url=redis_url)
-
-
-def _create_celery_adapter(config: ProcessConfig) -> ProcessAdapter:
-    """Create CeleryProcessAdapter with configuration."""
-    try:
-        from .celery_adapter import CeleryProcessAdapter
-    except ImportError as e:
-        raise ValueError(
-            "Celery backend requested but celery/redis not installed. "
-            "Install with: pip install dazzle[celery]"
-        ) from e
-
-    redis_url = config.celery.redis_url or os.environ.get("REDIS_URL")
-    return CeleryProcessAdapter(redis_url=redis_url)
 
 
 def get_backend_info(config: ProcessConfig) -> dict[str, str | bool]:
@@ -224,18 +200,10 @@ def get_backend_info(config: ProcessConfig) -> dict[str, str | bool]:
     info: dict[str, str | bool] = {
         "configured_backend": config.backend,
         "eventbus_available": bool(os.environ.get("REDIS_URL")),
-        "celery_available": False,
         "redis_url_set": bool(os.environ.get("REDIS_URL")),
         "temporal_sdk_installed": False,
         "temporal_server_reachable": False,
     }
-
-    try:
-        import celery as _celery  # noqa: F401
-
-        info["celery_available"] = True
-    except ImportError:
-        pass
 
     try:
         import temporalio  # noqa: F401

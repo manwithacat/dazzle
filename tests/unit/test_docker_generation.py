@@ -242,10 +242,6 @@ class TestGenerateEnvTemplate:
         result = generate_env_template("myapp")
         assert "REDIS_URL" in result
 
-    def test_contains_celery_setting(self) -> None:
-        result = generate_env_template("myapp")
-        assert "USE_CELERY_PROCESSES" in result
-
     def test_no_sqlite_reference(self) -> None:
         result = generate_env_template("myapp")
         assert "app.db" not in result

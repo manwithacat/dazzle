@@ -93,6 +93,45 @@ def validate_governance_policies(appspec: ir.AppSpec) -> tuple[list[str], list[s
     return errors, warnings
 
 
+def _validate_aijob_subject_target(
+    target_name: str, by_name: dict[str, ir.EntitySpec]
+) -> tuple[list[str], list[str]]:
+    """Validate one derived AIJob.subject poly_ref target (#1458).
+
+    Returns (errors, warnings): the target must exist and be uuid-pk; a ProcessRun
+    target without ``started_by`` warns (its RBAC anchor would be unavailable).
+    """
+    target = by_name.get(target_name)
+    if target is None:
+        return (
+            [
+                f"E_AIJOB_SUBJECT_TARGET_UNKNOWN: AIJob.subject target '{target_name}' "
+                "is not a declared entity."
+            ],
+            [],
+        )
+    id_field = next((f for f in target.fields if f.name == "id"), None)
+    if id_field is None or id_field.type.kind.value != "uuid":
+        return (
+            [
+                f"E_AIJOB_SUBJECT_TARGET_NOT_UUID_PK: AIJob.subject target '{target_name}' "
+                "must have a uuid primary key (poly_ref targets must be uuid-pk). A non-uuid "
+                "entity cannot back the subject_id column."
+            ],
+            [],
+        )
+    if target_name == "ProcessRun" and not any(f.name == "started_by" for f in target.fields):
+        return (
+            [],
+            [
+                "AIJob.subject target 'ProcessRun' has no 'started_by' field — process-run "
+                "RBAC scoping (subject[ProcessRun].started_by = current_user) is unavailable. "
+                "This usually means a user-declared ProcessRun shadowed the framework one."
+            ],
+        )
+    return [], []
+
+
 def validate_llm_subject_surface(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Validate the auto-injected AIJob.subject poly_ref (#1454 / #1458).
 
@@ -135,28 +174,9 @@ def validate_llm_subject_surface(appspec: ir.AppSpec) -> tuple[list[str], list[s
     # #1458: validate each derived target exists + is uuid-pk (poly_ref requires it).
     by_name = {e.name: e for e in appspec.domain.entities}
     for target_name in targets:
-        target = by_name.get(target_name)
-        if target is None:
-            errors.append(
-                f"E_AIJOB_SUBJECT_TARGET_UNKNOWN: AIJob.subject target '{target_name}' "
-                "is not a declared entity."
-            )
-            continue
-        id_field = next((f for f in target.fields if f.name == "id"), None)
-        if id_field is None or id_field.type.kind.value != "uuid":
-            errors.append(
-                f"E_AIJOB_SUBJECT_TARGET_NOT_UUID_PK: AIJob.subject target "
-                f"'{target_name}' must have a uuid primary key (poly_ref targets must "
-                "be uuid-pk). A non-uuid entity cannot back the subject_id column."
-            )
-            continue
-        if target_name == "ProcessRun" and not any(f.name == "started_by" for f in target.fields):
-            warnings.append(
-                "AIJob.subject target 'ProcessRun' has no 'started_by' field — "
-                "process-run RBAC scoping (subject[ProcessRun].started_by = current_user) "
-                "is unavailable. This usually means a user-declared ProcessRun shadowed "
-                "the framework-injected one."
-            )
+        errs, warns = _validate_aijob_subject_target(target_name, by_name)
+        errors.extend(errs)
+        warnings.extend(warns)
 
     return errors, warnings
 

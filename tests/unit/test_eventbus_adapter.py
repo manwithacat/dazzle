@@ -336,18 +336,6 @@ class TestFactoryEventBusBackend:
 
         assert isinstance(adapter, EventBusProcessAdapter)
 
-    def test_explicit_celery_still_works(self):
-        """Celery backend is still available when explicitly requested."""
-        from dazzle.core.process.factory import ProcessConfig, create_adapter
-
-        config = ProcessConfig(backend="celery")
-        with (
-            patch.dict("os.environ", {"REDIS_URL": "redis://localhost:6379/0"}),
-            patch("dazzle.core.process.celery_adapter.CeleryProcessAdapter") as mock_cls,
-        ):
-            mock_cls.return_value = MagicMock()
-            create_adapter(config)
-
     def test_backend_info_includes_eventbus(self):
         from dazzle.core.process.factory import ProcessConfig, get_backend_info
 
@@ -639,20 +627,6 @@ class TestAppIntegration:
             if adapter_env == "eventbus":
                 resolved = EventBusProcessAdapter
             assert resolved is EventBusProcessAdapter
-
-    def test_app_factory_env_var_celery_still_works(self):
-        """DAZZLE_PROCESS_ADAPTER=celery should still resolve to CeleryProcessAdapter."""
-        with patch.dict("os.environ", {"DAZZLE_PROCESS_ADAPTER": "celery"}):
-            try:
-                from dazzle.core.process import CeleryProcessAdapter
-
-                adapter_env = "celery"
-                resolved = None
-                if adapter_env in ("celery", "redis"):
-                    resolved = CeleryProcessAdapter
-                assert resolved is CeleryProcessAdapter
-            except ImportError:
-                pytest.skip("Celery not installed")
 
     def test_schedule_sync_uses_duck_typing(self):
         """Schedule sync should work with any adapter that has sync_schedules_from_appspec."""

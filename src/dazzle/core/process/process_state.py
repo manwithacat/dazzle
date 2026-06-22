@@ -1,4 +1,4 @@
-"""Redis-backed state store for CeleryProcessAdapter.
+"""Redis-backed process state store (shared by the EventBus adapter).
 
 This module provides persistent state storage using Redis, suitable for
 production deployments on platforms like Heroku where SQLite is not viable.

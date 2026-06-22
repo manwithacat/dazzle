@@ -137,7 +137,7 @@ pydantic>=2.0.0
 aiosqlite>=0.19.0
 # PostgreSQL: psycopg3 is provided transitively by dazzle-dsl[serve] (#1341).
 
-# Optional: Redis (for Celery workers / caching)
+# Optional: Redis (for the EventBus process adapter / caching)
 # redis>=5.0.0
 
 # Optional: Production server
@@ -392,9 +392,6 @@ LOG_LEVEL=INFO
 # FILES_ENABLED=true
 # FILES_PATH=./uploads
 # MAX_FILE_SIZE=10485760
-
-# Optional: Celery workers (requires Redis)
-# USE_CELERY_PROCESSES=true
 
 # Production settings
 # WORKERS=4

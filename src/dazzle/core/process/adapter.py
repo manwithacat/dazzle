@@ -97,7 +97,7 @@ class ProcessAdapter(ABC):
 
     Implementations:
     - EventBusProcessAdapter: Event-driven process execution
-    - CeleryProcessAdapter: Celery-based process execution
+    - EventBusProcessAdapter: event-driven process execution
     - TemporalAdapter: Production-grade with Temporal
 
     All methods are async to support both in-process and remote backends.
@@ -253,7 +253,7 @@ class ProcessAdapter(ABC):
         """Store entity metadata for built-in service step operations.
 
         Default no-op; overridden by adapters that support built-in CRUD
-        (e.g. CeleryProcessAdapter stores metadata in Redis).
+        (e.g. EventBusProcessAdapter stores metadata in Redis).
         """
 
     @abstractmethod

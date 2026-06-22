@@ -73,7 +73,7 @@ class RuntimeServices:
       need to emit a named metric without reaching for the collector
       directly.
     - ``process_manager`` — the active process / schedule runtime
-      (Celery / Temporal / event-bus adapter). Extension code that
+      (Temporal / event-bus adapter). Extension code that
       starts domain processes reaches for this.
     - ``app_spec`` — the parsed Dazzle ``AppSpec`` for this app instance.
       Populated at boot. Used by the renderer dispatch ctx builder to do

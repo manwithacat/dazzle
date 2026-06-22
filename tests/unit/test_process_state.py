@@ -1,4 +1,4 @@
-"""Tests for celery_state.py — ProcessStateStore JSON serialization."""
+"""Tests for process_state.py — ProcessStateStore JSON serialization."""
 
 import json
 import uuid
@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.core.process.celery_state import ProcessStateStore, _ProcessEncoder
+from dazzle.core.process.process_state import ProcessStateStore, _ProcessEncoder
 
 
 class TestProcessEncoder:

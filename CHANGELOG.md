@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.112] - 2026-06-22
+
+### Removed
+- **#1457 Celery process-execution backend removed (clean break).** Deleted `CeleryProcessAdapter` (`celery_adapter.py`) + the Celery worker tasks (`celery_tasks.py`), the `celery` optional-dependency group + its mypy override, the factory's `celery`/`CeleryConfig` selection branch, the `DAZZLE_PROCESS_ADAPTER=celery` env path, and the dead Celery metrics in `system_collector`. Celery was never auto-selected (auto-detect is Temporal -> EventBus); **EventBus (Redis) and Temporal remain** the process backends. The mis-named shared state store `celery_state.py` is renamed `process_state.py` (it backs the EventBus adapter, not Celery). Rationale: broker infra conflicts with the Postgres-only runtime (ADR-0008), zero adopters, and the Postgres-backed worker-dyno direction under exploration.
+
+### Changed
+- **#1458 follow-up:** refactored `validate_llm_subject_surface` (extracted `_validate_aijob_subject_target`) to stay under the cyclomatic-complexity ceiling after the #1458 subject-target validation additions; regenerated the complexity + deferred-import baselines.
+
+### Agent Guidance
+- Dazzle's process backends are now **EventBus** (event-driven, needs `REDIS_URL`) and **Temporal** (`pip install dazzle[temporal]`); auto-detect picks Temporal then EventBus. There is no Celery backend. Process state persists via `dazzle.core.process.process_state.ProcessStateStore`.
+
 ## [0.83.111] - 2026-06-22
 
 ### Added

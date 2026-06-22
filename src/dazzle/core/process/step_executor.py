@@ -1,7 +1,7 @@
 """Standalone process step executor.
 
-Extracted from celery_tasks.py to decouple step execution logic from
-any specific task queue backend. Both CeleryProcessAdapter and
+Backend-agnostic step execution logic, shared by the process adapters.
+(EventBus, Temporal).
 EventBusProcessAdapter use this module for actual step execution.
 
 The executor is synchronous (uses psycopg sync connections) because
@@ -27,7 +27,7 @@ from dazzle.core.process.adapter import (
 )
 
 if TYPE_CHECKING:
-    from dazzle.core.process.celery_state import ProcessStateStore
+    from dazzle.core.process.process_state import ProcessStateStore
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,6 @@ MAX_STEP_BACKOFF_SECONDS: float = 300.0
 
 # Callback type for scheduling delayed work (timeout checks, process resumption).
 # Adapters provide their own implementation:
-#   - Celery: check_human_task_timeout.apply_async(args=[task_id], countdown=seconds)
 #   - EventBus: publish delayed event to process.task_timeout topic
 DelayedCallback = Any  # Callable[[str, float], None] — (task_id, delay_seconds)
 
@@ -305,7 +304,7 @@ def _execute_builtin_entity_op(
     run: ProcessRun,
 ) -> dict[str, Any]:
     """Execute a built-in entity CRUD operation."""
-    from dazzle.core.process.celery_state import ProcessStateStore
+    from dazzle.core.process.process_state import ProcessStateStore
 
     store = ProcessStateStore()
     meta = store.get_entity_meta(entity_name)

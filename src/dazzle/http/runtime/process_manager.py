@@ -2,7 +2,7 @@
 ProcessManager - Integrates process execution with Dazzle runtime.
 
 This module connects ProcessSpec definitions from the AppSpec to the
-process adapter (EventBusProcessAdapter, CeleryProcessAdapter, or TemporalAdapter) and handles
+process adapter (EventBusProcessAdapter or TemporalAdapter) and handles
 entity event triggers.
 """
 

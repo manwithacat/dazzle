@@ -5,7 +5,6 @@ Aggregates metrics from all system components:
 - Event bus (throughput, latency, backlog)
 - Database (query latency, connection pool, slow queries)
 - TigerBeetle (account/transfer operations)
-- Celery (task queue depth, worker status)
 - HTTP API (request latency, error rates)
 - WebSocket (connection count, message rates)
 
@@ -49,7 +48,6 @@ class ComponentType(StrEnum):
     EVENT_BUS = "event_bus"
     DATABASE = "database"
     TIGERBEETLE = "tigerbeetle"
-    CELERY = "celery"
     HTTP_API = "http_api"
     WEBSOCKET = "websocket"
     CACHE = "cache"
@@ -473,26 +471,6 @@ class SystemMetricsCollector:
         if failed > 0:
             self.inc_counter(ComponentType.TIGERBEETLE, f"{operation}_failed", failed)
         self.record_histogram(ComponentType.TIGERBEETLE, f"{operation}_latency_ms", latency_ms)
-
-    def record_celery_task(
-        self,
-        task_name: str,
-        queue: str,
-        latency_ms: float,
-        status: str,
-    ) -> None:
-        """Record a Celery task execution."""
-        self.inc_counter(ComponentType.CELERY, f"tasks_{status}")
-        self.record_histogram(ComponentType.CELERY, "task_latency_ms", latency_ms)
-        self.inc_counter(ComponentType.CELERY, f"queue_{queue}_tasks")
-
-    def record_celery_queue_depth(
-        self,
-        queue: str,
-        depth: int,
-    ) -> None:
-        """Record Celery queue depth."""
-        self.set_gauge(ComponentType.CELERY, f"queue_{queue}_depth", float(depth))
 
     def record_http_request(
         self,
