@@ -35,7 +35,10 @@ def test_instrumentation_runs_when_env_set() -> None:
         called.append(received_app)
 
     with patch.dict(os.environ, {"DAZZLE_PERF_ENABLED": "1"}):
-        with patch("dazzle.perf.instrument.instrument_app", side_effect=fake_instrument):
+        # #1438: instrument_app is now imported at server module-top, so patch it
+        # in the consumer's namespace (where _maybe_instrument_for_perf binds it),
+        # not at the source module.
+        with patch("dazzle.http.runtime.server.instrument_app", side_effect=fake_instrument):
             _maybe_instrument_for_perf(app)
     assert called == [app]
 
@@ -97,7 +100,9 @@ def test_server_maybe_configure_tracer_delegates_to_bootstrap() -> None:
     def fake_bootstrap() -> None:
         called.append(True)
 
-    with patch("dazzle.perf.bootstrap.maybe_configure_tracer", side_effect=fake_bootstrap):
+    # #1438: maybe_configure_tracer is now imported at server module-top — patch
+    # it in the consumer's namespace, not at the source module.
+    with patch("dazzle.http.runtime.server.maybe_configure_tracer", side_effect=fake_bootstrap):
         _maybe_configure_tracer()
 
     assert called, "_maybe_configure_tracer did not delegate to bootstrap"

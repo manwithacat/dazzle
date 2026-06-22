@@ -219,7 +219,7 @@
   "src/dazzle/http/runtime/scope_filters.py": 8,
   "src/dazzle/http/runtime/security_middleware.py": 1,
   "src/dazzle/http/runtime/seed_runner.py": 2,
-  "src/dazzle/http/runtime/server.py": 53,
+  "src/dazzle/http/runtime/server.py": 48,
   "src/dazzle/http/runtime/service_generator.py": 12,
   "src/dazzle/http/runtime/site_routes.py": 14,
   "src/dazzle/http/runtime/sla_manager.py": 1,

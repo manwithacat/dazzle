@@ -53,6 +53,7 @@ from dazzle.http.runtime.repository import RepositoryFactory
 from dazzle.http.runtime.rls_schema import build_all_rls_ddl
 from dazzle.http.runtime.route_generator import RouteGenerator
 from dazzle.http.runtime.route_validator import validate_routes
+from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
 from dazzle.http.runtime.search_schema import build_search_index_ddl
 from dazzle.http.runtime.security_middleware import apply_security_middleware
 from dazzle.http.runtime.service_generator import CRUDService, ServiceFactory
@@ -93,6 +94,8 @@ from dazzle.http.runtime.workspace_handlers import (  # noqa: F401
 from dazzle.http.runtime.workspace_region_handler import _workspace_region_handler  # noqa: F401
 from dazzle.http.runtime.workspace_route_builder import WorkspaceRouteBuilder
 from dazzle.page.runtime.theme import install_theme_middleware
+from dazzle.perf.bootstrap import maybe_configure_tracer
+from dazzle.perf.instrument import instrument_app
 
 if TYPE_CHECKING:
     from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
@@ -219,7 +222,6 @@ def _tenancy_metadata_kwargs(appspec: AppSpec) -> dict[str, Any]:
     tenant-scoped iff it carries the partition_key field (covers both
     framework-injected and hand-declared discriminators).
     """
-    from dazzle.http.runtime.sa_schema import scoped_entity_names
 
     tenancy = appspec.tenancy
     if tenancy is None or tenancy.isolation.mode != TenancyMode.SHARED_SCHEMA:
@@ -269,7 +271,6 @@ def _maybe_configure_tracer() -> None:
     call inside ``_create_app`` is harmless — the function is idempotent
     and the CLI path fires first.
     """
-    from dazzle.perf.bootstrap import maybe_configure_tracer
 
     maybe_configure_tracer()
 
@@ -284,7 +285,6 @@ def _maybe_instrument_for_perf(app: Any) -> None:
 
     if os.environ.get("DAZZLE_PERF_ENABLED") != "1":
         return
-    from dazzle.perf.instrument import instrument_app
 
     instrument_app(app)
 
@@ -794,8 +794,6 @@ class DazzleBackendApp:
 
         from sqlalchemy import create_engine
 
-        from dazzle.http.runtime.sa_schema import build_metadata
-
         logger = logging.getLogger(__name__)
         assert self._database_url is not None
 
@@ -965,7 +963,6 @@ class DazzleBackendApp:
         # auth Plan 1d: under shared_schema, the framework partition key is
         # server-supplied (DB default from the bound session) — exclude it from
         # the create/update INPUT schemas for tenant-scoped entities.
-        from dazzle.http.runtime.sa_schema import scoped_entity_names
 
         partition_key: str | None = None
         scoped: set[str] = set()

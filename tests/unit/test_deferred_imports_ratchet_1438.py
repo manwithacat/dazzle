@@ -13,6 +13,18 @@ shared leaf — the `route_support`/`app_paths` pattern — then hoist the impor
 the dependency via RuntimeServices/ServerState). As a module drops below its baseline,
 **lower its entry in `fixtures/deferred_imports_baseline.json`** to lock the win.
 
+**Test-coupling convention (the #1438 unblock).** Many deferred imports are NOT real
+cycles — they're pinned by tests that `@patch("<source-module>.X")` and rely on the
+function-local import late-binding at call time. Hoisting such an import to module-top
+binds it at LOAD time, so a source patch misses. To hoist it, **migrate the test to
+patch-in-namespace**: patch `"<consumer-module>.X"` (where the hoisted import lands and
+is called), not the source module — in the SAME change as the hoist. Note: this only
+applies to imported *names that are called* (a class/function instantiation); patching a
+*method* on a class (`@patch("mod.Cls.method")`) is import-location-independent and never
+needs migration. High-breadth utilities patched across many files (e.g. `pg_backend`,
+`auth`, `token_store`) are deliberately left deferred — migrating a dozen test files to
+hoist a handful of imports is poor value; their baseline entries are the accepted residue.
+
 Methodology note: counts function-body `ImportFrom`/`Import` whose top package is
 `dazzle` (matching the baseline generator). Module-top imports and non-`dazzle` deferred
 imports are out of scope.

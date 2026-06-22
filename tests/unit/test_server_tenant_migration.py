@@ -89,14 +89,14 @@ def _patched_run(
         )
     )
 
-    # 2. Patch build_metadata at its source module — the production code
-    #    imports it locally inside ``_migrate_tenant_schemas``, so the
-    #    patch must target ``dazzle.http.runtime.sa_schema``.
+    # 2. Patch build_metadata in the consumer namespace — #1438 hoisted the
+    #    import to server module-top, so server binds it at load time; patch
+    #    ``dazzle.http.runtime.server`` (where it's called), not the source module.
     fake_metadata = MagicMock()
     fake_metadata.create_all.side_effect = counter.create_all
     stack.enter_context(
         patch(
-            "dazzle.http.runtime.sa_schema.build_metadata",
+            "dazzle.http.runtime.server.build_metadata",
             return_value=fake_metadata,
         )
     )

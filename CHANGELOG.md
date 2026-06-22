@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.83.107] - 2026-06-22
+## [0.83.108] - 2026-06-22
+
+### Changed
+- **#1438 test-coupling burn-down — `server.py` 53 → 48.** Adopted the patch-in-namespace convention to unblock source-patch-pinned imports: hoisted `perf.bootstrap.maybe_configure_tracer`, `perf.instrument.instrument_app`, and `sa_schema.{build_metadata,scoped_entity_names}` to server module-top and repointed their 3 coupled tests to patch the consumer namespace (`dazzle.http.runtime.server.X`) rather than the source module. Convention documented in the ratchet docstring. Measured finding: the high-breadth utilities (`pg_backend`×5, `auth`×4, `token_store`×3) are deliberately left deferred — `auth`/`token_store` tests patch `_init_db` *methods* (import-location-independent, wouldn't break), and migrating a dozen files to hoist a few imports is poor value. Tree total 1953 → 1948.
 
 ### Added
 - **#1455 `poly_ref` create/update scope support (payload-time probe).** Closes the #1448 MVP non-goal: a `poly_ref` scope on `create`/`update` now works (previously a loud `E_POLY_VERB_UNSUPPORTED` validate error). `scope_create_eval._walk` gained a `PolyPathCheck` arm — the discriminator (`{field}_type`) is a pure-payload check, and the sub-predicate is a payload-time probe against the target row the payload's `{field}_id` names (`compile_poly_path_check_probe` → `EXISTS (SELECT 1 FROM <target> WHERE "id" = %s AND (<sub>))`). Update-destination revalidation (#1312) reuses the same walker, so update is covered too. Real-PG proof: a teacher may create an `AIJob` only when `subject_type` matches AND the subject is a cohort they own. `poly_ref` is now scope-able on all verbs (read/list/delete/create/update).
