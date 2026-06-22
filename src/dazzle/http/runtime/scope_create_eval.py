@@ -59,6 +59,7 @@ from dazzle.core.ir.predicates import (
     Contradiction,
     ExistsCheck,
     PathCheck,
+    PolyPathCheck,
     ScopePredicate,
     Tautology,
     UserAttrCheck,
@@ -71,6 +72,7 @@ from dazzle.http.runtime.predicate_compiler import (
     UserAttrRef,
     compile_exists_check_probe,
     compile_path_check_probe,
+    compile_poly_path_check_probe,
 )
 
 if TYPE_CHECKING:
@@ -236,6 +238,19 @@ def _walk(
             )
         sql, raw_params = compile_exists_check_probe(p, entity_name, fk_graph, schema=schema)
         return _run_probe(sql, raw_params, payload, user_id, user_attrs, probe)
+    if isinstance(p, PolyPathCheck):
+        # #1455: poly_ref create/update scope. The discriminator is a pure-payload
+        # check (the row's {field}_type must match the selected branch); the sub is
+        # a payload-time probe against the target row the payload's {field}_id names.
+        if payload.get(p.type_field) != p.type_value:
+            return False
+        if probe is None or fk_graph is None:
+            raise ScopeCreateUnsupportedError(
+                "PolyPathCheck needs a payload-time SQL probe but none was supplied. "
+                "See #1455 and docs/reference/rbac-scope.md."
+            )
+        sql, raw_params = compile_poly_path_check_probe(p, entity_name, fk_graph, schema=schema)
+        return _run_probe(sql, raw_params, payload, user_id, user_attrs, probe)
     raise ScopeCreateUnsupportedError(f"Unknown predicate kind: {type(p).__name__}")
 
 
@@ -287,6 +302,14 @@ def _resolve_marker(
 
         return get_current_host_tenant_id()
     if isinstance(param, UserAttrRef):
+        # `entity_id` is the `current_user` self-id sentinel (predicate_builder maps
+        # `= current_user` → UserAttrCheck(user_attr="entity_id")). Resolve it like
+        # CurrentUserRef — entity_id attr, falling back to the auth user id — so a
+        # bare `current_user` inside a probe (e.g. a poly_ref sub, #1455) binds the
+        # principal even when entity_id isn't in user_attrs.
+        if param.attr_name == "entity_id":
+            entity_id = user_attrs.get("entity_id")
+            return entity_id if entity_id is not None else user_id
         # `dict.get` on `_LazyUserAttrs` routes through lazy resolution.
         return user_attrs.get(param.attr_name)
     return param

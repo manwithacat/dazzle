@@ -104,11 +104,11 @@ entity AIJob "AI Job":
 """
 
 
-def test_validation_rejects_poly_on_create():
-    # Adversarial-review fix: create/update poly scopes fail closed at runtime;
-    # reject them loudly at validate time (MVP non-goal — read/list/delete only).
+def test_validation_accepts_poly_on_create():
+    # #1455: create/update poly scopes are now supported via the payload-time
+    # probe (scope_create_eval._walk) — they must validate cleanly.
     from dazzle.core.validation.rbac import validate_scope_predicates
 
     appspec = _build_appspec(_CREATE_POLY)
     errors, _ = validate_scope_predicates(appspec)
-    assert any("VERB_UNSUPPORTED" in e for e in errors)
+    assert errors == [], errors

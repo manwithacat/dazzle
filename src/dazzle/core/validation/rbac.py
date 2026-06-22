@@ -120,32 +120,7 @@ def validate_scope_predicates(appspec: ir.AppSpec) -> tuple[list[str], list[str]
                 warnings,
             )
 
-            # #1448 MVP non-goal: a poly_ref scope on create/update would need the
-            # create-time payload probe (the row doesn't exist yet). That path is
-            # not built, so it would fail closed (silent deny) at runtime. Reject
-            # it loudly at validate time instead. read/list/delete are supported.
-            op_val = (
-                rule.operation.value if hasattr(rule.operation, "value") else str(rule.operation)
-            )
-            if op_val in ("create", "update") and _contains_poly_path(predicate):
-                errors.append(
-                    f"{ctx}: E_POLY_VERB_UNSUPPORTED — poly_ref scopes are not yet "
-                    f"supported on '{op_val}' (only read/list/delete). The {op_val} "
-                    f"path needs a payload-time probe (#1448 follow-on)."
-                )
-
     return errors, warnings
-
-
-def _contains_poly_path(node: object) -> bool:
-    """True if a PolyPathCheck appears anywhere in the predicate tree."""
-    from ..ir.predicates import BoolComposite, PolyPathCheck
-
-    if isinstance(node, PolyPathCheck):
-        return True
-    if isinstance(node, BoolComposite):
-        return any(_contains_poly_path(c) for c in node.children)
-    return False
 
 
 def _validate_predicate_node(

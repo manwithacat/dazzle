@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.107] - 2026-06-22
+
+### Added
+- **#1455 `poly_ref` create/update scope support (payload-time probe).** Closes the #1448 MVP non-goal: a `poly_ref` scope on `create`/`update` now works (previously a loud `E_POLY_VERB_UNSUPPORTED` validate error). `scope_create_eval._walk` gained a `PolyPathCheck` arm — the discriminator (`{field}_type`) is a pure-payload check, and the sub-predicate is a payload-time probe against the target row the payload's `{field}_id` names (`compile_poly_path_check_probe` → `EXISTS (SELECT 1 FROM <target> WHERE "id" = %s AND (<sub>))`). Update-destination revalidation (#1312) reuses the same walker, so update is covered too. Real-PG proof: a teacher may create an `AIJob` only when `subject_type` matches AND the subject is a cohort they own. `poly_ref` is now scope-able on all verbs (read/list/delete/create/update).
+
+### Fixed
+- **`scope_create_eval` `current_user` self-id consistency:** `_resolve_marker` now treats `UserAttrRef("entity_id")` (the `= current_user` sentinel) with the same `entity_id`-then-`user_id` fallback as `CurrentUserRef`, so a bare `current_user` inside a create-scope probe binds the principal even when `entity_id` isn't in `user_attrs` — matching the read-path resolver.
+
 ## [0.83.106] - 2026-06-22
 
 ### Fixed

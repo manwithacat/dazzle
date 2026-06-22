@@ -94,3 +94,60 @@ def test_collect_user_attr_refs_recurses_into_poly_sub():
     node = _node(UserAttrCheck(field="uploaded_by", op=CompOp.EQ, user_attr="org_id"))
     refs = collect_user_attr_refs(node)
     assert "org_id" in refs
+
+
+# --- #1455: create/update poly scope via the payload-time probe ---------------
+
+
+def test_compile_poly_path_check_probe_shape():
+    from dazzle.http.runtime.predicate_compiler import (
+        PayloadFieldRef,
+        compile_poly_path_check_probe,
+    )
+
+    node = _node(UserAttrCheck(field="uploaded_by", op=CompOp.EQ, user_attr="entity_id"))
+    sql, params = compile_poly_path_check_probe(node, "AIJob", _graph())
+    assert 'EXISTS (SELECT 1 FROM "Cohort" WHERE "id" = %s AND (' in sql
+    assert '"uploaded_by"' in sql
+    assert isinstance(params[0], PayloadFieldRef)
+    assert params[0].field_name == "target_id"  # payload's poly id column
+
+
+def test_create_eval_poly_type_guard_and_probe():
+    from dazzle.http.runtime.scope_create_eval import check_create_predicate
+
+    node = _node(UserAttrCheck(field="uploaded_by", op=CompOp.EQ, user_attr="entity_id"))
+    captured: dict = {}
+
+    def fake_probe(sql, params):
+        captured["sql"] = sql
+        captured["params"] = params
+        return True  # target row satisfies the sub
+
+    # Wrong discriminator → denied without even probing (pure-payload guard).
+    assert (
+        check_create_predicate(
+            node,
+            {"target_type": "Department", "target_id": "abc"},
+            user_id="u1",
+            probe=fake_probe,
+            fk_graph=_graph(),
+            entity_name="AIJob",
+        )
+        is False
+    )
+    assert "sql" not in captured  # short-circuited before the probe
+
+    # Right discriminator + probe says the target row matches → allowed.
+    assert (
+        check_create_predicate(
+            node,
+            {"target_type": "Cohort", "target_id": "cohort-uuid"},
+            user_id="u1",
+            probe=fake_probe,
+            fk_graph=_graph(),
+            entity_name="AIJob",
+        )
+        is True
+    )
+    assert captured["params"][0] == "cohort-uuid"  # PayloadFieldRef(target_id) resolved

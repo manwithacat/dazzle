@@ -104,9 +104,11 @@ verify it in one command.
 - **Supported:** `read` / `list` / `delete` scopes; targets must be uuid-pk;
   multi-branch via repeated rules; app-layer + RLS-policy compilation with #1447
   degradation; the `explain-scope` oracle.
-- **Non-goals (rejected loudly, not silently):** `create` / `update` poly scopes
-  (raise `E_POLY_VERB_UNSUPPORTED` at validate time — they need a payload-time
-  probe; the motivating gateway creates rows as admin); nullable `poly_ref`;
+- **Non-goals (rejected loudly, not silently):** ~~`create` / `update` poly
+  scopes~~ — **now supported via the payload-time probe (#1455, v0.83.107):**
+  `scope_create_eval._walk` checks the discriminator in Python and probes the
+  target row the payload's `{field}_id` names; update-destination revalidation
+  reuses the same walker. Remaining non-goals: nullable `poly_ref`;
   non-uuid-pk targets; poly_ref on subtype tables; cross-branch aggregate scoping;
   the framework-`AIJob` adoption (needs app-derived dynamic target sets — follow-on).
 

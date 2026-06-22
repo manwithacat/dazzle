@@ -153,3 +153,71 @@ async def test_poly_read_scope_isolates_rows() -> None:
     )
     assert job_other_type not in visible, "teacher must NOT see a Department-typed job (wrong type)"
     assert visible == {job_in_scope}
+
+
+@pytest.mark.asyncio
+async def test_poly_create_scope_probe() -> None:
+    """#1455: create-scope poly probe against real Postgres — a teacher may create
+    an AIJob only when subject_type matches AND the subject row is one they own."""
+    if not _PG_URL:
+        pytest.skip("no TEST_DATABASE_URL / DATABASE_URL")
+
+    import psycopg
+
+    from dazzle.http.converters.entity_converter import convert_entities
+    from dazzle.http.runtime.sa_schema import build_metadata
+    from dazzle.http.runtime.scope_create_eval import check_create_predicate
+    from dazzle.rbac.verification_harness import _DisposableDatabase
+
+    appspec = _build_appspec(_DSL)
+    aijob = next(e for e in appspec.domain.entities if e.name == "AIJob")
+    # Reuse the (read) poly predicate — the create probe is verb-independent.
+    pred = aijob.access.scopes[0].predicate
+
+    teacher1, teacher2 = _mk(), _mk()
+    cohort1, cohort2, dept = _mk(), _mk(), _mk()
+
+    async with _DisposableDatabase(_PG_URL) as db_url:
+        md = build_metadata(convert_entities(appspec.domain.entities))
+        with psycopg.connect(db_url, autocommit=True) as conn:
+            for tbl in md.sorted_tables:
+                cols = []
+                for c in tbl.columns:
+                    pgt = (
+                        "uuid"
+                        if c.type.__class__.__name__ == "Uuid"
+                        else ("numeric" if c.type.__class__.__name__ == "Numeric" else "text")
+                    )
+                    cols.append(f'"{c.name}" {pgt}')
+                conn.execute(f'CREATE TABLE "{tbl.name}" ({", ".join(cols)})')  # nosemgrep
+        with psycopg.connect(db_url) as conn:
+            conn.execute(
+                'INSERT INTO "Cohort" (id, uploaded_by) VALUES (%s, %s)', (cohort1, teacher1)
+            )
+            conn.execute(
+                'INSERT INTO "Cohort" (id, uploaded_by) VALUES (%s, %s)', (cohort2, teacher2)
+            )
+            conn.execute('INSERT INTO "Department" (id, name) VALUES (%s, %s)', (dept, "Maths"))
+            conn.commit()
+
+            def probe(sql: str, params: list) -> bool:
+                with conn.cursor() as cur:
+                    cur.execute(f"SELECT 1 WHERE {sql}", params)  # nosemgrep — compiled probe
+                    return cur.fetchone() is not None
+
+            def can_create(payload: dict) -> bool:
+                return check_create_predicate(
+                    pred,
+                    payload,
+                    user_id=teacher1,
+                    probe=probe,
+                    fk_graph=appspec.fk_graph,
+                    entity_name="AIJob",
+                )
+
+            # Own cohort → allowed.
+            assert can_create({"subject_type": "Cohort", "subject_id": cohort1}) is True
+            # Peer's cohort → denied (in-type, out-of-scope subject).
+            assert can_create({"subject_type": "Cohort", "subject_id": cohort2}) is False
+            # Department-typed → denied (out-of-scope discriminator, no probe needed).
+            assert can_create({"subject_type": "Department", "subject_id": dept}) is False

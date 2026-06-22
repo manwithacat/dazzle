@@ -134,7 +134,7 @@ surface task_list "Tasks":
 - NOT EXISTS: `not via BlockList(user = current_user, resource = id)` — negated junction check
 - Negation: `not (status = archived)` — parenthesised negation
 - Boolean: `realm = current_user.realm or creator = current_user` — AND/OR compile to SQL
-- Polymorphic ref (#1448): `subject[CohortAssessment].uploaded_by = current_user` — for a typed `poly_ref subject [CohortAssessment, Manuscript]` field (two columns `subject_type text` + `subject_id uuid`, targets uuid-pk). `[Type]` selects the branch, then a normal path/expression on that target. A bare `subject.x` (no selector) is a validation error (`E_POLY_SELECTOR_REQUIRED`). Multi-branch = repeated rules. read/list/delete only — create/update raise `E_POLY_VERB_UNSUPPORTED` (the gateway creates such rows as admin). Verify any poly scope with `dazzle db explain-scope <Entity> <verb>`.
+- Polymorphic ref (#1448/#1455): `subject[CohortAssessment].uploaded_by = current_user` — for a typed `poly_ref subject [CohortAssessment, Manuscript]` field (two columns `subject_type text` + `subject_id uuid`, targets uuid-pk). `[Type]` selects the branch, then a normal path/expression on that target. A bare `subject.x` (no selector) is a validation error (`E_POLY_SELECTOR_REQUIRED`). Multi-branch = repeated rules. Supported on all verbs (read/list/delete + create/update via the payload-time probe, #1455). Verify any poly scope with `dazzle db explain-scope <Entity> <verb>`.
 
 Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:` rule needs a matching `permit:` rule and an `as:` clause naming the personas (renamed from `for:` in #998 to remove the overloaded `for` keyword from the grammar — `as` is the canonical persona/scope binding introducer).
 
@@ -374,4 +374,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.83.106 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.83.107 | **Python**: 3.12+ | **Status**: Production Ready

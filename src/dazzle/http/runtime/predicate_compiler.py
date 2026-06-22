@@ -758,6 +758,37 @@ def compile_path_check_probe(
     return sql, [PayloadFieldRef(root_fk_field), *params]
 
 
+def compile_poly_path_check_probe(
+    predicate: PolyPathCheck,
+    entity_name: str,
+    fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
+) -> tuple[str, list[Any]]:
+    """Compile a PolyPathCheck into a create-scope probe expression (#1455).
+
+    At create time the poly row doesn't exist yet — its discriminator + id come
+    from the payload. The discriminator (``{field}_type``) is checked in pure
+    Python by the walker; this probe handles the **sub**: does the target row the
+    payload's ``{field}_id`` points at satisfy the sub-predicate? It matches the
+    payload id against the target's ``id`` (the type-coercion-safe shape, like
+    :func:`compile_path_check_probe`)::
+
+        EXISTS (SELECT 1 FROM "Cohort" WHERE "id" = %s AND ("uploaded_by" = %s))
+
+    ``params[0]`` is a :class:`PayloadFieldRef` for ``{field}_id``; the rest are
+    the sub-predicate's value markers (``CurrentUserRef`` / ``UserAttrRef`` /
+    literals), in order.
+    """
+    target_table = _qualify_table(predicate.target_entity, schema)
+    sub_sql, sub_params = _compile_predicate_impl(
+        predicate.sub, predicate.target_entity, fk_graph, schema=schema
+    )
+    sub_where = sub_sql if sub_sql else "true"
+    sql = f'EXISTS (SELECT 1 FROM {target_table} WHERE "id" = %s AND ({sub_where}))'
+    return sql, [PayloadFieldRef(predicate.id_field), *sub_params]
+
+
 def _compile_dotted_junction_predicate(
     junction_entity: str,
     path: list[str],
