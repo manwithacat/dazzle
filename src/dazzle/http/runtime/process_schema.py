@@ -44,6 +44,7 @@ mirrors this DDL for production deploys, following the authstore-parity rule
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from dazzle.core.coordination.claim import queue_columns_ddl
 
@@ -54,7 +55,7 @@ logger = logging.getLogger(__name__)
 _PROCESS_DDL_LOCK_KEY = 0x70726F63
 
 
-def ensure_process_tables(conn) -> None:  # conn: psycopg.Connection
+def ensure_process_tables(conn: Any) -> None:  # conn: psycopg.Connection
     """Create ``process_runs`` and ``process_tasks`` if they don't exist.
 
     Idempotent — safe to call on every boot worker simultaneously.  The

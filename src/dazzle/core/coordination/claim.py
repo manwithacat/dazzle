@@ -15,6 +15,7 @@ Do not expose ``table`` or ``id_column`` to user-controlled values.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any  # conn is any DBAPI connection — the primitive imports no driver
 
 
 def queue_columns_ddl(table: str) -> str:
@@ -61,7 +62,7 @@ RETURNING t.{id_column};
 
 
 def claim_due_work(
-    conn,
+    conn: Any,
     *,
     table: str,
     worker: str,
@@ -111,7 +112,7 @@ _TERMINAL_SQL = ", ".join(f"'{s}'" for s in sorted(_TERMINAL_STATUSES))
 
 
 def renew_lease(
-    conn,
+    conn: Any,
     *,
     table: str,
     row_id: str,
@@ -157,7 +158,7 @@ def renew_lease(
 
 
 def complete_work(
-    conn,
+    conn: Any,
     *,
     table: str,
     row_id: str,
@@ -193,7 +194,7 @@ def complete_work(
 
 
 def fail_work(
-    conn,
+    conn: Any,
     *,
     table: str,
     row_id: str,
