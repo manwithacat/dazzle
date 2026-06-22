@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.97] - 2026-06-22
+
+### Changed
+- **#1444 (slice 2, closes) — migrated `process.py::_parse_step_field` to the dispatch table + recorded
+  the regular-vs-irregular dispatch principle.** The investigation surfaced that the *biggest* regular
+  keyword ladder wasn't in the two files the issue named — it was `_parse_step_field` (19 arms, no
+  lookahead). Migrated it to `parse_block_with_dispatch` (`_STEP_FIELD_KEYWORDS` table + `input_map`
+  as an `ident_keywords` entry + the skip-unknown as `on_unknown`), reusing the existing
+  `_parse_step_*_field` handlers. Together with `parse_entity` (slice 1), the two largest *regular*
+  dispatches are now tables.
+
+### Added
+- **Agent-cognition guidance in `dispatch.py` (#1444).** Documents *when to use the table and when not
+  to*: the table fits **regular** dispatch (uniform `keyword → handler`, no `peek_token`), where it's a
+  clear win; a hand-written ladder is correct for **irregular** dispatch (lookahead / ordered precedence
+  / "default content" rules — e.g. `workspace.py::_dispatch_workspace_keyword`), where a table would
+  scatter the load-bearing peeks/ordering into `on_unknown` and *hurt* the next agent's comprehension.
+
+### Notes
+- **#1444 closed.** The substantive target — the unbounded *regular* keyword ladders — is migrated
+  (`parse_entity`, `_parse_step_field`). The remaining `elif self.match` arms are either small cohesive
+  sub-construct parsers (≤7 arms) or genuinely *irregular* dispatch that is **correctly** a ladder
+  (workspace's documented custom dispatch — the author was right). A bespoke "use the table" lint isn't
+  buildable cleanly (`self.match` is the parser's universal grammar primitive — too many false
+  positives); the real guarantee ("no new god-ladder") is enforced generically by the per-function
+  complexity ratchet. The file-wide `elif < 10` done-criteria over-reached; the principle is now
+  documented for judgment instead.
+
 ## [0.83.96] - 2026-06-22
 
 ### Changed

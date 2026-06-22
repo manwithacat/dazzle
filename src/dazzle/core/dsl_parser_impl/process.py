@@ -45,6 +45,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..ir.process import EffectAction, StepEffect
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
 @dataclass
@@ -707,11 +708,14 @@ class ProcessParserMixin:
 
         fields = _StepFields()
 
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-            self._parse_step_field(fields)
+        # #1444: table-driven dispatch (was a 19-arm if/elif in `_parse_step_field`).
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_STEP_FIELD_KEYWORDS,
+            state=fields,
+            ident_keywords=_STEP_FIELD_IDENT_KEYWORDS,
+            on_unknown=lambda _p: self._skip_unknown_step_field(),
+        )
 
         self.expect(TokenType.DEDENT)
 
@@ -744,54 +748,16 @@ class ProcessParserMixin:
             effects=fields.effects,
         )
 
-    def _parse_step_field(self, f: _StepFields) -> None:
-        """Parse a single field within a step block, dispatching by token type."""
-        if self.match(TokenType.SERVICE):
-            self._parse_step_service_field(f)
-        elif self.match(TokenType.LLM_INTENT):
-            self._parse_step_llm_intent_field(f)
-        elif self.match(TokenType.CHANNEL):
-            self._parse_step_channel_field(f)
-        elif self.match(TokenType.MESSAGE):
-            self._parse_step_message_field(f)
-        elif self.match(TokenType.WAIT):
-            self._parse_step_wait_field(f)
-        elif self.match(TokenType.HUMAN_TASK):
-            self._parse_step_human_task_field(f)
-        elif self.match(TokenType.SUBPROCESS):
-            self._parse_step_subprocess_field(f)
-        elif self.match(TokenType.CONDITION):
-            self._parse_step_condition_field(f)
-        elif self.match(TokenType.ON_TRUE):
-            self._parse_step_on_true_field(f)
-        elif self.match(TokenType.ON_FALSE):
-            self._parse_step_on_false_field(f)
-        elif self.match(TokenType.GOTO):
-            self._parse_step_goto_field(f)
-        elif self.match(TokenType.ON_SUCCESS):
-            self._parse_step_on_success_field(f)
-        elif self.match(TokenType.ON_FAILURE):
-            self._parse_step_on_failure_field(f)
-        elif self.match(TokenType.COMPENSATE):
-            self._parse_step_compensate_field(f)
-        elif self.match(TokenType.TIMEOUT):
-            self._parse_step_timeout_field(f)
-        elif self.match(TokenType.RETRY):
-            self._parse_step_retry_field(f)
-        elif self.match(TokenType.INPUTS):
-            self._parse_step_inputs_field(f)
-        elif self.match(TokenType.OUTPUT):
-            self._parse_step_output_field(f)
-        elif self.match(TokenType.EFFECTS):
-            self._parse_step_effects_field(f)
-        elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "input_map":
-            self._parse_step_input_map_field(f)
-        else:
-            # Skip unknown field
+    def _skip_unknown_step_field(self) -> None:
+        """Dispatch fallback for a step-field keyword that isn't recognised.
+
+        Mirrors the legacy ``else`` arm: consume the token (and a trailing
+        ``COLON``/value) so the block loop makes progress instead of spinning.
+        """
+        self.advance()
+        if self.match(TokenType.COLON):
             self.advance()
-            if self.match(TokenType.COLON):
-                self.advance()
-                self._skip_to_next_step_field()
+            self._skip_to_next_step_field()
 
     def _parse_step_service_field(self, f: _StepFields) -> None:
         self.advance()
@@ -1679,3 +1645,122 @@ class ProcessParserMixin:
         ):
             self.advance()
             self.skip_newlines()
+
+
+# ---------------------------------------------------------------------------
+# Process-step field dispatch table (#1444)
+#
+# Each handler is a thin `(parser, state)` adapter over the `_parse_step_*_field`
+# methods, mutating the `_StepFields` accumulator. Replaces the former 19-arm
+# `elif self.match(...)` ladder in `_parse_step_field`. This is *regular* keyword
+# dispatch (uniform keyword → handler, no lookahead), the case the table fits —
+# see the note in `dispatch.py` on when to keep a ladder instead.
+# ---------------------------------------------------------------------------
+
+
+def _sf_service(p: Any, s: _StepFields) -> None:
+    p._parse_step_service_field(s)
+
+
+def _sf_llm_intent(p: Any, s: _StepFields) -> None:
+    p._parse_step_llm_intent_field(s)
+
+
+def _sf_channel(p: Any, s: _StepFields) -> None:
+    p._parse_step_channel_field(s)
+
+
+def _sf_message(p: Any, s: _StepFields) -> None:
+    p._parse_step_message_field(s)
+
+
+def _sf_wait(p: Any, s: _StepFields) -> None:
+    p._parse_step_wait_field(s)
+
+
+def _sf_human_task(p: Any, s: _StepFields) -> None:
+    p._parse_step_human_task_field(s)
+
+
+def _sf_subprocess(p: Any, s: _StepFields) -> None:
+    p._parse_step_subprocess_field(s)
+
+
+def _sf_condition(p: Any, s: _StepFields) -> None:
+    p._parse_step_condition_field(s)
+
+
+def _sf_on_true(p: Any, s: _StepFields) -> None:
+    p._parse_step_on_true_field(s)
+
+
+def _sf_on_false(p: Any, s: _StepFields) -> None:
+    p._parse_step_on_false_field(s)
+
+
+def _sf_goto(p: Any, s: _StepFields) -> None:
+    p._parse_step_goto_field(s)
+
+
+def _sf_on_success(p: Any, s: _StepFields) -> None:
+    p._parse_step_on_success_field(s)
+
+
+def _sf_on_failure(p: Any, s: _StepFields) -> None:
+    p._parse_step_on_failure_field(s)
+
+
+def _sf_compensate(p: Any, s: _StepFields) -> None:
+    p._parse_step_compensate_field(s)
+
+
+def _sf_timeout(p: Any, s: _StepFields) -> None:
+    p._parse_step_timeout_field(s)
+
+
+def _sf_retry(p: Any, s: _StepFields) -> None:
+    p._parse_step_retry_field(s)
+
+
+def _sf_inputs(p: Any, s: _StepFields) -> None:
+    p._parse_step_inputs_field(s)
+
+
+def _sf_output(p: Any, s: _StepFields) -> None:
+    p._parse_step_output_field(s)
+
+
+def _sf_effects(p: Any, s: _StepFields) -> None:
+    p._parse_step_effects_field(s)
+
+
+def _sf_input_map(p: Any, s: _StepFields) -> None:
+    p._parse_step_input_map_field(s)
+
+
+_STEP_FIELD_KEYWORDS: dict[TokenType, KeywordParser[_StepFields]] = {
+    TokenType.SERVICE: _sf_service,
+    TokenType.LLM_INTENT: _sf_llm_intent,
+    TokenType.CHANNEL: _sf_channel,
+    TokenType.MESSAGE: _sf_message,
+    TokenType.WAIT: _sf_wait,
+    TokenType.HUMAN_TASK: _sf_human_task,
+    TokenType.SUBPROCESS: _sf_subprocess,
+    TokenType.CONDITION: _sf_condition,
+    TokenType.ON_TRUE: _sf_on_true,
+    TokenType.ON_FALSE: _sf_on_false,
+    TokenType.GOTO: _sf_goto,
+    TokenType.ON_SUCCESS: _sf_on_success,
+    TokenType.ON_FAILURE: _sf_on_failure,
+    TokenType.COMPENSATE: _sf_compensate,
+    TokenType.TIMEOUT: _sf_timeout,
+    TokenType.RETRY: _sf_retry,
+    TokenType.INPUTS: _sf_inputs,
+    TokenType.OUTPUT: _sf_output,
+    TokenType.EFFECTS: _sf_effects,
+}
+
+# `input_map` is a plain IDENTIFIER (no dedicated TokenType).
+_STEP_FIELD_IDENT_KEYWORDS: dict[str, KeywordParser[_StepFields]] = {
+    "input_map": _sf_input_map,
+}

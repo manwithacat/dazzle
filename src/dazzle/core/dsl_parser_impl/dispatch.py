@@ -42,6 +42,26 @@ dispatch-table form replaces a hand-rolled elif chain with no measurable
 perf cost (≤2% delta) and trivially testable per-keyword units. The
 spike kept the bespoke domain-specific error messages — that's the
 whole point of choosing this style over the Lark-generator alternative.
+
+When to use this — and when NOT to (#1444, agent-cognition note):
+    Use the table for *regular* keyword dispatch — a block loop where each
+    keyword maps uniformly to a handler with **no lookahead**: `keyword token
+    → _parse_<kw>(state)`. There the table wins on every axis (O(1), the legal
+    keyword set is enumerable *data*, adding a keyword is one dict entry, and
+    there are no hidden special cases). `parse_entity` and the process-step
+    field block are exactly this; both were migrated.
+
+    Keep a hand-written ladder when dispatch is *irregular* — it needs
+    `peek_token` lookahead, ordering-dependent precedence, or a "default content"
+    rule (e.g. *any bare identifier names a region*). `workspace.py`'s
+    `_dispatch_workspace_keyword` is the canonical example: forcing it into a
+    table would push the load-bearing peeks and the ordered identifier-specials
+    into `on_unknown`/handler bodies, *scattering* the dispatch and *hiding* the
+    subtle bits — the parts the next agent is most likely to get wrong. A linear
+    ladder keeps precedence == source order, which reads in one pass. The win the
+    table is for (bounding an unbounded keyword ladder) is enforced generically
+    by the per-function complexity ratchet, not by forcing every dispatch into a
+    table. Match the tool to the dispatch's *regularity*, not to a line count.
 """
 
 from __future__ import annotations
