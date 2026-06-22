@@ -109,6 +109,7 @@ def test_process_run_fields_complete():
         "process_name",
         "status",
         "started_by",
+        "current_step",
         "started_at",
         "finished_at",
         "error_message",

@@ -165,6 +165,33 @@ _READ_ONLY_OPS: tuple[ir.PermissionKind, ...] = (
     ir.PermissionKind.LIST,
 )
 
+# Names the linker auto-injects as framework-owned platform entities (domain="platform")
+# BEFORE admin infrastructure is built. When one of these already supplies a name that an
+# admin entity would also generate (the #1454 ProcessRun case: the governed run-audit entity
+# vs the admin-monitoring ProcessRun), the framework-injected one WINS — the admin entity is
+# suppressed and the name is excluded from the user-collision check. A genuinely user-declared
+# entity of the same name (default domain, not in this set) still collides loudly.
+_FRAMEWORK_INJECTED_PLATFORM_ENTITIES: frozenset[str] = frozenset(
+    {"AIJob", "ProcessRun", "JobRun", "AuditEntry", "OnboardingState", "FeedbackReport"}
+)
+
+
+def _framework_supplied_names(entities: list[ir.EntitySpec]) -> set[str]:
+    """Names already provided by a framework-injected platform entity.
+
+    An incoming entity counts as framework-supplied iff its ``domain`` is
+    ``"platform"`` AND its name is one the linker auto-injects
+    (:data:`_FRAMEWORK_INJECTED_PLATFORM_ENTITIES`). This deliberately does NOT
+    match a user-declared entity (default domain), so the user-collision guard in
+    :func:`_check_collisions` keeps firing for real conflicts.
+    """
+    return {
+        e.name
+        for e in entities
+        if getattr(e, "domain", None) == "platform"
+        and e.name in _FRAMEWORK_INJECTED_PLATFORM_ENTITIES
+    }
+
 
 def _build_admin_entities(security: SecurityConfig) -> list[ir.EntitySpec]:
     """Build the list of synthetic platform EntitySpec objects for the admin workspace.
@@ -706,6 +733,14 @@ def build_admin_infrastructure(
 
     admin_entities = _build_admin_entities(security_config)
     admin_surfaces = _build_admin_surfaces(security_config)
+
+    # #1454: when a framework-injected platform entity already supplies a name that
+    # an admin entity would generate (the governed ProcessRun supersedes the admin
+    # monitoring ProcessRun), drop the admin entity. The admin SURFACE/workspace
+    # region keep referencing the name, which now resolves to the governed entity.
+    # User-declared collisions are NOT in this set, so they still fail loudly below.
+    framework_supplied = _framework_supplied_names(entities)
+    admin_entities = [e for e in admin_entities if e.name not in framework_supplied]
 
     # Build the full set of entity names (user-declared + synthetic) so workspace
     # region sources are only included when their backing entity actually exists.

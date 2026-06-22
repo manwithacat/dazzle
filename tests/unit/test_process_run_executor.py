@@ -185,6 +185,44 @@ class TestProcessRunRowCreation:
         assert "finished_at" in final_update["data"]
 
     @pytest.mark.asyncio
+    async def test_warns_when_started_by_empty_but_row_still_created(self, caplog):
+        """#1454 Finding 2: a falsy user_id warns (vacuous RBAC anchor) but still creates a row.
+
+        System/scheduled triggers legitimately have no initiating user, so we don't
+        hard-fail — but the empty started_by makes the RBAC anchor vacuous, so it logs.
+        """
+        import logging
+
+        step = _make_step("svc", kind=StepKind.SERVICE, service="DummyService.execute")
+        process = _make_process("system_flow", [step])
+
+        svc = MagicMock()
+        svc.execute = AsyncMock(return_value={"ok": True})
+
+        pr_service = FakeProcessRunService(created_id="run-sys-1")
+        executor = ProcessExecutor(
+            _make_appspec([process]),
+            services={"DummyService": svc},
+            process_run_service=pr_service,
+        )
+
+        with caplog.at_level(logging.WARNING):
+            # No user_id passed → falsy initiating user
+            await executor.execute("system_flow")
+
+        # Row still created
+        assert len(pr_service.create_calls) == 1, "Expected the ProcessRun row to still be created"
+        assert not pr_service.create_calls[0].get("started_by")
+
+        # Warning fired, names #1454 and the empty RBAC anchor
+        warnings = [r.message for r in caplog.records if r.levelno == logging.WARNING]
+        joined = " ".join(warnings)
+        assert "1454" in joined, f"Expected a #1454-named warning; got: {warnings!r}"
+        assert "started_by" in joined or "RBAC anchor" in joined, (
+            f"Expected the warning to name the empty RBAC anchor; got: {warnings!r}"
+        )
+
+    @pytest.mark.asyncio
     async def test_no_process_run_when_service_is_none(self):
         """If no process_run_service is injected, execute runs without creating a row."""
         step = _make_step("check", kind=StepKind.CONDITION, condition="trigger.a == b")

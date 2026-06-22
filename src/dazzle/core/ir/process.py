@@ -492,6 +492,7 @@ PROCESS_RUN_FIELDS: list[tuple[str, str, list[str], str | None]] = [
     ("process_name", "str(200)", ["required"], None),
     ("status", "enum[pending,running,completed,failed]", ["required"], "pending"),
     ("started_by", "str(200)", [], None),  # initiating user's entity id — RBAC anchor
+    ("current_step", "str(200)", [], None),  # step name in flight — admin monitoring column
     ("started_at", "datetime", [], None),
     ("finished_at", "datetime", [], None),
     ("error_message", "text", [], None),

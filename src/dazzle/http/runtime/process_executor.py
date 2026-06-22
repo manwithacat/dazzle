@@ -199,6 +199,15 @@ class ProcessExecutor:
         """Create a ProcessRun row and store its id on context (#1454)."""
         if self._process_run_service is None:
             return
+        if not user_id:
+            # #1454: system/scheduled triggers legitimately have no initiating user,
+            # but then the RBAC anchor (subject[ProcessRun].started_by = current_user)
+            # is vacuous — log so this isn't silently relied upon for access control.
+            logger.warning(
+                "ProcessRun for process '%s' created without an initiating user_id; "
+                "the #1454 RBAC anchor (started_by) will be empty",
+                process_name,
+            )
         try:
             resp = await self._process_run_service.execute(
                 action="create",
