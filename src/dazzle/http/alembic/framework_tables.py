@@ -39,6 +39,8 @@ FRAMEWORK_TABLES: frozenset[str] = frozenset(
         "ops_credentials",
         "organizations",
         "password_reset_tokens",
+        "process_runs",
+        "process_tasks",
         "refresh_tokens",
         "retention_config",
         "saml_consumed_assertions",
