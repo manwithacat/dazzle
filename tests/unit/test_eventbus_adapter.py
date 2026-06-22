@@ -315,11 +315,17 @@ class TestDelayedEventEnvelope:
 class TestFactoryEventBusBackend:
     """Test factory auto-detection and explicit backend selection."""
 
-    def test_auto_detect_prefers_eventbus_over_celery(self):
+    def test_auto_detect_prefers_eventbus_when_no_database_url(self):
+        """REDIS_URL set and DATABASE_URL absent → EventBus (postgres wins when both present)."""
         from dazzle.core.process.factory import ProcessConfig, _detect_backend
 
         config = ProcessConfig()
-        with patch.dict("os.environ", {"REDIS_URL": "redis://localhost:6379/0"}):
+        env = {"REDIS_URL": "redis://localhost:6379/0"}
+        # Ensure DATABASE_URL is absent so Postgres doesn't take precedence.
+        with patch.dict("os.environ", env, clear=False):
+            import os as _os
+
+            _os.environ.pop("DATABASE_URL", None)
             backend = _detect_backend(config)
         assert backend == "eventbus"
 

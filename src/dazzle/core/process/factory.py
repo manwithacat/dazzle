@@ -2,8 +2,8 @@
 Process adapter factory for backend selection.
 
 This module provides automatic backend selection based on configuration
-and availability, allowing seamless switching between EventBus (Redis)
-and Temporal backends.
+and availability, allowing seamless switching between Postgres, EventBus
+(Redis), and Temporal backends.
 """
 
 import logging
@@ -18,7 +18,7 @@ from .adapter import ProcessAdapter
 logger = logging.getLogger(__name__)
 
 
-BackendType = Literal["auto", "eventbus", "temporal"]
+BackendType = Literal["auto", "postgres", "eventbus", "temporal"]
 
 
 @dataclass
@@ -26,6 +26,13 @@ class EventBusConfig:
     """Configuration for EventBusProcessAdapter."""
 
     redis_url: str | None = None  # Defaults to REDIS_URL env var
+
+
+@dataclass
+class PostgresProcessConfig:
+    """Configuration for PostgresProcessAdapter."""
+
+    dsn: str | None = None  # Defaults to DATABASE_URL env var at create time
 
 
 @dataclass
@@ -49,6 +56,10 @@ class ProcessConfig:
         config = ProcessConfig(backend="auto")
         adapter = create_adapter(config)
 
+        # Production with Postgres (DATABASE_URL auto-detected)
+        config = ProcessConfig(backend="postgres")
+        adapter = create_adapter(config)
+
         # Production with Temporal
         config = ProcessConfig(
             backend="temporal",
@@ -59,6 +70,7 @@ class ProcessConfig:
 
     backend: BackendType = "auto"
     eventbus: EventBusConfig = field(default_factory=EventBusConfig)
+    postgres: PostgresProcessConfig = field(default_factory=PostgresProcessConfig)
     temporal: TemporalConfig = field(default_factory=TemporalConfig)
 
     # Project root for database paths
@@ -70,11 +82,12 @@ def create_adapter(config: ProcessConfig) -> ProcessAdapter:
     Create the appropriate ProcessAdapter based on configuration.
 
     Selection logic:
-    1. If backend is "temporal" or "eventbus", use that directly
+    1. If backend is "temporal", "postgres", or "eventbus", use that directly.
     2. If backend is "auto":
-       a. Check if Temporal SDK is installed and server is reachable
-       b. Check if REDIS_URL is set -> EventBus
-       c. Raise ValueError if no backend available
+       a. Check if Temporal SDK is installed and server is reachable -> Temporal
+       b. Check if DATABASE_URL is set -> Postgres
+       c. Check if REDIS_URL is set -> EventBus
+       d. Raise ValueError if no backend available
 
     Args:
         config: Process configuration
@@ -93,6 +106,8 @@ def create_adapter(config: ProcessConfig) -> ProcessAdapter:
 
     if backend == "temporal":
         return _create_temporal_adapter(config)
+    elif backend == "postgres":
+        return _create_postgres_adapter(config)
     elif backend == "eventbus":
         return _create_eventbus_adapter(config)
     else:
@@ -105,8 +120,9 @@ def _detect_backend(config: ProcessConfig) -> BackendType:
 
     Detection order:
     1. Temporal SDK installed + server reachable -> "temporal"
-    2. REDIS_URL in environment -> "eventbus"
-    3. No backend available -> raise ValueError
+    2. DATABASE_URL in environment -> "postgres"
+    3. REDIS_URL in environment -> "eventbus"
+    4. No backend available -> raise ValueError
     """
     # Check if Temporal SDK is installed and server reachable
     try:
@@ -125,6 +141,12 @@ def _detect_backend(config: ProcessConfig) -> BackendType:
     except ImportError:
         logger.debug("Temporal SDK not installed")
 
+    # Check for Postgres → DATABASE_URL (higher precedence than EventBus)
+    database_url = config.postgres.dsn or os.environ.get("DATABASE_URL")
+    if database_url:
+        logger.debug("DATABASE_URL set, using Postgres backend")
+        return "postgres"
+
     # Check for Redis → EventBus
     redis_url = config.eventbus.redis_url or os.environ.get("REDIS_URL")
     if redis_url:
@@ -132,8 +154,8 @@ def _detect_backend(config: ProcessConfig) -> BackendType:
         return "eventbus"
 
     raise ValueError(
-        "No process backend available. Set REDIS_URL for EventBus "
-        "or install temporalio for Temporal."
+        "No process backend available. Set DATABASE_URL for Postgres, "
+        "REDIS_URL for EventBus, or install temporalio for Temporal."
     )
 
 
@@ -180,6 +202,23 @@ def _create_temporal_adapter(config: ProcessConfig) -> ProcessAdapter:
         namespace=config.temporal.namespace,
         task_queue=config.temporal.task_queue,
     )
+
+
+def _create_postgres_adapter(config: ProcessConfig) -> ProcessAdapter:
+    """Create PostgresProcessAdapter with configuration.
+
+    Reads the DSN from config.postgres.dsn first, then falls back to the
+    DATABASE_URL environment variable.  Raises ValueError if neither is set.
+    """
+    from .postgres_adapter import PostgresProcessAdapter
+
+    dsn = config.postgres.dsn or os.environ.get("DATABASE_URL")
+    if not dsn:
+        raise ValueError(
+            "Postgres backend requested but no DSN provided. "
+            "Set DATABASE_URL or pass PostgresProcessConfig(dsn=...)."
+        )
+    return PostgresProcessAdapter(dsn=dsn)
 
 
 def _create_eventbus_adapter(config: ProcessConfig) -> ProcessAdapter:
