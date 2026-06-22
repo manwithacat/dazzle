@@ -30,7 +30,7 @@ from uuid import uuid4
 
 import httpx
 
-from dazzle.testing.field_value_gen import generate_field_value_from_str
+from dazzle.testing.data_generator import DataGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -765,99 +765,6 @@ class DazzleClient:
             logger.debug("ignored exception in test_runner.py:629", exc_info=True)
             return None
 
-    def generate_entity_data(
-        self,
-        entity_name: str,
-        overrides: dict[str, Any] | None = None,
-        create_refs: bool = True,
-        _ref_depth: int = 0,
-    ) -> dict[str, Any]:
-        """Generate valid test data for an entity based on its schema.
-
-        Args:
-            entity_name: The entity type to generate data for
-            overrides: Field values to override the generated ones
-            create_refs: If True, create referenced entities and include their IDs
-            _ref_depth: Internal recursion depth counter (max 3 levels)
-        """
-        import re
-
-        schema = self.get_entity_schema(entity_name)
-        if not schema:
-            return overrides or {}
-
-        data = {}
-        for fld in schema.get("fields", []):
-            name = fld.get("name", "")
-            field_type_orig = fld.get("type", "")  # Preserve original case
-            field_type = field_type_orig.lower()
-            required = fld.get("required", False)
-            unique = fld.get("unique", False)
-            max_length = fld.get("max_length")
-            # Fallback: parse max_length from type string like "str(8)"
-            if max_length is None and "str" in field_type:
-                ml_match = re.search(r"str\((\d+)\)", field_type)
-                if ml_match:
-                    max_length = int(ml_match.group(1))
-
-            # Skip auto-generated fields
-            if name in ("id", "created_at", "updated_at"):
-                continue
-
-            # Handle reference fields
-            if "ref" in field_type:
-                if required and create_refs and _ref_depth < 3:
-                    # Extract the referenced entity name from "ref(EntityName)"
-                    # Use original case field_type to preserve entity name case
-                    ref_match = re.search(r"ref\((\w+)\)", field_type_orig)
-                    if ref_match:
-                        ref_entity = ref_match.group(1)
-                        # Create the referenced entity (with depth-limited recursion)
-                        ref_data = self.generate_entity_data(
-                            ref_entity, create_refs=True, _ref_depth=_ref_depth + 1
-                        )
-                        ref_result = self.create_entity(ref_entity, ref_data)
-                        if ref_result and "id" in ref_result:
-                            # Use the field name directly (the ref stores the ID)
-                            data[name] = ref_result["id"]
-                continue
-
-            if required:
-                data[name] = self._generate_field_value(name, field_type, unique, max_length)
-
-        # Apply overrides
-        if overrides:
-            data.update(overrides)
-
-        # Regenerate unique fields after overrides — design-time values
-        # from test JSON files are generated once and become stale across
-        # runs, causing unique-constraint collisions in the database.
-        # Skip ref fields: their override values are $ref:-resolved UUIDs
-        # pointing to real parent entities, not stale strings.
-        if overrides:
-            for fld in schema.get("fields", []):
-                fname = fld.get("name", "")
-                ftype = fld.get("type", "").lower()
-                if fld.get("unique", False) and fname in overrides and fname not in ("id",):
-                    if "ref" in ftype:
-                        continue
-                    ml = fld.get("max_length")
-                    if ml is None and "str" in ftype:
-                        ml_m = re.search(r"str\((\d+)\)", ftype)
-                        if ml_m:
-                            ml = int(ml_m.group(1))
-                    data[fname] = self._generate_field_value(
-                        fname, ftype, unique=True, max_length=ml
-                    )
-
-        return data
-
-    def _generate_field_value(
-        self, name: str, field_type: str, unique: bool = False, max_length: int | None = None
-    ) -> Any:
-        """Generate a test value for a field type, respecting max_length."""
-        return generate_field_value_from_str(name, field_type, unique=unique, max_length=max_length)
-
     def check_ui_loads(self, url: str | None = None) -> UICheckResult:
         """Check if the UI loads successfully (#1135).
 
@@ -1435,7 +1342,7 @@ class TestRunner:
     ) -> StepResult:
         assert self.client is not None
         entity_name = target.replace("entity:", "")
-        entity_data = self.client.generate_entity_data(entity_name, resolved_data)
+        entity_data = DataGenerator(self.client).generate(entity_name, resolved_data)
         result = self.client.create_entity(entity_name, entity_data)
         success = result is not None
         if success and store_result and result:

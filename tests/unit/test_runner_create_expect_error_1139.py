@@ -1,9 +1,9 @@
 """#1139: create_expect_error must reproduce the unique-field values
 that the preceding create step actually POSTed.
 
-The runner's generate_entity_data() regenerates unique fields whose
-literal values come from a stored test design, because design-time
-literals go stale across runs. Pre-fix, the create step sent the
+The DataGenerator regenerates unique fields whose literal values come
+from a stored test design, because design-time literals go stale across
+runs. Pre-fix, the create step sent the
 regenerated value but create_expect_error sent the original literal —
 two different values, no duplicate, the unique constraint was never
 tripped, and every VAL_*_UNIQUE test failed with "Expected 4xx, got
@@ -13,7 +13,7 @@ tripped, and every VAL_*_UNIQUE test failed with "Expected 4xx, got
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from dazzle.testing.test_runner import TestResult, TestRunner
 
@@ -28,21 +28,23 @@ def test_create_stashes_actually_sent_payload_in_context() -> None:
     a follow-up create_expect_error can reuse it."""
     runner = _runner()
     runner.client = MagicMock()
-    # generate_entity_data regenerates unique fields — design literal
-    # "test_a@x" becomes "regen_b@x" on the wire.
-    runner.client.generate_entity_data = MagicMock(return_value={"email": "regen_b@x", "name": "n"})
     runner.client.create_entity = MagicMock(return_value={"id": "1"})
+    # DataGenerator regenerates unique fields — design literal "test_a@x"
+    # becomes "regen_b@x" on the wire (#1446: data-gen extracted from the client).
+    gen = MagicMock()
+    gen.generate = MagicMock(return_value={"email": "regen_b@x", "name": "n"})
 
     ctx: dict = {}
-    runner.execute_step(
-        {
-            "action": "create",
-            "target": "entity:Contact",
-            "data": {"email": "test_a@x", "name": "n"},
-        },
-        design={},
-        context=ctx,
-    )
+    with patch("dazzle.testing.test_runner.DataGenerator", return_value=gen):
+        runner.execute_step(
+            {
+                "action": "create",
+                "target": "entity:Contact",
+                "data": {"email": "test_a@x", "name": "n"},
+            },
+            design={},
+            context=ctx,
+        )
     assert ctx["_last_created_data:Contact"] == {"email": "regen_b@x", "name": "n"}
 
 

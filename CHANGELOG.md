@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.91] - 2026-06-22
+
+### Changed
+- **#1446 (slice 1) — extracted `DataGenerator` from the `DazzleClient` god class.** The agent-E2E
+  harness's `DazzleClient` (`testing/test_runner.py`) had accreted ~25 methods across HTTP transport,
+  auth, CRUD, cleanup, schema, and data-generation. First collaborator split out per the issue's
+  decomposition: `generate_entity_data` + `_generate_field_value` → a new `testing/data_generator.py`
+  `DataGenerator` class that takes the client by constructor injection (for the two capabilities it
+  doesn't own — `get_entity_schema` + `create_entity` for ref parents). `DazzleClient` drops to 23
+  methods; the single caller (`_execute_create_step`) constructs `DataGenerator(self.client)`. The
+  `_generate_field_value` one-liner is gone (callers use the `generate_field_value_from_str` free
+  function directly). Behaviour unchanged; the `#1139` regen-on-overrides logic is preserved.
+
+### Notes
+- **#1446 remaining** (issue open): further `DazzleClient` collaborators (`CleanupManager` —
+  FK reverse-map/topo-sort/cleanup/residue; `EntityClient` — CRUD, but 58 `create_entity` call sites
+  so it needs a delegation strategy), the `TestRunner` `_execute_*_step` ladder (~40 handlers), and
+  the per-class method-count enforcement gate (added once counts are under the ~15 cap).
+
 ## [0.83.90] - 2026-06-22
 
 ### Changed
