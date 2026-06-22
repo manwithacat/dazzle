@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.98] - 2026-06-22
+
+### Added
+- **#1438 (slice 1) — function-level `dazzle.*` import ratchet.** 2126 `dazzle.*` imports sit inside
+  function bodies (across 407 files) as cycle-avoidance workarounds (`dazzle/__init__` eagerly imports
+  `http`, so a top-level import trips a real boot cycle — which is also why the import-linter contracts
+  run `allow_indirect_imports`). New gate `test_deferred_imports_ratchet_1438.py` freezes the per-file
+  counts in `fixtures/deferred_imports_baseline.json` and lets them only **shrink**: it fails on a net
+  increase per file or a new file growing one, and a second test fails if a file dropped below baseline
+  without the baseline being lowered (so burn-down progress is locked in). This is the issue's named
+  enforcement and the foundation for the (multi-session) burn-down.
+
+### Agent Guidance
+- **Don't add a function-body `dazzle.*` import.** It hides a dependency edge and defers `ImportError`
+  to first call. Break the underlying cycle (extract the shared types/leaf to a lower layer — the
+  `route_support`/`app_paths` pattern — then hoist to module top), or inject via RuntimeServices/
+  ServerState (ADR-0005). The ratchet (`test_deferred_imports_ratchet_1438.py`) blocks new ones.
+
+### Notes
+- **#1438 stays open — it's a 2126-site, file-by-file campaign** (the issue scopes it that way). The
+  obvious first burn-down target is the **289 deferred `dazzle.core.*` imports across 104 non-core
+  files**: `core` is the bottom layer (`core ↛ http/page` is import-linter-enforced), so those can't
+  cycle back and are safe to hoist to module top. Closing #1438 additionally requires driving
+  `server.py`/`app_factory.py` to ≤5 and flipping import-linter off `allow_indirect_imports`.
+
 ## [0.83.97] - 2026-06-22
 
 ### Changed
