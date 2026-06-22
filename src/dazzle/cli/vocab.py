@@ -10,6 +10,9 @@ from pathlib import Path
 
 import typer
 
+from dazzle.core.expander import ExpansionError, VocabExpander
+from dazzle.core.vocab import load_manifest
+
 logger = logging.getLogger(__name__)
 
 vocab_app = typer.Typer(help="Manage app-local vocabulary (macros, aliases, patterns)")
@@ -139,7 +142,6 @@ def vocab_list(
     tag: str | None = typer.Option(None, "--tag", "-t", help="Filter by tag"),
 ) -> None:
     """List all vocabulary entries in the project."""
-    from dazzle.core.vocab import load_manifest
 
     project_path = Path(path or ".")
     manifest_path = project_path / "dazzle" / "local_vocab" / "manifest.yml"
@@ -209,7 +211,6 @@ def vocab_show(
     ),
 ) -> None:
     """Show details and expansion of a vocabulary entry."""
-    from dazzle.core.vocab import load_manifest
 
     project_path = Path(path or ".")
     manifest_path = project_path / "dazzle" / "local_vocab" / "manifest.yml"
@@ -269,8 +270,6 @@ def vocab_expand(
     manifest: str | None = typer.Option(None, "--manifest", "-m", help="Path to manifest.yml"),
 ) -> None:
     """Expand vocabulary references in a DSL file to core DSL."""
-    from dazzle.core.expander import ExpansionError, VocabExpander
-    from dazzle.core.vocab import load_manifest
 
     input_path = Path(file_path)
 

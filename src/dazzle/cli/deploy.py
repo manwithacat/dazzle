@@ -14,6 +14,12 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
+from dazzle.core.renderer_registry import known_renderer_names
+
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec
 
@@ -27,10 +33,6 @@ console = Console()
 
 def _load_spec(project_dir: Path) -> AppSpec:
     """Load and parse the AppSpec from a project directory."""
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
 
     # Load manifest and discover DSL files
     manifest_path = (project_dir / "dazzle.toml").resolve()
@@ -41,8 +43,6 @@ def _load_spec(project_dir: Path) -> AppSpec:
     if not dsl_files:
         console.print("[red]No DSL files found in project[/red]")
         raise typer.Exit(1)
-
-    from dazzle.core.renderer_registry import known_renderer_names
 
     modules = parse_modules(dsl_files)
     spec = build_appspec(

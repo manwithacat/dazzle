@@ -17,6 +17,8 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 from dazzle.core.paths import project_log_dir
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
+from dazzle.core.spec_loader import get_spec_summary, load_spec
+from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
 from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
@@ -580,7 +582,6 @@ def get_product_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     - spec/ directory with multiple markdown files (recommended for complex projects)
     - SPEC.md single file (backward compatible)
     """
-    from dazzle.core.spec_loader import get_spec_summary, load_spec
 
     include_sources = args.get("include_sources", True)
     summary_only = args.get("summary_only", False)
@@ -1072,7 +1073,6 @@ def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
 def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze DSL and propose behavioural user stories."""
     from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.story_emitter import get_next_story_id_from_appspec
 
     app_spec = load_project_appspec(project_root)
 
@@ -1205,7 +1205,6 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
 def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save stories to dsl/stories.dsl."""
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.story_emitter import append_stories_to_dsl
 
     stories_data = args.get("stories", [])
 

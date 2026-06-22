@@ -20,6 +20,12 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
+from dazzle.core.paths import project_processes_db
+
 if TYPE_CHECKING:
     from dazzle.core.process import VersionManager
 
@@ -43,8 +49,6 @@ def _get_version_manager() -> VersionManager:
         console.print("[red]Error: No dazzle.toml found in current directory[/red]")
         raise typer.Exit(1)
 
-    from dazzle.core.paths import project_processes_db
-
     db_path = project_processes_db(project_root)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -53,8 +57,6 @@ def _get_version_manager() -> VersionManager:
 
 def _get_dsl_files() -> list[Path]:
     """Discover DSL files in current project."""
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.manifest import load_manifest
 
     project_root = Path.cwd()
     manifest = load_manifest(project_root / "dazzle.toml")
@@ -213,9 +215,6 @@ def deploy_command(
     ),
 ) -> None:
     """Deploy current DSL as new version."""
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
     from dazzle.core.process import VersionManager, generate_version_id
 
     project_root = Path.cwd()
@@ -395,7 +394,6 @@ def history_command(
     ),
 ) -> None:
     """Show migration history."""
-    from dazzle.core.paths import project_processes_db
     from dazzle.core.process import VersionManager
 
     project_root = Path.cwd()

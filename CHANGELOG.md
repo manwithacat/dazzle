@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.99] - 2026-06-22
+
+### Changed
+- **#1438 (slice 2) — first burn-down wave: hoisted 32 deferred `dazzle.core.*` imports in 7 mcp/cli
+  files (2126 → 2094).** `migrate`, `fragment_audit`, `deploy`, `vocab`, `tenant` (cli) +
+  `demo_data`, `tool_handlers` (mcp) had function-body `from dazzle.core.X import …` purely as
+  cycle-avoidance; since `core` is the bottom layer (`core ↛ http/page/cli/mcp`), they can't cycle
+  back and were hoisted to module top (AST-guided, skipping any inside `try/except`/conditional
+  guards). Baseline lowered to lock the win.
+
+### Notes
+- **Finding — deferred imports are entangled with test mocking.** The first batch also tried
+  `sitespec`/`composition`/`rbac`, but those broke 27 tests: a *function-local* `from dazzle.core.X
+  import foo` late-binds `foo` at **call** time, so a test that `@patch("dazzle.core.X.foo")` (patches
+  the source) takes effect; hoisting to module top binds at **load** time, so the patch misses. Those
+  three were reverted. **The burn-down is therefore not a pure mechanical hoist** — a deferred import
+  consumed by a source-patching test must either stay deferred or have its test migrated to
+  patch-where-used (`@patch("dazzle.<host>.foo")`). The full suite is the required oracle for each
+  wave. #1438 remains open as the ratcheted campaign.
+
 ## [0.83.98] - 2026-06-22
 
 ### Added

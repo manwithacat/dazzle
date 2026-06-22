@@ -8,7 +8,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.manifest import resolve_api_url
+from dazzle.core.demo_blueprint_persistence import (
+    get_blueprint_file,
+    load_blueprint,
+    save_blueprint,
+)
+from dazzle.core.manifest import load_manifest, resolve_api_url
 
 from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
@@ -38,7 +43,6 @@ def demo_propose_impl(
         PersonaBlueprint,
         TenantBlueprint,
     )
-    from dazzle.core.manifest import load_manifest
 
     manifest = load_manifest(project_root / "dazzle.toml")
     app_spec = load_project_appspec(project_root)
@@ -218,7 +222,6 @@ def demo_save_impl(
     validate_coverage: bool = True,
 ) -> dict[str, Any]:
     """Save a Demo Data Blueprint to .dazzle/demo_data/blueprint.json."""
-    from dazzle.core.demo_blueprint_persistence import load_blueprint, save_blueprint
     from dazzle.core.ir.demo_blueprint import DemoDataBlueprint
 
     new_blueprint = DemoDataBlueprint.model_validate(blueprint_data)
@@ -301,7 +304,6 @@ def demo_generate_impl(
     filter_entities: list[str] | None = None,
 ) -> dict[str, Any]:
     """Generate demo data files from the blueprint."""
-    from dazzle.core.demo_blueprint_persistence import load_blueprint
     from dazzle.demo_data.blueprint_generator import BlueprintDataGenerator
 
     blueprint = load_blueprint(project_root)
@@ -637,7 +639,6 @@ def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str
 @wrap_handler_errors
 def get_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load the current Demo Data Blueprint."""
-    from dazzle.core.demo_blueprint_persistence import get_blueprint_file, load_blueprint
 
     progress = extract_progress(args)
 

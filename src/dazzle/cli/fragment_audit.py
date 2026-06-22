@@ -19,6 +19,11 @@ from pathlib import Path
 
 import typer
 
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
+from dazzle.core.renderer_registry import known_renderer_names
 from dazzle.render.fragment.coverage import audit_appspec
 
 
@@ -42,11 +47,6 @@ def fragment_audit_command(
         raise typer.Exit(code=2)
 
     # Reuse the canonical project-loading pattern (cf. dazzle deploy).
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
-    from dazzle.core.renderer_registry import known_renderer_names
 
     manifest_path = (project_path / "dazzle.toml").resolve()
     if not manifest_path.exists():

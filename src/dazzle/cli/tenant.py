@@ -7,6 +7,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from dazzle.core.manifest import load_manifest, resolve_database_url
+
 tenant_app = typer.Typer(
     help="Multi-tenant schema management",
     no_args_is_help=True,
@@ -17,7 +19,6 @@ console = Console()
 
 def _check_tenant_enabled() -> None:
     """Raise if tenant isolation is not enabled."""
-    from dazzle.core.manifest import load_manifest
 
     toml_path = Path("dazzle.toml").resolve()
     if not toml_path.exists():
@@ -34,7 +35,6 @@ def _check_tenant_enabled() -> None:
 
 def _get_registry() -> Any:
     from dazzle.cli.env import get_active_env
-    from dazzle.core.manifest import load_manifest, resolve_database_url
     from dazzle.tenant.registry import TenantRegistry
 
     manifest = load_manifest(Path("dazzle.toml").resolve())
@@ -45,7 +45,6 @@ def _get_registry() -> Any:
 def _get_provisioner() -> Any:
     from dazzle.cli.env import get_active_env
     from dazzle.cli.utils import load_project_appspec
-    from dazzle.core.manifest import load_manifest, resolve_database_url
     from dazzle.tenant.provisioner import TenantProvisioner
 
     project_root = Path.cwd().resolve()
@@ -170,7 +169,6 @@ def _excise_context() -> tuple[Any, str]:
     shared-schema model)."""
     from dazzle.cli.env import get_active_env
     from dazzle.cli.utils import load_project_appspec
-    from dazzle.core.manifest import load_manifest, resolve_database_url
 
     project_root = Path.cwd().resolve()
     manifest = load_manifest(project_root / "dazzle.toml")
