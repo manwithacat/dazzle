@@ -91,7 +91,7 @@
   "src/dazzle/core/init_impl/project.py": 2,
   "src/dazzle/core/ir/predicate_builder.py": 1,
   "src/dazzle/core/ir/triples.py": 5,
-  "src/dazzle/core/linker.py": 2,
+  "src/dazzle/core/linker.py": 3,
   "src/dazzle/core/lint.py": 3,
   "src/dazzle/core/process/celery_adapter.py": 5,
   "src/dazzle/core/process/celery_tasks.py": 1,

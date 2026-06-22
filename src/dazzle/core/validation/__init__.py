@@ -92,6 +92,7 @@ from .flows import (
 from .governance import (
     validate_audit_config,
     validate_governance_policies,
+    validate_llm_subject_surface,
     validate_sensitive_fields,
 )
 from .graphs import (
@@ -204,6 +205,7 @@ __all__ = [
     "validate_fitness_repr_fields",
     "validate_foreign_models",
     "validate_governance_policies",
+    "validate_llm_subject_surface",
     "validate_graph_declarations",
     "validate_integrations",
     "validate_ledgers",

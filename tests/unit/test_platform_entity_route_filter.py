@@ -93,7 +93,7 @@ class TestFrameworkEntitiesArePlatform:
         # FeedbackReport routing.
         from dazzle.core.linker import _build_ai_job_entity
 
-        entity = _build_ai_job_entity()
+        entity = _build_ai_job_entity([])  # #1454: subject_targets required
         assert entity.domain == "platform"
 
     def test_feedback_report_is_platform(self):

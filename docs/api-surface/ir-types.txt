@@ -4647,7 +4647,7 @@ category: class_other
   - ValidationResult (class, bases=[])
 
 category: constant
-  - AI_JOB_FIELDS: list (len=14)
+  - AI_JOB_FIELDS: list (len=12)
   - CURRENCY_SCALES: dict (len=29)
   - DEFAULT_CURRENCY_SCALE: int = 2
   - FEEDBACK_REPORT_FIELDS: tuple (len=27)

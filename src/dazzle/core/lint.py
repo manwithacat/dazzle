@@ -16,6 +16,7 @@ from .validator import (
     validate_integrations,
     validate_ledgers,
     validate_lifecycles,
+    validate_llm_subject_surface,
     validate_money_fields,
     validate_nav_curation,
     validate_notifications,
@@ -181,6 +182,11 @@ def lint_appspec(
     all_warnings.extend(warnings)
 
     errors, warnings = validate_governance_policies(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # #1454: AIJob.subject poly_ref must have at least one declared target surface.
+    errors, warnings = validate_llm_subject_surface(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

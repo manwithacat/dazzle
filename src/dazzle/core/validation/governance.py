@@ -93,6 +93,35 @@ def validate_governance_policies(appspec: ir.AppSpec) -> tuple[list[str], list[s
     return errors, warnings
 
 
+def validate_llm_subject_surface(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """E_AIJOB_NO_SUBJECT_SURFACE: llm_config present but no cognition surface declared (#1454).
+
+    When llm_config is present the linker injects an AIJob entity whose ``subject``
+    is a required poly_ref.  If no trigger declares an ``on_entity`` and no process
+    has an ``llm_intent`` step, poly_targets will be empty — the required field has
+    no legal target.  Fail loud so the author knows they need to wire a surface.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if appspec.llm_config is None:
+        return errors, warnings
+
+    aijob = next((e for e in appspec.domain.entities if e.name == "AIJob"), None)
+    if aijob is None:
+        return errors, warnings
+
+    subj = next((f for f in aijob.fields if f.name == "subject"), None)
+    if subj is not None and not (subj.type.poly_targets or []):
+        errors.append(
+            "E_AIJOB_NO_SUBJECT_SURFACE: llm_config is present but no AI subject "
+            "surface is declared — add an llm_intent trigger (trigger: on_entity: X) "
+            "or a process step (kind: llm_intent) so AIJob has a scope-able subject."
+        )
+
+    return errors, warnings
+
+
 def validate_sensitive_fields(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Validate sensitive field markers and warn about runtime status."""
     errors: list[str] = []

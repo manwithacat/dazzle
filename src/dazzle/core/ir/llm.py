@@ -313,8 +313,6 @@ AI_JOB_FIELDS: list[tuple[str, str, list[str], str | None]] = [
     ("cost_usd", "money(USD)", [], None),
     ("duration_ms", "int", [], None),
     ("status", "enum[pending,running,completed,failed]", ["required"], "pending"),
-    ("entity_type", "str(200)", [], None),
-    ("entity_id", "str(200)", [], None),
     ("user_id", "str(200)", [], None),
     ("error_message", "text", [], None),
     ("created_at", "datetime", ["required"], "now"),

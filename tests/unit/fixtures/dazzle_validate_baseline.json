@@ -27,8 +27,12 @@
       "expected_warnings_min": 12
     },
     "examples/simple_task": {
-      "expected_errors": 0,
-      "expected_warnings_min": 15
+      "expected_errors": 1,
+      "expected_warnings_min": 15,
+      "expected_error_patterns": [
+        "E_AIJOB_NO_SUBJECT_SURFACE"
+      ],
+      "rationale": "#1454 Task 2: simple_task has llm_config + llm_intents but no llm_intent trigger (on_entity:) and no process llm_intent step, so AIJob.subject has no declared surface. This is a known cross-task gap — Task 3+ will add trigger wiring or process steps to satisfy the new invariant."
     },
     "examples/support_tickets": {
       "expected_errors": 0,
@@ -47,12 +51,13 @@
       "expected_warnings_min": 8
     },
     "fixtures/pra": {
-      "expected_errors": 7,
+      "expected_errors": 8,
       "expected_warnings_min": 350,
       "expected_error_patterns": [
-        "uses 'decimal' type for monetary value. Use 'money' type instead"
+        "uses 'decimal' type for monetary value. Use 'money' type instead",
+        "E_AIJOB_NO_SUBJECT_SURFACE"
       ],
-      "rationale": "pra is the largest example, kept as a kitchen-sink exercise of every DSL form including decimal stream-schema fields. The 7 errors are the validator's money-only rule (#1061) firing on the 7 deliberate decimal `amount:` declarations in orders_intent / payments_intent / orders_fact / payments_fact / ledger_fact streams. The 350+ warnings are entities with permit-but-no-scope and adjacent default-deny gates by design plus 15 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) \u2014 fixing these would lose the example's coverage."
+      "rationale": "pra is the largest example, kept as a kitchen-sink exercise of every DSL form including decimal stream-schema fields. 7 errors from the money-only rule (#1061) on 7 deliberate decimal `amount:` declarations in orders_intent / payments_intent / orders_fact / payments_fact / ledger_fact streams. +1 error for E_AIJOB_NO_SUBJECT_SURFACE (#1454 Task 2): pra has llm_config + llm_intents but no trigger on_entity or process llm_intent step \u2014 cross-task gap, Task 3+ will add wiring. The 350+ warnings are entities with permit-but-no-scope and adjacent default-deny gates by design plus 15 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) \u2014 fixing these would lose the example's coverage."
     },
     "examples/project_tracker": {
       "expected_errors": 0,

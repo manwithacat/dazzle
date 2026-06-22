@@ -43,7 +43,8 @@ class TestAIJobFields:
     """Tests for AI_JOB_FIELDS constant."""
 
     def test_field_count(self) -> None:
-        assert len(AI_JOB_FIELDS) == 14
+        # #1454: entity_type + entity_id removed; subject is appended by _build_ai_job_entity
+        assert len(AI_JOB_FIELDS) == 12
 
     def test_has_id_pk(self) -> None:
         name, type_str, modifiers, _ = AI_JOB_FIELDS[0]
@@ -71,33 +72,34 @@ class TestBuildAIJobEntity:
     """Tests for _build_ai_job_entity()."""
 
     def test_entity_name(self) -> None:
-        entity = _build_ai_job_entity()
+        entity = _build_ai_job_entity([])
         assert entity.name == "AIJob"
         assert entity.title == "AI Job"
 
     def test_entity_metadata(self) -> None:
-        entity = _build_ai_job_entity()
+        entity = _build_ai_job_entity([])
         assert entity.domain == "platform"
         assert "system" in entity.patterns
 
     def test_field_count(self) -> None:
-        entity = _build_ai_job_entity()
-        assert len(entity.fields) == 14
+        # #1454: 12 base fields (entity_type/entity_id removed) + 1 subject poly_ref = 13
+        entity = _build_ai_job_entity([])
+        assert len(entity.fields) == 13
 
     def test_id_field(self) -> None:
-        entity = _build_ai_job_entity()
+        entity = _build_ai_job_entity([])
         id_field = entity.fields[0]
         assert id_field.name == "id"
         assert id_field.is_primary_key
 
     def test_cost_usd_field(self) -> None:
-        entity = _build_ai_job_entity()
+        entity = _build_ai_job_entity([])
         cost_field = next(f for f in entity.fields if f.name == "cost_usd")
         assert cost_field.type.kind.value == "money"
         assert cost_field.type.currency_code == "USD"
 
     def test_status_field(self) -> None:
-        entity = _build_ai_job_entity()
+        entity = _build_ai_job_entity([])
         status_field = next(f for f in entity.fields if f.name == "status")
         assert status_field.type.kind.value == "enum"
         assert "pending" in status_field.type.enum_values
@@ -328,7 +330,7 @@ class TestAIJobAutoGeneration:
         assert ai_job.name == "AIJob"
         assert ai_job.domain == "platform"
 
-        # Verify key fields
+        # Verify key fields; entity_type/entity_id removed in #1454 (replaced by subject poly_ref)
         field_names = [f.name for f in ai_job.fields]
         assert "id" in field_names
         assert "intent" in field_names
@@ -336,8 +338,10 @@ class TestAIJobAutoGeneration:
         assert "tokens_in" in field_names
         assert "tokens_out" in field_names
         assert "status" in field_names
-        assert "entity_type" in field_names
         assert "user_id" in field_names
+        assert "entity_type" not in field_names
+        assert "entity_id" not in field_names
+        assert "subject" in field_names
 
     def test_no_ai_job_without_llm_config(self) -> None:
         """AIJob entity is NOT generated when llm_config is absent."""

@@ -135,7 +135,7 @@ def build_appspec(
     # 9. Auto-generate AIJob entity when LLM config is present (#376)
     entities = merged_fragment.entities
     if merged_fragment.llm_config is not None and not any(e.name == "AIJob" for e in entities):
-        entities = [*entities, _build_ai_job_entity()]
+        entities = [*entities, _build_ai_job_entity(_derive_aijob_subject_targets(merged_fragment))]
 
     # #1454: ProcessRun when any process runs an llm_intent step — the run is the AIJob subject.
     _has_llm_step = any(
@@ -1009,13 +1009,49 @@ _MODIFIER_MAP = {
 }
 
 
-def _build_ai_job_entity() -> ir.EntitySpec:
-    """Build the auto-generated AIJob system entity for AI cost tracking."""
+def _derive_aijob_subject_targets(fragment: object) -> list[str]:
+    """#1454: AIJob subject targets = the declared-cognition surface.
+
+    Returns sorted list of entity names that are legal subjects for an AIJob:
+    - every ``trigger.on_entity`` declared on any llm_intent
+    - "ProcessRun" when any process has at least one llm_intent step
+    """
+    targets: set[str] = set()
+    for intent in getattr(fragment, "llm_intents", []) or []:
+        for trig in getattr(intent, "triggers", []) or []:
+            if getattr(trig, "on_entity", None):
+                targets.add(trig.on_entity)
+    has_llm_step = any(
+        getattr(s, "kind", None) == ir.ProcessStepKind.LLM_INTENT
+        for p in getattr(fragment, "processes", []) or []
+        for s in p.steps
+    )
+    if has_llm_step:
+        targets.add("ProcessRun")
+    return sorted(targets)
+
+
+def _build_ai_job_entity(subject_targets: list[str]) -> ir.EntitySpec:
+    """Build the auto-generated AIJob system entity for AI cost tracking.
+
+    ``subject`` is a required poly_ref over the declared-cognition surface
+    (trigger entities + ProcessRun when any process runs an llm_intent step).
+    See #1454 / ADR-0042.
+    """
     fields: list[FieldSpec] = []
     for name, type_str, modifiers, default in AI_JOB_FIELDS:
         field_type = _parse_field_type(type_str)
         mods = [_MODIFIER_MAP[m] for m in modifiers]
         fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+
+    # #1454: required poly_ref subject — the governance unit.
+    fields.append(
+        FieldSpec(
+            name="subject",
+            type=FieldType(kind=FieldTypeKind.POLY_REF, poly_targets=subject_targets),
+            modifiers=[FieldModifier.REQUIRED],
+        )
+    )
 
     # Default access: any authenticated user can perform all operations.
     # AIJob records are internal system audit data — no role gating needed,
