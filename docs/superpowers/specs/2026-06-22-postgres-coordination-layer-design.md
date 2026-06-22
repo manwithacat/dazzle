@@ -43,7 +43,7 @@ Rejected alternatives (see brainstorm): (A) one generic polymorphic `pg_work_que
 - **Visibility-timeout / lease** for at-least-once on crash — Amazon SQS's model; formally a *lease* (Gray & Cheriton, 1989). Reference impl: **pgmq** (Tembo).
 - **LISTEN/NOTIFY + SKIP LOCKED + poll fallback** — exactly **graphile-worker** (Node) and **Solid Queue** (Rails 7.1 default; 37signals' Redis→Postgres move). Also **Oban** (Elixir), **River** (Go), **Que/GoodJob** (Ruby).
 - **Transactional outbox** (Richardson; Brandur) — a genuine *advantage over Redis*: a step can mutate domain data **and** enqueue follow-on work in **one transaction**, eliminating the dual-write lost-work window.
-- **At-least-once + idempotency** ("exactly-once delivery is impossible"). Dazzle already has the idempotency substrate: `step_executor` does **checkpoint replay — completed steps are skipped on restart**. A re-claimed run hands straight back to that path.
+- **At-least-once + idempotency** ("exactly-once delivery is impossible"). The mounted `step_executor` does **not** currently skip completed steps (it re-runs from the top, relying on step idempotency) — the *checkpointed* `process_executor.py` does, but it's unmounted. **Phase 1 adds checkpoint-skip to `step_executor`** (skip a step whose output is already in `run.context`) so a re-claimed run is safe to replay. (Spike-confirmed gap; see the Phase 1 plan, Task 4.)
 
 ## 4. The foundational primitive: `claim_due_work()`
 
