@@ -656,8 +656,17 @@ def _compile_poly_path_check(
     so there is no cast anywhere.
     """
     target_table = _qualify_table(predicate.target_entity, schema)
-    type_col = quote_identifier(predicate.type_field)
-    id_col = quote_identifier(predicate.id_field)
+    # #1449/#1448: in PARAM mode (app-layer list/read) TABLE-qualify the poly
+    # columns so a same-named column on an FK-display LEFT JOIN target can't make
+    # the reference ambiguous (target_type/target_id are common poly column names).
+    # Policy mode (RLS USING/WITH CHECK) has no joins → bare, byte-for-byte as before.
+    if predicate.field and policy is None and entity_name:
+        prefix = f"{_qualify_table(entity_name, None)}."
+        type_col = f"{prefix}{quote_identifier(predicate.type_field)}"
+        id_col = f"{prefix}{quote_identifier(predicate.id_field)}"
+    else:
+        type_col = quote_identifier(predicate.type_field)
+        id_col = quote_identifier(predicate.id_field)
 
     sub_sql, sub_params = _compile_predicate_impl(
         predicate.sub, predicate.target_entity, fk_graph, schema=schema, policy=policy
@@ -1214,6 +1223,10 @@ def _collect_user_attr_refs(predicate: ScopePredicate, refs: set[str]) -> None:
                     refs.add("id")
                 elif target.startswith("current_user."):
                     refs.add(target[len("current_user.") :])
+        case PolyPathCheck():
+            # #1448: the user-attr refs live in the sub-predicate (rooted on the
+            # poly target). Recurse so shared-schema RLS registers the GUCs.
+            _collect_user_attr_refs(predicate.sub, refs)
         case BoolComposite():
             for child in predicate.children:
                 _collect_user_attr_refs(child, refs)

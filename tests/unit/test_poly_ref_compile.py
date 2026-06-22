@@ -53,8 +53,9 @@ def _node(sub) -> PolyPathCheck:
 def test_app_compile_poly_path_check():
     node = _node(UserAttrCheck(field="uploaded_by", op=CompOp.EQ, user_attr="entity_id"))
     sql, params = compile_predicate(node, "AIJob", _graph())
-    assert '"target_type" = %s' in sql
-    assert '"target_id" IN (SELECT "id" FROM' in sql
+    # Param mode TABLE-qualifies the poly columns (#1449 ambiguity guard).
+    assert '"AIJob"."target_type" = %s' in sql
+    assert '"AIJob"."target_id" IN (SELECT "id" FROM' in sql
     assert '"uploaded_by"' in sql
     assert params[0] == "Cohort"
     # The sub's runtime marker (current_user) flows through after the type literal.
@@ -82,3 +83,14 @@ def test_policy_degrades_when_sub_not_expressible():
     )
     with pytest.raises(ValueError):
         compile_predicate_policy(node, "AIJob", _graph(), entity_types=_types)
+
+
+def test_collect_user_attr_refs_recurses_into_poly_sub():
+    # Adversarial-review fix: a PolyPathCheck must not crash collect_user_attr_refs
+    # (shared-schema RLS startup walks every scope predicate). The user-attr refs
+    # live in the sub-predicate.
+    from dazzle.http.runtime.predicate_compiler import collect_user_attr_refs
+
+    node = _node(UserAttrCheck(field="uploaded_by", op=CompOp.EQ, user_attr="org_id"))
+    refs = collect_user_attr_refs(node)
+    assert "org_id" in refs

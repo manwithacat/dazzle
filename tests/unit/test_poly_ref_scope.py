@@ -82,3 +82,33 @@ def test_validation_requires_selector():
     appspec = _build_appspec(src)
     errors, _ = validate_scope_predicates(appspec)
     assert any("SELECTOR_REQUIRED" in e or "poly_ref" in e.lower() for e in errors)
+
+
+_CREATE_POLY = """module m
+app a "A"
+
+entity Cohort "Cohort":
+  id: uuid pk
+  uploaded_by: uuid
+
+entity AIJob "AI Job":
+  id: uuid pk
+  target: poly_ref [Cohort] required
+
+  permit:
+    create: role(teacher)
+
+  scope:
+    create: target[Cohort].uploaded_by = current_user
+      as: teacher
+"""
+
+
+def test_validation_rejects_poly_on_create():
+    # Adversarial-review fix: create/update poly scopes fail closed at runtime;
+    # reject them loudly at validate time (MVP non-goal — read/list/delete only).
+    from dazzle.core.validation.rbac import validate_scope_predicates
+
+    appspec = _build_appspec(_CREATE_POLY)
+    errors, _ = validate_scope_predicates(appspec)
+    assert any("VERB_UNSUPPORTED" in e for e in errors)
