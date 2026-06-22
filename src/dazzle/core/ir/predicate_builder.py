@@ -21,6 +21,7 @@ Mapping rules
 from typing import Any
 
 from dazzle.core.ir.conditions import (
+    Comparison,
     ComparisonOperator,
     ConditionExpr,
     ViaBinding,
@@ -34,6 +35,7 @@ from dazzle.core.ir.predicates import (
     ExistsBinding,
     ExistsCheck,
     PathCheck,
+    PolyPathCheck,
     ScopePredicate,
     Tautology,
     UserAttrCheck,
@@ -137,6 +139,26 @@ def build_scope_predicate(
         field = cmp.field or ""
         op = _OP_MAP[cmp.operator]
         raw_value = cmp.value.literal  # str | int | float | bool | None
+
+        # #1448: poly_ref branch — `target[CohortAssessment].tail <op> value`.
+        # Resolve to a PolyPathCheck whose `sub` is the tail predicate rooted on
+        # the selected target entity (built by recursing this same function).
+        if "[" in field:
+            head, _, rest = field.partition("[")
+            type_value, _, after = rest.partition("]")
+            tail = after[1:] if after.startswith(".") else after
+            sub_cond = ConditionExpr(
+                comparison=Comparison(field=tail, operator=cmp.operator, value=cmp.value)
+            )
+            sub = build_scope_predicate(sub_cond, type_value, fk_graph, entities_by_name)
+            return PolyPathCheck(
+                field=head,
+                type_field=f"{head}_type",
+                type_value=type_value,
+                id_field=f"{head}_id",
+                target_entity=type_value,
+                sub=sub,
+            )
 
         # Null literal: rewrite operator to IS / IS NOT
         if isinstance(raw_value, str) and raw_value == "null":

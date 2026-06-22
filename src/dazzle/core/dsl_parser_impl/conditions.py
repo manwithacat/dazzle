@@ -178,6 +178,14 @@ class ConditionParserMixin:
             else:
                 # Check for dotted path (owner.team) - v0.7.0
                 field = name
+                # #1448: poly_ref branch selector — `target[CohortAssessment].…`.
+                # Captured inline; build_scope_predicate resolves it to a
+                # PolyPathCheck (it has the FK-graph/entity context the parser lacks).
+                if self.match(TokenType.LBRACKET):
+                    self.advance()
+                    type_ident = self.expect(TokenType.IDENTIFIER).value
+                    self.expect(TokenType.RBRACKET)
+                    field = f"{field}[{type_ident}]"
                 while self.match(TokenType.DOT):
                     self.advance()
                     next_part = self.expect_identifier_or_keyword().value
@@ -185,6 +193,13 @@ class ConditionParserMixin:
         else:
             # Allow keywords as field names
             field = self.expect_identifier_or_keyword().value
+            # #1448: poly_ref branch selector — `target[Type].…` (poly field names
+            # like `target` lex as keywords, so the selector is captured here too).
+            if self.match(TokenType.LBRACKET):
+                self.advance()
+                type_ident = self.expect(TokenType.IDENTIFIER).value
+                self.expect(TokenType.RBRACKET)
+                field = f"{field}[{type_ident}]"
             # Also check for dotted path after keyword field names
             while self.match(TokenType.DOT):
                 self.advance()

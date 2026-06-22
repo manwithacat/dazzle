@@ -141,6 +141,7 @@ def _validate_predicate_node(
         Contradiction,
         ExistsCheck,
         PathCheck,
+        PolyPathCheck,
         Tautology,
         UserAttrCheck,
     )
@@ -187,8 +188,62 @@ def _validate_predicate_node(
                     _, target = fk_graph.resolve_segment(current, segment)
                     current = target
                 except (ValueError, AttributeError) as exc:
-                    errors.append(f"{ctx}: PathCheck path '{path_str}' — {exc}")
+                    # #1448: a poly_ref field used without a [Type] selector is a
+                    # common mistake — give a poly-aware hint instead of a raw
+                    # "no FK for segment" error.
+                    ent = appspec.get_entity(current)
+                    pf = next((f for f in (ent.fields if ent else []) if f.name == segment), None)
+                    if pf is not None and pf.type.kind.value == "poly_ref":
+                        errors.append(
+                            f"{ctx}: E_POLY_SELECTOR_REQUIRED — '{segment}' is a poly_ref; "
+                            f"write '{segment}[<TargetType>].…' to select a branch"
+                        )
+                    else:
+                        errors.append(f"{ctx}: PathCheck path '{path_str}' — {exc}")
                     break  # Cannot continue resolving after a broken hop
+        return
+
+    if isinstance(node, PolyPathCheck):
+        ent = appspec.get_entity(entity_name)
+        poly_field = next((f for f in (ent.fields if ent else []) if f.name == node.field), None)
+        if poly_field is None or poly_field.type.kind.value != "poly_ref":
+            errors.append(
+                f"{ctx}: E_POLY_SELECTOR_REQUIRED — '{node.field}' is not a poly_ref field "
+                f"on '{entity_name}'"
+            )
+            return
+        targets = poly_field.type.poly_targets or []
+        if node.type_value not in targets:
+            errors.append(
+                f"{ctx}: E_POLY_BRANCH_UNDECLARED — branch '{node.type_value}' is not a declared "
+                f"target of {entity_name}.{node.field} (declared: {targets or 'none'})"
+            )
+            return
+        tgt = appspec.get_entity(node.type_value)
+        if tgt is None:
+            errors.append(
+                f"{ctx}: E_POLY_BRANCH_UNDECLARED — unknown target entity '{node.type_value}'"
+            )
+            return
+        id_field = next((f for f in tgt.fields if f.name == "id"), None)
+        if id_field is None or id_field.type.kind.value != "uuid":
+            errors.append(
+                f"{ctx}: E_POLY_TARGET_NOT_UUID_PK — poly_ref target '{node.type_value}' must have "
+                f"a uuid primary key"
+            )
+            return
+        # Validate the sub-predicate rooted on the target entity.
+        tgt_field_names = {f.name for f in tgt.fields}
+        _validate_predicate_node(
+            node.sub,
+            node.type_value,
+            tgt_field_names,
+            fk_graph,
+            appspec,
+            f"{ctx} (poly branch {node.type_value})",
+            errors,
+            warnings,
+        )
         return
 
     if isinstance(node, ExistsCheck):
