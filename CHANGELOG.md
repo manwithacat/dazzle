@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.114] - 2026-06-22
+
+### Fixed
+- **CI: alembic-parity head assertion** — `test_alembic_head_coexists_with_init_db` pinned the head to `0018_join_requests`; the v0.83.113 PG-coordination migration `0019_process_runtime_tables` legitimately advanced it. Updated to `0019` + asserts `process_runs`/`process_tasks` landed. (Local-miss: the keyword-filtered with-DB run didn't cover this `_pg` test; full `-m postgres` suite now green.)
+
 ## [0.83.113] - 2026-06-22
 
 ### Added
