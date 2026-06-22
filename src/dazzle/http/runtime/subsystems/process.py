@@ -26,21 +26,24 @@ class ProcessSubsystem:
             return
 
         try:
-            import os
-
             from dazzle.http.runtime.process_manager import ProcessManager
             from dazzle.http.runtime.task_routes import router as task_router
 
             adapter_cls: type | None = ctx.config.process_adapter_class
             if adapter_cls is None:
-                redis_url = os.environ.get("REDIS_URL")
-                if redis_url:
-                    from dazzle.core.process import EventBusProcessAdapter
+                # Route through the factory so auto-detection (Postgres >
+                # EventBus > error) matches exactly what `dazzle worker` uses
+                # on the CONSUME side — the dual-boot-path agreement required
+                # by #1422/#1428.  Postgres is available with DATABASE_URL
+                # alone; REDIS_URL is no longer required.
+                from dazzle.core.process.factory import ProcessConfig, create_adapter
 
-                    self._adapter = EventBusProcessAdapter(redis_url=redis_url)
-                else:
+                try:
+                    self._adapter = create_adapter(ProcessConfig())
+                except ValueError:
                     logger.warning(
-                        "Process manager requires REDIS_URL. Skipping process manager init."
+                        "Process manager requires DATABASE_URL or REDIS_URL. "
+                        "Skipping process manager init."
                     )
                     return
             else:

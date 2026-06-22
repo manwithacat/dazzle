@@ -547,8 +547,14 @@ class TestEventBusProcessAdapter:
 class TestAppIntegration:
     """Test that server.py and app_factory.py correctly select EventBusProcessAdapter."""
 
-    def test_server_prefers_eventbus_when_redis_url_set(self):
-        """ProcessSubsystem.startup() should create EventBusProcessAdapter when REDIS_URL is set."""
+    def test_server_uses_eventbus_when_only_redis_url_set(self):
+        """ProcessSubsystem.startup() creates EventBusProcessAdapter when only REDIS_URL set.
+
+        The factory auto-detects in priority order: Temporal > Postgres > EventBus.
+        With DATABASE_URL absent and REDIS_URL present the factory selects EventBus.
+        We control the full env via patch.dict(clear=True) so this test is
+        deterministic regardless of DATABASE_URL in the caller's shell.
+        """
         from unittest.mock import MagicMock
 
         from dazzle.http.runtime.subsystems import SubsystemContext
@@ -558,7 +564,7 @@ class TestAppIntegration:
         config_mock = MagicMock()
         config_mock.enable_processes = True
         config_mock.process_adapter_class = None
-        config_mock.database_url = "sqlite:///test.db"
+        config_mock.database_url = ""
         config_mock.process_specs = None
         config_mock.schedule_specs = None
         config_mock.entity_status_fields = {}
@@ -575,11 +581,15 @@ class TestAppIntegration:
 
         subsystem = ProcessSubsystem()
 
+        # Use clear=True so DATABASE_URL from the developer's shell doesn't
+        # cause the factory to prefer Postgres over EventBus.
         with (
-            patch.dict("os.environ", {"REDIS_URL": "redis://localhost:6379/0"}),
+            patch.dict("os.environ", {"REDIS_URL": "redis://localhost:6379/0"}, clear=True),
+            patch("dazzle.core.process.factory._temporal_available", return_value=False),
             patch("dazzle.core.process.eventbus_adapter.ProcessStateStore"),
             patch("dazzle.http.runtime.process_manager.ProcessManager"),
             patch("dazzle.http.runtime.task_routes.router"),
+            patch("dazzle.http.runtime.lifespan_hooks.register_lifespan_hook"),
         ):
             subsystem.startup(ctx)
 

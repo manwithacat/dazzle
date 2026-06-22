@@ -101,6 +101,9 @@ async def _run_worker(
     queue, queue_kind = _build_queue(redis_key)
     typer.echo(f"Queue backing: {queue_kind}")
 
+    # Build and start the process adapter (CONSUME side of the dual-boot-path).
+    process_adapter = await _start_process_adapter()
+
     job_specs = {job.name: job for job in appspec.jobs}
     scheduled = parse_scheduled_jobs(list(appspec.jobs))
     if scheduled:
@@ -151,18 +154,7 @@ async def _run_worker(
             worker_task, scheduler_task, retention_task
         )
     finally:
-        # Best-effort close — worker shuts down even if the queue's
-        # already gone away.
-        if hasattr(queue, "close"):
-            try:
-                await queue.close()
-            except Exception:
-                logger.warning("queue.close() failed", exc_info=True)
-        if db_manager is not None:
-            try:
-                db_manager.close_pool()
-            except Exception:
-                logger.warning("db_manager.close_pool() failed", exc_info=True)
+        await _teardown(queue=queue, process_adapter=process_adapter, db_manager=db_manager)
 
     typer.echo("")
     typer.echo("Worker stats:")
@@ -174,6 +166,61 @@ async def _run_worker(
     typer.echo("Retention stats:")
     for k, v in sorted(retention_stats.items()):
         typer.echo(f"  {k}: {v}")
+
+
+async def _start_process_adapter(
+    adapter_cls: type | None = None,
+) -> Any | None:
+    """Build and initialise the process adapter (CONSUME side).
+
+    This is the CONSUME side of the dual-boot-path (#1422/#1428 lesson):
+    the same factory + auto-detect logic that ProcessSubsystem uses on the
+    http (enqueue) side so both paths agree on the same backend.
+
+    Returns the initialised adapter, or ``None`` if no backend is available
+    or initialisation fails (process runs will not be consumed but the job
+    worker continues).
+    """
+    adapter = _build_process_adapter(adapter_cls)
+    if adapter is None:
+        typer.echo("Process adapter: none (set DATABASE_URL or REDIS_URL to enable)")
+        return None
+    try:
+        await adapter.initialize()
+        typer.echo(
+            f"Process adapter: {type(adapter).__name__} (consumer + scheduler loops started)"
+        )
+        return adapter
+    except Exception as exc:
+        logger.warning(
+            "Process adapter initialization failed (process runs will not be consumed): %s",
+            exc,
+        )
+        return None
+
+
+async def _teardown(
+    *,
+    queue: Any,
+    process_adapter: Any | None,
+    db_manager: Any | None,
+) -> None:
+    """Best-effort teardown of queue, process adapter, and DB pool."""
+    if hasattr(queue, "close"):
+        try:
+            await queue.close()
+        except Exception:
+            logger.warning("queue.close() failed", exc_info=True)
+    if process_adapter is not None and hasattr(process_adapter, "shutdown"):
+        try:
+            await process_adapter.shutdown()
+        except Exception:
+            logger.warning("process_adapter.shutdown() failed", exc_info=True)
+    if db_manager is not None:
+        try:
+            db_manager.close_pool()
+        except Exception:
+            logger.warning("db_manager.close_pool() failed", exc_info=True)
 
 
 async def _build_services(appspec: Any) -> tuple[dict[str, Any], Any | None]:
@@ -196,6 +243,38 @@ async def _build_services(appspec: Any) -> tuple[dict[str, Any], Any | None]:
     except Exception as exc:
         logger.warning("Service wiring failed (writes will be log-only): %s", exc)
         return {}, None
+
+
+def _build_process_adapter(
+    adapter_cls: type | None = None,
+) -> Any | None:
+    """Build the process adapter for the CONSUME side (dazzle worker).
+
+    Routes through ``create_adapter(ProcessConfig())`` so auto-detection
+    matches exactly what ``ProcessSubsystem`` uses on the http ENQUEUE side —
+    the dual-boot-path agreement required by #1422/#1428.
+
+    * DATABASE_URL set (no REDIS_URL) → ``PostgresProcessAdapter``
+    * REDIS_URL set (no DATABASE_URL) → ``EventBusProcessAdapter``
+    * Both set → Postgres (factory preference: Postgres > EventBus)
+    * Neither set → returns ``None`` (graceful: process runs skipped)
+
+    The optional *adapter_cls* parameter is the test-injection escape hatch;
+    it mirrors the ``config.process_adapter_class`` field in ``ProcessSubsystem``.
+    """
+    if adapter_cls is not None:
+        return adapter_cls()
+
+    try:
+        from dazzle.core.process.factory import ProcessConfig, create_adapter
+
+        return create_adapter(ProcessConfig())
+    except ValueError:
+        # No backend available (neither DATABASE_URL nor REDIS_URL set).
+        return None
+    except Exception as exc:
+        logger.warning("Process adapter construction failed: %s", exc)
+        return None
 
 
 def _build_queue(redis_key: str) -> tuple[Any, str]:

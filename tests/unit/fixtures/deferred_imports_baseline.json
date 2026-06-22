@@ -75,7 +75,7 @@
   "src/dazzle/cli/utils.py": 2,
   "src/dazzle/cli/ux.py": 24,
   "src/dazzle/cli/ux_interactions.py": 5,
-  "src/dazzle/cli/worker.py": 6,
+  "src/dazzle/cli/worker.py": 7,
   "src/dazzle/compliance/evidence.py": 3,
   "src/dazzle/conformance/executor.py": 2,
   "src/dazzle/conformance/plugin.py": 1,
