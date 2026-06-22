@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.process import StepKind
@@ -36,12 +37,14 @@ class StepResult:
 class ProcessContext:
     """Execution context for a process run.
 
-    Holds trigger data, step outputs, and checkpoint state.
+    Holds trigger data, step outputs, checkpoint state, and the ProcessRun id
+    for process-step AI subject tracking (#1454 closed-system AI cognition).
     """
 
     trigger_data: dict[str, Any] = field(default_factory=dict)
     step_outputs: dict[str, Any] = field(default_factory=dict)
     checkpoints: set[str] = field(default_factory=set)
+    run_id: str | None = None  # set when a ProcessRun row is created (#1454)
 
     def is_checkpointed(self, step_name: str) -> bool:
         return step_name in self.checkpoints
@@ -97,6 +100,7 @@ class ProcessResult:
     steps_total: int = 0
     outputs: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
+    run_id: str | None = None  # ProcessRun row id when one was created (#1454)
 
 
 class ProcessExecutor:
@@ -104,6 +108,12 @@ class ProcessExecutor:
 
     Executes process steps sequentially. Each step is checkpointed
     after completion. On restart, completed steps are skipped.
+
+    ``process_run_service`` is an optional CRUD service for the ``ProcessRun``
+    framework entity (#1454 closed-system AI cognition). When present, each
+    ``execute()`` call persists a ``ProcessRun`` row (status running →
+    completed/failed) and threads ``run_id`` onto ``ProcessContext`` so that
+    any ``LLM_INTENT`` step can name it as the AIJob subject.
     """
 
     def __init__(
@@ -111,10 +121,12 @@ class ProcessExecutor:
         appspec: AppSpec,
         services: dict[str, Any] | None = None,
         llm_executor: LLMIntentExecutor | None = None,
+        process_run_service: Any | None = None,
     ):
         self._appspec = appspec
         self._services = services or {}
         self._llm_executor = llm_executor
+        self._process_run_service = process_run_service
         self._processes = {p.name: p for p in (appspec.processes or [])}
 
     async def execute(
@@ -123,6 +135,7 @@ class ProcessExecutor:
         trigger_data: dict[str, Any] | None = None,
         *,
         checkpoint_data: dict[str, Any] | None = None,
+        user_id: str | None = None,
     ) -> ProcessResult:
         """Execute a process by name.
 
@@ -130,6 +143,8 @@ class ProcessExecutor:
             process_name: Name of the process to execute.
             trigger_data: Data from the triggering event.
             checkpoint_data: Previously checkpointed state for resume.
+            user_id: Initiating user id — stored as ``started_by`` on the
+                ProcessRun row when ``process_run_service`` is available.
         """
         process = self._processes.get(process_name)
         if not process:
@@ -146,11 +161,15 @@ class ProcessExecutor:
             context.checkpoints = set(checkpoint_data.get("checkpoints", []))
             context.step_outputs = checkpoint_data.get("step_outputs", {})
 
+        # --- #1454: persist a ProcessRun row so LLM steps have a subject ---
+        await self._start_process_run(context, process_name, user_id)
+
         steps = process.steps
         result = ProcessResult(
             success=True,
             process_name=process_name,
             steps_total=len(steps),
+            run_id=context.run_id,
         )
 
         for step in steps:
@@ -168,7 +187,56 @@ class ProcessExecutor:
                 break
 
         result.outputs = context.step_outputs
+
+        # --- #1454: update ProcessRun status on completion or failure ---
+        await self._finish_process_run(context, result)
+
         return result
+
+    async def _start_process_run(
+        self, context: ProcessContext, process_name: str, user_id: str | None
+    ) -> None:
+        """Create a ProcessRun row and store its id on context (#1454)."""
+        if self._process_run_service is None:
+            return
+        try:
+            resp = await self._process_run_service.execute(
+                action="create",
+                data={
+                    "process_name": process_name,
+                    "status": "running",
+                    "started_by": user_id,
+                    "started_at": datetime.now(UTC).isoformat(),
+                },
+            )
+            if resp and isinstance(resp, dict):
+                context.run_id = str(resp.get("id", ""))
+        except Exception:
+            logger.warning(
+                "Failed to create ProcessRun row for process '%s'", process_name, exc_info=True
+            )
+
+    async def _finish_process_run(self, context: ProcessContext, result: ProcessResult) -> None:
+        """Update the ProcessRun row to completed or failed (#1454)."""
+        if self._process_run_service is None or not context.run_id:
+            return
+        finished_at = datetime.now(UTC).isoformat()
+        data: dict[str, Any] = {"finished_at": finished_at}
+        if result.success:
+            data["status"] = "completed"
+        else:
+            data["status"] = "failed"
+            data["error_message"] = result.error or ""
+        try:
+            await self._process_run_service.execute(
+                action="update",
+                record_id=context.run_id,
+                data=data,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to update ProcessRun status for run '%s'", context.run_id, exc_info=True
+            )
 
     async def _execute_step(self, step: ProcessStepSpec, context: ProcessContext) -> StepResult:
         """Execute a single step based on its kind."""
@@ -203,7 +271,26 @@ class ProcessExecutor:
             for target_key, source_expr in step.llm_input_map.items():
                 input_data[target_key] = context.resolve_value(source_expr)
 
-        result = await self._llm_executor.execute(intent_name, input_data)
+        # #1454 closed-system AI cognition: every LLM step must supply a
+        # ProcessRun subject. run_id is None only when process_run_service was
+        # not injected — that is a wiring bug, so we fail loud here rather than
+        # silently calling execute() with an empty subject (which would raise
+        # ValueError inside LLMIntentExecutor anyway).
+        if not context.run_id:
+            return StepResult(
+                success=False,
+                error=(
+                    f"LLM step '{step.name}' has no run_id — ProcessRun subject is missing. "
+                    "Ensure process_run_service is injected into ProcessExecutor (#1454)."
+                ),
+            )
+
+        result = await self._llm_executor.execute(
+            intent_name,
+            input_data,
+            subject_type="ProcessRun",
+            subject_id=context.run_id,
+        )
 
         if result.success:
             # Parse output as JSON if possible

@@ -44,6 +44,18 @@ def _mock_llm_executor(output='{"category": "billing"}', success=True, error=Non
     return executor
 
 
+class _MinimalProcessRunService:
+    """Minimal fake ProcessRun service for tests that need LLM steps (#1454)."""
+
+    def __init__(self, run_id: str = "test-run-id"):
+        self._run_id = run_id
+
+    async def execute(self, *, action: str, data=None, record_id=None, **kw):
+        if action == "create":
+            return {"id": self._run_id}
+        return {"id": record_id}
+
+
 # ---------------------------------------------------------------------------
 # ProcessContext
 # ---------------------------------------------------------------------------
@@ -103,6 +115,7 @@ class TestProcessExecution:
         executor = ProcessExecutor(
             _make_appspec([process]),
             llm_executor=llm_exec,
+            process_run_service=_MinimalProcessRunService(),
         )
         result = await executor.execute(
             "classify_flow",
@@ -211,6 +224,7 @@ class TestCheckpointResume:
         executor = ProcessExecutor(
             _make_appspec([process]),
             llm_executor=llm_exec,
+            process_run_service=_MinimalProcessRunService(),
         )
 
         # Resume with step1 already checkpointed
@@ -292,6 +306,7 @@ class TestMultiStepFlow:
         executor = ProcessExecutor(
             _make_appspec([process]),
             llm_executor=llm_exec,
+            process_run_service=_MinimalProcessRunService(),
         )
         result = await executor.execute(
             "pipeline",
