@@ -529,9 +529,38 @@ class PgProcessStateStore:
         ``process_runs`` gets the full hardened claim behaviour — including the
         dead-letter sweep — without any inline SQL duplication.
 
+        **Crash-during-execution recovery (lease-vs-domain-status):**
+        ``execute_process_steps`` sets ``status='running'`` on the domain row
+        *while the lease is still held*.  If the worker crashes mid-execution
+        the row is left ``status='running'`` with an *expired* lease.
+        ``claim_due_work``'s reclaim branch only matches ``status='claimed'``
+        (the queue status), so it would never reclaim the orphaned run.
+
+        We resolve this by resetting expired-lease ``running`` rows to
+        ``pending`` *before* calling ``claim_due_work``.  Terminal states
+        (``completed``/``failed``/``cancelled``/``dead``) and deliberately
+        parked states (``waiting``/``suspended``) are excluded — the condition
+        is ``status='running' AND lease_expires_at <= now() AND attempts <
+        max_attempts``.  This is the same predicate ``claim_due_work`` applies
+        to the ``claimed`` queue state, but extended to the domain
+        ``running`` state.
+
         The caller is responsible for calling ``mark_run_done`` /
         ``mark_run_retry`` once execution completes/fails.
         """
+        with self._connect() as conn, conn.cursor() as cur:
+            # Reset orphaned 'running' rows whose lease has expired (crash recovery).
+            cur.execute(
+                """
+                UPDATE process_runs
+                SET status = 'pending', deliver_at = now()
+                WHERE status = 'running'
+                  AND lease_expires_at <= now()
+                  AND attempts < %(max)s
+                """,
+                {"max": max_attempts},
+            )
+            conn.commit()
         with self._connect() as conn:
             run_ids = claim_due_work(
                 conn,
@@ -550,6 +579,30 @@ class PgProcessStateStore:
             if run is not None:
                 runs.append(run)
         return runs
+
+    def re_enqueue_run(self, run_id: str) -> None:
+        """Re-enqueue a WAITING run so the consumer poll picks it up again.
+
+        Called by ``PostgresProcessAdapter.complete_task`` after storing the
+        task outcome — sets ``status='pending'`` and ``deliver_at=now()`` so
+        the next ``claim_due_runs`` poll reclaims the run.
+
+        WAITING is a *parked* state (lease intentionally released by the
+        adapter after entering WAITING); re-enqueuing is explicit rather than
+        automatic so no spurious reclaim can occur mid-wait.
+        """
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE process_runs
+                SET status = 'pending', deliver_at = now(),
+                    claimed_by = NULL, lease_expires_at = NULL
+                WHERE run_id = %s AND status = 'waiting'
+                """,
+                (run_id,),
+            )
+            conn.commit()
+        logger.debug("Re-enqueued waiting run %s", run_id)
 
     def mark_run_done(self, run_id: str) -> None:
         """Mark a claimed run as successfully completed (``status='completed'``).
