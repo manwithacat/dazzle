@@ -94,12 +94,20 @@ def validate_governance_policies(appspec: ir.AppSpec) -> tuple[list[str], list[s
 
 
 def validate_llm_subject_surface(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
-    """E_AIJOB_NO_SUBJECT_SURFACE: llm_config present but no cognition surface declared (#1454).
+    """Validate the auto-injected AIJob.subject poly_ref (#1454 / #1458).
 
     When llm_config is present the linker injects an AIJob entity whose ``subject``
-    is a required poly_ref.  If no trigger declares an ``on_entity`` and no process
-    has an ``llm_intent`` step, poly_targets will be empty — the required field has
-    no legal target.  Fail loud so the author knows they need to wire a surface.
+    is a required poly_ref over a link-time-derived target set.  Two checks:
+
+    - ``E_AIJOB_NO_SUBJECT_SURFACE``: no trigger ``on_entity`` and no process
+      ``llm_intent`` step → empty target set → the required field has no legal
+      target.  Fail loud so the author wires a surface.
+    - ``E_AIJOB_SUBJECT_TARGET_*`` (#1458): every derived target must exist and be
+      uuid-pk.  The #1448 poly_ref existence/uuid-pk checks otherwise only fire for
+      *authored* scope rules; the auto-injected subject has none, so a derived
+      target that is missing or non-uuid-pk (e.g. a user-declared entity shadowing
+      the framework ``ProcessRun`` name) would slip past link time.  A ProcessRun
+      target lacking ``started_by`` warns — its RBAC anchor is unavailable.
     """
     errors: list[str] = []
     warnings: list[str] = []
@@ -112,12 +120,43 @@ def validate_llm_subject_surface(appspec: ir.AppSpec) -> tuple[list[str], list[s
         return errors, warnings
 
     subj = next((f for f in aijob.fields if f.name == "subject"), None)
-    if subj is not None and not (subj.type.poly_targets or []):
+    if subj is None:
+        return errors, warnings
+
+    targets = subj.type.poly_targets or []
+    if not targets:
         errors.append(
             "E_AIJOB_NO_SUBJECT_SURFACE: llm_config is present but no AI subject "
             "surface is declared — add an llm_intent trigger (trigger: on_entity: X) "
             "or a process step (kind: llm_intent) so AIJob has a scope-able subject."
         )
+        return errors, warnings
+
+    # #1458: validate each derived target exists + is uuid-pk (poly_ref requires it).
+    by_name = {e.name: e for e in appspec.domain.entities}
+    for target_name in targets:
+        target = by_name.get(target_name)
+        if target is None:
+            errors.append(
+                f"E_AIJOB_SUBJECT_TARGET_UNKNOWN: AIJob.subject target '{target_name}' "
+                "is not a declared entity."
+            )
+            continue
+        id_field = next((f for f in target.fields if f.name == "id"), None)
+        if id_field is None or id_field.type.kind.value != "uuid":
+            errors.append(
+                f"E_AIJOB_SUBJECT_TARGET_NOT_UUID_PK: AIJob.subject target "
+                f"'{target_name}' must have a uuid primary key (poly_ref targets must "
+                "be uuid-pk). A non-uuid entity cannot back the subject_id column."
+            )
+            continue
+        if target_name == "ProcessRun" and not any(f.name == "started_by" for f in target.fields):
+            warnings.append(
+                "AIJob.subject target 'ProcessRun' has no 'started_by' field — "
+                "process-run RBAC scoping (subject[ProcessRun].started_by = current_user) "
+                "is unavailable. This usually means a user-declared ProcessRun shadowed "
+                "the framework-injected one."
+            )
 
     return errors, warnings
 

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.111] - 2026-06-22
+
+### Added
+- **#1458 harden auto-AIJob subject target derivation (#1454 follow-on).** `validate_llm_subject_surface` now validates every derived `AIJob.subject` poly_ref target: `E_AIJOB_SUBJECT_TARGET_UNKNOWN` (target is not a declared entity) and `E_AIJOB_SUBJECT_TARGET_NOT_UUID_PK` (target lacks a uuid primary key — poly_ref forbids it). The #1448 existence/uuid-pk checks otherwise only fire for *authored* scope rules; the auto-injected subject has none, so a trigger on a non-uuid-pk entity (or a user-declared entity shadowing the framework `ProcessRun` name) previously slipped past link time. A `ProcessRun` target missing `started_by` now warns — its RBAC anchor is unavailable.
+
 ## [0.83.110] - 2026-06-22
 
 ### Changed

@@ -202,3 +202,107 @@ def test_e_aijob_no_subject_surface_fires_when_no_surface_declared():
     errors, _warnings, _relevance = lint_appspec(appspec)
     matching = [e for e in errors if "E_AIJOB_NO_SUBJECT_SURFACE" in e]
     assert matching, f"Expected E_AIJOB_NO_SUBJECT_SURFACE error; errors were: {errors}"
+
+
+# --- #1458: field-level validation of the derived AIJob.subject target set ---
+
+# A trigger whose on_entity has a NON-uuid pk — the derived poly_ref target is
+# not uuid-pk, which poly_ref forbids. The #1448 uuid-pk check only fires for
+# authored scope rules, so without #1458 this slips past link time.
+_DSL_NON_UUID_TRIGGER_TARGET = """\
+module m
+app a "A"
+
+llm_config:
+  default_model: m1
+
+llm_model m1 "M1":
+  provider: anthropic
+  model_id: claude-3-5-haiku-20241022
+
+entity Doc "Doc":
+  code: str(50) pk
+  body: text
+
+llm_intent summarize "Summarize":
+  model: m1
+  prompt: "{{ input.text }}"
+  trigger:
+    on_entity: Doc
+    on_event: created
+    input_map:
+      text: entity.body
+"""
+
+# A user-declared ProcessRun (uuid pk, but NO started_by) shadows the
+# framework-injected governed one. A process llm_intent step makes ProcessRun a
+# derived target, so the subject points at an anchorless run entity.
+_DSL_USER_SHADOWED_PROCESSRUN = """\
+module m
+app a "A"
+
+llm_config:
+  default_model: m1
+
+llm_model m1 "M1":
+  provider: anthropic
+  model_id: claude-3-5-haiku-20241022
+
+entity Doc "Doc":
+  id: uuid pk
+  body: text
+
+entity ProcessRun "Process Run":
+  id: uuid pk
+  note: text
+
+process review "Review":
+  trigger:
+    when: entity Doc created
+  steps:
+    - step run_summarize:
+        llm_intent: summarize
+        input_map:
+          text: context.body
+
+llm_intent summarize "Summarize":
+  model: m1
+  prompt: "{{ input.text }}"
+"""
+
+
+def test_aijob_subject_target_not_uuid_pk_fires():
+    """#1458: a derived subject target that is not uuid-pk fails loud at lint time."""
+    from dazzle.core.lint import lint_appspec
+
+    appspec = _build_appspec(_DSL_NON_UUID_TRIGGER_TARGET)
+    errors, _warnings, _relevance = lint_appspec(appspec)
+    matching = [e for e in errors if "E_AIJOB_SUBJECT_TARGET_NOT_UUID_PK" in e]
+    assert matching, f"Expected E_AIJOB_SUBJECT_TARGET_NOT_UUID_PK; errors were: {errors}"
+    assert any("Doc" in e for e in matching), "error should name the offending target"
+
+
+def test_aijob_subject_processrun_without_anchor_warns():
+    """#1458: a user-shadowed ProcessRun (no started_by) warns — RBAC anchor unavailable."""
+    from dazzle.core.validation.governance import validate_llm_subject_surface
+
+    appspec = _build_appspec(_DSL_USER_SHADOWED_PROCESSRUN)
+    pr = next(e for e in appspec.domain.entities if e.name == "ProcessRun")
+    assert not any(f.name == "started_by" for f in pr.fields), (
+        "test premise: shadow lacks started_by"
+    )
+
+    errors, warnings = validate_llm_subject_surface(appspec)
+    assert not errors, f"uuid-pk shadow should not error; got {errors}"
+    assert any("started_by" in w and "ProcessRun" in w for w in warnings), (
+        f"Expected a ProcessRun-no-anchor warning; warnings were: {warnings}"
+    )
+
+
+def test_aijob_subject_valid_targets_produce_no_target_errors():
+    """#1458 regression: a well-formed trigger+process app has no subject-target errors."""
+    from dazzle.core.validation.governance import validate_llm_subject_surface
+
+    appspec = _build_appspec(_DSL_WITH_TRIGGER_AND_PROCESS)
+    errors, _warnings = validate_llm_subject_surface(appspec)
+    assert errors == [], f"valid app should have no subject-target errors; got {errors}"
