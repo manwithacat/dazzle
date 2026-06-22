@@ -200,6 +200,51 @@ def _expand_money_field(dazzle_field: ir.FieldSpec) -> list[FieldSpec]:
     return [minor_field, currency_field]
 
 
+def _expand_poly_ref_field(dazzle_field: ir.FieldSpec) -> list[FieldSpec]:
+    """Expand a poly_ref field into a `_type` (STR) + `_id` (UUID) column pair (#1448).
+
+    The logical `poly_ref target [A, B]` field has no own column; its two physical
+    columns hold the target entity name (discriminator) and the target uuid. Targets
+    are uuid-pk, so `_id` is a real UUID column — no text cast anywhere downstream.
+
+    Args:
+        dazzle_field: Dazzle IR field with kind=POLY_REF.
+
+    Returns:
+        Two FieldSpecs: {name}_type as STR, {name}_id as UUID.
+    """
+    base_name = dazzle_field.name
+    is_required = dazzle_field.is_required
+
+    type_field = FieldSpec(
+        name=f"{base_name}_type",
+        label=f"{base_name.replace('_', ' ').title()} Type",
+        type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
+        required=is_required,
+        default=None,
+        validators=[],
+        indexed=dazzle_field.is_indexed,
+        unique=False,
+        auto_add=False,
+        auto_update=False,
+    )
+
+    id_field = FieldSpec(
+        name=f"{base_name}_id",
+        label=f"{base_name.replace('_', ' ').title()} Id",
+        type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+        required=is_required,
+        default=None,
+        validators=[],
+        indexed=dazzle_field.is_indexed,
+        unique=False,
+        auto_add=False,
+        auto_update=False,
+    )
+
+    return [type_field, id_field]
+
+
 def convert_field(dazzle_field: ir.FieldSpec) -> FieldSpec:
     """
     Convert a Dazzle IR FieldSpec to the Dazzle runtime BackendSpec FieldSpec.
@@ -741,11 +786,14 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
     Returns:
         the Dazzle runtime BackendSpec entity specification
     """
-    # Convert fields, expanding money fields into _minor/_currency pairs
+    # Convert fields, expanding money fields into _minor/_currency pairs and
+    # poly_ref fields into _type/_id pairs (#1448).
     fields: list[FieldSpec] = []
     for f in dazzle_entity.fields:
         if f.type.kind == ir.FieldTypeKind.MONEY:
             fields.extend(_expand_money_field(f))
+        elif f.type.kind == ir.FieldTypeKind.POLY_REF:
+            fields.extend(_expand_poly_ref_field(f))
         else:
             fields.append(convert_field(f))
 
