@@ -1986,3 +1986,54 @@ def explain_aggregate_command(
         )
         for name, expr in derived_dict.items():
             console.print(f"  {name} = {expr}")
+
+
+@db_app.command(name="explain-scope")
+def explain_scope_command(
+    entity: str = typer.Argument(..., help="Entity name (e.g. AIJob)"),
+    verb: str = typer.Argument(..., help="read | list | create | update | delete"),
+    persona: str = typer.Option("", "--persona", "-p", help="Filter to one persona"),
+) -> None:
+    """Print the compiled scope predicate, app-layer WHERE, and RLS policy (or the
+    #1447 degradation reason) for <Entity>.<verb> — the #1448 traceability oracle."""
+    from dazzle.core.ir.fk_graph import FKGraph
+    from dazzle.http.runtime.predicate_compiler import (
+        build_entity_type_resolver,
+        compile_predicate,
+        compile_predicate_policy,
+    )
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+    ent = next((e for e in appspec.domain.entities if e.name == entity), None)
+    if ent is None or ent.access is None:
+        console.print(f"[red]No scoped entity:[/red] {entity}")
+        raise typer.Exit(code=1)
+
+    fk_graph = appspec.fk_graph or FKGraph.from_entities(appspec.domain.entities)
+    entity_types = build_entity_type_resolver(appspec.domain.entities)
+    rules = [
+        r
+        for r in ent.access.scopes
+        if (r.operation.value if hasattr(r.operation, "value") else str(r.operation)) == verb
+        and (not persona or persona in (r.personas or []))
+    ]
+    if not rules:
+        console.print(f"[yellow]No {verb} scope rules on {entity}[/yellow]")
+        return
+
+    for rule in rules:
+        personas = ", ".join(rule.personas or []) or "*"
+        console.print(f"\n[bold]{entity}.{verb}[/bold] (as {personas})")
+        console.print(f"[dim]predicate:[/dim] {rule.predicate!r}")
+        sql, params = compile_predicate(rule.predicate, entity, fk_graph)
+        console.print(f"[bold]app-layer WHERE:[/bold] {sql or '(no filter)'}")
+        console.print(f"[dim]params:[/dim] {params}")
+        try:
+            body = compile_predicate_policy(
+                rule.predicate, entity, fk_graph, entity_types=entity_types
+            )
+            console.print(f"[bold]RLS policy:[/bold] {body}")
+            console.print("[green]verdict:[/green] RLS")
+        except ValueError as exc:
+            console.print(f"[yellow]verdict:[/yellow] app-layer (degraded: {exc})")
