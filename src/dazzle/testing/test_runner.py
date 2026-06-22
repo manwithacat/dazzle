@@ -30,6 +30,7 @@ from uuid import uuid4
 
 import httpx
 
+from dazzle.testing.cleanup_manager import CleanupManager
 from dazzle.testing.data_generator import DataGenerator
 
 logger = logging.getLogger(__name__)
@@ -81,30 +82,6 @@ class UICheckResult:
     status: int | None
     url: str
     excerpt: str
-
-
-@dataclass
-class CleanupReport:
-    """#1307: outcome of ``DazzleClient.cleanup_created_entities``.
-
-    Pre-#1307 cleanup returned a bare ``(deleted, failed)`` tuple and counted
-    every HTTP 404 at teardown as a *failure* — producing the alarming
-    ``"N failed"`` line even though a 404 means the row is already gone (cleanup
-    succeeded). The three-way split makes the report honest:
-
-    - ``deleted`` — rows actually removed (200/204).
-    - ``absent``  — rows already gone (404). Success for cleanup's purpose.
-    - ``failed``  — genuine failures (auth/server/network); the row may persist.
-
-    ``created_types`` is the set of entity types this run created, captured
-    before the tracking list is cleared, so the caller can run the post-cleanup
-    residue scan (``detect_residue``) over exactly those types.
-    """
-
-    deleted: int = 0
-    absent: int = 0
-    failed: int = 0
-    created_types: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -177,7 +154,9 @@ class DazzleClient:
         self.client = httpx.Client(timeout=timeout, headers=headers)
         self._auth_token: str | None = None
         self._test_routes_available: bool | None = None  # None = unknown
-        self._created_entities: list[tuple[str, str]] = []  # (entity_name, entity_id)
+        # #1446: created-entity tracking + dependency-safe teardown live in the
+        # CleanupManager collaborator (composed here so create_entity can track).
+        self.cleanup = CleanupManager(self)
 
     def _ensure_csrf_token(self) -> None:
         """Acquire a CSRF token by making a GET request if we don't have one.
@@ -462,8 +441,8 @@ class DazzleClient:
             if self._test_routes_available is not False:
                 # #1210: uuid4 hex (not int(time.time())) — two entities
                 # created in the same second previously collided on
-                # fixture_id, silently dropping one from
-                # ``_created_entities`` and leaking it past --cleanup.
+                # fixture_id, silently dropping one from the cleanup
+                # tracking list and leaking it past --cleanup.
                 fixture_id = f"test-{entity_name.lower()}-{uuid4().hex}"
                 fixtures = [{"id": fixture_id, "entity": entity_name, "data": data}]
                 resp = self._request(
@@ -474,7 +453,7 @@ class DazzleClient:
                     created: dict[str, Any] = result.get("created", {})
                     created_entity = created.get(fixture_id)
                     if created_entity and "id" in created_entity:
-                        self._created_entities.append((entity_name, str(created_entity["id"])))
+                        self.cleanup.track(entity_name, str(created_entity["id"]))
                     return created_entity
                 if resp.status_code == 404:
                     self._test_routes_available = False
@@ -487,7 +466,7 @@ class DazzleClient:
             if resp.status_code in (200, 201):
                 result_data = dict(resp.json())
                 if "id" in result_data:
-                    self._created_entities.append((entity_name, str(result_data["id"])))
+                    self.cleanup.track(entity_name, str(result_data["id"]))
                 return result_data
             return None
         except Exception as e:
@@ -568,179 +547,6 @@ class DazzleClient:
         except Exception:
             logger.debug("ignored exception in test_runner.py:485", exc_info=True)
             return "failed"
-
-    def _build_fk_reverse_map(self) -> dict[str, list[tuple[str, str]]]:
-        """Build a map of parent_entity → [(child_entity, fk_field), ...] from the app spec.
-
-        Used by cleanup to cascade-delete child records before parents.
-        """
-        result: dict[str, list[tuple[str, str]]] = {}
-        spec = self.get_spec()
-        if not spec:
-            return result
-        entities = spec.get("entities") or []
-        if not entities:
-            # Try domain.entities (full spec format)
-            domain = spec.get("domain") or {}
-            entities = domain.get("entities") or []
-        for entity in entities:
-            entity_name = entity.get("name", "")
-            for fld in entity.get("fields", []):
-                ftype = fld.get("type") or {}
-                if ftype.get("kind") == "ref" and ftype.get("ref_entity"):
-                    parent = ftype["ref_entity"]
-                    result.setdefault(parent, []).append((entity_name, fld["name"]))
-        return result
-
-    def _topo_sort_for_delete(
-        self,
-        fk_map: dict[str, list[tuple[str, str]]],
-    ) -> list[tuple[str, str]]:
-        """Sort tracked entities so children come before parents.
-
-        Uses the FK reverse map to determine entity-type ordering:
-        if entity B has a FK to entity A, B must be deleted first.
-        Within each type-level, entities keep their LIFO order.
-        """
-        tracked_types: set[str] = {name for name, _id in self._created_entities}
-
-        # Build adjacency list: child → parent (child must be deleted first).
-        # Kahn's algorithm processes nodes with in_degree 0 first, so children
-        # (no incoming edges) get the lowest order indices.
-        successors: dict[str, set[str]] = {t: set() for t in tracked_types}
-        in_degree: dict[str, int] = dict.fromkeys(tracked_types, 0)
-        for parent_type, children in fk_map.items():
-            if parent_type not in tracked_types:
-                continue
-            for child_type, _fk_field in children:
-                if child_type in tracked_types and parent_type not in successors[child_type]:
-                    successors[child_type].add(parent_type)
-                    in_degree[parent_type] += 1
-
-        # Deterministic LIFO ordering for tie-breaking (preserves LIFO for
-        # unrelated types that all have in_degree 0).
-        lifo_types = list(dict.fromkeys(name for name, _id in reversed(self._created_entities)))
-        queue = [t for t in lifo_types if in_degree[t] == 0]
-
-        type_order: dict[str, int] = {}
-        order_idx = 0
-        while queue:
-            t = queue.pop(0)
-            type_order[t] = order_idx
-            order_idx += 1
-            for succ in successors.get(t, set()):
-                in_degree[succ] -= 1
-                if in_degree[succ] == 0:
-                    queue.append(succ)
-
-        # Types not in type_order (cycles) get highest index (delete last)
-        max_order = order_idx
-        for t in tracked_types:
-            if t not in type_order:
-                type_order[t] = max_order
-
-        # Stable sort: primary by type_order (children=low, parents=high),
-        # secondary preserves LIFO within same type-level.
-        reversed_entities = list(reversed(self._created_entities))
-        reversed_entities.sort(key=lambda pair: type_order.get(pair[0], max_order))
-        return reversed_entities
-
-    def cleanup_created_entities(self) -> CleanupReport:
-        """Delete all tracked entities in dependency-safe order.
-
-        Uses the FK graph to topologically sort tracked entities so children
-        are deleted before parents. Only deletes entities that were created
-        during this test run — **no API queries for untracked records** (the
-        #410 invariant; the residue scan is a *separate* phase, see
-        ``detect_residue``). Uses multi-pass for remaining FK constraint
-        failures.
-
-        Returns a :class:`CleanupReport` (#1307) splitting deleted / absent
-        (404 → already gone) / failed, plus the set of created entity types.
-        """
-        created_types = sorted({name for name, _id in self._created_entities})
-        if not self._created_entities:
-            return CleanupReport(created_types=created_types)
-
-        # Build FK graph and sort tracked entities
-        fk_map = self._build_fk_reverse_map()
-        pending = self._topo_sort_for_delete(fk_map)
-
-        # Deduplicate (same entity may be tracked multiple times)
-        seen: set[tuple[str, str]] = set()
-        unique_pending: list[tuple[str, str]] = []
-        for pair in pending:
-            if pair not in seen:
-                seen.add(pair)
-                unique_pending.append(pair)
-        pending = unique_pending
-
-        deleted = 0
-        absent = 0
-        max_passes = 3
-
-        for pass_num in range(max_passes):
-            still_pending: list[tuple[str, str]] = []
-            pass_progress = 0
-            for entity_name, entity_id in pending:
-                outcome = self.delete_entity(entity_name, entity_id)
-                if outcome == "deleted":
-                    deleted += 1
-                    pass_progress += 1
-                elif outcome == "absent":
-                    # Already gone — success for cleanup. Don't retry (a 404
-                    # won't become a 200 on a later pass).
-                    absent += 1
-                    pass_progress += 1
-                else:
-                    still_pending.append((entity_name, entity_id))
-            pending = still_pending
-            if not pending:
-                break
-            # Bail if no progress after first pass — retrying won't help
-            if pass_num > 0 and pass_progress == 0:
-                break
-
-        self._created_entities.clear()
-        return CleanupReport(
-            deleted=deleted,
-            absent=absent,
-            failed=len(pending),
-            created_types=created_types,
-        )
-
-    def detect_residue(self, entity_types: list[str]) -> dict[str, int]:
-        """Count test-data rows still present after cleanup (#1307).
-
-        A SEPARATE phase from ``cleanup_created_entities`` (which is delete-only,
-        per the #410 invariant) — this one *does* query the API. For each given
-        entity type it lists the rows and counts those bearing this run's
-        test-data signature (``is_generated_test_value`` — every runner-created
-        row carries at least one generated string field). A nonzero count means
-        cleanup left rows behind: rows the runner created but whose ids it never
-        tracked (e.g. cascade-created children, or an id the create response
-        didn't surface), which tracked-id deletion can't reach.
-
-        Returns ``{entity_type: leftover_count}`` for types with residue > 0.
-        Best-effort: a per-type query failure is skipped, not fatal.
-        """
-        from dazzle.core.field_values import is_generated_test_value
-
-        residue: dict[str, int] = {}
-        for entity_name in sorted(set(entity_types)):
-            try:
-                rows = self.get_entities(entity_name)
-            except Exception:
-                logger.debug("residue scan: get_entities(%s) failed", entity_name, exc_info=True)
-                continue
-            count = sum(
-                1
-                for row in rows
-                if isinstance(row, dict) and any(is_generated_test_value(v) for v in row.values())
-            )
-            if count:
-                residue[entity_name] = count
-        return residue
 
     def get_spec(self) -> dict[str, Any] | None:
         """Get the app spec."""
@@ -1084,7 +890,7 @@ class TestRunner:
         # Cleanup created entities (#1307: honest deleted/absent/failed split +
         # a separate residue scan so an incomplete cleanup is loud, not silent).
         if self._cleanup and self.client:
-            report = self.client.cleanup_created_entities()
+            report = self.client.cleanup.cleanup_created_entities()
             parts: list[str] = []
             if report.deleted:
                 parts.append(f"{report.deleted} deleted")
@@ -1102,7 +908,7 @@ class TestRunner:
             # runner created but never tracked (cascade children / untracked
             # ids), which tracked-id deletion can't reach — so cleanup that
             # reports success doesn't silently orphan rows.
-            residue = self.client.detect_residue(report.created_types)
+            residue = self.client.cleanup.detect_residue(report.created_types)
             if residue:
                 total_residue = sum(residue.values())
                 top = sorted(residue.items(), key=lambda kv: (-kv[1], kv[0]))
@@ -1645,9 +1451,9 @@ class TestRunner:
         """#1210: explicit-opt-in cleanup tracking for ``post`` / ``post_json``.
 
         If the step spec carries ``cleanup_entity: <EntityName>`` AND the
-        response is 2xx with a JSON body containing an ``id``, append
-        ``(EntityName, id)`` to the client's ``_created_entities`` list so
-        the end-of-run ``--cleanup`` phase deletes it.
+        response is 2xx with a JSON body containing an ``id``, track
+        ``(EntityName, id)`` on the client's CleanupManager so the
+        end-of-run ``--cleanup`` phase deletes it.
 
         Absent the hint, no tracking happens — this preserves existing
         behaviour for transition / auth / form POSTs that don't create
@@ -1671,7 +1477,7 @@ class TestRunner:
         entity_id = body.get("id")
         if entity_id is None:
             return
-        self.client._created_entities.append((str(cleanup_entity), str(entity_id)))
+        self.client.cleanup.track(str(cleanup_entity), str(entity_id))
 
     def _execute_post_step(
         self,

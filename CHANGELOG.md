@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.92] - 2026-06-22
+
+### Changed
+- **#1446 (slice 2) — extracted `CleanupManager` from the `DazzleClient` god class.** The
+  created-entity tracking list + dependency-safe teardown (`_build_fk_reverse_map`,
+  `_topo_sort_for_delete`, `cleanup_created_entities`, `detect_residue`) and the `CleanupReport`
+  result type moved to a new `testing/cleanup_manager.py`. `CleanupManager` **owns** the tracking
+  list (`created`) and takes the client by constructor injection (for `get_spec`/`delete_entity`/
+  `get_entities`); `DazzleClient` composes it as `self.cleanup` and `create_entity` records rows via
+  `self.cleanup.track(...)`. The ~13 caller sites (`cleanup_created_entities`/`detect_residue`/the
+  runner's post-step tracking) were repointed to `client.cleanup.*`. `DazzleClient` drops 23→19
+  methods. Behaviour unchanged (FK topo-sort + 3-way CleanupReport + residue scan preserved).
+
+### Notes
+- **#1446 remaining:** `EntityClient` (CRUD + `_entity_endpoint`) — deferred pending a call on its
+  **58 `create_entity` call sites** (delegate vs repoint); and the `TestRunner` `_execute_*_step`
+  ladder (~40 handlers, 44-method class). The per-class method-count gate lands once `DazzleClient`
+  is under ~15 and `TestRunner` is sliced.
+
 ## [0.83.91] - 2026-06-22
 
 ### Changed

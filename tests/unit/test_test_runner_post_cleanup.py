@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+from dazzle.testing.cleanup_manager import CleanupManager
 from dazzle.testing.test_runner import DazzleClient, TestResult, TestRunner
 
 
@@ -26,7 +27,10 @@ def _make_runner_with_stub_client() -> tuple[TestRunner, MagicMock]:
     client = MagicMock(spec=DazzleClient)
     client.api_url = "http://api.example"
     client.ui_url = "http://ui.example"
-    client._created_entities = []
+    # Real CleanupManager so `track()` actually appends to `.created` (#1446) —
+    # a bare mock attr wouldn't record, and `spec=DazzleClient` rejects the
+    # instance-only `cleanup` attribute.
+    client.cleanup = CleanupManager(client)
     runner.client = client
     return runner, client
 
@@ -54,7 +58,7 @@ def test_post_without_cleanup_entity_does_not_track() -> None:
     )
 
     assert result.result is TestResult.PASSED
-    assert client._created_entities == []
+    assert client.cleanup.created == []
 
 
 def test_post_with_cleanup_entity_tracks_returned_id() -> None:
@@ -72,7 +76,7 @@ def test_post_with_cleanup_entity_tracks_returned_id() -> None:
         context={},
     )
 
-    assert client._created_entities == [("ServicePackage", "abc-123")]
+    assert client.cleanup.created == [("ServicePackage", "abc-123")]
 
 
 def test_post_json_with_cleanup_entity_tracks_returned_id() -> None:
@@ -90,7 +94,7 @@ def test_post_json_with_cleanup_entity_tracks_returned_id() -> None:
         context={},
     )
 
-    assert client._created_entities == [("Widget", "42")]
+    assert client.cleanup.created == [("Widget", "42")]
 
 
 def test_post_non_2xx_does_not_track_even_with_cleanup_entity() -> None:
@@ -108,7 +112,7 @@ def test_post_non_2xx_does_not_track_even_with_cleanup_entity() -> None:
         context={},
     )
 
-    assert client._created_entities == []
+    assert client.cleanup.created == []
 
 
 def test_post_2xx_without_id_in_body_does_not_track() -> None:
@@ -128,7 +132,7 @@ def test_post_2xx_without_id_in_body_does_not_track() -> None:
         context={},
     )
 
-    assert client._created_entities == []
+    assert client.cleanup.created == []
 
 
 # ---- uuid4 fixture_id collision fix -----------------------------------------
@@ -167,7 +171,7 @@ def test_uuid4_fixture_id_eliminates_same_second_collision() -> None:
     assert len(set(captured_keys)) == 2
     # Both entities tracked for cleanup — the pre-fix bug would have
     # tracked only one due to the same-second key collision.
-    assert client._created_entities == [
+    assert client.cleanup.created == [
         ("ServicePackage", "row-1"),
         ("ServicePackage", "row-2"),
     ]
