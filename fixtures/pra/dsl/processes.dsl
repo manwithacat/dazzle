@@ -339,6 +339,11 @@ process delayed_notification "Delayed Notification":
         message: TaskCreatedNotification
         timeout: 30s
 
+    - step summarize_task:
+        llm_intent: summarize_text
+        input_map:
+          text: context.description
+
     - step wait_period:
         wait: 1h
 

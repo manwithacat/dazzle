@@ -54,6 +54,12 @@ llm_intent classify_task_priority "Auto-classify Task Priority":
   retry:
     max_attempts: 2
     backoff: exponential
+  trigger:
+    on_entity: Task
+    on_event: created
+    input_map:
+      title: entity.title
+      description: entity.description
   pii:
     scan: true
     action: redact
@@ -63,6 +69,12 @@ llm_intent suggest_task_tags "Suggest Tags for Task":
   model: claude_haiku
   prompt: "Suggest relevant tags for task '$title' with description '$description'. Available tags: backend, frontend, api, database, ui, testing, documentation, infrastructure, security, performance. Respond with JSON containing tags array and reasoning."
   timeout: 10
+  trigger:
+    on_entity: Task
+    on_event: created
+    input_map:
+      title: entity.title
+      description: entity.description
   pii:
     scan: true
     action: redact
@@ -75,6 +87,11 @@ llm_intent summarize_task_comments "Summarize Task Discussion":
   retry:
     max_attempts: 2
     backoff: linear
+  trigger:
+    on_entity: Task
+    on_event: created
+    input_map:
+      task_title: entity.title
   pii:
     scan: true
     action: redact
@@ -84,6 +101,13 @@ llm_intent estimate_task_effort "Estimate Task Effort":
   model: claude_sonnet
   prompt: "Estimate effort for task '$title' with description '$description' and priority '$priority'. Respond with JSON containing effort_hours, complexity, risks, dependencies, and confidence."
   timeout: 20
+  trigger:
+    on_entity: Task
+    on_event: created
+    input_map:
+      title: entity.title
+      description: entity.description
+      priority: entity.priority
   pii:
     scan: true
     action: warn
