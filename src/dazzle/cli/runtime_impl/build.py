@@ -10,6 +10,7 @@ from typing import Any
 import typer
 
 from dazzle.core.errors import DazzleError, ParseError
+from dazzle.core.manifest import _DEFAULT_DATABASE_URL, load_manifest
 
 from .docker import (
     generate_docker_compose,
@@ -242,7 +243,6 @@ def migrate_command(
         raise typer.Exit(code=1)
 
     # Resolve database URL: CLI flag → env → dazzle.toml → default
-    from dazzle.core.manifest import _DEFAULT_DATABASE_URL, load_manifest
 
     mf = load_manifest(manifest_path)
     had_explicit_source = bool(

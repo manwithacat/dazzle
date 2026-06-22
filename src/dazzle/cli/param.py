@@ -5,6 +5,8 @@ from pathlib import Path
 
 import typer
 
+from dazzle.core.appspec_loader import load_project_appspec
+
 param_app = typer.Typer(help="Runtime parameter management.", no_args_is_help=True)
 
 
@@ -40,7 +42,6 @@ def validate_command(
     project_root: Path = typer.Option(Path("."), "--project", help="Project root"),
 ) -> None:
     """Validate all parameter declarations against their defaults."""
-    from dazzle.core.appspec_loader import load_project_appspec
     from dazzle.http.runtime.param_store import validate_param_value
 
     appspec = load_project_appspec(project_root.resolve())

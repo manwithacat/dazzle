@@ -46,6 +46,9 @@ from dazzle.api_surface import (
     public_helpers_module,
     runtime_urls_module,
 )
+from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.renderer_registry import _DEFAULT_RENDERERS
 
 # =============================================================================
 # Group: dazzle inspect <ext-point>
@@ -116,14 +119,12 @@ def _resolve_project_root(project_path: Path | None) -> Path:
 def _load_manifest(project_root: Path) -> Any:
     """Load the project manifest. Imported lazily to avoid paying the
     parser cost on `--help`."""
-    from dazzle.core.manifest import load_manifest
 
     return load_manifest(project_root / "dazzle.toml")
 
 
 def _load_appspec(project_root: Path) -> Any:
     """Load and link the full AppSpec. ~50ms for typical projects."""
-    from dazzle.core.appspec_loader import load_project_appspec
 
     return load_project_appspec(project_root)
 
@@ -208,7 +209,6 @@ def renderers_command(
     """
     project_root = _resolve_project_root(project)
     manifest = _load_manifest(project_root)
-    from dazzle.core.renderer_registry import _DEFAULT_RENDERERS
 
     declared = set(manifest.renderers.extra)
     framework_defaults = set(_DEFAULT_RENDERERS)

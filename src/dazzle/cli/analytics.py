@@ -12,6 +12,8 @@ from pathlib import Path
 
 import typer
 
+from dazzle.core.appspec_loader import load_project_appspec
+
 analytics_app = typer.Typer(
     help="Analytics, consent, and privacy tooling (v0.61.0).",
     no_args_is_help=True,
@@ -106,7 +108,6 @@ def analytics_audit(
     All findings are warnings — this command never fails the build. Run
     before shipping to keep the privacy surface honest.
     """
-    from dazzle.core.appspec_loader import load_project_appspec
 
     root = project_dir.resolve()
     spec = load_project_appspec(root)

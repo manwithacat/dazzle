@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.100] - 2026-06-22
+
+### Changed
+- **#1438 (slice 3) — second burn-down wave: hoisted 42 deferred `dazzle.core.*` imports across 31
+  mcp/cli files (2094 → 2052).** Restricted to the `mcp/` and `cli/` layers (which `core` never
+  imports → guaranteed cycle-safe), AST-guided, skipping anything inside `try/except`/conditional
+  guards and any file with a late `# noqa: E402` sub-app-registration import block (4 such files
+  deferred). This wave hit **zero** test-coupling failures (unlike the `sitespec`/`composition`/`rbac`
+  trio in slice 2) — confirming the full suite is a reliable per-wave oracle. Total burned down so
+  far: 2126 → 2052 (74 across 38 files), baseline lowered each wave to lock the win.
+
 ## [0.83.99] - 2026-06-22
 
 ### Changed

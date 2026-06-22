@@ -8,6 +8,7 @@ import json
 import logging
 from typing import Any
 
+from dazzle.core.manifest import load_manifest
 from dazzle.core.paths import project_last_seen_version, project_log_dir, project_manifest
 from dazzle.mcp.semantics_kb import get_mcp_version
 
@@ -55,8 +56,6 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     progress.log_sync("Gathering MCP status...")
     from pathlib import Path
-
-    from dazzle.core.manifest import load_manifest
 
     reload_requested = args.get("reload", False)
     result: dict[str, Any] = {

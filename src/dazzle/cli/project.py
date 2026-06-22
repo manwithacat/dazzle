@@ -33,6 +33,7 @@ from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest, resolve_api_url, resolve_site_url
 from dazzle.core.parser import parse_modules
 from dazzle.core.renderer_registry import known_renderer_names
+from dazzle.core.spec_loader import load_spec
 
 if TYPE_CHECKING:
     from dazzle.core import ir
@@ -693,7 +694,6 @@ def analyze_spec_command(
     - SPEC.md single file (backward compatible)
     - Explicit file path as argument
     """
-    from dazzle.core.spec_loader import load_spec
 
     # Determine spec content
     if spec_file:

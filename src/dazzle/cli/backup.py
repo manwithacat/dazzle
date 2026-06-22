@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 import typer
 
-from dazzle.core.manifest import load_manifest
+from dazzle.core.manifest import load_manifest, resolve_database_url
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,6 @@ backup_app = typer.Typer(help="Backup and restore project data.")
 def _resolve_database_url(manifest_path: Path) -> str:
     """Resolve DATABASE_URL from env profile, env, or manifest."""
     from dazzle.cli.env import get_active_env
-    from dazzle.core.manifest import resolve_database_url
 
     manifest = load_manifest(manifest_path) if manifest_path.exists() else None
     return resolve_database_url(manifest, env_name=get_active_env())

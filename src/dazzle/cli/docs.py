@@ -5,6 +5,8 @@ from pathlib import Path
 
 import typer
 
+from dazzle.core.docs_gen import check_docs_coverage
+
 docs_app = typer.Typer(
     help="Documentation generation, validation, and maintenance.",
     no_args_is_help=True,
@@ -240,7 +242,6 @@ def docs_generate(
 @docs_app.command("check")
 def docs_check() -> None:
     """Validate TOML coverage. Exits non-zero if errors found."""
-    from dazzle.core.docs_gen import check_docs_coverage
 
     issues = check_docs_coverage()
     if not issues:

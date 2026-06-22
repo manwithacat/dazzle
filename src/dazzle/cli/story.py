@@ -15,6 +15,7 @@ import typer
 
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.errors import DazzleError, ParseError
+from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
 story_app = typer.Typer(
     help="Story-driven test generation. Propose stories from DSL, "
@@ -61,7 +62,6 @@ def propose_stories(
     """
 
     from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
     manifest_path = Path(manifest).resolve()
 

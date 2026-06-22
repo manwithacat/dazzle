@@ -12,6 +12,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.appspec_loader import load_project_appspec
+
 from .common import error_response, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
@@ -70,7 +72,6 @@ def conformance_cases_handler(project_root: Path, args: dict[str, Any]) -> str:
 @wrap_handler_errors
 def conformance_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Find entities with permit blocks but no scope blocks (conformance gaps)."""
-    from dazzle.core.appspec_loader import load_project_appspec
 
     appspec = load_project_appspec(project_root)
     gaps = []

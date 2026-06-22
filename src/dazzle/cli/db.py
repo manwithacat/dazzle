@@ -19,6 +19,7 @@ import typer
 from rich.console import Console
 
 from dazzle.cli.utils import load_project_appspec
+from dazzle.core.environment import DAZZLE_ENV_VAR
 
 logger = logging.getLogger(__name__)
 
@@ -1243,8 +1244,6 @@ def _default_db_env(project_root: Path) -> str:
     ``_resolve_url`` (`get_active_env`) and always wins regardless.
     """
     import os
-
-    from dazzle.core.environment import DAZZLE_ENV_VAR
 
     toml_path = project_root / "dazzle.toml"
     if not toml_path.exists():

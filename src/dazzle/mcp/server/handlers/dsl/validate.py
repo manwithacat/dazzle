@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.capabilities.cognition import active_capabilities_for
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
@@ -80,7 +81,6 @@ def lint_project(project_root: Path, args: dict[str, Any]) -> str:
 
     progress.log_sync("Running lint checks...")
     # Gate capability-tagged relevance on what this project has opted into (#1342).
-    from dazzle.core.capabilities.cognition import active_capabilities_for
 
     errors, warnings, relevance = lint_appspec(
         app_spec,

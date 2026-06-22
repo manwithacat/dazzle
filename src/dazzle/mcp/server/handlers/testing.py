@@ -10,6 +10,8 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.manifest import load_manifest
+
 from ..state import get_active_project_path, get_project_root
 from .common import (
     extract_progress,
@@ -296,7 +298,6 @@ def run_e2e_tests_handler(
 
 def get_e2e_test_coverage_impl(project_path: Path) -> dict[str, Any]:
     """Analyze E2E test coverage for the project. Returns coverage dict."""
-    from dazzle.core.manifest import load_manifest
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
     appspec = load_project_appspec(project_path)
@@ -386,7 +387,6 @@ def list_e2e_flows_impl(
     limit: int,
 ) -> dict[str, Any]:
     """List available E2E test flows. Returns flow list dict."""
-    from dazzle.core.manifest import load_manifest
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
     appspec = load_project_appspec(project_path)

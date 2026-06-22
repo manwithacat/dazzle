@@ -17,6 +17,8 @@ import logging
 import re
 from typing import Any
 
+from dazzle.core.capabilities.cognition import enable_suggestion
+
 from .common import error_response, extract_progress, unknown_op_response
 
 logger = logging.getLogger(__name__)
@@ -1138,7 +1140,6 @@ def _propose_patterns(arguments: dict[str, Any], active: set[str] | None = None)
     active = active if active is not None else set(arguments.get("active_capabilities") or [])
 
     # Lazy imports — keeps the handler module lightweight for non-bootstrap callers.
-    from dazzle.core.capabilities.cognition import enable_suggestion
     from dazzle.mcp.semantics_kb import get_dsl_patterns
 
     # --- Positive proposals (patterns.toml) ---

@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.frontend_spec_export import export_frontend_spec
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
 
 from ..common import extract_progress, load_project_appspec, wrap_handler_errors
@@ -95,8 +96,6 @@ def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> st
         test_designs = load_test_designs(project_root)
     except Exception:
         logger.debug("Optional test designs not available", exc_info=True)
-
-    from dazzle.core.frontend_spec_export import export_frontend_spec
 
     fmt = args.get("format", "markdown")
     sections = args.get("sections")

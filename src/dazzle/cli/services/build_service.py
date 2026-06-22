@@ -3,6 +3,9 @@
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.lint import lint_appspec
+from dazzle.core.manifest import load_manifest, resolve_database_url
+
 
 class BuildService:
     """Thin wrapper around build and migration operations for CLI usage.
@@ -23,7 +26,6 @@ class BuildService:
 
     def lint(self, appspec: Any) -> tuple[list[str], list[str]]:
         """Lint an AppSpec. Returns (errors, warnings)."""
-        from dazzle.core.lint import lint_appspec
 
         errors, warnings, _relevance = lint_appspec(appspec)
         return errors, warnings
@@ -88,7 +90,6 @@ class BuildService:
     def resolve_database_url(self, explicit_url: str = "") -> str:
         """Resolve the database URL from manifest/env/default."""
         from dazzle.cli.env import get_active_env
-        from dazzle.core.manifest import load_manifest, resolve_database_url
 
         manifest = None
         if self._manifest_path.exists():

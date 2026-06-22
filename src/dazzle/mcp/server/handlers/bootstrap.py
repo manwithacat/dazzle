@@ -10,6 +10,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.capabilities.cognition import active_capabilities_for
+
 from .common import extract_progress
 from .spec_analyze import handle_spec_analyze
 
@@ -116,7 +118,6 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
     # Capabilities this app has opted into (#1342) — gates pattern proposals so a
     # stated-but-undeclared requirement (e.g. "Okta") surfaces as a "declare the
     # capability" suggestion rather than full guidance the app can't yet use.
-    from dazzle.core.capabilities.cognition import active_capabilities_for
 
     active = active_capabilities_for(work_dir) if work_dir is not None else set()
 

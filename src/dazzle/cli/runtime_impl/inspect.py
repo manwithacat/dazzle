@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 import typer
 
 from dazzle.cli.utils import load_project_appspec
+from dazzle.core.strings import to_api_plural
 
 if TYPE_CHECKING:
     from dazzle.core import ir
@@ -339,7 +340,6 @@ def _inspect_workspace(
 
 def _inspect_endpoints(appspec: ir.AppSpec, format_output: str) -> None:
     """Inspect API surfaces (endpoint sources)."""
-    from dazzle.core.strings import to_api_plural
 
     entities = appspec.domain.entities
     if format_output == "json":

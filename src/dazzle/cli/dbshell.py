@@ -7,6 +7,8 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from dazzle.core.manifest import load_manifest, resolve_database_url
+
 console = Console()
 
 
@@ -15,7 +17,6 @@ def _resolve_db_url(database_url: str | None = None) -> str:
     from pathlib import Path
 
     from dazzle.cli.env import get_active_env
-    from dazzle.core.manifest import load_manifest, resolve_database_url
 
     manifest = None
     toml_path = Path.cwd().resolve() / "dazzle.toml"

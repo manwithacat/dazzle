@@ -6,6 +6,8 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from dazzle.core.appspec_loader import load_project_appspec
+
 compliance_app = typer.Typer(
     help="Compliance documentation tools",
     no_args_is_help=True,
@@ -187,7 +189,6 @@ def privacy_cmd(
         generate_privacy_page_markdown,
         merge_regenerated_into_existing,
     )
-    from dazzle.core.appspec_loader import load_project_appspec
 
     root = project_dir.resolve()
     spec = load_project_appspec(root)

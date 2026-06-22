@@ -25,6 +25,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.guide_concordance import check_guide_concordance
+
 from .common import error_response, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
@@ -73,7 +75,6 @@ def guide_concordance_handler(project_root: Path, args: dict[str, Any]) -> str:
     authoring before committing the DSL.
     """
     appspec = load_project_appspec(project_root)
-    from dazzle.core.guide_concordance import check_guide_concordance
 
     errors, warnings = check_guide_concordance(
         getattr(appspec, "guides", None) or [],

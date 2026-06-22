@@ -16,6 +16,8 @@ from typing import Any
 
 import typer
 
+from dazzle.core.demo_blueprint_persistence import load_blueprint
+
 demo_app = typer.Typer(help="Demo data management commands.", no_args_is_help=True)
 
 DEFAULT_TEST_PASSWORD = "dazzle-test-2026"
@@ -489,7 +491,6 @@ def verify_command(
     import json as _json
 
     from dazzle.cli.utils import load_project_appspec
-    from dazzle.core.demo_blueprint_persistence import load_blueprint
     from dazzle.demo_data.verify import verify_blueprint
 
     project_root = project_root.resolve()

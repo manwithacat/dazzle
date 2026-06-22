@@ -10,6 +10,9 @@ from typing import Any
 import typer
 from rich.console import Console
 
+from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.manifest import resolve_api_url, resolve_site_url
+
 logger = logging.getLogger(__name__)
 console = Console()
 
@@ -33,8 +36,6 @@ def _resolve_runtime_urls(project_root: Path) -> tuple[str, str]:
     """
     import os
 
-    from dazzle.core.manifest import resolve_api_url, resolve_site_url
-
     env_site = os.environ.get("DAZZLE_SITE_URL", "")
     env_api = os.environ.get("DAZZLE_API_URL", "")
     if env_site and env_api:
@@ -57,7 +58,6 @@ def _resolve_runtime_urls(project_root: Path) -> tuple[str, str]:
 
 def _run_structural_only() -> int:
     """Run structural checks only (no browser, no database)."""
-    from dazzle.core.appspec_loader import load_project_appspec
     from dazzle.testing.ux.inventory import generate_inventory
     from dazzle.testing.ux.report import generate_report
 
@@ -123,7 +123,6 @@ def _reset_and_seed(project_root: Path, api_url: str) -> None:
 
     import httpx
 
-    from dazzle.core.appspec_loader import load_project_appspec
     from dazzle.testing.ux.fixtures import generate_seed_payload
 
     secret = os.environ.get("DAZZLE_TEST_SECRET", "")
@@ -175,7 +174,6 @@ def _run_contracts(
     entity_filter: str = "",
 ) -> int:
     """Run contract verification against a live Dazzle app (no browser)."""
-    from dazzle.core.appspec_loader import load_project_appspec
     from dazzle.testing.ux.baseline import Baseline, BaselineDiff, compare_results
     from dazzle.testing.ux.contract_checker import check_contract
     from dazzle.testing.ux.contracts import RBACContract, generate_contracts
@@ -765,7 +763,6 @@ def verify_command(
         if strict and rc != 0:
             raise typer.Exit(rc)
 
-    from dazzle.core.appspec_loader import load_project_appspec
     from dazzle.testing.ux.harness import check_postgres_available
     from dazzle.testing.ux.inventory import generate_inventory
     from dazzle.testing.ux.report import generate_report

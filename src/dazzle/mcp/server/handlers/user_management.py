@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from dazzle.core.manifest import load_manifest, resolve_database_url
+
 from ..state import get_active_project_path
 from .common import extract_progress
 
@@ -33,7 +35,6 @@ def _get_auth_store(project_path: Path | None = None) -> AuthStore:
     Resolves the database URL from dazzle.toml [database] section,
     DATABASE_URL env var, or falls back to the default.
     """
-    from dazzle.core.manifest import load_manifest, resolve_database_url
     from dazzle.http import AuthStore
 
     if project_path is None:

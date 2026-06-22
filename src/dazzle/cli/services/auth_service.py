@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from dazzle.core.manifest import load_manifest, resolve_database_url
+
 
 class AuthService:
     """Thin wrapper around AuthStore for CLI usage.
@@ -27,7 +29,6 @@ class AuthService:
 
         Resolution order: explicit override -> dazzle.toml -> env -> default.
         """
-        from dazzle.core.manifest import load_manifest, resolve_database_url
 
         explicit = database_url_override or ""
         manifest = None

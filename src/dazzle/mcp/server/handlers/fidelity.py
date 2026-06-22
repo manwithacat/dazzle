@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.lint import lint_appspec
+
 from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,6 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
 
     # Validate DSL before proceeding
     progress.log_sync("Linting DSL...")
-    from dazzle.core.lint import lint_appspec
 
     lint_errors, lint_warnings, _relevance = lint_appspec(appspec)
     if lint_errors:

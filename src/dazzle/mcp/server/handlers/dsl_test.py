@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core.manifest import resolve_api_url
+from dazzle.core.project import load_project
 
 from .common import error_response, extract_progress, wrap_async_handler_errors, wrap_handler_errors
 
@@ -598,7 +599,6 @@ async def dsl_test_diff_personas_impl(
 
 def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
     """Generate bash/curl smoke test script."""
-    from dazzle.core.project import load_project
     from dazzle.testing.curl_test_generator import CurlTestGenerator
 
     appspec = load_project(project_root)

@@ -11,6 +11,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
+
 from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 from .serializers import (
     serialize_entity_detail,
@@ -137,7 +139,6 @@ def story_propose_impl(
     ``dsl/stories.dsl``, and returns a plain dict with summaries.
     """
     from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
     app_spec = load_project_appspec(project_root)
 
@@ -311,7 +312,6 @@ def story_save_impl(
     Raises ``ValueError`` when ``stories_data`` is empty.
     """
     from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.story_emitter import append_stories_to_dsl
 
     if not stories_data:
         raise ValueError("No stories provided")

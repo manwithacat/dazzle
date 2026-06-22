@@ -15,6 +15,7 @@ from dazzle.cli.utils import load_project_appspec
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.lint import lint_appspec
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
 test_app = typer.Typer(
     help=(
@@ -2147,7 +2148,6 @@ def test_populate(
         TestDesignStep,
         TestDesignTrigger,
     )
-    from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
     from dazzle.testing.test_design_persistence import add_test_designs
 
     manifest_path = Path(manifest).resolve()

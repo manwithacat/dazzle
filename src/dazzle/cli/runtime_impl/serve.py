@@ -27,11 +27,13 @@ from dazzle.cli.utils import load_project_appspec
 from dazzle.core.db_url import normalise_postgres_scheme
 from dazzle.core.environment import (
     get_dazzle_env,
+    pin_production_env,
     should_enable_test_endpoints,
 )
 from dazzle.core.errors import DazzleError, ParseError
+from dazzle.core.fileset import discover_dsl_files as _discover
 from dazzle.core.lint import lint_appspec
-from dazzle.core.manifest import load_manifest
+from dazzle.core.manifest import load_manifest, resolve_database_url
 from dazzle.core.sitespec_loader import load_sitespec, sitespec_exists
 
 from .ports import (
@@ -235,13 +237,10 @@ def _configure_production_mode(ctx: _ServeContext) -> None:
     """Apply production overrides: logging, env validation, migration check."""
     # `dazzle serve --production` is a production intent; pin DAZZLE_ENV so the
     # downstream fail-closed auth guard (reads DAZZLE_ENV directly) sees it (#1420).
-    from dazzle.core.environment import pin_production_env
 
     pin_production_env()
     configure_production_logging()
     database_url_prod, redis_url_prod = validate_production_env()
-
-    from dazzle.core.fileset import discover_dsl_files as _discover
 
     try:
         mf_check = load_manifest(ctx.manifest_path)
@@ -325,8 +324,6 @@ def _configure_dev_mode(
         ctx.enable_test_mode = should_enable_test_endpoints(ctx.dev_config_override_test)
     else:
         ctx.enable_test_mode = test_mode
-
-    from dazzle.core.manifest import resolve_database_url
 
     ctx.database_url = resolve_database_url(ctx.mf, explicit_url=ctx.database_url)
     ctx.redis_url = os.environ.get("REDIS_URL", "")
