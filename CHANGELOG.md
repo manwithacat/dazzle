@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.113] - 2026-06-22
+
+### Added
+- **Postgres-backed process coordination (Phase 1) — `process`/`schedule` workflows run on Postgres alone, no Redis.** New `PostgresProcessAdapter` (+ sync `PgProcessStateStore`) backed by `process_runs`/`process_tasks` framework tables, auto-selected by the process factory whenever `DATABASE_URL` is present (precedence Temporal -> Postgres -> EventBus/Redis). Substrate: a shared `claim_due_work()` lease primitive (`SELECT ... FOR UPDATE SKIP LOCKED` + visibility-timeout lease + crash-loop dead-letter sweep) over the run table — *the state table IS the queue*; `LISTEN/NOTIFY` is a best-effort latency hint over the durable polled table. A per-run lease heartbeat keeps long runs from being reclaimed; `step_executor` now skips already-completed steps on replay (at-least-once safety); ownership fencing stops a reclaim race from double-writing terminal state. `dazzle worker` and the http `ProcessSubsystem` both resolve the adapter through the factory so enqueue and consume agree on one backend. Builds on #1457 (Celery removal); spec/plan in `docs/superpowers/`. Phase 2 (PgJobQueue) + Phase 3 (default-flip docs + load-test + ADR) follow.
+
+### Agent Guidance
+- Dazzle's default process backend is now **Postgres** (auto-selected when `DATABASE_URL` is set; Redis/EventBus and Temporal remain opt-in). `process`/`schedule` workflows run via `dazzle worker` with no Redis; the durable queue is the `process_runs` table (`SELECT ... FROM process_runs` to inspect). Known Phase-1 limitations (follow-ons): a `human_task` step's `surface` isn't serialized from the IR (pre-existing parity with the Redis store); MCP process reads still spin a consumer loop; NOTIFY uses a per-call connection.
+
 ## [0.83.112] - 2026-06-22
 
 ### Removed
