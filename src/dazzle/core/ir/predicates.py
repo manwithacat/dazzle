@@ -212,6 +212,31 @@ class ExistsCheck(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class PolyPathCheck(BaseModel):
+    """Scope through one branch of a typed polymorphic ref (#1448).
+
+    For ``target[CohortAssessment].uploaded_by = current_user`` on an entity
+    with ``poly_ref target [CohortAssessment, Manuscript]`` this models::
+
+        "target_type" = 'CohortAssessment'
+        AND "target_id" IN (SELECT id FROM cohort_assessment WHERE <sub>)
+
+    ``sub`` is an ordinary predicate rooted on ``target_entity`` (here a
+    ``UserAttrCheck`` for ``uploaded_by = current_user``). No cast: ``id_field``
+    is a real ``uuid`` column.
+    """
+
+    kind: Literal["poly_path"] = "poly_path"
+    field: str  # the poly_ref field name, e.g. "target"
+    type_field: str  # f"{field}_type"
+    type_value: str  # selected branch, e.g. "CohortAssessment"
+    id_field: str  # f"{field}_id"
+    target_entity: str  # == type_value (the resolved entity)
+    sub: ScopePredicate  # post-selector predicate, rooted on target_entity
+
+    model_config = ConfigDict(frozen=True)
+
+
 class Tautology(BaseModel):
     """Logical constant TRUE — always matches every row."""
 
@@ -310,6 +335,7 @@ ScopePredicate = Annotated[
     | UserAttrCheck
     | PathCheck
     | ExistsCheck
+    | PolyPathCheck
     | BoolComposite
     | Tautology
     | Contradiction,
@@ -327,3 +353,5 @@ Use this type for fields that store a predicate tree::
 # Rebuild BoolComposite after ScopePredicate is defined so that the
 # self-referential ``children: list[ScopePredicate]`` annotation resolves.
 BoolComposite.model_rebuild()
+# #1448: PolyPathCheck.sub is a forward-ref to ScopePredicate — rebuild so it resolves.
+PolyPathCheck.model_rebuild()

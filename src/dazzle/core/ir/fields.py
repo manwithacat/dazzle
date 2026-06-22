@@ -65,6 +65,10 @@ class FieldTypeKind(StrEnum):
     # only; runtime resolution (recursive CTE) lands in 3b.ii.
     DESCENDANTS_OF = "descendants_of"
     ANCESTORS_OF = "ancestors_of"
+    # #1448 — typed polymorphic reference. `poly_ref target [A, B]` owns two
+    # physical columns (target_type text, target_id uuid) and replaces the
+    # stringly-typed entity_type/entity_id pathology. Targets MUST be uuid-pk.
+    POLY_REF = "poly_ref"
 
 
 class RelationshipBehavior(StrEnum):
@@ -121,6 +125,8 @@ class FieldType(BaseModel):
     currency_code: str | None = None  # for money (e.g., "GBP", "USD", "EUR")
     # v0.9.5: Many-to-many via junction table
     via_entity: str | None = None  # for has_many with junction table (m:n relationship)
+    # #1448: for poly_ref — the ordered set of legal target entity names.
+    poly_targets: list[str] | None = None
     # v0.39.0: Per-field upload size limit
     max_size: int | None = None  # for file (bytes, e.g., 200*1024*1024 for 200MB)
     # #1213: file UI-mode modifier.
