@@ -45,6 +45,7 @@ class UnifiedServerConfig:
     redis_url: str = ""
     tenant_config: Any = None
     storage_defs: dict[str, Any] | None = None  # #932 — propagated from manifest
+    dark_mode_toggle: bool = True  # #1445 — `[ui] dark_mode_toggle`, threaded to site routes
 
 
 # =============================================================================
@@ -136,6 +137,7 @@ def run_unified_server(
     tenant_config: Any = None,
     local_assets: bool = False,
     storage_defs: dict[str, Any] | None = None,
+    dark_mode_toggle: bool = True,
     *,
     config: UnifiedServerConfig | None = None,
 ) -> None:
@@ -172,6 +174,7 @@ def run_unified_server(
         redis_url = config.redis_url
         tenant_config = config.tenant_config
         storage_defs = config.storage_defs
+        dark_mode_toggle = config.dark_mode_toggle
     try:
         import uvicorn
 
@@ -312,6 +315,7 @@ def run_unified_server(
         sitespec_data=sitespec_data,
         theme_css=theme_css,
         bundled_css=bundled_css,
+        dark_mode_toggle=dark_mode_toggle,
     )
 
     # Mount the tenant-resolution middleware on the single-worker in-process

@@ -813,6 +813,7 @@ def assemble_post_build_routes(
     sitespec_data: dict[str, Any] | None = None,
     theme_css: str = "",
     bundled_css: str = "",
+    dark_mode_toggle: bool = True,
 ) -> None:
     """Mount all post-build routes on a FastAPI app in the correct order.
 
@@ -877,6 +878,7 @@ def assemble_post_build_routes(
                 analytics_spec=appspec.analytics,
                 consent_default_jurisdiction=_site_jurisdiction,
                 consent_override=_site_override,
+                dark_mode_toggle=dark_mode_toggle,
             )
             app.include_router(site_page_router)
             logger.info("  Site pages: landing, /site.js, /styles/dazzle.css")
@@ -1178,12 +1180,6 @@ def create_app_factory(
     logger.info("Loading Dazzle project from %s", project_root)
     manifest = load_manifest(manifest_path)
 
-    # #938 — wire `[ui] dark_mode_toggle` into the theme module before
-    # any template renders. Same hook as the CLI serve path.
-    from dazzle.page.runtime.theme import configure_dark_mode_toggle
-
-    configure_dark_mode_toggle(manifest.dark_mode_toggle)
-
     # Resolve DATABASE_URL: env → dazzle.toml [database] → default
     from dazzle.core.manifest import resolve_database_url
 
@@ -1339,6 +1335,7 @@ def create_app_factory(
         project_root=project_root,
         sitespec_data=sitespec_data,
         theme_css=theme_css,
+        dark_mode_toggle=manifest.dark_mode_toggle,
     )
 
     _stash_tenant_state_marker(app, appspec)

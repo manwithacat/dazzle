@@ -372,6 +372,7 @@ def create_site_page_routes(
     privacy_page_url: str = "/privacy",
     cookie_policy_url: str | None = None,
     analytics_spec: Any | None = None,
+    dark_mode_toggle: bool = True,
 ) -> APIRouter:
     """
     Create FastAPI routes that serve HTML pages directly.
@@ -433,7 +434,6 @@ def create_site_page_routes(
             TYPED_SECTION_TYPES,
             render_typed_section,
         )
-        from dazzle.page.runtime.theme import is_dark_mode_toggle_enabled
 
         product_name = _html_mod.escape(
             str(getattr(ctx, "product_name", "") or ""),
@@ -477,7 +477,7 @@ def create_site_page_routes(
         else:
             cta_html = ""
         theme_toggle_html = ""
-        if is_dark_mode_toggle_enabled():
+        if bool(getattr(ctx, "dark_mode_toggle", True)):
             theme_toggle_html = (
                 '<button class="dz-theme-toggle" id="dz-theme-toggle" '
                 'aria-label="Toggle dark mode" title="Toggle dark mode">'
@@ -909,6 +909,7 @@ def create_site_page_routes(
                     custom_css=has_custom_css,
                     is_authenticated=is_authed,
                     dashboard_url=dash_url,
+                    dark_mode_toggle=dark_mode_toggle,
                     qa_personas=qa_personas,
                     consent=consent_dict,
                     consent_state_json=consent_json,
@@ -943,6 +944,7 @@ def create_site_page_routes(
                     custom_css=has_custom_css,
                     is_authenticated=is_authed,
                     dashboard_url=dash_url,
+                    dark_mode_toggle=dark_mode_toggle,
                     consent=consent_dict,
                     consent_state_json=consent_json,
                     active_analytics_providers=active_providers,
@@ -974,6 +976,7 @@ def create_site_page_routes(
                 custom_css=has_custom_css,
                 is_authenticated=is_authed,
                 dashboard_url=dash_url,
+                dark_mode_toggle=dark_mode_toggle,
                 consent=consent_dict,
                 consent_state_json=consent_json,
                 active_analytics_providers=active_providers,
@@ -1004,6 +1007,7 @@ def create_site_page_routes(
                 custom_css=has_custom_css,
                 is_authenticated=is_authed,
                 dashboard_url=dash_url,
+                dark_mode_toggle=dark_mode_toggle,
                 consent=consent_dict,
                 consent_state_json=consent_json,
                 active_analytics_providers=active_providers,

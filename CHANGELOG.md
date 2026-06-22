@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.86] - 2026-06-22
+
+### Changed
+- **#1445 (slice 3 — shape (c), dark_mode) — `dark_mode_toggle` boot flag moved off the module
+  global onto the typed render context (ADR-0005).** `page/runtime/theme._DARK_MODE_TOGGLE_ENABLED`
+  + `configure_dark_mode_toggle()` + `is_dark_mode_toggle_enabled()` were a process-wide mutable
+  global (set once at boot, read by the site nav renderer) — an ADR-0005 violation that also forced
+  the flag per-process (blocking per-tenant override) and made tests order-dependent. The flag now
+  flows through the typed context: `SitePageContext.dark_mode_toggle` (frozen field) ← populated by
+  `build_site_page_context(dark_mode_toggle=…)` ← threaded from `manifest.dark_mode_toggle` through
+  `create_site_page_routes` / `assemble_post_build_routes` in **both** boot paths (`create_app_factory`
+  and `run_unified_server`/`serve`). The site nav renderer now gates the toggle button on
+  `ctx.dark_mode_toggle`. Deleted the three theme globals + their boot calls; decoupled the (already
+  unused) `get_theme_variant` from the removed global. **This completes #1445 shape (c)** — both the
+  haptic (slice 2, dead) and dark_mode flags are now off module globals.
+
+### Notes
+- **#1445 remaining:** only shape (b) — the self-rolled `_DEFAULT_ACCUMULATOR` / `_DEFAULT_BACKEND`
+  singletons (→ ServerState DI) and the ratchet enforcement gate. Shapes (a) and (c) are done.
+
 ## [0.83.85] - 2026-06-22
 
 ### Removed

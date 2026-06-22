@@ -615,6 +615,10 @@ class SitePageContext(BaseModel):
     custom_css: bool = False
     is_authenticated: bool = False
     dashboard_url: str = "/app"
+    # #1445 — `[ui] dark_mode_toggle` flows through the typed context (from the
+    # manifest at build time), replacing the old `theme._DARK_MODE_TOGGLE_ENABLED`
+    # module global. When False the nav renderer skips the theme-toggle button.
+    dark_mode_toggle: bool = False
     qa_personas: list[QAPersonaCardContext] = Field(default_factory=list)
     # Consent banner (v0.61.0 Phase 2). When None, banner is not rendered.
     consent: dict[str, Any] | None = None
