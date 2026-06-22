@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.94] - 2026-06-22
+
+### Added
+- **#1446 (slice 4) — per-class method-count ratchet gate.** `test_testing_class_method_cap_1446.py`
+  caps the agent-E2E harness classes by method count and only lets them shrink: `DazzleClient` ≤ 15
+  (the done-criteria, currently 14), `EntityClient`/`CleanupManager` ≤ 8 (currently 6), `DataGenerator`
+  ≤ 4 (currently 2), and `TestRunner` ≤ 44 (its current baseline — the `_execute_*_step` ladder).
+  A class that regrows past its cap fails CI; the fix is to extract a collaborator (the god-class
+  lesson), not raise the cap. This freezes the `DazzleClient` decomposition and ratchets `TestRunner`
+  downward as its handler ladder is later split.
+
+### Notes
+- **#1446 status:** the `DazzleClient` god class is fully resolved (25→14 across slices 1–3:
+  DataGenerator/CleanupManager/EntityClient) and now ratchet-enforced. The remaining work is the
+  `TestRunner` `_execute_*_step` handler ladder (~28 handlers, 44-method class) → a dispatch/registry
+  extraction — a larger, dedicated refactor; the gate caps it at 44 meanwhile so it can only shrink.
+
 ## [0.83.93] - 2026-06-22
 
 ### Changed
