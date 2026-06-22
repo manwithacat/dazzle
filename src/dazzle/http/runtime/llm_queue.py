@@ -79,8 +79,8 @@ class LLMJob:
     intent_name: str
     input_data: dict[str, Any]
     user_id: str | None = None
-    entity_type: str | None = None
-    entity_id: str | None = None
+    subject_type: str = ""
+    subject_id: str = ""
     callback: CompletionCallback | None = None
 
 
@@ -126,15 +126,24 @@ class LLMJobQueue:
         intent_name: str,
         input_data: dict[str, Any],
         *,
+        subject_type: str,
+        subject_id: str,
         user_id: str | None = None,
-        entity_type: str | None = None,
-        entity_id: str | None = None,
         callback: CompletionCallback | None = None,
     ) -> str:
         """Submit an intent for async execution.
 
         Returns the job_id immediately.
+        ``subject_type`` and ``subject_id`` are required — every AIJob must name
+        a subject (entity or ProcessRun). Raises ``ValueError`` if either is empty.
+        (#1454 closed-system AI cognition)
         """
+        if not subject_type or not subject_id:
+            raise ValueError(
+                f"AI call for intent '{intent_name}' has no subject — every AIJob must "
+                "name a subject (entity or ProcessRun). #1454 closed-system AI cognition."
+            )
+
         import uuid
 
         job_id = str(uuid.uuid4())
@@ -151,8 +160,8 @@ class LLMJobQueue:
                         "model": "",
                         "provider": "",
                         "status": "pending",
-                        "entity_type": entity_type,
-                        "entity_id": entity_id,
+                        "subject_type": subject_type,
+                        "subject_id": subject_id,
                         "user_id": user_id,
                     },
                 )
@@ -166,8 +175,8 @@ class LLMJobQueue:
             intent_name=intent_name,
             input_data=input_data,
             user_id=user_id,
-            entity_type=entity_type,
-            entity_id=entity_id,
+            subject_type=subject_type,
+            subject_id=subject_id,
             callback=callback,
         )
         await self._queue.put(job)
@@ -217,6 +226,8 @@ class LLMJobQueue:
                 job.intent_name,
                 job.input_data,
                 user_id=job.user_id,
+                subject_type=job.subject_type,
+                subject_id=job.subject_id,
             )
 
             # Emit event
@@ -249,8 +260,8 @@ class LLMJobQueue:
             "tokens_out": result.tokens_out,
             "cost_usd": str(result.cost_usd) if result.cost_usd else None,
             "duration_ms": result.duration_ms,
-            "entity_type": job.entity_type,
-            "entity_id": job.entity_id,
+            "subject_type": job.subject_type,
+            "subject_id": job.subject_id,
             "error": result.error,
         }
 

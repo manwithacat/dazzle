@@ -221,9 +221,9 @@ class LLMTriggerMatcher:
             await self._queue.submit(
                 entry.intent_name,
                 input_data,
+                subject_type=event.entity_name,
+                subject_id=event.entity_id,
                 user_id=event.user_id,
-                entity_type=event.entity_name,
-                entity_id=event.entity_id,
                 callback=callback,
             )
             logger.info(

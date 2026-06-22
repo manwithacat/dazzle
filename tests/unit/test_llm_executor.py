@@ -130,7 +130,12 @@ class TestExecute:
             mock_client.complete.return_value = "Summary result"
             mock_build.return_value = mock_client
 
-            result = await executor.execute("summarize", {"text": "hello"})
+            result = await executor.execute(
+                "summarize",
+                {"text": "hello"},
+                subject_type="Doc",
+                subject_id="00000000-0000-0000-0000-000000000001",
+            )
 
         assert result.success is True
         assert result.output == "Summary result"
@@ -139,7 +144,12 @@ class TestExecute:
     @pytest.mark.asyncio
     async def test_unknown_intent(self) -> None:
         executor = LLMIntentExecutor(_make_appspec())
-        result = await executor.execute("nonexistent", {})
+        result = await executor.execute(
+            "nonexistent",
+            {},
+            subject_type="Doc",
+            subject_id="00000000-0000-0000-0000-000000000001",
+        )
         assert result.success is False
         assert "Unknown intent" in (result.error or "")
 
@@ -150,7 +160,12 @@ class TestExecute:
         appspec = _make_appspec(intents=[_make_intent(prompt_template="$missing")])
         executor = LLMIntentExecutor(appspec)
         with patch.object(LLMIntentExecutor, "_build_client"):
-            result = await executor.execute("summarize", {})
+            result = await executor.execute(
+                "summarize",
+                {},
+                subject_type="Doc",
+                subject_id="00000000-0000-0000-0000-000000000001",
+            )
         assert result.success is False
         assert "template" in (result.error or "").lower()
 
@@ -158,7 +173,12 @@ class TestExecute:
     async def test_client_error(self) -> None:
         executor = LLMIntentExecutor(_make_appspec())
         with patch.object(LLMIntentExecutor, "_build_client", side_effect=ValueError("No API key")):
-            result = await executor.execute("summarize", {"text": "x"})
+            result = await executor.execute(
+                "summarize",
+                {"text": "x"},
+                subject_type="Doc",
+                subject_id="00000000-0000-0000-0000-000000000001",
+            )
         assert result.success is False
         assert "No API key" in (result.error or "")
 
@@ -187,7 +207,12 @@ class TestExecute:
             mock_client.complete.side_effect = complete_side_effect
             mock_build.return_value = mock_client
 
-            result = await executor.execute("summarize", {"text": "x"})
+            result = await executor.execute(
+                "summarize",
+                {"text": "x"},
+                subject_type="Doc",
+                subject_id="00000000-0000-0000-0000-000000000001",
+            )
 
         assert result.success is True
         assert result.output == "success after retries"
@@ -209,7 +234,12 @@ class TestExecute:
             mock_client.complete.side_effect = slow_complete
             mock_build.return_value = mock_client
 
-            result = await executor.execute("summarize", {"text": "x"})
+            result = await executor.execute(
+                "summarize",
+                {"text": "x"},
+                subject_type="Doc",
+                subject_id="00000000-0000-0000-0000-000000000001",
+            )
 
         assert result.success is False
         assert "Timeout" in (result.error or "")
@@ -226,7 +256,13 @@ class TestExecute:
             mock_client.complete.return_value = "result"
             mock_build.return_value = mock_client
 
-            result = await executor.execute("summarize", {"text": "x"}, user_id="user-1")
+            result = await executor.execute(
+                "summarize",
+                {"text": "x"},
+                user_id="user-1",
+                subject_type="Doc",
+                subject_id="00000000-0000-0000-0000-000000000001",
+            )
 
         assert result.job_id == "job-123"
         mock_service.execute.assert_called_once()

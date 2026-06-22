@@ -56,7 +56,9 @@ def _mock_executor(appspec=None):
     executor._appspec.llm_config = MagicMock()
     executor._appspec.llm_config.default_model = "claude"
 
-    async def mock_execute(intent_name, input_data, user_id=None):
+    async def mock_execute(
+        intent_name, input_data, user_id=None, subject_type=None, subject_id=None
+    ):
         result = MagicMock()
         result.success = True
         result.output = '{"category": "billing"}'
@@ -73,17 +75,19 @@ def _mock_executor(appspec=None):
 
 
 class TestLLMJobQueue:
+    _SUBJECT = {"subject_type": "Task", "subject_id": "00000000-0000-0000-0000-000000000001"}
+
     @pytest.mark.asyncio
     async def test_submit_returns_job_id(self):
         queue = LLMJobQueue(executor=_mock_executor())
-        job_id = await queue.submit("classify", {"title": "test"})
+        job_id = await queue.submit("classify", {"title": "test"}, **self._SUBJECT)
         assert isinstance(job_id, str)
         assert len(job_id) > 0
 
     @pytest.mark.asyncio
     async def test_submit_enqueues_job(self):
         queue = LLMJobQueue(executor=_mock_executor())
-        await queue.submit("classify", {"title": "test"})
+        await queue.submit("classify", {"title": "test"}, **self._SUBJECT)
         assert queue.pending_count == 1
 
     @pytest.mark.asyncio
@@ -92,7 +96,7 @@ class TestLLMJobQueue:
         queue = LLMJobQueue(executor=executor)
         await queue.start(num_workers=1)
 
-        await queue.submit("classify", {"title": "test"})
+        await queue.submit("classify", {"title": "test"}, **self._SUBJECT)
         # Wait for worker to process
         await asyncio.sleep(0.3)
 
@@ -106,7 +110,7 @@ class TestLLMJobQueue:
         await queue.start(num_workers=1)
 
         callback = AsyncMock()
-        await queue.submit("classify", {"title": "test"}, callback=callback)
+        await queue.submit("classify", {"title": "test"}, callback=callback, **self._SUBJECT)
 
         await asyncio.sleep(0.3)
         callback.assert_called_once()

@@ -141,9 +141,21 @@ class LLMIntentExecutor:
         intent_name: str,
         input_data: dict[str, Any],
         *,
+        subject_type: str,
+        subject_id: str,
         user_id: str | None = None,
     ) -> ExecutionResult:
-        """Execute a named intent with the given input data."""
+        """Execute a named intent with the given input data.
+
+        ``subject_type`` and ``subject_id`` are required — every AIJob must name
+        a subject (entity or ProcessRun). Raises ``ValueError`` if either is empty.
+        (#1454 closed-system AI cognition)
+        """
+        if not subject_type or not subject_id:
+            raise ValueError(
+                f"AI call for intent '{intent_name}' has no subject — every AIJob must "
+                "name a subject (entity or ProcessRun). #1454 closed-system AI cognition."
+            )
         intent = self._intents.get(intent_name)
         if not intent:
             return ExecutionResult(success=False, error=f"Unknown intent: {intent_name}")
@@ -196,7 +208,14 @@ class LLMIntentExecutor:
                 )
 
                 # Record AIJob if service available
-                await self._record_job(intent, model, result, user_id=user_id)
+                await self._record_job(
+                    intent,
+                    model,
+                    result,
+                    user_id=user_id,
+                    subject_type=subject_type,
+                    subject_id=subject_id,
+                )
 
                 return result
 
@@ -223,7 +242,15 @@ class LLMIntentExecutor:
             error=last_error,
             duration_ms=duration_ms,
         )
-        await self._record_job(intent, model, result, user_id=user_id, failed=True)
+        await self._record_job(
+            intent,
+            model,
+            result,
+            user_id=user_id,
+            failed=True,
+            subject_type=subject_type,
+            subject_id=subject_id,
+        )
         return result
 
     async def _record_job(
@@ -232,6 +259,8 @@ class LLMIntentExecutor:
         model: LLMModelSpec,
         result: ExecutionResult,
         *,
+        subject_type: str,
+        subject_id: str,
         user_id: str | None = None,
         failed: bool = False,
     ) -> None:
@@ -248,6 +277,8 @@ class LLMIntentExecutor:
                 "cost_usd": str(result.cost_usd) if result.cost_usd else None,
                 "duration_ms": result.duration_ms,
                 "status": "failed" if failed else "completed",
+                "subject_type": subject_type,
+                "subject_id": subject_id,
                 "user_id": user_id,
                 "error_message": result.error,
             }
