@@ -8,6 +8,8 @@ Exercises:
  * renew_lease — extending a lease prevents reclaim within the renewed window.
  * Crash-loop dead-letter — a row that is repeatedly claimed-and-expired (no
    fail_work) reaches status='dead' once attempts hits max_attempts.
+ * Non-default id_column — claim_due_work/complete_work/fail_work work correctly
+   against a table whose PK column is not ``id`` (e.g. ``run_id``).
 
 Marked ``postgres``: skipped locally without ``TEST_DATABASE_URL`` / ``DATABASE_URL``;
 CI's ``postgres-tests`` job runs it against a real ``postgres:16``.
@@ -343,6 +345,129 @@ def test_crash_loop_dead_letter() -> None:
                 f"(attempts={attempts})"
             )
             assert attempts >= max_attempts, f"Expected attempts >= {max_attempts}, got {attempts}"
+        finally:
+            conn.close()
+    finally:
+        with psycopg.connect(_PG, autocommit=True) as c:
+            c.execute(f"DROP TABLE IF EXISTS {tbl}")
+
+
+@pytest.mark.skipif(not _PG, reason="no TEST_DATABASE_URL / DATABASE_URL — needs real Postgres")
+def test_non_default_id_column() -> None:
+    """claim_due_work / complete_work / fail_work work against a table whose PK is not 'id'.
+
+    Creates a temp table with PK column ``run_id`` (mirroring ``process_runs``),
+    exercises the full claim → complete and claim → fail → dead-letter path,
+    and verifies the crash-loop dead-letter sweep fires via the shared primitive.
+    """
+    import psycopg
+
+    from dazzle.core.coordination.claim import (
+        claim_due_work,
+        complete_work,
+        fail_work,
+        queue_columns_ddl,
+    )
+
+    tbl = f"claim_runid_{uuid.uuid4().hex[:8]}"
+    row_a = str(uuid.uuid4())
+    row_b = str(uuid.uuid4())
+    with psycopg.connect(_PG, autocommit=True) as c:
+        c.execute(f"CREATE TABLE {tbl} (run_id text PRIMARY KEY, {queue_columns_ddl(tbl)})")
+        c.execute(
+            f"INSERT INTO {tbl} (run_id, deliver_at) VALUES (%s, now()), (%s, now())",
+            (row_a, row_b),
+        )
+
+    try:
+        conn = psycopg.connect(_PG)
+        try:
+            # ── claim → complete path ──────────────────────────────────────────
+            ids = claim_due_work(
+                conn, table=tbl, id_column="run_id", worker="w0", lease_seconds=30, batch=1
+            )
+            assert len(ids) == 1, f"Expected 1 claim, got {ids}"
+            claimed_id = ids[0]
+            assert claimed_id in (row_a, row_b)
+
+            complete_work(conn, table=tbl, id_column="run_id", row_id=claimed_id)
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT status FROM {tbl} WHERE run_id=%s", (claimed_id,))
+                row = cur.fetchone()
+            assert row and row[0] == "done", f"Expected 'done' after complete_work, got {row}"
+
+            # ── claim → fail → dead-letter path for the other row ─────────────
+            other_id = row_b if claimed_id == row_a else row_a
+            max_attempts = 2
+            for attempt in range(1, max_attempts + 1):
+                ids2 = claim_due_work(
+                    conn,
+                    table=tbl,
+                    id_column="run_id",
+                    worker="w0",
+                    lease_seconds=30,
+                    batch=1,
+                    max_attempts=max_attempts,
+                )
+                assert ids2 == [other_id], f"Attempt {attempt}: expected [{other_id}], got {ids2}"
+                outcome = fail_work(
+                    conn,
+                    table=tbl,
+                    id_column="run_id",
+                    row_id=other_id,
+                    error=f"err{attempt}",
+                    max_attempts=max_attempts,
+                )
+                if attempt < max_attempts:
+                    assert outcome == "retry"
+                else:
+                    assert outcome == "dead"
+
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT status FROM {tbl} WHERE run_id=%s", (other_id,))
+                row = cur.fetchone()
+            assert row and row[0] == "dead", f"Expected 'dead' after fail exhaustion, got {row}"
+
+            # ── crash-loop dead-letter via sweep (no fail_work) ───────────────
+            row_c = str(uuid.uuid4())
+            with conn.cursor() as cur:
+                cur.execute(f"INSERT INTO {tbl} (run_id, deliver_at) VALUES (%s, now())", (row_c,))
+                conn.commit()
+
+            max_crash = 2
+            for crash_n in range(1, max_crash + 1):
+                ids3 = claim_due_work(
+                    conn,
+                    table=tbl,
+                    id_column="run_id",
+                    worker="crasher",
+                    lease_seconds=1,
+                    batch=1,
+                    max_attempts=max_crash,
+                )
+                assert ids3 == [row_c], f"Crash {crash_n}: expected [{row_c}], got {ids3}"
+                time.sleep(1.2)  # let lease expire without calling fail_work
+
+            # The sweep on the next claim should dead-letter row_c.
+            ids4 = claim_due_work(
+                conn,
+                table=tbl,
+                id_column="run_id",
+                worker="sweeper",
+                lease_seconds=30,
+                batch=1,
+                max_attempts=max_crash,
+            )
+            assert ids4 == [], f"Over-limit row must not be claimed, got {ids4}"
+
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT status, attempts FROM {tbl} WHERE run_id=%s", (row_c,))
+                row = cur.fetchone()
+            assert row is not None
+            assert row[0] == "dead", (
+                f"Expected status='dead' after {max_crash} crashes (non-default id_column), "
+                f"got {row[0]!r} (attempts={row[1]})"
+            )
         finally:
             conn.close()
     finally:

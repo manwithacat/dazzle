@@ -5,11 +5,11 @@ FOR UPDATE SKIP LOCKED and a visibility-timeout lease; an expired lease is
 reclaimable (crash recovery). Takes a connection — no driver import here, so
 it's reusable by both the process adapter and the job queue, and layer-clean.
 
-Security note: ``table`` in the SQL strings below is ``.format``-interpolated
-(not a parameter placeholder), because Postgres does not allow parameterised
-table names. This is safe **only** because every caller supplies a
-framework-controlled identifier (never raw user input). Do not expose
-``table`` to user-controlled values.
+Security note: ``table`` and ``id_column`` in the SQL strings below are
+``.format``-interpolated (not parameter placeholders), because Postgres does
+not allow parameterised table/column names.  This is safe **only** because
+every caller supplies framework-controlled identifiers (never raw user input).
+Do not expose ``table`` or ``id_column`` to user-controlled values.
 """
 
 from __future__ import annotations
@@ -44,10 +44,10 @@ WHERE status = 'claimed'
 
 _CLAIM = """
 WITH due AS (
-    SELECT id FROM {table}
+    SELECT {id_column} FROM {table}
     WHERE (status = 'pending' AND deliver_at <= now())
        OR (status = 'claimed' AND lease_expires_at <= now() AND attempts < %(max)s)
-    ORDER BY deliver_at, id
+    ORDER BY deliver_at, {id_column}
     FOR UPDATE SKIP LOCKED
     LIMIT %(batch)s
 )
@@ -55,8 +55,8 @@ UPDATE {table} t
 SET status='claimed', claimed_by=%(worker)s, claimed_at=now(),
     lease_expires_at = now() + (%(lease)s || ' seconds')::interval,
     attempts = t.attempts + 1
-FROM due WHERE t.id = due.id
-RETURNING t.id;
+FROM due WHERE t.{id_column} = due.{id_column}
+RETURNING t.{id_column};
 """
 
 
@@ -68,6 +68,7 @@ def claim_due_work(
     lease_seconds: int,
     batch: int = 1,
     max_attempts: int = 5,
+    id_column: str = "id",
 ) -> list[str]:
     """Atomically claim up to *batch* due rows and return their ids.
 
@@ -84,40 +85,52 @@ def claim_due_work(
     The SELECT uses FOR UPDATE SKIP LOCKED so concurrent workers never
     double-claim the same row.
 
+    ``id_column`` names the primary-key column of *table*.  Defaults to
+    ``"id"`` (job_messages / generic queue tables).  Pass ``"run_id"`` for
+    ``process_runs``.  The value is format-interpolated, never a SQL parameter
+    — callers must supply a framework-controlled identifier.
+
     NOTE: this helper autonomous-commits (calls ``conn.commit()``).  A future
     transactional-outbox caller that needs a commit-less variant must factor
     out the cursor work separately.
     """
     params = {"batch": batch, "worker": worker, "lease": lease_seconds, "max": max_attempts}
+    sql_vars = {"table": table, "id_column": id_column}
     with conn.cursor() as cur:
-        cur.execute(_DEAD_LETTER_SWEEP.format(table=table), params)
-        cur.execute(_CLAIM.format(table=table), params)
+        cur.execute(_DEAD_LETTER_SWEEP.format(**sql_vars), params)
+        cur.execute(_CLAIM.format(**sql_vars), params)
         rows = cur.fetchall()
     conn.commit()
     return [str(r[0]) for r in rows]
 
 
-def renew_lease(conn, *, table: str, row_id: str, lease_seconds: int) -> None:
+def renew_lease(
+    conn, *, table: str, row_id: str, lease_seconds: int, id_column: str = "id"
+) -> None:
     """Extend the visibility-timeout lease on a row that is still being processed.
+
+    ``id_column`` defaults to ``"id"``; pass ``"run_id"`` for ``process_runs``.
 
     NOTE: autonomous-commits (calls ``conn.commit()``).
     """
     with conn.cursor() as cur:
         cur.execute(
             f"UPDATE {table} SET lease_expires_at = now() + (%s||' seconds')::interval "
-            "WHERE id=%s AND status='claimed'",
+            f"WHERE {id_column}=%s AND status='claimed'",
             (lease_seconds, row_id),
         )
     conn.commit()
 
 
-def complete_work(conn, *, table: str, row_id: str) -> None:
+def complete_work(conn, *, table: str, row_id: str, id_column: str = "id") -> None:
     """Mark a claimed row as successfully processed (``status='done'``).
+
+    ``id_column`` defaults to ``"id"``; pass ``"run_id"`` for ``process_runs``.
 
     NOTE: autonomous-commits (calls ``conn.commit()``).
     """
     with conn.cursor() as cur:
-        cur.execute(f"UPDATE {table} SET status='done' WHERE id=%s", (row_id,))
+        cur.execute(f"UPDATE {table} SET status='done' WHERE {id_column}=%s", (row_id,))
     conn.commit()
 
 
@@ -129,6 +142,7 @@ def fail_work(
     error: str,
     retry_at: datetime | None = None,
     max_attempts: int = 5,
+    id_column: str = "id",
 ) -> str:
     """Retry (reset to pending with deliver_at=retry_at) until max_attempts, then dead-letter.
 
@@ -136,24 +150,26 @@ def fail_work(
     is the discriminator; a row at or over *max_attempts* goes
     ``status='dead'``.
 
+    ``id_column`` defaults to ``"id"``; pass ``"run_id"`` for ``process_runs``.
+
     Returns ``"retry"`` or ``"dead"``.
 
     NOTE: autonomous-commits (calls ``conn.commit()``).
     """
     with conn.cursor() as cur:
-        cur.execute(f"SELECT attempts FROM {table} WHERE id=%s", (row_id,))
+        cur.execute(f"SELECT attempts FROM {table} WHERE {id_column}=%s", (row_id,))
         row = cur.fetchone()
         attempts = row[0] if row else 0
         if attempts >= max_attempts:
             cur.execute(
-                f"UPDATE {table} SET status='dead', payload = payload || %s WHERE id=%s",
+                f"UPDATE {table} SET status='dead', payload = payload || %s WHERE {id_column}=%s",
                 ('{"last_error": ' + _json(error) + "}", row_id),
             )
             outcome = "dead"
         else:
             cur.execute(
                 f"UPDATE {table} SET status='pending', deliver_at=%s, "
-                "payload = payload || %s WHERE id=%s",
+                f"payload = payload || %s WHERE {id_column}=%s",
                 (retry_at or _now(), '{"last_error": ' + _json(error) + "}", row_id),
             )
             outcome = "retry"

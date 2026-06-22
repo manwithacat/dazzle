@@ -492,6 +492,71 @@ def test_mark_run_retry_persists_error(store):
         _delete_runs([run.run_id])
 
 
+# ── crash-loop dead-letter via shared primitive ───────────────────────────────
+
+
+@pytest.mark.skipif(not _PG, reason="needs real Postgres")
+def test_claim_due_runs_crash_loop_dead_letters_via_shared_primitive(store):
+    """A process_run that crash-loops past max_attempts ends status='dead'.
+
+    Proves that process_runs gets the full dead-letter sweep from the shared
+    claim_due_work primitive (not a hand-rolled inline variant that might omit it).
+    Simulates repeated crash: claim with a short lease, let it expire without
+    calling mark_run_done/mark_run_retry.  After max_attempts expiries the
+    next claim sweep must set status='dead'.
+    """
+    from dazzle.core.process.adapter import ProcessStatus
+
+    max_attempts = 2
+    run = _make_run(status=ProcessStatus.PENDING)
+    store.save_run(run)
+
+    try:
+        for crash_n in range(1, max_attempts + 1):
+            claimed = store.claim_due_runs(
+                worker="crasher",
+                lease_seconds=1,
+                batch=5,
+                max_attempts=max_attempts,
+            )
+            claimed_ids = {r.run_id for r in claimed}
+            assert run.run_id in claimed_ids, (
+                f"Crash {crash_n}: expected run {run.run_id} to be claimable, got {claimed_ids}"
+            )
+            # Simulate crash — do NOT call mark_run_done or mark_run_retry.
+            time.sleep(1.2)  # let the 1-second lease expire
+
+        # The dead-letter sweep fires on the next claim call.
+        after = store.claim_due_runs(
+            worker="sweeper",
+            lease_seconds=30,
+            batch=5,
+            max_attempts=max_attempts,
+        )
+        assert run.run_id not in {r.run_id for r in after}, (
+            f"Over-limit run must not be claimed after {max_attempts} crashes"
+        )
+
+        # Verify the row reached status='dead' in the DB (shared sweep, not inline).
+        import psycopg
+
+        with psycopg.connect(_PG) as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT status, attempts FROM process_runs WHERE run_id=%s",
+                (run.run_id,),
+            )
+            row = cur.fetchone()
+        assert row is not None
+        status, attempts = row
+        assert status == "dead", (
+            f"Expected status='dead' after {max_attempts} crash-loops on process_runs, "
+            f"got {status!r} (attempts={attempts})"
+        )
+        assert attempts >= max_attempts, f"Expected attempts >= {max_attempts}, got {attempts}"
+    finally:
+        _delete_runs([run.run_id])
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 

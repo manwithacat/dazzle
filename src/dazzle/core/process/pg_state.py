@@ -29,7 +29,12 @@ from typing import Any
 import psycopg
 from psycopg.types.json import Jsonb
 
-from dazzle.core.coordination.claim import queue_columns_ddl
+from dazzle.core.coordination.claim import (
+    claim_due_work,
+    complete_work,
+    fail_work,
+    queue_columns_ddl,
+)
 from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
 from dazzle.core.process.adapter import (
     ProcessRun,
@@ -37,58 +42,6 @@ from dazzle.core.process.adapter import (
     ProcessTask,
     TaskStatus,
 )
-
-# ── process_runs claim SQL ─────────────────────────────────────────────────────
-# ``claim_due_work`` uses column ``id`` as the PK, but ``process_runs`` has
-# ``run_id``.  We inline a table-specific variant here using the same
-# SKIP LOCKED + lease pattern (spec §4) but keyed on ``run_id``.
-
-_DEAD_SWEEP_RUNS = """
-UPDATE process_runs
-SET status = 'dead'
-WHERE status = 'claimed'
-  AND lease_expires_at <= now()
-  AND attempts >= %(max)s;
-"""
-
-_CLAIM_RUNS = """
-WITH due AS (
-    SELECT run_id FROM process_runs
-    WHERE (status = 'pending' AND deliver_at <= now())
-       OR (status = 'claimed' AND lease_expires_at <= now() AND attempts < %(max)s)
-    ORDER BY deliver_at, run_id
-    FOR UPDATE SKIP LOCKED
-    LIMIT %(batch)s
-)
-UPDATE process_runs t
-SET status = 'claimed',
-    claimed_by        = %(worker)s,
-    claimed_at        = now(),
-    lease_expires_at  = now() + (%(lease)s || ' seconds')::interval,
-    attempts          = t.attempts + 1
-FROM due
-WHERE t.run_id = due.run_id
-RETURNING t.run_id;
-"""
-
-
-def _claim_due_runs_sql(
-    conn,
-    *,
-    worker: str,
-    lease_seconds: int,
-    batch: int = 1,
-    max_attempts: int = 5,
-) -> list[str]:
-    """Claim up to *batch* due process_runs rows; return their run_ids."""
-    params = {"batch": batch, "worker": worker, "lease": lease_seconds, "max": max_attempts}
-    with conn.cursor() as cur:
-        cur.execute(_DEAD_SWEEP_RUNS, params)
-        cur.execute(_CLAIM_RUNS, params)
-        rows = cur.fetchall()
-    conn.commit()
-    return [str(r[0]) for r in rows]
-
 
 logger = logging.getLogger(__name__)
 
@@ -567,22 +520,27 @@ class PgProcessStateStore:
         worker: str,
         lease_seconds: int,
         batch: int = 1,
+        max_attempts: int = 5,
     ) -> list[ProcessRun]:
         """Claim up to *batch* due process runs and return them.
 
-        Uses the Task-1 ``claim_due_work`` primitive (FOR UPDATE SKIP LOCKED)
-        so concurrent workers never double-claim the same run.  The claimed run
-        IDs are then loaded and returned as ``ProcessRun`` objects.
+        Delegates to the shared ``claim_due_work`` primitive (FOR UPDATE SKIP
+        LOCKED + crash-loop dead-letter sweep) with ``id_column="run_id"`` so
+        ``process_runs`` gets the full hardened claim behaviour — including the
+        dead-letter sweep — without any inline SQL duplication.
 
         The caller is responsible for calling ``mark_run_done`` /
         ``mark_run_retry`` once execution completes/fails.
         """
         with self._connect() as conn:
-            run_ids = _claim_due_runs_sql(
+            run_ids = claim_due_work(
                 conn,
+                table="process_runs",
+                id_column="run_id",
                 worker=worker,
                 lease_seconds=lease_seconds,
                 batch=batch,
+                max_attempts=max_attempts,
             )
         if not run_ids:
             return []
@@ -594,11 +552,15 @@ class PgProcessStateStore:
         return runs
 
     def mark_run_done(self, run_id: str) -> None:
-        """Mark a claimed run as successfully completed.
+        """Mark a claimed run as successfully completed (``status='completed'``).
 
-        Sets queue ``status='done'`` AND ``ProcessRun.status='completed'``
-        so ``get_run`` / ``list_runs`` reflect the terminal state immediately.
+        Uses the shared ``complete_work`` primitive (sets queue
+        ``status='done'``), then immediately updates to ``status='completed'``
+        so ``get_run`` / ``list_runs`` reflect the terminal state.
         """
+        with self._connect() as conn:
+            complete_work(conn, table="process_runs", id_column="run_id", row_id=run_id)
+        # complete_work sets status='done'; upgrade to the domain status.
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute(
                 "UPDATE process_runs SET status='completed', completed_at=now() WHERE run_id=%s",
@@ -609,29 +571,26 @@ class PgProcessStateStore:
     def mark_run_retry(self, run_id: str, error: str, max_attempts: int = 5) -> str:
         """Mark a claimed run as failed, scheduling a retry or dead-lettering.
 
-        Returns ``"retry"`` or ``"dead"``.  Persists the error into the
+        Delegates to the shared ``fail_work`` primitive with
+        ``id_column="run_id"``.  Additionally persists *error* into the
         ``error`` column so ``get_run`` can surface it.
-        """
 
+        Returns ``"retry"`` or ``"dead"``.
+        """
+        with self._connect() as conn:
+            outcome = fail_work(
+                conn,
+                table="process_runs",
+                id_column="run_id",
+                row_id=run_id,
+                error=error,
+                max_attempts=max_attempts,
+            )
+        # Persist the error string into the dedicated error column as well.
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT attempts FROM process_runs WHERE run_id=%s",
-                (run_id,),
+                "UPDATE process_runs SET error=%s WHERE run_id=%s",
+                (error, run_id),
             )
-            row = cur.fetchone()
-            attempts = row[0] if row else 0
-            if attempts >= max_attempts:
-                cur.execute(
-                    "UPDATE process_runs SET status='dead', error=%s WHERE run_id=%s",
-                    (error, run_id),
-                )
-                outcome = "dead"
-            else:
-                cur.execute(
-                    "UPDATE process_runs SET status='pending', error=%s, "
-                    "deliver_at = now() + interval '30 seconds' WHERE run_id=%s",
-                    (error, run_id),
-                )
-                outcome = "retry"
             conn.commit()
         return outcome
