@@ -27,6 +27,7 @@ from dazzle.core.ir.predicates import (
     Contradiction,
     ExistsCheck,
     PathCheck,
+    PolyPathCheck,
     ScopePredicate,
     Tautology,
     UserAttrCheck,
@@ -634,6 +635,46 @@ def _path_check_subquery(
     return root_fk_field, from_table, where_body, params
 
 
+def _compile_poly_path_check(
+    predicate: PolyPathCheck,
+    entity_name: str,
+    fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
+    policy: _PolicyCtx | None = None,
+) -> tuple[str, list[Any]]:
+    """Compile a PolyPathCheck (#1448): type-guard AND uuid ``IN (SELECT …)``.
+
+    Param mode::
+
+        "target_type" = %s AND "target_id" IN (SELECT "id" FROM <target> WHERE <sub>)
+
+    Policy mode inlines the discriminator literal and emits the sub in policy
+    form. If the sub isn't policy-expressible the recursive call raises
+    ``ValueError`` → the verb degrades to the app layer via the #1447 path
+    (``build_rls_scope_policy_ddl``). ``target_id`` is a real ``uuid`` column,
+    so there is no cast anywhere.
+    """
+    target_table = _qualify_table(predicate.target_entity, schema)
+    type_col = quote_identifier(predicate.type_field)
+    id_col = quote_identifier(predicate.id_field)
+
+    sub_sql, sub_params = _compile_predicate_impl(
+        predicate.sub, predicate.target_entity, fk_graph, schema=schema, policy=policy
+    )
+    sub_where = sub_sql if sub_sql else "true"
+
+    if policy is not None:
+        type_guard = f"{type_col} = {_inline_sql_literal(predicate.type_value)}"
+        sql = f'{type_guard} AND {id_col} IN (SELECT "id" FROM {target_table} WHERE {sub_where})'
+        return sql, []
+
+    type_guard = f"{type_col} = %s"
+    sql = f'{type_guard} AND {id_col} IN (SELECT "id" FROM {target_table} WHERE {sub_where})'
+    params: list[Any] = [predicate.type_value, *sub_params]
+    return sql, params
+
+
 def _compile_path_check(
     predicate: PathCheck,
     entity_name: str,
@@ -1051,6 +1092,11 @@ def _compile_predicate_impl(
 
         case ExistsCheck():
             return _compile_exists_check(
+                predicate, entity_name, fk_graph, schema=schema, policy=policy
+            )
+
+        case PolyPathCheck():
+            return _compile_poly_path_check(
                 predicate, entity_name, fk_graph, schema=schema, policy=policy
             )
 
