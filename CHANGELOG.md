@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.88] - 2026-06-22
+
+### Added
+- **#1445 (slice 5) — ratchet gate `test_no_new_mutable_globals_1445.py` (ADR-0005 enforcement).**
+  Turns the documented "no new singletons / hidden globals" rule into a live gate: an AST scan of
+  `src/dazzle` for `global _<name>` write sites, asserted against a **frozen allow-list** that may
+  only shrink. Any *new* module-level mutable global fails until it's reworked onto
+  RuntimeServices/ServerState (or `functools.cache` for an idempotent value), or — if it's a
+  genuinely sanctioned process/CLI/test seam — added to the allow-list with justification. A second
+  test rejects stale allow-list entries (so removed globals can't linger). The allow-list documents
+  the 12 remaining baseline sites: sanctioned (MCP `_state`, init-only logging, CLI per-invocation,
+  the process-bounded browser gate, the OTel tracer provider, two warn-once latches) and the two
+  still tracked for rework (`task_store._DEFAULT_BACKEND`, `tenant_isolation._rls_user_attr_names`).
+
+### Agent Guidance
+- **No new `global _<name>` in `src/dazzle`.** ADR-0005 is now gated. Use `functools.cache` for
+  idempotent lazy values, RuntimeServices/`app.state` for lifetime-bound state. A new global fails
+  `test_no_new_mutable_globals_1445.py` unless added to its allow-list with a justification.
+
+### Notes
+- **#1445 status:** shapes (a) + (c) done, shape (b) accumulator done, the **enforcement gate is now
+  live**. The only remaining item is `core/process/task_store._DEFAULT_BACKEND` — blocked on the
+  `core↛http` layer conflict (needs a core-level injection-seam design call). It's allow-listed so
+  the gate holds the line meanwhile.
+
 ## [0.83.87] - 2026-06-22
 
 ### Changed
