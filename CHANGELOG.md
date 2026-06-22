@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.83.102] - 2026-06-22
+## [0.83.103] - 2026-06-22
+
+### Changed
+- **#1438 deferred-import burn-down — `http/runtime/site_routes.py` (61 → 14, the single biggest hub).** Hoisted 25 single-line `dazzle.*` imports to module top; `FragmentRenderer` alone had been re-imported in **11** separate route handlers, and `auth_views`/`two_factor_views` symbols were scattered across functions — ruff consolidated the duplicates into shared module-top (multi-line) imports, so the function-body node count dropped 47. Zero source-patch coupling breakage; full suite green, ruff F821/F811 + mypy + import-linter all clean. Tree total 1998 → 1951. Ratchet baseline lowered.
 
 ### Changed
 - **#1438 deferred-import burn-down — `http/runtime/app_factory.py` (37 → 27).** Second file of the structural-core wave (after server.py). Hoisted 10 single-line non-guard `dazzle.*` imports to module top; full suite stayed green with **zero** source-patch coupling breakage this time (only `core.process.*` kept deferred for the eventbus_adapter→http reach). Tree total 2008 → 1998. Ratchet baseline lowered.

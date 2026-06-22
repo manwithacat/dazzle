@@ -16,6 +16,26 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from dazzle.core.ir import AnalyticsSpec
+from dazzle.http.runtime.auth.auth_views import (
+    build_forgot_password_sent_view,
+    build_forgot_password_view,
+    build_login_sent_view,
+    build_reset_password_done_view,
+    build_reset_password_view,
+)
+from dazzle.http.runtime.auth.two_factor_views import (
+    build_2fa_challenge_view,
+    build_2fa_settings_view,
+    build_2fa_setup_view,
+)
+from dazzle.page.runtime.css_loader import get_bundled_css
+from dazzle.page.runtime.site_context import build_site_page_context
+from dazzle.page.runtime.site_renderer import get_site_js
+from dazzle.render.context import PageContext
+from dazzle.render.dispatch import build_page
+from dazzle.render.fragment.renderer import FragmentRenderer
+
 logger = logging.getLogger(__name__)
 
 
@@ -398,9 +418,6 @@ def create_site_page_routes(
     from dazzle.http.runtime.renderers.site_section_override_loader import (
         discover_section_overrides,
     )
-    from dazzle.page.runtime.css_loader import get_bundled_css
-    from dazzle.page.runtime.site_context import build_site_page_context
-    from dazzle.page.runtime.site_renderer import get_site_js
 
     # Discover project-local section overrides once at build time
     # (#1110 Part A). Empty registry when the project doesn't have a
@@ -608,9 +625,6 @@ def create_site_page_routes(
             TYPED_SECTION_TYPES,
             render_typed_section,
         )
-        from dazzle.render.context import PageContext
-        from dazzle.render.dispatch import build_page
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         sections = list(getattr(ctx, "sections", None) or [])
         if sections:
@@ -788,7 +802,6 @@ def create_site_page_routes(
             ConsentDefaults,
             parse_consent_cookie,
         )
-        from dazzle.core.ir import AnalyticsSpec
 
         # Resolve the tenant (or app-wide) config for this request.
         fallback = TenantAnalyticsConfig(
@@ -1104,7 +1117,6 @@ def create_auth_page_routes(
             build_login_magic_link_view,
             build_login_password_view,
         )
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
@@ -1149,8 +1161,6 @@ def create_auth_page_routes(
         email: str = "",
     ) -> str:
         """Post-magic-link confirmation page (Phase 1.E: typed-only)."""
-        from dazzle.http.runtime.auth.auth_views import build_login_sent_view
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
@@ -1182,7 +1192,6 @@ def create_auth_page_routes(
             build_signup_magic_link_view,
             build_signup_password_view,
         )
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
@@ -1214,8 +1223,6 @@ def create_auth_page_routes(
         sitespec: dict[str, Any] = sitespec_data,
     ) -> str:
         """Serve the forgot-password page (Phase 1.E: typed-only)."""
-        from dazzle.http.runtime.auth.auth_views import build_forgot_password_view
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
@@ -1232,8 +1239,6 @@ def create_auth_page_routes(
         sitespec: dict[str, Any] = sitespec_data,
     ) -> str:
         """Post-forgot-password confirmation page (Phase 1.E: typed-only)."""
-        from dazzle.http.runtime.auth.auth_views import build_forgot_password_sent_view
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
@@ -1253,8 +1258,6 @@ def create_auth_page_routes(
         error: str = "",
     ) -> str:
         """Serve the reset-password page (Phase 1.E: typed-only)."""
-        from dazzle.http.runtime.auth.auth_views import build_reset_password_view
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
@@ -1278,8 +1281,6 @@ def create_auth_page_routes(
         sitespec: dict[str, Any] = sitespec_data,
     ) -> str:
         """Post-reset confirmation page (Phase 1.E: typed-only)."""
-        from dazzle.http.runtime.auth.auth_views import build_reset_password_done_view
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
@@ -1307,8 +1308,6 @@ def create_auth_page_routes(
         redirect = _require_auth(request, "/2fa/setup")
         if redirect is not None:
             return redirect
-        from dazzle.http.runtime.auth.two_factor_views import build_2fa_setup_view
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
@@ -1330,8 +1329,6 @@ def create_auth_page_routes(
         redirect = _require_auth(request, "/2fa/settings")
         if redirect is not None:
             return redirect
-        from dazzle.http.runtime.auth.two_factor_views import build_2fa_settings_view
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
@@ -1364,8 +1361,6 @@ def create_auth_page_routes(
         credential the verify endpoint relies on. The token threads
         through as ``?session=<token>`` from the login flow.
         """
-        from dazzle.http.runtime.auth.two_factor_views import build_2fa_challenge_view
-        from dazzle.render.fragment.renderer import FragmentRenderer
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
