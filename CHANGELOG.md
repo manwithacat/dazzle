@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.105] - 2026-06-22
+
+### Fixed
+- **#1448 CI follow-up:** regenerated the two syrupy snapshots the additive `poly_ref` change shifted — the golden-master IR snapshot (`poly_targets: None` now on every `FieldType` dump) and the `unknown_keyword` diagnostic (the valid-keywords list now includes `poly_ref`). Both live outside `tests/unit/`, so the unit-only local gate missed them.
+
 ## [0.83.104] - 2026-06-22
 
 ### Added
