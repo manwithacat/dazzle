@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.106] - 2026-06-22
+
+### Fixed
+- **Stale `test_combined_server` signature test** (pre-existing, surfaced by CI): `run_unified_server` gained a `dark_mode_toggle` param in #1445 slice 3 (`aef4de858`) but the `TestRunUnifiedServerSignature` expected-param set wasn't updated. Added it. Lives in `src/dazzle/**/tests/` — outside the `tests/unit/` lane, so it slipped past local pre-ship gates twice.
+
 ## [0.83.105] - 2026-06-22
 
 ### Fixed

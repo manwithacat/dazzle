@@ -91,6 +91,7 @@ class TestRunUnifiedServerSignature:
             "storage_defs",
             "tenant_config",
             "workers",
+            "dark_mode_toggle",  # #1445 slice 3 — threaded to the typed render context
         }
         assert expected == set(sig.parameters.keys())
 
