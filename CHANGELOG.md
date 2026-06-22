@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.96] - 2026-06-22
+
+### Changed
+- **#1444 (slice 1) — `parse_entity` migrated to `parse_block_with_dispatch` (the #2 fitness
+  hotspot's core ladder).** The ~37-arm `elif self.match(...)` chain in `parse_entity`
+  (`core/dsl_parser_impl/entity.py:119-260`) became an O(1) `{TokenType → handler}` table
+  (`_ENTITY_KEYWORDS`) dispatched through the shared helper, with the non-keyword fallthrough
+  (field declarations) as the helper's `on_unknown`. The existing `_EntityParseContext` accumulator
+  and `_parse_entity_*` methods are reused unchanged — each keyword is now a thin `(parser, state)`
+  adapter, so a new DSL keyword is a dict entry, not another match-ladder arm. `parse_entity`'s
+  cyclomatic complexity drops from ~37 to ~1. Verified: 164 parser tests + docs-drift pass, the full
+  unit suite is green (18121), and the rich example apps (acme_billing, hr_records, support_tickets,
+  invoice_ops, …) validate without parse changes.
+
+### Notes
+- **#1444 remaining:** the file-wide `elif self.match < 10` done-criteria isn't met yet (34 remain) —
+  but those live in **12 small cohesive sub-parser ladders** (≤7 arms each: `_parse_entity_graph_edge`,
+  the transition-guard parsers, …), not the unbounded keyword god-ladder the issue targets. And
+  `workspace.py` already uses the helper (its `_dispatch_workspace_keyword` is a *documented*
+  deliberate custom dispatch — the "any IDENTIFIER → region, else break" legacy semantics). Whether
+  to grind the small sub-ladders / migrate the deliberate workspace dispatch is a follow-up call.
+
 ## [0.83.95] - 2026-06-22
 
 ### Changed

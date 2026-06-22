@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from .dispatch import KeywordParser, parse_block_with_dispatch
 from .fitness import parse_fitness_block
 from .lifecycle import parse_lifecycle_block
 
@@ -19,6 +20,10 @@ from .lifecycle import parse_lifecycle_block
 @dataclass
 class _EntityParseContext:
     """Accumulator for all sub-parts parsed inside an entity block."""
+
+    # Entity name from the header — needed by the `publish` keyword handler
+    # (#1444: dispatch handlers receive only (parser, state)).
+    entity_name: str = ""
 
     # LLM cognition (v0.7.1)
     intent: str | None = None
@@ -123,95 +128,18 @@ class EntityParserMixin:
         accumulating results in an ``_EntityParseContext``.
         """
         name, title, loc = self._parse_construct_header(TokenType.ENTITY)
-        ctx = _EntityParseContext()
+        ctx = _EntityParseContext(entity_name=name)
 
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            if self.match(TokenType.INTENT):
-                ctx.intent = self._parse_entity_intent()
-            elif self.match(TokenType.DOMAIN):
-                ctx.domain = self._parse_entity_domain()
-            elif self.match(TokenType.PATTERNS):
-                ctx.patterns = self._parse_entity_patterns()
-            elif self.match(TokenType.EXTENDS):
-                ctx.extends = self._parse_entity_extends()
-            elif self.match(TokenType.ARCHETYPE):
-                ctx.archetype_kind = self._parse_entity_archetype()
-            elif self.match(TokenType.EXAMPLES):
-                ctx.examples.extend(self._parse_entity_examples())
-            elif self.match(TokenType.UNIQUE, TokenType.INDEX):
-                ctx.constraints.append(self._parse_entity_constraint())
-            elif self.match(TokenType.INVARIANT):
-                ctx.invariants.append(self._parse_entity_invariant())
-            elif self.match(TokenType.VISIBLE):
-                ctx.visibility_rules.extend(self._parse_entity_visible_block())
-            elif self.match(TokenType.PERMISSIONS):
-                ctx.permission_rules.extend(self._parse_entity_permissions_block())
-            elif self.match(TokenType.ACCESS):
-                self._parse_entity_access_block(ctx)
-            elif self.match(TokenType.PERMIT):
-                ctx.permission_rules.extend(self._parse_entity_policy_block(ir.PolicyEffect.PERMIT))
-            elif self.match(TokenType.FORBID):
-                ctx.permission_rules.extend(self._parse_entity_policy_block(ir.PolicyEffect.FORBID))
-            elif self.match(TokenType.SCOPE):
-                ctx.scope_rules.extend(self._parse_entity_scope_block())
-            elif self.match(TokenType.AUDIT):
-                ctx.audit_config = self._parse_entity_audit()
-            elif self.match(TokenType.SOFT_DELETE):
-                self.advance()
-                ctx.soft_delete = True
-            elif self.match(TokenType.SIGNABLE):
-                ctx.signable = self._parse_entity_signable()
-            elif self.match(TokenType.SIGNING_VALIDATOR):
-                ctx.signing_validator = self._parse_entity_signing_validator()
-            elif self.match(TokenType.SIGNING_TEMPLATE):
-                ctx.signing_template = self._parse_entity_signing_template()
-            elif self.match(TokenType.TEMPORAL):
-                ctx.temporal = self._parse_entity_temporal()
-            elif self.match(TokenType.SUBTYPE_OF):
-                ctx.subtype_of = self._parse_entity_subtype_of()
-            elif self.match(TokenType.WAS):
-                ctx.renamed_from = self._parse_was_hint()
-            elif self.match(TokenType.BULK):
-                ctx.bulk_config = self._parse_entity_bulk()
-            elif self.match(TokenType.GRAPH_EDGE):
-                ctx.graph_edge = self._parse_entity_graph_edge()
-            elif self.match(TokenType.GRAPH_NODE):
-                ctx.graph_node = self._parse_entity_graph_node()
-            elif self.match(TokenType.TRANSITIONS):
-                ctx.transitions.extend(self._parse_entity_transitions_block())
-            elif self.match(TokenType.ON_TRANSITION):
-                ctx.transition_effects.extend(self._parse_entity_on_transition_block())
-            elif self.match(TokenType.SEED):
-                ctx.seed_template = self._parse_entity_seed()
-            elif self.match(TokenType.PUBLISH):
-                ctx.publishes.append(self.parse_publish_directive(entity_name=name))
-            elif self.match(TokenType.LIFECYCLE):
-                ctx.lifecycle = self._parse_entity_lifecycle()
-            elif self.match(TokenType.FITNESS):
-                ctx.fitness_spec = self._parse_entity_fitness(ctx.fields)
-            elif self.match(TokenType.DISPLAY_FIELD):
-                ctx.display_field = self._parse_entity_display_field()
-            elif self.match(TokenType.TENANT_HOST):
-                self._parse_tenant_host_block(ctx)
-                continue
-            elif self.match(TokenType.MEMBERSHIP):
-                self._parse_membership_block(ctx)
-                continue
-            elif self.match(TokenType.MANAGED_BY):
-                ctx.managed_by = self._parse_entity_managed_by()
-            elif self.match(TokenType.EXPOSE):
-                ctx.api_expose = self._parse_entity_expose()
-            elif self.match(TokenType.AUTH_IDENTITY):
-                ctx.auth_identity = self._parse_entity_auth_identity()
-            else:
-                self._parse_entity_field_declaration(ctx)
-                continue  # field parsing handles its own skip_newlines
-
-            self.skip_newlines()
+        # #1444: table-driven dispatch (was a ~37-arm elif ladder). Each keyword
+        # maps to a thin handler that calls the existing `_parse_entity_*` method
+        # and mutates `ctx`; any non-keyword token falls through to a field
+        # declaration (the legacy `else`).
+        parse_block_with_dispatch(
+            self,
+            first_class_keywords=_ENTITY_KEYWORDS,
+            state=ctx,
+            on_unknown=lambda _p: self._parse_entity_field_declaration(ctx),
+        )
 
         self.expect(TokenType.DEDENT)
 
@@ -3019,3 +2947,204 @@ def _merge_transition_effects(
         )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Entity keyword dispatch table (#1444)
+#
+# Each handler is a thin `(parser, state)` adapter over the `_parse_entity_*`
+# methods above, mutating the `_EntityParseContext`. Replaces the former ~37-arm
+# `elif self.match(...)` ladder in `parse_entity` with an O(1) table lookup; new
+# keywords are added here, not appended to a growing match-ladder.
+# ---------------------------------------------------------------------------
+
+
+def _kw_intent(p: Any, s: _EntityParseContext) -> None:
+    s.intent = p._parse_entity_intent()
+
+
+def _kw_domain(p: Any, s: _EntityParseContext) -> None:
+    s.domain = p._parse_entity_domain()
+
+
+def _kw_patterns(p: Any, s: _EntityParseContext) -> None:
+    s.patterns = p._parse_entity_patterns()
+
+
+def _kw_extends(p: Any, s: _EntityParseContext) -> None:
+    s.extends = p._parse_entity_extends()
+
+
+def _kw_archetype(p: Any, s: _EntityParseContext) -> None:
+    s.archetype_kind = p._parse_entity_archetype()
+
+
+def _kw_examples(p: Any, s: _EntityParseContext) -> None:
+    s.examples.extend(p._parse_entity_examples())
+
+
+def _kw_constraint(p: Any, s: _EntityParseContext) -> None:
+    s.constraints.append(p._parse_entity_constraint())
+
+
+def _kw_invariant(p: Any, s: _EntityParseContext) -> None:
+    s.invariants.append(p._parse_entity_invariant())
+
+
+def _kw_visible(p: Any, s: _EntityParseContext) -> None:
+    s.visibility_rules.extend(p._parse_entity_visible_block())
+
+
+def _kw_permissions(p: Any, s: _EntityParseContext) -> None:
+    s.permission_rules.extend(p._parse_entity_permissions_block())
+
+
+def _kw_access(p: Any, s: _EntityParseContext) -> None:
+    p._parse_entity_access_block(s)
+
+
+def _kw_permit(p: Any, s: _EntityParseContext) -> None:
+    s.permission_rules.extend(p._parse_entity_policy_block(ir.PolicyEffect.PERMIT))
+
+
+def _kw_forbid(p: Any, s: _EntityParseContext) -> None:
+    s.permission_rules.extend(p._parse_entity_policy_block(ir.PolicyEffect.FORBID))
+
+
+def _kw_scope(p: Any, s: _EntityParseContext) -> None:
+    s.scope_rules.extend(p._parse_entity_scope_block())
+
+
+def _kw_audit(p: Any, s: _EntityParseContext) -> None:
+    s.audit_config = p._parse_entity_audit()
+
+
+def _kw_soft_delete(p: Any, s: _EntityParseContext) -> None:
+    p.advance()
+    s.soft_delete = True
+
+
+def _kw_signable(p: Any, s: _EntityParseContext) -> None:
+    s.signable = p._parse_entity_signable()
+
+
+def _kw_signing_validator(p: Any, s: _EntityParseContext) -> None:
+    s.signing_validator = p._parse_entity_signing_validator()
+
+
+def _kw_signing_template(p: Any, s: _EntityParseContext) -> None:
+    s.signing_template = p._parse_entity_signing_template()
+
+
+def _kw_temporal(p: Any, s: _EntityParseContext) -> None:
+    s.temporal = p._parse_entity_temporal()
+
+
+def _kw_subtype_of(p: Any, s: _EntityParseContext) -> None:
+    s.subtype_of = p._parse_entity_subtype_of()
+
+
+def _kw_was(p: Any, s: _EntityParseContext) -> None:
+    s.renamed_from = p._parse_was_hint()
+
+
+def _kw_bulk(p: Any, s: _EntityParseContext) -> None:
+    s.bulk_config = p._parse_entity_bulk()
+
+
+def _kw_graph_edge(p: Any, s: _EntityParseContext) -> None:
+    s.graph_edge = p._parse_entity_graph_edge()
+
+
+def _kw_graph_node(p: Any, s: _EntityParseContext) -> None:
+    s.graph_node = p._parse_entity_graph_node()
+
+
+def _kw_transitions(p: Any, s: _EntityParseContext) -> None:
+    s.transitions.extend(p._parse_entity_transitions_block())
+
+
+def _kw_on_transition(p: Any, s: _EntityParseContext) -> None:
+    s.transition_effects.extend(p._parse_entity_on_transition_block())
+
+
+def _kw_seed(p: Any, s: _EntityParseContext) -> None:
+    s.seed_template = p._parse_entity_seed()
+
+
+def _kw_publish(p: Any, s: _EntityParseContext) -> None:
+    s.publishes.append(p.parse_publish_directive(entity_name=s.entity_name))
+
+
+def _kw_lifecycle(p: Any, s: _EntityParseContext) -> None:
+    s.lifecycle = p._parse_entity_lifecycle()
+
+
+def _kw_fitness(p: Any, s: _EntityParseContext) -> None:
+    s.fitness_spec = p._parse_entity_fitness(s.fields)
+
+
+def _kw_display_field(p: Any, s: _EntityParseContext) -> None:
+    s.display_field = p._parse_entity_display_field()
+
+
+def _kw_tenant_host(p: Any, s: _EntityParseContext) -> None:
+    p._parse_tenant_host_block(s)
+
+
+def _kw_membership(p: Any, s: _EntityParseContext) -> None:
+    p._parse_membership_block(s)
+
+
+def _kw_managed_by(p: Any, s: _EntityParseContext) -> None:
+    s.managed_by = p._parse_entity_managed_by()
+
+
+def _kw_expose(p: Any, s: _EntityParseContext) -> None:
+    s.api_expose = p._parse_entity_expose()
+
+
+def _kw_auth_identity(p: Any, s: _EntityParseContext) -> None:
+    s.auth_identity = p._parse_entity_auth_identity()
+
+
+_ENTITY_KEYWORDS: dict[TokenType, KeywordParser[_EntityParseContext]] = {
+    TokenType.INTENT: _kw_intent,
+    TokenType.DOMAIN: _kw_domain,
+    TokenType.PATTERNS: _kw_patterns,
+    TokenType.EXTENDS: _kw_extends,
+    TokenType.ARCHETYPE: _kw_archetype,
+    TokenType.EXAMPLES: _kw_examples,
+    TokenType.UNIQUE: _kw_constraint,
+    TokenType.INDEX: _kw_constraint,
+    TokenType.INVARIANT: _kw_invariant,
+    TokenType.VISIBLE: _kw_visible,
+    TokenType.PERMISSIONS: _kw_permissions,
+    TokenType.ACCESS: _kw_access,
+    TokenType.PERMIT: _kw_permit,
+    TokenType.FORBID: _kw_forbid,
+    TokenType.SCOPE: _kw_scope,
+    TokenType.AUDIT: _kw_audit,
+    TokenType.SOFT_DELETE: _kw_soft_delete,
+    TokenType.SIGNABLE: _kw_signable,
+    TokenType.SIGNING_VALIDATOR: _kw_signing_validator,
+    TokenType.SIGNING_TEMPLATE: _kw_signing_template,
+    TokenType.TEMPORAL: _kw_temporal,
+    TokenType.SUBTYPE_OF: _kw_subtype_of,
+    TokenType.WAS: _kw_was,
+    TokenType.BULK: _kw_bulk,
+    TokenType.GRAPH_EDGE: _kw_graph_edge,
+    TokenType.GRAPH_NODE: _kw_graph_node,
+    TokenType.TRANSITIONS: _kw_transitions,
+    TokenType.ON_TRANSITION: _kw_on_transition,
+    TokenType.SEED: _kw_seed,
+    TokenType.PUBLISH: _kw_publish,
+    TokenType.LIFECYCLE: _kw_lifecycle,
+    TokenType.FITNESS: _kw_fitness,
+    TokenType.DISPLAY_FIELD: _kw_display_field,
+    TokenType.TENANT_HOST: _kw_tenant_host,
+    TokenType.MEMBERSHIP: _kw_membership,
+    TokenType.MANAGED_BY: _kw_managed_by,
+    TokenType.EXPOSE: _kw_expose,
+    TokenType.AUTH_IDENTITY: _kw_auth_identity,
+}
