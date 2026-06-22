@@ -1045,15 +1045,16 @@ class DazzleBackendApp:
         else:
             logger.info("Skipping startup schema creation in production; Alembic owns schema.")
 
-        # Development may initialize the framework params table. Production
-        # verifies it instead, so Alembic remains the schema owner.
-        from dazzle.http.runtime.migrations import (
-            ensure_dazzle_params_table,
-            verify_dazzle_params_table,
-        )
+        # Development: create ALL framework tables via the orchestrator (ADR-0044).
+        # Production: verify _dazzle_params exists (Alembic owns schema; the
+        # orchestrator runs eagerly on dev and is a no-op on prod if tables exist).
+        from dazzle.http.runtime.migrations import verify_dazzle_params_table
 
         if may_create_schema:
-            ensure_dazzle_params_table(self._db_manager)
+            from dazzle.http.runtime.framework_schema import ensure_framework_schema
+
+            with self._db_manager.connection() as _fw_conn:
+                ensure_framework_schema(_fw_conn)
         else:
             verify_dazzle_params_table(self._db_manager)
 

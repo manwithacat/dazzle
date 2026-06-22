@@ -42,14 +42,15 @@ def _make_builder() -> DazzleBackendApp:
 
 
 class TestRuntimeSchemaStartup:
-    def test_development_startup_keeps_create_all_convenience(self) -> None:
+    def test_development_startup_calls_ensure_framework_schema(self) -> None:
+        """Dev startup calls ensure_framework_schema (ADR-0044, Task 1 boot wiring)."""
         builder = _make_builder()
         engine = MagicMock()
 
         with (
             patch.dict(os.environ, {"DAZZLE_ENV": "development"}, clear=True),
             patch("dazzle.http.runtime.pg_backend.PostgresBackend"),
-            patch("dazzle.http.runtime.migrations.ensure_dazzle_params_table") as ensure_params,
+            patch("dazzle.http.runtime.framework_schema.ensure_framework_schema") as ensure_fw,
             patch("dazzle.http.runtime.migrations.verify_dazzle_params_table") as verify_params,
             patch("sqlalchemy.create_engine", return_value=engine) as create_engine,
         ):
@@ -57,7 +58,7 @@ class TestRuntimeSchemaStartup:
 
         create_engine.assert_called_once()
         engine.dispose.assert_called_once()
-        ensure_params.assert_called_once()
+        ensure_fw.assert_called_once()
         verify_params.assert_not_called()
 
     def test_production_startup_leaves_schema_to_alembic(self) -> None:
@@ -66,14 +67,14 @@ class TestRuntimeSchemaStartup:
         with (
             patch.dict(os.environ, {"DAZZLE_ENV": "production"}, clear=True),
             patch("dazzle.http.runtime.pg_backend.PostgresBackend"),
-            patch("dazzle.http.runtime.migrations.ensure_dazzle_params_table") as ensure_params,
+            patch("dazzle.http.runtime.framework_schema.ensure_framework_schema") as ensure_fw,
             patch("dazzle.http.runtime.migrations.verify_dazzle_params_table") as verify_params,
             patch("sqlalchemy.create_engine") as create_engine,
         ):
             builder._setup_database()
 
         create_engine.assert_not_called()
-        ensure_params.assert_not_called()
+        ensure_fw.assert_not_called()
         verify_params.assert_called_once()
 
 
