@@ -75,6 +75,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 
@@ -138,6 +139,41 @@ class PostgresProcessAdapter(ProcessAdapter):
         self._lease_seconds: int = 60
         self._batch_size: int = 5
         self._worker_id: str = f"worker-{uuid.uuid4().hex[:8]}"
+        # Optional handlers wired by ProcessSubsystem at startup.
+        # Mirrors EventBusProcessAdapter so the subsystem's hasattr checks
+        # find them and both backends behave identically for SEND steps and
+        # step side-effects.
+        self._send_handler: Callable[..., Coroutine[Any, Any, None]] | None = None
+        self._side_effect_executor: Any | None = None
+
+    # -------------------------------------------------------------------------
+    # Handler wiring (called by ProcessSubsystem at startup)
+    # -------------------------------------------------------------------------
+
+    def set_send_handler(self, handler: Callable[..., Coroutine[Any, Any, None]]) -> None:
+        """Wire a coroutine handler for SEND steps.
+
+        Mirrors ``EventBusProcessAdapter.set_send_handler`` so that
+        ``ProcessSubsystem._wire_send_handler_to_channels`` (which guards with
+        ``hasattr``) finds this method and wires ChannelManager sends on both
+        backends.  Without this method SEND steps on the Postgres backend were
+        log-only (the ``hasattr`` guard skipped wiring entirely).
+
+        Signature: ``async handler(channel: str, message_type: str, payload: dict) -> None``
+        """
+        self._send_handler = handler
+        logger.debug("PostgresProcessAdapter: send handler wired")
+
+    def set_side_effect_executor(self, executor: Any) -> None:
+        """Wire a ``SideEffectExecutor`` for step ``effects:`` blocks.
+
+        Mirrors ``EventBusProcessAdapter.set_side_effect_executor`` so that
+        ``ProcessSubsystem.startup`` (which guards with ``hasattr``) wires the
+        executor on both backends.  Without this method step side-effects on the
+        Postgres backend were silently skipped.
+        """
+        self._side_effect_executor = executor
+        logger.debug("PostgresProcessAdapter: side-effect executor wired")
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -505,12 +541,17 @@ class PostgresProcessAdapter(ProcessAdapter):
         Launched as a sibling task alongside the execution thread so a slow-but-
         healthy run keeps its lease (never reclaimed); a truly crashed worker's
         heartbeat dies with it and the lease eventually expires for reclaim.
+
+        The renewal is fenced on this worker's id so a superseded worker's
+        stale heartbeat cannot extend a lease that now belongs to a new holder.
         """
         interval = max(1.0, lease_seconds / 3)
         while True:
             await asyncio.sleep(interval)
             try:
-                await asyncio.to_thread(self._store.renew_run_lease, run_id, lease_seconds)
+                await asyncio.to_thread(
+                    self._store.renew_run_lease, run_id, lease_seconds, self._worker_id
+                )
                 logger.debug("Heartbeat renewed lease for run %s", run_id)
             except Exception as exc:
                 logger.warning("Heartbeat renewal failed for run %s: %s", run_id, exc)
@@ -609,7 +650,8 @@ class PostgresProcessAdapter(ProcessAdapter):
             if status == "completed":
                 # execute_process_steps already called save_run with COMPLETED;
                 # mark_run_done flips the queue status so it's not reclaimed.
-                self._store.mark_run_done(run_id)
+                # Fenced on worker_id: only the current holder can complete.
+                self._store.mark_run_done(run_id, worker=self._worker_id)
             elif status == "waiting":
                 # Release the lease so the run is parked until complete_task
                 # calls re_enqueue_run.  The store method clears claimed_by /
@@ -628,7 +670,8 @@ class PostgresProcessAdapter(ProcessAdapter):
             # run.  Calling fail_run first would write status='failed' +
             # completed_at=now(), then mark_run_retry would un-fail it, leaving
             # a briefly-inconsistent FAILED+completed_at row visible to get_run.
-            self._store.mark_run_retry(run_id, str(exc))
+            # Fenced on worker_id: only the current holder can retry/dead-letter.
+            self._store.mark_run_retry(run_id, str(exc), worker=self._worker_id)
 
     # -------------------------------------------------------------------------
     # Scheduler loop

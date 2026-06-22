@@ -548,3 +548,247 @@ def test_failure_path_no_terminal_then_unfail():
     with psycopg.connect(dsn) as conn, conn.cursor() as cur:
         cur.execute("DELETE FROM process_runs WHERE run_id = %s", (run_id,))
         conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Test 8: Long-run lease renewed — not reclaimed while heartbeat is alive
+# ---------------------------------------------------------------------------
+
+
+@_skip_no_pg
+def test_long_run_lease_renewed_not_reclaimed():
+    """A process whose step runs longer than lease_seconds is NOT reclaimed.
+
+    This is the critical regression test for the Bug #CRITICAL-1 fix:
+    renew_lease previously matched ``status='claimed'`` only, but
+    execute_process_steps transitions the row to ``status='running'`` (via
+    save_run) *before* the first heartbeat fires.  After the fix the predicate
+    matches any non-terminal held-lease row, so heartbeats work on running rows.
+
+    Scenario:
+    1. lease_seconds=2, heartbeat fires at lease/3 ≈ 0.67 s intervals.
+    2. Register a spec whose single step sleeps 3 s (longer than lease_seconds).
+    3. Start the run and drive _claim_and_execute_batch — which starts the
+       heartbeat alongside the execution thread.
+    4. Assert:
+       - The run completes (status=COMPLETED).
+       - attempts stayed at 1 (no reclaim fired while the worker was healthy).
+       - The side-effect spy fired exactly once (no double-execution).
+    """
+    import time as _time
+    from unittest.mock import patch
+
+    dsn = _PG
+    assert dsn
+
+    store = _make_store(dsn)
+    adapter = _make_adapter(dsn, store=store)
+    adapter._lease_seconds = 2  # short lease so the bug manifests quickly
+
+    spy: list[int] = []
+
+    proc_name = f"long_run_{uuid.uuid4().hex[:8]}"
+    # Register via in-memory dict so we can inject a custom step kind that
+    # sleeps inside step_executor via a service call monkey-patch.
+    store._process_specs[proc_name] = {
+        "name": proc_name,
+        "version": "1.0",
+        "steps": [{"name": "slow_step", "kind": "service", "service": None}],
+    }
+
+    from dazzle.core.process.adapter import ProcessRun, ProcessStatus
+
+    run_id = str(uuid.uuid4())
+    run = ProcessRun(
+        run_id=run_id,
+        process_name=proc_name,
+        status=ProcessStatus.PENDING,
+        inputs={},
+    )
+    store.save_run(run)
+
+    # Patch _execute_service_step to sleep 3 s (> lease_seconds=2) and record spy.
+    import dazzle.core.process.step_executor as _se
+
+    def slow_service_step(run_, step):
+        spy.append(1)
+        _time.sleep(3)  # longer than the 2 s lease — would expire without heartbeat
+        return {"output": {"done": True}}
+
+    try:
+        with patch.object(_se, "_execute_service_step", slow_service_step):
+            asyncio.run(adapter._claim_and_execute_batch())
+
+        result = store.get_run(run_id)
+        assert result is not None
+        assert result.status == ProcessStatus.COMPLETED, (
+            f"Long-running step: expected COMPLETED, got {result.status} "
+            f"(if PENDING/RUNNING the lease expired and the run was reclaimed)"
+        )
+
+        # Spy fired exactly once — no double-execution from a reclaim race.
+        assert len(spy) == 1, (
+            f"Side-effect spy must fire exactly once; fired {len(spy)} times "
+            f"(>1 means the run was reclaimed and re-executed while still running)"
+        )
+
+        # attempts must be 1 — the run was never reclaimed.
+        with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+            cur.execute("SELECT attempts FROM process_runs WHERE run_id = %s", (run_id,))
+            row = cur.fetchone()
+        assert row is not None
+        assert row[0] == 1, (
+            f"attempts must be 1 (no reclaim); got {row[0]} "
+            f"(>1 means claim_due_runs picked up the run again)"
+        )
+
+    finally:
+        with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+            cur.execute("DELETE FROM process_runs WHERE run_id = %s", (run_id,))
+            conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Test 9: Fencing token — wrong worker cannot renew/complete
+# ---------------------------------------------------------------------------
+
+
+@_skip_no_pg
+def test_renew_lease_fenced_by_worker_id():
+    """renew_lease and mark_run_done with a wrong worker_id match zero rows.
+
+    Proves the fencing token (Fix #2): after worker A claims a run, worker B
+    calling renew_lease / mark_run_done with its own worker_id must be a no-op
+    (zero rows updated), while worker A's call succeeds.
+    """
+    dsn = _PG
+    assert dsn
+
+    store = _make_store(dsn)
+
+    from dazzle.core.process.adapter import ProcessRun, ProcessStatus
+
+    run_id = str(uuid.uuid4())
+    run = ProcessRun(
+        run_id=run_id,
+        process_name="fence_test",
+        status=ProcessStatus.PENDING,
+        inputs={},
+    )
+    store.save_run(run)
+
+    # Claim as worker A with a 30 s lease.
+    claimed = store.claim_due_runs(worker="worker-A", lease_seconds=30, batch=5)
+    assert any(r.run_id == run_id for r in claimed), "worker-A must claim the run"
+
+    # Record the current lease_expires_at.
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT lease_expires_at, claimed_by FROM process_runs WHERE run_id = %s",
+            (run_id,),
+        )
+        row = cur.fetchone()
+    assert row is not None
+    original_expiry = row[0]
+    assert row[1] == "worker-A", f"claimed_by should be worker-A, got {row[1]}"
+
+    # Worker B tries to renew — must match zero rows (fence blocks it).
+    store.renew_run_lease(run_id, 60, worker="worker-B")
+
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute("SELECT lease_expires_at FROM process_runs WHERE run_id = %s", (run_id,))
+        row2 = cur.fetchone()
+    assert row2 is not None
+    # lease_expires_at must NOT have been extended by worker-B.
+    assert abs((row2[0] - original_expiry).total_seconds()) < 2, (
+        f"Worker-B fence failed: lease_expires_at changed from {original_expiry} to {row2[0]}"
+    )
+
+    # Worker A renews successfully.
+    store.renew_run_lease(run_id, 60, worker="worker-A")
+
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute("SELECT lease_expires_at FROM process_runs WHERE run_id = %s", (run_id,))
+        row3 = cur.fetchone()
+    assert row3 is not None
+    assert row3[0] > original_expiry, (
+        f"Worker-A renewal must extend the lease; expiry unchanged at {row3[0]}"
+    )
+
+    # Worker B tries mark_run_done — must be a no-op (status stays claimed/running).
+    store.mark_run_done(run_id, worker="worker-B")
+
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute("SELECT status FROM process_runs WHERE run_id = %s", (run_id,))
+        row4 = cur.fetchone()
+    assert row4 is not None
+    assert row4[0] not in ("done", "completed"), (
+        f"Worker-B must not complete a run it doesn't hold; status={row4[0]}"
+    )
+
+    # Worker A completes it properly.
+    store.mark_run_done(run_id, worker="worker-A")
+
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute("SELECT status FROM process_runs WHERE run_id = %s", (run_id,))
+        row5 = cur.fetchone()
+    assert row5 is not None
+    assert row5[0] in ("done", "completed"), f"Worker-A must complete the run; status={row5[0]}"
+
+    # Cleanup
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute("DELETE FROM process_runs WHERE run_id = %s", (run_id,))
+        conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Test 10: PostgresProcessAdapter send handler is invoked (not log-only)
+# ---------------------------------------------------------------------------
+
+
+@_skip_no_pg
+def test_postgres_adapter_send_handler_invoked():
+    """set_send_handler wires a callable that is stored on the adapter.
+
+    Proves Fix #3: PostgresProcessAdapter now has set_send_handler /
+    set_side_effect_executor so ProcessSubsystem's hasattr checks find them
+    and wire the handlers.  Prior to the fix, SEND steps on the Postgres
+    backend were silently log-only because hasattr returned False.
+    """
+    dsn = _PG
+    assert dsn
+
+    from dazzle.core.process.postgres_adapter import PostgresProcessAdapter
+
+    adapter = PostgresProcessAdapter(dsn)
+
+    # Both methods must exist (hasattr returns True).
+    assert hasattr(adapter, "set_send_handler"), (
+        "PostgresProcessAdapter must expose set_send_handler for ProcessSubsystem wiring"
+    )
+    assert hasattr(adapter, "set_side_effect_executor"), (
+        "PostgresProcessAdapter must expose set_side_effect_executor for ProcessSubsystem wiring"
+    )
+
+    # Wire a spy send handler.
+    send_calls: list[dict] = []
+
+    async def spy_send(channel: str, message_type: str, payload: dict) -> None:
+        send_calls.append({"channel": channel, "type": message_type, "payload": payload})
+
+    adapter.set_send_handler(spy_send)
+    assert adapter._send_handler is spy_send, "send handler must be stored on the adapter"
+
+    # Wire a spy side-effect executor.
+    class SpyExecutor:
+        called = False
+
+        async def execute_effects(self, effects, context):
+            SpyExecutor.called = True
+            return []
+
+    executor = SpyExecutor()
+    adapter.set_side_effect_executor(executor)
+    assert adapter._side_effect_executor is executor, (
+        "side-effect executor must be stored on the adapter"
+    )

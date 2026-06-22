@@ -610,29 +610,58 @@ class PgProcessStateStore:
             conn.commit()
         logger.debug("Re-enqueued waiting run %s", run_id)
 
-    def mark_run_done(self, run_id: str) -> None:
+    def mark_run_done(self, run_id: str, worker: str | None = None) -> None:
         """Mark a claimed run as successfully completed (``status='completed'``).
 
         Uses the shared ``complete_work`` primitive (sets queue
         ``status='done'``), then immediately updates to ``status='completed'``
         so ``get_run`` / ``list_runs`` reflect the terminal state.
+
+        When *worker* is supplied the ``complete_work`` call is fenced on
+        ``claimed_by = worker`` so a superseded worker cannot complete a run
+        that has already been reclaimed by a new holder.
         """
         with self._connect() as conn:
-            complete_work(conn, table="process_runs", id_column="run_id", row_id=run_id)
-        # complete_work sets status='done'; upgrade to the domain status.
-        with self._connect() as conn, conn.cursor() as cur:
-            cur.execute(
-                "UPDATE process_runs SET status='completed', completed_at=now() WHERE run_id=%s",
-                (run_id,),
+            complete_work(
+                conn, table="process_runs", id_column="run_id", row_id=run_id, worker=worker
             )
-            conn.commit()
+        # complete_work sets status='done'; upgrade to the domain status.
+        # The WHERE clause mirrors the worker fence: only promote rows that
+        # were actually flipped to 'done' by the complete_work call above
+        # (i.e. rows where claimed_by still matches this worker, or no fence).
+        if worker:
+            with self._connect() as conn, conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE process_runs SET status='completed', completed_at=now() "
+                    "WHERE run_id=%s AND status='done'",
+                    (run_id,),
+                )
+                conn.commit()
+        else:
+            with self._connect() as conn, conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE process_runs SET status='completed', completed_at=now() WHERE run_id=%s",
+                    (run_id,),
+                )
+                conn.commit()
 
-    def renew_run_lease(self, run_id: str, lease_seconds: int) -> None:
-        """Extend the lease on a currently-claimed (running) process run.
+    def renew_run_lease(self, run_id: str, lease_seconds: int, worker: str | None = None) -> None:
+        """Extend the lease on a currently-executing process run.
 
         Called by the heartbeat task in ``PostgresProcessAdapter`` while a long
         step is executing so the run's lease_expires_at stays ahead of now().
         Delegates to the shared ``renew_lease`` primitive (``id_column="run_id"``).
+
+        The predicate now matches ``lease_expires_at IS NOT NULL AND status NOT
+        IN (<terminal>)`` rather than the literal ``status='claimed'``, so the
+        renewal works correctly after ``execute_process_steps`` transitions the
+        row to ``status='running'`` (which happens *before* the first heartbeat
+        fires).  Without this fix the heartbeat was a no-op on running rows and
+        the lease would expire, causing spurious reclaim.
+
+        When *worker* is supplied the update is additionally fenced on
+        ``claimed_by = worker`` (ownership token) so a superseded worker's
+        heartbeat cannot extend a lease that belongs to the new holder.
         """
         with self._connect() as conn:
             renew_lease(
@@ -641,6 +670,7 @@ class PgProcessStateStore:
                 id_column="run_id",
                 row_id=run_id,
                 lease_seconds=lease_seconds,
+                worker=worker,
             )
         logger.debug("Renewed lease for run %s (+%ss)", run_id, lease_seconds)
 
@@ -679,12 +709,18 @@ class PgProcessStateStore:
             return None
         return _row_to_run(dict(row))
 
-    def mark_run_retry(self, run_id: str, error: str, max_attempts: int = 5) -> str:
+    def mark_run_retry(
+        self, run_id: str, error: str, max_attempts: int = 5, worker: str | None = None
+    ) -> str:
         """Mark a claimed run as failed, scheduling a retry or dead-lettering.
 
         Delegates to the shared ``fail_work`` primitive with
         ``id_column="run_id"``.  Additionally persists *error* into the
         ``error`` column so ``get_run`` can surface it.
+
+        When *worker* is supplied the ``fail_work`` call is fenced on
+        ``claimed_by = worker`` so a superseded worker cannot retry/dead-letter
+        a run already held by a new holder.
 
         Returns ``"retry"`` or ``"dead"``.
         """
@@ -696,6 +732,7 @@ class PgProcessStateStore:
                 row_id=run_id,
                 error=error,
                 max_attempts=max_attempts,
+                worker=worker,
             )
         # Persist the error string into the dedicated error column as well.
         with self._connect() as conn, conn.cursor() as cur:

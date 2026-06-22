@@ -104,33 +104,91 @@ def claim_due_work(
     return [str(r[0]) for r in rows]
 
 
+_TERMINAL_STATUSES = frozenset({"done", "dead", "completed", "failed", "cancelled"})
+
+# SQL fragment — terminal statuses as a quoted tuple literal used in NOT IN.
+_TERMINAL_SQL = ", ".join(f"'{s}'" for s in sorted(_TERMINAL_STATUSES))
+
+
 def renew_lease(
-    conn, *, table: str, row_id: str, lease_seconds: int, id_column: str = "id"
+    conn,
+    *,
+    table: str,
+    row_id: str,
+    lease_seconds: int,
+    id_column: str = "id",
+    worker: str | None = None,
 ) -> None:
     """Extend the visibility-timeout lease on a row that is still being processed.
 
+    Matches *any* non-terminal row that currently holds a lease (i.e.
+    ``lease_expires_at IS NOT NULL``), not just ``status='claimed'``.  This is
+    required because ``execute_process_steps`` transitions the row to
+    ``status='running'`` (via ``save_run``) *before* the first heartbeat fires,
+    so a ``WHERE status='claimed'`` predicate would match zero rows and the
+    heartbeat would be a no-op — the lease would expire and the run would be
+    reclaimed while the worker is still healthy.
+
+    When *worker* is supplied the update is additionally fenced on
+    ``claimed_by = %(worker)s`` (ownership token).  This prevents a superseded
+    worker from silently extending a lease that has already been reclaimed by a
+    new worker — the fenced update matches zero rows for the old holder, which is
+    the safe fail-closed outcome.
+
     ``id_column`` defaults to ``"id"``; pass ``"run_id"`` for ``process_runs``.
 
     NOTE: autonomous-commits (calls ``conn.commit()``).
     """
+    fence = " AND claimed_by = %(worker)s" if worker else ""
+    sql = (
+        f"UPDATE {table} "
+        f"SET lease_expires_at = now() + (%(lease)s || ' seconds')::interval "
+        f"WHERE {id_column} = %(row_id)s "
+        f"  AND lease_expires_at IS NOT NULL "
+        f"  AND status NOT IN ({_TERMINAL_SQL})"
+        f"{fence}"
+    )
+    params: dict[str, object] = {"lease": lease_seconds, "row_id": row_id}
+    if worker:
+        params["worker"] = worker
     with conn.cursor() as cur:
-        cur.execute(
-            f"UPDATE {table} SET lease_expires_at = now() + (%s||' seconds')::interval "
-            f"WHERE {id_column}=%s AND status='claimed'",
-            (lease_seconds, row_id),
-        )
+        cur.execute(sql, params)
     conn.commit()
 
 
-def complete_work(conn, *, table: str, row_id: str, id_column: str = "id") -> None:
+def complete_work(
+    conn,
+    *,
+    table: str,
+    row_id: str,
+    id_column: str = "id",
+    worker: str | None = None,
+) -> None:
     """Mark a claimed row as successfully processed (``status='done'``).
+
+    When *worker* is supplied the update is fenced on ``claimed_by = %(worker)s``
+    so only the current lease holder can complete the row.  A superseded worker's
+    call matches zero rows (fail-safe).
 
     ``id_column`` defaults to ``"id"``; pass ``"run_id"`` for ``process_runs``.
 
     NOTE: autonomous-commits (calls ``conn.commit()``).
     """
+    if worker:
+        sql = (
+            f"UPDATE {table} SET status='done' "
+            f"WHERE {id_column} = %(row_id)s AND claimed_by = %(worker)s"
+        )
+        params: dict[str, object] = {"row_id": row_id, "worker": worker}
+    else:
+        sql = f"UPDATE {table} SET status='done' WHERE {id_column}=%s"
+        params = {}
+        with conn.cursor() as cur:
+            cur.execute(sql, (row_id,))
+        conn.commit()
+        return
     with conn.cursor() as cur:
-        cur.execute(f"UPDATE {table} SET status='done' WHERE {id_column}=%s", (row_id,))
+        cur.execute(sql, params)
     conn.commit()
 
 
@@ -143,6 +201,7 @@ def fail_work(
     retry_at: datetime | None = None,
     max_attempts: int = 5,
     id_column: str = "id",
+    worker: str | None = None,
 ) -> str:
     """Retry (reset to pending with deliver_at=retry_at) until max_attempts, then dead-letter.
 
@@ -150,27 +209,39 @@ def fail_work(
     is the discriminator; a row at or over *max_attempts* goes
     ``status='dead'``.
 
+    When *worker* is supplied the write is fenced on ``claimed_by = %(worker)s``:
+    only the current lease holder can fail/retry the row.  A superseded worker's
+    call skips the SELECT (row_id unchanged) and commits a no-op — fail-safe.
+
     ``id_column`` defaults to ``"id"``; pass ``"run_id"`` for ``process_runs``.
 
     Returns ``"retry"`` or ``"dead"``.
 
     NOTE: autonomous-commits (calls ``conn.commit()``).
     """
+    worker_fence = " AND claimed_by = %(worker)s" if worker else ""
+    worker_params: dict[str, object] = {"worker": worker} if worker else {}
     with conn.cursor() as cur:
         cur.execute(f"SELECT attempts FROM {table} WHERE {id_column}=%s", (row_id,))
         row = cur.fetchone()
         attempts = row[0] if row else 0
         if attempts >= max_attempts:
             cur.execute(
-                f"UPDATE {table} SET status='dead', payload = payload || %s WHERE {id_column}=%s",
-                ('{"last_error": ' + _json(error) + "}", row_id),
+                f"UPDATE {table} SET status='dead', payload = payload || %(err)s "
+                f"WHERE {id_column} = %(row_id)s{worker_fence}",
+                {"err": '{"last_error": ' + _json(error) + "}", "row_id": row_id, **worker_params},
             )
             outcome = "dead"
         else:
             cur.execute(
-                f"UPDATE {table} SET status='pending', deliver_at=%s, "
-                f"payload = payload || %s WHERE {id_column}=%s",
-                (retry_at or _now(), '{"last_error": ' + _json(error) + "}", row_id),
+                f"UPDATE {table} SET status='pending', deliver_at=%(at)s, "
+                f"payload = payload || %(err)s WHERE {id_column} = %(row_id)s{worker_fence}",
+                {
+                    "at": retry_at or _now(),
+                    "err": '{"last_error": ' + _json(error) + "}",
+                    "row_id": row_id,
+                    **worker_params,
+                },
             )
             outcome = "retry"
     conn.commit()
