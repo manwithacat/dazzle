@@ -483,3 +483,17 @@ class ProcessesContainer(BaseModel):
     processes: list[ProcessSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=False)
+
+
+# #1454: persisted, uuid-pk, user-anchored run record for a process execution —
+# the AIJob subject for process-step AI calls (closed-system AI cognition).
+PROCESS_RUN_FIELDS: list[tuple[str, str, list[str], str | None]] = [
+    ("id", "uuid", ["pk"], None),
+    ("process_name", "str(200)", ["required"], None),
+    ("status", "enum[pending,running,completed,failed]", ["required"], "pending"),
+    ("started_by", "str(200)", [], None),  # initiating user's entity id — RBAC anchor
+    ("started_at", "datetime", [], None),
+    ("finished_at", "datetime", [], None),
+    ("error_message", "text", [], None),
+    ("created_at", "datetime", ["required"], "now"),
+]

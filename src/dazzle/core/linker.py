@@ -137,6 +137,15 @@ def build_appspec(
     if merged_fragment.llm_config is not None and not any(e.name == "AIJob" for e in entities):
         entities = [*entities, _build_ai_job_entity()]
 
+    # #1454: ProcessRun when any process runs an llm_intent step — the run is the AIJob subject.
+    _has_llm_step = any(
+        getattr(s, "kind", None) == ir.ProcessStepKind.LLM_INTENT
+        for p in merged_fragment.processes
+        for s in p.steps
+    )
+    if _has_llm_step and not any(e.name == "ProcessRun" for e in entities):
+        entities = [*entities, _build_process_run_entity()]
+
     # 9a. Auto-generate AuditEntry entity when any `audit on X:` block is
     # present (#956 cycle 2). Single shared system entity for all
     # audited entity types — `entity_type` discriminator on each row.
@@ -1022,6 +1031,37 @@ def _build_ai_job_entity() -> ir.EntitySpec:
         name="AIJob",
         title="AI Job",
         intent="Tracks every AI gateway call with token counts, cost, and audit trail",
+        domain="platform",
+        patterns=["system", "audit"],
+        fields=fields,
+        access=access,
+    )
+
+
+def _build_process_run_entity() -> ir.EntitySpec:
+    """Build the auto-generated ProcessRun system entity (#1454).
+
+    Persists each process execution as a uuid-pk, user-anchored audit row so a
+    process ``llm_intent`` step's AIJob can name it as the subject.
+    """
+    from dazzle.core.ir.process import PROCESS_RUN_FIELDS
+
+    fields: list[FieldSpec] = []
+    for name, type_str, modifiers, default in PROCESS_RUN_FIELDS:
+        field_type = _parse_field_type(type_str)
+        mods = [_MODIFIER_MAP[m] for m in modifiers]
+        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+
+    access = ir.AccessSpec(
+        permissions=[
+            ir.PermissionRule(operation=op, require_auth=True, effect=ir.PolicyEffect.PERMIT)
+            for op in ir.PermissionKind
+        ]
+    )
+    return ir.EntitySpec(
+        name="ProcessRun",
+        title="Process Run",
+        intent="Audit record of a process execution; subject for process-step AI calls",
         domain="platform",
         patterns=["system", "audit"],
         fields=fields,
