@@ -17,36 +17,11 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.pitch.extractor import PitchContext
-
-# Re-export primitives for backwards compatibility
-from dazzle.pitch.generators.pptx_primitives import (  # noqa: F401
-    CONTENT_BOTTOM,
-    CONTENT_TOP,
+from dazzle.pitch.generators.pptx_primitives import (
     SLIDE_HEIGHT,
-    SLIDE_WIDTH,
-    ContentRegion,
-    LayoutResult,
-    _add_bullet_list,
-    _add_callout_box,
-    _add_card,
-    _add_columns,
-    _add_divider,
-    _add_rich_text_box,
-    _add_slide_heading,
-    _add_speaker_notes,
-    _add_stat_box,
-    _add_table,
-    _add_text_box,
-    _add_timeline,
-    _create_dark_slide,
-    _create_light_slide,
-    _estimate_text_height,
-    _fmt_currency,
     _resolve_colors,
 )
-
-# Re-export slide builders for backwards compatibility
-from dazzle.pitch.generators.pptx_slides import (  # noqa: F401
+from dazzle.pitch.generators.pptx_slides import (
     _build_ask_slide,
     _build_business_model_slide,
     _build_closing_slide,
@@ -64,46 +39,12 @@ from dazzle.pitch.generators.pptx_slides import (  # noqa: F401
 )
 from dazzle.pitch.ir import ExtraSlide, ExtraSlideLayout
 
+# pptx_gen's public surface is the orchestrator entry point. Primitives live in
+# pptx_primitives, slide builders in pptx_slides — import them from there, not via
+# pptx_gen (#1439: dropped the ~40-symbol "for backwards compatibility" re-export).
 __all__ = [
     "GeneratorResult",
     "generate_pptx",
-    "ContentRegion",
-    "LayoutResult",
-    "_estimate_text_height",
-    "SLIDE_WIDTH",
-    "SLIDE_HEIGHT",
-    "CONTENT_TOP",
-    "CONTENT_BOTTOM",
-    "_fmt_currency",
-    "_resolve_colors",
-    "_add_text_box",
-    "_add_rich_text_box",
-    "_create_dark_slide",
-    "_create_light_slide",
-    "_add_speaker_notes",
-    "_add_card",
-    "_add_stat_box",
-    "_add_columns",
-    "_add_slide_heading",
-    "_add_bullet_list",
-    "_add_table",
-    "_add_callout_box",
-    "_add_divider",
-    "_add_timeline",
-    "_build_title_slide",
-    "_build_problem_slide",
-    "_build_solution_slide",
-    "_build_platform_slide",
-    "_build_personas_slide",
-    "_build_market_slide",
-    "_build_business_model_slide",
-    "_build_financials_slide",
-    "_build_team_slide",
-    "_build_competition_slide",
-    "_build_milestones_slide",
-    "_build_ask_slide",
-    "_build_closing_slide",
-    "_build_extra_slide",
 ]
 
 logger = logging.getLogger(__name__)

@@ -124,7 +124,7 @@ class TestPptxGenerator:
         assert result.slide_count >= 2
 
     def test_fmt_currency(self):
-        from dazzle.pitch.generators.pptx_gen import _fmt_currency
+        from dazzle.pitch.generators.pptx_primitives import _fmt_currency
 
         assert _fmt_currency(500000, "GBP") == "£500K"
         assert _fmt_currency(1500000, "USD") == "$1.5M"
@@ -142,7 +142,7 @@ class TestVisualPrimitives:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_stat_box, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_stat_box, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -170,7 +170,7 @@ class TestVisualPrimitives:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_columns, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_columns, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -195,7 +195,7 @@ class TestVisualPrimitives:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_rich_text_box
+        from dazzle.pitch.generators.pptx_primitives import _add_rich_text_box
 
         prs = Presentation()
         slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -225,7 +225,7 @@ class TestVisualPrimitives:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_card, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_card, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -353,7 +353,7 @@ class TestNewHelpers:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _create_light_slide, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _create_light_slide, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -373,7 +373,7 @@ class TestNewHelpers:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_slide_heading, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_slide_heading, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -395,7 +395,7 @@ class TestNewHelpers:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_bullet_list, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_bullet_list, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -419,7 +419,7 @@ class TestNewHelpers:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_table, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_table, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -450,7 +450,7 @@ class TestNewHelpers:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_callout_box, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_callout_box, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -528,7 +528,8 @@ class TestNewHelpers:
 
         from pptx import Presentation
 
-        from dazzle.pitch.generators.pptx_gen import _resolve_colors, generate_pptx
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+        from dazzle.pitch.generators.pptx_primitives import _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         spec = PitchSpec(
@@ -554,7 +555,7 @@ class TestNewHelpers:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_text_box
+        from dazzle.pitch.generators.pptx_primitives import _add_text_box
 
         prs = Presentation()
         slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -631,7 +632,7 @@ class TestNewCosmetics:
 
         from pptx import Presentation
 
-        from dazzle.pitch.generators.pptx_gen import _add_divider, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_divider, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -846,8 +847,11 @@ class TestLayoutSafety:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_bullet_list, _resolve_colors
-        from dazzle.pitch.generators.pptx_primitives import LayoutResult
+        from dazzle.pitch.generators.pptx_primitives import (
+            LayoutResult,
+            _add_bullet_list,
+            _resolve_colors,
+        )
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -870,7 +874,7 @@ class TestLayoutSafety:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_bullet_list, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_bullet_list, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -891,8 +895,11 @@ class TestLayoutSafety:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_table, _resolve_colors
-        from dazzle.pitch.generators.pptx_primitives import LayoutResult
+        from dazzle.pitch.generators.pptx_primitives import (
+            LayoutResult,
+            _add_table,
+            _resolve_colors,
+        )
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -920,7 +927,7 @@ class TestLayoutSafety:
         from pptx import Presentation
         from pptx.util import Inches
 
-        from dazzle.pitch.generators.pptx_gen import _add_table, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import _add_table, _resolve_colors
         from dazzle.pitch.ir import BrandColors
 
         prs = Presentation()
@@ -1119,7 +1126,8 @@ class TestOverflowHandling:
 
         from pptx import Presentation
 
-        from dazzle.pitch.generators.pptx_gen import SLIDE_HEIGHT, generate_pptx
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+        from dazzle.pitch.generators.pptx_primitives import SLIDE_HEIGHT
 
         spec = PitchSpec(
             market=MarketSpec(
@@ -1147,7 +1155,8 @@ class TestOverflowHandling:
 
         from pptx import Presentation
 
-        from dazzle.pitch.generators.pptx_gen import SLIDE_HEIGHT, generate_pptx
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+        from dazzle.pitch.generators.pptx_primitives import SLIDE_HEIGHT
 
         spec = PitchSpec()
         ctx = PitchContext(
@@ -1175,7 +1184,8 @@ class TestOverflowHandling:
 
         from pptx import Presentation
 
-        from dazzle.pitch.generators.pptx_gen import SLIDE_HEIGHT, generate_pptx
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+        from dazzle.pitch.generators.pptx_primitives import SLIDE_HEIGHT
 
         spec = PitchSpec(
             business_model=BusinessModelSpec(

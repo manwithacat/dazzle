@@ -9,7 +9,8 @@ import logging
 from pathlib import Path
 
 from dazzle.pitch.extractor import PitchContext
-from dazzle.pitch.generators.pptx_gen import GeneratorResult, _fmt_currency
+from dazzle.pitch.generators.pptx_gen import GeneratorResult
+from dazzle.pitch.generators.pptx_primitives import _fmt_currency
 
 logger = logging.getLogger(__name__)
 

@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.83] - 2026-06-22
+
+### Changed
+- **#1439 (slice 3) — `pitch/pptx_gen` no longer re-exports ~40 primitives/builders (ADR-0003).**
+  The orchestrator imported 37 symbols from `pptx_primitives`/`pptx_slides` and re-advertised them
+  via `__all__` "for backwards compatibility". An AST split showed 21 were **pure re-export**
+  (imported only to forward) while `SLIDE_HEIGHT`, `_resolve_colors`, and all 14 `_build_*` slide
+  builders are genuinely used in `generate_pptx`/`SLIDE_CATALOG`/`_audit_slide_bounds`. Migrated the
+  real callers (`narrative.py` + the 42 import lines in the 59-test pitch suite) to import
+  primitives from `pptx_primitives` and builders from `pptx_slides` directly; trimmed pptx_gen's
+  imports to the 2 it actually uses; narrowed `__all__` to its true public surface
+  (`GeneratorResult`, `generate_pptx`). Dropped the stale `# noqa: F401` (the builders were never
+  unused — `SLIDE_CATALOG` references them).
+
+### Notes
+- **#1439 remaining:** only `testing/agent_e2e`'s "Legacy Data Models" + `E2EAgent` adapter is left —
+  a **live** consumer migration (CLI + MCP call `run_agent_tests`/`generate_html_report`), deferred
+  for a focused pass. The three named re-export blocks (`realtime_client`, `kg/store`, `pptx_gen`)
+  are now resolved; the `linker_impl` "shim" was descoped (it's a facade, not a shim).
+
 ## [0.83.82] - 2026-06-22
 
 ### Removed
