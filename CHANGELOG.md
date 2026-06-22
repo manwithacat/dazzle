@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.95] - 2026-06-22
+
+### Changed
+- **#1446 (slice 5 — final) — extracted `StepExecutor`; `TestRunner` 44→9 methods. #1446 COMPLETE.**
+  The ~28 `_execute_*_step` handlers, their dispatch (`_get_step_handler` / `execute_step` /
+  `_scan_unknown_actions` + the `_STEP_DISPATCH_*` tables), and the step-only helpers
+  (`_resolve_surface_url` / `_build_surface_url_map` / `_track_post_cleanup` / `_resolve_credential` /
+  `_resolve_refs`, + the lazy surface-url-map cache) moved to a new `testing/step_executor.py`
+  `StepExecutor`. It holds the runner and reads the transport via `client` / `project_path`
+  properties, so the handlers moved **verbatim**. `TestRunner` keeps a thin delegating
+  `execute_step` (preserving its 60+ test callers) and is now orchestration-only (9 methods);
+  the import cycle is broken by a deferred `StepExecutor` import in `TestRunner.__init__`. The
+  per-class cap gate is tightened (TestRunner ≤12, StepExecutor ≤40). Also turned the moved
+  `create_entity` error from a silent `logger.debug` swallow into a visible `logger.warning`.
+
+### Agent Guidance
+- **#1446 closed — both god classes resolved.** `DazzleClient` 25→14 (DataGenerator / CleanupManager /
+  EntityClient collaborators) and `TestRunner` 44→9 (StepExecutor), each composing via constructor
+  injection; both under the ~15 done-criteria and ratchet-enforced by
+  `test_testing_class_method_cap_1446.py`. Add new test-step handlers to `StepExecutor`, new entity
+  CRUD to `EntityClient`, etc. — not back onto the runner/client.
+
 ## [0.83.94] - 2026-06-22
 
 ### Added

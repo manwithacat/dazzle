@@ -98,37 +98,39 @@ workspace home_dashboard "Home":
 class TestSurfaceURLMap:
     def test_workspace_resolves_to_app_workspaces_template(self, tiny_project: Path) -> None:
         runner = TestRunner(project_path=tiny_project)
-        assert runner._resolve_surface_url("home_dashboard") == "/app/workspaces/home_dashboard"
+        assert (
+            runner.steps._resolve_surface_url("home_dashboard") == "/app/workspaces/home_dashboard"
+        )
 
     def test_list_surface_resolves_to_app_entity_slug_path(self, tiny_project: Path) -> None:
         # #1230: must mirror template_compiler.py's `/app/{entity_slug}` —
         # the JSON API mounts `/contacts` but the UI surface (which the
         # test-runner navigates) is at `/app/contact`.
         runner = TestRunner(project_path=tiny_project)
-        assert runner._resolve_surface_url("contact_list") == "/app/contact"
+        assert runner.steps._resolve_surface_url("contact_list") == "/app/contact"
 
     def test_create_surface_resolves_to_create_path(self, tiny_project: Path) -> None:
         # #1230: matches `/app/{entity_slug}/create` from template_compiler.py.
         runner = TestRunner(project_path=tiny_project)
-        assert runner._resolve_surface_url("contact_create") == "/app/contact/create"
+        assert runner.steps._resolve_surface_url("contact_create") == "/app/contact/create"
 
     def test_unknown_name_returns_none(self, tiny_project: Path) -> None:
         runner = TestRunner(project_path=tiny_project)
-        assert runner._resolve_surface_url("nonexistent_surface") is None
+        assert runner.steps._resolve_surface_url("nonexistent_surface") is None
 
     def test_no_dsl_dir_returns_empty_map_silently(self, tmp_path: Path) -> None:
         """Robustness: if the project has no DSL, resolver returns None
         rather than raising — the runner has API-only test paths that
         don't need URL resolution at all."""
         runner = TestRunner(project_path=tmp_path)
-        assert runner._resolve_surface_url("anything") is None
+        assert runner.steps._resolve_surface_url("anything") is None
 
     def test_map_caches_between_calls(self, tiny_project: Path) -> None:
         """Lazy build — second call doesn't re-parse the DSL."""
         runner = TestRunner(project_path=tiny_project)
-        runner._resolve_surface_url("home_dashboard")
-        assert runner._surface_url_map is not None
-        snapshot = runner._surface_url_map
+        runner.steps._resolve_surface_url("home_dashboard")
+        assert runner.steps._surface_url_map is not None
+        snapshot = runner.steps._surface_url_map
         # Second call should reuse the same map object
-        runner._resolve_surface_url("contact_list")
-        assert runner._surface_url_map is snapshot
+        runner.steps._resolve_surface_url("contact_list")
+        assert runner.steps._surface_url_map is snapshot

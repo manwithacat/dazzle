@@ -7,9 +7,10 @@ The `DazzleClient` / `TestRunner` god classes accreted every concern in their do
 each class's method count may only **shrink** below its cap. A class that regrows past
 its cap fails here — the fix is to extract a collaborator, not raise the cap.
 
-`DazzleClient` is at the issue's ~15 done-criteria. `TestRunner` is still the
-`_execute_*_step` handler ladder (44 methods); its cap is the current baseline so it
-can only shrink — when that ladder is extracted to a dispatch/registry, lower the cap.
+Both god classes now meet the issue's ~15 done-criteria: `DazzleClient` is 14
+(DataGenerator/CleanupManager/EntityClient extracted) and `TestRunner` is 9 (the
+`_execute_*_step` ladder extracted to `StepExecutor`, which carries the cohesive
+handler collection and is capped separately).
 """
 
 from __future__ import annotations
@@ -23,10 +24,11 @@ _TESTING = Path(__file__).resolve().parents[2] / "src" / "dazzle" / "testing"
 # offset by extracting a collaborator (the #1446 lesson), not by bumping the number.
 _CAPS: dict[str, int] = {
     "DazzleClient": 15,  # done-criteria (currently 14)
+    "TestRunner": 12,  # done-criteria (currently 9 — orchestration only)
     "EntityClient": 8,  # currently 6
     "CleanupManager": 8,  # currently 6
     "DataGenerator": 4,  # currently 2
-    "TestRunner": 44,  # ratchet baseline — the _execute_*_step ladder; shrink toward ~15
+    "StepExecutor": 40,  # the cohesive _execute_*_step handler collection (currently 39)
 }
 
 _FILES = {
@@ -35,6 +37,7 @@ _FILES = {
     "EntityClient": "entity_client.py",
     "CleanupManager": "cleanup_manager.py",
     "DataGenerator": "data_generator.py",
+    "StepExecutor": "step_executor.py",
 }
 
 

@@ -35,7 +35,7 @@ def test_create_stashes_actually_sent_payload_in_context() -> None:
     gen.generate = MagicMock(return_value={"email": "regen_b@x", "name": "n"})
 
     ctx: dict = {}
-    with patch("dazzle.testing.test_runner.DataGenerator", return_value=gen):
+    with patch("dazzle.testing.step_executor.DataGenerator", return_value=gen):
         runner.execute_step(
             {
                 "action": "create",

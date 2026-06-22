@@ -108,8 +108,11 @@ class EntityClient:
                     client.cleanup.track(entity_name, str(result_data["id"]))
                 return result_data
             return None
-        except Exception:
-            logger.debug("ignored exception in EntityClient.create_entity", exc_info=True)
+        except Exception as exc:
+            # Surface create failures at warning (the original code printed them);
+            # a create error usually breaks the dependent steps, so don't silently
+            # debug-swallow it.
+            logger.warning("EntityClient.create_entity(%s) failed: %s", entity_name, exc)
             return None
 
     def update_entity(

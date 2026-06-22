@@ -18,6 +18,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from dazzle.testing.step_executor import StepExecutor
 from dazzle.testing.test_runner import StepResult, TestResult, TestRunner
 
 # ---------------------------------------------------------------------------
@@ -32,7 +33,7 @@ from dazzle.testing.test_runner import StepResult, TestResult, TestRunner
 def test_action_has_dispatch_entry(action: str) -> None:
     """All four actions must resolve to a handler — silent skip is
     the bug class this issue closes."""
-    dispatch = {**TestRunner._STEP_DISPATCH_SINGLE, **TestRunner._STEP_DISPATCH_MULTI}
+    dispatch = {**StepExecutor._STEP_DISPATCH_SINGLE, **StepExecutor._STEP_DISPATCH_MULTI}
     assert action in dispatch, f"{action!r} missing from runner dispatch tables"
 
 
@@ -190,7 +191,7 @@ def test_scan_unknown_actions_returns_only_truly_unknown() -> None:
             ],
         }
     ]
-    unknown = runner._scan_unknown_actions(designs)
+    unknown = runner.steps._scan_unknown_actions(designs)
     assert unknown == {"trigger_process", "wave_magic_wand"}
 
 
@@ -207,7 +208,7 @@ def test_scan_unknown_actions_returns_empty_when_all_known() -> None:
             ]
         }
     ]
-    assert runner._scan_unknown_actions(designs) == set()
+    assert runner.steps._scan_unknown_actions(designs) == set()
 
 
 def test_run_emits_preflight_error_for_unknown_actions(caplog, monkeypatch) -> None:

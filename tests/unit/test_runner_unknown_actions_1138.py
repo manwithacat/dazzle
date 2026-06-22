@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from dazzle.testing.step_executor import StepExecutor
 from dazzle.testing.test_runner import StepResult, TestResult, TestRunner
 
 
@@ -35,7 +36,7 @@ def _runner() -> TestRunner:
 )
 def test_action_has_dispatch_entry(action: str) -> None:
     """The 5 previously-unknown actions must all resolve to a handler."""
-    dispatch = {**TestRunner._STEP_DISPATCH_SINGLE, **TestRunner._STEP_DISPATCH_MULTI}
+    dispatch = {**StepExecutor._STEP_DISPATCH_SINGLE, **StepExecutor._STEP_DISPATCH_MULTI}
     assert action in dispatch, f"{action!r} missing from runner dispatch tables"
 
 
@@ -54,7 +55,7 @@ def test_unknown_action_scan_no_longer_reports_the_five() -> None:
             ]
         }
     ]
-    assert runner._scan_unknown_actions(designs) == set()
+    assert runner.steps._scan_unknown_actions(designs) == set()
 
 
 # ---------------------------------------------------------------------------
