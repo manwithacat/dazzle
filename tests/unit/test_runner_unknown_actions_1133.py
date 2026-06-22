@@ -71,7 +71,7 @@ def test_create_expect_error_passes_on_4xx() -> None:
     runner = _runner()
     runner.client = MagicMock()
     runner.client.api_url = "http://x"
-    runner.client._entity_endpoint = MagicMock(return_value="/api/task")
+    runner.client.entities._entity_endpoint = MagicMock(return_value="/api/task")
     runner.client._auth_headers = MagicMock(return_value={})
     resp = MagicMock(status_code=422, json=lambda: {"detail": "bad"}, text="bad")
     runner.client._request = MagicMock(return_value=resp)
@@ -92,7 +92,7 @@ def test_create_expect_error_fails_on_2xx() -> None:
     runner = _runner()
     runner.client = MagicMock()
     runner.client.api_url = "http://x"
-    runner.client._entity_endpoint = MagicMock(return_value="/api/task")
+    runner.client.entities._entity_endpoint = MagicMock(return_value="/api/task")
     runner.client._auth_headers = MagicMock(return_value={})
     resp = MagicMock(status_code=201, json=lambda: {"id": "1"}, text="")
     runner.client._request = MagicMock(return_value=resp)

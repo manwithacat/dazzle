@@ -26,12 +26,12 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 import httpx
 
 from dazzle.testing.cleanup_manager import CleanupManager
 from dazzle.testing.data_generator import DataGenerator
+from dazzle.testing.entity_client import EntityClient
 
 logger = logging.getLogger(__name__)
 
@@ -154,9 +154,11 @@ class DazzleClient:
         self.client = httpx.Client(timeout=timeout, headers=headers)
         self._auth_token: str | None = None
         self._test_routes_available: bool | None = None  # None = unknown
-        # #1446: created-entity tracking + dependency-safe teardown live in the
-        # CleanupManager collaborator (composed here so create_entity can track).
+        # #1446: collaborators split out of the former god class. cleanup must be
+        # composed before entities — EntityClient.create_entity records created
+        # rows via self.cleanup.track().
         self.cleanup = CleanupManager(self)
+        self.entities = EntityClient(self)
 
     def _ensure_csrf_token(self) -> None:
         """Acquire a CSRF token by making a GET request if we don't have one.
@@ -399,154 +401,6 @@ class DazzleClient:
         except Exception:
             logger.debug("ignored exception in test_runner.py:364", exc_info=True)
             return False
-
-    def get_entities(self, entity_name: str) -> list[dict[str, Any]]:
-        """Get all entities of a type."""
-        try:
-            # Prefer test endpoint (returns raw JSON)
-            if self._test_routes_available is not False:
-                resp = self._request(
-                    "GET",
-                    f"{self.api_url}/__test__/entity/{entity_name}",
-                    headers=self._auth_headers(),
-                )
-                if resp.status_code == 200:
-                    return list(resp.json())
-                if resp.status_code == 404:
-                    self._test_routes_available = False
-
-            # Fallback to standard list endpoint
-            endpoint = self._entity_endpoint(entity_name)
-            resp = self._request(
-                "GET",
-                f"{self.api_url}{endpoint}",
-                headers=self._auth_headers(),
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                # List endpoint may return {items: [...]} or [...] directly
-                if isinstance(data, list):
-                    return data
-                if isinstance(data, dict) and "items" in data:
-                    return list(data["items"])
-            return []
-        except Exception:
-            logger.debug("ignored exception in test_runner.py:397", exc_info=True)
-            return []
-
-    def create_entity(self, entity_name: str, data: dict[str, Any]) -> dict[str, Any] | None:
-        """Create a new entity, preferring ``/__test__/seed`` then standard CRUD."""
-        try:
-            # Use __test__/seed when available (bypasses auth)
-            if self._test_routes_available is not False:
-                # #1210: uuid4 hex (not int(time.time())) — two entities
-                # created in the same second previously collided on
-                # fixture_id, silently dropping one from the cleanup
-                # tracking list and leaking it past --cleanup.
-                fixture_id = f"test-{entity_name.lower()}-{uuid4().hex}"
-                fixtures = [{"id": fixture_id, "entity": entity_name, "data": data}]
-                resp = self._request(
-                    "POST", f"{self.api_url}/__test__/seed", json={"fixtures": fixtures}
-                )
-                if resp.status_code == 200:
-                    result: dict[str, Any] = resp.json()
-                    created: dict[str, Any] = result.get("created", {})
-                    created_entity = created.get(fixture_id)
-                    if created_entity and "id" in created_entity:
-                        self.cleanup.track(entity_name, str(created_entity["id"]))
-                    return created_entity
-                if resp.status_code == 404:
-                    self._test_routes_available = False
-
-            # Standard CRUD endpoint with auth
-            endpoint = self._entity_endpoint(entity_name)
-            resp = self._request(
-                "POST", f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
-            )
-            if resp.status_code in (200, 201):
-                result_data = dict(resp.json())
-                if "id" in result_data:
-                    self.cleanup.track(entity_name, str(result_data["id"]))
-                return result_data
-            return None
-        except Exception as e:
-            print(f"    Create error: {e}")
-            return None
-
-    def _entity_endpoint(self, entity_name: str) -> str:
-        """Derive the REST endpoint for an entity name.
-
-        Uses to_api_plural for proper English pluralization:
-        Contact -> /contacts, Company -> /companies, Address -> /addresses
-        """
-        from dazzle.core.strings import to_api_plural
-
-        return f"/{to_api_plural(entity_name)}"
-
-    def update_entity(
-        self, entity_name: str, entity_id: str, data: dict[str, Any]
-    ) -> dict[str, Any] | None:
-        """Update an entity."""
-        try:
-            endpoint = f"{self._entity_endpoint(entity_name)}/{entity_id}"
-            resp = self._request(
-                "PUT", f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
-            )
-            if resp.status_code == 200:
-                return dict(resp.json())
-            return None
-        except Exception:
-            logger.debug("ignored exception in test_runner.py:457", exc_info=True)
-            return None
-
-    def delete_entity(self, entity_name: str, entity_id: str) -> str:
-        """Delete an entity by ID. Tries __test__ route first, then standard REST.
-
-        Returns a three-state outcome (#1307):
-
-        - ``"deleted"`` — the row was removed (HTTP 200/204).
-        - ``"absent"``  — the row was already gone (HTTP 404). For *cleanup*
-          this is success, not failure: a 404 means the target id does not
-          exist, so there is nothing to clean up. Counting it as a failure
-          produced the misleading ``"N failed"`` teardown alarm.
-        - ``"failed"``  — a genuine failure (auth/permission/server error/
-          network) where the row may still exist.
-        """
-        try:
-            if self._test_routes_available is not False:
-                resp = self._request(
-                    "DELETE", self.api_url + "/__test__/entity/" + entity_name + "/" + entity_id
-                )
-                if resp.status_code == 200:
-                    return "deleted"
-                if resp.status_code == 403:
-                    # Missing X-Test-Secret — don't fall through to REST
-                    return "failed"
-                if resp.status_code == 404 and "Unknown entity" not in resp.text:
-                    # Ambiguous: either the test route is unavailable OR the id
-                    # is already gone. Preserve the established behaviour — mark
-                    # test routes unavailable and fall through to REST, which
-                    # disambiguates (a REST 404 → genuinely absent).
-                    self._test_routes_available = False
-                elif resp.status_code >= 500:
-                    # Server error — don't waste time on REST fallback
-                    return "failed"
-
-            endpoint = self._entity_endpoint(entity_name)
-            resp = self._request(
-                "DELETE",
-                self.api_url + endpoint + "/" + entity_id,
-                headers=self._auth_headers(),
-            )
-            if resp.status_code in (200, 204):
-                return "deleted"
-            if resp.status_code == 404:
-                # Row already gone — for cleanup this is success, not failure.
-                return "absent"
-            return "failed"
-        except Exception:
-            logger.debug("ignored exception in test_runner.py:485", exc_info=True)
-            return "failed"
 
     def get_spec(self) -> dict[str, Any] | None:
         """Get the app spec."""
@@ -1149,7 +1003,7 @@ class TestRunner:
         assert self.client is not None
         entity_name = target.replace("entity:", "")
         entity_data = DataGenerator(self.client).generate(entity_name, resolved_data)
-        result = self.client.create_entity(entity_name, entity_data)
+        result = self.client.entities.create_entity(entity_name, entity_data)
         success = result is not None
         if success and store_result and result:
             context[store_result] = result
@@ -1299,7 +1153,7 @@ class TestRunner:
             entity_name = entity_name.replace("-", " ").title().replace(" ", "")
         elif entity_name.islower():
             entity_name = entity_name.capitalize()
-        entities = self.client.get_entities(entity_name)
+        entities = self.client.entities.get_entities(entity_name)
         min_count = data.get("min", 0)
         success = len(entities) >= min_count
         return StepResult(
@@ -1428,7 +1282,7 @@ class TestRunner:
     ) -> StepResult:
         assert self.client is not None
         entity_name = target.replace("entity:", "")
-        entities = self.client.get_entities(entity_name)
+        entities = self.client.entities.get_entities(entity_name)
         context["last_response"] = type(
             "Response",
             (),
@@ -1929,7 +1783,7 @@ class TestRunner:
         """
         assert self.client is not None
         entity_name = target.replace("entity:", "")
-        endpoint = self.client._entity_endpoint(entity_name)
+        endpoint = self.client.entities._entity_endpoint(entity_name)
         # #1139: prefer the payload actually sent by the preceding
         # create step (which has post-generation unique-field values)
         # over the raw resolved_data literal — otherwise a "duplicate

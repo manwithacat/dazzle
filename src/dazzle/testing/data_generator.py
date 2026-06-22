@@ -80,7 +80,7 @@ class DataGenerator:
                         ref_data = self.generate(
                             ref_entity, create_refs=True, _ref_depth=_ref_depth + 1
                         )
-                        ref_result = self._client.create_entity(ref_entity, ref_data)
+                        ref_result = self._client.entities.create_entity(ref_entity, ref_data)
                         if ref_result and "id" in ref_result:
                             # Use the field name directly (the ref stores the ID)
                             data[name] = ref_result["id"]

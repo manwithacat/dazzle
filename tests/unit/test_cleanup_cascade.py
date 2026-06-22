@@ -191,14 +191,14 @@ class TestCleanupCreatedEntities:
         ]
         fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
         client.cleanup._build_fk_reverse_map = MagicMock(return_value=fk_map)  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
+        client.entities.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
 
         report = client.cleanup.cleanup_created_entities()
         assert report.deleted == 3
         assert report.failed == 0
 
         # Children deleted before parent
-        calls = [c.args for c in client.delete_entity.call_args_list]
+        calls = [c.args for c in client.entities.delete_entity.call_args_list]
         pi_calls = [c for c in calls if c[0] == "PropertyIncome"]
         st_calls = [c for c in calls if c[0] == "SoleTrader"]
         assert len(pi_calls) == 2
@@ -212,19 +212,19 @@ class TestCleanupCreatedEntities:
         client.cleanup.created = [("SoleTrader", "st-1"), ("PropertyIncome", "pi-1")]
         fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
         client.cleanup._build_fk_reverse_map = MagicMock(return_value=fk_map)  # type: ignore[method-assign]
-        client.get_entities = MagicMock(return_value=[])  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
+        client.entities.get_entities = MagicMock(return_value=[])  # type: ignore[method-assign]
+        client.entities.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
 
         client.cleanup.cleanup_created_entities()
         # get_entities should NOT be called during cleanup (was the #410 bug;
         # #1307 keeps the residue scan in the separate detect_residue phase).
-        client.get_entities.assert_not_called()
+        client.entities.get_entities.assert_not_called()
 
     def test_builds_fk_map_once(self, client: DazzleClient) -> None:
         """FK map is fetched once, not per entity."""
         client.cleanup.created = [("A", "1"), ("B", "2")]
         client.cleanup._build_fk_reverse_map = MagicMock(return_value={})  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
+        client.entities.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
 
         client.cleanup.cleanup_created_entities()
         client.cleanup._build_fk_reverse_map.assert_called_once()
@@ -235,7 +235,7 @@ class TestCleanupCreatedEntities:
         client.cleanup._build_fk_reverse_map = MagicMock(return_value={})  # type: ignore[method-assign]
 
         # Fail first attempt, succeed on second
-        client.delete_entity = MagicMock(side_effect=["failed", "deleted"])  # type: ignore[method-assign]
+        client.entities.delete_entity = MagicMock(side_effect=["failed", "deleted"])  # type: ignore[method-assign]
 
         report = client.cleanup.cleanup_created_entities()
         assert report.deleted == 1
@@ -247,22 +247,22 @@ class TestCleanupCreatedEntities:
         alarm fix, and 'absent' rows are NOT retried."""
         client.cleanup.created = [("A", "1"), ("A", "2")]
         client.cleanup._build_fk_reverse_map = MagicMock(return_value={})  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(side_effect=["deleted", "absent"])  # type: ignore[method-assign]
+        client.entities.delete_entity = MagicMock(side_effect=["deleted", "absent"])  # type: ignore[method-assign]
 
         report = client.cleanup.cleanup_created_entities()
         assert report.deleted == 1
         assert report.absent == 1
         assert report.failed == 0
         # 'absent' is terminal — exactly one delete attempt per id, no retry.
-        assert client.delete_entity.call_count == 2
+        assert client.entities.delete_entity.call_count == 2
 
     def test_deduplicates_tracked_entities(self, client: DazzleClient) -> None:
         """Same entity tracked twice is only deleted once."""
         client.cleanup.created = [("A", "1"), ("A", "1")]
         client.cleanup._build_fk_reverse_map = MagicMock(return_value={})  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
+        client.entities.delete_entity = MagicMock(return_value="deleted")  # type: ignore[method-assign]
 
         report = client.cleanup.cleanup_created_entities()
         assert report.deleted == 1
         assert report.failed == 0
-        client.delete_entity.assert_called_once_with("A", "1")
+        client.entities.delete_entity.assert_called_once_with("A", "1")

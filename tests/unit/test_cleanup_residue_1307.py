@@ -85,14 +85,14 @@ class TestDetectResidue:
             {"id": "2", "name": "Acme Corp"},  # real row
             {"id": "3", "email": "test_ff00@example.com"},  # test residue
         ]
-        client.get_entities = MagicMock(return_value=rows)  # type: ignore[method-assign]
+        client.entities.get_entities = MagicMock(return_value=rows)  # type: ignore[method-assign]
 
         residue = client.cleanup.detect_residue(["Contact"])
         assert residue == {"Contact": 2}
 
     def test_clean_type_absent_from_report(self, client: DazzleClient) -> None:
         """A type with zero residue is omitted (residue report stays terse)."""
-        client.get_entities = MagicMock(return_value=[{"id": "1", "name": "Real"}])  # type: ignore[method-assign]
+        client.entities.get_entities = MagicMock(return_value=[{"id": "1", "name": "Real"}])  # type: ignore[method-assign]
         assert client.cleanup.detect_residue(["Contact"]) == {}
 
     def test_per_type_query_failure_is_skipped(self, client: DazzleClient) -> None:
@@ -103,11 +103,11 @@ class TestDetectResidue:
                 raise RuntimeError("boom")
             return [{"id": "1", "title": "Test title_x"}]
 
-        client.get_entities = MagicMock(side_effect=_flaky)  # type: ignore[method-assign]
+        client.entities.get_entities = MagicMock(side_effect=_flaky)  # type: ignore[method-assign]
         residue = client.cleanup.detect_residue(["Bad", "Contact"])
         assert residue == {"Contact": 1}
 
     def test_empty_types_no_queries(self, client: DazzleClient) -> None:
-        client.get_entities = MagicMock(return_value=[])  # type: ignore[method-assign]
+        client.entities.get_entities = MagicMock(return_value=[])  # type: ignore[method-assign]
         assert client.cleanup.detect_residue([]) == {}
-        client.get_entities.assert_not_called()
+        client.entities.get_entities.assert_not_called()

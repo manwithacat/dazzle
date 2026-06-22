@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.93] - 2026-06-22
+
+### Changed
+- **#1446 (slice 3) — extracted `EntityClient`; `DazzleClient` now meets the done-criteria
+  (25→14 methods, under ~15).** Entity CRUD (`get_entities`, `create_entity`, `update_entity`,
+  `delete_entity`, `_entity_endpoint`) moved to a new `testing/entity_client.py` `EntityClient`
+  that composes the transport by constructor injection (`_request`/`_auth_headers`/`api_url`/the
+  `_test_routes_available` probe/`cleanup.track`). `DazzleClient` exposes `self.entities`; all 58
+  call sites repointed to `client.entities.*` (per the chosen approach) — the bulk were
+  `KnowledgeGraph.create_entity` false positives, so only ~6 real DazzleClient sites + the
+  collaborators (`DataGenerator`, `CleanupManager`) and 5 test files needed updating. The stray
+  `print()` in the old `create_entity` became a `logger.debug` (consistent with the other CRUD
+  methods). Behaviour unchanged. **DazzleClient: DataGenerator + CleanupManager + EntityClient
+  collaborators, 14 methods.**
+
+### Notes
+- **#1446 remaining:** only `TestRunner` (still 44 methods — the ~40 `_execute_*_step` handler
+  ladder → a dispatch/registry split) and the per-class method-count enforcement gate (lands once
+  TestRunner is under the cap). The `DazzleClient` god class is resolved.
+
 ## [0.83.92] - 2026-06-22
 
 ### Changed

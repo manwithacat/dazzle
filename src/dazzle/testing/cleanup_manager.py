@@ -175,7 +175,7 @@ class CleanupManager:
             still_pending: list[tuple[str, str]] = []
             pass_progress = 0
             for entity_name, entity_id in pending:
-                outcome = self._client.delete_entity(entity_name, entity_id)
+                outcome = self._client.entities.delete_entity(entity_name, entity_id)
                 if outcome == "deleted":
                     deleted += 1
                     pass_progress += 1
@@ -221,7 +221,7 @@ class CleanupManager:
         residue: dict[str, int] = {}
         for entity_name in sorted(set(entity_types)):
             try:
-                rows = self._client.get_entities(entity_name)
+                rows = self._client.entities.get_entities(entity_name)
             except Exception:
                 logger.debug("residue scan: get_entities(%s) failed", entity_name, exc_info=True)
                 continue

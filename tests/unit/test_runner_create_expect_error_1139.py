@@ -28,7 +28,7 @@ def test_create_stashes_actually_sent_payload_in_context() -> None:
     a follow-up create_expect_error can reuse it."""
     runner = _runner()
     runner.client = MagicMock()
-    runner.client.create_entity = MagicMock(return_value={"id": "1"})
+    runner.client.entities.create_entity = MagicMock(return_value={"id": "1"})
     # DataGenerator regenerates unique fields — design literal "test_a@x"
     # becomes "regen_b@x" on the wire (#1446: data-gen extracted from the client).
     gen = MagicMock()
@@ -55,7 +55,7 @@ def test_create_expect_error_reuses_stashed_payload() -> None:
     runner = _runner()
     runner.client = MagicMock()
     runner.client.api_url = "http://x"
-    runner.client._entity_endpoint = MagicMock(return_value="/api/contact")
+    runner.client.entities._entity_endpoint = MagicMock(return_value="/api/contact")
     runner.client._auth_headers = MagicMock(return_value={})
     resp = MagicMock(status_code=422, json=lambda: {"detail": "dup"}, text="dup")
     runner.client._request = MagicMock(return_value=resp)
@@ -83,7 +83,7 @@ def test_create_expect_error_falls_back_to_resolved_data_when_no_stash() -> None
     runner = _runner()
     runner.client = MagicMock()
     runner.client.api_url = "http://x"
-    runner.client._entity_endpoint = MagicMock(return_value="/api/contact")
+    runner.client.entities._entity_endpoint = MagicMock(return_value="/api/contact")
     runner.client._auth_headers = MagicMock(return_value={})
     resp = MagicMock(status_code=422, json=lambda: {"detail": "bad"}, text="bad")
     runner.client._request = MagicMock(return_value=resp)

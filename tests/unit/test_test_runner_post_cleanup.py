@@ -162,8 +162,8 @@ def test_uuid4_fixture_id_eliminates_same_second_collision() -> None:
 
     client._request = fake_request  # type: ignore[assignment]
 
-    a = client.create_entity("ServicePackage", {"name": "Gold"})
-    b = client.create_entity("ServicePackage", {"name": "Silver"})
+    a = client.entities.create_entity("ServicePackage", {"name": "Gold"})
+    b = client.entities.create_entity("ServicePackage", {"name": "Silver"})
 
     assert a == {"id": "row-1"}
     assert b == {"id": "row-2"}
