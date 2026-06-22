@@ -211,10 +211,10 @@ class SystemRoutesSubsystem:
                 from dazzle.http.runtime.integrations_retries import (
                     create_integrations_retries_routes,
                 )
-                from dazzle.http.runtime.retry_accumulator import get_default_accumulator
+                from dazzle.http.runtime.retry_accumulator import app_retry_accumulator
 
                 integrations_retries_router = create_integrations_retries_routes(
-                    get_default_accumulator(),
+                    app_retry_accumulator(ctx.app),
                     list(ctx.appspec.integrations),
                 )
                 ctx.app.include_router(integrations_retries_router)
@@ -313,8 +313,15 @@ class SystemRoutesSubsystem:
                     await repo.update(UUID(entity_id), fields)
 
             cache = ApiResponseCache()  # auto-detects REDIS_URL
+            from dazzle.http.runtime.retry_accumulator import app_retry_accumulator
+
             executor = MappingExecutor(
-                ctx.appspec, event_bus, update_entity=update_entity, cache=cache
+                ctx.appspec,
+                event_bus,
+                update_entity=update_entity,
+                cache=cache,
+                # #1445: share the per-app accumulator with the retries route reader.
+                retry_accumulator=app_retry_accumulator(ctx.app),
             )
             executor.register_all()
 

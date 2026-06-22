@@ -102,30 +102,21 @@ class RetryAccumulator:
 
 
 # =============================================================================
-# Process-wide singleton
+# Per-app accumulator (ADR-0005 — ServerState, not a process-wide module global)
 # =============================================================================
 
-_DEFAULT_ACCUMULATOR: RetryAccumulator | None = None
-_DEFAULT_LOCK = threading.Lock()
 
+def app_retry_accumulator(app: Any) -> RetryAccumulator:
+    """Get-or-create the per-app :class:`RetryAccumulator` on ``app.state``.
 
-def get_default_accumulator() -> RetryAccumulator:
-    """Return the process-wide :class:`RetryAccumulator` singleton.
-
-    Created lazily on first access. ``MappingExecutor`` (writer) and
-    the ``/_dazzle/integrations/{name}/retries`` route (reader) both
-    reach the same instance through this function, which keeps the
-    accumulator's lifetime tied to the process rather than to any
-    particular FastAPI app instance.
+    ``MappingExecutor`` (writer) and the ``/_dazzle/integrations/{name}/retries``
+    route (reader) are wired in two different subsystem-setup methods; both fetch
+    the one shared instance here, scoped to the FastAPI app (the ADR-0005
+    ServerState pattern) rather than a module-level process singleton (#1445).
+    Volatile — resets on restart.
     """
-    global _DEFAULT_ACCUMULATOR
-    if _DEFAULT_ACCUMULATOR is None:
-        with _DEFAULT_LOCK:
-            if _DEFAULT_ACCUMULATOR is None:
-                _DEFAULT_ACCUMULATOR = RetryAccumulator()
-    return _DEFAULT_ACCUMULATOR
-
-
-def reset_default_accumulator() -> None:
-    """Clear the singleton's contents (test-suite helper)."""
-    get_default_accumulator().clear()
+    acc = getattr(app.state, "retry_accumulator", None)
+    if acc is None:
+        acc = RetryAccumulator()
+        app.state.retry_accumulator = acc
+    return acc

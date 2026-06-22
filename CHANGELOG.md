@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.87] - 2026-06-22
+
+### Changed
+- **#1445 (slice 4 — shape (b), accumulator) — `retry_accumulator` moved off the module singleton
+  onto per-app `app.state` (ADR-0005).** `retry_accumulator._DEFAULT_ACCUMULATOR` /
+  `get_default_accumulator()` / `reset_default_accumulator()` were a lazy process-wide singleton.
+  Replaced with `app_retry_accumulator(app)` — a get-or-create on `app.state` (the ServerState
+  pattern), so the writer (`MappingExecutor`) and reader (the `/_dazzle/integrations/{name}/retries`
+  route) — wired in two different subsystem-setup methods that both hold `ctx.app` — share one
+  per-app instance instead of a hidden module global. `MappingExecutor` now falls back to its own
+  private `RetryAccumulator()` when constructed without injection (standalone/tests) rather than
+  reaching a global. The dead `reset_default_accumulator` test-helper (no callers) is gone.
+
+### Notes
+- **#1445 remaining:** only the `core/process/task_store` half (blocked on the `core↛http` layer
+  conflict — needs a core-level injection-seam design call, see prior comment) and the ratchet
+  enforcement gate (lands once task_store settles). Shapes (a), (c), and the accumulator half of (b)
+  are done.
+
 ## [0.83.86] - 2026-06-22
 
 ### Changed
