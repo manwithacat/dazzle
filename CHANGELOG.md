@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.101] - 2026-06-22
+
+### Changed
+- **#1438 deferred-import burn-down — structural core (`http/runtime/server.py`).** Hoisted 43 function-level `dazzle.*` imports to module top in the framework's most over-central hub (server.py: 97 → 53 deferred imports; tree total 2052 → 2008). Empirically probed every same-layer `dazzle.http.runtime.*` deferral: they were **precautionary, not real cycles** — server.py imports clean with them hoisted, so no leaf-extraction was needed for this file. Eight modules stay function-local because their tests source-patch them (`pg_backend`, `auth`, `token_store`, `sa_schema`, `tenant.registry`, `perf.{tracer,instrument,bootstrap}`) — hoisting those breaks the late-binding the `@patch("<source-module>.X")` tests rely on; that test-mocking coupling is the campaign's next seam, not a regression to absorb here. `core.process.*` also kept deferred (eventbus_adapter reaches `http`). Ratchet baseline lowered to lock the win (`tests/unit/fixtures/deferred_imports_baseline.json`).
+
 ## [0.83.100] - 2026-06-22
 
 ### Changed

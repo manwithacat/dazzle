@@ -16,25 +16,61 @@ from typing import TYPE_CHECKING, Any
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from dazzle.core.capabilities import resolve_capabilities
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
-from dazzle.core.ir import AppSpec, EntitySpec
+from dazzle.core.environment import is_production
+from dazzle.core.ir import AppSpec, EntitySpec, TenancyMode
+from dazzle.core.manifest import load_manifest
+from dazzle.core.strings import entity_slug as _entity_slug
+from dazzle.core.validator import validate_storage_refs
+from dazzle.http.converters.entity_converter import convert_entities
+from dazzle.http.converters.surface_converter import convert_surfaces_to_services
+from dazzle.http.runtime.audit_wiring import register_audit_callbacks
 from dazzle.http.runtime.auth import (
     AuthMiddleware,
     AuthStore,
 )
+from dazzle.http.runtime.csrf import apply_csrf_protection
+from dazzle.http.runtime.exception_handlers import register_exception_handlers
 from dazzle.http.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle.http.runtime.file_storage import FileService
 from dazzle.http.runtime.integration_manager import IntegrationManager, _convert_channels
+from dazzle.http.runtime.lifespan_hooks import init_lifespan_registry, register_lifespan_hook
 from dazzle.http.runtime.migrations import MigrationPlan
 from dazzle.http.runtime.model_generator import (
     generate_all_entity_models,
     generate_create_schema,
     generate_update_schema,
 )
+from dazzle.http.runtime.page_routes import build_app_page_context
+from dazzle.http.runtime.param_store import ParamResolver
+from dazzle.http.runtime.policy import EntityPolicyInfo, PolicyRegistry
+from dazzle.http.runtime.predicate_compiler import collect_user_attr_refs
+from dazzle.http.runtime.rate_limit import apply_rate_limiting
+from dazzle.http.runtime.relation_loader import RelationLoader, RelationRegistry
+from dazzle.http.runtime.renderers.init import register_default_renderers
 from dazzle.http.runtime.repository import RepositoryFactory
+from dazzle.http.runtime.rls_schema import build_all_rls_ddl
 from dazzle.http.runtime.route_generator import RouteGenerator
+from dazzle.http.runtime.route_validator import validate_routes
+from dazzle.http.runtime.search_schema import build_search_index_ddl
+from dazzle.http.runtime.security_middleware import apply_security_middleware
 from dazzle.http.runtime.service_generator import CRUDService, ServiceFactory
 from dazzle.http.runtime.service_loader import ServiceLoader
+from dazzle.http.runtime.services import RuntimeServices
+from dazzle.http.runtime.sse_stream import SSEStreamManager, create_sse_routes
+from dazzle.http.runtime.sse_wiring import LazyFrameworkBus, register_sse_callbacks
+from dazzle.http.runtime.storage import build_entity_storage_bindings
+from dazzle.http.runtime.subsystems import SubsystemContext
+from dazzle.http.runtime.subsystems.auth import AuthSubsystem
+from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
+from dazzle.http.runtime.subsystems.events import EventsSubsystem
+from dazzle.http.runtime.subsystems.llm_queue import LLMQueueSubsystem
+from dazzle.http.runtime.subsystems.process import ProcessSubsystem
+from dazzle.http.runtime.subsystems.seed import SeedSubsystem
+from dazzle.http.runtime.subsystems.sla import SLASubsystem
+from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
+from dazzle.http.runtime.tenant_isolation import register_rls_user_attr_names
 from dazzle.http.runtime.workspace_aggregation import (  # noqa: F401
     _compute_aggregate_metrics,
     _fetch_count_metric,
@@ -56,6 +92,7 @@ from dazzle.http.runtime.workspace_handlers import (  # noqa: F401
 )
 from dazzle.http.runtime.workspace_region_handler import _workspace_region_handler  # noqa: F401
 from dazzle.http.runtime.workspace_route_builder import WorkspaceRouteBuilder
+from dazzle.page.runtime.theme import install_theme_middleware
 
 if TYPE_CHECKING:
     from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
@@ -182,7 +219,6 @@ def _tenancy_metadata_kwargs(appspec: AppSpec) -> dict[str, Any]:
     tenant-scoped iff it carries the partition_key field (covers both
     framework-injected and hand-declared discriminators).
     """
-    from dazzle.core.ir import TenancyMode
     from dazzle.http.runtime.sa_schema import scoped_entity_names
 
     tenancy = appspec.tenancy
@@ -209,7 +245,6 @@ def _compute_rls_user_attr_names(entities: list[Any]) -> set[str]:
     A ``current_user`` reference (the user's PK) contributes ``"id"``. Entities
     without scope rules contribute nothing.
     """
-    from dazzle.http.runtime.predicate_compiler import collect_user_attr_refs
 
     names: set[str] = set()
     for entity in entities:
@@ -328,8 +363,6 @@ class DazzleBackendApp:
         import os
 
         # Convert AppSpec to runtime-ready specs
-        from dazzle.http.converters.entity_converter import convert_entities
-        from dazzle.http.converters.surface_converter import convert_surfaces_to_services
 
         self._appspec = appspec
         self._entities = convert_entities(appspec.domain.entities)
@@ -339,7 +372,6 @@ class DazzleBackendApp:
         # per request. Registered unconditionally (empty when not applicable) so a
         # prior app instance in the same process can't leak a stale set.
         self._rls_user_attr_names = self._compute_rls_user_attr_names_for_appspec()
-        from dazzle.http.runtime.tenant_isolation import register_rls_user_attr_names
 
         register_rls_user_attr_names(self._rls_user_attr_names)
         self._service_specs, self._endpoint_specs = convert_surfaces_to_services(
@@ -440,14 +472,6 @@ class DazzleBackendApp:
 
     def _build_default_subsystems(self) -> list[Any]:
         """Create the ordered list of default subsystem plugins."""
-        from dazzle.http.runtime.subsystems.auth import AuthSubsystem
-        from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
-        from dazzle.http.runtime.subsystems.events import EventsSubsystem
-        from dazzle.http.runtime.subsystems.llm_queue import LLMQueueSubsystem
-        from dazzle.http.runtime.subsystems.process import ProcessSubsystem
-        from dazzle.http.runtime.subsystems.seed import SeedSubsystem
-        from dazzle.http.runtime.subsystems.sla import SLASubsystem
-        from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         return [
             AuthSubsystem(),
@@ -468,15 +492,12 @@ class DazzleBackendApp:
         ``CapabilityUnavailableError`` if a capability is declared but its
         package isn't installed — a loud boot failure with the install runbook.
         """
-        from dazzle.core.capabilities import resolve_capabilities
 
         if self._project_root is None:
             return resolve_capabilities([])
         manifest_path = self._project_root / "dazzle.toml"
         if not manifest_path.is_file():
             return resolve_capabilities([])
-
-        from dazzle.core.manifest import load_manifest
 
         declared = load_manifest(manifest_path).capabilities.enabled
         return resolve_capabilities(list(declared))
@@ -497,7 +518,6 @@ class DazzleBackendApp:
         manifest_path = self._project_root / "dazzle.toml"
         if not manifest_path.is_file():
             return
-        from dazzle.core.manifest import load_manifest
 
         try:
             declared = load_manifest(manifest_path).renderers.extra
@@ -528,7 +548,6 @@ class DazzleBackendApp:
 
     def _build_subsystem_context(self, auth_dep: Any = None, optional_auth_dep: Any = None) -> Any:
         """Build SubsystemContext from current DazzleBackendApp state."""
-        from dazzle.http.runtime.subsystems import SubsystemContext
 
         assert self._app is not None
 
@@ -657,14 +676,11 @@ class DazzleBackendApp:
         )
         # Subsystems register startup/shutdown work here (replacing @app.on_event, which
         # a custom lifespan silently ignores). Initialised before _run_subsystems runs.
-        from dazzle.http.runtime.lifespan_hooks import init_lifespan_registry
 
         init_lifespan_registry(self._app)
         _maybe_instrument_for_perf(self._app)
 
         # Attach runtime service container (v0.49.0, #673)
-        from dazzle.http.runtime.renderers.init import register_default_renderers
-        from dazzle.http.runtime.services import RuntimeServices
 
         services = RuntimeServices()
         register_default_renderers(services)
@@ -681,7 +697,6 @@ class DazzleBackendApp:
 
         # Security middleware (v0.11.0). v0.61.0 Phase 3: resolve active
         # analytics providers so their CSP origins are allow-listed.
-        from dazzle.http.runtime.security_middleware import apply_security_middleware
 
         _active_providers: list[Any] = []
         if self._appspec.analytics is not None:
@@ -700,12 +715,10 @@ class DazzleBackendApp:
         )
 
         # Rate limiting (v1.0.0)
-        from dazzle.http.runtime.rate_limit import apply_rate_limiting
 
         apply_rate_limiting(self._app, self._security_profile)
 
         # CSRF protection (v1.0.0)
-        from dazzle.http.runtime.csrf import apply_csrf_protection
 
         apply_csrf_protection(
             self._app,
@@ -724,7 +737,6 @@ class DazzleBackendApp:
         # Jinja `theme_variant()` global can emit `<html data-theme>`
         # correctly on first paint (prevents the flash-of-light for
         # returning dark-mode users).
-        from dazzle.page.runtime.theme import install_theme_middleware
 
         install_theme_middleware(self._app)
 
@@ -765,7 +777,6 @@ class DazzleBackendApp:
             )
 
         # Exception handlers (v0.28.0)
-        from dazzle.http.runtime.exception_handlers import register_exception_handlers
 
         register_exception_handlers(self._app)
 
@@ -879,8 +890,6 @@ class DazzleBackendApp:
             return
         from sqlalchemy import text as _sa_text
 
-        from dazzle.http.runtime.search_schema import build_search_index_ddl
-
         statements = build_search_index_ddl(self._entities, searches)
         if not statements:
             return
@@ -903,7 +912,6 @@ class DazzleBackendApp:
         ``dazzle.user_<attr>`` GUCs needed. Other isolation modes / non-tenant apps
         get an empty set → the per-request bind is a no-op.
         """
-        from dazzle.core.ir import TenancyMode
 
         tenancy = self._appspec.tenancy
         if tenancy is None or tenancy.isolation.mode != TenancyMode.SHARED_SCHEMA:
@@ -935,8 +943,6 @@ class DazzleBackendApp:
         """
         from sqlalchemy import text as _sa_text
 
-        from dazzle.http.runtime.rls_schema import build_all_rls_ddl
-
         # All partitioning (scoped-vs-flat, fail-loud-on-missing-fk_graph, the
         # shared_schema / no-scoped no-op gates) now lives in build_all_rls_ddl
         # so the dev apply, prod apply, inspect, and drift paths share one
@@ -959,7 +965,6 @@ class DazzleBackendApp:
         # auth Plan 1d: under shared_schema, the framework partition key is
         # server-supplied (DB default from the bound session) — exclude it from
         # the create/update INPUT schemas for tenant-scoped entities.
-        from dazzle.core.ir import TenancyMode
         from dazzle.http.runtime.sa_schema import scoped_entity_names
 
         partition_key: str | None = None
@@ -1056,7 +1061,6 @@ class DazzleBackendApp:
             verify_dazzle_params_table(self._db_manager)
 
         # Build param resolver from AppSpec (#572)
-        from dazzle.http.runtime.param_store import ParamResolver
 
         param_specs = {p.key: p for p in self._appspec.params} if self._appspec.params else {}
         self._param_resolver = ParamResolver(specs=param_specs)
@@ -1070,7 +1074,6 @@ class DazzleBackendApp:
         # time. See ``_create_app`` (#438).
 
         # Build relation loader for nested ref resolution (#272)
-        from dazzle.http.runtime.relation_loader import RelationLoader, RelationRegistry
 
         relation_registry = RelationRegistry.from_entities(self._entities)
         # Populate display_field map from IR for FK display resolution (#555)
@@ -1091,7 +1094,6 @@ class DazzleBackendApp:
 
     def _should_create_schema_on_startup(self) -> bool:
         """Return whether startup may create entity tables directly."""
-        from dazzle.core.environment import is_production
 
         return not is_production()
 
@@ -1256,7 +1258,6 @@ class DazzleBackendApp:
         # #956 cycle 4 — wire the audit emitter callbacks against
         # services for every `audit on X:` block. Silent no-op when
         # the AppSpec has no audit declarations.
-        from dazzle.http.runtime.audit_wiring import register_audit_callbacks
 
         register_audit_callbacks(self._services, list(self._appspec.audits))
 
@@ -1350,10 +1351,6 @@ class DazzleBackendApp:
             )
             return
 
-        from dazzle.http.runtime.lifespan_hooks import register_lifespan_hook
-        from dazzle.http.runtime.sse_stream import SSEStreamManager, create_sse_routes
-        from dazzle.http.runtime.sse_wiring import LazyFrameworkBus, register_sse_callbacks
-
         assert self._app is not None
         # Defensive: never double-mount the SSE router (e.g. if a future ops
         # dashboard also mounts /_ops/sse). validate_routes() would reject the
@@ -1393,7 +1390,6 @@ class DazzleBackendApp:
         """
         import logging
 
-        from dazzle.core.validator import validate_storage_refs
         from dazzle.http.runtime.storage import (
             StorageRegistry,
             register_storage_proxy_routes,
@@ -1464,7 +1460,6 @@ class DazzleBackendApp:
         # #1420 Slice 1 — fail closed: auth disabled in production is a critical
         # misconfiguration (generated CRUD would be world-writable). Runs before
         # any auth/DB state is touched.
-        from dazzle.core.environment import is_production
         from dazzle.http.runtime.auth.insecure_guard import (
             assert_secure_auth_config,
             insecure_ack_from_env,
@@ -1640,8 +1635,6 @@ class DazzleBackendApp:
                 # overrides: chrome the handler's inner HTML in the app shell. deps=None
                 # ⇒ appspec from app.state + shell frame (the item-2 guarantee).
                 async def _ov_page_ctx(request: Any, current_route: str) -> Any:
-                    from dazzle.http.runtime.page_routes import build_app_page_context
-
                     return await build_app_page_context(request, current_route=current_route)
 
                 override_router = build_override_router(
@@ -1697,8 +1690,6 @@ class DazzleBackendApp:
         entity_htmx_meta: dict[str, dict[str, Any]] = {}
         app_prefix = "/app"
         for entity in self._entities:
-            from dazzle.core.strings import entity_slug as _entity_slug
-
             slug = _entity_slug(entity.name)
             _ls = _entity_list_surfaces.get(entity.name)
             cols = _build_surface_columns(entity, _ls) if _ls else _build_entity_columns(entity)
@@ -1776,7 +1767,6 @@ class DazzleBackendApp:
 
         # #932 cycle 4: compute storage-bound field bindings so the
         # create/update handlers can auto-verify uploaded s3_keys.
-        from dazzle.http.runtime.storage import build_entity_storage_bindings
 
         entity_storage_bindings = build_entity_storage_bindings(self._appspec)
 
@@ -1865,7 +1855,6 @@ class DazzleBackendApp:
         # commonly, indirectly via the public `dazzle.http.runtime.
         # policy.check_entity_op` helper). Closes the "route overrides
         # bypass permit/scope" gap surfaced by #1126.
-        from dazzle.http.runtime.policy import EntityPolicyInfo, PolicyRegistry
 
         # `_services` is keyed by service name; resolve an entity-keyed view
         # once so both the `service=` lookup and the entity-set enumeration
@@ -2272,7 +2261,6 @@ class DazzleBackendApp:
                 self._integration_mgr.channel_manager = self._subsystem_ctx.channel_manager
 
         # Validate routes for conflicts
-        from dazzle.http.runtime.route_validator import validate_routes
 
         assert self._app is not None
         validate_routes(self._app)
