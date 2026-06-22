@@ -308,6 +308,8 @@ class TokenType(Enum):
     HAS_ONE = "has_one"
     EMBEDS = "embeds"
     BELONGS_TO = "belongs_to"
+    # #1448: typed polymorphic reference field type
+    POLY_REF = "poly_ref"
     # #1223 Phase 3a.v: derived current-row relationship for temporal entities
     LATEST_ONE = "latest_one"
     # #1227 Phase 3b: recursive descendant / ancestor traversal for self-refs

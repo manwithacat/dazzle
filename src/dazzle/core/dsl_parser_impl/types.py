@@ -143,6 +143,7 @@ class TypeParserMixin:
             "timezone": self._parse_timezone_type,
             "enum": self._parse_enum_type,
             "ref": self._parse_ref_type,
+            "poly_ref": self._parse_poly_ref_type,
         }
 
         value_parser = _value_dispatch.get(token.value)
@@ -379,6 +380,27 @@ class TypeParserMixin:
         self.advance()
         entity_name = self.expect(TokenType.IDENTIFIER).value
         return ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity=entity_name)
+
+    def _parse_poly_ref_type(self) -> ir.FieldType:
+        """Parse `poly_ref [Target1, Target2, ...]` (#1448)."""
+        self.advance()  # consume 'poly_ref'
+        self.expect(TokenType.LBRACKET)
+        targets: list[str] = []
+        while not self.match(TokenType.RBRACKET):
+            targets.append(self.expect(TokenType.IDENTIFIER).value)
+            if self.match(TokenType.COMMA):
+                self.advance()
+        self.expect(TokenType.RBRACKET)
+        if not targets:
+            tok = self.current_token()
+            raise make_parse_error(
+                "poly_ref requires at least one target entity, e.g. "
+                "`poly_ref target [CohortAssessment]`",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return ir.FieldType(kind=ir.FieldTypeKind.POLY_REF, poly_targets=targets)
 
     def _parse_has_many_type(self) -> ir.FieldType:
         """Parse has_many EntityName [via JunctionEntity] [cascade|restrict|nullify] [readonly] (v0.7.1)."""
