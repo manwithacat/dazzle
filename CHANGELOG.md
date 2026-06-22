@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.90] - 2026-06-22
+
+### Changed
+- **#1439 (slice 4 — final) — `testing/agent_e2e` duplicate data models removed; #1439 COMPLETE.**
+  The "Legacy Data Models" block duplicated the native agent types: `AgentAction`/`AgentStep`
+  mirrored `dazzle.agent`'s `AgentAction`/`Step` field-for-field, and `_transcript_to_result`
+  re-packed every field — yet no consumer (CLI, MCP, the HTML report) ever read those step fields;
+  all three only use `len(result.steps)` + the result-level verdict. So `AgentTestResult.steps` now
+  holds the **native** transcript steps directly (`list[Step]`), `_transcript_to_result` is a thin
+  verdict-derivation, and the duplicate `AgentAction`/`AgentStep` dataclasses, the dead
+  `PageObserver` wrapper, and the unused `ActionType`/`Element`/`PageState` re-exports are deleted.
+  `E2EAgent` / `run_agent_tests` / `generate_html_report` stay (a legitimate test harness, not a
+  shim) with the "backward-compatible wrapper" framing dropped from their docstrings. `agent_e2e`
+  removed from the `test_no_shims.py` allow-list — the gate now actively guards it. Also relabelled
+  `mcp.DazzleMCPServer`'s misleading "Legacy wrapper" docstring (it's a kept public class-based entry
+  point over `run_server`, not a shim).
+
+### Agent Guidance
+- **#1439 closed.** ADR-0003 enforcement is live via two gates: `test_no_shims.py` (no
+  `# shim`/`backward-compatible shim` markers in production code, minimal allow-list) and
+  `test_no_inlined_js_asset_1439.py` (no inlined static-JS asset). Residual `legacy alias` mentions
+  on the `action_card_data` ctx-key and the aggregate `value` output key are **input/output-format
+  tolerance**, explicitly excluded by the issue's done-criteria — not shims.
+
 ## [0.83.89] - 2026-06-22
 
 ### Changed

@@ -580,9 +580,13 @@ async def run_server(project_root: Path | None = None) -> None:
         lock.release()
 
 
-# For backwards compatibility
 class DazzleMCPServer:
-    """Legacy wrapper for the MCP server."""
+    """Class-based entry point for the MCP server.
+
+    A thin object wrapper over the module-level ``run_server`` for callers that
+    prefer an instantiable handle (``DazzleMCPServer(root).run()``); exported as
+    public API via ``dazzle.mcp``. Not a shim — both forms are supported.
+    """
 
     def __init__(self, project_root: Path | None = None):
         self.project_root = project_root or Path.cwd()

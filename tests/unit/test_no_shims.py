@@ -42,8 +42,6 @@ SHIM_PATTERNS = [
 # rather than a removable wrapper. Each entry should reference an issue or
 # ADR that pins the rename plan.
 ALLOWED_PATHS: set[str] = {
-    # Substantial API wrappers around dazzle.agent — refactor tracked separately.
-    "src/dazzle/testing/agent_e2e.py",
     # RBAC backward-compat warning text describing PERMIT_UNPROTECTED legacy state.
     "src/dazzle/rbac/matrix.py",
 }

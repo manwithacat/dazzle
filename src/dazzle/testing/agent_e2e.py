@@ -10,9 +10,10 @@ The agent:
 3. Executes actions via Playwright
 4. Verifies outcomes
 
-This is a backward-compatible wrapper around the generic DazzleAgent
-framework at dazzle.agent. The underlying agent is mission-agnostic;
-this module provides the E2E testing mission.
+It is the E2E-testing harness over the generic DazzleAgent framework at
+dazzle.agent: the underlying agent is mission-agnostic; this module supplies
+the testing mission and packages the run's `AgentTranscript` into an
+`AgentTestResult` (test_id + pass/fail) for the CLI and MCP.
 
 Usage:
     from dazzle.testing.agent_e2e import E2EAgent, run_agent_tests
@@ -33,7 +34,7 @@ from typing import Any
 from dazzle.agent.core import DazzleAgent
 from dazzle.agent.executor import PlaywrightExecutor
 from dazzle.agent.missions.testing import build_test_mission
-from dazzle.agent.models import ActionType, Element, PageState
+from dazzle.agent.models import ActionType, Step
 from dazzle.agent.observer import PlaywrightObserver
 from dazzle.agent.transcript import AgentTranscript
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
@@ -42,98 +43,35 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# Legacy Data Models (kept for backward compatibility)
+# Test result
 # =============================================================================
-
-# Re-export from agent.models for code that imports from here
-ActionType = ActionType
-Element = Element
-PageState = PageState
-
-
-@dataclass
-class AgentAction:
-    """An action decided by the agent."""
-
-    type: ActionType
-    target: str | None = None
-    value: str | None = None
-    reasoning: str = ""
-    success: bool = True
-
-
-@dataclass
-class AgentStep:
-    """A single step in the agent's execution."""
-
-    state: PageState
-    action: AgentAction
-    result: str = ""
-    error: str | None = None
-    duration_ms: float = 0.0
-    prompt: str = ""
-    response: str = ""
-    step_number: int = 0
 
 
 @dataclass
 class AgentTestResult:
-    """Result of running an agent-based test."""
+    """Result of running an agent-based test.
+
+    Wraps the run's native `AgentTranscript` steps (no duplicate step/action
+    models — #1439) and adds the test-level verdict the CLI/MCP consume.
+    """
 
     test_id: str
     passed: bool
-    steps: list[AgentStep] = field(default_factory=list)
+    steps: list[Step] = field(default_factory=list)
     error: str | None = None
     duration_ms: float = 0.0
     reasoning: str = ""
 
 
 # =============================================================================
-# PageObserver (thin wrapper for backward compat)
-# =============================================================================
-
-
-class PageObserver:
-    """
-    Extracts semantic context from a Playwright page.
-
-    This is a backward-compatible wrapper around PlaywrightObserver.
-    """
-
-    def __init__(
-        self,
-        include_screenshots: bool = True,
-        observer_mode: str = "dom",
-        capture_console: bool = False,
-        capture_network: bool = False,
-    ):
-        self.include_screenshots = include_screenshots
-        self.observer_mode = observer_mode
-        self.capture_console = capture_console
-        self.capture_network = capture_network
-
-    async def observe(self, page: Any) -> PageState:
-        """Capture the current state of the page."""
-        observer = PlaywrightObserver(
-            page,
-            include_screenshots=self.include_screenshots,
-            mode=self.observer_mode,
-            capture_console=self.capture_console,
-            capture_network=self.capture_network,
-        )
-        return await observer.observe()
-
-
-# =============================================================================
-# E2E Agent (thin wrapper)
+# E2E Agent
 # =============================================================================
 
 
 class E2EAgent:
     """
-    LLM-driven E2E test agent.
-
-    Backward-compatible wrapper around DazzleAgent with a testing mission.
+    LLM-driven E2E test agent — runs DazzleAgent with the testing mission and
+    packages the resulting transcript into an AgentTestResult.
     """
 
     MAX_STEPS = 15
@@ -197,33 +135,16 @@ class E2EAgent:
         # Run
         transcript = await agent.run(mission)
 
-        # Convert transcript to legacy AgentTestResult
+        # Package the transcript into a test-level result (verdict + native steps).
         return self._transcript_to_result(test_id, transcript)
 
     def _transcript_to_result(self, test_id: str, transcript: AgentTranscript) -> AgentTestResult:
-        """Convert an AgentTranscript to the legacy AgentTestResult format."""
-        steps: list[AgentStep] = []
-        for step in transcript.steps:
-            legacy_action = AgentAction(
-                type=step.action.type,
-                target=step.action.target,
-                value=step.action.value,
-                reasoning=step.action.reasoning,
-                success=step.action.success,
-            )
-            legacy_step = AgentStep(
-                state=step.state,
-                action=legacy_action,
-                result=step.result.message,
-                error=step.result.error,
-                duration_ms=step.duration_ms,
-                prompt=step.prompt_text,
-                response=step.response_text,
-                step_number=step.step_number,
-            )
-            steps.append(legacy_step)
+        """Package an AgentTranscript into a test-level AgentTestResult.
 
-        # Determine pass/fail from last action
+        Carries the native transcript steps as-is and derives the verdict from
+        the final action (a successful DONE = pass).
+        """
+        # Determine pass/fail from last action.
         passed = False
         reasoning = ""
         if transcript.steps:
@@ -235,7 +156,7 @@ class E2EAgent:
         return AgentTestResult(
             test_id=test_id,
             passed=passed,
-            steps=steps,
+            steps=list(transcript.steps),
             error=transcript.error,
             duration_ms=transcript.duration_ms,
             reasoning=reasoning,
@@ -374,8 +295,8 @@ def generate_html_report(
     """
     Generate an HTML coverage report for agent E2E tests.
 
-    Delegates to AgentTranscript.to_html_report for the generic report,
-    but uses the legacy format for backward compatibility.
+    Renders the per-test pass/fail summary (test_id, step count, duration,
+    error) from the AgentTestResult list.
     """
     output_path.mkdir(parents=True, exist_ok=True)
 
