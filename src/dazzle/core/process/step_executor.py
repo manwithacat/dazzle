@@ -87,6 +87,16 @@ def execute_process_steps(
     try:
         for step in steps:
             step_name = step.get("name", "unknown")
+
+            # Checkpoint-skip: output already produced on a previous attempt
+            # (at-least-once re-delivery after worker crash + lease reclaim).
+            # A sentinel {} is written on no-output completion so this check
+            # also covers output-less steps (send, etc.).
+            if step_name in run.context:
+                logger.debug("Skipping completed step %s in run %s (replay)", step_name, run.run_id)
+                completed_steps.append(step_name)
+                continue
+
             run.current_step = step_name
             run.updated_at = datetime.now(UTC)
             store.save_run(run)
@@ -95,6 +105,8 @@ def execute_process_steps(
             step_result = execute_step(store, run, spec, step, on_task_created=on_task_created)
 
             if step_result.get("wait"):
+                # Step paused — NOT complete; do not write to context so that
+                # on resume the step re-enters and receives the task outcome.
                 run.status = ProcessStatus.WAITING
                 run.updated_at = datetime.now(UTC)
                 store.save_run(run)
@@ -104,8 +116,8 @@ def execute_process_steps(
                     "task_id": step_result.get("task_id"),
                 }
 
-            if step_result.get("output"):
-                run.context[step_name] = step_result["output"]
+            # Record output (or sentinel for no-output steps) so replay skips it.
+            run.context[step_name] = step_result.get("output") or {}
 
             completed_steps.append(step_name)
 
