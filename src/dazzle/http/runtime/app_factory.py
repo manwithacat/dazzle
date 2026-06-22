@@ -9,7 +9,15 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.environment import pin_production_env
 from dazzle.core.ir import AppSpec
+from dazzle.core.manifest import resolve_database_url
+from dazzle.core.renderer_registry import known_renderer_names
+from dazzle.http.runtime.server import DazzleBackendApp, ServerConfig
+from dazzle.http.runtime.tenant.cache import TenantCache
+from dazzle.log_setup import ensure_dazzle_logging_configured
+from dazzle.page.converters.workspace_converter import compute_persona_default_routes
+from dazzle.tenant.cache_registry import _register_cache, _register_slug_field
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -138,7 +146,6 @@ def _mount_tenant_resolution_middleware(
 
     from collections import defaultdict
 
-    from dazzle.http.runtime.tenant.cache import TenantCache
     from dazzle.http.runtime.tenant.middleware import (
         TenantHostBinding,
         TenantResolutionMiddleware,
@@ -270,7 +277,6 @@ def _mount_tenant_resolution_middleware(
         # invalidate it from project code on raw-SQL renames or admin tooling.
         # Also register each entity's slug field so Repository.update can
         # auto-bust on slug renames without any project-side wiring.
-        from dazzle.tenant.cache_registry import _register_cache, _register_slug_field
 
         _register_cache(binding.cache)
         for table_name, slug_col in slug_field_by_entity.items():
@@ -384,11 +390,8 @@ def create_app(
     # onboarding.startup:*, etc.) silently drop on bare uvicorn boots.
     # Idempotent + conservative — does nothing if root or dazzle.*
     # already has a handler attached. See `dazzle.log_setup`.
-    from dazzle.log_setup import ensure_dazzle_logging_configured
 
     ensure_dazzle_logging_configured()
-
-    from dazzle.http.runtime.server import DazzleBackendApp
 
     builder = DazzleBackendApp(
         appspec,
@@ -679,7 +682,6 @@ def build_server_config(
     Process adapter resolution is left to the caller (env-var-driven,
     deployment-specific).
     """
-    from dazzle.http.runtime.server import ServerConfig
 
     # Validate audit_integrity at the build boundary so a misconfigured
     # value (e.g. "hash-chain" hyphen typo) fails loud here rather than
@@ -1150,7 +1152,6 @@ def create_app_factory(
     Returns:
         FastAPI application configured for production
     """
-    from dazzle.http.runtime.server import DazzleBackendApp
 
     # Determine project root
     project_root = Path(os.environ.get("DAZZLE_PROJECT_ROOT", ".")).resolve()
@@ -1181,7 +1182,6 @@ def create_app_factory(
     manifest = load_manifest(manifest_path)
 
     # Resolve DATABASE_URL: env → dazzle.toml [database] → default
-    from dazzle.core.manifest import resolve_database_url
 
     database_url = resolve_database_url(manifest)
     logger.info("Database URL resolved (%s chars)", len(database_url))
@@ -1194,7 +1194,6 @@ def create_app_factory(
     # Determine environment. This factory (uvicorn --factory) treats an unset
     # DAZZLE_ENV as production — pin it so the downstream fail-closed auth guard
     # (which reads DAZZLE_ENV directly) sees the same intent (#1420).
-    from dazzle.core.environment import pin_production_env
 
     pin_production_env()
     dazzle_env = os.environ.get("DAZZLE_ENV", "production")
@@ -1222,7 +1221,6 @@ def create_app_factory(
     # PLUS any project-declared extras (`[renderers] extra` in
     # dazzle.toml) — see `dazzle.core.renderer_registry.known_renderer_names`
     # (#1116).
-    from dazzle.core.renderer_registry import known_renderer_names
 
     try:
         dsl_files = discover_dsl_files(project_root, manifest)
@@ -1246,7 +1244,6 @@ def create_app_factory(
             logger.warning("Failed to load sitespec.yaml: %s", e)
 
     # Extract personas with default routes for auth redirect (#255)
-    from dazzle.page.converters.workspace_converter import compute_persona_default_routes
 
     persona_routes = compute_persona_default_routes(appspec.personas, appspec.workspaces)
     personas = [

@@ -141,7 +141,7 @@
   "src/dazzle/http/runtime/analytics_collector.py": 1,
   "src/dazzle/http/runtime/api_middleware.py": 1,
   "src/dazzle/http/runtime/api_tracker.py": 1,
-  "src/dazzle/http/runtime/app_factory.py": 37,
+  "src/dazzle/http/runtime/app_factory.py": 27,
   "src/dazzle/http/runtime/atomic_flow_executor.py": 7,
   "src/dazzle/http/runtime/audit_history_routes.py": 1,
   "src/dazzle/http/runtime/audit_wiring.py": 2,
