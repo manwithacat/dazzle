@@ -5,8 +5,11 @@ layer: grammar
 status: active
 summary: >-
   Rails-style `belongs_to :commentable, polymorphic: true` and Django-style
-  `(subject_type, subject_id)` discriminator pairs are closed by construction.
-  No `polymorphic_ref:` keyword, no `ref X | Y | Z` union sugar, ever (ADR-0027).
+  hand-rolled `(subject_type, subject_id)` discriminator pairs are closed by
+  construction. No `ref X | Y | Z` union sugar, ever (ADR-0027). The one
+  sanctioned escape is the typed `poly_ref name [T1, T2]` construct + the
+  `name[Type].path` scope selector (ADR-0042) — use it ONLY when the
+  four-question interrogation genuinely fails (≈5% of proposals).
 triggers_text:
   - "polymorphic"
   - "commentable"
@@ -93,5 +96,6 @@ The pattern is also a tell. When an LLM proposes a polymorphic ref, the proximat
 
 - ADR-0026 (subtype polymorphism TPT) — the legitimate IS-A escape hatch.
 - ADR-0027 (no `polymorphic_ref:`, now or planned) — the formal closure.
+- ADR-0042 (`poly_ref` scoping) — the realized escape hatch: the typed, statically-validated, scope-composable construct for the ≈5% of cases that survive the interrogation. Verify any poly scope with `dazzle db explain-scope <Entity> <verb>`.
 - Inference KB entry `no_polymorphic_keys` — bootstrap auto-surfacing via `spec_analyze.propose_patterns` (#1249).
 - `tests/unit/test_propose_patterns_1249.py` — pins the four-question routing for the canonical use cases (comments / attachments / tags / audit log / notifications / likes).

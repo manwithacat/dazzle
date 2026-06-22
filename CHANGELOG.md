@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.104] - 2026-06-22
+
+### Added
+- **#1448 `poly_ref` polymorphic-ref scoping primitive (ADR-0042).** A typed `poly_ref name [T1, T2]` field (two columns `name_type text` + `name_id uuid`, targets must be uuid-pk) + a `name[Type].path` scope selector compile to a type-guarded uuid subquery — `name_type = 'T' AND name_id IN (SELECT id FROM t WHERE <sub>)` — in both app-layer and RLS-policy modes (degrades via #1447 when the sub-predicate isn't RLS-expressible). New `dazzle db explain-scope <Entity> <verb>` traceability oracle prints the predicate tree + compiled WHERE + RLS policy (or degradation reason). Realizes ADR-0027's pre-committed escape hatch (the four-question interrogation failed against AegisMark's `AIJob`) and resolves its scope-composition objection via the branch selector. Real-PG proof: a teacher sees only their own cohort's rows, not a peer's, not a wrong-type row. Non-goals (loud validate errors / documented): `create`/`update` poly scopes (`E_POLY_VERB_UNSUPPORTED` — read/list/delete only), nullable poly_ref, non-uuid-pk targets, framework-`AIJob` adoption (needs app-derived dynamic targets — follow-on).
+
+### Changed
+- ADR-0027 superseded-in-part by ADR-0042; `W_LOOKS_POLYMORPHIC` now names `poly_ref` as the preferred fix for a hand-rolled `*_type`+`*_id` pair; `polymorphic-associations` counter-prior points at the sanctioned construct.
+
+### Agent Guidance
+- Reach for `poly_ref name [T1, T2]` instead of a raw `entity_type`/`entity_id` pair when an entity references one of several target types **and the four-question interrogation genuinely fails** (≈5% of cases — see `docs/counter-priors/polymorphic-associations.md`). Scope it with `name[TargetType].path`; a bare `name.x` is a validation error. Only `read`/`list`/`delete` scopes are supported. Verify every poly scope with `dazzle db explain-scope <Entity> <verb>` — it shows the compiled app-layer WHERE and the RLS policy (or why it degraded to app-layer).
+
 ## [0.83.103] - 2026-06-22
 
 ### Changed

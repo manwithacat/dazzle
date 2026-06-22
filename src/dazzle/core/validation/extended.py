@@ -594,14 +594,16 @@ def _lint_modeling_anti_patterns(appspec: ir.AppSpec) -> list[str]:
                     # subtype_of: second (heavier, only when truly IS-A).
                     warnings.append(
                         f"W_LOOKS_POLYMORPHIC: Entity '{entity.name}': fields "
-                        f"'{field.name}' + '{sibling_name}' look like a "
+                        f"'{field.name}' + '{sibling_name}' look like a hand-rolled "
                         f"polymorphic key pair. Prefer (in order): "
                         f"1. Separate nullable refs — `post: ref Post` + "
                         f"`photo: ref Photo` — when the set is small + closed. "
                         f"2. subtype_of: — declare a base entity + subtypes "
                         f"if these really form an IS-A hierarchy. "
-                        f"Polymorphic key pairs break referential integrity "
-                        f"and linker validation."
+                        f"3. The typed `poly_ref {prefix} [{prefix.title()}A, {prefix.title()}B]` "
+                        f"construct (ADR-0042) — when the case genuinely survives the "
+                        f"four-question interrogation; it restores scope-composability "
+                        f"(`{prefix}[Type].path`) that a raw key pair breaks."
                     )
 
         # 1b. Subtype overreach (#1217 Phase 3e.vi): child entity declares

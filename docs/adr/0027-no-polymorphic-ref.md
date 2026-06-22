@@ -1,6 +1,6 @@
 # ADR-0027 — No `polymorphic_ref:` Keyword, Now or Planned
 
-**Status:** Accepted (v0.72.14)
+**Status:** Accepted (v0.72.14) — **superseded in part by [ADR-0042](0042-poly-ref-scoping.md) (#1448)**: the pre-committed escape hatch below has now fired (the four-question interrogation failed against AegisMark's `AIJob`) and is realized as the validated, scope-composable typed `poly_ref` construct. The blanket "now or planned" closure becomes "closed except via `poly_ref` + the `field[Type]` scope selector."
 **Issue:** #1240 (closed wontfix-by-design); part of the #1217 3NF coverage audit
 **Pair:** [inference KB `polymorphic_association_antipattern`](https://github.com/manwithacat/dazzle/blob/main/src/dazzle/mcp/inference_kb.toml)
 

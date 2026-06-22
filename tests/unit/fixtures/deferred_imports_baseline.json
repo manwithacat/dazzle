@@ -23,7 +23,7 @@
   "src/dazzle/cli/conformance.py": 4,
   "src/dazzle/cli/contribution.py": 8,
   "src/dazzle/cli/coverage.py": 1,
-  "src/dazzle/cli/db.py": 33,
+  "src/dazzle/cli/db.py": 35,
   "src/dazzle/cli/dbshell.py": 1,
   "src/dazzle/cli/demo.py": 15,
   "src/dazzle/cli/deploy.py": 6,

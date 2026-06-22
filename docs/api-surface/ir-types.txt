@@ -358,7 +358,7 @@ ir_class: BlueprintContainer
 
 ir_class: BoolComposite
   required:
-    - children: list[Annotated[ColumnCheck | ColumnRefCheck | UserAttrCheck | PathCheck | ExistsCheck | BoolComposite | Tautology | Contradiction, annotation=NoneType required=True discriminator='kind']]
+    - children: list[Annotated[ColumnCheck | ColumnRefCheck | UserAttrCheck | PathCheck | ExistsCheck | PolyPathCheck | BoolComposite | Tautology | Contradiction, annotation=NoneType required=True discriminator='kind']]
     - op: BoolOp
   optional:
     - kind: Literal[bool_composite] = 'bool_composite'
@@ -1004,6 +1004,7 @@ ir_class: FieldType
     - enum_values: list[str] | None = None
     - max_length: int | None = None
     - max_size: int | None = None
+    - poly_targets: list[str] | None = None
     - precision: int | None = None
     - readonly: bool = False
     - ref_entity: str | None = None
@@ -3857,6 +3858,7 @@ enum: FieldTypeKind
     - JSON = 'json'
     - LATEST_ONE = 'latest_one'
     - MONEY = 'money'
+    - POLY_REF = 'poly_ref'
     - REF = 'ref'
     - SLUG = 'slug'
     - STR = 'str'

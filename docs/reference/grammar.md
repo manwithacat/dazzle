@@ -125,6 +125,7 @@ All field types supported by the DSL (from `FieldTypeKind` enum):
 - `latest_one`
 - `descendants_of`
 - `ancestors_of`
+- `poly_ref` — typed polymorphic reference: `subject: poly_ref [CohortAssessment, Manuscript]` generates two columns (`subject_type text` + `subject_id uuid`; targets must be uuid-pk). Scope it with the branch selector `subject[CohortAssessment].path = current_user…` (ADR-0042); a bare `subject.x` is a validation error. The sanctioned escape from the polymorphic-association counter-prior.
 
 ## Full Grammar
 

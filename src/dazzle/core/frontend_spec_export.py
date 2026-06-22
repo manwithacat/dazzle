@@ -47,6 +47,9 @@ FIELD_TYPE_MAP: dict[str, str] = {
     # row ids at the frontend layer — same shape as HAS_MANY.
     FieldTypeKind.DESCENDANTS_OF: "string[]",
     FieldTypeKind.ANCESTORS_OF: "string[]",
+    # #1448: a poly_ref surfaces to the frontend as its discriminator + id pair.
+    # The logical field has no single scalar; model it as the {type, id} shape.
+    FieldTypeKind.POLY_REF: "{ type: string; id: string }",
 }
 
 ALL_SECTIONS = [
