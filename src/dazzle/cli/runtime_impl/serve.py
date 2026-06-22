@@ -581,11 +581,9 @@ def _serve_combined(ctx: _ServeContext) -> None:
     # both layouts (app shell + marketing) gate the toggle button on
     # the same flag, and a stale `dz_theme=dark` cookie can't trap a
     # newly opted-out project's users in dark-mode.
-    # #958 cycle 5 — same wiring for `[ui] haptic`.
-    from dazzle.page.runtime.theme import configure_dark_mode_toggle, configure_haptic
+    from dazzle.page.runtime.theme import configure_dark_mode_toggle
 
     configure_dark_mode_toggle(mf.dark_mode_toggle)
-    configure_haptic(mf.haptic)
 
     ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
 

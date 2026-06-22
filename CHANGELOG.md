@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.85] - 2026-06-22
+
+### Removed
+- **#1445 (slice 2 — shape (c), haptic) — dead `_HAPTIC_ENABLED` mutable global removed (ADR-0005).**
+  `page/runtime/theme._HAPTIC_ENABLED` + `configure_haptic()` + `is_haptic_enabled()` were a
+  process-wide boot flag set from `[ui] haptic`, but the `<meta name="dz-haptic">` emission they
+  gated lived in the Jinja `base.html` that was deleted in #1042 (ADR-0023) — so `is_haptic_enabled()`
+  had **no readers**: the global was written at boot and never read. Deleted the global, its setter,
+  its reader, and the two dead boot call sites (`cli/runtime_impl/serve`, `http/runtime/app_factory`).
+  (`manifest.haptic` / `[ui] haptic` is now unconsumed config — re-wiring haptic into the typed render
+  is a separate feature, left for later.)
+
+### Notes
+- **#1445 remaining:** shape (c)'s `_DARK_MODE_TOGGLE_ENABLED` is still live (read by the site nav
+  renderer + `get_theme_variant`) — fixing it ADR-0005-properly means threading `dark_mode_toggle`
+  onto the typed render context (read from the manifest where the context is built), a Tier-2
+  render-context change. Shape (b) singletons (`_DEFAULT_ACCUMULATOR`, `_DEFAULT_BACKEND` → ServerState)
+  and the ratchet gate also remain.
+
 ## [0.83.84] - 2026-06-22
 
 ### Changed

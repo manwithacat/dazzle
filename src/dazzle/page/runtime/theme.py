@@ -102,25 +102,6 @@ def is_dark_mode_toggle_enabled() -> bool:
     return _DARK_MODE_TOGGLE_ENABLED
 
 
-# #958 cycle 5 — haptic opt-in. Same pattern as dark mode: process
-# flag set at server startup from `[ui] haptic`. When True, base.html
-# emits a `<meta name="dz-haptic" content="on">` tag the framework JS
-# reads to enable navigator.vibrate calls.
-_HAPTIC_ENABLED = False
-
-
-def configure_haptic(enabled: bool) -> None:
-    """Set the process-wide haptic-feedback flag from manifest data."""
-    global _HAPTIC_ENABLED
-    _HAPTIC_ENABLED = bool(enabled)
-
-
-def is_haptic_enabled() -> bool:
-    """Return whether haptic feedback is opted in. Exposed as a Jinja
-    global so base.html can gate the meta tag emission on it."""
-    return _HAPTIC_ENABLED
-
-
 def get_theme_variant() -> str:
     """Return the current request's theme variant, or the default
     when called outside a request context (e.g. in unit tests).

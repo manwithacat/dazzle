@@ -1180,11 +1180,9 @@ def create_app_factory(
 
     # #938 — wire `[ui] dark_mode_toggle` into the theme module before
     # any template renders. Same hook as the CLI serve path.
-    # #958 cycle 5 — same wiring for `[ui] haptic`.
-    from dazzle.page.runtime.theme import configure_dark_mode_toggle, configure_haptic
+    from dazzle.page.runtime.theme import configure_dark_mode_toggle
 
     configure_dark_mode_toggle(manifest.dark_mode_toggle)
-    configure_haptic(manifest.haptic)
 
     # Resolve DATABASE_URL: env → dazzle.toml [database] → default
     from dazzle.core.manifest import resolve_database_url
