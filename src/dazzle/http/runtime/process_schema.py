@@ -108,6 +108,13 @@ def ensure_process_tables(conn) -> None:  # conn: psycopg.Connection
             WHERE status IN ('pending', 'claimed')
         """)
 
+        # Idempotency key lookup index — O(1) instead of linear scan.
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS ix_process_runs_idempotency_key
+            ON process_runs (idempotency_key)
+            WHERE idempotency_key IS NOT NULL
+        """)
+
         # ── process_tasks ─────────────────────────────────────────────────
         # Columns: ProcessTask fields (adapter.py:72-91) + queue columns.
         # ``due_at`` is the task deadline; ``deliver_at`` (from the queue

@@ -102,6 +102,13 @@ def upgrade() -> None:
             ["deliver_at"],
             postgresql_where=sa.text("status IN ('pending', 'claimed')"),
         )
+        # Idempotency key lookup index — O(1) instead of linear scan.
+        op.create_index(
+            "ix_process_runs_idempotency_key",
+            "process_runs",
+            ["idempotency_key"],
+            postgresql_where=sa.text("idempotency_key IS NOT NULL"),
+        )
 
     if not _has_table("process_tasks"):
         op.create_table(

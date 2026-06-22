@@ -90,7 +90,7 @@ from dazzle.core.process.adapter import (
     TaskStatus,
 )
 from dazzle.core.process.pg_state import PgProcessStateStore
-from dazzle.core.process.step_executor import check_task_timeout, execute_process_steps, fail_run
+from dazzle.core.process.step_executor import check_task_timeout, execute_process_steps
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +206,9 @@ class PostgresProcessAdapter(ProcessAdapter):
         dsl_version: str | None = None,
     ) -> str:
         if idempotency_key:
-            existing = await asyncio.to_thread(self._find_run_by_idempotency_key, idempotency_key)
+            existing = await asyncio.to_thread(
+                self._store.get_run_by_idempotency_key, idempotency_key
+            )
             if existing:
                 logger.info("Returning existing run %s for idempotency key", existing.run_id)
                 return existing.run_id
@@ -228,12 +230,6 @@ class PostgresProcessAdapter(ProcessAdapter):
         # Best-effort NOTIFY to wake the consumer immediately.
         await self._notify()
         return run_id
-
-    def _find_run_by_idempotency_key(self, key: str) -> ProcessRun | None:
-        for run in self._store.list_runs(limit=1000):
-            if run.idempotency_key == key:
-                return run
-        return None
 
     async def get_run(self, run_id: str) -> ProcessRun | None:
         return await asyncio.to_thread(self._store.get_run, run_id)
@@ -460,13 +456,7 @@ class PostgresProcessAdapter(ProcessAdapter):
 
                 # Wait for next poll or NOTIFY, whichever is first.
                 self._notify_event.clear()
-                try:
-                    await asyncio.wait_for(
-                        asyncio.shield(self._notify_event_wait()),
-                        timeout=self._poll_interval,
-                    )
-                except TimeoutError:
-                    pass
+                await self._notify_event_wait()
 
             except asyncio.CancelledError:
                 break
@@ -484,9 +474,11 @@ class PostgresProcessAdapter(ProcessAdapter):
         logger.info("Postgres process consumer loop stopped")
 
     async def _notify_event_wait(self) -> None:
-        """Async wait on the notify event."""
-        while not self._notify_event.is_set() and not self._shutdown_event.is_set():
-            await asyncio.sleep(0.05)
+        """Wait on the notify event, waking immediately on NOTIFY or at poll_interval."""
+        try:
+            await asyncio.wait_for(self._notify_event.wait(), timeout=self._poll_interval)
+        except TimeoutError:
+            pass
 
     async def _listen_loop(self) -> None:
         """Maintain a persistent LISTEN connection and set _notify_event on arrival."""
@@ -507,8 +499,24 @@ class PostgresProcessAdapter(ProcessAdapter):
         except Exception as exc:
             logger.warning("LISTEN loop ended: %s", exc)
 
+    async def _heartbeat(self, run_id: str, lease_seconds: int) -> None:
+        """Renew the lease on *run_id* every lease_seconds/3 until cancelled.
+
+        Launched as a sibling task alongside the execution thread so a slow-but-
+        healthy run keeps its lease (never reclaimed); a truly crashed worker's
+        heartbeat dies with it and the lease eventually expires for reclaim.
+        """
+        interval = max(1.0, lease_seconds / 3)
+        while True:
+            await asyncio.sleep(interval)
+            try:
+                await asyncio.to_thread(self._store.renew_run_lease, run_id, lease_seconds)
+                logger.debug("Heartbeat renewed lease for run %s", run_id)
+            except Exception as exc:
+                logger.warning("Heartbeat renewal failed for run %s: %s", run_id, exc)
+
     async def _claim_and_execute_batch(self) -> None:
-        """Claim a batch of due runs and execute each in a thread."""
+        """Claim a batch of due runs and execute each in a thread with a heartbeat."""
         runs: list[ProcessRun] = await asyncio.to_thread(
             self._store.claim_due_runs,
             self._worker_id,
@@ -516,10 +524,22 @@ class PostgresProcessAdapter(ProcessAdapter):
             self._batch_size,
         )
         for run in runs:
+            # Start the heartbeat task BEFORE blocking in the thread so the lease
+            # stays fresh even if execution takes longer than lease_seconds.
+            heartbeat = asyncio.create_task(
+                self._heartbeat(run.run_id, self._lease_seconds),
+                name=f"pg-heartbeat-{run.run_id[:8]}",
+            )
             try:
                 await asyncio.to_thread(self._execute_process_sync, run.run_id)
             except Exception as exc:
                 logger.error("Failed to execute process %s: %s", run.run_id, exc)
+            finally:
+                heartbeat.cancel()
+                try:
+                    await heartbeat
+                except asyncio.CancelledError:
+                    pass
 
         # Also handle task timeouts.
         await self._poll_task_timeouts()
@@ -592,31 +612,22 @@ class PostgresProcessAdapter(ProcessAdapter):
                 self._store.mark_run_done(run_id)
             elif status == "waiting":
                 # Release the lease so the run is parked until complete_task
-                # calls re_enqueue_run.  Clearing claimed_by + lease_expires_at
-                # means the crash-reclaim predicate won't match a legitimately
-                # parked waiting run.
-                import psycopg as _psycopg  # noqa: PLC0415
-
-                with _psycopg.connect(self._store._dsn) as conn, conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        UPDATE process_runs
-                        SET claimed_by = NULL, lease_expires_at = NULL
-                        WHERE run_id = %s
-                        """,
-                        (run_id,),
-                    )
-                    conn.commit()
+                # calls re_enqueue_run.  The store method clears claimed_by /
+                # claimed_at / lease_expires_at so the crash-reclaim predicate
+                # (status='running' AND lease_expires_at <= now()) never matches
+                # a legitimately parked WAITING run.
+                self._store.release_run_lease(run_id)
                 logger.info("Run %s parked at WAITING (lease released)", run_id)
             # status == "failed" is already handled by execute_process_steps
             # (via fail_run); no further action needed here.
 
         except Exception as exc:
             logger.exception("Process %s execution failed: %s", run_id, exc)
-            run = self._store.get_run(run_id)
-            if run and run.status not in (ProcessStatus.FAILED, ProcessStatus.COMPLETED):
-                fail_run(cast("ProcessStateStore", self._store), run, str(exc))
-            # Let claim_due_runs retry on next tick (attempts < max_attempts).
+            # Do NOT call fail_run here — mark_run_retry owns the queue
+            # transition and sets completed_at=NULL on a re-enqueued (pending)
+            # run.  Calling fail_run first would write status='failed' +
+            # completed_at=now(), then mark_run_retry would un-fail it, leaving
+            # a briefly-inconsistent FAILED+completed_at row visible to get_run.
             self._store.mark_run_retry(run_id, str(exc))
 
     # -------------------------------------------------------------------------

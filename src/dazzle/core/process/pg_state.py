@@ -34,6 +34,7 @@ from dazzle.core.coordination.claim import (
     complete_work,
     fail_work,
     queue_columns_ddl,
+    renew_lease,
 )
 from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
 from dazzle.core.process.adapter import (
@@ -239,6 +240,11 @@ class PgProcessStateStore:
                 CREATE INDEX IF NOT EXISTS ix_process_runs_due
                 ON process_runs (deliver_at)
                 WHERE status IN ('pending', 'claimed')
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS ix_process_runs_idempotency_key
+                ON process_runs (idempotency_key)
+                WHERE idempotency_key IS NOT NULL
             """)
             cur.execute(f"""
                 CREATE TABLE IF NOT EXISTS process_tasks (
@@ -620,6 +626,58 @@ class PgProcessStateStore:
                 (run_id,),
             )
             conn.commit()
+
+    def renew_run_lease(self, run_id: str, lease_seconds: int) -> None:
+        """Extend the lease on a currently-claimed (running) process run.
+
+        Called by the heartbeat task in ``PostgresProcessAdapter`` while a long
+        step is executing so the run's lease_expires_at stays ahead of now().
+        Delegates to the shared ``renew_lease`` primitive (``id_column="run_id"``).
+        """
+        with self._connect() as conn:
+            renew_lease(
+                conn,
+                table="process_runs",
+                id_column="run_id",
+                row_id=run_id,
+                lease_seconds=lease_seconds,
+            )
+        logger.debug("Renewed lease for run %s (+%ss)", run_id, lease_seconds)
+
+    def release_run_lease(self, run_id: str) -> None:
+        """Clear claimed_by / claimed_at / lease_expires_at on a WAITING run.
+
+        Called by the adapter after ``execute_process_steps`` returns
+        ``status='waiting'`` so the parked run is not reclaimable by the
+        crash-recovery predicate (which only fires on non-NULL lease_expires_at).
+        """
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE process_runs
+                SET claimed_by = NULL, claimed_at = NULL, lease_expires_at = NULL
+                WHERE run_id = %s
+                """,
+                (run_id,),
+            )
+            conn.commit()
+        logger.debug("Released lease for waiting run %s", run_id)
+
+    def get_run_by_idempotency_key(self, key: str) -> ProcessRun | None:
+        """Look up a run by its idempotency key using the indexed column.
+
+        This is an O(1) indexed lookup; ``start_process`` calls this instead of
+        scanning ``list_runs`` (which was capped at 1000 and broke at scale).
+        """
+        with self._connect() as conn, conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute(
+                "SELECT * FROM process_runs WHERE idempotency_key = %s LIMIT 1",
+                (key,),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return _row_to_run(dict(row))
 
     def mark_run_retry(self, run_id: str, error: str, max_attempts: int = 5) -> str:
         """Mark a claimed run as failed, scheduling a retry or dead-lettering.
