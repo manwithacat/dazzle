@@ -10,7 +10,7 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 57 routes across 17 modules
+# Counts: 56 routes across 17 modules
 
 module: admin_api_routes
   POST | /deploys/trigger
@@ -79,8 +79,6 @@ module: island_routes
     handler: get_island_data(page: int = Query(default=1, ge=1), page_size: int = Query(default=100, ge=1, le=1000), _entity: str = entity_name, _island: str = island_name) -> dict[str, Any]
 
 module: llm_routes
-  POST | /execute/{intent_name}
-    handler: execute_intent(intent_name: str, request: IntentExecuteRequest, async_mode: bool = False) -> IntentExecuteResponse | AsyncJobResponse
   GET | /intents
     handler: list_intents() -> list[dict[str, Any]]
   GET | /jobs/{job_id}
