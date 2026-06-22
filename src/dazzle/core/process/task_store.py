@@ -1,15 +1,19 @@
 """Task store backend protocol for process human tasks (#787).
 
-Decouples the Temporal-activity code from its persistence layer so
-deployments can swap in a durable backend without touching activity
-code. The default ``InMemoryTaskStore`` preserves the original
-dict-based behaviour for dev / tests; production deployments can
-register a database-backed implementation via :func:`set_task_store`
-before the runtime starts.
+Decouples the Temporal-activity code from its persistence layer via the
+``TaskStoreBackend`` protocol. The default ``InMemoryTaskStore`` preserves the
+original dict-based behaviour for dev / tests / single-node use.
+
+The process-wide backend is the single instance returned by
+:func:`get_task_store` (memoised — no module-level mutable global, ADR-0005 /
+#1445). A future durable, database-backed backend would be introduced through
+explicit dependency injection rather than a swap hook; the unused
+``set_task_store`` swap was removed in #1445 (it never had a caller).
 """
 
 from __future__ import annotations
 
+import functools
 import logging
 import threading
 from datetime import UTC, datetime
@@ -75,9 +79,9 @@ class InMemoryTaskStore:
     """Dict-backed implementation — suitable for dev, tests, single-node use.
 
     Thread-safe via a single lock. Not durable — state is lost when the
-    process exits. Deployments that need durability across restarts should
-    register a database-backed ``TaskStoreBackend`` via
-    :func:`set_task_store` before creating a ``TemporalAdapter``.
+    process exits. Durability across restarts would require a database-backed
+    ``TaskStoreBackend`` wired in through explicit dependency injection (the
+    process-wide default is whatever :func:`get_task_store` returns).
     """
 
     def __init__(self) -> None:
@@ -164,30 +168,21 @@ class InMemoryTaskStore:
             self._store.clear()
 
 
-# Process-wide default backend. Overridable via set_task_store() so
-# deployments can inject a database-backed implementation at startup.
-_DEFAULT_BACKEND: TaskStoreBackend = InMemoryTaskStore()
-
-
+@functools.cache
 def get_task_store() -> TaskStoreBackend:
-    """Return the currently active task store backend."""
-    return _DEFAULT_BACKEND
+    """Return the process-wide task store backend.
 
-
-def set_task_store(backend: TaskStoreBackend) -> None:
-    """Override the process-wide task store backend.
-
-    Call this once at startup before any ``TemporalAdapter`` instance is
-    created. Swapping mid-flight will leave in-flight tasks stranded in
-    the old backend.
+    Memoised, so every caller (the free-function Temporal activities in
+    ``activities.py`` and the ``TemporalAdapter`` methods) shares one
+    ``InMemoryTaskStore`` instance — no module-level mutable global (#1445).
+    Tests that need a clean store call ``get_task_store().clear()`` (or
+    ``get_task_store.cache_clear()`` to drop the instance entirely).
     """
-    global _DEFAULT_BACKEND
-    _DEFAULT_BACKEND = backend
+    return InMemoryTaskStore()
 
 
 __all__ = [
     "InMemoryTaskStore",
     "TaskStoreBackend",
     "get_task_store",
-    "set_task_store",
 ]

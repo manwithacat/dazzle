@@ -12,8 +12,9 @@ The #1445 cleanup removed the lazy-cache (`_dispatch_cache`, `_sa`, `_signer_cac
 `_DARK_MODE_TOGGLE_ENABLED`), and accumulator (`_DEFAULT_ACCUMULATOR`) globals. What
 remains is the frozen baseline below — each is either sanctioned (centralised MCP state,
 init-only logging, CLI per-invocation storage, the process-bounded browser gate, the
-OTel tracer provider) or tracked for a later slice (`task_store._DEFAULT_BACKEND` pending
-the core-injection-seam design; `tenant_isolation._rls_user_attr_names`).
+OTel tracer provider) or tracked for a later slice (`tenant_isolation._rls_user_attr_names`).
+(`task_store._DEFAULT_BACKEND` was removed in #1445 — `get_task_store()` is now a
+`functools.cache` factory after the unused `set_task_store` swap was dropped.)
 """
 
 from __future__ import annotations
@@ -40,7 +41,6 @@ _ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
         ("src/dazzle/core/sitespec_loader.py", "_PATH_KEY_DEPRECATION_WARNED"),
         ("src/dazzle/core/manifest.py", "_FRAGMENT_CHROME_WARNED"),
         # Tracked for a later #1445 slice (genuine shared state):
-        ("src/dazzle/core/process/task_store.py", "_DEFAULT_BACKEND"),  # core↛http seam (design)
         ("src/dazzle/http/runtime/tenant_isolation.py", "_rls_user_attr_names"),
     }
 )

@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.83.89] - 2026-06-22
+
+### Changed
+- **#1445 (slice 6 — shape (b), task_store) — `task_store` backend off the module global; #1445
+  COMPLETE.** `core/process/task_store._DEFAULT_BACKEND` (module global) + `get_task_store()` +
+  `set_task_store()` became a single memoised factory: `@functools.cache def get_task_store() ->
+  TaskStoreBackend: return InMemoryTaskStore()`. The free-function Temporal activities
+  (`activities.py`) and `TemporalAdapter` methods all share one instance through the unchanged
+  `get_task_store()` seam — no `global`, no `core↛http` layer conflict (the original "move to
+  ServerState" idea would have broken it). The `TaskStoreBackend` protocol + `InMemoryTaskStore`
+  are kept for a future durable backend, which would be wired via explicit DI.
+
+### Removed
+- **`set_task_store()` (unused swap hook from #787).** It had **zero callers** in src, tests, or
+  examples — the durable-backend swap was never wired. Removed it (and its `__all__` entry); a
+  future durable backend uses explicit DI rather than a process-wide swap (whose own docstring
+  admitted it stranded in-flight tasks). The swap-mechanism test was dropped.
+
+### Agent Guidance
+- **#1445 is fully closed.** All four smell shapes resolved (lazy caches → `functools.cache`; dead
+  haptic global removed; `dark_mode_toggle` → typed render context; `retry_accumulator` → per-app
+  `app.state`; `task_store` → cached factory) and the ADR-0005 ratchet gate
+  (`test_no_new_mutable_globals_1445.py`) enforces no new `global _<name>` in `src/dazzle`.
+
 ## [0.83.88] - 2026-06-22
 
 ### Added

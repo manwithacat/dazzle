@@ -176,8 +176,7 @@ if _TEMPORAL_AVAILABLE:
 
 
 # Task store operations (used by TemporalAdapter) — delegate to the
-# registered backend. Swap the backend with ``set_task_store()`` before
-# the adapter is created to persist tasks durably.
+# process-wide backend returned by ``get_task_store()``.
 async def get_task(task_id: str) -> ProcessTask | None:
     """Fetch a task by id from the active task store."""
     return await get_task_store().get(task_id)

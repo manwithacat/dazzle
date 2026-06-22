@@ -9,7 +9,6 @@ from dazzle.core.process.task_store import (
     InMemoryTaskStore,
     TaskStoreBackend,
     get_task_store,
-    set_task_store,
 )
 
 
@@ -127,14 +126,9 @@ class TestGlobalTaskStore:
     def test_get_returns_in_memory_by_default(self) -> None:
         assert isinstance(get_task_store(), TaskStoreBackend)
 
-    def test_set_and_get(self) -> None:
-        original = get_task_store()
-        try:
-            replacement = InMemoryTaskStore()
-            set_task_store(replacement)
-            assert get_task_store() is replacement
-        finally:
-            set_task_store(original)
+    def test_get_task_store_is_memoised_single_instance(self) -> None:
+        # One shared backend per process (functools.cache) — #1445.
+        assert get_task_store() is get_task_store()
 
 
 class TestActivitiesModuleFacade:
