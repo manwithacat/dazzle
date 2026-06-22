@@ -17,11 +17,14 @@ Full runtime write is too heavy (requires a live LLM provider); the scope-SQL + 
 assertions are the load-bearing correctness claims.
 
 Note on ProcessRun: the governed ProcessRun entity (#1454 Task 1) is injected by the
-linker when a process has an llm_intent step, but ``db.virtual.VIRTUAL_ENTITY_NAMES``
-still lists "ProcessRun" (the old admin read-only view).  ``build_metadata`` therefore
-skips it.  We create its table manually — the same scratchpad approach test_poly_scope_pg
-uses throughout.  The scope SQL itself is built directly from IR predicate types rather
-than parsed DSL scope rules, so no explicit entity AIJob block is needed in the DSL.
+linker when a process has an llm_intent step.  It carries a ``started_by`` RBAC anchor,
+so :func:`dazzle.db.virtual.is_virtual_entity` classifies it as a REAL persisted table
+(the admin-monitoring ProcessRun, which lacks ``started_by``, stays virtual).  Its table
+is therefore produced by the real ``build_metadata`` path — we include it in the entity
+set passed to ``build_metadata`` and create no table manually (the #1454 Task 6 fix; the
+prior manual-table workaround is gone).  The scope SQL itself is built directly from IR
+predicate types rather than parsed DSL scope rules, so no explicit entity AIJob block is
+needed in the DSL.
 """
 
 from __future__ import annotations
@@ -172,26 +175,15 @@ def _build_scope_predicates():
 
 
 def _build_schema_and_create(conn, md) -> None:
-    """Create tables from SA metadata + the manually-created ProcessRun table."""
+    """Create every table from SA metadata.
+
+    The governed ProcessRun table is produced by ``build_metadata`` itself
+    (#1454 Task 6 fix: ``is_virtual_entity`` treats a ProcessRun carrying
+    ``started_by`` as real), so there is no manual-table workaround here.
+    """
     for tbl in md.sorted_tables:
         cols = [_col_ddl(c) for c in tbl.columns]
         conn.execute(f'CREATE TABLE "{tbl.name}" ({", ".join(cols)})')  # nosemgrep
-
-    # ProcessRun is in VIRTUAL_ENTITY_NAMES so build_metadata skips it;
-    # create manually here.  The NOT NULL constraints mirror PROCESS_RUN_FIELDS.
-    conn.execute(
-        'CREATE TABLE "ProcessRun" ('
-        '"id" uuid PRIMARY KEY, '
-        '"process_name" text NOT NULL, '
-        '"started_by" text, '
-        "\"status\" text NOT NULL DEFAULT 'pending', "
-        '"current_step" text, '
-        '"started_at" timestamptz, '
-        '"finished_at" timestamptz, '
-        '"error_message" text, '
-        '"created_at" timestamptz NOT NULL DEFAULT now()'
-        ")"
-    )
 
 
 def _insert_aijob(conn, job_id: str, subject_type: str, subject_id: str) -> None:
@@ -236,7 +228,7 @@ async def test_trigger_subject_scope_isolates_rows() -> None:
     job_peer = _mk()  # subject = doc2 (owned by user2) → NOT visible to user1
     job_process = _mk()  # subject = ProcessRun → NOT visible under Doc scope
 
-    db_entities = [e for e in appspec.domain.entities if e.name in ("Doc", "AIJob")]
+    db_entities = [e for e in appspec.domain.entities if e.name in ("Doc", "AIJob", "ProcessRun")]
     md = build_metadata(convert_entities(db_entities))
 
     async with _DisposableDatabase(_PG_URL) as db_url:
@@ -247,7 +239,9 @@ async def test_trigger_subject_scope_isolates_rows() -> None:
             conn.execute('INSERT INTO "Doc" (id, owner) VALUES (%s, %s)', (doc1, user1))
             conn.execute('INSERT INTO "Doc" (id, owner) VALUES (%s, %s)', (doc2, user2))
             conn.execute(
-                'INSERT INTO "ProcessRun" (id, process_name, started_by) VALUES (%s, %s, %s)',
+                'INSERT INTO "ProcessRun" '
+                "(id, process_name, status, started_by, created_at) "
+                "VALUES (%s, %s, 'completed', %s, now())",
                 (run1, "review", user1),
             )
             _insert_aijob(conn, job_mine, "Doc", doc1)
@@ -310,7 +304,7 @@ async def test_process_subject_scope_isolates_rows() -> None:
     job_peer = _mk()  # subject = run_peer → NOT visible to user1
     job_doc = _mk()  # subject = Doc → NOT visible under ProcessRun scope
 
-    db_entities = [e for e in appspec.domain.entities if e.name in ("Doc", "AIJob")]
+    db_entities = [e for e in appspec.domain.entities if e.name in ("Doc", "AIJob", "ProcessRun")]
     md = build_metadata(convert_entities(db_entities))
 
     async with _DisposableDatabase(_PG_URL) as db_url:
@@ -319,11 +313,15 @@ async def test_process_subject_scope_isolates_rows() -> None:
 
         with psycopg.connect(db_url) as conn:
             conn.execute(
-                'INSERT INTO "ProcessRun" (id, process_name, started_by) VALUES (%s, %s, %s)',
+                'INSERT INTO "ProcessRun" '
+                "(id, process_name, status, started_by, created_at) "
+                "VALUES (%s, %s, 'completed', %s, now())",
                 (run_mine, "review", user1),
             )
             conn.execute(
-                'INSERT INTO "ProcessRun" (id, process_name, started_by) VALUES (%s, %s, %s)',
+                'INSERT INTO "ProcessRun" '
+                "(id, process_name, status, started_by, created_at) "
+                "VALUES (%s, %s, 'completed', %s, now())",
                 (run_peer, "review", user2),
             )
             conn.execute('INSERT INTO "Doc" (id, owner) VALUES (%s, %s)', (doc1, user1))

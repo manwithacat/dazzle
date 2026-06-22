@@ -17,7 +17,7 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
-from dazzle.db.virtual import VIRTUAL_ENTITY_NAMES as _VIRTUAL_ENTITY_NAMES
+from dazzle.db.virtual import is_virtual_entity
 from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 if TYPE_CHECKING:
@@ -476,7 +476,8 @@ def build_metadata(
     metadata: sqlalchemy.MetaData = cast("sqlalchemy.MetaData", sa.MetaData())
 
     # Filter out virtual entities — no PostgreSQL table for these.
-    db_entities = [e for e in entities if e.name not in _VIRTUAL_ENTITY_NAMES]
+    # Entity-aware (#1454): the governed ProcessRun (has started_by) IS real.
+    db_entities = [e for e in entities if not is_virtual_entity(e)]
 
     entity_names = {e.name for e in db_entities}
     circular_edges = _find_circular_refs(db_entities)

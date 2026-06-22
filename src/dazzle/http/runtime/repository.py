@@ -1094,10 +1094,10 @@ class Repository[T: BaseModel]:
         # against a non-existent relation. Short-circuit with an
         # empty result; a future cycle can wire a runtime-state
         # provider per virtual entity.
-        from dazzle.db.virtual import VIRTUAL_ENTITY_NAMES as _VIRTUAL
+        from dazzle.db.virtual import is_virtual_entity
         from dazzle.http.runtime.query_builder import QueryBuilder
 
-        if self.entity_spec is not None and self.entity_spec.name in _VIRTUAL:
+        if self.entity_spec is not None and is_virtual_entity(self.entity_spec):
             return {
                 "items": [],
                 "total": 0,
