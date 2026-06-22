@@ -4,6 +4,10 @@ Exercises:
  * No double-claim across 4 concurrent workers (300-row table, 4 threads).
  * Expired-lease reclaim — a row with a timed-out lease is claimed again.
  * fail_work retry→dead path — attempts counter drives the transition.
+ * fail_work payload merge — last_error is actually written to the jsonb payload.
+ * renew_lease — extending a lease prevents reclaim within the renewed window.
+ * Crash-loop dead-letter — a row that is repeatedly claimed-and-expired (no
+   fail_work) reaches status='dead' once attempts hits max_attempts.
 
 Marked ``postgres``: skipped locally without ``TEST_DATABASE_URL`` / ``DATABASE_URL``;
 CI's ``postgres-tests`` job runs it against a real ``postgres:16``.
@@ -129,7 +133,14 @@ def test_fail_work_retry_then_dead() -> None:
             max_attempts = 3
             # Cycle: claim → fail → claim → fail → ... until dead.
             for attempt in range(1, max_attempts + 1):
-                ids = claim_due_work(conn, table=tbl, worker="w0", lease_seconds=30, batch=1)
+                ids = claim_due_work(
+                    conn,
+                    table=tbl,
+                    worker="w0",
+                    lease_seconds=30,
+                    batch=1,
+                    max_attempts=max_attempts,
+                )
                 assert ids == [row_id], f"Attempt {attempt}: expected {row_id}, got {ids}"
                 outcome = fail_work(
                     conn,
@@ -155,6 +166,183 @@ def test_fail_work_retry_then_dead() -> None:
                     assert row and row[0] == "dead", (
                         f"Final attempt: expected dead status, got {row}"
                     )
+        finally:
+            conn.close()
+    finally:
+        with psycopg.connect(_PG, autocommit=True) as c:
+            c.execute(f"DROP TABLE IF EXISTS {tbl}")
+
+
+@pytest.mark.skipif(not _PG, reason="no TEST_DATABASE_URL / DATABASE_URL — needs real Postgres")
+def test_fail_work_payload_merge() -> None:
+    """fail_work writes last_error into the jsonb payload (not just status)."""
+    import psycopg
+
+    from dazzle.core.coordination.claim import (
+        claim_due_work,
+        fail_work,
+        queue_columns_ddl,
+    )
+
+    tbl = f"claim_payload_{uuid.uuid4().hex[:8]}"
+    row_id = str(uuid.uuid4())
+    with psycopg.connect(_PG, autocommit=True) as c:
+        c.execute(f"CREATE TABLE {tbl} (id uuid PRIMARY KEY, {queue_columns_ddl(tbl)})")
+        c.execute(f"INSERT INTO {tbl} (id, deliver_at) VALUES (%s, now())", (row_id,))
+    try:
+        conn = psycopg.connect(_PG)
+        try:
+            # Exhaust attempts so the final fail_work dead-letters.
+            max_attempts = 2
+            error_msg = "something went very wrong"
+            for attempt in range(1, max_attempts + 1):
+                claim_due_work(
+                    conn,
+                    table=tbl,
+                    worker="w0",
+                    lease_seconds=30,
+                    batch=1,
+                    max_attempts=max_attempts,
+                )
+                outcome = fail_work(
+                    conn,
+                    table=tbl,
+                    row_id=row_id,
+                    error=error_msg if attempt == max_attempts else f"interim-err{attempt}",
+                    max_attempts=max_attempts,
+                )
+            assert outcome == "dead"
+
+            # SELECT and assert the payload actually contains last_error.
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"SELECT status, payload->>'last_error' FROM {tbl} WHERE id=%s",
+                    (row_id,),
+                )
+                row = cur.fetchone()
+            assert row is not None
+            status, last_error = row
+            assert status == "dead", f"Expected dead, got {status!r}"
+            assert last_error is not None, "last_error key missing from payload"
+            assert error_msg in last_error, (
+                f"Expected {error_msg!r} in last_error, got {last_error!r}"
+            )
+        finally:
+            conn.close()
+    finally:
+        with psycopg.connect(_PG, autocommit=True) as c:
+            c.execute(f"DROP TABLE IF EXISTS {tbl}")
+
+
+@pytest.mark.skipif(not _PG, reason="no TEST_DATABASE_URL / DATABASE_URL — needs real Postgres")
+def test_renew_lease() -> None:
+    """renew_lease extends the lease so the row is not reclaimable mid-renewal window."""
+    import psycopg
+
+    from dazzle.core.coordination.claim import (
+        claim_due_work,
+        queue_columns_ddl,
+        renew_lease,
+    )
+
+    tbl = f"claim_renew_{uuid.uuid4().hex[:8]}"
+    row_id = str(uuid.uuid4())
+    with psycopg.connect(_PG, autocommit=True) as c:
+        c.execute(f"CREATE TABLE {tbl} (id uuid PRIMARY KEY, {queue_columns_ddl(tbl)})")
+        c.execute(f"INSERT INTO {tbl} (id, deliver_at) VALUES (%s, now())", (row_id,))
+    try:
+        conn = psycopg.connect(_PG)
+        try:
+            # Claim with a very short lease (1 s).
+            ids = claim_due_work(conn, table=tbl, worker="w0", lease_seconds=1, batch=1)
+            assert ids == [row_id]
+
+            # Renew to a 5-second lease BEFORE the original expires.
+            renew_lease(conn, table=tbl, row_id=row_id, lease_seconds=5)
+
+            # Sleep past the ORIGINAL 1-second window but within the renewed 5-second window.
+            time.sleep(1.5)
+
+            # A second worker must NOT be able to reclaim — lease is still valid.
+            ids2 = claim_due_work(conn, table=tbl, worker="w1", lease_seconds=30, batch=1)
+            assert ids2 == [], f"Row should NOT be reclaimable yet, but got {ids2}"
+
+            # Sleep past the renewed lease (total > 5 s from renewal point + 1.5 s already slept).
+            time.sleep(4.0)
+
+            # Now the renewed lease has also expired — w1 should reclaim it.
+            ids3 = claim_due_work(conn, table=tbl, worker="w1", lease_seconds=30, batch=1)
+            assert ids3 == [row_id], f"Expected reclaim after renewed lease expired, got {ids3}"
+        finally:
+            conn.close()
+    finally:
+        with psycopg.connect(_PG, autocommit=True) as c:
+            c.execute(f"DROP TABLE IF EXISTS {tbl}")
+
+
+@pytest.mark.skipif(not _PG, reason="no TEST_DATABASE_URL / DATABASE_URL — needs real Postgres")
+def test_crash_loop_dead_letter() -> None:
+    """A row that is repeatedly claimed-and-expired (crash, no fail_work) is dead-lettered.
+
+    Simulates max_attempts crashes: each cycle claims the row and then lets the
+    lease expire without calling fail_work or complete_work.  After max_attempts
+    expiries the row must transition to status='dead' via the claim-path sweep,
+    with no explicit call to fail_work.
+    """
+    import psycopg
+
+    from dazzle.core.coordination.claim import (
+        claim_due_work,
+        queue_columns_ddl,
+    )
+
+    tbl = f"claim_crash_{uuid.uuid4().hex[:8]}"
+    row_id = str(uuid.uuid4())
+    max_attempts = 3
+    with psycopg.connect(_PG, autocommit=True) as c:
+        c.execute(f"CREATE TABLE {tbl} (id uuid PRIMARY KEY, {queue_columns_ddl(tbl)})")
+        c.execute(f"INSERT INTO {tbl} (id, deliver_at) VALUES (%s, now())", (row_id,))
+    try:
+        conn = psycopg.connect(_PG)
+        try:
+            # Simulate max_attempts crashes: claim then let lease expire each time.
+            for crash_n in range(1, max_attempts + 1):
+                ids = claim_due_work(
+                    conn,
+                    table=tbl,
+                    worker="crasher",
+                    lease_seconds=1,
+                    batch=1,
+                    max_attempts=max_attempts,
+                )
+                assert ids == [row_id], f"Crash {crash_n}: expected to claim {row_id}, got {ids}"
+                # "Crash" — do NOT call complete_work or fail_work.
+                # Wait for the lease to expire.
+                time.sleep(1.2)
+
+            # After max_attempts lease-expiries, the NEXT claim call's dead-letter
+            # sweep should move the row to 'dead' (attempts == max_attempts, lease expired).
+            ids_after = claim_due_work(
+                conn,
+                table=tbl,
+                worker="sweeper",
+                lease_seconds=30,
+                batch=1,
+                max_attempts=max_attempts,
+            )
+            assert ids_after == [], f"Over-limit row must not be claimed, got {ids_after}"
+
+            # Verify the row is actually 'dead' in the DB.
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT status, attempts FROM {tbl} WHERE id=%s", (row_id,))
+                row = cur.fetchone()
+            assert row is not None
+            status, attempts = row
+            assert status == "dead", (
+                f"Expected status='dead' after {max_attempts} crash-loops, got {status!r} "
+                f"(attempts={attempts})"
+            )
+            assert attempts >= max_attempts, f"Expected attempts >= {max_attempts}, got {attempts}"
         finally:
             conn.close()
     finally:

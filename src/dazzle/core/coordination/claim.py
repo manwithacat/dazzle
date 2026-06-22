@@ -32,12 +32,22 @@ def queue_columns_ddl(table: str) -> str:
     )
 
 
+# Dead-letter sweep: move crash-looping rows (lease expired, attempts exhausted)
+# to 'dead' BEFORE the claim CTE so they are never re-claimed.
+_DEAD_LETTER_SWEEP = """
+UPDATE {table}
+SET status = 'dead'
+WHERE status = 'claimed'
+  AND lease_expires_at <= now()
+  AND attempts >= %(max)s;
+"""
+
 _CLAIM = """
 WITH due AS (
     SELECT id FROM {table}
     WHERE (status = 'pending' AND deliver_at <= now())
-       OR (status = 'claimed' AND lease_expires_at <= now())
-    ORDER BY deliver_at
+       OR (status = 'claimed' AND lease_expires_at <= now() AND attempts < %(max)s)
+    ORDER BY deliver_at, id
     FOR UPDATE SKIP LOCKED
     LIMIT %(batch)s
 )
@@ -57,29 +67,41 @@ def claim_due_work(
     worker: str,
     lease_seconds: int,
     batch: int = 1,
+    max_attempts: int = 5,
 ) -> list[str]:
     """Atomically claim up to *batch* due rows and return their ids.
 
     A row is due when:
     * ``status='pending'`` and ``deliver_at <= now()``, or
-    * ``status='claimed'`` and ``lease_expires_at <= now()`` (expired lease —
-      allows crash recovery without a separate reaper).
+    * ``status='claimed'`` and ``lease_expires_at <= now()`` and
+      ``attempts < max_attempts`` (expired lease — crash recovery).
+
+    Before claiming, rows whose lease has expired AND whose ``attempts`` have
+    reached *max_attempts* are swept to ``status='dead'`` (crash-loop
+    dead-lettering).  This ensures a worker that crashes without calling
+    ``fail_work`` does not loop forever.
 
     The SELECT uses FOR UPDATE SKIP LOCKED so concurrent workers never
     double-claim the same row.
+
+    NOTE: this helper autonomous-commits (calls ``conn.commit()``).  A future
+    transactional-outbox caller that needs a commit-less variant must factor
+    out the cursor work separately.
     """
+    params = {"batch": batch, "worker": worker, "lease": lease_seconds, "max": max_attempts}
     with conn.cursor() as cur:
-        cur.execute(
-            _CLAIM.format(table=table),
-            {"batch": batch, "worker": worker, "lease": lease_seconds},
-        )
+        cur.execute(_DEAD_LETTER_SWEEP.format(table=table), params)
+        cur.execute(_CLAIM.format(table=table), params)
         rows = cur.fetchall()
     conn.commit()
     return [str(r[0]) for r in rows]
 
 
 def renew_lease(conn, *, table: str, row_id: str, lease_seconds: int) -> None:
-    """Extend the visibility-timeout lease on a row that is still being processed."""
+    """Extend the visibility-timeout lease on a row that is still being processed.
+
+    NOTE: autonomous-commits (calls ``conn.commit()``).
+    """
     with conn.cursor() as cur:
         cur.execute(
             f"UPDATE {table} SET lease_expires_at = now() + (%s||' seconds')::interval "
@@ -90,7 +112,10 @@ def renew_lease(conn, *, table: str, row_id: str, lease_seconds: int) -> None:
 
 
 def complete_work(conn, *, table: str, row_id: str) -> None:
-    """Mark a claimed row as successfully processed (``status='done'``)."""
+    """Mark a claimed row as successfully processed (``status='done'``).
+
+    NOTE: autonomous-commits (calls ``conn.commit()``).
+    """
     with conn.cursor() as cur:
         cur.execute(f"UPDATE {table} SET status='done' WHERE id=%s", (row_id,))
     conn.commit()
@@ -112,6 +137,8 @@ def fail_work(
     ``status='dead'``.
 
     Returns ``"retry"`` or ``"dead"``.
+
+    NOTE: autonomous-commits (calls ``conn.commit()``).
     """
     with conn.cursor() as cur:
         cur.execute(f"SELECT attempts FROM {table} WHERE id=%s", (row_id,))
