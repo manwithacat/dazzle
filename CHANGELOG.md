@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.18] - 2026-06-23
+
+### Added
+- **#1463 (core fix) shared_schema RLS two-level tenancy: bind the membership's partition root, not the raw membership tenant.** New `auth/partition_root.py` resolves a membership's `archetype:tenant` partition root once, at write time, via a synchronous probe-then-ascend SQL walk over the tenant-host `parent:` chain (`build_partition_hierarchy` derives the graph from the AppSpec; `resolve_partition_root` probes the non-root kinds for the membership's id, then follows each kind's parent FK to the root). `create_membership` (and the inlined join-request-accept path) now store the resolved `partition_root_id`; the security-critical bind path (`_resolve_user_attribute("tenant_id")`) returns `partition_root_id or tenant_id` — a trivial sync read, no walk on the hot path. Backward-compatible: flat tenancy and root memberships resolve `partition_root_id == tenant_id` (no-op); only a leaf (e.g. School) membership in a `Trust ▸ School` hierarchy widens to the root so the fence matches the rows' partition key. Host-confinement is unchanged (it keys off `tenant_id` in `resolve_activation`), so a sibling-school host stays `HostForbidden`. The walk degrades closed (any gap returns the deepest id resolved → narrower visibility, never broader). Boot reconciliation/backfill + the real-PG two-level proof land in the following patches.
+
 ## [0.84.17] - 2026-06-23
 
 ### Added

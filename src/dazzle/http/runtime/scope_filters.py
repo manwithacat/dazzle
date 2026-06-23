@@ -288,6 +288,16 @@ def _resolve_user_attribute(attr_name: str, auth_context: "AuthContext | None") 
     if attr_name == "tenant_id":
         membership = getattr(auth_context, "active_membership", None)
         if membership is not None and getattr(membership, "tenant_id", None):
+            # #1463: bind the membership's archetype:tenant partition root — the id
+            # the RLS rows are partitioned at — not the raw membership tenant. For a
+            # flat tenancy or a root membership these are equal; for a leaf (School)
+            # membership in a hierarchy (Trust ▸ School) partition_root_id is the
+            # root (Trust), so the fence matches the rows' partition key. Falls back
+            # to tenant_id for un-backfilled rows (NULL partition_root_id). This is a
+            # trivial sync read — the resolution happened once at write time.
+            partition_root = getattr(membership, "partition_root_id", None)
+            if isinstance(partition_root, str) and partition_root:
+                return partition_root
             return str(membership.tenant_id)
         return _RBAC_DENY
 

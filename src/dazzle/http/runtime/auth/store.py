@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         MembershipEvent,
     )
     from dazzle.http.runtime.auth.models import ScimGroupRecord
+    from dazzle.http.runtime.auth.partition_root import PartitionHierarchy
 
 try:
     import psycopg
@@ -33,6 +34,7 @@ except ImportError:
     PSYCOPG_AVAILABLE = False
 
 from dazzle.core.db_url import normalise_postgres_scheme
+from dazzle.http.runtime.auth.partition_root import resolve_partition_root
 
 from .crypto import hash_password, verify_password
 from .models import (
@@ -469,6 +471,7 @@ class SessionStoreMixin:
     _get_connection: Any  # auth Plan 2a — used by _transaction / chain verify
     _transaction: Any  # auth Plan 2a — atomic mutation + lifecycle event
     _user_entity_table: str  # Set by AuthStore.__init__
+    _partition_hierarchy: "PartitionHierarchy | None"  # #1463 — set by AuthStore.__init__
 
     # Cross-cutting method provided by UserStoreMixin via AuthStore.
     get_user_by_id: Any
@@ -814,23 +817,28 @@ class SessionStoreMixin:
         if self.get_user_by_id(UUID(identity_id)) is None:
             raise ValueError(f"cannot create membership: no user with id {identity_id!r}")
 
-        membership = MembershipRecord(
-            id=secrets.token_urlsafe(24),
-            tenant_id=tenant_id,
-            identity_id=identity_id,
-            roles=roles or [],
-            status=status,
-            invited_by=invited_by,
-            external_id=external_id,
-        )
         with self._transaction() as cur:
             cur.execute("SELECT pg_advisory_xact_lock(%s)", (MEMBERSHIP_EVENTS_LOCK_KEY,))
+            # #1463: resolve the partition root once, at write time, inside this
+            # transaction (so it sees the tenant rows). Flat tenancy → tenant_id.
+            partition_root_id = resolve_partition_root(cur, tenant_id, self._partition_hierarchy)
+            membership = MembershipRecord(
+                id=secrets.token_urlsafe(24),
+                tenant_id=tenant_id,
+                identity_id=identity_id,
+                roles=roles or [],
+                status=status,
+                invited_by=invited_by,
+                partition_root_id=partition_root_id,
+                external_id=external_id,
+            )
             cur.execute(
                 """
                 INSERT INTO memberships
-                    (id, tenant_id, identity_id, roles, status, invited_by, external_id,
+                    (id, tenant_id, identity_id, roles, status, invited_by,
+                     partition_root_id, external_id,
                      joined_at, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     membership.id,
@@ -839,6 +847,7 @@ class SessionStoreMixin:
                     json.dumps(membership.roles),
                     membership.status,
                     membership.invited_by,
+                    membership.partition_root_id,
                     membership.external_id,
                     membership.joined_at.isoformat(),
                     membership.created_at.isoformat(),
@@ -1373,18 +1382,22 @@ class SessionStoreMixin:
 
             # Same advisory lock create_membership uses to serialize event sequencing.
             cur.execute("SELECT pg_advisory_xact_lock(%s)", (MEMBERSHIP_EVENTS_LOCK_KEY,))
+            # #1463: resolve the partition root in this same locked transaction.
+            partition_root_id = resolve_partition_root(cur, tenant_id, self._partition_hierarchy)
             membership = MembershipRecord(
                 id=secrets.token_urlsafe(24),
                 tenant_id=tenant_id,
                 identity_id=identity_id,
                 roles=roles or [],
+                partition_root_id=partition_root_id,
             )
             cur.execute(
                 """
                 INSERT INTO memberships
-                    (id, tenant_id, identity_id, roles, status, invited_by, external_id,
+                    (id, tenant_id, identity_id, roles, status, invited_by,
+                     partition_root_id, external_id,
                      joined_at, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     membership.id,
@@ -1393,6 +1406,7 @@ class SessionStoreMixin:
                     json.dumps(membership.roles),
                     membership.status,
                     membership.invited_by,
+                    membership.partition_root_id,
                     membership.external_id,
                     membership.joined_at.isoformat(),
                     membership.created_at.isoformat(),
@@ -2620,8 +2634,23 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         # Normalize Heroku's postgres:// to postgresql://
         self._database_url = normalise_postgres_scheme(database_url)
         self._user_entity_table = user_entity_table
+        # #1463: the tenant-host parent graph used to resolve a membership's
+        # partition root at write time. None = flat tenancy (no `parent:` edges),
+        # in which case partition_root_id == tenant_id. Injected at boot by the
+        # server from the AppSpec (set_partition_hierarchy); stays None for the
+        # many AuthStores built directly in tests / flat apps.
+        self._partition_hierarchy: PartitionHierarchy | None = None
 
         self._init_db()
+
+    def set_partition_hierarchy(self, hierarchy: "PartitionHierarchy | None") -> None:  # noqa: F821
+        """Install the tenant-host parent graph (#1463) for partition-root resolution.
+
+        Called once at boot from the server with the hierarchy derived from the
+        AppSpec. ``None`` (flat tenancy) leaves ``create_membership`` resolving
+        ``partition_root_id = tenant_id``.
+        """
+        self._partition_hierarchy = hierarchy
 
     # ------------------------------------------------------------------ #
     # SCIM Groups (#1342) — connection-scoped; members link to memberships.
