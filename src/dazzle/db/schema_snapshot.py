@@ -217,63 +217,49 @@ def introspect_schema(
     *,
     only: set[str] | None = None,
 ) -> dict[str, Any]:
-    """Introspect a live Postgres DB via SQLAlchemy inspector → Snapshot.
+    """Introspect a live Postgres DB via SQLAlchemy inspector → rich Snapshot.
 
-    Produces the same ``Snapshot`` / ``TableSnap`` / ``ColSnap`` shape as
-    ``project_schema`` so the two outputs are directly comparable and can be
-    fed to ``schema_diff.diff``.
+    Unlike ``project_schema`` (which reads in-memory MetaData and uses a lossy
+    comma-joined column-name list for indexes), this function reads the **actual
+    live database** and captures indexes in a richer, name-keyed format that
+    preserves the index name, uniqueness flag, and partial-index WHERE predicate.
 
-    Unlike ``project_schema`` (which reads in-memory MetaData), this function
-    reads the **actual live database** — making it suitable for the three-way
-    parity gate (alembic-head ≡ orchestrator ≡ committed snapshot).
+    This richer format is used exclusively by the three-way framework-baseline
+    parity gate (``tests/integration/test_framework_baseline_parity_pg.py``) and
+    the committed ``FRAMEWORK_SCHEMA_SNAPSHOT``.  It is intentionally **separate**
+    from ``project_schema``'s lossy ``indexes: list[str]`` format, which is used
+    by the #1431 app-entity migration-diffing path.  Do not conflate the two.
+
+    Index representation (richer than ``project_schema``):
+        ``indexes`` is a ``dict[str, dict]`` keyed by index name::
+
+            {
+                "idx_users_email": {"unique": False, "columns": ["email"], "predicate": None},
+                "users_email_key": {"unique": True,  "columns": ["email"], "predicate": None},
+                "ix_process_runs_due": {
+                    "unique": False, "columns": ["deliver_at"],
+                    "predicate": "(status = ANY (ARRAY['pending'::text, 'claimed'::text]))",
+                },
+            }
+
+        Key properties:
+        - Keyed by name → dropping one of two same-column indexes registers as a diff.
+        - ``unique`` flag → a non-unique→unique promotion is caught.
+        - ``predicate`` → any WHERE-clause change is caught.
+        - Column order is preserved (not sorted) so that functional-index column
+          order changes are not silently collapsed.
 
     Args:
         conn:
-            A SQLAlchemy ``Connection`` or ``Engine``, or a psycopg connection
-            that has been wrapped by ``sqlalchemy.inspect``.  Concretely:
-            pass the result of ``sa.create_engine(url)`` or
-            ``engine.connect().__enter__()``.
+            A SQLAlchemy ``Engine``.  Pass the result of ``sa.create_engine(url)``.
         only:
             Optional set of table names to include.  Tables not in this set
-            are silently skipped.  Use this to restrict to the in-scope
-            framework tables and exclude ops-DB, event-bus-prefixed, and
-            app-entity tables.  ``None`` means include every table found.
+            are silently skipped.  ``None`` means include every table found.
 
     Returns:
-        A deterministic ``Snapshot`` dict (sorted keys at every level), ready
-        for ``render_snapshot_literal`` or ``diff``.
-
-    Type-normalisation:
-        Column types from the inspector are SA dialect objects (TEXT, JSONB,
-        TIMESTAMP, BOOLEAN, BIGINT, INTEGER, UUID …).  We reuse
-        ``_sa_type_to_token`` — the same mapper used by ``project_schema`` —
-        so that the same logical type compares equal regardless of build path.
-
-    FK representation:
-        The inspector's ``get_foreign_keys`` returns constraint dicts.  We
-        capture ``col → referred_table`` (one entry per constrained column),
-        matching ``project_schema``'s ``fks`` convention.
-
-    Index representation:
-        Each index becomes a comma-joined, sorted string of its column names
-        (e.g. ``"tenant_id,user_id"``), matching ``project_schema``'s
-        ``indexes`` convention.  Unique indexes are also emitted here;
-        dedicated unique-constraint columns are captured in ``uniques``.
-
-    Unique representation:
-        ``get_unique_constraints`` returns named unique constraints.  We
-        collapse each to the set of constrained column names, then record
-        each column in ``uniques`` (matching ``project_schema``).  Columns
-        marked ``unique=True`` inline are captured via the indexes list above
-        (they appear as unique indexes in Postgres).
+        A deterministic rich ``Snapshot`` dict (sorted keys at every level).
     """
-    if isinstance(conn, sa.engine.Engine):
-        engine = conn
-        _owned = False
-    else:
-        # Assume it's already an inspectable connection
-        engine = conn
-        _owned = False
+    engine = conn  # accept Engine; inspector works on Engine directly
 
     insp = sa.inspect(engine)
     table_names = insp.get_table_names()
@@ -307,12 +293,28 @@ def introspect_schema(
             for col in fk_info.get("constrained_columns", []):
                 fks[col] = ref_table
 
-        # ── indexes ───────────────────────────────────────────────────────────
-        index_keys: list[str] = []
+        # ── indexes (rich: name-keyed, captures unique + predicate) ──────────
+        # Each entry: {name: {unique: bool, columns: list[str], predicate: str|None}}
+        # Using a dict keyed by name so that two indexes on the same column set
+        # are distinct entries (prevents the false-green where dropping one of two
+        # same-column indexes collapses under a set() comparison).
+        indexes: dict[str, Any] = {}
         for idx in insp.get_indexes(tname):
-            col_names = idx.get("column_names") or []
-            if col_names:
-                index_keys.append(",".join(sorted(str(c) for c in col_names)))
+            iname: str = idx["name"]
+            col_names: list[str] = [str(c) for c in (idx.get("column_names") or [])]
+            if not col_names:
+                # Functional/expression indexes with no column_names are skipped
+                # (cannot be round-tripped through the column-name representation).
+                continue
+            is_unique: bool = bool(idx.get("unique", False))
+            # Partial-index WHERE predicate is in dialect_options under the key
+            # 'postgresql_where'.  None when the index is not partial.
+            predicate: str | None = (idx.get("dialect_options") or {}).get("postgresql_where")
+            indexes[iname] = {
+                "unique": is_unique,
+                "columns": col_names,
+                "predicate": predicate,
+            }
 
         # ── unique constraints (named table-level uniques) ────────────────────
         unique_cols: set[str] = set()
@@ -324,7 +326,7 @@ def introspect_schema(
             "columns": dict(sorted(columns.items())),
             "fks": dict(sorted(fks.items())),
             "uniques": sorted(unique_cols),
-            "indexes": sorted(index_keys),
+            "indexes": dict(sorted(indexes.items())),
         }
 
     return dict(sorted(snapshot.items()))

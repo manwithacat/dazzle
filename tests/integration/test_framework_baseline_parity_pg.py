@@ -238,6 +238,45 @@ def _format_diff(
     return "\n".join(lines)
 
 
+def _format_index_diff(
+    snap_a: dict[str, Any],
+    snap_b: dict[str, Any],
+    label_a: str,
+    label_b: str,
+) -> str:
+    """Return a human-readable index-level diff between two rich snapshots.
+
+    The rich index format is ``{name: {unique, columns, predicate}}``.  The
+    schema_diff module uses the old lossy list format so cannot render these
+    differences; this helper fills that gap and is included in every mismatch
+    failure message alongside the schema_diff output.
+    """
+    lines: list[str] = []
+    all_tables = sorted(set(snap_a) | set(snap_b))
+    for tname in all_tables:
+        idxs_a: dict[str, Any] = (snap_a.get(tname) or {}).get("indexes") or {}
+        idxs_b: dict[str, Any] = (snap_b.get(tname) or {}).get("indexes") or {}
+        if not isinstance(idxs_a, dict) or not isinstance(idxs_b, dict):
+            # Fallback: old list format — skip rich comparison for this table.
+            continue
+        names_a = set(idxs_a)
+        names_b = set(idxs_b)
+        for name in sorted(names_a - names_b):
+            lines.append(f"  (-) index dropped in {label_b}: {tname}.{name} = {idxs_a[name]!r}")
+        for name in sorted(names_b - names_a):
+            lines.append(f"  (+) index added in {label_b}:   {tname}.{name} = {idxs_b[name]!r}")
+        for name in sorted(names_a & names_b):
+            if idxs_a[name] != idxs_b[name]:
+                lines.append(
+                    f"  (~) index changed: {tname}.{name}\n"
+                    f"      {label_a}: {idxs_a[name]!r}\n"
+                    f"      {label_b}: {idxs_b[name]!r}"
+                )
+    if not lines:
+        return "[no index diff]"
+    return f"INDEX DIFF ({label_a} → {label_b}):\n" + "\n".join(lines)
+
+
 def _assert_equal(
     snap_a: dict[str, Any],
     snap_b: dict[str, Any],
@@ -261,8 +300,13 @@ def _assert_equal(
     # Then do a full structural diff.
     if snap_a != snap_b:
         diff_text = _format_diff(snap_a, snap_b, label_a, label_b)
+        # Also emit a rich index-level diff since schema_diff uses the old
+        # lossy list format and cannot name dropped/changed indexes.
+        idx_diff_text = _format_index_diff(snap_a, snap_b, label_a, label_b)
         pytest.fail(
-            f"Schema mismatch between {label_a} and {label_b}.\n\n{diff_text}\n\n"
+            f"Schema mismatch between {label_a} and {label_b}.\n\n"
+            f"{diff_text}\n\n"
+            f"{idx_diff_text}\n\n"
             "Fix: ensure_framework_schema and the alembic baseline must produce "
             "identical DDL; regenerate FRAMEWORK_SCHEMA_SNAPSHOT if the DDL is correct."
         )
@@ -305,7 +349,7 @@ class TestFrameworkBaselineParityPG:
             IN_SCOPE_TABLES as SNAP_IN_SCOPE,
         )
 
-        snap_committed: dict[str, Any] = FRAMEWORK_SCHEMA_SNAPSHOT  # type: ignore[assignment]
+        snap_committed: dict[str, Any] = FRAMEWORK_SCHEMA_SNAPSHOT
 
         # Sanity: the committed snapshot must cover all 30 in-scope tables.
         assert set(snap_committed.keys()) == IN_SCOPE_TABLES, (
@@ -378,6 +422,38 @@ class TestFrameworkBaselineParityPG:
                 "it must not be included in the parity gate"
             )
 
+    def test_no_unlisted_table_in_orchestrator(
+        self,
+        scratch_url_orchestrator: str,
+    ) -> None:
+        """No-unlisted-table guard: orchestrator must not create tables outside IN_SCOPE_TABLES.
+
+        If ensure_framework_schema adds a new table without it being listed in
+        IN_SCOPE_TABLES, that table would go unguarded by the parity gate.  This
+        test catches exactly that case: it introspects without the only= filter
+        and asserts the result set (minus alembic_version) equals IN_SCOPE_TABLES.
+
+        A new framework table MUST be added to IN_SCOPE_TABLES and the committed
+        FRAMEWORK_SCHEMA_SNAPSHOT before this test will pass again.
+        """
+        from dazzle.db.schema_snapshot import introspect_schema
+
+        _ensure_orch(scratch_url_orchestrator)
+        eng = sa.create_engine(_sa_url(scratch_url_orchestrator))
+        try:
+            all_snap = introspect_schema(eng)  # no filter
+        finally:
+            eng.dispose()
+
+        all_table_names = set(all_snap.keys()) - {"alembic_version"}
+        unlisted = sorted(all_table_names - IN_SCOPE_TABLES)
+        assert not unlisted, (
+            f"ensure_framework_schema created table(s) NOT listed in IN_SCOPE_TABLES:\n"
+            f"  {unlisted}\n"
+            "Add them to IN_SCOPE_TABLES in both the test and "
+            "framework_schema_snapshot.py, then regenerate FRAMEWORK_SCHEMA_SNAPSHOT."
+        )
+
 
 # ---------------------------------------------------------------------------
 # Readable-diff proof test — verifies the diff path produces useful output
@@ -442,7 +518,9 @@ class TestReadableDiffPath:
             }
         }
         diff_text = _format_diff(snap, snap, "A", "B")
-        assert "no diff" in diff_text.lower() or "0 operations" not in diff_text
+        assert "no diff" in diff_text.lower(), (
+            f"Expected '[no diff]' in output for equal snapshots, got: {diff_text!r}"
+        )
 
     def test_assert_equal_raises_on_mismatch(self) -> None:
         """_assert_equal must call pytest.fail with readable text on mismatch."""
@@ -465,7 +543,7 @@ class TestReadableDiffPath:
                 "indexes": [],
             }
         }
-        with pytest.raises(pytest.fail.Exception) as exc_info:  # type: ignore[attr-defined]
+        with pytest.raises(pytest.fail.Exception) as exc_info:
             _assert_equal(snap_a, snap_b, "A", "B")
         msg = str(exc_info.value)
         assert "AddColumn" in msg or "extra" in msg, (

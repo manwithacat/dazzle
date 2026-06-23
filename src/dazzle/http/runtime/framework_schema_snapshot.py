@@ -10,6 +10,12 @@ scratch Postgres database and calling
 ``dazzle.db.schema_snapshot.introspect_schema(engine, only=IN_SCOPE_TABLES)``
 followed by ``render_snapshot_literal``.
 
+**Index format (rich — framework path only):**
+    ``indexes`` is a ``dict[str, dict]`` keyed by index name, capturing:
+    ``{"unique": bool, "columns": list[str], "predicate": str|None}``.
+    This is SEPARATE from ``project_schema``'s lossy ``list[str]`` format used
+    by the #1431 app-entity migration-diffing path.  Do not conflate the two.
+
 **In-scope tables** (30): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
 key set (see the global-constraints list in the migration-baseline plan).
 
@@ -27,7 +33,8 @@ key set (see the global-constraints list in the migration-baseline plan).
 **Parity gate:** ``tests/integration/test_framework_baseline_parity_pg.py``
 asserts all three paths agree on every in-scope table.
 
-Generated: 2026-06-23 (framework-migration-baseline Tasks 3+4, ADR-0044)
+Generated: 2026-06-23 (framework-migration-baseline Tasks 3+4, ADR-0044;
+           rich index format added by adversarial-review fix 2026-06-23)
 """
 
 from __future__ import annotations
@@ -88,7 +95,7 @@ IN_SCOPE_TABLES: frozenset[str] = frozenset(
 #   columns: dict[str, ColSnap]  (type, nullable, default, pk)
 #   fks:     dict[str, str]      (column -> referred_table)
 #   uniques: list[str]           (sorted column names)
-#   indexes: list[str]           (sorted comma-joined column name strings)
+#   indexes: dict[str, IndexSnap]  (name -> {unique, columns, predicate})
 # ---------------------------------------------------------------------------
 
 FRAMEWORK_SCHEMA_SNAPSHOT = {
@@ -107,7 +114,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_roles": {"default": None, "nullable": True, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["flow_name,timestamp"],
+        "indexes": {
+            "idx_atomic_audit_flow": {
+                "columns": ["flow_name", "timestamp"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "_dazzle_audit_log": {
@@ -137,7 +150,23 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_roles": {"default": None, "nullable": True, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["entity_name,timestamp", "timestamp", "timestamp,user_id"],
+        "indexes": {
+            "idx_audit_entity": {
+                "columns": ["entity_name", "timestamp"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_audit_timestamp": {
+                "columns": ["timestamp"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_audit_user": {
+                "columns": ["user_id", "timestamp"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "_dazzle_event_inbox": {
@@ -159,7 +188,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "result_data": {"default": None, "nullable": True, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["consumer_name", "processed_at"],
+        "indexes": {
+            "idx_inbox_consumer": {
+                "columns": ["consumer_name"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_inbox_processed": {
+                "columns": ["processed_at"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "_dazzle_event_outbox": {
@@ -188,7 +228,23 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "topic": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["created_at", "status", "topic"],
+        "indexes": {
+            "idx_outbox_created": {
+                "columns": ["created_at"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_outbox_status": {
+                "columns": ["status"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_outbox_topic": {
+                "columns": ["topic"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "_dazzle_otp_codes": {
@@ -209,7 +265,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["expires_at", "method,user_id"],
+        "indexes": {
+            "idx_otp_expires": {
+                "columns": ["expires_at"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_otp_user_method": {
+                "columns": ["user_id", "method"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "_dazzle_params": {
@@ -227,7 +294,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "value_json": {"default": None, "nullable": False, "pk": False, "type": "json"},
         },
         "fks": {},
-        "indexes": [],
+        "indexes": {},
         "uniques": [],
     },
     "_dazzle_recovery_codes": {
@@ -245,7 +312,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["user_id"],
+        "indexes": {
+            "idx_recovery_user": {
+                "columns": ["user_id"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "_grant_events": {
@@ -263,7 +336,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             },
         },
         "fks": {"grant_id": "_grants"},
-        "indexes": ["grant_id"],
+        "indexes": {
+            "idx_grant_events_grant_id": {
+                "columns": ["grant_id"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "_grants": {
@@ -289,7 +368,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "status": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["expires_at,status", "principal_id,relation,scope_id,status"],
+        "indexes": {
+            "idx_grants_expiry": {
+                "columns": ["status", "expires_at"],
+                "predicate": "((status = 'active'::text) AND (expires_at IS NOT NULL))",
+                "unique": False,
+            },
+            "idx_grants_lookup": {
+                "columns": ["principal_id", "relation", "scope_id", "status"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "connection_secret_events": {
@@ -304,7 +394,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "tenant_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["connection_id,seq"],
+        "indexes": {
+            "ix_connection_secret_events_conn": {
+                "columns": ["connection_id", "seq"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "connections": {
@@ -350,7 +446,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             },
         },
         "fks": {},
-        "indexes": ["tenant_id"],
+        "indexes": {
+            "ix_connections_tenant": {
+                "columns": ["tenant_id"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "dazzle_files": {
@@ -369,7 +471,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "updated_at": {"default": None, "nullable": True, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["entity_id,entity_name", "entity_name,field_name"],
+        "indexes": {
+            "idx_files_entity": {
+                "columns": ["entity_name", "entity_id"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_files_field": {
+                "columns": ["entity_name", "field_name"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "devices": {
@@ -386,7 +499,28 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["is_active,user_id", "platform", "push_token,user_id", "user_id"],
+        "indexes": {
+            "devices_user_id_push_token_key": {
+                "columns": ["user_id", "push_token"],
+                "predicate": None,
+                "unique": True,
+            },
+            "idx_devices_active": {
+                "columns": ["user_id", "is_active"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_devices_platform": {
+                "columns": ["platform"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_devices_user_id": {
+                "columns": ["user_id"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": ["push_token", "user_id"],
     },
     "email_verification_tokens": {
@@ -398,7 +532,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["user_id"],
+        "indexes": {
+            "idx_email_verify_user": {
+                "columns": ["user_id"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "invitations": {
@@ -413,7 +553,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "token": {"default": None, "nullable": False, "pk": True, "type": "text"},
         },
         "fks": {},
-        "indexes": ["email", "org_id"],
+        "indexes": {
+            "ix_invitations_email": {
+                "columns": ["email"],
+                "predicate": None,
+                "unique": False,
+            },
+            "ix_invitations_org": {
+                "columns": ["org_id"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "join_requests": {
@@ -433,7 +584,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "tenant_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["identity_id,tenant_id", "tenant_id"],
+        "indexes": {
+            "ix_join_requests_tenant": {
+                "columns": ["tenant_id"],
+                "predicate": None,
+                "unique": False,
+            },
+            "uq_join_requests_pending": {
+                "columns": ["tenant_id", "identity_id"],
+                "predicate": "(status = 'pending'::text)",
+                "unique": True,
+            },
+        },
         "uniques": [],
     },
     "magic_links": {
@@ -445,7 +607,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": [],
+        "indexes": {},
         "uniques": [],
     },
     "membership_events": {
@@ -466,7 +628,28 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "tenant_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["identity_id,seq", "membership_id,seq", "seq", "seq,tenant_id"],
+        "indexes": {
+            "ix_membership_events_identity": {
+                "columns": ["identity_id", "seq"],
+                "predicate": None,
+                "unique": False,
+            },
+            "ix_membership_events_membership": {
+                "columns": ["membership_id", "seq"],
+                "predicate": None,
+                "unique": False,
+            },
+            "ix_membership_events_tenant": {
+                "columns": ["tenant_id", "seq"],
+                "predicate": None,
+                "unique": False,
+            },
+            "membership_events_seq_key": {
+                "columns": ["seq"],
+                "predicate": None,
+                "unique": True,
+            },
+        },
         "uniques": ["seq"],
     },
     "memberships": {
@@ -483,7 +666,28 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "updated_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["external_id,tenant_id", "identity_id", "identity_id,tenant_id", "tenant_id"],
+        "indexes": {
+            "ix_memberships_identity_id": {
+                "columns": ["identity_id"],
+                "predicate": None,
+                "unique": False,
+            },
+            "ix_memberships_tenant_id": {
+                "columns": ["tenant_id"],
+                "predicate": None,
+                "unique": False,
+            },
+            "uq_memberships_tenant_external": {
+                "columns": ["tenant_id", "external_id"],
+                "predicate": "(external_id IS NOT NULL)",
+                "unique": True,
+            },
+            "uq_memberships_tenant_identity": {
+                "columns": ["tenant_id", "identity_id"],
+                "predicate": None,
+                "unique": True,
+            },
+        },
         "uniques": ["identity_id", "tenant_id"],
     },
     "organizations": {
@@ -498,7 +702,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "updated_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["slug"],
+        "indexes": {
+            "uq_organizations_slug": {
+                "columns": ["slug"],
+                "predicate": None,
+                "unique": True,
+            }
+        },
         "uniques": ["slug"],
     },
     "password_reset_tokens": {
@@ -510,7 +720,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {"user_id": "users"},
-        "indexes": ["user_id"],
+        "indexes": {
+            "idx_reset_tokens_user": {
+                "columns": ["user_id"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "process_runs": {
@@ -572,7 +788,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             },
         },
         "fks": {},
-        "indexes": ["deliver_at", "idempotency_key"],
+        "indexes": {
+            "ix_process_runs_due": {
+                "columns": ["deliver_at"],
+                "predicate": "(status = ANY (ARRAY['pending'::text, 'claimed'::text]))",
+                "unique": False,
+            },
+            "ix_process_runs_idempotency_key": {
+                "columns": ["idempotency_key"],
+                "predicate": "(idempotency_key IS NOT NULL)",
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "process_tasks": {
@@ -620,7 +847,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "task_id": {"default": None, "nullable": False, "pk": True, "type": "text"},
         },
         "fks": {"run_id": "process_runs"},
-        "indexes": ["deliver_at"],
+        "indexes": {
+            "ix_process_tasks_due": {
+                "columns": ["deliver_at"],
+                "predicate": "(status = ANY (ARRAY['pending'::text, 'claimed'::text]))",
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "refresh_tokens": {
@@ -636,7 +869,23 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["device_id,user_id", "expires_at", "user_id"],
+        "indexes": {
+            "idx_refresh_tokens_device": {
+                "columns": ["user_id", "device_id"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_refresh_tokens_expires": {
+                "columns": ["expires_at"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_refresh_tokens_user_id": {
+                "columns": ["user_id"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "saml_consumed_assertions": {
@@ -648,7 +897,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "tenant_id": {"default": None, "nullable": True, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": [],
+        "indexes": {},
         "uniques": [],
     },
     "scim_group_members": {
@@ -657,7 +906,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "membership_id": {"default": None, "nullable": False, "pk": True, "type": "text"},
         },
         "fks": {"group_id": "scim_groups"},
-        "indexes": ["membership_id"],
+        "indexes": {
+            "ix_scim_group_members_member": {
+                "columns": ["membership_id"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "scim_groups": {
@@ -670,7 +925,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "updated_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["connection_id", "connection_id,display_name"],
+        "indexes": {
+            "ix_scim_groups_conn": {
+                "columns": ["connection_id"],
+                "predicate": None,
+                "unique": False,
+            },
+            "scim_groups_connection_id_display_name_key": {
+                "columns": ["connection_id", "display_name"],
+                "predicate": None,
+                "unique": True,
+            },
+        },
         "uniques": ["connection_id", "display_name"],
     },
     "sessions": {
@@ -690,7 +956,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {"user_id": "users"},
-        "indexes": ["expires_at", "user_id"],
+        "indexes": {
+            "idx_sessions_expires": {
+                "columns": ["expires_at"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_sessions_user_id": {
+                "columns": ["user_id"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
         "uniques": [],
     },
     "user_preferences": {
@@ -701,7 +978,13 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "value": {"default": None, "nullable": False, "pk": False, "type": "text"},
         },
         "fks": {"user_id": "users"},
-        "indexes": ["user_id"],
+        "indexes": {
+            "idx_user_prefs_user": {
+                "columns": ["user_id"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
         "uniques": [],
     },
     "users": {
@@ -737,7 +1020,18 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "username": {"default": None, "nullable": True, "pk": False, "type": "text"},
         },
         "fks": {},
-        "indexes": ["email", "email"],
+        "indexes": {
+            "idx_users_email": {
+                "columns": ["email"],
+                "predicate": None,
+                "unique": False,
+            },
+            "users_email_key": {
+                "columns": ["email"],
+                "predicate": None,
+                "unique": True,
+            },
+        },
         "uniques": ["email"],
     },
 }
