@@ -35,6 +35,7 @@ import httpx
 
 from dazzle.core import ir
 from dazzle.core.http_client import async_retrying_request
+from dazzle.core.ir.expressions import FieldRef, Literal
 from dazzle.core.ir.integrations import (
     AuthType,
     ErrorAction,
@@ -698,8 +699,6 @@ class MappingExecutor:
 
     def _resolve_expr_value(self, node: Any, entity_data: dict[str, Any]) -> Any:
         """Resolve an expression AST node to a value."""
-        from dazzle.core.ir.expressions import FieldRef, Literal
-
         if isinstance(node, Literal):
             return node.value
         elif isinstance(node, FieldRef):

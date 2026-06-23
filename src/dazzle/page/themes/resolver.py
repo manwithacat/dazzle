@@ -11,6 +11,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.oklch import generate_palette
+from dazzle.core.theme_generators import (
+    generate_shape_tokens,
+    generate_spacing_scale,
+    generate_type_scale,
+)
 from dazzle.page.specs.theme import ThemeSpec, ThemeTokens, VariantSpec
 
 if TYPE_CHECKING:
@@ -152,12 +158,6 @@ def resolve_theme_from_themespec(themespec: ThemeSpecYAML) -> ThemeSpec:
     Returns:
         ThemeSpec ready for CSS generation.
     """
-    from dazzle.core.oklch import generate_palette
-    from dazzle.core.theme_generators import (
-        generate_shape_tokens,
-        generate_spacing_scale,
-        generate_type_scale,
-    )
     from dazzle.page.specs.theme import TextStyle
 
     # 1. Generate color palette

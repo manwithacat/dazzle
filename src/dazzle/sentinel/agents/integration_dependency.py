@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from dazzle.core.ir.services import AuthKind, DomainServiceKind
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
     AgentId,
@@ -40,8 +41,6 @@ class IntegrationDependencyAgent(DetectionAgent):
     )
     def api_without_auth(self, appspec: AppSpec) -> list[Finding]:
         """Flag external APIs that use auth kind 'none'."""
-        from dazzle.core.ir.services import AuthKind
-
         findings: list[Finding] = []
         for api in appspec.apis:
             if api.auth_profile.kind == AuthKind.NONE:
@@ -391,8 +390,6 @@ class IntegrationDependencyAgent(DetectionAgent):
     )
     def integration_service_no_guarantees(self, appspec: AppSpec) -> list[Finding]:
         """Flag domain services of kind 'integration' that define no guarantees."""
-        from dazzle.core.ir.services import DomainServiceKind
-
         findings: list[Finding] = []
         for svc in appspec.domain_services:
             if svc.kind != DomainServiceKind.INTEGRATION:

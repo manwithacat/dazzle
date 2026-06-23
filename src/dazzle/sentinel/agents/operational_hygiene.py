@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dazzle.core.ir.process import StepKind
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
     AgentId,
@@ -301,8 +302,6 @@ class OperationalHygieneAgent(DetectionAgent):
     )
     def process_without_compensation(self, appspec: AppSpec) -> list[Finding]:
         """Flag processes with service steps but no compensations."""
-        from dazzle.core.ir.process import StepKind
-
         findings: list[Finding] = []
         for process in appspec.processes:
             service_steps = [s for s in process.steps if s.kind == StepKind.SERVICE]
@@ -358,8 +357,6 @@ class OperationalHygieneAgent(DetectionAgent):
     )
     def service_step_without_retry(self, appspec: AppSpec) -> list[Finding]:
         """Flag process service steps that have no retry configuration."""
-        from dazzle.core.ir.process import StepKind
-
         findings: list[Finding] = []
         for process in appspec.processes:
             for step in process.steps:

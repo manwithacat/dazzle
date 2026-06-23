@@ -15,6 +15,7 @@ from typing import Any
 
 import typer
 
+from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 from dazzle.core.manifest import load_manifest
 from dazzle.qa.signing_seed import (
     SeededDoc,
@@ -471,8 +472,6 @@ def _placeholder_for_field_type(field: Any, *, _run_id: str | None = None) -> An
     unique str) so repeated calls within the same DB don't cause unique
     violations.  The caller passes a short UUID prefix for this purpose.
     """
-    from dazzle.core.ir.fields import FieldTypeKind
-
     kind = field.type.kind
     if kind == FieldTypeKind.EMAIL:
         suffix = f"-{_run_id}" if _run_id else ""
@@ -512,8 +511,6 @@ def _minimal_fields_for(entity: Any, *, _run_id: str | None = None) -> dict[str,
     ``_run_id`` is forwarded to ``_placeholder_for_field_type`` to generate
     unique values for fields with a uniqueness constraint (e.g. email).
     """
-    from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
-
     _REL_KINDS = {
         FieldTypeKind.HAS_MANY,
         FieldTypeKind.HAS_ONE,
@@ -587,8 +584,6 @@ def _collect_parent_fixtures(
 
     *visited* prevents infinite recursion on self-referential entities.
     """
-    from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
-
     refs: dict[str, str] = {}
     for field in entity.fields:
         if field.type.kind != FieldTypeKind.REF:

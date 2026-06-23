@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dazzle.core.ir.governance import InterfaceAuthMethod
+from dazzle.core.ir.messaging import ChannelKind, DeliveryMode
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
     AgentId,
@@ -42,8 +44,6 @@ class DeploymentStateAgent(DetectionAgent):
     )
     def interface_without_auth(self, appspec: AppSpec) -> list[Finding]:
         """Flag interface APIs that use auth method 'none'."""
-        from dazzle.core.ir.governance import InterfaceAuthMethod
-
         findings: list[Finding] = []
         if appspec.interfaces is None:
             return findings
@@ -186,8 +186,6 @@ class DeploymentStateAgent(DetectionAgent):
     )
     def queue_direct_delivery(self, appspec: AppSpec) -> list[Finding]:
         """Flag queue channels with send operations using direct delivery."""
-        from dazzle.core.ir.messaging import ChannelKind, DeliveryMode
-
         findings: list[Finding] = []
         for channel in appspec.channels:
             if channel.kind != ChannelKind.QUEUE:

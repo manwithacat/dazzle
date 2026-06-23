@@ -5,6 +5,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.ir.test_design import (
+    TestDesignAction,
+    TestDesignSpec,
+    TestDesignStatus,
+    TestDesignStep,
+    TestDesignTrigger,
+)
+
 from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 from ..serializers import serialize_test_design
 
@@ -25,13 +33,6 @@ def test_design_propose_persona_impl(
     """Generate test designs from persona goals and workflows."""
     from datetime import UTC, datetime
 
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
     from dazzle.testing.test_design_persistence import get_next_test_design_id
 
     app_spec = load_project_appspec(project_root)
@@ -199,8 +200,6 @@ def test_design_propose_persona_impl(
 
 def _parse_test_design_action(value: str) -> Any:
     """Parse a TestDesignAction with descriptive error on invalid input."""
-    from dazzle.core.ir.test_design import TestDesignAction
-
     try:
         return TestDesignAction(value)
     except ValueError:
@@ -210,8 +209,6 @@ def _parse_test_design_action(value: str) -> Any:
 
 def _parse_test_design_trigger(value: str) -> Any:
     """Parse a TestDesignTrigger with descriptive error on invalid input."""
-    from dazzle.core.ir.test_design import TestDesignTrigger
-
     try:
         return TestDesignTrigger(value)
     except ValueError:

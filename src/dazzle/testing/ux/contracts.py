@@ -13,7 +13,9 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Literal
 
+from dazzle.core.ir.domain import PermissionKind
 from dazzle.core.ir.state_machine import state_name
+from dazzle.core.ir.triples import get_permitted_personas
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
@@ -232,9 +234,6 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
     Workspace contracts are generated directly from the appspec (workspaces
     don't participate in the triple model).
     """
-    from dazzle.core.ir.domain import PermissionKind
-    from dazzle.core.ir.triples import get_permitted_personas
-
     contracts: list[Contract] = []
 
     # Track which entities have already emitted each CRUD contract kind

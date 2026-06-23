@@ -15,6 +15,14 @@ import typer
 
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.errors import DazzleError, ParseError
+from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
+from dazzle.core.ir.test_design import (
+    TestDesignAction,
+    TestDesignSpec,
+    TestDesignStatus,
+    TestDesignStep,
+    TestDesignTrigger,
+)
 from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
 story_app = typer.Typer(
@@ -60,8 +68,6 @@ def propose_stories(
         dazzle story propose -e Task,Project      # Focus on specific entities
         dazzle story propose --max 50             # Propose up to 50 stories
     """
-
-    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
 
     manifest_path = Path(manifest).resolve()
 
@@ -242,8 +248,6 @@ def list_stories(
         dazzle story list                    # List all stories
         dazzle story list --status accepted  # List accepted stories only
     """
-    from dazzle.core.ir.stories import StoryStatus
-
     manifest_path = Path(manifest).resolve()
     root = manifest_path.parent
 
@@ -314,14 +318,6 @@ def generate_tests(
         dazzle story generate-tests                 # From accepted stories
         dazzle story generate-tests --include-draft # Include drafts too
     """
-    from dazzle.core.ir.stories import StoryStatus, StoryTrigger
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
     from dazzle.testing.test_design_persistence import add_test_designs
 
     manifest_path = Path(manifest).resolve()
