@@ -156,11 +156,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
                 "predicate": None,
                 "unique": False,
             },
-            "idx_audit_timestamp": {
-                "columns": ["timestamp"],
-                "predicate": None,
-                "unique": False,
-            },
+            "idx_audit_timestamp": {"columns": ["timestamp"], "predicate": None, "unique": False},
             "idx_audit_user": {
                 "columns": ["user_id", "timestamp"],
                 "predicate": None,
@@ -229,21 +225,9 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {},
         "indexes": {
-            "idx_outbox_created": {
-                "columns": ["created_at"],
-                "predicate": None,
-                "unique": False,
-            },
-            "idx_outbox_status": {
-                "columns": ["status"],
-                "predicate": None,
-                "unique": False,
-            },
-            "idx_outbox_topic": {
-                "columns": ["topic"],
-                "predicate": None,
-                "unique": False,
-            },
+            "idx_outbox_created": {"columns": ["created_at"], "predicate": None, "unique": False},
+            "idx_outbox_status": {"columns": ["status"], "predicate": None, "unique": False},
+            "idx_outbox_topic": {"columns": ["topic"], "predicate": None, "unique": False},
         },
         "uniques": [],
     },
@@ -266,11 +250,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {},
         "indexes": {
-            "idx_otp_expires": {
-                "columns": ["expires_at"],
-                "predicate": None,
-                "unique": False,
-            },
+            "idx_otp_expires": {"columns": ["expires_at"], "predicate": None, "unique": False},
             "idx_otp_user_method": {
                 "columns": ["user_id", "method"],
                 "predicate": None,
@@ -313,11 +293,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {},
         "indexes": {
-            "idx_recovery_user": {
-                "columns": ["user_id"],
-                "predicate": None,
-                "unique": False,
-            }
+            "idx_recovery_user": {"columns": ["user_id"], "predicate": None, "unique": False}
         },
         "uniques": [],
     },
@@ -447,11 +423,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {},
         "indexes": {
-            "ix_connections_tenant": {
-                "columns": ["tenant_id"],
-                "predicate": None,
-                "unique": False,
-            }
+            "ix_connections_tenant": {"columns": ["tenant_id"], "predicate": None, "unique": False}
         },
         "uniques": [],
     },
@@ -510,16 +482,8 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
                 "predicate": None,
                 "unique": False,
             },
-            "idx_devices_platform": {
-                "columns": ["platform"],
-                "predicate": None,
-                "unique": False,
-            },
-            "idx_devices_user_id": {
-                "columns": ["user_id"],
-                "predicate": None,
-                "unique": False,
-            },
+            "idx_devices_platform": {"columns": ["platform"], "predicate": None, "unique": False},
+            "idx_devices_user_id": {"columns": ["user_id"], "predicate": None, "unique": False},
         },
         "uniques": ["push_token", "user_id"],
     },
@@ -533,11 +497,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {},
         "indexes": {
-            "idx_email_verify_user": {
-                "columns": ["user_id"],
-                "predicate": None,
-                "unique": False,
-            }
+            "idx_email_verify_user": {"columns": ["user_id"], "predicate": None, "unique": False}
         },
         "uniques": [],
     },
@@ -554,16 +514,8 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {},
         "indexes": {
-            "ix_invitations_email": {
-                "columns": ["email"],
-                "predicate": None,
-                "unique": False,
-            },
-            "ix_invitations_org": {
-                "columns": ["org_id"],
-                "predicate": None,
-                "unique": False,
-            },
+            "ix_invitations_email": {"columns": ["email"], "predicate": None, "unique": False},
+            "ix_invitations_org": {"columns": ["org_id"], "predicate": None, "unique": False},
         },
         "uniques": [],
     },
@@ -644,11 +596,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
                 "predicate": None,
                 "unique": False,
             },
-            "membership_events_seq_key": {
-                "columns": ["seq"],
-                "predicate": None,
-                "unique": True,
-            },
+            "membership_events_seq_key": {"columns": ["seq"], "predicate": None, "unique": True},
         },
         "uniques": ["seq"],
     },
@@ -703,11 +651,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {},
         "indexes": {
-            "uq_organizations_slug": {
-                "columns": ["slug"],
-                "predicate": None,
-                "unique": True,
-            }
+            "uq_organizations_slug": {"columns": ["slug"], "predicate": None, "unique": True}
         },
         "uniques": ["slug"],
     },
@@ -721,11 +665,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {"user_id": "users"},
         "indexes": {
-            "idx_reset_tokens_user": {
-                "columns": ["user_id"],
-                "predicate": None,
-                "unique": False,
-            }
+            "idx_reset_tokens_user": {"columns": ["user_id"], "predicate": None, "unique": False}
         },
         "uniques": [],
     },
@@ -957,16 +897,8 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {"user_id": "users"},
         "indexes": {
-            "idx_sessions_expires": {
-                "columns": ["expires_at"],
-                "predicate": None,
-                "unique": False,
-            },
-            "idx_sessions_user_id": {
-                "columns": ["user_id"],
-                "predicate": None,
-                "unique": False,
-            },
+            "idx_sessions_expires": {"columns": ["expires_at"], "predicate": None, "unique": False},
+            "idx_sessions_user_id": {"columns": ["user_id"], "predicate": None, "unique": False},
         },
         "uniques": [],
     },
@@ -979,11 +911,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {"user_id": "users"},
         "indexes": {
-            "idx_user_prefs_user": {
-                "columns": ["user_id"],
-                "predicate": None,
-                "unique": False,
-            }
+            "idx_user_prefs_user": {"columns": ["user_id"], "predicate": None, "unique": False}
         },
         "uniques": [],
     },
@@ -1021,16 +949,8 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {},
         "indexes": {
-            "idx_users_email": {
-                "columns": ["email"],
-                "predicate": None,
-                "unique": False,
-            },
-            "users_email_key": {
-                "columns": ["email"],
-                "predicate": None,
-                "unique": True,
-            },
+            "idx_users_email": {"columns": ["email"], "predicate": None, "unique": False},
+            "users_email_key": {"columns": ["email"], "predicate": None, "unique": True},
         },
         "uniques": ["email"],
     },

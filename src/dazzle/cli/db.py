@@ -833,6 +833,162 @@ def snapshot_baseline_command() -> None:
     )
 
 
+@db_app.command(name="reframework-baseline")
+def reframework_baseline_command(
+    database_url: str = typer.Option(
+        "",
+        "--database-url",
+        help="Admin Postgres URL for scratch-DB creation (default: DATABASE_URL env var).",
+    ),
+) -> None:
+    """Regenerate the committed framework schema snapshot deterministically.
+
+    Builds a temporary scratch Postgres database via ``ensure_framework_schema``,
+    introspects the in-scope tables, and rewrites the
+    ``FRAMEWORK_SCHEMA_SNAPSHOT = {...}`` block in
+    ``src/dazzle/http/runtime/framework_schema_snapshot.py`` in place.
+
+    **What this command regenerates (only):**
+    The committed *snapshot* literal (``FRAMEWORK_SCHEMA_SNAPSHOT``).  The
+    baseline migration file (``0019_process_runtime_tables.py``) calls the
+    shared DDL core directly and does NOT contain generated SQL — so there is no
+    generated baseline DDL to regenerate.
+
+    **Agent workflow (ADR-0044 §7):**
+    Change the orchestrator (``ensure_framework_schema``) → run
+    ``dazzle db reframework-baseline`` → the three-way parity gate
+    (``tests/integration/test_framework_baseline_parity_pg.py``) proves equality.
+
+    **Round-trip property:** regenerating against an unchanged orchestrator
+    produces a byte-identical snapshot — ``git diff`` is empty.
+
+    Requires an admin Postgres URL to CREATE and DROP a scratch database.
+    Pass ``--database-url`` or set ``DATABASE_URL``/``TEST_DATABASE_URL``.
+    """
+    import os
+    import uuid
+
+    import psycopg
+    import sqlalchemy as sa
+
+    from dazzle.db.schema_snapshot import introspect_schema, render_snapshot_literal
+    from dazzle.http.runtime.framework_schema import ensure_framework_schema
+    from dazzle.http.runtime.framework_schema_snapshot import IN_SCOPE_TABLES
+
+    # Resolve admin URL — prefer explicit flag, then env vars.
+    admin_plain = (
+        database_url.strip()
+        or os.environ.get("DATABASE_URL", "").strip()
+        or os.environ.get("TEST_DATABASE_URL", "").strip()
+    )
+    if not admin_plain:
+        console.print(
+            "[red]No database URL available.[/red]\n"
+            "[dim]  Pass --database-url or set DATABASE_URL / TEST_DATABASE_URL.[/dim]"
+        )
+        raise typer.Exit(1)
+
+    # Normalise to a plain psycopg URL (strip +psycopg dialect prefix if present).
+    admin_url = admin_plain.replace("postgresql+psycopg://", "postgresql://")
+
+    # Locate the snapshot module file.
+    import dazzle.http.runtime.framework_schema_snapshot as _snap_mod
+
+    snap_path = Path(_snap_mod.__file__).resolve()
+
+    name = f"dazzle_refw_{uuid.uuid4().hex[:8]}"
+    base, _, _ = admin_url.rpartition("/")
+    scratch_url = f"{base}/{name}"
+    sa_scratch = scratch_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    console.print(f"[dim]Creating scratch database: {name}[/dim]")
+    with psycopg.connect(admin_url, autocommit=True) as a:
+        a.execute(f'CREATE DATABASE "{name}"')  # nosemgrep
+
+    try:
+        # Build the schema via the orchestrator.
+        console.print("[dim]Running ensure_framework_schema …[/dim]")
+        with psycopg.connect(scratch_url) as conn:
+            conn.autocommit = False
+            ensure_framework_schema(conn)
+
+        # Introspect the in-scope tables.
+        console.print("[dim]Introspecting schema …[/dim]")
+        eng = sa.create_engine(sa_scratch)
+        try:
+            snap = introspect_schema(eng, only=set(IN_SCOPE_TABLES))
+        finally:
+            eng.dispose()
+    finally:
+        console.print(f"[dim]Dropping scratch database: {name}[/dim]")
+        with psycopg.connect(admin_url, autocommit=True) as a:
+            a.execute(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                "WHERE datname=%s AND pid<>pg_backend_pid()",
+                (name,),
+            )
+            a.execute(f'DROP DATABASE IF EXISTS "{name}"')  # nosemgrep
+
+    # Render the new snapshot literal.
+    new_literal = render_snapshot_literal(snap)
+
+    # Rewrite FRAMEWORK_SCHEMA_SNAPSHOT = {...} in the snapshot module in place.
+    #
+    # Strategy: split on the exact assignment prefix, then find the end of the
+    # dict literal by scanning forward for the first "\n\n" or "\n\n\n" that
+    # follows the opening brace — this is format-agnostic (works for both the
+    # original human-readable multi-line style and pprint's compact style).
+    original = snap_path.read_text()
+
+    _MARKER = "FRAMEWORK_SCHEMA_SNAPSHOT = "
+    marker_idx = original.find(_MARKER)
+    if marker_idx == -1:
+        console.print(
+            f"[red]Could not locate FRAMEWORK_SCHEMA_SNAPSHOT assignment in {snap_path}.[/red]\n"
+            "[dim]  The file may have been reformatted — inspect manually.[/dim]"
+        )
+        raise typer.Exit(1)
+
+    # Everything before the marker stays unchanged.
+    prefix = original[: marker_idx + len(_MARKER)]
+
+    # The rest is the dict literal followed by the rest of the module.
+    after_marker = original[marker_idx + len(_MARKER) :]
+
+    # Find the end of the dict literal: look for the first double-newline after
+    # the opening brace.  This handles both multi-line (ends with "\n}\n\n")
+    # and compact pprint (ends with "}}\n\n") formats.
+    sep_idx = after_marker.find("\n\n")
+    if sep_idx == -1:
+        console.print(
+            f"[red]Could not find end of FRAMEWORK_SCHEMA_SNAPSHOT dict in {snap_path}.[/red]\n"
+            "[dim]  The file format is unexpected — inspect manually.[/dim]"
+        )
+        raise typer.Exit(1)
+
+    # suffix = everything from the double-newline onward (module remainder).
+    suffix = after_marker[sep_idx:]
+
+    updated = prefix + new_literal + suffix
+
+    if updated == original:
+        console.print(
+            "[green]FRAMEWORK_SCHEMA_SNAPSHOT is already up to date — no changes written.[/green]\n"
+            "[dim]  (round-trip idempotent: regenerating against unchanged orchestrator "
+            "produces identical snapshot)[/dim]"
+        )
+        return
+
+    snap_path.write_text(updated)
+    table_count = len(snap)
+    console.print(
+        f"[green]FRAMEWORK_SCHEMA_SNAPSHOT regenerated: {table_count} table(s).[/green]\n"
+        f"[dim]  → {snap_path}[/dim]\n"
+        "[dim]  Run `pytest tests/integration/test_framework_baseline_parity_pg.py` "
+        "to verify three-way parity.[/dim]"
+    )
+
+
 @db_app.command(name="downgrade")
 def downgrade_command(
     revision: str = typer.Argument(
