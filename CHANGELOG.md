@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.84.20] - 2026-06-24
+## [0.84.21] - 2026-06-24
+
+### Fixed
+- **Signing integration tests now skip cleanly when the `[signing]` extra is absent.** `tests/integration/test_qa_trial_signing.py` (via `boot_fixture_app`) already skipped without a `DATABASE_URL`, but not without `fpdf2`/`pyhanko` — so a partial local env (DB present, signing extra absent) produced a *misleading* failure: the sign POST 500s with "fpdf2/pyhanko is not installed", the row stays `viewed`, and the status assertion fails as if the signing flow were broken. The runner now `importorskip`s `fpdf` (the `fpdf2` distribution's module name) and `pyhanko`, mirroring the DATABASE_URL guard. No product change — with the extra installed all five scenarios pass. (CI already skipped these: its `integration` job ships neither a Postgres service nor the signing extra.)
 
 ### Added
 - **#1463 (proof + close) two-level-tenancy RLS fix verified on real Postgres + adversarial security review.** New `tests/integration/test_partition_root_hierarchy_rls_pg.py` builds a `Trust ▸ School` hierarchy with Trust-partitioned data and proves, as a `NOSUPERUSER NOBYPASSRLS` role: a leaf (School) membership's write path resolves `partition_root_id` to the Trust via the real SQL walk; binding that root sees the Trust's rows; binding the raw School (the old bug) sees **nothing**; a foreign Trust is hidden; an unbound GUC denies all (fail-closed). Host-confinement is proven via `resolve_activation`: the leaf member activates at its own School host but is `HostForbidden` at a sibling School under the **same** Trust (activation keys off the leaf `tenant_id`, never the partition root) and at the root host. An independent adversarial security review found no fail-open path (degrade-closed invariant, backward-compat with canonical root memberships, identifier-injection safety, and host-confinement all verified). Review follow-ups landed: `dazzle db auth-migrate` no longer writes a `NULL partition_root_id` (set to `tenant_id`, which that tool already resolves to the root); resolver docstrings now state the global-id-uniqueness and cursor-reuse invariants.

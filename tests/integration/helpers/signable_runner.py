@@ -185,6 +185,14 @@ def boot_fixture_app(
     db_url = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
     if not db_url:
         pytest.skip("no TEST_DATABASE_URL / DATABASE_URL — skipping signing integration tests")
+    # The sign endpoint renders a PDF (fpdf2) and applies a PKCS#7 signature
+    # (pyhanko) — both in the optional `[signing]` extra. Without either, the sign
+    # POST 500s and the row never leaves `viewed`, so skip cleanly (mirrors the
+    # DATABASE_URL guard) rather than failing with a misleading status assertion on
+    # a partial local env. NB: the `fpdf2` distribution imports as the module `fpdf`.
+    _signing_hint = "signing extra not installed — pip install dazzle-dsl[signing]"
+    pytest.importorskip("fpdf", reason=_signing_hint)
+    pytest.importorskip("pyhanko", reason=_signing_hint)
 
     port = _free_port()
     cert_env = mint_ephemeral_cert_env(tmp_path, project_name="Test Co")
