@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.10] - 2026-06-23
+
+### Fixed
+- **#1460 `dazzle db baseline` silently dropped cyclic & self-referential foreign keys.** Dazzle builds every FK that participates in a table dependency cycle or self-reference with SQLAlchemy `use_alter=True` (so `create_all` emits it as a trailing `ALTER TABLE … ADD CONSTRAINT`). Alembic autogenerate, however, kept those FKs *inline* in the `CreateTableOp` — and the `CreateTable` DDL compiler **omits** `use_alter` constraints while Alembic emits no compensating `ALTER`, so the FK vanished silently from a baseline schema (the app booted, but the constraint was simply absent — e.g. AegisMark got 189 FKs where `create_all` produced 194). The legacy autogenerate path (`db baseline`/`db migrate`/tenant) now hoists every `use_alter` FK out of the inline `create_table` into a trailing `op.create_foreign_key(...)`, mirroring `create_all`; downgrades drop those constraints before their tables. The #1431 snapshot-diff engine path (`db revision`) was already immune — it emits FKs as separate ops. New helper `hoist_cyclic_create_fks` in `http/alembic/directive_scoping.py`; gate `tests/unit/test_alembic_cyclic_fk_hoist_1460.py`.
+
 ## [0.84.9] - 2026-06-23
 
 ### Changed

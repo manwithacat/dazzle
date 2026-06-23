@@ -9,7 +9,46 @@ logic is unit-testable in isolation.
 
 from typing import Any
 
+import sqlalchemy as sa
 from alembic.operations import ops as alembic_ops
+
+
+def hoist_cyclic_create_fks(upgrade_ops: Any) -> list[str]:
+    """Move ``use_alter`` (cyclic / self-referential) FKs out of inline create_table
+    ops into trailing ``op.create_foreign_key`` ops, in place. Returns their names.
+
+    SQLAlchemy marks a foreign key ``use_alter=True`` when it participates in a
+    table dependency cycle or self-reference; ``create_all`` then emits it as a
+    post-create ``ALTER TABLE … ADD CONSTRAINT`` (it can't go inline — the target
+    table may be created later). Alembic autogenerate instead keeps the constraint
+    inline in the ``CreateTableOp`` — but the ``CreateTable`` DDL compiler *omits*
+    ``use_alter`` constraints (it expects the separate ALTER), and Alembic emits no
+    such ALTER. The FK therefore vanishes silently from a ``dazzle db baseline`` /
+    ``dazzle db migrate`` schema (#1460): the app boots, but the referential
+    constraint is simply absent.
+
+    This reproduces ``create_all``'s behaviour: strip every ``use_alter`` FK from
+    its inline ``create_table`` and append an equivalent ``CreateForeignKeyOp``
+    after all the table creations (they all precede these in ``ops``, so the
+    referenced tables exist by the time each ADD CONSTRAINT runs). The #1431
+    snapshot-diff engine path is unaffected — it already emits FKs as separate
+    ``CreateForeignKeyOp`` ops, never inline.
+    """
+    hoisted_ops: list[Any] = []
+    hoisted_names: list[str] = []
+    for op in upgrade_ops.ops:
+        if not isinstance(op, alembic_ops.CreateTableOp):
+            continue
+        kept: list[Any] = []
+        for item in op.columns:
+            if isinstance(item, sa.ForeignKeyConstraint) and item.use_alter:
+                hoisted_ops.append(alembic_ops.CreateForeignKeyOp.from_constraint(item))
+                hoisted_names.append(str(item.name) if item.name is not None else "<unnamed>")
+            else:
+                kept.append(item)
+        op.columns = kept
+    upgrade_ops.ops.extend(hoisted_ops)
+    return hoisted_names
 
 
 def scope_upgrade_to_additive(upgrade_ops: Any) -> list[str]:

@@ -17,6 +17,7 @@ import sqlalchemy
 from alembic import context
 
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
+from dazzle.http.alembic.directive_scoping import hoist_cyclic_create_fks
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +247,23 @@ def _process_legacy_autogenerate(script: Any, directives: list[Any]) -> None:
         directives[:] = []
         return
 
-    _legacy_scope_to_additive(script, directives)
+    if _legacy_scope_to_additive(script, directives):
+        return  # revision became empty after additive scoping — suppressed
+
+    # #1460: Alembic renders use_alter (cyclic / self-referential) FKs inline in
+    # create_table, where SQLAlchemy's CreateTable compiler silently omits them
+    # (use_alter means "emit via a trailing ALTER") while Alembic emits no such
+    # ALTER — so those FKs vanish from a `db baseline` / `db migrate` schema. Hoist
+    # them into trailing op.create_foreign_key calls, mirroring create_all.
+    hoisted = hoist_cyclic_create_fks(script.upgrade_ops)
+    if hoisted:
+        logger.info(
+            "Hoisted %d cyclic/self-referential FK(s) to post-create ALTER (#1460): %s",
+            len(hoisted),
+            ", ".join(hoisted),
+        )
+        # Keep the downgrade the exact inverse (drop these FKs before their tables).
+        script.downgrade_ops = script.upgrade_ops.reverse()
 
 
 # ---------------------------------------------------------------------------
