@@ -4,6 +4,7 @@ TDD: each test group covers a SchemaOp type with upgrade assertions
 and exact inverse (downgrade) assertions.
 """
 
+import pytest
 from alembic.operations import ops as aops
 
 from dazzle.db.schema_diff import (
@@ -23,6 +24,8 @@ from dazzle.db.schema_diff import (
 )
 from dazzle.db.schema_render import SEAM_MARKER, render
 from dazzle.http.runtime.safe_casts import is_safe_cast
+
+pytestmark = pytest.mark.migration_engine
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers

@@ -19,7 +19,14 @@ from unittest.mock import MagicMock
 import pytest
 from alembic.operations import ops as aops
 
-from dazzle.db.migration_engine import RevisionPlan, build_plan, generate_revision
+from dazzle.db.migration_engine import (
+    RevisionPlan,
+    build_plan,
+    generate_baseline_plan,
+    generate_revision,
+)
+
+pytestmark = pytest.mark.migration_engine
 
 # ---------------------------------------------------------------------------
 # Snapshot helpers
@@ -254,3 +261,62 @@ class TestGenerateRevision:
         add_ops = [o for o in flat if isinstance(o, aops.AddColumnOp)]
         assert not drop_ops, f"unexpected DropColumnOp (data loss): {drop_ops}"
         assert not add_ops, f"unexpected AddColumnOp (data loss): {add_ops}"
+
+
+# ---------------------------------------------------------------------------
+# Test: generate_baseline_plan — full create from empty prev, framework excluded
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateBaselinePlan:
+    """A baseline diffs against an empty prev and (a) creates only project tables
+    (framework tables excluded via table_filter), with FKs as separate ops, while
+    (b) embedding the *full* snapshot so the next db revision diffs full-vs-full."""
+
+    # A project table with a self-referential FK + a framework-owned table.
+    _CURR: dict[str, Any] = {
+        "Project": {
+            "columns": {"id": _UUID_PK, "parent": _TEXT_COL},
+            "fks": {"parent": "Project"},  # self-ref
+            "uniques": [],
+            "indexes": [],
+        },
+        "users": _table({"id": _UUID_PK}),  # framework-owned
+    }
+
+    def _patch(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def _project_current(table_filter: Any = None) -> dict[str, Any]:
+            if table_filter is None:
+                return self._CURR
+            return {k: v for k, v in self._CURR.items() if table_filter(k)}
+
+        monkeypatch.setattr("dazzle.db.migration_engine.project_current", _project_current)
+
+    def test_creates_only_project_tables(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._patch(monkeypatch)
+        plan = generate_baseline_plan(table_filter=lambda n: n != "users")
+        created = {
+            o.table_name
+            for o in _flatten_ops(plan.upgrade_ops.ops)
+            if isinstance(o, aops.CreateTableOp)
+        }
+        assert created == {"Project"}  # framework "users" excluded
+
+    def test_self_ref_fk_emitted_as_separate_op(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._patch(monkeypatch)
+        plan = generate_baseline_plan(table_filter=lambda n: n != "users")
+        fk_ops = [
+            o for o in _flatten_ops(plan.upgrade_ops.ops) if isinstance(o, aops.CreateForeignKeyOp)
+        ]
+        assert len(fk_ops) == 1
+        assert fk_ops[0].source_table == "Project"
+        assert fk_ops[0].referent_table == "Project"
+
+    def test_embedded_snapshot_includes_framework_tables(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._patch(monkeypatch)
+        plan = generate_baseline_plan(table_filter=lambda n: n != "users")
+        recovered = ast.literal_eval(plan.snapshot_literal)
+        # Full post-state — framework "users" present so the next revision cancels it.
+        assert set(recovered.keys()) == {"Project", "users"}

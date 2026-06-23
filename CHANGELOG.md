@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`dazzle db baseline` now uses the #1431 snapshot-diff engine** instead of Alembic's metadata-vs-DB autogenerate. The engine emits foreign keys as separate `op.create_foreign_key(...)` ops (so circular and self-referential FKs are created correctly — the structural fix for #1460, independent of the inline-create hoist), and embeds a `SCHEMA_SNAPSHOT` constant. **A fresh baseline no longer needs a follow-up `dazzle db snapshot-baseline`** — the next `db revision` diffs against the embedded snapshot. Framework-owned tables remain excluded (created by the framework baseline migration). This is the first step of collapsing onto the engine as the sole migration generator (legacy autogenerate + the #1460 hoist will be removed once `db migrate` also moves over).
+
+### Fixed
+- **Engine silently dropped foreign keys, indexes, and unique constraints on brand-new tables** (latent #1431 bug). `schema_diff.diff` only emitted `AddForeignKey`/`AddIndex`/`AddUnique` ops for *existing* tables (the common-pair constraint diff), and `_render_add_table` renders columns only — so any table created from scratch (a `db baseline`, or a `db revision` that adds a new entity) lost all its FKs, indexes, and **unique constraints** (a missing `UNIQUE` is a silent data-integrity hole). `diff` now emits those ops for new tables too, ordered after all `create_table` ops so referenced tables exist. Composite-index rendering was also broken (the comma-joined column key was passed as a single column name) — fixed in `_idx_columns`/`_idx_name`. Found by the new `create_all`-parity oracle.
+
+### Added
+- **Engine-correctness validation strategy (#1431).** A three-tier regression path for the migration engine, all tagged `migration_engine` (run with `pytest -m migration_engine`): (1) a **`create_all` parity oracle** (`tests/integration/test_engine_baseline_parity_pg.py`) that asserts `db baseline` + `upgrade` produces a schema **identical to SQLAlchemy `create_all`** of the same DSL, introspected on real Postgres, name-insensitively, across an inline corpus (cyclic/self-ref FKs, multi-FK, plain) and real example apps; (2) a **round-trip property** — `baseline → db revision → upgrade ≡ create_all(evolved DSL)`; (3) the marker grouping the existing unit + PG engine tests. The oracle exists because op-tree unit tests are blind to "valid op-tree, wrong schema" bugs — it caught the four FK/index/unique/composite bugs fixed in this release.
+
+### Agent Guidance
+- **`db baseline` is now engine-generated.** When touching the migration engine (`src/dazzle/db/schema_{diff,render,snapshot}.py`, `migration_engine.py`), run `pytest -m migration_engine` — it includes the real-PG `create_all` parity oracle. Adding an op type or changing table-creation output? The oracle is the gate that proves the *resulting schema* (not just the op-tree) still matches `create_all`. New schema features (constraints, index kinds) must be emitted for **new** tables in `diff`, not only in the existing-table constraint diff.
+
 ## [0.84.10] - 2026-06-23
 
 ### Fixed

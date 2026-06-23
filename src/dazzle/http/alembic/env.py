@@ -101,7 +101,18 @@ def _alembic_config(context: Any) -> Any:
     return getattr(env_ctx, "config", None) if env_ctx is not None else None
 
 
-def _drive_snapshot_engine(context: Any, script: Any) -> bool:
+def _framework_table_filter(name: str) -> bool:
+    """Table-name predicate for the engine baseline: ``True`` to keep a table.
+
+    Adapts ``framework_tables.include_object`` (Alembic's autogenerate exclusion
+    hook) to a bare name check so the engine baseline creates exactly the set of
+    tables the legacy baseline did — project tables only, framework-owned tables
+    excluded (they are created by the framework baseline migration).
+    """
+    return _include_object(None, name, "table", False, None)
+
+
+def _drive_snapshot_engine(context: Any, script: Any, *, baseline: bool = False) -> bool:
     """Replace the autogenerate ops with the #1431 snapshot-diff engine's ops.
 
     Returns ``True`` when the engine suppressed an empty directive (caller clears
@@ -119,7 +130,7 @@ def _drive_snapshot_engine(context: Any, script: Any) -> bool:
     """
     from alembic.script import ScriptDirectory
 
-    from dazzle.db.migration_engine import generate_revision
+    from dazzle.db.migration_engine import generate_baseline_plan, generate_revision
 
     cfg = _alembic_config(context)
     if cfg is None:
@@ -128,8 +139,13 @@ def _drive_snapshot_engine(context: Any, script: Any) -> bool:
         # snapshot literal back to revision_command, so fall through to the
         # legacy autogenerate path rather than crash in ScriptDirectory.from_config.
         return False
-    script_dir = ScriptDirectory.from_config(cfg)
-    plan = generate_revision(script_dir)
+    if baseline:
+        # Fresh-database baseline: diff against an empty prev and exclude
+        # framework-owned tables (the framework baseline migration creates those).
+        plan = generate_baseline_plan(table_filter=_framework_table_filter)
+    else:
+        script_dir = ScriptDirectory.from_config(cfg)
+        plan = generate_revision(script_dir)
 
     if plan.is_empty:
         return True  # signal: suppress (caller clears directives)
@@ -182,7 +198,8 @@ def _process_revision_directives(context: Any, revision: Any, directives: list[A
         use_engine = bool(cfg.attributes.get("dazzle_use_engine", False))
 
     if use_engine:
-        if _drive_snapshot_engine(context, script):
+        baseline = bool(cfg.attributes.get("dazzle_baseline", False)) if cfg is not None else False
+        if _drive_snapshot_engine(context, script, baseline=baseline):
             directives[:] = []
         return
 

@@ -1143,9 +1143,17 @@ def baseline_command(
 ) -> None:
     """Generate a baseline migration that creates all DSL-declared tables.
 
-    Use this for first-time deployment to a fresh database. The command
-    diffs the DSL entities against the target database and generates a
-    migration with all CREATE TABLE statements.
+    Use this for first-time deployment to a fresh database. The command projects
+    the current DSL schema and generates a migration that creates all the
+    project's tables (framework-owned tables are created by the framework
+    baseline migration, so they are excluded here).
+
+    Generated via the #1431 snapshot-diff engine (the same generator as
+    ``db revision``): foreign keys are emitted as separate
+    ``op.create_foreign_key`` ops — so circular and self-referential FKs are
+    created correctly — and the file carries a ``SCHEMA_SNAPSHOT`` constant, so a
+    fresh baseline needs **no** follow-up ``snapshot-baseline`` step before the
+    next ``db revision``.
 
     Workflow for fresh deployment:
         dazzle db baseline --apply          # Generate + apply in one step
@@ -1162,6 +1170,12 @@ def baseline_command(
     url = _resolve_url(database_url)
     if url:
         cfg.set_main_option("sqlalchemy.url", url)
+
+    # Drive the snapshot-diff engine in baseline mode (empty prev, framework
+    # tables excluded). env.py's directive hook reads these and stashes the
+    # snapshot literal back on cfg.attributes for post-write injection below.
+    cfg.attributes["dazzle_use_engine"] = True
+    cfg.attributes["dazzle_baseline"] = True
 
     # Validate that DSL metadata is loadable and non-empty.
     # NOTE: import the side-effect-free metadata_loader, NOT
@@ -1216,6 +1230,12 @@ def baseline_command(
         if rev is None:
             console.print("[yellow]No revision was created.[/yellow]")
             return
+
+        # Embed the engine's SCHEMA_SNAPSHOT (the full post-state, framework
+        # tables included) so the next `db revision` diffs against it, and expand
+        # any data-migration seam markers — the same post-write seam db revision uses.
+        _inject_schema_snapshot(rev, cfg.attributes.get("dazzle_schema_snapshot"))
+        _inject_data_seams(rev)
 
         console.print(f"[green]Baseline revision created: {rev.revision}[/green]")
         console.print(f"[dim]  → {project_versions}/[/dim]")

@@ -385,7 +385,16 @@ def diff(
     ]
 
     # --- 3. Add tables (not resolved via rename) ----------------------------
+    # A new table's FKs, indexes and unique constraints are emitted as SEPARATE
+    # ops (rendered post-create), NOT inline in the create_table — so the engine
+    # creates every table first, then wires constraints/indexes. This makes
+    # circular and self-referential FKs work without inline-create special-casing
+    # and ensures a baseline reproduces create_all exactly (indexes + uniques are
+    # otherwise silently dropped, since _render_add_table renders columns only).
+    # These ops are ordered immediately after all AddTable ops (below) so every
+    # referenced table exists by the time its FK/index/constraint is added.
     add_tables: list[SchemaOp] = []
+    add_table_constraints: list[SchemaOp] = []
     for tname in sorted(curr_tables - prev_tables):
         if tname not in table_prev_name:
             tsnap = curr[tname]
@@ -398,6 +407,12 @@ def diff(
                     uniques=list(tsnap.get("uniques", [])),
                 )
             )
+            for col, ref in sorted(tsnap.get("fks", {}).items()):
+                add_table_constraints.append(AddForeignKey(table=tname, column=col, ref_table=ref))
+            for idx_cols in sorted(tsnap.get("indexes", [])):
+                add_table_constraints.append(AddIndex(table=tname, column=idx_cols))
+            for col in sorted(tsnap.get("uniques", [])):
+                add_table_constraints.append(AddUnique(table=tname, column=col))
 
     # --- 4. Diff columns + constraints for common/renamed table pairs -------
     add_details: list[SchemaOp] = []
@@ -426,4 +441,12 @@ def diff(
         alters.extend(col_rename_alters + col_alters)
         drop_details.extend(col_drops + constraint_drops)
 
-    return rename_ops + add_tables + add_details + alters + drop_details + drop_tables
+    return (
+        rename_ops
+        + add_tables
+        + add_table_constraints
+        + add_details
+        + alters
+        + drop_details
+        + drop_tables
+    )

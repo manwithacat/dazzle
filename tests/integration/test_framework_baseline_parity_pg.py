@@ -37,7 +37,7 @@ import psycopg
 import pytest
 import sqlalchemy as sa
 
-pytestmark = [pytest.mark.e2e, pytest.mark.postgres]
+pytestmark = [pytest.mark.e2e, pytest.mark.postgres, pytest.mark.migration_engine]
 
 _PG_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
 

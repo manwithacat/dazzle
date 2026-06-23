@@ -26,7 +26,7 @@ from pathlib import Path
 import psycopg
 import pytest
 
-pytestmark = [pytest.mark.postgres]
+pytestmark = [pytest.mark.postgres, pytest.mark.migration_engine]
 
 _PG_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
 

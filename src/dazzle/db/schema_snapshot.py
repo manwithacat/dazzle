@@ -21,6 +21,7 @@ All dict keys and lists are sorted for deterministic comparison.
 from __future__ import annotations
 
 import pprint
+from collections.abc import Callable
 from types import ModuleType
 from typing import Any
 
@@ -88,13 +89,21 @@ def _render_server_default(server_default: Any) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def project_schema(metadata: sa.MetaData) -> dict[str, Any]:
+def project_schema(
+    metadata: sa.MetaData,
+    table_filter: Callable[[str], bool] | None = None,
+) -> dict[str, Any]:
     """Introspect *metadata* and return a deterministic plain-dict Snapshot.
 
     This is a **pure** function: it touches only the in-memory MetaData
     object, never the database or the filesystem.  Unit tests can pass a
     hand-built MetaData; production code passes the result of
     ``load_target_metadata()``.
+
+    *table_filter*, when given, is called with each table name; tables for which
+    it returns ``False`` are omitted from the snapshot. The baseline generator
+    uses this to exclude framework-owned tables (the framework baseline migration
+    creates those) while still producing project-table create ops.
 
     The Snapshot structure::
 
@@ -115,6 +124,8 @@ def project_schema(metadata: sa.MetaData) -> dict[str, Any]:
     snapshot: dict[str, Any] = {}
 
     for table in metadata.sorted_tables:
+        if table_filter is not None and not table_filter(table.name):
+            continue
         # --- columns ---
         columns: dict[str, Any] = {}
         for col in table.columns:
@@ -168,17 +179,21 @@ def project_schema(metadata: sa.MetaData) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def project_current() -> dict[str, Any]:
+def project_current(table_filter: Callable[[str], bool] | None = None) -> dict[str, Any]:
     """Return the Snapshot for the Dazzle project in the current directory.
 
     Delegates to ``load_target_metadata()`` (the same builder Alembic uses for
     ``--autogenerate``) so the snapshot is always consistent with the real
     schema, including shared_schema ``tenant_id`` / composite-FK / index
     injections — no exclusion list required.
+
+    *table_filter* is forwarded to :func:`project_schema` (the baseline generator
+    passes the framework-table exclusion predicate so framework-owned tables —
+    created by the framework baseline migration — are not re-created).
     """
     from dazzle.http.alembic.metadata_loader import load_target_metadata
 
-    return project_schema(load_target_metadata())
+    return project_schema(load_target_metadata(), table_filter=table_filter)
 
 
 # ---------------------------------------------------------------------------

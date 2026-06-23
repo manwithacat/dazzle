@@ -192,7 +192,14 @@ def _fk_name(table: str, column: str) -> str:
 
 
 def _idx_name(table: str, column: str) -> str:
-    return f"ix_{table}_{column}"
+    # ``column`` may be a comma-joined multi-column key ("a,b") from the snapshot;
+    # commas are illegal in an identifier, so join the parts with an underscore.
+    return f"ix_{table}_{column.replace(',', '_')}"
+
+
+def _idx_columns(column: str) -> list[str]:
+    """Split a snapshot index key ("a" or "a,b") into its column list."""
+    return column.split(",")
 
 
 def _uq_name(table: str, column: str) -> str:
@@ -543,7 +550,7 @@ def _render_add_index(
     op: AddIndex,
 ) -> tuple[aops.MigrateOperation, aops.MigrateOperation]:
     name = _idx_name(op.table, op.column)
-    create_op = aops.CreateIndexOp(name, op.table, [op.column])
+    create_op = aops.CreateIndexOp(name, op.table, _idx_columns(op.column))
     drop_op = aops.DropIndexOp(name, op.table)
     return create_op, drop_op
 
@@ -553,7 +560,7 @@ def _render_drop_index(
 ) -> tuple[aops.MigrateOperation, aops.MigrateOperation]:
     name = _idx_name(op.table, op.column)
     drop_op = aops.DropIndexOp(name, op.table)
-    recreate_op = aops.CreateIndexOp(name, op.table, [op.column])
+    recreate_op = aops.CreateIndexOp(name, op.table, _idx_columns(op.column))
     return drop_op, recreate_op
 
 

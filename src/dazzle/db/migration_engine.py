@@ -35,6 +35,7 @@ Snapshot  = dict[str, TableSnap]
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -160,6 +161,47 @@ def build_plan(
         upgrade_ops=upgrade_ops,
         downgrade_ops=downgrade_ops,
         snapshot_literal=snapshot_literal,
+        is_empty=(delta == []),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Baseline: full create from an empty prior snapshot
+# ---------------------------------------------------------------------------
+
+
+def generate_baseline_plan(
+    table_filter: Callable[[str], bool] | None = None,
+) -> RevisionPlan:
+    """Build the engine's plan for a **fresh-database baseline** revision.
+
+    A baseline creates every project table from nothing, so the diff is against
+    an empty ``prev`` (``{}``). Two distinct projections are used:
+
+    * The **create ops** diff ``{}`` against the *framework-excluded* projection
+      (``table_filter``), so the baseline creates only the project's own tables —
+      framework-owned tables (auth/audit/event/process/deploy) are created by the
+      framework baseline migration, not here. FKs land as separate
+      ``op.create_foreign_key`` ops (the engine's native behaviour), so cyclic /
+      self-referential FKs work without the legacy inline-create hoist (#1460).
+    * The **embedded** ``SCHEMA_SNAPSHOT`` is the *full* projection (framework
+      tables included) — it describes the actual post-migration schema state, so
+      the next ``db revision`` diffs full-vs-full and framework tables cancel out
+      rather than re-appearing as additions. This matches what ``snapshot-baseline``
+      stamps, which is why an engine baseline no longer needs that follow-up step.
+
+    ``table_filter`` is the table-name predicate (typically
+    ``framework_tables.include_object`` adapted to a name check); when ``None`` no
+    tables are excluded (every table is treated as project-owned).
+    """
+    full = project_current()
+    creatable = project_current(table_filter=table_filter)
+    delta = diff({}, creatable, None)
+    upgrade_ops, downgrade_ops = render(delta)
+    return RevisionPlan(
+        upgrade_ops=upgrade_ops,
+        downgrade_ops=downgrade_ops,
+        snapshot_literal=render_snapshot_literal(full),
         is_empty=(delta == []),
     )
 

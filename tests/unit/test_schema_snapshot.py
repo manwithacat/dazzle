@@ -15,6 +15,8 @@ from dazzle.db.schema_snapshot import (
     snapshot_from_module,
 )
 
+pytestmark = pytest.mark.migration_engine
+
 
 def _meta() -> sa.MetaData:
     md = sa.MetaData()

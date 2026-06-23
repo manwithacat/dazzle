@@ -23,6 +23,8 @@ from dazzle.db.schema_diff import (
     diff,
 )
 
+pytestmark = pytest.mark.migration_engine
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -163,6 +165,40 @@ def test_add_table_fks_roundtrip():
     ops = diff({}, snap)
     at = next(o for o in ops if isinstance(o, AddTable))
     assert at.fks == {"owner_id": "users"}
+
+
+def test_new_table_fks_emitted_as_separate_addforeignkey_ops():
+    """A new table's FKs become separate AddForeignKey ops (rendered as post-create
+    op.create_foreign_key), so cyclic / self-referential FKs work without inline
+    create-table FKs. Regression: the engine previously dropped new-table FKs
+    entirely (only AddTable, no AddForeignKey)."""
+    snap = {
+        "new_t": {
+            "columns": {"owner_id": _COL, "parent_id": _COL},
+            "fks": {"owner_id": "users", "parent_id": "new_t"},  # incl. self-ref
+            "indexes": [],
+            "uniques": [],
+        }
+    }
+    ops = diff({}, snap)
+    fk_ops = [o for o in ops if isinstance(o, AddForeignKey)]
+    assert {(o.column, o.ref_table) for o in fk_ops} == {
+        ("owner_id", "users"),
+        ("parent_id", "new_t"),
+    }
+
+
+def test_new_table_fks_ordered_after_all_table_creates():
+    """Every AddTable must precede every new-table AddForeignKey so the referenced
+    table exists when the FK is added (covers the cyclic case)."""
+    snap = {
+        "a": {"columns": {"b_id": _COL}, "fks": {"b_id": "b"}, "indexes": [], "uniques": []},
+        "b": {"columns": {"a_id": _COL}, "fks": {"a_id": "a"}, "indexes": [], "uniques": []},
+    }
+    ops = diff({}, snap)
+    last_add_table = max(i for i, o in enumerate(ops) if isinstance(o, AddTable))
+    first_fk = min(i for i, o in enumerate(ops) if isinstance(o, AddForeignKey))
+    assert first_fk > last_add_table
 
 
 def test_add_table_frozen():
