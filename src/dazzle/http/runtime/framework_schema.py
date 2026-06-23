@@ -104,11 +104,15 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     # ── AUTH TABLES ───────────────────────────────────────────────────────
     # Delegated to ensure_auth_core_tables (auth/store.py) — single
     # definition, two callers (store._init_db + this orchestrator).
-    # NOTE: _ensure_email_ci_uniqueness is NOT called here — that check
-    # raises loudly for duplicate-email rows and is appropriate only for
-    # upgrade paths on pre-existing databases; fresh installs never have
-    # the conflict.  The structural index still enforces the invariant.
     ensure_auth_core_tables(cur)
+    # Case-insensitive email uniqueness (#1342, M2) is part of the
+    # migration-managed schema so a NON-OWNER production runtime (which skips
+    # AuthStore._init_db, #1462) still gets the structural backstop. Safe here
+    # unconditionally: the baseline only runs against a fresh DB (no rows → no
+    # LOWER(email) collisions), and an upgrade-path DB already carries this index
+    # from a prior _init_db, so IF NOT EXISTS is a no-op. The loud collision
+    # *pre-check* stays in AuthStore._ensure_email_ci_uniqueness for the dev path.
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_key ON users (LOWER(email))")
 
     # ── PROCESS TABLES (process_runs, process_tasks) ──────────────────────
     # Reuse queue_columns_ddl (single source of truth for queue columns).

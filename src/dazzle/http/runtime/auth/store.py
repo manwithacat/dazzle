@@ -8,6 +8,8 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from dazzle.core.environment import skip_boot_schema_ddl
+
 if TYPE_CHECKING:
     from dazzle.http.runtime.auth.connections import (
         ConnectionRecord,
@@ -2816,7 +2818,15 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         (shared with ``ensure_framework_schema``); retains the advisory
         lock and the post-commit ``_ensure_email_ci_uniqueness`` call here
         since those are store-specific concerns.
+
+        #1462: skipped in production — the schema (incl. the LOWER(email) index)
+        is migration-managed there, and the runtime may serve as a non-owner role
+        that cannot run DDL. See ``skip_boot_schema_ddl``.
         """
+        if skip_boot_schema_ddl():
+            logger.info("Skipping AuthStore boot schema DDL; migrations own the schema (#1462).")
+            return
+
         conn = self._get_connection()
         try:
             cursor = conn.cursor()

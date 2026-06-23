@@ -94,6 +94,23 @@ def is_test() -> bool:
     return get_dazzle_env() == DazzleEnv.TEST
 
 
+def skip_boot_schema_ddl() -> bool:
+    """True when framework stores must NOT run schema DDL at boot (#1462).
+
+    In production the app-DB schema is owned by Alembic migrations (ADR-0044's
+    ``ensure_framework_schema`` baseline creates every framework table + index),
+    and the runtime may connect as a NON-OWNER role — under ``shared_schema`` RLS
+    the serving role is ``dazzle_app`` (``NOSUPERUSER NOBYPASSRLS``) so RLS is
+    actually enforced. That role cannot run ``CREATE``/``ALTER TABLE``/``CREATE
+    INDEX``, so a store that runs DDL in its ``_init_db`` at boot halts startup.
+
+    This mirrors the DSL ``create_all`` gate (server's
+    ``_should_create_schema_on_startup`` = ``not is_production()``): framework
+    stores skip boot DDL in production and rely on the migration-managed schema.
+    """
+    return is_production()
+
+
 def pin_production_env() -> None:
     """#1420: pin ``DAZZLE_ENV=production`` when it is unset.
 

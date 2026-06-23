@@ -7,6 +7,7 @@ Metadata is stored in PostgreSQL via psycopg.
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from abc import ABC, abstractmethod
@@ -19,9 +20,12 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle.core.db_url import normalise_postgres_scheme
+from dazzle.core.environment import skip_boot_schema_ddl
 
 if TYPE_CHECKING:
     pass
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -504,7 +508,14 @@ class FileMetadataStore:
         return psycopg.connect(self._pg_url, row_factory=dict_row)
 
     def _init_db(self) -> None:
-        """Initialize PostgreSQL tables."""
+        """Initialize PostgreSQL tables.
+
+        #1462: skipped in production — ``dazzle_files`` is migration-managed
+        (``ensure_framework_schema``) and the runtime may serve as a non-owner role.
+        """
+        if skip_boot_schema_ddl():
+            logger.info("Skipping file-storage boot schema DDL; migrations own the schema (#1462).")
+            return
         conn = self._get_connection()
         try:
             cursor = conn.cursor()

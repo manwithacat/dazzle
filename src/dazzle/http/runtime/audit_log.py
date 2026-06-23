@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
+from dazzle.core.environment import skip_boot_schema_ddl
+
 logger = logging.getLogger(__name__)
 
 # #1383: per-transaction advisory-lock key that serialises the hash-chain
@@ -261,7 +263,14 @@ class AuditLogger:
         return conn
 
     def _init_db(self) -> None:
-        """Create the audit log table if it doesn't exist."""
+        """Create the audit log table if it doesn't exist.
+
+        #1462: skipped in production — ``_dazzle_audit_log`` is migration-managed
+        (``ensure_framework_schema``) and the runtime may serve as a non-owner role.
+        """
+        if skip_boot_schema_ddl():
+            logger.info("Skipping audit-log boot schema DDL; migrations own the schema (#1462).")
+            return
         try:
             conn = self._get_connection()
             try:

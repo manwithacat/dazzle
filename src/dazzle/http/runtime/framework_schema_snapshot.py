@@ -951,6 +951,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         "indexes": {
             "idx_users_email": {"columns": ["email"], "predicate": None, "unique": False},
             "users_email_key": {"columns": ["email"], "predicate": None, "unique": True},
+            "users_email_lower_key": {"columns": ["None"], "predicate": None, "unique": True},
         },
         "uniques": ["email"],
     },

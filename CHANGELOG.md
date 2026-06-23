@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.15] - 2026-06-23
+
+### Fixed
+- **#1462 shared_schema RLS: framework stores ran owner-only DDL at every boot, blocking non-owner serving.** `AuthStore`, `FileMetadataStore`, and `AuditLogger` ran `CREATE`/`ALTER TABLE` in `_init_db` unconditionally — so serving as the documented non-owner role (`dazzle_app`, `NOSUPERUSER NOBYPASSRLS`, the role that makes RLS actually enforce) halted at startup with `InsufficientPrivilege`. These now skip boot DDL in production (`skip_boot_schema_ddl()` in `dazzle.core.environment`, mirroring the existing DSL `create_all` gate), relying on the migration-managed schema. The one piece that was created *only* at boot — the case-insensitive email index `users_email_lower_key` (#1342) — is now part of the migration-managed framework schema (`ensure_framework_schema`), so gating loses nothing; the loud duplicate-email pre-check stays in `AuthStore._ensure_email_ci_uniqueness` for the dev path. Verified on real Postgres: a non-owner role boots cleanly in production. **Framework schema change** (ADR-0044): `users_email_lower_key` added to the baseline; `FRAMEWORK_SCHEMA_SNAPSHOT` regenerated, three-way parity gate green.
+
+### Agent Guidance
+- **Framework stores must not run schema DDL at boot in production.** A new store with an `_init_db` that creates tables/indexes must (a) gate it on `skip_boot_schema_ddl()` and (b) add its schema to `ensure_framework_schema` (the migration-managed source) + regenerate via `dazzle db reframework-baseline`. The non-owner shared_schema runtime performs zero DDL.
+
 ## [0.84.14] - 2026-06-23
 
 ### Fixed
