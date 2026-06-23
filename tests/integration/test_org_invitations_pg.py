@@ -198,33 +198,6 @@ def test_accept_rejects_already_member(store_url: str) -> None:
     assert ei.value.reason == "already_member"
 
 
-def test_migration_0010_creates_invitations(store_url: str) -> None:
-    from alembic import command
-    from alembic.config import Config
-
-    from dazzle.cli.db import _get_framework_alembic_dir
-
-    _store(store_url)  # auth tables present (incl. invitations via _init_db)
-    with psycopg.connect(store_url, autocommit=True) as c:
-        c.execute("DROP TABLE IF EXISTS invitations")
-
-    fw = _get_framework_alembic_dir()
-    cfg = Config(str(fw / "alembic.ini"))
-    cfg.set_main_option("script_location", str(fw))
-    cfg.set_main_option("version_locations", str(fw / "versions"))
-    cfg.set_main_option(
-        "sqlalchemy.url", store_url.replace("postgresql://", "postgresql+psycopg://")
-    )
-    command.stamp(cfg, "0009_membership_events")
-    command.upgrade(cfg, "0010_invitations")
-
-    with psycopg.connect(store_url) as c:
-        ok = c.execute("SELECT to_regclass('public.invitations') IS NOT NULL").fetchone()[0]
-        ver = c.execute("SELECT version_num FROM alembic_version").fetchone()
-    assert ok is True
-    assert ver is not None and ver[0] == "0010_invitations"
-
-
 def test_accept_unique_violation_maps_to_already_member(store_url: str) -> None:
     # A membership created between accept's guard-read and its insert (i.e. a
     # concurrent winner) must surface as a clean already_member, not a 500/raw

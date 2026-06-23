@@ -67,51 +67,6 @@ def _seed_user(store, email: str = "a@b.test") -> str:
     return str(user.id)
 
 
-# -- Task 3: the Alembic migration -------------------------------------------
-
-
-def test_migration_0007_applies_on_a_pre_0007_db(scratch_url: str) -> None:
-    """Migration 0007 creates `memberships` + `sessions.active_membership_id`
-    and lands at revision 0007.
-
-    The auth tables live in `_init_db`, not the Alembic chain, and migration
-    0005 ALTERs `sessions` unguarded — so a from-scratch `upgrade head` is not a
-    replayable scenario. The realistic pre-0007 state is: a deployed DB with the
-    auth tables present, stamped at 0006. We reproduce that (init_db, then drop
-    exactly what 0007 should create) and apply only 0007."""
-    from alembic import command
-    from alembic.config import Config
-
-    from dazzle.cli.db import _get_framework_alembic_dir
-    from dazzle.http.runtime.auth.store import AuthStore
-
-    # Realistic pre-0007 deployed DB: auth tables present, 0007's additions absent.
-    store = AuthStore(database_url=scratch_url)
-    store._init_db()
-    with psycopg.connect(scratch_url, autocommit=True) as conn:
-        conn.execute("DROP TABLE IF EXISTS memberships")
-        conn.execute("ALTER TABLE sessions DROP COLUMN IF EXISTS active_membership_id")
-
-    fw = _get_framework_alembic_dir()
-    cfg = Config(str(fw / "alembic.ini"))
-    cfg.set_main_option("script_location", str(fw))
-    cfg.set_main_option("version_locations", str(fw / "versions"))
-    cfg.set_main_option(
-        "sqlalchemy.url", scratch_url.replace("postgresql://", "postgresql+psycopg://")
-    )
-    command.stamp(cfg, "0006_tenant_is_test")  # mark the DB as at the prior head
-    # Target 0007 explicitly (NOT "head") so this test stays pinned to the 0007
-    # migration in isolation as later migrations (0008+) extend the chain.
-    command.upgrade(cfg, "0007_memberships")
-
-    mcols = _columns(scratch_url, "memberships")
-    assert {"id", "tenant_id", "identity_id", "roles", "status", "invited_by"} <= mcols
-    assert "active_membership_id" in _columns(scratch_url, "sessions")
-    with psycopg.connect(scratch_url) as conn:
-        ver = conn.execute("SELECT version_num FROM alembic_version").fetchone()
-    assert ver is not None and ver[0] == "0007_memberships"
-
-
 # -- Task 4: the _init_db dev path -------------------------------------------
 
 

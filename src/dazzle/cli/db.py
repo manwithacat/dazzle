@@ -371,11 +371,12 @@ def _inject_data_seams(rev: Any) -> None:
 
 
 #: #1282: Alembic ships `alembic_version.version_num` as `VARCHAR(32)`.
-#: Migration 0004 widens it to `VARCHAR(128)`. The pre-upgrade guard
+#: The 0019 baseline widens it to `VARCHAR(128)`. The pre-upgrade guard
 #: below uses this cap to fail fast on revision ids that would exceed
 #: the column width — otherwise the DDL applies and the trailing
 #: `UPDATE alembic_version` truncates, leaving schema-vs-version-state
-#: divergent. Keep in sync with `0004_widen_alembic_version_num.py`.
+#: divergent. (Previously synced with `0004_widen_alembic_version_num.py`,
+#: now folded into the 0019 baseline.)
 ALEMBIC_VERSION_NUM_MAX_LEN = 128
 
 
@@ -412,7 +413,7 @@ def _validate_revision_widths(cfg: object, target: str) -> None:
 #: migration predates the framework shipping baselines has `down_revision=None`
 #: — a parallel root to this one — so chaining both version dirs yields two
 #: heads. Used to give a precise "parallel baseline roots" diagnosis.
-_FRAMEWORK_BASELINE_ROOT = "0001_framework_baseline"
+_FRAMEWORK_BASELINE_ROOT = "0019_process_runtime_tables"
 
 
 def _get_heads(cfg: object) -> list[str]:
@@ -505,9 +506,9 @@ def _schema_is_materialized(cfg: Any) -> bool:
     Signals the "schema materialized but ``alembic_version`` empty" state: the app
     booted (the runtime's ``ensure_dazzle_params_table()`` + DSL-derived tables
     ran) but alembic was never stamped. ``_dazzle_params`` is created by both the
-    runtime bootstrap and the ``0001_framework_baseline`` migration, so its
-    presence means the framework baseline is already on disk. A genuinely fresh
-    DB returns False, so the normal baseline chain still runs there.
+    runtime bootstrap and the ``0019_process_runtime_tables`` baseline migration,
+    so its presence means the framework baseline is already on disk. A genuinely
+    fresh DB returns False, so the normal baseline chain still runs there.
     """
     try:
         from sqlalchemy import create_engine

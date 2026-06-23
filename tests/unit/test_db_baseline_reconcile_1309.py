@@ -57,7 +57,7 @@ def _two_root_cfg(tmp: Path) -> tuple[Any, Path]:
     proj = tmp / "proj_versions"
     proj.mkdir()
     # Framework baseline root (the real revision id the guard recognises).
-    _write_rev(fw, "0001_framework_baseline", None)
+    _write_rev(fw, "0019_process_runtime_tables", None)
     # Project baseline — a SECOND parallel root.
     _write_rev(proj, "proj_base", None)
 
@@ -72,7 +72,7 @@ class TestHeadGuards1309:
         from dazzle.cli.db import _get_heads
 
         cfg, _ = _two_root_cfg(tmp_path)
-        assert set(_get_heads(cfg)) == {"0001_framework_baseline", "proj_base"}
+        assert set(_get_heads(cfg)) == {"0019_process_runtime_tables", "proj_base"}
 
     def test_guard_raises_on_parallel_heads(self, tmp_path: Path) -> None:
         from dazzle.cli.db import _guard_single_head
@@ -89,9 +89,9 @@ class TestHeadGuards1309:
             _guard_single_head(cfg, "head")
 
     def test_guard_traces_framework_root_when_head_is_descendant(self, tmp_path: Path) -> None:
-        """The REAL #1309 case: the framework HEAD is `0004…`, not `0001` —
-        so the guard must trace ancestry to recognise the framework root, not
-        just match the head id directly."""
+        """The REAL #1309 case: the framework HEAD is a descendant of 0019, not
+        0019 itself — so the guard must trace ancestry to recognise the framework
+        root, not just match the head id directly."""
         from alembic.config import Config
 
         from dazzle.cli.db import _guard_single_head
@@ -103,9 +103,9 @@ class TestHeadGuards1309:
         fw.mkdir()
         proj = tmp_path / "proj"
         proj.mkdir()
-        # Framework chain 0001 -> 0004-ish (head is the descendant, not 0001).
-        _write_rev(fw, "0001_framework_baseline", None)
-        _write_rev(fw, "0004_widen_alembic_version_num", "0001_framework_baseline")
+        # Framework chain 0019 -> 0020-ish (head is the descendant, not 0019).
+        _write_rev(fw, "0019_process_runtime_tables", None)
+        _write_rev(fw, "0020_next_framework_migration", "0019_process_runtime_tables")
         _write_rev(proj, "proj_base", None)
         cfg = Config()
         cfg.set_main_option("script_location", str(script_loc))
@@ -113,7 +113,7 @@ class TestHeadGuards1309:
 
         from dazzle.cli.db import _get_heads
 
-        assert set(_get_heads(cfg)) == {"0004_widen_alembic_version_num", "proj_base"}
+        assert set(_get_heads(cfg)) == {"0020_next_framework_migration", "proj_base"}
         with pytest.raises(RuntimeError, match="parallel baseline roots"):
             _guard_single_head(cfg, "head")
 
@@ -135,7 +135,7 @@ class TestHeadGuards1309:
         shutil.copy(_FRAMEWORK_ALEMBIC / "script.py.mako", script_loc / "script.py.mako")
         v = tmp_path / "versions"
         v.mkdir()
-        _write_rev(v, "0001_framework_baseline", None)
+        _write_rev(v, "0019_process_runtime_tables", None)
         cfg = Config()
         cfg.set_main_option("script_location", str(script_loc))
         cfg.set_main_option("version_locations", str(v))
@@ -170,7 +170,7 @@ class TestReconcileBaseline1309:
         heads = list(script.get_heads())
         assert len(heads) == 1
         merge = script.get_revision(heads[0])
-        assert set(merge.down_revision) == {"0001_framework_baseline", "proj_base"}
+        assert set(merge.down_revision) == {"0019_process_runtime_tables", "proj_base"}
 
     def test_reconcile_noop_on_single_head(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

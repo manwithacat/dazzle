@@ -66,38 +66,6 @@ def test_init_db_creates_organizations(scratch_url: str) -> None:
     assert {"id", "slug", "name", "status", "is_test"} <= cols
 
 
-def test_migration_0008_applies_on_a_pre_0008_db(scratch_url: str) -> None:
-    """Migration 0008 creates `organizations` and lands at revision 0008.
-
-    Same realistic scenario as 0007's test: a deployed DB with the auth tables
-    present (via `_init_db`), stamped at the prior head, then apply only 0008.
-    """
-    from alembic import command
-    from alembic.config import Config
-
-    from dazzle.cli.db import _get_framework_alembic_dir
-    from dazzle.http.runtime.auth.store import AuthStore
-
-    store = AuthStore(database_url=scratch_url)
-    store._init_db()
-    with psycopg.connect(scratch_url, autocommit=True) as conn:
-        conn.execute("DROP TABLE IF EXISTS organizations")
-
-    fw = _get_framework_alembic_dir()
-    cfg = Config(str(fw / "alembic.ini"))
-    cfg.set_main_option("script_location", str(fw))
-    cfg.set_main_option("version_locations", str(fw / "versions"))
-    cfg.set_main_option(
-        "sqlalchemy.url", scratch_url.replace("postgresql://", "postgresql+psycopg://")
-    )
-    command.stamp(cfg, "0007_memberships")  # mark the DB as at the prior head
-    # Target 0008 explicitly (NOT "head") so this stays pinned to 0008 in
-    # isolation as later migrations extend the chain.
-    command.upgrade(cfg, "0008_organizations")
-
-    assert {"id", "slug", "name", "status", "is_test"} <= _columns(scratch_url, "organizations")
-
-
 # -- Task 3: organization CRUD (race-safe get-or-create) ---------------------
 
 

@@ -80,5 +80,6 @@ def downgrade() -> None:
     # Chain root — downgrade is a deliberate no-op.  Dropping the entire
     # framework schema requires an out-of-band DBA operation; an automated
     # downgrade here would be data-destructive and is not safe to run
-    # unattended.  This mirrors the convention of 0001_framework_baseline.
+    # unattended.  This is the framework baseline root (0019); prior
+    # per-migration roots 0001–0018 were squashed into this baseline.
     pass

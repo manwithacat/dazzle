@@ -242,31 +242,6 @@ def test_delete_sessions_for_membership_is_org_scoped(store_url: str) -> None:
     assert store.delete_sessions_for_membership(m1.id) == 0  # idempotent
 
 
-def test_migration_0011_creates_connections(store_url: str) -> None:
-    from alembic import command
-    from alembic.config import Config
-
-    from dazzle.cli.db import _get_framework_alembic_dir
-
-    _store(store_url)
-    with psycopg.connect(store_url, autocommit=True) as c:
-        c.execute("DROP TABLE IF EXISTS connections")
-    fw = _get_framework_alembic_dir()
-    cfg = Config(str(fw / "alembic.ini"))
-    cfg.set_main_option("script_location", str(fw))
-    cfg.set_main_option("version_locations", str(fw / "versions"))
-    cfg.set_main_option(
-        "sqlalchemy.url", store_url.replace("postgresql://", "postgresql+psycopg://")
-    )
-    command.stamp(cfg, "0010_invitations")
-    command.upgrade(cfg, "0011_connections")
-    with psycopg.connect(store_url) as c:
-        ok = c.execute("SELECT to_regclass('public.connections') IS NOT NULL").fetchone()[0]
-        ver = c.execute("SELECT version_num FROM alembic_version").fetchone()
-    assert ok is True
-    assert ver is not None and ver[0] == "0011_connections"
-
-
 # ---- #1342 SCIM bearer grace window + rotation audit ----
 
 
@@ -489,42 +464,6 @@ def test_enable_request_signing_tenant_fenced(store_url: str) -> None:
         )
         is False
     )
-
-
-def test_migration_0012_adds_grace_and_audit(store_url: str) -> None:
-    from alembic import command
-    from alembic.config import Config
-
-    from dazzle.cli.db import _get_framework_alembic_dir
-
-    _store(store_url)
-    with psycopg.connect(store_url, autocommit=True) as c:
-        c.execute("DROP TABLE IF EXISTS connection_secret_events")
-        c.execute("ALTER TABLE connections DROP COLUMN IF EXISTS previous_encrypted_secret")
-        c.execute("ALTER TABLE connections DROP COLUMN IF EXISTS previous_secret_expires_at")
-    fw = _get_framework_alembic_dir()
-    cfg = Config(str(fw / "alembic.ini"))
-    cfg.set_main_option("script_location", str(fw))
-    cfg.set_main_option("version_locations", str(fw / "versions"))
-    cfg.set_main_option(
-        "sqlalchemy.url", store_url.replace("postgresql://", "postgresql+psycopg://")
-    )
-    command.stamp(cfg, "0011_connections")
-    command.upgrade(cfg, "0012_connection_grace_secret")
-    with psycopg.connect(store_url) as c:
-        tbl = c.execute(
-            "SELECT to_regclass('public.connection_secret_events') IS NOT NULL"
-        ).fetchone()[0]
-        cols = {
-            r[0]
-            for r in c.execute(
-                "SELECT column_name FROM information_schema.columns WHERE table_name='connections'"
-            ).fetchall()
-        }
-        ver = c.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-    assert tbl is True
-    assert {"previous_encrypted_secret", "previous_secret_expires_at"} <= cols
-    assert ver == "0012_connection_grace_secret"
 
 
 def test_encryption_and_signing_share_one_keypair(store_url: str) -> None:

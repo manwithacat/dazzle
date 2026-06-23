@@ -151,37 +151,3 @@ def test_tampering_a_row_breaks_the_chain(store_url: str) -> None:
     result = store.verify_membership_event_chain()
     assert result.ok is False
     assert result.mismatched_count >= 1
-
-
-def test_migration_0009_creates_membership_events(store_url: str) -> None:
-    """Migration 0009 creates `membership_events` and lands at revision 0009.
-
-    The auth tables live in `_init_db`, not the Alembic chain, and migration 0005
-    ALTERs `sessions` unguarded — so a from-scratch `upgrade head` is not
-    replayable. The realistic pre-0009 state is a deployed DB with the auth tables
-    present, stamped at 0008; reproduce it (init_db, drop what 0009 creates) and
-    apply only 0009 (mirrors test_auth_membership_pg.test_migration_0007_*)."""
-    from alembic import command
-    from alembic.config import Config
-
-    from dazzle.cli.db import _get_framework_alembic_dir
-
-    _store(store_url)  # auth tables present (incl. membership_events via _init_db)
-    with psycopg.connect(store_url, autocommit=True) as c:
-        c.execute("DROP TABLE IF EXISTS membership_events")  # 0009's job to recreate
-
-    fw = _get_framework_alembic_dir()
-    cfg = Config(str(fw / "alembic.ini"))
-    cfg.set_main_option("script_location", str(fw))
-    cfg.set_main_option("version_locations", str(fw / "versions"))
-    cfg.set_main_option(
-        "sqlalchemy.url", store_url.replace("postgresql://", "postgresql+psycopg://")
-    )
-    command.stamp(cfg, "0008_organizations")  # prior head
-    command.upgrade(cfg, "0009_membership_events")
-
-    with psycopg.connect(store_url) as c:
-        ok = c.execute("SELECT to_regclass('public.membership_events') IS NOT NULL").fetchone()[0]
-        ver = c.execute("SELECT version_num FROM alembic_version").fetchone()
-    assert ok is True
-    assert ver is not None and ver[0] == "0009_membership_events"
