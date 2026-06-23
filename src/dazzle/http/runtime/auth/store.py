@@ -2366,7 +2366,7 @@ class SessionStoreMixin:
             return again
 
 
-def ensure_auth_core_tables(cur: object) -> None:
+def ensure_auth_core_tables(cur: Any) -> None:
     """Create all auth tables and indexes (idempotent).
 
     Single source of DDL for the auth schema — called by both

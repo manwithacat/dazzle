@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.1] - 2026-06-23
+
+### Fixed
+- **CI type-check on the framework-baseline extracted DDL functions.** The 8 shared `ensure_*` table-creator functions extracted in 0.84.0 (`grant_store`, `recovery_codes`, `otp_store`, `device_registry`, `file_storage`, `audit_log`, `token_store`, `auth/store`) annotated their cursor parameter as `cur: object`, so mypy rejected `cur.execute(...)` with `attr-defined`. Changed to `cur: Any` (matching the orchestrator's `_ensure_framework_schema_ddl(cur: Any)` convention). Latent since the arc was committed locally and only surfaced on first push. (Local-miss: pre-ship mypy was scoped to the 4 changed Task-3/5 files, not the Task-1 store modules — run full `mypy src/dazzle`.)
+
 ## [0.84.0] - 2026-06-23
 
 ### Changed

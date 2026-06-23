@@ -44,7 +44,7 @@ def _hash_code(code: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
-def ensure_recovery_code_tables(cur: object) -> None:
+def ensure_recovery_code_tables(cur: Any) -> None:
     """Create the ``_dazzle_recovery_codes`` table and its index (idempotent).
 
     Single source of DDL — called by both ``RecoveryCodeStore.init_db`` and

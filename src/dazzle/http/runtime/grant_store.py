@@ -23,7 +23,7 @@ class GrantStatus(StrEnum):
     REVOKED = "revoked"
 
 
-def ensure_grant_tables(cur: object) -> None:
+def ensure_grant_tables(cur: Any) -> None:
     """Create the ``_grants`` and ``_grant_events`` tables and indexes (idempotent).
 
     Single source of DDL — called by both ``GrantStore._ensure_tables`` and

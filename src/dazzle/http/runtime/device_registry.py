@@ -58,7 +58,7 @@ class DeviceRecord(BaseModel):
 # =============================================================================
 
 
-def ensure_device_tables(cur: object) -> None:
+def ensure_device_tables(cur: Any) -> None:
     """Create the ``devices`` table and its indexes (idempotent).
 
     Single source of DDL — called by both ``DeviceRegistry._init_db`` and

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 _AUDIT_LOG_LOCK_KEY = 0x61756474
 
 
-def ensure_audit_log_table(cur: object, *, hash_chain: bool = False) -> None:
+def ensure_audit_log_table(cur: Any, *, hash_chain: bool = False) -> None:
     """Create the ``_dazzle_audit_log`` table and its indexes (idempotent).
 
     Single source of DDL for the audit-log table — called by both

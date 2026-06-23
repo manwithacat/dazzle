@@ -59,7 +59,7 @@ class RefreshTokenRecord(BaseModel):
 # =============================================================================
 
 
-def ensure_refresh_token_tables(cur: object) -> None:
+def ensure_refresh_token_tables(cur: Any) -> None:
     """Create the ``refresh_tokens`` table and its indexes (idempotent).
 
     Single source of DDL — called by both ``TokenStore._init_db`` and

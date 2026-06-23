@@ -435,7 +435,7 @@ class S3StorageBackend(StorageBackend):
 # =============================================================================
 
 
-def ensure_file_storage_tables(cur: object) -> None:
+def ensure_file_storage_tables(cur: Any) -> None:
     """Create the ``dazzle_files`` table and its indexes (idempotent).
 
     Single source of DDL — called by both ``FileMetadataStore._init_db``

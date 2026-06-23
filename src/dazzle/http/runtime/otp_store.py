@@ -50,7 +50,7 @@ def _generate_code(length: int = 6) -> str:
     return f"{code:0{length}d}"
 
 
-def ensure_otp_tables(cur: object) -> None:
+def ensure_otp_tables(cur: Any) -> None:
     """Create the ``_dazzle_otp_codes`` table and its indexes (idempotent).
 
     Single source of DDL — called by both ``OTPStore.init_db`` and
