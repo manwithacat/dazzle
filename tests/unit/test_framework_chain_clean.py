@@ -152,12 +152,7 @@ class TestFrameworkChainClean:
 
         files = _revision_files(versions_dir)
         if len(files) != len(_ALLOWED_VERSIONS):
-            extra = sorted(
-                f.name
-                for f in files
-                if f.stem not in _ALLOWED_VERSIONS
-                and not any(f.stem.startswith(k) for k in _ALLOWED_VERSIONS)
-            )
+            extra = sorted(f.name for f in files if f.stem not in _ALLOWED_VERSIONS)
             missing = sorted(k for k in _ALLOWED_VERSIONS if not any(f.stem == k for f in files))
             detail_parts = []
             if extra:
@@ -213,7 +208,7 @@ class TestFrameworkChainClean:
 
         assert found_rev is not None, (
             f"Stable head revision '{_STABLE_HEAD}' not found in {versions_dir}.\n"
-            "The squashed baseline file must declare revision = {_STABLE_HEAD!r}.\n"
+            f"The squashed baseline file must declare revision = {_STABLE_HEAD!r}.\n"
             f"Files present: {[f.name for f in files]}"
         )
         assert found_down is None, (

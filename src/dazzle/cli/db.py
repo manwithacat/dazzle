@@ -859,13 +859,17 @@ def reframework_baseline_command(
     ``dazzle db reframework-baseline`` → the three-way parity gate
     (``tests/integration/test_framework_baseline_parity_pg.py``) proves equality.
 
-    **Round-trip property:** regenerating against an unchanged orchestrator
-    produces a byte-identical snapshot — ``git diff`` is empty.
+    **Round-trip property (byte-idempotent):** regenerating against an unchanged
+    orchestrator produces a byte-identical snapshot — ``git diff`` is empty.
+    This holds because the command applies ``ruff format`` to the rewritten file
+    as its final step, matching the project's pre-commit formatter.  Running the
+    command twice with no schema change leaves the file unchanged.
 
     Requires an admin Postgres URL to CREATE and DROP a scratch database.
     Pass ``--database-url`` or set ``DATABASE_URL``/``TEST_DATABASE_URL``.
     """
     import os
+    import subprocess
     import uuid
 
     import psycopg
@@ -971,15 +975,33 @@ def reframework_baseline_command(
 
     updated = prefix + new_literal + suffix
 
-    if updated == original:
+    # Write unconditionally, then apply ruff format so the on-disk form matches
+    # the project's pre-commit formatter.  The byte-idempotency check runs AFTER
+    # formatting so "already up to date" is truthful: it reflects the normalised
+    # ruff-formatted output, not the raw pprint output.
+    snap_path.write_text(updated)
+    try:
+        subprocess.run(
+            ["uv", "run", "ruff", "format", str(snap_path)],
+            check=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        console.print(
+            f"[yellow]Warning: ruff format failed on {snap_path.name} "
+            f"(exit {exc.returncode}); snapshot written but may not be "
+            "byte-identical to the committed form.[/yellow]"
+        )
+
+    formatted = snap_path.read_text()
+    if formatted == original:
         console.print(
             "[green]FRAMEWORK_SCHEMA_SNAPSHOT is already up to date — no changes written.[/green]\n"
-            "[dim]  (round-trip idempotent: regenerating against unchanged orchestrator "
-            "produces identical snapshot)[/dim]"
+            "[dim]  (byte-idempotent: regenerating against unchanged orchestrator "
+            "produces identical ruff-formatted snapshot)[/dim]"
         )
         return
 
-    snap_path.write_text(updated)
     table_count = len(snap)
     console.print(
         f"[green]FRAMEWORK_SCHEMA_SNAPSHOT regenerated: {table_count} table(s).[/green]\n"
