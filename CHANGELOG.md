@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.3] - 2026-06-23
+
+### Changed
+- **#1438 deferred-imports burn-down wave 2** — hoisted precautionary function-body `from dazzle.core.*` imports to module top in 10 more non-core files (`cli/project`, `testing/e2e_runner`, `rbac/verification_harness`, `testing/event_test_runner`, `sentinel/agents/multi_tenancy`, `pitch/extractor`, `mcp/server/handlers/rhythm`, `mcp/server/handlers/process/storage`, `mcp/server/handlers/process/inspection`, `mcp/knowledge_graph/handlers/population_handlers`). Ratchet total 1871→1824 (−47). All hoisted cleanly (no source-patching reverts); one `try/except ImportError`-guarded core import in `pitch/extractor` correctly left in-function. Campaign issue #1438 stays open.
+
 ## [0.84.2] - 2026-06-23
 
 ### Changed
