@@ -9,9 +9,8 @@ This exercises the REAL runtime path — ``dazzle db revision`` (engine, default
    pre-existing, unrelated table — the engine emits intentful diff-derived ops only.
 4. ``dazzle db upgrade`` applies the engine revision cleanly against the live DB.
 
-It also verifies the engine is suppressed when the DSL hasn't changed (no-op revision),
-and that ``--legacy-autogenerate`` still routes to the additive-guardrailed autogenerate
-path (no ``SCHEMA_SNAPSHOT`` constant).
+It also verifies the engine is suppressed when the DSL hasn't changed (no-op revision)
+and the ``snapshot-baseline`` adoption path for pre-engine (no-snapshot) heads.
 
 Scratch-DB lifecycle mirrors tests/integration/test_authstore_alembic_parity_pg.py.
 """
@@ -181,7 +180,7 @@ def test_engine_revision_embeds_snapshot_and_is_additive(
     # convention) — "Task" / "Note", not lowercased.
 
     # 1. Baseline: engine revision for the initial DSL, then apply it.
-    revision_command(message="baseline", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="baseline", autogenerate=True)
     upgrade_command(revision="head", no_rls=True)
 
     baseline_files = _project_revision_files(project)
@@ -194,7 +193,7 @@ def test_engine_revision_embeds_snapshot_and_is_additive(
     (project / "dsl" / "app.dsl").write_text(_DSL_WITH_NOTE, encoding="utf-8")
 
     # 3. Engine revision for the delta.
-    revision_command(message="add note", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="add note", autogenerate=True)
 
     files = _project_revision_files(project)
     new_files = [p for p in files if p not in set(baseline_files)]
@@ -236,32 +235,46 @@ def test_engine_revision_suppressed_when_dsl_unchanged(
 
     project, _ = in_project
 
-    revision_command(message="baseline", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="baseline", autogenerate=True)
     upgrade_command(revision="head", no_rls=True)
     after_baseline = _project_revision_files(project)
 
     # Re-run with no DSL change — engine must suppress the empty revision.
-    revision_command(message="noop", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="noop", autogenerate=True)
     after_noop = _project_revision_files(project)
 
     assert after_noop == after_baseline, "engine must suppress a no-op revision"
 
 
-def test_legacy_autogenerate_path_has_no_snapshot(
+def test_db_migrate_generates_and_applies_via_engine(
     in_project: tuple[Path, str],
 ) -> None:
-    """--legacy-autogenerate routes to the autogenerate path (no SCHEMA_SNAPSHOT)."""
-    from dazzle.cli.db import revision_command
+    """`dazzle db migrate` (ADR-0045) generates the DSL-delta via the engine and
+    applies it; `--check` is a faithful dry-run using the same engine."""
+    from dazzle.cli.db import migrate_command, revision_command, upgrade_command
 
-    project, _ = in_project
+    project, psycopg_url = in_project
 
-    revision_command(message="legacy baseline", autogenerate=True, legacy_autogenerate=True)
-    files = _project_revision_files(project)
-    assert files, "legacy autogenerate must still write a revision"
-    text = files[-1].read_text(encoding="utf-8")
-    # The legacy path produces an autogenerate diff with NO snapshot constant.
-    assert "SCHEMA_SNAPSHOT" not in text
-    assert "create_table" in text
+    # Baseline the initial DSL.
+    revision_command(message="baseline", autogenerate=True)
+    upgrade_command(revision="head", no_rls=True)
+
+    # No DSL change → --check reports clean (engine, not metadata-vs-DB command.check).
+    migrate_command(database_url="", tenant="", check=True, sql=False)
+
+    # Evolve the DSL, then migrate (generate + apply in one step).
+    (project / "dsl" / "app.dsl").write_text(_DSL_WITH_NOTE, encoding="utf-8")
+    migrate_command(database_url="", tenant="", check=False, sql=False)
+
+    # The Note table the engine delta created physically exists.
+    plain = psycopg_url.replace("postgresql+psycopg://", "postgresql://", 1)
+    with psycopg.connect(plain) as conn:
+        row = conn.execute("SELECT to_regclass('public.\"Note\"')").fetchone()
+    assert row is not None and row[0] is not None, "Note table must exist after db migrate"
+
+    # The migrate-generated revision embeds a SCHEMA_SNAPSHOT (next diff is correct).
+    text = _project_revision_files(project)[-1].read_text(encoding="utf-8")
+    assert "SCHEMA_SNAPSHOT" in text
 
 
 def test_unsafe_not_null_add_renders_data_seam(
@@ -274,7 +287,7 @@ def test_unsafe_not_null_add_renders_data_seam(
     project, _ = in_project
 
     # Baseline: create the Task table.
-    revision_command(message="baseline", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="baseline", autogenerate=True)
     upgrade_command(revision="head", no_rls=True)
     baseline_files = _project_revision_files(project)
 
@@ -284,7 +297,7 @@ def test_unsafe_not_null_add_renders_data_seam(
     )
     (project / "dsl" / "app.dsl").write_text(unsafe_dsl, encoding="utf-8")
 
-    revision_command(message="add owner not null", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="add owner not null", autogenerate=True)
 
     files = _project_revision_files(project)
     new_files = [p for p in files if p not in set(baseline_files)]
@@ -330,7 +343,7 @@ def test_engine_resolves_field_rename_not_drop_add(
     # 1. Baseline: project has Task with a `title` field.  Apply the baseline
     #    migration so the table exists in Postgres with the `title` column.
     # -----------------------------------------------------------------------
-    revision_command(message="baseline", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="baseline", autogenerate=True)
     upgrade_command(revision="head", no_rls=True)
 
     baseline_files = _project_revision_files(project)
@@ -371,7 +384,6 @@ entity Task "Task":
     revision_command(
         message="rename title to name",
         autogenerate=True,
-        legacy_autogenerate=False,
     )
 
     files = _project_revision_files(project)
@@ -448,15 +460,21 @@ def in_project_no_snapshot(
     monkeypatch.setenv("DATABASE_URL", psycopg_url)
     monkeypatch.delenv("DAZZLE_ENV", raising=False)
 
-    from dazzle.cli.db import stamp_command
+    from dazzle.cli.db import baseline_command, stamp_command, upgrade_command
 
     stamp_command(revision="head")
 
-    # Write a legacy (no-snapshot) revision by using --legacy-autogenerate.
-    # This creates a revision with create_table ops but no SCHEMA_SNAPSHOT.
-    from dazzle.cli.db import revision_command, upgrade_command
-
-    revision_command(message="legacy baseline", autogenerate=True, legacy_autogenerate=True)
+    # Simulate a pre-#1431 head: generate an engine baseline, then strip the
+    # appended SCHEMA_SNAPSHOT constant so the head looks like a hand-authored /
+    # legacy migration (create_table ops, no embedded snapshot). _inject_schema_snapshot
+    # appends the constant at end-of-file, so cutting from "SCHEMA_SNAPSHOT =" to EOF
+    # is a faithful, deterministic way to produce a no-snapshot head.
+    baseline_command(database_url="", apply=False)
+    head_file = _project_revision_files(project)[-1]
+    text = head_file.read_text(encoding="utf-8")
+    text = text.split("\nSCHEMA_SNAPSHOT", 1)[0] + "\n"
+    head_file.write_text(text, encoding="utf-8")
+    assert "SCHEMA_SNAPSHOT" not in head_file.read_text(encoding="utf-8")
     upgrade_command(revision="head", no_rls=True)
 
     yield project, psycopg_url
@@ -539,7 +557,7 @@ def test_snapshot_baseline_adoption_scenario(
     )
 
     # --- 7. A subsequent revision with no DSL change emits NOTHING ---
-    revision_command(message="should-be-noop", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="should-be-noop", autogenerate=True)
     noop_new_files = [p for p in _project_revision_files(project) if p not in set(after_files)]
     assert noop_new_files == [], (
         f"engine must emit NO revision when DSL matches snapshot-baseline; "
@@ -745,7 +763,7 @@ def test_sequence_walk_intentful_and_non_destructive(
     # -----------------------------------------------------------------------
     # STEP 1: Baseline — 2 entities (Task, Project)
     # -----------------------------------------------------------------------
-    revision_command(message="s1-baseline", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="s1-baseline", autogenerate=True)
     upgrade_command(revision="head", no_rls=True)
 
     s1_files = _project_revision_files(project)
@@ -766,7 +784,7 @@ def test_sequence_walk_intentful_and_non_destructive(
     # STEP 2: Add entity Note
     # -----------------------------------------------------------------------
     (project / "dsl" / "app.dsl").write_text(_SEQ_S2_ADD_NOTE, encoding="utf-8")
-    revision_command(message="s2-add-note", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="s2-add-note", autogenerate=True)
 
     s2_files = _project_revision_files(project)
     s2_new = [f for f in s2_files if f not in set(s1_files)]
@@ -794,7 +812,7 @@ def test_sequence_walk_intentful_and_non_destructive(
     # STEP 3: Add field Task.score (nullable text)
     # -----------------------------------------------------------------------
     (project / "dsl" / "app.dsl").write_text(_SEQ_S3_ADD_FIELD, encoding="utf-8")
-    revision_command(message="s3-add-score", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="s3-add-score", autogenerate=True)
 
     s3_files = _project_revision_files(project)
     s3_new = [f for f in s3_files if f not in set(s2_files)]
@@ -827,7 +845,7 @@ def test_sequence_walk_intentful_and_non_destructive(
     # STEP 4: Rename Task.title → Task.label (was:)
     # -----------------------------------------------------------------------
     (project / "dsl" / "app.dsl").write_text(_SEQ_S4_RENAME, encoding="utf-8")
-    revision_command(message="s4-rename-title-label", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="s4-rename-title-label", autogenerate=True)
 
     s4_files = _project_revision_files(project)
     s4_new = [f for f in s4_files if f not in set(s3_files)]
@@ -894,7 +912,7 @@ def test_sequence_walk_intentful_and_non_destructive(
         conn.commit()
 
     (project / "dsl" / "app.dsl").write_text(_SEQ_S5_TYPE_CHANGE, encoding="utf-8")
-    revision_command(message="s5-score-type-change", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="s5-score-type-change", autogenerate=True)
 
     s5_files = _project_revision_files(project)
     s5_new = [f for f in s5_files if f not in set(s4_files)]
@@ -945,7 +963,7 @@ def test_sequence_walk_intentful_and_non_destructive(
     # STEP 6: Drop field Task.completed
     # -----------------------------------------------------------------------
     (project / "dsl" / "app.dsl").write_text(_SEQ_S6_DROP_FIELD, encoding="utf-8")
-    revision_command(message="s6-drop-completed", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="s6-drop-completed", autogenerate=True)
 
     s6_files = _project_revision_files(project)
     s6_new = [f for f in s6_files if f not in set(s5_files)]
@@ -989,7 +1007,7 @@ def test_sequence_walk_intentful_and_non_destructive(
     # This proves each step's embedded SCHEMA_SNAPSHOT correctly represents the
     # live schema so the engine sees no delta and suppresses the no-op revision.
     # -----------------------------------------------------------------------
-    revision_command(message="s7-chain-noop", autogenerate=True, legacy_autogenerate=False)
+    revision_command(message="s7-chain-noop", autogenerate=True)
     s7_files = _project_revision_files(project)
     assert s7_files == s6_files, (
         "CHAIN PROOF: engine must suppress no-op revision after all 6 steps; "

@@ -749,10 +749,11 @@
       "explain_aggregate_command": 23,
       "explain_scope_command": 18,
       "history_command": 2,
-      "migrate_command": 12,
+      "migrate_command": 14,
       "reconcile_baseline_command": 4,
+      "reframework_baseline_command": 8,
       "reset_command": 11,
-      "revision_command": 4,
+      "revision_command": 3,
       "rollback_command_wrapper": 3,
       "snapshot_baseline_command": 5,
       "stamp_command": 2,
@@ -1731,10 +1732,13 @@
   },
   "dazzle/cli/worker.py": {
     "functions": {
+      "_build_process_adapter": 4,
       "_build_queue": 2,
       "_build_services": 3,
       "_install_signal_handlers": 3,
-      "_run_worker": 14,
+      "_run_worker": 10,
+      "_start_process_adapter": 3,
+      "_teardown": 8,
       "run": 4
     },
     "mi_rank": "A"
@@ -2431,6 +2435,22 @@
       "_resolve_dotted_field": 5,
       "_resolve_value": 22,
       "evaluate_condition": 13
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/core/coordination/__init__.py": {
+    "functions": {},
+    "mi_rank": "A"
+  },
+  "dazzle/core/coordination/claim.py": {
+    "functions": {
+      "_json": 1,
+      "_now": 1,
+      "claim_due_work": 2,
+      "complete_work": 2,
+      "fail_work": 6,
+      "queue_columns_ddl": 1,
+      "renew_lease": 3
     },
     "mi_rank": "A"
   },
@@ -5858,14 +5878,91 @@
   "dazzle/core/process/factory.py": {
     "functions": {
       "EventBusConfig": 1,
+      "PostgresProcessConfig": 1,
       "ProcessConfig": 1,
       "TemporalConfig": 1,
       "_create_eventbus_adapter": 2,
+      "_create_postgres_adapter": 3,
       "_create_temporal_adapter": 3,
-      "_detect_backend": 5,
+      "_detect_backend": 7,
       "_temporal_available": 2,
-      "create_adapter": 4,
+      "create_adapter": 5,
       "get_backend_info": 3
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/core/process/pg_state.py": {
+    "functions": {
+      "PgProcessStateStore": 3,
+      "PgProcessStateStore.__init__": 1,
+      "PgProcessStateStore._connect": 1,
+      "PgProcessStateStore._ensure": 2,
+      "PgProcessStateStore.claim_due_runs": 4,
+      "PgProcessStateStore.count_active_runs_by_version": 3,
+      "PgProcessStateStore.get_entity_meta": 1,
+      "PgProcessStateStore.get_process_spec": 1,
+      "PgProcessStateStore.get_run": 2,
+      "PgProcessStateStore.get_run_by_idempotency_key": 2,
+      "PgProcessStateStore.get_schedule_spec": 1,
+      "PgProcessStateStore.get_task": 2,
+      "PgProcessStateStore.list_runs": 5,
+      "PgProcessStateStore.list_runs_by_version": 3,
+      "PgProcessStateStore.list_schedule_specs": 1,
+      "PgProcessStateStore.list_tasks": 6,
+      "PgProcessStateStore.mark_run_done": 2,
+      "PgProcessStateStore.mark_run_retry": 1,
+      "PgProcessStateStore.re_enqueue_run": 1,
+      "PgProcessStateStore.register_process": 2,
+      "PgProcessStateStore.register_schedule": 1,
+      "PgProcessStateStore.release_run_lease": 1,
+      "PgProcessStateStore.renew_run_lease": 1,
+      "PgProcessStateStore.save_entity_meta": 1,
+      "PgProcessStateStore.save_run": 4,
+      "PgProcessStateStore.save_task": 2,
+      "PgProcessStateStore.set_schedule_last_run": 1,
+      "_row_to_run": 5,
+      "_row_to_task": 3,
+      "_serialize_step": 8,
+      "_utcnow": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/core/process/postgres_adapter.py": {
+    "functions": {
+      "PostgresProcessAdapter": 4,
+      "PostgresProcessAdapter.__init__": 2,
+      "PostgresProcessAdapter._claim_and_execute_batch": 4,
+      "PostgresProcessAdapter._consumer_loop": 8,
+      "PostgresProcessAdapter._cron_matches": 6,
+      "PostgresProcessAdapter._execute_process_sync": 6,
+      "PostgresProcessAdapter._heartbeat": 3,
+      "PostgresProcessAdapter._listen_loop": 5,
+      "PostgresProcessAdapter._notify": 2,
+      "PostgresProcessAdapter._notify_event_wait": 2,
+      "PostgresProcessAdapter._poll_task_timeouts": 4,
+      "PostgresProcessAdapter._scheduler_loop": 12,
+      "PostgresProcessAdapter._trigger_schedule": 2,
+      "PostgresProcessAdapter.cancel_process": 3,
+      "PostgresProcessAdapter.complete_task": 6,
+      "PostgresProcessAdapter.count_active_runs_by_version": 1,
+      "PostgresProcessAdapter.get_run": 1,
+      "PostgresProcessAdapter.get_task": 1,
+      "PostgresProcessAdapter.initialize": 2,
+      "PostgresProcessAdapter.list_runs": 1,
+      "PostgresProcessAdapter.list_runs_by_version": 1,
+      "PostgresProcessAdapter.list_tasks": 1,
+      "PostgresProcessAdapter.reassign_task": 2,
+      "PostgresProcessAdapter.register_entity_meta": 1,
+      "PostgresProcessAdapter.register_process": 1,
+      "PostgresProcessAdapter.register_schedule": 1,
+      "PostgresProcessAdapter.resume_process": 3,
+      "PostgresProcessAdapter.set_send_handler": 1,
+      "PostgresProcessAdapter.set_side_effect_executor": 1,
+      "PostgresProcessAdapter.shutdown": 5,
+      "PostgresProcessAdapter.signal_process": 4,
+      "PostgresProcessAdapter.start_process": 4,
+      "PostgresProcessAdapter.suspend_process": 3,
+      "_resolve_param_ref": 2
     },
     "mi_rank": "A"
   },
@@ -5917,7 +6014,7 @@
       "_get_db_connection": 2,
       "build_process_where_clause": 11,
       "check_task_timeout": 6,
-      "execute_process_steps": 6,
+      "execute_process_steps": 7,
       "execute_step": 6,
       "fail_run": 1,
       "run_compensation": 7
@@ -6456,6 +6553,7 @@
       "_load_project_appspec_for_hints": 3,
       "build_plan": 1,
       "extract_rename_hints": 5,
+      "generate_baseline_plan": 1,
       "generate_revision": 3
     },
     "mi_rank": "A"
@@ -6526,7 +6624,7 @@
       "_empty_hints": 1,
       "_resolve_column_renames": 6,
       "_resolve_table_renames": 4,
-      "diff": 8
+      "diff": 11
     },
     "mi_rank": "A"
   },
@@ -6535,6 +6633,7 @@
       "_build_alter_column_op": 6,
       "_col_snap_to_sa_column": 2,
       "_fk_name": 1,
+      "_idx_columns": 1,
       "_idx_name": 1,
       "_is_unsafe_add": 2,
       "_render_add_column": 2,
@@ -6566,9 +6665,10 @@
     "functions": {
       "_render_server_default": 3,
       "_sa_type_to_token": 14,
+      "introspect_schema": 14,
       "load_head_snapshot": 4,
       "project_current": 1,
-      "project_schema": 12,
+      "project_schema": 14,
       "render_snapshot_literal": 1,
       "snapshot_from_module": 1
     },
@@ -7743,21 +7843,14 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/http/alembic/directive_scoping.py": {
-    "functions": {
-      "scope_upgrade_to_additive": 8
-    },
-    "mi_rank": "A"
-  },
   "dazzle/http/alembic/env.py": {
     "functions": {
       "_alembic_config": 2,
-      "_drive_snapshot_engine": 4,
+      "_drive_snapshot_engine": 3,
+      "_framework_table_filter": 1,
       "_get_url": 2,
-      "_legacy_scope_to_additive": 4,
       "_load_target_metadata": 2,
-      "_process_legacy_autogenerate": 2,
-      "_process_revision_directives": 6,
+      "_process_revision_directives": 5,
       "run_migrations_offline": 1,
       "run_migrations_online": 4
     },
@@ -7779,7 +7872,7 @@
   "dazzle/http/alembic/versions/0019_process_runtime_tables.py": {
     "functions": {
       "downgrade": 1,
-      "upgrade": 2
+      "upgrade": 1
     },
     "mi_rank": "A"
   },
@@ -9814,7 +9907,7 @@
       "AuditLogger._flush": 1,
       "AuditLogger._flush_loop": 4,
       "AuditLogger._get_connection": 3,
-      "AuditLogger._init_db": 3,
+      "AuditLogger._init_db": 2,
       "AuditLogger._write_entries": 11,
       "AuditLogger.drain": 1,
       "AuditLogger.log_decision": 5,
@@ -9829,6 +9922,7 @@
       "_compute_row_hash": 1,
       "_execute_query_logs": 5,
       "create_audit_context_from_request": 5,
+      "ensure_audit_log_table": 2,
       "measure_evaluation_time": 1
     },
     "mi_rank": "A"
@@ -10615,14 +10709,14 @@
   },
   "dazzle/http/runtime/auth/store.py": {
     "functions": {
-      "AuthStore": 3,
+      "AuthStore": 2,
       "AuthStore.__init__": 1,
       "AuthStore._ensure_email_ci_uniqueness": 3,
       "AuthStore._execute": 3,
       "AuthStore._execute_modify": 1,
       "AuthStore._execute_one": 2,
       "AuthStore._get_connection": 1,
-      "AuthStore._init_db": 12,
+      "AuthStore._init_db": 1,
       "AuthStore._row_to_scim_group": 1,
       "AuthStore._transaction": 2,
       "AuthStore.add_group_member": 1,
@@ -10739,7 +10833,8 @@
       "UserStoreMixin.update_user": 7,
       "UserStoreMixin.validate_password_reset_token": 4,
       "_appspec_has_tenant_root": 5,
-      "_normalize_email": 2
+      "_normalize_email": 2,
+      "ensure_auth_core_tables": 7
     },
     "mi_rank": "C"
   },
@@ -10950,7 +11045,8 @@
       "DeviceRegistry.mark_device_used": 1,
       "DeviceRegistry.register_device": 2,
       "DeviceRegistry.unregister_device": 2,
-      "create_device_routes": 1
+      "create_device_routes": 1,
+      "ensure_device_tables": 1
     },
     "mi_rank": "A"
   },
@@ -11163,6 +11259,7 @@
       "StorageBackend.stream": 1,
       "create_local_file_service": 1,
       "create_s3_file_service": 1,
+      "ensure_file_storage_tables": 1,
       "secure_filename": 3
     },
     "mi_rank": "A"
@@ -11171,6 +11268,19 @@
     "functions": {
       "_html": 1,
       "create_fragment_router": 8
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/http/runtime/framework_schema.py": {
+    "functions": {
+      "_ensure_framework_schema_ddl": 3,
+      "ensure_framework_schema": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/http/runtime/framework_schema_snapshot.py": {
+    "functions": {
+      "regenerate_and_print": 1
     },
     "mi_rank": "A"
   },
@@ -11235,7 +11345,8 @@
       "GrantStore.has_active_grant": 1,
       "GrantStore.list_grants": 7,
       "GrantStore.reject_grant": 2,
-      "GrantStore.revoke_grant": 1
+      "GrantStore.revoke_grant": 1,
+      "ensure_grant_tables": 1
     },
     "mi_rank": "A"
   },
@@ -11923,7 +12034,8 @@
       "OTPStore.init_db": 1,
       "OTPStore.verify_otp": 4,
       "_generate_code": 1,
-      "_hash_code": 1
+      "_hash_code": 1,
+      "ensure_otp_tables": 1
     },
     "mi_rank": "A"
   },
@@ -12156,6 +12268,12 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/http/runtime/process_schema.py": {
+    "functions": {
+      "ensure_process_tables": 1
+    },
+    "mi_rank": "A"
+  },
   "dazzle/http/runtime/push_notifications.py": {
     "functions": {
       "BatchPushResult": 2,
@@ -12269,6 +12387,7 @@
       "RecoveryCodeStore.store_codes": 2,
       "RecoveryCodeStore.verify_code": 3,
       "_hash_code": 1,
+      "ensure_recovery_code_tables": 1,
       "generate_recovery_codes": 4
     },
     "mi_rank": "A"
@@ -13472,7 +13591,8 @@
       "TokenStore.revoke_user_tokens": 3,
       "TokenStore.rotate_token": 3,
       "TokenStore.use_token": 1,
-      "TokenStore.validate_token": 6
+      "TokenStore.validate_token": 6,
+      "ensure_refresh_token_tables": 1
     },
     "mi_rank": "A"
   },

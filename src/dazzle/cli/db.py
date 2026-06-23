@@ -101,23 +101,18 @@ def revision_command(
         "--autogenerate/--no-autogenerate",
         help="Auto-detect schema changes from DSL entities",
     ),
-    legacy_autogenerate: bool = typer.Option(
-        False,
-        "--legacy-autogenerate",
-        help="Use the pre-#1431 metadata-vs-DB autogenerate path (additive-scoped, "
-        "#1427) instead of the DSL-snapshot diff engine. The default engine emits "
-        "intentful diff-derived ops and embeds a SCHEMA_SNAPSHOT constant.",
-    ),
 ) -> None:
     """Generate a new migration revision into the project directory.
 
-    By default (the #1431 engine), the revision is computed by diffing the head
-    migration's embedded ``SCHEMA_SNAPSHOT`` against the live DSL: the generated
+    The revision is computed by the #1431 snapshot-diff engine: it diffs the head
+    migration's embedded ``SCHEMA_SNAPSHOT`` against the live DSL, the generated
     ``upgrade()``/``downgrade()`` are the engine's rendered ops, and the file
     carries the new state as a module-level ``SCHEMA_SNAPSHOT = <literal>`` constant
     so the *next* revision can diff against it. The engine emits intentful,
     additive ops only — it never produces the destructive whole-schema rewrite that
-    metadata-vs-DB diff noise can cause.
+    metadata-vs-DB diff noise can cause. (For schema the engine can't express —
+    triggers, extensions, partial indexes — hand-author the revision with
+    ``--no-autogenerate`` and write the ``op.execute(...)`` yourself.)
 
     **Snapshot embedding seam (Alembic 1.18):** env.py's
     ``_process_revision_directives`` hook replaces the op-trees with the engine's
@@ -125,10 +120,9 @@ def revision_command(
     command<->env.py side-channel, already used for ``tenant_schema``). This command
     then *post-writes* ``SCHEMA_SNAPSHOT = <literal>`` into the generated file. We
     chose post-write injection over a custom ``script.py.mako`` placeholder because
-    the framework template is shared by the legacy path and tenant migrations
-    (which must not carry the constant), and the dual-lineage ``version_path`` plus
-    the separate revision ``EnvironmentContext`` make template-arg plumbing the
-    more fragile of the two — see the task report.
+    the framework template is shared by tenant migrations (which must not carry the
+    constant), and the dual-lineage ``version_path`` plus the separate revision
+    ``EnvironmentContext`` make template-arg plumbing the more fragile of the two.
 
     **Data-migration seam (Task 5.1):** for an *unsafe* schema change — a
     ``NOT NULL`` column add with no server default, or a type change with no safe
@@ -137,18 +131,14 @@ def revision_command(
     placeholder ``op.execute`` marker and post-write-expanded here into a readable
     ``# === DATA MIGRATION (hand-author) ===`` block for the author to fill in (see
     ``_inject_data_seams``).
-
-    ``--legacy-autogenerate`` falls back to the metadata-vs-DB autogenerate path,
-    scoped to **additive** ops (#1427); set ``DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE=1``
-    there to allow drop/alter ops for one deliberately destructive revision.
     """
     from alembic import command
 
     cfg = _get_alembic_cfg()
     project_versions = str(_get_project_versions_dir())
 
-    # Select the generation strategy for env.py's revision-directive hook.
-    cfg.attributes["dazzle_use_engine"] = not legacy_autogenerate
+    # The snapshot-diff engine is the sole generator (env.py's directive hook).
+    cfg.attributes["dazzle_use_engine"] = True
 
     # #1309: alembic refuses to author a revision when multiple heads exist
     # (it can't pick a parent). Give the actionable reconcile guidance instead
@@ -170,18 +160,17 @@ def revision_command(
             autogenerate=autogenerate,
             version_path=project_versions,
         )
-        # Engine path: embed the snapshot literal the hook stashed on cfg.attributes
-        # into the generated file (no-op when legacy / suppressed / no snapshot).
-        if not legacy_autogenerate:
-            _inject_schema_snapshot(rev, cfg.attributes.get("dazzle_schema_snapshot"))
-            # Expand the renderer's data-migration seam markers into readable
-            # hand-author comment blocks (Task 5.1). No-op when the revision has
-            # no unsafe change (no marker present).
-            _inject_data_seams(rev)
-            # Warn-only internal-consistency check (Task 6.1): verify that the
-            # SCHEMA_SNAPSHOT just embedded matches the live DSL projection.
-            # Never raises, never blocks the revision.
-            _verify_snapshot_consistency(rev, cfg)
+        # Embed the snapshot literal the hook stashed on cfg.attributes into the
+        # generated file (no-op when suppressed / no snapshot).
+        _inject_schema_snapshot(rev, cfg.attributes.get("dazzle_schema_snapshot"))
+        # Expand the renderer's data-migration seam markers into readable
+        # hand-author comment blocks (Task 5.1). No-op when the revision has
+        # no unsafe change (no marker present).
+        _inject_data_seams(rev)
+        # Warn-only internal-consistency check (Task 6.1): verify that the
+        # SCHEMA_SNAPSHOT just embedded matches the live DSL projection.
+        # Never raises, never blocks the revision.
+        _verify_snapshot_consistency(rev, cfg)
         console.print(f"[green]Migration revision created: {message}[/green]")
         console.print(f"[dim]  → {project_versions}/[/dim]")
     except Exception as e:
@@ -1268,8 +1257,10 @@ def migrate_command(
 ) -> None:
     """Generate and apply pending migrations.
 
-    Diffs the DSL-derived schema against the live database and applies
-    safe changes automatically. Use --check for a dry-run preview.
+    Generates a revision via the #1431 snapshot-diff engine (diffing the head
+    migration's embedded ``SCHEMA_SNAPSHOT`` against the current DSL — the same
+    generator as ``db revision``) and applies it. This is ``db revision`` +
+    ``db upgrade`` in one step. Use --check for a dry-run preview.
 
     Examples:
         dazzle db migrate              # Generate + apply
@@ -1277,12 +1268,14 @@ def migrate_command(
         dazzle db migrate --tenant X   # Apply to tenant schema
     """
     from alembic import command
-    from alembic.util.exc import CommandError
 
     cfg = _get_alembic_cfg()
     url = _resolve_url(database_url)
     if url:
         cfg.set_main_option("sqlalchemy.url", url)
+
+    # Generate via the snapshot-diff engine (DSL-vs-snapshot), like `db revision`.
+    cfg.attributes["dazzle_use_engine"] = True
 
     schema = _resolve_tenant_schema(tenant) if tenant else ""
     if schema:
@@ -1294,11 +1287,18 @@ def migrate_command(
         # first, so `check` shows the real additive diff instead of a baseline
         # replay. Stamping aligns metadata with reality — it is not a schema change.
         _autostamp_if_materialized(cfg)
-        try:
-            command.check(cfg)
+        # Preview via the SAME engine `db migrate` generates with (ADR-0045), so
+        # --check is a faithful dry-run of migrate — not Alembic's metadata-vs-DB
+        # `command.check`, which would answer a different question.
+        from alembic.script import ScriptDirectory
+
+        from dazzle.db.migration_engine import generate_revision
+
+        plan = generate_revision(ScriptDirectory.from_config(cfg))
+        if plan.is_empty:
             console.print("[green]No pending changes.[/green]")
-        except CommandError as e:
-            console.print(f"[yellow]Pending changes detected:[/yellow] {e}")
+        else:
+            console.print("[yellow]Pending changes detected.[/yellow]")
         return
 
     if sql:
@@ -1330,20 +1330,38 @@ def migrate_command(
 
     try:
         # #1390: reconcile an empty alembic_version against a materialized schema
-        # so the autogenerate below produces an additive diff, not a baseline replay.
+        # before upgrade so we apply the additive delta, not a baseline replay.
         _autostamp_if_materialized(cfg)
-        # Generate revision from current DSL diff.
-        # process_revision_directives in env.py suppresses empty revisions,
-        # so revision() returns None when there are no changes.
+        # Generate the revision via the engine. process_revision_directives in
+        # env.py suppresses empty revisions, so revision() returns None when the
+        # DSL matches the head snapshot.
         rev = command.revision(cfg, message="auto", autogenerate=True)
         if rev is None:
             console.print("[green]No schema changes detected.[/green]")
             return
 
+        # Embed SCHEMA_SNAPSHOT + expand any data-migration seam (same post-write
+        # path as `db revision`), so the next migrate/revision diffs correctly.
+        _inject_schema_snapshot(rev, cfg.attributes.get("dazzle_schema_snapshot"))
+        _inject_data_seams(rev)
+
         # Apply the new revision (and any other pending)
         command.upgrade(cfg, "head")
         console.print("[green]Migration applied successfully.[/green]")
+    except typer.Exit:
+        raise
     except Exception as e:
+        # A pre-engine project (head migration carries no SCHEMA_SNAPSHOT) makes the
+        # engine diff against {} → a full baseline that recreates existing tables.
+        # Turn the raw "already exists" crash into the actionable adoption path.
+        if "already exists" in str(e).lower():
+            console.print(
+                "[red]Migration tried to create tables that already exist.[/red]\n"
+                "[dim]  This project's head migration has no SCHEMA_SNAPSHOT (it predates "
+                "the migration engine), so the engine diffed against an empty baseline.\n"
+                "  Run `dazzle db snapshot-baseline` once to adopt the engine, then retry.[/dim]"
+            )
+            raise typer.Exit(1)
         console.print(f"[red]Migration failed: {e}[/red]")
         raise typer.Exit(1)
 

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.12] - 2026-06-23
+
+### Changed
+- **The #1431 DSL-snapshot engine is now the sole migration generator (ADR-0045).** `dazzle db migrate` now generates via the engine (DSL-snapshot diff, like `db revision`) and applies it — it no longer diffs DSL-derived metadata against the live database. `db migrate --check` is a faithful dry-run of the same engine (not Alembic's metadata-vs-DB `command.check`). `db revision` loses `--legacy-autogenerate`. The `#1390` materialized-schema autostamp is retained as an upgrade-time reconciliation. **For schema the engine can't express** (triggers, extensions, partial indexes), hand-author with `dazzle db revision --no-autogenerate` + `op.execute(...)`; **live-DB drift** is a `dazzle db verify` / `db status` concern, reconciled with `stamp` / `snapshot-baseline`. A pre-engine project (head migration with no `SCHEMA_SNAPSHOT`) must run `dazzle db snapshot-baseline` once before `db migrate`/`db revision` (the engine surfaces an actionable error if it would otherwise recreate existing tables).
+
+### Removed
+- **Legacy metadata-vs-live-DB autogenerate path** — `src/dazzle/http/alembic/directive_scoping.py` (the #1427 additive-only scoping **and** the #1460 cyclic-FK inline hoist), `_process_legacy_autogenerate` / `_legacy_scope_to_additive` in `env.py`, the `--legacy-autogenerate` flag, and the `DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE` env var. The path added no expressiveness over the engine (both project the same `load_target_metadata()`) and was the destructive-churn source #1427 fought; the engine emits FKs/indexes/uniques as separate post-create ops, so cyclic/self-ref FKs and all new-table constraints are correct without the hoist. Bare `alembic revision --autogenerate` (no dazzle Config) is unsupported — the directive hook suppresses it with a warning pointing at `dazzle db revision`.
+
+### Agent Guidance
+- **No more `--legacy-autogenerate` / `DAZZLE_ALEMBIC_ALLOW_DESTRUCTIVE`.** Every migration comes from the engine (`db revision`/`db baseline`/`db migrate`). Engine-inexpressible schema → `dazzle db revision --no-autogenerate` and write `op.execute(...)` by hand. The `migration_engine` marker + `create_all` parity oracle (ADR-0045) is the regression gate for any engine change. See `docs/adr/0045-engine-sole-migration-generator.md` and `docs/reference/migrations.md`.
+
+## [0.84.11] - 2026-06-23
+
 ### Changed
 - **`dazzle db baseline` now uses the #1431 snapshot-diff engine** instead of Alembic's metadata-vs-DB autogenerate. The engine emits foreign keys as separate `op.create_foreign_key(...)` ops (so circular and self-referential FKs are created correctly — the structural fix for #1460, independent of the inline-create hoist), and embeds a `SCHEMA_SNAPSHOT` constant. **A fresh baseline no longer needs a follow-up `dazzle db snapshot-baseline`** — the next `db revision` diffs against the embedded snapshot. Framework-owned tables remain excluded (created by the framework baseline migration). This is the first step of collapsing onto the engine as the sole migration generator (legacy autogenerate + the #1460 hoist will be removed once `db migrate` also moves over).
 

@@ -404,7 +404,7 @@ def test_engine_revision_roundtrip_reaches_create_all_parity(
         _write_inline_project(eng_proj, _DSL_RT_V1)
         _engine_baseline(eng_proj, eng_url, monkeypatch)  # chdir + DATABASE_URL set here
         (eng_proj / "dsl" / "app.dsl").write_text(_DSL_RT_V2, encoding="utf-8")
-        revision_command(message="add note", autogenerate=True, legacy_autogenerate=False)
+        revision_command(message="add note", autogenerate=True)
         upgrade_command(revision="head", no_rls=True)
         engine = _normalize(_introspect_project_tables(eng_url))
 
