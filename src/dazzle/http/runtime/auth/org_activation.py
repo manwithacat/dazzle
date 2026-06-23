@@ -71,6 +71,16 @@ def resolve_activation(
     RLS fence binds the root tenant while ``current_tenant`` narrows the view to
     the host (Phase 4). Default ``()`` preserves the exact-match (Layer-1)
     behaviour. A non-member of the host's whole chain still gets ``HostForbidden``.
+
+    #1463 (leaf-membership model): activation deliberately stays at the **leaf**
+    membership — a member with a ``School`` membership in a ``Trust ▸ School`` tree
+    activates that School membership at its School host, and is ``HostForbidden`` at
+    a sibling School host (its ``tenant_id`` is not in that host's chain). The RLS
+    *data* fence still binds the partition **root** (Trust): not via this resolver,
+    but because the bind path reads ``membership.partition_root_id`` (resolved once
+    at write time). So host-confinement keys off the leaf ``tenant_id`` here, while
+    the fence keys off the stored root — do **not** activate a root membership to
+    widen data visibility (that would admit the member tree-wide).
     """
     active = [m for m in memberships if m.status == "active"]
     if host_tenant_id is not None:

@@ -30,6 +30,10 @@ from dazzle.http.runtime.auth import (
     AuthMiddleware,
     AuthStore,
 )
+from dazzle.http.runtime.auth.partition_root import (
+    build_partition_hierarchy,
+    reconcile_membership_partition_roots,
+)
 from dazzle.http.runtime.csrf import apply_csrf_protection
 from dazzle.http.runtime.exception_handlers import register_exception_handlers
 from dazzle.http.runtime.file_routes import create_file_routes, create_static_file_routes
@@ -611,6 +615,30 @@ class DazzleBackendApp:
     # Build phases — called in order by build()
     # ------------------------------------------------------------------
 
+    def _reconcile_membership_partition_roots(self) -> None:
+        """Backfill/refresh membership ``partition_root_id`` at boot (#1463).
+
+        No-op unless auth is enabled with a tenant hierarchy. Wrapped so a
+        reconciliation failure (e.g. a transient DB error) never aborts boot — it
+        degrades closed (un-backfilled leaf memberships bind their raw tenant →
+        fewer rows, never a cross-tenant leak), so a logged warning is the right
+        severity. New memberships are still resolved correctly at write time.
+        """
+        store = self._auth_store
+        if store is None:
+            return
+        hierarchy = getattr(store, "_partition_hierarchy", None)
+        if hierarchy is None:
+            return
+        try:
+            reconcile_membership_partition_roots(store, hierarchy)
+        except Exception:  # noqa: BLE001 — boot must not fail on a fail-closed backfill
+            logger.warning(
+                "membership partition-root reconciliation failed; leaf memberships "
+                "bind their raw tenant until the next successful boot (fail-closed)",
+                exc_info=True,
+            )
+
     @contextlib.asynccontextmanager
     async def _lifespan(self, app: FastAPI) -> AsyncIterator[None]:
         """Modern FastAPI lifespan replacing the deprecated ``on_event`` hooks.
@@ -645,6 +673,11 @@ class DazzleBackendApp:
         # pool is open so they can use the DB. Replaces the @on_event hooks a custom lifespan
         # silently dropped.
         await run_startup_hooks(app)
+        # #1463: backfill/refresh membership partition roots now that the tenant
+        # tables exist (after schema setup + seed hooks). Degrades closed — a
+        # failure leaves leaf memberships binding their raw tenant (fewer rows,
+        # never more), so log and continue rather than aborting boot.
+        self._reconcile_membership_partition_roots()
         # #1366: HOST-APP @app.on_event handlers — drained with original
         # FastAPI semantics (a failed startup hook aborts boot) after the
         # framework is up. Each emits a deprecation warning pointing at
@@ -1484,6 +1517,12 @@ class DazzleBackendApp:
             database_url=self._database_url,
             user_entity_table=_user_entity,
         )
+        # #1463: install the tenant-host parent graph so create_membership resolves
+        # each membership's archetype:tenant partition root at write time. None for
+        # flat tenancy (no `parent:` edges). Boot reconciliation (in _lifespan)
+        # backfills/refreshes existing rows once the tenant tables exist.
+        _tenant_entities = getattr(getattr(self._appspec, "domain", None), "entities", None)
+        self._auth_store.set_partition_hierarchy(build_partition_hierarchy(_tenant_entities))
         self._auth_middleware = AuthMiddleware(self._auth_store)
 
         # ADR-0039 (#778/#1398): wire the domain-`User` provisioning mirror onto the

@@ -28,10 +28,14 @@ data anomaly degrades closed, not open.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from dazzle.http.runtime.query_builder import quote_identifier, validate_sql_identifier
+
+logger = logging.getLogger(__name__)
 
 # Mirrors the resolver's ancestor-walk cap (tenant.resolver._MAX_ANCESTOR_WALK):
 # a defensive bound against a malformed parent chain that escaped link-time
@@ -146,3 +150,41 @@ def resolve_partition_root(cur: Any, tenant_id: str, hierarchy: PartitionHierarc
         seen.add(parent_id)
         cur_kind, cur_id = parent_kind, parent_id
     return cur_id
+
+
+def reconcile_membership_partition_roots(store: Any, hierarchy: PartitionHierarchy | None) -> int:
+    """Backfill / refresh every membership's ``partition_root_id`` (#1463).
+
+    Run once at boot for tenant-hierarchy apps. Recomputes each membership's root
+    via :func:`resolve_partition_root` and writes any that are ``NULL`` (a
+    pre-existing row created before this fix) or **stale** (the tenant was
+    re-parented across roots since the row was written — the "refresh on the rare
+    cross-root re-parent" case). Idempotent: a second run with no change updates
+    nothing, so concurrent boot workers converge.
+
+    ``store`` is an ``AuthStore`` (uses its sync ``_transaction``). Returns the
+    number of rows updated. ``None`` hierarchy (flat tenancy) is a no-op — flat
+    rows are correct via the bind-path fallback and new writes set the value
+    directly.
+
+    A reconciliation failure degrades **closed**: an un-backfilled leaf membership
+    binds its raw ``tenant_id`` (a descendant), so the fence shows *fewer* rows,
+    never more. The caller therefore logs and continues rather than aborting boot.
+    """
+    if hierarchy is None:
+        return 0
+    updated = 0
+    with store._transaction() as cur:
+        cur.execute("SELECT id, tenant_id, partition_root_id FROM memberships")
+        rows = list(cur.fetchall())
+        for r in rows:
+            root = resolve_partition_root(cur, r["tenant_id"], hierarchy)
+            if root != r.get("partition_root_id"):
+                cur.execute(
+                    "UPDATE memberships SET partition_root_id = %s, updated_at = %s WHERE id = %s",
+                    (root, datetime.now(UTC).isoformat(), r["id"]),
+                )
+                updated += 1
+    if updated:
+        logger.info("reconcile_membership_partition_roots: backfilled/refreshed %d row(s)", updated)
+    return updated

@@ -14,12 +14,14 @@ The real-Postgres proof (RLS fence + host-confinement) lives in
 from __future__ import annotations
 
 import re
+from contextlib import contextmanager
 from types import SimpleNamespace
 from typing import Any
 
 from dazzle.http.runtime.auth.partition_root import (
     PartitionHierarchy,
     build_partition_hierarchy,
+    reconcile_membership_partition_roots,
     resolve_partition_root,
 )
 
@@ -195,3 +197,79 @@ def test_resolve_user_attribute_no_membership_denies() -> None:
 
     ctx = SimpleNamespace(active_membership=None, user=None, preferences={})
     assert _resolve_user_attribute("tenant_id", ctx) == "__RBAC_DENY__"
+
+
+# ── reconcile_membership_partition_roots (boot backfill / refresh) ────────────
+
+
+class _ReconcileCursor(_FakeCursor):
+    """Adds the memberships SELECT/UPDATE shapes on top of the probe/ascend cursor."""
+
+    def __init__(
+        self,
+        tenant_store: dict[str, dict[str, dict[str, Any]]],
+        memberships: dict[str, dict[str, Any]],
+    ) -> None:
+        super().__init__(tenant_store)
+        self._memberships = memberships
+        self._fetchall_result: list[dict[str, Any]] = []
+
+    def execute(self, sql: str, params: tuple[Any, ...] = ()) -> None:
+        s = " ".join(sql.split())
+        if s.startswith("SELECT id, tenant_id, partition_root_id FROM memberships"):
+            self._fetchall_result = [
+                {
+                    "id": mid,
+                    "tenant_id": m["tenant_id"],
+                    "partition_root_id": m["partition_root_id"],
+                }
+                for mid, m in self._memberships.items()
+            ]
+            return
+        if s.startswith("UPDATE memberships SET partition_root_id"):
+            root, _updated_at, mid = params
+            self._memberships[mid]["partition_root_id"] = root
+            return
+        super().execute(sql, params)
+
+    def fetchall(self) -> list[dict[str, Any]]:
+        return self._fetchall_result
+
+
+class _FakeStore:
+    def __init__(self, cur: _ReconcileCursor) -> None:
+        self._cur = cur
+
+    @contextmanager
+    def _transaction(self) -> Any:
+        yield self._cur
+
+
+def test_reconcile_backfills_null_and_refreshes_stale() -> None:
+    memberships = {
+        "m-leaf-null": {"tenant_id": "school-1", "partition_root_id": None},  # backfill → reg-1
+        "m-leaf-ok": {"tenant_id": "school-2", "partition_root_id": "reg-1"},  # already correct
+        "m-stale": {"tenant_id": "school-1", "partition_root_id": "wrong"},  # refresh → reg-1
+        "m-root": {"tenant_id": "reg-1", "partition_root_id": "reg-1"},  # root, no change
+    }
+    cur = _ReconcileCursor(_store(), memberships)
+    updated = reconcile_membership_partition_roots(_FakeStore(cur), _H)
+    assert updated == 2  # the NULL and the stale rows
+    assert memberships["m-leaf-null"]["partition_root_id"] == "reg-1"
+    assert memberships["m-stale"]["partition_root_id"] == "reg-1"
+    assert memberships["m-leaf-ok"]["partition_root_id"] == "reg-1"
+    assert memberships["m-root"]["partition_root_id"] == "reg-1"
+
+
+def test_reconcile_idempotent_second_pass_updates_nothing() -> None:
+    memberships = {"m": {"tenant_id": "school-1", "partition_root_id": None}}
+    cur = _ReconcileCursor(_store(), memberships)
+    assert reconcile_membership_partition_roots(_FakeStore(cur), _H) == 1
+    cur2 = _ReconcileCursor(_store(), memberships)
+    assert reconcile_membership_partition_roots(_FakeStore(cur2), _H) == 0
+
+
+def test_reconcile_flat_hierarchy_is_noop() -> None:
+    memberships = {"m": {"tenant_id": "x", "partition_root_id": None}}
+    cur = _ReconcileCursor(_store(), memberships)
+    assert reconcile_membership_partition_roots(_FakeStore(cur), None) == 0
