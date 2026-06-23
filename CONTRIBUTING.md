@@ -116,6 +116,18 @@ Add hover documentation for entity fields
 Closes #123
 ```
 
+### Releases & versioning
+
+Every push to `main` gets a unique `vMAJOR.MINOR.PATCH` tag (via `/bump patch`) for
+deployment traceability — but **only minor/major releases (`vX.Y.0`) are published**
+to PyPI, Homebrew, and GitHub Releases. Patch tags (`vX.Y.1+`) exist for traceability
+and are **not** published. To cut a published release, bump the minor: `/bump minor`.
+
+To keep the public record tidy, on each minor release a workflow prunes patch
+**tags + GitHub Releases** whose minor series has fallen outside the most recent 5
+(`vX.Y.0` anchors are kept forever; the commits remain on `main`, and a tag→SHA
+backup is written before deleting). See `scripts/prune_old_patch_releases.py`.
+
 ## 🎯 Contribution Ideas
 
 Here are some areas where we'd love your help:

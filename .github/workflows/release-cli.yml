@@ -18,6 +18,9 @@ permissions:
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    # Minor/major releases only (patch == 0); patches are tagged but not published.
+    # See publish-pypi.yml for the `endsWith('.0')` rationale. Manual dispatch always runs.
+    if: github.event_name == 'workflow_dispatch' || endsWith(github.ref, '.0')
     permissions:
       contents: write
 
@@ -82,6 +85,9 @@ jobs:
   update-homebrew:
     needs: create-release
     runs-on: ubuntu-latest
+    # Skipped automatically when create-release is skipped (patch tag), but gate
+    # explicitly too so the intent is local to this job.
+    if: github.event_name == 'workflow_dispatch' || endsWith(github.ref, '.0')
     permissions:
       contents: write
 

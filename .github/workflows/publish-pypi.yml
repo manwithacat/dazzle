@@ -115,6 +115,12 @@ jobs:
     name: Publish to PyPI
     needs: [build, test-install]
     runs-on: ubuntu-latest
+    # Publish minor/major releases only (patch component == 0). Every push is
+    # still tagged for traceability, but PyPI receives only vX.Y.0 — patches
+    # (vX.Y.1+) are not published. `endsWith('.0')` is exact: multi-digit patches
+    # like v1.2.10 / v1.2.20 end in "10"/"20", never ".0". workflow_dispatch
+    # (manual release with an explicit version input) is always allowed through.
+    if: github.event_name == 'workflow_dispatch' || endsWith(github.ref, '.0')
     environment: pypi
     permissions:
       id-token: write  # OIDC for trusted publishing

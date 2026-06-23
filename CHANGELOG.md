@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.13] - 2026-06-23
+
+### Changed
+- **Release hygiene: publish minor/major versions only; prune old patch tags.** Every push is still tagged `vMAJOR.MINOR.PATCH` for deployment traceability, but **PyPI, Homebrew, and GitHub Releases now publish only on `vX.Y.0` tags** — patch tags (`vX.Y.1+`) are no longer published (they accumulated to ~1300 PyPI versions / Releases). `publish-pypi.yml`, `release-cli.yml`, and a new `prune-old-releases.yml` are gated on `endsWith(github.ref, '.0')` (exact for `patch == 0`; manual `workflow_dispatch` always runs). On each minor release, `prune-old-releases.yml` runs `scripts/prune_old_patch_releases.py`, which deletes patch **tags + GitHub Releases** whose minor series falls outside the most recent 5 (`.0` anchors kept forever; commits stay on `main`; a tag→SHA backup is written before deleting — recoverable). To cut a published release: `/bump minor`.
+
+### Agent Guidance
+- **`/bump patch` no longer publishes.** A patch push tags for traceability but does not reach PyPI/Homebrew/Releases — only `vX.Y.0` (minor/major) does. When a change needs to be consumable downstream, cut a minor (`/bump minor`). The `/ship` reminder that "the tag triggers PyPI + Homebrew" is now true only for minor/major tags.
+
 ## [0.84.12] - 2026-06-23
 
 ### Changed
