@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.2] - 2026-06-23
+
+### Changed
+- **#1438 deferred-imports burn-down wave** — hoisted precautionary function-body `from dazzle.core.*` imports to module top in 10 non-core files (`workspace_aggregation`, `dsl_test_generator`, `stories`, `process/diagrams`, `stress_test`, `hot_reload`, `process/proposals`, `page_routes`, `cli/testing`, `process/worker`). `dazzle.core` is the bottom layer (import-linter core ↛ http/page), so these can't cycle back. Ratchet baseline total 1949→1871 (−78). All 10 hoisted cleanly — none tripped a source-patching test (`@patch` of the source module). Campaign issue #1438 stays open.
+
 ## [0.84.1] - 2026-06-23
 
 ### Fixed
