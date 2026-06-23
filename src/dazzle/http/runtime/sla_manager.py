@@ -25,10 +25,9 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, tzinfo
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from dazzle.core.ir.sla import SLAConditionSpec, SLATierSpec
+from dazzle.core.ir.sla import SLAConditionSpec, SLASpec, SLATierSpec
 
 logger = logging.getLogger(__name__)
 
@@ -185,8 +184,6 @@ class SLAManager:
         services: dict[str, Any] | None = None,
         check_interval: int = 300,
     ) -> None:
-        from dazzle.core.ir.sla import SLASpec
-
         self._slas: dict[str, SLASpec] = {s.name: s for s in sla_specs}
         # Index by entity name for fast lookup
         self._sla_by_entity: dict[str, list[SLASpec]] = {}

@@ -19,6 +19,8 @@ from __future__ import annotations  # required: forward reference
 from dataclasses import dataclass, field
 from typing import Any
 
+from dazzle.core.ir.predicate_builder import build_scope_predicate
+
 
 @dataclass
 class StageVerification:
@@ -64,8 +66,6 @@ def verify_predicate_build(
         StageVerification with pass/fail.
     """
     try:
-        from dazzle.core.ir.predicate_builder import build_scope_predicate
-
         predicate = build_scope_predicate(condition, entity_name, fk_graph)
         actual_kind = getattr(predicate, "kind", "unknown")
 
@@ -204,7 +204,6 @@ def verify_round_trip(
         InvariantResult with all stage results.
     """
     result = InvariantResult(entity=entity_name, persona="")
-    from dazzle.core.ir.predicate_builder import build_scope_predicate
 
     # Stage 1: ConditionExpr → ScopePredicate
     stage1 = verify_predicate_build(

@@ -59,6 +59,8 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request
 
+from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
+
 if TYPE_CHECKING:
     from dazzle.core.ir.fk_graph import FKGraph
     from dazzle.http.runtime.service_generator import BaseService
@@ -312,7 +314,6 @@ def _permit_passes(
     reports True. `PermissionRule.require_auth` defaults to True and
     `evaluate_permission` short-circuits to DENY on unauth — passing
     an empty user_id would silently fail every check."""
-    from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
     from dazzle.render.access_evaluator import evaluate_permission
 
     op_kind = getattr(AccessOperationKind, op.upper(), None)

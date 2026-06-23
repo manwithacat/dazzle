@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core import ir
+from dazzle.core.http_client import async_retrying_request
 
 logger = logging.getLogger(__name__)
 
@@ -186,8 +187,6 @@ class IntegrationExecutor:
         # Make HTTP call
         try:
             import httpx
-
-            from dazzle.core.http_client import async_retrying_request
 
             url = f"{service.base_url.rstrip('/')}/{action.call_operation}"
 

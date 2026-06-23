@@ -8,6 +8,16 @@ the runtime's framework-agnostic BackendSpec format.
 from typing import Any
 
 from dazzle.core import ir
+from dazzle.core.ir.expressions import (
+    BinaryExpr,
+    BinaryOp,
+    DurationLiteral,
+    FieldRef,
+    FuncCall,
+    Literal,
+    UnaryExpr,
+    UnaryOp,
+)
 from dazzle.http.specs import (
     AccessAuthContext,
     AccessComparisonKind,
@@ -405,8 +415,6 @@ def _convert_computed_expr(expr: ir.ComputedExpr) -> ComputedExprSpec:
 
 def _convert_unified_expr_to_computed(expr: Any) -> ComputedExprSpec:
     """Convert unified Expr AST to BackendSpec ComputedExprSpec."""
-    from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, FuncCall, Literal
-
     if isinstance(expr, FieldRef):
         return ComputedExprSpec(kind="field_ref", path=expr.path)
     elif isinstance(expr, Literal):
@@ -544,16 +552,6 @@ def _convert_invariant_expr(expr: ir.InvariantExpr) -> InvariantExprSpec:
 
 def _convert_unified_expr_to_invariant(expr: Any) -> InvariantExprSpec:
     """Convert unified Expr AST to BackendSpec InvariantExprSpec."""
-    from dazzle.core.ir.expressions import (
-        BinaryExpr,
-        BinaryOp,
-        DurationLiteral,
-        FieldRef,
-        Literal,
-        UnaryExpr,
-        UnaryOp,
-    )
-
     if isinstance(expr, FieldRef):
         return InvariantExprSpec(kind="field_ref", path=expr.path)
     elif isinstance(expr, Literal):

@@ -13,6 +13,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from dazzle.core.http_client import async_retrying_request
 from dazzle.http.runtime.auth import AuthStore, UserRecord
 from dazzle.http.runtime.jwt_auth import JWTService
 from dazzle.http.runtime.token_store import TokenStore
@@ -243,8 +244,6 @@ async def exchange_github_code(
             code="missing_dependency",
         )
 
-    from dazzle.core.http_client import async_retrying_request
-
     async with (
         httpx.AsyncClient() as client
     ):  # DZ-HTTP-NORETRY  driven by async_retrying_request below
@@ -356,8 +355,6 @@ async def verify_github_token(access_token: str) -> SocialProfile:
             provider=SocialProvider.GITHUB,
             code="missing_dependency",
         )
-
-    from dazzle.core.http_client import async_retrying_request
 
     async with (
         httpx.AsyncClient() as client

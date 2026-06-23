@@ -13,7 +13,9 @@ from typing import Any
 
 from psycopg import sql as pgsql
 
+from dazzle.core.archetype_expander import _to_snake_case
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
+from dazzle.core.ir.params import ParamRef
 from dazzle.http.runtime.predicate_compiler import _USER_GUC_PREFIX
 from dazzle.http.runtime.query_builder import quote_identifier
 from dazzle.http.runtime.rls_schema import HOST_TENANT_GUC, TENANT_GUC, USER_GUC_PREFIX
@@ -537,8 +539,6 @@ class PostgresBackend:
             parts.append("UNIQUE")
 
         if field.default is not None:
-            from dazzle.core.ir.params import ParamRef
-
             raw_default = (
                 field.default.default if isinstance(field.default, ParamRef) else field.default
             )
@@ -611,7 +611,6 @@ class PostgresBackend:
         # multiple times.
         children = [e for e in entities if e.subtype_of is not None]
         if children:
-            from dazzle.core.archetype_expander import _to_snake_case
             from dazzle.http.runtime.triggers import (
                 build_assert_subtype_kind_function,
                 build_child_kind_trigger,

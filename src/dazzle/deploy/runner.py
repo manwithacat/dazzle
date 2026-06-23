@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.infra_analyzer import InfraRequirements, analyze_infra_requirements
+
 from .analyzer import AWSRequirements, analyze_aws_requirements
 from .config import DeploymentConfig, load_deployment_config
 from .generator import CDKGeneratorResult, StackGenerator
@@ -25,7 +27,6 @@ from .stacks import (
 
 if TYPE_CHECKING:
     from dazzle.core import ir
-    from dazzle.core.infra_analyzer import InfraRequirements
 
 
 DEPLOY_VERSION = "0.1.0"
@@ -116,8 +117,6 @@ class DeploymentRunner:
         self.output_dir = config.output.get_output_path(project_root)
 
         # Analyze infrastructure requirements
-        from dazzle.core.infra_analyzer import analyze_infra_requirements
-
         self.infra_reqs: InfraRequirements = analyze_infra_requirements(spec)
         self.aws_reqs: AWSRequirements = analyze_aws_requirements(spec, self.infra_reqs, config)
 

@@ -18,6 +18,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
+from dazzle.core.ir.params import ParamRef
+from dazzle.core.ir.state_machine import InvokeSourceKind
 from dazzle.http.specs.entity import EntitySpec, StateMachineSpec
 from dazzle.http.specs.service import (
     ServiceSpec,
@@ -267,8 +269,6 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
 
         # Apply default values for fields not provided (v0.14.2)
         if self.entity_spec:
-            from dazzle.core.ir.params import ParamRef
-
             for field in self.entity_spec.fields:
                 if field.name not in entity_data or entity_data[field.name] is None:
                     if field.default is not None:
@@ -567,8 +567,6 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
         ``self`` → the transitioning row's id; ``input.<name>`` → the value from the
         merged (current ⊕ update) row data; literal → the literal.
         """
-        from dazzle.core.ir.state_machine import InvokeSourceKind
-
         inputs: dict[str, Any] = {}
         for b in invoke_flow.bindings:
             if b.source_kind == InvokeSourceKind.SELF:
