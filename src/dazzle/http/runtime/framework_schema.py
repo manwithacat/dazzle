@@ -48,18 +48,14 @@ from typing import Any
 from dazzle.core.coordination.claim import queue_columns_ddl
 from dazzle.http.events.inbox import CREATE_INBOX_INDEXES, CREATE_INBOX_TABLE
 from dazzle.http.events.outbox import CREATE_OUTBOX_INDEXES, CREATE_OUTBOX_TABLE
-from dazzle.http.runtime.auth.connections import CONNECTIONS_DDL, CONNECTIONS_INDEXES
-from dazzle.http.runtime.auth.email_verification import EMAIL_VERIFICATION_TOKENS_DDL
-from dazzle.http.runtime.auth.invitations import INVITATIONS_DDL, INVITATIONS_INDEXES
-from dazzle.http.runtime.auth.magic_link import MAGIC_LINKS_DDL
-from dazzle.http.runtime.auth.membership_events import (
-    MEMBERSHIP_EVENTS_DDL,
-    MEMBERSHIP_EVENTS_INDEXES,
-)
-from dazzle.http.runtime.auth.secret_rotation import (
-    CONNECTION_SECRET_EVENTS_DDL,
-    CONNECTION_SECRET_EVENTS_INDEXES,
-)
+from dazzle.http.runtime.audit_log import ensure_audit_log_table
+from dazzle.http.runtime.auth.store import ensure_auth_core_tables
+from dazzle.http.runtime.device_registry import ensure_device_tables
+from dazzle.http.runtime.file_storage import ensure_file_storage_tables
+from dazzle.http.runtime.grant_store import ensure_grant_tables
+from dazzle.http.runtime.otp_store import ensure_otp_tables
+from dazzle.http.runtime.recovery_codes import ensure_recovery_code_tables
+from dazzle.http.runtime.token_store import ensure_refresh_token_tables
 from dazzle.http.runtime.triggers import build_assert_subtype_kind_function
 
 logger = logging.getLogger(__name__)
@@ -111,222 +107,13 @@ def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection
         """)
 
         # ── AUTH TABLES ───────────────────────────────────────────────────────
-        # DDL reused from AuthStore._init_db (auth/store.py) — no divergent
-        # copy.  The per-column ADD … IF NOT EXISTS guards handle pre-existing
-        # tables that pre-date the 2FA / email-verification columns.
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                username TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
-                is_superuser BOOLEAN DEFAULT FALSE,
-                roles TEXT DEFAULT '[]',
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-        """)
-        # Idempotent column additions (mirrors AuthStore._init_db ALTER loop).
-        for _col, _col_type, _default in [
-            ("totp_secret", "TEXT", None),
-            ("totp_enabled", "BOOLEAN", "FALSE"),
-            ("email_otp_enabled", "BOOLEAN", "FALSE"),
-            ("recovery_codes_generated", "BOOLEAN", "FALSE"),
-            ("email_verified", "BOOLEAN", "FALSE"),
-        ]:
-            _default_clause = f" DEFAULT {_default}" if _default else ""
-            cur.execute(
-                f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {_col} {_col_type}{_default_clause}"
-            )
-
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
-
-        # Case-insensitive email uniqueness (#1342, M2) — functional unique index.
-        # NOTE: In the orchestrator path we skip the pre-existing-collision check
-        # that AuthStore._ensure_email_ci_uniqueness performs (that check raises
-        # loudly for duplicate-email rows and is appropriate only for upgrade
-        # paths on pre-existing databases; fresh installs never have the
-        # conflict).  The structural index still enforces the invariant.
-        cur.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_key ON users (LOWER(email))"
-        )
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS sessions (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL REFERENCES users(id),
-                created_at TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                ip_address TEXT,
-                user_agent TEXT,
-                csrf_secret TEXT
-            )
-        """)
-        cur.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS csrf_secret TEXT")
-        cur.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS active_membership_id TEXT")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)")
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS memberships (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                identity_id TEXT NOT NULL,
-                roles TEXT NOT NULL DEFAULT '[]',
-                status TEXT NOT NULL DEFAULT 'active',
-                invited_by TEXT,
-                joined_at TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                CONSTRAINT uq_memberships_tenant_identity UNIQUE (tenant_id, identity_id)
-            )
-        """)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS ix_memberships_identity_id ON memberships(identity_id)"
-        )
-        cur.execute("CREATE INDEX IF NOT EXISTS ix_memberships_tenant_id ON memberships(tenant_id)")
-        # external_id for SCIM dedup (#1342 gap 1)
-        cur.execute("ALTER TABLE memberships ADD COLUMN IF NOT EXISTS external_id TEXT")
-        cur.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS uq_memberships_tenant_external "
-            "ON memberships(tenant_id, external_id) WHERE external_id IS NOT NULL"
-        )
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS organizations (
-                id TEXT PRIMARY KEY,
-                slug TEXT NOT NULL,
-                name TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'active',
-                is_test BOOLEAN NOT NULL DEFAULT false,
-                settings TEXT NOT NULL DEFAULT '{}',
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                CONSTRAINT uq_organizations_slug UNIQUE (slug)
-            )
-        """)
-
-        # membership_events (auth Plan 2a) — reuse the DDL constant.
-        cur.execute(MEMBERSHIP_EVENTS_DDL)
-        for _ix in MEMBERSHIP_EVENTS_INDEXES:
-            cur.execute(_ix)
-
-        # invitations (auth Plan 3a) — reuse the DDL constant.
-        cur.execute(INVITATIONS_DDL)
-        for _ix in INVITATIONS_INDEXES:
-            cur.execute(_ix)
-
-        # connections (auth Plan 4a) — reuse the DDL constant.
-        cur.execute(CONNECTIONS_DDL)
-        for _ix in CONNECTIONS_INDEXES:
-            cur.execute(_ix)
-
-        # Grace-window columns for connections (#1342 alembic 0012).
-        cur.execute(
-            "ALTER TABLE connections ADD COLUMN IF NOT EXISTS previous_encrypted_secret TEXT"
-        )
-        cur.execute(
-            "ALTER TABLE connections ADD COLUMN IF NOT EXISTS previous_secret_expires_at TEXT"
-        )
-
-        # connection_secret_events (#1342 rotation audit) — reuse the DDL constant.
-        cur.execute(CONNECTION_SECRET_EVENTS_DDL)
-        for _ix in CONNECTION_SECRET_EVENTS_INDEXES:
-            cur.execute(_ix)
-
-        # scim_groups + scim_group_members (#1342).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS scim_groups (
-                id            TEXT PRIMARY KEY,
-                connection_id TEXT NOT NULL,
-                display_name  TEXT NOT NULL,
-                created_at    TEXT NOT NULL,
-                updated_at    TEXT NOT NULL,
-                UNIQUE (connection_id, display_name)
-            )
-        """)
-        cur.execute("ALTER TABLE scim_groups ADD COLUMN IF NOT EXISTS external_id TEXT")
-        cur.execute("CREATE INDEX IF NOT EXISTS ix_scim_groups_conn ON scim_groups(connection_id)")
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS scim_group_members (
-                group_id      TEXT NOT NULL REFERENCES scim_groups(id) ON DELETE CASCADE,
-                membership_id TEXT NOT NULL,
-                PRIMARY KEY (group_id, membership_id)
-            )
-        """)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS ix_scim_group_members_member "
-            "ON scim_group_members(membership_id)"
-        )
-
-        # saml_consumed_assertions (IdP-initiated replay cache, #1342).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS saml_consumed_assertions (
-                assertion_id  TEXT PRIMARY KEY,
-                connection_id TEXT NOT NULL,
-                tenant_id     TEXT,
-                expires_at    TEXT NOT NULL,
-                created_at    TEXT NOT NULL
-            )
-        """)
-
-        # password_reset_tokens.
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS password_reset_tokens (
-                token TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL REFERENCES users(id),
-                created_at TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                used BOOLEAN DEFAULT FALSE
-            )
-        """)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id)"
-        )
-
-        # magic_links (#695) — reuse DDL constant.
-        cur.execute(MAGIC_LINKS_DDL)
-
-        # email_verification_tokens (#1109) — reuse DDL constant.
-        cur.execute(EMAIL_VERIFICATION_TOKENS_DDL)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_email_verify_user ON email_verification_tokens(user_id)"
-        )
-
-        # user_preferences (v0.38.0).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS user_preferences (
-                user_id TEXT NOT NULL REFERENCES users(id),
-                key TEXT NOT NULL,
-                value TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                PRIMARY KEY (user_id, key)
-            )
-        """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)")
-
-        # join_requests (#1424) — verified-domain self-service.
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS join_requests (
-                id          TEXT PRIMARY KEY,
-                tenant_id   TEXT NOT NULL,
-                identity_id TEXT NOT NULL,
-                email       TEXT NOT NULL,
-                status      TEXT NOT NULL DEFAULT 'pending',
-                created_at  TEXT NOT NULL,
-                decided_at  TEXT,
-                decided_by  TEXT
-            )
-        """)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS ix_join_requests_tenant ON join_requests(tenant_id)"
-        )
-        cur.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS uq_join_requests_pending "
-            "ON join_requests(tenant_id, identity_id) WHERE status = 'pending'"
-        )
+        # Delegated to ensure_auth_core_tables (auth/store.py) — single
+        # definition, two callers (store._init_db + this orchestrator).
+        # NOTE: _ensure_email_ci_uniqueness is NOT called here — that check
+        # raises loudly for duplicate-email rows and is appropriate only for
+        # upgrade paths on pre-existing databases; fresh installs never have
+        # the conflict.  The structural index still enforces the invariant.
+        ensure_auth_core_tables(cur)
 
         # ── PROCESS TABLES (process_runs, process_tasks) ──────────────────────
         # Reuse queue_columns_ddl (single source of truth for queue columns).
@@ -389,43 +176,11 @@ def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection
         """)
 
         # ── AUDIT TABLES ──────────────────────────────────────────────────────
-
-        # _dazzle_audit_log (#1172) — DDL inlined (no module-level DDL constant
-        # in audit_log.py; the class _init_db owns it).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS _dazzle_audit_log (
-                id TEXT PRIMARY KEY,
-                timestamp TEXT NOT NULL,
-                user_id TEXT,
-                user_email TEXT,
-                user_roles TEXT,
-                operation TEXT NOT NULL,
-                entity_name TEXT NOT NULL,
-                entity_id TEXT,
-                decision TEXT NOT NULL,
-                matched_policy TEXT,
-                policy_effect TEXT,
-                ip_address TEXT,
-                request_path TEXT,
-                request_method TEXT,
-                tenant_id TEXT,
-                evaluation_time_us INTEGER,
-                field_changes TEXT
-            )
-        """)
-        # row_hash column (opt-in hash-chain integrity, #1197) — ADD IF NOT EXISTS
-        # so existing tables without it are upgraded silently.
-        cur.execute("ALTER TABLE _dazzle_audit_log ADD COLUMN IF NOT EXISTS row_hash TEXT")
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_audit_entity "
-            "ON _dazzle_audit_log(entity_name, timestamp)"
-        )
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_audit_user ON _dazzle_audit_log(user_id, timestamp)"
-        )
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON _dazzle_audit_log(timestamp)"
-        )
+        # Delegated to ensure_audit_log_table (audit_log.py) — single
+        # definition, two callers.  The orchestrator unconditionally adds the
+        # row_hash column (ADD COLUMN IF NOT EXISTS is a no-op when absent) so
+        # hash-chain upgrades work without a separate migration step.
+        ensure_audit_log_table(cur, hash_chain=True)
 
         # _dazzle_atomic_audit (#1317, ADR-0029).
         cur.execute("""
@@ -449,164 +204,28 @@ def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection
         )
 
         # ── FILE STORAGE (dazzle_files) ───────────────────────────────────────
-        # DDL inlined (no module-level constant in file_storage.py).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS dazzle_files (
-                id TEXT PRIMARY KEY,
-                filename TEXT NOT NULL,
-                content_type TEXT NOT NULL,
-                size BIGINT NOT NULL,
-                storage_key TEXT NOT NULL,
-                storage_backend TEXT NOT NULL,
-                entity_name TEXT,
-                entity_id TEXT,
-                field_name TEXT,
-                thumbnail_key TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT
-            )
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_files_entity
-            ON dazzle_files(entity_name, entity_id)
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_files_field
-            ON dazzle_files(entity_name, field_name)
-        """)
+        # Delegated to ensure_file_storage_tables (file_storage.py).
+        ensure_file_storage_tables(cur)
 
         # ── REFRESH TOKENS ────────────────────────────────────────────────────
-        # DDL inlined (no module-level constant in token_store.py).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS refresh_tokens (
-                token_hash TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                device_id TEXT,
-                created_at TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                last_used_at TEXT,
-                revoked_at TEXT,
-                ip_address TEXT,
-                user_agent TEXT
-            )
-        """)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id)"
-        )
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at)"
-        )
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_device "
-            "ON refresh_tokens(user_id, device_id)"
-        )
+        # Delegated to ensure_refresh_token_tables (token_store.py).
+        ensure_refresh_token_tables(cur)
 
         # ── DEVICES ───────────────────────────────────────────────────────────
-        # DDL inlined (no module-level constant in device_registry.py).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS devices (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                platform TEXT NOT NULL,
-                push_token TEXT NOT NULL,
-                device_name TEXT,
-                app_version TEXT,
-                os_version TEXT,
-                created_at TEXT NOT NULL,
-                last_used_at TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
-                UNIQUE(user_id, push_token)
-            )
-        """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_devices_user_id ON devices(user_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_devices_platform ON devices(platform)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_devices_active ON devices(user_id, is_active)")
+        # Delegated to ensure_device_tables (device_registry.py).
+        ensure_device_tables(cur)
 
         # ── GRANTS (_grants, _grant_events) ──────────────────────────────────
-        # DDL inlined (GrantStore._ensure_tables owns it; no module-level constant).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS _grants (
-                id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                schema_name     TEXT NOT NULL,
-                relation        TEXT NOT NULL,
-                principal_id    UUID NOT NULL,
-                scope_entity    TEXT NOT NULL,
-                scope_id        UUID NOT NULL,
-                status          TEXT NOT NULL CHECK (status IN (
-                    'pending_approval', 'active', 'rejected',
-                    'cancelled', 'expired', 'revoked'
-                )),
-                granted_by_id   UUID NOT NULL,
-                approved_by_id  UUID,
-                granted_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-                approved_at     TIMESTAMPTZ,
-                expires_at      TIMESTAMPTZ,
-                revoked_at      TIMESTAMPTZ,
-                revoked_by_id   UUID
-            )
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_grants_lookup
-            ON _grants (principal_id, relation, scope_id, status)
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_grants_expiry
-            ON _grants (status, expires_at)
-            WHERE status = 'active' AND expires_at IS NOT NULL
-        """)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS _grant_events (
-                id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                grant_id    UUID NOT NULL REFERENCES _grants(id),
-                event_type  TEXT NOT NULL CHECK (event_type IN (
-                    'created', 'approved', 'rejected',
-                    'cancelled', 'revoked', 'expired'
-                )),
-                actor_id    UUID NOT NULL,
-                timestamp   TIMESTAMPTZ NOT NULL DEFAULT now(),
-                metadata    JSONB
-            )
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_grant_events_grant_id
-            ON _grant_events (grant_id)
-        """)
+        # Delegated to ensure_grant_tables (grant_store.py).
+        ensure_grant_tables(cur)
 
         # ── OTP CODES (_dazzle_otp_codes) ────────────────────────────────────
-        # DDL inlined (OTPStore.init_db uses f-string with TABLE constant).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS _dazzle_otp_codes (
-                id SERIAL PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                code_hash TEXT NOT NULL,
-                method TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                attempts INTEGER DEFAULT 0,
-                max_attempts INTEGER DEFAULT 3,
-                used BOOLEAN DEFAULT FALSE
-            )
-        """)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_otp_user_method ON _dazzle_otp_codes(user_id, method)"
-        )
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_otp_expires ON _dazzle_otp_codes(expires_at)")
+        # Delegated to ensure_otp_tables (otp_store.py).
+        ensure_otp_tables(cur)
 
         # ── RECOVERY CODES (_dazzle_recovery_codes) ──────────────────────────
-        # DDL inlined (RecoveryCodeStore.init_db uses f-string with TABLE constant).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS _dazzle_recovery_codes (
-                id SERIAL PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                code_hash TEXT NOT NULL,
-                used BOOLEAN DEFAULT FALSE,
-                used_at TEXT,
-                created_at TEXT NOT NULL
-            )
-        """)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_recovery_user ON _dazzle_recovery_codes(user_id)"
-        )
+        # Delegated to ensure_recovery_code_tables (recovery_codes.py).
+        ensure_recovery_code_tables(cur)
 
         # ── EVENT INBOX / OUTBOX (fixed names) ───────────────────────────────
         # The FIXED framework tables _dazzle_event_inbox and _dazzle_event_outbox
@@ -623,32 +242,3 @@ def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection
 
     conn.commit()
     logger.debug("ensure_framework_schema: all framework tables ensured")
-
-
-# ---------------------------------------------------------------------------
-# Per-subsystem helpers — thin wrappers that call ensure_framework_schema so
-# the stores' existing call sites still work during the transition period
-# (before all call sites are removed in Task 4 cleanup).
-# ---------------------------------------------------------------------------
-
-
-def ensure_params_table_conn(conn: Any) -> None:
-    """Conn-taking wrapper used by the orchestrator for _dazzle_params only.
-
-    Provided so the old ``ensure_dazzle_params_table(db_manager)`` call site
-    in ``server.py`` can be migrated to pass a raw conn instead of a manager.
-    """
-    with conn.cursor() as cur:
-        cur.execute("SELECT pg_advisory_xact_lock(%s)", (_FRAMEWORK_DDL_LOCK_KEY,))
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS _dazzle_params (
-                key TEXT NOT NULL,
-                scope TEXT NOT NULL,
-                scope_id TEXT NOT NULL DEFAULT '',
-                value_json JSONB NOT NULL,
-                updated_by TEXT,
-                updated_at TIMESTAMPTZ DEFAULT now(),
-                PRIMARY KEY (key, scope, scope_id)
-            )
-        """)
-    conn.commit()

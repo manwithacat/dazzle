@@ -58,6 +58,44 @@ class DeviceRecord(BaseModel):
 # =============================================================================
 
 
+def ensure_device_tables(cur: object) -> None:
+    """Create the ``devices`` table and its indexes (idempotent).
+
+    Single source of DDL — called by both ``DeviceRegistry._init_db`` and
+    ``ensure_framework_schema`` so there is exactly one definition.
+
+    Args:
+        cur: An open psycopg cursor (no commit here — caller commits).
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS devices (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            platform TEXT NOT NULL,
+            push_token TEXT NOT NULL,
+            device_name TEXT,
+            app_version TEXT,
+            os_version TEXT,
+            created_at TEXT NOT NULL,
+            last_used_at TEXT,
+            is_active BOOLEAN DEFAULT TRUE,
+            UNIQUE(user_id, push_token)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_devices_user_id
+            ON devices(user_id)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_devices_platform
+            ON devices(platform)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_devices_active
+            ON devices(user_id, is_active)
+    """)
+
+
 class DeviceRegistry:
     """
     Device registry for push notifications.
@@ -92,33 +130,7 @@ class DeviceRegistry:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS devices (
-                    id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    platform TEXT NOT NULL,
-                    push_token TEXT NOT NULL,
-                    device_name TEXT,
-                    app_version TEXT,
-                    os_version TEXT,
-                    created_at TEXT NOT NULL,
-                    last_used_at TEXT,
-                    is_active BOOLEAN DEFAULT TRUE,
-                    UNIQUE(user_id, push_token)
-                )
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_devices_user_id
-                    ON devices(user_id)
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_devices_platform
-                    ON devices(platform)
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_devices_active
-                    ON devices(user_id, is_active)
-            """)
+            ensure_device_tables(cursor)
             conn.commit()
         finally:
             conn.close()

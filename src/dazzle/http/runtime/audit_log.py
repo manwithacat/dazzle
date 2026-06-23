@@ -24,6 +24,54 @@ logger = logging.getLogger(__name__)
 _AUDIT_LOG_LOCK_KEY = 0x61756474
 
 
+def ensure_audit_log_table(cur: object, *, hash_chain: bool = False) -> None:
+    """Create the ``_dazzle_audit_log`` table and its indexes (idempotent).
+
+    Single source of DDL for the audit-log table — called by both
+    ``AuditLogger._init_db`` and ``ensure_framework_schema`` so there
+    is exactly one definition and two callers.
+
+    Args:
+        cur: An open psycopg cursor (no commit here — caller commits).
+        hash_chain: If True, also add the ``row_hash`` column used by the
+            tamper-evident hash-chain integrity mode (#1197).  The
+            orchestrator passes ``hash_chain=False`` (the base table always
+            gets the column via an unconditional ADD COLUMN IF NOT EXISTS in
+            the orchestrator path); ``AuditLogger._init_db`` passes its own
+            ``self._audit_integrity == "hash_chain"`` flag.
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS _dazzle_audit_log (
+            id TEXT PRIMARY KEY,
+            timestamp TEXT NOT NULL,
+            user_id TEXT,
+            user_email TEXT,
+            user_roles TEXT,
+            operation TEXT NOT NULL,
+            entity_name TEXT NOT NULL,
+            entity_id TEXT,
+            decision TEXT NOT NULL,
+            matched_policy TEXT,
+            policy_effect TEXT,
+            ip_address TEXT,
+            request_path TEXT,
+            request_method TEXT,
+            tenant_id TEXT,
+            evaluation_time_us INTEGER,
+            field_changes TEXT
+        )
+    """)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_entity ON _dazzle_audit_log(entity_name, timestamp)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_user ON _dazzle_audit_log(user_id, timestamp)"
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON _dazzle_audit_log(timestamp)")
+    if hash_chain:
+        cur.execute("ALTER TABLE _dazzle_audit_log ADD COLUMN IF NOT EXISTS row_hash TEXT")
+
+
 # Columns persisted as a row of `_dazzle_audit_log`. This is also the
 # canonical ordering used for the INSERT and — when `audit_integrity ==
 # "hash_chain"` — for building the canonical payload that feeds the
@@ -218,46 +266,7 @@ class AuditLogger:
             conn = self._get_connection()
             try:
                 cursor = conn.cursor()
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS _dazzle_audit_log (
-                        id TEXT PRIMARY KEY,
-                        timestamp TEXT NOT NULL,
-                        user_id TEXT,
-                        user_email TEXT,
-                        user_roles TEXT,
-                        operation TEXT NOT NULL,
-                        entity_name TEXT NOT NULL,
-                        entity_id TEXT,
-                        decision TEXT NOT NULL,
-                        matched_policy TEXT,
-                        policy_effect TEXT,
-                        ip_address TEXT,
-                        request_path TEXT,
-                        request_method TEXT,
-                        tenant_id TEXT,
-                        evaluation_time_us INTEGER,
-                        field_changes TEXT
-                    )
-                """)
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_audit_entity "
-                    "ON _dazzle_audit_log(entity_name, timestamp)"
-                )
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_audit_user "
-                    "ON _dazzle_audit_log(user_id, timestamp)"
-                )
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON _dazzle_audit_log(timestamp)"
-                )
-                # Opt-in tamper-evident hash chain (#1197). Only when
-                # `audit_integrity == "hash_chain"` do we touch the
-                # schema; the default ("none") path leaves the table
-                # byte-identical to today's behaviour.
-                if self._audit_integrity == "hash_chain":
-                    cursor.execute(
-                        "ALTER TABLE _dazzle_audit_log ADD COLUMN IF NOT EXISTS row_hash TEXT"
-                    )
+                ensure_audit_log_table(cursor, hash_chain=self._audit_integrity == "hash_chain")
                 conn.commit()
             finally:
                 conn.close()

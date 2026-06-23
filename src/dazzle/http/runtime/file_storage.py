@@ -435,6 +435,41 @@ class S3StorageBackend(StorageBackend):
 # =============================================================================
 
 
+def ensure_file_storage_tables(cur: object) -> None:
+    """Create the ``dazzle_files`` table and its indexes (idempotent).
+
+    Single source of DDL — called by both ``FileMetadataStore._init_db``
+    and ``ensure_framework_schema`` so there is exactly one definition.
+
+    Args:
+        cur: An open psycopg cursor (no commit here — caller commits).
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS dazzle_files (
+            id TEXT PRIMARY KEY,
+            filename TEXT NOT NULL,
+            content_type TEXT NOT NULL,
+            size BIGINT NOT NULL,
+            storage_key TEXT NOT NULL,
+            storage_backend TEXT NOT NULL,
+            entity_name TEXT,
+            entity_id TEXT,
+            field_name TEXT,
+            thumbnail_key TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_files_entity
+        ON dazzle_files(entity_name, entity_id)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_files_field
+        ON dazzle_files(entity_name, field_name)
+    """)
+
+
 class FileMetadataStore:
     """
     File metadata storage using PostgreSQL.
@@ -473,30 +508,7 @@ class FileMetadataStore:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS dazzle_files (
-                    id TEXT PRIMARY KEY,
-                    filename TEXT NOT NULL,
-                    content_type TEXT NOT NULL,
-                    size BIGINT NOT NULL,
-                    storage_key TEXT NOT NULL,
-                    storage_backend TEXT NOT NULL,
-                    entity_name TEXT,
-                    entity_id TEXT,
-                    field_name TEXT,
-                    thumbnail_key TEXT,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT
-                )
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_files_entity
-                ON dazzle_files(entity_name, entity_id)
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_files_field
-                ON dazzle_files(entity_name, field_name)
-            """)
+            ensure_file_storage_tables(cursor)
             conn.commit()
         finally:
             conn.close()

@@ -50,6 +50,34 @@ def _generate_code(length: int = 6) -> str:
     return f"{code:0{length}d}"
 
 
+def ensure_otp_tables(cur: object) -> None:
+    """Create the ``_dazzle_otp_codes`` table and its indexes (idempotent).
+
+    Single source of DDL — called by both ``OTPStore.init_db`` and
+    ``ensure_framework_schema`` so there is exactly one definition.
+
+    Args:
+        cur: An open psycopg cursor (no commit here — caller commits).
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS _dazzle_otp_codes (
+            id SERIAL PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            code_hash TEXT NOT NULL,
+            method TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            attempts INTEGER DEFAULT 0,
+            max_attempts INTEGER DEFAULT 3,
+            used BOOLEAN DEFAULT FALSE
+        )
+    """)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_otp_user_method ON _dazzle_otp_codes(user_id, method)"
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_otp_expires ON _dazzle_otp_codes(expires_at)")
+
+
 class OTPStore:
     """Database-backed OTP code store.
 
@@ -79,25 +107,7 @@ class OTPStore:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS {self.TABLE} (
-                    id SERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    code_hash TEXT NOT NULL,
-                    method TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    attempts INTEGER DEFAULT 0,
-                    max_attempts INTEGER DEFAULT 3,
-                    used BOOLEAN DEFAULT FALSE
-                )
-            """)
-            cursor.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_otp_user_method ON {self.TABLE}(user_id, method)"
-            )
-            cursor.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_otp_expires ON {self.TABLE}(expires_at)"
-            )
+            ensure_otp_tables(cursor)
             conn.commit()
         finally:
             conn.close()

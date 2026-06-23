@@ -44,6 +44,28 @@ def _hash_code(code: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def ensure_recovery_code_tables(cur: object) -> None:
+    """Create the ``_dazzle_recovery_codes`` table and its index (idempotent).
+
+    Single source of DDL — called by both ``RecoveryCodeStore.init_db`` and
+    ``ensure_framework_schema`` so there is exactly one definition.
+
+    Args:
+        cur: An open psycopg cursor (no commit here — caller commits).
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS _dazzle_recovery_codes (
+            id SERIAL PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            code_hash TEXT NOT NULL,
+            used BOOLEAN DEFAULT FALSE,
+            used_at TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_recovery_user ON _dazzle_recovery_codes(user_id)")
+
+
 class RecoveryCodeStore:
     """Database-backed recovery code storage.
 
@@ -72,17 +94,7 @@ class RecoveryCodeStore:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS {self.TABLE} (
-                    id SERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    code_hash TEXT NOT NULL,
-                    used BOOLEAN DEFAULT FALSE,
-                    used_at TEXT,
-                    created_at TEXT NOT NULL
-                )
-            """)
-            cursor.execute(f"CREATE INDEX IF NOT EXISTS idx_recovery_user ON {self.TABLE}(user_id)")
+            ensure_recovery_code_tables(cursor)
             conn.commit()
         finally:
             conn.close()

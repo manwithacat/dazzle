@@ -2366,6 +2366,224 @@ class SessionStoreMixin:
             return again
 
 
+def ensure_auth_core_tables(cur: object) -> None:
+    """Create all auth tables and indexes (idempotent).
+
+    Single source of DDL for the auth schema — called by both
+    ``AuthStore._init_db`` (under its advisory lock, after which
+    ``_ensure_email_ci_uniqueness`` runs in its own tx) and
+    ``ensure_framework_schema`` (under the framework-schema advisory lock;
+    the CI uniqueness check is skipped there because fresh installs never
+    have duplicate-email rows).
+
+    The caller is responsible for committing (or rolling back) the
+    transaction; this function never commits.
+
+    Args:
+        cur: An open psycopg cursor.
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            username TEXT,
+            is_active BOOLEAN DEFAULT TRUE,
+            is_superuser BOOLEAN DEFAULT FALSE,
+            roles TEXT DEFAULT '[]',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    # Add 2FA + email-verification columns if they don't exist (idempotent migration).
+    for _col, _col_type, _default in [
+        ("totp_secret", "TEXT", None),
+        ("totp_enabled", "BOOLEAN", "FALSE"),
+        ("email_otp_enabled", "BOOLEAN", "FALSE"),
+        ("recovery_codes_generated", "BOOLEAN", "FALSE"),
+        ("email_verified", "BOOLEAN", "FALSE"),
+    ]:
+        _default_clause = f" DEFAULT {_default}" if _default else ""
+        cur.execute(
+            f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {_col} {_col_type}{_default_clause}"
+        )
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS sessions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            ip_address TEXT,
+            user_agent TEXT,
+            csrf_secret TEXT
+        )
+    """)
+    cur.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS csrf_secret TEXT")
+    cur.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS active_membership_id TEXT")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS memberships (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            identity_id TEXT NOT NULL,
+            roles TEXT NOT NULL DEFAULT '[]',
+            status TEXT NOT NULL DEFAULT 'active',
+            invited_by TEXT,
+            joined_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            CONSTRAINT uq_memberships_tenant_identity UNIQUE (tenant_id, identity_id)
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS ix_memberships_identity_id ON memberships(identity_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS ix_memberships_tenant_id ON memberships(tenant_id)")
+    cur.execute("ALTER TABLE memberships ADD COLUMN IF NOT EXISTS external_id TEXT")
+    cur.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_memberships_tenant_external "
+        "ON memberships(tenant_id, external_id) WHERE external_id IS NOT NULL"
+    )
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS organizations (
+            id TEXT PRIMARY KEY,
+            slug TEXT NOT NULL,
+            name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            is_test BOOLEAN NOT NULL DEFAULT false,
+            settings TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            CONSTRAINT uq_organizations_slug UNIQUE (slug)
+        )
+    """)
+
+    from dazzle.http.runtime.auth.membership_events import (
+        MEMBERSHIP_EVENTS_DDL,
+        MEMBERSHIP_EVENTS_INDEXES,
+    )
+
+    cur.execute(MEMBERSHIP_EVENTS_DDL)
+    for _ix in MEMBERSHIP_EVENTS_INDEXES:
+        cur.execute(_ix)
+
+    from dazzle.http.runtime.auth.invitations import INVITATIONS_DDL, INVITATIONS_INDEXES
+
+    cur.execute(INVITATIONS_DDL)
+    for _ix in INVITATIONS_INDEXES:
+        cur.execute(_ix)
+
+    from dazzle.http.runtime.auth.connections import CONNECTIONS_DDL, CONNECTIONS_INDEXES
+
+    cur.execute(CONNECTIONS_DDL)
+    for _ix in CONNECTIONS_INDEXES:
+        cur.execute(_ix)
+
+    cur.execute("ALTER TABLE connections ADD COLUMN IF NOT EXISTS previous_encrypted_secret TEXT")
+    cur.execute("ALTER TABLE connections ADD COLUMN IF NOT EXISTS previous_secret_expires_at TEXT")
+
+    from dazzle.http.runtime.auth.secret_rotation import (
+        CONNECTION_SECRET_EVENTS_DDL,
+        CONNECTION_SECRET_EVENTS_INDEXES,
+    )
+
+    cur.execute(CONNECTION_SECRET_EVENTS_DDL)
+    for _ix in CONNECTION_SECRET_EVENTS_INDEXES:
+        cur.execute(_ix)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scim_groups (
+            id            TEXT PRIMARY KEY,
+            connection_id TEXT NOT NULL,
+            display_name  TEXT NOT NULL,
+            created_at    TEXT NOT NULL,
+            updated_at    TEXT NOT NULL,
+            UNIQUE (connection_id, display_name)
+        )
+    """)
+    cur.execute("ALTER TABLE scim_groups ADD COLUMN IF NOT EXISTS external_id TEXT")
+    cur.execute("CREATE INDEX IF NOT EXISTS ix_scim_groups_conn ON scim_groups(connection_id)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scim_group_members (
+            group_id      TEXT NOT NULL REFERENCES scim_groups(id) ON DELETE CASCADE,
+            membership_id TEXT NOT NULL,
+            PRIMARY KEY (group_id, membership_id)
+        )
+    """)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS ix_scim_group_members_member "
+        "ON scim_group_members(membership_id)"
+    )
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS saml_consumed_assertions (
+            assertion_id  TEXT PRIMARY KEY,
+            connection_id TEXT NOT NULL,
+            tenant_id     TEXT,
+            expires_at    TEXT NOT NULL,
+            created_at    TEXT NOT NULL
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            token TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used BOOLEAN DEFAULT FALSE
+        )
+    """)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id)"
+    )
+
+    from dazzle.http.runtime.auth.magic_link import MAGIC_LINKS_DDL
+
+    cur.execute(MAGIC_LINKS_DDL)
+
+    from dazzle.http.runtime.auth.email_verification import EMAIL_VERIFICATION_TOKENS_DDL
+
+    cur.execute(EMAIL_VERIFICATION_TOKENS_DDL)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_email_verify_user ON email_verification_tokens(user_id)"
+    )
+
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_preferences (
+            user_id TEXT NOT NULL REFERENCES users(id),
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (user_id, key)
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS join_requests (
+            id          TEXT PRIMARY KEY,
+            tenant_id   TEXT NOT NULL,
+            identity_id TEXT NOT NULL,
+            email       TEXT NOT NULL,
+            status      TEXT NOT NULL DEFAULT 'pending',
+            created_at  TEXT NOT NULL,
+            decided_at  TEXT,
+            decided_by  TEXT
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS ix_join_requests_tenant ON join_requests(tenant_id)")
+    cur.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_join_requests_pending "
+        "ON join_requests(tenant_id, identity_id) WHERE status = 'pending'"
+    )
+
+
 class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
     """
     Authentication store using PostgreSQL.
@@ -2593,301 +2811,17 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         every uvicorn worker executes this at boot, and Postgres's
         ``IF NOT EXISTS`` checks are not concurrency-safe at the catalog
         level. The lock releases at commit.
+
+        Delegates to ``ensure_auth_core_tables`` for the table/index DDL
+        (shared with ``ensure_framework_schema``); retains the advisory
+        lock and the post-commit ``_ensure_email_ci_uniqueness`` call here
+        since those are store-specific concerns.
         """
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
             cursor.execute("SELECT pg_advisory_xact_lock(%s)", (AUTH_DDL_LOCK_KEY,))
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id TEXT PRIMARY KEY,
-                    email TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    username TEXT,
-                    is_active BOOLEAN DEFAULT TRUE,
-                    is_superuser BOOLEAN DEFAULT FALSE,
-                    roles TEXT DEFAULT '[]',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )
-            """)
-            # Add 2FA + email-verification columns if they don't exist
-            # (idempotent migration). ``email_verified`` defaults to FALSE so
-            # existing deployments don't suddenly grant verified status to
-            # rows that pre-date the column.
-            for col, col_type, default in [
-                ("totp_secret", "TEXT", None),
-                ("totp_enabled", "BOOLEAN", "FALSE"),
-                ("email_otp_enabled", "BOOLEAN", "FALSE"),
-                ("recovery_codes_generated", "BOOLEAN", "FALSE"),
-                ("email_verified", "BOOLEAN", "FALSE"),
-            ]:
-                try:
-                    default_clause = f" DEFAULT {default}" if default else ""
-                    cursor.execute(
-                        f"ALTER TABLE users ADD COLUMN IF NOT EXISTS "
-                        f"{col} {col_type}{default_clause}"
-                    )
-                except Exception:
-                    logger.warning(
-                        "Schema migration for users column %s (%s) raised — continuing",
-                        col,
-                        col_type,
-                        exc_info=True,
-                    )
-
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS sessions (
-                    id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL REFERENCES users(id),
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    ip_address TEXT,
-                    user_agent TEXT,
-                    csrf_secret TEXT
-                )
-            """)
-            # Idempotent add for pre-existing sessions tables (dev path doesn't
-            # run Alembic; production gets this via migration 0005). Mirrors the
-            # users-table ALTER pattern above. ADD COLUMN IF NOT EXISTS is a
-            # Postgres extension (the auth store runtime is PG per ADR-0008); the
-            # try/except keeps the SQLite-in-tests path graceful.
-            try:
-                cursor.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS csrf_secret TEXT")
-            except Exception:
-                logger.warning(
-                    "Schema migration for sessions.csrf_secret raised — continuing",
-                    exc_info=True,
-                )
-            # auth Plan 1a: memberships (identity x org x roles) — the fenced source
-            # of dazzle.tenant_id. Mirrors alembic 0007_memberships exactly (same
-            # shape, NO users FK — see that migration's docstring). The dev path
-            # doesn't run Alembic; production gets it via the migration too.
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS memberships (
-                    id TEXT PRIMARY KEY,
-                    tenant_id TEXT NOT NULL,
-                    identity_id TEXT NOT NULL,
-                    roles TEXT NOT NULL DEFAULT '[]',
-                    status TEXT NOT NULL DEFAULT 'active',
-                    invited_by TEXT,
-                    joined_at TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    CONSTRAINT uq_memberships_tenant_identity UNIQUE (tenant_id, identity_id)
-                )
-            """)
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS ix_memberships_identity_id ON memberships(identity_id)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS ix_memberships_tenant_id ON memberships(tenant_id)"
-            )
-            # sessions.active_membership_id — pins the active org for the session.
-            try:
-                cursor.execute(
-                    "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS active_membership_id TEXT"
-                )
-            except Exception:
-                logger.warning(
-                    "Schema migration for sessions.active_membership_id raised — continuing",
-                    exc_info=True,
-                )
-            # auth Plan 1c: organizations (framework tenant root). Mirrors alembic
-            # 0008_organizations. organizations.id is the dazzle.tenant_id a
-            # membership carries; single-org apps use the fixed slug "default".
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS organizations (
-                    id TEXT PRIMARY KEY,
-                    slug TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'active',
-                    is_test BOOLEAN NOT NULL DEFAULT false,
-                    settings TEXT NOT NULL DEFAULT '{}',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    CONSTRAINT uq_organizations_slug UNIQUE (slug)
-                )
-            """)
-            # auth Plan 2a: append-only, hash-chained membership lifecycle events
-            # (compliance evidence). Mirrors alembic 0009_membership_events.
-            from dazzle.http.runtime.auth.membership_events import (
-                MEMBERSHIP_EVENTS_DDL,
-                MEMBERSHIP_EVENTS_INDEXES,
-            )
-
-            cursor.execute(MEMBERSHIP_EVENTS_DDL)
-            for _ix in MEMBERSHIP_EVENTS_INDEXES:
-                cursor.execute(_ix)
-            # auth Plan 3a: org invitation tokens (email-addressed, accept-time
-            # membership creation). Mirrors alembic 0010_invitations.
-            from dazzle.http.runtime.auth.invitations import (
-                INVITATIONS_DDL,
-                INVITATIONS_INDEXES,
-            )
-
-            cursor.execute(INVITATIONS_DDL)
-            for _ix in INVITATIONS_INDEXES:
-                cursor.execute(_ix)
-            # auth Plan 4a: per-org enterprise connections (OIDC/SAML/SCIM config;
-            # secrets encrypted at rest). Mirrors alembic 0011_connections.
-            from dazzle.http.runtime.auth.connections import (
-                CONNECTIONS_DDL,
-                CONNECTIONS_INDEXES,
-            )
-
-            cursor.execute(CONNECTIONS_DDL)
-            for _ix in CONNECTIONS_INDEXES:
-                cursor.execute(_ix)
-
-            # #1342 grace window: keep the OLD SCIM bearer valid for an overlap
-            # window. Idempotent adds for pre-existing connections tables (dev
-            # path; prod gets these via alembic 0012). Mirrors the sessions ALTERs.
-            # Literal statements (no interpolation) so the SQL-injection scanner
-            # stays satisfied.
-            for _alter in (
-                "ALTER TABLE connections ADD COLUMN IF NOT EXISTS previous_encrypted_secret TEXT",
-                "ALTER TABLE connections ADD COLUMN IF NOT EXISTS previous_secret_expires_at TEXT",
-            ):
-                try:
-                    cursor.execute(_alter)
-                except Exception:
-                    logger.warning(
-                        "Schema migration for a connections grace column raised — continuing",
-                        exc_info=True,
-                    )
-            # #1342 rotation audit (append-only). Mirrors alembic 0012.
-            from dazzle.http.runtime.auth.secret_rotation import (
-                CONNECTION_SECRET_EVENTS_DDL,
-                CONNECTION_SECRET_EVENTS_INDEXES,
-            )
-
-            cursor.execute(CONNECTION_SECRET_EVENTS_DDL)
-            for _ix in CONNECTION_SECRET_EVENTS_INDEXES:
-                cursor.execute(_ix)
-
-            # SCIM Groups (#1342). connection_id AND membership_id are code-scoped
-            # (no hard FK to connections/memberships) — matches the memberships
-            # convention, and a memberships FK would block the migration path that
-            # drops/recreates the memberships table. Group deletion cascades its
-            # member rows; membership deletion is cleaned up in code (deprovision).
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS scim_groups (
-                    id            TEXT PRIMARY KEY,
-                    connection_id TEXT NOT NULL,
-                    display_name  TEXT NOT NULL,
-                    created_at    TEXT NOT NULL,
-                    updated_at    TEXT NOT NULL,
-                    UNIQUE (connection_id, display_name)
-                )
-            """)
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS ix_scim_groups_conn ON scim_groups(connection_id)"
-            )
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS scim_group_members (
-                    group_id      TEXT NOT NULL REFERENCES scim_groups(id) ON DELETE CASCADE,
-                    membership_id TEXT NOT NULL,
-                    PRIMARY KEY (group_id, membership_id)
-                )
-            """)
-            # #1342 schools-gap: the IdP's stable id for the user (membership) / group — the
-            # SCIM externalId (Entra objectId GUID). Persisted so group→role + identity joins
-            # can key on it instead of mutable email/displayName. See the SCIM/SAML gaps.
-            cursor.execute("ALTER TABLE memberships ADD COLUMN IF NOT EXISTS external_id TEXT")
-            cursor.execute("ALTER TABLE scim_groups ADD COLUMN IF NOT EXISTS external_id TEXT")
-            # Dedup guarantee for SCIM provisioning (#1342 gap 1): one membership per
-            # (org, IdP user GUID). Partial so non-SCIM / pre-existing NULL external_ids
-            # are unconstrained. Closes the concurrent double-POST race lookup-first dedup
-            # alone can't (two provisions for the same externalId → two rows).
-            cursor.execute(
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_memberships_tenant_external "
-                "ON memberships(tenant_id, external_id) WHERE external_id IS NOT NULL"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS ix_scim_group_members_member "
-                "ON scim_group_members(membership_id)"
-            )
-            # SAML IdP-initiated replay cache (#1342): one-time consumption of an assertion id, so a
-            # captured unsolicited Response can't be replayed within its NotOnOrAfter window. Only
-            # written on the IdP-initiated path (SP-initiated is replay-safe via the session request
-            # id). Rows are purged once expired.
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS saml_consumed_assertions (
-                    assertion_id  TEXT PRIMARY KEY,
-                    connection_id TEXT NOT NULL,
-                    tenant_id     TEXT,
-                    expires_at    TEXT NOT NULL,
-                    created_at    TEXT NOT NULL
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS password_reset_tokens (
-                    token TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL REFERENCES users(id),
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    used BOOLEAN DEFAULT FALSE
-                )
-            """)
-            # Magic link tokens for one-time authentication (#695)
-            from dazzle.http.runtime.auth.magic_link import MAGIC_LINKS_DDL
-
-            cursor.execute(MAGIC_LINKS_DDL)
-
-            # Email-verification tokens (#1109).
-            from dazzle.http.runtime.auth.email_verification import (
-                EMAIL_VERIFICATION_TOKENS_DDL,
-            )
-
-            cursor.execute(EMAIL_VERIFICATION_TOKENS_DDL)
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS "
-                "idx_email_verify_user ON email_verification_tokens(user_id)"
-            )
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id)"
-            )
-            # User preferences (v0.38.0)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS user_preferences (
-                    user_id TEXT NOT NULL REFERENCES users(id),
-                    key TEXT NOT NULL,
-                    value TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    PRIMARY KEY (user_id, key)
-                )
-            """)
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)"
-            )
-            # Verified-domain self-service join requests (#1424). Mirrors alembic
-            # 0018_join_requests. One pending request per (tenant_id, identity_id)
-            # enforced via a partial unique index on status='pending'.
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS join_requests (
-                    id          TEXT PRIMARY KEY,
-                    tenant_id   TEXT NOT NULL,
-                    identity_id TEXT NOT NULL,
-                    email       TEXT NOT NULL,
-                    status      TEXT NOT NULL DEFAULT 'pending',
-                    created_at  TEXT NOT NULL,
-                    decided_at  TEXT,
-                    decided_by  TEXT
-                )
-            """)
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS ix_join_requests_tenant ON join_requests(tenant_id)"
-            )
-            cursor.execute(
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_join_requests_pending "
-                "ON join_requests(tenant_id, identity_id) WHERE status = 'pending'"
-            )
+            ensure_auth_core_tables(cursor)
             conn.commit()
         finally:
             conn.close()

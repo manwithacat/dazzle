@@ -59,6 +59,42 @@ class RefreshTokenRecord(BaseModel):
 # =============================================================================
 
 
+def ensure_refresh_token_tables(cur: object) -> None:
+    """Create the ``refresh_tokens`` table and its indexes (idempotent).
+
+    Single source of DDL — called by both ``TokenStore._init_db`` and
+    ``ensure_framework_schema`` so there is exactly one definition.
+
+    Args:
+        cur: An open psycopg cursor (no commit here — caller commits).
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS refresh_tokens (
+            token_hash TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            device_id TEXT,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            last_used_at TEXT,
+            revoked_at TEXT,
+            ip_address TEXT,
+            user_agent TEXT
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id
+            ON refresh_tokens(user_id)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires
+            ON refresh_tokens(expires_at)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_device
+            ON refresh_tokens(user_id, device_id)
+    """)
+
+
 class TokenStore:
     """
     Secure refresh token storage using PostgreSQL.
@@ -97,31 +133,7 @@ class TokenStore:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS refresh_tokens (
-                    token_hash TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    device_id TEXT,
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    last_used_at TEXT,
-                    revoked_at TEXT,
-                    ip_address TEXT,
-                    user_agent TEXT
-                )
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id
-                    ON refresh_tokens(user_id)
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires
-                    ON refresh_tokens(expires_at)
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_refresh_tokens_device
-                    ON refresh_tokens(user_id, device_id)
-            """)
+            ensure_refresh_token_tables(cursor)
             conn.commit()
         finally:
             conn.close()
