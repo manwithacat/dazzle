@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.8] - 2026-06-23
+
+### Changed
+- **#1438 deferred-imports burn-down wave 7** — hoisted precautionary function-body `from dazzle.core.*` imports to module top in 11 more non-core files (`specs/security_docs`, `render/dispatch`, `rbac/matrix`, `page/utils/expression_eval`, `mcp/server/handlers/{test_design/persistence,process/_helpers,policy,dsl_test,demo_data}`, `http/runtime/{workspace_region_render,workspace_columns}`). Ratchet total 1730→1713 (−17). No reverts; `page/converters/template_compiler` yielded zero (its triples imports are `@functools.cache`-guarded for IR init-order). Session cumulative: 1949→1713 (−236 over 7 waves).
+
 ## [0.84.7] - 2026-06-23
 
 ### Changed
