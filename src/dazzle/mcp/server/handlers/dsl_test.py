@@ -36,7 +36,6 @@ def dsl_test_generate_impl(
     if base_url is None:
         base_url = resolve_api_url()
     if fmt == "bash":
-        from dazzle.core.project import load_project
         from dazzle.testing.curl_test_generator import CurlTestGenerator
 
         appspec = load_project(project_root)
@@ -873,7 +872,6 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create authenticated sessions for all DSL-defined personas."""
     try:
-        from dazzle.core.project import load_project
         from dazzle.testing.session_manager import SessionManager
 
         base_url = args.get("base_url") or resolve_api_url()

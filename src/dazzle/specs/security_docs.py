@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dazzle.core.ir.security import SecurityConfig, SecurityProfile
+
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec
 
@@ -25,8 +27,6 @@ def generate_security_md(app_spec: AppSpec) -> str:
     security = app_spec.security
     if security is None:
         # Default to basic profile
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-
         security = SecurityConfig.from_profile(SecurityProfile.BASIC)
 
     # Build sections

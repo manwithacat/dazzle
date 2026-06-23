@@ -19,6 +19,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from dazzle.core.ir.appspec import AppSpec
+from dazzle.core.ir.atomic_flows import FlowUpdate
 from dazzle.core.ir.conditions import ConditionExpr
 from dazzle.core.ir.domain import (
     AccessSpec,
@@ -728,8 +729,6 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
     # flow. Kept separate from `cells` (distinct grant path; see
     # AtomicFlowProjection) so the CRUD matrix + conformance verifier are
     # unaffected.
-    from dazzle.core.ir.atomic_flows import FlowUpdate
-
     atomic_projections: list[AtomicFlowProjection] = []
     for flow in appspec.atomic_flows or []:
         steps = tuple(

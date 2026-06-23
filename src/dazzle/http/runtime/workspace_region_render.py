@@ -36,6 +36,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from dazzle.core.ir import BucketRef as _BucketRef
 from dazzle.http.runtime.workspace_card_data import (
     _build_cohort_cells,
     _build_day_timeline_slots,
@@ -222,8 +223,6 @@ def _build_chart_adapter_ctx(
     ``histogram_bins`` / ``box_plot_stats``). None of them need
     request or auth context.
     """
-    from dazzle.core.ir import BucketRef as _BucketRef
-
     inputs = env.inputs
     ctx_region = env.ctx.ctx_region
     adapter_ctx = dict(base_ctx)
@@ -301,8 +300,6 @@ def _build_list_adapter_ctx(
     filter bar, date-range picker, CSV export. The others share the
     same `items` + `columns` + `display_key` core.
     """
-    from dazzle.core.ir import BucketRef as _BucketRef
-
     inputs = env.inputs
     ctx = env.ctx
     ctx_region = ctx.ctx_region

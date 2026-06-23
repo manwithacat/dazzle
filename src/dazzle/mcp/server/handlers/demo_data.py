@@ -13,6 +13,14 @@ from dazzle.core.demo_blueprint_persistence import (
     load_blueprint,
     save_blueprint,
 )
+from dazzle.core.ir.demo_blueprint import (
+    DemoDataBlueprint,
+    EntityBlueprint,
+    FieldPattern,
+    FieldStrategy,
+    PersonaBlueprint,
+    TenantBlueprint,
+)
 from dazzle.core.manifest import load_manifest, resolve_api_url
 
 from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
@@ -35,15 +43,6 @@ def demo_propose_impl(
     quick_mode: bool = False,
 ) -> dict[str, Any]:
     """Analyze DSL and propose a Demo Data Blueprint."""
-    from dazzle.core.ir.demo_blueprint import (
-        DemoDataBlueprint,
-        EntityBlueprint,
-        FieldPattern,
-        FieldStrategy,
-        PersonaBlueprint,
-        TenantBlueprint,
-    )
-
     manifest = load_manifest(project_root / "dazzle.toml")
     app_spec = load_project_appspec(project_root)
 
@@ -222,8 +221,6 @@ def demo_save_impl(
     validate_coverage: bool = True,
 ) -> dict[str, Any]:
     """Save a Demo Data Blueprint to .dazzle/demo_data/blueprint.json."""
-    from dazzle.core.ir.demo_blueprint import DemoDataBlueprint
-
     new_blueprint = DemoDataBlueprint.model_validate(blueprint_data)
     warnings: list[str] = []
 

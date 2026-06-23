@@ -7,6 +7,9 @@ flows, and typed expression evaluation for surface ``when:`` conditions.
 import logging
 from typing import Any
 
+from dazzle.core.expression_lang.evaluator import evaluate
+from dazzle.core.expression_lang.parser import parse_expr
+
 logger = logging.getLogger(__name__)
 
 
@@ -122,9 +125,6 @@ def evaluate_when_expr(when_expr_str: str, data: dict[str, Any]) -> bool:
     if not when_expr_str:
         return True
     try:
-        from dazzle.core.expression_lang.evaluator import evaluate
-        from dazzle.core.expression_lang.parser import parse_expr
-
         expr = parse_expr(when_expr_str)
         result = evaluate(expr, data)
         return bool(result)

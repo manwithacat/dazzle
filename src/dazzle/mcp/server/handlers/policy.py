@@ -13,11 +13,9 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import Any, TypedDict
 
-if TYPE_CHECKING:
-    from dazzle.core.ir.appspec import AppSpec
-
+from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.conditions import ConditionExpr, LogicalOperator
 from dazzle.core.ir.domain import (
     AccessSpec,
@@ -26,6 +24,7 @@ from dazzle.core.ir.domain import (
     PermissionRule,
     PolicyEffect,
 )
+from dazzle.core.ir.identity import spec_display_id
 
 from .common import (
     extract_progress,
@@ -218,8 +217,6 @@ def _coverage_matrix(appspec: AppSpec, entity_names: list[str] | None) -> dict[s
 
     # Collect all persona IDs
     persona_ids: list[str] = []
-    from dazzle.core.ir.identity import spec_display_id
-
     for p in appspec.personas:
         pid: str = spec_display_id(p, prefer="id")
         persona_ids.append(pid)

@@ -30,6 +30,7 @@ from __future__ import annotations
 from html.parser import HTMLParser
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.renderer_registry import default_renderer_names
 from dazzle.render.fragment import (
     URL,
@@ -208,8 +209,6 @@ def _sidebar_from_nav_model(model: Any, ctx: PageContext) -> Sidebar:
     # context once: strip the ``role_`` prefix from roles (matching
     # page_routes' role_ctx) and pass per-tenant config so ``tenant_config.<key>``
     # references resolve. Visibility only — route access (RBAC) is unchanged.
-    from dazzle.core.condition_eval import evaluate_condition
-
     eval_ctx = {
         "user_roles": [r.removeprefix("role_") for r in (getattr(ctx, "user_roles", None) or [])],
         "tenant_config": getattr(ctx, "tenant_config", {}) or {},

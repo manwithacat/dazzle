@@ -23,6 +23,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.core.strings import to_api_plural
+
 
 def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     """Map an IR field to a column rendering type for workspace templates.
@@ -56,8 +58,6 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
     Uses the surface's section elements to determine which entity fields to
     show and in what order, rather than dumping all entity fields.
     """
-    from dazzle.core.strings import to_api_plural
-
     if not entity_spec or not hasattr(entity_spec, "fields"):
         return []
 
@@ -151,8 +151,6 @@ def build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
     All data comes from IR (field types, enum values, state machines) and
     never changes during the lifetime of the server.
     """
-    from dazzle.core.strings import to_api_plural
-
     columns: list[dict[str, Any]] = []
     if not entity_spec or not hasattr(entity_spec, "fields"):
         return columns

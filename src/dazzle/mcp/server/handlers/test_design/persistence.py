@@ -5,6 +5,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.ir.test_design import (
+    TestDesignAction,
+    TestDesignSpec,
+    TestDesignStatus,
+    TestDesignStep,
+    TestDesignTrigger,
+)
+
 from ..common import error_response, extract_progress, wrap_handler_errors
 from ..serializers import serialize_test_design, serialize_test_design_summary
 from .proposals import _parse_test_design_action, _parse_test_design_trigger
@@ -24,13 +32,6 @@ def test_design_save_impl(
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """Save test designs to dsl/tests/designs.json."""
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
     from dazzle.testing.test_design_persistence import add_test_designs, get_dsl_tests_dir
 
     designs: list[TestDesignSpec] = []
@@ -114,7 +115,6 @@ def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     Returns compact summaries by default. When ``test_ids`` is provided,
     returns full content for those specific designs only.
     """
-    from dazzle.core.ir.test_design import TestDesignStatus
     from dazzle.testing.test_design_persistence import (
         get_dsl_tests_dir,
         get_test_designs_by_status,
