@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.6] - 2026-06-23
+
+### Changed
+- **#1438 deferred-imports burn-down wave 5** — hoisted precautionary function-body `from dazzle.core.*` imports to module top in 9 more non-core files (`cli/story`, `cli/qa`, `testing/ux/contracts`, `sentinel/agents/{deployment_state,operational_hygiene,integration_dependency}`, `page/themes/resolver`, `mcp/server/handlers/test_design/proposals`, `http/runtime/mapping_executor`). Ratchet total 1774→1753 (−21); three sentinel files dropped to 0 and left the baseline. `page/converters/nav_builder` yielded zero (all its core imports are `TYPE_CHECKING`-only). No reverts. Campaign issue #1438 stays open. Session cumulative: 1949→1753 (−196 over 5 waves).
+
 ## [0.84.5] - 2026-06-23
 
 ### Changed
