@@ -912,7 +912,7 @@ wheels = [
 
 [[package]]
 name = "dazzle-dsl"
-version = "0.84.19"
+version = "0.84.20"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },

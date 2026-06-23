@@ -121,14 +121,20 @@ def migrate_to_memberships(
             result.memberships_created += 1
             if not dry_run:
                 roles = _scalar_at(u, "roles", 2)
+                # #1463: this tool resolves tenant_id from the user entity's
+                # partition_key column, which already carries the archetype:tenant
+                # root (RLS partitions at the root), so partition_root_id == tenant_id
+                # here. Set it explicitly so these rows are self-describing and not
+                # left NULL (the boot reconcile would otherwise have to backfill them).
                 conn.execute(
                     """
                     INSERT INTO memberships
-                        (id, tenant_id, identity_id, roles, status, joined_at, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, 'active', %s, %s, %s)
+                        (id, tenant_id, identity_id, roles, status, partition_root_id,
+                         joined_at, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, 'active', %s, %s, %s, %s)
                     ON CONFLICT (tenant_id, identity_id) DO NOTHING
                     """,
-                    (uuid.uuid4().hex, tenant_id, uid, roles or "[]", now, now, now),
+                    (uuid.uuid4().hex, tenant_id, uid, roles or "[]", tenant_id, now, now, now),
                 )
 
         if dry_run:

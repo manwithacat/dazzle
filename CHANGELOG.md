@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.20] - 2026-06-24
+
+### Added
+- **#1463 (proof + close) two-level-tenancy RLS fix verified on real Postgres + adversarial security review.** New `tests/integration/test_partition_root_hierarchy_rls_pg.py` builds a `Trust ▸ School` hierarchy with Trust-partitioned data and proves, as a `NOSUPERUSER NOBYPASSRLS` role: a leaf (School) membership's write path resolves `partition_root_id` to the Trust via the real SQL walk; binding that root sees the Trust's rows; binding the raw School (the old bug) sees **nothing**; a foreign Trust is hidden; an unbound GUC denies all (fail-closed). Host-confinement is proven via `resolve_activation`: the leaf member activates at its own School host but is `HostForbidden` at a sibling School under the **same** Trust (activation keys off the leaf `tenant_id`, never the partition root) and at the root host. An independent adversarial security review found no fail-open path (degrade-closed invariant, backward-compat with canonical root memberships, identifier-injection safety, and host-confinement all verified). Review follow-ups landed: `dazzle db auth-migrate` no longer writes a `NULL partition_root_id` (set to `tenant_id`, which that tool already resolves to the root); resolver docstrings now state the global-id-uniqueness and cursor-reuse invariants.
+
+### Agent Guidance
+- **#1463 closes the two-level-tenancy RLS gap.** A membership can be held at a *leaf* tenant kind (host-confinement) while RLS data is partitioned at the `archetype:tenant` root. The membership now carries `partition_root_id` (resolved once at write time by `auth/partition_root.py`); the RLS bind path reads it. When adding a tenancy/membership write path, route it through `create_membership` (which resolves the root) or set `partition_root_id` explicitly — do not leave it `NULL` for a hierarchy app (boot reconciliation backfills, but new code should be self-describing). Host-confinement keys off the leaf `tenant_id` (`resolve_activation`); never widen activation to the partition root.
+
 ## [0.84.19] - 2026-06-23
 
 ### Added

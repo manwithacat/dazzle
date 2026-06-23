@@ -115,7 +115,11 @@ def resolve_partition_root(cur: Any, tenant_id: str, hierarchy: PartitionHierarc
         return tenant_id
 
     # 1. kind-probe: which non-root kind owns this id? (Root-kind ids are skipped —
-    # they already equal their own partition root.)
+    # they already equal their own partition root.) This relies on tenant ids being
+    # globally unique across the tenant-kind tables — already a hard invariant of the
+    # RLS model (the partition_key is compared globally, so colliding ids across two
+    # tenant tables would break the fence everywhere, not just here). uuid pks (the
+    # tenant-kind norm) guarantee it; the first matching kind is therefore THE kind.
     start_kind: str | None = None
     for kind in hierarchy.probe_kinds:
         cur.execute(
@@ -175,6 +179,11 @@ def reconcile_membership_partition_roots(store: Any, hierarchy: PartitionHierarc
         return 0
     updated = 0
     with store._transaction() as cur:
+        # `rows` is materialised (list(fetchall())) BEFORE the loop reuses `cur` for
+        # the per-row probe/ascend SELECTs + UPDATE — safe because resolve_partition_root
+        # only queries the tenant-kind tables, never `memberships`, so the cursor is
+        # never re-reading the result set it's iterating. Keep that invariant if the
+        # resolver ever changes.
         cur.execute("SELECT id, tenant_id, partition_root_id FROM memberships")
         rows = list(cur.fetchall())
         for r in rows:
