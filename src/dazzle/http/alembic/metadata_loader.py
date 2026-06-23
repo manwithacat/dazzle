@@ -16,6 +16,13 @@ from pathlib import Path
 
 import sqlalchemy
 
+from dazzle.core import ir
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
+from dazzle.core.renderer_registry import known_renderer_names
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,11 +40,6 @@ def load_target_metadata() -> sqlalchemy.MetaData:
     empty metadata would let ``--autogenerate`` produce a migration that
     drops every table.
     """
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
-    from dazzle.core.renderer_registry import known_renderer_names
     from dazzle.http.converters.entity_converter import convert_entities
     from dazzle.http.runtime.sa_schema import build_metadata
 
@@ -62,7 +64,6 @@ def load_target_metadata() -> sqlalchemy.MetaData:
         manifest.project_root,
         known_renderers=known_renderer_names(manifest),
     )
-    from dazzle.core import ir
     from dazzle.http.runtime.sa_schema import scoped_entity_names
 
     entities = convert_entities(appspec.domain.entities)

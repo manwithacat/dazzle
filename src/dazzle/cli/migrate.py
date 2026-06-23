@@ -14,7 +14,6 @@ from __future__ import annotations
 import asyncio
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
@@ -25,9 +24,8 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 from dazzle.core.paths import project_processes_db
-
-if TYPE_CHECKING:
-    from dazzle.core.process import VersionManager
+from dazzle.core.process import VersionManager, generate_version_id
+from dazzle.core.renderer_registry import known_renderer_names
 
 migrate_app = typer.Typer(
     help="Process migration commands for safe DSL version deployments",
@@ -39,8 +37,6 @@ console = Console()
 
 def _get_version_manager() -> VersionManager:
     """Get VersionManager for current project."""
-    from dazzle.core.process import VersionManager
-
     # Get project root from cwd or find dazzle.toml
     project_root = Path.cwd()
     manifest_path = project_root / "dazzle.toml"
@@ -215,8 +211,6 @@ def deploy_command(
     ),
 ) -> None:
     """Deploy current DSL as new version."""
-    from dazzle.core.process import VersionManager, generate_version_id
-
     project_root = Path.cwd()
     manifest_path = project_root / "dazzle.toml"
 
@@ -239,8 +233,6 @@ def deploy_command(
     # Validate DSL
     console.print("Validating DSL...")
     try:
-        from dazzle.core.renderer_registry import known_renderer_names
-
         modules = parse_modules(dsl_files)
         # build_appspec wants the module name (e.g. "myapp.core") not
         # the filesystem path — see #886.
@@ -394,8 +386,6 @@ def history_command(
     ),
 ) -> None:
     """Show migration history."""
-    from dazzle.core.process import VersionManager
-
     project_root = Path.cwd()
     db_path = project_processes_db(project_root)
 

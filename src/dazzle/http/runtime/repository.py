@@ -19,6 +19,8 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from dazzle.core import ir
+from dazzle.core.archetype_expander import _to_snake_case
+from dazzle.core.ir import FieldTypeKind
 from dazzle.http.runtime.query_builder import quote_identifier
 from dazzle.http.specs.entity import (
     ComputedFieldSpec,
@@ -79,7 +81,6 @@ def _resolve_latest_one_fields(
     cohort_strip-class workloads already do per-region fan-out at similar
     granularity.
     """
-    from dazzle.core.ir import FieldTypeKind
     from dazzle.http.runtime.query_builder import quote_identifier
 
     if not rows or entity_spec is None:
@@ -228,8 +229,6 @@ def _resolve_recursive_traversal_fields(
 
     No-op when entity has no such fields or ``rows`` is empty.
     """
-    from dazzle.core.ir import FieldTypeKind
-
     if not rows or entity_spec is None:
         return rows
 
@@ -859,8 +858,6 @@ class Repository[T: BaseModel]:
         # #1223 Phase 3a.v.ii: resolve latest_one fields if any exist on
         # the entity. Forces dict-return (same coercion as `include`).
         # No-op when entity has no latest_one fields.
-        from dazzle.core.ir import FieldTypeKind
-
         _has_latest_one = any(
             getattr(f.type, "kind", None) == FieldTypeKind.LATEST_ONE
             for f in self.entity_spec.fields
@@ -1238,8 +1235,6 @@ class Repository[T: BaseModel]:
 
         # #1223 Phase 3a.v.ii: resolve latest_one fields if any exist.
         # Forces dict-return (same coercion as `include` / computed).
-        from dazzle.core.ir import FieldTypeKind
-
         _has_latest_one = any(
             getattr(f.type, "kind", None) == FieldTypeKind.LATEST_ONE
             for f in self.entity_spec.fields
@@ -1810,8 +1805,6 @@ def create_subtype(
     # #1239: snake_case the child entity name to derive the discriminator
     # value. Mirrors the convention used by the trigger emitter (Task 13)
     # and pg_backend.py's child-table mapping (~line 461).
-    from dazzle.core.archetype_expander import _to_snake_case
-
     new_id = uuid4()
     base_payload["id"] = new_id
     base_payload["kind"] = _to_snake_case(child_spec.name)

@@ -9,6 +9,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir import FieldModifier
+from dazzle.core.ir.hless import RecordKind
+
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec, EntitySpec
     from dazzle.core.ir.eventing import EventSpec, TopicSpec
@@ -257,8 +260,6 @@ def _build_custom_payload_schema(event: EventSpec) -> dict[str, Any]:
 
 def _add_hless_streams(asyncapi: dict[str, Any], spec: AppSpec) -> None:
     """Add channels from HLESS streams."""
-    from dazzle.core.ir.hless import RecordKind
-
     for stream in spec.streams:
         channel_name = stream.name
 
@@ -362,8 +363,6 @@ def _add_hless_streams(asyncapi: dict[str, Any], spec: AppSpec) -> None:
 
 def _add_entity_schema(asyncapi: dict[str, Any], entity: EntitySpec) -> None:
     """Add JSON Schema for an entity (used as event payload)."""
-    from dazzle.core.ir import FieldModifier
-
     properties: dict[str, Any] = {}
     required: list[str] = []
 

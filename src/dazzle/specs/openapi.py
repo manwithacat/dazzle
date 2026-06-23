@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir import FieldModifier
 from dazzle.core.manifest import resolve_api_url
 
 if TYPE_CHECKING:
@@ -152,8 +153,6 @@ def _entity_to_schema(
     only_fields: set[str] | None = None,
 ) -> dict[str, Any]:
     """Convert entity to JSON Schema."""
-    from dazzle.core.ir import FieldModifier
-
     properties: dict[str, Any] = {}
     required: list[str] = []
 
@@ -194,8 +193,6 @@ def _entity_to_schema(
 
 def _field_to_schema(field: FieldSpec, entity_name: str) -> dict[str, Any]:
     """Convert a field to JSON Schema property."""
-    from dazzle.core.ir import FieldModifier
-
     schema: dict[str, Any] = {}
 
     # Map DAZZLE types to JSON Schema types

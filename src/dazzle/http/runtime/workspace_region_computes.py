@@ -13,6 +13,9 @@ the dispatcher and makes each compute independently testable.
 
 from typing import Any
 
+from dazzle.core.condition_eval import evaluate_condition as _eval_vis
+from dazzle.core.ir import AggregateRef
+from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.workspace_card_data import (
     _apply_format_spec,
     _initials_from,
@@ -191,8 +194,6 @@ def compute_queue(
                         "label": to_state.replace("_", " ").title(),
                     }
                 )
-
-    from dazzle.core.strings import to_api_plural
 
     api_endpoint = f"/{to_api_plural(source_name)}"
     return transitions, status_field, api_endpoint
@@ -382,7 +383,6 @@ async def compute_action_grid(
     import asyncio as _asyncio
     import logging
 
-    from dazzle.core.ir import AggregateRef
     from dazzle.http.runtime.workspace_aggregation import _fetch_count_metric
 
     logger = logging.getLogger(__name__)
@@ -483,7 +483,6 @@ async def compute_pipeline_steps(
     import asyncio as _asyncio
     import logging
 
-    from dazzle.core.ir import AggregateRef
     from dazzle.http.runtime.workspace_aggregation import _fetch_count_metric
     from dazzle.http.runtime.workspace_card_data import _coerce_pipeline_progress
 
@@ -643,8 +642,6 @@ async def compute_cohort_aggregate_primary(
         (the cell renders without a value).
     """
     import logging
-
-    from dazzle.core.ir import AggregateRef
 
     logger = logging.getLogger(__name__)
     out: dict[str, Any] = {}
@@ -1345,8 +1342,6 @@ def compute_columns_for_persona(
     """
     if not any(c.get("visible_condition") for c in precomputed_columns):
         return precomputed_columns
-
-    from dazzle.core.condition_eval import evaluate_condition as _eval_vis
 
     role_ctx = {"user_roles": [r.removeprefix("role_") for r in user_roles]}
     return [

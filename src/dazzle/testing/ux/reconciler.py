@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
+from dazzle.core.ir.triples import resolve_widget
+
 if TYPE_CHECKING:
     from dazzle.core.ir.domain import EntitySpec
     from dazzle.core.ir.surfaces import SurfaceSpec
@@ -239,8 +241,6 @@ def reconcile(
                 if raw_entity:
                     raw_field = next((f for f in raw_entity.fields if f.name == field_name), None)
                     if raw_field and raw_field.type:
-                        from dazzle.core.ir.triples import resolve_widget
-
                         expected_widget = resolve_widget(raw_field)
                         if str(expected_widget.value) != str(triple_field.widget.value):
                             return Diagnosis(

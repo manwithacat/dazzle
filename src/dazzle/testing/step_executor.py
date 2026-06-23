@@ -18,6 +18,10 @@ import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir import SurfaceMode
+from dazzle.core.linker import build_appspec
+from dazzle.core.parser import parse_modules
+from dazzle.core.strings import entity_slug
 from dazzle.testing.data_generator import DataGenerator
 from dazzle.testing.test_runner import StepResult, TestResult
 
@@ -91,10 +95,6 @@ class StepExecutor:
         JSON API), producing 404s on CREATE walks and wrong-content checks on
         LIST walks.
         """
-        from dazzle.core.ir import SurfaceMode
-        from dazzle.core.linker import build_appspec
-        from dazzle.core.parser import parse_modules
-
         out: dict[str, str] = {}
         dsl_dir = self.project_path / "dsl"
         if not dsl_dir.is_dir():
@@ -109,8 +109,6 @@ class StepExecutor:
             appspec = build_appspec(modules, modules[0].name)
         except Exception:  # noqa: BLE001 — best-effort URL resolution
             return out
-
-        from dazzle.core.strings import entity_slug
 
         for ws in getattr(appspec, "workspaces", None) or []:
             out[ws.name] = f"/app/workspaces/{ws.name}"
