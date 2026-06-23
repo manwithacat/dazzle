@@ -17,7 +17,7 @@ because the repo install is editable).
 
 These tests pin the config invariants. The actual wheel inclusion was verified
 manually by building a wheel and confirming `script.py.mako`, `alembic.ini`, and
-`versions/0001_framework_baseline.py` are present under `dazzle/http/alembic/`.
+`versions/0019_process_runtime_tables.py` are present under `dazzle/http/alembic/`.
 """
 
 from __future__ import annotations
@@ -67,8 +67,8 @@ def test_alembic_assets_exist_at_framework_dir() -> None:
     )
     assert (framework_dir / "script.py.mako").exists(), "script.py.mako missing"
     assert (framework_dir / "alembic.ini").exists(), "alembic.ini missing"
-    assert (framework_dir / "versions" / "0001_framework_baseline.py").exists(), (
-        "framework baseline migration 0001 missing"
+    assert (framework_dir / "versions" / "0019_process_runtime_tables.py").exists(), (
+        "framework baseline migration 0019 missing"
     )
 
 

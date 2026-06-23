@@ -1,6 +1,5 @@
 """Phase 1 of the declarative-CSRF spec: the token is session-bound."""
 
-import importlib.util
 import secrets
 import sys
 from collections.abc import Iterator
@@ -12,7 +11,6 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-import sqlalchemy as sa
 
 from dazzle.http.runtime.auth.models import SessionRecord
 
@@ -31,46 +29,6 @@ class TestSessionRecordCsrfSecret:
 
     def test_csrf_secret_is_unique_per_session(self) -> None:
         assert _session().csrf_secret != _session().csrf_secret
-
-
-def _load_migration():
-    path = (
-        Path(__file__).resolve().parents[2]
-        / "src/dazzle/http/alembic/versions/0005_session_csrf_secret.py"
-    )
-    spec = importlib.util.spec_from_file_location("m0005", path)
-    assert spec and spec.loader
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-class TestMigration0005:
-    def test_revision_chain(self) -> None:
-        m = _load_migration()
-        assert m.revision == "0005_session_csrf_secret"
-        assert m.down_revision == "0004_widen_alembic_version_num"
-
-    def test_upgrade_adds_column_idempotently(self) -> None:
-        """upgrade() adds csrf_secret and is safe to run twice."""
-        from alembic.migration import MigrationContext
-        from alembic.operations import Operations
-
-        engine = sa.create_engine("sqlite://")
-        with engine.connect() as conn:
-            conn.execute(
-                sa.text(
-                    "CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id TEXT, "
-                    "created_at TEXT, expires_at TEXT, ip_address TEXT, user_agent TEXT)"
-                )
-            )
-            ctx = MigrationContext.configure(conn)
-            m = _load_migration()
-            with Operations.context(ctx):
-                m.upgrade()
-                m.upgrade()  # second run must not raise (idempotent)
-            cols = {c["name"] for c in sa.inspect(conn).get_columns("sessions")}
-            assert "csrf_secret" in cols
 
 
 class TestLoginCsrfCookie:
@@ -501,7 +459,6 @@ class TestEverySessionSiteSetsCsrfCookie:
 
     def test_all_browser_session_modules_set_dazzle_csrf(self) -> None:
         import re
-        from pathlib import Path
 
         auth_dir = Path(__file__).resolve().parents[2] / "src/dazzle/http/runtime/auth"
         offenders = []

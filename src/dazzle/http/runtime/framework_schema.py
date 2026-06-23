@@ -66,6 +66,176 @@ logger = logging.getLogger(__name__)
 _FRAMEWORK_DDL_LOCK_KEY = 0x667A646C
 
 
+def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
+    """Execute all framework-schema DDL statements on an open cursor.
+
+    This is the no-commit, no-lock DDL core.  It is called by:
+    - ``ensure_framework_schema`` (which wraps it with advisory-lock + commit)
+    - The squashed Alembic baseline ``0019_process_runtime_tables`` (which
+      runs inside Alembic's migration transaction — no separate commit or lock)
+
+    Every statement uses ``IF NOT EXISTS`` / ``CREATE OR REPLACE`` so the
+    function is idempotent.
+
+    Args:
+        cur: An open psycopg cursor in an active transaction.  The caller
+             is responsible for committing (or rolling back) afterwards.
+    """
+    # ── assert_subtype_kind plpgsql function ──────────────────────────────
+    # Created unconditionally (CREATE OR REPLACE).  Required by the
+    # per-child-table triggers that enforce subtype kind consistency
+    # (#1217 Phase 3e.iii).  Previously created lazily by pg_backend.py
+    # only when child entities were present; now ensured for every app.
+    cur.execute(build_assert_subtype_kind_function())
+
+    # ── _dazzle_params (#572) ─────────────────────────────────────────────
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS _dazzle_params (
+            key TEXT NOT NULL,
+            scope TEXT NOT NULL,
+            scope_id TEXT NOT NULL DEFAULT '',
+            value_json JSONB NOT NULL,
+            updated_by TEXT,
+            updated_at TIMESTAMPTZ DEFAULT now(),
+            PRIMARY KEY (key, scope, scope_id)
+        )
+    """)
+
+    # ── AUTH TABLES ───────────────────────────────────────────────────────
+    # Delegated to ensure_auth_core_tables (auth/store.py) — single
+    # definition, two callers (store._init_db + this orchestrator).
+    # NOTE: _ensure_email_ci_uniqueness is NOT called here — that check
+    # raises loudly for duplicate-email rows and is appropriate only for
+    # upgrade paths on pre-existing databases; fresh installs never have
+    # the conflict.  The structural index still enforces the invariant.
+    ensure_auth_core_tables(cur)
+
+    # ── PROCESS TABLES (process_runs, process_tasks) ──────────────────────
+    # Reuse queue_columns_ddl (single source of truth for queue columns).
+    runs_queue_cols = queue_columns_ddl("process_runs")
+    tasks_queue_cols = queue_columns_ddl("process_tasks")
+
+    cur.execute(f"""
+        CREATE TABLE IF NOT EXISTS process_runs (
+            run_id              text        NOT NULL PRIMARY KEY,
+            process_name        text        NOT NULL,
+            process_version     text        NOT NULL DEFAULT 'v1',
+            dsl_version         text        NOT NULL DEFAULT '0.1',
+            current_step        text,
+            inputs              jsonb       NOT NULL DEFAULT '{{}}'::jsonb,
+            context             jsonb       NOT NULL DEFAULT '{{}}'::jsonb,
+            outputs             jsonb,
+            error               text,
+            idempotency_key     text,
+            started_at          timestamptz NOT NULL DEFAULT now(),
+            updated_at          timestamptz NOT NULL DEFAULT now(),
+            completed_at        timestamptz,
+            {runs_queue_cols}
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS ix_process_runs_due
+        ON process_runs (deliver_at)
+        WHERE status IN ('pending', 'claimed')
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS ix_process_runs_idempotency_key
+        ON process_runs (idempotency_key)
+        WHERE idempotency_key IS NOT NULL
+    """)
+
+    cur.execute(f"""
+        CREATE TABLE IF NOT EXISTS process_tasks (
+            task_id             text        NOT NULL PRIMARY KEY,
+            run_id              text        NOT NULL
+                REFERENCES process_runs (run_id) ON DELETE CASCADE,
+            step_name           text        NOT NULL,
+            surface_name        text        NOT NULL,
+            entity_name         text        NOT NULL,
+            entity_id           text        NOT NULL,
+            assignee_id         text,
+            assignee_role       text,
+            outcome             text,
+            outcome_data        jsonb,
+            due_at              timestamptz NOT NULL,
+            escalated_at        timestamptz,
+            completed_at        timestamptz,
+            created_at          timestamptz NOT NULL DEFAULT now(),
+            {tasks_queue_cols}
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS ix_process_tasks_due
+        ON process_tasks (deliver_at)
+        WHERE status IN ('pending', 'claimed')
+    """)
+
+    # ── AUDIT TABLES ──────────────────────────────────────────────────────
+    # Delegated to ensure_audit_log_table (audit_log.py) — single
+    # definition, two callers.  The orchestrator unconditionally adds the
+    # row_hash column (ADD COLUMN IF NOT EXISTS is a no-op when absent) so
+    # hash-chain upgrades work without a separate migration step.
+    ensure_audit_log_table(cur, hash_chain=True)
+
+    # _dazzle_atomic_audit (#1317, ADR-0029).
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS _dazzle_atomic_audit (
+            id TEXT PRIMARY KEY,
+            timestamp TEXT NOT NULL,
+            flow_name TEXT NOT NULL,
+            user_id TEXT,
+            user_email TEXT,
+            user_roles TEXT,
+            operation TEXT NOT NULL,
+            entity_name TEXT NOT NULL,
+            entity_id TEXT,
+            decision TEXT NOT NULL,
+            matched_policy TEXT
+        )
+    """)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_atomic_audit_flow "
+        "ON _dazzle_atomic_audit(flow_name, timestamp)"
+    )
+
+    # ── FILE STORAGE (dazzle_files) ───────────────────────────────────────
+    # Delegated to ensure_file_storage_tables (file_storage.py).
+    ensure_file_storage_tables(cur)
+
+    # ── REFRESH TOKENS ────────────────────────────────────────────────────
+    # Delegated to ensure_refresh_token_tables (token_store.py).
+    ensure_refresh_token_tables(cur)
+
+    # ── DEVICES ───────────────────────────────────────────────────────────
+    # Delegated to ensure_device_tables (device_registry.py).
+    ensure_device_tables(cur)
+
+    # ── GRANTS (_grants, _grant_events) ──────────────────────────────────
+    # Delegated to ensure_grant_tables (grant_store.py).
+    ensure_grant_tables(cur)
+
+    # ── OTP CODES (_dazzle_otp_codes) ────────────────────────────────────
+    # Delegated to ensure_otp_tables (otp_store.py).
+    ensure_otp_tables(cur)
+
+    # ── RECOVERY CODES (_dazzle_recovery_codes) ──────────────────────────
+    # Delegated to ensure_recovery_code_tables (recovery_codes.py).
+    ensure_recovery_code_tables(cur)
+
+    # ── EVENT INBOX / OUTBOX (fixed names) ───────────────────────────────
+    # The FIXED framework tables _dazzle_event_inbox and _dazzle_event_outbox
+    # are in-scope.  The PREFIXED {prefix}events/offsets/dlq tables (created
+    # by PostgresBus._create_tables) are EXCLUDED (dynamic prefix).
+    # DDL constants from inbox.py / outbox.py.
+    cur.execute(CREATE_INBOX_TABLE)
+    for _ix in CREATE_INBOX_INDEXES:
+        cur.execute(_ix)
+
+    cur.execute(CREATE_OUTBOX_TABLE)
+    for _ix_name, _ix_sql in CREATE_OUTBOX_INDEXES:
+        cur.execute(_ix_sql)
+
+
 def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection
     """Create ALL in-scope app-DB framework tables if they don't exist.
 
@@ -85,160 +255,7 @@ def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection
     with conn.cursor() as cur:
         # ── single lock for the whole block ──────────────────────────────────
         cur.execute("SELECT pg_advisory_xact_lock(%s)", (_FRAMEWORK_DDL_LOCK_KEY,))
-
-        # ── assert_subtype_kind plpgsql function ──────────────────────────────
-        # Created unconditionally (CREATE OR REPLACE).  Required by the
-        # per-child-table triggers that enforce subtype kind consistency
-        # (#1217 Phase 3e.iii).  Previously created lazily by pg_backend.py
-        # only when child entities were present; now ensured for every app.
-        cur.execute(build_assert_subtype_kind_function())
-
-        # ── _dazzle_params (#572) ─────────────────────────────────────────────
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS _dazzle_params (
-                key TEXT NOT NULL,
-                scope TEXT NOT NULL,
-                scope_id TEXT NOT NULL DEFAULT '',
-                value_json JSONB NOT NULL,
-                updated_by TEXT,
-                updated_at TIMESTAMPTZ DEFAULT now(),
-                PRIMARY KEY (key, scope, scope_id)
-            )
-        """)
-
-        # ── AUTH TABLES ───────────────────────────────────────────────────────
-        # Delegated to ensure_auth_core_tables (auth/store.py) — single
-        # definition, two callers (store._init_db + this orchestrator).
-        # NOTE: _ensure_email_ci_uniqueness is NOT called here — that check
-        # raises loudly for duplicate-email rows and is appropriate only for
-        # upgrade paths on pre-existing databases; fresh installs never have
-        # the conflict.  The structural index still enforces the invariant.
-        ensure_auth_core_tables(cur)
-
-        # ── PROCESS TABLES (process_runs, process_tasks) ──────────────────────
-        # Reuse queue_columns_ddl (single source of truth for queue columns).
-        runs_queue_cols = queue_columns_ddl("process_runs")
-        tasks_queue_cols = queue_columns_ddl("process_tasks")
-
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS process_runs (
-                run_id              text        NOT NULL PRIMARY KEY,
-                process_name        text        NOT NULL,
-                process_version     text        NOT NULL DEFAULT 'v1',
-                dsl_version         text        NOT NULL DEFAULT '0.1',
-                current_step        text,
-                inputs              jsonb       NOT NULL DEFAULT '{{}}'::jsonb,
-                context             jsonb       NOT NULL DEFAULT '{{}}'::jsonb,
-                outputs             jsonb,
-                error               text,
-                idempotency_key     text,
-                started_at          timestamptz NOT NULL DEFAULT now(),
-                updated_at          timestamptz NOT NULL DEFAULT now(),
-                completed_at        timestamptz,
-                {runs_queue_cols}
-            )
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS ix_process_runs_due
-            ON process_runs (deliver_at)
-            WHERE status IN ('pending', 'claimed')
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS ix_process_runs_idempotency_key
-            ON process_runs (idempotency_key)
-            WHERE idempotency_key IS NOT NULL
-        """)
-
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS process_tasks (
-                task_id             text        NOT NULL PRIMARY KEY,
-                run_id              text        NOT NULL
-                    REFERENCES process_runs (run_id) ON DELETE CASCADE,
-                step_name           text        NOT NULL,
-                surface_name        text        NOT NULL,
-                entity_name         text        NOT NULL,
-                entity_id           text        NOT NULL,
-                assignee_id         text,
-                assignee_role       text,
-                outcome             text,
-                outcome_data        jsonb,
-                due_at              timestamptz NOT NULL,
-                escalated_at        timestamptz,
-                completed_at        timestamptz,
-                created_at          timestamptz NOT NULL DEFAULT now(),
-                {tasks_queue_cols}
-            )
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS ix_process_tasks_due
-            ON process_tasks (deliver_at)
-            WHERE status IN ('pending', 'claimed')
-        """)
-
-        # ── AUDIT TABLES ──────────────────────────────────────────────────────
-        # Delegated to ensure_audit_log_table (audit_log.py) — single
-        # definition, two callers.  The orchestrator unconditionally adds the
-        # row_hash column (ADD COLUMN IF NOT EXISTS is a no-op when absent) so
-        # hash-chain upgrades work without a separate migration step.
-        ensure_audit_log_table(cur, hash_chain=True)
-
-        # _dazzle_atomic_audit (#1317, ADR-0029).
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS _dazzle_atomic_audit (
-                id TEXT PRIMARY KEY,
-                timestamp TEXT NOT NULL,
-                flow_name TEXT NOT NULL,
-                user_id TEXT,
-                user_email TEXT,
-                user_roles TEXT,
-                operation TEXT NOT NULL,
-                entity_name TEXT NOT NULL,
-                entity_id TEXT,
-                decision TEXT NOT NULL,
-                matched_policy TEXT
-            )
-        """)
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS idx_atomic_audit_flow "
-            "ON _dazzle_atomic_audit(flow_name, timestamp)"
-        )
-
-        # ── FILE STORAGE (dazzle_files) ───────────────────────────────────────
-        # Delegated to ensure_file_storage_tables (file_storage.py).
-        ensure_file_storage_tables(cur)
-
-        # ── REFRESH TOKENS ────────────────────────────────────────────────────
-        # Delegated to ensure_refresh_token_tables (token_store.py).
-        ensure_refresh_token_tables(cur)
-
-        # ── DEVICES ───────────────────────────────────────────────────────────
-        # Delegated to ensure_device_tables (device_registry.py).
-        ensure_device_tables(cur)
-
-        # ── GRANTS (_grants, _grant_events) ──────────────────────────────────
-        # Delegated to ensure_grant_tables (grant_store.py).
-        ensure_grant_tables(cur)
-
-        # ── OTP CODES (_dazzle_otp_codes) ────────────────────────────────────
-        # Delegated to ensure_otp_tables (otp_store.py).
-        ensure_otp_tables(cur)
-
-        # ── RECOVERY CODES (_dazzle_recovery_codes) ──────────────────────────
-        # Delegated to ensure_recovery_code_tables (recovery_codes.py).
-        ensure_recovery_code_tables(cur)
-
-        # ── EVENT INBOX / OUTBOX (fixed names) ───────────────────────────────
-        # The FIXED framework tables _dazzle_event_inbox and _dazzle_event_outbox
-        # are in-scope.  The PREFIXED {prefix}events/offsets/dlq tables (created
-        # by PostgresBus._create_tables) are EXCLUDED (dynamic prefix).
-        # DDL constants from inbox.py / outbox.py.
-        cur.execute(CREATE_INBOX_TABLE)
-        for _ix in CREATE_INBOX_INDEXES:
-            cur.execute(_ix)
-
-        cur.execute(CREATE_OUTBOX_TABLE)
-        for _ix_name, _ix_sql in CREATE_OUTBOX_INDEXES:
-            cur.execute(_ix_sql)
+        _ensure_framework_schema_ddl(cur)
 
     conn.commit()
     logger.debug("ensure_framework_schema: all framework tables ensured")

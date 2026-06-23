@@ -122,6 +122,7 @@
   "src/dazzle/http/__init__.py": 9,
   "src/dazzle/http/alembic/env.py": 3,
   "src/dazzle/http/alembic/metadata_loader.py": 9,
+  "src/dazzle/http/alembic/versions/0019_process_runtime_tables.py": 1,
   "src/dazzle/http/channels/adapters/email.py": 3,
   "src/dazzle/http/channels/providers/email.py": 2,
   "src/dazzle/http/converters/__init__.py": 1,

@@ -7,69 +7,27 @@ root* (`down_revision = None`, authored before the framework shipped baselines).
 Heroku release phase broke.
 
 Fixes under test:
-1. `0001_framework_baseline` is idempotent — skips when `_dazzle_params` already
-   exists (so applying the framework chain to a pre-existing DB is safe).
-2. `dazzle db reconcile-baseline` generates a project-side merge migration
+1. `dazzle db reconcile-baseline` generates a project-side merge migration
    collapsing the parallel heads into one.
-3. `dazzle db upgrade head` / `revision` give actionable reconcile guidance
+2. `dazzle db upgrade head` / `revision` give actionable reconcile guidance
    instead of alembic's raw multi-head error.
+
+Note: the old Part 1 (0001_framework_baseline idempotency guard) was removed
+when 0001-0018 were squashed into 0019_process_runtime_tables (ADR-0044).  The
+squashed baseline uses IF NOT EXISTS throughout — no separate early-exit guard
+needed.
 """
 
 from __future__ import annotations
 
-import importlib.util
 import shutil
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _FRAMEWORK_ALEMBIC = _REPO_ROOT / "src/dazzle/http/alembic"
-
-
-# ---------------------------------------------------------------------------
-# Part 1 — 0001 idempotency
-# ---------------------------------------------------------------------------
-
-
-def _load_0001() -> Any:
-    """Load the 0001 migration module by path (its name starts with a digit,
-    so it isn't importable as a normal module)."""
-    path = _FRAMEWORK_ALEMBIC / "versions" / "0001_framework_baseline.py"
-    spec = importlib.util.spec_from_file_location("_fw_0001", path)
-    assert spec and spec.loader
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def _patch_existence(mod: Any, monkeypatch: pytest.MonkeyPatch, *, exists: bool) -> MagicMock:
-    """Patch the module's `op` and the dialect-agnostic existence check so
-    upgrade() believes `_dazzle_params` does / doesn't already exist."""
-    op = MagicMock()
-    monkeypatch.setattr(mod, "op", op)
-    inspector = MagicMock()
-    inspector.has_table.return_value = exists
-    monkeypatch.setattr(mod, "sa_inspect", lambda _bind: inspector)
-    return op
-
-
-class TestZeroOneIdempotent1309:
-    def test_skips_create_when_table_exists(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        mod = _load_0001()
-        op = _patch_existence(mod, monkeypatch, exists=True)
-        mod.upgrade()
-        op.create_table.assert_not_called()
-
-    def test_creates_when_table_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        mod = _load_0001()
-        op = _patch_existence(mod, monkeypatch, exists=False)
-        mod.upgrade()
-        op.create_table.assert_called_once()
-        # Sanity: still the _dazzle_params table.
-        assert op.create_table.call_args.args[0] == "_dazzle_params"
 
 
 # ---------------------------------------------------------------------------

@@ -322,35 +322,38 @@ class TestValidateRevisionWidths1282:
         assert "200 chars" in msg
 
 
-class TestMigration0004WidensVersionNum1282:
-    """Migration 0004 must contain the canonical `ALTER TABLE` widening
-    statement so the column matches the validator's cap."""
+class TestBaselineWidensVersionNum1282:
+    """The squashed baseline (0019_process_runtime_tables, ADR-0044) carries the
+    alembic_version widening that was formerly in the deleted migration 0004.
+    Verify the widening is present in the baseline so the column always fits
+    long revision ids (cap = ``ALEMBIC_VERSION_NUM_MAX_LEN``)."""
 
-    def test_migration_alters_version_num_to_128(self) -> None:
+    def test_baseline_alters_version_num_to_128(self) -> None:
         from pathlib import Path
 
         repo_root = Path(__file__).resolve().parents[2]
-        migration = (
+        baseline = (
             repo_root
             / "src"
             / "dazzle"
             / "http"
             / "alembic"
             / "versions"
-            / "0004_widen_alembic_version_num.py"
+            / "0019_process_runtime_tables.py"
         )
-        assert migration.exists()
-        text = migration.read_text(encoding="utf-8")
+        assert baseline.exists()
+        text = baseline.read_text(encoding="utf-8")
         assert "VARCHAR(128)" in text
         assert "version_num" in text
-        assert 'down_revision = "0003_subtype_kind_function"' in text
+        # Baseline is the chain root — no predecessor.
+        assert "down_revision = None" in text
 
 
 class TestPytestImports1282:
     """Sanity test — pytest + patch must be importable for the new tests
-    above to run. Also pins that the cap is what migration 0004 sets."""
+    above to run. Also pins that the cap matches the baseline."""
 
-    def test_cap_matches_migration(self) -> None:
+    def test_cap_matches_baseline(self) -> None:
         assert ALEMBIC_VERSION_NUM_MAX_LEN == 128
 
 

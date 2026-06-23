@@ -98,75 +98,49 @@ class TestDazzleParamsVerification:
 
 
 class TestFrameworkBaselineMigration:
-    """The framework ships an Alembic baseline that creates `_dazzle_params`,
-    so production startups (which call `verify_dazzle_params_table` instead of
-    `ensure_dazzle_params_table`) succeed after `dazzle db upgrade`.
+    """The framework ships an Alembic squashed baseline (0019_process_runtime_tables,
+    down_revision=None) that creates ALL in-scope framework tables, so production
+    startups (which call ``verify_dazzle_params_table`` instead of
+    ``ensure_dazzle_params_table``) succeed after ``dazzle db upgrade``.
 
-    The hint in `verify_dazzle_params_table`'s MigrationError points at this
-    migration — it's load-bearing and must not be deleted/renamed without
-    coordinated changes in `migrations.py`.
+    The baseline calls ``_ensure_framework_schema_ddl`` — the same DDL core
+    as ``ensure_framework_schema`` — so baseline ≡ orchestrator by shared code.
+
+    ADR-0044 / Task 2 of the framework-migration-baseline plan.
     """
 
     def test_baseline_migration_module_loads(self) -> None:
         """Migration module imports cleanly and exports the expected shape."""
         import importlib
 
-        mod = importlib.import_module("dazzle.http.alembic.versions.0001_framework_baseline")
-        assert mod.revision == "0001_framework_baseline"
-        assert mod.down_revision is None  # this is the root revision
+        mod = importlib.import_module("dazzle.http.alembic.versions.0019_process_runtime_tables")
+        assert mod.revision == "0019_process_runtime_tables"
+        assert mod.down_revision is None  # chain root — no predecessor
         assert callable(mod.upgrade)
         assert callable(mod.downgrade)
 
-    def test_baseline_migration_creates_dazzle_params(self) -> None:
-        """upgrade() emits CREATE TABLE for _dazzle_params with the columns
-        the runtime expects. Mirrors `ensure_dazzle_params_table()` so dev
-        and production land on the same schema."""
+    def test_baseline_migration_exports_broad_framework_schema(self) -> None:
+        """The baseline module documents the full in-scope framework table list
+        (spot-checks key members) so a rename/split is caught early."""
         import importlib
 
-        from alembic.operations import Operations
-        from alembic.runtime.migration import MigrationContext
-        from sqlalchemy import create_engine
-        from sqlalchemy.pool import StaticPool
-
-        mod = importlib.import_module("dazzle.http.alembic.versions.0001_framework_baseline")
-
-        # Use sqlite as a structural-validity sandbox — only verifies the
-        # migration module produces well-formed Alembic ops. PostgreSQL-only
-        # behaviour (JSONB, TIMESTAMPTZ default now()) is exercised by the
-        # real migration in any real db env (and by ensure_dazzle_params_table
-        # already, in dev).
-        engine = create_engine(
-            "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-        )
-        with engine.connect() as conn:
-            ctx = MigrationContext.configure(conn)
-            op = Operations(ctx)
-
-            # Patch the module-level `op` reference so upgrade() uses our
-            # bound Operations instance instead of the global Alembic proxy
-            # (which only resolves inside an `alembic` command run).
-            with patch.object(mod, "op", op):
-                # JSONB doesn't exist on sqlite; substitute with a JSON-equivalent
-                # for this structural test. The real migration runs against
-                # PostgreSQL and uses the genuine JSONB type.
-                from sqlalchemy.dialects import postgresql
-
-                with patch.object(postgresql, "JSONB", lambda: __import__("sqlalchemy").JSON()):
-                    mod.upgrade()
-
-            # Inspect the table
-            from sqlalchemy import inspect
-
-            inspector = inspect(engine)
-            assert "_dazzle_params" in inspector.get_table_names()
-            cols = {c["name"] for c in inspector.get_columns("_dazzle_params")}
-            assert cols == {
-                "key",
-                "scope",
-                "scope_id",
-                "value_json",
-                "updated_by",
-                "updated_at",
-            }
-            pk = inspector.get_pk_constraint("_dazzle_params")
-            assert pk["constrained_columns"] == ["key", "scope", "scope_id"]
+        mod = importlib.import_module("dazzle.http.alembic.versions.0019_process_runtime_tables")
+        doc = mod.__doc__ or ""
+        # Core framework tables that must be declared in the baseline docstring.
+        for table in (
+            "_dazzle_params",
+            "users",
+            "sessions",
+            "memberships",
+            "organizations",
+            "process_runs",
+            "process_tasks",
+            "_dazzle_audit_log",
+            "_grants",
+            "_dazzle_event_inbox",
+            "_dazzle_event_outbox",
+        ):
+            assert table in doc, (
+                f"Baseline docstring missing table {table!r} — update the "
+                "In-scope tables list in 0019_process_runtime_tables.py"
+            )
