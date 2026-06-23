@@ -212,6 +212,124 @@ def snapshot_from_module(module: ModuleType) -> dict[str, Any]:
     return getattr(module, "SCHEMA_SNAPSHOT", {})
 
 
+def introspect_schema(
+    conn: Any,
+    *,
+    only: set[str] | None = None,
+) -> dict[str, Any]:
+    """Introspect a live Postgres DB via SQLAlchemy inspector → Snapshot.
+
+    Produces the same ``Snapshot`` / ``TableSnap`` / ``ColSnap`` shape as
+    ``project_schema`` so the two outputs are directly comparable and can be
+    fed to ``schema_diff.diff``.
+
+    Unlike ``project_schema`` (which reads in-memory MetaData), this function
+    reads the **actual live database** — making it suitable for the three-way
+    parity gate (alembic-head ≡ orchestrator ≡ committed snapshot).
+
+    Args:
+        conn:
+            A SQLAlchemy ``Connection`` or ``Engine``, or a psycopg connection
+            that has been wrapped by ``sqlalchemy.inspect``.  Concretely:
+            pass the result of ``sa.create_engine(url)`` or
+            ``engine.connect().__enter__()``.
+        only:
+            Optional set of table names to include.  Tables not in this set
+            are silently skipped.  Use this to restrict to the in-scope
+            framework tables and exclude ops-DB, event-bus-prefixed, and
+            app-entity tables.  ``None`` means include every table found.
+
+    Returns:
+        A deterministic ``Snapshot`` dict (sorted keys at every level), ready
+        for ``render_snapshot_literal`` or ``diff``.
+
+    Type-normalisation:
+        Column types from the inspector are SA dialect objects (TEXT, JSONB,
+        TIMESTAMP, BOOLEAN, BIGINT, INTEGER, UUID …).  We reuse
+        ``_sa_type_to_token`` — the same mapper used by ``project_schema`` —
+        so that the same logical type compares equal regardless of build path.
+
+    FK representation:
+        The inspector's ``get_foreign_keys`` returns constraint dicts.  We
+        capture ``col → referred_table`` (one entry per constrained column),
+        matching ``project_schema``'s ``fks`` convention.
+
+    Index representation:
+        Each index becomes a comma-joined, sorted string of its column names
+        (e.g. ``"tenant_id,user_id"``), matching ``project_schema``'s
+        ``indexes`` convention.  Unique indexes are also emitted here;
+        dedicated unique-constraint columns are captured in ``uniques``.
+
+    Unique representation:
+        ``get_unique_constraints`` returns named unique constraints.  We
+        collapse each to the set of constrained column names, then record
+        each column in ``uniques`` (matching ``project_schema``).  Columns
+        marked ``unique=True`` inline are captured via the indexes list above
+        (they appear as unique indexes in Postgres).
+    """
+    if isinstance(conn, sa.engine.Engine):
+        engine = conn
+        _owned = False
+    else:
+        # Assume it's already an inspectable connection
+        engine = conn
+        _owned = False
+
+    insp = sa.inspect(engine)
+    table_names = insp.get_table_names()
+
+    snapshot: dict[str, Any] = {}
+
+    for tname in table_names:
+        if only is not None and tname not in only:
+            continue
+
+        # ── columns ──────────────────────────────────────────────────────────
+        raw_cols = insp.get_columns(tname)
+        pk_constraint = insp.get_pk_constraint(tname)
+        pk_cols: set[str] = set(pk_constraint.get("constrained_columns", []))
+
+        columns: dict[str, Any] = {}
+        for c in raw_cols:
+            # Inspector stores server default under 'default' key
+            default_val: str | None = c.get("default")
+            columns[c["name"]] = {
+                "type": _sa_type_to_token(c["type"]),
+                "nullable": bool(c["nullable"]),
+                "default": default_val,
+                "pk": c["name"] in pk_cols,
+            }
+
+        # ── foreign keys ──────────────────────────────────────────────────────
+        fks: dict[str, str] = {}
+        for fk_info in insp.get_foreign_keys(tname):
+            ref_table = fk_info["referred_table"]
+            for col in fk_info.get("constrained_columns", []):
+                fks[col] = ref_table
+
+        # ── indexes ───────────────────────────────────────────────────────────
+        index_keys: list[str] = []
+        for idx in insp.get_indexes(tname):
+            col_names = idx.get("column_names") or []
+            if col_names:
+                index_keys.append(",".join(sorted(str(c) for c in col_names)))
+
+        # ── unique constraints (named table-level uniques) ────────────────────
+        unique_cols: set[str] = set()
+        for uc in insp.get_unique_constraints(tname):
+            for col in uc.get("column_names", []):
+                unique_cols.add(col)
+
+        snapshot[tname] = {
+            "columns": dict(sorted(columns.items())),
+            "fks": dict(sorted(fks.items())),
+            "uniques": sorted(unique_cols),
+            "indexes": sorted(index_keys),
+        }
+
+    return dict(sorted(snapshot.items()))
+
+
 def load_head_snapshot(script_dir: Any) -> dict[str, Any]:
     """Return the SCHEMA_SNAPSHOT embedded in the project-lineage head revision.
 
