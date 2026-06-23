@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.9] - 2026-06-23
+
+### Changed
+- **#1438 deferred-imports burn-down wave 8** — hoisted precautionary function-body `from dazzle.core.*` imports to module top in 9 more non-core files (`http/runtime/{social_auth,sla_manager,service_generator,policy,pg_backend,integration_executor}`, `http/converters/entity_converter`, `deploy/runner`, `conformance/stage_invariants`). Ratchet total 1713→1699 (−14). No reverts; 3 candidates (`subsystems/channels`, `integration_manager`, `process_executor`) yielded zero — all their core imports are `try/except ImportError`/`TYPE_CHECKING`-guarded. Session cumulative: 1949→1699 (−250 over 8 waves).
+
 ## [0.84.8] - 2026-06-23
 
 ### Changed
