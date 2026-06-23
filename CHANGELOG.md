@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.14] - 2026-06-23
+
+### Fixed
+- **`Procfile` web command referenced the dead `dazzle_back.runtime` module** — stale since the #1055 package merge and the ADR-0041 `back/`→`http/` rename (last touched in #439, so it has been unbootable for a long time). Corrected to `dazzle.http.runtime.app_factory:create_app_factory` (verified: that is the `--factory` entrypoint; `dazzle_back` is not importable).
+
 ## [0.84.13] - 2026-06-23
 
 ### Changed
