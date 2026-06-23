@@ -776,6 +776,7 @@ class SessionStoreMixin:
             roles=json.loads(row["roles"]) if row.get("roles") else [],
             status=row["status"],
             invited_by=row.get("invited_by"),
+            partition_root_id=row.get("partition_root_id"),
             external_id=row.get("external_id"),
             joined_at=datetime.fromisoformat(row["joined_at"]),
             created_at=datetime.fromisoformat(row["created_at"]),
@@ -2432,6 +2433,7 @@ def ensure_auth_core_tables(cur: Any) -> None:
             roles TEXT NOT NULL DEFAULT '[]',
             status TEXT NOT NULL DEFAULT 'active',
             invited_by TEXT,
+            partition_root_id TEXT,
             joined_at TEXT NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
@@ -2441,6 +2443,11 @@ def ensure_auth_core_tables(cur: Any) -> None:
     cur.execute("CREATE INDEX IF NOT EXISTS ix_memberships_identity_id ON memberships(identity_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS ix_memberships_tenant_id ON memberships(tenant_id)")
     cur.execute("ALTER TABLE memberships ADD COLUMN IF NOT EXISTS external_id TEXT")
+    # #1463: the membership's archetype:tenant partition root (the ancestor whose
+    # id the shared_schema RLS fence reads as dazzle.tenant_id). NULL = flat / not
+    # yet backfilled; the bind path falls back to tenant_id. Resolved at write time
+    # (create_membership) and reconciled at boot for tenant-hierarchy apps.
+    cur.execute("ALTER TABLE memberships ADD COLUMN IF NOT EXISTS partition_root_id TEXT")
     cur.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_memberships_tenant_external "
         "ON memberships(tenant_id, external_id) WHERE external_id IS NOT NULL"

@@ -608,6 +608,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "identity_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
             "invited_by": {"default": None, "nullable": True, "pk": False, "type": "text"},
             "joined_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "partition_root_id": {"default": None, "nullable": True, "pk": False, "type": "text"},
             "roles": {"default": "'[]'::text", "nullable": False, "pk": False, "type": "text"},
             "status": {"default": "'active'::text", "nullable": False, "pk": False, "type": "text"},
             "tenant_id": {"default": None, "nullable": False, "pk": False, "type": "text"},

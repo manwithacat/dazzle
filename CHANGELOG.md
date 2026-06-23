@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.84.16] - 2026-06-23
+## [0.84.17] - 2026-06-23
+
+### Added
+- **#1463 (groundwork) shared_schema RLS two-level tenancy: `partition_root_id` column on `memberships`.** Schema + model groundwork for the fix where the RLS GUC `dazzle.tenant_id` binds the *raw* membership tenant instead of the `archetype:tenant` partition root — so a leaf (e.g. School) membership in a `Trust ▸ School` hierarchy binds `School` while rows are partitioned at `Trust`, and the fence hides everything. This patch adds the nullable `partition_root_id` column (migration-managed via `ensure_framework_schema`; `FRAMEWORK_SCHEMA_SNAPSHOT` regenerated, three-way parity gate green) and the `MembershipRecord.partition_root_id` field. No behaviour change yet — the resolver, bind-path read, boot reconciliation, and real-PG proof land in the following patches. **Framework schema change** (ADR-0044).
 
 ### Fixed
 - **#1461 shared_schema RLS: direct `ref <TenantRoot>` leaf entities were silently left unfenced (cross-tenant exposure).** The `tenant_id`-injection skip predicate treated *any* entity with a field referencing the tenant root as "already partitioned" and skipped it — but for leaf **data** entities (e.g. `SchoolAgreement` with `trust: ref Trust`) that meant **no `tenant_id`, RLS off, zero policies**: the row was globally readable/writable by the non-owner `dazzle_app` role. The predicate is now narrowed to its documented original intent — it skips only `USER_MEMBERSHIP` entities (which keep a per-app-named tenant ref like `organization`). A direct root ref is just another path to root, so such entities now get `tenant_id` injected + `FORCE` RLS + a `tenant_fence`, exactly like indirectly-linked entities. Entities that are genuinely cross-tenant remain excluded (tenant root, `USER`/`SETTINGS` archetypes, `domain == "platform"`, hand-declared `tenant_id`, or explicit `tenancy.entities_excluded`). Verified on real Postgres: `SchoolAgreement` goes unfenced → `tenant_id` + FORCE RLS + policies + correct own/foreign/no-GUC isolation as a non-owner role; a `USER_MEMBERSHIP` entity still keeps its single per-app ref. Adversarial security review walked every archetype + the downstream RLS/composite-FK chain — no unfenced or wrongly-fenced class.

@@ -75,6 +75,12 @@ class MembershipRecord(BaseModel):
     roles: list[str] = Field(default_factory=list)
     status: str = "active"
     invited_by: str | None = None
+    # #1463: the archetype:tenant partition root of ``tenant_id`` — the ancestor id
+    # the shared_schema RLS fence binds as ``dazzle.tenant_id``. For a flat tenancy
+    # or a root membership this equals ``tenant_id``; for a leaf (e.g. School)
+    # membership in a hierarchy (Trust ▸ School) it is the root (Trust). ``None``
+    # for un-backfilled rows — the bind path falls back to ``tenant_id``.
+    partition_root_id: str | None = None
     # The IdP's stable user id for this membership (Entra = user objectId GUID),
     # captured from SCIM `externalId`. Lets a re-push under a changed email update
     # this membership instead of forking a duplicate identity (#1342 gap 1).
