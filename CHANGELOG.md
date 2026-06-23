@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.7] - 2026-06-23
+
+### Changed
+- **#1438 deferred-imports burn-down wave 6** — hoisted precautionary function-body `from dazzle.core.*` imports to module top in 10 more non-core files (`mcp/server/handlers/process/scope_fidelity`, `http/runtime/storage/registry`, `http/runtime/rls_schema`, `http/runtime/handlers/list_handlers`, `deploy/analyzer`, `demo_data/blueprint_generator`, `compliance/evidence`, `cli/ux`, `api_surface/dsl_constructs`, `testing/unified_runner`). Ratchet total 1753→1730 (−23). No reverts. Session cumulative: 1949→1730 (−219 over 6 waves).
+
 ## [0.84.6] - 2026-06-23
 
 ### Changed
