@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Complete, CI-managed framework migration baseline (ADR-0044).** The framework's 19 dev-churn Alembic migrations (`0001`–`0019`) are collapsed into **one squashed baseline** at the stable head `0019_process_runtime_tables` (`down_revision=None`). That baseline is now the *complete, provably-faithful* mirror of the framework schema the runtime builds — previously the chain mirrored only `_dazzle_params` + auth + process, while ~10 other live framework tables (audit, atomic-audit, files, refresh-tokens, devices, grants, OTP, recovery-codes, event inbox/outbox) had **no Alembic representation at all** and were created by scattered lazy `_init_db`/`ensure_*` calls. New model: one orchestrator `ensure_framework_schema(conn)` (`src/dazzle/http/runtime/framework_schema.py`) is the single source of the framework schema; the baseline's `upgrade()` calls the orchestrator's shared no-commit core (`baseline ≡ orchestrator` *by code*, not a copy); a committed readable `FRAMEWORK_SCHEMA_SNAPSHOT` declares it; and a real-Postgres **three-way parity gate** (`tests/integration/test_framework_baseline_parity_pg.py`) asserts `alembic-head ≡ orchestrator ≡ snapshot` over all 30 in-scope tables on every change, with a readable diff on mismatch and a no-unlisted-table guard. Adds a chain-cleanliness gate (`tests/unit/test_framework_chain_clean.py`) and a `dazzle db reframework-baseline` regeneration command.
+- **Behavior change — eager framework-table creation.** The ~10 previously lazy/conditional framework tables are now created eagerly for **every app at boot** (most are tiny/empty; all are framework-owned and usage-audited as live). Genuinely separate concerns stay conditional and excluded from the app-DB baseline: **ops_database** tables (separate DB), event-bus `{prefix}events/offsets/dlq` (dynamic prefix), and the tenant registry `public.tenants` + per-tenant schemas.
+- **Widened dual-write rule.** A new framework table now goes in the orchestrator (preferably a shared `ensure_*` function called by both the store and the orchestrator) and the baseline is regenerated via `dazzle db reframework-baseline` — *not* added as a fresh per-table migration. The chain-cleanliness gate prevents silent dev-churn re-accumulation.
+
+#### Consumer adaptation (shared-base squash)
+
+The framework Alembic chain is a shared base (downstream app migrations chain off the framework head). By consumer state:
+1. **At the head / app migrations chaining off `0019`:** nothing — `alembic_version` still resolves, the baseline is the new root, `upgrade head` is a no-op; eager tables arrive via the orchestrator at boot (idempotent).
+2. **Lagging on an old framework revision:** one `dazzle db migrate` (autostamp #1390; guarded, re-run is a no-op).
+3. **An app migration whose `down_revision` is a deleted intermediate id (`0002`–`0018`):** the one manual case — re-point that single `down_revision` to `0019_process_runtime_tables`, or stamp.
+
+### Agent Guidance
+- **Framework schema lives in one place now.** To add or change a framework table, edit `ensure_framework_schema` (`src/dazzle/http/runtime/framework_schema.py`) — ideally via a shared `ensure_*` function called by both the store's `_init_db` and the orchestrator — then run `dazzle db reframework-baseline` and let the three-way parity gate prove `alembic-head ≡ orchestrator ≡ snapshot`. Do **not** add a new per-table framework migration; the chain-cleanliness gate enforces the single baseline at the stable head. See ADR-0044.
+
 ## [0.83.114] - 2026-06-22
 
 ### Fixed
