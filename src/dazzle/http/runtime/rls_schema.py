@@ -43,6 +43,7 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir import TenancyMode
 from dazzle.http.runtime.query_builder import quote_identifier
 
 logger = logging.getLogger(__name__)
@@ -126,7 +127,6 @@ def build_all_rls_ddl(appspec: Any, entities: list[Any]) -> list[str]:
         ValueError: A scoped entity carries scope rules but ``appspec.fk_graph``
             is ``None`` (cannot compile the policy body).
     """
-    from dazzle.core.ir import TenancyMode
     from dazzle.http.runtime.predicate_compiler import build_entity_type_resolver
     from dazzle.http.runtime.sa_schema import scoped_entity_names
 
@@ -262,7 +262,6 @@ def describe_rls_policies(appspec: Any, entities: list[Any]) -> list[PolicyDescr
         a stable per-entity policy order (fence first, then baseline or the
         scope policies in SELECT/INSERT/UPDATE/DELETE order).
     """
-    from dazzle.core.ir import TenancyMode
     from dazzle.http.runtime.sa_schema import scoped_entity_names
 
     tenancy = getattr(appspec, "tenancy", None)

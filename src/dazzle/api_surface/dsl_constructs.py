@@ -17,6 +17,9 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
+from dazzle.core.dsl_parser_impl import Parser
+from dazzle.core.ir.module import ModuleFragment
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BASELINE_PATH = REPO_ROOT / "docs" / "api-surface" / "dsl-constructs.txt"
 
@@ -24,11 +27,7 @@ _FIELD_KEY_RE = re.compile(r'"([a-z_][a-z0-9_]*)"\s*:')
 
 
 def _instantiate_parser() -> typing.Any:
-    from pathlib import Path as _Path
-
-    from dazzle.core.dsl_parser_impl import Parser
-
-    return Parser([], _Path("/synthetic-for-introspection"))
+    return Parser([], Path("/synthetic-for-introspection"))
 
 
 def _construct_to_fragment_fields() -> dict[str, list[str]]:
@@ -55,8 +54,6 @@ def _construct_to_fragment_fields() -> dict[str, list[str]]:
         fields = sorted(set(_FIELD_KEY_RE.findall(target)))
         # Filter to fields that actually exist on ModuleFragment (defensive
         # against future handlers that build dict keys for other reasons).
-        from dazzle.core.ir.module import ModuleFragment
-
         valid = set(ModuleFragment.model_fields)
         fields = [f for f in fields if f in valid]
         if fields:
@@ -181,8 +178,6 @@ def _render_ir_class(cls: type[BaseModel]) -> list[str]:
 
 def snapshot_dsl_constructs() -> str:
     """Render the deterministic DSL-constructs API-surface snapshot."""
-    from dazzle.core.ir.module import ModuleFragment
-
     construct_map = _construct_to_fragment_fields()
 
     lines: list[str] = []

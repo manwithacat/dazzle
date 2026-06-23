@@ -10,6 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir.messaging import ChannelKind
+from dazzle.core.ir.process import ProcessTriggerKind
+
 if TYPE_CHECKING:
     from dazzle.core import ir
     from dazzle.core.infra_analyzer import InfraRequirements
@@ -288,8 +291,6 @@ def _analyze_channel(
     config: DeploymentConfig,
 ) -> None:
     """Analyze a messaging channel and update requirements."""
-    from dazzle.core.ir.messaging import ChannelKind
-
     if channel.kind == ChannelKind.QUEUE:
         reqs.needs_sqs = True
 
@@ -336,8 +337,6 @@ def _analyze_channel(
 
 def _analyze_process(process: ir.process.ProcessSpec, reqs: AWSRequirements) -> None:
     """Analyze a process and create EventBridge rules for scheduled triggers."""
-    from dazzle.core.ir.process import ProcessTriggerKind
-
     if process.trigger:
         trigger = process.trigger
 

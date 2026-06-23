@@ -16,12 +16,10 @@ provider-agnostic — it sees only the `StorageProvider` protocol.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+
+from dazzle.core.manifest import StorageConfig
 
 from .protocol import StorageProvider
-
-if TYPE_CHECKING:
-    from dazzle.core.manifest import StorageConfig
 
 
 @dataclass
@@ -79,9 +77,7 @@ class StorageRegistry:
     def _build_from_config(self, config: StorageConfig) -> StorageProvider:
         """Map a config's `backend` field to a concrete provider
         class. v1 supports `s3` only; future backends slot in here."""
-        from dazzle.core.manifest import StorageConfig as _SC  # local import for runtime types
-
-        assert isinstance(config, _SC), "config must be a StorageConfig"
+        assert isinstance(config, StorageConfig), "config must be a StorageConfig"
         if config.backend == "s3":
             from .s3_provider import S3Provider
 
@@ -96,12 +92,10 @@ class StorageRegistry:
         fields, returning a new `StorageConfig`. Loud-on-missing —
         any unresolved var raises `EnvVarMissingError` with the
         config name in the context for diagnostics."""
-        from dazzle.core.manifest import StorageConfig as _SC
-
         from .env_vars import interpolate_env_vars
 
         ctx_root = f"[storage.{config.name}]"
-        return _SC(
+        return StorageConfig(
             name=config.name,
             backend=config.backend,
             bucket=interpolate_env_vars(config.bucket, context=f"{ctx_root} bucket") or "",

@@ -19,6 +19,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from dazzle.core.process_persistence import load_processes as load_persisted_processes
+
 from ..common import extract_progress, wrap_handler_errors
 from . import _helpers
 
@@ -183,8 +185,6 @@ def scope_fidelity_impl(
 
     # Load processes (DSL + persisted)
     processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
-    from dazzle.core.process_persistence import load_processes as load_persisted_processes
-
     persisted = load_persisted_processes(project_root)
     dsl_names = {p.name for p in processes}
     for p in persisted:

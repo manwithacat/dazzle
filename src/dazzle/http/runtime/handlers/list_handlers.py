@@ -31,6 +31,8 @@ from typing import TYPE_CHECKING, Any
 from fastapi import Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
+from dazzle.core.access import AccessOperationKind
+from dazzle.core.strings import entity_slug
 from dazzle.http.runtime.audit_wrap import _log_audit_decision
 from dazzle.http.runtime.auth import AuthContext
 from dazzle.http.runtime.htmx_render import (
@@ -349,7 +351,6 @@ async def _list_handler_body(
             temporal_include_closed=_include_closed,
         )
     except AccessForbidden:
-        from dazzle.core.access import AccessOperationKind
         from dazzle.http.runtime.auth.models import effective_roles_of
 
         raise HTTPException(
@@ -476,8 +477,6 @@ async def _list_handler_body(
     # Browser navigation: redirect to UI list page (#356)
     if _wants_html(request) and not _is_htmx_request(request):
         from starlette.responses import RedirectResponse
-
-        from dazzle.core.strings import entity_slug
 
         _slug = entity_slug(entity_name)
         redirect_url = f"/app/{_slug}"

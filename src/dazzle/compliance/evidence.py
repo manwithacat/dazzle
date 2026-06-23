@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from dazzle.compliance.models import EvidenceItem, EvidenceMap
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.manifest import load_manifest
 
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec
@@ -51,9 +53,6 @@ def extract_evidence_from_project(project_root: Path) -> EvidenceMap:
     evidence = extract_evidence(appspec)
 
     # Compute DSL hash over all files
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.manifest import load_manifest
-
     manifest_path = project_root / "dazzle.toml"
     if manifest_path.exists():
         manifest = load_manifest(manifest_path)

@@ -28,6 +28,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.project import load_project
+
 from .dsl_test_generator import (
     DSLTestGenerator,
     GeneratedTestSuite,
@@ -210,8 +212,6 @@ class UnifiedTestRunner:
 
         Uses caching to avoid regeneration if DSL hasn't changed.
         """
-        from dazzle.core.project import load_project
-
         print(f"Loading DSL from {self.project_path}...")
         appspec = load_project(self.project_path)
 
@@ -465,8 +465,6 @@ class UnifiedTestRunner:
 
     def run_event_tests(self) -> EventTestRunResult | None:
         """Run event flow tests if events are defined."""
-        from dazzle.core.project import load_project
-
         appspec = load_project(self.project_path)
 
         # Check if there are events to test

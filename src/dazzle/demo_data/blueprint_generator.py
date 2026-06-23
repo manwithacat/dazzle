@@ -15,6 +15,8 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir.demo_blueprint import FieldStrategy
+
 if TYPE_CHECKING:
     from dazzle.core.ir.demo_blueprint import (
         DemoDataBlueprint,
@@ -76,8 +78,6 @@ def _strategy_value_obviously_wrong(pattern: FieldPattern, value: Any) -> bool:
     2. Any strategy emits a non-UUID string on a field whose name
        looks like a ref (\"created_by\", \"assigned_to\", etc.).
     """
-    from dazzle.core.ir.demo_blueprint import FieldStrategy
-
     field_name_lower = pattern.field_name.lower()
 
     if pattern.strategy == FieldStrategy.DATE_RELATIVE and not any(
@@ -237,8 +237,6 @@ class BlueprintDataGenerator:
         Returns:
             Generated value
         """
-        from dazzle.core.ir.demo_blueprint import FieldStrategy
-
         strategy = pattern.strategy
         params = pattern.params
 

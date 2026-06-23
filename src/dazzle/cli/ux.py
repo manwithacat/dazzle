@@ -11,6 +11,8 @@ import typer
 from rich.console import Console
 
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.ir.domain import PermissionKind
+from dazzle.core.ir.triples import get_permitted_personas as _get_permitted_personas_raw
 from dazzle.core.manifest import resolve_api_url, resolve_site_url
 
 logger = logging.getLogger(__name__)
@@ -223,9 +225,6 @@ def _run_contracts(
     async def _run() -> None:
         # Build per-persona clients: non-RBAC contracts need a persona
         # that actually has access to the entity (not always admin).
-        from dazzle.core.ir.domain import PermissionKind
-        from dazzle.core.ir.triples import get_permitted_personas as _get_permitted_personas_raw
-
         def _get_permitted_personas(
             appspec_arg: Any, entity_name: str, operation: object
         ) -> list[str]:
@@ -560,8 +559,6 @@ def explore_command(
 
     personas: list[str]
     if all_personas:
-        from dazzle.core.appspec_loader import load_project_appspec
-
         try:
             appspec = load_project_appspec(resolved_app_dir)
         except Exception as e:
