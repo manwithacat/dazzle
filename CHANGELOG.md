@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.4] - 2026-06-23
+
+### Changed
+- **#1438 deferred-imports burn-down wave 3** — hoisted precautionary function-body `from dazzle.core.*` imports to module top in 8 more non-core files (`workspace_region_computes`, `repository`, `alembic/metadata_loader`, `cli/migrate`, `testing/ux/reconciler`, `testing/step_executor`, `specs/openapi`, `specs/asyncapi`). Ratchet total 1824→1795 (−29). All clean (no source-patching reverts, incl. the hot `repository.py` data-layer module); `TYPE_CHECKING`-only and `dazzle.http.*` function-body imports correctly left in place. Campaign issue #1438 stays open. Session cumulative: 1949→1795 (−154 over 3 waves).
+
 ## [0.84.3] - 2026-06-23
 
 ### Changed
