@@ -24,15 +24,25 @@ from typing import TYPE_CHECKING, Any
 import typer
 
 from dazzle.cli.utils import load_project_appspec
+from dazzle.core.admin_builder import format_injected_as_dsl
+from dazzle.core.anti_turing import AntiTuringValidator
+from dazzle.core.capabilities import suggest_capability, unknown_capability_ids
 from dazzle.core.discovery import Relevance
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.init_impl import InitError, init_project, list_examples
+from dazzle.core.init_impl import (
+    InitError,
+    init_project,
+    list_examples,
+    reset_project,
+    verify_project,
+)
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest, resolve_api_url, resolve_site_url
 from dazzle.core.parser import parse_modules
 from dazzle.core.renderer_registry import known_renderer_names
+from dazzle.core.sitespec_loader import SiteSpecError, load_sitespec, sitespec_exists
 from dazzle.core.spec_loader import load_spec
 
 if TYPE_CHECKING:
@@ -415,9 +425,6 @@ def validate_command(
         # Capability declarations must reference known capabilities (#1342).
         # Checked first so a bad [capabilities] id fails fast and clearly,
         # independent of DSL state.
-        from dazzle.core.capabilities import suggest_capability, unknown_capability_ids
-        from dazzle.core.manifest import load_manifest
-
         declared = load_manifest(manifest_path).capabilities.enabled
         bad_caps = unknown_capability_ids(declared)
         if bad_caps:
@@ -446,12 +453,6 @@ def validate_command(
         # Statically parse sitespec.yaml (if present) so schema errors
         # surface at validate-time instead of being swallowed by the
         # try/except in serve.py / app_factory.py at boot.
-        from dazzle.core.sitespec_loader import (
-            SiteSpecError,
-            load_sitespec,
-            sitespec_exists,
-        )
-
         if sitespec_exists(root):
             try:
                 load_sitespec(root)
@@ -507,8 +508,6 @@ def lint_command(
 
         # Anti-Turing validation (raw DSL content)
         if anti_turing:
-            from dazzle.core.anti_turing import AntiTuringValidator
-
             validator = AntiTuringValidator(strict=strict)
             all_violations = []
 
@@ -579,8 +578,6 @@ def inspect_command(
         appspec = load_project_appspec(root)
 
         if injected:
-            from dazzle.core.admin_builder import format_injected_as_dsl
-
             typer.echo(format_injected_as_dsl(appspec))
             return
 
@@ -926,8 +923,6 @@ def example_command(
             console.print()
             print_step(1, 3, "Resetting project...")
 
-            from dazzle.core.init_impl import reset_project
-
             try:
                 result = reset_project(target_dir, from_example=name)
 
@@ -987,8 +982,6 @@ def example_command(
     try:
         # Verify project setup
         print_step(2, 3, "Verifying project setup...")
-        from dazzle.core.init_impl import verify_project
-
         if not verify_project(target_dir):
             print_warning("DSL validation errors detected")
             console.print(

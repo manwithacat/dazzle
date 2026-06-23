@@ -8,6 +8,9 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir.process import StepKind
+from dazzle.core.process_persistence import load_processes as load_persisted_processes
+
 from ..common import error_response, extract_progress, wrap_handler_errors
 from . import _helpers
 
@@ -36,8 +39,6 @@ def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
     processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
     # Merge with persisted processes
-    from dazzle.core.process_persistence import load_processes as load_persisted_processes
-
     persisted = load_persisted_processes(project_root)
     dsl_names = {p.name for p in processes}
     for p in persisted:
@@ -117,8 +118,6 @@ def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 def _format_step(step: ProcessStepSpec) -> dict[str, Any]:
     """Format a process step for JSON output."""
-    from dazzle.core.ir.process import StepKind
-
     result: dict[str, Any] = {
         "name": step.name,
         "kind": step.kind.value,
@@ -179,8 +178,6 @@ def list_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
     # Merge with persisted processes
-    from dazzle.core.process_persistence import load_processes as load_persisted_processes
-
     persisted = load_persisted_processes(project_root)
     dsl_names = {p.name for p in processes}
     for p in persisted:

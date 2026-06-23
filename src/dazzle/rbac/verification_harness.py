@@ -20,6 +20,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse, urlunparse
 
+from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.ir.fields import FieldTypeKind
+from dazzle.core.ir.predicates import (
+    BoolComposite,
+    BoolOp,
+    ColumnCheck,
+    CompOp,
+    PathCheck,
+    UserAttrCheck,
+)
+from dazzle.core.manifest import load_manifest
 from dazzle.core.strings import to_api_plural
 from dazzle.rbac.matrix import AccessMatrix, PolicyDecision
 from dazzle.rbac.verification_types import (
@@ -203,8 +214,6 @@ def _build_asgi_app(root: Path, database_url: str) -> _BuiltApp:
     The caller is responsible for creating the bootstrap superuser in the
     auth store before the first authenticated request.
     """
-    from dazzle.core.appspec_loader import load_project_appspec
-    from dazzle.core.manifest import load_manifest
     from dazzle.http.runtime.app_factory import build_server_config
     from dazzle.http.runtime.server import DazzleBackendApp
 
@@ -340,8 +349,6 @@ def _minimal_body_for_entity(
     constraint hit returns 422, which would mask the real RBAC verdict).
     Pass an empty suffix for the one-off baseline seed.
     """
-    from dazzle.core.ir.fields import FieldTypeKind
-
     baseline = baseline or {}
     entity = next(
         (e for e in (appspec.domain.entities or []) if e.name == entity_name),
@@ -441,15 +448,6 @@ def _scope_create_overlay(
     Only equality (`EQ`) constraints are overlaid — an inequality cannot be
     satisfied by a single deterministic value.
     """
-    from dazzle.core.ir.predicates import (
-        BoolComposite,
-        BoolOp,
-        ColumnCheck,
-        CompOp,
-        PathCheck,
-        UserAttrCheck,
-    )
-
     entity = next(
         (e for e in (appspec.domain.entities or []) if e.name == entity_name),
         None,
@@ -899,8 +897,6 @@ def _minimal_flow_inputs(
     placeholder UUID — enough to clear body validation so the role gate (which
     fires before any scope/FK check) is observable.
     """
-    from dazzle.core.ir.fields import FieldTypeKind
-
     flow = next((f for f in (appspec.atomic_flows or []) if f.name == flow_name), None)
     if flow is None:
         return {}

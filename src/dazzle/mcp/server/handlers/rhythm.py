@@ -10,7 +10,8 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any, Literal
 
-from dazzle.core.ir.rhythm import LifecycleReport, LifecycleStep
+from dazzle.core.ir.rhythm import ACTION_VOCABULARY, LifecycleReport, LifecycleStep, SceneEvaluation
+from dazzle.core.ir.stories import StoryStatus
 
 from .common import error_response, load_project_appspec, wrap_handler_errors
 
@@ -152,8 +153,6 @@ def rhythm_evaluate_impl(
 
             # Action vocabulary checks (advisory)
             if scene.actions:
-                from dazzle.core.ir.rhythm import ACTION_VOCABULARY
-
                 for action_verb in scene.actions:
                     is_standard = action_verb in ACTION_VOCABULARY
                     checks.append(
@@ -239,8 +238,6 @@ def rhythm_evaluate_impl(
     }
     if advisory_warnings:
         result["advisory_warnings"] = advisory_warnings
-        from dazzle.core.ir.rhythm import ACTION_VOCABULARY
-
         result["action_vocabulary"] = list(ACTION_VOCABULARY.keys())
 
     return result
@@ -265,8 +262,6 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
 def _submit_scores(project_root: Path, rhythm_name: str, scores_data: list[dict[str, Any]]) -> str:
     """Persist agent-produced scene evaluation scores."""
     import datetime
-
-    from dazzle.core.ir.rhythm import SceneEvaluation
 
     evaluations = [SceneEvaluation(**s) for s in scores_data]
 
@@ -685,8 +680,6 @@ def rhythm_gaps_impl(project_root: Path) -> dict[str, Any]:
     """Analyse gaps between scenes and stories."""
     import datetime
 
-    from dazzle.core.ir.stories import StoryStatus
-
     app_spec = load_project_appspec(project_root)
 
     gaps: list[dict[str, Any]] = []
@@ -955,8 +948,6 @@ def _layer_evaluated_gaps(project_root: Path, gaps: list[dict[str, Any]]) -> Non
 
 def rhythm_lifecycle_impl(project_root: Path) -> dict[str, Any]:
     """Report lifecycle status against the 8-step operating model."""
-    from dazzle.core.ir.stories import StoryStatus
-
     app_spec = load_project_appspec(project_root)
 
     steps: list[LifecycleStep] = []

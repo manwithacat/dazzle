@@ -9,6 +9,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir.process import ProcessSpec
+from dazzle.core.process.adapter import ProcessStatus
+from dazzle.core.process_persistence import add_processes
+
 from ..common import (
     error_response,
     extract_progress,
@@ -18,7 +22,6 @@ from ..common import (
 from . import _helpers
 
 if TYPE_CHECKING:
-    from dazzle.core.ir.process import ProcessSpec
     from dazzle.core.ir.stories import StorySpec
 
 
@@ -59,9 +62,6 @@ def process_save_impl(
         raw_processes: List of process dicts (ProcessSpec-compatible).
         overwrite: If True, replace processes with matching names.
     """
-    from dazzle.core.ir.process import ProcessSpec
-    from dazzle.core.process_persistence import add_processes
-
     if not raw_processes or not isinstance(raw_processes, list):
         return {"error": "processes list is required"}
 
@@ -150,8 +150,6 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 async def _list_runs_async(project_root: Path, args: dict[str, Any]) -> str:
     """Async implementation for listing process runs."""
-    from dazzle.core.process.adapter import ProcessStatus
-
     progress = extract_progress(args)
     progress.log_sync("Loading process runs...")
     adapter = _helpers.get_process_adapter(project_root)

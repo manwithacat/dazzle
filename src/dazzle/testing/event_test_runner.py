@@ -27,6 +27,8 @@ import httpx
 
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.domain import EntitySpec
+from dazzle.core.ir.fields import FieldTypeKind
+from dazzle.core.strings import to_api_plural
 
 logger = logging.getLogger(__name__)
 
@@ -258,16 +260,12 @@ class EventTestClient:
 
     def _update_entity(self, entity_name: str, entity_id: str, data: dict[str, Any]) -> bool:
         """Update an entity."""
-        from dazzle.core.strings import to_api_plural
-
         endpoint = f"/{to_api_plural(entity_name)}/{entity_id}"
         resp = self._request("PUT", f"{self.api_url}{endpoint}", json=data)
         return resp.status_code == 200
 
     def _delete_entity(self, entity_name: str, entity_id: str) -> bool:
         """Delete an entity."""
-        from dazzle.core.strings import to_api_plural
-
         endpoint = f"/{to_api_plural(entity_name)}/{entity_id}"
         resp = self._request("DELETE", f"{self.api_url}{endpoint}")
         return resp.status_code in (200, 204)
@@ -286,8 +284,6 @@ class EventTestClient:
     def get_entity(self, entity_name: str, entity_id: str) -> Any:
         """Get a specific entity by ID."""
         try:
-            from dazzle.core.strings import to_api_plural
-
             resp = self._request("GET", f"{self.api_url}/{to_api_plural(entity_name)}/{entity_id}")
             if resp.status_code == 200:
                 return resp.json()
@@ -652,8 +648,6 @@ def _generate_entity_payload(entity: EntitySpec) -> dict[str, Any]:
     """Generate a sample payload for an entity."""
     import uuid as uuid_module
     from datetime import datetime
-
-    from dazzle.core.ir.fields import FieldTypeKind
 
     payload: dict[str, Any] = {}
     timestamp = int(datetime.now().timestamp() * 1000) % 100000

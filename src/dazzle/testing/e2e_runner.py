@@ -23,7 +23,12 @@ from typing import Any
 
 import httpx
 
-from dazzle.core.manifest import resolve_api_url, resolve_site_url
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.ir import FlowPriority
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest, resolve_api_url, resolve_site_url
+from dazzle.core.parser import parse_modules
+from dazzle.core.strings import to_api_plural
 
 logger = logging.getLogger(__name__)
 
@@ -283,10 +288,6 @@ class E2ERunner:
         Returns:
             E2ETestSpec object
         """
-        from dazzle.core.fileset import discover_dsl_files
-        from dazzle.core.linker import build_appspec
-        from dazzle.core.manifest import load_manifest
-        from dazzle.core.parser import parse_modules
         from dazzle.testing.testspec_generator import generate_e2e_testspec
 
         manifest_path = self.project_path / "dazzle.toml"
@@ -325,8 +326,6 @@ class E2ERunner:
         if options.flow_id:
             flows = [f for f in flows if f.id == options.flow_id]
         if options.priority:
-            from dazzle.core.ir import FlowPriority
-
             try:
                 priority_enum = FlowPriority(options.priority)
                 flows = [f for f in flows if f.priority == priority_enum]
@@ -452,8 +451,6 @@ class E2ERunner:
                 """Get entity count via API."""
                 try:
                     # Runtime API routes are at /{plural}, not /api/{entity}s
-                    from dazzle.core.strings import to_api_plural
-
                     url = self.api_url + "/" + to_api_plural(entity_name)
                     resp = self._http_client().get(url)
                     data = resp.json()

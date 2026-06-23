@@ -12,6 +12,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
+
 from .ir import PitchSpec
 
 logger = logging.getLogger(__name__)
@@ -61,11 +66,6 @@ def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
     ctx = PitchContext(spec=spec)
 
     try:
-        from dazzle.core.fileset import discover_dsl_files
-        from dazzle.core.linker import build_appspec
-        from dazzle.core.manifest import load_manifest
-        from dazzle.core.parser import parse_modules
-
         manifest_path = project_root / "dazzle.toml"
         if not manifest_path.exists():
             logger.debug("No dazzle.toml found, skipping DSL extraction")

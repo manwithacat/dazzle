@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dazzle.core.ir.fields import FieldTypeKind
+from dazzle.core.ir.governance import DataProductTransform, TenancyMode, TopicNamespaceMode
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
     AgentId,
@@ -38,8 +40,6 @@ class MultiTenancyAgent(DetectionAgent):
     )
     def mt_01_missing_partition_key(self, appspec: AppSpec) -> list[Finding]:
         """Flag shared-schema entities that lack the configured partition key."""
-        from dazzle.core.ir.governance import TenancyMode
-
         findings: list[Finding] = []
         tenancy = appspec.tenancy
         if tenancy is None:
@@ -112,8 +112,6 @@ class MultiTenancyAgent(DetectionAgent):
     )
     def mt_02_ref_chain_missing_tenant(self, appspec: AppSpec) -> list[Finding]:
         """Flag entities that reference a tenant-scoped entity but lack the partition key."""
-        from dazzle.core.ir.fields import FieldTypeKind
-
         findings: list[Finding] = []
         tenancy = appspec.tenancy
         if tenancy is None:
@@ -323,8 +321,6 @@ class MultiTenancyAgent(DetectionAgent):
     )
     def mt_05_cross_tenant_no_anonymization(self, appspec: AppSpec) -> list[Finding]:
         """Flag cross-tenant data products missing anonymization transforms."""
-        from dazzle.core.ir.governance import DataProductTransform
-
         findings: list[Finding] = []
         if appspec.data_products is None:
             return findings
@@ -478,8 +474,6 @@ class MultiTenancyAgent(DetectionAgent):
     )
     def mt_07_shared_topic_strict_tenancy(self, appspec: AppSpec) -> list[Finding]:
         """Flag shared topic namespace when tenancy uses strict isolation."""
-        from dazzle.core.ir.governance import TenancyMode, TopicNamespaceMode
-
         findings: list[Finding] = []
         tenancy = appspec.tenancy
         if tenancy is None:

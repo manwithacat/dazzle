@@ -11,6 +11,12 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.errors import ParseError
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
+
 if TYPE_CHECKING:
     from ..store import KnowledgeGraph
 
@@ -152,12 +158,6 @@ class PopulationHandlers:
 
         try:
             # Load AppSpec using the standard DAZZLE toolchain
-            from dazzle.core.errors import ParseError
-            from dazzle.core.fileset import discover_dsl_files
-            from dazzle.core.linker import build_appspec
-            from dazzle.core.manifest import load_manifest
-            from dazzle.core.parser import parse_modules
-
             manifest = load_manifest(manifest_path)
             dsl_files = discover_dsl_files(root, manifest)
 
