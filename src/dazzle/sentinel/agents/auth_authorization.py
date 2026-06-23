@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dazzle.core.ir.domain import PermissionKind, PolicyEffect
+from dazzle.core.ir.security import SecurityProfile
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
     AgentId,
@@ -380,8 +382,6 @@ class AuthAuthorizationAgent(DetectionAgent):
     )
     def non_admin_delete_without_forbid(self, appspec: AppSpec) -> list[Finding]:
         """Flag entities where non-admin personas have DELETE PERMIT but no FORBID guard."""
-        from dazzle.core.ir.domain import PermissionKind, PolicyEffect
-
         findings: list[Finding] = []
         for entity in appspec.domain.entities:
             if entity.access is None:
@@ -465,8 +465,6 @@ class AuthAuthorizationAgent(DetectionAgent):
     )
     def weak_security_sensitive_data(self, appspec: AppSpec) -> list[Finding]:
         """Flag BASIC security profile when entities have PII or financial classifications."""
-        from dazzle.core.ir.security import SecurityProfile
-
         findings: list[Finding] = []
         if appspec.security is None:
             return findings

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dazzle.core.ir import FieldTypeKind
+from dazzle.core.ir.ledgers import TransactionExecution
+from dazzle.core.ir.process import OverlapPolicy
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
     AgentId,
@@ -128,8 +131,6 @@ class PerformanceResourceAgent(DetectionAgent):
     )
     def ref_without_index(self, appspec: AppSpec) -> list[Finding]:
         """Flag ref fields on entities that have no index constraint covering them."""
-        from dazzle.core.ir import FieldTypeKind
-
         findings: list[Finding] = []
         for entity in appspec.domain.entities:
             indexed_fields: set[str] = set()
@@ -188,8 +189,6 @@ class PerformanceResourceAgent(DetectionAgent):
     )
     def process_allow_overlap(self, appspec: AppSpec) -> list[Finding]:
         """Flag processes that allow unbounded concurrent runs."""
-        from dazzle.core.ir.process import OverlapPolicy
-
         findings: list[Finding] = []
         for process in appspec.processes:
             if process.overlap_policy != OverlapPolicy.ALLOW:
@@ -367,8 +366,6 @@ class PerformanceResourceAgent(DetectionAgent):
     )
     def sync_transaction(self, appspec: AppSpec) -> list[Finding]:
         """Flag transactions using synchronous execution."""
-        from dazzle.core.ir.ledgers import TransactionExecution
-
         findings: list[Finding] = []
         for txn in appspec.transactions:
             if txn.execution != TransactionExecution.SYNC:

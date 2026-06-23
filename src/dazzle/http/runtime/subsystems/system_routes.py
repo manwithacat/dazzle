@@ -11,6 +11,10 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import Depends, HTTPException, Request
 
+from dazzle.core.ir.integrations import MappingTriggerType
+from dazzle.core.ir.process import StepEffect
+from dazzle.core.manifest import load_manifest
+from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.subsystems import SubsystemContext
 
 if TYPE_CHECKING:
@@ -384,8 +388,6 @@ class SystemRoutesSubsystem:
 
     def _register_manual_trigger_routes(self, ctx: SubsystemContext, executor: Any) -> None:
         """Register POST endpoints for manual integration triggers."""
-        from dazzle.core.ir.integrations import MappingTriggerType
-        from dazzle.core.strings import to_api_plural
 
         def _make_handler(
             _executor: Any,
@@ -478,7 +480,6 @@ class SystemRoutesSubsystem:
         if not ctx.appspec:
             return
 
-        from dazzle.core.ir.process import StepEffect
         from dazzle.http.runtime.service_generator import CRUDService
 
         entity_transitions: dict[str, list[tuple[str, str, list[StepEffect]]]] = {}
@@ -698,8 +699,6 @@ class SystemRoutesSubsystem:
             if ctx.project_root:
                 manifest_path = Path(ctx.project_root) / "dazzle.toml"
                 if manifest_path.exists():
-                    from dazzle.core.manifest import load_manifest
-
                     mf = load_manifest(manifest_path)
 
             chrome = resolve_app_chrome(

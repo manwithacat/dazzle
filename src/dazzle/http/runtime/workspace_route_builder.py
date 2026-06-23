@@ -10,7 +10,9 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from dazzle.core.ir import AppSpec
+from dazzle.core.admin_builder import boot_log_line
+from dazzle.core.ir import AppSpec, SurfaceMode
+from dazzle.core.strings import entity_slug, to_api_plural
 from dazzle.http.runtime.auth import AuthMiddleware
 from dazzle.http.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,
@@ -114,9 +116,6 @@ class WorkspaceRouteBuilder:
             # `POST /{plural(entity)}`. Renderers consume this to emit
             # ``data-dz-row-action-url`` on row_action buttons so the
             # client-side handler can POST without re-deriving the route.
-            from dazzle.core.ir import SurfaceMode
-            from dazzle.core.strings import entity_slug, to_api_plural
-
             row_action_routes: dict[str, str] = {}
             for _surf in appspec.surfaces:
                 if _surf.mode == SurfaceMode.CREATE and _surf.entity_ref:
@@ -608,8 +607,6 @@ class WorkspaceRouteBuilder:
             # authors discover the platform-admin workspace + injected
             # entities. `dazzle inspect --injected` prints the full
             # synthetic DSL view.
-            from dazzle.core.admin_builder import boot_log_line
-
             logging.getLogger(__name__).info(boot_log_line(self._appspec))
 
         except ImportError as e:
@@ -624,8 +621,6 @@ class WorkspaceRouteBuilder:
     def _init_workspace_entity_routes(self, workspaces: list[Any], app: Any) -> None:
         """Register workspace-prefixed entity routes (v0.20.1)."""
         from starlette.responses import RedirectResponse
-
-        from dazzle.core.strings import to_api_plural
 
         seen: set[str] = set()
         # #1420 S2.3 — only mount workspace-redirect methods for ops the source

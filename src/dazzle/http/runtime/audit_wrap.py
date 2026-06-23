@@ -33,6 +33,7 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request
 
+from dazzle.core.access import AccessDecision, AccessOperationKind, AccessRuntimeContext
 from dazzle.http.runtime.auth import AuthContext, effective_roles_of
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
@@ -77,8 +78,6 @@ def _build_access_context(
     that haven't been updated pass None and the bypass simply doesn't
     apply (identical to pre-cycle-4 behaviour).
     """
-    from dazzle.core.access import AccessRuntimeContext
-
     user = auth_context.user if auth_context.is_authenticated else None
     # auth Plan 1b: source roles from the active membership (effective_roles),
     # not the global user.roles. effective_roles returns [] when unauthenticated.
@@ -276,11 +275,6 @@ def _build_cedar_handler(
     admin_personas: list[str] | None = None,
 ) -> Callable[..., Any]:
     """Build a Cedar-policy-checked handler (with or without id param)."""
-    # Lazy: these stay in route_generator (shared with its read/custom
-    # handler factories and create core); a module-level import here would
-    # be circular. Build-time import — the inner closures capture them.
-    from dazzle.core.access import AccessOperationKind
-
     _op_kind = getattr(AccessOperationKind, operation.upper())
 
     async def _cedar_impl(
@@ -290,7 +284,6 @@ def _build_cedar_handler(
         *,
         body: dict[str, Any] | None = None,
     ) -> Any:
-        from dazzle.core.access import AccessDecision
         from dazzle.http.runtime.audit_log import measure_evaluation_time
         from dazzle.render.access_evaluator import evaluate_permission
 

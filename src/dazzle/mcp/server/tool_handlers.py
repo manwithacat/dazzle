@@ -11,6 +11,7 @@ from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
@@ -1072,8 +1073,6 @@ def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
 @wrap_handler_errors
 def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze DSL and propose behavioural user stories."""
-    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
-
     app_spec = load_project_appspec(project_root)
 
     max_stories = args.get("max_stories", 30)
@@ -1204,8 +1203,6 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
 @wrap_handler_errors
 def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save stories to dsl/stories.dsl."""
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
-
     stories_data = args.get("stories", [])
 
     if not stories_data:
@@ -1214,8 +1211,6 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     # Convert to StorySpec objects with validation
     stories: list[StorySpec] = []
     for s in stories_data:
-        from dazzle.core.ir.stories import StoryCondition
-
         # Convert to Gherkin fields, with legacy fallback
         given_raw = s.get("given") or s.get("preconditions", [])
         then_raw = s.get("then") or s.get("happy_path_outcome", [])
@@ -1250,8 +1245,6 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 @wrap_handler_errors
 def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Retrieve stories filtered by status."""
-    from dazzle.core.ir.stories import StoryStatus
-
     status_filter = args.get("status_filter", "all")
 
     app_spec = load_project_appspec(project_root)
