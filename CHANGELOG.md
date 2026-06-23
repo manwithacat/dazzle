@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.85.0] - 2026-06-24
+
+Published minor (PyPI / Homebrew / GitHub Release) — cuts the patch series since
+v0.84.0 into a consumable release. Headline since the last published minor:
+
+- **#1463 shared_schema RLS two-level tenancy** — leaf memberships now bind the
+  `archetype:tenant` partition root via a write-time walk (`partition_root_id`);
+  adversarially reviewed + proven on real Postgres (v0.84.17–v0.84.20).
+- **shared_schema RLS adoption** — #1461 (direct-ref leaf entities fenced) and
+  #1462 (non-owner production serving) (v0.84.15–v0.84.16).
+- **Migration engine is the sole generator** (ADR-0045) + **release hygiene**
+  (publish minors only; prune old patch tags) (v0.84.11–v0.84.13).
+- Signing integration-test hygiene — skip cleanly without the `[signing]` extra
+  (v0.84.21).
+
+See the per-patch entries below for detail.
+
 ## [0.84.21] - 2026-06-24
 
 ### Fixed
