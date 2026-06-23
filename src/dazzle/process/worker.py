@@ -21,6 +21,10 @@ import os
 import sys
 from pathlib import Path
 
+from dazzle.core.process.activities import get_all_activities
+from dazzle.core.process.temporal_adapter import TemporalAdapter
+from dazzle.core.renderer_registry import known_renderer_names
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -78,8 +82,6 @@ async def main() -> None:
 
     logger.info("Found %s DSL files", len(dsl_files))
 
-    from dazzle.core.renderer_registry import known_renderer_names
-
     modules = parse_modules(dsl_files)
     # build_appspec wants the module name from manifest (e.g.
     # "myapp.core"), NOT the filesystem path — see #886.
@@ -107,9 +109,6 @@ async def main() -> None:
         sys.exit(1)
 
     # Create adapter and register processes
-    from dazzle.core.process.activities import get_all_activities
-    from dazzle.core.process.temporal_adapter import TemporalAdapter
-
     # Parse host and port from address
     if ":" in temporal_address:
         host, port_str = temporal_address.rsplit(":", 1)

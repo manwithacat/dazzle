@@ -8,6 +8,9 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir.process import ProcessTriggerKind, StepKind
+from dazzle.core.process_persistence import load_processes as load_persisted_processes
+
 from ..common import error_response, extract_progress, wrap_handler_errors
 from . import _helpers
 
@@ -50,8 +53,6 @@ def process_diagram_impl(
     processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
     # Merge with persisted processes
-    from dazzle.core.process_persistence import load_processes as load_persisted_processes
-
     persisted = load_persisted_processes(project_root)
     dsl_names = {p.name for p in processes}
     for p in persisted:
@@ -118,7 +119,6 @@ def _generate_process_mermaid(
     diagram_type: str = "flowchart",
 ) -> str:
     """Generate Mermaid diagram code for a process."""
-    from dazzle.core.ir.process import StepKind
 
     lines: list[str] = []
 
@@ -196,7 +196,6 @@ def _generate_process_mermaid(
 
 def _generate_state_diagram(proc: ProcessSpec, include_compensations: bool) -> str:
     """Generate state diagram variant."""
-    from dazzle.core.ir.process import StepKind
 
     lines: list[str] = []
     lines.append("stateDiagram-v2")
@@ -253,8 +252,6 @@ def _get_trigger_label(proc: ProcessSpec) -> str:
     if not proc.trigger:
         return "Manual Start"
 
-    from dazzle.core.ir.process import ProcessTriggerKind
-
     kind = proc.trigger.kind
     if kind == ProcessTriggerKind.ENTITY_EVENT:
         event = proc.trigger.event_type or "event"
@@ -279,7 +276,6 @@ def _get_trigger_label(proc: ProcessSpec) -> str:
 
 def _get_step_label(step: ProcessStepSpec) -> str:
     """Get human-readable label for a step."""
-    from dazzle.core.ir.process import StepKind
 
     if step.kind == StepKind.SERVICE:
         return step.service or step.name
@@ -308,7 +304,6 @@ def _get_step_label(step: ProcessStepSpec) -> str:
 
 def _step_to_mermaid(step: ProcessStepSpec, index: int, total: int) -> list[str]:
     """Convert a step to Mermaid node definition."""
-    from dazzle.core.ir.process import StepKind
 
     lines: list[str] = []
     label = _get_step_label(step)
@@ -341,7 +336,6 @@ def _step_to_mermaid(step: ProcessStepSpec, index: int, total: int) -> list[str]
 
 def _step_edges(step: ProcessStepSpec, index: int, steps: list[ProcessStepSpec]) -> list[str]:
     """Generate edges for a step."""
-    from dazzle.core.ir.process import StepKind
 
     lines: list[str] = []
     next_step = steps[index + 1].name if index + 1 < len(steps) else "COMPLETE"

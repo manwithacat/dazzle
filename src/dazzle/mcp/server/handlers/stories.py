@@ -9,8 +9,16 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
+from dazzle.core.ir.test_design import (
+    TestDesignAction,
+    TestDesignSpec,
+    TestDesignStatus,
+    TestDesignStep,
+    TestDesignTrigger,
+)
 from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
 from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
@@ -23,9 +31,6 @@ from .serializers import (
     serialize_surface_summary,
     serialize_test_design_summary,
 )
-
-if TYPE_CHECKING:
-    from dazzle.core.ir.stories import StorySpec
 
 # =============================================================================
 # Constants
@@ -49,9 +54,6 @@ def _get_trigger_map() -> dict[Any, Any]:
 
     Uses lazy initialization since the IR types aren't available at module load.
     """
-    from dazzle.core.ir.stories import StoryTrigger
-    from dazzle.core.ir.test_design import TestDesignTrigger
-
     return {
         StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
         StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
@@ -138,7 +140,6 @@ def story_propose_impl(
     stories from entities and unmapped rhythm scenes, saves them to
     ``dsl/stories.dsl``, and returns a plain dict with summaries.
     """
-    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
 
     app_spec = load_project_appspec(project_root)
 
@@ -311,7 +312,6 @@ def story_save_impl(
 
     Raises ``ValueError`` when ``stories_data`` is empty.
     """
-    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
 
     if not stories_data:
         raise ValueError("No stories provided")
@@ -378,7 +378,6 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     returns full content for those specific stories only, keeping context
     usage proportional to what the caller actually needs.
     """
-    from dazzle.core.ir.stories import StoryStatus
 
     progress = extract_progress(args)
     status_filter = args.get("status_filter", "all")
@@ -431,7 +430,6 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     Optionally filtered by persona (actor).
     """
-    from dazzle.core.ir.stories import StoryStatus
 
     from .process import stories_coverage_handler
 
@@ -532,14 +530,6 @@ def story_generate_tests_impl(
 
     Returns a dict with ``status='no_stories'`` when no matching stories exist.
     """
-    from dazzle.core.ir.stories import StoryStatus, StoryTrigger
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
 
     app_spec = load_project_appspec(project_root)
     all_stories = list(app_spec.stories)

@@ -37,6 +37,10 @@ import datetime as _dt
 import logging
 from typing import Any
 
+from dazzle.core.ir import AggregateRef, BucketRef, ConditionExpr, ConditionValue, DerivedMetric
+from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
+from dazzle.core.ir.condition_to_predicate import condition_expr_to_scope_predicate
+from dazzle.core.ir.fk_graph import FKGraph as _FKGraph
 from dazzle.render.display_names import _resolve_display_name
 
 logger = logging.getLogger(__name__)
@@ -55,8 +59,6 @@ def _condition_references_current_bucket(expr: Any) -> bool:
     instances that haven't been re-parsed since the flag landed
     (e.g. unit fixtures constructed by hand).
     """
-    from dazzle.core.ir import ConditionExpr
-
     if not isinstance(expr, ConditionExpr):
         return False
     if expr.is_compound:
@@ -89,8 +91,6 @@ def _substitute_current_bucket(expr: Any, bucket_key: str) -> Any:
     / via_condition) also pass through — those shapes can't legally
     contain the sentinel.
     """
-    from dazzle.core.ir import ConditionExpr, ConditionValue
-
     if not isinstance(expr, ConditionExpr):
         return expr
     if expr.is_compound:
@@ -179,19 +179,14 @@ def _build_aggregate_filters(
     (from the route generator's RBAC compiler or upstream callers),
     the two SQL fragments are AND-combined into a single slot.
     """
-    from dazzle.core.ir import ConditionExpr
-
     base: dict[str, Any] = dict(scope_filters) if scope_filters else {}
     if where is None or (isinstance(where, str) and not where):
         return base or None
 
-    from dazzle.core.ir.fk_graph import FKGraph as _FKGraph
     from dazzle.http.runtime.predicate_compiler import compile_predicate
 
     if isinstance(where, ConditionExpr):
         # Typed path — no string round-trip, no parse step.
-        from dazzle.core.ir.condition_to_predicate import condition_expr_to_scope_predicate
-
         try:
             pred = condition_expr_to_scope_predicate(where)
         except ValueError:
@@ -372,8 +367,6 @@ async def _compute_pivot_buckets(
     if not aggregates or not repositories or not source_entity:
         return [], []
 
-    from dazzle.core.ir import AggregateRef
-    from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
     from dazzle.http.runtime.aggregate import Dimension, resolve_fk_display_field
 
     # Only the simple case (count(<source_entity>) with no current_bucket)
@@ -394,8 +387,6 @@ async def _compute_pivot_buckets(
 
     # Resolve each dim — FK target spec (if any), display field via probe,
     # or time-bucket via BucketRef (cycle 28).
-    from dazzle.core.ir import BucketRef
-
     dimensions: list[Dimension] = []
     dim_specs: list[dict[str, Any]] = []
     for dim_entry in group_by_dims:
@@ -520,7 +511,6 @@ async def _aggregate_via_groupby(
     ``value`` (first measure, legacy alias) plus ``metrics: {<name>:
     <value>, ...}`` for templates that want all of them.
     """
-    from dazzle.core.ir import BucketRef
     from dazzle.http.runtime.aggregate import Dimension, resolve_fk_display_field
 
     if not measures:
@@ -909,9 +899,6 @@ async def _compute_bucketed_aggregates(
     # ``current_bucket`` sentinel substitution — the fetcher paths
     # consume the typed ConditionExpr directly via Slice 2 of the
     # migration.
-    from dazzle.core.ir import AggregateRef
-    from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
-
     parsed_aggs: list[tuple[str, str, str, str | None, Any]] = []
     for name, ref in aggregates.items():
         if not isinstance(ref, AggregateRef):
@@ -939,9 +926,7 @@ async def _compute_bucketed_aggregates(
     # render multi-series profiles (#879, #883). The slow sentinel path
     # below stays for `count(OtherEntity where ... = current_bucket)`
     # expressions that need true per-bucket queries.
-    from dazzle.core.ir import BucketRef as _BucketRef
-
-    is_bucket_ref = isinstance(group_by, _BucketRef)
+    is_bucket_ref = isinstance(group_by, BucketRef)
 
     def _fast_path_eligible(
         name: str, func: str, arg: str, where: str | None, _typed: Any = None
@@ -1215,8 +1200,6 @@ def _apply_derived_to_bucket_rows(
     ``value`` stays the first *aggregate* metric — derived values ride in
     ``metrics`` for multi-series templates.
     """
-    from dazzle.core.ir import DerivedMetric
-
     derived = [(n, ref) for n, ref in aggregates.items() if isinstance(ref, DerivedMetric)]
     if not derived:
         return
@@ -1243,8 +1226,6 @@ def _evaluate_derived_metrics(
     earlier in the block, so a single ordered pass resolves chains
     (a derived metric may reference another derived metric).
     """
-    from dazzle.core.ir import DerivedMetric
-
     for name in metric_order:
         ref = aggregates.get(name)
         if isinstance(ref, DerivedMetric):
@@ -1280,8 +1261,6 @@ async def _compute_aggregate_metrics(
     (up|down|flat), ``delta_sentiment`` (positive_up|positive_down|neutral),
     and ``delta_period_label`` keys.
     """
-    from dazzle.core.ir import AggregateRef
-
     async_tasks: list[tuple[str, Any]] = []
     sync_results: dict[str, Any] = {}
     metric_order: list[str] = []

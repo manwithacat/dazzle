@@ -16,8 +16,15 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.ir import AppSpec
+from dazzle.core.linker import build_appspec
+from dazzle.core.lint import lint_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
+from dazzle.core.renderer_registry import known_renderer_names
+
 if TYPE_CHECKING:
-    from dazzle.core.ir import AppSpec
     from dazzle.page.specs import UISpec
 
 
@@ -425,11 +432,6 @@ def create_reload_callback(
 
     def reload_specs() -> tuple[AppSpec, UISpec] | None:
         try:
-            from dazzle.core.fileset import discover_dsl_files
-            from dazzle.core.linker import build_appspec
-            from dazzle.core.lint import lint_appspec
-            from dazzle.core.manifest import load_manifest
-            from dazzle.core.parser import parse_modules
             from dazzle.page.converters import convert_appspec_to_ui
 
             # Load manifest
@@ -443,8 +445,6 @@ def create_reload_callback(
             # `render: <unknown>` clauses in the same way the boot path does
             # — including any project-declared extras from
             # `[renderers] extra` in dazzle.toml (#1116).
-            from dazzle.core.renderer_registry import known_renderer_names
-
             app_spec = build_appspec(
                 modules,
                 manifest.project_root,

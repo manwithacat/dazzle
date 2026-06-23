@@ -25,6 +25,10 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
+from dazzle.core.condition_eval import evaluate_condition
+from dazzle.core.ir import SurfaceMode
+from dazzle.core.ir.integrations import MappingTriggerType
+from dazzle.core.strings import to_api_plural
 from dazzle.page import app_paths
 from dazzle.page.converters.nav_builder import (
     NavGroup,
@@ -108,8 +112,6 @@ async def _resolve_auth_context(get_auth_context: Callable[..., Any] | None, req
 
 def _inject_integration_actions(appspec: ir.AppSpec, page_contexts: dict[str, Any]) -> None:
     """Populate integration_actions on detail contexts from appspec integrations."""
-    from dazzle.core.ir.integrations import MappingTriggerType
-    from dazzle.core.strings import to_api_plural
     from dazzle.render.context import IntegrationActionContext
 
     # Build entity_name -> list of manual trigger actions
@@ -1292,8 +1294,6 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
 
     # Evaluate role-based visible conditions (#487)
     if prc.ctx.user_roles is not None:
-        from dazzle.core.condition_eval import evaluate_condition
-
         _role_ctx = {
             "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],
         }
@@ -1449,8 +1449,6 @@ async def _handle_table(prc: _PageRequestContext) -> None:
 
     # Evaluate role-based visible_condition on list columns (#585)
     if prc.ctx.user_roles is not None:
-        from dazzle.core.condition_eval import evaluate_condition
-
         _role_ctx = {
             "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],
         }
@@ -1884,7 +1882,6 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     # mode: custom surface was never actually called. The early-return
     # for CUSTOM mode below dispatches unconditionally and lets the
     # renderer fetch its own data via `services`.
-    from dazzle.core.ir import SurfaceMode
     from dazzle.render.dispatch import dispatch_render
     from dazzle.render.fragment.errors import FragmentError
 
@@ -2269,8 +2266,6 @@ def _resolve_workspace_authored_actions(
     AFTER the (permission-filtered) inferred create-CTAs. Unresolvable targets
     (which lint would already have errored on) are skipped defensively.
     """
-    from dazzle.core.ir import SurfaceMode
-
     resolved: list[dict[str, str]] = []
     for action in getattr(workspace, "primary_actions", []) or []:
         if action.target_kind == "workspace":
@@ -2729,8 +2724,6 @@ def create_page_routes(
     # /app/workspaces/<name> which never collides with /app/<plural>, so no
     # guard is needed beyond skipping entities whose singular and plural
     # slugs are identical (rare — e.g. "Series").
-    from dazzle.core.strings import to_api_plural as _to_api_plural
-
     _registered_reg_paths = {
         (app_prefix and route_path[len(app_prefix) :]) or route_path
         for route_path, _ in sorted_routes
@@ -2745,7 +2738,7 @@ def create_page_routes(
         if getattr(_entity, "domain", "") == "platform":
             continue
         singular_slug = app_paths.entity_slug(_entity.name)
-        plural_slug = _to_api_plural(_entity.name).replace("_", "-")
+        plural_slug = to_api_plural(_entity.name).replace("_", "-")
         if singular_slug == plural_slug:
             continue
         plural_reg_path = f"/{plural_slug}"

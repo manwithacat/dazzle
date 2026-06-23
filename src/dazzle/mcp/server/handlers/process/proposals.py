@@ -9,6 +9,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir.fields import FieldTypeKind
+from dazzle.core.ir.stories import StoryTrigger
+
 from ..common import extract_progress, wrap_handler_errors
 from ..text_utils import slugify as _slugify
 from . import _helpers
@@ -187,7 +190,6 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 def _is_crud_story(story: StorySpec) -> bool:
     """Detect if a story is simple CRUD handled by surface handlers."""
-    from dazzle.core.ir.stories import StoryTrigger
 
     # Must be user-initiated
     if story.trigger not in (StoryTrigger.FORM_SUBMITTED, StoryTrigger.USER_CLICK):
@@ -230,7 +232,6 @@ def _cluster_stories_into_workflows(
     3. Flag CRUD stories as process_not_recommended
     4. Group remaining by trigger affinity (CRON, EXTERNAL_EVENT)
     """
-    from dazzle.core.ir.stories import StoryTrigger
 
     proposals: list[WorkflowProposal] = []
 
@@ -399,7 +400,6 @@ def _build_proposal(
 
 def _build_entity_context(entity_name: str, app_spec: AppSpec) -> dict[str, Any]:
     """Build inline entity context for a design brief."""
-    from dazzle.core.ir.fields import FieldTypeKind
 
     entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
     if not entity:
@@ -450,7 +450,6 @@ def _generate_design_questions(
     stories: list[StorySpec], entity_name: str | None, app_spec: AppSpec
 ) -> list[str]:
     """Generate design questions based on story patterns."""
-    from dazzle.core.ir.stories import StoryTrigger
 
     questions: list[str] = []
 

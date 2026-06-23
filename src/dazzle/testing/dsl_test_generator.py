@@ -26,9 +26,16 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core.ir import AppSpec
-from dazzle.core.ir.domain import EntitySpec
+from dazzle.core.ir.domain import EntitySpec, PolicyEffect
 from dazzle.core.ir.eventing import EventSpec
-from dazzle.core.ir.fields import FieldSpec
+from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
+from dazzle.core.ir.fields import FieldSpec, FieldTypeKind
+from dazzle.core.ir.invariant import (
+    ComparisonExpr,
+    InvariantFieldRef,
+    InvariantLiteral,
+    LogicalExpr,
+)
 from dazzle.core.ir.personas import PersonaSpec
 from dazzle.core.ir.process import ProcessSpec
 from dazzle.core.ir.surfaces import SurfaceMode
@@ -45,9 +52,6 @@ def _invariant_required_fields(entity: EntitySpec) -> list[str]:
     Handles left-associative nesting, e.g. ``(A or B) or C`` parsed as a
     nested tree — the first successfully extracted field from the tree is used.
     """
-    from dazzle.core.ir.expressions import BinaryExpr, BinaryOp
-    from dazzle.core.ir.invariant import LogicalExpr
-
     fields: list[str] = []
     for inv in entity.invariants:
         # Try unified Expr first, then legacy
@@ -71,8 +75,6 @@ def _invariant_required_fields(entity: EntitySpec) -> list[str]:
 
 def _extract_not_null_field_expr_or_tree(expr: Any) -> str | None:
     """Recursively walk an OR tree and return the first ``field != null`` field name found."""
-    from dazzle.core.ir.expressions import BinaryExpr, BinaryOp
-
     if isinstance(expr, BinaryExpr) and expr.op == BinaryOp.OR:
         result = _extract_not_null_field_expr_or_tree(expr.left)
         if result is not None:
@@ -83,8 +85,6 @@ def _extract_not_null_field_expr_or_tree(expr: Any) -> str | None:
 
 def _extract_not_null_field_expr(expr: Any) -> str | None:
     """Extract field name from ``field != null`` in unified Expr AST."""
-    from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
-
     if not isinstance(expr, BinaryExpr) or expr.op != BinaryOp.NE:
         return None
     left, right = expr.left, expr.right
@@ -97,8 +97,6 @@ def _extract_not_null_field_expr(expr: Any) -> str | None:
 
 def _extract_not_null_field(expr: Any) -> str | None:
     """Extract the field name from a ``field != null`` comparison (legacy)."""
-    from dazzle.core.ir.invariant import ComparisonExpr, InvariantFieldRef, InvariantLiteral
-
     if not isinstance(expr, ComparisonExpr):
         return None
     if expr.operator.value in ("!=", "is not"):
@@ -122,8 +120,6 @@ def _entity_has_forbid_create(entity: EntitySpec) -> bool:
     """Check whether all create operations are forbidden for this entity."""
     if not entity.access or not entity.access.permissions:
         return False
-    from dazzle.core.ir.domain import PolicyEffect
-
     for perm in entity.access.permissions:
         if perm.operation.value == "create" and perm.effect == PolicyEffect.FORBID:
             return True
@@ -254,8 +250,6 @@ def _generate_field_value(fld: FieldSpec, unique_suffix: int = 0) -> Any:
 
 def _generate_entity_data(entity: EntitySpec, entity_map: dict[str, EntitySpec]) -> dict[str, Any]:
     """Generate valid test data for an entity."""
-    from dazzle.core.ir.fields import FieldTypeKind
-
     data: dict[str, Any] = {}
     timestamp = int(datetime.now().timestamp() * 1000) % 100000
 
@@ -295,8 +289,6 @@ def _get_required_refs(
 
     Returns list of (field_name, target_entity, pk_field_name) tuples.
     """
-    from dazzle.core.ir.fields import FieldTypeKind
-
     invariant_fields = set(_invariant_required_fields(entity))
     refs: list[tuple[str, str, str]] = []
     for fld in entity.fields:
@@ -530,8 +522,6 @@ class CRUDTestBuilder:
                 # and the constraint never trips. Forcing a concrete value
                 # in both create steps guarantees the duplicate is a real
                 # duplicate.
-                from dazzle.core.ir.fields import FieldTypeKind
-
                 if uf.type.kind != FieldTypeKind.REF and uf.name not in unique_data:
                     unique_data[uf.name] = _generate_field_value(
                         uf, int(datetime.now().timestamp() * 1000) % 100000
@@ -988,8 +978,6 @@ class DSLTestGenerator:
 
     def _build_dependency_graph(self) -> dict[str, list[str]]:
         """Build a graph of entity dependencies."""
-        from dazzle.core.ir.fields import FieldTypeKind
-
         deps: dict[str, list[str]] = {}
         for entity in self.appspec.domain.entities:
             entity_deps: list[str] = []

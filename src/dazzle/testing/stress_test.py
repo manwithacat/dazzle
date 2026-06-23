@@ -29,11 +29,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from dazzle.core.ir.appspec import AppSpec
-    from dazzle.core.ir.e2e import E2ETestSpec
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.ir import FieldModifier
+from dazzle.core.ir.appspec import AppSpec
+from dazzle.core.ir.e2e import E2ETestSpec
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
 
 logger = logging.getLogger(__name__)
 
@@ -178,10 +182,6 @@ class StressTestRunner:
 
     def load_specs(self) -> None:
         """Load AppSpec and generate TestSpec."""
-        from dazzle.core.fileset import discover_dsl_files
-        from dazzle.core.linker import build_appspec
-        from dazzle.core.manifest import load_manifest
-        from dazzle.core.parser import parse_modules
         from dazzle.testing.testspec_generator import generate_e2e_testspec
 
         manifest_path = self.project_path / "dazzle.toml"
@@ -375,8 +375,6 @@ class StressTestRunner:
         assert self.appspec is not None
         assert self.testspec is not None
         assert self.report is not None
-
-        from dazzle.core.ir import FieldModifier
 
         # Build index of surface fields by entity and mode
         # e.g., {"User": {"create": {"name", "email", ...}, "edit": {...}}}

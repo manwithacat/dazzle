@@ -13,8 +13,18 @@ import typer
 
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.errors import DazzleError, ParseError
+from dazzle.core.ir import FlowAssertionKind, FlowPriority, FlowStepKind
+from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
+from dazzle.core.ir.test_design import (
+    TestDesignAction,
+    TestDesignSpec,
+    TestDesignStatus,
+    TestDesignStep,
+    TestDesignTrigger,
+)
 from dazzle.core.lint import lint_appspec
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+from dazzle.core.project import load_project
 from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
 test_app = typer.Typer(
@@ -512,8 +522,6 @@ def _filter_flows(
             raise typer.Exit(code=1)
 
     if priority:
-        from dazzle.core.ir import FlowPriority
-
         try:
             priority_enum = FlowPriority(priority)
             result = [f for f in result if f.priority == priority_enum]
@@ -565,8 +573,6 @@ def _execute_step_sync(
     created_ids: dict[str, str] | None = None,
 ) -> None:
     """Execute a single flow step synchronously."""
-    from dazzle.core.ir import FlowStepKind
-
     if step.kind == FlowStepKind.NAVIGATE:
         if step.target and step.target.startswith("view:"):
             view_id = step.target.split(":", 1)[1]
@@ -925,8 +931,6 @@ def _assert_has_persona(page: Any, assertion: Any, adapter: Any, timeout: int) -
 
 def _build_assertion_handlers() -> dict[Any, Any]:
     """Build the assertion kind -> handler mapping. Deferred to avoid import at module level."""
-    from dazzle.core.ir import FlowAssertionKind
-
     return {
         FlowAssertionKind.VISIBLE: _assert_visible,
         FlowAssertionKind.NOT_VISIBLE: _assert_not_visible,
@@ -1025,8 +1029,6 @@ def test_list(
     flows = testspec.flows
 
     if priority:
-        from dazzle.core.ir import FlowPriority
-
         try:
             priority_enum = FlowPriority(priority)
             flows = [f for f in flows if f.priority == priority_enum]
@@ -2140,14 +2142,6 @@ def test_populate(
         dazzle test populate --max-stories 50   # More stories
         dazzle test populate --no-tests         # Stories only
     """
-    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
     from dazzle.testing.test_design_persistence import add_test_designs
 
     manifest_path = Path(manifest).resolve()
@@ -2594,8 +2588,6 @@ def test_create_sessions(
         return
 
     try:
-        from dazzle.core.project import load_project
-
         appspec = load_project(root)
     except Exception as e:
         typer.echo(f"Failed to load DSL: {e}", err=True)
