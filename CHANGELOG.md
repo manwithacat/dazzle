@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.84.5] - 2026-06-23
+
+### Changed
+- **#1438 deferred-imports burn-down wave 4** — hoisted precautionary function-body `from dazzle.core.*` imports to module top in 6 more non-core files (`sentinel/agents/performance_resource`, `sentinel/agents/auth_authorization`, `mcp/server/tool_handlers`, `http/runtime/workspace_route_builder`, `http/runtime/subsystems/system_routes`, `http/runtime/audit_wrap`). Ratchet total 1795→1774 (−21); two sentinel files dropped to 0 and left the baseline. All clean (no reverts). Also removed a stale `audit_wrap.py` cycle comment (the `route_generator` cycle it warned of was resolved by an earlier leaf extraction; `dazzle.core.access` has no http imports). Campaign issue #1438 stays open. Session cumulative: 1949→1774 (−175 over 4 waves).
+
 ## [0.84.4] - 2026-06-23
 
 ### Changed
