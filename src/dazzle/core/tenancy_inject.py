@@ -42,15 +42,20 @@ def inject_partition_key(
 
     result: list[ir.EntitySpec] = []
     for entity in entities:
-        # Skip if the entity already references the tenant — by the partition-key
-        # field name OR by ref *target*. The by-target check matches the original
-        # ``_inject_tenant_fk`` ``has_tenant_ref`` semantic: membership/archetype
-        # entities (e.g. USER_MEMBERSHIP) keep their per-app-named tenant ref (e.g.
-        # ``organization``) for now, so they must not also receive a second
-        # ``tenant_id`` (uniformity cleanup of those refs is a later concern).
-        has_tenant_ref = any(
-            f.type.kind == ir.FieldTypeKind.REF and f.type.ref_entity == tenant_name
-            for f in entity.fields
+        # Skip a USER_MEMBERSHIP entity that keeps its own per-app-named tenant ref
+        # (e.g. ``organization``): it must not also receive a second ``tenant_id``
+        # (uniformity cleanup of those refs is a later concern). #1461: this check
+        # was previously applied to ANY entity with a ref to the tenant root — which
+        # silently skipped *leaf data entities* that declare a direct ``ref <Tenant>``
+        # (e.g. ``trust: ref Trust``) from injection AND left them unfenced (no
+        # tenant_id, RLS off) → cross-tenant exposure. A direct root ref is just
+        # another path to root; only membership archetypes get the by-target skip.
+        has_membership_tenant_ref = (
+            entity.archetype_kind == ir.ArchetypeKind.USER_MEMBERSHIP
+            and any(
+                f.type.kind == ir.FieldTypeKind.REF and f.type.ref_entity == tenant_name
+                for f in entity.fields
+            )
         )
         if (
             entity.name == tenant_name
@@ -60,7 +65,7 @@ def inject_partition_key(
             # cross-tenant by design and managed by the framework — never auto-fenced.
             or entity.domain == "platform"
             or any(f.name == partition_key for f in entity.fields)
-            or has_tenant_ref
+            or has_membership_tenant_ref
         ):
             result.append(entity)
             continue

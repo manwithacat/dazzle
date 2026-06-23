@@ -106,13 +106,14 @@ def test_noop_when_no_tenant_entity() -> None:
     assert out == entities  # nothing to anchor to; left untouched
 
 
-def test_skips_if_tenant_ref_under_different_name() -> None:
-    # An entity that already references the tenant entity under a DIFFERENT field
-    # name (e.g. membership/archetype entities keep their per-app-named ref) must
-    # NOT get a second tenant_id injected — skip is by ref target, not just name.
+def test_skips_membership_archetype_with_tenant_ref_under_different_name() -> None:
+    # A USER_MEMBERSHIP archetype keeps its per-app-named tenant ref (e.g. `org`)
+    # and must NOT get a second tenant_id injected. #1461: this by-target skip is
+    # scoped to USER_MEMBERSHIP — it must NOT apply to plain data entities (see
+    # test_injects_on_leaf_entity_with_direct_tenant_ref below).
     entities = [
         _entity("Workspace", is_tenant_root=True),
-        _entity("Membership", _ref("org", "Workspace")),
+        _entity("Membership", _ref("org", "Workspace"), archetype=ir.ArchetypeKind.USER_MEMBERSHIP),
     ]
     out = inject_partition_key(entities, _shared_schema_tenancy())
     membership = next(e for e in out if e.name == "Membership")
@@ -124,6 +125,25 @@ def test_skips_if_tenant_ref_under_different_name() -> None:
     assert len(tenant_refs) == 1
     assert tenant_refs[0].name == "org"
     assert all(f.name != "tenant_id" for f in membership.fields)
+
+
+def test_injects_on_leaf_entity_with_direct_tenant_ref() -> None:
+    # #1461 regression: a plain (non-membership) data entity that declares a DIRECT
+    # `ref <TenantRoot>` must STILL get tenant_id injected — a direct root ref is
+    # just another path to root, not a reason to leave the entity unfenced. The old
+    # over-broad `has_tenant_ref` skip silently left such entities unfenced (no
+    # tenant_id, RLS off) → cross-tenant exposure.
+    entities = [
+        _entity("Workspace", is_tenant_root=True),
+        _entity("Agreement", _ref("workspace", "Workspace")),  # CUSTOM leaf, direct root ref
+    ]
+    out = inject_partition_key(entities, _shared_schema_tenancy())
+    agreement = next(e for e in out if e.name == "Agreement")
+    # tenant_id injected as the first field (so it IS fenced downstream)
+    assert agreement.fields[0].name == "tenant_id"
+    assert agreement.fields[0].type.ref_entity == "Workspace"
+    # the author's own direct ref is preserved alongside it
+    assert any(f.name == "workspace" for f in agreement.fields)
 
 
 def test_injects_on_tenant_settings_archetype() -> None:
@@ -146,6 +166,21 @@ def test_injects_on_tenant_settings_archetype() -> None:
         if f.type.kind == ir.FieldTypeKind.REF and f.type.ref_entity == "Workspace"
     ]
     assert len(tenant_refs) == 1
+
+
+def test_injects_on_profile_archetype() -> None:
+    # PROFILE is per-member, tenant-scoped (its archetype docstring states Phase A
+    # injects tenant_id) — it MUST receive the discriminator so the downstream
+    # UNIQUE(tenant_id, identity_id) + RLS fence hold. #1461: the narrowed skip
+    # predicate (USER_MEMBERSHIP-only) must NOT skip PROFILE.
+    entities = [
+        _entity("Workspace", is_tenant_root=True),
+        _entity("MemberProfile", archetype=ir.ArchetypeKind.PROFILE),
+    ]
+    out = inject_partition_key(entities, _shared_schema_tenancy())
+    profile = next(e for e in out if e.name == "MemberProfile")
+    assert profile.fields[0].name == "tenant_id"
+    assert profile.fields[0].type.ref_entity == "Workspace"
 
 
 def test_skips_platform_domain_entities() -> None:
