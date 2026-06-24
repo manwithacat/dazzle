@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.86.1] - 2026-06-24
+## [0.86.2] - 2026-06-24
+
+### Changed
+- **#1438 deferred-import burn-down (wave): hoisted 20 function-level `dazzle.core.*` imports to module top across 8 non-core files** (`process/worker`, `services/agent_commands/renderer`, `testing/fuzzer/oracle`, `page/converters/template_compiler`, `http/runtime/integration_manager`, `http/runtime/subsystems/channels`, `fitness/investigator/tools_read`, `cli/ux_interactions`). `dazzle.core` is the bottom layer (import-linter-enforced `core ↛ http/page`), so these can't cause an import cycle, and none of the hoisted names are source-patched in tests (the #1438 test-coupling trap) — verified by the full suite. Dead `try/except ImportError` guards around always-present core modules were dropped. Ratchet baseline lowered 1699 → 1679 (`deferred_imports_baseline.json`).
 
 ### Fixed
 - **#1464 (follow-up) engine baseline emitted composite FKs BEFORE the UNIQUE constraints they reference → `db upgrade` failed.** The v0.86.0 composite-constraint fix emitted ops in sorted-table order, so a composite FK `(tenant_id, fk) → Parent(tenant_id, id)` on a child that sorts *before* its parent was created before the parent's `UNIQUE(tenant_id, id)` existed — `psycopg.errors.InvalidForeignKey: there is no unique constraint matching given keys`. `schema_diff.diff` now orders all additions so **every `AddUnique`/`AddIndex` precedes every `AddForeignKey`** (and drops mirror it: FKs before the uniques they depend on), via a stable type-priority sort — independent of table name order. Guarded by a fast unit test (`diff` op ordering) and a real-PG fixture whose child (`Booking`) deliberately sorts before its parent (`Room`), which reproduced the exact `InvalidForeignKey` before the fix. The v0.86.0 fixture passed only because its parent happened to sort first. (Adopters who hand-reordered the generated baseline no longer need to.)

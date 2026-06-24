@@ -13,7 +13,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.ir.identity import spec_display_id
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
 
 from .loader import load_all_commands
 from .models import CommandDefinition, CommandStatus, MaturityGate, SyncManifest
@@ -167,11 +171,6 @@ def build_project_context(project_root: Path) -> dict[str, Any]:
 
     # Try to parse AppSpec for counts
     try:
-        from dazzle.core.fileset import discover_dsl_files
-        from dazzle.core.linker import build_appspec
-        from dazzle.core.manifest import load_manifest
-        from dazzle.core.parser import parse_modules
-
         manifest_path = project_root / "dazzle.toml"
         if manifest_path.exists():
             manifest = load_manifest(manifest_path)

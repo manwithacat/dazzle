@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
 from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
+from dazzle.core.ir.triples import WidgetKind, resolve_widget
 from dazzle.core.strings import to_api_plural
 from dazzle.page import app_paths
 from dazzle.render.context import (
@@ -172,8 +173,6 @@ def _widget_kind_to_form_type() -> dict[str, str]:
     after all IR modules initialise) and memoises it — no module-level mutable global
     + lazy-init `global` (ADR-0005). The returned dict must be treated read-only.
     """
-    from dazzle.core.ir.triples import WidgetKind
-
     return {
         WidgetKind.TEXT_INPUT: "text",
         WidgetKind.TEXTAREA: "textarea",
@@ -193,7 +192,6 @@ def _field_type_to_form_type(field_spec: ir.FieldSpec | None) -> str:
     """Map an IR field type to a form input type via the canonical widget map."""
     if not field_spec or not field_spec.type:
         return "text"
-    from dazzle.core.ir.triples import resolve_widget
 
     widget = resolve_widget(field_spec, has_source=False)
     return _widget_kind_to_form_type().get(widget, "text")

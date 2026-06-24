@@ -8,6 +8,8 @@ channel send operations, and connects the process adapter SEND step handler.
 import logging
 from typing import Any
 
+from dazzle.core.ir import ChannelKind
+from dazzle.core.ir import ChannelSpec as IRChannelSpec
 from dazzle.http.runtime.subsystems import SubsystemContext
 
 logger = logging.getLogger(__name__)
@@ -33,8 +35,6 @@ class ChannelsSubsystem:
 
     def _init_channel_manager(self, ctx: SubsystemContext) -> None:
         try:
-            from dazzle.core.ir import ChannelKind
-            from dazzle.core.ir import ChannelSpec as IRChannelSpec
             from dazzle.http.channels import create_channel_manager
 
             kind_map = {

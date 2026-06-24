@@ -7,7 +7,8 @@ previously defined inline in ``server.py``.
 import logging
 from typing import TYPE_CHECKING, Any
 
-from dazzle.core.ir import AppSpec
+from dazzle.core.ir import AppSpec, ChannelKind
+from dazzle.core.ir import ChannelSpec as IRChannelSpec
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -105,8 +106,6 @@ class IntegrationManager:
     def init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging."""
         try:
-            from dazzle.core.ir import ChannelKind
-            from dazzle.core.ir import ChannelSpec as IRChannelSpec
             from dazzle.http.channels import create_channel_manager
 
             ir_channels = []

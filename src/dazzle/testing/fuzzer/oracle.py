@@ -16,6 +16,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.errors import ParseError
+
 
 class Classification(Enum):
     VALID = "valid"
@@ -37,9 +40,6 @@ class FuzzResult:
 def _parse_worker(dsl: str, result_queue: multiprocessing.Queue) -> None:  # type: ignore[type-arg]
     """Worker function that runs in a subprocess to parse DSL with isolation."""
     try:
-        from dazzle.core.dsl_parser_impl import parse_dsl
-        from dazzle.core.errors import ParseError
-
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("fuzz.dsl"))
         # Collect which construct types were parsed
         constructs: list[str] = []

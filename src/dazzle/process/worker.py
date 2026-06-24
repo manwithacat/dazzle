@@ -21,6 +21,10 @@ import os
 import sys
 from pathlib import Path
 
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
 from dazzle.core.process.activities import get_all_activities
 from dazzle.core.process.temporal_adapter import TemporalAdapter
 from dazzle.core.renderer_registry import known_renderer_names
@@ -52,16 +56,6 @@ async def main() -> None:
         from temporalio.worker import Worker
     except ImportError:
         logger.error("Temporal SDK not installed. Install with: pip install dazzle[temporal]")
-        sys.exit(1)
-
-    # Load DSL and build AppSpec
-    try:
-        from dazzle.core.fileset import discover_dsl_files
-        from dazzle.core.linker import build_appspec
-        from dazzle.core.manifest import load_manifest
-        from dazzle.core.parser import parse_modules
-    except ImportError as e:
-        logger.error("Failed to import DAZZLE core modules: %s", e)
         sys.exit(1)
 
     # Load project manifest

@@ -27,6 +27,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.testing.ux.interactions import (
     CardAddInteraction,
     CardDragInteraction,
@@ -177,8 +178,6 @@ def _build_context_selector_walk(project_root: Path) -> list[Interaction]:
     be a real, surprising failure worth surfacing — not silently swallowing
     into "no gestures".
     """
-    from dazzle.core.appspec_loader import load_project_appspec
-
     appspec = load_project_appspec(project_root)
     return [
         ContextSelectInteraction(workspace=ws.name)
@@ -290,7 +289,6 @@ def run_guide_walk(project_root: Path, *, json_output: bool = False, persona: st
     Returns an exit code (0/1/2).
     """
     from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
-    from dazzle.core.appspec_loader import load_project_appspec
 
     appspec = load_project_appspec(project_root)
     if not (getattr(appspec, "guides", None) or []):

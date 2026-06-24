@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.agent.core import AgentTool
+from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.ir.identity import spec_display_id
 from dazzle.fitness.investigator.case_file import CaseFile
 from dazzle.fitness.investigator.tools import (
@@ -127,14 +128,6 @@ def _query_dsl_tool(case_file: CaseFile, dazzle_root: Path, state: ToolState) ->
     def handler(name: str) -> dict[str, Any]:
         state.tool_calls_summary.append(f"query_dsl({name})")
         scope_root = case_file.example_root or dazzle_root
-
-        try:
-            from dazzle.core.appspec_loader import load_project_appspec
-        except ImportError:
-            return {
-                "error": "DSL parser unavailable",
-                "hint": "install dazzle[dev]",
-            }
 
         try:
             appspec = load_project_appspec(scope_root)
