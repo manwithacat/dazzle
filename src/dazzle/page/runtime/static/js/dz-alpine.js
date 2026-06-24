@@ -972,13 +972,14 @@ document.addEventListener("alpine:init", () => {
       this.applyColumnVisibility();
       this._applyStoredWidths();
 
-      // Inject selected IDs into htmx bulk action requests
-      this.$el.addEventListener("htmx:config:request", (e) => {
-        const detail = /** @type {CustomEvent} */ (e).detail;
-        if (detail.elt.hasAttribute("data-dz-bulk-action")) {
-          detail.parameters["ids"] = Array.from(this.selected);
-        }
-      });
+      // #1465: removed a dead `htmx:config:request` listener that read
+      // `detail.elt.hasAttribute("data-dz-bulk-action")`. Under htmx 4 (the
+      // vendored runtime) that event's detail no longer carries `elt`/`parameters`,
+      // so `detail.elt.hasAttribute(...)` threw a TypeError on EVERY tbody load.
+      // The branch was also dead: nothing renders `data-dz-bulk-action` (the
+      // toolbar emits `dz-bulk-actions`/`data-dz-bulk-count`), and bulk delete
+      // already sends its own ids via `bulkDelete()`'s explicit fetch — so the
+      // injection was never reached. No replacement needed.
 
       // Loading state driven by HTMX events on the table root
       this.$el.addEventListener("htmx:before:request", () => {
@@ -2222,7 +2223,6 @@ document.body.addEventListener("htmx:after:settle", (e) => {
     window.Alpine.initTree(root);
   }
 });
-
 
 // #970: ref-entity filter dropdown population.
 //

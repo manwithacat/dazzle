@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.86.8] - 2026-06-24
+## [0.86.9] - 2026-06-24
+
+### Fixed
+- **#1465 dzTable crashed on every DataTable tbody load under htmx 4 (`detail.elt undefined`).** `dz-alpine.js` registered an `htmx:config:request` listener that read `detail.elt.hasAttribute("data-dz-bulk-action")` — but htmx 4 (the vendored runtime) changed that event's detail shape (no `elt`/`parameters`), so it threw a `TypeError` on every request from the table root, breaking DataTable loads. The listener was also **dead code**: nothing renders a `data-dz-bulk-action` attribute (the toolbar emits `dz-bulk-actions`/`data-dz-bulk-count`), and bulk delete already sends its own ids via `bulkDelete()`'s explicit `fetch` — so the id-injection it performed was never reached. Removed the listener entirely (no replacement needed) and rebuilt the `dist/` bundle. **Removed**: the dead `data-dz-bulk-action` config:request injection path.
+
+### Removed
+- Dead `htmx:config:request` bulk-action id-injection listener in `dz-alpine.js` (never matched any element; crashed under htmx 4). See #1465.
 
 ### Fixed
 - **#1466 shared_schema RLS: workspace region / batch / stats endpoints never bound `dazzle.tenant_id` → every region rendered its empty-state (and stats resolved to 0) under the non-bypass role.** The three workspace-region handlers self-authenticate via `auth_middleware.get_auth_context` (the routes register with plain `app.get` and gate personas inline — no FastAPI auth dependency), so `_bind_rls_tenant_id` was never called and the leased Postgres connection read an unset tenant GUC; on a `shared_schema`/RLS app the fence then denied every row. Now all three seams (`workspace_region_prelude.resolve_request_user_context`, `_workspace_batch_handler`, `_workspace_stats_handler`) bind the per-request RLS GUCs from the resolved auth context before any scope-aware read/aggregate — the same fix #1428 applied to the page in-process path. Fail-closed before and after (the bug over-denied, never over-exposed — no cross-tenant leak), so this is a correctness/availability fix. Guarded by `test_workspace_region_rls_bind_1466.py`.
