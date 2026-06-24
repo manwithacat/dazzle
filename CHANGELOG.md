@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.0] - 2026-06-24
+
+Published minor (PyPI / Homebrew / GitHub Release). Ships the **#1464 migration-engine
+composite-constraint fix** (v0.85.1–v0.85.2) so downstream shared_schema apps can adopt the
+`db baseline`/`db revision` path — the engine now reproduces composite tenant-scoped FKs
+`(tenant_id, fk) → Parent(tenant_id, id)` and `UNIQUE(tenant_id, id)` with full `create_all`
+parity (name-aligned, adversarially reviewed). See the per-patch entries below.
+
 ## [0.85.2] - 2026-06-24
 
 ### Fixed
