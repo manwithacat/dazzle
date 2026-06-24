@@ -132,9 +132,13 @@ def _find_examples_dir() -> Path | None:
         Path to the examples directory if it exists, otherwise ``None``.
     """
     try:
-        import dazzle
-
-        pkg_dir = Path(dazzle.__file__).resolve().parent
+        # Derive the package dir from THIS module's own path rather than
+        # `import dazzle` — importing the package root pulls its lazy
+        # `__getattr__` http edge into grimp's graph, creating an indirect
+        # core → http path that defeats the `core ↛ http` layering contract
+        # (#1438). engine.py lives at src/dazzle/core/discovery/engine.py, so
+        # parents[2] is the `dazzle/` package dir.
+        pkg_dir = Path(__file__).resolve().parents[2]
         project_root = pkg_dir.parent.parent  # src/dazzle → src → root
         examples = project_root / "examples"
         return examples if examples.is_dir() else None

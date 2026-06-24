@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.4] - 2026-06-24
+
+### Changed
+- **#1438 architectural unlock: three layer-purity import contracts now enforce INDIRECT violations (`allow_indirect_imports` flipped `true → false`).** `core ↛ http/page`, `page ↛ http`, and `render ↛ http/page` previously checked only *direct* imports — a lower-layer module could reach `http` transitively undetected. They now reject any path. This was gated by exactly two spurious edges, both fixed: (1) `core.discovery.engine` did `import dazzle` (the package root) just to read `__file__` — pulling the root's lazy `register_lifespan_hook → http` edge into the graph; it now derives its path from its own `__file__`. (2) `mcp/knowledge_graph/seed.py` had a broken `from dazzle.core.ir.app_spec import AppSpec` typo (the module is `core.ir.appspec`) which grimp couldn't resolve and attributed to the `dazzle` root; corrected to the `core.ir` facade (a latent bug — the import is `TYPE_CHECKING`-only so it never raised). The two SQLite/`core.ir`-facade contracts stay `allow_indirect` by design (their indirect reaches are legitimate). Net: the layering contracts are materially stronger, and a class of "lower layer sneaks up to http via a transitive hop" regressions is now caught in CI.
+
+### Agent Guidance
+- **Lower layers must not `import dazzle` (the package root).** core/page/render code that needs the package directory or version should use `Path(__file__)` / `dazzle._version.get_version()`, not `import dazzle` — importing the root pulls its lazy http re-export edge and (now) breaks the `core/page/render ↛ http` contracts. Import specific submodules, never the convenience root.
+
 ## [0.86.3] - 2026-06-24
 
 ### Changed

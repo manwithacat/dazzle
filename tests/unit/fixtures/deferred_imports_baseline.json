@@ -79,7 +79,7 @@
   "src/dazzle/core/composition_capture.py": 1,
   "src/dazzle/core/composition_styles.py": 1,
   "src/dazzle/core/demo_blueprint_persistence.py": 2,
-  "src/dazzle/core/discovery/engine.py": 2,
+  "src/dazzle/core/discovery/engine.py": 1,
   "src/dazzle/core/dsl_parser_impl/__init__.py": 1,
   "src/dazzle/core/dsl_parser_impl/process.py": 2,
   "src/dazzle/core/guide_concordance.py": 1,

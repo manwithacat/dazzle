@@ -14,7 +14,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from dazzle.core.ir.app_spec import AppSpec
+    from dazzle.core.ir import AppSpec
 
     from .store import KnowledgeGraph
 
