@@ -5,6 +5,10 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 KB_PATH = Path(__file__).resolve().parents[2] / "src" / "dazzle" / "mcp" / "inference_kb.toml"
 
 

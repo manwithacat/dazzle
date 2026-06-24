@@ -18,6 +18,10 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 _ROOT = Path(__file__).resolve().parents[2] / "src" / "dazzle"
 _THRESHOLD = 4000  # chars — well above any legitimate inline snippet, below a real asset
 _JS_MARKERS = ("addEventListener", "querySelector", "new WebSocket", "document.create")

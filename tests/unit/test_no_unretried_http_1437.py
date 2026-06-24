@@ -16,6 +16,10 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 _ROOTS = [
     Path(__file__).resolve().parents[2] / "src" / "dazzle" / "http",
     Path(__file__).resolve().parents[2] / "src" / "dazzle" / "agent",

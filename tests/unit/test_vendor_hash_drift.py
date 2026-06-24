@@ -48,6 +48,8 @@ from vendor_manifest import (  # noqa: E402
     load_manifest,
 )
 
+pytestmark = pytest.mark.gate
+
 
 def test_every_vendor_file_has_manifest_entry() -> None:
     """No file in vendor/ may exist without a pinned hash.

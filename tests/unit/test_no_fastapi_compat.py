@@ -7,6 +7,10 @@ Banning them keeps the clean break from regressing (ADR-0003).
 
 import pathlib
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SRC = ROOT / "src" / "dazzle"
 TESTS = ROOT / "tests"

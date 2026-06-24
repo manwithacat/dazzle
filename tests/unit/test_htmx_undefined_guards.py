@@ -16,6 +16,10 @@ the JS for un-guarded uses.
 import re
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 JS_DIR = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "js"
 

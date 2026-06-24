@@ -23,6 +23,8 @@ import pytest
 
 from dazzle.page.runtime.workspace_renderer import _action_to_url
 
+pytestmark = pytest.mark.gate
+
 
 def _stub_app_spec(surfaces):
     """Build a minimal app_spec stub with .surfaces."""

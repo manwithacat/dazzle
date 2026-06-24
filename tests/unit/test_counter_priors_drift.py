@@ -21,6 +21,8 @@ from dazzle.mcp.semantics_kb.counter_priors import (
     load_counter_prior,
 )
 
+pytestmark = pytest.mark.gate
+
 CATALOGUE = counter_priors_dir()
 
 

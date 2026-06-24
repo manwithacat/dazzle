@@ -79,6 +79,8 @@ from dazzle.http.runtime.route_overrides import (  # noqa: E402
     build_override_router,
 )
 
+pytestmark = pytest.mark.gate
+
 
 def _fake_request(*, hx: bool = False) -> Any:
     app_state = SimpleNamespace(

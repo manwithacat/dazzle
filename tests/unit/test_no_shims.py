@@ -29,6 +29,10 @@ from __future__ import annotations
 import pathlib
 import re
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 PROD_DIRS = ("src/dazzle", "src/dazzle/http", "src/dazzle/page")
 

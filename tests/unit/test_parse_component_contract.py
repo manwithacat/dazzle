@@ -8,6 +8,8 @@ from dazzle.agent.missions._shared import (
     parse_component_contract,
 )
 
+pytestmark = pytest.mark.gate
+
 SAMPLE_CONTRACT = """# Dashboard Grid Component Contract
 
 **Aesthetic target:** Linear

@@ -16,6 +16,10 @@ from __future__ import annotations
 import ast
 import pathlib
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 _ROOTS = [pathlib.Path("src/dazzle/http"), pathlib.Path("src/dazzle/page")]
 
 # Console-UX modules: print() is the deliberate interactive output here, not

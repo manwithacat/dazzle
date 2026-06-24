@@ -18,6 +18,10 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 _TESTING = Path(__file__).resolve().parents[2] / "src" / "dazzle" / "testing"
 
 # class name → max methods. Only shrinks. Adding a method to a capped class must be

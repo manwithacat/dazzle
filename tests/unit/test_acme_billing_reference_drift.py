@@ -33,6 +33,10 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 # Anchor paths to the repo root, not pytest's launch directory (#1174).
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _APP = _REPO_ROOT / "examples" / "acme_billing"

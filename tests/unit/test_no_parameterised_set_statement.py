@@ -9,6 +9,10 @@ identifier via ``psycopg.sql.Identifier`` instead.
 
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 _SRC = Path(__file__).resolve().parents[2] / "src" / "dazzle"
 
 

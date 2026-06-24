@@ -44,6 +44,8 @@ from typing import Any
 
 import pytest
 
+pytestmark = pytest.mark.gate
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASELINE_PATH = REPO_ROOT / "tests" / "unit" / "fixtures" / "dazzle_validate_baseline.json"
 SCAN_ROOTS = ("examples", "fixtures")

@@ -16,6 +16,8 @@ import pytest
 
 from dazzle.render.access_messages import _forbidden_detail
 
+pytestmark = pytest.mark.gate
+
 
 class _FakeOp(Enum):
     LIST = "list"

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.13] - 2026-06-24
+
+### Changed
+- **`/ship` pre-flight is now marker-driven — `pytest -m gate` — replacing the hand-curated glob + `$(ls ...)` file list.** Every fast, DB-free structural/regression gate carries `pytestmark = pytest.mark.gate` (marker registered in `pyproject.toml`), so the set has no list to drift (the list had already silently dropped two deleted files — `test_htmx_preload_silence.py`, `test_idiomorph_alpine_patch.py` — and was missing several live gates). `-m gate` selects exactly the ~345 gates in ~1 min with no Postgres. Marked 43 gate files across the drift / `test_no_` / ratchet / `_gate` / `_contract` / `_cap` families.
+
+### Added
+- **`tests/unit/test_gate_marker_complete.py` — completeness meta-gate.** Fails (in CI's full suite) if any test in the high-churn gate families (`*drift*`, `test_no_*`, `*ratchet*`) lacks `pytest.mark.gate`, so a new gate can't silently skip the `/ship` pre-flight — the structural fix for the #1466 class (a ratchet gate that matched no glob, escaped local pre-flight, and only went red in CI). The `_gate`/`_contract`/`_cap` families are marked by convention but not regex-enforced (those substrings false-match non-gates like `ai_gateway` / `gated_list_helpers`).
+
+### Agent Guidance
+- **Adding a structural gate:** give the test file `pytestmark = pytest.mark.gate` (merge into a list — `pytestmark = [pytest.mark.gate, pytest.mark.asyncio]` — if it already has one) and it runs in the `/ship` pre-flight automatically. Keep gates fast + DB-free; anything needing Postgres/Playwright belongs only in CI's full suite. Drift/`test_no_`/ratchet gates are marker-enforced by `test_gate_marker_complete.py`.
+
 ## [0.86.12] - 2026-06-24
 
 ### Changed

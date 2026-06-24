@@ -24,6 +24,8 @@ from dazzle.http.runtime.auth.domain_join import DomainNotAdmissibleError
 from dazzle.http.runtime.auth.enterprise_login import provision_enterprise_login
 from dazzle.http.runtime.auth.scim_provisioning import provision_scim_user
 
+pytestmark = pytest.mark.gate
+
 # A tenant that restricts membership to verified domains, with acme.test verified
 # (acme.test is admissible; other.com / evil.test are not).
 _RESTRICTED_SETTINGS = {

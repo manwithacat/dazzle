@@ -23,6 +23,8 @@ from dazzle.api_surface import mcp_tools_module as mcp_mod
 from dazzle.api_surface import public_helpers_module as helpers_mod
 from dazzle.api_surface import runtime_urls_module as urls_mod
 
+pytestmark = pytest.mark.gate
+
 # ---------------------------------------------------------------------------
 # Per-cycle module registry — drives the three uniform structural checks
 # ---------------------------------------------------------------------------

@@ -20,6 +20,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "src/dazzle/page/templates"
 
 # Widget kinds that mount a *vendor* instance via the bridge —

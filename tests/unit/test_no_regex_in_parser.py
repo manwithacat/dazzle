@@ -20,6 +20,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 # Files + line numbers of pre-existing regex calls in the parser surface.
 # Each entry is (relative_path, line_number, rationale). A regex call on
 # a line listed here is allowed; any other regex call fails the test.

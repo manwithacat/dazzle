@@ -5,11 +5,15 @@
 permanently removed; this test ensures it is never re-added.
 """
 
+import pytest
+
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.domain import DomainSpec
 from dazzle.core.ir.llm import LLMConfigSpec, LLMIntentSpec, LLMModelSpec, LLMProvider
 from dazzle.http.runtime.llm_executor import LLMIntentExecutor
 from dazzle.http.runtime.llm_routes import create_llm_routes
+
+pytestmark = pytest.mark.gate
 
 
 def _make_router():

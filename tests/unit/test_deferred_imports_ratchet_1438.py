@@ -36,6 +36,10 @@ import ast
 import json
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 _REPO = Path(__file__).resolve().parents[2]
 _SRC = _REPO / "src" / "dazzle"
 _BASELINE_PATH = Path(__file__).resolve().parent / "fixtures" / "deferred_imports_baseline.json"

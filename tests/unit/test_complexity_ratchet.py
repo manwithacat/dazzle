@@ -12,7 +12,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from dazzle.fitness.code import build_complexity_baseline, compare_complexity
+
+pytestmark = pytest.mark.gate
 
 _BASELINE = Path("tests/unit/fixtures/complexity_baseline.json")
 _SRC = Path("src/dazzle")

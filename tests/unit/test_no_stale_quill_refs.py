@@ -22,6 +22,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 ROOT = Path(__file__).resolve().parents[2]
 CSS_DIR = ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "css"
 

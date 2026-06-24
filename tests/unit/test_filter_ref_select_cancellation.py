@@ -25,6 +25,10 @@ the element is still mounted with a non-AbortError name.
 
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DZ_ALPINE = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "js" / "dz-alpine.js"
 

@@ -19,6 +19,8 @@ from dazzle.http.runtime.audit_log import AuditLogger
 from dazzle.http.runtime.auth.store import AuthStore
 from dazzle.http.runtime.file_storage import FileMetadataStore
 
+pytestmark = pytest.mark.gate
+
 
 def test_skip_boot_schema_ddl_tracks_production(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DAZZLE_ENV", "production")

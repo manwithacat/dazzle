@@ -19,6 +19,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 _ROOT = Path(__file__).resolve().parents[2]
 
 # Modules that completed the migration. Each entry MUST NOT contain

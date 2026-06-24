@@ -18,7 +18,11 @@ import ast
 import enum
 from pathlib import Path
 
+import pytest
+
 import dazzle.core.ir as ir
+
+pytestmark = pytest.mark.gate
 
 _PARSER_DIR = Path(__file__).resolve().parents[2] / "src" / "dazzle" / "core" / "dsl_parser_impl"
 _ENUM_NAMES = {

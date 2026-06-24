@@ -9,51 +9,28 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - **Run drift + policy gates** — fast (~1 min, no DB), catches the recurring Python ↔ htmx/Alpine boundary regressions (#949 / #963 / #966 / #968 class) plus CI-class violations that ruff/mypy don't see (bare excepts, abandoned shims, parser-regex sneaks, etc.):
 
   ```bash
-  pytest tests/unit/test_*drift*.py \
-         tests/unit/test_no_*.py \
-         tests/unit/test_*ratchet*.py \
-         $(ls tests/unit/test_idiomorph_alpine_patch.py \
-              tests/unit/test_htmx_preload_silence.py \
-              tests/unit/test_filter_ref_select_cancellation.py \
-              tests/unit/test_delete_preference_idempotent.py \
-              tests/unit/test_alpine_error_handler.py \
-              tests/unit/test_view_transition_swap.py \
-              tests/unit/test_action_url_surface_resolution.py \
-              tests/unit/test_htmx_undefined_guards.py \
-              tests/unit/test_forbidden_detail.py \
-              tests/unit/test_typed_runtime_no_jinja.py \
-              tests/unit/test_import_contracts.py \
-              tests/unit/test_dedup_footgun_gates.py \
-              tests/unit/test_testing_class_method_cap_1446.py \
-              tests/unit/test_nonowner_boot_gate_1462.py \
-              tests/unit/test_membership_admission_gate.py \
-              tests/unit/test_route_override_response_contract.py \
-              tests/unit/test_parse_component_contract.py \
-              tests/unit/test_widget_contract.py \
-              2>/dev/null) \
-         -q
+  pytest tests/unit -m gate -q
   ```
 
-  **Three globs auto-pick up new gates so the list can't silently rot:**
-  `test_*drift*.py` (snapshot/baseline drift, incl. `_drift_<issue>` suffixes), `test_no_*.py`
-  (forbidden-pattern gates), and `test_*ratchet*.py` (structural-fitness ratchets —
-  complexity, swallow, deferred-imports #1438, etc.). **Name a new fast structural gate to
-  match one of these globs** (`*drift*` / `test_no_*` / `*ratchet*`) and it registers
-  automatically — that's the preferred convention. The trailing explicit list is the residue
-  that doesn't fit a glob: the htmx/Alpine boundary regressions, `test_import_contracts.py`
-  (import-linter layer contracts), and the `*_gate`/`*_contract`/`*_cap` gates whose names
-  don't match a glob. **All entries must be fast and DB-free** (the pre-flight runs no
-  Postgres) — a gate needing PG/Playwright belongs in CI's full suite, not here. The
-  `ls ... 2>/dev/null` wrapper drops any deleted file so pre-flight survives drift (#1156);
-  remove a line when you delete its test. A ratchet failure (complexity CC>15 / MI drop;
-  deferred-import count grew; swallow count grew) means: refactor (often extract a helper),
-  or regenerate the baseline (`dazzle fitness code --write-baseline`, or the gate's own
-  baseline fixture) if the increase is genuinely justified.
+  **The `gate` marker is the single source of truth for this set** — no file list to
+  rot. Every fast, DB-free structural/regression gate carries
+  `pytestmark = pytest.mark.gate` (the marker is registered in `pyproject.toml`
+  `[tool.pytest.ini_options]`), so `-m gate` selects exactly them (~345 tests, ~1 min,
+  no Postgres). `tests/unit/test_gate_marker_complete.py` keeps it honest: the
+  high-churn gate families (`*drift*`, `test_no_*`, `*ratchet*`) **must** carry the
+  marker or that meta-gate fails in CI — which closes the #1466 class (a ratchet gate
+  that matched no glob, slipped the local pre-flight, and only went red in CI,
+  v0.86.10→.11).
 
-  Why this set: it mirrors the structural/regression gates in CI's `Python Tests` job so a
-  red badge is caught locally first. The #1466 deferred-import-ratchet regression (red badge,
-  v0.86.10→.11) slipped precisely because that ratchet matched no glob and wasn't listed — the
-  `test_*ratchet*.py` glob now closes that class.
+  **Adding a gate:** give the test file `pytestmark = pytest.mark.gate` (merge into a
+  list — `pytestmark = [pytest.mark.gate, pytest.mark.asyncio]` — if it already has a
+  `pytestmark`) and it runs here automatically. Keep gates **fast and DB-free** —
+  anything needing Postgres/Playwright belongs only in CI's full suite, never this
+  pre-flight. A ratchet failure (complexity CC>15 / MI drop; deferred-import or swallow
+  count grew) means: refactor (often extract a helper), or regenerate the baseline
+  (`dazzle fitness code --write-baseline`, or the gate's own baseline fixture) if the
+  increase is genuinely justified. This set mirrors the structural/regression gates in
+  CI's `Python Tests` job so a red badge is caught locally first.
 
   If a drift gate fails, **fix the regression** — or, if it's a deliberate API-surface change, regenerate the baseline with `--write` and add a CHANGELOG entry under Added/Changed/Removed. Never bypass.
 

@@ -5,10 +5,14 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 from dazzle.core.linker import SIGNABLE_AUTO_FIELD_NAMES
 from dazzle.db.signable_drift import detect_signable_drift, missing_signable_columns
 
 from ._fake_pg import FakePgConn
+
+pytestmark = pytest.mark.gate
 
 
 def _FakeConn(tables: dict[str, set[str]]) -> FakePgConn:

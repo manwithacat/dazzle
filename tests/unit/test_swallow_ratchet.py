@@ -12,7 +12,11 @@ Origin: the 2026-06-19 smells round flagged these as the dominant semantic debt
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.fitness.swallows import count_swallows
+
+pytestmark = pytest.mark.gate
 
 _SRC = Path(__file__).resolve().parents[2] / "src" / "dazzle"
 
