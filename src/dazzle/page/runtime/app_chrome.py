@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core import ir
+from dazzle.page.runtime.asset_fingerprint import fingerprint_static_url
 
 logger = logging.getLogger(__name__)
 
@@ -153,11 +154,13 @@ def resolve_app_chrome(
     # Manifest-level config (favicon, cdn toggle).
     favicon = _DEFAULT_FAVICON
     use_cdn = False
+    active_development = False
     manifest_theme: str | None = None
     if manifest is not None:
         if getattr(manifest, "favicon", None):
             favicon = str(manifest.favicon)
         use_cdn = bool(getattr(manifest, "cdn", False))
+        active_development = bool(getattr(manifest, "active_development", False))
         manifest_theme = getattr(manifest, "app_theme", None) or None
 
     # Theme name: env > DSL > manifest > None.
@@ -231,6 +234,17 @@ def resolve_app_chrome(
     # ~2 KB script cost.
     if appspec is not None and getattr(appspec, "guides", None):
         js_scripts.append("/static/js/dz-onboarding.js")
+
+    # #1468: content-hash the framework bundle URLs (prod/staging only) so a
+    # deploy's JS/CSS fixes reach returning visitors immediately instead of
+    # after the cached bundle's max-age. No-op in dev/test/active-development.
+    css_links = [
+        fingerprint_static_url(u, active_development=active_development) for u in css_links
+    ]
+    js_scripts = [
+        fingerprint_static_url(u, active_development=active_development) for u in js_scripts
+    ]
+    favicon = fingerprint_static_url(favicon, active_development=active_development)
 
     return AppChrome(
         css_links=tuple(css_links),

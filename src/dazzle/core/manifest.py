@@ -661,6 +661,18 @@ class ProjectManifest:
     signing: SigningConfig = field(default_factory=SigningConfig)  # #1283 phase 8
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
+    # #1468: a site under active development can opt out of content-hash
+    # fingerprinting + immutable caching of the framework runtime bundle.
+    # When true, asset URLs stay plain (`/static/dist/dazzle.min.js`) and
+    # `/static/dist/*` is served `Cache-Control: no-cache` so every rebuilt
+    # bundle is picked up on the next load. Default false = mature-site
+    # behaviour: fingerprinted URLs + immutable long cache in production.
+    # Set via `[ui] active_development = true` in dazzle.toml.
+    active_development: bool = False
+    # Cache duration (seconds) for NON-fingerprinted static assets in
+    # production. Fingerprinted assets are always immutable/1yr regardless.
+    # None = framework default (1h). Set via `[ui] static_max_age = 300`.
+    static_max_age: int | None = None
     # Asset bundling mode. Resolved at request time by `should_bundle_assets()`:
     #   "auto"   = bundle when DAZZLE_ENV=production, individual scripts in dev (default)
     #   "always" = bundle in every environment (perf testing / staging)
@@ -1034,6 +1046,14 @@ def load_manifest(path: Path) -> ProjectManifest:
     assets_mode = ui_data.get("assets", "auto")
     if assets_mode not in ("auto", "always", "never"):
         raise ValueError(f"[ui] assets must be 'auto', 'always', or 'never'; got {assets_mode!r}")
+    active_development_enabled = bool(ui_data.get("active_development", False))
+    static_max_age_value = ui_data.get("static_max_age")
+    if static_max_age_value is not None and (
+        not isinstance(static_max_age_value, int) or static_max_age_value < 0
+    ):
+        raise ValueError(
+            f"[ui] static_max_age must be a non-negative integer; got {static_max_age_value!r}"
+        )
 
     # Parse [extensions] section (#786)
     extensions_data = data.get("extensions", {})
@@ -1127,6 +1147,8 @@ def load_manifest(path: Path) -> ProjectManifest:
         signing=signing_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
+        active_development=active_development_enabled,
+        static_max_age=static_max_age_value,
         assets=assets_mode,
         favicon=favicon_path,
         app_theme=app_theme_name,

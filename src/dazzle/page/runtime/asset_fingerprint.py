@@ -1,17 +1,29 @@
 """Content-hash fingerprinting for static assets.
 
-Computes SHA-256 hashes of static files at startup and provides a Jinja2
-filter that rewrites paths with the hash embedded in the filename:
+Computes SHA-256 hashes of static files and rewrites their URLs with the
+hash embedded in the filename:
 
-    /static/css/dazzle-bundle.css → /static/css/dazzle-bundle.a1b2c3d4.css
+    /static/dist/dazzle.min.js → /static/dist/dazzle.min.a1b2c3d4.js
 
-The static file server recognises the hashed pattern and strips the hash
-before serving, adding ``Cache-Control: immutable`` headers.
+The static file server (``CombinedStaticFiles``) recognises the hashed
+pattern, strips the hash to find the real file on disk, and serves it with
+``Cache-Control: immutable``. A deploy that changes the bundle changes its
+hash → a new URL → returning visitors fetch the fix immediately instead of
+running the cached old bundle until ``max-age`` expires (#1468; the framework
+runtime bundle has the worst propagation of any asset class otherwise).
 
-No build step required — hashes are computed at runtime on first access.
+Gated on environment (``should_fingerprint``): on in production/staging,
+off in dev/test (plain URLs, fast iteration) and when a project sets
+``[ui] active_development = true`` (a deployed site that wants no-cache
+iteration instead of immutable fingerprints).
+
+No build step required — hashes are computed once per process (a deploy is a
+new process, so the cache is always fresh for the bytes being served).
 """
 
+import functools
 import hashlib
+import os
 import re
 from pathlib import Path
 
@@ -96,3 +108,65 @@ def strip_fingerprint(path: str) -> str | None:
     if match:
         return f"{match.group(1)}{match.group(3)}"
     return None
+
+
+# ---------------------------------------------------------------------------
+# Framework runtime-bundle fingerprinting (#1468)
+# ---------------------------------------------------------------------------
+
+
+def should_fingerprint(*, active_development: bool = False, env: str | None = None) -> bool:
+    """Whether framework asset URLs should carry content-hash fingerprints.
+
+    On in production/staging — returning visitors must receive a JS/CSS fix
+    the instant it deploys, not after the bundle's ``max-age`` expires (#1468).
+    Off in dev/test (plain ``/static/dist/...`` URLs — fast iteration, stable
+    test assertions) and whenever a project opts into ``[ui]
+    active_development = true`` (a deployed site that prefers ``no-cache``
+    iteration over immutable fingerprints).
+
+    Mirrors :func:`dazzle.page.runtime.asset_bundle.should_bundle_assets`'s
+    environment gate so bundling and fingerprinting turn on together.
+    """
+    if active_development:
+        return False
+    resolved = env if env is not None else os.environ.get("DAZZLE_ENV", "")
+    return resolved in ("production", "staging")
+
+
+def _framework_static_root() -> Path:
+    """The framework's served static dir (``page/runtime/static``)."""
+    return Path(__file__).parent / "static"
+
+
+@functools.cache
+def _framework_manifest() -> dict[str, str]:
+    """Content-hash manifest for the framework static dir (built once/process).
+
+    A deploy is a new process, so a process-lifetime cache always reflects the
+    bytes being served. Cleared in tests via ``_framework_manifest.cache_clear()``.
+    """
+    return build_asset_manifest(_framework_static_root())
+
+
+def fingerprint_static_url(url: str, *, active_development: bool = False) -> str:
+    """Rewrite a framework ``/static/<rel>`` URL to its content-hashed form.
+
+    ``/static/dist/dazzle.min.js`` → ``/static/dist/dazzle.min.a1b2c3d4.js``.
+    Returns the URL unchanged when fingerprinting is off (dev/test/active
+    development), when the URL isn't a ``/static/`` framework asset, or when
+    the asset isn't in the framework manifest (e.g. project-supplied or theme
+    overrides) — the server serves those at the configured ``max-age`` instead.
+    """
+    if not should_fingerprint(active_development=active_development):
+        return url
+    if not url.startswith("/static/"):
+        return url
+    rel = url.removeprefix("/static/")
+    fingerprinted = _framework_manifest().get(rel)
+    return f"/static/{fingerprinted}" if fingerprinted else url
+
+
+def fingerprint_urls(urls: tuple[str, ...], *, active_development: bool = False) -> tuple[str, ...]:
+    """Fingerprint every framework ``/static/`` URL in a tuple (order-preserving)."""
+    return tuple(fingerprint_static_url(u, active_development=active_development) for u in urls)

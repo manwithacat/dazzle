@@ -28,6 +28,8 @@ def _mount_static_files(
     *,
     project_root: Any = None,
     extra_static_dirs: Any = None,
+    active_development: bool = False,
+    static_max_age: int | None = None,
 ) -> None:
     """Mount the framework + project static file routes on ``app``.
 
@@ -78,7 +80,15 @@ def _mount_static_files(
                 name="project_themes",
             )
 
-    app.mount("/static", CombinedStaticFiles(directories=dirs), name="static")
+    app.mount(
+        "/static",
+        CombinedStaticFiles(
+            directories=dirs,
+            default_max_age=static_max_age,
+            active_development=active_development,
+        ),
+        name="static",
+    )
 
 
 class SystemRoutesSubsystem:
@@ -690,6 +700,11 @@ class SystemRoutesSubsystem:
         # sites read `app.state.fragment_chrome` and thread the
         # css_links / js_scripts / theme / font_preconnect kwargs into
         # `dispatch_render_page`.
+        # #1468: static-cache policy from [ui], resolved here and applied at the
+        # mount below. Defaults are mature-site behaviour (immutable fingerprints
+        # + framework default max-age for non-fingerprinted assets).
+        static_active_development = False
+        static_max_age: int | None = None
         try:
             from pathlib import Path
 
@@ -700,6 +715,9 @@ class SystemRoutesSubsystem:
                 manifest_path = Path(ctx.project_root) / "dazzle.toml"
                 if manifest_path.exists():
                     mf = load_manifest(manifest_path)
+            if mf is not None:
+                static_active_development = bool(getattr(mf, "active_development", False))
+                static_max_age = getattr(mf, "static_max_age", None)
 
             chrome = resolve_app_chrome(
                 appspec,
@@ -726,6 +744,8 @@ class SystemRoutesSubsystem:
                 ctx.app,
                 project_root=ctx.project_root,
                 extra_static_dirs=ctx.extra_static_dirs,
+                active_development=static_active_development,
+                static_max_age=static_max_age,
             )
         except ImportError:
             pass  # dazzle_page not installed — static files served externally

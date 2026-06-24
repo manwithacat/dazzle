@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.16] - 2026-06-24
+
+### Fixed
+- **#1468 framework runtime bundle no longer serves stale to returning users after a deploy.** `/static/dist/dazzle.min.{js,css}` (+ `dazzle-icons.min.js`) was emitted non-fingerprinted with a multi-hour `max-age`, so after a deploy returning visitors kept running the cached old bundle for up to ~4h — a JS *crash* fix (e.g. #1465) "didn't take" until the cache expired. Two-layer fix: **(1)** `build_app_chrome` now content-hashes the framework bundle URLs (`dazzle.min.<hash>.js`) in production/staging — immutable long cache + instant propagation — for the dominant app/workspace/page path (and every site that reads `app.state.fragment_chrome_*`); **(2)** a serving-layer safety net in `CombinedStaticFiles` serves any `/static/dist/*` requested at its plain URL `no-cache`, so emission sites that hardcode the path (auth/profile/signing pages) still propagate fixes immediately rather than staling for hours.
+
+### Added
+- **`[ui] active_development` and `[ui] static_max_age` (dazzle.toml).** `active_development = true` opts a deployed site out of fingerprinting/immutable caching in favour of `no-cache` revalidation (fast iteration on a staging/dev deploy). `static_max_age = <seconds>` configures the cache duration for non-fingerprinted, non-bundle static assets (default 1h; fingerprinted assets are always immutable). Realises the "mature site vs site under active development" distinction.
+
+### Agent Guidance
+- **Fingerprinting is env-gated.** `dazzle.page.runtime.asset_fingerprint.should_fingerprint()` is on only in `DAZZLE_ENV=production`/`staging` and off under `[ui] active_development` — so dev/test see plain `/static/dist/...` URLs (stable assertions). New framework HTML that emits a `/static/dist/*` URL should route it through `fingerprint_static_url()` for the immutable optimization; if it can't, the `no-cache` serving safety net still guarantees correctness.
+
 ## [0.86.15] - 2026-06-24
 
 ### Fixed

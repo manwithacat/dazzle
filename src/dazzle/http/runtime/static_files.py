@@ -45,8 +45,19 @@ class CombinedStaticFiles(StaticFiles):
     the original file and served with ``Cache-Control: immutable``.
     """
 
-    def __init__(self, directories: list[Path], **kwargs: Any) -> None:
+    def __init__(
+        self,
+        directories: list[Path],
+        *,
+        default_max_age: int | None = None,
+        active_development: bool = False,
+        **kwargs: Any,
+    ) -> None:
         self._extra_dirs = [d for d in directories[:-1] if d.is_dir()]
+        # #1468: cache policy for NON-fingerprinted assets. Fingerprinted
+        # (content-hashed) assets are always immutable regardless of these.
+        self._default_max_age = _DEFAULT_MAX_AGE if default_max_age is None else default_max_age
+        self._active_development = active_development
         primary = directories[-1] if directories else Path(".")
         super().__init__(directory=str(primary), **kwargs)
 
@@ -96,10 +107,28 @@ class CombinedStaticFiles(StaticFiles):
             is_fingerprinted = bool(FINGERPRINT_RE.search(os.path.basename(request_path)))
 
             ext = os.path.splitext(str(full_path))[1].lower()
-            if is_fingerprinted or ext in _IMMUTABLE_EXTENSIONS:
+            if self._active_development:
+                # #1468: a site under active development serves everything
+                # no-cache so each rebuild is picked up on the next load. The
+                # content hash (when present) still guarantees byte-correctness;
+                # no-cache just forces ETag revalidation → 304 when unchanged.
+                # Checked first so even a stale fingerprinted URL from a prior
+                # deploy revalidates instead of staying immutable.
+                response.headers["Cache-Control"] = "no-cache"
+            elif is_fingerprinted or ext in _IMMUTABLE_EXTENSIONS:
                 response.headers["Cache-Control"] = (
                     f"public, max-age={_IMMUTABLE_MAX_AGE}, immutable"
                 )
+            elif "/dist/" in request_path:
+                # #1468 safety net: the framework runtime bundle requested at its
+                # plain (non-fingerprinted) URL — i.e. from an HTML emission site
+                # that hardcodes `/static/dist/...` instead of reading the
+                # fingerprinted app-chrome URLs — must revalidate every load so a
+                # deploy's JS/CSS fix is never served stale for hours. The
+                # fingerprinted emissions (the dominant app-page path) take the
+                # immutable branch above; this guarantees correctness for any
+                # emission site that isn't (yet) wired to fingerprint.
+                response.headers["Cache-Control"] = "no-cache"
             else:
-                response.headers["Cache-Control"] = f"public, max-age={_DEFAULT_MAX_AGE}"
+                response.headers["Cache-Control"] = f"public, max-age={self._default_max_age}"
         return response
