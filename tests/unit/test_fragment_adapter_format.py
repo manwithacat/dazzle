@@ -15,5 +15,6 @@ def test_adapter_threads_currency() -> None:
     assert _format_cell(12345, "currency", "GBP") == "£123.45"
 
 
-def test_adapter_escapes() -> None:
-    assert _format_cell("<x>", "text") == "&lt;x&gt;"
+def test_adapter_returns_raw() -> None:
+    # Raw — the renderer escapes at emit time (no pre-escape / double-escape).
+    assert _format_cell("<x>", "text") == "<x>"

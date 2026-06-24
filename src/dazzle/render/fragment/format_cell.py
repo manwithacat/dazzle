@@ -6,18 +6,21 @@ isolation. The http fragment adapter (`_format_cell`) calls this in place of
 the old `str()`-coerce stub, so FK names, money, rounded floats, Yes/No bools,
 title-cased enums and friendly dates render correctly across every grid.
 
-FK display values are already resolved upstream (`fk_display_only`), so a
-``ref`` cell's value is already the name — formatting is just safe escaping.
+**Returns RAW (unescaped) strings.** The renderer owns HTML escaping — both
+consumers (`Table` cells via `_render_tables`, `Text` via `_emit_text`) call
+`ctx.escape(...)` at emit time, so this formatter must NOT pre-escape or values
+would be double-encoded (e.g. `&` → `&amp;amp;`). This mirrors the old stub's
+raw `str(value)` contract.
 
-Phase 2 (#1470) adds the explicit ``format:`` override via `override=`.
+FK display values are already resolved upstream (`fk_display_only`), so a
+``ref`` cell's value is already the name. Phase 2 (#1470) adds the explicit
+``format:`` override via `override=`.
 """
 
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
-
-from dazzle.render.html import esc
 
 # v1 currency symbols; unknown codes fall back to a "<amount> <CODE>" suffix.
 _CURRENCY_SYMBOLS = {"GBP": "£", "USD": "$", "EUR": "€"}
@@ -36,7 +39,7 @@ def _title_case(token: str) -> str:
 
 
 def _currency(minor: Any, code: str) -> str:
-    """Format integer minor units (e.g. pence) as a currency string."""
+    """Format integer minor units (e.g. pence) as a currency string (raw)."""
     try:
         major = Decimal(int(minor)) / 100
     except (TypeError, ValueError, InvalidOperation):
@@ -46,16 +49,20 @@ def _currency(minor: Any, code: str) -> str:
 
 
 def _friendly_dt(value: Any, *, with_time: bool) -> str:
-    """Return a friendly (non-ISO) date/datetime string. Raw — caller escapes."""
+    """Return a friendly (non-ISO) date/datetime string (raw)."""
     if isinstance(value, str):
         try:
             value = datetime.fromisoformat(value)
         except ValueError:
             return str(value)
-    if isinstance(value, datetime):
-        return value.strftime("%-d %b %Y %H:%M" if with_time else "%-d %b %Y")
-    if isinstance(value, date):
-        return value.strftime("%-d %b %Y")
+    if isinstance(value, (datetime, date)):
+        # `value.day` avoids the non-portable `%-d` strftime directive.
+        tail = (
+            value.strftime("%b %Y %H:%M")
+            if isinstance(value, datetime) and with_time
+            else value.strftime("%b %Y")
+        )
+        return f"{value.day} {tail}"
     return str(value)
 
 
@@ -64,17 +71,16 @@ def _infer(value: Any, kind: str, currency_code: str) -> str:
     if kind == "bool" or isinstance(value, bool):
         return "Yes" if value else "No"
     if kind == "currency":
-        # currency output is controlled (symbol/digits/sep) — no escaping needed.
         return _currency(value, currency_code or "GBP")
     if kind == "badge":
-        return esc(_title_case(str(value)))
+        return _title_case(str(value))
     if kind == "date":
-        return esc(_friendly_dt(value, with_time=isinstance(value, datetime)))
+        return _friendly_dt(value, with_time=isinstance(value, datetime))
     # float/Decimal round to 2dp (the column vocabulary collapses these to "text",
     # so rounding is keyed off the Python value type, not the kind).
     if isinstance(value, (float, Decimal)):
-        return esc(f"{float(value):.2f}")
-    return esc(str(value))
+        return f"{float(value):.2f}"
+    return str(value)
 
 
 def format_cell(
@@ -84,10 +90,11 @@ def format_cell(
     currency_code: str = "",
     override: ResolvedFormat | None = None,
 ) -> str:
-    """Render ``value`` to an HTML-escaped display string.
+    """Render ``value`` to a RAW (unescaped) display string.
 
     ``kind`` is the column's display type (``text``/``bool``/``date``/
     ``currency``/``badge``/``ref``). ``override`` (Phase 2) wins over inference.
+    The renderer escapes the result at emit time — do not escape here.
     """
     if value is None or value == "":
         return ""

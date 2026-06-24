@@ -50,12 +50,27 @@ def test_iso_string_datetime_parsed():
     assert "2026" in out and "T" not in out
 
 
-def test_escaping_no_double_escape():
-    # esc once: < > & escaped, and NOT re-escaped through the date/badge paths.
-    assert format_cell("<script>", "text") == "&lt;script&gt;"
-    assert format_cell("a & b", "badge") == "A &amp; B"
+def test_returns_raw_unescaped():
+    # format_cell returns RAW strings — the renderer escapes at emit time, so
+    # pre-escaping here would double-encode (& → &amp;amp;). See the render-path
+    # single-escape regression test below.
+    assert format_cell("<script>", "text") == "<script>"
+    assert format_cell("a & b", "badge") == "A & B"
 
 
 def test_bool_value_in_text_column():
     # A bool value renders Yes/No even if the column kind is generic.
     assert format_cell(True, "text") == "Yes"
+
+
+def test_render_path_escapes_exactly_once():
+    """Regression guard for the double-escape class: format_cell returns RAW and
+    the renderer escapes once. A special-char cell must appear escaped exactly
+    once in the final HTML (not `&amp;amp;`)."""
+    from dazzle.render.fragment.primitives.data import Table
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    cell = format_cell("a & <b>", "text")  # raw: "a & <b>"
+    html = FragmentRenderer().render(Table(columns=("c",), rows=((cell,),)))
+    assert "a &amp; &lt;b&gt;" in html  # escaped once by the renderer
+    assert "&amp;amp;" not in html and "&amp;lt;" not in html  # not double-escaped
