@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.86.9] - 2026-06-24
+## [0.86.10] - 2026-06-24
+
+### Fixed
+- **#1467 `update_vendors`: lucide icon vendoring was silently broken (couldn't fetch ≥ ~0.5xx).** `update_lucide` scanned GitHub *release assets* for an iife `.min.js`, but lucide stopped attaching one (it ships the umd/iife global build to npm). The version resolved fine via the releases API; only the download silently no-op'd (`WARNING: could not find lucide iife asset`), so any "vendor update" produced a partial, unverifiable result. Now fetches `dist/umd/lucide.min.js` from the npm CDN (jsDelivr) by the resolved version. Also added a `sourceMappingURL`-strip step to `_save_vendor` (#860 — lucide's umd build carries a `.map` reference we don't ship; the gate `test_vendor_sourcemap_refs` flagged it).
+
+### Changed
+- **Vendored lucide bumped 0.468.0 → 0.577.0** (icons). Provenance verified: the downloaded bytes are byte-identical across two independent CDNs (jsDelivr == unpkg), and the committed (sourcemap-stripped) `lucide.min.js` reproduces from `unpkg download + strip` → SHA-256 `cbb50509a5c8…`; manifest + `dist/` bundle regenerated.
 
 ### Fixed
 - **#1465 dzTable crashed on every DataTable tbody load under htmx 4 (`detail.elt undefined`).** `dz-alpine.js` registered an `htmx:config:request` listener that read `detail.elt.hasAttribute("data-dz-bulk-action")` — but htmx 4 (the vendored runtime) changed that event's detail shape (no `elt`/`parameters`), so it threw a `TypeError` on every request from the table root, breaking DataTable loads. The listener was also **dead code**: nothing renders a `data-dz-bulk-action` attribute (the toolbar emits `dz-bulk-actions`/`data-dz-bulk-count`), and bulk delete already sends its own ids via `bulkDelete()`'s explicit `fetch` — so the id-injection it performed was never reached. Removed the listener entirely (no replacement needed) and rebuilt the `dist/` bundle. **Removed**: the dead `data-dz-bulk-action` config:request injection path.

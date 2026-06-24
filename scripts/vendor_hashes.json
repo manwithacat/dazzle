@@ -13,7 +13,7 @@
     "flatpickr.css": "sha256:847e19bf7d5529fd8a30e26f214a6120c1cc8578df4cea7ae5405be87e76b101",
     "flatpickr.min.js": "sha256:f8dd3f8f0ef355d62bd21f2a0a8d0c6c1cae055f5610403b5c894ed771687d28",
     "htmx.min.js": "sha256:26382eb1b57b52105e4e9394799e79ac1f52548cc32d4c58d34eabd34f0c46f0",
-    "lucide.min.js": "sha256:d0e2c96358addcc6c537c80de85f984dfd64d2f7de5d3c9b5457ba5d860279e8",
+    "lucide.min.js": "sha256:cbb50509a5c804a7cf1f03ef33bf2e1fee07868b013955e996779de3ee472e4d",
     "tom-select.css": "sha256:afd5c263dcaf0fc10717bd8dc9583f7118dd4b6ee129bf090a4a40b64fcb9908",
     "tom-select.min.js": "sha256:7314702353ebc2eb8d6cca8c7628df18871bd8c3ab025ad486342dcdbb01e8bf"
   }

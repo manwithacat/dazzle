@@ -79,14 +79,29 @@ def _gh_request(url: str) -> bytes:
         return resp.read()
 
 
+# Trailing `//# sourceMappingURL=...` / `/*# sourceMappingURL=... */` comment (#860).
+# Vendored min bundles intentionally omit the .map, so the reference must be stripped
+# or DevTools fires a 404 for the missing map (gated by test_vendor_sourcemap_refs).
+_SOURCEMAP_RE = re.compile(
+    rb"\n?[ \t]*(?://# sourceMappingURL=\S+|/\*# sourceMappingURL=\S+ \*/)[ \t]*\n?\s*$"
+)
+
+
+def _strip_sourcemap(data: bytes) -> bytes:
+    """Remove a trailing sourceMappingURL comment from a vendored bundle (#860)."""
+    return _SOURCEMAP_RE.sub(b"", data)
+
+
 def _save_vendor(filename: str, data: bytes) -> None:
     """Write *data* to VENDOR_DIR/*filename* and update the manifest.
 
     Every vendored-file write goes through here so the manifest entry
-    is updated atomically with the bytes on disk. Records the diff for
-    end-of-run reporting (see _print_hash_diff).
+    is updated atomically with the bytes on disk, the sourcemap comment is
+    stripped (#860), and the diff is recorded for end-of-run reporting
+    (see _print_hash_diff).
     """
     assert _MANIFEST is not None, "_MANIFEST not initialised — call from main()"
+    data = _strip_sourcemap(data)
     new_hash = hash_bytes(data)
     old_hash = _MANIFEST.get(filename)
     (VENDOR_DIR / filename).write_bytes(data)
@@ -227,27 +242,16 @@ def update_lucide(*, check_only: bool) -> None:
     if check_only:
         return
 
-    # Look for the iife build in release assets
-    asset_url = None
-    for asset in release.get("assets", []):
-        name = asset["name"]
-        if "iife" in name and name.endswith(".js") and "min" in name:
-            asset_url = asset["browser_download_url"]
-            break
-
-    if not asset_url:
-        # Fallback: try lucide.iife.min.js directly
-        for asset in release.get("assets", []):
-            if asset["name"] in ("lucide.iife.min.js", "lucide.iife.js"):
-                asset_url = asset["browser_download_url"]
-                break
-
-    if asset_url:
-        data = _download(asset_url)
-        _save_vendor("lucide.min.js", data)
-        print("  downloaded lucide.min.js")
-    else:
-        print("  WARNING: could not find lucide iife asset in release")
+    # #1467: lucide ships the iife/umd global build (dist/umd/lucide.min.js) to npm,
+    # NOT as a GitHub release asset — it stopped attaching one around 0.5xx, which
+    # silently broke the old release-asset scan (the version resolves fine via the
+    # releases API above; only the download was lost). Fetch the build from the npm
+    # CDN by the resolved version. _save_vendor records the SHA-256 in the manifest
+    # so the drift gate + hash-diff reporting still provide provenance.
+    cdn_url = f"https://cdn.jsdelivr.net/npm/lucide@{latest}/dist/umd/lucide.min.js"
+    data = _download(cdn_url)
+    _save_vendor("lucide.min.js", data)
+    print(f"  downloaded lucide.min.js ({len(data)} bytes) from {cdn_url}")
 
 
 # ---------------------------------------------------------------------------
