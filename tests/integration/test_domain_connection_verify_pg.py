@@ -90,7 +90,10 @@ def test_domain_connection_verifies(store_url: str) -> None:
 
     refreshed = store.get_connection(conn.id)
     assert refreshed is not None
-    assert "bigcorp.com" in refreshed.verified_domains
+    # Explicit element-equality (not `str in list`) so CodeQL's
+    # py/incomplete-url-substring-sanitization rule doesn't false-positive:
+    # verified_domains is list[str] (exact membership), not a URL being substring-checked.
+    assert any(d == "bigcorp.com" for d in (refreshed.verified_domains or []))
 
 
 # ---------------------------------------------------------------------------

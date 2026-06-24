@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.86.6] - 2026-06-24
+## [0.86.7] - 2026-06-24
+
+### Fixed
+- **CodeQL FP cleared: `py/incomplete-url-substring-sanitization` (#206) in `test_domain_connection_verify_pg.py`.** The flagged `assert "bigcorp.com" in refreshed.verified_domains` is exact list membership (`verified_domains: list[str]`), not URL substring sanitization — CodeQL couldn't infer the collection type. Rewrote it as explicit element-equality (`any(d == "bigcorp.com" for d in ...)`) so the (high-severity) alert clears without a dismissal. Test-only; behaviour unchanged.
 
 ### Changed
 - **#1438 (final): inverted the last `core → api_kb` edge — the `core ↛ api_kb/mcp` contract is now zero-edge (no ignore-list).** `core.validation.surfaces` no longer imports `api_kb` for the `source=<pack>.<op>` typo check (#996). Instead it reads a registered provider (`register_pack_ops_provider`), and `dazzle.api_kb` registers its pack-ops provider into core at import time — the same import-time inversion `dazzle.mcp` uses for `core.docs_gen`. The validate entry point (`dazzle validate`) imports api_kb to activate the best-effort check; `core.validation.surfaces` now imports standalone with zero tooling-layer dependency. The contract's `ignore_imports` allow-list was removed (it's clean). Net: all six import contracts hold with no allow-listed edges on the core-tooling boundary.
