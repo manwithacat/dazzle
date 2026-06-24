@@ -41,6 +41,7 @@ from dazzle.render.fragment import (
     TargetSelector,
     Text,
 )
+from dazzle.render.fragment.format_cell import format_cell
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 
 
@@ -119,7 +120,12 @@ class FragmentSurfaceAdapter:
             )
             rows = tuple(
                 tuple(
-                    _format_cell(item.get(col["key"]), col.get("type", "text")) for col in columns
+                    _format_cell(
+                        item.get(col["key"]),
+                        col.get("type", "text"),
+                        col.get("currency_code", ""),
+                    )
+                    for col in columns
                 )
                 for item in items
             )
@@ -232,7 +238,13 @@ class FragmentSurfaceAdapter:
                 Row(
                     children=(
                         Heading(str(f.get("label", f.get("key", ""))), level=4),
-                        Text(_format_cell(f.get("value"), str(f.get("kind", "text")))),
+                        Text(
+                            _format_cell(
+                                f.get("value"),
+                                str(f.get("kind", "text")),
+                                str(f.get("currency_code", "")),
+                            )
+                        ),
                     ),
                     align="start",
                 )
@@ -641,15 +653,13 @@ def _pick_empty_state(ctx: dict[str, Any]) -> tuple[str, str]:
     return default_title, description
 
 
-def _format_cell(value: Any, kind: str) -> str:
-    """Stringify a cell value for the typed Table.
+def _format_cell(value: Any, kind: str, currency_code: str = "") -> str:
+    """Stringify a cell value for the typed Table via the pure formatter (#1470).
 
-    Plan 3 supports the most basic types only — text, str-coerced. Plan 6
-    or later adds badge/bool/date/currency/ref support. Until then, we
-    str-coerce everything and lose type-specific formatting; this is
-    acceptable because the Jinja path remains the default for any surface
-    that needs the richer formatting.
+    Delegates to ``render.fragment.format_cell``, which renders by column kind +
+    Python value type (bool→Yes/No, enum→Title Case, money(minor units)→currency,
+    float→2dp, datetime→friendly, FK→name) and HTML-escapes once. Replaces the
+    old str()-coerce stub — the "Jinja path" it deferred to was removed in #1042,
+    so the typed adapter is now the only path and must format properly.
     """
-    if value is None:
-        return ""
-    return str(value)
+    return format_cell(value, kind, currency_code=currency_code)
