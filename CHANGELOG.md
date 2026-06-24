@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.85.0] - 2026-06-24
+## [0.85.1] - 2026-06-24
+
+### Added
+- **#1464 (Phase A — reproducer) engine-baseline parity oracle now detects shared_schema composite-constraint divergence.** The `db baseline ≡ create_all` parity gate (`tests/integration/test_engine_baseline_parity_pg.py`) was blind to composite tenant-scoped constraints: it compared FKs by `column→table` (not structure) and omitted UNIQUE constraints entirely, both via the engine's own lossy snapshot. Added an independent `pg_catalog`-based introspection (`_pg_constraint_shapes`) that captures composite FK structure (`(constrained cols) → table(referred cols)`) and UNIQUE column-tuples, plus an inline `shared_schema_intra_fk` corpus fixture (Workspace tenant-root; `Project.owner → Member` intra-tenant ref). The fixture reproduces #1464 — the engine baseline emits a simple `(owner) → Member` FK + `UNIQUE(id)` + bogus `UNIQUE(tenant_id)` instead of the composite `(tenant_id, owner) → Member(tenant_id, id)` + `UNIQUE(tenant_id, id)` — and is marked `xfail(strict=True)` so CI stays green while the gap is tracked in-repo. The engine fix (Phase B) flips it to pass.
 
 Published minor (PyPI / Homebrew / GitHub Release) — cuts the patch series since
 v0.84.0 into a consumable release. Headline since the last published minor:

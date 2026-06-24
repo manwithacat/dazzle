@@ -99,11 +99,44 @@ entity Task "Task":
   done: bool=false
 """
 
+# shared_schema tenant-root app (#1464): a tenant-scoped entity (Project) refs
+# ANOTHER tenant-scoped entity (Member), so the schema generator emits a composite
+# intra-tenant FK `(tenant_id, owner) → Member(tenant_id, id)` + `UNIQUE(tenant_id, id)`
+# on every descendant, plus a multi-column index over a ref column (owner, name) —
+# the exact shapes the engine baseline must reproduce (was: simple FK + UNIQUE(tenant_id)
+# + double-emitted composite index). Modeled on fixtures/tenant_rls.
+_DSL_SHARED_SCHEMA = """\
+module app
+
+app sstenant "SS Tenant":
+  security_profile: standard
+
+tenancy:
+  mode: shared_schema
+  partition_key: tenant_id
+
+entity Workspace "Workspace":
+  archetype: tenant
+  id: uuid pk
+  name: str(100) required
+
+entity Member "Member":
+  id: uuid pk
+  email: str(120) required
+
+entity Project "Project":
+  id: uuid pk
+  name: str(100) required
+  owner: ref Member required
+  index owner, name
+"""
+
 # (label, dsl-text) — inline projects written to a scratch dir.
 _INLINE_CORPUS: list[tuple[str, str]] = [
     ("cyclic_self_ref", _DSL_CYCLIC),
     ("multi_fk", _DSL_MULTI_FK),
     ("plain", _DSL_PLAIN),
+    ("shared_schema_intra_fk", _DSL_SHARED_SCHEMA),
 ]
 
 # A handful of real example apps — diverse, real-world schema shapes.
@@ -274,6 +307,66 @@ def _normalize(snapshot: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _pg_constraint_shapes(plain_url: str) -> dict[str, dict[str, set]]:
+    """Independent, composite-AWARE introspection straight from pg_catalog (#1464).
+
+    The engine's own snapshot is lossy — FKs per-column (no referred columns) and
+    UNIQUE flattened to a column set — so comparing both sides through it hides the
+    composite divergence. This reads pg_constraint directly and keeps the full
+    structure: FKs as ``(constrained_cols, referred_table, referred_cols)`` and
+    UNIQUE constraints as column tuples. Framework tables are excluded.
+
+    Returns ``{table: {"fks": set[tuple], "uniques": set[tuple[str, ...]]}}``.
+    """
+    from dazzle.http.alembic.framework_tables import is_framework_table
+
+    query = """
+        SELECT
+          c.conrelid::regclass::text AS tbl,
+          c.contype,
+          c.confrelid::regclass::text AS reftbl,
+          (SELECT array_agg(a.attname ORDER BY k.ord)
+             FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+             JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) AS cols,
+          (SELECT array_agg(a.attname ORDER BY k.ord)
+             FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum, ord)
+             JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.attnum) AS refcols
+        FROM pg_constraint c
+        JOIN pg_namespace n ON n.oid = c.connamespace
+        WHERE n.nspname = 'public' AND c.contype IN ('f', 'u')
+    """
+
+    def _strip(name: str) -> str:
+        return name.replace('"', "")
+
+    out: dict[str, dict[str, set]] = {}
+    with psycopg.connect(plain_url) as conn:
+        for tbl, contype, reftbl, cols, refcols in conn.execute(query).fetchall():
+            table = _strip(tbl)
+            if is_framework_table(table):
+                continue
+            bucket = out.setdefault(table, {"fks": set(), "uniques": set()})
+            if contype == "f":
+                bucket["fks"].add((tuple(cols), _strip(reftbl), tuple(refcols)))
+            else:  # 'u' — unique constraint
+                bucket["uniques"].add(tuple(cols))
+    return out
+
+
+def _constraint_diff_report(ref: dict[str, Any], eng: dict[str, Any]) -> str:
+    lines: list[str] = []
+    for t in sorted(set(ref) | set(eng)):
+        r = ref.get(t, {"fks": set(), "uniques": set()})
+        e = eng.get(t, {"fks": set(), "uniques": set()})
+        if r["fks"] != e["fks"]:
+            lines.append(f"  {t} composite FKs: only-create_all={r['fks'] - e['fks']}")
+            lines.append(f"  {t} composite FKs: only-engine={e['fks'] - r['fks']}")
+        if r["uniques"] != e["uniques"]:
+            lines.append(f"  {t} UNIQUEs: only-create_all={r['uniques'] - e['uniques']}")
+            lines.append(f"  {t} UNIQUEs: only-engine={e['uniques'] - r['uniques']}")
+    return "\n".join(lines) or "  (no composite-constraint diff)"
+
+
 def _diff_report(ref: dict[str, Any], eng: dict[str, Any]) -> str:
     lines: list[str] = []
     ref_t, eng_t = set(ref), set(eng)
@@ -315,9 +408,19 @@ def _run_parity(setup: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> 
         reference = _normalize(_reference_via_create_all(ref_proj, ref_url, monkeypatch))
         engine = _normalize(_engine_baseline(eng_proj, eng_url, monkeypatch))
 
+        # #1464: composite-aware constraint parity (independent pg_catalog read) —
+        # catches composite tenant-scoped FKs `(tenant_id, fk) → Parent(tenant_id, id)`
+        # and `UNIQUE(tenant_id, id)` that the lossy per-column snapshot can't see.
+        ref_cons = _pg_constraint_shapes(ref_url)
+        eng_cons = _pg_constraint_shapes(eng_url)
+
         assert reference == engine, (
             "engine baseline schema diverges from create_all (project tables):\n"
             + _diff_report(reference, engine)
+        )
+        assert ref_cons == eng_cons, (
+            "engine baseline composite constraints diverge from create_all:\n"
+            + _constraint_diff_report(ref_cons, eng_cons)
         )
         # Guard against a vacuous pass: the corpus must produce at least one table.
         assert reference, "no project tables introspected — parity check was vacuous"
@@ -331,7 +434,32 @@ def _run_parity(setup: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> 
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("label,dsl", _INLINE_CORPUS, ids=[c[0] for c in _INLINE_CORPUS])
+_INLINE_PARAMS = [
+    pytest.param(
+        label,
+        dsl,
+        id=label,
+        marks=(
+            # #1464: the engine baseline does not yet reproduce shared_schema composite
+            # tenant-scoped FKs `(tenant_id, fk) → Parent(tenant_id, id)` or `UNIQUE(tenant_id,
+            # id)` (it emits simple FKs + a bogus `UNIQUE(tenant_id)`). This case reproduces the
+            # divergence; the engine fix (composite-aware snapshot/diff/render) flips it to pass,
+            # at which point the xfail is removed (strict=True surfaces an accidental early pass).
+            [
+                pytest.mark.xfail(
+                    reason="#1464 engine baseline lacks composite tenant-scoped FK/UNIQUE parity",
+                    strict=True,
+                )
+            ]
+            if label == "shared_schema_intra_fk"
+            else []
+        ),
+    )
+    for label, dsl in _INLINE_CORPUS
+]
+
+
+@pytest.mark.parametrize("label,dsl", _INLINE_PARAMS)
 def test_engine_baseline_matches_create_all_inline(
     label: str, dsl: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
