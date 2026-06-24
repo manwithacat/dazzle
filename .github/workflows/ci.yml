@@ -114,25 +114,20 @@ jobs:
         extras: dev,mobile,postgres,perf
         optional-pip: ""
 
-    - name: Run JWT security tests
-      run: |
-        pytest tests/unit/test_jwt_security.py -v --tb=short
+    # NOTE: the security *unit* tests (test_jwt_security, test_input_sanitization,
+    # tests/security/ ASVS, test_rbac_*) are NOT re-run here — the `python-tests`
+    # job already runs them via `pytest -m "not e2e"` (testpaths includes
+    # tests/ + tests/security/) across the full 3.12/3.13/3.14 matrix, in an
+    # extras superset of this job. Re-running them here was pure duplication
+    # (4× total). This job now owns only the gates that base CANNOT cover:
+    # the e2e-marked fuzzer below, the RBAC-matrix CLI gate, bandit SAST, and
+    # pip-audit. (Consolidation 2026-06-24.)
 
     - name: Run JWT fuzzing tests
+      # `@pytest.mark.e2e` → excluded from the base `-m "not e2e"` run, so this
+      # is the only place it executes. Kept here deliberately.
       run: |
         pytest tests/unit/test_jwt_fuzzing.py -v --tb=short
-
-    - name: Run ASVS security tests
-      run: |
-        pytest tests/security/ -v --tb=short
-
-    - name: Run input sanitization tests
-      run: |
-        pytest tests/unit/test_input_sanitization.py -v --tb=short
-
-    - name: Run RBAC enforcement tests
-      run: |
-        pytest tests/unit/test_rbac_enforcement.py tests/unit/test_rbac_audit.py tests/unit/test_rbac_audit_integration.py tests/unit/test_rbac_matrix.py tests/unit/test_rbac_verifier.py -v --tb=short
 
     - name: Validate Shapes RBAC matrix (security gate)
       run: |
@@ -153,9 +148,13 @@ jobs:
         "
 
     - name: Run bandit security scanner
+      # Path fix (2026-06-24): the back→http rename (ADR-0041) left this pointing
+      # at the nonexistent `src/dazzle_http/runtime/`, so bandit skipped the dir
+      # and exited 0 — a silent no-op SAST gate since 2026-06-20. The HTTP runtime
+      # lives at `src/dazzle/http/runtime/`.
       run: |
         uv pip install bandit[toml]
-        bandit -c pyproject.toml -r src/dazzle_http/runtime/ --severity-level medium
+        bandit -c pyproject.toml -r src/dazzle/http/runtime/ --severity-level medium
 
     - name: Run pip-audit (hard-fail on findings)
       # Hard-fails the build on any known vulnerability in the resolved

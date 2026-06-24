@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.14] - 2026-06-24
+
+### Changed
+- **CI `security-tests` job de-duplicated — it no longer re-runs security *unit* tests the base `python-tests` job already covers.** `python-tests` runs `pytest -m "not e2e"` across the full 3.12/3.13/3.14 matrix and `testpaths` includes `tests/` + `tests/security/`, in an extras superset of the security job — so `test_jwt_security`, `test_input_sanitization`, the `tests/security/` ASVS suite, and `test_rbac_*` were running 4× (3 base + 1 security) for no behavioral gain. The security job now owns only the gates base *cannot* cover: the `@pytest.mark.e2e` JWT fuzzer (excluded from the base run), the RBAC-matrix `PERMIT_UNPROTECTED` CLI gate, bandit SAST, and pip-audit. Security unit tests still gate on every push via `python-tests`, on more Pythons than before.
+
+### Fixed
+- **bandit SAST gate was a silent no-op since 2026-06-20 (ADR-0041 back→http rename).** The CI step scanned `src/dazzle_http/runtime/`, which doesn't exist — bandit skipped the missing directory and exited 0, so the SAST gate scanned zero files for ~4 days. Corrected to `src/dazzle/http/runtime/` (the HTTP runtime's real path); scans clean.
+
 ## [0.86.13] - 2026-06-24
 
 ### Changed
