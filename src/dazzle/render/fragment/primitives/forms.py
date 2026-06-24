@@ -164,8 +164,10 @@ class FormSection:
 class FormStack:
     """The `<form>` container — emits htmx-driven submission per the
     legacy `components/form.html` contract: `hx-post`/`hx-put` (chosen
-    by `method`), `hx-target="body"`, `hx-swap="innerHTML"`,
-    `hx-ext="json-enc"` so the controller receives a JSON payload.
+    by `method`), `hx-target="body"`, `hx-swap="innerHTML"`. The body
+    posts **form-urlencoded** (htmx's default; the `json-enc` extension
+    was dropped in the htmx 4 migration), so the controller reads fields
+    via `Form()`/`request.form()`, not JSON.
 
     `entity_name` + `mode` thread `data-dazzle-form="<entity>"` and
     `data-dazzle-form-mode="<create|edit>"` onto the `<form>` —

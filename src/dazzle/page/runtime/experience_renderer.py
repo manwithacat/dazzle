@@ -63,7 +63,8 @@ def _render_form_step_body(experience: Any, page_context: Any) -> str:
     """Inline-render the form-step body (Phase 4, v0.67.74).
 
     Replaces `experience/_step_form.html`. Composes:
-      - `<form>` element with HTMX wiring (hx-post/hx-put + json-enc)
+      - `<form>` element with HTMX wiring (hx-post/hx-put; body posts
+        form-urlencoded — json-enc was dropped in the htmx 4 migration)
       - empty `#form-errors` slot (htmx_error_response swaps content)
       - optional form_stepper (when sections are declared)
       - form fields rendered via `form_renderer.render_form_field`

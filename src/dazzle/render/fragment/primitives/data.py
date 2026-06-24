@@ -569,7 +569,8 @@ class QueueTransition:
     `to_state` is the target state (compared against the row's
     current `queue_status_field` value to decide whether to render
     the button). HTMX wiring is `hx-put="{endpoint}/{id}"` with
-    `hx-vals='{"<status_field>": "<to_state>"}'` + `json-enc` ext.
+    `hx-vals='{"<status_field>": "<to_state>"}'`, posted form-urlencoded
+    (json-enc was dropped in the htmx 4 migration).
     """
 
     label: str

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.15] - 2026-06-24
+
+### Fixed
+- **#1409 doc-debt: corrected docstrings that claimed forms still emit `hx-ext="json-enc"`.** The json-enc extension was dropped in the htmx 4 migration (v0.83.0) — forms post form-urlencoded and the server parses both — but several docstrings still described the old JSON-payload wiring, misleading anyone reading the form-render path. Fixed `FormStack` (`primitives/forms.py`), `_render_form_step_body` (`experience_renderer.py`), `QueueTransition` (`primitives/data.py`), and `_parse_request_body` (`write_handlers.py`). Docstring-only; no behavior change. (The #1409 near-term `update_vendors` hazard was already resolved by #1410; the GA bump remains blocked on upstream htmx 4.0.0 stable.)
+
 ## [0.86.14] - 2026-06-24
 
 ### Changed

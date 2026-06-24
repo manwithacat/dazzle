@@ -52,9 +52,10 @@ from dazzle.http.runtime.scope_filters import _enforce_create_scope, _enforce_up
 async def _parse_request_body(request: Any) -> dict[str, Any]:
     """Parse request body as JSON or form data.
 
-    HTMX forms send JSON when the json-enc extension is loaded, but
-    fall back to form-urlencoded otherwise.  Accept both so the API
-    works regardless of client encoding.
+    Dazzle's own htmx forms post form-urlencoded (the json-enc
+    extension was dropped in the htmx 4 migration); the JSON branch
+    remains for API clients that send `application/json`. Accept both
+    so the endpoint works regardless of client encoding.
 
     Empty string values are converted to None so that optional fields
     (e.g. ref/UUID fields) pass Pydantic validation.
