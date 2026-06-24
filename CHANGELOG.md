@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.21] - 2026-06-25
+
+### Fixed
+- **#1471: region tables rendered `ref` columns as the raw UUID instead of the target's display name.** Workspace region tables (e.g. `display: list` with auto/`repr_fields` columns) render through the typed `fragment_adapter._build_list`, which read the bare column key — but the FK display fast-path injects the resolved name under `{key}_display` (via `_inject_display_names`). The legacy `htmx_render` table path (used by surfaces) already preferred `{key}_display`; the adapter didn't, so regions leaked UUIDs into dashboards while surfaces resolved the same ref correctly. Added `_cell_value`, which prefers `{key}_display` for `ref` columns (falling back to the raw key when no display name is present), mirroring `htmx_render`. (One-hop fix; the two-hop case — a `display_field` that is itself a `ref` — is part of the #1470 presentation roadmap.)
+
 ## [0.86.20] - 2026-06-25
 
 ### Fixed

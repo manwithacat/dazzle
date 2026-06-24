@@ -121,7 +121,7 @@ class FragmentSurfaceAdapter:
             rows = tuple(
                 tuple(
                     _format_cell(
-                        item.get(col["key"]),
+                        _cell_value(item, col),
                         col.get("type", "text"),
                         col.get("currency_code", ""),
                         col.get("format_kind", ""),
@@ -655,6 +655,23 @@ def _pick_empty_state(ctx: dict[str, Any]) -> tuple[str, str]:
     generic_message = str(ctx.get("empty_message", "") or "").strip()
     description = typed_value or generic_message or "Items will appear here when they are added."
     return default_title, description
+
+
+def _cell_value(item: dict[str, Any], col: dict[str, Any]) -> Any:
+    """Pick a column's cell value, preferring a resolved ``{key}_display`` for
+    ``ref`` columns (#1471).
+
+    The fetch injects ``{fk}_display`` via ``_inject_display_names`` (FK display
+    fast-path), so a ref column should render the referenced row's display field,
+    not the raw UUID — mirroring the legacy ``htmx_render`` table path. Falls back
+    to the raw key when no display name is present (e.g. the ref wasn't included).
+    """
+    key = col["key"]
+    if col.get("type") == "ref":
+        display = item.get(f"{key}_display")
+        if display not in (None, ""):
+            return display
+    return item.get(key)
 
 
 def _format_cell(
