@@ -461,8 +461,10 @@ class SurfaceParserMixin:
 
         # Initial run of ``key=value`` options before any visible/when/help.
         options = self._parse_field_key_value_options()
-        # Then any mix of trailing visible:/when:/help: + more key=value pairs.
-        field_visible, when_expr, help_text = self._parse_field_trailing_modifiers(options)
+        # Then any mix of trailing visible:/when:/help:/format: + more key=value pairs.
+        field_visible, when_expr, help_text, field_format = self._parse_field_trailing_modifiers(
+            options
+        )
 
         return ir.SurfaceElement(
             field_name=field_name,
@@ -471,6 +473,7 @@ class SurfaceParserMixin:
             when_expr=when_expr,
             visible=field_visible,
             help=help_text,
+            format=field_format,
         )
 
     def _parse_field_key_value_options(self) -> dict[str, Any]:
@@ -498,7 +501,7 @@ class SurfaceParserMixin:
 
     def _parse_field_trailing_modifiers(
         self, options: dict[str, Any]
-    ) -> tuple["ir.ConditionExpr | None", Any, str | None]:
+    ) -> tuple["ir.ConditionExpr | None", Any, str | None, "ir.FieldFormatSpec | None"]:
         """Consume any mix of trailing ``visible:`` / ``when:`` / ``help:``
         / ``key=value`` modifiers in arbitrary order.
 
@@ -510,6 +513,7 @@ class SurfaceParserMixin:
         field_visible: ir.ConditionExpr | None = None
         when_expr: Any = None
         help_text: str | None = None
+        field_format: ir.FieldFormatSpec | None = None
 
         while True:
             if self.match(TokenType.VISIBLE):
@@ -526,6 +530,12 @@ class SurfaceParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 help_text = self.expect(TokenType.STRING).value
+            elif self.match(TokenType.FORMAT):
+                # #1470 Phase 2: format: kind[:arg] — explicit cell-format override
+                # (e.g. `format: currency:GBP`, `format: percent:1`, `format: relative`).
+                self.advance()
+                self.expect(TokenType.COLON)
+                field_format = self._parse_format_spec()
             elif self.match(TokenType.SOURCE) or self.match(TokenType.IDENTIFIER):
                 # Trailing key=value option (e.g. widget=picker after visible:).
                 peek = self.peek_token()
@@ -538,7 +548,20 @@ class SurfaceParserMixin:
             else:
                 break
 
-        return field_visible, when_expr, help_text
+        return field_visible, when_expr, help_text, field_format
+
+    def _parse_format_spec(self) -> "ir.FieldFormatSpec":
+        """Parse a ``format:`` value: ``kind`` or ``kind:arg`` (#1470 Phase 2).
+
+        ``currency:GBP`` → kind=currency arg=GBP; ``percent`` → kind=percent
+        arg=None; ``percent:1`` → kind=percent arg="1".
+        """
+        kind = self.expect_identifier_or_keyword().value
+        arg: str | None = None
+        if self.match(TokenType.COLON):
+            self.advance()  # consume the arg-separating ':'
+            arg = str(self.advance().value)
+        return ir.FieldFormatSpec(kind=kind, arg=arg)
 
     def parse_surface_action(self) -> ir.SurfaceAction:
         """Parse surface action."""
