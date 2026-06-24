@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.18] - 2026-06-24
+
+### Fixed
+- **#1470 (format layer, Phase 1): grid cells now render their declared type instead of raw values.** The cell stringifier `_format_cell` (`http/runtime/renderers/fragment_adapter.py`) was a stub that `str()`-coerced everything, leaking FK UUIDs, unrounded floats, raw `True`/`False`, and SCREAMING_ENUM tokens into every list/table grid. It now delegates to a new pure formatter `dazzle.render.fragment.format_cell.format_cell`, which renders by column kind + value type: FK→display name, money (minor units)→currency (using the column's `currency_code`), `float`/`Decimal`→2dp, `bool`→Yes/No, `enum`→Title Case, `datetime`→friendly, `None`/`""`→blank. No DSL change — every grid benefits automatically. (The explicit `format:` field override is Phase 2.)
+
+### Agent Guidance
+- **`format_cell` returns RAW (unescaped) strings; the renderer escapes at emit time.** `Table` cells (`_render_tables`) and `Text` (`_emit_text`) both call `ctx.escape(...)`, so formatters and other Fragment-content producers must NOT pre-escape — doing so double-encodes (`&` → `&amp;amp;`). When testing formatters that feed the renderer, assert single-escape through `FragmentRenderer().render(...)`, not on the formatter's return value alone.
+
 ## [0.86.17] - 2026-06-24
 
 ### Fixed
