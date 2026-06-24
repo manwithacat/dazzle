@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.19] - 2026-06-24
+
+### Added
+- **#1470 (format layer, Phase 2): inline `format:` field override on surface-list fields.** A new trailing modifier — `field amount "Amount" format: currency:GBP` — mirroring the existing `visible:`/`when:`/`help:` modifiers, lets authors override the inferred cell rendering when type can't decide. v1 vocabulary: `currency[:CODE]`, `percent[:dp]`, `round:dp`, `date:short|long|iso`, `datetime:short|long|relative`, `relative`, `title_case`, `upper`, `lower`, `yes_no`, `display_name`, `raw` (deliberate raw value, e.g. a UUID). Override wins over inference. Pipeline: parser (`FieldFormatSpec` on `SurfaceElement`) → validation (`E_FORMAT_UNKNOWN_KIND` / `E_FORMAT_TYPE_MISMATCH` at `dazzle validate`) → `build_surface_columns` threads `format_kind`/`format_arg` into the column dict → `_format_cell` → the pure `format_cell(override=...)`. Demonstrated on `examples/invoice_ops` (`field amount … format: currency:GBP`).
+
+### Agent Guidance
+- **Cell formatting:** unannotated fields render by inferred type (Phase 1, shipped v0.86.18). To override, add `format: kind[:arg]` to a surface-list `field` line. Note the **currency unit convention**: the money *type* stores minor units (inference divides by 100); the explicit `format: currency` override on a `decimal`/`float` field formats the value as-is (major units). `currency`/`percent`/`round` require a numeric field, `display_name` an FK, `date`/`datetime`/`relative` a temporal field — enforced at `dazzle validate` (`E_FORMAT_TYPE_MISMATCH`). The `format:` value is parsed as a trailing modifier in `_parse_field_trailing_modifiers`.
+
 ## [0.86.18] - 2026-06-24
 
 ### Fixed
