@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.86.4] - 2026-06-24
+## [0.86.5] - 2026-06-24
+
+### Added
+- **#1438 (follow-on) new layering contract: `core` stays below the tooling layers (`api_kb`, `mcp`).** Surfaced while hardening the http contracts: `core.validation.surfaces` reaches *up* into `dazzle.api_kb` (which pulls `dazzle.mcp`) — an inversion (mcp imports core 144×; the correct direction). Added a `forbidden` import-linter contract (indirect-enforced) locking the boundary while it's nearly clean, so no *new* core → api_kb/mcp edges can appear. `core ↛ mcp` already holds absolutely (`docs_gen` inverts via a registry). The lone `core → api_kb` edge — `surfaces` lazily importing `api_kb.list_packs` for best-effort `source=` typo detection (#996) — is ignore-listed as tracked debt (proper fix: inject the pack-ops map from the validate entry point, mirroring the registry pattern). 6 contracts now, all kept.
 
 ### Changed
 - **#1438 architectural unlock: three layer-purity import contracts now enforce INDIRECT violations (`allow_indirect_imports` flipped `true → false`).** `core ↛ http/page`, `page ↛ http`, and `render ↛ http/page` previously checked only *direct* imports — a lower-layer module could reach `http` transitively undetected. They now reject any path. This was gated by exactly two spurious edges, both fixed: (1) `core.discovery.engine` did `import dazzle` (the package root) just to read `__file__` — pulling the root's lazy `register_lifespan_hook → http` edge into the graph; it now derives its path from its own `__file__`. (2) `mcp/knowledge_graph/seed.py` had a broken `from dazzle.core.ir.app_spec import AppSpec` typo (the module is `core.ir.appspec`) which grimp couldn't resolve and attributed to the `dazzle` root; corrected to the `core.ir` facade (a latent bug — the import is `TYPE_CHECKING`-only so it never raised). The two SQLite/`core.ir`-facade contracts stay `allow_indirect` by design (their indirect reaches are legitimate). Net: the layering contracts are materially stronger, and a class of "lower layer sneaks up to http via a transitive hop" regressions is now caught in CI.
