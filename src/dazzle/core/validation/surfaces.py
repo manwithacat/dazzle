@@ -29,6 +29,65 @@ def register_pack_ops_provider(provider: Callable[[], dict[str, set[str]]]) -> N
     _PACK_OPS_REGISTRY["provider"] = provider
 
 
+# #1470 Phase 2: explicit field `format:` override validation. Inference handles
+# unannotated fields; an explicit kind must be known and type-compatible.
+_FORMAT_KINDS = frozenset(
+    {
+        "currency",
+        "percent",
+        "round",
+        "date",
+        "datetime",
+        "relative",
+        "title_case",
+        "upper",
+        "lower",
+        "yes_no",
+        "display_name",
+        "raw",
+    }
+)
+_FORMAT_NUMERIC = frozenset(
+    {
+        ir.FieldTypeKind.INT,
+        ir.FieldTypeKind.DECIMAL,
+        ir.FieldTypeKind.FLOAT,
+        ir.FieldTypeKind.MONEY,
+    }
+)
+_FORMAT_TEMPORAL = frozenset({ir.FieldTypeKind.DATE, ir.FieldTypeKind.DATETIME})
+_FORMAT_REF = frozenset({ir.FieldTypeKind.REF})
+# Kinds with a type requirement; those absent (title_case/upper/lower/yes_no/raw)
+# apply to any field type.
+_FORMAT_TYPE_REQ: dict[str, frozenset[ir.FieldTypeKind]] = {
+    "currency": _FORMAT_NUMERIC,
+    "percent": _FORMAT_NUMERIC,
+    "round": _FORMAT_NUMERIC,
+    "date": _FORMAT_TEMPORAL,
+    "datetime": _FORMAT_TEMPORAL,
+    "relative": _FORMAT_TEMPORAL,
+    "display_name": _FORMAT_REF,
+}
+
+
+def _format_kind_error(kind: str, field_type_kind: "ir.FieldTypeKind") -> str | None:
+    """Return an ``E_FORMAT_*`` message if the format kind is unknown or
+    type-incompatible; ``None`` when valid for the field type."""
+    if kind not in _FORMAT_KINDS:
+        return (
+            f"E_FORMAT_UNKNOWN_KIND: unknown format kind '{kind}'; "
+            f"expected one of {sorted(_FORMAT_KINDS)}"
+        )
+    required = _FORMAT_TYPE_REQ.get(kind)
+    if required is not None and field_type_kind not in required:
+        return (
+            f"E_FORMAT_TYPE_MISMATCH: format '{kind}' requires a "
+            f"{sorted(t.value for t in required)} field, but the field is "
+            f"'{field_type_kind.value}'"
+        )
+    return None
+
+
 def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all surfaces for semantic correctness.
@@ -77,12 +136,22 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 # Check that fields in surface sections match entity fields
                 for section in surface.sections:
                     for element in section.elements:
-                        if not entity.get_field(element.field_name):
+                        fld = entity.get_field(element.field_name)
+                        if not fld:
                             errors.append(
                                 f"Surface '{surface.name}' section '{section.name}' "
                                 f"references non-existent field '{element.field_name}' "
                                 f"from entity '{entity.name}'"
                             )
+                            continue
+                        # #1470 Phase 2: validate an explicit `format:` override.
+                        if element.format is not None and fld.type is not None:
+                            fmt_err = _format_kind_error(element.format.kind, fld.type.kind)
+                            if fmt_err:
+                                errors.append(
+                                    f"Surface '{surface.name}' field "
+                                    f"'{element.field_name}': {fmt_err}"
+                                )
 
         # Validate field source= references resolve to a known API pack
         # AND a known operation on that pack. #996 — typos and dropped
