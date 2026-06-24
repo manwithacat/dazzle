@@ -28,7 +28,7 @@ Issue all applicable commands as **separate Bash calls in a single message** so 
 
 | Check | Run when | Command |
 |-------|----------|---------|
-| Type | always | `mypy src/dazzle --ignore-missing-imports --exclude 'eject'` |
+| Type | always | `mypy src/dazzle` |
 | Unit tests | `py_changed` | `pytest tests/unit -x -q --tb=short -m "not slow"` |
 | DSL validation | `dsl_changed` | `dazzle validate` |
 | Parser corpus | `parser_changed` | `pytest tests/parser_corpus/ -x -q --tb=short` |

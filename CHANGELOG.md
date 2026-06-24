@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.12] - 2026-06-24
+
+### Changed
+- **`/ship` pre-flight drift-gate set no longer silently drifts from CI.** The hand-curated gate list matched only two globs (`test_*_drift.py`, `test_no_*.py`) plus an explicit tail, so a structural gate whose name fit neither — e.g. `test_deferred_imports_ratchet_1438.py` — slipped the local pre-flight and only failed in CI (the #1466 red-badge round-trip, v0.86.10→.11). Now the globs are `test_*drift*.py` (catches `_drift_<issue>` suffixes too), `test_no_*.py`, and a new `test_*ratchet*.py` (auto-registers complexity / swallow / deferred-imports ratchets + any future one). The remaining non-glob gates (`*_gate`/`*_contract`/`*_cap`) that were missing — `test_testing_class_method_cap_1446`, `test_nonowner_boot_gate_1462`, `test_membership_admission_gate`, `test_route_override_response_contract`, `test_parse_component_contract`, `test_widget_contract` — are now pinned explicitly (all verified fast + DB-free: 345 gate tests, ~1 min).
+- **mypy command aligned to the bare `mypy src/dazzle` CI actually runs, across `/ship`, `/check`, and `/cimonitor`.** The local playbooks carried `--ignore-missing-imports --exclude 'eject'`, both **no-ops** (`pyproject.toml [tool.mypy]` already sets `ignore_missing_imports = true`; no `eject` path exists under `src/dazzle` — proven equivalent: identical "no issues found in 1352 source files" with and without). Dropping them makes the "must stay identical across /ship, /check, CI" claim literally self-enforcing. Documented that the real local↔CI mypy divergence is the **installed extras superset**, not the command string.
+
+### Agent Guidance
+- **Adding a fast structural gate:** name it to match a `/ship` glob (`*drift*`, `test_no_*`, or `*ratchet*`) and it auto-registers in the pre-flight set — no edit to `ship.md` needed. Gates that can't follow the convention (and are fast + DB-free) go in the explicit `$(ls ...)` tail; anything needing Postgres/Playwright belongs only in CI's full suite, never the pre-flight.
+
 ## [0.86.10] - 2026-06-24
 
 ### Fixed

@@ -59,7 +59,7 @@ For each failed job:
 
 1. Fetch logs: `gh run view <run-id> --log-failed | tail -100`
 2. Categorize the failure:
-   - **Type error** (mypy) → fix locally with `mypy src/dazzle --ignore-missing-imports --exclude 'eject'` (matches /ship, /check, and CI)
+   - **Type error** (mypy) → fix locally with `mypy src/dazzle` (matches /ship, /check, and CI)
    - **Lint failure** (ruff) → fix locally with `ruff check src/ tests/ --fix && ruff format src/ tests/`
    - **Test failure** → identify the test, run locally with `pytest <test_file> -x -v`
    - **Security failure** (bandit) → check the flagged code
