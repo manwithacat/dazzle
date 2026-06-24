@@ -438,6 +438,11 @@ def validate_command(
                 )
             raise typer.Exit(code=1)
 
+        # #1438: importing api_kb registers its pack-ops provider into core's
+        # validation registry so the `source=<pack>.<op>` typo check (#996) is active
+        # — core no longer imports api_kb itself (core ↛ api_kb/mcp contract).
+        import dazzle.api_kb  # noqa: F401
+
         appspec = load_project_appspec(root)
         errors, warnings, relevance = lint_appspec(appspec)
 

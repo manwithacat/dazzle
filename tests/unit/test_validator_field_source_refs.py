@@ -15,6 +15,12 @@ from __future__ import annotations
 
 from typing import Any
 
+import dazzle.api_kb  # noqa: F401 — #1438: importing api_kb registers the pack-ops
+
+# provider into core's validation registry (core ↛ api_kb), which the source= typo
+# check reads. The check is best-effort and self-disables without a provider, so this
+# import is what makes the gate active in this direct-call test (was: a lazy
+# `from dazzle.api_kb import list_packs` inside validate_surfaces).
 from dazzle.core import ir
 from dazzle.core.validator import validate_surfaces
 

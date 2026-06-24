@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.6] - 2026-06-24
+
+### Changed
+- **#1438 (final): inverted the last `core → api_kb` edge — the `core ↛ api_kb/mcp` contract is now zero-edge (no ignore-list).** `core.validation.surfaces` no longer imports `api_kb` for the `source=<pack>.<op>` typo check (#996). Instead it reads a registered provider (`register_pack_ops_provider`), and `dazzle.api_kb` registers its pack-ops provider into core at import time — the same import-time inversion `dazzle.mcp` uses for `core.docs_gen`. The validate entry point (`dazzle validate`) imports api_kb to activate the best-effort check; `core.validation.surfaces` now imports standalone with zero tooling-layer dependency. The contract's `ignore_imports` allow-list was removed (it's clean). Net: all six import contracts hold with no allow-listed edges on the core-tooling boundary.
+
+### Agent Guidance
+- **Core ↔ tooling inversion pattern.** When `core` needs data owned by a higher layer (`api_kb`, `mcp`), do not import up — add a provider registry in core (`register_*_provider`) and have the tooling layer register at its `__init__` import time (see `core.validation.surfaces` ↔ `api_kb`, and `core.docs_gen` ↔ `mcp`). The consuming entry point imports the tooling layer to activate it; the check stays best-effort if unregistered.
+
 ## [0.86.5] - 2026-06-24
 
 ### Added

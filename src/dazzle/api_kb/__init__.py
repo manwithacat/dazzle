@@ -23,6 +23,11 @@ Usage:
     stripe_packs = search_packs(provider="Stripe")
 """
 
+# #1438: register the pack-ops provider into core's validation registry (below) so
+# core never imports this tooling layer (core ↛ api_kb/mcp). Imported at top to keep
+# the module import-order clean; the registration call runs at module end.
+from dazzle.core.validation.surfaces import register_pack_ops_provider as _register
+
 from .loader import (
     ApiPack,
     DockerSpec,
@@ -46,3 +51,13 @@ __all__ = [
     "list_packs",
     "search_packs",
 ]
+
+
+def _pack_ops_provider() -> dict[str, set[str]]:
+    """The ``{pack_name: {operation_names}}`` map for core's #996 source= typo check."""
+    return {p.name: {getattr(op, "name", str(op)) for op in p.operations} for p in list_packs()}
+
+
+# Activate the registration (the import-time inversion: api_kb → core, never the
+# reverse). Mirrors how dazzle.mcp registers into core.docs_gen.
+_register(_pack_ops_provider)
