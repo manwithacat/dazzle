@@ -38,6 +38,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from dazzle.core import ir
+from dazzle.core.ir.predicates import BoolComposite, PathCheck
 from dazzle.http.runtime.query_builder import quote_identifier
 
 logger = logging.getLogger(__name__)
@@ -239,7 +240,6 @@ def _collect_pathcheck_parent_locks(
     # coupled to the CRUD scope machinery (it reuses `_enforce_create_scope`),
     # so reusing the compiler's path decomposition + the eval's payload-key
     # resolver keeps the lock target identical to what the probe binds.
-    from dazzle.core.ir.predicates import BoolComposite, PathCheck
     from dazzle.http.runtime.predicate_compiler import _path_check_subquery
     from dazzle.http.runtime.scope_create_eval import _payload_value
     from dazzle.http.runtime.tenant_isolation import get_current_tenant_schema

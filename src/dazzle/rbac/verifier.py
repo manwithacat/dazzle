@@ -16,6 +16,8 @@ from __future__ import annotations  # required: forward reference
 import logging
 from pathlib import Path
 
+from dazzle.core.appspec_loader import load_project_appspec
+
 # ---------------------------------------------------------------------------
 # Re-exports from verification_harness (private helpers — also re-exported
 # so callers that reach into private symbols via `from dazzle.rbac.verifier
@@ -114,7 +116,6 @@ async def verify(
     import os
     from datetime import UTC, datetime
 
-    from dazzle.core.appspec_loader import load_project_appspec
     from dazzle.rbac.audit import NullAuditSink, set_audit_sink
     from dazzle.rbac.matrix import generate_access_matrix
 

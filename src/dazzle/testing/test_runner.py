@@ -29,6 +29,7 @@ from typing import Any
 
 import httpx
 
+from dazzle.core.http_client import retrying_request
 from dazzle.testing.cleanup_manager import CleanupManager
 from dazzle.testing.entity_client import EntityClient
 
@@ -194,8 +195,6 @@ class DazzleClient:
                 headers = dict(kwargs.get("headers") or {})
                 headers.setdefault("X-CSRF-Token", csrf_token)
                 kwargs["headers"] = headers
-
-        from dazzle.core.http_client import retrying_request
 
         return retrying_request(
             self.client,

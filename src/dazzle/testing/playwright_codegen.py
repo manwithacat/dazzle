@@ -10,6 +10,7 @@ from __future__ import annotations  # required: forward reference
 import re
 from pathlib import Path
 
+from dazzle.core import build_appspec, parse_modules
 from dazzle.core.ir import (
     E2ETestSpec,
     FixtureSpec,
@@ -19,6 +20,7 @@ from dazzle.core.ir import (
     FlowStep,
     FlowStepKind,
 )
+from dazzle.core.manifest import load_manifest
 
 # =============================================================================
 # Selector Mapping
@@ -731,8 +733,6 @@ def generate_tests_for_app(
     """
     from glob import glob
 
-    from dazzle.core import build_appspec, parse_modules
-    from dazzle.core.manifest import load_manifest
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
     app_path = Path(app_path)

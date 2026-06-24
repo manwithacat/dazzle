@@ -15,6 +15,8 @@ import logging
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
+from dazzle.core.strings import to_api_plural
+
 if TYPE_CHECKING:
     from dazzle.testing.test_runner import DazzleClient
 
@@ -33,7 +35,6 @@ class EntityClient:
         Uses to_api_plural for proper English pluralization:
         Contact -> /contacts, Company -> /companies, Address -> /addresses
         """
-        from dazzle.core.strings import to_api_plural
 
         return f"/{to_api_plural(entity_name)}"
 

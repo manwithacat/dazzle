@@ -15,6 +15,8 @@ from typing import Any
 
 from markupsafe import Markup
 
+from dazzle.core.ir.money import get_currency_scale
+
 
 def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> str:
     """Format a number as currency.
@@ -32,8 +34,6 @@ def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> s
         amount = float(value)
     except (TypeError, ValueError):
         return str(value)
-
-    from dazzle.core.ir.money import get_currency_scale
 
     scale = get_currency_scale(currency)
     if minor:

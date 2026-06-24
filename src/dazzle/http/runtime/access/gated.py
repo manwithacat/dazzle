@@ -12,6 +12,8 @@ closures. See docs/superpowers/specs/2026-06-20-page-rest-inprocess-core-design.
 from dataclasses import dataclass
 from typing import Any
 
+from dazzle.core.access import AccessDecision, AccessOperationKind
+
 
 class AccessForbidden(Exception):
     """Permit (Cedar) denied the operation."""
@@ -77,7 +79,6 @@ async def gated_read(
     Audits only when ``audit_logger`` and ``request`` are supplied (REST passes them;
     the page adapter passes neither, preserving today's no-audit-on-page-read behavior).
     """
-    from dazzle.core.access import AccessDecision, AccessOperationKind
     from dazzle.http.runtime.audit_log import measure_evaluation_time
     from dazzle.http.runtime.audit_wrap import (
         _SCOPE_DENY_EFFECT,
@@ -168,7 +169,6 @@ def _apply_list_permit_gate(
     ruleset deliberately skips this gate."""
     if not (cedar and is_authenticated and auth_context):
         return
-    from dazzle.core.access import AccessOperationKind
     from dazzle.http.runtime.audit_wrap import _build_access_context
     from dazzle.http.runtime.condition_evaluator import _is_field_condition
 

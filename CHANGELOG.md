@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.86.2] - 2026-06-24
+## [0.86.3] - 2026-06-24
+
+### Changed
+- **#1438 deferred-import burn-down (wave 2): hoisted 35 more function-level `dazzle.core.*` imports to module top across 29 non-core files** (agent, api_kb, cli/*, conformance, db, http/runtime/*, mcp handlers, rbac/verifier, render, testing). Same safety basis as wave 1: `dazzle.core` is the import-linter-enforced bottom layer (can't cycle) and none of the hoisted names are source-patched in tests (verified by scanning every `module.name` in the batch + the full suite). Three CLI files (`cli/__init__`, `cli/auth`, `cli/e2e/__init__`) keep their bottom-of-file `# noqa: E402` circular-avoidance imports — only the core imports moved to the real top. Ratchet baseline lowered 1679 → 1644 (cumulative this minor: 1699 → 1644).
 
 ### Changed
 - **#1438 deferred-import burn-down (wave): hoisted 20 function-level `dazzle.core.*` imports to module top across 8 non-core files** (`process/worker`, `services/agent_commands/renderer`, `testing/fuzzer/oracle`, `page/converters/template_compiler`, `http/runtime/integration_manager`, `http/runtime/subsystems/channels`, `fitness/investigator/tools_read`, `cli/ux_interactions`). `dazzle.core` is the bottom layer (import-linter-enforced `core ↛ http/page`), so these can't cause an import cycle, and none of the hoisted names are source-patched in tests (the #1438 test-coupling trap) — verified by the full suite. Dead `try/except ImportError` guards around always-present core modules were dropped. Ratchet baseline lowered 1699 → 1679 (`deferred_imports_baseline.json`).

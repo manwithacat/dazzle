@@ -15,7 +15,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from dazzle.core.manifest import resolve_api_url
+from dazzle.core.manifest import load_manifest, resolve_api_url, resolve_database_url
 
 auth_app = typer.Typer(
     help="Manage authentication users and sessions",
@@ -692,7 +692,6 @@ def migrate(
 
     from dazzle.cli.env import get_active_env
     from dazzle.cli.utils import load_project_appspec
-    from dazzle.core.manifest import load_manifest, resolve_database_url
     from dazzle.db.auth_migrate import MigrateError, migrate_to_memberships
 
     project_root = Path.cwd().resolve()

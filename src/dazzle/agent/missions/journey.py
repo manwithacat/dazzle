@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.agent.journey_models import JourneyStep, NavigationTarget, Verdict
 from dazzle.agent.models import Step
+from dazzle.core.strings import entity_slug
 
 if TYPE_CHECKING:
     from dazzle.agent.journey_writer import SessionWriter
@@ -29,7 +30,6 @@ def _entity_url_slug(entity_name: str) -> str:
     import re
 
     slug = re.sub(r"([a-z])([A-Z])", r"\1-\2", entity_name)
-    from dazzle.core.strings import entity_slug
 
     return entity_slug(slug)
 

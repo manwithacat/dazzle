@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.dsl_parser_impl.process import format_duration
+
 logger = logging.getLogger(__name__)
 
 
@@ -283,7 +285,6 @@ class ApiPack:
 
         Returns None if no cacheable models exist.
         """
-        from dazzle.core.dsl_parser_impl.process import format_duration
 
         service_name = self.name.replace("_", "")
         cacheable: list[tuple[ForeignModelSpec, list[OperationSpec]]] = []

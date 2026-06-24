@@ -23,6 +23,7 @@ is the orchestrator that wires them in the right order.
 import logging
 from typing import Any
 
+from dazzle.core.ir import BucketRef as _BucketRef
 from dazzle.http.runtime.workspace_aggregation import (
     _compute_aggregate_metrics,
     _compute_box_plot_stats,
@@ -74,7 +75,6 @@ async def compute_region_render_inputs(
     that don't need a given shape — phase 6's adapter dispatch
     handles the conditional reads.
     """
-    from dazzle.core.ir import BucketRef as _BucketRef
 
     items = fetched.items
     total = fetched.total

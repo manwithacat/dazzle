@@ -13,6 +13,7 @@ from pathlib import Path
 import typer
 
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.ir import SubprocessorSpec as _SP
 
 analytics_app = typer.Typer(
     help="Analytics, consent, and privacy tooling (v0.61.0).",
@@ -169,7 +170,6 @@ def _match_pii_hint(field_name: str) -> str | None:
 def _scan_subprocessors(spec) -> list[dict[str, object]]:  # type: ignore[no-untyped-def]
     """Report subprocessor summary + collisions with framework defaults."""
     from dazzle.compliance.analytics import FRAMEWORK_SUBPROCESSORS
-    from dazzle.core.ir import SubprocessorSpec as _SP
 
     app_declared: list[_SP] = list(getattr(spec, "subprocessors", []) or [])
     app_by_name = {sp.name: sp for sp in app_declared}

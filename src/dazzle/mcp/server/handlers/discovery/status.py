@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.ir.stories import StoryStatus
 from dazzle.core.paths import project_discovery_dir, project_kg_db
 
 from ..common import load_project_appspec, wrap_handler_errors
@@ -81,7 +82,6 @@ def discovery_verify_all_stories_impl(
     Raises:
         ValueError: When ``verify_story_handler`` returns an error payload.
     """
-    from dazzle.core.ir.stories import StoryStatus
 
     from ..dsl_test import verify_story_handler
 

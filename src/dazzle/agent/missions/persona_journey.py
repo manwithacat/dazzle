@@ -31,6 +31,8 @@ from ..compiler import infer_crud_action
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
+from dazzle.core.ir.identity import spec_display_id
+
 from ..transcript import Observation
 from ._shared import get_surface_entity, is_step_kind
 
@@ -1289,6 +1291,5 @@ def run_headless_discovery(
 
 def _persona_id(persona: Any) -> str:
     """Extract persona ID, handling both .id and .name attributes."""
-    from dazzle.core.ir.identity import spec_display_id
 
     return spec_display_id(persona, prefer="id")

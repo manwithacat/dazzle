@@ -9,6 +9,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from dazzle.core.ir.process import ProcessTriggerKind, StepKind
+from dazzle.core.process_persistence import load_processes as load_persisted_processes
+
 from ..common import extract_progress, wrap_handler_errors
 from . import _helpers
 
@@ -134,7 +137,6 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
     # Merge with persisted processes
-    from dazzle.core.process_persistence import load_processes as load_persisted_processes
 
     persisted = load_persisted_processes(project_root)
     dsl_names = {p.name for p in processes}
@@ -316,7 +318,6 @@ def _infer_structural_satisfaction(
     impl_procs: list[ProcessSpec],
 ) -> bool:
     """Check if outcome is structurally satisfied by CRUD bindings or triggers."""
-    from dazzle.core.ir.process import ProcessTriggerKind, StepKind
 
     for proc in impl_procs:
         # CRUD service binding inference (check both service and step name)

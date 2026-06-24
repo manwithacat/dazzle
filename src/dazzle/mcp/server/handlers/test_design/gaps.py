@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.ir.test_design import TestGap, TestGapAnalysis, TestGapCategory
+
 from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
@@ -30,7 +32,6 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     Returns untested entities, persona goals, state transitions, and suggested test designs.
     """
-    from dazzle.core.ir.test_design import TestGap, TestGapAnalysis, TestGapCategory
     from dazzle.testing.test_design_persistence import load_test_designs
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 

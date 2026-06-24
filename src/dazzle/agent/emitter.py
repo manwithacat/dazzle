@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.dsl_parser_impl import parse_dsl
+
 from .compiler import CATEGORY_LABELS, Proposal, infer_crud_action
 
 logger = logging.getLogger(__name__)
@@ -93,7 +95,6 @@ def _validate_dsl(dsl_text: str, source_label: str = "<emitted>") -> tuple[list[
 
     Returns (errors, warnings). Empty errors means the DSL is syntactically valid.
     """
-    from dazzle.core.dsl_parser_impl import parse_dsl
 
     errors: list[str] = []
     warnings: list[str] = []

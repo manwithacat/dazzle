@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from dazzle.core.ir import AggregateRef, DerivedMetricExpr
 from dazzle.render.fragment import (
     EmptyState,
     Fragment,
@@ -252,7 +253,6 @@ class _BuildersMetricsMixin:
             (legacy) aggregates: dict[name → resolved value], used as
                 fallback when metrics list isn't supplied
         """
-        from dazzle.core.ir import AggregateRef, DerivedMetricExpr
         from dazzle.render.filters import _metric_number_filter
 
         title = _region_title(region)

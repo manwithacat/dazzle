@@ -20,6 +20,9 @@ from rich.console import Console
 
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.environment import DAZZLE_ENV_VAR
+from dazzle.core.ir import TenancyMode
+from dazzle.core.ir.fields import FieldTypeKind
+from dazzle.core.ir.fk_graph import FKGraph
 
 logger = logging.getLogger(__name__)
 
@@ -1754,7 +1757,6 @@ def _is_shared_schema(appspec: Any) -> bool:
     The RLS apply/inspect/drift surfaces are no-ops for every other isolation
     mode (and for non-tenant apps), mirroring ``build_all_rls_ddl``'s gate.
     """
-    from dazzle.core.ir import TenancyMode
 
     tenancy = getattr(appspec, "tenancy", None)
     if tenancy is None:
@@ -2107,7 +2109,6 @@ def explain_aggregate_command(
     row-level security is applied at request time. Add ``--scope`` later
     if we need to simulate a persona's predicate.
     """
-    from dazzle.core.ir.fields import FieldTypeKind
     from dazzle.http.runtime.aggregate import (
         Dimension,
         build_aggregate_sql,
@@ -2213,7 +2214,6 @@ def explain_scope_command(
 ) -> None:
     """Print the compiled scope predicate, app-layer WHERE, and RLS policy (or the
     #1447 degradation reason) for <Entity>.<verb> — the #1448 traceability oracle."""
-    from dazzle.core.ir.fk_graph import FKGraph
     from dazzle.http.runtime.predicate_compiler import (
         build_entity_type_resolver,
         compile_predicate,

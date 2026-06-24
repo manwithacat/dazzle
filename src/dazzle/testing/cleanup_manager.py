@@ -14,6 +14,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from dazzle.core.field_values import is_generated_test_value
+
 if TYPE_CHECKING:
     from dazzle.testing.test_runner import DazzleClient
 
@@ -216,7 +218,6 @@ class CleanupManager:
         Returns ``{entity_type: leftover_count}`` for types with residue > 0.
         Best-effort: a per-type query failure is skipped, not fatal.
         """
-        from dazzle.core.field_values import is_generated_test_value
 
         residue: dict[str, int] = {}
         for entity_name in sorted(set(entity_types)):

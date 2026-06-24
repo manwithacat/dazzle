@@ -14,6 +14,8 @@ from typing import Any
 
 import typer
 
+from dazzle.core.appspec_loader import load_project_appspec
+
 e2e_app = typer.Typer(
     help="E2E testing with UX coverage tracking.",
     no_args_is_help=True,
@@ -603,7 +605,6 @@ async def _run_journey(
         run_phase1_exploration,
         run_phase2_verification,
     )
-    from dazzle.core.appspec_loader import load_project_appspec
 
     # Parse AppSpec
     appspec = load_project_appspec(project_root)

@@ -10,13 +10,13 @@ from typing import Any
 from uuid import uuid4
 
 from dazzle.core import ir
+from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 
 logger = logging.getLogger(__name__)
 
 
 def _find_uuid_pk_field(entity: Any) -> str | None:
     """Return the name of the UUID pk field, or None if not applicable."""
-    from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 
     for f in entity.fields:
         if FieldModifier.PK in f.modifiers and f.type.kind == FieldTypeKind.UUID:

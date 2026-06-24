@@ -36,12 +36,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from dazzle.core import build_appspec, parse_modules
 from dazzle.core.ir import (
     AppSpec,
     EntitySpec,
     SurfaceMode,
     SurfaceSpec,
 )
+from dazzle.core.manifest import load_manifest
 
 # =============================================================================
 # Selector Builder - The Semantic DOM Contract
@@ -829,9 +831,6 @@ def generate_tier2_tests_for_app(
         Path to the generated test file
     """
     from glob import glob
-
-    from dazzle.core import build_appspec, parse_modules
-    from dazzle.core.manifest import load_manifest
 
     app_path = Path(app_path)
     output_dir = Path(output_dir) if output_dir else app_path / "tests" / "e2e"

@@ -27,6 +27,7 @@ from pathlib import Path
 import typer
 
 from dazzle.cli.utils import version_callback
+from dazzle.core.grammar_gen import generate_grammar, write_grammar
 from dazzle.perf.bootstrap import maybe_configure_tracer
 
 maybe_configure_tracer()
@@ -160,7 +161,6 @@ def grammar_command(
     ),
 ) -> None:
     """Regenerate the DSL grammar reference from parser source code."""
-    from dazzle.core.grammar_gen import generate_grammar, write_grammar
 
     if stdout:
         typer.echo(generate_grammar())

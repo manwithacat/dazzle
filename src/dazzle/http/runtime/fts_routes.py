@@ -31,6 +31,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 
 from dazzle.core import ir
+from dazzle.core.access import AccessOperationKind
 from dazzle.http.runtime.http_errors import require_found
 
 logger = logging.getLogger(__name__)
@@ -256,7 +257,6 @@ def _compile_scope(
     # Find a list-permission scope predicate on the cedar spec.
     # Cedar specs carry per-operation predicates compiled by the
     # linker; LIST is the right one for search (returning matching rows).
-    from dazzle.core.access import AccessOperationKind
 
     list_rules = [
         r

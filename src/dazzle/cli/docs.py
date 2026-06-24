@@ -5,7 +5,12 @@ from pathlib import Path
 
 import typer
 
-from dazzle.core.docs_gen import check_docs_coverage
+from dazzle.core.docs_gen import (
+    check_docs_coverage,
+    generate_reference_docs,
+    inject_readme_feature_table,
+    write_reference_docs,
+)
 
 docs_app = typer.Typer(
     help="Documentation generation, validation, and maintenance.",
@@ -216,11 +221,6 @@ def docs_generate(
 ) -> None:
     """Regenerate reference docs from knowledge base TOML files."""
     import dazzle.mcp.server.docs_inventory  # noqa: F401 — registers the mcp_tools auto-source
-    from dazzle.core.docs_gen import (
-        generate_reference_docs,
-        inject_readme_feature_table,
-        write_reference_docs,
-    )
 
     if stdout:
         docs = generate_reference_docs()

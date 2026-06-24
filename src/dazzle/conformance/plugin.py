@@ -19,6 +19,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.appspec_loader import load_project_appspec
+
 from .derivation import derive_conformance_cases
 from .fixtures import generate_fixtures
 from .models import ConformanceCase, ConformanceFixtures
@@ -50,7 +52,6 @@ def collect_conformance_cases(
     Raises:
         FileNotFoundError: If ``dazzle.toml`` is not found in project_root.
     """
-    from dazzle.core.appspec_loader import load_project_appspec
 
     toml_path = project_root / "dazzle.toml"
     if not toml_path.exists():
