@@ -11,7 +11,7 @@ surface invoice_list "Invoices":
   mode: list
   section main:
     field invoice_number "Number"
-    field amount "Amount"
+    field amount "Amount" format: currency:GBP
     field currency "Currency"
     field status "Status"
 
