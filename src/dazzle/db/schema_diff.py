@@ -374,6 +374,39 @@ def _diff_constraints(
     return add_ops, drop_ops
 
 
+def _add_op_order(op: SchemaOp) -> int:
+    """Ordering key for post-table ADD ops (#1464): columns → unique/index → FK.
+
+    Uniques must be created before the composite FKs that reference them (a parent's
+    ``UNIQUE(tenant_id, id)`` backs every child's ``(tenant_id, fk)`` FK). Unknown
+    op types sort with column-adds (1) — a safe early position.
+    """
+    if isinstance(op, RenameColumn):
+        return 0
+    if isinstance(op, AddColumn):
+        return 1
+    if isinstance(op, (AddUnique, AddIndex)):
+        return 2
+    if isinstance(op, AddForeignKey):
+        return 3
+    return 1
+
+
+def _drop_op_order(op: SchemaOp) -> int:
+    """Ordering key for DROP ops (#1464): FK → unique/index → column.
+
+    The inverse of the add order: a dependent FK must be dropped before the UNIQUE
+    it references (and before the columns are removed).
+    """
+    if isinstance(op, DropForeignKey):
+        return 0
+    if isinstance(op, (DropUnique, DropIndex)):
+        return 1
+    if isinstance(op, DropColumn):
+        return 2
+    return 1
+
+
 def diff(
     prev: Snapshot,
     curr: Snapshot,
@@ -482,12 +515,15 @@ def diff(
         alters.extend(col_rename_alters + col_alters)
         drop_details.extend(col_drops + constraint_drops)
 
-    return (
-        rename_ops
-        + add_tables
-        + add_table_constraints
-        + add_details
-        + alters
-        + drop_details
-        + drop_tables
-    )
+    # #1464: order additions so every UNIQUE precedes every FK. A composite FK
+    # `(tenant_id, fk) → Parent(tenant_id, id)` references the parent's
+    # `UNIQUE(tenant_id, id)` — possibly on a DIFFERENT table — which Postgres
+    # requires to exist first (else "no unique constraint matching given keys").
+    # Columns precede constraints; the sort is stable, preserving the deterministic
+    # per-type table ordering. Drops mirror this in reverse (FKs before the uniques
+    # they depend on).
+    post_table_adds = add_table_constraints + add_details
+    post_table_adds.sort(key=_add_op_order)
+    drop_details.sort(key=_drop_op_order)
+
+    return rename_ops + add_tables + post_table_adds + alters + drop_details + drop_tables

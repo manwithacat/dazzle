@@ -99,12 +99,19 @@ entity Task "Task":
   done: bool=false
 """
 
-# shared_schema tenant-root app (#1464): a tenant-scoped entity (Project) refs
-# ANOTHER tenant-scoped entity (Member), so the schema generator emits a composite
-# intra-tenant FK `(tenant_id, owner) → Member(tenant_id, id)` + `UNIQUE(tenant_id, id)`
-# on every descendant, plus a multi-column index over a ref column (owner, name) —
+# shared_schema tenant-root app (#1464): a tenant-scoped entity (Booking) refs
+# ANOTHER tenant-scoped entity (Room), so the schema generator emits a composite
+# intra-tenant FK `(tenant_id, room) → Room(tenant_id, id)` + `UNIQUE(tenant_id, id)`
+# on every descendant, plus a multi-column index over a ref column (room, label) —
 # the exact shapes the engine baseline must reproduce (was: simple FK + UNIQUE(tenant_id)
 # + double-emitted composite index). Modeled on fixtures/tenant_rls.
+#
+# Naming is deliberate: the CHILD that holds the FK (`Booking`) sorts BEFORE the
+# PARENT it references (`Room`). The engine emits ops in sorted-table order, so a
+# composite FK that references a UNIQUE on a later-sorting table exposes the
+# constraint-ORDERING bug (all UNIQUEs must precede all FKs, else Postgres raises
+# "no unique constraint matching given keys"). A parent-sorts-first fixture would
+# pass by luck and hide it.
 _DSL_SHARED_SCHEMA = """\
 module app
 
@@ -120,15 +127,15 @@ entity Workspace "Workspace":
   id: uuid pk
   name: str(100) required
 
-entity Member "Member":
+entity Booking "Booking":
   id: uuid pk
-  email: str(120) required
+  label: str(100) required
+  room: ref Room required
+  index room, label
 
-entity Project "Project":
+entity Room "Room":
   id: uuid pk
-  name: str(100) required
-  owner: ref Member required
-  index owner, name
+  name: str(120) required
 """
 
 # (label, dsl-text) — inline projects written to a scratch dir.

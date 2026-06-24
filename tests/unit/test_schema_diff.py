@@ -122,6 +122,32 @@ def test_composite_fk_and_unique_roundtrip():
     assert any(isinstance(o, AddUnique) and o.columns == ("tenant_id", "id") for o in ops)
 
 
+def test_uniques_emitted_before_fks_cross_table():
+    """#1464 ordering: every AddUnique must precede every AddForeignKey, even when the
+    referenced parent table sorts AFTER the child holding the FK (ops are emitted in
+    sorted-table order). A composite FK `(tenant_id, ref) → Zparent(tenant_id, id)`
+    needs Zparent's UNIQUE(tenant_id, id) to exist first, else Postgres raises
+    "no unique constraint matching given keys"."""
+    snap = {
+        "Child": {
+            "columns": {"tenant_id": _COL, "ref": _COL},
+            "fks": [(("tenant_id", "ref"), "Zparent", ("tenant_id", "id"))],
+            "indexes": [],
+            "uniques": [("tenant_id", "id")],
+        },
+        "Zparent": {
+            "columns": {"tenant_id": _COL},
+            "fks": [],
+            "indexes": [],
+            "uniques": [("tenant_id", "id")],
+        },
+    }
+    ops = diff({}, snap)
+    last_unique = max(i for i, o in enumerate(ops) if isinstance(o, AddUnique))
+    first_fk = min(i for i, o in enumerate(ops) if isinstance(o, AddForeignKey))
+    assert last_unique < first_fk, "every AddUnique must precede every AddForeignKey (#1464)"
+
+
 def test_diff_add_index():
     prev = {"t": _tbl(a=_COL)}
     curr = {"t": {**_tbl(a=_COL), "indexes": ["a"]}}

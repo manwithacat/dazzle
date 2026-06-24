@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.86.0] - 2026-06-24
+## [0.86.1] - 2026-06-24
+
+### Fixed
+- **#1464 (follow-up) engine baseline emitted composite FKs BEFORE the UNIQUE constraints they reference → `db upgrade` failed.** The v0.86.0 composite-constraint fix emitted ops in sorted-table order, so a composite FK `(tenant_id, fk) → Parent(tenant_id, id)` on a child that sorts *before* its parent was created before the parent's `UNIQUE(tenant_id, id)` existed — `psycopg.errors.InvalidForeignKey: there is no unique constraint matching given keys`. `schema_diff.diff` now orders all additions so **every `AddUnique`/`AddIndex` precedes every `AddForeignKey`** (and drops mirror it: FKs before the uniques they depend on), via a stable type-priority sort — independent of table name order. Guarded by a fast unit test (`diff` op ordering) and a real-PG fixture whose child (`Booking`) deliberately sorts before its parent (`Room`), which reproduced the exact `InvalidForeignKey` before the fix. The v0.86.0 fixture passed only because its parent happened to sort first. (Adopters who hand-reordered the generated baseline no longer need to.)
 
 Published minor (PyPI / Homebrew / GitHub Release). Ships the **#1464 migration-engine
 composite-constraint fix** (v0.85.1–v0.85.2) so downstream shared_schema apps can adopt the
