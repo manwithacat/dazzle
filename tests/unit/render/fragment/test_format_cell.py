@@ -10,7 +10,56 @@ import datetime as dt
 
 import pytest
 
-from dazzle.render.fragment.format_cell import format_cell
+from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+
+
+def _ov(value, kind, arg=None, currency_code=""):
+    return format_cell(
+        value, "text", currency_code=currency_code, override=ResolvedFormat(kind, arg)
+    )
+
+
+def test_override_currency():
+    assert _ov(12345, "currency", "GBP") == "£123.45"
+
+
+def test_override_percent():
+    assert _ov(0.5, "percent", "1") == "50.0%"  # ratio → percent, 1 dp
+    assert _ov(0.137, "percent") == "14%"  # default 0 dp, rounded
+
+
+def test_override_round():
+    assert _ov(1234.56, "round", "1") == "1,234.6"
+    assert _ov(1234.0, "round", "0") == "1,234"
+
+
+def test_override_case():
+    assert _ov("hi", "upper") == "HI"
+    assert _ov("HI", "lower") == "hi"
+    assert _ov("in_review", "title_case") == "In Review"
+
+
+def test_override_yes_no_and_raw():
+    assert _ov(True, "yes_no") == "Yes"
+    assert _ov("00000000-0000-0000-0000-000000000001", "raw") == (
+        "00000000-0000-0000-0000-000000000001"
+    )
+
+
+def test_override_display_name():
+    assert _ov("Acme Ltd", "display_name") == "Acme Ltd"
+
+
+def test_override_date_iso_and_long():
+    import datetime as _dt
+
+    assert _ov(_dt.date(2026, 6, 24), "date", "iso") == "2026-06-24"
+    assert _ov(_dt.date(2026, 6, 24), "date", "long") == "24 June 2026"
+
+
+def test_override_wins_over_inference():
+    # kind="bool" would infer Yes/No, but the override forces raw.
+    assert format_cell(True, "bool", override=ResolvedFormat("raw")) == "True"
 
 
 @pytest.mark.parametrize(

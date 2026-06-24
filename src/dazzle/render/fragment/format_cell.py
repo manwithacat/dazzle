@@ -103,6 +103,75 @@ def format_cell(
     return _infer(value, kind, currency_code)
 
 
+def _coerce_dt(value: Any) -> datetime | date | None:
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    return value if isinstance(value, (datetime, date)) else None
+
+
+def _format_temporal(value: Any, kind: str, arg: str | None) -> str:
+    dtv = _coerce_dt(value)
+    if dtv is None:
+        return str(value)
+    if arg == "iso":
+        return dtv.isoformat()
+    if arg == "long":
+        return f"{dtv.day} {dtv.strftime('%B %Y')}"
+    return _friendly_dt(dtv, with_time=(kind == "datetime"))
+
+
+def _relative(value: Any) -> str:
+    dtv = _coerce_dt(value)
+    if dtv is None:
+        return str(value)
+    d = dtv.date() if isinstance(dtv, datetime) else dtv
+    delta = (d - date.today()).days
+    if delta == 0:
+        return "today"
+    if delta == 1:
+        return "tomorrow"
+    if delta == -1:
+        return "yesterday"
+    return f"{-delta} days ago" if delta < 0 else f"in {delta} days"
+
+
+def _dp(arg: str | None) -> int:
+    """Decimal-places argument (default 0)."""
+    return int(arg) if arg and arg.isdigit() else 0
+
+
+# Simple value→string transforms keyed by override kind (no arg/currency needed).
+_SIMPLE_OVERRIDES: dict[str, Any] = {
+    "raw": str,
+    "upper": lambda v: str(v).upper(),
+    "lower": lambda v: str(v).lower(),
+    "title_case": lambda v: _title_case(str(v)),
+    "yes_no": lambda v: "Yes" if v else "No",
+    "display_name": str,
+}
+
+
 def _apply_override(value: Any, fmt: ResolvedFormat, currency_code: str) -> str:
-    """Apply an explicit ``format:`` override. Implemented in Phase 2 (#1470)."""
-    raise NotImplementedError("format: override is wired in #1470 Phase 2")
+    """Apply an explicit ``format:`` override (#1470 Phase 2). Returns RAW.
+
+    Validation (`_format_kind_error`) has already rejected unknown kinds and
+    type mismatches, so this dispatches the v1 vocabulary directly.
+    """
+    kind, arg = fmt.kind, fmt.arg
+    if kind == "currency":
+        return _currency(value, arg or currency_code or "GBP")
+    if kind == "percent":
+        return f"{float(value) * 100:,.{_dp(arg)}f}%"
+    if kind == "round":
+        return f"{float(value):,.{_dp(arg)}f}"
+    if kind in ("date", "datetime"):
+        return _format_temporal(value, kind, arg)
+    if kind == "relative":
+        return _relative(value)
+    transform = _SIMPLE_OVERRIDES.get(kind)
+    if transform is not None:
+        return str(transform(value))
+    return str(value)  # defensive (validation rejects unknown kinds)

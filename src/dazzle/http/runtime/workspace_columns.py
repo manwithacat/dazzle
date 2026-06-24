@@ -66,6 +66,8 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
     # request handler can hide columns the persona shouldn't see (#872).
     surface_fields: list[str] = []
     field_visible_conditions: dict[str, dict[str, Any] | None] = {}
+    # #1470 Phase 2: per-field explicit format: override (None when unannotated).
+    field_formats: dict[str, Any] = {}
     for section in surface_spec.sections:
         _sec_vis = getattr(section, "visible", None)
         _section_vis_cond = _sec_vis.model_dump() if _sec_vis is not None else None
@@ -77,6 +79,7 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
                 field_visible_conditions[fn] = (
                     _el_vis.model_dump() if _el_vis else _section_vis_cond
                 )
+                field_formats[fn] = getattr(element, "format", None)
 
     if not surface_fields:
         return build_entity_columns(entity_spec)
@@ -90,6 +93,7 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
         if not f:
             continue
         _vis_cond = field_visible_conditions.get(fn)
+        _fmt = field_formats.get(fn)
         ft = f.type
         kind = ft.kind
         kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
@@ -107,6 +111,9 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
             }
             if _vis_cond:
                 ref_col["visible_condition"] = _vis_cond
+            if _fmt is not None:
+                ref_col["format_kind"] = _fmt.kind
+                ref_col["format_arg"] = _fmt.arg or ""
             columns.append(ref_col)
             continue
         # Skip non-displayable types
@@ -122,6 +129,9 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
         }
         if _vis_cond:
             col["visible_condition"] = _vis_cond
+        if _fmt is not None:
+            col["format_kind"] = _fmt.kind
+            col["format_arg"] = _fmt.arg or ""
         if kind_val == "money":
             col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
         if col_type == "badge":

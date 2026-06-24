@@ -47,3 +47,20 @@ def test_format_modifier_bare_kind() -> None:
 def test_field_without_format_is_none() -> None:
     els = _elements()
     assert els["title"].format is None
+
+
+def test_format_threads_into_surface_columns() -> None:
+    """#1470 Phase 2 Task 6: the parsed `format:` reaches the column dict the
+    adapter consumes (format_kind / format_arg)."""
+    from dazzle.http.runtime.workspace_columns import build_surface_columns
+
+    *_, fragment = parse_dsl(_DSL, Path("test.dsl"))
+    entity = next(e for e in fragment.entities if e.name == "Invoice")
+    surface = next(s for s in fragment.surfaces if s.name == "invoices")
+    cols = {c["key"]: c for c in build_surface_columns(entity, surface)}
+    amount = cols.get("amount_minor") or cols.get("amount")
+    assert amount is not None
+    assert amount["format_kind"] == "currency"
+    assert amount["format_arg"] == "GBP"
+    # `title` has no format: → no format keys on its column
+    assert "format_kind" not in cols["title"]
