@@ -411,7 +411,12 @@ def _tenant_table_args(
             sa.ForeignKeyConstraint(
                 [partition_key, field.name],
                 [f"{target}.{partition_key}", f"{target}.id"],
-                name=f"fk_{entity.name}_{field.name}",
+                # Name includes the partition key so it matches the migration engine's
+                # composite-FK name (schema_render._fk_name joins ALL constrained
+                # columns) — so create_all and `db baseline` produce byte-identical
+                # constraint names, not just identical structure (#1464). Mismatched
+                # names would break an engine downgrade / drop against a create_all DB.
+                name=f"fk_{entity.name}_{partition_key}_{field.name}",
                 use_alter=needs_alter,
             )
         )

@@ -44,8 +44,8 @@ def test_project_schema_introspects_metadata() -> None:
     assert inv["columns"]["total"]["type"] == "integer"
     assert inv["columns"]["total"]["nullable"] is True
     assert inv["columns"]["id"]["pk"] is True
-    # FK column is the field name VERBATIM; target is the referenced table name.
-    assert inv["fks"]["customer"] == "Customer"
+    # FK is composite-aware (#1464): (constrained cols, ref table, ref cols).
+    assert inv["fks"] == [(("customer",), "Customer", ("id",))]
 
 
 def test_project_schema_is_deterministic() -> None:

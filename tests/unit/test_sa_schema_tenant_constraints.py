@@ -54,6 +54,24 @@ def test_unique_tenant_id_id_emitted() -> None:
     assert any({col.name for col in uc.columns} == {"tenant_id", "id"} for uc in ucs)
 
 
+def test_composite_fk_name_matches_engine_render() -> None:
+    """#1464: create_all (sa_schema) and the migration engine (schema_render) must
+    name the composite tenant-scoped FK IDENTICALLY, so the two provisioning paths
+    produce byte-identical constraint names (not just identical structure) — an
+    engine DROP/downgrade against a create_all DB would otherwise target a name
+    that doesn't exist."""
+    from dazzle.db.schema_render import _fk_name
+
+    ents = [_e("Workspace"), _e("Member", _tid()), _e("Project", _tid(), _ref("owner", "Member"))]
+    md = _md(ents, {"Member", "Project"})
+    project = md.tables["Project"]
+    composite = next(fk for fk in project.foreign_key_constraints if len(fk.elements) == 2)
+    # sa_schema declares the FK columns as (partition_key, field); the engine snapshot
+    # preserves that order, so _fk_name over the same tuple must reproduce the name.
+    assert composite.name == _fk_name("Project", ("tenant_id", "owner"))
+    assert composite.name == "fk_Project_tenant_id_owner"
+
+
 def test_intra_tenant_ref_is_composite_fk() -> None:
     ents = [_e("Workspace"), _e("Project", _tid()), _e("Task", _tid(), _ref("project", "Project"))]
     md = _md(ents, {"Project", "Task"})

@@ -24,9 +24,11 @@ class AddTable:
 
     table: str
     columns: dict[str, Any]
-    fks: dict[str, str]
+    # #1464: composite-aware. fks = [(cols, ref_table, ref_cols), ...];
+    # uniques = [(col, ...), ...]. indexes = ["col[,col]", ...] (comma-joined).
+    fks: list[Any]
     indexes: list[str]
-    uniques: list[str]
+    uniques: list[Any]
 
 
 @dataclass(frozen=True)
@@ -84,20 +86,22 @@ class AlterColumn:
 
 @dataclass(frozen=True)
 class AddForeignKey:
-    """Add a foreign key constraint."""
+    """Add a (possibly composite) foreign key constraint (#1464)."""
 
     table: str
-    column: str
+    columns: tuple[str, ...]
     ref_table: str
+    ref_columns: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class DropForeignKey:
-    """Drop a foreign key constraint."""
+    """Drop a (possibly composite) foreign key constraint (#1464)."""
 
     table: str
-    column: str
+    columns: tuple[str, ...]
     ref_table: str
+    ref_columns: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -118,18 +122,18 @@ class DropIndex:
 
 @dataclass(frozen=True)
 class AddUnique:
-    """Add a unique constraint on a column."""
+    """Add a (possibly composite) unique constraint (#1464)."""
 
     table: str
-    column: str
+    columns: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class DropUnique:
-    """Drop a unique constraint on a column."""
+    """Drop a (possibly composite) unique constraint (#1464)."""
 
     table: str
-    column: str
+    columns: tuple[str, ...]
 
 
 SchemaOp = (
@@ -155,8 +159,11 @@ SchemaOp = (
 #: ColSnap keys: type (str), nullable (bool), default (str|None), pk (bool)
 ColSnap = dict[str, Any]
 
-#: TableSnap keys: columns (dict[str, ColSnap]), fks (dict[str, str]),
-#:                 indexes (list[str]), uniques (list[str])
+#: TableSnap keys: columns (dict[str, ColSnap]),
+#:   fks (list[(cols, ref_table, ref_cols)] — composite-aware, #1464; legacy
+#:        dict[col, table] is accepted + upgraded by _coerce_fks),
+#:   uniques (list[(col, ...)] — legacy list[str] upgraded by _coerce_uniques),
+#:   indexes (list[str] — comma-joined columns)
 TableSnap = dict[str, Any]
 
 #: Snapshot: table-name → TableSnap
@@ -299,6 +306,32 @@ def _diff_columns(
     return add_ops, alter_ops, drop_ops
 
 
+def _coerce_fks(snap: TableSnap) -> set[tuple[tuple[str, ...], str, tuple[str, ...]]]:
+    """Normalize a snapshot's ``fks`` to the composite set shape (#1464).
+
+    Accepts both the current composite shape (``[(cols, ref_table, ref_cols), ...]``)
+    and the legacy per-column shape (``{col: ref_table}``) embedded in pre-#1464
+    baselines — the latter upgrades to single-column FKs referencing the PK ``id``
+    (what the old engine always assumed), so an incremental ``db revision`` against
+    an old baseline doesn't see a spurious drop+re-add of every FK.
+    """
+    raw = snap.get("fks", [])
+    if isinstance(raw, dict):  # legacy {col: ref_table}
+        return {((col,), tbl, ("id",)) for col, tbl in raw.items()}
+    return {(tuple(cols), tbl, tuple(refcols)) for cols, tbl, refcols in raw}
+
+
+def _coerce_uniques(snap: TableSnap) -> set[tuple[str, ...]]:
+    """Normalize a snapshot's ``uniques`` to a set of column tuples (#1464).
+
+    Accepts the current shape (``[(col, ...), ...]``) and the legacy flat shape
+    (``["col", ...]`` — single-column names), upgrading each bare name to a
+    one-column tuple.
+    """
+    raw = snap.get("uniques", [])
+    return {(c,) if isinstance(c, str) else tuple(c) for c in raw}
+
+
 def _diff_constraints(
     curr_tname: str,
     prev_snap: TableSnap,
@@ -313,12 +346,16 @@ def _diff_constraints(
     add_ops: list[SchemaOp] = []
     drop_ops: list[SchemaOp] = []
 
-    prev_fk_set = set(prev_snap.get("fks", {}).items())
-    curr_fk_set = set(curr_snap.get("fks", {}).items())
-    for col, ref in sorted(curr_fk_set - prev_fk_set):
-        add_ops.append(AddForeignKey(table=curr_tname, column=col, ref_table=ref))
-    for col, ref in sorted(prev_fk_set - curr_fk_set):
-        drop_ops.append(DropForeignKey(table=curr_tname, column=col, ref_table=ref))
+    prev_fk_set = _coerce_fks(prev_snap)
+    curr_fk_set = _coerce_fks(curr_snap)
+    for cols, ref, refcols in sorted(curr_fk_set - prev_fk_set):
+        add_ops.append(
+            AddForeignKey(table=curr_tname, columns=cols, ref_table=ref, ref_columns=refcols)
+        )
+    for cols, ref, refcols in sorted(prev_fk_set - curr_fk_set):
+        drop_ops.append(
+            DropForeignKey(table=curr_tname, columns=cols, ref_table=ref, ref_columns=refcols)
+        )
 
     prev_indexes = set(prev_snap.get("indexes", []))
     curr_indexes = set(curr_snap.get("indexes", []))
@@ -327,12 +364,12 @@ def _diff_constraints(
     for col in sorted(prev_indexes - curr_indexes):
         drop_ops.append(DropIndex(table=curr_tname, column=col))
 
-    prev_uniques = set(prev_snap.get("uniques", []))
-    curr_uniques = set(curr_snap.get("uniques", []))
-    for col in sorted(curr_uniques - prev_uniques):
-        add_ops.append(AddUnique(table=curr_tname, column=col))
-    for col in sorted(prev_uniques - curr_uniques):
-        drop_ops.append(DropUnique(table=curr_tname, column=col))
+    prev_uniques = _coerce_uniques(prev_snap)
+    curr_uniques = _coerce_uniques(curr_snap)
+    for cols in sorted(curr_uniques - prev_uniques):
+        add_ops.append(AddUnique(table=curr_tname, columns=cols))
+    for cols in sorted(prev_uniques - curr_uniques):
+        drop_ops.append(DropUnique(table=curr_tname, columns=cols))
 
     return add_ops, drop_ops
 
@@ -398,21 +435,25 @@ def diff(
     for tname in sorted(curr_tables - prev_tables):
         if tname not in table_prev_name:
             tsnap = curr[tname]
+            fk_specs = sorted(_coerce_fks(tsnap))
+            unique_specs = sorted(_coerce_uniques(tsnap))
             add_tables.append(
                 AddTable(
                     table=tname,
                     columns=dict(tsnap.get("columns", {})),
-                    fks=dict(tsnap.get("fks", {})),
+                    fks=fk_specs,
                     indexes=list(tsnap.get("indexes", [])),
-                    uniques=list(tsnap.get("uniques", [])),
+                    uniques=unique_specs,
                 )
             )
-            for col, ref in sorted(tsnap.get("fks", {}).items()):
-                add_table_constraints.append(AddForeignKey(table=tname, column=col, ref_table=ref))
+            for cols, ref, refcols in fk_specs:
+                add_table_constraints.append(
+                    AddForeignKey(table=tname, columns=cols, ref_table=ref, ref_columns=refcols)
+                )
             for idx_cols in sorted(tsnap.get("indexes", [])):
                 add_table_constraints.append(AddIndex(table=tname, column=idx_cols))
-            for col in sorted(tsnap.get("uniques", [])):
-                add_table_constraints.append(AddUnique(table=tname, column=col))
+            for cols in unique_specs:
+                add_table_constraints.append(AddUnique(table=tname, columns=cols))
 
     # --- 4. Diff columns + constraints for common/renamed table pairs -------
     add_details: list[SchemaOp] = []

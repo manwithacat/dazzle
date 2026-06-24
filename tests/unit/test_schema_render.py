@@ -364,15 +364,32 @@ def test_rename_table_and_inverse():
 
 
 def test_add_foreign_key_and_inverse():
-    up, down = render([AddForeignKey("orders", "user_id", "users")])
+    up, down = render([AddForeignKey("orders", ("user_id",), "users", ("id",))])
     assert any(isinstance(o, aops.CreateForeignKeyOp) for o in up.ops)
     assert any(isinstance(o, aops.DropConstraintOp) for o in down.ops)
 
 
 def test_drop_foreign_key_and_inverse():
-    up, down = render([DropForeignKey("orders", "user_id", "users")])
+    up, down = render([DropForeignKey("orders", ("user_id",), "users", ("id",))])
     assert any(isinstance(o, aops.DropConstraintOp) for o in up.ops)
     assert any(isinstance(o, aops.CreateForeignKeyOp) for o in down.ops)
+
+
+def test_composite_fk_render_uses_all_columns():
+    """#1464: a composite FK renders with both legs + composite referred columns."""
+    up, _ = render(
+        [AddForeignKey("Project", ("tenant_id", "owner"), "Member", ("tenant_id", "id"))]
+    )
+    fk = next(o for o in up.ops if isinstance(o, aops.CreateForeignKeyOp))
+    assert fk.local_cols == ["tenant_id", "owner"]
+    assert fk.remote_cols == ["tenant_id", "id"]
+
+
+def test_composite_unique_render_uses_all_columns():
+    """#1464: a composite UNIQUE renders with the full column tuple, not per-column."""
+    up, _ = render([AddUnique("Project", ("tenant_id", "id"))])
+    uq = next(o for o in up.ops if isinstance(o, aops.CreateUniqueConstraintOp))
+    assert list(uq.columns) == ["tenant_id", "id"]
 
 
 # ---------------------------------------------------------------------------
@@ -398,13 +415,13 @@ def test_drop_index_and_inverse():
 
 
 def test_add_unique_and_inverse():
-    up, down = render([AddUnique("t", "email")])
+    up, down = render([AddUnique("t", ("email",))])
     assert any(isinstance(o, aops.CreateUniqueConstraintOp) for o in up.ops)
     assert any(isinstance(o, aops.DropConstraintOp) for o in down.ops)
 
 
 def test_drop_unique_and_inverse():
-    up, down = render([DropUnique("t", "email")])
+    up, down = render([DropUnique("t", ("email",))])
     assert any(isinstance(o, aops.DropConstraintOp) for o in up.ops)
     assert any(isinstance(o, aops.CreateUniqueConstraintOp) for o in down.ops)
 

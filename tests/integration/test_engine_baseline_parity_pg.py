@@ -434,32 +434,7 @@ def _run_parity(setup: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> 
 # ---------------------------------------------------------------------------
 
 
-_INLINE_PARAMS = [
-    pytest.param(
-        label,
-        dsl,
-        id=label,
-        marks=(
-            # #1464: the engine baseline does not yet reproduce shared_schema composite
-            # tenant-scoped FKs `(tenant_id, fk) → Parent(tenant_id, id)` or `UNIQUE(tenant_id,
-            # id)` (it emits simple FKs + a bogus `UNIQUE(tenant_id)`). This case reproduces the
-            # divergence; the engine fix (composite-aware snapshot/diff/render) flips it to pass,
-            # at which point the xfail is removed (strict=True surfaces an accidental early pass).
-            [
-                pytest.mark.xfail(
-                    reason="#1464 engine baseline lacks composite tenant-scoped FK/UNIQUE parity",
-                    strict=True,
-                )
-            ]
-            if label == "shared_schema_intra_fk"
-            else []
-        ),
-    )
-    for label, dsl in _INLINE_CORPUS
-]
-
-
-@pytest.mark.parametrize("label,dsl", _INLINE_PARAMS)
+@pytest.mark.parametrize("label,dsl", _INLINE_CORPUS, ids=[c[0] for c in _INLINE_CORPUS])
 def test_engine_baseline_matches_create_all_inline(
     label: str, dsl: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -541,6 +516,80 @@ def test_engine_revision_roundtrip_reaches_create_all_parity(
             + _diff_report(reference, engine)
         )
         assert "Note" in reference and "Note" in engine, "round-trip must add the Note table"
+    finally:
+        _drop_scratch_db(ref_name)
+        _drop_scratch_db(eng_name)
+
+
+# Incremental revision over shared_schema (#1464): the composite tenant-scoped FK +
+# UNIQUE(tenant_id, id) must be reached via `db revision` too, not just baseline.
+_DSL_SS_RT_V1 = """\
+module app
+
+app ssrt "SS RT":
+  security_profile: standard
+
+tenancy:
+  mode: shared_schema
+  partition_key: tenant_id
+
+entity Workspace "Workspace":
+  archetype: tenant
+  id: uuid pk
+  name: str(100) required
+
+entity Member "Member":
+  id: uuid pk
+  email: str(120) required
+"""
+
+_DSL_SS_RT_V2 = (
+    _DSL_SS_RT_V1
+    + """
+entity Project "Project":
+  id: uuid pk
+  name: str(100) required
+  owner: ref Member required
+"""
+)
+
+
+def test_engine_revision_roundtrip_shared_schema_composite_parity(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """baseline(V1) → revision adds a tenant-scoped Project with an intra-tenant FK →
+    upgrade ≡ create_all(V2), INCLUDING composite FK + UNIQUE structure (#1464). The
+    baseline test covers the create path; this covers the incremental `db revision` path."""
+    _skip_if_no_pg()
+    from dazzle.cli.db import revision_command, upgrade_command
+
+    ref_url, ref_name = _make_scratch_db()
+    eng_url, eng_name = _make_scratch_db()
+    try:
+        ref_proj = tmp_path / "ssref"
+        ref_proj.mkdir()
+        _write_inline_project(ref_proj, _DSL_SS_RT_V2)
+        _reference_via_create_all(ref_proj, ref_url, monkeypatch)
+        ref_cons = _pg_constraint_shapes(ref_url)
+
+        eng_proj = tmp_path / "sseng"
+        eng_proj.mkdir()
+        _write_inline_project(eng_proj, _DSL_SS_RT_V1)
+        _engine_baseline(eng_proj, eng_url, monkeypatch)
+        (eng_proj / "dsl" / "app.dsl").write_text(_DSL_SS_RT_V2, encoding="utf-8")
+        revision_command(message="add project", autogenerate=True)
+        upgrade_command(revision="head", no_rls=True)
+        eng_cons = _pg_constraint_shapes(eng_url)
+
+        assert ref_cons == eng_cons, (
+            "incremental revision composite constraints diverge from create_all(V2):\n"
+            + _constraint_diff_report(ref_cons, eng_cons)
+        )
+        # The composite intra-tenant FK on Project must be present (not a simple FK).
+        proj_fks = eng_cons.get("Project", {}).get("fks", set())
+        assert (("tenant_id", "owner"), "Member", ("tenant_id", "id")) in proj_fks, (
+            f"Project composite FK missing after revision; got {proj_fks}"
+        )
     finally:
         _drop_scratch_db(ref_name)
         _drop_scratch_db(eng_name)

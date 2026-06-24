@@ -81,11 +81,16 @@ def test_no_change_empty_delta():
 
 
 def test_add_fk():
+    # Legacy {col: table} input is upgraded by _coerce_fks to a composite single-col FK.
     prev = {"t": _tbl(a=_COL)}
     curr = {"t": {**_tbl(a=_COL), "fks": {"a": "other"}}}
     ops = diff(prev, curr)
     assert any(
-        isinstance(o, AddForeignKey) and o.column == "a" and o.ref_table == "other" for o in ops
+        isinstance(o, AddForeignKey)
+        and o.columns == ("a",)
+        and o.ref_table == "other"
+        and o.ref_columns == ("id",)
+        for o in ops
     )
 
 
@@ -93,7 +98,28 @@ def test_drop_fk():
     prev = {"t": {**_tbl(a=_COL), "fks": {"a": "other"}}}
     curr = {"t": _tbl(a=_COL)}
     ops = diff(prev, curr)
-    assert any(isinstance(o, DropForeignKey) and o.column == "a" for o in ops)
+    assert any(isinstance(o, DropForeignKey) and o.columns == ("a",) for o in ops)
+
+
+def test_composite_fk_and_unique_roundtrip():
+    """#1464: composite FK + composite UNIQUE survive the diff as single ops."""
+    prev = {"Project": _tbl(tenant_id=_COL, owner=_COL)}
+    curr = {
+        "Project": {
+            **_tbl(tenant_id=_COL, owner=_COL),
+            "fks": [(("tenant_id", "owner"), "Member", ("tenant_id", "id"))],
+            "uniques": [("tenant_id", "id")],
+        }
+    }
+    ops = diff(prev, curr)
+    assert any(
+        isinstance(o, AddForeignKey)
+        and o.columns == ("tenant_id", "owner")
+        and o.ref_table == "Member"
+        and o.ref_columns == ("tenant_id", "id")
+        for o in ops
+    )
+    assert any(isinstance(o, AddUnique) and o.columns == ("tenant_id", "id") for o in ops)
 
 
 def test_diff_add_index():
@@ -114,14 +140,14 @@ def test_diff_add_unique():
     prev = {"t": _tbl(a=_COL)}
     curr = {"t": {**_tbl(a=_COL), "uniques": ["a"]}}
     ops = diff(prev, curr)
-    assert any(isinstance(o, AddUnique) and o.column == "a" for o in ops)
+    assert any(isinstance(o, AddUnique) and o.columns == ("a",) for o in ops)
 
 
 def test_diff_drop_unique():
     prev = {"t": {**_tbl(a=_COL), "uniques": ["a"]}}
     curr = {"t": _tbl(a=_COL)}
     ops = diff(prev, curr)
-    assert any(isinstance(o, DropUnique) and o.column == "a" for o in ops)
+    assert any(isinstance(o, DropUnique) and o.columns == ("a",) for o in ops)
 
 
 def test_ordering_add_before_drop():
@@ -153,18 +179,18 @@ def test_drop_table_carries_snap():
 
 
 def test_add_table_fks_roundtrip():
-    """AddTable.fks carries the full col→ref_table mapping from the snapshot."""
+    """AddTable.fks carries the composite FK specs from the snapshot (#1464)."""
     snap = {
         "new_t": {
             "columns": {"owner_id": _COL},
-            "fks": {"owner_id": "users"},
+            "fks": {"owner_id": "users"},  # legacy input, upgraded by _coerce_fks
             "indexes": [],
             "uniques": [],
         }
     }
     ops = diff({}, snap)
     at = next(o for o in ops if isinstance(o, AddTable))
-    assert at.fks == {"owner_id": "users"}
+    assert at.fks == [(("owner_id",), "users", ("id",))]
 
 
 def test_new_table_fks_emitted_as_separate_addforeignkey_ops():
@@ -182,9 +208,9 @@ def test_new_table_fks_emitted_as_separate_addforeignkey_ops():
     }
     ops = diff({}, snap)
     fk_ops = [o for o in ops if isinstance(o, AddForeignKey)]
-    assert {(o.column, o.ref_table) for o in fk_ops} == {
-        ("owner_id", "users"),
-        ("parent_id", "new_t"),
+    assert {(o.columns, o.ref_table) for o in fk_ops} == {
+        (("owner_id",), "users"),
+        (("parent_id",), "new_t"),
     }
 
 
@@ -303,11 +329,12 @@ def test_alter_column():
 
 
 def test_add_foreign_key():
-    """AddForeignKey specifies table, column, and referenced table."""
-    op = AddForeignKey(table="orders", column="user_id", ref_table="users")
+    """AddForeignKey specifies table, columns, ref table, and ref columns (#1464)."""
+    op = AddForeignKey(table="orders", columns=("user_id",), ref_table="users", ref_columns=("id",))
     assert op.table == "orders"
-    assert op.column == "user_id"
+    assert op.columns == ("user_id",)
     assert op.ref_table == "users"
+    assert op.ref_columns == ("id",)
 
     # Assert frozen
     with pytest.raises(FrozenInstanceError):
@@ -315,15 +342,17 @@ def test_add_foreign_key():
 
 
 def test_drop_foreign_key():
-    """DropForeignKey specifies table, column, and referenced table."""
-    op = DropForeignKey(table="orders", column="user_id", ref_table="users")
+    """DropForeignKey specifies table, columns, ref table, and ref columns (#1464)."""
+    op = DropForeignKey(
+        table="orders", columns=("user_id",), ref_table="users", ref_columns=("id",)
+    )
     assert op.table == "orders"
-    assert op.column == "user_id"
+    assert op.columns == ("user_id",)
     assert op.ref_table == "users"
 
     # Assert frozen
     with pytest.raises(FrozenInstanceError):
-        op.column = "account_id"
+        op.columns = ("account_id",)
 
 
 def test_add_index():
@@ -349,10 +378,10 @@ def test_drop_index():
 
 
 def test_add_unique():
-    """AddUnique specifies table and column."""
-    op = AddUnique(table="users", column="email")
+    """AddUnique specifies table and columns (#1464)."""
+    op = AddUnique(table="users", columns=("email",))
     assert op.table == "users"
-    assert op.column == "email"
+    assert op.columns == ("email",)
 
     # Assert frozen
     with pytest.raises(FrozenInstanceError):
@@ -360,32 +389,32 @@ def test_add_unique():
 
 
 def test_drop_unique():
-    """DropUnique specifies table and column."""
-    op = DropUnique(table="users", column="email")
+    """DropUnique specifies table and columns (#1464)."""
+    op = DropUnique(table="users", columns=("email",))
     assert op.table == "users"
-    assert op.column == "email"
+    assert op.columns == ("email",)
 
     # Assert frozen
     with pytest.raises(FrozenInstanceError):
-        op.column = "username"
+        op.columns = ("username",)
 
 
 def test_schema_op_union_types():
     """SchemaOp accepts all op types."""
     ops: list[SchemaOp] = [
-        AddTable("t1", {}, {}, [], []),
+        AddTable("t1", {}, [], [], []),
         DropTable("t2", {}),
         RenameTable("t3", "t3_renamed"),
         AddColumn("t4", "c1", {}),
         DropColumn("t5", "c2", {}),
         RenameColumn("t6", "c3", "c3_renamed"),
         AlterColumn("t7", "c4", {}, {}),
-        AddForeignKey("t8", "c5", "t_ref"),
-        DropForeignKey("t9", "c6", "t_ref"),
+        AddForeignKey("t8", ("c5",), "t_ref", ("id",)),
+        DropForeignKey("t9", ("c6",), "t_ref", ("id",)),
         AddIndex("t10", "c7"),
         DropIndex("t11", "c8"),
-        AddUnique("t12", "c9"),
-        DropUnique("t13", "c10"),
+        AddUnique("t12", ("c9",)),
+        DropUnique("t13", ("c10",)),
     ]
     assert len(ops) == 13
 
