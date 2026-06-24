@@ -21,6 +21,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_user import _resolve_workspace_user
 
@@ -120,8 +121,6 @@ async def resolve_request_user_context(
     # (#1428, page_routes.py). Bound after the prefs splice above so the
     # current_user.<attr> scope GUCs resolve; fail-closed + idempotent.
     if auth_ctx_for_filters is not None:
-        from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
-
         _bind_rls_tenant_id(auth_ctx_for_filters)
 
     # Step 4: build filter context for attention signals + grant

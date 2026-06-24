@@ -21,7 +21,6 @@ from typing import Any
 
 import pytest
 
-import dazzle.http.runtime.auth.dependencies as _deps
 import dazzle.http.runtime.workspace_handlers as _handlers
 import dazzle.http.runtime.workspace_region_prelude as _prelude
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
@@ -50,7 +49,12 @@ def _region_ctx(mw: Any, *, require_auth: bool = True) -> WorkspaceRegionContext
 
 def _record_bind(monkeypatch: pytest.MonkeyPatch) -> list[object]:
     calls: list[object] = []
-    monkeypatch.setattr(_deps, "_bind_rls_tenant_id", lambda ctx: calls.append(ctx))
+    # _bind_rls_tenant_id is imported at module top in both consumer modules (the
+    # binding is module-level, not a call-time source import), so patch it in each
+    # consumer namespace — patching the source `_deps` would miss the bound name.
+    recorder = lambda ctx: calls.append(ctx)  # noqa: E731
+    monkeypatch.setattr(_prelude, "_bind_rls_tenant_id", recorder)
+    monkeypatch.setattr(_handlers, "_bind_rls_tenant_id", recorder)
     return calls
 
 
