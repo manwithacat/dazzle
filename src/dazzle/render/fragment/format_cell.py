@@ -51,7 +51,7 @@ def _friendly_dt(value: Any, *, with_time: bool) -> str:
         try:
             value = datetime.fromisoformat(value)
         except ValueError:
-            return value
+            return str(value)
     if isinstance(value, datetime):
         return value.strftime("%-d %b %Y %H:%M" if with_time else "%-d %b %Y")
     if isinstance(value, date):
