@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.86.7] - 2026-06-24
+## [0.86.8] - 2026-06-24
+
+### Fixed
+- **#1466 shared_schema RLS: workspace region / batch / stats endpoints never bound `dazzle.tenant_id` → every region rendered its empty-state (and stats resolved to 0) under the non-bypass role.** The three workspace-region handlers self-authenticate via `auth_middleware.get_auth_context` (the routes register with plain `app.get` and gate personas inline — no FastAPI auth dependency), so `_bind_rls_tenant_id` was never called and the leased Postgres connection read an unset tenant GUC; on a `shared_schema`/RLS app the fence then denied every row. Now all three seams (`workspace_region_prelude.resolve_request_user_context`, `_workspace_batch_handler`, `_workspace_stats_handler`) bind the per-request RLS GUCs from the resolved auth context before any scope-aware read/aggregate — the same fix #1428 applied to the page in-process path. Fail-closed before and after (the bug over-denied, never over-exposed — no cross-tenant leak), so this is a correctness/availability fix. Guarded by `test_workspace_region_rls_bind_1466.py`.
 
 ### Fixed
 - **CodeQL FP cleared: `py/incomplete-url-substring-sanitization` (#206) in `test_domain_connection_verify_pg.py`.** The flagged `assert "bigcorp.com" in refreshed.verified_domains` is exact list membership (`verified_domains: list[str]`), not URL substring sanitization — CodeQL couldn't infer the collection type. Rewrote it as explicit element-equality (`any(d == "bigcorp.com" for d in ...)`) so the (high-severity) alert clears without a dismissal. Test-only; behaviour unchanged.

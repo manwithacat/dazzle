@@ -241,6 +241,16 @@ async def _workspace_batch_handler(
         except Exception:
             logger.warning("Batch: failed to get auth context", exc_info=True)
 
+    # #1466: bind the per-request RLS GUCs so the batched region reads below run
+    # with dazzle.tenant_id resolved (this handler self-authenticates, so the
+    # auth dependency's _bind_rls_tenant_id never runs). Without it a shared_schema
+    # /RLS app denies every row → empty regions. Same fix as the region path; the
+    # prefs splice above means current_user.<attr> scope GUCs also bind.
+    if _batch_auth_ctx is not None:
+        from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
+
+        _bind_rls_tenant_id(_batch_auth_ctx)
+
     # Legacy filter context for backward compat
     _batch_filter_ctx: dict[str, Any] = {}
     if _batch_user_id:
@@ -292,6 +302,7 @@ async def _workspace_stats_handler(
     from fastapi import HTTPException
 
     # Enforce auth (same shape as batch handler: any region that requires it).
+    _stats_auth_ctx: Any = None
     for ctx in region_ctxs:
         if ctx.require_auth:
             auth_ctx = None
@@ -309,7 +320,17 @@ async def _workspace_stats_handler(
                     r in ctx.ws_access.allow_personas for r in normalized_roles
                 ):
                     raise HTTPException(status_code=403, detail="Workspace access denied")
+            _stats_auth_ctx = auth_ctx
             break
+
+    # #1466: bind dazzle.tenant_id before the scope-aware aggregate queries below.
+    # This handler self-authenticates, so the auth dependency's _bind_rls_tenant_id
+    # never runs — without it the aggregate's leased connection reads an unset
+    # tenant GUC and a shared_schema/RLS app fences every row → all stats are 0.
+    if _stats_auth_ctx is not None:
+        from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
+
+        _bind_rls_tenant_id(_stats_auth_ctx)
 
     workspace_name = ""
     if region_ctxs:

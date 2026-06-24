@@ -111,6 +111,19 @@ async def resolve_request_user_context(
         except Exception:
             logger.warning("Failed to get auth context for filter resolution", exc_info=True)
 
+    # #1466: bind the per-request RLS GUCs (dazzle.tenant_id / dazzle.user_<attr>)
+    # on this request task. Workspace region routes self-authenticate via
+    # get_auth_context (no FastAPI auth dependency, so _bind_rls_tenant_id is never
+    # called otherwise) — without this the leased connection reads an unset
+    # dazzle.tenant_id and a shared_schema/RLS app denies every row, so each region
+    # renders its empty-state under the non-bypass role. Mirrors the page-path fix
+    # (#1428, page_routes.py). Bound after the prefs splice above so the
+    # current_user.<attr> scope GUCs resolve; fail-closed + idempotent.
+    if auth_ctx_for_filters is not None:
+        from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
+
+        _bind_rls_tenant_id(auth_ctx_for_filters)
+
     # Step 4: build filter context for attention signals + grant
     # evaluation. Carries the resolved entity, the entity id, and
     # the context_id selector (v0.38.0).
