@@ -19,8 +19,11 @@ def _ov(value, kind, arg=None, currency_code=""):
     )
 
 
-def test_override_currency():
-    assert _ov(12345, "currency", "GBP") == "£123.45"
+def test_override_currency_major_units():
+    # The currency OVERRIDE on a decimal/float treats the value as major units
+    # (as-is), unlike the money-type inference path (minor units / 100).
+    assert _ov(1234.56, "currency", "GBP") == "£1,234.56"
+    assert _ov(1000, "currency", "USD") == "$1,000.00"
 
 
 def test_override_percent():

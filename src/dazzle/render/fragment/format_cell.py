@@ -38,14 +38,29 @@ def _title_case(token: str) -> str:
     return token.replace("_", " ").replace("-", " ").strip().title()
 
 
+def _currency_str(major: Decimal, code: str) -> str:
+    symbol = _CURRENCY_SYMBOLS.get(code.upper(), "")
+    return f"{symbol}{major:,.2f}" if symbol else f"{major:,.2f} {code}"
+
+
 def _currency(minor: Any, code: str) -> str:
-    """Format integer minor units (e.g. pence) as a currency string (raw)."""
+    """Format integer MINOR units (e.g. pence) as currency — the money-type
+    inference path (the money column stores minor units in ``<name>_minor``)."""
     try:
         major = Decimal(int(minor)) / 100
     except (TypeError, ValueError, InvalidOperation):
         return str(minor)
-    symbol = _CURRENCY_SYMBOLS.get(code.upper(), "")
-    return f"{symbol}{major:,.2f}" if symbol else f"{major:,.2f} {code}"
+    return _currency_str(major, code)
+
+
+def _currency_major(value: Any, code: str) -> str:
+    """Format a MAJOR-unit numeric as currency — the explicit ``format: currency``
+    override on a decimal/float field (which stores the amount as-is, not minor)."""
+    try:
+        major = Decimal(str(value))
+    except (TypeError, ValueError, InvalidOperation):
+        return str(value)
+    return _currency_str(major, code)
 
 
 def _friendly_dt(value: Any, *, with_time: bool) -> str:
@@ -162,7 +177,7 @@ def _apply_override(value: Any, fmt: ResolvedFormat, currency_code: str) -> str:
     """
     kind, arg = fmt.kind, fmt.arg
     if kind == "currency":
-        return _currency(value, arg or currency_code or "GBP")
+        return _currency_major(value, arg or currency_code or "GBP")
     if kind == "percent":
         return f"{float(value) * 100:,.{_dp(arg)}f}%"
     if kind == "round":
