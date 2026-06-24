@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.20] - 2026-06-25
+
+### Fixed
+- **CI: regenerated the `test_golden_master` IR snapshot** for the new `SurfaceElement.format` field (#1470 Phase 2). The v0.86.19 IR addition drifted the committed syrupy snapshot (`'format': None` on every surface element); the snapshot now matches. Snapshot-only — no behaviour change. (Lesson: an IR/rendering change needs the full `pytest -m "not e2e"` suite locally, not just the `/ship` gate subset — the golden-master + walk jobs live outside it.)
+
 ## [0.86.19] - 2026-06-24
 
 ### Added

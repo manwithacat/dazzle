@@ -1194,6 +1194,7 @@
             'elements': list([
               dict({
                 'field_name': 'title',
+                'format': None,
                 'help': None,
                 'label': 'Title',
                 'options': dict({
@@ -1203,6 +1204,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'format': None,
                 'help': None,
                 'label': 'Status',
                 'options': dict({
@@ -1254,6 +1256,7 @@
             'elements': list([
               dict({
                 'field_name': 'title',
+                'format': None,
                 'help': None,
                 'label': 'Title',
                 'options': dict({
@@ -1263,6 +1266,7 @@
               }),
               dict({
                 'field_name': 'description',
+                'format': None,
                 'help': None,
                 'label': 'Description',
                 'options': dict({
@@ -1272,6 +1276,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'format': None,
                 'help': None,
                 'label': 'Status',
                 'options': dict({
@@ -1323,6 +1328,7 @@
             'elements': list([
               dict({
                 'field_name': 'title',
+                'format': None,
                 'help': None,
                 'label': 'Title',
                 'options': dict({
@@ -1332,6 +1338,7 @@
               }),
               dict({
                 'field_name': 'description',
+                'format': None,
                 'help': None,
                 'label': 'Description',
                 'options': dict({
@@ -1383,6 +1390,7 @@
             'elements': list([
               dict({
                 'field_name': 'title',
+                'format': None,
                 'help': None,
                 'label': 'Title',
                 'options': dict({
@@ -1392,6 +1400,7 @@
               }),
               dict({
                 'field_name': 'description',
+                'format': None,
                 'help': None,
                 'label': 'Description',
                 'options': dict({
@@ -1401,6 +1410,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'format': None,
                 'help': None,
                 'label': 'Status',
                 'options': dict({
@@ -1461,6 +1471,7 @@
             'elements': list([
               dict({
                 'field_name': 'component',
+                'format': None,
                 'help': None,
                 'label': 'Component',
                 'options': dict({
@@ -1470,6 +1481,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'format': None,
                 'help': None,
                 'label': 'Status',
                 'options': dict({
@@ -1479,6 +1491,7 @@
               }),
               dict({
                 'field_name': 'message',
+                'format': None,
                 'help': None,
                 'label': 'Message',
                 'options': dict({
@@ -1488,6 +1501,7 @@
               }),
               dict({
                 'field_name': 'checked_at',
+                'format': None,
                 'help': None,
                 'label': 'Checked',
                 'options': dict({
@@ -1570,6 +1584,7 @@
             'elements': list([
               dict({
                 'field_name': 'version',
+                'format': None,
                 'help': None,
                 'label': 'Version',
                 'options': dict({
@@ -1579,6 +1594,7 @@
               }),
               dict({
                 'field_name': 'status',
+                'format': None,
                 'help': None,
                 'label': 'Status',
                 'options': dict({
@@ -1588,6 +1604,7 @@
               }),
               dict({
                 'field_name': 'deployed_by',
+                'format': None,
                 'help': None,
                 'label': 'Deployed By',
                 'options': dict({
@@ -1597,6 +1614,7 @@
               }),
               dict({
                 'field_name': 'deployed_at',
+                'format': None,
                 'help': None,
                 'label': 'Deployed At',
                 'options': dict({
