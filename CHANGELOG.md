@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.17] - 2026-06-24
+
+### Fixed
+- **#1469 relational `as parent` (EXISTS-via-junction) scope resolved inconsistently across source entities.** The same `via Junction(... = current_user, ... = id)` `as parent` scope populated a region for some source entities (bare-named FK columns) but returned empty for others (`<name>_id`-suffixed FK columns). Root cause: in `predicate_compiler._compile_exists_check`, the entity-column binding target was emitted as a raw `"<Entity>"."<target>"` reference **without** the bare⇄`<field>_id` resolution (`_resolve_field_on_entity`) that `ColumnCheck`/`PathCheck` already apply — so the EXISTS body referenced a non-existent column, the query raised, and `fetch_region_items` swallowed it fail-closed → empty region. The #764 "bare names" change removed the blind `_id` append but never added the symmetric resolution. Now the binding resolves through the same heuristic (real column as-is; `<field>_id` when that's the actual FK; bare fallback when the entity isn't in the FK graph). Verified via `dazzle db explain-scope`-equivalent SQL assertions in `test_predicate_compiler.py`.
+
 ## [0.86.16] - 2026-06-24
 
 ### Fixed

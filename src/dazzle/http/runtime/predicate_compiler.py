@@ -948,7 +948,17 @@ def _compile_exists_check(
                 "id, null, or a literal"
             )
         else:
-            value_sql = f"{quote_identifier(entity_name)}.{quote_identifier(target_val)}"
+            # #1469: the entity-column binding (e.g. `student = student_profile`)
+            # must resolve through the same bare⇄`<field>_id` heuristic the rest
+            # of the compiler uses (_qualify_column / _compile_path_check). Emitting
+            # `target_val` raw only produced valid SQL when the source entity's FK
+            # column was named exactly as written; for entities whose column carries
+            # the `_id` suffix the EXISTS body referenced a non-existent column → the
+            # query raised → fetch_region_items swallowed it fail-closed → the region
+            # rendered empty (inconsistent population across source entities). When
+            # fk_graph is None this returns target_val unchanged (no behaviour change).
+            resolved_target = _resolve_field_on_entity(target_val, entity_name, fk_graph)
+            value_sql = f"{quote_identifier(entity_name)}.{quote_identifier(resolved_target)}"
 
         if is_dotted:
             # Dotted junction-field (#858): expand via FK graph into nested

@@ -190,10 +190,16 @@ class TestTerminals:
 
 
 class TestExistsFieldReference:
-    """via bindings that reference root entity fields generate column refs (#764)."""
+    """via bindings that reference root entity fields generate column refs (#764).
 
-    def test_field_binding_generates_column_ref(self) -> None:
-        """student_profile binding should reference MarkingResult.student_profile (bare name)."""
+    #1469: the entity-column binding resolves through the same bare⇄`<field>_id`
+    heuristic the rest of the compiler uses — the bare name when it names a real
+    column or the source entity isn't in the FK graph (the fallback below), the
+    `<field>_id` form when that's the actual FK column on an in-graph entity.
+    """
+
+    def test_field_binding_falls_back_to_bare_when_entity_not_in_graph(self) -> None:
+        """An entity absent from the FK graph keeps the bare target (safe fallback)."""
         p = ExistsCheck(
             target_entity="ParentContact",
             bindings=[
@@ -201,14 +207,15 @@ class TestExistsFieldReference:
                 ExistsBinding(junction_field="parent_user_id", target="current_user"),
             ],
         )
+        # MarkingResult is not in _simple_graph → resolution can't see its columns
+        # → bare fallback (let SQL surface a genuine schema error, not fabricate).
         sql, params = compile_predicate(p, "MarkingResult", _simple_graph())
-        # Dazzle FK columns use bare field names — no _id suffix
         assert '"MarkingResult"."student_profile"' in sql
         # current_user should be a param, not a column ref
         assert len(params) == 1
 
-    def test_field_binding_bare_name_no_id_appended(self) -> None:
-        """Field references should NOT append _id — Dazzle FK columns are bare names."""
+    def test_field_binding_bare_name_no_id_appended_when_not_in_graph(self) -> None:
+        """No blind `_id` append: an entity absent from the graph keeps the bare name."""
         p = ExistsCheck(
             target_entity="Junction",
             bindings=[
@@ -218,7 +225,39 @@ class TestExistsFieldReference:
         sql, params = compile_predicate(p, "Root", _simple_graph())
         assert '"Root"."other_entity"' in sql
         assert '"Root"."other_entity_id"' not in sql
-        assert params == []
+
+    def test_entity_column_binding_resolves_id_suffix(self) -> None:
+        """#1469: a bare relation-name target resolves to the real `<name>_id` FK
+        column when the source entity IS in the FK graph.
+
+        This is the regression: `Manuscript` has the FK column `student_id`, but the
+        binding writes the relation name `student`. Emitting `"Manuscript"."student"`
+        raw referenced a non-existent column → the query raised → the region rendered
+        empty for every `_id`-suffixed source entity while bare-named ones worked.
+        """
+        p = ExistsCheck(
+            target_entity="ParentContact",
+            bindings=[
+                ExistsBinding(junction_field="student_id", target="student"),
+                ExistsBinding(junction_field="parent_user_id", target="current_user"),
+            ],
+        )
+        sql, _ = compile_predicate(p, "Manuscript", _simple_graph())
+        assert '"Manuscript"."student_id"' in sql, "bare `student` must resolve to student_id"
+        assert '"Manuscript"."student"' not in sql
+
+    def test_entity_column_binding_keeps_existing_bare_column(self) -> None:
+        """A target that already names a real column on an in-graph entity stays bare."""
+        p = ExistsCheck(
+            target_entity="Junction",
+            bindings=[
+                ExistsBinding(junction_field="m", target="title"),  # Manuscript.title exists
+                ExistsBinding(junction_field="u", target="current_user"),
+            ],
+        )
+        sql, _ = compile_predicate(p, "Manuscript", _simple_graph())
+        assert '"Manuscript"."title"' in sql
+        assert '"Manuscript"."title_id"' not in sql
 
 
 class TestSchemaQualification:
