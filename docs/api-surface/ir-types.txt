@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 370 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
+# Counts: 371 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -971,6 +971,12 @@ ir_class: FieldAssignment
     - field_path: str
     - value: str
   optional: (none)
+
+ir_class: FieldFormatSpec
+  required:
+    - kind: str
+  optional:
+    - arg: str | None = None
 
 ir_class: FieldPattern
   required:
@@ -2829,6 +2835,7 @@ ir_class: SurfaceElement
   required:
     - field_name: str
   optional:
+    - format: FieldFormatSpec | None = None
     - help: str | None = None
     - label: str | None = None
     - options: dict[str, Any] = {}

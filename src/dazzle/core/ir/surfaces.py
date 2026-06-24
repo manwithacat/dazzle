@@ -99,6 +99,21 @@ class Outcome(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class FieldFormatSpec(BaseModel):
+    """Explicit cell-format override on a surface field (#1470 Phase 2).
+
+    ``kind`` is one of the v1 vocabulary (currency, percent, round, date,
+    datetime, relative, title_case, upper, lower, yes_no, display_name, raw);
+    ``arg`` is the optional parameter (e.g. ``"GBP"`` for currency, ``"1"`` for
+    percent precision). Inference handles unannotated fields; this overrides it.
+    """
+
+    kind: str
+    arg: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SurfaceElement(BaseModel):
     """
     Element within a surface section (typically a field).
@@ -123,6 +138,8 @@ class SurfaceElement(BaseModel):
     # v0.61.88 (#918): field-level help text below the label. Renders as
     # a muted paragraph. None = no help text.
     help: str | None = None
+    # #1470 Phase 2: explicit cell-format override (None = type-inferred).
+    format: FieldFormatSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 
