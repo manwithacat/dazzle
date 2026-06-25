@@ -265,8 +265,16 @@ def _build_chart_adapter_ctx(
         adapter_ctx["total"] = inputs.total
         adapter_ctx["items"] = inputs.items
     elif display_upper == "FUNNEL_CHART":
+        # `_build_funnel_chart` counts `items` per `group_by` value across the
+        # ordered `kanban_columns` stages. It never reads `bucketed_metrics`,
+        # so without `items` + `group_by` the funnel rendered empty in every
+        # real app — caught by the UX catalogue fidelity gate (#1470).
         adapter_ctx["kanban_columns"] = inputs.kanban_columns
-        adapter_ctx["bucketed_metrics"] = inputs.bucketed_metrics
+        adapter_ctx["items"] = inputs.items
+        adapter_ctx["group_by"] = (
+            inputs.group_by.field if isinstance(inputs.group_by, _BucketRef) else inputs.group_by
+        )
+        adapter_ctx["total"] = inputs.total
     elif display_upper == "BAR_TRACK":
         adapter_ctx["bar_track_rows"] = inputs.bar_track_rows
         adapter_ctx["bar_track_max"] = inputs.bar_track_max

@@ -300,3 +300,11 @@ workspace ux_catalogue "UX Catalogue":
     value: latency_ms
     show_outliers: true
     empty: "No boxes"
+
+  cat_funnel:
+    source: Box
+    display: funnel_chart
+    group_by: status
+    aggregate:
+      count: count(Box)
+    empty: "No boxes"

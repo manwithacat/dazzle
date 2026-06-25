@@ -193,4 +193,10 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
         "sample_items": _BOXES,
         "canned_buckets": None,
     },
+    "cat_funnel": {
+        "description": "Stage funnel — boxes counted through the status lifecycle.",
+        "marker": "dz-funnel-chart-region",
+        "sample_items": _BOXES,
+        "canned_buckets": None,
+    },
 }
