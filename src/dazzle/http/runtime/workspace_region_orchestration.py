@@ -24,6 +24,7 @@ import logging
 from typing import Any
 
 from dazzle.core.ir import BucketRef as _BucketRef
+from dazzle.core.ir.workspaces import ComparisonOutlierSpec
 from dazzle.http.runtime.workspace_aggregation import (
     _compute_aggregate_metrics,
     _compute_box_plot_stats,
@@ -34,6 +35,7 @@ from dazzle.http.runtime.workspace_aggregation import (
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_computes import (
     apply_attention_signals,
+    build_comparison_inputs,
     compute_action_grid,
     compute_bar_track,
     compute_bullet,
@@ -56,7 +58,7 @@ logger = logging.getLogger(__name__)
 # Display-mode groupings used by phase-4 gates.
 _GROUPED_MODES: frozenset[str] = frozenset({"KANBAN", "BAR_CHART", "FUNNEL_CHART"})
 _SINGLE_DIM_CHART_MODES: frozenset[str] = frozenset(
-    {"BAR_CHART", "LINE_CHART", "SPARKLINE", "RADAR", "BAR_TRACK"}
+    {"BAR_CHART", "LINE_CHART", "SPARKLINE", "RADAR", "BAR_TRACK", "COMPARISON"}
 )
 _MULTI_DIM_MODES: frozenset[str] = frozenset({"PIVOT_TABLE", "AREA_CHART"})
 
@@ -231,6 +233,21 @@ async def compute_region_render_inputs(
         bar_track_rows = []
         bar_track_max = 0.0
 
+    # Comparison (#1470): ranked league from group buckets or scoped entity rows.
+    if display == "COMPARISON":
+        comparison_rows, comparison_max = build_comparison_inputs(
+            group_by=group_by,
+            bucketed_metrics=bucketed_metrics,
+            items=items,
+            columns=columns,
+            rank_by=getattr(ctx.ir_region, "rank_by", None) or "",
+            order=getattr(ctx.ir_region, "order", "desc"),
+            outlier_spec=getattr(ctx.ir_region, "outlier", None) or ComparisonOutlierSpec(),
+        )
+    else:
+        comparison_rows = []
+        comparison_max = 0.0
+
     # Action grid (#891): async per-card count fan-out.
     action_card_data: list[dict[str, Any]] = []
     if display == "ACTION_GRID":
@@ -397,6 +414,8 @@ async def compute_region_render_inputs(
         source_tabs=source_tabs,
         bar_track_rows=bar_track_rows,
         bar_track_max=bar_track_max,
+        comparison_rows=comparison_rows,
+        comparison_max=comparison_max,
         bullet_rows=bullet_rows,
         bullet_max_value=bullet_max_value,
         progress_stage_counts=progress_stage_counts,

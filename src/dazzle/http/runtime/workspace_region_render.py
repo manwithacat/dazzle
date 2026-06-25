@@ -84,6 +84,9 @@ class RegionRenderInputs:
     source_tabs: list[Any] = field(default_factory=list)
     bar_track_rows: list[dict[str, Any]] = field(default_factory=list)
     bar_track_max: float = 0.0
+    # #1470 display: comparison — ranked-league rows + shared bar scale.
+    comparison_rows: list[dict[str, Any]] = field(default_factory=list)
+    comparison_max: float = 0.0
     bullet_rows: list[dict[str, Any]] = field(default_factory=list)
     bullet_max_value: float = 0.0
     progress_stage_counts: list[dict[str, Any]] = field(default_factory=list)
@@ -151,6 +154,7 @@ _CHART_FAMILY: frozenset[str] = frozenset(
         "BULLET",
         "BOX_PLOT",
         "RADAR",
+        "COMPARISON",
     }
 )
 
@@ -255,6 +259,10 @@ def _build_chart_adapter_ctx(
     elif display_upper == "BAR_TRACK":
         adapter_ctx["bar_track_rows"] = inputs.bar_track_rows
         adapter_ctx["bar_track_max"] = inputs.bar_track_max
+    elif display_upper == "COMPARISON":
+        adapter_ctx["comparison_rows"] = inputs.comparison_rows
+        adapter_ctx["comparison_max"] = inputs.comparison_max
+        adapter_ctx["chart_label"] = ctx_region.title
     elif display_upper == "BULLET":
         adapter_ctx["bullet_rows"] = inputs.bullet_rows
         adapter_ctx["bullet_max_value"] = inputs.bullet_max_value

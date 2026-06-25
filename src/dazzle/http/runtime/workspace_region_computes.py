@@ -15,6 +15,7 @@ from typing import Any
 
 from dazzle.core.condition_eval import evaluate_condition as _eval_vis
 from dazzle.core.ir import AggregateRef
+from dazzle.core.ir.workspaces import ComparisonOutlierSpec
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.workspace_card_data import (
     _apply_format_spec,
@@ -23,6 +24,112 @@ from dazzle.http.runtime.workspace_card_data import (
     _resolve_path,
 )
 from dazzle.render.display_names import _resolve_display_name
+from dazzle.render.fragment.outliers import flag_outliers
+
+
+def _coerce_float(value: Any) -> float | None:
+    """Best-effort float coercion; None and unparseable values → None."""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def build_comparison_rows(
+    records: list[dict[str, Any]],
+    *,
+    label_key: str,
+    value_key: str,
+    order: str,
+    outlier_spec: ComparisonOutlierSpec,
+    extra_keys: list[str],
+) -> tuple[list[dict[str, Any]], float]:
+    """Rank ``records`` by ``value_key`` and flag outliers — the comparison spine (#1470).
+
+    Pure: runs AFTER the scope-safe fetch, so it never widens scope. Sorts by
+    value (``None`` always last regardless of ``order``), assigns ranks 1..N,
+    computes ``bar_fraction = value / max`` clamped to [0, 1], and attaches the
+    per-row outlier flag from :func:`flag_outliers`. Returns ``(rows, max)``
+    where ``max`` is the largest numeric value (``0.0`` when none).
+    """
+    if not records:
+        return [], 0.0
+
+    enriched = [(rec, _coerce_float(rec.get(value_key))) for rec in records]
+    non_none = [pair for pair in enriched if pair[1] is not None]
+    nones = [pair for pair in enriched if pair[1] is None]
+    non_none.sort(key=lambda pair: pair[1], reverse=order != "asc")  # type: ignore[arg-type,return-value]
+    ordered = non_none + nones
+
+    values = [v for _rec, v in ordered]
+    max_value = max((v for v in values if v is not None), default=0.0)
+    denom = max_value if max_value > 0 else 1.0
+    flags = flag_outliers(values, outlier_spec)
+
+    rows: list[dict[str, Any]] = []
+    for rank, ((rec, value), flag) in enumerate(zip(ordered, flags, strict=True), start=1):
+        fraction = max(0.0, min(1.0, value / denom)) if value is not None else 0.0
+        rows.append(
+            {
+                "rank": rank,
+                "label": str(rec.get(label_key, "") or ""),
+                "value": value,
+                "bar_fraction": fraction,
+                "columns": {k: rec.get(k) for k in extra_keys},
+                "outlier": flag,
+            }
+        )
+    return rows, max_value
+
+
+def build_comparison_inputs(
+    *,
+    group_by: Any,
+    bucketed_metrics: list[dict[str, Any]],
+    items: list[dict[str, Any]],
+    columns: list[dict[str, Any]],
+    rank_by: str,
+    order: str,
+    outlier_spec: ComparisonOutlierSpec,
+) -> tuple[list[dict[str, Any]], float]:
+    """Select the comparison data source by mode, then rank (#1470).
+
+    Group mode (``group_by`` + buckets): rank by the named aggregate, pulling it
+    from each bucket's ``metrics`` (falling back to the primary ``value``).
+    Entity-row mode: rank the scoped list ``items`` by the numeric ``rank_by``
+    field, labelling by the first non-metric column and surfacing the remaining
+    columns as ``columns``.
+    """
+    if group_by and bucketed_metrics:
+        records = [
+            {
+                "label": b.get("label"),
+                rank_by: (b.get("metrics") or {}).get(rank_by, b.get("value")),
+            }
+            for b in bucketed_metrics
+        ]
+        return build_comparison_rows(
+            records,
+            label_key="label",
+            value_key=rank_by,
+            order=order,
+            outlier_spec=outlier_spec,
+            extra_keys=[],
+        )
+
+    col_keys = [str(k) for c in columns if (k := c.get("key"))]
+    label_key = next((k for k in col_keys if k != rank_by), "id")
+    extra_keys = [k for k in col_keys if k not in (label_key, rank_by)]
+    return build_comparison_rows(
+        items,
+        label_key=label_key,
+        value_key=rank_by,
+        order=order,
+        outlier_spec=outlier_spec,
+        extra_keys=extra_keys,
+    )
 
 
 def compute_heatmap(

@@ -408,7 +408,9 @@
     "mi_rank": "A"
   },
   "dazzle/api_kb/__init__.py": {
-    "functions": {},
+    "functions": {
+      "_pack_ops_provider": 3
+    },
     "mi_rank": "A"
   },
   "dazzle/api_kb/loader.py": {
@@ -3574,7 +3576,8 @@
       "SurfaceParserMixin._parse_companion_stages": 3,
       "SurfaceParserMixin._parse_field_key_value_options": 3,
       "SurfaceParserMixin._parse_field_option_value": 3,
-      "SurfaceParserMixin._parse_field_trailing_modifiers": 9,
+      "SurfaceParserMixin._parse_field_trailing_modifiers": 10,
+      "SurfaceParserMixin._parse_format_spec": 2,
       "SurfaceParserMixin._parse_related_group": 10,
       "SurfaceParserMixin._parse_subtype_panel": 4,
       "SurfaceParserMixin._parse_surface_access": 5,
@@ -3843,9 +3846,12 @@
       "_kw_group_by": 5,
       "_kw_limit": 1,
       "_kw_notice": 8,
+      "_kw_order": 2,
+      "_kw_outlier_method": 1,
       "_kw_overlay_series": 1,
       "_kw_primary": 1,
       "_kw_primary_action": 2,
+      "_kw_rank_by": 1,
       "_kw_reference_bands": 1,
       "_kw_reference_lines": 1,
       "_kw_refresh": 1,
@@ -3868,7 +3874,8 @@
       "_kw_track_format": 1,
       "_kw_track_max": 1,
       "_kw_value": 2,
-      "_kw_width": 4
+      "_kw_width": 4,
+      "_parse_outlier_spec": 10
     },
     "mi_rank": "C"
   },
@@ -3888,7 +3895,8 @@
       "is_production": 1,
       "is_test": 1,
       "pin_production_env": 1,
-      "should_enable_test_endpoints": 3
+      "should_enable_test_endpoints": 3,
+      "skip_boot_schema_ddl": 1
     },
     "mi_rank": "A"
   },
@@ -5341,6 +5349,7 @@
       "CompanionPosition": 1,
       "CompanionSpec": 1,
       "CompanionStageSpec": 1,
+      "FieldFormatSpec": 1,
       "Outcome": 1,
       "OutcomeKind": 1,
       "RelatedDisplayMode": 1,
@@ -5477,6 +5486,7 @@
       "CohortStripConfig": 1,
       "CohortStripLens": 8,
       "CohortStripLens._validate_threshold_or_bands": 7,
+      "ComparisonOutlierSpec": 1,
       "CompositePrimaryPart": 1,
       "CompositePrimarySpec": 3,
       "CompositePrimarySpec._validate_non_empty": 2,
@@ -5698,7 +5708,7 @@
       "_fragment_chrome_warned": 1,
       "_parse_storage_configs": 12,
       "check_framework_version": 5,
-      "load_manifest": 39,
+      "load_manifest": 42,
       "resolve_api_url": 4,
       "resolve_database_url": 15,
       "resolve_site_url": 4
@@ -6275,7 +6285,7 @@
   "dazzle/core/tenancy_inject.py": {
     "functions": {
       "_find_tenant_entity": 4,
-      "inject_partition_key": 14
+      "inject_partition_key": 15
     },
     "mi_rank": "A"
   },
@@ -6436,8 +6446,10 @@
   },
   "dazzle/core/validation/surfaces.py": {
     "functions": {
+      "_format_kind_error": 5,
+      "register_pack_ops_provider": 1,
       "validate_experiences": 39,
-      "validate_surfaces": 28
+      "validate_surfaces": 31
     },
     "mi_rank": "A"
   },
@@ -6453,6 +6465,10 @@
   "dazzle/core/validation/ux.py": {
     "functions": {
       "_collect_tenant_config_refs": 7,
+      "_validate_comparison_outlier": 7,
+      "_validate_comparison_rank_by": 11,
+      "_validate_comparison_region": 3,
+      "validate_comparison_regions": 8,
       "validate_emits_targets": 5,
       "validate_nav_curation": 33,
       "validate_persona_nav_refs": 5,
@@ -6619,8 +6635,12 @@
       "RenameColumn": 1,
       "RenameResolutionError": 1,
       "RenameTable": 1,
+      "_add_op_order": 5,
+      "_coerce_fks": 4,
+      "_coerce_uniques": 3,
       "_diff_columns": 7,
       "_diff_constraints": 7,
+      "_drop_op_order": 4,
       "_empty_hints": 1,
       "_resolve_column_renames": 6,
       "_resolve_table_renames": 4,
@@ -6665,10 +6685,13 @@
     "functions": {
       "_render_server_default": 3,
       "_sa_type_to_token": 14,
+      "_table_fks": 4,
+      "_table_index_keys": 3,
+      "_table_uniques": 7,
       "introspect_schema": 14,
       "load_head_snapshot": 4,
       "project_current": 1,
-      "project_schema": 14,
+      "project_schema": 5,
       "render_snapshot_literal": 1,
       "snapshot_from_module": 1
     },
@@ -9907,7 +9930,7 @@
       "AuditLogger._flush": 1,
       "AuditLogger._flush_loop": 4,
       "AuditLogger._get_connection": 3,
-      "AuditLogger._init_db": 2,
+      "AuditLogger._init_db": 3,
       "AuditLogger._write_entries": 11,
       "AuditLogger.drain": 1,
       "AuditLogger.log_decision": 5,
@@ -10438,6 +10461,16 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/http/runtime/auth/partition_root.py": {
+    "functions": {
+      "PartitionHierarchy": 2,
+      "PartitionHierarchy.probe_kinds": 1,
+      "build_partition_hierarchy": 10,
+      "reconcile_membership_partition_roots": 5,
+      "resolve_partition_root": 10
+    },
+    "mi_rank": "A"
+  },
   "dazzle/http/runtime/auth/password_login_routes.py": {
     "functions": {
       "_encode_next": 1,
@@ -10716,7 +10749,7 @@
       "AuthStore._execute_modify": 1,
       "AuthStore._execute_one": 2,
       "AuthStore._get_connection": 1,
-      "AuthStore._init_db": 1,
+      "AuthStore._init_db": 2,
       "AuthStore._row_to_scim_group": 1,
       "AuthStore._transaction": 2,
       "AuthStore.add_group_member": 1,
@@ -10738,6 +10771,7 @@
       "AuthStore.rename_scim_group": 1,
       "AuthStore.replace_group_members": 2,
       "AuthStore.search_users": 4,
+      "AuthStore.set_partition_hierarchy": 1,
       "AuthStore.set_preference": 1,
       "AuthStore.set_preferences": 3,
       "AuthStore.store_totp_secret_pending": 1,
@@ -11205,10 +11239,10 @@
   "dazzle/http/runtime/file_storage.py": {
     "functions": {
       "FileMetadata": 1,
-      "FileMetadataStore": 2,
+      "FileMetadataStore": 3,
       "FileMetadataStore.__init__": 2,
       "FileMetadataStore._get_connection": 1,
-      "FileMetadataStore._init_db": 1,
+      "FileMetadataStore._init_db": 2,
       "FileMetadataStore._row_to_metadata": 4,
       "FileMetadataStore.delete": 1,
       "FileMetadataStore.get": 2,
@@ -12415,7 +12449,7 @@
       "RelationLoader._load_to_many": 9,
       "RelationLoader._load_to_one": 24,
       "RelationLoader.apply_display_joins_to_rows": 7,
-      "RelationLoader.build_display_join_plan": 5,
+      "RelationLoader.build_display_join_plan": 10,
       "RelationLoader.build_join_sql": 8,
       "RelationLoader.load_relations": 8,
       "RelationLoader.parse_joined_row": 9,
@@ -12454,8 +12488,9 @@
       "FragmentSurfaceAdapter._build_view": 9,
       "FragmentSurfaceAdapter.build": 4,
       "_build_column_header": 7,
+      "_cell_value": 3,
       "_field_to_primitive": 15,
-      "_format_cell": 2,
+      "_format_cell": 3,
       "_pick_empty_state": 6
     },
     "mi_rank": "A"
@@ -12779,7 +12814,7 @@
       "_extract_condition_filters": 80,
       "_resolve_predicate_filters": 10,
       "_resolve_scope_filters": 20,
-      "_resolve_user_attribute": 13,
+      "_resolve_user_attribute": 15,
       "_row_to_payload_dict": 5,
       "_scoped_pre_read": 14,
       "_should_bypass_tenant_filter": 7,
@@ -12850,6 +12885,7 @@
       "DazzleBackendApp._mount_search_routes": 5,
       "DazzleBackendApp._mount_signing_routes": 6,
       "DazzleBackendApp._mount_test_routes": 4,
+      "DazzleBackendApp._reconcile_membership_partition_roots": 4,
       "DazzleBackendApp._resolve_capabilities": 3,
       "DazzleBackendApp._resolve_pdf_branding": 8,
       "DazzleBackendApp._resolve_signing_recovery": 4,
@@ -13151,10 +13187,10 @@
   },
   "dazzle/http/runtime/static_files.py": {
     "functions": {
-      "CombinedStaticFiles": 5,
-      "CombinedStaticFiles.__init__": 4,
+      "CombinedStaticFiles": 6,
+      "CombinedStaticFiles.__init__": 5,
       "CombinedStaticFiles._lookup_in_dirs": 3,
-      "CombinedStaticFiles.file_response": 5,
+      "CombinedStaticFiles.file_response": 7,
       "CombinedStaticFiles.lookup_path": 4
     },
     "mi_rank": "A"
@@ -13356,7 +13392,7 @@
       "SystemRoutesSubsystem._init_workspace_routes": 2,
       "SystemRoutesSubsystem._register_manual_trigger_routes": 5,
       "SystemRoutesSubsystem._setup_optional_features": 12,
-      "SystemRoutesSubsystem._setup_system_routes": 16,
+      "SystemRoutesSubsystem._setup_system_routes": 17,
       "SystemRoutesSubsystem._wire_entity_events_to_bus": 4,
       "SystemRoutesSubsystem.shutdown": 1,
       "SystemRoutesSubsystem.startup": 1,
@@ -13720,7 +13756,7 @@
   "dazzle/http/runtime/workspace_columns.py": {
     "functions": {
       "build_entity_columns": 22,
-      "build_surface_columns": 31,
+      "build_surface_columns": 35,
       "field_kind_to_col_type": 10
     },
     "mi_rank": "A"
@@ -13740,8 +13776,8 @@
   "dazzle/http/runtime/workspace_handlers.py": {
     "functions": {
       "_fetch_region_json": 34,
-      "_workspace_batch_handler": 37,
-      "_workspace_stats_handler": 22
+      "_workspace_batch_handler": 38,
+      "_workspace_stats_handler": 23
     },
     "mi_rank": "A"
   },
@@ -13751,12 +13787,15 @@
       "_batched_fk_cohort_aggregate": 5,
       "_batched_share_cohort_aggregate": 12,
       "_batched_via_cohort_aggregate": 21,
+      "_coerce_float": 3,
       "_entity_name_of": 2,
       "_find_fk_to": 7,
       "_resolve_via_link_direction": 4,
       "_retarget_scope_predicate_to_alias": 3,
       "_strip_scope_predicate": 3,
       "apply_attention_signals": 10,
+      "build_comparison_inputs": 11,
+      "build_comparison_rows": 15,
       "compute_action_grid": 17,
       "compute_bar_track": 11,
       "compute_bullet": 16,
@@ -13772,7 +13811,7 @@
       "compute_queue": 6,
       "compute_tree": 8
     },
-    "mi_rank": "B"
+    "mi_rank": "C"
   },
   "dazzle/http/runtime/workspace_region_fetch.py": {
     "functions": {
@@ -13792,14 +13831,14 @@
   },
   "dazzle/http/runtime/workspace_region_orchestration.py": {
     "functions": {
-      "compute_region_render_inputs": 82
+      "compute_region_render_inputs": 85
     },
     "mi_rank": "A"
   },
   "dazzle/http/runtime/workspace_region_prelude.py": {
     "functions": {
       "RequestUserContext": 1,
-      "resolve_request_user_context": 34
+      "resolve_request_user_context": 35
     },
     "mi_rank": "A"
   },
@@ -13808,7 +13847,7 @@
       "RegionRenderInputs": 1,
       "RenderEnv": 1,
       "_build_card_adapter_ctx": 13,
-      "_build_chart_adapter_ctx": 18,
+      "_build_chart_adapter_ctx": 19,
       "_build_dashboard_adapter_ctx": 14,
       "_build_list_adapter_ctx": 13,
       "_build_specialty_adapter_ctx": 15,
@@ -16726,7 +16765,7 @@
       "AppChrome": 1,
       "_dedup_preserving_order": 3,
       "_theme_css_url": 2,
-      "resolve_app_chrome": 23
+      "resolve_app_chrome": 25
     },
     "mi_rank": "A"
   },
@@ -16738,8 +16777,13 @@
   },
   "dazzle/page/runtime/asset_fingerprint.py": {
     "functions": {
+      "_framework_manifest": 1,
+      "_framework_static_root": 1,
       "_hash_file": 1,
       "build_asset_manifest": 6,
+      "fingerprint_static_url": 4,
+      "fingerprint_urls": 2,
+      "should_fingerprint": 3,
       "static_url_filter": 3,
       "strip_fingerprint": 2
     },
@@ -17476,7 +17520,7 @@
   },
   "dazzle/process/worker.py": {
     "functions": {
-      "main": 13,
+      "main": 12,
       "run": 2
     },
     "mi_rank": "A"
@@ -17913,6 +17957,24 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/render/fragment/format_cell.py": {
+    "functions": {
+      "ResolvedFormat": 1,
+      "_apply_override": 9,
+      "_coerce_dt": 4,
+      "_currency": 2,
+      "_currency_major": 2,
+      "_currency_str": 2,
+      "_dp": 3,
+      "_format_temporal": 4,
+      "_friendly_dt": 6,
+      "_infer": 9,
+      "_relative": 7,
+      "_title_case": 1,
+      "format_cell": 4
+    },
+    "mi_rank": "A"
+  },
   "dazzle/render/fragment/htmx.py": {
     "functions": {
       "HxTrigger": 3,
@@ -17924,6 +17986,15 @@
       "URL": 4,
       "URL.__post_init__": 5,
       "URL.__str__": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/render/fragment/outliers.py": {
+    "functions": {
+      "_flag_by_fences": 7,
+      "_iqr_fences": 2,
+      "_sigma_fences": 3,
+      "flag_outliers": 9
     },
     "mi_rank": "A"
   },
