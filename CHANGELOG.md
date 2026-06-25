@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.22] - 2026-06-25
+
+### Fixed
+- **#1470/#1471 two-hop: ref columns whose target `display_field` is itself a ref now resolve to a human string, not the nested FK's UUID.** `build_display_join_plan` resolved one hop only — when an entity's `display_field` points at another ref (e.g. `Manuscript.display_field: student → User`), the FK display column projected the nested ref's raw UUID. It now detects that case and chains a second `LEFT JOIN` to the nested target's `display_field`, so the `{rel}__display` column carries the two-hop name. One-hop (scalar `display_field`) behaviour is unchanged; degrades to the prior column when the nested target has no `display_field`. This closes the "harder related case" noted on #1471. (Follow-on: a PG fixture exercising the chained join at runtime — currently the join SQL is asserted at the generation level + composes via the proven one-hop path.)
+
 ## [0.86.21] - 2026-06-25
 
 ### Fixed

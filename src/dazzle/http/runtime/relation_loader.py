@@ -476,9 +476,35 @@ class RelationLoader:
             alias = f"_fkd_{relation_name}"
             fk_col = quote_identifier(relation.foreign_key_field)
             target = quote_identifier(relation.to_entity)
-            display_col = quote_identifier(display_field)
             joins.append(f'LEFT JOIN {target} AS "{alias}" ON "{alias}".id = {base}.{fk_col}')
-            extra_cols.append(f'"{alias}".{display_col} AS "{relation_name}__display"')
+
+            # #1471 two-hop: if the target's own display_field is itself a to-one
+            # ref (e.g. Manuscript.display_field: student → User), chain a second
+            # LEFT JOIN so the column resolves to the nested target's display name
+            # instead of the nested FK's raw UUID. Falls back to the one-hop column
+            # when the display_field isn't a ref or the nested target has no
+            # display_field (degrades to the prior behaviour, no regression).
+            nested = self.registry.get_relation(relation.to_entity, display_field)
+            nested_display = (
+                self.registry.display_fields.get(nested.to_entity)
+                if nested and nested.is_to_one
+                else None
+            )
+            if nested and nested.is_to_one and nested_display:
+                alias2 = f"_fkd2_{relation_name}"
+                nested_fk = quote_identifier(nested.foreign_key_field)
+                nested_target = quote_identifier(nested.to_entity)
+                joins.append(
+                    f'LEFT JOIN {nested_target} AS "{alias2}" '
+                    f'ON "{alias2}".id = "{alias}".{nested_fk}'
+                )
+                extra_cols.append(
+                    f'"{alias2}".{quote_identifier(nested_display)} AS "{relation_name}__display"'
+                )
+            else:
+                extra_cols.append(
+                    f'"{alias}".{quote_identifier(display_field)} AS "{relation_name}__display"'
+                )
         return joins, extra_cols, fallback
 
     def apply_display_joins_to_rows(

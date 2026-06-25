@@ -44,6 +44,64 @@ def _registry_with(
     return registry
 
 
+def _two_hop_registry() -> RelationRegistry:
+    """Order → customer (Customer); Customer.display_field = rep → SalesRep;
+    SalesRep.display_field = name. So Order.customer should two-hop resolve to
+    SalesRep.name, not the nested rep UUID (#1471 two-hop)."""
+    registry = RelationRegistry()
+    registry.register(
+        "Order",
+        RelationInfo(
+            name="customer",
+            from_entity="Order",
+            to_entity="Customer",
+            kind="many_to_one",
+            foreign_key_field="customer_id",
+        ),
+    )
+    registry.register(
+        "Customer",
+        RelationInfo(
+            name="rep",
+            from_entity="Customer",
+            to_entity="SalesRep",
+            kind="many_to_one",
+            foreign_key_field="rep_id",
+        ),
+    )
+    registry.display_fields["Customer"] = "rep"  # display_field is itself a ref
+    registry.display_fields["SalesRep"] = "name"
+    return registry
+
+
+class TestTwoHopDisplayJoin:
+    def test_chains_second_join_when_display_field_is_ref(self) -> None:
+        loader = RelationLoader(registry=_two_hop_registry(), entities=[])
+        joins, extras, fallback = loader.build_display_join_plan("Order", ["customer"])
+
+        assert fallback == []
+        assert len(joins) == 2  # base join + nested join
+        # base: Customer joined on Order.customer_id
+        assert any(
+            '"Customer"' in j and '"customer_id"' in j and '"_fkd_customer"' in j for j in joins
+        )
+        # nested: SalesRep joined on _fkd_customer.rep_id
+        assert any(
+            '"SalesRep"' in j and '"_fkd2_customer"' in j and '"_fkd_customer"."rep_id"' in j
+            for j in joins
+        )
+        # the display column resolves to SalesRep.name (two hops), not the UUID
+        assert extras[0] == '"_fkd2_customer"."name" AS "customer__display"'
+
+    def test_one_hop_unaffected_by_two_hop_logic(self) -> None:
+        # display_field is a plain scalar → still a single join + direct column.
+        registry = _registry_with("Order", "customer", "Customer", "customer_id", "name")
+        loader = RelationLoader(registry=registry, entities=[])
+        joins, extras, _ = loader.build_display_join_plan("Order", ["customer"])
+        assert len(joins) == 1
+        assert extras[0] == '"_fkd_customer"."name" AS "customer__display"'
+
+
 class TestBuildDisplayJoinPlan:
     def test_emits_join_and_alias_column_for_registered_display(self) -> None:
         registry = _registry_with("Order", "customer", "Customer", "customer_id", "name")
