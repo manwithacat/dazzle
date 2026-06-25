@@ -134,6 +134,7 @@ from .tenancy import (
 from .ux import (
     _TENANT_CONFIG_PREFIX,
     _collect_tenant_config_refs,
+    validate_comparison_regions,
     validate_nav_curation,
     validate_persona_nav_refs,
     validate_ux_specs,
@@ -210,6 +211,7 @@ __all__ = [
     "validate_integrations",
     "validate_ledgers",
     "validate_lifecycles",
+    "validate_comparison_regions",
     "validate_money_fields",
     "validate_nav_curation",
     "validate_notifications",

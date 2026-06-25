@@ -6,6 +6,7 @@ from .validator import (
     validate_approvals,
     validate_atomic_flows,
     validate_audit_config,
+    validate_comparison_regions,
     validate_entities,
     validate_event_payload_secrets,
     validate_experiences,
@@ -131,6 +132,11 @@ def lint_appspec(
 
     # Cross-entity region action FK validation (#861)
     errors, warnings = validate_workspace_region_actions(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # display: comparison ranked-league region validation (#1470)
+    errors, warnings = validate_comparison_regions(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

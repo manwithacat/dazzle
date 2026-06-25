@@ -167,6 +167,108 @@ def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+_NUMERIC_FIELD_KINDS = frozenset(
+    {
+        ir.FieldTypeKind.INT,
+        ir.FieldTypeKind.DECIMAL,
+        ir.FieldTypeKind.FLOAT,
+        ir.FieldTypeKind.MONEY,
+    }
+)
+
+
+def _validate_comparison_rank_by(
+    region: ir.WorkspaceRegion,
+    entity: ir.EntitySpec | None,
+    label: str,
+) -> list[str]:
+    """Check `rank_by` is present and resolves for the region's mode (#1470)."""
+    if not region.rank_by:
+        return [
+            f"E_COMPARISON_RANK_BY_REQUIRED: {label} uses `display: comparison` but "
+            f"has no `rank_by:` — name the aggregate (group mode) or numeric field "
+            f"(entity-row mode) to rank by."
+        ]
+    if region.group_by is not None or region.group_by_dims:
+        # Group mode: rank_by must name a declared aggregate.
+        if region.rank_by not in region.aggregates:
+            known = ", ".join(sorted(region.aggregates)) or "(none)"
+            return [
+                f"E_COMPARISON_RANK_BY_UNKNOWN: {label} `rank_by: {region.rank_by}` "
+                f"is not a declared aggregate. Known aggregates: {known}."
+            ]
+        return []
+    # Entity-row mode: rank_by must name a numeric field on the source.
+    field = None
+    if entity is not None:
+        field = next((f for f in entity.fields if f.name == region.rank_by), None)
+    if field is None or field.type.kind not in _NUMERIC_FIELD_KINDS:
+        return [
+            f"E_COMPARISON_METRIC_NOT_NUMERIC: {label} `rank_by: {region.rank_by}` "
+            f"must name a numeric field (int/decimal/float/money) on the source "
+            f"entity, or use `group_by` + an aggregate."
+        ]
+    return []
+
+
+def _validate_comparison_outlier(outlier: ir.ComparisonOutlierSpec, label: str) -> list[str]:
+    """Check outlier params are well-formed (#1470)."""
+    if outlier.method == "sigma" and outlier.sigma_k is not None and outlier.sigma_k <= 0:
+        return [
+            f"E_COMPARISON_OUTLIER_INVALID: {label} sigma outlier needs a positive "
+            f"`sigma_k` (got {outlier.sigma_k})."
+        ]
+    if (
+        outlier.method == "threshold"
+        and outlier.threshold_low is None
+        and outlier.threshold_high is None
+    ):
+        return [
+            f"E_COMPARISON_OUTLIER_INVALID: {label} threshold outlier needs at "
+            f"least one of `low`/`high`."
+        ]
+    return []
+
+
+def _validate_comparison_region(
+    region: ir.WorkspaceRegion,
+    entity: ir.EntitySpec | None,
+    label: str,
+) -> list[str]:
+    """Pure rule check for one ``display: comparison`` region (#1470).
+
+    ``label`` prefixes each message (e.g. ``Workspace 'w' region 'league'``).
+    Group mode (``group_by`` set) ranks an aggregate; entity-row mode ranks a
+    numeric source field. Returns a list of ``E_COMPARISON_*`` error strings.
+    """
+    errors = _validate_comparison_rank_by(region, entity, label)
+    if region.order not in ("asc", "desc"):
+        errors.append(
+            f"E_COMPARISON_ORDER_INVALID: {label} `order: {region.order}` must be 'asc' or 'desc'."
+        )
+    if region.outlier is not None:
+        errors.extend(_validate_comparison_outlier(region.outlier, label))
+    return errors
+
+
+def validate_comparison_regions(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate every ``display: comparison`` region across all workspaces (#1470)."""
+    errors: list[str] = []
+    for workspace in appspec.workspaces:
+        for region in workspace.regions:
+            if region.display != ir.DisplayMode.COMPARISON:
+                continue
+            source_name = (
+                region.source.split(".")[0]
+                if region.source and "." in region.source
+                else region.source
+            )
+            entity = appspec.get_entity(source_name) if source_name else None
+            label = f"Workspace '{workspace.name}' region '{region.name or region.source}'"
+            errors.extend(_validate_comparison_region(region, entity, label))
+    return errors, []
+
+
 def validate_persona_nav_refs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Validate that each persona's `uses nav <name>` resolves (#1324).
 
