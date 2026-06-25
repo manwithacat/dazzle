@@ -96,11 +96,22 @@ def condition_expr_to_scope_predicate(expr: ConditionExpr | None) -> ScopePredic
     if val.is_list and val.values is not None:
         # IN / NOT IN against a list of literals. ScopePredicate's
         # ColumnCheck stores a single ValueRef, so a multi-value list
-        # expands to an OR-composite of individual ColumnChecks —
-        # matches parse_aggregate_where's behaviour.
+        # expands to a boolean composite of per-element checks. Each
+        # element compares against ONE literal, so it must use `=` / `!=`
+        # — NOT the list operator. Keeping `IN`/`NOT IN` here compiled to
+        # `col IN %s` with a scalar bind: invalid SQL that the count
+        # fetcher swallowed, silently returning 0 (#1472). De Morgan:
+        #   `x in [a, b]`     → (x = a) OR  (x = b)
+        #   `x not in [a, b]` → (x != a) AND (x != b)
+        is_not_in = op is CompOp.NOT_IN
+        elem_op = CompOp.NEQ if is_not_in else CompOp.EQ
+        bool_op = BoolOp.AND if is_not_in else BoolOp.OR
         return BoolComposite.make(
-            BoolOp.OR,
-            [ColumnCheck(field=field_name, op=op, value=ValueRef(literal=v)) for v in val.values],
+            bool_op,
+            [
+                ColumnCheck(field=field_name, op=elem_op, value=ValueRef(literal=v))
+                for v in val.values
+            ],
         )
 
     if val.is_date_expr:
