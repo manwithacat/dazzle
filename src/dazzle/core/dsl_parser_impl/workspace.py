@@ -2873,6 +2873,7 @@ class _WorkspaceRegionState:
     rank_by: str | None = None  # #1470 — comparison metric (aggregate key | numeric field)
     order: str = "desc"  # #1470 — comparison sort direction
     outlier: ir.ComparisonOutlierSpec | None = None  # #1470 — comparison outlier-flag config
+    outlier_on: str | None = None  # #1470 — outlier decorator target column
 
 
 # ---------- Simple keyword-value branches ---------- #
@@ -3358,6 +3359,15 @@ def _kw_rank_by(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.skip_newlines()
 
 
+def _kw_outlier_on(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1470: ``outlier_on: <column>`` — flag statistical outliers in this
+    numeric list column (method via the reused ``outlier_method:`` keyword)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.outlier_on = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
 def _kw_order(parser: Any, state: _WorkspaceRegionState) -> None:
     """#1470: ``order: asc | desc`` — comparison sort direction (default desc)."""
     parser.advance()
@@ -3708,6 +3718,7 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "drill": _kw_drill,  # #1303
     "refresh": _kw_refresh,  # #1391
     "rank_by": _kw_rank_by,  # #1470
+    "outlier_on": _kw_outlier_on,  # #1470
     "order": _kw_order,  # #1470
     "outlier_method": _kw_outlier_method,  # #1470
 }
@@ -3819,6 +3830,7 @@ def _build_workspace_region(
         drill=state.drill,  # #1303
         refresh_interval=state.refresh_interval,  # #1391
         rank_by=state.rank_by,  # #1470
+        outlier_on=state.outlier_on,  # #1470
         order=state.order,  # type: ignore[arg-type]  # #1470 — validated asc|desc
         outlier=state.outlier,  # #1470
     )
