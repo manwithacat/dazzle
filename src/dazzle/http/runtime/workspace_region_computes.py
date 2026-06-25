@@ -151,6 +151,31 @@ def build_outlier_flags(
     return flag_outliers(values, spec)
 
 
+def build_rag_tones(
+    items: list[dict[str, Any]], *, column: str, bands: list[Any]
+) -> list[str | None]:
+    """Per-row RAG tone for one column, index-aligned to ``items`` (#1470).
+
+    Reads ``column`` from each item, coercing non-numeric / non-finite / None to
+    None (no badge), then maps the value to a band tone: bands are walked in
+    descending ``at`` order, the first where ``value >= at`` wins. Below all bands
+    (or no value) → None. Pure: runs after the scoped fetch, never widens scope.
+    """
+    sorted_bands = sorted(bands, key=lambda b: getattr(b, "at", 0.0), reverse=True)
+    tones: list[str | None] = []
+    for item in items:
+        raw = item.get(column) if isinstance(item, dict) else None
+        v = _coerce_float(raw)
+        tone: str | None = None
+        if v is not None and math.isfinite(v):
+            for b in sorted_bands:
+                if v >= getattr(b, "at", 0.0):
+                    tone = getattr(b, "tone", None)
+                    break
+        tones.append(tone)
+    return tones
+
+
 def build_insight_inputs(
     bucketed_metrics: list[dict[str, Any]],
     *,

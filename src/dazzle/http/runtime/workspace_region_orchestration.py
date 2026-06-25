@@ -38,6 +38,7 @@ from dazzle.http.runtime.workspace_region_computes import (
     build_comparison_inputs,
     build_insight_inputs,
     build_outlier_flags,
+    build_rag_tones,
     compute_action_grid,
     compute_bar_track,
     compute_bullet,
@@ -279,6 +280,16 @@ async def compute_region_render_inputs(
         outlier_flags = []
         outlier_on = ""
 
+    # RAG decorator (#1470): per-row band tones for one list column.
+    rag_on = getattr(ctx.ir_region, "rag_on", None) or ""
+    if display == "LIST" and rag_on and not scope_denied:
+        rag_tones = build_rag_tones(
+            items, column=rag_on, bands=getattr(ctx.ir_region, "tone_bands", None) or []
+        )
+    else:
+        rag_tones = []
+        rag_on = ""
+
     # Action grid (#891): async per-card count fan-out.
     action_card_data: list[dict[str, Any]] = []
     if display == "ACTION_GRID":
@@ -450,6 +461,8 @@ async def compute_region_render_inputs(
         insight_narrative=insight_narrative,
         outlier_flags=outlier_flags,
         outlier_on=outlier_on,
+        rag_tones=rag_tones,
+        rag_on=rag_on,
         bullet_rows=bullet_rows,
         bullet_max_value=bullet_max_value,
         progress_stage_counts=progress_stage_counts,

@@ -92,6 +92,9 @@ class RegionRenderInputs:
     # #1470 outlier_on — per-row flags + the decorated column key.
     outlier_flags: list[Any] = field(default_factory=list)
     outlier_on: str = ""
+    # #1470 rag_on — per-row band tones + the decorated column key.
+    rag_tones: list[Any] = field(default_factory=list)
+    rag_on: str = ""
     bullet_rows: list[dict[str, Any]] = field(default_factory=list)
     bullet_max_value: float = 0.0
     progress_stage_counts: list[dict[str, Any]] = field(default_factory=list)
@@ -339,6 +342,8 @@ def _build_list_adapter_ctx(
         # #1470 outlier_on — decorated column key + per-row flags.
         adapter_ctx["outlier_flags"] = inputs.outlier_flags
         adapter_ctx["outlier_on"] = inputs.outlier_on
+        adapter_ctx["rag_tones"] = inputs.rag_tones
+        adapter_ctx["rag_on"] = inputs.rag_on
         adapter_ctx["empty_message"] = ctx.surface_empty_message or ctx_region.empty_message
         # #1233 — action_id → POST URL map for row_action buttons.
         adapter_ctx["row_action_routes"] = getattr(ctx, "row_action_routes", None) or {}
