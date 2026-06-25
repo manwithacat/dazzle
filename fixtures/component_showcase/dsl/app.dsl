@@ -240,9 +240,9 @@ workspace ux_catalogue "UX Catalogue":
   cat_heatmap:
     source: Box
     display: heatmap
-    group_by: status
-    aggregate:
-      count: count(Box)
+    rows: team
+    columns: status
+    value: latency_ms
     empty: "No boxes"
 
   cat_pivot:

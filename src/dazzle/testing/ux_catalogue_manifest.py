@@ -73,4 +73,69 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
         "sample_items": _BOXES,
         "canned_buckets": None,
     },
+    "cat_metrics": {
+        "description": "KPI tiles — scalar aggregates over the scoped set.",
+        "sample_items": [],
+        "canned_buckets": [{"dimensions": {}, "measures": {"avg_latency": 41}}],
+        "canned_list_totals": [42, 7],  # total, critical (popped in order)
+    },
+    "cat_bar_chart": {
+        "description": "Distribution by a category — one bar per group. One scope-aware GROUP BY.",
+        "sample_items": [],
+        "canned_buckets": [
+            {
+                "dimensions": {"team": "platform", "team_label": "platform"},
+                "measures": {"count": 12},
+            },
+            {
+                "dimensions": {"team": "payments", "team_label": "payments"},
+                "measures": {"count": 7},
+            },
+            {"dimensions": {"team": "growth", "team_label": "growth"}, "measures": {"count": 4}},
+            {"dimensions": {"team": "data", "team_label": "data"}, "measures": {"count": 9}},
+        ],
+    },
+    "cat_comparison": {
+        "description": "Ranked league — rows ranked by a metric with inline bars + automatic outlier flag.",
+        "sample_items": [],
+        "canned_buckets": [
+            {
+                "dimensions": {"team": "platform", "team_label": "platform"},
+                "measures": {"total": 12},
+            },
+            {
+                "dimensions": {"team": "payments", "team_label": "payments"},
+                "measures": {"total": 11},
+            },
+            {"dimensions": {"team": "growth", "team_label": "growth"}, "measures": {"total": 10}},
+            {"dimensions": {"team": "data", "team_label": "data"}, "measures": {"total": 9}},
+            {"dimensions": {"team": "infra", "team_label": "infra"}, "measures": {"total": 9}},
+            {"dimensions": {"team": "ml", "team_label": "ml"}, "measures": {"total": 1}},
+        ],
+    },
+    "cat_heatmap": {
+        "description": "Matrix density — latency shaded across team × status.",
+        "sample_items": _BOXES,
+        "canned_buckets": None,
+    },
+    "cat_pivot": {
+        "description": "Cross-tab — counts across two dimensions (team × status).",
+        "sample_items": [],
+        "canned_buckets": [
+            {"dimensions": {"team": "platform", "status": "healthy"}, "measures": {"count": 8}},
+            {"dimensions": {"team": "platform", "status": "critical"}, "measures": {"count": 1}},
+            {"dimensions": {"team": "payments", "status": "healthy"}, "measures": {"count": 6}},
+            {"dimensions": {"team": "payments", "status": "degraded"}, "measures": {"count": 2}},
+        ],
+    },
+    "cat_bullet": {
+        "description": "Actual-vs-target rows — each box's latency against its target.",
+        "sample_items": _BOXES,
+        "canned_buckets": None,
+    },
+    "cat_kanban": {
+        "description": "Board view — boxes grouped into status columns.",
+        "sample_items": _BOXES,
+        "canned_buckets": None,
+    },
 }

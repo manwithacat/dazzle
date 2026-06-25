@@ -1,3 +1,5 @@
+import pytest
+
 from dazzle.testing.ux_catalogue import (
     CATALOGUE_MANIFEST,
     iter_catalogue_regions,
@@ -18,3 +20,30 @@ def test_list_renders_table_with_outlier_badge() -> None:
     html = _render("cat_list")
     assert "<table" in html or "dz-list" in html
     assert 'data-dz-tone="warning"' in html  # outlier_on flags the latency outlier
+
+
+@pytest.mark.parametrize(
+    "name, marker",
+    [
+        ("cat_metrics", "dz-metric-tile"),
+        ("cat_bar_chart", "dz-bar-chart-region"),
+        ("cat_comparison", "dz-bar-track"),
+        ("cat_heatmap", "dz-heatmap-region"),
+        ("cat_pivot", "dz-pivot-region"),
+        ("cat_bullet", "dz-bullet-region"),
+        ("cat_kanban", "dz-kanban-board"),
+    ],
+)
+def test_mode_renders_primitive(name: str, marker: str) -> None:
+    html = _render(name)
+    assert html.strip(), f"{name} rendered empty"
+    assert marker in html, f"{name} missing {marker!r}"
+    assert "dz-empty" not in html, f"{name} fell through to an empty state"
+
+
+def test_every_catalogue_region_has_a_manifest_entry() -> None:
+    appspec = load_showcase_appspec()
+    region_names = {r.name for r, _ in iter_catalogue_regions(appspec)}
+    assert region_names == set(CATALOGUE_MANIFEST), (
+        "ux_catalogue regions and CATALOGUE_MANIFEST keys must match exactly"
+    )
