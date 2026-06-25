@@ -269,6 +269,38 @@ def validate_comparison_regions(appspec: ir.AppSpec) -> tuple[list[str], list[st
     return errors, []
 
 
+def validate_outlier_decorators(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate ``outlier_on`` statistical decorators on list regions (#1470)."""
+    errors: list[str] = []
+    for workspace in appspec.workspaces:
+        for region in workspace.regions:
+            if not region.outlier_on:
+                continue
+            label = f"Workspace '{workspace.name}' region '{region.name or region.source}'"
+            if region.display != ir.DisplayMode.LIST:
+                errors.append(
+                    f"E_OUTLIER_DISPLAY: {label} `outlier_on` requires `display: list` "
+                    f"(got {region.display.value})."
+                )
+            source_name = (
+                region.source.split(".")[0]
+                if region.source and "." in region.source
+                else region.source
+            )
+            entity = appspec.get_entity(source_name) if source_name else None
+            field = None
+            if entity is not None:
+                field = next((f for f in entity.fields if f.name == region.outlier_on), None)
+            if field is None or field.type.kind not in _NUMERIC_FIELD_KINDS:
+                errors.append(
+                    f"E_OUTLIER_NOT_NUMERIC: {label} `outlier_on: {region.outlier_on}` must "
+                    f"name a numeric field (int/decimal/float/money) on the source entity."
+                )
+            if region.outlier is not None:
+                errors.extend(_validate_comparison_outlier(region.outlier, label))
+    return errors, []
+
+
 def validate_persona_nav_refs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Validate that each persona's `uses nav <name>` resolves (#1324).
 

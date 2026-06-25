@@ -21,6 +21,7 @@ from .validator import (
     validate_money_fields,
     validate_nav_curation,
     validate_notifications,
+    validate_outlier_decorators,
     validate_persona_nav_refs,
     validate_process_step_service_refs,
     validate_rbac_matrix_diagnostics,
@@ -137,6 +138,11 @@ def lint_appspec(
 
     # display: comparison ranked-league region validation (#1470)
     errors, warnings = validate_comparison_regions(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # outlier_on statistical decorator validation (#1470)
+    errors, warnings = validate_outlier_decorators(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
