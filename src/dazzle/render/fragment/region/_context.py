@@ -83,6 +83,9 @@ class RegionContext(TypedDict, total=False):
     chart_label: str
     bar_track_rows: Any
     bar_track_max: Any
+    # #1470 display: comparison — ranked-league rows + shared bar scale.
+    comparison_rows: Any
+    comparison_max: Any
     bullet_rows: Any
     bullet_max_value: Any
     histogram_bins: Any

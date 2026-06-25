@@ -25,6 +25,7 @@ See issue #1065 for the full decomposition plan.
 
 from __future__ import annotations
 
+import math
 from html import escape as _html_escape
 from typing import Any, Literal
 
@@ -51,6 +52,7 @@ from dazzle.render.fragment import (
     Surface,
     TimeSeries,
 )
+from dazzle.render.fragment.format_cell import format_cell
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._shared import (
     _region_title,
@@ -114,6 +116,47 @@ def _parse_reference_bands(raw: Any) -> tuple[ReferenceBand, ...]:
             )
         )
     return tuple(out)
+
+
+def _comparison_track_rows(raw_rows: Any) -> list[tuple[str, float, str, float]]:
+    """Coerce ctx['comparison_rows'] into BarTrack `(label, value, formatted, fill_pct)`.
+
+    The label carries the rank prefix; the formatted value carries the
+    format-layer string plus an outlier badge (``⚠ low``/``⚠ high``). All
+    strings are escaped at emit time by the BarTrack renderer — no escaping
+    here. Malformed entries silently drop (the dashboard never crashes on a
+    bad row). #1470.
+    """
+    rows: list[tuple[str, float, str, float]] = []
+    if not isinstance(raw_rows, list):
+        return rows
+    for entry in raw_rows:
+        if not isinstance(entry, dict):
+            continue
+        base_label = str(entry.get("label") or "")
+        if not base_label:
+            continue
+        raw_value = entry.get("value")
+        try:
+            value = float(raw_value) if raw_value is not None else 0.0
+            fraction = float(entry.get("bar_fraction") or 0)
+        except (TypeError, ValueError):
+            continue
+        # IEEE inf/nan would crash BarTrack's `_num()` (int(inf) → OverflowError)
+        # and its fill_pct invariant; drop the row rather than the whole region.
+        if not math.isfinite(value):
+            continue
+        if not math.isfinite(fraction):
+            fraction = 0.0
+        rank = entry.get("rank")
+        label = f"{rank}. {base_label}" if rank is not None else base_label
+        formatted = format_cell(raw_value, "text") if raw_value is not None else "—"
+        outlier = entry.get("outlier")
+        if outlier in ("low", "high"):
+            formatted = f"{formatted} ⚠ {outlier}"
+        fill_pct = max(0.0, min(100.0, fraction * 100.0))
+        rows.append((label, value, formatted, fill_pct))
+    return rows
 
 
 class _BuildersChartsMixin:
@@ -436,6 +479,43 @@ class _BuildersChartsMixin:
                 reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
             )
 
+        return _wrap_surface(title, "report", body)
+
+    def _build_comparison(self, region: Any, ctx: RegionContext) -> Surface:
+        """`display: comparison` renders a ranked league as labelled ARIA
+        tracks: one row per ranked entry, the rank woven into the label,
+        the metric value formatted via the format layer, an inline filled
+        track (``bar_fraction``), and a ``⚠ low``/``⚠ high`` outlier badge
+        on flagged rows. #1470.
+
+        ctx shape:
+            comparison_rows: list of dicts {"rank": int, "label": str,
+                "value": float|None, "bar_fraction": float (0..1),
+                "outlier": "low"|"high"|None} — pre-ranked + pre-flagged by
+                the runtime (`build_comparison_rows`).
+            comparison_max: float — scale endpoint (largest metric value).
+
+        Empty rows degrade to EmptyState. Reuses the BarTrack primitive so
+        the inline tracks share the dashboard's bar styling + ARIA semantics.
+        """
+        title = _region_title(region)
+        try:
+            max_value = float(ctx.get("comparison_max") or 0)
+        except (TypeError, ValueError):
+            max_value = 0.0
+        # Guard non-finite (inf/nan → BarTrack `_num()` OverflowError) and ≤0.
+        if not math.isfinite(max_value) or max_value <= 0:
+            max_value = 1.0  # BarTrack invariant guard (fill_pct already clamped)
+
+        rows = _comparison_track_rows(ctx.get("comparison_rows"))
+        body: Fragment
+        if not rows:
+            body = EmptyState(
+                title="No data",
+                description=getattr(region, "empty_message", None) or "No data available.",
+            )
+        else:
+            body = BarTrack(rows=tuple(rows), max_value=max_value)
         return _wrap_surface(title, "report", body)
 
     def _build_bullet(self, region: Any, ctx: RegionContext) -> Surface:
