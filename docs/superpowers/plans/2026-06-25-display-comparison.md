@@ -1,6 +1,6 @@
 # `display: comparison` Implementation Plan (#1470)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add `display: comparison` — a ranked-league region that ranks rows by a metric (aggregated groups or entity rows) and auto-flags statistical outliers, rendered as a ranked table with inline bars.
 
@@ -42,7 +42,7 @@
 - `ComparisonOutlierSpec(method: Literal["iqr","sigma","threshold","none"] = "iqr", sigma_k: float | None = None, threshold_low: float | None = None, threshold_high: float | None = None)` (frozen BaseModel)
 - `WorkspaceRegion.rank_by: str | None = None`, `.order: Literal["asc","desc"] = "desc"`, `.outlier: ComparisonOutlierSpec | None = None`
 
-- [ ] **Step 1: failing test**
+- [x] **Step 1: failing test**
 
 ```python
 # tests/unit/test_comparison_ir.py
@@ -77,8 +77,8 @@ def test_region_comparison_defaults() -> None:
     assert r.rank_by is None and r.order == "desc" and r.outlier is None
 ```
 
-- [ ] **Step 2:** `uv run pytest tests/unit/test_comparison_ir.py -q` → FAIL (no COMPARISON / model / fields).
-- [ ] **Step 3: implement.** In `workspaces.py`: add `COMPARISON = "comparison"  # #1470: ranked-league` to `DisplayMode`. Add the model near `ReferenceBand` (the chart-config models):
+- [x] **Step 2:** `uv run pytest tests/unit/test_comparison_ir.py -q` → FAIL (no COMPARISON / model / fields).
+- [x] **Step 3: implement.** In `workspaces.py`: add `COMPARISON = "comparison"  # #1470: ranked-league` to `DisplayMode`. Add the model near `ReferenceBand` (the chart-config models):
 
 ```python
 class ComparisonOutlierSpec(BaseModel):
@@ -103,10 +103,10 @@ Add to `WorkspaceRegion` (near `reference_bands`):
 
 Ensure `Literal` and `ConfigDict` are imported in `workspaces.py` (they are — `ConfigDict` is used by sibling models; add `from typing import Literal` if absent). In `core/ir/__init__.py` add `ComparisonOutlierSpec` to the `from .workspaces import (...)` block and `__all__` (alphabetical-ish, near other Comparison/Workspace types).
 
-- [ ] **Step 4:** `uv run pytest tests/unit/test_comparison_ir.py -q` → PASS.
-- [ ] **Step 5:** `uv run mypy src/dazzle` clean; `uv run ruff check src/ tests/ --fix && uv run ruff format src/ tests/`.
-- [ ] **Step 6: regen api-surface ir-types baseline** (the new BaseModel + enum member drift it): `uv run dazzle inspect api ir-types --write` then `uv run pytest tests/unit/test_api_surface_drift.py -q` → PASS. Confirm the diff is only `ComparisonOutlierSpec` + the `comparison` enum member + the 3 WorkspaceRegion fields.
-- [ ] **Step 7: commit**
+- [x] **Step 4:** `uv run pytest tests/unit/test_comparison_ir.py -q` → PASS.
+- [x] **Step 5:** `uv run mypy src/dazzle` clean; `uv run ruff check src/ tests/ --fix && uv run ruff format src/ tests/`.
+- [x] **Step 6: regen api-surface ir-types baseline** (the new BaseModel + enum member drift it): `uv run dazzle inspect api ir-types --write` then `uv run pytest tests/unit/test_api_surface_drift.py -q` → PASS. Confirm the diff is only `ComparisonOutlierSpec` + the `comparison` enum member + the 3 WorkspaceRegion fields.
+- [x] **Step 7: commit**
 
 ```bash
 git add src/dazzle/core/ir/workspaces.py src/dazzle/core/ir/__init__.py docs/api-surface/ir-types.txt tests/unit/test_comparison_ir.py
@@ -125,7 +125,7 @@ git commit -m "feat(#1470): IR for display: comparison (DisplayMode + Comparison
 
 **Outlier value grammar:** `iqr` | `sigma:<k>` | `threshold:low=<x>,high=<y>` (either of low/high optional) | `none`.
 
-- [ ] **Step 1: failing test**
+- [x] **Step 1: failing test**
 
 ```python
 # tests/unit/test_comparison_parser.py
@@ -170,8 +170,8 @@ def test_parses_rank_order_outlier() -> None:
 
 (Confirm `fragment.workspaces[0].regions` is the access path; if the harness differs, mirror `tests/unit/test_surface_format_modifier.py`'s navigation.)
 
-- [ ] **Step 2:** run → FAIL (unknown keyword `rank_by` / `outlier_method`).
-- [ ] **Step 3: implement.** Add fields to `_WorkspaceRegionState` (dataclass): `rank_by: str | None = None`, `order: str = "desc"`, `outlier: Any = None`. Add `_kw_*` functions mirroring `_kw_limit`/`_kw_display`:
+- [x] **Step 2:** run → FAIL (unknown keyword `rank_by` / `outlier_method`).
+- [x] **Step 3: implement.** Add fields to `_WorkspaceRegionState` (dataclass): `rank_by: str | None = None`, `order: str = "desc"`, `outlier: Any = None`. Add `_kw_*` functions mirroring `_kw_limit`/`_kw_display`:
 
 ```python
 def _kw_rank_by(parser: Any, state: _WorkspaceRegionState) -> None:
@@ -224,9 +224,9 @@ def _parse_outlier_spec(parser: Any) -> "ir.ComparisonOutlierSpec":
 
 Register the keywords in `_WORKSPACE_REGION_KEYWORDS` (token-keyed) or `_WORKSPACE_REGION_IDENT_KEYWORDS` (ident-text-keyed) — match how `limit`/`sort` are registered (read lines ~3560–3580 for the registry). `rank_by`/`order`/`outlier_method` are likely IDENT keywords (no dedicated tokens). Wire `state.rank_by/order/outlier` into the `WorkspaceRegion(...)` construction in `_build_region`.
 
-- [ ] **Step 4:** run → PASS. Then `uv run pytest tests/unit/test_parser.py tests/parser_corpus/ -q` → no regression.
-- [ ] **Step 5:** ruff + mypy clean.
-- [ ] **Step 6: commit** `feat(#1470): parse comparison rank_by/order/outlier_method`.
+- [x] **Step 4:** run → PASS. Then `uv run pytest tests/unit/test_parser.py tests/parser_corpus/ -q` → no regression.
+- [x] **Step 5:** ruff + mypy clean.
+- [x] **Step 6: commit** `feat(#1470): parse comparison rank_by/order/outlier_method`.
 
 ---
 
@@ -238,7 +238,7 @@ Register the keywords in `_WORKSPACE_REGION_KEYWORDS` (token-keyed) or `_WORKSPA
 
 **Interfaces — Produces:** `flag_outliers(values: list[float | None], spec: ComparisonOutlierSpec) -> list[Literal["low","high"] | None]` (one entry per input, aligned by index).
 
-- [ ] **Step 1: failing test**
+- [x] **Step 1: failing test**
 
 ```python
 # tests/unit/render/fragment/test_flag_outliers.py
@@ -287,8 +287,8 @@ def test_method_none() -> None:
     assert flag_outliers([1, 2, 3, 4, 99], ComparisonOutlierSpec(method="none")) == [None] * 5
 ```
 
-- [ ] **Step 2:** run → FAIL (module missing).
-- [ ] **Step 3: implement**
+- [x] **Step 2:** run → FAIL (module missing).
+- [x] **Step 3: implement**
 
 ```python
 # src/dazzle/render/fragment/outliers.py
@@ -363,9 +363,9 @@ def flag_outliers(
     return out
 ```
 
-- [ ] **Step 4:** run → PASS (8 cases). If the IQR fence test is borderline, adjust the test vector — the asserted behaviour (100 high, −50 low) holds for `statistics.quantiles` exclusive on `[10..14,100,-50]`; verify and pin the exact vector.
-- [ ] **Step 5:** ruff + mypy clean. (`render/` importing `core.ir` is allowed — core is the bottom layer.)
-- [ ] **Step 6: commit** `feat(#1470): flag_outliers pure function (iqr/sigma/threshold)`.
+- [x] **Step 4:** run → PASS (8 cases). If the IQR fence test is borderline, adjust the test vector — the asserted behaviour (100 high, −50 low) holds for `statistics.quantiles` exclusive on `[10..14,100,-50]`; verify and pin the exact vector.
+- [x] **Step 5:** ruff + mypy clean. (`render/` importing `core.ir` is allowed — core is the bottom layer.)
+- [x] **Step 6: commit** `feat(#1470): flag_outliers pure function (iqr/sigma/threshold)`.
 
 ---
 
@@ -379,12 +379,12 @@ def flag_outliers(
 
 Rules: a `display: comparison` region (1) requires `rank_by`; (2) if `group_by` set → `rank_by` must be a key in `aggregates`; (3) if no `group_by` → `rank_by` must name a field on `source` whose type is numeric (`int/decimal/float/money`); (4) `order ∈ {asc,desc}` (parser already guards, but validate defensively); (5) outlier params well-formed (`sigma` needs `sigma_k>0`; `threshold` needs at least one of low/high).
 
-- [ ] **Step 1: failing test** — assert a comparison region missing `rank_by` yields `E_COMPARISON_RANK_BY_REQUIRED`; group-mode `rank_by` not in `aggregates` yields `E_COMPARISON_RANK_BY_UNKNOWN`; entity-row `rank_by` on a non-numeric field yields `E_COMPARISON_METRIC_NOT_NUMERIC`. (Build the AppSpec the way the other validation tests do — see how `tests/unit/test_format_validation.py` / existing region-validation tests construct input; if a full AppSpec is needed, extract a pure helper `_validate_comparison_region(region, entity, errors)` and unit-test it directly with stub IR, mirroring `_format_kind_error`.)
-- [ ] **Step 2:** run → FAIL.
-- [ ] **Step 3: implement** the rule set in the region validator, emitting `E_COMPARISON_*` strings (follow the existing `E_`/error-append convention in that file).
-- [ ] **Step 4:** run → PASS; `cd examples/* && uv run dazzle validate` for a couple examples → no false positives.
-- [ ] **Step 5:** ruff + mypy clean; `uv run pytest -m gate -q` (a new E_-code may need registration in the error-code list — follow the pattern).
-- [ ] **Step 6: commit** `feat(#1470): validate display: comparison (E_COMPARISON_*)`.
+- [x] **Step 1: failing test** — assert a comparison region missing `rank_by` yields `E_COMPARISON_RANK_BY_REQUIRED`; group-mode `rank_by` not in `aggregates` yields `E_COMPARISON_RANK_BY_UNKNOWN`; entity-row `rank_by` on a non-numeric field yields `E_COMPARISON_METRIC_NOT_NUMERIC`. (Build the AppSpec the way the other validation tests do — see how `tests/unit/test_format_validation.py` / existing region-validation tests construct input; if a full AppSpec is needed, extract a pure helper `_validate_comparison_region(region, entity, errors)` and unit-test it directly with stub IR, mirroring `_format_kind_error`.)
+- [x] **Step 2:** run → FAIL.
+- [x] **Step 3: implement** the rule set in the region validator, emitting `E_COMPARISON_*` strings (follow the existing `E_`/error-append convention in that file).
+- [x] **Step 4:** run → PASS; `cd examples/* && uv run dazzle validate` for a couple examples → no false positives.
+- [x] **Step 5:** ruff + mypy clean; `uv run pytest -m gate -q` (a new E_-code may need registration in the error-code list — follow the pattern).
+- [x] **Step 6: commit** `feat(#1470): validate display: comparison (E_COMPARISON_*)`.
 
 ---
 
@@ -398,7 +398,7 @@ Rules: a `display: comparison` region (1) requires `rank_by`; (2) if `group_by` 
 
 **Read first:** how `bar_track` builds its `ctx` rows from aggregate buckets (`grep -rn "bar_track_rows" src/dazzle/http/runtime/`) — mirror that for the group path. Group mode: the buckets are already produced via `agg_repo.aggregate(...)` (workspace_aggregation.py:302+). Entity-row mode: rows come from the scope-safe list read (`gated_list`).
 
-- [ ] **Step 1: failing test** — extract a pure row-builder `build_comparison_rows(records, *, label_key, value_key, order, outlier_spec, extra_keys) -> tuple[list[dict], float]` and test it with stub records: assert sort order (desc/asc), rank numbering 1..N, `bar_fraction = value/max`, and `outlier` populated from `flag_outliers`. This keeps the orchestration logic pure + unit-testable without a DB.
+- [x] **Step 1: failing test** — extract a pure row-builder `build_comparison_rows(records, *, label_key, value_key, order, outlier_spec, extra_keys) -> tuple[list[dict], float]` and test it with stub records: assert sort order (desc/asc), rank numbering 1..N, `bar_fraction = value/max`, and `outlier` populated from `flag_outliers`. This keeps the orchestration logic pure + unit-testable without a DB.
 
 ```python
 # sketch
@@ -414,9 +414,9 @@ assert rows[0]["bar_fraction"] == 1.0
 assert rows[-1]["outlier"] == "low"  # 5 is the low outlier
 ```
 
-- [ ] **Step 2–4:** implement `build_comparison_rows` (pure) in `workspace_aggregation.py`; wire both modes to call it (group: over aggregate buckets keyed by `rank_by`; entity-row: over list records keyed by the `rank_by` field, with `extra_keys` from `fields`), and set `ctx["comparison_rows"]`/`ctx["comparison_max"]` when `display == COMPARISON`. Run the pure test → PASS.
-- [ ] **Step 5:** ruff + mypy clean.
-- [ ] **Step 6: commit** `feat(#1470): comparison orchestration (rank + flag → ctx rows)`.
+- [x] **Step 2–4:** implement `build_comparison_rows` (pure) in `workspace_aggregation.py`; wire both modes to call it (group: over aggregate buckets keyed by `rank_by`; entity-row: over list records keyed by the `rank_by` field, with `extra_keys` from `fields`), and set `ctx["comparison_rows"]`/`ctx["comparison_max"]` when `display == COMPARISON`. Run the pure test → PASS.
+- [x] **Step 5:** ruff + mypy clean.
+- [x] **Step 6: commit** `feat(#1470): comparison orchestration (rank + flag → ctx rows)`.
 
 ---
 
@@ -429,12 +429,12 @@ assert rows[-1]["outlier"] == "low"  # 5 is the low outlier
 
 **Interfaces — Consumes:** `ctx["comparison_rows"]`/`ctx["comparison_max"]` (Task 5), the format layer (`format_cell`), `_cell_value` ref-display, `bar_track`'s track cell.
 
-- [ ] **Step 1: failing test** — build a `RegionContext`/ctx stub with two `comparison_rows` (one flagged `low`) and assert the rendered `Surface`/HTML contains: a rank column with `1`/`2`, the labels, the formatted metric values, an outlier badge (`⚠`/`low`) on the flagged row, and an inline track element. (Mirror `tests/unit/test_region_adapter.py` / an existing `_build_*` test for the harness.)
-- [ ] **Step 2:** run → FAIL (`_build_comparison` missing / dispatcher entry missing).
-- [ ] **Step 3: implement** `_build_comparison` mirroring `_build_bar_track` (rows → labelled track) but emitting a `Table` with: rank col, label (via `_cell_value` for ref-display), the metric cell (track + `format_cell`-formatted value), `columns` cells (format-layer), and a badge cell when `outlier` is set. Register the dispatcher entry.
-- [ ] **Step 4:** run → PASS.
-- [ ] **Step 5:** ruff + mypy clean; `uv run pytest -m gate -q` (complexity ratchet — if `_build_comparison` exceeds CC 15, extract a row-cell helper).
-- [ ] **Step 6: commit** `feat(#1470): _build_comparison ranked-table render`.
+- [x] **Step 1: failing test** — build a `RegionContext`/ctx stub with two `comparison_rows` (one flagged `low`) and assert the rendered `Surface`/HTML contains: a rank column with `1`/`2`, the labels, the formatted metric values, an outlier badge (`⚠`/`low`) on the flagged row, and an inline track element. (Mirror `tests/unit/test_region_adapter.py` / an existing `_build_*` test for the harness.)
+- [x] **Step 2:** run → FAIL (`_build_comparison` missing / dispatcher entry missing).
+- [x] **Step 3: implement** `_build_comparison` mirroring `_build_bar_track` (rows → labelled track) but emitting a `Table` with: rank col, label (via `_cell_value` for ref-display), the metric cell (track + `format_cell`-formatted value), `columns` cells (format-layer), and a badge cell when `outlier` is set. Register the dispatcher entry.
+- [x] **Step 4:** run → PASS.
+- [x] **Step 5:** ruff + mypy clean; `uv run pytest -m gate -q` (complexity ratchet — if `_build_comparison` exceeds CC 15, extract a row-cell helper).
+- [x] **Step 6: commit** `feat(#1470): _build_comparison ranked-table render`.
 
 ---
 
@@ -445,12 +445,12 @@ assert rows[-1]["outlier"] == "low"  # 5 is the low outlier
 - Modify: `CHANGELOG.md`, version files (`/bump`), `docs/api-surface/ir-types.txt` (already regen'd Task 1), golden-master snapshot.
 - Test: the example's `dazzle validate` + the full suite.
 
-- [ ] **Step 1:** add a `display: comparison` region to the example (group_by an FK + an aggregate + `rank_by` + `outlier_method: iqr`); `cd examples/<app> && uv run dazzle validate` → exit 0.
-- [ ] **Step 2: regen golden-master** (new DisplayMode / IR fields drift it if the simple_test fixture touches regions; regen regardless to be safe): `uv run pytest tests/integration/test_golden_master.py --snapshot-update -q` then re-run to confirm PASS. Inspect the diff is comparison-related only.
-- [ ] **Step 3: full suite** — `uv run pytest tests/ -m "not e2e" -q`. Expect only the 3 pre-existing `test_fuzzer_oracle` pollution failures. Fix anything else.
-- [ ] **Step 4:** `uv run ruff check src/ tests/ && uv run mypy src/dazzle` clean.
-- [ ] **Step 5:** `/bump patch`; CHANGELOG entry under `### Added` (the `display: comparison` primitive — modes, outlier methods, render) + `### Agent Guidance` (when to use comparison vs bar_chart; the within-scope-ranking semantic; the outlier methods) + an api-surface drift note under `### Changed`.
-- [ ] **Step 6: commit + tag + push**, then watch CI to green (`gh run watch`). The walks render the example region for the first time — confirm they pass.
+- [x] **Step 1:** add a `display: comparison` region to the example (group_by an FK + an aggregate + `rank_by` + `outlier_method: iqr`); `cd examples/<app> && uv run dazzle validate` → exit 0.
+- [x] **Step 2: regen golden-master** (new DisplayMode / IR fields drift it if the simple_test fixture touches regions; regen regardless to be safe): `uv run pytest tests/integration/test_golden_master.py --snapshot-update -q` then re-run to confirm PASS. Inspect the diff is comparison-related only.
+- [x] **Step 3: full suite** — `uv run pytest tests/ -m "not e2e" -q`. Expect only the 3 pre-existing `test_fuzzer_oracle` pollution failures. Fix anything else.
+- [x] **Step 4:** `uv run ruff check src/ tests/ && uv run mypy src/dazzle` clean.
+- [x] **Step 5:** `/bump patch`; CHANGELOG entry under `### Added` (the `display: comparison` primitive — modes, outlier methods, render) + `### Agent Guidance` (when to use comparison vs bar_chart; the within-scope-ranking semantic; the outlier methods) + an api-surface drift note under `### Changed`.
+- [x] **Step 6: commit + tag + push**, then watch CI to green (`gh run watch`). The walks render the example region for the first time — confirm they pass.
 
 ---
 
