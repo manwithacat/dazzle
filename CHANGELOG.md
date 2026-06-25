@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.1] - 2026-06-25
+
+### Fixed
+- **#1472: aggregate `count(... where <field> in [a, b, c])` silently returned 0.** A list (`in` / `not in`) where-clause in a region `aggregate` passed `dazzle validate` but fetched 0 at runtime — only `=` / `!=` worked. Root cause: `condition_expr_to_scope_predicate` expanded a list into per-element `ColumnCheck`s but **kept the `IN` operator on each single-literal element**, compiling to `"col" IN %s` with a *scalar* bind — invalid SQL the count fetcher swallowed to 0. Now `x in [a, b]` → `(x = a) OR (x = b)` and `x not in [a, b]` → `(x != a) AND (x != b)` (correct De Morgan; the previous code also wrongly OR-combined `not in`). `in []` compiles to `FALSE`. Worst-kind bug — passed validate, "0" looked plausible, shipped wrong numbers to dashboards.
+
+### Agent Guidance
+- **`in [...]` now works in aggregate where-clauses** (region `aggregate:` / `count(... where ...)`), at parity with region/list filters. No need to rewrite a set membership as repeated `= x` comparisons. Verified at the SQL-compilation layer (`tests/unit/test_condition_to_predicate.py`): a list expands to a parameterized `= %s` per branch, never `IN %s`.
+
 ## [0.87.0] - 2026-06-25
 
 ### Added

@@ -98,11 +98,61 @@ def test_in_list_expands_to_or_of_column_checks() -> None:
         )
     )
     pred = condition_expr_to_scope_predicate(expr)
-    # IN list → OR of ColumnChecks (matches parse_aggregate_where).
+    # IN list → OR of equality ColumnChecks.
     assert isinstance(pred, BoolComposite)
     assert pred.op == BoolOp.OR
     assert all(isinstance(c, ColumnCheck) for c in pred.children)
     assert {c.value.literal for c in pred.children} == {"open", "doing"}
+
+
+def test_in_list_children_use_equality_op_not_in() -> None:
+    # #1472: each expanded child compares against a SINGLE literal, so it
+    # must use `=`, not `IN`. Keeping `IN` produces `col IN %s` with a
+    # scalar bind — invalid SQL that silently fetched 0 on dashboards.
+    expr = ConditionExpr(
+        comparison=Comparison(
+            field="status",
+            operator=ComparisonOperator.IN,
+            value=ConditionValue(values=["reviewed", "released", "analysed"]),
+        )
+    )
+    pred = condition_expr_to_scope_predicate(expr)
+    assert all(c.op == CompOp.EQ for c in pred.children)
+
+
+def test_in_list_compiles_to_valid_equality_sql() -> None:
+    # #1472: the compiled SQL must be `= %s` per branch, never `IN %s`.
+    from dazzle.core.ir.fk_graph import FKGraph
+    from dazzle.http.runtime.predicate_compiler import compile_predicate
+
+    expr = ConditionExpr(
+        comparison=Comparison(
+            field="status",
+            operator=ComparisonOperator.IN,
+            value=ConditionValue(values=["reviewed", "released"]),
+        )
+    )
+    pred = condition_expr_to_scope_predicate(expr)
+    sql, params = compile_predicate(pred, "AssessmentEvent", FKGraph())
+    assert "IN %s" not in sql
+    assert sql.count("= %s") == 2
+    assert params == ["reviewed", "released"]
+
+
+def test_not_in_list_expands_to_and_of_inequality() -> None:
+    # #1472: `not in [a, b]` means `field != a AND field != b` — AND of
+    # NEQ, not OR of NOT_IN.
+    expr = ConditionExpr(
+        comparison=Comparison(
+            field="status",
+            operator=ComparisonOperator.NOT_IN,
+            value=ConditionValue(values=["archived", "deleted"]),
+        )
+    )
+    pred = condition_expr_to_scope_predicate(expr)
+    assert isinstance(pred, BoolComposite)
+    assert pred.op == BoolOp.AND
+    assert all(c.op == CompOp.NEQ for c in pred.children)
 
 
 def test_role_check_rejected() -> None:
