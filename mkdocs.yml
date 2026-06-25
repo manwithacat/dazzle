@@ -61,6 +61,7 @@ nav:
       - Surfaces: reference/surfaces.md
       - Workspaces: reference/workspaces.md
       - UX Layer: reference/ux.md
+      - UX Catalogue: reference/ux-catalogue.md
       - Experiences: reference/experiences.md
       - Services: reference/services.md
       - Integrations: reference/integrations.md
@@ -173,3 +174,9 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/manwithacat/dazzle
+
+# Dazzle component styles for the live previews on the UX Catalogue page.
+# Generated from the framework component CSS by scripts/gen_ux_catalogue.py
+# (`.dz-*`/`:root`-scoped only — no global selectors that would restyle the theme).
+extra_css:
+  - assets/dazzle-catalogue.css

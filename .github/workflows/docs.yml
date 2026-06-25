@@ -34,6 +34,9 @@ jobs:
       - name: Generate API reference docs
         run: python scripts/gen_reference_docs.py
 
+      - name: Verify UX catalogue is current
+        run: python scripts/gen_ux_catalogue.py --mode=ci
+
       - name: Build docs
         run: mkdocs build --strict
 

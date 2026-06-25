@@ -12,7 +12,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from dazzle.testing.ux_catalogue import OUT_PATH, generate_catalogue_markdown  # noqa: E402
+from dazzle.testing.ux_catalogue import (  # noqa: E402
+    CSS_OUT_PATH,
+    OUT_PATH,
+    generate_catalogue_css,
+    generate_catalogue_markdown,
+)
 
 
 def main() -> int:
@@ -20,21 +25,26 @@ def main() -> int:
     ap.add_argument("--mode", choices=["write", "ci"], default="write")
     args = ap.parse_args()
 
-    md = generate_catalogue_markdown()
+    outputs = [(OUT_PATH, generate_catalogue_markdown()), (CSS_OUT_PATH, generate_catalogue_css())]
+
     if args.mode == "ci":
-        current = OUT_PATH.read_text() if OUT_PATH.exists() else ""
-        if current != md:
+        stale = [p for p, content in outputs if (p.read_text() if p.exists() else "") != content]
+        if stale:
+            names = ", ".join(
+                str(p.relative_to(Path(__file__).resolve().parents[1])) for p in stale
+            )
             print(
-                "docs/reference/ux-catalogue.md is stale — run: python scripts/gen_ux_catalogue.py",
+                f"stale: {names} — run: python scripts/gen_ux_catalogue.py",
                 file=sys.stderr,
             )
             return 1
-        print("ux-catalogue.md is current")
+        print("ux catalogue is current")
         return 0
 
-    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUT_PATH.write_text(md)
-    print(f"Wrote {OUT_PATH}")
+    for path, content in outputs:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+        print(f"Wrote {path}")
     return 0
 
 
