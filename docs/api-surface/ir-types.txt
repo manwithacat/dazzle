@@ -3403,6 +3403,7 @@ ir_class: WorkspaceRegion
     - notice: NoticeSpec | None = None
     - order: Literal[asc, desc] = 'desc'
     - outlier: ComparisonOutlierSpec | None = None
+    - outlier_on: str | None = None
     - overlay_series: list[OverlaySeriesSpec] = []
     - pipeline_stages: list[PipelineStageSpec] = []
     - primary: str | None = None

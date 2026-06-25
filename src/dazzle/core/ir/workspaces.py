@@ -1047,6 +1047,10 @@ class WorkspaceRegion(BaseModel):
     rank_by: str | None = None
     order: Literal["asc", "desc"] = "desc"
     outlier: ComparisonOutlierSpec | None = None
+    # #1470 outlier_on — statistical outlier decorator on a list region column.
+    # Names the numeric column to flag; the test reuses `outlier` (set by
+    # outlier_method:). Only meaningful for display: list (validated).
+    outlier_on: str | None = None
     # v0.61.27 (#882): Histogram-mode bin count.
     # ``None`` means "auto" (Sturges' rule: ⌈log2(N) + 1⌉). A positive int
     # forces N equal-width bins. Histograms read ``heatmap_value`` for the
