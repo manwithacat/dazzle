@@ -3721,6 +3721,7 @@ enum: DisplayMode
     - GRID = 'grid'
     - HEATMAP = 'heatmap'
     - HISTOGRAM = 'histogram'
+    - INSIGHT_SUMMARY = 'insight_summary'
     - KANBAN = 'kanban'
     - LINE_CHART = 'line_chart'
     - LIST = 'list'

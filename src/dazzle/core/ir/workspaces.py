@@ -95,6 +95,7 @@ class DisplayMode(StrEnum):
     TASK_INBOX = "task_inbox"  # #1015: workflow-led landing surface
     ENTITY_CARD = "entity_card"  # #1017: 360° single-entity drill-down composite
     COMPARISON = "comparison"  # #1470: ranked-league (rank rows by metric + flag outliers)
+    INSIGHT_SUMMARY = "insight_summary"  # #1470: deterministic grounded narrative
 
 
 class BucketRef(BaseModel):
