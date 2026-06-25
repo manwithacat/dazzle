@@ -9,6 +9,7 @@
 | [Surfaces](surfaces.md) | Surfaces define the UI and API interfaces for interacting with entities. |
 | [Workspaces](workspaces.md) | Workspaces compose multiple data views into cohesive dashboards or information hubs. |
 | [UX Semantic Layer](ux.md) | The UX semantic layer expresses WHY interfaces exist and WHAT matters to users, without prescribing HOW to implement it. |
+| [UX Catalogue](ux-catalogue.md) | A live gallery of Dazzle display modes — each component rendered from real DSL through the real render pipeline, with its DSL snippet. |
 | [Experiences](experiences.md) | Experiences define multi-step user flows such as onboarding wizards, checkout processes, and approval workflows. |
 | [Services](services.md) | Services declare custom business logic in DSL with implementation in Python or TypeScript stubs. |
 | [Integrations](integrations.md) | Integrations connect DAZZLE apps to external systems via declarative API bindings with triggers, field mappings, and error handling. |
