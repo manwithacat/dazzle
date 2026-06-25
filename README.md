@@ -50,7 +50,7 @@ The reason the DSL is the codebase, not a generator for it, is downstream of a s
 
 The framework's job in the agent-driven era is to be that something. Dazzle implements three stacked layers that each catch what the others miss:
 
-1. **Grammar restriction.** The DSL closes off bad idioms by construction. There is no `polymorphic_ref:` keyword (ADR-0027). Field-level authorization isn't expressible (ADR-0025). Scope rules compile to a formal predicate algebra validated against the FK graph (ADR-0009). Regex in the parser is a smell (ADR-0024) and the allowlist sits at zero. Each closed-off shape is one degree of freedom the corpus prior can no longer exercise.
+1. **Grammar restriction.** The DSL closes off bad idioms by construction. Untyped polymorphic associations — the Rails `belongs_to … polymorphic: true` shape, `ref X | Y | Z` union sugar, a hidden discriminator — don't exist; the sole exception is a *typed* `poly_ref [A, B]` with a visible discriminator and an exhaustive target list, opened only after a real use case survived a four-question interrogation and still statically scope-validated against the FK graph (ADR-0027 → ADR-0042). Field-level authorization isn't expressible (ADR-0025). Scope rules compile to a formal predicate algebra validated against the FK graph (ADR-0009). Regex in the parser is a smell (ADR-0024) and the allowlist sits at zero. Each closed-off shape is one degree of freedom the corpus prior can no longer exercise.
 
 2. **Inference-time bias correction.** Agent instruction files (`.claude/CLAUDE.md`), the ADR index (each line a "decision that prevents a wrong proposal"), and the **counter-prior catalogue** at [`docs/counter-priors/`](docs/counter-priors/INDEX.md) are versioned engineering artefacts that name specific corpus pathologies and route the agent toward the right shape. The catalogue is queryable via the MCP server (`knowledge counter_prior query=...`) and is auto-surfaced at the bootstrap step when an agent's spec text contains matching triggers.
 
@@ -266,7 +266,7 @@ The DSL is parsed into a typed intermediate representation (AppSpec IR). The run
 
 This architecture is deliberately **anti-Turing**: the DSL has no arbitrary computation, which means Dazzle can statically validate, lint, measure fidelity, and reason about your application. What you declare is what runs.
 
-The frontend uses server-rendered HTML with HTMX — zero build toolchain, stable technology, and full visibility into what the runtime produces. For UX that the generated surfaces can't express, **fragments** provide a constrained escape hatch: named, semantically-tagged custom rendering that remains connected to the entity and surface graph.
+The frontend uses server-rendered HTML with HTMX — zero build toolchain, stable technology, and full visibility into what the runtime produces. Every built-in display mode — lists, kanban, charts, pivots, funnels, metrics, and more — is rendered with sample data, live previews, and its source DSL in the **[UX Catalogue](https://manwithacat.github.io/dazzle/reference/ux-catalogue/)**. For UX that the generated surfaces can't express, **fragments** provide a constrained escape hatch: named, semantically-tagged custom rendering that remains connected to the entity and surface graph.
 
 For the full architecture, see [docs/architecture/overview.md](docs/architecture/overview.md). For the event-semantics rationale, see [docs/architecture/hless-deep-dive.md](docs/architecture/hless-deep-dive.md).
 
@@ -313,7 +313,9 @@ dazzle mcp check
 | `support_tickets` | Intermediate | Ticket lifecycle with state machines and assignments |
 | `ops_dashboard` | Intermediate | Workspace stages and aggregate metrics |
 | `fieldtest_hub` | Advanced | Full-featured demo with integrations |
-| `pra` | Advanced | 15 DSL files covering every construct: ledgers, processes, LLM, services |
+| `invoice_ops` | Advanced | Invoicing lifecycle with processes, services, and four-eyes approvals |
+
+A curated ladder — the full set (12 apps, including `acme_billing`, `project_tracker`, `design_studio`, `hr_records`, and `llm_ticket_classifier`) lives in [`examples/`](examples/).
 
 ---
 
@@ -337,6 +339,7 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[Security & Compliance Claims](SECURITY_CLAIMS.md)** — claim-by-claim inventory: status, enforcement, tests, known gaps
 - **[Agent Workflow Guide](docs/guides/agent-workflow.md)** — end-to-end AI-agent spec-edit loop: spec change → DSL edit → validate → tests → human review → deploy
 - **[DSL Reference](docs/reference/index.md)** — complete guide to all DSL constructs
+- **[UX Catalogue](https://manwithacat.github.io/dazzle/reference/ux-catalogue/)** — every built-in display mode rendered with sample data, live previews, and source DSL
 - **[HLESS deep dive](docs/architecture/hless-deep-dive.md)** — event semantics and why they're named this way
 - **[Graphs](docs/reference/graphs.md)** — entity graph relationships, CTE traversal, algorithms
 - **[Compliance](docs/reference/compliance.md)** — ISO 27001 + SOC 2 evidence pipeline
@@ -347,7 +350,7 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app
 - **[Examples](examples/)** — runnable example applications
-- **[Fixtures](fixtures/)** — framework-validation probes (`shapes_validation` for RBAC, `asset_registry` for `subtype_of:` TPT inheritance)
+- **[Fixtures](fixtures/)** — framework-validation probes (`shapes_validation` for RBAC, `asset_registry` for `subtype_of:` TPT inheritance, `pra` for full parser/construct conformance, `component_showcase` for the UX catalogue)
 
 ---
 
