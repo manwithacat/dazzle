@@ -34,8 +34,10 @@ jobs:
       - name: Generate API reference docs
         run: python scripts/gen_reference_docs.py
 
-      - name: Verify UX catalogue is current
-        run: python scripts/gen_ux_catalogue.py --mode=ci
+      # The UX catalogue page is committed; its freshness is gated by
+      # tests/unit/test_ux_catalogue.py in the main CI (which has the framework
+      # installed). This docs job is mkdocs-only — it just builds the committed
+      # page, so it must NOT import the framework here.
 
       - name: Build docs
         run: mkdocs build --strict

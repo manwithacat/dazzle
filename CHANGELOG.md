@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.26] - 2026-06-25
+
+### Fixed
+- **docs workflow: drop the UX-catalogue generator step.** The `docs` job is mkdocs-only (it installs `requirements-docs.txt`, not the framework), so `scripts/gen_ux_catalogue.py --mode=ci` failed with `ModuleNotFoundError: pydantic` (the generator imports `dazzle` to render real components). The catalogue page is committed and its freshness is gated by `tests/unit/test_ux_catalogue.py` in the main CI (which has the framework installed); the docs job now just builds the committed page.
+
 ## [0.86.25] - 2026-06-25
 
 ### Added
