@@ -259,6 +259,22 @@ workspace command_center "Command Center":
       count: count(Alert)
     empty: "No alerts grouped by system"
 
+  # System League — ranked comparison of systems by alert volume (#1470).
+  # `display: comparison` ranks the group_by buckets by the `rank_by`
+  # aggregate and auto-flags statistical outliers (IQR Tukey fences) so an
+  # operator sees at a glance which system is anomalously noisy/quiet. Reuses
+  # the same scope-safe GROUP BY spine as bar_chart — no new query semantics.
+  system_alert_league:
+    source: Alert
+    display: comparison
+    group_by: system
+    aggregate:
+      count: count(Alert)
+    rank_by: count
+    order: desc
+    outlier_method: iqr
+    empty: "No alerts to rank"
+
   # Pivot Table — multi-dimension cross-tab (cycle 25, v0.59.3).
   # Combines an FK dim (system) with a scalar enum dim (severity) so each
   # row is one (system, severity) cell with its count. Exercises the

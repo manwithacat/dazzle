@@ -1763,6 +1763,8 @@
             'limit': None,
             'name': 'health',
             'notice': None,
+            'order': 'desc',
+            'outlier': None,
             'overlay_series': list([
             ]),
             'pipeline_stages': list([
@@ -1774,6 +1776,7 @@
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
+            'rank_by': None,
             'reference_bands': list([
             ]),
             'reference_lines': list([
@@ -1840,6 +1843,8 @@
             'limit': None,
             'name': 'deploys',
             'notice': None,
+            'order': 'desc',
+            'outlier': None,
             'overlay_series': list([
             ]),
             'pipeline_stages': list([
@@ -1851,6 +1856,7 @@
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
+            'rank_by': None,
             'reference_bands': list([
             ]),
             'reference_lines': list([
@@ -1917,6 +1923,8 @@
             'limit': None,
             'name': 'app_map',
             'notice': None,
+            'order': 'desc',
+            'outlier': None,
             'overlay_series': list([
             ]),
             'pipeline_stages': list([
@@ -1928,6 +1936,7 @@
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
+            'rank_by': None,
             'reference_bands': list([
             ]),
             'reference_lines': list([

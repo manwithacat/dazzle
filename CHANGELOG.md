@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.23] - 2026-06-25
+
+### Added
+- **#1470: `display: comparison` — ranked-league region primitive.** A new workspace-region display that ranks rows by a metric and auto-flags statistical outliers, rendered as labelled ARIA tracks (rank · label · formatted metric · inline bar · `⚠ low`/`⚠ high` badge). Two modes off the same scope-safe spine as `bar_chart` — **group mode** (`group_by` + `aggregate`, rank by an aggregate key) and **entity-row mode** (no `group_by`, rank by a numeric field on `source`). Grammar: `rank_by: <metric>`, `order: asc|desc` (default `desc`), `outlier_method: iqr | sigma:<k> | threshold:low=<x>,high=<y> | none` (default `iqr`). Outlier flagging runs in a pure post-fetch pass (`render/fragment/outliers.flag_outliers`): IQR Tukey fences and sigma (mean ± k·σ) apply a small-N guard (≥4 numeric values) and a zero-spread guard; `threshold` applies at any N. Validation (`E_COMPARISON_*`) requires `rank_by`, checks it resolves for the mode (aggregate key / numeric field), and rejects malformed outlier config (`sigma_k>0`, `threshold` needs ≥1 bound). Demonstrated on `examples/ops_dashboard` (`system_alert_league` — systems ranked by alert volume). Ranking + flagging happen strictly *after* the scoped fetch — never widening scope.
+
+### Changed
+- **api-surface drift (ir-types):** new `DisplayMode.COMPARISON` enum member, new `ComparisonOutlierSpec` BaseModel, and three `WorkspaceRegion` fields (`rank_by`, `order`, `outlier`). Baseline `docs/api-surface/ir-types.txt` regenerated. Also drifts the golden-master + parser-corpus IR snapshots (new region fields serialize) — regenerated.
+
+### Agent Guidance
+- **When to use `display: comparison` vs `bar_chart`:** reach for `comparison` when the *ranking* and *anomaly detection* are the point (a league table — "which system is the noisy outlier?"); reach for `bar_chart` when the *distribution shape* is the point. Both compile to the same one-query scope-aware GROUP BY in group mode — no new query semantics, no N+1.
+- **Within-scope ranking is a hard invariant:** rank + outlier-flag run on the already-scoped rows in a pure pass. The primitive cannot surface a row the requesting persona's scope wouldn't already return.
+- **Outlier methods are the v2 tuning knob:** `iqr` (default) is conservative at small N (≥4-value guard; exclusive-quantile fences widen for tiny leagues — fewer spurious flags). `sigma:<k>` and `threshold:low=,high=` are available now; the configurable per-method calibration + a richer table/decorator render are deferred to a follow-up (aegismark will feed real-world tuning). `outlier_method: none` disables flagging.
+
 ## [0.86.22] - 2026-06-25
 
 ### Fixed
