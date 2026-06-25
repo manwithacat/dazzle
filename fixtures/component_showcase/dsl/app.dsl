@@ -340,3 +340,11 @@ workspace ux_catalogue "UX Catalogue":
     aggregate:
       count: count(Box)
     empty: "No boxes"
+
+  cat_area_stacked:
+    source: Box
+    display: area_chart
+    group_by: [bucket(opened_at, week), team]
+    aggregate:
+      count: count(Box)
+    empty: "No boxes"

@@ -53,6 +53,7 @@ from dazzle.render.fragment import (
     Surface,
     Text,
     TimeSeries,
+    TimeSeriesSeries,
 )
 from dazzle.render.fragment.format_cell import format_cell
 from dazzle.render.fragment.region._context import RegionContext
@@ -118,6 +119,30 @@ def _parse_reference_bands(raw: Any) -> tuple[ReferenceBand, ...]:
             )
         )
     return tuple(out)
+
+
+def _coerce_series_points(raw_points: Any) -> list[tuple[str, float]]:
+    """Coerce a series' raw points to `(label, value)` tuples.
+
+    Accepts `(label, value)` tuples/lists or `{label|x, value|y}` dicts —
+    the two shapes the orchestration emits for time-series buckets. Shared
+    by the single-series (`points`) and multi-series (`series`) paths."""
+    out: list[tuple[str, float]] = []
+    for entry in raw_points or []:
+        if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+            try:
+                out.append((str(entry[0]), float(entry[1])))
+            except (TypeError, ValueError):
+                continue
+        elif isinstance(entry, dict):
+            label = str(entry.get("label") or entry.get("x") or "")
+            try:
+                val = float(entry.get("value") or entry.get("y") or 0)
+            except (TypeError, ValueError):
+                val = 0.0
+            if label:
+                out.append((label, val))
+    return out
 
 
 def _fmt_num(v: object) -> str:
@@ -353,24 +378,35 @@ class _BuildersChartsMixin:
         """
         title = _region_title(region)
         chart_label = str(ctx.get("chart_label") or title or view.title())
-        raw_points = ctx.get("points") or []
-        points: list[tuple[str, float]] = []
-        for entry in raw_points:
-            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
-                try:
-                    points.append((str(entry[0]), float(entry[1])))
-                except (TypeError, ValueError):
-                    continue
-            elif isinstance(entry, dict):
-                label = str(entry.get("label") or entry.get("x") or "")
-                try:
-                    val = float(entry.get("value") or entry.get("y") or 0)
-                except (TypeError, ValueError):
-                    val = 0.0
-                if label:
-                    points.append((label, val))
 
         body: Fragment
+
+        # Multi-series path (#1473): `series` is a list of {name, points}
+        # shaped by the adapter from pivot_buckets (stacked area_chart) or
+        # bucketed_metrics + overlay_series_data (line overlays). Sparkline
+        # stays single-series — its compact tile has no room for layers.
+        raw_series: Any = ctx.get("series") or []
+        if raw_series and view != "sparkline":
+            series: list[TimeSeriesSeries] = []
+            for s in raw_series:
+                if not isinstance(s, dict):
+                    continue
+                s_points = _coerce_series_points(s.get("points") or [])
+                if s_points:
+                    series.append(
+                        TimeSeriesSeries(name=str(s.get("name") or ""), points=tuple(s_points))
+                    )
+            if series:
+                body = TimeSeries(
+                    label=chart_label,
+                    view=view,
+                    series=tuple(series),
+                    reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
+                    reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
+                )
+                return _wrap_surface(title, "report", body)
+
+        points = _coerce_series_points(ctx.get("points") or [])
 
         # Sparkline is a structurally distinct shape (180×32 viewBox,
         # headline + tiny SVG, no axis labels, no reference overlays);

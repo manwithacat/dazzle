@@ -281,7 +281,7 @@ class _RenderChartsMixin:
         already carries the same data via `<title>` tooltips and is
         the visual layer.
         """
-        from dazzle.render.svg import time_series_svg
+        from dazzle.render.svg import _series_color, time_series_svg
 
         # Phase 4B.4 wave 3: aligned with legacy template — strip the
         # `<section class="dz-timeseries">` chrome + `<h4>` + Phase 4B-
@@ -289,6 +289,35 @@ class _RenderChartsMixin:
         # (`dz-line-chart-region` for line, `dz-area-chart-region` for
         # area). Summary line emits `{count} buckets · peak {max_val}`.
         wrapper_class = "dz-area-chart-region" if t.view == "area" else "dz-line-chart-region"
+
+        # Multi-series path (#1473): overlaid layers + a colour-keyed legend.
+        if t.series:
+            series_pairs = tuple((s.name, s.points) for s in t.series)
+            axis_labels = {lbl for _n, pts in series_pairs for lbl, _v in pts}
+            all_vals = [v for _n, pts in series_pairs for _l, v in pts]
+            max_val = max(all_vals, default=1) or 1
+            max_val_str = str(int(max_val)) if max_val == int(max_val) else str(max_val)
+            svg = time_series_svg(
+                t.label,
+                (),
+                view=t.view,
+                series=series_pairs,
+                reference_lines=t.reference_lines,
+                reference_bands=t.reference_bands,
+            )
+            legend_items = "".join(
+                f'<li class="dz-chart-legend-item">'
+                f'<span class="dz-chart-legend-swatch" '
+                f'style="background:{_series_color(i)}"></span>'
+                f'<span class="dz-chart-legend-name">{ctx.escape(s.name)}</span></li>'
+                for i, s in enumerate(t.series)
+            )
+            legend = f'<ul class="dz-chart-legend">{legend_items}</ul>'
+            summary = (
+                f'<p class="dz-chart-summary">{len(axis_labels)} buckets · '
+                f"{len(t.series)} series · peak {max_val_str}</p>"
+            )
+            return f'<div class="{wrapper_class}">{svg}{legend}{summary}</div>'
 
         if not t.points:
             return f'<div class="{wrapper_class}"></div>'

@@ -42,6 +42,26 @@ _BAND_COLORS: dict[str, str] = {
     "muted": "hsl(var(--muted-foreground))",
 }
 
+# Multi-series palette (#1473) — overlaid series cycle through these
+# design tokens so each series inherits a theme-aware colour. Five
+# distinct tokens; series beyond the fifth wrap (modulo).
+_SERIES_COLORS: tuple[str, ...] = (
+    "hsl(var(--primary))",
+    "hsl(var(--info))",
+    "hsl(var(--success))",
+    "hsl(var(--warning))",
+    "hsl(var(--destructive))",
+)
+
+
+def _series_color(index: int) -> str:
+    return _SERIES_COLORS[index % len(_SERIES_COLORS)]
+
+
+def _fmt_value(val: float) -> str:
+    """Int-narrow whole-valued floats — matches the single-series path."""
+    return str(int(val)) if val == int(val) else str(val)
+
 
 def time_series_svg(
     label: str,
@@ -52,19 +72,35 @@ def time_series_svg(
     reference_bands: tuple[Any, ...] = (),
     width: int = DEFAULT_WIDTH,
     height: int = DEFAULT_HEIGHT,
+    series: tuple[tuple[str, tuple[tuple[str, float], ...]], ...] = (),
 ) -> str:
     """Produce inline SVG for a TimeSeries primitive.
 
     Single-series time series rendered as polyline + area fill + data
     points + reference overlays. Output matches the legacy
     `workspace/regions/line_chart.html` byte-for-byte for the basic
-    case (no overlay_series_data — that remains a future extension
-    once the runtime threads multi-series data through ctx).
+    case.
+
+    `series` (#1473) carries the multi-series case: a tuple of
+    `(name, points)` pairs. When non-empty it takes precedence over
+    `points` and every series is drawn as an overlaid transparent layer
+    on a shared label axis (the ordered union of all series' labels),
+    each in its own palette colour. This is the rendering substrate for
+    stacked `area_chart` and line-chart `overlay_series` (#883).
 
     `view` is currently informational; the same geometry covers line,
     area, and sparkline. A future ship can specialise sparkline to a
     smaller viewBox without axis labels.
     """
+    if series:
+        return _multi_series_svg(
+            label,
+            series,
+            reference_lines=reference_lines,
+            reference_bands=reference_bands,
+            width=width,
+            height=height,
+        )
     if not points:
         return ""
 
@@ -191,6 +227,176 @@ def time_series_svg(
                 f"{_escape(lbl)}</text>"
             )
 
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def _shared_axis(
+    series: tuple[tuple[str, tuple[tuple[str, float], ...]], ...],
+) -> tuple[list[str], list[dict[str, float]]]:
+    """Ordered union of every series' labels + a label→value map per series."""
+    axis_labels: list[str] = []
+    seen: set[str] = set()
+    series_maps: list[dict[str, float]] = []
+    for _name, pts in series:
+        smap: dict[str, float] = {}
+        for lbl, val in pts:
+            key = str(lbl)
+            smap[key] = float(val)
+            if key not in seen:
+                seen.add(key)
+                axis_labels.append(key)
+        series_maps.append(smap)
+    return axis_labels, series_maps
+
+
+def _reference_overlay_parts(
+    reference_bands: tuple[Any, ...],
+    reference_lines: tuple[Any, ...],
+    y_of: Any,
+    pl: int,
+    plot_w: int,
+) -> list[str]:
+    """Shaded bands + annotation lines, drawn under the data layers."""
+    parts: list[str] = []
+    for band in reference_bands:
+        band_top_y = y_of(band.to_value)
+        band_h = round(y_of(band.from_value) - band_top_y, 2)
+        if band_h > 0:
+            color = _BAND_COLORS.get(band.color, _BAND_COLORS["target"])
+            parts.append(
+                f'<rect x="{pl}" y="{band_top_y}" '
+                f'width="{plot_w}" height="{band_h}" '
+                f'fill="{color}" fill-opacity="0.12" stroke="none">'
+                f"<title>{_escape(band.label)}: "
+                f"{band.from_value}–{band.to_value}</title>"
+                f"</rect>"
+            )
+    for ref in reference_lines:
+        ref_y = y_of(ref.value)
+        dasharray = _LINE_DASHARRAY.get(ref.style, "")
+        parts.append(
+            f'<line x1="{pl}" y1="{ref_y}" '
+            f'x2="{pl + plot_w}" y2="{ref_y}" '
+            f'stroke="hsl(var(--muted-foreground))" '
+            f'stroke-width="1" stroke-dasharray="{dasharray}">'
+            f"<title>{_escape(ref.label)}: {ref.value}</title>"
+            f"</line>"
+        )
+    return parts
+
+
+def _series_layer_parts(
+    s_idx: int,
+    s_name: str,
+    smap: dict[str, float],
+    axis_labels: list[str],
+    xs: list[float],
+    base_y: float,
+    y_of: Any,
+    pl: int,
+    plot_w: int,
+) -> list[str]:
+    """One series' translucent area + line + titled data points."""
+    color = _series_color(s_idx)
+    coords = [(xs[i], y_of(smap.get(lbl, 0.0))) for i, lbl in enumerate(axis_labels)]
+    line_points_str = " ".join(f"{px},{py}" for px, py in coords)
+    parts = [
+        f'<polygon points="{pl},{base_y} {line_points_str} '
+        f'{pl + plot_w},{base_y}" '
+        f'fill="{color}" fill-opacity="0.12" stroke="none" />',
+        f'<polyline points="{line_points_str}" '
+        f'fill="none" stroke="{color}" stroke-width="1.5" '
+        f'stroke-linejoin="round" stroke-linecap="round" />',
+    ]
+    for i, lbl in enumerate(axis_labels):
+        px, py = coords[i]
+        val_label = _fmt_value(smap.get(lbl, 0.0))
+        parts.append(
+            f'<circle cx="{px}" cy="{py}" r="2.5" '
+            f'fill="{color}" stroke="hsl(var(--card))" '
+            f'stroke-width="1">'
+            f"<title>{_escape(s_name)} · {_escape(lbl)}: {val_label}</title>"
+            f"</circle>"
+        )
+    return parts
+
+
+def _axis_label_parts(axis_labels: list[str], xs: list[float], height: int) -> list[str]:
+    """X-axis tick labels — every Nth bucket to avoid collisions."""
+    count = len(axis_labels)
+    show_every = 1 if count <= 5 else max(1, (count + 4) // 5)
+    parts: list[str] = []
+    for i, lbl in enumerate(axis_labels):
+        if i == 0 or i == count - 1 or i % show_every == 0:
+            parts.append(
+                f'<text x="{xs[i]}" y="{height - 8}" '
+                f'text-anchor="middle" font-size="9" '
+                f'fill="hsl(var(--muted-foreground))" '
+                f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
+                f"{_escape(lbl)}</text>"
+            )
+    return parts
+
+
+def _multi_series_svg(
+    label: str,
+    series: tuple[tuple[str, tuple[tuple[str, float], ...]], ...],
+    *,
+    reference_lines: tuple[Any, ...] = (),
+    reference_bands: tuple[Any, ...] = (),
+    width: int = DEFAULT_WIDTH,
+    height: int = DEFAULT_HEIGHT,
+) -> str:
+    """Render N overlaid series sharing one label axis (#1473).
+
+    Each series is drawn from the baseline as a translucent area + line
+    + data points, one design-palette colour per series. Missing
+    (series, label) cells read as 0 — for time-bucket stacked areas an
+    absent bucket genuinely means a zero count.
+    """
+    axis_labels, series_maps = _shared_axis(series)
+    if not axis_labels:
+        return ""
+
+    pt, pl = DEFAULT_PADDING_TOP, DEFAULT_PADDING_LEFT
+    plot_w = width - pl - DEFAULT_PADDING_RIGHT
+    plot_h = height - pt - DEFAULT_PADDING_BOTTOM
+    count = len(axis_labels)
+
+    # Y-range spans every series value (0-filled) plus reference overlays.
+    all_values = [m.get(lbl, 0.0) for m in series_maps for lbl in axis_labels]
+    candidates = (
+        all_values + [r.value for r in reference_lines] + [b.to_value for b in reference_bands]
+    )
+    max_val = max(candidates) if candidates else 1
+    if max_val <= 0:
+        max_val = 1
+    min_val = min([0, *(b.from_value for b in reference_bands)])
+    value_range = (max_val - min_val) or 1
+
+    def _y(val: float) -> float:
+        return float(round(pt + plot_h - ((val - min_val) / value_range * plot_h), 2))
+
+    step = plot_w / (count - 1) if count > 1 else 0
+    xs = [round(pl + i * step, 2) for i in range(count)]
+    base_y = pt + plot_h
+
+    parts: list[str] = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'viewBox="0 0 {width} {height}" '
+        f'class="dz-line-chart-svg dz-chart-svg" role="img" '
+        f'aria-label="{_escape(label, quote=True)} time series — '
+        f'{len(series)} series, {count} buckets, peak {_fmt_value(max_val)}">',
+        f'<line x1="{pl}" y1="{base_y}" x2="{pl + plot_w}" y2="{base_y}" '
+        f'stroke="hsl(var(--border))" stroke-width="1" />',
+    ]
+    parts += _reference_overlay_parts(reference_bands, reference_lines, _y, pl, plot_w)
+    for s_idx, (s_name, _pts) in enumerate(series):
+        parts += _series_layer_parts(
+            s_idx, s_name, series_maps[s_idx], axis_labels, xs, base_y, _y, pl, plot_w
+        )
+    parts += _axis_label_parts(axis_labels, xs, height)
     parts.append("</svg>")
     return "".join(parts)
 

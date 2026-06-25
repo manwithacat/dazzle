@@ -1348,6 +1348,27 @@ class LazyTabPanel:
 
 
 @dataclass(frozen=True, slots=True)
+class TimeSeriesSeries:
+    """One named series inside a multi-series `TimeSeries`.
+
+    Not a Fragment union member — held inside `TimeSeries.series`. Each
+    series carries its own `(label, value)` points; the renderer aligns
+    them on a shared label axis (the ordered union of all series'
+    labels) and draws them as overlaid transparent layers, one design
+    palette colour per series. Used by stacked `area_chart`
+    (`group_by: [bucket(date, unit), <dim>]`) and line-chart
+    `overlay_series` (#883, #1473).
+    """
+
+    name: str
+    points: tuple[tuple[str, float], ...]
+
+    def __post_init__(self) -> None:
+        if not self.points:
+            raise ValueError("TimeSeriesSeries requires at least one point")
+
+
+@dataclass(frozen=True, slots=True)
 class TimeSeries:
     """Sequential numeric data plotted over a label axis.
 
@@ -1355,9 +1376,17 @@ class TimeSeries:
     they differ only in chrome (axis labels, fill, size). The `view`
     discriminator selects the rendering style.
 
-    `points` is a sequence of (label, value) pairs. The label is
-    rendered as-is (typically an iso-date string or a bucket name);
-    values are floats so callers can pass ratios as well as counts.
+    `points` is a sequence of (label, value) pairs for the single-series
+    case. The label is rendered as-is (typically an iso-date string or a
+    bucket name); values are floats so callers can pass ratios as well
+    as counts.
+
+    `series` carries the multi-series case (#1473): a tuple of
+    `TimeSeriesSeries`, each a named `(label, value)` line. When `series`
+    is non-empty it takes precedence over `points` and the renderer draws
+    every series as an overlaid transparent layer on a shared label axis
+    (line/area views only — sparkline stays single-series). Exactly one of
+    `points` / `series` must be non-empty.
 
     Optional `reference_lines` and `reference_bands` carry chart
     overlays — single-value horizontal annotations and shaded ranges
@@ -1367,15 +1396,16 @@ class TimeSeries:
     """
 
     label: str
-    points: tuple[tuple[str, float], ...]
+    points: tuple[tuple[str, float], ...] = ()
     view: Literal["line", "area", "sparkline"] = "line"
     reference_lines: tuple[ReferenceLine, ...] = ()
     reference_bands: tuple[ReferenceBand, ...] = ()
+    series: tuple["TimeSeriesSeries", ...] = ()
 
     def __post_init__(self) -> None:
         if self.view not in _TIMESERIES_VIEWS:
             raise ValueError(f"invalid view {self.view!r}")
-        if not self.points:
+        if not self.points and not self.series:
             raise ValueError("TimeSeries requires at least one point")
 
 
