@@ -1777,6 +1777,7 @@
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
+            'rag_on': None,
             'rank_by': None,
             'reference_bands': list([
             ]),
@@ -1801,6 +1802,8 @@
             ]),
             'task_inbox_config': None,
             'title': None,
+            'tone_bands': list([
+            ]),
             'tones': dict({
             }),
             'track_format': None,
@@ -1858,6 +1861,7 @@
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
+            'rag_on': None,
             'rank_by': None,
             'reference_bands': list([
             ]),
@@ -1882,6 +1886,8 @@
             ]),
             'task_inbox_config': None,
             'title': None,
+            'tone_bands': list([
+            ]),
             'tones': dict({
             }),
             'track_format': None,
@@ -1939,6 +1945,7 @@
             'progress_complete_at': None,
             'progress_stages': list([
             ]),
+            'rag_on': None,
             'rank_by': None,
             'reference_bands': list([
             ]),
@@ -1963,6 +1970,8 @@
             ]),
             'task_inbox_config': None,
             'title': None,
+            'tone_bands': list([
+            ]),
             'tones': dict({
             }),
             'track_format': None,

@@ -219,6 +219,23 @@ workspace command_center "Command Center":
     action: system_detail
     empty: "No systems registered"
 
+  # System RAG board — a list region with the #1470 fixed-band RAG decorator:
+  # `rag_on: error_rate` colours each cell green/amber/red against author
+  # thresholds (WCAG-safe tone + icon + label), so an operator triages by
+  # severity at a glance. Deterministic — no statistics, no LLM.
+  system_rag:
+    source: System
+    display: list
+    sort: name asc
+    rag_on: error_rate
+    tone_bands:
+      - at: 5
+        tone: destructive
+      - at: 1
+        tone: warning
+      - at: 0
+        tone: positive
+
   # System Response League — a plain list region with the #1470 outlier
   # decorator: `outlier_on: response_time_ms` flags rows whose response time
   # is a statistical outlier (IQR Tukey fences) vs the displayed systems, so

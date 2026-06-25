@@ -138,6 +138,15 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
         "sample_items": _BOXES,
         "canned_buckets": None,
     },
+    "cat_rag": {
+        "description": (
+            "Fixed-band RAG decorator — `error_rate` cells are coloured green/amber/red "
+            "against author thresholds (WCAG-safe tone + icon + label). The deterministic "
+            "sibling of the outlier decorator."
+        ),
+        "sample_items": _BOXES,
+        "canned_buckets": None,
+    },
     "cat_insight": {
         "description": (
             "A grounded, deterministic narrative — scale + leader + outlier — over a "

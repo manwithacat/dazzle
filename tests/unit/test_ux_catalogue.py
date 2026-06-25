@@ -33,6 +33,7 @@ def test_list_renders_table_with_outlier_badge() -> None:
         ("cat_bullet", "dz-bullet-region"),
         ("cat_kanban", "dz-kanban-board"),
         ("cat_insight", "dz-stack"),
+        ("cat_rag", "dz-badge"),
     ],
 )
 def test_mode_renders_primitive(name: str, marker: str) -> None:

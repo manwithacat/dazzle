@@ -163,3 +163,25 @@ cat_insight:
   aggregate:
     count: count(Box)
 ```
+
+## List
+
+Fixed-band RAG decorator — `error_rate` cells are coloured green/amber/red against author thresholds (WCAG-safe tone + icon + label). The deterministic sibling of the outlier decorator.
+
+<div class="dz-catalogue-preview" markdown="0">
+<div data-dz-region data-dz-region-name="cat_rag" id="region-cat_rag"><div class="dz-list-region"><div class="dz-list-actions"><div class="dz-list-action-group"><button type="button" data-dz-csv-endpoint="/api/workspaces/ux_catalogue/regions/cat_rag" data-dz-csv-filename="cat_rag.csv" onclick="window.dz.downloadCsv(this.dataset.dzCsvEndpoint, this.dataset.dzCsvFilename)" class="dz-list-csv-button" title="Export CSV" aria-label="Export CSV"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button></div></div><div class="dz-list-scroll"><table class="dz-list-table"><thead><tr><th>Name</th><th>Team</th><th>Status</th><th>Latency Ms</th><th>Error Rate</th><th>Target Ms</th></tr></thead><tbody><tr class="dz-list-row "><td>alpha</td><td>platform</td><td>healthy</td><td>42</td><td><div class="dz-row dz-row--gap-sm dz-row--align-center">0.1<span class="dz-badge dz-badge-sm" data-dz-tone="positive" role="status" aria-label="Status: good">● good</span></div></td><td>50</td></tr><tr class="dz-list-row "><td>bravo</td><td>platform</td><td>healthy</td><td>38</td><td><div class="dz-row dz-row--gap-sm dz-row--align-center">0.2<span class="dz-badge dz-badge-sm" data-dz-tone="positive" role="status" aria-label="Status: good">● good</span></div></td><td>50</td></tr><tr class="dz-list-row "><td>charlie</td><td>payments</td><td>degraded</td><td>44</td><td><div class="dz-row dz-row--gap-sm dz-row--align-center">1.4<span class="dz-badge dz-badge-sm" data-dz-tone="warning" role="status" aria-label="Status: watch">● watch</span></div></td><td>50</td></tr><tr class="dz-list-row "><td>delta</td><td>payments</td><td>healthy</td><td>40</td><td><div class="dz-row dz-row--gap-sm dz-row--align-center">0.3<span class="dz-badge dz-badge-sm" data-dz-tone="positive" role="status" aria-label="Status: good">● good</span></div></td><td>50</td></tr><tr class="dz-list-row "><td>echo</td><td>growth</td><td>healthy</td><td>46</td><td><div class="dz-row dz-row--gap-sm dz-row--align-center">0.2<span class="dz-badge dz-badge-sm" data-dz-tone="positive" role="status" aria-label="Status: good">● good</span></div></td><td>50</td></tr><tr class="dz-list-row "><td>foxtrot</td><td>data</td><td>critical</td><td>380</td><td><div class="dz-row dz-row--gap-sm dz-row--align-center">7.2<span class="dz-badge dz-badge-sm" data-dz-tone="destructive" role="status" aria-label="Status: critical">● critical</span></div></td><td>50</td></tr></tbody></table></div></div></div>
+</div>
+
+```dsl
+cat_rag:
+  source: Box
+  display: list
+  rag_on: error_rate
+  tone_bands:
+    - at: 5
+      tone: destructive
+    - at: 1
+      tone: warning
+    - at: 0
+      tone: positive
+```

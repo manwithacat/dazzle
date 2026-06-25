@@ -273,3 +273,15 @@ workspace ux_catalogue "UX Catalogue":
     group_by: team
     aggregate:
       count: count(Box)
+
+  cat_rag:
+    source: Box
+    display: list
+    rag_on: error_rate
+    tone_bands:
+      - at: 5
+        tone: destructive
+      - at: 1
+        tone: warning
+      - at: 0
+        tone: positive

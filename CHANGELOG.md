@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.28] - 2026-06-25
+
+### Added
+- **#1470: `rag_on` — fixed-band RAG decorator (closes sequencing item 3).** The deterministic, author-threshold sibling of `outlier_on`: flags a `display: list` column with a red/amber/green tone by author-defined `tone_bands` (reusing the `ToneBandSpec` from #1144), rendered as a WCAG-safe badge (tone colour + `●` icon + derived label good/watch/critical). Bands evaluate descending-`at`, first `value >= at` wins. Validation (`E_RAG_DISPLAY` / `E_RAG_NOT_NUMERIC` / `E_RAG_BANDS_REQUIRED`). Demonstrated on `examples/ops_dashboard` (`system_rag`) and as the **10th mode on the published UX catalogue**. Mirrors `outlier_on` across every layer — near-total reuse.
+
+### Changed
+- **api-surface drift (ir-types):** new `WorkspaceRegion.rag_on` + `tone_bands` fields. Baseline + golden-master regenerated.
+
+### Agent Guidance
+- **`rag_on` vs `outlier_on`:** both decorate a numeric `display: list` column with a WCAG-safe tone badge, but `rag_on` uses **fixed author thresholds** (`tone_bands`) for good/bad RAG colouring, while `outlier_on` uses a **statistical test** (`outlier_method`) to flag anomalies vs the displayed distribution. Use `rag_on` when "good/bad" is a known threshold (SLA, score, error rate); use `outlier_on` when "anomalous vs the rest" is the question. They attach to independent columns; if both ever target one column, the outlier badge wins.
+- **Band semantics:** `tone_bands` are walked in descending `at`; the first band a value clears sets the tone. Include an `at: 0` band to colour all non-negative values (values below all bands get no badge). Tones are the RAG palette (`positive`/`warning`/`destructive`); the badge label is derived (good/watch/critical).
+
 ## [0.86.27] - 2026-06-25
 
 ### Added
