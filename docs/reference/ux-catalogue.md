@@ -146,3 +146,20 @@ cat_kanban:
   group_by: status
   empty: "No boxes"
 ```
+
+## Insight Summary
+
+A grounded, deterministic narrative — scale + leader + outlier — over a grouped aggregate, with the underlying values cited so every claim is verifiable. No LLM (that's Slice 2).
+
+<div class="dz-catalogue-preview" markdown="0">
+<div data-dz-region data-dz-region-name="cat_insight" id="region-cat_insight"><div class="dz-stack dz-stack--gap-sm"><span class="dz-text dz-text--tone-default">91 count across 6 team.</span><span class="dz-text dz-text--tone-default">platform is highest at 20 (22% of the total).</span><span class="dz-text dz-text--tone-default">ml is anomalously low at 1.</span><span class="dz-text dz-text--tone-muted">Based on: platform 20 · payments 19 · growth 18 · data 17 · infra 16 · ml 1</span><span class="dz-text dz-text--tone-muted">across all team · Computed from live data</span></div></div>
+</div>
+
+```dsl
+cat_insight:
+  source: Box
+  display: insight_summary
+  group_by: team
+  aggregate:
+    count: count(Box)
+```

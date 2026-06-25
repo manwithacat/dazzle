@@ -266,3 +266,10 @@ workspace ux_catalogue "UX Catalogue":
     display: kanban
     group_by: status
     empty: "No boxes"
+
+  cat_insight:
+    source: Box
+    display: insight_summary
+    group_by: team
+    aggregate:
+      count: count(Box)

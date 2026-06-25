@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.27] - 2026-06-25
+
+### Added
+- **#1470: `display: insight_summary` — deterministic, grounded narrative region (Slice 1 of 3).** A region that computes a grouped aggregate (its own `source`/`group_by`/`aggregate`, like `bar_chart`) and renders a **template-NLG narrative** — *scale + leader + outlier* — above a **trust block** (the underlying values cited, the scope, a "Computed from live data" badge). The prose is generated from the real numbers, so it **cannot hallucinate** and every claim cites an exact value (the structural answer to the AI "plausible-but-wrong" failure mode). No LLM. Reuses the shipped `flag_outliers` for the anomaly callout and the `bar_chart` aggregation spine. Validation (`E_INSIGHT_GROUP_BY_REQUIRED` / `E_INSIGHT_AGGREGATE_REQUIRED` / `E_INSIGHT_SINGLE_DIM_ONLY`). Demonstrated on `examples/ops_dashboard` (`alert_insight`) and as the 9th mode on the published UX catalogue (`…/reference/ux-catalogue/`).
+
+### Changed
+- **api-surface drift (ir-types):** new `DisplayMode.INSIGHT_SUMMARY` enum member. Baseline regenerated. (No new `WorkspaceRegion` fields — it reuses `source`/`group_by`/`aggregate`.)
+
+### Agent Guidance
+- **When to use `insight_summary` vs the chart regions:** use it to *narrate* a grouped aggregate in words (the "so what" above a chart). It pairs with a `bar_chart`/`comparison` by authoring convention (same `group_by`/`aggregate`, side by side).
+- **It is deterministic by design (Slice 1).** The narrative is computed from the real aggregates — grounded, testable, zero LLM cost/latency. **Slice 2** swaps the template generator for a pre-computed `llm_intent` over the *same* grounded buckets (with confidence scoring); the deterministic version becomes the fallback + the grounding contract the LLM must respect. **Slice 3** adds refresh triggers / AIJob cost-tracking / clickable citations.
+- **Truthfulness guards (don't remove):** the NLG suppresses "% of total" when a signed `sum` makes a part exceed the whole; never cites a non-zero value as "0.00"; reports "N of M groups" honestly when buckets have no data; says "is highest" (not "leads", which mis-reads a `min` metric); and uses a stable alphabetical leader tiebreak so tied data never disagrees across re-renders. Measure-aware: additive (`count`/`sum`) get totals + %, non-additive (`avg`/`min`/`max`) and funcless `DerivedMetric` measures skip them.
+
 ## [0.86.26] - 2026-06-25
 
 ### Fixed

@@ -138,4 +138,26 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
         "sample_items": _BOXES,
         "canned_buckets": None,
     },
+    "cat_insight": {
+        "description": (
+            "A grounded, deterministic narrative — scale + leader + outlier — over a "
+            "grouped aggregate, with the underlying values cited so every claim is "
+            "verifiable. No LLM (that's Slice 2)."
+        ),
+        "sample_items": [],
+        "canned_buckets": [
+            {
+                "dimensions": {"team": "platform", "team_label": "platform"},
+                "measures": {"count": 20},
+            },
+            {
+                "dimensions": {"team": "payments", "team_label": "payments"},
+                "measures": {"count": 19},
+            },
+            {"dimensions": {"team": "growth", "team_label": "growth"}, "measures": {"count": 18}},
+            {"dimensions": {"team": "data", "team_label": "data"}, "measures": {"count": 17}},
+            {"dimensions": {"team": "infra", "team_label": "infra"}, "measures": {"count": 16}},
+            {"dimensions": {"team": "ml", "team_label": "ml"}, "measures": {"count": 1}},
+        ],
+    },
 }

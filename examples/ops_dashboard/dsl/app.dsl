@@ -273,6 +273,17 @@ workspace command_center "Command Center":
       count: count(Alert)
     empty: "No alerts grouped by system"
 
+  # Alert Insight — deterministic grounded narrative (#1470). The framework
+  # computes the real per-system alert counts and writes a scale/leader/outlier
+  # summary above a trust block listing the underlying values — no LLM, so every
+  # claim cites an exact number the operator can verify against the charts.
+  alert_insight:
+    source: Alert
+    display: insight_summary
+    group_by: system
+    aggregate:
+      count: count(Alert)
+
   # System League — ranked comparison of systems by alert volume (#1470).
   # `display: comparison` ranks the group_by buckets by the `rank_by`
   # aggregate and auto-flags statistical outliers (IQR Tukey fences) so an
