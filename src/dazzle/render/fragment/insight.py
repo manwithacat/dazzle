@@ -10,7 +10,7 @@ loads of tied data never disagree on the leader.
 
 import math
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec
 from dazzle.render.fragment.outliers import flag_outliers
@@ -26,6 +26,19 @@ class InsightNarrative:
     citations: tuple[tuple[str, float], ...]
     scope: str
     badge: str = "Computed from live data"
+
+
+@dataclass(frozen=True, slots=True)
+class StoredInsight:
+    """A pre-computed (eventually LLM-authored) narrative overlay (#1470 Slice 2a).
+
+    Rendered ABOVE the deterministic citations (the always-present grounding),
+    so the prose is always verifiable against the real values beneath it.
+    """
+
+    prose: tuple[str, ...]
+    confidence: Literal["high", "medium", "low"]
+    generated_at: str
 
 
 def _fmt(v: float) -> str:
