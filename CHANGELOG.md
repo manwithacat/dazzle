@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.30] - 2026-06-25
+
+### Added
+- **#1470: UX catalogue — chart family complete (10 → 17 modes).** Added the seven remaining chart-family display modes to the published catalogue: `line_chart`, `area_chart`, `sparkline`, `histogram`, `box_plot`, `radar`, `funnel_chart`. Each is a real region in the `component_showcase` fixture rendered through the live DSL→IR→orchestration→adapter→fragment path with sample data from the manifest. The fidelity **marker now lives in the manifest entry** (`CATALOGUE_MANIFEST[name]["marker"]`) and `test_mode_renders_primitive` iterates the manifest — adding a catalogue mode is now a **2-place edit** (fixture DSL region + manifest entry) instead of 3.
+
+### Fixed
+- **#1470: three latent chart render-path bugs, caught by the catalogue fidelity gate.** All three rendered an empty card in real apps:
+  - **`box_plot`** — orchestration computed `box_plot_stats` but `_build_chart_adapter_ctx` never mapped it to the `groups` key `_build_box_plot` reads. One-line key rename.
+  - **`funnel_chart`** — the `FUNNEL_CHART` adapter ctx threaded `kanban_columns` + a dead `bucketed_metrics` key, but `_build_funnel_chart` counts `items` per `group_by` across the stages. Thread `items` + `group_by` + `total` (like `KANBAN`).
+  - **single-dim `area_chart`** — `AREA_CHART` was absent from `_SINGLE_DIM_CHART_MODES` (where `LINE_CHART` sits), so a single time-dim area computed no `bucketed_metrics` and rendered empty. Added it; multi-dim area (`group_by: [a, b]`) has a null scalar `group_by` and still routes through the pivot path (unaffected).
+
+### Agent Guidance
+- **The catalogue is a fidelity gate, not just docs.** It drives the real render path with no DB, so a region that renders empty in production renders empty here — that is how the three bugs above surfaced. When adding/altering a display mode, add it to the catalogue and assert its `dz-*` marker; an empty card is a real-app bug, not a harness artifact.
+- **Adding a catalogue mode is now 2 places:** a `cat_<name>` region in `fixtures/component_showcase/dsl/app.dsl` (real DSL) + a `CATALOGUE_MANIFEST` entry carrying `description`, `marker` (the `dz-*` class it emits), and sample data (`sample_items` for item-driven modes, `canned_buckets` for aggregate modes, `canned_list_totals` for slow-path counts). Then regenerate: `python scripts/gen_ux_catalogue.py`.
+- **Known follow-up:** multi-dim / stacked `area_chart` (`group_by: [bucket, dim]`) computes `pivot_buckets` but never threads them to the time-series builder, and `_build_time_series` is single-series only — stacked-area rendering is an open feature, not wired. The catalogue ships single-series area.
+
 ## [0.86.29] - 2026-06-25
 
 ### Added
