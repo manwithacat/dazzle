@@ -2870,6 +2870,9 @@ class _WorkspaceRegionState:
     row_action: ir.RowActionSpec | None = None  # #1148
     drill: str | None = None  # #1303 — per-row drill-to-detail (detail|none)
     refresh_interval: int | None = None  # #1391 — `refresh: every Ns` poll seconds
+    rank_by: str | None = None  # #1470 — comparison metric (aggregate key | numeric field)
+    order: str = "desc"  # #1470 — comparison sort direction
+    outlier: ir.ComparisonOutlierSpec | None = None  # #1470 — comparison outlier-flag config
 
 
 # ---------- Simple keyword-value branches ---------- #
@@ -3343,6 +3346,94 @@ def _kw_drill(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.skip_newlines()
 
 
+def _kw_rank_by(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1470: ``rank_by: <metric>`` — the comparison league's ranking metric.
+
+    Names an aggregate key (group mode) or a numeric field on ``source``
+    (entity-row mode); validated downstream in the region validator.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.rank_by = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_order(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1470: ``order: asc | desc`` — comparison sort direction (default desc)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value_tok = parser.expect_identifier_or_keyword()
+    value = str(value_tok.value)
+    if value not in ("asc", "desc"):
+        raise make_parse_error(
+            f"order must be 'asc' or 'desc'; got {value!r}.",
+            parser.file,
+            value_tok.line,
+            value_tok.column,
+        )
+    state.order = value
+    parser.skip_newlines()
+
+
+def _parse_outlier_spec(parser: Any) -> "ir.ComparisonOutlierSpec":
+    """Parse ``iqr`` | ``sigma:<k>`` | ``threshold:low=<x>,high=<y>`` | ``none``.
+
+    The method ident is required; params follow after a ``:`` for ``sigma``
+    (single number) and ``threshold`` (one or both of ``low``/``high``).
+    """
+    method_tok = parser.expect_identifier_or_keyword()
+    method = str(method_tok.value)
+    sigma_k = threshold_low = threshold_high = None
+    if method == "sigma":
+        if parser.match(TokenType.COLON):
+            parser.advance()
+            sigma_k = float(parser.expect(TokenType.NUMBER).value)
+    elif method == "threshold":
+        if parser.match(TokenType.COLON):
+            parser.advance()
+            while True:
+                key_tok = parser.expect_identifier_or_keyword()
+                key = str(key_tok.value)
+                parser.expect(TokenType.EQUALS)
+                num = float(parser.expect(TokenType.NUMBER).value)
+                if key == "low":
+                    threshold_low = num
+                elif key == "high":
+                    threshold_high = num
+                else:
+                    raise make_parse_error(
+                        f"threshold param must be 'low' or 'high'; got {key!r}.",
+                        parser.file,
+                        key_tok.line,
+                        key_tok.column,
+                    )
+                if parser.match(TokenType.COMMA):
+                    parser.advance()
+                    continue
+                break
+    elif method not in ("iqr", "none"):
+        raise make_parse_error(
+            f"outlier_method must be iqr|sigma|threshold|none; got {method!r}.",
+            parser.file,
+            method_tok.line,
+            method_tok.column,
+        )
+    return ir.ComparisonOutlierSpec(
+        method=method,  # type: ignore[arg-type]
+        sigma_k=sigma_k,
+        threshold_low=threshold_low,
+        threshold_high=threshold_high,
+    )
+
+
+def _kw_outlier_method(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1470: ``outlier_method: <spec>`` — comparison outlier-flag config."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.outlier = _parse_outlier_spec(parser)
+    parser.skip_newlines()
+
+
 def _kw_state_field(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -3616,6 +3707,9 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "row_action": _kw_row_action,  # #1148
     "drill": _kw_drill,  # #1303
     "refresh": _kw_refresh,  # #1391
+    "rank_by": _kw_rank_by,  # #1470
+    "order": _kw_order,  # #1470
+    "outlier_method": _kw_outlier_method,  # #1470
 }
 
 
@@ -3724,4 +3818,7 @@ def _build_workspace_region(
         row_action=state.row_action,
         drill=state.drill,  # #1303
         refresh_interval=state.refresh_interval,  # #1391
+        rank_by=state.rank_by,  # #1470
+        order=state.order,  # type: ignore[arg-type]  # #1470 — validated asc|desc
+        outlier=state.outlier,  # #1470
     )
