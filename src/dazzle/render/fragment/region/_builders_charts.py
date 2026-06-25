@@ -131,6 +131,42 @@ def _fmt_num(v: object) -> str:
     return f"{f:.3g}" if 0 < abs(f) < 0.005 else f"{f:.2f}"
 
 
+_CONFIDENCE_TONE = {"high": "positive", "medium": "warning", "low": "neutral"}
+
+
+def _stored_insight_card(title: str, stored: Any, nar: Any) -> Surface:
+    """Render a stored (pre-computed) narrative overlay over the deterministic
+    grounding: prose, then the cited values + a confidence badge + 'as of'
+    freshness. The citations come from the deterministic narrative, so the prose
+    is always verifiable against the real numbers beneath it (#1470 Slice 2a)."""
+    from html import escape as _esc
+
+    children: list[Fragment] = [
+        Text(body=str(line)) for line in (getattr(stored, "prose", ()) or ())
+    ]
+    citations = getattr(nar, "citations", ()) or ()
+    if citations:
+        cite_str = " · ".join(f"{lbl} {_fmt_num(val)}" for lbl, val in citations)
+        children.append(Text(body=f"Based on: {cite_str}", tone="muted"))
+    conf = str(getattr(stored, "confidence", "") or "")
+    tone = _CONFIDENCE_TONE.get(conf, "neutral")
+    children.append(
+        RawHTML(
+            f'<span class="dz-badge dz-badge-sm" data-dz-tone="{tone}" role="status" '
+            f'aria-label="Confidence: {_esc(conf)}">confidence: {_esc(conf)}</span>'
+        )
+    )
+    children.append(
+        Text(
+            body=f"{getattr(nar, 'scope', '')} · as of {getattr(stored, 'generated_at', '')}".strip(
+                " ·"
+            ),
+            tone="muted",
+        )
+    )
+    return _wrap_surface(title, "report", Stack(children=tuple(children), gap="sm"))
+
+
 def _comparison_track_rows(raw_rows: Any) -> list[tuple[str, float, str, float]]:
     """Coerce ctx['comparison_rows'] into BarTrack `(label, value, formatted, fill_pct)`.
 
@@ -548,6 +584,12 @@ class _BuildersChartsMixin:
                     description=getattr(region, "empty_message", None) or "No data to summarise.",
                 ),
             )
+
+        # #1470 Slice 2a: a stored (pre-computed) narrative overlays the
+        # deterministic facts; fall back to the deterministic narrative when none.
+        stored = ctx.get("stored_insight")
+        if getattr(stored, "prose", None):
+            return _stored_insight_card(title, stored, nar)
 
         children: list[Fragment] = [Text(body=str(line)) for line in lines]
         citations = getattr(nar, "citations", ()) or ()

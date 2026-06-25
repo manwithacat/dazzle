@@ -3848,9 +3848,11 @@
       "_kw_notice": 8,
       "_kw_order": 2,
       "_kw_outlier_method": 1,
+      "_kw_outlier_on": 1,
       "_kw_overlay_series": 1,
       "_kw_primary": 1,
       "_kw_primary_action": 2,
+      "_kw_rag_on": 1,
       "_kw_rank_by": 1,
       "_kw_reference_bands": 1,
       "_kw_reference_lines": 1,
@@ -3870,6 +3872,7 @@
       "_kw_task_inbox_config": 1,
       "_kw_thresholds": 6,
       "_kw_title": 1,
+      "_kw_tone_bands": 1,
       "_kw_tones": 3,
       "_kw_track_format": 1,
       "_kw_track_max": 1,
@@ -6470,8 +6473,11 @@
       "_validate_comparison_region": 3,
       "validate_comparison_regions": 8,
       "validate_emits_targets": 5,
+      "validate_insight_summaries": 8,
       "validate_nav_curation": 33,
+      "validate_outlier_decorators": 15,
       "validate_persona_nav_refs": 5,
+      "validate_rag_decorators": 15,
       "validate_ux_specs": 47,
       "validate_workspace_primary_actions": 9,
       "validate_workspace_region_actions": 21
@@ -11564,6 +11570,15 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/http/runtime/insight_store.py": {
+    "functions": {
+      "_default_provider": 1,
+      "get_stored_insight": 1,
+      "reset_insight_provider": 1,
+      "set_insight_provider": 1
+    },
+    "mi_rank": "A"
+  },
   "dazzle/http/runtime/integration_executor.py": {
     "functions": {
       "ActionResult": 1,
@@ -13796,6 +13811,9 @@
       "apply_attention_signals": 10,
       "build_comparison_inputs": 11,
       "build_comparison_rows": 15,
+      "build_insight_inputs": 7,
+      "build_outlier_flags": 5,
+      "build_rag_tones": 7,
       "compute_action_grid": 17,
       "compute_bar_track": 11,
       "compute_bullet": 16,
@@ -13831,7 +13849,8 @@
   },
   "dazzle/http/runtime/workspace_region_orchestration.py": {
     "functions": {
-      "compute_region_render_inputs": 85
+      "_read_stored_insight": 2,
+      "compute_region_render_inputs": 102
     },
     "mi_rank": "A"
   },
@@ -13847,7 +13866,7 @@
       "RegionRenderInputs": 1,
       "RenderEnv": 1,
       "_build_card_adapter_ctx": 13,
-      "_build_chart_adapter_ctx": 19,
+      "_build_chart_adapter_ctx": 20,
       "_build_dashboard_adapter_ctx": 14,
       "_build_list_adapter_ctx": 13,
       "_build_specialty_adapter_ctx": 15,
@@ -17989,6 +18008,19 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/render/fragment/insight.py": {
+    "functions": {
+      "InsightNarrative": 1,
+      "StoredInsight": 1,
+      "_fmt": 3,
+      "_leader_line": 7,
+      "_num": 3,
+      "_outlier_line": 4,
+      "_scale_line": 3,
+      "build_insight_narrative": 10
+    },
+    "mi_rank": "A"
+  },
   "dazzle/render/fragment/outliers.py": {
     "functions": {
       "_flag_by_fences": 7,
@@ -18257,21 +18289,26 @@
   },
   "dazzle/render/fragment/region/_builders_charts.py": {
     "functions": {
-      "_BuildersChartsMixin": 21,
+      "_BuildersChartsMixin": 19,
       "_BuildersChartsMixin._build_bar_chart": 17,
       "_BuildersChartsMixin._build_bar_track": 25,
       "_BuildersChartsMixin._build_box_plot": 27,
       "_BuildersChartsMixin._build_bullet": 16,
+      "_BuildersChartsMixin._build_comparison": 7,
       "_BuildersChartsMixin._build_diagram": 21,
       "_BuildersChartsMixin._build_funnel_chart": 28,
       "_BuildersChartsMixin._build_heatmap": 22,
       "_BuildersChartsMixin._build_histogram": 12,
+      "_BuildersChartsMixin._build_insight_summary": 9,
       "_BuildersChartsMixin._build_radar": 16,
       "_BuildersChartsMixin._build_time_series": 20,
+      "_comparison_track_rows": 14,
+      "_fmt_num": 4,
       "_parse_reference_bands": 13,
-      "_parse_reference_lines": 9
+      "_parse_reference_lines": 9,
+      "_stored_insight_card": 7
     },
-    "mi_rank": "B"
+    "mi_rank": "C"
   },
   "dazzle/render/fragment/region/_builders_metrics.py": {
     "functions": {
@@ -18297,11 +18334,13 @@
   },
   "dazzle/render/fragment/region/_builders_tables.py": {
     "functions": {
-      "_BuildersTablesMixin": 45,
-      "_BuildersTablesMixin._build_list": 57,
+      "_BuildersTablesMixin": 49,
+      "_BuildersTablesMixin._build_list": 70,
       "_BuildersTablesMixin._build_pivot_table": 35,
       "_BuildersTablesMixin._build_queue": 52,
-      "_BuildersTablesMixin._build_tabbed_list": 34
+      "_BuildersTablesMixin._build_tabbed_list": 34,
+      "_outlier_badge": 2,
+      "_rag_badge": 1
     },
     "mi_rank": "A"
   },
@@ -20153,6 +20192,28 @@
       "check_form": 12,
       "check_html": 9
     },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/ux_catalogue.py": {
+    "functions": {
+      "_CatalogueRepo": 3,
+      "_CatalogueRepo.__init__": 3,
+      "_CatalogueRepo.aggregate": 2,
+      "_CatalogueRepo.list": 2,
+      "_FakeRequest": 2,
+      "_FakeRequest.__init__": 1,
+      "_auto_columns": 4,
+      "_dsl_snippet": 10,
+      "generate_catalogue_css": 2,
+      "generate_catalogue_markdown": 4,
+      "iter_catalogue_regions": 3,
+      "load_showcase_appspec": 1,
+      "render_catalogue_region": 6
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/ux_catalogue_manifest.py": {
+    "functions": {},
     "mi_rank": "A"
   },
   "dazzle/testing/vendor_mock/__init__.py": {
