@@ -25,6 +25,7 @@ from dazzle.http.runtime.workspace_card_data import (
     _resolve_path,
 )
 from dazzle.render.display_names import _resolve_display_name
+from dazzle.render.fragment.insight import InsightNarrative, build_insight_narrative
 from dazzle.render.fragment.outliers import Flag, flag_outliers
 
 
@@ -148,6 +149,43 @@ def build_outlier_flags(
         v = _coerce_float(raw)
         values.append(v if v is not None and math.isfinite(v) else None)
     return flag_outliers(values, spec)
+
+
+def build_insight_inputs(
+    bucketed_metrics: list[dict[str, Any]],
+    *,
+    region: Any,
+    group_label: str,
+    scope_desc: str,
+    outlier_spec: ComparisonOutlierSpec,
+) -> InsightNarrative:
+    """Select the narrated measure and build the deterministic narrative (#1470).
+
+    Prefers the first plain aggregate (an ``AggregateRef`` with a ``func``); a
+    funcless metric (e.g. a ``DerivedMetric``) is treated as non-additive — its
+    ``measure_func`` is "" so the narrative never claims a bogus "% of total".
+    """
+    aggregates = getattr(region, "aggregates", None) or {}
+    measure_name, ref = next(
+        ((name, ref) for name, ref in aggregates.items() if getattr(ref, "func", None) is not None),
+        next(iter(aggregates.items()), ("value", None)),
+    )
+    measure_func = getattr(ref, "func", "") or ""
+    records = [
+        {
+            "label": b.get("label"),
+            "value": (b.get("metrics") or {}).get(measure_name, b.get("value")),
+        }
+        for b in bucketed_metrics
+    ]
+    return build_insight_narrative(
+        records,
+        measure_name=measure_name,
+        measure_func=measure_func,
+        group_label=group_label,
+        scope_desc=scope_desc,
+        outlier_spec=outlier_spec,
+    )
 
 
 def compute_heatmap(

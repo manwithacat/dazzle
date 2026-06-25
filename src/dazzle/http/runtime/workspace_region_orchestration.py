@@ -36,6 +36,7 @@ from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_computes import (
     apply_attention_signals,
     build_comparison_inputs,
+    build_insight_inputs,
     build_outlier_flags,
     compute_action_grid,
     compute_bar_track,
@@ -59,7 +60,7 @@ logger = logging.getLogger(__name__)
 # Display-mode groupings used by phase-4 gates.
 _GROUPED_MODES: frozenset[str] = frozenset({"KANBAN", "BAR_CHART", "FUNNEL_CHART"})
 _SINGLE_DIM_CHART_MODES: frozenset[str] = frozenset(
-    {"BAR_CHART", "LINE_CHART", "SPARKLINE", "RADAR", "BAR_TRACK", "COMPARISON"}
+    {"BAR_CHART", "LINE_CHART", "SPARKLINE", "RADAR", "BAR_TRACK", "COMPARISON", "INSIGHT_SUMMARY"}
 )
 _MULTI_DIM_MODES: frozenset[str] = frozenset({"PIVOT_TABLE", "AREA_CHART"})
 
@@ -249,6 +250,23 @@ async def compute_region_render_inputs(
         comparison_rows = []
         comparison_max = 0.0
 
+    # Insight summary (#1470): deterministic narrative over the grouped aggregate.
+    if display == "INSIGHT_SUMMARY" and group_by and bucketed_metrics:
+        _gb = group_by if isinstance(group_by, str) else str(group_by)
+        group_label = _gb.replace("_", " ")
+        scope_desc = f"across all {group_label}"
+        if getattr(ctx.ir_region, "filter", None) is not None:
+            scope_desc += " (filtered)"
+        insight_narrative = build_insight_inputs(
+            bucketed_metrics,
+            region=ctx.ir_region,
+            group_label=group_label,
+            scope_desc=scope_desc,
+            outlier_spec=getattr(ctx.ir_region, "outlier", None) or ComparisonOutlierSpec(),
+        )
+    else:
+        insight_narrative = None
+
     # Outlier decorator (#1470): per-row flags for one list column.
     outlier_on = getattr(ctx.ir_region, "outlier_on", None) or ""
     if display == "LIST" and outlier_on and not scope_denied:
@@ -429,6 +447,7 @@ async def compute_region_render_inputs(
         bar_track_max=bar_track_max,
         comparison_rows=comparison_rows,
         comparison_max=comparison_max,
+        insight_narrative=insight_narrative,
         outlier_flags=outlier_flags,
         outlier_on=outlier_on,
         bullet_rows=bullet_rows,
