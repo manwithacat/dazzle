@@ -1765,6 +1765,7 @@
             'notice': None,
             'order': 'desc',
             'outlier': None,
+            'outlier_on': None,
             'overlay_series': list([
             ]),
             'pipeline_stages': list([
@@ -1845,6 +1846,7 @@
             'notice': None,
             'order': 'desc',
             'outlier': None,
+            'outlier_on': None,
             'overlay_series': list([
             ]),
             'pipeline_stages': list([
@@ -1925,6 +1927,7 @@
             'notice': None,
             'order': 'desc',
             'outlier': None,
+            'outlier_on': None,
             'overlay_series': list([
             ]),
             'pipeline_stages': list([

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.24] - 2026-06-25
+
+### Added
+- **#1470: `outlier_on` — statistical outlier decorator on `display: list` regions.** A new region keyword that flags statistically anomalous cells in one numeric column, rendered as a WCAG-safe badge (tone colour + `⚠` icon + `high`/`low` text). Grammar: `outlier_on: <column>` names the numeric column; the method reuses the existing `outlier_method: iqr | sigma:<k> | threshold:low=<x>,high=<y> | none` keyword (defaults to `iqr`). Flagging runs in a pure post-fetch pass (`build_outlier_flags` → the comparison slice's `flag_outliers`) over the **displayed rows** (bounded by `limit:`) — never widens scope. Validation (`E_OUTLIER_DISPLAY`, `E_OUTLIER_NOT_NUMERIC`, reused `E_COMPARISON_OUTLIER_INVALID`) requires `display: list` + a numeric source field + well-formed outlier params. Demonstrated on `examples/ops_dashboard` (`system_response_times` — systems list flagging `response_time_ms`). Reuses the comparison slice wholesale (`flag_outliers`, `ComparisonOutlierSpec`, the numeric-kind + outlier-param validators, `_coerce_float`); the only new code is the IR field, parser keyword, validator, the pure flag pass, and the `_build_list` composite cell.
+
+### Changed
+- **api-surface drift (ir-types):** one new `WorkspaceRegion.outlier_on: str | None` field. Baseline `docs/api-surface/ir-types.txt` regenerated. Also drifts the golden-master IR snapshot (new region field) — regenerated.
+
+### Agent Guidance
+- **When to use `outlier_on` vs `display: comparison`:** `outlier_on` decorates an *ordinary list* — keep the table, flag the one anomalous numeric column. `display: comparison` is a dedicated *ranked league* (rank rows by a metric + inline bars + its own outlier flag). Use `outlier_on` when the list itself is the point and you just want anomalies surfaced; use `comparison` when ranking is the point.
+- **Uniform `warning` tone is deliberate:** a statistical outlier is *notable*, not inherently good/bad (a high response-time is bad, a high score is good — the framework can't know). Direction is carried by the `⚠` icon + `high`/`low` text. Good/bad-by-threshold colouring is the deferred **RAG decorator** (the other half of #1470's "outlier/rag decorator").
+- **Deferred follow-ons (not built):** multi-column flagging (a rich `fields:` dash-list), surface-list-field attachment (a `format:`-style modifier), full-scoped-set population (sound stats under pagination), and the fixed-band RAG decorator. `insight_summary` is the next planned brainstorm.
+
 ## [0.86.23] - 2026-06-25
 
 ### Added

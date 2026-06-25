@@ -219,6 +219,20 @@ workspace command_center "Command Center":
     action: system_detail
     empty: "No systems registered"
 
+  # System Response League — a plain list region with the #1470 outlier
+  # decorator: `outlier_on: response_time_ms` flags rows whose response time
+  # is a statistical outlier (IQR Tukey fences) vs the displayed systems, so
+  # an operator spots the anomalously slow/fast box at a glance. WCAG-safe
+  # (tone colour + ⚠ icon + high/low text). Reuses the list render + the
+  # comparison slice's flag_outliers engine — no new query semantics.
+  system_response_times:
+    source: System
+    display: list
+    sort: name asc
+    outlier_on: response_time_ms
+    outlier_method: iqr
+    empty: "No systems registered"
+
   # Health Summary — metrics tile region. Picks up the v0.61.65
   # per-tile tones (#2) and v0.61.68 notice band (#7) from the
   # AegisMark UX patterns roadmap.
