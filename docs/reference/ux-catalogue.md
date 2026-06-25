@@ -310,3 +310,21 @@ cat_area:
     count: count(Box)
   empty: "No boxes"
 ```
+
+## Area Chart
+
+Stacked area — weekly box volume split by team. Multi-dim time bucket (#1473): overlaid series, one per team, with a legend.
+
+<div class="dz-catalogue-preview" markdown="0">
+<div data-dz-region data-dz-region-name="cat_area_stacked" id="region-cat_area_stacked"><div class="dz-area-chart-region"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" class="dz-line-chart-svg dz-chart-svg" role="img" aria-label="Cat Area Stacked time series — 2 series, 2 buckets, peak 6"><line x1="8" y1="92" x2="392" y2="92" stroke="hsl(var(--border))" stroke-width="1" /><polygon points="8,92 8.0,36.0 392.0,8.0 392,92" fill="hsl(var(--primary))" fill-opacity="0.12" stroke="none" /><polyline points="8.0,36.0 392.0,8.0" fill="none" stroke="hsl(var(--primary))" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" /><circle cx="8.0" cy="36.0" r="2.5" fill="hsl(var(--primary))" stroke="hsl(var(--card))" stroke-width="1"><title>platform · 2026-W23: 4</title></circle><circle cx="392.0" cy="8.0" r="2.5" fill="hsl(var(--primary))" stroke="hsl(var(--card))" stroke-width="1"><title>platform · 2026-W24: 6</title></circle><polygon points="8,92 8.0,64.0 392.0,50.0 392,92" fill="hsl(var(--info))" fill-opacity="0.12" stroke="none" /><polyline points="8.0,64.0 392.0,50.0" fill="none" stroke="hsl(var(--info))" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" /><circle cx="8.0" cy="64.0" r="2.5" fill="hsl(var(--info))" stroke="hsl(var(--card))" stroke-width="1"><title>payments · 2026-W23: 2</title></circle><circle cx="392.0" cy="50.0" r="2.5" fill="hsl(var(--info))" stroke="hsl(var(--card))" stroke-width="1"><title>payments · 2026-W24: 3</title></circle><text x="8.0" y="112" text-anchor="middle" font-size="9" fill="hsl(var(--muted-foreground))" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2026-W23</text><text x="392.0" y="112" text-anchor="middle" font-size="9" fill="hsl(var(--muted-foreground))" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2026-W24</text></svg><ul class="dz-chart-legend"><li class="dz-chart-legend-item"><span class="dz-chart-legend-swatch" style="background:hsl(var(--primary))"></span><span class="dz-chart-legend-name">platform</span></li><li class="dz-chart-legend-item"><span class="dz-chart-legend-swatch" style="background:hsl(var(--info))"></span><span class="dz-chart-legend-name">payments</span></li></ul><p class="dz-chart-summary">2 buckets · 2 series · peak 6</p></div></div>
+</div>
+
+```dsl
+cat_area_stacked:
+  source: Box
+  display: area_chart
+  group_by: [bucket(opened_at, week), team]
+  aggregate:
+    count: count(Box)
+  empty: "No boxes"
+```

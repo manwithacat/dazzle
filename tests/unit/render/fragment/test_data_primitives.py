@@ -33,6 +33,7 @@ from dazzle.render.fragment.primitives.data import (
     Table,
     Timeline,
     TimeSeries,
+    TimeSeriesSeries,
 )
 
 # === Table ===
@@ -184,6 +185,36 @@ def test_timeseries_accepts_all_three_views() -> None:
     for view in ("line", "area", "sparkline"):
         t = TimeSeries(label="x", points=(("a", 1.0),), view=view)  # type: ignore[arg-type]
         assert t.view == view
+
+
+def test_timeseries_accepts_multi_series() -> None:
+    t = TimeSeries(
+        label="x",
+        view="area",
+        series=(
+            TimeSeriesSeries(name="high", points=(("W1", 2.0), ("W2", 3.0))),
+            TimeSeriesSeries(name="low", points=(("W1", 1.0), ("W2", 4.0))),
+        ),
+    )
+    assert len(t.series) == 2
+    assert t.series[0].name == "high"
+    assert t.points == ()
+
+
+def test_timeseries_with_series_does_not_require_points() -> None:
+    # Series-only construction is valid — points stays empty.
+    t = TimeSeries(label="x", series=(TimeSeriesSeries(name="a", points=(("a", 1.0),)),))
+    assert t.series[0].points == (("a", 1.0),)
+
+
+def test_timeseries_requires_points_or_series() -> None:
+    with pytest.raises(ValueError, match="at least one point"):
+        TimeSeries(label="x", points=(), series=())
+
+
+def test_timeseries_series_requires_at_least_one_point() -> None:
+    with pytest.raises(ValueError, match="at least one point"):
+        TimeSeriesSeries(name="empty", points=())
 
 
 # === Radar ===

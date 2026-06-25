@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.0] - 2026-06-25
+
+### Added
+- **#1473: multi-series (overlaid) time-series rendering — stacked `area_chart` + line `overlay_series`.** A stacked `area_chart` (`group_by: [bucket(date, unit), <dim>]`) now renders one overlaid translucent layer per series-dimension value, each in its own design-palette colour, with a colour-keyed legend. The same capability also lights up line-chart `overlay_series` (#883), which had been computed-then-dropped since its introduction. New `TimeSeriesSeries` primitive + `TimeSeries.series` field; `time_series_svg(..., series=...)` renders N layers on a shared x-axis (the ordered union of all series' labels, missing cells = 0). Catalogue gains a `cat_area_stacked` mode (17 → 18) whose fidelity marker is `dz-chart-legend` — proof the overlaid path actually fired. Verified end-to-end (no-DB) against `examples/ops_dashboard` `alerts_weekly_stacked`. Closes the "Known follow-up" noted in 0.86.30.
+
+### Agent Guidance
+- **Two callers, one substrate.** A multi-series TimeSeries is fed by the adapter (`_build_chart_adapter_ctx`) from one of two shapes: `_pivot_to_series(pivot_buckets, pivot_dim_specs, measure)` for stacked area (dim[0] = time/x-axis, dim[1] = series), or `_overlays_to_series(base_name, bucketed_metrics, overlay_series_data)` for line/area overlays. The builder reads `ctx["series"]` (a list of `{name, points}`); when absent it falls back to the single-series `points` path — **single-series byte-output is unchanged**.
+- **Sparkline stays single-series** (its compact tile has no room for layers). NULL dim values render as a visible `(none)` sentinel rather than a blank legend chip or a silently dropped bucket.
+- **Render style is overlaid, not cumulative-stacked.** Each series is drawn from the baseline with `fill-opacity`; the visual reads as comparison-of-composition. True cumulative stacking (summed bands) is a future option if needed.
+
 ## [0.86.30] - 2026-06-25
 
 ### Added

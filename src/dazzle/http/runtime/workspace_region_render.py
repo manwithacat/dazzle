@@ -226,6 +226,68 @@ def _pick_display_key(columns: list[dict[str, Any]]) -> str:
 # ──────────────────────────── chart family ─────────────────────────────
 
 
+def _pivot_to_series(
+    pivot_buckets: list[dict[str, Any]],
+    pivot_dim_specs: list[dict[str, Any]],
+    measure_name: str,
+) -> list[dict[str, Any]]:
+    """Shape flat pivot cells into one named series per series-dim value.
+
+    Stacked `area_chart` declares `group_by: [bucket(date, unit), <dim>]`,
+    so dim[0] is the time bucket (the shared x-axis) and dim[1] is the
+    series dimension. Each pivot row is one `(time, series)` cell; we
+    group rows by their series-dim value (its `_label` when an FK/label
+    is present, else the raw value) and emit `{name, points}` per series,
+    preserving first-seen order. Returns `[]` unless there are ≥2 dims.
+    """
+    if len(pivot_dim_specs) < 2 or not measure_name:
+        return []
+    x_name = pivot_dim_specs[0]["name"]
+    s_name = pivot_dim_specs[1]["name"]
+    order: list[str] = []
+    points_by_series: dict[str, list[dict[str, Any]]] = {}
+    for row in pivot_buckets:
+        # A NULL dim value yields an empty label; substitute a visible
+        # sentinel so the bucket survives `_coerce_series_points`' empty-
+        # label drop and never renders a blank legend chip (#1473 review).
+        x_label = str(row.get(f"{x_name}_label") or row.get(x_name) or "") or "(none)"
+        s_label = str(row.get(f"{s_name}_label") or row.get(s_name) or "") or "(none)"
+        try:
+            value = float(row.get(measure_name) or 0)
+        except (TypeError, ValueError):
+            value = 0.0
+        if s_label not in points_by_series:
+            points_by_series[s_label] = []
+            order.append(s_label)
+        points_by_series[s_label].append({"label": x_label, "value": value})
+    return [{"name": name, "points": points_by_series[name]} for name in order]
+
+
+def _overlays_to_series(
+    base_name: str,
+    base_points: list[dict[str, Any]],
+    overlay_series_data: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Shape a base distribution + overlays into one series each (#883).
+
+    Returns `[]` when there are no overlays so the caller keeps the
+    single-series `points` path. Otherwise the base bucketed_metrics
+    becomes the first series and each overlay (`{label, buckets}`)
+    becomes a named series after it.
+    """
+    if not overlay_series_data:
+        return []
+    series: list[dict[str, Any]] = [{"name": base_name, "points": base_points}]
+    for overlay in overlay_series_data:
+        series.append(
+            {
+                "name": str(overlay.get("label") or ""),
+                "points": list(overlay.get("buckets") or []),
+            }
+        )
+    return series
+
+
 def _build_chart_adapter_ctx(
     display_upper: str,
     env: RenderEnv,
@@ -252,6 +314,22 @@ def _build_chart_adapter_ctx(
         adapter_ctx["reference_lines"] = getattr(ctx_region, "reference_lines", [])
         adapter_ctx["reference_bands"] = getattr(ctx_region, "reference_bands", [])
         adapter_ctx["overlay_series_data"] = inputs.overlay_series_data
+        # Multi-series (#1473): a stacked area_chart (`group_by:
+        # [bucket(date, unit), <dim>]`) shapes its series from the
+        # pivot cells; line/area `overlay_series` (#883) shape theirs
+        # from the base distribution + overlays. When a `series` list is
+        # set the builder draws overlaid layers + a legend; otherwise it
+        # falls back to the single-series `points` path.
+        measure_name = next(iter(getattr(ctx_region, "aggregates", None) or {}), "")
+        series: list[dict[str, Any]] = []
+        if display_upper == "AREA_CHART" and inputs.pivot_buckets:
+            series = _pivot_to_series(inputs.pivot_buckets, inputs.pivot_dim_specs, measure_name)
+        if not series:
+            series = _overlays_to_series(
+                ctx_region.title or "", inputs.bucketed_metrics, inputs.overlay_series_data
+            )
+        if series:
+            adapter_ctx["series"] = series
     elif display_upper == "SPARKLINE":
         adapter_ctx["points"] = inputs.bucketed_metrics
         adapter_ctx["chart_label"] = ctx_region.title

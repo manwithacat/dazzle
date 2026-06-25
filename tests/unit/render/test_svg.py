@@ -93,6 +93,79 @@ def test_polyline_points_use_padding_left() -> None:
     assert " 392.0," in svg
 
 
+# === time_series_svg multi-series (#1473) ===
+
+
+def test_multi_series_emits_one_polyline_and_polygon_per_series() -> None:
+    svg = time_series_svg(
+        "Alerts",
+        (),
+        view="area",
+        series=(
+            ("high", (("W1", 2.0), ("W2", 3.0))),
+            ("low", (("W1", 1.0), ("W2", 4.0))),
+        ),
+    )
+    assert svg.startswith("<svg ") and svg.endswith("</svg>")
+    assert svg.count("<polyline ") == 2  # one line per series
+    assert svg.count("<polygon ") == 2  # one area fill per series
+
+
+def test_multi_series_tooltips_name_their_series() -> None:
+    svg = time_series_svg(
+        "Alerts",
+        (),
+        view="area",
+        series=(
+            ("high", (("W1", 2.0),)),
+            ("low", (("W1", 1.0),)),
+        ),
+    )
+    assert "<title>high · W1: 2</title>" in svg
+    assert "<title>low · W1: 1</title>" in svg
+
+
+def test_multi_series_colours_each_series_distinctly() -> None:
+    svg = time_series_svg(
+        "Alerts",
+        (),
+        view="area",
+        series=(
+            ("high", (("W1", 2.0),)),
+            ("low", (("W1", 1.0),)),
+        ),
+    )
+    assert "hsl(var(--primary))" in svg  # series 0
+    assert "hsl(var(--info))" in svg  # series 1
+
+
+def test_multi_series_shares_x_axis_as_ordered_union_of_labels() -> None:
+    # Second series introduces W3, which the first lacks — the axis spans both.
+    svg = time_series_svg(
+        "Alerts",
+        (),
+        view="area",
+        series=(
+            ("high", (("W1", 2.0), ("W2", 3.0))),
+            ("low", (("W2", 1.0), ("W3", 4.0))),
+        ),
+    )
+    assert ">W1<" in svg and ">W2<" in svg and ">W3<" in svg
+
+
+def test_multi_series_aria_label_reports_series_count() -> None:
+    svg = time_series_svg(
+        "Alerts",
+        (),
+        view="area",
+        series=(
+            ("high", (("W1", 2.0),)),
+            ("low", (("W1", 1.0),)),
+        ),
+    )
+    assert "2 series" in svg
+
+
 # === box_plot_svg ===
 
 

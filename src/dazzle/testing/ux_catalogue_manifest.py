@@ -73,6 +73,16 @@ _TIME_BUCKETS: list[dict[str, Any]] = [
     {"dimensions": {"opened_at": "2026-06-25"}, "measures": {"count": 6}},
 ]
 
+# Multi-dim time × team aggregate rows for the stacked area mode (#1473).
+# Two series (platform/payments) over two weekly buckets — the pivot path
+# keys each cell on `opened_at` (time bucket) + `team` (series dim).
+_TIME_TEAM_BUCKETS: list[dict[str, Any]] = [
+    {"dimensions": {"opened_at": "2026-W23", "team": "platform"}, "measures": {"count": 4}},
+    {"dimensions": {"opened_at": "2026-W23", "team": "payments"}, "measures": {"count": 2}},
+    {"dimensions": {"opened_at": "2026-W24", "team": "platform"}, "measures": {"count": 6}},
+    {"dimensions": {"opened_at": "2026-W24", "team": "payments"}, "measures": {"count": 3}},
+]
+
 CatalogueEntry = dict[str, Any]
 
 CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
@@ -244,5 +254,12 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
         "marker": "dz-area-chart-region",
         "sample_items": [],
         "canned_buckets": _TIME_BUCKETS,
+    },
+    "cat_area_stacked": {
+        "description": "Stacked area — weekly box volume split by team. "
+        "Multi-dim time bucket (#1473): overlaid series, one per team, with a legend.",
+        "marker": "dz-chart-legend",
+        "sample_items": [],
+        "canned_buckets": _TIME_TEAM_BUCKETS,
     },
 }
