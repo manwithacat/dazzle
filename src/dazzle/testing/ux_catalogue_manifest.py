@@ -70,17 +70,20 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
             "The workhorse table. Here it carries the `outlier_on` decorator — the "
             "`latency_ms` cell flags the statistical outlier (⚠ high) vs the displayed rows."
         ),
+        "marker": "dz-list-region",
         "sample_items": _BOXES,
         "canned_buckets": None,
     },
     "cat_metrics": {
         "description": "KPI tiles — scalar aggregates over the scoped set.",
+        "marker": "dz-metric-tile",
         "sample_items": [],
         "canned_buckets": [{"dimensions": {}, "measures": {"avg_latency": 41}}],
         "canned_list_totals": [42, 7],  # total, critical (popped in order)
     },
     "cat_bar_chart": {
         "description": "Distribution by a category — one bar per group. One scope-aware GROUP BY.",
+        "marker": "dz-bar-chart-region",
         "sample_items": [],
         "canned_buckets": [
             {
@@ -97,6 +100,7 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
     },
     "cat_comparison": {
         "description": "Ranked league — rows ranked by a metric with inline bars + automatic outlier flag.",
+        "marker": "dz-bar-track",
         "sample_items": [],
         "canned_buckets": [
             {
@@ -115,11 +119,13 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
     },
     "cat_heatmap": {
         "description": "Matrix density — latency shaded across team × status.",
+        "marker": "dz-heatmap-region",
         "sample_items": _BOXES,
         "canned_buckets": None,
     },
     "cat_pivot": {
         "description": "Cross-tab — counts across two dimensions (team × status).",
+        "marker": "dz-pivot-region",
         "sample_items": [],
         "canned_buckets": [
             {"dimensions": {"team": "platform", "status": "healthy"}, "measures": {"count": 8}},
@@ -130,11 +136,13 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
     },
     "cat_bullet": {
         "description": "Actual-vs-target rows — each box's latency against its target.",
+        "marker": "dz-bullet-region",
         "sample_items": _BOXES,
         "canned_buckets": None,
     },
     "cat_kanban": {
         "description": "Board view — boxes grouped into status columns.",
+        "marker": "dz-kanban-board",
         "sample_items": _BOXES,
         "canned_buckets": None,
     },
@@ -144,6 +152,7 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
             "against author thresholds (WCAG-safe tone + icon + label). The deterministic "
             "sibling of the outlier decorator."
         ),
+        "marker": "dz-badge",
         "sample_items": _BOXES,
         "canned_buckets": None,
     },
@@ -153,6 +162,7 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
             "grouped aggregate, with the underlying values cited so every claim is "
             "verifiable. No LLM (that's Slice 2)."
         ),
+        "marker": "dz-stack",
         "sample_items": [],
         "canned_buckets": [
             {

@@ -22,21 +22,15 @@ def test_list_renders_table_with_outlier_badge() -> None:
     assert 'data-dz-tone="warning"' in html  # outlier_on flags the latency outlier
 
 
-@pytest.mark.parametrize(
-    "name, marker",
-    [
-        ("cat_metrics", "dz-metric-tile"),
-        ("cat_bar_chart", "dz-bar-chart-region"),
-        ("cat_comparison", "dz-bar-track"),
-        ("cat_heatmap", "dz-heatmap-region"),
-        ("cat_pivot", "dz-pivot-region"),
-        ("cat_bullet", "dz-bullet-region"),
-        ("cat_kanban", "dz-kanban-board"),
-        ("cat_insight", "dz-stack"),
-        ("cat_rag", "dz-badge"),
-    ],
-)
-def test_mode_renders_primitive(name: str, marker: str) -> None:
+@pytest.mark.parametrize("name", sorted(CATALOGUE_MANIFEST))
+def test_mode_renders_primitive(name: str) -> None:
+    """Every catalogue mode renders its declared marker — no empty fall-through.
+
+    The marker lives in the manifest entry (single source of truth), so adding
+    a catalogue mode is a 2-place edit: the fixture DSL region + the manifest
+    entry. This test derives its coverage from `CATALOGUE_MANIFEST` directly.
+    """
+    marker = CATALOGUE_MANIFEST[name]["marker"]
     html = _render(name)
     assert html.strip(), f"{name} rendered empty"
     assert marker in html, f"{name} missing {marker!r}"
