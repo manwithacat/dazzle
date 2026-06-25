@@ -75,6 +75,20 @@ def _outlier_badge(flag: str) -> RawHTML:
     )
 
 
+_RAG_LABELS = {"positive": "good", "warning": "watch", "destructive": "critical"}
+
+
+def _rag_badge(tone: str) -> RawHTML:
+    """WCAG-safe RAG badge: band tone colour + ● icon + derived label (#1470)."""
+    from html import escape as _esc
+
+    label = _RAG_LABELS.get(tone, tone)
+    return RawHTML(
+        f'<span class="dz-badge dz-badge-sm" data-dz-tone="{_esc(tone, quote=True)}" '
+        f'role="status" aria-label="Status: {_esc(label)}">● {_esc(label)}</span>'
+    )
+
+
 class _BuildersTablesMixin:
     """Mixin adding the 4 tables-family `_build_*` methods to
     `WorkspaceRegionAdapter`. Same pattern as other family mixins.
@@ -119,6 +133,9 @@ class _BuildersTablesMixin:
         # to `items`). Empty/unset → ordinary list render.
         outlier_on = str(ctx.get("outlier_on") or "")
         outlier_flags = ctx.get("outlier_flags") or []
+        # #1470 rag_on — fixed-band RAG decorator (parallel to outlier_on).
+        rag_on = str(ctx.get("rag_on") or "")
+        rag_tones = ctx.get("rag_tones") or []
 
         endpoint = ctx.get("endpoint")
         region_name = str(ctx.get("region_name") or getattr(region, "name", "") or "list")
@@ -234,6 +251,7 @@ class _BuildersTablesMixin:
             row_flag = (
                 outlier_flags[item_idx] if outlier_on and item_idx < len(outlier_flags) else None
             )
+            row_rag = rag_tones[item_idx] if rag_on and item_idx < len(rag_tones) else None
             row_cells: list[object] = []
             for col in columns:
                 if not isinstance(col, dict):
@@ -242,10 +260,19 @@ class _BuildersTablesMixin:
                 # by DETAIL/TIMELINE/GRID. LIST passes default badge args
                 # (size="md", bordered=False).
                 value_cell = _render_typed_value(item, col)
-                if row_flag in ("low", "high") and str(col.get("key") or "") == outlier_on:
+                col_key = str(col.get("key") or "")
+                if row_flag in ("low", "high") and col_key == outlier_on:
                     row_cells.append(
                         Row(
                             children=(value_cell, _outlier_badge(row_flag)),
+                            gap="sm",
+                            align="center",
+                        )
+                    )
+                elif row_rag and col_key == rag_on:
+                    row_cells.append(
+                        Row(
+                            children=(value_cell, _rag_badge(str(row_rag))),
                             gap="sm",
                             align="center",
                         )
