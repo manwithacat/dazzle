@@ -49,7 +49,9 @@ from dazzle.render.fragment import (
     ReferenceBand,
     ReferenceLine,
     Sparkline,
+    Stack,
     Surface,
+    Text,
     TimeSeries,
 )
 from dazzle.render.fragment.format_cell import format_cell
@@ -116,6 +118,17 @@ def _parse_reference_bands(raw: Any) -> tuple[ReferenceBand, ...]:
             )
         )
     return tuple(out)
+
+
+def _fmt_num(v: object) -> str:
+    """Format a cited value: ints bare, floats at 2dp (3 sig-figs for tiny non-zero)."""
+    try:
+        f = float(v)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return str(v)
+    if f == int(f):
+        return str(int(f))
+    return f"{f:.3g}" if 0 < abs(f) < 0.005 else f"{f:.2f}"
 
 
 def _comparison_track_rows(raw_rows: Any) -> list[tuple[str, float, str, float]]:
@@ -517,6 +530,33 @@ class _BuildersChartsMixin:
         else:
             body = BarTrack(rows=tuple(rows), max_value=max_value)
         return _wrap_surface(title, "report", body)
+
+    def _build_insight_summary(self, region: Any, ctx: RegionContext) -> Surface:
+        """`display: insight_summary` renders a deterministic grounded narrative
+        (scale + leader + outlier) above a trust block (the cited values + scope +
+        a 'Computed' badge). All strings escaped at emit by the Text primitive. #1470.
+        """
+        title = _region_title(region)
+        nar = ctx.get("insight_narrative")
+        lines = tuple(getattr(nar, "lines", ()) or ())
+        if not lines:
+            return _wrap_surface(
+                title,
+                "report",
+                EmptyState(
+                    title="No insight",
+                    description=getattr(region, "empty_message", None) or "No data to summarise.",
+                ),
+            )
+
+        children: list[Fragment] = [Text(body=str(line)) for line in lines]
+        citations = getattr(nar, "citations", ()) or ()
+        if citations:
+            cite_str = " · ".join(f"{lbl} {_fmt_num(val)}" for lbl, val in citations)
+            children.append(Text(body=f"Based on: {cite_str}", tone="muted"))
+        footer = f"{getattr(nar, 'scope', '')} · {getattr(nar, 'badge', '')}".strip(" ·")
+        children.append(Text(body=footer, tone="muted"))
+        return _wrap_surface(title, "report", Stack(children=tuple(children), gap="sm"))
 
     def _build_bullet(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: bullet` renders Stephen Few bullet rows — label +
