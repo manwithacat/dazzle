@@ -14,6 +14,7 @@ from .validator import (
     validate_foreign_models,
     validate_governance_policies,
     validate_graph_declarations,
+    validate_insight_summaries,
     validate_integrations,
     validate_ledgers,
     validate_lifecycles,
@@ -143,6 +144,11 @@ def lint_appspec(
 
     # outlier_on statistical decorator validation (#1470)
     errors, warnings = validate_outlier_decorators(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # insight_summary deterministic-narrative validation (#1470)
+    errors, warnings = validate_insight_summaries(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

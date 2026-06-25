@@ -301,6 +301,32 @@ def validate_outlier_decorators(appspec: ir.AppSpec) -> tuple[list[str], list[st
     return errors, []
 
 
+def validate_insight_summaries(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate `display: insight_summary` regions (#1470 Slice 1)."""
+    errors: list[str] = []
+    for workspace in appspec.workspaces:
+        for region in workspace.regions:
+            if region.display != ir.DisplayMode.INSIGHT_SUMMARY:
+                continue
+            label = f"Workspace '{workspace.name}' region '{region.name or region.source}'"
+            if region.group_by_dims:
+                errors.append(
+                    f"E_INSIGHT_SINGLE_DIM_ONLY: {label} `display: insight_summary` supports a "
+                    f"single `group_by` only (got a multi-dimension list)."
+                )
+            elif region.group_by is None:
+                errors.append(
+                    f"E_INSIGHT_GROUP_BY_REQUIRED: {label} `display: insight_summary` requires "
+                    f"a `group_by`."
+                )
+            if not region.aggregates:
+                errors.append(
+                    f"E_INSIGHT_AGGREGATE_REQUIRED: {label} `display: insight_summary` requires "
+                    f"at least one `aggregate`."
+                )
+    return errors, []
+
+
 def validate_persona_nav_refs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Validate that each persona's `uses nav <name>` resolves (#1324).
 
