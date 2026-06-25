@@ -2874,6 +2874,8 @@ class _WorkspaceRegionState:
     order: str = "desc"  # #1470 — comparison sort direction
     outlier: ir.ComparisonOutlierSpec | None = None  # #1470 — comparison outlier-flag config
     outlier_on: str | None = None  # #1470 — outlier decorator target column
+    rag_on: str | None = None  # #1470 — RAG decorator target column
+    tone_bands: list[Any] = field(default_factory=list)  # #1470 — RAG bands
 
 
 # ---------- Simple keyword-value branches ---------- #
@@ -3368,6 +3370,25 @@ def _kw_outlier_on(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.skip_newlines()
 
 
+def _kw_rag_on(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1470: ``rag_on: <column>`` — RAG-flag this numeric list column by `tone_bands`."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.rag_on = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_tone_bands(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1470: ``tone_bands:`` dash-list of `- at: <n>` + `tone:` — the RAG bands."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.tone_bands = parser._parse_tone_bands_block()
+    parser.expect(TokenType.DEDENT)
+    parser.skip_newlines()
+
+
 def _kw_order(parser: Any, state: _WorkspaceRegionState) -> None:
     """#1470: ``order: asc | desc`` — comparison sort direction (default desc)."""
     parser.advance()
@@ -3719,6 +3740,8 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "refresh": _kw_refresh,  # #1391
     "rank_by": _kw_rank_by,  # #1470
     "outlier_on": _kw_outlier_on,  # #1470
+    "rag_on": _kw_rag_on,  # #1470
+    "tone_bands": _kw_tone_bands,  # #1470
     "order": _kw_order,  # #1470
     "outlier_method": _kw_outlier_method,  # #1470
 }
@@ -3831,6 +3854,8 @@ def _build_workspace_region(
         refresh_interval=state.refresh_interval,  # #1391
         rank_by=state.rank_by,  # #1470
         outlier_on=state.outlier_on,  # #1470
+        rag_on=state.rag_on,  # #1470
+        tone_bands=state.tone_bands,  # #1470
         order=state.order,  # type: ignore[arg-type]  # #1470 — validated asc|desc
         outlier=state.outlier,  # #1470
     )
