@@ -47,3 +47,22 @@ def test_every_catalogue_region_has_a_manifest_entry() -> None:
     assert region_names == set(CATALOGUE_MANIFEST), (
         "ux_catalogue regions and CATALOGUE_MANIFEST keys must match exactly"
     )
+
+
+def test_generated_page_has_all_modes() -> None:
+    from dazzle.testing.ux_catalogue import generate_catalogue_markdown
+
+    md = generate_catalogue_markdown()
+    for marker in ("# UX Catalogue", "dz-catalogue-preview", "data-dz-tone", "```dsl", "cat_list:"):
+        assert marker in md, f"generated page missing {marker!r}"
+
+
+def test_generated_page_is_current() -> None:
+    from pathlib import Path
+
+    from dazzle.testing.ux_catalogue import OUT_PATH, generate_catalogue_markdown
+
+    committed = Path(OUT_PATH).read_text() if Path(OUT_PATH).exists() else ""
+    assert generate_catalogue_markdown() == committed, (
+        "docs/reference/ux-catalogue.md is stale — run: python scripts/gen_ux_catalogue.py"
+    )

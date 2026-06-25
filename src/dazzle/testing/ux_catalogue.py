@@ -34,12 +34,17 @@ from dazzle.testing.ux_catalogue_manifest import CATALOGUE_MANIFEST
 
 __all__ = [
     "CATALOGUE_MANIFEST",
+    "OUT_PATH",
+    "generate_catalogue_markdown",
     "iter_catalogue_regions",
     "load_showcase_appspec",
     "render_catalogue_region",
 ]
 
-_FIXTURE = Path(__file__).resolve().parents[3] / "fixtures" / "component_showcase"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_FIXTURE = _REPO_ROOT / "fixtures" / "component_showcase"
+_DSL_PATH = _FIXTURE / "dsl" / "app.dsl"
+OUT_PATH = _REPO_ROOT / "docs" / "reference" / "ux-catalogue.md"
 
 
 class _FakeRequest:
@@ -153,3 +158,73 @@ def render_catalogue_region(
         return await render_region_html(request, ctx, user_ctx, inputs, None, "")
 
     return asyncio.run(_run())
+
+
+def _dsl_snippet(region_name: str) -> str:
+    """Slice one region's DSL block from the fixture by indentation.
+
+    Region headers sit at 2-space indent (``  cat_list:``); their body is
+    indented deeper. The block ends at the next ≤2-space, non-blank line.
+    The leading 2-space workspace indent is stripped for a clean snippet.
+    """
+    out: list[str] = []
+    capturing = False
+    for line in _DSL_PATH.read_text().splitlines():
+        stripped = line.strip()
+        if not capturing:
+            if (
+                line.startswith("  ")
+                and not line.startswith("   ")
+                and stripped == f"{region_name}:"
+            ):
+                capturing = True
+                out.append(stripped)
+            continue
+        if stripped == "":
+            out.append("")
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent <= 2:
+            break
+        out.append(line[2:].rstrip())
+    while out and out[-1] == "":
+        out.pop()
+    return "\n".join(out)
+
+
+def generate_catalogue_markdown() -> str:
+    """Render every ux_catalogue region and assemble the mkdocs catalogue page."""
+    appspec = load_showcase_appspec()
+    parts = [
+        "# UX Catalogue",
+        "",
+        "Every component below is rendered from real Dazzle DSL through the real render "
+        "pipeline — the same code that produces a running app's HTML. Each card shows the "
+        "live component and the DSL that produced it.",
+        "",
+    ]
+    for ir_region, ctx_region in iter_catalogue_regions(appspec):
+        name = ir_region.name
+        entry = CATALOGUE_MANIFEST.get(name)
+        if entry is None:
+            continue
+        html = render_catalogue_region(appspec, ir_region, ctx_region, entry)
+        display = getattr(getattr(ir_region, "display", None), "value", None) or name
+        title = str(display).replace("_", " ").title()
+        parts += [
+            f"## {title}",
+            "",
+            str(entry["description"]),
+            "",
+            '<div class="dz-catalogue-preview" markdown="0">',
+            html,
+            "</div>",
+            "",
+            "```dsl",
+            _dsl_snippet(name),
+            "```",
+            "",
+        ]
+    # Exactly one trailing newline so the committed page matches generator output
+    # (the end-of-file-fixer pre-commit hook strips extra blank lines otherwise).
+    return "\n".join(parts).rstrip("\n") + "\n"
