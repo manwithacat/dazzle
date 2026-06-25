@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.86.29] - 2026-06-25
+
+### Added
+- **#1470: `insight_summary` Slice 2a — stored-narrative overlay + provider seam.** An `insight_summary` region can now render a **pre-computed** narrative (richer prose + a confidence badge + "as of" freshness) *on top of the always-present deterministic citations*, falling back automatically to the deterministic Slice-1 narrative when none exists. A new render-layer `StoredInsight` type + an in-memory provider seam (`dazzle.http.runtime.insight_store`: `get_stored_insight` / `set_insight_provider` / `reset_insight_provider`) — **no DB, no LLM-runtime dependency in this slice**; the default provider returns `None` so prod falls back to deterministic, and tests + the catalogue inject a stub. Demonstrated on the published catalogue's `cat_insight` card. The **grounding contract is structural**: the deterministic citations always render beneath any prose, so a future hallucinating model is visibly contradicted by the real numbers.
+
+### Agent Guidance
+- **The provider seam is how a narrative gets stored.** `set_insight_provider(fn)` registers a `region_name -> StoredInsight | None` callable (registry is a dict mutated in place, per the #1445 mutable-globals ratchet). Slice 2b adds the **real** provider: a scheduled process (ProcessRun subject per #1454) that renders the grounded-buckets prompt, calls `LLMExecutor.execute`, runs a grounding-enforcement check, derives confidence, and writes a framework store.
+- **Always-grounding invariant:** the stored/LLM prose is an *overlay* — the deterministic citations (the real bucket values) render beneath it unconditionally. Do not let the stored render path drop the citations; that's the structural defence against hallucination.
+- **Confidence is categorical** (`high`/`medium`/`low` → positive/warning/neutral tone) — honest, since LLMs can't produce calibrated floats.
+
 ## [0.86.28] - 2026-06-25
 
 ### Added

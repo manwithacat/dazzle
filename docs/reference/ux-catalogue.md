@@ -152,7 +152,7 @@ cat_kanban:
 A grounded, deterministic narrative — scale + leader + outlier — over a grouped aggregate, with the underlying values cited so every claim is verifiable. No LLM (that's Slice 2).
 
 <div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_insight" id="region-cat_insight"><div class="dz-stack dz-stack--gap-sm"><span class="dz-text dz-text--tone-default">91 count across 6 team.</span><span class="dz-text dz-text--tone-default">platform is highest at 20 (22% of the total).</span><span class="dz-text dz-text--tone-default">ml is anomalously low at 1.</span><span class="dz-text dz-text--tone-muted">Based on: platform 20 · payments 19 · growth 18 · data 17 · infra 16 · ml 1</span><span class="dz-text dz-text--tone-muted">across all team · Computed from live data</span></div></div>
+<div data-dz-region data-dz-region-name="cat_insight" id="region-cat_insight"><div class="dz-stack dz-stack--gap-sm"><span class="dz-text dz-text--tone-default">Alert volume is concentrated in Platform, with ML unusually quiet — worth checking whether ML's pipeline is reporting.</span><span class="dz-text dz-text--tone-muted">Based on: platform 20 · payments 19 · growth 18 · data 17 · infra 16 · ml 1</span><span class="dz-badge dz-badge-sm" data-dz-tone="warning" role="status" aria-label="Confidence: medium">confidence: medium</span><span class="dz-text dz-text--tone-muted">across all team · as of 2026-06-25 14:00 UTC</span></div></div>
 </div>
 
 ```dsl

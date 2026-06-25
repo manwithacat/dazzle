@@ -24,12 +24,14 @@ from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.http.runtime.aggregate import AggregateBucket
+from dazzle.http.runtime.insight_store import reset_insight_provider, set_insight_provider
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_fetch import RegionItemsResult
 from dazzle.http.runtime.workspace_region_orchestration import compute_region_render_inputs
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_region_render import render_region_html
 from dazzle.page.runtime.workspace_renderer import build_workspace_context
+from dazzle.render.fragment.insight import StoredInsight
 from dazzle.testing.ux_catalogue_manifest import CATALOGUE_MANIFEST
 
 __all__ = [
@@ -182,6 +184,24 @@ def render_catalogue_region(
         inputs = await compute_region_render_inputs(request, ctx, user_ctx, fetched, columns)
         return await render_region_html(request, ctx, user_ctx, inputs, None, "")
 
+    # #1470 Slice 2a: show the stored-narrative card on the insight mode by
+    # injecting a stub provider (no LLM in the catalogue). Reset after so no
+    # other region picks it up.
+    if ir_region.name == "cat_insight":
+        set_insight_provider(
+            lambda _r: StoredInsight(
+                prose=(
+                    "Alert volume is concentrated in Platform, with ML unusually quiet — "
+                    "worth checking whether ML's pipeline is reporting.",
+                ),
+                confidence="medium",
+                generated_at="2026-06-25 14:00 UTC",
+            )
+        )
+        try:
+            return asyncio.run(_run())
+        finally:
+            reset_insight_provider()
     return asyncio.run(_run())
 
 
