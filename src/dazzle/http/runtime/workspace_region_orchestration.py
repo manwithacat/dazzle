@@ -25,6 +25,7 @@ from typing import Any
 
 from dazzle.core.ir import BucketRef as _BucketRef
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec
+from dazzle.http.runtime.insight_store import get_stored_insight
 from dazzle.http.runtime.workspace_aggregation import (
     _compute_aggregate_metrics,
     _compute_box_plot_stats,
@@ -57,6 +58,18 @@ from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_region_render import RegionRenderInputs
 
 logger = logging.getLogger(__name__)
+
+
+def _read_stored_insight(region_name: str) -> Any:
+    """Read the stored narrative for a region; a provider error → None (fallback)."""
+    try:
+        return get_stored_insight(region_name)
+    except Exception:
+        logger.warning(
+            "insight_summary stored-narrative provider failed for %r", region_name, exc_info=True
+        )
+        return None
+
 
 # Display-mode groupings used by phase-4 gates.
 _GROUPED_MODES: frozenset[str] = frozenset({"KANBAN", "BAR_CHART", "FUNNEL_CHART"})
@@ -265,8 +278,11 @@ async def compute_region_render_inputs(
             scope_desc=scope_desc,
             outlier_spec=getattr(ctx.ir_region, "outlier", None) or ComparisonOutlierSpec(),
         )
+        # #1470 Slice 2a: a pre-computed narrative overlay (or None → deterministic).
+        stored_insight = _read_stored_insight(getattr(ctx.ir_region, "name", "") or "")
     else:
         insight_narrative = None
+        stored_insight = None
 
     # Outlier decorator (#1470): per-row flags for one list column.
     outlier_on = getattr(ctx.ir_region, "outlier_on", None) or ""
@@ -459,6 +475,7 @@ async def compute_region_render_inputs(
         comparison_rows=comparison_rows,
         comparison_max=comparison_max,
         insight_narrative=insight_narrative,
+        stored_insight=stored_insight,
         outlier_flags=outlier_flags,
         outlier_on=outlier_on,
         rag_tones=rag_tones,

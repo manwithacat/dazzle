@@ -89,6 +89,8 @@ class RegionRenderInputs:
     comparison_max: float = 0.0
     # #1470 insight_summary — the deterministic narrative (or None).
     insight_narrative: Any = None
+    # #1470 Slice 2a: pre-computed narrative overlay (or None).
+    stored_insight: Any = None
     # #1470 outlier_on — per-row flags + the decorated column key.
     outlier_flags: list[Any] = field(default_factory=list)
     outlier_on: str = ""
@@ -274,6 +276,7 @@ def _build_chart_adapter_ctx(
         adapter_ctx["chart_label"] = ctx_region.title
     elif display_upper == "INSIGHT_SUMMARY":
         adapter_ctx["insight_narrative"] = inputs.insight_narrative
+        adapter_ctx["stored_insight"] = inputs.stored_insight
     elif display_upper == "BULLET":
         adapter_ctx["bullet_rows"] = inputs.bullet_rows
         adapter_ctx["bullet_max_value"] = inputs.bullet_max_value
