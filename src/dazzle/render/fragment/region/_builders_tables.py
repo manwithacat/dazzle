@@ -41,6 +41,8 @@ from dazzle.render.fragment import (
     QueueRegion,
     QueueRow,
     QueueTransition,
+    RawHTML,
+    Row,
     Stack,
     Surface,
     Tabs,
@@ -56,6 +58,21 @@ from dazzle.render.fragment.region.workspace_card_bodies import (
     _eval_row_condition,
     _render_row_action_button,
 )
+
+
+def _outlier_badge(flag: str) -> RawHTML:
+    """WCAG-safe outlier badge: tone colour + ⚠ icon + direction text (#1470).
+
+    Uniform `warning` tone (an outlier is *notable*, not good/bad); the
+    direction is carried by the ⚠ icon + `high`/`low` text + aria-label.
+    """
+    from html import escape as _esc
+
+    direction = flag if flag in ("low", "high") else "outlier"
+    return RawHTML(
+        f'<span class="dz-badge dz-badge-sm" data-dz-tone="warning" role="status" '
+        f'aria-label="Outlier: {_esc(direction)}">⚠ {_esc(direction)}</span>'
+    )
 
 
 class _BuildersTablesMixin:
@@ -98,6 +115,10 @@ class _BuildersTablesMixin:
         title = _region_title(region)
         items = ctx.get("items", []) or []
         columns: list[Any] = ctx.get("columns", []) or []
+        # #1470 outlier_on — decorated column key + per-row flags (index-aligned
+        # to `items`). Empty/unset → ordinary list render.
+        outlier_on = str(ctx.get("outlier_on") or "")
+        outlier_flags = ctx.get("outlier_flags") or []
 
         endpoint = ctx.get("endpoint")
         region_name = str(ctx.get("region_name") or getattr(region, "name", "") or "list")
@@ -204,9 +225,15 @@ class _BuildersTablesMixin:
         detail_url_template = str(ctx.get("detail_url_template") or "")
         row_items: list[dict[str, Any]] = []
 
-        for item in items:
+        for item_idx, item in enumerate(items):
             if not isinstance(item, dict):
                 continue
+            # #1470: this row's flag for the decorated column (index-aligned
+            # to `items`; non-dict items skipped here are still slotted None
+            # by build_outlier_flags so indices stay aligned).
+            row_flag = (
+                outlier_flags[item_idx] if outlier_on and item_idx < len(outlier_flags) else None
+            )
             row_cells: list[object] = []
             for col in columns:
                 if not isinstance(col, dict):
@@ -214,7 +241,17 @@ class _BuildersTablesMixin:
                 # Per-cell type-aware rendering via the same helper used
                 # by DETAIL/TIMELINE/GRID. LIST passes default badge args
                 # (size="md", bordered=False).
-                row_cells.append(_render_typed_value(item, col))
+                value_cell = _render_typed_value(item, col)
+                if row_flag in ("low", "high") and str(col.get("key") or "") == outlier_on:
+                    row_cells.append(
+                        Row(
+                            children=(value_cell, _outlier_badge(row_flag)),
+                            gap="sm",
+                            align="center",
+                        )
+                    )
+                else:
+                    row_cells.append(value_cell)
             list_rows.append(tuple(row_cells))
             row_items.append(item)
             if row_action_spec is not None:
