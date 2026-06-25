@@ -94,6 +94,7 @@ class DisplayMode(StrEnum):
     DAY_TIMELINE = "day_timeline"  # #1016: chronological MIS landing
     TASK_INBOX = "task_inbox"  # #1015: workflow-led landing surface
     ENTITY_CARD = "entity_card"  # #1017: 360° single-entity drill-down composite
+    COMPARISON = "comparison"  # #1470: ranked-league (rank rows by metric + flag outliers)
 
 
 class BucketRef(BaseModel):
@@ -161,6 +162,26 @@ class ReferenceBand(BaseModel):
     color: str = Field(default="target")
 
     model_config = ConfigDict(frozen=True, populate_by_name=True)
+
+
+class ComparisonOutlierSpec(BaseModel):
+    """Outlier-flag config for `display: comparison` (#1470).
+
+    Drives the pure ``flag_outliers`` pass that runs after the scoped fetch.
+    Attributes:
+        method: ``iqr`` (Tukey fences, default) | ``sigma`` (mean ± k·σ) |
+            ``threshold`` (fixed low/high bounds) | ``none`` (no flagging).
+        sigma_k: Multiplier for ``sigma`` (defaults to 2.0 when unset).
+        threshold_low: Values below this flag ``low`` (``threshold`` only).
+        threshold_high: Values above this flag ``high`` (``threshold`` only).
+    """
+
+    method: Literal["iqr", "sigma", "threshold", "none"] = "iqr"
+    sigma_k: float | None = None
+    threshold_low: float | None = None
+    threshold_high: float | None = None
+
+    model_config = ConfigDict(frozen=True)
 
 
 class OverlaySeriesSpec(BaseModel):
@@ -1019,6 +1040,13 @@ class WorkspaceRegion(BaseModel):
     # Pure template overlay — no extra DB queries.
     reference_lines: list[ReferenceLine] = Field(default_factory=list)
     reference_bands: list[ReferenceBand] = Field(default_factory=list)
+    # #1470 display: comparison — ranked league.
+    # `rank_by` names the metric: an aggregate key (group mode) or a numeric
+    # field on `source` (entity-row mode). `order` sorts the league; `outlier`
+    # configures the post-fetch statistical flag pass.
+    rank_by: str | None = None
+    order: Literal["asc", "desc"] = "desc"
+    outlier: ComparisonOutlierSpec | None = None
     # v0.61.27 (#882): Histogram-mode bin count.
     # ``None`` means "auto" (Sturges' rule: ⌈log2(N) + 1⌉). A positive int
     # forces N equal-width bins. Histograms read ``heatmap_value`` for the

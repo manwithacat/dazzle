@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 371 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
+# Counts: 372 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -503,6 +503,14 @@ ir_class: ComparisonExpr
     - operator: ComparisonOperator
     - right: InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr
   optional: (none)
+
+ir_class: ComparisonOutlierSpec
+  required: (none)
+  optional:
+    - method: Literal[iqr, sigma, threshold, none] = 'iqr'
+    - sigma_k: float | None = None
+    - threshold_high: float | None = None
+    - threshold_low: float | None = None
 
 ir_class: CompensationSpec
   required:
@@ -3393,6 +3401,8 @@ ir_class: WorkspaceRegion
     - heatmap_value: str | None = None
     - limit: int | None = None
     - notice: NoticeSpec | None = None
+    - order: Literal[asc, desc] = 'desc'
+    - outlier: ComparisonOutlierSpec | None = None
     - overlay_series: list[OverlaySeriesSpec] = []
     - pipeline_stages: list[PipelineStageSpec] = []
     - primary: str | None = None
@@ -3400,6 +3410,7 @@ ir_class: WorkspaceRegion
     - profile_stats: list[ProfileCardStatSpec] = []
     - progress_complete_at: str | None = None
     - progress_stages: list[str] = []
+    - rank_by: str | None = None
     - reference_bands: list[ReferenceBand] = []
     - reference_lines: list[ReferenceLine] = []
     - refresh_interval: int | None = None
@@ -3699,6 +3710,7 @@ enum: DisplayMode
     - BOX_PLOT = 'box_plot'
     - BULLET = 'bullet'
     - COHORT_STRIP = 'cohort_strip'
+    - COMPARISON = 'comparison'
     - CONFIRM_ACTION_PANEL = 'confirm_action_panel'
     - DAY_TIMELINE = 'day_timeline'
     - DETAIL = 'detail'
