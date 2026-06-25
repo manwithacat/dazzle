@@ -301,6 +301,40 @@ def validate_outlier_decorators(appspec: ir.AppSpec) -> tuple[list[str], list[st
     return errors, []
 
 
+def validate_rag_decorators(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate `rag_on` fixed-band RAG decorators on list regions (#1470)."""
+    errors: list[str] = []
+    for workspace in appspec.workspaces:
+        for region in workspace.regions:
+            if not region.rag_on:
+                continue
+            label = f"Workspace '{workspace.name}' region '{region.name or region.source}'"
+            if region.display != ir.DisplayMode.LIST:
+                errors.append(
+                    f"E_RAG_DISPLAY: {label} `rag_on` requires `display: list` "
+                    f"(got {region.display.value})."
+                )
+            source_name = (
+                region.source.split(".")[0]
+                if region.source and "." in region.source
+                else region.source
+            )
+            entity = appspec.get_entity(source_name) if source_name else None
+            field = None
+            if entity is not None:
+                field = next((f for f in entity.fields if f.name == region.rag_on), None)
+            if field is None or field.type.kind not in _NUMERIC_FIELD_KINDS:
+                errors.append(
+                    f"E_RAG_NOT_NUMERIC: {label} `rag_on: {region.rag_on}` must name a numeric "
+                    f"field (int/decimal/float/money) on the source entity."
+                )
+            if not region.tone_bands:
+                errors.append(
+                    f"E_RAG_BANDS_REQUIRED: {label} `rag_on` requires a non-empty `tone_bands`."
+                )
+    return errors, []
+
+
 def validate_insight_summaries(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Validate `display: insight_summary` regions (#1470 Slice 1)."""
     errors: list[str] = []

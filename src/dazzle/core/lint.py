@@ -25,6 +25,7 @@ from .validator import (
     validate_outlier_decorators,
     validate_persona_nav_refs,
     validate_process_step_service_refs,
+    validate_rag_decorators,
     validate_rbac_matrix_diagnostics,
     validate_role_references_against_enum,
     validate_scope_predicates,
@@ -144,6 +145,11 @@ def lint_appspec(
 
     # outlier_on statistical decorator validation (#1470)
     errors, warnings = validate_outlier_decorators(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # rag_on fixed-band decorator validation (#1470)
+    errors, warnings = validate_rag_decorators(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
