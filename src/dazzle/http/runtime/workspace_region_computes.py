@@ -11,6 +11,7 @@ These started life as inline blocks inside the 1,455-line
 the dispatcher and makes each compute independently testable.
 """
 
+import math
 from typing import Any
 
 from dazzle.core.condition_eval import evaluate_condition as _eval_vis
@@ -24,7 +25,7 @@ from dazzle.http.runtime.workspace_card_data import (
     _resolve_path,
 )
 from dazzle.render.display_names import _resolve_display_name
-from dazzle.render.fragment.outliers import flag_outliers
+from dazzle.render.fragment.outliers import Flag, flag_outliers
 
 
 def _coerce_float(value: Any) -> float | None:
@@ -130,6 +131,23 @@ def build_comparison_inputs(
         outlier_spec=outlier_spec,
         extra_keys=extra_keys,
     )
+
+
+def build_outlier_flags(
+    items: list[dict[str, Any]], *, column: str, spec: ComparisonOutlierSpec
+) -> list[Flag | None]:
+    """Per-row outlier flag for one column, index-aligned to ``items`` (#1470).
+
+    Reads ``column`` from each item, coercing non-numeric / non-finite / None to
+    None (excluded from the distribution and never flagged), then runs the shared
+    ``flag_outliers`` pass. Pure: runs after the scoped fetch, never widens scope.
+    """
+    values: list[float | None] = []
+    for item in items:
+        raw = item.get(column) if isinstance(item, dict) else None
+        v = _coerce_float(raw)
+        values.append(v if v is not None and math.isfinite(v) else None)
+    return flag_outliers(values, spec)
 
 
 def compute_heatmap(

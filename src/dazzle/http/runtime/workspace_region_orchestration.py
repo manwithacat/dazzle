@@ -36,6 +36,7 @@ from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_computes import (
     apply_attention_signals,
     build_comparison_inputs,
+    build_outlier_flags,
     compute_action_grid,
     compute_bar_track,
     compute_bullet,
@@ -248,6 +249,18 @@ async def compute_region_render_inputs(
         comparison_rows = []
         comparison_max = 0.0
 
+    # Outlier decorator (#1470): per-row flags for one list column.
+    outlier_on = getattr(ctx.ir_region, "outlier_on", None) or ""
+    if display == "LIST" and outlier_on and not scope_denied:
+        outlier_flags = build_outlier_flags(
+            items,
+            column=outlier_on,
+            spec=getattr(ctx.ir_region, "outlier", None) or ComparisonOutlierSpec(),
+        )
+    else:
+        outlier_flags = []
+        outlier_on = ""
+
     # Action grid (#891): async per-card count fan-out.
     action_card_data: list[dict[str, Any]] = []
     if display == "ACTION_GRID":
@@ -416,6 +429,8 @@ async def compute_region_render_inputs(
         bar_track_max=bar_track_max,
         comparison_rows=comparison_rows,
         comparison_max=comparison_max,
+        outlier_flags=outlier_flags,
+        outlier_on=outlier_on,
         bullet_rows=bullet_rows,
         bullet_max_value=bullet_max_value,
         progress_stage_counts=progress_stage_counts,

@@ -86,6 +86,9 @@ class RegionContext(TypedDict, total=False):
     # #1470 display: comparison — ranked-league rows + shared bar scale.
     comparison_rows: Any
     comparison_max: Any
+    # #1470 outlier_on — list-column outlier decorator.
+    outlier_flags: Any
+    outlier_on: Any
     bullet_rows: Any
     bullet_max_value: Any
     histogram_bins: Any
