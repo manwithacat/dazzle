@@ -281,7 +281,12 @@ def _build_chart_adapter_ctx(
         adapter_ctx["bullet_rows"] = inputs.bullet_rows
         adapter_ctx["bullet_max_value"] = inputs.bullet_max_value
     elif display_upper == "BOX_PLOT":
-        adapter_ctx["box_plot_stats"] = inputs.box_plot_stats
+        # `_build_box_plot` reads `groups` (label + quartile keys); the
+        # computed `box_plot_stats` dicts carry exactly those keys (+ `n`
+        # for the sample-count tooltip). Without this rename the builder
+        # saw no `groups` key and every box_plot rendered empty — caught by
+        # the UX catalogue fidelity gate (#1470).
+        adapter_ctx["groups"] = inputs.box_plot_stats
     elif display_upper == "RADAR":
         # Radar consumes (label, value) axis tuples — the bucketed
         # metrics shape is one step richer than what the primitive

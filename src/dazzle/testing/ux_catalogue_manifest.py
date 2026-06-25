@@ -179,4 +179,18 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
             {"dimensions": {"team": "ml", "team_label": "ml"}, "measures": {"count": 1}},
         ],
     },
+    "cat_histogram": {
+        "description": "Continuous-axis distribution — `latency_ms` binned (Sturges' rule).",
+        "marker": "dz-histogram-region",
+        "sample_items": _BOXES,
+        "canned_buckets": None,
+    },
+    "cat_box_plot": {
+        "description": (
+            "Quartile spread per team — Q1/median/Q3 + Tukey whiskers over `latency_ms`."
+        ),
+        "marker": "dz-box-plot-region",
+        "sample_items": _BOXES,
+        "canned_buckets": None,
+    },
 }

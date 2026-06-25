@@ -285,3 +285,18 @@ workspace ux_catalogue "UX Catalogue":
         tone: warning
       - at: 0
         tone: positive
+
+  cat_histogram:
+    source: Box
+    display: histogram
+    value: latency_ms
+    bins: auto
+    empty: "No boxes"
+
+  cat_box_plot:
+    source: Box
+    display: box_plot
+    group_by: team
+    value: latency_ms
+    show_outliers: true
+    empty: "No boxes"
