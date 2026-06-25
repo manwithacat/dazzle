@@ -308,3 +308,35 @@ workspace ux_catalogue "UX Catalogue":
     aggregate:
       count: count(Box)
     empty: "No boxes"
+
+  cat_line:
+    source: Box
+    display: line_chart
+    group_by: bucket(opened_at, day)
+    aggregate:
+      count: count(Box)
+    empty: "No boxes"
+
+  cat_sparkline:
+    source: Box
+    display: sparkline
+    group_by: bucket(opened_at, day)
+    aggregate:
+      count: count(Box)
+    empty: "—"
+
+  cat_radar:
+    source: Box
+    display: radar
+    group_by: team
+    aggregate:
+      count: count(Box)
+    empty: "No boxes"
+
+  cat_area:
+    source: Box
+    display: area_chart
+    group_by: bucket(opened_at, day)
+    aggregate:
+      count: count(Box)
+    empty: "No boxes"

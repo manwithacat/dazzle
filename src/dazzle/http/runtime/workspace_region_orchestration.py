@@ -73,8 +73,22 @@ def _read_stored_insight(region_name: str) -> Any:
 
 # Display-mode groupings used by phase-4 gates.
 _GROUPED_MODES: frozenset[str] = frozenset({"KANBAN", "BAR_CHART", "FUNNEL_CHART"})
+# AREA_CHART is here *and* in _MULTI_DIM_MODES: with a single scalar/bucket
+# group_by it renders one filled series (this block); with `group_by: [a, b]`
+# the scalar group_by is None so this block is skipped and it routes through
+# the pivot path instead. Without AREA_CHART here a single-dim area computed
+# no bucketed_metrics and rendered empty (#1470, caught by the catalogue).
 _SINGLE_DIM_CHART_MODES: frozenset[str] = frozenset(
-    {"BAR_CHART", "LINE_CHART", "SPARKLINE", "RADAR", "BAR_TRACK", "COMPARISON", "INSIGHT_SUMMARY"}
+    {
+        "BAR_CHART",
+        "LINE_CHART",
+        "AREA_CHART",
+        "SPARKLINE",
+        "RADAR",
+        "BAR_TRACK",
+        "COMPARISON",
+        "INSIGHT_SUMMARY",
+    }
 )
 _MULTI_DIM_MODES: frozenset[str] = frozenset({"PIVOT_TABLE", "AREA_CHART"})
 

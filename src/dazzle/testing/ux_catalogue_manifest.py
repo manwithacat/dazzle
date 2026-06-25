@@ -62,6 +62,17 @@ _BOXES: list[dict[str, Any]] = [
     },
 ]
 
+# Time-bucket aggregate rows for the time-series modes (line/sparkline).
+# The fast-path GROUP BY shaping keys the bucket on the field name
+# (`opened_at`) + emits a formatted `<field>_label`; the measure is `count`.
+_TIME_BUCKETS: list[dict[str, Any]] = [
+    {"dimensions": {"opened_at": "2026-06-21"}, "measures": {"count": 3}},
+    {"dimensions": {"opened_at": "2026-06-22"}, "measures": {"count": 5}},
+    {"dimensions": {"opened_at": "2026-06-23"}, "measures": {"count": 4}},
+    {"dimensions": {"opened_at": "2026-06-24"}, "measures": {"count": 8}},
+    {"dimensions": {"opened_at": "2026-06-25"}, "measures": {"count": 6}},
+]
+
 CatalogueEntry = dict[str, Any]
 
 CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
@@ -198,5 +209,40 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
         "marker": "dz-funnel-chart-region",
         "sample_items": _BOXES,
         "canned_buckets": None,
+    },
+    "cat_line": {
+        "description": "Time series — daily box volume. One `date_trunc('day')` GROUP BY.",
+        "marker": "dz-line-chart-region",
+        "sample_items": [],
+        "canned_buckets": _TIME_BUCKETS,
+    },
+    "cat_sparkline": {
+        "description": "Compact trend tile — the same daily series as a headline + tiny SVG.",
+        "marker": "dz-sparkline-region",
+        "sample_items": [],
+        "canned_buckets": _TIME_BUCKETS,
+    },
+    "cat_radar": {
+        "description": "Polar profile — one spoke per team, value = box count for that team.",
+        "marker": "dz-radar-region",
+        "sample_items": [],
+        "canned_buckets": [
+            {
+                "dimensions": {"team": "platform", "team_label": "platform"},
+                "measures": {"count": 12},
+            },
+            {
+                "dimensions": {"team": "payments", "team_label": "payments"},
+                "measures": {"count": 7},
+            },
+            {"dimensions": {"team": "growth", "team_label": "growth"}, "measures": {"count": 4}},
+            {"dimensions": {"team": "data", "team_label": "data"}, "measures": {"count": 9}},
+        ],
+    },
+    "cat_area": {
+        "description": "Filled area — daily box volume under a single series.",
+        "marker": "dz-area-chart-region",
+        "sample_items": [],
+        "canned_buckets": _TIME_BUCKETS,
     },
 }
