@@ -1052,6 +1052,11 @@ class WorkspaceRegion(BaseModel):
     # Names the numeric column to flag; the test reuses `outlier` (set by
     # outlier_method:). Only meaningful for display: list (validated).
     outlier_on: str | None = None
+    # #1470 rag_on — fixed-band RAG decorator on a list region column.
+    # Names the numeric column; `tone_bands` defines value->tone bands
+    # (descending `at`, first `value >= at` wins). Only for display: list.
+    rag_on: str | None = None
+    tone_bands: list[ToneBandSpec] = Field(default_factory=list)
     # v0.61.27 (#882): Histogram-mode bin count.
     # ``None`` means "auto" (Sturges' rule: ⌈log2(N) + 1⌉). A positive int
     # forces N equal-width bins. Histograms read ``heatmap_value`` for the

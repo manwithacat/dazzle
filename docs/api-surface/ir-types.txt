@@ -3411,6 +3411,7 @@ ir_class: WorkspaceRegion
     - profile_stats: list[ProfileCardStatSpec] = []
     - progress_complete_at: str | None = None
     - progress_stages: list[str] = []
+    - rag_on: str | None = None
     - rank_by: str | None = None
     - reference_bands: list[ReferenceBand] = []
     - reference_lines: list[ReferenceLine] = []
@@ -3429,6 +3430,7 @@ ir_class: WorkspaceRegion
     - status_entries: list[StatusListEntrySpec] = []
     - task_inbox_config: TaskInboxConfig | None = None
     - title: str | None = None
+    - tone_bands: list[ToneBandSpec] = []
     - tones: dict[str, str] = {}
     - track_format: str | None = None
     - track_max: float | None = None
