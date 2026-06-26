@@ -46,6 +46,12 @@ entity User "Team Member":
   scope:
     list: all
       as: admin, manager, member
+    create: all
+      as: admin
+    update: all
+      as: admin
+    delete: all
+      as: admin
 
 entity Project "Project":
   display_field: name
@@ -69,6 +75,12 @@ entity Project "Project":
   scope:
     list: all
       as: admin, manager, member
+    create: all
+      as: admin, manager
+    update: all
+      as: admin, manager
+    delete: all
+      as: admin
 
 entity Milestone "Milestone":
   display_field: name
@@ -96,6 +108,12 @@ entity Milestone "Milestone":
   scope:
     list: all
       as: admin, manager, member
+    create: all
+      as: admin, manager
+    update: all
+      as: admin, manager
+    delete: all
+      as: admin
 
 entity Task "Task":
   display_field: title
@@ -137,6 +155,14 @@ entity Task "Task":
       as: admin, manager
     list: assigned_to = current_user
       as: member
+    create: all
+      as: admin, manager, member
+    update: all
+      as: admin, manager
+    update: assigned_to = current_user
+      as: member
+    delete: all
+      as: admin, manager
 
 entity Comment "Comment":
   id: uuid pk
@@ -155,6 +181,12 @@ entity Comment "Comment":
   scope:
     list: all
       as: admin, manager, member
+    create: all
+      as: admin, manager, member
+    update: all
+      as: admin
+    delete: all
+      as: admin
 
 entity Attachment "Attachment":
   id: uuid pk
@@ -174,6 +206,10 @@ entity Attachment "Attachment":
   scope:
     list: all
       as: admin, manager, member
+    create: all
+      as: admin, manager, member
+    delete: all
+      as: admin, manager
 
 # ── Workspaces ───────────────────────────────────────────────────────
 

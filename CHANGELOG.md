@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.6] - 2026-06-26
+
+### Fixed
+- **`examples/project_tracker` — RBAC write paths were broken at runtime (improve cycle 188).** Every entity (User/Project/Milestone/Task/Comment/Attachment) granted create/update/delete via `permit:` but declared only a `list:` scope, so all non-list writes 403/404'd at runtime for every role — the app was effectively read-only. Added create/update/delete `scope:` rules to all six entities, each `as:` role-set mirroring its `permit:` grant (predicate `all`, matching the app's flat collaborative model; Task member-update scoped to `assigned_to = current_user` for coherence with its member list-scope). `dazzle lint` `no_scope_rule` warnings 24 → 0; validate clean.
+
 ## [0.87.5] - 2026-06-26
 
 ### Fixed
