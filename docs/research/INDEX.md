@@ -19,6 +19,12 @@ held up (including what didn't, and any measurement mistakes caught along the wa
   disciplined-rise / campaign-noise) and the finding that no measured construct
   worsens with newer models — including a rising-`noqa` regression that *acquits*
   under the same convict/acquit discipline the reflection programme uses on code.
+- [Can a cheap detector catch re-implemented capability before it's written?](reuse-detection.md)
+  — a ~70-line Type-2 clone detector over the project's own agent-generated code.
+  3.2% of functions sit in near-duplicate clusters, including genuine re-derived
+  capability (one availability check re-implemented in four files) — but also
+  parallel-by-design families, so the cheap reuse check is a *screen, not a
+  verdict*. Tests the B(ii) reuse half the context-bounds spike left open.
 
 ## Related
 
