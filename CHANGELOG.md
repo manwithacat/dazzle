@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.3] - 2026-06-26
+
+### Changed
+- **Agent self-reflection programme — pass 2: first-party corroboration + two disciplined declines.** The two shipped agent-era counter-priors now carry **first-party evidence** from this repo's own (agent-generated, 5.5k-commit) history: `reinvented-capability` cites filed tech-debt where the prior recurred — a `slug:` primitive added because *"every multi-tenant app reimplements"* it (#1288), *"~20 inline copies"* of DB-URL normalisation consolidated (#1185), duplicate constants (#1459), persistent re-export blocks (#1439); `assert-on-mock` notes the construct's surface here (~21% of ~1,470 test files use mocks). Two further candidates were run through the reflection/steelman dialectic and **correctly declined** (the catalogue stays load-bearing): *verbosity/god-functions* (mis-specified — sub-small effect size lands on the explicit-by-design variant Dazzle prizes; convictable residue folds into `god-entities`) and *extract-without-a-frame* (Fowler's Data Clump at n=1 — drop, revisit at n=2-3). KG re-seeds (`SEED_SCHEMA_VERSION` 27→28).
+
+### Agent Guidance
+- **The programme declines as readily as it promotes — by design.** A human-flagged "AI anti-pattern" only becomes a counter-prior if it survives an adversarial steelman *and* has measured recurrence. This pass examined 4 candidates and promoted 0 new ones (the 2 real entries shipped in v0.87.2); verbosity and extract-without-a-frame were declined with recorded reasons. When proposing a new counter-prior, expect to clear the same bar: distinct from existing entries (incl. classic refactoring lore), recurrence shown (not n=1), and a defensible convict/acquit boundary — not a blanket ban.
+
 ## [0.87.2] - 2026-06-26
 
 ### Added
