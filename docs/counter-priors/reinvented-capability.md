@@ -25,7 +25,8 @@ refs:
   adrs: []
   memories: []
   pr_review_agents: []
-  tests: []
+  tests:
+    - tests/unit/test_clone_ratchet.py
 detectors: []
 ---
 
@@ -92,7 +93,10 @@ are each "the agent re-implemented a capability the framework already provides."
 Those are first-party evidence that this prior recurs in Dazzle's own
 agent-generated history. Where a specific capability has a keyword, the **grammar**
 layer closes it by construction; for everything else, the fix is inference-time —
-discover before you write. A re-implemented invariant is a divergence surface that
+discover before you write — backed by a **filter** layer: `dazzle fitness clones`
+detects Type-2 structural re-derivation, and the clone ratchet
+(`tests/unit/test_clone_ratchet.py`) fails the build on a *new* duplicated cluster.
+All three substrate layers now cover this prior. A re-implemented invariant is a divergence surface that
 RBAC, scope composition, and migrations cannot see, because the framework only
 guarantees the path that goes through the framework.
 

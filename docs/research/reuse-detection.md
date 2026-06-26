@@ -102,7 +102,11 @@ was written), the engine is ~70 lines of stdlib `ast`, and the false positives a
 bounded, characterisable class (parallel families) that the convict/acquit prompt
 handles. A practical B(ii) check is: at the moment an agent is about to emit a
 function, compute its signature, query the index, and if it collides with existing
-functions, surface them and ask the discriminating question. Note this is
+functions, surface them and ask the discriminating question. **This has since been
+shipped** as the `reinvented-capability` counter-prior's filter layer — `dazzle
+fitness clones` plus a ratchet gate (`tests/unit/test_clone_ratchet.py`) that fails
+the build on a *new* duplicated cluster while grandfathering the parallel-by-design
+families as accepted residue. Note this is
 *structural*, so it catches re-derivation even when the agent picked different
 names — precisely the bounded-context failure mode.
 
