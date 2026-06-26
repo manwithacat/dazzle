@@ -127,7 +127,10 @@ def _metric_number_filter(value: Any) -> str:
     if isinstance(value, float):
         if abs(value) >= 1:
             return f"{value:,.1f}"
-        return f"{value}"
+        # Sub-1.0 floats (ratios, averages like avg(confidence)) round to 2dp
+        # — matching the #1470 `format_cell` cell layer — rather than leaking
+        # full precision (#1479: avg_confidence -> 0.8850441412520064).
+        return f"{value:.2f}"
     return str(value)
 
 

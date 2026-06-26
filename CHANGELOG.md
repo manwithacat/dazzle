@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.5] - 2026-06-26
+
+### Fixed
+- **#1479 — `display: metrics` tiles no longer leak full-precision sub-1.0 floats.** `_metric_number_filter` stringified any float with `abs(value) < 1` at raw precision (`avg(confidence)` → `0.8850441412520064` on the tile); it now rounds those to 2dp (`0.89`), matching the #1470 `format_cell` cell layer. Floats `≥ 1` keep their existing 1dp formatting (no change to SVG chart-axis labels, which share this filter). A richer declarative `format:`/`round` on metric aggregates remains a follow-on (see #1479).
+
 ## [0.87.4] - 2026-06-26
 
 ### Added

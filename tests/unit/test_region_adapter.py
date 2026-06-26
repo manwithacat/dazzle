@@ -589,6 +589,16 @@ def test_metrics_value_passes_through_metric_number_filter() -> None:
     assert ">0<" in html  # None → "0"
 
 
+def test_metrics_sub_one_float_rounds_to_2dp_no_leak() -> None:
+    """#1479: a sub-1.0 float aggregate (e.g. avg(confidence)) rounds to
+    2dp instead of leaking full precision (0.8850441412520064)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {"metrics": [{"label": "Avg Confidence", "value": 0.8850441412520064}]}
+    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
+    assert "0.89" in html
+    assert "0.8850441412520064" not in html
+
+
 # ───────────────── Bar chart ───────────────────────
 
 
