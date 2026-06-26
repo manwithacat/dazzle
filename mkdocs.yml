@@ -58,6 +58,7 @@ nav:
   - Research:
       - Overview: research/INDEX.md
       - Context-Bounds Prediction: research/context-bounds-prediction.md
+      - Epoch Stratification: research/epoch-stratification.md
   - DSL Reference:
       - Overview: reference/index.md
       - Entities: reference/entities.md

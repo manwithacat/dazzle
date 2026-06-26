@@ -143,7 +143,10 @@ noise. It is also the cleanest test of the reframe above — a human-flagged
 construct that *newer* agents stopped producing was never an agent anti-pattern,
 only a human-legible artifact of an older model. (The project's own issue log is a
 useful seam here: closed tech-debt and refactor issues are a record of past agent
-sessions already convicting their own code.)
+sessions already convicting their own code.) This test has now been **run** — see
+[Do agent-written code biases persist across model generations?](../research/epoch-stratification.md),
+which stratifies construct prevalence across four real model generations (Opus
+4.5 → 4.8) and finds none worsening with newer models.
 
 ## Status
 
@@ -158,3 +161,4 @@ production rather than the training corpus it inherited.
 - [Model-driven failure modes](model-driven-failure-modes.md) — MDF-14 is the home mode; its five-question rubric is the promotion gate
 - [ADR-0027](../adr/0027-no-polymorphic-ref.md) — the four-question interrogation that is this protocol's structural ancestor
 - [Research: predicting task context from a code graph](../research/context-bounds-prediction.md) — an empirical spike motivated by this programme's "bounded context" finding
+- [Research: do agent-written code biases persist across model generations?](../research/epoch-stratification.md) — the epoch-stratification test from this programme, run on four real model generations

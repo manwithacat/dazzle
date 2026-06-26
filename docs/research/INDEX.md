@@ -13,6 +13,12 @@ held up (including what didn't, and any measurement mistakes caught along the wa
   (73%) + bidirectional edges (91%), in ~50 deterministic lines — and why the
   residual is a retrieval problem, not a graph or database problem. Runnable eval
   scripts included.
+- [Do agent-written code biases persist across model generations?](epoch-stratification.md)
+  — an epoch-stratified study across four real model generations (Opus 4.5 → 4.8),
+  attributed by commit trailer. A four-way taxonomy (model-shed / substrate-held /
+  disciplined-rise / campaign-noise) and the finding that no measured construct
+  worsens with newer models — including a rising-`noqa` regression that *acquits*
+  under the same convict/acquit discipline the reflection programme uses on code.
 
 ## Related
 
