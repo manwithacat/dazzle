@@ -1,12 +1,17 @@
 # ADR-0046 — Introspection boots the app's real entrypoint
 
-**Status:** Accepted (2026-06-26) — **first slice shipped**: `dazzle inspect …
---runtime` (renderers / primitives / routes) and `dazzle perf trace
---all-surfaces` now boot the app's declared `[serve] app` entrypoint via
-`cli/inspect.py::_boot_app`, with graceful fallback to `create_app` + a note
-(closes #1485). The remaining slice — `ux verify` honouring `[serve] app` (D1) —
-is tracked in #1486 (it boots a managed `dazzle serve` subprocess, a larger
-change than the in-process swap). Supersedes the per-subsystem
+**Status:** Accepted (2026-06-26) — **shipped & complete for its (now-narrowed)
+scope**: `dazzle inspect … --runtime` (renderers / primitives / routes) and
+`dazzle perf trace --all-surfaces` boot the app's declared `[serve] app`
+entrypoint via `cli/inspect.py::_boot_app`, with graceful fallback to
+`create_app` + a note (closes #1485). **Scope narrowed 2026-06-26 (#1486 closed,
+superseded):** `ux verify` is NOT in scope — its guide-walk oracle depends on
+framework test seams (`runtime.json`, `/__test__/authenticate`,
+`DAZZLE_TEST_SECRET`) the app's prod entrypoint doesn't expose, and its
+persona-switch assumes the framework auth model; that case stays solved by the
+`page_auth_context` bridge (#1401). The "boot the real entrypoint" principle
+applies to in-process registry reads, not the live oracle (see D1). Supersedes
+the per-subsystem
 `pipeline.serve.app_init` hook approach (#1290 `register_middleware`, #1401
 `page_auth_context`) as the *general* answer to the introspection-vs-production
 divergence class; those hooks are not removed yet (D5). Relates to #1485
@@ -57,11 +62,26 @@ An app may declare its ASGI entrypoint in the manifest:
 app = "server:app"   # the module:attr the app actually runs in prod
 ```
 
-When present, `inspect … --runtime` and `ux verify` import and boot **that** app for
-introspection, so `app.state.services` reflects exactly what production wires. When
-absent, they fall back to `create_app(appspec)` — today's behavior. The change is
-therefore **opt-in and zero-impact for apps that don't customize post-build wiring**
-(the common case, and all current example apps).
+When present, the **in-process introspection tools** — `inspect … --runtime` and
+`perf trace --all-surfaces` — import and boot **that** app, so `app.state.services`
+reflects exactly what production wires. When absent, they fall back to
+`create_app(appspec)` — today's behavior. The change is therefore **opt-in and
+zero-impact for apps that don't customize post-build wiring** (the common case, and all
+current example apps).
+
+**`ux verify` is explicitly out of scope** (narrowed 2026-06-26, #1486). It is *not* an
+in-process registry read — it drives a **live server through framework test seams**:
+`.dazzle/runtime.json` (URL + secret discovery) and `/__test__/authenticate` +
+`DAZZLE_TEST_SECRET` (the persona-switch the guide walk uses), both injected by
+`dazzle serve` in test mode and absent from an app's real prod entrypoint. The
+test-auth seam also assumes the *framework* session model, whereas the apps this ADR
+targets run their *own* auth. So "boot the real entrypoint" does not translate to the
+ux-verify-class: there, the app instead **bridges its auth into the framework serve**
+via the `page_auth_context` hook (#1401) — which keeps the oracle's seams intact and
+already works. The general principle here ("introspect what prod runs") holds for
+in-process registry reads; the live-oracle case is a different problem solved by the
+bridge, not by booting the app's server. #1486 is closed as superseded by that
+distinction.
 
 ### D2 — Only the already-runtime tools adopt this. `validate` stays static.
 
@@ -90,14 +110,17 @@ app's lifespan context before reading `app.state.services`; if lifespan startup 
 (e.g. no DB), it degrades to import-only state with a note (D3). Apps that want
 reliable `--runtime` visibility should prefer import/build-time registration.
 
-### D5 — This supersedes per-subsystem `app_init` hooks as the general mechanism; existing hooks are not removed yet.
+### D5 — Supersedes the per-subsystem hooks **for the inspect-class only**; existing hooks are not removed.
 
-`register_renderers` (the #1485 proposal) is **not added**. `register_middleware`
-(#1290) and `page_auth_context` (#1401) remain supported for now (no shim removal in
-this ADR), but adopting the declared entrypoint makes them unnecessary for an app that
-routes its wiring through its own `server:app`: the framework boots that app directly,
-so there is nothing to "replay." A future ADR may deprecate the named hooks once the
-entrypoint mechanism has shipped and migrated the known consumers (PD).
+`register_renderers` (the #1485 proposal) is **not added** — the declared entrypoint
+replaces it for in-process introspection. `register_middleware` (#1290) remains
+supported. **`page_auth_context` (#1401) is explicitly NOT superseded** (corrected
+2026-06-26): it is the load-bearing answer for the ux-verify-class (D1), where booting
+the real entrypoint does not apply — an app bridges its auth into the framework serve
+so the oracle's test seams keep working. So the supersession is scoped: the entrypoint
+mechanism replaces named hooks *for what `inspect --runtime` reads* (renderers,
+primitives, routes), while the auth bridge stays the mechanism *for what `ux verify`
+drives*. No named hook is removed in this ADR.
 
 ## Consequences
 
