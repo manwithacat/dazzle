@@ -29,7 +29,11 @@ from dazzle.render.html import esc as _esc
 def _render_search_input(table: Any, endpoint: str, target: str) -> str:
     """Port of `fragments/search_input.html`."""
     entity_name = str(getattr(table, "entity_name", "") or "")
-    entity_label = entity_name.replace("_", " ").lower()
+    # #1487 follow-on: prefer the declared display title ("curriculum plan")
+    # over the raw PascalCase identifier ("curriculumplan") in the placeholder.
+    entity_label = (
+        str(getattr(table, "entity_title", "") or "") or entity_name.replace("_", " ")
+    ).lower()
     placeholder = f"Search {entity_label}..."
     placeholder_attr = _esc(placeholder, quote=True)
     table_id = str(getattr(table, "table_id", "") or "dt-table")

@@ -118,3 +118,71 @@ def test_legacy_table_renderer_uses_declared_title() -> None:
     out = render_filterable_table(tc, page_title="Curriculum Plans")
     assert "New Curriculum Plan" in out
     assert "New CurriculumPlan<" not in out
+
+
+# ── Search placeholder (#1487 follow-on) ─────────────────────────────────
+
+
+def test_legacy_search_placeholder_uses_declared_title() -> None:
+    from dazzle.page.runtime.table_renderer import _render_search_input
+
+    tc = TableContext(
+        entity_name="CurriculumPlan",
+        title="Curriculum Plans",
+        entity_title="Curriculum Plan",
+        columns=[],
+        api_endpoint="/api/curriculumplan",
+    )
+    out = _render_search_input(tc, "/api/curriculumplan", "#t-body")
+    assert "Search curriculum plan..." in out
+    assert "Search curriculumplan" not in out  # the raw-id leak
+
+
+def test_legacy_search_placeholder_falls_back_to_humanised_name() -> None:
+    from dazzle.page.runtime.table_renderer import _render_search_input
+
+    tc = TableContext(
+        entity_name="CurriculumPlan",
+        title="Curriculum Plans",
+        columns=[],
+        api_endpoint="/api/curriculumplan",
+    )
+    out = _render_search_input(tc, "/api/curriculumplan", "#t-body")
+    assert "Search curriculumplan..." in out  # no title → humanised identifier
+
+
+def test_fragment_search_placeholder_uses_declared_title() -> None:
+    from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+
+    toolbar = FragmentSurfaceAdapter()._build_list_toolbar(
+        search_enabled=True,
+        search_fields=["name"],
+        filter_values={},
+        columns=[],
+        entity_name="CurriculumPlan",
+        entity_title="Curriculum Plan",
+        endpoint="/api/curriculumplan",
+        region_name="curriculumplan",
+    )
+    html = "".join(FragmentRenderer().render(f) for f in toolbar)
+    assert 'placeholder="Search curriculum plan' in html
+    # the FTS endpoint legitimately carries the raw entity name; the VISIBLE
+    # placeholder must not.
+    assert 'placeholder="Search CurriculumPlan' not in html
+
+
+def test_fragment_search_placeholder_default_when_no_title() -> None:
+    from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+
+    toolbar = FragmentSurfaceAdapter()._build_list_toolbar(
+        search_enabled=True,
+        search_fields=["name"],
+        filter_values={},
+        columns=[],
+        entity_name="CurriculumPlan",
+        entity_title="",
+        endpoint="/api/curriculumplan",
+        region_name="curriculumplan",
+    )
+    html = "".join(FragmentRenderer().render(f) for f in toolbar)
+    assert 'placeholder="Search…"' in html

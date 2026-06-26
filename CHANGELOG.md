@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.9] - 2026-06-26
+
+### Fixed
+- **#1487 follow-on — list search placeholder reads the entity's declared title.** The same raw-PascalCase-identifier leak as the create CTA also affected the list search placeholder ("Search curriculumplan…"). Both render paths now use `entity_title`: the legacy `table_renderer._render_search_input` → "Search curriculum plan…", and the typed-Fragment `SearchBox` (previously a generic "Search…") now reads "Search curriculum plan…" too. Falls back to the humanised identifier (legacy) / generic "Search…" (fragment) when no title is declared. The FTS endpoint URL still uses the raw entity name (correct — it's an API path).
+
 ## [0.87.8] - 2026-06-26
 
 ### Fixed

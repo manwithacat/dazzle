@@ -84,6 +84,7 @@ class FragmentSurfaceAdapter:
             filter_values=filter_values,
             columns=columns,
             entity_name=entity_name,
+            entity_title=str(ctx.get("entity_title", "") or ""),  # #1487 follow-on
             endpoint=endpoint,
             region_name=region_name,
         )
@@ -307,6 +308,7 @@ class FragmentSurfaceAdapter:
         filter_values: dict[str, str],
         columns: list[dict[str, Any]],
         entity_name: str,
+        entity_title: str,
         endpoint: str,
         region_name: str,
     ) -> tuple[Fragment, ...]:
@@ -321,10 +323,14 @@ class FragmentSurfaceAdapter:
         toolbar: list[Fragment] = []
 
         if search_enabled and search_fields and entity_name:
+            # #1487 follow-on: name the entity by its declared title in the
+            # search placeholder ("Search curriculum plan…"), not the raw id.
+            placeholder = f"Search {entity_title.lower()}…" if entity_title else "Search…"
             toolbar.append(
                 SearchBox(
                     name=f"{region_name or entity_name}_search",
                     fts_endpoint=URL(f"/_dazzle/fts/{entity_name}?html=1"),
+                    placeholder=placeholder,
                 )
             )
 
