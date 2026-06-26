@@ -103,4 +103,7 @@ reimplements"* it (#1288); *"~20 inline copies"* of DB-URL normalisation
 consolidated (#1185); duplicate `VIRTUAL_ENTITY_NAMES` (#1459); persistent
 re-export/wrapper blocks (#1439). The agent re-derived, then a later agent filed
 the consolidation — exactly the discover-before-you-write gap, paid down after the
-fact instead of avoided.
+fact instead of avoided. A quantified scan —
+[Can a cheap detector catch re-implemented capability before it's written?](../research/reuse-detection.md)
+— finds 3.2% of functions in near-duplicate clusters, including clean cases like one
+availability check re-implemented across four files.
