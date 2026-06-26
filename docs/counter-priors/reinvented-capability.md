@@ -95,3 +95,12 @@ layer closes it by construction; for everything else, the fix is inference-time 
 discover before you write. A re-implemented invariant is a divergence surface that
 RBAC, scope composition, and migrations cannot see, because the framework only
 guarantees the path that goes through the framework.
+
+**First-party corroboration.** A scan of this repo's own closed issues (the
+codebase is ~entirely agent-generated, 5.5k commits) finds the prior recurring as
+filed tech-debt: a `slug:` primitive added because *"every multi-tenant Dazzle app
+reimplements"* it (#1288); *"~20 inline copies"* of DB-URL normalisation
+consolidated (#1185); duplicate `VIRTUAL_ENTITY_NAMES` (#1459); persistent
+re-export/wrapper blocks (#1439). The agent re-derived, then a later agent filed
+the consolidation — exactly the discover-before-you-write gap, paid down after the
+fact instead of avoided.

@@ -101,3 +101,10 @@ that looks like new coverage is the one most likely to be hollow. The legitimate
 forms (boundary mocking, parameterised matrices with independently-derived
 expecteds, blessed snapshots) are not just allowed but encouraged; the line is
 whether a real defect can turn the test red.
+
+**First-party corroboration.** This repo's own (agent-generated) test suite shows
+the construct at scale: of ~1,470 test files, ~21% use mocks / `@patch`, with
+hundreds of `assert_called*` interaction assertions. Prevalence alone is not
+conviction — most are the legitimate forms above — but it confirms the surface
+this prior acts on is large here, which is why the discriminating question
+("would a real defect turn this red?") is the cheaper guard than auditing after.
