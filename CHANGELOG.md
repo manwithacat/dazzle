@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.2] - 2026-06-26
+
+### Added
+- **Agent self-reflection programme + first two agent-era counter-priors.** A new mechanism for discovering counter-priors specific to *agentic code production* (the analogue of the existing corpus-prior catalogue), documented at `docs/architecture/agent-self-reflection.md`. Its load-bearing reframe: human critique of AI code is a *prior to be skeptical of*, not a verdict — the anti-pattern is the unexamined assumption, not the shape, and the agent (which holds the context) is better placed than a human critic to identify it on reflection. The programme pairs a six-question reflection protocol with an adversarial-steelman dialectic (acquit/convict) and an epoch-stratification test (persistence across model generations = a real prior; a bias a newer model shed never was). Two catalogue entries produced and validated through it: **`reinvented-capability`** (re-implementing an invariant-equivalent capability that already exists because bounded context didn't surface it — the general form of the `hand-rolled-*` cluster) and **`assert-on-mock`** (a test whose assertions verify the mock, not the behaviour — green by construction, stays green when the behaviour breaks). Both document the convict/acquit *boundary*, not a blanket ban. KG re-seeds (`SEED_SCHEMA_VERSION` 26→27).
+
+### Agent Guidance
+- **Two new counter-priors surface via `knowledge counter_prior`.** `reinvented-capability` — before hand-writing a helper, ask "does a construct with this exact responsibility already exist, and is the invariant shared?"; reuse the keyword/helper, or duplicate with a documented why. `assert-on-mock` — for any test, ask "if I break the real behaviour, leaving every mock as written, does this test go red?"; if no, assert on behaviour the real code produced, not on the mock. Both *acquit* their legitimate variants (deliberate AHA duplication; boundary mocking, parameterised matrices, blessed snapshots) — they are reflection prompts, not prohibitions.
+
 ## [0.87.1] - 2026-06-25
 
 ### Fixed
