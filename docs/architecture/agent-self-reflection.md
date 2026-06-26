@@ -157,3 +157,4 @@ production rather than the training corpus it inherited.
 - [Counter-prior catalogue](../counter-priors/INDEX.md) — where promoted entries land
 - [Model-driven failure modes](model-driven-failure-modes.md) — MDF-14 is the home mode; its five-question rubric is the promotion gate
 - [ADR-0027](../adr/0027-no-polymorphic-ref.md) — the four-question interrogation that is this protocol's structural ancestor
+- [Research: predicting task context from a code graph](../research/context-bounds-prediction.md) — an empirical spike motivated by this programme's "bounded context" finding

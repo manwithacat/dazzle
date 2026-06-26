@@ -347,6 +347,7 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[Enterprise SSO & Provisioning](docs/reference/enterprise-sso.md)** — per-org OIDC / SAML 2.0 / SCIM (opt-in)
 - **[Autonomous Harness](docs/autonomous-harness.md)** — Claude Code slash commands + methodology
 - **[ADRs](docs/adr/INDEX.md)** — architectural decisions, defended
+- **[Research notes](docs/research/INDEX.md)** — reproducible empirical investigations (agent-era counter-priors, predicting task context from a code graph)
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app
 - **[Examples](examples/)** — runnable example applications
