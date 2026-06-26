@@ -64,10 +64,12 @@ def _derive_surface_urls() -> list[str]:
     )
 
     project_root = _resolve_project_root(None)
-    app_or_error = _boot_app(project_root)
-    if isinstance(app_or_error, str):
-        typer.echo(f"  --all-surfaces: could not enumerate routes — {app_or_error}")
+    app, message = _boot_app(project_root)
+    if app is None:
+        typer.echo(f"  --all-surfaces: could not enumerate routes — {message}")
         return []
+    if message:  # ADR-0046 fallback note
+        typer.echo(f"  --all-surfaces: {message}")
 
     # Categorisation degrades gracefully without the AppSpec — workspace
     # routes just land in the "surface" bucket — so an AppSpec load
@@ -77,7 +79,7 @@ def _derive_surface_urls() -> list[str]:
         appspec = _load_appspec(project_root)
         workspace_names = frozenset(ws.name for ws in (getattr(appspec, "workspaces", None) or []))
 
-    entries = _walk_runtime_routes(app_or_error.routes, workspace_names)
+    entries = _walk_runtime_routes(app.routes, workspace_names)
     return _traceable_page_urls(entries)
 
 

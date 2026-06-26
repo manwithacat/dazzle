@@ -1,12 +1,17 @@
 # ADR-0046 — Introspection boots the app's real entrypoint
 
-**Status:** Proposed (2026-06-26) — design recorded from the #1485 investigation;
-implementation deferred to a scoped follow-up. Supersedes the per-subsystem
+**Status:** Accepted (2026-06-26) — **first slice shipped**: `dazzle inspect …
+--runtime` (renderers / primitives / routes) and `dazzle perf trace
+--all-surfaces` now boot the app's declared `[serve] app` entrypoint via
+`cli/inspect.py::_boot_app`, with graceful fallback to `create_app` + a note
+(closes #1485). The remaining slice — `ux verify` honouring `[serve] app` (D1) —
+is tracked in #1486 (it boots a managed `dazzle serve` subprocess, a larger
+change than the in-process swap). Supersedes the per-subsystem
 `pipeline.serve.app_init` hook approach (#1290 `register_middleware`, #1401
 `page_auth_context`) as the *general* answer to the introspection-vs-production
-divergence class. Relates to #1485 (renderers), #1401 (page auth), #1413 (custom
-renderer signpost), ADR-0005 (RuntimeServices on `app.state`), ADR-0040
-(conformant custom routes).
+divergence class; those hooks are not removed yet (D5). Relates to #1485
+(renderers), #1401 (page auth), #1413 (custom renderer signpost), ADR-0005
+(RuntimeServices on `app.state`), ADR-0040 (conformant custom routes).
 
 ## Context
 

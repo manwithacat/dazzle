@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.7] - 2026-06-26
+
+### Added
+- **ADR-0046 (first slice) — runtime introspection boots the app's real entrypoint (#1485).** `dazzle inspect … --runtime` (renderers / primitives / routes) and `dazzle perf trace --all-surfaces` now boot the app's declared ASGI entrypoint when `dazzle.toml` carries `[serve] app = "server:app"`, instead of the framework-default `create_app`. This closes the introspection-vs-production false-negative class: an app that registers renderers / middleware / page-auth in its own standalone server (not `dazzle serve`) is now introspected as it actually runs, so `inspect renderers --runtime` stops reporting live renderers as "no runtime handler" (#1485, sibling of #1401). Opt-in — absent `[serve] app` keeps today's `create_app` behavior; an entrypoint that fails to boot falls back to `create_app` with a loud note (never silent or fatal). `dazzle serve` and the static `dazzle validate` gate are unchanged. The remaining slice (`ux verify` honouring `[serve] app`) is tracked in #1486.
+
+### Agent Guidance
+- **New `dazzle.toml` convention: `[serve] app = "module:attr"`.** Declare it when a project registers post-build wiring (renderers, middleware, page auth) through its own ASGI entrypoint rather than `dazzle serve` — then `inspect --runtime` introspects the real app. This is the general replacement for the per-subsystem `pipeline.serve.app_init` hooks (`register_middleware`, `page_auth_context`); do **not** propose a new named hook per subsystem (e.g. `register_renderers`) — point at `[serve] app` instead. See ADR-0046.
+
 ## [0.87.6] - 2026-06-26
 
 ### Fixed

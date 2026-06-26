@@ -543,6 +543,30 @@ class ExtensionsConfig:
 
 
 @dataclass
+class ServeConfig:
+    """The app's real ASGI entrypoint, for runtime introspection (ADR-0046).
+
+    An app that wires post-build setup (renderers, middleware, page auth)
+    through its own standalone server rather than ``dazzle serve`` can
+    declare that entrypoint here::
+
+        [serve]
+        app = "server:app"
+
+    The runtime-introspection tools (``dazzle inspect … --runtime``,
+    ``dazzle ux verify``) then boot *that* module:attr instead of the
+    framework-default ``create_app``, so they observe exactly what
+    production runs — closing the introspection-vs-production false-negative
+    class (#1401, #1485). When ``app`` is None the tools fall back to
+    ``create_app`` (the default for apps that don't customise post-build
+    wiring). Does NOT affect ``dazzle serve`` itself or the static
+    ``dazzle validate`` gate.
+    """
+
+    app: str | None = None
+
+
+@dataclass
 class RenderersConfig:
     """Declaration of project-supplied renderer names (closes #1116).
 
@@ -704,6 +728,10 @@ class ProjectManifest:
     # deprecation notice but does NOT toggle anything.
     environments: dict[str, EnvironmentProfile] = field(default_factory=dict)
     extensions: ExtensionsConfig = field(default_factory=ExtensionsConfig)
+    # ADR-0046 / #1485 — optional real ASGI entrypoint for runtime
+    # introspection (`inspect --runtime`, `ux verify`). None = framework
+    # default (`create_app`).
+    serve: ServeConfig = field(default_factory=ServeConfig)
     # v0.71.x #1116 — project-side renderer-name allowlist. Merged with
     # framework defaults via known_renderer_names() for link-time validation.
     renderers: RenderersConfig = field(default_factory=RenderersConfig)
@@ -1064,6 +1092,14 @@ def load_manifest(path: Path) -> ProjectManifest:
         routers=[str(r) for r in raw_routers if isinstance(r, str)],
     )
 
+    # Parse [serve] section (ADR-0046) — optional real ASGI entrypoint
+    # (`module:attr`) for runtime introspection. Anything that isn't a
+    # non-empty string is treated as absent (framework-default boot).
+    serve_data = data.get("serve", {})
+    raw_serve_app = serve_data.get("app") if isinstance(serve_data, dict) else None
+    serve_app = raw_serve_app if isinstance(raw_serve_app, str) and raw_serve_app.strip() else None
+    serve_config = ServeConfig(app=serve_app)
+
     # Parse [renderers] section (#1116) — project-side renderer-name
     # allowlist for the DSL's `render:` clause.
     renderers_data = data.get("renderers", {})
@@ -1156,6 +1192,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         haptic=haptic_enabled,
         environments=environments,
         extensions=extensions_config,
+        serve=serve_config,
         renderers=renderers_config,
         storage_defs=storage_defs,
         audit_integrity=audit_integrity,

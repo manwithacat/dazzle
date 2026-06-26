@@ -242,9 +242,13 @@ def renderers_command(
         )
 
     if runtime:
-        registered_names, boot_error = _boot_and_get_registered_names("renderer_registry")
+        registered_names, boot_error, boot_note = _boot_and_get_registered_names(
+            "renderer_registry", project_root
+        )
+        if boot_note:
+            result.notes.append(boot_note)
         if boot_error:
-            result.notes.append(f"--runtime boot failed: {boot_error}")
+            result.notes.append(f"--runtime: {boot_error}")
         else:
             _cross_reference(entries, result, registered_names, framework_defaults | declared)
 
@@ -285,9 +289,13 @@ def primitives_command(
         _emit(result, output_json)
         return
 
-    registered_names, boot_error = _boot_and_get_registered_names("primitive_registry")
+    registered_names, boot_error, boot_note = _boot_and_get_registered_names(
+        "primitive_registry", project_root
+    )
+    if boot_note:
+        result.notes.append(boot_note)
     if boot_error:
-        result.notes.append(f"--runtime boot failed: {boot_error}")
+        result.notes.append(f"--runtime: {boot_error}")
     else:
         for name in sorted(registered_names):
             entries.append(
@@ -428,10 +436,10 @@ def routes_command(
         _emit(result, output_json)
         return
 
-    app_or_error = _boot_app(project_root)
-    if isinstance(app_or_error, str):
-        note = f"--runtime boot failed: {app_or_error}"
-        if "database_url" in app_or_error.lower():
+    app, message = _boot_app(project_root)
+    if app is None:
+        note = f"--runtime boot failed: {message}"
+        if message and "database_url" in message.lower():
             note += (
                 " — set DATABASE_URL to a reachable Postgres instance so "
                 "--runtime can boot the app and enumerate every workspace / "
@@ -441,7 +449,8 @@ def routes_command(
         _emit(result, output_json)
         return
 
-    app = app_or_error
+    if message:  # ADR-0046 fallback note — boot succeeded via create_app
+        result.notes.append(message)
     try:
         appspec = _load_appspec(project_root)
         workspace_names = frozenset(ws.name for ws in (getattr(appspec, "workspaces", None) or []))
@@ -793,17 +802,81 @@ inspect_app.add_typer(api_app, name="api")
 # =============================================================================
 
 
-def _boot_app(project_root: Path) -> Any:
+def _boot_declared_entrypoint(spec: str, project_root: Path) -> Any:
+    """Import the app's declared ``module:attr`` ASGI entrypoint (ADR-0046).
+
+    Returns the app object on success, or a string error message. The
+    project root is placed on ``sys.path`` (mirroring route-override
+    import) so the entrypoint module resolves the same way it does under
+    the app's own server.
+
+    Captures import-time registration (e.g. an app that registers
+    renderers synchronously after ``build()`` in its ``server.py``).
+    Startup/lifespan-time registration is a best-effort follow-up (ADR-0046
+    D4) — not entered here.
+    """
+    import importlib
+    import sys
+
+    module_name, _, attr = spec.partition(":")
+    if not module_name or not attr:
+        return f"invalid entrypoint spec {spec!r} (expected 'module:attr')"
+
+    # Mirror route_overrides.py: insert the project root for the import, then
+    # remove it in finally so repeated/in-process introspection doesn't
+    # accumulate sys.path entries. The module stays cached in sys.modules, so
+    # removing the path after a successful import is safe.
+    root_str = str(project_root)
+    added_to_path = root_str not in sys.path
+    if added_to_path:
+        sys.path.insert(0, root_str)
+    try:
+        module = importlib.import_module(module_name)
+    except Exception as exc:
+        return f"import of {module_name!r} failed: {type(exc).__name__}: {exc}"
+    finally:
+        if added_to_path and root_str in sys.path:
+            sys.path.remove(root_str)
+    app = getattr(module, attr, None)
+    if app is None:
+        return f"module {module_name!r} has no attribute {attr!r}"
+    return app
+
+
+def _boot_app(project_root: Path) -> tuple[Any | None, str | None]:
     """Boot the project's FastAPI app for runtime introspection.
 
-    Returns the app instance on success, or a string error message on
-    failure (typically when the project can't reach Postgres in the
-    inspect environment).
+    Returns ``(app, message)``. When the manifest declares a real ASGI
+    entrypoint (``[serve] app``, ADR-0046) that boots, returns
+    ``(app, None)`` — introspection then reflects exactly what production
+    runs. On entrypoint failure, falls back to the framework-default
+    ``create_app`` and returns ``(app, note)`` where *note* explains the
+    fallback (the boot itself succeeded). On hard failure returns
+    ``(None, error)``.
     """
+    # ADR-0046: prefer the app's own declared entrypoint so post-build
+    # wiring done in the app's server (renderers, middleware, page auth)
+    # is visible to introspection. Absent / unbootable → framework default.
+    fallback_note: str | None = None
+    try:
+        manifest = _load_manifest(project_root)
+        serve_app = getattr(getattr(manifest, "serve", None), "app", None)
+    except Exception:
+        serve_app = None
+    if serve_app:
+        app_or_error = _boot_declared_entrypoint(serve_app, project_root)
+        if not isinstance(app_or_error, str):
+            return app_or_error, None
+        fallback_note = (
+            f"declared entrypoint '{serve_app}' did not boot ({app_or_error}); "
+            "introspected the framework-default app instead — results may differ "
+            "from what your server registers (ADR-0046)"
+        )
+
     try:
         appspec = _load_appspec(project_root)
     except Exception as exc:
-        return f"failed to load AppSpec: {exc!r}"
+        return None, f"failed to load AppSpec: {exc!r}"
 
     try:
         from dazzle.http.runtime.app_factory import create_app
@@ -811,33 +884,39 @@ def _boot_app(project_root: Path) -> Any:
         # database_url=None lets the factory default to env / fallbacks;
         # boot may still fail if PG isn't reachable, in which case we
         # return the exception to the caller.
-        return create_app(appspec, database_url=None)
+        app = create_app(appspec, database_url=None)
     except Exception as exc:
-        return (
+        return None, (
             f"failed to boot app: {type(exc).__name__}: {exc} "
             "(--runtime needs a reachable database; for manifest-only "
             "inspection, omit --runtime)"
         )
+    return app, fallback_note
 
 
-def _boot_and_get_registered_names(registry_attr: str) -> tuple[set[str], str | None]:
+def _boot_and_get_registered_names(
+    registry_attr: str,
+    project_root: Path,
+) -> tuple[set[str], str | None, str | None]:
     """Boot the app and return ``services.<registry_attr>.registered_names()``.
 
-    On failure returns ``(set(), error_message)`` so the caller can fold
-    the error into the report rather than crash.
+    Returns ``(names, error, note)``. *error* is set only on a hard boot
+    failure (and *names* is empty). *note* is an informational message —
+    e.g. the ADR-0046 fallback notice — that the caller surfaces without
+    treating it as a failure. *project_root* must be the caller's resolved
+    root so the ADR-0046 ``[serve] app`` lookup honours ``--project``.
     """
-    project_root = _resolve_project_root(None)
-    app_or_error = _boot_app(project_root)
-    if isinstance(app_or_error, str):
-        return set(), app_or_error
-    services = getattr(getattr(app_or_error, "state", None), "services", None)
+    app, message = _boot_app(project_root)
+    if app is None:
+        return set(), message, None
+    services = getattr(getattr(app, "state", None), "services", None)
     if services is None:
-        return set(), "app booted but services not attached to app.state"
+        return set(), "app booted but services not attached to app.state", message
     registry = getattr(services, registry_attr, None)
     if registry is None:
-        return set(), f"app booted but services.{registry_attr} not present"
+        return set(), f"app booted but services.{registry_attr} not present", message
     names = registry.registered_names() if hasattr(registry, "registered_names") else set()
-    return set(names), None
+    return set(names), None, message
 
 
 def _cross_reference(
@@ -874,4 +953,7 @@ def _cross_reference(
         if declared_entry is not None and declared_entry.source == "manifest":
             result.mismatches.append(
                 f"`{name}` is declared in dazzle.toml but no runtime handler is registered"
+                " — if your app registers it in its own ASGI entrypoint (not"
+                " `dazzle serve`), declare that entrypoint with `[serve] app ="
+                ' "server:app"` so introspection boots the real app (ADR-0046)'
             )
