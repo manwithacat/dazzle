@@ -194,6 +194,7 @@ class FragmentSurfaceAdapter:
                     CreateButton(
                         href=URL(create_url),
                         entity_name=entity_name,
+                        entity_title=str(ctx.get("entity_title", "") or ""),  # #1487
                     ),
                 ),
                 align="center",

@@ -163,7 +163,9 @@ class _RenderInteractiveMixin:
         "New {entity_name}" label (or caller's custom label)."""
         href_attr = ctx.escape_attr(str(b.href))
         action_attr = ctx.escape_attr(f"{b.entity_name}.create")
-        label = b.label or f"New {b.entity_name.replace('_', ' ')}"
+        # #1487: prefer the declared display title; fall back to humanising the
+        # raw entity identifier only when no title is declared.
+        label = b.label or f"New {b.entity_title or b.entity_name.replace('_', ' ')}"
         return (
             f'<a href="{href_attr}" '
             f'data-dazzle-action="{action_attr}" '

@@ -1593,6 +1593,10 @@ class CreateButton:
 
     href: object  # URL — typed object to keep the union simple
     entity_name: str
+    # #1487: entity's declared display title ("Curriculum Plan"). When set and
+    # no explicit `label` override, the default becomes "New <entity_title>"
+    # instead of "New <entity_name>" (the raw PascalCase identifier).
+    entity_title: str = ""
     label: str = ""
 
     def __post_init__(self) -> None:

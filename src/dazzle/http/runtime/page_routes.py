@@ -1602,6 +1602,10 @@ def _build_dispatch_ctx(
             # adapter can emit a Create link required by the UX
             # contract checker (rbac:<Entity>:<persona>:create).
             "create_url": getattr(table, "create_url", "") or "",
+            # #1487: the entity's declared display title for the "New <Entity>"
+            # create CTA (so it reads "New Curriculum Plan", not the raw class
+            # name). Empty → adapter humanises entity_name.
+            "entity_title": getattr(table, "entity_title", "") or "",
             # Issue #1029 phase 1: detail_url_template threads through
             # so the adapter can wrap each <tr> in an hx-get drill-down
             # to the detail surface. Template usually contains "{id}"

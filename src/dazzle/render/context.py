@@ -82,6 +82,12 @@ class TableContext(BaseModel):
 
     entity_name: str
     title: str
+    # #1487: the entity's declared display title ("Curriculum Plan"), distinct
+    # from `entity_name` (the PascalCase identifier "CurriculumPlan") and from
+    # `title` (the surface/list title). Used for the "New <Entity>" create CTA
+    # so it reads the declared title, not the raw class name. Empty when the
+    # entity has no declared title (renderer falls back to humanising the name).
+    entity_title: str = ""
     columns: list[ColumnContext]
     api_endpoint: str
     search_enabled: bool = True

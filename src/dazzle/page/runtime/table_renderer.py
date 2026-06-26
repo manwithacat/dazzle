@@ -216,7 +216,11 @@ def render_filterable_table(table: Any, *, page_title: str = "") -> str:
     table_id_attr = _esc(table_id, quote=True)
     entity_name = str(getattr(table, "entity_name", "") or "")
     entity_name_attr = _esc(entity_name, quote=True)
-    entity_label_text = entity_name.replace("_", " ")
+    # #1487: prefer the entity's declared display title for the "New <Entity>"
+    # CTA + empty-state copy; fall back to humanising the raw identifier.
+    entity_label_text = str(getattr(table, "entity_title", "") or "") or entity_name.replace(
+        "_", " "
+    )
     entity_label_lower = entity_label_text.lower()
     title = _esc(getattr(table, "title", ""))
     title_attr = _esc(getattr(table, "title", ""), quote=True)

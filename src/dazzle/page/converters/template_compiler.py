@@ -923,6 +923,7 @@ def _compile_list_surface(
         table=TableContext(
             entity_name=entity_name,
             title=surface.title or f"{entity_name}s",
+            entity_title=(getattr(entity, "title", "") or "") if entity else "",
             columns=columns,
             api_endpoint=api_endpoint,
             create_url=create_url,

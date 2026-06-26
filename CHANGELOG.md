@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.8] - 2026-06-26
+
+### Fixed
+- **#1487 — list-view create CTA now reads the entity's declared display title, not the raw class name.** A `mode: list` surface's primary "New <Entity>" button rendered the PascalCase identifier (`New CurriculumPlan`) instead of the declared title (`New Curriculum Plan`), even though the page title and nav resolved it correctly. Threaded the entity's display title onto `TableContext.entity_title` (from `EntitySpec.title` at compile time) and through both render paths — the typed `CreateButton` fragment and the legacy `table_renderer.render_filterable_table` — so the default label becomes `New <declared title>`, falling back to humanising the identifier only when no title is declared. The `data-dazzle-action="<Entity>.create"` RBAC anchor still uses the raw entity name (unchanged). An explicit DSL `label` override still wins.
+
 ## [0.87.7] - 2026-06-26
 
 ### Added
