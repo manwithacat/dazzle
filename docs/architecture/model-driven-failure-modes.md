@@ -336,6 +336,10 @@ risky_agent_changes =
 
 Required detector dimensions: static, traceability.
 
+The *discovery* mechanism for the agent-era constructs this mode amplifies —
+how we find and validate new counter-priors for agent production specifically —
+is [Agent self-reflection](agent-self-reflection.md).
+
 ## 6. Initial risk register
 
 This is a qualitative seed register. The numbers below are **hand-set

@@ -12,6 +12,12 @@ Each entry's frontmatter declares which layer it primarily belongs to, plus trig
 
 Entries are agent-scannable: each row is a counter-prior that prevents a wrong emission.
 
+These entries correct **corpus priors** — bad shapes humans wrote at scale, now in
+training data. Agentic *production* has its own predictable failure modes; the
+mechanism for discovering and validating those agent-era counter-priors (without
+naively importing human critique of AI code as ground truth) is
+[Agent self-reflection](../architecture/agent-self-reflection.md).
+
 ## Active entries
 
 - [custom-route-undeclared-response](custom-route-undeclared-response.md) — A `routes/*.py` override that returns HTML with no `# dazzle:returns` (can't be chromed → escapes the shell) and/or touches an entity with no `# dazzle:implements` (bypasses RBAC). Chrome/shape = declared choice (novel UI welcome via `page`); RBAC = the mandatory line (#1392/#1420).

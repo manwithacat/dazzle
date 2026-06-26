@@ -53,6 +53,7 @@ nav:
       - DSL to AppSpec: architecture/dsl-to-appspec.md
       - MCP Server: architecture/mcp-server.md
       - Model-Driven Failure Modes: architecture/model-driven-failure-modes.md
+      - Agent Self-Reflection: architecture/agent-self-reflection.md
       - Project Evolution: architecture/evolution.md
   - DSL Reference:
       - Overview: reference/index.md
