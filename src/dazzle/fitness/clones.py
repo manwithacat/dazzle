@@ -98,7 +98,7 @@ def _signature(fn: ast.AST) -> str:
 
     for stmt in getattr(fn, "body", []):
         emit(stmt)
-    return hashlib.md5("|".join(toks).encode()).hexdigest()  # noqa: S324 — non-crypto bucketing
+    return hashlib.md5("|".join(toks).encode(), usedforsecurity=False).hexdigest()
 
 
 def _stmt_count(fn: ast.AST) -> int:

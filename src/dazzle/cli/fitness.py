@@ -17,6 +17,7 @@ import typer
 
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
 from dazzle.fitness.backlog import read_backlog
+from dazzle.fitness.clones import build_clone_baseline, compute_clone_index
 from dazzle.fitness.triage import (
     cluster_findings,
     read_queue_file,
@@ -340,10 +341,6 @@ def clones_command(
     parallel-by-design (a family of CLI commands / route handlers) is accepted
     residue — it lives in the baseline; the gate only forbids *new* duplication.
     """
-    import json
-
-    from dazzle.fitness.clones import build_clone_baseline, compute_clone_index
-
     repo = project or Path.cwd()
     root = repo / "src" / "dazzle"
 
