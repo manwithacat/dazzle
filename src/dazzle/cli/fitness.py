@@ -17,6 +17,7 @@ import typer
 
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
 from dazzle.fitness.backlog import read_backlog
+from dazzle.fitness.clones import build_clone_baseline, compute_clone_index
 from dazzle.fitness.triage import (
     cluster_findings,
     read_queue_file,
@@ -277,6 +278,7 @@ def _build_llm_client(model: str | None, dry_run: bool) -> object:
 
 
 _COMPLEXITY_BASELINE = Path("tests/unit/fixtures/complexity_baseline.json")
+_CLONE_BASELINE = Path("tests/unit/fixtures/clone_baseline.json")
 
 
 @fitness_app.command("code")
@@ -322,3 +324,40 @@ def code_command(
         typer.echo(f"Wrote {out}")
     else:
         typer.echo(md)
+
+
+@fitness_app.command("clones")
+def clones_command(
+    project: Path | None = typer.Option(None, "--project", help="Repo root (default: cwd)"),
+    write_baseline: bool = typer.Option(
+        False, "--write-baseline", help="Regenerate the clone (reuse) ratchet baseline"
+    ),
+) -> None:
+    """Type-2 function-clone detection — the reinvented-capability layer-3 filter.
+
+    Reports clusters of functions sharing a structural signature (re-implemented
+    capability). Report-only by default; `--write-baseline` re-tightens the clone
+    ratchet (`tests/unit/test_clone_ratchet.py`) after a dedup. A cluster that is
+    parallel-by-design (a family of CLI commands / route handlers) is accepted
+    residue — it lives in the baseline; the gate only forbids *new* duplication.
+    """
+    repo = project or Path.cwd()
+    root = repo / "src" / "dazzle"
+
+    if write_baseline:
+        baseline = build_clone_baseline(root)
+        out = repo / _CLONE_BASELINE
+        out.write_text(json.dumps(baseline, indent=2) + "\n")
+        members = sum(int(e["count"]) for e in baseline)
+        typer.echo(f"Wrote {out} ({len(baseline)} clusters, {members} functions)")
+        return
+
+    index = compute_clone_index(root)
+    members = sum(len(m) for m in index.values())
+    typer.echo(f"# Re-implemented capability — {len(index)} clone clusters, {members} functions\n")
+    for cluster in sorted(index.values(), key=len, reverse=True):
+        typer.echo(f"x{len(cluster)}:")
+        for member in cluster:
+            typer.echo(f"    {member}")
+    if not index:
+        typer.echo("No clone clusters found.")

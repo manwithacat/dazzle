@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.4] - 2026-06-26
+
+### Added
+- **Clone ratchet — the `reinvented-capability` counter-prior's layer-3 filter.** `dazzle fitness clones` detects Type-2 function clones (structural signature: argument arity + control-flow shape + called-method/keyword names, modulo local names and literal values), and a new ratchet gate (`tests/unit/test_clone_ratchet.py`, baseline `tests/unit/fixtures/clone_baseline.json` — 99 clusters / 220 functions) fails the build on a *new* or *grown* duplicate cluster. This completes the three-layer coverage (grammar / inference / filter) for the duplication-instead-of-reuse prior, which previously had only the inference-layer reflection prompt. Grew out of the [reuse-detection research note](docs/research/reuse-detection.md). The ratchet is **keyed on the signature, not on function names**, so renaming or moving an already-clustered function does not trip it — only genuine new duplication does.
+
+### Agent Guidance
+- **New build gate: the clone ratchet.** Before hand-writing a function, prefer reusing an existing one; the gate forbids adding a *new* structural duplicate of code that already exists. If a flagged cluster is genuinely parallel-by-design accepted residue (a family of CLI sub-commands / route handlers), regenerate the baseline with `dazzle fitness clones --write-baseline` (mirrors the complexity-ratchet escape hatch). A pure rename/move never trips it (signature-keyed). `dazzle fitness clones` (report-only) lists current clusters — query it when about to write a helper, as the automated form of `reinvented-capability`'s "does this already exist?" question.
+
 ## [0.87.3] - 2026-06-26
 
 ### Changed

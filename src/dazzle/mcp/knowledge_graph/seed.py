@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 28  # v28: first-party corroboration added to agent-era counter-priors
+SEED_SCHEMA_VERSION = 29  # v29: reinvented-capability filter layer (clone ratchet)
 
 
 def compute_seed_version() -> str:
