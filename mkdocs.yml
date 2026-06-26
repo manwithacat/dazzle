@@ -55,6 +55,9 @@ nav:
       - Model-Driven Failure Modes: architecture/model-driven-failure-modes.md
       - Agent Self-Reflection: architecture/agent-self-reflection.md
       - Project Evolution: architecture/evolution.md
+  - Research:
+      - Overview: research/INDEX.md
+      - Context-Bounds Prediction: research/context-bounds-prediction.md
   - DSL Reference:
       - Overview: reference/index.md
       - Entities: reference/entities.md
