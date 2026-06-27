@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Builds on:** ADR-0017 (Alembic for all schema changes), ADR-0008 (PostgreSQL-only app runtime), ADR-0005 (no new singletons), ADR-0003 (clean breaks), #1431 (`SCHEMA_SNAPSHOT` serializer + `schema_diff`), #1390 (autostamp), #1309 (baseline reconcile)
+**Amended by:** ADR-0047 (2026-06-27) — artifact *membership and per-artifact metadata* (class / owner / RLS posture / boot-DDL gating) is now sourced from the DB-artifact registry (`dazzle.db.artifact_registry`); this ADR's `IN_SCOPE_TABLES` is registry-derived (`in_baseline_tables()`). ADR-0044 remains the record of the baseline *construction + parity* mechanism (the squash, the shared-DDL orchestrator, the three-way real-PG parity gate).
 
 ## Decision
 

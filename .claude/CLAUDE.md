@@ -328,6 +328,7 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No field conditions in `permit:`** — use `scope:` with `as:` (ADR-0010; `as:` formerly `for:`, renamed in #998)
 - **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)
 - **All schema changes via Alembic** — including framework entities (FeedbackReport, AIJob, admin entities). No raw ALTER TABLE. Use `dazzle db revision -m "description"` then `dazzle db upgrade` (ADR-0017)
+- **DB artifacts have one registry** — before adding a framework table, boot-DDL, or RLS, read `docs/reference/db-artifacts.md` or run `dazzle inspect db-artifacts`. `dazzle.db.artifact_registry` is the source of truth (class/owner/RLS/baseline/gating); `tests/unit/test_db_artifact_contract.py` enforces the boot-entry gating invariant + a completeness sweep — a new ungated boot-DDL path (the #1495 class: `CREATE INDEX` fails for the non-owner runtime role under split-ownership RLS) fails CI until registered+gated with `skip_boot_schema_ddl()`. `IN_SCOPE_TABLES` is registry-derived (ADR-0047, supersedes the hand-synced list; ADR-0044 keeps the baseline mechanism)
 
 ## Autonomous Multi-Phase Execution
 
