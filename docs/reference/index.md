@@ -50,6 +50,7 @@
 | [Multi-Tenant Hosts](tenant-hosts.md) | The `tenant_host:` sub-block that auto-mounts Host-header-based tenant routing (#1289). |
 | [Database Configuration](databases.md) | PostgreSQL configuration for development and production — Dazzle is Postgres-only (ADR-0008). |
 | [Schema Migrations](migrations.md) | How Dazzle uses Alembic for all schema changes, including framework entities (ADR-0017). |
+| [DB Artifacts](db-artifacts.md) | Every database artifact the framework manages — class, owner, RLS posture, baseline membership, boot-DDL gating — and the registry + contract that keep them honest (ADR-0047). |
 | [AWS Deployment](deployment.md) | Generating and managing AWS CDK infrastructure from your DSL specifications. |
 | [CLI Reference](cli.md) | Complete reference for the `dazzle` command-line interface and its command groups. |
 | [E2E Environment (Mode A)](e2e-environment.md) | The Mode A developer one-shot harness that launches a live example app for end-to-end testing. |

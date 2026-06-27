@@ -1620,3 +1620,10 @@ slug = "llm-drivers"
 order = 129
 handwritten = true
 intro = "Subscription-billed (`claude-cli`) vs metered (`anthropic-api`) cognition: resolution order, the dev → deploy path, and the production guard."
+
+[pages.db-artifacts]
+title = "DB Artifacts"
+slug = "db-artifacts"
+order = 131
+handwritten = true
+intro = "Every database artifact the framework manages, in one registry: class, creator, boot-entry, owner, RLS posture, baseline membership, and boot-DDL gating. The registry is the source of truth; an executable contract enforces the gating / in-baseline / RLS invariants (catching the #1495 class). Run `dazzle inspect db-artifacts` for the live per-table view."
