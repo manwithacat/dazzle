@@ -798,6 +798,71 @@ When all gaps are DONE/BLOCKED and re-seed finds nothing:
 # ---------------------------------------------------------------------------
 
 
+def _render_ux_maturity(cmd: Any, ctx: dict[str, Any]) -> str:
+    return f"""# {cmd.title} — Framework UX-maturity scorecard
+
+You are running the **{cmd.name}** command for the **{ctx["project_name"]}** project.
+
+## What this scores
+
+This judges the **Dazzle framework** your app is built on — *does Dazzle make the
+data-right UI the DEFAULT?* — not whether one screen is good. The rubric, ladder
+(0 absent → 4 adaptive), the 13 criteria, and the output schema live in the
+framework docs: **`docs/reference/ux-maturity.md`** (in the Dazzle repo). Two
+evidence kinds that must agree: a static **capability** pass (the framework's
+primitives + zero-effort defaults) and a **rendered** pass (your live UI).
+
+## Workflow (one-shot)
+
+### 1. Capability pass (static, deterministic)
+
+```bash
+dazzle ux maturity --json > .dazzle/ux-maturity.json
+dazzle ux maturity            # human-readable table + framework backlog
+```
+
+This is boot-free and version-pinned: it scores each criterion from the installed
+Dazzle's grammar/renderer. The `framework_backlog` (red/amber criteria,
+leverage-ordered) is your candidate list of framework primitives worth building.
+
+### 2. Rendered pass (drive the real app — attribution only)
+
+Boot the app and drive it as a real user (reuse the `/ux-pass` / `dazzle ux
+verify` walk — **rendered affordances only**, never type `/app/<entity>/<id>`).
+Per screen, record clumsiness flags: `raw_data`, `empty_on_path`, `hunt`,
+`nav_only`, `long_chain`, `deadend`, `ambiguous`. Map a *pattern* of a flag to its
+criterion (see the rubric's flag→criterion table — e.g. repeated `raw_data` → 1d;
+`empty_on_path` → 3d).
+
+### 3. Attribution (the rigorous step)
+
+For each failing criterion, decide per the rubric's **attribution rule**:
+- **Authoring gap** — the right-by-default primitive existed and the author didn't
+  use it. Fix in *this app's* DSL.
+- **Framework gap** — it fails *despite* the author (missing primitive, only via
+  `mode: custom`/custom renderer, or wrong default). **Promote to the framework
+  backlog only on repetition under effort** (many screens, several via custom
+  renderers). One screen is authoring; a pattern is the framework.
+
+### 4. Roll up + report
+
+Merge the static capability scores with the rendered evidence into the scorecard
+schema (overall index, per-principle levels, `framework_backlog` keyed to the
+`framework_version` from step 1). Write it to `.dazzle/ux-maturity.json`.
+
+- **App-side findings** → fix in DSL here (or file in this app's tracker).
+- **Framework-side findings** → file/upstream against Dazzle, citing the criterion
+  id, the repetition evidence, and `framework_version`. Prefer requesting a native
+  primitive over a bespoke `mode: custom` surface (that's the maturity signal).
+
+## Rules
+- The static `dazzle ux maturity` index is the **canonical, CI-able number**; the
+  rendered pass annotates and attributes it — it does not replace it.
+- Never promote a single screen to the framework backlog. Patterns only.
+- Stay declarative: a missing capability is a framework RFC, not app-side custom HTML.
+"""
+
+
 _SKILL_RENDERERS: dict[str, Callable[[Any, dict[str, Any]], str]] = {
     "ship.md.j2": _render_ship,
     "qa.md.j2": _render_qa,
@@ -806,6 +871,7 @@ _SKILL_RENDERERS: dict[str, Callable[[Any, dict[str, Any]], str]] = {
     "explore.md.j2": _render_explore,
     "polish.md.j2": _render_polish,
     "improve.md.j2": _render_improve,
+    "ux_maturity.md.j2": _render_ux_maturity,
 }
 
 

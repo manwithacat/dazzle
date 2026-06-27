@@ -829,3 +829,68 @@ def verify_command(
 
     if report.failed > 0:
         raise typer.Exit(1)
+
+
+@ux_app.command("maturity")
+def maturity_command(
+    json_output: bool = typer.Option(False, "--json", help="Emit the scorecard as JSON."),
+    min_index: float = typer.Option(
+        None,
+        "--min",
+        help="CI gate: exit non-zero if the overall index is below this (e.g. --min 2.5).",
+    ),
+    check_drift: bool = typer.Option(
+        False,
+        "--drift",
+        help="Exit non-zero if any capability probe contradicts its declared baseline level.",
+    ),
+) -> None:
+    """Framework UX-maturity — the static capability scan.
+
+    Scores Dazzle the *framework* (not a screen): does Dazzle make the data-right
+    UI the DEFAULT? 13 criteria across three principles, each 0-4 (absent →
+    adaptive). Deterministic and boot-free — CI-able. The rendered/attribution
+    pass is the `/ux-maturity` agent command. Rubric: docs/reference/ux-maturity.md.
+    """
+    from dazzle.qa.ux_maturity import LEVEL_NAMES, PRINCIPLES, drift_violations, run_scan
+
+    if check_drift:
+        violations = drift_violations()
+        if violations:
+            for v in violations:
+                console.print(f"[red]DRIFT[/red] {v}")
+            raise typer.Exit(1)
+        console.print("[green]ux-maturity baseline in sync with the framework.[/green]")
+        return
+
+    sc = run_scan()
+    if json_output:
+        console.print_json(_json.dumps(sc))
+    else:
+        _rag_colour = {"red": "red", "amber": "yellow", "green": "green"}
+        console.print(
+            f"\n[bold]Framework UX-maturity[/bold] — dazzle {sc['framework_version']}   "
+            f"overall [{_rag_colour[sc['rag']]}]{sc['overall_index']} ({sc['rag']})[/]\n"
+        )
+        for pid, pdata in sc["principles"].items():
+            console.print(
+                f"[bold]{PRINCIPLES[pid]}[/bold] — [{_rag_colour[pdata['rag']]}]{pdata['index']}[/]"
+            )
+            for cid in pdata["criteria"]:
+                c = sc["criteria"][cid]
+                col = _rag_colour[c["rag"]]
+                console.print(
+                    f"  [{col}]●[/] {cid} {c['name']:<26} "
+                    f"L{c['capability']} {LEVEL_NAMES[c['capability']]:<18} {c['evidence']}"
+                )
+            console.print("")
+        if sc["framework_backlog"]:
+            console.print("[bold]Framework backlog[/bold] (red/amber, leverage-ordered):")
+            for b in sc["framework_backlog"]:
+                console.print(f"  [{b['leverage']:<6}] {b['criterion']} L{b['level']} — {b['gap']}")
+
+    if min_index is not None and sc["overall_index"] < min_index:
+        console.print(
+            f"\n[red]ux-maturity gate: overall {sc['overall_index']} < required {min_index}[/red]"
+        )
+        raise typer.Exit(1)

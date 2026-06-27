@@ -1,0 +1,27 @@
+[command]
+name = "ux-maturity"
+version = "1.0.0"
+title = "UX Maturity"
+description = "Framework UX-maturity scorecard — does Dazzle make the data-right UI the DEFAULT? Static capability pass + rendered attribution."
+pattern = "one-shot"
+batch_compatible = false
+
+[maturity]
+# Applicable once the app has enough surface to evaluate; the rendered pass
+# drives a real app, so it needs one running. The static capability pass alone
+# needs only `validate`.
+min_entities = 1
+min_surfaces = 3
+requires_running_app = true
+requires = ["validate"]
+
+[tools]
+mcp = ["dsl.validate", "dsl.inspect_surface"]
+cli = [
+    "dazzle ux maturity",
+    "dazzle ux verify",
+    "dazzle validate",
+]
+
+[skill_template]
+file = "ux_maturity.md.j2"

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.0] - 2026-06-27
+
+### Added
+- **Framework UX-maturity rubric — `dazzle ux maturity` + the `/ux-maturity` agent command.** A rubric that scores **Dazzle the framework**, not a screen: *does Dazzle make the data-right UI the DEFAULT?* 13 criteria across three principles (data-drives-UI / progressive-disclosure / negative-space), each on a 0–4 ladder (absent → escape-hatch → declarative-manual → good-defaults → adaptive). `dazzle ux maturity` is the **static capability scan** — deterministic, boot-free, CI-gateable (`--min`, `--drift`, `--json`); each criterion carries a version-pinned declared level plus a probe against the framework's own IR/registry/renderer, and a drift gate (`tests/unit/test_ux_maturity_baseline.py`) keeps the baseline honest. The `/ux-maturity` agent command (distributed to every Dazzle app via `dazzle agent sync`) adds the **rendered + attribution** pass. Rubric, ladder, criteria, evidence/attribution rules and output schema: `docs/reference/ux-maturity.md`. First scan of Dazzle itself: overall **2.6** (negative-space 3.0 green on the provable RBAC matrix + scope concealment; data-drives-UI 2.25 amber — the gaps are at *default + inference*, e.g. no `display: auto` form inference, status→tone is a name-convention not a declared binding).
+
+### Agent Guidance
+- **`dazzle ux maturity` judges the framework, not your app.** The static index is the canonical, CI-able number; the `/ux-maturity` rendered pass attributes per-screen findings to *authoring* vs *framework* gaps (promote to the framework backlog only on repetition under effort — a pattern, not one screen). When a criterion is amber/red and the cause is a missing/wrong-default primitive, prefer filing an upstream RFC over a bespoke `mode: custom` surface — that choice *is* the maturity signal. "Maturity" is overloaded: this is **`ux maturity`**, distinct from `fitness/maturity.py` (project lifecycle) and the agent-command `[maturity]` gate.
+
 ## [0.87.11] - 2026-06-27
 
 ### Fixed

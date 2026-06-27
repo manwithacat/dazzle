@@ -183,7 +183,7 @@ def test_load_all_commands_finds_definitions() -> None:
 
 def test_load_all_commands_finds_all_definitions() -> None:
     commands = load_all_commands()
-    assert len(commands) == 7
+    assert len(commands) == 8
     names = sorted(c.name for c in commands)
     assert names == [
         "explore",
@@ -193,6 +193,7 @@ def test_load_all_commands_finds_all_definitions() -> None:
         "qa",
         "ship",
         "spec-sync",
+        "ux-maturity",
     ]
 
 
