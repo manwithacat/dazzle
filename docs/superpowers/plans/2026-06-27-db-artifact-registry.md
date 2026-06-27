@@ -31,7 +31,7 @@
   - `class ArtifactClass(StrEnum)` — members `FRAMEWORK_INTERNAL`, `EVENT_BUS_TRANSPORT`, `OPS_DB`, `APP_ENTITY`, `TENANT_REGISTRY`
   - `class Ownership(StrEnum)` — `OWNER_ROLE`, `RUNTIME_SELF`, `N_A`
   - `class RlsPosture(StrEnum)` — `FENCED`, `NON_FENCED`, `NOT_APPLICABLE`
-  - `@dataclass(frozen=True) class Artifact` — fields exactly: `name: str`, `cls: ArtifactClass`, `creator: str`, `boot_entry: str | None`, `owner: Ownership`, `rls: RlsPosture`, `in_baseline: bool`, `boot_ddl_gated: bool`, `notes: str = ""`, `is_pattern: bool = False`
+  - `@dataclass(frozen=True) class Artifact` — fields exactly: `name: str`, `cls: ArtifactClass`, `creator: str`, `boot_entry: str | None`, `owner: Ownership`, `rls: RlsPosture`, `in_baseline: bool`, `boot_ddl_gated: bool`, `notes: str = ""`, `is_pattern: bool = False`, `known_ungated_issue: str | None = None` (a registered independent boot path that is *currently ungated*, tracked by a GitHub issue — e.g. `#1496`; the #1495-sibling discovery)
   - `DB_ARTIFACTS: tuple[Artifact, ...]`
   - `def in_baseline_tables() -> frozenset[str]` — `frozenset(a.name for a in DB_ARTIFACTS if a.in_baseline and not a.is_pattern)`
   - `def framework_boot_entries() -> tuple[Artifact, ...]` — artifacts with a non-None `boot_entry`
@@ -87,6 +87,12 @@ def test_every_artifact_is_well_formed() -> None:
         # orchestrator-only rows declare no self-gate.
         if a.boot_entry is None and not a.is_pattern:
             assert a.boot_ddl_gated is False, f"{a.name}: no boot_entry yet gated"
+        # known-ungated debt: a registered independent boot path, NOT yet gated,
+        # carrying a tracking issue (#1495-sibling).
+        if a.known_ungated_issue is not None:
+            assert a.boot_entry is not None, f"{a.name}: ungated-debt but no boot_entry"
+            assert a.boot_ddl_gated is False, f"{a.name}: marked debt yet claims gated"
+            assert a.known_ungated_issue.startswith("#"), f"{a.name}: issue ref must be #NNNN"
         # exact (non-pattern) framework names are unique.
         if not a.is_pattern and a.cls is ArtifactClass.FRAMEWORK_INTERNAL:
             assert a.name not in seen, f"duplicate framework artifact {a.name}"
@@ -156,6 +162,10 @@ class Artifact:
     boot_ddl_gated: bool
     notes: str = ""
     is_pattern: bool = False
+    known_ungated_issue: str | None = None  # registered independent boot path that is
+                                            # CURRENTLY ungated, tracked by a GH issue
+                                            # (#1495-sibling). Contract documents it as
+                                            # debt instead of failing; flip to gated when fixed.
 
 
 _AUTH_CREATOR = "dazzle.http.runtime.auth.store.ensure_auth_core_tables"
@@ -177,7 +187,10 @@ def _fw(
     boot_entry: str | None,
     rls: RlsPosture = RlsPosture.NON_FENCED,
     notes: str = "",
+    known_ungated_issue: str | None = None,
 ) -> Artifact:
+    # A boot path is "gated" iff it exists AND is not flagged as known-ungated debt.
+    gated = boot_entry is not None and known_ungated_issue is None
     return Artifact(
         name=name,
         cls=ArtifactClass.FRAMEWORK_INTERNAL,
@@ -186,8 +199,9 @@ def _fw(
         owner=Ownership.OWNER_ROLE,
         rls=rls,
         in_baseline=True,
-        boot_ddl_gated=boot_entry is not None,
+        boot_ddl_gated=gated,
         notes=notes,
+        known_ungated_issue=known_ungated_issue,
     )
 
 
@@ -202,12 +216,21 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
     _fw("_dazzle_atomic_audit", _ORCH, boot_entry=None, notes="orchestrator-only; lazy ensure in mutation path is no-op when table exists"),
     _fw("dazzle_files", "dazzle.http.runtime.file_storage.ensure_file_storage_tables",
         boot_entry="dazzle.http.runtime.file_storage.FileMetadataStore._init_db"),
-    _fw("refresh_tokens", "dazzle.http.runtime.token_store.ensure_refresh_token_tables", boot_entry=None, notes="orchestrator-only (verify Step 4)"),
-    _fw("devices", "dazzle.http.runtime.device_registry.ensure_device_tables", boot_entry=None, notes="orchestrator-only (verify Step 4)"),
-    _fw("_grants", "dazzle.http.runtime.grant_store.ensure_grant_tables", boot_entry=None, notes="orchestrator-only (verify Step 4)"),
-    _fw("_grant_events", "dazzle.http.runtime.grant_store.ensure_grant_tables", boot_entry=None, notes="orchestrator-only (verify Step 4)"),
-    _fw("_dazzle_otp_codes", "dazzle.http.runtime.otp_store.ensure_otp_tables", boot_entry=None, notes="orchestrator-only (verify Step 4)"),
-    _fw("_dazzle_recovery_codes", "dazzle.http.runtime.recovery_codes.ensure_recovery_code_tables", boot_entry=None, notes="orchestrator-only (verify Step 4)"),
+    # refresh_tokens / devices / _grants — registered independent boot paths that are
+    # CURRENTLY UNGATED (#1495-siblings, discovered building this registry). Tracked as
+    # debt so the contract documents them instead of failing; flip to gated when fixed.
+    _fw("refresh_tokens", "dazzle.http.runtime.token_store.ensure_refresh_token_tables",
+        boot_entry="dazzle.http.runtime.token_store.TokenStore._init_db", known_ungated_issue="#1496"),
+    _fw("devices", "dazzle.http.runtime.device_registry.ensure_device_tables",
+        boot_entry="dazzle.http.runtime.device_registry.DeviceRegistry._init_db", known_ungated_issue="#1498"),
+    _fw("_grants", "dazzle.http.runtime.grant_store.ensure_grant_tables",
+        boot_entry="dazzle.http.runtime.grant_store.GrantStore._ensure_tables", known_ungated_issue="#1497"),
+    _fw("_grant_events", "dazzle.http.runtime.grant_store.ensure_grant_tables",
+        boot_entry="dazzle.http.runtime.grant_store.GrantStore._ensure_tables", known_ungated_issue="#1497"),
+    # otp / recovery — truly orchestrator-only (no independent boot path; ensure_* called
+    # only by the orchestrator; verified: no _init_db / create_table / skip_boot_schema_ddl).
+    _fw("_dazzle_otp_codes", "dazzle.http.runtime.otp_store.ensure_otp_tables", boot_entry=None),
+    _fw("_dazzle_recovery_codes", "dazzle.http.runtime.recovery_codes.ensure_recovery_code_tables", boot_entry=None),
     _fw("_dazzle_event_inbox", "dazzle.http.events.inbox.EventInbox.create_table",
         boot_entry="dazzle.http.events.inbox.EventInbox.create_table"),
     _fw("_dazzle_event_outbox", "dazzle.http.events.outbox.EventOutbox.create_table",
@@ -516,6 +539,19 @@ def test_registered_boot_entries_self_gate() -> None:
             failures.append(f"{a.name}: boot_entry {a.boot_entry} does not call "
                             f"skip_boot_schema_ddl() (the #1495 class)")
     assert not failures, "\n".join(failures)
+
+
+def test_known_ungated_debt_is_honest() -> None:
+    """A row flagged known_ungated_issue must genuinely be ungated today — and
+    when its issue is fixed (the boot_entry gains the gate), this test flips red,
+    reminding the fixer to clear the marker + set boot_ddl_gated=True."""
+    for a in framework_boot_entries():
+        if a.known_ungated_issue is None:
+            continue
+        assert a.boot_ddl_gated is False
+        assert not _calls_skip_boot(a.boot_entry), (
+            f"{a.name}: boot_entry now gates — clear known_ungated_issue "
+            f"({a.known_ungated_issue}) and set boot_ddl_gated=True")
 ```
 
 - [ ] **Step 2: Run to verify it passes (the gates are already in place post-#1495/#1462)**
@@ -948,7 +984,7 @@ Expected: PASS / `Contracts: 6 kept, 0 broken` (the registry in `db/` imports on
 Add under `## [Unreleased]` → `### Added`:
 
 ```markdown
-- **DB-artifact registry — single source of truth for every framework database artifact (#1495 follow-on, ADR-0047).** `dazzle.db.artifact_registry` declares each artifact's class / creator / boot-entry / owner / RLS posture / baseline membership / boot-DDL gating; `framework_schema_snapshot.IN_SCOPE_TABLES` and the real-PG parity test are now registry-derived (collapsing the triplicated list). New `dazzle inspect db-artifacts` lens + `docs/reference/db-artifacts.md`. The executable contract (`tests/unit/test_db_artifact_contract.py`) asserts every registered boot-entry self-gates with `skip_boot_schema_ddl()` and that every framework function issuing app-DB `CREATE TABLE/INDEX` is registered — making the #1495 class (ungated boot-DDL under a non-owner role) un-shippable. ADR-0044 amended (scope narrowed to the baseline-construction mechanism).
+- **DB-artifact registry — single source of truth for every framework database artifact (#1495 follow-on, ADR-0047).** `dazzle.db.artifact_registry` declares each artifact's class / creator / boot-entry / owner / RLS posture / baseline membership / boot-DDL gating; `framework_schema_snapshot.IN_SCOPE_TABLES` and the real-PG parity test are now registry-derived (collapsing the triplicated list). New `dazzle inspect db-artifacts` lens + `docs/reference/db-artifacts.md`. The executable contract (`tests/unit/test_db_artifact_contract.py`) asserts every registered boot-entry self-gates with `skip_boot_schema_ddl()` and that every framework function issuing app-DB `CREATE TABLE/INDEX` is registered — making the #1495 class (ungated boot-DDL under a non-owner role) un-shippable. Building the registry surfaced three latent #1495-siblings (`refresh_tokens` #1496, `_grants`/`_grant_events` #1497, `devices` #1498), now registered as tracked debt pending their gating fixes. ADR-0044 amended (scope narrowed to the baseline-construction mechanism).
 ```
 
 - [ ] **Step 3: Bump + commit + push**
