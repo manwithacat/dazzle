@@ -93,14 +93,13 @@ def _init_db(self) -> None:
 A framework-internal table whose independent boot path is **currently ungated** is
 registered honestly with a `known_ungated_issue` reference — the contract documents it
 as debt (instead of failing) until the fix lands, then the gating test flips red to
-remind the fixer to clear the marker. Current tracked siblings of #1495:
+remind the fixer to clear the marker.
 
-| Table | Issue |
-|---|---|
-| `refresh_tokens` | #1496 |
-| `_grants` / `_grant_events` | #1497 |
-| `devices` | #1498 |
-| `_dazzle_outbox` | #1499 (also: missing from the ADR-0044 baseline) |
+**Currently: none.** Building the registry surfaced four siblings of #1495, all now
+resolved — `refresh_tokens` (#1496), `_grants`/`_grant_events` (#1497), `devices`
+(#1498), and `_dazzle_outbox` (#1499, which also joined the ADR-0044 baseline). The
+mechanism stays in place: any future ungated boot path is registered with a
+`known_ungated_issue` until gated.
 
 ## Relationship to ADR-0044
 

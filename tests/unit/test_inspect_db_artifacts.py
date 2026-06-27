@@ -38,9 +38,13 @@ def test_db_artifacts_class_filter() -> None:
     assert classes == {"event_bus_transport"}
 
 
-def test_db_artifacts_surfaces_tracked_debt() -> None:
+def test_db_artifacts_exposes_gating_fields() -> None:
+    """The JSON surfaces the gating + tracked-debt fields per artifact. After the
+    #1496-#1499 drain, refresh_tokens is gated and carries no debt; the
+    known_ungated_issue field is present (None) so future debt is visible."""
     res = runner.invoke(inspect_app, ["db-artifacts", "--json"])
     payload = json.loads(res.stdout)
-    debt = next(a for a in payload["artifacts"] if a["name"] == "refresh_tokens")
-    assert debt["known_ungated_issue"] == "#1496"
-    assert debt["boot_ddl_gated"] is False
+    rt = next(a for a in payload["artifacts"] if a["name"] == "refresh_tokens")
+    assert rt["boot_ddl_gated"] is True
+    assert rt["known_ungated_issue"] is None
+    assert "known_ungated_issue" in rt  # field always present for future debt

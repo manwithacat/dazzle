@@ -19,6 +19,8 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.environment import skip_boot_schema_ddl
+
 if TYPE_CHECKING:
     from dazzle.http.runtime.repository import DatabaseManager
 
@@ -125,22 +127,17 @@ class OutboxMessage:
         )
 
 
-class OutboxRepository:
-    """Repository for outbox message persistence.
+def ensure_outbox_table(cur: Any) -> None:
+    """Create the ``_dazzle_outbox`` table and its indexes (idempotent).
 
-    Handles all database operations for the outbox table.
+    Single source of DDL — called by both ``OutboxRepository._ensure_table`` and
+    ``ensure_framework_schema`` (#1499: _dazzle_outbox is an in-baseline framework
+    table) so there is exactly one definition. ``cur`` is anything with ``.execute``
+    (a psycopg cursor in the orchestrator path; a DatabaseManager connection in the
+    boot path).
     """
-
-    TABLE_NAME = "_dazzle_outbox"
-
-    def __init__(self, db_manager: DatabaseManager):
-        self.db = db_manager
-        self._ensure_table()
-
-    def _ensure_table(self) -> None:
-        """Ensure outbox table exists."""
-        sql = f"""
-        CREATE TABLE IF NOT EXISTS {self.TABLE_NAME} (
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS _dazzle_outbox (
             id TEXT PRIMARY KEY,
             channel_name TEXT NOT NULL,
             operation_name TEXT NOT NULL,
@@ -158,27 +155,43 @@ class OutboxRepository:
             build_id TEXT,
             metadata TEXT
         )
-        """
-        with self.db.connection() as conn:
-            conn.execute(sql)
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx__dazzle_outbox_status ON _dazzle_outbox(status)")
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx__dazzle_outbox_channel ON _dazzle_outbox(channel_name)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx__dazzle_outbox_scheduled ON _dazzle_outbox(scheduled_for)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx__dazzle_outbox_recipient "
+        "ON _dazzle_outbox(recipient, channel_name)"
+    )
 
-            # Create indexes for efficient querying
-            conn.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_status "
-                f"ON {self.TABLE_NAME}(status)"
-            )
-            conn.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_channel "
-                f"ON {self.TABLE_NAME}(channel_name)"
-            )
-            conn.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_scheduled "
-                f"ON {self.TABLE_NAME}(scheduled_for)"
-            )
-            conn.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_recipient "
-                f"ON {self.TABLE_NAME}(recipient, channel_name)"
-            )
+
+class OutboxRepository:
+    """Repository for outbox message persistence.
+
+    Handles all database operations for the outbox table.
+    """
+
+    TABLE_NAME = "_dazzle_outbox"
+
+    def __init__(self, db_manager: DatabaseManager):
+        self.db = db_manager
+        self._ensure_table()
+
+    def _ensure_table(self) -> None:
+        """Ensure outbox table exists.
+
+        #1499: skipped in production — ``_dazzle_outbox`` is migration-managed
+        (``ensure_framework_schema``) and the runtime may serve as a non-owner role
+        under split-ownership RLS, where ``CREATE INDEX`` raises InsufficientPrivilege.
+        """
+        if skip_boot_schema_ddl():
+            return
+        with self.db.connection() as conn:
+            ensure_outbox_table(conn)
 
     def create(self, message: OutboxMessage, conn: Any | None = None) -> OutboxMessage:
         """Create a new outbox message.

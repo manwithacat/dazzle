@@ -40,6 +40,7 @@ from typing import Any
 # DDL constants re-used from their canonical home modules (no duplication).
 # All imports are at module top — none of these create circular imports.
 from dazzle.core.coordination.claim import queue_columns_ddl
+from dazzle.http.channels.outbox import ensure_outbox_table
 from dazzle.http.events.inbox import CREATE_INBOX_INDEXES, CREATE_INBOX_TABLE
 from dazzle.http.events.outbox import CREATE_OUTBOX_INDEXES, CREATE_OUTBOX_TABLE
 from dazzle.http.runtime.audit_log import ensure_audit_log_table
@@ -232,6 +233,12 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     cur.execute(CREATE_OUTBOX_TABLE)
     for _ix_name, _ix_sql in CREATE_OUTBOX_INDEXES:
         cur.execute(_ix_sql)
+
+    # ── CHANNEL DELIVERY OUTBOX (_dazzle_outbox) ─────────────────────────
+    # #1499: a fixed-name framework table that was previously created ungated at
+    # boot by ChannelManager (and missing from this baseline). Now delegated to the
+    # single ensure_outbox_table DDL (channels/outbox.py), like the other tables.
+    ensure_outbox_table(cur)
 
 
 def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection
