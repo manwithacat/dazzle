@@ -179,7 +179,12 @@ def _display_mode_coverage(repo_root: Path) -> CategoryCoverage:
             "rendered by at least one example to be QA-visible."
         ),
     )
-    all_modes = [m.value for m in DisplayMode]
+    # `auto` (#1492) is a *resolver* meta-mode: it has no template of its own —
+    # it resolves to a concrete mode (list/bar_chart/kanban/…) at render time via
+    # resolve_auto_display. So it's excluded from the per-template coverage gate;
+    # the concrete modes it resolves to are the artefacts that must stay covered.
+    _VIRTUAL_MODES = {"auto"}
+    all_modes = [m.value for m in DisplayMode if m.value not in _VIRTUAL_MODES]
     cat.coverage = {m: [] for m in all_modes}
     pattern = re.compile(r"\bdisplay:\s*([a-z_]+)")
     for app in _example_app_dirs(repo_root):

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.4] - 2026-06-27
+
+### Fixed
+- **Framework artefact coverage gate counted `display: auto` as an uncovered display mode (#1492).** `auto` is a *resolver* meta-mode — it has no template of its own and resolves to a concrete mode at render time — so it's now excluded from the per-template `display_modes` coverage gate (`dazzle coverage --fail-on-uncovered`) and the matching drift test. The concrete modes it resolves to remain covered as before.
+
 ## [0.88.3] - 2026-06-27
 
 ### Added

@@ -70,7 +70,11 @@ class TestDisplayModeCoverage:
         from dazzle.core.ir.workspaces import DisplayMode
 
         cat = _display_mode_coverage(_repo_root())
-        assert set(cat.coverage.keys()) == {m.value for m in DisplayMode}
+        # `auto` (#1492) is a resolver meta-mode with no template of its own —
+        # it resolves to a concrete mode at render time, so the template-coverage
+        # gate deliberately excludes it (see _display_mode_coverage).
+        virtual = {"auto"}
+        assert set(cat.coverage.keys()) == {m.value for m in DisplayMode} - virtual
 
 
 class TestDslConstructCoverage:
