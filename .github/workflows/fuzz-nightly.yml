@@ -61,3 +61,34 @@ jobs:
         path: fuzz-out/
         if-no-files-found: warn
         retention-days: 30
+
+  # Schedule-only nightly — surface a genuine job failure as a tracking issue so
+  # it doesn't rot invisibly (it never gates a commit). See mutation-nightly.
+  notify-on-failure:
+    name: Notify on failure (open/update tracking issue)
+    needs: parser-fuzz
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open or update the nightly-failure tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="Nightly CI failing: fuzz-nightly"
+          gh label create ci-nightly --color FBCA04 --description "Nightly CI failure" 2>/dev/null || true
+          NUM=$(gh issue list --state open --search "$TITLE in:title" --json number,title \
+                  --jq "map(select(.title==\"$TITLE\")) | .[0].number // empty")
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body "Still failing — $RUN_URL"
+          else
+            printf '%s\n\n%s\n\n%s\n' \
+              "The **fuzz-nightly** workflow failed (schedule-only — it does not gate commits)." \
+              "Latest run: $RUN_URL" \
+              "Automated by the nightly failure-feedback job. Close once the nightly is green again; it re-opens on the next failure." \
+              | gh issue create --title "$TITLE" --label ci-nightly --body-file -
+          fi

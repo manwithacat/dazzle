@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.9] - 2026-06-28
+
+### Changed
+- **Nightly workflows now feed failures back as a tracking issue.** `mutation-nightly`, `coverage-nightly`, and `fuzz-nightly` are schedule-only, so a failure never gates a commit and previously rotted invisibly in the Actions tab. Each gained a `notify-on-failure` job (`needs: <gate>`, `if: failure()`, `issues: write`) that opens — or comments on an existing — `ci-nightly`-labelled tracking issue when the nightly fails. The per-commit `CI` gate is unchanged (it was already sound; all its jobs block, with only benign step-level `continue-on-error` advisories). Surfaced a pre-existing mutation-gate regression: `rls_schema.py` (82% < 90% floor) and `predicate_compiler.py` (69% < 72%) have surviving mutants.
+
 ## [0.88.8] - 2026-06-27
 
 ### Fixed

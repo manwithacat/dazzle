@@ -55,3 +55,35 @@ jobs:
         TEST_DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
       run: |
         dazzle sentinel mutate --suite security
+
+  # Nightlies are schedule-only — they never gate a commit, so a failure would
+  # otherwise rot invisibly in the Actions tab. This job makes a failure feed
+  # back as a visible, actionable tracking issue (open once, comment thereafter).
+  notify-on-failure:
+    name: Notify on failure (open/update tracking issue)
+    needs: mutation-gate
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open or update the nightly-failure tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="Nightly CI failing: mutation-nightly"
+          gh label create ci-nightly --color FBCA04 --description "Nightly CI failure" 2>/dev/null || true
+          NUM=$(gh issue list --state open --search "$TITLE in:title" --json number,title \
+                  --jq "map(select(.title==\"$TITLE\")) | .[0].number // empty")
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body "Still failing — $RUN_URL"
+          else
+            printf '%s\n\n%s\n\n%s\n' \
+              "The **mutation-nightly** workflow failed (schedule-only — it does not gate commits)." \
+              "Latest run: $RUN_URL" \
+              "Automated by the nightly failure-feedback job. Close once the nightly is green again; it re-opens on the next failure." \
+              | gh issue create --title "$TITLE" --label ci-nightly --body-file -
+          fi
