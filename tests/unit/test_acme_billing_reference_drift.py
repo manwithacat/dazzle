@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -61,7 +62,7 @@ def test_rbac_matrix_matches_committed_reference() -> None:
     """RBAC matrix must exactly match the committed expected/rbac-matrix.json."""
     committed = json.loads((_APP / "expected" / "rbac-matrix.json").read_text())
     result = subprocess.run(
-        ["python", "-m", "dazzle", "rbac", "matrix", "--format", "json"],
+        [sys.executable, "-m", "dazzle", "rbac", "matrix", "--format", "json"],
         cwd=_APP,
         capture_output=True,
         text=True,
@@ -93,7 +94,7 @@ def test_compliance_auditspec_matches_committed_reference() -> None:
         json.loads((_APP / "expected" / "compliance-auditspec.json").read_text())
     )
     subprocess.run(
-        ["python", "-m", "dazzle", "compliance", "compile"],
+        [sys.executable, "-m", "dazzle", "compliance", "compile"],
         cwd=_APP,
         capture_output=True,
         text=True,
