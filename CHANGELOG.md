@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.11] - 2026-06-27
+
+### Fixed
+- **#1490 — `dazzle validate` now statically checks that job `run:` handlers resolve.** A `job … run: module:fn` whose module was neither a file under the project root nor an importable installed package previously passed validate and the app booted fine, then `ModuleNotFoundError`'d the moment the job fired (cron tick / entity event). Unlike runtime-registered renderers (#1413, advisory-only), a job handler is a real importable path, so validate *can* check it — `validate_command` now errors, naming the job, the unresolved module, and the expected file. Shipped `examples/support_tickets/app/jobs.py` with the 4 handler stubs the example's jobs declared but never provided. Caught by the cross-app fuzz sweep.
+
+### Agent Guidance
+- **A declared `job … run: app.x:fn` must have its module.** `dazzle validate` now hard-errors when a job handler module can't be found under the project root (or as an installed package). Ship the handler module (e.g. `app/jobs.py`) alongside the `job` DSL, or the job fails at first fire. The function name within the module isn't checked statically — only the module's existence (mirrors how far a static check can see).
+
 ## [0.87.10] - 2026-06-27
 
 ### Fixed

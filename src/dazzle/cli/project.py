@@ -407,6 +407,48 @@ def _renderer_registration_advisory(extra_renderers: list[str]) -> str | None:
     )
 
 
+def _job_handler_errors(appspec: object, root: Path) -> list[str]:
+    """#1490: statically check each job ``run: module:fn`` handler resolves.
+
+    Unlike a runtime-registered renderer (#1413, advisory-only), a job's
+    ``run:`` is a real importable module path, so validate *can* check it
+    without booting: the module must be a file under the project root or an
+    importable installed package. A handler whose module is neither would
+    ``ModuleNotFoundError`` the moment the job fires (cron tick / entity event),
+    long after validate passed — exactly the "passes validate, fails at runtime"
+    class the fuzz sweep flags. Purely filesystem + ``find_spec`` (project root
+    is not on ``sys.path`` here, so ``find_spec`` only resolves installed
+    packages — a clean discriminator with no project-side import effects).
+    """
+    import importlib.util
+
+    errors: list[str] = []
+    for job in getattr(appspec, "jobs", None) or []:
+        run = (getattr(job, "run", "") or "").strip()
+        if not run:
+            continue
+        # `module:fn` (preferred) or `module.fn`; module is everything before
+        # the `:`, else the dotted path minus the trailing attribute.
+        module_name = run.split(":", 1)[0] if ":" in run else run.rsplit(".", 1)[0]
+        if not module_name:
+            continue
+        rel = module_name.replace(".", "/")
+        if (root / f"{rel}.py").is_file() or (root / rel / "__init__.py").is_file():
+            continue  # project module present
+        try:
+            installed = importlib.util.find_spec(module_name) is not None
+        except Exception:
+            installed = False
+        if not installed:
+            job_name = getattr(job, "name", "?")
+            errors.append(
+                f"job '{job_name}' run handler '{run}' — module '{module_name}' "
+                f"not found under the project root and not importable. Create "
+                f"{rel}.py exporting the handler, or fix the `run:` path (#1490)."
+            )
+    return errors
+
+
 def validate_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
     format: str = typer.Option(
@@ -454,6 +496,9 @@ def validate_command(
         )
         if renderer_advisory:
             warnings.append(renderer_advisory)
+
+        # #1490: statically verify declared job `run:` handlers resolve.
+        errors.extend(_job_handler_errors(appspec, root))
 
         # Statically parse sitespec.yaml (if present) so schema errors
         # surface at validate-time instead of being swallowed by the
