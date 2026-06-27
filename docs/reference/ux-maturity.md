@@ -190,6 +190,13 @@ between versions is an attributable **regression**; a criterion rising is the
 primitive work landing. A drift gate keeps the declared capability levels honest —
 a probe that contradicts its declared level fails CI.
 
+## Turning the scorecard into work
+
+Every criterion implies primitive work — see the
+[UX-maturity primitive roadmap](../architecture/ux-maturity-primitive-roadmap.md)
+(each criterion → its target primitive + how to build it, including which ones
+htmx 4 now expresses directly so they're declarative wrappers, not custom JS).
+
 ## Discovery + distribution
 
 One source, every Dazzle app, via Dazzle's existing agent-command channel:
