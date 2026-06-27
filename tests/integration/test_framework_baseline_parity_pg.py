@@ -37,52 +37,18 @@ import psycopg
 import pytest
 import sqlalchemy as sa
 
+from dazzle.db.artifact_registry import in_baseline_tables
+
 pytestmark = [pytest.mark.e2e, pytest.mark.postgres, pytest.mark.migration_engine]
 
 _PG_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
 
 # ---------------------------------------------------------------------------
-# In-scope table set — must stay in sync with framework_schema_snapshot.py
-# and the global-constraints list in the migration-baseline plan.
+# In-scope table set — owned by the DB-artifact registry (ADR-0047). This test
+# derives it from the single source; it no longer re-declares the list.
 # ---------------------------------------------------------------------------
 
-IN_SCOPE_TABLES: frozenset[str] = frozenset(
-    {
-        "_dazzle_params",
-        # auth
-        "users",
-        "sessions",
-        "memberships",
-        "organizations",
-        "membership_events",
-        "invitations",
-        "connections",
-        "connection_secret_events",
-        "scim_groups",
-        "scim_group_members",
-        "saml_consumed_assertions",
-        "password_reset_tokens",
-        "magic_links",
-        "email_verification_tokens",
-        "user_preferences",
-        "join_requests",
-        # process
-        "process_runs",
-        "process_tasks",
-        # audit / misc
-        "_dazzle_audit_log",
-        "_dazzle_atomic_audit",
-        "dazzle_files",
-        "refresh_tokens",
-        "devices",
-        "_grants",
-        "_grant_events",
-        "_dazzle_otp_codes",
-        "_dazzle_recovery_codes",
-        "_dazzle_event_inbox",
-        "_dazzle_event_outbox",
-    }
-)
+IN_SCOPE_TABLES: frozenset[str] = in_baseline_tables()
 
 
 # ---------------------------------------------------------------------------

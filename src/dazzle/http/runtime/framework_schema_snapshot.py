@@ -41,52 +41,17 @@ from __future__ import annotations
 
 # Module-top dazzle imports (no circular dependency: snapshot ← db.schema_snapshot;
 # snapshot ← http.runtime.framework_schema which does not import back from here).
+from dazzle.db.artifact_registry import in_baseline_tables
 from dazzle.db.schema_snapshot import introspect_schema, render_snapshot_literal
 from dazzle.http.runtime.framework_schema import ensure_framework_schema
 
 # ---------------------------------------------------------------------------
 # In-scope table set — the filter applied during introspect_schema.
-# Must stay in sync with the global-constraints list in the plan and with
-# the IN_SCOPE_TABLES constant in the parity test.
+# The set is owned by the DB-artifact registry (ADR-0047); this module consumes
+# it, it does NOT re-declare it. The parity test derives from the same source.
 # ---------------------------------------------------------------------------
 
-IN_SCOPE_TABLES: frozenset[str] = frozenset(
-    {
-        "_dazzle_params",
-        # auth
-        "users",
-        "sessions",
-        "memberships",
-        "organizations",
-        "membership_events",
-        "invitations",
-        "connections",
-        "connection_secret_events",
-        "scim_groups",
-        "scim_group_members",
-        "saml_consumed_assertions",
-        "password_reset_tokens",
-        "magic_links",
-        "email_verification_tokens",
-        "user_preferences",
-        "join_requests",
-        # process
-        "process_runs",
-        "process_tasks",
-        # audit / misc
-        "_dazzle_audit_log",
-        "_dazzle_atomic_audit",
-        "dazzle_files",
-        "refresh_tokens",
-        "devices",
-        "_grants",
-        "_grant_events",
-        "_dazzle_otp_codes",
-        "_dazzle_recovery_codes",
-        "_dazzle_event_inbox",
-        "_dazzle_event_outbox",
-    }
-)
+IN_SCOPE_TABLES: frozenset[str] = in_baseline_tables()
 
 
 # ---------------------------------------------------------------------------
