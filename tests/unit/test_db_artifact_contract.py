@@ -46,11 +46,24 @@ def _resolve(dotted: str) -> object:
 
 
 def _calls_skip_boot(dotted: str) -> bool:
-    """True if the named function's body references skip_boot_schema_ddl."""
+    """True iff the function actually GUARDS on skip_boot_schema_ddl — i.e. contains
+    ``if skip_boot_schema_ddl(): <return/raise>``. Checks the guard structure, not mere
+    name presence, so a copy-paste that calls skip_boot_schema_ddl() without the
+    early-return (the result ignored) does NOT pass."""
     fn = _resolve(dotted)
     src = textwrap.dedent(inspect.getsource(fn))  # type: ignore[arg-type]
     tree = ast.parse(src)
-    return any(isinstance(n, ast.Name) and n.id == "skip_boot_schema_ddl" for n in ast.walk(tree))
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.If)
+            and isinstance(node.test, ast.Call)
+            and isinstance(node.test.func, ast.Name)
+            and node.test.func.id == "skip_boot_schema_ddl"
+        ):
+            # the guarded branch must short-circuit (return/raise) before any DDL
+            if any(isinstance(s, ast.Return | ast.Raise) for b in node.body for s in ast.walk(b)):
+                return True
+    return False
 
 
 # ── (3) refs resolve ─────────────────────────────────────────────────────
@@ -95,43 +108,45 @@ def test_known_ungated_debt_is_honest() -> None:
 
 # ── (2) completeness sweep — every app-DB DDL function is registered ──────
 
-# Directories whose functions issue app-DB framework DDL. A function here that runs
-# CREATE TABLE/INDEX must be registered (some artifact's creator/boot_entry) OR named
-# in _ALLOWLIST below.
-_DDL_DIRS = (
-    "src/dazzle/http/runtime",
-    "src/dazzle/http/events",
-    "src/dazzle/core/process",
-)
+# The WHOLE framework source tree is scanned (minus tests) — no per-directory
+# allowlist that could hide a DDL path in an unscanned dir (the hole that let
+# channels/outbox.py — #1499 — evade an earlier 3-dir version of this sweep).
+_SCAN_ROOT = "src/dazzle"
 
-# The excluded-classes list, MADE EXECUTABLE. These DDL-issuing functions are
-# intentionally NOT app-DB framework tables — keep curated and commented.
+# The excluded-classes list, MADE EXECUTABLE — FUNCTION-LEVEL entries only (a
+# module-level prefix would silently exempt every FUTURE function added to that
+# module). Each entry is a DDL-issuing function that is intentionally NOT an
+# app-DB framework table; a NEW DDL function anywhere is flagged until it is
+# registered or explicitly added here with a reason.
 _ALLOWLIST = frozenset(
     {
         # ── separate ops_integration DB (class OPS_DB; not app-DB framework tables) ──
-        "dazzle.http.runtime.ops_database",
-        "dazzle.http.runtime.deploy_history",  # deployment_history (ops DB)
-        "dazzle.http.runtime.spec_versioning",  # spec_versions (ops DB)
-        # ── app-entity DDL machinery (class APP_ENTITY; per-DSL tables, not framework) ──
-        "dazzle.http.runtime.pg_backend",  # builds CREATE TABLE/INDEX for app entities
-        "dazzle.http.runtime.relation_loader",  # FK indexes for app entities
-        "dazzle.http.runtime.fts_postgres",  # FTS GIN index on app-entity tables
-        "dazzle.http.runtime.search_schema",  # per-app FTS GIN / ivfflat indexes
-        # ── event-bus transport, registered as {prefix} pattern rows ──
-        "dazzle.http.events.postgres_bus.PostgresBus._create_tables",
-        # ── RLS POLICY ddl (not tables) — owned by rls_schema / rls_apply ──
-        "dazzle.http.runtime.rls_schema",
+        "dazzle.http.runtime.ops_database.OpsDatabase._init_schema",
+        "dazzle.http.runtime.ops_database.OpsDatabase._apply_migrations",
+        "dazzle.http.runtime.deploy_history.DeployHistoryStore._ensure_table",
+        "dazzle.http.runtime.spec_versioning.SpecVersionStore._ensure_table",
+        # ── app-entity / codegen DDL machinery (class APP_ENTITY; per-DSL, not framework) ──
+        "dazzle.http.runtime.pg_backend._create_table_sql",
+        "dazzle.http.runtime.pg_backend._create_index_sql",
+        "dazzle.http.runtime.relation_loader.get_foreign_key_indexes",
+        "dazzle.http.runtime.fts_postgres.PostgresFTSBackend.create_fts_index",
+        "dazzle.http.runtime.search_schema.build_search_index_ddl",
+        "dazzle.cli.runtime_impl.build._generate_sql_target",  # codegen SQL target
+        # ── non-app-DB stores (SQLite / ops) ──
+        "dazzle.mcp.knowledge_graph.store.KnowledgeGraph._init_schema",  # SQLite KG (ADR-0008 ok)
+        "dazzle.core.process.version_manager.VersionManager.initialize",  # SQLite version store
         # ── process-table http boot path: dead-in-prod, no live caller (ADR-0044) ──
-        "dazzle.http.runtime.process_schema",
-        # process version manager uses its own sqlite store, not the app DB
-        "dazzle.core.process.version_manager",
+        "dazzle.http.runtime.process_schema.ensure_process_tables",
         # ── alternative creators of ALREADY-REGISTERED framework tables ──
-        # (the orchestrator owns the canonical baseline DDL for these two; these
-        # are the standalone / lazy-mutation-path creators of the same table.)
+        # (the orchestrator owns the canonical baseline DDL for these two; these are
+        # the standalone / lazy-mutation-path creators of the same table.)
         "dazzle.http.runtime.migrations.ensure_dazzle_params_table",  # → _dazzle_params
         "dazzle.http.runtime.atomic_flow_executor.ensure_atomic_audit_table",  # → _dazzle_atomic_audit
     }
 )
+
+# Test files legitimately contain DDL fixtures; they are not framework code paths.
+_TEST_MARKERS = ("/tests/", "/test_")
 
 
 def _module_name(path: pathlib.Path) -> str:
@@ -162,31 +177,35 @@ def _issues_ddl(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
 
 
 def _ddl_functions() -> list[tuple[str, str]]:
-    """(dotted_ref, file) for every function in _DDL_DIRS that issues app-DB DDL."""
+    """(dotted_ref, file) for every non-test function in the framework tree that
+    issues app-DB DDL (a CREATE TABLE/INDEX string literal in its body)."""
     out: list[tuple[str, str]] = []
-    for d in _DDL_DIRS:
-        for path in sorted((_REPO / d).rglob("*.py")):
-            src = path.read_text()
-            if "CREATE TABLE" not in src and "CREATE INDEX" not in src:
-                continue
-            tree = ast.parse(src)
-            mod = _module_name(path)
-            # map each function node to its enclosing class (if any)
-            class_of: dict[ast.AST, str] = {}
-            for cls in ast.walk(tree):
-                if isinstance(cls, ast.ClassDef):
-                    for child in cls.body:
-                        class_of[child] = cls.name
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and _issues_ddl(node):
-                    cls_name = class_of.get(node)
-                    ref = f"{mod}.{cls_name}.{node.name}" if cls_name else f"{mod}.{node.name}"
-                    out.append((ref, str(path)))
+    for path in sorted((_REPO / _SCAN_ROOT).rglob("*.py")):
+        posix = path.as_posix()
+        if any(m in posix for m in _TEST_MARKERS):
+            continue
+        src = path.read_text()
+        if "CREATE TABLE" not in src and "CREATE INDEX" not in src:
+            continue
+        tree = ast.parse(src)
+        mod = _module_name(path)
+        # map each function node to its enclosing class (if any)
+        class_of: dict[ast.AST, str] = {}
+        for cls in ast.walk(tree):
+            if isinstance(cls, ast.ClassDef):
+                for child in cls.body:
+                    class_of[child] = cls.name
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and _issues_ddl(node):
+                cls_name = class_of.get(node)
+                ref = f"{mod}.{cls_name}.{node.name}" if cls_name else f"{mod}.{node.name}"
+                out.append((ref, str(path)))
     return out
 
 
 def _allowlisted(ref: str) -> bool:
-    return any(ref == a or ref.startswith(a + ".") for a in _ALLOWLIST)
+    # EXACT match only — function-level entries, no module-prefix blinding.
+    return ref in _ALLOWLIST
 
 
 def test_every_app_db_ddl_function_is_registered() -> None:

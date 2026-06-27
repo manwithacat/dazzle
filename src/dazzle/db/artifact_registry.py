@@ -179,6 +179,24 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         "dazzle.http.events.outbox.EventOutbox.create_table",
         boot_entry="dazzle.http.events.outbox.EventOutbox.create_table",
     ),
+    # _dazzle_outbox (channel delivery) — a fixed-name FRAMEWORK table that is NOT
+    # in the ADR-0044 baseline (in_baseline=False) AND creates itself ungated at boot
+    # via ChannelManager. Tracked debt #1499: the fix must add it to the baseline +
+    # gate it (or confirm intentional exclusion). Registered honestly so the contract
+    # documents both the gap and the ungated path. Surfaced by the contract's
+    # adversarial review.
+    Artifact(
+        name="_dazzle_outbox",
+        cls=ArtifactClass.FRAMEWORK_INTERNAL,
+        creator="dazzle.http.channels.outbox.OutboxRepository._ensure_table",
+        boot_entry="dazzle.http.channels.outbox.OutboxRepository._ensure_table",
+        owner=Ownership.OWNER_ROLE,
+        rls=RlsPosture.NON_FENCED,
+        in_baseline=False,
+        boot_ddl_gated=False,
+        notes="channel delivery outbox; NOT in ADR-0044 baseline (gap) + ungated boot DDL",
+        known_ungated_issue="#1499",
+    ),
     # ── event-bus transport (excluded; dynamic prefix; self-creating) ──────
     *[
         Artifact(
