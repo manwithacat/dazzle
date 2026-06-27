@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.7] - 2026-06-27
+
+### Fixed
+- **All four #1495-siblings the DB-artifact registry surfaced are now gated.** `refresh_tokens` (#1496, `TokenStore._init_db`), `_grants`/`_grant_events` (#1497, `GrantStore._ensure_tables` — request-path), and `devices` (#1498, `DeviceRegistry._init_db`) now early-return on `skip_boot_schema_ddl()` in production (the tables are migration-managed). `_dazzle_outbox` (#1499) — the deepest one, which was *missing from the ADR-0044 baseline* — now joins the universal framework baseline (orchestrator delegates to a single `ensure_outbox_table`, like the event inbox/outbox) **and** gates its boot path; the `FRAMEWORK_SCHEMA_SNAPSHOT` was regenerated (31 tables) and the real-PG three-way parity gate (alembic ≡ orchestrator ≡ snapshot) verified. The registry contract now AST-verifies all four guard. **Behavior change:** `_dazzle_outbox` is now eagerly created for every app at boot (consistent with the ~10 framework tables ADR-0044 already does this for).
+- **`test_acme_billing_reference_drift` used a hardcoded `"python"` in its subprocess calls** instead of `sys.executable` (#1500) — it failed outside a venv-on-PATH environment (e.g. a pyenv shim) though it was always green in CI. Now runs the child under the same interpreter as the test.
+
 ## [0.88.6] - 2026-06-27
 
 ### Added
