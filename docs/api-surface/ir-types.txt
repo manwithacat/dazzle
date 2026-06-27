@@ -3708,6 +3708,7 @@ enum: DisplayMode
     - ACTION_GRID = 'action_grid'
     - ACTIVITY_FEED = 'activity_feed'
     - AREA_CHART = 'area_chart'
+    - AUTO = 'auto'
     - BAR_CHART = 'bar_chart'
     - BAR_TRACK = 'bar_track'
     - BOX_PLOT = 'box_plot'

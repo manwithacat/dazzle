@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from dazzle.core import ir
 from dazzle.page import app_paths
+from dazzle.page.runtime.auto_display import resolve_auto_display
 
 
 def _entity_to_app_url(entity_name: str) -> str:
@@ -483,7 +484,11 @@ def build_workspace_context(
         # apps (simple_task admin_dashboard.metrics,
         # admin_dashboard.team_metrics, team_overview.metrics,
         # fieldtest_hub engineering_dashboard.metrics).
-        if display_mode == "LIST" and region.aggregates:
+        # #1492 — explicit `display: auto` routes through the general shape->form
+        # resolver (opt-in; everything else is unchanged).
+        if display_mode == "AUTO":
+            display_mode = resolve_auto_display(region, _entities_by_name)
+        elif display_mode == "LIST" and region.aggregates:
             display_mode = "SUMMARY"
 
         template = DISPLAY_TEMPLATE_MAP.get(display_mode, _TYPED_SHIM)

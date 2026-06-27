@@ -14,10 +14,18 @@ One DSL declaration compiles to one `GROUP BY` SQL statement that evaluates the 
 
 ## Decide the shape first
 
+**`display: auto`** (#1492, UX-maturity 1a) — instead of picking, let the framework
+infer the form from the source's data shape: aggregate + 2-D grouping → `pivot_table`,
+aggregate + 1-D → `bar_chart`, scalar aggregate → `summary`, a state-machine entity →
+`kanban`, a meaningful (non-`created_at`) temporal field → `timeline`, else `list`.
+Resolution is `dazzle.page.runtime.auto_display.resolve_auto_display`. Opt-in today;
+when you know the form you want, name it explicitly per the table below:
+
 Before you write DSL, pick the cardinality × visualisation:
 
 | Visual | `display:` | Dimensions | Typical use |
 |---|---|---|---|
+| **Inferred** | **`auto`** | — | **let the framework pick the form from the data shape (#1492)** |
 | KPI tile | `metrics` / `summary` | 0 | "42 open tickets" |
 | Bar chart | `bar_chart` | 1 | Tickets by status |
 | Funnel | `funnel_chart` | 1 (ordered) | Pipeline by stage |

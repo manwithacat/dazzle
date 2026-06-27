@@ -52,6 +52,9 @@ class WorkspaceAccessSpec(BaseModel):
 class DisplayMode(StrEnum):
     """Display modes for workspace regions."""
 
+    # #1492 (UX-maturity 1a): infer the form from the source's data shape at
+    # render time (see dazzle.page.runtime.auto_display.resolve_auto_display).
+    AUTO = "auto"
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"

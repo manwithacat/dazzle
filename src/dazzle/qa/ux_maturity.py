@@ -161,7 +161,7 @@ CRITERIA: list[Criterion] = [
         "data_drives_ui",
         "region form inference",
         2,
-        "rich display kinds exist; a PARTIAL ad-hoc inference promotes aggregate regions LIST->SUMMARY (EX-047/#1082) + a kanban auto-promotion — but there's no general `display: auto` shape->form mapping, and non-aggregate data still defaults to list. The work (#1492) is to generalise the existing inference, not build it.",
+        "a general `display: auto` resolver now exists (opt-in, #1492 — resolve_auto_display unifies the EX-047/#1082 aggregate->SUMMARY + kanban promotions and adds temporal->timeline). Still level 2: `auto` is opt-in, not the default — unset `display:` still routes to list. Reaching 3 = make `auto` the default (validated against the example fleet + visual baselines).",
         "high",
         _probe_1a,
     ),

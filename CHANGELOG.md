@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.3] - 2026-06-27
+
+### Added
+- **`display: auto` — region form inferred from data shape (#1492, UX-maturity 1a, opt-in).** A workspace region declaring `display: auto` routes through `dazzle.page.runtime.auto_display.resolve_auto_display`, which picks the form from the source's shape: aggregate + 2-D grouping → `pivot_table`, aggregate + 1-D → `bar_chart`, scalar aggregate → `summary`, a state-machine entity → `kanban`, a meaningful (non-auto-timestamp) temporal field → `timeline`, else `list`. Generalises the prior ad-hoc `aggregate→SUMMARY` (EX-047/#1082) and kanban auto-promotions into one resolver and extends them. **Opt-in and zero-blast-radius** — only `auto` regions hit it; everything else is unchanged. Making `auto` the *default* for unset `display:` (the level-moving step) is the tracked follow-on. Adds `DisplayMode.AUTO` (ir-types api-surface baseline updated).
+
 ## [0.88.0] - 2026-06-27
 
 ### Added
