@@ -93,9 +93,18 @@ def generate_archetype_surfaces(
                 generated.append(surface)
 
         elif entity.archetype_kind == ir.ArchetypeKind.TENANT:
-            surface = _generate_tenant_admin_surface(entity)
-            if surface.name not in existing_names:
-                generated.append(surface)
+            # #1489: skip the auto-admin tenant surface when the app already
+            # declares a user list-mode surface on the tenant entity. Both are
+            # list surfaces on the same entity → both map to GET /<plural>, so
+            # one is silently dropped at boot. The user's surface wins.
+            user_has_tenant_list = any(
+                s.mode == ir.SurfaceMode.LIST and s.entity_ref == entity.name
+                for s in existing_surfaces
+            )
+            if not user_has_tenant_list:
+                surface = _generate_tenant_admin_surface(entity)
+                if surface.name not in existing_names:
+                    generated.append(surface)
 
         elif entity.archetype_kind == ir.ArchetypeKind.TENANT_SETTINGS:
             surface = _generate_tenant_settings_surface(entity)
@@ -177,7 +186,9 @@ def _generate_tenant_admin_surface(entity: ir.EntitySpec) -> ir.SurfaceSpec:
     Creates a list-mode surface with:
     - Key fields for tenant identification
     - Admin-only access
-    - Route: /admin/tenants
+    - Route: GET /<tenant-plural> (the standard list route — only injected
+      when the app declares no user list surface on the tenant entity; see
+      the suppression guard in generate_archetype_surfaces, #1489)
 
     Args:
         entity: Tenant root entity

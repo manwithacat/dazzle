@@ -64,13 +64,10 @@ surface payment_attempt_list "Payment Attempts":
 # AUDIT EXPORT SURFACE
 # =============================================================================
 
-surface audit_export "Audit Export":
-  uses entity Invoice
-  mode: list
-  section main:
-    field invoice_number "Number"
-    field status "Status"
-    field updated_at "Last Change"
+# NOTE: a second `mode: list` surface on Invoice (e.g. an "Audit Export" view)
+# can't be reached — it resolves to the same GET /invoices route as invoice_list
+# and is dropped at boot (#1489). For a secondary invoice view, use a workspace
+# region or a filtered list, not a second list surface on the same entity.
 
 # =============================================================================
 # TENANT SURFACES

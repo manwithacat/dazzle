@@ -211,6 +211,31 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
             if not surface.entity_ref:
                 warnings.append(f"Surface '{surface.name}' has mode 'view' but no entity reference")
 
+    # #1489: route-collision check. An auto-routed surface's path is
+    # deterministic in (mode, entity_ref) — list → GET /<plural>, view/edit →
+    # GET /<plural>/{id}, create → POST /<plural>. So two surfaces sharing the
+    # same (mode, entity_ref) resolve to the same (method, path); the second is
+    # silently dropped at boot ("Dropping duplicate endpoint …") and its surface
+    # is unreachable. `validate` never modelled the materialised route set, so
+    # this only surfaced as a boot-time log line. Turn it into a hard error.
+    # CUSTOM mode routes by surface name (always distinct) and is exempt.
+    route_groups: dict[tuple[object, str], list[str]] = {}
+    for surface in appspec.surfaces:
+        if surface.mode == ir.SurfaceMode.CUSTOM or not surface.entity_ref:
+            continue
+        route_groups.setdefault((surface.mode, surface.entity_ref), []).append(surface.name)
+    for (mode, entity_ref), names in route_groups.items():
+        if len(names) > 1:
+            mode_name = getattr(mode, "value", str(mode))
+            errors.append(
+                f"Surfaces {sorted(names)} all use mode '{mode_name}' on entity "
+                f"'{entity_ref}', so they resolve to the same route — only the "
+                f"first is mounted and the rest are silently dropped at boot. "
+                f"Keep one surface per (mode, entity), or give the others a "
+                f"distinct entity/mode (e.g. a workspace region for a secondary "
+                f"view)."
+            )
+
     return errors, warnings
 
 

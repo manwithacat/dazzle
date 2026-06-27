@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.87.10] - 2026-06-27
+
+### Fixed
+- **#1489 — surface route collisions are now a `dazzle validate` error, not a silent boot drop.** Two surfaces sharing the same `(mode, entity_ref)` resolve to the same auto-route (e.g. two `mode: list` surfaces on one entity → `GET /<plural>`); previously the second was silently dropped at boot ("Dropping duplicate endpoint …") and its surface was unreachable, with `validate` none the wiser. `validate_surfaces` now hard-errors on the collision, naming the surfaces and pointing at the fix (one surface per (mode, entity); secondary views belong in workspace regions). Also fixed the framework half: the auto-injected tenant-admin surface (`_generate_tenant_admin_surface`) is **suppressed when the app already declares a user list surface on the tenant entity** — it previously collided with the user's `tenant_list` on `GET /<plural>` and one was dropped (its docstring claimed `/admin/tenants` but it emitted `/<plural>`). Fixed `examples/invoice_ops` (removed the dead second `audit_export` list surface on Invoice). Caught by the cross-app fuzz sweep.
+
+### Agent Guidance
+- **One surface per `(mode, entity)`.** `dazzle validate` now rejects two surfaces that resolve to the same route (same mode + entity). You cannot have, e.g., both a list and a kanban "list" surface on the same entity, or two `view` surfaces — only the first mounts. For a secondary presentation of an entity, use a **workspace region** (or a distinct entity/mode), not a second top-level surface. `mode: custom` surfaces route by name and are exempt.
+
 ## [0.87.9] - 2026-06-26
 
 ### Fixed
