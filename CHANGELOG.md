@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.6] - 2026-06-27
+
+### Added
+- **DB-artifact registry — single source of truth for every framework database artifact (#1495 follow-on, ADR-0047).** `dazzle.db.artifact_registry` declares each artifact's class / creator / boot-entry / owner / RLS posture / baseline membership / boot-DDL gating; `framework_schema_snapshot.IN_SCOPE_TABLES` and the real-PG parity test are now registry-derived (collapsing the previously triplicated, hand-synced list). New `dazzle inspect db-artifacts` lens + `docs/reference/db-artifacts.md`. The executable contract (`tests/unit/test_db_artifact_contract.py`, static) asserts every registered boot-entry *structurally* self-gates with `if skip_boot_schema_ddl(): return/raise`, and a **completeness sweep** asserts every framework function issuing app-DB `CREATE TABLE/INDEX` (whole tree, tests excluded) is registered or in a function-level reasoned allowlist — making the #1495 class (ungated boot-DDL under a non-owner role) **un-shippable**. Building the contract (incl. an adversarial review) surfaced four latent siblings, filed + registered as tracked debt: `refresh_tokens` (#1496), `_grants`/`_grant_events` (#1497), `devices` (#1498), and `_dazzle_outbox` (#1499 — also missing from the ADR-0044 baseline). ADR-0044 amended (scope narrowed to the baseline construction + parity mechanism).
+
+### Agent Guidance
+- **DB artifacts have one registry.** Before adding a framework table, boot-DDL, or RLS, read `docs/reference/db-artifacts.md` or run `dazzle inspect db-artifacts`. A new ungated boot-DDL path fails CI until registered in `dazzle.db.artifact_registry` and gated with `skip_boot_schema_ddl()` (ADR-0047). `IN_SCOPE_TABLES` is registry-derived — do not re-list framework tables.
+
 ## [0.88.5] - 2026-06-27
 
 ### Fixed
