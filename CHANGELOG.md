@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.8] - 2026-06-27
+
+### Fixed
+- **Clone-ratchet baseline regenerated** after the v0.88.7 gating fixes. Applying the standard per-store `skip_boot_schema_ddl()` guard to `TokenStore`/`DeviceRegistry`/`GrantStore` made their `_init_db`/`_ensure_tables` structurally match the existing gated stores (`file_storage`, etc.) — a deliberate, locality-of-behavior idiom, accepted as parallel-by-design residue via `dazzle fitness clones --write-baseline`.
+
 ## [0.88.7] - 2026-06-27
 
 ### Fixed

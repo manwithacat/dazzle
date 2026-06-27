@@ -591,12 +591,11 @@
     ]
   },
   {
-    "signature": "d100312e7baa6130f0f2d2331127a925",
-    "count": 4,
+    "signature": "cb9f2908cf95ef717a62b1c3f416f486",
+    "count": 3,
     "names": [
       "dazzle/http/runtime/device_registry.py::_init_db",
-      "dazzle/http/runtime/otp_store.py::init_db",
-      "dazzle/http/runtime/recovery_codes.py::init_db",
+      "dazzle/http/runtime/file_storage.py::_init_db",
       "dazzle/http/runtime/token_store.py::_init_db"
     ]
   },
@@ -640,6 +639,14 @@
     "names": [
       "dazzle/http/runtime/integration_manager.py::send_message",
       "dazzle/http/runtime/subsystems/channels.py::send_message"
+    ]
+  },
+  {
+    "signature": "d100312e7baa6130f0f2d2331127a925",
+    "count": 2,
+    "names": [
+      "dazzle/http/runtime/otp_store.py::init_db",
+      "dazzle/http/runtime/recovery_codes.py::init_db"
     ]
   },
   {
