@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.5] - 2026-06-27
+
+### Fixed
+- **Events + process-consumer subsystems ran ungated boot-DDL → `InsufficientPrivilege` under a non-owner runtime role (#1495, #1462 residual).** Under split-ownership RLS the runtime/consumer serves as a non-owner role (`dazzle_app`, `NOSUPERUSER NOBYPASSRLS`) that owns no tables. `EventInbox.create_table`, `EventOutbox.create_table`, and the process state store's `PgProcessStateStore._ensure` issued owner-only `CREATE INDEX` DDL at boot/first-use — which raises `InsufficientPrivilege` for a non-owner, halting the event framework (`_start_events` lifespan hook) and spamming the process consumer loop every ~5s. All three tables (`_dazzle_event_inbox`, `_dazzle_event_outbox`, `process_runs`/`process_tasks`) are migration-managed (`ensure_framework_schema` + the ADR-0044 parity gate), so they now skip boot DDL in production via `skip_boot_schema_ddl()` — the same gate #1462 applied to AuthStore / FileMetadataStore / AuditLogger. The prefixed event-*bus* transport tables (`{prefix}events`/`offsets`/`dlq`, `PostgresBus`) are deliberately **not** gated — they're excluded from the migration baseline. Gate covered by `tests/unit/test_nonowner_boot_gate_1495.py`.
+
 ## [0.88.4] - 2026-06-27
 
 ### Fixed

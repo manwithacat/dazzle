@@ -36,6 +36,7 @@ from dazzle.core.coordination.claim import (
     queue_columns_ddl,
     renew_lease,
 )
+from dazzle.core.environment import skip_boot_schema_ddl
 from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
 from dazzle.core.process.adapter import (
     ProcessRun,
@@ -212,6 +213,17 @@ class PgProcessStateStore:
         so whichever runs first wins and the other is a no-op.
         """
         if self._tables_ensured:
+            return
+        # #1495: skip boot DDL in production — process_runs/process_tasks are
+        # migration-managed (ensure_framework_schema) and the runtime/consumer
+        # may run as a non-owner role under split-ownership RLS, where
+        # CREATE INDEX raises InsufficientPrivilege (spamming the consumer loop
+        # every ~5s). Migrations own the schema there.
+        if skip_boot_schema_ddl():
+            logger.info(
+                "Skipping process-table boot schema DDL; migrations own the schema (#1495)."
+            )
+            self._tables_ensured = True
             return
         runs_q = queue_columns_ddl("process_runs")
         tasks_q = queue_columns_ddl("process_tasks")

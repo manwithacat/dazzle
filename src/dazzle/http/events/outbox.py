@@ -20,6 +20,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from dazzle.core.environment import skip_boot_schema_ddl
 from dazzle.http.events.envelope import EventEnvelope
 
 logger = logging.getLogger(__name__)
@@ -136,7 +137,15 @@ class EventOutbox:
         rare genuine first-boot-into-contention case: if the timeout
         fires the error is swallowed, since a missing index is non-fatal
         and the next clean boot will create it.
+
+        #1495: skipped entirely in production — ``_dazzle_event_outbox`` is
+        migration-managed (``ensure_framework_schema``) and the runtime may serve
+        as a non-owner role under split-ownership RLS, where ``CREATE INDEX`` raises
+        InsufficientPrivilege.
         """
+        if skip_boot_schema_ddl():
+            logger.info("Skipping event-outbox boot schema DDL; migrations own the schema (#1495).")
+            return
         await conn.execute(
             CREATE_OUTBOX_TABLE
         )  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query

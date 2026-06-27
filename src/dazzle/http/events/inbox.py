@@ -11,11 +11,16 @@ Rule 2: At-least-once delivery is assumed; consumers must be idempotent
 
 from __future__ import annotations  # required: forward reference
 
+import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
+
+from dazzle.core.environment import skip_boot_schema_ddl
+
+logger = logging.getLogger(__name__)
 
 
 class ProcessingResult(StrEnum):
@@ -115,7 +120,15 @@ class EventInbox:
         self._sql_list_consumers = f"SELECT DISTINCT consumer_name FROM {t} ORDER BY consumer_name"
 
     async def create_table(self, conn: Any) -> None:
-        """Create the inbox table if it doesn't exist."""
+        """Create the inbox table if it doesn't exist.
+
+        #1495: skipped in production — ``_dazzle_event_inbox`` is migration-managed
+        (``ensure_framework_schema``) and the runtime may serve as a non-owner role
+        under split-ownership RLS, where ``CREATE INDEX`` raises InsufficientPrivilege.
+        """
+        if skip_boot_schema_ddl():
+            logger.info("Skipping event-inbox boot schema DDL; migrations own the schema (#1495).")
+            return
         await conn.execute(CREATE_INBOX_TABLE)
         for idx_sql in CREATE_INBOX_INDEXES:
             await conn.execute(idx_sql)
