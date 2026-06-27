@@ -130,7 +130,6 @@
   "security.TwoFactorConfig.otp_expiry_seconds",
   "security.TwoFactorConfig.otp_length",
   "seed.SeedTemplateSpec.month_anchor",
-  "services.APISpec.owner",
   "services.DomainServiceSpec.stub_language",
   "sitespec.FAQItem.answer",
   "sitespec.FAQItem.question",

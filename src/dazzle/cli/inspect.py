@@ -49,6 +49,7 @@ from dazzle.api_surface import (
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.renderer_registry import _DEFAULT_RENDERERS
+from dazzle.db.artifact_registry import DB_ARTIFACTS
 
 # =============================================================================
 # Group: dazzle inspect <ext-point>
@@ -812,8 +813,6 @@ def db_artifacts_command(
     in-baseline / RLS invariants — a new ungated boot-DDL path (the #1495 class) fails
     CI until registered + gated.
     """
-    from dazzle.db.artifact_registry import DB_ARTIFACTS
-
     rows = [a for a in DB_ARTIFACTS if cls_filter is None or a.cls.value == cls_filter]
 
     if output_json:
