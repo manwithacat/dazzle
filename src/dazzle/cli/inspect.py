@@ -794,6 +794,69 @@ def api_runtime_urls(
     )
 
 
+@inspect_app.command("db-artifacts")
+def db_artifacts_command(
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON instead of human text"),
+    cls_filter: str | None = typer.Option(
+        None,
+        "--class",
+        help="Filter by class (framework_internal, event_bus_transport, ops_db, "
+        "app_entity, tenant_registry)",
+    ),
+) -> None:
+    """List every database artifact the framework manages, with its class, creator,
+    boot-entry, owner, RLS posture, baseline membership, and boot-DDL gating.
+
+    The DB-artifact registry (``dazzle.db.artifact_registry``, ADR-0047) is the source
+    of truth; ``tests/unit/test_db_artifact_contract.py`` enforces the gating /
+    in-baseline / RLS invariants — a new ungated boot-DDL path (the #1495 class) fails
+    CI until registered + gated.
+    """
+    from dazzle.db.artifact_registry import DB_ARTIFACTS
+
+    rows = [a for a in DB_ARTIFACTS if cls_filter is None or a.cls.value == cls_filter]
+
+    if output_json:
+        typer.echo(
+            json.dumps(
+                {
+                    "artifacts": [
+                        {
+                            "name": a.name,
+                            "cls": a.cls.value,
+                            "creator": a.creator,
+                            "boot_entry": a.boot_entry,
+                            "owner": a.owner.value,
+                            "rls": a.rls.value,
+                            "in_baseline": a.in_baseline,
+                            "boot_ddl_gated": a.boot_ddl_gated,
+                            "is_pattern": a.is_pattern,
+                            "known_ungated_issue": a.known_ungated_issue,
+                            "notes": a.notes,
+                        }
+                        for a in rows
+                    ]
+                },
+                indent=2,
+            )
+        )
+        return
+
+    typer.echo(f"{'artifact':<34} {'class':<20} {'base':<5} {'gated':<6} {'rls':<12}")
+    typer.echo("-" * 80)
+    for a in rows:
+        debt = f"  ⚠ {a.known_ungated_issue}" if a.known_ungated_issue else ""
+        typer.echo(
+            f"{a.name:<34} {a.cls.value:<20} "
+            f"{'yes' if a.in_baseline else '—':<5} "
+            f"{'yes' if a.boot_ddl_gated else '—':<6} {a.rls.value:<12}{debt}"
+        )
+    typer.echo(
+        f"\n{len(rows)} artifacts. Source: dazzle.db.artifact_registry (ADR-0047). "
+        f"Rules: docs/reference/db-artifacts.md"
+    )
+
+
 inspect_app.add_typer(api_app, name="api")
 
 
