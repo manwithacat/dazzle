@@ -6,6 +6,7 @@ Provides secure storage for refresh tokens with revocation support.
 
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -16,6 +17,9 @@ from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle.core.db_url import normalise_postgres_scheme
+from dazzle.core.environment import skip_boot_schema_ddl
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from dazzle.http.runtime.auth import UserRecord
@@ -129,7 +133,17 @@ class TokenStore:
         return psycopg.connect(self._database_url, row_factory=dict_row)
 
     def _init_db(self) -> None:
-        """Initialize database tables."""
+        """Initialize database tables.
+
+        #1496: skipped in production — ``refresh_tokens`` is migration-managed
+        (``ensure_framework_schema``) and the runtime may serve as a non-owner role
+        under split-ownership RLS, where ``CREATE INDEX`` raises InsufficientPrivilege.
+        """
+        if skip_boot_schema_ddl():
+            logger.info(
+                "Skipping refresh-token boot schema DDL; migrations own the schema (#1496)."
+            )
+            return
         conn = self._get_connection()
         try:
             cursor = conn.cursor()

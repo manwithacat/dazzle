@@ -8,10 +8,15 @@ Requires: psycopg >= 3.2
 """
 
 import json
+import logging
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
+
+from dazzle.core.environment import skip_boot_schema_ddl
+
+logger = logging.getLogger(__name__)
 
 
 class GrantStatus(StrEnum):
@@ -107,6 +112,13 @@ class GrantStore:
         self._ensure_tables()
 
     def _ensure_tables(self) -> None:
+        # #1497: skipped in production — _grants / _grant_events are migration-managed
+        # (ensure_framework_schema) and the runtime serves as a non-owner role under
+        # split-ownership RLS, where CREATE INDEX raises InsufficientPrivilege. This
+        # path runs per-request (GrantStore is request-scoped), so the gate also avoids
+        # re-issuing DDL on every request.
+        if skip_boot_schema_ddl():
+            return
         cursor = self._conn.cursor()
         ensure_grant_tables(cursor)
         self._conn.commit()

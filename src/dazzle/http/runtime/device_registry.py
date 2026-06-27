@@ -5,6 +5,7 @@ Manages device tokens for mobile push notifications.
 Uses PostgreSQL (psycopg v3) exclusively.
 """
 
+import logging
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
@@ -14,6 +15,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle.core.db_url import normalise_postgres_scheme
+from dazzle.core.environment import skip_boot_schema_ddl
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import psycopg
@@ -126,7 +130,17 @@ class DeviceRegistry:
         return psycopg.connect(self._database_url, row_factory=dict_row)
 
     def _init_db(self) -> None:
-        """Initialize database tables."""
+        """Initialize database tables.
+
+        #1498: skipped in production — ``devices`` is migration-managed
+        (``ensure_framework_schema``) and the runtime may serve as a non-owner role
+        under split-ownership RLS, where ``CREATE INDEX`` raises InsufficientPrivilege.
+        """
+        if skip_boot_schema_ddl():
+            logger.info(
+                "Skipping device-registry boot schema DDL; migrations own the schema (#1498)."
+            )
+            return
         conn = self._get_connection()
         try:
             cursor = conn.cursor()

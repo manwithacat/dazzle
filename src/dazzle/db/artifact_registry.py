@@ -135,32 +135,27 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         "dazzle.http.runtime.file_storage.ensure_file_storage_tables",
         boot_entry="dazzle.http.runtime.file_storage.FileMetadataStore._init_db",
     ),
-    # refresh_tokens / devices / _grants — registered independent boot paths that are
-    # CURRENTLY UNGATED (#1495-siblings, discovered building this registry). Tracked as
-    # debt so the contract documents them instead of failing; flip to gated when fixed.
+    # refresh_tokens / devices / _grants — independent boot paths, now GATED
+    # (#1496/#1498/#1497 fixed: each self-gates with skip_boot_schema_ddl()).
     _fw(
         "refresh_tokens",
         "dazzle.http.runtime.token_store.ensure_refresh_token_tables",
         boot_entry="dazzle.http.runtime.token_store.TokenStore._init_db",
-        known_ungated_issue="#1496",
     ),
     _fw(
         "devices",
         "dazzle.http.runtime.device_registry.ensure_device_tables",
         boot_entry="dazzle.http.runtime.device_registry.DeviceRegistry._init_db",
-        known_ungated_issue="#1498",
     ),
     _fw(
         "_grants",
         "dazzle.http.runtime.grant_store.ensure_grant_tables",
         boot_entry="dazzle.http.runtime.grant_store.GrantStore._ensure_tables",
-        known_ungated_issue="#1497",
     ),
     _fw(
         "_grant_events",
         "dazzle.http.runtime.grant_store.ensure_grant_tables",
         boot_entry="dazzle.http.runtime.grant_store.GrantStore._ensure_tables",
-        known_ungated_issue="#1497",
     ),
     # otp / recovery — truly orchestrator-only (no independent boot path).
     _fw("_dazzle_otp_codes", "dazzle.http.runtime.otp_store.ensure_otp_tables", boot_entry=None),
