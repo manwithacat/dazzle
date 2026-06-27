@@ -55,7 +55,7 @@ client reactivity.
 
 | # | Criterion | now→target | Primitive (the work) | Class | htmx-4 leverage |
 |---|---|---|---|---|---|
-| **1a** | region form inference | 2→4 | **`display: auto`** — infer the region form from the source's data shape (temporal field → timeline/trend; ordered-state enum → board; grouped count → chart; else list). The dispatcher already has every form; this adds the *chooser*. | S | — |
+| **1a** | region form inference | 2→4 | **`display: auto`** — infer the region form from the source's data shape (temporal field → timeline/trend; ordered-state enum → board; grouped count → chart; scalar → metrics; else list). **Generalise, don't build:** a *partial* ad-hoc inference already exists (aggregate→SUMMARY EX-047/#1082 in `workspace_renderer`; a kanban auto-promotion) — unify these into one `resolve_auto_display(region, entities)` and extend with the temporal/state rules. | S | — |
 | **1b** | semantic-state binding | 2→4 | **`semantic:` on enums** — declare a status field's lifecycle role (`open=warning, done=positive`), validated against the token palette; retire the `_STATUS_TONE_MAP` name guess. Tone+icon then *inferred* from the declared role. | S | — |
 | **1c** | comparison context | 2→3→4 | **scalar-with-context default** — a `metrics` tile defaults to delta/trend/rank when a comparison source exists; at 4, infer the comparison from the aggregate's grain. | S | — |
 | **1d** | raw-data honesty | 3→4 | **exhaustive format coverage + inference** — close the residual leaks (ISO datetime, JSON, nested ref) and infer format from column type everywhere (not just list cells). | S | — |
