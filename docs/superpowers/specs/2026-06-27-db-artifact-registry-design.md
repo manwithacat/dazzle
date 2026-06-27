@@ -54,11 +54,18 @@ class RlsPosture(StrEnum):  FENCED | NON_FENCED | NOT_APPLICABLE
 class Artifact:
     name: str                 # exact name, OR a name_pattern for {prefix}* / per-tenant
     cls: ArtifactClass
-    creator: str              # dotted ref to the function that issues the DDL
+    creator: str              # dotted ref to the function that issues the DDL (where the DDL lives)
+    boot_entry: str | None    # dotted ref to the INDEPENDENT boot-time path that runs the
+                              # creator at every startup (AuthStore._init_db,
+                              # EventInbox.create_table, PgProcessStateStore._ensure, …),
+                              # or None if the table is created ONLY by the orchestrator
+                              # (ensure_framework_schema) — those are safe via the server-level
+                              # _should_create_schema_on_startup gate, no self-gate needed.
     owner: Ownership
     rls: RlsPosture
     in_baseline: bool         # in ensure_framework_schema / the ADR-0044 baseline
-    boot_ddl_gated: bool      # creator must guard with skip_boot_schema_ddl()
+    boot_ddl_gated: bool      # iff boot_entry is not None: that boot_entry MUST self-gate with
+                              # skip_boot_schema_ddl(). (orchestrator-only rows ⇒ None ⇒ False.)
     notes: str = ""
     is_pattern: bool = False  # name is a pattern (dynamic prefix / per-tenant), not exact
 
@@ -81,13 +88,18 @@ The registry becomes the **single** source of the in-scope list:
 - `framework_schema.py`'s docstring stops re-listing and points at the registry
 
 New `tests/unit/test_db_artifact_contract.py` (static, no DB) asserts declared-vs-real:
-1. **Gating invariant (the #1495 catcher)** — a uniform biconditional over every enumerated artifact that names a concrete `creator` (skip `is_pattern` rows and the dynamic class-descriptor rows, which have no single creator fn): AST-scan the `creator` function and assert it early-returns on `skip_boot_schema_ddl()` **iff** `boot_ddl_gated=True`. So framework-internal in-baseline tables must gate (the #1495 fix); self-creating transport tables and ops-DB tables (`gated=False`) must *not*. One test covers every subsystem; an ungated boot-DDL path — or a spuriously-gated self-creating one — fails CI.
-2. **Creator resolves** — every `creator` dotted-ref imports cleanly (no rotted references).
-3. **RLS posture** — `FENCED` artifacts appear in `rls_schema.build_all_rls_ddl(...)` output with `FORCE ROW LEVEL SECURITY`; `NON_FENCED` framework tables do not. Static, against the DDL generator (no DB).
+
+1. **Gating invariant — registered boot-entries (the #1495 catcher, part 1).** For every artifact with a non-None `boot_entry` (and `boot_ddl_gated=True`), AST-scan that `boot_entry` function and assert it early-returns on `skip_boot_schema_ddl()`. So every independent startup path (auth/audit/files/event-inbox/outbox/process) self-gates; an ungated *registered* boot path fails CI. Orchestrator-only artifacts (`boot_entry=None`) are exempt — they're created solely under `alembic upgrade` / the server-gated startup call.
+
+2. **Completeness sweep (the #1495 catcher, part 2 — makes the class un-shippable).** AST-walk the framework source dirs that issue app-DB DDL (`src/dazzle/http/runtime/`, `src/dazzle/http/events/`, `src/dazzle/core/process/`) for every function whose body contains a `CREATE TABLE`/`CREATE INDEX` against the app DB, and assert each such function is *accounted for* in the registry — it is some artifact's `creator` or `boot_entry`. A brand-new ungated path is therefore unregistered → fails → forces a registry entry → part 1 then forces the gating decision. The **allowlist** of DDL-issuing functions that are *not* app-DB framework tables — `ops_database.*` (separate DB), `postgres_bus._create_tables` (transport, registered as patterns), `rls_schema.*` (RLS policy DDL, not tables), `search_schema.*` (per-app GIN/ivfflat), the alembic `versions/` migrations — IS the excluded-classes list made executable, and lives in the test as a named, commented constant.
+
+3. **Creator + boot_entry resolve** — every `creator` and non-None `boot_entry` dotted-ref imports cleanly (no rotted references).
+
+4. **RLS posture** — `FENCED` artifacts appear in `rls_schema.build_all_rls_ddl(...)` output with `FORCE ROW LEVEL SECURITY`; `NON_FENCED` framework tables do not. Static, against the DDL generator (no DB).
 
 The existing real-PG parity gate (`tests/integration/test_framework_baseline_parity_pg.py`) keeps the structural three-way "orchestrator ≡ baseline ≡ snapshot" check — now reading `in_baseline_tables()`, so its no-unlisted-table guard is registry-sourced. The per-subsystem runtime tests (#1462, #1495) remain the behavioral backstop beneath the AST contract.
 
-**How the gating invariant reads "is this creator gated":** AST scan of the creator function (static, robust, one test covers all) — *not* a runtime probe per creator. The runtime probes already exist as #1462/#1495 behavioral tests; the AST contract is the generic, exhaustive gate.
+**Why AST, not a runtime probe:** the gating + completeness checks are static (one test covers every subsystem, no DB, no per-creator harness). The runtime probes already exist as the #1462/#1495 behavioral tests; the AST contract is the generic, exhaustive gate above them.
 
 ### C — The surfaces (what an agent touches)
 
@@ -122,7 +134,7 @@ The registry restates some facts that live in DDL (creator function names as dot
 ## Success criteria
 
 1. One module declares every framework DB artifact + its five properties; `in_baseline_tables()` is the *only* in-scope list, consumed by the snapshot + parity test (triplication gone).
-2. `tests/unit/test_db_artifact_contract.py` fails if any `boot_ddl_gated=True` creator is ungated — i.e. the #1495 class is caught at test time.
+2. `tests/unit/test_db_artifact_contract.py` fails if any registered `boot_entry` is ungated, **and** if any framework function issues app-DB `CREATE TABLE/INDEX` without being registered — i.e. the #1495 class is caught at test time and a new ungated path can't ship unregistered.
 3. `dazzle inspect db-artifacts` answers all five facts per artifact in one view; `docs/reference/db-artifacts.md` states the rules; CLAUDE.md points to both.
 4. ADR-0044 + ADR-0047 have a clean, non-overlapping boundary.
 5. Existing real-PG parity gate stays green.
