@@ -622,3 +622,106 @@ Before applying any migration that drops or renames columns or tables:
 3. **Fill in the data-migration seam** for any NOT NULL add — never apply it with an empty stub.
 4. **Test the downgrade path** — run `dazzle db downgrade` and `dazzle db upgrade` on a copy of the database before touching production.
 5. **Commit the migration file** — before deploying, confirm the migration is committed and pushed.
+
+## Troubleshooting: a framework-baseline squash dangles your project's mergepoints (#1488)
+
+### Symptom
+
+After bumping Dazzle, **every** `dazzle db` command (`current`, `upgrade`,
+`reconcile-baseline`, …) fails while building the alembic revision map:
+
+```
+UserWarning: Revision 0004_widen_alembic_version_num referenced from
+  0004_widen_alembic_version_num, c3d4e5f6a7b8 -> 0b9ffb9a370b (head) (mergepoint),
+  merge framework + project baselines (#1309) is not present
+...
+KeyError: '0004_widen_alembic_version_num'
+```
+
+It reproduces locally (no DB needed) — it is the **migration graph**, not DB state.
+
+### Cause
+
+Periodically the framework **squashes its migration baseline** (collapses
+`0001…00NN` into a single idempotent baseline, e.g. `0019_process_runtime_tables`
+with `down_revision = None` — ADR-0044) and **deletes the intermediate framework
+revisions**. A project that adopted Dazzle long ago typically accumulated several
+`#1309` "merge framework + project baselines" mergepoints over time, **each
+referencing the then-current framework baseline head** in its `down_revision`
+tuple. Those intermediate heads are exactly what the squash removed, so the
+project's mergepoints now point at revisions the installed framework no longer
+ships, and alembic can't resolve ancestry → `KeyError`.
+
+Because the graph won't even build, **no graph-dependent command can repair it**
+— `reconcile-baseline` (which merges parallel *heads*) needs a buildable graph
+first. The fix is a one-time, text-level rewrite of your project's mergepoint
+files. (Your DB's `alembic_version` only stores the *current* head, which is your
+own latest mergepoint and still exists — so this is purely a file-graph repair;
+no `stamp` is needed.)
+
+### Fix (downstream project, one-time)
+
+1. **Find the current framework baseline id.** It's the single revision the
+   installed wheel ships:
+
+   ```bash
+   ls "$(python -c 'import dazzle,os;print(os.path.dirname(dazzle.__file__))')/http/alembic/versions/"
+   # e.g. 0019_process_runtime_tables.py   ← the current baseline
+   ```
+
+2. **Rewrite each dangling mergepoint** in your project's
+   `.dazzle/migrations/versions/`: drop the deleted framework revision from the
+   `down_revision` tuple, keeping the **project** parent. A two-parent mergepoint
+   collapses to its single project parent:
+
+   ```python
+   # before — references the now-deleted framework rev 0004
+   down_revision = ("0004_widen_alembic_version_num", "c3d4e5f6a7b8")
+   # after
+   down_revision = "c3d4e5f6a7b8"
+   ```
+
+   Repeat for every mergepoint that names a removed framework revision. The
+   worked example below has three.
+
+3. **Unify the two roots.** The graph now builds, with two heads — your project
+   chain's head and the framework baseline. Generate the merge:
+
+   ```bash
+   dazzle db reconcile-baseline      # writes a merge migration → single head
+   ```
+
+4. **Apply.** The framework baseline is **idempotent**, so applying it to a DB
+   that already has the framework tables (from when you ran the old chain) is
+   safe — existing objects are skipped:
+
+   ```bash
+   dazzle db upgrade head
+   ```
+
+5. **Commit** the rewritten mergepoint files + the new merge migration, then
+   deploy. Your `release:` phase `dazzle db upgrade` will now succeed.
+
+### Worked example
+
+A project with three accumulated `#1309` mergepoints:
+
+| mergepoint | `down_revision` before | after |
+|---|---|---|
+| `0b9ffb9a370b` | `("0004_widen_alembic_version_num", "c3d4e5f6a7b8")` | `"c3d4e5f6a7b8"` |
+| `0d90d36d9eab` | `("0011_connections", "0b9ffb9a370b")` | `"0b9ffb9a370b"` |
+| `9ed5766ec6b3` | `("0016_saml_consumed_assertions", "0d90d36d9eab")` | `"0d90d36d9eab"` |
+
+After the rewrite the project chain is linear (`c3d4… → 0b9f… → 0d90… → 9ed5…`)
+and the framework baseline (`0019_…`) is a second root; `reconcile-baseline`
+merges them, and `upgrade head` applies the idempotent baseline.
+
+### Why there's no one-shot command
+
+The repair edits **your** migration history (project-owned files), and the
+correct rewrite depends on which framework revisions your specific chain
+referenced — which the broken graph can't enumerate for you. A framework command
+can't safely rewrite project history sight-unseen, so this stays a documented,
+reviewable manual step. If you hit it, the rewrite is mechanical (drop the
+framework element from each affected `down_revision` tuple) and the worked
+example above is the template.
