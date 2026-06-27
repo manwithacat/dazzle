@@ -69,7 +69,7 @@
   "src/dazzle/cli/testing.py": 28,
   "src/dazzle/cli/theme.py": 3,
   "src/dazzle/cli/utils.py": 2,
-  "src/dazzle/cli/ux.py": 19,
+  "src/dazzle/cli/ux.py": 20,
   "src/dazzle/cli/ux_interactions.py": 3,
   "src/dazzle/cli/worker.py": 7,
   "src/dazzle/compliance/evidence.py": 1,

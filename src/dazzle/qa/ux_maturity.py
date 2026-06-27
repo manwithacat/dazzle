@@ -16,9 +16,19 @@ agent command.
 
 from __future__ import annotations
 
+import importlib.util
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
+
+# Hoisted (no cycle: qa -> render/page/core is the correct layer direction; #1438).
+from dazzle._version import get_version
+from dazzle.core.ir import state_machine
+from dazzle.page import app_paths
+from dazzle.render import filters
+from dazzle.render.context import TableContext
+from dazzle.render.fragment import format_cell
+from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
 
 # ── Ladder ───────────────────────────────────────────────────────────────
 LEVEL_NAMES = {
@@ -68,8 +78,6 @@ PRINCIPLES = {
 def _display_kinds() -> tuple[dict[str, str], set[str]]:
     """The full set of region display kinds (builders + aliases + timeseries
     views) and the raw `_BUILDERS` map."""
-    from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
-
     builders = dict(WorkspaceRegionAdapter._BUILDERS)
     kinds = set(builders)
     for attr in ("_ALIASES", "_TIMESERIES_VIEWS"):
@@ -102,39 +110,29 @@ def _probe_1c() -> ProbeResult:
 def _probe_1b() -> ProbeResult:
     """Status->tone is a name-convention map (not a declared+validated binding on
     the field)."""
-    from dazzle.render import filters
-
     has_convention = hasattr(filters, "_STATUS_TONE_MAP")
     return ProbeResult(has_convention, "status->tone via _STATUS_TONE_MAP name convention")
 
 
 def _probe_1d() -> ProbeResult:
     """The cell format layer humanises float/bool/ref/money by default."""
-    from dazzle.render.fragment import format_cell
-
     has_infer = hasattr(format_cell, "_infer") or hasattr(format_cell, "format_cell")
     return ProbeResult(has_infer, "format_cell layer present (float->2dp, bool->Yes/No, FK->name)")
 
 
 def _probe_2b() -> ProbeResult:
     """List->detail drill is the default path (app_paths.detail_path)."""
-    from dazzle.page import app_paths
-
     return ProbeResult(hasattr(app_paths, "detail_path"), "app_paths.detail_path drill default")
 
 
 def _probe_2c() -> ProbeResult:
     """A row-peek primitive exists (slide-over) but is a manual flag."""
-    from dazzle.render.context import TableContext
-
     has_peek = "slide_over" in TableContext.model_fields
     return ProbeResult(has_peek, "TableContext.slide_over (manual row-peek)")
 
 
 def _probe_3b() -> ProbeResult:
     """Role-gated affordance via the provable RBAC matrix."""
-    import importlib.util
-
     return ProbeResult(
         importlib.util.find_spec("dazzle.rbac") is not None,
         "provable RBAC matrix (permit/scope) gates affordances by role",
@@ -143,8 +141,6 @@ def _probe_3b() -> ProbeResult:
 
 def _probe_3c() -> ProbeResult:
     """State-gated affordance via the state machine (transitions)."""
-    from dazzle.core.ir import state_machine
-
     has_sm = hasattr(state_machine, "StateMachineSpec")
     return ProbeResult(has_sm, "state-machine transitions gate actions by entity state")
 
@@ -152,8 +148,6 @@ def _probe_3c() -> ProbeResult:
 def _probe_3e() -> ProbeResult:
     """Scope concealment: rows outside scope are never rendered (predicate
     algebra + RLS)."""
-    import importlib.util
-
     have = importlib.util.find_spec("dazzle.core.ir.predicates") is not None
     return ProbeResult(have, "scope: -> predicate algebra (core.ir.predicates) + RLS conceals rows")
 
@@ -287,8 +281,6 @@ CRITERIA: list[Criterion] = [
 def run_scan() -> dict[str, Any]:
     """Run the static capability scan and return the scorecard dict (the
     output schema in docs/reference/ux-maturity.md)."""
-    from dazzle._version import get_version
-
     crit_out: dict[str, Any] = {}
     by_principle: dict[str, list[int]] = {p: [] for p in PRINCIPLES}
     backlog: list[dict[str, Any]] = []
