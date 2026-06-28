@@ -15,8 +15,8 @@ that enforces it *and* an automated test that exercises it. Where a capability
 is partial, the partiality is stated. If something here drifts from the code,
 the code wins — file an issue.
 
-> This is a companion to [`EVALUATION.md`](EVALUATION.md) (the hands-on
-> walkthrough) and the reference docs under [`docs/reference/`](docs/reference/).
+> This is a companion to [`EVALUATION.md`](evaluation.md) (the hands-on
+> walkthrough) and the reference docs under [`docs/reference/`](../reference/).
 > The maturity ratings below are evidence-based assessments, not marketing
 > grades; they are open to maintainer revision.
 
@@ -152,7 +152,7 @@ stated limits) · **Roadmap** (not yet built).
 - **Enforced where:** `src/dazzle/rbac/encode_smt.py` (predicate→SMT encoder),
   `src/dazzle/rbac/prove.py` (the five provers), surfaced by `dazzle rbac prove`.
   The proof-obligation model and trust boundary are normative in
-  [`docs/reference/rbac-proof-model.md`](docs/reference/rbac-proof-model.md); the
+  [`docs/reference/rbac-proof-model.md`](../reference/rbac-proof-model.md); the
   claim ledger (`src/dazzle/rbac/claim_ledger.py`, `dazzle rbac report --lint`)
   fails CI on any copy that claims more than its evidence class discharges.
 - **Tested where:** `tests/unit/test_rbac_proof_model.py`,
@@ -294,7 +294,7 @@ Things Dazzle is sometimes assumed to do, and does **not**:
 
 ## How to verify these claims yourself
 
-See [`EVALUATION.md`](EVALUATION.md) for a ~30-minute hands-on walkthrough with
+See [`EVALUATION.md`](evaluation.md) for a ~30-minute hands-on walkthrough with
 copy-pasteable commands and expected output. The short version:
 
 ```bash

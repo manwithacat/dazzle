@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.7] - 2026-06-28
+
+### Fixed
+- **Docs `strict` build red on `main` from three broken links in `docs/evaluation/security-claims.md` (introduced v0.92.5).** The MkDocs mirror carried repo-root-relative links (`EVALUATION.md`, `docs/reference/rbac-proof-model.md`) copied verbatim from the root `SECURITY_CLAIMS.md`, but those don't resolve from `docs/evaluation/` — MkDocs strict mode aborted with 3 warnings. Repointed the mirror's links to the in-site targets (`evaluation.md`, `../reference/rbac-proof-model.md`, `../reference/`). Root `SECURITY_CLAIMS.md` is unchanged — its repo-root paths are correct for its location. `mkdocs build --strict` now exits 0. Docs-only.
+
 ## [0.92.6] - 2026-06-28
 
 ### Added
