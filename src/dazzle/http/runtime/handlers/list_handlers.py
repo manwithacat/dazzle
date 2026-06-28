@@ -38,7 +38,6 @@ from dazzle.http.runtime.auth import AuthContext
 from dazzle.http.runtime.htmx_render import (
     _render_table_empty,
     _render_table_pagination,
-    _render_table_row,
     _render_table_sentinel,
 )
 
@@ -51,6 +50,8 @@ from dazzle.http.runtime.route_support import (
     _wants_html,
 )
 from dazzle.render.access_messages import _forbidden_detail
+from dazzle.render.fragment.primitives import DataTable, RowCapabilities
+from dazzle.render.fragment.renderer._data_row import render_data_table_rows
 
 if TYPE_CHECKING:
     from dazzle.core.ir.fk_graph import FKGraph
@@ -58,6 +59,31 @@ if TYPE_CHECKING:
     from dazzle.http.specs.auth import EntityAccessSpec
 
 logger = logging.getLogger(__name__)
+
+
+def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) -> DataTable:
+    """Map an http/ HTMX-refresh ``table_dict`` (+ its row items) into the typed
+    render/ ``DataTable`` primitive (#1505 P2).
+
+    The capability vector is resolved from exactly the keys the retired
+    ``_render_table_row`` read (``bulk_actions`` / ``inline_editable`` /
+    ``detail_url_template``), so ``render_data_table_rows(build_data_table(...))``
+    is byte-identical to the legacy per-row join.
+    """
+    caps = RowCapabilities(
+        bulk_select=bool(table_dict.get("bulk_actions")),
+        inline_editable=tuple(table_dict.get("inline_editable") or ()),
+        drill=bool(table_dict.get("detail_url_template")),
+    )
+    return DataTable(
+        columns=tuple(table_dict.get("columns") or ()),
+        rows=tuple(items),
+        entity_name=str(table_dict.get("entity_name") or "Item"),
+        api_endpoint=str(table_dict.get("api_endpoint") or ""),
+        detail_url_template=str(table_dict.get("detail_url_template") or ""),
+        table_id=str(table_dict.get("table_id") or "dt-table"),
+        capabilities=caps,
+    )
 
 
 def create_list_handler(
@@ -527,7 +553,9 @@ async def _list_handler_body(
             if not items:
                 html = _render_table_empty(table_dict, request)
             else:
-                html = "".join(_render_table_row(table_dict, item) for item in items)
+                # #1505 P2: the rich rows now render via the render/ substrate
+                # (one source of truth); http/ is transport-only here.
+                html = render_data_table_rows(build_data_table(table_dict, items))
 
             # Check if table uses infinite scroll mode
             pagination_mode = getattr(request.state, "htmx_pagination_mode", "pages")
