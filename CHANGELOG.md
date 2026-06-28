@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.13] - 2026-06-28
+
+### Changed
+- **List-render convergence Phase 2 — the `render/` substrate is now the sole renderer of the rich data-table row; `http/` is transport-only (#1505, ADR-0048).** The HTMX list-refresh path (`list_handlers`) builds a typed `DataTable` (`build_data_table`) and renders the `<tbody>` slice via the substrate's `render_data_table_rows`; the duplicate `http/runtime/htmx_render.py::_render_table_row` + `_render_cell_display` + `_render_inline_edit` are **deleted** (dropped from `route_generator.py`'s re-export block). **Byte-identical** to the prior output (the Phase-1 characterization fixtures are the anchor). The `DataTable` empty-columns guard was dropped so a column-less refresh stays byte-identical (actions-only row) rather than fail-loud. New **ADR-0048** completes ADR-0038's unfinished relocation of rendering out of `http/`.
+
+### Removed
+- `_render_table_row`, `_render_cell_display`, `_render_inline_edit` from `dazzle.http.runtime.htmx_render` (moved to the `render/` substrate as `render_data_row` / `_data_row.py`). Any external importer should call `dazzle.render.fragment.renderer._data_row.render_data_table_rows` (or `render_data_row` for a single row).
+
+### Agent Guidance
+- **List/table rows render in ONE place now: `render/fragment/renderer/_data_row.py`.** To change rich-row markup (cells, drill, badges, future `peek`), edit `render_data_row`; do not reintroduce a row renderer in `http/`. `http/` only decides *which* fragment to return. The rich row is the `data-table` archetype of a capability-composed row-core — add behaviour as an **orthogonal capability** (honouring the stopPropagation protocol: row owns the bare click, every interactive sub-element `stopPropagation`s); a capability that can't compose that way belongs to a **new archetype**, not a branch. The committed fixtures under `tests/unit/__snapshots__/data_row_char_1505/` are the byte spec — regenerate intentionally with `UPDATE_CHAR_1505=1` and inspect the diff.
+
 ## [0.92.12] - 2026-06-28
 
 ### Added
