@@ -45,10 +45,14 @@ def test_backlog_is_amber_or_red_only_and_leverage_ordered() -> None:
     keys = [order.get(b["leverage"], 3) for b in backlog]
     assert keys == sorted(keys)
     # the known top gaps are present and high-leverage. 1a left the backlog when
-    # `display: auto` became the default (#1492 default-flip → level 3).
+    # `display: auto` became the default (#1492 default-flip → level 3); 1b left
+    # when the declared `semantic:` binding became render-consumed (#1493 slice 2
+    # → level 3).
     high = {b["criterion"] for b in backlog if b["leverage"] == "high"}
-    assert {"1b", "1c", "3d"} <= high
-    assert "1a" not in {b["criterion"] for b in backlog}  # level 3, no longer a gap
+    assert {"1c", "3d"} <= high
+    not_gaps = {b["criterion"] for b in backlog}
+    assert "1a" not in not_gaps  # level 3, no longer a gap
+    assert "1b" not in not_gaps  # level 3 (#1493 slice 2), no longer a gap
 
 
 def test_criteria_count_and_ids() -> None:

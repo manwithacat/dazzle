@@ -85,8 +85,13 @@ surfaces/displays/visibility (see "Revisions", below).
 - **1b — semantic-state binding.** Is a status/enum → colour/icon mapping
   **declared on the field and validated** against a semantic role, or derived
   from a name→theme convention? (R3: Dazzle has a validated palette
-  `positive/warning/destructive`; the gap is *binding* it by declaration vs the
-  `_STATUS_TONE_MAP` name fallback.)
+  `positive/warning/destructive`; the gap was *binding* it by declaration vs the
+  `_STATUS_TONE_MAP` name fallback.) **#1493 closed the binding+consumption: a
+  `semantic:` line on a shared `enum`/inline `enum[...]` field declares each
+  value's tone, validated against the palette, and `resolve_status_tone` now
+  consults it before the name guess on the list/table badge path (level 3). The
+  remaining level-4 step is WCAG colour+icon+text on every badge surface +
+  state-machine-terminal inference for undeclared values.**
 - **1c — comparison context.** Are lone scalars avoided — is a number shown with
   trend / rank / distribution / outlier by default?
 - **1d — raw-data honesty.** Are UUID / FK / ISO / float / JSON / bool

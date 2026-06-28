@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.8] - 2026-06-28
+
+### Added
+- **Render consumption of the `semantic:` status→tone binding (#1493, UX-maturity 1b — slice 2 part 2). Criterion 1b re-scored 2 → 3.** The declared `semantic:` binding (shipped parse+validate in v0.92.3/v0.92.6) is now *consumed* at render time, replacing the spelling-based name guess where a binding is declared:
+  - New resolver `resolve_status_tone(value, semantic_map)` in `dazzle.render.filters` — order: **declared binding → `_STATUS_TONE_MAP` name guess → neutral**. Declared tones are normalised via `core.ir.tones` (`positive`→`success`). `_badge_tone_filter` now delegates to it (no-context path).
+  - New shared `core.ir.tones.field_enum_semantic_map(field_type, enums)` extracts a field's declared value→tone map (inline `FieldType.enum_semantics` wins; else a shared `enum` block matched by value-set), used by **both** column builders so the logic lives in one place (`core`, bottom layer — no `page`/`http` cross-import).
+  - Threaded through the **list/table badge path** end-to-end: `ColumnContext.semantic_map` (page-render typed-value cells) **and** the HTMX tbody column dicts (`workspace_columns.build_surface_columns`/`build_entity_columns`, now passed the appspec `enums`). The badge seams (`_render_status_badge_html`, htmx `_render_cell_display`, detail `_render_status_badge`) resolve through the new function.
+  - **Byte-identical on the current fleet** — no example/fixture declares `semantic:` yet, so every resolved map is empty and the output is unchanged (snapshots, golden-master, api-surface all green). The binding only changes a badge's tone where it both is declared *and* differs from the name guess.
+  - **Remaining slice-2 work (#1493 stays open):** the detail-view per-field badge + the Fragment-substrate workspace-region (`QueueRegion`) badge paths (both route through the resolver but don't yet thread the map), the WCAG colour+**icon**+text layer (the byte-churning part → updates ~10 badge baselines), and state-machine-terminal inference for undeclared values (the level-4 step).
+
 ## [0.92.7] - 2026-06-28
 
 ### Fixed

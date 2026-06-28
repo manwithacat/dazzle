@@ -158,9 +158,10 @@ class WorkspaceRouteBuilder:
             def _columns_for_entity(entity_spec: Any, entity_name: str) -> list[dict[str, Any]]:
                 """Build columns using list surface projection if available."""
                 _ls = _entity_list_surfaces.get(entity_name)
+                _enums = getattr(appspec, "enums", None)
                 if _ls and entity_spec:
-                    return _build_surface_columns(entity_spec, _ls)
-                return _build_entity_columns(entity_spec)
+                    return _build_surface_columns(entity_spec, _ls, _enums)
+                return _build_entity_columns(entity_spec, _enums)
 
             for workspace in workspaces:
                 ws_ctx = build_workspace_context(workspace, appspec)

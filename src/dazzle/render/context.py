@@ -37,6 +37,12 @@ class ColumnContext(BaseModel):
     hidden: bool = False
     currency_code: str = ""
     visible_condition: dict[str, Any] | None = None  # Role-based visibility (#585)
+    # #1493 slice 2: for `badge` (enum) columns, the field's declared `semantic:`
+    # value→tone binding (shared enum `EnumValueSpec.semantic` or inline
+    # `FieldType.enum_semantics`). Tones are stored as declared (raw/lowercased);
+    # `resolve_status_tone` normalises them. Empty = none declared → the badge
+    # tone falls back to the `_STATUS_TONE_MAP` name guess (byte-identical).
+    semantic_map: dict[str, str] = Field(default_factory=dict)
 
 
 class FieldSourceContext(BaseModel):

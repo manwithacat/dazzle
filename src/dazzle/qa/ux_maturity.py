@@ -28,7 +28,7 @@ from dazzle.core.ir import state_machine
 from dazzle.page import app_paths
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
 from dazzle.render import filters
-from dazzle.render.context import TableContext
+from dazzle.render.context import ColumnContext, TableContext
 from dazzle.render.fragment import format_cell
 from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
 
@@ -121,10 +121,25 @@ def _probe_1c() -> ProbeResult:
 
 
 def _probe_1b() -> ProbeResult:
-    """Status->tone is a name-convention map (not a declared+validated binding on
-    the field)."""
-    has_convention = hasattr(filters, "_STATUS_TONE_MAP")
-    return ProbeResult(has_convention, "status->tone via _STATUS_TONE_MAP name convention")
+    """A declared+validated status->tone binding is consumed at render time
+    (#1493 slice 2), with the name-convention map as the documented fallback.
+
+    Level 3 evidence: the render-layer resolver `resolve_status_tone` consults a
+    field's declared `semantic:` map before the `_STATUS_TONE_MAP` name guess,
+    and the list/table badge path threads that map (`ColumnContext.semantic_map`,
+    populated from shared-enum `EnumValueSpec.semantic` / inline
+    `FieldType.enum_semantics`). Reaching 4 = icon (WCAG colour+icon+text) on
+    every badge surface + state-machine-terminal inference when undeclared.
+    """
+    has_resolver = hasattr(filters, "resolve_status_tone")
+    threads_binding = "semantic_map" in ColumnContext.model_fields
+    has_fallback = hasattr(filters, "_STATUS_TONE_MAP")
+    ok = has_resolver and threads_binding and has_fallback
+    return ProbeResult(
+        ok,
+        f"declared semantic: binding consumed (resolver={has_resolver}, "
+        f"ColumnContext.semantic_map={threads_binding}, name-guess-fallback={has_fallback})",
+    )
 
 
 def _probe_1d() -> ProbeResult:
@@ -182,8 +197,8 @@ CRITERIA: list[Criterion] = [
         "1b",
         "data_drives_ui",
         "semantic-state binding",
-        2,
-        "validated tone palette exists, but status->tone is a `_STATUS_TONE_MAP` name convention, not a declared+validated binding on the field",
+        3,
+        "#1493 — a declared+validated `semantic:` binding (shared `enum` block or inline `enum[...]` field) is now CONSUMED at render time: `resolve_status_tone` resolves the field's declared value->tone map before the `_STATUS_TONE_MAP` name guess, and the list/table badge path threads it via `ColumnContext.semantic_map`. Level 3 (good-defaults): the declared binding is authoritative where it renders; the name guess is the documented fallback. Reaching 4 (adaptive) = WCAG colour+icon+text on every badge surface + state-machine-terminal inference for undeclared values.",
         "high",
         _probe_1b,
     ),

@@ -16,6 +16,7 @@ from typing import Any
 from markupsafe import Markup
 
 from dazzle.core.ir.money import get_currency_scale
+from dazzle.core.ir.tones import normalize_tone
 
 
 def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> str:
@@ -134,16 +135,42 @@ def _metric_number_filter(value: Any) -> str:
     return str(value)
 
 
-def _badge_tone_filter(value: Any) -> str:
-    """Map a status value to a semantic tone name.
+def resolve_status_tone(value: Any, semantic_map: dict[str, str] | None = None) -> str:
+    """Resolve a status value to a semantic tone (#1493 slice 2 — render consumption).
 
-    Returns one of: ``neutral`` | ``success`` | ``warning`` | ``info`` |
-    ``destructive``.
+    Resolution order, highest precedence first:
+
+    1. **Declared** — the field's `semantic:` binding (`semantic_map`), a
+       value→tone map declared on a shared `enum` block (`EnumValueSpec.semantic`)
+       or an inline `enum[...]` field (`FieldType.enum_semantics`). Tones may be
+       raw (e.g. ``positive``); they're normalised here via the canonical palette
+       (`core.ir.tones`, ``positive``→``success``).
+    2. **Name guess** — the spelling-based `_STATUS_TONE_MAP` (the legacy default).
+    3. **Neutral** — when neither hits.
+
+    When ``semantic_map`` is None/empty the result is byte-identical to the
+    legacy `_badge_tone_filter` name guess, so threading the (usually empty) map
+    through the badge seams changes nothing until an app declares a binding.
     """
     if value is None:
         return "neutral"
     status = str(value).lower().replace(" ", "_")
+    if semantic_map:
+        declared = semantic_map.get(status)
+        if declared is not None:
+            return normalize_tone(declared) or "neutral"
     return _STATUS_TONE_MAP.get(status, "neutral")
+
+
+def _badge_tone_filter(value: Any) -> str:
+    """Map a status value to a semantic tone name (name-guess only).
+
+    Returns one of: ``neutral`` | ``success`` | ``warning`` | ``info`` |
+    ``destructive``. The context-aware path is `resolve_status_tone`, which
+    consults a declared `semantic:` binding first; this thin wrapper is the
+    no-context call site (a bare value with no field/column in scope).
+    """
+    return resolve_status_tone(value)
 
 
 def _bool_icon_filter(value: Any) -> Markup:

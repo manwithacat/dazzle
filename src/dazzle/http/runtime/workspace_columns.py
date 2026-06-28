@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.core.ir.tones import field_enum_semantic_map
 from dazzle.core.strings import to_api_plural
 
 
@@ -52,11 +53,18 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     return "text"
 
 
-def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str, Any]]:
+def build_surface_columns(
+    entity_spec: Any, surface_spec: Any, enums: Any = None
+) -> list[dict[str, Any]]:
     """Build column metadata from a list surface's field projection.
 
     Uses the surface's section elements to determine which entity fields to
     show and in what order, rather than dumping all entity fields.
+
+    ``enums`` (the app's shared `enum` blocks) lets a badge column carry its
+    declared `semantic:` value→tone map (#1493 slice 2); pass the appspec's
+    ``enums`` so shared-enum bindings resolve (inline `enum[...]` bindings
+    resolve without it).
     """
     if not entity_spec or not hasattr(entity_spec, "fields"):
         return []
@@ -82,7 +90,7 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
                 field_formats[fn] = getattr(element, "format", None)
 
     if not surface_fields:
-        return build_entity_columns(entity_spec)
+        return build_entity_columns(entity_spec, enums)
 
     # Build a lookup from entity fields
     field_map: dict[str, Any] = {f.name: f for f in entity_spec.fields}
@@ -135,6 +143,9 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
         if kind_val == "money":
             col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
         if col_type == "badge":
+            _sem = field_enum_semantic_map(ft, enums)  # #1493 slice 2
+            if _sem:
+                col["semantic_map"] = _sem
             if kind_val == "enum":
                 ev = getattr(ft, "enum_values", None)
                 if ev:
@@ -154,12 +165,14 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
     return columns
 
 
-def build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
+def build_entity_columns(entity_spec: Any, enums: Any = None) -> list[dict[str, Any]]:
     """Pre-compute column metadata from an entity spec (constant-folded at startup).
 
     This replaces per-request column derivation with a one-time computation.
     All data comes from IR (field types, enum values, state machines) and
-    never changes during the lifetime of the server.
+    never changes during the lifetime of the server. ``enums`` carries the app's
+    shared `enum` blocks so badge columns pick up their declared `semantic:`
+    value→tone map (#1493 slice 2).
     """
     columns: list[dict[str, Any]] = []
     if not entity_spec or not hasattr(entity_spec, "fields"):
@@ -204,6 +217,9 @@ def build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
         if kind_val == "money":
             col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
         if col_type == "badge":
+            _sem = field_enum_semantic_map(ft, enums)  # #1493 slice 2
+            if _sem:
+                col["semantic_map"] = _sem
             if kind_val == "enum":
                 ev = getattr(ft, "enum_values", None)
                 if ev:

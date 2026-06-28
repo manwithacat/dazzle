@@ -204,6 +204,171 @@ entity Task "Task":
     assert any("E_SEMANTIC_TONE_UNKNOWN" in e and "turquoise" in e for e in errors)
 
 
+# ── render consumption: resolve_status_tone (slice 2 part 2) ───────────────
+
+
+def test_resolver_no_map_matches_name_guess() -> None:
+    from dazzle.render.filters import _badge_tone_filter, resolve_status_tone
+
+    # Byte-identical to the legacy name guess when no binding is supplied.
+    for value in ["done", "blocked", "open", "totally_unknown", None, "In Progress"]:
+        assert resolve_status_tone(value) == _badge_tone_filter(value)
+
+
+def test_resolver_declared_binding_wins_over_name_guess() -> None:
+    from dazzle.render.filters import resolve_status_tone
+
+    # "open" name-guesses to "info"; a declared binding overrides it.
+    assert resolve_status_tone("open") == "info"
+    assert resolve_status_tone("open", {"open": "warning"}) == "warning"
+    # `positive` alias normalises to `success`.
+    assert resolve_status_tone("draft", {"draft": "positive"}) == "success"
+
+
+def test_resolver_unknown_declared_tone_falls_back_to_neutral() -> None:
+    from dazzle.render.filters import resolve_status_tone
+
+    # A non-palette tone in the map resolves to neutral (not the name guess) —
+    # the binding is authoritative; validation catches the typo separately.
+    assert resolve_status_tone("done", {"done": "turquoise"}) == "neutral"
+
+
+def test_resolver_undeclared_value_with_map_uses_name_guess() -> None:
+    from dazzle.render.filters import resolve_status_tone
+
+    # A value not in the (partial) map still falls through to the name guess
+    # ("done" → success), not neutral.
+    assert resolve_status_tone("done", {"open": "warning"}) == "success"
+
+
+def test_badge_html_consumes_semantic_map() -> None:
+    from dazzle.render.fragment.region._shared import _render_status_badge_html
+
+    # Without a map, "open" → info; with a declared binding, → warning.
+    assert 'data-dz-tone="info"' in _render_status_badge_html("open")
+    assert 'data-dz-tone="warning"' in _render_status_badge_html(
+        "open", semantic_map={"open": "warning"}
+    )
+
+
+def test_column_semantic_map_populated_from_shared_enum() -> None:
+    # The col-build site resolves a shared enum's `semantic:` into ColumnContext.
+    # A shared enum binds an inline `enum[...]` field by value-set match (the same
+    # mechanism `_infer_filter_type` uses to recover titles).
+    from dazzle.page.converters.template_compiler import _build_columns
+
+    appspec = _appspec(
+        """module m
+app a "A"
+enum TaskStatus "Task Status":
+  open "Open"
+  done "Done"
+  semantic: open=warning, done=positive
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, done]
+surface tasks "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field status "Status"
+"""
+    )
+    entity = next(e for e in appspec.domain.entities if e.name == "Task")
+    surface = next(s for s in appspec.surfaces if s.name == "tasks")
+    cols = _build_columns(surface, entity, surface.ux, list(appspec.enums))
+    status_col = next(col for col in cols if col.key == "status")
+    assert status_col.type == "badge"
+    assert status_col.semantic_map == {"open": "warning", "done": "positive"}
+
+
+def test_column_semantic_map_from_inline_field_binding() -> None:
+    # An inline `semantic:` on the field itself populates the column map too.
+    from dazzle.page.converters.template_compiler import _build_columns
+
+    appspec = _appspec(
+        """module m
+app a "A"
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, done]
+    semantic: open=warning, done=positive
+surface tasks "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field status "Status"
+"""
+    )
+    entity = next(e for e in appspec.domain.entities if e.name == "Task")
+    surface = next(s for s in appspec.surfaces if s.name == "tasks")
+    cols = _build_columns(surface, entity, surface.ux, list(appspec.enums))
+    status_col = next(col for col in cols if col.key == "status")
+    assert status_col.semantic_map == {"open": "warning", "done": "positive"}
+
+
+def test_htmx_workspace_columns_carry_semantic_map() -> None:
+    # The HTMX tbody column path (workspace_columns) is the dominant list-row
+    # render; it must carry the declared binding too.
+    from dazzle.http.runtime.workspace_columns import build_surface_columns
+
+    appspec = _appspec(
+        """module m
+app a "A"
+enum TaskStatus "Task Status":
+  open "Open"
+  done "Done"
+  semantic: open=warning, done=positive
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, done]
+surface tasks "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field status "Status"
+"""
+    )
+    entity = next(e for e in appspec.domain.entities if e.name == "Task")
+    surface = next(s for s in appspec.surfaces if s.name == "tasks")
+    cols = build_surface_columns(entity, surface, list(appspec.enums))
+    status_col = next(c for c in cols if c["key"] == "status")
+    assert status_col["type"] == "badge"
+    assert status_col["semantic_map"] == {"open": "warning", "done": "positive"}
+
+
+def test_htmx_workspace_columns_omit_key_when_undeclared() -> None:
+    # No declared semantic: the key is absent (byte-identical col dicts).
+    from dazzle.http.runtime.workspace_columns import build_surface_columns
+
+    appspec = _appspec(
+        """module m
+app a "A"
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, done]
+surface tasks "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field status "Status"
+"""
+    )
+    entity = next(e for e in appspec.domain.entities if e.name == "Task")
+    surface = next(s for s in appspec.surfaces if s.name == "tasks")
+    cols = build_surface_columns(entity, surface, list(appspec.enums))
+    status_col = next(c for c in cols if c["key"] == "status")
+    assert "semantic_map" not in status_col
+
+
+def test_probe_1b_reports_level_3() -> None:
+    from dazzle.qa.ux_maturity import CRITERIA
+
+    crit_1b = next(c for c in CRITERIA if c.id == "1b")
+    assert crit_1b.declared == 3
+    assert crit_1b.probe().ok  # probe agrees with the declared level (no drift)
+
+
 # ── validator: tone palette ───────────────────────────────────────────────
 
 

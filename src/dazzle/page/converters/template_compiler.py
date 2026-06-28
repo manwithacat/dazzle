@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
 from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
+from dazzle.core.ir.tones import field_enum_semantic_map
 from dazzle.core.ir.triples import WidgetKind, resolve_widget
 from dazzle.core.strings import to_api_plural
 from dazzle.page import app_paths
@@ -152,6 +153,19 @@ def _field_type_to_column_type(
         FieldTypeKind.BELONGS_TO: "ref",
     }
     return type_map.get(kind, "text")
+
+
+def _enum_semantic_map(
+    field_spec: ir.FieldSpec | None,
+    enums: list[ir.EnumSpec] | None = None,
+) -> dict[str, str]:
+    """Declared value→tone `semantic:` map for an enum field column (#1493 slice 2).
+
+    Thin FieldSpec→FieldType adapter over the shared
+    `core.ir.tones.field_enum_semantic_map` (which both this page-render builder
+    and the http-workspace builder call, so the logic lives in one place).
+    """
+    return field_enum_semantic_map(field_spec.type if field_spec else None, enums)
 
 
 def _file_accept_attr(field_spec: ir.FieldSpec) -> str:
@@ -354,6 +368,7 @@ def _build_columns(
                         filter_ref_api=_ref_api,
                         currency_code=col_currency,
                         visible_condition=_col_vis,
+                        semantic_map=_enum_semantic_map(field_spec, enums),
                     )
                 )
     elif entity and entity.fields:
@@ -401,6 +416,7 @@ def _build_columns(
                         filter_ref_entity=_ref_ent,
                         filter_ref_api=_ref_api,
                         currency_code=col_currency,
+                        semantic_map=_enum_semantic_map(field, enums),
                     )
                 )
 
@@ -1080,6 +1096,9 @@ def _build_entity_columns(entity: ir.EntitySpec) -> list[ColumnContext]:
                 label=col_key.replace("_", " ").title(),
                 type=_field_type_to_column_type(field, field.name),
                 currency_code=col_currency,
+                # No shared-enum registry here (related-tab columns); inline
+                # `enum[...]` bindings still resolve via FieldType.enum_semantics.
+                semantic_map=_enum_semantic_map(field, None),
             )
         )
     return columns

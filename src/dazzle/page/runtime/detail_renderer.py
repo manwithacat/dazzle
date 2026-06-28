@@ -22,13 +22,18 @@ from typing import Any
 from dazzle.render.html import esc as _esc
 
 
-def _render_status_badge(value: Any) -> str:
-    """Inline mirror of `macros/status_badge.html::render_status_badge`."""
-    from dazzle.render.filters import _badge_tone_filter
+def _render_status_badge(value: Any, semantic_map: dict[str, str] | None = None) -> str:
+    """Inline mirror of `macros/status_badge.html::render_status_badge`.
+
+    #1493 slice 2: routes through `resolve_status_tone`, so a declared
+    `semantic:` binding (when threaded via `semantic_map`) wins over the name
+    guess. `semantic_map` None → byte-identical to the legacy name guess.
+    """
+    from dazzle.render.filters import resolve_status_tone
 
     if value in (None, "", "—"):
         return '<span class="dz-badge-empty" aria-label="No status">—</span>'
-    tone = _badge_tone_filter(value)
+    tone = resolve_status_tone(value, semantic_map)
     label = str(value).replace("_", " ").title()
     return (
         f'<span class="dz-badge" data-dz-tone="{_esc(tone, quote=True)}" '  # nosemgrep

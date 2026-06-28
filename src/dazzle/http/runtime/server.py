@@ -1733,7 +1733,11 @@ class DazzleBackendApp:
         for entity in self._entities:
             slug = _entity_slug(entity.name)
             _ls = _entity_list_surfaces.get(entity.name)
-            cols = _build_surface_columns(entity, _ls) if _ls else _build_entity_columns(entity)
+            cols = (
+                _build_surface_columns(entity, _ls, self._appspec.enums)
+                if _ls
+                else _build_entity_columns(entity, self._appspec.enums)
+            )
             entity_htmx_meta[entity.name] = {
                 "columns": cols,
                 "detail_url": f"{app_prefix}/{slug}/{{id}}",
