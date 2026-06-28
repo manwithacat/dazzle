@@ -73,7 +73,7 @@ Eleven stated positions, defended in the [ADRs](docs/adr/INDEX.md):
 5. **Server-rendered HTML + HTMX.** No SPA framework, no build toolchain, no client-state fragmentation.
 6. **Fragments as the only escape hatch.** When the DSL can't express it, you reach for a *fragment* — a constrained, named, semantically-tagged piece of custom rendering. Not arbitrary frontend.
 7. **Append-oriented history.** Events, decisions, and grants are logged. Auditors don't need to spelunk; the trail is part of the substrate.
-8. **Provable RBAC.** Scope rules compile to a formal predicate algebra and are statically validated against the FK graph.
+8. **Provable RBAC.** Scope rules compile to a formal predicate algebra, statically validated against the FK graph, and their meta-properties (least-privilege containment, deny-overrides precedence) are mechanically proved by an SMT solver — `dazzle rbac prove` — with the trust boundary stated explicitly.
 9. **No hidden singletons.** Dependencies are explicit (`RuntimeServices`, `ServerState`) — readable by both humans and agents.
 10. **No backwards-compat shims.** Pre-1.0, clean breaks beat layered workarounds. Callers are updated in the same commit.
 11. **Bump on every fix.** Every push gets a unique semantic version — deployment traceability over release ceremony.
@@ -96,7 +96,7 @@ If you're building SaaS — especially in regulated industries — you will face
 
 Most teams answer these questions retroactively, combing through code to produce evidence. Dazzle derives the answers from the DSL itself:
 
-- **Access control** is declared in the DSL and provably enforced. Every permission is statically verifiable.
+- **Access control** is declared in the DSL. The permission matrix is *derived* from it (not hand-maintained), its meta-properties — least-privilege containment, deny-overrides precedence, no dead-rule scopes — are *mechanically proved* (`dazzle rbac prove`), and runtime enforcement is *conformance-verified* against that matrix (`dazzle rbac verify`). The proof's scope and trust boundary are stated explicitly, the way an auditor expects.
 - **State machines** model approval workflows, transitions, and four-eyes authorization.
 - **Compliance evidence** is extracted automatically. Run `dazzle compliance compile --framework soc2` and get a structured audit report showing which controls your DSL satisfies.
 - **Grant-based RBAC** supports delegated, time-bounded access with approval workflows — the kind of access governance auditors want to see.
@@ -193,21 +193,23 @@ The output is a structured `AuditSpec` showing which controls are **evidenced** 
 
 ### Provable access control
 
-Scope rules compile to a formal predicate algebra, statically validated against the FK graph at `dazzle validate` time. The verification framework has three layers:
+Scope rules compile to a formal predicate algebra, statically validated against the FK graph at `dazzle validate` time. Each layer below carries an explicit **evidence class** — *enumeration*, *proof*, or *test* — so the word "provable" never outruns what is actually discharged:
 
-| Layer | What it proves |
-|-------|---------------|
-| **Static Matrix** | Every (role, entity, operation) combination is computed from the DSL |
-| **Dynamic Verification** | The running app is probed as every role to confirm runtime matches the matrix |
-| **Decision Audit Trail** | Every access decision is logged with the matched rule and outcome |
+| Layer | What it establishes | Evidence class |
+|-------|---------------------|----------------|
+| **Static Matrix** | Every (role, entity, operation) decision is derived from the DSL | Enumeration |
+| **Meta-property proof** | Least-privilege containment, deny-overrides precedence, and no-dead-rule scopes are proved by an SMT solver, with a counter-model on any violation | **Proof** |
+| **Dynamic Verification** | The running app is probed as every role to confirm runtime matches the matrix | Test |
+| **Decision Audit Trail** | Every access decision is logged with the matched rule and outcome | Test |
 
 ```bash
-dazzle rbac matrix    # Generate the access matrix (no server needed)
+dazzle rbac matrix    # Derive the access matrix from the DSL (no server needed)
+dazzle rbac prove     # Prove the meta-properties; counter-model on violation (CI gate)
 dazzle rbac verify    # Verify runtime matches the matrix (CI gate)
-dazzle rbac report    # Compliance report for auditors
+dazzle rbac report    # Compliance report for auditors (--lint guards the copy)
 ```
 
-See [RBAC Verification](docs/reference/rbac-verification.md) and [Compliance](docs/reference/compliance.md) for details.
+The proof is *scoped* — it covers the static core (tenant ∧ role ∧ scope) modulo a named trust boundary (PostgreSQL, the connection factory, authentication), and it proves a model of the policy whose faithfulness to the emitted SQL is closed by test. That boundary is stated, not buried: see the [RBAC Proof Model & Trust Boundary](docs/reference/rbac-proof-model.md), plus [RBAC Verification](docs/reference/rbac-verification.md) and [Compliance](docs/reference/compliance.md).
 
 ### Enterprise authentication & identity (opt-in)
 

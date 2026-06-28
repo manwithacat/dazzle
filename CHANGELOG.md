@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.91.0] - 2026-06-28
+
+### Added
+- **RBAC claim ledger + copy-lint (`dazzle rbac report --lint`) — WP-7.** Closes the
+  proof substrate's honesty loop: `dazzle.rbac.claim_ledger` maps every external
+  access-control claim to a discharging artefact and an evidence class (mirroring
+  the proof model §5), and `dazzle rbac report --lint` (a) checks ledger integrity
+  (no undischarged Proof-class claim; every anchor exists in the proof model) and
+  (b) scans the README for copy that exceeds its discharged evidence class — e.g.
+  "provably enforced" when enforcement is only conformance-*tested*. Exits non-zero
+  on any finding; gated by `tests/unit/test_rbac_claim_ledger.py`.
+
+### Changed
+- **README RBAC claims are now evidence-backed — more ambitious *and* more honest.**
+  The "Provable access control" section gains the new SMT **Meta-property proof**
+  layer (`dazzle rbac prove`) and labels every layer with its evidence class
+  (enumeration / proof / test). The prior overclaim "access control is … provably
+  enforced. Every permission is statically verifiable." is corrected: the matrix is
+  *derived*, its meta-properties are *proved*, and runtime enforcement is
+  *conformance-verified* — with the scoped trust boundary stated, not buried.
+
+### Agent Guidance
+- **Copy is now lint-gated against the ledger.** Before adding or changing any
+  access-control / "provable" wording in README/PyPI/marketing copy, run
+  `dazzle rbac report --lint`. To license a new claim, add a row to
+  `src/dazzle/rbac/claim_ledger.py` (`LEDGER`) with its evidence class + discharging
+  command; to forbid a new overclaim phrase, add a pattern to `_OVERCLAIM_PATTERNS`.
+  The rule: never assert *proof* for a *test*- or *assumed*-class property
+  (enforcement conformance is WP-3 test-class; the TCB is assumption A.4).
+
 ## [0.90.0] - 2026-06-28
 
 ### Added

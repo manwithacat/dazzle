@@ -516,8 +516,38 @@ def prove_cmd(
 def report_cmd(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
     format: str = typer.Option("markdown", "--format", "-f", help="Output format: markdown"),
+    lint: bool = typer.Option(
+        False, "--lint", help="Lint marketing copy (README) against the claim ledger (WP-7)."
+    ),
 ) -> None:
-    """Generate compliance report from last verification run."""
+    """Generate compliance report from last verification run, or --lint the copy.
+
+    With --lint, checks the claim ledger's integrity and scans the README for
+    access-control claims that exceed their discharged evidence class (e.g.
+    'provably enforced' when enforcement is only conformance-tested). Exits
+    non-zero on any finding. Needs no verification run or project.
+    """
+    if lint:
+        from pathlib import Path
+
+        from dazzle.rbac.claim_ledger import lint_readme, verify_ledger_integrity
+
+        repo_root = Path(__file__).resolve().parents[3]
+        errors = verify_ledger_integrity()
+        findings = lint_readme(repo_root / "README.md")
+        for e in errors:
+            typer.echo(f"  LEDGER ERROR: {e}", err=True)
+        for f in findings:
+            typer.echo(f"  OVERCLAIM in {f.source}: …{f.excerpt}…", err=True)
+            typer.echo(f"               → {f.reason}", err=True)
+        if errors or findings:
+            typer.echo(
+                f"claim-lint: {len(errors)} ledger error(s), {len(findings)} overclaim(s)", err=True
+            )
+            raise typer.Exit(code=1)
+        typer.echo("claim-lint: clean — all RBAC copy is within its discharged evidence class.")
+        return
+
     from dazzle.rbac.report import generate_report
     from dazzle.rbac.verifier import VerificationReport
 
