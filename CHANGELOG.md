@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.1] - 2026-06-28
+
+### Fixed
+- **#1438 deferred-imports ratchet regression from v0.92.0.** The re-scored `_probe_1a` (#1492) added a function-level `from dazzle.page.runtime.auto_display import resolve_region_display_mode` inside the probe, tripping the deferred-imports ratchet (`src/dazzle/qa/ux_maturity.py` baseline was 0). Hoisted the import (and `types.SimpleNamespace`) to module top — `qa → page` is the correct layer direction (the module already imports `dazzle.page` at top). CI-only; no behaviour change.
+
 ## [0.92.0] - 2026-06-28
 
 ### Changed

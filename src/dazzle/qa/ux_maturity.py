@@ -19,12 +19,14 @@ from __future__ import annotations
 import importlib.util
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any
 
 # Hoisted (no cycle: qa -> render/page/core is the correct layer direction; #1438).
 from dazzle._version import get_version
 from dazzle.core.ir import state_machine
 from dazzle.page import app_paths
+from dazzle.page.runtime.auto_display import resolve_region_display_mode
 from dazzle.render import filters
 from dazzle.render.context import TableContext
 from dazzle.render.fragment import format_cell
@@ -91,10 +93,6 @@ def _probe_1a() -> ProbeResult:
     default-flip). Confirms the declared level by exercising the real dispatch
     decision — an unset region with a scalar aggregate must resolve to SUMMARY,
     not LIST."""
-    from types import SimpleNamespace
-
-    from dazzle.page.runtime.auto_display import resolve_region_display_mode
-
     unset_agg = SimpleNamespace(
         display="list", display_unset=True, aggregates={"n": object()}, source=""
     )
