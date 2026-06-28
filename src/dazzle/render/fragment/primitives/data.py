@@ -86,6 +86,55 @@ _METRIC_DELTA_SENTIMENTS = ("", "positive_up", "positive_down")
 
 
 @dataclass(frozen=True, slots=True)
+class RowCapabilities:
+    """Orthogonal per-row capability vector for the converged list row-core
+    (#1505 — `docs/superpowers/specs/2026-06-28-list-render-convergence-design.md`
+    §3). Each flag honours the one composition rule: *the row owns the bare
+    click (`drill`); every interactive sub-element stops propagation*.
+
+    Phase 1 carries only the flags that gate the rich `data-table` archetype's
+    output — the subset that varies in today's `_render_table_row`. The field
+    set grows in Phase 3 as the `list-region` / `embedded` archetypes are folded
+    onto the shared core (e.g. an explicit `row_actions` flavour). Adding a
+    capability that cannot satisfy the composition rule is the signal it belongs
+    to a new archetype, not a new flag here.
+    """
+
+    bulk_select: bool = False
+    inline_editable: tuple[str, ...] = ()
+    drill: bool = False
+    peek: str = "off"
+
+
+@dataclass(frozen=True, slots=True)
+class DataTable:
+    """Rich CRUD data-table primitive (#1505) — the `render/` substrate home for
+    the `dz-tr-row` archetype previously rendered by
+    `http/runtime/htmx_render.py::_render_table_row`.
+
+    Unlike `Table`/`ListRegion` (which carry pre-rendered string/Fragment cells),
+    `DataTable` carries the *raw inputs* the row-core needs to render cells
+    itself: `columns` are column-spec mappings (``key``/``type``/optional
+    ``hidden``/``currency_code``/``semantic_map``/``filter_options``/``label``)
+    and `rows` are item mappings. Rendered by `_emit_data_table` (full table) and
+    `render_data_table_rows` (the `<tbody>`-only entry the http/ HTMX-refresh
+    transport path calls down into).
+    """
+
+    columns: tuple[typing.Mapping[str, Any], ...]
+    rows: tuple[typing.Mapping[str, Any], ...] = ()
+    entity_name: str = "Item"
+    api_endpoint: str = ""
+    detail_url_template: str = ""
+    table_id: str = "dt-table"
+    capabilities: RowCapabilities = field(default_factory=RowCapabilities)
+
+    def __post_init__(self) -> None:
+        if not self.columns:
+            raise ValueError("DataTable requires at least one column")
+
+
+@dataclass(frozen=True, slots=True)
 class Table:
     """Plain tabular data primitive.
 
