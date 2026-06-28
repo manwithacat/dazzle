@@ -42,7 +42,10 @@ def test_init_db_runs_no_ddl_in_production(
     attempt fail."""
     monkeypatch.setenv("DAZZLE_ENV", "production")
     store = store_cls.__new__(store_cls)  # bypass __init__; exercise _init_db in isolation
+    # Boom BOTH connection seams: stores hardened in #1504 connect via _connect_raw,
+    # others still via _get_connection — either being called would fail the test.
     monkeypatch.setattr(store, "_get_connection", _boom, raising=False)
+    monkeypatch.setattr(store, "_connect_raw", _boom, raising=False)
     store._init_db()  # must return cleanly without opening a connection
 
 
@@ -57,7 +60,9 @@ def test_init_db_runs_ddl_in_development(monkeypatch: pytest.MonkeyPatch) -> Non
         called.append(True)
         raise RuntimeError("stop after connect attempt")
 
-    monkeypatch.setattr(store, "_get_connection", _record, raising=False)
+    # #1504: _init_db connects via _connect_raw (runs under the init lock, must
+    # not re-enter ensure_initialized).
+    monkeypatch.setattr(store, "_connect_raw", _record, raising=False)
     with pytest.raises(RuntimeError, match="stop after connect"):
         store._init_db()
     assert called, "dev path must attempt boot DDL"

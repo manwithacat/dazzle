@@ -2,6 +2,7 @@
 
 import logging
 import secrets
+import threading
 from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
@@ -2641,7 +2642,11 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         # many AuthStores built directly in tests / flat apps.
         self._partition_hierarchy: PartitionHierarchy | None = None
 
-        self._init_db()
+        # Construction is pure — no I/O. Schema init is deferred to first use
+        # (or an explicit ensure_initialized() at boot) so the store can be
+        # built without a live database. See ensure_initialized().
+        self._initialized = False
+        self._init_lock = threading.Lock()
 
     def set_partition_hierarchy(self, hierarchy: "PartitionHierarchy | None") -> None:  # noqa: F821
         """Install the tenant-host parent graph (#1463) for partition-root resolution.
@@ -2813,7 +2818,9 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         also tore down the other table creation. Fails loud by design: you cannot
         silently boot with the split-identity hole open.
         """
-        conn = self._get_connection()
+        # _connect_raw: this runs inside _init_db under the init lock, so it must
+        # not re-enter ensure_initialized (which _get_connection would).
+        conn = self._connect_raw()
         try:
             cursor = conn.cursor()
             # #1363: serialize across workers — released at commit/close.
@@ -2838,9 +2845,37 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         finally:
             conn.close()
 
-    def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
-        """Get a PostgreSQL database connection."""
+    def ensure_initialized(self) -> None:
+        """Run first-use schema initialization (idempotent, thread-safe).
+
+        Construction is pure (no I/O) so the store can be built without a live
+        database; the table DDL is deferred here. Triggered lazily on the first
+        connection acquisition, and called explicitly at server boot to preserve
+        eager-DDL / fail-fast behavior.
+
+        Concurrency (review #1504 follow-up): double-checked locking makes the
+        flag flip atomic, and ``_initialized`` is set only AFTER ``_init_db``
+        completes — so a concurrent caller either waits on the lock or sees the
+        store fully initialized, never a half-built schema. ``_init_db`` uses
+        ``_connect_raw`` (not ``_get_connection``) so it never re-enters this
+        method under the lock. On failure the flag stays False → retryable.
+        """
+        if self._initialized:
+            return
+        with self._init_lock:
+            if self._initialized:
+                return
+            self._init_db()
+            self._initialized = True
+
+    def _connect_raw(self) -> psycopg.Connection[dict[str, Any]]:
+        """A connection that does NOT trigger lazy init — used only by _init_db."""
         return psycopg.connect(self._database_url, row_factory=dict_row)
+
+    def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
+        """Get a PostgreSQL database connection (lazily initializing schema)."""
+        self.ensure_initialized()
+        return self._connect_raw()
 
     def _init_db(self) -> None:
         """Initialize database tables.
@@ -2863,7 +2898,7 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             logger.info("Skipping AuthStore boot schema DDL; migrations own the schema (#1462).")
             return
 
-        conn = self._get_connection()
+        conn = self._connect_raw()
         try:
             cursor = conn.cursor()
             cursor.execute("SELECT pg_advisory_xact_lock(%s)", (AUTH_DDL_LOCK_KEY,))

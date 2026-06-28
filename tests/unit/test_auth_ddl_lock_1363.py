@@ -19,7 +19,9 @@ def _store_with_recording_conn() -> tuple[AuthStore, MagicMock]:
     conn = MagicMock()
     cursor = conn.cursor.return_value
     cursor.fetchall.return_value = []  # no LOWER(email) collisions
-    store._get_connection = lambda: conn  # type: ignore[method-assign]
+    # #1504: boot DDL acquires via _connect_raw (it runs under the init lock and
+    # must not re-enter ensure_initialized, which _get_connection would).
+    store._connect_raw = lambda: conn  # type: ignore[method-assign]
     return store, conn
 
 

@@ -76,7 +76,7 @@ class TestTokenStorePostgresInit:
 
             store = TokenStore(database_url="postgresql://localhost/test")
 
-        with patch.object(store, "_get_connection", return_value=mock_conn):
+        with patch.object(store, "_connect_raw", return_value=mock_conn):
             # Call the real _init_db — it will use our mock connection
             TokenStore._init_db(store)
 
@@ -95,7 +95,7 @@ class TestTokenStorePostgresInit:
 
             store = TokenStore(database_url="postgresql://localhost/test")
 
-        with patch.object(store, "_get_connection", return_value=mock_conn):
+        with patch.object(store, "_connect_raw", return_value=mock_conn):
             TokenStore._init_db(store)
 
         call_strs = [str(c) for c in mock_cursor.execute.call_args_list]
@@ -114,7 +114,7 @@ class TestTokenStorePostgresInit:
 
             store = TokenStore(database_url="postgresql://localhost/test")
 
-        with patch.object(store, "_get_connection", return_value=mock_conn):
+        with patch.object(store, "_connect_raw", return_value=mock_conn):
             TokenStore._init_db(store)
 
         mock_conn.commit.assert_called_once()

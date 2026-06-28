@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+import threading
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -126,11 +127,34 @@ class TokenStore:
         self._database_url = normalise_postgres_scheme(database_url)
 
         self.token_lifetime_days = token_lifetime_days
-        self._init_db()
+        # Pure construction — no I/O. Schema init deferred to first use.
+        self._initialized = False
+        self._init_lock = threading.Lock()
+
+    def ensure_initialized(self) -> None:
+        """Run first-use schema initialization (idempotent, thread-safe).
+
+        Construction is pure so the store can be built without a live database.
+        Double-checked locking + flag-set-after-success means a concurrent caller
+        either waits or sees a fully-initialized schema, never a half-built one
+        (review #1504 follow-up). ``_init_db`` uses ``_connect_raw`` so it never
+        re-enters this method under the lock; on failure the flag stays False."""
+        if self._initialized:
+            return
+        with self._init_lock:
+            if self._initialized:
+                return
+            self._init_db()
+            self._initialized = True
+
+    def _connect_raw(self) -> psycopg.Connection[dict[str, Any]]:
+        """A connection that does NOT trigger lazy init — used only by _init_db."""
+        return psycopg.connect(self._database_url, row_factory=dict_row)
 
     def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
-        """Get a PostgreSQL database connection."""
-        return psycopg.connect(self._database_url, row_factory=dict_row)
+        """Get a PostgreSQL database connection (lazily initializing schema)."""
+        self.ensure_initialized()
+        return self._connect_raw()
 
     def _init_db(self) -> None:
         """Initialize database tables.
@@ -144,7 +168,7 @@ class TokenStore:
                 "Skipping refresh-token boot schema DDL; migrations own the schema (#1496)."
             )
             return
-        conn = self._get_connection()
+        conn = self._connect_raw()  # raw: runs under the init lock, must not re-enter
         try:
             cursor = conn.cursor()
             ensure_refresh_token_tables(cursor)

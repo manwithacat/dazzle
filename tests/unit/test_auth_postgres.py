@@ -155,8 +155,10 @@ class TestPostgresTableInit:
 
             store = AuthStore(database_url="postgresql://mock/test")
 
-        # Call the real _init_db with a mocked _get_connection
-        with patch.object(store, "_get_connection", return_value=mock_conn):
+        # Call the real _init_db with a mocked connection. _init_db acquires via
+        # _connect_raw now (#1504: it runs under the init lock and must not
+        # re-enter ensure_initialized, which _get_connection would).
+        with patch.object(store, "_connect_raw", return_value=mock_conn):
             AuthStore._init_db(store)
 
         return store
@@ -231,10 +233,12 @@ class TestPostgresGetConnection:
         mock_pg, mock_rows = mock_psycopg
         mock_conn = MagicMock()
 
-        with patch("dazzle.http.runtime.auth.AuthStore._init_db"):
-            from dazzle.http.runtime.auth import AuthStore
+        from dazzle.http.runtime.auth import AuthStore
 
-            store = AuthStore(database_url="postgresql://localhost/test")
+        store = AuthStore(database_url="postgresql://localhost/test")
+        # Construction is lazy now (#1504): mark initialized so _get_connection
+        # doesn't trigger schema init — isolates the connect-call assertion.
+        store._initialized = True
 
         with patch("dazzle.http.runtime.auth.store.psycopg") as patched_pg:
             patched_pg.connect.return_value = mock_conn

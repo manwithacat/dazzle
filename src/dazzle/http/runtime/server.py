@@ -1523,6 +1523,10 @@ class DazzleBackendApp:
         # backfills/refreshes existing rows once the tenant tables exist.
         _tenant_entities = getattr(getattr(self._appspec, "domain", None), "entities", None)
         self._auth_store.set_partition_hierarchy(build_partition_hierarchy(_tenant_entities))
+        # AuthStore construction is now pure (no I/O); run its first-use schema
+        # init eagerly at boot to preserve fail-fast + eager-DDL behavior. A no-op
+        # in production (skip_boot_schema_ddl: migrations own the schema, #1462).
+        self._auth_store.ensure_initialized()
         self._auth_middleware = AuthMiddleware(self._auth_store)
 
         # ADR-0039 (#778/#1398): wire the domain-`User` provisioning mirror onto the

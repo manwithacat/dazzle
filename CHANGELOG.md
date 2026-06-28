@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.91.2] - 2026-06-28
+
+### Changed
+- **Auth stores construct without I/O (#1504 design follow-up).** `AuthStore`,
+  `TokenStore`, and `DeviceRegistry` used to connect to PostgreSQL inside
+  `__init__` (eager `_init_db()`), so they couldn't be built without a live
+  database. Construction is now pure; schema init is deferred to first use via a
+  thread-safe `ensure_initialized()` (double-checked `threading.Lock`, flag set
+  only after success → a concurrent caller waits or sees a fully-built schema,
+  never a half-built one; `_init_db` uses a raw connection so it can't re-enter
+  under the lock). The server boots `AuthStore` and `TokenStore` eagerly to keep
+  fail-fast/eager-DDL behavior; production is unchanged (`_init_db` already
+  no-ops under `skip_boot_schema_ddl`). New `tests/unit/test_auth_store_lazy_init.py`
+  unit-tests construction with no DB, plus a concurrency single-flight regression.
+  Adversarial review drove the thread-safety hardening.
+
+### Fixed
+- **JWT fuzz test was flaky once Hypothesis cached a NUL-byte example.**
+  `test_create_token_with_random_metadata` fed `\x00` into PostgreSQL text columns
+  (which cannot store it — a DB constraint, not a crash-resistance gap); the
+  metadata strategy now excludes NUL. Surfaced by #1504 making the dead e2e tests
+  actually run.
+
+### Agent Guidance
+- **Auth-store init is lazy + thread-safe.** Stores do no I/O in `__init__`; the
+  first `_get_connection()` (or an explicit `ensure_initialized()`) runs the schema
+  DDL once under `_init_lock`. Code that runs *inside* `_init_db` must acquire
+  connections via `_connect_raw()` (not `_get_connection()`) or it deadlocks on the
+  init lock. Tests that drive `_init_db`/`_ensure_email_ci_uniqueness` in isolation
+  must patch `_connect_raw`, not `_get_connection`.
+
 ## [0.91.1] - 2026-06-28
 
 ### Fixed

@@ -58,7 +58,7 @@ class TestDeviceRegistryPostgresInit:
 
             reg = DeviceRegistry(database_url="postgresql://localhost/test")
 
-        with patch.object(reg, "_get_connection", return_value=mock_conn):
+        with patch.object(reg, "_connect_raw", return_value=mock_conn):
             DeviceRegistry._init_db(reg)
 
         calls = mock_cursor.execute.call_args_list
@@ -76,7 +76,7 @@ class TestDeviceRegistryPostgresInit:
 
             reg = DeviceRegistry(database_url="postgresql://localhost/test")
 
-        with patch.object(reg, "_get_connection", return_value=mock_conn):
+        with patch.object(reg, "_connect_raw", return_value=mock_conn):
             DeviceRegistry._init_db(reg)
 
         calls = mock_cursor.execute.call_args_list
@@ -96,7 +96,7 @@ class TestDeviceRegistryPostgresInit:
 
             reg = DeviceRegistry(database_url="postgresql://localhost/test")
 
-        with patch.object(reg, "_get_connection", return_value=mock_conn):
+        with patch.object(reg, "_connect_raw", return_value=mock_conn):
             DeviceRegistry._init_db(reg)
 
         call_strs = [str(c) for c in mock_cursor.execute.call_args_list]
@@ -115,7 +115,7 @@ class TestDeviceRegistryPostgresInit:
 
             reg = DeviceRegistry(database_url="postgresql://localhost/test")
 
-        with patch.object(reg, "_get_connection", return_value=mock_conn):
+        with patch.object(reg, "_connect_raw", return_value=mock_conn):
             DeviceRegistry._init_db(reg)
 
         mock_conn.commit.assert_called_once()

@@ -480,6 +480,9 @@ class AuthSubsystem:
                 database_url=ctx.database_url,
                 token_lifetime_days=refresh_days,
             )
+            # Construction is pure now (#1504); init the schema eagerly here so
+            # first-use isn't racing concurrent requests and a dead DB fails loud.
+            self._token_store.ensure_initialized()
         return True
 
     def _register_jwt_routes(self, ctx: SubsystemContext) -> None:
