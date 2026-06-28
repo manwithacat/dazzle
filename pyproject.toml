@@ -131,6 +131,14 @@ lsp = [
 graph = [
     "networkx>=3.0",
 ]
+proof = [
+    # z3-solver drives the RBAC meta-property prover (`dazzle rbac prove`,
+    # WP-2) and the predicate-algebra SMT encoder (dazzle.rbac.encode_smt,
+    # WP-1). Lazy-imported inside dazzle.rbac.encode_smt, so core installs
+    # without [proof] are unaffected until `dazzle rbac prove` runs. See
+    # docs/reference/rbac-proof-model.md for what the proof discharges.
+    "z3-solver>=4.13",
+]
 e2e = [
     # Playwright drives the browser-based UX walks (`dazzle ux verify
     # --interactions`). Pinned >=1.40 for the sync-API shape used in
@@ -194,6 +202,7 @@ dev = [
     "ruff>=0.1",
     "radon>=6.0",          # framework structural-fitness: complexity (CC/MI)
     "import-linter>=2.0",  # framework structural-fitness: layer contracts
+    "z3-solver>=4.13",     # RBAC meta-property prover gate (WP-1/WP-2); see [proof]
     "pyyaml>=6.0",
     "types-PyYAML>=6.0",
     "requests>=2.31",
@@ -502,6 +511,18 @@ disallow_subclassing_any = false
 module = "dazzle.mcp.server"
 # MCP SDK decorators are untyped
 disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = [
+    "dazzle.rbac.encode_smt",
+    "dazzle.rbac.prove",
+]
+# z3-solver ships no py.typed, so every z3 expression is Any. The RBAC SMT
+# encoder/prover are a thin boundary over it; relax the Any-return warnings at
+# that boundary (mirrors the lsp/mcp untyped-SDK overrides above). The predicate
+# IR they consume is fully typed; only the z3 handles are Any.
+warn_return_any = false
+disallow_any_explicit = false
 
 [[tool.mypy.overrides]]
 module = [
