@@ -24,6 +24,7 @@ from dazzle.core import ir
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.spec_loader import load_spec
 from dazzle.core.strings import to_api_plural
+from dazzle.spec_narrative import SpecBrief, build_brief
 
 logger = logging.getLogger(__name__)
 
@@ -647,3 +648,57 @@ def _manifest_strict_enabled(project_dir: Path) -> bool:
             exc_info=True,
         )
         return False
+
+
+@spec_app.command(name="brief")
+def spec_brief(
+    project_dir: Path = typer.Option(
+        Path("."),
+        "--project",
+        "-p",
+        help="Project directory (default: current directory).",
+    ),
+    output_format: str = typer.Option(
+        "json",
+        "--format",
+        "-f",
+        help="Output format: 'json' (machine, for /spec-narrate) or 'text' (human preview).",
+    ),
+) -> None:
+    """Emit a deterministic spec brief: verified app facts + activated framework claims.
+
+    Stage 1 of DSL → SPECIFICATION.md. The JSON output is the single source of
+    truth for the ``/spec-narrate`` skill, which writes the prose document.
+    """
+    try:
+        appspec = load_project_appspec(project_dir)
+    except Exception as exc:  # noqa: BLE001 — surface any load failure to the user
+        typer.echo(f"Error loading DSL: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    brief = build_brief(appspec)
+    if output_format == "text":
+        typer.echo(_format_brief_text(brief))
+    else:
+        typer.echo(brief.model_dump_json(indent=2))
+
+
+def _format_brief_text(brief: SpecBrief) -> str:
+    """Render a compact human-readable preview of the brief."""
+    lines: list[str] = [f"SPEC BRIEF — {brief.app_title or brief.app_name}", ""]
+    lines.append(f"Domain ({len(brief.domain)} entities):")
+    for d in brief.domain:
+        states = f" [{', '.join(d.lifecycle_states)}]" if d.lifecycle_states else ""
+        lines.append(f"  - {d.title or d.name}{states}")
+    lines.append("")
+    lines.append(f"Actors ({len(brief.actors)}): " + ", ".join(a.label for a in brief.actors))
+    lines.append("")
+    lines.append("Activated framework claims:")
+    for c in brief.activated_claims:
+        lines.append(f"  - [{c.group}] {c.id} (verify: {c.evidence})")
+    lines.append("")
+    lines.append("Document sections:")
+    for s in brief.skeleton:
+        mark = "x" if s.populated else " "
+        lines.append(f"  [{mark}] {s.section}")
+    return "\n".join(lines)

@@ -1,0 +1,212 @@
+{
+  "app_name": "simple_task",
+  "app_title": "Team Task Manager",
+  "domain": [
+    {
+      "name": "User",
+      "title": "Team Member",
+      "intent": "A person with an account who can create and be assigned tasks within an organisation",
+      "lifecycle_states": []
+    },
+    {
+      "name": "Task",
+      "title": "Task",
+      "intent": "A unit of work assigned to a Team Member with a lifecycle from todo through review to done",
+      "lifecycle_states": [
+        "todo",
+        "in_progress",
+        "review",
+        "done"
+      ]
+    },
+    {
+      "name": "TaskComment",
+      "title": "Task Comment",
+      "intent": "A discussion note attached to a Task by a Team Member to capture context or decisions",
+      "lifecycle_states": []
+    }
+  ],
+  "actors": [
+    {
+      "id": "admin",
+      "label": "Administrator",
+      "description": "Full system access for task and user management"
+    },
+    {
+      "id": "manager",
+      "label": "Team Manager",
+      "description": "Oversee team tasks and assignments"
+    },
+    {
+      "id": "member",
+      "label": "Team Member",
+      "description": "Work on assigned tasks"
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "task_list",
+      "title": "Task List",
+      "entity": "Task",
+      "mode": "list"
+    },
+    {
+      "name": "task_detail",
+      "title": "Task Detail",
+      "entity": "Task",
+      "mode": "view"
+    },
+    {
+      "name": "task_comments",
+      "title": "Task Comments",
+      "entity": "TaskComment",
+      "mode": "list"
+    },
+    {
+      "name": "comment_detail",
+      "title": "Comment Detail",
+      "entity": "TaskComment",
+      "mode": "view"
+    },
+    {
+      "name": "comment_create",
+      "title": "Add Comment",
+      "entity": "TaskComment",
+      "mode": "create"
+    },
+    {
+      "name": "comment_edit",
+      "title": "Edit Comment",
+      "entity": "TaskComment",
+      "mode": "edit"
+    },
+    {
+      "name": "task_create",
+      "title": "Create Task",
+      "entity": "Task",
+      "mode": "create"
+    },
+    {
+      "name": "task_edit",
+      "title": "Edit Task",
+      "entity": "Task",
+      "mode": "edit"
+    },
+    {
+      "name": "user_list",
+      "title": "Team Members",
+      "entity": "User",
+      "mode": "list"
+    },
+    {
+      "name": "user_detail",
+      "title": "Team Member Detail",
+      "entity": "User",
+      "mode": "view"
+    },
+    {
+      "name": "user_create",
+      "title": "Add Team Member",
+      "entity": "User",
+      "mode": "create"
+    },
+    {
+      "name": "user_edit",
+      "title": "Edit Team Member",
+      "entity": "User",
+      "mode": "edit"
+    }
+  ],
+  "security": {
+    "has_row_level_security": true,
+    "scoped_entities": [
+      "User",
+      "Task",
+      "TaskComment"
+    ],
+    "persona_count": 3
+  },
+  "activated_claims": [
+    {
+      "id": "scope_filtering",
+      "group": "security",
+      "audience": "investor",
+      "claim": "Access-controlled records are filtered to what each user is permitted\nto see. The rule is declared once in the model and applied automatically to every\nquery the framework runs, instead of being re-implemented — and re-checked — on\neach screen.",
+      "evidence": "dazzle rbac report"
+    },
+    {
+      "id": "provable_rbac",
+      "group": "security",
+      "audience": "investor",
+      "claim": "Every role's permissions, for every entity and operation, are declared\nas machine-readable policy. They compile on demand into an auditable access\nmatrix — so permission review is something you run and diff, not something you\neyeball.",
+      "evidence": "dazzle rbac report"
+    },
+    {
+      "id": "postgres_backed",
+      "group": "data",
+      "audience": "technical",
+      "claim": "All data is stored in PostgreSQL — a mature, widely-trusted relational\ndatabase. There is no bespoke or experimental datastore to operate, secure, or\nreason about.",
+      "evidence": "dazzle db status"
+    },
+    {
+      "id": "schema_managed",
+      "group": "data",
+      "audience": "technical",
+      "claim": "In production, every change to the data model is applied through\nversioned, reversible migrations. The live schema is never edited by hand, so\nupgrades are repeatable and fully auditable.",
+      "evidence": "dazzle db status"
+    },
+    {
+      "id": "server_rendered",
+      "group": "architecture",
+      "audience": "technical",
+      "claim": "The interface is rendered on the server and progressively enhanced.\nThere is no heavy single-page JavaScript application to maintain, which keeps the\nproduct fast, accessible, and simple to operate.",
+      "evidence": "dazzle validate"
+    },
+    {
+      "id": "event_semantics",
+      "group": "architecture",
+      "audience": "technical",
+      "claim": "Significant business moments are modelled as first-class events with\nformally-defined semantics, giving the system a precise, auditable record of what\nhappened and when.",
+      "evidence": "dazzle specs asyncapi"
+    }
+  ],
+  "skeleton": [
+    {
+      "section": "executive_summary",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "what_it_does",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "who_uses_it",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "how_work_flows",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "technical_foundation",
+      "populated": true,
+      "claim_ids": [
+        "scope_filtering",
+        "provable_rbac",
+        "postgres_backed",
+        "schema_managed",
+        "server_rendered",
+        "event_semantics"
+      ]
+    },
+    {
+      "section": "compliance_posture",
+      "populated": false,
+      "claim_ids": []
+    }
+  ]
+}

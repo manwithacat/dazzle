@@ -216,6 +216,15 @@ def _dsl_list_fragments(project_path: Path, args: dict[str, Any]) -> str:
     return json.dumps({"fragments": get_fragment_registry()}, indent=2)
 
 
+def _dsl_brief(project_path: Path, args: dict[str, Any]) -> str:
+    """Stateless read mirror of `dazzle spec brief` — the spec-narrative brief."""
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.spec_narrative.brief import build_brief
+
+    appspec = load_project_appspec(project_path)
+    return build_brief(appspec).model_dump_json(indent=2)
+
+
 handle_dsl: Callable[[dict[str, Any]], str] = _make_project_handler(
     "DSL",
     {
@@ -230,6 +239,7 @@ handle_dsl: Callable[[dict[str, Any]], str] = _make_project_handler(
         "fidelity": f"{_MOD_DSL_FIDELITY}:score_fidelity_handler",
         "export_frontend_spec": f"{_MOD_DSL}:export_frontend_spec_handler",
         "list_fragments": _dsl_list_fragments,
+        "brief": _dsl_brief,
     },
 )
 

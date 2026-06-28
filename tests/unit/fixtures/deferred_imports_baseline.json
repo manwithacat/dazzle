@@ -297,7 +297,7 @@
   "src/dazzle/mcp/server/handlers/user_management.py": 1,
   "src/dazzle/mcp/server/handlers/user_profile.py": 4,
   "src/dazzle/mcp/server/handlers/viewport_testing.py": 5,
-  "src/dazzle/mcp/server/handlers_consolidated.py": 4,
+  "src/dazzle/mcp/server/handlers_consolidated.py": 6,
   "src/dazzle/mcp/server/state.py": 11,
   "src/dazzle/mcp/server/tool_handlers.py": 7,
   "src/dazzle/mcp/setup.py": 1,
