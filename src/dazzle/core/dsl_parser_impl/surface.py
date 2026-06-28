@@ -685,6 +685,9 @@ class _SurfaceState:
     render: str | None = None  # Plan 2
     refresh_interval: int | None = None  # #1399 slice 3
     emits: list[str] = field(default_factory=list)  # #1392 item 3
+    # #1494 (UX-maturity 2c): action-proximate detail mode. `None` = unset
+    # (author wrote no `peek:`); `_kw_peek` sets the explicit value.
+    peek: ir.PeekMode | None = None
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -722,6 +725,21 @@ def _kw_render(parser: Any, state: _SurfaceState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.render = parser.expect_identifier_or_keyword().value
+    parser.skip_newlines()
+
+
+def _kw_peek(parser: Any, state: _SurfaceState) -> None:
+    """``peek: expand|slide_over|off`` — action-proximate detail (#1494, 2c).
+
+    Inline expand-in-place / side-panel / plain-drill for a list surface's rows.
+    Setting any value (including ``off``) makes ``surface.peek`` non-``None``, so
+    the render-time resolver (`resolve_peek_mode`) tells an explicit ``peek: off``
+    from an unset surface (``peek is None``, resolved by the default-by-role step).
+    An unknown value is a parse error via ``enum_from_token``.
+    """
+    parser.advance()  # consume `peek`
+    parser.expect(TokenType.COLON)
+    state.peek = parser.enum_from_token(ir.PeekMode, parser.expect_identifier_or_keyword())
     parser.skip_newlines()
 
 
@@ -892,6 +910,7 @@ _SURFACE_KEYWORDS: dict[TokenType, KeywordParser[_SurfaceState]] = {
 _SURFACE_IDENT_KEYWORDS: dict[str, KeywordParser[_SurfaceState]] = {
     "show_history": _kw_show_history,
     "refresh": _kw_refresh,  # #1399 slice 3 — live-refresh poll interval
+    "peek": _kw_peek,  # #1494 (2c) — action-proximate detail mode
 }
 
 
@@ -952,6 +971,7 @@ def _build_surface(
         render=state.render,
         refresh_interval=state.refresh_interval,
         emits=tuple(state.emits),
+        peek=state.peek,
     )
 
 

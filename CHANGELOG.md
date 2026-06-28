@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.10] - 2026-06-28
+
+### Added
+- **`peek:` DSL surface — IR + parser + resolver (#1494, UX-maturity 2c — slice 1 of 4).** The first piece of the action-proximate-detail primitive: a list surface may declare `peek: expand | slide_over | off` (inline expand-in-place / side panel / plain drill). This slice lands the **declarative surface only** — render + the right-by-default flip come in later slices, so the fleet is **byte-stable**.
+  - IR: `SurfaceSpec.peek: PeekMode | None` (`PeekMode` exported from `dazzle.core.ir`). **`None` is the true-unset signal** — distinct from an explicit `peek: off` — and is stripped from `model_dump()`, so unset surfaces don't churn the parser-corpus snapshot. (This is a deliberate simplification over #1492's `WorkspaceRegion.display_unset` bool: `display` predated its discriminator and couldn't be made nullable; `peek` is a fresh field, so `None` carries the discriminator directly.)
+  - Parser: a `peek:` keyword on the surface block (`_kw_peek`, ident-keyword); an unknown value is a parse error via `enum_from_token`. Grammar documented.
+  - `resolve_peek_mode(surface, entity)` (`dazzle.page.runtime.peek_resolver`): an explicit value wins; **unset resolves `off` this slice** (the Slice-4 default-flip makes an unset surface whose entity has a detail surface resolve `expand`). Mirrors the #1492 `resolve_region_display_mode` staging.
+  - Note: `slide_over` was found to be a **dormant** `TableContext` render field with no DSL keyword, so `peek: slide_over` is the first way to actually request it — no deprecation alias was needed.
+  - ir-types api-surface baseline + the `simple_task` golden-master IR snapshot regenerated (every surface gains an inert `peek: None`). Design spec: `docs/architecture/1494-peek-when-empty-design.md`; plan: `docs/superpowers/plans/2026-06-28-1494-peek-when-empty.md`.
+
 ## [0.92.9] - 2026-06-28
 
 ### Added

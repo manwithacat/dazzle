@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 372 BaseModels, 149 Enums, 23 other (functions / typealiases / constants)
+# Counts: 372 BaseModels, 150 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -2895,6 +2895,7 @@ ir_class: SurfaceSpec
     - entity_ref: str | None = None
     - headless: bool = False
     - layout: str = 'wizard'
+    - peek: PeekMode | None = None
     - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
     - refresh_interval: int | None = None
     - related_groups: list[RelatedGroup] = []
@@ -4201,6 +4202,12 @@ enum: ParallelFailurePolicy
     - FAIL_FAST = 'fail_fast'
     - ROLLBACK = 'rollback'
     - WAIT_ALL = 'wait_all'
+
+enum: PeekMode
+  members:
+    - EXPAND = 'expand'
+    - OFF = 'off'
+    - SLIDE_OVER = 'slide_over'
 
 enum: PermissionKind
   members:

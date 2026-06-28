@@ -324,6 +324,19 @@ class SurfaceAccessSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class PeekMode(StrEnum):
+    """Action-proximate detail mode for a list surface (#1494, UX-maturity 2c).
+
+    - ``expand``     — inline expand-in-place (accordion row + detail partial).
+    - ``slide_over`` — the side-panel render (`TableContext.slide_over`).
+    - ``off``        — plain drill to the detail page (pre-#1494 behaviour).
+    """
+
+    EXPAND = "expand"
+    SLIDE_OVER = "slide_over"
+    OFF = "off"
+
+
 class SurfaceSpec(BaseModel):
     """
     Specification for a user-facing surface (screen/form/view).
@@ -357,6 +370,14 @@ class SurfaceSpec(BaseModel):
     priority: BusinessPriority = BusinessPriority.MEDIUM
     # v0.34.0: Search configuration for list surfaces
     search_fields: list[str] = Field(default_factory=list)
+    # #1494 (UX-maturity 2c): action-proximate detail mode for a list surface.
+    # `None` is the true-unset signal — "the author wrote no `peek:`" — distinct
+    # from an explicit `peek: off`. (#1492's `WorkspaceRegion.display_unset` needed
+    # a separate bool only because `display` predated it and couldn't be made
+    # nullable; `peek` is a fresh field, so `None` carries the discriminator
+    # directly — and is stripped from `model_dump()`, so unset surfaces don't
+    # churn the corpus snapshot.) Default-by-role resolution is `resolve_peek_mode`.
+    peek: PeekMode | None = None
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
     related_groups: list[RelatedGroup] = Field(default_factory=list)

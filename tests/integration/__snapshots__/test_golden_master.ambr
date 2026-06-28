@@ -1207,6 +1207,7 @@
         'layout': 'wizard',
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': 'task_list',
+        'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
         'related_groups': list([
@@ -1269,6 +1270,7 @@
         'layout': 'wizard',
         'mode': <SurfaceMode.VIEW: 'view'>,
         'name': 'task_detail',
+        'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
         'related_groups': list([
@@ -1341,6 +1343,7 @@
         'layout': 'wizard',
         'mode': <SurfaceMode.CREATE: 'create'>,
         'name': 'task_create',
+        'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
         'related_groups': list([
@@ -1403,6 +1406,7 @@
         'layout': 'wizard',
         'mode': <SurfaceMode.EDIT: 'edit'>,
         'name': 'task_edit',
+        'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
         'related_groups': list([
@@ -1484,6 +1488,7 @@
         'layout': 'wizard',
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': '_admin_health',
+        'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
         'related_groups': list([
@@ -1597,6 +1602,7 @@
         'layout': 'wizard',
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': '_admin_deploys',
+        'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
         'related_groups': list([
