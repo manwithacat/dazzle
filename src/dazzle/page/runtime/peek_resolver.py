@@ -24,7 +24,9 @@ def resolve_peek_mode(surface: Any, entity: Any = None) -> PeekMode:
     """
     explicit = getattr(surface, "peek", None)
     if explicit is not None:
-        return explicit
+        # Normalise to PeekMode (surface is duck-typed `Any`; `getattr` yields
+        # `Any`, and a raw string value validates here too).
+        return PeekMode(explicit)
     # Unset → default. Staged: off for now (Slice 1). The `entity` arg is the
     # seam the Slice-4 flip uses (detail-surface presence → expand).
     return PeekMode.OFF

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.11] - 2026-06-28
+
+### Fixed
+- **CI type-check red on `main` (v0.92.10): `resolve_peek_mode` returned `Any`.** `getattr(surface, "peek", None)` yields `Any` (the param is duck-typed), tripping mypy's `no-any-return` under the full `mypy src/dazzle` (the per-file local run missed it). Normalised the explicit branch to `PeekMode(explicit)`. Agent-guidance: run the **full** `mypy src/dazzle` before ship, not a file-targeted subset — `no-any-return` only fires with the whole module graph.
+
 ## [0.92.10] - 2026-06-28
 
 ### Added
