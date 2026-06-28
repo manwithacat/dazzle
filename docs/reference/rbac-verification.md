@@ -1,6 +1,6 @@
 # RBAC Verification Framework
 
-Dazzle provides a three-layer access control verification system that proves DSL-declared security policies are enforced at runtime. This is not a testing framework that checks a few happy paths — it is a systematic verification of every role, entity, and operation in the application.
+Dazzle provides a three-layer access control verification system that **verifies** DSL-declared security policies against runtime behaviour — by probing every role, entity, and operation, not a few happy paths. This is verification (an empirical, exhaustive probe), distinct from the *proof* of meta-properties over the DSL model (`dazzle rbac prove`; see [RBAC Proof Model & Trust Boundary](rbac-proof-model.md)). The probe catches divergence between declared policy and observed behaviour; it is not a formal proof that the enforcement code is correct.
 
 ## Motivation
 
@@ -32,7 +32,7 @@ Layer 2: Dynamic Verification     ← "What DOES happen"
 Layer 3: Decision Audit Trail     ← "WHY it happened"
 ```
 
-Each layer is independently useful. Together they produce a provable security envelope.
+Each layer is independently useful. Together they produce an **auditable** security envelope: the matrix says what *should* happen, the dynamic probe confirms what *does* happen, and the audit trail records *why*. The word "provable" is reserved for the meta-property proofs over the DSL model (`dazzle rbac prove`) — these three layers are derivation + empirical verification + logging, with the proof/test boundary stated, not blurred.
 
 ### Layer 1: Static Access Matrix
 

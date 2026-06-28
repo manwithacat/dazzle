@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.5] - 2026-06-28
+
+### Changed
+- **Sharpened the "provable RBAC" copy to match what shipped — confident on tooling, honest on assurance-vs-proof, explicit on the builder-grant limitation.** The SMT proof substrate (`dazzle rbac prove`, WP-0/1/2/7) shipped in v0.90–0.91, but the external copy hadn't caught up. Updated README, `SECURITY_CLAIMS.md` (+ its MkDocs mirror `docs/evaluation/security-claims.md`), and `docs/reference/rbac-verification.md`:
+  - **Confident where tooling exists:** the five Z3 meta-property provers, the honest per-obligation verdicts (`PROVED` / `VACUOUS` / `INFORMATIONAL` / `FAILED`), the over-approximation residual print-out, and the claim-ledger copy-lint.
+  - **Honest about assurance vs proof:** the prover discharges theorems about a *model* of the policy; the model↔emitted-SQL link is closed by **test** (runtime verifier today; formal conformance oracle WP-3 is roadmap) and the TCB (PostgreSQL/auth/single query path) is *trusted, not proven*. Removed two present-tense overclaims — the README's "faithfulness to the emitted SQL **is** closed by test" and `rbac-verification.md`'s "**proves** DSL-declared security policies **are enforced at runtime**" / "**provable** security envelope".
+  - **Explicit on user-built grants:** the "who could access" upper-bound reading is proved only over DSL-declared `grant_schema` classes; grants minted by application code outside those classes are runtime-supported but out of proof scope (and `dazzle rbac report` flags such an app). Added as a new claim (C10) + an explicit non-claim in the claims inventory.
+  - Added a C10 entry + maturity row for the SMT prover; bumped the claims-inventory review stamp v0.82.35 → v0.92.4. `dazzle rbac report --lint` and the WP-7 claim-ledger gate stay clean.
+
 ## [0.92.4] - 2026-06-28
 
 ### Fixed

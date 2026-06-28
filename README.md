@@ -73,7 +73,7 @@ Eleven stated positions, defended in the [ADRs](docs/adr/INDEX.md):
 5. **Server-rendered HTML + HTMX.** No SPA framework, no build toolchain, no client-state fragmentation.
 6. **Fragments as the only escape hatch.** When the DSL can't express it, you reach for a *fragment* — a constrained, named, semantically-tagged piece of custom rendering. Not arbitrary frontend.
 7. **Append-oriented history.** Events, decisions, and grants are logged. Auditors don't need to spelunk; the trail is part of the substrate.
-8. **Provable RBAC.** Scope rules compile to a formal predicate algebra, statically validated against the FK graph, and their meta-properties (least-privilege containment, deny-overrides precedence) are mechanically proved by an SMT solver — `dazzle rbac prove` — with the trust boundary stated explicitly.
+8. **Provable RBAC (scoped, honestly).** Scope rules compile to a formal predicate algebra, statically validated against the FK graph; their meta-properties (least-privilege containment, deny-overrides precedence, …) are mechanically proved over the DSL by an SMT solver — `dazzle rbac prove`. The proof is of a *model* of the policy over a stated trust boundary (PostgreSQL, auth, the single query path are *trusted, not proven*); runtime conformance is *verified by test*, and grants you mint outside the declared classes fall outside the proof. The tool says which — `PROVED` / `VACUOUS` / `INFORMATIONAL` / `FAILED` — rather than a blanket green.
 9. **No hidden singletons.** Dependencies are explicit (`RuntimeServices`, `ServerState`) — readable by both humans and agents.
 10. **No backwards-compat shims.** Pre-1.0, clean breaks beat layered workarounds. Callers are updated in the same commit.
 11. **Bump on every fix.** Every push gets a unique semantic version — deployment traceability over release ceremony.
@@ -96,7 +96,7 @@ If you're building SaaS — especially in regulated industries — you will face
 
 Most teams answer these questions retroactively, combing through code to produce evidence. Dazzle derives the answers from the DSL itself:
 
-- **Access control** is declared in the DSL. The permission matrix is *derived* from it (not hand-maintained), its meta-properties — least-privilege containment, deny-overrides precedence, no dead-rule scopes — are *mechanically proved* (`dazzle rbac prove`), and runtime enforcement is *conformance-verified* against that matrix (`dazzle rbac verify`). The proof's scope and trust boundary are stated explicitly, the way an auditor expects.
+- **Access control** is declared in the DSL. The permission matrix is *derived* from it (not hand-maintained); its meta-properties — least-privilege containment, deny-overrides precedence, no dead-rule scopes — are *mechanically proved* over the DSL model (`dazzle rbac prove`); and runtime enforcement is *conformance-verified* against that matrix by empirical probe (`dazzle rbac verify`), **not** proved. The proof's scope, trust boundary (PostgreSQL/auth are trusted), and the out-of-scope case (grants minted outside the declared classes) are stated explicitly, the way an auditor expects.
 - **State machines** model approval workflows, transitions, and four-eyes authorization.
 - **Compliance evidence** is extracted automatically. Run `dazzle compliance compile --framework soc2` and get a structured audit report showing which controls your DSL satisfies.
 - **Grant-based RBAC** supports delegated, time-bounded access with approval workflows — the kind of access governance auditors want to see.
@@ -142,7 +142,7 @@ That's a todo app. The same language scales to 39-entity accountancy platforms w
 | **Surfaces** | List, detail, create, review views | UI and API from the same declaration |
 | **Workspaces** | Role-based dashboards with filtered regions | Each persona sees what they need |
 | **State Machines** | Lifecycle transitions with guards and approval | Business processes enforced, not just documented |
-| **Access Control** | Cedar-style permit/forbid rules, scope predicates | Provable RBAC — auditors can verify mechanically |
+| **Access Control** | Cedar-style permit/forbid rules, scope predicates | RBAC meta-properties machine-proved over the DSL (scoped); runtime verified by probe |
 | **Grant Schemas** | Delegated, time-bounded access with approval | Four-eyes authorization, SOC 2-ready |
 | **Processes** | Multi-step workflows with saga patterns | Durable business operations |
 | **Atomic Transactions** | Multi-entity writes in one scope-guarded transaction (`atomic`) | No partial writes; every touched entity scope-checked, fail-closed (ADR-0029) |
@@ -198,18 +198,25 @@ Scope rules compile to a formal predicate algebra, statically validated against 
 | Layer | What it establishes | Evidence class |
 |-------|---------------------|----------------|
 | **Static Matrix** | Every (role, entity, operation) decision is derived from the DSL | Enumeration |
-| **Meta-property proof** | Least-privilege containment, deny-overrides precedence, and no-dead-rule scopes are proved by an SMT solver, with a counter-model on any violation | **Proof** |
-| **Dynamic Verification** | The running app is probed as every role to confirm runtime matches the matrix | Test |
+| **Meta-property proof** | Least-privilege containment, deny-overrides precedence, scope satisfiability / no-dead-rule, role-hierarchy acyclicity, separation-of-duty — discharged over the DSL by an SMT solver (Z3), with a counter-model on any violation | **Proof** |
+| **Dynamic Verification** | The running app is probed as every role to confirm runtime HTTP behaviour matches the matrix | Test |
 | **Decision Audit Trail** | Every access decision is logged with the matched rule and outcome | Test |
 
 ```bash
 dazzle rbac matrix    # Derive the access matrix from the DSL (no server needed)
-dazzle rbac prove     # Prove the meta-properties; counter-model on violation (CI gate)
-dazzle rbac verify    # Verify runtime matches the matrix (CI gate)
+dazzle rbac prove     # Prove the meta-properties over the DSL; counter-model on violation
+dazzle rbac verify    # Probe the running app per role vs the matrix (needs PostgreSQL)
 dazzle rbac report    # Compliance report for auditors (--lint guards the copy)
 ```
 
-The proof is *scoped* — it covers the static core (tenant ∧ role ∧ scope) modulo a named trust boundary (PostgreSQL, the connection factory, authentication), and it proves a model of the policy whose faithfulness to the emitted SQL is closed by test. That boundary is stated, not buried: see the [RBAC Proof Model & Trust Boundary](docs/reference/rbac-proof-model.md), plus [RBAC Verification](docs/reference/rbac-verification.md) and [Compliance](docs/reference/compliance.md).
+The prover reports an honest verdict per obligation, not a blanket green — `PROVED` (discharged), `VACUOUS` (the construct isn't used in this app, so there's nothing to prove), `INFORMATIONAL` (proved, but partly over over-approximated nodes — see below), or `FAILED` (counter-model emitted). An app with no role hierarchy gets `VACUOUS role_hierarchy_acyclic`, not a misleading "proved".
+
+**What is proof, and what is not — stated plainly.** The proof is *scoped*: it discharges theorems about a **model** of the policy (the scope-predicate algebra), over the static core (tenant ∧ role ∧ scope), modulo a named trust boundary — PostgreSQL's RLS engine, the connection factory, and authentication are *trusted, not proven*. Two links in the chain are deliberately **not** proof and are stated as such:
+
+- **Model ↔ emitted SQL.** That the proved IR model faithfully matches the SQL PostgreSQL actually runs is closed by *test* (the runtime verifier today; a formal conformance oracle is on the roadmap), not by the solver.
+- **Over-approximation.** `EXISTS` junctions and multi-hop FK paths are abstracted to free symbols — sound for the "who could access" (no-escalation) reading, but the prover prints exactly which obligations leaned on those abstractions so you can see the residual.
+
+**When you mint your own grants.** The "who could access" upper-bound reading is proven only over **DSL-declared grant classes** (`grant_schema`). Grants minted by your own application code *outside* the declared classes are fully supported at runtime but are **not** covered by the proof — `dazzle rbac report` labels such an app with a residual-risk note, and its claim degrades from "proven upper bound" to "upper bound over declared classes". That boundary is stated, not buried: see the [RBAC Proof Model & Trust Boundary](docs/reference/rbac-proof-model.md), plus [RBAC Verification](docs/reference/rbac-verification.md) and [Compliance](docs/reference/compliance.md).
 
 ### Enterprise authentication & identity (opt-in)
 

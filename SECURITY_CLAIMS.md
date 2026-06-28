@@ -2,7 +2,7 @@
 
 <!-- Root GitHub copy. MkDocs-adapted copy lives at docs/evaluation/security-claims.md; update both together. -->
 
-*Last reviewed against v0.82.35 (2026-06-12).*
+*Last reviewed against v0.92.4 (2026-06-28).*
 
 This document inventories every security-relevant claim Dazzle makes, with its
 implementation status, where it is enforced, where it is tested, and its known
@@ -43,6 +43,7 @@ last few releases (see the gap columns).
 |-----------|----------|-------|
 | DSL parser + IR | **Stable** | Largest test surface in the repo; API-surface drift gates; every construct exercised by 14 example apps and CI. |
 | RBAC static matrix | **Stable** | `generate_access_matrix` is well-tested; CI has a dedicated security gate asserting the `shapes_validation` matrix has zero unprotected cells. |
+| RBAC meta-property prover (SMT) | **Beta** | `dazzle rbac prove` discharges five meta-property obligations over the DSL via Z3, with honest per-obligation verdicts and a copy-lint that gates the word "proof". Scoped to a model of the policy modulo a stated trust boundary; WP-0/1/2/7 shipped, WP-3–6 roadmap (see C10). |
 | Scope predicate algebra | **Beta** | Formal 6-type predicate algebra, statically validated against the FK graph at `dazzle validate` time. Core is solid; parser-surface edge cases were still being fixed as recently as v0.71.96 (#1180). |
 | Runtime RBAC enforcement | **Beta** | Enforced on every generated CRUD route and tested — but the enforcement surface has had security fixes land recently (bulk endpoints, FK errors, scope-deny auditing). |
 | Dynamic RBAC verifier | **Beta** | A real verifier (boots the app, probes every role) shipped in v0.71.91 (#1171), replacing an earlier stub. Functional and tested, but only weeks old and requires a live PostgreSQL server. |
@@ -139,6 +140,44 @@ stated limits) · **Roadmap** (not yet built).
   `dazzle.rbac.audit` *sink* (`NullAuditSink` by default) is a separate
   verification-layer seam, **not** the production trail — don't confuse the two.
 
+#### C10 · RBAC meta-properties are mechanically proved over the DSL by an SMT solver
+- **Status:** Implemented (scoped) · **Maturity:** Beta
+- **What it means:** `dazzle rbac prove` encodes the scope-predicate algebra into
+  Z3 and discharges meta-property obligations **over the DSL model**:
+  least-privilege containment, deny-overrides precedence, scope satisfiability /
+  no-dead-rule, role-hierarchy acyclicity, and separation-of-duty. Each
+  obligation reports an honest verdict — `PROVED`, `VACUOUS` (the construct isn't
+  used in this app), `INFORMATIONAL` (proved, partly over over-approximated
+  nodes), or `FAILED` (with a counter-model) — never a blanket green.
+- **Enforced where:** `src/dazzle/rbac/encode_smt.py` (predicate→SMT encoder),
+  `src/dazzle/rbac/prove.py` (the five provers), surfaced by `dazzle rbac prove`.
+  The proof-obligation model and trust boundary are normative in
+  [`docs/reference/rbac-proof-model.md`](docs/reference/rbac-proof-model.md); the
+  claim ledger (`src/dazzle/rbac/claim_ledger.py`, `dazzle rbac report --lint`)
+  fails CI on any copy that claims more than its evidence class discharges.
+- **Tested where:** `tests/unit/test_rbac_proof_model.py`,
+  `test_rbac_encode_smt.py`, and the prover unit tests.
+- **Known gaps (the assurance-vs-proof boundary — read these):**
+  - **It proves a *model*, not the SQL.** The solver discharges theorems about
+    the IR predicate algebra. That the model faithfully matches the RLS/SQL
+    PostgreSQL actually executes is closed by **test** (the runtime verifier, C4,
+    today; a formal conformance oracle is roadmap — WP-3), not by the solver.
+  - **Trusted computing base.** PostgreSQL's RLS engine, psycopg3, the pooler,
+    authentication, and the single-governed-query-path assumption are *trusted,
+    not proven* (assumption set A in the proof model).
+  - **Over-approximation.** `EXISTS` junctions and multi-hop FK paths are
+    abstracted to free symbols — sound for the "who could access" (no-escalation)
+    reading; the prover prints which obligations relied on those abstractions.
+  - **Builder-minted grants.** The "who could access" upper-bound reading is
+    proved only over DSL-declared grant classes (`grant_schema`). Grants minted
+    by arbitrary application code outside those classes are supported at runtime
+    but **not** covered by the proof; the report degrades the claim to "upper
+    bound over declared classes" with a residual-risk note. See the **non-claims**
+    below.
+  - **Young + scoped.** WP-0/1/2/7 of the proof substrate have shipped; the
+    runtime-conformance (WP-3), complete-mediation (WP-4), adversarial (WP-5),
+    and ReBAC over-approximation (WP-6) work programmes are roadmap, human-gated.
+
 ### Authentication & tenancy
 
 #### C7 · Session mutations are gated by auth-class-derived CSRF protection
@@ -232,6 +271,17 @@ Things Dazzle is sometimes assumed to do, and does **not**:
 - **The verifier does not formally prove the enforcement code correct.** It
   empirically probes the running app's HTTP behaviour against the declared
   matrix. It catches divergence; it is not a proof.
+- **`dazzle rbac prove` proves a model, not the running system.** It discharges
+  meta-property theorems over the DSL predicate algebra. It does **not** prove
+  that the emitted SQL matches the model (closed by test, C4), that the TCB
+  (PostgreSQL/psycopg3/pooler/auth) is correct (assumed), or that grants minted
+  outside the declared `grant_schema` classes stay within the proven bound. "Proved"
+  always means *the scoped meta-property, modulo the stated trust boundary* — never
+  an unconditional claim that the system as a whole is secure.
+- **The proof does not cover grants you mint yourself.** If your application code
+  creates grants outside the DSL-declared grant classes, the "who could access"
+  upper-bound reading no longer holds for those grants — they are runtime-supported
+  but out of proof scope, and `dazzle rbac report` flags the app accordingly.
 - **No infrastructure, cloud-configuration, or deployment-posture assessment.**
   The compliance pipeline reasons about the DSL specification only.
 - **`PERMIT_UNPROTECTED` entities are open.** An entity with no access rules is
@@ -250,6 +300,8 @@ copy-pasteable commands and expected output. The short version:
 ```bash
 dazzle rbac matrix --format table     # C1 — the static decision grid
 dazzle validate                       # C2 — scope predicates checked vs FK graph
+dazzle rbac prove                     # C10 — meta-property proofs over the DSL (honest verdicts)
 dazzle rbac verify                    # C3/C4 — probe the running app (needs PostgreSQL)
+dazzle rbac report --lint             # gate: no copy claims more than its evidence class
 dazzle compliance compile --framework soc2   # C6 — control evidence mapping
 ```
