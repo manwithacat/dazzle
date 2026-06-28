@@ -1,6 +1,29 @@
 """Tests for fuzzer classification oracle."""
 
+import subprocess
+import sys
+
 from dazzle.testing.fuzzer.oracle import Classification, classify
+
+
+def test_parse_worker_import_path_is_lightweight() -> None:
+    """#1501 regression: the multiprocessing-spawn parse worker must re-import ONLY
+    the parser — never ``dazzle.testing`` / ``httpx``. That heavy, fragile chain
+    (``dazzle.testing.__init__`` → ``e2e_runner`` → httpx → ``http.client``) could
+    fail to import in the spawn child under a full-suite run, so the worker exited
+    without a result and valid DSL was mis-classified as CRASH.
+
+    Checked in a CLEAN subprocess — this test process has already imported
+    ``dazzle.testing``/httpx via collection, so an in-process check would be moot.
+    """
+    code = (
+        "import sys, dazzle.core._fuzz_parse_worker as w\n"
+        "assert hasattr(w, 'parse_worker')\n"
+        "bad = sorted(m for m in sys.modules if m == 'httpx' or m.startswith('dazzle.testing'))\n"
+        "assert not bad, 'worker import pulled in: ' + repr(bad)\n"
+    )
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
 
 
 class TestOracle:

@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.91.5] - 2026-06-28
+
+### Fixed
+- **Fuzzer-oracle test pollution under full-suite ordering (#1501).** The 3
+  `test_fuzzer_oracle::TestOracle` tests failed under a full random-ordered
+  `pytest -m "not e2e"` run (passed in isolation). Root cause (pinned via the
+  spawn worker's captured stderr — not the MCP-mock theory in the issue): the
+  oracle runs each parse in a `multiprocessing` **spawn** subprocess, and the
+  worker lived in `dazzle.testing.fuzzer.oracle`. Spawn re-imports the worker's
+  module, so the child ran `dazzle/testing/__init__.py` → `e2e_runner` → `httpx`
+  → `urllib` → `http.client`; under a full-suite run that heavy chain failed to
+  import in the child, so the worker exited without a result and valid DSL was
+  mis-classified as CRASH. Moved the worker to a lightweight
+  `dazzle.core._fuzz_parse_worker` module (the spawn child now imports only the
+  parser, never `dazzle.testing`/httpx) and pinned an explicit spawn context. A
+  regression test asserts the worker's import path stays httpx-free. Verified:
+  full random-ordered suite → 0 fuzzer-oracle failures (was 3).
+
+### Agent Guidance
+- **multiprocessing-spawn worker targets must live in lightweight modules.** Under
+  spawn, the child re-imports the module defining the target function — so the
+  target must not sit under a package whose `__init__` eagerly imports a heavy or
+  fragile chain (e.g. `dazzle.testing` → httpx). Keep such workers in
+  parser/core-only modules.
+
 ## [0.91.4] - 2026-06-28
 
 ### Fixed

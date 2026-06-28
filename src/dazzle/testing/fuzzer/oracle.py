@@ -14,10 +14,12 @@ import multiprocessing
 import queue
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 
-from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.errors import ParseError
+# #1501: the parse worker lives under dazzle.core (NOT dazzle.testing) so the
+# spawn child re-imports only the parser, never dazzle/testing/__init__.py →
+# httpx → http.client (a heavy/fragile chain that could fail to import in the
+# child under a full-suite run, mis-classifying valid DSL as CRASH).
+from dazzle.core._fuzz_parse_worker import parse_worker
 
 
 class Classification(Enum):
@@ -37,40 +39,6 @@ class FuzzResult:
     constructs_hit: list[str] = field(default_factory=list)
 
 
-def _parse_worker(dsl: str, result_queue: multiprocessing.Queue) -> None:  # type: ignore[type-arg]
-    """Worker function that runs in a subprocess to parse DSL with isolation."""
-    try:
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("fuzz.dsl"))
-        # Collect which construct types were parsed
-        constructs: list[str] = []
-        for attr in (
-            "entities",
-            "surfaces",
-            "workspaces",
-            "experiences",
-            "processes",
-            "stories",
-            "rhythms",
-            "integrations",
-            "apis",
-            "ledgers",
-            "webhooks",
-            "approvals",
-            "slas",
-            "personas",
-            "scenarios",
-            "enums",
-            "views",
-        ):
-            if getattr(fragment, attr, None):
-                constructs.append(attr)
-        result_queue.put(("valid", None, None, constructs))
-    except ParseError as e:
-        result_queue.put(("parse_error", str(e), "ParseError", []))
-    except Exception as e:
-        result_queue.put(("crash", str(e), type(e).__name__, []))
-
-
 def classify(dsl: str, timeout_seconds: float = 5.0) -> FuzzResult:
     """Classify a DSL input by running it through the parser.
 
@@ -81,8 +49,12 @@ def classify(dsl: str, timeout_seconds: float = 5.0) -> FuzzResult:
     Returns:
         FuzzResult with classification and metadata.
     """
-    result_queue: multiprocessing.Queue = multiprocessing.Queue()  # type: ignore[type-arg]
-    proc = multiprocessing.Process(target=_parse_worker, args=(dsl, result_queue))
+    # Explicit spawn context (#1501): a fresh interpreter per worker, independent
+    # of any test that mutated the global start method, and re-importing only the
+    # lightweight parser module (see dazzle.core._fuzz_parse_worker).
+    ctx = multiprocessing.get_context("spawn")
+    result_queue: multiprocessing.Queue = ctx.Queue()  # type: ignore[type-arg]
+    proc = ctx.Process(target=parse_worker, args=(dsl, result_queue))
     proc.start()
     proc.join(timeout=timeout_seconds)
 
