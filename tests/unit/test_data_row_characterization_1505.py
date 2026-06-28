@@ -144,3 +144,34 @@ def test_current_render_table_row_matches_fixture(label: str, table: dict, item:
         path.write_text(rendered, encoding="utf-8")
     assert path.exists(), f"missing fixture {path} — regenerate with UPDATE_CHAR_1505=1"
     assert rendered == path.read_text(encoding="utf-8")
+
+
+def _caps_call(table: dict, item: dict) -> str:
+    """Translate a characterization `table_dict` into the typed
+    `render_data_row(columns, item, caps, ...)` call (the substrate-native
+    entry) and render it."""
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    caps = RowCapabilities(
+        bulk_select=bool(table.get("bulk_actions")),
+        inline_editable=tuple(table.get("inline_editable") or ()),
+        drill=bool(table.get("detail_url_template")),
+    )
+    return render_data_row(
+        tuple(table["columns"]),
+        item,
+        caps,
+        entity_name=table.get("entity_name", "Item"),
+        api_endpoint=table.get("api_endpoint", ""),
+        detail_url_template=table.get("detail_url_template", ""),
+    )
+
+
+class TestRenderDataRowParity:
+    """The render/ substrate row-core must be byte-identical to the retired
+    http/ `_render_table_row` for the `data-table` archetype (#1505 P1)."""
+
+    @pytest.mark.parametrize(("label", "table", "item"), CAP_MATRIX, ids=_IDS)
+    def test_render_data_row_matches_fixture(self, label: str, table: dict, item: dict) -> None:
+        assert _caps_call(table, item) == _fixture_path(label).read_text(encoding="utf-8")
