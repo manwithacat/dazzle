@@ -48,3 +48,51 @@ def test_data_table_construction_and_defaults() -> None:
 def test_data_table_requires_columns() -> None:
     with pytest.raises(ValueError, match="at least one column"):
         DataTable(columns=())
+
+
+class TestRenderDataTableRows:
+    """`render_data_table_rows` — the <tbody>-children entry the Phase-2 http/
+    HTMX-refresh transport path calls down into (#1505 P1)."""
+
+    def test_concatenates_one_tr_per_row(self) -> None:
+        from dazzle.render.fragment.renderer._data_row import (
+            render_data_row,
+            render_data_table_rows,
+        )
+
+        cols = ({"key": "name", "type": "str"},)
+        items = ({"id": "a", "name": "Ada"}, {"id": "b", "name": "Babbage"})
+        dt = DataTable(columns=cols, rows=items, entity_name="Task", api_endpoint="/api/tasks")
+        expected = "".join(
+            render_data_row(
+                cols,
+                dict(i),
+                dt.capabilities,
+                entity_name="Task",
+                api_endpoint="/api/tasks",
+                detail_url_template="",
+                table_id="dt-table",
+            )
+            for i in items
+        )
+        assert render_data_table_rows(dt) == expected
+        assert render_data_table_rows(dt).count('class="dz-tr-row group"') == 2
+
+    def test_empty_rows_render_nothing(self) -> None:
+        from dazzle.render.fragment.renderer._data_row import render_data_table_rows
+
+        dt = DataTable(columns=({"key": "name", "type": "str"},), rows=())
+        assert render_data_table_rows(dt) == ""
+
+    def test_threads_capabilities(self) -> None:
+        from dazzle.render.fragment.renderer._data_row import render_data_table_rows
+
+        dt = DataTable(
+            columns=({"key": "name", "type": "str"},),
+            rows=({"id": "a", "name": "Ada"},),
+            capabilities=RowCapabilities(bulk_select=True, drill=True),
+            detail_url_template="/tasks/{id}",
+        )
+        out = render_data_table_rows(dt)
+        assert "dz-tr-checkbox" in out  # bulk_select threaded
+        assert 'hx-get="/tasks/a"' in out  # drill threaded

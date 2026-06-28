@@ -25,7 +25,7 @@ from dazzle.render.filters import (
     badge_icon_html,
     resolve_status_tone,
 )
-from dazzle.render.fragment.primitives import RowCapabilities
+from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 
 
 def _render_inline_edit(item: dict[str, Any], col: dict[str, Any], value: Any) -> str:
@@ -386,3 +386,26 @@ def render_data_row(
         "table_id": table_id,
     }
     return _render_table_row(table, dict(item))
+
+
+def render_data_table_rows(dt: DataTable) -> str:
+    """Render the `<tbody>` children (the `<tr>` set) of a `DataTable` (#1505).
+
+    The substrate-native rows-only entry. Both the (Phase-3) full-table emitter
+    and the (Phase-2) http/ HTMX-refresh transport adapter call down into this,
+    so first-paint and refresh can never diverge. Returns the rows alone (no
+    `<tbody>` wrapper) for an `innerHTML`/`innerMorph` swap into an existing
+    table body.
+    """
+    return "".join(
+        render_data_row(
+            dt.columns,
+            dict(item),
+            dt.capabilities,
+            entity_name=dt.entity_name,
+            api_endpoint=dt.api_endpoint,
+            detail_url_template=dt.detail_url_template,
+            table_id=dt.table_id,
+        )
+        for item in dt.rows
+    )
