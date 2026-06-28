@@ -44,9 +44,11 @@ def test_backlog_is_amber_or_red_only_and_leverage_ordered() -> None:
     order = {"high": 0, "medium": 1, "low": 2}
     keys = [order.get(b["leverage"], 3) for b in backlog]
     assert keys == sorted(keys)
-    # the four known top gaps are present and high-leverage
+    # the known top gaps are present and high-leverage. 1a left the backlog when
+    # `display: auto` became the default (#1492 default-flip → level 3).
     high = {b["criterion"] for b in backlog if b["leverage"] == "high"}
-    assert {"1a", "1b", "1c", "3d"} <= high
+    assert {"1b", "1c", "3d"} <= high
+    assert "1a" not in {b["criterion"] for b in backlog}  # level 3, no longer a gap
 
 
 def test_criteria_count_and_ids() -> None:

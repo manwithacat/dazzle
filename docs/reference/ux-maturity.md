@@ -166,19 +166,19 @@ criterion:
     "1a": {
       "principle": "data_drives_ui",
       "name": "region form inference",
-      "capability": 2,
+      "capability": 3,
       "rendered": null,
-      "rag": "amber",
-      "evidence": "display dispatcher default is `_build_list`; kinds exist but no shape inference",
+      "rag": "green",
+      "evidence": "`display: auto` is the default for an unset `display:` (#1492); the form is inferred from the data shape",
       "attribution": null
     }
   },
   "framework_backlog": [
     {
-      "criterion": "1a",
+      "criterion": "1b",
       "leverage": "high",
-      "gap": "no data-shape -> form inference (display: auto)",
-      "evidence": ["dispatcher default _build_list", "..."],
+      "gap": "status->tone is a name convention (`_STATUS_TONE_MAP`), not a declared+validated binding",
+      "evidence": ["_STATUS_TONE_MAP name fallback", "..."],
       "since_version": "0.87.11"
     }
   ]

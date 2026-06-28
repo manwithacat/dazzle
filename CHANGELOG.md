@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.0] - 2026-06-28
+
+### Changed
+- **`display: auto` is now the DEFAULT — region form inferred from data shape (#1492, UX-maturity 1a → level 3).** A workspace `region:` with *no* `display:` at all now infers its form from the source's data shape (aggregate → summary/chart, state-machine → kanban, meaningful temporal field → timeline, else list) instead of falling to the list template. The opt-in `display: auto` resolver (v0.88.3) becomes the default via a new single dispatch decision `resolve_region_display_mode`. An explicit `display: list` (or any concrete verb) stays **authoritative** and is never re-inferred — the renderer distinguishes a genuinely-unset display from an explicit one via a new render-time discriminator `WorkspaceRegion.display_unset` (set by the parser; `exclude=True`, so it never appears in IR/corpus snapshots). Byte-identical across the entire example + fixture fleet (8 unset regions, all resolve to their prior rendering; the multi-source `TABBED_LIST` auto-bump is preserved). Subsumes and removes the ad-hoc EX-047/#1082 `unset-aggregate → SUMMARY` promotion in `workspace_renderer`. The `dazzle ux maturity` 1a probe re-scores 2 → 3 (good-defaults); reaching 4 (adaptive) = runtime/usage-driven form selection.
+
+### Agent Guidance
+- **An unset `display:` now means "infer the form," not "list."** When authoring workspace regions, omit `display:` to get the data-right default; write `display: list` only when you specifically want a table on data the resolver would otherwise promote (aggregate/state-machine/temporal sources). `display: list` is honoured verbatim. The single decision point is `dazzle.page.runtime.auto_display.resolve_region_display_mode`.
+
 ## [0.91.5] - 2026-06-28
 
 ### Fixed

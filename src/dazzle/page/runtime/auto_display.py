@@ -29,6 +29,29 @@ _TEMPORAL_KINDS = {FieldTypeKind.DATE, FieldTypeKind.DATETIME}
 _AUTO_TIMESTAMP = {FieldModifier.AUTO_ADD, FieldModifier.AUTO_UPDATE}
 
 
+def resolve_region_display_mode(region: Any, entities_by_name: dict[str, Any]) -> str:
+    """The single dispatch decision for a region's concrete display mode.
+
+    Returns an UPPERCASE mode matching ``workspace_renderer``'s
+    ``DISPLAY_TEMPLATE_MAP`` convention. The form is inferred from the data
+    shape (via :func:`resolve_auto_display`) when either:
+
+    - the author wrote ``display: auto`` (explicit opt-in, #1492), or
+    - the author wrote no ``display:`` at all (``display_unset`` — the #1492
+      default-flip; raw default ``LIST`` that no one chose).
+
+    An *explicit* ``display: list`` (or any other concrete verb) is authoritative
+    and returned unchanged — the resolver never overrides an author's choice.
+    This subsumes the prior ad-hoc ``unset aggregate -> SUMMARY`` promotion, since
+    :func:`resolve_auto_display` returns ``SUMMARY`` for that shape.
+    """
+    raw: Any = getattr(region, "display", None)
+    mode = (raw.value if hasattr(raw, "value") else str(raw)).upper()
+    if mode == "AUTO" or (mode == "LIST" and getattr(region, "display_unset", False)):
+        return resolve_auto_display(region, entities_by_name)
+    return mode
+
+
 def resolve_auto_display(region: Any, entities_by_name: dict[str, Any]) -> str:
     """Infer the concrete display mode for a ``display: auto`` region."""
     aggregates = getattr(region, "aggregates", None) or {}

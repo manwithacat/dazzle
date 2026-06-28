@@ -1,13 +1,18 @@
-"""#1492 (UX-maturity 1a) — `display: auto` shape->form resolver.
+"""#1492 (UX-maturity 1a) — `display: auto` shape->form resolver + default-flip.
 
 Generalises the ad-hoc aggregate->SUMMARY / kanban promotions into one
-`resolve_auto_display`. Opt-in: only `display: auto` regions route through it.
+`resolve_auto_display`. Since the default-flip, `resolve_region_display_mode`
+makes a genuinely-unset `display:` (and an explicit `display: auto`) infer its
+form, while an explicit verb stays authoritative.
 """
 
 from types import SimpleNamespace
 
 from dazzle.core.ir.fields import FieldModifier, FieldType, FieldTypeKind
-from dazzle.page.runtime.auto_display import resolve_auto_display
+from dazzle.page.runtime.auto_display import (
+    resolve_auto_display,
+    resolve_region_display_mode,
+)
 
 
 def _region(**kw) -> SimpleNamespace:
@@ -88,3 +93,36 @@ def test_unknown_source_falls_back_to_list() -> None:
 def test_plain_entity_no_signal_falls_back_to_list() -> None:
     ent = _entity("Plain", fields=[_field("name", FieldType(kind=FieldTypeKind.STR).kind)])
     assert resolve_auto_display(_region(source="Plain"), {"Plain": ent}) == "LIST"
+
+
+# ── default-flip: resolve_region_display_mode (#1492 level 2->3) ───────────────
+
+
+def test_unset_display_infers_form_by_default() -> None:
+    # A genuinely-unset `display:` (display_unset=True) with a scalar aggregate
+    # now infers SUMMARY — the data-right form is the default, no `display:` line.
+    r = _region(display="list", display_unset=True, aggregates={"total": object()})
+    assert resolve_region_display_mode(r, {}) == "SUMMARY"
+
+
+def test_explicit_list_is_authoritative_even_with_aggregates() -> None:
+    # An author who explicitly writes `display: list` is never re-inferred,
+    # even on an aggregate region the resolver would otherwise promote.
+    r = _region(display="list", display_unset=False, aggregates={"total": object()})
+    assert resolve_region_display_mode(r, {}) == "LIST"
+
+
+def test_explicit_auto_routes_through_resolver() -> None:
+    r = _region(display="auto", display_unset=False, group_by="status", aggregates={"n": object()})
+    assert resolve_region_display_mode(r, {}) == "BAR_CHART"
+
+
+def test_explicit_kanban_is_passed_through_unchanged() -> None:
+    r = _region(display="kanban", display_unset=False)
+    assert resolve_region_display_mode(r, {}) == "KANBAN"
+
+
+def test_unset_plain_entity_still_lists() -> None:
+    ent = _entity("Plain", fields=[_field("name", FieldType(kind=FieldTypeKind.STR).kind)])
+    r = _region(display="list", display_unset=True, source="Plain")
+    assert resolve_region_display_mode(r, {"Plain": ent}) == "LIST"

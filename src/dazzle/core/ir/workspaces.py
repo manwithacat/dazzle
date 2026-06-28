@@ -989,6 +989,15 @@ class WorkspaceRegion(BaseModel):
     sort: list[SortSpec] = Field(default_factory=list)
     limit: int | None = Field(None, ge=1, le=1000)
     display: DisplayMode = DisplayMode.LIST
+    # #1492 default-flip: render-time discriminator for "the author did not
+    # choose a display mode" vs "the author explicitly wrote `display: list`".
+    # Both surface as `DisplayMode.LIST` in the IR, so a genuinely-unset region
+    # can't otherwise be told apart from an explicit list. The parser sets this
+    # True only when no `display:` keyword appeared; programmatic/explicit
+    # construction defaults to False (authoritative — never re-inferred).
+    # `exclude=True`: this is render metadata, not semantic IR — kept out of
+    # `model_dump()` so it never appears in the parser-corpus / IR snapshots.
+    display_unset: bool = Field(default=False, exclude=True)
     # Plan 2: renderer name override at region level. Optional;
     # `None` means the framework default applies. Validated at link
     # time against the RendererRegistry. Resolution order

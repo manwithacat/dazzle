@@ -3387,6 +3387,7 @@ ir_class: WorkspaceRegion
     - day_timeline_config: DayTimelineConfig | None = None
     - delta: DeltaSpec | None = None
     - display: DisplayMode = <DisplayMode.LIST: 'list'>
+    - display_unset: bool = False
     - drill: str | None = None
     - empty_message: str | None = None
     - entity_card_config: EntityCardConfig | None = None

@@ -18,8 +18,11 @@ One DSL declaration compiles to one `GROUP BY` SQL statement that evaluates the 
 infer the form from the source's data shape: aggregate + 2-D grouping → `pivot_table`,
 aggregate + 1-D → `bar_chart`, scalar aggregate → `summary`, a state-machine entity →
 `kanban`, a meaningful (non-`created_at`) temporal field → `timeline`, else `list`.
-Resolution is `dazzle.page.runtime.auto_display.resolve_auto_display`. Opt-in today;
-when you know the form you want, name it explicitly per the table below:
+Resolution is `dazzle.page.runtime.auto_display.resolve_auto_display`. **This is now
+the default** (#1492 default-flip): a region with *no* `display:` at all is inferred the
+same way — you only write `display:` when you want to override the inferred form. An
+explicit `display: list` stays authoritative (it is never re-inferred). When you know
+the form you want, name it explicitly per the table below:
 
 Before you write DSL, pick the cardinality × visualisation:
 

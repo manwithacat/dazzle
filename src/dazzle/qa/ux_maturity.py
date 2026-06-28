@@ -86,16 +86,31 @@ def _display_kinds() -> tuple[dict[str, str], set[str]]:
 
 
 def _probe_1a() -> ProbeResult:
-    """Region form is NOT inferred: dispatcher default is a list, rich kinds
-    exist, and there is no `auto`/inference entry."""
-    builders, kinds = _display_kinds()
-    default_is_list = builders.get("", "").endswith("_build_list")
-    has_inference = "auto" in kinds or "infer" in kinds
+    """Region form IS inferred by default (level 3): a genuinely-unset `display:`
+    routes through the shape->form resolver, not the list template (#1492
+    default-flip). Confirms the declared level by exercising the real dispatch
+    decision — an unset region with a scalar aggregate must resolve to SUMMARY,
+    not LIST."""
+    from types import SimpleNamespace
+
+    from dazzle.page.runtime.auto_display import resolve_region_display_mode
+
+    unset_agg = SimpleNamespace(
+        display="list", display_unset=True, aggregates={"n": object()}, source=""
+    )
+    explicit_list = SimpleNamespace(
+        display="list", display_unset=False, aggregates={"n": object()}, source=""
+    )
+    default_infers = resolve_region_display_mode(unset_agg, {}) == "SUMMARY"
+    # an explicit `display: list` is authoritative — never re-inferred
+    explicit_respected = resolve_region_display_mode(explicit_list, {}) == "LIST"
+    _, kinds = _display_kinds()
     rich = len(kinds) >= 10
-    ok = default_is_list and rich and not has_inference
+    ok = default_infers and explicit_respected and rich
     return ProbeResult(
         ok,
-        f"display kinds={len(kinds)}, default={builders.get('', '?')}, inference_key={has_inference}",
+        f"unset->infer={default_infers}, explicit-list-respected={explicit_respected}, "
+        f"kinds={len(kinds)}",
     )
 
 
@@ -160,8 +175,8 @@ CRITERIA: list[Criterion] = [
         "1a",
         "data_drives_ui",
         "region form inference",
-        2,
-        "a general `display: auto` resolver now exists (opt-in, #1492 — resolve_auto_display unifies the EX-047/#1082 aggregate->SUMMARY + kanban promotions and adds temporal->timeline). Still level 2: `auto` is opt-in, not the default — unset `display:` still routes to list. Reaching 3 = make `auto` the default (validated against the example fleet + visual baselines).",
+        3,
+        "`display: auto` is now the DEFAULT (#1492 default-flip): a genuinely-unset `display:` routes through resolve_region_display_mode -> resolve_auto_display, inferring the form from the data shape (aggregate->summary/chart, state-machine->kanban, temporal->timeline, else list). An explicit `display: list` stays authoritative (true-unset discriminator: WorkspaceRegion.display_unset). Level 3 (good-defaults): the data-right form is the default; the author writes nothing. Reaching 4 (adaptive) = runtime/usage-driven form selection.",
         "high",
         _probe_1a,
     ),

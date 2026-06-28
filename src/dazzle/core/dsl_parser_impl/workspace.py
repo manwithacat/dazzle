@@ -2819,6 +2819,10 @@ class _WorkspaceRegionState:
     sort: list[ir.SortSpec] = field(default_factory=list)
     limit: int | None = None
     display: ir.DisplayMode = ir.DisplayMode.LIST
+    # #1492 default-flip: True until a `display:` keyword is parsed. Carried to
+    # ir.WorkspaceRegion.display_unset so the renderer can infer the form for a
+    # genuinely-unset region without ever overriding an explicit `display: list`.
+    display_unset: bool = True
     render: str | None = None
     action: str | None = None
     empty_message: str | None = None
@@ -2943,6 +2947,7 @@ def _kw_display(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.display = parser.enum_from_token(ir.DisplayMode, parser.expect_identifier_or_keyword())
+    state.display_unset = False  # #1492: author chose a form explicitly
     parser.skip_newlines()
 
 
@@ -3801,6 +3806,7 @@ def _build_workspace_region(
         sort=state.sort,
         limit=state.limit,
         display=display,
+        display_unset=state.display_unset,
         action=state.action,
         empty_message=state.empty_message,
         group_by=state.group_by,
