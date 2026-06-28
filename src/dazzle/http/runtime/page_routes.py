@@ -1952,7 +1952,7 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
 
 def _render_response(prc: _PageRequestContext) -> Response:
     """Build the final HTML response, handling HTMX fragment/drawer/full modes."""
-    from dazzle.http.runtime.htmx import HtmxDetails
+    from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
     from dazzle.page.runtime.template_renderer import render_page
 
     htmx = HtmxDetails.from_request(prc.request)
@@ -1989,6 +1989,14 @@ def _render_response(prc: _PageRequestContext) -> Response:
     # every surface without ``render:`` set (the overwhelming majority),
     # which preserves the legacy direct-template path unchanged.
     inner_html = _maybe_dispatch_inner_html(prc, render_ctx)
+
+    # #1494 (2c): row-peek fetch (`?peek=1`) — the list-row chevron loads this
+    # entity's detail *body* into an inline panel. Return content-only (no app
+    # chrome) and, unlike the generic htmx-partial path below, fire NO
+    # dz:titleUpdate trigger — expanding a row must not retitle the page.
+    if is_peek_request(prc.request):
+        html = render_page(render_ctx, content_only=True, inner_html=inner_html)
+        return HTMLResponse(content=html)  # nosemgrep
 
     # Fragment targeting: nav links target #main-content directly,
     # so return only the content template (no layout wrapper).

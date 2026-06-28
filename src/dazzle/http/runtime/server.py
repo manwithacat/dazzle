@@ -97,6 +97,7 @@ from dazzle.http.runtime.workspace_handlers import (  # noqa: F401
 )
 from dazzle.http.runtime.workspace_region_handler import _workspace_region_handler  # noqa: F401
 from dazzle.http.runtime.workspace_route_builder import WorkspaceRouteBuilder
+from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.page.runtime.theme import install_theme_middleware
 from dazzle.perf.bootstrap import maybe_configure_tracer
 from dazzle.perf.instrument import instrument_app
@@ -1742,6 +1743,10 @@ class DazzleBackendApp:
                 "columns": cols,
                 "detail_url": f"{app_prefix}/{slug}/{{id}}",
                 "entity_name": entity.name,
+                # #1494 (2c): resolved `peek:` mode for the list surface. Unset →
+                # "off" (Slice-1 default, byte-stable); `peek: expand` opts the
+                # entity-list rows into the inline detail-panel chevron.
+                "peek_mode": resolve_peek_mode(_ls, entity).value if _ls else "off",
             }
 
         # Build per-entity audit config mapping.

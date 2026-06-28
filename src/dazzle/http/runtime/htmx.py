@@ -139,6 +139,23 @@ def is_htmx_request(request: Any) -> bool:
     return HtmxDetails.from_request(request).is_htmx
 
 
+def is_peek_request(request: Any) -> bool:
+    """Whether this is a #1494 row-peek fetch (`peek: expand`).
+
+    The list-row chevron loads an entity's detail *body* into an inline panel
+    via ``hx-get="<detail-url>?peek=1"``. Such a request must return the
+    content-only body (no app chrome, and crucially no ``dz:titleUpdate``
+    trigger — expanding a row must not retitle the page). A direct browser GET
+    of the same URL (no ``HX-Request``) is an ordinary full-page detail view.
+    """
+    if not is_htmx_request(request):
+        return False
+    params = getattr(request, "query_params", None)
+    if params is None:
+        return False
+    return bool(params.get("peek") == "1")
+
+
 def htmx_error_response(
     errors: list[str],
     *,

@@ -20,6 +20,29 @@ def test_build_data_table_rows_match_fixture(label: str, table: dict, item: dict
     assert rendered == _fixture_path(label).read_text(encoding="utf-8")
 
 
+def test_build_data_table_threads_peek_mode() -> None:
+    """#1494 P4: a `peek: expand` surface (table_dict["peek_mode"]) flows through
+    build_data_table → caps.peek → the inline-detail chevron."""
+    table = {
+        "entity_name": "Task",
+        "api_endpoint": "/api/tasks",
+        "detail_url_template": "/tasks/{id}",
+        "peek_mode": "expand",
+        "columns": [{"key": "name", "type": "str"}],
+    }
+    dt = build_data_table(table, [{"id": "a", "name": "Ada"}])
+    assert dt.capabilities.peek == "expand"
+    out = render_data_table_rows(dt)
+    assert "dz-tr-peek-toggle" in out
+    assert 'hx-get="/tasks/a?peek=1"' in out
+    # Absent peek_mode → off → no chevron (byte-stable default).
+    table_no_peek = {**table}
+    del table_no_peek["peek_mode"]
+    assert "dz-tr-peek-toggle" not in render_data_table_rows(
+        build_data_table(table_no_peek, [{"id": "a", "name": "Ada"}])
+    )
+
+
 def test_multi_row_is_per_row_concatenation() -> None:
     """Two rows through one DataTable equal the two single-row renders joined."""
     table = {

@@ -509,6 +509,7 @@ class RouteGenerator:
                 json_projection=projection,
                 htmx_columns=_htmx.get("columns"),
                 htmx_detail_url=_htmx.get("detail_url"),
+                htmx_peek_mode=_htmx.get("peek_mode"),
                 htmx_entity_name=_htmx.get("entity_name", entity_name or "Item"),
                 htmx_empty_message=_htmx.get("empty_message", "No items found."),
                 search_fields=_search_fields,

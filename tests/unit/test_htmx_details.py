@@ -4,12 +4,35 @@ from types import SimpleNamespace
 
 import pytest
 
+from dazzle.http.runtime.htmx import is_peek_request
 from dazzle.http.runtime.htmx_response import HtmxDetails
 
 
 def _fake_request(**headers: str) -> SimpleNamespace:
     """Build a minimal request-like object with the given headers."""
     return SimpleNamespace(headers=headers)
+
+
+class TestIsPeekRequest:
+    """is_peek_request() — #1494 row-peek detail-body fetch detection."""
+
+    def test_htmx_get_with_peek_param(self) -> None:
+        req = SimpleNamespace(headers={"HX-Request": "true"}, query_params={"peek": "1"})
+        assert is_peek_request(req) is True
+
+    def test_htmx_without_peek_param(self) -> None:
+        req = SimpleNamespace(headers={"HX-Request": "true"}, query_params={})
+        assert is_peek_request(req) is False
+
+    def test_peek_param_without_htmx(self) -> None:
+        # A direct browser GET of the peek URL is a full-page detail view,
+        # not a row-peek fragment.
+        req = SimpleNamespace(headers={}, query_params={"peek": "1"})
+        assert is_peek_request(req) is False
+
+    def test_missing_query_params(self) -> None:
+        req = SimpleNamespace(headers={"HX-Request": "true"})
+        assert is_peek_request(req) is False
 
 
 class TestFromRequest:

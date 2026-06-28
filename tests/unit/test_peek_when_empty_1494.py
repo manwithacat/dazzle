@@ -98,3 +98,68 @@ class TestPeekResolver:
         # Slice 1: unset → off (byte-stable). Slice 4 flips this to expand when
         # the entity has a detail surface.
         assert resolve_peek_mode(_surface()) is PeekMode.OFF
+
+
+# --- peek: expand render on the converged substrate row-core (#1505 Phase 4) ---
+
+
+def _peek_row(peek: str = "off", *, drill: bool = True) -> str:
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    caps = RowCapabilities(peek=peek, drill=drill)
+    return render_data_row(
+        ({"key": "title", "type": "str"},),
+        {"id": "abc-123", "title": "x"},
+        caps,
+        entity_name="Task",
+        api_endpoint="/api/tasks",
+        detail_url_template="/tasks/{id}",
+    )
+
+
+class TestPeekExpandRender:
+    """`peek: expand` renders a chevron + hidden detail-body panel on the
+    converged `render_data_row` core (#1505 P4 / #1494 2c)."""
+
+    def test_expand_emits_chevron_to_peek_partial(self):
+        html = _peek_row("expand")
+        assert "dz-tr-peek-toggle" in html
+        assert 'hx-get="/tasks/abc-123?peek=1"' in html
+        assert 'aria-expanded="false"' in html
+        assert 'id="peek-content-abc-123"' in html
+        assert 'hx-target="#peek-content-abc-123"' in html
+
+    def test_expand_emits_hidden_panel_row(self):
+        html = _peek_row("expand")
+        assert 'id="peek-abc-123"' in html
+        assert "dz-tr-peek-panel" in html
+        assert "hidden" in html
+        assert 'colspan="2"' in html  # 1 visible column + actions cell
+
+    def test_off_has_no_chevron_or_panel(self):
+        html = _peek_row("off")
+        assert "dz-tr-peek-toggle" not in html
+        assert "dz-tr-peek-panel" not in html
+
+    def test_off_is_byte_identical_to_default(self):
+        # caps.peek defaults to "off", so an explicit off is byte-identical to
+        # not requesting peek — keeps the fleet byte-stable.
+        from dazzle.render.fragment.primitives import RowCapabilities
+        from dazzle.render.fragment.renderer._data_row import render_data_row
+
+        args = (({"key": "title", "type": "str"},), {"id": "r1", "title": "x"})
+        kw = {
+            "entity_name": "Task",
+            "api_endpoint": "/api/tasks",
+            "detail_url_template": "/tasks/{id}",
+        }
+        explicit_off = render_data_row(*args, RowCapabilities(peek="off", drill=True), **kw)
+        default = render_data_row(*args, RowCapabilities(drill=True), **kw)
+        assert explicit_off == default
+
+    def test_peek_requires_detail_surface(self):
+        # The chevron lives inside the drill block — peek with no detail URL is
+        # inert (nothing to peek at).
+        html = _peek_row("expand", drill=False)
+        assert "dz-tr-peek-toggle" not in html

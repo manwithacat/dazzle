@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.14] - 2026-06-29
+
+### Added
+- **`peek: expand` — inline detail-panel on the converged row-core (#1494 UX-maturity 2c, on the #1505 substrate).** A `mode: list` surface declaring `peek: expand` now renders, per row, a chevron that `hx-get`s the entity's detail **body** (`?peek=1` → content-only, no chrome / no title-flip) into a hidden sibling panel toggled in place. Because the rich data-table row is now a single substrate core (#1505 Phase 2), this landed in **one place** (`render/fragment/renderer/_data_row.py`) — the payoff of the convergence. Full wiring: `surface.peek` → `resolve_peek_mode` (server boot) → entity htmx-meta → `create_list_handler(htmx_peek_mode=)` → `request.state` → `build_data_table` `RowCapabilities.peek` → chevron. New `is_peek_request` + a `_render_response` peek branch serve the body partial. **Opt-in and byte-stable** — `resolve_peek_mode` still defaults unset → `off`, so the fleet is unchanged until an author opts in (the default-flip + `when_empty:` + the 2c/3d probe re-score remain follow-on #1494 work).
+
 ## [0.92.13] - 2026-06-28
 
 ### Changed

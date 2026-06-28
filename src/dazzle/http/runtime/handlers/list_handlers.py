@@ -74,6 +74,7 @@ def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) ->
         bulk_select=bool(table_dict.get("bulk_actions")),
         inline_editable=tuple(table_dict.get("inline_editable") or ()),
         drill=bool(table_dict.get("detail_url_template")),
+        peek=str(table_dict.get("peek_mode") or "off"),
     )
     return DataTable(
         columns=tuple(table_dict.get("columns") or ()),
@@ -94,6 +95,7 @@ def create_list_handler(
     json_projection: list[str] | None = None,
     htmx_columns: list[dict[str, Any]] | None = None,
     htmx_detail_url: str | None = None,
+    htmx_peek_mode: str | None = None,
     htmx_entity_name: str | None = None,
     htmx_empty_message: str = "No items found.",
     search_fields: list[str] | None = None,
@@ -140,6 +142,8 @@ def create_list_handler(
             request.state.htmx_columns = htmx_columns
         if htmx_detail_url is not None:
             request.state.htmx_detail_url = htmx_detail_url
+        if htmx_peek_mode is not None:
+            request.state.htmx_peek_mode = htmx_peek_mode
         request.state.htmx_entity_name = htmx_entity_name
         request.state.htmx_empty_message = htmx_empty_message
 
@@ -534,6 +538,7 @@ async def _list_handler_body(
                 if hasattr(request.state, "htmx_columns")
                 else [],
                 "detail_url_template": getattr(request.state, "htmx_detail_url", None),
+                "peek_mode": getattr(request.state, "htmx_peek_mode", None),
                 "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
                 "api_endpoint": str(request.url.path),
                 "table_id": table_id,

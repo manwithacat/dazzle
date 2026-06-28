@@ -226,12 +226,41 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         f"'is-error': editing && editing.rowId === {item_id_js} && editing.error}}"
     )
 
+    # #1494 (2c): `peek: expand` gives each row a chevron that hx-gets the
+    # entity's detail *body* partial (`?peek=1` → content-only) into a hidden
+    # sibling panel row, toggled in place. Only emitted when the resolved mode is
+    # `expand` (so `off`/unset rows are byte-identical to pre-#1494).
+    peek_expand = str(table.get("peek_mode") or "").strip() == "expand"
+    peek_toggle_html = ""
+
     detail_hx_attrs = ""
     detail_link_html = ""
     edit_link_html = ""
     if detail_url_template:
         detail_url = detail_url_template.replace("{id}", item_id)
         detail_url_attr = _html_mod.escape(detail_url, quote=True)
+        if peek_expand:
+            peek_url_attr = _html_mod.escape(f"{detail_url}?peek=1", quote=True)
+            panel_id = f"peek-{item_id_attr}"
+            content_id = f"peek-content-{item_id_attr}"
+            peek_toggle_html = (
+                f'<button type="button" '  # nosemgrep
+                f'class="dz-tr-action dz-tr-peek-toggle" '
+                f'data-dazzle-action="{entity_name_attr}.peek" '
+                f'aria-label="Toggle detail for {row_label_attr}" '
+                f'aria-expanded="false" '
+                f'hx-get="{peek_url_attr}" '
+                f'hx-target="#{content_id}" '
+                f'hx-swap="innerHTML" '
+                f"hx-on:click=\"const p=document.getElementById('{panel_id}'); "
+                f"const willOpen=p.hasAttribute('hidden'); "
+                f"if(willOpen){{p.removeAttribute('hidden')}}else{{p.setAttribute('hidden','')}}; "
+                f"this.setAttribute('aria-expanded', String(willOpen));\">"
+                '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" '
+                'xmlns="http://www.w3.org/2000/svg">'
+                '<path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" stroke-width="1.25" '
+                'stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
+            )
         detail_hx_attrs = f'hx-get="{detail_url_attr}" hx-push-url="true" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
         detail_link_html = (
             f'<a href="{detail_url_attr}" '  # nosemgrep
@@ -339,9 +368,22 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     )
     actions_cell = (
         '<td class="dz-tr-actions-cell" onclick="event.stopPropagation()">'
-        f'<div class="dz-tr-actions">{detail_link_html}{edit_link_html}{delete_button}</div>'
+        f'<div class="dz-tr-actions">{peek_toggle_html}{detail_link_html}{edit_link_html}'
+        f"{delete_button}</div>"
         "</td>"
     )
+
+    # #1494: the hidden sibling panel the chevron reveals; spans the full row.
+    peek_panel_row = ""
+    if peek_toggle_html:
+        colspan = len(cell_parts) + (1 if bulk_actions else 0) + 1
+        peek_panel_row = (
+            f'<tr id="peek-{item_id_attr}" '  # nosemgrep
+            f'class="dz-tr-peek-panel" hidden>'
+            f'<td colspan="{colspan}" class="dz-tr-peek-cell" '
+            f'id="peek-content-{item_id_attr}"></td>'
+            "</tr>"
+        )
 
     return (
         f'<tr id="row-{item_id_attr}" '  # nosemgrep
@@ -354,6 +396,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         f"{''.join(cell_parts)}"
         f"{actions_cell}"
         "</tr>"
+        f"{peek_panel_row}"
     )
 
 
@@ -384,6 +427,10 @@ def render_data_row(
         "bulk_actions": caps.bulk_select,
         "inline_editable": list(caps.inline_editable),
         "table_id": table_id,
+        # #1494: `peek: expand` chevron + inline detail panel. Requires a detail
+        # surface (the chevron lives inside the `drill` block), so peek with no
+        # detail URL is inert.
+        "peek_mode": caps.peek,
     }
     return _render_table_row(table, dict(item))
 
