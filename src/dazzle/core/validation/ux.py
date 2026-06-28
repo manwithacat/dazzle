@@ -692,3 +692,44 @@ def validate_workspace_region_actions(appspec: ir.AppSpec) -> tuple[list[str], l
                     f"Ambiguous FK — the runtime cannot pick one automatically."
                 )
     return errors, warnings
+
+
+def validate_enum_semantics(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate `semantic:` tone bindings on enums (#1493, UX-maturity 1b).
+
+    Each declared tone must resolve to a canonical tone (the 5-tone palette, with
+    `positive`→`success`). Value membership is enforced at parse time
+    (E_SEMANTIC_VALUE_UNKNOWN); here we gate the tone vocabulary
+    (E_SEMANTIC_TONE_UNKNOWN). Covers both shared `enum` blocks
+    (EnumValueSpec.semantic) and inline `enum[...]` fields (FieldType.enum_semantics).
+    """
+    from ..ir.tones import CANONICAL_TONES, normalize_tone
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    palette = ", ".join(CANONICAL_TONES)
+
+    for enum in appspec.enums:
+        for value in enum.values:
+            if value.semantic is not None and normalize_tone(value.semantic) is None:
+                errors.append(
+                    f"E_SEMANTIC_TONE_UNKNOWN: enum '{enum.name}' value '{value.name}' "
+                    f"binds unknown tone '{value.semantic}'. Allowed: {palette} "
+                    f"(or alias `positive`→`success`)."
+                )
+
+    for entity in appspec.domain.entities:
+        for field in entity.fields:
+            ft = getattr(field, "type", None)
+            semantics = getattr(ft, "enum_semantics", None) if ft else None
+            if not semantics:
+                continue
+            for value_name, tone in semantics.items():
+                if normalize_tone(tone) is None:
+                    errors.append(
+                        f"E_SEMANTIC_TONE_UNKNOWN: {entity.name}.{field.name} value "
+                        f"'{value_name}' binds unknown tone '{tone}'. Allowed: {palette} "
+                        f"(or alias `positive`→`success`)."
+                    )
+
+    return errors, warnings

@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.3] - 2026-06-28
+
+### Added
+- **`semantic:` tone bindings on shared enums (#1493, UX-maturity 1b — slice 1 of 2).** A shared `enum` block may now declare each value's lifecycle role → semantic tone, replacing the spelling-based `_STATUS_TONE_MAP` guess with a declared, validated binding:
+  ```
+  enum OrderStatus "Order Status":
+    draft "Draft"
+    approved "Approved"
+    rejected "Rejected"
+    semantic: approved=positive, rejected=destructive, draft=neutral
+  ```
+  Tone vocabulary is the five live CSS tones — `success / info / warning / destructive / neutral` — with `positive` accepted as an author-friendly alias for `success`. The palette + `normalize_tone` live in `dazzle.core.ir.tones` (so the validator can reach them; `core` is the bottom layer). A `semantic:` line binding a value not declared in the enum is a parse error (`E_SEMANTIC_VALUE_UNKNOWN`); an unknown tone is a validation error (`E_SEMANTIC_TONE_UNKNOWN`, via `validate_enum_semantics`). IR: `EnumValueSpec.semantic` + `FieldType.enum_semantics` (the latter for the inline `enum[...]` form, landing in slice 2). Stored raw/lowercased; normalised downstream so the validator can report the offending token.
+  **Slice 2 (tracked on #1493, issue stays open):** the inline `enum[...]` field continuation-line parser, the render-layer consumption (thread the resolved tone map through `ColumnContext` to the three badge seams; tone resolution order = declared → name-guess → state-machine-terminal inference), and the WCAG colour+icon+text layer.
+
+### Agent Guidance
+- **Declare status tones, don't rely on the name guess.** For a status/state enum, add a `semantic:` line binding each value to a tone (`success/info/warning/destructive/neutral`, or `positive`→`success`). It's validated at `dazzle validate`. The render layer doesn't consume the binding yet (slice 2) — but declaring it now is forward-compatible and gets you parse/validate-time safety. Canonical palette: `dazzle.core.ir.tones.CANONICAL_TONES`.
+
 ## [0.92.2] - 2026-06-28
 
 ### Fixed

@@ -8,6 +8,7 @@ from .validator import (
     validate_audit_config,
     validate_comparison_regions,
     validate_entities,
+    validate_enum_semantics,
     validate_event_payload_secrets,
     validate_experiences,
     validate_fitness_repr_fields,
@@ -130,6 +131,11 @@ def lint_appspec(
 
     # UX Semantic Layer validation
     errors, warnings = validate_ux_specs(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Enum `semantic:` tone bindings (#1493)
+    errors, warnings = validate_enum_semantics(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

@@ -250,6 +250,19 @@ scalar_type   ::= "str" "(" NUMBER ")"
 
 enum_type     ::= "enum" "[" IDENT ("," IDENT)* "]" ;
 
+(* #1493 — a shared `enum` block may carry a `semantic:` line binding each
+   value's lifecycle role to a tone. Tones: success | info | warning |
+   destructive | neutral (alias: positive → success). The bound values must be
+   declared in the enum (else E_SEMANTIC_VALUE_UNKNOWN at parse); unknown tones
+   are E_SEMANTIC_TONE_UNKNOWN at validate.
+     enum OrderStatus "Order Status":
+       draft "Draft"
+       approved "Approved"
+       rejected "Rejected"
+       semantic: approved=positive, rejected=destructive, draft=neutral
+*)
+enum_semantic ::= "semantic" ":" IDENT "=" TONE ("," IDENT "=" TONE)* ;
+
 reference_type ::= "ref" ENTITY_NAME delete_behavior?
                  | "has_many" ENTITY_NAME delete_behavior?
                  | "has_one" ENTITY_NAME delete_behavior?

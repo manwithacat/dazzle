@@ -24,6 +24,11 @@ class EnumValueSpec(BaseModel):
 
     name: str
     title: str | None = None
+    # #1493: declared lifecycle role → semantic tone. Set (raw, lowercased) from
+    # the enum block's `semantic:` line; normalised via core.ir.tones.normalize_tone
+    # at validate (which rejects unknown tones) and render time (`positive`→`success`).
+    # None = undeclared → tone falls back to state-machine inference / name guess.
+    semantic: str | None = None
 
     model_config = ConfigDict(frozen=True)
 

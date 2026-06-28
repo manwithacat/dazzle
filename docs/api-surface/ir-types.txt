@@ -817,6 +817,7 @@ ir_class: EnumValueSpec
   required:
     - name: str
   optional:
+    - semantic: str | None = None
     - title: str | None = None
 
 ir_class: ErasureSpec
@@ -1015,6 +1016,7 @@ ir_class: FieldType
     - kind: FieldTypeKind
   optional:
     - currency_code: str | None = None
+    - enum_semantics: dict[str, str] | None = None
     - enum_values: list[str] | None = None
     - max_length: int | None = None
     - max_size: int | None = None

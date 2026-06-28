@@ -114,6 +114,12 @@ class FieldType(BaseModel):
     precision: int | None = None  # for decimal
     scale: int | None = None  # for decimal
     enum_values: list[str] | None = None  # for enum
+    # #1493: per-value declared lifecycle role → semantic tone for an inline
+    # `enum[...]` field. Keys are a subset of enum_values; values are raw
+    # (lowercased) tones normalised via core.ir.tones.normalize_tone at
+    # validate/render. Set from the field's `semantic:` continuation line
+    # (parser wiring lands with the render slice). None = none declared.
+    enum_semantics: dict[str, str] | None = None  # for enum
     ref_entity: str | None = None  # for ref, has_many, has_one, embeds, belongs_to, latest_one
     relationship_behavior: RelationshipBehavior | None = None  # for has_many, has_one
     readonly: bool = False  # for relationships - cannot modify through this relationship
