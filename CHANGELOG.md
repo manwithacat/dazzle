@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.6] - 2026-06-28
+
+### Added
+- **Inline `enum[...]` field `semantic:` continuation line (#1493, UX-maturity 1b — slice 2 part 1).** The `semantic:` tone binding that shipped on shared `enum` blocks in v0.92.3 now also works on an inline `enum[...]` field, as an indented continuation line:
+  ```
+  status: enum[open, in_review, done, blocked]
+    semantic: open=neutral, in_review=warning, done=positive, blocked=destructive
+  ```
+  This populates the already-present `FieldType.enum_semantics` IR field (added in slice 1). Same tones and error codes as the shared form: a binding to a value not declared in the `enum[...]` is a parse error (`E_SEMANTIC_VALUE_UNKNOWN`); an unknown tone is a validation error (`E_SEMANTIC_TONE_UNKNOWN`, via the existing `validate_enum_semantics`, which already covered the inline shape). The continuation composes with a same-line `=default` modifier. Parser-only, no byte-churn — no example/fixture declares it yet, so the IR-types, golden-master, and parser-corpus snapshots are all unchanged.
+  **#1493 stays open** for the remaining slice-2 work: the render-layer consumption (thread the resolved tone map through `ColumnContext` to the three badge seams; resolution order = declared → name-guess → state-machine-terminal inference) and the WCAG colour+icon+text layer + the `_probe_1b` re-score.
+
 ## [0.92.5] - 2026-06-28
 
 ### Changed

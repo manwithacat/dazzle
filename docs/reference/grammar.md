@@ -260,6 +260,11 @@ enum_type     ::= "enum" "[" IDENT ("," IDENT)* "]" ;
        approved "Approved"
        rejected "Rejected"
        semantic: approved=positive, rejected=destructive, draft=neutral
+
+   Slice 2 (part 1) — an inline `enum[...]` field carries the same binding as an
+   indented `semantic:` continuation line (same tones + error codes):
+     status: enum[open, in_review, done]
+       semantic: open=neutral, in_review=warning, done=positive
 *)
 enum_semantic ::= "semantic" ":" IDENT "=" TONE ("," IDENT "=" TONE)* ;
 

@@ -110,6 +110,8 @@ class EntityParserMixin:
         _parse_field_path: Any
         parse_type_spec: Any
         parse_field_modifiers: Any
+        # #1493: shared `semantic:` value=tone map parser from EnumParserMixin
+        _parse_semantic_map: Any
         # v0.10.2: Date/duration methods from TypeParserMixin
         _parse_date_expr: Any
         _parse_duration_literal: Any
@@ -1128,6 +1130,10 @@ class EntityParserMixin:
             # Placed after modifiers so it composes with them on one field line:
             #   title: str(200) required was: name
             renamed_from = self._parse_was_hint() if self.match(TokenType.WAS) else None
+            # #1493 slice 2: optional indented `semantic:` continuation line on an
+            # inline `enum[...]` field, binding each value to a lifecycle tone.
+            if field_type.kind == ir.FieldTypeKind.ENUM:
+                field_type = self._maybe_parse_inline_enum_semantics(field_name, field_type)
             ctx.fields.append(
                 ir.FieldSpec(
                     name=field_name,
@@ -1172,6 +1178,56 @@ class EntityParserMixin:
             )
         self.advance()
         return str(tok.value)
+
+    def _maybe_parse_inline_enum_semantics(
+        self, field_name: str, field_type: ir.FieldType
+    ) -> ir.FieldType:
+        """Parse an optional indented ``semantic:`` continuation on an inline enum
+        field (#1493 slice 2), returning ``field_type`` augmented with the
+        declared value→tone map. Mirrors the shared-enum ``semantic:`` line::
+
+            status: enum[open, in_review, done]
+              semantic: open=neutral, in_review=warning, done=positive
+
+        Tones are stored raw/lowercased (``positive`` etc.); the palette is gated
+        downstream by ``validate_enum_semantics`` (E_SEMANTIC_TONE_UNKNOWN). A
+        binding to a value not declared in the ``enum[...]`` is a parse error
+        (E_SEMANTIC_VALUE_UNKNOWN), matching the shared-enum form. An inline enum
+        field has no other continuation block, so a deeper indent here is treated
+        as the ``semantic:`` line — anything else is a clear author-time error.
+        """
+        self.skip_newlines()
+        if not self.match(TokenType.INDENT):
+            return field_type
+        self.advance()  # INDENT
+        self.skip_newlines()
+        tok = self.current_token()
+        keyword = self.expect_identifier_or_keyword().value
+        if keyword != "semantic":
+            raise make_parse_error(
+                f"inline enum field '{field_name}' only supports a `semantic:` "
+                f"continuation line, got {keyword!r}.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.expect(TokenType.COLON)
+        semantics = self._parse_semantic_map()
+        self.skip_newlines()
+        self.expect(TokenType.DEDENT)
+
+        declared = set(field_type.enum_values or [])
+        unknown = [k for k in semantics if k not in declared]
+        if unknown:
+            raise make_parse_error(
+                f"E_SEMANTIC_VALUE_UNKNOWN: field '{field_name}' `semantic:` line binds "
+                f"value(s) not declared in the enum: {', '.join(sorted(unknown))}. "
+                f"Declared values: {', '.join(sorted(declared)) or '(none)'}.",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        return field_type.model_copy(update={"enum_semantics": semantics})
 
     # ------------------------------------------------------------------
     # Entity construction

@@ -4,7 +4,11 @@ Slice 1: the declarative + validated core. A shared `enum` block may carry a
 `semantic: value=tone, ...` line binding each value's lifecycle role to a tone
 from the canonical palette (`positive` aliases `success`). Declared tones are
 validated against the palette; value membership is enforced at parse time.
-(Inline `enum[...]` field bindings + the render/icon consumption land in slice 2.)
+
+Slice 2 (part 1): the inline `enum[...]` field form gains the same `semantic:`
+continuation line (`status: enum[...]` + an indented `semantic: v=tone, ...`),
+populating `FieldType.enum_semantics`. The render/icon consumption is the
+remaining slice-2 work.
 """
 
 import pathlib
@@ -112,6 +116,92 @@ enum S "S":
 """
         )
     assert "E_SEMANTIC_VALUE_UNKNOWN" in str(exc.value)
+
+
+# ── parser: inline `enum[...]` field `semantic:` continuation (slice 2) ────
+
+
+def _field(frag, entity_name: str, field_name: str):
+    entity = next(e for e in frag.entities if e.name == entity_name)
+    return next(f for f in entity.fields if f.name == field_name)
+
+
+def test_inline_enum_semantic_continuation_binds_tones() -> None:
+    frag = _parse(
+        """module m
+app a "A"
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, in_review, done, blocked]
+    semantic: open=neutral, in_review=warning, done=positive, blocked=destructive
+"""
+    )
+    ft = _field(frag, "Task", "status").type
+    assert ft.enum_semantics == {
+        "open": "neutral",
+        "in_review": "warning",
+        "done": "positive",  # raw; normalises to success downstream
+        "blocked": "destructive",
+    }
+
+
+def test_inline_enum_without_semantic_has_none() -> None:
+    frag = _parse(
+        """module m
+app a "A"
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, done]
+"""
+    )
+    ft = _field(frag, "Task", "status").type
+    assert ft.enum_semantics is None
+
+
+def test_inline_enum_semantic_composes_with_default() -> None:
+    # The continuation must not interfere with a same-line `=default` modifier.
+    frag = _parse(
+        """module m
+app a "A"
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, done]=open
+    semantic: done=positive
+"""
+    )
+    field = _field(frag, "Task", "status")
+    assert field.default == "open"
+    assert field.type.enum_semantics == {"done": "positive"}
+
+
+def test_inline_enum_semantic_unknown_value_is_parse_error() -> None:
+    with pytest.raises(DazzleError) as exc:
+        _parse(
+            """module m
+app a "A"
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, done]
+    semantic: nonexistent=warning
+"""
+        )
+    assert "E_SEMANTIC_VALUE_UNKNOWN" in str(exc.value)
+
+
+def test_inline_enum_semantic_unknown_tone_is_validation_error() -> None:
+    from dazzle.core.validation.ux import validate_enum_semantics
+
+    appspec = _appspec(
+        """module m
+app a "A"
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, done]
+    semantic: done=turquoise
+"""
+    )
+    errors, _ = validate_enum_semantics(appspec)
+    assert any("E_SEMANTIC_TONE_UNKNOWN" in e and "turquoise" in e for e in errors)
 
 
 # ── validator: tone palette ───────────────────────────────────────────────
