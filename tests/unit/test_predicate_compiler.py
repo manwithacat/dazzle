@@ -109,6 +109,22 @@ class TestPathCheck:
         assert '"Feedback"."manuscript_id" IN' in sql_s
         assert 'tenant_x"."Feedback"."manuscript_id" IN' not in sql_s
 
+    def test_outer_fk_column_bare_in_policy_mode(self) -> None:
+        """#1449: in POLICY mode (RLS USING/WITH CHECK — no joins) the outer root FK
+        column is BARE, never table-qualified — a ``"Entity"."col"`` ref resolves
+        wrongly in a standalone policy body. Kills the L725
+        ``entity_name and policy is None``→``or`` mutant, which would table-qualify
+        the outer column in policy mode (the param-mode test above can't catch it —
+        there the qualification is correct)."""
+        p = PathCheck(
+            path=["manuscript", "student_id"], op=CompOp.EQ, value=ValueRef(current_user=True)
+        )
+        body = compile_predicate_policy(
+            p, "Feedback", _simple_graph(), entity_types=lambda _e, _f: "uuid"
+        )
+        assert '"manuscript_id" IN' in body
+        assert '"Feedback"."manuscript_id"' not in body  # NOT qualified in policy mode
+
     def test_depth_2(self) -> None:
         """manuscript.assessment_event.school_id = current_user.school
         Each subquery SELECTs "id" so parent IN matches PKs, not FK values."""
@@ -395,6 +411,22 @@ class TestResidualBranches:
         )
         with pytest.raises(ValueError):
             compile_predicate(p, "Root", _simple_graph())
+
+    def test_dotted_junction_without_fk_graph_is_rejected(self) -> None:
+        # A dotted via-binding must expand through the FK graph; with fk_graph=None
+        # the guard raises. This is the case the null-target test above can't catch:
+        # for a null target `value_sql` is ALSO None, so the `or value_sql is None`
+        # disjunct keeps the guard true under both `or`→`and` flips (the L966
+        # mutants survive). A NON-null target (here `id`, value_sql set) + fk_graph
+        # None makes the three conditions differ, so this kills both mutants —
+        # `(null and fk_None) or value_None` and `null or (fk_None and value_None)`
+        # both evaluate False here while the real guard is True.
+        p = ExistsCheck(
+            target_entity="Feedback",
+            bindings=[ExistsBinding(junction_field="manuscript.student_id", target="id")],
+        )
+        with pytest.raises(ValueError):
+            compile_predicate(p, "Root", None)  # fk_graph=None
 
     def test_create_probe_binds_id_to_payload_marker(self) -> None:
         # The create-scope probe runs in payload_mode=True: a binding target of "id" must

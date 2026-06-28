@@ -71,7 +71,7 @@ SECURITY_TARGETS: tuple[MutationTarget, ...] = (
             "tests/integration/test_rls_scope_enforcement_pg.py",
             "tests/integration/test_rls_apply_and_drift_pg.py",
         ),
-        floor=90,  # measured 93%; only survivor is an equivalent frozen-dataclass mutant
+        floor=90,  # measured 94% (#1502); only survivor is the equivalent frozen-dataclass mutant
         needs_pg=True,
         note="RLS DDL generation (PG-pinned)",
     ),
@@ -83,7 +83,7 @@ SECURITY_TARGETS: tuple[MutationTarget, ...] = (
             "tests/integration/test_scope_parent_lock_pg.py",
             "tests/integration/test_rls_scope_enforcement_pg.py",
         ),
-        floor=72,  # measured 77%; survivors are all equivalent (frozen, error-string, correlated guard)
+        floor=72,  # measured 77% (#1502); survivors: 5 frozen + 1 error-string (equivalent) + 2 poly-qualify correlated-guard mutants
         needs_pg=True,
         note="scope→SQL compiler (PG-pinned)",
     ),

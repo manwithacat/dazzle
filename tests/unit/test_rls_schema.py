@@ -182,3 +182,60 @@ def test_scope_policy_ddl_requires_scope_rules() -> None:
     empty_scopes = SimpleNamespace(name="X", access=SimpleNamespace(scopes=[]))
     with pytest.raises(ValueError):
         build_rls_scope_policy_ddl(empty_scopes, None, None, partition_key="tenant_id")
+
+
+def _degrading_entity(personas: list[str]) -> SimpleNamespace:
+    """A scoped entity whose single read-rule will hit the #1447 degradation path
+    (compile_predicate_policy is monkeypatched to raise in the test)."""
+    rule = SimpleNamespace(
+        operation=SimpleNamespace(value="read"),
+        predicate=SimpleNamespace(kind="exists_check"),  # content irrelevant — compile is patched
+        personas=personas,
+    )
+    return SimpleNamespace(name="Doc", access=SimpleNamespace(scopes=[rule]))
+
+
+def test_degraded_verb_names_personas_in_warning(monkeypatch, caplog) -> None:
+    """#1447 graceful degradation: when a scope rule is not RLS-policy-expressible,
+    the warning must name the rule's personas. The persona string is otherwise
+    unobserved by DDL assertions (degraded_verbs is membership-only), so without
+    this the `personas = ... or [] ... or "*"` fallback (rls_schema.py L542) is a
+    coverage gap — its two mutants (`or []`→`and []`, `or "*"`→`and "*"`) both
+    collapse the personas to "*" and would survive."""
+    import logging
+
+    from dazzle.http.runtime import predicate_compiler
+
+    def _raise(*_a, **_k):
+        raise ValueError("not RLS-policy-expressible (test)")
+
+    monkeypatch.setattr(predicate_compiler, "compile_predicate_policy", _raise)
+
+    entity = _degrading_entity(["auditor", "manager"])
+    with caplog.at_level(logging.WARNING):
+        ddl = build_rls_scope_policy_ddl(entity, None, None, partition_key="tenant_id")
+
+    # Degradation does NOT abort — the verb still gets a permissive (fence-only) policy.
+    assert any("CREATE POLICY" in s for s in ddl)
+    # The warning names the personas verbatim — kills both L542 fallback mutants.
+    assert "as auditor, manager" in caplog.text
+
+
+def test_degraded_verb_no_personas_defaults_to_star(monkeypatch, caplog) -> None:
+    """A degraded rule with no personas falls back to ``*`` in the warning — the
+    true-branch of the ``or "*"`` default."""
+    import logging
+
+    from dazzle.http.runtime import predicate_compiler
+
+    monkeypatch.setattr(
+        predicate_compiler,
+        "compile_predicate_policy",
+        lambda *_a, **_k: (_ for _ in ()).throw(ValueError("nope")),
+    )
+
+    entity = _degrading_entity([])
+    with caplog.at_level(logging.WARNING):
+        build_rls_scope_policy_ddl(entity, None, None, partition_key="tenant_id")
+
+    assert "as *" in caplog.text

@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.91.3] - 2026-06-28
+
+### Fixed
+- **Nightly mutation gate restored to green for two security modules (#1502).**
+  Recently-added security code had outrun its mutation-killing tests:
+  `rls_schema.py` was 82% (floor 90%) and `predicate_compiler.py` 69% (floor 72%).
+  Added targeted tests that kill the surviving mutants in security-load-bearing
+  paths:
+  - `rls_schema` #1447 graceful-degradation: the warning now asserts the rule's
+    personas (the `personas = … or [] … or "*"` fallback was unobserved) → 94%.
+  - `predicate_compiler` scope→SQL compiler: a dotted via-binding with no FK graph
+    must raise (the null-target test couldn't distinguish the L966 `or`→`and`
+    guard flips), and the outer FK column must stay *bare* in RLS-policy mode
+    (vs table-qualified in app/param mode, #1449) → 77%.
+  Remaining survivors are equivalent/correlated (frozen dataclasses, an
+  error-string, poly-ref qualification guards) — consistent with the floors'
+  original justification. No floor changes; no runtime change (tests only).
+
 ## [0.91.2] - 2026-06-28
 
 ### Changed
