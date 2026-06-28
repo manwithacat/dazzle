@@ -81,7 +81,7 @@ class TestRenderSeams:
         assert "dz-badge-icon" not in html
 
     def test_htmx_cell_badge(self):
-        from dazzle.http.runtime.htmx_render import _render_cell_display
+        from dazzle.render.fragment.renderer._data_row import _render_cell_display
 
         html = _render_cell_display({"type": "badge"}, "pending")  # → warning
         assert 'data-dz-tone="warning"' in html
@@ -89,7 +89,7 @@ class TestRenderSeams:
         assert "dz-badge-icon" in html
 
     def test_htmx_cell_badge_neutral_unchanged(self):
-        from dazzle.http.runtime.htmx_render import _render_cell_display
+        from dazzle.render.fragment.renderer._data_row import _render_cell_display
 
         html = _render_cell_display({"type": "badge"}, "draft")  # neutral
         assert "dz-badge-icon" not in html
@@ -98,7 +98,7 @@ class TestRenderSeams:
         """A declared `semantic:` binding that overrides the name guess also
         drives the icon — e.g. a value the name-guess would call neutral but the
         app declares `success` gets the success glyph."""
-        from dazzle.http.runtime.htmx_render import _render_cell_display
+        from dazzle.render.fragment.renderer._data_row import _render_cell_display
 
         col = {"type": "badge", "semantic_map": {"shipped": "success"}}
         html = _render_cell_display(col, "shipped")

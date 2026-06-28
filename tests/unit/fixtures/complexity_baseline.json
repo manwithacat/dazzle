@@ -11504,7 +11504,8 @@
   },
   "dazzle/http/runtime/handlers/list_handlers.py": {
     "functions": {
-      "_list_handler_body": 80,
+      "_list_handler_body": 79,
+      "build_data_table": 7,
       "create_list_handler": 3
     },
     "mi_rank": "A"
@@ -11588,12 +11589,9 @@
   "dazzle/http/runtime/htmx_render.py": {
     "functions": {
       "_build_table_url_params": 6,
-      "_render_cell_display": 19,
       "_render_detail_html": 16,
-      "_render_inline_edit": 10,
       "_render_table_empty": 19,
       "_render_table_pagination": 13,
-      "_render_table_row": 23,
       "_render_table_sentinel": 9,
       "_with_htmx_triggers": 5
     },

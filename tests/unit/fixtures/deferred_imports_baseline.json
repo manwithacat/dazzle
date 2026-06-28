@@ -178,7 +178,7 @@
   "src/dazzle/http/runtime/handlers/read_handlers.py": 2,
   "src/dazzle/http/runtime/handlers/write_handlers.py": 4,
   "src/dazzle/http/runtime/health_aggregator.py": 1,
-  "src/dazzle/http/runtime/htmx_render.py": 6,
+  "src/dazzle/http/runtime/htmx_render.py": 3,
   "src/dazzle/http/runtime/integration_manager.py": 4,
   "src/dazzle/http/runtime/jwt_middleware.py": 1,
   "src/dazzle/http/runtime/llm_queue.py": 1,

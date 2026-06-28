@@ -6,8 +6,6 @@ orthogonal capability vector (§3.2 of the convergence design); Phase 1 carries
 only the flags that gate the data-table archetype's output.
 """
 
-import pytest
-
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 
 
@@ -45,9 +43,12 @@ def test_data_table_construction_and_defaults() -> None:
     assert bare.rows == ()
 
 
-def test_data_table_requires_columns() -> None:
-    with pytest.raises(ValueError, match="at least one column"):
-        DataTable(columns=())
+def test_data_table_allows_empty_columns() -> None:
+    # No guard: a column-less data-table is degenerate but renders an
+    # actions-only row exactly as the retired _render_table_row did (#1505 P2
+    # byte-identity for a misconfigured/column-less refresh).
+    dt = DataTable(columns=())
+    assert dt.columns == ()
 
 
 class TestRenderDataTableRows:

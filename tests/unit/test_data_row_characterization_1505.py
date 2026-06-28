@@ -5,26 +5,21 @@ The list-render convergence (#1505) moves the rich `dz-tr-row` rendering out of
 substrate row-core (`render_data_row`). Phase 1 must reproduce today's output
 **byte-for-byte**.
 
-This module freezes the *current* `_render_table_row` output across a capability
-matrix into committed `.html` fixtures. Two consumers assert against the same
-fixtures:
-  - `test_current_render_table_row_matches_fixture` — guards the legacy renderer
-    from drift while the replacement is built (Phase 1), and is the durable
-    byte anchor that survives the Phase-2 deletion of `_render_table_row`.
-  - the Phase-1.3 parity test (`TestRenderDataRowParity`) asserts the new
-    `render_data_row` matches these same fixtures.
+The committed `.html` fixtures froze the original `_render_table_row` output
+across a capability matrix (Phase 1). Since Phase 2 deleted that legacy renderer,
+`render_data_row` (the render/ substrate row-core) is now both the renderer under
+test AND the fixture generator — the fixtures remain the durable byte anchor for
+the rich `dz-tr-row` output (`TestRenderDataRowParity`).
 
 Regenerate fixtures intentionally with `UPDATE_CHAR_1505=1 uv run pytest
 tests/unit/test_data_row_characterization_1505.py` and inspect the diff before
-committing — these bytes ARE the spec of the migration.
+committing — these bytes ARE the spec of the rich row.
 """
 
 import os
 import pathlib
 
 import pytest
-
-from dazzle.http.runtime.htmx_render import _render_table_row
 
 _FIXTURE_DIR = pathlib.Path(__file__).parent / "__snapshots__" / "data_row_char_1505"
 _UPDATE = os.environ.get("UPDATE_CHAR_1505") == "1"
@@ -135,17 +130,6 @@ def _fixture_path(label: str) -> pathlib.Path:
     return _FIXTURE_DIR / f"{label}.html"
 
 
-@pytest.mark.parametrize(("label", "table", "item"), CAP_MATRIX, ids=_IDS)
-def test_current_render_table_row_matches_fixture(label: str, table: dict, item: dict) -> None:
-    rendered = _render_table_row(table, item)
-    path = _fixture_path(label)
-    if _UPDATE:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(rendered, encoding="utf-8")
-    assert path.exists(), f"missing fixture {path} — regenerate with UPDATE_CHAR_1505=1"
-    assert rendered == path.read_text(encoding="utf-8")
-
-
 def _caps_call(table: dict, item: dict) -> str:
     """Translate a characterization `table_dict` into the typed
     `render_data_row(columns, item, caps, ...)` call (the substrate-native
@@ -169,9 +153,16 @@ def _caps_call(table: dict, item: dict) -> str:
 
 
 class TestRenderDataRowParity:
-    """The render/ substrate row-core must be byte-identical to the retired
-    http/ `_render_table_row` for the `data-table` archetype (#1505 P1)."""
+    """The render/ substrate row-core is the rich `dz-tr-row` source of truth;
+    the committed fixtures are its durable byte anchor (#1505). `render_data_row`
+    is also the fixture generator under `UPDATE_CHAR_1505=1`."""
 
     @pytest.mark.parametrize(("label", "table", "item"), CAP_MATRIX, ids=_IDS)
     def test_render_data_row_matches_fixture(self, label: str, table: dict, item: dict) -> None:
-        assert _caps_call(table, item) == _fixture_path(label).read_text(encoding="utf-8")
+        rendered = _caps_call(table, item)
+        path = _fixture_path(label)
+        if _UPDATE:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(rendered, encoding="utf-8")
+        assert path.exists(), f"missing fixture {path} — regenerate with UPDATE_CHAR_1505=1"
+        assert rendered == path.read_text(encoding="utf-8")

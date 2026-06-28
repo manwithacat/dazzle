@@ -128,10 +128,10 @@ class DataTable:
     detail_url_template: str = ""
     table_id: str = "dt-table"
     capabilities: RowCapabilities = field(default_factory=RowCapabilities)
-
-    def __post_init__(self) -> None:
-        if not self.columns:
-            raise ValueError("DataTable requires at least one column")
+    # No empty-columns guard: the rich row-core renders an actions-only row for a
+    # column-less table exactly as the retired `_render_table_row` did, so the
+    # #1505-P2 switch stays byte-identical even for a misconfigured (column-less)
+    # refresh. A column-less data-table is degenerate, not an error to raise.
 
 
 @dataclass(frozen=True, slots=True)

@@ -20,12 +20,13 @@ _scoped_pre_read, scope: create:/update: enforcement) moved to
 scope_filters.py (#1361 slice 1); the names are re-imported above for
 back-compat.
 
-Inline HTMX/HTML response rendering (_render_table_row,
-_render_table_pagination, _render_inline_edit, _render_cell_display,
+Inline HTMX/HTML response rendering (_render_table_pagination,
 _render_table_empty, _render_table_sentinel, _build_table_url_params,
-_with_htmx_triggers, _render_detail_html — 500+ lines of inline HTML;
-no Jinja2) moved to htmx_render.py (#1361 slice 2); the names are
-re-imported above for back-compat.
+_with_htmx_triggers, _render_detail_html — inline HTML, no Jinja2) moved
+to htmx_render.py (#1361 slice 2); the names are re-imported above for
+back-compat. The rich data-table *row* renderer (_render_table_row + its
+cell/inline-edit helpers) moved on to the render/ substrate
+(render_data_row / render_data_table_rows) and was deleted here (#1505 P2).
 
 Audit context + access logging + auth wrapping (_build_access_context,
 _record_to_dict, _compute_field_changes, _log_audit_decision,
@@ -126,12 +127,9 @@ from dazzle.http.runtime.handlers.write_handlers import (  # noqa: F401  (re-exp
 # resolving here.
 from dazzle.http.runtime.htmx_render import (  # noqa: F401  (re-exported for back-compat importers)
     _build_table_url_params,
-    _render_cell_display,
     _render_detail_html,
-    _render_inline_edit,
     _render_table_empty,
     _render_table_pagination,
-    _render_table_row,
     _render_table_sentinel,
     _with_htmx_triggers,
 )

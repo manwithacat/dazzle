@@ -15,7 +15,16 @@ from __future__ import annotations
 
 import re
 
-from dazzle.http.runtime.htmx_render import _render_table_row
+from dazzle.http.runtime.handlers.list_handlers import build_data_table
+from dazzle.render.fragment.renderer._data_row import render_data_table_rows
+
+
+def _render_table_row(table: dict, item: dict) -> str:
+    """Render one rich row via the converged render/ substrate (#1505 P2) — the
+    `dz-tr-row` source of truth, formerly `http/htmx_render._render_table_row`.
+    The #1327 single-quoted-id escaping lives in the ported row-core, so this
+    regression gate now exercises it there."""
+    return render_data_table_rows(build_data_table(table, [item]))
 
 
 def _table(*, bulk_actions: bool = True, inline: bool = True) -> dict:

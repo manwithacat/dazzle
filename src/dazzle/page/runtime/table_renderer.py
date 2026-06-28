@@ -210,8 +210,9 @@ def render_filterable_table(table: Any, *, page_title: str = "") -> str:
     empty state, screen-reader loading region, and pagination footer.
 
     The row body is fetched by HTMX from `table.api_endpoint` and
-    rendered by `htmx_render._render_table_row` server-side; this
-    function does NOT inline the row markup itself.
+    rendered by the render/ substrate row-core (`render_data_table_rows` /
+    `_data_row.render_data_row`, #1505) server-side; this function does NOT
+    inline the row markup itself.
     """
     if not table:
         return ""
