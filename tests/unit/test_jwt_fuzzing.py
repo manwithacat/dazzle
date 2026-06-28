@@ -15,6 +15,8 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from tests.unit._auth_pg import pg_url_or_skip
+
 # =============================================================================
 # Strategy Definitions
 # =============================================================================
@@ -388,8 +390,8 @@ class TestHeaderFuzzing:
 
 @pytest.mark.e2e
 @pytest.mark.skipif(
-    not os.environ.get("DATABASE_URL"),
-    reason="DATABASE_URL not set — TokenStore requires real PostgreSQL",
+    not (os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")),
+    reason="TEST_DATABASE_URL / DATABASE_URL not set — TokenStore requires real PostgreSQL",
 )
 class TestTokenStoreFuzzing:
     """Fuzz test token store operations."""
@@ -400,7 +402,7 @@ class TestTokenStoreFuzzing:
         """Token store should handle random validation queries."""
         from dazzle.http.runtime.token_store import TokenStore
 
-        store = TokenStore(database_url="postgresql://mock/test")
+        store = TokenStore(database_url=pg_url_or_skip())
         result = store.validate_token(token)
         # Should return None for invalid tokens
         assert result is None
@@ -421,7 +423,7 @@ class TestTokenStoreFuzzing:
         from dazzle.http.runtime.auth import UserRecord
         from dazzle.http.runtime.token_store import TokenStore
 
-        store = TokenStore(database_url="postgresql://mock/test")
+        store = TokenStore(database_url=pg_url_or_skip())
         user = UserRecord(
             id=uuid4(),
             email="test@example.com",

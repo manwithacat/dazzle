@@ -278,11 +278,10 @@ class TestTestRoutesIntegration:
 
     @pytest.fixture(scope="class")
     def database_url(self) -> str:
-        """Get PostgreSQL URL from environment."""
-        import os
+        """Test PostgreSQL URL (TEST_DATABASE_URL / DATABASE_URL), or skip."""
+        from tests.unit._auth_pg import pg_url_or_skip
 
-        url = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/dazzle_test")
-        return url
+        return pg_url_or_skip()
 
     @pytest.fixture(scope="class")
     def appspec(self) -> AppSpec:
@@ -325,15 +324,27 @@ class TestTestRoutesIntegration:
     @pytest.fixture(scope="class")
     def shared_test_client(self, appspec: AppSpec, database_url: str) -> TestClient:
         """Create a shared test client for the class (reused across tests)."""
+        import os
+
         from fastapi.testclient import TestClient
 
         from dazzle.http.runtime.app_factory import create_app
 
-        app = create_app(
-            appspec,
-            database_url=database_url,
-            enable_test_mode=True,
-        )
+        # The test routes capture DAZZLE_TEST_SECRET at router-creation time
+        # (test_routes.py): if set, every request needs an X-Test-Secret header.
+        # These tests exercise the routes openly, so build the app with the
+        # secret unset — and restore it — so an ambient secret (e.g. from a
+        # developer's `dazzle serve` shell) can't cause spurious 403s.
+        saved = os.environ.pop("DAZZLE_TEST_SECRET", None)
+        try:
+            app = create_app(
+                appspec,
+                database_url=database_url,
+                enable_test_mode=True,
+            )
+        finally:
+            if saved is not None:
+                os.environ["DAZZLE_TEST_SECRET"] = saved
         return TestClient(app)
 
     @pytest.fixture
@@ -454,9 +465,6 @@ class TestTestRoutesIntegration:
         assert len(data) == 1
         assert data[0]["title"] == "Test Task"
 
-    @pytest.mark.xfail(
-        reason="SQLite connection isolation: seed writes via repo, count reads via db_manager"
-    )
     def test_get_entity_count(self, test_client: TestClient) -> None:
         """Test getting entity count via API."""
         # Seed some data

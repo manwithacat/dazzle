@@ -16,12 +16,13 @@ from pathlib import Path
 import pytest
 
 from dazzle.http.runtime.auth import AuthStore
+from tests.unit._auth_pg import AUTH_TABLES, fresh_url
 
 
 @pytest.fixture
 def auth_store() -> AuthStore:
-    """Create an AuthStore backed by a PostgreSQL test database."""
-    return AuthStore(database_url="postgresql://mock/test")
+    """An AuthStore backed by a real PostgreSQL test database, clean per test."""
+    return AuthStore(database_url=fresh_url(*AUTH_TABLES))
 
 
 @pytest.fixture

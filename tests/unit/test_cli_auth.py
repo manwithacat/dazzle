@@ -7,6 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from dazzle.http.runtime.auth import AuthStore
+from tests.unit._auth_pg import AUTH_TABLES, fresh_url
 
 pytestmark = pytest.mark.e2e
 
@@ -15,8 +16,8 @@ runner = CliRunner()
 
 @pytest.fixture()
 def auth_store():
-    """Create an AuthStore backed by a PostgreSQL test database."""
-    return AuthStore(database_url="postgresql://mock/test")
+    """An AuthStore backed by a real PostgreSQL test database, clean per test."""
+    return AuthStore(database_url=fresh_url(*AUTH_TABLES))
 
 
 @pytest.fixture()
@@ -343,14 +344,15 @@ class TestConfig:
     def test_config(self, app, auth_store):
         result = runner.invoke(app, ["config"])
         assert result.exit_code == 0
-        assert "sqlite" in result.output
+        # Runtime is PostgreSQL-only (ADR-0008); SQLite was removed.
+        assert "postgresql" in result.output
         assert "Total users" in result.output
 
     def test_config_json(self, app, auth_store):
         result = runner.invoke(app, ["config", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["database_type"] == "sqlite"
+        assert data["database_type"] == "postgresql"
         assert "total_users" in data
         assert "active_users" in data
         assert "active_sessions" in data

@@ -91,17 +91,20 @@ def temp_project(tmp_path):
 
 @pytest.fixture
 def database_url():
-    """Get PostgreSQL URL from environment."""
-    return os.environ.get("DATABASE_URL", "postgresql://localhost:5432/dazzle_test")
+    """Test PostgreSQL URL (TEST_DATABASE_URL / DATABASE_URL), or skip."""
+    from tests.unit._auth_pg import pg_url_or_skip
+
+    return pg_url_or_skip()
 
 
 @pytest.fixture
 def auth_store(database_url):
-    """Create an AuthStore instance for testing."""
+    """An AuthStore on the test database, with auth tables reset per test."""
     from dazzle.http.runtime.auth import AuthStore
+    from tests.unit._auth_pg import AUTH_TABLES, reset_tables
 
-    store = AuthStore(database_url=database_url)
-    return store
+    reset_tables(database_url, *AUTH_TABLES)
+    return AuthStore(database_url=database_url)
 
 
 @pytest.fixture(autouse=True)

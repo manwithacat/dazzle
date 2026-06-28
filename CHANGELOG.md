@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.91.1] - 2026-06-28
+
+### Fixed
+- **100 PostgreSQL-backed `@pytest.mark.e2e` unit tests were never executed in CI
+  (#1504).** Across 6 files (`test_cli_auth`, `test_auth_password_reset`,
+  `test_jwt_auth`, `test_jwt_fuzzing`, `test_runtime_test_routes`,
+  `mcp/test_user_management_handlers`) they were excluded from the base
+  `-m "not e2e"` run and never collected by the single-file e2e job, so they sat
+  dead — and 4 of them could not pass anyway, constructing stores against a bogus
+  `postgresql://mock/test` host while `AuthStore/TokenStore/DeviceRegistry.__init__`
+  connect eagerly. Fixes:
+  - new `tests/unit/_auth_pg.py` helper — resolves `TEST_DATABASE_URL` /
+    `DATABASE_URL` (or skips) and resets each store's tables per test for isolation
+    (mirrors `test_grant_store.py`);
+  - the ci.yml postgres-backed e2e job now also runs `pytest tests/unit -m e2e`, so
+    these tests actually execute;
+  - stale assertions corrected (`database_type == "sqlite"` → `postgresql`, ADR-0008)
+    and a stale SQLite `xfail` removed;
+  - `test_runtime_test_routes` is now hermetic to an ambient `DAZZLE_TEST_SECRET`
+    (built the app with the secret unset) so a developer's `dazzle serve` shell no
+    longer causes spurious 403s. Not a psycopg bug — psycopg correctly raised
+    `OperationalError` for the unresolvable `mock` host.
+
 ## [0.91.0] - 2026-06-28
 
 ### Added

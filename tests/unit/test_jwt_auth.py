@@ -165,10 +165,11 @@ class TestTokenStore:
 
     @pytest.fixture
     def token_store(self):
-        """Create token store with PostgreSQL test database."""
+        """Token store backed by a real PostgreSQL test database, clean per test."""
         from dazzle.http.runtime.token_store import TokenStore
+        from tests.unit._auth_pg import TOKEN_TABLES, fresh_url
 
-        return TokenStore(database_url="postgresql://mock/test")
+        return TokenStore(database_url=fresh_url(*TOKEN_TABLES))
 
     @pytest.fixture
     def user(self):
@@ -376,10 +377,11 @@ class TestDeviceRegistry:
 
     @pytest.fixture
     def registry(self):
-        """Create device registry with PostgreSQL test database."""
+        """Device registry backed by a real PostgreSQL test database, clean per test."""
         from dazzle.http.runtime.device_registry import DeviceRegistry
+        from tests.unit._auth_pg import DEVICE_TABLES, fresh_url
 
-        return DeviceRegistry(database_url="postgresql://mock/test")
+        return DeviceRegistry(database_url=fresh_url(*DEVICE_TABLES))
 
     def test_register_device(self, registry) -> None:
         """Should register a device."""

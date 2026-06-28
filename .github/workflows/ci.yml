@@ -477,6 +477,15 @@ jobs:
         pytest tests/integration/test_runtime_e2e.py -v -m e2e --timeout=180
       timeout-minutes: 10
 
+    # tests/unit e2e tests (PostgreSQL-only auth stores + test routes) were
+    # previously never executed: excluded from the base `-m "not e2e"` run and
+    # not collected by the single-file e2e step above (#1504). Run them here,
+    # where the postgres service + DATABASE_URL are available.
+    - name: Run unit e2e tests (auth stores / test routes — require PostgreSQL)
+      run: |
+        pytest tests/unit -m e2e -v --timeout=180
+      timeout-minutes: 10
+
     - name: Start server for DSL tests
       run: |
         cd examples/simple_task
