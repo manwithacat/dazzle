@@ -29,16 +29,18 @@ def _render_status_badge(value: Any, semantic_map: dict[str, str] | None = None)
     `semantic:` binding (when threaded via `semantic_map`) wins over the name
     guess. `semantic_map` None → byte-identical to the legacy name guess.
     """
-    from dazzle.render.filters import resolve_status_tone
+    from dazzle.render.filters import badge_icon_html, resolve_status_tone
 
     if value in (None, "", "—"):
         return '<span class="dz-badge-empty" aria-label="No status">—</span>'
     tone = resolve_status_tone(value, semantic_map)
     label = str(value).replace("_", " ").title()
+    # #1493 slice 2 part 3: WCAG colour+icon+text (neutral → "" = unchanged).
+    icon = badge_icon_html(tone)
     return (
         f'<span class="dz-badge" data-dz-tone="{_esc(tone, quote=True)}" '  # nosemgrep
         f'role="status" aria-label="Status: {_esc(label, quote=True)}">'
-        f"{_esc(label)}</span>"
+        f"{icon}{_esc(label)}</span>"
     )
 
 
@@ -182,9 +184,14 @@ def _render_related_status_cards(group: Any, detail_item: dict[str, Any]) -> str
                         col.get("key", "") if isinstance(col, dict) else getattr(col, "key", "")
                     )
                     if col_type == "badge":
+                        _sem = (
+                            col.get("semantic_map")
+                            if isinstance(col, dict)
+                            else getattr(col, "semantic_map", None)
+                        )
                         badge_html = (
                             '<span class="dz-related-status-card-badge">'
-                            f"{_render_status_badge(item.get(col_key) if isinstance(item, dict) else None)}"
+                            f"{_render_status_badge(item.get(col_key) if isinstance(item, dict) else None, _sem)}"
                             "</span>"
                         )
                         break
@@ -299,7 +306,10 @@ def _render_related_table_cell(col: Any, item: dict[str, Any]) -> str:
     col_type = col.get("type", "") if isinstance(col, dict) else getattr(col, "type", "")
     val = item.get(col_key) if isinstance(item, dict) else None
     if col_type == "badge":
-        return _render_status_badge(val)
+        _sem = (
+            col.get("semantic_map") if isinstance(col, dict) else getattr(col, "semantic_map", None)
+        )
+        return _render_status_badge(val, _sem)
     if col_type == "bool":
         return str(_bool_icon_filter(val))
     if col_type == "date":

@@ -1,4 +1,4 @@
-/* dazzle v0.86.10 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.92.9 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -1266,6 +1266,11 @@ font-size: var(--text-xs);
 padding-inline: var(--space-xs);
 height: 1rem;
 font-size: 0.625rem;
+line-height: 1;
+}
+.dz-badge-icon {
+margin-inline-end: var(--space-xs);
+font-size: 0.875em;
 line-height: 1;
 }
 .dz-badge[data-dz-tone="success"] {

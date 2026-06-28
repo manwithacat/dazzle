@@ -122,23 +122,31 @@ def _probe_1c() -> ProbeResult:
 
 def _probe_1b() -> ProbeResult:
     """A declared+validated status->tone binding is consumed at render time
-    (#1493 slice 2), with the name-convention map as the documented fallback.
+    (#1493 slice 2), with WCAG colour+icon+text and state-machine inference.
 
-    Level 3 evidence: the render-layer resolver `resolve_status_tone` consults a
-    field's declared `semantic:` map before the `_STATUS_TONE_MAP` name guess,
-    and the list/table badge path threads that map (`ColumnContext.semantic_map`,
-    populated from shared-enum `EnumValueSpec.semantic` / inline
-    `FieldType.enum_semantics`). Reaching 4 = icon (WCAG colour+icon+text) on
-    every badge surface + state-machine-terminal inference when undeclared.
+    Level 4 evidence: the render-layer resolver `resolve_status_tone` consults a
+    field's declared `semantic:` map before the `_STATUS_TONE_MAP` name guess, and
+    the badge path threads that map (`ColumnContext.semantic_map`). On top of the
+    level-3 binding, level 4 adds (a) WCAG colour+icon+text — `badge_icon_html`
+    emits a non-colour glyph on every badge surface so state never relies on
+    colour alone (WCAG 1.4.1); and (b) `infer_terminal_tone_map` —
+    state-machine-terminal inference for undeclared, name-guess-miss values
+    (a graph sink is a reached end-state), merged at build time by
+    `status_tone_map`.
     """
     has_resolver = hasattr(filters, "resolve_status_tone")
     threads_binding = "semantic_map" in ColumnContext.model_fields
     has_fallback = hasattr(filters, "_STATUS_TONE_MAP")
-    ok = has_resolver and threads_binding and has_fallback
+    has_wcag_icon = hasattr(filters, "badge_icon_html")
+    has_sm_inference = hasattr(filters, "infer_terminal_tone_map") and hasattr(
+        filters, "status_tone_map"
+    )
+    ok = has_resolver and threads_binding and has_fallback and has_wcag_icon and has_sm_inference
     return ProbeResult(
         ok,
         f"declared semantic: binding consumed (resolver={has_resolver}, "
-        f"ColumnContext.semantic_map={threads_binding}, name-guess-fallback={has_fallback})",
+        f"ColumnContext.semantic_map={threads_binding}, name-guess-fallback={has_fallback}, "
+        f"wcag-icon={has_wcag_icon}, sm-terminal-inference={has_sm_inference})",
     )
 
 
@@ -197,8 +205,8 @@ CRITERIA: list[Criterion] = [
         "1b",
         "data_drives_ui",
         "semantic-state binding",
-        3,
-        "#1493 — a declared+validated `semantic:` binding (shared `enum` block or inline `enum[...]` field) is now CONSUMED at render time: `resolve_status_tone` resolves the field's declared value->tone map before the `_STATUS_TONE_MAP` name guess, and the list/table badge path threads it via `ColumnContext.semantic_map`. Level 3 (good-defaults): the declared binding is authoritative where it renders; the name guess is the documented fallback. Reaching 4 (adaptive) = WCAG colour+icon+text on every badge surface + state-machine-terminal inference for undeclared values.",
+        4,
+        "#1493 — a declared+validated `semantic:` binding (shared `enum` block or inline `enum[...]` field) is CONSUMED at render time: `resolve_status_tone` resolves the field's declared value->tone map before the `_STATUS_TONE_MAP` name guess, threaded via `ColumnContext.semantic_map`. Level 4 (adaptive) adds (a) WCAG colour+icon+text — `badge_icon_html` leads every non-neutral badge with a non-colour glyph (WCAG 1.4.1), so state never relies on colour alone; and (b) state-machine-terminal inference (`infer_terminal_tone_map`, merged by `status_tone_map`): an undeclared, name-guess-miss terminal state (a graph sink) is inferred a reached `success` end-state. Precedence: declared > name-guess > SM-terminal > neutral. Known limit: the IR doesn't yet classify a terminal as success-vs-failure, so a custom-named *failure* terminal needs an explicit `semantic:` binding.",
         "high",
         _probe_1b,
     ),

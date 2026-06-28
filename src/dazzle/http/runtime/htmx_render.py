@@ -224,14 +224,16 @@ def _render_cell_display(col: dict[str, Any], value: Any) -> str:
             return '<span class="dz-badge-empty" aria-label="No status">—</span>'
         # #1493 slice 2: a declared `semantic:` binding (col["semantic_map"]) wins
         # over the spelling-based name guess; None/empty → byte-identical default.
-        from dazzle.render.filters import resolve_status_tone
+        from dazzle.render.filters import badge_icon_html, resolve_status_tone
 
         tone = resolve_status_tone(value, col.get("semantic_map"))
         label = str(value).replace("_", " ").title()
+        # #1493 slice 2 part 3: WCAG colour+icon+text (neutral → "" = unchanged).
+        icon = badge_icon_html(tone)
         return (
             f'<span class="dz-badge" data-dz-tone="{_html_mod.escape(tone, quote=True)}" '
             f'role="status" aria-label="Status: {_html_mod.escape(label, quote=True)}">'
-            f"{_html_mod.escape(label, quote=False)}</span>"
+            f"{icon}{_html_mod.escape(label, quote=False)}</span>"
         )
     if col_type == "bool":
         # `_bool_icon_filter` returns Markup with raw HTML — safe to emit.

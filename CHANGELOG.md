@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.9] - 2026-06-28
+
+### Added
+- **WCAG colour+icon+text + state-machine-terminal inference for `semantic:` badges (#1493, UX-maturity 1b — slice 2 parts 3 & 4). Criterion 1b re-scored 3 → 4 (level complete; #1493 closed).** Builds on the render-consumption shipped in v0.92.8:
+  - **WCAG colour+icon+text (1.4.1 Use of Color).** New `badge_icon_html(tone)` / `resolve_status_icon(tone)` in `dazzle.render.filters` lead every **non-neutral** badge with a decorative, `aria-hidden` glyph (`success` ✓, `warning` ⚠, `destructive` ✕, `info` ℹ) so state is never conveyed by colour alone. Wired into all three badge seams (`_render_status_badge_html`, page detail `_render_status_badge`, http htmx `_render_cell_display`) + a `.dz-badge-icon` rule in `badge.css`. **Neutral carries no icon** — it has no semantic emphasis, which also keeps the dominant name-guess-miss badge byte-identical to pre-#1493 output. Only the published UX catalogue (the one committed artifact with non-neutral rendered badges) changed; regenerated via `scripts/gen_ux_catalogue.py`.
+  - **State-machine-terminal inference (the level-4 step).** New `infer_terminal_tone_map(state_machine)` infers a tone for a status value with **no** declared `semantic:` binding **and** no `_STATUS_TONE_MAP` name-guess match: a **terminal** state (a state-machine graph sink — nothing can leave it) is a reached end-state, inferred `success`. `status_tone_map(field_type, enums, state_machine)` is the single build-time merge (declared bindings + inference) now called by **both** column builders (`http.runtime.workspace_columns`, `page.converters.template_compiler`). Precedence is **declared > name-guess > SM-terminal > neutral** — preserved because `resolve_status_tone` consults the threaded map first then the name guess, and SM entries exist only for name-guess-miss values (so they never shadow the guess). **Known limit:** the IR does not yet classify a terminal as success-vs-failure, so a custom-named *failure* terminal needs an explicit `semantic:` binding (which wins); recognisably-failing terminals (`cancelled`/`rejected`/`failed`/…) are already caught by the name-guess layer, which precedes inference.
+  - **Render-consumption threading completed** on the detail-view related-table / related-status-card badge seams (they carry `ColumnContext.semantic_map` but previously dropped it). Byte-identical on the fleet (no example declares `semantic:` yet).
+  - `_probe_1b` strengthened to assert the level-4 evidence (`badge_icon_html` + `infer_terminal_tone_map`/`status_tone_map`); the `1b` rubric baseline bumped 3 → 4 (`qa/ux_maturity.py`, drift-gated). Rubric + roadmap docs updated.
+
+#### Agent Guidance
+- **Badge tone resolution is build-time, single-sourced.** Compute a status/badge column's `semantic_map` via `render.filters.status_tone_map(field_type, enums, state_machine)` (declared `semantic:` + SM-terminal inference), not `core.ir.tones.field_enum_semantic_map` directly — the latter is declared-only. `resolve_status_tone(value, semantic_map)` then applies precedence declared > name-guess > SM-terminal > neutral at render time. To add a non-colour signal to a new badge surface, call `badge_icon_html(tone)` after resolving the tone.
+
 ## [0.92.8] - 2026-06-28
 
 ### Added

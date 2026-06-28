@@ -16,7 +16,7 @@ from typing import Any
 from markupsafe import Markup
 
 from dazzle.core.ir.money import get_currency_scale
-from dazzle.core.ir.tones import normalize_tone
+from dazzle.core.ir.tones import field_enum_semantic_map, normalize_tone
 
 
 def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> str:
@@ -160,6 +160,104 @@ def resolve_status_tone(value: Any, semantic_map: dict[str, str] | None = None) 
         if declared is not None:
             return normalize_tone(declared) or "neutral"
     return _STATUS_TONE_MAP.get(status, "neutral")
+
+
+# #1493 slice 2 part 3 — WCAG colour+icon+text. A status badge must not rely on
+# colour alone (WCAG 1.4.1 Use of Color): each non-neutral tone carries a glyph
+# so the state reads for colour-blind / monochrome users. Neutral carries no
+# emphasis (grey, the default "no special state"), so it stays icon-free — which
+# also keeps the common name-guess-miss badge byte-identical to the pre-#1493
+# output. Glyphs are numeric HTML entities (mirrors `_bool_icon_filter`).
+_BADGE_TONE_ICONS: dict[str, str] = {
+    "success": "&#10003;",  # ✓ check
+    "warning": "&#9888;",  # ⚠ warning sign
+    "destructive": "&#10005;",  # ✕ multiplication x (matches the bool-icon cross)
+    "info": "&#8505;",  # ℹ information source
+}
+
+
+def resolve_status_icon(tone: str | None) -> str:
+    """Return the WCAG non-colour glyph (HTML entity) for a badge tone.
+
+    Empty string for ``neutral`` / unknown — a neutral badge carries no semantic
+    emphasis, so colour+text alone suffices and emitting no icon keeps the
+    (dominant) neutral badge output unchanged. Tones are normalised first, so
+    a declared ``positive`` resolves to the ``success`` glyph.
+    """
+    if not tone:
+        return ""
+    return _BADGE_TONE_ICONS.get(normalize_tone(tone) or "", "")
+
+
+def badge_icon_html(tone: str | None) -> str:
+    """Render the leading badge icon span for a tone, or "" for neutral/unknown.
+
+    Emitted as the first child of `.dz-badge` (inline-flex), before the text
+    label, so every badge surface carries colour+icon+text. `aria-hidden` keeps
+    it decorative — the `aria-label="Status: …"` on the badge owns the a11y name.
+    """
+    glyph = resolve_status_icon(tone)
+    if not glyph:
+        return ""
+    return f'<span class="dz-badge-icon" aria-hidden="true">{glyph}</span>'
+
+
+def infer_terminal_tone_map(state_machine: Any) -> dict[str, str]:
+    """State-machine terminal inference (#1493 slice 2 part 4 — the level-4 step).
+
+    When a status value has *no* declared `semantic:` binding *and* no
+    `_STATUS_TONE_MAP` name-guess match, fall back to the entity's state-machine
+    graph: a **terminal** state (a graph sink — nothing can leave it) is a
+    reached end-state, inferred ``success``.
+
+    Two precedence rules keep this honest and non-destructive:
+
+    * It never overrides the name guess — recognisably-failing terminals
+      (``cancelled`` / ``rejected`` / ``failed`` / …) are already in
+      `_STATUS_TONE_MAP`, which resolves *before* this map, so those keys are
+      skipped here. This layer only colours *unrecognised* terminal states.
+    * The IR does not (yet) classify a terminal state as success-vs-failure, so
+      an unrecognised sink is treated as a positive completion (``success``);
+      a custom-named *failure* terminal would need an explicit `semantic:`
+      binding (which wins) or a name the guess recognises. Documented limitation.
+
+    Returns ``{normalised_value: tone}`` (keys lowercased/underscored to match
+    `resolve_status_tone`), ready to merge under declared bindings.
+    """
+    if state_machine is None or not hasattr(state_machine, "terminal_states"):
+        return {}
+    terminals = state_machine.terminal_states()
+    out: dict[str, str] = {}
+    for s in terminals:
+        key = str(s).lower().replace(" ", "_")
+        if key in _STATUS_TONE_MAP:  # the name guess already classifies it
+            continue
+        out[key] = "success"
+    return out
+
+
+def status_tone_map(
+    field_type: Any, enums: Any = None, state_machine: Any = None
+) -> dict[str, str]:
+    """Build-time effective value→tone map for a badge/status column (#1493).
+
+    Declared `semantic:` bindings (`field_enum_semantic_map`) merged with
+    state-machine terminal inference (`infer_terminal_tone_map`). Precedence
+    declared > name-guess > SM-terminal is preserved by `resolve_status_tone`,
+    which consults the returned map first and the name guess second: SM entries
+    exist only for name-guess-miss values (so they can't shadow the guess), and
+    declared bindings always win the merge.
+
+    This is the single place the http (`workspace_columns`) and page
+    (`template_compiler`) column builders compute the threaded `semantic_map`.
+    """
+    declared = field_enum_semantic_map(field_type, enums)
+    inferred = infer_terminal_tone_map(state_machine)
+    if not inferred:
+        return declared
+    merged = dict(inferred)
+    merged.update(declared)  # declared bindings win over inference
+    return merged
 
 
 def _badge_tone_filter(value: Any) -> str:

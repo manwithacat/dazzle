@@ -86,12 +86,15 @@ surfaces/displays/visibility (see "Revisions", below).
   **declared on the field and validated** against a semantic role, or derived
   from a name→theme convention? (R3: Dazzle has a validated palette
   `positive/warning/destructive`; the gap was *binding* it by declaration vs the
-  `_STATUS_TONE_MAP` name fallback.) **#1493 closed the binding+consumption: a
+  `_STATUS_TONE_MAP` name fallback.) **#1493 reached level 4: a
   `semantic:` line on a shared `enum`/inline `enum[...]` field declares each
-  value's tone, validated against the palette, and `resolve_status_tone` now
-  consults it before the name guess on the list/table badge path (level 3). The
-  remaining level-4 step is WCAG colour+icon+text on every badge surface +
-  state-machine-terminal inference for undeclared values.**
+  value's tone, validated against the palette, and `resolve_status_tone`
+  consults it before the name guess. On top of the binding, level 4 adds WCAG
+  colour+icon+text (`badge_icon_html` leads every non-neutral badge with a
+  non-colour glyph) and state-machine-terminal inference (`status_tone_map`
+  merges `infer_terminal_tone_map`: an undeclared, name-guess-miss terminal
+  state — a graph sink — is inferred a `success` end-state). Precedence:
+  declared > name-guess > SM-terminal > neutral.**
 - **1c — comparison context.** Are lone scalars avoided — is a number shown with
   trend / rank / distribution / outlier by default?
 - **1d — raw-data honesty.** Are UUID / FK / ISO / float / JSON / bool
@@ -180,10 +183,10 @@ criterion:
   },
   "framework_backlog": [
     {
-      "criterion": "1b",
+      "criterion": "1c",
       "leverage": "high",
-      "gap": "status->tone is a name convention (`_STATUS_TONE_MAP`), not a declared+validated binding",
-      "evidence": ["_STATUS_TONE_MAP name fallback", "..."],
+      "gap": "lone scalars shown without trend/rank/distribution by default",
+      "evidence": ["comparison-family display kinds present but not the default", "..."],
       "since_version": "0.87.11"
     }
   ]

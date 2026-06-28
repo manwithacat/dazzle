@@ -83,6 +83,7 @@ def _render_status_badge_html(
 
     from dazzle.render.filters import (
         _humanize_filter,
+        badge_icon_html,
         resolve_status_tone,
     )
 
@@ -95,12 +96,15 @@ def _render_status_badge_html(
     label_str = str(label)
     size_class = "dz-badge-sm" if size == "sm" else ""
     border_class = "bordered" if bordered else ""
+    # #1493 slice 2 part 3: WCAG colour+icon+text — non-neutral tones lead with a
+    # glyph so the state isn't colour-only. Neutral → "" (byte-identical default).
+    icon = badge_icon_html(tone)
     return (
         f'<span class="dz-badge {size_class} {border_class}" '
         f'data-dz-tone="{_esc(tone, quote=True)}" '
         f'role="status" '
         f'aria-label="Status: {_esc(label_str, quote=True)}">'
-        f"{_esc(label_str)}</span>"
+        f"{icon}{_esc(label_str)}</span>"
     )
 
 

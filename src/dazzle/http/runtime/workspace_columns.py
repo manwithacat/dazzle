@@ -23,8 +23,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from dazzle.core.ir.tones import field_enum_semantic_map
 from dazzle.core.strings import to_api_plural
+from dazzle.render.filters import status_tone_map
 
 
 def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
@@ -143,7 +143,8 @@ def build_surface_columns(
         if kind_val == "money":
             col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
         if col_type == "badge":
-            _sem = field_enum_semantic_map(ft, enums)  # #1493 slice 2
+            # #1493 slice 2: declared `semantic:` binding + SM-terminal inference.
+            _sem = status_tone_map(ft, enums, entity_spec.state_machine)
             if _sem:
                 col["semantic_map"] = _sem
             if kind_val == "enum":
@@ -217,7 +218,8 @@ def build_entity_columns(entity_spec: Any, enums: Any = None) -> list[dict[str, 
         if kind_val == "money":
             col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
         if col_type == "badge":
-            _sem = field_enum_semantic_map(ft, enums)  # #1493 slice 2
+            # #1493 slice 2: declared `semantic:` binding + SM-terminal inference.
+            _sem = status_tone_map(ft, enums, entity_spec.state_machine)
             if _sem:
                 col["semantic_map"] = _sem
             if kind_val == "enum":

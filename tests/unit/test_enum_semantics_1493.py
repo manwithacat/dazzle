@@ -361,11 +361,13 @@ surface tasks "Tasks":
     assert "semantic_map" not in status_col
 
 
-def test_probe_1b_reports_level_3() -> None:
+def test_probe_1b_reports_level_4() -> None:
     from dazzle.qa.ux_maturity import CRITERIA
 
     crit_1b = next(c for c in CRITERIA if c.id == "1b")
-    assert crit_1b.declared == 3
+    # Level 4 (#1493 slice 2 complete): render consumption + WCAG colour+icon+text
+    # + state-machine-terminal inference. The probe asserts all three.
+    assert crit_1b.declared == 4
     assert crit_1b.probe().ok  # probe agrees with the declared level (no drift)
 
 

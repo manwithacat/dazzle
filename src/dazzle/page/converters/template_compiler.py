@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING, Any
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
 from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
-from dazzle.core.ir.tones import field_enum_semantic_map
 from dazzle.core.ir.triples import WidgetKind, resolve_widget
 from dazzle.core.strings import to_api_plural
 from dazzle.page import app_paths
@@ -39,6 +38,7 @@ from dazzle.render.context import (
     TableContext,
     TransitionContext,
 )
+from dazzle.render.filters import status_tone_map
 
 if TYPE_CHECKING:
     pass
@@ -158,14 +158,16 @@ def _field_type_to_column_type(
 def _enum_semantic_map(
     field_spec: ir.FieldSpec | None,
     enums: list[ir.EnumSpec] | None = None,
+    state_machine: Any = None,
 ) -> dict[str, str]:
-    """Declared value→tone `semantic:` map for an enum field column (#1493 slice 2).
+    """Effective value→tone map for an enum/status field column (#1493 slice 2).
 
-    Thin FieldSpec→FieldType adapter over the shared
-    `core.ir.tones.field_enum_semantic_map` (which both this page-render builder
-    and the http-workspace builder call, so the logic lives in one place).
+    Thin FieldSpec→FieldType adapter over the shared `render.filters.status_tone_map`
+    (declared `semantic:` binding + state-machine terminal inference), which both
+    this page-render builder and the http-workspace builder call, so the logic
+    lives in one place.
     """
-    return field_enum_semantic_map(field_spec.type if field_spec else None, enums)
+    return status_tone_map(field_spec.type if field_spec else None, enums, state_machine)
 
 
 def _file_accept_attr(field_spec: ir.FieldSpec) -> str:
@@ -368,7 +370,9 @@ def _build_columns(
                         filter_ref_api=_ref_api,
                         currency_code=col_currency,
                         visible_condition=_col_vis,
-                        semantic_map=_enum_semantic_map(field_spec, enums),
+                        semantic_map=_enum_semantic_map(
+                            field_spec, enums, entity.state_machine if entity else None
+                        ),
                     )
                 )
     elif entity and entity.fields:
@@ -416,7 +420,9 @@ def _build_columns(
                         filter_ref_entity=_ref_ent,
                         filter_ref_api=_ref_api,
                         currency_code=col_currency,
-                        semantic_map=_enum_semantic_map(field, enums),
+                        semantic_map=_enum_semantic_map(
+                            field, enums, entity.state_machine if entity else None
+                        ),
                     )
                 )
 
@@ -1097,8 +1103,9 @@ def _build_entity_columns(entity: ir.EntitySpec) -> list[ColumnContext]:
                 type=_field_type_to_column_type(field, field.name),
                 currency_code=col_currency,
                 # No shared-enum registry here (related-tab columns); inline
-                # `enum[...]` bindings still resolve via FieldType.enum_semantics.
-                semantic_map=_enum_semantic_map(field, None),
+                # `enum[...]` bindings still resolve via FieldType.enum_semantics,
+                # plus SM-terminal inference from the related entity's machine.
+                semantic_map=_enum_semantic_map(field, None, entity.state_machine),
             )
         )
     return columns
