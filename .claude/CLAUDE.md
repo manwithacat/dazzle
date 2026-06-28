@@ -255,7 +255,7 @@ The table below is drift-gated against the live registry (`tests/unit/test_docs_
 | `db` | status, verify |
 | `demo_data` | get |
 | `discovery` | coherence |
-| `dsl` | validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec |
+| `dsl` | validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief |
 | `e2e` | list_modes, describe_mode, status, list_baselines |
 | `feedback` | list, get, triage, resolve |
 | `fitness` | queue |
@@ -312,6 +312,30 @@ dazzle api-pack generate-dsl|env-vars|infrastructure|scaffold
 dazzle mock scenarios|fire-webhook|inject-error|scaffold-scenario
 dazzle contribution templates|create|validate|examples
 ```
+
+## Specification Narrative (DSL → stakeholder prose)
+
+Reverse the DSL→app flow into a non-technical specification document for
+investors, business leaders, and founders:
+
+- `dazzle spec brief [--project DIR] [--format json|text]` — deterministic Stage 1.
+  Emits a fact-only `SpecBrief`: app facts (entities/personas/surfaces/lifecycles,
+  with framework-`platform` plumbing excluded), security posture, and **framework
+  value-claims** that activate only when a named detector fires against the AppSpec
+  (so the document never asserts a capability the app doesn't exercise).
+- `dsl` MCP tool, `brief` op — stateless read mirror of `dazzle spec brief`
+  (returns the same JSON), for in-session agents that prefer MCP over shelling out.
+- `/spec-narrate` skill — agent-driven Stage 2. Reads the brief as the single
+  source of truth and writes a layered `SPECIFICATION.md` (exec summary → depth);
+  every sentence must trace to the brief.
+
+To add/reword a framework guarantee, edit `src/dazzle/spec_narrative/claims.toml`;
+each claim names a detector in `spec_narrative/detectors.py` and carries an
+`evidence` command a skeptic can run. The claim-integrity test
+(`tests/unit/test_spec_narrative_claims.py`) gates that every claim's detector
+exists; the `simple_task` brief is golden-snapshotted
+(`tests/unit/test_spec_narrative_brief_snapshot.py` — regenerate with
+`dazzle spec brief -p examples/simple_task -f json > tests/unit/baselines/spec_brief_simple_task.json`).
 
 ## PyPI Package
 
@@ -375,4 +399,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.88.9 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.89.0 | **Python**: 3.12+ | **Status**: Production Ready

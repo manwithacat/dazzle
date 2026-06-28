@@ -71,7 +71,7 @@ def _tool_dsl() -> Tool:
     """DSL operations (replaces 7 tools)."""
     return Tool(
         name="dsl",
-        description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.",
+        description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief. 'brief' returns the deterministic stakeholder spec-brief (fact-only app facts + activated framework value-claims) consumed by the /spec-narrate skill. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -88,6 +88,7 @@ def _tool_dsl() -> Tool:
                         "fidelity",
                         "list_fragments",
                         "export_frontend_spec",
+                        "brief",
                     ],
                     "description": "Operation to perform",
                 },

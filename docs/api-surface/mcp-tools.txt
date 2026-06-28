@@ -322,8 +322,8 @@ tool: discovery
   }
 
 tool: dsl
-  description_hash: f031b49924ad
-  description_len: 385
+  description_hash: 800dd35f88b8
+  description_len: 543
   {
     "properties": {
       "entities": {
@@ -372,7 +372,8 @@ tool: dsl
           "get_spec",
           "fidelity",
           "list_fragments",
-          "export_frontend_spec"
+          "export_frontend_spec",
+          "brief"
         ],
         "type": "string"
       },

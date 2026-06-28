@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.89.0] - 2026-06-28
+
+### Added
+- **Specification Narrative (`dazzle spec brief` + `/spec-narrate`)** — generate a
+  stakeholder-facing `SPECIFICATION.md` from the DSL, reversing the usual DSL→app
+  flow into DSL→prose for investors, business leaders, and founders. Stage 1
+  (`dazzle spec brief`) deterministically extracts app facts (entities/personas/
+  surfaces/lifecycles, with framework-`platform` plumbing excluded) plus
+  detector-gated framework value-claims (RLS, provable RBAC, Postgres, SSR, HLESS
+  event semantics, multi-tenancy, compliance evidence); Stage 2 (the `/spec-narrate`
+  skill) renders them to a layered, non-technical document. New package
+  `src/dazzle/spec_narrative/` (claim catalogue in `claims.toml`, gated by
+  `detectors.py`). Claim integrity + a `simple_task` golden brief snapshot are
+  drift-gated. Also exposed as the `dsl` MCP tool's `brief` op (stateless read
+  mirror) for in-session agents that prefer MCP over shelling out to the CLI.
+
+### Agent Guidance
+- **Stakeholder spec generation.** To add or reword a framework guarantee shown to
+  stakeholders, edit `src/dazzle/spec_narrative/claims.toml` — each claim is gated
+  by a detector in `detectors.py` and carries an `evidence` command a skeptic can
+  run. The `/spec-narrate` skill must trace every sentence to the `dazzle spec brief`
+  output; it invents nothing. The brief excludes framework `domain == "platform"`
+  entities (AIJob, FeedbackReport, …) so they never leak into a non-technical doc.
+
 ## [0.88.9] - 2026-06-28
 
 ### Changed

@@ -1,0 +1,103 @@
+# Framework value-claims surfaced in the generated SPECIFICATION.md.
+#
+# A claim appears in the brief ONLY when its `detector` (see detectors.REGISTRY)
+# returns True for the app — the document never asserts a capability the app does
+# not exercise.
+#
+# INTEGRITY RULE: a claim must not assert more than its detector proves. The
+# claim is shown to investors as fact. "Scope rules declared" (app-layer) is
+# weaker than "Postgres RLS enforced" (shared_schema tenancy); "rules declared"
+# is weaker than "rules verified"; "classifications declared" is weaker than
+# "audit evidence produced". The copy below is deliberately phrased as what is
+# *true today* for an app that fires the detector — capability, not aspiration.
+#
+# Fields per claim:
+#   detector  — name of a predicate in detectors.REGISTRY
+#   group     — document grouping: security | data | architecture | compliance
+#   audience  — primary reader: investor | founder | technical
+#   claim     — plain-English, jargon-free stakeholder statement
+#   evidence  — the command a skeptic runs to verify the claim
+
+[scope_filtering]
+detector = "has_rls"
+group = "security"
+audience = "investor"
+claim = """Access-controlled records are filtered to what each user is permitted
+to see. The rule is declared once in the model and applied automatically to every
+query the framework runs, instead of being re-implemented — and re-checked — on
+each screen."""
+evidence = "dazzle rbac report"
+
+[database_rls]
+detector = "has_database_rls"
+group = "security"
+audience = "investor"
+claim = """Because the system shares tables across tenants, the per-tenant
+boundary is enforced inside PostgreSQL itself through row-level security policies.
+The database refuses to return another tenant's rows even if the application code
+has a bug, because the rule lives in the data layer, not the app."""
+evidence = "dazzle db verify"
+
+[provable_rbac]
+detector = "has_provable_rbac"
+group = "security"
+audience = "investor"
+claim = """Every role's permissions, for every entity and operation, are declared
+as machine-readable policy. They compile on demand into an auditable access
+matrix — so permission review is something you run and diff, not something you
+eyeball."""
+evidence = "dazzle rbac report"
+
+[multi_tenant]
+detector = "is_multi_tenant"
+group = "security"
+audience = "founder"
+claim = """The system is multi-tenant: each customer's data is isolated from every
+other customer's at the data layer, so one organisation cannot see another
+organisation's records."""
+evidence = "dazzle tenant list"
+
+[postgres_backed]
+detector = "always"
+group = "data"
+audience = "technical"
+claim = """All data is stored in PostgreSQL — a mature, widely-trusted relational
+database. There is no bespoke or experimental datastore to operate, secure, or
+reason about."""
+evidence = "dazzle db status"
+
+[schema_managed]
+detector = "always"
+group = "data"
+audience = "technical"
+claim = """In production, every change to the data model is applied through
+versioned, reversible migrations. The live schema is never edited by hand, so
+upgrades are repeatable and fully auditable."""
+evidence = "dazzle db status"
+
+[server_rendered]
+detector = "always"
+group = "architecture"
+audience = "technical"
+claim = """The interface is rendered on the server and progressively enhanced.
+There is no heavy single-page JavaScript application to maintain, which keeps the
+product fast, accessible, and simple to operate."""
+evidence = "dazzle validate"
+
+[event_semantics]
+detector = "has_events"
+group = "architecture"
+audience = "technical"
+claim = """Significant business moments are modelled as first-class events with
+formally-defined semantics, giving the system a precise, auditable record of what
+happened and when."""
+evidence = "dazzle specs asyncapi"
+
+[compliance_evidence]
+detector = "has_compliance_evidence"
+group = "compliance"
+audience = "investor"
+claim = """Data classifications and controls declared in the model can be
+extracted into a compliance evidence report mapped to ISO 27001 and SOC 2
+controls, rather than assembled by hand at audit time."""
+evidence = "dazzle compliance summary"
