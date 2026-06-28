@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.91.4] - 2026-06-28
+
+### Fixed
+- **Restore the structural-fitness ratchets after the RBAC proof + lazy-init work
+  (v0.90.0–0.91.2).** The full `pytest -m "not e2e"` run (not the targeted subsets
+  used while shipping) flagged 4 ratchet regressions, all from the new code:
+  clone clusters (the parallel lazy-init `ensure_initialized`/`_init_db` trio +
+  the `_z3`/`_ensure_sa` lazy-import helpers), one complexity entry, and deferred
+  `dazzle.*` imports in `cli/rbac.py`. Regenerated the clone + complexity baselines
+  (parallel-by-design / new modules) and raised `cli/rbac.py`'s deferred-import
+  baseline (lazy command imports match the file's CLI-startup-perf pattern). Also
+  *hoisted* `claim_ledger.py`'s lazy `prove` import to module top (no import cycle
+  — reduces deferred imports rather than baselining them). No runtime change.
+
 ## [0.91.3] - 2026-06-28
 
 ### Fixed

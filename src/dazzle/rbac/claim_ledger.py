@@ -18,6 +18,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from dazzle.rbac import prove as _prove
 from dazzle.rbac.prove import EvidenceClass
 
 _PROOF_MODEL = Path(__file__).resolve().parents[3] / "docs" / "reference" / "rbac-proof-model.md"
@@ -134,9 +135,7 @@ def verify_ledger_integrity() -> list[str]:
     - Every claim's proof-model anchor must exist in rbac-proof-model.md.
     """
     errors: list[str] = []
-    from dazzle.rbac import prove as P
-
-    prover_names = {fn.__name__ for fn in P._PROVERS}
+    prover_names = {fn.__name__ for fn in _prove._PROVERS}
     proof_text = _PROOF_MODEL.read_text(encoding="utf-8") if _PROOF_MODEL.exists() else ""
     if not proof_text:
         errors.append(f"proof model not found at {_PROOF_MODEL}")

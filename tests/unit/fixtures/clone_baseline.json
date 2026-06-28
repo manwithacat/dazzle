@@ -583,6 +583,15 @@
     ]
   },
   {
+    "signature": "c2ee12dae8dbe790209aa6dddbdad7c6",
+    "count": 3,
+    "names": [
+      "dazzle/http/runtime/auth/store.py::ensure_initialized",
+      "dazzle/http/runtime/device_registry.py::ensure_initialized",
+      "dazzle/http/runtime/token_store.py::ensure_initialized"
+    ]
+  },
+  {
     "signature": "8b9d53209fa1fc837f46c55af6fbea15",
     "count": 2,
     "names": [
@@ -591,11 +600,10 @@
     ]
   },
   {
-    "signature": "cb9f2908cf95ef717a62b1c3f416f486",
-    "count": 3,
+    "signature": "74b3ac67c66c3dfcc11f52f975c57a4f",
+    "count": 2,
     "names": [
       "dazzle/http/runtime/device_registry.py::_init_db",
-      "dazzle/http/runtime/file_storage.py::_init_db",
       "dazzle/http/runtime/token_store.py::_init_db"
     ]
   },
@@ -663,6 +671,14 @@
     "names": [
       "dazzle/http/runtime/renderers/site_section_builder.py::_build_faq_section",
       "dazzle/http/runtime/renderers/site_section_builder.py::_build_stats_section"
+    ]
+  },
+  {
+    "signature": "c128fd66eff19d8d0070dce04f2c3aab",
+    "count": 2,
+    "names": [
+      "dazzle/http/runtime/sa_schema.py::_ensure_sa",
+      "dazzle/rbac/encode_smt.py::_z3"
     ]
   },
   {
