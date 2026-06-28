@@ -42,6 +42,7 @@
 | [Card-Safety Invariants](card-safety-invariants.md) | The canonical spec for what a card means in Dazzle templates and the eight invariants its scanners enforce. |
 | [RBAC Scope Rules](rbac-scope.md) | Operation-by-operation reference for `scope:` row-level authorization rules and their predicate algebra. |
 | [RBAC Verification Framework](rbac-verification.md) | The three-layer access-control verification system that proves DSL-declared security policies hold. |
+| [RBAC Proof Model & Trust Boundary](rbac-proof-model.md) | The normative proof-obligation model for "provable RBAC": the effective-decision composition, the safety/availability/over-approximation theorem, assumption set A (the trust boundary), the proof→test→assumed trust chain, the per-property evidence-class table, and the ReBAC declared-classes stance. `dazzle rbac prove` discharges the Proof-class rows. |
 | [Security Profiles](security-profiles.md) | The security profile every app declares in its `app` block, and what each profile enforces. |
 | [Enterprise SSO & Provisioning](enterprise-sso.md) | Native per-org enterprise connections (OIDC, SAML, SCIM) behind the opt-in capability registry. |
 | [Verified-Domain Join](verified-domain-join.md) | The non-SSO self-service join: a tenant proves its email domain (DNS-TXT), then verified-email users self-join under a per-tenant policy (#1424). |

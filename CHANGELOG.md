@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.90.0] - 2026-06-28
+
+### Added
+- **RBAC proof substrate — `dazzle rbac prove` + the proof model (WP-0→WP-2).**
+  Turns "provable RBAC" from an assertion into a discharged, mechanically-checked
+  statement with a named trust boundary.
+  - `docs/reference/rbac-proof-model.md` (WP-0) — the normative proof-obligation
+    model: the effective-decision composition, the safety/availability/
+    over-approximation theorem, **assumption set A** (the trust boundary), the
+    **proof→test→assumed trust chain** (what is proven vs tested vs assumed), the
+    per-property **evidence-class table** (Proof / Enumeration / Test), and the
+    ReBAC stance (provable over DSL-declared grant classes; builder-minted grants
+    are a documented out-of-scope residual). Structurally gated by
+    `tests/unit/test_rbac_proof_model.py`.
+  - `dazzle.rbac.encode_smt` + `dazzle.rbac.ir` (WP-1) — an SMT encoder over the
+    existing `ScopePredicate` algebra (Z3). Every node-kind abstraction
+    over-approximates ("could match"), so it is sound for the no-escalation/safety
+    direction. New optional `[proof]` extra (`pip install 'dazzle-dsl[proof]'`);
+    z3 is lazy-imported so core installs are unaffected.
+  - `dazzle.rbac.prove` + `dazzle rbac prove` (WP-2) — proves scope satisfiability,
+    the least-privilege containment lattice, and deny-overrides precedence over the
+    static core, emitting a **counter-model** on any violation and exiting non-zero.
+    Honest verdict surface: each property is marked `PROVED` / `VACUOUS` /
+    `INFORMATIONAL` / `FAILED`, and reliance on model-level over-approximation is
+    counted and disclosed — it never prints a uniform "proved".
+
+### Agent Guidance
+- **"Provable RBAC" is now contract-bound.** Every external access-control claim
+  must map to a clause in `docs/reference/rbac-proof-model.md`; the word *provable*
+  is licensed per-property by the §5 evidence-class table (Proof / Enumeration /
+  Test). Don't describe a test-discharged property as "proven". `dazzle rbac prove`
+  discharges the Proof-class rows over the static core (tenant ∧ role ∧ scope) and
+  is a stateless, server-free CI gate.
+- **What the proof covers (and doesn't).** It proves a *model* of the policy; the
+  model-faithful-to-emitted-SQL link is a separate test obligation (WP-3, planned)
+  and PostgreSQL correctness is an assumption (A.4). The SMT encoder abstracts
+  EXISTS/FK-path nodes toward "could match" (sound only for the safety direction).
+  When extending it, preserve that over-approximation discipline — an
+  under-approximation would let the prover certify escalation-safety that does not
+  hold. New predicate node kinds need an encoder arm + a soundness-regression test.
+
 ## [0.89.0] - 2026-06-28
 
 ### Added

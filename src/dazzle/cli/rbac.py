@@ -465,6 +465,53 @@ def verify_cmd(
         raise typer.Exit(code=1)
 
 
+@rbac_app.command("prove")
+def prove_cmd(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
+    format: str = typer.Option("table", "--format", "-f", help="Output format: table, json"),
+) -> None:
+    """Prove RBAC meta-properties from the DSL (WP-2; no server required).
+
+    Discharges the Proof-class properties of docs/reference/rbac-proof-model.md §5
+    over the static core (scope satisfiability, least-privilege containment,
+    deny-overrides precedence, role-hierarchy acyclicity, separation-of-duty),
+    emitting a counter-model on any violation. Exits non-zero if a property fails.
+    """
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.rbac.prove import prove_all
+
+    root = resolve_project(manifest)
+    appspec = load_project_appspec(root)
+    report = prove_all(appspec)
+
+    if format == "json":
+        typer.echo(report.model_dump_json(indent=2))
+    else:
+        typer.echo(f"RBAC proof — {report.project}")
+        for p in report.properties:
+            # The status is printed verbatim — PROVED / VACUOUS / INFORMATIONAL /
+            # FAILED are visually distinct so a vacuous or informational result is
+            # never mistaken for a substantive proof.
+            typer.echo(f"  [{p.status.value}] {p.name} ({p.evidence.value}): {p.summary}")
+            for v in p.violations:
+                typer.echo(f"      ✗ {v.description}", err=True)
+                if v.counter_model:
+                    typer.echo(f"        counter-model: {v.counter_model}", err=True)
+        if report.residual_notes:
+            # Surface the actual abstraction notes, not just a count, so the auditor
+            # sees which scopes are over-approximated (rbac-proof-model.md §4).
+            typer.echo("  residual model abstractions (over-approximation; see §4):")
+            for note in report.residual_notes:
+                typer.echo(f"      · {note}")
+        verdict = "VIOLATIONS FOUND" if not report.passed else "no violations"
+        typer.echo(
+            f"  → {verdict} — {report.substantive_obligations} substantive obligation(s) discharged"
+        )
+
+    if not report.passed:
+        raise typer.Exit(code=1)
+
+
 @rbac_app.command("report")
 def report_cmd(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),

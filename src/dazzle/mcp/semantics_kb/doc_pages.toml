@@ -1627,3 +1627,10 @@ slug = "db-artifacts"
 order = 131
 handwritten = true
 intro = "Every database artifact the framework manages, in one registry: class, creator, boot-entry, owner, RLS posture, baseline membership, and boot-DDL gating. The registry is the source of truth; an executable contract enforces the gating / in-baseline / RLS invariants (catching the #1495 class). Run `dazzle inspect db-artifacts` for the live per-table view."
+
+[pages.rbac-proof-model]
+title = "RBAC Proof Model & Trust Boundary"
+slug = "rbac-proof-model"
+order = 132
+handwritten = true
+intro = "The normative proof-obligation model for \"provable RBAC\": the effective-decision composition, the safety/availability/over-approximation theorem, assumption set A (the trust boundary), the proof→test→assumed trust chain, the per-property evidence-class table (Proof/Enumeration/Test), and the ReBAC declared-classes stance. Every external access-control claim must map to a clause here; `dazzle rbac prove` discharges the Proof-class rows."
