@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.2] - 2026-06-28
+
+### Fixed
+- **Stale auth pre-flight test broke `main` CI (PostgreSQL Tests).** `test_auth.py::TestAuthStore::test_email_ci_uniqueness_preflight_reports_collisions` asserted that *constructing* `AuthStore` runs the case-insensitive email-uniqueness pre-flight (#1342) and raises on collisions. The lazy-init refactor (#1504 follow-up, 336877dcf) made construction I/O-free — the pre-flight now runs in `ensure_initialized()` (triggered lazily on first use and explicitly at server boot, so fail-fast is preserved in production). The test was never updated, and #1504 (turning on previously-never-run PG auth tests) exposed it as a red job on `main`. Updated the test to (a) call `ensure_initialized()` to create the base schema before seeding dup rows (construction no longer does), and (b) assert the collision `RuntimeError` fires at `ensure_initialized()`, not `__init__`. Test-only; production behaviour unchanged. Verified against real PostgreSQL.
+
 ## [0.92.1] - 2026-06-28
 
 ### Fixed

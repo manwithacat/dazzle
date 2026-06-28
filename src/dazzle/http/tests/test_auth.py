@@ -231,6 +231,11 @@ class TestAuthStore:
 
         from dazzle.http.runtime.pg_backend import PostgresBackend
 
+        # Construction is I/O-free since the lazy-init refactor (#1504 follow-up
+        # 336877dcf), so the base schema (the `users` table) is no longer created
+        # at fixture-construction time — initialize it explicitly before seeding.
+        auth_store.ensure_initialized()
+
         db = PostgresBackend(os.environ["DATABASE_URL"])
         now = datetime.now(UTC).isoformat()
         with db.connection() as conn:
@@ -243,9 +248,13 @@ class TestAuthStore:
                     (str(uuid4()), email, "x", None, True, False, "[]", now, now),
                 )
 
-        # Constructing the store runs the pre-flight, which must raise clearly.
+        # Construction is now I/O-free (lazy init, #1504 follow-up 336877dcf):
+        # the pre-flight runs at ensure_initialized() — triggered lazily on first
+        # use and explicitly at server boot (fail-fast preserved) — not in
+        # __init__. So build the store, then trigger init: that must raise clearly.
+        store = AuthStore(os.environ["DATABASE_URL"])
         with pytest.raises(RuntimeError) as exc:
-            AuthStore(os.environ["DATABASE_URL"])
+            store.ensure_initialized()
         assert "collide on LOWER(email)" in str(exc.value)
         assert "dup@example.com" in str(exc.value)
 
