@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.4] - 2026-06-28
+
+### Fixed
+- **Golden-master IR snapshot drift from the #1493 IR fields (v0.92.3).** Adding `EnumValueSpec.semantic` + `FieldType.enum_semantics` (default `None`) shifted `tests/integration/test_golden_master.py::test_simple_dsl_to_ir_snapshot`, which serialises the full IR *without* stripping `None` (unlike the parser-corpus snapshot, which strips empties and so saw no churn). Regenerated the golden-master `.ambr` — the diff is purely the new `None` fields. Test-only; no behaviour change.
+
 ## [0.92.3] - 2026-06-28
 
 ### Added
