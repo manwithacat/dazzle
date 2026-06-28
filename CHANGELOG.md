@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.12] - 2026-06-28
+
+### Added
+- **List-render convergence Phase 1 — substrate `DataTable` + `render_data_row` row-core (#1505).** The rich `dz-tr-row` data-table row now has a single source of truth in the pure `render/` substrate, **byte-for-byte identical** to the legacy `http/runtime/htmx_render.py::_render_table_row` (pinned by an 11-case characterization suite, `tests/unit/test_data_row_characterization_1505.py`). No caller is switched this phase, so the fleet is **byte-stable**. New `DataTable` + `RowCapabilities` primitives (`dazzle.render.fragment.primitives`); `render_data_row(columns, item, caps, …)` + `render_data_table_rows(dt)` (the `<tbody>`-children entry the Phase-2 HTMX-refresh transport path will call down into). `render is pure` import-linter contract stays green — the row HTML now originates in `render/`, not `http/`. Design: `docs/superpowers/specs/2026-06-28-list-render-convergence-design.md`; plan: `docs/superpowers/plans/2026-06-28-list-render-convergence-p1p2.md`.
+
+### Changed
+- **Complexity baseline regenerated** (`tests/unit/fixtures/complexity_baseline.json`) — absorbs the two verbatim-ported functions in `render/fragment/renderer/_data_row.py` (`_render_table_row` CC 23, `_render_cell_display` CC 19 — relocated, not new complexity; Phase 2 deletes the `http/` originals) plus pre-existing un-baselined drift from the #1492/#1493/#1494-slice1 commits.
+
 ## [0.92.11] - 2026-06-28
 
 ### Fixed

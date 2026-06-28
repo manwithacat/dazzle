@@ -2163,6 +2163,12 @@
     "functions": {},
     "mi_rank": "A"
   },
+  "dazzle/core/_fuzz_parse_worker.py": {
+    "functions": {
+      "parse_worker": 5
+    },
+    "mi_rank": "A"
+  },
   "dazzle/core/access.py": {
     "functions": {
       "AccessAuthContext": 1,
@@ -2830,6 +2836,7 @@
       "EntityParserMixin._expect_via_lparen": 2,
       "EntityParserMixin._has_field_condition": 6,
       "EntityParserMixin._map_archetype_kind": 2,
+      "EntityParserMixin._maybe_parse_inline_enum_semantics": 8,
       "EntityParserMixin._parse_audit_directive": 8,
       "EntityParserMixin._parse_bulk_config": 16,
       "EntityParserMixin._parse_computed_expr": 3,
@@ -2846,7 +2853,7 @@
       "EntityParserMixin._parse_entity_examples": 3,
       "EntityParserMixin._parse_entity_expose": 5,
       "EntityParserMixin._parse_entity_extends": 2,
-      "EntityParserMixin._parse_entity_field_declaration": 3,
+      "EntityParserMixin._parse_entity_field_declaration": 4,
       "EntityParserMixin._parse_entity_fitness": 2,
       "EntityParserMixin._parse_entity_graph_edge": 16,
       "EntityParserMixin._parse_entity_graph_node": 8,
@@ -2941,8 +2948,9 @@
   },
   "dazzle/core/dsl_parser_impl/enum.py": {
     "functions": {
-      "EnumParserMixin": 7,
-      "EnumParserMixin.parse_enum": 5
+      "EnumParserMixin": 11,
+      "EnumParserMixin._parse_semantic_map": 3,
+      "EnumParserMixin.parse_enum": 15
     },
     "mi_rank": "A"
   },
@@ -3616,6 +3624,7 @@
       "_kw_emits": 3,
       "_kw_layout": 2,
       "_kw_mode": 1,
+      "_kw_peek": 1,
       "_kw_priority": 1,
       "_kw_refresh": 1,
       "_kw_related": 1,
@@ -5363,6 +5372,7 @@
       "FieldFormatSpec": 1,
       "Outcome": 1,
       "OutcomeKind": 1,
+      "PeekMode": 1,
       "RelatedDisplayMode": 1,
       "RelatedGroup": 1,
       "SubtypePanelBranch": 1,
@@ -5430,6 +5440,13 @@
       "TypographyRatioPreset": 1,
       "TypographySpec": 1,
       "VisualTreatment": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/core/ir/tones.py": {
+    "functions": {
+      "field_enum_semantic_map": 13,
+      "normalize_tone": 2
     },
     "mi_rank": "A"
   },
@@ -6482,6 +6499,7 @@
       "_validate_comparison_region": 3,
       "validate_comparison_regions": 8,
       "validate_emits_targets": 5,
+      "validate_enum_semantics": 11,
       "validate_insight_summaries": 8,
       "validate_nav_curation": 33,
       "validate_outlier_decorators": 15,
@@ -13812,8 +13830,8 @@
   },
   "dazzle/http/runtime/workspace_columns.py": {
     "functions": {
-      "build_entity_columns": 22,
-      "build_surface_columns": 35,
+      "build_entity_columns": 23,
+      "build_surface_columns": 36,
       "field_kind_to_col_type": 10
     },
     "mi_rank": "A"
@@ -16776,7 +16794,7 @@
   },
   "dazzle/page/converters/template_compiler.py": {
     "functions": {
-      "_build_columns": 44,
+      "_build_columns": 46,
       "_build_companion_contexts": 5,
       "_build_currency_options": 3,
       "_build_entity_columns": 11,
@@ -16789,6 +16807,7 @@
       "_compile_form_surface": 11,
       "_compile_list_surface": 33,
       "_compile_view_surface": 43,
+      "_enum_semantic_map": 2,
       "_extract_surface_purpose": 6,
       "_field_type_to_column_type": 4,
       "_field_type_to_form_type": 3,
@@ -16857,7 +16876,8 @@
     "functions": {
       "_group_dims": 3,
       "_has_meaningful_temporal": 6,
-      "resolve_auto_display": 9
+      "resolve_auto_display": 9,
+      "resolve_region_display_mode": 5
     },
     "mi_rank": "A"
   },
@@ -16874,8 +16894,8 @@
       "_render_field_value": 27,
       "_render_related_file_list": 26,
       "_render_related_group": 4,
-      "_render_related_status_cards": 25,
-      "_render_related_table_cell": 11,
+      "_render_related_status_cards": 26,
+      "_render_related_table_cell": 12,
       "_render_related_table_group": 31,
       "_render_status_badge": 2,
       "render_detail_view": 44
@@ -17028,6 +17048,12 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/page/runtime/peek_resolver.py": {
+    "functions": {
+      "resolve_peek_mode": 2
+    },
+    "mi_rank": "A"
+  },
   "dazzle/page/runtime/site_context.py": {
     "functions": {
       "_brand_value": 2,
@@ -17113,7 +17139,7 @@
       "_serialize_filter_to_params": 3,
       "apply_layout_preferences": 9,
       "build_catalog": 3,
-      "build_workspace_context": 84,
+      "build_workspace_context": 80,
       "migrate_v1_to_v2": 9,
       "render_workspace_content_typed": 15
     },
@@ -17715,8 +17741,8 @@
       "Criterion": 1,
       "ProbeResult": 1,
       "_display_kinds": 3,
-      "_probe_1a": 4,
-      "_probe_1b": 1,
+      "_probe_1a": 3,
+      "_probe_1b": 6,
       "_probe_1c": 1,
       "_probe_1d": 2,
       "_probe_2b": 1,
@@ -18044,7 +18070,7 @@
   },
   "dazzle/render/filters.py": {
     "functions": {
-      "_badge_tone_filter": 2,
+      "_badge_tone_filter": 1,
       "_basename_or_url_filter": 4,
       "_bool_icon_filter": 2,
       "_currency_filter": 4,
@@ -18058,7 +18084,12 @@
       "_resolve_fk_id_filter": 6,
       "_slugify_filter": 2,
       "_timeago_filter": 20,
-      "_truncate_filter": 4
+      "_truncate_filter": 4,
+      "badge_icon_html": 2,
+      "infer_terminal_tone_map": 5,
+      "resolve_status_icon": 3,
+      "resolve_status_tone": 5,
+      "status_tone_map": 2
     },
     "mi_rank": "A"
   },
@@ -18257,6 +18288,8 @@
       "DashboardCard.__post_init__": 4,
       "DashboardGrid": 1,
       "DashboardNotice": 1,
+      "DataTable": 3,
+      "DataTable.__post_init__": 2,
       "DateRangePicker": 3,
       "DateRangePicker.__post_init__": 2,
       "DayTimelineRegion": 6,
@@ -18323,6 +18356,7 @@
       "ReferenceBand.__post_init__": 3,
       "ReferenceLine": 3,
       "ReferenceLine.__post_init__": 2,
+      "RowCapabilities": 1,
       "SearchBox": 3,
       "SearchBox.__post_init__": 2,
       "Sequence": 1,
@@ -18565,6 +18599,16 @@
   },
   "dazzle/render/fragment/renderer/__init__.py": {
     "functions": {},
+    "mi_rank": "A"
+  },
+  "dazzle/render/fragment/renderer/_data_row.py": {
+    "functions": {
+      "_render_cell_display": 19,
+      "_render_inline_edit": 10,
+      "_render_table_row": 23,
+      "render_data_row": 2,
+      "render_data_table_rows": 2
+    },
     "mi_rank": "A"
   },
   "dazzle/render/fragment/renderer/_emit.py": {
@@ -19770,7 +19814,6 @@
     "functions": {
       "Classification": 1,
       "FuzzResult": 1,
-      "_parse_worker": 5,
       "classify": 6
     },
     "mi_rank": "A"
