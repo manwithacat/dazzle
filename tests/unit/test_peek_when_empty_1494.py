@@ -221,32 +221,48 @@ class TestWhenEmptyResolver:
         base.update(kw)
         return SimpleNamespace(**base)
 
-    def test_explicit_collapse_authoritative(self):
+    def test_explicit_value_authoritative(self):
         assert resolve_when_empty(self._r(when_empty=WhenEmpty.COLLAPSE)) == WhenEmpty.COLLAPSE
-
-    def test_explicit_suppress_authoritative(self):
         assert resolve_when_empty(self._r(when_empty=WhenEmpty.SUPPRESS)) == WhenEmpty.SUPPRESS
+        assert resolve_when_empty(self._r(when_empty=WhenEmpty.MESSAGE)) == WhenEmpty.MESSAGE
 
-    def test_unset_defaults_to_message_byte_stable(self):
-        # The auto self-demote default-flip is deferred (it breaks the fleet's
-        # viewport/interaction gates) — unset always resolves to `message` so
-        # existing dashboards are byte-stable. Self-demote is opt-in only.
-        assert resolve_when_empty(self._r(display="bar_chart")) == WhenEmpty.MESSAGE
-        assert resolve_when_empty(self._r(display="list", aggregates={"n": 1})) == WhenEmpty.MESSAGE
+    def test_author_empty_message_keeps_message(self):
+        # An author who wrote an empty_message opted into a visible empty-state.
+        r = self._r(display="bar_chart", aggregates={"n": 1}, empty_message="No data")
+        assert resolve_when_empty(r) == WhenEmpty.MESSAGE
+
+    def test_supporting_widget_collapses_by_default(self):
+        # The default-flip: empty supporting widgets self-collapse to header-only
+        # (card stays in the grid). Charts/metrics + any aggregate region.
+        assert resolve_when_empty(self._r(display="bar_chart")) == WhenEmpty.COLLAPSE
+        assert resolve_when_empty(self._r(display="metrics")) == WhenEmpty.COLLAPSE
+        assert (
+            resolve_when_empty(self._r(display="list", aggregates={"n": 1})) == WhenEmpty.COLLAPSE
+        )
+
+    def test_primary_content_keeps_message(self):
+        # Primary content (list/kanban/…) keeps a "nothing here yet" message.
         assert resolve_when_empty(self._r(display="list")) == WhenEmpty.MESSAGE
         assert resolve_when_empty(self._r(display="kanban")) == WhenEmpty.MESSAGE
+
+    def test_suppress_is_never_the_default(self):
+        # Full card removal is explicit opt-in only — never a default-flip outcome.
+        for display in ("bar_chart", "metrics", "list", "kanban"):
+            assert resolve_when_empty(self._r(display=display)) != WhenEmpty.SUPPRESS
 
 
 class TestWhenEmptyRenderSeam:
     """`_build_region_response` turns the resolved mode into native htmx removal
     when the fetch produced no rows."""
 
-    def _resp(self, ir_region, items, hx_target="region-recent-recent"):
+    def _resp(self, ir_region, items, hx_target="region-recent-recent", is_added_card=False):
         from dazzle.http.runtime.workspace_region_handler import _build_region_response
 
         ctx = SimpleNamespace(ir_region=ir_region, ctx_region=SimpleNamespace(display="list"))
         fetched = SimpleNamespace(items=items, total=len(items))
-        return _build_region_response(ctx, fetched, "<table>body</table>", hx_target)
+        return _build_region_response(
+            ctx, fetched, "<table>body</table>", hx_target, is_added_card=is_added_card
+        )
 
     def _region(self, **kw):
         base = {
@@ -282,3 +298,24 @@ class TestWhenEmptyRenderSeam:
         resp = self._resp(self._region(when_empty=WhenEmpty.SUPPRESS), items=[{"id": "1"}])
         assert "<table>body</table>" in bytes(resp.body).decode()
         assert "hx-swap-oob" not in bytes(resp.body).decode()
+
+    def test_empty_supporting_widget_collapses_by_default(self):
+        # Unset chart/metric → default-flip → collapse (HX-Reswap: delete body).
+        resp = self._resp(self._region(display="bar_chart"), items=[])
+        assert resp.headers.get("HX-Reswap") == "delete"
+
+    def test_added_card_exempt_from_auto_collapse(self):
+        # A picker-added card (?added=1) skips the auto default-flip — it shows
+        # its empty-state, never an immediate self-demote.
+        resp = self._resp(self._region(display="bar_chart"), items=[], is_added_card=True)
+        assert "HX-Reswap" not in resp.headers
+        assert "<table>body</table>" in bytes(resp.body).decode()
+
+    def test_added_card_still_honours_explicit_when_empty(self):
+        # An explicit author `when_empty:` wins even for an added card.
+        resp = self._resp(
+            self._region(display="bar_chart", when_empty=WhenEmpty.COLLAPSE),
+            items=[],
+            is_added_card=True,
+        )
+        assert resp.headers.get("HX-Reswap") == "delete"

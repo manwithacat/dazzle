@@ -307,9 +307,12 @@ document.addEventListener("alpine:init", () => {
         htmx.process(cardEl);
         const bodyEl = cardEl.querySelector(".dz-card-body");
         if (bodyEl) {
+          // #1494: mark this as a picker-added card so the server skips the
+          // `when_empty` auto self-demote default — a user who explicitly adds
+          // a card should see its empty-state, not have it immediately collapse.
           htmx.ajax(
             "GET",
-            "/api/workspaces/" + wsName + "/regions/" + regionName,
+            "/api/workspaces/" + wsName + "/regions/" + regionName + "?added=1",
             { target: "#" + bodyEl.id, swap: "innerHTML" },
           );
         }

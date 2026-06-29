@@ -83,6 +83,7 @@ def _build_region_response(
     fetched: Any,
     html_body: str,
     hx_target: str | None,
+    is_added_card: bool = False,
 ) -> Any:
     """Build the region-fetch HTTP response, stopping the poll when complete.
 
@@ -106,8 +107,14 @@ def _build_region_response(
     # `when_empty` mode (declarative-over-htmx-4 — native OOB / HX-Reswap, no
     # bespoke JS). Only when the fetch produced no rows; `message` (the default
     # for primary content) falls through to the normal typed empty-state body.
+    # #1494: a picker-added card (`?added=1`) is exempt from the auto self-demote
+    # default — a user who explicitly adds a card should see its empty-state, not
+    # have it immediately collapse/vanish. An *explicit* author `when_empty:`
+    # still applies (their declared intent wins, even for an added card).
     if hx_target and not getattr(fetched, "items", None):
         mode = resolve_when_empty(ctx.ir_region)
+        if is_added_card and getattr(ctx.ir_region, "when_empty", None) is None:
+            mode = WhenEmpty.MESSAGE
         if mode == WhenEmpty.SUPPRESS:
             # Remove the whole card: htmx OOB-delete the addressable wrapper
             # (`card-…`, derived from the body's `region-…` hx-target). The
@@ -190,4 +197,8 @@ async def _workspace_region_handler(
     html_body = await render_region_html(request, ctx, user_ctx, render_inputs, sort, dir)
 
     # #1399 slice 2: stop polling a finished region (htmx-native self-replace).
-    return _build_region_response(ctx, fetched, html_body, request.headers.get("hx-target"))
+    # #1494: `?added=1` marks a picker-added card → exempt from auto self-demote.
+    is_added_card = request.query_params.get("added") == "1"
+    return _build_region_response(
+        ctx, fetched, html_body, request.headers.get("hx-target"), is_added_card=is_added_card
+    )

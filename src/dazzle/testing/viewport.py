@@ -47,6 +47,13 @@ class ViewportAssertion:
     expected: str | list[str]
     viewport: str
     description: str
+    # #1494: when the selector targets a *content-dependent* element (a region
+    # body grid that only exists when the region has data), its absence is N/A,
+    # not a geometry regression — this gate asserts geometry, not DOM presence
+    # (an empty / `when_empty`-collapsed region has no grid). The runner then
+    # records "Element not found" for this assertion as SKIPPED, not FAILED.
+    # Chrome assertions (sidebar/toggle) leave this False — they must be present.
+    skip_if_absent: bool = False
 
 
 @dataclass
@@ -55,6 +62,14 @@ class ComponentPattern:
 
     name: str
     assertions: list[ViewportAssertion]
+    # Propagated to every assertion that didn't set it explicitly (#1494).
+    skip_if_absent: bool = False
+
+    def __post_init__(self) -> None:
+        if self.skip_if_absent:
+            for a in self.assertions:
+                if not a.skip_if_absent:
+                    a.skip_if_absent = True
 
 
 @dataclass
@@ -179,6 +194,7 @@ DRAWER_PATTERN = ComponentPattern(
 # GRID display → `.dz-grid-list`: 1 → 2 → 3 cols (40rem / 64rem).
 GRID_PATTERN = ComponentPattern(
     name="grid",
+    skip_if_absent=True,  # region-body grid — absent when the region is empty/collapsed (#1494)
     assertions=[
         ViewportAssertion(
             selector=".dz-grid-list",
@@ -207,6 +223,7 @@ GRID_PATTERN = ComponentPattern(
 # METRICS / SUMMARY display → `.dz-metrics-grid`: 1 → 2 → 4 cols (40rem / 64rem).
 METRICS_PATTERN = ComponentPattern(
     name="metrics",
+    skip_if_absent=True,  # region-body grid — absent when the region is empty/collapsed (#1494)
     assertions=[
         ViewportAssertion(
             selector=".dz-metrics-grid",
@@ -235,6 +252,7 @@ METRICS_PATTERN = ComponentPattern(
 # ACTION_GRID display → `.dz-action-grid`: 1 → 2 → 3 cols (40rem / 64rem).
 ACTION_GRID_PATTERN = ComponentPattern(
     name="action_grid",
+    skip_if_absent=True,  # region-body grid — absent when the region is empty/collapsed (#1494)
     assertions=[
         ViewportAssertion(
             selector=".dz-action-grid",

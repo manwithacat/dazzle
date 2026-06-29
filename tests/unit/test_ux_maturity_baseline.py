@@ -47,15 +47,16 @@ def test_backlog_is_amber_or_red_only_and_leverage_ordered() -> None:
     # the known top gaps are present and high-leverage. 1a left the backlog when
     # `display: auto` became the default (#1492 default-flip → level 3); 1b left
     # when the declared `semantic:` binding became render-consumed (#1493 slice 2),
-    # reaching level 4 with WCAG colour+icon+text + state-machine-terminal inference.
-    # 3d stays a gap: #1494 shipped the `when_empty:` *vocabulary* (opt-in), but the
-    # level-4 adaptive auto-default is deferred (it tripped the fleet's
-    # viewport/interaction gates) — so the data-right default isn't there yet.
+    # reaching level 4 with WCAG colour+icon+text + state-machine-terminal inference;
+    # 3d left when `when_empty:` + the resolve_when_empty default-flip shipped — an
+    # empty supporting region self-collapses to header-only by default (#1494, level 4),
+    # with the geometry-gate skip + added-card exemption keeping the auto-default safe.
     high = {b["criterion"] for b in backlog if b["leverage"] == "high"}
-    assert {"1c", "3d"} <= high
+    assert {"1c"} <= high
     not_gaps = {b["criterion"] for b in backlog}
     assert "1a" not in not_gaps  # level 3, no longer a gap
     assert "1b" not in not_gaps  # level 4 (#1493 slice 2 complete), no longer a gap
+    assert "3d" not in not_gaps  # level 4 (#1494 default-flip complete), no longer a gap
 
 
 def test_criteria_count_and_ids() -> None:

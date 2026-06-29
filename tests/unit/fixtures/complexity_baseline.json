@@ -13907,7 +13907,7 @@
   },
   "dazzle/http/runtime/workspace_region_handler.py": {
     "functions": {
-      "_build_region_response": 8,
+      "_build_region_response": 10,
       "_region_polling_complete": 8,
       "_row_status": 2,
       "_workspace_region_handler": 7
@@ -17080,7 +17080,7 @@
   "dazzle/page/runtime/when_empty_resolver.py": {
     "functions": {
       "_is_supporting_widget": 4,
-      "resolve_when_empty": 2
+      "resolve_when_empty": 4
     },
     "mi_rank": "A"
   },
@@ -20620,7 +20620,8 @@
   },
   "dazzle/testing/viewport.py": {
     "functions": {
-      "ComponentPattern": 1,
+      "ComponentPattern": 5,
+      "ComponentPattern.__post_init__": 4,
       "ViewportAssertion": 1,
       "ViewportAssertionResult": 1,
       "ViewportReport": 1,
@@ -20642,10 +20643,10 @@
       "ViewportRunResult": 13,
       "ViewportRunResult.to_json": 9,
       "ViewportRunResult.to_markdown": 14,
-      "ViewportRunner": 13,
+      "ViewportRunner": 15,
       "ViewportRunner.__init__": 1,
       "ViewportRunner._ensure_persona_session": 6,
-      "ViewportRunner._run_matrix": 29,
+      "ViewportRunner._run_matrix": 39,
       "ViewportRunner.run": 11
     },
     "mi_rank": "A"

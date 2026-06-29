@@ -429,18 +429,30 @@ class ViewportRunner:
                     for assertion, raw in zip(assertions_for_page, raw_results, strict=True):
                         actual = raw.get("actual")
                         passed = _matches(assertion.expected, actual)
+                        # #1494: a content-dependent selector that's absent is N/A,
+                        # not a geometry regression — this gate asserts geometry of
+                        # PRESENT elements, not DOM presence. An empty / `when_empty`-
+                        # collapsed region has no body grid to measure, so skip it.
+                        skipped_absent = (
+                            (not passed) and actual is None and assertion.skip_if_absent
+                        )
+                        if skipped_absent:
+                            error = (
+                                "skipped: element absent (content-dependent — empty / "
+                                "when_empty-collapsed region has no grid; geometry N/A)"
+                            )
+                        elif passed:
+                            error = None
+                        elif actual is None:
+                            error = "Element not found"
+                        else:
+                            error = f"Expected {assertion.expected!r}, got {actual!r}"
                         assertion_results.append(
                             ViewportAssertionResult(
                                 assertion=assertion,
                                 actual=actual,
                                 passed=passed,
-                                error=None
-                                if passed
-                                else (
-                                    "Element not found"
-                                    if actual is None
-                                    else f"Expected {assertion.expected!r}, got {actual!r}"
-                                ),
+                                error=error,
                             )
                         )
 
@@ -449,7 +461,8 @@ class ViewportRunner:
                         from dazzle.testing.viewport_suggestions import suggest_fix
 
                         for res in assertion_results:
-                            if not res.passed:
+                            _is_skipped = res.actual is None and res.assertion.skip_if_absent
+                            if not res.passed and not _is_skipped:
                                 suggestion = suggest_fix(
                                     selector=res.assertion.selector,
                                     property=res.assertion.property,
@@ -475,7 +488,13 @@ class ViewportRunner:
                         result.visual_results.append(vr)
 
                     passed_count = sum(1 for r in assertion_results if r.passed)
-                    failed_count = len(assertion_results) - passed_count
+                    # #1494: absent content-dependent selectors are skipped, not failed.
+                    skipped_count = sum(
+                        1
+                        for r in assertion_results
+                        if (not r.passed) and r.actual is None and r.assertion.skip_if_absent
+                    )
+                    failed_count = len(assertion_results) - passed_count - skipped_count
 
                     report = ViewportReport(
                         surface_or_page=page_path,
@@ -484,6 +503,13 @@ class ViewportRunner:
                         results=assertion_results,
                         passed=passed_count,
                         failed=failed_count,
+                        skipped=skipped_count,
+                        skip_reason=(
+                            "content-dependent selector(s) absent (empty / "
+                            "when_empty-collapsed region — geometry N/A)"
+                            if skipped_count
+                            else None
+                        ),
                         persona_id=options.persona_id,
                         duration_ms=duration_ms,
                     )
@@ -491,6 +517,7 @@ class ViewportRunner:
                     result.total_assertions += len(assertion_results)
                     result.total_passed += passed_count
                     result.total_failed += failed_count
+                    result.total_skipped += skipped_count
 
         finally:
             context.close()

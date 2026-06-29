@@ -310,17 +310,20 @@ CRITERIA: list[Criterion] = [
         "3d",
         "negative_space",
         "empty-state suppression",
-        2,
-        "#1494 shipped the `when_empty: message | collapse | suppress` vocabulary "
-        "(IR + parser + `resolve_when_empty` + a native-htmx render seam: OOB-delete / "
-        "HX-Reswap:delete at the lazy-load fetch) — an empty region CAN self-demote. "
-        "But it is **opt-in**: the default stays `message` (the typed empty-state). The "
-        "level-4 adaptive auto-default (empty supporting widgets self-demote with no "
-        "author keyword) is deferred — CI's INTERACTION_WALK viewport-geometry gate "
-        "showed auto-removing empty-region DOM shifts the dashboard grid and trips the "
-        "fleet gates that assert on it; reaching 4 needs those gates updated to tolerate "
-        "a self-demoting empty region (#1494). Vocabulary exists (declarative-manual); "
-        "the data-right auto-default does not yet.",
+        4,
+        "#1494 — `when_empty:` (message | collapse | suppress) + the render-time "
+        "default-flip (`resolve_when_empty`) make empty-state handling **adaptive**: "
+        "an empty *supporting* widget (chart/metric/summary, or any region with "
+        "declared `aggregates`) self-**collapses** to header-only by default (the dead "
+        "body scaffolding goes via a native `HX-Reswap: delete` at the lazy-load seam — "
+        "no bespoke JS), while a *primary content* region (list/grid/kanban/…) and any "
+        "region with an author `empty_message:` keep their typed empty-state. Two "
+        "safety refinements keep the auto-default from over-reaching: the geometry gate "
+        "skips grid assertions for a collapsed region (`ViewportAssertion.skip_if_absent` "
+        "— geometry is N/A for an absent grid), and a picker-**added** card is exempt "
+        "(it shows its empty-state, `?added=1`). Full `suppress` (card removal) stays "
+        "explicit opt-in. Level 4 (adaptive): the empty region's presence adapts to its "
+        "data + role, traceable to `display`/`aggregates`/`empty_message`.",
         "high",
         _probe_3d,
     ),
