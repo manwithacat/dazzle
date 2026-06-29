@@ -140,21 +140,41 @@ class CardAddInteraction:
             # since it has the latest Date.now() timestamp.
             new_card_id = max(added_ids)
 
-            body_text = page.locator(f"[data-card-id='{new_card_id}']").inner_text()
+            # #1494: an empty region may self-demote (`when_empty:` —
+            # collapse/suppress), so its card legitimately has no body content.
+            # That is NOT the #798 bug (a *stuck skeleton* where the fetch never
+            # fired). Distinguish by the skeleton marker: the #798 contract is
+            # "the fetch fires AND the skeleton is replaced". A self-demoted
+            # empty region replaces the skeleton with nothing (or the card is
+            # OOB-removed entirely) — both valid. So the failure is specifically
+            # "skeleton persists" (fetch fired but content never swapped in).
+            card_locator = page.locator(f"[data-card-id='{new_card_id}']")
+            card_gone = card_locator.count() == 0  # suppress: OOB-removed the card
+            if card_gone:
+                body_text = ""
+                skeleton_present = False
+            else:
+                body_text = card_locator.inner_text()
+                skeleton_present = "dz-card-skeleton" in card_locator.inner_html()
             body_populated = len(body_text.strip()) > _MIN_BODY_TEXT_LENGTH
+            # The region "responded" if the skeleton is gone — populated, or
+            # legitimately empty/self-demoted. A persistent skeleton is the
+            # #798 regression.
+            region_responded = body_populated or not skeleton_present
 
             region_path_fragment = f"/regions/{self.region}"
             region_fetches = [u for u in captured_urls if region_path_fragment in u]
             fetch_observed = bool(region_fetches)
 
-            passed = body_populated and fetch_observed
+            passed = region_responded and fetch_observed
             reason = ""
             if not passed:
                 parts: list[str] = []
-                if not body_populated:
+                if not region_responded:
                     parts.append(
-                        f"card body text is {len(body_text.strip())} chars — "
-                        f"likely still a skeleton"
+                        f"card body text is {len(body_text.strip())} chars and the "
+                        f"skeleton is still present — the region fetch resolved but "
+                        f"never replaced the skeleton (#798)"
                     )
                 if not fetch_observed:
                     parts.append(
@@ -179,6 +199,8 @@ class CardAddInteraction:
                 evidence={
                     "new_card_id": new_card_id,
                     "body_length": len(body_text.strip()),
+                    "skeleton_present": skeleton_present,
+                    "card_self_demoted": card_gone or (not body_populated and not skeleton_present),
                     "region_fetch_count": len(region_fetches),
                     "sample_urls": debug_urls,
                 },

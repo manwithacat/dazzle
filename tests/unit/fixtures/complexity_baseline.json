@@ -20332,8 +20332,8 @@
   },
   "dazzle/testing/ux/interactions/card_add.py": {
     "functions": {
-      "CardAddInteraction": 18,
-      "CardAddInteraction.execute": 17
+      "CardAddInteraction": 22,
+      "CardAddInteraction.execute": 21
     },
     "mi_rank": "A"
   },

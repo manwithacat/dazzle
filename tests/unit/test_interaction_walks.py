@@ -35,6 +35,8 @@ class _StubLocator:
     _child_locators: dict[str, _StubLocator] = field(default_factory=dict)
     _click_raises: Exception | None = None
     _inner_text: str = ""
+    _inner_html: str | None = None  # None → derived (skeleton iff body is unpopulated)
+    _count: int = 1  # #1494 — 0 simulates an OOB-suppressed (removed) card
 
     @property
     def first(self) -> _StubLocator:
@@ -52,6 +54,21 @@ class _StubLocator:
 
     def inner_text(self) -> str:
         return self._inner_text
+
+    def inner_html(self) -> str:
+        # When not explicitly set, a short body implies a stuck skeleton (the
+        # #798 shape) and a long body implies real content — so existing tests
+        # keep their meaning without every one setting _inner_html.
+        if self._inner_html is not None:
+            return self._inner_html
+        return (
+            self._inner_text
+            if len(self._inner_text.strip()) > 40
+            else '<div class="dz-card-skeleton"></div>'
+        )
+
+    def count(self) -> int:
+        return self._count
 
     def locator(self, selector: str) -> _StubLocator:
         return self._child_locators.get(selector, _StubLocator())
@@ -359,6 +376,32 @@ class TestCardAdd:
 
         assert not result.passed
         assert "no GET" in result.reason
+
+    def test_passes_when_empty_region_self_demotes(self) -> None:
+        # #1494: an added region that resolves empty self-demotes (when_empty —
+        # the skeleton is replaced with nothing, or the card is OOB-removed).
+        # That's NOT the #798 stuck-skeleton bug: the fetch fired and the
+        # skeleton is gone. The walk must accept it.
+        page = _StubPage()
+        page.locators["[data-test-id='dz-add-card-trigger']"] = _StubLocator()
+        page.locators[
+            "[data-test-id='dz-card-picker-entry'][data-test-region='alert_severity']"
+        ] = _StubLocator()
+        # Empty body, but the skeleton is gone (collapse/suppress responded).
+        page.locators["[data-card-id='card-9999']"] = _StubLocator(
+            _inner_text="Alert Severity", _inner_html='<div class="dz-card-header"></div>'
+        )
+        page._eval_returns = [[], ["card-9999"]]
+        original_on = page.on
+
+        def on_request_fire(event: str, listener: Any) -> None:
+            original_on(event, listener)
+            page._fire_request("http://test/api/workspaces/ws/regions/alert_severity")
+
+        page.on = on_request_fire  # type: ignore[method-assign]
+        result = CardAddInteraction(region="alert_severity", settle_ms=0).execute(page)
+        assert result.passed, result.reason
+        assert result.evidence["card_self_demoted"] is True
 
     def test_fails_when_trigger_not_clickable(self) -> None:
         page = _StubPage()

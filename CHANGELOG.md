@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **INTERACTION_WALK `card_add` now distinguishes a self-demoting empty region from a stuck skeleton (#1494 follow-up).** The walk's #798 guard ("a dynamically-added card's region fetch fires + replaces the skeleton") wrongly failed when an added region resolved *empty* and self-demoted via `when_empty:` (collapse/suppress) — the body is then legitimately empty, not a stuck skeleton. The walk now passes when the fetch fired and the skeleton is gone (populated **or** self-demoted), and fails only on a persistent skeleton (the real #798 regression).
+
 ## [0.92.32] - 2026-06-29
 
 ### Added
