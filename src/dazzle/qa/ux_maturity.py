@@ -310,15 +310,17 @@ CRITERIA: list[Criterion] = [
         "3d",
         "negative_space",
         "empty-state suppression",
-        4,
-        "#1494 — `when_empty:` (message | collapse | suppress) lets an empty region "
-        "self-demote. The render-time default-flip (`resolve_when_empty`) makes this "
-        "adaptive: an empty *supporting* widget (chart/metric/summary, or any region "
-        "with declared `aggregates`) self-**collapses** to header-only by default (native htmx "
-        "OOB-delete at the lazy-load seam — no bespoke JS), while a *primary content* "
-        "region (list/grid/kanban/…) and any region with an author `empty_message:` "
-        "keeps its typed empty-state. Level 4 (adaptive): the empty region's presence "
-        "adapts to the data + its role, traceable to `display`/`aggregates`/`empty_message`.",
+        2,
+        "#1494 shipped the `when_empty: message | collapse | suppress` vocabulary "
+        "(IR + parser + `resolve_when_empty` + a native-htmx render seam: OOB-delete / "
+        "HX-Reswap:delete at the lazy-load fetch) — an empty region CAN self-demote. "
+        "But it is **opt-in**: the default stays `message` (the typed empty-state). The "
+        "level-4 adaptive auto-default (empty supporting widgets self-demote with no "
+        "author keyword) is deferred — CI's INTERACTION_WALK viewport-geometry gate "
+        "showed auto-removing empty-region DOM shifts the dashboard grid and trips the "
+        "fleet gates that assert on it; reaching 4 needs those gates updated to tolerate "
+        "a self-demoting empty region (#1494). Vocabulary exists (declarative-manual); "
+        "the data-right auto-default does not yet.",
         "high",
         _probe_3d,
     ),

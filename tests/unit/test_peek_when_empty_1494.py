@@ -221,32 +221,19 @@ class TestWhenEmptyResolver:
         base.update(kw)
         return SimpleNamespace(**base)
 
-    def test_explicit_value_authoritative(self):
+    def test_explicit_collapse_authoritative(self):
         assert resolve_when_empty(self._r(when_empty=WhenEmpty.COLLAPSE)) == WhenEmpty.COLLAPSE
 
-    def test_author_empty_message_keeps_message(self):
-        # An author who wrote an empty_message opted into a visible empty-state.
-        r = self._r(display="bar_chart", aggregates={"n": 1}, empty_message="No data")
-        assert resolve_when_empty(r) == WhenEmpty.MESSAGE
-
-    def test_supporting_chart_collapses(self):
-        # Default-flip is collapse (header-only), NOT suppress (full removal) —
-        # silently removing a grid card is too disruptive for a default.
-        assert resolve_when_empty(self._r(display="bar_chart")) == WhenEmpty.COLLAPSE
-
-    def test_aggregate_region_collapses(self):
-        assert (
-            resolve_when_empty(self._r(display="list", aggregates={"n": 1})) == WhenEmpty.COLLAPSE
-        )
-
-    def test_suppress_is_explicit_opt_in_only(self):
-        # Full suppression only when authored — never a default-flip outcome.
+    def test_explicit_suppress_authoritative(self):
         assert resolve_when_empty(self._r(when_empty=WhenEmpty.SUPPRESS)) == WhenEmpty.SUPPRESS
 
-    def test_primary_list_keeps_message(self):
+    def test_unset_defaults_to_message_byte_stable(self):
+        # The auto self-demote default-flip is deferred (it breaks the fleet's
+        # viewport/interaction gates) — unset always resolves to `message` so
+        # existing dashboards are byte-stable. Self-demote is opt-in only.
+        assert resolve_when_empty(self._r(display="bar_chart")) == WhenEmpty.MESSAGE
+        assert resolve_when_empty(self._r(display="list", aggregates={"n": 1})) == WhenEmpty.MESSAGE
         assert resolve_when_empty(self._r(display="list")) == WhenEmpty.MESSAGE
-
-    def test_primary_kanban_keeps_message(self):
         assert resolve_when_empty(self._r(display="kanban")) == WhenEmpty.MESSAGE
 
 

@@ -17080,7 +17080,7 @@
   "dazzle/page/runtime/when_empty_resolver.py": {
     "functions": {
       "_is_supporting_widget": 4,
-      "resolve_when_empty": 4
+      "resolve_when_empty": 2
     },
     "mi_rank": "A"
   },

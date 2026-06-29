@@ -8,25 +8,20 @@ Mirrors the `peek:` (`peek_resolver`) and `display: auto` (`auto_display`) patte
 an explicit author value is authoritative; an *unset* region (`when_empty is None`)
 routes through the render-time default-flip.
 
-**The default-flip (the #1494 3d level-4 move):** an empty region adapts its
-presence to the data —
-- an author-declared `empty_message:` is honoured (`message` — they opted into a
-  visible empty-state);
-- a **supporting widget** (a chart/metric/summary, or any region with declared
-  `aggregates`) **collapses** to header-only when empty — the dead body
-  scaffolding disappears, but the card (and its title, for context) stays in the
-  grid. Full **suppression** (removing the whole card) stays explicit opt-in
-  (`when_empty: suppress`), since silently removing a grid card is more
-  disruptive than collapsing its body;
-- a **primary content** region (list/grid/kanban/queue/timeline/… — the thing a
-  user navigated to) keeps its `message` — an empty primary surface deserves a
-  helpful "nothing here yet" guide, not a silent disappearance.
+**The default is `message` (byte-stable — today's typed empty-state).** Self-
+demote is **explicit opt-in** via `when_empty: collapse | suppress`. An earlier
+cut auto-collapsed empty *supporting widgets* by default (the 3d level-4
+"adaptive" move), but CI's INTERACTION_WALK viewport-geometry gate showed that
+auto-removing an empty region's body/card shifts the dashboard grid and trips
+the fleet gates that assert on empty-region DOM. Making the auto-default safe
+therefore needs those gates updated to tolerate a self-demoting empty region —
+a separate effort tracked on #1494; until then the default stays `message` and
+`_is_supporting_widget` is retained for when that flip lands.
 
-Fully traceable: the choice is a pure function of the region's declared
-`display` + `aggregates` + `empty_message` — no runtime/usage signal, no bespoke
-JS. The render seam (`workspace_region_handler._build_region_response`) turns the
-resolved mode into a native htmx OOB-delete (`suppress`) / `HX-Reswap: delete`
-(`collapse`) when the fetched region has no rows.
+The render seam (`workspace_region_handler._build_region_response`) turns an
+*opted-in* mode into a native htmx OOB-delete (`suppress`) / `HX-Reswap: delete`
+(`collapse`) when the fetched region has no rows. Declarative-over-htmx-4, no
+bespoke JS.
 """
 
 from __future__ import annotations
@@ -77,17 +72,13 @@ def resolve_when_empty(region: Any) -> WhenEmpty:
     """Resolve the effective `when_empty:` mode for a workspace region.
 
     - Explicit author value (`region.when_empty is not None`) wins — incl.
-      `when_empty: message` and `when_empty: suppress` (full card removal).
-    - Unset → the default-flip: `message` when the author declared an
-      `empty_message` or the region is primary content; `collapse` (header-only,
-      card stays in the grid) for an empty supporting widget (chart/metric/
-      aggregate). Full `suppress` is never the default — it's explicit opt-in.
+      `when_empty: collapse` / `when_empty: suppress` (the opt-in self-demote).
+    - Unset → `message` (byte-stable; the typed empty-state, unchanged from
+      before #1494). The auto self-demote default-flip is deferred (see the
+      module docstring) — it needs the fleet's viewport/interaction gates
+      updated to tolerate a self-demoting empty region.
     """
     explicit = getattr(region, "when_empty", None)
     if explicit is not None:
         return WhenEmpty(explicit)
-    if getattr(region, "empty_message", None):
-        return WhenEmpty.MESSAGE
-    if _is_supporting_widget(region):
-        return WhenEmpty.COLLAPSE
     return WhenEmpty.MESSAGE
