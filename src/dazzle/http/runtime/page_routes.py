@@ -1662,6 +1662,16 @@ def _build_dispatch_ctx(
                     (str(o.get("value", "")), str(o.get("label", o.get("value", ""))))
                     for o in options
                 ]
+            # ADR-0049 Phase 3a: thread a `: money` field's currency config
+            # (`extra`) + persisted minor units so the adapter's MONEY branch
+            # can build a MoneyField (legacy `_render_money` parity).
+            if str(kind).lower() == "money":
+                field_extra = getattr(field, "extra", None) or {}
+                if field_extra:
+                    entry["extra"] = field_extra
+                minor_initial = str(initial_values.get(f"{fname}_minor", "") or "")
+                if minor_initial:
+                    entry["minor_initial"] = minor_initial
             # ADR-0049 Phase 3a: thread `source:` (search_select typeahead)
             # into the dispatch ctx so the adapter's SEARCH_SELECT branch can
             # produce a SearchSelect primitive. FieldSourceContext carries the

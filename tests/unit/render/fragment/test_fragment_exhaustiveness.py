@@ -83,6 +83,7 @@ from dazzle.render.fragment import (
     MetricsGrid,
     MetricTile,
     Modal,
+    MoneyField,
     NavGroup,
     NavItem,
     Page,
@@ -463,6 +464,8 @@ def _sample_for(primitive_type: type) -> object:
         return RefPicker(name="r", label="R", ref_api=URL("/x"))
     if primitive_type is SearchSelect:
         return SearchSelect(name="ss", label="SS", endpoint=URL("/search"))
+    if primitive_type is MoneyField:
+        return MoneyField(name="amt", label="Amount")
     if primitive_type is FileUpload:
         return FileUpload(name="f", label="F", upload_url=URL("/uploads"))
     if primitive_type is Submit:

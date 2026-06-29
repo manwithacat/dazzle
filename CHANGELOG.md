@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.27] - 2026-06-29
+
+### Added
+- **Substrate `MoneyField` form primitive — ADR-0049 Phase 3a (forms), widget 2/9.** The typed substrate now renders a first-class `: money` field at parity with the legacy `form_renderer._render_money` (used by the `pra` fixture). `MoneyField` (`render/fragment/primitives/forms.py`) + `_emit_money` (`_render_forms.py`) reproduce the `x-data="dzMoney"` controller contract — a major-unit `inputmode="decimal"` text input (`x-model="displayValue"`, `@input`/`@blur`) backed by a hidden `{name}_minor` integer carrier — in both fixed-currency (symbol prefix + `data-dz-currency`/`data-dz-scale` + hidden `{name}_currency`) and currency-selector (`<select name="{name}_currency">` of `currency_options`) modes. `_field_to_primitive` routes `kind == "money"` here (was degrading to a plain `number` input — the exact regression Phase 2's review flagged); `_build_dispatch_ctx` threads the currency config (`extra`) + persisted minor units. Parity pinned by `test_form_widget_money_phase3.py`.
+
 ## [0.92.26] - 2026-06-29
 
 ### Added

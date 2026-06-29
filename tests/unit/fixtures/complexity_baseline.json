@@ -12155,7 +12155,7 @@
       "_apply_anon_nav": 1,
       "_apply_persona_form_overrides": 20,
       "_apply_persona_overrides": 16,
-      "_build_dispatch_ctx": 151,
+      "_build_dispatch_ctx": 156,
       "_build_workspace_primary_action_candidates": 9,
       "_check_entity_cedar_access": 22,
       "_check_surface_access": 10,
@@ -12566,7 +12566,7 @@
       "_cell_value": 3,
       "_detail_field_value": 5,
       "_esc_attr": 1,
-      "_field_to_primitive": 22,
+      "_field_to_primitive": 33,
       "_filter_option": 4,
       "_format_cell": 3,
       "_pick_empty_state": 9,
@@ -18396,6 +18396,8 @@
       "FormSection.__post_init__": 2,
       "FormStack": 4,
       "FormStack.__post_init__": 3,
+      "MoneyField": 4,
+      "MoneyField.__post_init__": 3,
       "RefPicker": 4,
       "RefPicker.__post_init__": 3,
       "SearchSelect": 6,
@@ -18607,7 +18609,7 @@
   "dazzle/render/fragment/renderer/_emit.py": {
     "functions": {
       "FragmentRenderer": 31,
-      "FragmentRenderer._emit": 103,
+      "FragmentRenderer._emit": 104,
       "FragmentRenderer._emit_script": 10,
       "FragmentRenderer._emit_stylesheet": 5,
       "FragmentRenderer.render": 2
@@ -18671,6 +18673,7 @@
       "_RenderFormsMixin._emit_file_upload": 5,
       "_RenderFormsMixin._emit_form_section": 3,
       "_RenderFormsMixin._emit_form_stack": 8,
+      "_RenderFormsMixin._emit_money": 5,
       "_RenderFormsMixin._emit_ref_picker": 4,
       "_RenderFormsMixin._emit_search_select": 5,
       "_RenderFormsMixin._emit_submit": 1

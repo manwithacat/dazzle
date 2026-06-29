@@ -33,6 +33,7 @@ from dazzle.render.fragment import (
     Heading,
     Link,
     ListFilterBar,
+    MoneyField,
     RawHTML,
     RefPicker,
     Region,
@@ -668,7 +669,7 @@ class FragmentSurfaceAdapter:
 
 def _field_to_primitive(
     field_dict: dict[str, Any],
-) -> "Field | Combobox | RefPicker | SearchSelect | FileUpload":
+) -> "Field | Combobox | RefPicker | SearchSelect | MoneyField | FileUpload":
     """Map a field-shape dict to the right Fragment form primitive.
 
     The `kind` carried in field_dict is the *widget* kind — matching
@@ -706,6 +707,33 @@ def _field_to_primitive(
             max_size_bytes=int(field_dict.get("max_size_bytes", 0) or 0),
             initial_value=initial_value,
             initial_label=str(field_dict.get("initial_label", "") or ""),
+        )
+
+    # MONEY: a first-class `: money` field. The currency config (code/scale/
+    # symbol/fixed/options) rides in `extra`, threaded by `_build_dispatch_ctx`;
+    # `minor_initial` is the persisted integer minor units. Routed BEFORE the
+    # widget_to_field_kind fallback (which would degrade money → plain number).
+    if kind == "money":
+        extra = field_dict.get("extra") or {}
+        raw_opts = extra.get("currency_options") or []
+        currency_options = tuple(
+            (
+                str(o.get("code", "") if isinstance(o, dict) else getattr(o, "code", "")),
+                str(o.get("scale", "") if isinstance(o, dict) else getattr(o, "scale", "")),
+                str(o.get("symbol", "") if isinstance(o, dict) else getattr(o, "symbol", "")),
+            )
+            for o in raw_opts
+        )
+        return MoneyField(
+            name=name,
+            label=label,
+            currency_code=str(extra.get("currency_code", "") or ""),
+            scale=str(extra.get("scale", "") or ""),
+            symbol=str(extra.get("symbol", "") or ""),
+            currency_fixed=bool(extra.get("currency_fixed", True)),
+            currency_options=currency_options,
+            required=required,
+            minor_initial=str(field_dict.get("minor_initial", "") or ""),
         )
 
     # SEARCH_SELECT: a `source:` typeahead field. Distinguished by a

@@ -156,11 +156,16 @@ def test_url_widget_kind_produces_url_input() -> None:
     assert primitive.kind == "url"
 
 
-def test_money_widget_kind_produces_number_input() -> None:
-    """money DSL fields arrive as widget 'money'; render as number."""
+def test_money_widget_kind_produces_money_field() -> None:
+    """money DSL fields arrive as widget 'money' and route to MoneyField —
+    the dzMoney controller widget (major/minor split + currency), NOT a plain
+    number input. ADR-0049 Phase 3a fixed the prior degrade-to-number (the
+    regression Phase 2's review flagged); see test_form_widget_money_phase3."""
+    from dazzle.render.fragment import MoneyField
+
     primitive = _field_to_primitive({"name": "m", "label": "M", "kind": "money"})
-    assert isinstance(primitive, Field)
-    assert primitive.kind == "number"
+    assert isinstance(primitive, MoneyField)
+    assert not isinstance(primitive, Field)
 
 
 def test_unknown_widget_kind_falls_back_to_text() -> None:

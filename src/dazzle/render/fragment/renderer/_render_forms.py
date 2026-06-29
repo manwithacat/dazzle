@@ -31,6 +31,7 @@ from dazzle.render.fragment.primitives import (
     FileUpload,
     FormSection,
     FormStack,
+    MoneyField,
     RefPicker,
     SearchSelect,
     Submit,
@@ -248,6 +249,67 @@ class _RenderFormsMixin:
             '<div class="dz-search-select-prompt" role="option" aria-disabled="true">'
             f"Type at least {s.min_chars} characters to search..."
             "</div></div></div>"
+        )
+
+    def _emit_money(self, m: MoneyField, ctx: RenderContext) -> str:
+        """Render a MoneyField reproducing the legacy `_render_money` dzMoney
+        contract — a major-unit text input + hidden `{name}_minor` carrier,
+        in fixed (symbol prefix + hidden currency) or selector mode."""
+        name = ctx.escape_attr(m.name)
+        label_text = ctx.escape(m.label)
+        minor_attr = ctx.escape_attr(m.minor_initial)
+        required_attr = ' required aria-required="true"' if m.required else ""
+
+        if m.currency_fixed:
+            return (
+                '<div x-data="dzMoney" '
+                f'data-dz-currency="{ctx.escape_attr(m.currency_code)}" '
+                f'data-dz-scale="{ctx.escape_attr(m.scale)}">'
+                '<div class="dz-form-money-group">'
+                f'<span class="dz-form-money-prefix" aria-hidden="true">'
+                f"{ctx.escape(m.symbol)}</span>"
+                f'<input type="text" inputmode="decimal" id="field-{name}" '
+                f'data-dazzle-field="{name}" '
+                'x-model="displayValue" @input="onInput()" @blur="onBlur()" '
+                'class="dz-form-input dz-form-input-trailing" '
+                'placeholder="0.00" '
+                f'aria-label="{label_text} ({ctx.escape(m.currency_code)})"'
+                f"{required_attr}>"
+                "</div>"
+                f'<input type="hidden" name="{name}_minor" x-model="minorValue" '
+                f"x-init=\"minorValue = '{minor_attr}'\">"
+                f'<input type="hidden" name="{name}_currency" '
+                f'value="{ctx.escape_attr(m.currency_code)}">'
+                "</div>"
+            )
+        currency_opts = "".join(
+            f'<option value="{ctx.escape_attr(code)}" '
+            f'data-scale="{ctx.escape_attr(opt_scale)}" '
+            f'data-symbol="{ctx.escape_attr(opt_symbol)}"'
+            + (" selected" if code == m.currency_code else "")
+            + f">{ctx.escape(opt_symbol)} {ctx.escape(code)}</option>"
+            for code, opt_scale, opt_symbol in m.currency_options
+        )
+        return (
+            f'<div x-data="dzMoney" data-dz-scale="{ctx.escape_attr(m.scale)}">'
+            '<div class="dz-form-money-group">'
+            f'<select name="{name}_currency" '
+            '@change="onCurrencyChange($event)" '
+            'class="dz-form-money-select" '
+            f'aria-label="Currency for {label_text}">'
+            f"{currency_opts}"
+            "</select>"
+            f'<input type="text" inputmode="decimal" id="field-{name}" '
+            f'data-dazzle-field="{name}" '
+            'x-model="displayValue" @input="onInput()" @blur="onBlur()" '
+            'class="dz-form-input dz-form-input-trailing" '
+            'placeholder="0.00" '
+            f'aria-label="{label_text}"'
+            f"{required_attr}>"
+            "</div>"
+            f'<input type="hidden" name="{name}_minor" x-model="minorValue" '
+            f"x-init=\"minorValue = '{minor_attr}'\">"
+            "</div>"
         )
 
     def _emit_submit(self, s: Submit, ctx: RenderContext) -> str:

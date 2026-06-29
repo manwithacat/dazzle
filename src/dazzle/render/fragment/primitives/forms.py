@@ -174,6 +174,43 @@ class FileUpload:
 
 
 @dataclass(frozen=True, slots=True)
+class MoneyField:
+    """Money input for a first-class `: money` field — at parity with the
+    legacy `_render_money` widget.
+
+    Renders the `x-data="dzMoney"` controller contract: a major-unit text
+    input (`inputmode="decimal"`, `x-model="displayValue"`) backed by a
+    hidden `{name}_minor` input (the integer minor units the controller
+    keeps in sync) plus a `{name}_currency` carrier. Two modes:
+
+    - **fixed** (`currency_fixed=True`): a static symbol prefix +
+      `data-dz-currency`/`data-dz-scale` on the controller + a hidden
+      `{name}_currency`.
+    - **selector** (`currency_fixed=False`): a `<select name="{name}_currency">`
+      of `currency_options` (each `(code, scale, symbol)`) driving
+      `onCurrencyChange`.
+
+    The dzMoney Alpine controller already exists client-side; this primitive
+    only emits the mount attributes it reads."""
+
+    name: str
+    label: str
+    currency_code: str = ""
+    scale: str = ""
+    symbol: str = ""
+    currency_fixed: bool = True
+    currency_options: tuple[tuple[str, str, str], ...] = ()
+    required: bool = False
+    minor_initial: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("MoneyField requires a non-empty name")
+        if not self.label:
+            raise ValueError("MoneyField requires a non-empty label")
+
+
+@dataclass(frozen=True, slots=True)
 class Submit:
     label: str
     variant: Literal["primary", "secondary", "danger"] = "primary"

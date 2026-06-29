@@ -75,6 +75,7 @@ from dazzle.render.fragment.primitives import (
     MetricsGrid,
     MetricTile,
     Modal,
+    MoneyField,
     NavGroup,
     NavItem,
     Page,
@@ -379,6 +380,8 @@ class FragmentRenderer(
                 return self._emit_ref_picker(fragment, ctx)
             case SearchSelect():
                 return self._emit_search_select(fragment, ctx)
+            case MoneyField():
+                return self._emit_money(fragment, ctx)
             case FileUpload():
                 return self._emit_file_upload(fragment, ctx)
             case Submit():
