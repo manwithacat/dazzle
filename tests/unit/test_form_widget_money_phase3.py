@@ -100,34 +100,7 @@ def test_selector_mode_currency_options() -> None:
     assert 'name="price_minor"' in html
 
 
-def test_parity_with_legacy_money() -> None:
-    """Direct attribute-parity vs the legacy `_render_money` for the dzMoney
-    contract attrs the controller depends on."""
-    from types import SimpleNamespace
-
-    from dazzle.page.runtime.form_renderer import _render_money
-
-    legacy_field = SimpleNamespace(
-        name="amount",
-        label="Amount",
-        required=True,
-        extra={"currency_code": "GBP", "scale": "2", "symbol": "£", "currency_fixed": True},
-    )
-    legacy = _render_money(legacy_field, None, "", "", {"amount_minor": "1500"})
-    substrate = _render(_FIXED)
-    for token in (
-        'x-data="dzMoney"',
-        'data-dz-currency="GBP"',
-        'data-dz-scale="2"',
-        'inputmode="decimal"',
-        'id="field-amount"',
-        'x-model="displayValue"',
-        '@input="onInput()"',
-        '@blur="onBlur()"',
-        'name="amount_minor"',
-        "minorValue = '1500'",
-        'name="amount_currency"',
-        'class="dz-form-money-group"',
-    ):
-        assert token in legacy, f"legacy missing {token!r} (test assumption stale)"
-        assert token in substrate, f"substrate missing {token!r} — parity break"
+# NOTE: the `def test_parity_with_legacy_money` legacy-vs-substrate parity test was removed in ADR-0049
+# Phase 3b — `form_renderer` is deleted, so there is no legacy renderer left to
+# compare against; the substrate is now the source of truth (parity is recorded
+# in git history + the CHANGELOG). The substrate-only assertions above stand.

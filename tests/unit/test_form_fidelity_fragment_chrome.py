@@ -27,8 +27,38 @@ def _create_surface() -> ir.SurfaceSpec:
     )
 
 
-def test_template_renderer_emits_form_tag() -> None:
-    """The typed body renderer wraps fields in a <form> with FormStack markers."""
+def _edit_surface() -> ir.SurfaceSpec:
+    return ir.SurfaceSpec(
+        name="widget_edit",
+        title="Edit Widget",
+        entity_ref="Widget",
+        mode=ir.SurfaceMode.EDIT,
+    )
+
+
+def _render_substrate_form(form: FormContext, surface: ir.SurfaceSpec) -> str:
+    """Render a form through the substrate dispatch path (the default since
+    ADR-0049 Phase 3b) — the same FieldContext→dispatch-ctx→FormStack path a
+    real request takes, minus the http boot."""
+    from types import SimpleNamespace
+
+    from dazzle.http.runtime.page_routes import _build_dispatch_ctx
+    from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+    from dazzle.render.fragment import FragmentRenderer
+
+    render_ctx = SimpleNamespace(form=form, table=None, detail=None)
+    ctx = _build_dispatch_ctx(render_ctx, surface, services=None)
+    return FragmentRenderer().render(
+        FragmentSurfaceAdapter()._build_form(surface, ctx, mode=surface.mode)
+    )
+
+
+def test_legacy_form_path_raises_loudly() -> None:
+    """ADR-0049 Phase 3b (D4): forms render via the substrate now — reaching
+    the legacy `_render_typed_body` with a form ctx (no RuntimeServices) is a
+    misconfiguration that fails loudly, never a blank page."""
+    import pytest
+
     form = FormContext(
         entity_name="Widget",
         title="Create Widget",
@@ -38,7 +68,22 @@ def test_template_renderer_emits_form_tag() -> None:
         mode="create",
     )
     ctx = PageContext(page_title="Create Widget", layout="single_column", form=form)
-    html = _render_typed_body(ctx)
+    with pytest.raises(RuntimeError, match="typed substrate"):
+        _render_typed_body(ctx)
+
+
+def test_substrate_emits_form_tag() -> None:
+    """The substrate form path wraps fields in a <form> with the FormStack
+    contract markers the fidelity scorer + RBAC checker key off."""
+    form = FormContext(
+        entity_name="Widget",
+        title="Create Widget",
+        fields=[FieldContext(name="title", label="Title", field_type="string")],
+        action_url="/api/widgets",
+        method="post",
+        mode="create",
+    )
+    html = _render_substrate_form(form, _create_surface())
     assert "<form " in html
     assert 'class="dz-form-stack"' in html
     assert 'hx-post="/api/widgets"' in html
@@ -106,8 +151,7 @@ def test_default_path_create_form_has_submit_button() -> None:
         method="post",
         mode="create",
     )
-    ctx = PageContext(page_title="Create Widget", layout="single_column", form=form)
-    html = _render_typed_body(ctx)
+    html = _render_substrate_form(form, _create_surface())
     assert 'type="submit"' in html
     assert 'class="dz-submit dz-submit--variant-primary"' in html
     assert _submit_buttons(html) == ["Create"]
@@ -123,8 +167,8 @@ def test_default_path_edit_form_has_submit_button() -> None:
         method="put",
         mode="edit",
     )
-    ctx = PageContext(page_title="Edit Widget", layout="single_column", form=form)
-    html = _render_typed_body(ctx)
+    html = _render_substrate_form(form, _edit_surface())
     assert _submit_buttons(html) == ["Save"]
     # Edit forms post via hx-put; the submit lives inside the <form>.
     assert html.index('type="submit"') > html.index("<form ")
+    assert 'hx-put="/api/widgets/123"' in html

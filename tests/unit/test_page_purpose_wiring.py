@@ -136,11 +136,12 @@ def test_view_surface_threads_purpose() -> None:
 # =============================================================================
 
 
-# The page-purpose element is page chrome, not mode-specific. ADR-0049 routes
-# `mode: list` (Phase 1) and `mode: view` (Phase 2) through the substrate (so
-# `render_page` raises for a list/detail ctx, D4); these chrome tests use a
-# CREATE surface — whose form body still renders via `render_page` — to
-# exercise the same purpose-chrome wiring (emitted by `dispatch_render_page`).
+# The page-purpose element is page chrome (emitted by `dispatch_render_page`),
+# independent of the body. ADR-0049 routes every standard mode (list/view/
+# create/edit) through the substrate, so `render_page`'s body renderer raises
+# for them (D4). These chrome tests therefore pass `inner_html=""` to render the
+# chrome around a pre-supplied (empty) body — the same shape the dispatch path
+# uses (`render_page(ctx, inner_html=<substrate body>)`).
 def test_render_includes_purpose_when_non_empty() -> None:
     entity = _task_entity()
     surface = _make_surface(
@@ -148,7 +149,7 @@ def test_render_includes_purpose_when_non_empty() -> None:
         ir.UXSpec(purpose="Browse and manage all tasks"),
     )
     ctx = compile_surface_to_context(surface, entity, "/app")
-    html = render_page(ctx)
+    html = render_page(ctx, inner_html="")
     assert "Browse and manage all tasks" in html
     assert "dz-page-purpose" in html
     assert "data-dazzle-purpose" in html
@@ -159,7 +160,7 @@ def test_render_omits_purpose_element_when_empty() -> None:
     surface = _make_surface(ir.SurfaceMode.CREATE, ir.UXSpec())
     ctx = compile_surface_to_context(surface, entity, "/app")
     assert ctx.page_purpose == ""
-    html = render_page(ctx)
+    html = render_page(ctx, inner_html="")
     assert "dz-page-purpose" not in html
 
 
@@ -183,12 +184,12 @@ def test_render_persona_override_via_context_copy() -> None:
     assert ctx.persona_purposes == {"admin": "Create a task for any user"}
 
     # Non-persona render: surface-level purpose wins.
-    html_default = render_page(ctx)
+    html_default = render_page(ctx, inner_html="")
     assert "Add a new task to the backlog" in html_default
     assert "Create a task for any user" not in html_default
 
     # Persona render: the override replaces the surface-level purpose.
     ctx_admin = ctx.model_copy(update={"page_purpose": ctx.persona_purposes["admin"]})
-    html_admin = render_page(ctx_admin)
+    html_admin = render_page(ctx_admin, inner_html="")
     assert "Create a task for any user" in html_admin
     assert "Add a new task to the backlog" not in html_admin

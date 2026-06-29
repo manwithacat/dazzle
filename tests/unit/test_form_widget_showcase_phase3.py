@@ -134,70 +134,7 @@ def test_rich_text_empty_options() -> None:
     assert "data-dz-options='{}'" in html
 
 
-def test_parity_with_legacy_widgets() -> None:
-    """Direct mount-attribute parity vs the legacy renderers for the contract
-    attrs the client controllers depend on."""
-    from types import SimpleNamespace
-
-    from dazzle.page.runtime.form_renderer import (
-        _render_color,
-        _render_combobox,
-        _render_date_picker,
-        _render_rich_text,
-        _render_slider,
-        _render_tags,
-    )
-
-    # combobox
-    lf = SimpleNamespace(
-        name="status", label="Status", placeholder="", options=[{"value": "open", "label": "Open"}]
-    )
-    legacy = _render_combobox(lf, None, "", "")
-    sub = _render(
-        {"name": "status", "label": "Status", "widget": "combobox", "options": [("open", "Open")]}
-    )
-    for tok in ('data-dz-widget="combobox"', "data-dz-options='{}'", 'id="field-status"'):
-        assert tok in legacy and tok in sub, f"combobox parity: {tok}"
-
-    # tags
-    lf = SimpleNamespace(name="t", label="T", placeholder="")
-    legacy = _render_tags(lf, None, "", "")
-    sub = _render({"name": "t", "label": "T", "widget": "tags"})
-    for tok in ('data-dz-widget="tags"', '"create":true'):
-        assert tok in legacy and tok in sub, f"tags parity: {tok}"
-
-    # date picker (datetime)
-    lf = SimpleNamespace(name="d", label="D", type="datetime", placeholder="", default="")
-    legacy = _render_date_picker(lf, None, "", "")
-    sub = _render({"name": "d", "label": "D", "widget": "picker", "kind": "datetime"})
-    for tok in ('data-dz-widget="datepicker"', '"enableTime":true'):
-        assert tok in legacy and tok in sub, f"picker parity: {tok}"
-
-    # color
-    lf = SimpleNamespace(name="c", label="C", default="#3b82f6")
-    legacy = _render_color(lf, None, "", "")
-    sub = _render({"name": "c", "label": "C", "widget": "color"})
-    for tok in ('type="color"', 'x-model="value"'):
-        assert tok in legacy and tok in sub, f"color parity: {tok}"
-
-    # slider
-    lf = SimpleNamespace(name="s", label="S", extra={"min": 0, "max": 100, "step": 1}, default="50")
-    legacy = _render_slider(lf, None, "", "")
-    sub = _render({"name": "s", "label": "S", "widget": "slider", "default": "50"})
-    for tok in ('data-dz-widget="range-tooltip"', 'type="range"', "data-dz-slider"):
-        assert tok in legacy and tok in sub, f"slider parity: {tok}"
-
-    # rich text
-    lf = SimpleNamespace(name="r", label="R", extra={"rich_text_toolbar": "bold"})
-    legacy = _render_rich_text(lf, None, "", "")
-    sub = _render(
-        {"name": "r", "label": "R", "widget": "rich_text", "extra": {"rich_text_toolbar": "bold"}}
-    )
-    for tok in ('data-dz-widget="richtext"', "data-dz-editor", "toolbar", "bold"):
-        assert tok in legacy and tok in sub, f"rich_text parity: {tok}"
-    # The escaped data-dz-options JSON must be byte-identical between paths.
-    import re
-
-    leg_opts = re.search(r"data-dz-options='([^']*)'", legacy).group(1)
-    sub_opts = re.search(r"data-dz-options='([^']*)'", sub).group(1)
-    assert leg_opts == sub_opts, f"rich_text options drift: {leg_opts!r} vs {sub_opts!r}"
+# NOTE: the `def test_parity_with_legacy_widgets` legacy-vs-substrate parity test was removed in ADR-0049
+# Phase 3b — `form_renderer` is deleted, so there is no legacy renderer left to
+# compare against; the substrate is now the source of truth (parity is recorded
+# in git history + the CHANGELOG). The substrate-only assertions above stand.

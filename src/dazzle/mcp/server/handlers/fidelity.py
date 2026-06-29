@@ -106,7 +106,9 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     def _render_for_fidelity(ctx: Any) -> str:
         surface = appspec.get_surface(ctx.view_name) if hasattr(appspec, "get_surface") else None
         is_substrate_mode = (
-            getattr(ctx, "table", None) is not None or getattr(ctx, "detail", None) is not None
+            getattr(ctx, "table", None) is not None
+            or getattr(ctx, "detail", None) is not None
+            or getattr(ctx, "form", None) is not None
         )
         if is_substrate_mode and surface is not None:
             dctx = _build_dispatch_ctx(ctx, surface, services=_fidelity_services)

@@ -12155,7 +12155,7 @@
       "_apply_anon_nav": 1,
       "_apply_persona_form_overrides": 20,
       "_apply_persona_overrides": 16,
-      "_build_dispatch_ctx": 163,
+      "_build_dispatch_ctx": 130,
       "_build_workspace_primary_action_candidates": 9,
       "_check_entity_cedar_access": 22,
       "_check_surface_access": 10,
@@ -12566,13 +12566,12 @@
       "_cell_value": 3,
       "_detail_field_value": 5,
       "_esc_attr": 1,
-      "_field_to_primitive": 52,
       "_filter_option": 4,
       "_format_cell": 3,
       "_pick_empty_state": 9,
       "render_generic_detail": 1
     },
-    "mi_rank": "B"
+    "mi_rank": "A"
   },
   "dazzle/http/runtime/renderers/html_normalise.py": {
     "functions": {
@@ -16941,7 +16940,7 @@
   },
   "dazzle/page/runtime/experience_renderer.py": {
     "functions": {
-      "_render_form_step_body": 24,
+      "_render_form_step_body": 25,
       "_render_step_body": 9,
       "_render_step_progress": 12,
       "_render_transition_button": 4,
@@ -16958,37 +16957,6 @@
       "create_initial_state": 1,
       "sign_state": 1,
       "verify_state": 8
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/page/runtime/form_renderer.py": {
-    "functions": {
-      "_aria_invalid": 2,
-      "_basename_or_url": 5,
-      "_describedby_attr": 6,
-      "_error_paragraph": 2,
-      "_hint_paragraph": 3,
-      "_label_block": 1,
-      "_render_checkbox": 2,
-      "_render_color": 3,
-      "_render_combobox": 10,
-      "_render_date_picker": 7,
-      "_render_date_range": 3,
-      "_render_file": 10,
-      "_render_input": 4,
-      "_render_money": 12,
-      "_render_multi_select": 10,
-      "_render_ref_entity": 3,
-      "_render_rich_text": 7,
-      "_render_search_select": 18,
-      "_render_select": 9,
-      "_render_slider": 5,
-      "_render_tags": 3,
-      "_render_textarea": 3,
-      "_required_attrs": 2,
-      "_required_indicator": 2,
-      "render_form_field": 29,
-      "render_form_stepper": 7
     },
     "mi_rank": "A"
   },
@@ -17091,7 +17059,7 @@
   },
   "dazzle/page/runtime/template_renderer.py": {
     "functions": {
-      "_render_body_inner": 8,
+      "_render_body_inner": 5,
       "_render_typed_body": 2,
       "render_page": 4
     },
@@ -18129,6 +18097,14 @@
       "Stylesheet.__post_init__": 7,
       "_attr_escape": 1,
       "_close_script_tag_safe": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/render/fragment/form_field.py": {
+    "functions": {
+      "field_context_to_dict": 34,
+      "field_dict_to_primitive": 52,
+      "render_field_context": 1
     },
     "mi_rank": "A"
   },

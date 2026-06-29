@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.31] - 2026-06-29
+
+### Removed
+- **Deleted the legacy `page/runtime/form_renderer.py` (~806 LOC) — the typed substrate is now the *sole* create/edit render path, completing ADR-0049 (Phase 3b delete). The `render is None` direct-template fork is gone for all four surface modes — ADR-0049 is fully realised.** With the form flip shipped + CI-validated (v0.92.30), the legacy form renderer was an unreachable fallback; this removes it and repoints every caller. **Architectural cleanup:** the pure FieldContext→primitive mapping moved out of http to the render layer — new `render/fragment/form_field.py` holds `field_context_to_dict` (extracted verbatim from `page_routes._build_dispatch_ctx`), `field_dict_to_primitive` (moved from `fragment_adapter._field_to_primitive`, re-exported under the old name), and `render_field_context` (the page-reachable per-field renderer). Repointed: `template_renderer._render_body_inner` form branch → loud `RuntimeError` (D4, matching list/view); the experience-flow form-step (`experience_renderer._render_form_step_body`) → substrate fields via `render_field_context` + the `FormStepper` primitive (page → render, no http import); `static_preview` create/edit → the `surface_body_renderer` seam; `fidelity._render_for_fidelity` → dispatches `ctx.form` too. Also dropped the dead `multi_select`/`date_range` widgets (zero fleet usage). Gated by an independent pre-delete adversarial review (clean bill: the `field_context_to_dict` extraction drops no dict key incl. the #1027 ref-EDIT coercion; the experience stepper is byte-identical; build-ui/serve/fidelity all dispatch without hitting the D4 raise; `page ↛ http` holds).
+
+### Agent Guidance
+- **`page/runtime/form_renderer.py` is deleted — there is no legacy form renderer left; all four surface modes (list/view/create/edit) render via the typed substrate.** A form (`mode: create`/`edit`) ctx reaching `render_page` without `RuntimeServices` now raises loudly (D4), like list/view. The FieldContext→primitive mapping lives in the render layer now: `render/fragment/form_field.py` — use `render_field_context(field_ctx, initial_values)` to render one field's HTML from any layer (it's pure render), `field_context_to_dict` + `field_dict_to_primitive` for the two halves. The page-layer experience form renderer uses these directly (page → render is legal; never import http from page). To change form-field rendering, edit the substrate primitives (`render/fragment/primitives/forms.py`) + emitters (`renderer/_render_forms.py`), never a legacy renderer. **ADR-0049 is complete — the typed substrate is the universal server-side render path.**
+
 ## [0.92.30] - 2026-06-29
 
 ### Changed

@@ -50,7 +50,9 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "description": "Click-to-edit field with inline event handlers and HTMX save.",
     },
     "form_errors": {
-        "module": "dazzle.page.runtime.form_renderer",
+        # ADR-0049 Phase 3b: form rendering moved to the typed substrate
+        # (the legacy page.runtime.form_renderer is deleted).
+        "module": "dazzle.render.fragment.renderer._render_forms",
         "params": ["form_errors"],
         "emits": [],
         "listens": [],

@@ -108,40 +108,7 @@ def test_min_chars_zero_omits_hx_vals() -> None:
     assert "delay:300ms" in html
 
 
-def test_parity_with_legacy_search_select() -> None:
-    """Direct attribute-parity check vs the legacy renderer for the
-    contract attrs the client JS + fidelity scorer depend on."""
-    from types import SimpleNamespace
-
-    from dazzle.page.runtime.form_renderer import _render_search_select
-
-    legacy_field = SimpleNamespace(
-        name="company",
-        label="Company",
-        required=True,
-        placeholder="",
-        source=SimpleNamespace(
-            endpoint="/_dazzle/fragments/search?source=companieshouse",
-            debounce_ms=400,
-            min_chars=3,
-        ),
-    )
-    legacy = _render_search_select(legacy_field, None, {})
-    substrate = _render(_BASE)
-    # The load-bearing contract tokens must appear in BOTH.
-    for token in (
-        'id="search-input-company"',
-        'id="search-results-company"',
-        'id="field-company"',
-        'hx-get="/_dazzle/fragments/search?source=companieshouse"',
-        'hx-trigger="keyup changed delay:400ms"',
-        'hx-target="#search-results-company"',
-        'hx-indicator="#search-spinner-company"',
-        'hx-params="q"',
-        'data-dz-widget="search_select"',
-        'role="combobox"',
-        'aria-controls="search-results-company"',
-        "Type at least 3 characters",
-    ):
-        assert token in legacy, f"legacy missing {token!r} (test assumption stale)"
-        assert token in substrate, f"substrate missing {token!r} — parity break"
+# NOTE: the `def test_parity_with_legacy_search_select` legacy-vs-substrate parity test was removed in ADR-0049
+# Phase 3b — `form_renderer` is deleted, so there is no legacy renderer left to
+# compare against; the substrate is now the source of truth (parity is recorded
+# in git history + the CHANGELOG). The substrate-only assertions above stand.

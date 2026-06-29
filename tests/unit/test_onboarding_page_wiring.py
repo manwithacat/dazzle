@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 
 from dazzle.http.runtime.page_routes import _inject_onboarding_step
 from dazzle.page.runtime.template_renderer import _render_typed_body
-from dazzle.render.context import FieldContext, FormContext, PageContext
+from dazzle.render.context import PageContext
 
 # ---------------------------------------------------------------------------
 # PageContext field
@@ -40,39 +40,26 @@ def test_page_context_active_guide_html_is_settable() -> None:
 # ---------------------------------------------------------------------------
 
 
+# ADR-0049 Phase 3b: list/detail/form bodies render via the substrate dispatch
+# now (where the guide overlay is prepended by `_maybe_dispatch_inner_html`'s
+# `_compose`). `_render_typed_body` raises for those modes, so these tests
+# exercise its overlay-prepend on an empty-body ctx — the prepend is plain
+# `overlay + body` concatenation, independent of the body's mode.
 def test_render_typed_body_prepends_active_guide_html() -> None:
-    form = FormContext(
-        entity_name="Widget",
-        title="Create Widget",
-        fields=[FieldContext(name="title", label="Title", field_type="string")],
-        action_url="/api/widgets",
-        method="post",
-        mode="create",
-    )
     ctx = PageContext(
         page_title="Create",
         layout="single_column",
-        form=form,
         active_guide_html='<dz-onboarding-step data-step="welcome"/>',
     )
     html = _render_typed_body(ctx)
-    assert html.startswith('<dz-onboarding-step data-step="welcome"/>')
-    assert "<form " in html  # form body still rendered
+    assert html == '<dz-onboarding-step data-step="welcome"/>'
 
 
 def test_render_typed_body_unchanged_when_overlay_empty() -> None:
-    form = FormContext(
-        entity_name="Widget",
-        title="Create Widget",
-        fields=[],
-        action_url="/api/widgets",
-        method="post",
-        mode="create",
-    )
-    ctx = PageContext(page_title="x", layout="single_column", form=form)
-    # No overlay set → body comes back un-prepended.
+    ctx = PageContext(page_title="x", layout="single_column")
+    # No overlay set → body comes back un-prepended (empty body here).
     html = _render_typed_body(ctx)
-    assert html.startswith("<form ")
+    assert html == ""
 
 
 # ---------------------------------------------------------------------------

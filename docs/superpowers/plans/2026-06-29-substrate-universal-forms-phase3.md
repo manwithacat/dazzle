@@ -70,5 +70,5 @@ Order (leverage / risk):
   - Migrate/delete legacy widget tests; regen complexity/clone/deferred baselines.
 - [ ] **Task 4 — ADR/CHANGELOG/ship.** ADR-0049 status → **Phase 3 (forms) SHIPPED → ADR fully realised (substrate is THE universal render path; legacy direct-template layer retired)**. CHANGELOG Removed + Agent Guidance. Bump, push, **monitor E2E (PostgreSQL) + fidelity tiers**.
 
-## Phase 3 gate (ADR-0049 complete)
+## Phase 3 gate (ADR-0049 complete) — ✅ MET (v0.92.31)
 - [ ] Every `mode: create`/`mode: edit` surface renders via the substrate; every fleet+fixture widget at parity; `form_renderer.py` deleted; fidelity green (search_select); full suite + card-safety + a11y + e2e/PG/browser tier green; `render is pure` + `page ↛ http` KEPT; goldens re-baselined with inspected diffs. **ADR-0049 fully delivered — the `render is None` fork is gone for all four surface modes.**

@@ -39,14 +39,7 @@ def test_single_section_has_no_connector() -> None:
     assert html.count('class="dz-form-stepper-item') == 1
 
 
-def test_parity_with_legacy_stepper() -> None:
-    """Byte-equality vs the legacy `render_form_stepper` for the same sections —
-    the dzWizard contract the client controller depends on must be identical."""
-    from types import SimpleNamespace
-
-    from dazzle.page.runtime.form_renderer import render_form_stepper
-
-    sections = ["Basics", "Details", "Review"]
-    legacy = render_form_stepper(SimpleNamespace(sections=[{"title": s} for s in sections]))
-    substrate = _R.render(FormStepper(sections=tuple(sections)))
-    assert legacy == substrate, "FormStepper drifted from legacy render_form_stepper"
+# NOTE: the `def test_parity_with_legacy_stepper` legacy-vs-substrate parity test was removed in ADR-0049
+# Phase 3b — `form_renderer` is deleted, so there is no legacy renderer left to
+# compare against; the substrate is now the source of truth (parity is recorded
+# in git history + the CHANGELOG). The substrate-only assertions above stand.

@@ -1033,8 +1033,8 @@ def _compile_form_surface(
             page_purpose=page_purpose,
             persona_purposes=persona_purposes,
             # v0.67.74: PageContext.template field is no longer read by any
-            # renderer (form rendering moved to form_renderer.py + inline
-            # Python). Empty string for clarity.
+            # renderer (form rendering moved to the typed substrate, ADR-0049
+            # Phase 3b — the legacy form_renderer is deleted). Empty for clarity.
             template="",
             form=FormContext(
                 entity_name=entity_name,
@@ -1057,8 +1057,8 @@ def _compile_form_surface(
             page_purpose=page_purpose,
             persona_purposes=persona_purposes,
             # v0.67.74: PageContext.template field is no longer read by any
-            # renderer (form rendering moved to form_renderer.py + inline
-            # Python). Empty string for clarity.
+            # renderer (form rendering moved to the typed substrate, ADR-0049
+            # Phase 3b — the legacy form_renderer is deleted). Empty for clarity.
             template="",
             form=FormContext(
                 entity_name=entity_name,

@@ -20,6 +20,12 @@ from __future__ import annotations
 import html as _html_mod
 from typing import Any
 
+# ADR-0049 Phase 3b: experience form-step fields render through the typed
+# substrate now (the legacy form_renderer is deleted). The render layer is a
+# legal dependency for the page layer (page → render), so these are module-top.
+from dazzle.render.fragment import FormStepper, FragmentRenderer
+from dazzle.render.fragment.form_field import render_field_context
+
 
 def _render_transition_button(tr: Any) -> str:
     """Inline mirror of `macros/experience_transition.html`."""
@@ -67,11 +73,10 @@ def _render_form_step_body(experience: Any, page_context: Any) -> str:
         form-urlencoded — json-enc was dropped in the htmx 4 migration)
       - empty `#form-errors` slot (htmx_error_response swaps content)
       - optional form_stepper (when sections are declared)
-      - form fields rendered via `form_renderer.render_form_field`
+      - form fields rendered via the typed substrate
+        (`render.fragment.form_field.render_field_context`, ADR-0049 Phase 3b)
       - submit button + transition buttons (excluding `success` event)
     """
-    from dazzle.page.runtime.form_renderer import render_form_field, render_form_stepper
-
     form = getattr(page_context, "form", None)
     if form is None:
         return ""
@@ -88,21 +93,22 @@ def _render_form_step_body(experience: Any, page_context: Any) -> str:
 
     sections = getattr(form, "sections", None) or []
     if sections:
-        stepper_html = render_form_stepper(form)
+
+        def _section_title(s: Any) -> str:
+            return s.get("title", "") if isinstance(s, dict) else getattr(s, "title", "")
+
+        stepper_html = FragmentRenderer().render(
+            FormStepper(sections=tuple(str(_section_title(s) or "") for s in sections))
+        )
         stage_blocks: list[str] = []
         for idx, section in enumerate(sections):
-            section_title = (
-                section.get("title", "")
-                if isinstance(section, dict)
-                else getattr(section, "title", "")
-            )
-            section_title_html = _html_mod.escape(str(section_title or ""), quote=False)
+            section_title_html = _html_mod.escape(str(_section_title(section) or ""), quote=False)
             fields = (
                 section.get("fields", [])
                 if isinstance(section, dict)
                 else getattr(section, "fields", None) or []
             )
-            field_html = "".join(render_form_field(f, initial_values) for f in fields)
+            field_html = "".join(render_field_context(f, initial_values) for f in fields)
             hide_style = ' style="display:none"' if idx > 0 else ""
             stage_blocks.append(
                 f'<div class="dz-wizard-stage" data-dz-stage="{idx}"{hide_style}>'  # nosemgrep
@@ -113,7 +119,7 @@ def _render_form_step_body(experience: Any, page_context: Any) -> str:
         fields_body = stepper_html + "".join(stage_blocks)
     else:
         fields_body = "".join(
-            render_form_field(f, initial_values) for f in (getattr(form, "fields", None) or [])
+            render_field_context(f, initial_values) for f in (getattr(form, "fields", None) or [])
         )
 
     transition_buttons = "".join(

@@ -131,38 +131,7 @@ def test_no_help_no_describedby() -> None:
     assert "dz-form-hint" not in html
 
 
-# ── parity vs legacy ─────────────────────────────────────────────────────────
-
-
-def test_field_wrapper_matches_legacy() -> None:
-    """Both legacy and substrate wrap each field in `<div class="dz-form-field">`."""
-    from types import SimpleNamespace
-
-    from dazzle.page.runtime.form_renderer import render_form_field
-
-    legacy = render_form_field(
-        SimpleNamespace(
-            name="title",
-            label="Title",
-            type="text",
-            required=True,
-            help="",
-            default=None,
-            widget=None,
-            source=None,
-            ref_entity="",
-            placeholder="",
-        )
-    )
-    substrate = _render({"name": "title", "label": "Title", "kind": "text", "required": True})
-    for tok in (
-        '<div class="dz-form-field">',
-        '<label for="field-title" class="dz-form-label">',
-        'id="field-title"',
-        'data-dazzle-field="title"',
-        'class="dz-form-input"',
-        'required aria-required="true"',
-        'class="dz-form-required"',
-    ):
-        assert tok in legacy, f"legacy missing {tok!r} (assumption stale)"
-        assert tok in substrate, f"substrate missing {tok!r} — parity break"
+# NOTE: the `def test_field_wrapper_matches_legacy` legacy-vs-substrate parity test was removed in ADR-0049
+# Phase 3b — `form_renderer` is deleted, so there is no legacy renderer left to
+# compare against; the substrate is now the source of truth (parity is recorded
+# in git history + the CHANGELOG). The substrate-only assertions above stand.

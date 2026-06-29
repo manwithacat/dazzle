@@ -42,6 +42,7 @@ from dazzle.rbac.matrix import generate_access_matrix
 from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
 from dazzle.render.display_names import _inject_display_names
+from dazzle.render.fragment.form_field import field_context_to_dict
 
 logger = logging.getLogger(__name__)
 
@@ -1641,96 +1642,14 @@ def _build_dispatch_ctx(
 
     form = getattr(render_ctx, "form", None)
     if form is not None:
-        fields_out: list[dict[str, Any]] = []
         initial_values = getattr(form, "initial_values", {}) or {}
-        for field in getattr(form, "fields", []) or []:
-            fname = getattr(field, "name", "")
-            kind = getattr(field, "type", None) or "str"
-            raw_value = initial_values.get(fname, "")
-            entry = {
-                "name": fname,
-                "label": getattr(field, "label", "") or fname,
-                "kind": str(kind).lower(),
-                "required": bool(getattr(field, "required", False)),
-                "value": raw_value or "",
-                "placeholder": getattr(field, "placeholder", "") or "",
-            }
-            options = getattr(field, "options", None)
-            if options:
-                # Each option dict has {"value": ..., "label": ...}
-                entry["options"] = [
-                    (str(o.get("value", "")), str(o.get("label", o.get("value", ""))))
-                    for o in options
-                ]
-            # #3b review: thread `help:` text + the field `default` so the
-            # substrate field emitters can render the hint paragraph + the
-            # CREATE-mode default value (legacy `render_form_field` parity).
-            help_text = str(getattr(field, "help", "") or "")
-            if help_text:
-                entry["help"] = help_text
-            # ADR-0049 Phase 3a: thread the `widget=` override + the field
-            # default + extra config (slider min/max/step, rich_text
-            # toolbar/maxLength) so the adapter can build the matching widget
-            # primitive (combobox/tags/picker/color/slider/rich_text).
-            widget = getattr(field, "widget", None)
-            if widget:
-                entry["widget"] = str(widget)
-            field_default = getattr(field, "default", None)
-            if field_default not in (None, ""):
-                entry["default"] = str(field_default)
-            field_extra_all = getattr(field, "extra", None) or {}
-            if field_extra_all and "extra" not in entry:
-                entry["extra"] = field_extra_all
-            # ADR-0049 Phase 3a: thread a `: money` field's currency config
-            # (`extra`) + persisted minor units so the adapter's MONEY branch
-            # can build a MoneyField (legacy `_render_money` parity).
-            if str(kind).lower() == "money":
-                field_extra = getattr(field, "extra", None) or {}
-                if field_extra:
-                    entry["extra"] = field_extra
-                minor_initial = str(initial_values.get(f"{fname}_minor", "") or "")
-                if minor_initial:
-                    entry["minor_initial"] = minor_initial
-            # ADR-0049 Phase 3a: thread `source:` (search_select typeahead)
-            # into the dispatch ctx so the adapter's SEARCH_SELECT branch can
-            # produce a SearchSelect primitive. FieldSourceContext carries the
-            # search endpoint + debounce + min_chars the legacy widget reads.
-            source = getattr(field, "source", None)
-            source_endpoint = str(getattr(source, "endpoint", "") or "") if source else ""
-            if source_endpoint:
-                entry["source"] = {
-                    "endpoint": source_endpoint,
-                    "debounce_ms": int(getattr(source, "debounce_ms", 300) or 300),
-                    "min_chars": int(getattr(source, "min_chars", 0) or 0),
-                }
-            # Plan 14: thread ref_api into Fragment dispatch ctx so the
-            # adapter's REF branch can produce a RefPicker primitive.
-            ref_api = str(getattr(field, "ref_api", "") or "")
-            if ref_api:
-                entry["ref_api"] = ref_api
-            initial_label_value = str(getattr(field, "initial_label", "") or "")
-            if initial_label_value:
-                entry["initial_label"] = initial_label_value
-            # Issue #1027: ref-typed fields in EDIT mode receive an
-            # eagerly-expanded related-record dict from the loader,
-            # not the bare FK UUID. Coerce to the FK scalar and lift
-            # a sensible display value into `initial_label` so the
-            # dropdown reads something while the lazy fetch resolves.
-            if ref_api and isinstance(raw_value, dict):
-                entry["value"] = str(raw_value.get("id", "") or "")
-                if not entry.get("initial_label"):
-                    for label_key in (
-                        "__display__",
-                        "name",
-                        "title",
-                        "label",
-                        "email",
-                        "code",
-                    ):
-                        if raw_value.get(label_key):
-                            entry["initial_label"] = str(raw_value[label_key])
-                            break
-            fields_out.append(entry)
+        # ADR-0049 Phase 3b: the per-field FieldContext→dict mapping moved to
+        # the render layer (`render.fragment.form_field.field_context_to_dict`)
+        # so the page-layer experience form renderer can share it (page ↛ http).
+        fields_out: list[dict[str, Any]] = [
+            field_context_to_dict(field, initial_values)
+            for field in getattr(form, "fields", []) or []
+        ]
         is_edit = str(getattr(form, "mode", "create")).lower() == "edit"
         # Issue #1031: thread `form.sections` into the ctx alongside the
         # flat fields. The adapter prefers sections when populated;

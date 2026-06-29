@@ -103,7 +103,8 @@ def generate_preview_files(
             generated.append(empty_path)
 
         elif surface.mode == SurfaceMode.CREATE:
-            html = render_page(ctx)
+            # ADR-0049 Phase 3b: forms render via the substrate.
+            html = _render_surface_body_preview(ctx, surface, surface_body_renderer)
             file_path = output_path / f"{slug}-create.html"
             file_path.write_text(html, encoding="utf-8")
             generated.append(file_path)
@@ -120,7 +121,8 @@ def generate_preview_files(
                     if ctx.form.cancel_url:
                         ctx.form.cancel_url = ctx.form.cancel_url.replace("{id}", str(item_id))
 
-            html = render_page(ctx)
+            # ADR-0049 Phase 3b: forms render via the substrate.
+            html = _render_surface_body_preview(ctx, surface, surface_body_renderer)
             file_path = output_path / f"{slug}-edit.html"
             file_path.write_text(html, encoding="utf-8")
             generated.append(file_path)

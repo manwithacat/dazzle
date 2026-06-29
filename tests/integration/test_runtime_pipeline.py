@@ -32,13 +32,18 @@ from dazzle.page.specs import UISpec
 
 
 def _render_page_for_pipeline(route: str, ctx: object) -> str:
-    """ADR-0049: list (Phase 1) and detail/view (Phase 2) pages render via the
-    substrate dispatch (the http route), not `render_page` — so `render_page`
-    raises a loud error for a list/detail ctx (D4: no silent legacy fallback).
-    For form ctx it renders as before. Returns the rendered HTML, or "" for a
-    list/detail ctx (after asserting the loud error), so pipeline loops can
-    skip the length assertions for substrate-rendered surfaces."""
-    if getattr(ctx, "table", None) is not None or getattr(ctx, "detail", None) is not None:
+    """ADR-0049: list (Phase 1), detail/view (Phase 2) and create/edit forms
+    (Phase 3) render via the substrate dispatch (the http route), not
+    `render_page` — so `render_page` raises a loud error for any of those ctx
+    (D4: no silent legacy fallback). Only pdf_viewer / empty ctx still render
+    via `render_page`. Returns the rendered HTML, or "" for a substrate-mode ctx
+    (after asserting the loud error), so pipeline loops can skip its assertions."""
+    is_substrate_mode = (
+        getattr(ctx, "table", None) is not None
+        or getattr(ctx, "detail", None) is not None
+        or getattr(ctx, "form", None) is not None
+    )
+    if is_substrate_mode:
         with pytest.raises(RuntimeError, match="typed substrate"):
             render_page(ctx)  # type: ignore[arg-type]
         return ""

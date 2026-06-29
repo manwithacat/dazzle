@@ -117,8 +117,9 @@ _TYPED_ONLY_MODULES = (
     # v0.67.71 — experience-shell rendering owned by
     # `experience_renderer.render_experience_inner_html` (inline Python).
     "src/dazzle/http/runtime/experience_routes.py",
-    # v0.67.74 — form_field/form_stepper/search_select inlined.
-    "src/dazzle/page/runtime/form_renderer.py",
+    # v0.67.74 — form_field/form_stepper/search_select inlined; the whole module
+    # deleted in ADR-0049 Phase 3b (create/edit render via the typed substrate
+    # now), so there is no file left to scan.
     # v0.67.75 — detail_view + related-* fragments inlined; the whole module
     # deleted in ADR-0049 Phase 2 (detail/view renders via the typed substrate
     # now), so there is no file left to scan.
