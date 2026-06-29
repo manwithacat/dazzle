@@ -72,3 +72,26 @@ def test_audit_history_slot_when_show_history() -> None:
 def test_no_audit_history_by_default() -> None:
     html = _render(_detail())
     assert "dz-detail-audit-history" not in html
+
+
+# ── peek mode (flip review SEV-2): content-only, no Surface header / Back ──
+
+
+def test_peek_mode_omits_surface_header_and_back() -> None:
+    ctx = _build_dispatch_ctx(_RC(_detail(back_url="/task")), _Surface())
+    ctx["peek"] = True
+    html = FragmentRenderer().render(FragmentSurfaceAdapter()._build_view(_Surface(), ctx))
+    # no page-level Surface chrome / h1 (peek panel lives in a list-row <td>)
+    assert "dz-surface" not in html
+    assert "dz-heading--level-1" not in html
+    # no Back link in an inline peek
+    assert "← Back" not in html
+    # but the detail content + entity anchor are still present
+    assert "dz-region--kind-detail" in html
+    assert 'data-dazzle-entity="Task"' in html
+
+
+def test_non_peek_keeps_surface_header() -> None:
+    html = _render(_detail(back_url="/task"))
+    assert "dz-surface" in html
+    assert "← Back" in html

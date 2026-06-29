@@ -121,19 +121,31 @@ class _RenderInteractiveMixin:
         )
         attr_str = f" {attrs}" if attrs else ""
         disabled = ' disabled="disabled"' if b.visibility == "disabled" else ""
-        action_attr = (
-            f' data-dazzle-action="{ctx.escape_attr(b.data_action)}"' if b.data_action else ""
-        )
+        action_attr = self._action_attrs(b.data_action, ctx)
         label = ctx.escape(b.label)
         return (
             f'<button type="button" class="{cls}"{action_attr}{attr_str}{disabled}>{label}</button>'
         )
 
+    @staticmethod
+    def _action_attrs(data_action: str, ctx: RenderContext) -> str:
+        """Build the action anchors from `data_action` (`"{entity}.{verb}"`):
+        `data-dazzle-action` + the `data-dz-action` (verb) / `data-dz-entity`
+        pair that `dz-analytics.js` delegates on (ADR-0049 Phase 2)."""
+        if not data_action:
+            return ""
+        entity, sep, verb = data_action.partition(".")
+        out = f' data-dazzle-action="{ctx.escape_attr(data_action)}"'
+        if sep:
+            out += (
+                f' data-dz-action="{ctx.escape_attr(verb)}"'
+                f' data-dz-entity="{ctx.escape_attr(entity)}"'
+            )
+        return out
+
     def _emit_link(self, link: Link, ctx: RenderContext) -> str:
         href = ctx.escape_attr(str(link.href))
-        action_attr = (
-            f' data-dazzle-action="{ctx.escape_attr(link.data_action)}"' if link.data_action else ""
-        )
+        action_attr = self._action_attrs(link.data_action, ctx)
         tab_attr = ' target="_blank" rel="noopener noreferrer"' if link.new_tab else ""
         return (
             f'<a class="dz-link" href="{href}"{action_attr}{tab_attr}>{ctx.escape(link.label)}</a>'

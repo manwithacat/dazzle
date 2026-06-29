@@ -17,6 +17,7 @@ import json
 from typing import Any
 
 from dazzle.render.filters import (
+    _basename_or_url_filter,
     _bool_icon_filter,
     _currency_filter,
     _date_filter,
@@ -143,7 +144,7 @@ def _render_cell_display(col: dict[str, Any], value: Any) -> str:
         return str(_bool_icon_filter(value))
     if col_type == "date":
         return _html_mod.escape(_date_filter(value), quote=False)
-    if col_type == "currency":
+    if col_type in ("currency", "money"):
         currency_code = col.get("currency_code") or "GBP"
         return _html_mod.escape(_currency_filter(value, currency_code), quote=False)
     if col_type == "sensitive":
@@ -166,6 +167,17 @@ def _render_cell_display(col: dict[str, Any], value: Any) -> str:
         if value is None:
             return "—"
         return _html_mod.escape(f"{value}%", quote=False)
+    if col_type == "file":
+        # ADR-0049 Phase 2: file fields render a download link (detail-view
+        # parity). Files aren't typical list columns, so this is additive.
+        if value in (None, "", "—"):
+            return "—"
+        href = _html_mod.escape(str(value), quote=True)
+        label = _html_mod.escape(str(_basename_or_url_filter(value)), quote=False)
+        return (
+            f'<a href="{href}" target="_blank" rel="noopener" class="dz-detail-file-link">'
+            f"{label}</a>"
+        )
     # Default text cell — truncated.
     return (
         '<span class="dz-tr-cell-truncate">'

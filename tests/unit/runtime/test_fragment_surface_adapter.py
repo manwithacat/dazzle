@@ -86,8 +86,10 @@ def test_view_mode_produces_surface_with_detail_region() -> None:
 
 
 def test_view_mode_field_row_shape() -> None:
-    """Plan 8 — each field renders as Row(Heading, Text)."""
-    from dazzle.render.fragment import Heading, Row, Text
+    """Each field renders as Row(Heading, value). ADR-0049 Phase 2: the value
+    goes through the typed cell core (`_render_cell_display`), so it's RawHTML
+    (the typed rendering) rather than a plain Text."""
+    from dazzle.render.fragment import Heading, RawHTML, Row
 
     surface = SurfaceSpec(name="x", title="X", mode=SurfaceMode.VIEW, entity_ref="Task")
     ctx = {
@@ -101,8 +103,8 @@ def test_view_mode_field_row_shape() -> None:
     label, value = first_row.children
     assert isinstance(label, Heading)
     assert label.body == "Title"
-    assert isinstance(value, Text)
-    assert value.body == "Hello"
+    assert isinstance(value, RawHTML)
+    assert "Hello" in value.html
 
 
 def test_view_mode_handles_no_fields_gracefully() -> None:

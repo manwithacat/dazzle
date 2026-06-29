@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.23] - 2026-06-29
+
+### Fixed
+- **Substrate detail field-value parity + peek + analytics (ADR-0049 Phase 2 — pre-flip review fixes).** The independent adversarial review before the `mode: view` flip caught real fleet-breakers in the substrate detail view:
+  - **Field values regressed on every detail page:** `ref`/FK fields rendered the raw UUID (now the resolved `{name}_display`), `money`/`currency` rendered raw minor units (now formatted), `badge`/status lost the WCAG badge chrome (now `dz-badge` + tone + icon + `role="status"`), `bool` rendered text (now the ✓/✗ icon), `file` lost the download link (now restored). Fixed by routing detail field values through the **same typed-cell core the list rows use** (`_render_cell_display`, +a `file` + `money` branch) and threading the missing ctx inputs (`currency_code`/`semantic_map` + ref `_display`) — the recurring "incomplete dispatch ctx" trap.
+  - **peek (`?peek=1`):** the substrate detail would inject a full `dz-surface` + page `<h1>` + Back link into a list-row `<td>`. `_build_view` now has a content-only peek mode (`ctx["peek"]`) that omits the Surface header + Back, like the legacy peek body.
+  - **analytics:** detail action buttons now emit `data-dz-action` (verb) + `data-dz-entity` (the pair `dz-analytics.js` delegates on), derived from `data_action`.
+
 ## [0.92.22] - 2026-06-29
 
 ### Fixed

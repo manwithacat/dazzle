@@ -1740,13 +1740,27 @@ def _build_dispatch_ctx(
         detail_fields_out: list[dict[str, Any]] = []
         for f in getattr(detail, "fields", []) or []:
             field_name = getattr(f, "name", "") or getattr(f, "key", "")
+            kind = getattr(f, "type", "text") or "text"
             value = item.get(field_name, "") if isinstance(item, dict) else ""
+            # ADR-0049 Phase 2 (flip review): for ref fields prefer the resolved
+            # `{name}_display` / `{rel}_display` (else the raw UUID renders).
+            if kind == "ref" and isinstance(item, dict):
+                rel = field_name[:-3] if field_name.endswith("_id") else field_name
+                value = item.get(f"{rel}_display") or item.get(f"{field_name}_display") or value
+            extra = getattr(f, "extra", None) or {}
+            currency_code = (
+                str(extra.get("currency_code", "") or "") if isinstance(extra, dict) else ""
+            )
             detail_fields_out.append(
                 {
                     "key": field_name,
                     "label": getattr(f, "label", "") or field_name,
                     "value": "" if value is None else value,
-                    "kind": getattr(f, "type", "text") or "text",
+                    "kind": kind,
+                    # flip-review fix: thread the typed-render inputs the
+                    # substrate cell core needs (currency / badge tone).
+                    "currency_code": currency_code,
+                    "semantic_map": dict(getattr(f, "enum_semantics", {}) or {}),
                 }
             )
         # #1217 Phase 3e: when a section has subtype_panel and the row's

@@ -48,12 +48,29 @@ from dazzle.render.fragment import (
     Text,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.fragment.renderer._data_row import _render_cell_display
 from dazzle.render.html import esc as _html_esc
 
 
 def _esc_attr(s: str) -> str:
     """Attribute-escape for the few RawHTML escape-hatch interpolations."""
     return _html_esc(str(s), quote=True)
+
+
+def _detail_field_value(f: dict[str, Any]) -> Fragment:
+    """ADR-0049 Phase 2 (flip review): render one detail field VALUE through the
+    same typed-cell core the list rows use (`_render_cell_display`) — so `ref`
+    (display name), `money`/`currency`, `badge` (WCAG chrome), `bool` (icon),
+    `file` (download link) all render at parity instead of as a raw value."""
+    value = f.get("value")
+    if value in (None, "", "—"):
+        return Text("—")
+    col = {
+        "type": str(f.get("kind", "text") or "text"),
+        "currency_code": str(f.get("currency_code", "") or ""),
+        "semantic_map": dict(f.get("semantic_map", {}) or {}),
+    }
+    return RawHTML(_render_cell_display(col, value))
 
 
 class FragmentSurfaceAdapter:
@@ -241,7 +258,7 @@ class FragmentSurfaceAdapter:
             body=Region(kind="list", body=body, data_table=entity_name, mount=mount),
         )
 
-    def _build_view(self, surface: SurfaceLike, ctx: dict[str, Any]) -> Surface:
+    def _build_view(self, surface: SurfaceLike, ctx: dict[str, Any]) -> Fragment:
         """Detail surface — fields + action toolbar + related groups.
 
         Plan 8: each field renders as a Row of (Heading-level-4 label,
@@ -271,15 +288,7 @@ class FragmentSurfaceAdapter:
                 Row(
                     children=(
                         Heading(str(f.get("label", f.get("key", ""))), level=4),
-                        Text(
-                            _format_cell(
-                                f.get("value"),
-                                str(f.get("kind", "text")),
-                                str(f.get("currency_code", "")),
-                                str(f.get("format_kind", "")),
-                                str(f.get("format_arg", "")),
-                            )
-                        ),
+                        _detail_field_value(f),
                     ),
                     align="start",
                 )
@@ -304,10 +313,16 @@ class FragmentSurfaceAdapter:
             )
             detail_body = Stack(children=(detail_body, audit), gap="md")
 
+        # ADR-0049 Phase 2 (flip review): peek mode (`?peek=1`) injects this body
+        # into a list-row `<td>` panel. Omit the page-level Surface header (no
+        # second `<h1>` on the page) + the Back link (you don't navigate back
+        # from an inline peek) — content-only, like the legacy peek body.
+        peek = bool(ctx.get("peek"))
+
         # Issue #1030: action toolbar — Back / Edit / Delete / transitions /
         # integration / external-link actions.
         back_url = str(ctx.get("back_url", "") or "").strip()
-        back = (Link(label="← Back", href=URL(back_url)),) if back_url else ()
+        back = (Link(label="← Back", href=URL(back_url)),) if (back_url and not peek) else ()
         actions = back + self._build_detail_actions(ctx)
         if actions:
             detail_body = Stack(
@@ -318,9 +333,13 @@ class FragmentSurfaceAdapter:
         def _detail_region(body: Fragment) -> Region:
             return Region(kind="detail", body=body, data_entity=entity_name, data_entity_id=item_id)
 
+        def _wrap(region: Region) -> Fragment:
+            # Peek = content-only (the Region itself, no Surface chrome / h1).
+            return region if peek else Surface(header=Heading(title, level=1), body=region)
+
         related_groups: list[dict[str, Any]] = ctx.get("related_groups", []) or []
         if not related_groups:
-            return Surface(header=Heading(title, level=1), body=_detail_region(detail_body))
+            return _wrap(_detail_region(detail_body))
 
         # ADR-0049 Phase 2 Task 3a: render the FETCHED related-group content
         # (table / status_cards / file_list) instead of a Skeleton placeholder.
@@ -347,7 +366,7 @@ class FragmentSurfaceAdapter:
 
         # Outer Region uses kind="detail" since the surface IS a detail
         # surface; the inner sub-regions carry kind="related" for CSS.
-        return Surface(header=Heading(title, level=1), body=_detail_region(wrapper))
+        return _wrap(_detail_region(wrapper))
 
     def _build_list_toolbar(
         self,
