@@ -29,6 +29,7 @@ from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.ir import SurfaceMode
 from dazzle.core.ir.integrations import MappingTriggerType
 from dazzle.core.strings import to_api_plural
+from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
 from dazzle.page import app_paths
 from dazzle.page.converters.nav_builder import (
     NavGroup,
@@ -1933,12 +1934,13 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     surface = appspec.get_surface(surface_name) if appspec is not None else None
     if surface is None:
         return None
-    # ADR-0049 Phase 1 (the flip): `mode: list` surfaces dispatch to the typed
-    # substrate even when `render is None` (the fleet default) — the substrate
-    # is now the universal list render path. VIEW / CREATE / EDIT with an unset
-    # `render` stay on the legacy direct-template path until their own phases.
-    # CUSTOM is dispatched by the branch below only when `render` is set.
-    if surface.render is None and surface.mode != SurfaceMode.LIST:
+    # ADR-0049: `mode: list` (Phase 1) and `mode: view` (Phase 2) surfaces
+    # dispatch to the typed substrate even when `render is None` (the fleet
+    # default) — the substrate is the universal render path for those modes.
+    # CREATE / EDIT with an unset `render` stay on the legacy direct-template
+    # path until Phase 3. CUSTOM is dispatched by the branch below only when
+    # `render` is set.
+    if surface.render is None and surface.mode not in (SurfaceMode.LIST, SurfaceMode.VIEW):
         return None
 
     # Services live on the FastAPI app state. Fall back to legacy path
@@ -2014,6 +2016,10 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
         return None
 
     ctx_dict = _build_dispatch_ctx(render_ctx, surface, services=services)
+    # ADR-0049 Phase 2: a peek fetch (`?peek=1`) wants the detail body
+    # content-only (no Surface header / Back) — it loads into an inline list-row
+    # panel. `_build_view` reads this flag.
+    ctx_dict["peek"] = is_peek_request(prc.request)
     try:
         return _compose(dispatch_render(surface, ctx=ctx_dict, services=services))
     except FragmentError as e:
@@ -2458,8 +2464,6 @@ async def _workspace_handler(
                 status_code=403,
                 detail="You don't have permission to access this workspace.",
             )
-
-    from dazzle.http.runtime.htmx import HtmxDetails
 
     htmx = HtmxDetails.from_request(request)
 

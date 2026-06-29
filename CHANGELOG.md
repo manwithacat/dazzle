@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.24] - 2026-06-29
+
+### Changed
+- **THE VIEW FLIP — `mode: view` (detail) surfaces now render through the typed substrate by default (ADR-0049 Phase 2 Task 5).** `page_routes.py::_maybe_dispatch_inner_html` dispatches view surfaces to the substrate even when `render is None` (joining `mode: list` from Phase 1); the legacy `render_detail_view` now runs only as a fallback (deleted in Task 6). The `?peek=1` inline detail-panel rides on the same dispatch and is wired content-only (`ctx["peek"]` → `_build_view` omits the Surface header + Back). create/edit stay legacy until Phase 3. Gated by an independent adversarial review whose findings were all fixed pre-flip (v0.92.23). Verified: the substrate detail renders with 0 card-safety violations (peek + non-peek), peek is content-only (no duplicate `<h1>`, no `dz-surface`), and field values (badge/money/ref/related) render at parity; full unit suite (19291) + card-safety composite green. **Breaking-ish for downstreams that scraped legacy detail DOM:** the detail wrapper is now `<section class="dz-region dz-region--kind-detail">` (was `<div class="dz-detail">`); the `<dt>/<dd>` definition list became `Row(Heading, value)`.
+
+### Agent Guidance
+- **Default `mode: view` surfaces render via the substrate now, not the legacy `detail_renderer`.** Same model as list (Phase 1): `_build_view` (`fragment_adapter.py`) owns detail rendering; the dispatch fork in `_maybe_dispatch_inner_html` only falls through to legacy for create/edit (unset `render`). Detail field VALUES go through the shared `_render_cell_display` cell core (the same one list rows use) — typed badge/bool/date/currency/money/ref/file. peek (`?peek=1`) renders content-only via `ctx["peek"]`. To change detail appearance, edit `_build_view` + the `render/` primitives, never `page/runtime/detail_renderer.py` (deleted in Task 6). Thread any new field a detail reads through BOTH `_build_dispatch_ctx`'s detail branch AND `_build_view`.
+
 ## [0.92.23] - 2026-06-29
 
 ### Fixed

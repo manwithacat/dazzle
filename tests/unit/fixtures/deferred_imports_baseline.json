@@ -188,7 +188,7 @@
   "src/dazzle/http/runtime/model_generator.py": 1,
   "src/dazzle/http/runtime/ops_database.py": 3,
   "src/dazzle/http/runtime/ops_integration.py": 4,
-  "src/dazzle/http/runtime/page_routes.py": 25,
+  "src/dazzle/http/runtime/page_routes.py": 24,
   "src/dazzle/http/runtime/pg_backend.py": 6,
   "src/dazzle/http/runtime/policy.py": 9,
   "src/dazzle/http/runtime/predicate_compiler.py": 1,
