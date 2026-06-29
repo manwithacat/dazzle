@@ -110,6 +110,7 @@ from dazzle.render.fragment.primitives import (
     RelatedTab,
     Row,
     SearchBox,
+    SearchSelect,
     Sequence,
     Sidebar,
     Skeleton,
@@ -327,6 +328,7 @@ __all__ = [
     "Field",
     "Combobox",
     "RefPicker",
+    "SearchSelect",
     "FileUpload",
     "Submit",
     # primitives — navigation

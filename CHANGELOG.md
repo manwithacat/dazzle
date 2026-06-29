@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.26] - 2026-06-29
+
+### Added
+- **Substrate `SearchSelect` form primitive — ADR-0049 Phase 3a (forms), widget 1/9.** The typed Fragment substrate now has a `source:` typeahead picker at parity with the legacy `form_renderer._render_search_select` (the only `search_select` impl, used by ~21 fleet DSL files and enforced by the fidelity scorer). `SearchSelect` (`render/fragment/primitives/forms.py`) + `_emit_search_select` (`_render_forms.py`) reproduce the exact mount-attribute contract the client JS + fidelity gate key off: `search-input-{name}` / `search-results-{name}` ids, hidden FK input, `hx-get` typeahead with `delay:` debounce, `hx-indicator`, `min_chars` empty-state prompt, self-contained Alpine open/close. `_field_to_primitive` routes a field with a non-empty `source` dict (threaded by `page_routes._build_dispatch_ctx`) to it. Not yet wired into the default render path — forms flip to the substrate in Phase 3b after all widgets are ported. Parity pinned by `test_form_widget_search_select_phase3.py` (incl. a direct legacy-vs-substrate token-parity check).
+
+### Agent Guidance
+- **ADR-0049 Phase 3 (forms) is "build widgets, then flip" (3a→3b), NOT a direct flip+delete.** Unlike list/view (chrome convergence), the substrate form path is missing 8 fleet-used widgets `form_renderer.py` is the sole impl of (search_select/rich_text/picker/combobox-parity/slider/color/tags/money). Each ships as a substrate primitive that emits the *same* `data-dz-widget`/`data-dz-options`/`x-data` mount attributes (the Alpine/TomSelect/Flatpickr controllers already exist client-side — porting = attribute parity, not new JS). Adding a form widget = primitive (`primitives/forms.py`) + `_emit_*` (`renderer/_render_forms.py`) + register in 5 places (`Fragment` union in `primitives/_base.py`, `_emit` match in `renderer/_emit.py`, `primitives/__init__` + `render/fragment/__init__` exports, the exhaustiveness/alias sample harnesses) + `_field_to_primitive` mapper branch + thread the dispatch-ctx keys in `_build_dispatch_ctx`. `multi_select`/`date_range` are dead (zero usage) — drop, don't port. Plan: `docs/superpowers/plans/2026-06-29-substrate-universal-forms-phase3.md`.
+
 ## [0.92.25] - 2026-06-29
 
 ### Removed

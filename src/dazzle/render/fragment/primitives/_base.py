@@ -94,6 +94,7 @@ from dazzle.render.fragment.primitives.forms import (
     FormSection,
     FormStack,
     RefPicker,
+    SearchSelect,
     Submit,
 )
 from dazzle.render.fragment.primitives.interactive import (
@@ -213,6 +214,7 @@ Fragment = (
     | Field
     | Combobox
     | RefPicker
+    | SearchSelect
     | FileUpload
     | Submit
     # Escape hatches

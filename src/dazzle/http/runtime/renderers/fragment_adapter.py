@@ -40,6 +40,7 @@ from dazzle.render.fragment import (
     RelatedTab,
     Row,
     SearchBox,
+    SearchSelect,
     SortHeader,
     Stack,
     Submit,
@@ -667,7 +668,7 @@ class FragmentSurfaceAdapter:
 
 def _field_to_primitive(
     field_dict: dict[str, Any],
-) -> "Field | Combobox | RefPicker | FileUpload":
+) -> "Field | Combobox | RefPicker | SearchSelect | FileUpload":
     """Map a field-shape dict to the right Fragment form primitive.
 
     The `kind` carried in field_dict is the *widget* kind — matching
@@ -703,6 +704,25 @@ def _field_to_primitive(
             required=required,
             accept=str(field_dict.get("accept", "") or ""),
             max_size_bytes=int(field_dict.get("max_size_bytes", 0) or 0),
+            initial_value=initial_value,
+            initial_label=str(field_dict.get("initial_label", "") or ""),
+        )
+
+    # SEARCH_SELECT: a `source:` typeahead field. Distinguished by a
+    # non-empty `source` dict (endpoint/debounce/min_chars), threaded by
+    # `_build_dispatch_ctx`. Checked before ref_api/options — a source
+    # field is a remote-search combobox, not a static enum or full-list ref.
+    source = field_dict.get("source") or {}
+    source_endpoint = str(source.get("endpoint", "") or "").strip() if source else ""
+    if source_endpoint:
+        return SearchSelect(
+            name=name,
+            label=label,
+            endpoint=URL(source_endpoint),
+            required=required,
+            placeholder=placeholder,
+            debounce_ms=int(source.get("debounce_ms", 300) or 300),
+            min_chars=int(source.get("min_chars", 0) or 0),
             initial_value=initial_value,
             initial_label=str(field_dict.get("initial_label", "") or ""),
         )

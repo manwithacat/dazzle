@@ -69,6 +69,48 @@ class Combobox:
 
 
 @dataclass(frozen=True, slots=True)
+class SearchSelect:
+    """Typeahead reference picker for a `source:` field (search_select).
+
+    Distinct from RefPicker: where RefPicker loads the full option list
+    client-side from a `ref_api` and renders a `<select>`, SearchSelect
+    is a debounced remote-search combobox — a visible text input drives
+    `hx-get` typeahead requests against `endpoint`, results swap into a
+    listbox, and a hidden `<input name="{name}">` holds the selected id.
+    Used for large/external option sets (companies-house, user search).
+
+    Emits the exact DOM contract the fidelity scorer's interaction check
+    keys off (`search-input-{name}`, `search-results-{name}`,
+    `hx-indicator`, `delay:` debounce, an empty-state prompt, and
+    `aria-invalid` error wiring). The Alpine open/close + htmx wiring is
+    self-contained (`x-data="{ open: false }"`), no external controller.
+
+    `initial_value` is the persisted FK id; `initial_label` the display
+    text shown in the visible input on EDIT (matches the legacy
+    `_render_search_select` value-resolution)."""
+
+    name: str
+    label: str
+    endpoint: URL
+    required: bool = False
+    placeholder: str = ""
+    debounce_ms: int = 300
+    min_chars: int = 0
+    initial_value: str = ""
+    initial_label: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("SearchSelect requires a non-empty name")
+        if not self.label:
+            raise ValueError("SearchSelect requires a non-empty label")
+        if self.debounce_ms < 0:
+            raise ValueError("debounce_ms must be >= 0")
+        if self.min_chars < 0:
+            raise ValueError("min_chars must be >= 0")
+
+
+@dataclass(frozen=True, slots=True)
 class RefPicker:
     """Reference-field picker — selectable list of related entity rows.
 

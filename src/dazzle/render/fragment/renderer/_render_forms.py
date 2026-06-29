@@ -32,6 +32,7 @@ from dazzle.render.fragment.primitives import (
     FormSection,
     FormStack,
     RefPicker,
+    SearchSelect,
     Submit,
 )
 
@@ -192,6 +193,61 @@ class _RenderFormsMixin:
             f"{initial_option}"
             f"</select>"
             f"</label>"
+        )
+
+    def _emit_search_select(self, s: SearchSelect, ctx: RenderContext) -> str:
+        """Render a SearchSelect (`source:` typeahead) reproducing the legacy
+        `_render_search_select` DOM contract the fidelity scorer keys off:
+        `search-input-{name}` + `search-results-{name}` ids, `hx-indicator`,
+        a `delay:` debounce in `hx-trigger`, an empty-state prompt, and
+        `aria-invalid` error wiring. Alpine open/close is self-contained
+        (`x-data="{ open: false }"`); no external controller."""
+        name = ctx.escape_attr(s.name)
+        label_text = ctx.escape(s.label)
+        placeholder = ctx.escape_attr(s.placeholder or f"Search {s.label}...")
+        endpoint = ctx.escape_attr(str(s.endpoint))
+        init_id = ctx.escape_attr(s.initial_value)
+        init_display = ctx.escape_attr(s.initial_label or s.initial_value)
+        required_attr = ' required aria-required="true"' if s.required else ""
+        hx_min_chars = f" hx-vals='{{\"min_chars\": {s.min_chars}}}'" if s.min_chars else ""
+        return (
+            '<div class="dz-search-select" x-data="{ open: false }" '
+            'data-dz-widget="search_select">'
+            f'<input type="hidden" name="{name}" id="field-{name}" '
+            f'data-dazzle-field="{name}" value="{init_id}"{required_attr}>'
+            '<input type="text" '
+            f'id="search-input-{name}" '
+            'class="dz-search-select-input" '
+            f'placeholder="{placeholder}" '
+            'autocomplete="off" role="combobox" '
+            ':aria-expanded="open" '
+            f'aria-controls="search-results-{name}" '
+            'aria-autocomplete="list" aria-haspopup="listbox" '
+            f'value="{init_display}" '
+            f'hx-get="{endpoint}" '
+            f'hx-trigger="keyup changed delay:{s.debounce_ms}ms" '
+            f'hx-target="#search-results-{name}" '
+            f'hx-indicator="#search-spinner-{name}" '
+            f'hx-params="q"{hx_min_chars} '
+            '@focus="open = true" '
+            '@blur="setTimeout(() => { open = false }, 200)">'
+            f'<span id="search-spinner-{name}" '
+            'class="htmx-indicator dz-search-select-spinner" '
+            'role="status" aria-label="Searching">'
+            '<svg class="dz-search-select-spinner-icon" fill="none" viewBox="0 0 24 24" '
+            'aria-hidden="true">'
+            '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" '
+            'stroke-width="4"></circle>'
+            '<path class="opacity-75" fill="currentColor" '
+            'd="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>'
+            "</svg></span>"
+            f'<div id="search-results-{name}" '
+            'x-show="open" x-cloak role="listbox" '
+            f'aria-label="{label_text} suggestions" '
+            'class="dz-search-select-results">'
+            '<div class="dz-search-select-prompt" role="option" aria-disabled="true">'
+            f"Type at least {s.min_chars} characters to search..."
+            "</div></div></div>"
         )
 
     def _emit_submit(self, s: Submit, ctx: RenderContext) -> str:

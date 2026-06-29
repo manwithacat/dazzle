@@ -127,6 +127,7 @@ from dazzle.render.fragment.primitives.forms import (
     FormSection,
     FormStack,
     RefPicker,
+    SearchSelect,
     Submit,
 )
 from dazzle.render.fragment.primitives.interactive import (
@@ -278,6 +279,7 @@ __all__ = [
     "Field",
     "Combobox",
     "RefPicker",
+    "SearchSelect",
     "FileUpload",
     "Submit",
     # navigation

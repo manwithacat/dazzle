@@ -90,6 +90,7 @@ from dazzle.render.fragment.primitives import (
     RelatedGroup,
     Row,
     SearchBox,
+    SearchSelect,
     Sequence,
     Sidebar,
     Skeleton,
@@ -376,6 +377,8 @@ class FragmentRenderer(
                 return self._emit_combobox(fragment, ctx)
             case RefPicker():
                 return self._emit_ref_picker(fragment, ctx)
+            case SearchSelect():
+                return self._emit_search_select(fragment, ctx)
             case FileUpload():
                 return self._emit_file_upload(fragment, ctx)
             case Submit():

@@ -1662,6 +1662,18 @@ def _build_dispatch_ctx(
                     (str(o.get("value", "")), str(o.get("label", o.get("value", ""))))
                     for o in options
                 ]
+            # ADR-0049 Phase 3a: thread `source:` (search_select typeahead)
+            # into the dispatch ctx so the adapter's SEARCH_SELECT branch can
+            # produce a SearchSelect primitive. FieldSourceContext carries the
+            # search endpoint + debounce + min_chars the legacy widget reads.
+            source = getattr(field, "source", None)
+            source_endpoint = str(getattr(source, "endpoint", "") or "") if source else ""
+            if source_endpoint:
+                entry["source"] = {
+                    "endpoint": source_endpoint,
+                    "debounce_ms": int(getattr(source, "debounce_ms", 300) or 300),
+                    "min_chars": int(getattr(source, "min_chars", 0) or 0),
+                }
             # Plan 14: thread ref_api into Fragment dispatch ctx so the
             # adapter's REF branch can produce a RefPicker primitive.
             ref_api = str(getattr(field, "ref_api", "") or "")
