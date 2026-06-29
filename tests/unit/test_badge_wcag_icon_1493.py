@@ -68,16 +68,19 @@ class TestRenderSeams:
         assert "dz-badge-icon" not in html
 
     def test_detail_badge(self):
-        from dazzle.page.runtime.detail_renderer import _render_status_badge
+        # ADR-0049 Phase 2: detail-surface badges render through the same
+        # `_render_cell_display` cell core as list rows (the legacy
+        # detail_renderer._render_status_badge is deleted).
+        from dazzle.render.fragment.renderer._data_row import _render_cell_display
 
-        html = _render_status_badge("rejected")  # name-guess → destructive
+        html = _render_cell_display({"type": "badge"}, "rejected")  # → destructive
         assert 'data-dz-tone="destructive"' in html
         assert '<span class="dz-badge-icon" aria-hidden="true">&#10005;</span>Rejected' in html
 
     def test_detail_badge_neutral_unchanged(self):
-        from dazzle.page.runtime.detail_renderer import _render_status_badge
+        from dazzle.render.fragment.renderer._data_row import _render_cell_display
 
-        html = _render_status_badge("todo")  # neutral
+        html = _render_cell_display({"type": "badge"}, "todo")  # neutral
         assert "dz-badge-icon" not in html
 
     def test_htmx_cell_badge(self):

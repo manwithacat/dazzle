@@ -1,6 +1,6 @@
 # ADR-0049 — The typed Fragment substrate is the universal render path; the legacy direct-template layer is retired mode-by-mode
 
-**Status:** Accepted (2026-06-29). **Phase 1 (LIST) SHIPPED** (v0.92.15–0.92.18): list surfaces render exclusively via the typed substrate (skeleton+hydrate); the legacy `render_filterable_table` is deleted. **Phase 2 (view) + Phase 3 (create/edit) pending.**
+**Status:** Accepted (2026-06-29). **Phase 1 (LIST) SHIPPED** (v0.92.15–0.92.18): list surfaces render exclusively via the typed substrate (skeleton+hydrate); the legacy `render_filterable_table` is deleted. **Phase 2 (VIEW) SHIPPED** (v0.92.20–0.92.25): detail (`mode: view`) surfaces render exclusively via the substrate (`fragment_adapter._build_view`, field values through the shared `_render_cell_display` cell core, related-groups reproduced, peek content-only); the legacy `render_detail_view` / `detail_renderer.py` is deleted and the `#1297` custom-VIEW delegation moved to `render_generic_detail`. **Phase 3 (create/edit) pending** — forms are the only surfaces left on the legacy `render_page` body path.
 **Builds on:** ADR-0023 (typed Fragment emission — created the substrate), ADR-0038 (render/ is pure — relocated rendering into the substrate layer), ADR-0048 (#1505 — converged the list *row* engine onto `render_data_row`). Completes the de-Jinja migration (#1042) at the level of *render-path shape*, not just template syntax.
 **Origin:** the #1494/#1505 work surfaced that production runs 100% on a legacy render path while the typed substrate sits unadopted.
 

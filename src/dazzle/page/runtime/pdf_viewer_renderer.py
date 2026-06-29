@@ -2,8 +2,9 @@
 
 Inline Python port of `components/pdf_viewer_page.html` (the DSL hook
 wrapper) and `components/pdf_viewer.html` (the chrome component).
-Mirrors `form_renderer`, `detail_renderer`, and `table_renderer` —
-emits HTML via `html.escape` + Python string composition, no Jinja env.
+Mirrors `form_renderer` — emits HTML via `html.escape` + Python string
+composition, no Jinja env. (The sibling `detail_renderer`/`table_renderer`
+were deleted in ADR-0049; list/view now render via the typed substrate.)
 
 The bridge contract is preserved: the root `<div class="dz-pdf-viewer">`
 carries `data-dz-widget="pdf-viewer"` (and never `x-data`), so the

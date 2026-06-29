@@ -57,7 +57,9 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "description": "Validation error alert with single or multiple error messages.",
     },
     "detail_fields": {
-        "module": "dazzle.page.runtime.detail_renderer",
+        # ADR-0049 Phase 2: detail/view rendering moved to the typed-substrate
+        # adapter (the legacy page.runtime.detail_renderer is deleted).
+        "module": "dazzle.http.runtime.renderers.fragment_adapter",
         "params": ["item", "fields"],
         "emits": [],
         "listens": [],

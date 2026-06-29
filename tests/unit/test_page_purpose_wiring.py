@@ -136,14 +136,15 @@ def test_view_surface_threads_purpose() -> None:
 # =============================================================================
 
 
-# The page-purpose element is page chrome, not list-specific. ADR-0049 Task 6
-# routes `mode: list` through the substrate (so `render_page` raises for a list
-# ctx, D4); these chrome tests use a VIEW surface — whose legacy detail body
-# still renders via `render_page` — to exercise the same purpose-chrome wiring.
+# The page-purpose element is page chrome, not mode-specific. ADR-0049 routes
+# `mode: list` (Phase 1) and `mode: view` (Phase 2) through the substrate (so
+# `render_page` raises for a list/detail ctx, D4); these chrome tests use a
+# CREATE surface — whose form body still renders via `render_page` — to
+# exercise the same purpose-chrome wiring (emitted by `dispatch_render_page`).
 def test_render_includes_purpose_when_non_empty() -> None:
     entity = _task_entity()
     surface = _make_surface(
-        ir.SurfaceMode.VIEW,
+        ir.SurfaceMode.CREATE,
         ir.UXSpec(purpose="Browse and manage all tasks"),
     )
     ctx = compile_surface_to_context(surface, entity, "/app")
@@ -155,7 +156,7 @@ def test_render_includes_purpose_when_non_empty() -> None:
 
 def test_render_omits_purpose_element_when_empty() -> None:
     entity = _task_entity()
-    surface = _make_surface(ir.SurfaceMode.VIEW, ir.UXSpec())
+    surface = _make_surface(ir.SurfaceMode.CREATE, ir.UXSpec())
     ctx = compile_surface_to_context(surface, entity, "/app")
     assert ctx.page_purpose == ""
     html = render_page(ctx)

@@ -59,10 +59,10 @@ def test_experience_triage_step_renders_list_via_substrate() -> None:
     assert exp_ctx.page_context.table is not None
 
     # The http route pre-renders the table-step list via the substrate.
-    from dazzle.http.runtime.experience_routes import _render_experience_table_step
+    from dazzle.http.runtime.experience_routes import _render_experience_surface_step
 
     services = _services()
-    table_html = _render_experience_table_step(exp_ctx, _Deps(appspec), _Req(services))
+    table_html = _render_experience_surface_step(exp_ctx, _Deps(appspec), _Req(services))
 
     # It renders the substrate list (not the deleted legacy table chrome).
     assert "dz-region--kind-list" in table_html
@@ -70,7 +70,7 @@ def test_experience_triage_step_renders_list_via_substrate() -> None:
     assert "dzTable(" in table_html  # the mounted controller
 
     # And it composes into the experience inner HTML.
-    inner = render_experience_inner_html(exp_ctx, table_step_html=table_html)
+    inner = render_experience_inner_html(exp_ctx, surface_step_html=table_html)
     assert "dz-experience-step" in inner
     assert "dz-region--kind-list" in inner
     # the loud placeholder must NOT appear when the list rendered
@@ -89,9 +89,9 @@ def test_experience_table_step_loud_placeholder_when_no_services() -> None:
     state = ExperienceState(step="triage", completed=[], data={})
     exp_ctx = compile_experience_context(experience, state, appspec, "")
 
-    from dazzle.http.runtime.experience_routes import _render_experience_table_step
+    from dazzle.http.runtime.experience_routes import _render_experience_surface_step
 
-    table_html = _render_experience_table_step(exp_ctx, _Deps(appspec), _Req(None))
+    table_html = _render_experience_surface_step(exp_ctx, _Deps(appspec), _Req(None))
     assert table_html == ""  # route can't render without services
-    inner = render_experience_inner_html(exp_ctx, table_step_html=table_html)
+    inner = render_experience_inner_html(exp_ctx, surface_step_html=table_html)
     assert "could not be rendered" in inner

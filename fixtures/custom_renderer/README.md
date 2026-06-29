@@ -135,23 +135,24 @@ god-file branching on `entity_name`:
    handler (as above).
 
 3. In the handler, **delegate** to the framework's generic detail
-   rendering via `ctx["detail_context"]` — the direct analogue of the
-   old `{% include "dz://components/detail_view.html" %}` fall-through:
+   rendering via `render_generic_detail(surface, ctx)` (substrate-backed,
+   ADR-0049 Phase 2) — the direct analogue of the old
+   `{% include "dz://components/detail_view.html" %}` fall-through:
 
    ```python
-   from dazzle.page.runtime import render_detail_view
+   from dazzle.http.runtime.renderers.fragment_adapter import render_generic_detail
 
    class ManuscriptViewer:
        def render(self, surface, ctx) -> str:
-           detail = ctx["detail_context"]          # the original DetailContext
-           generic_body = render_detail_view(detail)   # standard field layout
+           detail = ctx["detail_context"]              # the original DetailContext
+           generic_body = render_generic_detail(surface, ctx)  # standard field layout
            custom_panel = self._render_ao_grid(detail.item)
            return f'<section>{custom_panel}{generic_body}</section>'
    ```
 
-`render_detail_view(ctx["detail_context"])` is **lazy** — the generic
-HTML is only produced if you call it, so a viewer that *fully* replaces
-the standard layout simply never calls it and pays nothing.
+`render_generic_detail(surface, ctx)` is **lazy** — the generic HTML is
+only produced if you call it, so a viewer that *fully* replaces the
+standard layout simply never calls it and pays nothing.
 
 See `app/render/feedback_detail.py` for a runnable version of exactly
 this pattern.

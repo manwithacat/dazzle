@@ -23,7 +23,6 @@ Example usage:
     >>> generate_preview_files(appspec, "preview/")
 """
 
-from dazzle.page.runtime.detail_renderer import render_detail_view
 from dazzle.page.runtime.dev_server import (
     DazzleDevServer,
     run_dev_server,
@@ -45,12 +44,10 @@ from dazzle.render.context import (
 __all__ = [
     # Template rendering
     "render_page",
-    # Canonical delegation helper for custom per-entity detail viewers
-    # (#1297): a `render: <name>` renderer on a VIEW surface can render
-    # the standard detail body via `render_detail_view(ctx["detail_context"])`
-    # and then wrap/append its own chrome. Replaces the removed (ADR-0023)
-    # Jinja `components/detail_view.html` override + `dz://` fall-through.
-    "render_detail_view",
+    # (ADR-0049 Phase 2) The #1297 generic-detail delegation helper moved to
+    # the http layer — custom VIEW renderers now delegate via
+    # `from dazzle.http.runtime.renderers.fragment_adapter import render_generic_detail`
+    # (substrate-backed). The legacy page-layer `render_detail_view` is deleted.
     "PageContext",
     "TableContext",
     "FormContext",

@@ -1312,7 +1312,8 @@ def _compile_custom_surface(
         page_purpose=page_purpose,
         persona_purposes=persona_purposes,
         # v0.67.75: PageContext.template field is no longer read by any
-        # renderer (detail rendering moved to detail_renderer.py).
+        # renderer (detail/view rendering moved to the typed substrate,
+        # ADR-0049 Phase 2 — the legacy detail_renderer is deleted).
         template="",
     )
 

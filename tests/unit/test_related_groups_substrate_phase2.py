@@ -1,10 +1,11 @@
 """Task 3a (ADR-0049 Phase 2): substrate renders related-groups real content.
 
-The substrate `_build_view` rendered related groups as `Skeleton` placeholders;
-the legacy `render_detail_view` renders real inline content across 3 display
-modes (table / status_cards / file_list), used by 4+ example apps. The substrate
-dispatch ctx didn't even carry the fetched data (it threaded the surface IR
-config, not `detail.related_groups`). This pins the reproduced content.
+The substrate `_build_view` originally rendered related groups as `Skeleton`
+placeholders; the (now-deleted) legacy `render_detail_view` rendered real inline
+content across 3 display modes (table / status_cards / file_list), used by 4+
+example apps. The substrate dispatch ctx didn't even carry the fetched data (it
+threaded the surface IR config, not `detail.related_groups`). The substrate now
+reproduces that content; this pins it.
 """
 
 from __future__ import annotations

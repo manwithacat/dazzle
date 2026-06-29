@@ -16,9 +16,12 @@ from dazzle.render.context import DetailContext, FieldContext
 
 class _Surface:
     """Minimal surface stub — `_build_dispatch_ctx` reads `related_groups`
-    on the surface for the detail branch."""
+    on the surface for the detail branch; `render_generic_detail`'s
+    `_build_view` reads `title`/`name` for the surface heading."""
 
     related_groups: list[object] = []
+    title = "Manuscript"
+    name = "manuscript_detail"
 
 
 class _RenderCtx:
@@ -177,12 +180,13 @@ def test_dispatch_ctx_detail_threads_detail_context_for_delegation() -> None:
 
 
 def test_custom_detail_viewer_can_delegate_to_generic_render() -> None:
-    """#1297: a custom renderer holding `ctx["detail_context"]` can call
-    the exported `render_detail_view` helper to produce the standard
-    detail body, then wrap/append its own chrome. This pins the full
-    delegation round-trip the worked example (fixtures/custom_renderer)
-    relies on."""
-    from dazzle.page.runtime import render_detail_view
+    """#1297 (ADR-0049 Phase 2): a custom VIEW renderer holding the dispatch
+    ctx delegates to the framework's generic detail body via the
+    substrate-backed `render_generic_detail(surface, ctx)` helper, then
+    wraps/appends its own chrome. This pins the full delegation round-trip
+    the worked example (fixtures/custom_renderer) relies on now that the
+    legacy page-layer `render_detail_view` is deleted."""
+    from dazzle.http.runtime.renderers.fragment_adapter import render_generic_detail
 
     detail = DetailContext(
         entity_name="Manuscript",
@@ -190,8 +194,9 @@ def test_custom_detail_viewer_can_delegate_to_generic_render() -> None:
         fields=[FieldContext(name="title", label="Title")],
         item={"title": "The Old Curiosity Shop"},
     )
-    ctx = _build_dispatch_ctx(_RenderCtx(detail), _Surface())
-    generic_html = render_detail_view(ctx["detail_context"])
+    surface = _Surface()
+    ctx = _build_dispatch_ctx(_RenderCtx(detail), surface)
+    generic_html = render_generic_detail(surface, ctx)
     assert generic_html  # non-empty
     assert "The Old Curiosity Shop" in generic_html
     # The viewer composes bespoke chrome around the delegated body.

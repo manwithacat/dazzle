@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.25] - 2026-06-29
+
+### Removed
+- **Deleted the legacy `page/runtime/detail_renderer.py` (~635 LOC) — the typed substrate is now the *sole* `mode: view` render path (ADR-0049 Phase 2 Task 6 complete).** With the view flip shipped (v0.92.24), nothing reached the legacy detail body on the happy path; this removes it and repoints every remaining caller so there is no second renderer to drift against. Repointed: the `#1297` custom-VIEW delegation now uses the new substrate-backed `render_generic_detail(surface, ctx)` (in `http/runtime/renderers/fragment_adapter.py`, replacing the deleted `page.runtime.render_detail_view`); `template_renderer._render_body_inner`'s detail branch raises a loud `RuntimeError` (D4, matching the Phase-1 list branch); the experience detail-STEP renders via the substrate (the Phase-1 `table_step_html` route pre-render generalised to `surface_step_html`, covering both list and detail steps); `static_preview` (build-ui / `serve --ui-only`) and `fidelity` scoring dispatch detail through the substrate (`surface_body_renderer` / `ctx.detail` branch). Also deleted the legacy detail-chrome characterization test + its 7 snapshots (the renderer they pinned is gone). `mode: create`/`mode: edit` (forms) remain the only surfaces on the legacy `render_page` body path — Phase 3.
+
+### Agent Guidance
+- **`page/runtime/detail_renderer.py` is deleted — there is no legacy detail body renderer left.** A detail (`mode: view`) ctx reaching `render_page` without `RuntimeServices` now raises loudly (D4), exactly like list. Custom per-entity VIEW renderers (`#1297`) delegate to the generic body via `from dazzle.http.runtime.renderers.fragment_adapter import render_generic_detail` → `render_generic_detail(surface, ctx)` (NOT the old `page.runtime.render_detail_view`). Any non-request render path that needs a detail body (experience steps, static preview, fidelity) must pre-render through the http substrate dispatch and pass the HTML down (page ↛ http) — see `_render_experience_surface_step` / `generate_preview_files_with_substrate` for the pattern. Only `mode: create`/`edit` remain on the legacy `render_page` body path (Phase 3).
+
 ## [0.92.24] - 2026-06-29
 
 ### Changed

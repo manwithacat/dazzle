@@ -91,9 +91,10 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     # but target different entities (e.g. an app's ``feedback_create`` vs. the
     # framework-synth ``feedback_create`` on FeedbackReport). See #828.
     progress.log_sync(f"Rendering {len(page_contexts)} pages...")
-    # ADR-0049 Task 6: `mode: list` renders via the typed substrate now —
-    # `render_page` raises for a list ctx. Render lists through the substrate
-    # (the body) wrapped in the page chrome, so fidelity keeps scoring lists.
+    # ADR-0049 Task 6: `mode: list` (Phase 1) and `mode: view` (Phase 2) render
+    # via the typed substrate now — `render_page` raises for a list/detail ctx.
+    # Render the substrate body wrapped in the page chrome, so fidelity keeps
+    # scoring both lists and detail surfaces.
     from dazzle.http.runtime.page_routes import _build_dispatch_ctx
     from dazzle.http.runtime.renderers.init import register_default_renderers
     from dazzle.http.runtime.services import RuntimeServices
@@ -104,7 +105,10 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
 
     def _render_for_fidelity(ctx: Any) -> str:
         surface = appspec.get_surface(ctx.view_name) if hasattr(appspec, "get_surface") else None
-        if getattr(ctx, "table", None) is not None and surface is not None:
+        is_substrate_mode = (
+            getattr(ctx, "table", None) is not None or getattr(ctx, "detail", None) is not None
+        )
+        if is_substrate_mode and surface is not None:
             dctx = _build_dispatch_ctx(ctx, surface, services=_fidelity_services)
             body = dispatch_render(surface, ctx=dctx, services=_fidelity_services)
             return render_page(ctx, inner_html=body)

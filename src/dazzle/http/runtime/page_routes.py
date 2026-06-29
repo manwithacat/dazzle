@@ -1908,9 +1908,9 @@ def _build_dispatch_ctx(
             # `{% else %}{% include "dz://…" %}` fall-through. A renderer
             # registered via `render: <name>` on a VIEW surface renders its
             # bespoke chrome, then optionally appends/wraps the standard
-            # view via `render_detail_view(ctx["detail_context"])`. Lazy by
-            # construction: the generic HTML is only produced if the
-            # renderer asks for it, so the override case costs nothing.
+            # view via `render_generic_detail(surface, ctx)` (substrate-backed,
+            # ADR-0049 Phase 2). Lazy by construction: the generic HTML is only
+            # produced if the renderer asks for it, so override costs nothing.
             "detail_context": detail,
         }
 

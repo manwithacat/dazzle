@@ -32,12 +32,13 @@ from dazzle.page.specs import UISpec
 
 
 def _render_page_for_pipeline(route: str, ctx: object) -> str:
-    """ADR-0049 Task 6: list pages render via the substrate dispatch (the http
-    route), not `render_page` — so `render_page` raises a loud error for a list
-    ctx (D4: no silent legacy fallback). For non-list ctx it renders as before.
-    Returns the rendered HTML, or "" for a list ctx (after asserting the loud
-    error), so pipeline loops can skip the length assertions for lists."""
-    if getattr(ctx, "table", None) is not None:
+    """ADR-0049: list (Phase 1) and detail/view (Phase 2) pages render via the
+    substrate dispatch (the http route), not `render_page` — so `render_page`
+    raises a loud error for a list/detail ctx (D4: no silent legacy fallback).
+    For form ctx it renders as before. Returns the rendered HTML, or "" for a
+    list/detail ctx (after asserting the loud error), so pipeline loops can
+    skip the length assertions for substrate-rendered surfaces."""
+    if getattr(ctx, "table", None) is not None or getattr(ctx, "detail", None) is not None:
         with pytest.raises(RuntimeError, match="typed substrate"):
             render_page(ctx)  # type: ignore[arg-type]
         return ""
@@ -415,7 +416,7 @@ class TestTemplateRuntime:
 
         for route, ctx in contexts.items():
             html = _render_page_for_pipeline(route, ctx)
-            if html == "":  # list route — renders via the substrate, not render_page
+            if html == "":  # list/detail route — renders via the substrate, not render_page
                 continue
             assert len(html) > 0, f"Route {route} produced empty HTML"
             assert "<!DOCTYPE html>" in html or "<html" in html or "<div" in html
@@ -448,7 +449,7 @@ class TestFullPipeline:
         assert len(contexts) > 0
         for route, ctx in contexts.items():
             html = _render_page_for_pipeline(route, ctx)
-            if html == "":  # list route — substrate-rendered
+            if html == "":  # list/detail route — substrate-rendered
                 continue
             assert len(html) > 100, f"Route {route} HTML too short"
 
@@ -465,7 +466,7 @@ class TestFullPipeline:
         assert len(contexts) > 0
         for _route, ctx in contexts.items():
             html = _render_page_for_pipeline(_route, ctx)
-            if html == "":  # list route — substrate-rendered
+            if html == "":  # list/detail route — substrate-rendered
                 continue
             assert len(html) > 0
 

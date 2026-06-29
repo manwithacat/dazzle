@@ -29,6 +29,7 @@ from dazzle.render.fragment import (
     FormSection,
     FormStack,
     Fragment,
+    FragmentRenderer,
     Heading,
     Link,
     ListFilterBar,
@@ -55,6 +56,15 @@ from dazzle.render.html import esc as _html_esc
 def _esc_attr(s: str) -> str:
     """Attribute-escape for the few RawHTML escape-hatch interpolations."""
     return _html_esc(str(s), quote=True)
+
+
+def render_generic_detail(surface: SurfaceLike, ctx: dict[str, Any]) -> str:
+    """ADR-0049 Phase 2 (#1297): render the framework's generic detail body via
+    the typed substrate, for a custom `mode: view` renderer that wants to wrap
+    the standard detail with bespoke chrome. The substrate-backed replacement
+    for the deleted `page.runtime.render_detail_view(ctx["detail_context"])` —
+    the custom renderer already has `surface` + the dispatch `ctx`."""
+    return FragmentRenderer().render(FragmentSurfaceAdapter()._build_view(surface, ctx))
 
 
 def _detail_field_value(f: dict[str, Any]) -> Fragment:

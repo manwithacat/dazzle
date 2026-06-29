@@ -51,15 +51,15 @@ class FeedbackDetailRenderer:
 
     1. Render a bespoke header/banner for this specific entity.
     2. **Delegate** to the framework's generic detail rendering via
-       ``render_detail_view(ctx["detail_context"])`` — no need to
-       re-implement the field-section layout, related-record tables,
-       transition buttons, etc.
+       ``render_generic_detail(surface, ctx)`` (substrate-backed,
+       ADR-0049 Phase 2) — no need to re-implement the field-section
+       layout, related-record tables, transition buttons, etc.
     3. Compose: bespoke chrome + generic body.
 
     Because the delegation is lazy (the generic HTML is only produced
     when this renderer asks for it), a viewer that *fully* replaces the
-    standard layout simply never calls ``render_detail_view`` — it costs
-    nothing.
+    standard layout simply never calls ``render_generic_detail`` — it
+    costs nothing.
     """
 
     def render(self, surface: SurfaceLike, ctx: dict[str, Any]) -> str:
@@ -89,9 +89,11 @@ class FeedbackDetailRenderer:
         if detail is None:
             generic_body = '<p class="dz-empty">No detail context available.</p>'  # defensive
         else:
-            from dazzle.page.runtime import render_detail_view
+            # ADR-0049 Phase 2: the framework's generic detail renders via the
+            # typed substrate now; delegate with this surface + dispatch ctx.
+            from dazzle.http.runtime.renderers.fragment_adapter import render_generic_detail
 
-            generic_body = render_detail_view(detail)
+            generic_body = render_generic_detail(surface, ctx)
 
         return (
             '<section class="dz-section dz-section-feedback-detail">'

@@ -17,17 +17,17 @@ from dazzle.render.dispatch import dispatch_render
 
 
 def generate_preview_files_with_substrate(appspec: Any, output_dir: str) -> list[Path]:
-    """Generate static preview HTML files, rendering `mode: list` surfaces via
-    the typed substrate (ADR-0049 Task 6). Used by `dazzle build-ui` (via
-    `BuildService`) and `dazzle serve --ui-only`."""
+    """Generate static preview HTML files, rendering `mode: list` (Phase 1) and
+    `mode: view` (Phase 2) surfaces via the typed substrate (ADR-0049 Task 6).
+    Used by `dazzle build-ui` (via `BuildService`) and `dazzle serve --ui-only`."""
     services = RuntimeServices()
     register_default_renderers(services)
 
-    def _list_body(surface: Any, ctx: Any) -> str:
+    def _surface_body(surface: Any, ctx: Any) -> str:
         dctx = _build_dispatch_ctx(ctx, surface, services=services)
         return dispatch_render(surface, ctx=dctx, services=services)
 
-    return generate_preview_files(appspec, output_dir, list_body_renderer=_list_body)
+    return generate_preview_files(appspec, output_dir, surface_body_renderer=_surface_body)
 
 
 class BuildService:

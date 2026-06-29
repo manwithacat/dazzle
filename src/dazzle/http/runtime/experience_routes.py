@@ -244,14 +244,16 @@ async def _experience_entry(deps: _ExperienceDeps, request: Request, name: str) 
     return response
 
 
-def _render_experience_table_step(exp_ctx: Any, deps: _ExperienceDeps, request: Request) -> str:
-    """ADR-0049 Task 6: render an experience table-step's list through the
-    substrate. The page layer can't import the http dispatch seam (page↛http),
-    so the route pre-renders the list here and passes the HTML down. Returns ""
-    for non-table steps or when services/surface are unavailable — the page
+def _render_experience_surface_step(exp_ctx: Any, deps: _ExperienceDeps, request: Request) -> str:
+    """ADR-0049 Phase 2 Task 6: render an experience list-step (Phase 1) OR
+    detail-step through the substrate. The page layer can't import the http
+    dispatch seam (page↛http), so the route pre-renders the surface body here
+    and passes the HTML down. dispatch_render handles both list and view modes
+    (it reads pc.table / pc.detail off the same dispatch ctx). Returns "" for
+    form/placeholder steps or when services/surface are unavailable — the page
     renderer then shows a loud placeholder (D4: no silent legacy fallback)."""
     pc = getattr(exp_ctx, "page_context", None)
-    if pc is None or getattr(pc, "table", None) is None:
+    if pc is None or (getattr(pc, "table", None) is None and getattr(pc, "detail", None) is None):
         return ""
     surface_name = getattr(exp_ctx, "surface_name", "") or ""
     appspec = getattr(deps, "appspec", None)
@@ -370,12 +372,12 @@ async def _experience_step_get(
     htmx = HtmxDetails.from_request(request)
     current_route = f"{deps.app_prefix}/experiences/{name}/{step}"
 
-    # ADR-0049 Task 6: pre-render a table-step's list via the substrate.
-    table_step_html = _render_experience_table_step(exp_ctx, deps, request)
+    # ADR-0049 Task 6: pre-render a list- or detail-step's body via the substrate.
+    surface_step_html = _render_experience_surface_step(exp_ctx, deps, request)
 
     # Fragment targeting: return only the content
     if htmx.wants_fragment:
-        html = render_experience_inner_html(exp_ctx, table_step_html=table_step_html)
+        html = render_experience_inner_html(exp_ctx, surface_step_html=surface_step_html)
         headers = {
             "HX-Trigger": json.dumps({"dz:titleUpdate": exp_ctx.title}),
         }
@@ -391,7 +393,7 @@ async def _experience_step_get(
         from dazzle.render.context import NavItemContext, PageContext
         from dazzle.render.dispatch import dispatch_render_page
 
-        inner_html = render_experience_inner_html(exp_ctx, table_step_html=table_step_html)
+        inner_html = render_experience_inner_html(exp_ctx, surface_step_html=surface_step_html)
         nav_items_ctx = [
             NavItemContext(
                 label=getattr(n, "label", None) or n.get("label", "")

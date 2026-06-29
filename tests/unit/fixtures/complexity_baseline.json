@@ -11281,7 +11281,7 @@
       "_make_experience_step_get_handler": 1,
       "_make_experience_step_post_handler": 1,
       "_persist_progress": 2,
-      "_render_experience_table_step": 10,
+      "_render_experience_surface_step": 11,
       "create_experience_routes": 17
     },
     "mi_rank": "A"
@@ -12569,7 +12569,8 @@
       "_field_to_primitive": 15,
       "_filter_option": 4,
       "_format_cell": 3,
-      "_pick_empty_state": 9
+      "_pick_empty_state": 9,
+      "render_generic_detail": 1
     },
     "mi_rank": "A"
   },
@@ -16893,20 +16894,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/page/runtime/detail_renderer.py": {
-    "functions": {
-      "_render_create_row": 7,
-      "_render_field_value": 27,
-      "_render_related_file_list": 26,
-      "_render_related_group": 4,
-      "_render_related_status_cards": 26,
-      "_render_related_table_cell": 12,
-      "_render_related_table_group": 31,
-      "_render_status_badge": 2,
-      "render_detail_view": 44
-    },
-    "mi_rank": "B"
-  },
   "dazzle/page/runtime/dev_server.py": {
     "functions": {
       "DazzleDevHandler": 3,
@@ -16955,7 +16942,7 @@
   "dazzle/page/runtime/experience_renderer.py": {
     "functions": {
       "_render_form_step_body": 24,
-      "_render_step_body": 8,
+      "_render_step_body": 9,
       "_render_step_progress": 12,
       "_render_transition_button": 4,
       "_render_transitions_row": 8,
@@ -17083,7 +17070,7 @@
   },
   "dazzle/page/runtime/static_preview.py": {
     "functions": {
-      "_render_list_preview": 2,
+      "_render_surface_body_preview": 2,
       "generate_preview_files": 26
     },
     "mi_rank": "A"

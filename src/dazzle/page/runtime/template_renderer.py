@@ -74,9 +74,16 @@ def _render_body_inner(context: PageContext) -> str:
 
         return render_pdf_viewer(context.detail, context.pdf_viewer)
     if context.detail is not None:
-        from dazzle.page.runtime.detail_renderer import render_detail_view
-
-        return render_detail_view(context.detail)
+        # ADR-0049 Phase 2 (D4): detail (mode: view) surfaces render exclusively
+        # via the typed substrate now — the legacy render_detail_view is deleted.
+        # Reaching here means the substrate dispatch was skipped (no
+        # RuntimeServices on the request) — fail loudly, not a blank page.
+        raise RuntimeError(
+            "detail surface reached the legacy body renderer, but mode: view "
+            "renders via the typed substrate now (ADR-0049). Attach "
+            "RuntimeServices to the request (app.state.services) so the detail "
+            f"dispatches to the substrate. (page_title={context.page_title!r})"
+        )
     if context.table is not None:
         # ADR-0049 Task 6 (D4): list surfaces render exclusively via the typed
         # substrate now — the legacy `render_filterable_table` is deleted.

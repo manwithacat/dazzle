@@ -180,11 +180,11 @@ def _render_step_progress(experience: Any) -> str:
     return f'<ol class="dz-steps">{"".join(items)}</ol>'
 
 
-def _render_step_body(experience: Any, table_step_html: str = "") -> str:
+def _render_step_body(experience: Any, surface_step_html: str = "") -> str:
     """Dispatch to the right step-body renderer.
 
     Form/detail bodies render via the typed Python renderers; a table-step
-    body is pre-rendered by the http route (`table_step_html`) through the
+    body is pre-rendered by the http route (`surface_step_html`) through the
     substrate, since the page layer cannot import the http dispatch seam
     (ADR-0049 Task 6). Simple branches (ready, placeholder, non-surface)
     inline in Python.
@@ -219,27 +219,21 @@ def _render_step_body(experience: Any, table_step_html: str = "") -> str:
     if ctx_form is not None:
         # Form step — fully inline-rendered (v0.67.74).
         body = _render_form_step_body(experience, page_context)
-    elif ctx_detail is not None:
-        # Phase 4 (v0.67.75): inline-render via detail_renderer.
-        from dazzle.page.runtime.detail_renderer import render_detail_view
-
-        body_inner = render_detail_view(ctx_detail)
-        actions = _render_transitions_row(transitions)
-        body = f"{body_inner}{actions}"
-    elif ctx_table is not None:
-        # ADR-0049 Task 6: the experience table-step renders through the typed
-        # substrate now (the legacy table_renderer is deleted). The http route
-        # pre-renders the substrate list (it owns the dispatch seam, respecting
-        # the page↛http import contract) and passes the HTML in via
-        # `table_step_html`. Empty string means the route couldn't render it
-        # (no services / no surface) — emit a loud placeholder rather than a
-        # blank step (D4: no silent legacy fallback).
-        if table_step_html:
-            body_inner = table_step_html
+    elif ctx_detail is not None or ctx_table is not None:
+        # ADR-0049 Phase 2 Task 6: experience table-steps (Phase 1) AND
+        # detail-steps render through the typed substrate now (the legacy
+        # table_renderer + detail_renderer are deleted). The http route
+        # pre-renders the substrate surface body (it owns the dispatch seam,
+        # respecting page↛http) and passes it in via `surface_step_html`.
+        # Empty means the route couldn't render it (no services / no surface) —
+        # emit a loud placeholder, not a blank step (D4: no silent fallback).
+        if surface_step_html:
+            body_inner = surface_step_html
         else:
+            kind = "detail" if ctx_detail is not None else "list"
             body_inner = (
                 '<div class="dz-experience-ready" role="alert">'
-                "<span>This list step could not be rendered.</span></div>"
+                f"<span>This {kind} step could not be rendered.</span></div>"
             )
         actions = _render_transitions_row(transitions)
         body = f"{body_inner}{actions}"
@@ -253,20 +247,20 @@ def _render_step_body(experience: Any, table_step_html: str = "") -> str:
     return f'<div class="dz-experience-step" data-dz-exp-current="{current_step_attr}">{body}</div>'
 
 
-def render_experience_inner_html(experience: Any, *, table_step_html: str = "") -> str:
+def render_experience_inner_html(experience: Any, *, surface_step_html: str = "") -> str:
     """Render the experience-flow inner HTML (Phase 4, v0.67.71).
 
     Replaces the legacy `experience/_content.html` Jinja render call.
     The outer shell (title, step progress, container) is Python; step
     bodies render via the typed renderers. A table-step body is rendered
     through the substrate by the http route and passed in as
-    `table_step_html` (ADR-0049 Task 6 — the page layer cannot reach the
+    `surface_step_html` (ADR-0049 Task 6 — the page layer cannot reach the
     http dispatch seam).
     """
     name_attr = _html_mod.escape(str(getattr(experience, "name", "") or ""), quote=True)
     title = _html_mod.escape(str(getattr(experience, "title", "") or ""), quote=False)
     progress = _render_step_progress(experience)
-    body = _render_step_body(experience, table_step_html)
+    body = _render_step_body(experience, surface_step_html)
     return (
         f'<div data-dz-experience="{name_attr}" class="dz-experience">'  # nosemgrep
         f'<h2 class="dz-experience-title">{title}</h2>'
