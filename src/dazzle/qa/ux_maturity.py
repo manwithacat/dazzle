@@ -24,11 +24,12 @@ from typing import Any
 
 # Hoisted (no cycle: qa -> render/page/core is the correct layer direction; #1438).
 from dazzle._version import get_version
-from dazzle.core.ir import state_machine, workspaces
+from dazzle.core.ir import PeekMode, state_machine, workspaces
 from dazzle.page import app_paths
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
+from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
-from dazzle.render.context import ColumnContext, TableContext
+from dazzle.render.context import ColumnContext
 from dazzle.render.fragment import format_cell
 from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
 
@@ -162,9 +163,20 @@ def _probe_2b() -> ProbeResult:
 
 
 def _probe_2c() -> ProbeResult:
-    """A row-peek primitive exists (slide-over) but is a manual flag."""
-    has_peek = "slide_over" in TableContext.model_fields
-    return ProbeResult(has_peek, "TableContext.slide_over (manual row-peek)")
+    """`peek:` + the resolve_peek_mode default-flip are live (#1494). An *unset*
+    list surface whose entity has a detail surface resolves to `expand` (the
+    inline action-proximate detail panel) by default; an explicit author value
+    still wins. Proven by exercising the real resolver, not just a field check."""
+
+    class _UnsetSurface:
+        peek = None
+
+    flips_to_expand = resolve_peek_mode(_UnsetSurface(), entity=object()) == PeekMode.EXPAND
+    off_without_detail = resolve_peek_mode(_UnsetSurface(), entity=None) == PeekMode.OFF
+    return ProbeResult(
+        flips_to_expand and off_without_detail,
+        "resolve_peek_mode default-flip — unset + detail surface -> peek: expand (action-proximate detail by default)",
+    )
 
 
 def _probe_3b() -> ProbeResult:
@@ -264,8 +276,8 @@ CRITERIA: list[Criterion] = [
         "2c",
         "progressive_disclosure",
         "action-proximate detail",
-        2,
-        "TableContext.slide_over exists (row-peek) but is opt-in, not default/inferred",
+        4,
+        "#1494 — `peek:` (expand | slide_over | off) + the `resolve_peek_mode` default-flip: an *unset* list surface whose entity has a detail surface resolves to `peek: expand` by default, so each row gets an inline expand-in-place chevron that `hx-get`s the entity's detail *body* partial into a sibling panel row (the same detail body the drill page shows — one detail renderer, not two). Level 4 (adaptive): the right-by-default form is the default; the author writes nothing and gets action-proximate detail wherever a detail surface exists. An explicit `peek: off` opts out (true-unset discriminator: `SurfaceSpec.peek is None`). Render gates the chevron on `detail_url_template`, so a non-drillable row degrades to plain drill. Follow-ons (#1494 Slice 2): the click-to-edit view⇄edit partial swap + the `slide_over` render branch.",
         "medium",
         _probe_2c,
     ),

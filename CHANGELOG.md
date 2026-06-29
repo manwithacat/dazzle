@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.38] - 2026-06-30
+
+### Changed
+- **`peek:` is now `expand` by default for any list whose entity has a detail surface — UX-maturity 2c → level 4 (#1494 default-flip; overall index 2.62 → 3.15).** An *unset* list surface (`SurfaceSpec.peek is None`) now resolves to `peek: expand` via `page/runtime/peek_resolver.resolve_peek_mode` when the entity has a detail surface (the drill target the panel expands into) — so each row gets the inline expand-in-place chevron that `hx-get`s the entity's detail *body* partial (`?peek=1`) into a sibling panel row by default. It's the same detail body the drill page shows (one detail renderer, not two), and the route was already wired (Slice 1 / ADR-0049 Phase 2). The author still opts out with `peek: off` (true-unset discriminator), or picks `slide_over`. **Adaptive (level 4):** the author writes nothing and gets action-proximate detail wherever a detail surface exists — mirroring the #1492 `display: auto` and #1493 `semantic:` default-flips. Render gates the chevron on `detail_url_template`, so a non-drillable row degrades to plain drill (belt-and-braces with the resolver's `entity is None → off`). The `_probe_2c` capability probe now exercises the real resolver (unset + detail → `expand`); `dazzle ux maturity` re-scores 2c 2 → 4 (drift-gated). **Fleet-quiet at the unit level** (the resolver runs at server boot; render-unit goldens pass explicit caps), but this is the first fleet-wide exercise of the chevron at e2e time. Follow-on (#1494 Slice 2, in progress): the native click-to-edit view⇄edit partial swap (with the existing `x-optimistic` Alpine directive) + the `slide_over` render branch.
+
+### Agent Guidance
+- **`peek: expand` is the default for drillable list surfaces now (#1494).** A list whose entity has a detail surface renders the row-peek chevron + inline detail panel by default — authors get action-proximate detail for free. Opt out with `peek: off` on the surface. The default is resolved by `page/runtime/peek_resolver.resolve_peek_mode(surface, entity)` (unset + entity → `expand`); an explicit author value always wins. The chevron only renders where `detail_url_template` is set, so non-drillable rows are unaffected.
+
 ## [0.92.37] - 2026-06-29
 
 ### Changed

@@ -94,9 +94,16 @@ class TestPeekResolver:
         assert resolve_peek_mode(_surface("peek: slide_over")) is PeekMode.SLIDE_OVER
         assert resolve_peek_mode(_surface("peek: off")) is PeekMode.OFF
 
-    def test_unset_resolves_off_this_slice(self):
-        # Slice 1: unset → off (byte-stable). Slice 4 flips this to expand when
-        # the entity has a detail surface.
+    def test_unset_flips_to_expand_when_entity_has_detail(self):
+        # The default-flip (#1494, 2c → level 4): an unset surface whose entity
+        # has a detail surface resolves to `expand` (action-proximate detail by
+        # default). The entity arg is the detail-surface signal.
+        assert resolve_peek_mode(_surface(), entity=object()) is PeekMode.EXPAND
+
+    def test_unset_resolves_off_without_detail(self):
+        # No detail target (entity is None) → off: there is no detail body to
+        # expand into, so the row degrades to plain drill.
+        assert resolve_peek_mode(_surface(), entity=None) is PeekMode.OFF
         assert resolve_peek_mode(_surface()) is PeekMode.OFF
 
 
