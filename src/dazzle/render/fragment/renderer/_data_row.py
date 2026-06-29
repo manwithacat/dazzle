@@ -14,6 +14,7 @@ byte-for-byte by `tests/unit/test_data_row_characterization_1505.py`.
 
 import html as _html_mod
 import json
+from dataclasses import dataclass
 from typing import Any
 
 from dazzle.render.filters import (
@@ -27,6 +28,93 @@ from dazzle.render.filters import (
     resolve_status_tone,
 )
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
+
+
+@dataclass(frozen=True, slots=True)
+class _RowArchetype:
+    """A named list-row archetype (#1511): a capability *preset* over the one
+    shared row-core. The three archetypes converge their `<tr>` assembly here
+    while staying semantically distinct — `base_class` keeps each variant's
+    existing CSS hook, and `list_kind` stamps the `data-dz-list-kind` marker so
+    both CSS and an inspecting agent retain the category (design §3.3).
+    """
+
+    base_class: str
+    list_kind: str
+
+
+# The three archetypes (design §3.3). `data-table` is the rich CRUD row (Alpine
+# `dzTable` controller mounted); `embedded` is the plain Fragment `Table` row;
+# `region` is the workspace `kind: list` row. All three flow through
+# `assemble_list_row` — only HTML production converges; RBAC/scope/sort and the
+# per-archetype cell content stay in the callers.
+ARCHETYPE_DATA_TABLE = _RowArchetype("dz-tr-row group", "data-table")
+ARCHETYPE_EMBEDDED = _RowArchetype("dz-table__row", "embedded")
+ARCHETYPE_LIST_REGION = _RowArchetype("dz-list-row", "region")
+
+
+def drill_row_attrs(url_attr: str) -> str:
+    """The shared clickable-row block (#1511, design §3.2): the row owns a
+    bare-click `hx-get` to the detail surface (full-page swap). `url_attr` is the
+    already-escaped detail URL — empty means the row is not clickable.
+
+    This is the single load-bearing composition rule: the *row* owns the bare
+    click; every interactive sub-element (checkbox, edit cell, action button,
+    peek chevron) must `event.stopPropagation()` so the capabilities coexist on
+    one row without entanglement.
+    """
+    if not url_attr:
+        return ""
+    return (
+        f'hx-get="{url_attr}" hx-push-url="true" hx-trigger="click" '
+        f'hx-target="body" hx-swap="innerHTML" tabindex="0"'
+    )
+
+
+def assemble_list_row(
+    *,
+    archetype: _RowArchetype,
+    cells_html: str,
+    row_id_attr: str = "",
+    dom_id: str = "",
+    data_dazzle_row: str = "",
+    state_bind: str = "",
+    drill_attrs: str = "",
+    class_extra: str = "",
+    checkbox_cell: str = "",
+    actions_cell: str = "",
+    peek_panel_row: str = "",
+) -> str:
+    """Assemble one list-row `<tr>` from per-archetype pieces (#1511).
+
+    The single `<tr>`-skeleton owner for all three list archetypes. It fixes the
+    canonical attribute order, stamps the `data-dz-list-kind` archetype marker,
+    composes the base class, and orders the cells (`checkbox · cells · actions`)
+    — then appends any peek panel row. The *content* of each slot (cell wrappers,
+    checkbox flavour, action flavour, row-state binds) is produced by the caller,
+    because those genuinely diverge by archetype (design §3.3); only the skeleton
+    converges here.
+
+    All `*_attr` / `dom_id` / `data_dazzle_row` inputs are already HTML-escaped by
+    the caller (which owns its escaping context) — this seam does pure string
+    assembly. `state_bind` is a full Alpine `:class="…"` attribute (data-table
+    row-state). `drill_attrs` is the output of `drill_row_attrs`.
+    """
+    head = "<tr"
+    if dom_id:
+        head += f' id="{dom_id}"'
+    if data_dazzle_row:
+        head += f' data-dazzle-row="{data_dazzle_row}"'
+    if row_id_attr:
+        head += f' data-dz-row-id="{row_id_attr}"'
+    head += f' data-dz-list-kind="{archetype.list_kind}"'
+    if state_bind:
+        head += f" {state_bind}"
+    head += f' class="{archetype.base_class}{class_extra}"'
+    if drill_attrs:
+        head += f" {drill_attrs}"
+    head += ">"
+    return f"{head}{checkbox_cell}{cells_html}{actions_cell}</tr>{peek_panel_row}"
 
 
 def _render_inline_edit(item: dict[str, Any], col: dict[str, Any], value: Any) -> str:
@@ -245,7 +333,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     peek_expand = str(table.get("peek_mode") or "").strip() == "expand"
     peek_toggle_html = ""
 
-    detail_hx_attrs = ""
+    drill_attrs = ""
     detail_link_html = ""
     edit_link_html = ""
     if detail_url_template:
@@ -273,7 +361,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 '<path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" stroke-width="1.25" '
                 'stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
             )
-        detail_hx_attrs = f'hx-get="{detail_url_attr}" hx-push-url="true" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
+        drill_attrs = drill_row_attrs(detail_url_attr)
         detail_link_html = (
             f'<a href="{detail_url_attr}" '  # nosemgrep
             f'data-dazzle-action="{entity_name_attr}.view" '
@@ -397,18 +485,24 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             "</tr>"
         )
 
-    return (
-        f'<tr id="row-{item_id_attr}" '  # nosemgrep
-        f'data-dazzle-row="{entity_name_attr}" '
-        f'data-dz-row-id="{item_id_attr}" '
-        f':class="{row_state_class}" '
-        f'class="dz-tr-row group" '
-        f"{detail_hx_attrs}>"
-        f"{checkbox_cell}"
-        f"{''.join(cell_parts)}"
-        f"{actions_cell}"
-        "</tr>"
-        f"{peek_panel_row}"
+    # #1511: the `<tr>` skeleton is assembled by the shared `assemble_list_row`
+    # seam (the one row-core for all three archetypes). The data-table archetype
+    # contributes its rich pieces — the whole-row drill (`detail_url`), the Alpine
+    # row-state bind, the bulk-select checkbox, the per-column cells, and the
+    # hover-icon actions cell + peek panel — but the row identity/marker/class
+    # ordering lives in the seam. `drill_attrs` is built above (reusing the
+    # escaped detail URL) inside the `detail_url_template` block.
+    return assemble_list_row(
+        archetype=ARCHETYPE_DATA_TABLE,
+        cells_html="".join(cell_parts),
+        row_id_attr=item_id_attr,
+        dom_id=f"row-{item_id_attr}",
+        data_dazzle_row=entity_name_attr,
+        state_bind=f':class="{row_state_class}"',
+        drill_attrs=drill_attrs,
+        checkbox_cell=checkbox_cell,
+        actions_cell=actions_cell,
+        peek_panel_row=peek_panel_row,
     )
 
 

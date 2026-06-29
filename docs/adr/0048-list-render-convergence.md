@@ -72,6 +72,16 @@ separate, later, deliberately-churning step (#1494, Phase 4).
 
 ## Follow-ons
 
-- **Phase 3** — fold `_emit_list_region` + `_emit_table` onto the shared row-core as
-  archetype presets (may re-baseline workspace-region goldens; re-run card-safety).
-- **Phase 4** — add the `peek` capability + `when_empty` to the shared core (#1494).
+- **Phase 3 — DELIVERED (#1511).** `_emit_list_region` + `_emit_table` fold onto the shared
+  row-core via `assemble_list_row` as archetype presets (`embedded` / `region`), each
+  stamping the `data-dz-list-kind` marker and delegating the clickable-row drill to
+  `drill_row_attrs`. Per-archetype base classes (`dz-table__row` / `dz-list-row`) are kept as
+  preset outputs; only the `<tr>` skeleton + the §3.2 orthogonality rule converge. Deliberate
+  (non-byte-stable) re-baseline — all three archetypes gained the marker; the two folded ones
+  adopted the data-table drill order + `tabindex="0"`. Closed the §3.2 gap on the region
+  action cell (it now `stopPropagation()`s, so drill + action no longer co-fire). New byte
+  anchors: `tests/unit/test_list_row_archetype_fold_1511.py`. Checkbox-cell *content* stays
+  per-archetype (the skeleton convergence is the win; unifying the checkbox markup is optional
+  later polish, not required by the invariant).
+- **Phase 4** — add the `peek` capability + `when_empty` to the shared core (#1494). Now lands
+  once per archetype because the single seam exists.

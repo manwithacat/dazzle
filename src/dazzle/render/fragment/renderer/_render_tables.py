@@ -50,6 +50,12 @@ from dazzle.render.fragment.primitives import (
     StatusList,
     Table,
 )
+from dazzle.render.fragment.renderer._data_row import (
+    ARCHETYPE_EMBEDDED,
+    ARCHETYPE_LIST_REGION,
+    assemble_list_row,
+    drill_row_attrs,
+)
 from dazzle.render.fragment.renderer._helpers import _render_references
 
 if TYPE_CHECKING:
@@ -178,13 +184,17 @@ class _RenderTablesMixin:
         # URL via htmx (full-page swap into <body>). Wrapping each
         # cell in an <a> would break <td> nesting; wrapping the <tr>
         # is the htmx-idiomatic shape for clickable rows.
-        body_parts: list[str] = []
+        # #1511: each `<tr>` is assembled by the shared `assemble_list_row` seam
+        # (the `embedded` archetype). The checkbox cell + the bare `<td>` data
+        # cells are this archetype's content; the row skeleton, the
+        # `data-dz-list-kind` marker, and the clickable-row drill converge there.
+        body_parts = []
         for i, row in enumerate(t.rows):
-            row_cells: list[str] = []
             # Phase 7: per-row checkbox cell when bulk_select is on.
+            checkbox_cell = ""
             if t.bulk_select:
                 row_id = ctx.escape_attr(t.row_ids[i]) if t.row_ids else ""
-                row_cells.append(
+                checkbox_cell = (
                     f'<td class="dz-tr-checkbox-cell" '
                     f'onclick="event.stopPropagation()">'
                     f'<input type="checkbox" class="dz-tr-checkbox" '
@@ -193,24 +203,19 @@ class _RenderTablesMixin:
                     f'aria-label="Select row" />'
                     f"</td>"
                 )
-            row_cells.extend(f"<td>{ctx.escape(cell)}</td>" for cell in row)
-            cells_html = "".join(row_cells)
+            cells_html = "".join(f"<td>{ctx.escape(cell)}</td>" for cell in row)
             url = t.row_links[i] if t.row_links else None
-            row_id_attr = (
-                f' data-dz-row-id="{ctx.escape_attr(t.row_ids[i])}"'
-                if t.bulk_select and t.row_ids
-                else ""
-            )
-            if url:
-                url_attr = ctx.escape_attr(url)
-                body_parts.append(
-                    f'<tr class="dz-table__row dz-table__row--linked" '
-                    f'hx-get="{url_attr}" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
-                    f'hx-push-url="true" tabindex="0"{row_id_attr}>'
-                    f"{cells_html}</tr>"
+            row_id_attr = ctx.escape_attr(t.row_ids[i]) if t.bulk_select and t.row_ids else ""
+            body_parts.append(
+                assemble_list_row(
+                    archetype=ARCHETYPE_EMBEDDED,
+                    cells_html=cells_html,
+                    row_id_attr=row_id_attr,
+                    checkbox_cell=checkbox_cell,
+                    class_extra=" dz-table__row--linked" if url else "",
+                    drill_attrs=drill_row_attrs(ctx.escape_attr(url)) if url else "",
                 )
-            else:
-                body_parts.append(f"<tr{row_id_attr}>{cells_html}</tr>")
+            )
         body_rows = "".join(body_parts)
         return (
             f'<table class="dz-table">'
@@ -952,37 +957,44 @@ class _RenderTablesMixin:
             )
         thead = "<thead><tr>" + "".join(thead_cells) + "</tr></thead>"
 
-        tbody_rows: list[str] = []
+        # #1511: each `<tr>` flows through the shared `assemble_list_row` seam
+        # (the `region` archetype). The data `<td>` cells + the #1148 trailing
+        # action cell are this archetype's content; the row skeleton, the
+        # `data-dz-list-kind` marker, and the #1303 clickable-row drill converge
+        # there. The legacy trailing space on the non-clickable `dz-list-row `
+        # class is preserved as a class suffix.
+        tbody_rows = []
         for i, row in enumerate(lst.rows):
-            cells_html = ""
-            for cell in row:
-                if isinstance(cell, str):
-                    cells_html += f"<td>{ctx.escape(cell)}</td>"
-                else:
-                    cells_html += f"<td>{self._emit(cell, ctx)}</td>"  # type: ignore[arg-type]
-            if has_actions:
-                # #1148: per-row action button HTML is pre-rendered by
-                # the data builder (already-escaped attributes, hx-post
-                # URL, JSON-encoded bound args). Trust contract: builder
-                # owns escape for the values it pulls off row dicts.
-                cells_html += f'<td class="dz-list-row-action">{lst.row_actions[i]}</td>'
-            # #1303: per-row drill-to-detail. When a row link is set, the
-            # <tr> carries an hx-get to the entity detail (full-page swap),
-            # the htmx-idiomatic clickable-row shape the standalone list uses
-            # (#1029) — not a cell <a>, which would break <td> nesting.
+            cells_html = "".join(
+                f"<td>{ctx.escape(cell)}</td>"
+                if isinstance(cell, str)
+                else f"<td>{self._emit(cell, ctx)}</td>"  # type: ignore[arg-type]
+                for cell in row
+            )
+            # #1148: per-row action button HTML is pre-rendered by the data
+            # builder (already-escaped attributes, hx-post URL, JSON-encoded
+            # bound args). Trust contract: builder owns escape for the values it
+            # pulls off row dicts. Empty cell when the row's action is hidden so
+            # column arity stays stable. #1511: the action `<td>` stops click
+            # propagation so the button never co-fires with the row-level drill
+            # (the §3.2 rule — every interactive sub-element opts out of the
+            # bare-click the row owns), matching the queue-region pattern.
+            actions_cell = (
+                f'<td class="dz-list-row-action" onclick="event.stopPropagation()">'
+                f"{lst.row_actions[i]}</td>"
+                if has_actions
+                else ""
+            )
             url = lst.row_links[i] if lst.row_links else None
-            if url:
-                url_attr = ctx.escape_attr(url)
-                tbody_rows.append(
-                    f'<tr class="dz-list-row is-clickable" '
-                    f'hx-get="{url_attr}" hx-trigger="click" hx-target="body" hx-swap="innerHTML" '
-                    f'hx-push-url="true" tabindex="0">{cells_html}</tr>'
+            tbody_rows.append(
+                assemble_list_row(
+                    archetype=ARCHETYPE_LIST_REGION,
+                    cells_html=cells_html,
+                    actions_cell=actions_cell,
+                    class_extra=" is-clickable" if url else " ",
+                    drill_attrs=drill_row_attrs(ctx.escape_attr(url)) if url else "",
                 )
-            else:
-                # Trailing space on `class="dz-list-row "` mirrors legacy
-                # `class="dz-list-row {{ attention_classes(...) }}{% if action_url %} is-clickable{% endif %}"`
-                # for the no-attention, no-action_url case.
-                tbody_rows.append(f'<tr class="dz-list-row ">{cells_html}</tr>')
+            )
         tbody = f"<tbody>{''.join(tbody_rows)}</tbody>"
 
         table = (
