@@ -46,6 +46,30 @@ class Card:
 
 
 @dataclass(frozen=True, slots=True)
+class DzTableMount:
+    """The `dzTable` Alpine-controller mount for a stateful list Region
+    (ADR-0049 Phase 1, D3).
+
+    When a `Region(kind="list")` carries a `DzTableMount`, the renderer adds
+    `id`, `x-data="dzTable(id, endpoint, config)"`, `:aria-busy="loading"`,
+    and `data-dz-bulk-count="0"` to the region root — so the hydrated rows'
+    `toggleRow`/`startEdit`/`isColumnVisible`/`toggleSort` bindings resolve
+    against the controller (the same one the legacy `render_filterable_table`
+    wrapper mounted). The config JSON shape mirrors the legacy mount:
+    `{sortField, sortDir, inlineEditable, bulkActions, entityName}`.
+    `inline_editable` is a tuple to keep the frozen dataclass hashable.
+    """
+
+    table_id: str
+    endpoint: str
+    sort_field: str = ""
+    sort_dir: str = "asc"
+    inline_editable: tuple[str, ...] = ()
+    bulk_actions: bool = False
+    entity_name: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class Region:
     """A semantic region inside a surface — list, detail, form, dashboard, etc.
 
@@ -61,6 +85,10 @@ class Region:
     region root. List regions need this attribute so the contract
     checker (and htmx `closest [data-dazzle-table]` selectors in
     search/filter fragments) can locate the entity container."""
+    mount: DzTableMount | None = None
+    """ADR-0049 D3: optional dzTable controller mount for stateful list
+    regions. When set, the region root carries the `x-data="dzTable(...)"`
+    wrapper. None = a plain (uncontrolled) region — backwards-compatible."""
 
     def __post_init__(self) -> None:
         if self.kind not in _REGION_KINDS:

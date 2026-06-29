@@ -17,6 +17,7 @@ from dazzle.render.fragment import (
     Button,
     Combobox,
     CreateButton,
+    DzTableMount,
     EmptyState,
     Field,
     FileUpload,
@@ -204,12 +205,28 @@ class FragmentSurfaceAdapter:
         else:
             header = Heading(title, level=1)
 
+        # ADR-0049 D3: mount the dzTable controller on the list Region so the
+        # hydrated rows' sort/bulk/inline/column-visibility bindings resolve
+        # (and the loading spinner's `loading` var exists). Mounted
+        # unconditionally — like the legacy `render_filterable_table` wrapper,
+        # the controller owns the loading state + tbody hydrate, not just the
+        # interactive affordances. The id (`region_name`) matches the tbody
+        # hydrate target convention (`#{region_name}-body`).
+        mount = DzTableMount(
+            table_id=region_name or entity_name,
+            endpoint=endpoint,
+            sort_field=str(ctx.get("sort_field", "") or ""),
+            sort_dir=str(ctx.get("sort_dir", "asc") or "asc"),
+            inline_editable=tuple(ctx.get("inline_editable", []) or ()),
+            bulk_actions=bool(ctx.get("bulk_actions", False)),
+            entity_name=entity_name,
+        )
         return Surface(
             header=header,
             # Region carries `data-dazzle-table` so the UX contract
             # checker + htmx `closest [data-dazzle-table]` selectors
             # find the entity container.
-            body=Region(kind="list", body=body, data_table=entity_name),
+            body=Region(kind="list", body=body, data_table=entity_name, mount=mount),
         )
 
     def _build_view(self, surface: SurfaceLike, ctx: dict[str, Any]) -> Surface:
