@@ -33,6 +33,7 @@ from dazzle.render.fragment.primitives import (
     FileUpload,
     FormSection,
     FormStack,
+    FormStepper,
     MoneyField,
     RefPicker,
     RichTextField,
@@ -432,6 +433,51 @@ class _RenderFormsMixin:
             "</div>"
         )
         return self._widget_label(ctx.escape(r.label), name, inner)
+
+    def _emit_form_stepper(self, fs: FormStepper, ctx: RenderContext) -> str:
+        """Render the dzWizard stage-tabs at parity with the legacy
+        `render_form_stepper` — checkmark SVG for completed stages, the bare
+        index for current/pending, Alpine `isActive`/`isCurrent`/`goToStep`."""
+        n = len(fs.sections)
+        items: list[str] = []
+        for idx, title in enumerate(fs.sections):
+            title_html = ctx.escape(title)
+            is_last = idx == n - 1
+            not_last_cls = "" if is_last else " is-not-last"
+            connector = (
+                ""
+                if is_last
+                else (
+                    '<span class="dz-form-stepper-connector" '
+                    f":class=\"{{ 'is-active': isActive({idx + 1}) }}\" "
+                    'aria-hidden="true"></span>'
+                )
+            )
+            items.append(
+                f'<li class="dz-form-stepper-item{not_last_cls}" '
+                f'@click="goToStep({idx})" '
+                f":aria-current=\"isCurrent({idx}) ? 'step' : false\">"
+                '<span class="dz-form-stepper-circle" '
+                f":class=\"{{ 'is-active': isActive({idx}) }}\">"
+                f'<template x-if="step > {idx}">'
+                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" '
+                'stroke="currentColor" stroke-width="3" aria-hidden="true">'
+                '<path stroke-linecap="round" stroke-linejoin="round" '
+                'd="M5 13l4 4L19 7" /></svg></template>'
+                f'<template x-if="step <= {idx}"><span>{idx + 1}</span></template>'
+                "</span>"
+                '<span class="dz-form-stepper-label" '
+                f":class=\"{{ 'is-active': isActive({idx}) }}\">{title_html}</span>"
+                '<span class="visually-hidden" '
+                f"x-text=\"step > {idx} ? 'completed' : "
+                f"(isCurrent({idx}) ? 'current' : 'pending')\"></span>"
+                f"{connector}"
+                "</li>"
+            )
+        return (
+            '<ol class="dz-form-stepper" role="list" aria-label="Form progress">'
+            f"{''.join(items)}</ol>"
+        )
 
     def _emit_submit(self, s: Submit, ctx: RenderContext) -> str:
         cls = f"dz-submit dz-submit--variant-{s.variant}"

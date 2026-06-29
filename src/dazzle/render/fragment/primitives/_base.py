@@ -95,6 +95,7 @@ from dazzle.render.fragment.primitives.forms import (
     FileUpload,
     FormSection,
     FormStack,
+    FormStepper,
     MoneyField,
     RefPicker,
     RichTextField,
@@ -218,6 +219,7 @@ Fragment = (
     # Forms
     | FormStack
     | FormSection
+    | FormStepper
     | Field
     | Combobox
     | RefPicker

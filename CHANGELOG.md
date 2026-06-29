@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.29] - 2026-06-29
+
+### Added
+- **Substrate `FormStepper` primitive — ADR-0049 Phase 3a (forms), widget 9/9 — the widget port is COMPLETE.** The last form widget: the multi-section wizard stage-tabs at byte-identical parity with the legacy `form_renderer.render_form_stepper` (the `<ol class="dz-form-stepper">` whose items are `dzWizard`-driven — `isActive`/`isCurrent`/`goToStep`, completed-stage checkmark SVG vs pending bare-index). Only the experience-flow form path renders a stepper (the main CREATE/EDIT path groups sections without one), so this is the primitive the experience path repoints to in Phase 3b once `form_renderer` is deleted. Parity (byte-equality vs legacy) pinned by `test_form_widget_stepper_phase3.py`. **All 9 form widgets are now ported to the substrate** (search_select, money, combobox, tags, picker, color, slider, rich_text, stepper) — Phase 3a is done; next is the 3b flip + delete (review-gated).
+
 ## [0.92.28] - 2026-06-29
 
 ### Added

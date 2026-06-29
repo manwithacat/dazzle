@@ -58,6 +58,7 @@ from dazzle.render.fragment.primitives import (
     FilterBar,
     FormSection,
     FormStack,
+    FormStepper,
     Fragment,
     Funnel,
     Grid,
@@ -378,6 +379,8 @@ class FragmentRenderer(
                 return self._emit_form_stack(fragment, ctx)
             case FormSection():
                 return self._emit_form_section(fragment, ctx)
+            case FormStepper():
+                return self._emit_form_stepper(fragment, ctx)
             case Field():
                 return self._emit_field(fragment, ctx)
             case Combobox():

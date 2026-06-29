@@ -107,6 +107,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         # forms
         "FormStack",
         "FormSection",
+        "FormStepper",
         "Field",
         "Combobox",
         "RefPicker",

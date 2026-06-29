@@ -18400,6 +18400,8 @@
       "FormSection.__post_init__": 2,
       "FormStack": 4,
       "FormStack.__post_init__": 3,
+      "FormStepper": 3,
+      "FormStepper.__post_init__": 2,
       "MoneyField": 4,
       "MoneyField.__post_init__": 3,
       "RefPicker": 4,
@@ -18621,7 +18623,7 @@
   "dazzle/render/fragment/renderer/_emit.py": {
     "functions": {
       "FragmentRenderer": 33,
-      "FragmentRenderer._emit": 110,
+      "FragmentRenderer._emit": 111,
       "FragmentRenderer._emit_script": 10,
       "FragmentRenderer._emit_stylesheet": 5,
       "FragmentRenderer.render": 2
@@ -18687,6 +18689,7 @@
       "_RenderFormsMixin._emit_file_upload": 5,
       "_RenderFormsMixin._emit_form_section": 3,
       "_RenderFormsMixin._emit_form_stack": 8,
+      "_RenderFormsMixin._emit_form_stepper": 4,
       "_RenderFormsMixin._emit_money": 5,
       "_RenderFormsMixin._emit_ref_picker": 4,
       "_RenderFormsMixin._emit_rich_text": 4,

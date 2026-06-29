@@ -316,6 +316,22 @@ class RichTextField:
 
 
 @dataclass(frozen=True, slots=True)
+class FormStepper:
+    """Wizard stage-tabs for a multi-section experience form (`widget`-free).
+    Parity with the legacy `form_renderer.render_form_stepper` — an
+    `<ol class="dz-form-stepper">` whose items are dzWizard-driven
+    (`isActive()`/`isCurrent()`/`goToStep()` live on the surrounding
+    `x-data="dzWizard"` scope). Only the experience-flow form path renders a
+    stepper; the main CREATE/EDIT form path groups sections without one."""
+
+    sections: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if not self.sections:
+            raise ValueError("FormStepper requires at least one section title")
+
+
+@dataclass(frozen=True, slots=True)
 class Submit:
     label: str
     variant: Literal["primary", "secondary", "danger"] = "primary"

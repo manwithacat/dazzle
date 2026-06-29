@@ -60,6 +60,7 @@ from dazzle.render.fragment.primitives import (
     FilterColumn,
     FormSection,
     FormStack,
+    FormStepper,
     Fragment,
     Funnel,
     FunnelStage,
@@ -332,6 +333,7 @@ __all__ = [
     # primitives — forms
     "FormStack",
     "FormSection",
+    "FormStepper",
     "Field",
     "Combobox",
     "MoneyField",
