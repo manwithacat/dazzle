@@ -91,11 +91,30 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     # but target different entities (e.g. an app's ``feedback_create`` vs. the
     # framework-synth ``feedback_create`` on FeedbackReport). See #828.
     progress.log_sync(f"Rendering {len(page_contexts)} pages...")
+    # ADR-0049 Task 6: `mode: list` renders via the typed substrate now —
+    # `render_page` raises for a list ctx. Render lists through the substrate
+    # (the body) wrapped in the page chrome, so fidelity keeps scoring lists.
+    from dazzle.http.runtime.page_routes import _build_dispatch_ctx
+    from dazzle.http.runtime.renderers.init import register_default_renderers
+    from dazzle.http.runtime.services import RuntimeServices
+    from dazzle.render.dispatch import dispatch_render
+
+    _fidelity_services = RuntimeServices()
+    register_default_renderers(_fidelity_services)
+
+    def _render_for_fidelity(ctx: Any) -> str:
+        surface = appspec.get_surface(ctx.view_name) if hasattr(appspec, "get_surface") else None
+        if getattr(ctx, "table", None) is not None and surface is not None:
+            dctx = _build_dispatch_ctx(ctx, surface, services=_fidelity_services)
+            body = dispatch_render(surface, ctx=dctx, services=_fidelity_services)
+            return render_page(ctx, inner_html=body)
+        return render_page(ctx)
+
     rendered_pages: dict[tuple[str, str], str] = {}
     render_failure_details: list[dict[str, str]] = []
     for _route, ctx in page_contexts.items():
         try:
-            html = render_page(ctx)
+            html = _render_for_fidelity(ctx)
             rendered_pages[(ctx.view_name, ctx.entity_ref)] = html
         except Exception as e:  # nosec B112 - skip unrenderable pages gracefully
             logger.warning("Fidelity: failed to render %s: %s", ctx.view_name, e)

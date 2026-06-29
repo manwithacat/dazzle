@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.19] - 2026-06-29
+
+### Fixed
+- **`dazzle build-ui` / `dazzle serve --ui-only` / fidelity scoring render `mode: list` via the substrate (ADR-0049 Phase 1 follow-up).** The E2E (PostgreSQL) tier caught that the static-preview generator (`page/runtime/static_preview.py`) and two more callers rendered list surfaces through `render_page`, which now raises loudly for a list (the D4 guard from v0.92.18) — so `build-ui` crashed and `serve --ui-only` would too. These are page/mcp-layer callers that can't reach the http dispatch seam (`page ↛ http`). Fix: `static_preview.generate_preview_files` accepts an injected `list_body_renderer`; the cli `build_service.generate_preview_files_with_substrate` (used by `build-ui` + `serve --ui-only`) and the mcp fidelity handler provide it (build the substrate list body, wrap via `render_page(ctx, inner_html=body)`). No content regression — the legacy `render_filterable_table` was skeleton-only too, so static list previews were always an empty skeleton. New `tests/integration/test_build_ui_substrate_list.py` pins this so the missed-caller class is caught without the Postgres tier.
+
+### Agent Guidance
+- **`render_page(ctx)` raises for a `mode: list` ctx now (ADR-0049 D4).** Any path that renders a list page must either dispatch via `_maybe_dispatch_inner_html` (the http route) or pre-render the substrate list body and pass it as `render_page(ctx, inner_html=body)`. The reusable cli helper is `dazzle.cli.services.build_service.generate_preview_files_with_substrate`. When adding a new surface-rendering caller, sweep for `render_page(` + `generate_preview_files(` and confirm it handles list ctx — the unit suite won't catch a list-only path without services; the E2E (PostgreSQL) tier will.
+
 ## [0.92.18] - 2026-06-29
 
 ### Removed

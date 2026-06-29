@@ -3,8 +3,31 @@
 from pathlib import Path
 from typing import Any
 
+# ADR-0049 Task 6: the preview generators render `mode: list` via the typed
+# substrate (the dispatch seam is in http; the page-layer static_preview can't
+# reach it, page ↛ http). cli → http/page/render are all legal directions, so
+# these are module-top (no cycle — http does not import the cli build service).
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest, resolve_database_url
+from dazzle.http.runtime.page_routes import _build_dispatch_ctx
+from dazzle.http.runtime.renderers.init import register_default_renderers
+from dazzle.http.runtime.services import RuntimeServices
+from dazzle.page.runtime.static_preview import generate_preview_files
+from dazzle.render.dispatch import dispatch_render
+
+
+def generate_preview_files_with_substrate(appspec: Any, output_dir: str) -> list[Path]:
+    """Generate static preview HTML files, rendering `mode: list` surfaces via
+    the typed substrate (ADR-0049 Task 6). Used by `dazzle build-ui` (via
+    `BuildService`) and `dazzle serve --ui-only`."""
+    services = RuntimeServices()
+    register_default_renderers(services)
+
+    def _list_body(surface: Any, ctx: Any) -> str:
+        dctx = _build_dispatch_ctx(ctx, surface, services=services)
+        return dispatch_render(surface, ctx=dctx, services=services)
+
+    return generate_preview_files(appspec, output_dir, list_body_renderer=_list_body)
 
 
 class BuildService:
@@ -82,10 +105,8 @@ class BuildService:
         return cfg
 
     def generate_preview_files(self, appspec: Any, output_dir: str) -> list[str]:
-        """Generate static preview HTML files from AppSpec."""
-        from dazzle.page.runtime.static_preview import generate_preview_files
-
-        return [str(p) for p in generate_preview_files(appspec, output_dir)]
+        """Generate static preview HTML files from AppSpec (substrate lists)."""
+        return [str(p) for p in generate_preview_files_with_substrate(appspec, output_dir)]
 
     def resolve_database_url(self, explicit_url: str = "") -> str:
         """Resolve the database URL from manifest/env/default."""

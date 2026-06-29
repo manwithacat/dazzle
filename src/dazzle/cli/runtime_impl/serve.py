@@ -505,10 +505,11 @@ def _start_vendor_mocks(ctx: _ServeContext) -> None:
 
 def _serve_ui_only(ctx: _ServeContext) -> None:
     """Serve UI-only static preview files."""
-    from dazzle.page.runtime.static_preview import generate_preview_files
+    # ADR-0049 Task 6: render `mode: list` previews via the substrate.
+    from dazzle.cli.services.build_service import generate_preview_files_with_substrate
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        preview_files = generate_preview_files(ctx.appspec, tmpdir)
+        preview_files = generate_preview_files_with_substrate(ctx.appspec, tmpdir)
         if preview_files:
             first = preview_files[0]
             (Path(tmpdir) / "index.html").write_text(
