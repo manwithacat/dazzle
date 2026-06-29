@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.16] - 2026-06-29
+
+### Added
+- **Substrate-canonical comprehensive list chrome (ADR-0049 Phase 1 Tasks 2–4).** The typed Fragment substrate now renders the full list-chrome surface, reaching parity with the legacy `render_filterable_table` so the substrate can become the universal list render path. New pure `render/` primitives: `Table` skeleton mode (empty hydrating `<tbody hx-trigger="load">` → `/api` → `render_data_row`, the sole row source per D2; plus `dz-table-grid` class, sr `<caption>`, trailing actions `<th>`, `data-dz-col` headers, dzTable `toggleSort` sortable headers); `DataListScroll` (the `.dz-table` list shell — scroll/loading-spinner/scroll-x landmark/empty sibling/loading-sr/pagination footer, reusing all of `table.css`); `ColumnVisibilityMenu` (>3-col dropdown); `ListFilterBar` (list filters that actually filter — target `#{id}-body` with `filter[key]` names + select/text/ref controls); `DzTableMount` on the list `Region` (the dzTable controller). `_build_list` composes the canonical shell (always skeleton+hydrate). The `/api` handler derives `table_id` from `HX-Target` so OOB pagination + row swaps land automatically. The 6 `render: fragment` opt-in surfaces render this canonical chrome now; the default-list dispatch flip is the next step (gated by independent review).
+
+### Changed
+- **List free-text search is the substrate FTS dropdown, not the legacy inline table-filter** (substrate-canonical divergence, accepted). Filter *selects* still narrow the list in place.
+
+### Agent Guidance
+- **List chrome has one home now: the substrate.** `_build_list` (`http/runtime/renderers/fragment_adapter.py`) composes a `DataListScroll` shell around a skeleton `Table`, with `ListFilterBar`/`ColumnVisibilityMenu`/`SearchBox`/`BulkActionToolbar`/`CreateButton` + a `DzTableMount` on the `Region`. To change list chrome, edit those `render/` primitives — do NOT reach for the legacy `page/runtime/table_renderer.py` (it is being deleted in Task 6). The list is **skeleton+hydrate**: rows come only from `/api` → `render_data_row`; never inline rows in `_build_list`. List interactive controls (sort/bulk/inline/column-visibility) bind to the mounted `dzTable` controller; the `/api` handler recovers `table_id` from `HX-Target` (`-body` stripped), so filter/sort/pagination targets must point at `#{table_id}-body`. Adding a new list-chrome primitive means registering it in the `Fragment` union (`primitives/_base.py`), the renderer match block (`renderer/_emit.py`), and the exhaustiveness/alias/html5 test harnesses; void elements (`<input>`) must NOT self-close (`/>` trips the html5 validator).
+
 ## [0.92.15] - 2026-06-29
 
 ### Added
