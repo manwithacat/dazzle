@@ -1662,6 +1662,19 @@ def _build_dispatch_ctx(
                     (str(o.get("value", "")), str(o.get("label", o.get("value", ""))))
                     for o in options
                 ]
+            # ADR-0049 Phase 3a: thread the `widget=` override + the field
+            # default + extra config (slider min/max/step, rich_text
+            # toolbar/maxLength) so the adapter can build the matching widget
+            # primitive (combobox/tags/picker/color/slider/rich_text).
+            widget = getattr(field, "widget", None)
+            if widget:
+                entry["widget"] = str(widget)
+            field_default = getattr(field, "default", None)
+            if field_default not in (None, ""):
+                entry["default"] = str(field_default)
+            field_extra_all = getattr(field, "extra", None) or {}
+            if field_extra_all and "extra" not in entry:
+                entry["extra"] = field_extra_all
             # ADR-0049 Phase 3a: thread a `: money` field's currency config
             # (`extra`) + persisted minor units so the adapter's MONEY branch
             # can build a MoneyField (legacy `_render_money` parity).

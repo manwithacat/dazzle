@@ -31,6 +31,7 @@ from dazzle.render.fragment import (
     CohortStripCell,
     CohortStripLensTab,
     CohortStripRegion,
+    ColorField,
     ColumnVisibilityMenu,
     Combobox,
     ConfirmGate,
@@ -40,6 +41,7 @@ from dazzle.render.fragment import (
     DashboardGrid,
     DashboardNotice,
     DataListScroll,
+    DatePickerField,
     DateRangePicker,
     DayTimelineRegion,
     DayTimelineSlot,
@@ -106,6 +108,7 @@ from dazzle.render.fragment import (
     Region,
     RelatedGroup,
     RelatedTab,
+    RichTextField,
     Row,
     Script,
     SearchBox,
@@ -114,6 +117,7 @@ from dazzle.render.fragment import (
     Sidebar,
     Skeleton,
     SkipLink,
+    SliderField,
     Slot,
     SortHeader,
     Sparkline,
@@ -127,6 +131,7 @@ from dazzle.render.fragment import (
     Surface,
     Table,
     Tabs,
+    TagsField,
     TargetSelector,
     TaskInboxItem,
     TaskInboxRegion,
@@ -139,6 +144,7 @@ from dazzle.render.fragment import (
     Topbar,
     Tree,
     TreeNode,
+    WidgetCombobox,
     WorkspaceContextSelector,
     WorkspaceDrawer,
     WorkspacePrimaryAction,
@@ -466,6 +472,18 @@ def _sample_for(primitive_type: type) -> object:
         return SearchSelect(name="ss", label="SS", endpoint=URL("/search"))
     if primitive_type is MoneyField:
         return MoneyField(name="amt", label="Amount")
+    if primitive_type is WidgetCombobox:
+        return WidgetCombobox(name="wc", label="WC", options=(("a", "A"),))
+    if primitive_type is TagsField:
+        return TagsField(name="tg", label="Tags")
+    if primitive_type is DatePickerField:
+        return DatePickerField(name="dp", label="Date")
+    if primitive_type is ColorField:
+        return ColorField(name="cl", label="Colour")
+    if primitive_type is SliderField:
+        return SliderField(name="sl", label="Slider")
+    if primitive_type is RichTextField:
+        return RichTextField(name="rt", label="Rich")
     if primitive_type is FileUpload:
         return FileUpload(name="f", label="F", upload_url=URL("/uploads"))
     if primitive_type is Submit:

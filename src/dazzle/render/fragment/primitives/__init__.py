@@ -121,15 +121,21 @@ from dazzle.render.fragment.primitives.data import (
     WorkspaceToolbar,
 )
 from dazzle.render.fragment.primitives.forms import (
+    ColorField,
     Combobox,
+    DatePickerField,
     Field,
     FileUpload,
     FormSection,
     FormStack,
     MoneyField,
     RefPicker,
+    RichTextField,
     SearchSelect,
+    SliderField,
     Submit,
+    TagsField,
+    WidgetCombobox,
 )
 from dazzle.render.fragment.primitives.interactive import (
     Button,
@@ -282,6 +288,12 @@ __all__ = [
     "MoneyField",
     "RefPicker",
     "SearchSelect",
+    "WidgetCombobox",
+    "TagsField",
+    "DatePickerField",
+    "ColorField",
+    "SliderField",
+    "RichTextField",
     "FileUpload",
     "Submit",
     # navigation

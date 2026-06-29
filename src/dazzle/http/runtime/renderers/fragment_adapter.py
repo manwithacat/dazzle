@@ -16,10 +16,12 @@ from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.render.fragment import (
     URL,
     Button,
+    ColorField,
     ColumnVisibilityMenu,
     Combobox,
     CreateButton,
     DataListScroll,
+    DatePickerField,
     DzTableMount,
     EmptyState,
     Field,
@@ -39,16 +41,20 @@ from dazzle.render.fragment import (
     Region,
     RelatedGroup,
     RelatedTab,
+    RichTextField,
     Row,
     SearchBox,
     SearchSelect,
+    SliderField,
     SortHeader,
     Stack,
     Submit,
     Surface,
     Table,
+    TagsField,
     TargetSelector,
     Text,
+    WidgetCombobox,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
@@ -669,7 +675,7 @@ class FragmentSurfaceAdapter:
 
 def _field_to_primitive(
     field_dict: dict[str, Any],
-) -> "Field | Combobox | RefPicker | SearchSelect | MoneyField | FileUpload":
+) -> "Field | Combobox | RefPicker | SearchSelect | MoneyField | FileUpload | WidgetCombobox | TagsField | DatePickerField | ColorField | SliderField | RichTextField":
     """Map a field-shape dict to the right Fragment form primitive.
 
     The `kind` carried in field_dict is the *widget* kind — matching
@@ -765,6 +771,69 @@ def _field_to_primitive(
             required=required,
             initial_value=initial_value,
             initial_label=str(field_dict.get("initial_label", "") or ""),
+        )
+
+    # WIDGET overrides (ADR-0049 Phase 3a): a `widget=` clause selects a
+    # client-controller widget (combobox/tags/picker/color/slider/rich_text).
+    # Routed before the plain enum/select branch — `widget=combobox` is a
+    # TomSelect-enhanced select, not the vanilla Combobox. `multi_select` and
+    # `range`/date_range are intentionally unported (zero fleet usage).
+    widget = str(field_dict.get("widget", "") or "").strip()
+    extra = field_dict.get("extra") or {}
+    default = str(field_dict.get("default", "") or "")
+    widget_initial = initial_value or default
+    if widget == "combobox":
+        opts = tuple((str(v), str(label_)) for v, label_ in (field_dict.get("options") or []))
+        return WidgetCombobox(
+            name=name,
+            label=label,
+            options=opts,
+            required=required,
+            placeholder=placeholder,
+            initial_value=initial_value,
+        )
+    if widget == "tags":
+        return TagsField(
+            name=name,
+            label=label,
+            required=required,
+            placeholder=placeholder,
+            initial_value=initial_value,
+        )
+    if widget == "picker":
+        return DatePickerField(
+            name=name,
+            label=label,
+            is_datetime=(kind == "datetime"),
+            required=required,
+            placeholder=placeholder,
+            initial_value=widget_initial,
+        )
+    if widget == "color":
+        return ColorField(
+            name=name,
+            label=label,
+            required=required,
+            initial_value=widget_initial or "#3b82f6",
+        )
+    if widget == "slider":
+        return SliderField(
+            name=name,
+            label=label,
+            min_val=str(extra.get("min", 0)),
+            max_val=str(extra.get("max", 100)),
+            step=str(extra.get("step", 1)),
+            required=required,
+            initial_value=widget_initial or "50",
+        )
+    if widget == "rich_text":
+        return RichTextField(
+            name=name,
+            label=label,
+            required=required,
+            initial_value=initial_value,
+            toolbar=str(extra.get("rich_text_toolbar", "") or ""),
+            max_length=int(extra.get("rich_text_max_length", 0) or 0),
         )
 
     # Enum / select: distinguished by presence of options OR widget kind

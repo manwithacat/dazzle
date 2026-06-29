@@ -211,6 +211,111 @@ class MoneyField:
 
 
 @dataclass(frozen=True, slots=True)
+class WidgetCombobox:
+    """TomSelect enum picker (`widget=combobox`) — at parity with the legacy
+    `_render_combobox`. Distinct from the plain `Combobox` (a vanilla
+    `<select>`): this emits `data-dz-widget="combobox"` so the client TomSelect
+    controller mounts. A leading empty/placeholder option is always rendered."""
+
+    name: str
+    label: str
+    options: tuple[tuple[str, str], ...] = ()
+    required: bool = False
+    placeholder: str = ""
+    initial_value: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("WidgetCombobox requires a non-empty name")
+
+
+@dataclass(frozen=True, slots=True)
+class TagsField:
+    """Free-form tag entry (`widget=tags`) — TomSelect with create + remove
+    plugins. Parity with the legacy `_render_tags`."""
+
+    name: str
+    label: str
+    required: bool = False
+    placeholder: str = ""
+    initial_value: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("TagsField requires a non-empty name")
+
+
+@dataclass(frozen=True, slots=True)
+class DatePickerField:
+    """Flatpickr date/datetime picker (`widget=picker`). Parity with the legacy
+    `_render_date_picker` — `data-dz-widget="datepicker"` + a `data-dz-options`
+    JSON carrying `dateFormat` (+ `enableTime` for datetime)."""
+
+    name: str
+    label: str
+    is_datetime: bool = False
+    required: bool = False
+    placeholder: str = ""
+    initial_value: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("DatePickerField requires a non-empty name")
+
+
+@dataclass(frozen=True, slots=True)
+class ColorField:
+    """Native colour input with a live hex readout (`widget=color`). Parity
+    with the legacy `_render_color` (`x-data`/`x-model` self-contained)."""
+
+    name: str
+    label: str
+    required: bool = False
+    initial_value: str = "#3b82f6"
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("ColorField requires a non-empty name")
+
+
+@dataclass(frozen=True, slots=True)
+class SliderField:
+    """Range slider with a tooltip value readout (`widget=slider`). Parity with
+    the legacy `_render_slider` — `data-dz-widget="range-tooltip"` mounts the
+    dzRangeTooltip controller; `min`/`max`/`step` come from the field `extra`."""
+
+    name: str
+    label: str
+    min_val: str = "0"
+    max_val: str = "100"
+    step: str = "1"
+    required: bool = False
+    initial_value: str = "50"
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("SliderField requires a non-empty name")
+
+
+@dataclass(frozen=True, slots=True)
+class RichTextField:
+    """Rich-text editor (`widget=rich_text`). Parity with the legacy
+    `_render_rich_text` — a hidden input holds the HTML, `data-dz-editor`
+    mounts the editor, and `data-dz-options` carries `toolbar`/`maxLength`."""
+
+    name: str
+    label: str
+    required: bool = False
+    initial_value: str = ""
+    toolbar: str = ""
+    max_length: int = 0
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("RichTextField requires a non-empty name")
+
+
+@dataclass(frozen=True, slots=True)
 class Submit:
     label: str
     variant: Literal["primary", "secondary", "danger"] = "primary"

@@ -26,15 +26,21 @@ from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.primitives import (
     AddCardRow,
     CardPicker,
+    ColorField,
     Combobox,
+    DatePickerField,
     Field,
     FileUpload,
     FormSection,
     FormStack,
     MoneyField,
     RefPicker,
+    RichTextField,
     SearchSelect,
+    SliderField,
     Submit,
+    TagsField,
+    WidgetCombobox,
 )
 
 if TYPE_CHECKING:
@@ -311,6 +317,121 @@ class _RenderFormsMixin:
             f"x-init=\"minorValue = '{minor_attr}'\">"
             "</div>"
         )
+
+    @staticmethod
+    def _widget_label(label_html: str, name: str, inner: str) -> str:
+        """Common substrate field wrapper for `widget=`-driven primitives —
+        the label + the widget element the client controller mounts on."""
+        return (
+            f'<label class="dz-field" for="field-{name}">'
+            f'<span class="dz-field__label">{label_html}</span>{inner}</label>'
+        )
+
+    def _emit_widget_combobox(self, c: WidgetCombobox, ctx: RenderContext) -> str:
+        name = ctx.escape_attr(c.name)
+        placeholder_html = ctx.escape(c.placeholder or "Select...")
+        placeholder_attr = (
+            f' placeholder="{ctx.escape_attr(c.placeholder)}"' if c.placeholder else ""
+        )
+        required_attr = ' required aria-required="true"' if c.required else ""
+        opts = [f'<option value="">{placeholder_html}</option>']
+        for value, label in c.options:
+            sel = " selected" if value == c.initial_value else ""
+            opts.append(
+                f'<option value="{ctx.escape_attr(value)}"{sel}>{ctx.escape(label)}</option>'
+            )
+        inner = (
+            f'<select id="field-{name}" name="{name}" '
+            "data-dz-widget=\"combobox\" data-dz-options='{}' "
+            f'class="dz-form-input"{placeholder_attr}{required_attr}>'
+            f"{''.join(opts)}</select>"
+        )
+        return self._widget_label(ctx.escape(c.label), name, inner)
+
+    def _emit_tags_field(self, t: TagsField, ctx: RenderContext) -> str:
+        name = ctx.escape_attr(t.name)
+        placeholder_attr = (
+            f' placeholder="{ctx.escape_attr(t.placeholder)}"' if t.placeholder else ""
+        )
+        required_attr = ' required aria-required="true"' if t.required else ""
+        inner = (
+            f'<input id="field-{name}" name="{name}" type="text" '
+            'data-dz-widget="tags" '
+            'data-dz-options=\'{"create":true,"plugins":["remove_button"]}\' '
+            f'class="dz-form-input" value="{ctx.escape_attr(t.initial_value)}"'
+            f"{placeholder_attr}{required_attr}>"
+        )
+        return self._widget_label(ctx.escape(t.label), name, inner)
+
+    def _emit_date_picker(self, d: DatePickerField, ctx: RenderContext) -> str:
+        name = ctx.escape_attr(d.name)
+        date_format = "Y-m-d H:i" if d.is_datetime else "Y-m-d"
+        enable_time = ',"enableTime":true' if d.is_datetime else ""
+        placeholder_attr = (
+            f' placeholder="{ctx.escape_attr(d.placeholder)}"' if d.placeholder else ""
+        )
+        required_attr = ' required aria-required="true"' if d.required else ""
+        inner = (
+            f'<input id="field-{name}" name="{name}" type="text" '
+            'data-dz-widget="datepicker" '
+            f'data-dz-options=\'{{"dateFormat":"{date_format}"{enable_time}}}\' '
+            f'class="dz-form-input" value="{ctx.escape_attr(d.initial_value)}"'
+            f"{placeholder_attr}{required_attr}>"
+        )
+        return self._widget_label(ctx.escape(d.label), name, inner)
+
+    def _emit_color_field(self, c: ColorField, ctx: RenderContext) -> str:
+        name = ctx.escape_attr(c.name)
+        init_attr = ctx.escape_attr(c.initial_value)
+        required_attr = ' required aria-required="true"' if c.required else ""
+        inner = (
+            f'<div class="dz-form-color-group" x-data="{{ value: \'{init_attr}\' }}">'
+            f'<input type="color" id="field-{name}" name="{name}" '
+            f'class="dz-form-color-input" x-model="value"{required_attr}>'
+            '<span class="dz-form-color-hex" aria-hidden="true" '
+            f'x-text="value">{ctx.escape(c.initial_value)}</span>'
+            "</div>"
+        )
+        return self._widget_label(ctx.escape(c.label), name, inner)
+
+    def _emit_slider_field(self, s: SliderField, ctx: RenderContext) -> str:
+        name = ctx.escape_attr(s.name)
+        required_attr = ' required aria-required="true"' if s.required else ""
+        inner = (
+            '<div data-dz-widget="range-tooltip" class="dz-form-slider-group">'
+            f'<input id="field-{name}" name="{name}" type="range" '
+            'data-dz-slider class="dz-form-slider" '
+            f'min="{ctx.escape_attr(s.min_val)}" '
+            f'max="{ctx.escape_attr(s.max_val)}" '
+            f'step="{ctx.escape_attr(s.step)}" '
+            f'value="{ctx.escape_attr(s.initial_value)}"{required_attr}>'
+            '<span data-dz-range-value class="dz-form-slider-value" '
+            f'aria-hidden="true">{ctx.escape(s.initial_value)}</span>'
+            "</div>"
+        )
+        return self._widget_label(ctx.escape(s.label), name, inner)
+
+    def _emit_rich_text(self, r: RichTextField, ctx: RenderContext) -> str:
+        import json
+
+        name = ctx.escape_attr(r.name)
+        required_attr = ' required aria-required="true"' if r.required else ""
+        rt_opts: dict[str, object] = {}
+        if r.toolbar:
+            rt_opts["toolbar"] = r.toolbar
+        if r.max_length:
+            rt_opts["maxLength"] = r.max_length
+        rt_opts_json = ctx.escape_attr(json.dumps(rt_opts))
+        inner = (
+            '<div data-dz-widget="richtext" '
+            f"data-dz-options='{rt_opts_json}' "
+            'class="dz-form-richtext">'
+            f'<input type="hidden" id="field-{name}" name="{name}" '
+            f'value="{ctx.escape_attr(r.initial_value)}"{required_attr}>'
+            "<div data-dz-editor></div>"
+            "</div>"
+        )
+        return self._widget_label(ctx.escape(r.label), name, inner)
 
     def _emit_submit(self, s: Submit, ctx: RenderContext) -> str:
         cls = f"dz-submit dz-submit--variant-{s.variant}"

@@ -12155,7 +12155,7 @@
       "_apply_anon_nav": 1,
       "_apply_persona_form_overrides": 20,
       "_apply_persona_overrides": 16,
-      "_build_dispatch_ctx": 156,
+      "_build_dispatch_ctx": 161,
       "_build_workspace_primary_action_candidates": 9,
       "_check_entity_cedar_access": 22,
       "_check_surface_access": 10,
@@ -12566,7 +12566,7 @@
       "_cell_value": 3,
       "_detail_field_value": 5,
       "_esc_attr": 1,
-      "_field_to_primitive": 33,
+      "_field_to_primitive": 49,
       "_filter_option": 4,
       "_format_cell": 3,
       "_pick_empty_state": 9,
@@ -18386,8 +18386,12 @@
   },
   "dazzle/render/fragment/primitives/forms.py": {
     "functions": {
+      "ColorField": 3,
+      "ColorField.__post_init__": 2,
       "Combobox": 3,
       "Combobox.__post_init__": 2,
+      "DatePickerField": 3,
+      "DatePickerField.__post_init__": 2,
       "Field": 3,
       "Field.__post_init__": 2,
       "FileUpload": 5,
@@ -18400,9 +18404,17 @@
       "MoneyField.__post_init__": 3,
       "RefPicker": 4,
       "RefPicker.__post_init__": 3,
+      "RichTextField": 3,
+      "RichTextField.__post_init__": 2,
       "SearchSelect": 6,
       "SearchSelect.__post_init__": 5,
-      "Submit": 1
+      "SliderField": 3,
+      "SliderField.__post_init__": 2,
+      "Submit": 1,
+      "TagsField": 3,
+      "TagsField.__post_init__": 2,
+      "WidgetCombobox": 3,
+      "WidgetCombobox.__post_init__": 2
     },
     "mi_rank": "A"
   },
@@ -18608,8 +18620,8 @@
   },
   "dazzle/render/fragment/renderer/_emit.py": {
     "functions": {
-      "FragmentRenderer": 31,
-      "FragmentRenderer._emit": 104,
+      "FragmentRenderer": 33,
+      "FragmentRenderer._emit": 110,
       "FragmentRenderer._emit_script": 10,
       "FragmentRenderer._emit_stylesheet": 5,
       "FragmentRenderer.render": 2
@@ -18664,19 +18676,26 @@
   },
   "dazzle/render/fragment/renderer/_render_forms.py": {
     "functions": {
-      "_RenderFormsMixin": 5,
+      "_RenderFormsMixin": 4,
       "_RenderFormsMixin._emit": 1,
       "_RenderFormsMixin._emit_add_card_row": 1,
       "_RenderFormsMixin._emit_card_picker": 4,
+      "_RenderFormsMixin._emit_color_field": 2,
       "_RenderFormsMixin._emit_combobox": 4,
+      "_RenderFormsMixin._emit_date_picker": 5,
       "_RenderFormsMixin._emit_field": 6,
       "_RenderFormsMixin._emit_file_upload": 5,
       "_RenderFormsMixin._emit_form_section": 3,
       "_RenderFormsMixin._emit_form_stack": 8,
       "_RenderFormsMixin._emit_money": 5,
       "_RenderFormsMixin._emit_ref_picker": 4,
+      "_RenderFormsMixin._emit_rich_text": 4,
       "_RenderFormsMixin._emit_search_select": 5,
-      "_RenderFormsMixin._emit_submit": 1
+      "_RenderFormsMixin._emit_slider_field": 2,
+      "_RenderFormsMixin._emit_submit": 1,
+      "_RenderFormsMixin._emit_tags_field": 3,
+      "_RenderFormsMixin._emit_widget_combobox": 6,
+      "_RenderFormsMixin._widget_label": 1
     },
     "mi_rank": "A"
   },

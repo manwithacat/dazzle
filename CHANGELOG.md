@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.28] - 2026-06-29
+
+### Added
+- **Substrate `widget=`-driven form primitives — ADR-0049 Phase 3a (forms), widgets 3-8/9.** Six new typed primitives at parity with the legacy `form_renderer` widgets, each emitting the exact `data-dz-widget` + `data-dz-options` mount contract the existing client controllers read (so the controllers keep working unchanged): `WidgetCombobox` (`widget=combobox`, TomSelect-enhanced enum, distinct from the vanilla `Combobox`), `TagsField` (`widget=tags`, TomSelect create+remove), `DatePickerField` (`widget=picker`, Flatpickr date/datetime), `ColorField` (`widget=color`, native colour + live hex readout), `SliderField` (`widget=slider`, dzRangeTooltip with `min`/`max`/`step` from `extra`), `RichTextField` (`widget=rich_text`, dzRichText editor with `rich_text_toolbar`/`rich_text_max_length`). `_field_to_primitive` routes on the `widget` clause (threaded by `_build_dispatch_ctx` alongside the field `default` + `extra`); `multi_select` and `range`/date_range are intentionally left unported (zero fleet usage — dropped at the 3b delete). Exercised by the `component_showcase` gallery; parity (incl. a byte-identical `data-dz-options` check for rich_text) pinned by `test_form_widget_showcase_phase3.py`. **Phase 3a widget port now covers 8/9** — only the multi-section wizard stepper (3a.9) remains before the 3b flip.
+  - **Convergence note (affects existing `render: fragment` forms):** the compiler auto-assigns `widget="picker"` to date/datetime fields, so the legacy form path already renders them as the Flatpickr datepicker. The substrate form path previously *ignored* the widget and emitted a native `<input type="date">` — a divergence; it now honours `widget=picker` too (the `DatePickerField`), matching legacy. Date/datetime fields on surfaces that already opt into `render: fragment` therefore change from a native date input to the Flatpickr datepicker (parity, not a regression).
+
 ## [0.92.27] - 2026-06-29
 
 ### Added

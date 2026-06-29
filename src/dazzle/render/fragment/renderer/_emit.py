@@ -35,6 +35,7 @@ from dazzle.render.fragment.primitives import (
     Card,
     CardPicker,
     CohortStripRegion,
+    ColorField,
     ColumnVisibilityMenu,
     Combobox,
     ConfirmGate,
@@ -43,6 +44,7 @@ from dazzle.render.fragment.primitives import (
     DashboardCard,
     DashboardGrid,
     DataListScroll,
+    DatePickerField,
     DateRangePicker,
     DayTimelineRegion,
     DetailGrid,
@@ -89,6 +91,7 @@ from dazzle.render.fragment.primitives import (
     RefPicker,
     Region,
     RelatedGroup,
+    RichTextField,
     Row,
     SearchBox,
     SearchSelect,
@@ -96,6 +99,7 @@ from dazzle.render.fragment.primitives import (
     Sidebar,
     Skeleton,
     SkipLink,
+    SliderField,
     SortHeader,
     Sparkline,
     Split,
@@ -106,6 +110,7 @@ from dazzle.render.fragment.primitives import (
     Surface,
     Table,
     Tabs,
+    TagsField,
     TaskInboxRegion,
     Text,
     Timeline,
@@ -113,6 +118,7 @@ from dazzle.render.fragment.primitives import (
     Toolbar,
     Topbar,
     Tree,
+    WidgetCombobox,
     WorkspaceContextSelector,
     WorkspaceDrawer,
     WorkspaceShell,
@@ -382,6 +388,18 @@ class FragmentRenderer(
                 return self._emit_search_select(fragment, ctx)
             case MoneyField():
                 return self._emit_money(fragment, ctx)
+            case WidgetCombobox():
+                return self._emit_widget_combobox(fragment, ctx)
+            case TagsField():
+                return self._emit_tags_field(fragment, ctx)
+            case DatePickerField():
+                return self._emit_date_picker(fragment, ctx)
+            case ColorField():
+                return self._emit_color_field(fragment, ctx)
+            case SliderField():
+                return self._emit_slider_field(fragment, ctx)
+            case RichTextField():
+                return self._emit_rich_text(fragment, ctx)
             case FileUpload():
                 return self._emit_file_upload(fragment, ctx)
             case Submit():
