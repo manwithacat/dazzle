@@ -84,6 +84,41 @@ class _RenderTablesMixin:
             else:
                 head_cells_parts.append(f"<th>{ctx.escape(str(c))}</th>")
         head_cells = "".join(head_cells_parts)
+        # ADR-0049 Phase 1 (D2): skeleton mode — first paint emits an empty
+        # hydrating tbody instead of inline rows. The body is fetched from
+        # `hx_endpoint` and rendered by the substrate row-core
+        # (`render_data_row`, ADR-0048), so rows have exactly one source.
+        # Mirrors the legacy `render_filterable_table` tbody (table_renderer.py).
+        if t.skeleton:
+            id_attr = f' id="{ctx.escape_attr(t.tbody_id)}"' if t.tbody_id else ""
+            triggers: list[str] = []
+            if t.hx_trigger:
+                triggers.append(t.hx_trigger)
+            if t.refresh_interval:
+                triggers.append(f"every {int(t.refresh_interval)}s")
+            trigger_attr = f' hx-trigger="{", ".join(triggers)}"' if triggers else ""
+            indicator_attr = (
+                f' hx-indicator="{ctx.escape_attr(t.loading_indicator)}"'
+                if t.loading_indicator
+                else ""
+            )
+            skeleton_tbody = (
+                f"<tbody{id_attr} "
+                f'hx-get="{ctx.escape_attr(t.hx_endpoint)}"'
+                f"{trigger_attr} "
+                'hx-swap="innerMorph" '
+                'hx-headers=\'{"Accept": "text/html"}\''
+                f"{indicator_attr} "
+                '@htmx:before-request="loading = true" '
+                '@htmx:after-settle="loading = false" '
+                'class="dz-table-body"></tbody>'
+            )
+            return (
+                f'<table class="dz-table">'
+                f"<thead><tr>{head_cells}</tr></thead>"
+                f"{skeleton_tbody}"
+                f"</table>"
+            )
         # Issue #1029 phase 1: row_links — when set, each row carries
         # an hx-get on the <tr> so clicking navigates to the detail
         # URL via htmx (full-page swap into <body>). Wrapping each

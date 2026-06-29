@@ -157,10 +157,26 @@ class Table:
     # `toggleRow`, `toggleSelectAll`, `bulkDelete`, `clearSelection`.
     bulk_select: bool = False
     row_ids: tuple[str, ...] = ()
+    # ADR-0049 Phase 1 (D2): skeleton mode. When `skeleton=True` the table
+    # first-paints chrome (thead) + an empty hydrating `<tbody>` that `hx-get`s
+    # the row body from `hx_endpoint` (→ `render_data_row`, the sole row
+    # source). No inline `<tr>` rows. Mirrors the legacy
+    # `render_filterable_table` skeleton tbody so the hydrate is identical.
+    skeleton: bool = False
+    tbody_id: str = ""  # legacy `{table_id}-body` — htmx target for refreshes
+    hx_endpoint: str = ""  # row-body endpoint (already carries any sort qs)
+    hx_trigger: str = "load"  # base trigger; "" suppresses (search_first lists)
+    refresh_interval: int | None = None  # appends `, every Ns` to the trigger
+    loading_indicator: str = ""  # `#{table_id}-loading-sr` selector
 
     def __post_init__(self) -> None:
         if not self.columns:
             raise ValueError("Table requires at least one column")
+        if self.skeleton and self.rows:
+            raise ValueError(
+                "skeleton tables must not carry inline rows — rows hydrate "
+                "from hx_endpoint via render_data_row (ADR-0049 D2)"
+            )
         for i, row in enumerate(self.rows):
             if len(row) != len(self.columns):
                 raise ValueError(
