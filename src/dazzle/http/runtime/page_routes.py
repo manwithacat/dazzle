@@ -1568,6 +1568,13 @@ def _build_dispatch_ctx(
                     "sortable": getattr(col, "sortable", False),
                     "filterable": getattr(col, "filterable", False),
                     "hidden": getattr(col, "hidden", False),
+                    # ADR-0049 Task 5: the canonical ListFilterBar needs the
+                    # per-column filter kind + ref wiring, or text/ref filters
+                    # degrade to empty selects. (filter_type "text"/"select"/
+                    # "ref"; ref_* drive dzFilterRefSelect.)
+                    "filter_type": getattr(col, "filter_type", "text") or "text",
+                    "filter_ref_entity": getattr(col, "filter_ref_entity", "") or "",
+                    "filter_ref_api": getattr(col, "filter_ref_api", "") or "",
                     # Issue #1029 phase 5: filter options for select-typed
                     # filterable columns. Each option is {"value", "label"}.
                     "filter_options": [
@@ -1621,6 +1628,14 @@ def _build_dispatch_ctx(
             "sort_dir": str(getattr(table, "sort_dir", "asc") or "asc"),
             # Issue #1029 phase 7: bulk-actions flag + per-row ids.
             "bulk_actions": bool(getattr(table, "bulk_actions", False)),
+            # ADR-0049 Task 5: fields the canonical substrate list reads that
+            # the legacy renderer read straight off TableContext. Without these
+            # the flip silently regresses inline-edit, live-refresh, infinite
+            # scroll, and search-first lists.
+            "inline_editable": list(getattr(table, "inline_editable", []) or []),
+            "refresh_interval": getattr(table, "refresh_interval", None),
+            "pagination_mode": str(getattr(table, "pagination_mode", "pages") or "pages"),
+            "search_first": bool(getattr(table, "search_first", False)),
         }
 
     form = getattr(render_ctx, "form", None)

@@ -73,11 +73,18 @@ class _RenderTablesMixin:
         # checkbox header cell. Alpine `dzTable` controller owns
         # bulkCount + toggleSelectAll.
         if t.bulk_select:
+            # Task 5: the select-all checkbox reflects selection state via the
+            # dzTable controller's bulkCount vs the rendered row count (legacy
+            # parity) — checked when all rows selected, indeterminate for some.
             head_cells_parts.append(
                 '<th scope="col" class="dz-table-th-select">'
                 '<input type="checkbox" class="dz-table-col-menu-checkbox" '
                 '@change="toggleSelectAll($event.target.checked)" '
-                'aria-label="Select all rows" />'
+                ':checked="bulkCount > 0 && bulkCount === '
+                "$el.closest('table').querySelectorAll('tbody tr[data-dz-row-id]').length\" "
+                ':indeterminate="bulkCount > 0 && bulkCount < '
+                "$el.closest('table').querySelectorAll('tbody tr[data-dz-row-id]').length\" "
+                'aria-label="Select all rows">'
                 "</th>"
             )
         # Task 4e: when column keys are supplied (the canonical list path), each

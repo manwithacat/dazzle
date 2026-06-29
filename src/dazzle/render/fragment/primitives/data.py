@@ -187,7 +187,10 @@ class Table:
     sortable_keys: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not self.columns:
+        # Skeleton (list) tables may have zero data columns — they still render
+        # a valid actions-only / select+actions table (legacy parity; ADR-0049
+        # Task 5). Non-skeleton embedded tables still require ≥1 column.
+        if not self.columns and not self.skeleton:
             raise ValueError("Table requires at least one column")
         if self.skeleton and self.rows:
             raise ValueError(

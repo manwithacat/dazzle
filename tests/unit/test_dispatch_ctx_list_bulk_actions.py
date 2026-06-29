@@ -177,9 +177,12 @@ def test_list_renders_bulk_toolbar_and_select_all_when_bulk_actions_on() -> None
     assert "dz-bulk-actions" in html
     assert '@click="bulkDelete()"' in html
     assert "dz-table-th-select" in html
-    # per-row checkboxes are not inlined at first paint (rows come from /api)
+    # per-row checkboxes are not inlined at first paint (rows come from /api).
+    # NB the select-all `:checked` binding legitimately references
+    # `data-dz-row-id` inside a querySelectorAll, so assert on the per-row
+    # ATTRIBUTE form, not the bare substring.
     assert "dz-tr-checkbox" not in html
-    assert "data-dz-row-id" not in html
+    assert 'data-dz-row-id="' not in html
 
 
 def test_list_omits_bulk_toolbar_when_bulk_actions_off() -> None:

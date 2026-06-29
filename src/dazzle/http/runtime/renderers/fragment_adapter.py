@@ -155,17 +155,19 @@ class FragmentSurfaceAdapter:
             )
         filter_cols = tuple(
             FilterColumn(
-                key=str(c["key"]),
-                label=str(c.get("label", c["key"])),
+                key=str(c.get("key", "")),
+                label=str(c.get("label", "") or c.get("key", "")),
                 options=tuple(_filter_option(o) for o in (c.get("filter_options") or [])),
-                selected=str(filter_values.get(c["key"], "")),
+                selected=str(filter_values.get(c.get("key", ""), "")),
                 filter_type=(
                     "ref" if c.get("filter_ref_entity") else c.get("filter_type", "select")
                 ),
                 ref_api=str(c.get("filter_ref_api", "")),
             )
+            # a key-less column can't be filtered (no param name) — skip it
+            # rather than 500 the page (D4 removes the legacy fallback).
             for c in visible
-            if c.get("filterable")
+            if c.get("filterable") and c.get("key")
         )
         if filter_cols and endpoint:
             toolbar.append(
@@ -681,8 +683,17 @@ def _pick_empty_state(ctx: dict[str, Any]) -> tuple[str, str]:
     from the kind (e.g. "No matches" for filtered); we mirror that
     contract here."""
     kind = str(ctx.get("empty_kind", "") or "collection").lower()
+    # ADR-0049 Task 5: entity-specific collection title ("No tasks found"),
+    # matching the legacy renderer, when the entity label is known.
+    entity_label = (
+        str(ctx.get("entity_title", "") or ctx.get("entity_name", "") or "")
+        .replace("_", " ")
+        .strip()
+        .lower()
+    )
+    collection_title = f"No {entity_label}s found" if entity_label else "No items yet"
     typed_keys = {
-        "collection": ("empty_collection", "No items yet"),
+        "collection": ("empty_collection", collection_title),
         "filtered": ("empty_filtered", "No matches"),
         "forbidden": ("empty_forbidden", "Not available"),
     }
