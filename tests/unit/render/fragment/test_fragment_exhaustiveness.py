@@ -103,6 +103,8 @@ from dazzle.render.fragment import (
     RawHTML,
     RefPicker,
     Region,
+    RelatedGroup,
+    RelatedTab,
     Row,
     Script,
     SearchBox,
@@ -222,6 +224,13 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is ColumnVisibilityMenu:
         return ColumnVisibilityMenu(columns=(("a", "A"),))
+    if primitive_type is RelatedGroup:
+        return RelatedGroup(
+            group_id="g",
+            label="Tasks",
+            display="table",
+            tabs=(RelatedTab(tab_id="t", label="Tasks", headers=("Title",), rows=(("x",),)),),
+        )
     if primitive_type is ListFilterBar:
         return ListFilterBar(
             tbody_id="x-body",

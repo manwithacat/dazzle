@@ -246,6 +246,47 @@ class DataListScroll:
 
 
 @dataclass(frozen=True, slots=True)
+class RelatedTab:
+    """One related-entity tab inside a `RelatedGroup` (ADR-0049 Phase 2).
+
+    The adapter pre-formats each row's cells (via `_format_cell` — typed
+    date/currency/bool/enum) into plain value strings (the renderer escapes
+    them), so the primitive stays fully typed-simple. `row_drill` is parallel
+    to `rows` (per-row detail URL, "" = not clickable). The create affordance
+    is the pre-built `+ New {create_label}` link with its RBAC anchor."""
+
+    tab_id: str
+    label: str
+    headers: tuple[str, ...]
+    rows: tuple[tuple[str, ...], ...]
+    row_drill: tuple[str, ...] = ()
+    create_href: str = ""
+    create_action: str = ""
+    create_label: str = ""
+
+    def __post_init__(self) -> None:
+        if self.row_drill and len(self.row_drill) != len(self.rows):
+            raise ValueError(
+                f"row_drill length {len(self.row_drill)} != rows length {len(self.rows)}"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class RelatedGroup:
+    """A group of related-entity tabs on a detail page (ADR-0049 Phase 2),
+    rendered by `display` mode: `table` (Alpine tab-strip + per-tab table),
+    `status_cards` (cards of the first 3 columns), or `file_list` (file rows
+    of the first 2 columns). Reproduces the legacy `_render_related_group`
+    content the substrate previously stubbed as a `Skeleton`."""
+
+    group_id: str
+    label: str
+    display: str  # "table" | "status_cards" | "file_list"
+    tabs: tuple[RelatedTab, ...]
+    is_auto: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class ColumnVisibilityMenu:
     """The list header's column-visibility menu (ADR-0049 Phase 1 Task 4c).
 

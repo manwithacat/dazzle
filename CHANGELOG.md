@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.21] - 2026-06-29
+
+### Fixed
+- **Substrate detail view renders related-record groups with real content (ADR-0049 Phase 2 Task 3a).** The substrate `_build_view` previously rendered related-entity groups as a `Skeleton` placeholder — and the dispatch ctx didn't even carry the data (it threaded the surface IR config, not the fetched `detail.related_groups`). Now `_build_dispatch_ctx` threads the fetched groups (tabs/columns/rows/total/detail-url/create-url/filter), and new pure `render/` primitives `RelatedGroup` + `RelatedTab` reproduce all three legacy display modes: **table** (Alpine tab-strip + per-tab `dz-related-table` with click-to-detail rows), **status_cards** (cards of the first 3 columns), **file_list** (file rows of the first 2 columns), each with the `+ New {label}` create affordance carrying the parent filter + RBAC anchor. Cells are typed via `_format_cell`. Reproduces the content 4+ example apps (simple_task, project_tracker, support_tickets, fieldtest_hub, design_studio) show on detail pages, so the upcoming `mode: view` flip won't regress them.
+
+### Agent Guidance
+- **Related groups on a detail surface render via the `RelatedGroup`/`RelatedTab` substrate primitives** (`render/fragment`), built by `FragmentSurfaceAdapter._build_related_group` from the fetched `detail.related_groups`. To change related-group rendering, edit `_emit_related_group` (+ the per-mode `_emit_related_table`/`_emit_related_cards`/`_emit_related_files`) — not the legacy `detail_renderer` (being deleted in Phase 2). The dispatch ctx must carry the *fetched* data (`detail.related_groups`, with tabs/rows), not the surface IR config — the substrate can't render content it isn't given (the recurring "incomplete adapter" trap).
+
 ## [0.92.20] - 2026-06-29
 
 ### Fixed

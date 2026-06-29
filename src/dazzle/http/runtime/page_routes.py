@@ -1790,20 +1790,48 @@ def _build_dispatch_ctx(
                         )
                         seen_keys.add(field_name)
         fields_out = detail_fields_out
-        # Plan 10: thread surface.related_groups (IR-level) into the ctx
+        # ADR-0049 Phase 2 Task 3a: thread the FETCHED related groups
+        # (`detail.related_groups` — RelatedGroupContext w/ tabs + rows), not
+        # the surface IR config. The substrate previously only got the config
+        # (name/title/display), so it could only render a Skeleton placeholder;
+        # the real related-record content needs the fetched tabs/columns/rows.
         related_groups_out: list[dict[str, Any]] = []
-        for rg in getattr(surface, "related_groups", []) or []:
-            display = getattr(rg, "display", None)
-            display_str: str
-            if display is not None and hasattr(display, "value"):
-                display_str = str(display.value)
-            else:
-                display_str = str(display or "table")
+        for rg in getattr(detail, "related_groups", []) or []:
+            tabs_out: list[dict[str, Any]] = []
+            for tab in getattr(rg, "tabs", []) or []:
+                if not bool(getattr(tab, "visible", True)):
+                    continue
+                cols_out = [
+                    {
+                        "key": getattr(c, "key", ""),
+                        "label": getattr(c, "label", "") or getattr(c, "key", ""),
+                        "type": getattr(c, "type", "text") or "text",
+                        "currency_code": getattr(c, "currency_code", "") or "",
+                    }
+                    for c in (getattr(tab, "columns", []) or [])
+                ]
+                tabs_out.append(
+                    {
+                        "tab_id": getattr(tab, "tab_id", "") or "",
+                        "label": getattr(tab, "label", "") or "",
+                        "entity_name": getattr(tab, "entity_name", "") or "",
+                        "columns": cols_out,
+                        "rows": list(getattr(tab, "rows", []) or []),
+                        "total": int(getattr(tab, "total", 0) or 0),
+                        "detail_url_template": getattr(tab, "detail_url_template", "") or "",
+                        "create_url": getattr(tab, "create_url", "") or "",
+                        "filter_field": getattr(tab, "filter_field", "") or "",
+                        "filter_type_field": getattr(tab, "filter_type_field", "") or "",
+                        "filter_type_value": getattr(tab, "filter_type_value", "") or "",
+                    }
+                )
             related_groups_out.append(
                 {
-                    "name": getattr(rg, "name", ""),
-                    "title": getattr(rg, "title", "") or getattr(rg, "name", ""),
-                    "display": display_str,
+                    "group_id": getattr(rg, "group_id", "") or "",
+                    "label": getattr(rg, "label", "") or "",
+                    "display": str(getattr(rg, "display", "table") or "table"),
+                    "is_auto": bool(getattr(rg, "is_auto", False)),
+                    "tabs": tabs_out,
                 }
             )
         # Issue #1030: thread action-bearing fields from DetailContext
@@ -1853,6 +1881,9 @@ def _build_dispatch_ctx(
             "status_field": getattr(detail, "status_field", "status") or "status",
             "integration_actions": integration_actions_out,
             "external_link_actions": external_links_out,
+            # ADR-0049 Phase 2 Task 3a: the parent record id for related-group
+            # create hrefs (`?{filter_field}={item_id}`).
+            "item_id": str(item.get("id", "") or "") if isinstance(item, dict) else "",
             # #1297: hand VIEW-mode custom renderers the original
             # DetailContext so a per-entity detail viewer can *delegate*
             # to the generic detail rendering — the modern replacement

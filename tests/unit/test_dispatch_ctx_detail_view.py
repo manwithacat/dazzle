@@ -114,24 +114,47 @@ def test_dispatch_ctx_detail_empty_fields_returns_empty_list() -> None:
     assert ctx.get("region_name") == "Item_detail"
 
 
-def test_dispatch_ctx_detail_threads_related_groups_from_surface() -> None:
-    """Pre-existing related_groups thread is unchanged by the field-
-    iteration fix."""
+def test_dispatch_ctx_detail_threads_fetched_related_groups() -> None:
+    """ADR-0049 Phase 2 Task 3a: the ctx threads the FETCHED related groups
+    (`detail.related_groups` — with tabs/rows), not the surface IR config, so
+    the substrate can render the real related-record content."""
+    from dazzle.render.context import ColumnContext, RelatedGroupContext, RelatedTabContext
 
-    class _RG:
-        def __init__(self, name: str, title: str, display: str = "table") -> None:
-            self.name = name
-            self.title = title
-            self.display = display
+    detail = DetailContext(
+        entity_name="X",
+        title="X",
+        fields=[],
+        item={"id": "x1"},
+        related_groups=[
+            RelatedGroupContext(
+                group_id="g1",
+                label="Comments",
+                display="table",
+                tabs=[
+                    RelatedTabContext(
+                        tab_id="comments",
+                        label="Comments",
+                        entity_name="Comment",
+                        api_endpoint="/api/comment",
+                        filter_field="x",
+                        columns=[ColumnContext(key="body", label="Body")],
+                        rows=[{"id": "c1", "body": "hi"}],
+                        total=1,
+                    )
+                ],
+            )
+        ],
+    )
 
-    class _SurfaceWithRG:
-        related_groups = [_RG("comments", "Comments")]
+    class _SurfaceNoRG:
+        related_groups = ()
 
-    detail = DetailContext(entity_name="X", title="X", fields=[])
-    ctx = _build_dispatch_ctx(_RenderCtx(detail), _SurfaceWithRG())
+    ctx = _build_dispatch_ctx(_RenderCtx(detail), _SurfaceNoRG())
     rgs = ctx.get("related_groups", [])
     assert len(rgs) == 1
-    assert rgs[0]["name"] == "comments"
+    assert rgs[0]["label"] == "Comments"
+    assert rgs[0]["display"] == "table"
+    assert rgs[0]["tabs"][0]["rows"] == [{"id": "c1", "body": "hi"}]
 
 
 # ── #1297: per-entity detail-viewer delegation contract ──────────────────

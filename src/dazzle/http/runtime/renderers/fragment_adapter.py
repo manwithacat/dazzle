@@ -34,9 +34,10 @@ from dazzle.render.fragment import (
     ListFilterBar,
     RefPicker,
     Region,
+    RelatedGroup,
+    RelatedTab,
     Row,
     SearchBox,
-    Skeleton,
     SortHeader,
     Stack,
     Submit,
@@ -296,18 +297,24 @@ class FragmentSurfaceAdapter:
                 body=Region(kind="detail", body=detail_body),
             )
 
-        # Wrap detail + related-group regions in an outer Stack
+        # ADR-0049 Phase 2 Task 3a: render the FETCHED related-group content
+        # (table / status_cards / file_list) instead of a Skeleton placeholder.
+        item_id = str(ctx.get("item_id", "") or "")
         related_regions: list[Fragment] = []
         for group in related_groups:
-            group_title = str(group.get("title") or group.get("name", "Related"))
-            group_body = Stack(
-                children=(
-                    Heading(group_title, level=2),
-                    Skeleton(lines=3),
-                ),
-                gap="sm",
+            group_title = str(group.get("label") or group.get("title") or "Related")
+            related_regions.append(
+                Region(
+                    kind="related",
+                    body=Stack(
+                        children=(
+                            Heading(group_title, level=2),
+                            self._build_related_group(group, item_id),
+                        ),
+                        gap="sm",
+                    ),
+                )
             )
-            related_regions.append(Region(kind="related", body=group_body))
 
         wrapper = Stack(
             children=(Region(kind="detail", body=detail_body), *related_regions),
@@ -375,6 +382,63 @@ class FragmentSurfaceAdapter:
             )
 
         return tuple(toolbar)
+
+    def _build_related_group(self, group: dict[str, Any], item_id: str) -> Fragment:
+        """ADR-0049 Phase 2 Task 3a: build a `RelatedGroup` primitive from the
+        fetched related-group ctx. Cells are formatted via `_format_cell`
+        (typed); drill + create hrefs are pre-built here (page-free renderer)."""
+        tabs: list[RelatedTab] = []
+        for tab in group.get("tabs", []) or []:
+            cols = tab.get("columns", []) or []
+            headers = tuple(str(c.get("label", c.get("key", ""))) for c in cols)
+            rows: list[tuple[str, ...]] = []
+            drills: list[str] = []
+            tmpl = str(tab.get("detail_url_template", "") or "")
+            for record in tab.get("rows", []) or []:
+                rec = record if isinstance(record, dict) else {}
+                cells = tuple(
+                    _format_cell(
+                        rec.get(c.get("key", "")),
+                        str(c.get("type", "text") or "text"),
+                        str(c.get("currency_code", "") or ""),
+                        "",
+                        "",
+                    )
+                    for c in cols
+                )
+                rows.append(cells)
+                rid = str(rec.get("id", "") or "")
+                drills.append(tmpl.replace("{id}", rid) if (tmpl and rid) else "")
+            create_url = str(tab.get("create_url", "") or "")
+            create_href = create_action = create_label = ""
+            if create_url:
+                sep = "&" if "?" in create_url else "?"
+                filter_field = str(tab.get("filter_field", "") or "")
+                create_href = f"{create_url}{sep}{filter_field}={item_id}"
+                ftf = str(tab.get("filter_type_field", "") or "")
+                if ftf:
+                    create_href += f"&{ftf}={tab.get('filter_type_value', '') or ''}"
+                create_action = f"{tab.get('entity_name', '') or ''}.create"
+                create_label = str(tab.get("label", "") or "")
+            tabs.append(
+                RelatedTab(
+                    tab_id=str(tab.get("tab_id", "") or ""),
+                    label=str(tab.get("label", "") or ""),
+                    headers=headers,
+                    rows=tuple(rows),
+                    row_drill=tuple(drills),
+                    create_href=create_href,
+                    create_action=create_action,
+                    create_label=create_label,
+                )
+            )
+        return RelatedGroup(
+            group_id=str(group.get("group_id", "") or ""),
+            label=str(group.get("label", "") or ""),
+            display=str(group.get("display", "table") or "table"),
+            tabs=tuple(tabs),
+            is_auto=bool(group.get("is_auto", False)),
+        )
 
     def _build_detail_actions(self, ctx: dict[str, Any]) -> tuple[Fragment, ...]:
         """Issue #1030: build the per-record action row from ctx.

@@ -43,6 +43,8 @@ from dazzle.render.fragment.primitives import (
     PivotTableRegion,
     ProfileCard,
     QueueRegion,
+    RelatedGroup,
+    RelatedTab,
     SortHeader,
     StageBar,
     StatusList,
@@ -284,6 +286,142 @@ class _RenderTablesMixin:
             f"{pagination_footer}"
             "</div>"
         )
+
+    def _emit_related_group(self, g: RelatedGroup, ctx: RenderContext) -> str:
+        """Task 3a: render a related-entity group's real content (table /
+        status_cards / file_list), reproducing the legacy detail related-group
+        renderers. Cells are pre-formatted value strings (escaped here)."""
+        tabs = list(g.tabs)
+        if g.display == "table":
+            return self._emit_related_table(tabs, ctx)
+        if g.display == "status_cards":
+            return self._emit_related_cards(tabs, ctx)
+        return self._emit_related_files(tabs, ctx)
+
+    @staticmethod
+    def _related_drill_attrs(drill: str, ctx: RenderContext) -> str:
+        """The htmx click-to-detail attrs for a related row/card/file (or "")."""
+        if not drill:
+            return ""
+        return (
+            f' hx-get="{ctx.escape_attr(drill)}" hx-push-url="true" '
+            'hx-trigger="click" hx-target="body" hx-swap="innerHTML"'
+        )
+
+    @staticmethod
+    def _related_create_row(t: RelatedTab, ctx: RenderContext) -> str:
+        if not t.create_href:
+            return ""
+        return (
+            '<div class="dz-related-create-row">'
+            f'<a href="{ctx.escape_attr(t.create_href)}" class="dz-related-create-button" '
+            f'data-dazzle-action="{ctx.escape_attr(t.create_action)}">'
+            f"+ New {ctx.escape(t.create_label)}</a></div>"
+        )
+
+    def _emit_related_table(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+        multi = len(tabs) > 1
+        first = tabs[0].tab_id if tabs else ""
+        parts = [f"<div x-data=\"{{ activeTab: '{ctx.escape_attr(first)}' }}\">"]
+        if multi:
+            buttons = "".join(
+                f'<button type="button" class="dz-related-tab" role="tab" '
+                f":class=\"{{ 'is-active': activeTab === '{ctx.escape_attr(t.tab_id)}' }}\" "
+                f":aria-selected=\"activeTab === '{ctx.escape_attr(t.tab_id)}'\" "
+                f"@click=\"activeTab = '{ctx.escape_attr(t.tab_id)}'\">"
+                f'{ctx.escape(t.label)}<span class="dz-related-tab-count">{len(t.rows)}</span>'
+                "</button>"
+                for t in tabs
+            )
+            parts.append(f'<div class="dz-related-tabs" role="tablist">{buttons}</div>')
+        for t in tabs:
+            x_show = f" x-show=\"activeTab === '{ctx.escape_attr(t.tab_id)}'\"" if multi else ""
+            head = "".join(f'<th scope="col">{ctx.escape(h)}</th>' for h in t.headers)
+            if t.rows:
+                body_rows = []
+                for i, row in enumerate(t.rows):
+                    drill = t.row_drill[i] if t.row_drill else ""
+                    attrs = (
+                        f' hx-get="{ctx.escape_attr(drill)}" hx-push-url="true" '
+                        'hx-trigger="click" hx-target="body" hx-swap="innerHTML"'
+                        if drill
+                        else ""
+                    )
+                    cells = "".join(f"<td>{ctx.escape(c)}</td>" for c in row)
+                    body_rows.append(f"<tr{attrs}>{cells}</tr>")
+                body = "".join(body_rows)
+            else:
+                body = (
+                    f'<tr><td colspan="{max(1, len(t.headers))}" '
+                    f'class="dz-related-table-empty-cell">No {ctx.escape(t.label.lower())} found.'
+                    "</td></tr>"
+                )
+            parts.append(
+                f'<div{x_show} role="tabpanel"><div class="dz-related-table-card">'
+                f"{self._related_create_row(t, ctx)}"
+                '<div class="dz-related-table-scroll">'
+                '<table class="dz-related-table">'
+                f"<thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+                "</div></div></div>"
+            )
+        parts.append("</div>")
+        return "".join(parts)
+
+    def _emit_related_cards(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+        multi = len(tabs) > 1
+        parts: list[str] = []
+        for t in tabs:
+            block = ['<div class="dz-related-group">']
+            if multi:
+                block.append(f'<h4 class="dz-related-tab-label">{ctx.escape(t.label)}</h4>')
+            block.append(self._related_create_row(t, ctx))
+            cards = []
+            for i, row in enumerate(t.rows):
+                drill = t.row_drill[i] if t.row_drill else ""
+                attrs = self._related_drill_attrs(drill, ctx)
+                lines = "".join(
+                    f'<div class="dz-related-status-card-'
+                    f'{"primary" if j == 0 else "secondary"}">{ctx.escape(c)}</div>'
+                    for j, c in enumerate(row[:3])
+                )
+                cards.append(f'<div class="dz-related-status-card"{attrs}>{lines}</div>')
+            if cards:
+                block.append(f'<div class="dz-related-status-cards">{"".join(cards)}</div>')
+            else:
+                block.append(
+                    f'<p class="dz-related-empty">No {ctx.escape(t.label.lower())} found.</p>'
+                )
+            block.append("</div>")
+            parts.append("".join(block))
+        return "".join(parts)
+
+    def _emit_related_files(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+        multi = len(tabs) > 1
+        parts: list[str] = []
+        for t in tabs:
+            block = ['<div class="dz-related-group">']
+            if multi:
+                block.append(f'<h4 class="dz-related-tab-label">{ctx.escape(t.label)}</h4>')
+            block.append(self._related_create_row(t, ctx))
+            files = []
+            for i, row in enumerate(t.rows):
+                drill = t.row_drill[i] if t.row_drill else ""
+                attrs = self._related_drill_attrs(drill, ctx)
+                lines = "".join(
+                    f'<span class="dz-related-file-{"name" if j == 0 else "meta"}">'
+                    f"{ctx.escape(c)}</span>"
+                    for j, c in enumerate(row[:2])
+                )
+                files.append(f'<div class="dz-related-file-row"{attrs}>{lines}</div>')
+            if files:
+                block.append(f'<div class="dz-related-file-list">{"".join(files)}</div>')
+            else:
+                block.append(
+                    f'<p class="dz-related-empty">No {ctx.escape(t.label.lower())} found.</p>'
+                )
+            block.append("</div>")
+            parts.append("".join(block))
+        return "".join(parts)
 
     def _emit_column_visibility_menu(self, m: ColumnVisibilityMenu, ctx: RenderContext) -> str:
         """Task 4c: the column-visibility dropdown, bound to dzTable."""

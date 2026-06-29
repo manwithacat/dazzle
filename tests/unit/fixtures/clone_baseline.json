@@ -821,6 +821,14 @@
     ]
   },
   {
+    "signature": "60b17ed823a6675e162a8b9519eedf2d",
+    "count": 2,
+    "names": [
+      "dazzle/render/fragment/renderer/_render_tables.py::_emit_related_cards",
+      "dazzle/render/fragment/renderer/_render_tables.py::_emit_related_files"
+    ]
+  },
+  {
     "signature": "ed41f50ad12ca02034323484685c5eb5",
     "count": 2,
     "names": [

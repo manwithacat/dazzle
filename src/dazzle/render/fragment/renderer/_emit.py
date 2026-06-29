@@ -87,6 +87,7 @@ from dazzle.render.fragment.primitives import (
     Radar,
     RefPicker,
     Region,
+    RelatedGroup,
     Row,
     SearchBox,
     Sequence,
@@ -247,6 +248,8 @@ class FragmentRenderer(
                 return self._emit_data_list_scroll(fragment, ctx)
             case ColumnVisibilityMenu():
                 return self._emit_column_visibility_menu(fragment, ctx)
+            case RelatedGroup():
+                return self._emit_related_group(fragment, ctx)
             case KPI():
                 return self._emit_kpi(fragment, ctx)
             case BarChart():
