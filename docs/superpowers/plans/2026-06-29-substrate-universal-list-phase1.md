@@ -141,11 +141,14 @@ comprehensive substrate-canonical list-chrome build, not 4 patches.
 **Interfaces:**
 - Produces: one list render path. `render_filterable_table` gone.
 
-- [ ] **Step 0: Grep all callers** — `grep -rn "render_filterable_table\|_render_filter_bar\|_render_search_input\|_render_bulk_actions" src tests`. Confirm only the 2 non-test callers + the named tests.
-- [ ] **Step 1: Independent adversarial review** — dispatch a reviewer to confirm no live caller is missed, the experience/template repoints preserve behaviour, and the no-fallback removal (D4) is safe (substrate robust for list).
-- [ ] **Step 2: Delete + repoint** in one commit; migrate the legacy-pinning tests.
-- [ ] **Step 3: Run the FULL suite + lint/mypy/import-linter** — green; `render is pure` KEPT.
-- [ ] **Step 4: Commit** (`refactor(render): delete render_filterable_table — substrate is the sole list path (Phase 1)`).
+- [x] **Step 0: Grep all callers** — live callers: `template_renderer.py:81` (the SOLE legacy list-HTML producer, via `_render_body_inner`), `experience_renderer.py:230` (experience table-step), `fragment_registry.py` ×4 (stale informational strings). Plus comment-only refs in `render/fragment/**`, `pdf_viewer_renderer.py`, `template_compiler.py`.
+- [x] **Step 1: Independent adversarial review — DONE; found BLOCKERS. Task 6 PAUSED for user decision (2026-06-29).** The delete is NOT a simple 2-caller repoint:
+  - **B1 (layer contract):** `experience_renderer` is in the **page** layer; `_build_list`/`_build_dispatch_ctx` are in **http**. The `page ↛ http` import-linter contract (pyproject `[importlinter]`) forbids importing them. The legal seam is `dazzle.render.dispatch.dispatch_render(surface, ctx, services)` — but it needs a real `SurfaceSpec` + the full ~30-key dispatch ctx + `services`, none of which the experience render path threads today.
+  - **B2 (live example, no coverage):** `examples/ops_dashboard` `incident_response` experience → `triage` step → `alert_list` (`mode: list render: fragment`) renders through the experience table-step. Repointing requires plumbing `services` + `SurfaceSpec` through `compile_experience_context` + `render_experience_inner_html`, and `_build_list` emits its own `Heading(level=1)` → double-heading inside the experience step's `<h2>`. Zero direct test coverage → silent regression risk.
+  - **B3 (fallback wider than D4 scoped):** `_maybe_dispatch_inner_html` returns `None` for `mode: list` in THREE cases (services-None, table-build-failure, `except FragmentError`); all route to `_render_body_inner` → `render_filterable_table` (template_renderer is the sole legacy list producer). Deleting it makes those cases return a **blank 200** (empty string) unless `_render_body_inner`'s list branch is made to raise loudly.
+- [ ] **Step 2 (revised, pending decision):** (a) thread `services`+`SurfaceSpec` through the experience render path + adapt the substrate Surface to drop the duplicate heading inside an experience step + add an ops_dashboard experience-triage test; (b) make `_render_body_inner`'s list branch (and the list `None`-returns) a loud error, not empty string; (c) THEN delete `render_filterable_table` + repoint template_renderer + update fragment_registry + migrate/delete tests (`test_create_cta_entity_title_1487`, `test_surface_refresh_1399`, `test_typed_runtime_no_jinja`, delete `test_legacy_list_chrome_char_phase1` + snapshots), regen complexity + clone ratchets.
+- [ ] **Step 3: Run the FULL suite + lint/mypy/import-linter** — green; `render is pure` + `page ↛ http` KEPT.
+- [ ] **Step 4: Commit.**
 
 ## Task 7: ADR status + CHANGELOG + ship
 
