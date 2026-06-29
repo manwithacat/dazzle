@@ -35,12 +35,14 @@ from dazzle.render.fragment.primitives import (
     Card,
     CardPicker,
     CohortStripRegion,
+    ColumnVisibilityMenu,
     Combobox,
     ConfirmGate,
     CreateButton,
     CsvExportButton,
     DashboardCard,
     DashboardGrid,
+    DataListScroll,
     DateRangePicker,
     DayTimelineRegion,
     DetailGrid,
@@ -68,6 +70,7 @@ from dazzle.render.fragment.primitives import (
     KanbanRegion,
     LazyTabPanel,
     Link,
+    ListFilterBar,
     ListRegion,
     MetricsGrid,
     MetricTile,
@@ -240,6 +243,10 @@ class FragmentRenderer(
             # Data
             case Table():
                 return self._emit_table(fragment, ctx)
+            case DataListScroll():
+                return self._emit_data_list_scroll(fragment, ctx)
+            case ColumnVisibilityMenu():
+                return self._emit_column_visibility_menu(fragment, ctx)
             case KPI():
                 return self._emit_kpi(fragment, ctx)
             case BarChart():
@@ -347,6 +354,8 @@ class FragmentRenderer(
                 return self._emit_add_card_row(fragment, ctx)
             case FilterBar():
                 return self._emit_filter_bar(fragment, ctx)
+            case ListFilterBar():
+                return self._emit_list_filter_bar(fragment, ctx)
             case SortHeader():
                 return self._emit_sort_header(fragment, ctx)
             case CsvExportButton():

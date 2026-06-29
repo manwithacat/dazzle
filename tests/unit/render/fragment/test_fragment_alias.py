@@ -45,6 +45,9 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Interactive",
         # data
         "Table",
+        "DataListScroll",
+        "ColumnVisibilityMenu",
+        "ListFilterBar",
         "KanbanBoard",
         "CalendarGrid",
         "Timeline",

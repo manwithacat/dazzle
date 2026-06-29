@@ -73,21 +73,44 @@
 - [ ] **Step 4: Run, verify pass; full suite + gates green.**
 - [ ] **Step 5: Commit.**
 
-## Task 4: Close remaining substrate chrome gaps to visual parity
+## Task 4: Substrate-canonical comprehensive list chrome (RE-SCOPED 2026-06-29)
+
+**Re-scope decision (James, 2026-06-29):** the Step-0 diff found the gap is larger
+than the original 4-element list, AND that the substrate's reused *workspace*
+toolbar primitives are behaviourally wrong for surface lists. James chose
+**substrate-canonical** (accept the FTS-dropdown search divergence; do NOT port
+legacy inline-filter search) AND asked for the *whole* legacy-chrome surface to be
+audited + delivered in **one big bang** so we don't revisit. So Task 4 is now a
+comprehensive substrate-canonical list-chrome build, not 4 patches.
+
+**Element ledger (legacy → substrate-canonical disposition):**
+- visually-hidden page-title `<h1>` → **drop** (substrate header already has a visible `<h1>`; it serves the a11y role).
+- dzTable wrapper attrs → **done** (Task 3).
+- column-visibility menu (>3 cols) → **build** (`ColumnVisibilityMenu` primitive).
+- create button, bulk toolbar, sort headers → **present** ✓.
+- search: legacy inline-table-filter → **substrate FTS dropdown is canonical** (keep; documented divergence).
+- filter selects: legacy `filter[key]`→tbody → substrate emits `filter_key`→dead `#region-task` AND passes option dicts where the renderer wants tuples (doubly broken). → **build working list filters**: target `#{id}-body`, `name="filter[key]"`, correct options.
+- colgroup + column-resize handles → **drop** (discretionary polish; substrate lists are not resizable in Phase 1 — documented divergence).
+- `<table class="dz-table-grid">` + visually-hidden `<caption>` → **build** (in `Table` skeleton mode).
+- trailing actions `<th>` → **build** (CRITICAL: `render_data_row` always emits a trailing actions `<td>`; thead must match column count post-flip).
+- `dz-table-scroll`(--dz-list-rows) + loading-spinner overlay + `dz-table-scroll-x`(role=region,tabindex) → **build** (`DataListScroll` primitive).
+- `dz-table-empty` sibling (role=status) → **build** (shown when the hydrate returns no rows; replaces the `if not items: EmptyState` branch — list always renders the skeleton table now).
+- `-loading-sr` htmx-indicator (sr-only) → **build** (the skeleton tbody / filters `hx-indicator` target).
+- `#dz-live-region` (dzTable JS announces sort/loading here) → **build** (once per list Region).
 
 **Files:**
-- Modify: `src/dazzle/http/runtime/renderers/fragment_adapter.py::_build_list` + the relevant `render/` primitives/renderers
-- Test: `tests/unit/test_list_chrome_parity_phase1.py` (create)
+- Modify: `src/dazzle/render/fragment/primitives/data.py` (`Table` skeleton: caption + actions-th + grid class), `containers.py` (Region live-region), new primitives `DataListScroll` + `ColumnVisibilityMenu`.
+- Modify: the matching renderers in `render/fragment/renderer/` (pure).
+- Modify: `fragment_adapter.py::_build_list` — compose the canonical shell (always skeleton; no inline-row branch) + working filter selects.
+- Test: `tests/unit/test_list_chrome_parity_phase1.py` (create), sub-step test files.
 
-**Interfaces:**
-- Produces substrate equivalents (visual parity) for the legacy-only chrome (from the depth investigation): **column-visibility menu** (header button + checkbox grid bound to `isColumnVisible`/`toggleColumn`), **colgroup** (column widths), **loading spinner overlay**, **screen-reader loading + a11y live region**. (SearchBox/FilterBar/SortHeader/BulkActionToolbar/CreateButton/Pagination/EmptyState already exist — confirm at Step 0.)
-
-- [ ] **Step 0: Diff** the substrate `_build_list` output vs the Task-1 legacy fixtures; produce the concrete missing-chrome list (the investigation's gap-list is the starting point — verify against current code).
-- [ ] **Step 1: Write failing tests** per missing element (column-visibility menu present; colgroup present; a11y live region present), asserting the substrate emits them.
-- [ ] **Step 2: Run, verify fail.**
-- [ ] **Step 3: Implement** each gap as a primitive/renderer addition in `render/` (pure), wired by `_build_list`.
-- [ ] **Step 4: Run, verify pass; full suite + gates green.**
-- [ ] **Step 5: Commit** (one commit per gap element is fine).
+- [x] **Step 0: Diff** substrate `_build_list` vs Task-1 legacy fixtures → element ledger above.
+- [x] **4a:** `Table` skeleton enrich — `dz-table-grid` class + sr `<caption>` + trailing actions `<th>` + `data-dz-col`/sortable `toggleSort` headers. TDD.
+- [x] **4b:** `DataListScroll` primitive — `.dz-table` scope + scroll(--dz-list-rows) + loading-spinner overlay + scroll-x(role=region) + empty sibling + loading-sr + pagination footer. TDD.
+- [x] **4c:** `ColumnVisibilityMenu` primitive (>3 cols). TDD.
+- [x] **4d:** working list filters — `ListFilterBar` (tbody target + `filter[key]` names + select/text/ref + correct options). TDD.
+- [x] **4e:** `_build_list` rewrite — composes the canonical shell (always skeleton+hydrate, no inline branch) + Region live-region; migrated the inline-row-pinning dispatch/adapter/renderer/pagination/search-filter tests to the canonical model; full unit suite (19262) + gates green. The 6 `render: fragment` opt-in surfaces now render the canonical chrome (integration substring tests hold).
+- [x] **Done.** The page_routes *dispatch* flip stays in Task 5 (gated by independent review).
 
 ## Task 5: Flip the list default to the substrate (+ re-baseline + verify)  — INDEPENDENT REVIEW
 

@@ -183,36 +183,45 @@ def test_renderer_emits_sort_header_inside_th_for_sortable_columns() -> None:
 # ── End-to-end ──
 
 
-def test_list_renders_sort_header_for_sortable_column_only() -> None:
-    """End-to-end: sortable=True column → SortHeader in the header
-    row; sortable=False column → plain `<th>` label."""
+# ── End-to-end: canonical model (ADR-0049 Phase 1 Task 4e) ───────────────
+# Sortable list headers are dzTable `toggleSort` buttons (client-state sort
+# via the mounted controller), not pre-baked SortHeader hx-links. The current
+# sort lives in the dzTable config + the skeleton tbody hydrate endpoint.
+
+
+def test_list_sortable_column_is_dztable_toggle_button() -> None:
+    """sortable=True → a dzTable toggleSort button header; sortable=False →
+    a plain canonical `dz-table-th`."""
     table = _table()
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    # Sortable Name column has hx-get with sort param.
-    assert "sort=name" in html
-    # Non-sortable Score column stays plain.
-    assert "<th>Score</th>" in html
+    assert "@click=\"toggleSort('name')\"" in html
+    assert ":aria-sort=\"ariaSortDir('name')\"" in html
+    # non-sortable Score is a plain canonical header (no toggleSort)
+    assert '<th data-dz-col="score" scope="col" class="dz-table-th">Score</th>' in html
 
 
-def test_list_active_sort_column_carries_current_direction() -> None:
-    """When `sort_field == column_key`, the SortHeader's
-    `current_direction` reflects the active state — affects the
-    direction indicator + next-click direction flip."""
+def test_list_active_sort_threads_into_controller_config_and_hydrate() -> None:
+    """The active sort is carried client-side by the dzTable controller config
+    and on the skeleton tbody hydrate endpoint (current direction, not 'next')."""
+    # production resolves sort_field from default_sort_field at request time
+    # (page_routes.py:1522); the dispatch ctx reads the resolved sort_field.
     table = _table(sort_field="name", sort_dir="desc")
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    # Active descending sort: next click should ask for asc.
-    assert "dir=asc" in html
+    assert '"sortField": "name"' in html
+    assert '"sortDir": "desc"' in html
+    # the hydrate endpoint fetches the current sort
+    assert "sort=name&amp;dir=desc" in html or "sort=name&dir=desc" in html
 
 
 def test_list_with_no_sortable_columns_emits_plain_headers() -> None:
-    """List of all-non-sortable columns renders the legacy plain
-    `<th>` shape — no sort affordance noise."""
+    """All-non-sortable columns render the canonical plain `dz-table-th`
+    headers with no sort affordance."""
     table = _table(
         columns=[ColumnContext(key="name", label="Name", sortable=False)],
     )
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    assert "<th>Name</th>" in html
-    assert "sort=" not in html
+    assert '<th data-dz-col="name" scope="col" class="dz-table-th">Name</th>' in html
+    assert "toggleSort" not in html

@@ -31,6 +31,7 @@ from dazzle.render.fragment import (
     CohortStripCell,
     CohortStripLensTab,
     CohortStripRegion,
+    ColumnVisibilityMenu,
     Combobox,
     ConfirmGate,
     CreateButton,
@@ -38,6 +39,7 @@ from dazzle.render.fragment import (
     DashboardCard,
     DashboardGrid,
     DashboardNotice,
+    DataListScroll,
     DateRangePicker,
     DayTimelineRegion,
     DayTimelineSlot,
@@ -76,6 +78,7 @@ from dazzle.render.fragment import (
     LazyTabPanel,
     Link,
     ListColumn,
+    ListFilterBar,
     ListRegion,
     MetricsGrid,
     MetricTile,
@@ -211,6 +214,20 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is Table:
         return Table(columns=("a",), rows=(("v",),))
+    if primitive_type is DataListScroll:
+        return DataListScroll(
+            table=Table(columns=("a",), rows=(), skeleton=True, hx_endpoint="/api/x"),
+            table_id="x",
+            empty_title="No items",
+        )
+    if primitive_type is ColumnVisibilityMenu:
+        return ColumnVisibilityMenu(columns=(("a", "A"),))
+    if primitive_type is ListFilterBar:
+        return ListFilterBar(
+            tbody_id="x-body",
+            endpoint=URL("/api/x"),
+            columns=(FilterColumn(key="status", label="Status", options=(("o", "Open"),)),),
+        )
     if primitive_type is KanbanBoard:
         return KanbanBoard(columns=(("col", ()),))
     if primitive_type is CalendarGrid:

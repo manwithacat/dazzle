@@ -39,11 +39,13 @@ from dazzle.render.fragment.primitives.data import (
     CalendarGrid,
     CardPicker,
     CohortStripRegion,
+    ColumnVisibilityMenu,
     ConfirmGate,
     CreateButton,
     CsvExportButton,
     DashboardCard,
     DashboardGrid,
+    DataListScroll,
     DateRangePicker,
     DayTimelineRegion,
     DetailGrid,
@@ -57,6 +59,7 @@ from dazzle.render.fragment.primitives.data import (
     KanbanBoard,
     KanbanRegion,
     LazyTabPanel,
+    ListFilterBar,
     ListRegion,
     MetricsGrid,
     MetricTile,
@@ -196,6 +199,9 @@ Fragment = (
     | DashboardCard
     | AddCardRow
     | FilterBar
+    | ListFilterBar
+    | DataListScroll
+    | ColumnVisibilityMenu
     | SortHeader
     | CsvExportButton
     | DateRangePicker

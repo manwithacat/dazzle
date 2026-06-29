@@ -164,7 +164,16 @@ class _RenderLayoutMixin:
         # hydrated rows' sort/bulk/inline/column-visibility bindings resolve.
         mount_attr = self._dztable_mount_attrs(r.mount, ctx) if r.mount is not None else ""
         body_html = self._emit(r.body, ctx)  # type: ignore[arg-type]
-        return f'<section class="{cls}"{mount_attr}{data_attr}>{body_html}</section>'
+        # Task 4e: a controlled list region carries the polite ARIA live region
+        # the dzTable controller announces sort/loading state into
+        # (`getElementById("dz-live-region")`). One per list region.
+        live_region = (
+            '<div id="dz-live-region" aria-live="polite" aria-atomic="true" '
+            'class="visually-hidden"></div>'
+            if r.mount is not None
+            else ""
+        )
+        return f'<section class="{cls}"{mount_attr}{data_attr}>{body_html}{live_region}</section>'
 
     @staticmethod
     def _dztable_mount_attrs(m: DzTableMount, ctx: RenderContext) -> str:

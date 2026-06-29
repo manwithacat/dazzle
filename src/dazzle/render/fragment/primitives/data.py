@@ -168,6 +168,23 @@ class Table:
     hx_trigger: str = "load"  # base trigger; "" suppresses (search_first lists)
     refresh_interval: int | None = None  # appends `, every Ns` to the trigger
     loading_indicator: str = ""  # `#{table_id}-loading-sr` selector
+    # ADR-0049 Phase 1 Task 4a: in skeleton mode the list `<table>` carries the
+    # canonical `dz-table-grid` class + a visually-hidden `<caption>` (the
+    # accessible name) + a trailing actions `<th>` so the thead column count
+    # matches the hydrated `render_data_row` rows (which always emit a trailing
+    # actions `<td>`). All three are skeleton-only — embedded plain tables are
+    # unaffected.
+    caption: str = ""
+    has_actions: bool = False
+    # ADR-0049 Phase 1 Task 4e: parallel column keys (aligned to `columns`).
+    # When set, each data `<th>` carries `data-dz-col="{key}"` so the dzTable
+    # column-visibility toggle hides the header in lock-step with the hydrated
+    # `render_data_row` body cells. Empty = plain headers (embedded tables).
+    column_keys: tuple[str, ...] = ()
+    # Keys whose canonical list header renders as a dzTable `toggleSort`
+    # button (client-state sort + aria-sort + sort icon), not a static label.
+    # Only consulted in skeleton mode alongside `column_keys`.
+    sortable_keys: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.columns:
@@ -192,6 +209,50 @@ class Table:
                 f"row_ids length {len(self.row_ids)} != rows length {len(self.rows)} "
                 "(bulk_select requires a per-row id for the checkbox/Alpine binding)"
             )
+
+
+@dataclass(frozen=True, slots=True)
+class DataListScroll:
+    """The canonical list-table shell (ADR-0049 Phase 1 Task 4b).
+
+    Wraps a skeleton `Table` with the scroll container + loading-spinner
+    overlay + focusable horizontal scroll region + empty-state sibling +
+    screen-reader loading indicator — reproducing the legacy
+    `render_filterable_table` table shell so the whole `table.css` (loading
+    `:has(.htmx-request)`, the `.dz-table-grid ~ .dz-table-empty` empty guard,
+    the `--dz-list-rows` sizing) applies unchanged. The outermost `.dz-table`
+    class is what scopes those rules.
+
+    `table` is the skeleton `Table` child (rendered inside the scroll region,
+    immediately before the empty sibling so the CSS following-sibling guard
+    fires). `empty_action_*` render an optional create CTA in the empty state.
+    """
+
+    table: object
+    table_id: str
+    page_size: int = 10
+    aria_label: str = ""
+    empty_title: str = "No items found"
+    empty_description: str = "Try adjusting your search or filter criteria."
+    empty_action_href: str = ""
+    empty_action_label: str = ""
+    # Task 4e: emit the empty `#{table_id}-pagination` footer the /api response
+    # fills via its `hx-swap-oob` pagination swap (list_handlers). False for
+    # infinite-scroll lists (no footer).
+    paginated: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class ColumnVisibilityMenu:
+    """The list header's column-visibility menu (ADR-0049 Phase 1 Task 4c).
+
+    A dropdown of per-column checkboxes bound to the `dzTable` controller's
+    `isColumnVisible`/`toggleColumn` — mirrors the legacy
+    `render_filterable_table` column menu. `columns` is the ordered tuple of
+    visible `(key, label)` pairs. `_build_list` only constructs the menu when
+    there are more than three visible columns (the legacy gate)."""
+
+    columns: tuple[tuple[str, str], ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -1229,6 +1290,13 @@ class FilterColumn:
     label: str
     options: tuple[tuple[str, str], ...]  # (value, display_label) pairs
     selected: str = ""
+    # ADR-0049 Phase 1 Task 4d: filter control kind for ListFilterBar.
+    # "select" (static options), "text" (free-text contains), or "ref" (a
+    # FK select whose options are fetched at runtime via `dzFilterRefSelect`
+    # from `ref_api`). The workspace FilterBar ignores these (it only renders
+    # static selects).
+    filter_type: str = "select"
+    ref_api: str = ""
 
     def __post_init__(self) -> None:
         if not self.key:
@@ -1261,6 +1329,33 @@ class FilterBar:
         keys = [c.key for c in self.columns]
         if len(set(keys)) != len(keys):
             raise ValueError(f"FilterBar column keys must be unique; got duplicates in {keys}")
+
+
+@dataclass(frozen=True, slots=True)
+class ListFilterBar:
+    """List-surface filter row (ADR-0049 Phase 1 Task 4d).
+
+    Distinct from the workspace `FilterBar`: it targets the list's hydrating
+    `<tbody>` (`#{tbody_id}`) with `filter[{key}]` param names + `innerMorph`
+    — exactly what the `/api` list handler parses (list_handlers.py) and what
+    the skeleton tbody hydrates with. (The workspace `FilterBar` targets
+    `#region-{name}` with `filter_{key}` names, which the list handler does
+    not parse.) The FTS search box is the canonical free-text affordance;
+    these selects narrow the list in place.
+
+    `hx-include="closest [data-dazzle-table]"` makes every active filter ride
+    along on each change, matching the legacy list filter bar."""
+
+    tbody_id: str
+    endpoint: URL
+    columns: tuple[FilterColumn, ...]
+    loading_indicator: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.tbody_id:
+            raise ValueError("ListFilterBar requires a non-empty tbody_id")
+        if not self.columns:
+            raise ValueError("ListFilterBar requires at least one column")
 
 
 @dataclass(frozen=True, slots=True)

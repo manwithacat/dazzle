@@ -24,10 +24,14 @@ def test_fragment_surface_renderer_renders_a_minimal_list_surface() -> None:
     renderer = FragmentSurfaceRenderer()
     html = renderer.render(surface, ctx)
     assert isinstance(html, str)
-    assert "Buy milk" in html
-    assert "Walk dog" in html
+    # Canonical (ADR-0049 Task 4e): rows hydrate from /api, so the first paint
+    # is a skeleton table (column header + chrome), not inline row content.
+    assert "Title" in html  # column header
     assert "<table" in html
+    assert 'class="dz-table-body"' in html  # the hydrating skeleton tbody
+    assert 'hx-get="/api/test' in html  # points at the row-data endpoint
     assert "dz-surface" in html  # uses Fragment chrome, not Jinja chrome
+    assert "Buy milk" not in html  # row content is NOT inlined
 
 
 def test_fragment_surface_renderer_signature_is_stable() -> None:

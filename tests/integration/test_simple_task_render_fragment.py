@@ -28,9 +28,11 @@ def _ctx() -> dict:
 
 
 def test_jinja_and_fragment_both_render_the_titles() -> None:
-    """Both renderers must include both row titles. Byte parity is not
-    asserted — class-name ordering, whitespace, attribute ordering legitimately
-    differ. Content + structural shape are what matter."""
+    """Both render paths first-paint the list chrome + a skeleton tbody that
+    hydrates rows from /api (ADR-0049 D2 — and the legacy path has always been
+    skeleton+hydrate too). So neither inlines the row titles at first paint;
+    structural parity (column header + table chrome + hydrating tbody) is what
+    matters."""
     services = _make_services()
 
     jinja_surface = SurfaceSpec(
@@ -52,10 +54,12 @@ def test_jinja_and_fragment_both_render_the_titles() -> None:
 
     for renderer_name, html in [("jinja", jinja_html), ("fragment", fragment_html)]:
         assert isinstance(html, str), f"{renderer_name}: not a string"
-        assert "Buy milk" in html, f"{renderer_name}: missing 'Buy milk'"
-        assert "Walk dog" in html, f"{renderer_name}: missing 'Walk dog'"
         assert "Title" in html, f"{renderer_name}: missing column header"
         assert "<table" in html, f"{renderer_name}: missing table chrome"
+        # rows hydrate from /api — the hydrating skeleton tbody is present and
+        # the row content is not inlined at first paint
+        assert "dz-table-body" in html, f"{renderer_name}: missing hydrating tbody"
+        assert "Buy milk" not in html, f"{renderer_name}: row content should not be inlined"
 
 
 def test_jinja_and_fragment_both_render_a_heading() -> None:

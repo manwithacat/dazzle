@@ -166,17 +166,20 @@ def test_table_bulk_select_off_emits_no_checkbox_or_row_id() -> None:
 # ── End-to-end LIST adapter ──
 
 
-def test_list_renders_bulk_toolbar_and_checkboxes_when_bulk_actions_on() -> None:
-    """Surface with `bulk_actions: true` renders the toolbar + the
-    per-row checkboxes + select-all header."""
+def test_list_renders_bulk_toolbar_and_select_all_when_bulk_actions_on() -> None:
+    """Canonical (ADR-0049 Task 4e): `bulk_actions: true` first-paints the bulk
+    toolbar + the select-all header. The per-row checkboxes + data-dz-row-id are
+    emitted by render_data_row on the /api hydrate (covered by the data_row
+    characterization 'bulk' case), not inline at first paint."""
     table = _table(bulk_actions=True)
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
     assert "dz-bulk-actions" in html
     assert '@click="bulkDelete()"' in html
-    assert "dz-tr-checkbox" in html
     assert "dz-table-th-select" in html
-    assert 'data-dz-row-id="abc"' in html
+    # per-row checkboxes are not inlined at first paint (rows come from /api)
+    assert "dz-tr-checkbox" not in html
+    assert "data-dz-row-id" not in html
 
 
 def test_list_omits_bulk_toolbar_when_bulk_actions_off() -> None:
@@ -190,10 +193,13 @@ def test_list_omits_bulk_toolbar_when_bulk_actions_off() -> None:
     assert "data-dz-row-id" not in html
 
 
-def test_list_omits_bulk_toolbar_when_no_items() -> None:
-    """Empty list with bulk_actions still on → no bulk toolbar
-    (nothing to bulk-act on; the empty-state copy is the only body)."""
+def test_list_keeps_bulk_toolbar_for_empty_list_css_gated() -> None:
+    """Canonical: the bulk toolbar + select-all header are emitted whenever
+    `bulk_actions` is declared — their visibility is CSS-gated on
+    `[data-dz-bulk-count] > 0`, not gated on the first-paint item count (the
+    list hydrates rows from /api, so item count is unknown at first paint)."""
     table = _table(bulk_actions=True, rows=[], total=0)
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    assert "dz-bulk-actions" not in html
+    assert "dz-bulk-actions" in html
+    assert "dz-table-th-select" in html

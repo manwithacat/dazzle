@@ -247,9 +247,9 @@ def test_dispatch_ctx_region_name_falls_back_to_table_id_without_surface_name() 
 
 
 def test_list_filter_bar_hx_target_uses_surface_region_id() -> None:
-    """End-to-end: rendered FilterBar `hx-target` points at the
-    workspace region container (`#region-<surface.name>`), not at the
-    renderer's table_id with `dt-` prefix. Closes #1205."""
+    """Canonical (ADR-0049 Task 4e): list filters target the hydrating tbody
+    (`#{table_id}-body`) with `filter[<key>]` param names — what the /api list
+    handler parses — NOT the dead `#region-*` workspace target."""
     table = _table(
         table_id="dt-contact_list",
         columns=[
@@ -268,9 +268,11 @@ def test_list_filter_bar_hx_target_uses_surface_region_id() -> None:
     )
     ctx = _build_dispatch_ctx(_RC(table), _Surface())
     html = _render_list(ctx)
-    # FilterBar hx-target must hit the workspace region container.
-    assert "#region-contact_list" in html
-    assert "#region-dt-contact_list" not in html
+    # The list filter targets the hydrating tbody with a filter[<key>] name,
+    # not the dead #region-* workspace container.
+    assert 'hx-target="#contact_list-body"' in html
+    assert 'name="filter[status]"' in html
+    assert "#region-" not in html
 
 
 def test_list_omits_filter_bar_when_endpoint_missing() -> None:

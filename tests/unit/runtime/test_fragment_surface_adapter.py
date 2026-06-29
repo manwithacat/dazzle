@@ -4,7 +4,7 @@ import pytest
 
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
-from dazzle.render.fragment import Heading, Region, Surface, Table
+from dazzle.render.fragment import DataListScroll, Heading, Region, Surface, Table
 
 
 def test_list_mode_produces_surface_with_heading_and_region() -> None:
@@ -27,7 +27,10 @@ def test_list_mode_produces_surface_with_heading_and_region() -> None:
     assert fragment.header.body == "Task List"
     assert isinstance(fragment.body, Region)
     assert fragment.body.kind == "list"
-    assert isinstance(fragment.body.body, Table)
+    # Canonical (ADR-0049 Task 4e): the list body is the DataListScroll shell
+    # wrapping a skeleton Table (rows hydrate from /api).
+    assert isinstance(fragment.body.body, DataListScroll)
+    assert isinstance(fragment.body.body.table, Table)
 
 
 def test_list_mode_table_columns_match_ctx() -> None:
@@ -40,9 +43,12 @@ def test_list_mode_table_columns_match_ctx() -> None:
         "total": 1,
     }
     fragment = FragmentSurfaceAdapter().build(surface, ctx)
-    table = fragment.body.body
+    table = fragment.body.body.table  # skeleton Table inside the DataListScroll
     assert table.columns == ("Title",)
-    assert table.rows == (("Hello",),)
+    assert table.column_keys == ("title",)
+    # rows hydrate from /api — the skeleton carries none inline
+    assert table.rows == ()
+    assert table.skeleton is True
 
 
 def test_unsupported_mode_raises() -> None:

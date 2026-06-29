@@ -119,51 +119,28 @@ def test_table_primitive_accepts_empty_row_links() -> None:
     assert t.row_links == ()
 
 
-def test_renderer_emits_hx_get_per_linked_row() -> None:
-    """Each row with a non-None URL becomes
-    `<tr hx-get="..." hx-target="body" hx-swap="innerHTML"
-    hx-push-url="true" tabindex="0">`."""
+# ── Canonical model (ADR-0049 Phase 1 Task 4e) ───────────────────────────
+# `_build_list` no longer renders rows inline — the list first-paints a
+# skeleton tbody that hydrates from /api, where `render_data_row` owns the
+# per-row drill (covered by tests/unit/test_data_row_characterization_1505.py,
+# the "drill" case). The `_resolve_row_links` helper above is unchanged and
+# still exercised directly; only `_build_list`'s inline-drill rendering is gone.
+
+
+def test_list_skeleton_hydrates_rows_from_api_not_inline() -> None:
+    """Rows come from /api (render_data_row), not inline — so the first paint
+    is a skeleton tbody pointing at the row-data endpoint, with no inline
+    `<tr>` drill rows and no row data inlined."""
     ctx = _build_dispatch_ctx(_RC(_table(detail_url_template="/contacts/{id}")), object())
     html = _render(ctx)
-    assert 'hx-get="/contacts/abc-123"' in html
-    assert 'hx-get="/contacts/def-456"' in html
-    assert 'hx-target="body"' in html
-    assert 'hx-push-url="true"' in html
-    # Linked rows carry a class so CSS can apply hover/focus styling.
-    assert 'class="dz-table__row dz-table__row--linked"' in html
-
-
-def test_renderer_omits_hx_attrs_when_no_template() -> None:
-    """No template → no `hx-get` on any row. Plain table render."""
-    ctx = _build_dispatch_ctx(_RC(_table()), object())
-    html = _render(ctx)
-    assert "hx-get" not in html
-    assert "Alice" in html and "Bob" in html
-
-
-def test_renderer_emits_plain_tr_for_unmappable_row() -> None:
-    """Defensive: a row that doesn't have the template's key gets a
-    plain `<tr>` instead of crashing."""
-    table = TableContext(
-        entity_name="X",
-        title="X",
-        columns=[ColumnContext(key="name", label="Name")],
-        api_endpoint="/api/x",
-        rows=[
-            {"id": "ok", "name": "Mappable"},
-            {"slug": "no-id-here", "name": "Unmappable"},
-        ],
-        total=2,
-        detail_url_template="/x/{id}",
-    )
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render(ctx)
-    assert 'hx-get="/x/ok"' in html
-    # The unmappable row's <tr> has no hx-get
-    assert html.count("hx-get=") == 1
-    # Both still appear in the rendered output
-    assert "Mappable" in html
-    assert "Unmappable" in html
+    # the empty hydrating tbody points at the row-data endpoint
+    assert 'class="dz-table-body"' in html
+    assert 'hx-get="/api/contacts' in html
+    assert 'hx-trigger="load"' in html
+    # no inline data rows / per-row drill at first paint
+    assert "dz-table__row--linked" not in html
+    assert "Alice" not in html
+    assert "Bob" not in html
 
 
 def test_dispatch_ctx_preserves_existing_table_keys() -> None:

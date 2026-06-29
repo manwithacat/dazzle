@@ -47,6 +47,7 @@ from dazzle.render.fragment.primitives import (
     InlineEdit,
     Interactive,
     Link,
+    ListFilterBar,
     Pagination,
     SearchBox,
     SortHeader,
@@ -435,6 +436,67 @@ class _RenderInteractiveMixin:
 
         selects_html = "".join(_render_column(col) for col in f.columns)
         return f'<div class="dz-queue-filters filter-bar">{selects_html}</div>'
+
+    def _emit_list_filter_bar(self, f: ListFilterBar, ctx: RenderContext) -> str:
+        """Task 4d: list filter row that actually filters the list tbody.
+
+        Targets `#{tbody_id}` with `filter[{key}]` param names (what the
+        /api list handler parses), `innerMorph` swap, and
+        `hx-include="closest [data-dazzle-table]"` so all active filters ride
+        along — mirroring the legacy `render_filterable_table` filter bar."""
+        endpoint = ctx.escape_attr(str(f.endpoint))
+        target = ctx.escape_attr(f"#{f.tbody_id}")
+        indicator_attr = (
+            f' hx-indicator="{ctx.escape_attr(f.loading_indicator)}"' if f.loading_indicator else ""
+        )
+        common = (
+            f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerMorph" '
+            'hx-include="closest [data-dazzle-table]" '
+            'hx-headers=\'{"Accept": "text/html"}\''
+            f"{indicator_attr}"
+        )
+
+        def _control(col: FilterColumn) -> str:
+            name = f"filter[{ctx.escape_attr(col.key)}]"
+            sel = ctx.escape_attr(col.selected)
+            if col.filter_type == "text":
+                placeholder = ctx.escape_attr(f"Filter {col.label.lower()}…")
+                return (
+                    f'<input type="text" name="{name}" class="dz-filter-input" '
+                    f'placeholder="{placeholder}" value="{sel}" '
+                    f'hx-trigger="keyup changed delay:300ms" {common}>'
+                )
+            if col.filter_type == "ref":
+                return (
+                    f'<select name="{name}" class="dz-filter-select" '
+                    f'data-ref-api="{ctx.escape_attr(col.ref_api)}" '
+                    f'data-selected-value="{sel}" '
+                    f'hx-trigger="change changed" {common} '
+                    'x-init="dzFilterRefSelect($el)">'
+                    '<option value="">All</option></select>'
+                )
+            options_html = '<option value="">All</option>'
+            for value, display in col.options:
+                selected_attr = " selected" if value == col.selected else ""
+                options_html += (
+                    f'<option value="{ctx.escape_attr(value)}"{selected_attr}>'
+                    f"{ctx.escape(display)}</option>"
+                )
+            return (
+                f'<select name="{name}" class="dz-filter-select" '
+                f'hx-trigger="change changed" {common}>'
+                f"{options_html}</select>"
+            )
+
+        cells = "".join(
+            f'<div class="dz-filter-cell">'
+            f'<label class="dz-filter-label">{ctx.escape(col.label)}</label>'
+            f"{_control(col)}</div>"
+            for col in f.columns
+        )
+        return (
+            f'<div class="dz-table-toolbar-filters"><div class="dz-filter-bar">{cells}</div></div>'
+        )
 
     def _emit_sort_header(self, s: SortHeader, ctx: RenderContext) -> str:
         """Render a SortHeader as an HTMX-driven column-header link.

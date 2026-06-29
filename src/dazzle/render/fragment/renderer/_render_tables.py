@@ -32,6 +32,8 @@ from dazzle.render.fragment.primitives import (
     ActionGrid,
     ActivityFeed,
     BarTrack,
+    ColumnVisibilityMenu,
+    DataListScroll,
     DetailGrid,
     GridRegion,
     ListRegion,
@@ -78,8 +80,37 @@ class _RenderTablesMixin:
                 'aria-label="Select all rows" />'
                 "</th>"
             )
-        for c in t.columns:
-            if isinstance(c, SortHeader):
+        # Task 4e: when column keys are supplied (the canonical list path), each
+        # data header carries `data-dz-col="{key}"` so the dzTable controller's
+        # column-visibility toggle (which sets style.display on every
+        # `[data-dz-col]` cell) hides the header in lock-step with the hydrated
+        # body cells (which already carry data-dz-col via render_data_row).
+        keys = t.column_keys if (t.column_keys and len(t.column_keys) == len(t.columns)) else None
+        sortable = set(t.sortable_keys)
+        for i, c in enumerate(t.columns):
+            if keys:
+                # Canonical list header: data-dz-col (column-visibility) +
+                # dz-table-th; sortable columns are dzTable toggleSort buttons.
+                ck = ctx.escape_attr(keys[i])
+                label = ctx.escape(str(c))
+                if keys[i] in sortable:
+                    head_cells_parts.append(
+                        f'<th data-dz-col="{ck}" :aria-sort="ariaSortDir(\'{ck}\')" '
+                        'scope="col" class="dz-table-th">'
+                        f'<button type="button" @click="toggleSort(\'{ck}\')" '
+                        f'aria-label="Sort by {label}" class="dz-table-sort-button">'
+                        f"{label}"
+                        '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" '
+                        'aria-hidden="true" xmlns="http://www.w3.org/2000/svg" '
+                        f':class="sortIcon(\'{ck}\')" class="dz-table-sort-icon">'
+                        '<path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" '
+                        'stroke-linecap="round" stroke-linejoin="round"/></svg></button></th>'
+                    )
+                else:
+                    head_cells_parts.append(
+                        f'<th data-dz-col="{ck}" scope="col" class="dz-table-th">{label}</th>'
+                    )
+            elif isinstance(c, SortHeader):
                 head_cells_parts.append(f"<th>{self._emit(c, ctx)}</th>")
             else:
                 head_cells_parts.append(f"<th>{ctx.escape(str(c))}</th>")
@@ -90,6 +121,19 @@ class _RenderTablesMixin:
         # (`render_data_row`, ADR-0048), so rows have exactly one source.
         # Mirrors the legacy `render_filterable_table` tbody (table_renderer.py).
         if t.skeleton:
+            # Task 4a: the canonical list table carries the actions header so
+            # its column count matches the hydrated render_data_row rows.
+            head_html = head_cells
+            if t.has_actions:
+                head_html += (
+                    '<th scope="col" class="dz-table-th-actions">'
+                    '<span class="visually-hidden">Actions</span></th>'
+                )
+            caption_html = (
+                f'<caption class="visually-hidden">{ctx.escape(t.caption)}</caption>'
+                if t.caption
+                else ""
+            )
             id_attr = f' id="{ctx.escape_attr(t.tbody_id)}"' if t.tbody_id else ""
             triggers: list[str] = []
             if t.hx_trigger:
@@ -114,8 +158,9 @@ class _RenderTablesMixin:
                 'class="dz-table-body"></tbody>'
             )
             return (
-                f'<table class="dz-table">'
-                f"<thead><tr>{head_cells}</tr></thead>"
+                f'<table class="dz-table-grid">'
+                f"{caption_html}"
+                f"<thead><tr>{head_html}</tr></thead>"
                 f"{skeleton_tbody}"
                 f"</table>"
             )
@@ -163,6 +208,107 @@ class _RenderTablesMixin:
             f"<thead><tr>{head_cells}</tr></thead>"
             f"<tbody>{body_rows}</tbody>"
             f"</table>"
+        )
+
+    def _emit_data_list_scroll(self, s: DataListScroll, ctx: RenderContext) -> str:
+        """Task 4b: the canonical list-table shell around a skeleton Table.
+
+        Reproduces the legacy `render_filterable_table` shell so all of
+        `table.css` applies: the `.dz-table` ancestor scopes the loading
+        overlay (`:has(.htmx-request)`), the empty sibling follows the
+        `.dz-table-grid` (CSS `:not(:has(tbody tr td)) ~ .dz-table-empty`),
+        and `--dz-list-rows` sizes the min-height.
+        """
+        table_id = ctx.escape_attr(s.table_id)
+        table_html = self._emit(s.table, ctx)  # type: ignore[arg-type]
+        aria_label = ctx.escape_attr(f"{s.aria_label} table" if s.aria_label else "Data table")
+
+        loading_overlay = (
+            '<div aria-hidden="true" class="dz-table-loading">'
+            '<svg class="dz-table-loading-spinner" viewBox="0 0 24 24" fill="none" '
+            'xmlns="http://www.w3.org/2000/svg">'
+            '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" '
+            'stroke-width="2"/>'
+            '<path class="opacity-75" fill="currentColor" '
+            'd="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>'
+            '<span class="visually-hidden">Loading…</span></div>'
+        )
+
+        empty_cta = ""
+        if s.empty_action_href and s.empty_action_label:
+            empty_cta = (
+                f'<a href="{ctx.escape_attr(s.empty_action_href)}" class="dz-button-primary">'
+                '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">'
+                '<path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" '
+                'stroke-linecap="round"/></svg>'
+                f"{ctx.escape(s.empty_action_label)}</a>"
+            )
+        empty_html = (
+            f'<div id="{table_id}-empty" role="status" class="dz-table-empty">'
+            '<svg width="40" height="40" viewBox="0 0 40 40" fill="none" '
+            'aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="dz-table-empty-icon">'
+            '<rect x="4" y="4" width="32" height="32" rx="4" stroke="currentColor" '
+            'stroke-width="2"/>'
+            '<path d="M12 16h16M12 20h10M12 24h8" stroke="currentColor" stroke-width="1.5" '
+            'stroke-linecap="round"/></svg>'
+            f'<p class="dz-table-empty-title">{ctx.escape(s.empty_title)}</p>'
+            f'<p class="dz-table-empty-hint">{ctx.escape(s.empty_description)}</p>'
+            f"{empty_cta}</div>"
+        )
+
+        loading_sr = (
+            f'<div id="{table_id}-loading-sr" class="htmx-indicator visually-hidden" '
+            'role="status" aria-label="Loading data">Loading…</div>'
+        )
+        # The /api response fills this via an hx-swap-oob pagination swap
+        # (list_handlers). Empty at first paint; absent for infinite lists.
+        pagination_footer = (
+            f'<div id="{table_id}-pagination" class="dz-table-footer"></div>' if s.paginated else ""
+        )
+
+        return (
+            '<div class="dz-table">'
+            f'<div class="dz-table-scroll" style="--dz-list-rows: {int(s.page_size)}">'
+            f"{loading_overlay}"
+            f'<div class="dz-table-scroll-x" role="region" aria-label="{aria_label}" tabindex="0">'
+            f"{table_html}{empty_html}"
+            "</div></div>"
+            f"{loading_sr}"
+            f"{pagination_footer}"
+            "</div>"
+        )
+
+    def _emit_column_visibility_menu(self, m: ColumnVisibilityMenu, ctx: RenderContext) -> str:
+        """Task 4c: the column-visibility dropdown, bound to dzTable."""
+        items: list[str] = []
+        for key, label in m.columns:
+            ck = ctx.escape_attr(key)
+            cl_attr = ctx.escape_attr(label)
+            items.append(
+                '<label role="menuitemcheckbox" class="dz-table-col-menu-item">'
+                '<input type="checkbox" class="dz-table-col-menu-checkbox" '
+                f":checked=\"isColumnVisible('{ck}')\" "
+                f"@change=\"toggleColumn('{ck}')\" "
+                f'aria-label="Show {cl_attr} column">'
+                f"<span>{ctx.escape(label)}</span></label>"
+            )
+        return (
+            '<div class="dz-table-col-menu" @click.outside="colMenuOpen = false">'
+            '<button type="button" @click="colMenuOpen = !colMenuOpen" '
+            ':aria-expanded="colMenuOpen" aria-label="Toggle column visibility" '
+            'aria-haspopup="menu" class="dz-table-col-menu-trigger">'
+            '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" '
+            'aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="1" y="1" width="3" height="12" rx="0.5" stroke="currentColor" '
+            'stroke-width="1.5"/>'
+            '<rect x="5.5" y="1" width="3" height="12" rx="0.5" stroke="currentColor" '
+            'stroke-width="1.5"/>'
+            '<rect x="10" y="1" width="3" height="12" rx="0.5" stroke="currentColor" '
+            'stroke-width="1.5"/>'
+            "</svg>Columns</button>"
+            '<div x-show="colMenuOpen" x-transition.opacity.duration.80ms '
+            'role="menu" class="dz-table-col-menu-panel">'
+            f"{''.join(items)}</div></div>"
         )
 
     def _emit_kpi(self, k: KPI, ctx: RenderContext) -> str:

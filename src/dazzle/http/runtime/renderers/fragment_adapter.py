@@ -15,8 +15,10 @@ from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.render.fragment import (
     URL,
     Button,
+    ColumnVisibilityMenu,
     Combobox,
     CreateButton,
+    DataListScroll,
     DzTableMount,
     EmptyState,
     Field,
@@ -28,7 +30,7 @@ from dazzle.render.fragment import (
     Fragment,
     Heading,
     Link,
-    Pagination,
+    ListFilterBar,
     RefPicker,
     Region,
     Row,
@@ -43,7 +45,6 @@ from dazzle.render.fragment import (
     Text,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
-from dazzle.render.fragment.region._row_links import _resolve_row_links
 
 
 class FragmentSurfaceAdapter:
@@ -62,170 +63,170 @@ class FragmentSurfaceAdapter:
         )
 
     def _build_list(self, surface: SurfaceLike, ctx: dict[str, Any]) -> Surface:
+        """Substrate-canonical list surface (ADR-0049 Phase 1, Task 4e).
+
+        First-paints the chrome + an empty skeleton `<tbody hx-trigger="load">`;
+        rows hydrate from `/api` via `render_data_row` (D2). The dzTable
+        controller mounts on the Region (D3) and drives sort/bulk/inline/
+        column-visibility; the `/api` handler derives its `table_id` from the
+        `HX-Target` header (the tbody id), so the OOB pagination + row swaps
+        land automatically. The free-text search is the FTS dropdown
+        (substrate-canonical divergence from the legacy inline filter); the
+        filter selects narrow the list in place via `ListFilterBar`.
+        """
         title = surface.title or surface.name.replace("_", " ").title()
-        items: list[dict[str, Any]] = ctx.get("items", [])
         columns: list[dict[str, Any]] = ctx.get("columns", [])
         entity_name = (getattr(surface, "entity_ref", "") or "").strip()
+        entity_title = str(ctx.get("entity_title", "") or "")
         create_url = str(ctx.get("create_url", "") or "").strip()
-        # Issue #1029 phase 1: per-row drill-down URL.
-        detail_url_template = str(ctx.get("detail_url_template", "") or "").strip()
-        # Issue #1029 phase 2: pagination footer when total > page_size.
-        total = int(ctx.get("total", 0) or 0)
-        page = int(ctx.get("page", 1) or 1)
         page_size = int(ctx.get("page_size", 20) or 20)
         endpoint = str(ctx.get("endpoint", "") or "").strip()
         region_name = str(ctx.get("region_name", "") or "").strip()
-        # Issue #1029 phase 5: search + filter toolbar.
         search_enabled = bool(ctx.get("search_enabled", False))
         search_fields = list(ctx.get("search_fields", []) or [])
         filter_values = dict(ctx.get("filter_values", {}) or {})
-        toolbar_children = self._build_list_toolbar(
-            search_enabled=search_enabled,
-            search_fields=search_fields,
-            filter_values=filter_values,
-            columns=columns,
-            entity_name=entity_name,
-            entity_title=str(ctx.get("entity_title", "") or ""),  # #1487 follow-on
-            endpoint=endpoint,
-            region_name=region_name,
+        bulk_actions = bool(ctx.get("bulk_actions", False))
+        inline_editable = tuple(ctx.get("inline_editable", []) or ())
+        sort_field = str(ctx.get("sort_field", "") or "")
+        sort_dir = "desc" if str(ctx.get("sort_dir", "asc") or "asc").lower() == "desc" else "asc"
+        refresh_interval = ctx.get("refresh_interval")
+        search_first = bool(ctx.get("search_first", False))
+        paginated = str(ctx.get("pagination_mode", "pages") or "pages") != "infinite"
+
+        # The dzTable id; the tbody hydrate target is `#{table_id}-body`, and
+        # the /api handler strips `-body` off HX-Target to recover it.
+        table_id = region_name or entity_name
+        tbody_id = f"{table_id}-body"
+        loading_sr = f"#{table_id}-loading-sr"
+
+        visible = [c for c in columns if not c.get("hidden")]
+        col_labels = tuple(str(c.get("label", c.get("key", ""))) for c in visible)
+        col_keys = tuple(str(c.get("key", "")) for c in visible)
+        sortable_keys = tuple(str(c.get("key", "")) for c in visible if c.get("sortable"))
+
+        # Skeleton hydrate endpoint carries the default sort (matches legacy).
+        hx_endpoint = endpoint
+        if sort_field and endpoint:
+            sep = "&" if "?" in endpoint else "?"
+            hx_endpoint = f"{endpoint}{sep}sort={sort_field}&dir={sort_dir}"
+        # search_first lists omit the load trigger (the search drives the fetch).
+        hx_trigger = "" if search_first else "load"
+
+        table = Table(
+            columns=col_labels,
+            rows=(),
+            skeleton=True,
+            bulk_select=bulk_actions,
+            tbody_id=tbody_id,
+            hx_endpoint=hx_endpoint,
+            hx_trigger=hx_trigger,
+            refresh_interval=int(refresh_interval) if refresh_interval else None,
+            loading_indicator=loading_sr,
+            caption=title,
+            has_actions=True,
+            column_keys=col_keys,
+            sortable_keys=sortable_keys,
         )
-        # Issue #1029 phase 7: bulk-actions toolbar + per-row checkboxes.
-        bulk_actions_enabled = bool(ctx.get("bulk_actions", False)) and bool(items)
 
-        body: Fragment
-        if not items:
-            # Issue #1029 phase 4: pick the right empty-state message
-            # based on `empty_kind` (#807). Priority: typed variant
-            # (collection / filtered / forbidden) → generic
-            # `empty_message` → framework default.
-            empty_title, empty_description = _pick_empty_state(ctx)
-            body = EmptyState(title=empty_title, description=empty_description)
-        else:
-            # Issue #1029 phase 6: sortable columns become SortHeader
-            # primitives; non-sortable stay as plain strings. The
-            # adapter reads the active `sort_field` / `sort_dir` from
-            # ctx so the right column shows its current direction
-            # (▲/▼) and its next-click flips, while others always
-            # default to ascending.
-            sort_field = str(ctx.get("sort_field", "") or "")
-            sort_dir_raw = str(ctx.get("sort_dir", "asc") or "asc").lower()
-            sort_dir: str = "desc" if sort_dir_raw == "desc" else "asc"
-            column_labels = tuple(
-                _build_column_header(
-                    col=col,
-                    endpoint=endpoint,
-                    region_name=region_name,
-                    current_sort=sort_field,
-                    current_direction=sort_dir,
+        empty_title, empty_description = _pick_empty_state(ctx)
+        create_label = f"New {entity_title or entity_name.replace('_', ' ')}" if create_url else ""
+        shell = DataListScroll(
+            table=table,
+            table_id=table_id,
+            page_size=page_size,
+            aria_label=title,
+            empty_title=empty_title,
+            empty_description=empty_description,
+            empty_action_href=create_url,
+            empty_action_label=create_label,
+            paginated=paginated,
+        )
+
+        # Toolbar: FTS search box (canonical) + working list filters.
+        toolbar: list[Fragment] = []
+        if search_enabled and search_fields and entity_name:
+            placeholder = f"Search {entity_title.lower()}…" if entity_title else "Search…"
+            toolbar.append(
+                SearchBox(
+                    name=f"{region_name or entity_name}_search",
+                    fts_endpoint=URL(f"/_dazzle/fts/{entity_name}?html=1"),
+                    placeholder=placeholder,
                 )
-                for col in columns
             )
-            rows = tuple(
-                tuple(
-                    _format_cell(
-                        _cell_value(item, col),
-                        col.get("type", "text"),
-                        col.get("currency_code", ""),
-                        col.get("format_kind", ""),
-                        col.get("format_arg", ""),
-                    )
-                    for col in columns
-                )
-                for item in items
+        filter_cols = tuple(
+            FilterColumn(
+                key=str(c["key"]),
+                label=str(c.get("label", c["key"])),
+                options=tuple(_filter_option(o) for o in (c.get("filter_options") or [])),
+                selected=str(filter_values.get(c["key"], "")),
+                filter_type=(
+                    "ref" if c.get("filter_ref_entity") else c.get("filter_type", "select")
+                ),
+                ref_api=str(c.get("filter_ref_api", "")),
             )
-            row_links = (
-                _resolve_row_links(items, detail_url_template) if detail_url_template else ()
-            )
-            # Phase 7: pass per-row ids for bulk-select checkboxes
-            # when bulk_actions enabled. Falls back to empty tuple
-            # otherwise.
-            row_ids = (
-                tuple(str(item.get("id", "") or "") for item in items)
-                if bulk_actions_enabled
-                else ()
-            )
-            table = Table(
-                columns=column_labels,
-                rows=rows,
-                row_links=row_links,
-                bulk_select=bulk_actions_enabled,
-                row_ids=row_ids,
-            )
-            # Append Pagination when total exceeds the current page slice.
-            # Region wrapping uses Stack (matches legacy template's parent
-            # `<div>` shape; an extra wrapping div is fine here).
-            if total > page_size and endpoint and region_name:
-                pagination = Pagination(
-                    region_name=region_name,
+            for c in visible
+            if c.get("filterable")
+        )
+        if filter_cols and endpoint:
+            toolbar.append(
+                ListFilterBar(
+                    tbody_id=tbody_id,
                     endpoint=URL(endpoint),
-                    total=total,
-                    page=page,
-                    page_size=page_size,
+                    columns=filter_cols,
+                    loading_indicator=loading_sr,
                 )
-                body = Stack(children=(table, pagination), gap="sm")
-            else:
-                body = table
+            )
 
-        # Prepend the search/filter toolbar (Phase 5) to the body when
-        # any toolbar primitive is configured. Empty otherwise — the
-        # body remains untouched.
-        if toolbar_children:
-            body = Stack(children=(*toolbar_children, body), gap="sm")
-
-        # Phase 7: prepend the BulkActionToolbar when bulk_actions is
-        # on. Visibility is CSS-driven (`[data-dz-bulk-count]`) so
-        # the toolbar only shows when at least one row is selected.
-        if bulk_actions_enabled:
+        # Body: [BulkActionToolbar?] + toolbar + the list-table shell.
+        body_children: list[Fragment] = []
+        if bulk_actions:
             from dazzle.render.fragment import BulkActionToolbar
 
-            body = Stack(children=(BulkActionToolbar(), body), gap="sm")
+            body_children.append(BulkActionToolbar())
+        body_children.extend(toolbar)
+        body_children.append(shell)
+        body: Fragment = (
+            Stack(children=tuple(body_children), gap="sm") if len(body_children) > 1 else shell
+        )
 
-        # Header carries title + optional CreateButton. The Create
-        # button is contractually required for the list page (UX
-        # contract `rbac:<Entity>:<persona>:create` looks for an
-        # `<a href="*create*" data-dazzle-action="<Entity>.create">`
-        # visible on the list). Issue #1029 phase 3: switched from a
-        # plain Link to CreateButton — adds the data-dazzle-action
-        # attribute the RBAC checker keys off plus the 12x12 `+` icon,
-        # matching the legacy `filterable_table.html` shape.
-        header: Fragment
-        if create_url and entity_name:
-            header = Row(
-                children=(
-                    Heading(title, level=1),
-                    CreateButton(
-                        href=URL(create_url),
-                        entity_name=entity_name,
-                        entity_title=str(ctx.get("entity_title", "") or ""),  # #1487
-                    ),
-                ),
-                align="center",
-                gap="md",
+        # Header: title + column-visibility menu (>3 visible cols) + create.
+        header_children: list[Fragment] = [Heading(title, level=1)]
+        if len(visible) > 3:
+            header_children.append(
+                ColumnVisibilityMenu(
+                    columns=tuple(
+                        (str(c.get("key", "")), str(c.get("label", c.get("key", ""))))
+                        for c in visible
+                    )
+                )
             )
-        else:
-            header = Heading(title, level=1)
+        if create_url and entity_name:
+            header_children.append(
+                CreateButton(
+                    href=URL(create_url),
+                    entity_name=entity_name,
+                    entity_title=entity_title,
+                )
+            )
+        header: Fragment = (
+            Row(children=tuple(header_children), align="center", gap="md")
+            if len(header_children) > 1
+            else Heading(title, level=1)
+        )
 
-        # ADR-0049 D3: mount the dzTable controller on the list Region so the
-        # hydrated rows' sort/bulk/inline/column-visibility bindings resolve
-        # (and the loading spinner's `loading` var exists). Mounted
-        # unconditionally — like the legacy `render_filterable_table` wrapper,
-        # the controller owns the loading state + tbody hydrate, not just the
-        # interactive affordances. The id (`region_name`) matches the tbody
-        # hydrate target convention (`#{region_name}-body`).
         mount = DzTableMount(
-            table_id=region_name or entity_name,
+            table_id=table_id,
             endpoint=endpoint,
-            sort_field=str(ctx.get("sort_field", "") or ""),
-            sort_dir=str(ctx.get("sort_dir", "asc") or "asc"),
-            inline_editable=tuple(ctx.get("inline_editable", []) or ()),
-            bulk_actions=bool(ctx.get("bulk_actions", False)),
+            sort_field=sort_field,
+            sort_dir=sort_dir,
+            inline_editable=inline_editable,
+            bulk_actions=bulk_actions,
             entity_name=entity_name,
         )
         return Surface(
             header=header,
-            # Region carries `data-dazzle-table` so the UX contract
-            # checker + htmx `closest [data-dazzle-table]` selectors
-            # find the entity container.
+            # Region carries `data-dazzle-table` so the UX contract checker +
+            # htmx `closest [data-dazzle-table]` selectors find the container.
             body=Region(kind="list", body=body, data_table=entity_name, mount=mount),
         )
 
@@ -621,6 +622,17 @@ def _field_to_primitive(
         placeholder=placeholder,
         initial_value=initial_value,
     )
+
+
+def _filter_option(o: Any) -> tuple[str, str]:
+    """Normalise a filter option into a `(value, label)` pair. Dispatch ctx
+    supplies either dicts (`{"value":..,"label":..}`) or `(value, label)`
+    tuples depending on the column source — accept both (Task 4d)."""
+    if isinstance(o, dict):
+        return (str(o.get("value", "")), str(o.get("label", "")))
+    if isinstance(o, (tuple, list)) and len(o) >= 2:
+        return (str(o[0]), str(o[1]))
+    return (str(o), str(o))
 
 
 def _build_column_header(

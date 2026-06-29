@@ -44,65 +44,29 @@ def _render_list(ctx: dict) -> str:
     return FragmentRenderer().render(adapter._build_list(_Surface(), ctx))
 
 
-def test_list_renders_pagination_when_total_exceeds_page_size() -> None:
-    """200 rows / 20 per page → 10 pages → pagination row appears."""
+# ── Canonical model (ADR-0049 Phase 1 Task 4e) ───────────────────────────
+# The list first-paints an empty `#{table_id}-pagination` footer container; the
+# /api response fills it via an `hx-swap-oob` pagination swap (list_handlers).
+# So the page buttons (aria-current / hx-get / ellipsis / first+last) are NOT
+# in the first paint — they're rendered server-side on hydrate. Those button
+# details remain covered by the `Pagination` primitive direct tests below.
+
+
+def test_list_emits_empty_pagination_footer_container() -> None:
+    """Non-infinite lists first-paint an empty `#{table_id}-pagination` footer
+    (table_id == region_name) for the /api OOB pagination swap to land in."""
     html = _render_list(_ctx(total=200, page=1, page_size=20))
-    assert 'class="dz-pagination"' in html
-    assert "200 rows" in html
+    assert '<div id="contact_table-pagination" class="dz-table-footer"></div>' in html
+    # no inline page buttons at first paint
+    assert 'class="dz-pagination"' not in html
 
 
-def test_list_omits_pagination_when_total_fits_page() -> None:
-    """≤ page_size rows → no pagination shown (single page is dead UX)."""
-    html = _render_list(_ctx(total=15, page=1, page_size=20))
-    assert "dz-pagination" not in html
-
-
-def test_list_omits_pagination_when_endpoint_missing() -> None:
-    """Without endpoint we can't build hx-get URLs — omit pagination
-    rather than emit broken buttons."""
+def test_list_omits_pagination_footer_when_infinite() -> None:
+    """Infinite-scroll lists have no pagination footer."""
     ctx = _ctx(total=200)
-    ctx["endpoint"] = ""
+    ctx["pagination_mode"] = "infinite"
     html = _render_list(ctx)
-    assert "dz-pagination" not in html
-
-
-def test_list_pagination_active_page_marked_aria_current() -> None:
-    """The current page button gets `is-current` class + `aria-current="page"`
-    for screen-reader accessibility."""
-    html = _render_list(_ctx(total=200, page=5, page_size=20))
-    assert 'aria-current="page"' in html
-    assert "is-current" in html
-
-
-def test_list_pagination_emits_hx_get_for_each_page() -> None:
-    """Each page button has hx-get with page + page_size params,
-    targeted at the table region body."""
-    html = _render_list(_ctx(total=200, page=5, page_size=20))
-    assert "hx-get" in html
-    assert "page=4" in html  # window around page 5
-    assert "page=6" in html
-    assert 'hx-target="#contact_table-body"' in html
-    assert 'hx-swap="innerMorph"' in html  # htmx 4 native morph (was morph:innerHTML)
-
-
-def test_list_pagination_includes_first_and_last_pages() -> None:
-    """The bounded page list always includes page 1 and the last page,
-    even with ellipses in between (matches `pagination_pages` helper)."""
-    html = _render_list(_ctx(total=10000, page=50, page_size=20))
-    # Page 1 (first) and page 500 (last) both present.
-    assert ">1<" in html
-    assert ">500<" in html
-    # Window around page 50.
-    assert ">49<" in html
-    assert ">50<" in html
-    assert ">51<" in html
-
-
-def test_list_pagination_emits_ellipsis_when_total_pages_large() -> None:
-    """Many pages → bounded list with ellipsis markers."""
-    html = _render_list(_ctx(total=10000, page=50, page_size=20))
-    assert "…" in html
-    assert 'class="dz-pagination-ellipsis"' in html
+    assert "-pagination" not in html
 
 
 # ── Pagination primitive direct tests ──
