@@ -12554,16 +12554,17 @@
   },
   "dazzle/http/runtime/renderers/fragment_adapter.py": {
     "functions": {
-      "FragmentSurfaceAdapter": 23,
+      "FragmentSurfaceAdapter": 24,
       "FragmentSurfaceAdapter._build_detail_actions": 29,
       "FragmentSurfaceAdapter._build_form": 18,
       "FragmentSurfaceAdapter._build_list": 50,
       "FragmentSurfaceAdapter._build_list_toolbar": 12,
       "FragmentSurfaceAdapter._build_related_group": 29,
-      "FragmentSurfaceAdapter._build_view": 11,
+      "FragmentSurfaceAdapter._build_view": 18,
       "FragmentSurfaceAdapter.build": 4,
       "_build_column_header": 7,
       "_cell_value": 3,
+      "_esc_attr": 1,
       "_field_to_primitive": 15,
       "_filter_option": 4,
       "_format_cell": 3,
@@ -18720,7 +18721,7 @@
       "_RenderLayoutMixin._emit_icon": 1,
       "_RenderLayoutMixin._emit_lazy_tab_panel": 7,
       "_RenderLayoutMixin._emit_modal": 1,
-      "_RenderLayoutMixin._emit_region": 4,
+      "_RenderLayoutMixin._emit_region": 6,
       "_RenderLayoutMixin._emit_row": 2,
       "_RenderLayoutMixin._emit_skeleton": 2,
       "_RenderLayoutMixin._emit_split": 1,
@@ -18753,7 +18754,7 @@
   },
   "dazzle/render/fragment/renderer/_render_tables.py": {
     "functions": {
-      "_RenderTablesMixin": 8,
+      "_RenderTablesMixin": 7,
       "_RenderTablesMixin._emit": 1,
       "_RenderTablesMixin._emit_action_card": 4,
       "_RenderTablesMixin._emit_action_grid": 3,
@@ -18771,14 +18772,15 @@
       "_RenderTablesMixin._emit_pivot_table_region": 12,
       "_RenderTablesMixin._emit_profile_card": 10,
       "_RenderTablesMixin._emit_queue_region": 17,
-      "_RenderTablesMixin._emit_related_cards": 9,
-      "_RenderTablesMixin._emit_related_files": 9,
+      "_RenderTablesMixin._emit_related_cards": 8,
+      "_RenderTablesMixin._emit_related_files": 8,
       "_RenderTablesMixin._emit_related_group": 3,
       "_RenderTablesMixin._emit_related_table": 12,
       "_RenderTablesMixin._emit_stage_bar": 6,
       "_RenderTablesMixin._emit_status_list": 6,
       "_RenderTablesMixin._emit_table": 24,
-      "_RenderTablesMixin._related_create_row": 2
+      "_RenderTablesMixin._related_create_row": 2,
+      "_RenderTablesMixin._related_drill_attrs": 2
     },
     "mi_rank": "A"
   },

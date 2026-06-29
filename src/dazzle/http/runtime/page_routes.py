@@ -1884,6 +1884,8 @@ def _build_dispatch_ctx(
             # ADR-0049 Phase 2 Task 3a: the parent record id for related-group
             # create hrefs (`?{filter_field}={item_id}`).
             "item_id": str(item.get("id", "") or "") if isinstance(item, dict) else "",
+            # Task 3b: opt-in audit-history region (#956).
+            "show_history": bool(getattr(detail, "show_history", False)),
             # #1297: hand VIEW-mode custom renderers the original
             # DetailContext so a per-entity detail viewer can *delegate*
             # to the generic detail rendering — the modern replacement

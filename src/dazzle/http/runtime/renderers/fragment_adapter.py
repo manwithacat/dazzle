@@ -32,6 +32,7 @@ from dazzle.render.fragment import (
     Heading,
     Link,
     ListFilterBar,
+    RawHTML,
     RefPicker,
     Region,
     RelatedGroup,
@@ -47,6 +48,12 @@ from dazzle.render.fragment import (
     Text,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.html import esc as _html_esc
+
+
+def _esc_attr(s: str) -> str:
+    """Attribute-escape for the few RawHTML escape-hatch interpolations."""
+    return _html_esc(str(s), quote=True)
 
 
 class FragmentSurfaceAdapter:
@@ -280,26 +287,43 @@ class FragmentSurfaceAdapter:
             )
             detail_body = Stack(children=field_rows, gap="sm")
 
-        # Issue #1030: action toolbar — Edit / Delete / transitions /
-        # integration / external-link actions. Each action checks its
-        # ctx key and emits the corresponding primitive when present.
-        actions = self._build_detail_actions(ctx)
+        entity_name = (getattr(surface, "entity_ref", "") or ctx.get("entity_name") or "").strip()
+        item_id = str(ctx.get("item_id", "") or "")
+
+        # Task 3b: audit-history slot (#956) — an htmx-loaded region. Appended
+        # to the detail body when `show_history` is opted in and we have an id.
+        if ctx.get("show_history") and item_id and entity_name:
+            ent = _esc_attr(entity_name)
+            iid = _esc_attr(item_id)
+            audit = RawHTML(
+                f'<div class="dz-detail-audit-history" '
+                f'hx-get="/_dazzle/audit-history/{ent}/{iid}" '
+                'hx-trigger="load" hx-swap="innerHTML">'
+                '<p class="dz-audit-history__loading" aria-live="polite">'
+                "Loading history…</p></div>"
+            )
+            detail_body = Stack(children=(detail_body, audit), gap="md")
+
+        # Issue #1030: action toolbar — Back / Edit / Delete / transitions /
+        # integration / external-link actions.
+        back_url = str(ctx.get("back_url", "") or "").strip()
+        back = (Link(label="← Back", href=URL(back_url)),) if back_url else ()
+        actions = back + self._build_detail_actions(ctx)
         if actions:
             detail_body = Stack(
                 children=(Row(children=actions, align="start"), detail_body),
                 gap="md",
             )
 
+        def _detail_region(body: Fragment) -> Region:
+            return Region(kind="detail", body=body, data_entity=entity_name, data_entity_id=item_id)
+
         related_groups: list[dict[str, Any]] = ctx.get("related_groups", []) or []
         if not related_groups:
-            return Surface(
-                header=Heading(title, level=1),
-                body=Region(kind="detail", body=detail_body),
-            )
+            return Surface(header=Heading(title, level=1), body=_detail_region(detail_body))
 
         # ADR-0049 Phase 2 Task 3a: render the FETCHED related-group content
         # (table / status_cards / file_list) instead of a Skeleton placeholder.
-        item_id = str(ctx.get("item_id", "") or "")
         related_regions: list[Fragment] = []
         for group in related_groups:
             group_title = str(group.get("label") or group.get("title") or "Related")
@@ -323,10 +347,7 @@ class FragmentSurfaceAdapter:
 
         # Outer Region uses kind="detail" since the surface IS a detail
         # surface; the inner sub-regions carry kind="related" for CSS.
-        return Surface(
-            header=Heading(title, level=1),
-            body=Region(kind="detail", body=wrapper),
-        )
+        return Surface(header=Heading(title, level=1), body=_detail_region(wrapper))
 
     def _build_list_toolbar(
         self,

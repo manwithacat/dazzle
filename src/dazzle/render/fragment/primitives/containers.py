@@ -89,6 +89,12 @@ class Region:
     """ADR-0049 D3: optional dzTable controller mount for stateful list
     regions. When set, the region root carries the `x-data="dzTable(...)"`
     wrapper. None = a plain (uncontrolled) region — backwards-compatible."""
+    data_entity: str = ""
+    """ADR-0049 Phase 2: entity name for a detail region — emitted as
+    `data-dazzle-entity`/`data-dz-entity` (the selector tier2 e2e gestures +
+    dz-analytics.js scope a detail surface by). Empty = omitted."""
+    data_entity_id: str = ""
+    """The record id for a detail region — emitted as `data-dz-entity-id`."""
 
     def __post_init__(self) -> None:
         if self.kind not in _REGION_KINDS:

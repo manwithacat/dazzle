@@ -158,6 +158,13 @@ class _RenderLayoutMixin:
     def _emit_region(self, r: Region, ctx: RenderContext) -> str:
         cls = f"dz-region dz-region--kind-{r.kind}"
         data_attr = f' data-dazzle-table="{ctx.escape_attr(r.data_table)}"' if r.data_table else ""
+        # Phase 2: detail regions carry the entity anchor tier2 e2e gestures +
+        # dz-analytics.js scope by.
+        if r.data_entity:
+            ent = ctx.escape_attr(r.data_entity)
+            data_attr += f' data-dazzle-entity="{ent}" data-dz-entity="{ent}"'
+            if r.data_entity_id:
+                data_attr += f' data-dz-entity-id="{ctx.escape_attr(r.data_entity_id)}"'
         # ADR-0049 D3: when the region carries a dzTable mount, the root gets
         # the `x-data="dzTable(id, endpoint, config)"` controller wrapper —
         # the same one the legacy `render_filterable_table` mounted — so the

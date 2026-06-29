@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.22] - 2026-06-29
+
+### Fixed
+- **Substrate detail-view chrome gaps (ADR-0049 Phase 2 Task 3b).** The substrate detail Region now carries `data-dazzle-entity`/`data-dz-entity`/`data-dz-entity-id` — the selector `tier2_playwright` e2e gestures + `dz-analytics.js` scope a detail surface by (without it the E2E tier would fail at the view-flip). The opt-in audit-history region is restored (`show_history` → an htmx-loaded `dz-detail-audit-history` div that GETs `/_dazzle/audit-history/{entity}/{id}` on load), threaded through the dispatch ctx. A `← Back` link (from `back_url`) is prepended to the detail action toolbar. New `Region.data_entity`/`Region.data_entity_id` fields.
+
 ## [0.92.21] - 2026-06-29
 
 ### Fixed
