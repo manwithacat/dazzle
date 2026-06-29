@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.17] - 2026-06-29
+
+### Changed
+- **THE FLIP — `mode: list` surfaces now first-paint through the typed substrate by default (ADR-0049 Phase 1 Task 5).** `page_routes.py::_maybe_dispatch_inner_html` dispatches list surfaces to the substrate even when `render is None` (the fleet default) — the legacy `render_filterable_table` path now runs only as a fallback (deleted in Task 6). View / create / edit with unset `render` stay on the legacy path until their phases. Every default list first-paints chrome + an empty skeleton `<tbody hx-trigger="load">` and hydrates rows from `/api` → `render_data_row` (D2 — the `/api` path is unchanged). Verified live across 15 default-`render` lists in 4 example apps (all render the substrate, 0 card-safety/a11y violations); full unit suite + card-safety composite green. **Breaking-ish for downstreams that scraped legacy list DOM:** the list wrapper is now `<section class="dz-region dz-region--kind-list">` (was `<div class="dz-table">`), free-text search is the FTS dropdown (was inline filter), and there is no column-resize.
+
+### Fixed
+- **Pre-flip hardening (adversarial review, Task 5 Step 0):** `_build_dispatch_ctx` now threads per-column `filter_type`/`filter_ref_entity`/`filter_ref_api` (text & ref filters were degrading to empty selects) and the ctx keys `inline_editable`/`refresh_interval`/`pagination_mode`/`search_first` (inline-edit, live-refresh, infinite-scroll, search-first were silently regressing). `_build_list` no longer 500s on zero visible columns or a key-less filterable column. Entity-specific empty-state title + the select-all header's `:checked`/`:indeterminate` state bindings restored.
+
+### Agent Guidance
+- **Default `mode: list` surfaces render via the substrate now, not the legacy `table_renderer`.** The dispatch fork in `_maybe_dispatch_inner_html` only falls through to legacy for non-list modes (view/create/edit) with unset `render`. The list page is **skeleton+hydrate**: first paint is chrome + an empty `<tbody>`, rows arrive from `/api` → `render_data_row`. To change a default list's appearance, edit the substrate (`_build_list` + the `render/` list primitives), never `page/runtime/table_renderer.py`. When adding a field the list reads, thread it through BOTH `_build_dispatch_ctx` (the ctx adapter) AND `_build_list` — the review found the dispatch ctx silently lagging the renderer is the trap.
+
 ## [0.92.16] - 2026-06-29
 
 ### Added

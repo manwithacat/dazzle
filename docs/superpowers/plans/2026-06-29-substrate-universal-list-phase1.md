@@ -123,11 +123,11 @@ comprehensive substrate-canonical list-chrome build, not 4 patches.
 - Consumes: Tasks 2–4 (skeleton, dzTable mount, chrome parity).
 - Produces: every `mode: list` surface first-paints via the substrate (chrome + skeleton), hydrating rows via `/api` → `render_data_row`.
 
-- [ ] **Step 0: Independent adversarial review** — dispatch a fresh reviewer over the Task 2–4 substrate list output vs the Task-1 legacy fixtures: visual parity, a11y, the `dzTable` mount/config equivalence, the skeleton tbody equivalence. Fix findings before flipping.
-- [ ] **Step 1: Implement the flip** — `_maybe_dispatch_inner_html` returns the substrate render for `mode: list` when `render is None` (scope strictly to list; view/create/edit stay legacy this phase).
-- [ ] **Step 2: Run the FULL suite** — inspect EVERY churned golden diff (chrome moved to substrate shape; skeleton tbody present; rows still hydrate). Re-baseline deliberately (the substrate DOM is canonical).
-- [ ] **Step 3: Run the oracles** — `dazzle ux verify` (live render), `test_htmx_workspace_composite` (card-safety on post-hydrate DOM), a11y checks. All green.
-- [ ] **Step 4: Commit** (`feat(render): list surfaces first-paint via the substrate (skeleton+hydrate) — Phase 1 flip`).
+- [x] **Step 0: Independent adversarial review** — fresh reviewer ran the matrix + traced the hydrate cycle. Chrome shape + plumbing were sound; found `_build_dispatch_ctx` was an INCOMPLETE adapter for the canonical `_build_list` (SEV-1 per-column filter_type/ref dropped → text/ref filters dead; SEV-1 `_build_list` 500s on zero/keyless columns; SEV-2 inline_editable/refresh_interval/pagination_mode/search_first dropped; SEV-3 generic empty title + missing select-all :checked/:indeterminate). **All fixed + 13 tests before the flip** (commit `harden the canonical list before the flip`).
+- [x] **Step 1: Implement the flip** — `_maybe_dispatch_inner_html`: `surface.render is None and mode != LIST → legacy`; list dispatches to `dispatch_render` (defaults `render or "fragment"`). View/create/edit stay legacy. The `/api` row hydrate + `render_data_row` untouched.
+- [x] **Step 2: Run the FULL suite** — green (19275), NO failures. No page-level byte-goldens pin default lists (they were substring-asserted), so there is no golden churn to re-baseline at the unit level.
+- [x] **Step 3: Run the oracles** — `test_htmx_workspace_composite` (card-safety) green; verified the flip LIVE via TestClient boots of 4 default-`render` apps → 15 lists all render the substrate (`dz-region--kind-list` + skeleton + dzTable mount) with **0** card-safety/a11y violations (nested-chrome / duplicate-title / hidden-primary scanners). NOTE: the browser `dazzle ux verify` oracle needs a live `dazzle serve --local` + test DB (not runnable in-session) — the structural card-safety + a11y scanners stand in; flag for CI/e2e.
+- [x] **Step 4: Commit + ship.**
 
 ## Task 6: Delete `render_filterable_table` + repoint callers — INDEPENDENT REVIEW
 

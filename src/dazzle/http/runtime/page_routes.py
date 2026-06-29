@@ -1877,7 +1877,14 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
         return None
     appspec = prc.deps.appspec
     surface = appspec.get_surface(surface_name) if appspec is not None else None
-    if surface is None or surface.render is None:
+    if surface is None:
+        return None
+    # ADR-0049 Phase 1 (the flip): `mode: list` surfaces dispatch to the typed
+    # substrate even when `render is None` (the fleet default) — the substrate
+    # is now the universal list render path. VIEW / CREATE / EDIT with an unset
+    # `render` stay on the legacy direct-template path until their own phases.
+    # CUSTOM is dispatched by the branch below only when `render` is set.
+    if surface.render is None and surface.mode != SurfaceMode.LIST:
         return None
 
     # Services live on the FastAPI app state. Fall back to legacy path
