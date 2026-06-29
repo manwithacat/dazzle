@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`when_empty` default-flip is now `collapse` (header-only), not `suppress` (full card removal) — #1494 follow-up (CI-driven).** The browser tier (INTERACTION_WALK) caught that auto-**suppressing** empty supporting widgets *removes* their dashboard cards, which shifts the grid geometry and breaks gates/walks that assert card presence. The default-flip now **collapses** an empty supporting widget to header-only — the dead body scaffolding disappears but the card (with its title, for context) stays in the grid. Full `suppress` (removing the whole card) is now **explicit opt-in only** (`when_empty: suppress`), since silently removing a grid card is more disruptive than collapsing its body. Still adaptive (3d level 4): an empty region self-demotes based on its data + role.
+
 ### Fixed
-- **INTERACTION_WALK `card_add` now distinguishes a self-demoting empty region from a stuck skeleton (#1494 follow-up).** The walk's #798 guard ("a dynamically-added card's region fetch fires + replaces the skeleton") wrongly failed when an added region resolved *empty* and self-demoted via `when_empty:` (collapse/suppress) — the body is then legitimately empty, not a stuck skeleton. The walk now passes when the fetch fired and the skeleton is gone (populated **or** self-demoted), and fails only on a persistent skeleton (the real #798 regression).
+- **INTERACTION_WALK `card_add` now distinguishes a self-demoting empty region from a stuck skeleton (#1494 follow-up).** The walk's #798 guard ("a dynamically-added card's region fetch fires + replaces the skeleton") wrongly failed when an added region resolved *empty* and self-demoted via `when_empty:` — the body is then legitimately empty, not a stuck skeleton. The walk now passes when the fetch fired and the skeleton is gone (populated **or** self-demoted), and fails only on a persistent skeleton (the real #798 regression).
 
 ## [0.92.32] - 2026-06-29
 

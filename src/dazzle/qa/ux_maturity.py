@@ -190,7 +190,7 @@ def _probe_3d() -> ProbeResult:
     have_enum = hasattr(workspaces, "WhenEmpty")
     return ProbeResult(
         have_resolver and have_enum,
-        "when_empty: + resolve_when_empty default-flip — empty supporting region self-suppresses",
+        "when_empty: + resolve_when_empty default-flip — empty supporting region collapses to header-only",
     )
 
 
@@ -314,7 +314,7 @@ CRITERIA: list[Criterion] = [
         "#1494 — `when_empty:` (message | collapse | suppress) lets an empty region "
         "self-demote. The render-time default-flip (`resolve_when_empty`) makes this "
         "adaptive: an empty *supporting* widget (chart/metric/summary, or any region "
-        "with declared `aggregates`) self-**suppresses** by default (native htmx "
+        "with declared `aggregates`) self-**collapses** to header-only by default (native htmx "
         "OOB-delete at the lazy-load seam — no bespoke JS), while a *primary content* "
         "region (list/grid/kanban/…) and any region with an author `empty_message:` "
         "keeps its typed empty-state. Level 4 (adaptive): the empty region's presence "

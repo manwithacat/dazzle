@@ -229,13 +229,19 @@ class TestWhenEmptyResolver:
         r = self._r(display="bar_chart", aggregates={"n": 1}, empty_message="No data")
         assert resolve_when_empty(r) == WhenEmpty.MESSAGE
 
-    def test_supporting_chart_suppresses(self):
-        assert resolve_when_empty(self._r(display="bar_chart")) == WhenEmpty.SUPPRESS
+    def test_supporting_chart_collapses(self):
+        # Default-flip is collapse (header-only), NOT suppress (full removal) —
+        # silently removing a grid card is too disruptive for a default.
+        assert resolve_when_empty(self._r(display="bar_chart")) == WhenEmpty.COLLAPSE
 
-    def test_aggregate_region_suppresses(self):
+    def test_aggregate_region_collapses(self):
         assert (
-            resolve_when_empty(self._r(display="list", aggregates={"n": 1})) == WhenEmpty.SUPPRESS
+            resolve_when_empty(self._r(display="list", aggregates={"n": 1})) == WhenEmpty.COLLAPSE
         )
+
+    def test_suppress_is_explicit_opt_in_only(self):
+        # Full suppression only when authored — never a default-flip outcome.
+        assert resolve_when_empty(self._r(when_empty=WhenEmpty.SUPPRESS)) == WhenEmpty.SUPPRESS
 
     def test_primary_list_keeps_message(self):
         assert resolve_when_empty(self._r(display="list")) == WhenEmpty.MESSAGE
