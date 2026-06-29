@@ -3895,6 +3895,7 @@
       "_kw_track_format": 1,
       "_kw_track_max": 1,
       "_kw_value": 2,
+      "_kw_when_empty": 1,
       "_kw_width": 4,
       "_parse_outlier_spec": 10
     },
@@ -5543,6 +5544,7 @@
       "TaskSource": 1,
       "TaskSourceTemplate": 1,
       "ToneBandSpec": 1,
+      "WhenEmpty": 1,
       "WorkspaceAccessLevel": 1,
       "WorkspaceAccessSpec": 1,
       "WorkspacePrimaryActionSpec": 1,
@@ -13905,7 +13907,7 @@
   },
   "dazzle/http/runtime/workspace_region_handler.py": {
     "functions": {
-      "_build_region_response": 4,
+      "_build_region_response": 8,
       "_region_polling_complete": 8,
       "_row_status": 2,
       "_workspace_region_handler": 7
@@ -17075,6 +17077,13 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/page/runtime/when_empty_resolver.py": {
+    "functions": {
+      "_is_supporting_widget": 4,
+      "resolve_when_empty": 4
+    },
+    "mi_rank": "A"
+  },
   "dazzle/page/runtime/workspace_renderer.py": {
     "functions": {
       "RegionContext": 1,
@@ -17701,6 +17710,7 @@
       "_probe_2c": 1,
       "_probe_3b": 1,
       "_probe_3c": 1,
+      "_probe_3d": 2,
       "_probe_3e": 1,
       "_rag": 3,
       "drift_violations": 5,

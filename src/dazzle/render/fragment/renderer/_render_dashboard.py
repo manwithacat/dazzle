@@ -185,7 +185,11 @@ class _RenderDashboardMixin:
         )
 
         return (
-            f'<div data-card-id="{ctx.escape_attr(c.card_id)}" '
+            # #1494: addressable wrapper id (`card-{name}-{card_id}`, derivable
+            # from the body's `region-{name}-{card_id}` hx-target) so an empty
+            # `when_empty: suppress` region can self-remove via htmx OOB-delete.
+            f'<div id="card-{ctx.escape_attr(c.name)}-{ctx.escape_attr(c.card_id)}" '
+            f'data-card-id="{ctx.escape_attr(c.card_id)}" '
             f'data-card-region="{ctx.escape_attr(c.name)}" '
             f'data-card-col-span="{c.col_span}" '
             f'data-card-row-order="{c.row_order}" '

@@ -625,6 +625,7 @@ region_directive
                 | "stage" ":" STRING NEWLINE
                 | "refresh" ":" "every"? NUMBER ("s")? NEWLINE   (* #1391 live-refresh: poll seconds, >= 5 *)
                 | "peek" ":" ("expand" | "slide_over" | "off") NEWLINE   (* #1494 2c: action-proximate detail; unset → resolver default *)
+                | "when_empty" ":" ("message" | "collapse" | "suppress") NEWLINE   (* #1494 3d: empty-region self-demote; unset → resolver default-flip *)
                 | "aggregate" ":" NEWLINE INDENT metric_line+ DEDENT ;
 
 metric_line   ::= IDENT ":" (aggregate_call | derived_metric_expr) NEWLINE ;

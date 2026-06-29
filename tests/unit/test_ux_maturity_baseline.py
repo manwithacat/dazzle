@@ -47,12 +47,15 @@ def test_backlog_is_amber_or_red_only_and_leverage_ordered() -> None:
     # the known top gaps are present and high-leverage. 1a left the backlog when
     # `display: auto` became the default (#1492 default-flip → level 3); 1b left
     # when the declared `semantic:` binding became render-consumed (#1493 slice 2),
-    # reaching level 4 with WCAG colour+icon+text + state-machine-terminal inference.
+    # reaching level 4 with WCAG colour+icon+text + state-machine-terminal inference;
+    # 3d left when `when_empty:` + the resolve_when_empty default-flip shipped
+    # (#1494 slice 3 → level 4 adaptive empty-region suppression).
     high = {b["criterion"] for b in backlog if b["leverage"] == "high"}
-    assert {"1c", "3d"} <= high
+    assert {"1c"} <= high
     not_gaps = {b["criterion"] for b in backlog}
     assert "1a" not in not_gaps  # level 3, no longer a gap
     assert "1b" not in not_gaps  # level 4 (#1493 slice 2 complete), no longer a gap
+    assert "3d" not in not_gaps  # level 4 (#1494 slice 3 complete), no longer a gap
 
 
 def test_criteria_count_and_ids() -> None:

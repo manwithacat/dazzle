@@ -860,6 +860,7 @@ from .workspaces import (
     TaskSource,
     TaskSourceTemplate,
     ToneBandSpec,
+    WhenEmpty,
     WorkspaceAccessLevel,
     WorkspaceAccessSpec,
     WorkspacePrimaryActionSpec,
@@ -968,6 +969,7 @@ __all__ = [
     # Workspaces
     "BucketRef",
     "DisplayMode",
+    "WhenEmpty",
     "NavSpec",
     "NavGroupSpec",
     "ContextSelectorSpec",

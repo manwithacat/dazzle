@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 372 BaseModels, 150 Enums, 23 other (functions / typealiases / constants)
+# Counts: 372 BaseModels, 151 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -3438,6 +3438,7 @@ ir_class: WorkspaceRegion
     - tones: dict[str, str] = {}
     - track_format: str | None = None
     - track_max: float | None = None
+    - when_empty: WhenEmpty | None = None
     - width: int | None = None
 
 ir_class: WorkspaceSpec
@@ -4644,6 +4645,12 @@ enum: WebhookEvent
     - CREATED = 'created'
     - DELETED = 'deleted'
     - UPDATED = 'updated'
+
+enum: WhenEmpty
+  members:
+    - COLLAPSE = 'collapse'
+    - MESSAGE = 'message'
+    - SUPPRESS = 'suppress'
 
 enum: WidgetKind
   members:

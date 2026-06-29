@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.32] - 2026-06-29
+
+### Added
+- **`when_empty:` — empty-region self-demote (#1494, UX-maturity 3d → level 4).** A new workspace-region keyword `when_empty: message | collapse | suppress` lets an empty region (one whose scope-aware fetch returns no rows) self-demote instead of rendering dead scaffolding. `message` keeps today's typed empty-state; `collapse` drops the empty body but keeps the card chrome (title); `suppress` removes the whole card from the dashboard grid. Declarative-over-htmx-4, **no bespoke JS** — the render seam (`workspace_region_handler._build_region_response`) emits a native htmx OOB-delete (`suppress`, targeting an addressable `card-{name}-{card_id}` wrapper id) or `HX-Reswap: delete` (`collapse`) at the lazy-load fetch. IR: `WhenEmpty` enum + nullable `WorkspaceRegion.when_empty` (the parser leaves it `None` when unset — the true-unset discriminator, mirroring `peek:`).
+  - **Default-flip (the level-4 adaptive move):** an *unset* region resolves via `page/runtime/when_empty_resolver.resolve_when_empty` — an author-declared `empty_message:` is honoured (`message`); a **supporting widget** (a chart/metric/summary `display`, or any region with declared `aggregates`) self-**suppresses** when empty (an empty chart is pure noise); a **primary content** region (list/grid/kanban/queue/timeline/…) keeps its `message` (an empty primary surface deserves a "nothing here yet" guide). Fully traceable — the choice is a pure function of the region's declared `display` + `aggregates` + `empty_message`, no runtime/usage signal. This re-scores criterion 3d from level 2 → **level 4 (adaptive)** (`dazzle ux maturity`); the `_probe_3d` capability probe is now live. `peek:` (2c) shipped earlier; this closes the 3d half of #1494 (Slices 2/4 — click-to-edit/optimistic + the broader default-flip — remain).
+
 ## [0.92.31] - 2026-06-29
 
 ### Removed

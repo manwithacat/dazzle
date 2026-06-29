@@ -101,6 +101,20 @@ class DisplayMode(StrEnum):
     INSIGHT_SUMMARY = "insight_summary"  # #1470: deterministic grounded narrative
 
 
+class WhenEmpty(StrEnum):
+    """How a region behaves when it resolves to *no rows* (#1494, UX-maturity 3d).
+
+    The negative-space primitive: an empty supporting region renders dead
+    scaffolding (an empty card with a placeholder) by default. `when_empty:`
+    lets an empty region instead self-demote — declarative-over-htmx-4, no
+    bespoke JS (native OOB / `HX-Reswap` removal at the lazy-load seam).
+    """
+
+    MESSAGE = "message"  # today's behaviour — render the typed empty-state placeholder
+    COLLAPSE = "collapse"  # keep the card chrome (title), drop the empty body
+    SUPPRESS = "suppress"  # remove the whole card from the dashboard grid
+
+
 class BucketRef(BaseModel):
     """A time-bucketed group-by dimension.
 
@@ -1005,6 +1019,11 @@ class WorkspaceRegion(BaseModel):
     render: str | None = None
     action: str | None = None  # Surface reference
     empty_message: str | None = None
+    # #1494 (UX-maturity 3d): how an empty region self-demotes. `None` = unset
+    # (the parser leaves it None when no `when_empty:` keyword appears); the
+    # render-time default-flip (resolve_when_empty) then decides per region role.
+    # An explicit author value is authoritative. Mirrors the `peek:` discriminator.
+    when_empty: WhenEmpty | None = None
     group_by: str | BucketRef | None = None  # Field or bucket() ref (single dim)
     # v0.59.3 (cycle 25): multi-dimension group_by for pivot_table /
     # cross-tab views. When set, the runtime composes a multi-dim

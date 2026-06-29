@@ -1839,6 +1839,7 @@
             }),
             'track_format': None,
             'track_max': None,
+            'when_empty': None,
             'width': None,
           }),
           dict({
@@ -1923,6 +1924,7 @@
             }),
             'track_format': None,
             'track_max': None,
+            'when_empty': None,
             'width': None,
           }),
           dict({
@@ -2007,6 +2009,7 @@
             }),
             'track_format': None,
             'track_max': None,
+            'when_empty': None,
             'width': None,
           }),
         ]),

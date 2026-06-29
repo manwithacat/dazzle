@@ -2826,6 +2826,7 @@ class _WorkspaceRegionState:
     render: str | None = None
     action: str | None = None
     empty_message: str | None = None
+    when_empty: ir.WhenEmpty | None = None  # #1494 — empty-region self-demote
     group_by: str | ir.BucketRef | None = None
     group_by_dims: list[str | ir.BucketRef] | None = None
     aggregates: dict[str, ir.AggregateRef | ir.DerivedMetric] = field(default_factory=dict)
@@ -2969,6 +2970,14 @@ def _kw_empty(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.empty_message = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def _kw_when_empty(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``when_empty: message | collapse | suppress`` (#1494, UX-maturity 3d)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.when_empty = parser.enum_from_token(ir.WhenEmpty, parser.expect_identifier_or_keyword())
     parser.skip_newlines()
 
 
@@ -3749,6 +3758,7 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "tone_bands": _kw_tone_bands,  # #1470
     "order": _kw_order,  # #1470
     "outlier_method": _kw_outlier_method,  # #1470
+    "when_empty": _kw_when_empty,  # #1494
 }
 
 
@@ -3809,6 +3819,7 @@ def _build_workspace_region(
         display_unset=state.display_unset,
         action=state.action,
         empty_message=state.empty_message,
+        when_empty=state.when_empty,
         group_by=state.group_by,
         group_by_dims=state.group_by_dims,
         aggregates=state.aggregates,

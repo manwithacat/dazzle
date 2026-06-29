@@ -24,7 +24,7 @@ from typing import Any
 
 # Hoisted (no cycle: qa -> render/page/core is the correct layer direction; #1438).
 from dazzle._version import get_version
-from dazzle.core.ir import state_machine
+from dazzle.core.ir import state_machine, workspaces
 from dazzle.page import app_paths
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
 from dazzle.render import filters
@@ -181,6 +181,19 @@ def _probe_3c() -> ProbeResult:
     return ProbeResult(has_sm, "state-machine transitions gate actions by entity state")
 
 
+def _probe_3d() -> ProbeResult:
+    """Empty-state suppression: an empty region self-demotes (#1494). The
+    `when_empty:` IR primitive + the render-time default-flip resolver are
+    present, so an empty supporting region suppresses (OOB-delete) by default
+    instead of rendering dead scaffolding."""
+    have_resolver = importlib.util.find_spec("dazzle.page.runtime.when_empty_resolver") is not None
+    have_enum = hasattr(workspaces, "WhenEmpty")
+    return ProbeResult(
+        have_resolver and have_enum,
+        "when_empty: + resolve_when_empty default-flip — empty supporting region self-suppresses",
+    )
+
+
 def _probe_3e() -> ProbeResult:
     """Scope concealment: rows outside scope are never rendered (predicate
     algebra + RLS)."""
@@ -297,10 +310,17 @@ CRITERIA: list[Criterion] = [
         "3d",
         "negative_space",
         "empty-state suppression",
-        2,
-        "EmptyState renders a placeholder; an empty region does not self-demote/hide",
+        4,
+        "#1494 — `when_empty:` (message | collapse | suppress) lets an empty region "
+        "self-demote. The render-time default-flip (`resolve_when_empty`) makes this "
+        "adaptive: an empty *supporting* widget (chart/metric/summary, or any region "
+        "with declared `aggregates`) self-**suppresses** by default (native htmx "
+        "OOB-delete at the lazy-load seam — no bespoke JS), while a *primary content* "
+        "region (list/grid/kanban/…) and any region with an author `empty_message:` "
+        "keeps its typed empty-state. Level 4 (adaptive): the empty region's presence "
+        "adapts to the data + its role, traceable to `display`/`aggregates`/`empty_message`.",
         "high",
-        None,
+        _probe_3d,
     ),
     Criterion(
         "3e",

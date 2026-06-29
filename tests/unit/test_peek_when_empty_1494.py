@@ -163,3 +163,129 @@ class TestPeekExpandRender:
         # inert (nothing to peek at).
         html = _peek_row("expand", drill=False)
         assert "dz-tr-peek-toggle" not in html
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Slice 3 (#1494, 3d): `when_empty:` — empty-region self-demote
+# ─────────────────────────────────────────────────────────────────────────────
+
+from types import SimpleNamespace  # noqa: E402
+
+from dazzle.core.ir import WhenEmpty  # noqa: E402
+from dazzle.page.runtime.when_empty_resolver import resolve_when_empty  # noqa: E402
+
+_WS_DSL = """\
+module t
+app a "A"
+entity Task "Task":
+  id: uuid pk
+  title: str(100)
+workspace ops "Ops":
+  recent:
+    source: Task
+    display: list
+{when_empty_line}  all_tasks:
+    source: Task
+"""
+
+
+def _ws_region(when_empty_line: str = ""):
+    dsl = _WS_DSL.format(when_empty_line=(f"    {when_empty_line}\n" if when_empty_line else ""))
+    n, a, t, c, u, frag = parse_dsl(dsl, pathlib.Path("t.dsl"))
+    return frag.workspaces[0].regions[0]
+
+
+class TestWhenEmptyParse:
+    def test_unset_is_none(self):
+        assert _ws_region().when_empty is None
+
+    def test_explicit_suppress(self):
+        assert _ws_region("when_empty: suppress").when_empty == WhenEmpty.SUPPRESS
+
+    def test_explicit_collapse(self):
+        assert _ws_region("when_empty: collapse").when_empty == WhenEmpty.COLLAPSE
+
+    def test_explicit_message(self):
+        assert _ws_region("when_empty: message").when_empty == WhenEmpty.MESSAGE
+
+    def test_invalid_value_rejected(self):
+        with pytest.raises(DazzleError):
+            _ws_region("when_empty: vanish")
+
+
+class TestWhenEmptyResolver:
+    """The default-flip: explicit wins; unset adapts to the region's role."""
+
+    def _r(self, **kw):
+        base = {"when_empty": None, "display": "list", "aggregates": {}, "empty_message": None}
+        base.update(kw)
+        return SimpleNamespace(**base)
+
+    def test_explicit_value_authoritative(self):
+        assert resolve_when_empty(self._r(when_empty=WhenEmpty.COLLAPSE)) == WhenEmpty.COLLAPSE
+
+    def test_author_empty_message_keeps_message(self):
+        # An author who wrote an empty_message opted into a visible empty-state.
+        r = self._r(display="bar_chart", aggregates={"n": 1}, empty_message="No data")
+        assert resolve_when_empty(r) == WhenEmpty.MESSAGE
+
+    def test_supporting_chart_suppresses(self):
+        assert resolve_when_empty(self._r(display="bar_chart")) == WhenEmpty.SUPPRESS
+
+    def test_aggregate_region_suppresses(self):
+        assert (
+            resolve_when_empty(self._r(display="list", aggregates={"n": 1})) == WhenEmpty.SUPPRESS
+        )
+
+    def test_primary_list_keeps_message(self):
+        assert resolve_when_empty(self._r(display="list")) == WhenEmpty.MESSAGE
+
+    def test_primary_kanban_keeps_message(self):
+        assert resolve_when_empty(self._r(display="kanban")) == WhenEmpty.MESSAGE
+
+
+class TestWhenEmptyRenderSeam:
+    """`_build_region_response` turns the resolved mode into native htmx removal
+    when the fetch produced no rows."""
+
+    def _resp(self, ir_region, items, hx_target="region-recent-recent"):
+        from dazzle.http.runtime.workspace_region_handler import _build_region_response
+
+        ctx = SimpleNamespace(ir_region=ir_region, ctx_region=SimpleNamespace(display="list"))
+        fetched = SimpleNamespace(items=items, total=len(items))
+        return _build_region_response(ctx, fetched, "<table>body</table>", hx_target)
+
+    def _region(self, **kw):
+        base = {
+            "when_empty": None,
+            "display": "list",
+            "aggregates": {},
+            "empty_message": None,
+            "refresh_interval": None,
+        }
+        base.update(kw)
+        return SimpleNamespace(**base)
+
+    def test_empty_suppress_oob_deletes_wrapper(self):
+        resp = self._resp(self._region(when_empty=WhenEmpty.SUPPRESS), items=[])
+        body = bytes(resp.body).decode()
+        assert 'id="card-recent-recent"' in body
+        assert 'hx-swap-oob="delete"' in body
+        assert "<table>" not in body  # the empty body is dropped
+
+    def test_empty_collapse_reswap_delete(self):
+        resp = self._resp(self._region(when_empty=WhenEmpty.COLLAPSE), items=[])
+        assert resp.headers.get("HX-Reswap") == "delete"
+        assert bytes(resp.body).decode() == ""
+
+    def test_empty_message_renders_normal_body(self):
+        # Primary list, unset → message → the normal typed body (no removal).
+        resp = self._resp(self._region(), items=[])
+        assert "HX-Reswap" not in resp.headers
+        assert "<table>body</table>" in bytes(resp.body).decode()
+
+    def test_nonempty_suppress_renders_normally(self):
+        # Suppress only fires on an empty fetch; with rows the body renders.
+        resp = self._resp(self._region(when_empty=WhenEmpty.SUPPRESS), items=[{"id": "1"}])
+        assert "<table>body</table>" in bytes(resp.body).decode()
+        assert "hx-swap-oob" not in bytes(resp.body).decode()
