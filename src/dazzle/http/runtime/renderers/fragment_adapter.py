@@ -697,7 +697,13 @@ def _field_to_primitive(
     label = str(field_dict.get("label", name))
     required = bool(field_dict.get("required", False))
     placeholder = str(field_dict.get("placeholder", ""))
-    initial_value = str(field_dict.get("value", "") or "")
+    help_text = str(field_dict.get("help", "") or "")
+    # CREATE-mode default (#3b review): on create `value` is empty; the DSL
+    # `default:` must seed the field. `value or default` honours the persisted
+    # value in EDIT and the default in CREATE — matching legacy
+    # `render_form_field`'s `values.get(name, field.default)`.
+    field_default = str(field_dict.get("default", "") or "")
+    initial_value = str(field_dict.get("value", "") or "") or field_default
     kind = str(field_dict.get("kind", "text")).lower()
 
     # FILE: issue #1033 — distinguished by widget kind "file". Returns
@@ -851,6 +857,8 @@ def _field_to_primitive(
             options=opts,
             required=required,
             initial_value=initial_value,
+            placeholder=placeholder,
+            help=help_text,
         )
 
     # Map widget kind to Field.kind. Field._FIELD_KINDS validates the
@@ -879,6 +887,7 @@ def _field_to_primitive(
         required=required,
         placeholder=placeholder,
         initial_value=initial_value,
+        help=help_text,
     )
 
 

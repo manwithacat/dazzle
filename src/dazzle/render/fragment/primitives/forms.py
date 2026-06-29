@@ -49,6 +49,7 @@ class Field:
     placeholder: str = ""
     initial_value: str = ""
     readonly: bool = False
+    help: str = ""
 
     def __post_init__(self) -> None:
         if self.kind not in _FIELD_KINDS:
@@ -62,6 +63,8 @@ class Combobox:
     options: tuple[tuple[str, str], ...]
     required: bool = False
     initial_value: str = ""
+    placeholder: str = ""
+    help: str = ""
 
     def __post_init__(self) -> None:
         if not self.options:

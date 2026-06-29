@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.30] - 2026-06-29
+
+### Changed
+- **THE FORM FLIP — `mode: create` / `mode: edit` surfaces now render through the typed substrate by default (ADR-0049 Phase 3b, flip step).** `page_routes._maybe_dispatch_inner_html` dispatches create/edit surfaces to the substrate even when `render is None` (joining list + view), so the typed Fragment form path is now the default for every standard surface mode. The legacy `form_renderer` runs only as a fallback (deleted in the next step). Gated by an independent adversarial review whose findings were all fixed pre-flip (below). create/edit forms now gain the proper `<form>` wrapper + submit button (#1291, now universal) and the converged field markup.
+  - **Pre-flip review fixes (data correctness + a11y + QA-harness parity).** The review found the substrate's *common-case* field emitters (`_emit_field`/`_emit_combobox`) had regressed against legacy while the rich widgets were ported at parity. Fixed: (1) **required enums now emit a leading disabled placeholder option** so a required `<select>` starts unselected — without it the first option auto-selected and `required` was a no-op (silent wrong-default writes); (2) **CREATE-mode `default:` values now seed** plain fields + enums (was dropped — only widgets honoured the default); (3) **`data-dazzle-field`** restored on every plain input (the E2E/QA harness `stress_test.py` selects on it); (4) **`aria-required` + the required-indicator span + `for`/`id` label association** restored; (5) **`help:` text** now renders as a `dz-form-hint` paragraph with `aria-describedby`. The substrate plain-field emitters converged onto the legacy `dz-form-field`/`dz-form-label`/`dz-form-input` contract (from the prior minimal `dz-field` shape) so all fields in a form are visually consistent. Pinned by `test_form_field_parity_phase3b.py` (incl. a legacy-vs-substrate wrapper-parity check).
+
 ## [0.92.29] - 2026-06-29
 
 ### Added

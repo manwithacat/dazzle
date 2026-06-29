@@ -172,23 +172,34 @@ def test_simple_task_create_form_str_field_renders_as_text_input() -> None:
 
 
 def test_simple_task_create_form_text_field_renders_as_textarea() -> None:
-    """`description: text` → <textarea>, NOT <input type="text">."""
+    """`description: text` → <textarea>, NOT <input type="text">.
+
+    ADR-0049 Phase 3b: the substrate plain-field emitter converged onto the
+    legacy `render_form_field` contract (`dz-form-input`/`dz-form-textarea` +
+    `data-dazzle-field`), so this asserts that parity markup, not the old
+    minimal `dz-field__input` shape."""
     client = _client_for("simple_task")
     resp = client.get("/task/create")
     body = resp.text
-    assert '<textarea class="dz-field__input" name="description"' in body, (
+    assert '<textarea id="field-description" name="description"' in body, (
         "task_create description field rendered as input, not textarea."
     )
+    assert 'class="dz-form-input dz-form-textarea"' in body
+    assert 'data-dazzle-field="description"' in body
 
 
 def test_simple_task_create_form_enum_field_renders_as_select() -> None:
-    """`priority: enum[low,medium,high,urgent]` → <select> with options."""
+    """`priority: enum[low,medium,high,urgent]` → <select> with a leading
+    disabled placeholder option (so a required enum starts unselected) and the
+    enum options — the legacy `_render_select` parity contract (ADR-0049 3b)."""
     client = _client_for("simple_task")
     resp = client.get("/task/create")
     body = resp.text
-    assert '<select class="dz-combobox__select" name="priority">' in body, (
-        "task_create priority field is not a Combobox <select>."
+    assert '<select id="field-priority" name="priority" data-dazzle-field="priority"' in body, (
+        "task_create priority field is not the parity <select>."
     )
+    # A leading disabled placeholder so `required` actually blocks submit.
+    assert '<option value="" disabled' in body
     for value in ("low", "medium", "high", "urgent"):
         assert f'<option value="{value}"' in body, (
             f"task_create priority field missing enum option {value!r}."

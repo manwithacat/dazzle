@@ -1662,6 +1662,12 @@ def _build_dispatch_ctx(
                     (str(o.get("value", "")), str(o.get("label", o.get("value", ""))))
                     for o in options
                 ]
+            # #3b review: thread `help:` text + the field `default` so the
+            # substrate field emitters can render the hint paragraph + the
+            # CREATE-mode default value (legacy `render_form_field` parity).
+            help_text = str(getattr(field, "help", "") or "")
+            if help_text:
+                entry["help"] = help_text
             # ADR-0049 Phase 3a: thread the `widget=` override + the field
             # default + extra config (slider min/max/step, rich_text
             # toolbar/maxLength) so the adapter can build the matching widget
@@ -1969,13 +1975,17 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     surface = appspec.get_surface(surface_name) if appspec is not None else None
     if surface is None:
         return None
-    # ADR-0049: `mode: list` (Phase 1) and `mode: view` (Phase 2) surfaces
-    # dispatch to the typed substrate even when `render is None` (the fleet
-    # default) — the substrate is the universal render path for those modes.
-    # CREATE / EDIT with an unset `render` stay on the legacy direct-template
-    # path until Phase 3. CUSTOM is dispatched by the branch below only when
-    # `render` is set.
-    if surface.render is None and surface.mode not in (SurfaceMode.LIST, SurfaceMode.VIEW):
+    # ADR-0049: list (Phase 1), view (Phase 2) and create/edit (Phase 3)
+    # surfaces all dispatch to the typed substrate even when `render is None`
+    # (the fleet default) — the substrate is the universal render path for
+    # every standard surface mode now. CUSTOM is dispatched by the branch
+    # below only when `render` is set (the project renderer is explicit).
+    if surface.render is None and surface.mode not in (
+        SurfaceMode.LIST,
+        SurfaceMode.VIEW,
+        SurfaceMode.CREATE,
+        SurfaceMode.EDIT,
+    ):
         return None
 
     # Services live on the FastAPI app state. Fall back to legacy path

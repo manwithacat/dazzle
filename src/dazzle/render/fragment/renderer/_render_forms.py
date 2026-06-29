@@ -99,52 +99,122 @@ class _RenderFormsMixin:
             f"</form>"
         )
 
+    @staticmethod
+    def _form_required_indicator(required: bool) -> str:
+        """The `*` + visually-hidden `(required)` marker (legacy
+        `_required_indicator`), rendered only for required fields."""
+        return (
+            (
+                '<span class="dz-form-required" aria-hidden="true">*</span>'
+                '<span class="visually-hidden">(required)</span>'
+            )
+            if required
+            else ""
+        )
+
+    def _form_label_block(self, ctx: RenderContext, name: str, label: str, required: bool) -> str:
+        """`<label for="field-{name}" class="dz-form-label">` + required marker
+        (legacy `_label_block`)."""
+        return (
+            f'<label for="field-{ctx.escape_attr(name)}" class="dz-form-label">'
+            f"{ctx.escape(label)}{self._form_required_indicator(required)}</label>"
+        )
+
+    def _form_hint(self, ctx: RenderContext, name: str, help_text: str) -> str:
+        """Optional `<p class="dz-form-hint">` help paragraph (legacy
+        `_hint_paragraph`)."""
+        if not help_text:
+            return ""
+        return (
+            f'<p id="hint-{ctx.escape_attr(name)}" class="dz-form-hint">{ctx.escape(help_text)}</p>'
+        )
+
+    @staticmethod
+    def _form_field_a11y(name_attr: str, required: bool, help_text: str) -> str:
+        """Inline ` required aria-required` + ` aria-describedby="hint-{name}"`
+        on the input (legacy `_required_attrs` + `_describedby_attr`)."""
+        req = ' required aria-required="true"' if required else ""
+        describedby = f' aria-describedby="hint-{name_attr}"' if help_text else ""
+        return req + describedby
+
     def _emit_field(self, f: Field, ctx: RenderContext) -> str:
-        # Field labels are developer-supplied; values may be user-supplied —
-        # escape both as a safety net.
-        label = ctx.escape(f.label)
+        """Render a plain form field at parity with the legacy
+        `render_form_field` standard-field contract: a `<div class="dz-form-field">`
+        wrapping a `<label for>` (+ required marker), an optional help paragraph,
+        and the input — which carries `id`/`data-dazzle-field` (QA-harness +
+        a11y selectors), `dz-form-input`, and `aria-required`/`aria-describedby`."""
         name = ctx.escape_attr(f.name)
-        placeholder = ctx.escape_attr(f.placeholder)
-        initial = ctx.escape_attr(f.initial_value)
-        required_attr = " required" if f.required else ""
+        a11y = self._form_field_a11y(name, f.required, f.help)
         readonly_attr = " readonly" if f.readonly else ""
+
+        if f.kind == "checkbox":
+            # Checkbox keeps its own label structure (input nested in the label);
+            # the hint sits after, both inside the dz-form-field wrapper.
+            checked = " checked" if f.initial_value == "true" else ""
+            return (
+                '<div class="dz-form-field">'
+                '<label class="dz-form-checkbox-label">'
+                f'<input type="checkbox" name="{name}" id="field-{name}" '
+                f'data-dazzle-field="{name}" class="dz-form-checkbox"'
+                f"{a11y}{checked}{readonly_attr}>"
+                f"<span>{ctx.escape(f.label)}</span></label>"
+                f"{self._form_hint(ctx, f.name, f.help)}"
+                "</div>"
+            )
 
         if f.kind == "textarea":
             inner = (
-                f'<textarea class="dz-field__input" name="{name}" '
-                f'placeholder="{placeholder}"{required_attr}{readonly_attr}>'
-                f"{ctx.escape(f.initial_value)}</textarea>"
-            )
-        elif f.kind == "checkbox":
-            checked = " checked" if f.initial_value == "true" else ""
-            inner = (
-                f'<input class="dz-field__input" type="checkbox" name="{name}"'
-                f"{checked}{required_attr}{readonly_attr}>"
+                f'<textarea id="field-{name}" name="{name}" data-dazzle-field="{name}" '
+                f'class="dz-form-input dz-form-textarea" '
+                f'placeholder="{ctx.escape_attr(f.placeholder)}"'
+                f'{a11y}{readonly_attr} rows="4">{ctx.escape(f.initial_value)}</textarea>'
             )
         else:
+            # Native date/datetime inputs suppress the placeholder (legacy parity).
+            placeholder = (
+                ""
+                if f.kind in ("date", "datetime-local")
+                else f' placeholder="{ctx.escape_attr(f.placeholder)}"'
+            )
             inner = (
-                f'<input class="dz-field__input" type="{f.kind}" name="{name}" '
-                f'value="{initial}" placeholder="{placeholder}"{required_attr}{readonly_attr}>'
+                f'<input id="field-{name}" type="{f.kind}" name="{name}" '
+                f'data-dazzle-field="{name}" class="dz-form-input" '
+                f'value="{ctx.escape_attr(f.initial_value)}"'
+                f"{placeholder}{a11y}{readonly_attr}>"
             )
         return (
-            f'<label class="dz-field"><span class="dz-field__label">{label}</span>{inner}</label>'
+            '<div class="dz-form-field">'
+            f"{self._form_label_block(ctx, f.name, f.label, f.required)}"
+            f"{self._form_hint(ctx, f.name, f.help)}"
+            f"{inner}</div>"
         )
 
     def _emit_combobox(self, c: Combobox, ctx: RenderContext) -> str:
-        options = "".join(
-            f'<option value="{ctx.escape_attr(value)}"'
-            + (" selected" if value == c.initial_value else "")
-            + f">{ctx.escape(label)}</option>"
-            for value, label in c.options
-        )
-        required_attr = " required" if c.required else ""
-        label = ctx.escape(c.label)
+        """Render a plain enum `<select>` at parity with the legacy
+        `_render_select` — a leading disabled placeholder option so a *required*
+        select starts unselected (without it the first real option auto-selects
+        and `required` is a no-op → silent wrong-default writes)."""
         name = ctx.escape_attr(c.name)
+        a11y = self._form_field_a11y(name, c.required, c.help)
+        placeholder_text = c.placeholder or f"Select {c.label}"
+        opts = [
+            f'<option value="" disabled{" selected" if not c.initial_value else ""}>'
+            f"{ctx.escape(placeholder_text)}</option>"
+        ]
+        for value, label in c.options:
+            sel = " selected" if value == c.initial_value else ""
+            opts.append(
+                f'<option value="{ctx.escape_attr(value)}"{sel}>{ctx.escape(label)}</option>'
+            )
+        inner = (
+            f'<select id="field-{name}" name="{name}" data-dazzle-field="{name}" '
+            f'class="dz-form-input"{a11y}>{"".join(opts)}</select>'
+        )
         return (
-            f'<label class="dz-combobox">'
-            f'<span class="dz-combobox__label">{label}</span>'
-            f'<select class="dz-combobox__select" name="{name}"{required_attr}>{options}</select>'
-            f"</label>"
+            '<div class="dz-form-field">'
+            f"{self._form_label_block(ctx, c.name, c.label, c.required)}"
+            f"{self._form_hint(ctx, c.name, c.help)}"
+            f"{inner}</div>"
         )
 
     def _emit_file_upload(self, f: FileUpload, ctx: RenderContext) -> str:
