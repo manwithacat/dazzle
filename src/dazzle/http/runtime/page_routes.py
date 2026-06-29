@@ -1824,6 +1824,10 @@ def _build_dispatch_ctx(
             {
                 "label": getattr(a, "label", "") or "",
                 "api_url": getattr(a, "api_url", "") or "",
+                # ADR-0049 Phase 2: thread the names for the action anchor
+                # `data-dazzle-action="{entity}.integration.{name}.{mapping}"`.
+                "integration_name": getattr(a, "integration_name", "") or "",
+                "mapping_name": getattr(a, "mapping_name", "") or "",
             }
             for a in (getattr(detail, "integration_actions", []) or [])
         ]
@@ -1832,6 +1836,8 @@ def _build_dispatch_ctx(
                 "label": getattr(a, "label", "") or "",
                 "url": getattr(a, "url", "") or "",
                 "new_tab": bool(getattr(a, "new_tab", True)),
+                # ADR-0049 Phase 2: the action anchor needs the link name.
+                "name": getattr(a, "name", "") or "",
             }
             for a in (getattr(detail, "external_link_actions", []) or [])
         ]
@@ -1844,6 +1850,7 @@ def _build_dispatch_ctx(
             "back_url": getattr(detail, "back_url", "/") or "/",
             "entity_name": getattr(detail, "entity_name", "") or "",
             "transitions": transitions_out,
+            "status_field": getattr(detail, "status_field", "status") or "status",
             "integration_actions": integration_actions_out,
             "external_link_actions": external_links_out,
             # #1297: hand VIEW-mode custom renderers the original

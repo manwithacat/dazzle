@@ -77,6 +77,9 @@ class Button:
     hx_confirm: str | None = None
     hx_vals: str = ""
     hx_ext: tuple[str, ...] = ()
+    # ADR-0049 Phase 2: optional `data-dazzle-action="{entity}.{verb}"` anchor
+    # (consumed by dz-analytics.js + as a stable gesture selector). Empty = none.
+    data_action: str = ""
 
     tokens: ButtonTokens | None = None
 
@@ -106,6 +109,10 @@ class Link:
 
     label: str
     href: URL
+    # ADR-0049 Phase 2: `new_tab` adds target="_blank" rel="noopener noreferrer"
+    # (external-link actions); `data_action` adds the analytics/gesture anchor.
+    new_tab: bool = False
+    data_action: str = ""
 
 
 @dataclass(frozen=True, slots=True)

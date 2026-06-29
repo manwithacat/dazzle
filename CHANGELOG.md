@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.20] - 2026-06-29
+
+### Fixed
+- **Substrate detail (`mode: view`) action parity (ADR-0049 Phase 2 Task 2).** The substrate `_build_view` action toolbar now carries `data-dazzle-action="{entity}.{verb}"` anchors on every action (Edit/transition/integration/external/Delete) — consumed by `dz-analytics.js` + as stable gesture selectors — and **state-machine transitions are now `hx-put` with the status field → target state in `hx-vals`** (the legacy semantics; the prior `hx-post` without `hx-vals` never told the endpoint which state to move to — a real transition break). External-link actions emit `target="_blank" rel="noopener noreferrer"` when `new_tab`. The dispatch ctx now threads `status_field` + integration `integration_name`/`mapping_name` + external `name` (the Phase-1 "incomplete adapter" class). New `Button.data_action` + `Link.data_action`/`Link.new_tab` fields. Phase 2 is in progress — the `mode: view` default-flip + the deletion of `render_detail_view` follow.
+
 ## [0.92.19] - 2026-06-29
 
 ### Fixed

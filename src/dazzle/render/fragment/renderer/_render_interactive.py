@@ -121,12 +121,23 @@ class _RenderInteractiveMixin:
         )
         attr_str = f" {attrs}" if attrs else ""
         disabled = ' disabled="disabled"' if b.visibility == "disabled" else ""
+        action_attr = (
+            f' data-dazzle-action="{ctx.escape_attr(b.data_action)}"' if b.data_action else ""
+        )
         label = ctx.escape(b.label)
-        return f'<button type="button" class="{cls}"{attr_str}{disabled}>{label}</button>'
+        return (
+            f'<button type="button" class="{cls}"{action_attr}{attr_str}{disabled}>{label}</button>'
+        )
 
     def _emit_link(self, link: Link, ctx: RenderContext) -> str:
         href = ctx.escape_attr(str(link.href))
-        return f'<a class="dz-link" href="{href}">{ctx.escape(link.label)}</a>'
+        action_attr = (
+            f' data-dazzle-action="{ctx.escape_attr(link.data_action)}"' if link.data_action else ""
+        )
+        tab_attr = ' target="_blank" rel="noopener noreferrer"' if link.new_tab else ""
+        return (
+            f'<a class="dz-link" href="{href}"{action_attr}{tab_attr}>{ctx.escape(link.label)}</a>'
+        )
 
     def _emit_interactive(self, iw: Interactive, ctx: RenderContext) -> str:
         attrs = _hx_attrs(

@@ -125,11 +125,14 @@ def test_view_renders_delete_button_with_hx_delete_and_confirm() -> None:
 
 
 def test_view_renders_one_button_per_state_machine_transition() -> None:
-    """Each TransitionContext gets a Button with hx_post to its api_url
-    and the transition label as button text."""
+    """Each TransitionContext gets a Button. ADR-0049 Phase 2: transitions are
+    hx-PUT with the status field → target state in hx-vals (legacy semantics —
+    the prior hx-post without vals never told the endpoint which state to move
+    to), plus a `data-dazzle-action` anchor."""
     html = _render_view(_detail_with_all_actions())
-    assert 'hx-post="/_dazzle/tasks/abc/transitions/in_progress"' in html
-    assert 'hx-post="/_dazzle/tasks/abc/transitions/complete"' in html
+    assert 'hx-put="/_dazzle/tasks/abc/transitions/in_progress"' in html
+    assert 'hx-put="/_dazzle/tasks/abc/transitions/complete"' in html
+    assert "data-dazzle-action=" in html and ".transition." in html
     assert "Mark in progress" in html
     assert "Mark complete" in html
 

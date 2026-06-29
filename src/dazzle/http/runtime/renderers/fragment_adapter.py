@@ -9,6 +9,7 @@ to render simple_task's task_list surface. Subsequent plans add detail,
 form, and dashboard modes.
 """
 
+import json
 from typing import Any
 
 from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
@@ -385,25 +386,38 @@ class FragmentSurfaceAdapter:
         edit_url = ctx.get("edit_url") or ""
         delete_url = ctx.get("delete_url") or ""
         entity_name = ctx.get("entity_name") or "record"
+        status_field = str(ctx.get("status_field") or "status")
         transitions = ctx.get("transitions") or []
         integration_actions = ctx.get("integration_actions") or []
         external_links = ctx.get("external_link_actions") or []
 
         if edit_url:
-            actions.append(Link(label="Edit", href=URL(str(edit_url))))
+            actions.append(
+                Link(
+                    label="Edit",
+                    href=URL(str(edit_url)),
+                    data_action=f"{entity_name}.edit",
+                )
+            )
 
         for t in transitions:
             api_url = t.get("api_url") or ""
             label = t.get("label") or ""
+            to_state = str(t.get("to_state") or "")
             if not api_url or not label:
                 continue
+            # ADR-0049 Phase 2: transitions are hx-PUT with the status field →
+            # target state in hx-vals (the legacy semantics); the prior hx-post
+            # without vals never told the endpoint which state to move to.
             actions.append(
                 Button(
                     label=str(label),
                     variant="secondary",
-                    hx_post=URL(str(api_url)),
+                    hx_put=URL(str(api_url)),
                     hx_target=TargetSelector("body"),
                     hx_swap="innerHTML",
+                    hx_vals=json.dumps({status_field: to_state}),
+                    data_action=f"{entity_name}.transition.{to_state}",
                 )
             )
 
@@ -412,6 +426,8 @@ class FragmentSurfaceAdapter:
             label = a.get("label") or ""
             if not api_url or not label:
                 continue
+            iname = str(a.get("integration_name") or "")
+            mname = str(a.get("mapping_name") or "")
             actions.append(
                 Button(
                     label=str(label),
@@ -419,6 +435,7 @@ class FragmentSurfaceAdapter:
                     hx_post=URL(str(api_url)),
                     hx_target=TargetSelector("body"),
                     hx_swap="innerHTML",
+                    data_action=f"{entity_name}.integration.{iname}.{mname}",
                 )
             )
 
@@ -428,7 +445,14 @@ class FragmentSurfaceAdapter:
             if not label or not url:
                 continue
             # External links use Link primitive (no htmx — full nav).
-            actions.append(Link(label=str(label), href=URL(str(url))))
+            actions.append(
+                Link(
+                    label=str(label),
+                    href=URL(str(url)),
+                    new_tab=bool(link.get("new_tab")),
+                    data_action=f"{entity_name}.external.{link.get('name') or ''}",
+                )
+            )
 
         if delete_url:
             actions.append(
@@ -439,6 +463,7 @@ class FragmentSurfaceAdapter:
                     hx_target=TargetSelector("body"),
                     hx_swap="innerHTML",
                     hx_confirm=f"Delete this {str(entity_name).lower()}?",
+                    data_action=f"{entity_name}.delete",
                 )
             )
 
