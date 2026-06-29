@@ -17,8 +17,13 @@ unchanged from the legacy registry so existing consumers don't break.
 from typing import Any
 
 FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
+    # ADR-0049: list rendering moved entirely to the typed substrate. The
+    # table body rows + inline edit are emitted by the render/ row-core
+    # (`render_data_row`, #1505); the list chrome (table/pagination/sentinel)
+    # by `FragmentSurfaceAdapter._build_list` + the render/ list primitives.
+    # The legacy `page.runtime.table_renderer` module is deleted.
     "table_rows": {
-        "module": "dazzle.page.runtime.table_renderer",
+        "module": "dazzle.render.fragment.renderer._data_row",
         "params": [
             "table.rows",
             "table.columns",
@@ -31,14 +36,14 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "description": "Table body rows with typed cell rendering and row-level actions.",
     },
     "table_pagination": {
-        "module": "dazzle.page.runtime.table_renderer",
+        "module": "dazzle.http.runtime.renderers.fragment_adapter",
         "params": ["table.total", "table.page_size", "table.page", "table.api_endpoint"],
         "emits": [],
         "listens": [],
         "description": "Page navigation buttons for paginated tables.",
     },
     "inline_edit": {
-        "module": "dazzle.page.runtime.table_renderer",
+        "module": "dazzle.render.fragment.renderer._data_row",
         "params": ["field_name", "field_value", "endpoint", "field_type"],
         "emits": [],
         "listens": [],
@@ -59,7 +64,7 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "description": "Definition-list renderer for detail/view surfaces.",
     },
     "table_sentinel": {
-        "module": "dazzle.page.runtime.table_renderer",
+        "module": "dazzle.http.runtime.renderers.fragment_adapter",
         "params": ["table"],
         "emits": [],
         "listens": [],

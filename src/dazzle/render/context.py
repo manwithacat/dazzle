@@ -517,6 +517,11 @@ class ExperienceContext(BaseModel):
     current_step: str = ""
     transitions: list[ExperienceTransitionContext] = Field(default_factory=list)
     page_context: PageContext | None = None
+    # ADR-0049 Task 6: the current step's target surface name (when it is a
+    # surface step), so the http route can resolve the SurfaceSpec and render
+    # a table-step's list through the substrate (the legacy table_renderer that
+    # the experience step used is deleted). None for non-surface steps.
+    surface_name: str = ""
 
 
 # =============================================================================

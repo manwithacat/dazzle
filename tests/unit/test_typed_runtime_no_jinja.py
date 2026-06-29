@@ -121,8 +121,9 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/page/runtime/form_renderer.py",
     # v0.67.75 — detail_view + related-* fragments inlined.
     "src/dazzle/page/runtime/detail_renderer.py",
-    # v0.67.76 — filterable_table + search_input + filter_bar + bulk_actions inlined.
-    "src/dazzle/page/runtime/table_renderer.py",
+    # v0.67.76 — filterable_table + search_input + filter_bar + bulk_actions
+    # inlined; the whole module deleted in ADR-0049 (lists render via the
+    # typed substrate now), so there is no file left to scan.
     # v0.67.71 — experience flow shell (form/detail/table dispatcher) is
     # now fully Python. Renamed file kept under the same path.
     "src/dazzle/page/runtime/experience_renderer.py",

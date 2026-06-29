@@ -78,9 +78,18 @@ def _render_body_inner(context: PageContext) -> str:
 
         return render_detail_view(context.detail)
     if context.table is not None:
-        from dazzle.page.runtime.table_renderer import render_filterable_table
-
-        return render_filterable_table(context.table, page_title=context.page_title)
+        # ADR-0049 Task 6 (D4): list surfaces render exclusively via the typed
+        # substrate now — the legacy `render_filterable_table` is deleted.
+        # Reaching here means the substrate dispatch was skipped (no
+        # RuntimeServices on the request, so `_maybe_dispatch_inner_html`
+        # returned None) — a real misconfiguration, not a blank page. Fail
+        # loudly rather than render an empty 200.
+        raise RuntimeError(
+            "list surface reached the legacy body renderer, but lists render via "
+            "the typed substrate now (ADR-0049). Attach RuntimeServices to the "
+            "request (app.state.services) so the list dispatches to the substrate. "
+            f"(page_title={context.page_title!r})"
+        )
     return ""
 
 

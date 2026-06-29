@@ -11280,6 +11280,7 @@
       "_make_experience_step_get_handler": 1,
       "_make_experience_step_post_handler": 1,
       "_persist_progress": 2,
+      "_render_experience_table_step": 10,
       "create_experience_routes": 17
     },
     "mi_rank": "A"
@@ -12153,7 +12154,7 @@
       "_apply_anon_nav": 1,
       "_apply_persona_form_overrides": 20,
       "_apply_persona_overrides": 16,
-      "_build_dispatch_ctx": 109,
+      "_build_dispatch_ctx": 114,
       "_build_workspace_primary_action_candidates": 9,
       "_check_entity_cedar_access": 22,
       "_check_surface_access": 10,
@@ -12172,7 +12173,7 @@
       "_make_page_handler": 1,
       "_make_root_redirect_handler": 1,
       "_make_workspace_handler": 1,
-      "_maybe_dispatch_inner_html": 14,
+      "_maybe_dispatch_inner_html": 15,
       "_page_handler": 13,
       "_read_entity_in_process": 6,
       "_reconcile_nav_model": 3,
@@ -12555,7 +12556,7 @@
       "FragmentSurfaceAdapter": 20,
       "FragmentSurfaceAdapter._build_detail_actions": 24,
       "FragmentSurfaceAdapter._build_form": 18,
-      "FragmentSurfaceAdapter._build_list": 48,
+      "FragmentSurfaceAdapter._build_list": 50,
       "FragmentSurfaceAdapter._build_list_toolbar": 12,
       "FragmentSurfaceAdapter._build_view": 9,
       "FragmentSurfaceAdapter.build": 4,
@@ -12564,7 +12565,7 @@
       "_field_to_primitive": 15,
       "_filter_option": 4,
       "_format_cell": 3,
-      "_pick_empty_state": 6
+      "_pick_empty_state": 9
     },
     "mi_rank": "A"
   },
@@ -17082,15 +17083,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/page/runtime/table_renderer.py": {
-    "functions": {
-      "_render_bulk_actions": 1,
-      "_render_filter_bar": 24,
-      "_render_search_input": 5,
-      "render_filterable_table": 48
-    },
-    "mi_rank": "A"
-  },
   "dazzle/page/runtime/task_context.py": {
     "functions": {
       "TaskContext": 5,
@@ -18372,8 +18364,8 @@
       "StatusList": 1,
       "StatusListEntry": 4,
       "StatusListEntry.__post_init__": 3,
-      "Table": 12,
-      "Table.__post_init__": 11,
+      "Table": 13,
+      "Table.__post_init__": 12,
       "TaskInboxItem": 3,
       "TaskInboxItem.__post_init__": 2,
       "TaskInboxRegion": 3,

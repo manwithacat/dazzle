@@ -20,9 +20,9 @@ repos:
         # the update-vendors bot commits them byte-exact (via Actions, which
         # bypasses pre-commit) and vendor_hashes.json pins their checksum, so
         # whitespace-normalising them here corrupts the integrity hash.
-        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$|/static/(vendor|dist)/|/__snapshots__/(data_row_char_1505|legacy_list_chrome)/
+        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$|/static/(vendor|dist)/|/__snapshots__/data_row_char_1505/
       - id: end-of-file-fixer
-        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$|/static/(vendor|dist)/|/__snapshots__/(data_row_char_1505|legacy_list_chrome)/
+        exclude: ^(CHANGELOG\.md|ROADMAP\.md)$|/static/(vendor|dist)/|/__snapshots__/data_row_char_1505/
       - id: check-yaml
         exclude: mkdocs\.yml$  # Uses PyYAML-specific tags
       - id: check-toml

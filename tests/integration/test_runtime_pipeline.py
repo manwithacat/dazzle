@@ -31,6 +31,19 @@ from dazzle.page.specs import UISpec
 # =============================================================================
 
 
+def _render_page_for_pipeline(route: str, ctx: object) -> str:
+    """ADR-0049 Task 6: list pages render via the substrate dispatch (the http
+    route), not `render_page` — so `render_page` raises a loud error for a list
+    ctx (D4: no silent legacy fallback). For non-list ctx it renders as before.
+    Returns the rendered HTML, or "" for a list ctx (after asserting the loud
+    error), so pipeline loops can skip the length assertions for lists."""
+    if getattr(ctx, "table", None) is not None:
+        with pytest.raises(RuntimeError, match="typed substrate"):
+            render_page(ctx)  # type: ignore[arg-type]
+        return ""
+    return render_page(ctx)  # type: ignore[arg-type]
+
+
 def make_simple_appspec() -> ir.AppSpec:
     """Create a simple AppSpec for testing."""
     task_entity = ir.EntitySpec(
@@ -401,7 +414,9 @@ class TestTemplateRuntime:
         contexts = compile_appspec_to_templates(simple_appspec)
 
         for route, ctx in contexts.items():
-            html = render_page(ctx)
+            html = _render_page_for_pipeline(route, ctx)
+            if html == "":  # list route — renders via the substrate, not render_page
+                continue
             assert len(html) > 0, f"Route {route} produced empty HTML"
             assert "<!DOCTYPE html>" in html or "<html" in html or "<div" in html
 
@@ -432,7 +447,9 @@ class TestFullPipeline:
         contexts = compile_appspec_to_templates(appspec)
         assert len(contexts) > 0
         for route, ctx in contexts.items():
-            html = render_page(ctx)
+            html = _render_page_for_pipeline(route, ctx)
+            if html == "":  # list route — substrate-rendered
+                continue
             assert len(html) > 100, f"Route {route} HTML too short"
 
     def test_multi_entity_full_pipeline(self) -> None:
@@ -447,7 +464,9 @@ class TestFullPipeline:
         contexts = compile_appspec_to_templates(appspec)
         assert len(contexts) > 0
         for _route, ctx in contexts.items():
-            html = render_page(ctx)
+            html = _render_page_for_pipeline(_route, ctx)
+            if html == "":  # list route — substrate-rendered
+                continue
             assert len(html) > 0
 
     def test_roundtrip_spec_serialization(self, simple_appspec: ir.AppSpec) -> None:

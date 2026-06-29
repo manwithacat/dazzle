@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.18] - 2026-06-29
+
+### Removed
+- **The legacy `page/runtime/table_renderer.py` is DELETED — one list-render path (ADR-0049 Phase 1 Task 6, the phase complete).** `render_filterable_table` + `_render_search_input` + `_render_filter_bar` + `_render_bulk_actions` (~516 LOC, the whole module) are gone; `mode: list` renders exclusively through the typed substrate. The two non-list callers are repointed: the **experience table-step** now renders via the substrate (the http experience route pre-renders the list with `dispatch_render` and passes the HTML to the page renderer, respecting the `page ↛ http` import contract — the previously-untested `ops_dashboard` `incident_response` triage step is now covered by `tests/integration/test_experience_table_step_substrate.py`); `template_renderer._render_body_inner`'s list branch now **raises a loud `RuntimeError`** (D4) if a list ever reaches the legacy body path (e.g. no `RuntimeServices` on the request) instead of rendering a blank 200. `fragment_registry` entries repointed to the substrate modules.
+
+### Added
+- `ExperienceContext.surface_name` — the resolved surface name for a surface step, so the http route can render a table-step's list through the substrate.
+
+### Agent Guidance
+- **There is now ONE list-render path: the typed substrate.** `page/runtime/table_renderer.py` is deleted — do not look for it. A `mode: list` surface renders via `FragmentSurfaceAdapter._build_list` (dispatched from `page_routes._maybe_dispatch_inner_html`); an experience table-step renders via the http experience route's `_render_experience_table_step` (pre-renders with `dispatch_render`, passes HTML down — the page layer cannot import the http dispatch seam). If a list reaches `template_renderer._render_body_inner` it raises loudly (D4): that means `RuntimeServices` wasn't on the request. The `page ↛ http` import contract holds — keep substrate-dispatch calls in `http/`, pass rendered HTML strings into `page/`.
+
 ## [0.92.17] - 2026-06-29
 
 ### Changed

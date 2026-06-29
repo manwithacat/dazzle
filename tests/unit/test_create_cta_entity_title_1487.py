@@ -9,8 +9,6 @@ title onto `TableContext.entity_title`.
 from dazzle.core import ir
 from dazzle.core.ir import FieldModifier, FieldTypeKind, SurfaceMode
 from dazzle.page.converters.template_compiler import compile_surface_to_context
-from dazzle.page.runtime.table_renderer import render_filterable_table
-from dazzle.render.context import TableContext
 from dazzle.render.fragment import CreateButton, FragmentRenderer
 
 
@@ -103,52 +101,11 @@ def test_fragment_explicit_label_override_still_wins() -> None:
     assert "New Curriculum Plan" not in html
 
 
-# ── Legacy table_renderer path ───────────────────────────────────────────
-
-
-def test_legacy_table_renderer_uses_declared_title() -> None:
-    tc = TableContext(
-        entity_name="CurriculumPlan",
-        title="Curriculum Plans",
-        entity_title="Curriculum Plan",
-        columns=[],
-        api_endpoint="/api/curriculumplan",
-        create_url="/app/curriculumplan/create",
-    )
-    out = render_filterable_table(tc, page_title="Curriculum Plans")
-    assert "New Curriculum Plan" in out
-    assert "New CurriculumPlan<" not in out
-
-
-# ── Search placeholder (#1487 follow-on) ─────────────────────────────────
-
-
-def test_legacy_search_placeholder_uses_declared_title() -> None:
-    from dazzle.page.runtime.table_renderer import _render_search_input
-
-    tc = TableContext(
-        entity_name="CurriculumPlan",
-        title="Curriculum Plans",
-        entity_title="Curriculum Plan",
-        columns=[],
-        api_endpoint="/api/curriculumplan",
-    )
-    out = _render_search_input(tc, "/api/curriculumplan", "#t-body")
-    assert "Search curriculum plan..." in out
-    assert "Search curriculumplan" not in out  # the raw-id leak
-
-
-def test_legacy_search_placeholder_falls_back_to_humanised_name() -> None:
-    from dazzle.page.runtime.table_renderer import _render_search_input
-
-    tc = TableContext(
-        entity_name="CurriculumPlan",
-        title="Curriculum Plans",
-        columns=[],
-        api_endpoint="/api/curriculumplan",
-    )
-    out = _render_search_input(tc, "/api/curriculumplan", "#t-body")
-    assert "Search curriculumplan..." in out  # no title → humanised identifier
+# ADR-0049 Task 6: the legacy `table_renderer` create-CTA + search-placeholder
+# tests are removed with the deleted module. The same #1487 behaviour (declared
+# title in the create CTA + search placeholder) is covered on the substrate path
+# by `test_fragment_create_button_uses_declared_title` +
+# `test_fragment_search_placeholder_uses_declared_title` above.
 
 
 def test_fragment_search_placeholder_uses_declared_title() -> None:

@@ -180,13 +180,14 @@ def _render_step_progress(experience: Any) -> str:
     return f'<ol class="dz-steps">{"".join(items)}</ol>'
 
 
-def _render_step_body(experience: Any) -> str:
+def _render_step_body(experience: Any, table_step_html: str = "") -> str:
     """Dispatch to the right step-body renderer.
 
-    Form/detail/table step bodies still go through Jinja sub-templates
-    (`components/detail_view.html`, `components/filterable_table.html`,
-    plus the form_field macro chain). Simple branches (ready,
-    placeholder, non-surface) inline in Python.
+    Form/detail bodies render via the typed Python renderers; a table-step
+    body is pre-rendered by the http route (`table_step_html`) through the
+    substrate, since the page layer cannot import the http dispatch seam
+    (ADR-0049 Task 6). Simple branches (ready, placeholder, non-surface)
+    inline in Python.
     """
     current_step_attr = _html_mod.escape(
         str(getattr(experience, "current_step", "") or ""), quote=True
@@ -226,13 +227,20 @@ def _render_step_body(experience: Any) -> str:
         actions = _render_transitions_row(transitions)
         body = f"{body_inner}{actions}"
     elif ctx_table is not None:
-        # Phase 4 (v0.67.76): inline-render via table_renderer.
-        from dazzle.page.runtime.table_renderer import render_filterable_table
-
-        body_inner = render_filterable_table(
-            ctx_table,
-            page_title=str(getattr(page_context, "page_title", "") or ""),
-        )
+        # ADR-0049 Task 6: the experience table-step renders through the typed
+        # substrate now (the legacy table_renderer is deleted). The http route
+        # pre-renders the substrate list (it owns the dispatch seam, respecting
+        # the page↛http import contract) and passes the HTML in via
+        # `table_step_html`. Empty string means the route couldn't render it
+        # (no services / no surface) — emit a loud placeholder rather than a
+        # blank step (D4: no silent legacy fallback).
+        if table_step_html:
+            body_inner = table_step_html
+        else:
+            body_inner = (
+                '<div class="dz-experience-ready" role="alert">'
+                "<span>This list step could not be rendered.</span></div>"
+            )
         actions = _render_transitions_row(transitions)
         body = f"{body_inner}{actions}"
     else:
@@ -245,17 +253,20 @@ def _render_step_body(experience: Any) -> str:
     return f'<div class="dz-experience-step" data-dz-exp-current="{current_step_attr}">{body}</div>'
 
 
-def render_experience_inner_html(experience: Any) -> str:
+def render_experience_inner_html(experience: Any, *, table_step_html: str = "") -> str:
     """Render the experience-flow inner HTML (Phase 4, v0.67.71).
 
     Replaces the legacy `experience/_content.html` Jinja render call.
     The outer shell (title, step progress, container) is Python; step
-    bodies dispatch to typed-Python renderers (form, detail, table).
+    bodies render via the typed renderers. A table-step body is rendered
+    through the substrate by the http route and passed in as
+    `table_step_html` (ADR-0049 Task 6 — the page layer cannot reach the
+    http dispatch seam).
     """
     name_attr = _html_mod.escape(str(getattr(experience, "name", "") or ""), quote=True)
     title = _html_mod.escape(str(getattr(experience, "title", "") or ""), quote=False)
     progress = _render_step_progress(experience)
-    body = _render_step_body(experience)
+    body = _render_step_body(experience, table_step_html)
     return (
         f'<div data-dz-experience="{name_attr}" class="dz-experience">'  # nosemgrep
         f'<h2 class="dz-experience-title">{title}</h2>'

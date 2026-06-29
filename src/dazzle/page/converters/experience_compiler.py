@@ -115,6 +115,7 @@ def compile_experience_context(
 
     # Compile the inner page context for the current step's surface
     page_context: PageContext | None = None
+    resolved_surface_name = ""
     if current_step and current_step.kind == StepKind.SURFACE:
         surface: SurfaceSpec | None = None
         entity = None
@@ -135,6 +136,7 @@ def compile_experience_context(
                 )
 
         if surface:
+            resolved_surface_name = surface.name
             page_context = compile_surface_to_context(surface, entity, app_prefix=app_prefix)
             # Filter form fields to only those listed in step.fields
             if page_context.form and current_step.fields is not None:
@@ -172,4 +174,7 @@ def compile_experience_context(
         current_step=state.step,
         transitions=transitions,
         page_context=page_context,
+        # ADR-0049 Task 6: expose the resolved surface name so the http route
+        # can render a table-step's list via the substrate.
+        surface_name=resolved_surface_name,
     )
