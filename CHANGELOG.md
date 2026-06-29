@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.15] - 2026-06-29
+
+### Added
+- **Legacy list-chrome characterization anchor (ADR-0049 Phase 1, Task 1).** `tests/unit/test_legacy_list_chrome_char_phase1.py` freezes `render_filterable_table` output across a 17-case chrome matrix (search / filters / bulk / column-visibility menu / colgroup / sortable thead / skeleton tbody / pagination / a11y regions) as the **visual-parity reference** the typed Fragment substrate's `_build_list` must reproduce before the Phase 1 default-flip and the deletion of the legacy renderer. Per ADR-0049 D1 these are a visual reference, **not** a post-flip byte gate. The snapshot dir is excluded from the whitespace/eof pre-commit hooks (the #1505 byte-exact-fixture scar).
+
 ## [0.92.14] - 2026-06-29
 
 ### Added
