@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.39] - 2026-06-30
+
+### Added
+- **Click-to-edit in the peek panel — view⇄edit toggle in place (#1494, 2c Slice 2, increment 1).** When a list row's peek panel is open (the inline detail body), the **Edit** affordance now toggles the edit form *into the same panel cell* (`#peek-content-{id}`) instead of navigating to the edit page: `_build_detail_actions` renders Edit as an `hx-get` Button (`{edit_url}?peek=1`, target the panel cell) when `ctx["peek"]` is set, and `_build_form` returns the edit form **content-only** (no page `<h1>`, mirroring `_build_view`) with an inline **Cancel** that re-fetches the read-only view back into the panel (`{cancel_url}?peek=1` — `cancel_url` for an edit form is the detail-view path). RBAC is inherited for free: the toggle only renders when `edit_url` is set, which the detail builder already nulls when the persona lacks update permission (so no edit affordance leaks). The form dispatch ctx now also threads `cancel_url` + `item_id`. **Save** still PUTs the form's API action (full-page settle on success, the existing edit behaviour); the inline *save-and-stay-in-panel* (FormStack peek wiring → re-fetch the view, with native `x-optimistic`) is the next increment. Gated by an independent adversarial review (clean: RBAC gate, `TargetSelector` regex + HTML-escape on the panel selector, URL-scheme validation, non-peek byte-stability). New tests: `TestPeekClickToEdit`.
+
 ## [0.92.38] - 2026-06-30
 
 ### Changed

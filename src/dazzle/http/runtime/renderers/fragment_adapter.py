@@ -502,13 +502,32 @@ class FragmentSurfaceAdapter:
         external_links = ctx.get("external_link_actions") or []
 
         if edit_url:
-            actions.append(
-                Link(
-                    label="Edit",
-                    href=URL(str(edit_url)),
-                    data_action=f"{entity_name}.edit",
+            # #1494 (2c, Slice 2): in a peek panel the Edit affordance toggles the
+            # edit form *in place* — hx-get the content-only form into the same
+            # panel cell (`#peek-content-{id}`) instead of navigating to the edit
+            # page. RBAC is inherited for free (this only fires when `edit_url` is
+            # set, which the detail builder already gates on update permission).
+            peek = bool(ctx.get("peek"))
+            item_id = str(ctx.get("item_id", "") or "")
+            if peek and item_id:
+                actions.append(
+                    Button(
+                        label="Edit",
+                        variant="secondary",
+                        hx_get=URL(f"{edit_url}?peek=1"),
+                        hx_target=TargetSelector(f"#peek-content-{item_id}"),
+                        hx_swap="innerHTML",
+                        data_action=f"{entity_name}.edit",
+                    )
                 )
-            )
+            else:
+                actions.append(
+                    Link(
+                        label="Edit",
+                        href=URL(str(edit_url)),
+                        data_action=f"{entity_name}.edit",
+                    )
+                )
 
         for t in transitions:
             api_url = t.get("api_url") or ""
@@ -585,7 +604,7 @@ class FragmentSurfaceAdapter:
         ctx: dict[str, Any],
         *,
         mode: SurfaceMode,
-    ) -> Surface:
+    ) -> Fragment:
         """CREATE/EDIT form surface — FormStack with type-aware widgets.
 
         Both modes share infrastructure; the only differences are:
@@ -654,6 +673,29 @@ class FragmentSurfaceAdapter:
                 entity_name=form_entity_name,
                 mode=form_mode,  # type: ignore[arg-type]
             )
+
+        # #1494 (2c, Slice 2): click-to-edit. When the edit form is fetched into a
+        # list-row peek panel (`?peek=1`), render it content-only (no page-level
+        # `<h1>`, mirroring `_build_view`) and add an inline Cancel that re-fetches
+        # the read-only view back into the same panel cell — so the panel toggles
+        # view⇄edit in place without leaving the list. Save still PUTs the form's
+        # API action (full-page settle on success); the inline save-and-stay is a
+        # follow-on (FormStack peek wiring + API redirect suppression).
+        if bool(ctx.get("peek")):
+            item_id = str(ctx.get("item_id", "") or "")
+            cancel_url = str(ctx.get("cancel_url", "") or "")
+            form_body: Fragment = body
+            if cancel_url and item_id:
+                cancel = Button(
+                    label="Cancel",
+                    variant="ghost",
+                    hx_get=URL(f"{cancel_url}?peek=1"),
+                    hx_target=TargetSelector(f"#peek-content-{item_id}"),
+                    hx_swap="innerHTML",
+                    data_action=f"{form_entity_name}.peek-cancel",
+                )
+                form_body = Stack(children=(body, Row(children=(cancel,), align="start")), gap="sm")
+            return Region(kind="form", body=form_body)
 
         return Surface(
             header=Heading(title, level=1),

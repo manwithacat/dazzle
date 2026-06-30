@@ -1680,6 +1680,12 @@ def _build_dispatch_ctx(
             "action": getattr(form, "action_url", "") or "",
             "method": str(getattr(form, "method", "POST") or "POST").upper(),
             "submit_label": "Save" if is_edit else "Create",
+            # #1494 (2c, Slice 2): click-to-edit in the peek panel. `cancel_url`
+            # for an EDIT form is the detail view path (template_compiler), so the
+            # inline Cancel can re-fetch the read-only view back into the panel;
+            # `item_id` anchors the panel target (`#peek-content-{id}`).
+            "cancel_url": getattr(form, "cancel_url", "") or "",
+            "item_id": str((getattr(form, "initial_values", {}) or {}).get("id", "") or ""),
         }
         if sections_out:
             ctx_out["sections"] = sections_out

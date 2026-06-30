@@ -1,9 +1,10 @@
 """#1494 (UX-maturity 2c/3d) — `peek:` + `when_empty:` declarative-over-htmx-4.
 
-Slice 1: the `peek:` DSL surface — IR field with `None` as the true-unset signal
-(`SurfaceSpec.peek` — `None` distinct from explicit `peek: off`), parser keyword,
-and the right-by-default resolver (`resolve_peek_mode`, default `off` this slice
-→ byte-stable). Render + the default-flip land in later slices.
+Covers the `peek:` DSL surface (IR field with `None` as the true-unset signal,
+parser keyword), the `resolve_peek_mode` default-flip (unset + detail surface →
+`expand`, the 2c level-4 move), the `expand` render on the converged row-core,
+the `when_empty:` region self-demote, and the Slice-2 click-to-edit toggle in the
+peek panel (`TestPeekClickToEdit`).
 """
 
 import pathlib
@@ -326,3 +327,73 @@ class TestWhenEmptyRenderSeam:
             is_added_card=True,
         )
         assert resp.headers.get("HX-Reswap") == "delete"
+
+
+# --- Slice 2: click-to-edit toggle in the peek panel (#1494) ------------------
+
+
+class TestPeekClickToEdit:
+    """The peek panel toggles view⇄edit in place: the Edit affordance hx-gets a
+    content-only edit form into the panel cell (`#peek-content-{id}`); an inline
+    Cancel re-fetches the read-only view back. Non-peek detail/edit render is
+    unchanged (nav Link / page form with `<h1>`)."""
+
+    def _adapter(self):
+        from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+
+        return FragmentSurfaceAdapter()
+
+    def _render(self, fragment) -> str:
+        from dazzle.render.fragment import FragmentRenderer
+
+        return FragmentRenderer().render(fragment)
+
+    def _edit_form(self, *, peek: bool):
+        import types
+
+        from dazzle.core.ir.surfaces import SurfaceMode
+
+        surf = types.SimpleNamespace(
+            name="task_edit", title="Edit Task", entity_ref="Task", mode=None
+        )
+        ctx = {
+            "fields": [{"name": "title", "label": "Title", "type": "text", "value": "x"}],
+            "action": "/api/tasks/abc",
+            "method": "PUT",
+        }
+        if peek:
+            ctx |= {"peek": True, "item_id": "abc", "cancel_url": "/app/tasks/abc"}
+        return self._render(self._adapter()._build_form(surf, ctx, mode=SurfaceMode.EDIT))
+
+    def test_peek_edit_form_is_content_only(self):
+        # No page-level <h1> — the form swaps into the inline panel, not a page.
+        assert "<h1" not in self._edit_form(peek=True)
+
+    def test_non_peek_edit_form_keeps_page_heading(self):
+        assert "<h1" in self._edit_form(peek=False)
+
+    def test_peek_edit_form_has_inline_cancel_back_to_view(self):
+        html = self._edit_form(peek=True)
+        assert "Cancel" in html
+        # Cancel re-fetches the content-only view into the same panel cell.
+        assert 'hx-get="/app/tasks/abc?peek=1"' in html
+        assert 'hx-target="#peek-content-abc"' in html
+
+    def _edit_action(self, *, peek: bool):
+        ctx = {"edit_url": "/app/tasks/abc/edit", "entity_name": "Task"}
+        if peek:
+            ctx |= {"peek": True, "item_id": "abc"}
+        actions = self._adapter()._build_detail_actions(ctx)
+        return self._render(actions[0])
+
+    def test_peek_edit_toggle_is_hx_get_into_panel(self):
+        html = self._edit_action(peek=True)
+        # A button (not a nav link) that loads the edit form into the panel cell.
+        assert 'hx-get="/app/tasks/abc/edit?peek=1"' in html
+        assert 'hx-target="#peek-content-abc"' in html
+        assert "<button" in html
+
+    def test_non_peek_edit_action_is_nav_link(self):
+        html = self._edit_action(peek=False)
+        assert 'href="/app/tasks/abc/edit"' in html
+        assert "hx-get" not in html
