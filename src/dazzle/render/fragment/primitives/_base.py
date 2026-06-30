@@ -73,6 +73,7 @@ from dazzle.render.fragment.primitives.data import (
     RelatedGroup,
     SearchBox,
     Sequence,
+    SlideOver,
     SortHeader,
     Sparkline,
     StageBar,
@@ -209,6 +210,7 @@ Fragment = (
     | DashboardGrid
     | DashboardCard
     | AddCardRow
+    | SlideOver
     | FilterBar
     | ListFilterBar
     | DataListScroll

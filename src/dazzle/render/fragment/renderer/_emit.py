@@ -100,6 +100,7 @@ from dazzle.render.fragment.primitives import (
     Sidebar,
     Skeleton,
     SkipLink,
+    SlideOver,
     SliderField,
     SortHeader,
     Sparkline,
@@ -364,6 +365,8 @@ class FragmentRenderer(
                 return self._emit_dashboard_card(fragment, ctx)
             case AddCardRow():
                 return self._emit_add_card_row(fragment, ctx)
+            case SlideOver():
+                return self._emit_slide_over(fragment, ctx)
             case FilterBar():
                 return self._emit_filter_bar(fragment, ctx)
             case ListFilterBar():

@@ -100,6 +100,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "DashboardGrid",
         "DashboardCard",
         "AddCardRow",
+        "SlideOver",
         "FilterBar",
         "SortHeader",
         "CsvExportButton",

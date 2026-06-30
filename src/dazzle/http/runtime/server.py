@@ -1723,11 +1723,14 @@ class DazzleBackendApp:
         # render table row fragments with correct column definitions.
         # Use surface field projection when a list surface exists (#405).
         _entity_list_surfaces: dict[str, Any] = {}
+        _entity_all_list_surfaces: dict[str, list[Any]] = {}
         for _surf in self._appspec.surfaces:
             _eref = _surf.entity_ref
             _mode = str(_surf.mode or "").lower()
-            if _eref and _mode == "list" and _eref not in _entity_list_surfaces:
-                _entity_list_surfaces[_eref] = _surf
+            if _eref and _mode == "list":
+                if _eref not in _entity_list_surfaces:
+                    _entity_list_surfaces[_eref] = _surf
+                _entity_all_list_surfaces.setdefault(_eref, []).append(_surf)
 
         entity_htmx_meta: dict[str, dict[str, Any]] = {}
         app_prefix = "/app"
@@ -1739,14 +1742,27 @@ class DazzleBackendApp:
                 if _ls
                 else _build_entity_columns(entity, self._appspec.enums)
             )
+            # #1494 (2c, Slice 2): peek is declared PER SURFACE, but one entity can
+            # host several list surfaces with different `peek:` modes. Map each
+            # surface's table_id (= surface.name = region_name) to its resolved
+            # peek so the `/api` row-hydrate path picks the mode for the *actual*
+            # surface being viewed (recovered from HX-Target) — keeping the row
+            # chevron in step with the per-surface SlideOver container `_build_list`
+            # emits. `peek_mode` stays the first-surface value (the byte-stable
+            # default used when no table_id is resolvable).
+            peek_by_table_id = {
+                _s.name: resolve_peek_mode(_s, entity).value
+                for _s in _entity_all_list_surfaces.get(entity.name, [])
+            }
             entity_htmx_meta[entity.name] = {
                 "columns": cols,
                 "detail_url": f"{app_prefix}/{slug}/{{id}}",
                 "entity_name": entity.name,
-                # #1494 (2c): resolved `peek:` mode for the list surface. Unset →
-                # "off" (Slice-1 default, byte-stable); `peek: expand` opts the
-                # entity-list rows into the inline detail-panel chevron.
+                # #1494 (2c): resolved `peek:` mode for the (first) list surface.
+                # Unset → "off" (Slice-1 default, byte-stable); `peek: expand` opts
+                # the entity-list rows into the inline detail-panel chevron.
                 "peek_mode": resolve_peek_mode(_ls, entity).value if _ls else "off",
+                "peek_by_table_id": peek_by_table_id,
             }
 
         # Build per-entity audit config mapping.

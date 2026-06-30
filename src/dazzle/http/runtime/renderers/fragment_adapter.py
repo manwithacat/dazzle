@@ -36,6 +36,7 @@ from dazzle.render.fragment import (
     RelatedTab,
     Row,
     SearchBox,
+    SlideOver,
     SortHeader,
     Stack,
     Submit,
@@ -219,6 +220,18 @@ class FragmentSurfaceAdapter:
             body_children.append(BulkActionToolbar())
         body_children.extend(toolbar)
         body_children.append(shell)
+        # #1494 (2c, Slice 2): `peek: slide_over` emits the one shared right-side
+        # panel inline with the list — a row's chevron loads its detail body into
+        # it (`#slideover-content-{table_id}`) and reveals it. `slide_over` is
+        # always an explicit author value (never a default), so a missing/`off`/
+        # `expand` peek_mode adds nothing here (byte-stable).
+        if str(ctx.get("peek_mode", "") or "").strip() == "slide_over":
+            body_children.append(
+                SlideOver(
+                    table_id=table_id,
+                    title=f"{entity_title or entity_name.replace('_', ' ').title()} detail",
+                )
+            )
         body: Fragment = (
             Stack(children=tuple(body_children), gap="sm") if len(body_children) > 1 else shell
         )

@@ -96,6 +96,7 @@ def create_list_handler(
     htmx_columns: list[dict[str, Any]] | None = None,
     htmx_detail_url: str | None = None,
     htmx_peek_mode: str | None = None,
+    htmx_peek_by_table_id: dict[str, str] | None = None,
     htmx_entity_name: str | None = None,
     htmx_empty_message: str = "No items found.",
     search_fields: list[str] | None = None,
@@ -144,6 +145,8 @@ def create_list_handler(
             request.state.htmx_detail_url = htmx_detail_url
         if htmx_peek_mode is not None:
             request.state.htmx_peek_mode = htmx_peek_mode
+        if htmx_peek_by_table_id is not None:
+            request.state.htmx_peek_by_table_id = htmx_peek_by_table_id
         request.state.htmx_entity_name = htmx_entity_name
         request.state.htmx_empty_message = htmx_empty_message
 
@@ -526,6 +529,16 @@ async def _list_handler_body(
             if htmx.target and htmx.target.endswith("-body"):
                 table_id = htmx.target.removesuffix("-body")
 
+            # #1494 (2c, Slice 2): `peek:` is declared per surface; resolve the
+            # mode for the *actual* surface in view (its table_id == region_name)
+            # so the row chevron matches the per-surface SlideOver container.
+            # Fall back to the entity-level default when no per-surface entry
+            # exists (single-list-surface entities — the common case, byte-stable).
+            _peek_by_tid = getattr(request.state, "htmx_peek_by_table_id", None) or {}
+            _resolved_peek = _peek_by_tid.get(table_id) or getattr(
+                request.state, "htmx_peek_mode", None
+            )
+
             items = result.get("items", []) if isinstance(result, dict) else []
             # Convert Pydantic models to dicts
             if items and hasattr(items[0], "model_dump"):
@@ -538,7 +551,7 @@ async def _list_handler_body(
                 if hasattr(request.state, "htmx_columns")
                 else [],
                 "detail_url_template": getattr(request.state, "htmx_detail_url", None),
-                "peek_mode": getattr(request.state, "htmx_peek_mode", None),
+                "peek_mode": _resolved_peek,
                 "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
                 "api_endpoint": str(request.url.path),
                 "table_id": table_id,

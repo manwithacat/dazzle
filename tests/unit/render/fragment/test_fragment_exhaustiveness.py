@@ -118,6 +118,7 @@ from dazzle.render.fragment import (
     Sidebar,
     Skeleton,
     SkipLink,
+    SlideOver,
     SliderField,
     Slot,
     SortHeader,
@@ -381,6 +382,8 @@ def _sample_for(primitive_type: type) -> object:
         return WorkspaceToolbar()
     if primitive_type is WorkspaceDrawer:
         return WorkspaceDrawer()
+    if primitive_type is SlideOver:
+        return SlideOver(table_id="tasks")
     if primitive_type is Sequence:
         return Sequence(children=(Text("a"), Text("b")))
     if primitive_type is Pagination:

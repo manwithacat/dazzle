@@ -1585,9 +1585,19 @@ def _build_dispatch_ctx(
                     ],
                 }
             )
+        # #1494 (2c, Slice 2): the explicit `peek:` mode threads to the list
+        # adapter so `peek: slide_over` emits its shared right-side panel with the
+        # initial chrome. Only the explicit author value matters here (slide_over
+        # is never a default; `expand`/unset/`off` need no list-level container —
+        # the chevron's per-row resolution rides the `/api` row-hydrate path).
+        _peek = getattr(surface, "peek", None)
+        # PeekMode (a StrEnum) carries `.value`; a duck-typed raw string falls
+        # back to str(); unset → "off".
+        peek_mode = "off" if _peek is None else (getattr(_peek, "value", None) or str(_peek))
         return {
             "items": list(getattr(table, "rows", []) or []),
             "columns": columns_out,
+            "peek_mode": peek_mode,
             "endpoint": getattr(table, "api_endpoint", "") or "",
             "total": int(getattr(table, "total", 0) or 0),
             "page": int(getattr(table, "page", 1) or 1),

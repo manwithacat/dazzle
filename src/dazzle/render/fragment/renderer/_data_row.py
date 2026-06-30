@@ -71,6 +71,20 @@ def drill_row_attrs(url_attr: str) -> str:
     )
 
 
+def slideover_panel_id(table_id: str) -> str:
+    """Container id for a list's `peek: slide_over` shared panel (#1494).
+
+    The single id convention shared by the `SlideOver` container emitter
+    (`_emit_slide_over`) and the per-row chevron (`render_data_row`) so a row's
+    reveal/target resolves to the one panel emitted for its list."""
+    return f"slideover-{table_id}"
+
+
+def slideover_content_id(table_id: str) -> str:
+    """Body id a row's slide_over chevron `hx-get`s the detail body into (#1494)."""
+    return f"slideover-content-{table_id}"
+
+
 def assemble_list_row(
     *,
     archetype: _RowArchetype,
@@ -326,11 +340,13 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         f"'is-error': editing && editing.rowId === {item_id_js} && editing.error}}"
     )
 
-    # #1494 (2c): `peek: expand` gives each row a chevron that hx-gets the
-    # entity's detail *body* partial (`?peek=1` → content-only) into a hidden
-    # sibling panel row, toggled in place. Only emitted when the resolved mode is
-    # `expand` (so `off`/unset rows are byte-identical to pre-#1494).
-    peek_expand = str(table.get("peek_mode") or "").strip() == "expand"
+    # #1494 (2c): the row-peek chevron. `peek: expand` toggles a hidden *sibling
+    # panel row* in place; `peek: slide_over` loads the same detail body into the
+    # one shared right-side `SlideOver` panel for this list and reveals it. Only
+    # `off`/unset rows stay byte-identical to pre-#1494 (no chevron emitted).
+    peek_mode = str(table.get("peek_mode") or "").strip()
+    peek_expand = peek_mode == "expand"
+    peek_slide = peek_mode == "slide_over"
     peek_toggle_html = ""
 
     drill_attrs = ""
@@ -359,6 +375,34 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" '
                 'xmlns="http://www.w3.org/2000/svg">'
                 '<path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" stroke-width="1.25" '
+                'stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
+            )
+        elif peek_slide:
+            # The chevron loads the detail body into this list's one shared
+            # SlideOver panel (`#slideover-content-{table_id}`) and reveals the
+            # container (`#slideover-{table_id}`). JS-free reveal via inline
+            # hx-on; the backdrop/close button (on the SlideOver) re-hide it.
+            table_id = str(table.get("table_id") or "")
+            slide_url_attr = _html_mod.escape(f"{detail_url}?peek=1", quote=True)
+            content_target = _html_mod.escape(slideover_content_id(table_id), quote=True)
+            # panel id crosses into a JS-string context inside hx-on — json.dumps
+            # for the JS layer, then HTML-escape for the attribute layer (the
+            # #1494 Slice-2 hardening; table_id is a parser-validated identifier,
+            # so this is defense-in-depth).
+            panel_js = _html_mod.escape(json.dumps(slideover_panel_id(table_id)), quote=True)
+            reveal_js = f"document.getElementById({panel_js}).removeAttribute('hidden')"
+            peek_toggle_html = (
+                f'<button type="button" '  # nosemgrep
+                f'class="dz-tr-action dz-tr-peek-toggle" '
+                f'data-dazzle-action="{entity_name_attr}.peek" '
+                f'aria-label="Open detail for {row_label_attr}" '
+                f'hx-get="{slide_url_attr}" '
+                f'hx-target="#{content_target}" '
+                f'hx-swap="innerHTML" '
+                f'hx-on:click="{reveal_js}">'
+                '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" '
+                'xmlns="http://www.w3.org/2000/svg">'
+                '<path d="M5.5 3.5L9 7l-3.5 3.5" stroke="currentColor" stroke-width="1.25" '
                 'stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
             )
         drill_attrs = drill_row_attrs(detail_url_attr)
@@ -473,9 +517,11 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         "</td>"
     )
 
-    # #1494: the hidden sibling panel the chevron reveals; spans the full row.
+    # #1494: the hidden sibling panel the `expand` chevron reveals; spans the full
+    # row. `slide_over` uses the one shared SlideOver container instead, so it
+    # emits no per-row panel.
     peek_panel_row = ""
-    if peek_toggle_html:
+    if peek_expand:
         colspan = len(cell_parts) + (1 if bulk_actions else 0) + 1
         peek_panel_row = (
             f'<tr id="peek-{item_id_attr}" '  # nosemgrep

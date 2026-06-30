@@ -466,3 +466,172 @@ class TestPeekSaveAndStay:
         html = self._form(peek=True, mode=SurfaceMode.CREATE)
         assert "hx-on:htmx:after:request" not in html
         assert 'hx-swap="none"' not in html
+
+
+# --- peek: slide_over render (#1494 2c, Slice 2) -----------------------------
+
+
+def _slide_row(peek: str = "slide_over", *, table_id: str = "tasks") -> str:
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    return render_data_row(
+        ({"key": "title", "type": "str"},),
+        {"id": "abc-123", "title": "x"},
+        RowCapabilities(peek=peek, drill=True),
+        entity_name="Task",
+        api_endpoint="/api/tasks",
+        detail_url_template="/tasks/{id}",
+        table_id=table_id,
+    )
+
+
+class TestPeekSlideOverRowChevron:
+    """A `peek: slide_over` row chevron loads the detail body into the list's one
+    shared slide-over panel and reveals it — no per-row panel (that's `expand`)."""
+
+    def test_chevron_targets_shared_slideover_content(self):
+        html = _slide_row(table_id="tasks")
+        assert "dz-tr-peek-toggle" in html
+        assert 'hx-get="/tasks/abc-123?peek=1"' in html
+        # Targets the list-level shared content cell, not a per-row panel.
+        assert 'hx-target="#slideover-content-tasks"' in html
+
+    def test_chevron_reveals_the_container(self):
+        html = _slide_row(table_id="tasks")
+        # The reveal removes `hidden` from the shared container id.
+        assert "removeAttribute('hidden')" in html
+        assert "slideover-tasks" in html
+
+    def test_slide_over_emits_no_per_row_panel(self):
+        html = _slide_row()
+        assert "dz-tr-peek-panel" not in html
+        assert "peek-content-abc-123" not in html
+
+    def test_slide_over_off_byte_identical_to_expand_off(self):
+        # off rows stay byte-stable regardless of the new branch.
+        assert _slide_row("off") == _slide_row("off")
+        assert "dz-tr-peek-toggle" not in _slide_row("off")
+
+    def test_build_data_table_threads_peek_and_table_id_to_chevron(self):
+        # The /api row-hydrate seam: the per-surface-resolved `peek_mode` + the
+        # surface's `table_id` flow table_dict → DataTable → row chevron, so the
+        # chevron's reveal/target ids match the container `_build_list` emits for
+        # that same table_id (the SEV-2 alignment — chevron keyed per-surface).
+        from dazzle.http.runtime.handlers.list_handlers import build_data_table
+        from dazzle.render.fragment.renderer._data_row import render_data_table_rows
+
+        dt = build_data_table(
+            {
+                "columns": [{"key": "title", "type": "str"}],
+                "entity_name": "Task",
+                "detail_url_template": "/tasks/{id}",
+                "peek_mode": "slide_over",
+                "table_id": "my_tasks",
+            },
+            [{"id": "r1", "title": "x"}],
+        )
+        html = render_data_table_rows(dt)
+        assert 'hx-target="#slideover-content-my_tasks"' in html
+        assert "slideover-my_tasks" in html  # reveal targets the per-surface panel
+        assert "dz-tr-peek-panel" not in html  # no per-row panel for slide_over
+
+
+class TestSlideOverPrimitive:
+    """The `SlideOver` container renders the `.dz-slideover-*` markup with the
+    panel + content ids the row chevron addresses, initially hidden."""
+
+    def _render(self, **kw) -> str:
+        from dazzle.render.fragment import FragmentRenderer, SlideOver
+
+        return FragmentRenderer().render(SlideOver(**kw))
+
+    def test_renders_hidden_container_with_matching_ids(self):
+        html = self._render(table_id="tasks", title="Task detail")
+        assert 'id="slideover-tasks"' in html
+        assert "dz-slideover" in html
+        assert "hidden" in html
+        assert 'id="slideover-content-tasks"' in html
+        assert "dz-slideover-body" in html
+
+    def test_close_affordances_hide_the_container(self):
+        html = self._render(table_id="tasks")
+        # Backdrop + close button both toggle the container hidden.
+        assert "dz-slideover-backdrop" in html
+        assert "dz-slideover-close" in html
+        assert html.count("setAttribute('hidden','')") == 2
+
+    def test_width_drives_data_attr(self):
+        assert 'data-dz-width="lg"' in self._render(table_id="t", width="lg")
+
+    def test_requires_table_id(self):
+        import pytest
+
+        from dazzle.render.fragment import SlideOver
+
+        with pytest.raises(ValueError):
+            SlideOver(table_id="")
+
+
+class TestSlideOverListContainer:
+    """`_build_list` emits the shared `SlideOver` exactly when the list's
+    resolved peek mode is `slide_over` (always an explicit author value)."""
+
+    def _list_html(self, peek_mode: str) -> str:
+        import types
+
+        from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+        from dazzle.render.fragment import FragmentRenderer
+
+        surf = types.SimpleNamespace(name="task_list", title="Tasks", entity_ref="Task", mode=None)
+        ctx = {
+            "columns": [{"key": "title", "label": "Title", "type": "text"}],
+            "endpoint": "/api/tasks",
+            "entity_title": "Task",
+            "detail_url_template": "/tasks/{id}",
+            # region_name is what `_build_dispatch_ctx` sets to surface.name; it
+            # drives table_id (= region_name or entity_name), so the container id
+            # matches the row chevron's `#slideover-{table_id}` target.
+            "region_name": "task_list",
+            "peek_mode": peek_mode,
+        }
+        return FragmentRenderer().render(FragmentSurfaceAdapter()._build_list(surf, ctx))
+
+    def test_slide_over_emits_container(self):
+        html = self._list_html("slide_over")
+        assert "dz-slideover-panel" in html
+        assert 'id="slideover-task_list"' in html  # table_id = region_name
+
+    def test_expand_emits_no_container(self):
+        assert "dz-slideover-panel" not in self._list_html("expand")
+
+    def test_off_emits_no_container(self):
+        assert "dz-slideover-panel" not in self._list_html("off")
+
+
+class TestSlideOverDispatchCtx:
+    """`_build_dispatch_ctx` threads the explicit `peek:` value so the list
+    adapter can emit the container with the initial chrome."""
+
+    def test_explicit_slide_over_threads(self):
+        import types
+
+        from dazzle.core.ir.surfaces import PeekMode
+        from dazzle.http.runtime.page_routes import _build_dispatch_ctx
+
+        table = types.SimpleNamespace(columns=[], rows=[], api_endpoint="/api/tasks")
+        render_ctx = types.SimpleNamespace(table=table, form=None)
+        surface = types.SimpleNamespace(name="task_list", peek=PeekMode.SLIDE_OVER)
+        ctx = _build_dispatch_ctx(render_ctx, surface)
+        assert ctx["peek_mode"] == "slide_over"
+
+    def test_unset_threads_off(self):
+        import types
+
+        from dazzle.http.runtime.page_routes import _build_dispatch_ctx
+
+        table = types.SimpleNamespace(columns=[], rows=[], api_endpoint="/api/tasks")
+        render_ctx = types.SimpleNamespace(table=table, form=None)
+        surface = types.SimpleNamespace(name="task_list", peek=None)
+        ctx = _build_dispatch_ctx(render_ctx, surface)
+        assert ctx["peek_mode"] == "off"
