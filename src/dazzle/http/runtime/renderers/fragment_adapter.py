@@ -64,16 +64,32 @@ def render_generic_detail(surface: SurfaceLike, ctx: dict[str, Any]) -> str:
     return FragmentRenderer().render(FragmentSurfaceAdapter()._build_view(surface, ctx))
 
 
+# #1491 1d: detail fields carry FORM-input types (`checkbox`/`datetime`/
+# `number`/`select`/`textarea`), but the shared cell core speaks DISPLAY types
+# (`bool`/`date`/`badge`/…). Without this reconciliation every form-typed value
+# fell through the core to a raw `str()` truncate — leaking `True`, raw ISO
+# timestamps, full-precision floats, and mangled JSON into detail views.
+_FORM_KIND_TO_DISPLAY: dict[str, str] = {
+    "checkbox": "bool",
+    "select": "badge",
+    "datetime": "datetime",
+    "number": "number",
+    "textarea": "text",  # a JSON dict value is summarised by the core default branch
+}
+
+
 def _detail_field_value(f: dict[str, Any]) -> Fragment:
     """ADR-0049 Phase 2 (flip review): render one detail field VALUE through the
     same typed-cell core the list rows use (`_render_cell_display`) — so `ref`
     (display name), `money`/`currency`, `badge` (WCAG chrome), `bool` (icon),
-    `file` (download link) all render at parity instead of as a raw value."""
+    `file` (download link), `datetime`/`number`/`json` (#1491 1d) all render at
+    parity instead of as a raw value."""
     value = f.get("value")
     if value in (None, "", "—"):
         return Text("—")
+    kind = str(f.get("kind", "text") or "text")
     col = {
-        "type": str(f.get("kind", "text") or "text"),
+        "type": _FORM_KIND_TO_DISPLAY.get(kind, kind),
         "currency_code": str(f.get("currency_code", "") or ""),
         "semantic_map": dict(f.get("semantic_map", {}) or {}),
     }

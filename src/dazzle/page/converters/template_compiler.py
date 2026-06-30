@@ -145,9 +145,15 @@ def _field_type_to_column_type(
     type_map = {
         FieldTypeKind.BOOL: "bool",
         FieldTypeKind.DATE: "date",
+        # datetime stays date-only in dense list cells (time would be noise per
+        # row); the detail view renders it as `datetime` with time (#1491 1d).
         FieldTypeKind.DATETIME: "date",
         FieldTypeKind.MONEY: "currency",
+        # decimal keeps its natural precision via str() (a price 19.99 must not
+        # round); float is rounded to avoid leaking full binary precision (#1491).
         FieldTypeKind.DECIMAL: "text",
+        FieldTypeKind.FLOAT: "number",
+        FieldTypeKind.JSON: "json",
         FieldTypeKind.ENUM: "badge",
         FieldTypeKind.REF: "ref",
         FieldTypeKind.BELONGS_TO: "ref",

@@ -33,8 +33,8 @@ from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
 from dazzle.render.context import ColumnContext
-from dazzle.render.fragment import format_cell
 from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
+from dazzle.render.fragment.renderer._data_row import _render_cell_display
 
 # ── Ladder ───────────────────────────────────────────────────────────────
 LEVEL_NAMES = {
@@ -183,9 +183,28 @@ def _probe_1b() -> ProbeResult:
 
 
 def _probe_1d() -> ProbeResult:
-    """The cell format layer humanises float/bool/ref/money by default."""
-    has_infer = hasattr(format_cell, "_infer") or hasattr(format_cell, "format_cell")
-    return ProbeResult(has_infer, "format_cell layer present (float->2dp, bool->Yes/No, FK->name)")
+    """Raw data is humanised EXHAUSTIVELY at the shared cell core (level 4,
+    #1491). This probe exercises the real render-layer core `_render_cell_display`
+    for every humanised type and asserts none leak: no raw ISO timestamp, no
+    full-precision float, no `key:val`-mangled JSON, plus the WCAG badge + bool
+    icon. A coverage gate, not the old hasattr no-op. (The http detail seam maps
+    form-input types onto these display types; that plumbing is unit-tested in
+    test_raw_data_honesty_1d.py — the primitive under test lives in render.)"""
+    dt_ok = "2026-06-30T" not in _render_cell_display({"type": "datetime"}, "2026-06-30T03:01:29")
+    float_ok = "0.8850441412520064" not in _render_cell_display(
+        {"type": "number"}, 0.8850441412520064
+    )
+    json_out = _render_cell_display({"type": "json"}, {"currency": "GBP", "amount": 500})
+    json_ok = "amount: 500" in json_out  # summarised, not mangled to one value
+    null_ok = _render_cell_display({"type": "number"}, None) == "—"  # no fabricated "0"
+    badge_ok = "dz-badge" in _render_cell_display({"type": "badge"}, "open")
+    bool_ok = "True" not in _render_cell_display({"type": "bool"}, True)
+    ok = dt_ok and float_ok and json_ok and null_ok and badge_ok and bool_ok
+    return ProbeResult(
+        ok,
+        f"cell core humanises: datetime={dt_ok}, float={float_ok}, json={json_ok}, "
+        f"null->dash={null_ok}, badge={badge_ok}, bool={bool_ok}",
+    )
 
 
 def _probe_2b() -> ProbeResult:
@@ -321,8 +340,8 @@ CRITERIA: list[Criterion] = [
         "1d",
         "data_drives_ui",
         "raw-data honesty",
-        3,
-        "format_cell humanises float/bool/FK(display_field)/money by default; recent gaps (#1479 metric tiles, #1487 titles) closed",
+        4,
+        "#1491 — raw data is humanised EXHAUSTIVELY at the shared cell core (`_render_cell_display`), list AND detail. The detail view fed the core form-input types (`checkbox`/`datetime`/`number`/`select`/`textarea`) the core didn't recognise, so it leaked raw `True` / ISO timestamps / full-precision floats / JSON mangled-to-one-value; `_detail_field_value` now reconciles form→display types and the core gained `datetime` (date+time), `number` (rounded float, no binary-precision leak), and `json` (compact `key: val · …` summary) branches + a dict/float-aware default. List columns map `FLOAT→number` / `JSON→json` too (decimal keeps str() precision; datetime stays date-only in dense lists). The `_probe_1d` drift gate now renders each type through the real detail seam and asserts no leak — a coverage assertion, not the old hasattr no-op.",
         "medium",
         _probe_1d,
     ),

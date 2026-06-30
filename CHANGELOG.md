@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.52] - 2026-06-30
+
+### Fixed
+- **Detail views no longer leak raw data — UX-maturity 1d → level 4 (#1491; overall index 3.46 → 3.54).** Detail views render field values through the shared cell core (`_render_cell_display`, the ADR-0049 list/detail convergence), but the detail seam fed it FORM-input types (`checkbox`/`datetime`/`number`/`select`/`textarea`) the core didn't recognise — so everything except date/ref/money/badge/file fell through to a raw `str()` and **detail pages shipped raw `True`, raw ISO timestamps (`2026-06-30T03:01:29`), full-precision floats (`0.8850441412520064`), and mangled JSON** (a `{"currency":"GBP","amount":500}` blob collapsed to `GBP` because `_truncate_filter` routed the dict through the FK-display helper). Fixes: (1) `_detail_field_value` reconciles form→display types (`checkbox`→bool, `select`→badge, `datetime`→datetime, `number`→number, `textarea`→text); (2) the cell core gained `datetime` (date+time), `number` (rounded float — no binary-precision leak), and `json` (compact `key: val · …` summary) branches, plus a dict/float-aware text default and null→`—` guards; (3) the list column-type map adds `FLOAT→number` and `JSON→json` (decimal keeps `str()` precision, datetime stays date-only in dense list cells). Independent adversarial review caught + fixed two latent null-cell leaks (a null `number` fabricated `0`, a null `json` leaked `None`) before flip; verified Decimal isn't rounded, bool can't hit the float path, JSON summaries are HTML-escaped (XSS-safe), and the existing list-row byte output is unchanged (no current example has FLOAT/JSON list columns). The `_probe_1d` drift gate is now a render-the-real-core coverage assertion, not the old hasattr no-op. Full suite 19431 passed.
+
+### Agent Guidance
+- **All field types humanise in detail views now (#1491, 1d).** datetime → `30 Jun 2026 03:01`, float → rounded, bool → icon, enum → badge, JSON → `key: value · …` summary, null → `—`. The single humanisation seam is `_render_cell_display` (`render/fragment/renderer/_data_row.py`); the http detail seam (`_detail_field_value`) maps form-input kinds onto its display types. When adding a new display type, add an empty-guard (`value in (None, "", "—") → "—"`) alongside the branch — a missing guard leaks `None`/`0` for null list cells (the bug the adversarial review caught here).
+
 ## [0.92.51] - 2026-06-30
 
 ### Changed

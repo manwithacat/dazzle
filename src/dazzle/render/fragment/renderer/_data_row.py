@@ -22,6 +22,7 @@ from dazzle.render.filters import (
     _bool_icon_filter,
     _currency_filter,
     _date_filter,
+    _metric_number_filter,
     _ref_display_name,
     _truncate_filter,
     badge_icon_html,
@@ -218,14 +219,48 @@ def _render_inline_edit(item: dict[str, Any], col: dict[str, Any], value: Any) -
     return f'<div class="dz-inline-edit">{editor}{spinner}{error}</div>'
 
 
+def _json_summary(value: Any, *, max_pairs: int = 4, length: int = 80) -> str:
+    """Humanise a JSON value (#1491 1d) — a compact `key: val · key: val`
+    summary for a dict, `a, b, c` for a list — instead of a raw blob or (worse)
+    `_ref_display_name` mangling a dict down to a single arbitrary value."""
+    if isinstance(value, dict):
+        parts = [f"{k}: {v}" for k, v in list(value.items())[:max_pairs]]
+        text = " · ".join(parts)
+        if len(value) > max_pairs:
+            text += " · …"
+    elif isinstance(value, (list, tuple)):
+        parts = [str(x) for x in list(value)[:max_pairs]]
+        text = ", ".join(parts)
+        if len(value) > max_pairs:
+            text += ", …"
+    else:
+        text = str(value)
+    return text[:length] + "…" if len(text) > length else text
+
+
 def _render_cell_display(col: dict[str, Any], value: Any) -> str:
     """Render the display-mode value for one table cell.
 
     Mirrors the type-dispatch in `table_rows.html` (badge / bool /
-    date / currency / sensitive / ref / percentage / text default).
+    date / datetime / number / json / currency / sensitive / ref /
+    percentage / text default). #1491 1d: datetime/number/json are
+    humanised at the core so detail views (which feed the cell core
+    form-typed values) stop leaking raw ISO / `True` / full-precision
+    floats / mangled JSON.
     """
 
     col_type = str(col.get("type", "") or "")
+    # #1491 1d: an empty value renders the em-dash placeholder for the humanised
+    # types — a null `number` must NOT fabricate "0" and a null `json` must NOT
+    # leak "None" (the detail seam guards upstream; list rows reach here directly).
+    if col_type in ("datetime", "number", "json") and value in (None, "", "—"):
+        return "—"
+    if col_type == "datetime":
+        return _html_mod.escape(_date_filter(value, "%d %b %Y %H:%M"), quote=False)
+    if col_type == "number":
+        return _html_mod.escape(_metric_number_filter(value), quote=False)
+    if col_type == "json":
+        return _html_mod.escape(_json_summary(value), quote=False)
     if col_type == "badge":
         if value in (None, "", "—"):
             return '<span class="dz-badge-empty" aria-label="No status">—</span>'
@@ -280,12 +315,18 @@ def _render_cell_display(col: dict[str, Any], value: Any) -> str:
             f'<a href="{href}" target="_blank" rel="noopener" class="dz-detail-file-link">'
             f"{label}</a>"
         )
-    # Default text cell — truncated.
-    return (
-        '<span class="dz-tr-cell-truncate">'
-        f"{_html_mod.escape(_truncate_filter(value or ''), quote=False)}"
-        "</span>"
-    )
+    # Default text cell — truncated. #1491 1d: a dict/list value (an unmapped
+    # `json` field, e.g. a `text`-typed column over JSON data) is summarised
+    # rather than routed through `_truncate_filter` → `_ref_display_name`, which
+    # mangles a dict down to one arbitrary value. A float is rounded rather than
+    # leaking full binary precision.
+    if isinstance(value, (dict, list, tuple)):
+        inner = _json_summary(value)
+    elif isinstance(value, float):
+        inner = _metric_number_filter(value)
+    else:
+        inner = _truncate_filter(value or "")
+    return f'<span class="dz-tr-cell-truncate">{_html_mod.escape(inner, quote=False)}</span>'
 
 
 def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:

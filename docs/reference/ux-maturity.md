@@ -105,7 +105,12 @@ surfaces/displays/visibility (see "Revisions", below).
   magnitude/direction without asserting good/bad; declared `semantic:` (1b) owns
   tone. An explicit `delta:` wins; no `created_at` stays a lone KPI.**
 - **1d — raw-data honesty.** Are UUID / FK / ISO / float / JSON / bool
-  unrenderable raw by default (resolved / rounded / humanised)?
+  unrenderable raw by default (resolved / rounded / humanised)? **Level 4 (#1491):
+  the shared cell core humanises every type, list AND detail — `datetime` (date+
+  time), `number` (rounded float), `json` (compact `key: val · …` summary), bool
+  (icon), badge (WCAG chrome), null (`—`). The detail view's form-input types are
+  reconciled to these display types; the `_probe_1d` drift gate renders each
+  through the real core and asserts no raw leak.**
 
 ### Progressive disclosure — choose the *amount*
 - **2a — answer-first landing.** Does the persona land on a workspace that leads
