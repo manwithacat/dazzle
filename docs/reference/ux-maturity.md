@@ -96,7 +96,13 @@ surfaces/displays/visibility (see "Revisions", below).
   state — a graph sink — is inferred a `success` end-state). Precedence:
   declared > name-guess > SM-terminal > neutral.**
 - **1c — comparison context.** Are lone scalars avoided — is a number shown with
-  trend / rank / distribution / outlier by default?
+  trend / rank / distribution / outlier by default? **Level 3 (#1491): an unset
+  `metrics`/`summary` tile infers a 30-day period-over-period delta by default
+  for a `count()` over an entity with `created_at` (`resolve_comparison`,
+  applied at the `_compute_aggregate_metrics` seam). Inferred deltas are
+  `neutral`-sentiment — magnitude/direction without asserting good/bad; declared
+  `semantic:` (1b) owns tone. An explicit `delta:` wins; no `created_at` or a
+  non-count grain stays a lone KPI. L4 follow-on: infer for scalar/sum/avg grains.**
 - **1d — raw-data honesty.** Are UUID / FK / ISO / float / JSON / bool
   unrenderable raw by default (resolved / rounded / humanised)?
 

@@ -24,9 +24,10 @@ from typing import Any
 
 # Hoisted (no cycle: qa -> render/page/core is the correct layer direction; #1438).
 from dazzle._version import get_version
-from dazzle.core.ir import PeekMode, state_machine, workspaces
+from dazzle.core.ir import AggregateRef, PeekMode, state_machine, workspaces
 from dazzle.page import app_paths
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
+from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
 from dazzle.render.context import ColumnContext
@@ -114,11 +115,29 @@ def _probe_1a() -> ProbeResult:
 
 
 def _probe_1c() -> ProbeResult:
-    """Comparison/distribution vocabulary exists (so the gap is the default, not
-    the vocabulary)."""
+    """Comparison context IS inferred by default (level 3): an unset metrics
+    region over a `count()` of an entity with `created_at` resolves to a
+    period-over-period `DeltaSpec` via the #1491 default-flip, so a scalar shows
+    trend context rather than a lone KPI — and an explicit `delta:` still wins.
+    Confirms the declared level by exercising the real resolver, plus that the
+    comparison-family display vocabulary exists."""
+    dated_entity = SimpleNamespace(fields=[SimpleNamespace(name="created_at")])
+    undated_entity = SimpleNamespace(fields=[SimpleNamespace(name="id")])
+    aggs = {"n": AggregateRef(func="count", entity="Order")}
+    repos_dated = {"Order": SimpleNamespace(entity_spec=dated_entity)}
+    repos_undated = {"Order": SimpleNamespace(entity_spec=undated_entity)}
+
+    default_infers = resolve_comparison(aggs, repos_dated) is not None
+    # An entity with no comparison source gracefully stays a lone KPI.
+    undated_stays_kpi = resolve_comparison(aggs, repos_undated) is None
     _, kinds = _display_kinds()
     have = kinds & {"comparison", "radar", "box_plot", "bullet", "sparkline", "heatmap"}
-    return ProbeResult(bool(have), f"comparison-family kinds present: {sorted(have)}")
+    ok = default_infers and undated_stays_kpi and bool(have)
+    return ProbeResult(
+        ok,
+        f"unset-count->infer-delta={default_infers}, undated->kpi={undated_stays_kpi}, "
+        f"comparison-family kinds={sorted(have)}",
+    )
 
 
 def _probe_1b() -> ProbeResult:
@@ -239,8 +258,8 @@ CRITERIA: list[Criterion] = [
         "1c",
         "data_drives_ui",
         "comparison context",
-        2,
-        "comparison/outlier/rag/sparkline kinds exist (#1470) but are opt-in; a scalar defaults to a lone KPI",
+        3,
+        "#1491 — an unset `metrics`/`summary` tile now infers comparison context by DEFAULT: `resolve_comparison` (`page/runtime/comparison_resolver`) synthesises a 30-day period-over-period `DeltaSpec` for a `count()` over an entity with `created_at`, applied at the shared `_compute_aggregate_metrics` seam (so both server-render + htmx lazy-fetch light up), so a scalar shows a trend arrow + `vs prior 30 days` instead of a lone KPI. Sentiment is `neutral` for an inferred delta — magnitude/direction without asserting good/bad (declared `semantic:`/1b owns tone). An explicit author `delta:` always wins; an entity with no `created_at` (or a non-count grain) gracefully stays a lone KPI. The comparison/outlier/rag/sparkline display kinds (#1470) remain for richer opt-in forms. L4 follow-on: infer the comparison for scalar/sum/avg grains too.",
         "high",
         _probe_1c,
     ),

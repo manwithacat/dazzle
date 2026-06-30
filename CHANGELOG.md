@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.47] - 2026-06-30
+
+### Changed
+- **Scalar `metrics`/`summary` tiles now infer a comparison delta by default — UX-maturity 1c → level 3 (#1491; overall index 3.15 → 3.23).** The period-over-period delta machinery already shipped (#884), but a `DeltaSpec` only ever came from an explicit author `delta:` block — so an undeclared `count()` tile rendered a lone KPI number. `resolve_comparison` (new `page/runtime/comparison_resolver.py`, mirroring the `display: auto` / `peek:` / `when_empty:` default-flip pattern) now synthesises a default **30-day** period-over-period `DeltaSpec` for a `count()` tile whose source entity has `created_at`, applied at the single shared `_compute_aggregate_metrics` seam so **both** the server-render and htmx lazy-fetch paths light up. A scalar count tile shows a trend arrow + `vs prior 30 days` instead of a bare number. Inferred deltas are **`neutral`-sentiment** — magnitude/direction without asserting good/bad (a rising open-ticket count must not render green just because it went up); declared `semantic:` (1c's sibling 1b) owns tone. An explicit author `delta:` always wins; an entity with no `created_at`, or a non-count grain (sum/avg/scalar), gracefully stays a lone KPI. `dazzle ux maturity` re-scores 1c L2 → L3 (drift-gated via `_probe_1c`, which now exercises the real resolver). L4 follow-on: infer the comparison for scalar/sum/avg grains too.
+
+### Agent Guidance
+- **Count-metric tiles get an automatic 30-day trend now (#1491).** An unset `metrics`/`summary` region with a `count()` over an entity that has `created_at` renders a period-over-period delta by default — authors get comparison context for free. To opt a tile out or change the window/label/sentiment, declare an explicit `delta:` block (it always overrides the inferred default). Inferred deltas are `neutral` (no green/red); assert good/bad only via a declared `semantic:` binding. The flip lives in `resolve_comparison` (`page/runtime/comparison_resolver`), applied at `_compute_aggregate_metrics`.
+
 ## [0.92.46] - 2026-06-30
 
 ### Added

@@ -41,6 +41,7 @@ from dazzle.core.ir import AggregateRef, BucketRef, ConditionExpr, ConditionValu
 from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
 from dazzle.core.ir.condition_to_predicate import condition_expr_to_scope_predicate
 from dazzle.core.ir.fk_graph import FKGraph as _FKGraph
+from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.render.display_names import _resolve_display_name
 
 logger = logging.getLogger(__name__)
@@ -1288,7 +1289,18 @@ async def _compute_aggregate_metrics(
     ``delta`` (current - prior), ``delta_pct``, ``delta_direction``
     (up|down|flat), ``delta_sentiment`` (positive_up|positive_down|neutral),
     and ``delta_period_label`` keys.
+
+    1c default-flip (#1491): when no explicit author ``delta:`` was declared,
+    ``resolve_comparison`` infers a default 30-day period-over-period
+    ``DeltaSpec`` for a ``count()`` tile whose source entity has ``created_at``,
+    so a scalar metric shows comparison context by default instead of a lone
+    KPI. An explicit ``delta:`` always wins (it arrives non-None). Applied at
+    this single shared seam so both the server-render and htmx lazy-fetch paths
+    light up.
     """
+    if delta is None:
+        delta = resolve_comparison(aggregates, repositories)
+
     async_tasks: list[tuple[str, Any]] = []
     sync_results: dict[str, Any] = {}
     metric_order: list[str] = []
