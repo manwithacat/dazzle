@@ -676,6 +676,20 @@ pages:
 # sitespec(operation="scaffold")
 ```
 
+### Custom client JS (`[ui] app_scripts`)
+
+Project files in `static/js/*.js` are served automatically, but a script is only *loaded* when it's referenced from the page `<head>`. To thread your own client JS (custom islands, controllers) into the app shell, list the served URLs under `[ui] app_scripts` in `dazzle.toml`:
+
+```toml
+[ui]
+app_scripts = [
+  "/static/js/dz-islands.js",
+  "/static/js/charts.js",
+]
+```
+
+The scripts are appended to the app-shell `<head>` **after** the framework bundle, in declared order (so they can depend on the framework runtime), and go through the same content-hash fingerprinting as framework assets in production. Point at any served path; an empty/absent list leaves the framework-only script set unchanged.
+
 **Related:** [Sitespec](frontend.md#sitespec), [Section Types](frontend.md#section-types)
 
 ---

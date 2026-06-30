@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.46] - 2026-06-30
+
+### Added
+- **`[ui] app_scripts` — a hook for downstream apps to include custom client JS — #1515.** A project lists served script URLs (`[ui] app_scripts = ["/static/js/dz-islands.js"]`) and `resolve_app_chrome` threads them into the app-shell `<head>` **after** the framework + onboarding scripts, in declared order (so they can depend on the framework runtime), through the same content-hash fingerprint pass as framework assets. Static serving of the app's own `static/js/*.js` already worked (#793); this closes the chrome-threading gap that left custom islands unloaded on v0.92. The key is validated at parse time (must be a list of strings) and mirrors the existing `[ui]` flattened-field pattern (`favicon` / `app_theme`). Empty/absent list → framework-only script set unchanged (byte-stable). Documented in `docs/reference/frontend.md`.
+
+### Agent Guidance
+- **Downstream client JS goes in `[ui] app_scripts` (#1515).** When a Dazzle app needs custom client JS (islands, controllers) loaded into the app shell, add the served URL(s) to `[ui] app_scripts` in `dazzle.toml` — do NOT expect a bare `static/js/*.js` file to auto-load. Scripts load after the framework bundle in listed order; point at any `/static/...` path. The CSS-side analogue remains the `/static/css/custom.css` auto-include.
+
 ## [0.92.45] - 2026-06-30
 
 ### Fixed

@@ -45,6 +45,36 @@ class TestResolveAppChrome:
         chrome = resolve_app_chrome(None, project_root=None, manifest=manifest)
         assert chrome.use_cdn is True
 
+    def test_manifest_app_scripts_appended_after_framework(self) -> None:
+        # #1515: downstream [ui] app_scripts thread into the chrome <head>
+        # after the framework bundle, in declared order.
+        manifest = SimpleNamespace(
+            favicon=None,
+            cdn=False,
+            app_theme=None,
+            app_scripts=["/static/js/dz-islands.js", "/static/js/charts.js"],
+        )
+        chrome = resolve_app_chrome(None, project_root=None, manifest=manifest)
+        assert chrome.js_scripts[-2:] == (
+            "/static/js/dz-islands.js",
+            "/static/js/charts.js",
+        )
+        # Framework bundle still precedes the app scripts.
+        assert chrome.js_scripts.index("/static/dist/dazzle.min.js") < chrome.js_scripts.index(
+            "/static/js/dz-islands.js"
+        )
+
+    def test_manifest_no_app_scripts_is_byte_stable(self) -> None:
+        # Absent / empty app_scripts → unchanged framework-only script list.
+        manifest = SimpleNamespace(favicon=None, cdn=False, app_theme=None, app_scripts=[])
+        chrome = resolve_app_chrome(None, project_root=None, manifest=manifest)
+        assert chrome.js_scripts == (
+            "/static/dist/dazzle-icons.min.js",
+            "/static/vendor/tom-select.min.js",
+            "/static/vendor/flatpickr.min.js",
+            "/static/dist/dazzle.min.js",
+        )
+
     def test_feedback_widget_threaded_from_appspec(self) -> None:
         appspec = SimpleNamespace(
             feedback_widget=SimpleNamespace(enabled=True),

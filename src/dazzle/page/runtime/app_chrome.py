@@ -235,6 +235,14 @@ def resolve_app_chrome(
     if appspec is not None and getattr(appspec, "guides", None):
         js_scripts.append("/static/js/dz-onboarding.js")
 
+    # #1515 — downstream app custom client JS. Appended after the framework +
+    # onboarding scripts so a project's islands/controllers load last (and can
+    # depend on the framework bundle). Order-preserving; goes through the same
+    # fingerprint pass below. Static serving of static/js/*.js already works
+    # (#793) — this only threads the URLs into the chrome <head>.
+    for _app_script in getattr(manifest, "app_scripts", None) or []:
+        js_scripts.append(str(_app_script))
+
     # #1468: content-hash the framework bundle URLs (prod/staging only) so a
     # deploy's JS/CSS fixes reach returning visitors immediately instead of
     # after the cached bundle's max-age. No-op in dev/test/active-development.

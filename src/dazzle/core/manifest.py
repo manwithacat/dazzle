@@ -716,6 +716,12 @@ class ProjectManifest:
     # the presets shipped in src/dazzle/page/runtime/static/css/themes/<name>.css
     # — e.g. "linear-dark", "paper", "stripe". None = default theme.
     # Distinct from [theme] which covers site/marketing-page tokens.
+    app_scripts: list[str] = field(default_factory=list)  # #1515 — downstream
+    # app client-JS hook. URLs (served paths) appended to the app-shell
+    # <head> after the framework/onboarding scripts, in declared order, so a
+    # project's custom islands/controllers load. Set via `[ui] app_scripts =
+    # ["/static/js/dz-islands.js"]`. Static serving of the app's own
+    # static/js/*.js already works (#793); this only closes the chrome gap.
     haptic: bool = False  # #958 cycle 5 — haptic opt-in. When True, the
     # framework JS calls `navigator.vibrate(...)` on key actions (toast
     # success, swipe, pull-to-refresh complete, confirm submit) on
@@ -1082,6 +1088,14 @@ def load_manifest(path: Path) -> ProjectManifest:
         raise ValueError(
             f"[ui] static_max_age must be a non-negative integer; got {static_max_age_value!r}"
         )
+    # #1515 — downstream custom client-JS hook.
+    app_scripts_value = ui_data.get("app_scripts", [])
+    if not isinstance(app_scripts_value, list) or not all(
+        isinstance(s, str) for s in app_scripts_value
+    ):
+        raise ValueError(
+            f"[ui] app_scripts must be a list of URL strings; got {app_scripts_value!r}"
+        )
 
     # Parse [extensions] section (#786)
     extensions_data = data.get("extensions", {})
@@ -1188,6 +1202,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         assets=assets_mode,
         favicon=favicon_path,
         app_theme=app_theme_name,
+        app_scripts=app_scripts_value,
         dark_mode_toggle=dark_mode_toggle_enabled,
         haptic=haptic_enabled,
         environments=environments,
