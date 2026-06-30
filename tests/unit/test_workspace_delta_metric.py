@@ -299,3 +299,58 @@ class TestComputeAggregateMetricsDelta:
     def test_sentiment_flows_through(self) -> None:
         m = self._run(current=5, prior=10, sentiment="positive_down")
         assert m["delta_sentiment"] == "positive_down"
+
+
+class TestComputeAggregateMetricsScalarDelta:
+    """#1491 L4: a scalar grain (sum/avg/min/max) gets a period-over-period delta
+    too — not just count. The prior value comes from `_fetch_scalar_metric`'s
+    `repo.aggregate()` query, windowed to the prior period."""
+
+    def _make_repo(self, current: float, prior: float) -> MagicMock:
+        from dazzle.http.runtime.aggregate import AggregateBucket
+
+        repo = MagicMock()
+        repo.db = MagicMock()
+        repo.db.placeholder = "%s"
+
+        async def _aggregate(
+            dimensions=None, measures=None, filters=None, limit=1, measure_expressions=None
+        ):
+            filters = filters or {}
+            is_prior = any(k.endswith("__gte") or k.endswith("__lt") for k in filters)
+            name = next(iter(measures))
+            return [AggregateBucket(measures={name: prior if is_prior else current})]
+
+        repo.aggregate = AsyncMock(side_effect=_aggregate)
+        return repo
+
+    def _run_scalar(self, func: str, current: float, prior: float) -> dict:
+        from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
+
+        repo = self._make_repo(current, prior)
+        delta = DeltaSpec(period_seconds=86400, sentiment="neutral", period_label="yesterday")
+        result = asyncio.run(
+            _compute_aggregate_metrics(
+                aggregates={"revenue": AggregateRef(func=func, entity="Order", column="amount")},
+                repositories={"Order": repo},
+                total=0,
+                items=[],
+                scope_filters=None,
+                delta=delta,
+            )
+        )
+        assert len(result) == 1
+        return result[0]
+
+    def test_sum_grain_gets_period_over_period_delta(self) -> None:
+        m = self._run_scalar("sum", current=1000, prior=600)
+        assert m["value"] == 1000
+        assert m["delta"] == 400
+        assert m["delta_direction"] == "up"
+        assert m["delta_sentiment"] == "neutral"
+        assert m["delta_period_label"] == "yesterday"
+
+    def test_avg_grain_negative_delta(self) -> None:
+        m = self._run_scalar("avg", current=3.5, prior=4.0)
+        assert m["delta"] == -0.5
+        assert m["delta_direction"] == "down"

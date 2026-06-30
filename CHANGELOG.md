@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.51] - 2026-06-30
+
+### Changed
+- **The default comparison-delta inference now adapts to the aggregate grain — UX-maturity 1c → level 4 (#1491; overall index 3.38 → 3.46).** The 1c default-flip (v0.92.47) inferred a period-over-period delta only for `count()` tiles. It now fires for **any aggregate grain** — `count` AND scalar `sum`/`avg`/`min`/`max` — so a revenue-`sum` or rating-`avg` metric tile over an entity with `created_at` shows a trend arrow + `vs prior 30 days` by default, not just count tiles. Two seams changed: `resolve_comparison` (`page/runtime/comparison_resolver`) now infers for a scalar grain (windowing against the aggregate's `entity`, or the region's `source_entity` when the scalar declares none), and `_compute_aggregate_metrics` fires the prior-window query per-grain via a new `_prior_period_task` helper (count → `_fetch_count_metric`, scalar → `_fetch_scalar_metric`), keeping current and prior values in lockstep. Inferred deltas remain `neutral`-sentiment; an explicit author `delta:` still wins; an entity with no `created_at` stays a lone KPI. **This is the last L4 increment of the #1491 epic that ships without an htmx-4 / usage-telemetry dependency.**
+
+### Agent Guidance
+- **Scalar metric tiles (sum/avg/min/max) get an automatic 30-day trend now (#1491, 1c L4).** Any `metrics`/`summary` aggregate — not just `count` — over an entity with `created_at` renders a period-over-period delta by default. To opt out or tune the window/sentiment, declare an explicit `delta:` block (always wins). The per-grain prior-period query is built by `_prior_period_task` in `workspace_aggregation.py`; the inference lives in `resolve_comparison` (now takes an optional `source_entity` for entity-less scalar aggregates).
+
 ## [0.92.50] - 2026-06-30
 
 ### Changed

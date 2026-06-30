@@ -117,28 +117,38 @@ def _probe_1a() -> ProbeResult:
 
 
 def _probe_1c() -> ProbeResult:
-    """Comparison context IS inferred by default (level 3): an unset metrics
-    region over a `count()` of an entity with `created_at` resolves to a
-    period-over-period `DeltaSpec` via the #1491 default-flip, so a scalar shows
-    trend context rather than a lone KPI — and an explicit `delta:` still wins.
-    Confirms the declared level by exercising the real resolver, plus that the
-    comparison-family display vocabulary exists."""
+    """Comparison context IS inferred by default and ADAPTS to the aggregate grain
+    (level 4, #1491): an unset metrics region resolves to a period-over-period
+    `DeltaSpec` for *any* grain over an entity with `created_at` — `count` AND
+    scalar `sum`/`avg` (not just count, the level-3 limit) — so a revenue-sum or
+    rating-avg tile gets a trend too. An explicit `delta:` still wins, and an
+    undated entity gracefully stays a lone KPI. Exercises the real resolver."""
     dated_entity = SimpleNamespace(fields=[SimpleNamespace(name="created_at")])
     undated_entity = SimpleNamespace(fields=[SimpleNamespace(name="id")])
-    aggs = {"n": AggregateRef(func="count", entity="Order")}
     repos_dated = {"Order": SimpleNamespace(entity_spec=dated_entity)}
     repos_undated = {"Order": SimpleNamespace(entity_spec=undated_entity)}
 
-    default_infers = resolve_comparison(aggs, repos_dated) is not None
-    # An entity with no comparison source gracefully stays a lone KPI.
-    undated_stays_kpi = resolve_comparison(aggs, repos_undated) is None
+    count_infers = (
+        resolve_comparison({"n": AggregateRef(func="count", entity="Order")}, repos_dated)
+        is not None
+    )
+    # Level 4: a scalar grain infers the comparison too, adapting to the grain.
+    sum_infers = (
+        resolve_comparison(
+            {"rev": AggregateRef(func="sum", entity="Order", column="amount")}, repos_dated
+        )
+        is not None
+    )
+    undated_stays_kpi = (
+        resolve_comparison({"n": AggregateRef(func="count", entity="Order")}, repos_undated) is None
+    )
     _, kinds = _display_kinds()
     have = kinds & {"comparison", "radar", "box_plot", "bullet", "sparkline", "heatmap"}
-    ok = default_infers and undated_stays_kpi and bool(have)
+    ok = count_infers and sum_infers and undated_stays_kpi and bool(have)
     return ProbeResult(
         ok,
-        f"unset-count->infer-delta={default_infers}, undated->kpi={undated_stays_kpi}, "
-        f"comparison-family kinds={sorted(have)}",
+        f"count-infers={count_infers}, scalar-grain-infers={sum_infers}, "
+        f"undated->kpi={undated_stays_kpi}, comparison-family kinds={sorted(have)}",
     )
 
 
@@ -302,8 +312,8 @@ CRITERIA: list[Criterion] = [
         "1c",
         "data_drives_ui",
         "comparison context",
-        3,
-        "#1491 — an unset `metrics`/`summary` tile now infers comparison context by DEFAULT: `resolve_comparison` (`page/runtime/comparison_resolver`) synthesises a 30-day period-over-period `DeltaSpec` for a `count()` over an entity with `created_at`, applied at the shared `_compute_aggregate_metrics` seam (so both server-render + htmx lazy-fetch light up), so a scalar shows a trend arrow + `vs prior 30 days` instead of a lone KPI. Sentiment is `neutral` for an inferred delta — magnitude/direction without asserting good/bad (declared `semantic:`/1b owns tone). An explicit author `delta:` always wins; an entity with no `created_at` (or a non-count grain) gracefully stays a lone KPI. The comparison/outlier/rag/sparkline display kinds (#1470) remain for richer opt-in forms. L4 follow-on: infer the comparison for scalar/sum/avg grains too.",
+        4,
+        "#1491 — an unset `metrics`/`summary` tile infers comparison context by DEFAULT and the inference ADAPTS to the aggregate grain (level 4): `resolve_comparison` (`page/runtime/comparison_resolver`) synthesises a 30-day period-over-period `DeltaSpec` for **any** grain — `count` AND scalar `sum`/`avg`/`min`/`max` — over an entity with `created_at`, and `_compute_aggregate_metrics` fires the prior-window query for every grain (`_prior_period_task`), so a revenue-sum or rating-avg tile shows a trend arrow + `vs prior 30 days`, not just count tiles. Applied at the shared compute seam (server-render + htmx lazy-fetch both light up). Sentiment is `neutral` for an inferred delta — magnitude/direction without asserting good/bad (declared `semantic:`/1b owns tone). An explicit author `delta:` always wins; an entity with no `created_at` gracefully stays a lone KPI. The comparison/outlier/rag/sparkline display kinds (#1470) remain for richer opt-in forms.",
         "high",
         _probe_1c,
     ),

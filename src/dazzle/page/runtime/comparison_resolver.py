@@ -57,23 +57,47 @@ def _entity_has_created_at(entity_spec: Any) -> bool:
     return False
 
 
+def _aggregate_source_entity(ref: AggregateRef, source_entity: str | None) -> str | None:
+    """The entity an aggregate windows against, or ``None`` if it has none.
+
+    A ``count()`` names its entity in ``ref.entity``. A scalar grain
+    (sum/avg/min/max) windows against ``ref.entity`` when set (cross-entity), else
+    the region's own ``source_entity``; a scalar with neither a column nor an
+    expression is a degenerate ref with no source (#1491 L4).
+    """
+    if ref.func == "count":
+        return ref.entity or None
+    if ref.column is None and ref.expression is None:
+        return None
+    return ref.entity if ref.entity is not None else source_entity
+
+
 def resolve_comparison(
     aggregates: dict[str, Any] | None,
     repositories: dict[str, Any] | None,
+    source_entity: str | None = None,
 ) -> DeltaSpec | None:
     """Infer a default period-over-period ``DeltaSpec`` for an unset metrics region.
 
     Returns a 30-day, ``neutral``-sentiment ``DeltaSpec`` when at least one
-    ``count()`` aggregate's source entity has a ``created_at`` field; otherwise
-    ``None`` (the tile stays a lone KPI). The caller applies this only when no
-    explicit author ``delta:`` was declared, so a declared delta always wins.
+    aggregate's source entity has a ``created_at`` field; otherwise ``None`` (the
+    tile stays a lone KPI). The caller applies this only when no explicit author
+    ``delta:`` was declared, so a declared delta always wins.
+
+    L4 (#1491): the inference fires for **any aggregate grain** — ``count`` *and*
+    scalar ``sum``/``avg``/``min``/``max`` — not just count, so a revenue ``sum``
+    or a rating ``avg`` tile shows a period-over-period trend by default too. A
+    scalar grain with no explicit ``entity`` windows against ``source_entity``.
     """
     if not aggregates or not repositories:
         return None
     for ref in aggregates.values():
-        if not isinstance(ref, AggregateRef) or ref.func != "count":
+        if not isinstance(ref, AggregateRef):
             continue
-        repo = repositories.get(ref.entity or "")
+        entity_name = _aggregate_source_entity(ref, source_entity)
+        if not entity_name:
+            continue
+        repo = repositories.get(entity_name)
         entity_spec = getattr(repo, "entity_spec", None) if repo else None
         if entity_spec is not None and _entity_has_created_at(entity_spec):
             return DeltaSpec(

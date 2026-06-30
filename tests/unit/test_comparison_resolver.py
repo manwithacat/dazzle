@@ -35,9 +35,19 @@ def test_entity_without_created_at_stays_lone_kpi() -> None:
     assert resolve_comparison(aggs, _repos(["id", "name"])) is None
 
 
-def test_non_count_grain_is_not_inferred() -> None:
-    # L3 scope is count-only; scalar/sum/avg grains stay lone KPI (L4 follow-on).
-    aggs = {"total": AggregateRef(func="sum", entity="Order", column="amount")}
+def test_scalar_grain_infers_delta_l4() -> None:
+    # #1491 L4: a scalar grain (sum/avg/min/max) over a dated entity now infers a
+    # delta too — not just count. A revenue-sum tile gets a period-over-period trend.
+    for func in ("sum", "avg", "min", "max"):
+        aggs = {"m": AggregateRef(func=func, entity="Order", column="amount")}
+        assert resolve_comparison(aggs, _repos(["id", "created_at"])) is not None, func
+
+
+def test_scalar_grain_without_entity_uses_source_entity_l4() -> None:
+    # A scalar agg with no explicit entity windows against the region's source.
+    aggs = {"m": AggregateRef(func="sum", column="amount")}
+    assert resolve_comparison(aggs, _repos(["id", "created_at"]), source_entity="Order") is not None
+    # …and with no source_entity it can't resolve, so no inference.
     assert resolve_comparison(aggs, _repos(["id", "created_at"])) is None
 
 

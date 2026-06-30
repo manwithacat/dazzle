@@ -1265,6 +1265,53 @@ def _evaluate_derived_metrics(
                 sync_results[name] = 0
 
 
+def _prior_period_task(
+    metric_name: str,
+    ref: Any,
+    repositories: dict[str, Any] | None,
+    source_entity: str | None,
+    prior_window: dict[str, Any],
+) -> Any | None:
+    """Build the prior-period fetch coroutine for one metric's delta (#884, #1491).
+
+    Returns a ``_fetch_count_metric`` / ``_fetch_scalar_metric`` coroutine windowed
+    to the prior period, or ``None`` when the metric isn't a delta-eligible
+    aggregate (not an ``AggregateRef``, no repo, or a degenerate scalar with
+    neither column nor expression). Mirrors the current-value dispatch in
+    ``_compute_aggregate_metrics`` so count and scalar grains stay in lockstep.
+    """
+    if not isinstance(ref, AggregateRef) or repositories is None:
+        return None
+    if ref.func == "count":
+        entity_name = ref.entity or ""
+        agg_repo = repositories.get(entity_name)
+        if not agg_repo:
+            return None
+        return _fetch_count_metric(
+            metric_name, agg_repo, ref.where, prior_window, source_entity=entity_name
+        )
+    # Scalar grain (sum/avg/min/max) — #1491 L4.
+    if ref.column is None and ref.expression is None:
+        return None
+    agg_entity = ref.entity if ref.entity is not None else source_entity
+    if not agg_entity:
+        return None
+    agg_repo = repositories.get(agg_entity)
+    if not agg_repo:
+        return None
+    return _fetch_scalar_metric(
+        metric_name,
+        ref.func,
+        ref.column,
+        agg_repo,
+        ref.where,
+        prior_window,
+        source_entity=agg_entity,
+        expression=ref.expression,
+        expression_alias=ref.entity,
+    )
+
+
 async def _compute_aggregate_metrics(
     aggregates: dict[str, Any],
     repositories: dict[str, Any] | None,
@@ -1299,7 +1346,7 @@ async def _compute_aggregate_metrics(
     light up.
     """
     if delta is None:
-        delta = resolve_comparison(aggregates, repositories)
+        delta = resolve_comparison(aggregates, repositories, source_entity=source_entity)
 
     async_tasks: list[tuple[str, Any]] = []
     sync_results: dict[str, Any] = {}
@@ -1391,9 +1438,9 @@ async def _compute_aggregate_metrics(
         for name in metric_order
     ]
 
-    # v0.61.25 (#884): period-over-period delta. For each count() metric,
-    # fire a second aggregate over the prior window so the template can
-    # render the trend arrow + comparison line.
+    # v0.61.25 (#884): period-over-period delta. For each aggregate metric
+    # (count + scalar grains, #1491 L4), fire a second aggregate over the prior
+    # window so the template can render the trend arrow + comparison line.
     if delta is not None and aggregates and repositories:
         from datetime import datetime, timedelta
 
@@ -1403,33 +1450,26 @@ async def _compute_aggregate_metrics(
         prior_end = now - period
         date_field = delta.date_field or "created_at"
 
+        # Prior-period window: AND-composed with each metric's typed where via
+        # _build_aggregate_filters (→ compile_predicate). Built once — the window
+        # is the same for every metric.
+        prior_window = {
+            f"{date_field}__gte": prior_start.isoformat(),
+            f"{date_field}__lt": prior_end.isoformat(),
+        }
+        if scope_filters:
+            prior_window = {**scope_filters, **prior_window}
+
         prior_tasks: list[Any] = []
         prior_metric_names: list[str] = []
         for metric_name, ref in aggregates.items():
-            if not isinstance(ref, AggregateRef) or ref.func != "count":
+            # #1491 L4: compute a prior-period value for *any* grain — count and
+            # scalar sum/avg/min/max — so a revenue-sum or rating-avg tile gets a
+            # trend too, not just count tiles.
+            task = _prior_period_task(metric_name, ref, repositories, source_entity, prior_window)
+            if task is None:
                 continue
-            entity_name = ref.entity or ""
-            agg_repo = repositories.get(entity_name)
-            if not agg_repo:
-                continue
-            # Prior-period delta: AND-compose the typed where with the
-            # date-window filter via _build_aggregate_filters, which
-            # routes the ConditionExpr through compile_predicate.
-            prior_window = {
-                f"{date_field}__gte": prior_start.isoformat(),
-                f"{date_field}__lt": prior_end.isoformat(),
-            }
-            if scope_filters:
-                prior_window = {**scope_filters, **prior_window}
-            prior_tasks.append(
-                _fetch_count_metric(
-                    metric_name,
-                    agg_repo,
-                    ref.where,
-                    prior_window,
-                    source_entity=entity_name,
-                )
-            )
+            prior_tasks.append(task)
             prior_metric_names.append(metric_name)
 
         prior_map: dict[str, Any] = {}
