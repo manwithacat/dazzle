@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.42] - 2026-06-30
+
+### Fixed
+- **`count(... where field = null)` aggregates now compile to `IS NULL` instead of the never-matching `col = NULL` — #1516.** The aggregate-count where-path (`condition_to_predicate`) preserves the author's original op (`=`/`!=`) when the RHS is a null literal, unlike the RBAC scope path which pre-rewrites to `IS`/`IS_NOT`. `_compile_column_check` only special-cased `IS`/`IS_NOT`, so `field = null` fell through to `col = NULL` (matches nothing → silently returns 0) and `field != null` to `col != NULL`. The fix moves null-op resolution into a single `_null_test_sql(op)` helper at the convergence seam every predicate source flows through, mapping `EQ`/`IS` → `IS NULL` and `NEQ`/`IS_NOT` → `IS NOT NULL`. The same helper fixes a parallel latent bug in `_compile_path_check`, whose `else`-branch turned `path.field = null` (EQ) into `IS NOT NULL` — the inverse of the ask. The `filter:` query path was already correct (it routes the string `"null"` through a dedicated `ISNULL` operator). New regression tests cover EQ/NEQ-against-null at both the column-check and path-check seams.
+
 ## [0.92.41] - 2026-06-30
 
 ### Added

@@ -66,6 +66,24 @@ class TestColumnCheck:
         assert '"deleted_at" IS NULL' in sql
         assert params == []
 
+    def test_eq_null_emits_is_null(self) -> None:
+        # #1516: the aggregate `count(... where field = null)` path keeps op EQ
+        # (it doesn't pre-rewrite to IS like the scope path); EQ + null literal
+        # must still compile to IS NULL, not the never-matching `col = NULL`.
+        p = ColumnCheck(field="deleted_at", op=CompOp.EQ, value=ValueRef(literal_null=True))
+        sql, params = compile_predicate(p, "Task", _simple_graph())
+        assert '"deleted_at" IS NULL' in sql
+        assert "= NULL" not in sql
+        assert params == []
+
+    def test_neq_null_emits_is_not_null(self) -> None:
+        # #1516: NEQ + null literal → IS NOT NULL (not `col != NULL`).
+        p = ColumnCheck(field="deleted_at", op=CompOp.NEQ, value=ValueRef(literal_null=True))
+        sql, params = compile_predicate(p, "Task", _simple_graph())
+        assert '"deleted_at" IS NOT NULL' in sql
+        assert "!= NULL" not in sql
+        assert params == []
+
 
 class TestUserAttrCheck:
     def test_simple(self) -> None:
@@ -93,6 +111,29 @@ class TestPathCheck:
         assert '"manuscript_id" IN' in sql
         assert 'SELECT "id" FROM "Manuscript"' in sql
         assert '"student_id" = %s' in sql
+
+    def test_path_eq_null_emits_is_null(self) -> None:
+        # #1516: `manuscript.student_id = null` (EQ) must compile the terminal
+        # condition to IS NULL. The old else-branch turned EQ into IS NOT NULL —
+        # the inverse of the ask.
+        p = PathCheck(
+            path=["manuscript", "student_id"],
+            op=CompOp.EQ,
+            value=ValueRef(literal_null=True),
+        )
+        sql, _ = compile_predicate(p, "Feedback", _simple_graph())
+        assert '"student_id" IS NULL' in sql
+        assert "IS NOT NULL" not in sql
+
+    def test_path_neq_null_emits_is_not_null(self) -> None:
+        # #1516: `manuscript.student_id != null` (NEQ) → IS NOT NULL.
+        p = PathCheck(
+            path=["manuscript", "student_id"],
+            op=CompOp.NEQ,
+            value=ValueRef(literal_null=True),
+        )
+        sql, _ = compile_predicate(p, "Feedback", _simple_graph())
+        assert '"student_id" IS NOT NULL' in sql
 
     def test_outer_fk_column_table_qualified_param_mode(self) -> None:
         """#1449: in param mode the OUTER root FK column is TABLE-qualified with the

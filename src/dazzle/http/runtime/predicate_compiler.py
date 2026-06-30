@@ -381,6 +381,20 @@ def _op_to_sql(op: CompOp) -> str:
     return _MAP[op]
 
 
+def _null_test_sql(op: CompOp) -> str:
+    """Return ``IS NULL`` or ``IS NOT NULL`` for a comparison against a null literal.
+
+    Predicate sources don't all rewrite the op when the RHS is a null literal:
+    the aggregate ``count(... where field = null)`` path keeps the original
+    ``EQ``/``NEQ`` (condition_to_predicate.py), while the RBAC scope path
+    pre-rewrites to ``IS``/``IS_NOT``. This seam is where every source converges,
+    so it must map *all four* of those ops, not just ``IS``/``IS_NOT`` — otherwise
+    ``= null`` falls through to ``col = NULL`` (matches nothing, silently #1516) or,
+    in the path-check, to ``IS NOT NULL`` (the inverse of what was asked).
+    """
+    return "IS NOT NULL" if op in (CompOp.NEQ, CompOp.IS_NOT) else "IS NULL"
+
+
 # ---------------------------------------------------------------------------
 # Per-node compilers
 # ---------------------------------------------------------------------------
@@ -399,13 +413,10 @@ def _compile_column_check(
     value = predicate.value
 
     if value.literal_null:
-        # IS NULL / IS NOT NULL — no placeholder
-        if predicate.op is CompOp.IS:
-            return f"{col} IS NULL", []
-        if predicate.op is CompOp.IS_NOT:
-            return f"{col} IS NOT NULL", []
-        # Fallback for any other op (unusual but safe)
-        return f"{col} {op_sql} NULL", []
+        # IS NULL / IS NOT NULL — no placeholder. Covers EQ/IS → IS NULL and
+        # NEQ/IS_NOT → IS NOT NULL so `field = null` from the aggregate path
+        # (which keeps the original op) compiles correctly (#1516).
+        return f"{col} {_null_test_sql(predicate.op)}", []
 
     pg_type = (
         _resolve_column_pg_type(predicate.field, entity_name, fk_graph, policy)
@@ -606,10 +617,9 @@ def _path_check_subquery(
     value_op = _op_to_sql(predicate.op)
 
     if predicate.value.literal_null:
-        if predicate.op is CompOp.IS:
-            innermost_condition = f"{quote_identifier(terminal_field)} IS NULL"
-        else:
-            innermost_condition = f"{quote_identifier(terminal_field)} IS NOT NULL"
+        # EQ/IS → IS NULL, NEQ/IS_NOT → IS NOT NULL. The previous else-branch
+        # turned `= null` (EQ) into IS NOT NULL — the inverse of the ask (#1516).
+        innermost_condition = f"{quote_identifier(terminal_field)} {_null_test_sql(predicate.op)}"
         params: list[Any] = []
     else:
         rhs = value_token if policy is not None else "%s"
