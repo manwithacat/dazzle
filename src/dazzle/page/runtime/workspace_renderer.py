@@ -945,13 +945,14 @@ def render_workspace_content_typed(
     )
 
     # ── WorkspacePrimaryAction list ─────────────────────────────────
-    typed_actions = tuple(
-        WorkspacePrimaryAction(label=a["label"], route=a["route"]) for a in primary_actions
-    )
+    def _typed(actions: list[dict[str, str]] | None) -> tuple[WorkspacePrimaryAction, ...]:
+        return tuple(
+            WorkspacePrimaryAction(label=a["label"], route=a["route"]) for a in (actions or [])
+        )
+
+    typed_actions = _typed(primary_actions)
     # 3a (#1491): the demoted tail renders in a `More ⋯` overflow menu.
-    typed_overflow = tuple(
-        WorkspacePrimaryAction(label=a["label"], route=a["route"]) for a in (overflow_actions or [])
-    )
+    typed_overflow = _typed(overflow_actions)
 
     # ── Optional context selector ───────────────────────────────────
     inner_pieces: list[object] = []

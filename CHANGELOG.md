@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.49] - 2026-06-30
+
+### Fixed
+- **Complexity-ratchet regression from the 3a action-prominence work (#1491).** Threading the overflow-action tuple through `render_workspace_content_typed` pushed its cyclomatic complexity 15 → 17 (it was already at the ratchet edge). Extracted the `WorkspacePrimaryAction`-tuple construction into a local `_typed()` helper used for both the primary and overflow lists — removes both comprehensions and the `or []` branch from the parent (back under the 15 budget) and de-duplicates the two call sites. No behaviour change; caught by `test_complexity_ratchet` on the full suite (the targeted pre-push sweeps missed it).
+
 ## [0.92.48] - 2026-06-30
 
 ### Changed
