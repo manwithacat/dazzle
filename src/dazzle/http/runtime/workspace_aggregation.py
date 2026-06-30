@@ -342,6 +342,24 @@ def _resolve_fk_target_spec(
     return getattr(target_repo, "entity_spec", None) if target_repo else None
 
 
+def _resolve_bucket_cast(entity_spec: Any, field_name: str) -> str:
+    """PG cast for a time-bucket column (#1514).
+
+    date/datetime DSL fields are TEXT-stored, so ``date_trunc`` needs an
+    explicit cast or Postgres raises ``date_trunc(unknown, text) does not
+    exist``. Returns ``"date"`` for a ``date`` field, else ``"timestamptz"``
+    (the safe default for ``datetime`` and for an unresolved field — casting an
+    already-typed timestamp is a no-op). The returned value is one of the
+    whitelist entries enforced by ``Dimension.__post_init__``.
+    """
+    fld = next(
+        (f for f in getattr(entity_spec, "fields", []) if f.name == field_name),
+        None,
+    )
+    kind = getattr(getattr(fld, "type", None), "kind", None) if fld else None
+    return "date" if kind == "date" else "timestamptz"
+
+
 async def _compute_pivot_buckets(
     aggregates: dict[str, str],
     repositories: dict[str, Any] | None,
@@ -394,7 +412,13 @@ async def _compute_pivot_buckets(
             # Time-bucketed dim — no FK, no enum, just date_trunc on the
             # timestamp column. The label generator in _format_bucket_label
             # handles the display format.
-            dimensions.append(Dimension(name=dim_entry.field, truncate=dim_entry.unit))
+            dimensions.append(
+                Dimension(
+                    name=dim_entry.field,
+                    truncate=dim_entry.unit,
+                    bucket_cast=_resolve_bucket_cast(source_entity_spec, dim_entry.field),
+                )
+            )
             dim_specs.append(
                 {
                     "name": dim_entry.field,
@@ -532,7 +556,11 @@ async def _aggregate_via_groupby(
 
     # Time-bucketed single-dim path — no FK join, date_trunc in SQL.
     if isinstance(group_by, BucketRef):
-        bucket_dim = Dimension(name=group_by.field, truncate=group_by.unit)  # type: ignore[arg-type]
+        bucket_dim = Dimension(
+            name=group_by.field,
+            truncate=group_by.unit,  # type: ignore[arg-type]
+            bucket_cast=_resolve_bucket_cast(source_entity_spec, group_by.field),
+        )
         buckets = await agg_repo.aggregate(
             dimensions=[bucket_dim],
             measures=measures,

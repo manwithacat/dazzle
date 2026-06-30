@@ -56,6 +56,13 @@ _UNARY_MEASURES: frozenset[str] = frozenset({"sum", "avg", "min", "max"})
 TruncateUnit = Literal["day", "week", "month", "quarter", "year"]
 _VALID_TRUNCATE_UNITS: frozenset[str] = frozenset({"day", "week", "month", "quarter", "year"})
 
+# PG type names a time-bucket column may be cast to before ``date_trunc``.
+# date/datetime DSL fields are stored as TEXT, and ``date_trunc(unknown, text)``
+# does not exist — the cast makes Postgres resolve the timestamptz/date overload
+# (#1514). Casting an already-typed timestamp column is a harmless no-op. The
+# value is whitelist-validated so it is never untrusted interpolation.
+_VALID_BUCKET_CASTS: frozenset[str] = frozenset({"date", "timestamp", "timestamptz"})
+
 
 @dataclass(frozen=True)
 class Dimension:
@@ -76,14 +83,25 @@ class Dimension:
             value. Mutually exclusive with ``fk_table`` (an FK column
             isn't a timestamp). Time dims render in chronological ASC
             order, not alphabetical. Unit is validated on construction.
+        bucket_cast: PG type name (``date`` / ``timestamp`` / ``timestamptz``)
+            to cast the bucketed column to before ``date_trunc``. Required when
+            the date/datetime field is TEXT-stored (the Dazzle convention), as
+            ``date_trunc(unknown, text)`` has no overload (#1514). Whitelist-
+            validated; ``None`` emits the cast-free expression (unchanged).
     """
 
     name: str
     fk_table: str | None = None
     fk_display_field: str | None = None
     truncate: TruncateUnit | None = None
+    bucket_cast: str | None = None
 
     def __post_init__(self) -> None:
+        if self.bucket_cast is not None and self.bucket_cast not in _VALID_BUCKET_CASTS:
+            raise ValueError(
+                f"Invalid bucket cast {self.bucket_cast!r}; "
+                f"expected one of {sorted(_VALID_BUCKET_CASTS)}"
+            )
         if self.truncate is not None:
             if self.truncate not in _VALID_TRUNCATE_UNITS:
                 raise ValueError(
@@ -284,9 +302,12 @@ def _build_aggregate_sql_impl(
         col_q = quote_identifier(dim.name)
         id_alias = quote_identifier(f"dim_{i}_id")
         if dim.is_time_bucket:
-            # `truncate` is validated against _VALID_TRUNCATE_UNITS in
-            # Dimension.__post_init__, so inlining it here is safe.
-            bucket_expr = f"date_trunc('{dim.truncate}', {src}.{col_q})"
+            # `truncate` and `bucket_cast` are both whitelist-validated in
+            # Dimension.__post_init__, so inlining them here is safe. The cast
+            # makes date_trunc resolve for TEXT-stored date columns (#1514);
+            # it's a no-op on an already-typed timestamp.
+            cast_suffix = f"::{dim.bucket_cast}" if dim.bucket_cast else ""
+            bucket_expr = f"date_trunc('{dim.truncate}', {src}.{col_q}{cast_suffix})"
             select_parts.append(f"{bucket_expr} AS {id_alias}")
             group_parts.append(bucket_expr)
             # Chronological order — ASC so earliest bucket first.

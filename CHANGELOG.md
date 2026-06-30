@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.44] - 2026-06-30
+
+### Fixed
+- **`bucket()` time-grouping now casts the column before `date_trunc`, so it works on TEXT-stored date/datetime fields — #1514.** date/datetime DSL fields are stored as TEXT, and `date_trunc('day', col)` on a text column raises `function date_trunc(unknown, text) does not exist` — so any `bar_chart` / `time_series` / `pivot_table` region grouped by `bucket(<date_field>, <unit>)` failed at query time for a downstream app on the TEXT-storage convention. `Dimension` gained a whitelist-validated `bucket_cast` attribute (`date` / `timestamp` / `timestamptz`); the time-bucket branch of `build_aggregate_sql` now emits `date_trunc('<unit>', <src>.<col>::<cast>)` when set. Both call sites that construct time-bucket `Dimension`s (`_compute_pivot_buckets` and the bar_chart single-dim path in `_aggregate_via_groupby`) resolve the cast from the field's DSL type via the new `_resolve_bucket_cast` helper — `date → ::date`, everything else (incl. `datetime`) → `::timestamptz`, which is a harmless no-op on an already-typed timestamp. `bucket_cast=None` emits the cast-free expression unchanged (byte-stable). New tests assert the cast appears in the generated SQL, the date-vs-timestamptz split, byte-stability of the unset case, the validation whitelist, and that the bar_chart caller threads the cast.
+
 ## [0.92.43] - 2026-06-30
 
 ### Fixed

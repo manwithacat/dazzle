@@ -896,13 +896,17 @@ class TestTimeBucketedAggregates:
             ]
         )
 
+        source_entity_spec = SimpleNamespace(
+            name="Alert",
+            fields=[SimpleNamespace(name="created_at", type=SimpleNamespace(kind="datetime"))],
+        )
         rows = await _aggregate_via_groupby(
             agg_repo,
             measures={"count": "count"},
             group_by=BucketRef(field="created_at", unit="day"),
             where_clause=None,
             scope_filters=None,
-            source_entity_spec=None,
+            source_entity_spec=source_entity_spec,
             fk_target_spec=None,
         )
         assert rows == [
@@ -920,11 +924,13 @@ class TestTimeBucketedAggregates:
             },
         ]
 
-        # Aggregate call used a single time-bucket Dimension.
+        # Aggregate call used a single time-bucket Dimension, cast for the
+        # TEXT-stored datetime column (#1514).
         dims = agg_repo.aggregate.call_args.kwargs["dimensions"]
         assert len(dims) == 1
         assert dims[0].truncate == "day"
         assert dims[0].is_time_bucket is True
+        assert dims[0].bucket_cast == "timestamptz"
 
     @pytest.mark.asyncio()
     async def test_pivot_multi_dim_with_time_bucket(self) -> None:

@@ -115,6 +115,51 @@ def test_dimension_invariants() -> None:
         scalar.name = "other"  # type: ignore[misc]
 
 
+def test_time_bucket_emits_cast_when_set() -> None:
+    """#1514: date/datetime fields are TEXT-stored, so the time-bucket expr
+    must cast the column before date_trunc or Postgres raises
+    date_trunc(unknown, text)."""
+    sql, _ = build_aggregate_sql(
+        table_name="Event",
+        placeholder_style="%s",
+        dimensions=[Dimension(name="occurred_at", truncate="day", bucket_cast="timestamptz")],
+        measures={"count": "count"},
+        filters=None,
+    )
+    assert 'date_trunc(\'day\', "Event"."occurred_at"::timestamptz)' in sql
+
+
+def test_time_bucket_date_cast() -> None:
+    """A `date` field casts to ::date, not ::timestamptz (#1514)."""
+    sql, _ = build_aggregate_sql(
+        table_name="Event",
+        placeholder_style="%s",
+        dimensions=[Dimension(name="due_on", truncate="month", bucket_cast="date")],
+        measures={"count": "count"},
+        filters=None,
+    )
+    assert 'date_trunc(\'month\', "Event"."due_on"::date)' in sql
+
+
+def test_time_bucket_without_cast_is_unchanged() -> None:
+    """bucket_cast=None emits the cast-free expression (byte-stable)."""
+    sql, _ = build_aggregate_sql(
+        table_name="Event",
+        placeholder_style="%s",
+        dimensions=[Dimension(name="occurred_at", truncate="day")],
+        measures={"count": "count"},
+        filters=None,
+    )
+    assert 'date_trunc(\'day\', "Event"."occurred_at")' in sql
+    assert "::" not in sql.split("FROM")[0]  # no cast in the SELECT
+
+
+def test_invalid_bucket_cast_rejected() -> None:
+    """Only the whitelist of PG type names is accepted — never raw input."""
+    with pytest.raises(ValueError, match="Invalid bucket cast"):
+        Dimension(name="occurred_at", truncate="day", bucket_cast="text); DROP TABLE")
+
+
 # ---------------------------------------------------------------------------
 # build_aggregate_sql — single dimension
 # ---------------------------------------------------------------------------
