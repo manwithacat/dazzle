@@ -7,10 +7,12 @@ via the helpers in ``vendor_manifest.py``. The companion drift gate in
 ``tests/unit/test_vendor_hash_drift.py`` then catches any divergence between
 on-disk vendored files and the pinned manifest.
 
-This script handles the **auto-update** subset (htmx core + 4 htmx
-extensions, idiomorph, lucide). Other vendored files (Alpine, flatpickr,
-tom-select, etc.) are vendored manually — use
-``scripts/update_vendor_hashes.py`` after replacing them by hand.
+This script handles lucide (auto-update) and the manually-pinned htmx 4 set —
+the core (``update_htmx``, a no-op report) plus the three vendored htmx-4
+extensions (``update_htmx_extensions``: ``hx-preload`` / ``hx-optimistic`` /
+``hx-upsert``), all pinned to ``HTMX_PINNED_VERSION`` and bumped together at GA
+(#1409). Other vendored files (Alpine, flatpickr, tom-select, etc.) are vendored
+manually — use ``scripts/update_vendor_hashes.py`` after replacing them by hand.
 """
 
 from __future__ import annotations
@@ -217,6 +219,36 @@ def update_htmx(*, check_only: bool) -> None:
     )
 
 
+# htmx-4 extensions vendored for the #1491 H-class UX-maturity work (preload-drill
+# 2b, optimistic peek 2c, live upsert). htmx 4 dropped the `hx-ext` attribute —
+# extensions activate simply by being included as `<script>` tags after the core,
+# and a `<meta name="htmx-config" content='{"extensions": "..."}'>` can restrict
+# which load. Pinned to HTMX_PINNED_VERSION (the same manually-vendored beta as the
+# core) so the pair never drifts; re-fetching at the pin is idempotent. Bump these
+# together with the core at GA (#1409).
+HTMX_EXTENSIONS = ("hx-preload", "hx-optimistic", "hx-upsert")
+
+
+def update_htmx_extensions(*, check_only: bool) -> None:
+    """Vendor the pinned htmx-4 extensions from the jsdelivr CDN (#1491/#1409).
+
+    Fetched at ``HTMX_PINNED_VERSION`` (not ``latest``) so they stay locked to
+    the vendored core; a re-run downloads the same bytes → no manifest churn.
+    ``_save_vendor`` records each SHA-256 in the manifest + strips the trailing
+    sourceMappingURL comment (#860), so the drift gate accepts the new files.
+    """
+    print(f"htmx extensions: pinned to {HTMX_PINNED_VERSION} ({', '.join(HTMX_EXTENSIONS)})")
+    if check_only:
+        return
+    for name in HTMX_EXTENSIONS:
+        cdn_url = (
+            f"https://cdn.jsdelivr.net/npm/htmx.org@{HTMX_PINNED_VERSION}/dist/ext/{name}.min.js"
+        )
+        data = _download(cdn_url)
+        _save_vendor(f"{name}.min.js", data)
+        print(f"  downloaded {name}.min.js ({len(data)} bytes) from {cdn_url}")
+
+
 # update_idiomorph removed in the htmx 4 migration (#1405): idiomorph-ext.min.js
 # was dropped in favour of htmx 4's native innerMorph/outerMorph. The cron used
 # to re-vendor it, which would resurrect the deleted file. (GA follow-up: #1409.)
@@ -300,6 +332,7 @@ def main() -> None:
         print("Updating vendored dependencies...\n")
 
     update_htmx(check_only=check_only)
+    update_htmx_extensions(check_only=check_only)
     update_lucide(check_only=check_only)
 
     if check_only:

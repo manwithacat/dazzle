@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Vendored three htmx-4 extensions — enabling groundwork for the htmx-4-gated UX-maturity tier (#1491 / #1409).** With the decision to build on htmx-4-beta rather than wait for GA, `hx-preload.min.js` (preload-drill, 2b), `hx-optimistic.min.js` (optimistic peek-edit, 2c follow-on), and `hx-upsert.min.js` (live list insert-or-update) are now vendored under `static/vendor/`, pinned to `HTMX_PINNED_VERSION` (4.0.0-beta4, matching the vendored core) and hash-recorded in `vendor_hashes.json`. A new `update_htmx_extensions` in `scripts/update_vendors.py` fetches them at the pin from jsdelivr (idempotent; bumped together with the core at GA). htmx 4 dropped the `hx-ext` attribute — extensions activate by `<script>` include after the core, so the feature commits wire the specific ones into the app chrome. `#1409` taken off `future`: the GA *bump* stays pending but no longer blocks dependent work.
+
+### Agent Guidance
+- **htmx-4 extensions are vendored but not yet loaded (#1491/#1409).** `hx-preload` / `hx-optimistic` / `hx-upsert` live in `static/vendor/` but aren't in the app-chrome `js_scripts` yet — a feature using one adds its `<script>` after `htmx.min.js` (htmx 4 has no `hx-ext` attribute; inclusion = activation, restrictable via `<meta name="htmx-config" content='{"extensions":"..."}'>`). To bump htmx: update the vendored core `htmx.min.js` + `HTMX_PINNED_VERSION` + re-run `update_htmx_extensions` together (latest upstream is 4.0.0-beta5).
+
 ## [0.92.52] - 2026-06-30
 
 ### Fixed
