@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.54] - 2026-06-30
+
+### Changed
+- **Drilling is now perceived-instant — UX-maturity 2b → level 4 (#1491; overall index 3.54 → 3.62).** Every clickable list row already drills to the detail via htmx (`hx-get` + click → body swap); it now also carries `hx-preload="mouseover"`, so the vendored htmx-4 `preload` extension (newly bundled into `dazzle.min.js` after the core) warms the detail GET on **hover** and the click serves the cached prefetch — the detail page is already in hand when the user clicks, fleet-wide (the change is in the shared `drill_row_attrs`, used by all three row archetypes since #1511). The extension dedups per row (one prefetch / 5s) so a mouse-sweep down a dense table doesn't storm the server, and the prefetch is the same scope-filtered detail GET, so there's no RBAC or data-exposure change. `dazzle ux maturity` re-scores 2b L3 → L4.
+
+### Agent Guidance
+- **List rows hover-preload their detail now (#1491, 2b L4).** `drill_row_attrs` emits `hx-preload="mouseover"`; the `preload` extension is bundled (don't add a separate `<script>`). To tune aggressiveness, change the trigger on `drill_row_attrs` (`mousedown` = conservative/just-before-click, `mouseover` = hover/current). htmx 4 activates a bundled extension by inclusion — no `hx-ext` attribute.
+
+## [0.92.53] - 2026-06-30
+
 ### Added
 - **Vendored three htmx-4 extensions — enabling groundwork for the htmx-4-gated UX-maturity tier (#1491 / #1409).** With the decision to build on htmx-4-beta rather than wait for GA, `hx-preload.min.js` (preload-drill, 2b), `hx-optimistic.min.js` (optimistic peek-edit, 2c follow-on), and `hx-upsert.min.js` (live list insert-or-update) are now vendored under `static/vendor/`, pinned to `HTMX_PINNED_VERSION` (4.0.0-beta4, matching the vendored core) and hash-recorded in `vendor_hashes.json`. A new `update_htmx_extensions` in `scripts/update_vendors.py` fetches them at the pin from jsdelivr (idempotent; bumped together with the core at GA). htmx 4 dropped the `hx-ext` attribute — extensions activate by `<script>` include after the core, so the feature commits wire the specific ones into the app chrome. `#1409` taken off `future`: the GA *bump* stays pending but no longer blocks dependent work.
 

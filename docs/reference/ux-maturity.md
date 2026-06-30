@@ -116,7 +116,10 @@ surfaces/displays/visibility (see "Revisions", below).
 - **2a — answer-first landing.** Does the persona land on a workspace that leads
   with the answer/anomaly, not raw CRUD?
 - **2b — depth in ≤1 action.** Is detail one cheap click away (auto-drill list →
-  detail), not hunted?
+  detail), not hunted? **Level 4 (#1491): drilling is perceived-instant —
+  clickable rows carry `hx-preload="mouseover"`, so the vendored htmx-4 `preload`
+  extension warms the detail GET on hover and the click serves the cached
+  prefetch, fleet-wide.**
 - **2c — action-proximate detail.** Is row-peek / inline-expand declarative and
   **on by default** where it helps (not a hand-set flag)?
 - **2d — field economy.** Is column priority / hidden-by-default the **default**,

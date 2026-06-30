@@ -51,7 +51,7 @@ class TestEmbeddedArchetype:
             '<tr data-dz-list-kind="embedded" '
             'class="dz-table__row dz-table__row--linked" '
             'hx-get="/x/1" hx-push-url="true" hx-trigger="click" '
-            'hx-target="body" hx-swap="innerHTML" tabindex="0">'
+            'hx-preload="mouseover" hx-target="body" hx-swap="innerHTML" tabindex="0">'
             "<td>Ada</td></tr>"
         ]
 
@@ -95,7 +95,7 @@ class TestListRegionArchetype:
         assert rows == [
             '<tr data-dz-list-kind="region" class="dz-list-row is-clickable" '
             'hx-get="/y/1" hx-push-url="true" hx-trigger="click" '
-            'hx-target="body" hx-swap="innerHTML" tabindex="0">'
+            'hx-preload="mouseover" hx-target="body" hx-swap="innerHTML" tabindex="0">'
             "<td>Ada</td></tr>"
         ]
 
@@ -133,7 +133,7 @@ class TestListRegionArchetype:
         assert rows == [
             '<tr data-dz-list-kind="region" class="dz-list-row is-clickable" '
             'hx-get="/y/1" hx-push-url="true" hx-trigger="click" '
-            'hx-target="body" hx-swap="innerHTML" tabindex="0">'
+            'hx-preload="mouseover" hx-target="body" hx-swap="innerHTML" tabindex="0">'
             "<td>Ada</td>"
             '<td class="dz-list-row-action" onclick="event.stopPropagation()">'
             "<button>Go</button></td></tr>"

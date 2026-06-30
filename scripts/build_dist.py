@@ -75,6 +75,10 @@ CSS_UNLAYERED: list[Path] = [
 JS_SOURCES = [
     # HTMX core + extensions (vendored). Order: core first, then extensions.
     STATIC / "vendor" / "htmx.min.js",
+    # 2b preload-drill (#1491): hover-preload the detail page for a perceived-
+    # instant drill. htmx 4 activates an extension by inclusion (no hx-ext); the
+    # `hx-preload="mouseover"` attribute on clickable rows does the rest.
+    STATIC / "vendor" / "hx-preload.min.js",
     # Alpine plugins + Alpine core (order matters: plugins before core).
     # SortableJS + alpine-sort were removed in #948 cycle 1 — pointer-event
     # drag in dashboard-builder.js replaced them. workspace-editor.js was

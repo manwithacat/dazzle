@@ -66,9 +66,13 @@ def drill_row_attrs(url_attr: str) -> str:
     """
     if not url_attr:
         return ""
+    # 2b preload-drill (#1491): `hx-preload="mouseover"` warms the detail GET on
+    # hover (the vendored htmx-4 `preload` extension), so the click serves the
+    # cached prefetch — perceived-instant drill. The extension dedups per row
+    # (one prefetch / 5s), so a mouse-sweep doesn't storm the server.
     return (
         f'hx-get="{url_attr}" hx-push-url="true" hx-trigger="click" '
-        f'hx-target="body" hx-swap="innerHTML" tabindex="0"'
+        f'hx-preload="mouseover" hx-target="body" hx-swap="innerHTML" tabindex="0"'
     )
 
 

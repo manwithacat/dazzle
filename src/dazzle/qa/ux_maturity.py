@@ -34,7 +34,7 @@ from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
 from dazzle.render.context import ColumnContext
 from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
-from dazzle.render.fragment.renderer._data_row import _render_cell_display
+from dazzle.render.fragment.renderer._data_row import _render_cell_display, drill_row_attrs
 
 # ── Ladder ───────────────────────────────────────────────────────────────
 LEVEL_NAMES = {
@@ -208,8 +208,14 @@ def _probe_1d() -> ProbeResult:
 
 
 def _probe_2b() -> ProbeResult:
-    """List->detail drill is the default path (app_paths.detail_path)."""
-    return ProbeResult(hasattr(app_paths, "detail_path"), "app_paths.detail_path drill default")
+    """List->detail drill is the default AND perceived-instant (level 4, #1491):
+    a clickable row carries `hx-preload="mouseover"`, so the vendored htmx-4
+    preload extension warms the detail GET on hover and the click serves the
+    cached prefetch. Exercises the real render seam (`drill_row_attrs`)."""
+    drill = drill_row_attrs("/app/thing/1")
+    preloads = 'hx-preload="mouseover"' in drill and "hx-get" in drill
+    ok = hasattr(app_paths, "detail_path") and preloads
+    return ProbeResult(ok, f"drill default + hover-preload wired (preload={preloads})")
 
 
 def _probe_2d() -> ProbeResult:
@@ -359,8 +365,8 @@ CRITERIA: list[Criterion] = [
         "2b",
         "progressive_disclosure",
         "depth in <=1 action",
-        3,
-        "list->detail drill is the default (app_paths #1426, ref drill-down #1471)",
+        4,
+        '#1491 — list→detail drill is the default (app_paths #1426, ref drill-down #1471) AND perceived-instant (level 4): every clickable row carries `hx-preload="mouseover"`, so the vendored htmx-4 `preload` extension (bundled into dazzle.min.js after the core) warms the detail GET on hover and the click serves the cached prefetch — drilling feels instant fleet-wide. The extension dedups per row (one prefetch / 5s) so a mouse-sweep doesn\'t storm the server; the prefetch is the same scope-filtered detail GET, so no RBAC change.',
         "low",
         _probe_2b,
     ),
