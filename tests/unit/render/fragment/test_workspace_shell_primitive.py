@@ -118,6 +118,42 @@ def test_workspace_shell_primary_actions_use_hx_boost_anchors() -> None:
     assert ">New</a>" in html
 
 
+def test_workspace_shell_omits_overflow_menu_when_empty() -> None:
+    """3a (#1491): no overflow actions → no `More ⋯` menu (byte-stable for the
+    common ≤budget heading)."""
+    html = _render(
+        WorkspaceShell(
+            workspace_name="d",
+            title="X",
+            body=Text(""),
+            primary_actions=(WorkspacePrimaryAction(label="New", route="/api/new"),),
+        )
+    )
+    assert "dz-workspace-more" not in html
+
+
+def test_workspace_shell_renders_overflow_details_menu() -> None:
+    """3a (#1491): demoted actions render in a native `<details>` `More ⋯`
+    dropdown inside the primary-actions row (JS-free)."""
+    html = _render(
+        WorkspaceShell(
+            workspace_name="d",
+            title="X",
+            body=Text(""),
+            primary_actions=(WorkspacePrimaryAction(label="New", route="/api/new"),),
+            overflow_actions=(
+                WorkspacePrimaryAction(label="Export", route="/api/export"),
+                WorkspacePrimaryAction(label="Archive all", route="/api/archive"),
+            ),
+        )
+    )
+    assert '<details class="dz-workspace-more" data-test-id="dz-workspace-more">' in html
+    assert '<a href="/api/export" hx-boost="true" class="dz-workspace-more__item"' in html
+    assert ">Archive all</a>" in html
+    # The overflow menu lives inside the primary-actions row.
+    assert html.index("dz-workspace-primary-actions") < html.index("dz-workspace-more")
+
+
 def test_workspace_shell_primary_actions_carry_plus_icon_svg() -> None:
     """Each primary action has a leading `+` SVG icon — the path
     `M12 4v16m8-8H4` is the framework's plus-icon glyph."""

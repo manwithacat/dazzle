@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.48] - 2026-06-30
+
+### Changed
+- **Workspace headings now infer action prominence by default — UX-maturity 3a → level 3 (#1491; overall index 3.23 → 3.31).** A heading rendered every declared/inferred action as a prominent button, so an action-heavy workspace surfaced a wall of competing CTAs. `resolve_action_prominence` (new `page/runtime/action_prominence_resolver.py`, same default-flip shape as `comparison_resolver` / `peek_resolver` / `when_empty_resolver`) now keeps the **top 3** actions prominent by declaration order — the inferred `+ New <Entity>` create-CTAs are assembled first, so they're protected by position — and demotes the tail to a native `<details>` **`More ⋯`** overflow menu (JS-free; the browser owns open/close). Applied at the `page_routes` action-assembly seam. An action-heavy heading declutters to a clear primary row; a **≤3-action heading is byte-unchanged** (empty overflow). Pure declared-signal default — no runtime usage, no JS. The orphaned `dzCommandPalette` (⌘K) JS was considered as the overflow target but is unmounted (no markup/CSS), so the native `<details>` menu is the minimal path. L4 follow-on: derive prominence from observed usage frequency, and extend to row-action / bulk-toolbar / action-grid placements.
+
+### Agent Guidance
+- **Workspace headings cap at 3 prominent actions now (#1491).** Beyond the top 3 (create-CTAs first), actions demote to a `More ⋯` `<details>` overflow menu by default — authors get a decluttered heading for free. The split is positional/count-based at L3 (`resolve_action_prominence`, budget 3, applied in `page_routes`); declaration order decides what stays prominent. A heading with ≤3 actions renders exactly as before. Render seam: `WorkspaceShell.overflow_actions` → `_emit_workspace_overflow` in `_render_shell.py`; CSS `.dz-workspace-more*` in `dashboard.css` (dist rebuilt).
+
 ## [0.92.47] - 2026-06-30
 
 ### Changed

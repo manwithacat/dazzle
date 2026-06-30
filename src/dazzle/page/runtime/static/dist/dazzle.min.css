@@ -1,4 +1,4 @@
-/* dazzle v0.92.36 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.92.48 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -1416,6 +1416,57 @@ transition: opacity var(--duration-fast) var(--ease-out);
 }
 .dz-workspace-action:hover {
 opacity: 0.9;
+}
+.dz-workspace-more {
+position: relative;
+}
+.dz-workspace-more__trigger {
+display: inline-flex;
+align-items: center;
+gap: var(--space-xs);
+height: 2rem;
+padding-inline: var(--space-sm);
+border-radius: var(--radius-sm);
+font-size: var(--text-sm);
+font-weight: var(--weight-medium);
+color: var(--colour-text);
+background: var(--colour-surface);
+border: 1px solid var(--colour-border);
+cursor: pointer;
+list-style: none;
+transition: background var(--duration-fast) var(--ease-out);
+}
+.dz-workspace-more__trigger::-webkit-details-marker {
+display: none;
+}
+.dz-workspace-more__trigger:hover {
+background: var(--colour-surface-hover, var(--colour-surface));
+}
+.dz-workspace-more__menu {
+position: absolute;
+inset-inline-end: 0;
+inset-block-start: calc(100% + var(--space-xs));
+z-index: 20;
+display: flex;
+flex-direction: column;
+min-width: 12rem;
+padding: var(--space-xs);
+border-radius: var(--radius-md);
+background: var(--colour-surface);
+border: 1px solid var(--colour-border);
+box-shadow: var(--shadow-md, 0 4px 12px rgb(0 0 0 / 0.12));
+}
+.dz-workspace-more__item {
+padding: var(--space-xs) var(--space-sm);
+border-radius: var(--radius-sm);
+font-size: var(--text-sm);
+color: var(--colour-text);
+text-decoration: none;
+white-space: nowrap;
+transition: background var(--duration-fast) var(--ease-out);
+}
+.dz-workspace-more__item:hover {
+background: var(--colour-surface-hover, var(--colour-bg-subtle, transparent));
 }
 .dz-workspace-context {
 display: flex;

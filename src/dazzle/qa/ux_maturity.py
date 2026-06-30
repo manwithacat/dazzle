@@ -26,6 +26,7 @@ from typing import Any
 from dazzle._version import get_version
 from dazzle.core.ir import AggregateRef, PeekMode, state_machine, workspaces
 from dazzle.page import app_paths
+from dazzle.page.runtime.action_prominence_resolver import resolve_action_prominence
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
@@ -198,6 +199,25 @@ def _probe_2c() -> ProbeResult:
     )
 
 
+def _probe_3a() -> ProbeResult:
+    """Action prominence IS inferred by default (level 3): a heading with more
+    than the budget of actions keeps the top-K prominent and demotes the tail to
+    overflow via the #1491 default-flip — exercised through the real resolver. A
+    within-budget heading is a no-op (empty overflow)."""
+    over_budget = [{"label": f"a{i}", "route": f"/{i}"} for i in range(5)]
+    primary, overflow = resolve_action_prominence(over_budget)
+    demotes_tail = len(primary) == 3 and len(overflow) == 2
+    # A heading within budget keeps everything prominent (byte-stable).
+    p2, o2 = resolve_action_prominence([{"label": "x", "route": "/x"}])
+    within_budget_noop = len(p2) == 1 and o2 == []
+    ok = demotes_tail and within_budget_noop
+    return ProbeResult(
+        ok,
+        f"over-budget->primary={len(primary)},overflow={len(overflow)}; "
+        f"within-budget-noop={within_budget_noop}",
+    )
+
+
 def _probe_3b() -> ProbeResult:
     """Role-gated affordance via the provable RBAC matrix."""
     return ProbeResult(
@@ -314,10 +334,10 @@ CRITERIA: list[Criterion] = [
         "3a",
         "negative_space",
         "frequency-weighted prominence",
-        2,
-        "command palette + primary/overflow/row actions exist; placement is manual, not frequency-derived",
+        3,
+        "#1491 — workspace heading actions infer prominence by DEFAULT: `resolve_action_prominence` (`page/runtime/action_prominence_resolver`) keeps the top-3 actions as prominent buttons by declaration order (inferred `+ New <Entity>` create-CTAs come first, so they're protected) and demotes the tail to a native `<details>` `More ⋯` overflow menu, applied at the `page_routes` action-assembly seam. So an action-heavy heading declutters to a clear primary row instead of a wall of competing CTAs; a ≤3-action heading is byte-unchanged. Pure declared-signal default (no runtime usage, no JS). L4 follow-on: derive prominence from observed usage frequency, and extend to row-action / bulk-toolbar / action-grid placements.",
         "medium",
-        None,
+        _probe_3a,
     ),
     Criterion(
         "3b",

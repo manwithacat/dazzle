@@ -2006,6 +2006,9 @@ class WorkspaceShell:
     title: str
     body: object  # Fragment — typed as object per primitive convention
     primary_actions: tuple[WorkspacePrimaryAction, ...] = ()
+    # 3a (#1491): actions demoted past the prominence budget. Rendered in a
+    # native `<details>` `More ⋯` overflow menu after the primary row.
+    overflow_actions: tuple[WorkspacePrimaryAction, ...] = ()
     fold_count: int | None = None
 
 

@@ -119,6 +119,11 @@ surfaces/displays/visibility (see "Revisions", below).
 ### Negative space — choose *whether*
 - **3a — frequency-weighted prominence.** Do rare actions default to overflow and
   common actions to primary, derived from usage/frequency, not hand-placed?
+  **Level 3 (#1491): a workspace heading keeps the top-3 actions prominent by
+  declaration order (inferred create-CTAs first) and demotes the tail to a native
+  `<details>` `More ⋯` menu (`resolve_action_prominence`, applied at the
+  `page_routes` assembly seam). A ≤3-action heading is unchanged. L4: derive
+  prominence from observed usage frequency + extend to row/bulk/grid actions.**
 - **3b — role-gated affordance.** Is an affordance's visibility gated by **role**,
   declaratively and provably (not rendered-then-403)?
 - **3c — state-gated affordance.** Is it gated by **entity state** (an action

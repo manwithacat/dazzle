@@ -38,6 +38,7 @@ from dazzle.page.converters.nav_builder import (
     build_all_persona_navs,
     build_anon_nav,
 )
+from dazzle.page.runtime.action_prominence_resolver import resolve_action_prominence
 from dazzle.rbac.matrix import generate_access_matrix
 from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
@@ -2495,6 +2496,12 @@ async def _workspace_handler(
     # at registration time (already validated at lint time).
     primary_actions.extend(authored_actions)
 
+    # 3a (#1491): demote the action tail to a `More ⋯` overflow menu so an
+    # action-heavy heading keeps a clear primary row instead of a wall of
+    # competing CTAs. Top-3 stay prominent by declaration order (inferred
+    # create-CTAs first); a ≤3-action heading is unchanged (empty overflow).
+    primary_actions, overflow_actions = resolve_action_prominence(primary_actions)
+
     # Phase 4 app-shell migration (v0.67.44): the workspace page
     # renders unconditionally through the typed-Fragment substrate.
     # The `fragment_chrome` flag is no longer consulted; the typed
@@ -2524,6 +2531,7 @@ async def _workspace_handler(
         catalog=catalog,
         fold_count=fold_count,
         primary_actions=primary_actions,
+        overflow_actions=overflow_actions,
         can_edit_layout=is_superuser,
     )
 

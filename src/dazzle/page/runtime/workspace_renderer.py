@@ -861,6 +861,7 @@ def render_workspace_content_typed(
     catalog: list[dict[str, str]],
     fold_count: int,
     primary_actions: list[dict[str, str]],
+    overflow_actions: list[dict[str, str]] | None = None,
     can_edit_layout: bool = False,
 ) -> str:
     """Render the workspace content via the typed-Fragment substrate.
@@ -947,6 +948,10 @@ def render_workspace_content_typed(
     typed_actions = tuple(
         WorkspacePrimaryAction(label=a["label"], route=a["route"]) for a in primary_actions
     )
+    # 3a (#1491): the demoted tail renders in a `More ⋯` overflow menu.
+    typed_overflow = tuple(
+        WorkspacePrimaryAction(label=a["label"], route=a["route"]) for a in (overflow_actions or [])
+    )
 
     # ── Optional context selector ───────────────────────────────────
     inner_pieces: list[object] = []
@@ -976,6 +981,7 @@ def render_workspace_content_typed(
         workspace_name=workspace.name,
         title=ws_title,
         primary_actions=typed_actions,
+        overflow_actions=typed_overflow,
         fold_count=fold_count if fold_count is not None else 0,
         body=Sequence(children=tuple(inner_pieces)),
     )
