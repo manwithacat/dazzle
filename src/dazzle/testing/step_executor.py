@@ -16,6 +16,7 @@ import os
 import re
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir import SurfaceMode
@@ -26,8 +27,6 @@ from dazzle.testing.data_generator import DataGenerator
 from dazzle.testing.test_runner import StepResult, TestResult
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from dazzle.testing.test_runner import DazzleClient, TestRunner
 
 logger = logging.getLogger(__name__)
@@ -1217,8 +1216,10 @@ class StepExecutor:
             if val:
                 return val
 
-        # Credentials file
-        creds_path = Path(".dazzle/test_credentials.json")
+        # Credentials file — resolved against the project root, not the CWD
+        # (non-admin personas reach this line; a CWD-relative path silently
+        # missed the file and returned the unresolved marker, #1513).
+        creds_path = self.project_path / ".dazzle" / "test_credentials.json"
         if creds_path.exists():
             try:
                 creds = json.loads(creds_path.read_text(encoding="utf-8"))

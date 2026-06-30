@@ -98,21 +98,27 @@ class UnifiedTestResult:
         return cats
 
     def _failure_details(self, limit: int = 50) -> list[dict[str, str]]:
-        """First N failures with test_id and error message."""
-        failures: list[dict[str, str]] = []
-        if self.crud_result:
-            for t in self.crud_result.tests:
-                if t.result.value != "failed":
-                    continue
-                failures.append({"id": t.test_id, "error": t.error_message or ""})
-                if len(failures) >= limit:
-                    return failures
-        if self.event_result:
-            for et in self.event_result.tests:
-                if et.result.value != "failed":
-                    continue
-                failures.append({"id": et.test_id, "error": et.error_message or ""})
+        """First N non-passing tests with test_id, status, and error message.
 
+        Includes both ``failed`` and ``error`` status tests (#1513): an
+        ``error`` carries its exception text in ``error_message``, so dropping
+        it silently hid the actual reason a test errored. The ``status`` key
+        lets a consumer tell an assertion failure from a harness error.
+        """
+        failures: list[dict[str, str]] = []
+        for result in (self.crud_result, self.event_result):
+            if not result:
+                continue
+            for t in result.tests:
+                if t.result.value not in ("failed", "error"):
+                    continue
+                failures.append(
+                    {
+                        "id": t.test_id,
+                        "status": t.result.value,
+                        "error": t.error_message or "",
+                    }
+                )
                 if len(failures) >= limit:
                     return failures
         return failures

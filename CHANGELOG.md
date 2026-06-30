@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.43] - 2026-06-30
+
+### Fixed
+- **`test dsl-run` no longer reports `error` for non-admin persona auth/UI-checks while endpoints return 200 — #1513.** `StepExecutor._resolve_credential` (the typed step path that resolves the `__PERSONA_EMAIL__` / `__PERSONA_PASSWORD__` markers) imported `Path` only under `TYPE_CHECKING`, so the call `Path(".dazzle/test_credentials.json")` raised `NameError` at runtime for every non-admin persona — admin short-circuits to env vars before that line and passed, masking the bug. The marker resolution happens outside the per-step `try`, so the `NameError` propagated up to a *test-level* ERROR (3 erroring tests × 5 non-admin personas = the 15 reported). Fixed by importing `Path` at runtime **and** resolving the credentials file against `self.project_path` rather than a CWD-relative path (the latter also fixes the post-login 403 in `navigate_to` UI-checks, whose session context never got established for non-admin). Diagnosability: `UnifiedTestResult._failure_details` now includes `error`-status tests (which carry the exception text in `error_message`) instead of dropping everything but `failed`, and tags each entry with a `status` key so an assertion failure is distinguishable from a harness error in the `-o` JSON. New tests: `TestStepExecutorResolveCredential` (3 cases) + `test_unified_runner_failures.py`.
+
 ## [0.92.42] - 2026-06-30
 
 ### Fixed

@@ -140,3 +140,44 @@ class TestAuthenticatePassesPersona:
         with patch.object(runner, "_login_with_credentials", return_value=True) as mock_login:
             runner.authenticate("admin")
         mock_login.assert_called_once_with("admin")
+
+
+class TestStepExecutorResolveCredential:
+    """StepExecutor._resolve_credential reads creds relative to project_path (#1513).
+
+    The typed step path (persona UI-checks) resolves the ``__PERSONA_EMAIL__`` /
+    ``__PERSONA_PASSWORD__`` markers here. Two bugs were fixed: ``Path`` was
+    imported only under ``TYPE_CHECKING`` (so the call raised ``NameError`` for
+    every non-admin persona), and the path was CWD-relative rather than rooted
+    at the project.
+    """
+
+    def _executor(self, project_path: Path):
+        from dazzle.testing.step_executor import StepExecutor
+
+        runner = MagicMock()
+        runner.project_path = project_path
+        return StepExecutor(runner)
+
+    def test_non_admin_resolves_from_project_path(self, tmp_path: Path) -> None:
+        creds = {"personas": {"agent": {"email": "agent@test", "password": "agpw"}}}
+        creds_path = tmp_path / ".dazzle" / "test_credentials.json"
+        creds_path.parent.mkdir(parents=True)
+        creds_path.write_text(json.dumps(creds))
+
+        ex = self._executor(tmp_path)
+        # Would raise NameError before the runtime Path import fix.
+        assert ex._resolve_credential("agent", "email") == "agent@test"
+        assert ex._resolve_credential("agent", "password") == "agpw"
+
+    def test_missing_file_returns_unresolved_marker(self, tmp_path: Path) -> None:
+        ex = self._executor(tmp_path)  # no creds file written
+        assert ex._resolve_credential("agent", "email") == "__PERSONA_EMAIL__"
+
+    def test_admin_prefers_env_vars(self, tmp_path: Path) -> None:
+        ex = self._executor(tmp_path)
+        with patch.dict(
+            "os.environ", {"DAZZLE_TEST_EMAIL": "a@b.com", "DAZZLE_TEST_PASSWORD": "pw"}
+        ):
+            assert ex._resolve_credential("admin", "email") == "a@b.com"
+            assert ex._resolve_credential("admin", "password") == "pw"
