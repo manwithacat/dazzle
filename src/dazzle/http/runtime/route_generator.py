@@ -177,6 +177,7 @@ APIRouter = _APIRouter
 # leaf instead of back UP into this module — breaking the import cycle that forced
 # ~18 in-function imports. Re-exported here so `route_generator.<name>` keeps resolving
 # for back-compat importers and patch points.
+from dazzle.http.runtime.htmx import is_peek_request  # noqa: E402
 from dazzle.http.runtime.route_support import (  # noqa: E402, F401  (re-exported for back-compat importers + patch points; route_support declares __all__)
     HandlerConfig,
     RouteSpec,
@@ -847,8 +848,14 @@ def generate_crud_routes(
     async def update_item(id: UUID, request: Request, data: update_schema) -> Any:
         result = await service.execute(operation="update", id=id, data=data)
         result = require_found(result)
+        # #1494 (2c, Slice 2 — inline save-and-stay): a peek-panel save
+        # (`?peek=1`) must NOT redirect the whole page — the form re-fetches the
+        # read-only view back into the panel cell itself. Suppress HX-Redirect so
+        # only the HX-Trigger toast/refresh headers ride along; otherwise settle
+        # to the current page as before.
+        redirect_url = None if is_peek_request(request) else _htmx_current_url(request)
         return _with_htmx_triggers(
-            request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
+            request, result, entity_name, "updated", redirect_url=redirect_url
         )
 
     # Delete

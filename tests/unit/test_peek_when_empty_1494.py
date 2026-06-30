@@ -397,3 +397,72 @@ class TestPeekClickToEdit:
         html = self._edit_action(peek=False)
         assert 'href="/app/tasks/abc/edit"' in html
         assert "hx-get" not in html
+
+
+class TestPeekSaveAndStay:
+    """#1494 (2c, Slice 2 increment 2): a peek-panel EDIT form commits in place —
+    posts `?peek=1` (API suppresses HX-Redirect), discards the JSON body
+    (`hx-swap="none"`), and re-fetches the read-only view back into the panel
+    cell on success. Non-peek forms keep the page-settling `hx-target="body"`."""
+
+    def _adapter(self):
+        from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+
+        return FragmentSurfaceAdapter()
+
+    def _render(self, fragment) -> str:
+        from dazzle.render.fragment import FragmentRenderer
+
+        return FragmentRenderer().render(fragment)
+
+    def _form(self, *, peek: bool, mode):
+        import types
+
+        surf = types.SimpleNamespace(
+            name="task_edit", title="Edit Task", entity_ref="Task", mode=None
+        )
+        ctx = {
+            "fields": [{"name": "title", "label": "Title", "type": "text", "value": "x"}],
+            "action": "/api/tasks/abc",
+            "method": "PUT",
+        }
+        if peek:
+            ctx |= {"peek": True, "item_id": "abc", "cancel_url": "/app/tasks/abc"}
+        return self._render(self._adapter()._build_form(surf, ctx, mode=mode))
+
+    def test_peek_edit_form_posts_with_peek_flag(self):
+        from dazzle.core.ir.surfaces import SurfaceMode
+
+        html = self._form(peek=True, mode=SurfaceMode.EDIT)
+        # Action carries ?peek=1 so update_item suppresses HX-Redirect.
+        assert 'hx-put="/api/tasks/abc?peek=1"' in html
+
+    def test_peek_edit_form_swaps_none_and_refetches_view(self):
+        from dazzle.core.ir.surfaces import SurfaceMode
+
+        html = self._form(peek=True, mode=SurfaceMode.EDIT)
+        assert 'hx-swap="none"' in html
+        assert 'hx-target="#peek-content-abc"' in html
+        # On success, re-fetch the read-only view back into the panel cell.
+        assert "hx-on:htmx:after:request=" in html
+        assert "event.detail.successful" in html
+        assert "/app/tasks/abc?peek=1" in html
+        assert 'data-dz-peek-save="1"' in html
+
+    def test_non_peek_edit_form_settles_to_page(self):
+        from dazzle.core.ir.surfaces import SurfaceMode
+
+        html = self._form(peek=False, mode=SurfaceMode.EDIT)
+        assert 'hx-target="body"' in html
+        assert 'hx-swap="innerHTML"' in html
+        assert "?peek=1" not in html
+        assert "hx-on:htmx:after:request" not in html
+
+    def test_peek_create_form_does_not_save_in_panel(self):
+        # CREATE has no item to return to — keep the page-settling submit even in
+        # a (crafted) peek context, so the inline wiring stays EDIT-only.
+        from dazzle.core.ir.surfaces import SurfaceMode
+
+        html = self._form(peek=True, mode=SurfaceMode.CREATE)
+        assert "hx-on:htmx:after:request" not in html
+        assert 'hx-swap="none"' not in html

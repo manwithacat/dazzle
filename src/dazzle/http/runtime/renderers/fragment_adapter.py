@@ -631,6 +631,26 @@ class FragmentSurfaceAdapter:
         # RBAC contract attrs threaded onto the <form>.
         form_entity_name = (getattr(surface, "entity_ref", "") or "").strip()
         form_mode = "edit" if mode == SurfaceMode.EDIT else "create"
+        # #1494 (2c, Slice 2 — inline save-and-stay): when this form is fetched
+        # into a list-row peek panel (`?peek=1`) AND we have a panel target +
+        # read-only view URL to return to, wire the FormStack to commit and swap
+        # the view back into the panel cell in place (no page reload). Only EDIT
+        # forms with a known item_id qualify; CREATE (no item, no view to return
+        # to) keeps the page-settling submit.
+        peek_form = bool(ctx.get("peek"))
+        peek_item_id = str(ctx.get("item_id", "") or "")
+        peek_cancel_url = str(ctx.get("cancel_url", "") or "")
+        stay_in_panel = (
+            peek_form and mode == SurfaceMode.EDIT and bool(peek_item_id) and bool(peek_cancel_url)
+        )
+        peek_kwargs: dict[str, str] = (
+            {
+                "peek_target": f"#peek-content-{peek_item_id}",
+                "peek_view_url": f"{peek_cancel_url}?peek=1",
+            }
+            if stay_in_panel
+            else {}
+        )
         sections_in: list[dict[str, Any]] = ctx.get("sections", []) or []
         if not fields_in:
             body = EmptyState(
@@ -662,6 +682,7 @@ class FragmentSurfaceAdapter:
                 submit=Submit(label=submit_label),
                 entity_name=form_entity_name,
                 mode=form_mode,  # type: ignore[arg-type]
+                **peek_kwargs,
             )
         else:
             primitives = tuple(_field_to_primitive(f) for f in fields_in)
@@ -672,6 +693,7 @@ class FragmentSurfaceAdapter:
                 submit=Submit(label=submit_label),
                 entity_name=form_entity_name,
                 mode=form_mode,  # type: ignore[arg-type]
+                **peek_kwargs,
             )
 
         # #1494 (2c, Slice 2): click-to-edit. When the edit form is fetched into a

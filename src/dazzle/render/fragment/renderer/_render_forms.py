@@ -20,6 +20,7 @@ See issue #1064 for the full decomposition plan.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
@@ -79,12 +80,44 @@ class _RenderFormsMixin:
         `json-enc` extension was dropped in the htmx 4 migration, so
         handlers must read fields via `Form()`/`request.form()`, not
         JSON. The RBAC contract checker requires `hx-post` on the form."""
-        action = ctx.escape_attr(str(fs.action))
         fields_html = "".join(self._emit(f, ctx) for f in fs.fields)  # type: ignore[arg-type]
         submit_html = self._emit(fs.submit, ctx) if fs.submit is not None else ""
+        peek_attrs = ""
         if fs.method == "GET":
+            action = ctx.escape_attr(str(fs.action))
             method_attrs = f'action="{action}" method="GET"'
+        elif fs.peek_target:
+            # #1494 (2c, Slice 2): inline save-and-stay inside a peek panel.
+            # The submit posts `?peek=1` (→ API suppresses HX-Redirect),
+            # discards the JSON body (`hx-swap="none"`), and on success
+            # re-fetches the read-only view back into the panel cell — a
+            # native htmx after-request hook, no page reload, no JS module.
+            raw_action = str(fs.action)
+            sep = "&" if "?" in raw_action else "?"
+            action = ctx.escape_attr(f"{raw_action}{sep}peek=1")
+            hx_verb = "hx-put" if fs.method == "PUT" else "hx-post"
+            target = ctx.escape_attr(fs.peek_target)
+            # The re-fetch lives in an `hx-on` inline JS string, so the
+            # URL/selector cross TWO contexts: a JS string literal nested in a
+            # double-quoted HTML attribute. `json.dumps` safely encodes the
+            # JS-string layer (quotes/backslashes), then `escape_attr` encodes
+            # the outer HTML-attribute layer — defense-in-depth that holds even
+            # if a future caller routes a slug/display-name into these values,
+            # not just the server-derived uuid/path they carry today.
+            view_url_js = ctx.escape_attr(json.dumps(fs.peek_view_url))
+            target_js = ctx.escape_attr(json.dumps(fs.peek_target))
+            refetch = (
+                "if(event.detail.successful){"
+                f"htmx.ajax('GET',{view_url_js},"
+                f"{{target:{target_js},swap:'innerHTML'}})}}"
+            )
+            method_attrs = (
+                f'{hx_verb}="{action}" hx-target="{target}" hx-swap="none" '
+                f'hx-on:htmx:after:request="{refetch}"'
+            )
+            peek_attrs = ' data-dz-peek-save="1"'
         else:
+            action = ctx.escape_attr(str(fs.action))
             hx_verb = "hx-put" if fs.method == "PUT" else "hx-post"
             method_attrs = f'{hx_verb}="{action}" hx-target="body" hx-swap="innerHTML"'
         data_parts: list[str] = []
@@ -94,7 +127,7 @@ class _RenderFormsMixin:
             data_parts.append(f'data-dazzle-form-mode="{ctx.escape_attr(fs.mode)}"')
         data_attrs = (" " + " ".join(data_parts)) if data_parts else ""
         return (
-            f'<form class="dz-form-stack" {method_attrs}{data_attrs}>'
+            f'<form class="dz-form-stack" {method_attrs}{data_attrs}{peek_attrs}>'
             f"{fields_html}{submit_html}"
             f"</form>"
         )

@@ -375,7 +375,18 @@ class FormStack:
     `entity_name` + `mode` thread `data-dazzle-form="<entity>"` and
     `data-dazzle-form-mode="<create|edit>"` onto the `<form>` —
     contract attrs the RBAC checker (`_check_create_form` in
-    `testing/ux/contract_checker.py`) keys off."""
+    `testing/ux/contract_checker.py`) keys off.
+
+    #1494 (2c, Slice 2 — inline save-and-stay): when `peek_target` is
+    set, the form is rendered inside a list-row peek panel. Instead of
+    swapping the whole page on submit, it (1) appends `?peek=1` to the
+    action so the API route suppresses `HX-Redirect`, (2) uses
+    `hx-swap="none"` so the JSON mutation result is ignored, and (3)
+    re-fetches the read-only view (`peek_view_url`) back into the panel
+    cell (`peek_target`) on a successful request via a native htmx
+    `hx-on:htmx:after:request` handler — no page reload, no bespoke JS
+    module. Empty `peek_target` ⇒ byte-identical legacy `hx-target="body"`
+    behaviour."""
 
     action: URL
     fields: tuple[object, ...]  # Field | Combobox | FormSection
@@ -383,9 +394,13 @@ class FormStack:
     submit: Submit | None = None
     entity_name: str = ""
     mode: Literal["", "create", "edit"] = ""
+    peek_target: str = ""  # CSS selector of the peek panel cell, e.g. "#peek-content-{id}"
+    peek_view_url: str = ""  # read-only view URL to re-fetch after a save-and-stay
 
     def __post_init__(self) -> None:
         if not self.fields:
             raise ValueError("FormStack requires at least one field")
         if self.method not in _METHODS:
             raise ValueError(f"invalid method {self.method!r}")
+        if self.peek_target and self.method == "GET":
+            raise ValueError("peek save-and-stay is unsupported for GET forms")
