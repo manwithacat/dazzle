@@ -42,12 +42,12 @@ def _surface(name: str, entity: str, mode: ir.SurfaceMode) -> ir.SurfaceSpec:
     )
 
 
-def _appspec(entities, surfaces) -> ir.AppSpec:
+def _appspec(entities, surfaces, experiences=None) -> ir.AppSpec:
     return ir.AppSpec(
         name="Test",
         domain=ir.DomainSpec(entities=entities),
         surfaces=surfaces,
-        experiences=[],
+        experiences=experiences or [],
         apis=[],
         foreign_models=[],
         integrations=[],
@@ -94,6 +94,62 @@ def test_custom_mode_surfaces_are_exempt() -> None:
     )
     errors, _ = validate_surfaces(appspec)
     assert not [e for e in errors if "resolve to the same route" in e]
+
+
+def test_experience_step_surfaces_are_exempt_1512() -> None:
+    # #1512: a view surface that exists only to be rendered inline as an
+    # experience surface-step renders by name, never claiming the entity's
+    # auto-route — so it must NOT collide with the entity's route-mounted view.
+    appspec = _appspec(
+        [_entity("Employee")],
+        [
+            _surface("employee_detail", "Employee", ir.SurfaceMode.VIEW),
+            _surface("employee_review_step", "Employee", ir.SurfaceMode.VIEW),
+        ],
+        experiences=[
+            ir.ExperienceSpec(
+                name="onboarding",
+                title="Onboarding",
+                start_step="review",
+                steps=[
+                    ir.ExperienceStep(
+                        name="review",
+                        kind=ir.StepKind.SURFACE,
+                        surface="employee_review_step",
+                    )
+                ],
+            )
+        ],
+    )
+    errors, _ = validate_surfaces(appspec)
+    assert not [e for e in errors if "resolve to the same route" in e]
+
+
+def test_route_mounted_collision_still_errors_with_a_step_surface_present() -> None:
+    # The exemption is narrow: two genuinely route-mounted list surfaces still
+    # collide even when an unrelated experience-step surface exists.
+    appspec = _appspec(
+        [_entity("Invoice")],
+        [
+            _surface("invoice_list", "Invoice", ir.SurfaceMode.LIST),
+            _surface("audit_export", "Invoice", ir.SurfaceMode.LIST),
+            _surface("invoice_step", "Invoice", ir.SurfaceMode.VIEW),
+        ],
+        experiences=[
+            ir.ExperienceSpec(
+                name="flow",
+                title="Flow",
+                start_step="s",
+                steps=[
+                    ir.ExperienceStep(name="s", kind=ir.StepKind.SURFACE, surface="invoice_step")
+                ],
+            )
+        ],
+    )
+    errors, _ = validate_surfaces(appspec)
+    collision = [e for e in errors if "resolve to the same route" in e]
+    assert len(collision) == 1
+    assert "invoice_list" in collision[0] and "audit_export" in collision[0]
 
 
 def test_single_list_surface_per_entity_is_clean() -> None:

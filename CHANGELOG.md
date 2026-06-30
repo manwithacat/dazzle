@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.45] - 2026-06-30
+
+### Fixed
+- **`validate`: the #1489 route-collision error no longer false-positives on surfaces consumed only by experience/process steps — #1512.** A surface used as an inline experience surface-step or process human-task target is resolved by name (`appspec.get_surface()`) and rendered in place via `dispatch_render`; it never claims the auto-mounted entity route, so it can't collide. The check now skips those names (collected by a new `_inline_step_target_surfaces` helper that walks `ExperienceStep.surface` and `HumanTaskSpec.surface`, recursing into a process step's `parallel_steps`/`foreach_steps`). The exemption is deliberately narrow: **guide** step targets are *not* exempted (a guide only decorates a surface that still renders through its normal route), and two genuinely route-mounted surfaces on the same `(mode, entity)` still error. The `fixtures/pra` validate baseline drops 19 → 14 errors (5 of its deliberate same-route surfaces are step targets; 7 genuine route-collisions remain). New tests: experience-step surfaces are exempt; a real collision still errors when an unrelated step surface is present.
+
 ## [0.92.44] - 2026-06-30
 
 ### Fixed

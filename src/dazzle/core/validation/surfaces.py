@@ -88,6 +88,39 @@ def _format_kind_error(kind: str, field_type_kind: "ir.FieldTypeKind") -> str | 
     return None
 
 
+def _inline_step_target_surfaces(appspec: ir.AppSpec) -> set[str]:
+    """Surface names rendered inline as experience/process step targets (#1512).
+
+    These surfaces are resolved by name (``appspec.get_surface()``) and rendered
+    in place by the step renderer; they never claim the auto-mounted entity
+    route, so they cannot participate in the #1489 route-collision check.
+    Collects ``ExperienceStep.surface`` and ``HumanTaskSpec.surface``, recursing
+    into a process step's ``parallel_steps`` / ``foreach_steps``. Guide step
+    targets are intentionally excluded — a guide decorates a surface that still
+    renders through its normal route.
+    """
+    names: set[str] = set()
+    # getattr-guarded: some validation call sites pass a partial appspec stub
+    # (only `surfaces` + `get_entity`); a real AppSpec always carries both.
+    for experience in getattr(appspec, "experiences", None) or []:
+        for step in experience.steps:
+            if step.surface:
+                names.add(step.surface)
+
+    def _walk(steps: list[ir.ProcessStepSpec]) -> None:
+        for step in steps:
+            if step.human_task and step.human_task.surface:
+                names.add(step.human_task.surface)
+            if step.parallel_steps:
+                _walk(step.parallel_steps)
+            if step.foreach_steps:
+                _walk(step.foreach_steps)
+
+    for process in getattr(appspec, "processes", None) or []:
+        _walk(process.steps)
+    return names
+
+
 def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all surfaces for semantic correctness.
@@ -219,9 +252,17 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     # is unreachable. `validate` never modelled the materialised route set, so
     # this only surfaced as a boot-time log line. Turn it into a hard error.
     # CUSTOM mode routes by surface name (always distinct) and is exempt.
+    # #1512: surfaces consumed ONLY as inline experience/process step targets
+    # render by name via get_surface()+dispatch_render and never claim the
+    # auto-mounted entity route, so they can't collide — exempt them too. (Guide
+    # steps only *decorate* a surface that still renders through its normal
+    # route, so they are deliberately NOT exempted.)
+    inline_step_surfaces = _inline_step_target_surfaces(appspec)
     route_groups: dict[tuple[object, str], list[str]] = {}
     for surface in appspec.surfaces:
         if surface.mode == ir.SurfaceMode.CUSTOM or not surface.entity_ref:
+            continue
+        if surface.name in inline_step_surfaces:
             continue
         route_groups.setdefault((surface.mode, surface.entity_ref), []).append(surface.name)
     for (mode, entity_ref), names in route_groups.items():
