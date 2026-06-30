@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.50] - 2026-06-30
+
+### Changed
+- **Auto-derived list columns now infer field economy by default — UX-maturity 2d → level 3 (#1491; overall index 3.31 → 3.38). MILESTONE: every one of the 13 maturity criteria now clears the L3 bar; the framework backlog is empty.** When a list surface declares no field projection, Dazzle auto-derived the columns from the entity and showed up to a magic cap of 8 in declaration order — a wide entity dumped a sprawl of low-signal columns. `resolve_column_economy` (new `page/runtime/column_economy_resolver.py`, same default-flip shape as `comparison_resolver` / `action_prominence_resolver`) now keeps the **top-6 most salient** columns (identifying/title name > status badge > relationship > scalar > auto-`*_at` timestamp) and sheds the low-signal tail, re-emitting survivors in declaration order (truncation, not reorder). The dropped fields are recovered by the already-default row drill (2b) / `peek:` (2c) — the L3 "reveal" with **no htmx-4 dependency**. Applied at the `workspace_columns` entity-fallback builder only: **an explicit surface field projection is authoritative and rendered in full** (auto-columns only — the "explicit author value wins" discriminator every resolver uses). A ≤6-column entity is byte-unchanged. Pure declared-signal default (salience from field name/type, no usage, no JS). Independent adversarial review (clean, no SEV-1/2): confirmed no leak into authored projections, no header/row column divergence, no RBAC interaction, and that the fleet impact is favorable — only framework-injected / un-dashboarded auto-tables trim (e.g. `OnboardingState` 8→6, `AIJob` 11→6); authored user dashboards are unaffected. L4 follow-on: an explicit `priority:` field modifier as the author override + a live in-table "show all columns" reveal.
+
+### Agent Guidance
+- **Auto-generated list tables cap at 6 salient columns now (#1491).** An entity surfaced *without* an explicit list-surface field projection renders its top-6 columns by salience (identifying/title > badge > ref > scalar > timestamp); the rest are reachable via the default drill/peek. **To control columns precisely, declare a field projection on the list surface** — an explicit projection is rendered in full and never trimmed. The economy is inference-only at L3 (no `priority:` keyword yet); the resolver is `resolve_column_economy` (`page/runtime/column_economy_resolver`), applied in `build_entity_columns`. With this, the whole UX-maturity rubric is at L3+.
+
 ## [0.92.49] - 2026-06-30
 
 ### Fixed

@@ -53,18 +53,11 @@ def test_backlog_is_amber_or_red_only_and_leverage_ordered() -> None:
     # with the geometry-gate skip + added-card exemption keeping the auto-default safe;
     # 1c left when an unset metrics tile began inferring a default comparison delta
     # (#1491 resolve_comparison → level 3); 3a left when heading action prominence
-    # became inferred (#1491 resolve_action_prominence → level 3). No high-leverage
-    # gaps remain; the only backlog item left is the medium-leverage field-economy
-    # (2d) default.
-    assert {b["criterion"] for b in backlog if b["leverage"] == "high"} == set()
-    backlog_ids = {b["criterion"] for b in backlog}
-    assert {"2d"} <= backlog_ids
-    not_gaps = backlog_ids
-    assert "1a" not in not_gaps  # level 3, no longer a gap
-    assert "1b" not in not_gaps  # level 4 (#1493 slice 2 complete), no longer a gap
-    assert "1c" not in not_gaps  # level 3 (#1491 comparison default-flip), no longer a gap
-    assert "3a" not in not_gaps  # level 3 (#1491 action-prominence default-flip), no longer a gap
-    assert "3d" not in not_gaps  # level 4 (#1494 default-flip complete), no longer a gap
+    # became inferred (#1491 resolve_action_prominence → level 3); 2d left when
+    # auto-derived columns began inferring field economy (#1491
+    # resolve_column_economy → level 3). **MILESTONE: with 2d gone the backlog is
+    # EMPTY — every one of the 13 criteria now clears the L3 bar.**
+    assert backlog == [], f"expected an empty backlog (all criteria >= L3), got {backlog}"
 
 
 def test_criteria_count_and_ids() -> None:

@@ -28,6 +28,7 @@ from dazzle.core.ir import AggregateRef, PeekMode, state_machine, workspaces
 from dazzle.page import app_paths
 from dazzle.page.runtime.action_prominence_resolver import resolve_action_prominence
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
+from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
@@ -182,6 +183,29 @@ def _probe_2b() -> ProbeResult:
     return ProbeResult(hasattr(app_paths, "detail_path"), "app_paths.detail_path drill default")
 
 
+def _probe_2d() -> ProbeResult:
+    """Field economy IS the default for auto-derived columns (level 3): an
+    over-budget column list keeps the top-N most salient and sheds the tail via
+    the #1491 default-flip — exercised through the real resolver — while a
+    within-budget list is a no-op (byte-stable)."""
+    wide = [{"key": f"f{i}", "type": "text"} for i in range(10)]
+    wide[0] = {"key": "title", "type": "text"}  # identifying — must survive
+    wide[1] = {"key": "created_at", "type": "date"}  # timestamp — must drop
+    kept = resolve_column_economy(wide)
+    keys = {c["key"] for c in kept}
+    trims_to_budget = len(kept) == 6
+    keeps_identifying = "title" in keys
+    drops_timestamp = "created_at" not in keys
+    narrow = [{"key": "a", "type": "text"}, {"key": "b", "type": "badge"}]
+    within_budget_noop = resolve_column_economy(narrow) == narrow
+    ok = trims_to_budget and keeps_identifying and drops_timestamp and within_budget_noop
+    return ProbeResult(
+        ok,
+        f"over-budget->kept={len(kept)} (title kept={keeps_identifying}, "
+        f"created_at dropped={drops_timestamp}); within-budget-noop={within_budget_noop}",
+    )
+
+
 def _probe_2c() -> ProbeResult:
     """`peek:` + the resolve_peek_mode default-flip are live (#1494). An *unset*
     list surface whose entity has a detail surface resolves to `expand` (the
@@ -324,10 +348,10 @@ CRITERIA: list[Criterion] = [
         "2d",
         "progressive_disclosure",
         "field economy",
-        2,
-        "per-persona `hide:` exists; no column-priority / show-top-N economy default",
+        3,
+        "#1491 — auto-derived list columns infer field economy by DEFAULT: `resolve_column_economy` (`page/runtime/column_economy_resolver`) keeps the top-6 most salient columns (identifying/title > badge/ref > scalar > auto-timestamp) and sheds the low-signal tail, applied at the `workspace_columns` entity-fallback builder (replacing the old magic cap-of-8). The dropped fields are recovered by the already-default row drill (2b) / `peek:` (2c) — the L3 'reveal' with no htmx-4 dependency. An explicit surface field projection is authoritative and rendered in full (auto-columns only); a ≤6-column entity is byte-unchanged. Pure declared-signal default (salience from name/type, no usage, no JS). L4 follow-on: a `priority:` field override + a live in-table 'show all columns' reveal.",
         "medium",
-        None,
+        _probe_2d,
     ),
     # Negative space
     Criterion(

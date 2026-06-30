@@ -16,7 +16,9 @@ Public API:
   predicates through to the column metadata.
 - ``build_entity_columns(entity_spec)`` — fallback column derivation
   from the entity's full field list when a surface doesn't pin its
-  own projection. Hard-caps at 8 columns to avoid runaway tables.
+  own projection. Applies the 2d field-economy default-flip (#1491):
+  keeps the top-6 most salient columns (``resolve_column_economy``) and
+  sheds the low-signal tail, which the default row drill/peek recovers.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from __future__ import annotations
 from typing import Any
 
 from dazzle.core.strings import to_api_plural
+from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
 from dazzle.render.filters import status_tone_map
 
 
@@ -238,6 +241,8 @@ def build_entity_columns(entity_spec: Any, enums: Any = None) -> list[dict[str, 
             col["filterable"] = True
             col["filter_options"] = ["true", "false"]
         columns.append(col)
-        if len(columns) >= 8:
-            break
-    return columns
+    # 2d (#1491): field economy. Auto-derived columns (no author projection) keep
+    # the top-6 most salient and shed the low-signal tail (timestamps, long text),
+    # which the default row drill/peek still surfaces. Replaces the old magic
+    # cap-of-8. A ≤6-column entity is byte-identical.
+    return resolve_column_economy(columns)
