@@ -1692,6 +1692,9 @@ class DazzleBackendApp:
             services = getattr(self._app.state, "services", None)
             if services is not None:
                 services.usage_collector = self._usage_collector
+            # ADR-0050 3a (Phase 4): expose the pooled DB backend so the workspace
+            # handler can read usage counts at render time (best-effort, pooled).
+            self._app.state.db_manager = self._db_manager
 
         # Project route overrides — registered first for priority (v0.29.0)
         if self._project_root:

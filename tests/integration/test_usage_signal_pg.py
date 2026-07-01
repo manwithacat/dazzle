@@ -205,3 +205,53 @@ def test_read_usage_counts_tenant_fenced_and_windowed(
         (USAGE_KIND_ACTION, "approve"): 2,
         (USAGE_KIND_FIELD, "title"): 1,
     }
+
+
+def test_read_workspace_action_usage_glue(scratch_conn: tuple[psycopg.Connection, str]) -> None:
+    """Phase 4 glue: the workspace handler's per-render read resolves route→count for
+    ACTION events only (fields excluded) via the pooled backend on app.state."""
+    from types import SimpleNamespace
+
+    from dazzle.http.runtime.page_routes import _read_workspace_action_usage
+    from dazzle.http.runtime.pg_backend import PostgresBackend
+    from dazzle.http.runtime.usage_signal import (
+        USAGE_KIND_ACTION,
+        USAGE_KIND_FIELD,
+        ensure_usage_events_table,
+    )
+
+    conn, url = scratch_conn
+    with conn.cursor() as cur:
+        ensure_usage_events_table(cur)
+        for route, kind, n in [
+            ("/orders/new", USAGE_KIND_ACTION, 3),
+            ("/orders/report", USAGE_KIND_ACTION, 1),
+            ("title", USAGE_KIND_FIELD, 9),  # a field event — must be excluded
+        ]:
+            for _ in range(n):
+                cur.execute(
+                    "INSERT INTO _dazzle_usage_events (tenant_id, surface, kind, target) "
+                    "VALUES ('', 'dash', %s, %s)",
+                    (kind, route),
+                )
+    conn.commit()
+
+    backend = PostgresBackend(url)  # no pool → direct-connection fallback
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(db_manager=backend)),
+        state=SimpleNamespace(tenant=None),  # single-tenant → tenant_id ''
+    )
+    counts = _read_workspace_action_usage(request, "dash")
+    assert counts == {"/orders/new": 3, "/orders/report": 1}
+
+
+def test_read_workspace_action_usage_no_backend_returns_empty() -> None:
+    """No db_manager on app.state (e.g. no database) → {} → declared-order fallback."""
+    from types import SimpleNamespace
+
+    from dazzle.http.runtime.page_routes import _read_workspace_action_usage
+
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace()), state=SimpleNamespace(tenant=None)
+    )
+    assert _read_workspace_action_usage(request, "dash") == {}

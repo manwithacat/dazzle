@@ -94,7 +94,7 @@ def read_usage_counts(
     all-time. ``cur`` is an open psycopg cursor; the caller owns the connection.
     """
     sql = (
-        "SELECT kind, target, count(*) FROM _dazzle_usage_events "
+        "SELECT kind, target, count(*) AS n FROM _dazzle_usage_events "
         "WHERE tenant_id = %s AND surface = %s"
     )
     params: list[Any] = [tenant_id or "", surface]
@@ -103,7 +103,15 @@ def read_usage_counts(
         params.append(window_days)
     sql += " GROUP BY kind, target"
     cur.execute(sql, params)
-    return {(kind, target): count for kind, target, count in cur.fetchall()}
+    # Factory-agnostic: the framework's pooled connection uses a dict_row factory
+    # (rows are mappings), while a plain psycopg cursor yields tuples. Handle both.
+    result: dict[tuple[str, str], int] = {}
+    for row in cur.fetchall():
+        if isinstance(row, dict):
+            result[(row["kind"], row["target"])] = int(row["n"])
+        else:
+            result[(row[0], row[1])] = int(row[2])
+    return result
 
 
 def record_usage_from_request(request: Any) -> None:

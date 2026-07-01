@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.63] - 2026-07-01
+
+### Changed
+- **Workspace heading actions are now usage-ordered — the observe→infer loop closes (ADR-0050 Option A, Phase 4 / 3a → L4).** `resolve_action_prominence_by_usage` ranks a workspace's heading actions by their own click history (captured in Phase 3): above a **10-click min-sample floor** (per surface), frequently-used actions stay prominent and rarely-used ones demote to the `More ⋯` overflow; below the floor — a fresh app, thin signal, or no database — it is **byte-identical to the declared-order split**. The sort is stable, so ties and never-clicked actions keep their declared order (create-CTA-first is preserved at cold start). The workspace handler reads counts best-effort per render via the pooled backend (`_read_workspace_action_usage`, tenant-fenced, trailing 90 days); a read failure falls back to declared order and never breaks the render. This is the first framework surface whose layout adapts to observed usage — the ADR-0050 thesis delivered for 3a. (1a form-widget inference remains deferred behind the client-side field-capture fork.)
+
+### Fixed
+- **`read_usage_counts` is now row-factory-agnostic.** It unpacked rows as tuples, which silently returned column *names* under the framework's pooled `dict_row` connection (caught by the Phase-4 render-path glue test). Handles both mapping and tuple rows.
+
+### Agent Guidance
+- **The framework's pooled connection (`PostgresBackend.connection()`) yields `dict_row` mappings, not tuples** — a raw `psycopg.connect()` yields tuples. A reader used on both paths must handle both (isinstance-dict branch), or it will silently mis-read under one. End-to-end glue tests (not just raw-cursor tests) catch this.
+
 ## [0.92.62] - 2026-07-01
 
 ### Added

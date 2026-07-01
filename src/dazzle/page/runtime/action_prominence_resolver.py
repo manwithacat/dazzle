@@ -27,8 +27,15 @@ placements (this increment is scoped to the workspace heading row only).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 # Up to this many heading actions stay prominent; the rest overflow.
 _DEFAULT_PRIMARY_BUDGET = 3
+
+# ADR-0050 3a: minimum total heading-action clicks on a surface before usage
+# reorders its actions. Below this floor the declared order stands (cold-start =
+# byte-identical to today), so a thin, noisy signal never thrashes the UI.
+_DEFAULT_MIN_SAMPLES = 10
 
 
 def resolve_action_prominence[T](
@@ -48,3 +55,34 @@ def resolve_action_prominence[T](
     if len(actions) <= budget:
         return list(actions), []
     return list(actions[:budget]), list(actions[budget:])
+
+
+def resolve_action_prominence_by_usage[T](
+    actions: list[T],
+    usage: dict[str, int],
+    *,
+    route_of: Callable[[T], str],
+    budget: int = _DEFAULT_PRIMARY_BUDGET,
+    min_samples: int = _DEFAULT_MIN_SAMPLES,
+) -> tuple[list[T], list[T]]:
+    """Usage-weighted heading-action prominence (ADR-0050 3a → L4).
+
+    Cold-start-safe: when the surface's total clicks are below ``min_samples`` (a
+    fresh app, or a thin/noisy signal), returns exactly
+    ``resolve_action_prominence(actions, budget)`` — **byte-identical to today's
+    declaration-order split**. Above the floor, the actions are **stable-sorted by
+    usage descending** (``usage`` maps an action's route → click count) and then
+    split at ``budget``, so a frequently-clicked action stays prominent and a rare
+    one demotes to the ``More ⋯`` overflow.
+
+    The sort is *stable*: actions with equal usage keep their declared order, so the
+    canonical create-CTA-first ordering is preserved on ties and — critically — for
+    every action that has never been clicked (usage 0), which is the whole set at
+    cold start. ``route_of`` extracts the usage key (the action's route/target) from
+    each action, keeping this decoupled from the action's concrete shape.
+    """
+    total = sum(usage.values())
+    if total < min_samples:
+        return resolve_action_prominence(actions, budget)
+    ranked = sorted(actions, key=lambda a: -usage.get(route_of(a), 0))
+    return resolve_action_prominence(ranked, budget)
