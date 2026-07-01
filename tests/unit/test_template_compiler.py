@@ -736,6 +736,64 @@ class TestRelatedEntityTabs:
         assert len(ctx.detail.related_groups[0].tabs) == 1
         assert ctx.detail.related_groups[0].tabs[0].entity_name == "Contact"
 
+    def test_single_fk_path_tab_keeps_historical_shape(self):
+        """One FK path → tab_id/label unchanged (byte-stable for existing apps)."""
+        company = _company_entity()
+        contact = _contact_entity()
+        surface = ir.SurfaceSpec(
+            name="company_detail",
+            title="Company Detail",
+            entity_ref="Company",
+            mode=SurfaceMode.VIEW,
+            actions=[],
+        )
+        ctx = compile_surface_to_context(
+            surface,
+            company,
+            reverse_refs=[("Contact", "company", contact)],
+        )
+        tab = ctx.detail.related_groups[0].tabs[0]
+        assert tab.tab_id == "tab-contact"
+        assert tab.label == "Contact"
+
+    def test_multi_fk_path_tabs_disambiguated_by_fk_field(self):
+        """#1523: N FK paths from one entity → N distinct tab_ids and labels.
+
+        Duplicate tab_ids are a functional bug (the Alpine tab strip keys
+        activeTab on tab_id, so identical ids render all tabs active at once);
+        identical labels make the tabs indistinguishable. Both must vary by
+        the FK field.
+        """
+        company = _company_entity()
+        contact = _contact_entity()
+        surface = ir.SurfaceSpec(
+            name="company_detail",
+            title="Company Detail",
+            entity_ref="Company",
+            mode=SurfaceMode.VIEW,
+            actions=[],
+        )
+        ctx = compile_surface_to_context(
+            surface,
+            company,
+            reverse_refs=[
+                ("Contact", "company", contact),
+                ("Contact", "billing_company", contact),
+            ],
+        )
+        tabs = ctx.detail.related_groups[0].tabs
+        assert len(tabs) == 2
+        assert {t.tab_id for t in tabs} == {
+            "tab-contact-company",
+            "tab-contact-billing-company",
+        }
+        assert {t.label for t in tabs} == {
+            "Contact · company",
+            "Contact · billing company",
+        }
+        # Each tab still filters by its own FK path — the data was never identical.
+        assert {t.filter_field for t in tabs} == {"company", "billing_company"}
+
 
 def _audit_log_entity() -> ir.EntitySpec:
     """Entity with polymorphic FK (entity_type enum + entity_id uuid)."""

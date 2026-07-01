@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import functools
 import logging
+from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core import ir
@@ -1155,12 +1156,21 @@ def _compile_view_surface(
                 # Index by section name (lowercase) for fuzzy matching
                 _section_vis_map[_sec.name.lower()] = _sec_vis.model_dump()
 
-    # Build related entity tabs from reverse references
+    # Build related entity tabs from reverse references. An entity with more than
+    # one FK path to the parent yields one tab per path (#1523): disambiguate the
+    # tab_id (the Alpine activeTab key — duplicates render all tabs active) and the
+    # label by the FK field, so "Task · assigned to" / "Task · reviewed by" instead
+    # of N identical "Task" tabs. Single-path entities keep the historical shape.
+    _ref_path_counts = Counter(name for name, _, _ in reverse_refs or [])
     related_tabs: list[RelatedTabContext] = []
     for ref_entity_name, fk_field, ref_entity in reverse_refs or []:
         ref_slug = app_paths.entity_slug(ref_entity_name)
         ref_api = f"/{to_api_plural(ref_entity_name)}"
         tab_label = (ref_entity.title or ref_entity_name).replace("_", " ")
+        tab_id = f"tab-{ref_slug}"
+        if _ref_path_counts[ref_entity_name] > 1:
+            tab_id = f"tab-{ref_slug}-{fk_field.replace('_', '-')}"
+            tab_label = f"{tab_label} · {fk_field.replace('_', ' ')}"
         # Build columns from the related entity's fields (exclude FK to parent)
         tab_columns = [c for c in _build_entity_columns(ref_entity) if c.key != fk_field]
         # Match section visible condition to tab (#501)
@@ -1172,7 +1182,7 @@ def _compile_view_surface(
         )
         related_tabs.append(
             RelatedTabContext(
-                tab_id=f"tab-{ref_slug}",
+                tab_id=tab_id,
                 label=tab_label,
                 entity_name=ref_entity_name,
                 api_endpoint=ref_api,

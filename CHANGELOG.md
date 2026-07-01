@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.92.70] - 2026-07-02
+## [0.92.71] - 2026-07-02
+
+### Fixed
+- **Detail related tabs: multiple FK paths from one entity no longer render N identical, simultaneously-active tabs (#1523).** When a related entity reaches the parent through more than one FK (`assigned_to` + `reviewed_by` both `ref Parent`), the compiler previously emitted N tabs with the same label *and* the same `tab_id` — and since the Alpine tab strip keys `activeTab` on `tab_id`, all N rendered as active at once. Each FK path now gets a distinct `tab_id` (`tab-task-assigned-to`) and an FK-disambiguated label (`Task · assigned to`). Single-FK-path entities keep the exact historical `tab_id`/label (byte-stable — no golden churn). Each tab always filtered by its own FK path; only the presentation collapsed them. A declarative `via <fk_field>` qualifier for `related` groups (author-pinned path selection) is a possible follow-on.
 
 ### Fixed
 - **Vitality: returned-closure factories no longer read as islets (#1527).** `_dispatch_reference_names` gains a fourth name-based recovery arm: a bare `Name` in a `return` statement is dispatch-referenced (the closure-factory idiom — `def factory(): def handler(): …; return handler` — hands the inner function to a dynamic binder). This clears the 8 GraphQL resolver false positives (`ResolverGenerator.resolve_get` family in `graphql/resolver_generator.py` + `graphql/integration.py`), which Strawberry binds and invokes dynamically so no static call site exists. General fix, not GraphQL-specific: any route/handler factory returning a closure is now rescued.
