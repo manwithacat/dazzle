@@ -105,7 +105,9 @@ def test_workspace_shell_renders_primary_actions_row_with_test_id() -> None:
 def test_workspace_shell_primary_actions_use_hx_boost_anchors() -> None:
     """Each primary action is an `<a class="dz-workspace-action" hx-boost="true">`
     — boost upgrades it to an HTMX swap so the navigation doesn't
-    blow away the workspace shell."""
+    blow away the workspace shell. ADR-0050 3a also tags it with an
+    `hx-headers` `X-Dz-Usage-Action` carrying `<workspace>|<route>` so the
+    boosted click records a usage event server-side."""
     html = _render(
         WorkspaceShell(
             workspace_name="d",
@@ -114,8 +116,11 @@ def test_workspace_shell_primary_actions_use_hx_boost_anchors() -> None:
             primary_actions=(WorkspacePrimaryAction(label="New", route="/api/new"),),
         )
     )
-    assert '<a href="/api/new" hx-boost="true" class="dz-workspace-action">' in html
+    assert '<a href="/api/new" hx-boost="true" class="dz-workspace-action"' in html
     assert ">New</a>" in html
+    # ADR-0050 3a: the boosted anchor carries its (surface|action) identity.
+    assert "X-Dz-Usage-Action" in html
+    assert "d|/api/new" in html
 
 
 def test_workspace_shell_omits_overflow_menu_when_empty() -> None:

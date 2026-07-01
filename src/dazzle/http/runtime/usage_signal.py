@@ -106,6 +106,58 @@ def read_usage_counts(
     return {(kind, target): count for kind, target, count in cur.fetchall()}
 
 
+def record_usage_from_request(request: Any) -> None:
+    """Record a heading-action click from the ``X-Dz-Usage-Action`` request header
+    (ADR-0050 Phase 3, 3a). Internally safe — never raises, so a middleware can
+    call it unguarded without risking the request path.
+
+    The header (``"<surface>|<target>"``) is set by the hx-boosted heading-action
+    anchors (`_render_shell`); it is present only on a heading-action click, so this
+    is a no-op on every other request. The tenant key is the resolved request tenant
+    id (``''`` for single-tenant), matching what ``read_usage_counts`` reads back.
+    """
+    header = request.headers.get("X-Dz-Usage-Action") if hasattr(request, "headers") else None
+    if not header:
+        return
+    collector = getattr(getattr(request.app, "state", None), "usage_collector", None)
+    if collector is None:
+        return
+    surface, sep, target = header.partition("|")
+    if not sep or not surface or not target:
+        return
+    resolved = getattr(getattr(request, "state", None), "tenant", None)
+    resolved_id = getattr(resolved, "id", None) if resolved is not None else None
+    tenant_id = str(resolved_id) if resolved_id is not None else ""
+    collector.record(tenant_id=tenant_id, surface=surface, kind=USAGE_KIND_ACTION, target=target)
+
+
+class UsageSignalMiddleware:
+    """Raw ASGI middleware that records heading-action clicks (ADR-0050 Phase 3, 3a).
+
+    **Raw ASGI, NOT ``BaseHTTPMiddleware``** — the latter has body-consumption
+    issues that break streaming/SSE responses (see the same rationale in
+    ``csrf.py``/``api_middleware.py``). This passes ``receive``/``send`` through
+    **untouched**, so streaming responses are unaffected, and records **after** the
+    inner app completes — when ``request.state.tenant`` is resolved. ``record_usage_
+    from_request`` is a no-op unless the ``X-Dz-Usage-Action`` header is present, so
+    the per-request cost off the heading-action path is one dict lookup.
+    """
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+        # Post-response: tenant state is now set. Reuse the internally-safe recorder
+        # via a lightweight Request view over the same scope (no body read).
+        from starlette.requests import Request
+
+        record_usage_from_request(Request(scope))
+
+
 class UsageCollector:
     """Async, non-blocking batched writer for ``_dazzle_usage_events`` (Phase 1b).
 

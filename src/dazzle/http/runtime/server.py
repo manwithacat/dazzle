@@ -76,7 +76,7 @@ from dazzle.http.runtime.subsystems.seed import SeedSubsystem
 from dazzle.http.runtime.subsystems.sla import SLASubsystem
 from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 from dazzle.http.runtime.tenant_isolation import register_rls_user_attr_names
-from dazzle.http.runtime.usage_signal import UsageCollector
+from dazzle.http.runtime.usage_signal import UsageCollector, UsageSignalMiddleware
 from dazzle.http.runtime.workspace_aggregation import (  # noqa: F401
     _compute_aggregate_metrics,
     _fetch_count_metric,
@@ -787,6 +787,13 @@ class DazzleBackendApp:
             add_metrics_middleware(self._app)
         except ImportError:
             pass
+
+        # Usage-signal middleware (ADR-0050 Option A, 3a): record heading-action
+        # clicks. Raw ASGI (NOT BaseHTTPMiddleware — SSE/streaming-safe, per the
+        # csrf.py convention); records after the response when request.state.tenant
+        # is resolved, no-op unless the `X-Dz-Usage-Action` header (set by the
+        # hx-boosted heading anchors) is present.
+        self._app.add_middleware(UsageSignalMiddleware)
 
         # Tenant isolation middleware (schema-per-tenant)
         tenant_config = self._tenant_config

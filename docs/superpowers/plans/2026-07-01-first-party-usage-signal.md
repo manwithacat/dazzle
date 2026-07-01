@@ -32,16 +32,30 @@
 
 **Gate:** real-PG test: seeded rows aggregate correctly; a second tenant's rows are excluded.
 
-## Phase 3 — Event origination (design-risk phase)
+## Phase 3 — Event origination
 
-**Goal:** real usage produces rows. Two independent sources, kept behind the Phase-1 collector so the method can change without touching storage:
+**Sequencing decided (James, 2026-07-01): 3a-first, defer the 1a fork.**
 
-- **Actions (server-side, exact):** when a generated action endpoint fires, record `(surface, 'action', action_name)`. Cheap, no client code, always accurate.
-- **Field engagement (client, best-effort):** ride the existing `/_analytics/beacon/*` endpoints or a small htmx/Alpine hook emitting focus/commit on form fields → `(surface, 'field', field_name)`. Best-effort; loss is fine (cold-start/fallback covers gaps).
+### 3a — heading-action clicks (SHIPPED)
 
-**Open question for checkpoint:** field-engagement origination — beacon endpoint vs htmx event hook vs defer 1a entirely and ship 3a first (actions are the cleaner signal). See "Checkpoints".
+**Mechanism decided (James, 2026-07-01): tag anchors + recording hook** (over a
+boot route-map middleware). Workspace heading actions render as `hx-boost`ed
+anchors (`_render_shell.py`); each is tagged with `hx-headers` carrying its
+`"<surface>|<route>"` identity. A **raw ASGI** `UsageSignalMiddleware` (NOT
+`BaseHTTPMiddleware` — SSE/streaming-safe, per the `csrf.py` convention) records
+the click **after the response** (when `request.state.tenant` is resolved),
+reusing the internally-safe `record_usage_from_request`. Pure declarative htmx —
+no bespoke JS. Verified end-to-end (post-response tenant visibility via shared
+scope state) with a TestClient test.
 
-**Gate:** invoking an action writes an `action` row; engaging a field writes a `field` row (whichever origination is chosen).
+### 1a — field engagement (DEFERRED, fork open)
+
+Client-side capture of which form fields users engage. Fork to settle *after* 3a
+proves the loop: existing `/_analytics/beacon/*` endpoint vs a small htmx/Alpine
+focus hook vs skip 1a. Deferred by decision.
+
+**Gate (3a):** clicking a heading action writes an `action` row keyed by
+`(surface, route)`; a non-heading request writes nothing.
 
 ## Phase 4 — Inference consumers (cold-start-safe, traceable)
 

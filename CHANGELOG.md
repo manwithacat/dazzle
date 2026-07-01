@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.62] - 2026-07-01
+
+### Added
+- **Heading-action usage capture — the first production `record()` calls (ADR-0050 Option A, Phase 3 / 3a).** Workspace heading actions (the CTA row) render as `hx-boost`ed anchors; each is now tagged with `hx-headers` carrying its `"<surface>|<route>"` identity, and a **raw ASGI** `UsageSignalMiddleware` records the click into `_dazzle_usage_events` after the response (when `request.state.tenant` is resolved). Pure declarative htmx — no bespoke JS. The signal is what UX-maturity `3a` (action prominence) will consume in Phase 4 to demote rarely-used actions. **1a (form-field engagement) is deferred** — its client-side capture is a separate fork to settle once 3a proves the loop. Nothing *reads* the counts yet (Phase 4 wires the inferers), so behaviour is unchanged bar the added anchor attribute + a dormant post-response hook.
+
+### Agent Guidance
+- **Use raw ASGI middleware, never `BaseHTTPMiddleware`, for request/response observation** (`UsageSignalMiddleware`, following `csrf.py`/`api_middleware.py`) — `BaseHTTPMiddleware` buffers the body and breaks SSE/streaming. Read `request.state` *after* `await self.app(...)` to see values set by inner middleware (shared request scope); it's SSE-safe because `receive`/`send` pass through untouched.
+
 ## [0.92.61] - 2026-07-01
 
 ### Added
