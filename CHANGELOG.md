@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.68] - 2026-07-01
+
+### Added
+- **Vitality Phase 2 — test-coverage overlay (`dazzle fitness vitality --coverage <.coverage>`).** Overlays a coverage.py data file onto the Phase-1 connectedness report to clear static false positives (the thesis §5 "dynamic exercise" signal): each islet candidate splits into **unexercised** (statically isolated *and* never run by the suite — the highest-confidence genuine islets) vs **covered** (run under test despite static isolation — a graph-completeness gap or test-only code, i.e. *not* dead). On the framework this collapses the actionable set ~13× (≈1,380 candidates → **≈105 unexercised**). Reads the `.coverage` DB via the `coverage.CoverageData` API and maps executed lines to functions by AST line range; coverage scope matches CI's `-m "not e2e"` run, so a function exercised only by e2e reads as unexercised. Still report-only, no deletion. `analyze_connectedness(root, coverage_path=…)` returns `dead_candidates` / `covered_candidates`.
+
 ## [0.92.67] - 2026-07-01
 
 ### Added

@@ -81,3 +81,55 @@ def test_report_renders_and_lists_the_orphan(pkg: Path) -> None:
     assert "Vitality" in md
     assert "Augmentation delta" in md
     assert "pkg.a.orphan" in md
+
+
+# --- Phase 2: coverage overlay -----------------------------------------------
+
+
+def _orphan_lineno(pkg: Path) -> int:
+    import ast
+
+    tree = ast.parse((pkg / "pkg" / "a.py").read_text(encoding="utf-8"))
+    fn = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "orphan")
+    assert fn.end_lineno is not None
+    return fn.end_lineno
+
+
+def test_coverage_overlay_covered_candidate_is_not_dead(pkg: Path, tmp_path: Path) -> None:
+    from coverage import CoverageData
+
+    cov = tmp_path / ".cov"
+    data = CoverageData(basename=str(cov))
+    data.add_lines({str(pkg / "pkg" / "a.py"): {_orphan_lineno(pkg)}})
+    data.write()
+
+    r = analyze_connectedness(pkg, coverage_path=cov)
+    # orphan is statically isolated but *exercised* → covered, not dead.
+    assert "pkg.a.orphan" in (r.covered_candidates or [])
+    assert "pkg.a.orphan" not in (r.dead_candidates or [])
+
+
+def test_coverage_overlay_unexercised_candidate_is_dead(pkg: Path, tmp_path: Path) -> None:
+    from coverage import CoverageData
+
+    cov = tmp_path / ".cov"
+    data = CoverageData(basename=str(cov))
+    data.add_lines({str(pkg / "pkg" / "a.py"): set()})  # nothing executed
+    data.write()
+
+    r = analyze_connectedness(pkg, coverage_path=cov)
+    assert "pkg.a.orphan" in (r.dead_candidates or [])
+    assert "pkg.a.orphan" not in (r.covered_candidates or [])
+
+
+def test_report_headline_flips_to_unexercised_with_coverage(pkg: Path, tmp_path: Path) -> None:
+    from coverage import CoverageData
+
+    cov = tmp_path / ".cov"
+    data = CoverageData(basename=str(cov))
+    data.add_lines({str(pkg / "pkg" / "a.py"): set()})
+    data.write()
+
+    md = render_report_md(analyze_connectedness(pkg, coverage_path=cov))
+    assert "Coverage overlay" in md
+    assert "unexercised" in md

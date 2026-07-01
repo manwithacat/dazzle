@@ -54,7 +54,8 @@ _PROTOCOL_METHODS = frozenset(
 @dataclass
 class _ModuleFacts:
     module: str
-    functions: dict[str, ast.AST]  # qualname -> def node
+    path: Path  # the file, for the coverage overlay (Phase 2)
+    functions: dict[str, ast.AST]  # qualname -> def node (carries lineno/end_lineno)
     imports: dict[str, str]  # local alias -> target dotted path (from-imports + import-as)
     import_modules: set[str]  # local aliases that are modules (import x / import x as y)
     exported: set[str]  # simple names in __all__
@@ -69,6 +70,12 @@ class ConnectednessReport:
     augmentation_delta: int  # functions rescued by the reference augmentation
     unresolved_calls: int  # call sites the AST walk couldn't resolve (completeness signal)
     candidates: list[str] = field(default_factory=list)  # isolated: 0 callers, unreachable
+    # Phase 2 (coverage overlay): None until a coverage file is supplied. `dead`
+    # candidates are isolated AND unexercised by the test suite — the highest-confidence
+    # islets; `covered` candidates run under test despite static isolation (a
+    # graph-completeness gap or test-only code), i.e. NOT dead.
+    dead_candidates: list[str] | None = None
+    covered_candidates: list[str] | None = None
 
 
 def _module_name(path: Path, root: Path) -> str:
@@ -155,7 +162,7 @@ def _scan_module(path: Path, root: Path) -> _ModuleFacts | None:
                         for el in node.value.elts
                         if isinstance(el, ast.Constant) and isinstance(el.value, str)
                     }
-    return _ModuleFacts(module, functions, imports, import_modules, exported)
+    return _ModuleFacts(module, path, functions, imports, import_modules, exported)
 
 
 def _class_of(qualname: str, module: str) -> str | None:
@@ -234,8 +241,58 @@ def _build_call_edges(
     return edges, unresolved
 
 
-def analyze_connectedness(root: Path) -> ConnectednessReport:
-    """Build the AST call graph over ``root`` and compute the Phase-1 report."""
+def _covered_candidates(
+    coverage_path: Path, facts_by_file: dict[Path, _ModuleFacts], candidates: set[str]
+) -> set[str]:
+    """Of ``candidates``, the qualnames whose body has any test-executed line.
+
+    Reads a coverage.py data file (the ``.coverage`` DB) and maps executed lines back
+    to functions by AST line range. A covered islet candidate is *exercised* — a
+    graph-completeness gap or test-only code, not dead."""
+    from coverage import CoverageData
+
+    data = CoverageData(basename=str(coverage_path))
+    data.read()
+    executed: dict[str, set[int]] = {}
+    for f in data.measured_files():
+        executed[str(Path(f).resolve())] = set(data.lines(f) or ())
+
+    covered: set[str] = set()
+    for facts in facts_by_file.values():
+        lines = executed.get(str(facts.path.resolve()))
+        if not lines:
+            continue
+        for qual, node in facts.functions.items():
+            if qual not in candidates:
+                continue
+            start = getattr(node, "lineno", None)
+            if not isinstance(start, int):
+                continue
+            end_ln = getattr(node, "end_lineno", None)
+            end = end_ln if isinstance(end_ln, int) else start
+            if not lines.isdisjoint(range(start, end + 1)):
+                covered.add(qual)
+    return covered
+
+
+def _coverage_split(
+    coverage_path: Path | None, facts_by_file: dict[Path, _ModuleFacts], candidates: list[str]
+) -> tuple[list[str] | None, list[str] | None]:
+    """Partition islet candidates into (dead, covered) via a coverage file, or (None, None)."""
+    if coverage_path is None:
+        return None, None
+    covered = _covered_candidates(coverage_path, facts_by_file, set(candidates))
+    dead = [c for c in candidates if c not in covered]
+    covered_list = [c for c in candidates if c in covered]
+    return dead, covered_list
+
+
+def analyze_connectedness(root: Path, *, coverage_path: Path | None = None) -> ConnectednessReport:
+    """Build the AST call graph over ``root`` and compute the report.
+
+    ``coverage_path`` (Phase 2) overlays a coverage.py data file: islet candidates
+    split into ``dead_candidates`` (also unexercised — highest confidence) and
+    ``covered_candidates`` (run under test despite static isolation)."""
     facts_by_file: dict[Path, _ModuleFacts] = {}
     dispatch_names: set[str] = set()
     for path in _py_files(root):
@@ -304,6 +361,8 @@ def analyze_connectedness(root: Path) -> ConnectednessReport:
         and _leaf(q) not in _PROTOCOL_METHODS
     )
 
+    dead_candidates, covered_candidates = _coverage_split(coverage_path, facts_by_file, candidates)
+
     return ConnectednessReport(
         total_functions=len(functions),
         entry_points=len(entry_points),
@@ -312,6 +371,8 @@ def analyze_connectedness(root: Path) -> ConnectednessReport:
         augmentation_delta=len(reachable_augmented) - len(reachable_raw),
         unresolved_calls=unresolved,
         candidates=candidates,
+        dead_candidates=dead_candidates,
+        covered_candidates=covered_candidates,
     )
 
 
@@ -331,20 +392,35 @@ def render_report_md(report: ConnectednessReport, *, top: int = 40) -> str:
         f"- **Augmentation delta (functions rescued from 'unreachable'): {report.augmentation_delta}**",
         f"- Unresolved call sites (graph-completeness signal): {report.unresolved_calls}",
         f"- Islet candidates (0 callers, unreachable, non-protocol): **{len(report.candidates)}**",
+    ]
+    if report.dead_candidates is not None and report.covered_candidates is not None:
+        lines.append(
+            f"- **Coverage overlay (Phase 2):** {len(report.dead_candidates)} unexercised "
+            f"(genuine islets) · {len(report.covered_candidates)} covered "
+            f"(exercised — graph-gap or test-only)"
+        )
+    lines += [
         "",
         "> Report-only, AST-based, conservative (unresolved calls are counted, never "
         "guessed). A high augmentation delta means registry/decorator dispatch is the "
         "dominant reachability path — expected for Dazzle. Candidates are *review prompts*, "
         "not dead code: an AST-only graph still misses some dynamic dispatch.",
         "",
-        "## Islet candidates (review these)",
-        "",
     ]
-    if not report.candidates:
-        lines.append("_None — every function is reached or referenced._")
+
+    # With a coverage overlay the actionable set is the *unexercised* candidates.
+    headline = report.dead_candidates if report.dead_candidates is not None else report.candidates
+    heading = (
+        "## Islet candidates — unexercised (highest confidence)"
+        if report.dead_candidates is not None
+        else "## Islet candidates (review these)"
+    )
+    lines += [heading, ""]
+    if not headline:
+        lines.append("_None — every candidate is reached, referenced, or exercised._")
     else:
-        for q in report.candidates[:top]:
+        for q in headline[:top]:
             lines.append(f"- `{q}`")
-        if len(report.candidates) > top:
-            lines.append(f"- …and {len(report.candidates) - top} more")
+        if len(headline) > top:
+            lines.append(f"- …and {len(headline) - top} more")
     return "\n".join(lines) + "\n"

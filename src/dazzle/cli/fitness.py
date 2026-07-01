@@ -370,6 +370,12 @@ def vitality(
     output: Path | None = typer.Option(
         None, "--output", "-o", help="Write the report markdown to this file"
     ),
+    coverage: Path | None = typer.Option(
+        None,
+        "--coverage",
+        help="Path to a coverage.py data file (e.g. .coverage) — overlays test exercise "
+        "so islet candidates split into unexercised (genuine) vs covered (Phase 2)",
+    ),
     top: int = typer.Option(40, "--top", help="Max islet candidates to list"),
 ) -> None:
     """Static connectedness report — Vitality Phase 1 (#1521).
@@ -383,7 +389,7 @@ def vitality(
     positives). See ``dev_docs/dazzle-vitality-thesis.md``.
     """
     src_root = (project or Path.cwd()) / "src"
-    report = analyze_connectedness(src_root)
+    report = analyze_connectedness(src_root, coverage_path=coverage)
     md = render_report_md(report, top=top)
     if output is not None:
         output.write_text(md, encoding="utf-8")
