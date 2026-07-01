@@ -76,6 +76,7 @@ from dazzle.http.runtime.subsystems.seed import SeedSubsystem
 from dazzle.http.runtime.subsystems.sla import SLASubsystem
 from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 from dazzle.http.runtime.tenant_isolation import register_rls_user_attr_names
+from dazzle.http.runtime.usage_signal import UsageCollector
 from dazzle.http.runtime.workspace_aggregation import (  # noqa: F401
     _compute_aggregate_metrics,
     _fetch_count_metric,
@@ -420,6 +421,7 @@ class DazzleBackendApp:
         self._auth_store: AuthStore | None = None
         self._auth_middleware: AuthMiddleware | None = None
         self._audit_logger: AuditLogger | None = None
+        self._usage_collector: Any = None  # UsageCollector | None (ADR-0050)
         self._file_service: FileService | None = None
         self._last_migration: MigrationPlan | None = None
         self._start_time: datetime | None = None
@@ -670,6 +672,8 @@ class DazzleBackendApp:
         self._db_manager.open_pool(min_size=pool_min, max_size=pool_max)
         if self._audit_logger is not None:
             self._audit_logger.start()
+        if self._usage_collector is not None:
+            self._usage_collector.start()  # ADR-0050 first-party usage signal
         # Subsystem startup hooks (seed/events/queues/sla/process/channels/…) run after the
         # pool is open so they can use the DB. Replaces the @on_event hooks a custom lifespan
         # silently dropped.
@@ -697,6 +701,8 @@ class DazzleBackendApp:
             await run_shutdown_hooks(app)
             if self._audit_logger is not None:
                 await self._audit_logger.stop()
+            if self._usage_collector is not None:
+                await self._usage_collector.stop()  # final flush of queued usage events
             self._db_manager.close_pool()
 
     def _create_app(self) -> None:
@@ -1667,6 +1673,18 @@ class DazzleBackendApp:
             # assignment must precede app startup (it does — it runs at build
             # time, well before the lifespan fires).
             self._audit_logger = audit_logger
+
+        # ADR-0050 Option A (first-party usage signal): construct the usage
+        # collector whenever a database is available (any app can capture usage,
+        # unlike audit which is gated on auditable entities). start()/stop() are
+        # driven by the lifespan (reads self._usage_collector at startup). Dormant
+        # until Phase 3 wires record() calls; reachable via request.app.state.
+        if self._database_url:
+            self._usage_collector = UsageCollector(database_url=self._database_url)
+            self._app.state.usage_collector = self._usage_collector
+            services = getattr(self._app.state, "services", None)
+            if services is not None:
+                services.usage_collector = self._usage_collector
 
         # Project route overrides — registered first for priority (v0.29.0)
         if self._project_root:

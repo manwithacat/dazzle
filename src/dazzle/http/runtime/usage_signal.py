@@ -26,13 +26,20 @@ that orchestrator (``dazzle db reframework-baseline``).
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Kinds of usage event we record. ``field`` = a form field was engaged; ``action``
 # = a surface action was invoked. Kept as a closed set so the aggregate + inferers
 # can reason about exactly these two.
 USAGE_KIND_FIELD = "field"
 USAGE_KIND_ACTION = "action"
+
+# One queued usage event: (tenant_id, surface, kind, target).
+_UsageRow = tuple[str, str, str, str]
 
 
 def ensure_usage_events_table(cur: Any) -> None:
@@ -62,3 +69,111 @@ def ensure_usage_events_table(cur: Any) -> None:
     cur.execute(
         "CREATE INDEX IF NOT EXISTS idx_usage_events_ts ON _dazzle_usage_events (tenant_id, ts)"
     )
+
+
+class UsageCollector:
+    """Async, non-blocking batched writer for ``_dazzle_usage_events`` (Phase 1b).
+
+    Mirrors ``AuditLogger``'s pattern: callers ``record(...)`` (fire-and-forget,
+    dropped under backpressure — a lost usage sample is harmless, the inference
+    layer already tolerates sparse data via its cold-start fallback), a background
+    ``_flush_loop`` batch-INSERTs on an interval, and ``start()``/``stop()`` are
+    driven by the app lifespan (a running event loop is guaranteed at startup).
+
+    PostgreSQL-only (ADR-0008). Does **not** create the table — that is the
+    orchestrator's job (``ensure_usage_events_table``); the collector only writes.
+    Dormant until Phase 3 wires ``record`` calls into the action/field paths.
+    """
+
+    def __init__(
+        self,
+        database_url: str,
+        *,
+        max_queue_size: int = 10000,
+        flush_interval: float = 2.0,
+    ) -> None:
+        self._database_url = database_url
+        self._flush_interval = flush_interval
+        self._queue: asyncio.Queue[_UsageRow] = asyncio.Queue(maxsize=max_queue_size)
+        self._dropped_count = 0
+        self._task: asyncio.Task[None] | None = None
+        self._stopped = False
+
+    def record(self, *, tenant_id: str | None, surface: str, kind: str, target: str) -> None:
+        """Enqueue one usage event (non-blocking; dropped when the queue is full).
+
+        ``tenant_id`` is coerced to ``''`` for single-tenant apps so it matches the
+        table's ``NOT NULL DEFAULT ''`` and the tenant-fenced read (Phase 2).
+        """
+        if not surface or not target:
+            return
+        try:
+            self._queue.put_nowait((tenant_id or "", surface, kind, target))
+        except asyncio.QueueFull:
+            self._dropped_count += 1
+            if self._dropped_count % 1000 == 1:
+                logger.warning("Usage-signal queue full, dropped %d event(s)", self._dropped_count)
+
+    def start(self) -> None:
+        """Start the background flush task (call from within a running loop)."""
+        if self._task is None or self._task.done():
+            self._stopped = False
+            loop = asyncio.get_running_loop()
+            self._task = loop.create_task(self._flush_loop())
+
+    async def stop(self) -> None:
+        """Stop the flush task and flush any remaining queued events."""
+        self._stopped = True
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+        await self._flush()
+
+    async def _flush_loop(self) -> None:
+        while not self._stopped:
+            try:
+                await asyncio.sleep(self._flush_interval)
+                await self._flush()
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                logger.warning("Usage-signal flush error", exc_info=True)
+
+    async def _flush(self) -> None:
+        rows = self._drain_queue()
+        if rows:
+            await asyncio.to_thread(self._write_rows, rows)
+
+    def _drain_queue(self) -> list[_UsageRow]:
+        rows: list[_UsageRow] = []
+        while not self._queue.empty():
+            try:
+                rows.append(self._queue.get_nowait())
+            except asyncio.QueueEmpty:
+                break
+        return rows
+
+    def _write_rows(self, rows: list[_UsageRow]) -> None:
+        """Synchronously batch-INSERT drained events. Best-effort: a write failure
+        is logged, never raised — usage capture must never break a request path."""
+        if not rows:
+            return
+        try:
+            import psycopg
+        except ImportError:  # pragma: no cover - psycopg is a runtime dependency
+            logger.warning("psycopg unavailable; usage-signal events dropped")
+            return
+        try:
+            with psycopg.connect(self._database_url) as conn:
+                with conn.cursor() as cur:
+                    cur.executemany(
+                        "INSERT INTO _dazzle_usage_events (tenant_id, surface, kind, target) "
+                        "VALUES (%s, %s, %s, %s)",
+                        rows,
+                    )
+                conn.commit()
+        except Exception:
+            logger.warning("Usage-signal batch write failed; %d event(s) lost", len(rows))

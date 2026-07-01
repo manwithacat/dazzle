@@ -75,6 +75,9 @@ class RuntimeServices:
     - ``process_manager`` — the active process / schedule runtime
       (Temporal / event-bus adapter). Extension code that
       starts domain processes reaches for this.
+    - ``usage_collector`` — the first-party usage-signal collector
+      (ADR-0050); ``record(...)`` feeds ``_dazzle_usage_events`` for
+      UX inference. None when the app has no database.
     - ``app_spec`` — the parsed Dazzle ``AppSpec`` for this app instance.
       Populated at boot. Used by the renderer dispatch ctx builder to do
       polymorphic-surface lookups for ``subtype_panel:`` blocks (#1217 Phase 3e).
@@ -104,6 +107,7 @@ class RuntimeServices:
     system_collector: Any = None  # SystemCollector | None
     metrics_emitter: Any = None  # MetricsEmitter | None
     process_manager: Any = None  # ProcessManager | None
+    usage_collector: Any = None  # UsageCollector | None (ADR-0050 first-party usage signal)
     app_spec: ir.AppSpec | None = (
         None  # ir.AppSpec | None — populated at boot, used by renderer dispatch ctx builder
     )

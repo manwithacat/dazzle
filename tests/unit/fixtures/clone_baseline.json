@@ -511,6 +511,22 @@
     ]
   },
   {
+    "signature": "116f1e8e21e3b40602f06f2eb7d5bbd2",
+    "count": 2,
+    "names": [
+      "dazzle/http/runtime/audit_log.py::start",
+      "dazzle/http/runtime/usage_signal.py::start"
+    ]
+  },
+  {
+    "signature": "1fa89c0f2f0e25b1f8404f1c681dc72f",
+    "count": 2,
+    "names": [
+      "dazzle/http/runtime/audit_log.py::stop",
+      "dazzle/http/runtime/usage_signal.py::stop"
+    ]
+  },
+  {
     "signature": "caa0527e353ca0f13b285a780f5eb8c9",
     "count": 2,
     "names": [

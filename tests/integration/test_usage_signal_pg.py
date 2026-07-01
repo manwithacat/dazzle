@@ -97,3 +97,39 @@ def test_usage_events_insert_and_tenant_fenced_readback(
         )
         rows = {(k, t): c for k, t, c in cur.fetchall()}
     assert rows == {(USAGE_KIND_ACTION, "approve"): 3, (USAGE_KIND_FIELD, "title"): 2}
+
+
+@pytest.mark.asyncio
+async def test_usage_collector_records_and_flushes(scratch_conn: psycopg.Connection) -> None:
+    """Phase 1b: record() enqueues, _flush() batch-writes to the app DB."""
+    from dazzle.http.runtime.usage_signal import (
+        USAGE_KIND_ACTION,
+        USAGE_KIND_FIELD,
+        UsageCollector,
+        ensure_usage_events_table,
+    )
+
+    with scratch_conn.cursor() as cur:
+        ensure_usage_events_table(cur)
+    scratch_conn.commit()
+
+    # Derive the scratch DB's URL from the open connection.
+    info = scratch_conn.info
+    url = f"postgresql://{info.user}@{info.host}:{info.port}/{info.dbname}"
+
+    collector = UsageCollector(database_url=url, flush_interval=1000.0)  # manual flush
+    collector.record(tenant_id="t-a", surface="orders", kind=USAGE_KIND_ACTION, target="approve")
+    collector.record(tenant_id="t-a", surface="orders", kind=USAGE_KIND_FIELD, target="title")
+    collector.record(tenant_id=None, surface="orders", kind=USAGE_KIND_ACTION, target="export")
+    # Guard: empty surface/target is dropped, not written.
+    collector.record(tenant_id="t-a", surface="", kind=USAGE_KIND_ACTION, target="noop")
+    await collector._flush()
+
+    with scratch_conn.cursor() as cur:
+        cur.execute("SELECT tenant_id, surface, kind, target FROM _dazzle_usage_events ORDER BY id")
+        rows = cur.fetchall()
+    assert rows == [
+        ("t-a", "orders", USAGE_KIND_ACTION, "approve"),
+        ("t-a", "orders", USAGE_KIND_FIELD, "title"),
+        ("", "orders", USAGE_KIND_ACTION, "export"),  # None tenant → '' (single-tenant)
+    ]

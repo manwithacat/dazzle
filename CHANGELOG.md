@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.59] - 2026-07-01
+
+### Added
+- **`UsageCollector` — first-party usage-signal writer wired into the app lifespan (ADR-0050 Option A, Phase 1b).** An async, non-blocking batched writer (mirroring `AuditLogger`) for `_dazzle_usage_events`: `record(surface, kind, target, tenant_id)` is fire-and-forget (dropped under backpressure — a lost sample is harmless; inference tolerates sparse data), a background loop batch-INSERTs on an interval, and a final flush runs on shutdown. Constructed whenever a database is present, reachable via `request.app.state.usage_collector` and `RuntimeServices.usage_collector`, started/stopped by the server lifespan. Best-effort by design — a write failure is logged, never raised, so usage capture can't break a request path. **Dormant until Phase 3** wires `record()` calls into the action/field paths; Phase 2 adds the tenant-fenced aggregate.
+
+### Fixed
+- **Green up `main` after v0.92.58 (Phase 1a) tripped four non-`gate` guards.** Registry/new-file changes need the full `pytest -m "not e2e"` suite, not just `-m gate`: `test_artifact_registry.py`'s hand-maintained `_EXPECTED_BASELINE` (+`_dazzle_usage_events`), the deferred-imports ratchet (hoisted the `UsageCollector` import to `server.py` module top — no cycle), the RuntimeServices docstring (documented the new field), and the clone ratchet (the collector's trivial `start`/`stop` asyncio lifecycle is accepted parallel-by-design residue vs coupling to security-sensitive `AuditLogger`).
+
+### Agent Guidance
+- **Run the full `pytest -m "not e2e"` locally before shipping a framework-table / registry / new-file change** — several drift/ratchet/doc guards (`test_artifact_registry` `_EXPECTED_BASELINE`, clone ratchet, deferred-imports ratchet, `test_runtime_services_doc`) are **not** in `-m gate`, so a gate-only pre-flight can go green locally and red in CI.
+
 ## [0.92.58] - 2026-07-01
 
 ### Added
