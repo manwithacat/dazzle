@@ -509,6 +509,7 @@ class RouteGenerator:
                 select_fields=projection,
                 json_projection=projection,
                 htmx_columns=_htmx.get("columns"),
+                htmx_columns_full=_htmx.get("columns_full"),  # ADR-0050 2d (untruncated)
                 htmx_detail_url=_htmx.get("detail_url"),
                 htmx_peek_mode=_htmx.get("peek_mode"),
                 htmx_peek_by_table_id=_htmx.get("peek_by_table_id"),

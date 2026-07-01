@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.66] - 2026-07-01
+
+### Changed
+- **Field economy is now usage-driven — the 1a/2d loop closes (ADR-0050 Option A, Phase 5b wired; #1524).** For the entity-fallback (auto-derived column) path, a list's columns are now chosen **per request** from the field-engagement signal captured in Phase 5a: above a 10-event floor for the entity, a heavily-engaged field survives auto-column truncation instead of being shed (via `resolve_column_economy_by_usage`, which boosts declared salience — capped below the identifying-column floor, so the row's title is never displaced). Below the floor / no usage / no database → **byte-identical** to today's declared-salience truncation. Mechanics: `build_entity_columns` split into `build_entity_columns_full` (untruncated) + the truncating wrapper; the full set is cached alongside the truncated one (entity-fallback only); the list handler applies usage economy in `_inject_htmx_meta` via the shared best-effort `read_usage_counts_for_request` (tenant-fenced, 90-day window, pooled connection). The 3a read helper (`_read_workspace_action_usage`) now delegates to the same shared reader (de-duplicated). This makes the framework's **second** surface — auto-list columns, after 3a heading actions — adapt to observed usage.
+
+### Agent Guidance
+- **`read_usage_counts_for_request(request, surface=…, kind=…)` is the shared request-time usage read** for render inferers (3a actions, 2d fields) — leases `app.state.db_manager`, tenant-fenced, best-effort (`{}` on failure → declared default). Use it rather than re-implementing the connection/tenant/except dance. A build-time→request-time move of a resolver (like the column-economy split) can trip the **complexity ratchet** on the renamed function even with no new complexity — `dazzle fitness code --write-baseline` is the sanctioned fix once you've confirmed it flagged only the rename.
+
 ## [0.92.65] - 2026-07-01
 
 ### Added

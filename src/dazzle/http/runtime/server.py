@@ -87,6 +87,9 @@ from dazzle.http.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,  # noqa: F401
 )
 from dazzle.http.runtime.workspace_columns import (
+    build_entity_columns_full as _build_entity_columns_full,  # noqa: F401
+)
+from dazzle.http.runtime.workspace_columns import (
     build_surface_columns as _build_surface_columns,  # noqa: F401
 )
 from dazzle.http.runtime.workspace_columns import (
@@ -1771,6 +1774,11 @@ class DazzleBackendApp:
                 if _ls
                 else _build_entity_columns(entity, self._appspec.enums)
             )
+            # ADR-0050 2d → L4: for the pure entity-fallback (no list surface), cache
+            # the FULL untruncated column set so the request-time usage inferer can
+            # rescue a heavily-engaged field that build-time salience would shed. None
+            # for surface-declared columns (explicit author projection wins).
+            cols_full = None if _ls else _build_entity_columns_full(entity, self._appspec.enums)
             # #1494 (2c, Slice 2): peek is declared PER SURFACE, but one entity can
             # host several list surfaces with different `peek:` modes. Map each
             # surface's table_id (= surface.name = region_name) to its resolved
@@ -1785,6 +1793,7 @@ class DazzleBackendApp:
             }
             entity_htmx_meta[entity.name] = {
                 "columns": cols,
+                "columns_full": cols_full,  # ADR-0050 2d: untruncated (entity-fallback only)
                 "detail_url": f"{app_prefix}/{slug}/{{id}}",
                 "entity_name": entity.name,
                 # #1494 (2c): resolved `peek:` mode for the (first) list surface.

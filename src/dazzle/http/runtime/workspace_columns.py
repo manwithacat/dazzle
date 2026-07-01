@@ -169,14 +169,16 @@ def build_surface_columns(
     return columns
 
 
-def build_entity_columns(entity_spec: Any, enums: Any = None) -> list[dict[str, Any]]:
-    """Pre-compute column metadata from an entity spec (constant-folded at startup).
+def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[str, Any]]:
+    """Pre-compute the **full** (untruncated) auto-derived column list from an entity.
 
-    This replaces per-request column derivation with a one-time computation.
-    All data comes from IR (field types, enum values, state machines) and
-    never changes during the lifetime of the server. ``enums`` carries the app's
-    shared `enum` blocks so badge columns pick up their declared `semantic:`
-    value→tone map (#1493 slice 2).
+    Same one-time IR-derived computation as ``build_entity_columns`` but WITHOUT the
+    2d column-economy truncation — every eligible field becomes a column, in
+    declaration order. The caller applies economy: ``build_entity_columns`` truncates
+    by declared salience (the build-time default), while the request-time path
+    (ADR-0050 2d) applies ``resolve_column_economy_by_usage`` so a heavily-engaged
+    field can survive. ``enums`` carries the shared `enum` blocks for badge
+    `semantic:` maps (#1493 slice 2).
     """
     columns: list[dict[str, Any]] = []
     if not entity_spec or not hasattr(entity_spec, "fields"):
@@ -241,8 +243,16 @@ def build_entity_columns(entity_spec: Any, enums: Any = None) -> list[dict[str, 
             col["filterable"] = True
             col["filter_options"] = ["true", "false"]
         columns.append(col)
-    # 2d (#1491): field economy. Auto-derived columns (no author projection) keep
-    # the top-6 most salient and shed the low-signal tail (timestamps, long text),
-    # which the default row drill/peek still surfaces. Replaces the old magic
-    # cap-of-8. A ≤6-column entity is byte-identical.
-    return resolve_column_economy(columns)
+    return columns
+
+
+def build_entity_columns(entity_spec: Any, enums: Any = None) -> list[dict[str, Any]]:
+    """Auto-derived columns with the **build-time** 2d economy applied (the default).
+
+    Keeps the top-6 most salient auto-columns (``resolve_column_economy``) and sheds
+    the low-signal tail (timestamps, long text), recovered via the default row
+    drill/peek. A ≤6-column entity is byte-identical. The request-time usage path
+    (ADR-0050 2d → L4) instead calls ``build_entity_columns_full`` + the usage-boosted
+    resolver; this remains the cold-start / no-DB default.
+    """
+    return resolve_column_economy(build_entity_columns_full(entity_spec, enums))

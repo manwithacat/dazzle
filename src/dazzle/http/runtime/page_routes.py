@@ -30,7 +30,7 @@ from dazzle.core.ir import SurfaceMode
 from dazzle.core.ir.integrations import MappingTriggerType
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
-from dazzle.http.runtime.usage_signal import USAGE_KIND_ACTION, read_usage_counts
+from dazzle.http.runtime.usage_signal import USAGE_KIND_ACTION, read_usage_counts_for_request
 from dazzle.page import app_paths
 from dazzle.page.converters.nav_builder import (
     NavGroup,
@@ -2374,33 +2374,11 @@ def _resolve_workspace_authored_actions(
 def _read_workspace_action_usage(request: Any, surface_name: str) -> dict[str, int]:
     """Best-effort per-render read of heading-action usage counts (ADR-0050 3a).
 
-    Returns ``{route: click_count}`` for the resolved tenant over the trailing 90
-    days, or ``{}`` on any failure / no DB — which makes
-    ``resolve_action_prominence_by_usage`` fall back byte-identically to the declared
-    order. Leases a pooled connection like the region prelude's grant read; the
-    ``_dazzle_usage_events`` table is NON_FENCED, so tenant scoping is the explicit
-    ``WHERE tenant_id`` filter in ``read_usage_counts``, not RLS."""
-    app = getattr(request, "app", None)
-    state = getattr(app, "state", None) if app is not None else None
-    db_mgr = getattr(state, "db_manager", None) if state is not None else None
-    if db_mgr is None:
-        return {}
-    resolved = getattr(getattr(request, "state", None), "tenant", None)
-    tenant_id = str(getattr(resolved, "id", "") or "") if resolved is not None else ""
-    try:
-        with db_mgr.connection() as conn, conn.cursor() as cur:
-            raw = read_usage_counts(cur, tenant_id=tenant_id, surface=surface_name, window_days=90)
-    except Exception:
-        # Best-effort: a usage read must never break a workspace render — fall back to
-        # declared order. Logged at WARNING (not debug) so a persistent failure stays
-        # visible rather than silently swallowed.
-        logger.warning(
-            "usage-signal read failed for workspace %s; using declared order",
-            surface_name,
-            exc_info=True,
-        )
-        return {}
-    return {target: cnt for (kind, target), cnt in raw.items() if kind == USAGE_KIND_ACTION}
+    Thin wrapper over the shared ``read_usage_counts_for_request`` — returns
+    ``{route: click_count}`` for the resolved tenant over the trailing 90 days, or
+    ``{}`` on any failure / no DB (→ ``resolve_action_prominence_by_usage`` falls back
+    byte-identically to the declared order)."""
+    return read_usage_counts_for_request(request, surface=surface_name, kind=USAGE_KIND_ACTION)
 
 
 async def _workspace_handler(

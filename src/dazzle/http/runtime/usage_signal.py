@@ -114,6 +114,44 @@ def read_usage_counts(
     return result
 
 
+def read_usage_counts_for_request(
+    request: Any, *, surface: str, kind: str, window_days: int | None = 90
+) -> dict[str, int]:
+    """Best-effort per-render read of ``{target: count}`` for one ``(surface, kind)``.
+
+    The single request-time read the render inferers share (3a action prominence,
+    2d column economy). Leases a pooled connection from ``app.state.db_manager``,
+    tenant-fenced to the resolved request tenant (``''`` for single-tenant). Returns
+    ``{}`` on any failure / no DB — so the inferers fall back byte-identically to
+    their declared default. The ``_dazzle_usage_events`` table is NON_FENCED, so
+    tenant scoping is the explicit ``WHERE tenant_id`` filter, not RLS.
+    """
+    app = getattr(request, "app", None)
+    state = getattr(app, "state", None) if app is not None else None
+    db_mgr = getattr(state, "db_manager", None) if state is not None else None
+    if db_mgr is None:
+        return {}
+    resolved = getattr(getattr(request, "state", None), "tenant", None)
+    resolved_id = getattr(resolved, "id", None) if resolved is not None else None
+    tenant_id = str(resolved_id) if resolved_id is not None else ""
+    try:
+        with db_mgr.connection() as conn, conn.cursor() as cur:
+            raw = read_usage_counts(
+                cur, tenant_id=tenant_id, surface=surface, window_days=window_days
+            )
+    except Exception:
+        # Best-effort: a usage read must never break a render — fall back to the
+        # declared default. WARNING (not debug) so a persistent failure is visible.
+        logger.warning(
+            "usage-signal read failed for %s/%s; using declared default",
+            surface,
+            kind,
+            exc_info=True,
+        )
+        return {}
+    return {target: cnt for (k, target), cnt in raw.items() if k == kind}
+
+
 def record_usage_from_request(request: Any) -> None:
     """Record a heading-action click from the ``X-Dz-Usage-Action`` request header
     (ADR-0050 Phase 3, 3a). Internally safe — never raises, so a middleware can

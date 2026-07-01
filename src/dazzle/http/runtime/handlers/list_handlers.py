@@ -49,6 +49,8 @@ from dazzle.http.runtime.route_support import (
     _is_htmx_request,
     _wants_html,
 )
+from dazzle.http.runtime.usage_signal import USAGE_KIND_FIELD, read_usage_counts_for_request
+from dazzle.page.runtime.column_economy_resolver import resolve_column_economy_by_usage
 from dazzle.render.access_messages import _forbidden_detail
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.renderer._data_row import render_data_table_rows
@@ -94,6 +96,7 @@ def create_list_handler(
     select_fields: list[str] | None = None,
     json_projection: list[str] | None = None,
     htmx_columns: list[dict[str, Any]] | None = None,
+    htmx_columns_full: list[dict[str, Any]] | None = None,
     htmx_detail_url: str | None = None,
     htmx_peek_mode: str | None = None,
     htmx_peek_by_table_id: dict[str, str] | None = None,
@@ -139,8 +142,20 @@ def create_list_handler(
 
     def _inject_htmx_meta(request: Request) -> None:
         """Set HTMX rendering metadata on request.state for table row fragments."""
-        if htmx_columns is not None:
-            request.state.htmx_columns = htmx_columns
+        cols = htmx_columns
+        # ADR-0050 2d → L4: for the entity-fallback path (columns_full present), apply
+        # usage-boosted column economy per request so a heavily-engaged field survives
+        # truncation. Cold-start / no usage / no DB → resolve_column_economy(full) ==
+        # the cached truncated `htmx_columns`, so the output is byte-identical.
+        if htmx_columns_full is not None:
+            usage = read_usage_counts_for_request(
+                request, surface=htmx_entity_name or "", kind=USAGE_KIND_FIELD
+            )
+            cols = resolve_column_economy_by_usage(
+                htmx_columns_full, usage, key_of=lambda c: str(c.get("key", ""))
+            )
+        if cols is not None:
+            request.state.htmx_columns = cols
         if htmx_detail_url is not None:
             request.state.htmx_detail_url = htmx_detail_url
         if htmx_peek_mode is not None:

@@ -255,3 +255,43 @@ def test_read_workspace_action_usage_no_backend_returns_empty() -> None:
         app=SimpleNamespace(state=SimpleNamespace()), state=SimpleNamespace(tenant=None)
     )
     assert _read_workspace_action_usage(request, "dash") == {}
+
+
+def test_read_usage_counts_for_request_field_kind(
+    scratch_conn: tuple[psycopg.Connection, str],
+) -> None:
+    """The shared request-time read (what list_handlers calls for 2d) resolves
+    field-kind counts for the resolved tenant, excluding action rows."""
+    from types import SimpleNamespace
+
+    from dazzle.http.runtime.pg_backend import PostgresBackend
+    from dazzle.http.runtime.usage_signal import (
+        USAGE_KIND_ACTION,
+        USAGE_KIND_FIELD,
+        ensure_usage_events_table,
+        read_usage_counts_for_request,
+    )
+
+    conn, url = scratch_conn
+    with conn.cursor() as cur:
+        ensure_usage_events_table(cur)
+        for kind, target, n in [
+            (USAGE_KIND_FIELD, "title", 4),
+            (USAGE_KIND_FIELD, "notes", 2),
+            (USAGE_KIND_ACTION, "approve", 9),  # action — must be excluded
+        ]:
+            for _ in range(n):
+                cur.execute(
+                    "INSERT INTO _dazzle_usage_events (tenant_id, surface, kind, target) "
+                    "VALUES ('', 'Task', %s, %s)",
+                    (kind, target),
+                )
+    conn.commit()
+
+    backend = PostgresBackend(url)
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(db_manager=backend)),
+        state=SimpleNamespace(tenant=None),
+    )
+    counts = read_usage_counts_for_request(request, surface="Task", kind=USAGE_KIND_FIELD)
+    assert counts == {"title": 4, "notes": 2}
