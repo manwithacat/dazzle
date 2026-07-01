@@ -940,7 +940,8 @@
       "code_command": 4,
       "investigate_command": 10,
       "queue_command": 6,
-      "triage_command": 11
+      "triage_command": 11,
+      "vitality": 3
     },
     "mi_rank": "A"
   },
@@ -7893,6 +7894,22 @@
       "dedupe_key_for": 1,
       "read_queue_file": 6,
       "write_queue_file": 4
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/fitness/vitality.py": {
+    "functions": {
+      "ConnectednessReport": 1,
+      "_ModuleFacts": 1,
+      "_build_call_edges": 7,
+      "_class_of": 3,
+      "_dispatch_reference_names": 10,
+      "_module_name": 3,
+      "_py_files": 3,
+      "_resolve_call": 11,
+      "_scan_module": 19,
+      "analyze_connectedness": 22,
+      "render_report_md": 5
     },
     "mi_rank": "A"
   },

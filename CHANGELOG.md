@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.67] - 2026-07-01
+
+### Added
+- **`dazzle fitness vitality` — static connectedness report (Vitality Phase 1, #1521).** The first actioned slice of the long-planned Vitality thesis (`dev_docs/dazzle-vitality-thesis.md`), which had stalled on a 5-source node-identity join. This slice does only the tractable topological half: builds an AST call graph over `src/`, augments it with the **registry/decorator dispatch recovered from the code itself** (a function handed to a call, decorated, or invoked as `x.method()` is dispatch-reachable — the thesis §6 correction, since a pure AST graph massively over-reports dead code in Dazzle's registry-driven runtime), then reports reachability, the **augmentation delta** (functions the dispatch recovery rescues from "unreachable" — the acceptance signal; ~4,100 on the framework, so dispatch dominates reachability as expected), and the **islet candidates** (functions with no caller, unreached, non-protocol). Report-only — no runtime, no coverage, no deletion (per the thesis non-goals). **Investigation reframed the original #1521 premise:** the MCP knowledge graph has no populated `calls` edges and "surfacing prominence" isn't extractable, so the real §6 "suture" is Dazzle's own dispatch registries, not the KG. AST-only still over-reports (candidates are review prompts, not dead code); Phase 2 (coverage/runtime) would clear the false positives. `analyze_connectedness` + `render_report_md` in `dazzle.fitness.vitality`.
+
+### Agent Guidance
+- **A static call-graph over Dazzle must resolve relative imports and recover registry/duck-typed dispatch, or it's noise.** `dazzle.fitness.vitality` does both: `node.level` relative imports (`from ._shared import x`) resolve to absolute qualnames (else every intra-package edge is missed), and a name that's decorated / passed as a value / called as `.name()` counts as reached (Dazzle dispatches through registries, not direct calls). The **augmentation delta** is the honesty check — if dispatch recovery changes nothing, it's not wired.
+
 ## [0.92.66] - 2026-07-01
 
 ### Changed

@@ -10,10 +10,10 @@ class Dazzle < Formula
 
   desc "DSL-first application framework with LLM-assisted development"
   homepage "https://github.com/manwithacat/dazzle"
-  version "0.92.66"
+  version "0.92.67"
   license "MIT"
 
-  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.92.66.tar.gz"
+  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.92.67.tar.gz"
   sha256 "PLACEHOLDER_SOURCE_SHA256"
 
   # pydantic-core requires Rust to build from source, so use pre-built wheels
