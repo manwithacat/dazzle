@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.70] - 2026-07-02
+
+### Fixed
+- **Vitality: returned-closure factories no longer read as islets (#1527).** `_dispatch_reference_names` gains a fourth name-based recovery arm: a bare `Name` in a `return` statement is dispatch-referenced (the closure-factory idiom — `def factory(): def handler(): …; return handler` — hands the inner function to a dynamic binder). This clears the 8 GraphQL resolver false positives (`ResolverGenerator.resolve_get` family in `graphql/resolver_generator.py` + `graphql/integration.py`), which Strawberry binds and invokes dynamically so no static call site exists. General fix, not GraphQL-specific: any route/handler factory returning a closure is now rescued.
+
 ## [0.92.69] - 2026-07-01
 
 ### Added

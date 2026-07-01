@@ -203,7 +203,7 @@ def _resolve_call(
 def _dispatch_reference_names(tree: ast.AST) -> set[str]:
     """Simple names that are dispatched somewhere a pure AST call-graph can't pin.
 
-    Three cheap recoveries, all name-based:
+    Four cheap recoveries, all name-based:
     - **passed as a value** — a bare ``Name`` handed to a call (``register(handler)`` /
       ``Depends(dep)``) → registry/DI dispatch.
     - **decorator** — a bare-``Name`` decorator.
@@ -211,6 +211,10 @@ def _dispatch_reference_names(tree: ast.AST) -> set[str]:
       ``x``'s type statically, but the method name being *called as an attribute* means
       a method of that name is reached. Without this, every method that's invoked on an
       instance (the common case) falsely reads as uncalled — the AST-only over-report.
+    - **returned as a value** — a bare ``Name`` in a ``return`` statement: the
+      closure-factory idiom (``def factory(): def handler(): ...; return handler``)
+      hands the inner function to a caller that binds it dynamically (Strawberry
+      resolvers, route factories), so the closure is reachable despite zero call sites.
 
     Coarse (name-keyed, so a shared name over-rescues), which is the right bias for a
     *"review these"* report: we'd rather miss a real islet than flag 4000 false ones.
@@ -224,6 +228,8 @@ def _dispatch_reference_names(tree: ast.AST) -> set[str]:
                 names.add(node.func.attr)  # x.method() → 'method' is dispatched
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             names |= {d.id for d in node.decorator_list if isinstance(d, ast.Name)}
+        if isinstance(node, ast.Return) and isinstance(node.value, ast.Name):
+            names.add(node.value.id)  # return handler → closure-factory dispatch
     return names
 
 

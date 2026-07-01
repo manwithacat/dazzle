@@ -42,6 +42,11 @@ def pkg(tmp_path: Path) -> Path:
             "\n"
             "register(dispatched)\n"
             "\n"
+            "def factory():\n"  # closure-factory idiom (#1527): returned bare name
+            "    def resolve_get():\n"
+            "        pass\n"
+            "    return resolve_get\n"
+            "\n"
             "class Thing:\n"
             "    def __init__(self):\n"  # protocol method → never a candidate
             "        pass\n"
@@ -69,6 +74,14 @@ def test_registry_reference_rescues_and_moves_the_delta(pkg: Path) -> None:
     # counts toward the augmentation delta (rescued beyond the raw call graph).
     assert "pkg.a.dispatched" not in r.candidates
     assert r.augmentation_delta >= 1
+
+
+def test_returned_closure_rescued_not_a_candidate(pkg: Path) -> None:
+    # `return resolve_get` inside a factory = closure-factory dispatch (#1527):
+    # the inner function is handed to a dynamic binder (Strawberry, route registries),
+    # so it must not read as an islet despite zero static call sites.
+    r = analyze_connectedness(pkg)
+    assert not any(q.endswith(".resolve_get") for q in r.candidates)
 
 
 def test_protocol_method_never_a_candidate(pkg: Path) -> None:
