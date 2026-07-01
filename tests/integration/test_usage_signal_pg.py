@@ -145,3 +145,63 @@ async def test_usage_collector_records_and_flushes(
         ("t-a", "orders", USAGE_KIND_FIELD, "title"),
         ("", "orders", USAGE_KIND_ACTION, "export"),  # None tenant → '' (single-tenant)
     ]
+
+
+def test_read_usage_counts_tenant_fenced_and_windowed(
+    scratch_conn: tuple[psycopg.Connection, str],
+) -> None:
+    """Phase 2: read_usage_counts fences by tenant + surface and can window by recency."""
+    from dazzle.http.runtime.usage_signal import (
+        USAGE_KIND_ACTION,
+        USAGE_KIND_FIELD,
+        ensure_usage_events_table,
+        read_usage_counts,
+    )
+
+    conn, _url = scratch_conn
+    with conn.cursor() as cur:
+        ensure_usage_events_table(cur)
+        # t-a/orders: 2 fresh 'approve' actions + 1 fresh 'title' field; 1 OLD 'approve'.
+        for _ in range(2):
+            cur.execute(
+                "INSERT INTO _dazzle_usage_events (tenant_id, surface, kind, target) "
+                "VALUES (%s, %s, %s, %s)",
+                ("t-a", "orders", USAGE_KIND_ACTION, "approve"),
+            )
+        cur.execute(
+            "INSERT INTO _dazzle_usage_events (tenant_id, surface, kind, target) "
+            "VALUES (%s, %s, %s, %s)",
+            ("t-a", "orders", USAGE_KIND_FIELD, "title"),
+        )
+        cur.execute(
+            "INSERT INTO _dazzle_usage_events (tenant_id, surface, kind, target, ts) "
+            "VALUES (%s, %s, %s, %s, now() - make_interval(days => 40))",
+            ("t-a", "orders", USAGE_KIND_ACTION, "approve"),
+        )
+        # Noise a fenced read must exclude: other tenant + other surface.
+        cur.execute(
+            "INSERT INTO _dazzle_usage_events (tenant_id, surface, kind, target) "
+            "VALUES ('t-b', 'orders', %s, 'approve')",
+            (USAGE_KIND_ACTION,),
+        )
+        cur.execute(
+            "INSERT INTO _dazzle_usage_events (tenant_id, surface, kind, target) "
+            "VALUES ('t-a', 'invoices', %s, 'approve')",
+            (USAGE_KIND_ACTION,),
+        )
+    conn.commit()
+
+    with conn.cursor() as cur:
+        # All-time: the old 'approve' counts too → 3 approves, 1 title.
+        all_time = read_usage_counts(cur, tenant_id="t-a", surface="orders")
+        # 30-day window: the 40-day-old 'approve' drops → 2 approves, 1 title.
+        windowed = read_usage_counts(cur, tenant_id="t-a", surface="orders", window_days=30)
+
+    assert all_time == {
+        (USAGE_KIND_ACTION, "approve"): 3,
+        (USAGE_KIND_FIELD, "title"): 1,
+    }
+    assert windowed == {
+        (USAGE_KIND_ACTION, "approve"): 2,
+        (USAGE_KIND_FIELD, "title"): 1,
+    }

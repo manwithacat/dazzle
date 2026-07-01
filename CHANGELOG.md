@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.61] - 2026-07-01
+
+### Added
+- **`read_usage_counts` — tenant-fenced, time-windowed usage aggregate (ADR-0050 Option A, Phase 2).** The single read the render-time inferers (Phase 4) will consume: `read_usage_counts(cur, tenant_id=…, surface=…, window_days=None) -> {(kind, target): count}` for one surface. Tenant fence (`WHERE tenant_id = %s`) is the scope contract — usage rows are framework-owned and tenant-keyed, so no domain scope-predicate is needed and a second tenant's rows can never appear. `window_days` restricts to the trailing N days (parameterized via `make_interval`) so the signal can *decay* — a field popular a year ago won't dominate forever; `None` = all-time. Still nothing calls it in real traffic (Phase 3 wires origination, Phase 4 the inferers).
+
 ## [0.92.60] - 2026-07-01
 
 ### Fixed

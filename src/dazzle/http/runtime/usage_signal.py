@@ -71,6 +71,41 @@ def ensure_usage_events_table(cur: Any) -> None:
     )
 
 
+def read_usage_counts(
+    cur: Any,
+    *,
+    tenant_id: str | None,
+    surface: str,
+    window_days: int | None = None,
+) -> dict[tuple[str, str], int]:
+    """Tenant-fenced usage-frequency counts for one surface (ADR-0050 Phase 2).
+
+    Returns ``{(kind, target): count}`` — e.g. ``{('action', 'approve'): 12,
+    ('field', 'title'): 4}`` — for the given ``tenant_id`` (``''`` for single-tenant,
+    matching the collector's coercion). This is the single read the render-time
+    inferers (Phase 4) consume for `1a`/`3a`.
+
+    **Tenant fence is the scope contract:** usage rows are framework-owned and
+    tenant-keyed, so a plain ``WHERE tenant_id = %s`` is the isolation boundary —
+    a second tenant's rows can never appear (no domain scope-predicate needed).
+
+    **Recency:** ``window_days`` restricts to the trailing N days so a signal can
+    *decay* (a field popular a year ago should not dominate forever). ``None`` =
+    all-time. ``cur`` is an open psycopg cursor; the caller owns the connection.
+    """
+    sql = (
+        "SELECT kind, target, count(*) FROM _dazzle_usage_events "
+        "WHERE tenant_id = %s AND surface = %s"
+    )
+    params: list[Any] = [tenant_id or "", surface]
+    if window_days is not None:
+        sql += " AND ts > now() - make_interval(days => %s)"
+        params.append(window_days)
+    sql += " GROUP BY kind, target"
+    cur.execute(sql, params)
+    return {(kind, target): count for kind, target, count in cur.fetchall()}
+
+
 class UsageCollector:
     """Async, non-blocking batched writer for ``_dazzle_usage_events`` (Phase 1b).
 
