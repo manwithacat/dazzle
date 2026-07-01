@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.60] - 2026-07-01
+
+### Fixed
+- **`test_usage_collector_records_and_flushes` green on a password-authed CI Postgres.** The test reconstructed the collector's DB URL from `conn.info`, which drops the password — fine on a trust-auth local Postgres, but on CI the collector's own `psycopg.connect` failed and (writes being best-effort/swallowed) silently wrote nothing → empty table. The `scratch_conn` fixture now yields `(conn, url)` with the **credentialed** scratch URL derived from `TEST_DATABASE_URL`, and the collector uses it.
+
+### Agent Guidance
+- **A runtime component that opens its OWN DB connection from a URL must be handed the credentialed URL in tests** — don't rebuild it from `conn.info` (loses the password; passes local trust-auth, fails CI). And run the **postgres-marked** tests locally too (not just `-m "not e2e"`) before shipping a DB-writer change.
+
 ## [0.92.59] - 2026-07-01
 
 ### Added

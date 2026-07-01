@@ -24,17 +24,26 @@ def _admin_url() -> str:
 
 
 @pytest.fixture
-def scratch_conn() -> Iterator[psycopg.Connection]:
+def scratch_conn() -> Iterator[tuple[psycopg.Connection, str]]:
+    """Yield ``(connection, url)`` for a throwaway database.
+
+    The ``url`` is the **credentialed** scratch-DB URL (derived from
+    ``TEST_DATABASE_URL``), which the ``UsageCollector`` needs to open its OWN
+    connection. Reconstructing a URL from ``conn.info`` drops the password and
+    silently fails on a password-authed CI Postgres (the collector swallows write
+    errors by design), so the fixture hands out the real URL.
+    """
     if not _PG_URL:
         pytest.skip("no TEST_DATABASE_URL/DATABASE_URL")
     admin_url = _admin_url()
     base, _, _old = admin_url.rpartition("/")
     scratch = f"dazzle_usage_{uuid.uuid4().hex[:8]}"
+    scratch_url = f"{base}/{scratch}"
     with psycopg.connect(admin_url, autocommit=True) as admin:
         admin.execute(f'CREATE DATABASE "{scratch}"')  # nosemgrep — uuid-derived
     try:
-        with psycopg.connect(f"{base}/{scratch}") as conn:
-            yield conn
+        with psycopg.connect(scratch_url) as conn:
+            yield conn, scratch_url
     finally:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             admin.execute(
@@ -46,16 +55,17 @@ def scratch_conn() -> Iterator[psycopg.Connection]:
 
 
 def test_ensure_usage_events_table_creates_shape_and_is_idempotent(
-    scratch_conn: psycopg.Connection,
+    scratch_conn: tuple[psycopg.Connection, str],
 ) -> None:
     from dazzle.http.runtime.usage_signal import ensure_usage_events_table
 
-    with scratch_conn.cursor() as cur:
+    conn, _url = scratch_conn
+    with conn.cursor() as cur:
         ensure_usage_events_table(cur)
         ensure_usage_events_table(cur)  # idempotent — second call must not raise
-    scratch_conn.commit()
+    conn.commit()
 
-    with scratch_conn.cursor() as cur:
+    with conn.cursor() as cur:
         cur.execute(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name = '_dazzle_usage_events' ORDER BY column_name"
@@ -65,7 +75,7 @@ def test_ensure_usage_events_table_creates_shape_and_is_idempotent(
 
 
 def test_usage_events_insert_and_tenant_fenced_readback(
-    scratch_conn: psycopg.Connection,
+    scratch_conn: tuple[psycopg.Connection, str],
 ) -> None:
     from dazzle.http.runtime.usage_signal import (
         USAGE_KIND_ACTION,
@@ -73,7 +83,8 @@ def test_usage_events_insert_and_tenant_fenced_readback(
         ensure_usage_events_table,
     )
 
-    with scratch_conn.cursor() as cur:
+    conn, _url = scratch_conn
+    with conn.cursor() as cur:
         ensure_usage_events_table(cur)
         # Two tenants, overlapping (surface, target) — a fenced read must not mix them.
         for tenant, kind, target, n in [
@@ -87,9 +98,9 @@ def test_usage_events_insert_and_tenant_fenced_readback(
                     "VALUES (%s, %s, %s, %s)",
                     (tenant, "orders", kind, target),
                 )
-    scratch_conn.commit()
+    conn.commit()
 
-    with scratch_conn.cursor() as cur:
+    with conn.cursor() as cur:
         cur.execute(
             "SELECT kind, target, count(*) FROM _dazzle_usage_events "
             "WHERE tenant_id = %s AND surface = %s GROUP BY kind, target ORDER BY target",
@@ -100,7 +111,9 @@ def test_usage_events_insert_and_tenant_fenced_readback(
 
 
 @pytest.mark.asyncio
-async def test_usage_collector_records_and_flushes(scratch_conn: psycopg.Connection) -> None:
+async def test_usage_collector_records_and_flushes(
+    scratch_conn: tuple[psycopg.Connection, str],
+) -> None:
     """Phase 1b: record() enqueues, _flush() batch-writes to the app DB."""
     from dazzle.http.runtime.usage_signal import (
         USAGE_KIND_ACTION,
@@ -109,14 +122,13 @@ async def test_usage_collector_records_and_flushes(scratch_conn: psycopg.Connect
         ensure_usage_events_table,
     )
 
-    with scratch_conn.cursor() as cur:
+    conn, url = scratch_conn
+    with conn.cursor() as cur:
         ensure_usage_events_table(cur)
-    scratch_conn.commit()
+    conn.commit()
 
-    # Derive the scratch DB's URL from the open connection.
-    info = scratch_conn.info
-    url = f"postgresql://{info.user}@{info.host}:{info.port}/{info.dbname}"
-
+    # The collector opens its OWN connection from `url` — must be the credentialed
+    # scratch URL (not a conn.info reconstruction, which drops the password on CI).
     collector = UsageCollector(database_url=url, flush_interval=1000.0)  # manual flush
     collector.record(tenant_id="t-a", surface="orders", kind=USAGE_KIND_ACTION, target="approve")
     collector.record(tenant_id="t-a", surface="orders", kind=USAGE_KIND_FIELD, target="title")
@@ -125,7 +137,7 @@ async def test_usage_collector_records_and_flushes(scratch_conn: psycopg.Connect
     collector.record(tenant_id="t-a", surface="", kind=USAGE_KIND_ACTION, target="noop")
     await collector._flush()
 
-    with scratch_conn.cursor() as cur:
+    with conn.cursor() as cur:
         cur.execute("SELECT tenant_id, surface, kind, target FROM _dazzle_usage_events ORDER BY id")
         rows = cur.fetchall()
     assert rows == [
