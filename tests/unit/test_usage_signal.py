@@ -12,6 +12,7 @@ import pytest
 
 from dazzle.http.runtime.usage_signal import (
     USAGE_KIND_ACTION,
+    USAGE_KIND_FIELD,
     UsageSignalMiddleware,
     record_usage_from_request,
 )
@@ -156,3 +157,68 @@ def test_middleware_sees_resolved_tenant_end_to_end() -> None:
     assert c.calls == [
         {"tenant_id": "t-xyz", "surface": "orders", "kind": USAGE_KIND_ACTION, "target": "/x"}
     ]
+
+
+# --- field-engagement beacon endpoint (Phase 5 / 1a) -------------------------
+
+
+def _beacon_app(collector: object) -> object:
+    from fastapi import FastAPI
+
+    from dazzle.http.runtime.usage_routes import create_usage_routes
+
+    app = FastAPI()
+    app.state.usage_collector = collector
+
+    @app.middleware("http")
+    async def _set_tenant(request, call_next):  # type: ignore[no-untyped-def]
+        request.state.tenant = SimpleNamespace(id="t-1")
+        return await call_next(request)
+
+    app.include_router(create_usage_routes())
+    return app
+
+
+def test_field_beacon_records_and_returns_204() -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    c = _StubCollector()
+    r = TestClient(_beacon_app(c)).post(
+        "/_dz/usage/field", data={"surface": "task_edit", "field": "title"}
+    )
+    assert r.status_code == 204
+    assert c.calls == [
+        {"tenant_id": "t-1", "surface": "task_edit", "kind": USAGE_KIND_FIELD, "target": "title"}
+    ]
+
+
+def test_field_beacon_empty_payload_is_noop_still_204() -> None:
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    c = _StubCollector()
+    r = TestClient(_beacon_app(c)).post("/_dz/usage/field", data={"surface": "", "field": ""})
+    assert r.status_code == 204
+    assert c.calls == []
+
+
+def test_dz_usage_js_bundled() -> None:
+    """dz-usage.js must be in the build manifest AND the built dist bundle, or the
+    1a field-engagement beacon never loads in a real browser (mirrors the dz-csrf
+    manifest guard)."""
+    import importlib.util
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    spec = importlib.util.spec_from_file_location("build_dist", repo / "scripts" / "build_dist.py")
+    assert spec is not None and spec.loader is not None
+    build_dist = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build_dist)
+    assert "dz-usage.js" in {p.name for p in build_dist.JS_SOURCES}
+
+    dist = repo / "src" / "dazzle" / "page" / "runtime" / "static" / "dist" / "dazzle.min.js"
+    assert dist.exists(), "dist bundle missing — run scripts/build_dist.py"
+    assert "/_dz/usage/field" in dist.read_text(encoding="utf-8"), (
+        "dz-usage.js not in the dist bundle — rebuild with scripts/build_dist.py"
+    )

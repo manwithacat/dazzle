@@ -76,6 +76,7 @@ from dazzle.http.runtime.subsystems.seed import SeedSubsystem
 from dazzle.http.runtime.subsystems.sla import SLASubsystem
 from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 from dazzle.http.runtime.tenant_isolation import register_rls_user_attr_names
+from dazzle.http.runtime.usage_routes import create_usage_routes
 from dazzle.http.runtime.usage_signal import UsageCollector, UsageSignalMiddleware
 from dazzle.http.runtime.workspace_aggregation import (  # noqa: F401
     _compute_aggregate_metrics,
@@ -2118,6 +2119,12 @@ class DazzleBackendApp:
             self._app.include_router(locale_router)
         except Exception:
             logger.warning("Locale router mount failed", exc_info=True)
+
+        # ADR-0050 Phase 5 / 1a: field-engagement beacon endpoint, mounted only when
+        # a usage collector exists (a database is configured). The dz-usage.js hook
+        # POSTs here on first form-field focus so the 1a widget inferer can adapt.
+        if getattr(self._app.state, "usage_collector", None) is not None:
+            self._app.include_router(create_usage_routes())
 
     def _mount_file_routes(self) -> None:
         assert self._app is not None

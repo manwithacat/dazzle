@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.64] - 2026-07-01
+
+### Added
+- **Form-field engagement capture (ADR-0050 Option A, Phase 5a / 1a).** A zero-dependency client hook (`dz-usage.js`, bundled) fires a fire-and-forget `navigator.sendBeacon` to `POST /_dz/usage/field` on a form field's **first focus**, recording `(surface, 'field', field)` into the usage collector — the signal the 1a form-widget inferer will consume (Phase 5b). Privacy-safe: it sends only the surface + field **names** (no values), once per field per page load, same-origin (admitted by the CSRF origin gate — no exemption). The `surface` key is the form's existing `data-dazzle-form` (entity) attribute, so **no form markup changed**; the `field` is the input's existing `data-dazzle-field`. The beacon route mounts only when a usage collector exists (a database is configured). Capture-only — nothing infers from field usage yet (Phase 5b wires the widget inferer). New runtime route `/_dz/usage/field` (runtime-urls baseline updated).
+
+### Agent Guidance
+- **FastAPI route files must NOT carry `from __future__ import annotations` (ADR-0014)** — it defers annotation evaluation and breaks `Form()`/`Depends()` resolution. A new `*_routes.py` with route handlers will fail `test_no_future_annotations_in_routes`. New runtime routes also drift the `runtime-urls` API-surface baseline — regenerate with `dazzle inspect api runtime-urls --write` and note it here.
+
 ## [0.92.63] - 2026-07-01
 
 ### Changed

@@ -10,7 +10,7 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 56 routes across 17 modules
+# Counts: 57 routes across 18 modules
 
 module: admin_api_routes
   POST | /deploys/trigger
@@ -157,3 +157,7 @@ module: task_routes
     handler: reassign_task(task_id: str, body: ReassignTaskRequest, services: RuntimeServices = Depends(get_services)) -> CompleteTaskResponse
   GET | /{task_id}/surface-url
     handler: get_task_surface_url(task_id: str, services: RuntimeServices = Depends(get_services)) -> dict[str, str]
+
+module: usage_routes
+  POST | /field
+    handler: record_field(request: Request, surface: Annotated[str, Form()] = '', field: Annotated[str, Form()] = '') -> Response

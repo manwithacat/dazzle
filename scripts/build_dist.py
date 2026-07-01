@@ -121,6 +121,10 @@ JS_SOURCES = [
     # htmx 4 migration: auto-dismiss bridge for OOB toasts (replaces the
     # dropped htmx-2 remove-me extension).
     STATIC / "js" / "dz-toast.js",
+    # ADR-0050 Phase 5 / 1a: first-party form-field engagement beacon. Fires a
+    # sendBeacon on a field's first focus so the 1a widget inferer can adapt to
+    # real usage. Zero-dep, best-effort, same-origin.
+    STATIC / "js" / "dz-usage.js",
     SITE_STATIC / "js" / "site.js",
 ]
 
