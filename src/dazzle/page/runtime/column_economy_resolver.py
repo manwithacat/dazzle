@@ -28,11 +28,22 @@ reveal.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 # Keep at most this many auto-derived columns; the salience tail is dropped
 # (recovered via the default drill/peek).
 _DEFAULT_COLUMN_BUDGET = 6
+
+# ADR-0050 2d→L4: minimum total field-engagement events for an entity before usage
+# boosts column economy. Below it, declared salience alone decides (cold-start =
+# byte-identical). Mirrors the 3a action-prominence floor.
+_DEFAULT_MIN_SAMPLES = 10
+
+# Max salience a fully-engaged field can gain from usage. Bounded below the
+# identifying-field floor (100) so a used field can rescue itself past a badge/ref
+# but never outrank the row's identifying column.
+_USAGE_BOOST_MAX = 40
 
 # Field names that identify a row at a glance — always worth a column.
 _IDENTIFYING_KEYS = frozenset(
@@ -94,5 +105,43 @@ def resolve_column_economy(
     # Stable sort by descending salience keeps declaration order among ties;
     # take the top `budget` indices, then re-emit in original order.
     ranked = sorted(range(len(columns)), key=lambda i: -_salience(columns[i]))
+    keep = set(ranked[:budget])
+    return [c for i, c in enumerate(columns) if i in keep]
+
+
+def resolve_column_economy_by_usage(
+    columns: list[dict[str, Any]],
+    usage: dict[str, int],
+    *,
+    key_of: Callable[[dict[str, Any]], str],
+    budget: int = _DEFAULT_COLUMN_BUDGET,
+    min_samples: int = _DEFAULT_MIN_SAMPLES,
+) -> list[dict[str, Any]]:
+    """Usage-boosted column economy (ADR-0050 2d → L4).
+
+    Cold-start-safe: below the entity's ``min_samples`` engagement floor — or when
+    the table is already within budget — returns exactly ``resolve_column_economy``
+    (**byte-identical** to the declared-salience truncation). Above the floor, each
+    column's effective salience is its declared salience **plus** a bounded usage
+    boost (``usage`` maps a field name → form-engagement count), so a frequently-
+    engaged field survives truncation even if declared-low. The boost is capped
+    below the identifying-field floor, so a used field can rise past a badge/ref but
+    never displaces the row's identifying column; a never-engaged field gets no
+    boost (its ranking is unchanged). Survivors are re-emitted in declaration order
+    (truncation, not reorder), matching the sibling resolver.
+    """
+    total = sum(usage.values())
+    if budget < 0:
+        budget = 0
+    if total < min_samples or len(columns) <= budget:
+        return resolve_column_economy(columns, budget)
+    max_usage = max(usage.values()) or 1
+
+    def _effective(i: int) -> int:
+        col = columns[i]
+        boost = round(_USAGE_BOOST_MAX * usage.get(key_of(col), 0) / max_usage)
+        return _salience(col) + boost
+
+    ranked = sorted(range(len(columns)), key=lambda i: -_effective(i))
     keep = set(ranked[:budget])
     return [c for i, c in enumerate(columns) if i in keep]

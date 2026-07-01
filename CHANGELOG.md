@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.65] - 2026-07-01
+
+### Added
+- **Usage-boosted column-economy inferer (ADR-0050 Option A, Phase 5b / 2d — core).** `resolve_column_economy_by_usage` (`page/runtime/column_economy_resolver.py`) is the field-signal consumer for 2d field economy: above a 10-event floor, a column's declared salience gets a bounded usage boost (from the field-engagement signal captured in Phase 5a), so a frequently-engaged low-salience field survives auto-column truncation instead of being shed — while a never-engaged field is unchanged and the identifying column is never displaced (the boost is capped below its salience floor). Below the floor / no usage → **byte-identical** to today's declared-salience truncation. **Not yet wired into rendering** — `build_entity_columns` truncates at build time (cached) but usage is per-request, so the request-time application is a build→request refactor tracked in **#1524**. This commit lands the reviewed, unit-tested core (cold-start, usage-rescue, identifying-protection) to de-risk that wiring.
+
 ## [0.92.64] - 2026-07-01
 
 ### Added
