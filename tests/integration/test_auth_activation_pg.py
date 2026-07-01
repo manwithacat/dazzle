@@ -341,3 +341,94 @@ def test_host_pin_uuid_discriminator_round_trips(scratch_url: str) -> None:
     out = activate_session_for_login(store, user, req)
     assert isinstance(out, Activated)
     assert out.membership_id == m.id
+
+
+# ── #1518: cross-tenant guard reads the REAL active-membership binding ────────
+
+
+def _guard_request(
+    *, app_name: str, tenant_id: object | None, super_admin_role: str = "super_admin"
+):
+    """Stub request carrying the app's host session cookie + a resolved tenant.
+
+    Mirrors the shape `enforce_cross_tenant` reads: `app.state.tenant_host`
+    (marker), the `__Host-<app>` cookie, and `request.state.tenant`.
+    """
+    from types import SimpleNamespace
+
+    from dazzle.http.runtime.tenant.cookies import host_cookie_name
+
+    tenant = (
+        SimpleNamespace(id=tenant_id, slug="acme", ancestor_ids=())
+        if tenant_id is not None
+        else None
+    )
+    tenant_state = SimpleNamespace(
+        app_name=app_name,
+        canonical_hosts=frozenset({"app.example.com"}),
+        super_admin_role=super_admin_role,
+    )
+    return SimpleNamespace(
+        cookies={host_cookie_name(app_name): "sid"},
+        state=SimpleNamespace(tenant=tenant),
+        app=SimpleNamespace(state=SimpleNamespace(tenant_host=tenant_state)),
+    )
+
+
+def test_cross_tenant_guard_reads_real_membership_binding(scratch_url: str) -> None:
+    """#1518 end-to-end: a session's tenant binding is its active membership's
+    `tenant_id` (as returned by `validate_session`), and `enforce_cross_tenant`
+    compares it to the resolved host id. This would FAIL against the old
+    `user.tenant_slug` source (always None → fail-closed 403 on the *matching*
+    host), so it pins the regression the magic-link QA sessions surfaced."""
+    from uuid import uuid4
+
+    from fastapi import HTTPException
+
+    from dazzle.http.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.tenant.guard_wiring import enforce_cross_tenant
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    org_id = uuid4()
+    user = store.create_user(email="member@b.test", password="pw123456")
+    m = store.create_membership(tenant_id=str(org_id), identity_id=str(user.id), roles=["admin"])
+    session = store.create_session(user, active_membership_id=m.id)
+
+    ctx = store.validate_session(session.id)
+    assert ctx.active_membership is not None
+    assert ctx.active_membership.tenant_id == str(org_id)
+
+    # Matching host → PASS (no exception raised).
+    enforce_cross_tenant(_guard_request(app_name="AegisMark", tenant_id=org_id), ctx)
+
+    # A different tenant host → 403.
+    with pytest.raises(HTTPException) as exc:
+        enforce_cross_tenant(_guard_request(app_name="AegisMark", tenant_id=uuid4()), ctx)
+    assert exc.value.status_code == 403
+
+
+def test_cross_tenant_guard_fails_closed_without_membership(scratch_url: str) -> None:
+    """#1518: a host-cookie session with no active membership fails closed (403).
+
+    Every membership-gated `tenant_host:` login binds a membership, so this only
+    rejects the unexercised `membership_gated: false` path — the deliberate
+    fail-closed choice for this security guard."""
+    from uuid import uuid4
+
+    from fastapi import HTTPException
+
+    from dazzle.http.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.tenant.guard_wiring import enforce_cross_tenant
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    user = store.create_user(email="orphan@b.test", password="pw123456")
+    session = store.create_session(user)  # no active membership
+
+    ctx = store.validate_session(session.id)
+    assert ctx.active_membership is None
+
+    with pytest.raises(HTTPException) as exc:
+        enforce_cross_tenant(_guard_request(app_name="AegisMark", tenant_id=uuid4()), ctx)
+    assert exc.value.status_code == 403

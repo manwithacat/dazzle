@@ -21,8 +21,19 @@ HOST_COOKIE = host_cookie_name(APP_NAME)
 APEX_COOKIE = apex_cookie_name(APP_NAME)
 
 
-def _tenant(slug: str) -> ResolvedTenant:
-    return ResolvedTenant(kind="Trust", id=uuid4(), slug=slug, name=slug.title())
+def _tenant(
+    slug: str,
+    *,
+    tid: object | None = None,
+    ancestor_ids: tuple[str, ...] = (),
+) -> ResolvedTenant:
+    return ResolvedTenant(
+        kind="Trust",
+        id=tid or uuid4(),
+        slug=slug,
+        name=slug.title(),
+        ancestor_ids=ancestor_ids,
+    )
 
 
 def _tenant_state(super_admin_role: str = "super_admin") -> SimpleNamespace:
@@ -46,9 +57,18 @@ def _request(
     )
 
 
-def _auth(roles: list[str], *, tenant_slug: str | None = None) -> SimpleNamespace:
-    user = SimpleNamespace(tenant_slug=tenant_slug) if tenant_slug is not None else None
-    return SimpleNamespace(roles=roles, user=user)
+def _auth(roles: list[str], *, member_tenant_id: str | None = None) -> SimpleNamespace:
+    """Build an AuthContext-shaped stub.
+
+    #1518: the session's bound tenant comes from ``active_membership.tenant_id``
+    (the org id), NOT a slug on the user — mirror the real AuthContext shape so
+    the wiring test can't pass by fabricating a ``user.tenant_slug`` the
+    production ``UserRecord`` never carries.
+    """
+    membership = (
+        SimpleNamespace(tenant_id=member_tenant_id) if member_tenant_id is not None else None
+    )
+    return SimpleNamespace(roles=roles, user=SimpleNamespace(), active_membership=membership)
 
 
 # --- legacy app (no tenant_host:) --------------------------------------------
@@ -73,8 +93,17 @@ def test_no_relevant_cookie_passes():
 
 
 def test_host_cookie_matching_tenant_passes():
-    request = _request(cookies={HOST_COOKIE: "sid"}, tenant=_tenant("acme"))
-    enforce_cross_tenant(request, _auth(["member"], tenant_slug="acme"))
+    t = _tenant("acme")
+    request = _request(cookies={HOST_COOKIE: "sid"}, tenant=t)
+    enforce_cross_tenant(request, _auth(["member"], member_tenant_id=str(t.id)))
+
+
+def test_host_cookie_ancestor_membership_passes():
+    """ADR-0037: a member of the resolved host's ancestor (root) reaches the host."""
+    root = uuid4()
+    leaf = _tenant("leaf", ancestor_ids=(str(root),))
+    request = _request(cookies={HOST_COOKIE: "sid"}, tenant=leaf)
+    enforce_cross_tenant(request, _auth(["member"], member_tenant_id=str(root)))
 
 
 def test_host_cookie_mismatched_tenant_raises_403():
@@ -82,7 +111,17 @@ def test_host_cookie_mismatched_tenant_raises_403():
 
     request = _request(cookies={HOST_COOKIE: "sid"}, tenant=_tenant("other"))
     with pytest.raises(HTTPException) as excinfo:
-        enforce_cross_tenant(request, _auth(["member"], tenant_slug="acme"))
+        enforce_cross_tenant(request, _auth(["member"], member_tenant_id=str(uuid4())))
+    assert excinfo.value.status_code == 403
+
+
+def test_host_cookie_no_active_membership_fails_closed_403():
+    """#1518: a host cookie whose session carries no active membership → 403."""
+    from fastapi import HTTPException
+
+    request = _request(cookies={HOST_COOKIE: "sid"}, tenant=_tenant("acme"))
+    with pytest.raises(HTTPException) as excinfo:
+        enforce_cross_tenant(request, _auth(["member"]))
     assert excinfo.value.status_code == 403
 
 
@@ -91,7 +130,7 @@ def test_host_cookie_on_apex_request_raises_403():
 
     request = _request(cookies={HOST_COOKIE: "sid"}, tenant=None)
     with pytest.raises(HTTPException) as excinfo:
-        enforce_cross_tenant(request, _auth(["member"], tenant_slug="acme"))
+        enforce_cross_tenant(request, _auth(["member"], member_tenant_id=str(uuid4())))
     assert excinfo.value.status_code == 403
 
 

@@ -13,12 +13,11 @@ The adapter is a no-op when `app.state.tenant_host` is `None` (i.e. the
 app has no `tenant_host:` block) so legacy single-tenant apps are
 unaffected.
 
-Until the cookie-naming follow-up threads `__Host-<app>_session` /
-`__Secure-<app>_admin` through the login routes, `request.cookies`
-won't carry either of those names, so `cookie_kind` stays `None` and
-`check_cross_tenant()` returns `PASS`. The wiring is dormant but
-present, so the day the cookie rename ships the guard activates without
-further changes here.
+#1518: the session's bound tenant is read from `auth_context.active_membership.
+tenant_id` (the org id == `ResolvedTenant.id`), compared id-wise against the
+resolved host's id **and** its ADR-0037 ancestor chain. The original wiring read
+`user.tenant_slug`, an attribute no production `UserRecord` carries, so the guard
+false-403'd every host-bound request the moment the `__Host-` cookie names shipped.
 """
 
 from __future__ import annotations
@@ -48,8 +47,17 @@ def enforce_cross_tenant(request: Any, auth_context: Any) -> None:
     cookies = _cookies(request)
     cookie_kind = _classify_cookie(cookies, tenant_cfg.app_name)
 
-    user = getattr(auth_context, "user", None)
-    session_tenant_slug = getattr(user, "tenant_slug", None) if user is not None else None
+    # #1518: the session's bound tenant is the active membership's org id, not a
+    # (never-populated) slug on the user. None when the session carries no active
+    # membership → fails closed on a host cookie.
+    membership = getattr(auth_context, "active_membership", None)
+    tenant_id = getattr(membership, "tenant_id", None) if membership is not None else None
+    session_tenant_id = str(tenant_id) if tenant_id is not None else None
+
+    resolved = getattr(getattr(request, "state", None), "tenant", None)
+    resolved_id = getattr(resolved, "id", None) if resolved is not None else None
+    request_tenant_id = str(resolved_id) if resolved_id is not None else None
+    request_ancestor_ids = tuple(str(a) for a in (getattr(resolved, "ancestor_ids", ()) or ()))
 
     user_role = _pick_user_role(
         getattr(auth_context, "roles", []) or [],
@@ -59,8 +67,9 @@ def enforce_cross_tenant(request: Any, auth_context: Any) -> None:
     try:
         check_cross_tenant(
             cookie_kind=cookie_kind,
-            session_tenant_slug=session_tenant_slug,
-            request_tenant=getattr(getattr(request, "state", None), "tenant", None),
+            session_tenant_id=session_tenant_id,
+            request_tenant_id=request_tenant_id,
+            request_ancestor_ids=request_ancestor_ids,
             user_role=user_role,
             super_admin_role=tenant_cfg.super_admin_role,
         )

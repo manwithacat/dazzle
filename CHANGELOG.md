@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.55] - 2026-07-01
+
+### Fixed
+- **Cross-tenant guard now reads the session's real tenant binding — fixes false 403s on every host-bound endpoint (#1518).** Under `tenant_host:` shared-schema tenancy, the cross-tenant session guard (`http/runtime/tenant/guard.py`) compared the request host against `auth_context.user.tenant_slug` — an attribute no production `UserRecord` carries — so `session_tenant_id` was always `None` and **every** request presenting a `__Host-<app>` cookie false-403'd (`host-bound cookie for None presented on '<tenant>'`). Surfaced by AegisMark's magic-link QA sessions (list-search / HTMX list-refresh), but the bug hit all host-cookie sessions, not just magic-link. The guard is now **id-based**: the session's bound tenant is `active_membership.tenant_id` (the org id, `== str(ResolvedTenant.id)`), and the request passes when that id is the resolved host **or any of the host's ADR-0037 `parent:` ancestors** (a root/Trust member reaches a descendant host — the same acceptance set `resolve_activation` uses at login). A host cookie carrying **no** active membership now fails **closed** (403); every membership-gated `tenant_host:` login binds a membership, so this only affects the unexercised `membership_gated: false` path. The prior unit tests passed only by fabricating `user.tenant_slug` on a stub; they now use a realistic `active_membership`, and a real-Postgres integration test proves the `validate_session → active_membership.tenant_id → enforce_cross_tenant` flow end-to-end.
+
+### Agent Guidance
+- **The cross-tenant guard's session tenant is `active_membership.tenant_id`, not a slug (#1518).** When touching `tenant/guard.py` / `guard_wiring.py`, remember the acceptance set is `{host id} ∪ host ancestor ids` (id-based, hierarchy-aware) and must stay in lockstep with `org_activation.resolve_activation`'s login-time set. A host cookie with no active membership fails closed. Don't reintroduce a `user.tenant_slug` read — `UserRecord` has no such field, and stubbing it in a test hides the failure.
+
 ## [0.92.54] - 2026-06-30
 
 ### Changed
