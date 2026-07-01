@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.57] - 2026-07-01
+
+### Added
+- **ADR-0050 — first-party usage signal is a framework inference input (Option A, accepted).** Records the decision behind #1517's "telemetry-gated" deferral of UX-maturity `1a` (region-form inference) / `3a` (action prominence): the framework will capture first-party end-user usage frequency and feed it into the DSL→render inference loop, closing the observe→infer loop the data-driven-UI thesis depends on. Storage is a lean Postgres framework table (`_dazzle_usage_events`), registered per ADR-0047 and built by the ADR-0044 orchestrator — the pre-existing `analytics_collector` already writes Postgres (the SQLite claim in `dev_docs/observability_platform.md` is stale), but its table is orphaned/unregistered. Explicitly *not* product analytics (no consent/GA4/PII) and *not* Vitality (code-node health). Phased plan: `docs/superpowers/plans/2026-07-01-first-party-usage-signal.md`; landscape audit: `dev_docs/2026-07-01-telemetry-observability-state-of-play.md`.
+
+### Agent Guidance
+- **"Telemetry" in Dazzle = four orthogonal axes** (end-user usage · code-node vitality · perf traces · agent/MCP telemetry). Don't conflate them — ADR-0050 covers only end-user usage feeding UX inference. Perf observability already shipped (`perf/`, OTLP, `dazzle perf`); Vitality (`dev_docs/dazzle-vitality-*.md`) is planned-but-unbuilt; product analytics (`compliance/analytics/` + `analytics:` DSL) is scaffold-only.
+
 ## [0.92.56] - 2026-07-01
 
 ### Fixed
