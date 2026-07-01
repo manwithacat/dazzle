@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.56] - 2026-07-01
+
+### Fixed
+- **Cross-tenant cookie guard now runs on the deny + optional-auth dependencies, not just full-auth (#1519).** Follow-up to #1518 (surfaced by that fix's adversarial review). `enforce_cross_tenant` was called only from `create_auth_dependency`, so a cross-tenant `__Host-<app>` cookie replayed on a deny-gated or optional-auth route skipped the guard (the RLS fence still denied *data*, but the belt-and-suspenders cookie check was absent). All three factories in `http/runtime/auth/dependencies.py` now run a shared `_enforce_cross_tenant` helper that 403s a genuine cross-tenant cookie while no-opping for unauthenticated sessions — so an expired/absent cookie on an optional/deny route still falls through to anonymous rather than 403ing. `__Host-` cookies are browser-host-scoped, so this only bites deliberate non-browser replay. Pinned by a new test covering all three factories plus the anonymous-fallback regression.
+
 ## [0.92.55] - 2026-07-01
 
 ### Fixed

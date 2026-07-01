@@ -9,6 +9,30 @@ from .models import AuthContext
 from .store import AuthStore
 
 
+def _enforce_cross_tenant(request: FastAPIRequest, auth_context: AuthContext) -> None:
+    """Run the cross-tenant cookie guard for an *authenticated* session (#1519).
+
+    Shared post-validation step for every auth dependency factory so the guard
+    can't be silently skipped on the deny / optional-auth paths (the #1519 gap:
+    only ``create_auth_dependency`` called it, so a cross-tenant ``__Host-`` cookie
+    presented on a deny/optional route reached the handler — the RLS fence still
+    denied data, but the belt-and-suspenders cookie guard was absent).
+
+    No-op when the context is unauthenticated: an expired or absent session on an
+    optional/deny route is *anonymous*, not a violation, so it must fall through
+    to the empty-context path rather than 403. Also a no-op for apps without a
+    ``tenant_host:`` block (``enforce_cross_tenant`` returns early there). Raises
+    ``HTTPException(403)`` on a genuine cross-tenant cookie.
+    """
+    if not auth_context.is_authenticated:
+        return
+    # Local import: guard_wiring is cheap but keep the import lazy to match the
+    # rest of this module's request-time import style (avoids import cycles).
+    from dazzle.http.runtime.tenant.guard_wiring import enforce_cross_tenant
+
+    enforce_cross_tenant(request, auth_context)
+
+
 def _bind_rls_tenant_id(auth_context: AuthContext) -> None:
     """Bind the RLS tenant id + scope-attr GUCs from the authenticated user.
 
@@ -118,11 +142,10 @@ def create_auth_dependency(
         if not auth_context.is_authenticated:
             raise HTTPException(status_code=401, detail="Session expired")
 
-        # #1289 slice 5 wiring: enforce cross-tenant cookie binding.
-        # No-op on apps without a `tenant_host:` block.
-        from dazzle.http.runtime.tenant.guard_wiring import enforce_cross_tenant
-
-        enforce_cross_tenant(request, auth_context)
+        # #1289 slice 5 wiring: enforce cross-tenant cookie binding (#1519: via the
+        # shared helper so deny/optional factories enforce it too). No-op on apps
+        # without a `tenant_host:` block.
+        _enforce_cross_tenant(request, auth_context)
 
         # Check roles if required.
         # Database roles use "role_" prefix; persona IDs don't — normalize.
@@ -179,6 +202,10 @@ def create_deny_dependency(
         if not auth_context.is_authenticated:
             return auth_context
 
+        # #1519: a cross-tenant `__Host-` cookie must 403 here too, not just on
+        # full-auth routes. No-op for non-tenant apps / unauthenticated contexts.
+        _enforce_cross_tenant(request, auth_context)
+
         # Check deny roles (effective_roles — membership-aware; see get_current_user)
         if deny_roles:
             user_roles = set(auth_context.effective_roles)
@@ -226,6 +253,10 @@ def create_optional_auth_dependency(
             return AuthContext()
 
         auth_context = auth_store.validate_session(session_id)
+        # #1519: enforce the cross-tenant cookie guard on optional-auth routes too.
+        # An expired/invalid session stays anonymous (helper no-ops when
+        # unauthenticated); a valid cross-tenant cookie 403s.
+        _enforce_cross_tenant(request, auth_context)
         _bind_rls_tenant_id(auth_context)
         return auth_context
 

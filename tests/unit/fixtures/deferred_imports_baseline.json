@@ -141,7 +141,7 @@
   "src/dazzle/http/runtime/auth/connection_probe.py": 1,
   "src/dazzle/http/runtime/auth/cookie_name.py": 3,
   "src/dazzle/http/runtime/auth/current.py": 1,
-  "src/dazzle/http/runtime/auth/dependencies.py": 10,
+  "src/dazzle/http/runtime/auth/dependencies.py": 9,
   "src/dazzle/http/runtime/auth/email_verification_routes.py": 2,
   "src/dazzle/http/runtime/auth/enterprise_login.py": 1,
   "src/dazzle/http/runtime/auth/forbidden_org.py": 2,
