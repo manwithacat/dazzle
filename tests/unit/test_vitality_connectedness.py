@@ -133,3 +133,35 @@ def test_report_headline_flips_to_unexercised_with_coverage(pkg: Path, tmp_path:
     md = render_report_md(analyze_connectedness(pkg, coverage_path=cov))
     assert "Coverage overlay" in md
     assert "unexercised" in md
+
+
+# --- Phase 3: git staleness ranking ------------------------------------------
+
+
+def test_git_staleness_annotates_and_ranks(pkg: Path) -> None:
+    import shutil
+    import subprocess
+
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    for args in (
+        ["init", "-q"],
+        ["add", "-A"],
+        ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "x"],
+    ):
+        subprocess.run(["git", "-C", str(pkg), *args], capture_output=True, check=True)
+
+    r = analyze_connectedness(pkg, git_root=pkg)
+    assert r.candidate_last_touch is not None
+    assert "pkg.a.orphan" in r.candidate_last_touch
+    assert r.candidate_last_touch["pkg.a.orphan"] >= 0  # just committed → ~0 days
+
+    md = render_report_md(r)
+    assert "oldest first" in md
+    assert "file last changed" in md
+
+
+def test_git_absent_leaves_staleness_none(pkg: Path) -> None:
+    # No git_root passed → no staleness overlay.
+    r = analyze_connectedness(pkg)
+    assert r.candidate_last_touch is None

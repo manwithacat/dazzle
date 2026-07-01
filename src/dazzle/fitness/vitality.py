@@ -24,6 +24,8 @@ for Dazzle.
 from __future__ import annotations
 
 import ast
+import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -76,6 +78,10 @@ class ConnectednessReport:
     # graph-completeness gap or test-only code), i.e. NOT dead.
     dead_candidates: list[str] | None = None
     covered_candidates: list[str] | None = None
+    # Phase 3 (git evolution): qualname -> days since the candidate's file last changed,
+    # None until a git root is supplied. Old + unexercised + isolated = most likely
+    # *abandoned* (vs recently-added WIP); the report ranks the islet list by this.
+    candidate_last_touch: dict[str, int] | None = None
 
 
 def _module_name(path: Path, root: Path) -> str:
@@ -275,6 +281,48 @@ def _covered_candidates(
     return covered
 
 
+def _git_last_touch_days(files: set[Path], git_root: Path) -> dict[Path, int]:
+    """Days since each file's last commit (best-effort git; skips on any failure).
+
+    File-level staleness is a cheap proxy for a function's: an isolated, unexercised
+    function in a file untouched for a year is a far stronger *abandoned* signal than
+    one in a file changed last week (which is likely work-in-progress)."""
+    now = time.time()
+    ages: dict[Path, int] = {}
+    for f in files:
+        try:
+            out = subprocess.run(
+                ["git", "-C", str(git_root), "log", "-1", "--format=%ct", "--", str(f)],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (subprocess.SubprocessError, OSError):
+            continue
+        ts = out.stdout.strip()
+        if ts:
+            ages[f] = int((now - int(ts)) / 86400)
+    return ages
+
+
+def _candidate_staleness(
+    git_root: Path | None,
+    facts_by_file: dict[Path, _ModuleFacts],
+    candidates: list[str],
+) -> dict[str, int] | None:
+    """Map each candidate qualname to the age (days) of its file's last commit."""
+    if git_root is None or not candidates:
+        return None
+    cand = set(candidates)
+    qual_file: dict[str, Path] = {}
+    for facts in facts_by_file.values():
+        for qual in facts.functions:
+            if qual in cand:
+                qual_file[qual] = facts.path
+    ages = _git_last_touch_days(set(qual_file.values()), git_root)
+    return {q: ages[p] for q, p in qual_file.items() if p in ages}
+
+
 def _coverage_split(
     coverage_path: Path | None, facts_by_file: dict[Path, _ModuleFacts], candidates: list[str]
 ) -> tuple[list[str] | None, list[str] | None]:
@@ -287,12 +335,16 @@ def _coverage_split(
     return dead, covered_list
 
 
-def analyze_connectedness(root: Path, *, coverage_path: Path | None = None) -> ConnectednessReport:
+def analyze_connectedness(
+    root: Path, *, coverage_path: Path | None = None, git_root: Path | None = None
+) -> ConnectednessReport:
     """Build the AST call graph over ``root`` and compute the report.
 
     ``coverage_path`` (Phase 2) overlays a coverage.py data file: islet candidates
     split into ``dead_candidates`` (also unexercised — highest confidence) and
-    ``covered_candidates`` (run under test despite static isolation)."""
+    ``covered_candidates`` (run under test despite static isolation). ``git_root``
+    (Phase 3) annotates each candidate with its file's last-commit age (days), so the
+    report can rank the islets by staleness (abandoned vs recently-added)."""
     facts_by_file: dict[Path, _ModuleFacts] = {}
     dispatch_names: set[str] = set()
     for path in _py_files(root):
@@ -362,6 +414,9 @@ def analyze_connectedness(root: Path, *, coverage_path: Path | None = None) -> C
     )
 
     dead_candidates, covered_candidates = _coverage_split(coverage_path, facts_by_file, candidates)
+    # Phase 3: rank by staleness the set the report leads with (unexercised, else all).
+    staleness_over = dead_candidates if dead_candidates is not None else candidates
+    candidate_last_touch = _candidate_staleness(git_root, facts_by_file, staleness_over)
 
     return ConnectednessReport(
         total_functions=len(functions),
@@ -373,6 +428,7 @@ def analyze_connectedness(root: Path, *, coverage_path: Path | None = None) -> C
         candidates=candidates,
         dead_candidates=dead_candidates,
         covered_candidates=covered_candidates,
+        candidate_last_touch=candidate_last_touch,
     )
 
 
@@ -415,12 +471,20 @@ def render_report_md(report: ConnectednessReport, *, top: int = 40) -> str:
         if report.dead_candidates is not None
         else "## Islet candidates (review these)"
     )
+    # Phase 3: when git staleness is available, lead with the oldest (most likely
+    # abandoned) and annotate each with its file's last-touch age.
+    ages = report.candidate_last_touch
+    if ages:
+        heading += " · oldest first"
+        headline = sorted(headline, key=lambda q: -ages.get(q, -1))
     lines += [heading, ""]
     if not headline:
         lines.append("_None — every candidate is reached, referenced, or exercised._")
     else:
         for q in headline[:top]:
-            lines.append(f"- `{q}`")
+            age = ages.get(q) if ages else None
+            suffix = f" — file last changed {age}d ago" if age is not None else ""
+            lines.append(f"- `{q}`{suffix}")
         if len(headline) > top:
             lines.append(f"- …and {len(headline) - top} more")
     return "\n".join(lines) + "\n"

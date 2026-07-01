@@ -376,6 +376,9 @@ def vitality(
         help="Path to a coverage.py data file (e.g. .coverage) — overlays test exercise "
         "so islet candidates split into unexercised (genuine) vs covered (Phase 2)",
     ),
+    git: bool = typer.Option(
+        True, "--git/--no-git", help="Rank islet candidates by file staleness (git last-commit age)"
+    ),
     top: int = typer.Option(40, "--top", help="Max islet candidates to list"),
 ) -> None:
     """Static connectedness report — Vitality Phase 1 (#1521).
@@ -388,8 +391,9 @@ def vitality(
     review prompts, not dead code (Phase 2 coverage/runtime would clear false
     positives). See ``dev_docs/dazzle-vitality-thesis.md``.
     """
-    src_root = (project or Path.cwd()) / "src"
-    report = analyze_connectedness(src_root, coverage_path=coverage)
+    repo = project or Path.cwd()
+    src_root = repo / "src"
+    report = analyze_connectedness(src_root, coverage_path=coverage, git_root=repo if git else None)
     md = render_report_md(report, top=top)
     if output is not None:
         output.write_text(md, encoding="utf-8")

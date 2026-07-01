@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.69] - 2026-07-01
+
+### Added
+- **Vitality Phase 3 — git-staleness ranking (`dazzle fitness vitality`, on by default; `--no-git` to skip).** Overlays each islet candidate's **file last-commit age** and ranks the report **oldest-first**, so an isolated, unexercised function in a file untouched for a year (likely *abandoned*) sorts above one changed last week (likely work-in-progress) — the thesis §6 "abandoned vs recently-orphaned vs finished-stable" distinction, at file granularity. Best-effort git (skips silently outside a repo); annotates each candidate with `file last changed Nd ago`. Combined with the Phase-2 coverage overlay, the report now leads with the highest-confidence islets (statically isolated + unexercised) ranked by staleness. `analyze_connectedness(root, coverage_path=…, git_root=…)`. Still report-only, no deletion.
+
 ## [0.92.68] - 2026-07-01
 
 ### Added
