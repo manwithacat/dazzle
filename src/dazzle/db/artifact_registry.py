@@ -181,6 +181,13 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         "dazzle.http.channels.outbox.ensure_outbox_table",
         boot_entry="dazzle.http.channels.outbox.OutboxRepository._ensure_table",
     ),
+    # _dazzle_usage_events (ADR-0050 Option A) — first-party usage-frequency capture
+    # for UX inference. Orchestrator-only (no request-path boot entry → boot_entry=None).
+    _fw(
+        "_dazzle_usage_events",
+        "dazzle.http.runtime.usage_signal.ensure_usage_events_table",
+        boot_entry=None,
+    ),
     # ── event-bus transport (excluded; dynamic prefix; self-creating) ──────
     *[
         Artifact(

@@ -311,6 +311,30 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "uniques": [],
     },
+    "_dazzle_usage_events": {
+        "columns": {
+            "id": {"default": None, "nullable": False, "pk": True, "type": "bigint"},
+            "kind": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "surface": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "target": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "tenant_id": {"default": "''::text", "nullable": False, "pk": False, "type": "text"},
+            "ts": {"default": "now()", "nullable": False, "pk": False, "type": "timestamptz"},
+        },
+        "fks": {},
+        "indexes": {
+            "idx_usage_events_agg": {
+                "columns": ["tenant_id", "surface", "kind", "target"],
+                "predicate": None,
+                "unique": False,
+            },
+            "idx_usage_events_ts": {
+                "columns": ["tenant_id", "ts"],
+                "predicate": None,
+                "unique": False,
+            },
+        },
+        "uniques": [],
+    },
     "_grant_events": {
         "columns": {
             "actor_id": {"default": None, "nullable": False, "pk": False, "type": "uuid"},

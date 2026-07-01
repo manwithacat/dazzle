@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.58] - 2026-07-01
+
+### Added
+- **Usage-signal capture table `_dazzle_usage_events` (ADR-0050 Option A, Phase 1a).** A lean, append-only framework table — `(id, tenant_id, surface, kind, target, ts)`, `kind ∈ {field, action}` — that will record first-party end-user usage frequency for the DSL→render inference layer (#1517 `1a`/`3a`). PostgreSQL-only (ADR-0008); orchestrator-only DDL (`http/runtime/usage_signal.py::ensure_usage_events_table`, no request-path boot entry), registered in the ADR-0047 db-artifact registry and built by the ADR-0044 framework-schema orchestrator; baseline regenerated (three-way parity green). **Behavior change (per ADR-0044 eager-creation policy):** every app now creates this empty table at boot. Nothing reads or writes it yet — capture (collector + lifespan wiring) is Phase 1b, aggregation Phase 2, origination Phase 3, inference Phase 4. Not product analytics, not Vitality.
+
+### Agent Guidance
+- **New framework table checklist worked in practice (ADR-0044/0047):** add the `ensure_*` creator (single DDL source) → call it from `framework_schema.py::_ensure_framework_schema_ddl` → register with `_fw(...)` in `dazzle.db.artifact_registry` (`boot_entry=None` when orchestrator-only) → `dazzle db reframework-baseline --database-url …` → verify `tests/integration/test_framework_baseline_parity_pg.py`. The `uv.lock` self-version also needs `uv lock` after a version bump.
+
 ## [0.92.57] - 2026-07-01
 
 ### Added

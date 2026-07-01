@@ -52,6 +52,7 @@ from dazzle.http.runtime.otp_store import ensure_otp_tables
 from dazzle.http.runtime.recovery_codes import ensure_recovery_code_tables
 from dazzle.http.runtime.token_store import ensure_refresh_token_tables
 from dazzle.http.runtime.triggers import build_assert_subtype_kind_function
+from dazzle.http.runtime.usage_signal import ensure_usage_events_table
 
 logger = logging.getLogger(__name__)
 
@@ -239,6 +240,12 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     # boot by ChannelManager (and missing from this baseline). Now delegated to the
     # single ensure_outbox_table DDL (channels/outbox.py), like the other tables.
     ensure_outbox_table(cur)
+
+    # ── USAGE SIGNAL (_dazzle_usage_events) ──────────────────────────────
+    # ADR-0050 Option A: first-party usage-frequency capture feeding UX inference.
+    # Orchestrator-only (no request-path boot entry) — single DDL source in
+    # usage_signal.py.
+    ensure_usage_events_table(cur)
 
 
 def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection
