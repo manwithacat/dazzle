@@ -1277,12 +1277,6 @@ def feedback_summary(
         typer.echo("Top failure types:")
         for ft, count in summary.top_failure_types:
             typer.echo(f"  {ft}: {count}")
-        typer.echo()
-
-    if summary.prompt_versions:
-        typer.echo("Prompt versions by tool:")
-        for tool, count in summary.prompt_versions.items():
-            typer.echo(f"  {tool}: {count} versions")
 
 
 @feedback_app.command("patterns")

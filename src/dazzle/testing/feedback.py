@@ -1,17 +1,18 @@
 """
 Feedback loop infrastructure for DAZZLE UX Coverage Testing.
 
-This module provides tracking for test regressions, corrections, and prompt
-evolution. It enables a semi-automatic feedback loop where:
+This module provides tracking for test regressions and corrections. It enables
+a semi-automatic feedback loop where:
 1. Test failures are recorded with context
 2. Human corrections are tracked
 3. Patterns emerge that can improve test design prompts
-4. Prompt performance is tracked over time
+
+(Prompt-version tracking was retired in #1526 — built alongside this loop but
+never wired to a caller.)
 
 Storage locations:
 - .dazzle/test_feedback/regressions.json
 - .dazzle/test_feedback/corrections.json
-- .dazzle/test_feedback/prompt_versions.json
 """
 
 from __future__ import annotations  # required: forward reference
@@ -34,7 +35,6 @@ def _utcnow() -> datetime:
 FEEDBACK_DIR = ".dazzle/test_feedback"
 REGRESSIONS_FILE = "regressions.json"
 CORRECTIONS_FILE = "corrections.json"
-PROMPT_VERSIONS_FILE = "prompt_versions.json"
 
 
 class RegressionStatus(StrEnum):
@@ -138,40 +138,6 @@ class TestCorrection(BaseModel):
     timestamp: datetime = Field(default_factory=_utcnow)
 
 
-class PromptVersion(BaseModel):
-    """
-    Track prompt evolution for test design tools.
-
-    Attributes:
-        version: Version identifier (v1, v2, etc.)
-        tool_name: Which MCP tool this prompt is for
-        prompt_text: The actual prompt text
-        created_at: When this version was created
-
-        tests_generated: Total tests generated with this prompt
-        tests_accepted: Tests accepted by humans
-        tests_rejected: Tests rejected by humans
-        acceptance_rate: Computed acceptance rate
-    """
-
-    version: str
-    tool_name: str
-    prompt_text: str
-    created_at: datetime = Field(default_factory=_utcnow)
-
-    # Performance tracking
-    tests_generated: int = 0
-    tests_accepted: int = 0
-    tests_rejected: int = 0
-
-    @property
-    def acceptance_rate(self) -> float:
-        """Calculate acceptance rate as a percentage."""
-        if self.tests_generated == 0:
-            return 0.0
-        return (self.tests_accepted / self.tests_generated) * 100
-
-
 class RegressionsContainer(BaseModel):
     """Container for persisting regressions."""
 
@@ -185,14 +151,6 @@ class CorrectionsContainer(BaseModel):
 
     version: str = "1.0"
     corrections: list[TestCorrection] = Field(default_factory=list)
-    updated_at: datetime = Field(default_factory=_utcnow)
-
-
-class PromptVersionsContainer(BaseModel):
-    """Container for persisting prompt versions."""
-
-    version: str = "1.0"
-    prompts: list[PromptVersion] = Field(default_factory=list)
     updated_at: datetime = Field(default_factory=_utcnow)
 
 
@@ -472,15 +430,6 @@ def record_correction(
     return correction
 
 
-def get_corrections_for_regression(
-    project_root: Path,
-    regression_id: str,
-) -> list[TestCorrection]:
-    """Get all corrections for a specific regression."""
-    corrections = load_corrections(project_root)
-    return [c for c in corrections if c.regression_id == regression_id]
-
-
 def get_pattern_insights(project_root: Path) -> list[str]:
     """Get all identified patterns from corrections."""
     corrections = load_corrections(project_root)
@@ -491,157 +440,6 @@ def get_prompt_improvements(project_root: Path) -> list[str]:
     """Get all suggested prompt improvements from corrections."""
     corrections = load_corrections(project_root)
     return [c.prompt_improvement for c in corrections if c.prompt_improvement]
-
-
-# ============================================================================
-# Prompt Versions
-# ============================================================================
-
-
-def load_prompt_versions(project_root: Path) -> list[PromptVersion]:
-    """Load all prompt versions from storage."""
-    feedback_dir = get_feedback_dir(project_root)
-    prompts_file = feedback_dir / PROMPT_VERSIONS_FILE
-
-    if not prompts_file.exists():
-        return []
-
-    try:
-        content = prompts_file.read_text(encoding="utf-8")
-        data = json.loads(content)
-        container = PromptVersionsContainer.model_validate(data)
-        return list(container.prompts)
-    except (json.JSONDecodeError, ValueError):
-        return []
-
-
-def save_prompt_versions(project_root: Path, prompts: list[PromptVersion]) -> Path:
-    """Save prompt versions to storage."""
-    feedback_dir = get_feedback_dir(project_root)
-    feedback_dir.mkdir(parents=True, exist_ok=True)
-
-    container = PromptVersionsContainer(
-        prompts=prompts,
-        updated_at=datetime.now(UTC),
-    )
-
-    prompts_file = feedback_dir / PROMPT_VERSIONS_FILE
-    prompts_file.write_text(
-        json.dumps(
-            container.model_dump(mode="json"),
-            indent=2,
-            ensure_ascii=False,
-            default=str,
-        ),
-        encoding="utf-8",
-    )
-
-    return prompts_file
-
-
-def register_prompt_version(
-    project_root: Path,
-    tool_name: str,
-    prompt_text: str,
-    version: str | None = None,
-) -> PromptVersion:
-    """Register a new prompt version for tracking."""
-    prompts = load_prompt_versions(project_root)
-
-    # Auto-generate version if not provided
-    if version is None:
-        existing_versions = [p for p in prompts if p.tool_name == tool_name]
-        if not existing_versions:
-            version = "v1"
-        else:
-            max_num = max(
-                int(p.version[1:]) for p in existing_versions if p.version.startswith("v")
-            )
-            version = f"v{max_num + 1}"
-
-    prompt = PromptVersion(
-        version=version,
-        tool_name=tool_name,
-        prompt_text=prompt_text,
-    )
-
-    prompts.append(prompt)
-    save_prompt_versions(project_root, prompts)
-
-    return prompt
-
-
-def update_prompt_stats(
-    project_root: Path,
-    tool_name: str,
-    version: str,
-    *,
-    tests_generated: int = 0,
-    tests_accepted: int = 0,
-    tests_rejected: int = 0,
-) -> PromptVersion | None:
-    """Update statistics for a prompt version."""
-    prompts = load_prompt_versions(project_root)
-
-    for i, p in enumerate(prompts):
-        if p.tool_name == tool_name and p.version == version:
-            updated = PromptVersion(
-                version=p.version,
-                tool_name=p.tool_name,
-                prompt_text=p.prompt_text,
-                created_at=p.created_at,
-                tests_generated=p.tests_generated + tests_generated,
-                tests_accepted=p.tests_accepted + tests_accepted,
-                tests_rejected=p.tests_rejected + tests_rejected,
-            )
-            prompts[i] = updated
-            save_prompt_versions(project_root, prompts)
-            return updated
-
-    return None
-
-
-def get_prompt_version(
-    project_root: Path,
-    tool_name: str,
-    version: str | None = None,
-) -> PromptVersion | None:
-    """Get a specific prompt version, or latest if version not specified."""
-    prompts = load_prompt_versions(project_root)
-    tool_prompts = [p for p in prompts if p.tool_name == tool_name]
-
-    if not tool_prompts:
-        return None
-
-    if version is None:
-        # Return latest
-        return max(tool_prompts, key=lambda p: p.created_at)
-
-    for p in tool_prompts:
-        if p.version == version:
-            return p
-
-    return None
-
-
-def compare_prompt_versions(
-    project_root: Path,
-    tool_name: str,
-) -> list[dict[str, float | str]]:
-    """Compare all prompt versions for a tool by acceptance rate."""
-    prompts = load_prompt_versions(project_root)
-    tool_prompts = [p for p in prompts if p.tool_name == tool_name]
-
-    return [
-        {
-            "version": p.version,
-            "tests_generated": p.tests_generated,
-            "tests_accepted": p.tests_accepted,
-            "tests_rejected": p.tests_rejected,
-            "acceptance_rate": p.acceptance_rate,
-        }
-        for p in sorted(tool_prompts, key=lambda x: x.version)
-    ]
 
 
 # ============================================================================
@@ -660,8 +458,6 @@ class FeedbackSummary(BaseModel):
     patterns_identified: int = 0
     prompt_improvements_suggested: int = 0
 
-    prompt_versions: dict[str, int] = Field(default_factory=dict)  # tool -> count
-
     top_failure_types: list[tuple[str, int]] = Field(default_factory=list)
 
 
@@ -669,7 +465,6 @@ def get_feedback_summary(project_root: Path) -> FeedbackSummary:
     """Get a summary of the feedback loop state."""
     regressions = load_regressions(project_root)
     corrections = load_corrections(project_root)
-    prompts = load_prompt_versions(project_root)
 
     # Count failure types
     failure_counts: dict[str, int] = {}
@@ -679,11 +474,6 @@ def get_feedback_summary(project_root: Path) -> FeedbackSummary:
 
     top_failures = sorted(failure_counts.items(), key=lambda x: x[1], reverse=True)[:5]
 
-    # Count prompt versions by tool
-    prompt_counts: dict[str, int] = {}
-    for p in prompts:
-        prompt_counts[p.tool_name] = prompt_counts.get(p.tool_name, 0) + 1
-
     return FeedbackSummary(
         total_regressions=len(regressions),
         open_regressions=len([r for r in regressions if r.status == RegressionStatus.OPEN]),
@@ -691,6 +481,5 @@ def get_feedback_summary(project_root: Path) -> FeedbackSummary:
         total_corrections=len(corrections),
         patterns_identified=len([c for c in corrections if c.pattern_identified]),
         prompt_improvements_suggested=len([c for c in corrections if c.prompt_improvement]),
-        prompt_versions=prompt_counts,
         top_failure_types=top_failures,
     )

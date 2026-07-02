@@ -9,7 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.92.73] - 2026-07-02
+## [0.92.74] - 2026-07-02
+
+### Removed
+- **Six dead islet clusters retired (~1,250 LOC) — the #1526 vitality triage, first deletion pass driven by the #1521 connectedness report (ADR-0003 clean breaks).** Verified zero-consumer before each cut:
+  - `http/runtime/push_notifications.py` (485 LOC) — Jan-2026 mobile-JWT fossil; `create_push_service` had no callers. Sibling `device_registry.py` stays (live boot DDL + registry entry).
+  - `page/themes/token_compiler.py` (184 LOC) — not even exported from `themes/__init__`; the live theme path is `resolver.py`+`css_generator.py`, DTCG export goes through `core/dtcg_export`.
+  - `core/question_emitter.py` + `core/rule_emitter.py` (153 LOC) — zero external references to any symbol; the `question` construct is parse-side only.
+  - `testing/feedback.py` prompt-versioning sub-cluster (~250 LOC) — `PromptVersion` model + register/update/compare/load/save had no callers; the six `dazzle test feedback` CLI commands keep working, `FeedbackSummary` drops its `prompt_versions` field.
+  - `http/runtime/jwt_middleware.py` dead half (~200 LOC) — the DI factories (`create_jwt_dependency`/`create_optional_jwt_dependency`/`create_dual_auth_dependency`) and `DualAuthMiddleware` were never wired (`add_middleware` nowhere); prod dual-auth lives in `auth/dependencies.py` (#1518/#1519). `JWTMiddleware` itself stays (used by `auth/routes_jwt.py`, #1105). The #1419 live-layer regression tests are untouched; only the dead middleware's fallback test went with it.
+  - `compliance/coordinator.py` helpers (~85 LOC) — `topological_sort_documents` + `build_agent_context` had zero callers; `compile_full_pipeline` (CLI + MCP) stays.
+  - Deferred to #1525 (ops-platform decision): `email_templates.py`, `admin_api_routes.py` + the 404-ing super-admin deploy/rollback buttons it implies.
+
+### Agent Guidance
+- **Deleting dead code trips three fitness baselines, all "lock in the win" style**: clone ratchet (`dazzle fitness clones --write-baseline`), deferred-imports ratchet (remove zeroed entries from `deferred_imports_baseline.json`), and the IR field-reader parity gate (a deleted module may have been the *only* reader of an IR field — add the now-orphaned fields to `ir_reader_baseline.json`, which marks them candidate-dead for a future IR-trim pass rather than silently unaccounted). `QuestionSpec`/`RuleSpec` id/blocks/raised_by fields and `EmailFailedEvent.error_code` entered the baseline this way.
 
 ### Fixed
 - **`belongs_to` FKs are now real references — no more raw-UUID leak in repr/grid (#1522).** `_map_field_type` (core→http boundary) had no BELONGS_TO branch, so a `belongs_to X` field silently degraded to a plain string: the relation loader's `belongs_to` arm was dead code (it runs against converted backend specs, whose kind vocabulary is scalar/enum/ref), the FK-display join never fired, DDL emitted a TEXT column with no FK constraint, and the pydantic model typed it `str` — while IR-side consumers (workspace columns, auto-include) *did* treat it as an FK, producing the observed asymmetry with `ref` in the same list. BELONGS_TO now maps to `kind="ref"` exactly like REF, restoring relation registration, display-name join, UUID column + FK constraint, and UUID model field in one change.

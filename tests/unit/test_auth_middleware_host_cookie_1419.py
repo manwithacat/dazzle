@@ -56,35 +56,6 @@ class TestGetAuthContextHostCookie:
         assert not getattr(ctx, "roles", None)  # empty AuthContext
 
 
-class _SessionStore:
-    """validate_session returns a full session context (the JWT fallback reads .user)."""
-
-    def __init__(self) -> None:
-        self.called_with: str | None = None
-
-    def validate_session(self, session_id: str) -> object:
-        self.called_with = session_id
-        return SimpleNamespace(
-            is_authenticated=True,
-            roles=["author"],
-            user=SimpleNamespace(id="u1", email="a@example.com"),
-        )
-
-
-class _NoJWT:
-    def get_auth_context(self, request: object) -> object:
-        return SimpleNamespace(is_authenticated=False)
-
-
-class TestJwtMiddlewareSessionFallbackHostCookie:
-    """#1419 audit: the JWT middleware's session fallback had the same single-name bug."""
-
-    def test_session_fallback_resolves_host_cookie(self) -> None:
-        from dazzle.http.runtime.jwt_middleware import DualAuthMiddleware
-
-        store = _SessionStore()
-        mw = DualAuthMiddleware(_NoJWT(), store)
-        result = mw.get_auth_context(_req({"__Host-myapp_session": "SID9"}, app_name="myapp"))
-        assert store.called_with == "SID9"
-        assert result["auth_type"] == "session"
-        assert result["is_authenticated"] is True
+# NOTE: DualAuthMiddleware's session-fallback test lived here until #1526
+# retired that middleware (never add_middleware'd anywhere; prod dual-auth is
+# auth/dependencies.py). The live-layer #1419 coverage above is unaffected.

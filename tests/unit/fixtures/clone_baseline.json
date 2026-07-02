@@ -413,15 +413,6 @@
     ]
   },
   {
-    "signature": "ccc56c305e3e7416af49999c15cad532",
-    "count": 3,
-    "names": [
-      "dazzle/core/question_emitter.py::append_questions_to_dsl",
-      "dazzle/core/rule_emitter.py::append_rules_to_dsl",
-      "dazzle/core/story_emitter.py::append_stories_to_dsl"
-    ]
-  },
-  {
     "signature": "ccbb86b1c36a4e3783cb370b1236764f",
     "count": 2,
     "names": [
