@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.76] - 2026-07-02
+
+### Fixed
+- **AIJob cost fields are now real — LLM call usage and USD cost recorded per call (#1528, the ADR-0051 salvage).** The governed `AIJob` entity (ADR-0043) always carried `tokens_in`/`tokens_out`/`cost_usd` and both write sites passed them through — but they were permanently `0`/`None` because `LLMAPIClient.complete()` returned only text, discarding the SDK's usage block. The issue's original mini-spec (a new `_dazzle_llm_calls` framework table + registry entry + collector) turned out to be unnecessary: **AIJob already is the cost ledger** — subject-linked (#1454), scope-governed as an app entity, and visible in the admin workspace. What shipped instead: `complete_with_usage()` on `LLMAPIClient` (a `Completion(text, tokens_in, tokens_out)` NamedTuple; Anthropic + OpenAI report the split, the Claude-CLI subscription path reports 0/0), the pure `dazzle.llm.costing.compute_cost_usd` module (single home for per-MTok pricing; Anthropic rates from `core.model_defaults.ANTHROPIC_PRICING_PER_MTOK`), and executor wiring that fills the `ExecutionResult` before `_record_job`. Cost semantics are **None-means-unknown, never 0-means-free**: unmetered providers (claude-cli/local/google), unpriced models, and unreported usage all record `NULL`.
+
+### Agent Guidance
+- **LLM cost queries go through AIJob, not a dedicated table.** Per-call cost/usage lives on each app's `AIJob` rows (`model`, `provider`, `tokens_in`, `tokens_out`, `cost_usd`, `subject_*`); aggregate with a normal scoped query. When adding a model to the fleet, price it in `ANTHROPIC_PRICING_PER_MTOK` (or `OPENAI_PRICING_PER_MTOK` in `llm/costing.py`) or its calls record cost `NULL`.
+
 ## [0.92.75] - 2026-07-02
 
 ### Removed

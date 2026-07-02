@@ -12,7 +12,7 @@ import logging
 import os
 import uuid
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 from dazzle.core.model_defaults import ANTHROPIC_PRICING_PER_MTOK, DEFAULT_JUDGMENT_MODEL
 from dazzle.llm.driver import (
@@ -54,6 +54,20 @@ class LLMProvider(StrEnum):
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
     CLAUDE_CLI = "claude_cli"  # Fallback using Claude CLI (subscription)
+
+
+class Completion(NamedTuple):
+    """A completion plus the provider-reported token usage (#1528).
+
+    ``tokens_in`` / ``tokens_out`` are 0 when the provider does not
+    report usage (notably the Claude CLI subscription path, which only
+    reports a total) — cost computation treats 0/0 as "unknown", never
+    as free.
+    """
+
+    text: str
+    tokens_in: int
+    tokens_out: int
 
 
 class LLMAPIClient:
@@ -179,11 +193,21 @@ class LLMAPIClient:
         Returns:
             The LLM's response text.
         """
+        return self.complete_with_usage(system_prompt, user_prompt).text
+
+    def complete_with_usage(self, system_prompt: str, user_prompt: str) -> Completion:
+        """Completion plus provider-reported token usage (#1528).
+
+        The metered providers (Anthropic / OpenAI) report an input/output
+        split; the Claude CLI subscription path reports only a total, so
+        both counts come back 0 there (subscription calls have no metered
+        cost to compute anyway).
+        """
         if self._use_cli_fallback:
             text, _tokens = call_claude_cli(
                 user_prompt, system_prompt=system_prompt, model=self.model
             )
-            return text
+            return Completion(text, 0, 0)
         elif self.provider == LLMProvider.ANTHROPIC:
             return self._call_anthropic(system_prompt, user_prompt)
         else:
@@ -222,9 +246,9 @@ class LLMAPIClient:
                 user_prompt, system_prompt=system_prompt, model=self.model
             )
         elif self.provider == LLMProvider.ANTHROPIC:
-            response_text = self._call_anthropic(system_prompt, user_prompt)
+            response_text = self._call_anthropic(system_prompt, user_prompt).text
         else:
-            response_text = self._call_openai(system_prompt, user_prompt)
+            response_text = self._call_openai(system_prompt, user_prompt).text
 
         # Parse JSON response — strip optional markdown code fences first
         # (#1219). Claude's instruction-following defaults to fenced output
@@ -368,7 +392,7 @@ Extract structured information following the JSON schema provided in the system 
 
 Return ONLY the JSON object. Do not include any explanatory text before or after the JSON."""
 
-    def _call_anthropic(self, system_prompt: str, user_prompt: str) -> str:
+    def _call_anthropic(self, system_prompt: str, user_prompt: str) -> Completion:
         """Call Anthropic Claude API."""
         logger.debug("Calling Anthropic API with model %s", self.model)
         assert self.client is not None, "Client not initialized"
@@ -385,15 +409,20 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
 
             # Extract text from response (first block is always a TextBlock for completions)
             text_block = response.content[0]
-            if hasattr(text_block, "text"):
-                return str(text_block.text)
-            raise ValueError(f"Unexpected response block type: {type(text_block)}")
+            if not hasattr(text_block, "text"):
+                raise ValueError(f"Unexpected response block type: {type(text_block)}")
+            usage = getattr(response, "usage", None)
+            return Completion(
+                str(text_block.text),
+                int(getattr(usage, "input_tokens", 0) or 0),
+                int(getattr(usage, "output_tokens", 0) or 0),
+            )
 
         except Exception as e:
             logger.error("Anthropic API call failed: %s", e)
             raise
 
-    def _call_openai(self, system_prompt: str, user_prompt: str) -> str:
+    def _call_openai(self, system_prompt: str, user_prompt: str) -> Completion:
         """Call OpenAI GPT API."""
         logger.debug("Calling OpenAI API with model %s", self.model)
         assert self.client is not None, "Client not initialized"
@@ -413,8 +442,12 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
 
             content = response.choices[0].message.content
             assert content is not None, "OpenAI returned empty response"
-            result: str = content
-            return result
+            usage = getattr(response, "usage", None)
+            return Completion(
+                content,
+                int(getattr(usage, "prompt_tokens", 0) or 0),
+                int(getattr(usage, "completion_tokens", 0) or 0),
+            )
 
         except Exception as e:
             logger.error("OpenAI API call failed: %s", e)

@@ -15,6 +15,7 @@ from dazzle.core.ir.llm import (
     RetryPolicySpec,
 )
 from dazzle.http.runtime.llm_executor import LLMIntentExecutor
+from dazzle.llm.api_client import Completion
 
 
 def _make_model(
@@ -127,7 +128,7 @@ class TestExecute:
         executor = LLMIntentExecutor(_make_appspec())
         with patch.object(LLMIntentExecutor, "_build_client") as mock_build:
             mock_client = MagicMock()
-            mock_client.complete.return_value = "Summary result"
+            mock_client.complete_with_usage.return_value = Completion("Summary result", 0, 0)
             mock_build.return_value = mock_client
 
             result = await executor.execute(
@@ -195,16 +196,16 @@ class TestExecute:
 
         call_count = 0
 
-        def complete_side_effect(sys_prompt: str, user_prompt: str) -> str:
+        def complete_side_effect(sys_prompt: str, user_prompt: str) -> Completion:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
                 raise RuntimeError("temporary failure")
-            return "success after retries"
+            return Completion("success after retries", 0, 0)
 
         with patch.object(LLMIntentExecutor, "_build_client") as mock_build:
             mock_client = MagicMock()
-            mock_client.complete.side_effect = complete_side_effect
+            mock_client.complete_with_usage.side_effect = complete_side_effect
             mock_build.return_value = mock_client
 
             result = await executor.execute(
@@ -223,15 +224,15 @@ class TestExecute:
         appspec = _make_appspec(intents=[_make_intent(timeout_seconds=1)])
         executor = LLMIntentExecutor(appspec)
 
-        def slow_complete(sys_prompt: str, user_prompt: str) -> str:
+        def slow_complete(sys_prompt: str, user_prompt: str) -> Completion:
             import time
 
             time.sleep(5)
-            return "should not reach"
+            return Completion("should not reach", 0, 0)
 
         with patch.object(LLMIntentExecutor, "_build_client") as mock_build:
             mock_client = MagicMock()
-            mock_client.complete.side_effect = slow_complete
+            mock_client.complete_with_usage.side_effect = slow_complete
             mock_build.return_value = mock_client
 
             result = await executor.execute(
@@ -253,7 +254,7 @@ class TestExecute:
 
         with patch.object(LLMIntentExecutor, "_build_client") as mock_build:
             mock_client = MagicMock()
-            mock_client.complete.return_value = "result"
+            mock_client.complete_with_usage.return_value = Completion("result", 0, 0)
             mock_build.return_value = mock_client
 
             result = await executor.execute(
@@ -269,6 +270,60 @@ class TestExecute:
         call_kwargs = mock_service.execute.call_args
         assert call_kwargs[1]["data"]["intent"] == "summarize"
         assert call_kwargs[1]["data"]["user_id"] == "user-1"
+
+    @pytest.mark.asyncio
+    async def test_ai_job_carries_usage_and_cost(self) -> None:
+        """#1528: provider-reported usage flows onto the AIJob record with a
+        computed USD cost from the central pricing table."""
+        mock_service = AsyncMock()
+        mock_service.execute.return_value = {"id": "job-9"}
+
+        appspec = _make_appspec(models=[_make_model(model_id="claude-sonnet-4-6")])
+        executor = LLMIntentExecutor(appspec, ai_job_service=mock_service)
+
+        with patch.object(LLMIntentExecutor, "_build_client") as mock_build:
+            mock_client = MagicMock()
+            mock_client.complete_with_usage.return_value = Completion("out", 1000, 500)
+            mock_build.return_value = mock_client
+
+            result = await executor.execute(
+                "summarize",
+                {"text": "x"},
+                subject_type="Doc",
+                subject_id="00000000-0000-0000-0000-000000000001",
+            )
+
+        assert result.tokens_in == 1000
+        assert result.tokens_out == 500
+        # claude-sonnet-4-6: $3/MTok in + $15/MTok out
+        # 1000 in → $0.003; 500 out → $0.0075 → $0.0105
+        data = mock_service.execute.call_args[1]["data"]
+        assert data["tokens_in"] == 1000
+        assert data["tokens_out"] == 500
+        assert data["cost_usd"] == "0.010500"
+
+    @pytest.mark.asyncio
+    async def test_unknown_model_cost_is_none_not_zero(self) -> None:
+        """#1528: a model missing from the pricing table records cost None
+        (unknown), never 0 (free)."""
+        mock_service = AsyncMock()
+        mock_service.execute.return_value = {"id": "job-10"}
+        executor = LLMIntentExecutor(_make_appspec(), ai_job_service=mock_service)
+
+        with patch.object(LLMIntentExecutor, "_build_client") as mock_build:
+            mock_client = MagicMock()
+            mock_client.complete_with_usage.return_value = Completion("out", 1000, 500)
+            mock_build.return_value = mock_client
+
+            await executor.execute(
+                "summarize",
+                {"text": "x"},
+                subject_type="Doc",
+                subject_id="00000000-0000-0000-0000-000000000001",
+            )
+
+        data = mock_service.execute.call_args[1]["data"]
+        assert data["cost_usd"] is None
 
 
 # ── List helpers ──────────────────────────────────────────────────────

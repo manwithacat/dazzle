@@ -28,6 +28,7 @@ from dazzle.core.ir.llm import LLMIntentSpec, LLMModelSpec, RetryBackoff
 from dazzle.core.ir.llm import LLMProvider as IRProvider
 from dazzle.llm.api_client import LLMAPIClient
 from dazzle.llm.api_client import LLMProvider as ClientProvider
+from dazzle.llm.costing import compute_cost_usd
 
 logger = logging.getLogger(__name__)
 
@@ -195,15 +196,26 @@ class LLMIntentExecutor:
         for attempt in range(1, max_attempts + 1):
             t0 = time.monotonic()
             try:
-                output = await asyncio.wait_for(
-                    asyncio.to_thread(client.complete, system_prompt, rendered),
+                completion = await asyncio.wait_for(
+                    asyncio.to_thread(client.complete_with_usage, system_prompt, rendered),
                     timeout=intent.timeout_seconds,
                 )
                 duration_ms = int((time.monotonic() - t0) * 1000)
 
+                # #1528: carry the provider-reported usage onto the AIJob
+                # record — cost is None (unknown), never 0, when the model
+                # has no metered price or usage wasn't reported.
                 result = ExecutionResult(
                     success=True,
-                    output=output,
+                    output=completion.text,
+                    tokens_in=completion.tokens_in,
+                    tokens_out=completion.tokens_out,
+                    cost_usd=compute_cost_usd(
+                        model.provider.value,
+                        model.model_id,
+                        completion.tokens_in,
+                        completion.tokens_out,
+                    ),
                     duration_ms=duration_ms,
                 )
 
