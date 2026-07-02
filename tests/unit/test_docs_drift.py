@@ -150,9 +150,18 @@ def test_claude_md_mcp_tools_table_matches_registry() -> None:
     `operation` enum in the tool's input schema. Tools without an
     operation enum (e.g. `bootstrap`) keep a prose cell, unchecked.
     """
+    from unittest.mock import patch
+
     from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
 
-    registry = {t.name: t for t in get_all_consolidated_tools()}
+    # The table documents the consolidated (non-dev) tool set. is_dev_mode()
+    # reads a process-global that any earlier in-process MCP state init flips
+    # to True when the working dir is this repo (a dev environment) — under
+    # xdist that made this gate scheduling-dependent: the registry grew the
+    # dev-mode `project` tool on whichever worker ran such a test first
+    # (failed the py3.14 cell on v0.92.81). Pin dev mode off for the read.
+    with patch("dazzle.mcp.server.tools_consolidated.is_dev_mode", return_value=False):
+        registry = {t.name: t for t in get_all_consolidated_tools()}
     table = _claude_md_mcp_table()
 
     missing = sorted(set(registry) - set(table))

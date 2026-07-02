@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.82] - 2026-07-02
+
+### Fixed
+- **`test_claude_md_mcp_tools_table_matches_registry` was scheduling-dependent under xdist** (failed the py3.14 cell on v0.92.81): `is_dev_mode()` reads a process-global that any earlier in-process MCP state init flips to True when the working dir is this repo (a dev environment), growing the registry by the dev-mode `project` tool on whichever worker ran such a test first. The gate now pins dev mode off for the registry read — the CLAUDE.md table documents the consolidated (non-dev) tool set. Verified both ways: polluted state without the pin shows `project`; with the pin it never does.
+
 ## [0.92.81] - 2026-07-02
 
 ### Fixed
