@@ -359,20 +359,49 @@ def test_rename_table_and_inverse():
 
 
 # ---------------------------------------------------------------------------
-# AddForeignKey / DropForeignKey
+# AddForeignKey / DropForeignKey / AddIndex / DropIndex / AddUnique / DropUnique
+# — one contract: render([op]) emits the op type in upgrade and its exact
+# inverse type in downgrade.
 # ---------------------------------------------------------------------------
 
 
-def test_add_foreign_key_and_inverse():
-    up, down = render([AddForeignKey("orders", ("user_id",), "users", ("id",))])
-    assert any(isinstance(o, aops.CreateForeignKeyOp) for o in up.ops)
-    assert any(isinstance(o, aops.DropConstraintOp) for o in down.ops)
-
-
-def test_drop_foreign_key_and_inverse():
-    up, down = render([DropForeignKey("orders", ("user_id",), "users", ("id",))])
-    assert any(isinstance(o, aops.DropConstraintOp) for o in up.ops)
-    assert any(isinstance(o, aops.CreateForeignKeyOp) for o in down.ops)
+@pytest.mark.parametrize(
+    ("op", "up_type", "down_type"),
+    [
+        pytest.param(
+            AddForeignKey("orders", ("user_id",), "users", ("id",)),
+            aops.CreateForeignKeyOp,
+            aops.DropConstraintOp,
+            id="add-foreign-key",
+        ),
+        pytest.param(
+            DropForeignKey("orders", ("user_id",), "users", ("id",)),
+            aops.DropConstraintOp,
+            aops.CreateForeignKeyOp,
+            id="drop-foreign-key",
+        ),
+        pytest.param(AddIndex("t", "email"), aops.CreateIndexOp, aops.DropIndexOp, id="add-index"),
+        pytest.param(
+            DropIndex("t", "email"), aops.DropIndexOp, aops.CreateIndexOp, id="drop-index"
+        ),
+        pytest.param(
+            AddUnique("t", ("email",)),
+            aops.CreateUniqueConstraintOp,
+            aops.DropConstraintOp,
+            id="add-unique",
+        ),
+        pytest.param(
+            DropUnique("t", ("email",)),
+            aops.DropConstraintOp,
+            aops.CreateUniqueConstraintOp,
+            id="drop-unique",
+        ),
+    ],
+)
+def test_constraint_op_and_inverse(op, up_type, down_type):
+    up, down = render([op])
+    assert any(isinstance(o, up_type) for o in up.ops)
+    assert any(isinstance(o, down_type) for o in down.ops)
 
 
 def test_composite_fk_render_uses_all_columns():
@@ -390,40 +419,6 @@ def test_composite_unique_render_uses_all_columns():
     up, _ = render([AddUnique("Project", ("tenant_id", "id"))])
     uq = next(o for o in up.ops if isinstance(o, aops.CreateUniqueConstraintOp))
     assert list(uq.columns) == ["tenant_id", "id"]
-
-
-# ---------------------------------------------------------------------------
-# AddIndex / DropIndex
-# ---------------------------------------------------------------------------
-
-
-def test_add_index_and_inverse():
-    up, down = render([AddIndex("t", "email")])
-    assert any(isinstance(o, aops.CreateIndexOp) for o in up.ops)
-    assert any(isinstance(o, aops.DropIndexOp) for o in down.ops)
-
-
-def test_drop_index_and_inverse():
-    up, down = render([DropIndex("t", "email")])
-    assert any(isinstance(o, aops.DropIndexOp) for o in up.ops)
-    assert any(isinstance(o, aops.CreateIndexOp) for o in down.ops)
-
-
-# ---------------------------------------------------------------------------
-# AddUnique / DropUnique
-# ---------------------------------------------------------------------------
-
-
-def test_add_unique_and_inverse():
-    up, down = render([AddUnique("t", ("email",))])
-    assert any(isinstance(o, aops.CreateUniqueConstraintOp) for o in up.ops)
-    assert any(isinstance(o, aops.DropConstraintOp) for o in down.ops)
-
-
-def test_drop_unique_and_inverse():
-    up, down = render([DropUnique("t", ("email",))])
-    assert any(isinstance(o, aops.DropConstraintOp) for o in up.ops)
-    assert any(isinstance(o, aops.CreateUniqueConstraintOp) for o in down.ops)
 
 
 # ---------------------------------------------------------------------------

@@ -8,6 +8,8 @@ reused, not re-tested here.
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from dazzle.http.runtime.auth.connection_probe import ProbeError, probe_connection
 
 
@@ -63,22 +65,27 @@ def test_oidc_discovery_url_overrides_issuer():
     assert http_get.calls == ["https://idp.test/custom/.wk"]
 
 
-def test_oidc_discovery_non_200_warns():
-    checks = probe_connection(_conn("oidc", issuer="https://idp.test"), http_get=_gives(404))
-    assert checks[0].status == "warn" and "404" in checks[0].detail
-
-
-def test_oidc_discovery_missing_endpoint_warns():
-    body = json.dumps({"authorization_endpoint": "https://idp.test/authorize"}).encode()
-    checks = probe_connection(_conn("oidc", issuer="https://idp.test"), http_get=_gives(200, body))
-    assert checks[0].status == "warn" and "token_endpoint" in checks[0].detail
-
-
-def test_oidc_discovery_not_json_warns():
+@pytest.mark.parametrize(
+    ("status", "body", "expected_substring"),
+    [
+        pytest.param(404, b"", "404", id="non-200"),
+        pytest.param(
+            200,
+            json.dumps({"authorization_endpoint": "https://idp.test/authorize"}).encode(),
+            "token_endpoint",
+            id="missing-endpoint",
+        ),
+        pytest.param(200, b"<html>nope", "not valid JSON", id="not-json"),
+        # a malicious/misconfigured IdP serves valid JSON that isn't an object —
+        # must warn, not crash
+        pytest.param(200, b"[]", "not an object", id="json-not-an-object"),
+    ],
+)
+def test_oidc_discovery_bad_response_warns(status: int, body: bytes, expected_substring: str):
     checks = probe_connection(
-        _conn("oidc", issuer="https://idp.test"), http_get=_gives(200, b"<html>nope")
+        _conn("oidc", issuer="https://idp.test"), http_get=_gives(status, body)
     )
-    assert checks[0].status == "warn" and "not valid JSON" in checks[0].detail
+    assert checks[0].status == "warn" and expected_substring in checks[0].detail
 
 
 def test_oidc_no_issuer_or_discovery_warns_without_network():
@@ -152,12 +159,6 @@ def test_scim_is_informational_no_network():
 def test_unknown_type_warns():
     checks = probe_connection(_conn("ldap"), http_get=_gives(200))
     assert checks[0].status == "warn" and "ldap" in checks[0].detail
-
-
-def test_oidc_discovery_json_not_an_object_warns():
-    # a malicious/misconfigured IdP serves valid JSON that isn't an object — must warn, not crash
-    checks = probe_connection(_conn("oidc", issuer="https://idp.test"), http_get=_gives(200, b"[]"))
-    assert checks[0].status == "warn" and "not an object" in checks[0].detail
 
 
 def test_probe_never_raises_on_non_string_config():

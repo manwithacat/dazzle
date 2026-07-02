@@ -10,6 +10,10 @@ sitespec author's custom types — fall through to the Jinja partial.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
+import pytest
+
 from dazzle.http.runtime.renderers.site_section_builder import (
     TYPED_SECTION_TYPES,
     _build_card_grid_section,
@@ -50,15 +54,81 @@ def test_render_typed_section_dispatches_each_new_type() -> None:
         assert "<section" in out
 
 
+# ───────────────── shared chrome contract ────────────────────
+# One contract across all 7 builders: each emits its
+# `dz-section dz-section-<type>` class plus (where the section has one)
+# its inner wrapper marker. Collapsed from 7 per-builder smokes (#1530).
+
+
+@pytest.mark.parametrize(
+    ("build", "section_type", "section_class", "wrapper_marker"),
+    [
+        # #1113 — stats wrapper is the Dazzle-native `dz-stats-grid`, replacing
+        # DaisyUI `stats stats-vertical lg:stats-horizontal shadow` (CDN-only).
+        pytest.param(
+            _build_stats_section,
+            "stats",
+            'class="dz-section dz-section-stats"',
+            'class="dz-stats-grid"',
+            id="stats",
+        ),
+        pytest.param(
+            _build_steps_section,
+            "steps",
+            'class="dz-section dz-section-steps"',
+            "dz-section-steps-list",
+            id="steps",
+        ),
+        pytest.param(
+            _build_comparison_section,
+            "comparison",
+            'class="dz-section dz-section-comparison"',
+            "dz-comparison-table",
+            id="comparison",
+        ),
+        pytest.param(
+            _build_split_content_section,
+            "split_content",
+            'class="dz-section dz-section-split-content"',
+            None,
+            id="split_content",
+        ),
+        pytest.param(
+            _build_card_grid_section,
+            "card_grid",
+            'class="dz-section dz-section-card-grid"',
+            "dz-card-grid",
+            id="card_grid",
+        ),
+        pytest.param(
+            _build_team_section,
+            "team",
+            'class="dz-section dz-section-team"',
+            "dz-team-grid",
+            id="team",
+        ),
+        pytest.param(
+            _build_testimonials_section,
+            "testimonials",
+            'class="dz-section dz-section-testimonials"',
+            "dz-testimonials-grid",
+            id="testimonials",
+        ),
+    ],
+)
+def test_emits_section_class_and_wrapper(
+    build: Callable[[dict], str],
+    section_type: str,
+    section_class: str,
+    wrapper_marker: str | None,
+) -> None:
+    out = build({"type": section_type})
+    assert section_class in out
+    if wrapper_marker is not None:
+        assert wrapper_marker in out
+
+
 # ───────────────── stats ────────────────────
-
-
-def test_stats_emits_section_class_and_stats_wrapper() -> None:
-    out = _build_stats_section({"type": "stats"})
-    assert 'class="dz-section dz-section-stats"' in out
-    # #1113 — Dazzle-native grid replaces DaisyUI `stats stats-vertical
-    # lg:stats-horizontal shadow` (CDN-only styling).
-    assert 'class="dz-stats-grid"' in out
 
 
 def test_stats_renders_one_stat_per_item() -> None:
@@ -89,12 +159,6 @@ def test_stats_handles_empty_items() -> None:
 
 
 # ───────────────── steps ────────────────────
-
-
-def test_steps_emits_section_class() -> None:
-    out = _build_steps_section({"type": "steps"})
-    assert 'class="dz-section dz-section-steps"' in out
-    assert "dz-section-steps-list" in out
 
 
 def test_steps_numbers_each_item_starting_at_one() -> None:
@@ -137,24 +201,7 @@ def test_steps_handles_single_item_no_connector() -> None:
     assert "is-not-last" not in out
 
 
-def test_steps_escapes_title_and_body() -> None:
-    out = _build_steps_section(
-        {
-            "type": "steps",
-            "items": [{"title": "<script>", "body": "<img src=x>"}],
-        }
-    )
-    assert "<script>" not in out
-    assert "<img" not in out
-
-
 # ───────────────── comparison ────────────────────
-
-
-def test_comparison_emits_section_class_and_table() -> None:
-    out = _build_comparison_section({"type": "comparison"})
-    assert 'class="dz-section dz-section-comparison"' in out
-    assert "dz-comparison-table" in out
 
 
 def test_comparison_renders_columns_in_thead() -> None:
@@ -203,25 +250,7 @@ def test_comparison_handles_more_cells_than_columns() -> None:
     assert out.count("<td>") + out.count("<td class=") >= 3
 
 
-def test_comparison_escapes_cells_and_features() -> None:
-    out = _build_comparison_section(
-        {
-            "type": "comparison",
-            "columns": [{"label": "<x>"}],
-            "items": [{"feature": "<y>", "cells": ["<z>"]}],
-        }
-    )
-    assert "<x>" not in out
-    assert "<y>" not in out
-    assert "<z>" not in out
-
-
 # ───────────────── split_content ────────────────────
-
-
-def test_split_content_emits_section_class() -> None:
-    out = _build_split_content_section({"type": "split_content"})
-    assert 'class="dz-section dz-section-split-content"' in out
 
 
 def test_split_content_alignment_right_swaps_order() -> None:
@@ -275,12 +304,6 @@ def test_split_content_omits_media_when_kind_not_image() -> None:
 # ───────────────── card_grid ────────────────────
 
 
-def test_card_grid_emits_section_class_and_grid() -> None:
-    out = _build_card_grid_section({"type": "card_grid"})
-    assert 'class="dz-section dz-section-card-grid"' in out
-    assert "dz-card-grid" in out
-
-
 def test_card_grid_renders_one_card_per_item() -> None:
     out = _build_card_grid_section(
         {
@@ -330,12 +353,6 @@ def test_card_grid_renders_section_media_when_provided() -> None:
 
 
 # ───────────────── team ────────────────────
-
-
-def test_team_emits_section_class_and_grid() -> None:
-    out = _build_team_section({"type": "team"})
-    assert 'class="dz-section dz-section-team"' in out
-    assert "dz-team-grid" in out
 
 
 def test_team_renders_avatar_image_when_provided() -> None:
@@ -431,12 +448,6 @@ def test_team_handles_member_without_name() -> None:
 # ───────────────── testimonials ────────────────────
 
 
-def test_testimonials_emits_section_class_and_grid() -> None:
-    out = _build_testimonials_section({"type": "testimonials"})
-    assert 'class="dz-section dz-section-testimonials"' in out
-    assert "dz-testimonials-grid" in out
-
-
 def test_testimonials_renders_blockquote_with_quote_marks() -> None:
     out = _build_testimonials_section(
         {
@@ -465,19 +476,51 @@ def test_testimonials_omits_role_when_absent() -> None:
     assert "<span>" not in out
 
 
-def test_testimonials_escapes_quote_and_name_and_role() -> None:
-    out = _build_testimonials_section(
-        {
-            "type": "testimonials",
-            "items": [
-                {
-                    "quote": "<script>alert(1)</script>",
-                    "name": "<img src=x>",
-                    "role": "<svg/>",
-                }
-            ],
-        }
-    )
-    assert "<script>" not in out
-    assert "<img " not in out
-    assert "<svg/>" not in out
+# ───────────────── shared escaping contract ────────────────────
+# One contract: user-supplied strings are HTML-escaped. Collapsed from the
+# per-builder escape smokes (#1530); each row keeps its original hostile
+# payload and forbidden raw markup.
+
+
+@pytest.mark.parametrize(
+    ("build", "section", "forbidden"),
+    [
+        pytest.param(
+            _build_steps_section,
+            {"type": "steps", "items": [{"title": "<script>", "body": "<img src=x>"}]},
+            ["<script>", "<img"],
+            id="steps-title-and-body",
+        ),
+        pytest.param(
+            _build_comparison_section,
+            {
+                "type": "comparison",
+                "columns": [{"label": "<x>"}],
+                "items": [{"feature": "<y>", "cells": ["<z>"]}],
+            },
+            ["<x>", "<y>", "<z>"],
+            id="comparison-columns-features-cells",
+        ),
+        pytest.param(
+            _build_testimonials_section,
+            {
+                "type": "testimonials",
+                "items": [
+                    {
+                        "quote": "<script>alert(1)</script>",
+                        "name": "<img src=x>",
+                        "role": "<svg/>",
+                    }
+                ],
+            },
+            ["<script>", "<img ", "<svg/>"],
+            id="testimonials-quote-name-role",
+        ),
+    ],
+)
+def test_escapes_user_content(
+    build: Callable[[dict], str], section: dict, forbidden: list[str]
+) -> None:
+    out = build(section)
+    for raw in forbidden:
+        assert raw not in out

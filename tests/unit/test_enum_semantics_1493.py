@@ -27,8 +27,32 @@ def _parse(dsl: str):
     return frag
 
 
+def _appspec(dsl: str):
+    n, a, t, c, u, frag = parse_dsl(dsl, pathlib.Path("t.dsl"))
+    root = n or "t"
+    return build_appspec(
+        [
+            ModuleIR(
+                name=root,
+                file=pathlib.Path("t.dsl"),
+                app_name=a,
+                app_title=t,
+                app_config=c,
+                uses=u,
+                fragment=frag,
+            )
+        ],
+        root,
+    )
+
+
 def _enum(frag, name: str):
     return next(e for e in frag.enums if e.name == name)
+
+
+def _field(frag, entity_name: str, field_name: str):
+    entity = next(e for e in frag.entities if e.name == entity_name)
+    return next(f for f in entity.fields if f.name == field_name)
 
 
 # ── tone normalisation / palette ──────────────────────────────────────────
@@ -38,24 +62,26 @@ def test_canonical_palette_is_the_five_css_tones() -> None:
     assert set(CANONICAL_TONES) == {"success", "info", "warning", "destructive", "neutral"}
 
 
-def test_positive_aliases_success() -> None:
-    assert normalize_tone("positive") == "success"
-
-
-def test_normalize_is_case_insensitive() -> None:
-    assert normalize_tone("WARNING") == "warning"
-
-
-def test_unknown_tone_normalises_to_none() -> None:
-    assert normalize_tone("turquoise") is None
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        pytest.param("positive", "success", id="positive-aliases-success"),
+        pytest.param("WARNING", "warning", id="normalize-is-case-insensitive"),
+        pytest.param("turquoise", None, id="unknown-tone-normalises-to-none"),
+    ],
+)
+def test_normalize_tone(raw: str, expected: str | None) -> None:
+    assert normalize_tone(raw) == expected
 
 
 # ── parser: shared enum `semantic:` line ──────────────────────────────────
 
 
-def test_semantic_line_binds_values() -> None:
-    frag = _parse(
-        """module m
+@pytest.mark.parametrize(
+    ("dsl", "enum_name", "expected"),
+    [
+        pytest.param(
+            """module m
 app a "A"
 enum OrderStatus "Order Status":
   draft "Draft"
@@ -63,43 +89,46 @@ enum OrderStatus "Order Status":
   approved "Approved"
   rejected "Rejected"
   semantic: pending=warning, approved=positive, rejected=destructive, draft=neutral
-"""
-    )
-    by_name = {v.name: v.semantic for v in _enum(frag, "OrderStatus").values}
-    assert by_name == {
-        "draft": "neutral",
-        "pending": "warning",
-        "approved": "positive",  # raw; normalises to success downstream
-        "rejected": "destructive",
-    }
-
-
-def test_undeclared_values_keep_none_semantic() -> None:
-    frag = _parse(
-        """module m
+""",
+            "OrderStatus",
+            {
+                "draft": "neutral",
+                "pending": "warning",
+                "approved": "positive",  # raw; normalises to success downstream
+                "rejected": "destructive",
+            },
+            id="semantic-line-binds-values",
+        ),
+        pytest.param(
+            """module m
 app a "A"
 enum S "S":
   a "A"
   b "B"
   semantic: a=success
-"""
-    )
-    by_name = {v.name: v.semantic for v in _enum(frag, "S").values}
-    assert by_name == {"a": "success", "b": None}
-
-
-def test_semantic_line_may_precede_values() -> None:
-    frag = _parse(
-        """module m
+""",
+            "S",
+            {"a": "success", "b": None},
+            id="undeclared-values-keep-none-semantic",
+        ),
+        pytest.param(
+            """module m
 app a "A"
 enum S "S":
   semantic: a=success, b=destructive
   a "A"
   b "B"
-"""
-    )
-    by_name = {v.name: v.semantic for v in _enum(frag, "S").values}
-    assert by_name == {"a": "success", "b": "destructive"}
+""",
+            "S",
+            {"a": "success", "b": "destructive"},
+            id="semantic-line-may-precede-values",
+        ),
+    ],
+)
+def test_shared_enum_semantic_line(dsl: str, enum_name: str, expected: dict) -> None:
+    frag = _parse(dsl)
+    by_name = {v.name: v.semantic for v in _enum(frag, enum_name).values}
+    assert by_name == expected
 
 
 def test_semantic_binding_unknown_value_is_parse_error() -> None:
@@ -118,41 +147,40 @@ enum S "S":
 # ── parser: inline `enum[...]` field `semantic:` continuation (slice 2) ────
 
 
-def _field(frag, entity_name: str, field_name: str):
-    entity = next(e for e in frag.entities if e.name == entity_name)
-    return next(f for f in entity.fields if f.name == field_name)
-
-
-def test_inline_enum_semantic_continuation_binds_tones() -> None:
-    frag = _parse(
-        """module m
+@pytest.mark.parametrize(
+    ("dsl", "expected"),
+    [
+        pytest.param(
+            """module m
 app a "A"
 entity Task "Task":
   id: uuid pk
   status: enum[open, in_review, done, blocked]
     semantic: open=neutral, in_review=warning, done=positive, blocked=destructive
-"""
-    )
-    ft = _field(frag, "Task", "status").type
-    assert ft.enum_semantics == {
-        "open": "neutral",
-        "in_review": "warning",
-        "done": "positive",  # raw; normalises to success downstream
-        "blocked": "destructive",
-    }
-
-
-def test_inline_enum_without_semantic_has_none() -> None:
-    frag = _parse(
-        """module m
+""",
+            {
+                "open": "neutral",
+                "in_review": "warning",
+                "done": "positive",  # raw; normalises to success downstream
+                "blocked": "destructive",
+            },
+            id="semantic-continuation-binds-tones",
+        ),
+        pytest.param(
+            """module m
 app a "A"
 entity Task "Task":
   id: uuid pk
   status: enum[open, done]
-"""
-    )
-    ft = _field(frag, "Task", "status").type
-    assert ft.enum_semantics is None
+""",
+            None,
+            id="without-semantic-has-none",
+        ),
+    ],
+)
+def test_inline_enum_semantics(dsl: str, expected: dict | None) -> None:
+    ft = _field(_parse(dsl), "Task", "status").type
+    assert ft.enum_semantics == expected
 
 
 def test_inline_enum_semantic_composes_with_default() -> None:
@@ -222,20 +250,24 @@ def test_resolver_declared_binding_wins_over_name_guess() -> None:
     assert resolve_status_tone("draft", {"draft": "positive"}) == "success"
 
 
-def test_resolver_unknown_declared_tone_falls_back_to_neutral() -> None:
+@pytest.mark.parametrize(
+    ("value", "semantic_map", "expected"),
+    [
+        # A non-palette tone in the map resolves to neutral (not the name
+        # guess) — the binding is authoritative; validation catches the typo
+        # separately.
+        pytest.param(
+            "done", {"done": "turquoise"}, "neutral", id="unknown-declared-tone-to-neutral"
+        ),
+        # A value not in the (partial) map still falls through to the name
+        # guess ("done" → success), not neutral.
+        pytest.param("done", {"open": "warning"}, "success", id="undeclared-value-uses-name-guess"),
+    ],
+)
+def test_resolver_map_edge_rows(value: str, semantic_map: dict, expected: str) -> None:
     from dazzle.render.filters import resolve_status_tone
 
-    # A non-palette tone in the map resolves to neutral (not the name guess) —
-    # the binding is authoritative; validation catches the typo separately.
-    assert resolve_status_tone("done", {"done": "turquoise"}) == "neutral"
-
-
-def test_resolver_undeclared_value_with_map_uses_name_guess() -> None:
-    from dazzle.render.filters import resolve_status_tone
-
-    # A value not in the (partial) map still falls through to the name guess
-    # ("done" → success), not neutral.
-    assert resolve_status_tone("done", {"open": "warning"}) == "success"
+    assert resolve_status_tone(value, semantic_map) == expected
 
 
 def test_badge_html_consumes_semantic_map() -> None:
@@ -369,25 +401,6 @@ def test_probe_1b_reports_level_4() -> None:
 
 
 # ── validator: tone palette ───────────────────────────────────────────────
-
-
-def _appspec(dsl: str):
-    n, a, t, c, u, frag = parse_dsl(dsl, pathlib.Path("t.dsl"))
-    root = n or "t"
-    return build_appspec(
-        [
-            ModuleIR(
-                name=root,
-                file=pathlib.Path("t.dsl"),
-                app_name=a,
-                app_title=t,
-                app_config=c,
-                uses=u,
-                fragment=frag,
-            )
-        ],
-        root,
-    )
 
 
 def test_validator_accepts_canonical_and_alias_tones() -> None:

@@ -392,10 +392,18 @@ atomic reassign "Reassign":
 
 
 class TestAtomicFlowValidator:
-    def test_valid_flow_no_errors(self) -> None:
-        dsl = (
-            _base_entities()
-            + """
+    """One contract, one table: an atomic block appended to the base
+    entities yields an error where all `expected` substrings appear in
+    the same error string."""
+
+    @pytest.mark.parametrize(
+        ("atomic_dsl", "expected"),
+        [
+            pytest.param(
+                # NB: above.Role.id from Employment is a forward ref since
+                # Role is declared *after* Employment in this DSL — should
+                # error.
+                """
 atomic onboard "X":
   permit:
     execute: role(admin)
@@ -407,89 +415,63 @@ atomic onboard "X":
     role: above.Role.id
   create Role:
     title: "Dev"
-"""
-        )
-        # NB: above.Role.id from Employment is a forward ref since Role
-        # is declared *after* Employment in this DSL — should error.
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("'Role' is not created earlier in this flow" in e for e in errors)
-
-    def test_unknown_create_target_errors(self) -> None:
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("'Role' is not created earlier in this flow",),
+                id="forward-above-ref",
+            ),
+            pytest.param(
+                """
 atomic onboard "X":
   permit:
     execute: role(admin)
   create Unknown:
     foo: "x"
-"""
-        )
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("unknown entity 'Unknown'" in e for e in errors)
-
-    def test_unknown_assignment_field_errors(self) -> None:
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("unknown entity 'Unknown'",),
+                id="unknown-create-target",
+            ),
+            pytest.param(
+                """
 atomic onboard "X":
   permit:
     execute: role(admin)
   create Person:
     not_a_field: "x"
-"""
-        )
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("unknown field 'not_a_field'" in e for e in errors)
-
-    def test_undeclared_input_ref_errors(self) -> None:
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("unknown field 'not_a_field'",),
+                id="unknown-assignment-field",
+            ),
+            pytest.param(
+                """
 atomic onboard "X":
   permit:
     execute: role(admin)
   create Person:
     legal_name: input.never_declared
-"""
-        )
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("undeclared input 'never_declared'" in e for e in errors)
-
-    def test_missing_permit_errors(self) -> None:
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("undeclared input 'never_declared'",),
+                id="undeclared-input-ref",
+            ),
+            pytest.param(
+                """
 atomic onboard "X":
   create Person:
     legal_name: "x"
-"""
-        )
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("must declare `permit: execute: role(...)`" in e for e in errors)
-
-    def test_no_creates_errors(self) -> None:
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("must declare `permit: execute: role(...)`",),
+                id="missing-permit",
+            ),
+            pytest.param(
+                """
 atomic onboard "X":
   permit:
     execute: role(admin)
-"""
-        )
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("must declare at least one `create` or `update` step" in e for e in errors)
-
-    def test_duplicate_input_errors(self) -> None:
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("must declare at least one `create` or `update` step",),
+                id="no-creates",
+            ),
+            pytest.param(
+                """
 atomic onboard "X":
   permit:
     execute: role(admin)
@@ -497,16 +479,12 @@ atomic onboard "X":
   input foo: str(50) required
   create Person:
     legal_name: input.foo
-"""
-        )
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("duplicate input 'foo'" in e for e in errors)
-
-    def test_duplicate_create_target_errors(self) -> None:
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("duplicate input 'foo'",),
+                id="duplicate-input",
+            ),
+            pytest.param(
+                """
 atomic onboard "X":
   permit:
     execute: role(admin)
@@ -514,16 +492,12 @@ atomic onboard "X":
     legal_name: "a"
   create Person:
     legal_name: "b"
-"""
-        )
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("appears more than once" in e for e in errors)
-
-    def test_above_ref_to_non_id_field_errors(self) -> None:
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("appears more than once",),
+                id="duplicate-create-target",
+            ),
+            pytest.param(
+                """
 atomic onboard "X":
   permit:
     execute: role(admin)
@@ -531,42 +505,39 @@ atomic onboard "X":
     legal_name: "a"
   create Employment:
     person: above.Person.legal_name
-"""
-        )
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("only '.id' is supported" in e for e in errors)
-
-    def test_update_target_undeclared_input_errors(self) -> None:
-        """#1313: an update's target row-selector must resolve to a declared
-        input (or an earlier-created above-ref)."""
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("only '.id' is supported",),
+                id="above-ref-to-non-id-field",
+            ),
+            pytest.param(
+                # #1313: an update's target row-selector must resolve to a
+                # declared input (or an earlier-created above-ref).
+                """
 atomic change "X":
   permit:
     execute: role(admin)
   update Person(input.never_declared):
     legal_name: "x"
-"""
-        )
-        appspec = _appspec(dsl)
-        errors, _ = validate_atomic_flows(appspec)
-        assert any("undeclared input 'never_declared'" in e and "target" in e for e in errors)
-
-    def test_update_unknown_field_errors(self) -> None:
-        """#1313: update assignments are field-checked like creates."""
-        dsl = (
-            _base_entities()
-            + """
+""",
+                ("undeclared input 'never_declared'", "target"),
+                id="update-target-undeclared-input",
+            ),
+            pytest.param(
+                # #1313: update assignments are field-checked like creates.
+                """
 atomic change "X":
   permit:
     execute: role(admin)
   input pid: uuid required
   update Person(input.pid):
     not_a_field: "x"
-"""
-        )
-        appspec = _appspec(dsl)
+""",
+                ("unknown field 'not_a_field'",),
+                id="update-unknown-field",
+            ),
+        ],
+    )
+    def test_invalid_flow_errors(self, atomic_dsl: str, expected: tuple[str, ...]) -> None:
+        appspec = _appspec(_base_entities() + atomic_dsl)
         errors, _ = validate_atomic_flows(appspec)
-        assert any("unknown field 'not_a_field'" in e for e in errors)
+        assert any(all(sub in e for sub in expected) for e in errors), errors

@@ -264,24 +264,9 @@ def test_list_rhythms_includes_ambient_phases(mock_appspec_with_kinds):
         assert data["rhythms"][0]["ambient_phases"] == 1
 
 
-def test_get_rhythm_includes_phase_kind(mock_appspec_with_kinds):
-    """get operation includes kind on phases."""
-    from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec_with_kinds,
-    ):
-        result = get_rhythm_handler(Path("/fake"), {"name": "onboarding"})
-        data = json.loads(result)
-        assert data["phases"][0]["kind"] == "active"
-        assert data["phases"][1]["kind"] == "ambient"
-
-
-def test_get_rhythm_includes_phase_cadence():
-    """get operation includes cadence on phases."""
-    from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler
-
+@pytest.fixture
+def mock_appspec_fiscal_cadence():
+    """Rhythm with per-phase cadence hints (periodic + ambient)."""
     rhythm = RhythmSpec(
         name="fiscal",
         title="Fiscal Year",
@@ -313,28 +298,55 @@ def test_get_rhythm_includes_phase_cadence():
     spec.surfaces = []
     spec.workspaces = []
     spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = get_rhythm_handler(Path("/fake"), {"name": "fiscal"})
-        data = json.loads(result)
-        assert data["phases"][0]["cadence"] == "January-March"
-        assert data["phases"][1]["cadence"] == "ad-hoc, between deadlines"
+    return spec
 
 
-def test_get_rhythm_phase_kind_null_when_unset(mock_appspec):
-    """get operation returns null kind when phase has no kind set."""
+# One serialization contract: the `get` operation includes per-phase
+# metadata field X. Collapsed from three "get_rhythm includes ..." tests
+# (kind / kind-null-when-unset / cadence) — #1530.
+@pytest.mark.parametrize(
+    ("spec_fixture", "rhythm_name", "field", "expected_by_phase"),
+    [
+        pytest.param(
+            "mock_appspec_with_kinds",
+            "onboarding",
+            "kind",
+            ["active", "ambient"],
+            id="kind",
+        ),
+        pytest.param(
+            "mock_appspec",
+            "onboarding",
+            "kind",
+            [None],
+            id="kind-null-when-unset",
+        ),
+        pytest.param(
+            "mock_appspec_fiscal_cadence",
+            "fiscal",
+            "cadence",
+            ["January-March", "ad-hoc, between deadlines"],
+            id="cadence",
+        ),
+    ],
+)
+def test_get_rhythm_includes_phase_field(
+    request: pytest.FixtureRequest,
+    spec_fixture: str,
+    rhythm_name: str,
+    field: str,
+    expected_by_phase: list,
+):
     from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler
 
     with patch(
         "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
+        return_value=request.getfixturevalue(spec_fixture),
     ):
-        result = get_rhythm_handler(Path("/fake"), {"name": "onboarding"})
-        data = json.loads(result)
-        assert data["phases"][0]["kind"] is None
+        result = get_rhythm_handler(Path("/fake"), {"name": rhythm_name})
+    data = json.loads(result)
+    for i, expected in enumerate(expected_by_phase):
+        assert data["phases"][i][field] == expected
 
 
 def test_coverage_rhythms(mock_appspec):
@@ -797,54 +809,109 @@ def _make_gaps_appspec(
     return spec
 
 
-def test_gaps_missing_story(tmp_path):
-    """Scene referencing non-existent story produces blocking capability gap."""
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    rhythm = RhythmSpec(
+def _gaps_rhythm(*scenes: SceneSpec, kind: PhaseKind | None = None) -> RhythmSpec:
+    """Single-phase rhythm 'r1' for persona 'user' — the gaps-test shape."""
+    return RhythmSpec(
         name="r1",
         title="R1",
         persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-999")],
-            ),
-        ],
+        phases=[PhaseSpec(name="p1", kind=kind, scenes=list(scenes))],
     )
-    app = _make_gaps_appspec(rhythms=[rhythm], stories=[], persona_ids=["user"])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(gaps_rhythm_handler(project, {}))
-
-    cap_gaps = [g for g in result["gaps"] if g["kind"] == "capability"]
-    assert len(cap_gaps) >= 1
-    assert cap_gaps[0]["severity"] == "blocking"
-    assert "ST-999" in cap_gaps[0]["description"]
 
 
-def test_gaps_draft_story(tmp_path):
-    """Scene referencing DRAFT story produces blocking capability gap."""
+# One classification contract: each spec shape produces a gap of the
+# expected kind + severity (+ description mention). Collapsed from six
+# per-kind tests (#1530). `exact_one=False` rows keep the original
+# `>= 1` count assertion.
+@pytest.mark.parametrize(
+    ("rhythms", "stories", "persona_ids", "kind", "severity", "desc_contains", "exact_one"),
+    [
+        # Scene referencing non-existent story → blocking capability gap.
+        pytest.param(
+            [_gaps_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-999"))],
+            [],
+            ["user"],
+            "capability",
+            "blocking",
+            "ST-999",
+            False,
+            id="missing-story-blocking",
+        ),
+        # Scene referencing DRAFT story → blocking capability gap.
+        pytest.param(
+            [_gaps_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-001"))],
+            [_make_story("ST-001", actor="user", status=StoryStatus.DRAFT)],
+            ["user"],
+            "capability",
+            "blocking",
+            "DRAFT",
+            False,
+            id="draft-story-blocking",
+        ),
+        # Scene without story ref → advisory unmapped gap.
+        pytest.param(
+            [_gaps_rhythm(SceneSpec(name="s1", surface="sf1"))],
+            [],
+            ["user"],
+            "unmapped",
+            "advisory",
+            None,
+            True,
+            id="unmapped-scene-advisory",
+        ),
+        # Story not referenced by any scene → advisory orphan gap.
+        pytest.param(
+            [_gaps_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-002"))],
+            [_make_story("ST-001", actor="user"), _make_story("ST-002", actor="user")],
+            ["user"],
+            "orphan",
+            "advisory",
+            "ST-001",
+            True,
+            id="orphan-story-advisory",
+        ),
+        # Persona with rhythm but no ambient phase → advisory ambient gap.
+        pytest.param(
+            [
+                _gaps_rhythm(
+                    SceneSpec(name="s1", surface="sf1", story="ST-001"),
+                    kind=PhaseKind.ACTIVE,
+                )
+            ],
+            [_make_story("ST-001", actor="user")],
+            ["user"],
+            "ambient",
+            "advisory",
+            "user",
+            True,
+            id="no-ambient-phase-advisory",
+        ),
+        # Persona with stories but no rhythm → advisory unscored gap.
+        pytest.param(
+            [],
+            [_make_story("ST-001", actor="lonely_persona")],
+            ["lonely_persona"],
+            "unscored",
+            "advisory",
+            "lonely_persona",
+            True,
+            id="unscored-persona-advisory",
+        ),
+    ],
+)
+def test_gaps_classification(
+    tmp_path,
+    rhythms: list[RhythmSpec],
+    stories: list[StorySpec],
+    persona_ids: list[str],
+    kind: str,
+    severity: str,
+    desc_contains: str | None,
+    exact_one: bool,
+):
     from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
 
-    story = _make_story("ST-001", actor="user", status=StoryStatus.DRAFT)
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
-            ),
-        ],
-    )
-    app = _make_gaps_appspec(rhythms=[rhythm], stories=[story], persona_ids=["user"])
+    app = _make_gaps_appspec(rhythms=rhythms, stories=stories, persona_ids=persona_ids)
     project = tmp_path / "proj"
     project.mkdir()
 
@@ -854,127 +921,14 @@ def test_gaps_draft_story(tmp_path):
     ):
         result = json.loads(gaps_rhythm_handler(project, {}))
 
-    cap_gaps = [g for g in result["gaps"] if g["kind"] == "capability"]
-    assert len(cap_gaps) >= 1
-    assert cap_gaps[0]["severity"] == "blocking"
-    assert "DRAFT" in cap_gaps[0]["description"]
-
-
-def test_gaps_unmapped_scene(tmp_path):
-    """Scene without story ref produces advisory unmapped gap."""
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1")],
-            ),
-        ],
-    )
-    app = _make_gaps_appspec(rhythms=[rhythm], stories=[], persona_ids=["user"])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(gaps_rhythm_handler(project, {}))
-
-    unmapped = [g for g in result["gaps"] if g["kind"] == "unmapped"]
-    assert len(unmapped) == 1
-    assert unmapped[0]["severity"] == "advisory"
-
-
-def test_gaps_orphan_story(tmp_path):
-    """Story not referenced by any scene produces advisory orphan gap."""
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    story = _make_story("ST-001", actor="user")
-    other_story = _make_story("ST-002", actor="user")
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-002")],
-            ),
-        ],
-    )
-    app = _make_gaps_appspec(rhythms=[rhythm], stories=[story, other_story], persona_ids=["user"])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(gaps_rhythm_handler(project, {}))
-
-    orphans = [g for g in result["gaps"] if g["kind"] == "orphan"]
-    assert len(orphans) == 1
-    assert orphans[0]["severity"] == "advisory"
-    assert "ST-001" in orphans[0]["description"]
-
-
-def test_gaps_no_ambient(tmp_path):
-    """Persona with rhythm but no ambient phase produces advisory ambient gap."""
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    story = _make_story("ST-001", actor="user")
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                kind=PhaseKind.ACTIVE,
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
-            ),
-        ],
-    )
-    app = _make_gaps_appspec(rhythms=[rhythm], stories=[story], persona_ids=["user"])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(gaps_rhythm_handler(project, {}))
-
-    ambient = [g for g in result["gaps"] if g["kind"] == "ambient"]
-    assert len(ambient) == 1
-    assert ambient[0]["severity"] == "advisory"
-    assert "user" in ambient[0]["description"]
-
-
-def test_gaps_unscored_persona(tmp_path):
-    """Persona with stories but no rhythm produces advisory unscored gap."""
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    story = _make_story("ST-001", actor="lonely_persona")
-    app = _make_gaps_appspec(rhythms=[], stories=[story], persona_ids=["lonely_persona"])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(gaps_rhythm_handler(project, {}))
-
-    unscored = [g for g in result["gaps"] if g["kind"] == "unscored"]
-    assert len(unscored) == 1
-    assert unscored[0]["severity"] == "advisory"
-    assert "lonely_persona" in unscored[0]["description"]
+    matched = [g for g in result["gaps"] if g["kind"] == kind]
+    if exact_one:
+        assert len(matched) == 1
+    else:
+        assert len(matched) >= 1
+    assert matched[0]["severity"] == severity
+    if desc_contains is not None:
+        assert desc_contains in matched[0]["description"]
 
 
 def test_gaps_roadmap_blocking_first(tmp_path):
@@ -1702,8 +1656,16 @@ def test_evaluate_surface_reuse_different_expects():
     assert set(spec_checks[0]["scenes"]) == {"confirm_stmt", "ct600_review"}
 
 
-def test_evaluate_surface_reuse_same_expects_no_advisory():
-    """Surface used in multiple scenes with same expects produces no advisory."""
+# One no-advisory contract: a surface reused across scenes with identical
+# (or absent) expects produces no specialization advisory. Collapsed from
+# the same-expects / no-expects pair (#1530); expects=None is the SceneSpec
+# field default, so the no-expects row is byte-equivalent to omitting it.
+@pytest.mark.parametrize(
+    "expects",
+    ["data_visible", None],
+    ids=["same-expects", "no-expects"],
+)
+def test_evaluate_surface_reuse_no_advisory(expects: str | None):
     from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
 
     rhythm = RhythmSpec(
@@ -1714,8 +1676,8 @@ def test_evaluate_surface_reuse_same_expects_no_advisory():
             PhaseSpec(
                 name="p1",
                 scenes=[
-                    SceneSpec(name="s1", surface="dashboard", expects="data_visible"),
-                    SceneSpec(name="s2", surface="dashboard", expects="data_visible"),
+                    SceneSpec(name="s1", surface="dashboard", expects=expects),
+                    SceneSpec(name="s2", surface="dashboard", expects=expects),
                 ],
             ),
         ],
@@ -1738,44 +1700,6 @@ def test_evaluate_surface_reuse_same_expects_no_advisory():
 
     spec_checks = [c for c in data["checks"] if c["check"] == "surface_specialization"]
     assert spec_checks == []
-
-
-def test_evaluate_surface_reuse_no_expects_no_advisory():
-    """Surface used in multiple scenes without expects produces no advisory."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(name="s1", surface="dashboard"),
-                    SceneSpec(name="s2", surface="dashboard"),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    spec.surfaces = []
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
-    data = json.loads(result)
-
-    spec_checks = [c for c in data["checks"] if c["check"] == "surface_specialization"]
-    assert len(spec_checks) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -1812,37 +1736,166 @@ def _make_fidelity_surface(
     return surf
 
 
-def test_fidelity_scene_served():
-    """Scene with expects matching surface fields is served."""
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
+def _make_fidelity_spec(
+    scenes: list[SceneSpec],
+    surfaces: list[MagicMock] | None = None,
+    workspace_names: list[str] | None = None,
+) -> MagicMock:
+    """Single-phase rhythm 'r1' for persona 'user' — the fidelity-test shape."""
     rhythm = RhythmSpec(
         name="r1",
         title="R1",
         persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(
-                        name="check_balance",
-                        surface="wallet_detail",
-                        expects="balance_visible",
-                    ),
-                ],
-            ),
-        ],
+        phases=[PhaseSpec(name="p1", scenes=scenes)],
     )
     spec = MagicMock()
     spec.rhythms = [rhythm]
     persona = MagicMock()
     persona.id = "user"
     spec.personas = [persona]
-    spec.surfaces = [
-        _make_fidelity_surface("wallet_detail", ["balance", "currency", "last_updated"])
-    ]
-    spec.workspaces = []
+    spec.surfaces = surfaces or []
+    workspaces = []
+    for wn in workspace_names or []:
+        w = MagicMock()
+        w.name = wn
+        workspaces.append(w)
+    spec.workspaces = workspaces
     spec.domain.entities = []
+    return spec
+
+
+# One scoring contract: fidelity = served / total scenes, where a scene
+# is served when its expects/actions match the target surface (or the
+# target is a workspace, or it carries no expects). Collapsed from seven
+# scenario tests (#1530); each row asserts exactly the fields the original
+# test asserted. The proxy-detail reporting contract stays named below
+# (test_fidelity_scene_proxied).
+@pytest.mark.parametrize(
+    ("spec", "expected"),
+    [
+        # Scene with expects matching surface fields is served.
+        pytest.param(
+            _make_fidelity_spec(
+                [
+                    SceneSpec(
+                        name="check_balance",
+                        surface="wallet_detail",
+                        expects="balance_visible",
+                    )
+                ],
+                surfaces=[
+                    _make_fidelity_surface("wallet_detail", ["balance", "currency", "last_updated"])
+                ],
+            ),
+            {"rhythm_fidelity": 1.0, "scenes_served": 1, "scenes_proxied": 0},
+            id="served-expects-match",
+        ),
+        # Mix of served and proxied scenes gives correct fidelity score.
+        pytest.param(
+            _make_fidelity_spec(
+                [
+                    SceneSpec(name="s1", surface="task_list", expects="task_title_visible"),
+                    SceneSpec(
+                        name="s2",
+                        surface="company_detail",
+                        expects="financial_summary_visible",
+                    ),
+                ],
+                surfaces=[
+                    _make_fidelity_surface("task_list", ["title", "status", "due_date"]),
+                    _make_fidelity_surface("company_detail", ["name", "address"]),
+                ],
+            ),
+            {"rhythm_fidelity": 0.5, "scenes_served": 1, "scenes_proxied": 1},
+            id="mixed-half-served",
+        ),
+        # Scenes targeting workspaces are treated as served.
+        pytest.param(
+            _make_fidelity_spec(
+                [SceneSpec(name="arrive", surface="director_dash")],
+                workspace_names=["director_dash"],
+            ),
+            {"rhythm_fidelity": 1.0, "scenes_served": 1},
+            id="workspace-target-served",
+        ),
+        # Scenes without expects are served (no expectation to violate).
+        pytest.param(
+            _make_fidelity_spec(
+                [SceneSpec(name="browse", surface="task_list")],
+                surfaces=[_make_fidelity_surface("task_list", ["title"])],
+            ),
+            {"rhythm_fidelity": 1.0},
+            id="no-expects-served",
+        ),
+        # Standard action 'approve' fuzzy-matches 'client_approve' /
+        # 'approve_return' even without an exact 'approve' action (#454).
+        pytest.param(
+            _make_fidelity_spec(
+                [
+                    SceneSpec(
+                        name="vat_approval",
+                        surface="vat_return",
+                        actions=["approve"],
+                        expects="return_approved",
+                    )
+                ],
+                surfaces=[
+                    _make_fidelity_surface(
+                        "vat_return",
+                        ["return", "status", "amount"],
+                        ["client_approve", "approve_return", "submit_hmrc"],
+                    )
+                ],
+            ),
+            {"scenes_proxied": 0, "rhythm_fidelity": 1.0},
+            id="fuzzy-action-match-#454",
+        ),
+        # Passive actions (browse, review) match any surface (#454).
+        pytest.param(
+            _make_fidelity_spec(
+                [
+                    SceneSpec(
+                        name="check_pnl",
+                        surface="pnl_dashboard",
+                        actions=["browse", "review"],
+                        expects="pnl_visible",
+                    )
+                ],
+                surfaces=[
+                    _make_fidelity_surface(
+                        "pnl_dashboard",
+                        ["pnl", "revenue", "expense"],
+                        ["export_csv"],
+                    )
+                ],
+            ),
+            {"scenes_proxied": 0},
+            id="passive-actions-always-match-#454",
+        ),
+        # Stemmed keywords match: 'deadlines' matches field 'deadline_type' (#457).
+        pytest.param(
+            _make_fidelity_spec(
+                [
+                    SceneSpec(
+                        name="review_deadlines",
+                        surface="deadline_view",
+                        expects="upcoming_deadlines_visible_for_next_90_days",
+                    )
+                ],
+                surfaces=[
+                    _make_fidelity_surface(
+                        "deadline_view",
+                        ["deadline_type", "due_date", "entity_type", "status"],
+                    )
+                ],
+            ),
+            {"scenes_proxied": 0, "rhythm_fidelity": 1.0},
+            id="keyword-stemming-#457",
+        ),
+    ],
+)
+def test_fidelity_scoring(spec: MagicMock, expected: dict):
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
 
     with patch(
         "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
@@ -1850,9 +1903,8 @@ def test_fidelity_scene_served():
     ):
         result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
 
-    assert result["rhythm_fidelity"] == 1.0
-    assert result["scenes_served"] == 1
-    assert result["scenes_proxied"] == 0
+    for key, value in expected.items():
+        assert result[key] == value, key
 
 
 def test_fidelity_scene_proxied():
@@ -1900,120 +1952,6 @@ def test_fidelity_scene_proxied():
     assert "distributable_reserves_visible" in result["proxy_scenes"][0]["gaps"][0]
 
 
-def test_fidelity_mixed_scenes():
-    """Mix of served and proxied scenes gives correct fidelity score."""
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(name="s1", surface="task_list", expects="task_title_visible"),
-                    SceneSpec(
-                        name="s2",
-                        surface="company_detail",
-                        expects="financial_summary_visible",
-                    ),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    spec.surfaces = [
-        _make_fidelity_surface("task_list", ["title", "status", "due_date"]),
-        _make_fidelity_surface("company_detail", ["name", "address"]),
-    ]
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
-
-    assert result["rhythm_fidelity"] == 0.5
-    assert result["scenes_served"] == 1
-    assert result["scenes_proxied"] == 1
-
-
-def test_fidelity_workspace_scene_served():
-    """Scenes targeting workspaces are treated as served."""
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="arrive", surface="director_dash")],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    spec.surfaces = []
-    w1 = MagicMock()
-    w1.name = "director_dash"
-    spec.workspaces = [w1]
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
-
-    assert result["rhythm_fidelity"] == 1.0
-    assert result["scenes_served"] == 1
-
-
-def test_fidelity_scene_without_expects_served():
-    """Scenes without expects are served (no expectation to violate)."""
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="browse", surface="task_list")],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    spec.surfaces = [_make_fidelity_surface("task_list", ["title"])]
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
-
-    assert result["rhythm_fidelity"] == 1.0
-
-
 def test_fidelity_not_found():
     """Fidelity returns error for unknown rhythm."""
     from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
@@ -2028,149 +1966,6 @@ def test_fidelity_not_found():
         result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "nope"}))
 
     assert "error" in result
-
-
-def test_fidelity_fuzzy_action_match():
-    """Standard action 'approve' fuzzy-matches 'client_approve' (#454)."""
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(
-                        name="vat_approval",
-                        surface="vat_return",
-                        actions=["approve"],
-                        expects="return_approved",
-                    ),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    # Surface has 'client_approve' and 'approve_return' but NOT exact 'approve'
-    spec.surfaces = [
-        _make_fidelity_surface(
-            "vat_return",
-            ["return", "status", "amount"],
-            ["client_approve", "approve_return", "submit_hmrc"],
-        )
-    ]
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
-
-    # 'approve' should fuzzy-match 'client_approve' / 'approve_return'
-    assert result["scenes_proxied"] == 0
-    assert result["rhythm_fidelity"] == 1.0
-
-
-def test_fidelity_passive_action_always_matches():
-    """Passive actions (browse, review) match any surface (#454)."""
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(
-                        name="check_pnl",
-                        surface="pnl_dashboard",
-                        actions=["browse", "review"],
-                        expects="pnl_visible",
-                    ),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    # Surface has unrelated actions — browse/review are passive so should still match
-    spec.surfaces = [
-        _make_fidelity_surface(
-            "pnl_dashboard",
-            ["pnl", "revenue", "expense"],
-            ["export_csv"],
-        )
-    ]
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
-
-    assert result["scenes_proxied"] == 0
-
-
-def test_fidelity_keyword_stemming():
-    """Stemmed keywords match: 'deadlines' matches field 'deadline_type' (#457)."""
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(
-                        name="review_deadlines",
-                        surface="deadline_view",
-                        expects="upcoming_deadlines_visible_for_next_90_days",
-                    ),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    # Field 'deadline_type' should match 'deadlines' via stemming
-    spec.surfaces = [
-        _make_fidelity_surface(
-            "deadline_view",
-            ["deadline_type", "due_date", "entity_type", "status"],
-        )
-    ]
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
-
-    # 'deadlines' stems to 'deadline', which matches 'deadline' from 'deadline_type'
-    assert result["scenes_proxied"] == 0
-    assert result["rhythm_fidelity"] == 1.0
 
 
 def test_naive_stem():

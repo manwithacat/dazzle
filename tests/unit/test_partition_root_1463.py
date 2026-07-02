@@ -18,6 +18,8 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from dazzle.http.runtime.auth.partition_root import (
     PartitionHierarchy,
     build_partition_hierarchy,
@@ -122,31 +124,22 @@ def _store() -> dict[str, dict[str, dict[str, Any]]]:
     }
 
 
-def test_resolve_leaf_walks_to_root() -> None:
+@pytest.mark.parametrize(
+    ("tenant_id", "hierarchy", "expected"),
+    [
+        # School → Trust → Region(root)
+        pytest.param("school-1", _H, "reg-1", id="leaf-walks-to-root"),
+        pytest.param("trust-2", _H, "reg-1", id="mid-walks-to-root"),
+        # Region is not a probe kind → unmatched probe → returns input unchanged.
+        pytest.param("reg-1", _H, "reg-1", id="root-id-returns-itself"),
+        pytest.param("ghost", _H, "ghost", id="unknown-id-returns-itself"),
+        # No hierarchy (flat tenancy) → resolver is a pure no-op.
+        pytest.param("anything", None, "anything", id="flat-hierarchy-is-noop"),
+    ],
+)
+def test_resolve_walk(tenant_id: str, hierarchy: PartitionHierarchy | None, expected: str) -> None:
     cur = _FakeCursor(_store())
-    # School → Trust → Region(root)
-    assert resolve_partition_root(cur, "school-1", _H) == "reg-1"
-
-
-def test_resolve_mid_walks_to_root() -> None:
-    cur = _FakeCursor(_store())
-    assert resolve_partition_root(cur, "trust-2", _H) == "reg-1"
-
-
-def test_resolve_root_id_returns_itself() -> None:
-    # Region is not a probe kind → unmatched probe → returns input unchanged.
-    cur = _FakeCursor(_store())
-    assert resolve_partition_root(cur, "reg-1", _H) == "reg-1"
-
-
-def test_resolve_unknown_id_returns_itself() -> None:
-    cur = _FakeCursor(_store())
-    assert resolve_partition_root(cur, "ghost", _H) == "ghost"
-
-
-def test_resolve_flat_hierarchy_is_noop() -> None:
-    cur = _FakeCursor(_store())
-    assert resolve_partition_root(cur, "anything", None) == "anything"
+    assert resolve_partition_root(cur, tenant_id, hierarchy) == expected
 
 
 def test_resolve_null_parent_fk_stops_narrow() -> None:
@@ -175,28 +168,29 @@ def test_resolve_cycle_guard_truncates() -> None:
 # ── _resolve_user_attribute("tenant_id") binds partition_root_id ──────────────
 
 
-def test_resolve_user_attribute_prefers_partition_root() -> None:
+@pytest.mark.parametrize(
+    ("membership", "expected"),
+    [
+        pytest.param(
+            SimpleNamespace(tenant_id="school-1", partition_root_id="reg-1"),
+            "reg-1",
+            id="prefers-partition-root",
+        ),
+        # Un-backfilled row: partition_root_id is None → fall back to tenant_id.
+        pytest.param(
+            SimpleNamespace(tenant_id="school-1", partition_root_id=None),
+            "school-1",
+            id="falls-back-to-tenant-id",
+        ),
+        # No membership at all → fail-closed deny.
+        pytest.param(None, "__RBAC_DENY__", id="no-membership-denies"),
+    ],
+)
+def test_resolve_user_attribute_tenant_id(membership: Any, expected: str) -> None:
     from dazzle.http.runtime.scope_filters import _resolve_user_attribute
 
-    membership = SimpleNamespace(tenant_id="school-1", partition_root_id="reg-1")
     ctx = SimpleNamespace(active_membership=membership, user=None, preferences={})
-    assert _resolve_user_attribute("tenant_id", ctx) == "reg-1"
-
-
-def test_resolve_user_attribute_falls_back_to_tenant_id() -> None:
-    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
-
-    # Un-backfilled row: partition_root_id is None → fall back to tenant_id.
-    membership = SimpleNamespace(tenant_id="school-1", partition_root_id=None)
-    ctx = SimpleNamespace(active_membership=membership, user=None, preferences={})
-    assert _resolve_user_attribute("tenant_id", ctx) == "school-1"
-
-
-def test_resolve_user_attribute_no_membership_denies() -> None:
-    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
-
-    ctx = SimpleNamespace(active_membership=None, user=None, preferences={})
-    assert _resolve_user_attribute("tenant_id", ctx) == "__RBAC_DENY__"
+    assert _resolve_user_attribute("tenant_id", ctx) == expected
 
 
 # ── reconcile_membership_partition_roots (boot backfill / refresh) ────────────

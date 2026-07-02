@@ -17,110 +17,99 @@ class TestAntiTuringValidator:
         return AntiTuringValidator()
 
     # === Valid DSL Tests ===
+    # One contract: legitimate DSL forms produce zero violations.
 
-    def test_valid_entity_declaration(self, validator: AntiTuringValidator) -> None:
-        """Entity declarations should pass validation."""
-        dsl = """
+    @pytest.mark.parametrize(
+        "dsl",
+        [
+            pytest.param(
+                """
 entity Task "A task":
   id: uuid pk
   title: str(200) required
   completed: bool default=false
   due_date: date optional
-"""
-        violations = validator.validate(dsl)
-        assert violations == [], f"Unexpected violations: {violations}"
-
-    def test_valid_surface_declaration(self, validator: AntiTuringValidator) -> None:
-        """Surface declarations should pass validation."""
-        dsl = """
+""",
+                id="entity-declaration",
+            ),
+            pytest.param(
+                """
 surface task_list "Task List":
   uses entity Task
   mode: list
   section main:
     field title "Title"
     field completed "Done"
-"""
-        violations = validator.validate(dsl)
-        assert violations == [], f"Unexpected violations: {violations}"
-
-    def test_valid_workspace_with_filter(self, validator: AntiTuringValidator) -> None:
-        """Workspace declarations with filters should pass validation."""
-        dsl = """
+""",
+                id="surface-declaration",
+            ),
+            pytest.param(
+                """
 workspace dashboard "Dashboard":
   active_tasks:
     source: Task
     filter: completed = false and due_date > today
     sort: priority desc, due_date asc
-"""
-        violations = validator.validate(dsl)
-        assert violations == [], f"Unexpected violations: {violations}"
-
-    def test_valid_attention_signal(self, validator: AntiTuringValidator) -> None:
-        """Attention signals with conditions should pass validation."""
-        dsl = """
+""",
+                id="workspace-with-filter",
+            ),
+            pytest.param(
+                """
 surface task_list "Tasks":
   ux:
     attention critical:
       when: days_until(due_date) < 1 and completed = false
       message: "Task is overdue!"
-"""
-        violations = validator.validate(dsl)
-        assert violations == [], f"Unexpected violations: {violations}"
-
-    def test_valid_aggregate_functions(self, validator: AntiTuringValidator) -> None:
-        """Allowed aggregate functions should pass validation."""
-        dsl = """
+""",
+                id="attention-signal",
+            ),
+            pytest.param(
+                """
 workspace dashboard:
   metrics:
     aggregate:
       total_tasks: count(id)
       avg_priority: avg(priority)
       max_days: max(days_until(due_date))
-"""
-        violations = validator.validate(dsl)
-        assert violations == [], f"Unexpected violations: {violations}"
-
-    def test_valid_type_annotations(self, validator: AntiTuringValidator) -> None:
-        """Type annotations with parentheses should pass validation."""
-        dsl = """
+""",
+                id="aggregate-functions",
+            ),
+            pytest.param(
+                """
 entity Invoice:
   id: uuid pk
   title: str(200) required
   amount: decimal(10,2) required
   notes: text optional
   status: enum[draft,sent,paid]
-"""
-        violations = validator.validate(dsl)
-        assert violations == [], f"Unexpected violations: {violations}"
-
-    def test_valid_quoted_strings_with_keywords(self, validator: AntiTuringValidator) -> None:
-        """Keywords inside quoted strings should not trigger violations."""
-        dsl = """
+""",
+                id="type-annotations",
+            ),
+            pytest.param(
+                # Keywords inside quoted strings should not trigger violations.
+                """
 entity Task "A task for tracking things":
   id: uuid pk
   description: str(500) required
   # This description might say "if this then that"
-"""
-        violations = validator.validate(dsl)
-        assert violations == [], f"Unexpected violations: {violations}"
-
-    def test_valid_comments_with_keywords(self, validator: AntiTuringValidator) -> None:
-        """Keywords in comments should be ignored."""
-        dsl = """
+""",
+                id="quoted-strings-with-keywords",
+            ),
+            pytest.param(
+                # Keywords in comments should be ignored.
+                """
 # if we need to add more fields, do it here
 # for each task, we track the following:
 entity Task:
   id: uuid pk
-"""
-        violations = validator.validate(dsl)
-        assert violations == [], f"Unexpected violations: {violations}"
-
-    def test_valid_persona_block(self, validator: AntiTuringValidator) -> None:
-        """Persona blocks using 'as <identifier>:' syntax should pass.
-
-        #998 — renamed from `for <identifier>:` to remove the overloaded
-        `for` keyword. Bare `for` is a banned-keyword violation again."""
-        dsl = """
+""",
+                id="comments-with-keywords",
+            ),
+            pytest.param(
+                # Persona blocks use 'as <identifier>:' syntax (#998 — renamed
+                # from `for <identifier>:` to remove the overloaded `for`
+                # keyword; bare `for` is a banned-keyword violation again).
+                """
 surface dashboard:
   ux:
     as ops_engineer:
@@ -128,128 +117,142 @@ surface dashboard:
       purpose: "Full visibility"
     as support_agent:
       scope: assigned
-"""
+""",
+                id="persona-as-block",
+            ),
+            pytest.param("", id="empty-content"),
+            pytest.param(
+                """
+# This is a comment
+# Another comment
+# if we had code here, it would be validated
+""",
+                id="only-comments",
+            ),
+        ],
+    )
+    def test_valid_dsl_no_violations(self, validator: AntiTuringValidator, dsl: str) -> None:
         violations = validator.validate(dsl)
         assert violations == [], f"Unexpected violations: {violations}"
 
-    # === Banned Keyword Tests ===
+    # === Banned Keyword / Pattern / Function-Call Tests ===
+    # One contract: Turing-complete constructs produce a violation of the
+    # expected type. `keyword` is additionally required in the violation
+    # message when not None.
 
-    def test_banned_if_keyword(self, validator: AntiTuringValidator) -> None:
-        """'if' keyword should trigger violation."""
-        dsl = """
+    @pytest.mark.parametrize(
+        ("dsl", "expected_type", "keyword"),
+        [
+            pytest.param(
+                """
 entity Task:
   id: uuid pk
   status: if completed then "done" else "pending"
-"""
-        violations = validator.validate(dsl)
-        assert len(violations) >= 1
-        assert any(
-            v.type == ViolationType.BANNED_KEYWORD and "if" in v.message.lower() for v in violations
-        )
-
-    def test_banned_for_keyword(self, validator: AntiTuringValidator) -> None:
-        """'for' keyword should trigger violation."""
-        dsl = """
+""",
+                ViolationType.BANNED_KEYWORD,
+                "if",
+                id="banned-if-keyword",
+            ),
+            pytest.param(
+                """
 workspace dashboard:
   tasks:
     for task in tasks:
       display: task.title
-"""
-        violations = validator.validate(dsl)
-        assert len(violations) >= 1
-        assert any(
-            v.type == ViolationType.BANNED_KEYWORD and "for" in v.message.lower()
-            for v in violations
-        )
-
-    def test_banned_while_keyword(self, validator: AntiTuringValidator) -> None:
-        """'while' keyword should trigger violation."""
-        dsl = """
+""",
+                ViolationType.BANNED_KEYWORD,
+                "for",
+                id="banned-for-keyword",
+            ),
+            pytest.param(
+                """
 entity Task:
   id: uuid pk
   while: bool default=false
-"""
-        violations = validator.validate(dsl)
-        assert len(violations) >= 1
-        assert any(v.type == ViolationType.BANNED_KEYWORD for v in violations)
-
-    def test_banned_def_keyword(self, validator: AntiTuringValidator) -> None:
-        """'def' keyword should trigger violation."""
-        dsl = """
+""",
+                ViolationType.BANNED_KEYWORD,
+                None,
+                id="banned-while-keyword",
+            ),
+            pytest.param(
+                """
 def calculate_total(items):
   return sum(items)
-"""
-        violations = validator.validate(dsl)
-        assert len(violations) >= 1
-        assert any(
-            v.type == ViolationType.BANNED_KEYWORD and "def" in v.message.lower()
-            for v in violations
-        )
-
-    def test_banned_lambda_keyword(self, validator: AntiTuringValidator) -> None:
-        """'lambda' keyword should trigger violation."""
-        dsl = """
+""",
+                ViolationType.BANNED_KEYWORD,
+                "def",
+                id="banned-def-keyword",
+            ),
+            pytest.param(
+                """
 entity Task:
   compute: lambda x: x * 2
-"""
-        violations = validator.validate(dsl)
-        assert len(violations) >= 1
-        assert any(v.type == ViolationType.BANNED_KEYWORD for v in violations)
-
-    def test_banned_return_keyword(self, validator: AntiTuringValidator) -> None:
-        """'return' keyword should trigger violation."""
-        dsl = """
+""",
+                ViolationType.BANNED_KEYWORD,
+                None,
+                id="banned-lambda-keyword",
+            ),
+            pytest.param(
+                """
 service calculate:
   return total * tax_rate
-"""
-        violations = validator.validate(dsl)
-        assert len(violations) >= 1
-        assert any(v.type == ViolationType.BANNED_KEYWORD for v in violations)
-
-    # === Banned Pattern Tests ===
-
-    def test_banned_arrow_function(self, validator: AntiTuringValidator) -> None:
-        """Arrow function syntax should trigger violation."""
-        dsl = """
+""",
+                ViolationType.BANNED_KEYWORD,
+                None,
+                id="banned-return-keyword",
+            ),
+            pytest.param(
+                """
 entity Task:
   compute: (x) => x * 2
-"""
-        violations = validator.validate(dsl)
-        assert len(violations) >= 1
-        assert any(v.type == ViolationType.BANNED_PATTERN for v in violations)
-
-    def test_banned_ternary_operator(self, validator: AntiTuringValidator) -> None:
-        """Ternary operator should trigger violation."""
-        dsl = """
+""",
+                ViolationType.BANNED_PATTERN,
+                None,
+                id="banned-arrow-function",
+            ),
+            pytest.param(
+                """
 entity Task:
   status: completed ? "done" : "pending"
-"""
-        violations = validator.validate(dsl)
-        assert len(violations) >= 1
-        assert any(v.type == ViolationType.BANNED_PATTERN for v in violations)
-
-    # === Invalid Function Call Tests ===
-
-    def test_invalid_custom_function(self, validator: AntiTuringValidator) -> None:
-        """Custom function calls should trigger violation."""
-        dsl = """
+""",
+                ViolationType.BANNED_PATTERN,
+                None,
+                id="banned-ternary-operator",
+            ),
+            pytest.param(
+                """
 workspace dashboard:
   metrics:
     total: calculate_total(items)
-"""
-        violations = validator.validate(dsl)
-        assert len(violations) >= 1
-        assert any(v.type == ViolationType.INVALID_FUNCTION_CALL for v in violations)
-
-    def test_invalid_arbitrary_function(self, validator: AntiTuringValidator) -> None:
-        """Arbitrary function calls should trigger violation."""
-        dsl = """
+""",
+                ViolationType.INVALID_FUNCTION_CALL,
+                None,
+                id="invalid-custom-function",
+            ),
+            pytest.param(
+                """
 entity Task:
   hash: sha256(title)
-"""
+""",
+                ViolationType.INVALID_FUNCTION_CALL,
+                None,
+                id="invalid-arbitrary-function",
+            ),
+        ],
+    )
+    def test_banned_construct_fires(
+        self,
+        validator: AntiTuringValidator,
+        dsl: str,
+        expected_type: ViolationType,
+        keyword: str | None,
+    ) -> None:
         violations = validator.validate(dsl)
         assert len(violations) >= 1
-        assert any(v.type == ViolationType.INVALID_FUNCTION_CALL for v in violations)
+        assert any(
+            v.type == expected_type and (keyword is None or keyword in v.message.lower())
+            for v in violations
+        )
 
     # === Convenience Function Tests ===
 
@@ -276,21 +279,7 @@ entity Task:
         assert "violation" in message.lower()
 
     # === Edge Case Tests ===
-
-    def test_empty_content(self, validator: AntiTuringValidator) -> None:
-        """Empty content should pass validation."""
-        violations = validator.validate("")
-        assert violations == []
-
-    def test_only_comments(self, validator: AntiTuringValidator) -> None:
-        """Content with only comments should pass validation."""
-        dsl = """
-# This is a comment
-# Another comment
-# if we had code here, it would be validated
-"""
-        violations = validator.validate(dsl)
-        assert violations == []
+    # (empty-content / only-comments live as rows in the valid-DSL table above)
 
     def test_mixed_valid_and_invalid(self, validator: AntiTuringValidator) -> None:
         """Multiple violations should all be caught."""

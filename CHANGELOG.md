@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.92] - 2026-07-02
+
+### Changed
+- **Test-suite redundancy collapse, second tranche (#1530).** 164 test functions collapsed into parametrize tables across 18 files (433→269 functions; collected cases preserved 1:1 per file): the python-audit exceptions/optional pair, the onboarding trio (renderer/resolver/page_wiring), `test_auto_display_1492` (14→2), `test_enum_semantics_1493`, `test_auth_cookie_name` (collapsed conservatively — #1518-sensitive branches keep exact expectations + a do-not-merge security note), `test_site_section_medium_builders`, `test_rhythm_mcp`, `test_cedar_row_filters`, `test_anti_turing`, `test_atomic_flow_parser`, `test_guide_concordance`, `test_partition_root_1463`, `test_schema_render` (ADR-0045 SQL-exact tests deliberately kept named), `test_connection_probe`, `test_fragment_adapter_ref`. Suite-wide theoretical collapse saving 3,035→2,852.
+- **Cross-file distillation view is now actionable (#1530).** `scripts/distill/cross_file.py` View 1 keys clusters on `(class, assertion_shape, deduped public imports)` instead of shape alone — the old key matched hundreds of unrelated files (a "cluster" of 1,067 tests across 346 files). New honest numbers: 22 clusters / 215 tests / ~193 theoretical saving; 966 untargeted shape-matches skipped and reported.
+
+### Agent Guidance
+- When collapsing tests to parametrize: an optional expected-column asserted-only-when-not-None is the pattern for clusters whose members assert at different strictness — never silently strengthen or weaken a row's assertion to fit the table (see `test_anti_turing`'s kept-named case-insensitive test for the counter-example).
+
 ## [0.92.91] - 2026-07-02
 
 ### Changed

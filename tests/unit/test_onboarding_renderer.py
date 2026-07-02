@@ -129,16 +129,32 @@ def test_popover_escapes_user_supplied_strings() -> None:
     assert "<img src=x" not in html
 
 
-def test_popover_default_cta_label_when_unset() -> None:
-    step = _step(cta_label=None)
-    html = render_step(step, guide_name="g1")
-    assert ">Got it</a>" in html
-
-
-def test_popover_custom_cta_label_when_set() -> None:
-    step = _step(cta_label="New Task")
-    html = render_step(step, guide_name="g1")
-    assert ">New Task</a>" in html
+# CTA label resolution is one contract across kinds: an explicit
+# ``cta_label`` wins; otherwise each kind supplies its own action prompt
+# (popover "Got it"; checklist "Do this" — action-oriented; blocking_task
+# "Continue"; nudge "OK").
+@pytest.mark.parametrize(
+    ("kind", "cta_label", "expected"),
+    [
+        pytest.param(ir.GuideStepKind.POPOVER, None, "Got it", id="popover-default-got-it"),
+        pytest.param(
+            ir.GuideStepKind.POPOVER, "New Task", "New Task", id="popover-custom-label-wins"
+        ),
+        pytest.param(
+            ir.GuideStepKind.CHECKLIST_ITEM,
+            None,
+            "Do this",
+            id="checklist-item-default-do-this",
+        ),
+        pytest.param(
+            ir.GuideStepKind.BLOCKING_TASK, None, "Continue", id="blocking-task-default-continue"
+        ),
+        pytest.param(ir.GuideStepKind.NUDGE, None, "OK", id="nudge-default-ok"),
+    ],
+)
+def test_cta_label_resolution(kind: ir.GuideStepKind, cta_label: str | None, expected: str) -> None:
+    html = render_step(_step(kind=kind, cta_label=cta_label), guide_name="g1")
+    assert f">{expected}</a>" in html
 
 
 def test_popover_cta_href_when_target_set() -> None:
@@ -300,14 +316,6 @@ def test_checklist_item_dismiss_hidden_by_default() -> None:
     assert "dz-onboarding-checklist-item__dismiss--hidden" in html
 
 
-def test_checklist_item_default_cta_label_is_do_this() -> None:
-    """checklist items use 'Do this' as the action prompt rather than
-    'Got it' — they're action-oriented."""
-    step = _step(kind=ir.GuideStepKind.CHECKLIST_ITEM, cta_label=None)
-    html = render_step(step, guide_name="g1")
-    assert ">Do this</a>" in html
-
-
 def test_blocking_task_uses_native_dialog_element() -> None:
     """blocking_task uses <dialog open> so browsers provide focus
     trap + Escape handling natively, without client JS."""
@@ -318,12 +326,6 @@ def test_blocking_task_uses_native_dialog_element() -> None:
     # Backdrop renders as a separate layer for browsers that don't
     # implement the ::backdrop pseudo-element.
     assert "dz-onboarding-blocking-task__backdrop" in html
-
-
-def test_blocking_task_default_cta_label_is_continue() -> None:
-    step = _step(kind=ir.GuideStepKind.BLOCKING_TASK, cta_label=None)
-    html = render_step(step, guide_name="g1")
-    assert ">Continue</a>" in html
 
 
 def test_nudge_carries_autodismiss_data_attr() -> None:
@@ -352,9 +354,3 @@ def test_nudge_autodismiss_falls_back_when_placement_invalid() -> None:
         assert 'data-autodismiss-ms="6000"' in html, (
             f"placement={placement!r} should fall back to default"
         )
-
-
-def test_nudge_default_cta_label_is_ok() -> None:
-    step = _step(kind=ir.GuideStepKind.NUDGE, cta_label=None)
-    html = render_step(step, guide_name="g1")
-    assert ">OK</a>" in html

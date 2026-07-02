@@ -6,6 +6,8 @@ that earlier versions assumed DSL kinds — silently swapping str↔text and
 mis-rendering enum/bool. v0.66.45 fixed the mapping.
 """
 
+import pytest
+
 from dazzle.http.runtime.renderers.fragment_adapter import _field_to_primitive
 from dazzle.render.fragment.primitives.forms import Combobox, Field, RefPicker
 
@@ -100,60 +102,32 @@ def test_options_alone_imply_combobox_even_without_select_kind() -> None:
 # ─────────────────────────── Widget kind → Field.kind ─────────────────
 
 
-def test_text_widget_kind_produces_text_input() -> None:
-    """str(N) DSL fields arrive as widget kind 'text'."""
-    primitive = _field_to_primitive({"name": "title", "label": "Title", "kind": "text"})
+@pytest.mark.parametrize(
+    ("widget_kind", "expected_field_kind"),
+    [
+        # str(N) DSL fields arrive as widget kind 'text'.
+        pytest.param("text", "text", id="text"),
+        # text DSL fields arrive as widget kind 'textarea'.
+        pytest.param("textarea", "textarea", id="textarea"),
+        # bool DSL fields arrive as widget kind 'checkbox'.
+        pytest.param("checkbox", "checkbox", id="checkbox"),
+        # int/decimal/float DSL fields arrive as widget kind 'number'.
+        pytest.param("number", "number", id="number"),
+        pytest.param("email", "email", id="email"),
+        pytest.param("date", "date", id="date"),
+        # datetime field type maps to widget 'datetime', renders as
+        # HTML input type='datetime-local'.
+        pytest.param("datetime", "datetime-local", id="datetime-to-datetime-local"),
+        pytest.param("url", "url", id="url"),
+        # Any widget kind the adapter doesn't explicitly recognise renders
+        # as plain text — graceful, not an exception.
+        pytest.param("definitely-not-a-widget", "text", id="unknown-falls-back-to-text"),
+    ],
+)
+def test_widget_kind_produces_field_kind(widget_kind: str, expected_field_kind: str) -> None:
+    primitive = _field_to_primitive({"name": "x", "label": "X", "kind": widget_kind})
     assert isinstance(primitive, Field)
-    assert primitive.kind == "text"
-
-
-def test_textarea_widget_kind_produces_textarea() -> None:
-    """text DSL fields arrive as widget kind 'textarea'."""
-    primitive = _field_to_primitive(
-        {"name": "description", "label": "Description", "kind": "textarea"}
-    )
-    assert isinstance(primitive, Field)
-    assert primitive.kind == "textarea"
-
-
-def test_checkbox_widget_kind_produces_checkbox() -> None:
-    """bool DSL fields arrive as widget kind 'checkbox'."""
-    primitive = _field_to_primitive({"name": "completed", "label": "Completed", "kind": "checkbox"})
-    assert isinstance(primitive, Field)
-    assert primitive.kind == "checkbox"
-
-
-def test_number_widget_kind_produces_number_input() -> None:
-    """int/decimal/float DSL fields arrive as widget kind 'number'."""
-    primitive = _field_to_primitive({"name": "n", "label": "N", "kind": "number"})
-    assert isinstance(primitive, Field)
-    assert primitive.kind == "number"
-
-
-def test_email_widget_kind_produces_email_input() -> None:
-    primitive = _field_to_primitive({"name": "e", "label": "E", "kind": "email"})
-    assert isinstance(primitive, Field)
-    assert primitive.kind == "email"
-
-
-def test_date_widget_kind_produces_date_input() -> None:
-    primitive = _field_to_primitive({"name": "d", "label": "D", "kind": "date"})
-    assert isinstance(primitive, Field)
-    assert primitive.kind == "date"
-
-
-def test_datetime_widget_kind_produces_datetime_local_input() -> None:
-    """datetime field type maps to widget 'datetime', renders as
-    HTML input type='datetime-local'."""
-    primitive = _field_to_primitive({"name": "d", "label": "D", "kind": "datetime"})
-    assert isinstance(primitive, Field)
-    assert primitive.kind == "datetime-local"
-
-
-def test_url_widget_kind_produces_url_input() -> None:
-    primitive = _field_to_primitive({"name": "u", "label": "U", "kind": "url"})
-    assert isinstance(primitive, Field)
-    assert primitive.kind == "url"
+    assert primitive.kind == expected_field_kind
 
 
 def test_money_widget_kind_produces_money_field() -> None:
@@ -166,11 +140,3 @@ def test_money_widget_kind_produces_money_field() -> None:
     primitive = _field_to_primitive({"name": "m", "label": "M", "kind": "money"})
     assert isinstance(primitive, MoneyField)
     assert not isinstance(primitive, Field)
-
-
-def test_unknown_widget_kind_falls_back_to_text() -> None:
-    """Any widget kind the adapter doesn't explicitly recognise renders
-    as plain text — graceful, not an exception."""
-    primitive = _field_to_primitive({"name": "x", "label": "X", "kind": "definitely-not-a-widget"})
-    assert isinstance(primitive, Field)
-    assert primitive.kind == "text"

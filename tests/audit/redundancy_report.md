@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 1,028
-- **Tests inside those clusters**: 4,063
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **3,035 tests** (≈ 21.2% of the suite)
+- **Clusters of ≥3**: 1,016
+- **Tests inside those clusters**: 3,868
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,852 tests** (≈ 20.0% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -15,9 +15,9 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | Size | Clusters |
 |---|---:|
 | 20+ | 3 |
-| 10-19 | 26 |
-| 5-9 | 143 |
-| 3-4 | 856 |
+| 10-19 | 7 |
+| 5-9 | 145 |
+| 3-4 | 861 |
 
 ## Top 30 largest clusters
 
@@ -28,31 +28,31 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_auth_connection_cli.py` | `(module)` | 20 | test_verify_domain_not_found_prints_record, test_show_verification, test_doctor_ready_exit_0… |
 | `tests/unit/test_region_adapter.py` | `(module)` | 17 | test_grid_uses_label_field_override, test_metrics_invalid_tone_coerced_to_default, test_metrics_no_delta_omits_delta_block… |
 | `tests/unit/test_region_adapter.py` | `(module)` | 16 | test_timeline_overflow_line_renders_when_total_exceeds_items, test_list_with_csv_export_renders_button, test_metrics_falls_back_to_aggregates_dict… |
-| `tests/unit/test_auto_display_1492.py` | `(module)` | 14 | test_scalar_aggregate_to_summary, test_single_dim_aggregate_to_bar_chart, test_multi_dim_aggregate_to_pivot_table… |
-| `tests/unit/test_onboarding_renderer.py` | `(module)` | 14 | test_popover_default_cta_label_when_unset, test_popover_custom_cta_label_when_set, test_popover_cta_href_when_target_set… |
-| `tests/unit/test_onboarding_resolver.py` | `(module)` | 14 | test_audience_matches_when_persona_clause_includes_user, test_audience_with_or_clauses_matches_any, test_audience_excludes_when_user_persona_not_listed… |
-| `tests/unit/test_python_audit_exceptions.py` | `(module)` | 13 | test_silent_swallow_except_exception_pass, test_silent_swallow_negative_specific_recovery, test_fallback_control_flow_literal_default… |
-| `tests/unit/test_python_audit_optional_instead_of_result.py` | `(module)` | 13 | test_three_return_none_fires_once, test_optional_legacy_syntax, test_pipe_none_left_position… |
-| `tests/unit/test_site_section_medium_builders.py` | `(module)` | 13 | test_stats_emits_section_class_and_stats_wrapper, test_steps_emits_section_class, test_comparison_emits_section_class_and_table… |
-| `tests/unit/test_auth_cookie_name.py` | `(module)` | 12 | test_select_write_name_legacy_app_returns_dazzle_session, test_select_write_name_tenant_host_request_returns_host_cookie, test_select_write_name_canonical_host_non_admin_returns_host_cookie… |
-| `tests/unit/test_cedar_row_filters.py` | `TestExtractCedarRowFilters` | 12 | test_owner_equals_current_user, test_read_rule_also_applies, test_non_list_read_rules_ignored… |
-| `tests/unit/test_enum_semantics_1493.py` | `(module)` | 12 | test_canonical_palette_is_the_five_css_tones, test_positive_aliases_success, test_normalize_is_case_insensitive… |
-| `tests/unit/test_onboarding_page_wiring.py` | `(module)` | 12 | test_page_context_active_guide_html_defaults_empty, test_page_context_active_guide_html_is_settable, test_render_typed_body_prepends_active_guide_html… |
 | `tests/unit/test_region_adapter.py` | `(module)` | 12 | test_list_renders_with_table, test_list_with_date_range_renders_picker, test_metrics_value_passes_through_metric_number_filter… |
-| `tests/unit/test_rhythm_mcp.py` | `(module)` | 12 | test_get_rhythm_includes_phase_kind, test_get_rhythm_includes_phase_cadence, test_gaps_unmapped_scene… |
 | `tests/integration/test_scim_routes.py` | `(module)` | 11 | test_no_bearer_is_401, test_bad_bearer_is_401, test_create_user_unverified_domain_is_400… |
-| `tests/unit/test_anti_turing.py` | `TestAntiTuringValidator` | 11 | test_valid_entity_declaration, test_valid_surface_declaration, test_valid_workspace_with_filter… |
-| `tests/unit/test_atomic_flow_parser.py` | `TestAtomicFlowValidator` | 11 | test_valid_flow_no_errors, test_unknown_create_target_errors, test_unknown_assignment_field_errors… |
-| `tests/unit/test_guide_concordance.py` | `(module)` | 11 | test_target_must_start_with_surface, test_target_unknown_surface_errors, test_target_unknown_action_errors… |
-| `tests/unit/test_partition_root_1463.py` | `(module)` | 11 | test_resolve_leaf_walks_to_root, test_resolve_mid_walks_to_root, test_resolve_root_id_returns_itself… |
-| `tests/unit/test_schema_render.py` | `(module)` | 11 | test_add_table_renders_create_table, test_add_column_renders_add_and_inverse_drop, test_drop_table_renders_drop_and_inverse_create… |
 | `tests/integration/test_saml_routes.py` | `(module)` | 10 | test_login_redirects_to_idp, test_login_resolves_by_verified_email_domain, test_sls_kills_only_the_connections_org_sessions… |
 | `tests/unit/render/fragment/test_data_primitives.py` | `(module)` | 10 | test_profile_card_holds_stats_and_facts_immutably, test_metric_tile_full_delta_block, test_stage_bar_minimal… |
 | `tests/unit/render/fragment/test_htmx_types.py` | `(module)` | 10 | test_url_accepts_relative_path, test_target_selector_id_form, test_hx_trigger_simple_event… |
-| `tests/unit/test_anti_turing.py` | `TestAntiTuringValidator` | 10 | test_banned_if_keyword, test_banned_for_keyword, test_banned_while_keyword… |
-| `tests/unit/test_connection_probe.py` | `(module)` | 10 | test_oidc_discovery_non_200_warns, test_oidc_discovery_missing_endpoint_warns, test_oidc_discovery_not_json_warns… |
-| `tests/unit/test_fragment_adapter_ref.py` | `(module)` | 10 | test_no_ref_api_no_options_falls_through_to_widget_field, test_text_widget_kind_produces_text_input, test_textarea_widget_kind_produces_textarea… |
 | `tests/unit/test_auth_views_password_reset.py` | `(module)` | 9 | test_forgot_password_view_posts_to_submit_endpoint, test_forgot_password_view_uses_product_name_in_brand, test_forgot_password_view_links_back_to_login… |
+| `tests/unit/test_enterprise_login.py` | `(module)` | 9 | test_no_verified_domains_refuses_everyone, test_empty_email_refuses, test_unsigned_fallback_without_email_verified_refuses… |
+| `tests/unit/test_entity_card_data_resolution.py` | `(module)` | 9 | test_halo_section_omitted_when_no_record, test_section_omitted_when_record_has_no_field_values, test_quick_actions_omits_section_when_no_actions_declared… |
+| `tests/unit/test_onboarding_renderer.py` | `(module)` | 9 | test_popover_cta_href_when_target_set, test_popover_placement_threads_into_data_attr, test_every_supported_kind_emits_htmx_complete… |
+| `tests/unit/test_python_audit_enum_dispatch_1274.py` | `(module)` | 9 | test_fires_on_four_branch_chain, test_fires_when_literal_on_left_side, test_does_not_fire_on_two_branch_chain… |
+| `tests/unit/test_python_audit_raw_sql_string_building.py` | `(module)` | 9 | test_fires_on_format_method_execute, test_fires_on_scripts_subdir, test_fires_on_session_execute_not_just_cursor… |
+| `tests/unit/test_saml_metadata.py` | `(module)` | 9 | test_validate_rejects_non_https, test_validate_rejects_private_ip, test_validate_unresolvable… |
+| `tests/unit/test_schema_diff.py` | `(module)` | 9 | test_added_column, test_dropped_column, test_no_change_empty_delta… |
+| `tests/unit/test_scope_create_eval.py` | `(module)` | 9 | test_user_attr_check_passes_when_field_equals_user_id, test_user_attr_check_rejects_when_field_does_not_equal_user_id, test_user_attr_check_missing_attr_rejects… |
+| `tests/unit/test_two_factor_views.py` | `(module)` | 9 | test_totp_mode_posts_to_verify_submit, test_totp_mode_default_subtitle, test_totp_mode_offers_email_otp_link_when_enabled… |
+| `tests/integration/test_connection_admin_routes.py` | `(module)` | 8 | test_page_forbidden_without_session, test_page_forbidden_for_non_admin, test_page_forbidden_when_no_admin_roles_configured… |
+| `tests/integration/test_connection_admin_routes.py` | `(module)` | 8 | test_page_only_shows_active_orgs_connections, test_page_shows_rotation_history, test_page_shows_grace_window_when_active… |
+| `tests/integration/test_examples_fragment_http.py` | `(module)` | 8 | test_simple_task_create_form_str_field_renders_as_text_input, test_fragment_chrome_emits_dz_page_body_class, test_fragment_chrome_default_off_unchanged_behaviour… |
+| `tests/integration/test_scim_routes.py` | `(module)` | 8 | test_service_provider_config_requires_bearer, test_delete_user, test_cross_org_patch_is_404… |
+| `tests/unit/render/fragment/test_flag_outliers.py` | `(module)` | 8 | test_iqr_small_n_no_flags, test_all_equal_no_flags, test_sigma… |
+| `tests/unit/render/test_svg.py` | `(module)` | 8 | test_unknown_reference_line_style_falls_back_to_empty_dasharray, test_aria_label_includes_count_and_peak, test_multi_series_aria_label_reports_series_count… |
+| `tests/unit/test_cedar_row_filters.py` | `TestExtractConditionFilters` | 8 | test_simple_comparison_equals, test_not_equals_comparison, test_literal_value_equals… |
+| `tests/unit/test_cedar_row_filters.py` | `TestExtractConditionFiltersIR` | 8 | test_ir_current_user_equals, test_ir_literal_value, test_ir_boolean_value… |
+| `tests/unit/test_cohort_strip_tone_bands_1144.py` | `(module)` | 8 | test_value_clears_highest_band_takes_that_tone, test_value_falls_to_middle_band, test_value_below_all_bands_stays_neutral… |
+| `tests/unit/test_csrf_disposition_phase3.py` | `TestCsrfDisposition` | 8 | test_bearer_is_na_bearer, test_webhook_is_na_signature, test_sign_route_is_na_signature… |
 
 ## Top 10 files by collapse-saving potential
 
@@ -60,25 +60,24 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | `tests/unit/test_region_adapter.py` | 96 |
 | `tests/unit/render/fragment/test_data_primitives.py` | 33 |
-| `tests/unit/test_rhythm_mcp.py` | 29 |
 | `tests/unit/test_auth_connection_cli.py` | 27 |
-| `tests/unit/test_anti_turing.py` | 27 |
 | `tests/unit/test_expression_lang.py` | 27 |
-| `tests/unit/test_cedar_row_filters.py` | 25 |
 | `tests/unit/test_schema_diff.py` | 25 |
 | `tests/unit/test_rbac_verifier.py` | 25 |
 | `tests/integration/test_connection_admin_routes.py` | 23 |
+| `tests/unit/test_entity_card_data_resolution.py` | 21 |
+| `tests/unit/test_two_factor_views.py` | 21 |
+| `tests/integration/test_scim_routes.py` | 19 |
 
 ## Fuzz-target worklist (property/fuzz-candidate clusters)
 
 Clusters whose subject is an input-boundary surface (parser/validator/crypto/…). Each is a candidate to collapse into ONE property test (input space → invariant) — which then becomes a fuzz target — rather than a fixed `@pytest.mark.parametrize` list. Path-based hint; confirm by reading the cluster. (#1342)
 
-- **Property/fuzz-candidate clusters**: 119
+- **Property/fuzz-candidate clusters**: 118
 
 | File | Class | Size | Form | Why |
 |---|---|---:|---|---|
 | `tests/integration/test_scim_routes.py` | `(module)` | 11 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
-| `tests/unit/test_atomic_flow_parser.py` | `TestAtomicFlowValidator` | 11 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/integration/test_saml_routes.py` | `(module)` | 10 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_saml_metadata.py` | `(module)` | 9 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_scope_create_eval.py` | `(module)` | 9 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
@@ -107,6 +106,7 @@ Clusters whose subject is an input-boundary surface (parser/validator/crypto/…
 | `tests/unit/test_db_url.py` | `TestNormalisePostgresScheme` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_db_url.py` | `TestAddPsycopgDriver` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_entity_card_config_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
+| `tests/unit/test_expression_lang.py` | `TestParserFieldRef` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 
 ## How to act on this
 

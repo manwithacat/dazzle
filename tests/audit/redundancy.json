@@ -164,245 +164,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_auto_display_1492.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 14,
-    "members": [
-      "test_scalar_aggregate_to_summary",
-      "test_single_dim_aggregate_to_bar_chart",
-      "test_multi_dim_aggregate_to_pivot_table",
-      "test_state_machine_to_kanban",
-      "test_meaningful_temporal_to_timeline",
-      "test_auto_timestamps_do_not_trigger_timeline",
-      "test_aggregate_wins_over_entity_shape",
-      "test_unknown_source_falls_back_to_list",
-      "test_plain_entity_no_signal_falls_back_to_list",
-      "test_unset_display_infers_form_by_default",
-      "test_explicit_list_is_authoritative_even_with_aggregates",
-      "test_explicit_auto_routes_through_resolver",
-      "test_explicit_kanban_is_passed_through_unchanged",
-      "test_unset_plain_entity_still_lists"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_onboarding_renderer.py",
-    "class": "(module)",
-    "assertion_shape": "('in',)",
-    "size": 14,
-    "members": [
-      "test_popover_default_cta_label_when_unset",
-      "test_popover_custom_cta_label_when_set",
-      "test_popover_cta_href_when_target_set",
-      "test_popover_placement_threads_into_data_attr",
-      "test_every_supported_kind_emits_htmx_complete",
-      "test_every_dismissable_kind_emits_htmx_dismiss",
-      "test_empty_state_uses_h2_for_higher_visual_weight",
-      "test_empty_state_dismiss_button_labeled_skip",
-      "test_checklist_item_dismiss_hidden_by_default",
-      "test_checklist_item_default_cta_label_is_do_this",
-      "test_blocking_task_default_cta_label_is_continue",
-      "test_nudge_autodismiss_ms_pulled_from_placement_when_numeric",
-      "test_nudge_autodismiss_falls_back_when_placement_invalid",
-      "test_nudge_default_cta_label_is_ok"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_onboarding_resolver.py",
-    "class": "(module)",
-    "assertion_shape": "('is',)",
-    "size": 14,
-    "members": [
-      "test_audience_matches_when_persona_clause_includes_user",
-      "test_audience_with_or_clauses_matches_any",
-      "test_audience_excludes_when_user_persona_not_listed",
-      "test_audience_with_no_persona_clause_matches_conservatively",
-      "test_audience_empty_string_matches",
-      "test_target_whole_surface_matches",
-      "test_target_action_matches_parent_surface",
-      "test_target_field_matches_parent_surface",
-      "test_target_mismatch_surface_name",
-      "test_target_non_surface_prefix_rejected",
-      "test_select_next_step_returns_none_when_all_resolved",
-      "test_resolver_returns_none_when_audience_mismatch",
-      "test_resolver_returns_none_when_target_surface_mismatch",
-      "test_resolver_skips_completed_guide"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_python_audit_exceptions.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 13,
-    "members": [
-      "test_silent_swallow_except_exception_pass",
-      "test_silent_swallow_negative_specific_recovery",
-      "test_fallback_control_flow_literal_default",
-      "test_fallback_control_flow_negative_distinct_action",
-      "test_validation_via_exception_int_cast",
-      "test_validation_via_exception_assigned_call",
-      "test_validation_via_exception_negative_real_parse",
-      "test_try_as_conditional_dict_get",
-      "test_try_as_conditional_attr_access",
-      "test_try_as_conditional_index_access",
-      "test_try_as_conditional_negative_other_exception",
-      "test_heuristic_skips_tests_and_scripts",
-      "test_heuristic_noqa_suppression"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_python_audit_optional_instead_of_result.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 13,
-    "members": [
-      "test_three_return_none_fires_once",
-      "test_optional_legacy_syntax",
-      "test_pipe_none_left_position",
-      "test_bare_return_counts_as_none",
-      "test_async_function_fires",
-      "test_negative_single_return_none",
-      "test_negative_no_optional_return",
-      "test_negative_nested_function_returns_dont_count",
-      "test_negative_single_exception_catch",
-      "test_negative_no_return_annotation",
-      "test_noqa_suppression_on_def",
-      "test_heuristic_skips_tests_and_scripts",
-      "test_nested_helper_inside_except_does_not_trip_outer_1273"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_site_section_medium_builders.py",
-    "class": "(module)",
-    "assertion_shape": "('in', 'in')",
-    "size": 13,
-    "members": [
-      "test_stats_emits_section_class_and_stats_wrapper",
-      "test_steps_emits_section_class",
-      "test_comparison_emits_section_class_and_table",
-      "test_split_content_renders_media_when_image",
-      "test_card_grid_emits_section_class_and_grid",
-      "test_card_grid_renders_optional_per_item_cta",
-      "test_card_grid_renders_section_media_when_provided",
-      "test_team_emits_section_class_and_grid",
-      "test_team_renders_initials_fallback_when_no_image",
-      "test_team_renders_optional_role_and_bio",
-      "test_team_link_anchors_have_security_attributes",
-      "test_testimonials_emits_section_class_and_grid",
-      "test_testimonials_renders_blockquote_with_quote_marks"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_auth_cookie_name.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 12,
-    "members": [
-      "test_select_write_name_legacy_app_returns_dazzle_session",
-      "test_select_write_name_tenant_host_request_returns_host_cookie",
-      "test_select_write_name_canonical_host_non_admin_returns_host_cookie",
-      "test_select_write_name_canonical_host_super_admin_returns_apex_cookie",
-      "test_select_write_name_strips_role_prefix",
-      "test_select_write_name_tenant_host_super_admin_on_tenant_host_returns_host_cookie",
-      "test_select_write_name_honours_custom_default",
-      "test_read_session_id_legacy_cookie_preferred_during_rollout",
-      "test_read_session_id_falls_back_to_host_cookie",
-      "test_read_session_id_falls_back_to_apex_cookie",
-      "test_names_to_clear_legacy_app_returns_only_default",
-      "test_names_to_clear_tenant_host_returns_all_three"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_cedar_row_filters.py",
-    "class": "TestExtractCedarRowFilters",
-    "assertion_shape": "('eq',)",
-    "size": 12,
-    "members": [
-      "test_owner_equals_current_user",
-      "test_read_rule_also_applies",
-      "test_non_list_read_rules_ignored",
-      "test_forbid_rules_ignored",
-      "test_unconditional_permit_skips_filtering",
-      "test_unconditional_permit_with_matching_persona",
-      "test_unconditional_permit_with_non_matching_persona",
-      "test_no_permissions",
-      "test_no_permissions_attr",
-      "test_and_condition_both_extracted",
-      "test_or_condition_not_pushed_to_sql",
-      "test_persona_scoped_rule_wrong_role"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_enum_semantics_1493.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 12,
-    "members": [
-      "test_canonical_palette_is_the_five_css_tones",
-      "test_positive_aliases_success",
-      "test_normalize_is_case_insensitive",
-      "test_semantic_line_binds_values",
-      "test_undeclared_values_keep_none_semantic",
-      "test_semantic_line_may_precede_values",
-      "test_inline_enum_semantic_continuation_binds_tones",
-      "test_resolver_no_map_matches_name_guess",
-      "test_resolver_unknown_declared_tone_falls_back_to_neutral",
-      "test_resolver_undeclared_value_with_map_uses_name_guess",
-      "test_column_semantic_map_from_inline_field_binding",
-      "test_validator_accepts_canonical_and_alias_tones"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_onboarding_page_wiring.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 12,
-    "members": [
-      "test_page_context_active_guide_html_defaults_empty",
-      "test_page_context_active_guide_html_is_settable",
-      "test_render_typed_body_prepends_active_guide_html",
-      "test_render_typed_body_unchanged_when_overlay_empty",
-      "test_inject_noops_when_no_guides",
-      "test_inject_noops_when_anonymous",
-      "test_inject_noops_when_no_repo",
-      "test_inject_noops_when_no_view_name",
-      "test_inject_skips_unsupported_kind",
-      "test_inject_swallows_repository_errors",
-      "test_cta_preserved_when_persona_can_mutate",
-      "test_read_cta_never_suppressed"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_region_adapter.py",
     "class": "(module)",
     "assertion_shape": "('in', 'in', 'in')",
@@ -420,29 +181,6 @@
       "test_progress_chip_tone_maps_from_complete_and_count",
       "test_progress_legacy_items_fallback_treats_100_pct_as_complete",
       "test_cohort_strip_empty_cells_renders_empty_state"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_rhythm_mcp.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 12,
-    "members": [
-      "test_get_rhythm_includes_phase_kind",
-      "test_get_rhythm_includes_phase_cadence",
-      "test_gaps_unmapped_scene",
-      "test_gaps_layers_evaluated_failures",
-      "test_lifecycle_write_rhythms_partial_persona_coverage",
-      "test_lifecycle_map_scenes_partial",
-      "test_lifecycle_build_from_stories",
-      "test_lifecycle_iterate_not_started_when_nothing_complete",
-      "test_evaluate_advisory_not_counted_in_summary",
-      "test_fidelity_workspace_scene_served",
-      "test_fidelity_fuzzy_action_match",
-      "test_fidelity_keyword_stemming"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -469,116 +207,6 @@
     "recommendation": "parametrise",
     "recommended_form": "property",
     "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
-  },
-  {
-    "file": "tests/unit/test_anti_turing.py",
-    "class": "TestAntiTuringValidator",
-    "assertion_shape": "('eq',)",
-    "size": 11,
-    "members": [
-      "test_valid_entity_declaration",
-      "test_valid_surface_declaration",
-      "test_valid_workspace_with_filter",
-      "test_valid_attention_signal",
-      "test_valid_aggregate_functions",
-      "test_valid_type_annotations",
-      "test_valid_quoted_strings_with_keywords",
-      "test_valid_comments_with_keywords",
-      "test_valid_persona_block",
-      "test_empty_content",
-      "test_only_comments"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_atomic_flow_parser.py",
-    "class": "TestAtomicFlowValidator",
-    "assertion_shape": "('call_any',)",
-    "size": 11,
-    "members": [
-      "test_valid_flow_no_errors",
-      "test_unknown_create_target_errors",
-      "test_unknown_assignment_field_errors",
-      "test_undeclared_input_ref_errors",
-      "test_missing_permit_errors",
-      "test_no_creates_errors",
-      "test_duplicate_input_errors",
-      "test_duplicate_create_target_errors",
-      "test_above_ref_to_non_id_field_errors",
-      "test_update_target_undeclared_input_errors",
-      "test_update_unknown_field_errors"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "fuzz",
-    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
-    "file": "tests/unit/test_guide_concordance.py",
-    "class": "(module)",
-    "assertion_shape": "('call_any',)",
-    "size": 11,
-    "members": [
-      "test_target_must_start_with_surface",
-      "test_target_unknown_surface_errors",
-      "test_target_unknown_action_errors",
-      "test_unknown_persona_in_audience_errors",
-      "test_event_completion_unknown_entity_errors",
-      "test_event_completion_unknown_lifecycle_errors",
-      "test_field_filled_unknown_field_errors",
-      "test_cta_target_unknown_surface_errors",
-      "test_step_order_references_unknown_step_errors",
-      "test_step_order_duplicate_errors",
-      "test_cta_denied_for_audience_errors"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_partition_root_1463.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 11,
-    "members": [
-      "test_resolve_leaf_walks_to_root",
-      "test_resolve_mid_walks_to_root",
-      "test_resolve_root_id_returns_itself",
-      "test_resolve_unknown_id_returns_itself",
-      "test_resolve_flat_hierarchy_is_noop",
-      "test_resolve_null_parent_fk_stops_narrow",
-      "test_resolve_cycle_guard_truncates",
-      "test_resolve_user_attribute_prefers_partition_root",
-      "test_resolve_user_attribute_falls_back_to_tenant_id",
-      "test_resolve_user_attribute_no_membership_denies",
-      "test_reconcile_flat_hierarchy_is_noop"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_schema_render.py",
-    "class": "(module)",
-    "assertion_shape": "('call_any', 'call_any')",
-    "size": 11,
-    "members": [
-      "test_add_table_renders_create_table",
-      "test_add_column_renders_add_and_inverse_drop",
-      "test_drop_table_renders_drop_and_inverse_create",
-      "test_drop_column_renders_drop_and_inverse_add",
-      "test_rename_table_and_inverse",
-      "test_add_foreign_key_and_inverse",
-      "test_drop_foreign_key_and_inverse",
-      "test_add_index_and_inverse",
-      "test_drop_index_and_inverse",
-      "test_add_unique_and_inverse",
-      "test_drop_unique_and_inverse"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
     "file": "tests/integration/test_saml_routes.py",
@@ -644,69 +272,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_anti_turing.py",
-    "class": "TestAntiTuringValidator",
-    "assertion_shape": "('call_any', 'gte')",
-    "size": 10,
-    "members": [
-      "test_banned_if_keyword",
-      "test_banned_for_keyword",
-      "test_banned_while_keyword",
-      "test_banned_def_keyword",
-      "test_banned_lambda_keyword",
-      "test_banned_return_keyword",
-      "test_banned_arrow_function",
-      "test_banned_ternary_operator",
-      "test_invalid_custom_function",
-      "test_invalid_arbitrary_function"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_connection_probe.py",
-    "class": "(module)",
-    "assertion_shape": "('expr',)",
-    "size": 10,
-    "members": [
-      "test_oidc_discovery_non_200_warns",
-      "test_oidc_discovery_missing_endpoint_warns",
-      "test_oidc_discovery_not_json_warns",
-      "test_oidc_no_issuer_or_discovery_warns_without_network",
-      "test_oidc_unreachable_warns_with_reason",
-      "test_oidc_ssrf_reject_surfaces_as_warn_not_raise",
-      "test_saml_sso_transport_error_is_unreachable",
-      "test_saml_no_sso_url_warns_without_network",
-      "test_unknown_type_warns",
-      "test_oidc_discovery_json_not_an_object_warns"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_fragment_adapter_ref.py",
-    "class": "(module)",
-    "assertion_shape": "('call_isinstance', 'eq')",
-    "size": 10,
-    "members": [
-      "test_no_ref_api_no_options_falls_through_to_widget_field",
-      "test_text_widget_kind_produces_text_input",
-      "test_textarea_widget_kind_produces_textarea",
-      "test_checkbox_widget_kind_produces_checkbox",
-      "test_number_widget_kind_produces_number_input",
-      "test_email_widget_kind_produces_email_input",
-      "test_date_widget_kind_produces_date_input",
-      "test_datetime_widget_kind_produces_datetime_local_input",
-      "test_url_widget_kind_produces_url_input",
-      "test_unknown_widget_kind_falls_back_to_text"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_auth_views_password_reset.py",
     "class": "(module)",
     "assertion_shape": "('in',)",
@@ -761,6 +326,26 @@
       "test_stamps_omits_section_when_no_timestamp_field",
       "test_thread_summary_omits_section_when_no_rows",
       "test_thread_summary_omits_section_when_no_timestamp_field"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_onboarding_renderer.py",
+    "class": "(module)",
+    "assertion_shape": "('in',)",
+    "size": 9,
+    "members": [
+      "test_popover_cta_href_when_target_set",
+      "test_popover_placement_threads_into_data_attr",
+      "test_every_supported_kind_emits_htmx_complete",
+      "test_every_dismissable_kind_emits_htmx_dismiss",
+      "test_empty_state_uses_h2_for_higher_visual_weight",
+      "test_empty_state_dismiss_button_labeled_skip",
+      "test_checklist_item_dismiss_hidden_by_default",
+      "test_nudge_autodismiss_ms_pulled_from_placement_when_numeric",
+      "test_nudge_autodismiss_falls_back_when_placement_invalid"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -1426,24 +1011,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_rhythm_mcp.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 7,
-    "members": [
-      "test_list_rhythms_includes_ambient_phases",
-      "test_lifecycle_current_focus_is_first_incomplete",
-      "test_lifecycle_evaluating_maturity",
-      "test_evaluate_surface_reuse_same_expects_no_advisory",
-      "test_evaluate_surface_reuse_no_expects_no_advisory",
-      "test_fidelity_scene_without_expects_served",
-      "test_fidelity_passive_action_always_matches"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_scope_create_eval.py",
     "class": "(module)",
     "assertion_shape": "('is', 'is')",
@@ -1482,16 +1049,16 @@
   {
     "file": "tests/unit/test_site_section_medium_builders.py",
     "class": "(module)",
-    "assertion_shape": "('in',)",
+    "assertion_shape": "('in', 'in')",
     "size": 7,
     "members": [
-      "test_seven_new_section_types_in_typed_set",
-      "test_render_typed_section_dispatches_each_new_type",
-      "test_split_content_emits_section_class",
-      "test_split_content_alignment_right_swaps_order",
-      "test_team_initials_uses_first_letter_of_first_two_words",
-      "test_team_handles_member_without_name",
-      "test_testimonials_renders_optional_role"
+      "test_split_content_renders_media_when_image",
+      "test_card_grid_renders_optional_per_item_cta",
+      "test_card_grid_renders_section_media_when_provided",
+      "test_team_renders_initials_fallback_when_no_image",
+      "test_team_renders_optional_role_and_bio",
+      "test_team_link_anchors_have_security_attributes",
+      "test_testimonials_renders_blockquote_with_quote_marks"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -1698,6 +1265,23 @@
       "test_app_404_announces_404",
       "test_app_404_renders_supplied_message",
       "test_app_500_renders_back_affordance_when_supplied"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_connection_probe.py",
+    "class": "(module)",
+    "assertion_shape": "('expr',)",
+    "size": 6,
+    "members": [
+      "test_oidc_no_issuer_or_discovery_warns_without_network",
+      "test_oidc_unreachable_warns_with_reason",
+      "test_oidc_ssrf_reject_surfaces_as_warn_not_raise",
+      "test_saml_sso_transport_error_is_unreachable",
+      "test_saml_no_sso_url_warns_without_network",
+      "test_unknown_type_warns"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -1944,15 +1528,15 @@
   {
     "file": "tests/unit/test_rhythm_mcp.py",
     "class": "(module)",
-    "assertion_shape": "('eq', 'eq', 'eq')",
+    "assertion_shape": "('eq', 'eq')",
     "size": 6,
     "members": [
-      "test_list_rhythms",
-      "test_coverage_persona_deny_list",
-      "test_gaps_summary_counts",
-      "test_lifecycle_mature",
-      "test_fidelity_scene_served",
-      "test_fidelity_mixed_scenes"
+      "test_gaps_layers_evaluated_failures",
+      "test_lifecycle_write_rhythms_partial_persona_coverage",
+      "test_lifecycle_map_scenes_partial",
+      "test_lifecycle_build_from_stories",
+      "test_lifecycle_iterate_not_started_when_nothing_complete",
+      "test_evaluate_advisory_not_counted_in_summary"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -2038,6 +1622,23 @@
       "test_hero_omits_media_block_when_src_missing",
       "test_hero_omits_id_when_no_id_or_headline_for_slug",
       "test_hero_escapes_explicit_section_id"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_site_section_medium_builders.py",
+    "class": "(module)",
+    "assertion_shape": "('in',)",
+    "size": 6,
+    "members": [
+      "test_seven_new_section_types_in_typed_set",
+      "test_render_typed_section_dispatches_each_new_type",
+      "test_split_content_alignment_right_swaps_order",
+      "test_team_initials_uses_first_letter_of_first_two_words",
+      "test_team_handles_member_without_name",
+      "test_testimonials_renders_optional_role"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -2769,22 +2370,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_onboarding_page_wiring.py",
-    "class": "(module)",
-    "assertion_shape": "('call_any',)",
-    "size": 5,
-    "members": [
-      "test_inject_logs_no_repo_branch",
-      "test_inject_logs_not_authenticated_branch",
-      "test_inject_logs_no_surface_name_branch",
-      "test_inject_logs_no_active_step_branch",
-      "test_inject_logs_resolve_failed_branch_at_info_level"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_org_activation.py",
     "class": "TestLoginRedirectMapper",
     "assertion_shape": "('eq', 'is')",
@@ -2907,6 +2492,22 @@
       "test_active_development_serves_no_cache",
       "test_configured_max_age_for_non_fingerprinted_non_bundle",
       "test_runtime_bundle_no_cache_when_requested_unfingerprinted"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_schema_render.py",
+    "class": "(module)",
+    "assertion_shape": "('call_any', 'call_any')",
+    "size": 5,
+    "members": [
+      "test_add_table_renders_create_table",
+      "test_add_column_renders_add_and_inverse_drop",
+      "test_drop_table_renders_drop_and_inverse_create",
+      "test_drop_column_renders_drop_and_inverse_add",
+      "test_rename_table_and_inverse"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -4473,6 +4074,21 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_enum_semantics_1493.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 4,
+    "members": [
+      "test_canonical_palette_is_the_five_css_tones",
+      "test_resolver_no_map_matches_name_guess",
+      "test_column_semantic_map_from_inline_field_binding",
+      "test_validator_accepts_canonical_and_alias_tones"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
     "file": "tests/unit/test_eventbus_adapter.py",
     "class": "TestStepExecutor",
     "assertion_shape": "('eq', 'eq')",
@@ -5952,6 +5568,21 @@
       "test_cap_enforced_exponential",
       "test_cap_enforced_linear",
       "test_attempt_zero_is_no_sleep"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_rhythm_mcp.py",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'eq', 'eq')",
+    "size": 4,
+    "members": [
+      "test_list_rhythms",
+      "test_coverage_persona_deny_list",
+      "test_gaps_summary_counts",
+      "test_lifecycle_mature"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -10795,6 +10426,20 @@
   {
     "file": "tests/unit/test_guide_concordance.py",
     "class": "(module)",
+    "assertion_shape": "('call_any',)",
+    "size": 3,
+    "members": [
+      "test_step_order_references_unknown_step_errors",
+      "test_step_order_duplicate_errors",
+      "test_cta_denied_for_audience_errors"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_guide_concordance.py",
+    "class": "(module)",
     "assertion_shape": "('eq',)",
     "size": 3,
     "members": [
@@ -11761,12 +11406,12 @@
   {
     "file": "tests/unit/test_onboarding_resolver.py",
     "class": "(module)",
-    "assertion_shape": "('eq',)",
+    "assertion_shape": "('is',)",
     "size": 3,
     "members": [
-      "test_select_next_step_first_when_no_progress",
-      "test_select_next_step_skips_completed",
-      "test_select_next_step_skips_dismissed"
+      "test_resolver_returns_none_when_audience_mismatch",
+      "test_resolver_returns_none_when_target_surface_mismatch",
+      "test_resolver_skips_completed_guide"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -12065,6 +11710,20 @@
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "fuzz",
     "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
+  },
+  {
+    "file": "tests/unit/test_partition_root_1463.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_resolve_null_parent_fk_stops_narrow",
+      "test_resolve_cycle_guard_truncates",
+      "test_reconcile_flat_hierarchy_is_noop"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
     "file": "tests/unit/test_patch_field.py",
@@ -12655,6 +12314,20 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_python_audit_optional_instead_of_result.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_noqa_suppression_on_def",
+      "test_heuristic_skips_tests_and_scripts",
+      "test_nested_helper_inside_except_does_not_trip_outer_1273"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
     "file": "tests/unit/test_qa/test_cli_signing_wiring.py",
     "class": "(module)",
     "assertion_shape": "('eq', 'in')",
@@ -13175,12 +12848,12 @@
   {
     "file": "tests/unit/test_rhythm_mcp.py",
     "class": "(module)",
-    "assertion_shape": "('eq', 'eq', 'in')",
+    "assertion_shape": "('eq',)",
     "size": 3,
     "members": [
-      "test_gaps_orphan_story",
-      "test_gaps_no_ambient",
-      "test_gaps_unscored_persona"
+      "test_list_rhythms_includes_ambient_phases",
+      "test_lifecycle_current_focus_is_first_incomplete",
+      "test_lifecycle_evaluating_maturity"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",

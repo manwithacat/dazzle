@@ -1,9 +1,15 @@
-"""Tests for PA-LLM-09 — optional-instead-of-result."""
+"""Tests for PA-LLM-09 — optional-instead-of-result.
+
+The multi-return-None and multi-exception-catch arms share the two tables
+below — expected_shape is asserted only when not None.
+"""
 
 from __future__ import annotations
 
 import ast
 from pathlib import Path
+
+import pytest
 
 from dazzle.sentinel.agents.python_audit import (
     PythonAuditAgent,
@@ -16,98 +22,86 @@ def _parse(src: str) -> ast.Module:
 
 
 # ---------------------------------------------------------------------------
-# Positive: multiple return None
+# Positive: multiple return None + multi-exception catch shapes.
+# expected_shape is asserted only when not None.
 # ---------------------------------------------------------------------------
 
 
-def test_two_return_none_fires() -> None:
-    src = (
-        "def parse(text: str) -> int | None:\n"
-        "    if not text:\n"
-        "        return None\n"
-        "    if text.isspace():\n"
-        "        return None\n"
-        "    return int(text)\n"
-    )
+@pytest.mark.parametrize(
+    ("src", "expected_shape"),
+    [
+        pytest.param(
+            "def parse(text: str) -> int | None:\n"
+            "    if not text:\n"
+            "        return None\n"
+            "    if text.isspace():\n"
+            "        return None\n"
+            "    return int(text)\n",
+            "multi_return_none",
+            id="two-return-none",
+        ),
+        pytest.param(
+            # Multiple return None statements yield one finding, not three.
+            "def f(x) -> str | None:\n"
+            "    if not x: return None\n"
+            "    if x < 0: return None\n"
+            "    if x > 100: return None\n"
+            "    return str(x)\n",
+            None,
+            id="three-return-none-fires-once",
+        ),
+        pytest.param(
+            "from typing import Optional\n"
+            "def f(x) -> Optional[int]:\n"
+            "    if x is None: return None\n"
+            "    if x < 0: return None\n"
+            "    return x\n",
+            None,
+            id="optional-legacy-syntax",
+        ),
+        pytest.param(
+            # `None | int` (None on the left) is the same union as `int | None`.
+            "def f(x) -> None | int:\n"
+            "    if x == 0: return None\n"
+            "    if x < 0: return None\n"
+            "    return x\n",
+            None,
+            id="pipe-none-left-position",
+        ),
+        pytest.param(
+            # A bare `return` (no value) is equivalent to `return None`.
+            "def f(x) -> int | None:\n"
+            "    if x == 0: return\n"
+            "    if x < 0: return None\n"
+            "    return x\n",
+            None,
+            id="bare-return-counts-as-none",
+        ),
+        pytest.param(
+            "async def fetch(uid) -> int | None:\n"
+            "    if not uid: return None\n"
+            "    if uid < 0: return None\n"
+            "    return await load(uid)\n",
+            None,
+            id="async-function",
+        ),
+        pytest.param(
+            # Single return None but except (X, Y) catching >=2 types fires.
+            "def parse(text) -> int | None:\n"
+            "    try:\n"
+            "        return int(text)\n"
+            "    except (ValueError, TypeError):\n"
+            "        return None\n",
+            "multi_exception_catch",
+            id="multi-exception-catch",
+        ),
+    ],
+)
+def test_optional_shape_fires(src: str, expected_shape: str | None) -> None:
     hits = _detect_optional_instead_of_result(_parse(src), Path("app/x.py"))
     assert len(hits) == 1
-    assert hits[0].shape == "multi_return_none"
-
-
-def test_three_return_none_fires_once() -> None:
-    """Multiple return None statements yield one finding, not three."""
-    src = (
-        "def f(x) -> str | None:\n"
-        "    if not x: return None\n"
-        "    if x < 0: return None\n"
-        "    if x > 100: return None\n"
-        "    return str(x)\n"
-    )
-    hits = _detect_optional_instead_of_result(_parse(src), Path("app/x.py"))
-    assert len(hits) == 1
-
-
-def test_optional_legacy_syntax() -> None:
-    src = (
-        "from typing import Optional\n"
-        "def f(x) -> Optional[int]:\n"
-        "    if x is None: return None\n"
-        "    if x < 0: return None\n"
-        "    return x\n"
-    )
-    hits = _detect_optional_instead_of_result(_parse(src), Path("app/x.py"))
-    assert len(hits) == 1
-
-
-def test_pipe_none_left_position() -> None:
-    """`None | int` (None on the left) is the same union as `int | None`."""
-    src = (
-        "def f(x) -> None | int:\n"
-        "    if x == 0: return None\n"
-        "    if x < 0: return None\n"
-        "    return x\n"
-    )
-    hits = _detect_optional_instead_of_result(_parse(src), Path("app/x.py"))
-    assert len(hits) == 1
-
-
-def test_bare_return_counts_as_none() -> None:
-    """A bare `return` (no value) is equivalent to `return None`."""
-    src = (
-        "def f(x) -> int | None:\n    if x == 0: return\n    if x < 0: return None\n    return x\n"
-    )
-    hits = _detect_optional_instead_of_result(_parse(src), Path("app/x.py"))
-    assert len(hits) == 1
-
-
-def test_async_function_fires() -> None:
-    src = (
-        "async def fetch(uid) -> int | None:\n"
-        "    if not uid: return None\n"
-        "    if uid < 0: return None\n"
-        "    return await load(uid)\n"
-    )
-    hits = _detect_optional_instead_of_result(_parse(src), Path("app/x.py"))
-    assert len(hits) == 1
-
-
-# ---------------------------------------------------------------------------
-# Positive: multi-exception catch
-# ---------------------------------------------------------------------------
-
-
-def test_multi_exception_catch_fires() -> None:
-    """Single return None but except (X, Y) catching >=2 types fires."""
-    src = (
-        "def parse(text) -> int | None:\n"
-        "    try:\n"
-        "        return int(text)\n"
-        "    except (ValueError, TypeError):\n"
-        "        return None\n"
-    )
-    hits = _detect_optional_instead_of_result(_parse(src), Path("app/x.py"))
-    assert len(hits) == 1
-    assert hits[0].shape == "multi_exception_catch"
+    if expected_shape is not None:
+        assert hits[0].shape == expected_shape
 
 
 # ---------------------------------------------------------------------------
@@ -115,50 +109,51 @@ def test_multi_exception_catch_fires() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_negative_single_return_none() -> None:
-    """Single failure mode is legitimate Optional usage — no fire."""
-    src = (
-        "def find_user(uid) -> User | None:\n"
-        "    if uid not in users: return None\n"
-        "    return users[uid]\n"
-    )
-    assert _detect_optional_instead_of_result(_parse(src), Path("app/x.py")) == []
-
-
-def test_negative_no_optional_return() -> None:
-    """Function returns int (not int | None) — out of scope even with two return None."""
-    src = "def f(x) -> int:\n    if x == 0: return None\n    if x < 0: return None\n    return x\n"
-    assert _detect_optional_instead_of_result(_parse(src), Path("app/x.py")) == []
-
-
-def test_negative_nested_function_returns_dont_count() -> None:
-    """`return None` inside a nested def doesn't contribute to the outer count."""
-    src = (
-        "def outer(x) -> int | None:\n"
-        "    def inner():\n"
-        "        if x == 0: return None\n"
-        "        if x < 0: return None\n"
-        "        return x\n"
-        "    return inner() if x else None\n"
-    )
-    assert _detect_optional_instead_of_result(_parse(src), Path("app/x.py")) == []
-
-
-def test_negative_single_exception_catch() -> None:
-    """`except KeyError: return None` (one type only) doesn't fire."""
-    src = (
-        "def get(d, k) -> int | None:\n"
-        "    try:\n"
-        "        return d[k]\n"
-        "    except KeyError:\n"
-        "        return None\n"
-    )
-    assert _detect_optional_instead_of_result(_parse(src), Path("app/x.py")) == []
-
-
-def test_negative_no_return_annotation() -> None:
-    """Function without return annotation doesn't fire."""
-    src = "def f(x):\n    if x: return None\n    return None\n"
+@pytest.mark.parametrize(
+    "src",
+    [
+        pytest.param(
+            # Single failure mode is legitimate Optional usage — no fire.
+            "def find_user(uid) -> User | None:\n"
+            "    if uid not in users: return None\n"
+            "    return users[uid]\n",
+            id="single-return-none",
+        ),
+        pytest.param(
+            # Function returns int (not int | None) — out of scope even with two return None.
+            "def f(x) -> int:\n"
+            "    if x == 0: return None\n"
+            "    if x < 0: return None\n"
+            "    return x\n",
+            id="no-optional-return",
+        ),
+        pytest.param(
+            # `return None` inside a nested def doesn't contribute to the outer count.
+            "def outer(x) -> int | None:\n"
+            "    def inner():\n"
+            "        if x == 0: return None\n"
+            "        if x < 0: return None\n"
+            "        return x\n"
+            "    return inner() if x else None\n",
+            id="nested-function-returns-dont-count",
+        ),
+        pytest.param(
+            # `except KeyError: return None` (one type only) doesn't fire.
+            "def get(d, k) -> int | None:\n"
+            "    try:\n"
+            "        return d[k]\n"
+            "    except KeyError:\n"
+            "        return None\n",
+            id="single-exception-catch",
+        ),
+        pytest.param(
+            # Function without return annotation doesn't fire.
+            "def f(x):\n    if x: return None\n    return None\n",
+            id="no-return-annotation",
+        ),
+    ],
+)
+def test_optional_negative_no_fire(src: str) -> None:
     assert _detect_optional_instead_of_result(_parse(src), Path("app/x.py")) == []
 
 

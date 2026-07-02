@@ -32,8 +32,19 @@ OUT_DIR = REPO_ROOT / "tests" / "audit"
 def main() -> None:
     records = json.load((OUT_DIR / "classification.json").open())
 
-    # === View 1: cross-file (class, assertion-shape) clusters ===
-    by_shape: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    # === View 1: cross-file (class, assertion-shape, public-target) clusters ===
+    # The key MUST include what the tests exercise, not just how they assert.
+    # Keying on (class, shape) alone made `(module)` + a common assert pattern
+    # match hundreds of unrelated files (the #1530 investigation found a
+    # "cluster" of 1,067 tests across 346 files) — a signature artifact, not a
+    # collapse opportunity. `imports_public` (the deduped dazzle.* callables a
+    # test references) is the target discriminator: same shape + same public
+    # surface across files = a genuine copy-pasted pattern that one shared
+    # parametrised helper could replace. Tests with no attributable public
+    # target are skipped (counted below) — an unattributable shape match is
+    # not actionable.
+    by_shape: dict[tuple[str, str, tuple[str, ...]], list[dict]] = defaultdict(list)
+    untargeted = 0
     for r in records:
         if r["archetype"] in ("parametric_cluster", "snapshot"):
             continue
@@ -42,10 +53,14 @@ def main() -> None:
         shape = tuple(sorted(r["metrics"]["assert_shapes"]))
         if not shape:
             continue
-        by_shape[(cls, str(shape))].append(r)
+        target = tuple(sorted(set(r["metrics"]["imports_public"])))
+        if not target:
+            untargeted += 1
+            continue
+        by_shape[(cls, str(shape), target)].append(r)
 
     cross_file_clusters = []
-    for (cls, shape), members in by_shape.items():
+    for (cls, shape, target), members in by_shape.items():
         files = {m["file"] for m in members}
         if len(files) < 2 or len(members) < 4:
             continue  # only interesting if >=2 files and >=4 tests
@@ -53,6 +68,7 @@ def main() -> None:
             {
                 "class_name": cls,
                 "assertion_shape": shape,
+                "public_target": list(target),
                 "files": sorted(files),
                 "size": len(members),
                 "samples": [m["test_id"] for m in members[:6]],
@@ -161,9 +177,12 @@ def main() -> None:
     lines.append("## View 1 — Cross-file shape clusters")
     lines.append("")
     lines.append(
-        "Tests sharing the same `(class_name, assertion_shape)` across multiple "
-        "files. Often means a test pattern was copy-pasted across handler/parser "
-        "files; one parametric test could replace many."
+        "Tests sharing the same `(class_name, assertion_shape, public_target)` "
+        "across multiple files — same assert shape AND the same deduped set of "
+        "public dazzle callables. A cluster here is a genuinely copy-pasted "
+        "pattern that one shared parametrised helper could replace. (Pre-#1530 "
+        "this view keyed on shape alone, which matched hundreds of unrelated "
+        "files; the target discriminator makes the numbers actionable.)"
     )
     lines.append("")
     lines.append(f"- **Clusters of size ≥4 across ≥2 files**: {len(cross_file_clusters)}")
@@ -173,17 +192,25 @@ def main() -> None:
         f"- **Theoretical saving**: ~{total_tests - len(cross_file_clusters):,} "
         "if each cluster collapses to one parametric test"
     )
+    lines.append(
+        f"- **Skipped (no attributable public target)**: {untargeted:,} tests — "
+        "shape matches without a shared target are not actionable"
+    )
     lines.append("")
     lines.append("### Top 25 cross-file clusters")
     lines.append("")
-    lines.append("| Class | Size | Files | Sample tests |")
-    lines.append("|---|---:|---|---|")
+    lines.append("| Class | Size | Target | Files | Sample tests |")
+    lines.append("|---|---:|---|---|---|")
     for c in cross_file_clusters[:25]:
         files_str = ", ".join(f"`{f.split('/')[-1]}`" for f in c["files"][:3])
         if len(c["files"]) > 3:
             files_str += f" (+{len(c['files']) - 3} more)"
         samples = ", ".join(s.split("::")[-1] for s in c["samples"][:2])
-        lines.append(f"| `{c['class_name']}` | {c['size']} | {files_str} | {samples}… |")
+        target_names = [t.rsplit(".", 1)[-1] for t in c["public_target"][:3]]
+        lines.append(
+            f"| `{c['class_name']}` | {c['size']} | {', '.join(target_names)} | "
+            f"{files_str} | {samples}… |"
+        )
     lines.append("")
 
     lines.append("## View 2 — Implementation-mirror file candidates")

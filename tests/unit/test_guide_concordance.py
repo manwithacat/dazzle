@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.guide_concordance import check_guide_concordance
 
@@ -98,159 +100,116 @@ def test_clean_guide_produces_no_errors() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Attachment errors
+# Step-reference validation errors (attachment / audience / completion / CTA)
+#
+# One contract, one table: a guide step carrying an invalid reference
+# produces an error containing `expected`. `step_kwargs` are forwarded to
+# `_step("s1", ...)`; the audience persona pool is always just `admin`.
 # ---------------------------------------------------------------------------
 
 
-def test_target_must_start_with_surface() -> None:
-    guide = _guide(
-        "g1",
-        audience="persona = admin",
-        steps=[_step("s1", target="entity.Task.create")],
-    )
-    errors, _ = _run(guides=[guide], personas=[_persona("admin")])
-    assert any("must start with 'surface." in e for e in errors)
-
-
-def test_target_unknown_surface_errors() -> None:
-    guide = _guide(
-        "g1",
-        audience="persona = admin",
-        steps=[_step("s1", target="surface.nonexistent")],
-    )
-    errors, _ = _run(guides=[guide], personas=[_persona("admin")])
-    assert any("target surface 'nonexistent' does not exist" in e for e in errors)
-
-
-def test_target_unknown_action_errors() -> None:
-    surfaces = [_surface("task_list", actions=("create",))]
-    guide = _guide(
-        "g1",
-        audience="persona = admin",
-        steps=[_step("s1", target="surface.task_list.action.delete")],
-    )
-    errors, _ = _run(guides=[guide], surfaces=surfaces, personas=[_persona("admin")])
-    assert any("has no action 'delete'" in e for e in errors)
-
-
-# ---------------------------------------------------------------------------
-# Audience errors
-# ---------------------------------------------------------------------------
-
-
-def test_unknown_persona_in_audience_errors() -> None:
-    guide = _guide(
-        "g1",
-        audience="persona = wizard",
-        steps=[_step("s1", target="surface.task_list")],
-    )
-    errors, _ = _run(
-        guides=[guide],
-        surfaces=[_surface("task_list")],
-        personas=[_persona("admin")],
-    )
-    assert any("unknown persona 'wizard'" in e for e in errors)
-
-
-# ---------------------------------------------------------------------------
-# Completion errors
-# ---------------------------------------------------------------------------
-
-
-def test_event_completion_unknown_entity_errors() -> None:
-    guide = _guide(
-        "g1",
-        audience="persona = admin",
-        steps=[
-            _step(
-                "s1",
-                target="surface.task_list",
-                complete_on=ir.GuideCompleteOn(
+@pytest.mark.parametrize(
+    ("audience", "step_kwargs", "surfaces", "entities", "expected"),
+    [
+        pytest.param(
+            "persona = admin",
+            {"target": "entity.Task.create"},
+            [],
+            [],
+            "must start with 'surface.",
+            id="target-must-start-with-surface",
+        ),
+        pytest.param(
+            "persona = admin",
+            {"target": "surface.nonexistent"},
+            [],
+            [],
+            "target surface 'nonexistent' does not exist",
+            id="target-unknown-surface",
+        ),
+        pytest.param(
+            "persona = admin",
+            {"target": "surface.task_list.action.delete"},
+            [_surface("task_list", actions=("create",))],
+            [],
+            "has no action 'delete'",
+            id="target-unknown-action",
+        ),
+        pytest.param(
+            "persona = wizard",
+            {"target": "surface.task_list"},
+            [_surface("task_list")],
+            [],
+            "unknown persona 'wizard'",
+            id="audience-unknown-persona",
+        ),
+        pytest.param(
+            "persona = admin",
+            {
+                "target": "surface.task_list",
+                "complete_on": ir.GuideCompleteOn(
                     kind=ir.GuideCompleteOnKind.EVENT,
                     event_ref="entity.NoSuch.created",
                 ),
-            )
-        ],
-    )
-    errors, _ = _run(
-        guides=[guide],
-        surfaces=[_surface("task_list")],
-        personas=[_persona("admin")],
-    )
-    assert any("unknown entity 'NoSuch'" in e for e in errors)
-
-
-def test_event_completion_unknown_lifecycle_errors() -> None:
-    guide = _guide(
-        "g1",
-        audience="persona = admin",
-        steps=[
-            _step(
-                "s1",
-                target="surface.task_list",
-                complete_on=ir.GuideCompleteOn(
+            },
+            [_surface("task_list")],
+            [],
+            "unknown entity 'NoSuch'",
+            id="event-completion-unknown-entity",
+        ),
+        pytest.param(
+            "persona = admin",
+            {
+                "target": "surface.task_list",
+                "complete_on": ir.GuideCompleteOn(
                     kind=ir.GuideCompleteOnKind.EVENT,
                     event_ref="entity.Task.exploded",
                 ),
-            )
-        ],
-    )
-    errors, _ = _run(
-        guides=[guide],
-        surfaces=[_surface("task_list")],
-        entities=[_entity("Task")],
-        personas=[_persona("admin")],
-    )
-    assert any("lifecycle 'exploded'" in e for e in errors)
-
-
-def test_field_filled_unknown_field_errors() -> None:
-    guide = _guide(
-        "g1",
-        audience="persona = admin",
-        steps=[
-            _step(
-                "s1",
-                target="surface.task_create",
-                complete_on=ir.GuideCompleteOn(
+            },
+            [_surface("task_list")],
+            [_entity("Task")],
+            "lifecycle 'exploded'",
+            id="event-completion-unknown-lifecycle",
+        ),
+        pytest.param(
+            "persona = admin",
+            {
+                "target": "surface.task_create",
+                "complete_on": ir.GuideCompleteOn(
                     kind=ir.GuideCompleteOnKind.FIELD_FILLED,
                     field_filled="surface.task_create.field.no_such_field",
                 ),
-            )
-        ],
-    )
+            },
+            [_surface("task_create", entity_ref="Task")],
+            [_entity("Task", fields=("title",))],
+            "unknown field 'no_such_field'",
+            id="field-filled-unknown-field",
+        ),
+        pytest.param(
+            "persona = admin",
+            {"target": "surface.task_list", "cta_target": "surface.nowhere"},
+            [_surface("task_list")],
+            [],
+            "cta_target surface 'nowhere' does not exist",
+            id="cta-target-unknown-surface",
+        ),
+    ],
+)
+def test_invalid_step_reference_errors(
+    audience: str,
+    step_kwargs: dict,
+    surfaces: list,
+    entities: list,
+    expected: str,
+) -> None:
+    guide = _guide("g1", audience=audience, steps=[_step("s1", **step_kwargs)])
     errors, _ = _run(
         guides=[guide],
-        surfaces=[_surface("task_create", entity_ref="Task")],
-        entities=[_entity("Task", fields=("title",))],
+        surfaces=surfaces,
+        entities=entities,
         personas=[_persona("admin")],
     )
-    assert any("unknown field 'no_such_field'" in e for e in errors)
-
-
-# ---------------------------------------------------------------------------
-# CTA target errors
-# ---------------------------------------------------------------------------
-
-
-def test_cta_target_unknown_surface_errors() -> None:
-    guide = _guide(
-        "g1",
-        audience="persona = admin",
-        steps=[
-            _step(
-                "s1",
-                target="surface.task_list",
-                cta_target="surface.nowhere",
-            )
-        ],
-    )
-    errors, _ = _run(
-        guides=[guide],
-        surfaces=[_surface("task_list")],
-        personas=[_persona("admin")],
-    )
-    assert any("cta_target surface 'nowhere' does not exist" in e for e in errors)
+    assert any(expected in e for e in errors), errors
 
 
 # ---------------------------------------------------------------------------

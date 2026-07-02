@@ -5,6 +5,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.render.onboarding.resolver import (
     _audience_matches_persona,
@@ -19,28 +21,33 @@ from dazzle.render.onboarding.state import OnboardingProgress
 # ---------------------------------------------------------------------------
 
 
-def test_audience_matches_when_persona_clause_includes_user() -> None:
-    assert _audience_matches_persona("persona = admin", "admin") is True
-
-
-def test_audience_with_or_clauses_matches_any() -> None:
-    assert _audience_matches_persona("persona = admin or persona = member", "member") is True
-
-
-def test_audience_excludes_when_user_persona_not_listed() -> None:
-    assert _audience_matches_persona("persona = admin", "member") is False
-
-
-def test_audience_with_no_persona_clause_matches_conservatively() -> None:
-    """A predicate that uses entity-state aggregates but no persona
-    clause should match — the persona compiler is the resolver's
-    business, not v0.71.2's. False positives here are caught at the
-    next layer."""
-    assert _audience_matches_persona("entity.Task.count = 0", "admin") is True
-
-
-def test_audience_empty_string_matches() -> None:
-    assert _audience_matches_persona("", "admin") is True
+# One contract: does the audience predicate's persona clause admit the
+# user's persona? (audience, user_persona) → matches.
+@pytest.mark.parametrize(
+    ("audience", "user_persona", "matches"),
+    [
+        pytest.param("persona = admin", "admin", True, id="persona-clause-includes-user"),
+        pytest.param(
+            "persona = admin or persona = member",
+            "member",
+            True,
+            id="or-clauses-match-any",
+        ),
+        pytest.param("persona = admin", "member", False, id="user-persona-not-listed"),
+        # A predicate that uses entity-state aggregates but no persona clause
+        # should match — the persona compiler is the resolver's business, not
+        # v0.71.2's. False positives here are caught at the next layer.
+        pytest.param(
+            "entity.Task.count = 0",
+            "admin",
+            True,
+            id="no-persona-clause-matches-conservatively",
+        ),
+        pytest.param("", "admin", True, id="empty-string-matches"),
+    ],
+)
+def test_audience_matches_persona(audience: str, user_persona: str, matches: bool) -> None:
+    assert _audience_matches_persona(audience, user_persona) is matches
 
 
 # ---------------------------------------------------------------------------
@@ -48,24 +55,30 @@ def test_audience_empty_string_matches() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_target_whole_surface_matches() -> None:
-    assert _step_target_matches_surface("surface.task_list", "task_list") is True
-
-
-def test_target_action_matches_parent_surface() -> None:
-    assert _step_target_matches_surface("surface.task_list.action.create", "task_list") is True
-
-
-def test_target_field_matches_parent_surface() -> None:
-    assert _step_target_matches_surface("surface.task_create.field.title", "task_create") is True
-
-
-def test_target_mismatch_surface_name() -> None:
-    assert _step_target_matches_surface("surface.task_list", "task_create") is False
-
-
-def test_target_non_surface_prefix_rejected() -> None:
-    assert _step_target_matches_surface("entity.Task", "task_list") is False
+# One contract: does a step target (surface.<name>[.action|.field...])
+# belong to the surface being rendered? (target, surface_name) → matches.
+@pytest.mark.parametrize(
+    ("target", "surface_name", "matches"),
+    [
+        pytest.param("surface.task_list", "task_list", True, id="whole-surface"),
+        pytest.param(
+            "surface.task_list.action.create",
+            "task_list",
+            True,
+            id="action-matches-parent-surface",
+        ),
+        pytest.param(
+            "surface.task_create.field.title",
+            "task_create",
+            True,
+            id="field-matches-parent-surface",
+        ),
+        pytest.param("surface.task_list", "task_create", False, id="surface-name-mismatch"),
+        pytest.param("entity.Task", "task_list", False, id="non-surface-prefix-rejected"),
+    ],
+)
+def test_step_target_matches_surface(target: str, surface_name: str, matches: bool) -> None:
+    assert _step_target_matches_surface(target, surface_name) is matches
 
 
 # ---------------------------------------------------------------------------
@@ -94,49 +107,40 @@ def _guide(steps: list[ir.GuideStep], audience: str = "persona = admin") -> ir.G
     )
 
 
-def test_select_next_step_first_when_no_progress() -> None:
-    guide = _guide([_step("s1"), _step("s2"), _step("s3")])
-    assert _select_next_step(guide, None).name == "s1"
-
-
-def test_select_next_step_skips_completed() -> None:
-    guide = _guide([_step("s1"), _step("s2"), _step("s3")])
-    progress = OnboardingProgress(
-        id="r",
-        user_id="u",
-        guide_name="g",
-        guide_version=1,
-        current_step=None,
-        completed_steps=["s1"],
+# One contract: the picker walks step_order and returns the first step
+# that is neither completed nor dismissed — None once all are resolved.
+# ``completed=None`` means "no progress row at all" (progress is None).
+@pytest.mark.parametrize(
+    ("n_steps", "completed", "dismissed", "expected"),
+    [
+        pytest.param(3, None, None, "s1", id="first-when-no-progress"),
+        pytest.param(3, ["s1"], [], "s2", id="skips-completed"),
+        pytest.param(3, [], ["s1", "s2"], "s3", id="skips-dismissed"),
+        pytest.param(2, ["s1"], ["s2"], None, id="none-when-all-resolved"),
+    ],
+)
+def test_select_next_step(
+    n_steps: int,
+    completed: list[str] | None,
+    dismissed: list[str] | None,
+    expected: str | None,
+) -> None:
+    guide = _guide([_step(f"s{i}") for i in range(1, n_steps + 1)])
+    progress = (
+        None
+        if completed is None
+        else OnboardingProgress(
+            id="r",
+            user_id="u",
+            guide_name="g",
+            guide_version=1,
+            current_step=None,
+            completed_steps=completed,
+            dismissed_steps=dismissed or [],
+        )
     )
-    assert _select_next_step(guide, progress).name == "s2"
-
-
-def test_select_next_step_skips_dismissed() -> None:
-    guide = _guide([_step("s1"), _step("s2"), _step("s3")])
-    progress = OnboardingProgress(
-        id="r",
-        user_id="u",
-        guide_name="g",
-        guide_version=1,
-        current_step=None,
-        dismissed_steps=["s1", "s2"],
-    )
-    assert _select_next_step(guide, progress).name == "s3"
-
-
-def test_select_next_step_returns_none_when_all_resolved() -> None:
-    guide = _guide([_step("s1"), _step("s2")])
-    progress = OnboardingProgress(
-        id="r",
-        user_id="u",
-        guide_name="g",
-        guide_version=1,
-        current_step=None,
-        completed_steps=["s1"],
-        dismissed_steps=["s2"],
-    )
-    assert _select_next_step(guide, progress) is None
+    result = _select_next_step(guide, progress)
+    assert (result.name if result is not None else None) == expected
 
 
 # ---------------------------------------------------------------------------

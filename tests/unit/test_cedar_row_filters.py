@@ -7,6 +7,8 @@ that convert Cedar permission rules to SQL-compatible row filters.
 
 from typing import Any
 
+import pytest
+
 from dazzle.http.runtime.route_generator import (
     _extract_cedar_row_filters,
     _extract_condition_filters,
@@ -79,137 +81,190 @@ def _make_access_spec(rules: list[PermissionRuleSpec]) -> EntityAccessSpec:
     return EntityAccessSpec(permissions=rules)
 
 
+class _FakeUser:
+    def __init__(self, roles: list[str]) -> None:
+        self.roles = roles
+
+
+class _FakeAuth:
+    is_authenticated = True  # auth Plan 1b: effective_roles needs this
+
+    def __init__(self, roles: list[str]) -> None:
+        self.user = _FakeUser(roles)
+
+
 # ---- Test classes -----------------------------------------------------------
 
 
 class TestExtractCedarRowFilters:
-    """Tests for _extract_cedar_row_filters."""
+    """Tests for _extract_cedar_row_filters.
 
-    def test_owner_equals_current_user(self) -> None:
-        """Basic owner_id = current_user condition produces row filter."""
-        spec = _make_access_spec(
-            [
-                _make_rule(
-                    AccessOperationKind.LIST,
-                    condition=_make_condition("owner_id", "current_user"),
-                ),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-123")
-        assert filters == {"owner_id": "user-123"}
+    One contract, one table: a rules list (plus the requesting user's
+    roles, when persona-scoped) maps to the row filters pushed to SQL.
+    `roles=None` means no auth context is supplied.
+    """
 
-    def test_read_rule_also_applies(self) -> None:
-        """READ permission rules also contribute to list row filters."""
-        spec = _make_access_spec(
-            [
-                _make_rule(
-                    AccessOperationKind.READ,
-                    condition=_make_condition("owner_id", "current_user"),
-                ),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-456")
-        assert filters == {"owner_id": "user-456"}
-
-    def test_non_list_read_rules_ignored(self) -> None:
-        """CREATE/UPDATE/DELETE rules are not used for row filtering."""
-        spec = _make_access_spec(
-            [
-                _make_rule(
-                    AccessOperationKind.CREATE,
-                    condition=_make_condition("owner_id", "current_user"),
-                ),
-                _make_rule(
-                    AccessOperationKind.UPDATE,
-                    condition=_make_condition("owner_id", "current_user"),
-                ),
-                _make_rule(
-                    AccessOperationKind.DELETE,
-                    condition=_make_condition("owner_id", "current_user"),
-                ),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-789")
-        assert filters == {}
-
-    def test_forbid_rules_ignored(self) -> None:
-        """FORBID rules are not used for row-level filtering."""
-        spec = _make_access_spec(
-            [
-                _make_rule(
-                    AccessOperationKind.LIST,
-                    condition=_make_condition("owner_id", "current_user"),
-                    effect=AccessPolicyEffect.FORBID,
-                ),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-123")
-        assert filters == {}
-
-    def test_unconditional_permit_skips_filtering(self) -> None:
-        """An unconditional permit rule means no row filtering needed."""
-        spec = _make_access_spec(
-            [
-                _make_rule(AccessOperationKind.LIST, condition=None),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-123")
-        assert filters == {}
-
-    def test_unconditional_permit_with_matching_persona(self) -> None:
-        """Unconditional permit with matching persona skips filtering."""
-
-        class FakeUser:
-            roles = ["admin"]
-
-        class FakeAuth:
-            is_authenticated = True  # auth Plan 1b: effective_roles needs this
-            user = FakeUser()
-
-        spec = _make_access_spec(
-            [
-                _make_rule(
-                    AccessOperationKind.LIST,
-                    condition=None,
-                    personas=["admin"],
-                ),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-123", auth_context=FakeAuth())
-        assert filters == {}
-
-    def test_unconditional_permit_with_non_matching_persona(self) -> None:
-        """Unconditional permit with non-matching persona doesn't grant unrestricted access."""
-
-        class FakeUser:
-            roles = ["viewer"]
-
-        class FakeAuth:
-            is_authenticated = True  # auth Plan 1b: effective_roles needs this
-            user = FakeUser()
-
-        spec = _make_access_spec(
-            [
-                _make_rule(
-                    AccessOperationKind.LIST,
-                    condition=_make_condition("owner_id", "current_user"),
-                    personas=["viewer"],
-                ),
-                _make_rule(
-                    AccessOperationKind.LIST,
-                    condition=None,
-                    personas=["admin"],
-                ),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-123", auth_context=FakeAuth())
-        assert filters == {"owner_id": "user-123"}
-
-    def test_no_permissions(self) -> None:
-        """Empty permissions list returns empty filters."""
-        spec = _make_access_spec([])
-        filters = _extract_cedar_row_filters(spec, "user-123")
-        assert filters == {}
+    @pytest.mark.parametrize(
+        ("rules", "roles", "expected"),
+        [
+            pytest.param(
+                # Basic owner_id = current_user condition produces row filter.
+                [
+                    _make_rule(
+                        AccessOperationKind.LIST,
+                        condition=_make_condition("owner_id", "current_user"),
+                    ),
+                ],
+                None,
+                {"owner_id": "user-123"},
+                id="owner-equals-current-user",
+            ),
+            pytest.param(
+                # READ permission rules also contribute to list row filters.
+                [
+                    _make_rule(
+                        AccessOperationKind.READ,
+                        condition=_make_condition("owner_id", "current_user"),
+                    ),
+                ],
+                None,
+                {"owner_id": "user-123"},
+                id="read-rule-also-applies",
+            ),
+            pytest.param(
+                # CREATE/UPDATE/DELETE rules are not used for row filtering.
+                [
+                    _make_rule(
+                        AccessOperationKind.CREATE,
+                        condition=_make_condition("owner_id", "current_user"),
+                    ),
+                    _make_rule(
+                        AccessOperationKind.UPDATE,
+                        condition=_make_condition("owner_id", "current_user"),
+                    ),
+                    _make_rule(
+                        AccessOperationKind.DELETE,
+                        condition=_make_condition("owner_id", "current_user"),
+                    ),
+                ],
+                None,
+                {},
+                id="non-list-read-rules-ignored",
+            ),
+            pytest.param(
+                # FORBID rules are not used for row-level filtering.
+                [
+                    _make_rule(
+                        AccessOperationKind.LIST,
+                        condition=_make_condition("owner_id", "current_user"),
+                        effect=AccessPolicyEffect.FORBID,
+                    ),
+                ],
+                None,
+                {},
+                id="forbid-rules-ignored",
+            ),
+            pytest.param(
+                # An unconditional permit rule means no row filtering needed.
+                [_make_rule(AccessOperationKind.LIST, condition=None)],
+                None,
+                {},
+                id="unconditional-permit-skips-filtering",
+            ),
+            pytest.param(
+                # Unconditional permit with matching persona skips filtering.
+                [
+                    _make_rule(
+                        AccessOperationKind.LIST,
+                        condition=None,
+                        personas=["admin"],
+                    ),
+                ],
+                ["admin"],
+                {},
+                id="unconditional-permit-matching-persona",
+            ),
+            pytest.param(
+                # Unconditional permit with non-matching persona doesn't
+                # grant unrestricted access.
+                [
+                    _make_rule(
+                        AccessOperationKind.LIST,
+                        condition=_make_condition("owner_id", "current_user"),
+                        personas=["viewer"],
+                    ),
+                    _make_rule(
+                        AccessOperationKind.LIST,
+                        condition=None,
+                        personas=["admin"],
+                    ),
+                ],
+                ["viewer"],
+                {"owner_id": "user-123"},
+                id="unconditional-permit-non-matching-persona",
+            ),
+            pytest.param(
+                # Empty permissions list returns empty filters.
+                [],
+                None,
+                {},
+                id="no-permissions",
+            ),
+            pytest.param(
+                # AND conditions produce multiple SQL filters.
+                [
+                    _make_rule(
+                        AccessOperationKind.LIST,
+                        condition=_make_and_condition(
+                            _make_condition("owner_id", "current_user"),
+                            _make_condition("status", "active"),
+                        ),
+                    ),
+                ],
+                None,
+                {"owner_id": "user-123", "status": "active"},
+                id="and-condition-both-extracted",
+            ),
+            pytest.param(
+                # OR conditions are not pushed to SQL.
+                [
+                    _make_rule(
+                        AccessOperationKind.LIST,
+                        condition=_make_or_condition(
+                            _make_condition("owner_id", "current_user"),
+                            _make_condition("is_public", True),
+                        ),
+                    ),
+                ],
+                None,
+                {},
+                id="or-condition-not-pushed-to-sql",
+            ),
+            pytest.param(
+                # Rule with persona that doesn't match user's roles is skipped.
+                [
+                    _make_rule(
+                        AccessOperationKind.LIST,
+                        condition=_make_condition("department_id", "current_user"),
+                        personas=["manager"],
+                    ),
+                ],
+                ["viewer"],
+                {},
+                id="persona-scoped-rule-wrong-role",
+            ),
+        ],
+    )
+    def test_rules_map_to_row_filters(
+        self,
+        rules: list[PermissionRuleSpec],
+        roles: list[str] | None,
+        expected: dict[str, object],
+    ) -> None:
+        spec = _make_access_spec(rules)
+        auth_context = _FakeAuth(roles) if roles is not None else None
+        filters = _extract_cedar_row_filters(spec, "user-123", auth_context=auth_context)
+        assert filters == expected
 
     def test_no_permissions_attr(self) -> None:
         """Spec without permissions attribute returns empty filters."""
@@ -218,60 +273,6 @@ class TestExtractCedarRowFilters:
             pass
 
         filters = _extract_cedar_row_filters(FakeSpec(), "user-123")
-        assert filters == {}
-
-    def test_and_condition_both_extracted(self) -> None:
-        """AND conditions produce multiple SQL filters."""
-        spec = _make_access_spec(
-            [
-                _make_rule(
-                    AccessOperationKind.LIST,
-                    condition=_make_and_condition(
-                        _make_condition("owner_id", "current_user"),
-                        _make_condition("status", "active"),
-                    ),
-                ),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-123")
-        assert filters == {"owner_id": "user-123", "status": "active"}
-
-    def test_or_condition_not_pushed_to_sql(self) -> None:
-        """OR conditions are not pushed to SQL."""
-        spec = _make_access_spec(
-            [
-                _make_rule(
-                    AccessOperationKind.LIST,
-                    condition=_make_or_condition(
-                        _make_condition("owner_id", "current_user"),
-                        _make_condition("is_public", True),
-                    ),
-                ),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-123")
-        assert filters == {}
-
-    def test_persona_scoped_rule_wrong_role(self) -> None:
-        """Rule with persona that doesn't match user's roles is skipped."""
-
-        class FakeUser:
-            roles = ["viewer"]
-
-        class FakeAuth:
-            is_authenticated = True  # auth Plan 1b: effective_roles needs this
-            user = FakeUser()
-
-        spec = _make_access_spec(
-            [
-                _make_rule(
-                    AccessOperationKind.LIST,
-                    condition=_make_condition("department_id", "current_user"),
-                    personas=["manager"],
-                ),
-            ]
-        )
-        filters = _extract_cedar_row_filters(spec, "user-123", auth_context=FakeAuth())
         assert filters == {}
 
 
