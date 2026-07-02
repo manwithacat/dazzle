@@ -80,12 +80,10 @@ def _import_demo_data():
     spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.demo_data",
         module_path,
-        submodule_search_locations=[],
     )
     module = importlib.util.module_from_spec(spec)
 
     # Set up the package structure for relative imports
-    module.__package__ = "dazzle.mcp.server.handlers"
     sys.modules["dazzle.mcp.server.handlers.demo_data"] = module
 
     spec.loader.exec_module(module)

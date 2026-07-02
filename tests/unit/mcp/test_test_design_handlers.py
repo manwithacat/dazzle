@@ -83,10 +83,8 @@ def _import_test_design():
     ser_spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.serializers",
         ser_path,
-        submodule_search_locations=[],
     )
     ser_mod = importlib.util.module_from_spec(ser_spec)
-    ser_mod.__package__ = "dazzle.mcp.server.handlers"
     sys.modules["dazzle.mcp.server.handlers.serializers"] = ser_mod
     ser_spec.loader.exec_module(ser_mod)
 
@@ -101,10 +99,8 @@ def _import_test_design():
         sub_spec = importlib.util.spec_from_file_location(
             f"dazzle.mcp.server.handlers.test_design.{submod_name}",
             submod_path,
-            submodule_search_locations=[],
         )
         sub_module = importlib.util.module_from_spec(sub_spec)
-        sub_module.__package__ = "dazzle.mcp.server.handlers.test_design"
         sys.modules[f"dazzle.mcp.server.handlers.test_design.{submod_name}"] = sub_module
         sub_spec.loader.exec_module(sub_module)
 
@@ -116,7 +112,6 @@ def _import_test_design():
         submodule_search_locations=[str(pkg_dir)],
     )
     module = importlib.util.module_from_spec(spec)
-    module.__package__ = "dazzle.mcp.server.handlers.test_design"
     sys.modules["dazzle.mcp.server.handlers.test_design"] = module
 
     spec.loader.exec_module(module)

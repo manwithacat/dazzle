@@ -5,11 +5,24 @@ appspec/connection-runner). The real-PG apply proof is in
 ``tests/integration/test_rls_apply_and_drift_pg.py`` (Task 4).
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import DEFAULT, MagicMock, patch
 
 from typer.testing import CliRunner
 
 from dazzle.cli.db import db_app
+
+
+def _close_coro(coro):  # pragma: no cover - test plumbing
+    """Consume the coroutine handed to the mocked asyncio.run.
+
+    The production code builds a real ``_run_with_connection(...)`` coroutine
+    and passes it to ``asyncio.run``; a bare MagicMock drops it un-awaited
+    (RuntimeWarning). Returning DEFAULT keeps ``mock_run.return_value``
+    semantics intact.
+    """
+    coro.close()
+    return DEFAULT
+
 
 runner = CliRunner()
 
@@ -53,7 +66,7 @@ class TestApplyRlsNonTenant:
 
 
 class TestApplyRlsSharedSchema:
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db._resolve_url")
     @patch("dazzle.cli.db.load_project_appspec")
     def test_shared_schema_invokes_apply(
@@ -77,7 +90,7 @@ class TestApplyRlsSharedSchema:
         # The owner-role note is surfaced.
         assert "owns the tables" in result.output
 
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db._resolve_url")
     @patch("dazzle.cli.db.load_project_appspec")
     def test_shared_schema_json_reports_count(
@@ -95,7 +108,7 @@ class TestApplyRlsSharedSchema:
         assert result.exit_code == 0
         assert '"applied": 1' in result.output
 
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db._resolve_url")
     @patch("dazzle.cli.db.load_project_appspec")
     def test_apply_failure_exits_nonzero_with_owner_hint(
@@ -109,7 +122,12 @@ class TestApplyRlsSharedSchema:
         # owner-role hint, not dump a raw driver traceback.
         mock_load.return_value = _shared_schema_appspec()
         mock_resolve.return_value = "postgresql://localhost/db"
-        mock_run.side_effect = RuntimeError("permission denied for table Project")
+
+        def _close_then_raise(coro):  # close the coro, then simulate the driver error
+            coro.close()
+            raise RuntimeError("permission denied for table Project")
+
+        mock_run.side_effect = _close_then_raise
 
         result = runner.invoke(db_app, ["apply-rls"])
 
@@ -132,7 +150,7 @@ class TestDbUpgradeRlsHook:
     mocking style.
     """
 
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db.load_project_appspec")
     @patch("dazzle.cli.db._safe_current_revision")
     @patch("dazzle.cli.db._validate_revision_widths")
@@ -160,7 +178,7 @@ class TestDbUpgradeRlsHook:
         # No-op for a non-shared_schema app — the connection runner is NOT driven.
         assert not mock_run.called
 
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db.load_project_appspec")
     @patch("dazzle.cli.db._safe_current_revision")
     @patch("dazzle.cli.db._validate_revision_widths")
@@ -188,7 +206,7 @@ class TestDbUpgradeRlsHook:
         assert result.exit_code == 0
         assert not mock_run.called
 
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db.load_project_appspec")
     @patch("dazzle.cli.db._safe_current_revision")
     @patch("dazzle.cli.db._validate_revision_widths")
@@ -211,7 +229,12 @@ class TestDbUpgradeRlsHook:
         mock_cfg.return_value.get_main_option.return_value = "postgresql://localhost/db"
         mock_rev.side_effect = ["base", "head"]
         mock_load.return_value = _shared_schema_appspec()
-        mock_run.side_effect = RuntimeError("permission denied for table Project")
+
+        def _close_then_raise(coro):  # close the coro, then simulate the driver error
+            coro.close()
+            raise RuntimeError("permission denied for table Project")
+
+        mock_run.side_effect = _close_then_raise
 
         result = runner.invoke(db_app, ["upgrade"])
 
@@ -225,7 +248,7 @@ class TestDbUpgradeRlsHook:
         assert "NOT enforced" in result.output
         assert "dazzle db apply-rls" in result.output
 
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db.load_project_appspec")
     @patch("dazzle.cli.db._safe_current_revision")
     @patch("dazzle.cli.db._validate_revision_widths")

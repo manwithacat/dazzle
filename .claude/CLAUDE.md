@@ -391,6 +391,16 @@ Every chart region compiles to one `Repository.aggregate` call which runs one sc
 
 Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`) and `pivot_table` (`group_by: [system, severity]`) regions.
 
+## Test Authoring — Distillation Feedback Loop
+
+Before adding non-trivial tests, consult `tests/audit/` (the suite-distillation artifacts; strategy in `docs/proposals/Suite Distillation Strategy.md`):
+
+- **`redundancy_report.md`** — if the file you're extending already carries a cluster matching your new test's assertion shape, extend the existing `@pytest.mark.parametrize` set instead of adding a standalone test. Same rule cross-file: `cross_file_report.md` lists copy-pasted shapes spanning handler/parser files.
+- **`taxonomy_report.md`** — don't add the flagged archetypes: implementation mirrors (importing private `_`-callables + heavy mocking) or tautologies. One behaviour = one test; the suite runs 20k tests at ~7 ms each, so count is cheap but attention-per-failure and cluster bloat are not.
+- Regenerate after large test additions: `python scripts/distill/classify.py && python scripts/distill/cluster.py && python scripts/distill/cross_file.py` (the 19 MB `classification.json` stays gitignored; the five summary artifacts are committed).
+
+Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 min; per-worker Postgres databases are provisioned automatically when a DB URL is set). Tests that boot an app subprocess against a repo directory (not `tmp_path`) must carry an `xdist_group` pin naming that directory's cohort.
+
 ## Gotchas
 
 - **MCP test isolation**: Tests that mock `mcp.*` modules pollute `sys.modules`. The `tests/unit/conftest.py` 3-phase fixture handles this — don't bypass it.
@@ -399,4 +409,4 @@ Example: `examples/ops_dashboard` has working `bar_chart` (FK `group_by: system`
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.92.80 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.92.81 | **Python**: 3.12+ | **Status**: Production Ready

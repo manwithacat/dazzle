@@ -97,12 +97,10 @@ def _import_api_packs():
     spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.api_packs",
         module_path,
-        submodule_search_locations=[],
     )
     module = importlib.util.module_from_spec(spec)
 
     # Set up the package structure for relative imports
-    module.__package__ = "dazzle.mcp.server.handlers"
     sys.modules["dazzle.mcp.server.handlers.api_packs"] = module
 
     spec.loader.exec_module(module)

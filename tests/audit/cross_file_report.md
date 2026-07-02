@@ -6,99 +6,102 @@ Three structural views the per-file Pass-2 redundancy report doesn't capture.
 
 Tests sharing the same `(class_name, assertion_shape)` across multiple files. Often means a test pattern was copy-pasted across handler/parser files; one parametric test could replace many.
 
-- **Clusters of size ≥4 across ≥2 files**: 46
-- **Tests inside cross-file clusters**: 593
-- **Theoretical saving**: ~547 if each cluster collapses to one parametric test
+- **Clusters of size ≥4 across ≥2 files**: 133
+- **Tests inside cross-file clusters**: 4,497
+- **Theoretical saving**: ~4,364 if each cluster collapses to one parametric test
 
 ### Top 25 cross-file clusters
 
 | Class | Size | Files | Sample tests |
 |---|---:|---|---|
-| `(module)` | 117 | `test_golden_master.py`, `test_runtime_e2e.py`, `test_backlog_findings.py` (+47 more) | test_dsl_parsing_is_deterministic, test_example_validates… |
-| `(module)` | 72 | `test_attempted.py`, `test_mission.py`, `test_tools.py` (+31 more) | test_mark_attempted_updates_entry, test_null_observer_returns_empty_state… |
-| `(module)` | 56 | `test_end_to_end.py`, `test_e2e_handler.py`, `test_agent_commands_handler.py` (+22 more) | test_error_handling_invalid_reference, test_describe_mode_returns_error_on_unknown… |
-| `(module)` | 39 | `test_case_file.py`, `test_tools.py`, `test_fitness_handler.py` (+20 more) | test_to_prompt_text_large_file_line_number_width, test_read_file_rejects_absolute_path… |
-| `(module)` | 26 | `test_case_file.py`, `test_budget.py`, `test_contract_parser.py` (+13 more) | test_build_case_file_no_file_path_in_evidence_yields_none_locus, test_build_case_file_extracted_file_missing_yields_none_locus… |
-| `(module)` | 22 | `test_proposal.py`, `test_config.py`, `test_models.py` (+9 more) | test_proposal_construction, test_load_config_honours_overrides… |
-| `(module)` | 16 | `test_attempted.py`, `test_tools.py`, `test_cross_check.py` (+8 more) | test_save_load_round_trip, test_rebuild_from_blocked_artefact… |
-| `(module)` | 16 | `test_tools.py`, `test_agent_command_models.py`, `test_agent_commands_handler.py` (+9 more) | test_read_file_missing_with_similar_suggestions, test_render_improve_skill… |
-| `(module)` | 15 | `test_mode_a_integration.py`, `test_api_surface_drift.py`, `test_auth_schema_exclusion.py` (+8 more) | test_mode_a_stale_lock_recovery, test_surface_matches_baseline… |
-| `(module)` | 14 | `test_bulk_count_via_data_attr.py`, `test_completeness_rules.py`, `test_component_rules.py` (+5 more) | test_bulk_actions_no_x_show_or_x_text, test_pagination_no_x_show_or_x_text… |
-| `(module)` | 11 | `test_comparator.py`, `test_independence.py`, `test_interlock.py` (+5 more) | test_same_findings_no_regression, test_finding_cleared_with_no_new_findings… |
-| `(module)` | 11 | `test_animation_tokens.py`, `test_heading_scale_tokens.py`, `test_optimistic_redo_reconcile.py` (+1 more) | test_animation_tokens_reference_existing_keyframes, test_workspace_title_uses_token… |
-| `(module)` | 11 | `test_compliance_review.py`, `test_compliance_slicer.py`, `test_ir.py` (+4 more) | test_new_schema_review, test_summary_recalculated… |
-| `TestEdgeCases` | 9 | `test_entity_list_projections.py`, `test_example_index.py`, `test_search_schema_ddl.py` (+1 more) | test_surface_without_view_ref_or_sections_not_projected, test_surface_with_missing_view_ignored… |
-| `(module)` | 7 | `test_runner.py`, `test_api_kb_project_local.py`, `test_fitness_repr_parser.py` (+2 more) | test_walk_queue_top_n, test_project_local_overrides_builtin… |
-| `(module)` | 7 | `test_fitness_strategy_integration.py`, `test_walker.py`, `test_constraint_errors.py` (+2 more) | test_fitness_strategy_calls_engine_run, test_walker_records_error_on_executor_failure… |
-| `(module)` | 6 | `test_case_file.py`, `test_api_kb_project_local.py`, `test_compliance_citation.py` (+2 more) | test_build_case_file_empty_locus_file, test_locus_windowing_no_evidence_lines… |
-| `(module)` | 6 | `test_triage_cli.py`, `test_agent_command_models.py`, `test_rhythm_ir.py` (+2 more) | test_queue_json_output, test_loop_config_fields… |
-| `(module)` | 6 | `test_alpine_error_handler.py`, `test_htmx_preload_silence.py`, `test_idiomorph_alpine_patch.py` (+2 more) | test_handler_wraps_in_real_error, test_silence_calls_prevent_default… |
-| `(module)` | 6 | `test_alpine_error_handler.py`, `test_cli.py`, `test_filter_ref_select_cancellation.py` (+2 more) | test_handler_includes_expression_in_message, test_handler_attaches_cause… |
-| `(module)` | 6 | `test_completeness_rules.py`, `test_component_rules.py`, `test_notification_email_shape.py` (+2 more) | test_create_permit_no_create_surface_produces_create_relevance, test_entity_with_permissions_and_no_surfaces_is_unreachable… |
-| `TestMoneyFieldExpansion` | 6 | `test_entity_list_projections.py`, `test_fidelity_scorer.py` | test_money_field_expands_to_minor_and_currency, test_multiple_money_fields_all_expand… |
-| `(module)` | 6 | `test_fuzz_runtime_importable.py`, `test_openapi_importer.py`, `test_quick_wins.py` | test_richtext_battery_present, test_scaffold_blank_basic… |
-| `TestUploadTicketRoute` | 6 | `test_storage_cycle3.py`, `test_storage_cycle5.py` | test_registers_route_for_storage_field, test_no_route_for_entity_without_storage_field… |
-| `TestRegionContextWiring` | 6 | `test_workspace_reference_overlays.py`, `test_workspace_routes.py` | test_line_overlays_flatten_to_dicts, test_action_passed_through… |
+| `(module)` | 1067 | `test_acme_billing_rbac.py`, `test_auth_orgprovision_pg.py`, `test_connection_admin_routes.py` (+343 more) | test_idor_foreign_org_invoice_returns_404, test_bulk_action_denied_for_unpermitted_role… |
+| `(module)` | 363 | `test_acme_billing_rbac.py`, `test_auth_activation_pg.py`, `test_auth_login_magic_link_chrome_gate.py` (+181 more) | test_sensitive_invoice_denied_to_contractor, test_password_login_no_membership_redirects_to_no_orgs_when_required… |
+| `(module)` | 360 | `test_auth_password_reset_chrome_gate.py`, `test_connection_admin_routes.py`, `test_connections_pg.py` (+137 more) | test_post_forgot_password_logs_reset_link_for_dev_pickup, test_create_path_is_csrf_protected… |
+| `(module)` | 233 | `test_auth_activation_pg.py`, `test_auth_orgprovision_pg.py`, `test_connections_pg.py` (+118 more) | test_set_session_active_membership_rejects_suspended, test_server_config_defaults_auto_provision_off… |
+| `(module)` | 228 | `test_auth_login_magic_link_chrome_gate.py`, `test_auth_signup_magic_link_chrome_gate.py`, `test_connections_pg.py` (+105 more) | test_post_magic_link_logs_link_url_for_dev_pickup, test_login_falls_back_to_log_mailer_when_unregistered… |
+| `(module)` | 141 | `test_connection_admin_routes.py`, `test_connections_pg.py`, `test_enterprise_routes.py` (+53 more) | test_page_only_shows_active_orgs_connections, test_page_shows_rotation_history… |
+| `(module)` | 132 | `test_app_shell_primitive.py`, `test_error_page_primitive.py`, `test_insight_narrative.py` (+63 more) | test_app_shell_sanitises_invalid_sidebar_state, test_error_page_home_label_customisable… |
+| `(module)` | 118 | `test_access_review_pg.py`, `test_acme_billing_rbac.py`, `test_auth_login_magic_link_chrome_gate.py` (+72 more) | test_cli_access_review_rejects_bad_as_of, test_org_owner_create_is_scoped_to_own_org… |
+| `(module)` | 112 | `test_app_shell_primitive.py`, `test_error_page_primitive.py`, `test_insight_narrative.py` (+65 more) | test_app_shell_omits_sidebar_aside_when_no_sidebar, test_error_page_omits_home_link_when_no_href… |
+| `(module)` | 101 | `test_mode_a_integration.py`, `test_simple_task_chrome_smoke.py`, `test_container_primitives.py` (+62 more) | test_mode_a_stale_lock_recovery, test_simple_task_chrome_smoke_no_route_returns_5xx… |
+| `(module)` | 92 | `test_access_review_pg.py`, `test_auth_login_magic_link_chrome_gate.py`, `test_auth_orgprovision_pg.py` (+59 more) | test_access_review_as_of_excludes_later_changes, test_post_magic_link_unknown_email_redirects_same_no_token… |
+| `(module)` | 86 | `test_auth_activation_pg.py`, `test_connections_pg.py`, `test_comparator.py` (+63 more) | test_cross_tenant_guard_fails_closed_without_membership, test_grace_expiry_rejects_old_bearer… |
+| `(module)` | 86 | `test_examples_fragment_http.py`, `test_render_clause_linking.py`, `test_tools.py` (+56 more) | test_simple_task_create_form_text_field_renders_as_textarea, test_simple_task_create_form_enum_field_renders_as_select… |
+| `(module)` | 84 | `test_sentinel_findings_mcp_catalogue.py`, `test_archetype_profile.py`, `test_atomic_flow_invariants.py` (+24 more) | test_catalogue_url_in_remediation_references, test_profile_without_shared_schema_is_a_validation_error… |
+| `(module)` | 66 | `test_auth_orgprovision_pg.py`, `test_auth_password_reset_chrome_gate.py`, `test_auth_signup_magic_link_chrome_gate.py` (+49 more) | test_ensure_single_org_membership_first_and_second_user, test_post_reset_password_mismatched_redirects_back_with_error… |
+| `(module)` | 46 | `test_fidelity_integration.py`, `test_error_page_primitive.py`, `test_navigation_primitives.py` (+32 more) | test_mcp_handler_returns_valid_json, test_error_page_emits_section_with_code_and_message… |
+| `(module)` | 41 | `test_auth_password_mode_chrome_gate.py`, `test_auth_password_reset_chrome_gate.py`, `test_engine_baseline_parity_pg.py` (+23 more) | test_get_login_password_mode_renders_invalid_credentials_error, test_get_signup_renders_mismatch_error… |
+| `(module)` | 39 | `test_auth_activation_pg.py`, `test_connections_pg.py`, `test_dispatch_render.py` (+25 more) | test_set_session_active_membership_rejects_foreign_membership, test_delete_connection… |
+| `(module)` | 39 | `test_auth_password_reset_chrome_gate.py`, `test_examples_fragment_http.py`, `test_member_admin_pg.py` (+26 more) | test_get_forgot_password_sent_chrome_on_renders_typed_view, test_get_forgot_password_sent_chrome_off_also_renders_typed_view… |
+| `(module)` | 35 | `test_tenant_rls_constraints_pg.py`, `test_attempted.py`, `test_context.py` (+20 more) | test_composite_fk_rejects_cross_tenant_reference, test_uniqueness_is_tenant_scoped… |
+| `(module)` | 30 | `test_auth_password_reset_chrome_gate.py`, `test_org_invitations_pg.py`, `test_scim_routes.py` (+21 more) | test_post_reset_password_success_updates_password_and_redirects, test_invite_route_authz_gate… |
+| `(module)` | 29 | `test_auth_activation_pg.py`, `test_qa_auth_containment_pg.py`, `test_qa_trial_signing.py` (+24 more) | test_password_login_multi_membership_redirects_to_picker, test_password_login_no_membership_proceeds_by_default… |
+| `(module)` | 29 | `test_create_time_tenant_injection_pg.py`, `test_member_admin_pg.py`, `test_runner.py` (+23 more) | test_scoped_insert_omitting_tenant_id_autofills_from_bound_guc, test_cross_org_target_is_rejected… |
+| `(module)` | 29 | `test_examples_fragment_http.py`, `test_insight_narrative.py`, `test_renderer_containers.py` (+21 more) | test_fragment_chrome_default_assets_when_state_unset, test_non_additive_skips_total_and_pct… |
+| `(module)` | 28 | `test_migration_engine_pg.py`, `test_tools.py`, `test_format_cell.py` (+18 more) | test_db_migrate_generates_and_applies_via_engine, test_read_file_traversal_guard… |
 
 ## View 2 — Implementation-mirror file candidates
 
 Files dominated by tests that pin internal call shapes (high mocks, short body, low public-import diversity). Strategy doc tags these as the highest-leverage *deletion* targets — replace with one canonical behavior test per shape.
 
-- **Files flagged**: 10
-- **Tests in flagged files**: 136
+- **Files flagged**: 13
+- **Tests in flagged files**: 168
 
 ### Top 30 candidates (by test count)
 
 | File | Tests | Mirror share | Avg mocks | Avg body | Avg asserts | Priv imports/test |
 |---|---:|---:|---:|---:|---:|---:|
-| `tests/unit/test_agent_core.py` | 33 | 0.0 | 2.0 | 17.5 | 2.1 | 0.0 |
-| `tests/unit/test_composition_styles.py` | 17 | 0.0 | 4.3 | 15.7 | 1.9 | 0.0 |
+| `tests/unit/test_agent_core.py` | 29 | 0.0 | 2.0 | 19.0 | 2.4 | 0.0 |
+| `tests/unit/test_cli_db_ops.py` | 23 | 0.0 | 2.4 | 16.2 | 2.1 | 0.4 |
 | `tests/unit/test_domain_user_attributes.py` | 14 | 0.5 | 1.7 | 18.9 | 2.5 | 0.5 |
+| `tests/unit/test_composition_styles.py` | 12 | 0.0 | 4.9 | 19.0 | 2.1 | 0.0 |
+| `tests/unit/test_email_verification_routes.py` | 12 | 0.0 | 2.2 | 12.7 | 2.0 | 0.2 |
 | `tests/unit/test_mapping_executor_cache.py` | 12 | 0.0 | 2.4 | 17.2 | 1.9 | 0.0 |
-| `tests/unit/test_cli_tenant.py` | 11 | 0.0 | 4.1 | 10.6 | 2.4 | 0.0 |
-| `tests/unit/test_github_issues.py` | 11 | 0.0 | 2.0 | 8.8 | 1.6 | 0.4 |
-| `tests/unit/test_interaction_server_fixture.py` | 10 | 0.0 | 3.0 | 16.8 | 1.2 | 0.3 |
-| `tests/unit/test_version_manager_pg.py` | 10 | 0.0 | 3.6 | 15.7 | 1.6 | 0.0 |
-| `tests/unit/test_cli_db_ops.py` | 9 | 0.0 | 2.6 | 13.6 | 2.2 | 0.0 |
-| `tests/unit/test_tenant_registry.py` | 9 | 0.0 | 2.4 | 16.0 | 1.7 | 0.0 |
+| `tests/unit/test_tenant_registry.py` | 11 | 0.0 | 2.6 | 18.5 | 1.7 | 0.1 |
+| `tests/unit/test_auth_subsystem_jwt_wiring.py` | 10 | 0.0 | 2.2 | 20.4 | 2.6 | 0.0 |
+| `tests/unit/test_worker_postgres_wiring.py` | 10 | 0.1 | 2.0 | 23.8 | 1.7 | 0.4 |
+| `tests/unit/test_cli_tenant.py` | 9 | 0.0 | 4.2 | 12.3 | 2.4 | 0.0 |
+| `tests/unit/test_github_issues.py` | 9 | 0.0 | 2.4 | 11.3 | 2.0 | 0.4 |
+| `tests/unit/test_interaction_server_fixture.py` | 9 | 0.0 | 2.7 | 16.3 | 1.3 | 0.2 |
+| `tests/unit/test_custom_mode_dispatch.py` | 8 | 0.0 | 2.0 | 18.2 | 2.9 | 1.0 |
 
 ## View 3 — Twin file pairs (body-shape multiset overlap ≥70%)
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 7144
+- **Twin pairs**: 13827
 
 ### Top 30 twin pairs
 
 | File A | File B | A | B | Shared | Overlap |
 |---|---|---:|---:|---:|---:|
-| `test_dz_richtext.py` | `test_workspace_routes.py` | 87 | 394 | 75 | 0.86 |
-| `test_workspace_rendering.py` | `test_workspace_routes.py` | 61 | 394 | 52 | 0.85 |
-| `test_pdf_viewer_component.py` | `test_workspace_routes.py` | 49 | 394 | 42 | 0.86 |
-| `test_persona_journey.py` | `test_workspace_routes.py` | 56 | 394 | 41 | 0.73 |
-| `test_agent_integration_dependency.py` | `test_agent_performance_resource.py` | 41 | 47 | 38 | 0.93 |
-| `test_dsl_emitter.py` | `test_workspace_routes.py` | 51 | 394 | 38 | 0.75 |
-| `test_agent_performance_resource.py` | `test_workspace_routes.py` | 47 | 394 | 37 | 0.79 |
-| `test_composition_audit.py` | `test_dsl_emitter.py` | 89 | 51 | 37 | 0.73 |
-| `test_aggregate_sql.py` | `test_workspace_routes.py` | 48 | 394 | 36 | 0.75 |
-| `test_composition_visual.py` | `test_workspace_routes.py` | 51 | 394 | 36 | 0.71 |
-| `test_fidelity_scorer.py` | `test_workspace_routes.py` | 36 | 394 | 36 | 1.0 |
-| `test_mapping_executor.py` | `test_parser.py` | 46 | 131 | 35 | 0.76 |
-| `test_dashboard_builder_triggers.py` | `test_workspace_routes.py` | 34 | 394 | 34 | 1.0 |
-| `test_parser.py` | `test_rbac_enforcement.py` | 131 | 45 | 34 | 0.76 |
-| `test_richtext_processor.py` | `test_workspace_routes.py` | 40 | 394 | 34 | 0.85 |
-| `test_agent_deployment_state.py` | `test_agent_integration_dependency.py` | 45 | 41 | 33 | 0.8 |
-| `test_agent_deployment_state.py` | `test_agent_performance_resource.py` | 45 | 47 | 33 | 0.73 |
-| `test_agent_deployment_state.py` | `test_workspace_routes.py` | 45 | 394 | 33 | 0.73 |
-| `test_agent_integration_dependency.py` | `test_workspace_routes.py` | 41 | 394 | 33 | 0.8 |
-| `test_docker_generation.py` | `test_workspace_routes.py` | 36 | 394 | 33 | 0.92 |
-| `test_fidelity_scorer.py` | `test_parser.py` | 36 | 131 | 33 | 0.92 |
-| `test_parser.py` | `test_vendor_mock_generator.py` | 131 | 36 | 33 | 0.92 |
-| `test_rbac_enforcement.py` | `test_workspace_routes.py` | 45 | 394 | 33 | 0.73 |
-| `test_site_templates.py` | `test_workspace_routes.py` | 38 | 394 | 33 | 0.87 |
-| `test_agent_integration_dependency.py` | `test_agent_operational_hygiene.py` | 41 | 34 | 32 | 0.94 |
-| `test_expression_lang.py` | `test_vendor_mock_generator.py` | 83 | 36 | 32 | 0.89 |
-| `test_vendor_mock_generator.py` | `test_workspace_routes.py` | 36 | 394 | 32 | 0.89 |
-| `test_agent_data_integrity.py` | `test_workspace_routes.py` | 32 | 394 | 31 | 0.97 |
-| `test_agent_integration_dependency.py` | `test_fidelity_scorer.py` | 41 | 36 | 31 | 0.86 |
-| `test_agent_operational_hygiene.py` | `test_agent_performance_resource.py` | 34 | 47 | 31 | 0.91 |
+| `test_parser.py` | `test_rbac_verifier.py` | 143 | 59 | 45 | 0.76 |
+| `test_data_primitives.py` | `test_parser.py` | 46 | 143 | 42 | 0.91 |
+| `test_fidelity_scorer.py` | `test_rbac_verifier.py` | 36 | 59 | 35 | 0.97 |
+| `test_pdf_viewer_component.py` | `test_region_adapter.py` | 49 | 169 | 35 | 0.71 |
+| `test_composition_audit.py` | `test_dsl_emitter.py` | 89 | 48 | 34 | 0.71 |
+| `test_fidelity_scorer.py` | `test_parser.py` | 36 | 143 | 34 | 0.94 |
+| `test_mapping_executor.py` | `test_parser.py` | 40 | 143 | 31 | 0.78 |
+| `test_cohort_strip_data_resolution.py` | `test_parser.py` | 30 | 143 | 30 | 1.0 |
+| `test_cohort_strip_data_resolution.py` | `test_rbac_verifier.py` | 30 | 59 | 30 | 1.0 |
+| `test_agent_business_logic.py` | `test_persona_journey.py` | 29 | 56 | 29 | 1.0 |
+| `test_agent_performance_resource.py` | `test_parser.py` | 40 | 143 | 29 | 0.72 |
+| `test_agent_performance_resource.py` | `test_rbac_verifier.py` | 40 | 59 | 29 | 0.72 |
+| `test_region_adapter.py` | `test_site_section_medium_builders.py` | 169 | 38 | 29 | 0.76 |
+| `test_region_adapter.py` | `test_two_factor_views.py` | 169 | 30 | 29 | 0.97 |
+| `test_data_primitives.py` | `test_agent_business_logic.py` | 46 | 29 | 28 | 0.97 |
+| `test_agent_business_logic.py` | `test_parser.py` | 29 | 143 | 28 | 0.97 |
+| `test_agent_business_logic.py` | `test_rbac_verifier.py` | 29 | 59 | 28 | 0.97 |
+| `test_agent_performance_resource.py` | `test_cohort_strip_data_resolution.py` | 40 | 30 | 28 | 0.93 |
+| `test_agent_performance_resource.py` | `test_fidelity_scorer.py` | 40 | 36 | 28 | 0.78 |
+| `test_cedar_row_filters.py` | `test_cohort_strip_data_resolution.py` | 28 | 30 | 28 | 1.0 |
+| `test_cedar_row_filters.py` | `test_fidelity_scorer.py` | 28 | 36 | 28 | 1.0 |
+| `test_cedar_row_filters.py` | `test_parser.py` | 28 | 143 | 28 | 1.0 |
+| `test_cedar_row_filters.py` | `test_rbac_verifier.py` | 28 | 59 | 28 | 1.0 |
+| `test_cohort_strip_data_resolution.py` | `test_fidelity_scorer.py` | 30 | 36 | 28 | 0.93 |
+| `test_composition_audit.py` | `test_qa_trial.py` | 89 | 39 | 28 | 0.72 |
+| `test_docker_generation.py` | `test_region_adapter.py` | 35 | 169 | 28 | 0.8 |
+| `test_parser.py` | `test_structured_content.py` | 143 | 32 | 28 | 0.88 |
+| `test_data_primitives.py` | `test_cohort_strip_data_resolution.py` | 46 | 30 | 27 | 0.9 |
+| `test_agent_auth.py` | `test_persona_journey.py` | 28 | 56 | 27 | 0.96 |
+| `test_agent_business_logic.py` | `test_expression_lang.py` | 29 | 83 | 27 | 0.93 |

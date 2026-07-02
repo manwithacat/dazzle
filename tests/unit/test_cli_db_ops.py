@@ -1,6 +1,6 @@
 """Tests for dazzle db CLI commands (status, verify, reset, cleanup, stamp, baseline)."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import DEFAULT, MagicMock, patch
 
 import pytest
 import sqlalchemy
@@ -13,11 +13,24 @@ from dazzle.cli.db import (
     db_app,
 )
 
+
+def _close_coro(coro):  # pragma: no cover - test plumbing
+    """Consume the coroutine handed to the mocked asyncio.run.
+
+    The production code builds a real ``_run_with_connection(...)`` coroutine
+    and passes it to ``asyncio.run``; a bare MagicMock drops it un-awaited
+    (RuntimeWarning). Returning DEFAULT keeps ``mock_run.return_value``
+    semantics intact.
+    """
+    coro.close()
+    return DEFAULT
+
+
 runner = CliRunner()
 
 
 class TestDbStatusCommand:
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db.load_project_appspec")
     def test_status_shows_entities(self, mock_load: MagicMock, mock_run: MagicMock) -> None:
         appspec = MagicMock()
@@ -40,7 +53,7 @@ class TestDbStatusCommand:
 
 
 class TestDbVerifyCommand:
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db.load_project_appspec")
     def test_verify_shows_results(self, mock_load: MagicMock, mock_run: MagicMock) -> None:
         appspec = MagicMock()
@@ -71,7 +84,7 @@ class TestDbVerifyCommand:
             or "valid" in result.output.lower()
         )
 
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db.load_project_appspec")
     def test_verify_reports_money_drift(self, mock_load: MagicMock, mock_run: MagicMock) -> None:
         """Drift rows are printed to the user with the repair SQL."""
@@ -117,7 +130,7 @@ class TestDbVerifyCommand:
 
 
 class TestDbResetCommand:
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db.load_project_appspec")
     def test_reset_dry_run(self, mock_load: MagicMock, mock_run: MagicMock) -> None:
         appspec = MagicMock()
@@ -140,7 +153,7 @@ class TestDbResetCommand:
 
 
 class TestDbCleanupCommand:
-    @patch("dazzle.cli.db.asyncio.run")
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
     @patch("dazzle.cli.db.load_project_appspec")
     def test_cleanup_dry_run(self, mock_load: MagicMock, mock_run: MagicMock) -> None:
         appspec = MagicMock()

@@ -51,10 +51,8 @@ def _import_module():
     helpers_spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.process._helpers",
         helpers_path,
-        submodule_search_locations=[],
     )
     _helpers_module = importlib.util.module_from_spec(helpers_spec)
-    _helpers_module.__package__ = "dazzle.mcp.server.handlers.process"
     sys.modules["dazzle.mcp.server.handlers.process._helpers"] = _helpers_module
 
     # Create a mock process package that has _helpers as an attribute
@@ -69,10 +67,8 @@ def _import_module():
     spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.process.coverage",
         module_path,
-        submodule_search_locations=[],
     )
     _process_module = importlib.util.module_from_spec(spec)
-    _process_module.__package__ = "dazzle.mcp.server.handlers.process"
     sys.modules["dazzle.mcp.server.handlers.process.coverage"] = _process_module
     spec.loader.exec_module(_process_module)
 

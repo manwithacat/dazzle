@@ -6,20 +6,31 @@ Single import point for agents consuming the module. Contains:
 - AuditSpec types (compiler output)
 """
 
+import warnings
 from typing import Literal
 
 from pydantic import BaseModel, Field
+
+# `construct` is the natural domain word here (a DSL construct), and the
+# BaseModel.construct classmethod it shadows is itself deprecated (removed in
+# pydantic v3, at which point the warning disappears). Pydantic offers no
+# per-field opt-out, so the definition-time shadow warning is suppressed
+# locally for exactly these classes.
+_SHADOW_WARNING = r'Field name "construct" .* shadows an attribute in parent'
 
 # =============================================================================
 # Taxonomy Types (loaded from framework YAML files)
 # =============================================================================
 
 
-class DslEvidence(BaseModel):
-    """Maps a DSL construct to a compliance control."""
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", message=_SHADOW_WARNING, category=UserWarning)
 
-    construct: str  # type: ignore[assignment]  # shadows deprecated BaseModel.construct
-    description: str = ""
+    class DslEvidence(BaseModel):
+        """Maps a DSL construct to a compliance control."""
+
+        construct: str  # type: ignore[assignment]  # shadows deprecated BaseModel.construct
+        description: str = ""
 
 
 class Control(BaseModel):
@@ -68,13 +79,16 @@ class Taxonomy(BaseModel):
 # =============================================================================
 
 
-class EvidenceItem(BaseModel):
-    """A single piece of compliance evidence found in the DSL."""
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", message=_SHADOW_WARNING, category=UserWarning)
 
-    entity: str  # which entity/persona/process this was found on
-    construct: str  # type: ignore[assignment]  # shadows deprecated BaseModel.construct
-    detail: str  # human-readable summary
-    dsl_ref: str  # "EntityName.construct" for citation validation
+    class EvidenceItem(BaseModel):
+        """A single piece of compliance evidence found in the DSL."""
+
+        entity: str  # which entity/persona/process this was found on
+        construct: str  # type: ignore[assignment]  # shadows deprecated BaseModel.construct
+        detail: str  # human-readable summary
+        dsl_ref: str  # "EntityName.construct" for citation validation
 
 
 class EvidenceMap(BaseModel):

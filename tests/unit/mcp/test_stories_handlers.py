@@ -85,10 +85,8 @@ def _import_stories():
     ser_spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.serializers",
         ser_path,
-        submodule_search_locations=[],
     )
     ser_mod = importlib.util.module_from_spec(ser_spec)
-    ser_mod.__package__ = "dazzle.mcp.server.handlers"
     sys.modules["dazzle.mcp.server.handlers.serializers"] = ser_mod
     ser_spec.loader.exec_module(ser_mod)
 
@@ -107,12 +105,10 @@ def _import_stories():
     spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.stories",
         module_path,
-        submodule_search_locations=[],
     )
     module = importlib.util.module_from_spec(spec)
 
     # Set up the package structure for relative imports
-    module.__package__ = "dazzle.mcp.server.handlers"
     sys.modules["dazzle.mcp.server.handlers.stories"] = module
 
     spec.loader.exec_module(module)

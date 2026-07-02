@@ -65,10 +65,8 @@ def _import_module():
     helpers_spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.process._helpers",
         helpers_path,
-        submodule_search_locations=[],
     )
     _helpers_mod = importlib.util.module_from_spec(helpers_spec)
-    _helpers_mod.__package__ = "dazzle.mcp.server.handlers.process"
     sys.modules["dazzle.mcp.server.handlers.process._helpers"] = _helpers_mod
 
     process_pkg = MagicMock(pytest_plugins=[])
@@ -82,10 +80,8 @@ def _import_module():
     cov_spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.process.coverage",
         cov_path,
-        submodule_search_locations=[],
     )
     cov_mod = importlib.util.module_from_spec(cov_spec)
-    cov_mod.__package__ = "dazzle.mcp.server.handlers.process"
     sys.modules["dazzle.mcp.server.handlers.process.coverage"] = cov_mod
     cov_spec.loader.exec_module(cov_mod)
 
@@ -94,10 +90,8 @@ def _import_module():
     prop_spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.process.proposals",
         prop_path,
-        submodule_search_locations=[],
     )
     _process_module = importlib.util.module_from_spec(prop_spec)
-    _process_module.__package__ = "dazzle.mcp.server.handlers.process"
     sys.modules["dazzle.mcp.server.handlers.process.proposals"] = _process_module
     prop_spec.loader.exec_module(_process_module)
 

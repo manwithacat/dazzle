@@ -39,6 +39,8 @@ logger = logging.getLogger(__name__)
 class TestResult(StrEnum):
     """Result of a single test."""
 
+    __test__ = False  # not a pytest test class, despite the Test* name
+
     PASSED = "passed"
     FAILED = "failed"
     SKIPPED = "skipped"
@@ -461,6 +463,8 @@ class DazzleClient:
 
 class TestRunner:
     """Execute test designs against a the Dazzle runtime app."""
+
+    __test__ = False  # not a pytest test class, despite the Test* name
 
     def __init__(
         self,

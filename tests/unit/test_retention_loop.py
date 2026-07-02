@@ -100,9 +100,20 @@ class TestCronFiring:
         assert stats["runs"] >= 1
 
     def test_dedupes_within_same_minute(self):
-        # With tick_interval=0.05 and cron="* * * * *", multiple
+        # With tick_interval=0.02 and cron="* * * * *", multiple
         # ticks fall within the same minute. The loop must fire
-        # AT MOST ONCE per minute even with many ticks.
+        # AT MOST ONCE per minute even with many ticks. The loop's
+        # clock is frozen so every tick sees the same minute — with
+        # real wall-clock the 0.2s window occasionally straddles a
+        # minute boundary and fires twice (~0.33% of runs; flaked
+        # the py3.14 CI cell on 2026-07-02).
+        from datetime import UTC, datetime
+
+        class _FrozenDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):  # noqa: ANN001 — datetime.now signature
+                return cls(2026, 7, 2, 12, 30, 15, tzinfo=UTC)
+
         call_count = {"n": 0}
 
         async def _counting_sweep(**_kwargs: Any) -> dict[str, int]:
@@ -113,9 +124,15 @@ class TestCronFiring:
             stop = asyncio.Event()
             loop = asyncio.get_running_loop()
             loop.call_later(0.2, stop.set)
-            with patch(
-                "dazzle.http.runtime.retention_loop.run_retention_sweep",
-                side_effect=_counting_sweep,
+            with (
+                patch(
+                    "dazzle.http.runtime.retention_loop.run_retention_sweep",
+                    side_effect=_counting_sweep,
+                ),
+                patch(
+                    "dazzle.http.runtime.retention_loop.datetime",
+                    _FrozenDatetime,
+                ),
             ):
                 await run_retention_loop(
                     services={},
@@ -126,7 +143,7 @@ class TestCronFiring:
                 )
 
         _run(go())
-        # ~10 ticks in 0.2s but only one minute boundary →
+        # ~10 ticks in 0.2s, all in the same (frozen) minute →
         # exactly one call.
         assert call_count["n"] == 1
 

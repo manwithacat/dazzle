@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.81] - 2026-07-02
+
+### Fixed
+- **Deprecation/warning sweep — suite warnings 725 → 153.** (a) The 33 `DeprecationWarning: __package__ != __spec__.parent` sites: 14 MCP-handler test files hand-loaded modules with `spec_from_file_location(..., submodule_search_locations=[])` — an empty *list* marks the spec as a package (`spec.parent == name`) while the manual `__package__` override said otherwise; omitting both lets importlib derive the right parent. (b) `PytestCollectionWarning` ×20: the production `TestRunner`/`TestResult` classes now carry `__test__ = False`. (c) Pillow 14 deprecation: `viewport_screenshot.py` counts differing pixels via a band-max (`ImageChops.lighter` reduce) + `get_flattened_data()` — identical "any channel > 0" semantics, and single-band data matches Pillow's type stubs. (d) `coroutine '_run_with_connection' was never awaited` ×5: the db-CLI tests' mocked `asyncio.run` now closes the coroutine it's handed (side_effect returning `DEFAULT` keeps `return_value` semantics; the two exception-raising overrides close-then-raise). (e) Pydantic `Field name "construct" shadows BaseModel` ×2: suppressed locally at the two compliance-model definitions — the domain word is right and the shadowed classmethod is deprecated-and-removed in pydantic v3 (no per-field opt-out exists). (f) `StarletteDeprecationWarning`: `httpx2>=2.0` added to dev extras — starlette ≥1.3's TestClient imports it preferentially (verified provenance: Tom Christie / pydantic org).
+- **`test_retention_loop.py::test_dedupes_within_same_minute` wall-clock flake** (failed the py3.14 cell on the v0.92.80 run): the test ran a real cron loop for 0.2 s and asserted exactly one firing — a window straddling a minute boundary (~0.33%/run) sees two minutes. The loop's clock is now frozen via a patched `datetime`.
+
+### Changed
+- **Distillation audit refreshed against the 20.6k-test suite** (`tests/audit/`; was built at ~15.4k). Proportions stable (82.3% contract, 12% smoke); same-file redundancy clusters 1,030 (theoretical collapse ≈ 3,150 tests / 22%); cross-file clusters 133 (≈ 4,364 collapsible — sharply up from 46/547, the copy-paste growth is handler/parser-shaped). Regression pins 260 → 346. New CLAUDE.md section "Test Authoring — Distillation Feedback Loop" wires the reports into new-test authoring (§6 of the strategy doc).
+
+### Agent Guidance
+- **Framework-injected entities still carry uncoerced string defaults** (`'now'`/`'false'` reach pydantic + the DB as strings; PG coerces by accident) — multi-layer fix filed as #1529; the two remaining Pydantic serializer warnings in the RBAC verifier e2e are that issue, not new regressions.
+
 ## [0.92.80] - 2026-07-02
 
 ### Changed

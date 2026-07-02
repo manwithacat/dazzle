@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.92.80"
+version = "0.92.81"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -192,6 +192,9 @@ signing = [
 ]
 dev = [
     "pytest>=7.4",
+    # starlette >=1.3 deprecates backing TestClient with httpx; httpx2 is the
+    # successor it imports preferentially (StarletteDeprecationWarning otherwise).
+    "httpx2>=2.0",
     "pytest-asyncio>=0.23",
     "pytest-cov>=4.1",
     "pytest-xdist>=3.3",

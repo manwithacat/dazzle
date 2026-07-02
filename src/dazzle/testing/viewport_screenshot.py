@@ -6,6 +6,7 @@ baselines using pixel-level diffing via Pillow (optional dependency).
 
 from __future__ import annotations  # required: forward reference
 
+import functools
 import hashlib
 import logging
 import shutil
@@ -161,7 +162,14 @@ def compare_screenshots(
             img_baseline = img_baseline.resize(img_current.size)  # type: ignore[assignment]
 
         diff = ImageChops.difference(img_current.convert("RGB"), img_baseline.convert("RGB"))
-        diff_pixels = sum(1 for px in list(diff.getdata()) if any(int(c) > 0 for c in px))
+        # Per-pixel max across the RGB bands: a pixel differs iff any channel
+        # is nonzero, i.e. iff the band-max is nonzero. Single-band data is
+        # flat ints, which is also the shape get_flattened_data is typed for
+        # (the multiband tuple-of-tuples runtime shape is untyped territory).
+        band_max = functools.reduce(ImageChops.lighter, diff.split())
+        diff_pixels = sum(
+            1 for v in band_max.get_flattened_data() if isinstance(v, (int, float)) and v > 0
+        )
         total_pixels = img_current.size[0] * img_current.size[1]
         diff_pct = diff_pixels / total_pixels if total_pixels > 0 else 0.0
 
