@@ -27,7 +27,10 @@ placements (this increment is scoped to the workspace heading row only).
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
+
+logger = logging.getLogger(__name__)
 
 # Up to this many heading actions stay prominent; the rest overflow.
 _DEFAULT_PRIMARY_BUDGET = 3
@@ -85,4 +88,19 @@ def resolve_action_prominence_by_usage[T](
     if total < min_samples:
         return resolve_action_prominence(actions, budget)
     ranked = sorted(actions, key=lambda a: -usage.get(route_of(a), 0))
-    return resolve_action_prominence(ranked, budget)
+    primary, overflow = resolve_action_prominence(ranked, budget)
+    # Traceability (ADR-0050 / model-driven-failure rubric): when usage actually
+    # changed the outcome vs the declared-order split, record which signal did it
+    # — a usage-driven UI choice must be explainable, never a silent oracle.
+    static_primary, _ = resolve_action_prominence(actions, budget)
+    if [route_of(a) for a in primary] != [route_of(a) for a in static_primary]:
+        logger.debug(
+            "usage-weighted action prominence: primary=%s (declared order: %s; "
+            "clicks=%s, total=%d >= floor=%d)",
+            [route_of(a) for a in primary],
+            [route_of(a) for a in static_primary],
+            {route_of(a): usage.get(route_of(a), 0) for a in actions},
+            total,
+            min_samples,
+        )
+    return primary, overflow

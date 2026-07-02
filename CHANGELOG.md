@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.84] - 2026-07-02
+
+### Changed
+- **UX-maturity criteria 3a + 2d declared at L4 — index 3.62 → 3.77, 10/13 criteria adaptive (#1517 line A).** Both criteria's usage-driven implementations already shipped live (ADR-0050: `resolve_action_prominence_by_usage` wired at the `_workspace_handler` seam; `resolve_column_economy_by_usage` at the `list_handlers` seam, #1524) but the declarations were stale at L3 and the probes exercised only the declared-order/salience cold-start paths. Now: declarations updated with the full capture→aggregate→infer evidence chain, and both probes exercise the usage-weighted path (above-floor promotion/rescue) **and** below-floor byte-parity (cold-start = today's static split, the ADR-0050 invariant).
+- **Explain-traces added to both usage-driven resolvers** (the ADR-0050 traceability invariant, previously unimplemented): when usage actually changes the outcome vs the static default, a structured debug log records the chosen set, what declaration order would have chosen, and the per-target counts/floor — a usage-driven UI choice is explainable, never a silent oracle.
+
+### Agent Guidance
+- **#1517's "telemetry-gated" framing is obsolete** — ADR-0050 phases 1–4 (capture table, tenant-fenced aggregate, action-click + field-engagement capture, 3a/2d consumers) all shipped v0.92.4x–5x. The remaining 1a delta is Phase 5b only: a form-widget inferer consuming the already-captured field engagement. htmx 4 remains beta (beta5); the GA bump stays tracked in #1409, whose stale-vendor-pin hazard is already fixed in-tree (`update_htmx` is a documented no-op pin).
+
 ## [0.92.83] - 2026-07-02
 
 ### Fixed

@@ -26,9 +26,15 @@ from typing import Any
 from dazzle._version import get_version
 from dazzle.core.ir import AggregateRef, PeekMode, state_machine, workspaces
 from dazzle.page import app_paths
-from dazzle.page.runtime.action_prominence_resolver import resolve_action_prominence
+from dazzle.page.runtime.action_prominence_resolver import (
+    resolve_action_prominence,
+    resolve_action_prominence_by_usage,
+)
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
-from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
+from dazzle.page.runtime.column_economy_resolver import (
+    resolve_column_economy,
+    resolve_column_economy_by_usage,
+)
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
@@ -219,10 +225,11 @@ def _probe_2b() -> ProbeResult:
 
 
 def _probe_2d() -> ProbeResult:
-    """Field economy IS the default for auto-derived columns (level 3): an
-    over-budget column list keeps the top-N most salient and sheds the tail via
-    the #1491 default-flip — exercised through the real resolver — while a
-    within-budget list is a no-op (byte-stable)."""
+    """Field economy is usage-boosted (level 4, ADR-0050 / #1524): above the
+    engagement floor a heavily-engaged low-salience field survives truncation;
+    below the floor the truncation is byte-identical to the declared-salience
+    default (level-3 behaviour, cold-start safety) — both exercised through
+    the real resolvers."""
     wide = [{"key": f"f{i}", "type": "text"} for i in range(10)]
     wide[0] = {"key": "title", "type": "text"}  # identifying — must survive
     wide[1] = {"key": "created_at", "type": "date"}  # timestamp — must drop
@@ -233,11 +240,30 @@ def _probe_2d() -> ProbeResult:
     drops_timestamp = "created_at" not in keys
     narrow = [{"key": "a", "type": "text"}, {"key": "b", "type": "badge"}]
     within_budget_noop = resolve_column_economy(narrow) == narrow
-    ok = trims_to_budget and keeps_identifying and drops_timestamp and within_budget_noop
+    # Above the floor, heavy engagement rescues the declared-last text field
+    # f9 (dropped by the static truncation above).
+    hot = {"f9": 40, "title": 5}
+    kept_hot = resolve_column_economy_by_usage(wide, hot, key_of=lambda c: c["key"])
+    usage_rescues = any(c["key"] == "f9" for c in kept_hot) and any(
+        c["key"] == "title" for c in kept_hot
+    )
+    # Below the floor, byte-identical to the declared-salience truncation.
+    cold_parity = (
+        resolve_column_economy_by_usage(wide, {"f9": 2}, key_of=lambda c: c["key"]) == kept
+    )
+    ok = (
+        trims_to_budget
+        and keeps_identifying
+        and drops_timestamp
+        and within_budget_noop
+        and usage_rescues
+        and cold_parity
+    )
     return ProbeResult(
         ok,
         f"over-budget->kept={len(kept)} (title kept={keeps_identifying}, "
-        f"created_at dropped={drops_timestamp}); within-budget-noop={within_budget_noop}",
+        f"created_at dropped={drops_timestamp}); within-budget-noop={within_budget_noop}; "
+        f"usage-rescues-hot-field={usage_rescues}; below-floor-byte-parity={cold_parity}",
     )
 
 
@@ -259,21 +285,31 @@ def _probe_2c() -> ProbeResult:
 
 
 def _probe_3a() -> ProbeResult:
-    """Action prominence IS inferred by default (level 3): a heading with more
-    than the budget of actions keeps the top-K prominent and demotes the tail to
-    overflow via the #1491 default-flip — exercised through the real resolver. A
-    within-budget heading is a no-op (empty overflow)."""
+    """Action prominence is usage-weighted (level 4, ADR-0050): above the
+    min-sample floor a frequently-clicked tail action is promoted into the
+    primary row; below the floor the split is byte-identical to the declared-
+    order default (level-3 behaviour, cold-start safety) — both exercised
+    through the real resolvers."""
     over_budget = [{"label": f"a{i}", "route": f"/{i}"} for i in range(5)]
+    # Declared-order default still demotes the tail (cold-start path).
     primary, overflow = resolve_action_prominence(over_budget)
     demotes_tail = len(primary) == 3 and len(overflow) == 2
-    # A heading within budget keeps everything prominent (byte-stable).
-    p2, o2 = resolve_action_prominence([{"label": "x", "route": "/x"}])
-    within_budget_noop = len(p2) == 1 and o2 == []
-    ok = demotes_tail and within_budget_noop
+    # Above the floor, the heavily-clicked tail action /4 is promoted.
+    hot_tail = {"/4": 40, "/0": 5}
+    p_hot, o_hot = resolve_action_prominence_by_usage(
+        over_budget, hot_tail, route_of=lambda a: a["route"]
+    )
+    promotes_hot = any(a["route"] == "/4" for a in p_hot)
+    # Below the floor, byte-identical to the declared-order split.
+    p_cold, o_cold = resolve_action_prominence_by_usage(
+        over_budget, {"/4": 2}, route_of=lambda a: a["route"]
+    )
+    cold_start_parity = (p_cold, o_cold) == (primary, overflow)
+    ok = demotes_tail and promotes_hot and cold_start_parity
     return ProbeResult(
         ok,
-        f"over-budget->primary={len(primary)},overflow={len(overflow)}; "
-        f"within-budget-noop={within_budget_noop}",
+        f"declared-order demote={demotes_tail}; usage-promotes-hot-tail={promotes_hot}; "
+        f"below-floor-byte-parity={cold_start_parity}",
     )
 
 
@@ -383,8 +419,8 @@ CRITERIA: list[Criterion] = [
         "2d",
         "progressive_disclosure",
         "field economy",
-        3,
-        "#1491 — auto-derived list columns infer field economy by DEFAULT: `resolve_column_economy` (`page/runtime/column_economy_resolver`) keeps the top-6 most salient columns (identifying/title > badge/ref > scalar > auto-timestamp) and sheds the low-signal tail, applied at the `workspace_columns` entity-fallback builder (replacing the old magic cap-of-8). The dropped fields are recovered by the already-default row drill (2b) / `peek:` (2c) — the L3 'reveal' with no htmx-4 dependency. An explicit surface field projection is authoritative and rendered in full (auto-columns only); a ≤6-column entity is byte-unchanged. Pure declared-signal default (salience from name/type, no usage, no JS). L4 follow-on: a `priority:` field override + a live in-table 'show all columns' reveal.",
+        4,
+        "#1491 L3 + ADR-0050/#1524 L4 — auto-derived list columns infer field economy by default AND adapt to observed usage: `resolve_column_economy` (`page/runtime/column_economy_resolver`) keeps the top-6 most salient columns (identifying/title > badge/ref > scalar > auto-timestamp); `resolve_column_economy_by_usage` (wired at the `list_handlers` seam) boosts each column's salience by its form-engagement frequency (`_dazzle_usage_events`, tenant-fenced GROUP BY) so a heavily-used field survives truncation even if declared-low — bounded below the identifying-field floor, cold-start byte-identical below the min-sample floor. Dropped fields are recovered by the default row drill (2b) / `peek:` (2c). An explicit surface field projection is authoritative and rendered in full (auto-columns only).",
         "medium",
         _probe_2d,
     ),
@@ -393,8 +429,8 @@ CRITERIA: list[Criterion] = [
         "3a",
         "negative_space",
         "frequency-weighted prominence",
-        3,
-        "#1491 — workspace heading actions infer prominence by DEFAULT: `resolve_action_prominence` (`page/runtime/action_prominence_resolver`) keeps the top-3 actions as prominent buttons by declaration order (inferred `+ New <Entity>` create-CTAs come first, so they're protected) and demotes the tail to a native `<details>` `More ⋯` overflow menu, applied at the `page_routes` action-assembly seam. So an action-heavy heading declutters to a clear primary row instead of a wall of competing CTAs; a ≤3-action heading is byte-unchanged. Pure declared-signal default (no runtime usage, no JS). L4 follow-on: derive prominence from observed usage frequency, and extend to row-action / bulk-toolbar / action-grid placements.",
+        4,
+        "#1491 L3 + ADR-0050 L4 — workspace heading actions infer prominence by default AND reorder by observed usage: `resolve_action_prominence` (`page/runtime/action_prominence_resolver`) keeps the top-3 prominent by declaration order and demotes the tail to a native `<details>` `More ⋯` overflow; `resolve_action_prominence_by_usage` (wired at the `page_routes` `_workspace_handler` seam) stable-sorts by per-tenant click frequency captured via `hx-headers`-tagged anchors + `UsageSignalMiddleware` into `_dazzle_usage_events`, so a frequently-clicked action stays in the primary row and a rarely-clicked declared-early one demotes. Cold-start byte-identical below the min-sample floor (a fresh app is exactly the declared-order L3 split). The observe→infer loop the framework thesis promises, closed for actions. Remaining follow-on: extend to row-action / bulk-toolbar / action-grid placements.",
         "medium",
         _probe_3a,
     ),

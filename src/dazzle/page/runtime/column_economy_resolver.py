@@ -28,8 +28,11 @@ reveal.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Keep at most this many auto-derived columns; the salience tail is dropped
 # (recovered via the default drill/peek).
@@ -144,4 +147,19 @@ def resolve_column_economy_by_usage(
 
     ranked = sorted(range(len(columns)), key=lambda i: -_effective(i))
     keep = set(ranked[:budget])
-    return [c for i, c in enumerate(columns) if i in keep]
+    kept = [c for i, c in enumerate(columns) if i in keep]
+    # Traceability (ADR-0050 / model-driven-failure rubric): when usage actually
+    # changed which columns survive vs the declared-salience truncation, record
+    # the signal — a usage-driven UI choice must be explainable.
+    static_kept = resolve_column_economy(columns, budget)
+    if [key_of(c) for c in kept] != [key_of(c) for c in static_kept]:
+        logger.debug(
+            "usage-boosted column economy: kept=%s (declared salience would keep %s; "
+            "engagement=%s, total=%d >= floor=%d)",
+            [key_of(c) for c in kept],
+            [key_of(c) for c in static_kept],
+            {key_of(c): usage.get(key_of(c), 0) for c in columns},
+            total,
+            min_samples,
+        )
+    return kept
