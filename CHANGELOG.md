@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.79] - 2026-07-02
+
+### Fixed
+- **`tests/test_mcp_integration.py` pinned to one xdist worker (`xdist_group("mcp-server")`) — SQLite seed contention under the v0.92.78 parallel flip.** Several tests in the module spawn their own MCP server subprocess against the shared repo root (that's what `DAZZLE_MCP_SKIP_LOCK` is for). Serially that's safe — the class fixture's server finishes seeding the `.dazzle` knowledge-graph SQLite before any per-test server starts — but with the module's tests scattered across workers, two servers can seed the same SQLite concurrently and one dies on lock contention (stdout EOF → "No response received"; hit the py3.13 CI cell, whose stderr showed the server dying mid-initialization). The `send_jsonrpc` EOF error now also reports the server's exit code. Diagnosis note: an empty `readline()` on a piped subprocess means the process *died*, not that it was slow — different failure class from the LSP timeout flakes fixed in v0.92.78.
+
 ## [0.92.78] - 2026-07-02
 
 ### Changed

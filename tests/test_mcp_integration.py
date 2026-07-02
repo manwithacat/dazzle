@@ -17,6 +17,15 @@ import pytest
 PROJECT_ROOT = Path(__file__).parent.parent
 PYTHON_PATH = sys.executable
 
+# Serialize this module onto one xdist worker. Several tests spawn their own
+# MCP server subprocess against the shared PROJECT_ROOT (hence
+# DAZZLE_MCP_SKIP_LOCK below); run serially the class fixture's server seeds
+# the .dazzle knowledge-graph SQLite first and later servers find it done,
+# but with the module's tests scattered across workers two servers can seed
+# the same SQLite concurrently and one dies on lock contention (stdout EOF →
+# "No response received"; bit the py3.13 CI cell on the v0.92.78 xdist flip).
+pytestmark = pytest.mark.xdist_group("mcp-server")
+
 
 def send_jsonrpc(proc: subprocess.Popen, method: str, params: dict = None, id: int = 1) -> dict:
     """Send a JSON-RPC message and get the response."""
@@ -36,8 +45,12 @@ def send_jsonrpc(proc: subprocess.Popen, method: str, params: dict = None, id: i
     while True:
         response_line = proc.stdout.readline()
         if not response_line:
+            # Empty readline = stdout EOF = the server process died (readline
+            # otherwise blocks); surface the exit code alongside stderr.
             stderr = proc.stderr.read()
-            raise RuntimeError(f"No response received. stderr: {stderr}")
+            raise RuntimeError(
+                f"No response received — server exited (returncode={proc.poll()}). stderr: {stderr}"
+            )
 
         data = json.loads(response_line)
 
