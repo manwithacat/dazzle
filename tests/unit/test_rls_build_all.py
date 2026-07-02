@@ -214,3 +214,76 @@ def test_no_fk_graph_ok_when_only_flat_entities() -> None:
     appspec = _appspec(entities, fk_graph=None)
     ddl = _joined(build_all_rls_ddl(appspec, entities))
     assert 'CREATE POLICY tenant_baseline ON "Account"' in ddl
+
+
+# ---------------------------------------------------------------------------
+# #1531: physical column-type overrides for the GUC casts
+# ---------------------------------------------------------------------------
+
+
+def _scope_select_stmt(stmts: list[str]) -> str:
+    return next(s for s in stmts if s.startswith("CREATE POLICY scope_select"))
+
+
+def test_physical_cast_overrides_normalises_udt_names() -> None:
+    from dazzle.http.runtime.rls_schema import physical_cast_overrides
+
+    rows = [
+        ("Project", "owner_id", "varchar"),
+        ("Project", "tenant_id", "uuid"),
+        ("Project", "flag", "bool"),
+        ("Project", "weird", "hstore"),  # unknown udt → no override (fail-safe)
+        # Dict rows — the `dazzle db` CLI's psycopg connection uses a dict row
+        # factory, so the mapping shape must resolve identically (#1531).
+        {"table_name": "Task", "column_name": "owner", "udt_name": "varchar"},
+    ]
+    overrides = physical_cast_overrides(rows)
+    assert overrides[("Project", "owner_id")] == "text"
+    assert overrides[("Project", "tenant_id")] == "uuid"
+    assert overrides[("Project", "flag")] == "boolean"
+    assert ("Project", "weird") not in overrides
+    assert overrides[("Task", "owner")] == "text"
+
+
+def test_physical_text_column_suppresses_uuid_cast() -> None:
+    # The #1531 regression shape: owner_id is logically a ref (→ uuid cast) but
+    # the live column is TEXT (created before its type migration was generated).
+    # The scope policy must cast the GUC to the PHYSICAL type or CREATE POLICY
+    # fails with `operator does not exist: text = uuid`.
+    entities = [_scoped_project([_owner_rule(AccessOperationKind.READ)])]
+    appspec = _appspec(entities)
+    stmts = build_all_rls_ddl(appspec, entities, physical_types={("Project", "owner_id"): "text"})
+    scope_select = _scope_select_stmt(stmts)
+    assert "::text" in scope_select
+    assert "::uuid" not in scope_select
+
+
+def test_physical_override_falls_back_to_logical_for_missing_columns() -> None:
+    # A physical map that doesn't mention the scope column leaves the logical
+    # (ref → uuid) resolution in charge.
+    entities = [_scoped_project([_owner_rule(AccessOperationKind.READ)])]
+    appspec = _appspec(entities)
+    stmts = build_all_rls_ddl(appspec, entities, physical_types={("Project", "status"): "text"})
+    assert "::uuid" in _scope_select_stmt(stmts)
+
+
+def test_physical_matching_logical_emits_same_ddl_as_db_free_build() -> None:
+    # When live and logical types agree, the physical-aware build is
+    # byte-identical to the DB-free one.
+    entities = [_scoped_project([_owner_rule(AccessOperationKind.READ)])]
+    appspec = _appspec(entities)
+    db_free = build_all_rls_ddl(appspec, entities)
+    physical = build_all_rls_ddl(
+        appspec, entities, physical_types={("Project", "owner_id"): "uuid"}
+    )
+    assert physical == db_free
+
+
+def test_physical_logical_drift_logs_warning(caplog) -> None:
+    import logging
+
+    entities = [_scoped_project([_owner_rule(AccessOperationKind.READ)])]
+    appspec = _appspec(entities)
+    with caplog.at_level(logging.WARNING, logger="dazzle.http.runtime.rls_schema"):
+        build_all_rls_ddl(appspec, entities, physical_types={("Project", "owner_id"): "text"})
+    assert any("dazzle db revision" in r.message for r in caplog.records)

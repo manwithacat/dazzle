@@ -302,3 +302,72 @@ def test_drift_detected_when_rls_disabled(harness: _ApplyHarness) -> None:
     assert set(by_entity) == {"Member"}, (
         f"only Member should have drifted, but got {set(by_entity)}"
     )
+
+
+def test_apply_follows_physical_column_type_1531(harness: _ApplyHarness) -> None:
+    """(#1531) A scope column whose LIVE type is TEXT — a deployment whose
+    column-type migration hasn't been generated yet (the pre-#1522 belongs_to
+    shape: TEXT, no FK) — must get a ``::text`` GUC cast. The logical-only
+    resolver emitted ``::uuid`` and ``CREATE POLICY`` failed with
+    ``operator does not exist: text = uuid`` on the production upgrade path."""
+    from dazzle.db.rls_apply import apply_rls_policies
+
+    # Degrade Project.owner to the pre-migration physical shape: drop its FK
+    # constraint(s), then retype the column TEXT.
+    with psycopg.connect(harness.conn_url(), autocommit=True) as admin:
+        fks = admin.execute(
+            "SELECT conname FROM pg_constraint "
+            "WHERE conrelid = '\"Project\"'::regclass AND contype = 'f'"
+        ).fetchall()
+        for (conname,) in fks:
+            admin.execute(f'ALTER TABLE "Project" DROP CONSTRAINT "{conname}"')
+        admin.execute('ALTER TABLE "Project" ALTER COLUMN owner TYPE text USING owner::text')
+
+    async def _apply(conn: Any) -> int:
+        return await apply_rls_policies(conn, harness.appspec, harness.entities)
+
+    # Pre-fix this raised psycopg.errors.UndefinedFunction (text = uuid).
+    count = asyncio.run(_with_conn(harness.conn_url(), _apply))
+    assert count > 0
+
+    # The applied scope policy casts the GUC to the physical TEXT type.
+    with psycopg.connect(harness.conn_url()) as conn:
+        row = conn.execute(
+            "SELECT qual FROM pg_policies "
+            "WHERE schemaname='public' AND tablename='Project' AND policyname='scope_select'"
+        ).fetchone()
+    assert row is not None, "scope_select policy missing after apply"
+    qual = row[0]
+    assert "::text" in qual, f"expected a ::text GUC cast, got: {qual}"
+    assert "::uuid" not in qual, f"no ::uuid cast may target the TEXT column: {qual}"
+
+
+def test_partial_failure_rolls_back_prior_policies_1531(
+    harness: _ApplyHarness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """(#1531 blast radius) apply runs DROP-then-CREATE per policy on an
+    autocommit conn; a mid-run failure used to leave the dropped policy absent
+    (intra-tenant scope silently lapsed). The single-transaction apply must
+    roll back so the pre-existing policy survives a failed run."""
+    import dazzle.http.runtime.rls_schema as rls_schema_mod
+    from dazzle.db.rls_apply import apply_rls_policies
+
+    async def _apply(conn: Any) -> int:
+        return await apply_rls_policies(conn, harness.appspec, harness.entities)
+
+    # Clean apply first: scope_select exists on Project.
+    asyncio.run(_with_conn(harness.conn_url(), _apply))
+    assert "scope_select" in _live_policy_names(harness.scratch_url, "Project")
+
+    # Second apply drops scope_select then fails before recreating anything.
+    def _failing_ddl(*args: Any, **kwargs: Any) -> list[str]:
+        return ['DROP POLICY IF EXISTS scope_select ON "Project"', "SELECT 1/0"]
+
+    monkeypatch.setattr(rls_schema_mod, "build_all_rls_ddl", _failing_ddl)
+    with pytest.raises(Exception, match="division by zero"):
+        asyncio.run(_with_conn(harness.conn_url(), _apply))
+
+    # The transaction rolled back — the previously-applied policy is intact.
+    assert "scope_select" in _live_policy_names(harness.scratch_url, "Project"), (
+        "a failed apply must not leave the table without its scope policy"
+    )

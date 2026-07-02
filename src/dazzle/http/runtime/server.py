@@ -54,7 +54,7 @@ from dazzle.http.runtime.rate_limit import apply_rate_limiting
 from dazzle.http.runtime.relation_loader import RelationLoader, RelationRegistry
 from dazzle.http.runtime.renderers.init import register_default_renderers
 from dazzle.http.runtime.repository import RepositoryFactory
-from dazzle.http.runtime.rls_schema import build_all_rls_ddl
+from dazzle.http.runtime.rls_schema import build_all_rls_ddl, physical_cast_overrides
 from dazzle.http.runtime.route_generator import RouteGenerator
 from dazzle.http.runtime.route_validator import validate_routes
 from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
@@ -996,10 +996,22 @@ class DazzleBackendApp:
         # shared_schema / no-scoped no-op gates) now lives in build_all_rls_ddl
         # so the dev apply, prod apply, inspect, and drift paths share one
         # generator. Behaviour here is identical to the old inline version.
-        statements = build_all_rls_ddl(self._appspec, self._entities)
-        if not statements:
+        # The DB-free build is only an emptiness gate (its gates fire before any
+        # cast is computed) — the applied DDL is rebuilt with the live column
+        # types below, so casts match the physical schema even when a dev DB
+        # (db_policy=preserve) predates a column-type change (#1531).
+        if not build_all_rls_ddl(self._appspec, self._entities):
             return
         with engine.begin() as conn:
+            rows = conn.execute(
+                _sa_text(
+                    "SELECT table_name, column_name, udt_name "
+                    "FROM information_schema.columns WHERE table_schema = current_schema()"
+                )
+            ).fetchall()
+            statements = build_all_rls_ddl(
+                self._appspec, self._entities, physical_types=physical_cast_overrides(rows)
+            )
             for stmt in statements:
                 conn.execute(_sa_text(stmt))
         logger.info(

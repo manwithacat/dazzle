@@ -47,9 +47,39 @@ async def apply_rls_policies(conn: Any, appspec: Any, entities: list[Any]) -> in
         ValueError: A scoped entity carries scope rules but ``appspec.fk_graph``
             is missing (propagated from :func:`build_all_rls_ddl`).
     """
-    from dazzle.http.runtime.rls_schema import build_all_rls_ddl
+    from dazzle.http.runtime.rls_schema import build_all_rls_ddl, physical_cast_overrides
 
-    statements = build_all_rls_ddl(appspec, entities)
-    for stmt in statements:
-        await conn.execute(stmt)
+    # DB-free emptiness gate: the no-tenancy / non-shared_schema / no-scoped
+    # cases return before the introspection query, keeping the no-op truly DB-free.
+    if not build_all_rls_ddl(appspec, entities):
+        return 0
+    # #1531: resolve GUC casts from the LIVE column types, not the logical
+    # schema — the two drift on deployments whose column-type migration hasn't
+    # been generated yet (e.g. a pre-#1522 TEXT ``belongs_to`` column while the
+    # logical schema now says uuid), and a logical-only cast then makes
+    # ``CREATE POLICY`` fail with ``operator does not exist: text = uuid``.
+    physical = physical_cast_overrides(await _fetch_information_schema_columns(conn))
+    statements = build_all_rls_ddl(appspec, entities, physical_types=physical)
+    # One transaction for the whole policy set: each CREATE POLICY is preceded
+    # by DROP POLICY IF EXISTS, so on an autocommit connection a mid-run failure
+    # would leave a table's scope policy dropped-but-not-recreated (intra-tenant
+    # scope silently absent) until the next successful apply. All-or-nothing
+    # closes that window (#1531 blast-radius note).
+    async with conn.transaction():
+        for stmt in statements:
+            await conn.execute(stmt)
     return len(statements)
+
+
+async def _fetch_information_schema_columns(conn: Any) -> Any:
+    """Read the current schema's physical column rows for the cast overrides.
+
+    Rows feed :func:`dazzle.http.runtime.rls_schema.physical_cast_overrides`;
+    ``current_schema()`` is where ``create_all`` / the migrations wrote under
+    the connection's ``search_path``.
+    """
+    cursor = await conn.execute(
+        "SELECT table_name, column_name, udt_name "
+        "FROM information_schema.columns WHERE table_schema = current_schema()"
+    )
+    return await cursor.fetchall()

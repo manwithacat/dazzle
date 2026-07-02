@@ -40,6 +40,7 @@ real-PG test fixture can provision loginable roles).
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -86,8 +87,71 @@ HOST_TENANT_GUC = "dazzle.host_tenant_id"
 # attribute ``a`` → ``dazzle.user_<a>``.
 USER_GUC_PREFIX = "dazzle.user_"
 
+# Closed udt_name → cast-type map for :func:`physical_cast_overrides`. Only
+# udt names in this map produce an override; anything else falls back to the
+# logical resolver (fail-safe: never emit an unrecognised token into a
+# ``::<type>`` cast). The values feed ``_guc_read``'s ``::{pg_type}`` channel,
+# so this map must stay closed — no passthrough of raw catalog strings.
+_UDT_TO_CAST: dict[str, str] = {
+    "text": "text",
+    "varchar": "text",
+    "bpchar": "text",
+    "citext": "text",
+    "uuid": "uuid",
+    "bool": "boolean",
+    "int2": "integer",
+    "int4": "integer",
+    "int8": "bigint",
+    "float4": "real",
+    "float8": "double precision",
+    "numeric": "numeric",
+    "date": "date",
+    "timestamp": "timestamp",
+    "timestamptz": "timestamptz",
+    "json": "json",
+    "jsonb": "jsonb",
+}
 
-def build_all_rls_ddl(appspec: Any, entities: list[Any]) -> list[str]:
+
+def physical_cast_overrides(rows: Any) -> dict[tuple[str, str], str]:
+    """Normalise ``information_schema.columns`` rows into a cast-override map.
+
+    ``rows`` is an iterable of ``SELECT table_name, column_name, udt_name FROM
+    information_schema.columns WHERE table_schema = current_schema()`` results.
+    Both row shapes in the framework are accepted: mappings (the ``dazzle db``
+    CLI's psycopg connection uses dict rows) and sequences (SQLAlchemy ``Row``).
+    Returns ``{(table, column): cast_type}`` for every column whose ``udt_name``
+    is in the closed :data:`_UDT_TO_CAST` map; unrecognised udts are skipped so
+    the logical resolver stays in charge.
+
+    Why this exists (#1531): the scope-policy GUC cast must match the PHYSICAL
+    column type, not the logical schema. When the two drift — e.g. a
+    ``belongs_to`` column created TEXT pre-#1522 while the logical schema now
+    says uuid — a logical-only cast produces ``text = uuid`` and ``CREATE
+    POLICY`` fails on the production upgrade path.
+    """
+    overrides: dict[tuple[str, str], str] = {}
+    for row in rows:
+        if isinstance(row, Mapping):
+            table_name, column_name, udt_name = (
+                row["table_name"],
+                row["column_name"],
+                row["udt_name"],
+            )
+        else:
+            table_name, column_name, udt_name = row[0], row[1], row[2]
+        cast = _UDT_TO_CAST.get(str(udt_name).lower())
+        if cast is not None:
+            overrides[(str(table_name), str(column_name))] = cast
+    return overrides
+
+
+def build_all_rls_ddl(
+    appspec: Any,
+    entities: list[Any],
+    *,
+    physical_types: dict[tuple[str, str], str] | None = None,
+) -> list[str]:
     """Build the full RLS DDL set for an appspec — the shared partitioner (Phase D).
 
     The single, DB-free source of the tenant fence + per-verb scope / baseline
@@ -116,6 +180,13 @@ def build_all_rls_ddl(appspec: Any, entities: list[Any]) -> list[str]:
             carries ``.access.scopes`` with compiled ``.predicate`` and the field
             list used by the type resolver. This is the list iterated for the
             scoped-vs-flat partition.
+        physical_types: Optional ``{(table, column): cast_type}`` map from the
+            LIVE database (see :func:`physical_cast_overrides`). When provided,
+            a column's GUC cast is resolved from the physical column type, with
+            the logical resolver as fallback for columns not in the map — so a
+            policy never casts against a type the table doesn't actually have
+            (#1531). DB-free consumers (``dazzle inspect rls``, the drift gate,
+            unit tests) omit it and get pure logical resolution, unchanged.
 
     Returns:
         A flat list of idempotent DDL statements. Empty list when there is no
@@ -144,7 +215,32 @@ def build_all_rls_ddl(appspec: Any, entities: list[Any]) -> list[str]:
     # bodies — built once over the back-spec entities (the shape
     # compile_predicate_policy + build_entity_type_resolver expect). Computes a
     # column's type only when a policy references it.
-    entity_types = build_entity_type_resolver(entities)
+    logical_types = build_entity_type_resolver(entities)
+    entity_types: EntityTypeResolver = logical_types
+    if physical_types:
+        overrides = physical_types
+
+        def _physical_first(entity_name: str, field_name: str) -> str:
+            physical = overrides.get((entity_name, field_name))
+            if physical is None:
+                return logical_types(entity_name, field_name)
+            try:
+                logical = logical_types(entity_name, field_name)
+            except ValueError:
+                logical = None
+            if logical is not None and logical != physical:
+                logger.warning(
+                    "RLS cast for %s.%s follows the live column type %r; the logical "
+                    "schema says %r — run `dazzle db revision` to generate the "
+                    "column-type migration and close the drift (#1531)",
+                    entity_name,
+                    field_name,
+                    physical,
+                    logical,
+                )
+            return physical
+
+        entity_types = _physical_first
 
     # Partition the tenant-scoped entities into "has scope rules" (Phase C
     # per-verb policies) vs "tenant-flat" (Phase B baseline). A scope rule

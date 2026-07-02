@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.90] - 2026-07-02
+
+### Fixed
+- **RLS scope-policy GUC casts now follow the LIVE column type (#1531, regression from #1522).** `apply_rls_policies` introspects `information_schema.columns` and feeds `build_all_rls_ddl(..., physical_types=...)`, so a scope column whose physical type is still TEXT (a deployment whose #1522 `belongs_to`→uuid column migration hasn't been generated yet) gets a `::text` cast instead of the logical `::uuid` — previously `CREATE POLICY` failed with `operator does not exist: text = uuid` on the production `dazzle db upgrade` path. The dev `create_all` boot apply gained the same physical-aware build (a `db_policy=preserve` dev DB can carry the same drift). A drift warning names the fix (`dazzle db revision` to generate the column-type migration). DB-free consumers (`dazzle inspect rls`, the drift gate) are unchanged.
+- **RLS apply is now all-or-nothing.** The policy DDL set runs in a single transaction: previously (autocommit + DROP-then-CREATE) a mid-run failure left the failing table's `scope_select` dropped — intra-tenant row scope silently absent until the next successful apply (the #1531 blast-radius note). Real-PG regression tests cover both the TEXT-column apply and the rollback.
+
 ## [0.92.89] - 2026-07-02
 
 ### Added
