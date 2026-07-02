@@ -10,23 +10,32 @@ judges' own repeatability.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import random
 import statistics
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+from dazzle.core.taste_rubric import build_judge_prompt, dimensions_for_theme
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "JudgeScore",
     "PanelImage",
+    "PanelResult",
+    "TastePanelError",
     "aggregate_scores",
     "assemble_pool",
     "blind_order",
     "noise_sd",
     "parity_verdict",
+    "run_panel",
+    "score_image",
 ]
 
 
@@ -168,3 +177,144 @@ def parity_verdict(
             "parity": dazzle >= reference - margin,
         }
     return verdict
+
+
+# ── Judge runner ─────────────────────────────────────────────────────
+
+
+class TastePanelError(RuntimeError):
+    """A judge returned unusable output after retries."""
+
+
+@dataclass
+class PanelResult:
+    """Full output of one panel run."""
+
+    scores: list[JudgeScore]
+    means: dict[str, dict[str, float]]
+    noise: dict[str, float]
+    verdict: dict[str, dict[str, float | bool]]
+    pool: list[PanelImage]
+
+
+def _make_client() -> Any:
+    try:
+        import anthropic
+    except ImportError as e:  # pragma: no cover - env-dependent
+        raise TastePanelError(
+            "anthropic package required for the taste panel. Install with: pip install anthropic"
+        ) from e
+    return anthropic.Anthropic()
+
+
+def score_image(
+    image: PanelImage,
+    *,
+    judge: int,
+    repeat: int = 0,
+    model: str = DEFAULT_JUDGMENT_MODEL,
+    client: Any | None = None,
+) -> list[JudgeScore]:
+    """Score one image across its applicable dimensions with one judge pass.
+
+    Sends ONLY pixels + rubric — no filename, label, or source hint (the
+    blindness contract). Retries JSON parsing twice, then raises.
+    """
+    if client is None:
+        client = _make_client()
+
+    dims = dimensions_for_theme(image.theme)
+    prompt = build_judge_prompt(dims)
+    b64 = base64.standard_b64encode(image.path.read_bytes()).decode("ascii")
+
+    last_error = "no attempts"
+    for attempt in range(3):
+        message = client.messages.create(
+            model=model,
+            max_tokens=500,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": b64,
+                            },
+                        },
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ],
+        )
+        text = "".join(getattr(block, "text", "") for block in message.content)
+        try:
+            start, end = text.index("{"), text.rindex("}") + 1
+            payload = json.loads(text[start:end])
+            raw_scores = payload["scores"]
+            return [
+                JudgeScore(
+                    image_id=image.image_id,
+                    dimension=d.key,
+                    score=max(1, min(10, int(raw_scores[d.key]))),
+                    judge=judge,
+                    repeat=repeat,
+                )
+                for d in dims
+            ]
+        except (ValueError, KeyError, TypeError) as e:
+            last_error = f"{type(e).__name__}: {e}"
+            logger.warning(
+                "taste-panel: unparseable judge response for %s (attempt %d): %s",
+                image.image_id,
+                attempt + 1,
+                last_error,
+            )
+    raise TastePanelError(
+        f"Judge {judge} returned unusable output for {image.image_id}: {last_error}"
+    )
+
+
+def run_panel(
+    pool: list[PanelImage],
+    *,
+    judges: int = 3,
+    noise_runs: int = 2,
+    noise_subset: int = 4,
+    seed: int = 7,
+    model: str = DEFAULT_JUDGMENT_MODEL,
+    client: Any | None = None,
+) -> PanelResult:
+    """Run the full blind panel: base passes, noise repeats, aggregate, verdict.
+
+    Base: every image scored once per judge (order re-blinded per judge).
+    Noise: the first *noise_subset* images of the seed order are re-scored
+    *noise_runs* more times by judge 0; the noise SD pools ONLY judge-0
+    passes of that subset so inter-judge disagreement doesn't inflate the
+    repeatability estimate. Means exclude repeat passes so the noise subset
+    doesn't get extra weight.
+    """
+    if client is None:
+        client = _make_client()
+
+    all_scores: list[JudgeScore] = []
+    for judge in range(judges):
+        for image in blind_order(pool, seed=seed + judge):
+            all_scores.extend(score_image(image, judge=judge, model=model, client=client))
+
+    subset = blind_order(pool, seed=seed)[:noise_subset]
+    for repeat in range(1, noise_runs + 1):
+        for image in subset:
+            all_scores.extend(
+                score_image(image, judge=0, repeat=repeat, model=model, client=client)
+            )
+
+    sources = {p.image_id: p.source for p in pool}
+    subset_ids = {p.image_id for p in subset}
+    noise_scores = [s for s in all_scores if s.image_id in subset_ids and s.judge == 0]
+    means = aggregate_scores([s for s in all_scores if s.repeat == 0], sources=sources)
+    noise = noise_sd(noise_scores)
+    verdict = parity_verdict(means, noise)
+    return PanelResult(scores=all_scores, means=means, noise=noise, verdict=verdict, pool=pool)
