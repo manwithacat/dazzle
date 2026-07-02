@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.92.76] - 2026-07-02
+## [0.92.77] - 2026-07-02
+
+### Fixed
+- **CodeQL `py/insecure-temporary-file` (alert #207) resolved.** `tests/unit/test_enum_semantics_1493.py`'s `_parse` helper used `tempfile.mktemp` + `write_text` to fabricate a path for `parse_dsl` — but `parse_dsl` parses the source string it's given and only uses the path as a label, so the on-disk write was pure waste (and leaked one temp file per test). Now uses the canonical `parse_dsl(dsl, Path("test.dsl"))` pattern from `test_parser.py`. No behaviour change; 25/25 tests pass.
+- **update-vendors workflow no longer opens spurious banner-only PRs (the #1510 class).** The weekly job rebuilt dist bundles unconditionally and gated PR creation on *any* git diff — but `build_dist.py` stamps the current project version into the dist banners, so whenever version bumps landed without a JS rebuild the job produced a no-op PR whose only delta was the banner comment (#1510: v0.92.9→v0.92.23, zero vendor changes). The vendor-diff check now runs *before* the dist rebuild; no vendor changes → no rebuild, no PR.
 
 ### Fixed
 - **AIJob cost fields are now real — LLM call usage and USD cost recorded per call (#1528, the ADR-0051 salvage).** The governed `AIJob` entity (ADR-0043) always carried `tokens_in`/`tokens_out`/`cost_usd` and both write sites passed them through — but they were permanently `0`/`None` because `LLMAPIClient.complete()` returned only text, discarding the SDK's usage block. The issue's original mini-spec (a new `_dazzle_llm_calls` framework table + registry entry + collector) turned out to be unnecessary: **AIJob already is the cost ledger** — subject-linked (#1454), scope-governed as an app entity, and visible in the admin workspace. What shipped instead: `complete_with_usage()` on `LLMAPIClient` (a `Completion(text, tokens_in, tokens_out)` NamedTuple; Anthropic + OpenAI report the split, the Claude-CLI subscription path reports 0/0), the pure `dazzle.llm.costing.compute_cost_usd` module (single home for per-MTok pricing; Anthropic rates from `core.model_defaults.ANTHROPIC_PRICING_PER_MTOK`), and executor wiring that fills the `ExecutionResult` before `_record_job`. Cost semantics are **None-means-unknown, never 0-means-free**: unmetered providers (claude-cli/local/google), unpriced models, and unreported usage all record `NULL`.

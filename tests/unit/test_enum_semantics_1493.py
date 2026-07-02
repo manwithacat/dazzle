@@ -12,7 +12,6 @@ remaining slice-2 work.
 """
 
 import pathlib
-import tempfile
 
 import pytest
 
@@ -24,9 +23,7 @@ from dazzle.core.parser import parse_dsl
 
 
 def _parse(dsl: str):
-    p = pathlib.Path(tempfile.mktemp(suffix=".dsl"))
-    p.write_text(dsl)
-    _, _, _, _, _, frag = parse_dsl(dsl, p)
+    _, _, _, _, _, frag = parse_dsl(dsl, pathlib.Path("test.dsl"))
     return frag
 
 

@@ -25,17 +25,27 @@ jobs:
         run: python scripts/update_vendors.py | tee /tmp/update-vendors.log
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check for vendor changes
+        # Gate BEFORE the dist rebuild: build_dist.py stamps the current
+        # project version into the dist banners, so an unconditional rebuild
+        # produces a spurious banner-only PR whenever version bumps have
+        # landed without a JS change (see #1510).
+        id: vendor_diff
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No vendor changes detected"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Rebuild dist bundles
+        if: steps.vendor_diff.outputs.changed == 'true'
         run: python scripts/build_dist.py
-      - name: Create PR if changed
+      - name: Create PR
+        if: steps.vendor_diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if git diff --quiet; then
-            echo "No changes detected"
-            exit 0
-          fi
-
           BRANCH="update-vendors"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
