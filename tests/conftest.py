@@ -8,6 +8,7 @@ import pytest
 from dazzle.core import ir
 from dazzle.core.linker import build_appspec
 from dazzle.core.parser import parse_modules
+from tests import _pg_worker_db
 
 # Exclude e2e/docker tests from regular collection
 # These tests require playwright which is only available in Docker containers
@@ -46,31 +47,90 @@ def _skip_infra_check() -> None:
     os.environ.setdefault("DAZZLE_SKIP_INFRA_CHECK", "1")
 
 
+# Per-xdist-worker PostgreSQL databases (see tests/_pg_worker_db.py).
+#
+# The controller decides ONCE whether workers get their own databases and
+# pushes the verdict to every worker via xdist's workerinput channel. A
+# per-worker probe would risk split-brain: one worker's transient probe
+# failure while the controller probed True would silently run postgres tests
+# against the shared base DB concurrently with other workers' — the exact
+# corruption this mechanism prevents. With the verdict centralized, a worker
+# either provisions (and crashes the run loudly if it can't) or knows the
+# fallback pin is in force.
+_PG_WORKER_DB_KEY = "dazzle_pg_worker_db"
+
+
+def _pg_worker_db_enabled() -> bool:
+    """Controller-side verdict: can/should workers provision own databases?
+
+    ``DAZZLE_PG_WORKER_DB=0`` (or off/false) forces the fallback pin — the
+    escape hatch, and the lever the fallback path is tested with.
+    """
+    base_url = _pg_worker_db.base_pg_url()
+    if not base_url:
+        return False
+    if os.environ.get("DAZZLE_PG_WORKER_DB", "").lower() in {"0", "off", "false"}:
+        return False
+    return _pg_worker_db.can_create_databases(base_url)
+
+
+def pytest_configure_node(node) -> None:  # type: ignore[no-untyped-def]  # xdist controller hook
+    """Runs on the controller once per worker node, before the worker starts."""
+    node.workerinput[_PG_WORKER_DB_KEY] = "1" if _pg_worker_db_enabled() else "0"
+
+
 # Suppress deprecation warnings from deprecated adapters used in tests
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "filterwarnings",
         "ignore:OutboxPublisher.*db_path.*is deprecated:DeprecationWarning",
     )
+    _provision_pg_worker_db(config)
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Serialize all postgres-marked tests onto one xdist worker.
+def _provision_pg_worker_db(config: pytest.Config) -> None:
+    """In an xdist worker the controller cleared: provision this worker's DB.
 
-    They share a single live database, so running them concurrently corrupts
-    each other's state. Under `-n auto --dist loadgroup` this pins them to one
-    worker; without xdist (or under plain `--dist load`, which ignores
-    xdist_group) it is a no-op. New postgres-marked tests inherit the pin
-    automatically.
-
-    Scope caveat: this protects postgres-marked tests from EACH OTHER only.
-    A local `-n auto` run with TEST_DATABASE_URL/DATABASE_URL set still fails
-    sporadically because some unmarked tests also touch the live DB. CI's
-    base matrix job has no DB env (everything DB-backed skips), and the
-    dedicated PostgreSQL job runs single-process, so CI is unaffected.
-    Parallelising against a live DB needs per-worker databases — deliberate
-    follow-up, see dev_docs/2026-07-02-ci-runtime-and-suite-size-analysis.md.
+    Runs before collection, so the env rewrite is visible to the module-
+    import-time ``os.environ.get("TEST_DATABASE_URL")`` reads most postgres
+    test files do. Only env vars already set get rewritten — setting an
+    unset DATABASE_URL would activate tests that today skip. A provisioning
+    failure raises, which crashes the worker and fails the run loudly —
+    never a silent fall-through to the shared base database.
     """
+    workerinput = getattr(config, "workerinput", None)
+    if not workerinput or workerinput.get(_PG_WORKER_DB_KEY) != "1":
+        return
+    base_url = _pg_worker_db.base_pg_url()
+    assert base_url, "controller set the worker-db flag without a DB URL"
+    new_url = _pg_worker_db.provision_worker_database(base_url, workerinput["workerid"])
+    for var in _pg_worker_db.PG_ENV_VARS:
+        if os.environ.get(var):
+            os.environ[var] = new_url
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Fallback serialization for postgres-marked tests.
+
+    Applies only in xdist workers the controller did NOT clear for per-worker
+    databases while a live DB URL is configured: all postgres-marked tests
+    then share one worker under ``--dist loadgroup`` (they'd corrupt each
+    other's state on a shared database otherwise).
+
+    ``tryfirst`` is load-bearing: xdist's WorkerInteractor registers AFTER
+    conftests, so under plain (LIFO) ordering its collection_modifyitems —
+    which bakes each item's xdist_group into the ``@group`` nodeid suffix the
+    controller's loadgroup scheduler splits on — would run BEFORE this hook
+    and never see the marker (empirically: 26 cross-worker failures with the
+    plain hook, green with tryfirst). Serial runs never reach this: without
+    xdist there is no workerinput.
+    """
+    workerinput = getattr(config, "workerinput", None)
+    if not workerinput or workerinput.get(_PG_WORKER_DB_KEY) == "1":
+        return
+    if not _pg_worker_db.base_pg_url():
+        return
     for item in items:
         if "postgres" in item.keywords:
             item.add_marker(pytest.mark.xdist_group("postgres"))

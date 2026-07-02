@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.80] - 2026-07-02
+
+### Changed
+- **PostgreSQL CI job parallelised via per-xdist-worker databases (the v0.92.78 follow-up).** `tests/_pg_worker_db.py` + conftest wiring: under xdist with a CREATEDB-capable role, each worker gets its own database (`dazzle_test_gw0`, …) — the controller probes ONCE and pushes the verdict to every worker through xdist's `pytest_configure_node`/`workerinput` channel, so a transient per-worker probe failure can't silently land a worker on the shared base DB (the split-brain quadrant an adversarial review flagged). Worker provisioning failure crashes the run loudly. The env rewrite happens in worker `pytest_configure`, before the module-import-time `os.environ.get("TEST_DATABASE_URL")` reads the postgres test files do. Fallback for CREATEDB-less roles: all postgres-marked tests pin to one worker via `xdist_group("postgres")` — the pin hook is `tryfirst`, which is load-bearing (xdist's WorkerInteractor registers after conftests, so a plain hook runs *after* xdist bakes the `@group` nodeid suffix and the marker never reaches the scheduler; empirically 26 cross-worker failures without `tryfirst`). `DAZZLE_PG_WORKER_DB=0` forces the fallback. Proofs: postgres suite parallel 420/420 in 55 s (CI was 7.2 min serial); forced-fallback 420/420 serialized; full 19,938-test suite with a live DB fully parallel, 0 failures.
+- **Both app-booting signing test modules pinned to `xdist_group("signing-fixture-app")`** — they boot real `dazzle serve` subprocesses against shared repo dirs (`fixtures/signing_validation/`, `examples/contact_manager`); concurrent boots race on the app dir's `.dazzle/runtime.json` port discovery and on `_free_port`'s bind-close-reuse TOCTOU.
+
+### Agent Guidance
+- **Local `pytest -n auto --dist loadgroup` now works WITH a live DB** — each worker provisions its own `<dbname>_gwN` database automatically (leftovers are dropped/recreated on the next run). Tests that boot an app subprocess against a repo directory (not `tmp_path`) must carry an `xdist_group` pin naming that directory's cohort.
+
 ## [0.92.79] - 2026-07-02
 
 ### Fixed

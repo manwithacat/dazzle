@@ -26,7 +26,14 @@ import pytest
 
 from dazzle.qa.signing_seed import SeededDoc, mint_ephemeral_cert_env
 
-pytestmark = pytest.mark.integration
+# One xdist group across both app-booting signing modules. Two hazards when
+# boots overlap across workers: (1) each `dazzle serve` writes the booted
+# app dir's .dazzle/runtime.json, which boot helpers delete + poll for port
+# discovery — concurrent boots of the SAME dir clobber each other; (2)
+# _free_port's bind-close-return is a TOCTOU race, so two concurrent booters
+# can be handed the same port. Serializing every booter on one worker
+# removes both.
+pytestmark = [pytest.mark.integration, pytest.mark.xdist_group("signing-fixture-app")]
 
 CONTACT_MANAGER = Path(__file__).resolve().parents[2] / "examples" / "contact_manager"
 

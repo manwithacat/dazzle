@@ -19,7 +19,14 @@ from dazzle.qa.signing_verifier import verify_signing_outcome
 
 FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "signing_validation"
 
-pytestmark = pytest.mark.integration
+# One xdist group across both app-booting signing modules. Two hazards when
+# boots overlap across workers: (1) each `dazzle serve` writes the booted
+# app dir's .dazzle/runtime.json, which boot helpers delete + poll for port
+# discovery — concurrent boots of the SAME dir clobber each other; (2)
+# _free_port's bind-close-return is a TOCTOU race, so two concurrent booters
+# can be handed the same port. Serializing every booter on one worker
+# removes both.
+pytestmark = [pytest.mark.integration, pytest.mark.xdist_group("signing-fixture-app")]
 
 
 # ---------------------------------------------------------------------------

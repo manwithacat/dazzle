@@ -444,11 +444,16 @@ jobs:
       run: python scripts/build_dist.py
 
     - name: Run PostgreSQL-specific tests
+      # Parallel via per-xdist-worker databases: the service user `dazzle` is
+      # the instance superuser, so tests/conftest.py provisions dazzle_test_gw0…
+      # per worker and rewrites the env vars before collection (fallback for
+      # CREATEDB-less roles = xdist_group pin, hence --dist loadgroup).
       env:
         DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
         TEST_DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
+        COVERAGE_CORE: sysmon
       run: |
-        pytest -v -m "postgres" -x --cov=src/dazzle --cov-report=xml
+        pytest -n auto --dist loadgroup -m "postgres" -x --cov=src/dazzle --cov-report=xml
 
     - name: Upload coverage to Codecov
       # #1169: the postgres-marked tests exercise real-DB code paths
