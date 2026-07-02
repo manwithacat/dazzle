@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.88] - 2026-07-02
+
+### Removed
+- **`.agents/skills/` deleted — skills live in `.claude/skills/` only.** The directory was an April Codex-integration copy of the qa-trial skill (`chore(codex)`, one skill, never grew) that had already drifted behind its `.claude` source (missing Rule 7 / `signing_token_state`, v0.82.42) — the same content-copy rot that killed the full-content AGENTS.md (#1367). No Codex configuration exists in the repo and nothing referenced the path. If Codex support is ever wanted, symlink `.agents/skills → .claude/skills` instead of copying — one source of truth, zero drift. The drift-gated `AGENTS.md` stub remains the cross-tool pointer.
+
 ## [0.92.87] - 2026-07-02
 
 ### Changed
