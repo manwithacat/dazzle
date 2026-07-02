@@ -118,8 +118,10 @@ completeness, dark-mode integrity, perceived craft.
   resolver, `[data-theme]`/`[data-theme-name]` switching, and shipped themes
   keep working.
 - **Self-hosted variable font:** vendored woff2, `font-display: swap`,
-  preloaded. **Decision: Inter** (recommended over Geist — neutral rather than
-  borrowing Vercel's identity; tabular numerals for data-dense tables; OFL).
+  preloaded. **Decision: Geist** (James's call — start with the dialect's own
+  face and see what happens; OFL. Geist Mono for `--font-mono`. Inter remains
+  the fallback candidate if Geist underwhelms in the judged slices; enable
+  tabular-numeral feature settings for data-dense tables either way).
 - **Icon system:** vendor a curated Lucide subset (~120 icons, ISC license
   file included) as SVG path data in a generated Python registry
   (`src/dazzle/render/fragment/icons.py`, marked `# AUTO-GENERATED`,
@@ -197,7 +199,7 @@ per-app theme/sitespec fixes. Final deliverable: a convergence report
 
 | Decision | Choice |
 |---|---|
-| Font | Inter (variable, self-hosted, OFL) |
+| Font | Geist + Geist Mono (variable, self-hosted, OFL); Inter is the fallback candidate |
 | Icon set | Lucide (curated ~120 subset, vendored SVG paths, ISC) |
 | Reference screenshots | Gitignored; capture script committed |
 | Artifact home | `docs/reference/taste.md` (card-safety pattern) |
