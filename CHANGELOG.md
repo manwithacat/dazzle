@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.92.71] - 2026-07-02
+## [0.92.72] - 2026-07-02
+
+### Fixed
+- **`get_permitted_personas` no longer over-reports personas the rbac matrix denies (#1520).** The IR triples helper was never taught the #1281 deny-all short-form: `permit: create: false` produces a rule with empty `personas` and no condition, which fell through to the "open rule → all personas permitted" branch — so every persona got phantom `create_link`/`delete_button` actions (and therefore phantom surface triples) on append-only entities. The helper now mirrors `rbac.matrix._resolve_decision` in full: deny-all rules match nobody, a matching FORBID rule beats any PERMIT (Cedar forbid > permit — a second, previously-latent over-report path), and rules match each persona's `effective_role` (#1147) rather than its raw id, with the returned list still carrying persona ids. Transitively fixes `get_triples_for_persona`, the UX contract/inventory layers, `dazzle ux` CLI, and the MCP `policy` handler (which shares `_rule_matches_persona`). New drift gate `tests/unit/test_triples_matrix_parity.py` pins the containment invariant — triples-permitted ⊆ matrix-permitted — across every example app.
 
 ### Fixed
 - **Detail related tabs: multiple FK paths from one entity no longer render N identical, simultaneously-active tabs (#1523).** When a related entity reaches the parent through more than one FK (`assigned_to` + `reviewed_by` both `ref Parent`), the compiler previously emitted N tabs with the same label *and* the same `tab_id` — and since the Alpine tab strip keys `activeTab` on `tab_id`, all N rendered as active at once. Each FK path now gets a distinct `tab_id` (`tab-task-assigned-to`) and an FK-disambiguated label (`Task · assigned to`). Single-FK-path entities keep the exact historical `tab_id`/label (byte-stable — no golden churn). Each tab always filtered by its own FK path; only the presentation collapsed them. A declarative `via <fk_field>` qualifier for `related` groups (author-pinned path selection) is a possible follow-on.

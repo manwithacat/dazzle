@@ -177,12 +177,16 @@ def _condition_is_pure_role_only(condition: object) -> bool:
 def _rule_matches_persona(rule: object, persona_id: str) -> bool:
     """Return True if a PermissionRule applies to the given persona ID.
 
-    Evaluation order:
-    1. If the rule has explicit ``personas``, check membership.
-    2. If the condition is a pure role gate, check whether the role name
+    Evaluation order (mirrors ``rbac.matrix._rule_matches_role``, #1520):
+    1. If the rule is the #1281 deny-all short-form (``permit: <op>: false``),
+       no persona matches — it must not fall through to the open-rule branch.
+    2. If the rule has explicit ``personas``, check membership.
+    3. If the condition is a pure role gate, check whether the role name
        matches the persona ID.
-    3. Otherwise (open rule), return True — any authenticated persona matches.
+    4. Otherwise (open rule), return True — any authenticated persona matches.
     """
+    if getattr(rule, "deny_all", False):
+        return False
     personas = getattr(rule, "personas", [])
     condition = getattr(rule, "condition", None)
     if not personas:
@@ -194,6 +198,27 @@ def _rule_matches_persona(rule: object, persona_id: str) -> bool:
     if _condition_matches_role(condition, persona_id):
         return True
     return False
+
+
+def _cedar_permits(op_rules: Sequence[object], role: str) -> bool:
+    """Cedar decision for one role over an operation's rules: forbid > permit > deny.
+
+    A matching FORBID denies immediately (it beats any PERMIT, so scanning the
+    remaining rules cannot change the outcome); otherwise at least one matching
+    PERMIT is required.
+    """
+    from dazzle.core.ir.domain import PolicyEffect
+
+    permit_matched = False
+    for rule in op_rules:
+        if not _rule_matches_persona(rule, role):
+            continue
+        effect = getattr(rule, "effect", PolicyEffect.PERMIT)
+        if effect == PolicyEffect.FORBID:
+            return False
+        if effect == PolicyEffect.PERMIT:
+            permit_matched = True
+    return permit_matched
 
 
 def get_permitted_personas(
@@ -217,36 +242,31 @@ def get_permitted_personas(
         persona list is returned (open-by-default).  When the access spec
         exists but has no rule for *operation* an empty list is returned
         (deny-by-default for that operation).
-    """
-    from dazzle.core.ir.domain import PolicyEffect
 
+    Semantics mirror ``rbac.matrix._resolve_decision`` (#1520): rules are
+    matched against each persona's ``effective_role`` (#1147), the #1281
+    deny-all short-form matches nobody, and a matching FORBID rule beats any
+    PERMIT (Cedar forbid > permit) — so the result is always a subset of the
+    matrix's permitted roles.
+    """
     entity = next((e for e in entities if getattr(e, "name", None) == entity_name), None)
     if entity is None or not getattr(entity, "access", None):
         return [getattr(p, "id", str(p)) for p in personas]
 
-    permitted: set[str] = set()
     access = getattr(entity, "access", None)
-    for rule in getattr(access, "permissions", []):
-        if getattr(rule, "operation", None) != operation:
-            continue
-        effect = getattr(rule, "effect", PolicyEffect.PERMIT)
-        if effect != PolicyEffect.PERMIT:
-            continue
-        rule_personas: list[str] = getattr(rule, "personas", [])
-        if rule_personas:
-            permitted.update(rule_personas)
-        else:
-            condition = getattr(rule, "condition", None)
-            if _condition_is_pure_role_only(condition):
-                for p in personas:
-                    pid = getattr(p, "id", str(p))
-                    if _condition_matches_role(condition, pid):
-                        permitted.add(pid)
-            else:
-                # Open rule — all personas permitted
-                return [getattr(p, "id", str(p)) for p in personas]
+    op_rules = [
+        rule
+        for rule in getattr(access, "permissions", [])
+        if getattr(rule, "operation", None) == operation
+    ]
 
-    return list(permitted)
+    permitted: list[str] = []
+    for p in personas:
+        pid = getattr(p, "id", str(p))
+        role = getattr(p, "effective_role", None) or pid
+        if _cedar_permits(op_rules, role):
+            permitted.append(pid)
+    return permitted
 
 
 # ---------------------------------------------------------------------------

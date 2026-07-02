@@ -371,6 +371,64 @@ class TestGetPermittedPersonas:
         result = get_permitted_personas([entity], personas, query_entity, query_op)
         assert set(result) == expected
 
+    def test_deny_all_rule_permits_nobody(self) -> None:
+        """#1520: the #1281 short-form `permit: create: false` must not fall
+        through to the open-rule branch and permit every persona."""
+        entity = _make_entity("Task")
+        entity = entity.model_copy(
+            update={
+                "access": AccessSpec(
+                    permissions=[
+                        PermissionRule(
+                            operation=PermissionKind.CREATE,
+                            personas=[],
+                            deny_all=True,
+                            effect=PolicyEffect.PERMIT,
+                        )
+                    ]
+                )
+            }
+        )
+        personas = _make_personas("admin", "teacher")
+        assert get_permitted_personas([entity], personas, "Task", PermissionKind.CREATE) == []
+
+    def test_forbid_rule_overrides_permit(self) -> None:
+        """#1520: Cedar forbid > permit — a persona matched by a FORBID rule is
+        excluded even when an open PERMIT rule also matches it."""
+        entity = _make_entity("Task")
+        entity = entity.model_copy(
+            update={
+                "access": AccessSpec(
+                    permissions=[
+                        PermissionRule(
+                            operation=PermissionKind.READ,
+                            personas=[],
+                            effect=PolicyEffect.PERMIT,
+                        ),
+                        PermissionRule(
+                            operation=PermissionKind.READ,
+                            personas=["viewer"],
+                            effect=PolicyEffect.FORBID,
+                        ),
+                    ]
+                )
+            }
+        )
+        personas = _make_personas("admin", "viewer")
+        result = get_permitted_personas([entity], personas, "Task", PermissionKind.READ)
+        assert set(result) == {"admin"}
+
+    def test_rules_match_effective_role_not_persona_id(self) -> None:
+        """#1520/#1147: a persona whose `role:` differs from its id must match
+        rules naming the role, and the returned list carries the persona id."""
+        entity = _make_entity("Task", permissions=[(PermissionKind.UPDATE, ["staff"])])
+        personas = [
+            PersonaSpec(id="alice", label="Alice", role="staff"),
+            PersonaSpec(id="bob", label="Bob", role="customer"),
+        ]
+        result = get_permitted_personas([entity], personas, "Task", PermissionKind.UPDATE)
+        assert result == ["alice"]
+
 
 # ---------------------------------------------------------------------------
 # TestResolveSurfaceActions
