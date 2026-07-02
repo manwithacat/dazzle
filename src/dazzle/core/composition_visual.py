@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from .model_defaults import DEFAULT_JUDGMENT_MODEL
 from .taste_rubric import TASTE_DIMENSIONS as _TASTE_DIMENSIONS
+from .taste_rubric import TasteDimension
 
 if TYPE_CHECKING:
     from .composition_capture import CapturedPage, CapturedSection
@@ -288,7 +289,7 @@ DIMENSION_PROMPT_BUILDERS: dict[str, Any] = {
 # panel's scores contract in dazzle.qa.taste_panel).
 
 
-def _make_taste_prompt_builder(dim: Any) -> Any:
+def _make_taste_prompt_builder(dim: TasteDimension) -> Any:
     def _build(section_type: str, spec_context: dict[str, Any]) -> str:
         anchors = "; ".join(f"{score}={text}" for score, text in dim.anchors)
         return (
