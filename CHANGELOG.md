@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.86] - 2026-07-02
+
+### Fixed
+- **py3.12 mypy inference in the 1a maturity probe** — the CI type-check job (3.12-pinned) inferred the probe's field-dict list literals as `list[object]` where the local 3.14 run did not; explicit `list[dict[str, Any]]` annotations restore the green.
+
 ## [0.92.85] - 2026-07-02
 
 ### Added

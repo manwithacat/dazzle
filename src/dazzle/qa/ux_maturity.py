@@ -117,7 +117,7 @@ def _probe_1a() -> ProbeResult:
     _, kinds = _display_kinds()
     rich = len(kinds) >= 10
     # Level 4: usage annotates the form's field dicts (autofocus + upgrade)…
-    hot = [
+    hot: list[dict[str, Any]] = [
         {"name": "title", "kind": "text", "label": "T"},
         {
             "name": "cat",
@@ -129,7 +129,7 @@ def _probe_1a() -> ProbeResult:
     annotate_form_fields_by_usage(hot, {"title": 30, "cat": 12})
     usage_adapts = hot[0].get("autofocus") is True and hot[1].get("widget") == "combobox"
     # …and below the floor is byte-identical (cold-start invariant).
-    cold = [{"name": "title", "kind": "text", "label": "T"}]
+    cold: list[dict[str, Any]] = [{"name": "title", "kind": "text", "label": "T"}]
     annotate_form_fields_by_usage(cold, {"title": 2})
     cold_parity = cold == [{"name": "title", "kind": "text", "label": "T"}]
     ok = default_infers and explicit_respected and rich and usage_adapts and cold_parity
