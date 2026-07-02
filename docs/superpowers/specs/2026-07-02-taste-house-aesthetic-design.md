@@ -24,6 +24,15 @@ the ux-architect material is locked in PDFs rather than agent-readable form.
 opinionated house aesthetic in the framework defaults, demonstrated end-to-end
 in the example apps, and judged against an explicit parity gate.
 
+**Name:** the house style is called **HaTchi-MaXchi** (pronounced
+"hachi machi"). The capitalisation spells out its substrate — HTMX — and the
+style leans into HTMX4 structures deliberately: the design language
+accentuates, rather than hides, the hypermedia anatomy (swap targets,
+fragments, indicators, boosted navigation). Where the dialect we target
+parity with treats the network as something to conceal behind client state,
+HaTchi-MaXchi treats the request/swap lifecycle as a first-class design
+material.
+
 **Non-goal:** accreting CSS until Dazzle imitates a generic React app, or
 adopting the dialect's *mechanism* (utility-class proliferation, heavyweight
 component frameworks). We target parity with the dialect's **perceived
@@ -78,7 +87,8 @@ quality**, achieved through principles, semantic CSS, and tokens.
 pattern: canonical doc, machine-enforced where possible, drift-gated where
 cheap. Three strata:
 
-**Principles** (prose — the why; refined against Phase 0 evidence):
+**Principles** (prose — the why; refined against Phase 0 evidence). Nine
+principles; the ninth is the HaTchi-MaXchi signature:
 
 1. **Semantic surface, expressive result.** One root class + `data-dz-*`
    modifiers; tokens carry the aesthetic. Agent-hostile class soup is a rule
@@ -97,6 +107,13 @@ cheap. Three strata:
    scale.
 8. **Every state is designed.** Hover, focus, active, disabled, loading,
    empty, error — no browser defaults showing through.
+9. **The structure is the style.** HaTchi-MaXchi expresses its HTMX4
+   anatomy: swap targets read as coherent surfaces, `hx-indicator` and the
+   htmx request-lifecycle classes drive the loading/motion language
+   (skeleton shimmer, settle transitions), and boosted navigation feels
+   like part of the material rather than a page reload apologising for
+   itself. The design language and the transport share one skeleton — a
+   differentiator no client-state dialect can copy honestly.
 
 **Numbered rules** (`TASTE-1…n` — concrete, checkable). Examples of the
 intended register: "focus ring: 2px accent at 40% alpha, offset 2px, on every

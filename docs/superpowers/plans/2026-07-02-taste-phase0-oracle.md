@@ -1719,9 +1719,11 @@ Expected: FAIL — doc missing.
 Structure (author the full prose during execution — principles are fixed by the spec; rules MUST cite baseline evidence from Task 8 where available):
 
 ```markdown
-# Taste — the Dazzle House Aesthetic
+# HaTchi-MaXchi — the Dazzle House Aesthetic
 
-Canonical, agent-readable definition of Dazzle's visual taste.
+Canonical, agent-readable definition of Dazzle's visual taste — the
+**HaTchi-MaXchi** style (pronounced "hachi machi"; the capitals spell its
+HTMX substrate).
 Consumed by: framework CSS/token authors (now), the authoring agent and
 the improve loop (follow-ons). Enforced by: the blind taste panel
 (`dazzle qa taste-panel`), opt-in `composition analyze` taste focus, and
@@ -1731,11 +1733,14 @@ Baseline: `dev_docs/taste/baseline-2026-07-02.md`.
 
 ## Principles
 
-[The eight principles from the spec, verbatim headers + one paragraph each:
+[The nine principles from the spec, verbatim headers + one paragraph each:
 1 Semantic surface, expressive result · 2 Type does the hierarchy ·
 3 One accent; neutrals do the work · 4 Depth is information ·
 5 Motion confirms, never entertains · 6 Dark is a material, not an
-inversion · 7 Density with rhythm · 8 Every state is designed]
+inversion · 7 Density with rhythm · 8 Every state is designed ·
+9 The structure is the style (the HaTchi-MaXchi signature: HTMX4 anatomy —
+swap targets, hx-indicator lifecycle, boosted navigation — IS the design
+material; motion/loading language derives from the htmx request lifecycle)]
 
 ## Rules
 
