@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .model_defaults import DEFAULT_JUDGMENT_MODEL
+from .taste_rubric import TASTE_DIMENSIONS as _TASTE_DIMENSIONS
 
 if TYPE_CHECKING:
     from .composition_capture import CapturedPage, CapturedSection
@@ -277,6 +278,57 @@ DIMENSION_PROMPT_BUILDERS: dict[str, Any] = {
     "visual_hierarchy": _build_visual_hierarchy_prompt,
     "responsive_fidelity": _build_responsive_fidelity_prompt,
 }
+
+
+# ── Opt-in taste dimensions ─────────────────────────────────────────
+# HaTchi-MaXchi rubric dimensions (spec: docs/superpowers/specs/
+# 2026-07-02-taste-house-aesthetic-design.md). Never run by default —
+# they cost LLM tokens and exist for explicit focus=["taste"] audits.
+# Prompts follow the composition findings contract (not the blind
+# panel's scores contract in dazzle.qa.taste_panel).
+
+
+def _make_taste_prompt_builder(dim: Any) -> Any:
+    def _build(section_type: str, spec_context: dict[str, Any]) -> str:
+        anchors = "; ".join(f"{score}={text}" for score, text in dim.anchors)
+        return (
+            f"Evaluate this {section_type} section for {dim.title.lower()} "
+            f"({dim.key}).\n{dim.question}\n"
+            f"Calibration (1-10 scale): {anchors}\n\n"
+            "Report only concrete, visible problems.\n"
+            'Return JSON: {"findings": [{"section": "...", "category": "'
+            + dim.key
+            + '", "severity": "high|medium|low", "finding": "...", '
+            '"evidence": "...", "remediation": "..."}]}'
+        )
+
+    return _build
+
+
+TASTE_FOCUS_KEYS: list[str] = [d.key for d in _TASTE_DIMENSIONS]
+
+for _taste_dim in _TASTE_DIMENSIONS:
+    DIMENSION_PROMPT_BUILDERS[_taste_dim.key] = _make_taste_prompt_builder(_taste_dim)
+    DIMENSION_PREPROCESSING[_taste_dim.key] = None  # full-colour screenshots
+
+
+def resolve_focus_dimensions(focus: list[str] | None) -> list[str]:
+    """Expand a focus request into concrete dimension keys.
+
+    ``None`` → the standard DIMENSIONS. ``"taste"`` expands to all six
+    rubric keys. Unknown names are dropped. Taste keys never run unless
+    explicitly requested.
+    """
+    if focus is None:
+        return list(DIMENSIONS)
+    valid = set(DIMENSIONS) | set(TASTE_FOCUS_KEYS)
+    expanded: list[str] = []
+    for f in focus:
+        if f == "taste":
+            expanded.extend(TASTE_FOCUS_KEYS)
+        elif f in valid:
+            expanded.append(f)
+    return expanded
 
 
 # ── LLM Evaluation ──────────────────────────────────────────────────

@@ -168,13 +168,20 @@ def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str
     if not captures:
         return error_response("No capture files found in " + str(captures_dir))
 
-    # Filter dimensions if focus specified
+    # Filter dimensions if focus specified ("taste" expands to the
+    # HaTchi-MaXchi rubric keys — opt-in, never in the default run)
     dimensions: list[str] | None = None
     if focus:
-        dimensions = [d for d in DIMENSIONS if d in focus]
+        from dazzle.core.composition_visual import resolve_focus_dimensions
+
+        dimensions = resolve_focus_dimensions(focus)
         if not dimensions:
             return json.dumps(
-                {"error": f"No valid dimensions in focus: {focus}. Valid: {DIMENSIONS}"}
+                {
+                    "error": (
+                        f"No valid dimensions in focus: {focus}. Valid: {DIMENSIONS} or 'taste'"
+                    )
+                }
             )
 
     t0 = time.monotonic()
@@ -403,7 +410,6 @@ async def _run_visual_pipeline(
     from dazzle.core.composition import run_geometry_audit
     from dazzle.core.composition_capture import capture_page_sections
     from dazzle.core.composition_visual import (
-        DIMENSIONS,
         build_visual_report,
         evaluate_captures,
     )
@@ -437,10 +443,12 @@ async def _run_visual_pipeline(
     # Geometry audit (zero-cost — no LLM tokens)
     geometry_result = run_geometry_audit(captures, sitespec)
 
-    # LLM visual analysis
+    # LLM visual analysis ("taste" expands to the rubric keys, opt-in)
     dimensions: list[str] | None = None
     if focus:
-        dimensions = [d for d in DIMENSIONS if d in focus]
+        from dazzle.core.composition_visual import resolve_focus_dimensions
+
+        dimensions = resolve_focus_dimensions(focus)
 
     results = evaluate_captures(
         captures,
