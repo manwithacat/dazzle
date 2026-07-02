@@ -45,8 +45,9 @@ audience = "investor"
 claim = """Every role's permissions, for every entity and operation, are declared
 as machine-readable policy. They compile on demand into an auditable access
 matrix — so permission review is something you run and diff, not something you
-eyeball."""
-evidence = "dazzle rbac report"
+eyeball — and the row-visibility rules can additionally be submitted to an SMT
+solver for formal verification."""
+evidence = "dazzle rbac prove"
 
 [multi_tenant]
 detector = "is_multi_tenant"
@@ -101,3 +102,49 @@ claim = """Data classifications and controls declared in the model can be
 extracted into a compliance evidence report mapped to ISO 27001 and SOC 2
 controls, rather than assembled by hand at audit time."""
 evidence = "dazzle compliance summary"
+
+[ledger_integrity]
+detector = "has_ledger"
+group = "data"
+audience = "investor"
+claim = """Money movement is recorded as balanced, double-entry transactions
+against declared ledger accounts: every movement has an equal and opposite
+entry, so the books cannot silently drift out of balance."""
+evidence = "dazzle validate"
+
+[background_execution]
+detector = "has_background_work"
+group = "architecture"
+audience = "technical"
+claim = """Long-running and scheduled work is executed by a built-in background
+engine coordinated through the database itself — there is no separate queue
+infrastructure to deploy or operate, and an interrupted run is picked up rather
+than lost."""
+evidence = "dazzle process list"
+
+[approval_controls]
+detector = "has_approvals"
+group = "security"
+audience = "founder"
+claim = """Sensitive changes require explicit sign-off: approval rules with named
+approver roles and quorums are part of the model itself, not an informal process
+that depends on people remembering to ask."""
+evidence = "dazzle validate"
+
+[sla_commitments]
+detector = "has_slas"
+group = "architecture"
+audience = "founder"
+claim = """Response-time commitments are declared in the model per record type,
+with escalation tiers — the commitment is explicit and inspectable rather than
+a support-page promise."""
+evidence = "dazzle validate"
+
+[governed_ai]
+detector = "has_ai_assist"
+group = "architecture"
+audience = "investor"
+claim = """AI-assisted steps are declared in the model — each with an explicit
+trigger, prompt contract, and timeout — rather than ad-hoc calls buried in
+code, so what the AI is allowed to touch is reviewable in one place."""
+evidence = "dazzle validate"

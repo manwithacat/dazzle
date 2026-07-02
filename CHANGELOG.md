@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.1] - 2026-07-02
+
+### Added
+- **Spec-brief enrichment (spec-narrative Stage 1).** `dazzle spec brief` now extracts the constructs the narrative was starving without: entity **relationships** (ref/belongs_to/poly_ref between user entities, with required-ness), actor **goals** + explicitly-granted workspaces, **journeys** (authored `story` declarations — 80 across the examples were previously invisible), **places** (workspaces with purpose/personas/region contents, experiences with steps), **automation & controls** (processes, schedules, approvals, SLAs, llm_intents, integrations, double-entry ledgers, transactions), and **scope rules rendered in plain English** via the new `spec_narrative/english.py` predicate renderer ("its assigned tester is the signed-in user" — closed over the whole predicate algebra, fail-safe on unknown nodes). Skeleton gains `where_work_happens` and `automation_and_controls` sections. Framework plumbing (`_platform_admin` workspace) is excluded like admin surfaces.
+- **Five new value-claims with honest detectors**: `ledger_integrity` (double-entry), `background_execution` (processes/schedules), `approval_controls`, `sla_commitments`, `governed_ai` (declared llm_intents) — plus `provable_rbac` now cites `dazzle rbac prove` (SMT verification) as its evidence. Claim sets now genuinely differentiate examples (gated by test).
+
+### Changed
+- simple_task spec-brief golden snapshot regenerated (enriched shape + reworded provable_rbac claim).
+
 ## [0.93.0] - 2026-07-02
 
 ### Fixed

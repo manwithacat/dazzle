@@ -73,7 +73,9 @@ def test_build_brief_plain_app_has_no_rls_claim():
         "executive_summary",
         "what_it_does",
         "who_uses_it",
+        "where_work_happens",
         "how_work_flows",
+        "automation_and_controls",
         "technical_foundation",
         "compliance_posture",
     ]

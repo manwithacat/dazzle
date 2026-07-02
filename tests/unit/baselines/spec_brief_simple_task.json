@@ -6,7 +6,8 @@
       "name": "User",
       "title": "Team Member",
       "intent": "A person with an account who can create and be assigned tasks within an organisation",
-      "lifecycle_states": []
+      "lifecycle_states": [],
+      "relationships": []
     },
     {
       "name": "Task",
@@ -17,30 +18,86 @@
         "in_progress",
         "review",
         "done"
+      ],
+      "relationships": [
+        {
+          "field": "assigned_to",
+          "target": "User",
+          "target_title": "Team Member",
+          "required": false
+        },
+        {
+          "field": "created_by",
+          "target": "User",
+          "target_title": "Team Member",
+          "required": false
+        }
       ]
     },
     {
       "name": "TaskComment",
       "title": "Task Comment",
       "intent": "A discussion note attached to a Task by a Team Member to capture context or decisions",
-      "lifecycle_states": []
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "task",
+          "target": "Task",
+          "target_title": "Task",
+          "required": true
+        },
+        {
+          "field": "author",
+          "target": "User",
+          "target_title": "Team Member",
+          "required": true
+        }
+      ]
     }
   ],
   "actors": [
     {
       "id": "admin",
       "label": "Administrator",
-      "description": "Full system access for task and user management"
+      "description": "Full system access for task and user management",
+      "goals": [
+        "Manage all tasks",
+        "Configure team settings",
+        "View analytics"
+      ],
+      "workspaces": [
+        "Task Board",
+        "Admin Dashboard",
+        "Team Overview"
+      ]
     },
     {
       "id": "manager",
       "label": "Team Manager",
-      "description": "Oversee team tasks and assignments"
+      "description": "Oversee team tasks and assignments",
+      "goals": [
+        "Assign tasks to team",
+        "Track team progress",
+        "Review completed work"
+      ],
+      "workspaces": [
+        "Task Board",
+        "Team Overview"
+      ]
     },
     {
       "id": "member",
       "label": "Team Member",
-      "description": "Work on assigned tasks"
+      "description": "Work on assigned tasks",
+      "goals": [
+        "Complete assigned tasks",
+        "Update task status",
+        "Request help"
+      ],
+      "workspaces": [
+        "Task Board",
+        "My Work"
+      ]
     }
   ],
   "capabilities": [
@@ -117,6 +174,300 @@
       "mode": "edit"
     }
   ],
+  "journeys": [
+    {
+      "id": "ST-006",
+      "title": "Administrator creates a new Team Member",
+      "actor": "admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "New User is saved to database",
+        "Administrator sees confirmation message"
+      ]
+    },
+    {
+      "id": "ST-007",
+      "title": "Administrator creates a new Task",
+      "actor": "admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "New Task is saved to database",
+        "Administrator sees confirmation message"
+      ]
+    },
+    {
+      "id": "ST-008",
+      "title": "Administrator changes Task from todo to in_progress",
+      "actor": "admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Task.status becomes 'in_progress'",
+        "Timestamp is recorded"
+      ]
+    },
+    {
+      "id": "ST-009",
+      "title": "Administrator changes Task from in_progress to review",
+      "actor": "admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Task.status becomes 'review'",
+        "Timestamp is recorded"
+      ]
+    },
+    {
+      "id": "ST-010",
+      "title": "Administrator changes Task from in_progress to todo",
+      "actor": "admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Task.status becomes 'todo'",
+        "Timestamp is recorded"
+      ]
+    },
+    {
+      "id": "ST-011",
+      "title": "Administrator creates a new Task Comment",
+      "actor": "admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "New TaskComment is saved to database",
+        "Administrator sees confirmation message"
+      ]
+    },
+    {
+      "id": "ST-012",
+      "title": "Administrator views all tasks across organization",
+      "actor": "admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Administrator sees every Task regardless of assignee",
+        "Task list is sortable by priority, status, due_date"
+      ]
+    },
+    {
+      "id": "ST-013",
+      "title": "Administrator configures team settings",
+      "actor": "admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Administrator sees the full team roster",
+        "Administrator can change a Team Member's role or department"
+      ]
+    },
+    {
+      "id": "ST-014",
+      "title": "Administrator views system-wide analytics",
+      "actor": "admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Administrator sees aggregate counts of Tasks by status",
+        "Administrator sees team velocity metrics"
+      ]
+    },
+    {
+      "id": "ST-015",
+      "title": "Team Manager views all tasks for team",
+      "actor": "manager",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Team Manager sees every Task assigned within their team",
+        "Task list is sortable by priority, status, due_date"
+      ]
+    },
+    {
+      "id": "ST-016",
+      "title": "Team Manager views unassigned tasks",
+      "actor": "manager",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Team Manager sees Tasks where assigned_to is null",
+        "Team Manager can click a Task to assign it"
+      ]
+    },
+    {
+      "id": "ST-017",
+      "title": "Team Manager assigns a task to a Team Member",
+      "actor": "manager",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Task.assigned_to is set to the chosen Team Member",
+        "Team Member sees the new Task in their my_work view"
+      ]
+    },
+    {
+      "id": "ST-018",
+      "title": "Team Manager reviews completed tasks",
+      "actor": "manager",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Team Manager sees the review queue sorted by updated_at desc",
+        "Team Manager can approve a Task to done or send it back to in_progress"
+      ]
+    },
+    {
+      "id": "ST-019",
+      "title": "Team Member updates own task status",
+      "actor": "member",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Task.status transitions through declared state machine",
+        "Updated timestamp is recorded"
+      ]
+    },
+    {
+      "id": "ST-020",
+      "title": "Team Member views own tasks",
+      "actor": "member",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Team Member sees only Tasks where assigned_to = self or created_by = self",
+        "Task list is grouped by status"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "task_board",
+      "title": "Task Board",
+      "kind": "workspace",
+      "purpose": "Manage tasks visually",
+      "personas": [
+        "admin",
+        "manager",
+        "member"
+      ],
+      "contents": [
+        "kanban of Task",
+        "timeline of Task",
+        "list of TaskComment"
+      ]
+    },
+    {
+      "name": "admin_dashboard",
+      "title": "Admin Dashboard",
+      "kind": "workspace",
+      "purpose": "System-wide overview and management",
+      "personas": [
+        "admin"
+      ],
+      "contents": [
+        "list of Task",
+        "list of User",
+        "list of Task",
+        "list of Task"
+      ]
+    },
+    {
+      "name": "team_overview",
+      "title": "Team Overview",
+      "kind": "workspace",
+      "purpose": "Monitor team progress and workload",
+      "personas": [
+        "admin",
+        "manager"
+      ],
+      "contents": [
+        "list of Task",
+        "list of Task",
+        "list of Task",
+        "list of Task"
+      ]
+    },
+    {
+      "name": "my_work",
+      "title": "My Work",
+      "kind": "workspace",
+      "purpose": "Personal task view for assigned work",
+      "personas": [],
+      "contents": [
+        "list of Task",
+        "list of Task",
+        "list of Task",
+        "list of Task"
+      ]
+    }
+  ],
+  "automation": [
+    {
+      "kind": "process",
+      "name": "task_auto_assignment",
+      "title": "Auto-Assign High Priority Tasks",
+      "description": null,
+      "detail": "runs when a Task changes"
+    },
+    {
+      "kind": "process",
+      "name": "task_escalation",
+      "title": "Escalate Overdue Task",
+      "description": null,
+      "detail": null
+    },
+    {
+      "kind": "process",
+      "name": "urgent_task_approval",
+      "title": "Urgent Task Approval",
+      "description": null,
+      "detail": "runs when a Task changes"
+    },
+    {
+      "kind": "schedule",
+      "name": "daily_overdue_check",
+      "title": "Daily Overdue Task Check",
+      "description": null,
+      "detail": "on a schedule (0 9 * * *)"
+    },
+    {
+      "kind": "schedule",
+      "name": "weekly_team_report",
+      "title": "Weekly Team Report",
+      "description": null,
+      "detail": "on a schedule (0 9 * * MON)"
+    },
+    {
+      "kind": "llm_intent",
+      "name": "classify_task_priority",
+      "title": "Auto-classify Task Priority",
+      "description": "Analyze task title and description to suggest priority level",
+      "detail": "AI-assisted"
+    },
+    {
+      "kind": "llm_intent",
+      "name": "suggest_task_tags",
+      "title": "Suggest Tags for Task",
+      "description": "Analyze task to suggest relevant tags/labels",
+      "detail": "AI-assisted"
+    },
+    {
+      "kind": "llm_intent",
+      "name": "summarize_task_comments",
+      "title": "Summarize Task Discussion",
+      "description": "Summarize the comment thread on a task",
+      "detail": "AI-assisted"
+    },
+    {
+      "kind": "llm_intent",
+      "name": "estimate_task_effort",
+      "title": "Estimate Task Effort",
+      "description": "Estimate effort required for a task",
+      "detail": "AI-assisted"
+    }
+  ],
   "security": {
     "has_row_level_security": true,
     "scoped_entities": [
@@ -124,7 +475,166 @@
       "Task",
       "TaskComment"
     ],
-    "persona_count": 3
+    "persona_count": 3,
+    "scope_rules": [
+      {
+        "entity": "User",
+        "operation": "list",
+        "personas": [
+          "admin",
+          "manager"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "User",
+        "operation": "read",
+        "personas": [
+          "admin",
+          "manager"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "User",
+        "operation": "create",
+        "personas": [
+          "admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "User",
+        "operation": "update",
+        "personas": [
+          "admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "User",
+        "operation": "delete",
+        "personas": [
+          "admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Task",
+        "operation": "list",
+        "personas": [
+          "member"
+        ],
+        "rule": "(its assigned to is the signed-in user or its created by is the signed-in user)"
+      },
+      {
+        "entity": "Task",
+        "operation": "list",
+        "personas": [
+          "admin",
+          "manager"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Task",
+        "operation": "read",
+        "personas": [
+          "member"
+        ],
+        "rule": "(its assigned to is the signed-in user or its created by is the signed-in user)"
+      },
+      {
+        "entity": "Task",
+        "operation": "read",
+        "personas": [
+          "admin",
+          "manager"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Task",
+        "operation": "create",
+        "personas": [
+          "admin",
+          "manager",
+          "member"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Task",
+        "operation": "update",
+        "personas": [
+          "member"
+        ],
+        "rule": "(its assigned to is the signed-in user or its created by is the signed-in user)"
+      },
+      {
+        "entity": "Task",
+        "operation": "update",
+        "personas": [
+          "admin",
+          "manager"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Task",
+        "operation": "delete",
+        "personas": [
+          "admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskComment",
+        "operation": "list",
+        "personas": [
+          "admin",
+          "manager",
+          "member"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskComment",
+        "operation": "read",
+        "personas": [
+          "admin",
+          "manager",
+          "member"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskComment",
+        "operation": "create",
+        "personas": [
+          "admin",
+          "manager",
+          "member"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskComment",
+        "operation": "update",
+        "personas": [
+          "admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskComment",
+        "operation": "delete",
+        "personas": [
+          "admin"
+        ],
+        "rule": "all records"
+      }
+    ]
   },
   "activated_claims": [
     {
@@ -138,8 +648,8 @@
       "id": "provable_rbac",
       "group": "security",
       "audience": "investor",
-      "claim": "Every role's permissions, for every entity and operation, are declared\nas machine-readable policy. They compile on demand into an auditable access\nmatrix — so permission review is something you run and diff, not something you\neyeball.",
-      "evidence": "dazzle rbac report"
+      "claim": "Every role's permissions, for every entity and operation, are declared\nas machine-readable policy. They compile on demand into an auditable access\nmatrix — so permission review is something you run and diff, not something you\neyeball — and the row-visibility rules can additionally be submitted to an SMT\nsolver for formal verification.",
+      "evidence": "dazzle rbac prove"
     },
     {
       "id": "postgres_backed",
@@ -168,6 +678,20 @@
       "audience": "technical",
       "claim": "Significant business moments are modelled as first-class events with\nformally-defined semantics, giving the system a precise, auditable record of what\nhappened and when.",
       "evidence": "dazzle specs asyncapi"
+    },
+    {
+      "id": "background_execution",
+      "group": "architecture",
+      "audience": "technical",
+      "claim": "Long-running and scheduled work is executed by a built-in background\nengine coordinated through the database itself — there is no separate queue\ninfrastructure to deploy or operate, and an interrupted run is picked up rather\nthan lost.",
+      "evidence": "dazzle process list"
+    },
+    {
+      "id": "governed_ai",
+      "group": "architecture",
+      "audience": "investor",
+      "claim": "AI-assisted steps are declared in the model — each with an explicit\ntrigger, prompt contract, and timeout — rather than ad-hoc calls buried in\ncode, so what the AI is allowed to touch is reviewable in one place.",
+      "evidence": "dazzle validate"
     }
   ],
   "skeleton": [
@@ -187,7 +711,17 @@
       "claim_ids": []
     },
     {
+      "section": "where_work_happens",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
       "section": "how_work_flows",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "automation_and_controls",
       "populated": true,
       "claim_ids": []
     },
@@ -200,7 +734,9 @@
         "postgres_backed",
         "schema_managed",
         "server_rendered",
-        "event_semantics"
+        "event_semantics",
+        "background_execution",
+        "governed_ai"
       ]
     },
     {
