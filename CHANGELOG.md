@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.3] - 2026-07-03
+
 ### Added
 - **HaTchi-MaXchi taste oracle (Phase 0+1 of the house-aesthetic effort)** — an agent-accessible concept of taste with a measurable parity gate against the shadcn/Vercel design dialect:
   - `docs/reference/taste.md` — the canonical artifact: 9 principles (incl. "the structure is the style" — HTMX4 anatomy as design material), 12 evidence-cited TASTE-n rules, judged rubric. Drift-gated by `tests/unit/test_taste_doc_drift.py`.
