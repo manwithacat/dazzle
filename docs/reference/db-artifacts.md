@@ -49,15 +49,15 @@ Each artifact declares:
    prefix); they **self-create** on their own connection. Not subject to the non-owner
    posture.
 
-3. **ops_db** — tables on the separate `ops_integration` database (deployment history,
-   spec versions, analytics, …). Own lifecycle, separate connection; not app-DB tables.
-
-4. **app_entity** — the per-DSL entity tables. Created by the migration engine
+3. **app_entity** — the per-DSL entity tables. Created by the migration engine
    (ADR-0045) the framework generates per app; tenant-scoped entities are RLS-**fenced**.
    Not enumerated here (per-app) — represented as one class row.
 
-5. **tenant_registry** — `public.tenants` + per-tenant schemas; separate tenant
+4. **tenant_registry** — `public.tenants` + per-tenant schemas; separate tenant
    lifecycle. One class row.
+
+(The former **ops_db** class — tables on the separate `ops_integration` database —
+was retired with the orphaned ops platform in #1525.)
 
 ## The gating rule (the #1495 class)
 

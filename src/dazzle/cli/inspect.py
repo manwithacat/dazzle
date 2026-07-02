@@ -801,7 +801,7 @@ def db_artifacts_command(
     cls_filter: str | None = typer.Option(
         None,
         "--class",
-        help="Filter by class (framework_internal, event_bus_transport, ops_db, "
+        help="Filter by class (framework_internal, event_bus_transport, "
         "app_entity, tenant_registry)",
     ),
 ) -> None:

@@ -22,7 +22,6 @@ from enum import StrEnum
 class ArtifactClass(StrEnum):
     FRAMEWORK_INTERNAL = "framework_internal"  # in the ADR-0044 baseline; owner-created
     EVENT_BUS_TRANSPORT = "event_bus_transport"  # {prefix}* ; excluded; self-creating
-    OPS_DB = "ops_db"  # separate ops database; own lifecycle
     APP_ENTITY = "app_entity"  # per-DSL; migration-engine generated
     TENANT_REGISTRY = "tenant_registry"  # public.tenants + per-tenant schemas
 
@@ -204,27 +203,6 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         )
         for n in ("{prefix}events", "{prefix}consumer_offsets", "{prefix}dlq")
     ],
-    # ── ops database (separate DB; own lifecycle) ──────────────────────────
-    # Represented as ONE class-descriptor row: the ops tables (ops_credentials,
-    # health_checks, api_calls, analytics_events, event_log, retention_config,
-    # deployment_history, spec_versions, …) live on a SEPARATE database
-    # (ops_integration) the app owns, created across several stores
-    # (ops_database / deploy_history / spec_versioning). They are NOT app-DB
-    # framework tables and not subject to the non-owner RLS posture, so the
-    # completeness sweep allowlists their modules rather than policing them.
-    Artifact(
-        name="<ops_integration tables>",
-        cls=ArtifactClass.OPS_DB,
-        creator="dazzle.http.runtime.ops_database",
-        boot_entry=None,
-        owner=Ownership.RUNTIME_SELF,
-        rls=RlsPosture.NOT_APPLICABLE,
-        in_baseline=False,
-        boot_ddl_gated=False,
-        notes="separate ops_integration DB; own lifecycle (ops_database / "
-        "deploy_history / spec_versioning stores)",
-        is_pattern=True,
-    ),
     # ── dynamic classes (described, not enumerated) ────────────────────────
     Artifact(
         name="<app entities>",

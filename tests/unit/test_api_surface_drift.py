@@ -136,7 +136,8 @@ def test_public_helpers_includes_known_packages():
 
 def test_runtime_urls_includes_known_modules():
     snapshot = urls_mod.snapshot_runtime_urls()
-    for module in ("admin_api_routes", "audit_routes", "search_routes"):
+    # admin_api_routes was retired with the ops platform (ADR-0051, #1525).
+    for module in ("audit_routes", "search_routes"):
         assert f"module: {module}\n" in snapshot, f"Missing module: {module}"
 
 

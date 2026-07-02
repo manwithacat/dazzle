@@ -485,30 +485,13 @@ _NAV_GROUPS: list[tuple[str, list[str]]] = [
 
 # Actions available on admin regions (region_name -> list of action defs)
 # Each action: {"label": str, "endpoint": str, "method": str, "confirm": str, "persona": str}
-_REGION_ACTIONS: dict[str, list[dict[str, str]]] = {
-    "deploys": [
-        {
-            "label": "Trigger Deploy",
-            "endpoint": "/_admin/api/deploys/trigger",
-            "method": "POST",
-            "confirm": "Trigger a new deployment?",
-            "persona": "super_admin",
-        },
-    ],
-}
+# The deploys Trigger Deploy / Rollback actions were removed in #1525: their
+# /_admin/api/deploys/* endpoints lived in the retired ops platform's
+# admin_api_routes (never mounted), so the buttons always 404'd.
+_REGION_ACTIONS: dict[str, list[dict[str, str]]] = {}
 
 # Row-level actions (shown per item)
-_ROW_ACTIONS: dict[str, list[dict[str, str]]] = {
-    "deploys": [
-        {
-            "label": "Rollback",
-            "endpoint": "/_admin/api/deploys/{id}/rollback",
-            "method": "POST",
-            "confirm": "Roll back to this deployment?",
-            "persona": "super_admin",
-        },
-    ],
-}
+_ROW_ACTIONS: dict[str, list[dict[str, str]]] = {}
 
 
 def get_region_actions(region_name: str) -> list[dict[str, str]]:

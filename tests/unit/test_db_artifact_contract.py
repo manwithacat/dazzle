@@ -120,11 +120,6 @@ _SCAN_ROOT = "src/dazzle"
 # registered or explicitly added here with a reason.
 _ALLOWLIST = frozenset(
     {
-        # ── separate ops_integration DB (class OPS_DB; not app-DB framework tables) ──
-        "dazzle.http.runtime.ops_database.OpsDatabase._init_schema",
-        "dazzle.http.runtime.ops_database.OpsDatabase._apply_migrations",
-        "dazzle.http.runtime.deploy_history.DeployHistoryStore._ensure_table",
-        "dazzle.http.runtime.spec_versioning.SpecVersionStore._ensure_table",
         # ── app-entity / codegen DDL machinery (class APP_ENTITY; per-DSL, not framework) ──
         "dazzle.http.runtime.pg_backend._create_table_sql",
         "dazzle.http.runtime.pg_backend._create_index_sql",

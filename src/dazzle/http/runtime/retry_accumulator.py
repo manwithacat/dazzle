@@ -11,8 +11,8 @@ state is:
 That trade-off is deliberate. Durable retry history is the
 responsibility of the integration provider's own logs; this accumulator
 exists purely to make in-flight / recent retry state inspectable via
-``GET /_dazzle/integrations/{name}/retries`` without changing the
-schema or scope of ``ops_db``.
+``GET /_dazzle/integrations/{name}/retries`` without introducing any
+database storage.
 
 The per-integration list is capped at
 :data:`RetryAccumulator.MAX_EVENTS_PER_INTEGRATION` entries (default

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.75] - 2026-07-02
+
+### Removed
+- **The orphaned ops platform is retired (ADR-0051, #1525) — ~5,600 LOC deleted.** The Dec-2025 single-founder cockpit (12 modules under `http/runtime/`: `ops_integration`, `analytics_collector`, `ops_database`, `health_aggregator`, `api_tracker`, `api_middleware`, `email_templates`, `spec_versioning`, `system_entity_store`, `admin_api_routes`, `deploy_history`, `rollback_manager`) plus the `/​_ops/ui/` Control Plane assets (`page/runtime/static/ops/`) and its three dedicated PG test files. `mount_ops_platform()` was never wired at any point in history; the platform's only consumer (the Founder Console) was deleted by #703 in March 2026 when the DSL-native admin workspace won, and ADR-0050 already salvaged the one thesis-relevant capability (usage capture) by deliberate narrow rebuild. Capability-by-capability archaeology + verdicts on the issue. Also removed: the `ArtifactClass.OPS_DB` registry class (ADR-0047 row + enum + 4 DDL-sweep allowlist entries), the super-admin **Trigger Deploy / Rollback** buttons in the admin workspace (their `/_admin/api/deploys/*` endpoints lived in the never-mounted `admin_api_routes` — they always 404'd), and the `admin_api_routes` section of the runtime-urls api-surface baseline (55 routes across 17 modules now). Kept: `sse_stream`/`sse_wiring` (live at `/_ops/sse/events`) and `device_registry` (live boot DDL). Follow-ups: LLM-cost tracking salvage (the one un-substituted capability, filed separately); the writer-less `DeployHistory` admin entity (fleet-wide blast radius, deferred — see ADR-0051).
+
 ## [0.92.74] - 2026-07-02
 
 ### Removed
