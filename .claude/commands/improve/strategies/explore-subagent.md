@@ -96,7 +96,7 @@ print(prompt)
 
 `Agent` / `Task` tool call:
 - `subagent_type`: `general-purpose`
-- `model`: `sonnet`
+- `model`: omit — inherit the session model (contract/edge-case discovery is judgment work; CLAUDE.md Subagent Model Policy)
 - `description`: `Cycle N /improve framework-ux explore: <example> <persona>`
 - `prompt`: string from step 5
 

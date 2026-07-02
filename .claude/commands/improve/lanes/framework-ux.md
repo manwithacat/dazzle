@@ -121,7 +121,7 @@ Choose one of six sub-strategies based on accumulated state. Pick by judgment, n
 
 Scan for recurring UX patterns lacking a contract. Proposal-heavy. Use when (a) recently-touched template family may contain uncontracted components, or (b) >3 cycles since last `missing_contracts`.
 
-Substrate: dispatches a Claude Code Task-tool subagent (model `sonnet`, type `general-purpose`) using the playbook in `improve/strategies/explore-subagent.md`. Findings go to per-run findings.json then ingested into the lane backlog as `PROP-NNN` proposals.
+Substrate: dispatches a Claude Code Task-tool subagent (no `model` override — judgment work inherits the session model per CLAUDE.md; type `general-purpose`) using the playbook in `improve/strategies/explore-subagent.md`. Findings go to per-run findings.json then ingested into the lane backlog as `PROP-NNN` proposals.
 
 #### Sub-strategy: edge_cases
 

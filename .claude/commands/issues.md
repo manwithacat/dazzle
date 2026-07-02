@@ -55,6 +55,10 @@ Every issue is classified into one tier during investigation (Step 2). The class
   2. Post a comment summarising what was implemented and which commit(s) resolve it.
   3. Close the issue: `gh issue close <number>`.
   4. Remove the `needs-triage` label if present: `gh issue edit <number> --remove-label "needs-triage"`.
+  5. Emit the `fix-deployed` signal so /improve lanes re-verify affected rows (the
+     cross-lane contract names /issues as this signal's emitter — previously
+     declared but never wired). Best-effort, never blocks the loop:
+     `python -c "from dazzle.cli.runtime_impl.ux_cycle_signals import emit; emit(source='issues', kind='fix-deployed', payload={'issue': <number>})"`
 - Clean up stale labels: run `gh issue list --state closed --label "needs-triage" --limit 50 --json number` and remove the label from each: `gh issue edit <number> --remove-label "needs-triage"`.
 - Display a summary table of remaining open issues: number, title, labels, **author**.
 

@@ -74,7 +74,23 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - If a tag was created in step 3, also run `git push origin --tags` to push it. This triggers release workflows (PyPI, Homebrew).
 - If the push is rejected (e.g. non-fast-forward), do NOT force-push. Inform the user and stop.
 
-## 5. Final verification
+## 5. Signal the improvement loop
+
+After a successful push, emit the `fix-deployed` signal so /improve lanes
+re-verify rows the change may affect (the cross-lane contract in
+`improve.md` names /ship as this signal's emitter — previously declared
+but never wired, so lanes sat on stale verification state across releases):
+
+```bash
+python -c "
+from dazzle.cli.runtime_impl.ux_cycle_signals import emit
+emit(source='ship', kind='fix-deployed', payload={'sha': '$(git rev-parse --short HEAD)', 'version': 'vX.Y.Z'})
+"
+```
+
+Best-effort — a failure here never blocks the ship; note it and continue.
+
+## 6. Final verification
 
 - Run `git status` one last time to confirm the worktree is clean.
 - Report the final state: commit SHA, branch, and worktree status.

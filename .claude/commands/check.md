@@ -29,12 +29,14 @@ Issue all applicable commands as **separate Bash calls in a single message** so 
 | Check | Run when | Command |
 |-------|----------|---------|
 | Type | always | `mypy src/dazzle` |
-| Unit tests | `py_changed` | `pytest tests/unit -x -q --tb=short -m "not slow"` |
+| Unit tests | `py_changed` | `pytest tests/unit -n auto --dist loadgroup -q --tb=short -m "not slow"` |
 | DSL validation | `dsl_changed` | `dazzle validate` |
 | Parser corpus | `parser_changed` | `pytest tests/parser_corpus/ -x -q --tb=short` |
 | MCP verify | `mcp_changed` | `python scripts/verify-mcp.py` |
 
 The type command **must stay identical to `/ship` and CI** — change one, change all three (see the gate-sync note in `ship.md`).
+
+Unit tests run parallel (`-n auto --dist loadgroup`, v0.92.80+): per-worker Postgres databases are provisioned automatically when a DB URL is set, and postgres-marked tests pin to one worker otherwise. `-x` is dropped in parallel mode (xdist makes it approximate); rely on the failure list instead.
 
 ### 4. Collect and report
 

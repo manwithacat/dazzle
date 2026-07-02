@@ -78,7 +78,7 @@ The prompt instructs the subagent to Read each screenshot, evaluate against `daz
 Single dispatch, one subagent for the whole fleet (~25-50 screenshots):
 
 - `subagent_type`: `general-purpose`
-- `model`: `sonnet`
+- `model`: omit — inherit the session model (visual perception + evaluation is judgment work; CLAUDE.md Subagent Model Policy)
 - `description`: `Cycle N /improve example-apps visual Tier 2 — fleet sweep`
 - `prompt`: contents of `${STATE_DIR}/prompt.txt`
 

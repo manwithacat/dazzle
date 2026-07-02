@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.87] - 2026-07-02
+
+### Changed
+- **Agent-tooling cleanup (fresh-eyes audit of /improve + the skills estate).** (1) The three hardcoded `model: sonnet` pins in the improve strategies/lanes (Opus-4.7-era, predating the Subagent Model Policy) removed — judgment-work subagents now inherit the session model. (2) `/check`'s unit-test run adopts `-n auto --dist loadgroup` (the v0.92.80 parallel substrate; `-x` dropped, approximate under xdist). (3) The `fix-deployed` signal is now actually EMITTED by `/ship` (post-push) and `/issues` (post-close) — the cross-lane contract in `improve.md` had declared both as emitters since April but neither was wired, so /improve lanes sat on stale verification state across releases (the log's own "0 signals in 13 days across the htmx migration" complaint). Bus probed end-to-end.
+
+### Removed
+- **Three dead "skills" deleted** — `.claude/skills/{dsl-patterns,deployment,process-schema}.md` carried Cursor-style `auto_load:`/`globs:` frontmatter that Claude Code never loads; they were silent no-ops, and `dsl-patterns.md` had rotted into actively teaching the two inline patterns `test_dedup_footgun_gates.py` forbids (re-inlined persona-id and state-name fallbacks) plus a ~15-construct-stale construct list. Replaced by a real skill, `.claude/skills/dsl-authoring/SKILL.md` — thin by design: corrected mistake list (including the scope/permit-pairing bug class from improve cycle 188), pointers to the drift-gated homes (CLAUDE.md quick reference, grammar.md) instead of copies that rot. `deployment.md`/`process-schema.md` content defers to the existing `docs/reference/{deployment,processes}.md`. Also removed the project-level `/glitch` copy — it was byte-identical to the user-level `~/.claude/commands/glitch.md` and double-registered in the skill list.
+
 ## [0.92.86] - 2026-07-02
 
 ### Fixed
