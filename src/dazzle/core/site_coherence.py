@@ -227,17 +227,82 @@ def validate_site_coherence(
     all_routes = _collect_all_routes(sitespec_data)
 
     # Run all checks
-    _check_navigation(sitespec_data, all_routes, report)
-    _check_ctas(sitespec_data, all_routes, report)
+    _check_navigation(sitespec_data, all_routes, report, project_root=project_root)
+    _check_ctas(sitespec_data, all_routes, report, project_root=project_root)
     _check_required_pages(sitespec_data, all_routes, report, business_context)
     _check_legal_pages(sitespec_data, report)
     _check_auth_flow(sitespec_data, all_routes, report)
     _check_content_completeness(sitespec_data, copy_data, report)
     _check_placeholder_content(sitespec_data, copy_data, report)
-    _check_footer(sitespec_data, all_routes, report)
+    _check_footer(sitespec_data, all_routes, report, project_root=project_root)
     _check_branding(sitespec_data, report)
 
     return report
+
+
+# A final path segment with a short extension marks an asset href, not a page
+# route (#1532) — marketing routes in this framework never carry extensions.
+_ASSET_EXT_RE = re.compile(r"\.[A-Za-z0-9]{1,8}$")
+
+_STATIC_MOUNT = "/static/"
+
+
+def _href_path(href: str) -> str:
+    """The path part of an href — query string and fragment stripped."""
+    return href.split("?", 1)[0].split("#", 1)[0]
+
+
+def _is_asset_href(href: str) -> bool:
+    """True when a ``/``-href points at a static asset rather than a page route.
+
+    Assets are anything under the static mount plus any href whose final path
+    segment carries a file extension (``/downloads/brochure.pdf``). These must
+    never be flagged by the route-existence checks — they are served by the
+    static mount, not the route table (#1532).
+    """
+    path = _href_path(href)
+    if path.startswith(_STATIC_MOUNT):
+        return True
+    final_segment = path.rsplit("/", 1)[-1]
+    return bool(_ASSET_EXT_RE.search(final_segment))
+
+
+def _check_asset_href(
+    href: str,
+    project_root: Path | None,
+    report: CoherenceReport,
+    *,
+    category: str,
+    location: str | None,
+    label: str,
+) -> None:
+    """Verify a static-asset href on disk when a static root is resolvable (#1532).
+
+    Probes ``<project_root>/static/<rel>`` for hrefs under the static mount.
+    Found → nothing to report (the passed-summary of the calling check covers
+    it). Not found → a SUGGESTION, never an error: the asset is commonly a
+    build-generated artifact (gitignored, produced during the deploy build) or
+    served from the framework static dir / an ``extra_static_dirs`` entry that
+    this check deliberately does not model. Hrefs outside the static mount and
+    checks without a ``project_root`` are skipped — nothing to probe.
+    """
+    path = _href_path(href)
+    if project_root is None or not path.startswith(_STATIC_MOUNT):
+        return
+    static_root = (Path(project_root) / "static").resolve()
+    candidate = (static_root / path[len(_STATIC_MOUNT) :]).resolve()
+    # Traversal guard: an href like /static/../x must not escape the root.
+    if candidate.is_relative_to(static_root) and candidate.is_file():
+        return
+    report.add_suggestion(
+        category,
+        f"{label} asset '{href}' not found under static/",
+        location=location,
+        suggestion=(
+            "Fine if the asset is generated at build time or served from an "
+            "extra static dir — otherwise add the file or fix the href"
+        ),
+    )
 
 
 def _collect_all_routes(sitespec_data: dict[str, Any]) -> set[str]:
@@ -280,6 +345,7 @@ def _check_navigation(
     sitespec_data: dict[str, Any],
     all_routes: set[str],
     report: CoherenceReport,
+    project_root: Path | None = None,
 ) -> None:
     """Check that navigation links resolve."""
     layout = sitespec_data.get("layout") or {}
@@ -296,6 +362,19 @@ def _check_navigation(
 
         # Skip external links
         if href.startswith(("http://", "https://", "mailto:", "tel:")):
+            continue
+
+        # Static assets are served by the static mount, not the route table —
+        # probe the filesystem instead of flagging a missing route (#1532).
+        if href.startswith("/") and _is_asset_href(href):
+            _check_asset_href(
+                href,
+                project_root,
+                report,
+                category="Navigation",
+                location="nav",
+                label=f"Link '{label}'",
+            )
             continue
 
         # Check internal links
@@ -321,10 +400,14 @@ def _check_ctas(
     sitespec_data: dict[str, Any],
     all_routes: set[str],
     report: CoherenceReport,
+    project_root: Path | None = None,
 ) -> None:
     """Check that CTAs lead somewhere meaningful."""
     broken_ctas = []
     empty_ctas = []
+
+    integrations = sitespec_data.get("integrations") or {}
+    app_mount = integrations.get("app_mount_route", "/app")
 
     for page in sitespec_data.get("pages", []):
         page_route = page.get("route", "unknown")
@@ -332,34 +415,33 @@ def _check_ctas(
         for i, section in enumerate(page.get("sections", [])):
             section_loc = f"{page_route} section {i + 1}"
 
-            # Check primary CTA
-            primary = section.get("primary_cta")
-            if primary:
-                href = primary.get("href", "")
-                label = primary.get("label", "")
+            # Primary and secondary share the href checks; only the primary
+            # flags missing label/destination (a secondary CTA is optional).
+            for kind in ("primary_cta", "secondary_cta"):
+                cta = section.get(kind)
+                if not cta:
+                    continue
+                href = cta.get("href", "")
+                label = cta.get("label", "")
 
-                if not label:
+                if kind == "primary_cta" and not label:
                     empty_ctas.append((section_loc, "primary CTA has no label"))
-                elif not href:
+                elif kind == "primary_cta" and not href:
                     empty_ctas.append((section_loc, f"'{label}' has no destination"))
-                elif href.startswith("/") and href not in all_routes:
-                    # Check if it's an app route
-                    integrations = sitespec_data.get("integrations") or {}
-                    app_mount = integrations.get("app_mount_route", "/app")
-                    if not href.startswith(app_mount):
-                        broken_ctas.append((section_loc, label, href))
-
-            # Check secondary CTA
-            secondary = section.get("secondary_cta")
-            if secondary:
-                href = secondary.get("href", "")
-                label = secondary.get("label", "")
-
-                if label and href.startswith("/") and href not in all_routes:
-                    integrations = sitespec_data.get("integrations") or {}
-                    app_mount = integrations.get("app_mount_route", "/app")
-                    if not href.startswith(app_mount):
-                        broken_ctas.append((section_loc, label, href))
+                elif not label or not href.startswith("/"):
+                    continue
+                elif _is_asset_href(href):
+                    # A static asset (e.g. a PDF download) is not a route (#1532).
+                    _check_asset_href(
+                        href,
+                        project_root,
+                        report,
+                        category="CTAs",
+                        location=section_loc,
+                        label=f"CTA '{label}'",
+                    )
+                elif href not in all_routes and not href.startswith(app_mount):
+                    broken_ctas.append((section_loc, label, href))
 
     for loc, issue in empty_ctas:
         report.add_warning(
@@ -625,6 +707,7 @@ def _check_footer(
     sitespec_data: dict[str, Any],
     all_routes: set[str],
     report: CoherenceReport,
+    project_root: Path | None = None,
 ) -> None:
     """Check footer has expected links."""
     layout = sitespec_data.get("layout") or {}
@@ -669,7 +752,17 @@ def _check_footer(
     # Check footer links resolve
     broken = []
     for href in footer_hrefs:
-        if href.startswith("/") and href not in all_routes:
+        if href.startswith("/") and _is_asset_href(href):
+            # Static asset, not a route (#1532) — probe the filesystem instead.
+            _check_asset_href(
+                href,
+                project_root,
+                report,
+                category="Footer",
+                location="footer",
+                label=f"Footer link '{href}'",
+            )
+        elif href.startswith("/") and href not in all_routes:
             broken.append(href)
 
     if broken:

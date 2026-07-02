@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.0] - 2026-07-02
+
+### Fixed
+- **sitespec coherence no longer flags working static-asset CTAs as broken routes (#1532).** The CTA, navigation, and footer checks were route-only, so a CTA pointing at a downloadable asset (`/static/samples/sample-pack.pdf`) was always a −20 error even when it serves 200 in production. Asset hrefs — anything under `/static/` or with a file extension in the final path segment — now leave the route check entirely; `/static/` hrefs get a filesystem probe against `<project_root>/static` (with a traversal guard), where a missing file is a −1 *suggestion*, never an error, because such assets are commonly build-generated and legitimately absent at check time. Genuinely dead download links are now surfaced (the old route-only check could never catch them); plain route hrefs still error as before.
+
+### Changed
+- `_check_ctas` primary/secondary duplication folded into one loop (behaviour identical; the primary-only empty-label/href warnings preserved) — keeps the file's maintainability rank at A.
+
 ## [0.92.93] - 2026-07-02
 
 ### Changed

@@ -353,3 +353,103 @@ class TestFullValidation:
         report = validate_site_coherence(sitespec)
         assert report.is_coherent
         assert report.score >= 70  # Some suggestions are OK
+
+
+class TestStaticAssetHrefs1532:
+    """#1532: static-asset hrefs (PDF downloads etc.) are not routes.
+
+    The CTA / nav / footer checks were route-only, so a working
+    `/static/samples/pack.pdf` CTA was always an ERROR. Asset hrefs now leave
+    the route check entirely; `/static/` hrefs get a filesystem probe against
+    `<project_root>/static` where MISSING is a SUGGESTION (build-generated
+    artifacts are legitimately absent pre-build), never an error.
+    """
+
+    @staticmethod
+    def _sitespec(cta_href: str) -> dict:
+        return {
+            "pages": [
+                {
+                    "route": "/",
+                    "sections": [
+                        {
+                            "primary_cta": {"label": "Sign up", "href": "/signup"},
+                            "secondary_cta": {"label": "Download the PDF pack", "href": cta_href},
+                        }
+                    ],
+                }
+            ],
+            "layout": {
+                "nav": {"public": [{"label": "Home", "href": "/"}]},
+                "footer": {"columns": [{"links": [{"label": "Pack", "href": cta_href}]}]},
+            },
+            "legal": {},
+            "auth_pages": {},
+            "integrations": {},
+            "brand": {},
+        }
+
+    def _issues(self, report, categories=("CTAs", "Footer", "Navigation")):
+        return [i for i in report.issues if i.category in categories]
+
+    def test_static_asset_present_on_disk_is_clean(self, tmp_path) -> None:
+        asset = tmp_path / "static" / "samples" / "sample-pack.pdf"
+        asset.parent.mkdir(parents=True)
+        asset.write_bytes(b"%PDF-1.4")
+        report = validate_site_coherence(
+            self._sitespec("/static/samples/sample-pack.pdf"), project_root=tmp_path
+        )
+        assert self._issues(report) == []
+
+    def test_static_asset_missing_is_suggestion_not_error(self, tmp_path) -> None:
+        (tmp_path / "static").mkdir()
+        report = validate_site_coherence(
+            self._sitespec("/static/samples/sample-pack.pdf"), project_root=tmp_path
+        )
+        issues = self._issues(report)
+        assert issues, "missing asset should still be surfaced"
+        assert all(i.severity == Severity.SUGGESTION for i in issues)
+        assert report.error_count == 0
+
+    def test_static_asset_without_project_root_is_skipped(self) -> None:
+        # No static root resolvable → nothing to probe, nothing to flag.
+        report = validate_site_coherence(self._sitespec("/static/samples/sample-pack.pdf"))
+        assert self._issues(report) == []
+
+    def test_extension_href_outside_static_mount_is_not_a_broken_route(self, tmp_path) -> None:
+        # Served by a custom mount the checker doesn't model — asset, not route.
+        report = validate_site_coherence(
+            self._sitespec("/downloads/brochure.pdf"), project_root=tmp_path
+        )
+        assert self._issues(report) == []
+
+    def test_query_string_and_fragment_are_ignored_for_asset_detection(self, tmp_path) -> None:
+        asset = tmp_path / "static" / "pack.pdf"
+        asset.parent.mkdir(parents=True)
+        asset.write_bytes(b"%PDF-1.4")
+        report = validate_site_coherence(
+            self._sitespec("/static/pack.pdf?v=2#page=3"), project_root=tmp_path
+        )
+        assert self._issues(report) == []
+
+    def test_traversal_href_cannot_escape_static_root(self, tmp_path) -> None:
+        (tmp_path / "static").mkdir()
+        (tmp_path / "secret.pdf").write_bytes(b"%PDF-1.4")  # exists OUTSIDE static/
+        report = validate_site_coherence(
+            self._sitespec("/static/../secret.pdf"), project_root=tmp_path
+        )
+        issues = self._issues(report)
+        # Must not be treated as found (escape) — surfaced as the missing-asset
+        # suggestion, and never an error.
+        assert issues and all(i.severity == Severity.SUGGESTION for i in issues)
+        assert report.error_count == 0
+
+    def test_plain_route_hrefs_still_flag_as_errors(self) -> None:
+        # Regression guard: the asset carve-out must not weaken the route check.
+        report = validate_site_coherence(self._sitespec("/nonexistent-page"))
+        cta_errors = [
+            i
+            for i in report.issues
+            if i.category in ("CTAs", "Footer") and i.severity == Severity.ERROR
+        ]
+        assert len(cta_errors) == 2  # secondary CTA + footer link
