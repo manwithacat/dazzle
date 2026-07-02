@@ -316,9 +316,12 @@ for _taste_dim in _TASTE_DIMENSIONS:
 def resolve_focus_dimensions(focus: list[str] | None) -> list[str]:
     """Expand a focus request into concrete dimension keys.
 
-    ``None`` → the standard DIMENSIONS. ``"taste"`` expands to all six
-    rubric keys. Unknown names are dropped. Taste keys never run unless
-    explicitly requested.
+    ``None`` → the standard DIMENSIONS. ``"taste"`` expands to the rubric
+    keys that apply to any theme — ``dark_mode_integrity`` is excluded
+    because composition captures carry no theme information, and asking a
+    dark-mode question of a light screenshot produces false findings; it
+    can still be requested explicitly by name against known-dark captures.
+    Unknown names are dropped. Taste keys never run unless requested.
     """
     if focus is None:
         return list(DIMENSIONS)
@@ -326,7 +329,7 @@ def resolve_focus_dimensions(focus: list[str] | None) -> list[str]:
     expanded: list[str] = []
     for f in focus:
         if f == "taste":
-            expanded.extend(TASTE_FOCUS_KEYS)
+            expanded.extend(d.key for d in _TASTE_DIMENSIONS if d.applies_to == "both")
         elif f in valid:
             expanded.append(f)
     return expanded

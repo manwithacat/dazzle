@@ -101,6 +101,27 @@ def test_assemble_pool_skips_missing_files(tmp_path: Path) -> None:
     assert len(pool) == 3  # missing file skipped, not crashed
 
 
+def test_normalize_pool_frames_crops_tall_images_only(tmp_path: Path) -> None:
+    from PIL import Image
+
+    from dazzle.qa.taste_panel import PanelImage, normalize_pool_frames
+
+    tall = tmp_path / "tall.png"
+    Image.new("RGB", (1440, 3000), "white").save(tall)
+    fits = tmp_path / "fits.png"
+    Image.new("RGB", (1440, 900), "white").save(fits)
+    pool = [
+        PanelImage(image_id="img-00", source="dazzle", label="a", path=tall, theme="light"),
+        PanelImage(image_id="img-01", source="reference", label="r", path=fits, theme="light"),
+    ]
+    normalized = normalize_pool_frames(pool, frame_width=1440, frame_height=900)
+    with Image.open(normalized[0].path) as img:
+        assert img.size == (1440, 900)
+    assert normalized[0].path.stem.endswith("-frame")
+    assert normalized[0].image_id == "img-00"  # identity preserved
+    assert normalized[1].path == fits  # in-frame image untouched
+
+
 def test_blind_order_is_deterministic_and_shuffled(tmp_path: Path) -> None:
     fleet, refs = _write_manifests(tmp_path)
     pool = assemble_pool(fleet, refs)

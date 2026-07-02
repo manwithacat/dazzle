@@ -34,6 +34,7 @@ __all__ = [
     "blind_order",
     "build_report",
     "noise_sd",
+    "normalize_pool_frames",
     "parity_verdict",
     "run_panel",
     "score_image",
@@ -107,6 +108,47 @@ def assemble_pool(fleet_manifest: Path, references_manifest: Path) -> list[Panel
             )
         )
     return pool
+
+
+def normalize_pool_frames(
+    pool: list[PanelImage], *, frame_width: int = 1440, frame_height: int = 900
+) -> list[PanelImage]:
+    """Crop every pool image to the judged frame (top-left anchored).
+
+    The parity contract is "a fixed frame for every image, Dazzle and
+    reference alike". Fleet captures default to full-page screenshots; a
+    tall Dazzle image judged against a 900px reference frame is a fairness
+    confound (below-the-fold footers/empty states drag one side only).
+    Cropped copies are written beside the originals with a ``-frame``
+    suffix; images already within the frame pass through untouched.
+    Requires Pillow; if unavailable, images pass through with a warning.
+    """
+    try:
+        from PIL import Image
+    except ImportError:  # pragma: no cover - env-dependent
+        logger.warning("taste-panel: Pillow unavailable — frame normalization skipped")
+        return pool
+
+    normalized: list[PanelImage] = []
+    for p in pool:
+        with Image.open(p.path) as img:
+            w, h = img.size
+            if w <= frame_width and h <= frame_height:
+                normalized.append(p)
+                continue
+            cropped = img.crop((0, 0, min(w, frame_width), min(h, frame_height)))
+            out = p.path.with_stem(p.path.stem + "-frame")
+            cropped.save(out)
+        normalized.append(
+            PanelImage(
+                image_id=p.image_id,
+                source=p.source,
+                label=p.label,
+                path=out,
+                theme=p.theme,
+            )
+        )
+    return normalized
 
 
 def blind_order(pool: list[PanelImage], seed: int) -> list[PanelImage]:

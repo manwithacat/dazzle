@@ -28,8 +28,14 @@ def test_resolve_focus_default_is_standard_dimensions() -> None:
     assert resolve_focus_dimensions(None) == list(DIMENSIONS)
 
 
-def test_resolve_focus_taste_shorthand_expands() -> None:
-    assert resolve_focus_dimensions(["taste"]) == TASTE_FOCUS_KEYS
+def test_resolve_focus_taste_shorthand_expands_theme_agnostic_keys() -> None:
+    # "taste" expands only to both-theme dimensions: composition captures
+    # carry no theme info, so dark_mode_integrity would produce false
+    # findings on light screenshots. It stays requestable by name.
+    expanded = resolve_focus_dimensions(["taste"])
+    assert expanded == [d.key for d in TASTE_DIMENSIONS if d.applies_to == "both"]
+    assert "dark_mode_integrity" not in expanded
+    assert resolve_focus_dimensions(["dark_mode_integrity"]) == ["dark_mode_integrity"]
 
 
 def test_resolve_focus_mixed_and_invalid() -> None:

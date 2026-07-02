@@ -998,7 +998,12 @@ def qa_taste_panel(
     scriptable as the HaTchi-MaXchi convergence gate (Phases 2-4).
     """
     from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
-    from dazzle.qa.taste_panel import assemble_pool, build_report, run_panel
+    from dazzle.qa.taste_panel import (
+        assemble_pool,
+        build_report,
+        normalize_pool_frames,
+        run_panel,
+    )
 
     if not manifest.exists():
         typer.echo(f"Fleet manifest not found: {manifest}", err=True)
@@ -1012,6 +1017,15 @@ def qa_taste_panel(
         raise typer.Exit(code=2)
 
     pool = assemble_pool(manifest, references)
+    # Frame-parity contract: judge a fixed frame for every image, Dazzle
+    # and reference alike. Full-page fleet captures get top-cropped to the
+    # reference viewport so below-the-fold content can't skew one side.
+    ref_viewport = json.loads(references.read_text(encoding="utf-8")).get("viewport", {})
+    pool = normalize_pool_frames(
+        pool,
+        frame_width=int(ref_viewport.get("width", 1440)),
+        frame_height=int(ref_viewport.get("height", 900)),
+    )
     dazzle_n = sum(1 for p in pool if p.source == "dazzle")
     ref_n = len(pool) - dazzle_n
     if not dazzle_n or not ref_n:
