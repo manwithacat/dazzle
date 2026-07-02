@@ -9,7 +9,6 @@
 | [Surfaces](surfaces.md) | Surfaces define the UI and API interfaces for interacting with entities. |
 | [Workspaces](workspaces.md) | Workspaces compose multiple data views into cohesive dashboards or information hubs. |
 | [UX Semantic Layer](ux.md) | The UX semantic layer expresses WHY interfaces exist and WHAT matters to users, without prescribing HOW to implement it. |
-| [UX Catalogue](ux-catalogue.md) | A live gallery of Dazzle display modes — each component rendered from real DSL through the real render pipeline, with its DSL snippet. |
 | [Experiences](experiences.md) | Experiences define multi-step user flows such as onboarding wizards, checkout processes, and approval workflows. |
 | [Services](services.md) | Services declare custom business logic in DSL with implementation in Python or TypeScript stubs. |
 | [Integrations](integrations.md) | Integrations connect DAZZLE apps to external systems via declarative API bindings with triggers, field mappings, and error handling. |
@@ -31,27 +30,24 @@
 
 | Page | Description |
 |------|-------------|
+| [UX Catalogue](ux-catalogue.md) | A live gallery of Dazzle display modes — each component rendered from real DSL through the real render pipeline, with its DSL snippet. |
 | [Project Layout](project-layout.md) | The recommended directory layout for a Dazzle project — where DSL, app code, and one-shot scripts live. |
 | [DSL Grammar Specification](grammar.md) | The formal EBNF grammar for the DAZZLE DSL, regenerated from parser source by `dazzle grammar`. |
 | [Personas and Scenarios](scenarios.md) | Personas define user types; scenarios define test-data states for development and demonstration. |
 | [UI Islands](islands.md) | Self-contained interactive JavaScript components that mount into server-rendered pages. |
 | [Reports & Charts](reports.md) | How chart and report regions (bar_chart, pivot_table, heatmap, funnel, metrics) compile to scope-aware aggregate queries. |
 | [Runtime UI Capabilities](runtime-capabilities.md) | What the Dazzle runtime actually renders for each DSL construct — the map from DSL to live UI. |
-| [Framework UX-Maturity Rubric](ux-maturity.md) | Scores the framework, not a screen: does Dazzle make the data-right UI the DEFAULT? The 0-4 capability ladder, 13 criteria, evidence/attribution, and the `dazzle ux maturity` scan + `/ux-maturity` command. |
 | [HTMX Template Specification](htmx-templates.md) | The HTMX interaction patterns the runtime emits; SSR + HTMX with no SPA framework. |
 | [Card-Safety Invariants](card-safety-invariants.md) | The canonical spec for what a card means in Dazzle templates and the eight invariants its scanners enforce. |
 | [RBAC Scope Rules](rbac-scope.md) | Operation-by-operation reference for `scope:` row-level authorization rules and their predicate algebra. |
 | [RBAC Verification Framework](rbac-verification.md) | The three-layer access-control verification system that proves DSL-declared security policies hold. |
-| [RBAC Proof Model & Trust Boundary](rbac-proof-model.md) | The normative proof-obligation model for "provable RBAC": the effective-decision composition, the safety/availability/over-approximation theorem, assumption set A (the trust boundary), the proof→test→assumed trust chain, the per-property evidence-class table, and the ReBAC declared-classes stance. `dazzle rbac prove` discharges the Proof-class rows. |
 | [Security Profiles](security-profiles.md) | The security profile every app declares in its `app` block, and what each profile enforces. |
 | [Enterprise SSO & Provisioning](enterprise-sso.md) | Native per-org enterprise connections (OIDC, SAML, SCIM) behind the opt-in capability registry. |
-| [Verified-Domain Join](verified-domain-join.md) | The non-SSO self-service join: a tenant proves its email domain (DNS-TXT), then verified-email users self-join under a per-tenant policy (#1424). |
 | [PII & Privacy Primitives](pii-privacy.md) | Analytics, consent, and privacy primitives for marking and handling personally identifiable data. |
 | [Document Signing](document-signing.md) | Native PAdES B-T document signing as a first-class DSL primitive via `signable: true`. |
 | [Multi-Tenant Hosts](tenant-hosts.md) | The `tenant_host:` sub-block that auto-mounts Host-header-based tenant routing (#1289). |
 | [Database Configuration](databases.md) | PostgreSQL configuration for development and production — Dazzle is Postgres-only (ADR-0008). |
 | [Schema Migrations](migrations.md) | How Dazzle uses Alembic for all schema changes, including framework entities (ADR-0017). |
-| [DB Artifacts](db-artifacts.md) | Every database artifact the framework manages — class, owner, RLS posture, baseline membership, boot-DDL gating — and the registry + contract that keep them honest (ADR-0047). |
 | [AWS Deployment](deployment.md) | Generating and managing AWS CDK infrastructure from your DSL specifications. |
 | [CLI Reference](cli.md) | Complete reference for the `dazzle` command-line interface and its command groups. |
 | [E2E Environment (Mode A)](e2e-environment.md) | The Mode A developer one-shot harness that launches a live example app for end-to-end testing. |
@@ -65,3 +61,8 @@
 | [Implicitness Audit](implicitness-audit.md) | A working doc on identifying implicit behaviour in Dazzle, written after a runtime post-mortem. |
 | [Onboarding Guides](guides.md) | The `guide` construct: terse, in-fiction, per-persona onboarding overlays — authored by the agent, validated by a fast quality-bar gate plus an e2e guide-walk oracle. |
 | [LLM Drivers](llm-drivers.md) | Subscription-billed (`claude-cli`) vs metered (`anthropic-api`) cognition: resolution order, the dev → deploy path, and the production guard. |
+| [Framework UX-Maturity Rubric](ux-maturity.md) | Scores the framework, not a screen: does Dazzle make the data-right UI the DEFAULT? The 0-4 capability ladder, 13 criteria, evidence/attribution, and the `dazzle ux maturity` scan + `/ux-maturity` command. |
+| [DB Artifacts](db-artifacts.md) | Every database artifact the framework manages, in one registry: class, creator, boot-entry, owner, RLS posture, baseline membership, and boot-DDL gating. |
+| [RBAC Proof Model & Trust Boundary](rbac-proof-model.md) | The normative proof-obligation model for "provable RBAC": the effective-decision composition, the safety/availability/over-approximation theorem, assumption set A (the trust boundary), the proof→test→assumed trust chain, the per-property evidence-class table (Proof/Enumeration/Test), and the ReBAC declared-classes stance. |
+| [HaTchi-MaXchi — the Dazzle House Aesthetic](taste.md) | The canonical, agent-readable definition of Dazzle's visual taste: nine principles (including the HTMX4-structural signature), evidence-cited TASTE-n rules, the judged rubric, and the blind parity gate (`dazzle qa taste-panel`) with baseline-locked margins. |
+| [Verified-Domain Self-Service Join](verified-domain-join.md) | The verified-domain join (#1424): a non-SSO user with a verified work email self-joins the tenant that owns their email domain — DNS-TXT domain proof, per-tenant join policy, and the password-side complement to invitations and SSO JIT provisioning. |

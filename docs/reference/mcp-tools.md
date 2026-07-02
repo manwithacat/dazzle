@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 34 tools, 156 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 34 tools, 157 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -22,7 +22,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`db`](#db) | 2 | Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection) |
 | [`demo_data`](#demo_data) | 1 | Demo data operations: get |
 | [`discovery`](#discovery) | 1 | Capability discovery operations: coherence (persona-by-persona authenticated UX coherence score) |
-| [`dsl`](#dsl) | 10 | DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec |
+| [`dsl`](#dsl) | 11 | DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief |
 | [`e2e`](#e2e) | 4 | E2E environment operations (read-only) |
 | [`feedback`](#feedback) | 4 | Feedback operations: list, get, triage, resolve |
 | [`fitness`](#fitness) | 1 | Agent-Led Fitness Methodology queries (read-only) |
@@ -178,9 +178,9 @@ Capability discovery operations: coherence (persona-by-persona authenticated UX 
 
 ### `dsl`
 
-DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.
+DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief. 'brief' returns the deterministic stakeholder spec-brief (fact-only app facts + activated framework value-claims) consumed by the /spec-narrate skill. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.
 
-**Operations (10):** `validate`, `list_modules`, `inspect_entity`, `inspect_surface`, `analyze`, `lint`, `get_spec`, `fidelity`, `list_fragments`, `export_frontend_spec`
+**Operations (11):** `validate`, `list_modules`, `inspect_entity`, `inspect_surface`, `analyze`, `lint`, `get_spec`, `fidelity`, `list_fragments`, `export_frontend_spec`, `brief`
 
 **Parameters:**
 

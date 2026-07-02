@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.composition_visual import resolve_focus_dimensions
 from dazzle.core.paths import project_composition_captures, project_composition_references
 
 from .common import error_response, extract_progress, wrap_async_handler_errors, wrap_handler_errors
@@ -172,8 +173,6 @@ def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str
     # HaTchi-MaXchi rubric keys — opt-in, never in the default run)
     dimensions: list[str] | None = None
     if focus:
-        from dazzle.core.composition_visual import resolve_focus_dimensions
-
         dimensions = resolve_focus_dimensions(focus)
         if not dimensions:
             return json.dumps(
@@ -446,8 +445,6 @@ async def _run_visual_pipeline(
     # LLM visual analysis ("taste" expands to the rubric keys, opt-in)
     dimensions: list[str] | None = None
     if focus:
-        from dazzle.core.composition_visual import resolve_focus_dimensions
-
         dimensions = resolve_focus_dimensions(focus)
 
     results = evaluate_captures(

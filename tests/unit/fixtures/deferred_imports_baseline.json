@@ -46,7 +46,7 @@
   "src/dazzle/cli/process_cli.py": 9,
   "src/dazzle/cli/project.py": 4,
   "src/dazzle/cli/pulse.py": 18,
-  "src/dazzle/cli/qa.py": 24,
+  "src/dazzle/cli/qa.py": 23,
   "src/dazzle/cli/quality.py": 2,
   "src/dazzle/cli/rbac.py": 20,
   "src/dazzle/cli/rhythm.py": 15,

@@ -140,7 +140,6 @@
   "seed.SeedTemplateSpec.month_anchor",
   "services.DomainServiceSpec.stub_language",
   "sitespec.FAQItem.answer",
-  "sitespec.FAQItem.question",
   "sitespec.LayoutSpec.section_backgrounds",
   "sitespec.LogoSpec.alt",
   "sitespec.MediaSpec.alt",

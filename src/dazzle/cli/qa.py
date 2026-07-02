@@ -18,6 +18,8 @@ import typer
 
 from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 from dazzle.core.manifest import load_manifest
+from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+from dazzle.qa.capture import build_capture_plan, capture_screenshots, write_manifest
 from dazzle.qa.signing_seed import (
     SeededDoc,
     SigningSeedContext,
@@ -25,6 +27,12 @@ from dazzle.qa.signing_seed import (
     write_mock_inbox,
 )
 from dazzle.qa.signing_verifier import SigningOutcome, verify_signing_outcome
+from dazzle.qa.taste_panel import (
+    assemble_pool,
+    build_report,
+    normalize_pool_frames,
+    run_panel,
+)
 from dazzle.signing.tokens import mint_token
 
 qa_app = typer.Typer(
@@ -870,6 +878,34 @@ def _reset_db_for_trial(project_dir: Path) -> None:
         os.chdir(old_cwd)
 
 
+def _plan_qa_capture(project_dir: Path, persona: str | None) -> tuple[Any, list[Any]]:
+    """Load the AppSpec and build the (optionally persona-filtered) capture plan.
+
+    Exits the CLI with a diagnostic when the appspec can't load or the plan
+    is empty — shared error handling extracted from ``qa_capture``.
+    """
+    from dazzle.cli.utils import load_project_appspec
+
+    try:
+        appspec = load_project_appspec(project_dir)
+    except Exception as e:
+        typer.echo(f"Failed to load AppSpec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    targets = build_capture_plan(appspec)
+    if not targets:
+        typer.echo("No capture targets found (no workspaces or personas defined).", err=True)
+        raise typer.Exit(code=1)
+
+    if persona:
+        targets = [t for t in targets if t.persona == persona]
+        if not targets:
+            typer.echo(f"No targets found for persona '{persona}'.", err=True)
+            raise typer.Exit(code=1)
+
+    return appspec, targets
+
+
 @qa_app.command("capture")
 def qa_capture(
     url: str | None = typer.Option(None, "--url", "-u", help="URL of a running app"),
@@ -895,31 +931,10 @@ def qa_capture(
     ),
 ) -> None:
     """Capture screenshots only — no LLM evaluation needed."""
-    from dazzle.cli.utils import load_project_appspec
-    from dazzle.qa.capture import build_capture_plan, capture_screenshots, write_manifest
     from dazzle.qa.server import AppConnection, wait_for_ready
 
     project_dir = _resolve_project_dir(app)
-
-    # Load AppSpec
-    try:
-        appspec = load_project_appspec(project_dir)
-    except Exception as e:
-        typer.echo(f"Failed to load AppSpec: {e}", err=True)
-        raise typer.Exit(code=1)
-
-    # Build capture plan
-    targets = build_capture_plan(appspec)
-    if not targets:
-        typer.echo("No capture targets found (no workspaces or personas defined).", err=True)
-        raise typer.Exit(code=1)
-
-    # Filter by persona if requested
-    if persona:
-        targets = [t for t in targets if t.persona == persona]
-        if not targets:
-            typer.echo(f"No targets found for persona '{persona}'.", err=True)
-            raise typer.Exit(code=1)
+    appspec, targets = _plan_qa_capture(project_dir, persona)
 
     if url is None:
         typer.echo(
@@ -997,14 +1012,6 @@ def qa_taste_panel(
     Exit code 0 when every rubric dimension reaches parity, 1 otherwise —
     scriptable as the HaTchi-MaXchi convergence gate (Phases 2-4).
     """
-    from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
-    from dazzle.qa.taste_panel import (
-        assemble_pool,
-        build_report,
-        normalize_pool_frames,
-        run_panel,
-    )
-
     if not manifest.exists():
         typer.echo(f"Fleet manifest not found: {manifest}", err=True)
         raise typer.Exit(code=2)

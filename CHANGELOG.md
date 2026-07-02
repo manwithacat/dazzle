@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **HaTchi-MaXchi taste oracle (Phase 0+1 of the house-aesthetic effort)** — an agent-accessible concept of taste with a measurable parity gate against the shadcn/Vercel design dialect:
+  - `docs/reference/taste.md` — the canonical artifact: 9 principles (incl. "the structure is the style" — HTMX4 anatomy as design material), 12 evidence-cited TASTE-n rules, judged rubric. Drift-gated by `tests/unit/test_taste_doc_drift.py`.
+  - `src/dazzle/core/taste_rubric.py` — single source of truth for the 6 judged dimensions (calibrated 1–10 anchors, dialect-neutral by construction).
+  - `dazzle qa taste-panel` — blind vision-judge panel: interleaves fleet screenshots with reference captures under opaque ids, frame-normalizes (top-crop to the reference viewport), measures judge noise via repeat passes, computes per-dimension parity (`margin = max(0.5, 2×noise SD)`); exit code 0/1 = scriptable convergence gate.
+  - `dazzle qa capture` gains `--dark`, `--viewport`, `--above-fold`; `CapturedScreen`/manifest gain `theme`; screenshot names now `{workspace}_{persona}_{viewport}_{scheme}.png`.
+  - `composition analyze`/`report` accept `focus=["taste"]` (theme-agnostic five; `dark_mode_integrity` by explicit name only).
+  - `scripts/taste/capture_references.py` — captures dialect reference screenshots into gitignored `.dazzle/composition/references/taste/`.
+  - Committed baseline `dev_docs/taste/baseline-2026-07-02.{md,json}` — all six dimensions FAIL (fleet 2.4–3.2 vs references 5.1–5.8); parity margins locked.
+
+### Agent Guidance
+- Before styling work in framework CSS, read `docs/reference/taste.md` (HaTchi-MaXchi); judge changes with `dazzle qa taste-panel` against the locked baseline margins. Taste captures must use `--above-fold` (+ `--dark` for the dark pool); the panel top-crops as a backstop.
+
 ## [0.93.2] - 2026-07-02
 
 ### Added

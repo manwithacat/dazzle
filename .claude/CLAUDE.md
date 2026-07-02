@@ -375,6 +375,7 @@ When authoring or editing a `guide` (per-persona onboarding overlays), read `doc
 
 ## UI Invariants
 
+- **Taste (HaTchi-MaXchi)**: the house aesthetic is defined in `docs/reference/taste.md` (9 principles → TASTE-n rules → judged rubric). Read it before any styling work in framework CSS. The blind parity gate is `dazzle qa taste-panel` (fleet vs dialect references; baseline `dev_docs/taste/baseline-2026-07-02.md`); rubric source of truth is `src/dazzle/core/taste_rubric.py` (drift-gated by `tests/unit/test_taste_doc_drift.py`).
 - **Card safety**: any new region template, dashboard layout change, or fragment primitive must satisfy the 8 invariants in `docs/reference/card-safety-invariants.md`. The scanners in `src/dazzle/testing/ux/contract_checker.py` enforce them, and the composite gate `tests/unit/test_htmx_workspace_composite.py` runs them on the stitched post-HTMX DOM. Regions emit zero chrome + zero title; the dashboard slot owns both. Tests run on the composite DOM, not isolated templates.
 
 ## Reports & Charts

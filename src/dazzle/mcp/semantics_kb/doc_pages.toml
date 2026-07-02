@@ -1634,3 +1634,17 @@ slug = "rbac-proof-model"
 order = 132
 handwritten = true
 intro = "The normative proof-obligation model for \"provable RBAC\": the effective-decision composition, the safety/availability/over-approximation theorem, assumption set A (the trust boundary), the proof→test→assumed trust chain, the per-property evidence-class table (Proof/Enumeration/Test), and the ReBAC declared-classes stance. Every external access-control claim must map to a clause here; `dazzle rbac prove` discharges the Proof-class rows."
+
+[pages.taste]
+title = "HaTchi-MaXchi — the Dazzle House Aesthetic"
+slug = "taste"
+order = 133
+handwritten = true
+intro = "The canonical, agent-readable definition of Dazzle's visual taste: nine principles (including the HTMX4-structural signature), evidence-cited TASTE-n rules, the judged rubric, and the blind parity gate (`dazzle qa taste-panel`) with baseline-locked margins."
+
+[pages.verified-domain-join]
+title = "Verified-Domain Self-Service Join"
+slug = "verified-domain-join"
+order = 134
+handwritten = true
+intro = "The verified-domain join (#1424): a non-SSO user with a verified work email self-joins the tenant that owns their email domain — DNS-TXT domain proof, per-tenant join policy, and the password-side complement to invitations and SSO JIT provisioning."
