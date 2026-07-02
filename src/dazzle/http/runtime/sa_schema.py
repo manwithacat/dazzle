@@ -144,6 +144,66 @@ def _find_circular_refs(entities: list[EntitySpec]) -> set[tuple[str, str]]:
     return cycle_edges
 
 
+_INTERVAL_UNITS = {
+    "minutes": "minutes",
+    "hours": "hours",
+    "days": "days",
+    "weeks": "weeks",
+    "months": "months",
+    "years": "years",
+}
+
+
+def _server_default_sql(default: Any) -> str | None:
+    """Render a field default as a PostgreSQL DDL DEFAULT expression.
+
+    Replaces the old ``repr(default)`` emission (#1529), which produced
+    Python syntax for anything non-string: dict date-exprs rendered as
+    ``DEFAULT {'kind': 'now'}`` (invalid SQL — latent, since nothing in the
+    live corpus carried a date-expr default through create_all), and the
+    string form ``DEFAULT 'now'`` is PostgreSQL's classic frozen-at-parse-
+    time trap. Date-exprs now become real volatile defaults, so the DB-side
+    default matches the Python-side ``_create_date_factory`` semantics.
+
+    Returns None for shapes with no sensible DDL form; the Python-side
+    default application still covers those rows.
+    """
+    if isinstance(default, bool):
+        return "true" if default else "false"
+    if isinstance(default, int | float):
+        return str(default)
+    if isinstance(default, str):
+        escaped = default.replace("'", "''")
+        return f"'{escaped}'"
+    if isinstance(default, dict) and "kind" in default:
+        base = "now()" if default.get("kind") == "now" else "CURRENT_DATE"
+        op = default.get("op")
+        if not op:
+            return base
+        unit = _INTERVAL_UNITS.get(default.get("unit", "days"), "days")
+        value = default.get("value", 0)
+        return f"({base} {op} interval '{value} {unit}')"
+    return None
+
+
+def _column_kwargs(field: FieldSpec, sa: Any, *, suppress_unique: bool) -> dict[str, Any]:
+    """Assemble the pk/nullable/unique/server_default kwargs for a Column."""
+    kwargs: dict[str, Any] = {}
+    if field.name == "id":
+        kwargs["primary_key"] = True
+    else:
+        kwargs["nullable"] = not (
+            getattr(field, "is_required", None) or getattr(field, "required", False)
+        )
+    if not suppress_unique and (
+        getattr(field, "is_unique", False) or getattr(field, "unique", False)
+    ):
+        kwargs["unique"] = True
+    if field.default is not None and (server_default := _server_default_sql(field.default)):
+        kwargs["server_default"] = sa.text(server_default)
+    return kwargs
+
+
 def _field_to_column(
     field: FieldSpec,
     entity_name: str,
@@ -165,28 +225,7 @@ def _field_to_column(
     """
     sa = _ensure_sa()
     col_type = _field_type_to_sa(field.type)
-
-    kwargs: dict[str, Any] = {}
-
-    # Primary key
-    if field.name == "id":
-        kwargs["primary_key"] = True
-
-    # Nullable / required
-    if field.name != "id":
-        kwargs["nullable"] = not (
-            getattr(field, "is_required", None) or getattr(field, "required", False)
-        )
-
-    # Unique
-    if not suppress_unique and (
-        getattr(field, "is_unique", False) or getattr(field, "unique", False)
-    ):
-        kwargs["unique"] = True
-
-    # Default
-    if field.default is not None:
-        kwargs["server_default"] = sa.text(repr(field.default))
+    kwargs = _column_kwargs(field, sa, suppress_unique=suppress_unique)
 
     # Foreign key for ref fields
     fk_args: list[Any] = []

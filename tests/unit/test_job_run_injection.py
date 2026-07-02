@@ -171,11 +171,14 @@ class TestJobRunShape:
 
     def test_attempt_number_default_one(self, job_run):
         attempt = next(f for f in job_run.fields if f.name == "attempt_number")
-        assert attempt.default == "1"
+        # #1529: typed at link time — int, not the tuple's "1" string.
+        assert attempt.default == 1
 
     def test_created_at_defaults_now(self, job_run):
+        from dazzle.core.ir.dates import DateLiteral, DateLiteralKind
+
         created = next(f for f in job_run.fields if f.name == "created_at")
-        assert created.default == "now"
+        assert created.default == DateLiteral(kind=DateLiteralKind.NOW)
 
 
 # ---------------------------------------------------------------------------

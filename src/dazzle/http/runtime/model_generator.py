@@ -5,7 +5,7 @@ This module creates dynamic Pydantic models at runtime from BackendSpec entity d
 """
 
 from collections.abc import Callable
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated, Any
 from uuid import UUID
@@ -134,9 +134,12 @@ def _create_date_factory(expr: dict[str, Any]) -> Callable[[], date | datetime]:
     unit = expr.get("unit", "days")
 
     def factory() -> date | datetime:
-        # Get base value
+        # Get base value. UTC-aware, matching the auto_add timestamp path
+        # (service_generator uses datetime.now(UTC)) and the timestamptz
+        # columns these land in — a naive local datetime stores skewed
+        # (#1529 review finding; `today` stays a plain local date).
         if kind == "now":
-            base: date | datetime = datetime.now()
+            base: date | datetime = datetime.now(UTC)
         else:  # "today"
             base = date.today()
 

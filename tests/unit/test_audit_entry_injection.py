@@ -141,8 +141,12 @@ class TestAuditEntryShape:
         assert FieldModifier.PK in id_field.modifiers
 
     def test_at_defaults_to_now(self, audit_entry):
+        from dazzle.core.ir.dates import DateLiteral, DateLiteralKind
+
         at_field = next(f for f in audit_entry.fields if f.name == "at")
-        assert at_field.default == "now"
+        # #1529: framework tuple defaults are coerced to the parser's typed
+        # form at link time — "now" becomes a DateLiteral, not a string.
+        assert at_field.default == DateLiteral(kind=DateLiteralKind.NOW)
 
     def test_operation_is_enum(self, audit_entry):
         op_field = next(f for f in audit_entry.fields if f.name == "operation")

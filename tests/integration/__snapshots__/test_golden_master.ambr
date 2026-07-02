@@ -420,7 +420,9 @@
               }),
             }),
             dict({
-              'default': 'now',
+              'default': dict({
+                'kind': <DateLiteralKind.NOW: 'now'>,
+              }),
               'default_expr': None,
               'modifiers': list([
               ]),
@@ -925,7 +927,9 @@
               }),
             }),
             dict({
-              'default': 'now',
+              'default': dict({
+                'kind': <DateLiteralKind.NOW: 'now'>,
+              }),
               'default_expr': None,
               'modifiers': list([
               ]),

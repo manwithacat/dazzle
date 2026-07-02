@@ -13,7 +13,13 @@ from .errors import (
 )
 from .ir.audit import AUDIT_ENTRY_FIELDS
 from .ir.feedback_widget import FEEDBACK_REPORT_FIELDS
-from .ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
+from .ir.fields import (
+    FieldModifier,
+    FieldSpec,
+    FieldType,
+    FieldTypeKind,
+    coerce_framework_default,
+)
 from .ir.fk_graph import FKGraph
 from .ir.jobs import JOB_RUN_FIELDS
 from .ir.llm import AI_JOB_FIELDS
@@ -1042,7 +1048,14 @@ def _build_ai_job_entity(subject_targets: list[str]) -> ir.EntitySpec:
     for name, type_str, modifiers, default in AI_JOB_FIELDS:
         field_type = _parse_field_type(type_str)
         mods = [_MODIFIER_MAP[m] for m in modifiers]
-        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+        fields.append(
+            FieldSpec(
+                name=name,
+                type=field_type,
+                modifiers=mods,
+                default=coerce_framework_default(default, field_type),
+            )
+        )
 
     # #1454: required poly_ref subject — the governance unit.
     fields.append(
@@ -1086,7 +1099,14 @@ def _build_process_run_entity() -> ir.EntitySpec:
     for name, type_str, modifiers, default in PROCESS_RUN_FIELDS:
         field_type = _parse_field_type(type_str)
         mods = [_MODIFIER_MAP[m] for m in modifiers]
-        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+        fields.append(
+            FieldSpec(
+                name=name,
+                type=field_type,
+                modifiers=mods,
+                default=coerce_framework_default(default, field_type),
+            )
+        )
 
     access = ir.AccessSpec(
         permissions=[
@@ -1120,7 +1140,14 @@ def _build_job_run_entity() -> ir.EntitySpec:
     for name, type_str, modifiers, default in JOB_RUN_FIELDS:
         field_type = _parse_field_type(type_str)
         mods = [_MODIFIER_MAP[m] for m in modifiers]
-        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+        fields.append(
+            FieldSpec(
+                name=name,
+                type=field_type,
+                modifiers=mods,
+                default=coerce_framework_default(default, field_type),
+            )
+        )
 
     # Default access: any authenticated user can READ/LIST job runs —
     # they're internal observability data; admins typically need them
@@ -1178,7 +1205,14 @@ def _build_audit_entry_entity() -> ir.EntitySpec:
     for name, type_str, modifiers, default in AUDIT_ENTRY_FIELDS:
         field_type = _parse_field_type(type_str)
         mods = [_MODIFIER_MAP[m] for m in modifiers]
-        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+        fields.append(
+            FieldSpec(
+                name=name,
+                type=field_type,
+                modifiers=mods,
+                default=coerce_framework_default(default, field_type),
+            )
+        )
 
     # Default access: any authenticated user can READ/LIST audit
     # entries — cycle 5 will tighten this via `show_to`. CREATE is
@@ -1311,7 +1345,14 @@ def _build_onboarding_state_entity() -> ir.EntitySpec:
     for name, type_str, modifiers, default in ONBOARDING_STATE_FIELDS:
         field_type = _parse_field_type(type_str)
         mods = [_MODIFIER_MAP[m] for m in modifiers]
-        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+        fields.append(
+            FieldSpec(
+                name=name,
+                type=field_type,
+                modifiers=mods,
+                default=coerce_framework_default(default, field_type),
+            )
+        )
 
     _ops = (
         ir.PermissionKind.CREATE,
@@ -1364,7 +1405,14 @@ def _build_feedback_report_entity() -> ir.EntitySpec:
     for name, type_str, modifiers, default in FEEDBACK_REPORT_FIELDS:
         field_type = _parse_field_type(type_str)
         mods = [_MODIFIER_MAP[m] for m in modifiers]
-        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+        fields.append(
+            FieldSpec(
+                name=name,
+                type=field_type,
+                modifiers=mods,
+                default=coerce_framework_default(default, field_type),
+            )
+        )
 
     # v0.61.6 (#859): scope rules split so non-admins see/update only their
     # own reports, while admins see everything. Previously ``scope: all

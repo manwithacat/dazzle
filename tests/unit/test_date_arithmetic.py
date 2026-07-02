@@ -8,7 +8,7 @@ Tests cover:
 - Runtime: Evaluation with default_factory
 """
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import Parser, parse_dsl
@@ -307,9 +307,9 @@ class TestRuntimeEvaluation:
     def test_now_factory(self):
         """Factory for 'now' returns current datetime (within tolerance)."""
         factory = _create_date_factory({"kind": "now"})
-        before = datetime.now()
+        before = datetime.now(UTC)
         result = factory()
-        after = datetime.now()
+        after = datetime.now(UTC)
         assert before <= result <= after
 
     def test_today_plus_days(self):
@@ -338,7 +338,7 @@ class TestRuntimeEvaluation:
         )
         result = factory()
         # Allow 1 second tolerance
-        expected = datetime.now() - timedelta(hours=24)
+        expected = datetime.now(UTC) - timedelta(hours=24)
         assert abs((result - expected).total_seconds()) < 1
 
     def test_weeks_arithmetic(self):
@@ -366,7 +366,7 @@ class TestRuntimeEvaluation:
             }
         )
         result = factory()
-        expected = datetime.now() + timedelta(minutes=30)
+        expected = datetime.now(UTC) + timedelta(minutes=30)
         # Allow 1 second tolerance
         assert abs((result - expected).total_seconds()) < 1
 
@@ -458,7 +458,7 @@ entity Task "Task":
 
         # created_at should be ~now
         assert isinstance(created_result, datetime)
-        assert abs((created_result - datetime.now()).total_seconds()) < 1
+        assert abs((created_result - datetime.now(UTC)).total_seconds()) < 1
 
         # due_date should be today + 7 days
         assert isinstance(due_result, date)

@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from dazzle.core.ir.params import ParamRef
 from dazzle.core.ir.state_machine import InvokeSourceKind
+from dazzle.http.runtime.model_generator import _create_date_factory, _is_date_expr
 from dazzle.http.specs.entity import EntitySpec, StateMachineSpec
 from dazzle.http.specs.service import (
     ServiceSpec,
@@ -276,7 +277,15 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
                         default = field.default
                         if isinstance(default, ParamRef):
                             default = default.default
-                        if default is not None:
+                        # Date-expr defaults arrive as {"kind": "now", ...} dicts
+                        # (entity_converter._serialize_date_expr). The pydantic
+                        # request model resolves them via default_factory for
+                        # OMITTED fields, but an explicit null (or a create entry
+                        # point that bypasses the request model) lands here —
+                        # assigning the raw dict would store it verbatim (#1529).
+                        if _is_date_expr(default):
+                            entity_data[field.name] = _create_date_factory(default)()
+                        elif default is not None:
                             entity_data[field.name] = default
 
         # Validate invariants (v0.14.2)

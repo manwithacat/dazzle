@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.83] - 2026-07-02
+
+### Fixed
+- **Framework-injected entity defaults are typed, not raw strings (#1529).** The framework field tuples (FeedbackReport, AIJob, AuditEntry, JobRun, OnboardingState, ProcessRun, admin entities) declared DSL-style string defaults (`"now"`, `"false"`, `"0"`) that bypassed the parser's coercion, so the strings flowed into pydantic models and the database (PostgreSQL coerced `'now'::timestamptz` by accident — surfaced as the RBAC-verifier pydantic serializer warnings). New `coerce_framework_default` (`core/ir/fields.py`) mirrors parser semantics — `"now"`/`"today"` → `DateLiteral`, `"true"`/`"false"` → bool, numeric strings → numbers, enum/str pass through — applied at all 7 tuple loops (6 in the linker + admin_builder). Loud `ValueError` on uncoercible strings; a sweep test walks every framework tuple so a future bad default fails in CI, not production.
+- **Service-layer default application resolves date-expr dicts (the explicit-null hole).** The pydantic request model's `default_factory` covers *omitted* date-defaulted fields, but an explicit `null` (or a create entry point bypassing the request model) fell through to the service-layer default loop, which assigned the raw `{"kind": "now"}` dict verbatim — a live bug for user DSL predating #1529. Now resolved via the shared date factory.
+- **`sa_schema` DDL `server_default` emission rewritten — was `repr(default)`.** Dict date-exprs rendered as `DEFAULT {'kind': 'now'}` (invalid SQL — latent, nothing in the live corpus carried one through create_all) and string defaults produced PostgreSQL's classic frozen-at-parse-time trap (`DEFAULT 'now'` evaluates once at DDL time). Date-exprs now emit real volatile defaults (`now()`, `CURRENT_DATE ± interval '…'`), bools emit `true`/`false`, strings are properly quote-escaped, unrepresentable shapes skip DDL (Python-side default still applies).
+- **`_create_date_factory` is now UTC-aware for `now`** (adversarial-review finding): it returned naive local `datetime.now()` into `timestamptz` columns, inconsistent with the `auto_add` path's `datetime.now(UTC)`. `today` remains a plain local date.
+
+### Agent Guidance
+- **Downstream projects: the next `dazzle db revision` after upgrading will propose a one-time `AlterColumn` set** transitioning framework-entity columns from the old string defaults (`DEFAULT 'now'`) to the corrected volatile ones (`DEFAULT now()`). This is the deliberate repair of the frozen-time trap in deployed schemas — apply it, don't suppress it. In-repo blast radius was zero (no committed migration snapshots).
+
 ## [0.92.82] - 2026-07-02
 
 ### Fixed

@@ -11,7 +11,13 @@ from dazzle.core import ir
 from dazzle.core.errors import LinkError
 from dazzle.core.ir.admin_entities import ADMIN_ENTITY_DEFS
 from dazzle.core.ir.feedback_widget import FeedbackWidgetSpec
-from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
+from dazzle.core.ir.fields import (
+    FieldModifier,
+    FieldSpec,
+    FieldType,
+    FieldTypeKind,
+    coerce_framework_default,
+)
 from dazzle.core.ir.security import SecurityConfig, SecurityProfile
 from dazzle.core.ir.surfaces import (
     SurfaceAccessSpec,
@@ -219,7 +225,12 @@ def _build_admin_entities(security: SecurityConfig) -> list[ir.EntitySpec]:
             field_type = _parse_field_type(type_str)
             mods = [_MODIFIER_MAP[m] for m in modifiers]
             fields.append(
-                FieldSpec(name=field_name, type=field_type, modifiers=mods, default=default)
+                FieldSpec(
+                    name=field_name,
+                    type=field_type,
+                    modifiers=mods,
+                    default=coerce_framework_default(default, field_type),
+                )
             )
 
         # Read-only access restricted to admin personas

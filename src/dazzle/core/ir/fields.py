@@ -273,6 +273,44 @@ class FieldSpec(BaseModel):
         return FieldModifier.INDEXED in self.modifiers
 
 
+def coerce_framework_default(
+    default: str | None, field_type: FieldType
+) -> str | int | float | bool | DateLiteral | None:
+    """Coerce a framework field-tuple string default to the parser's typed form.
+
+    Framework-injected entities (FeedbackReport, AIJob, AuditEntry, admin
+    entities, …) declare fields as `(name, type_str, modifiers, default)`
+    tuples with the default as a DSL-style string literal. User DSL goes
+    through the parser, which types these (`=false` → False, `=now` →
+    DateLiteral(NOW), `=3` → 3); the tuples bypassed it, so raw strings
+    like "now" flowed into pydantic models and the DB (#1529 — PostgreSQL
+    coerced them by accident). Every tuple loop must call this so framework
+    entities are indistinguishable from parsed DSL.
+
+    Enum and str/text defaults are string-valued by design and pass through.
+    """
+    if default is None:
+        return None
+    from .dates import DateLiteral, DateLiteralKind
+
+    kind = field_type.kind
+    if kind in (FieldTypeKind.DATETIME, FieldTypeKind.DATE):
+        if default == "now":
+            return DateLiteral(kind=DateLiteralKind.NOW)
+        if default == "today":
+            return DateLiteral(kind=DateLiteralKind.TODAY)
+        raise ValueError(f"framework field default {default!r} on a {kind} field has no typed form")
+    if kind == FieldTypeKind.BOOL:
+        if default in ("true", "false"):
+            return default == "true"
+        raise ValueError(f"framework bool field default {default!r} is not true/false")
+    if kind == FieldTypeKind.INT:
+        return int(default)
+    if kind in (FieldTypeKind.FLOAT, FieldTypeKind.DECIMAL):
+        return float(default)
+    return default
+
+
 def _rebuild_field_spec() -> None:
     """Rebuild FieldSpec model to resolve forward references to date and expression types."""
     # Import here to avoid circular imports
