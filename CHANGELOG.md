@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.89] - 2026-07-02
+
+### Added
+- **`/improve` test-suite lane (#1530).** New lane at `.claude/commands/improve/lanes/test-suite.md`: collapses one redundancy-cluster family per cycle (`@pytest.mark.parametrize` where cases share one behaviour contract; `keep_all` is a legitimate verdict), full-suite verify before ship, nightly `dazzle sentinel mutate` floors as the mutation-kill backstop, distillation-artifact regeneration after large collapses. Backlog seeded TS-001..TS-008 from `tests/audit/redundancy_report.md`.
+- **`/improve` self-audit strategy.** `.claude/commands/improve/strategies/self_audit.md` — every ≥15 cycles the driver adversarially reviews recent `improve:` commits against their cycle-log/backlog claims (claim↔diff, verification honesty, transition justification, scope honesty); discrepancies become `REGRESSION` marks or `AUD-NNN` rows. Closes the "driver trusts lane self-reports" gap from the v0.92.87 audit.
+- **`/improve` state compaction.** `scripts/improve_compact.py` archives settled backlog rows (DONE/VERIFIED/CLEAN/RESOLVED, plus FILED→#N rows whose GitHub issue is closed) and cycle-log entries older than the last 25 into `dev_docs/improve-{backlog,log}-archive.md`. Idempotent, fail-safe (ambiguous rows stay put). Driver runs it at Step 0d when either working file exceeds 100 KB. First run: backlog 269 KB → 91 KB, log 187 KB → 46 KB.
+
+### Changed
+- **`dazzle-updated` signal wired (releases).** `/ship` now emits `dazzle-updated` when the pushed tag is a published release (`vX.Y.0`, mirroring the release workflows' publish condition) — previously declared in `improve.md`'s cross-lane contract but never emitted, the same gap `fix-deployed` had before v0.92.87.
+- **Explore-budget renewal story.** The `/improve` explore cap (100) is now per-release, not per-lifetime: a `dazzle-updated` signal resets `.dazzle/improve-explore-count` to 0, and `/improve --reset-budget` is the manual escape hatch. Previously the driver idled forever at cap.
+
+### Agent Guidance
+- `/improve` now has five lanes (`test-suite` joined) plus a driver-level `self-audit` strategy; the at-cap idle tick must name the two budget-renewal routes in its log entry.
+- When /improve state files exceed 100 KB, run `python scripts/improve_compact.py` — never hand-prune the backlog/log. Archived rows are greppable in `dev_docs/improve-{backlog,log}-archive.md`; restore a row with status `REGRESSION` if it re-opens.
+
 ## [0.92.88] - 2026-07-02
 
 ### Removed

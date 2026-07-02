@@ -148,6 +148,7 @@ Dazzle has a single agent-first entrypoint for autonomous investigation, improve
 | `example-apps` | Example app DSL gaps (lint, scope, fidelity, conformance). Tiered gap discovery |
 | `trials` | Qualitative persona scenarios via `dazzle qa trial`. ~5 min/cycle, burns tokens — was `/trial-cycle` |
 | `ux-converge` | Example apps with nonzero contract failures; runs converge-to-zero per app — was `/ux-converge` |
+| `test-suite` | Test-suite redundancy-cluster collapse (#1530). One cluster family per cycle; parametrize-collapse with the nightly mutation floors as backstop |
 
 **State:**
 - `dev_docs/improve-backlog.md` — unified backlog with one `## Lane:` section per lane
@@ -409,4 +410,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.92.88 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.92.89 | **Python**: 3.12+ | **Status**: Production Ready

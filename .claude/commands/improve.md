@@ -5,9 +5,10 @@ Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve tho
 ARGUMENTS: $ARGUMENTS
 
 If `$ARGUMENTS` is empty: driver picks the lane.
-If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge`): force that lane.
+If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite`): force that lane. (`self-audit` forces the driver-level self-audit strategy.)
 If `$ARGUMENTS` is `<lane> <strategy>`: force that lane and that sub-strategy.
 If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (no cycle).
+If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count`, log the manual reset, and exit (no cycle). Operator escape hatch — use when the cap was reached but exploration should continue (e.g. after a large framework change that a release signal didn't capture).
 
 ## Lanes
 
@@ -17,18 +18,29 @@ If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (n
 | example-apps | example apps (DSL gaps, lint, conformance, fidelity, visual) | `## Lane: example-apps` | `improve/lanes/example-apps.md` |
 | trials | qualitative persona scenarios (trial.toml) | `## Lane: trials` | `improve/lanes/trials.md` |
 | ux-converge | example apps with nonzero UX contract failures | `## Lane: ux-converge` | `improve/lanes/ux-converge.md` |
+| test-suite | test-suite redundancy-cluster collapse (#1530) | `## Lane: test-suite` | `improve/lanes/test-suite.md` |
 
 ## State files
 
 | File | Purpose |
 |------|---------|
-| `dev_docs/improve-backlog.md` | All four lanes' backlog tables, one `## Lane:` section each |
+| `dev_docs/improve-backlog.md` | All lanes' backlog tables, one `## Lane:` section each |
 | `dev_docs/improve-log.md` | Append-only cycle log (single source of truth across all lanes) |
+| `dev_docs/improve-backlog-archive.md` | Settled backlog rows (DONE/VERIFIED/CLEAN/RESOLVED/FILED-and-closed), moved by `scripts/improve_compact.py` |
+| `dev_docs/improve-log-archive.md` | Cycle-log entries older than the last 25, moved by `scripts/improve_compact.py` |
 | `.dazzle/improve.lock` | PID + timestamp; 15-min TTL |
 | `.dazzle/improve-explore-count` | Single counter shared across all lanes' explore phases (cap 100) |
 | `.dazzle/signals/` | Cross-lane signal bus (existing `ux_cycle_signals` infrastructure) |
 
 All gitignored.
+
+**State compaction.** The driver reads the backlog + log every cycle, so settled
+material is pure context burn. When either working file exceeds **100 KB**, run
+`python scripts/improve_compact.py` during Step 0d. The script is idempotent and
+fail-safe (any row it can't parse unambiguously stays put); archives are append-only
+and stay greppable. Archiving is a *driver housekeeping* action — it does not count
+as a lane modifying DONE/VERIFIED rows. If a regression re-opens archived work,
+copy the row back from the archive with status `REGRESSION`.
 
 ## Cycle
 
@@ -54,10 +66,20 @@ signals = since_last_run(source="improve")
 ```
 
 Categorise:
-- `dazzle-updated` / `fix-deployed` → mark affected backlog rows for re-verification (delegated to each lane)
+- `dazzle-updated` → **reset the explore budget**: write `0` to `.dazzle/improve-explore-count` and note the reset (with the release version) in this cycle's log entry. A published release means fresh explore territory — the cap is per-release, not per-lifetime. Also mark affected backlog rows for re-verification (delegated to each lane).
+- `fix-deployed` → mark affected backlog rows for re-verification (delegated to each lane)
 - `trial-friction` → bias next lane selection toward `framework-ux` (qualitative finding may need a contract)
 - `ux-component-shipped` → bias toward `example-apps` (re-verify apps using that component)
 - `ux-regression` → priority signal; jump straight to the relevant lane regardless of selection algorithm
+
+### Step 0d: Compact state (only when oversized)
+
+```bash
+[ $(wc -c < dev_docs/improve-backlog.md) -gt 100000 ] || [ $(wc -c < dev_docs/improve-log.md) -gt 100000 ] \
+  && python scripts/improve_compact.py
+```
+
+See **State compaction** above. Skip silently when both files are under the threshold.
 
 ### Step 1: Pick a lane
 
@@ -73,10 +95,11 @@ For each lane, compute two numbers from the unified backlog:
 Selection priority:
 
 1. **Any lane with REGRESSION rows** → that lane (most urgent — it shipped broken)
-2. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
-3. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
-4. **All counts zero** → pick lane with oldest `last_run_at` and run its **explore phase**
-5. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit
+2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`.
+3. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
+4. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
+5. **All counts zero** → pick lane with oldest `last_run_at` and run its **explore phase**
+6. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit. The log entry must name the two renewal routes so the loop never looks permanently stuck: the budget resets automatically on the next `dazzle-updated` release signal, or manually via `/improve --reset-budget`.
 
 Record the choice. Bias from signals must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N") so future operators can audit.
 
@@ -160,6 +183,7 @@ framework-ux    N             cycle M      yes/no
 example-apps    N             cycle M      yes/no
 trials          N             cycle M      yes/no
 ux-converge     N             cycle M      yes/no
+test-suite      N             cycle M      yes/no
 
 Recent signals (last 24h):
 - {kind} from {source} at TIME

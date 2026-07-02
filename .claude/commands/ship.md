@@ -88,7 +88,21 @@ emit(source='ship', kind='fix-deployed', payload={'sha': '$(git rev-parse --shor
 "
 ```
 
-Best-effort — a failure here never blocks the ship; note it and continue.
+If step 4 pushed a **published-release tag** — one matching `vX.Y.0`, the same
+`endsWith('.0')` condition the release workflows use to publish to PyPI/Homebrew —
+additionally emit `dazzle-updated` (the cross-lane contract's "(external — releases)"
+signal). This is what tells /improve a new framework version is live: lanes mark
+affected rows for re-verification and the driver resets the explore budget
+(new release = fresh explore territory):
+
+```bash
+python -c "
+from dazzle.cli.runtime_impl.ux_cycle_signals import emit
+emit(source='ship', kind='dazzle-updated', payload={'version': 'vX.Y.0', 'sha': '$(git rev-parse --short HEAD)'})
+"
+```
+
+Both are best-effort — a failure here never blocks the ship; note it and continue.
 
 ## 6. Final verification
 
