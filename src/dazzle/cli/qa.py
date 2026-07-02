@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import json
 import os
 import re
 import shutil
@@ -973,6 +974,68 @@ def qa_capture(
         app_name = str(getattr(appspec, "name", None) or project_dir.name)
         write_manifest(screens, app_name=app_name, manifest_path=manifest)
         typer.echo(f"Manifest: {manifest}")
+
+
+@qa_app.command("taste-panel")
+def qa_taste_panel(
+    manifest: Path = typer.Option(
+        ..., "--manifest", "-m", help="Fleet manifest from `dazzle qa capture --manifest`"
+    ),
+    references: Path = typer.Option(
+        Path(".dazzle/composition/references/taste/references_manifest.json"),
+        "--references",
+        help="References manifest from scripts/taste/capture_references.py",
+    ),
+    judges: int = typer.Option(3, "--judges", help="Independent judge passes per image"),
+    noise_runs: int = typer.Option(2, "--noise-runs", help="Repeat passes for noise SD"),
+    seed: int = typer.Option(7, "--seed", help="Blinding shuffle seed"),
+    model: str | None = typer.Option(None, "--model", help="Override judge model"),
+    out: Path = typer.Option(Path(".dazzle/qa/taste"), "--out", help="Report output dir"),
+) -> None:
+    """Run the blind taste panel: Dazzle fleet vs dialect references.
+
+    Exit code 0 when every rubric dimension reaches parity, 1 otherwise —
+    scriptable as the HaTchi-MaXchi convergence gate (Phases 2-4).
+    """
+    from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+    from dazzle.qa.taste_panel import assemble_pool, build_report, run_panel
+
+    if not manifest.exists():
+        typer.echo(f"Fleet manifest not found: {manifest}", err=True)
+        raise typer.Exit(code=2)
+    if not references.exists():
+        typer.echo(
+            f"References manifest not found: {references}\n"
+            "Run: python scripts/taste/capture_references.py",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    pool = assemble_pool(manifest, references)
+    dazzle_n = sum(1 for p in pool if p.source == "dazzle")
+    ref_n = len(pool) - dazzle_n
+    if not dazzle_n or not ref_n:
+        typer.echo(f"Pool needs both sources (dazzle={dazzle_n}, reference={ref_n}).", err=True)
+        raise typer.Exit(code=2)
+
+    typer.echo(
+        f"Panel: {len(pool)} images ({dazzle_n} dazzle, {ref_n} reference), {judges} judges…"
+    )
+    result = run_panel(
+        pool,
+        judges=judges,
+        noise_runs=noise_runs,
+        seed=seed,
+        model=model or DEFAULT_JUDGMENT_MODEL,
+    )
+    data, md = build_report(result)
+
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "taste-panel.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    (out / "taste-panel.md").write_text(md, encoding="utf-8")
+    typer.echo(md)
+    typer.echo(f"Reports: {out / 'taste-panel.json'}, {out / 'taste-panel.md'}")
+    raise typer.Exit(code=0 if data["parity"] else 1)
 
 
 @qa_app.command("trial")

@@ -32,6 +32,7 @@ __all__ = [
     "aggregate_scores",
     "assemble_pool",
     "blind_order",
+    "build_report",
     "noise_sd",
     "parity_verdict",
     "run_panel",
@@ -318,3 +319,64 @@ def run_panel(
     noise = noise_sd(noise_scores)
     verdict = parity_verdict(means, noise)
     return PanelResult(scores=all_scores, means=means, noise=noise, verdict=verdict, pool=pool)
+
+
+# ── Report ───────────────────────────────────────────────────────────
+
+
+def build_report(result: PanelResult) -> tuple[dict[str, Any], str]:
+    """Build the (json_dict, markdown) pair for a panel run."""
+    overall = bool(result.verdict) and all(v["parity"] for v in result.verdict.values())
+    counts = {
+        "dazzle": sum(1 for p in result.pool if p.source == "dazzle"),
+        "reference": sum(1 for p in result.pool if p.source == "reference"),
+    }
+    data: dict[str, Any] = {
+        "parity": overall,
+        "counts": counts,
+        "means": result.means,
+        "noise_sd": result.noise,
+        "verdict": result.verdict,
+        "pool": [
+            {
+                "image_id": p.image_id,
+                "source": p.source,
+                "label": p.label,
+                "theme": p.theme,
+                "path": str(p.path),
+            }
+            for p in result.pool
+        ],
+        "scores": [
+            {
+                "image_id": s.image_id,
+                "dimension": s.dimension,
+                "score": s.score,
+                "judge": s.judge,
+                "repeat": s.repeat,
+            }
+            for s in result.scores
+        ],
+    }
+
+    lines = [
+        "# Taste Panel",
+        "",
+        f"**Overall parity: {'PASS' if overall else 'FAIL'}** "
+        f"({counts['dazzle']} dazzle screens vs {counts['reference']} references)",
+        "",
+        "| Dimension | Dazzle | Reference | Gap | Margin | Verdict |",
+        "|---|---|---|---|---|---|",
+    ]
+    for dim, v in sorted(result.verdict.items()):
+        lines.append(
+            f"| {dim} | {v['dazzle']} | {v['reference']} | {v['gap']} "
+            f"| {v['margin']} | {'PASS' if v['parity'] else 'FAIL'} |"
+        )
+    lines += [
+        "",
+        "Margin = max(0.5, 2 × judge noise SD) per dimension. "
+        "Parity = dazzle mean ≥ reference mean − margin.",
+        "",
+    ]
+    return data, "\n".join(lines)
