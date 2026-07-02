@@ -14,6 +14,7 @@ class CapturedScreen:
     url: str
     screenshot: Path
     viewport: str = "desktop"
+    theme: str = "light"
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 

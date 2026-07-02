@@ -887,6 +887,11 @@ def qa_capture(
             "sub-strategy to hand a multi-app manifest to a CC subagent."
         ),
     ),
+    dark: bool = typer.Option(False, "--dark", help="Capture with dark color-scheme emulation"),
+    viewport: str = typer.Option("desktop", "--viewport", help="desktop | mobile"),
+    above_fold: bool = typer.Option(
+        False, "--above-fold", help="Viewport-height screenshot instead of full page"
+    ),
 ) -> None:
     """Capture screenshots only — no LLM evaluation needed."""
     from dazzle.cli.utils import load_project_appspec
@@ -947,6 +952,9 @@ def qa_capture(
                 site_url=connection.site_url,
                 api_url=connection.api_url,
                 project_dir=project_dir,
+                viewport=viewport,
+                color_scheme="dark" if dark else "light",
+                full_page=not above_fold,
             )
         )
 

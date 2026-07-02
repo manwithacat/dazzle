@@ -48,6 +48,12 @@ class CaptureTarget:
     url: str
 
 
+VIEWPORTS: dict[str, dict[str, int]] = {
+    "desktop": {"width": 1440, "height": 900},
+    "mobile": {"width": 390, "height": 844},
+}
+
+
 # =============================================================================
 # Planning
 # =============================================================================
@@ -102,6 +108,9 @@ async def capture_screenshots(
     project_dir: Path,
     *,
     output_dir: Path | None = None,
+    viewport: str = "desktop",
+    color_scheme: str = "light",
+    full_page: bool = True,
 ) -> list[CapturedScreen]:
     """Capture screenshots for all targets using a headless Playwright browser.
 
@@ -142,6 +151,9 @@ async def capture_screenshots(
                 site_url=site_url,
                 session_manager=session_manager,
                 output_dir=resolved_output_dir,
+                viewport=viewport,
+                color_scheme=color_scheme,
+                full_page=full_page,
             )
             if screen is not None:
                 results.append(screen)
@@ -189,6 +201,7 @@ def write_manifest(
                     "url": s.url,
                     "screenshot": str(s.screenshot),
                     "viewport": s.viewport,
+                    "theme": s.theme,
                 }
                 for s in screens
             ],
@@ -204,6 +217,10 @@ async def _capture_one(
     site_url: str,
     session_manager: SessionManager,
     output_dir: Path,
+    *,
+    viewport: str = "desktop",
+    color_scheme: str = "light",
+    full_page: bool = True,
 ) -> CapturedScreen | None:
     """Capture a single persona/workspace screenshot.
 
@@ -217,7 +234,9 @@ async def _capture_one(
     Returns:
         A :class:`CapturedScreen` on success, ``None`` on failure.
     """
-    screenshot_path = output_dir / f"{target.workspace}_{target.persona}.png"
+    screenshot_path = (
+        output_dir / f"{target.workspace}_{target.persona}_{viewport}_{color_scheme}.png"
+    )
 
     try:
         session = await session_manager.create_session(target.persona)
@@ -232,7 +251,7 @@ async def _capture_one(
         return None
 
     try:
-        context = await browser.new_context()
+        context = await browser.new_context(viewport=VIEWPORTS[viewport], color_scheme=color_scheme)
         try:
             await context.add_cookies(
                 [
@@ -247,7 +266,7 @@ async def _capture_one(
             try:
                 full_url = f"{site_url}{target.url}"
                 await page.goto(full_url, wait_until="networkidle")
-                await page.screenshot(path=str(screenshot_path), full_page=True)
+                await page.screenshot(path=str(screenshot_path), full_page=full_page)
                 logger.info(
                     "Captured %s/%s → %s",
                     target.persona,
@@ -259,6 +278,8 @@ async def _capture_one(
                     workspace=target.workspace,
                     url=full_url,
                     screenshot=screenshot_path,
+                    viewport=viewport,
+                    theme=color_scheme,
                 )
             finally:
                 await page.close()
