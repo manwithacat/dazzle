@@ -34,15 +34,18 @@ def _config(*, member_via: str = "profile", lenses: list[dict] | None = None) ->
     )
 
 
-def test_returns_empty_when_no_items() -> None:
-    cells = _build_cohort_cells(items=[], config=_config(), active_lens_id="score")
-    assert cells == []
+# ── empty guards ──
 
 
-def test_returns_empty_when_config_missing() -> None:
-    cells = _build_cohort_cells(
-        items=[{"id": "1", "score": 50}], config=None, active_lens_id="score"
-    )
+@pytest.mark.parametrize(
+    ("items", "config"),
+    [
+        pytest.param([], _config(), id="no-items"),
+        pytest.param([{"id": "1", "score": 50}], None, id="config-missing"),
+    ],
+)
+def test_returns_empty(items: list[dict], config: CohortStripConfig | None) -> None:
+    cells = _build_cohort_cells(items=items, config=config, active_lens_id="score")
     assert cells == []
 
 
@@ -56,202 +59,217 @@ def test_skips_rows_without_id() -> None:
     assert cells[0]["member_id"] == "p1"
 
 
-def test_resolves_member_name_from_fk_display_dict() -> None:
-    """When the FK was resolved upstream into a dict, use its
-    __display__ key (or canonical fallback)."""
-    cells = _build_cohort_cells(
-        items=[
-            {
-                "id": "p1",
-                "score": 78,
-                "profile": {"id": "prof1", "__display__": "Alice Wong"},
-            }
-        ],
-        config=_config(member_via="profile"),
-        active_lens_id="score",
-    )
-    assert cells[0]["member_name"] == "Alice Wong"
+# ── member_name resolution priority chain ──
+# Rungs: (1) FK resolved upstream into a dict → its __display__ key;
+# (2) `_inject_display_names` `<field>_display` sibling key;
+# (3) source entity's display_field (#1299: self-referential `member_via: id`
+#     has no sibling — the label must come from display_field, not the UUID);
+# (4) the row's own `name` field when member_via wasn't FK-resolved;
+# (5) raw-id fallback when no display_field either (#1299: no regression).
 
 
-def test_resolves_member_name_from_display_sibling() -> None:
-    """When _inject_display_names produced a `<field>_display`
-    sibling key, use that."""
-    cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 78, "profile": "prof1", "profile_display": "Alice"}],
-        config=_config(member_via="profile"),
-        active_lens_id="score",
-    )
-    assert cells[0]["member_name"] == "Alice"
-
-
-def test_falls_back_to_name_field_when_fk_unresolved() -> None:
-    """When member_via wasn't FK-resolved (no display dict, no
-    sibling), fall through to the row's own `name` field."""
-    cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 78, "profile": None, "name": "Bob"}],
-        config=_config(member_via="profile"),
-        active_lens_id="score",
-    )
-    assert cells[0]["member_name"] == "Bob"
-
-
-def test_extracts_primary_value_from_active_lens_field() -> None:
-    cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 78, "att_pct": 92}],
-        config=_config(
-            lenses=[
-                {"id": "score", "label": "Score", "primary": "score"},
-                {"id": "att", "label": "Attendance", "primary": "att_pct"},
-            ]
+@pytest.mark.parametrize(
+    ("items", "member_via", "source_display_field", "expected"),
+    [
+        pytest.param(
+            [
+                {
+                    "id": "p1",
+                    "score": 78,
+                    "profile": {"id": "prof1", "__display__": "Alice Wong"},
+                }
+            ],
+            "profile",
+            "",
+            "Alice Wong",
+            id="p1-fk-display-dict",
         ),
-        active_lens_id="att",
-    )
-    assert cells[0]["primary_value"] == "92"
-
-
-def test_unknown_active_lens_falls_back_to_first_declared() -> None:
-    cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 50, "att_pct": 90}],
-        config=_config(
-            lenses=[
-                {"id": "score", "label": "Score", "primary": "score"},
-                {"id": "att", "label": "Attendance", "primary": "att_pct"},
-            ]
+        pytest.param(
+            [{"id": "p1", "score": 78, "profile": "prof1", "profile_display": "Alice"}],
+            "profile",
+            "",
+            "Alice",
+            id="p2-display-sibling",
         ),
-        active_lens_id="ghost-lens",
-    )
-    # First lens (score) wins.
-    assert cells[0]["primary_value"] == "50"
-
-
-def test_tone_good_when_at_or_above_threshold() -> None:
-    cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 90}, {"id": "p2", "score": 85}],
-        config=_config(
-            lenses=[{"id": "score", "label": "Score", "primary": "score", "threshold": 85}]
+        pytest.param(
+            [
+                {
+                    "id": "p1",
+                    "score": 1,
+                    "profile": "x",
+                    "profile_display": "Alice",
+                    "form_name": "10A",
+                }
+            ],
+            "profile",
+            "form_name",
+            "Alice",
+            id="p2-sibling-beats-p3-display-field-#1299",
         ),
-        active_lens_id="score",
-    )
-    assert cells[0]["tone"] == "good"
-    assert cells[1]["tone"] == "good"
-
-
-def test_tone_warn_when_within_10pct_below_threshold() -> None:
-    cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 80}],
-        config=_config(
-            lenses=[{"id": "score", "label": "Score", "primary": "score", "threshold": 85}]
+        pytest.param(
+            [{"id": "0f9a-2b1c-uuid", "form_name": "10A", "score": 78}],
+            "id",
+            "form_name",
+            "10A",
+            id="p3-self-ref-display-field-#1299",
         ),
-        active_lens_id="score",
-    )
-    # 80 / 85 ≈ 94% → within warn band.
-    assert cells[0]["tone"] == "warn"
-
-
-def test_tone_bad_when_below_warn_band() -> None:
-    cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 50}],
-        config=_config(
-            lenses=[{"id": "score", "label": "Score", "primary": "score", "threshold": 85}]
+        pytest.param(
+            [{"id": "p1", "score": 78, "profile": None, "name": "Bob"}],
+            "profile",
+            "",
+            "Bob",
+            id="p4-name-field-when-fk-unresolved",
         ),
-        active_lens_id="score",
-    )
-    # 50 / 85 ≈ 59% → bad.
-    assert cells[0]["tone"] == "bad"
-
-
-def test_tone_neutral_when_no_threshold() -> None:
-    cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 30}],
-        config=_config(),  # no threshold on default lens
-        active_lens_id="score",
-    )
-    assert cells[0]["tone"] == "neutral"
-
-
-def test_tone_neutral_when_primary_not_numeric() -> None:
-    cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": "active"}],
-        config=_config(
-            lenses=[{"id": "score", "label": "Score", "primary": "score", "threshold": 85}]
+        pytest.param(
+            [{"id": "u1", "score": 1}],
+            "id",
+            "",
+            "u1",
+            id="p5-raw-id-when-no-display-field-#1299",
         ),
-        active_lens_id="score",
-    )
-    # Non-numeric primary can't be compared — defensive neutral.
-    assert cells[0]["tone"] == "neutral"
-
-
-def test_avatar_initials_from_member_name() -> None:
+    ],
+)
+def test_member_name_resolution_priority(
+    items: list[dict], member_via: str, source_display_field: str, expected: str
+) -> None:
     cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 78, "profile_display": "Alice Wong"}],
-        config=_config(member_via="profile"),
+        items=items,
+        config=_config(member_via=member_via),
         active_lens_id="score",
+        source_display_field=source_display_field,
     )
-    assert cells[0]["avatar_initials"] == "AW"
+    assert cells[0]["member_name"] == expected
 
 
-def test_avatar_initials_empty_when_no_name() -> None:
+# ── primary value extraction from the active lens ──
+
+_TWO_LENSES = [
+    {"id": "score", "label": "Score", "primary": "score"},
+    {"id": "att", "label": "Attendance", "primary": "att_pct"},
+]
+
+
+@pytest.mark.parametrize(
+    ("items", "lenses", "active_lens_id", "expected"),
+    [
+        pytest.param(
+            [{"id": "p1", "score": 78, "att_pct": 92}],
+            _TWO_LENSES,
+            "att",
+            "92",
+            id="active-lens-field",
+        ),
+        # Unknown active lens → first declared lens (score) wins.
+        pytest.param(
+            [{"id": "p1", "score": 50, "att_pct": 90}],
+            _TWO_LENSES,
+            "ghost-lens",
+            "50",
+            id="unknown-lens-falls-back-to-first-declared",
+        ),
+        # Row missing the lens's primary field → handled gracefully as "".
+        pytest.param(
+            [{"id": "p1", "name": "Alice"}],
+            None,
+            "score",
+            "",
+            id="missing-primary-field-renders-empty",
+        ),
+    ],
+)
+def test_primary_value_extraction(
+    items: list[dict], lenses: list[dict] | None, active_lens_id: str, expected: str
+) -> None:
     cells = _build_cohort_cells(
-        items=[{"id": "p1", "score": 78}],
-        config=_config(member_via="missing"),
-        active_lens_id="score",
+        items=items,
+        config=_config(lenses=lenses),
+        active_lens_id=active_lens_id,
     )
-    assert cells[0]["avatar_initials"] == ""
+    assert cells[0]["primary_value"] == expected
 
 
-def test_handles_items_with_missing_primary_field_gracefully() -> None:
+# ── tone banding against the lens threshold ──
+
+_THRESHOLD_LENS = [{"id": "score", "label": "Score", "primary": "score", "threshold": 85}]
+
+
+@pytest.mark.parametrize(
+    ("items", "lenses", "expected_tones"),
+    [
+        pytest.param(
+            [{"id": "p1", "score": 90}, {"id": "p2", "score": 85}],
+            _THRESHOLD_LENS,
+            ["good", "good"],
+            id="good-at-or-above-threshold",
+        ),
+        # 80 / 85 ≈ 94% → within warn band.
+        pytest.param(
+            [{"id": "p1", "score": 80}],
+            _THRESHOLD_LENS,
+            ["warn"],
+            id="warn-within-10pct-below-threshold",
+        ),
+        # 50 / 85 ≈ 59% → bad.
+        pytest.param(
+            [{"id": "p1", "score": 50}],
+            _THRESHOLD_LENS,
+            ["bad"],
+            id="bad-below-warn-band",
+        ),
+        # No threshold on the default lens → neutral.
+        pytest.param(
+            [{"id": "p1", "score": 30}],
+            None,
+            ["neutral"],
+            id="neutral-when-no-threshold",
+        ),
+        # Non-numeric primary can't be compared — defensive neutral.
+        pytest.param(
+            [{"id": "p1", "score": "active"}],
+            _THRESHOLD_LENS,
+            ["neutral"],
+            id="neutral-when-primary-not-numeric",
+        ),
+    ],
+)
+def test_tone_banding(
+    items: list[dict], lenses: list[dict] | None, expected_tones: list[str]
+) -> None:
     cells = _build_cohort_cells(
-        items=[{"id": "p1", "name": "Alice"}],  # no `score` field
-        config=_config(),
+        items=items,
+        config=_config(lenses=lenses),
         active_lens_id="score",
     )
-    assert cells[0]["primary_value"] == ""
+    assert [cell["tone"] for cell in cells] == expected_tones
 
 
-# ── #1299: self-referential member_via resolves to source display_field ──
+# ── avatar initials ──
 
 
-def test_member_name_from_display_field_when_member_via_is_self() -> None:
-    """#1299: `member_via: id` (self-referential) has no `<field>_display`
-    sibling — the scalar value is the row's own UUID. The label must come
-    from the source entity's display_field, not the UUID."""
+@pytest.mark.parametrize(
+    ("items", "member_via", "expected"),
+    [
+        pytest.param(
+            [{"id": "p1", "score": 78, "profile_display": "Alice Wong"}],
+            "profile",
+            "AW",
+            id="initials-from-member-name",
+        ),
+        pytest.param(
+            [{"id": "p1", "score": 78}],
+            "missing",
+            "",
+            id="empty-when-no-name",
+        ),
+    ],
+)
+def test_avatar_initials(items: list[dict], member_via: str, expected: str) -> None:
     cells = _build_cohort_cells(
-        items=[{"id": "0f9a-2b1c-uuid", "form_name": "10A", "score": 78}],
-        config=_config(member_via="id"),
+        items=items,
+        config=_config(member_via=member_via),
         active_lens_id="score",
-        source_display_field="form_name",
     )
-    assert cells[0]["member_name"] == "10A"
-
-
-def test_member_name_falls_back_to_raw_id_when_no_display_field() -> None:
-    """No source_display_field → unchanged raw-id fallback (no regression)."""
-    cells = _build_cohort_cells(
-        items=[{"id": "u1", "score": 1}],
-        config=_config(member_via="id"),
-        active_lens_id="score",
-        source_display_field="",
-    )
-    assert cells[0]["member_name"] == "u1"
-
-
-def test_fk_display_sibling_wins_over_source_display_field() -> None:
-    """Priority: `<member_via>_display` sibling (2) beats display_field (3)."""
-    cells = _build_cohort_cells(
-        items=[
-            {
-                "id": "p1",
-                "score": 1,
-                "profile": "x",
-                "profile_display": "Alice",
-                "form_name": "10A",
-            }
-        ],
-        config=_config(member_via="profile"),
-        active_lens_id="score",
-        source_display_field="form_name",
-    )
-    assert cells[0]["member_name"] == "Alice"
+    assert cells[0]["avatar_initials"] == expected
 
 
 # ── #1300: aggregate primary formatting (default-round + format knob) ──
@@ -273,49 +291,71 @@ def _agg_config(fmt: str = "") -> CohortStripConfig:
     )
 
 
-def test_aggregate_default_round_trims_raw_float() -> None:
-    """#1300: an `avg` lens with no format knob no longer emits the raw
-    '7.7500000000000000' — it default-rounds to '7.75'."""
+@pytest.mark.parametrize(
+    ("fmt", "items", "aggregate_values", "source_display_field", "expected"),
+    [
+        # #1300: an `avg` lens with no format knob no longer emits the raw
+        # '7.7500000000000000' — it default-rounds to '7.75'.
+        pytest.param(
+            "",
+            [{"id": "m1", "form_name": "10A"}],
+            {"m1": "7.7500000000000000"},
+            "form_name",
+            "7.75",
+            id="default-round-trims-raw-float-#1300",
+        ),
+        pytest.param(
+            "",
+            [{"id": "m1"}],
+            {"m1": 8.0},
+            "",
+            "8",
+            id="default-round-integral-drops-decimal",
+        ),
+        # #1300: an explicit `format:` spec wins over default-round.
+        pytest.param(
+            ".1f",
+            [{"id": "m1"}],
+            {"m1": 7.74},
+            "",
+            "7.7",
+            id="format-spec-overrides-default-round-#1300",
+        ),
+        # str.format template form (`{...}`) is honoured, beating default-round.
+        pytest.param(
+            "{:.0f}%",
+            [{"id": "m1"}],
+            {"m1": 92.4},
+            "",
+            "92%",
+            id="format-template-form",
+        ),
+        # Missing aggregate value (query returned no row) → empty cell.
+        pytest.param(
+            "",
+            [{"id": "m1"}],
+            {},
+            "",
+            "",
+            id="empty-value-renders-empty",
+        ),
+    ],
+)
+def test_aggregate_primary_formatting(
+    fmt: str,
+    items: list[dict],
+    aggregate_values: dict[str, object],
+    source_display_field: str,
+    expected: str,
+) -> None:
     cells = _build_cohort_cells(
-        items=[{"id": "m1", "form_name": "10A"}],
-        config=_agg_config(),
+        items=items,
+        config=_agg_config(fmt),
         active_lens_id="att",
-        source_display_field="form_name",
-        cohort_aggregate_values={"m1": "7.7500000000000000"},
+        source_display_field=source_display_field,
+        cohort_aggregate_values=aggregate_values,
     )
-    assert cells[0]["primary_value"] == "7.75"
-
-
-def test_aggregate_default_round_integral_drops_decimal() -> None:
-    cells = _build_cohort_cells(
-        items=[{"id": "m1"}],
-        config=_agg_config(),
-        active_lens_id="att",
-        cohort_aggregate_values={"m1": 8.0},
-    )
-    assert cells[0]["primary_value"] == "8"
-
-
-def test_aggregate_format_spec_overrides_default_round() -> None:
-    """#1300: an explicit `format:` spec wins over default-round."""
-    cells = _build_cohort_cells(
-        items=[{"id": "m1"}],
-        config=_agg_config(fmt=".1f"),
-        active_lens_id="att",
-        cohort_aggregate_values={"m1": 7.74},
-    )
-    assert cells[0]["primary_value"] == "7.7"
-
-
-def test_aggregate_format_template_form() -> None:
-    """str.format template form (`{...}`) is honoured, beating default-round."""
-    cells = _build_cohort_cells(
-        items=[{"id": "m1"}],
-        config=_agg_config(fmt="{:.0f}%"),
-        active_lens_id="att",
-        cohort_aggregate_values={"m1": 92.4},
-    )
-    assert cells[0]["primary_value"] == "92%"
+    assert cells[0]["primary_value"] == expected
 
 
 def test_aggregate_invalid_format_falls_back_to_raw(caplog: pytest.LogCaptureFixture) -> None:
@@ -327,17 +367,6 @@ def test_aggregate_invalid_format_falls_back_to_raw(caplog: pytest.LogCaptureFix
         cohort_aggregate_values={"m1": 5.5},
     )
     assert cells[0]["primary_value"] == "5.5"
-
-
-def test_aggregate_empty_value_renders_empty() -> None:
-    """Missing aggregate value (query returned no row) → empty cell."""
-    cells = _build_cohort_cells(
-        items=[{"id": "m1"}],
-        config=_agg_config(),
-        active_lens_id="att",
-        cohort_aggregate_values={},
-    )
-    assert cells[0]["primary_value"] == ""
 
 
 # ── shared format helpers (also used by bar_track via track_format) ──

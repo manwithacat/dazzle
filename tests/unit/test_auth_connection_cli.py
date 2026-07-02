@@ -178,9 +178,32 @@ def test_create_bad_group_map(monkeypatch) -> None:
     assert r.exit_code != 0
 
 
-def test_delete_missing(monkeypatch) -> None:
+# ---- missing connection → exit 1 (one contract across commands, #1530 TS-002) ----
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        pytest.param(["connection", "delete", "conn-x"], id="delete"),
+        pytest.param(["connection", "add-domain", "conn-x", "acme.test"], id="add-domain"),
+        pytest.param(["connection", "doctor", "conn-x"], id="doctor"),
+        pytest.param(
+            ["connection", "rotate-secret", "conn-x", "--client-secret", "s"],
+            id="rotate-secret",
+        ),
+        pytest.param(
+            ["connection", "revoke-previous-secret", "conn-x"], id="revoke-previous-secret"
+        ),
+        pytest.param(["connection", "enable-request-signing", "cx"], id="enable-request-signing"),
+        pytest.param(["connection", "enable-idp-initiated", "conn-x"], id="enable-idp-initiated"),
+    ],
+)
+def test_missing_connection_exits_1(monkeypatch, argv) -> None:
     _patch_store(monkeypatch, _Store(conn=None))
-    r = runner.invoke(auth_app, ["connection", "delete", "conn-x"])
+    # doctor checks environment flags BEFORE loading the connection; force them all-ok
+    # so the "No connection" path stays reachable for that row (harmless for the rest).
+    monkeypatch.setattr(auth_connection, "_env_flags", lambda: (True, True, True))
+    r = runner.invoke(auth_app, argv)
     assert r.exit_code == 1 and "No connection" in r.output
 
 
@@ -194,12 +217,6 @@ def test_add_domain_prints_txt_and_claims(monkeypatch) -> None:
     assert r.exit_code == 0
     assert "dazzle-verify=" in r.output  # the TXT record to publish
     assert store.set_domains_calls == [("conn-1", ["acme.test"])]  # normalized + claimed
-
-
-def test_add_domain_missing_connection(monkeypatch) -> None:
-    _patch_store(monkeypatch, _Store(conn=None))
-    r = runner.invoke(auth_app, ["connection", "add-domain", "conn-x", "acme.test"])
-    assert r.exit_code == 1 and "No connection" in r.output
 
 
 # ---- verify-domain ----
@@ -320,12 +337,6 @@ def test_doctor_no_key_blocks_before_load(monkeypatch) -> None:
     _patch_doctor(monkeypatch, _oidc_conn(), flags=(False, True, True))
     r = runner.invoke(auth_app, ["connection", "doctor", "conn-1"])
     assert r.exit_code == 1 and "DAZZLE_CONNECTION_SECRET" in r.output
-
-
-def test_doctor_missing_connection(monkeypatch) -> None:
-    _patch_doctor(monkeypatch, None)
-    r = runner.invoke(auth_app, ["connection", "doctor", "conn-x"])
-    assert r.exit_code == 1 and "No connection" in r.output
 
 
 def _stub_probe(monkeypatch, checks):
@@ -503,16 +514,57 @@ def test_rotate_secret_scim_mints_new_bearer(monkeypatch) -> None:
     assert secrets["scim_bearer"] in r.output  # printed once for the operator
 
 
-def test_rotate_secret_saml_refused(monkeypatch) -> None:
-    _patch_store(monkeypatch, _Store(conn=_Conn("conn-1", conn_type="saml")))
-    r = runner.invoke(auth_app, ["connection", "rotate-secret", "conn-1"])
-    assert r.exit_code == 1 and "no rotatable secret" in r.output
+# ---- wrong connection type → refusal (one contract across commands, #1530 TS-002) ----
 
 
-def test_rotate_secret_missing_connection(monkeypatch) -> None:
-    _patch_store(monkeypatch, _Store(conn=None))
-    r = runner.invoke(auth_app, ["connection", "rotate-secret", "conn-x", "--client-secret", "s"])
-    assert r.exit_code == 1 and "No connection" in r.output
+@pytest.mark.parametrize(
+    ("conn_type", "argv", "refusal", "casefold", "absent_write_attr"),
+    [
+        pytest.param(
+            "saml",
+            ["connection", "rotate-secret", "conn-1"],
+            "no rotatable secret",
+            False,
+            None,
+            id="rotate-secret-refuses-saml",
+        ),
+        pytest.param(
+            "oidc",
+            ["connection", "enable-request-signing", "c1"],
+            "saml",
+            True,
+            None,
+            id="request-signing-rejects-oidc",
+        ),
+        pytest.param(
+            "oidc",
+            ["connection", "enable-assertion-encryption", "c1"],
+            None,
+            False,
+            "encryption_enabled",
+            id="assertion-encryption-rejects-non-saml",
+        ),
+        pytest.param(
+            "oidc",
+            ["connection", "enable-idp-initiated", "conn-1"],
+            "SAML-only",
+            False,
+            "idp_initiated",
+            id="idp-initiated-refuses-non-saml",
+        ),
+    ],
+)
+def test_wrong_connection_type_refused(
+    monkeypatch, conn_type, argv, refusal, casefold, absent_write_attr
+) -> None:
+    store = _Store(conn=_Conn(argv[-1], conn_type=conn_type))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, argv)
+    assert r.exit_code == 1
+    if refusal is not None:
+        assert refusal in (r.output.lower() if casefold else r.output)
+    if absent_write_attr is not None:
+        assert getattr(store, absent_write_attr, None) is None  # store not written
 
 
 # ---- #1342 grace window + audit ----
@@ -569,12 +621,6 @@ def test_secret_history_lists_events(monkeypatch) -> None:
     _patch_store(monkeypatch, store)
     r = runner.invoke(auth_app, ["connection", "secret-history", "conn-1"])
     assert r.exit_code == 0 and "rotated" in r.output
-
-
-def test_revoke_previous_secret_missing_connection(monkeypatch) -> None:
-    _patch_store(monkeypatch, _Store(conn=None))
-    r = runner.invoke(auth_app, ["connection", "revoke-previous-secret", "conn-x"])
-    assert r.exit_code == 1 and "No connection" in r.output
 
 
 def test_secret_history_empty(monkeypatch) -> None:
@@ -690,18 +736,6 @@ def test_enable_request_signing_saml(monkeypatch) -> None:
     assert "metadata?connection=c1" in r.output  # re-import hint
 
 
-def test_enable_request_signing_rejects_oidc(monkeypatch) -> None:
-    _patch_store(monkeypatch, _Store(conn=_Conn("c1", conn_type="oidc")))
-    r = runner.invoke(auth_app, ["connection", "enable-request-signing", "c1"])
-    assert r.exit_code == 1 and "saml" in r.output.lower()
-
-
-def test_enable_request_signing_missing(monkeypatch) -> None:
-    _patch_store(monkeypatch, _Store(conn=None))
-    r = runner.invoke(auth_app, ["connection", "enable-request-signing", "cx"])
-    assert r.exit_code == 1 and "No connection" in r.output
-
-
 def test_enable_request_signing_already_on(monkeypatch) -> None:
     store = _Store(conn=_Conn("c1", conn_type="saml", config={"sign_requests": "true"}))
     _patch_store(monkeypatch, store)
@@ -727,14 +761,6 @@ def test_enable_assertion_encryption(monkeypatch) -> None:
     assert store.encryption_enabled == "c1"
     assert "metadata?connection=c1" in result.output  # IdP re-import hint
     assert "plaintext" in result.output.lower()  # strict-posture warning
-
-
-def test_enable_assertion_encryption_rejects_non_saml(monkeypatch) -> None:
-    store = _Store(conn=_Conn("c1", conn_type="oidc"))
-    _patch_store(monkeypatch, store)
-    result = runner.invoke(auth_connection.connection_app, ["enable-assertion-encryption", "c1"])
-    assert result.exit_code == 1
-    assert getattr(store, "encryption_enabled", None) is None
 
 
 def test_enable_assertion_encryption_already_on_is_noop(monkeypatch) -> None:
@@ -790,14 +816,6 @@ def test_enable_idp_initiated_saml(monkeypatch) -> None:
     assert store.idp_initiated == ("conn-1", True)
 
 
-def test_enable_idp_initiated_non_saml_refused(monkeypatch) -> None:
-    store = _Store(conn=_Conn("conn-1", conn_type="oidc"))
-    _patch_store(monkeypatch, store)
-    r = runner.invoke(auth_app, ["connection", "enable-idp-initiated", "conn-1"])
-    assert r.exit_code == 1 and "SAML-only" in r.output
-    assert not hasattr(store, "idp_initiated")
-
-
 def test_enable_idp_initiated_already_on_is_noop(monkeypatch) -> None:
     store = _Store(conn=_Conn("conn-1", conn_type="saml", config={"allow_idp_initiated": "true"}))
     _patch_store(monkeypatch, store)
@@ -812,9 +830,3 @@ def test_disable_idp_initiated_saml(monkeypatch) -> None:
     r = runner.invoke(auth_app, ["connection", "disable-idp-initiated", "conn-1"])
     assert r.exit_code == 0 and "disabled" in r.output.lower()
     assert store.idp_initiated == ("conn-1", False)
-
-
-def test_enable_idp_initiated_missing_connection(monkeypatch) -> None:
-    _patch_store(monkeypatch, _Store(conn=None))
-    r = runner.invoke(auth_app, ["connection", "enable-idp-initiated", "conn-x"])
-    assert r.exit_code == 1 and "No connection" in r.output

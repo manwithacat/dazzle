@@ -79,15 +79,6 @@ def test_timeline_renders_rich_event_shape() -> None:
     assert not any(label == "When" for label, _ in evt.fields)
 
 
-def test_timeline_no_items_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("e", display="timeline", empty_message="No events yet."), {}
-    )
-    html = _render(fragment)
-    assert "No events yet." in html
-
-
 def test_timeline_overflow_line_renders_when_total_exceeds_items() -> None:
     """Legacy `<p class="dz-timeline-overflow">Showing N of M</p>`
     appears when ctx total > items length."""
@@ -226,22 +217,6 @@ def test_kanban_no_items_renders_empty_state_or_minimal_board() -> None:
 # ───────────────── End-to-end render ──────────────
 
 
-def test_kanban_renders_to_html_with_dz_kanban_marker() -> None:
-    """Rendered output carries the `dz-kanban` CSS hook so workspace
-    layout CSS can target the kanban column structure."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"id": "1", "title": "Buy milk", "status": "todo"}],
-        "group_keys": ["todo", "doing", "done"],
-        "group_by_field": "status",
-    }
-    fragment = adapter.build(_FakeRegion("b", display="kanban", title="Tasks"), ctx)
-    html = _render(fragment)
-    assert "dz-kanban" in html
-    assert "Tasks" in html
-    assert "Buy milk" in html
-
-
 def test_list_renders_with_table() -> None:
     adapter = WorkspaceRegionAdapter()
     ctx = {
@@ -253,16 +228,6 @@ def test_list_renders_with_table() -> None:
     assert "<table" in html
     assert "Alice" in html
     assert "Bob" in html
-
-
-def test_list_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("users", display="list", empty_message="No users."),
-        {"items": [], "columns": []},
-    )
-    html = _render(fragment)
-    assert "No users." in html
 
 
 def test_list_with_filter_columns_renders_filter_bar() -> None:
@@ -418,15 +383,6 @@ def test_grid_clamps_column_count_to_valid_range() -> None:
     assert "x" in _render(fragment)
 
 
-def test_grid_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("c", display="grid", empty_message="Nothing here."),
-        {"items": []},
-    )
-    assert "Nothing here." in _render(fragment)
-
-
 # ───────────────── Metrics ─────────────────────────
 
 
@@ -505,15 +461,6 @@ def test_metrics_invalid_tone_coerced_to_default() -> None:
     html = _render(fragment)
     assert "X" in html
     assert 'data-dz-tone="garbage"' not in html  # garbage stripped
-
-
-def test_metrics_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("k", display="metrics", empty_message="None yet."),
-        {},
-    )
-    assert "None yet." in _render(fragment)
 
 
 def test_metrics_extended_deltas_render_full_block() -> None:
@@ -614,21 +561,6 @@ def test_bar_chart_renders_buckets() -> None:
     assert "High" in html
 
 
-def test_bar_chart_accepts_dict_bucket_shape() -> None:
-    """Buckets can also arrive as dicts with label/value or key/count."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "buckets": [
-            {"label": "open", "value": 5},
-            {"key": "closed", "count": 9},
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("c", display="bar_chart"), ctx)
-    html = _render(fragment)
-    # v0.66.110: humanized via render_status_badge.
-    assert "Open" in html and "Closed" in html
-
-
 def test_bar_chart_skips_malformed_entries() -> None:
     """A bucket missing a usable key/value silently drops; pure garbage
     leaves an empty bucket list → EmptyState."""
@@ -638,15 +570,6 @@ def test_bar_chart_skips_malformed_entries() -> None:
         {"buckets": [None, 42, "string"]},
     )
     assert "No data." in _render(fragment)
-
-
-def test_bar_chart_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("c", display="bar_chart", empty_message="None."),
-        {"buckets": []},
-    )
-    assert "None." in _render(fragment)
 
 
 def test_bar_chart_uses_chart_label_override() -> None:
@@ -736,15 +659,6 @@ def test_pivot_table_drops_cells_with_unknown_dimensions() -> None:
     assert "99" not in html
 
 
-def test_pivot_table_empty_dimensions_render_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("p", display="pivot_table", empty_message="No data."),
-        {"rows": [], "columns": ["x"]},
-    )
-    assert "No data." in _render(fragment)
-
-
 # ───────────────── Tabbed list ─────────────────────
 
 
@@ -810,15 +724,6 @@ def test_tabbed_list_dedupes_duplicate_tab_keys() -> None:
     html = _render(fragment)
     assert "FirstValue" in html
     assert "SecondValue" not in html
-
-
-def test_tabbed_list_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("t", display="tabbed_list", empty_message="No tabs."),
-        {},
-    )
-    assert "No tabs." in _render(fragment)
 
 
 def test_tabbed_list_source_tabs_produces_lazy_tab_panel() -> None:
@@ -973,15 +878,6 @@ def test_detail_renders_em_dash_for_missing_values() -> None:
     assert "—" in html
 
 
-def test_detail_no_item_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("d", display="detail", empty_message="No item."),
-        {"item": None},
-    )
-    assert "No item." in _render(fragment)
-
-
 def test_detail_type_aware_badge_renders_status_tone() -> None:
     """Phase 4B.1.a: `type: badge` columns use the Badge primitive with
     a variant computed from `_badge_tone_filter` (mirrors the legacy
@@ -1102,22 +998,6 @@ def test_detail_default_type_renders_em_dash_for_none() -> None:
 # ───────────────── Activity feed ──────────────────
 
 
-def test_radar_renders_polar_axes() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "axes": [
-            ("Python", 9),
-            ("Go", 7),
-            ("Rust", 5),
-            ("JavaScript", 6),
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("r", display="radar"), ctx)
-    html = _render(fragment)
-    assert "dz-radar" in html
-    assert "Python" in html and "Go" in html and "Rust" in html
-
-
 def test_radar_with_fewer_than_three_axes_degrades_to_empty_state() -> None:
     """Adapter is permissive — Radar's __post_init__ raises on <3 axes;
     the adapter returns EmptyState rather than crashing."""
@@ -1127,45 +1007,6 @@ def test_radar_with_fewer_than_three_axes_degrades_to_empty_state() -> None:
         {"axes": [("A", 1), ("B", 2)]},
     )
     assert "Need 3+ axes." in _render(fragment)
-
-
-def test_radar_accepts_dict_axis_shape() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "axes": [
-            {"axis": "X", "value": 1},
-            {"label": "Y", "value": 2},
-            {"axis": "Z", "value": 3},
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("r", display="radar"), ctx)
-    html = _render(fragment)
-    assert "X" in html and "Y" in html and "Z" in html
-
-
-def test_box_plot_renders_quartile_table() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "groups": [
-            ("p50", 0, 1, 2, 3, 4),
-            ("p99", 5, 6, 7, 8, 9),
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("b", display="box_plot"), ctx)
-    html = _render(fragment)
-    assert "dz-box-plot" in html
-    assert "p50" in html and "p99" in html
-
-
-def test_box_plot_accepts_dict_group_shape() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "groups": [
-            {"label": "g1", "min": 0, "q1": 1, "median": 2, "q3": 3, "max": 4},
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("b", display="box_plot"), ctx)
-    assert "g1" in _render(fragment)
 
 
 def test_box_plot_silently_drops_non_monotonic_groups() -> None:
@@ -1184,35 +1025,6 @@ def test_box_plot_silently_drops_non_monotonic_groups() -> None:
     assert "bad" not in html
 
 
-def test_box_plot_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("b", display="box_plot", empty_message="No distribution."),
-        {"groups": []},
-    )
-    assert "No distribution." in _render(fragment)
-
-
-def test_line_chart_renders_time_series() -> None:
-    """v0.66.110: legacy region wrapper class is `dz-line-chart-region`
-    (chrome stripping)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"points": [("Jan", 5), ("Feb", 8), ("Mar", 12)]}
-    fragment = adapter.build(_FakeRegion("c", display="line_chart"), ctx)
-    html = _render(fragment)
-    assert "dz-line-chart-region" in html
-    assert "Jan" in html and "Feb" in html and "Mar" in html
-
-
-def test_area_chart_uses_area_region_wrapper() -> None:
-    """v0.66.110: AREA_CHART wrapper is `dz-area-chart-region`
-    (legacy class scheme — was BEM `dz-timeseries--view-area`)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"points": [("Q1", 100), ("Q2", 150)]}
-    fragment = adapter.build(_FakeRegion("c", display="area_chart"), ctx)
-    assert "dz-area-chart-region" in _render(fragment)
-
-
 def test_sparkline_renders_dedicated_primitive() -> None:
     """v0.66.106: SPARKLINE split from TimeSeries into a dedicated
     `Sparkline` primitive matching the legacy `dz-sparkline-region`
@@ -1223,15 +1035,6 @@ def test_sparkline_renders_dedicated_primitive() -> None:
     assert 'class="dz-sparkline-region"' in html
     assert 'class="dz-sparkline-svg"' in html
     assert 'viewBox="0 0 180 32"' in html
-
-
-def test_time_series_accepts_dict_point_shape() -> None:
-    """Points can also arrive as `{label, value}` or `{x, y}` dicts."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"points": [{"x": "Jan", "y": 10}, {"label": "Feb", "value": 20}]}
-    fragment = adapter.build(_FakeRegion("c", display="line_chart"), ctx)
-    html = _render(fragment)
-    assert "Jan" in html and "Feb" in html
 
 
 def test_time_series_skips_malformed_points() -> None:
@@ -1294,34 +1097,6 @@ def test_time_series_no_references_omits_block() -> None:
     ctx = {"points": [("a", 1)]}
     html = _render(adapter.build(_FakeRegion("c", display="line_chart"), ctx))
     assert "dz-timeseries__references" not in html
-
-
-def test_diagram_renders_nodes_and_edges() -> None:
-    """`display: diagram` produces a Diagram primitive with the
-    declared nodes and edges, rendered as paired UL lists."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "nodes": ["Device", "Tester", "IssueReport"],
-        "edges": [("Device", "Tester"), ("Device", "IssueReport")],
-    }
-    fragment = adapter.build(_FakeRegion("d", display="diagram"), ctx)
-    html = _render(fragment)
-    assert "dz-diagram" in html
-    assert "Device" in html and "Tester" in html and "IssueReport" in html
-    # Edge arrow rendered
-    assert "→" in html
-
-
-def test_diagram_accepts_dict_edge_shape() -> None:
-    """Edges can also arrive as `{from, to}` or `{source, target}` dicts."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "nodes": ["A", "B"],
-        "edges": [{"from": "A", "to": "B"}],
-    }
-    fragment = adapter.build(_FakeRegion("d", display="diagram"), ctx)
-    html = _render(fragment)
-    assert "A" in html and "B" in html
 
 
 def test_diagram_drops_edges_with_unknown_endpoints() -> None:
@@ -1613,15 +1388,6 @@ def test_bar_track_drops_malformed_rows() -> None:
     assert "OK" not in html  # bad value caused drop
 
 
-def test_bar_track_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("b", display="bar_track", empty_message="No tracks."),
-        {"bar_track_rows": []},
-    )
-    assert "No tracks." in _render(fragment)
-
-
 def test_bullet_renders_track_with_actual_target_tick() -> None:
     """Phase 4B.4 wave 2 (v0.66.105): adapter consumes the authored
     `bullet_rows` shape directly with `bullet_max_value` for the
@@ -1664,15 +1430,6 @@ def test_bullet_drops_non_numeric_values() -> None:
     assert "1 rows · scale 0–100" in html
 
 
-def test_bullet_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("b", display="bullet", empty_message="No bullets."),
-        {"items": []},
-    )
-    assert "No bullets." in _render(fragment)
-
-
 def test_tree_renders_indented_labels_recursively() -> None:
     """`display: tree` flattens nested children into a Stack of Text
     rows, with each level of nesting prefixed by two spaces."""
@@ -1694,15 +1451,6 @@ def test_tree_renders_indented_labels_recursively() -> None:
     assert "Child1" in html
     assert "Child2" in html
     assert "Grand" in html
-
-
-def test_tree_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("t", display="tree", empty_message="Empty tree."),
-        {"items": []},
-    )
-    assert "Empty tree." in _render(fragment)
 
 
 def test_pipeline_steps_renders_row_of_cards() -> None:
@@ -1729,15 +1477,6 @@ def test_pipeline_steps_renders_row_of_cards() -> None:
     assert "—" in html
     # 3 stages → 2 connector pairs (last omits).
     assert html.count('class="dz-pipeline-connector"') == 2
-
-
-def test_pipeline_steps_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("p", display="pipeline_steps", empty_message="No steps."),
-        {"pipeline_stage_data": []},
-    )
-    assert "No steps." in _render(fragment)
 
 
 def test_action_grid_renders_cta_cards_with_tone_and_count() -> None:
@@ -1820,15 +1559,6 @@ def test_action_grid_count_zero_renders_badge() -> None:
     assert ">0<" in html  # zero badge rendered
     # The "None" card has no count badge — verify by checking only one badge appears
     assert html.count("dz-action-card-count") == 1
-
-
-def test_action_grid_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("a", display="action_grid", empty_message="No quick actions."),
-        {"action_cards": []},
-    )
-    assert "No quick actions." in _render(fragment)
 
 
 def test_profile_card_renders_full_identity_panel() -> None:
@@ -2000,15 +1730,6 @@ def test_progress_omits_summary_when_total_is_zero() -> None:
     assert "dz-progress-summary" not in html
 
 
-def test_progress_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("p", display="progress", empty_message="No progress."),
-        {"stage_counts": []},
-    )
-    assert "No progress." in _render(fragment)
-
-
 def test_status_list_renders_authored_entries() -> None:
     """Phase 4B.4 wave 1 (v0.66.104): adapter consumes `status_entries`
     (authored shape) directly and emits the legacy `dz-status-list`
@@ -2052,15 +1773,6 @@ def test_status_list_unknown_state_falls_back_to_neutral() -> None:
     assert "dz-status-list-pill" not in html
 
 
-def test_status_list_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("s", display="status_list", empty_message="All clear."),
-        {"items": []},
-    )
-    assert "All clear." in _render(fragment)
-
-
 def test_funnel_chart_renders_dedicated_primitive() -> None:
     """v0.66.111: FUNNEL_CHART now uses a dedicated `Funnel` primitive
     matching `dz-funnel-chart-region` byte-for-byte. Stages render in
@@ -2090,15 +1802,6 @@ def test_funnel_chart_renders_dedicated_primitive() -> None:
     assert "width: 50%" in html
     # 25% < 20% min → clamped to 20%.
     assert "width: 25%" in html or "width: 20%" in html
-
-
-def test_funnel_chart_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("f", display="funnel_chart", empty_message="No funnel."),
-        {"buckets": []},
-    )
-    assert "No funnel." in _render(fragment)
 
 
 def test_queue_renders_minimal_items() -> None:
@@ -2170,15 +1873,6 @@ def test_queue_count_metrics_overflow_render_via_dedicated_primitive() -> None:
     assert "100" in html  # total in count row
     assert "dz-queue-metric" in html  # metrics row
     assert "Showing 1 of 100" in html  # overflow line
-
-
-def test_queue_empty_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("q", display="queue", empty_message="Queue is empty."),
-        {"items": []},
-    )
-    assert "Queue is empty." in _render(fragment)
 
 
 def test_queue_skips_transitions_when_required_ctx_keys_missing() -> None:
@@ -2874,3 +2568,185 @@ def test_entity_card_skips_sections_with_missing_id() -> None:
     html = _render(surface)
     assert 'data-section-id="ok"' in html
     assert "Bad" not in html
+
+
+# ───────────────── Cross-display parametrized families (#1530) ─────────────
+# Three assertion-shape families collapsed from named per-display tests.
+# Membership is deliberately conservative: config-driven displays
+# (cohort_strip, day_timeline, task_inbox, entity_card) stay named above
+# because their empty paths flow through builder functions — not the
+# generic EmptyState arm — and some also pin chrome persistence
+# (role="tablist"). Also kept named: metrics scope-denial (#1425 non-leak),
+# the kanban either-of-three-outputs test, the radar <3-axes degrade test,
+# the diagram legacy hardcoded-message test (v0.66.118 — empty_message is
+# intentionally *ignored* there), profile_card degrade/default-message
+# contracts, and any smoke test that pins structure (isinstance, viewBox,
+# counts) rather than substrings.
+
+
+# Family 1: empty data + region.empty_message → the message renders via
+# the generic EmptyState arm. One row per display; assertion is exactly
+# "message in rendered output".
+_EMPTY_STATE_CASES: list[tuple[str, dict, str]] = [
+    ("timeline", {}, "No events yet."),
+    ("list", {"items": [], "columns": []}, "No users."),
+    ("grid", {"items": []}, "Nothing here."),
+    ("metrics", {}, "None yet."),
+    ("bar_chart", {"buckets": []}, "None."),
+    ("pivot_table", {"rows": [], "columns": ["x"]}, "No data."),
+    ("tabbed_list", {}, "No tabs."),
+    ("detail", {"item": None}, "No item."),
+    ("box_plot", {"groups": []}, "No distribution."),
+    ("bar_track", {"bar_track_rows": []}, "No tracks."),
+    ("bullet", {"items": []}, "No bullets."),
+    ("tree", {"items": []}, "Empty tree."),
+    ("pipeline_steps", {"pipeline_stage_data": []}, "No steps."),
+    ("action_grid", {"action_cards": []}, "No quick actions."),
+    ("status_list", {"items": []}, "All clear."),
+    ("funnel_chart", {"buckets": []}, "No funnel."),
+    ("queue", {"items": []}, "Queue is empty."),
+    ("progress", {"stage_counts": []}, "No progress."),
+]
+
+
+@pytest.mark.parametrize(
+    ("display", "ctx", "message"),
+    _EMPTY_STATE_CASES,
+    ids=[case[0] for case in _EMPTY_STATE_CASES],
+)
+def test_empty_data_with_empty_message_renders_empty_state(
+    display: str, ctx: dict, message: str
+) -> None:
+    adapter = WorkspaceRegionAdapter()
+    fragment = adapter.build(_FakeRegion("r", display=display, empty_message=message), ctx)
+    assert message in _render(fragment)
+
+
+# Family 2: alternative dict item shapes normalize to the same render as
+# the primary tuple shape. Per-row rationale:
+# - bar_chart: buckets as {label, value} or {key, count} dicts; labels
+#   humanized via render_status_badge (v0.66.110) — "open" → "Open".
+# - radar: axes as {axis, value} or {label, value} dicts.
+# - box_plot: groups as {label, min, q1, median, q3, max} dicts.
+# - line_chart (TimeSeries): points as {x, y} or {label, value} dicts.
+# - diagram: edges as {from, to} (or {source, target}) dicts.
+_ALT_DICT_SHAPE_CASES: list[tuple[str, dict, tuple[str, ...]]] = [
+    (
+        "bar_chart",
+        {"buckets": [{"label": "open", "value": 5}, {"key": "closed", "count": 9}]},
+        ("Open", "Closed"),
+    ),
+    (
+        "radar",
+        {
+            "axes": [
+                {"axis": "X", "value": 1},
+                {"label": "Y", "value": 2},
+                {"axis": "Z", "value": 3},
+            ]
+        },
+        ("X", "Y", "Z"),
+    ),
+    (
+        "box_plot",
+        {"groups": [{"label": "g1", "min": 0, "q1": 1, "median": 2, "q3": 3, "max": 4}]},
+        ("g1",),
+    ),
+    (
+        "line_chart",
+        {"points": [{"x": "Jan", "y": 10}, {"label": "Feb", "value": 20}]},
+        ("Jan", "Feb"),
+    ),
+    (
+        "diagram",
+        {"nodes": ["A", "B"], "edges": [{"from": "A", "to": "B"}]},
+        ("A", "B"),
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("display", "ctx", "expected"),
+    _ALT_DICT_SHAPE_CASES,
+    ids=[case[0] for case in _ALT_DICT_SHAPE_CASES],
+)
+def test_alternative_dict_item_shape_normalizes_to_same_render(
+    display: str, ctx: dict, expected: tuple[str, ...]
+) -> None:
+    adapter = WorkspaceRegionAdapter()
+    html = _render(adapter.build(_FakeRegion("r", display=display), ctx))
+    for substring in expected:
+        assert substring in html
+
+
+# Family 3: render smoke — each display emits its dz-* marker plus the
+# item content (substring assertions only; structural assertions stay in
+# named tests). Per-row rationale:
+# - kanban: `dz-kanban` CSS hook so workspace layout CSS can target the
+#   column structure; title + card content render.
+# - radar: polar axes labels render inside dz-radar.
+# - box_plot: quartile groups render inside dz-box-plot.
+# - line_chart: v0.66.110 — legacy region wrapper class is
+#   `dz-line-chart-region` (chrome stripping).
+# - area_chart: v0.66.110 — wrapper is `dz-area-chart-region` (legacy
+#   class scheme — was BEM `dz-timeseries--view-area`).
+# - diagram: nodes + edges render as paired UL lists with the → arrow.
+_RENDER_SMOKE_CASES: list[tuple[str, str | None, dict, tuple[str, ...]]] = [
+    (
+        "kanban",
+        "Tasks",
+        {
+            "items": [{"id": "1", "title": "Buy milk", "status": "todo"}],
+            "group_keys": ["todo", "doing", "done"],
+            "group_by_field": "status",
+        },
+        ("dz-kanban", "Tasks", "Buy milk"),
+    ),
+    (
+        "radar",
+        None,
+        {"axes": [("Python", 9), ("Go", 7), ("Rust", 5), ("JavaScript", 6)]},
+        ("dz-radar", "Python", "Go", "Rust"),
+    ),
+    (
+        "box_plot",
+        None,
+        {"groups": [("p50", 0, 1, 2, 3, 4), ("p99", 5, 6, 7, 8, 9)]},
+        ("dz-box-plot", "p50", "p99"),
+    ),
+    (
+        "line_chart",
+        None,
+        {"points": [("Jan", 5), ("Feb", 8), ("Mar", 12)]},
+        ("dz-line-chart-region", "Jan", "Feb", "Mar"),
+    ),
+    (
+        "area_chart",
+        None,
+        {"points": [("Q1", 100), ("Q2", 150)]},
+        ("dz-area-chart-region",),
+    ),
+    (
+        "diagram",
+        None,
+        {
+            "nodes": ["Device", "Tester", "IssueReport"],
+            "edges": [("Device", "Tester"), ("Device", "IssueReport")],
+        },
+        ("dz-diagram", "Device", "Tester", "IssueReport", "→"),
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("display", "title", "ctx", "expected"),
+    _RENDER_SMOKE_CASES,
+    ids=[case[0] for case in _RENDER_SMOKE_CASES],
+)
+def test_display_renders_dz_marker_and_item_content(
+    display: str, title: str | None, ctx: dict, expected: tuple[str, ...]
+) -> None:
+    adapter = WorkspaceRegionAdapter()
+    html = _render(adapter.build(_FakeRegion("r", display=display, title=title), ctx))
+    for substring in expected:
+        assert substring in html

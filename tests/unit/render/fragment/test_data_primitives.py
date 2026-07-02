@@ -1,6 +1,8 @@
 """Tests for data primitives — Table, KPI, BarChart, PivotTable, Timeline,
 KanbanBoard, CalendarGrid."""
 
+from collections.abc import Callable
+
 import pytest
 
 from dazzle.render.fragment.htmx import URL
@@ -36,6 +38,224 @@ from dazzle.render.fragment.primitives.data import (
     TimeSeriesSeries,
 )
 
+# === Guard-clause families (TS-003 parametrize-collapse) ===
+# Three shared contracts, one parametrized test each. Every row preserves
+# the original pytest.raises match string; ids name primitive.field.
+
+
+@pytest.mark.parametrize(
+    ("ctor", "match"),
+    [
+        pytest.param(
+            lambda: ActionCard(label=""),
+            "non-empty label",
+            id="action_card.label",
+        ),
+        pytest.param(
+            lambda: MetricTile(label="", value="0"),
+            "non-empty label",
+            id="metric_tile.label",
+        ),
+        pytest.param(
+            lambda: LazyTab(key="", label="X", endpoint=URL("/x")),
+            "non-empty key",
+            id="lazy_tab.key",
+        ),
+        pytest.param(
+            lambda: LazyTab(key="x", label="", endpoint=URL("/x")),
+            "non-empty label",
+            id="lazy_tab.label",
+        ),
+        pytest.param(
+            lambda: LazyTabPanel(
+                region_name="",
+                tabs=(LazyTab(key="x", label="X", endpoint=URL("/x")),),
+            ),
+            "non-empty region_name",
+            id="lazy_tab_panel.region_name",
+        ),
+        pytest.param(
+            # `name` becomes part of the results-panel DOM id; empty name
+            # would produce a colliding/missing id.
+            lambda: SearchBox(name="", fts_endpoint=URL("/_dazzle/fts/X")),
+            "non-empty name",
+            id="search_box.name",
+        ),
+        pytest.param(
+            lambda: ConfirmCheckItem(title=""),
+            "non-empty title",
+            id="confirm_check_item.title",
+        ),
+        pytest.param(
+            lambda: FilterColumn(key="", label="X", options=()),
+            "non-empty key",
+            id="filter_column.key",
+        ),
+        pytest.param(
+            lambda: FilterBar(
+                endpoint=URL("/x"),
+                region_name="",
+                columns=(FilterColumn(key="k", label="L", options=()),),
+            ),
+            "non-empty region_name",
+            id="filter_bar.region_name",
+        ),
+        pytest.param(
+            lambda: SortHeader(label="L", column_key="", endpoint=URL("/x"), region_name="r"),
+            "non-empty column_key",
+            id="sort_header.column_key",
+        ),
+        pytest.param(
+            lambda: SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name=""),
+            "non-empty region_name",
+            id="sort_header.region_name",
+        ),
+        pytest.param(
+            lambda: CsvExportButton(endpoint=URL("/x"), filename=""),
+            "non-empty filename",
+            id="csv_export_button.filename",
+        ),
+        pytest.param(
+            lambda: DateRangePicker(endpoint=URL("/x"), region_name=""),
+            "non-empty region_name",
+            id="date_range_picker.region_name",
+        ),
+    ],
+)
+def test_rejects_empty_required_field(ctor: Callable[[], object], match: str) -> None:
+    """Required string fields reject the empty string at construction time."""
+    with pytest.raises(ValueError, match=match):
+        ctor()
+
+
+@pytest.mark.parametrize(
+    ("ctor", "match"),
+    [
+        pytest.param(
+            lambda: Table(columns=(), rows=(("x",),)),
+            "at least one column",
+            id="table.columns",
+        ),
+        pytest.param(
+            lambda: BarChart(label="x", buckets=()),
+            "at least one bucket",
+            id="bar_chart.buckets",
+        ),
+        pytest.param(
+            lambda: TimeSeries(label="x", points=()),
+            "at least one point",
+            id="time_series.points",
+        ),
+        pytest.param(
+            lambda: TimeSeries(label="x", points=(), series=()),
+            "at least one point",
+            id="time_series.points_or_series",
+        ),
+        pytest.param(
+            lambda: TimeSeriesSeries(name="empty", points=()),
+            "at least one point",
+            id="time_series_series.points",
+        ),
+        pytest.param(
+            lambda: Radar(label="x", axes=()),
+            "at least one axis",
+            id="radar.axes",
+        ),
+        pytest.param(
+            lambda: BoxPlot(label="x", groups=()),
+            "at least one group",
+            id="box_plot.groups",
+        ),
+        pytest.param(
+            lambda: BarTrack(rows=(), max_value=100.0),
+            "at least one row",
+            id="bar_track.rows",
+        ),
+        pytest.param(
+            lambda: StageBar(stages=()),
+            "at least one stage",
+            id="stage_bar.stages",
+        ),
+        pytest.param(
+            lambda: LazyTabPanel(region_name="r", tabs=()),
+            "at least one tab",
+            id="lazy_tab_panel.tabs",
+        ),
+        pytest.param(
+            lambda: FilterBar(endpoint=URL("/x"), region_name="r", columns=()),
+            "at least one column",
+            id="filter_bar.columns",
+        ),
+    ],
+)
+def test_rejects_empty_collection(ctor: Callable[[], object], match: str) -> None:
+    """Collection-bearing primitives reject an empty collection at construction time."""
+    with pytest.raises(ValueError, match=match):
+        ctor()
+
+
+@pytest.mark.parametrize(
+    ("ctor", "match"),
+    [
+        pytest.param(
+            lambda: KPI(label="x", value="0", trend="sideways"),  # type: ignore[arg-type]
+            "invalid trend",
+            id="kpi.trend",
+        ),
+        pytest.param(
+            lambda: TimeSeries(label="x", points=(("a", 1.0),), view="pie"),  # type: ignore[arg-type]
+            "invalid view",
+            id="time_series.view",
+        ),
+        pytest.param(
+            lambda: ActionCard(label="X", tone="purple"),  # type: ignore[arg-type]
+            "invalid tone",
+            id="action_card.tone",
+        ),
+        pytest.param(
+            lambda: MetricTile(label="X", value="0", tone="purple"),  # type: ignore[arg-type]
+            "invalid tone",
+            id="metric_tile.tone",
+        ),
+        pytest.param(
+            lambda: MetricTile(label="X", value="0", delta_direction="sideways"),  # type: ignore[arg-type]
+            "invalid delta_direction",
+            id="metric_tile.delta_direction",
+        ),
+        pytest.param(
+            lambda: MetricTile(label="X", value="0", delta_sentiment="ambiguous"),  # type: ignore[arg-type]
+            "invalid delta_sentiment",
+            id="metric_tile.delta_sentiment",
+        ),
+        pytest.param(
+            lambda: ReferenceLine(value=1, style="wavy"),  # type: ignore[arg-type]
+            "invalid style",
+            id="reference_line.style",
+        ),
+        pytest.param(
+            lambda: ReferenceBand(from_value=0, to_value=1, color="magenta"),  # type: ignore[arg-type]
+            "invalid color",
+            id="reference_band.color",
+        ),
+        pytest.param(
+            lambda: SortHeader(
+                label="L",
+                column_key="k",
+                endpoint=URL("/x"),
+                region_name="r",
+                current_direction="random",  # type: ignore[arg-type]
+            ),
+            "invalid current_direction",
+            id="sort_header.current_direction",
+        ),
+    ],
+)
+def test_rejects_invalid_enum_value(ctor: Callable[[], object], match: str) -> None:
+    """Enum-constrained fields reject values outside their literal set."""
+    with pytest.raises(ValueError, match=match):
+        ctor()
+
+
 # === Table ===
 
 
@@ -45,11 +265,6 @@ def test_table_columns_and_rows() -> None:
         rows=(("Buy milk", "open"), ("Walk dog", "done")),
     )
     assert len(t.rows) == 2
-
-
-def test_table_rejects_no_columns() -> None:
-    with pytest.raises(ValueError, match="at least one column"):
-        Table(columns=(), rows=(("x",),))
 
 
 def test_table_row_arity_must_match_columns() -> None:
@@ -65,22 +280,12 @@ def test_kpi_basic() -> None:
     assert k.trend == "up"
 
 
-def test_kpi_invalid_trend() -> None:
-    with pytest.raises(ValueError, match="invalid trend"):
-        KPI(label="x", value="0", trend="sideways")  # type: ignore[arg-type]
-
-
 # === BarChart / PivotTable ===
 
 
 def test_bar_chart_buckets() -> None:
     b = BarChart(label="Tasks by status", buckets=(("open", 3), ("done", 7)))
     assert len(b.buckets) == 2
-
-
-def test_bar_chart_rejects_no_buckets() -> None:
-    with pytest.raises(ValueError, match="at least one bucket"):
-        BarChart(label="x", buckets=())
 
 
 def test_pivot_table_dimensions() -> None:
@@ -166,16 +371,6 @@ def test_diagram_no_edges_is_valid() -> None:
 # === TimeSeries ===
 
 
-def test_timeseries_requires_at_least_one_point() -> None:
-    with pytest.raises(ValueError, match="at least one point"):
-        TimeSeries(label="x", points=())
-
-
-def test_timeseries_rejects_invalid_view() -> None:
-    with pytest.raises(ValueError, match="invalid view"):
-        TimeSeries(label="x", points=(("a", 1.0),), view="pie")  # type: ignore[arg-type]
-
-
 def test_timeseries_default_view_is_line() -> None:
     t = TimeSeries(label="x", points=(("a", 1.0),))
     assert t.view == "line"
@@ -207,22 +402,7 @@ def test_timeseries_with_series_does_not_require_points() -> None:
     assert t.series[0].points == (("a", 1.0),)
 
 
-def test_timeseries_requires_points_or_series() -> None:
-    with pytest.raises(ValueError, match="at least one point"):
-        TimeSeries(label="x", points=(), series=())
-
-
-def test_timeseries_series_requires_at_least_one_point() -> None:
-    with pytest.raises(ValueError, match="at least one point"):
-        TimeSeriesSeries(name="empty", points=())
-
-
 # === Radar ===
-
-
-def test_radar_requires_at_least_one_axis() -> None:
-    with pytest.raises(ValueError, match="at least one axis"):
-        Radar(label="x", axes=())
 
 
 def test_radar_requires_at_least_three_axes_to_be_visually_a_radar() -> None:
@@ -237,11 +417,6 @@ def test_radar_three_axes_minimum() -> None:
 
 
 # === BoxPlot ===
-
-
-def test_box_plot_requires_at_least_one_group() -> None:
-    with pytest.raises(ValueError, match="at least one group"):
-        BoxPlot(label="x", groups=())
 
 
 def test_box_plot_rejects_non_monotonic_quartiles() -> None:
@@ -262,16 +437,6 @@ def test_box_plot_rejects_wrong_arity_group() -> None:
 
 
 # === ActionCard ===
-
-
-def test_action_card_requires_label() -> None:
-    with pytest.raises(ValueError, match="non-empty label"):
-        ActionCard(label="")
-
-
-def test_action_card_rejects_unknown_tone() -> None:
-    with pytest.raises(ValueError, match="invalid tone"):
-        ActionCard(label="X", tone="purple")  # type: ignore[arg-type]
 
 
 def test_action_card_count_zero_distinct_from_none() -> None:
@@ -335,26 +500,6 @@ def test_profile_card_holds_stats_and_facts_immutably() -> None:
 # === MetricTile ===
 
 
-def test_metric_tile_requires_label() -> None:
-    with pytest.raises(ValueError, match="non-empty label"):
-        MetricTile(label="", value="0")
-
-
-def test_metric_tile_rejects_unknown_tone() -> None:
-    with pytest.raises(ValueError, match="invalid tone"):
-        MetricTile(label="X", value="0", tone="purple")  # type: ignore[arg-type]
-
-
-def test_metric_tile_rejects_unknown_delta_direction() -> None:
-    with pytest.raises(ValueError, match="invalid delta_direction"):
-        MetricTile(label="X", value="0", delta_direction="sideways")  # type: ignore[arg-type]
-
-
-def test_metric_tile_rejects_unknown_delta_sentiment() -> None:
-    with pytest.raises(ValueError, match="invalid delta_sentiment"):
-        MetricTile(label="X", value="0", delta_sentiment="ambiguous")  # type: ignore[arg-type]
-
-
 def test_metric_tile_minimal_no_delta() -> None:
     m = MetricTile(label="Total", value="42")
     assert m.label == "Total"
@@ -379,11 +524,6 @@ def test_metric_tile_full_delta_block() -> None:
 
 
 # === BarTrack ===
-
-
-def test_bar_track_requires_at_least_one_row() -> None:
-    with pytest.raises(ValueError, match="at least one row"):
-        BarTrack(rows=(), max_value=100.0)
 
 
 def test_bar_track_rejects_wrong_arity_row() -> None:
@@ -411,11 +551,6 @@ def test_bar_track_accepts_zero_and_hundred_fill_pct() -> None:
 
 
 # === StageBar ===
-
-
-def test_stage_bar_requires_at_least_one_stage() -> None:
-    with pytest.raises(ValueError, match="at least one stage"):
-        StageBar(stages=())
 
 
 def test_stage_bar_rejects_complete_pct_above_100() -> None:
@@ -452,11 +587,6 @@ def test_reference_line_default_style() -> None:
     assert r.style == "solid"
 
 
-def test_reference_line_rejects_unknown_style() -> None:
-    with pytest.raises(ValueError, match="invalid style"):
-        ReferenceLine(value=1, style="wavy")  # type: ignore[arg-type]
-
-
 def test_reference_band_rejects_inverted_range() -> None:
     with pytest.raises(ValueError, match="from_value=10"):
         ReferenceBand(from_value=10, to_value=5)
@@ -466,11 +596,6 @@ def test_reference_band_accepts_zero_width_range() -> None:
     """from == to is structurally valid (point band)."""
     b = ReferenceBand(from_value=5, to_value=5, label="threshold")
     assert b.from_value == b.to_value == 5
-
-
-def test_reference_band_rejects_unknown_color() -> None:
-    with pytest.raises(ValueError, match="invalid color"):
-        ReferenceBand(from_value=0, to_value=1, color="magenta")  # type: ignore[arg-type]
 
 
 def test_time_series_carries_optional_references() -> None:
@@ -537,26 +662,6 @@ def test_chart_primitives_default_references_empty() -> None:
 # === LazyTab / LazyTabPanel ===
 
 
-def test_lazy_tab_requires_key_and_label() -> None:
-    with pytest.raises(ValueError, match="non-empty key"):
-        LazyTab(key="", label="X", endpoint=URL("/x"))
-    with pytest.raises(ValueError, match="non-empty label"):
-        LazyTab(key="x", label="", endpoint=URL("/x"))
-
-
-def test_lazy_tab_panel_requires_at_least_one_tab() -> None:
-    with pytest.raises(ValueError, match="at least one tab"):
-        LazyTabPanel(region_name="r", tabs=())
-
-
-def test_lazy_tab_panel_requires_region_name() -> None:
-    with pytest.raises(ValueError, match="non-empty region_name"):
-        LazyTabPanel(
-            region_name="",
-            tabs=(LazyTab(key="x", label="X", endpoint=URL("/x")),),
-        )
-
-
 def test_lazy_tab_panel_rejects_duplicate_keys() -> None:
     """DOM ids would collide if two tabs share a key — strict invariant."""
     dup = (
@@ -578,13 +683,6 @@ def test_lazy_tab_panel_default_eager_is_false() -> None:
 # === SearchBox ===
 
 
-def test_search_box_requires_non_empty_name() -> None:
-    """`name` becomes part of the results-panel DOM id; empty name
-    would produce a colliding/missing id."""
-    with pytest.raises(ValueError, match="non-empty name"):
-        SearchBox(name="", fts_endpoint=URL("/_dazzle/fts/X"))
-
-
 def test_search_box_default_strings() -> None:
     s = SearchBox(name="x", fts_endpoint=URL("/_dazzle/fts/X"))
     assert s.placeholder == "Search…"
@@ -593,11 +691,6 @@ def test_search_box_default_strings() -> None:
 
 
 # === ConfirmCheckItem / ConfirmGate ===
-
-
-def test_confirm_check_item_requires_title() -> None:
-    with pytest.raises(ValueError, match="non-empty title"):
-        ConfirmCheckItem(title="")
 
 
 def test_confirm_check_item_default_required_is_false() -> None:
@@ -640,28 +733,9 @@ def test_confirm_gate_default_copy_strings() -> None:
 # === FilterColumn / FilterBar ===
 
 
-def test_filter_column_requires_key() -> None:
-    with pytest.raises(ValueError, match="non-empty key"):
-        FilterColumn(key="", label="X", options=())
-
-
 def test_filter_column_default_selected_empty() -> None:
     c = FilterColumn(key="k", label="L", options=(("a", "A"),))
     assert c.selected == ""
-
-
-def test_filter_bar_requires_region_name() -> None:
-    with pytest.raises(ValueError, match="non-empty region_name"):
-        FilterBar(
-            endpoint=URL("/x"),
-            region_name="",
-            columns=(FilterColumn(key="k", label="L", options=()),),
-        )
-
-
-def test_filter_bar_requires_at_least_one_column() -> None:
-    with pytest.raises(ValueError, match="at least one column"):
-        FilterBar(endpoint=URL("/x"), region_name="r", columns=())
 
 
 def test_filter_bar_rejects_duplicate_column_keys() -> None:
@@ -681,27 +755,6 @@ def test_filter_bar_rejects_duplicate_column_keys() -> None:
 # === SortHeader ===
 
 
-def test_sort_header_requires_column_key() -> None:
-    with pytest.raises(ValueError, match="non-empty column_key"):
-        SortHeader(label="L", column_key="", endpoint=URL("/x"), region_name="r")
-
-
-def test_sort_header_requires_region_name() -> None:
-    with pytest.raises(ValueError, match="non-empty region_name"):
-        SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="")
-
-
-def test_sort_header_rejects_invalid_direction() -> None:
-    with pytest.raises(ValueError, match="invalid current_direction"):
-        SortHeader(
-            label="L",
-            column_key="k",
-            endpoint=URL("/x"),
-            region_name="r",
-            current_direction="random",  # type: ignore[arg-type]
-        )
-
-
 def test_sort_header_default_direction_is_asc() -> None:
     s = SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="r")
     assert s.current_direction == "asc"
@@ -711,11 +764,6 @@ def test_sort_header_default_direction_is_asc() -> None:
 # === CsvExportButton ===
 
 
-def test_csv_export_button_requires_filename() -> None:
-    with pytest.raises(ValueError, match="non-empty filename"):
-        CsvExportButton(endpoint=URL("/x"), filename="")
-
-
 def test_csv_export_button_defaults() -> None:
     c = CsvExportButton(endpoint=URL("/api/x"))
     assert c.filename == "export.csv"
@@ -723,11 +771,6 @@ def test_csv_export_button_defaults() -> None:
 
 
 # === DateRangePicker ===
-
-
-def test_date_range_picker_requires_region_name() -> None:
-    with pytest.raises(ValueError, match="non-empty region_name"):
-        DateRangePicker(endpoint=URL("/x"), region_name="")
 
 
 def test_date_range_picker_defaults_empty() -> None:

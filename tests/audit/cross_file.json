@@ -168,6 +168,7 @@
         "tests/unit/test_explain_scope_cli.py",
         "tests/unit/test_fitness_code.py",
         "tests/unit/test_fitness_repr_lint.py",
+        "tests/unit/test_form_engagement_1517.py",
         "tests/unit/test_form_fidelity_fragment_chrome.py",
         "tests/unit/test_fragment_adapter_format.py",
         "tests/unit/test_fuzzer_oracle.py",
@@ -351,7 +352,7 @@
         "tests/unit/test_workspace_row_drill_1303.py",
         "tests/visual/test_onboarding_visual_smoke.py"
       ],
-      "size": 1067,
+      "size": 990,
       "samples": [
         "tests/integration/test_acme_billing_rbac.py::test_idor_foreign_org_invoice_returns_404",
         "tests/integration/test_acme_billing_rbac.py::test_bulk_action_denied_for_unpermitted_role",
@@ -440,7 +441,6 @@
         "tests/unit/test_csv_export.py",
         "tests/unit/test_day_timeline_as_of_1146.py",
         "tests/unit/test_day_timeline_card_body_1146.py",
-        "tests/unit/test_day_timeline_data_resolution.py",
         "tests/unit/test_dispatch_ctx_detail_actions.py",
         "tests/unit/test_dispatch_ctx_detail_view.py",
         "tests/unit/test_dispatch_ctx_form_sections.py",
@@ -488,8 +488,6 @@
         "tests/unit/test_poly_ref_parser.py",
         "tests/unit/test_python_audit_enum_dispatch_1274.py",
         "tests/unit/test_python_audit_exceptions.py",
-        "tests/unit/test_python_audit_magic_string_typing.py",
-        "tests/unit/test_python_audit_n_plus_one.py",
         "tests/unit/test_python_audit_optional_instead_of_result.py",
         "tests/unit/test_python_audit_raw_sql_string_building.py",
         "tests/unit/test_qa/test_signing_verifier.py",
@@ -550,7 +548,7 @@
         "tests/unit/test_visual_tier2_ingest.py",
         "tests/unit/test_workspace_region_aggregates_typed.py"
       ],
-      "size": 363,
+      "size": 355,
       "samples": [
         "tests/integration/test_acme_billing_rbac.py::test_sensitive_invoice_denied_to_contractor",
         "tests/integration/test_auth_activation_pg.py::test_password_login_no_membership_redirects_to_no_orgs_when_required",
@@ -638,6 +636,7 @@
         "tests/unit/test_eventbus_param_ref_1131.py",
         "tests/unit/test_file_upload_primitive.py",
         "tests/unit/test_filter_ref_select_cancellation.py",
+        "tests/unit/test_form_engagement_1517.py",
         "tests/unit/test_form_field_parity_phase3b.py",
         "tests/unit/test_form_widget_money_phase3.py",
         "tests/unit/test_form_widget_search_select_phase3.py",
@@ -705,7 +704,7 @@
         "tests/unit/test_vitality_connectedness.py",
         "tests/unit/test_webhook_from_pack.py"
       ],
-      "size": 360,
+      "size": 345,
       "samples": [
         "tests/integration/test_auth_password_reset_chrome_gate.py::test_post_forgot_password_logs_reset_link_for_dev_pickup",
         "tests/integration/test_connection_admin_routes.py::test_create_path_is_csrf_protected",
@@ -770,6 +769,7 @@
         "tests/unit/test_field_format_ir.py",
         "tests/unit/test_fitness_repr_parser.py",
         "tests/unit/test_fk_graph_deletion_order.py",
+        "tests/unit/test_form_engagement_1517.py",
         "tests/unit/test_format_validation.py",
         "tests/unit/test_framework_tables_registry_1357.py",
         "tests/unit/test_inprocess_create_invokers.py",
@@ -841,7 +841,7 @@
         "tests/unit/test_viewport.py",
         "tests/unit/test_vitality_connectedness.py"
       ],
-      "size": 233,
+      "size": 234,
       "samples": [
         "tests/integration/test_auth_activation_pg.py::test_set_session_active_membership_rejects_suspended",
         "tests/integration/test_auth_orgprovision_pg.py::test_server_config_defaults_auto_provision_off",
@@ -859,6 +859,7 @@
         "tests/integration/test_auth_signup_magic_link_chrome_gate.py",
         "tests/integration/test_connections_pg.py",
         "tests/integration/test_examples_fragment_http.py",
+        "tests/integration/test_rls_apply_and_drift_pg.py",
         "tests/unit/core/test_render_clause_linking.py",
         "tests/unit/fitness/investigator/test_case_file.py",
         "tests/unit/fitness/investigator/test_tools.py",
@@ -964,7 +965,7 @@
         "tests/unit/test_two_factor_views.py",
         "tests/unit/test_vitality_connectedness.py"
       ],
-      "size": 228,
+      "size": 229,
       "samples": [
         "tests/integration/test_auth_login_magic_link_chrome_gate.py::test_post_magic_link_logs_link_url_for_dev_pickup",
         "tests/integration/test_auth_signup_magic_link_chrome_gate.py::test_login_falls_back_to_log_mailer_when_unregistered",
@@ -972,6 +973,89 @@
         "tests/integration/test_examples_fragment_http.py::test_simple_task_detail_url_renders_via_fragment_or_404",
         "tests/integration/test_examples_fragment_http.py::test_fragment_chrome_includes_dazzle_css_and_js_bundles",
         "tests/integration/test_examples_fragment_http.py::test_fragment_chrome_inner_surface_still_renders"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('in', 'notin')",
+      "files": [
+        "tests/unit/render/fragment/test_app_shell_primitive.py",
+        "tests/unit/render/fragment/test_error_page_primitive.py",
+        "tests/unit/render/fragment/test_insight_narrative.py",
+        "tests/unit/render/fragment/test_navigation_primitives.py",
+        "tests/unit/render/fragment/test_page_primitive.py",
+        "tests/unit/render/fragment/test_renderer_data.py",
+        "tests/unit/render/fragment/test_renderer_skeleton.py",
+        "tests/unit/render/fragment/test_script_sri_1136.py",
+        "tests/unit/render/fragment/test_script_stylesheet_1130.py",
+        "tests/unit/render/fragment/test_skip_link_primitive.py",
+        "tests/unit/render/fragment/test_topbar_primitive.py",
+        "tests/unit/render/fragment/test_workspace_shell_primitive.py",
+        "tests/unit/render/test_classes.py",
+        "tests/unit/render/test_svg.py",
+        "tests/unit/test_aggregate_sql.py",
+        "tests/unit/test_api_kb_project_local.py",
+        "tests/unit/test_app_error_views.py",
+        "tests/unit/test_auth_views_login_magic_link.py",
+        "tests/unit/test_auth_views_password_mode.py",
+        "tests/unit/test_auth_views_password_reset.py",
+        "tests/unit/test_auth_views_signup_magic_link.py",
+        "tests/unit/test_build_comparison.py",
+        "tests/unit/test_cohort_aggregate_compute.py",
+        "tests/unit/test_cohort_strip_primitive.py",
+        "tests/unit/test_create_cta_entity_title_1487.py",
+        "tests/unit/test_day_timeline_primitive.py",
+        "tests/unit/test_detail_action_parity_phase2.py",
+        "tests/unit/test_detail_field_value_parity_phase2.py",
+        "tests/unit/test_dispatch_ctx_list_create_button.py",
+        "tests/unit/test_dispatch_ctx_list_empty_state.py",
+        "tests/unit/test_dispatch_ctx_list_pagination.py",
+        "tests/unit/test_dispatch_ctx_list_sort_headers.py",
+        "tests/unit/test_documents_api.py",
+        "tests/unit/test_entity_card_data_resolution.py",
+        "tests/unit/test_error_views.py",
+        "tests/unit/test_file_upload_primitive.py",
+        "tests/unit/test_form_engagement_1517.py",
+        "tests/unit/test_form_field_parity_phase3b.py",
+        "tests/unit/test_form_widget_search_select_phase3.py",
+        "tests/unit/test_insight_summary_render.py",
+        "tests/unit/test_nav_builder.py",
+        "tests/unit/test_nav_model_render_1324.py",
+        "tests/unit/test_pg_state_store.py",
+        "tests/unit/test_qa/test_cli_signing_wiring.py",
+        "tests/unit/test_raw_data_honesty_1d.py",
+        "tests/unit/test_rbac_matrix.py",
+        "tests/unit/test_region_adapter.py",
+        "tests/unit/test_rls_build_all.py",
+        "tests/unit/test_rls_schema.py",
+        "tests/unit/test_rls_scope_policies.py",
+        "tests/unit/test_route_generator_id_convertor.py",
+        "tests/unit/test_saml_provider.py",
+        "tests/unit/test_secret_redaction.py",
+        "tests/unit/test_signing/test_service.py",
+        "tests/unit/test_signing/test_template_renderer.py",
+        "tests/unit/test_site_section_final_builders.py",
+        "tests/unit/test_site_section_hero_builder.py",
+        "tests/unit/test_site_section_medium_builders.py",
+        "tests/unit/test_site_section_new_builders.py",
+        "tests/unit/test_site_section_simple_builders.py",
+        "tests/unit/test_spec_narrative_brief.py",
+        "tests/unit/test_static_themes_mount_order_1330.py",
+        "tests/unit/test_table_empty_state_guard_1450.py",
+        "tests/unit/test_task_inbox_fan_out.py",
+        "tests/unit/test_tenant_middleware.py",
+        "tests/unit/test_two_factor_views.py",
+        "tests/unit/test_vitality_connectedness.py",
+        "tests/unit/test_worker_services.py"
+      ],
+      "size": 134,
+      "samples": [
+        "tests/unit/render/fragment/test_app_shell_primitive.py::test_app_shell_sanitises_invalid_sidebar_state",
+        "tests/unit/render/fragment/test_error_page_primitive.py::test_error_page_home_label_customisable",
+        "tests/unit/render/fragment/test_error_page_primitive.py::test_error_page_message_is_html_escaped",
+        "tests/unit/render/fragment/test_insight_narrative.py::test_negative_sum_suppresses_percentage",
+        "tests/unit/render/fragment/test_navigation_primitives.py::test_nav_item_label_is_escaped",
+        "tests/unit/render/fragment/test_navigation_primitives.py::test_nav_group_collapsed_renders_without_open_attr"
       ]
     },
     {
@@ -1016,6 +1100,7 @@
         "tests/unit/test_enterprise_login.py",
         "tests/unit/test_error_views.py",
         "tests/unit/test_filter_ref_select_cancellation.py",
+        "tests/unit/test_form_engagement_1517.py",
         "tests/unit/test_lifespan_hooks.py",
         "tests/unit/test_membership_admission_gate.py",
         "tests/unit/test_parser_dispatch.py",
@@ -1035,7 +1120,7 @@
         "tests/unit/test_touch_targets_css.py",
         "tests/unit/test_two_factor_views.py"
       ],
-      "size": 141,
+      "size": 130,
       "samples": [
         "tests/integration/test_connection_admin_routes.py::test_page_only_shows_active_orgs_connections",
         "tests/integration/test_connection_admin_routes.py::test_page_shows_rotation_history",
@@ -1043,87 +1128,6 @@
         "tests/integration/test_connection_admin_routes.py::test_audit_is_org_scoped",
         "tests/integration/test_connection_admin_routes.py::test_create_saml_metadata_error_is_400",
         "tests/integration/test_connection_admin_routes.py::test_create_forbidden_without_session"
-      ]
-    },
-    {
-      "class_name": "(module)",
-      "assertion_shape": "('in', 'notin')",
-      "files": [
-        "tests/unit/render/fragment/test_app_shell_primitive.py",
-        "tests/unit/render/fragment/test_error_page_primitive.py",
-        "tests/unit/render/fragment/test_insight_narrative.py",
-        "tests/unit/render/fragment/test_navigation_primitives.py",
-        "tests/unit/render/fragment/test_page_primitive.py",
-        "tests/unit/render/fragment/test_renderer_data.py",
-        "tests/unit/render/fragment/test_renderer_skeleton.py",
-        "tests/unit/render/fragment/test_script_sri_1136.py",
-        "tests/unit/render/fragment/test_script_stylesheet_1130.py",
-        "tests/unit/render/fragment/test_skip_link_primitive.py",
-        "tests/unit/render/fragment/test_topbar_primitive.py",
-        "tests/unit/render/fragment/test_workspace_shell_primitive.py",
-        "tests/unit/render/test_classes.py",
-        "tests/unit/render/test_svg.py",
-        "tests/unit/test_aggregate_sql.py",
-        "tests/unit/test_api_kb_project_local.py",
-        "tests/unit/test_app_error_views.py",
-        "tests/unit/test_auth_views_login_magic_link.py",
-        "tests/unit/test_auth_views_password_mode.py",
-        "tests/unit/test_auth_views_password_reset.py",
-        "tests/unit/test_auth_views_signup_magic_link.py",
-        "tests/unit/test_build_comparison.py",
-        "tests/unit/test_cohort_aggregate_compute.py",
-        "tests/unit/test_cohort_strip_primitive.py",
-        "tests/unit/test_create_cta_entity_title_1487.py",
-        "tests/unit/test_day_timeline_primitive.py",
-        "tests/unit/test_detail_action_parity_phase2.py",
-        "tests/unit/test_detail_field_value_parity_phase2.py",
-        "tests/unit/test_dispatch_ctx_list_create_button.py",
-        "tests/unit/test_dispatch_ctx_list_empty_state.py",
-        "tests/unit/test_dispatch_ctx_list_pagination.py",
-        "tests/unit/test_dispatch_ctx_list_sort_headers.py",
-        "tests/unit/test_documents_api.py",
-        "tests/unit/test_entity_card_data_resolution.py",
-        "tests/unit/test_error_views.py",
-        "tests/unit/test_file_upload_primitive.py",
-        "tests/unit/test_form_field_parity_phase3b.py",
-        "tests/unit/test_form_widget_search_select_phase3.py",
-        "tests/unit/test_insight_summary_render.py",
-        "tests/unit/test_nav_builder.py",
-        "tests/unit/test_nav_model_render_1324.py",
-        "tests/unit/test_pg_state_store.py",
-        "tests/unit/test_qa/test_cli_signing_wiring.py",
-        "tests/unit/test_raw_data_honesty_1d.py",
-        "tests/unit/test_rbac_matrix.py",
-        "tests/unit/test_region_adapter.py",
-        "tests/unit/test_rls_schema.py",
-        "tests/unit/test_rls_scope_policies.py",
-        "tests/unit/test_route_generator_id_convertor.py",
-        "tests/unit/test_saml_provider.py",
-        "tests/unit/test_secret_redaction.py",
-        "tests/unit/test_signing/test_service.py",
-        "tests/unit/test_signing/test_template_renderer.py",
-        "tests/unit/test_site_section_final_builders.py",
-        "tests/unit/test_site_section_hero_builder.py",
-        "tests/unit/test_site_section_medium_builders.py",
-        "tests/unit/test_site_section_new_builders.py",
-        "tests/unit/test_site_section_simple_builders.py",
-        "tests/unit/test_spec_narrative_brief.py",
-        "tests/unit/test_static_themes_mount_order_1330.py",
-        "tests/unit/test_table_empty_state_guard_1450.py",
-        "tests/unit/test_task_inbox_fan_out.py",
-        "tests/unit/test_tenant_middleware.py",
-        "tests/unit/test_two_factor_views.py",
-        "tests/unit/test_vitality_connectedness.py",
-        "tests/unit/test_worker_services.py"
-      ],
-      "size": 132,
-      "samples": [
-        "tests/unit/render/fragment/test_app_shell_primitive.py::test_app_shell_sanitises_invalid_sidebar_state",
-        "tests/unit/render/fragment/test_error_page_primitive.py::test_error_page_home_label_customisable",
-        "tests/unit/render/fragment/test_error_page_primitive.py::test_error_page_message_is_html_escaped",
-        "tests/unit/render/fragment/test_insight_narrative.py::test_negative_sum_suppresses_percentage",
-        "tests/unit/render/fragment/test_navigation_primitives.py::test_nav_item_label_is_escaped",
-        "tests/unit/render/fragment/test_navigation_primitives.py::test_nav_group_collapsed_renders_without_open_attr"
       ]
     },
     {
@@ -1251,6 +1255,7 @@
         "tests/unit/test_enum_semantics_1493.py",
         "tests/unit/test_error_views.py",
         "tests/unit/test_file_upload_primitive.py",
+        "tests/unit/test_form_engagement_1517.py",
         "tests/unit/test_insight_stored_render.py",
         "tests/unit/test_insight_summary_orchestration.py",
         "tests/unit/test_join_request_view.py",
@@ -1289,7 +1294,7 @@
         "tests/unit/test_vendor_sourcemap_refs.py",
         "tests/unit/test_vitality_connectedness.py"
       ],
-      "size": 112,
+      "size": 115,
       "samples": [
         "tests/unit/render/fragment/test_app_shell_primitive.py::test_app_shell_omits_sidebar_aside_when_no_sidebar",
         "tests/unit/render/fragment/test_error_page_primitive.py::test_error_page_omits_home_link_when_no_href",
@@ -1437,6 +1442,7 @@
         "tests/unit/test_region_adapter.py",
         "tests/unit/test_rhythm_mcp.py",
         "tests/unit/test_rhythm_parser.py",
+        "tests/unit/test_rls_apply.py",
         "tests/unit/test_rls_user_gucs.py",
         "tests/unit/test_schema_diff.py",
         "tests/unit/test_scim_discovery.py",
@@ -1446,7 +1452,7 @@
         "tests/unit/test_timeseries_series_shaping.py",
         "tests/unit/test_webhook_from_pack.py"
       ],
-      "size": 92,
+      "size": 93,
       "samples": [
         "tests/integration/test_access_review_pg.py::test_access_review_as_of_excludes_later_changes",
         "tests/integration/test_auth_login_magic_link_chrome_gate.py::test_post_magic_link_unknown_email_redirects_same_no_token",
@@ -1475,7 +1481,6 @@
         "tests/unit/test_agent_command_models.py",
         "tests/unit/test_aggregate_expression_l3.py",
         "tests/unit/test_async_get_auth_context_1128.py",
-        "tests/unit/test_auth_connection_cli.py",
         "tests/unit/test_auth_store_lazy_init.py",
         "tests/unit/test_cohort_strip_aggregate_primary_1144.py",
         "tests/unit/test_cohort_strip_composite_parser_1144.py",
@@ -1527,7 +1532,7 @@
         "tests/unit/test_viewport.py",
         "tests/unit/test_workspace_pipeline_steps_typed.py"
       ],
-      "size": 86,
+      "size": 85,
       "samples": [
         "tests/integration/test_auth_activation_pg.py::test_cross_tenant_guard_fails_closed_without_membership",
         "tests/integration/test_connections_pg.py::test_grace_expiry_rejects_old_bearer",
@@ -1601,7 +1606,7 @@
         "tests/unit/test_vitality_connectedness.py",
         "tests/unit/test_workspace_multisource_region_1388.py"
       ],
-      "size": 86,
+      "size": 85,
       "samples": [
         "tests/integration/test_examples_fragment_http.py::test_simple_task_create_form_text_field_renders_as_textarea",
         "tests/integration/test_examples_fragment_http.py::test_simple_task_create_form_enum_field_renders_as_select",
@@ -1632,6 +1637,7 @@
         "tests/unit/test_project_post_build_hook.py",
         "tests/unit/test_rag_decorator_validation.py",
         "tests/unit/test_rbac_encode_smt.py",
+        "tests/unit/test_rls_build_all.py",
         "tests/unit/test_rls_drift.py",
         "tests/unit/test_sa_schema_tenant_constraints.py",
         "tests/unit/test_schema_diff.py",
@@ -1643,7 +1649,7 @@
         "tests/unit/test_transition_invoke.py",
         "tests/unit/test_validator.py"
       ],
-      "size": 84,
+      "size": 85,
       "samples": [
         "tests/integration/test_sentinel_findings_mcp_catalogue.py::test_catalogue_url_in_remediation_references",
         "tests/unit/test_archetype_profile.py::test_profile_without_shared_schema_is_a_validation_error",
@@ -1913,6 +1919,7 @@
         "tests/unit/test_decide_domain_join.py",
         "tests/unit/test_decimal_numeric_ddl.py",
         "tests/unit/test_documents_api.py",
+        "tests/unit/test_form_engagement_1517.py",
         "tests/unit/test_fragment_adapter_ref.py",
         "tests/unit/test_null_event_bus.py",
         "tests/unit/test_oidc_provider.py",
@@ -1926,7 +1933,7 @@
         "tests/unit/test_workspace_pipeline_steps_typed.py",
         "tests/unit/test_workspace_region_aggregates_typed.py"
       ],
-      "size": 35,
+      "size": 36,
       "samples": [
         "tests/integration/test_tenant_rls_constraints_pg.py::test_composite_fk_rejects_cross_tenant_reference",
         "tests/integration/test_tenant_rls_constraints_pg.py::test_uniqueness_is_tenant_scoped",
@@ -2099,42 +2106,6 @@
     },
     {
       "class_name": "(module)",
-      "assertion_shape": "('expr', 'in')",
-      "files": [
-        "tests/integration/test_migration_engine_pg.py",
-        "tests/unit/fitness/investigator/test_tools.py",
-        "tests/unit/render/fragment/test_format_cell.py",
-        "tests/unit/render/fragment/test_timeseries_multi_series.py",
-        "tests/unit/render/test_svg.py",
-        "tests/unit/test_access_evidence.py",
-        "tests/unit/test_auth_views_login_magic_link.py",
-        "tests/unit/test_build_comparison.py",
-        "tests/unit/test_cli_spec_status.py",
-        "tests/unit/test_connection_probe.py",
-        "tests/unit/test_dispatch_ctx_list_search_filter.py",
-        "tests/unit/test_insight_summary_orchestration.py",
-        "tests/unit/test_interaction_guide_walk.py",
-        "tests/unit/test_onboarding_client_js.py",
-        "tests/unit/test_optimistic_directive_shapes.py",
-        "tests/unit/test_optimistic_undo_stack.py",
-        "tests/unit/test_region_adapter.py",
-        "tests/unit/test_renderer_registration_warning_1413.py",
-        "tests/unit/test_tenant_middleware.py",
-        "tests/unit/test_touch_targets_css.py",
-        "tests/unit/test_ux_catalogue.py"
-      ],
-      "size": 28,
-      "samples": [
-        "tests/integration/test_migration_engine_pg.py::test_db_migrate_generates_and_applies_via_engine",
-        "tests/unit/fitness/investigator/test_tools.py::test_read_file_traversal_guard",
-        "tests/unit/render/fragment/test_format_cell.py::test_render_path_escapes_exactly_once",
-        "tests/unit/render/fragment/test_timeseries_multi_series.py::test_multi_series_timeseries_emits_legend_with_series_names",
-        "tests/unit/render/test_svg.py::test_axis_labels_appear_in_text_elements",
-        "tests/unit/test_access_evidence.py::test_render_flags_reconciliation_divergence"
-      ]
-    },
-    {
-      "class_name": "(module)",
       "assertion_shape": "('call_isinstance', 'eq')",
       "files": [
         "tests/integration/test_auth_activation_pg.py",
@@ -2196,6 +2167,42 @@
         "tests/unit/test_app_error_views.py::test_app_500_no_form_no_inline_script",
         "tests/unit/test_auth_connection_cli.py::test_doctor_never_leaks_secret",
         "tests/unit/test_build_css_compat_shim.py::test_build_css_no_args_does_not_crash"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('expr', 'in')",
+      "files": [
+        "tests/integration/test_migration_engine_pg.py",
+        "tests/unit/fitness/investigator/test_tools.py",
+        "tests/unit/render/fragment/test_format_cell.py",
+        "tests/unit/render/fragment/test_timeseries_multi_series.py",
+        "tests/unit/render/test_svg.py",
+        "tests/unit/test_access_evidence.py",
+        "tests/unit/test_auth_views_login_magic_link.py",
+        "tests/unit/test_build_comparison.py",
+        "tests/unit/test_cli_spec_status.py",
+        "tests/unit/test_connection_probe.py",
+        "tests/unit/test_dispatch_ctx_list_search_filter.py",
+        "tests/unit/test_insight_summary_orchestration.py",
+        "tests/unit/test_interaction_guide_walk.py",
+        "tests/unit/test_onboarding_client_js.py",
+        "tests/unit/test_optimistic_directive_shapes.py",
+        "tests/unit/test_optimistic_undo_stack.py",
+        "tests/unit/test_region_adapter.py",
+        "tests/unit/test_renderer_registration_warning_1413.py",
+        "tests/unit/test_tenant_middleware.py",
+        "tests/unit/test_touch_targets_css.py",
+        "tests/unit/test_ux_catalogue.py"
+      ],
+      "size": 25,
+      "samples": [
+        "tests/integration/test_migration_engine_pg.py::test_db_migrate_generates_and_applies_via_engine",
+        "tests/unit/fitness/investigator/test_tools.py::test_read_file_traversal_guard",
+        "tests/unit/render/fragment/test_format_cell.py::test_render_path_escapes_exactly_once",
+        "tests/unit/render/fragment/test_timeseries_multi_series.py::test_multi_series_timeseries_emits_legend_with_series_names",
+        "tests/unit/render/test_svg.py::test_axis_labels_appear_in_text_elements",
+        "tests/unit/test_access_evidence.py::test_render_flags_reconciliation_divergence"
       ]
     },
     {
@@ -2686,6 +2693,33 @@
     },
     {
       "class_name": "(module)",
+      "assertion_shape": "('eq', 'eq', 'eq', 'is')",
+      "files": [
+        "tests/integration/test_qa_trial_signing.py",
+        "tests/integration/test_rls_enforcement_pg.py",
+        "tests/unit/fitness/investigator/test_metrics.py",
+        "tests/unit/render/fragment/test_error_page_primitive.py",
+        "tests/unit/runtime/test_fragment_surface_adapter.py",
+        "tests/unit/test_aggregate_parser.py",
+        "tests/unit/test_build_app_page_context.py",
+        "tests/unit/test_custom_renderer_conformance_1392.py",
+        "tests/unit/test_framework_default_coercion_1529.py",
+        "tests/unit/test_integrations_retries_endpoint.py",
+        "tests/unit/test_qa/test_cli_signing_wiring.py",
+        "tests/unit/test_transition_invoke.py"
+      ],
+      "size": 12,
+      "samples": [
+        "tests/integration/test_qa_trial_signing.py::test_happy_path",
+        "tests/integration/test_rls_enforcement_pg.py::test_owner_does_not_bypass_under_force",
+        "tests/unit/fitness/investigator/test_metrics.py::test_append_metric_is_append_only",
+        "tests/unit/render/fragment/test_error_page_primitive.py::test_error_page_minimal_construction",
+        "tests/unit/runtime/test_fragment_surface_adapter.py::test_list_mode_table_columns_match_ctx",
+        "tests/unit/test_aggregate_parser.py::test_avg_cross_entity_column"
+      ]
+    },
+    {
+      "class_name": "(module)",
       "assertion_shape": "('call_any', 'call_any')",
       "files": [
         "tests/unit/test_schema_diff.py",
@@ -2749,32 +2783,6 @@
         "tests/unit/test_dispatch_ctx_list_sort_headers.py::test_build_column_header_threads_current_sort_state",
         "tests/unit/test_file_upload_primitive.py::test_field_to_primitive_dispatches_kind_file_to_file_upload",
         "tests/unit/test_oidc_provider.py::test_callback_maps_userinfo_to_asserted_identity"
-      ]
-    },
-    {
-      "class_name": "(module)",
-      "assertion_shape": "('eq', 'eq', 'eq', 'is')",
-      "files": [
-        "tests/integration/test_qa_trial_signing.py",
-        "tests/integration/test_rls_enforcement_pg.py",
-        "tests/unit/fitness/investigator/test_metrics.py",
-        "tests/unit/render/fragment/test_error_page_primitive.py",
-        "tests/unit/runtime/test_fragment_surface_adapter.py",
-        "tests/unit/test_aggregate_parser.py",
-        "tests/unit/test_build_app_page_context.py",
-        "tests/unit/test_custom_renderer_conformance_1392.py",
-        "tests/unit/test_integrations_retries_endpoint.py",
-        "tests/unit/test_qa/test_cli_signing_wiring.py",
-        "tests/unit/test_transition_invoke.py"
-      ],
-      "size": 11,
-      "samples": [
-        "tests/integration/test_qa_trial_signing.py::test_happy_path",
-        "tests/integration/test_rls_enforcement_pg.py::test_owner_does_not_bypass_under_force",
-        "tests/unit/fitness/investigator/test_metrics.py::test_append_metric_is_append_only",
-        "tests/unit/render/fragment/test_error_page_primitive.py::test_error_page_minimal_construction",
-        "tests/unit/runtime/test_fragment_surface_adapter.py::test_list_mode_table_columns_match_ctx",
-        "tests/unit/test_aggregate_parser.py::test_avg_cross_entity_column"
       ]
     },
     {
@@ -2991,26 +2999,6 @@
     },
     {
       "class_name": "(module)",
-      "assertion_shape": "('expr', 'not')",
-      "files": [
-        "tests/integration/test_connection_admin_routes.py",
-        "tests/unit/test_aggregate_expression_l3.py",
-        "tests/unit/test_auth_connection_cli.py",
-        "tests/unit/test_docs_drift.py",
-        "tests/unit/test_schema_render.py"
-      ],
-      "size": 9,
-      "samples": [
-        "tests/integration/test_connection_admin_routes.py::test_create_oidc_requires_https_issuer",
-        "tests/integration/test_connection_admin_routes.py::test_create_oidc_missing_client_secret_400",
-        "tests/integration/test_connection_admin_routes.py::test_create_saml_missing_fields_400",
-        "tests/integration/test_connection_admin_routes.py::test_create_oidc_without_at_rest_key_400",
-        "tests/unit/test_aggregate_expression_l3.py::test_expr_column_ref_bare",
-        "tests/unit/test_auth_connection_cli.py::test_enable_idp_initiated_non_saml_refused"
-      ]
-    },
-    {
-      "class_name": "(module)",
       "assertion_shape": "('eq', 'not')",
       "files": [
         "tests/integration/test_enterprise_routes.py",
@@ -3080,6 +3068,26 @@
     },
     {
       "class_name": "(module)",
+      "assertion_shape": "('expr', 'not')",
+      "files": [
+        "tests/integration/test_connection_admin_routes.py",
+        "tests/unit/test_aggregate_expression_l3.py",
+        "tests/unit/test_auth_connection_cli.py",
+        "tests/unit/test_docs_drift.py",
+        "tests/unit/test_schema_render.py"
+      ],
+      "size": 8,
+      "samples": [
+        "tests/integration/test_connection_admin_routes.py::test_create_oidc_requires_https_issuer",
+        "tests/integration/test_connection_admin_routes.py::test_create_oidc_missing_client_secret_400",
+        "tests/integration/test_connection_admin_routes.py::test_create_saml_missing_fields_400",
+        "tests/integration/test_connection_admin_routes.py::test_create_oidc_without_at_rest_key_400",
+        "tests/unit/test_aggregate_expression_l3.py::test_expr_column_ref_bare",
+        "tests/unit/test_auth_connection_cli.py::test_enable_idp_initiated_already_on_is_noop"
+      ]
+    },
+    {
+      "class_name": "(module)",
       "assertion_shape": "('gt',)",
       "files": [
         "tests/integration/test_fidelity_integration.py",
@@ -3099,29 +3107,6 @@
         "tests/unit/test_kb_examples_parse_1358.py::test_gate_has_coverage",
         "tests/unit/test_rhythm_mcp.py::test_lifecycle_steps_have_suggestions",
         "tests/unit/test_schema_diff.py::test_new_table_fks_ordered_after_all_table_creates"
-      ]
-    },
-    {
-      "class_name": "(module)",
-      "assertion_shape": "('expr', 'in', 'in')",
-      "files": [
-        "tests/integration/test_invoice_ops_tenant_isolation.py",
-        "tests/integration/test_simple_task_render_fragment.py",
-        "tests/unit/test_dispatch_ctx_list_sort_headers.py",
-        "tests/unit/test_filter_ref_select_cancellation.py",
-        "tests/unit/test_polymorphic_association_guidance_1240.py",
-        "tests/unit/test_rbac_proof_model.py",
-        "tests/unit/test_region_adapter.py",
-        "tests/unit/test_sitespec_title_and_h1.py"
-      ],
-      "size": 8,
-      "samples": [
-        "tests/integration/test_invoice_ops_tenant_isolation.py::test_other_tenant_config_denied",
-        "tests/integration/test_simple_task_render_fragment.py::test_fragment_renders_edit_form_with_values",
-        "tests/unit/test_dispatch_ctx_list_sort_headers.py::test_list_active_sort_threads_into_controller_config_and_hydrate",
-        "tests/unit/test_filter_ref_select_cancellation.py::test_listeners_are_one_shot",
-        "tests/unit/test_polymorphic_association_guidance_1240.py::test_polymorphic_guidance_has_triggers_covering_common_aliases",
-        "tests/unit/test_rbac_proof_model.py::test_rebac_stance_declared_classes_only"
       ]
     },
     {
@@ -3251,6 +3236,28 @@
         "tests/unit/test_capability_cognition.py::test_active_capability_ids_is_non_raising",
         "tests/unit/test_cli_spec_status.py::test_compute_drift_filters_framework_injected_entities_by_default",
         "tests/unit/test_cli_spec_strict_guard.py::test_compute_drift_strict_filters_framework_entities"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('expr', 'in', 'in')",
+      "files": [
+        "tests/integration/test_invoice_ops_tenant_isolation.py",
+        "tests/integration/test_simple_task_render_fragment.py",
+        "tests/unit/test_dispatch_ctx_list_sort_headers.py",
+        "tests/unit/test_filter_ref_select_cancellation.py",
+        "tests/unit/test_polymorphic_association_guidance_1240.py",
+        "tests/unit/test_rbac_proof_model.py",
+        "tests/unit/test_sitespec_title_and_h1.py"
+      ],
+      "size": 7,
+      "samples": [
+        "tests/integration/test_invoice_ops_tenant_isolation.py::test_other_tenant_config_denied",
+        "tests/integration/test_simple_task_render_fragment.py::test_fragment_renders_edit_form_with_values",
+        "tests/unit/test_dispatch_ctx_list_sort_headers.py::test_list_active_sort_threads_into_controller_config_and_hydrate",
+        "tests/unit/test_filter_ref_select_cancellation.py::test_listeners_are_one_shot",
+        "tests/unit/test_polymorphic_association_guidance_1240.py::test_polymorphic_guidance_has_triggers_covering_common_aliases",
+        "tests/unit/test_rbac_proof_model.py::test_rebac_stance_declared_classes_only"
       ]
     },
     {
@@ -3437,6 +3444,26 @@
         "tests/unit/test_rbac_proof_model.py::test_evidence_class_table_complete",
         "tests/unit/test_sa_schema_tenant_constraints.py::test_intra_tenant_ref_is_composite_fk",
         "tests/unit/test_serve_entrypoint_introspection_0046.py::test_boot_declared_entrypoint_imports_the_real_app"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('is', 'notin')",
+      "files": [
+        "tests/unit/render/fragment/test_field_readonly.py",
+        "tests/unit/test_form_engagement_1517.py",
+        "tests/unit/test_qa/test_trial_report_signing.py",
+        "tests/unit/test_saml_provider.py",
+        "tests/unit/test_secret_redaction.py"
+      ],
+      "size": 6,
+      "samples": [
+        "tests/unit/render/fragment/test_field_readonly.py::test_field_readonly_default_false",
+        "tests/unit/test_form_engagement_1517.py::test_hottest_plain_field_gains_autofocus",
+        "tests/unit/test_form_engagement_1517.py::test_author_declared_widget_excluded_from_autofocus",
+        "tests/unit/test_qa/test_trial_report_signing.py::test_report_omits_signing_outcomes_when_none",
+        "tests/unit/test_saml_provider.py::test_settings_require_signed_assertions",
+        "tests/unit/test_secret_redaction.py::test_filter_redacts_record_message"
       ]
     },
     {
@@ -4109,19 +4136,19 @@
     },
     {
       "class_name": "(module)",
-      "assertion_shape": "('is', 'notin')",
+      "assertion_shape": "('call_isinstance', 'eq', 'is')",
       "files": [
-        "tests/unit/render/fragment/test_field_readonly.py",
-        "tests/unit/test_qa/test_trial_report_signing.py",
-        "tests/unit/test_saml_provider.py",
-        "tests/unit/test_secret_redaction.py"
+        "tests/unit/fitness/test_independence.py",
+        "tests/unit/test_form_engagement_1517.py",
+        "tests/unit/test_log_setup.py",
+        "tests/unit/test_saml_provider.py"
       ],
       "size": 4,
       "samples": [
-        "tests/unit/render/fragment/test_field_readonly.py::test_field_readonly_default_false",
-        "tests/unit/test_qa/test_trial_report_signing.py::test_report_omits_signing_outcomes_when_none",
-        "tests/unit/test_saml_provider.py::test_settings_require_signed_assertions",
-        "tests/unit/test_secret_redaction.py::test_filter_redacts_record_message"
+        "tests/unit/fitness/test_independence.py::test_perfect_overlap_flags_degraded",
+        "tests/unit/test_form_engagement_1517.py::test_upgrade_preserves_edit_value_and_required",
+        "tests/unit/test_log_setup.py::test_attaches_handler_when_nothing_configured",
+        "tests/unit/test_saml_provider.py::test_callback_idp_initiated_fresh_assertion_accepts"
       ]
     },
     {
@@ -4533,7 +4560,7 @@
       "file_a": "tests/unit/test_pdf_viewer_component.py",
       "file_b": "tests/unit/test_region_adapter.py",
       "tests_a": 49,
-      "tests_b": 169,
+      "tests_b": 143,
       "shared_shape_count": 35,
       "overlap_ratio": 0.71
     },
@@ -4562,22 +4589,6 @@
       "overlap_ratio": 0.78
     },
     {
-      "file_a": "tests/unit/test_cohort_strip_data_resolution.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 30,
-      "tests_b": 143,
-      "shared_shape_count": 30,
-      "overlap_ratio": 1.0
-    },
-    {
-      "file_a": "tests/unit/test_cohort_strip_data_resolution.py",
-      "file_b": "tests/unit/test_rbac_verifier.py",
-      "tests_a": 30,
-      "tests_b": 59,
-      "shared_shape_count": 30,
-      "overlap_ratio": 1.0
-    },
-    {
       "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
       "file_b": "tests/unit/test_persona_journey.py",
       "tests_a": 29,
@@ -4604,7 +4615,7 @@
     {
       "file_a": "tests/unit/test_region_adapter.py",
       "file_b": "tests/unit/test_site_section_medium_builders.py",
-      "tests_a": 169,
+      "tests_a": 143,
       "tests_b": 38,
       "shared_shape_count": 29,
       "overlap_ratio": 0.76
@@ -4612,7 +4623,7 @@
     {
       "file_a": "tests/unit/test_region_adapter.py",
       "file_b": "tests/unit/test_two_factor_views.py",
-      "tests_a": 169,
+      "tests_a": 143,
       "tests_b": 30,
       "shared_shape_count": 29,
       "overlap_ratio": 0.97
@@ -4643,27 +4654,11 @@
     },
     {
       "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
-      "file_b": "tests/unit/test_cohort_strip_data_resolution.py",
-      "tests_a": 40,
-      "tests_b": 30,
-      "shared_shape_count": 28,
-      "overlap_ratio": 0.93
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
       "file_b": "tests/unit/test_fidelity_scorer.py",
       "tests_a": 40,
       "tests_b": 36,
       "shared_shape_count": 28,
       "overlap_ratio": 0.78
-    },
-    {
-      "file_a": "tests/unit/test_cedar_row_filters.py",
-      "file_b": "tests/unit/test_cohort_strip_data_resolution.py",
-      "tests_a": 28,
-      "tests_b": 30,
-      "shared_shape_count": 28,
-      "overlap_ratio": 1.0
     },
     {
       "file_a": "tests/unit/test_cedar_row_filters.py",
@@ -4690,14 +4685,6 @@
       "overlap_ratio": 1.0
     },
     {
-      "file_a": "tests/unit/test_cohort_strip_data_resolution.py",
-      "file_b": "tests/unit/test_fidelity_scorer.py",
-      "tests_a": 30,
-      "tests_b": 36,
-      "shared_shape_count": 28,
-      "overlap_ratio": 0.93
-    },
-    {
       "file_a": "tests/unit/test_composition_audit.py",
       "file_b": "tests/unit/test_qa_trial.py",
       "tests_a": 89,
@@ -4709,7 +4696,7 @@
       "file_a": "tests/unit/test_docker_generation.py",
       "file_b": "tests/unit/test_region_adapter.py",
       "tests_a": 35,
-      "tests_b": 169,
+      "tests_b": 143,
       "shared_shape_count": 28,
       "overlap_ratio": 0.8
     },
@@ -4720,14 +4707,6 @@
       "tests_b": 32,
       "shared_shape_count": 28,
       "overlap_ratio": 0.88
-    },
-    {
-      "file_a": "tests/unit/render/fragment/test_data_primitives.py",
-      "file_b": "tests/unit/test_cohort_strip_data_resolution.py",
-      "tests_a": 46,
-      "tests_b": 30,
-      "shared_shape_count": 27,
-      "overlap_ratio": 0.9
     },
     {
       "file_a": "tests/unit/sentinel/test_agent_auth.py",
@@ -4837,7 +4816,7 @@
       "file_a": "tests/unit/test_onboarding_renderer.py",
       "file_b": "tests/unit/test_region_adapter.py",
       "tests_a": 29,
-      "tests_b": 169,
+      "tests_b": 143,
       "shared_shape_count": 26,
       "overlap_ratio": 0.9
     },
@@ -4845,7 +4824,7 @@
       "file_a": "tests/unit/test_predicate_compiler.py",
       "file_b": "tests/unit/test_region_adapter.py",
       "tests_a": 34,
-      "tests_b": 169,
+      "tests_b": 143,
       "shared_shape_count": 26,
       "overlap_ratio": 0.76
     },
@@ -4899,11 +4878,59 @@
     },
     {
       "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
-      "file_b": "tests/unit/test_cohort_strip_data_resolution.py",
+      "file_b": "tests/unit/test_fidelity_scorer.py",
       "tests_a": 29,
-      "tests_b": 30,
+      "tests_b": 36,
       "shared_shape_count": 25,
       "overlap_ratio": 0.86
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
+      "file_b": "tests/unit/test_ux_contract_checker.py",
+      "tests_a": 40,
+      "tests_b": 35,
+      "shared_shape_count": 25,
+      "overlap_ratio": 0.71
+    },
+    {
+      "file_a": "tests/unit/test_curl_test_generator.py",
+      "file_b": "tests/unit/test_region_adapter.py",
+      "tests_a": 28,
+      "tests_b": 143,
+      "shared_shape_count": 25,
+      "overlap_ratio": 0.89
+    },
+    {
+      "file_a": "tests/unit/test_list_chrome_parity_phase1.py",
+      "file_b": "tests/unit/test_region_adapter.py",
+      "tests_a": 32,
+      "tests_b": 143,
+      "shared_shape_count": 25,
+      "overlap_ratio": 0.78
+    },
+    {
+      "file_a": "tests/unit/test_narrative_compiler.py",
+      "file_b": "tests/unit/test_peek_when_empty_1494.py",
+      "tests_a": 31,
+      "tests_b": 50,
+      "shared_shape_count": 25,
+      "overlap_ratio": 0.81
+    },
+    {
+      "file_a": "tests/unit/test_persona_journey.py",
+      "file_b": "tests/unit/test_ux_contract_checker.py",
+      "tests_a": 56,
+      "tests_b": 35,
+      "shared_shape_count": 25,
+      "overlap_ratio": 0.71
+    },
+    {
+      "file_a": "tests/integration/test_scim_routes.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 32,
+      "tests_b": 143,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.75
     }
   ]
 }

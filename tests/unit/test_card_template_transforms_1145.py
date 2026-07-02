@@ -32,137 +32,145 @@ def fixed_now(monkeypatch: pytest.MonkeyPatch) -> _dt.datetime:
     return now
 
 
-# ---------------------------------------------------------------------------
-# minutes_until
-# ---------------------------------------------------------------------------
-
-
-def test_minutes_until_future_minutes(fixed_now) -> None:
-    item = {"t": "10:05"}  # 5 minutes ahead of fixed_now
-    result = _wcd._interpolate_card_template("{{ t | minutes_until }}", item)
-    assert result == "in 5 minutes"
-
-
-def test_minutes_until_one_minute_singular(fixed_now) -> None:
-    item = {"t": "10:01"}
-    assert _wcd._interpolate_card_template("{{ t | minutes_until }}", item) == "in 1 minute"
-
-
-def test_minutes_until_now_when_within_a_minute(fixed_now) -> None:
-    item = {"t": "10:00"}
-    assert _wcd._interpolate_card_template("{{ t | minutes_until }}", item) == "now"
-
-
-def test_minutes_until_hours_format(fixed_now) -> None:
-    item = {"t": "12:00"}  # 2 hours ahead
-    assert _wcd._interpolate_card_template("{{ t | minutes_until }}", item) == "in 2 hours"
-
-
-def test_minutes_until_past_same_day(fixed_now) -> None:
-    item = {"t": "08:00"}  # earlier today
-    assert _wcd._interpolate_card_template("{{ t | minutes_until }}", item) == "earlier today"
-
-
-def test_minutes_until_past_different_day(fixed_now) -> None:
-    item = {"t": "2026-05-15T10:00:00+00:00"}  # 4 days ago
-    assert _wcd._interpolate_card_template("{{ t | minutes_until }}", item) == "overdue"
-
-
-# ---------------------------------------------------------------------------
-# age
-# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    ("template", "item", "expected"),
+    [
+        # minutes_until -----------------------------------------------------
+        pytest.param(
+            "{{ t | minutes_until }}",
+            {"t": "10:05"},  # 5 minutes ahead of fixed_now
+            "in 5 minutes",
+            id="minutes_until-future-minutes",
+        ),
+        pytest.param(
+            "{{ t | minutes_until }}",
+            {"t": "10:01"},
+            "in 1 minute",
+            id="minutes_until-one-minute-singular",
+        ),
+        pytest.param(
+            "{{ t | minutes_until }}",
+            {"t": "10:00"},
+            "now",
+            id="minutes_until-now-when-within-a-minute",
+        ),
+        pytest.param(
+            "{{ t | minutes_until }}",
+            {"t": "12:00"},  # 2 hours ahead
+            "in 2 hours",
+            id="minutes_until-hours-format",
+        ),
+        pytest.param(
+            "{{ t | minutes_until }}",
+            {"t": "08:00"},  # earlier today
+            "earlier today",
+            id="minutes_until-past-same-day",
+        ),
+        pytest.param(
+            "{{ t | minutes_until }}",
+            {"t": "2026-05-15T10:00:00+00:00"},  # 4 days ago
+            "overdue",
+            id="minutes_until-past-different-day",
+        ),
+        # age ---------------------------------------------------------------
+        pytest.param(
+            "{{ t | age }}",
+            {"t": "09:50"},  # 10 minutes ago
+            "10 minutes ago",
+            id="age-minutes-ago",
+        ),
+        pytest.param(
+            "{{ t | age }}",
+            {"t": "07:00"},  # 3 hours ago
+            "3 hours ago",
+            id="age-hours-ago",
+        ),
+        pytest.param(
+            "{{ t | age }}",
+            {"t": "2026-05-15T10:00:00+00:00"},
+            "4 days ago",
+            id="age-days-ago",
+        ),
+        # until -------------------------------------------------------------
+        pytest.param(
+            "{{ due | until }}",
+            {"due": "2026-05-19T18:00:00+00:00"},
+            "due today",
+            id="until-today",
+        ),
+        pytest.param(
+            "{{ due | until }}",
+            {"due": "2026-05-20T10:00:00+00:00"},
+            "due tomorrow",
+            id="until-tomorrow",
+        ),
+        pytest.param(
+            "{{ due | until }}",
+            {"due": "2026-05-26T10:00:00+00:00"},  # 7 days ahead
+            "due in 7 days",
+            id="until-future-days",
+        ),
+        pytest.param(
+            "{{ due | until }}",
+            {"due": "2026-05-18T10:00:00+00:00"},
+            "overdue",
+            id="until-overdue-one-day",
+        ),
+        pytest.param(
+            "{{ due | until }}",
+            {"due": "2026-05-12T10:00:00+00:00"},  # 7 days ago
+            "overdue by 7 days",
+            id="until-overdue-many-days",
+        ),
+        # Edge cases ---------------------------------------------------------
+        pytest.param(
+            "{{ t | bogus_xform }}",
+            {"t": "10:30"},
+            "10:30",
+            # Unknown transform name = no-transform: render the raw field
+            # (graceful degradation matches the rest of the template grammar).
+            id="unknown-transform-falls-back-to-raw-value",
+        ),
+        pytest.param(
+            "{{ name }}",
+            {"name": "Alice"},
+            "Alice",
+            # Regression guard — bare `{{ field }}` renders the raw value
+            # the same as pre-#1145.
+            id="no-transform-unchanged",
+        ),
+        pytest.param(
+            "{{ t | minutes_until }}",
+            {},
+            "",
+            # Unresolvable field path + transform = empty string — same
+            # graceful-degradation contract as missing fields.
+            id="transform-on-missing-field-renders-empty",
+        ),
+        pytest.param(
+            "{{ period.start_time | minutes_until }}",
+            {"period": {"start_time": "10:15"}},
+            "in 15 minutes",
+            # Dotted path + transform composes — the resolved nested value
+            # feeds the transform.
+            id="dotted-path-with-transform",
+        ),
+        pytest.param(
+            "Register {{ name }} ({{ start | minutes_until }})",
+            {"name": "Maths", "start": "10:30"},
+            "Register Maths (in 30 minutes)",
+            # Bare fields + a transformed field in one template — the
+            # transform suffix is per-placeholder.
+            id="mixed-template-with-field-and-transform",
+        ),
+    ],
+)
+def test_interpolate_card_template(fixed_now, template: str, item: dict, expected: str) -> None:
+    """One (template, item, expected) row per transform contract, all
+    stated relative to ``fixed_now`` (2026-05-19 10:00 UTC)."""
+    assert _wcd._interpolate_card_template(template, item) == expected
 
 
 def test_age_within_a_minute_is_just_now(fixed_now) -> None:
     item = {"t": fixed_now}
     assert _wcd._interpolate_card_template("{{ t | age }}", item) == "just now"
-
-
-def test_age_minutes_ago(fixed_now) -> None:
-    item = {"t": "09:50"}  # 10 minutes ago
-    assert _wcd._interpolate_card_template("{{ t | age }}", item) == "10 minutes ago"
-
-
-def test_age_hours_ago(fixed_now) -> None:
-    item = {"t": "07:00"}  # 3 hours ago
-    assert _wcd._interpolate_card_template("{{ t | age }}", item) == "3 hours ago"
-
-
-def test_age_days_ago(fixed_now) -> None:
-    item = {"t": "2026-05-15T10:00:00+00:00"}
-    assert _wcd._interpolate_card_template("{{ t | age }}", item) == "4 days ago"
-
-
-# ---------------------------------------------------------------------------
-# until
-# ---------------------------------------------------------------------------
-
-
-def test_until_today(fixed_now) -> None:
-    item = {"due": "2026-05-19T18:00:00+00:00"}
-    assert _wcd._interpolate_card_template("{{ due | until }}", item) == "due today"
-
-
-def test_until_tomorrow(fixed_now) -> None:
-    item = {"due": "2026-05-20T10:00:00+00:00"}
-    assert _wcd._interpolate_card_template("{{ due | until }}", item) == "due tomorrow"
-
-
-def test_until_future_days(fixed_now) -> None:
-    item = {"due": "2026-05-26T10:00:00+00:00"}  # 7 days ahead
-    assert _wcd._interpolate_card_template("{{ due | until }}", item) == "due in 7 days"
-
-
-def test_until_overdue_one_day(fixed_now) -> None:
-    item = {"due": "2026-05-18T10:00:00+00:00"}
-    assert _wcd._interpolate_card_template("{{ due | until }}", item) == "overdue"
-
-
-def test_until_overdue_many_days(fixed_now) -> None:
-    item = {"due": "2026-05-12T10:00:00+00:00"}  # 7 days ago
-    assert _wcd._interpolate_card_template("{{ due | until }}", item) == "overdue by 7 days"
-
-
-# ---------------------------------------------------------------------------
-# Edge cases
-# ---------------------------------------------------------------------------
-
-
-def test_unknown_transform_falls_back_to_raw_value(fixed_now) -> None:
-    """An unknown transform name is treated as no-transform — render
-    the raw field. Graceful degradation matches the rest of the
-    template grammar."""
-    item = {"t": "10:30"}
-    assert _wcd._interpolate_card_template("{{ t | bogus_xform }}", item) == "10:30"
-
-
-def test_no_transform_unchanged(fixed_now) -> None:
-    """Regression guard — bare `{{ field }}` (no transform) renders
-    the raw value the same as pre-#1145."""
-    item = {"name": "Alice"}
-    assert _wcd._interpolate_card_template("{{ name }}", item) == "Alice"
-
-
-def test_transform_on_missing_field_renders_empty(fixed_now) -> None:
-    """If the field path doesn't resolve, transforms produce empty
-    string — same graceful-degradation contract as missing fields."""
-    item: dict = {}
-    assert _wcd._interpolate_card_template("{{ t | minutes_until }}", item) == ""
-
-
-def test_dotted_path_with_transform(fixed_now) -> None:
-    """Dotted path + transform composes — the resolved nested value
-    feeds the transform."""
-    item = {"period": {"start_time": "10:15"}}
-    assert (
-        _wcd._interpolate_card_template("{{ period.start_time | minutes_until }}", item)
-        == "in 15 minutes"
-    )
-
-
-def test_mixed_template_with_field_and_transform(fixed_now) -> None:
-    """A template with both bare fields and a transformed field
-    renders correctly — the transform suffix is per-placeholder."""
-    item = {"name": "Maths", "start": "10:30"}
-    out = _wcd._interpolate_card_template("Register {{ name }} ({{ start | minutes_until }})", item)
-    assert out == "Register Maths (in 30 minutes)"

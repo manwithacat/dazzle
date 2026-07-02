@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.91] - 2026-07-02
+
+### Changed
+- **Test-suite redundancy collapse, first tranche (#1530, TS-001..TS-007 + sibling).** 138 test functions collapsed into 21 `@pytest.mark.parametrize` tables across 8 files — `test_region_adapter.py` (170→144), `render/fragment/test_data_primitives.py` (95→66), `test_auth_connection_cli.py` (57→48), `test_cohort_strip_data_resolution.py` (30→13), `test_day_timeline_data_resolution.py` (13→7), `test_card_template_transforms_1145.py` (20→2), `test_python_audit_magic_string_typing.py` (23→8), `test_python_audit_n_plus_one.py` (25→7). Collected-case count preserved 1:1 (442→443 across the files) — every original case survives as a `pytest.param` row with issue provenance (#1018/#1267/#1275/#1299/#1300/#1425) folded into ids and row comments; keep_all verdicts protected per-display/per-primitive contract tests and rationale docstrings. Distillation audit artifacts regenerated (`tests/audit/`). Nightly `dazzle sentinel mutate` floors are the kill-rate backstop per the lane contract.
+
+### Agent Guidance
+- The #1530 investigation found the audit's cross-file "collapsible" figure is a signature artifact (cluster key drops the file) — do not plan collapse work from `cross_file_report.md` View 1 until the clustering key includes the assert target. Same-file cluster sizes overstate genuine one-contract families ~2×; judge per file before collapsing (recorded verdicts live in the `/improve` test-suite lane backlog rows).
+
 ## [0.92.90] - 2026-07-02
 
 ### Fixed
