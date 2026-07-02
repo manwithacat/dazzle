@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.78] - 2026-07-02
+
+### Changed
+- **CI Python Tests matrix job parallelised — the ~15-min critical-path pytest step now runs `-n auto --dist loadgroup`.** pytest-xdist was already a dev dependency; CI just never passed `-n`. Empirical basis: the full non-e2e suite (19,835 tests under CI-parity conditions) runs in **1m45s** parallel locally vs ~15 min single-process in CI. Three supporting changes: (1) coverage is now measured on the py3.12 cell only (`COVERAGE_CORE=sysmon` — the 3.12+ sys.monitoring backend with lower instrumentation overhead; 3.13/3.14 cells run uninstrumented, their redundant Codecov uploads dropped); (2) the Sentinel example audit — a version-independent source scan — runs once on 3.12 instead of ×3; (3) `-v` and `--cov-report=term-missing` dropped (no CI consumer parses pytest stdout; xdist interleaves per-test lines into noise anyway).
+- **All postgres-marked tests are pinned to one xdist worker** via a `pytest_collection_modifyitems` hook in `tests/conftest.py` (`xdist_group("postgres")` — they share one live database). Scope caveat documented in the hook: this protects postgres-marked tests from each other; a local `-n auto` run with a live `TEST_DATABASE_URL` can still see collisions from *unmarked* DB-touching tests. CI is unaffected (base job has no DB env; the PostgreSQL job stays single-process — its parallelisation needs per-worker databases, a deliberate follow-up).
+
+### Fixed
+- **Three `tests/unit/test_lsp.py` subprocess tests flaked under parallel load** — they spawn `python -m dazzle.lsp` with 2s/5s timeouts, and interpreter startup exceeds that when all cores are saturated by xdist workers. Timeouts raised to 30s (pure headroom; the subprocesses exit promptly on stdin EOF in the normal path).
+
+### Agent Guidance
+- **Run the unit suite with `pytest -n auto --dist loadgroup -m "not e2e"`** — 20k tests in under 2 min locally. Plain `--dist load` ignores the postgres group pin; don't use it with a live DB env. CI-runtime + suite-size analysis (including the distillation-strategy status and the slowest-test profile) at `dev_docs/2026-07-02-ci-runtime-and-suite-size-analysis.md`.
+
 ## [0.92.77] - 2026-07-02
 
 ### Fixed

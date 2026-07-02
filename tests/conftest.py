@@ -54,6 +54,28 @@ def pytest_configure(config: pytest.Config) -> None:
     )
 
 
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Serialize all postgres-marked tests onto one xdist worker.
+
+    They share a single live database, so running them concurrently corrupts
+    each other's state. Under `-n auto --dist loadgroup` this pins them to one
+    worker; without xdist (or under plain `--dist load`, which ignores
+    xdist_group) it is a no-op. New postgres-marked tests inherit the pin
+    automatically.
+
+    Scope caveat: this protects postgres-marked tests from EACH OTHER only.
+    A local `-n auto` run with TEST_DATABASE_URL/DATABASE_URL set still fails
+    sporadically because some unmarked tests also touch the live DB. CI's
+    base matrix job has no DB env (everything DB-backed skips), and the
+    dedicated PostgreSQL job runs single-process, so CI is unaffected.
+    Parallelising against a live DB needs per-worker databases — deliberate
+    follow-up, see dev_docs/2026-07-02-ci-runtime-and-suite-size-analysis.md.
+    """
+    for item in items:
+        if "postgres" in item.keywords:
+            item.add_marker(pytest.mark.xdist_group("postgres"))
+
+
 @pytest.fixture
 def fixtures_dir() -> Path:
     """Return path to fixtures directory."""

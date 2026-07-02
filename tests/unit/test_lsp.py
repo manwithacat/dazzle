@@ -40,7 +40,9 @@ class TestLspModuleLoading:
             ],
             capture_output=True,
             text=True,
-            timeout=5,
+            # Generous: interpreter startup can exceed small timeouts when the
+            # machine is saturated by parallel xdist workers.
+            timeout=30,
         )
 
         # Should import without warnings (we used -W error to turn warnings into errors)
@@ -54,8 +56,10 @@ class TestLspModuleLoading:
             [sys.executable, "-m", "dazzle.lsp"],
             capture_output=True,
             text=True,
-            timeout=2,  # Will timeout since server waits for stdin
-            input="",  # Empty stdin causes immediate exit attempt
+            # EOF on stdin makes the server exit promptly; the timeout is pure
+            # headroom for interpreter startup under parallel-test load.
+            timeout=30,
+            input="",
         )
 
         # Count feature registrations - each should appear only once
@@ -79,7 +83,7 @@ class TestLspModuleLoading:
             [sys.executable, "-m", "dazzle.lsp"],
             capture_output=True,
             text=True,
-            timeout=2,
+            timeout=30,  # headroom under parallel-test load; exits on stdin EOF
             input="",
         )
 

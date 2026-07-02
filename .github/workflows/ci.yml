@@ -75,9 +75,25 @@ jobs:
       # bundle-shape tests have the artifacts on disk.
       run: python scripts/build_dist.py
 
-    - name: Run tests with pytest
+    # Two pytest variants, split on coverage: measuring coverage on one
+    # matrix cell is enough for Codecov, and the other two cells run
+    # meaningfully faster without instrumentation. Both run xdist
+    # (`-n auto --dist loadgroup`) — loadgroup honours the xdist_group pin
+    # that tests/conftest.py applies to every postgres-marked test (shared
+    # live DB ⇒ must not run concurrently). COVERAGE_CORE=sysmon uses the
+    # py3.12+ sys.monitoring backend, which cuts instrumentation overhead
+    # (line coverage only — we don't set branch=true).
+    - name: Run tests with pytest (coverage)
+      if: matrix.python-version == '3.12'
+      env:
+        COVERAGE_CORE: sysmon
       run: |
-        pytest -v --cov=src/dazzle --cov-report=xml --cov-report=term-missing -m "not e2e"
+        pytest -n auto --dist loadgroup --cov=src/dazzle --cov-report=xml -m "not e2e"
+
+    - name: Run tests with pytest
+      if: matrix.python-version != '3.12'
+      run: |
+        pytest -n auto --dist loadgroup -m "not e2e"
 
     - name: Sentinel Python audit on examples (PA-LLM-07+)
       # #1256: PA-LLM-07 promoted from informational to blocker. Backfill
@@ -85,6 +101,8 @@ jobs:
       # now gates on PA-LLM-07 (MEDIUM) plus PA-LLM-08/09/10 and any other
       # MEDIUM+ heuristic. Step fails on any finding (no `|| echo` swallow).
       # See docs/counter-priors/exceptions-as-control-flow.md.
+      # Version-independent source scan — one matrix cell is authoritative.
+      if: matrix.python-version == '3.12'
       run: |
         for dir in examples/*/; do
           if [ -f "${dir}dazzle.toml" ] && [ "$(basename $dir)" != "pra" ]; then
@@ -96,6 +114,8 @@ jobs:
         done
 
     - name: Upload coverage to Codecov
+      # Coverage is measured on the 3.12 cell only (see pytest split above).
+      if: matrix.python-version == '3.12'
       uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v6
       with:
         files: ./coverage.xml
