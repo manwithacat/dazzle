@@ -1,5 +1,7 @@
 """Build a fact-only SpecBrief from an AppSpec: facts + activated claims + skeleton."""
 
+import hashlib
+
 from dazzle.core import ir
 from dazzle.spec_narrative.claims import load_claims
 from dazzle.spec_narrative.detectors import REGISTRY
@@ -408,3 +410,16 @@ def _plan_skeleton(
         SectionPlan(section=s, populated=populated[s], claim_ids=claim_map.get(s, []))
         for s in _SECTIONS
     ]
+
+
+def brief_fingerprint(brief: SpecBrief) -> str:
+    """Stable content hash of a brief — the freshness anchor for committed docs.
+
+    A generated ``SPECIFICATION.md`` carries this as a footer comment
+    (``<!-- dazzle-spec-brief: sha256:… -->``); the example-spec drift gate
+    recomputes it from the live DSL and fails when the model changed but the
+    document wasn't regenerated. Canonical JSON (sorted keys, no whitespace
+    variance) so the hash is independent of serialization cosmetics.
+    """
+    canonical = brief.model_dump_json()
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()

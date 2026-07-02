@@ -1,0 +1,54 @@
+# Project Tracker — Specification
+
+## Executive summary
+
+Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces — a Dashboard for the overview and a Project Board for day-to-day task and milestone management.
+
+Three roles use it — Admin, Project Manager, and Team Member — and what each can see and do is not left to convention. Every role's permissions, for every kind of record and operation, are declared as machine-readable policy that compiles on demand into an auditable access matrix — permission review is something you run and diff, not something you eyeball — and the row-visibility rules can additionally be submitted to an SMT solver for formal verification. Access-controlled records are automatically filtered to what each user is permitted to see: a team member's task list, for instance, shows only the tasks assigned to them.
+
+## What it does
+
+The product manages six kinds of thing, woven together:
+
+- **Projects** — the top-level containers of work. Every Project has an owning Team Member.
+- **Milestones** — staging posts within a Project. Every Milestone belongs to its parent Project and moves through planning, active, and completed states.
+- **Tasks** — the units of work. Every Task belongs to a parent Project, can optionally sit under a Milestone, and records who it is assigned to and who created it. A Task travels a five-stage lifecycle from backlog to done.
+- **Comments** — the discussion. Every Comment is attached to a Task and names its author.
+- **Attachments** — the supporting files. Every Attachment is tied to a Task and records who uploaded it.
+- **Team Members** — the people, referenced throughout as owners, assignees, authors, and uploaders.
+
+Around these, the product provides sixteen capabilities: browsing, creating, viewing, and editing Projects and Tasks; creating, listing, and editing Milestones and Comments; and listing and uploading Attachments.
+
+## Who uses it
+
+**Admins** have full access to all projects and settings. They alone can manage the team-member roster, delete projects and milestones, and moderate comments.
+
+**Project Managers** manage projects and assign tasks. They can create and edit Projects and Milestones, see and update every Task, and remove tasks and attachments when needed.
+
+**Team Members** work on assigned tasks. They see all projects, milestones, comments, and attachments, and can create tasks, comment, and upload files — but their task list and their editing rights extend only to Tasks where the assignee is the signed-in user.
+
+All three roles work in the same two places: the Dashboard and the Project Board.
+
+## Where work happens
+
+**Dashboard** gives the whole team the project and task overview: a grid of Projects beside a kanban board of Tasks.
+
+**Project Board** is where task and milestone management happens day to day: a kanban board of Tasks alongside the list of Milestones.
+
+## How work flows through it
+
+Work flows through two lifecycles. A **Task** moves from backlog → todo → in progress → review → done — the kanban boards on both workspaces make that journey visible and draggable. A **Milestone** moves from planning → active → completed, marking the larger beats of a Project as its tasks land.
+
+Who advances what is governed by the declared rules: managers and admins can move any task; a team member advances only the tasks assigned to them.
+
+## The technical foundation
+
+These guarantees hold because the product is built on Dazzle, and each can be independently verified by running a single command.
+
+**Security.** Access-controlled records are filtered to what each user is permitted to see. The rule is declared once in the model and applied automatically to every query the product runs, instead of being re-implemented — and re-checked — on each screen (verify: `dazzle rbac report`). Every role's permissions, for every kind of record and operation, are declared as machine-readable policy; they compile on demand into an auditable access matrix, and the row-visibility rules can additionally be submitted to an SMT solver for formal verification (verify: `dazzle rbac prove`).
+
+**Data & reliability.** All data is stored in PostgreSQL — a mature, widely-trusted relational database. There is no bespoke or experimental datastore to operate, secure, or reason about (verify: `dazzle db status`). In production, every change to the data model is applied through versioned, reversible migrations; the live schema is never edited by hand, so upgrades are repeatable and fully auditable (verify: `dazzle db status`).
+
+**Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
+
+<!-- dazzle-spec-brief: sha256:79628f5ea702f023aa51460a69bac040656e2370acd22062e36f7aaedbcac466 -->

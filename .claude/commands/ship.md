@@ -71,7 +71,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 ## 4. Push
 
 - Run `git push` to push the current branch to origin.
-- If a tag was created in step 3, also run `git push origin --tags` to push it. This triggers release workflows (PyPI, Homebrew).
+- If a tag was created in step 3, push **only that tag**: `git push origin vX.Y.Z`. This triggers release workflows (PyPI, Homebrew). **Never `git push origin --tags`** — a clone that still holds historically-pruned patch tags re-publishes ALL of them (the 2026-07-02 incident re-pushed 257 pruned v0.82–v0.87 tags; the prune-old-releases workflow had to be dispatched to sweep them).
 - If the push is rejected (e.g. non-fast-forward), do NOT force-push. Inform the user and stop.
 
 ## 5. Signal the improvement loop

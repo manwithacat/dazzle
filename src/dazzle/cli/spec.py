@@ -24,7 +24,7 @@ from dazzle.core import ir
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.spec_loader import load_spec
 from dazzle.core.strings import to_api_plural
-from dazzle.spec_narrative import SpecBrief, build_brief
+from dazzle.spec_narrative import SpecBrief, brief_fingerprint, build_brief
 
 logger = logging.getLogger(__name__)
 
@@ -664,6 +664,11 @@ def spec_brief(
         "-f",
         help="Output format: 'json' (machine, for /spec-narrate) or 'text' (human preview).",
     ),
+    fingerprint: bool = typer.Option(
+        False,
+        "--fingerprint",
+        help="Print only the brief's content hash (the SPECIFICATION.md freshness anchor).",
+    ),
 ) -> None:
     """Emit a deterministic spec brief: verified app facts + activated framework claims.
 
@@ -677,6 +682,9 @@ def spec_brief(
         raise typer.Exit(code=1) from exc
 
     brief = build_brief(appspec)
+    if fingerprint:
+        typer.echo(brief_fingerprint(brief))
+        return
     if output_format == "text":
         typer.echo(_format_brief_text(brief))
     else:
