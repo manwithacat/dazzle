@@ -89,8 +89,10 @@ def _map_field_type(dazzle_type: ir.FieldType) -> FieldType:
             kind="enum",
             enum_values=dazzle_type.enum_values or [],
         )
-    elif kind == ir.FieldTypeKind.REF:
-        # Reference type
+    elif kind in (ir.FieldTypeKind.REF, ir.FieldTypeKind.BELONGS_TO):
+        # Reference type. belongs_to is ref-equivalent at the http boundary
+        # (#1522): without this branch it degraded to a plain string — no
+        # relation registration, no display join, TEXT column, no FK constraint.
         return FieldType(
             kind="ref",
             ref_entity=dazzle_type.ref_entity,

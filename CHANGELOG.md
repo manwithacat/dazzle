@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.92.72] - 2026-07-02
+## [0.92.73] - 2026-07-02
+
+### Fixed
+- **`belongs_to` FKs are now real references — no more raw-UUID leak in repr/grid (#1522).** `_map_field_type` (core→http boundary) had no BELONGS_TO branch, so a `belongs_to X` field silently degraded to a plain string: the relation loader's `belongs_to` arm was dead code (it runs against converted backend specs, whose kind vocabulary is scalar/enum/ref), the FK-display join never fired, DDL emitted a TEXT column with no FK constraint, and the pydantic model typed it `str` — while IR-side consumers (workspace columns, auto-include) *did* treat it as an FK, producing the observed asymmetry with `ref` in the same list. BELONGS_TO now maps to `kind="ref"` exactly like REF, restoring relation registration, display-name join, UUID column + FK constraint, and UUID model field in one change.
+
+### Agent Guidance
+- **Deployed apps with `belongs_to` fields get a schema diff on next `dazzle db revision`**: TEXT → UUID (needs `USING <col>::uuid`) plus a new FK constraint. No example/fixture uses `belongs_to`, so framework goldens are unaffected; the `pytest -m migration_engine` parity oracle passes.
 
 ### Fixed
 - **`get_permitted_personas` no longer over-reports personas the rbac matrix denies (#1520).** The IR triples helper was never taught the #1281 deny-all short-form: `permit: create: false` produces a rule with empty `personas` and no condition, which fell through to the "open rule → all personas permitted" branch — so every persona got phantom `create_link`/`delete_button` actions (and therefore phantom surface triples) on append-only entities. The helper now mirrors `rbac.matrix._resolve_decision` in full: deny-all rules match nobody, a matching FORBID rule beats any PERMIT (Cedar forbid > permit — a second, previously-latent over-report path), and rules match each persona's `effective_role` (#1147) rather than its raw id, with the returned list still carrying persona ids. Transitively fixes `get_triples_for_persona`, the UX contract/inventory layers, `dazzle ux` CLI, and the MCP `policy` handler (which shares `_rule_matches_persona`). New drift gate `tests/unit/test_triples_matrix_parity.py` pins the containment invariant — triples-permitted ⊆ matrix-permitted — across every example app.
