@@ -50,6 +50,9 @@ class Field:
     initial_value: str = ""
     readonly: bool = False
     help: str = ""
+    # ADR-0050 Phase 5b (#1517 1a): usage-driven — the entity's most-engaged
+    # plain field opens focused. Default False = byte-identical output.
+    autofocus: bool = False
 
     def __post_init__(self) -> None:
         if self.kind not in _FIELD_KINDS:
@@ -65,6 +68,8 @@ class Combobox:
     initial_value: str = ""
     placeholder: str = ""
     help: str = ""
+    # ADR-0050 Phase 5b (#1517 1a): see Field.autofocus.
+    autofocus: bool = False
 
     def __post_init__(self) -> None:
         if not self.options:

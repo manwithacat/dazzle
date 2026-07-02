@@ -284,6 +284,7 @@ def field_dict_to_primitive(
             initial_value=initial_value,
             placeholder=placeholder,
             help=help_text,
+            autofocus=bool(field_dict.get("autofocus")),
         )
 
     # Map widget kind to Field.kind. Field._FIELD_KINDS validates the
@@ -313,6 +314,7 @@ def field_dict_to_primitive(
         placeholder=placeholder,
         initial_value=initial_value,
         help=help_text,
+        autofocus=bool(field_dict.get("autofocus")),
     )
 
 

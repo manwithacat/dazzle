@@ -30,7 +30,11 @@ from dazzle.core.ir import SurfaceMode
 from dazzle.core.ir.integrations import MappingTriggerType
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
-from dazzle.http.runtime.usage_signal import USAGE_KIND_ACTION, read_usage_counts_for_request
+from dazzle.http.runtime.usage_signal import (
+    USAGE_KIND_ACTION,
+    USAGE_KIND_FIELD,
+    read_usage_counts_for_request,
+)
 from dazzle.page import app_paths
 from dazzle.page.converters.nav_builder import (
     NavGroup,
@@ -42,6 +46,7 @@ from dazzle.page.converters.nav_builder import (
 from dazzle.page.runtime.action_prominence_resolver import (
     resolve_action_prominence_by_usage,
 )
+from dazzle.page.runtime.form_engagement_resolver import annotate_form_fields_by_usage
 from dazzle.rbac.matrix import generate_access_matrix
 from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
@@ -1897,6 +1902,33 @@ def _build_dispatch_ctx(
     return {}
 
 
+def _annotate_form_usage(
+    prc: _PageRequestContext, render_ctx: Any, surface: Any, ctx_dict: dict[str, Any]
+) -> None:
+    """ADR-0050 Phase 5b (#1517 1a): usage-annotate CREATE/EDIT field dicts.
+
+    Reads the entity's field-engagement signal and lets the page-layer
+    resolver autofocus the hottest plain field / upgrade heavily-used long
+    selects to the searchable combobox. Keyed by ENTITY name — the
+    dz-usage.js beacon records `data-dazzle-form` (the entity), so reads
+    match writes. Best-effort: no usage / no entity → dicts untouched →
+    byte-identical form (cold-start parity). Section dicts alias the flat
+    entries, so sectioned forms are covered by the same pass.
+    """
+    # Forms only: the detail ctx also carries "fields", and annotating those
+    # dicts (widget upgrades) would leak into read-only rendering.
+    if getattr(render_ctx, "form", None) is None or not ctx_dict.get("fields"):
+        return
+    form_entity = (getattr(surface, "entity_ref", "") or "").strip()
+    if not form_entity:
+        return
+    field_usage = read_usage_counts_for_request(
+        prc.request, surface=form_entity, kind=USAGE_KIND_FIELD
+    )
+    if field_usage:
+        annotate_form_fields_by_usage(ctx_dict["fields"], field_usage)
+
+
 def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str | None:
     """If the surface declares an explicit ``render:`` clause, route the
     inner-HTML render through the renderer registry. Returns the inner
@@ -2000,6 +2032,7 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
         return None
 
     ctx_dict = _build_dispatch_ctx(render_ctx, surface, services=services)
+    _annotate_form_usage(prc, render_ctx, surface, ctx_dict)
     # ADR-0049 Phase 2: a peek fetch (`?peek=1`) wants the detail body
     # content-only (no Surface header / Back) — it loads into an inline list-row
     # panel. `_build_view` reads this flag.

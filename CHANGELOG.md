@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.85] - 2026-07-02
+
+### Added
+- **Usage-driven form-field inference — 1a → L4, closing #1517's last telemetry-gated criterion (ADR-0050 Phase 5b).** The field-engagement signal (dz-usage.js first-focus beacons, per-entity tenant-fenced aggregate) now annotates CREATE/EDIT field dicts before primitive dispatch, via the new pure resolver `page/runtime/form_engagement_resolver.annotate_form_fields_by_usage` wired at the `page_routes` dispatch-ctx seam (`_annotate_form_usage`, form-guarded so detail/list "fields" are never touched). Two inferences, both floor-gated (James: "both", 2026-07-02): (1) **autofocus** — the entity's most-engaged *plain* field opens focused (rich client-controller widgets are excluded; combobox upgrades run first so an upgraded select can't take autofocus); (2) **combobox upgrade** — a heavily-engaged plain select with ≥8 options promotes to the searchable `WidgetCombobox` (author-declared `widget:` is authoritative; EDIT value + required preserved, pinned by test). `Field`/`Combobox` primitives gain `autofocus: bool = False` emitted as the HTML attribute. Cold-start byte parity below the 10-event floor; explain-trace on every usage-driven change. UX-maturity index 3.77 → **3.85, 11/13 criteria adaptive**; the 1a criterion + probe now cover the usage path and below-floor parity.
+
 ## [0.92.84] - 2026-07-02
 
 ### Changed

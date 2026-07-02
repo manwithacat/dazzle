@@ -36,6 +36,7 @@ from dazzle.page.runtime.column_economy_resolver import (
     resolve_column_economy_by_usage,
 )
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
+from dazzle.page.runtime.form_engagement_resolver import annotate_form_fields_by_usage
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
 from dazzle.render.context import ColumnContext
@@ -98,11 +99,12 @@ def _display_kinds() -> tuple[dict[str, str], set[str]]:
 
 
 def _probe_1a() -> ProbeResult:
-    """Region form IS inferred by default (level 3): a genuinely-unset `display:`
-    routes through the shape->form resolver, not the list template (#1492
-    default-flip). Confirms the declared level by exercising the real dispatch
-    decision — an unset region with a scalar aggregate must resolve to SUMMARY,
-    not LIST."""
+    """Region form is inferred by default (#1492) AND form fields adapt to
+    observed usage (level 4, ADR-0050 Phase 5b): above the engagement floor
+    the hottest plain field gains autofocus and a heavily-engaged long select
+    upgrades to the searchable combobox; below the floor the field dicts are
+    untouched (cold-start byte parity) — exercised through the real
+    resolvers."""
     unset_agg = SimpleNamespace(
         display="list", display_unset=True, aggregates={"n": object()}, source=""
     )
@@ -114,11 +116,28 @@ def _probe_1a() -> ProbeResult:
     explicit_respected = resolve_region_display_mode(explicit_list, {}) == "LIST"
     _, kinds = _display_kinds()
     rich = len(kinds) >= 10
-    ok = default_infers and explicit_respected and rich
+    # Level 4: usage annotates the form's field dicts (autofocus + upgrade)…
+    hot = [
+        {"name": "title", "kind": "text", "label": "T"},
+        {
+            "name": "cat",
+            "kind": "select",
+            "label": "C",
+            "options": [(str(i), str(i)) for i in range(10)],
+        },
+    ]
+    annotate_form_fields_by_usage(hot, {"title": 30, "cat": 12})
+    usage_adapts = hot[0].get("autofocus") is True and hot[1].get("widget") == "combobox"
+    # …and below the floor is byte-identical (cold-start invariant).
+    cold = [{"name": "title", "kind": "text", "label": "T"}]
+    annotate_form_fields_by_usage(cold, {"title": 2})
+    cold_parity = cold == [{"name": "title", "kind": "text", "label": "T"}]
+    ok = default_infers and explicit_respected and rich and usage_adapts and cold_parity
     return ProbeResult(
         ok,
         f"unset->infer={default_infers}, explicit-list-respected={explicit_respected}, "
-        f"kinds={len(kinds)}",
+        f"kinds={len(kinds)}; usage-adapts-form={usage_adapts}, "
+        f"below-floor-byte-parity={cold_parity}",
     )
 
 
@@ -355,8 +374,8 @@ CRITERIA: list[Criterion] = [
         "1a",
         "data_drives_ui",
         "region form inference",
-        3,
-        "`display: auto` is now the DEFAULT (#1492 default-flip): a genuinely-unset `display:` routes through resolve_region_display_mode -> resolve_auto_display, inferring the form from the data shape (aggregate->summary/chart, state-machine->kanban, temporal->timeline, else list). An explicit `display: list` stays authoritative (true-unset discriminator: WorkspaceRegion.display_unset). Level 3 (good-defaults): the data-right form is the default; the author writes nothing. Reaching 4 (adaptive) = runtime/usage-driven form selection.",
+        4,
+        "#1492 L3 + ADR-0050 Phase 5b L4 — `display: auto` is the DEFAULT (a genuinely-unset `display:` routes through resolve_region_display_mode -> resolve_auto_display, inferring the form from the data shape; an explicit value stays authoritative), AND form-field selection now adapts to observed usage: `annotate_form_fields_by_usage` (`page/runtime/form_engagement_resolver`, wired at the `page_routes` dispatch-ctx seam) consumes the dz-usage.js first-focus signal (`_dazzle_usage_events`, tenant-fenced) to autofocus the entity's most-engaged plain field and upgrade a heavily-engaged long select to the searchable combobox. Author-declared `widget:` is authoritative; rich client widgets are excluded from autofocus; cold-start byte-identical below the min-sample floor; every usage-driven change carries an explain-trace.",
         "high",
         _probe_1a,
     ),

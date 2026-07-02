@@ -179,6 +179,8 @@ class _RenderFormsMixin:
         name = ctx.escape_attr(f.name)
         a11y = self._form_field_a11y(name, f.required, f.help)
         readonly_attr = " readonly" if f.readonly else ""
+        # ADR-0050 Phase 5b: usage-driven autofocus (default False = no attr).
+        autofocus_attr = " autofocus" if f.autofocus else ""
 
         if f.kind == "checkbox":
             # Checkbox keeps its own label structure (input nested in the label);
@@ -189,7 +191,7 @@ class _RenderFormsMixin:
                 '<label class="dz-form-checkbox-label">'
                 f'<input type="checkbox" name="{name}" id="field-{name}" '
                 f'data-dazzle-field="{name}" class="dz-form-checkbox"'
-                f"{a11y}{checked}{readonly_attr}>"
+                f"{a11y}{checked}{readonly_attr}{autofocus_attr}>"
                 f"<span>{ctx.escape(f.label)}</span></label>"
                 f"{self._form_hint(ctx, f.name, f.help)}"
                 "</div>"
@@ -200,7 +202,7 @@ class _RenderFormsMixin:
                 f'<textarea id="field-{name}" name="{name}" data-dazzle-field="{name}" '
                 f'class="dz-form-input dz-form-textarea" '
                 f'placeholder="{ctx.escape_attr(f.placeholder)}"'
-                f'{a11y}{readonly_attr} rows="4">{ctx.escape(f.initial_value)}</textarea>'
+                f'{a11y}{readonly_attr}{autofocus_attr} rows="4">{ctx.escape(f.initial_value)}</textarea>'
             )
         else:
             # Native date/datetime inputs suppress the placeholder (legacy parity).
@@ -213,7 +215,7 @@ class _RenderFormsMixin:
                 f'<input id="field-{name}" type="{f.kind}" name="{name}" '
                 f'data-dazzle-field="{name}" class="dz-form-input" '
                 f'value="{ctx.escape_attr(f.initial_value)}"'
-                f"{placeholder}{a11y}{readonly_attr}>"
+                f"{placeholder}{a11y}{readonly_attr}{autofocus_attr}>"
             )
         return (
             '<div class="dz-form-field">'
@@ -239,9 +241,10 @@ class _RenderFormsMixin:
             opts.append(
                 f'<option value="{ctx.escape_attr(value)}"{sel}>{ctx.escape(label)}</option>'
             )
+        autofocus_attr = " autofocus" if c.autofocus else ""
         inner = (
             f'<select id="field-{name}" name="{name}" data-dazzle-field="{name}" '
-            f'class="dz-form-input"{a11y}>{"".join(opts)}</select>'
+            f'class="dz-form-input"{a11y}{autofocus_attr}>{"".join(opts)}</select>'
         )
         return (
             '<div class="dz-form-field">'
