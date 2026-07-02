@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.92.93] - 2026-07-02
+
+### Changed
+- **/improve test-suite lane parked (#1530 closed).** Tranches 1+2 delivered −302 test functions; the remaining tail is marginal. The lane's EXPLORE step now honours a `PARKED` marker on its backlog section (returns HOUSEKEEPING instead of re-seeding); the marker documents its own unpark condition (redundancy saving trending back toward ~3,500+ or a new 20+ cluster family).
+
 ## [0.92.92] - 2026-07-02
 
 ### Changed

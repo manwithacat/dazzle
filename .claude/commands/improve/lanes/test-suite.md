@@ -96,7 +96,13 @@ distinguishing assertion).
 
 ### 6. EXPLORE (no actionable rows)
 
-Regenerate the distillation artifacts (command above), then re-seed the section:
+**Parking check first:** if the `## Lane: test-suite` section header in the
+backlog carries a `PARKED` marker, do NOT re-seed — return
+`{status: HOUSEKEEPING, summary: "lane parked (<marker reason>)", signals_to_emit: [], budget_consumed: 0}`.
+The marker states its own unpark condition; only an operator (or a signal
+matching that condition) removes it.
+
+Otherwise: regenerate the distillation artifacts (command above), then re-seed the section:
 one row per top-10 same-file cluster family not already present (and not
 previously verdicted keep_all), plus one design-first row per new top-3
 cross-file cluster. `budget_consumed: 1`.
