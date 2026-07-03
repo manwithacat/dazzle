@@ -36,6 +36,8 @@ from dazzle.http.runtime.usage_signal import (
     read_usage_counts_for_request,
 )
 from dazzle.page import app_paths
+from dazzle.page.command_index import build_command_index, filter_command_index
+from dazzle.page.command_render import render_command_results
 from dazzle.page.converters.nav_builder import (
     NavGroup,
     NavLink,
@@ -3165,4 +3167,39 @@ def create_page_routes(
                 _make_root_redirect_handler(deps, _persona_ws_routes, _fallback_ws_route)
             )
 
+    # Command-palette results endpoint (HaTchi-MaXchi tranche 2B adoption).
+    # Returns persona-scoped `.dz-command__item` markup for the `dz-command`
+    # palette's hx-get input. Access uses the same source of truth as the
+    # sidebar, so the palette never surfaces a destination that would 403.
+    if getattr(appspec, "workspaces", None):
+        router.get("/command", response_class=HTMLResponse)(
+            _make_command_handler(deps, appspec, app_prefix)
+        )
+
     return router
+
+
+def _make_command_handler(
+    deps: _PageRouterConfig, appspec: ir.AppSpec, app_prefix: str
+) -> Callable[[Request], Any]:
+    """Build the `/command` results handler bound to this app's index."""
+
+    async def command_handler(request: Request) -> Response:
+        roles: list[str] = []
+        is_superuser = False
+        if deps.get_auth_context is not None:
+            try:
+                auth_ctx = await _resolve_auth_context(deps.get_auth_context, request)
+                if auth_ctx and auth_ctx.is_authenticated and auth_ctx.user is not None:
+                    roles = list(getattr(auth_ctx.user, "roles", None) or [])
+                    is_superuser = bool(getattr(auth_ctx.user, "is_superuser", False))
+            except Exception:
+                logger.warning("command palette: auth resolution failed", exc_info=True)
+        index = build_command_index(
+            appspec, roles=roles, is_superuser=is_superuser, app_prefix=app_prefix
+        )
+        query = request.query_params.get("q", "")
+        html = render_command_results(filter_command_index(index, query))
+        return HTMLResponse(content=html)
+
+    return command_handler

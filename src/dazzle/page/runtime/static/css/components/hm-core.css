@@ -258,7 +258,10 @@ dialog.dz-command {
   border-radius: var(--radius-lg);
   background: var(--colour-surface);
   box-shadow: var(--shadow-lg);
-  margin-block-start: 12vh;
+  /* top-anchored, horizontally centered (native dialog centers by
+     default; override only the block axis) */
+  margin-block: 12vh auto;
+  margin-inline: auto;
 }
 
 dialog.dz-command::backdrop {

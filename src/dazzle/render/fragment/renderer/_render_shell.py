@@ -262,6 +262,23 @@ class _RenderShellMixin:
                 f'<footer class="dz-app-footer">{self._emit(a.footer, ctx)}</footer>'  # type: ignore[arg-type]
             )
         parts.append("</div>")
+        # Command palette (tranche 2B adoption): one empty dz-command dialog
+        # per shell, wired to the app's hx-get endpoint. dz-command.js opens
+        # it on ⌘K; the input fetches persona-scoped results on focus. The
+        # dialog SHELL is fixed markup (render-pure); the results come from
+        # the endpoint (page layer owns CommandEntry rendering).
+        if a.command_endpoint:
+            ep = ctx.escape_attr(a.command_endpoint)
+            parts.append(
+                '<dialog class="dz-command" aria-label="Command palette">'
+                '<input class="dz-command__input" type="search" name="q" '
+                'placeholder="Search workspaces and records…" autocomplete="off" '
+                'aria-label="Search" '
+                f'hx-get="{ep}" hx-trigger="input changed delay:150ms, search, focus once" '
+                'hx-target="next .dz-command__results" hx-swap="innerHTML">'
+                '<div class="dz-command__results" role="listbox"></div>'
+                "</dialog>"
+            )
         parts.append("</div>")
         return "".join(parts)
 

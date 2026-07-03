@@ -276,6 +276,11 @@ class AppShell:
     area. Defaults to `"open"` so the nav is reachable on first paint;
     callers thread the persisted value from `theme.get_sidebar_state()`
     (the `dz_sidebar` cookie). Only `"open"`/`"closed"` are emitted."""
+    command_endpoint: str = ""
+    """HaTchi-MaXchi command palette (tranche 2B adoption). When set (e.g.
+    `"/app/command"`), the shell emits an empty `dz-command` dialog wired to
+    this hx-get endpoint; `dz-command.js` opens it on ⌘K and the input
+    fetches persona-scoped results on focus. Empty omits the palette."""
 
 
 @dataclass(frozen=True, slots=True)

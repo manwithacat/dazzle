@@ -103,3 +103,25 @@ def test_command_controller_bundled_and_wired() -> None:
     assert "dz-command.js" in {p.name for p in build_dist.JS_SOURCES}
     js = (STATIC / "js" / "dz-command.js").read_text()
     assert "metaKey" in js and "htmx:afterSwap" in js and "aria-selected" in js
+
+
+def test_command_dialog_injected_when_endpoint_set() -> None:
+    from dazzle.render.fragment import AppShell, Surface, Text
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    shell = AppShell(
+        body=Surface(header=Text("x"), body=Text("y")),
+        command_endpoint="/app/command",
+    )
+    html = FragmentRenderer().render(shell)  # type: ignore[arg-type]
+    assert 'dialog class="dz-command"' in html
+    assert 'hx-get="/app/command"' in html
+
+
+def test_command_dialog_absent_without_endpoint() -> None:
+    from dazzle.render.fragment import AppShell, Surface, Text
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    shell = AppShell(body=Surface(header=Text("x"), body=Text("y")))
+    html = FragmentRenderer().render(shell)  # type: ignore[arg-type]
+    assert "dz-command" not in html

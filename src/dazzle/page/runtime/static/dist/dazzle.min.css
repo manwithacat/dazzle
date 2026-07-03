@@ -1,4 +1,4 @@
-/* dazzle v0.93.9 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.10 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -6405,7 +6405,8 @@ border: 1px solid var(--colour-border);
 border-radius: var(--radius-lg);
 background: var(--colour-surface);
 box-shadow: var(--shadow-lg);
-margin-block-start: 12vh;
+margin-block: 12vh auto;
+margin-inline: auto;
 }
 dialog.dz-command::backdrop {
 background: oklch(13% 0.028 261.69 / 0.4);

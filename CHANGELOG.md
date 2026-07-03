@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.10] - 2026-07-03
+
+### Added
+- **Command palette adopted fleet-wide (⌘K)** — every Dazzle app with navigation now ships the `dz-command` palette in its app shell, opened with ⌘K/Ctrl-K. Results come from a new persona-scoped `GET /app/command` endpoint (`command_index.build_command_index` reuses `workspace_allowed_personas`, so the palette can never surface a destination that would 403); the input fetches on focus via `hx-get`, arrow/Enter handled by `dz-command.js`. `AppShell.command_endpoint` slot gates the injection; the dialog shell is render-pure, results markup lives in the page layer.
+
 ## [0.93.9] - 2026-07-03
 
 ### Added

@@ -375,6 +375,10 @@ def build_app_chrome_page(
     # E2E locators / agent observers / accessibility tooling that
     # ran against the legacy Jinja `layouts/app_shell.html` template
     # keep working without changes.
+    # Command palette endpoint (tranche 2B): present whenever the app has a
+    # sidebar (i.e. real navigation). app_prefix defaults to /app.
+    app_prefix = getattr(ctx, "app_prefix", "") or "/app"
+    command_endpoint = f"{app_prefix}/command" if sidebar is not None else ""
     body = AppShell(
         sidebar=sidebar,
         header=topbar,
@@ -384,6 +388,7 @@ def build_app_chrome_page(
         workspace_name=getattr(ctx, "workspace_name", "") or "",
         page_purpose=getattr(ctx, "page_purpose", "") or "",
         sidebar_state=sidebar_state,
+        command_endpoint=command_endpoint,
     )
     return Page(
         title=title,
