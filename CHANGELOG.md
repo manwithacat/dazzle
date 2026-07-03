@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.11] - 2026-07-03
+
+### Added
+- **HaTchi-MaXchi static site — the extraction seed.** `scripts/hm_site/build_site.py` generates a fully self-contained `hatchi-maxchi/` directory (shipping CSS, behaviour controllers + a mock htmx4 so the command palette and confirm dialog demo with no server, vendored fonts, and a component gallery where every example is its own copy-paste snippet). `scripts/hm_site/registry.py` is the catalogue (15 components). This is the GitHub-Pages-ready spin-out seed; extraction plan in `docs/superpowers/specs/2026-07-03-hm-extraction-plan.md`.
+
+### Agent Guidance
+- The HaTchi-MaXchi component reference is `scripts/hm_site/registry.py` (canonical HTML per component) rendered by the site gallery. Regenerate the site with `python scripts/hm_site/build_site.py` after adding components.
+
 ## [0.93.10] - 2026-07-03
 
 ### Added

@@ -1,0 +1,251 @@
+window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /> <rect width="7" height="5" x="14" y="3" rx="1" /> <rect width="7" height="9" x="14" y="12" rx="1" /> <rect width="7" height="5" x="3" y="16" rx="1" /></svg>','settings':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /> <circle cx="12" cy="12" r="3" /></svg>','receipt':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V7" /> <path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8" /> <path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z" /></svg>','users':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <path d="M16 3.128a4 4 0 0 1 0 7.744" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <circle cx="9" cy="7" r="4" /></svg>','triangle-alert':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></svg>',};
+/* Minimal htmx4 mock — enough for the static gallery demos.
+   Supports: hx-get (canned responses), hx-confirm -> htmx:confirm event,
+   hx-boost no-op. NOT a real htmx; the point is that the SAME markup that
+   runs against a Dazzle server also demos statically here. */
+(function () {
+  "use strict";
+  var RESPONSES = {
+    "/mock/command": '<div class="dz-command__group">Workspaces</div>' +
+      '<a class="dz-command__item" href="#" role="option">{i:layout-dashboard}<span>Operations Dashboard</span></a>' +
+      '<a class="dz-command__item" href="#" role="option">{i:settings}<span>Platform Admin</span></a>' +
+      '<div class="dz-command__group">Records</div>' +
+      '<a class="dz-command__item" href="#" role="option">{i:receipt}<span>Invoices</span></a>' +
+      '<a class="dz-command__item" href="#" role="option">{i:users}<span>Customers</span></a>' +
+      '<a class="dz-command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>'
+  };
+  // icon placeholders resolved from a tiny inline map (built by the site gen)
+  function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
+  function expand(h) { return h.replace(/\{i:([a-z0-9-]+)\}/g, function (_, n) {
+    return '<span class="dz-icon dz-icon--size-sm">' + icon(n) + '</span>'; }); }
+
+  function fire(el, name, detail) {
+    var evt = new CustomEvent(name, { bubbles: true, cancelable: true, detail: detail });
+    el.dispatchEvent(evt);
+    return evt;
+  }
+
+  function doGet(el) {
+    var url = el.getAttribute("hx-get");
+    var body = expand(RESPONSES[url] || '<div class="dz-command__empty">No results.</div>');
+    var sel = el.getAttribute("hx-target");
+    var target = null;
+    if (sel && sel.indexOf("next ") === 0) {
+      var cls = sel.slice(5).trim();
+      var n = el.nextElementSibling;
+      while (n && !n.matches(cls)) n = n.nextElementSibling;
+      target = n;
+    }
+    if (target) {
+      target.innerHTML = body;
+      fire(target, "htmx:afterSwap", { elt: target });
+    }
+  }
+
+  // hx-get on input/focus/change
+  document.addEventListener("focus", function (e) {
+    if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
+  }, true);
+  document.addEventListener("input", function (e) {
+    if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
+  });
+
+  // hx-confirm -> htmx:confirm (drives dz-confirm.js)
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest && e.target.closest("[hx-confirm]");
+    if (!el) return;
+    e.preventDefault();
+    fire(el, "htmx:confirm", {
+      elt: el,
+      question: el.getAttribute("hx-confirm"),
+      issueRequest: function () {
+        // demo: flash a toast-ish confirmation
+        var note = document.createElement("div");
+        note.className = "hm-toast";
+        note.textContent = "Deleted (demo).";
+        document.body.appendChild(note);
+        setTimeout(function () { note.remove(); }, 1800);
+      }
+    });
+  });
+
+  window.htmx = { version: "mock-4" };
+})();
+
+/* --- dz-confirm.js --- */
+/*
+ * dz-confirm — designed hx-confirm surface (HaTchi-MaXchi tranche 1).
+ *
+ * Intercepts htmx's `htmx:confirm` event and replaces window.confirm with
+ * a designed <dialog class="dz-alert-dialog"> (icon + title + message +
+ * destructive-styled confirm). Every existing `hx-confirm="…"` attribute
+ * in the fleet upgrades automatically — no emitter changes.
+ *
+ * Lifecycle-as-material (taste principle 9): the dialog is created lazily,
+ * reused, and the htmx request is only issued via evt.detail.issueRequest()
+ * on explicit confirm — cancel closes with no request.
+ *
+ * Opt-out: set `data-dz-native-confirm` on the element to keep
+ * window.confirm (e.g. for tests that stub it).
+ */
+(function () {
+  "use strict";
+
+  var dialog = null;
+
+  var LOCK_ICON =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+    'stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
+
+  function ensureDialog() {
+    if (dialog) return dialog;
+    dialog = document.createElement("dialog");
+    dialog.className = "dz-alert-dialog";
+    dialog.innerHTML =
+      '<span class="dz-alert-dialog__icon" aria-hidden="true">' +
+      LOCK_ICON +
+      "</span>" +
+      '<h2 class="dz-alert-dialog__title">Are you sure?</h2>' +
+      '<p class="dz-alert-dialog__message"></p>' +
+      '<div class="dz-alert-dialog__actions">' +
+      '<button type="button" class="dz-button dz-button-outline" data-dz-confirm-cancel>Cancel</button>' +
+      '<button type="button" class="dz-button dz-button-destructive" data-dz-confirm-accept>Confirm</button>' +
+      "</div>";
+    document.body.appendChild(dialog);
+    return dialog;
+  }
+
+  document.addEventListener("htmx:confirm", function (evt) {
+    var elt = evt.detail.elt;
+    if (!elt || elt.hasAttribute("data-dz-native-confirm")) return;
+    var question = evt.detail.question;
+    if (!question) return; // no hx-confirm on this element
+
+    evt.preventDefault(); // suppress window.confirm; we own the flow now
+
+    var dlg = ensureDialog();
+    dlg.querySelector(".dz-alert-dialog__message").textContent = question;
+
+    var accept = dlg.querySelector("[data-dz-confirm-accept]");
+    var cancel = dlg.querySelector("[data-dz-confirm-cancel]");
+
+    function cleanup() {
+      accept.removeEventListener("click", onAccept);
+      cancel.removeEventListener("click", onCancel);
+      dlg.removeEventListener("close", onClose);
+      if (dlg.open) dlg.close();
+    }
+    function onAccept() {
+      cleanup();
+      // true = skip re-running the confirm hook for this request
+      evt.detail.issueRequest(true);
+    }
+    function onCancel() {
+      cleanup();
+    }
+    function onClose() {
+      // Esc / backdrop close — treat as cancel
+      cleanup();
+    }
+
+    accept.addEventListener("click", onAccept);
+    cancel.addEventListener("click", onCancel);
+    dlg.addEventListener("close", onClose);
+
+    dlg.showModal();
+    accept.focus();
+  });
+})();
+
+/* --- dz-command.js --- */
+/*
+ * dz-command — command-palette controller (HaTchi-MaXchi tranche 2B).
+ *
+ * The palette itself is server-rendered markup (dialog.dz-command with an
+ * hx-get input); this controller only owns the purely-client bits:
+ *   - ⌘K / Ctrl-K opens the first .dz-command dialog on the page
+ *   - Esc closes (native <dialog> behaviour, kept)
+ *   - ArrowUp/ArrowDown move [aria-selected] over .dz-command__item
+ *   - Enter activates the selected item (click — works for <a> and
+ *     <button hx-*> items alike)
+ * Results arrive via htmx swaps; selection resets on each swap.
+ */
+(function () {
+  "use strict";
+
+  function palette() {
+    return document.querySelector("dialog.dz-command");
+  }
+
+  function items(dlg) {
+    return Array.prototype.slice.call(
+      dlg.querySelectorAll(".dz-command__item"),
+    );
+  }
+
+  function select(dlg, index) {
+    var list = items(dlg);
+    list.forEach(function (el, i) {
+      if (i === index) {
+        el.setAttribute("aria-selected", "true");
+        el.scrollIntoView({ block: "nearest" });
+      } else {
+        el.removeAttribute("aria-selected");
+      }
+    });
+    return index;
+  }
+
+  function selectedIndex(dlg) {
+    var list = items(dlg);
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].getAttribute("aria-selected") === "true") return i;
+    }
+    return -1;
+  }
+
+  document.addEventListener("keydown", function (evt) {
+    var dlg = palette();
+    if (!dlg) return;
+
+    if ((evt.metaKey || evt.ctrlKey) && (evt.key === "k" || evt.key === "K")) {
+      evt.preventDefault();
+      if (dlg.open) {
+        dlg.close();
+      } else {
+        dlg.showModal();
+        var input = dlg.querySelector(".dz-command__input");
+        if (input) input.focus();
+      }
+      return;
+    }
+
+    if (!dlg.open) return;
+
+    if (evt.key === "ArrowDown" || evt.key === "ArrowUp") {
+      evt.preventDefault();
+      var count = items(dlg).length;
+      if (!count) return;
+      var cur = selectedIndex(dlg);
+      var next = evt.key === "ArrowDown" ? cur + 1 : cur - 1;
+      if (next < 0) next = count - 1;
+      if (next >= count) next = 0;
+      select(dlg, next);
+    } else if (evt.key === "Enter") {
+      var idx = selectedIndex(dlg);
+      if (idx >= 0) {
+        evt.preventDefault();
+        items(dlg)[idx].click();
+      }
+    }
+  });
+
+  // Reset selection whenever htmx swaps new results in.
+  document.addEventListener("htmx:afterSwap", function (evt) {
+    var dlg = palette();
+    if (dlg && dlg.open && dlg.contains(evt.target)) {
+      if (items(dlg).length) select(dlg, 0);
+    }
+  });
+})();
