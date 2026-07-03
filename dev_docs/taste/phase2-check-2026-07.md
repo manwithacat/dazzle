@@ -40,3 +40,37 @@ the Phase 4 gate against the locked margins.
 
 Raw data: `.dazzle/qa/taste/phase2-check.json` (gitignored);
 protocol identical to `dev_docs/taste/baseline-2026-07-02.md`.
+
+---
+
+# Phase 3 component pass — evidence check (2026-07-03, v0.93.5)
+
+Same protocol, same 14 references, 26-image blind pool, 3 sonnet judges
+(429 scores, 0 problems). Reference cohort mean 5.26 (baseline 5.54,
+phase 2 5.09) — within-run gaps remain the metric.
+
+## Gap trajectory (pooled, vs same-run references)
+
+| App | Baseline | Phase 2 | Phase 3 |
+|---|---|---|---|
+| ops_dashboard | 2.22 | 1.49 | 1.52 (flat — within noise) |
+| design_studio | 2.47 | 2.24 | **2.02** |
+
+## Reading
+
+Phase 3 targeted the content-light residue, and that is what moved:
+design_studio's largest per-dimension gains are exactly the seams touched —
+perceived_craft +0.83 (nav icons, badge SVGs, card shadows),
+typographic_hierarchy +0.50, color_discipline +0.44. ops_dashboard, which
+took its big step from the Phase 2 foundations, holds its gap (1.49→1.52,
+inside judge noise) with modest dimension gains (dark_mode_integrity +0.56,
+state_completeness +0.28).
+
+Cumulative from baseline: ops_dashboard −0.70 gap, design_studio −0.45.
+The worst remaining screens are the RBAC-denied raw-JSON 403 pages (#1536)
+— a product fix, not a CSS one. Next: Phase 4 full-fleet judgment against
+the locked margins (with persona-matched workspace sampling per the
+baseline's protocol note), after #1536-class fixes and any straggler
+per-app sitespec work.
+
+Raw data: `.dazzle/qa/taste/phase3-check.json` (gitignored).
