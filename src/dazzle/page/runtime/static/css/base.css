@@ -94,8 +94,8 @@ select {
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--colour-brand);
-  outline-offset: 1px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 button {
@@ -114,8 +114,16 @@ button:hover:not(:disabled) {
 }
 
 button:focus-visible {
-  outline: 2px solid var(--colour-brand);
-  outline-offset: 1px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* TASTE-1 safety net: every other focusable gets the same ring — links,
+ * summary, ARIA widgets, tabindex hosts. :where() keeps specificity 0 so
+ * components can still opt into richer treatments without fighting it. */
+:where(a, summary, [tabindex]:not([tabindex="-1"]), [role="button"], [role="tab"], [role="menuitem"]):focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 button:disabled {

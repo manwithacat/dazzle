@@ -94,6 +94,12 @@
 
   /* ─────────────────────────── radii ───────────────────────────────
    * Use semantic names. Full = pill. */
+  /* Focus ring (HaTchi-MaXchi TASTE-1): accent at 40% alpha, 2px, offset
+     2px — one ring vocabulary for every interactive element. */
+  --focus-ring-color: color-mix(in oklab, var(--colour-brand) 40%, transparent);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
   --radius-sm: 0.25rem;  /* 4px — small inputs, badges */
   --radius-md: 0.375rem; /* 6px — cards, buttons */
   --radius-lg: 0.75rem;  /* 12px — large cards, modals */
