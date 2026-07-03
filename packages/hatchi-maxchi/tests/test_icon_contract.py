@@ -79,3 +79,20 @@ def test_icon_span_label_makes_icon_meaningful() -> None:
 def test_label_is_escaped() -> None:
     out = lucide_svg_html("check", cls="dz-icon", label='a"b')
     assert 'aria-label="a&quot;b"' in out
+
+
+# ── build-time fail-loud on an unknown icon token ─────────────────────────
+
+
+def test_unknown_icon_token_fails_loud() -> None:
+    from build_site import expand_icons
+
+    with pytest.raises((KeyError, ValueError)) as exc:
+        expand_icons("<i>{svg:definitely-not-an-icon}</i>")
+    assert "definitely-not-an-icon" in str(exc.value)
+
+
+def test_known_icon_token_still_expands() -> None:
+    from build_site import expand_icons
+
+    assert "<svg" in expand_icons("<i>{svg:check}</i>")

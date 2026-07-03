@@ -89,11 +89,19 @@ def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     ).format(n=len(parts) + 1, parts=" · ".join(parts), id=_html.escape(hyperpart.id))
 
 
+def _require(name: str) -> str:
+    """Fail the build loud on an unknown icon token — a typo'd ``{svg:...}``
+    should not silently render the fallback and slip into the gallery."""
+    if name not in ICONS:
+        raise ValueError(f"unknown icon token '{name}' — add it via icons/gen_registry.py")
+    return name
+
+
 def expand_icons(markup: str) -> str:
     markup = _ICON_RE.sub(
-        lambda m: lucide_icon_html(m.group(1), cls="dz-icon dz-icon--size-sm"), markup
+        lambda m: lucide_icon_html(_require(m.group(1)), cls="dz-icon dz-icon--size-sm"), markup
     )
-    markup = _SVG_RE.sub(lambda m: lucide_svg_html(m.group(1), cls=""), markup)
+    markup = _SVG_RE.sub(lambda m: lucide_svg_html(_require(m.group(1)), cls=""), markup)
     return markup
 
 
