@@ -34,11 +34,14 @@ jobs:
           python build.py --out /tmp/hm-ax --prefix ax-
       - run: python -m pytest tests/test_contract.py tests/test_boundary.py -q
 
-  # Interactive contracts in headless Chromium: command palette keys
-  # (⌘K / Esc / arrows), designed hx-confirm interception, theme toggle
-  # + persistence, copy-to-clipboard feedback.
+  # Interactive contracts in headless Chromium AND WebKit (Safari's
+  # engine): command palette keys (⌘K / Esc / arrows) + pointer dismiss
+  # (backdrop tap, close button — the mobile paths), designed hx-confirm
+  # interception, theme toggle + persistence, copy feedback. WebKit
+  # catches Safari/iPadOS regressions the others miss (e.g. a flex/abspos
+  # layout that collapses only in WebKit).
   behaviour:
-    name: Behaviour (headless Chromium)
+    name: Behaviour (Chromium + WebKit)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +50,7 @@ jobs:
           python-version: "3.12"
       - run: |
           pip install pytest playwright
-          playwright install --with-deps chromium
+          playwright install --with-deps chromium webkit
       - run: python -m pytest tests/test_behaviour.py -q
 
   # WCAG 2.2 AA conformance via axe-core, light + dark + opened-overlay

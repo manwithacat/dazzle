@@ -124,9 +124,16 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     var target = null;
     if (sel && sel.indexOf("next ") === 0) {
       var cls = sel.slice(5).trim();
-      var n = el.nextElementSibling;
-      while (n && !n.matches(cls)) n = n.nextElementSibling;
-      target = n;
+      // htmx `next <sel>` = the first element matching sel that appears
+      // AFTER el in document order (not just the immediate sibling). This
+      // matches real htmx and frees the markup to wrap the input.
+      var all = document.querySelectorAll(cls);
+      for (var i = 0; i < all.length; i++) {
+        if (el.compareDocumentPosition(all[i]) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          target = all[i];
+          break;
+        }
+      }
     }
     if (target) {
       target.innerHTML = body;

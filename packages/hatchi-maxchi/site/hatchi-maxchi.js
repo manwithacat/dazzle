@@ -32,9 +32,16 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     var target = null;
     if (sel && sel.indexOf("next ") === 0) {
       var cls = sel.slice(5).trim();
-      var n = el.nextElementSibling;
-      while (n && !n.matches(cls)) n = n.nextElementSibling;
-      target = n;
+      // htmx `next <sel>` = the first element matching sel that appears
+      // AFTER el in document order (not just the immediate sibling). This
+      // matches real htmx and frees the markup to wrap the input.
+      var all = document.querySelectorAll(cls);
+      for (var i = 0; i < all.length; i++) {
+        if (el.compareDocumentPosition(all[i]) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          target = all[i];
+          break;
+        }
+      }
     }
     if (target) {
       target.innerHTML = body;
@@ -265,16 +272,23 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     }
   });
 
-  // Pointer dismiss — the ONLY way to close on a touch device with no
-  // Esc key. The palette has padding:0 so its children fill it; a click
-  // whose target is the <dialog> itself is therefore a backdrop click
-  // (outside the box). Also handles the explicit close button. Native
-  // `<dialog closedby="any">` gives this for free where supported (recent
-  // Chromium); this handler is the cross-browser floor.
+  // Pointer dismiss — the ONLY way to close on a touch device with no Esc
+  // key. Two paths: the explicit close button (a native <button>, so its
+  // tap fires reliably everywhere incl. iOS Safari) and a backdrop tap.
+  // For the backdrop we check `target === dlg`: a modal <dialog>'s box is
+  // its content, so a click on the surrounding backdrop targets the dialog
+  // ELEMENT, while a click anywhere else (e.g. the opener button) targets
+  // that element — so this never fires on the same click that opened the
+  // palette. (A naive "outside the dialog rect" test would: the opener is
+  // outside, so it'd close on open.) Native `closedby="any"` covers this
+  // where supported; this is the cross-browser floor.
   document.addEventListener("click", function (evt) {
     var dlg = palette();
     if (!dlg || !dlg.open) return;
-    if (evt.target === dlg || evt.target.closest("[data-hm-close-command]")) {
+    if (
+      evt.target === dlg ||
+      (evt.target.closest && evt.target.closest("[data-hm-close-command]"))
+    ) {
       dlg.close();
     }
   });

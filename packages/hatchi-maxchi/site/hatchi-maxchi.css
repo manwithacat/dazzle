@@ -3758,13 +3758,21 @@ dialog.dz-command::backdrop {
   backdrop-filter: blur(2px);
 }
 
-.dz-command__input {
-  width: 100%;
-  /* right padding leaves room for the close button overlaid on this row */
-  padding: var(--space-lg);
-  padding-inline-end: calc(var(--space-lg) + 2rem);
-  border: none;
+/* input + close share a flex row (the bar); results follow. Flex, not
+   absolute positioning — abspos against a modal <dialog> is fragile on
+   Safari/iPadOS (the button landed at its static position there, so taps
+   on the expected top-right corner missed it). */
+.dz-command__bar {
+  display: flex;
+  align-items: center;
   border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-command__input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-lg);
+  border: none;
   background: transparent;
   color: var(--colour-text);
   font-family: var(--font-sans);
@@ -3774,17 +3782,15 @@ dialog.dz-command::backdrop {
 }
 
 /* Always-visible dismiss affordance — essential on touch (no Esc key).
-   Overlaid on the input's search row via absolute positioning so the
-   input, close, and results stay DOM-order siblings (htmx `next`). */
+   A native <button> so its tap fires reliably, incl. on iOS Safari. */
 .dz-command__close {
-  position: absolute;
-  inset-block-start: var(--space-md);
-  inset-inline-end: var(--space-md);
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-inline-end: var(--space-sm);
   padding: 0;
   border: none;
   border-radius: var(--radius-sm);

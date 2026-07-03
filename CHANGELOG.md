@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.35] - 2026-07-03
+
+### Fixed
+- **Command palette close button was invisible/untappable on Safari/iPadOS.** The button used absolute positioning inside a modal `<dialog>`; in WebKit that collapsed it to **0×0** (an empty box at the wrong place), so taps on the expected top-right × missed and the palette couldn't be closed. Restructured to a **flex bar** (input + close share a row; results follow) — reliable placement, no abspos-against-modal-dialog fragility. The gallery mock's `next` resolution now scans forward in the DOM (matching real htmx) so the wrapper doesn't break result targeting. Applied to both the canonical `command` Hyperpart and Dazzle's shell emitter.
+
+### Added
+- **HM behaviour tests now run in WebKit (Safari's engine) as well as Chromium** — the CI `behaviour` job installs both, and every interaction test is parametrised over both engines (WCAG/visual stay Chromium, their baselines being Chromium-rendered). This is what caught the 0×0 collapse; a direct regression pin asserts the close button has a real box and sits top-right. Real cross-browser interaction testing in GitHub Actions, on the actual Safari engine.
+
 ## [0.93.34] - 2026-07-03
 
 ### Added

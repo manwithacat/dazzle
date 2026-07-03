@@ -278,6 +278,7 @@ class _RenderShellMixin:
             # siblings so `next .dz-command__results` resolves.
             parts.append(
                 '<dialog class="dz-command" aria-label="Command palette" closedby="any">'
+                '<div class="dz-command__bar">'
                 '<input class="dz-command__input" type="search" name="q" '
                 'placeholder="Search workspaces and records…" autocomplete="off" '
                 'aria-label="Search" '
@@ -285,7 +286,7 @@ class _RenderShellMixin:
                 'hx-target="next .dz-command__results" hx-swap="innerHTML">'
                 '<button type="button" class="dz-command__close" data-hm-close-command '
                 'aria-label="Close command palette">'
-                f"{lucide_svg_html('x', cls='')}</button>"
+                f"{lucide_svg_html('x', cls='')}</button></div>"
                 '<div class="dz-command__results" role="listbox" aria-label="Results"></div>'
                 "</dialog>"
             )

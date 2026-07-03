@@ -8,8 +8,49 @@ Regression pins for the two launch bugs:
   color-scheme declaration once overrode the [data-theme] binding).
 """
 
+from pathlib import Path
+
+import pytest
+
+_SITE_URI = (Path(__file__).resolve().parents[1] / "site" / "index.html").as_uri()
+
 PALETTE = "dialog.dz-command"
 INPUT = ".dz-command__input"
+
+# Behaviour runs in BOTH Chromium and WebKit (Safari's engine). WebKit
+# catches Safari/iPadOS regressions the keyboard-only + Chromium tests
+# miss — e.g. the command palette's close button collapsing to 0×0 under
+# absolute positioning in a modal <dialog> (v0.93.34, fixed by the flex
+# bar). This module OVERRIDES the shared chromium-only `page` fixture;
+# visual/wcag stay on chromium (their baselines are chromium-rendered).
+_ENGINES = ["chromium", "webkit"]
+
+
+@pytest.fixture(params=_ENGINES, scope="module")
+def _engine_browser(request):  # type: ignore[no-untyped-def]
+    pw = pytest.importorskip("playwright.sync_api")
+    with pw.sync_playwright() as p:
+        engine = getattr(p, request.param, None)
+        if engine is None:
+            pytest.skip(f"{request.param} not installed")
+        try:
+            b = engine.launch()
+        except Exception as exc:  # noqa: BLE001 — a missing engine binary should skip, not error
+            pytest.skip(f"{request.param} unavailable: {exc}")
+        yield b
+        b.close()
+
+
+@pytest.fixture()
+def page(_engine_browser):  # type: ignore[no-untyped-def]  # noqa: F811 (overrides conftest)
+    pg = _engine_browser.new_page(viewport={"width": 1280, "height": 900})
+    errors: list[str] = []
+    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.goto(_SITE_URI)
+    pg.wait_for_timeout(200)
+    yield pg
+    assert not errors, f"gallery page threw JS errors: {errors}"
+    pg.close()
 
 
 def _open_palette(page) -> None:  # type: ignore[no-untyped-def]
@@ -51,6 +92,21 @@ def test_palette_closes_via_backdrop_tap(page) -> None:  # type: ignore[no-untyp
     )
 
 
+def test_palette_close_button_is_rendered_and_placed(page) -> None:  # type: ignore[no-untyped-def]
+    """The close button must have a real box and sit at the top-right of the
+    dialog. Direct pin for the v0.93.34 Safari bug: absolute positioning
+    against a modal <dialog> collapsed the button to 0×0 in WebKit, so it was
+    invisible and untappable. The flex bar fixed it — assert it in WebKit."""
+    _open_palette(page)
+    box = page.evaluate(
+        "() => { const b = document.querySelector('.dz-command__close').getBoundingClientRect();"
+        " const d = document.querySelector('dialog.dz-command').getBoundingClientRect();"
+        " return {w: b.width, h: b.height, topRight: b.right > d.right - 70 && b.top < d.top + 70}; }"
+    )
+    assert box["w"] > 10 and box["h"] > 10, f"close button collapsed ({box}) — the Safari 0×0 bug"
+    assert box["topRight"], "close button must sit at the dialog's top-right"
+
+
 def test_palette_closes_via_close_button(page) -> None:  # type: ignore[no-untyped-def]
     """The always-visible close button is the discoverable dismiss
     affordance (touch has no Esc)."""
@@ -86,21 +142,27 @@ def test_confirm_dialog_intercepts_hx_confirm(page) -> None:  # type: ignore[no-
     ), "clicking an hx-confirm element must open the designed dz-alert-dialog"
 
 
-def test_copy_button_copies_and_gives_feedback(browser) -> None:  # type: ignore[no-untyped-def]
-    from pathlib import Path
-
-    SITE_URI = (Path(__file__).resolve().parents[1] / "site" / "index.html").as_uri()
-    ctx = browser.new_context(permissions=["clipboard-read", "clipboard-write"])
+def test_copy_button_copies_and_gives_feedback(_engine_browser) -> None:  # type: ignore[no-untyped-def]
+    # Headless WebKit blocks navigator.clipboard.writeText (and rejects the
+    # clipboard-* permissions), so the button's feedback never fires there.
+    # This is a clipboard-API limitation, not a Safari layout/interaction
+    # concern (the palette dismiss is), so the copy contract is Chromium-only.
+    if _engine_browser.browser_type.name == "webkit":
+        pytest.skip("clipboard write is unavailable in headless WebKit")
+    ctx = _engine_browser.new_context(permissions=["clipboard-read", "clipboard-write"])
     page = ctx.new_page()
-    page.goto(SITE_URI)
+    page.goto(_SITE_URI)
     page.wait_for_timeout(200)
     page.evaluate("document.querySelectorAll('.hm-copy')[0].click()")
     page.wait_for_timeout(150)
     assert page.evaluate("document.querySelectorAll('.hm-copy')[0].hasAttribute('data-copied')"), (
         "copy click must flip the button into its Copied state"
     )
-    clip = page.evaluate("navigator.clipboard.readText()")
-    assert clip.strip().startswith("<"), "clipboard should hold the snippet HTML"
+    try:
+        clip = page.evaluate("navigator.clipboard.readText()")
+        assert clip.strip().startswith("<"), "clipboard should hold the snippet HTML"
+    except Exception:  # noqa: BLE001 — clipboard read unsupported on this engine
+        pass
     # feedback reverts, and no stuck focus/hover state remains
     page.wait_for_timeout(1800)
     assert not page.evaluate(

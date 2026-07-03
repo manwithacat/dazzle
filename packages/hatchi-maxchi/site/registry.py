@@ -142,15 +142,17 @@ HYPERPARTS: list[Hyperpart] = [
         # floor. The close button is the always-visible dismiss affordance —
         # essential on touch, where there is no Esc key.
         '<dialog class="dz-command" aria-label="Command palette" closedby="any">'
-        # input, close, results stay DIRECT siblings so `next
-        # .dz-command__results` resolves by DOM order (the close button sits
-        # between them but doesn't match); the close button is positioned
-        # over the input row via CSS, not a wrapper.
+        # input + close share a flex bar; results follow. `next
+        # .dz-command__results` resolves by DOM order (forward scan), so the
+        # wrapper is fine. Flex layout (not absolute positioning) keeps the
+        # close button reliably placed — abspos against a modal <dialog> is
+        # fragile on Safari/iPadOS (it landed at its static position there).
+        '<div class="dz-command__bar">'
         '<input class="dz-command__input" type="search" placeholder="Search workspaces and records…" '
         'hx-get="/mock/command" hx-trigger="input changed delay:150ms, focus once" '
         'hx-target="next .dz-command__results">'
         '<button type="button" class="dz-command__close" data-hm-close-command '
-        'aria-label="Close command palette">{svg:x}</button>'
+        'aria-label="Close command palette">{svg:x}</button></div>'
         '<div class="dz-command__results" role="listbox" aria-label="Results"></div></dialog>',
         notes="In Dazzle the input's hx-get hits <code>/app/command</code>, which returns "
         "persona-scoped results. Here a mock htmx returns a canned list so the demo works "

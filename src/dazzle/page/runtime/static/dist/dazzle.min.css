@@ -1,4 +1,4 @@
-/* dazzle v0.93.34 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.35 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2646,12 +2646,16 @@ dialog.dz-command::backdrop {
 background: oklch(13% 0.028 261.69 / 0.4);
 backdrop-filter: blur(2px);
 }
-.dz-command__input {
-width: 100%;
-padding: var(--space-lg);
-padding-inline-end: calc(var(--space-lg) + 2rem);
-border: none;
+.dz-command__bar {
+display: flex;
+align-items: center;
 border-block-end: 1px solid var(--colour-border);
+}
+.dz-command__input {
+flex: 1;
+min-width: 0;
+padding: var(--space-lg);
+border: none;
 background: transparent;
 color: var(--colour-text);
 font-family: var(--font-sans);
@@ -2660,14 +2664,13 @@ outline: none;
 box-sizing: border-box;
 }
 .dz-command__close {
-position: absolute;
-inset-block-start: var(--space-md);
-inset-inline-end: var(--space-md);
+flex: none;
 display: inline-flex;
 align-items: center;
 justify-content: center;
-width: 1.75rem;
-height: 1.75rem;
+width: 2.25rem;
+height: 2.25rem;
+margin-inline-end: var(--space-sm);
 padding: 0;
 border: none;
 border-radius: var(--radius-sm);
