@@ -1505,7 +1505,8 @@ def test_action_grid_renders_cta_cards_with_tone_and_count() -> None:
     assert "Open tickets" in html and "New issue" in html and "Static" in html
     assert 'data-dz-tone="warning"' in html
     assert 'data-dz-tone="accent"' in html
-    assert 'data-lucide="ticket"' in html
+    # "ticket" is in the vendored registry -> server-side inline SVG (TASTE-6)
+    assert '<span class="dz-action-card-icon" aria-hidden="true"><svg' in html
     assert "/tickets" in html
     assert ">12<" in html  # count badge
 
@@ -2377,7 +2378,7 @@ def test_task_inbox_builds_items_with_urgency() -> None:
     assert 'data-item-id="i1"' in html
     assert 'data-dz-urgency="due"' in html
     assert 'data-dz-urgency="overdue"' in html
-    assert 'data-icon="register"' in html
+    assert 'data-lucide="register"' in html  # unknown name -> client-hydration fallback
     assert 'href="/r/i1"' in html
 
 

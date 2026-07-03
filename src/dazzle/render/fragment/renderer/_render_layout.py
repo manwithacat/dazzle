@@ -34,6 +34,7 @@ import json
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
+from dazzle.render.fragment.icon_html import lucide_icon_html
 from dazzle.render.fragment.primitives import (
     Badge,
     Card,
@@ -225,9 +226,7 @@ class _RenderLayoutMixin:
         )
 
     def _emit_icon(self, i: Icon, ctx: RenderContext) -> str:
-        name = ctx.escape_attr(i.name)
-        cls = f"dz-icon dz-icon--size-{i.size}"
-        return f'<span class="{cls}" data-icon="{name}" aria-hidden="true"></span>'
+        return lucide_icon_html(i.name, cls=f"dz-icon dz-icon--size-{i.size}")
 
     def _emit_badge(self, b: Badge, ctx: RenderContext) -> str:
         cls = f"dz-badge dz-badge--variant-{b.variant}"

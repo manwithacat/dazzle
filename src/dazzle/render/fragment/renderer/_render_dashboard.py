@@ -21,6 +21,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
+from dazzle.render.fragment.icon_html import lucide_icon_html
 from dazzle.render.fragment.primitives import (
     CohortStripRegion,
     DashboardCard,
@@ -461,9 +462,9 @@ class _RenderDashboardMixin:
                 if item.meta
                 else ""
             )
+            icon_html = lucide_icon_html(item.icon, cls="dz-task-inbox-item-icon")
             inner = (
-                f'<div class="dz-task-inbox-item-icon" '
-                f'data-icon="{ctx.escape_attr(item.icon)}"></div>'
+                f"{icon_html}"
                 f'<div class="dz-task-inbox-item-body">'
                 f'<div class="dz-task-inbox-item-title">{ctx.escape(item.title)}</div>'
                 f"{meta_html}"

@@ -27,6 +27,7 @@ import json
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
+from dazzle.render.fragment.icon_html import lucide_icon_html
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
@@ -543,8 +544,7 @@ class _RenderTablesMixin:
         tone = ctx.escape_attr(a.tone)
         label = ctx.escape(a.label)
         icon_html = (
-            f'<span class="dz-action-card-icon" data-lucide="{ctx.escape_attr(a.icon)}" '
-            f'aria-hidden="true"></span>'
+            lucide_icon_html(a.icon, cls="dz-action-card-icon")
             if a.icon
             else '<span class="dz-action-card-icon-spacer"></span>'
         )
@@ -1135,11 +1135,7 @@ class _RenderTablesMixin:
         rows: list[str] = []
         for entry in s.entries:
             if entry.icon:
-                icon_html = (
-                    f'<span class="dz-status-list-icon" '
-                    f'data-lucide="{ctx.escape_attr(entry.icon)}" '
-                    f'aria-hidden="true"></span>'
-                )
+                icon_html = lucide_icon_html(entry.icon, cls="dz-status-list-icon")
             else:
                 icon_html = '<span class="dz-status-list-icon-spacer" aria-hidden="true"></span>'
 

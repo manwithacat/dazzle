@@ -15,7 +15,8 @@ from dazzle.render.fragment.renderer import FragmentRenderer
 def test_render_icon() -> None:
     r = FragmentRenderer()
     out = r.render(Icon(name="check"))
-    assert 'data-icon="check"' in out
+    # "check" is in the vendored registry -> inline SVG, no client hydration
+    assert "<svg" in out and 'aria-hidden="true"' in out
     assert "dz-icon--size-md" in out
 
 
