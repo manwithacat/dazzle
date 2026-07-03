@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.27] - 2026-07-03
+
+### Fixed
+- **CI: Pillow-less test env crashed `test_taste_panel`** — the frame-crop test now `importorskip`s PIL like every other optional-viewport-dep test (Pillow isn't in the py3.12 CI matrix).
+- **PyPI wheel smoke test: bare installs lost the console script.** `dazzle.qa.capture` imported `dazzle.testing.*` at module level, dragging `e2e_runner → httpx` (a dev-extra dep) into the `dazzle` CLI import chain. Both imports are now function-deferred (#1438 pattern, baseline raised with justification).
+
 ## [0.93.26] - 2026-07-03
 
 ### Changed

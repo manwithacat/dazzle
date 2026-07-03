@@ -303,6 +303,7 @@
   "src/dazzle/perf/tracer.py": 1,
   "src/dazzle/pitch/extractor.py": 2,
   "src/dazzle/pitch/generators/pptx_gen.py": 2,
+  "src/dazzle/qa/capture.py": 2,
   "src/dazzle/qa/signing_seed.py": 1,
   "src/dazzle/qa/trial_verdict_fallback.py": 1,
   "src/dazzle/rbac/report.py": 1,

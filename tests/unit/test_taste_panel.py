@@ -102,7 +102,7 @@ def test_assemble_pool_skips_missing_files(tmp_path: Path) -> None:
 
 
 def test_normalize_pool_frames_crops_tall_images_only(tmp_path: Path) -> None:
-    from PIL import Image
+    Image = pytest.importorskip("PIL.Image")  # Pillow is an optional (viewport) dep
 
     from dazzle.qa.taste_panel import PanelImage, normalize_pool_frames
 

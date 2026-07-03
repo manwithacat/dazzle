@@ -24,13 +24,14 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dazzle.core.access import workspace_allowed_personas
 from dazzle.core.ir.identity import spec_display_id
 from dazzle.qa.models import CapturedScreen
-from dazzle.testing.browser_gate import BrowserGate
-from dazzle.testing.session_manager import SessionManager
+
+if TYPE_CHECKING:
+    from dazzle.testing.session_manager import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +164,13 @@ async def capture_screenshots(
     site_url = site_url.rstrip("/")
     resolved_output_dir = output_dir or (Path(project_dir) / ".dazzle" / "qa" / "screenshots")
     resolved_output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Deferred (#1438 pattern): dazzle.testing eagerly imports e2e_runner ->
+    # httpx, which a bare `pip install dazzle-dsl` doesn't ship. Importing at
+    # module level broke the console script on wheel-only installs (caught
+    # by the PyPI smoke test).
+    from dazzle.testing.browser_gate import BrowserGate
+    from dazzle.testing.session_manager import SessionManager
 
     session_manager = SessionManager(project_dir, base_url=api_url)
     gate = BrowserGate(max_concurrent=1, headless=True)
