@@ -27,7 +27,12 @@
 @import url("reset.css") layer(reset);
 @import url("../vendor/tom-select.css") layer(vendor);
 @import url("../vendor/flatpickr.css") layer(vendor);
-@import url("fonts.css") layer(vendor); /* Geist @font-face (HaTchi-MaXchi Phase 2) */
+/* Geist @font-face + ALL design-system CSS (tokens/base/components) come
+ * from the HaTchi-MaXchi dist artifact (packages/hatchi-maxchi/dist/
+ * hatchi-maxchi.css, pre-layered) — consumed by css_loader/build_dist as
+ * one published bundle since boundary Phase 2. Not @importable from here
+ * (lives outside static/); this file is a human-readable ordering
+ * reference for the Dazzle-side files only. */
 /* vendor/quill.snow.css removed in #977 cycle 4 — Quill replaced by
  * dz-richtext (Dazzle-native, bundled). Caught by the /fuzz runtime
  * pass: every rich_text page was 404ing on this stale @import.

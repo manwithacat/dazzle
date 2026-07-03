@@ -39,11 +39,14 @@ def test_component_css_in_dev_bundle(selector: str) -> None:
 def test_confirm_controller_bundled() -> None:
     import scripts.build_dist as build_dist  # type: ignore[import-not-found]
 
+    # Phase 2: controllers ship inside the HM dist artifact.
     names = {p.name for p in build_dist.JS_SOURCES}
-    assert "dz-confirm.js" in names, (
-        "dz-confirm.js dropped from build_dist.JS_SOURCES — every hx-confirm "
-        "would regress to window.confirm"
+    assert "hatchi-maxchi.js" in names, (
+        "the HM dist JS dropped from build_dist.JS_SOURCES — every hx-confirm "
+        "would regress to window.confirm and the command palette would lose ⌘K"
     )
+    dist_js = (HM / "dist" / "hatchi-maxchi.js").read_text()
+    assert "htmx:confirm" in dist_js, "dz-confirm controller missing from the HM dist JS"
 
 
 def test_confirm_controller_intercepts_htmx_confirm() -> None:
@@ -101,8 +104,9 @@ def test_tranche2b_css_in_dev_bundle(selector: str) -> None:
 def test_command_controller_bundled_and_wired() -> None:
     import scripts.build_dist as build_dist  # type: ignore[import-not-found]
 
-    assert "dz-command.js" in {p.name for p in build_dist.JS_SOURCES}
-    js = (HM / "controllers" / "dz-command.js").read_text()
+    # Phase 2: controllers ship inside the HM dist artifact.
+    assert "hatchi-maxchi.js" in {p.name for p in build_dist.JS_SOURCES}
+    js = (HM / "dist" / "hatchi-maxchi.js").read_text()
     assert "metaKey" in js and "htmx:afterSwap" in js and "aria-selected" in js
 
 

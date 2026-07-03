@@ -1,4 +1,7 @@
+@layer vendor, tokens, base, components;
+
 /* ── base/fonts.css ── */
+@layer vendor {
 /*
  * HaTchi-MaXchi type foundation — Geist + Geist Mono, self-hosted.
  *
@@ -25,7 +28,9 @@
   font-display: swap;
 }
 
+}
 /* ── tokens/tokens.css ── */
+@layer tokens {
 /*
  * tokens.css — Dazzle design system as CSS custom properties.
  *
@@ -394,7 +399,9 @@
   }
 }
 
+}
 /* ── base/design-system.css ── */
+@layer tokens {
 /* =============================================================================
    DAZZLE Design System (app-shell layer)
 
@@ -1450,7 +1457,9 @@ progress[data-dz-progress]::-moz-progress-bar {
   border-radius: 2px;
 }
 
+}
 /* ── base/base.css ── */
+@layer base {
 /*
  * base.css — element defaults that apply before any component CSS.
  *
@@ -1628,7 +1637,9 @@ th {
   font-size: var(--text-sm);
 }
 
+}
 /* ── components/alert.css ── */
+@layer components {
 /*
  * dz-alert — HaTchi-MaXchi tranche 1 (spec: hatchi-maxchi-standalone).
  *
@@ -1864,7 +1875,9 @@ dialog.dz-alert-dialog::backdrop {
   justify-content: center;
 }
 
+}
 /* ── components/badge.css ── */
+@layer components {
 /*
  * badge.css — status / state / enum badge component.
  *
@@ -1991,7 +2004,9 @@ dialog.dz-alert-dialog::backdrop {
   display: block;
 }
 
+}
 /* ── components/button.css ── */
+@layer components {
 /*
  * button.css — button component family.
  *
@@ -2097,7 +2112,9 @@ dialog.dz-alert-dialog::backdrop {
   font-size: var(--text-xs);
 }
 
+}
 /* ── components/form.css ── */
+@layer components {
 /*
  * form.css — form field component family.
  *
@@ -2733,7 +2750,9 @@ input.dz-switch:checked::before {
   input.dz-switch, input.dz-switch::before { transition: none; }
 }
 
+}
 /* ── components/fragment-primitives.css ── */
+@layer components {
 /*
  * fragment-primitives.css — visual chrome for typed Fragment renderer output.
  *
@@ -3462,7 +3481,9 @@ input.dz-switch:checked::before {
   background: var(--brand-700);
 }
 
+}
 /* ── components/hm-core.css ── */
+@layer components {
 /*
  * hm-core — HaTchi-MaXchi tranche 2A components (spec:
  * hatchi-maxchi-standalone). Accumulates new standalone-system
@@ -3849,7 +3870,9 @@ dialog.dz-command::backdrop {
 }
 .dz-scroll-area::-webkit-scrollbar-track { background: transparent; }
 
+}
 /* ── components/htmx-states.css ── */
+@layer components {
 /*
  * htmx-states.css — HTMX runtime-class styling.
  *
@@ -3938,7 +3961,9 @@ button.htmx-request,
   }
 }
 
+}
 /* ── components/table.css ── */
+@layer components {
 /*
  * table.css — filterable_table component family.
  *
@@ -4327,7 +4352,9 @@ button.htmx-request,
   display: block;
 }
 
+}
 /* ── components/touch-targets.css ── */
+@layer components {
 /*
  * touch-targets.css — mobile touch hit-area enforcement (#958 cycle 1).
  *
@@ -4392,4 +4419,6 @@ button.htmx-request,
       min-height: var(--dz-touch-target-min);
     }
   }
+}
+
 }

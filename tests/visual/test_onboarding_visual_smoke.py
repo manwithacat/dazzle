@@ -75,11 +75,18 @@ def _build_step(kind: GuideStepKind) -> GuideStep:
     )
 
 
+_FONTS_DIR = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "fonts"
+
+
 def _harness_html(overlay_html: str) -> str:
     """Wrap an overlay HTML fragment in a minimal page that loads the
     framework CSS bundle. No layout chrome — just enough to verify
     the overlay paints."""
-    css = get_bundled_css()
+    # The bundle references /static/fonts/ (the app's mount); on a file://
+    # harness that's unresolvable and the failed fetch surfaces as a console
+    # error — nondeterministically relative to networkidle (it went from
+    # latent to constant when the bundle grew). Point at the real files.
+    css = get_bundled_css().replace('url("/static/fonts/', f'url("{_FONTS_DIR.as_uri()}/')
     return f"""<!doctype html>
 <html lang="en">
 <head>

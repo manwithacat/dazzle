@@ -28,21 +28,28 @@ PKG = Path(__file__).resolve().parent
 
 # Concatenation order mirrors the monorepo cascade: fonts first (families
 # exist before tokens reference them), tokens, base, then components.
+# Each source is wrapped in a CSS cascade layer (declared in LAYER_ORDER);
+# consumers' own unlayered CSS therefore always wins the cascade — override
+# by writing plain rules, no specificity games needed. The layer names are
+# a subset of Dazzle's (reset, vendor, tokens, base, utilities, components,
+# overrides) so the bundle slots into its consumer's layer order unchanged.
 CSS_SOURCES = [
-    "base/fonts.css",
-    "tokens/tokens.css",
-    "base/design-system.css",
-    "base/base.css",
-    "components/alert.css",
-    "components/badge.css",
-    "components/button.css",
-    "components/form.css",
-    "components/fragment-primitives.css",
-    "components/hm-core.css",
-    "components/htmx-states.css",
-    "components/table.css",
-    "components/touch-targets.css",
+    ("vendor", "base/fonts.css"),
+    ("tokens", "tokens/tokens.css"),
+    ("tokens", "base/design-system.css"),
+    ("base", "base/base.css"),
+    ("components", "components/alert.css"),
+    ("components", "components/badge.css"),
+    ("components", "components/button.css"),
+    ("components", "components/form.css"),
+    ("components", "components/fragment-primitives.css"),
+    ("components", "components/hm-core.css"),
+    ("components", "components/htmx-states.css"),
+    ("components", "components/table.css"),
+    ("components", "components/touch-targets.css"),
 ]
+
+LAYER_ORDER = "@layer vendor, tokens, base, components;"
 
 JS_SOURCES = [
     "controllers/dz-confirm.js",
@@ -55,19 +62,21 @@ _PREFIX_RE = re.compile(r"^[a-z][a-z0-9]*-$")
 
 
 def build_css(prefix: str = "dz-") -> str:
-    parts = []
-    for rel in CSS_SOURCES:
+    parts = [LAYER_ORDER, ""]
+    for layer, rel in CSS_SOURCES:
         css = (PKG / rel).read_text(encoding="utf-8")
         # Dazzle serves fonts at /static/fonts/; the standalone bundle
         # keeps them relative, next to the CSS.
         css = css.replace("/static/fonts/", "fonts/")
-        parts.append(f"/* ── {rel} ── */\n{css}")
-    return apply_prefix("\n".join(parts), prefix)
+        parts.append(f"/* ── {rel} ── */\n@layer {layer} {{\n{css}\n}}")
+    # exactly ONE trailing newline: keeps the committed artifacts stable
+    # under end-of-file-fixer (adds if missing, trims if multiple)
+    return apply_prefix("\n".join(parts).rstrip("\n") + "\n", prefix)
 
 
 def build_js(prefix: str = "dz-") -> str:
     parts = [f"/* ── {rel} ── */\n{(PKG / rel).read_text(encoding='utf-8')}" for rel in JS_SOURCES]
-    return apply_prefix("\n".join(parts), prefix)
+    return apply_prefix("\n".join(parts).rstrip("\n") + "\n", prefix)
 
 
 def apply_prefix(text: str, prefix: str) -> str:

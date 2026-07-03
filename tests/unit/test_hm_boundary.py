@@ -85,7 +85,10 @@ def test_build_lists_reference_the_same_package_files() -> None:
         f"bundle and dist bundle would diverge. dev-only: {sorted(dev - dist)}, "
         f"dist-only: {sorted(dist - dev)}"
     )
-    assert dev, "expected @hm: entries — the package seam vanished?"
+    assert dev == {"dist/hatchi-maxchi.css"}, (
+        "Phase 2 invariant: Dazzle consumes ONLY the published dist artifact — "
+        f"found {sorted(dev)}. Per-source @hm: reads reopen the internals seam."
+    )
 
 
 def test_hm_paths_in_build_lists_exist() -> None:

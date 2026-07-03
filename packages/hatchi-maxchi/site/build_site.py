@@ -201,7 +201,9 @@ def build(out_dir: Path) -> None:
             f'stroke-linejoin="round">{inner}</svg>\','
         )
     icon_map += "};\n"
-    (out_dir / "hatchi-maxchi.js").write_text(icon_map + MOCK_HTMX + controllers, encoding="utf-8")
+    (out_dir / "hatchi-maxchi.js").write_text(
+        (icon_map + MOCK_HTMX + controllers).rstrip("\n") + "\n", encoding="utf-8"
+    )
 
     # ── gallery HTML ──
     nav_parts = [

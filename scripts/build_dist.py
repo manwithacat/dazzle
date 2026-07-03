@@ -29,35 +29,25 @@ SITE_STATIC = REPO_ROOT / "src" / "dazzle" / "page" / "static"
 # Each entry is (layer_name, path). Pre-#920 this list was stale and
 # only emitted the three legacy files, so dist/dazzle.min.css shipped
 # with zero .dz-button (and every other v0.62 component) rules.
-CSS_SOURCES: list[tuple[str, Path]] = [
+# Layer name None = pre-layered artifact, appended raw (HM dist carries
+# its own @layer blocks using the same layer names as ours).
+CSS_SOURCES: list[tuple[str | None, Path]] = [
     ("reset", STATIC / "css" / "reset.css"),
     ("vendor", STATIC / "vendor" / "tom-select.css"),
     ("vendor", STATIC / "vendor" / "flatpickr.css"),
-    # Geist/Geist Mono @font-face (HaTchi-MaXchi Phase 2) — vendor layer so
-    # the families exist before tokens reference them.
-    ("vendor", HM / "base" / "fonts.css"),
+    # HaTchi-MaXchi — the PUBLISHED dist artifact (boundary Phase 2), not
+    # per-source files. Rebuild with `python packages/hatchi-maxchi/build.py`
+    # after editing package CSS (drift-gated in the package's tests).
+    (None, HM / "dist" / "hatchi-maxchi.css"),
     # quill.snow.css removed in #977 cycle 4 — replaced by dz-richtext.
     # pickr.css removed in #976 — `widget=color` uses native <input type="color">,
     # no vendor CSS required (mirrors css_loader.CSS_SOURCE_FILES).
-    ("tokens", HM / "tokens" / "tokens.css"),
-    ("tokens", HM / "base" / "design-system.css"),
-    ("base", HM / "base" / "base.css"),
     ("utilities", STATIC / "css" / "utilities.css"),
-    ("components", HM / "components" / "alert.css"),
-    ("components", HM / "components" / "badge.css"),
-    ("components", HM / "components" / "button.css"),
     ("components", STATIC / "css" / "components" / "dashboard.css"),
     ("components", STATIC / "css" / "components" / "detail.css"),
-    ("components", HM / "components" / "form.css"),
-    ("components", HM / "components" / "fragment-primitives.css"),
     ("components", STATIC / "css" / "components" / "fragments.css"),
-    ("components", HM / "components" / "hm-core.css"),
-    ("components", HM / "components" / "htmx-states.css"),
     ("components", STATIC / "css" / "components" / "pdf-viewer.css"),
     ("components", STATIC / "css" / "components" / "regions.css"),
-    ("components", HM / "components" / "table.css"),
-    # #958 — mobile UX (cycle 1: touch targets, cycle 4: scroll containment).
-    ("components", HM / "components" / "touch-targets.css"),
     ("components", STATIC / "css" / "components" / "mobile-scroll.css"),
     # #977 cycle 1 — Dazzle-native rich-text editor.
     ("components", STATIC / "css" / "components" / "richtext.css"),
@@ -106,8 +96,8 @@ JS_SOURCES = [
     # which is all of them, since app_chrome.js_scripts always points at the
     # bundle. Ordered first in the runtime block so the listener is registered
     # before any other runtime code can trigger an htmx request.
-    HM / "controllers" / "dz-command.js",
-    HM / "controllers" / "dz-confirm.js",
+    # HaTchi-MaXchi controllers — the published dist artifact (Phase 2).
+    HM / "dist" / "hatchi-maxchi.js",
     STATIC / "js" / "dz-csrf.js",
     STATIC / "js" / "dz-a11y.js",
     STATIC / "js" / "dz-islands.js",
@@ -231,7 +221,12 @@ def build() -> None:
             print(f"WARNING: missing {src}", file=sys.stderr)
             continue
         content = src.read_text()
-        css_parts.append(f"@layer {layer} {{\n{content}\n}}\n")
+        if layer is None:
+            # Pre-layered HM artifact; its font URLs are standalone-relative —
+            # rewrite to Dazzle's static mount (mirrors css_loader).
+            css_parts.append(content.replace('url("fonts/', 'url("/static/fonts/') + "\n")
+        else:
+            css_parts.append(f"@layer {layer} {{\n{content}\n}}\n")
     for src in CSS_UNLAYERED:
         if not src.exists():
             print(f"WARNING: missing {src}", file=sys.stderr)

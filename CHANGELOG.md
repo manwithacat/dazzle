@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.30] - 2026-07-03
+
+### Changed
+- **HM ⇄ Dazzle boundary, Phase 2 — the design is COMPLETE.** Dazzle now consumes HaTchi-MaXchi as its **published dist artifact** (one pre-layered `dist/hatchi-maxchi.css` + `dist/hatchi-maxchi.js`) instead of 13 per-source `@hm:` reads. The package bundle carries its own `@layer vendor, tokens, base, components` structure (standalone consumers' unlayered CSS now always wins the cascade — override with plain rules); Dazzle's seams rewrite the artifact's standalone-relative font URLs to `/static/fonts/`. The Phase-3 lockstep gate hard-pins `{"dist/hatchi-maxchi.css"}` as the ONLY package read. Verified: full suite green (19,796), fleet screenshot pixel-compare pre/post flip = **0 differing pixels** (light + dark), adversarial review clean (2 stale-doc SEV-3s fixed in-commit).
+- Onboarding visual smoke harness points font URLs at the real files (the `/static/fonts/` 404 on `file://` was a latent, timing-dependent console-error flake that the larger bundle made deterministic); dashboard gates xdist-pinned (fixed-port harness class).
+
+### Agent Guidance
+- After editing ANY HaTchi-MaXchi CSS/JS, run `python packages/hatchi-maxchi/build.py` (and the gallery build if snippets changed) — Dazzle's dev bundle and dist consume `packages/hatchi-maxchi/dist/`, and the package's drift gate fails CI on a stale dist. `css_loader.CSS_SOURCE_FILES` is the source of truth for bundle order; `static/css/dazzle.css` is a reference document only.
+
 ## [0.93.29] - 2026-07-03
 
 ### Added

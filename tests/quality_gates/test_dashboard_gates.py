@@ -13,6 +13,9 @@ import time
 
 import pytest
 
+# Module-scoped http.server on a FIXED port (8766): xdist workers clash.
+pytestmark = pytest.mark.xdist_group("dashboard_gates")
+
 # Skip the whole module if playwright isn't installed (the unit test job in
 # CI doesn't install it). This is a static-harness browser test that still
 # runs wherever playwright is available.
