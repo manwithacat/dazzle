@@ -1,10 +1,18 @@
-"""HaTchi-MaXchi component registry — the copy-paste catalogue.
+"""HaTchi-MaXchi Hyperpart registry — the copy-paste catalogue.
 
-Single source for the static site AND (post-extraction) the agent-facing
-component reference. Each entry is one component: a title, a one-line
-blurb, the canonical HTML (rendered live in the gallery AND shown as the
-copy-paste snippet — they are the same string, so the docs can never drift
-from the demo), and optional notes on the htmx4 wiring.
+A **Hyperpart** is the htmx-native unit of reuse: a *partial* (server-
+rendered markup + classes) plus its *exchange contract(s)* (the endpoint
+request/response the server must satisfy), plus an optional *controller*
+(vanilla JS, only where the platform lacks a primitive). It is NOT a React
+component — there is no client state graph; state lives on the server and
+htmx swaps the markup. Naming it distinctly is deliberate: it stops an
+agent coder importing React priors (client state, composition trees) into
+a server-owned partial.
+
+Single source for the static gallery AND the agent-facing reference. Each
+entry: a title, blurb, the canonical partial (rendered live AND shown as
+the copy-paste snippet — the same string, so docs can't drift from the
+demo), its exchange contracts, and optional wiring notes.
 
 Icon/SVG placeholders (``{icon:name}``) are expanded by the builder from
 the vendored Lucide registry so snippets stay readable.
@@ -16,22 +24,54 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
-class Component:
+class Exchange:
+    """One hypermedia exchange contract.
+
+    A partial carries *affordances* — the `hx-*` controls that initiate a
+    request. An Exchange declares, for one affordance, the request the
+    server must handle and the response fragment it must return. This is
+    the "endpoint response contract" half of a Hyperpart: the thing shadcn
+    never had to standardise (React resolves state on the client), and the
+    thing that makes a component agent-buildable — the server side is a
+    checkable contract, not prose. Vocabulary grounded in *Hypermedia
+    Systems* (Gross/Stepanek/Akşimşek): the request/response round-trip is
+    a "hypermedia exchange".
+
+    The `method`/`endpoint` fields are machine-checked against the `hx-*`
+    attributes in the partial's markup (a Hyperpart that makes a request
+    it doesn't declare — or declares one it doesn't make — fails CI). The
+    prose fields document the contract for the agent/developer consuming it.
+    """
+
+    method: str  # GET / POST / PUT / PATCH / DELETE — matches the hx-<method> attr
+    endpoint: str  # the URL the affordance targets — matches hx-<method>="…"
+    trigger: str  # what fires it (the hx-trigger semantics), human-readable
+    response: str  # the fragment contract the server MUST return
+    swap: str  # where/how the response lands (target selector + swap mode)
+
+
+@dataclass(frozen=True)
+class Hyperpart:
     id: str
     title: str
     group: str
     blurb: str
-    html: str  # rendered live AND shown as the snippet
+    partial: str  # the markup — rendered live AND shown as the snippet
     notes: str = ""
     tags: tuple[str, ...] = field(default_factory=tuple)
+    # The endpoint response contracts this partial's affordances require.
+    # Every hx-{get,post,put,patch,delete} in `partial` must have a matching
+    # Exchange (gated by tests/test_contract.py). hx-confirm is a client
+    # affordance (no server round-trip of its own), so it is exempt.
+    exchanges: tuple[Exchange, ...] = field(default_factory=tuple)
 
 
 # Groups order the gallery nav.
 GROUPS = ["Actions", "Feedback", "Navigation", "Overlays", "Forms", "Data"]
 
-COMPONENTS: list[Component] = [
+HYPERPARTS: list[Hyperpart] = [
     # ── Actions ──────────────────────────────────────────────────────
-    Component(
+    Hyperpart(
         "button",
         "Button",
         "Actions",
@@ -43,7 +83,7 @@ COMPONENTS: list[Component] = [
         '<button class="dz-button dz-button-destructive">Delete</button>'
         "</div>",
     ),
-    Component(
+    Hyperpart(
         "badge",
         "Badge",
         "Feedback",
@@ -56,7 +96,7 @@ COMPONENTS: list[Component] = [
         "</div>",
         tags=("identity",),
     ),
-    Component(
+    Hyperpart(
         "alert",
         "Alert",
         "Feedback",
@@ -67,7 +107,7 @@ COMPONENTS: list[Component] = [
         '<div class="dz-alert__description">Your card ending 4242 expires next month.</div></div></div>',
         tags=("identity",),
     ),
-    Component(
+    Hyperpart(
         "card",
         "Card",
         "Data",
@@ -79,7 +119,7 @@ COMPONENTS: list[Component] = [
         '<span style="width:.875rem;height:.875rem">{svg:trending-up}</span> +12.5% this month</div></div>',
     ),
     # ── Overlays (interactive — need the mock htmx / dialog) ─────────
-    Component(
+    Hyperpart(
         "command",
         "Command palette",
         "Overlays",
@@ -94,19 +134,41 @@ COMPONENTS: list[Component] = [
         "persona-scoped results. Here a mock htmx returns a canned list so the demo works "
         "with no server.",
         tags=("interactive", "htmx"),
+        exchanges=(
+            Exchange(
+                method="GET",
+                endpoint="/app/command",
+                trigger="the search input, on `input` (debounced 150ms) and first `focus`",
+                response='zero or more result rows — `<a>`/`<button class="dz-command__item" '
+                'role="option">` grouped by `<div class="dz-command__group">` headers; '
+                'empty query or no matches returns `<div class="dz-command__empty">`',
+                swap="innerHTML of the sibling `.dz-command__results` listbox",
+            ),
+        ),
     ),
-    Component(
+    Hyperpart(
         "confirm",
         "Confirm dialog",
         "Overlays",
         "Designed replacement for window.confirm — every hx-confirm upgrades automatically.",
         '<button class="dz-button dz-button-destructive" hx-delete="/mock/noop" '
         'hx-confirm="Delete this invoice? This cannot be undone.">Delete invoice</button>',
-        notes="dz-confirm.js intercepts <code>htmx:confirm</code>. No per-button wiring — "
-        "any element with <code>hx-confirm</code> gets the designed dialog.",
+        notes="dz-confirm.js intercepts <code>htmx:confirm</code> (a client affordance — no "
+        "server round-trip). On approval it issues the underlying request. No per-button "
+        "wiring — any element with <code>hx-confirm</code> gets the designed dialog.",
         tags=("interactive", "htmx"),
+        exchanges=(
+            Exchange(
+                method="DELETE",
+                endpoint="/app/invoices/{id}",
+                trigger="the button, after the user approves the designed confirm dialog",
+                response="the server deletes the resource and returns the replacement markup "
+                "for the affected region (e.g. the row's removal, or an empty-state)",
+                swap="per the button's `hx-target`/`hx-swap` (row removal by default)",
+            ),
+        ),
     ),
-    Component(
+    Hyperpart(
         "menu",
         "Menu",
         "Overlays",
@@ -119,7 +181,7 @@ COMPONENTS: list[Component] = [
         '<button class="dz-menu__item" data-dz-tone="destructive">{icon:trash-2} Delete</button></div></details>',
         tags=("interactive",),
     ),
-    Component(
+    Hyperpart(
         "popover",
         "Popover",
         "Overlays",
@@ -129,7 +191,7 @@ COMPONENTS: list[Component] = [
         '<p style="margin:0;font-size:var(--text-sm);color:var(--colour-text-muted)">Filters, previews, quick forms.</p></div></details>',
         tags=("interactive",),
     ),
-    Component(
+    Hyperpart(
         "tooltip",
         "Tooltip",
         "Overlays",
@@ -137,7 +199,7 @@ COMPONENTS: list[Component] = [
         '<button class="dz-button dz-button-outline" data-dz-tooltip="Saved 2 minutes ago">Hover me</button>',
     ),
     # ── Forms ────────────────────────────────────────────────────────
-    Component(
+    Hyperpart(
         "controls",
         "Selection controls",
         "Forms",
@@ -148,7 +210,7 @@ COMPONENTS: list[Component] = [
         '<label class="hm-inline"><input type="checkbox" class="dz-switch" checked> Switch</label>'
         "</div>",
     ),
-    Component(
+    Hyperpart(
         "toggle-group",
         "Toggle group",
         "Navigation",
@@ -159,7 +221,7 @@ COMPONENTS: list[Component] = [
         '<label><input type="radio" name="hm-view"><span>{icon:calendar} Calendar</span></label></fieldset>',
     ),
     # ── Navigation / Data ────────────────────────────────────────────
-    Component(
+    Hyperpart(
         "breadcrumb",
         "Breadcrumb",
         "Navigation",
@@ -168,7 +230,7 @@ COMPONENTS: list[Component] = [
         '<li><a href="#">Home</a></li><li><a href="#">Invoices</a></li>'
         '<li aria-current="page">INV-0042</li></ol></nav>',
     ),
-    Component(
+    Hyperpart(
         "avatar",
         "Avatar",
         "Data",
@@ -177,7 +239,7 @@ COMPONENTS: list[Component] = [
         '<span class="dz-avatar-group"><span class="dz-avatar">JD</span><span class="dz-avatar">AK</span><span class="dz-avatar">+3</span></span>'
         '<span class="dz-avatar" data-dz-size="lg">HM</span></div>',
     ),
-    Component(
+    Hyperpart(
         "progress",
         "Progress",
         "Feedback",
@@ -186,7 +248,7 @@ COMPONENTS: list[Component] = [
         '<div class="dz-progress" role="progressbar" aria-label="Storage used" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="width:62%"></div></div>'
         '<div class="dz-progress" data-dz-tone="success" role="progressbar" aria-label="Upload progress" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="width:100%"></div></div></div>',
     ),
-    Component(
+    Hyperpart(
         "empty-state",
         "Empty state",
         "Feedback",

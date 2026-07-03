@@ -6,6 +6,14 @@ approved and is the prerequisite machinery.
 **Parents:** `2026-07-03-hatchi-maxchi-standalone-design.md`,
 `2026-07-03-hm-boundary-and-wcag-gate-design.md`
 
+## The unit
+
+The HM unit is a **Hyperpart** (James, 2026-07-03): a *partial* + its
+*exchange contract(s)* + an optional *controller* — deliberately NOT called
+a "component" (that imports React priors an agent shouldn't apply to a
+server-owned partial). Below, "component" refers to shadcn's React units in
+comparison; "Hyperpart" is ours.
+
 ## The thesis (James)
 
 Standardise "components" — htmx-inscribed HTML partials (markup + classes

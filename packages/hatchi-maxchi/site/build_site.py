@@ -26,12 +26,40 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from build import FONT_DIR, build_css, build_js  # noqa: E402  (package build.py)
 from icons import ICONS, LUCIDE_VERSION, lucide_icon_html, lucide_svg_html  # noqa: E402
-from registry import COMPONENTS, GROUPS  # noqa: E402
+from registry import GROUPS, HYPERPARTS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 
 _ICON_RE = re.compile(r"\{icon:([a-z0-9-]+)\}")
 _SVG_RE = re.compile(r"\{svg:([a-z0-9-]+)\}")
+
+
+def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    """Render a Hyperpart's hypermedia exchange contracts — the "endpoint
+    response contract" half a server must satisfy for the partial to work."""
+    if not hyperpart.exchanges:
+        return ""
+    rows = []
+    for e in hyperpart.exchanges:
+        rows.append(
+            "<tr>"
+            f'<td><code class="hm-verb">{_html.escape(e.method)}</code> '
+            f"<code>{_html.escape(e.endpoint)}</code></td>"
+            f"<td>{_html.escape(e.trigger)}</td>"
+            f"<td>{_html.escape(e.response)}</td>"
+            f"<td>{_html.escape(e.swap)}</td>"
+            "</tr>"
+        )
+    return (
+        '<details class="hm-contract"><summary>Endpoint contract</summary>'
+        '<table class="hm-contract-table"><thead><tr>'
+        "<th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th>"
+        f"</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+        "<p>The partial above is only half the Hyperpart; the server must "
+        "satisfy this contract for it to work. In Dazzle the response is "
+        "rendered automatically — for any other htmx app, return matching "
+        "markup from your endpoint.</p></details>"
+    )
 
 
 def expand_icons(markup: str) -> str:
@@ -166,6 +194,20 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-copy[data-copied] .hm-copy__done { display: inline-flex; }
 .hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .75rem; }
 .hm-notes code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
+.hm-contract { margin-top: .75rem; border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
+.hm-contract > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
+  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
+.hm-contract-table { width: 100%; border-collapse: collapse; font-size: .75rem;
+  background: var(--colour-surface); }
+.hm-contract-table th, .hm-contract-table td { text-align: left; vertical-align: top;
+  padding: .4rem .6rem; border-top: 1px solid var(--colour-border); }
+.hm-contract-table th { color: var(--colour-text-muted); font-weight: var(--weight-medium);
+  text-transform: uppercase; letter-spacing: .04em; font-size: .625rem; }
+.hm-contract-table code { font-family: var(--font-mono); }
+.hm-verb { color: var(--colour-brand-text); font-weight: var(--weight-semibold); }
+.hm-contract > p { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0; padding: .6rem .75rem; }
 .hm-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
   background: var(--colour-text); color: var(--colour-bg); padding: .5rem 1rem;
   border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); }
@@ -211,7 +253,7 @@ def build(out_dir: Path) -> None:
     ]
     body_parts = []
     for group in GROUPS:
-        comps = [c for c in COMPONENTS if c.group == group]
+        comps = [c for c in HYPERPARTS if c.group == group]
         if not comps:
             continue
         nav_parts.append(f'<div class="hm-nav-group">{group}</div>')
@@ -230,12 +272,12 @@ def build(out_dir: Path) -> None:
         "</button>"
     )
 
-    for c in COMPONENTS:
+    for c in HYPERPARTS:
         # Expand icon placeholders ONCE and use the SAME string for the
         # live demo and the snippet — so copied markup carries real
         # inline SVG (a {icon:...} placeholder in the snippet would be
         # dead text in a consumer's app), and demo/docs cannot drift.
-        live = expand_icons(c.html)
+        live = expand_icons(c.partial)
         snippet = _html.escape(live)
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         notes = f'<div class="hm-notes">{c.notes}</div>' if c.notes else ""
@@ -247,6 +289,7 @@ def build(out_dir: Path) -> None:
             f'<div class="hm-code">{copy_button}'
             f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
             f"<code>{snippet}</code></pre></div>"
+            f"{_exchanges_html(c)}"
             f"{notes}</section>"
         )
 
@@ -317,7 +360,7 @@ Every snippet is the live example — copy it into any htmx4 app.
     (out_dir / "index.html").write_text(doc + "\n", encoding="utf-8")
 
     (out_dir / "README.md").write_text(_readme(), encoding="utf-8")
-    print(f"built {len(COMPONENTS)} components -> {out_dir}/index.html")
+    print(f"built {len(HYPERPARTS)} Hyperparts -> {out_dir}/index.html")
 
 
 def _readme() -> str:

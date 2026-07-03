@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.32] - 2026-07-03
+
+### Added
+- **The Hyperpart — HM's named unit of reuse.** A *partial* (server-rendered markup) + its *exchange contract(s)* (the endpoint request/response the server must satisfy) + an optional *controller*. Named distinctly from "component" on purpose: the term is for agent coders, and "component" imports React priors (client state, composition trees) that are wrong for a server-owned partial. The registry's `Component` dataclass is now `Hyperpart` (field `html` → `partial`); `Exchange` is a first-class, CI-checked artifact. New contract gates: a partial that makes an `hx-{get,post,put,patch,delete}` request with no declared `Exchange` (or declares one it doesn't make, or leaves a contract field blank) fails the build. The gallery renders each interactive Hyperpart's "Endpoint contract" (request / trigger / response fragment / swap). Vocabulary from *Hypermedia Systems*: the round-trip is a "hypermedia exchange", the individual `hx-*` control an "affordance". Thesis + naming rationale: `docs/superpowers/specs/2026-07-03-hm-shadcn-catalogue-thesis.md`.
+
 ## [0.93.31] - 2026-07-03
 
 ### Added

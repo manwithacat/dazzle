@@ -16,7 +16,11 @@ sys.path.insert(0, str(PKG))
 sys.path.insert(0, str(PKG / "site"))
 
 from build import build_css, build_js  # noqa: E402
-from registry import COMPONENTS  # noqa: E402
+from registry import HYPERPARTS  # noqa: E402
+
+# hx-* attributes that make a server request (each REQUIRES a declared
+# Exchange). hx-confirm is a client affordance (no round-trip) → exempt.
+_REQUEST_ATTR_RE = re.compile(r'hx-(get|post|put|patch|delete)="([^"]+)"')
 
 # Structural wrappers that intentionally carry no rule of their own
 # (styled via inheritance / parent selectors). Additions here need a
@@ -29,8 +33,8 @@ SEMANTIC_ONLY = {
 
 def _used_classes() -> set[str]:
     used: set[str] = set()
-    for c in COMPONENTS:
-        for m in re.finditer(r'class="([^"]+)"', c.html):
+    for c in HYPERPARTS:
+        for m in re.finditer(r'class="([^"]+)"', c.partial):
             used.update(cls for cls in m.group(1).split() if cls.startswith("dz-"))
     return used
 
@@ -106,3 +110,62 @@ def test_prefix_transform_is_total() -> None:
 
 def test_default_prefix_is_dz() -> None:
     assert ".dz-button" in build_css()
+
+
+# ── Hypermedia exchange contracts (the "partial + endpoint contract"
+#    concept) — every request a partial makes must be a DECLARED contract,
+#    and every declared contract must correspond to a real affordance. ──
+
+
+def test_every_request_affordance_has_a_declared_exchange() -> None:
+    """A partial that makes an hx request it doesn't declare is an
+    undocumented contract — an agent consuming the component can't know
+    what endpoint to build. Fail loudly."""
+    gaps = []
+    for c in HYPERPARTS:
+        declared = {(e.method.upper(), e.endpoint) for e in c.exchanges}
+        for method, _url in _REQUEST_ATTR_RE.findall(c.partial):
+            # markup uses mock endpoints; exchanges declare the REAL contract
+            # — so we require one exchange per request METHOD, not per URL.
+            if not any(m == method.upper() for m, _ in declared):
+                gaps.append(f"{c.id}: hx-{method} in markup with no declared Exchange")
+    assert not gaps, (
+        "components make requests they don't declare as Exchange contracts:\n  " + "\n  ".join(gaps)
+    )
+
+
+def test_no_orphan_exchange_without_an_affordance() -> None:
+    """An Exchange with no matching hx-* control in the markup is a stale
+    contract — the partial doesn't actually make that request."""
+    orphans = []
+    for c in HYPERPARTS:
+        methods_in_markup = {m.upper() for m, _ in _REQUEST_ATTR_RE.findall(c.partial)}
+        for e in c.exchanges:
+            if e.method.upper() not in methods_in_markup:
+                orphans.append(f"{c.id}: Exchange {e.method} {e.endpoint} has no hx-* affordance")
+    assert not orphans, "stale Exchange contracts (no affordance in markup):\n  " + "\n  ".join(
+        orphans
+    )
+
+
+def test_exchange_fields_are_populated() -> None:
+    """Each contract must actually document trigger / response / swap — a
+    blank field is an undocumented contract masquerading as a documented one."""
+    thin = [
+        f"{c.id}: {e.method} {e.endpoint}"
+        for c in HYPERPARTS
+        for e in c.exchanges
+        if not (e.trigger.strip() and e.response.strip() and e.swap.strip())
+    ]
+    assert not thin, "Exchange contracts with empty trigger/response/swap:\n  " + "\n  ".join(thin)
+
+
+def test_interactive_htmx_components_declare_contracts() -> None:
+    """A component tagged htmx that makes requests must carry exchanges —
+    guards against the tag drifting from reality."""
+    missing = [
+        c.id
+        for c in HYPERPARTS
+        if "htmx" in c.tags and _REQUEST_ATTR_RE.search(c.partial) and not c.exchanges
+    ]
+    assert not missing, f"htmx components making requests but declaring no Exchange: {missing}"

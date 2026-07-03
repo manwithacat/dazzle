@@ -63,6 +63,33 @@ attributes at your endpoints:
 No build step, no JSX, no utility soup. One semantic root class per
 component, `data-dz-*` attributes for variants, tokens for every value.
 
+## The unit is a Hyperpart, not a component
+
+A React component bundles structure, behaviour, and *client* state into a
+tree. HaTchi-MaXchi's unit is different enough to deserve its own name — a
+**Hyperpart**:
+
+> **Hyperpart** = a *partial* (server-rendered markup + classes) + its
+> *exchange contract(s)* (the endpoint request/response the server must
+> satisfy) + an optional *controller* (vanilla JS, only where the platform
+> lacks a primitive).
+
+The naming is deliberate. "Component" imports React priors — client state,
+props, composition trees — which are exactly wrong for a server-owned
+partial, and an agent told to build a "component" reaches for them. A
+Hyperpart has no client state graph: state lives on the server and htmx
+swaps the markup.
+
+The second half — the **exchange contract** — is the part shadcn never had
+to standardise (React resolves state locally). For interactive Hyperparts
+the gallery documents it explicitly: *what request the affordance makes,
+and what fragment your server must return.* It's a first-class, CI-checked
+artifact (a partial that makes an undeclared request fails the build). In
+Dazzle the response is emitted automatically; in any other htmx app, return
+matching markup from your endpoint. (Vocabulary from *Hypermedia Systems*:
+a request/response round-trip is a "hypermedia exchange"; the individual
+`hx-*` control that initiates it is an "affordance".)
+
 ## Why htmx-native (not transliterated React)
 
 Most design systems assume a client framework owns the DOM. HaTchi-MaXchi
@@ -120,7 +147,7 @@ emits this markup from a DSL, the default prefix is part of the contract.)
 | `components/` | Component CSS. One semantic root class + `data-dz-*` modifiers; tokens carry the aesthetic. |
 | `controllers/` | Vanilla-JS for the purely-client bits (`dz-confirm.js`, `dz-command.js`). htmx-aware, framework-free. |
 | `icons/` | The Lucide subset — source of truth (`registry.py`, ISC), rendering helpers, and the generator. Dazzle vendors a drift-gated copy. |
-| `site/` | The gallery — a committed build artifact, deployed to Pages as-is. `registry.py` is the **source of truth for the component list**. |
+| `site/` | The gallery — a committed build artifact, deployed to Pages as-is. `registry.py` is the **source of truth for the Hyperpart catalogue** (partials + their exchange contracts). |
 | `build.py` | Builds `dist/` (CSS + JS + fonts) from package sources. Stdlib-only; takes `--prefix`. |
 | `tests/` | Regression gates: contract (console), behaviour (headless Chromium), visual (screenshot vs committed per-platform baselines), and **WCAG 2.2 AA** (vendored axe-core over the gallery in light + dark + opened-overlay states; allowlist may only shrink). |
 
@@ -172,16 +199,20 @@ Visual baselines: after an intended visual change,
 `HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py` and commit
 the PNGs.
 
-### Add a component
+### Add a Hyperpart
 
 1. Write its CSS in `components/` — one root class, `data-dz-*` variants,
    tokens for all values.
-2. Add its canonical HTML to `site/registry.py` — that entry is the
-   gallery demo *and* the copy-paste snippet.
-3. Client behaviour (only if the platform has no primitive) goes in
+2. Add a `Hyperpart(...)` to `site/registry.py` — its `partial` is the
+   gallery demo *and* the copy-paste snippet (same string, can't drift).
+3. If it makes htmx requests, declare an `Exchange(...)` per request in
+   the Hyperpart's `exchanges` — method, endpoint, trigger, response
+   fragment, swap. The contract gate fails if the markup makes a request
+   with no matching Exchange (or declares one it doesn't make).
+4. Client behaviour (only if the platform has no primitive) goes in
    `controllers/`.
-4. Register the file in `build.py` `CSS_SOURCES` (and, in-tree, Dazzle's
-   build lists). Rebuild the gallery; the contract test fails on any
+5. Register the CSS file in `build.py` `CSS_SOURCES` (and, in-tree,
+   Dazzle's build lists). Rebuild; the contract test fails on any
    published class without a rule.
 
 ## Licence
