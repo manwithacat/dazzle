@@ -1,5 +1,10 @@
+/* HYPERPART: confirm */
 /*
  * dz-confirm — designed hx-confirm surface (HaTchi-MaXchi tranche 1).
+ *
+ * Part of the `confirm` Hyperpart — manifest in site/registry.py; the
+ * designed dialog's styles are in components/alert.css (marked
+ * `HYPERPART: confirm`). `python tools/hyperpart.py confirm` lists them.
  *
  * Intercepts htmx's `htmx:confirm` event and replaces window.confirm with
  * a designed <dialog class="dz-alert-dialog"> (icon + title + message +

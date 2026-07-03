@@ -38,6 +38,30 @@ def test_palette_esc_closes_even_with_query_text(page) -> None:  # type: ignore[
     )
 
 
+def test_palette_closes_via_backdrop_tap(page) -> None:  # type: ignore[no-untyped-def]
+    """A touch device has no Esc key — tapping outside the palette (the
+    backdrop) MUST close it, or a mobile user is trapped. Regression pin
+    for the bug the keyboard-only tests never caught."""
+    _open_palette(page)
+    # The palette is top-anchored + centered; (8, 8) is backdrop, not the box.
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(100)
+    assert not page.evaluate(f"document.querySelector('{PALETTE}').open"), (
+        "backdrop tap must close the palette (the only pointer-only dismiss path)"
+    )
+
+
+def test_palette_closes_via_close_button(page) -> None:  # type: ignore[no-untyped-def]
+    """The always-visible close button is the discoverable dismiss
+    affordance (touch has no Esc)."""
+    _open_palette(page)
+    page.click("[data-hm-close-command]")
+    page.wait_for_timeout(100)
+    assert not page.evaluate(f"document.querySelector('{PALETTE}').open"), (
+        "the close button must close the palette"
+    )
+
+
 def test_palette_arrows_and_enter(page) -> None:  # type: ignore[no-untyped-def]
     _open_palette(page)
     page.focus(f"{PALETTE} {INPUT}")  # focus triggers the mock hx-get

@@ -121,6 +121,10 @@ def test_command_dialog_injected_when_endpoint_set() -> None:
     html = FragmentRenderer().render(shell)  # type: ignore[arg-type]
     assert 'dialog class="dz-command"' in html
     assert 'hx-get="/app/command"' in html
+    # Mobile dismiss (no Esc key on touch): the palette must ship the close
+    # affordance + native light-dismiss, mirroring the canonical Hyperpart.
+    assert "data-hm-close-command" in html, "command palette missing its close button (mobile trap)"
+    assert 'closedby="any"' in html
 
 
 def test_command_dialog_absent_without_endpoint() -> None:

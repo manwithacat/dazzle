@@ -1,4 +1,4 @@
-/* dazzle v0.93.32 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.34 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2649,6 +2649,7 @@ backdrop-filter: blur(2px);
 .dz-command__input {
 width: 100%;
 padding: var(--space-lg);
+padding-inline-end: calc(var(--space-lg) + 2rem);
 border: none;
 border-block-end: 1px solid var(--colour-border);
 background: transparent;
@@ -2657,6 +2658,34 @@ font-family: var(--font-sans);
 font-size: var(--text-base);
 outline: none;
 box-sizing: border-box;
+}
+.dz-command__close {
+position: absolute;
+inset-block-start: var(--space-md);
+inset-inline-end: var(--space-md);
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 1.75rem;
+height: 1.75rem;
+padding: 0;
+border: none;
+border-radius: var(--radius-sm);
+background: transparent;
+color: var(--colour-text-muted);
+cursor: pointer;
+}
+.dz-command__close:hover {
+background: var(--colour-surface-muted);
+color: var(--colour-text);
+}
+.dz-command__close:focus-visible {
+outline: var(--focus-ring-width) solid var(--focus-ring-color);
+outline-offset: var(--focus-ring-offset);
+}
+.dz-command__close svg {
+width: 1rem;
+height: 1rem;
 }
 .dz-command__results {
 max-height: 20rem;

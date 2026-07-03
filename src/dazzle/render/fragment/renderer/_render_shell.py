@@ -35,7 +35,7 @@ import json
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
-from dazzle.render.fragment.icon_html import lucide_icon_html
+from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.nav_icons import infer_nav_icon
 from dazzle.render.fragment.primitives import (
     AppShell,
@@ -269,13 +269,23 @@ class _RenderShellMixin:
         # the endpoint (page layer owns CommandEntry rendering).
         if a.command_endpoint:
             ep = ctx.escape_attr(a.command_endpoint)
+            # Mirrors the canonical `command` Hyperpart markup (HM registry;
+            # Phase 5 will gate this against it). `closedby="any"` gives
+            # native light-dismiss where supported; the close button is the
+            # always-visible dismiss affordance — essential on touch, where
+            # there is no Esc key. dz-command.js provides the cross-browser
+            # backdrop/close handlers. input/close/results stay DOM-order
+            # siblings so `next .dz-command__results` resolves.
             parts.append(
-                '<dialog class="dz-command" aria-label="Command palette">'
+                '<dialog class="dz-command" aria-label="Command palette" closedby="any">'
                 '<input class="dz-command__input" type="search" name="q" '
                 'placeholder="Search workspaces and records…" autocomplete="off" '
                 'aria-label="Search" '
                 f'hx-get="{ep}" hx-trigger="input changed delay:150ms, search, focus once" '
                 'hx-target="next .dz-command__results" hx-swap="innerHTML">'
+                '<button type="button" class="dz-command__close" data-hm-close-command '
+                'aria-label="Close command palette">'
+                f"{lucide_svg_html('x', cls='')}</button>"
                 '<div class="dz-command__results" role="listbox" aria-label="Results"></div>'
                 "</dialog>"
             )

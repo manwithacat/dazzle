@@ -23,8 +23,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
 from build import FONT_DIR, build_css, build_js  # noqa: E402  (package build.py)
+from hyperpart import anatomy  # noqa: E402  (package tools/hyperpart.py)
 from icons import ICONS, LUCIDE_VERSION, lucide_icon_html, lucide_svg_html  # noqa: E402
 from registry import GROUPS, HYPERPARTS  # noqa: E402
 
@@ -60,6 +62,25 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
         "rendered automatically — for any other htmx app, return matching "
         "markup from your endpoint.</p></details>"
     )
+
+
+def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    """A one-line 'this Hyperpart is one unit spread across N files' note,
+    for the interactive Hyperparts where the code is genuinely scattered."""
+    if not hyperpart.controller:
+        return ""
+    a = anatomy(hyperpart.id)
+    parts = ["<code>site/registry.py</code>"]
+    parts += [f"<code>{_html.escape(s)}</code>" for s in a["styles"]]
+    parts.append(f"<code>{_html.escape(a['controller'])}</code>")
+    if a["mock"]:
+        parts.append(f"mock <code>{_html.escape(a['mock'])}</code>")
+    return (
+        '<p class="hm-anatomy"><strong>One Hyperpart, {n} code items:</strong> '
+        "{parts}. Distributed by the build (CSS layered, JS bundled) but "
+        "bound by <code>HYPERPART: {id}</code> markers — <code>python "
+        "tools/hyperpart.py {id}</code> lists them.</p>"
+    ).format(n=len(parts) + 1, parts=" · ".join(parts), id=_html.escape(hyperpart.id))
 
 
 def expand_icons(markup: str) -> str:
@@ -192,6 +213,10 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-copy__done { display: none; color: var(--success-500); }
 .hm-copy[data-copied] .hm-copy__idle { display: none; }
 .hm-copy[data-copied] .hm-copy__done { display: inline-flex; }
+.hm-anatomy { font-size: .75rem; color: var(--colour-text-muted); margin-top: .6rem;
+  padding: .5rem .7rem; border-left: 2px solid var(--colour-brand); background: var(--colour-brand-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.hm-anatomy code { font-family: var(--font-mono); font-size: .9em; }
 .hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .75rem; }
 .hm-notes code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
 .hm-contract { margin-top: .75rem; border: 1px solid var(--colour-border);
@@ -290,6 +315,7 @@ def build(out_dir: Path) -> None:
             f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
             f"<code>{snippet}</code></pre></div>"
             f"{_exchanges_html(c)}"
+            f"{_anatomy_html(c)}"
             f"{notes}</section>"
         )
 

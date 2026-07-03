@@ -64,6 +64,18 @@ class Hyperpart:
     # Exchange (gated by tests/test_contract.py). hx-confirm is a client
     # affordance (no server round-trip of its own), so it is exempt.
     exchanges: tuple[Exchange, ...] = field(default_factory=tuple)
+    # ── The Hyperpart manifest: the other code items that make up this
+    #    unit, physically distributed by the build (CSS concatenated in
+    #    layer order, JS bundled) but logically ONE Hyperpart. `partial`
+    #    and `exchanges` above are inline; these point outward. Styles are
+    #    NOT hand-listed (a component's CSS is genuinely many-to-many across
+    #    files) — they're discovered from `HYPERPART: <id>` marker comments
+    #    at each CSS block, so the marker at the code site is the source of
+    #    truth. `controller`/`mock` are clean 1:1 and declared here.
+    #    tools/hyperpart.py assembles the full anatomy; test_hyperpart_cohesion
+    #    keeps the manifest and the markers honest.
+    controller: str | None = None  # a controllers/*.js file, if it needs client behaviour
+    mock: str | None = None  # the gallery mock endpoint (interactive Hyperparts)
 
 
 # Groups order the gallery nav.
@@ -125,10 +137,20 @@ HYPERPARTS: list[Hyperpart] = [
         "Overlays",
         "The hx-get palette — the htmx4 flagship. Press ⌘K.",
         '<button class="dz-button dz-button-outline" data-hm-open-command>Open palette <kbd class="dz-kbd">⌘K</kbd></button>'
-        '<dialog class="dz-command" aria-label="Command palette">'
+        # `closedby="any"` = native light-dismiss (backdrop tap + Esc) where
+        # supported (recent Chromium); dz-command.js provides the cross-browser
+        # floor. The close button is the always-visible dismiss affordance —
+        # essential on touch, where there is no Esc key.
+        '<dialog class="dz-command" aria-label="Command palette" closedby="any">'
+        # input, close, results stay DIRECT siblings so `next
+        # .dz-command__results` resolves by DOM order (the close button sits
+        # between them but doesn't match); the close button is positioned
+        # over the input row via CSS, not a wrapper.
         '<input class="dz-command__input" type="search" placeholder="Search workspaces and records…" '
         'hx-get="/mock/command" hx-trigger="input changed delay:150ms, focus once" '
         'hx-target="next .dz-command__results">'
+        '<button type="button" class="dz-command__close" data-hm-close-command '
+        'aria-label="Close command palette">{svg:x}</button>'
         '<div class="dz-command__results" role="listbox" aria-label="Results"></div></dialog>',
         notes="In Dazzle the input's hx-get hits <code>/app/command</code>, which returns "
         "persona-scoped results. Here a mock htmx returns a canned list so the demo works "
@@ -145,6 +167,8 @@ HYPERPARTS: list[Hyperpart] = [
                 swap="innerHTML of the sibling `.dz-command__results` listbox",
             ),
         ),
+        controller="controllers/dz-command.js",
+        mock="/mock/command",
     ),
     Hyperpart(
         "confirm",
@@ -167,6 +191,7 @@ HYPERPARTS: list[Hyperpart] = [
                 swap="per the button's `hx-target`/`hx-swap` (row removal by default)",
             ),
         ),
+        controller="controllers/dz-confirm.js",
     ),
     Hyperpart(
         "menu",

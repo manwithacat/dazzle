@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.34] - 2026-07-03
+
+### Added
+- **The Hyperpart manifest — scattered code, one legible unit.** A Hyperpart's code is distributed by build necessity (CSS layer-concatenated, JS bundled, markup+contract in the registry). The manifest makes it comprehensible two ways: top-down, the registry entry declares `controller`/`mock` pointers (partial + exchanges already inline); bottom-up, each CSS block / controller carries a `/* HYPERPART: <id> */` marker so any file tells you which Hyperpart it serves. `packages/hatchi-maxchi/tools/hyperpart.py <id>` assembles the full anatomy; the gallery shows it inline for interactive Hyperparts; `tests/test_hyperpart_cohesion.py` fails CI if manifest and markers disagree (unowned controller, orphan marker, unmarked interactive Hyperpart, mismatched owner). Styles are marker-*discovered*, not hand-listed (a component's CSS is genuinely many-to-many across files).
+
+### Fixed
+- **Command palette was un-closable on touch devices (no Esc key).** The palette only dismissed via `keydown`, trapping mobile users. Now: backdrop tap-to-dismiss and an always-visible close button (`dz-command.js` handles both cross-browser), plus native `closedby="any"` light-dismiss where supported. Applied to both the canonical `command` Hyperpart and Dazzle's shell emitter (`_render_shell.py`). Regression-pinned with pointer-dismiss behaviour tests — the gap the keyboard-only tests never caught. The mobile fix is the first worked consumer of the manifest: it touched the palette's markup, styles, controller, and a test, all bound to `HYPERPART: command`.
+
+### Agent Guidance
+- Working on a Hyperpart? `python packages/hatchi-maxchi/tools/hyperpart.py <id>` lists every code item. When you add a Hyperpart's controller/CSS, carry the `/* HYPERPART: <id> */` marker or the cohesion gate fails. Behaviour tests must cover pointer-only dismissal, not just keyboard.
+
 ## [0.93.33] - 2026-07-03
 
 ### Fixed

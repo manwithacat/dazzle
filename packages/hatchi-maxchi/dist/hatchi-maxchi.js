@@ -1,6 +1,11 @@
 /* ── controllers/dz-confirm.js ── */
+/* HYPERPART: confirm */
 /*
  * dz-confirm — designed hx-confirm surface (HaTchi-MaXchi tranche 1).
+ *
+ * Part of the `confirm` Hyperpart — manifest in site/registry.py; the
+ * designed dialog's styles are in components/alert.css (marked
+ * `HYPERPART: confirm`). `python tools/hyperpart.py confirm` lists them.
  *
  * Intercepts htmx's `htmx:confirm` event and replaces window.confirm with
  * a designed <dialog class="dz-alert-dialog"> (icon + title + message +
@@ -85,8 +90,14 @@
 })();
 
 /* ── controllers/dz-command.js ── */
+/* HYPERPART: command */
 /*
  * dz-command — command-palette controller (HaTchi-MaXchi tranche 2B).
+ *
+ * Part of the `command` Hyperpart — see its manifest in site/registry.py
+ * (partial + exchange contract) and its styles in components/hm-core.css
+ * (also marked `HYPERPART: command`). `python tools/hyperpart.py command`
+ * lists every part.
  *
  * The palette itself is server-rendered markup (dialog.dz-command with an
  * hx-get input); this controller only owns the purely-client bits:
@@ -177,6 +188,20 @@
     var dlg = palette();
     if (dlg && dlg.open && dlg.contains(evt.target)) {
       if (items(dlg).length) select(dlg, 0);
+    }
+  });
+
+  // Pointer dismiss — the ONLY way to close on a touch device with no
+  // Esc key. The palette has padding:0 so its children fill it; a click
+  // whose target is the <dialog> itself is therefore a backdrop click
+  // (outside the box). Also handles the explicit close button. Native
+  // `<dialog closedby="any">` gives this for free where supported (recent
+  // Chromium); this handler is the cross-browser floor.
+  document.addEventListener("click", function (evt) {
+    var dlg = palette();
+    if (!dlg || !dlg.open) return;
+    if (evt.target === dlg || evt.target.closest("[data-hm-close-command]")) {
+      dlg.close();
     }
   });
 })();

@@ -90,6 +90,39 @@ matching markup from your endpoint. (Vocabulary from *Hypermedia Systems*:
 a request/response round-trip is a "hypermedia exchange"; the individual
 `hx-*` control that initiates it is an "affordance".)
 
+### One unit, distributed by the build — the manifest keeps it legible
+
+A Hyperpart's code is physically scattered *by build necessity*: its CSS
+is concatenated in cascade-layer order (so it lives in `components/*.css`
+accumulators), its controller is bundled (`controllers/`), and its markup
++ contract are in `site/registry.py`. We can't co-locate everything in one
+file like shadcn — but the relationship must stay legible, both to an agent
+and a human. Two mechanisms, kept honest by a gate:
+
+- **Top-down** — the registry entry is the *manifest*: `partial` and
+  `exchanges` inline, `controller` and `mock` as pointers.
+- **Bottom-up** — each CSS block and controller carries a
+  `/* HYPERPART: <id> */` marker, so opening any file tells you which
+  Hyperpart it serves. Styles are *discovered* from these markers (a
+  component's CSS is genuinely many-to-many across files), not hand-listed.
+
+`python tools/hyperpart.py <id>` assembles the full anatomy:
+
+```
+$ python tools/hyperpart.py command
+Hyperpart: command  (Command palette)
+  partial     site/registry.py (inline markup)
+  exchanges   GET /app/command
+  styles      components/hm-core.css:256
+  controller  controllers/dz-command.js
+  mock        /mock/command
+```
+
+`tests/test_hyperpart_cohesion.py` fails CI if the manifest and the markers
+disagree (unowned controller, orphan marker, interactive Hyperpart with no
+style marker, controller not marked). The gallery shows the same anatomy
+inline for interactive Hyperparts.
+
 ## Why htmx-native (not transliterated React)
 
 Most design systems assume a client framework owns the DOM. HaTchi-MaXchi

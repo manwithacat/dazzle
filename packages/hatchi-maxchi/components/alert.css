@@ -188,7 +188,7 @@
 }
 
 /* ── dz-alert-dialog — designed hx-confirm surface ───────────────────── */
-
+/* HYPERPART: confirm */
 dialog.dz-alert-dialog {
   width: min(26rem, calc(100vw - 2rem));
   padding: var(--space-2xl);
