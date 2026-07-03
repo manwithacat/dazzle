@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.18] - 2026-07-03
+
+### Fixed
+- **HaTchi-MaXchi visual baselines are per-platform.** Chromium font rasterisation differs enough between macOS and Linux (~4% of pixels) to swamp the 1% gate, so baselines now live under `tests/baselines/{darwin,linux}/` and each environment compares against its own set. New `update-baselines.yml` (workflow_dispatch, standalone repo) regenerates the Linux set in the exact CI environment and uploads it as an artifact for committing.
+
 ## [0.93.17] - 2026-07-03
 
 ### Fixed

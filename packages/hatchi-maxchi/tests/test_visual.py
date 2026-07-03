@@ -1,20 +1,27 @@
 """Visual-domain regression — gallery screenshots vs committed baselines.
 
 Above-fold (1280x900) captures of the gallery in light and dark, compared
-pixel-wise with a tolerance that absorbs cross-platform antialiasing but
+pixel-wise with a tolerance that absorbs same-platform rendering noise but
 fails on real palette / layout drift.
 
+Baselines are **per-platform** (``baselines/linux/``, ``baselines/darwin/``)
+because Chromium's font rasterisation differs enough across OSes (~4% of
+pixels) to swamp a tight threshold. CI compares against the linux set; local
+runs compare against your platform's set (and skip-write it if absent).
+
 Update baselines after an INTENDED visual change:
-    HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py
+    HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py   # yours
+    gh workflow run update-baselines.yml                          # linux set
 and commit the PNGs (review the diff images first).
 """
 
 import os
+import sys
 from pathlib import Path
 
 import pytest
 
-BASELINES = Path(__file__).resolve().parent / "baselines"
+BASELINES = Path(__file__).resolve().parent / "baselines" / sys.platform
 OUT = Path(__file__).resolve().parent / ".diff"
 
 # A pixel "differs" when any channel deviates by more than this (0-255);
@@ -30,9 +37,9 @@ def _compare(name: str, png_bytes: bytes) -> None:
 
     baseline_path = BASELINES / f"{name}.png"
     if os.environ.get("HM_UPDATE_BASELINES") == "1" or not baseline_path.exists():
-        BASELINES.mkdir(exist_ok=True)
+        BASELINES.mkdir(parents=True, exist_ok=True)
         baseline_path.write_bytes(png_bytes)
-        pytest.skip(f"baseline written: {baseline_path.name} — commit it")
+        pytest.skip(f"baseline written: {sys.platform}/{baseline_path.name} — commit it")
 
     baseline = Image.open(baseline_path).convert("RGB")
     current = Image.open(io.BytesIO(png_bytes)).convert("RGB")

@@ -1,0 +1,32 @@
+# Regenerate the linux visual baselines in the SAME environment CI
+# compares in, and upload them as an artifact. Download, drop into
+# tests/baselines/linux/ (in the Dazzle monorepo package), review the
+# visual change, and commit.
+name: Update visual baselines
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baselines:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test deps
+        run: |
+          pip install pytest playwright pillow
+          playwright install --with-deps chromium
+      - name: Capture baselines
+        env:
+          HM_UPDATE_BASELINES: "1"
+        run: python -m pytest tests/test_visual.py -q
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-baselines
+          path: tests/baselines/linux/
