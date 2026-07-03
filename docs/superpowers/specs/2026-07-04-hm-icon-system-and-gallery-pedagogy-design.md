@@ -178,8 +178,11 @@ The sprite view, the inline view, and the live demo cannot disagree.
 - HM CSS change (the `.icon` contract + per-component migration) runs through the package
   `build.py`; Dazzle consumes via the existing `@hm-build:dz-` seam (byte-identical namespace
   application). Rebuild dist after the CSS change.
-- The `.icon` contract ships unprefixed in HM; Dazzle's ingest re-prefixes to `.dz-icon`
-  (existing prefix-flip machinery — no per-file special-casing).
+- The contract is authored **with** the `dz-` prefix in HM source (`.dz-icon`), per the
+  package convention. `build_css("")` strips it for the gallery (`.icon`); `build_css("dz-")`
+  keeps it for Dazzle (`.dz-icon`) — existing prefix machinery, no per-file special-casing.
+  It also *extends the already-present* `.dz-icon` + `.dz-icon--size-{sm,md,lg}` primitive
+  (`fragment-primitives.css`), not a new `.icon` from scratch; `sm/md/lg` names are preserved.
 - Sheet generation is a new `gen_registry.py` output; the Dazzle-side sprite endpoint/asset is a
   follow-on (server inline is the default, so Dazzle can adopt sprite mode after HM lands).
 
