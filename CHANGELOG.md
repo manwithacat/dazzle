@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.14] - 2026-07-03
+
+### Changed
+- **HaTchi-MaXchi extraction — Stage 2b: the legacy HSL token system is gone.** All ~280 `hsl(var(--foreground/--muted-foreground/--border/--primary/…))` fossil call sites (design-system.css, dz-tones.css, feedback-widget.css, site-sections.css, dazzle-layer.css, the SVG chart emitters, and the static test harnesses) migrated onto the OKLCH semantic tokens (`--colour-text`, `--colour-text-muted`, `--colour-border`, `--colour-brand`, …); alpha washes became `color-mix(in oklab, <token> N%, transparent)`. The shadcn-era HSL definition blocks (light + dark + prefers-fallback) were deleted; `light-dark()` in tokens.css now owns all scheme switching. The cleaned `design-system.css` moved to `packages/hatchi-maxchi/base/` (same `@hm:`/`HM /` indirection as Stage 2a). Two new semantic tokens: `--colour-surface-muted` (was `--muted`/`--accent`) and `--colour-info` (cyan-leaning, keeps chart series distinguishable from `--colour-brand`). Deliberate render changes: former zinc-near-black accents (`--primary`, `--ring`) are now the chromatic brand accent (HM identity signal); page bg is `--colour-bg` (neutral-50) rather than pure white; the global `:focus-visible` net converged onto the `--focus-ring-*` vocabulary. Light+dark verified live on ops_dashboard + design_studio.
+- **feedback-widget.css restyled from broken to live.** Its daisyUI-era vars (`--p`, `--bc`, `--b1/2/3`, `--su`, `--er`, `--wa`, …) had been undefined since the DaisyUI removal (#1113) — most of the widget's colour rules were silently invalid. They now bind to the OKLCH semantic tokens, so the widget is styled again (and flips schemes correctly).
+
+### Fixed
+- **pdf-viewer quality gates: harness 404, not an xdist flake (#1538).** `test-pdf-viewer.html` linked `/css/tokens.css`, which Stage 2a moved into `packages/hatchi-maxchi/` — outside the gate server's static root — so the focus-visibility and dark-parity gates failed with unresolved tokens. The harness now loads `/dist/dazzle.min.css` (the production cascade). All 56 pdf-viewer + data-table gates pass serially.
+
+### Agent Guidance
+- The legacy HSL tokens (`hsl(var(--foreground))` et al.) no longer exist anywhere — always use the OKLCH semantic tokens (`var(--colour-*)`, defined in `packages/hatchi-maxchi/tokens/tokens.css`). For alpha washes use `color-mix(in oklab, var(--colour-x) N%, transparent)`; for muted surfaces `--colour-surface-muted`; for focus indicators the `--focus-ring-*` tokens.
+
 ## [0.93.13] - 2026-07-03
 
 ### Changed

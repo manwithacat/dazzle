@@ -5,10 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDF Viewer Quality Gate Test Harness</title>
 
-    <!-- Cycle 1b chrome under test. The bundled CSS resolves all
-         tokens used by pdf-viewer.css; we pull both directly so the
-         harness exercises the same cascade as a real Dazzle page. -->
-    <link rel="stylesheet" href="/css/tokens.css" />
+    <!-- Cycle 1b chrome under test. tokens.css moved to
+         packages/hatchi-maxchi/ (Stage 2a) — outside this harness's
+         static-file server root — so the token layer now comes from
+         the built dist bundle, the same cascade a real Dazzle page
+         loads. pdf-viewer.css is also in the bundle; the direct link
+         stays so the gate still exercises the file under test even
+         if the bundle is stale. -->
+    <link rel="stylesheet" href="/dist/dazzle.min.css" />
     <link rel="stylesheet" href="/css/components/pdf-viewer.css" />
 
     <!-- Bridge first (so registerWidget exists), then pdf-viewer.js. -->

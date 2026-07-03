@@ -238,6 +238,7 @@
    * ───────────────────────────────────────────────────────────────── */
   --colour-bg: light-dark(var(--neutral-50), var(--neutral-950));
   --colour-surface: light-dark(white, var(--neutral-900));
+  --colour-surface-muted: light-dark(var(--neutral-100), var(--neutral-800));
   --colour-text: light-dark(var(--neutral-900), var(--neutral-50));
   --colour-text-muted: light-dark(var(--neutral-600), var(--neutral-400));
   --colour-border: light-dark(var(--neutral-200), var(--neutral-700));
@@ -247,6 +248,9 @@
   --colour-success: var(--success-600);
   --colour-warning: var(--warning-600);
   --colour-danger: var(--danger-500);
+  /* Info: cyan-leaning so chart series stay distinguishable from
+   * --colour-brand (hue ~263). Scheme-stable, like the tone hues. */
+  --colour-info: oklch(60% 0.13 220);
 
   /* Tone tints (background washes for surfaces) — semantic tokens
    * the dz-tones replacements consume. Authors don't hand-craft
@@ -286,6 +290,7 @@
     :root {
       --colour-bg: var(--neutral-950);
       --colour-surface: var(--neutral-900);
+      --colour-surface-muted: var(--neutral-800);
       --colour-text: var(--neutral-50);
       --colour-text-muted: var(--neutral-400);
       --colour-border: var(--neutral-700);
@@ -646,16 +651,16 @@ body.cursor-col-resize * {
 /* ── Metric tile background tints (#894 / roadmap #2) ────────────── */
 
 .dz-metric-tile[data-dz-tone="positive"] {
-  background: hsl(var(--success) / 0.10);
+  background: color-mix(in oklab, var(--colour-success) 10%, transparent);
 }
 .dz-metric-tile[data-dz-tone="warning"] {
-  background: hsl(var(--warning) / 0.10);
+  background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
 }
 .dz-metric-tile[data-dz-tone="destructive"] {
-  background: hsl(var(--destructive) / 0.10);
+  background: color-mix(in oklab, var(--colour-danger) 10%, transparent);
 }
 .dz-metric-tile[data-dz-tone="accent"] {
-  background: hsl(var(--primary) / 0.10);
+  background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
 }
 /* No rule for `data-dz-tone="neutral"` — neutral tiles fall back to
  * the default `bg-[hsl(var(--muted)/0.4)]` Tailwind class baked into
@@ -664,25 +669,25 @@ body.cursor-col-resize * {
 /* ── Notice band background + left rail (#7 / roadmap #7) ─────────── */
 
 .dz-notice-band[data-dz-notice-tone="positive"] {
-  background: hsl(var(--success) / 0.08);
-  border-left-color: hsl(var(--success));
+  background: color-mix(in oklab, var(--colour-success) 8%, transparent);
+  border-left-color: var(--colour-success);
 }
 .dz-notice-band[data-dz-notice-tone="warning"] {
-  background: hsl(var(--warning) / 0.10);
-  border-left-color: hsl(var(--warning));
+  background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
+  border-left-color: var(--colour-warning);
 }
 .dz-notice-band[data-dz-notice-tone="destructive"] {
-  background: hsl(var(--destructive) / 0.08);
-  border-left-color: hsl(var(--destructive));
+  background: color-mix(in oklab, var(--colour-danger) 8%, transparent);
+  border-left-color: var(--colour-danger);
 }
 .dz-notice-band[data-dz-notice-tone="accent"] {
-  background: hsl(var(--primary) / 0.08);
-  border-left-color: hsl(var(--primary));
+  background: color-mix(in oklab, var(--colour-brand) 8%, transparent);
+  border-left-color: var(--colour-brand);
 }
 .dz-notice-band[data-dz-notice-tone="neutral"],
 .dz-notice-band:not([data-dz-notice-tone]) {
-  background: hsl(var(--muted) / 0.4);
-  border-left-color: hsl(var(--border));
+  background: color-mix(in oklab, var(--colour-surface-muted) 40%, transparent);
+  border-left-color: var(--colour-border);
 }
 
 /* ── Action grid card surface + count badge tints (#891) ─────────── */
@@ -694,65 +699,65 @@ body.cursor-col-resize * {
  * applies. */
 
 .dz-action-card[data-dz-tone="positive"] {
-  border-color: hsl(var(--success) / 0.4);
-  background: hsl(var(--success) / 0.05);
+  border-color: color-mix(in oklab, var(--colour-success) 40%, transparent);
+  background: color-mix(in oklab, var(--colour-success) 5%, transparent);
 }
 .dz-action-card[data-dz-tone="positive"]:hover {
-  background: hsl(var(--success) / 0.10);
+  background: color-mix(in oklab, var(--colour-success) 10%, transparent);
 }
 .dz-action-card[data-dz-tone="warning"] {
-  border-color: hsl(var(--warning) / 0.4);
-  background: hsl(var(--warning) / 0.05);
+  border-color: color-mix(in oklab, var(--colour-warning) 40%, transparent);
+  background: color-mix(in oklab, var(--colour-warning) 5%, transparent);
 }
 .dz-action-card[data-dz-tone="warning"]:hover {
-  background: hsl(var(--warning) / 0.10);
+  background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
 }
 .dz-action-card[data-dz-tone="destructive"] {
-  border-color: hsl(var(--destructive) / 0.4);
-  background: hsl(var(--destructive) / 0.05);
+  border-color: color-mix(in oklab, var(--colour-danger) 40%, transparent);
+  background: color-mix(in oklab, var(--colour-danger) 5%, transparent);
 }
 .dz-action-card[data-dz-tone="destructive"]:hover {
-  background: hsl(var(--destructive) / 0.10);
+  background: color-mix(in oklab, var(--colour-danger) 10%, transparent);
 }
 .dz-action-card[data-dz-tone="accent"] {
-  border-color: hsl(var(--primary) / 0.4);
-  background: hsl(var(--primary) / 0.05);
+  border-color: color-mix(in oklab, var(--colour-brand) 40%, transparent);
+  background: color-mix(in oklab, var(--colour-brand) 5%, transparent);
 }
 .dz-action-card[data-dz-tone="accent"]:hover {
-  background: hsl(var(--primary) / 0.10);
+  background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
 }
 .dz-action-card[data-dz-tone="neutral"],
 .dz-action-card:not([data-dz-tone]) {
-  border-color: hsl(var(--border));
-  background: hsl(var(--card));
+  border-color: var(--colour-border);
+  background: var(--colour-surface);
 }
 .dz-action-card[data-dz-tone="neutral"]:hover,
 .dz-action-card:not([data-dz-tone]):hover {
-  background: hsl(var(--muted) / 0.4);
+  background: color-mix(in oklab, var(--colour-surface-muted) 40%, transparent);
 }
 
 /* Count-badge tints — same five tones, slightly different opacities
  * so the badge reads as denser than the card surface. */
 .dz-action-card-count[data-dz-tone-badge="positive"] {
-  background: hsl(var(--success) / 0.15);
-  color: hsl(var(--success));
+  background: color-mix(in oklab, var(--colour-success) 15%, transparent);
+  color: var(--colour-success);
 }
 .dz-action-card-count[data-dz-tone-badge="warning"] {
-  background: hsl(var(--warning) / 0.18);
-  color: hsl(var(--warning));
+  background: color-mix(in oklab, var(--colour-warning) 18%, transparent);
+  color: var(--colour-warning);
 }
 .dz-action-card-count[data-dz-tone-badge="destructive"] {
-  background: hsl(var(--destructive) / 0.15);
-  color: hsl(var(--destructive));
+  background: color-mix(in oklab, var(--colour-danger) 15%, transparent);
+  color: var(--colour-danger);
 }
 .dz-action-card-count[data-dz-tone-badge="accent"] {
-  background: hsl(var(--primary) / 0.15);
-  color: hsl(var(--primary));
+  background: color-mix(in oklab, var(--colour-brand) 15%, transparent);
+  color: var(--colour-brand);
 }
 .dz-action-card-count[data-dz-tone-badge="neutral"],
 .dz-action-card-count:not([data-dz-tone-badge]) {
-  background: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
+  background: var(--colour-surface-muted);
+  color: var(--colour-text-muted);
 }
 
 /* ── Metric delta arrow colour (#884 / sibling #906 cleanup) ──────── */
@@ -763,14 +768,14 @@ body.cursor-col-resize * {
  * canonical green slot. */
 
 .dz-metric-delta[data-dz-delta-tone="positive"] {
-  color: hsl(var(--success));
+  color: var(--colour-success);
 }
 .dz-metric-delta[data-dz-delta-tone="destructive"] {
-  color: hsl(var(--destructive));
+  color: var(--colour-danger);
 }
 .dz-metric-delta[data-dz-delta-tone="neutral"],
 .dz-metric-delta:not([data-dz-delta-tone]) {
-  color: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted);
 }
 
 /* ── Status list pill + icon colour (#3 / roadmap #3) ─────────────── */
@@ -778,39 +783,39 @@ body.cursor-col-resize * {
 /* Pill backgrounds (rendered only for non-neutral states; neutral
  * entries omit the pill via template branch). */
 .dz-status-list-entry[data-dz-state="positive"] .dz-status-list-pill {
-  background: hsl(var(--success) / 0.15);
-  color: hsl(var(--success));
+  background: color-mix(in oklab, var(--colour-success) 15%, transparent);
+  color: var(--colour-success);
 }
 .dz-status-list-entry[data-dz-state="warning"] .dz-status-list-pill {
-  background: hsl(var(--warning) / 0.18);
-  color: hsl(var(--warning));
+  background: color-mix(in oklab, var(--colour-warning) 18%, transparent);
+  color: var(--colour-warning);
 }
 .dz-status-list-entry[data-dz-state="destructive"] .dz-status-list-pill {
-  background: hsl(var(--destructive) / 0.15);
-  color: hsl(var(--destructive));
+  background: color-mix(in oklab, var(--colour-danger) 15%, transparent);
+  color: var(--colour-danger);
 }
 .dz-status-list-entry[data-dz-state="accent"] .dz-status-list-pill {
-  background: hsl(var(--primary) / 0.15);
-  color: hsl(var(--primary));
+  background: color-mix(in oklab, var(--colour-brand) 15%, transparent);
+  color: var(--colour-brand);
 }
 
 /* Icon colour matches the state. Neutral entries fall back to the
  * default muted-foreground. */
 .dz-status-list-entry[data-dz-state="positive"] .dz-status-list-icon {
-  color: hsl(var(--success));
+  color: var(--colour-success);
 }
 .dz-status-list-entry[data-dz-state="warning"] .dz-status-list-icon {
-  color: hsl(var(--warning));
+  color: var(--colour-warning);
 }
 .dz-status-list-entry[data-dz-state="destructive"] .dz-status-list-icon {
-  color: hsl(var(--destructive));
+  color: var(--colour-danger);
 }
 .dz-status-list-entry[data-dz-state="accent"] .dz-status-list-icon {
-  color: hsl(var(--primary));
+  color: var(--colour-brand);
 }
 .dz-status-list-entry[data-dz-state="neutral"] .dz-status-list-icon,
 .dz-status-list-entry:not([data-dz-state]) .dz-status-list-icon {
-  color: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted);
 }
 /* --- components/badge.css --- */
 /*

@@ -135,8 +135,8 @@ def test_multi_series_colours_each_series_distinctly() -> None:
             ("low", (("W1", 1.0),)),
         ),
     )
-    assert "hsl(var(--primary))" in svg  # series 0
-    assert "hsl(var(--info))" in svg  # series 1
+    assert "var(--colour-brand)" in svg  # series 0
+    assert "var(--colour-info)" in svg  # series 1
 
 
 def test_multi_series_shares_x_axis_as_ordered_union_of_labels() -> None:

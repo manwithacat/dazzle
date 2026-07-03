@@ -415,7 +415,7 @@ class _RenderChartsMixin:
 
         Empty path renders the `dz-empty-dense` fallback inside the
         region wrapper. Reference bands use the same colour map as the
-        chart-family SVG helpers (`hsl(var(--primary))` for `target`
+        chart-family SVG helpers (`var(--colour-brand)` for `target`
         etc.); `from`/`to` positions are rendered as percentage of
         max_value.
 
@@ -553,9 +553,9 @@ class _RenderChartsMixin:
             f'aria-label="Sparkline — {count} points, latest '
             f'{last_value_str}, peak {max_val_str}">'
             f'<polygon points="0,{h} {pts_str} {w},{h}" '
-            f'fill="hsl(var(--primary))" fill-opacity="0.15" stroke="none" />'
+            f'fill="var(--colour-brand)" fill-opacity="0.15" stroke="none" />'
             f'<polyline points="{pts_str}" fill="none" '
-            f'stroke="hsl(var(--primary))" stroke-width="1.25" '
+            f'stroke="var(--colour-brand)" stroke-width="1.25" '
             f'stroke-linejoin="round" stroke-linecap="round" />'
             f"</svg>"
         )

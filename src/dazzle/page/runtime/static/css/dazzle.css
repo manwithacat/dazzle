@@ -46,7 +46,6 @@
  * templates were migrated to .dz-* semantic classes that live in the
  * new components/*.css above, but these legacy files still own:
  *   - dazzle-layer.css : structural shell (.dz-app, .dz-app__main)
- *   - design-system.css: shadcn-zinc design tokens (var(--background) etc)
  *   - site-sections.css: marketing-page section grammar
  *   - dz.css           : micro-runtime CSS-only transitions
  *   - dz-tones.css     : tone-tinting attribute selectors (#906)
@@ -54,10 +53,14 @@
  * Until each is decomposed into the new layer system, they load here
  * so their rules continue to apply.
  *
+ * design-system.css (non-colour tokens + app-shell overrides) moved to
+ * packages/hatchi-maxchi/base/ in Stage 2b after its legacy HSL token
+ * system was migrated to the OKLCH --colour-* semantics; css_loader/
+ * build_dist read it via the @hm: sentinel like the entries above.
+ *
  * Found broken in production by aegismark on the v0.62 merge — base.html
  * had been left pointing at the old `dazzle-framework.css` entry which
  * imported only the legacy stack and skipped every component family. */
-@import url("design-system.css") layer(tokens);
 @import url("dazzle-layer.css") layer(components);
 @import url("site-sections.css") layer(components);
 @import url("dz.css");

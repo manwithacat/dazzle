@@ -32,7 +32,7 @@ class TestDarkModeCSSClasses:
 
         # Header/logo/nav dark mode is now handled by token overrides
         # in design-system.css rather than explicit selectors in site-sections.css
-        ds_path = Path("src/dazzle/page/runtime/static/css/design-system.css")
+        ds_path = Path("packages/hatchi-maxchi/base/design-system.css")
         ds_content = ds_path.read_text()
 
         assert "--dz-header-bg:" in ds_content

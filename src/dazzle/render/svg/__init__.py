@@ -35,22 +35,22 @@ _LINE_DASHARRAY: dict[str, str] = {
 # Reference-band fills — keys match `ReferenceBand.color`. Token-driven
 # so the rendered SVG inherits the design palette.
 _BAND_COLORS: dict[str, str] = {
-    "target": "hsl(var(--primary))",
+    "target": "var(--colour-brand)",
     "positive": "hsl(145, 55%, 45%)",
     "warning": "hsl(40, 90%, 55%)",
-    "destructive": "hsl(var(--destructive))",
-    "muted": "hsl(var(--muted-foreground))",
+    "destructive": "var(--colour-danger)",
+    "muted": "var(--colour-text-muted)",
 }
 
 # Multi-series palette (#1473) — overlaid series cycle through these
 # design tokens so each series inherits a theme-aware colour. Five
 # distinct tokens; series beyond the fifth wrap (modulo).
 _SERIES_COLORS: tuple[str, ...] = (
-    "hsl(var(--primary))",
-    "hsl(var(--info))",
-    "hsl(var(--success))",
-    "hsl(var(--warning))",
-    "hsl(var(--destructive))",
+    "var(--colour-brand)",
+    "var(--colour-info)",
+    "var(--colour-success)",
+    "var(--colour-warning)",
+    "var(--colour-danger)",
 )
 
 
@@ -144,7 +144,7 @@ def time_series_svg(
         # Baseline grid — single line at the bottom of the plot area.
         f'<line x1="{pl}" y1="{pt + plot_h}" '
         f'x2="{pl + plot_w}" y2="{pt + plot_h}" '
-        f'stroke="hsl(var(--border))" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1" />',
     ]
 
     # Reference bands — render before data so the line/area sit on top.
@@ -170,7 +170,7 @@ def time_series_svg(
         parts.append(
             f'<line x1="{pl}" y1="{ref_y}" '
             f'x2="{pl + plot_w}" y2="{ref_y}" '
-            f'stroke="hsl(var(--muted-foreground))" '
+            f'stroke="var(--colour-text-muted)" '
             f'stroke-width="1" stroke-dasharray="{dasharray}">'
             f"<title>{_escape(ref.label)}: {ref.value}</title>"
             f"</line>"
@@ -190,13 +190,13 @@ def time_series_svg(
     parts.append(
         f'<polygon points="{pl},{base_y} {line_points_str} '
         f'{pl + plot_w},{base_y}" '
-        f'fill="hsl(var(--primary))" fill-opacity="0.12" stroke="none" />'
+        f'fill="var(--colour-brand)" fill-opacity="0.12" stroke="none" />'
     )
 
     # The line itself
     parts.append(
         f'<polyline points="{line_points_str}" '
-        f'fill="none" stroke="hsl(var(--primary))" stroke-width="1.5" '
+        f'fill="none" stroke="var(--colour-brand)" stroke-width="1.5" '
         f'stroke-linejoin="round" stroke-linecap="round" />'
     )
 
@@ -208,7 +208,7 @@ def time_series_svg(
         val_label = str(int(val)) if val == int(val) else str(val)
         parts.append(
             f'<circle cx="{px}" cy="{py}" r="2.5" '
-            f'fill="hsl(var(--primary))" stroke="hsl(var(--card))" '
+            f'fill="var(--colour-brand)" stroke="var(--colour-surface)" '
             f'stroke-width="1">'
             f"<title>{_escape(lbl)}: {val_label}</title>"
             f"</circle>"
@@ -222,7 +222,7 @@ def time_series_svg(
             parts.append(
                 f'<text x="{px}" y="{height - 8}" '
                 f'text-anchor="middle" font-size="9" '
-                f'fill="hsl(var(--muted-foreground))" '
+                f'fill="var(--colour-text-muted)" '
                 f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
                 f"{_escape(lbl)}</text>"
             )
@@ -278,7 +278,7 @@ def _reference_overlay_parts(
         parts.append(
             f'<line x1="{pl}" y1="{ref_y}" '
             f'x2="{pl + plot_w}" y2="{ref_y}" '
-            f'stroke="hsl(var(--muted-foreground))" '
+            f'stroke="var(--colour-text-muted)" '
             f'stroke-width="1" stroke-dasharray="{dasharray}">'
             f"<title>{_escape(ref.label)}: {ref.value}</title>"
             f"</line>"
@@ -314,7 +314,7 @@ def _series_layer_parts(
         val_label = _fmt_value(smap.get(lbl, 0.0))
         parts.append(
             f'<circle cx="{px}" cy="{py}" r="2.5" '
-            f'fill="{color}" stroke="hsl(var(--card))" '
+            f'fill="{color}" stroke="var(--colour-surface)" '
             f'stroke-width="1">'
             f"<title>{_escape(s_name)} · {_escape(lbl)}: {val_label}</title>"
             f"</circle>"
@@ -332,7 +332,7 @@ def _axis_label_parts(axis_labels: list[str], xs: list[float], height: int) -> l
             parts.append(
                 f'<text x="{xs[i]}" y="{height - 8}" '
                 f'text-anchor="middle" font-size="9" '
-                f'fill="hsl(var(--muted-foreground))" '
+                f'fill="var(--colour-text-muted)" '
                 f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
                 f"{_escape(lbl)}</text>"
             )
@@ -389,7 +389,7 @@ def _multi_series_svg(
         f'aria-label="{_escape(label, quote=True)} time series — '
         f'{len(series)} series, {count} buckets, peak {_fmt_value(max_val)}">',
         f'<line x1="{pl}" y1="{base_y}" x2="{pl + plot_w}" y2="{base_y}" '
-        f'stroke="hsl(var(--border))" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1" />',
     ]
     parts += _reference_overlay_parts(reference_bands, reference_lines, _y, pl, plot_w)
     for s_idx, (s_name, _pts) in enumerate(series):
@@ -468,19 +468,19 @@ def box_plot_svg(
         # Baseline + Y-axis lines.
         f'<line x1="{pl}" y1="{pt + plot_h}" '
         f'x2="{pl + plot_w}" y2="{pt + plot_h}" '
-        f'stroke="hsl(var(--border))" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1" />',
         f'<line x1="{pl}" y1="{pt}" '
         f'x2="{pl}" y2="{pt + plot_h}" '
-        f'stroke="hsl(var(--border))" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1" />',
         # Y-axis tick labels: min (bottom), max (top).
         f'<text x="{pl - 4}" y="{pt + plot_h + 4}" '
         f'text-anchor="end" font-size="9" '
-        f'fill="hsl(var(--muted-foreground))" '
+        f'fill="var(--colour-text-muted)" '
         f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
         f"{round(y_min, 1)}</text>",
         f'<text x="{pl - 4}" y="{pt + 4}" '
         f'text-anchor="end" font-size="9" '
-        f'fill="hsl(var(--muted-foreground))" '
+        f'fill="var(--colour-text-muted)" '
         f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
         f"{round(y_max, 1)}</text>",
     ]
@@ -501,18 +501,18 @@ def box_plot_svg(
         parts.append(
             f'<line x1="{col_x}" y1="{whisker_low_y}" '
             f'x2="{col_x}" y2="{whisker_high_y}" '
-            f'stroke="hsl(var(--muted-foreground))" stroke-width="1" />'
+            f'stroke="var(--colour-text-muted)" stroke-width="1" />'
         )
         # Whisker caps.
         parts.append(
             f'<line x1="{col_x - cap_half}" y1="{whisker_low_y}" '
             f'x2="{col_x + cap_half}" y2="{whisker_low_y}" '
-            f'stroke="hsl(var(--muted-foreground))" stroke-width="1" />'
+            f'stroke="var(--colour-text-muted)" stroke-width="1" />'
         )
         parts.append(
             f'<line x1="{col_x - cap_half}" y1="{whisker_high_y}" '
             f'x2="{col_x + cap_half}" y2="{whisker_high_y}" '
-            f'stroke="hsl(var(--muted-foreground))" stroke-width="1" />'
+            f'stroke="var(--colour-text-muted)" stroke-width="1" />'
         )
         # Box body. Compute height from RAW (unrounded) y values to
         # match the legacy template's order-of-operations: legacy
@@ -527,8 +527,8 @@ def box_plot_svg(
         parts.append(
             f'<rect x="{col_x - box_half}" y="{q3_y}" '
             f'width="{round(box_w, 2)}" height="{box_h}" '
-            f'fill="hsl(var(--primary))" fill-opacity="0.18" '
-            f'stroke="hsl(var(--primary))" stroke-width="1">'
+            f'fill="var(--colour-brand)" fill-opacity="0.18" '
+            f'stroke="var(--colour-brand)" stroke-width="1">'
             f"<title>{_escape(group_label)}: Q1 {round(q1, 1)}, "
             f"median {round(median, 1)}, Q3 {round(q3, 1)}"
             f"{n_suffix}</title>"
@@ -538,13 +538,13 @@ def box_plot_svg(
         parts.append(
             f'<line x1="{col_x - box_half}" y1="{median_y}" '
             f'x2="{col_x + box_half}" y2="{median_y}" '
-            f'stroke="hsl(var(--primary))" stroke-width="1.5" />'
+            f'stroke="var(--colour-brand)" stroke-width="1.5" />'
         )
         # Group label below the axis.
         parts.append(
             f'<text x="{col_x}" y="{h - 8}" '
             f'text-anchor="middle" font-size="10" '
-            f'fill="hsl(var(--foreground))" '
+            f'fill="var(--colour-text)" '
             f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
             f"{_escape(group_label)}</text>"
         )
@@ -558,7 +558,7 @@ def box_plot_svg(
         parts.append(
             f'<line x1="{pl}" y1="{ref_y}" '
             f'x2="{pl + plot_w}" y2="{ref_y}" '
-            f'stroke="hsl(var(--muted-foreground))" '
+            f'stroke="var(--colour-text-muted)" '
             f'stroke-width="1" stroke-dasharray="{dasharray}">'
             f"<title>{_escape(ref.label)}: {ref.value}</title>"
             f"</line>"
@@ -644,7 +644,7 @@ def radar_svg(
         )
         parts.append(
             f'<polygon points="{ring_pts}" '
-            f'fill="none" stroke="hsl(var(--border))" '
+            f'fill="none" stroke="var(--colour-border)" '
             f'stroke-width="0.5" stroke-opacity="0.6" />'
         )
 
@@ -654,7 +654,7 @@ def radar_svg(
         parts.append(
             f'<line x1="{cx}" y1="{cy}" '
             f'x2="{ax_x}" y2="{ax_y}" '
-            f'stroke="hsl(var(--border))" '
+            f'stroke="var(--colour-border)" '
             f'stroke-width="0.5" stroke-opacity="0.7" />'
         )
 
@@ -668,8 +668,8 @@ def radar_svg(
         vertices.append((vx, vy, axis_label, value))
     parts.append(
         f'<polygon points="{" ".join(poly_pts)}" '
-        f'fill="hsl(var(--primary))" fill-opacity="0.15" '
-        f'stroke="hsl(var(--primary))" stroke-width="1.5" '
+        f'fill="var(--colour-brand)" fill-opacity="0.15" '
+        f'stroke="var(--colour-brand)" stroke-width="1.5" '
         f'stroke-linejoin="round" />'
     )
 
@@ -681,7 +681,7 @@ def radar_svg(
         val_label = _metric_number_filter(val_for_label)
         parts.append(
             f'<circle cx="{vx}" cy="{vy}" r="3" '
-            f'fill="hsl(var(--primary))" stroke="hsl(var(--card))" '
+            f'fill="var(--colour-brand)" stroke="var(--colour-surface)" '
             f'stroke-width="1">'
             f"<title>{_escape(axis_label)} value: {val_label}</title>"
             f"</circle>"
@@ -694,7 +694,7 @@ def radar_svg(
         parts.append(
             f'<text x="{lx}" y="{ly}" '
             f'text-anchor="middle" dominant-baseline="middle" '
-            f'font-size="10" fill="hsl(var(--foreground))" '
+            f'font-size="10" fill="var(--colour-text)" '
             f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
             f"{_escape(axis_label)}</text>"
         )
@@ -756,7 +756,7 @@ def histogram_svg(
         # Baseline.
         f'<line x1="{pl}" y1="{pt + plot_h}" '
         f'x2="{pl + plot_w}" y2="{pt + plot_h}" '
-        f'stroke="hsl(var(--border))" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1" />',
     ]
 
     # Bars.
@@ -767,7 +767,7 @@ def histogram_svg(
         parts.append(
             f'<rect x="{x}" y="{y}" '
             f'width="{round(bar_w - 1, 2)}" height="{bar_h}" '
-            f'fill="hsl(var(--primary))" fill-opacity="0.6">'
+            f'fill="var(--colour-brand)" fill-opacity="0.6">'
             f"<title>{_escape(bins[i][0])}: {cnt}</title>"
             f"</rect>"
         )
@@ -783,7 +783,7 @@ def histogram_svg(
         parts.append(
             f'<line x1="{ref_x}" y1="{pt}" '
             f'x2="{ref_x}" y2="{pt + plot_h}" '
-            f'stroke="hsl(var(--muted-foreground))" '
+            f'stroke="var(--colour-text-muted)" '
             f'stroke-width="1" stroke-dasharray="{dasharray}">'
             f"<title>{_escape(ref.label)}: {ref_value_str}</title>"
             f"</line>"
@@ -791,7 +791,7 @@ def histogram_svg(
         parts.append(
             f'<text x="{ref_x}" y="{pt + 8}" '
             f'text-anchor="middle" font-size="9" '
-            f'fill="hsl(var(--muted-foreground))" '
+            f'fill="var(--colour-text-muted)" '
             f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
             f"{_escape(ref.label)}</text>"
         )
@@ -813,7 +813,7 @@ def histogram_svg(
             parts.append(
                 f'<text x="{lx}" y="{h - 8}" '
                 f'text-anchor="middle" font-size="9" '
-                f'fill="hsl(var(--muted-foreground))" '
+                f'fill="var(--colour-text-muted)" '
                 f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
                 f"{low_str}</text>"
             )

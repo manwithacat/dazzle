@@ -78,13 +78,13 @@ class TestDzTonesCssRulesPresent:
             assert sel in text, f"Missing status-list icon rule for state={state!r}"
 
     def test_uses_design_system_tokens(self) -> None:
-        """All tints route through HSL design-system slots so the
+        """All tints route through the OKLCH semantic tokens so the
         active project theme applies — no hardcoded colours."""
         text = self._text()
-        assert "var(--success)" in text
-        assert "var(--warning)" in text
-        assert "var(--destructive)" in text
-        assert "var(--primary)" in text
+        assert "var(--colour-success)" in text
+        assert "var(--colour-warning)" in text
+        assert "var(--colour-danger)" in text
+        assert "var(--colour-brand)" in text
 
 
 # ───────────────────────── load order ──────────────────────────

@@ -1,67 +1,34 @@
 /* =============================================================================
-   DAZZLE Design System
+   DAZZLE Design System (app-shell layer)
 
-   Shadcn/ui-inspired design tokens and component overrides for DaisyUI.
-   Achieves visual parity with shadcn/ui while keeping DaisyUI's component classes.
+   Non-colour design tokens (type/space/radius/shadow/motion + --dz-*
+   site tokens) and app-shell component overrides. All colour comes
+   from the HaTchi-MaXchi OKLCH semantic tokens (--colour-*,
+   packages/hatchi-maxchi/tokens/tokens.css) — the legacy shadcn-era
+   HSL token system was removed in the Stage 2b fossil migration.
 
    Sections:
    1. Design Tokens (CSS custom properties)
-   2. DaisyUI Theme Bridge
+   2. (removed — DaisyUI theme bridge, #1113)
    3. Typography
    4. Global Refinements
    5. Component Overrides
    6. Loading States & Animations
    7. Responsive Refinements
-
-   Note: CSS custom properties (--dz-*) are generated from ThemeSpec
-   by the theme system (v0.16.0). See src/dazzle_dnr_ui/themes/presets.py
    ============================================================================= */
 
 /* =============================================================================
    1. Design Tokens — Light Mode (default)
 
-   HSL-based colour palette inspired by shadcn/ui zinc theme.
+   Colour comes from the HaTchi-MaXchi OKLCH semantic tokens
+   (--colour-*, tokens/tokens.css). The legacy shadcn-era HSL token
+   block (--background/--foreground/--primary/…) was removed in the
+   Stage 2b fossil migration — every consumer now references the
+   semantic tokens directly, and light/dark switching is handled by
+   light-dark() in tokens.css (no per-scheme block needed here).
    ============================================================================= */
 
 :root {
-  /* --- Colour tokens (HSL values) --- */
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
-
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 240 5.9% 10%;
-
-  --success: 142 76% 36%;
-  --success-foreground: 0 0% 98%;
-
-  --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 98%;
-
-  --info: 217 91% 60%;
-  --info-foreground: 0 0% 98%;
-
   /* --- Typography --- */
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, 'Cascadia Code', monospace;
@@ -111,7 +78,7 @@
   --dz-shadow-lg: var(--shadow-lg);
   --dz-transition-fast: var(--duration-fast);
   --dz-transition-normal: var(--duration-normal);
-  --dz-accent-glow: hsl(var(--ring) / 0.15);
+  --dz-accent-glow: color-mix(in oklab, var(--colour-brand) 15%, transparent);
 
   /* --- Site section tokens (marketing pages) --- */
 
@@ -215,43 +182,6 @@
 
 .dark,
 [data-theme="dark"] {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
-
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
-
-  --success: 142 76% 36%;
-  --success-foreground: 0 0% 98%;
-
-  --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 98%;
-
-  --info: 217 91% 60%;
-  --info-foreground: 0 0% 98%;
-
   --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.1);
   --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
   --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.2), 0 2px 4px -2px hsl(0 0% 0% / 0.15);
@@ -260,7 +190,7 @@
 
   --dz-sidebar-from: hsl(240 10% 5%);
   --dz-sidebar-to: hsl(240 10% 8%);
-  --dz-accent-glow: hsl(var(--ring) / 0.2);
+  --dz-accent-glow: color-mix(in oklab, var(--colour-brand) 20%, transparent);
 
   /* Site section overrides for dark mode */
   --dz-section-alt-bg: oklch(0.08 0.01 260);
@@ -299,49 +229,15 @@
   --dz-ring-glow: 0 0 0 3px oklch(0.60 0.18 270 / 0.15);
 }
 
-/* No-JS / pre-paint parity (#tranche2): the legacy HSL token system
-   must follow prefers-color-scheme like the OKLCH set does, otherwise
-   hsl(var(--…)) consumers render light values on dark until theme JS
-   sets [data-theme]. Mirrors the tokens.css fallback. */
+/* No-JS / pre-paint parity (#tranche2): the shadow + --dz-* site
+   tokens must follow prefers-color-scheme like the OKLCH set does,
+   otherwise consumers render light values on dark until theme JS
+   sets [data-theme]. Mirrors the tokens.css fallback. (The legacy
+   HSL colour tokens this block also carried were removed in the
+   Stage 2b fossil migration — light-dark() in tokens.css covers
+   the --colour-* set natively.) */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
-
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
-
-  --success: 142 76% 36%;
-  --success-foreground: 0 0% 98%;
-
-  --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 98%;
-
-  --info: 217 91% 60%;
-  --info-foreground: 0 0% 98%;
-
   --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.1);
   --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
   --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.2), 0 2px 4px -2px hsl(0 0% 0% / 0.15);
@@ -350,7 +246,7 @@
 
   --dz-sidebar-from: hsl(240 10% 5%);
   --dz-sidebar-to: hsl(240 10% 8%);
-  --dz-accent-glow: hsl(var(--ring) / 0.2);
+  --dz-accent-glow: color-mix(in oklab, var(--colour-brand) 20%, transparent);
 
   /* Site section overrides for dark mode */
   --dz-section-alt-bg: oklch(0.08 0.01 260);
@@ -411,8 +307,8 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: hsl(var(--foreground));
-  background-color: hsl(var(--background));
+  color: var(--colour-text);
+  background-color: var(--colour-bg);
 }
 
 code, pre, kbd, samp {
@@ -428,10 +324,11 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   transition: all var(--duration-fast) var(--ease-default);
 }
 
-/* Focus visibility — consistent, high-contrast focus ring */
+/* Focus visibility — universal net, same ring vocabulary as the
+   HaTchi-MaXchi per-element rules in base.css (TASTE-1). */
 :focus-visible {
-  outline: 3px solid hsl(var(--ring));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* Remove default focus outline — rely on :focus-visible only */
@@ -442,9 +339,8 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 /* High contrast mode adjustments */
 @media (prefers-contrast: high) {
   :root {
-    --border: 240 10% 30%;
-    --input: 240 10% 30%;
-    --muted-foreground: 240 10% 25%;
+    --colour-border: light-dark(var(--neutral-600), var(--neutral-400));
+    --colour-text-muted: light-dark(var(--neutral-700), var(--neutral-300));
   }
   .btn {
     border: 2px solid currentColor;
@@ -481,21 +377,21 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 .drawer-side aside,
 .drawer-side > aside.bg-base-200,
 .drawer-side > aside.bg-base-100 {
-  background: hsl(var(--card));
-  border-inline-end: 1px solid hsl(var(--border));
+  background: var(--colour-surface);
+  border-inline-end: 1px solid var(--colour-border);
 }
 
 .drawer-side aside > div:first-child {
-  border-block-end-color: hsl(var(--border));
+  border-block-end-color: var(--colour-border);
 }
 
 .drawer-side aside > div:first-child a {
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
   letter-spacing: -0.01em;
 }
 
 .drawer-side .menu a {
-  color: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted);
   border-radius: var(--radius-md);
   margin-bottom: 0.125rem;
   padding: 0.5rem 0.75rem;
@@ -504,27 +400,27 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 }
 
 .drawer-side .menu a:hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
 }
 
 .drawer-side .menu a.active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
   font-weight: 500;
   box-shadow: none;
 }
 
 .drawer-side aside > div:last-child {
-  border-block-start-color: hsl(var(--border));
+  border-block-start-color: var(--colour-border);
 }
 
 /* --- Navbar --- */
 
 .navbar {
   backdrop-filter: blur(8px);
-  background: hsl(var(--background) / 0.85);
-  border-block-end: 1px solid hsl(var(--border));
+  background: color-mix(in oklab, var(--colour-bg) 85%, transparent);
+  border-block-end: 1px solid var(--colour-border);
 }
 
 .navbar .text-xl {
@@ -536,10 +432,10 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 
 .card {
   box-shadow: var(--shadow-sm);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--colour-border);
   border-radius: var(--radius-lg);
-  background: hsl(var(--card));
-  color: hsl(var(--card-foreground));
+  background: var(--colour-surface);
+  color: var(--colour-text);
   transition: box-shadow var(--duration-normal) var(--ease-default),
               transform var(--duration-normal) var(--ease-default);
 }
@@ -562,20 +458,20 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 /* Legacy DaisyUI shim classes (.card-body, .btn, .btn-primary, .btn-ghost,
    .btn-outline, .btn-error, .input, .select, .textarea, .label-text,
    .table, .table thead th, .table tbody td) removed in v0.56.0.
-   All components now use inline Tailwind with hsl(var(--token)) variables.
+   All components now use the OKLCH semantic tokens (var(--colour-*)).
    See the component contracts at ~/.claude/skills/ux-architect/components/. */
 
 /* --- Modal/Dialog (kept — used by the native <dialog> modal component) --- */
 
 .modal-box {
   box-shadow: var(--shadow-xl);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--colour-border);
   border-radius: var(--radius-lg);
-  background: hsl(var(--card));
+  background: var(--colour-surface);
 }
 
 .modal-backdrop {
-  background: hsl(var(--foreground) / 0.5);
+  background: color-mix(in oklab, var(--colour-text) 50%, transparent);
   backdrop-filter: blur(4px);
 }
 
@@ -596,11 +492,11 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 .dz-page-header .text-2xl {
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
 }
 
 .dz-page-header .text-sm {
-  color: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted);
 }
 
 /* --- Empty State --- */
@@ -608,7 +504,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 .dz-empty-state {
   text-align: center;
   padding: 3rem 1.5rem;
-  color: var(--colour-text-muted); /* was hsl(var(--muted-foreground)) fossil */
+  color: var(--colour-text-muted); /* was var(--colour-text-muted) fossil */
 }
 
 .dz-empty-state svg {
@@ -635,11 +531,11 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 /* --- Dropdown menus --- */
 
 .menu.shadow {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--colour-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  background: hsl(var(--popover));
-  color: hsl(var(--popover-foreground));
+  background: var(--colour-surface);
+  color: var(--colour-text);
 }
 
 /* =============================================================================
@@ -647,7 +543,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
    ============================================================================= */
 
 .loading {
-  color: hsl(var(--primary));
+  color: var(--colour-brand);
 }
 
 /* Skeleton shimmer */
@@ -655,9 +551,9 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 .dz-skeleton {
   background: linear-gradient(
     90deg,
-    hsl(var(--muted)) 25%,
-    hsl(var(--muted) / 0.6) 50%,
-    hsl(var(--muted)) 75%
+    var(--colour-surface-muted) 25%,
+    color-mix(in oklab, var(--colour-surface-muted) 60%, transparent) 50%,
+    var(--colour-surface-muted) 75%
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
@@ -674,8 +570,8 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   display: inline-block;
   width: 1rem;
   height: 1rem;
-  border: 2px solid hsl(var(--muted));
-  border-top-color: hsl(var(--primary));
+  border: 2px solid var(--colour-surface-muted);
+  border-top-color: var(--colour-brand);
   border-radius: 50%;
   animation: dz-spin 0.6s linear infinite;
 }
@@ -736,7 +632,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   .table tbody tr {
     display: block;
     margin-block-end: 0.75rem;
-    border: 1px solid hsl(var(--border));
+    border: 1px solid var(--colour-border);
     border-radius: var(--radius-md);
     padding: 0.5rem;
   }
@@ -753,30 +649,30 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: hsl(var(--muted-foreground));
+    color: var(--colour-text-muted);
   }
 }
 
 /* ── Tom Select token overrides (UX-009 widget:combobox) ───────────────── */
 /* Linear-aesthetic override of vendor/tom-select.css. Targets the library's  */
-/* generated class names to align with hsl(var(--*)) design tokens.           */
+/* generated class names to align with the --colour-* semantic tokens.        */
 .ts-wrapper.single .ts-control,
 .ts-wrapper.multi .ts-control {
-  background: hsl(var(--background));
-  border: 1px solid hsl(var(--border));
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
   border-radius: 4px;
   min-height: 32px;
   padding: 0 12px;
   font-size: 13px;
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
   box-shadow: none;
   transition: box-shadow 120ms cubic-bezier(0.2, 0, 0, 1),
               border-color 120ms cubic-bezier(0.2, 0, 0, 1);
 }
 .ts-wrapper.single.focus .ts-control,
 .ts-wrapper.multi.focus .ts-control {
-  border-color: hsl(var(--ring));
-  box-shadow: 0 0 0 1px hsl(var(--ring));
+  border-color: var(--colour-brand);
+  box-shadow: 0 0 0 1px var(--colour-brand);
 }
 .ts-wrapper.single.disabled .ts-control,
 .ts-wrapper.multi.disabled .ts-control {
@@ -785,45 +681,45 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 }
 .ts-wrapper .ts-control > input::placeholder,
 .ts-wrapper .ts-control .placeholder {
-  color: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted);
 }
 .ts-dropdown {
-  background: hsl(var(--popover));
-  border: 1px solid hsl(var(--border));
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
   margin-top: 4px;
   font-size: 13px;
 }
 .ts-dropdown .option {
   padding: 6px 12px;
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
 }
 .ts-dropdown .active {
-  background: hsl(var(--muted));
-  color: hsl(var(--foreground));
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
 }
 .ts-dropdown .selected {
-  background: hsl(var(--primary) / 0.1);
-  color: hsl(var(--primary));
+  background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
+  color: var(--colour-brand);
 }
 .ts-dropdown .no-results {
   padding: 8px 12px;
-  color: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted);
   font-style: italic;
 }
 /* Error state — mirrors aria-invalid on the underlying <select> */
 .ts-wrapper[aria-invalid="true"] .ts-control,
 select[aria-invalid="true"] + .ts-wrapper .ts-control {
-  border-color: hsl(var(--destructive));
+  border-color: var(--colour-danger);
 }
 /* Multi-select pills (used by multiselect/tags — out of scope for UX-009 but */
 /* included so the other widgets inherit the tokens without extra work).       */
 .ts-wrapper.multi .ts-control > .item {
-  background: hsl(var(--muted));
-  color: hsl(var(--foreground));
-  border: 1px solid hsl(var(--border));
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
   border-radius: 3px;
   padding: 0 6px;
   font-size: 12px;
@@ -831,13 +727,13 @@ select[aria-invalid="true"] + .ts-wrapper .ts-control {
 
 /* ── Flatpickr token overrides (UX-010 widget:datepicker) ──────────────── */
 /* Linear-aesthetic override of vendor/flatpickr.css. Targets the library's  */
-/* generated class names to align with hsl(var(--*)) design tokens.          */
+/* generated class names to align with the --colour-* semantic tokens.       */
 .flatpickr-calendar {
-  background: hsl(var(--popover));
-  border: 1px solid hsl(var(--border));
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
   font-size: 13px;
   margin-top: 4px;
   width: auto;
@@ -846,47 +742,47 @@ select[aria-invalid="true"] + .ts-wrapper .ts-control {
 .flatpickr-calendar.arrowTop::after,
 .flatpickr-calendar.arrowBottom::before,
 .flatpickr-calendar.arrowBottom::after {
-  border-bottom-color: hsl(var(--popover));
-  border-top-color: hsl(var(--popover));
+  border-bottom-color: var(--colour-surface);
+  border-top-color: var(--colour-surface);
 }
 .flatpickr-months {
   padding: 8px 8px 4px;
 }
 .flatpickr-month {
   background: transparent;
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
   height: 32px;
 }
 .flatpickr-current-month {
   font-size: 13px;
   font-weight: 500;
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
   padding: 4px 0;
 }
 .flatpickr-current-month .flatpickr-monthDropdown-months,
 .flatpickr-current-month input.cur-year {
   background: transparent;
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
   font-weight: 500;
 }
 .flatpickr-prev-month,
 .flatpickr-next-month {
-  color: hsl(var(--muted-foreground));
-  fill: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted);
+  fill: var(--colour-text-muted);
   padding: 4px 8px;
   transition: color 80ms cubic-bezier(0.2, 0, 0, 1);
 }
 .flatpickr-prev-month:hover,
 .flatpickr-next-month:hover {
-  color: hsl(var(--foreground));
-  fill: hsl(var(--foreground));
+  color: var(--colour-text);
+  fill: var(--colour-text);
 }
 .flatpickr-weekdays {
   background: transparent;
 }
 .flatpickr-weekday {
   background: transparent;
-  color: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted);
   font-size: 12px;
   font-weight: 500;
 }
@@ -898,7 +794,7 @@ select[aria-invalid="true"] + .ts-wrapper .ts-control {
   min-width: auto;
 }
 .flatpickr-day {
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
   border: 0;
   border-radius: 3px;
   max-width: 36px;
@@ -910,17 +806,17 @@ select[aria-invalid="true"] + .ts-wrapper .ts-control {
 }
 .flatpickr-day:hover,
 .flatpickr-day:focus {
-  background: hsl(var(--muted));
-  color: hsl(var(--foreground));
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
 }
 .flatpickr-day.today {
-  border: 1px solid hsl(var(--primary));
+  border: 1px solid var(--colour-brand);
   background: transparent;
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
 }
 .flatpickr-day.today:hover {
-  background: hsl(var(--muted));
-  border-color: hsl(var(--primary));
+  background: var(--colour-surface-muted);
+  border-color: var(--colour-brand);
 }
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
@@ -928,21 +824,21 @@ select[aria-invalid="true"] + .ts-wrapper .ts-control {
 .flatpickr-day.selected:hover,
 .flatpickr-day.startRange:hover,
 .flatpickr-day.endRange:hover {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border-color: hsl(var(--primary));
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  border-color: var(--colour-brand);
 }
 .flatpickr-day.inRange,
 .flatpickr-day.inRange:hover {
-  background: hsl(var(--primary) / 0.1);
-  color: hsl(var(--foreground));
+  background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
+  color: var(--colour-text);
   box-shadow: none;
   border-color: transparent;
 }
 .flatpickr-day.flatpickr-disabled,
 .flatpickr-day.prevMonthDay,
 .flatpickr-day.nextMonthDay {
-  color: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted);
   opacity: 0.5;
 }
 .flatpickr-day.flatpickr-disabled:hover {
@@ -951,7 +847,7 @@ select[aria-invalid="true"] + .ts-wrapper .ts-control {
 /* Error state — underlying input border already set via Tailwind conditional */
 input[aria-invalid="true"][data-dz-widget="datepicker"],
 input[aria-invalid="true"][data-dz-widget="daterange"] {
-  border-color: hsl(var(--destructive));
+  border-color: var(--colour-danger);
 }
 
 /* ── Range slider token overrides (UX-023 widget:slider) ──────────────── */
@@ -970,14 +866,14 @@ input[type="range"][data-dz-slider]:focus { outline: none; }
 /* Track — WebKit / Blink */
 input[type="range"][data-dz-slider]::-webkit-slider-runnable-track {
   height: 4px;
-  background: hsl(var(--muted));
+  background: var(--colour-surface-muted);
   border-radius: 2px;
   border: 0;
 }
 /* Track — Gecko */
 input[type="range"][data-dz-slider]::-moz-range-track {
   height: 4px;
-  background: hsl(var(--muted));
+  background: var(--colour-surface-muted);
   border-radius: 2px;
   border: 0;
 }
@@ -989,7 +885,7 @@ input[type="range"][data-dz-slider]::-webkit-slider-thumb {
   height: 16px;
   width: 16px;
   border-radius: 50%;
-  background: hsl(var(--primary));
+  background: var(--colour-brand);
   border: 0;
   cursor: pointer;
   margin-top: -6px; /* (thumb - track) / 2 = (16 - 4) / 2 = 6 */
@@ -1000,7 +896,7 @@ input[type="range"][data-dz-slider]::-webkit-slider-thumb:hover {
   filter: brightness(1.05);
 }
 input[type="range"][data-dz-slider]:focus::-webkit-slider-thumb {
-  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.4);
+  box-shadow: 0 0 0 2px var(--focus-ring-color);
 }
 
 /* Thumb — Gecko */
@@ -1008,7 +904,7 @@ input[type="range"][data-dz-slider]::-moz-range-thumb {
   height: 16px;
   width: 16px;
   border-radius: 50%;
-  background: hsl(var(--primary));
+  background: var(--colour-brand);
   border: 0;
   cursor: pointer;
   transition: filter 80ms cubic-bezier(0.2, 0, 0, 1),
@@ -1018,7 +914,7 @@ input[type="range"][data-dz-slider]::-moz-range-thumb:hover {
   filter: brightness(1.05);
 }
 input[type="range"][data-dz-slider]:focus::-moz-range-thumb {
-  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.4);
+  box-shadow: 0 0 0 2px var(--focus-ring-color);
 }
 
 input[type="range"][data-dz-slider]:disabled {
@@ -1030,9 +926,9 @@ input[type="range"][data-dz-slider]:disabled {
 /* Linear-aesthetic override of vendor/pickr.css (nano theme). Scoped to   */
 /* .pcr-app so the rules don't leak into non-Pickr elements.                */
 .pcr-app {
-  background: hsl(var(--popover));
-  color: hsl(var(--popover-foreground));
-  border: 1px solid hsl(var(--border));
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.08), 0 1px 3px rgb(0 0 0 / 0.06);
   font-family: inherit;
@@ -1040,7 +936,7 @@ input[type="range"][data-dz-slider]:disabled {
 }
 .pcr-app .pcr-selection .pcr-color-preview {
   border-radius: 3px;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--colour-border);
 }
 .pcr-app .pcr-selection .pcr-color-chooser,
 .pcr-app .pcr-selection .pcr-color-opacity {
@@ -1049,14 +945,14 @@ input[type="range"][data-dz-slider]:disabled {
 .pcr-app .pcr-interaction {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid hsl(var(--border));
+  border-top: 1px solid var(--colour-border);
 }
 .pcr-app .pcr-interaction input,
 .pcr-app .pcr-interaction .pcr-result {
-  background: hsl(var(--background));
-  border: 1px solid hsl(var(--border));
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
   border-radius: 3px;
-  color: hsl(var(--foreground));
+  color: var(--colour-text);
   font-size: 12px;
   font-family: ui-monospace, Menlo, monospace;
   padding: 4px 8px;
@@ -1065,27 +961,27 @@ input[type="range"][data-dz-slider]:disabled {
 .pcr-app .pcr-interaction input:focus,
 .pcr-app .pcr-interaction .pcr-result:focus {
   outline: none;
-  box-shadow: 0 0 0 1px hsl(var(--ring));
-  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
 }
 .pcr-app .pcr-interaction .pcr-type.active,
 .pcr-app .pcr-interaction .pcr-type:hover {
-  background: hsl(var(--muted));
-  color: hsl(var(--foreground));
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
 }
 .pcr-app .pcr-interaction .pcr-type {
   background: transparent;
-  color: hsl(var(--muted-foreground));
-  border: 1px solid hsl(var(--border));
+  color: var(--colour-text-muted);
+  border: 1px solid var(--colour-border);
   border-radius: 3px;
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 500;
 }
 .pcr-app .pcr-interaction .pcr-save {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border: 1px solid hsl(var(--primary));
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  border: 1px solid var(--colour-brand);
   border-radius: 3px;
   padding: 4px 10px;
   font-size: 12px;
@@ -1098,8 +994,8 @@ input[type="range"][data-dz-slider]:disabled {
 .pcr-app .pcr-interaction .pcr-cancel,
 .pcr-app .pcr-interaction .pcr-clear {
   background: transparent;
-  color: hsl(var(--muted-foreground));
-  border: 1px solid hsl(var(--border));
+  color: var(--colour-text-muted);
+  border: 1px solid var(--colour-border);
   border-radius: 3px;
   padding: 4px 10px;
   font-size: 12px;
@@ -1107,17 +1003,17 @@ input[type="range"][data-dz-slider]:disabled {
 .pcr-app .pcr-swatches {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid hsl(var(--border));
+  border-top: 1px solid var(--colour-border);
 }
 .pcr-app .pcr-swatches > button {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--colour-border);
   border-radius: 3px;
   margin: 2px;
 }
 /* Error state propagation via the hidden input */
 input[aria-invalid="true"][type="hidden"] + .pcr-app,
 [data-dz-widget="colorpicker"] .pcr-trigger[aria-invalid="true"] {
-  outline: 1px solid hsl(var(--destructive));
+  outline: 1px solid var(--colour-danger);
 }
 
 /* Quill .ql-* token overrides removed in #1001 — Quill replaced by
@@ -1138,21 +1034,21 @@ progress[data-dz-progress] {
   height: 4px;
   overflow: hidden;
   border-radius: 2px;
-  background: hsl(var(--muted));
+  background: var(--colour-surface-muted);
 }
 progress[data-dz-file-progress]::-webkit-progress-bar,
 progress[data-dz-progress]::-webkit-progress-bar {
-  background: hsl(var(--muted));
+  background: var(--colour-surface-muted);
   border-radius: 2px;
 }
 progress[data-dz-file-progress]::-webkit-progress-value,
 progress[data-dz-progress]::-webkit-progress-value {
-  background: hsl(var(--primary));
+  background: var(--colour-brand);
   border-radius: 2px;
   transition: width 120ms cubic-bezier(0.2, 0, 0, 1);
 }
 progress[data-dz-file-progress]::-moz-progress-bar,
 progress[data-dz-progress]::-moz-progress-bar {
-  background: hsl(var(--primary));
+  background: var(--colour-brand);
   border-radius: 2px;
 }

@@ -76,11 +76,11 @@ def test_tranche2a_css_in_dev_bundle(selector: str) -> None:
     assert selector in _bundle(), f"{selector} missing from the CSS bundle"
 
 
-def test_legacy_hsl_dark_block_has_media_fallback() -> None:
-    css = (STATIC / "css" / "design-system.css").read_text()
+def test_dark_token_block_has_media_fallback() -> None:
+    css = (HM / "base" / "design-system.css").read_text()
     assert ':root:not([data-theme="light"])' in css, (
-        "legacy HSL tokens must follow prefers-color-scheme (no-JS/pre-paint "
-        "dark parity) — the tranche-2A fallback block was removed"
+        "the shadow/--dz-* dark overrides must follow prefers-color-scheme "
+        "(no-JS/pre-paint dark parity) — the tranche-2A fallback block was removed"
     )
 
 

@@ -66,7 +66,7 @@ def test_no_quill_import_in_dazzle_css() -> None:
 
 
 def test_no_ql_class_rules_in_design_system_css() -> None:
-    css = (CSS_DIR / "design-system.css").read_text()
+    css = (ROOT / "packages" / "hatchi-maxchi" / "base" / "design-system.css").read_text()
     live = "\n".join(_live_lines(css))
     # `.ql-something {` is the Quill class-rule shape.
     forbidden_starts = (

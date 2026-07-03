@@ -22,52 +22,52 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: Inter, system-ui, sans-serif;
-      background: hsl(var(--background));
-      color: hsl(var(--foreground));
+      background: var(--colour-bg);
+      color: var(--colour-text);
       padding: 24px;
       padding-bottom: 64px;
     }
     h1 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
     h2 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-    p { font-size: 13px; color: hsl(var(--muted-foreground)); margin-bottom: 12px; }
+    p { font-size: 13px; color: var(--colour-text-muted); margin-bottom: 12px; }
     section { margin-bottom: 32px; max-width: 720px; }
-    hr { border: 0; border-top: 1px solid hsl(var(--border)); margin: 24px 0; }
+    hr { border: 0; border-top: 1px solid var(--colour-border); margin: 24px 0; }
     button {
       font: inherit;
       cursor: pointer;
       height: 32px;
       padding: 0 12px;
       border-radius: 4px;
-      border: 1px solid hsl(var(--border));
-      background: hsl(var(--background));
-      color: hsl(var(--foreground));
+      border: 1px solid var(--colour-border);
+      background: var(--colour-bg);
+      color: var(--colour-text);
       font-size: 13px;
       font-weight: 500;
       margin-right: 8px;
       transition: background-color 80ms cubic-bezier(0.2,0,0,1);
     }
-    button:hover { background: hsl(var(--muted)); }
+    button:hover { background: var(--colour-surface-muted); }
     button.primary {
-      background: hsl(var(--primary));
-      color: hsl(var(--primary-foreground));
-      border-color: hsl(var(--primary));
+      background: var(--colour-brand);
+      color: var(--colour-brand-contrast);
+      border-color: var(--colour-brand);
     }
     button.primary:hover { filter: brightness(1.1); }
     button.destructive {
-      background: hsl(var(--destructive));
-      color: hsl(var(--destructive-foreground));
-      border-color: hsl(var(--destructive));
+      background: var(--colour-danger);
+      color: var(--colour-brand-contrast);
+      border-color: var(--colour-danger);
     }
     button.destructive:hover { filter: brightness(1.1); }
-    .hint { font-size: 12px; color: hsl(var(--muted-foreground)); font-style: italic; }
+    .hint { font-size: 12px; color: var(--colour-text-muted); font-style: italic; }
 
     /* Modal (UX-005) — native <dialog> */
     dialog { border: 0; padding: 0; background: transparent; }
     dialog::backdrop { background: rgb(0 0 0 / 0.4); backdrop-filter: blur(2px); }
     .modal-card {
-      background: hsl(var(--popover));
-      color: hsl(var(--popover-foreground));
-      border: 1px solid hsl(var(--border));
+      background: var(--colour-surface);
+      color: var(--colour-text);
+      border: 1px solid var(--colour-border);
       border-radius: 6px;
       box-shadow: 0 20px 40px rgb(0 0 0 / 0.2), 0 2px 8px rgb(0 0 0 / 0.08);
       max-width: 32rem;
@@ -75,7 +75,7 @@
       padding: 20px;
     }
     .modal-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
-    .modal-card .body { font-size: 13px; color: hsl(var(--muted-foreground)); margin-bottom: 20px; }
+    .modal-card .body { font-size: 13px; color: var(--colour-text-muted); margin-bottom: 20px; }
     .modal-card form[method="dialog"] { display: flex; justify-content: flex-end; gap: 8px; }
 
     /* Toast (UX-013) */
@@ -90,9 +90,9 @@
       max-width: 24rem;
     }
     .toast {
-      background: hsl(var(--popover));
-      color: hsl(var(--popover-foreground));
-      border: 1px solid hsl(var(--border));
+      background: var(--colour-surface);
+      color: var(--colour-text);
+      border: 1px solid var(--colour-border);
       border-left-width: 4px;
       border-radius: 4px;
       padding: 10px 12px;
@@ -104,8 +104,8 @@
       min-width: 16rem;
     }
     .toast.success { border-left-color: hsl(142 76% 36%); }
-    .toast.error { border-left-color: hsl(var(--destructive)); }
-    .toast.info { border-left-color: hsl(var(--primary)); }
+    .toast.error { border-left-color: var(--colour-danger); }
+    .toast.info { border-left-color: var(--colour-brand); }
 
     /* Confirm dialog (UX-014) styles inherit the dialog + modal-card */
 
@@ -118,9 +118,9 @@
       margin-top: 4px;
       min-width: 12rem;
       padding: 12px;
-      background: hsl(var(--popover));
-      color: hsl(var(--popover-foreground));
-      border: 1px solid hsl(var(--border));
+      background: var(--colour-surface);
+      color: var(--colour-text);
+      border: 1px solid var(--colour-border);
       border-radius: 6px;
       box-shadow: 0 4px 12px rgb(0 0 0 / 0.08), 0 1px 3px rgb(0 0 0 / 0.06);
       font-size: 13px;
@@ -237,7 +237,7 @@
       <button @click="toggle()" :aria-expanded="open">More options</button>
       <div x-show="open" x-cloak class="popover-panel" role="dialog">
         <div><strong>Popover content</strong></div>
-        <div style="margin-top: 6px; color: hsl(var(--muted-foreground));">
+        <div style="margin-top: 6px; color: var(--colour-text-muted);">
           Arbitrary HTML here. Click outside to close.
         </div>
       </div>

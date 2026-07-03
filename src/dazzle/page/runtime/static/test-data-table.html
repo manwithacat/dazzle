@@ -33,15 +33,15 @@
 
     body {
       font-family: var(--font-sans);
-      background: hsl(var(--background));
-      color: hsl(var(--foreground));
+      background: var(--colour-bg);
+      color: var(--colour-text);
       padding: 2rem;
     }
 
     /* Table chrome */
     .dz-table-root {
       position: relative;
-      border: 1px solid hsl(var(--border));
+      border: 1px solid var(--colour-border);
       border-radius: 6px;
       overflow: hidden;
     }
@@ -55,7 +55,7 @@
     thead {
       position: sticky;
       top: 0;
-      background: hsl(var(--card));
+      background: var(--colour-surface);
       z-index: 10;
     }
 
@@ -66,8 +66,8 @@
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      color: hsl(var(--muted-foreground));
-      border-bottom: 1px solid hsl(var(--border));
+      color: var(--colour-text-muted);
+      border-bottom: 1px solid var(--colour-border);
       text-align: left;
       user-select: none;
       cursor: pointer;
@@ -76,12 +76,12 @@
     td {
       padding: 8px 12px;
       font-size: 13px;
-      color: hsl(var(--foreground));
-      border-bottom: 1px solid hsl(var(--border));
+      color: var(--colour-text);
+      border-bottom: 1px solid var(--colour-border);
     }
 
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: hsl(var(--muted)); }
+    tr:hover td { background: var(--colour-surface-muted); }
 
     /* Resize handle */
     .col-resize-handle {
@@ -94,7 +94,7 @@
       background: transparent;
     }
     .col-resize-handle:hover {
-      background: hsl(var(--border));
+      background: var(--colour-border);
     }
 
     /* Badge */
@@ -105,27 +105,27 @@
       border-radius: 9999px;
       font-size: 11px;
       font-weight: 500;
-      background: hsl(var(--secondary));
-      color: hsl(var(--secondary-foreground));
+      background: var(--colour-surface-muted);
+      color: var(--colour-text);
     }
     .dz-badge[data-status="open"] { background: hsl(217 91% 60% / 0.15); color: hsl(217 91% 40%); }
     .dz-badge[data-status="in_progress"] { background: hsl(38 92% 50% / 0.15); color: hsl(38 92% 35%); }
     .dz-badge[data-status="done"] { background: hsl(142 76% 36% / 0.15); color: hsl(142 76% 28%); }
-    .dz-badge[data-status="archived"] { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+    .dz-badge[data-status="archived"] { background: var(--colour-surface-muted); color: var(--colour-text-muted); }
 
     /* Inline edit input */
     .dz-edit-input {
       width: 100%;
       padding: 4px 8px;
       font-size: 13px;
-      border: 1px solid hsl(var(--primary));
+      border: 1px solid var(--colour-brand);
       border-radius: 4px;
       outline: none;
-      background: hsl(var(--background));
-      color: hsl(var(--foreground));
+      background: var(--colour-bg);
+      color: var(--colour-text);
     }
     .dz-edit-input:focus {
-      box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+      box-shadow: 0 0 0 2px color-mix(in oklab, var(--colour-brand) 20%, transparent);
     }
 
     /* Select all */
@@ -135,7 +135,7 @@
     .dz-loading-overlay {
       position: absolute;
       inset: 0;
-      background: hsl(var(--background) / 0.7);
+      background: color-mix(in oklab, var(--colour-bg) 70%, transparent);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -148,8 +148,8 @@
       align-items: center;
       justify-content: space-between;
       padding: 8px 12px;
-      border-bottom: 1px solid hsl(var(--border));
-      background: hsl(var(--card));
+      border-bottom: 1px solid var(--colour-border);
+      background: var(--colour-surface);
     }
 
     /* Checkbox */
@@ -180,13 +180,13 @@
 
     <!-- Toolbar -->
     <div class="dz-toolbar">
-      <span style="font-size:13px;color:hsl(var(--muted-foreground));">Tasks</span>
+      <span style="font-size:13px;color:var(--colour-text-muted);">Tasks</span>
       <div style="display:flex;gap:8px;align-items:center;">
-        <span x-show="bulkCount > 0" x-text="bulkCount + ' selected'" style="font-size:12px;color:hsl(var(--muted-foreground));"></span>
+        <span x-show="bulkCount > 0" x-text="bulkCount + ' selected'" style="font-size:12px;color:var(--colour-text-muted);"></span>
         <button
           x-show="bulkCount > 0"
           @click="bulkDelete()"
-          style="font-size:12px;padding:4px 10px;border:1px solid hsl(var(--destructive));border-radius:4px;cursor:pointer;color:hsl(var(--destructive));background:transparent;"
+          style="font-size:12px;padding:4px 10px;border:1px solid var(--colour-danger);border-radius:4px;cursor:pointer;color:var(--colour-danger);background:transparent;"
         >Delete</button>
       </div>
     </div>

@@ -45,7 +45,7 @@ CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
     # vendor/pickr.css removed in #976 — `widget=color` uses native
     # <input type="color">, no vendor CSS required.
     ("tokens", "@hm:tokens/tokens.css"),
-    ("tokens", "css/design-system.css"),
+    ("tokens", "@hm:base/design-system.css"),
     ("base", "@hm:base/base.css"),
     ("utilities", "css/utilities.css"),
     ("components", "@hm:components/alert.css"),

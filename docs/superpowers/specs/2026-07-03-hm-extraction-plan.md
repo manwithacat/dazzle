@@ -47,8 +47,12 @@ because we kept `dz-*` and developed in an extraction-ready shape.
 5. Cross-repo contract test: Dazzle's `test_fragment_primitive_css`
    ("every emitted class has a rule") generalises to validate emitted
    markup against the published contract.
-6. Migrate the 249 legacy `hsl(var(--…))` call sites onto OKLCH semantic
-   tokens during the move (they don't belong in the clean system).
+6. ~~Migrate the 249 legacy `hsl(var(--…))` call sites onto OKLCH semantic
+   tokens during the move (they don't belong in the clean system).~~
+   **DONE (Stage 2b, v0.93.14):** every call site migrated to
+   `var(--colour-*)` / `color-mix(...)`, the HSL definition blocks
+   deleted, and `design-system.css` moved to `base/`. The package's
+   token sheet is the sole colour vocabulary.
 
 ## The feedback loop this unlocks
 

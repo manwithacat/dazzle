@@ -40,7 +40,7 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     # pickr.css removed in #976 — `widget=color` uses native <input type="color">,
     # no vendor CSS required (mirrors css_loader.CSS_SOURCE_FILES).
     ("tokens", HM / "tokens" / "tokens.css"),
-    ("tokens", STATIC / "css" / "design-system.css"),
+    ("tokens", HM / "base" / "design-system.css"),
     ("base", HM / "base" / "base.css"),
     ("utilities", STATIC / "css" / "utilities.css"),
     ("components", HM / "components" / "alert.css"),

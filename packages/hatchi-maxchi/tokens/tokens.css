@@ -226,6 +226,7 @@
    * ───────────────────────────────────────────────────────────────── */
   --colour-bg: light-dark(var(--neutral-50), var(--neutral-950));
   --colour-surface: light-dark(white, var(--neutral-900));
+  --colour-surface-muted: light-dark(var(--neutral-100), var(--neutral-800));
   --colour-text: light-dark(var(--neutral-900), var(--neutral-50));
   --colour-text-muted: light-dark(var(--neutral-600), var(--neutral-400));
   --colour-border: light-dark(var(--neutral-200), var(--neutral-700));
@@ -235,6 +236,9 @@
   --colour-success: var(--success-600);
   --colour-warning: var(--warning-600);
   --colour-danger: var(--danger-500);
+  /* Info: cyan-leaning so chart series stay distinguishable from
+   * --colour-brand (hue ~263). Scheme-stable, like the tone hues. */
+  --colour-info: oklch(60% 0.13 220);
 
   /* Tone tints (background washes for surfaces) — semantic tokens
    * the dz-tones replacements consume. Authors don't hand-craft
@@ -274,6 +278,7 @@
     :root {
       --colour-bg: var(--neutral-950);
       --colour-surface: var(--neutral-900);
+      --colour-surface-muted: var(--neutral-800);
       --colour-text: var(--neutral-50);
       --colour-text-muted: var(--neutral-400);
       --colour-border: var(--neutral-700);

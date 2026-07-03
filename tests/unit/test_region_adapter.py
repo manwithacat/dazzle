@@ -1085,7 +1085,7 @@ def test_time_series_carries_reference_bands_with_alt_keys() -> None:
     assert "<title>Healthy:" in html
     assert "hsl(145, 55%, 45%)" in html  # positive colour
     assert "<title>Danger:" in html
-    assert "hsl(var(--destructive))" in html
+    assert "var(--colour-danger)" in html
     assert "Bad order" not in html
 
 

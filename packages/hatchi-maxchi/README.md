@@ -15,13 +15,14 @@ the published bundle back. See
 
 | Path | What lives here |
 |------|-----------------|
+| `tokens/` | `tokens.css` — the OKLCH ramps + semantic tokens (`--colour-*`), type, spacing, shadow, motion, focus. The single colour vocabulary; the legacy HSL system was removed in Stage 2b. |
+| `base/` | `base.css` (element defaults + focus net), `fonts.css` (Geist @font-face), `design-system.css` (non-colour app-shell tokens + vendor-widget theming, moved in Stage 2b). |
 | `components/` | Component CSS (`alert.css`, `hm-core.css`, …). One semantic root class + `data-dz-*` modifiers; tokens carry the aesthetic. |
 | `controllers/` | Vanilla-JS behaviour for the purely-client bits (`dz-confirm.js` = designed `hx-confirm`; `dz-command.js` = ⌘K palette keys). htmx-aware, no framework. |
 | `site/` | The catalogue + gallery. `registry.py` is the **source of truth for the component list**; `build_site.py` renders the static gallery where every example IS its copy-paste snippet (they cannot drift). Includes a mock htmx4 so interactive demos run with no server. |
 | `assets/` | Vendored Geist (OFL) + the Lucide icon registry (ISC). |
 | `oracle/` | The taste rubric + blind-panel harness — the design system carries its own quality gate. |
 | `dist/` | Built `hatchi-maxchi.{css,js}` — vendored back into Dazzle. |
-| `tokens/` | OKLCH ramps, type, spacing, shadow, motion, focus (Stage 2 lands the token sheet here). |
 
 ## Add a component (the agent workflow)
 
