@@ -147,10 +147,19 @@ safe to restyle on.
 
 The system is developed inside the
 [Dazzle monorepo](https://github.com/manwithacat/dazzle)
-(`packages/hatchi-maxchi/` — the source of truth) and published here via
-`git subtree push`. PRs against this repo are welcome for discussion, but
-fixes land in the monorepo, where the design system's blind-panel taste
-oracle and a 12-app example fleet exercise every component.
+(`packages/hatchi-maxchi/` — the source of truth). PRs against this repo
+are welcome for discussion, but fixes land in the monorepo, where the
+design system's blind-panel taste oracle and a 12-app example fleet
+exercise every component.
+
+**Publish pipeline:** every monorepo push touching the package triggers a
+subtree sync to this repo's `main` (Dazzle's `sync-hatchi-maxchi.yml`,
+authenticated by a repo-scoped deploy key); this repo's CI then gates the
+sync and Pages redeploys the gallery. **Releases are never automatic**:
+bump `package.json` in the monorepo (the sync carries it here), then
+either push the matching `v*` tag or run the Release workflow from the
+Actions tab with the version input — both validate tag == package.json
+and attach the built bundle + CDN/SRI snippet.
 
 Run the gates locally:
 

@@ -36,3 +36,11 @@ jobs:
           path: site
       - id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true
+      # The deploy API is occasionally flaky ("fetching artifact metadata
+      # failed — check githubstatus"); one in-run retry absorbs it. Do NOT
+      # re-run a failed run instead — that re-uploads the artifact and the
+      # deploy then fails on "multiple artifacts named github-pages".
+      - id: deployment-retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4

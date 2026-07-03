@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.28] - 2026-07-03
+
+### Added
+- **Automated HaTchi-MaXchi sync pipeline.** New `sync-hatchi-maxchi.yml`: any push to main touching `packages/hatchi-maxchi/**` splits the package history and pushes it to the standalone repo (deploy-key auth via the `HM_SYNC_DEPLOY_KEY` secret; the run fails loudly until the key is configured). The standalone `release.yml` gains a `workflow_dispatch` mode — cut a release from the Actions UI with a version input (validated against `package.json`); tag-push still works. `pages.yml` retries the flaky deploy step in-run (re-running a failed run duplicates the artifact — don't).
+
+### Agent Guidance
+- Do NOT manually `git subtree push` after HM-touching ships any more — the sync workflow does it on push to main. Releases: bump `packages/hatchi-maxchi/package.json` in the monorepo, let the sync land, then cut the release on the standalone repo (tag push or Release workflow dispatch).
+
 ## [0.93.27] - 2026-07-03
 
 ### Fixed

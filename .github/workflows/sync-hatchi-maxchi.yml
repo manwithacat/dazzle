@@ -1,0 +1,51 @@
+# Continuous sync: any push to main that touches packages/hatchi-maxchi/**
+# re-splits the package history and pushes it to the standalone repo
+# (github.com/manwithacat/hatchi-maxchi). The standalone repo's own CI
+# then gates the sync (contract / behaviour / visual / WCAG).
+#
+# Releases stay DELIBERATE and are cut on the standalone repo (release.yml
+# there: push a v* tag, or run its workflow_dispatch with a version input).
+#
+# Auth: HM_SYNC_DEPLOY_KEY — an SSH deploy key scoped to write on the
+# hatchi-maxchi repo only (Settings → Deploy keys there; private half in
+# this repo's Actions secrets).
+name: Sync HaTchi-MaXchi
+
+on:
+  push:
+    branches: [main]
+    paths: ["packages/hatchi-maxchi/**"]
+  workflow_dispatch:
+
+# Queue, never cancel: each sync must land in order (fast-forward pushes).
+concurrency:
+  group: hm-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # subtree split walks the full history
+      - name: Split package history and push to standalone repo
+        env:
+          HM_SYNC_DEPLOY_KEY: ${{ secrets.HM_SYNC_DEPLOY_KEY }}
+        run: |
+          if [ -z "$HM_SYNC_DEPLOY_KEY" ]; then
+            echo "::error::HM_SYNC_DEPLOY_KEY secret is not set — add the deploy key (see workflow header)"; exit 1
+          fi
+          git config user.name "dazzle-hm-sync[bot]"
+          git config user.email "noreply@github.com"
+          BRANCH_SHA=$(git subtree split --prefix=packages/hatchi-maxchi)
+          echo "split -> $BRANCH_SHA"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$HM_SYNC_DEPLOY_KEY" > ~/.ssh/hm_sync
+          chmod 600 ~/.ssh/hm_sync
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/hm_sync -o IdentitiesOnly=yes" \
+            git push git@github.com:manwithacat/hatchi-maxchi.git "$BRANCH_SHA:refs/heads/main"
