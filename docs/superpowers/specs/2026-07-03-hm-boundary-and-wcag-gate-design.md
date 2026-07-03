@@ -1,8 +1,9 @@
 # HM ⇄ Dazzle boundary + WCAG gate — design
 
 **Date:** 2026-07-03
-**Status:** Phases 1 + 3 + 4 SHIPPED (v0.93.25/29); only the Phase 2 dist flip
-remains (adversarial-review-gated). Phase 3's lockstep gate found REAL DRIFT on
+**Status:** ALL PHASES SHIPPED (v0.93.25/29/30) — the design is COMPLETE.
+Phase 2 verification: full suite green, fleet pixel-compare 0-diff both
+themes, adversarial review clean (2 stale-doc SEV-3s fixed in-commit). Phase 3's lockstep gate found REAL DRIFT on
 its first run: `fragment-primitives.css` had been lost from the dev concat at
 the Stage 2a move (dist had it, dev didn't — `serve --local` shipped without
 `.dz-submit` styling); restored. The HM-side gallery-regen gate now runs in
