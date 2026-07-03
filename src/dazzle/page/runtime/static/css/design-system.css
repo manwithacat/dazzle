@@ -63,8 +63,8 @@
   --info-foreground: 0 0% 98%;
 
   /* --- Typography --- */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', monospace;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, 'Cascadia Code', monospace;
 
   /* --- Spacing scale --- */
   --space-0: 0;

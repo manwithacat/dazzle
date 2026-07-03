@@ -24,6 +24,7 @@
 @import url("reset.css") layer(reset);
 @import url("../vendor/tom-select.css") layer(vendor);
 @import url("../vendor/flatpickr.css") layer(vendor);
+@import url("fonts.css") layer(vendor); /* Geist @font-face (HaTchi-MaXchi Phase 2) */
 /* vendor/quill.snow.css removed in #977 cycle 4 — Quill replaced by
  * dz-richtext (Dazzle-native, bundled). Caught by the /fuzz runtime
  * pass: every rich_text page was 404ing on this stale @import.

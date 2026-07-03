@@ -1,0 +1,25 @@
+/*
+ * HaTchi-MaXchi type foundation — Geist + Geist Mono, self-hosted.
+ *
+ * Variable woff2s vendored from vercel/geist-font v1.7.2 (SIL OFL 1.1,
+ * licence at ../fonts/OFL.txt). No third-party request, no FOIT:
+ * font-display: swap falls back to the system stack until loaded.
+ * TASTE-5 (docs/reference/taste.md): type does the hierarchy — the
+ * family loads here; the scale/weight discipline lives in tokens.
+ */
+
+@font-face {
+  font-family: "Geist";
+  src: url("/static/fonts/geist-var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/static/fonts/geist-mono-var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}

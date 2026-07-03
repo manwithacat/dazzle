@@ -35,6 +35,8 @@ CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
     ("reset", "css/reset.css"),
     ("vendor", "vendor/tom-select.css"),
     ("vendor", "vendor/flatpickr.css"),
+    # Geist/Geist Mono @font-face (HaTchi-MaXchi Phase 2).
+    ("vendor", "css/fonts.css"),
     # vendor/quill.snow.css removed in #977 cycle 4 — Quill replaced by
     # dz-richtext (Dazzle-native, bundled).
     # vendor/pickr.css removed in #976 — `widget=color` uses native

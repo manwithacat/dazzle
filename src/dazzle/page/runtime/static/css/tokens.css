@@ -75,8 +75,8 @@
   /* ─────────────────────────── font families ─────────────────────
    * `--font-system` is the OS-default sans stack; `--font-mono` is
    * used by tabular numerics in chart summaries (bar_track etc.). */
-  --font-system: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
+  --font-system: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
                Consolas, "Liberation Mono", monospace;
 
   /* ─────────────────────────── line height ─────────────────────────
