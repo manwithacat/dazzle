@@ -239,3 +239,142 @@
   font-size: 0.6875rem;
   color: var(--colour-text-muted);
 }
+
+/* ── dz-command — the hx-get command palette (htmx4 flagship) ─────────
+ * <dialog class="dz-command">
+ *   <input class="dz-command__input" placeholder="Search…" name="q"
+ *          hx-get="/app/command" hx-trigger="input changed delay:150ms"
+ *          hx-target="next .dz-command__results">
+ *   <div class="dz-command__results">…server-rendered items…</div>
+ * </dialog>
+ * Server renders .dz-command__item entries (icon + label + dz-kbd hint).
+ * dz-command.js: ⌘K/Ctrl-K opens, Esc closes, arrows move [aria-selected].
+ */
+
+dialog.dz-command {
+  width: min(34rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-lg);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-lg);
+  margin-block-start: 12vh;
+}
+
+dialog.dz-command::backdrop {
+  background: oklch(13% 0.028 261.69 / 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.dz-command__input {
+  width: 100%;
+  padding: var(--space-lg);
+  border: none;
+  border-block-end: 1px solid var(--colour-border);
+  background: transparent;
+  color: var(--colour-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.dz-command__results {
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: var(--space-xs);
+}
+
+.dz-command__group {
+  padding: var(--space-sm) var(--space-md) var(--space-xs);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--colour-text-muted);
+}
+
+.dz-command__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dz-command__item:hover,
+.dz-command__item[aria-selected="true"] {
+  background: color-mix(in oklab, var(--colour-brand) 8%, var(--colour-surface));
+}
+
+.dz-command__item .dz-kbd { margin-inline-start: auto; }
+
+.dz-command__empty {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ── dz-hover-card ────────────────────────────────────────────────────
+ * <span class="dz-hover-card">trigger<span class="dz-hover-card__panel">
+ * …rich preview…</span></span> — pure CSS reveal, htmx can lazy-load the
+ * panel body with hx-trigger="intersect once".
+ */
+
+.dz-hover-card {
+  position: relative;
+  display: inline-block;
+}
+
+.dz-hover-card__panel {
+  position: absolute;
+  inset-block-start: calc(100% + 0.375rem);
+  inset-inline-start: 0;
+  width: 18rem;
+  padding: var(--space-lg);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  z-index: 45;
+}
+
+.dz-hover-card:hover .dz-hover-card__panel,
+.dz-hover-card:focus-within .dz-hover-card__panel {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 400ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-hover-card__panel { transition: none; }
+}
+
+/* ── dz-scroll-area ──────────────────────────────────────────────────
+ * Thin, token-coloured scrollbars for constrained panels.
+ */
+
+.dz-scroll-area {
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--colour-text) 25%, transparent) transparent;
+}
+
+.dz-scroll-area::-webkit-scrollbar { width: 8px; height: 8px; }
+.dz-scroll-area::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--colour-text) 25%, transparent);
+  border-radius: var(--radius-full);
+}
+.dz-scroll-area::-webkit-scrollbar-track { background: transparent; }

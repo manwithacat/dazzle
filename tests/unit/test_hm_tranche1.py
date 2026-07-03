@@ -81,3 +81,25 @@ def test_legacy_hsl_dark_block_has_media_fallback() -> None:
         "legacy HSL tokens must follow prefers-color-scheme (no-JS/pre-paint "
         "dark parity) — the tranche-2A fallback block was removed"
     )
+
+
+@pytest.mark.parametrize(
+    "selector",
+    [
+        "dialog.dz-command",
+        '.dz-command__item[aria-selected="true"]',
+        ".dz-command__empty",
+        ".dz-hover-card:hover .dz-hover-card__panel",
+        ".dz-scroll-area::-webkit-scrollbar-thumb",
+    ],
+)
+def test_tranche2b_css_in_dev_bundle(selector: str) -> None:
+    assert selector in _bundle(), f"{selector} missing from the CSS bundle"
+
+
+def test_command_controller_bundled_and_wired() -> None:
+    import scripts.build_dist as build_dist  # type: ignore[import-not-found]
+
+    assert "dz-command.js" in {p.name for p in build_dist.JS_SOURCES}
+    js = (STATIC / "js" / "dz-command.js").read_text()
+    assert "metaKey" in js and "htmx:afterSwap" in js and "aria-selected" in js

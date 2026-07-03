@@ -105,6 +105,7 @@ JS_SOURCES = [
     # which is all of them, since app_chrome.js_scripts always points at the
     # bundle. Ordered first in the runtime block so the listener is registered
     # before any other runtime code can trigger an htmx request.
+    STATIC / "js" / "dz-command.js",
     STATIC / "js" / "dz-confirm.js",
     STATIC / "js" / "dz-csrf.js",
     STATIC / "js" / "dz-a11y.js",

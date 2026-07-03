@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.9] - 2026-07-03
+
+### Added
+- **HaTchi-MaXchi tranche 2B** — `dz-command` (the hx-get command palette: server-rendered dialog + input wired with `hx-get`/`hx-trigger`; `dz-command.js` owns only ⌘K open, arrow selection, Enter activate — the htmx4 flagship), `dz-hover-card` (CSS reveal, panel body lazy-loadable via `hx-trigger="intersect once"`), `dz-scroll-area` (token-coloured thin scrollbars).
+
 ## [0.93.8] - 2026-07-03
 
 ### Added
