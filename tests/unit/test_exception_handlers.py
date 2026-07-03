@@ -262,6 +262,69 @@ class TestCompute404Suggestions:
         assert len(out) <= 3
 
 
+class TestNoSitespecStillRendersHtml1536:
+    """#1536: the styled error handlers register even WITHOUT a sitespec.
+
+    Apps with no marketing site previously served raw JSON to the browser
+    on every 403/404 — the raw-JSON denial pages the taste panel scored
+    1.3/10. Empty sitespec_data must still produce HTML for browsers.
+    """
+
+    @pytest.fixture
+    def handler(self) -> Any:
+        from dazzle.http.runtime.exception_handlers import register_site_error_handlers
+
+        app = MagicMock()
+        handlers: dict[type, Any] = {}
+
+        def capture_handler(exc_class: type) -> Any:
+            def decorator(fn: Any) -> Any:
+                handlers[exc_class] = fn
+                return fn
+
+            return decorator
+
+        app.exception_handler = capture_handler
+        register_site_error_handlers(app, sitespec_data={})
+
+        from starlette.exceptions import HTTPException as StarletteHTTPException
+
+        return handlers[StarletteHTTPException]
+
+    def _make_request(self, path: str, accept: str = "text/html") -> Any:
+        req = MagicMock()
+        req.headers = {"accept": accept}
+        req.url = MagicMock()
+        req.url.path = path
+        req.url.__str__ = lambda self: f"http://test{path}"  # type: ignore[method-assign]
+        return req
+
+    @pytest.mark.asyncio
+    async def test_403_workspace_denial_renders_in_shell_html(self, handler: Any) -> None:
+        from starlette.exceptions import HTTPException
+
+        req = self._make_request("/app/workspaces/_platform_admin")
+        exc = HTTPException(
+            status_code=403,
+            detail="You don't have permission to access this workspace.",
+        )
+        response = await handler(req, exc)
+        assert response.status_code == 403
+        body = response.body.decode()
+        assert body.lstrip().startswith("<!") or body.lstrip().startswith("<")
+        assert "permission" in body
+
+    @pytest.mark.asyncio
+    async def test_api_clients_still_get_json(self, handler: Any) -> None:
+        from starlette.exceptions import HTTPException
+
+        req = self._make_request("/app/workspaces/x", accept="application/json")
+        exc = HTTPException(status_code=403, detail="nope")
+        response = await handler(req, exc)
+        assert response.status_code == 403
+        assert b'"detail"' in response.body
+
+
 class TestErrorHandlerDispatch:
     """The registered 404/403 handler chooses templates by URL prefix."""
 
@@ -316,9 +379,11 @@ class TestErrorHandlerDispatch:
 
         assert response.status_code == 404
         body = response.body.decode()
-        # Typed-view markers — 404 heading + stack layout.
-        assert "<h1" in body and "404" in body
-        assert "dz-stack" in body
+        # Typed-view markers — #1536 designed error shape: centered card
+        # with a registry-icon EmptyState (h3 headline) + CTAs.
+        assert "404" in body
+        assert "dz-empty-state" in body and "dz-card" in body
+        assert '<span class="dz-empty-state__icon"' in body
         # Back affordance to /app/contact (parent list).
         assert 'href="/app/contact"' in body
         assert "Back to List" in body

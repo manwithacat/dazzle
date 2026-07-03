@@ -26,6 +26,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.access import workspace_allowed_personas
 from dazzle.core.ir.identity import spec_display_id
 from dazzle.qa.models import CapturedScreen
 from dazzle.testing.browser_gate import BrowserGate
@@ -59,16 +60,35 @@ VIEWPORTS: dict[str, dict[str, int]] = {
 # =============================================================================
 
 
-def build_capture_plan(appspec: Any) -> list[CaptureTarget]:
+def _workspace_access_map(workspaces: list[Any], personas: list[Any]) -> dict[str, set[str] | None]:
+    """Per-workspace allowed-persona sets (None = open to all personas)."""
+    allowed_by_ws: dict[str, set[str] | None] = {}
+    for workspace in workspaces:
+        workspace_name = str(getattr(workspace, "name", None) or "unknown")
+        try:
+            allowed = workspace_allowed_personas(workspace, personas)
+        except Exception:  # pragma: no cover - duck-typed appspecs in tests
+            allowed = None
+        allowed_by_ws[workspace_name] = None if allowed is None else set(allowed)
+    return allowed_by_ws
+
+
+def build_capture_plan(appspec: Any, *, include_denied: bool = False) -> list[CaptureTarget]:
     """Build a list of capture targets from an AppSpec.
 
-    Creates one :class:`CaptureTarget` for every (persona, workspace)
-    combination found in *appspec*.  Returns an empty list when either
-    collection is absent or empty.
+    Creates one :class:`CaptureTarget` per **accessible** (persona,
+    workspace) combination — accessibility comes from
+    :func:`dazzle.core.access.workspace_allowed_personas`, the same single
+    source of truth the nav builder uses, so captures see what a real
+    signed-in persona sees (#1536 follow-on: the old Cartesian product
+    spent most of its screenshots on 403 pages). Returns an empty list
+    when either collection is absent or empty.
 
     Args:
         appspec: A loaded Dazzle AppSpec (or any object exposing
             ``.workspaces`` and ``.personas`` (or ``.archetypes``) iterables).
+        include_denied: Also emit the inaccessible combos (for auditing the
+            denial pages themselves).
 
     Returns:
         Ordered list of :class:`CaptureTarget` instances.
@@ -81,11 +101,17 @@ def build_capture_plan(appspec: Any) -> list[CaptureTarget]:
     if not workspaces or not personas:
         return []
 
+    allowed_by_ws = _workspace_access_map(workspaces, personas)
+
     targets: list[CaptureTarget] = []
     for persona in personas:
         persona_id: str = str(spec_display_id(persona))
         for workspace in workspaces:
-            workspace_name: str = str(getattr(workspace, "name", None) or "unknown")
+            workspace_name = str(getattr(workspace, "name", None) or "unknown")
+            allowed_set = allowed_by_ws[workspace_name]
+            accessible = allowed_set is None or persona_id in allowed_set
+            if not accessible and not include_denied:
+                continue
             targets.append(
                 CaptureTarget(
                     persona=persona_id,

@@ -878,7 +878,9 @@ def _reset_db_for_trial(project_dir: Path) -> None:
         os.chdir(old_cwd)
 
 
-def _plan_qa_capture(project_dir: Path, persona: str | None) -> tuple[Any, list[Any]]:
+def _plan_qa_capture(
+    project_dir: Path, persona: str | None, *, include_denied: bool = False
+) -> tuple[Any, list[Any]]:
     """Load the AppSpec and build the (optionally persona-filtered) capture plan.
 
     Exits the CLI with a diagnostic when the appspec can't load or the plan
@@ -892,7 +894,7 @@ def _plan_qa_capture(project_dir: Path, persona: str | None) -> tuple[Any, list[
         typer.echo(f"Failed to load AppSpec: {e}", err=True)
         raise typer.Exit(code=1)
 
-    targets = build_capture_plan(appspec)
+    targets = build_capture_plan(appspec, include_denied=include_denied)
     if not targets:
         typer.echo("No capture targets found (no workspaces or personas defined).", err=True)
         raise typer.Exit(code=1)
@@ -929,12 +931,18 @@ def qa_capture(
     above_fold: bool = typer.Option(
         False, "--above-fold", help="Viewport-height screenshot instead of full page"
     ),
+    include_denied: bool = typer.Option(
+        False,
+        "--include-denied",
+        help="Also capture persona/workspace combos the persona cannot access "
+        "(denial-page auditing; the default plan is persona-matched, #1536)",
+    ),
 ) -> None:
     """Capture screenshots only — no LLM evaluation needed."""
     from dazzle.qa.server import AppConnection, wait_for_ready
 
     project_dir = _resolve_project_dir(app)
-    appspec, targets = _plan_qa_capture(project_dir, persona)
+    appspec, targets = _plan_qa_capture(project_dir, persona, include_denied=include_denied)
 
     if url is None:
         typer.echo(
@@ -989,6 +997,42 @@ def qa_capture(
         app_name = str(getattr(appspec, "name", None) or project_dir.name)
         write_manifest(screens, app_name=app_name, manifest_path=manifest)
         typer.echo(f"Manifest: {manifest}")
+
+
+@qa_app.command("login")
+def qa_login(
+    persona: str = typer.Argument(..., help="Persona id to sign in as (e.g. admin)"),
+    url: str = typer.Option(..., "--url", "-u", help="Base URL of a running dev app"),
+) -> None:
+    """Print a one-click magic-link URL for a dev persona (#1536 follow-on).
+
+    Uses the dev-gated POST /qa/magic-link endpoint — the server must be
+    running with DAZZLE_ENV=development and DAZZLE_QA_MODE=1 (`dazzle serve
+    --local` sets these; `dazzle e2e env start` sets them when `--personas`
+    is passed). Open the printed URL in a browser to land signed in, then
+    browse the deeper dashboards.
+    """
+    import httpx
+
+    base = url.rstrip("/")
+    try:
+        resp = httpx.post(f"{base}/qa/magic-link", json={"persona_id": persona}, timeout=10.0)
+    except httpx.HTTPError as exc:
+        typer.echo(f"Could not reach {base}: {exc}", err=True)
+        raise typer.Exit(code=1)
+    if resp.status_code == 404:
+        typer.echo(
+            "QA mode is not active on that server (or the persona isn't "
+            "provisioned). The endpoint needs DAZZLE_ENV=development and "
+            "DAZZLE_QA_MODE=1, and the persona must exist "
+            f"({persona}@example.test).",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    resp.raise_for_status()
+    link = resp.json()["url"]
+    typer.echo(f"{base}{link}")
+    typer.echo("(single-use, 60s TTL — open it now)", err=True)
 
 
 @qa_app.command("taste-panel")

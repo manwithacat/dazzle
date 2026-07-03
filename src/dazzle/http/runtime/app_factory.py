@@ -1079,16 +1079,19 @@ def assemble_post_build_routes(
                 adapter_name = type(builder.process_adapter).__name__
                 logger.info("Synced %s DSL schedule(s) to %s", count, adapter_name)
 
-    # ---- 8. 404 handler ----
-    if sitespec_data:
-        try:
-            from dazzle.http.runtime.exception_handlers import register_site_error_handlers
+    # ---- 8. Error-page handlers ----
+    # Registered UNCONDITIONALLY (#1536): the styled 403/404/500 pages were
+    # previously gated on a sitespec being present, so any app without a
+    # marketing site served raw JSON to the browser on every denial — the
+    # taste-panel judges scored those pages 1.3/10, and rightly so.
+    try:
+        from dazzle.http.runtime.exception_handlers import register_site_error_handlers
 
-            register_site_error_handlers(
-                app, sitespec_data, project_root=project_root, appspec=appspec
-            )
-        except ImportError:
-            pass
+        register_site_error_handlers(
+            app, sitespec_data or {}, project_root=project_root, appspec=appspec
+        )
+    except ImportError:
+        pass
 
     # ---- 9. Route validation ----
     try:

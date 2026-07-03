@@ -941,7 +941,7 @@
       "investigate_command": 10,
       "queue_command": 6,
       "triage_command": 11,
-      "vitality": 3
+      "vitality": 4
     },
     "mi_rank": "A"
   },
@@ -1176,16 +1176,19 @@
       "_minimal_fields_for": 16,
       "_missing_signing_server_deps": 3,
       "_placeholder_for_field_type": 13,
+      "_plan_qa_capture": 7,
       "_provision_signing_env": 7,
       "_pyhanko_validator": 3,
       "_reset_db_for_trial": 1,
       "_resolve_project_dir": 4,
       "_seed_demo_data_for_trial": 31,
       "_seed_signable_rows": 9,
-      "qa_capture": 15,
+      "qa_capture": 10,
+      "qa_login": 3,
+      "qa_taste_panel": 9,
       "qa_trial": 41
     },
-    "mi_rank": "A"
+    "mi_rank": "B"
   },
   "dazzle/cli/quality.py": {
     "functions": {
@@ -1551,7 +1554,7 @@
       "_format_report": 10,
       "_manifest_strict_enabled": 3,
       "_spec_mentions_entity": 3,
-      "spec_brief": 3,
+      "spec_brief": 4,
       "spec_status": 8
     },
     "mi_rank": "A"
@@ -1670,7 +1673,7 @@
       "feedback_patterns": 3,
       "feedback_prompt_suggestions": 3,
       "feedback_record_regression": 3,
-      "feedback_summary": 6,
+      "feedback_summary": 4,
       "test_agent": 19,
       "test_create_sessions": 10,
       "test_diff_personas": 16,
@@ -1977,9 +1980,7 @@
   },
   "dazzle/compliance/coordinator.py": {
     "functions": {
-      "build_agent_context": 11,
-      "compile_full_pipeline": 2,
-      "topological_sort_documents": 4
+      "compile_full_pipeline": 2
     },
     "mi_rank": "A"
   },
@@ -2435,12 +2436,14 @@
       "_build_visual_markdown": 10,
       "_call_vision_api": 8,
       "_evaluate_section_dimension": 10,
+      "_make_taste_prompt_builder": 1,
       "_parse_findings": 5,
       "_score_findings": 2,
       "apply_filter": 8,
       "build_visual_report": 14,
       "evaluate_captures": 20,
-      "image_to_base64": 1
+      "image_to_base64": 1,
+      "resolve_focus_dimensions": 7
     },
     "mi_rank": "A"
   },
@@ -4682,7 +4685,8 @@
       "FieldType.validate_enum_values": 4,
       "FieldTypeKind": 1,
       "RelationshipBehavior": 1,
-      "_rebuild_field_spec": 1
+      "_rebuild_field_spec": 1,
+      "coerce_framework_default": 9
     },
     "mi_rank": "A"
   },
@@ -5461,12 +5465,13 @@
       "VerifiableTriple": 3,
       "VerifiableTriple.action_names": 2,
       "WidgetKind": 1,
+      "_cedar_permits": 5,
       "_condition_is_pure_role_only": 10,
       "_condition_matches_role": 6,
       "_resolve_surface_fields": 11,
-      "_rule_matches_persona": 5,
+      "_rule_matches_persona": 6,
       "derive_triples": 11,
-      "get_permitted_personas": 14,
+      "get_permitted_personas": 11,
       "resolve_surface_actions": 14,
       "resolve_widget": 5
     },
@@ -6171,26 +6176,10 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/core/question_emitter.py": {
-    "functions": {
-      "append_questions_to_dsl": 5,
-      "emit_question_dsl": 6,
-      "get_next_question_id": 4
-    },
-    "mi_rank": "A"
-  },
   "dazzle/core/renderer_registry.py": {
     "functions": {
       "default_renderer_names": 1,
       "known_renderer_names": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/rule_emitter.py": {
-    "functions": {
-      "append_rules_to_dsl": 5,
-      "emit_rule_dsl": 8,
-      "get_next_rule_id": 4
     },
     "mi_rank": "A"
   },
@@ -6211,16 +6200,19 @@
       "CoherenceReport.to_dict": 2,
       "CoherenceReport.warning_count": 3,
       "Severity": 1,
+      "_check_asset_href": 5,
       "_check_auth_flow": 15,
       "_check_branding": 9,
       "_check_content_completeness": 15,
-      "_check_ctas": 20,
-      "_check_footer": 17,
+      "_check_ctas": 19,
+      "_check_footer": 19,
       "_check_legal_pages": 8,
-      "_check_navigation": 10,
+      "_check_navigation": 12,
       "_check_placeholder_content": 17,
       "_check_required_pages": 10,
       "_collect_all_routes": 14,
+      "_href_path": 1,
+      "_is_asset_href": 2,
       "detect_placeholders": 2,
       "validate_site_coherence": 1
     },
@@ -6312,6 +6304,14 @@
       "entity_slug": 1,
       "pluralize": 16,
       "to_api_plural": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/core/taste_rubric.py": {
+    "functions": {
+      "TasteDimension": 1,
+      "build_judge_prompt": 4,
+      "dimensions_for_theme": 3
     },
     "mi_rank": "A"
   },
@@ -6655,7 +6655,8 @@
   },
   "dazzle/db/rls_apply.py": {
     "functions": {
-      "apply_rls_policies": 2
+      "_fetch_information_schema_columns": 1,
+      "apply_rls_policies": 3
     },
     "mi_rank": "A"
   },
@@ -7902,14 +7903,19 @@
       "ConnectednessReport": 1,
       "_ModuleFacts": 1,
       "_build_call_edges": 7,
+      "_candidate_staleness": 8,
       "_class_of": 3,
-      "_dispatch_reference_names": 10,
+      "_coverage_split": 6,
+      "_covered_candidates": 10,
+      "_dispatch_reference_names": 12,
+      "_git_last_touch_days": 4,
+      "_import_prefix": 5,
       "_module_name": 3,
       "_py_files": 3,
       "_resolve_call": 11,
       "_scan_module": 19,
-      "analyze_connectedness": 22,
-      "render_report_md": 5
+      "analyze_connectedness": 23,
+      "render_report_md": 12
     },
     "mi_rank": "A"
   },
@@ -9735,12 +9741,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/http/runtime/admin_api_routes.py": {
-    "functions": {
-      "create_admin_api_routes": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/http/runtime/aggregate.py": {
     "functions": {
       "AggregateBucket": 1,
@@ -9785,33 +9785,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/http/runtime/analytics_collector.py": {
-    "functions": {
-      "AnalyticsCollector": 4,
-      "AnalyticsCollector.__init__": 2,
-      "AnalyticsCollector._build_properties": 9,
-      "AnalyticsCollector._emit_event": 3,
-      "AnalyticsCollector._flush_batch": 4,
-      "AnalyticsCollector._flush_loop": 3,
-      "AnalyticsCollector._track": 8,
-      "AnalyticsCollector.start": 2,
-      "AnalyticsCollector.stop": 3,
-      "AnalyticsCollector.track_action": 2,
-      "AnalyticsCollector.track_click": 2,
-      "AnalyticsCollector.track_conversion": 2,
-      "AnalyticsCollector.track_custom": 1,
-      "AnalyticsCollector.track_error": 2,
-      "AnalyticsCollector.track_feature_use": 1,
-      "AnalyticsCollector.track_form_submit": 2,
-      "AnalyticsCollector.track_page_view": 4,
-      "AnalyticsCollector.track_search": 2,
-      "AnalyticsConfig": 1,
-      "AnalyticsContext": 1,
-      "AnalyticsEventType": 1,
-      "create_analytics_routes": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/http/runtime/api_cache.py": {
     "functions": {
       "ApiResponseCache": 3,
@@ -9829,63 +9802,13 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/http/runtime/api_middleware.py": {
-    "functions": {
-      "ApiTrackingMiddleware": 4,
-      "ApiTrackingMiddleware.__call__": 4,
-      "ApiTrackingMiddleware.__init__": 1,
-      "RequestContext": 3,
-      "RequestContext.current": 2,
-      "add_api_tracking_middleware": 1,
-      "create_correlation_middleware": 1,
-      "create_tracked_client": 1,
-      "get_correlation_id": 1,
-      "get_tenant_id": 1,
-      "get_user_id": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/api_tracker.py": {
-    "functions": {
-      "ApiCostConfig": 1,
-      "ApiTracker": 4,
-      "ApiTracker.__init__": 2,
-      "ApiTracker._calculate_cost": 6,
-      "ApiTracker._emit_event": 4,
-      "ApiTracker._record": 4,
-      "ApiTracker.configure_cost": 1,
-      "ApiTracker.traced": 1,
-      "ApiTracker.track": 2,
-      "TrackedHttpxClient": 2,
-      "TrackedHttpxClient.__aenter__": 1,
-      "TrackedHttpxClient.__aexit__": 1,
-      "TrackedHttpxClient.__init__": 2,
-      "TrackedHttpxClient.aclose": 1,
-      "TrackedHttpxClient.delete": 1,
-      "TrackedHttpxClient.get": 1,
-      "TrackedHttpxClient.patch": 1,
-      "TrackedHttpxClient.post": 1,
-      "TrackedHttpxClient.put": 1,
-      "TrackedHttpxClient.request": 7,
-      "TrackingContext": 2,
-      "TrackingContext.add_metadata": 1,
-      "TrackingContext.latency_ms": 1,
-      "TrackingContext.set_cost": 1,
-      "TrackingContext.set_error": 2,
-      "TrackingContext.set_request_size": 1,
-      "TrackingContext.set_response": 1,
-      "configure_anthropic_tracking": 2,
-      "configure_openai_tracking": 1,
-      "create_openai_cost_calculator": 2
-    },
-    "mi_rank": "A"
-  },
   "dazzle/http/runtime/app_error_views.py": {
     "functions": {
       "_common_assets": 1,
-      "build_app_403_view": 15,
-      "build_app_404_view": 12,
-      "build_app_500_view": 7
+      "_error_page": 7,
+      "build_app_403_view": 9,
+      "build_app_404_view": 6,
+      "build_app_500_view": 1
     },
     "mi_rank": "A"
   },
@@ -11132,22 +11055,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/http/runtime/deploy_history.py": {
-    "functions": {
-      "DeployHistoryStore": 3,
-      "DeployHistoryStore.__init__": 1,
-      "DeployHistoryStore._ensure_table": 1,
-      "DeployHistoryStore._save": 3,
-      "DeployHistoryStore.create_deployment": 1,
-      "DeployHistoryStore.get_deployment": 4,
-      "DeployHistoryStore.list_deployments": 3,
-      "DeployHistoryStore.update_status": 6,
-      "DeployStatus": 1,
-      "DeploymentRecord": 3,
-      "DeploymentRecord.to_dict": 2
-    },
-    "mi_rank": "A"
-  },
   "dazzle/http/runtime/device_registry.py": {
     "functions": {
       "DevicePlatform": 1,
@@ -11167,31 +11074,6 @@
       "DeviceRegistry.unregister_device": 2,
       "create_device_routes": 1,
       "ensure_device_tables": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/email_templates.py": {
-    "functions": {
-      "BrandConfig": 1,
-      "EmailTemplate": 1,
-      "EmailTemplateEngine": 3,
-      "EmailTemplateEngine.__init__": 3,
-      "EmailTemplateEngine._build_context": 1,
-      "EmailTemplateEngine._generate_signature_html": 8,
-      "EmailTemplateEngine._generate_signature_text": 3,
-      "EmailTemplateEngine._inject_tracking_pixel": 3,
-      "EmailTemplateEngine._process_conditionals": 1,
-      "EmailTemplateEngine._rewrite_links": 2,
-      "EmailTemplateEngine._strip_conditionals": 1,
-      "EmailTemplateEngine._substitute_variables": 1,
-      "EmailTemplateEngine.list_templates": 2,
-      "EmailTemplateEngine.record_event": 2,
-      "EmailTemplateEngine.register_template": 1,
-      "EmailTemplateEngine.render": 6,
-      "EmailTrackingRecord": 1,
-      "RenderedEmail": 1,
-      "_utcnow": 1,
-      "create_email_tracking_routes": 1
     },
     "mi_rank": "A"
   },
@@ -11285,7 +11167,7 @@
       "_render_app_shell_error": 5,
       "_typed_error_assets": 3,
       "register_exception_handlers": 1,
-      "register_site_error_handlers": 10
+      "register_site_error_handlers": 14
     },
     "mi_rank": "A"
   },
@@ -11551,31 +11433,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/http/runtime/health_aggregator.py": {
-    "functions": {
-      "AggregateStatus": 1,
-      "ComponentHealth": 1,
-      "HealthAggregator": 5,
-      "HealthAggregator.__init__": 1,
-      "HealthAggregator._check_loop": 3,
-      "HealthAggregator._emit_health_event": 2,
-      "HealthAggregator.check_all": 17,
-      "HealthAggregator.check_component": 5,
-      "HealthAggregator.get_latest": 13,
-      "HealthAggregator.register": 1,
-      "HealthAggregator.start_periodic_checks": 2,
-      "HealthAggregator.stop_periodic_checks": 3,
-      "HealthAggregator.unregister": 1,
-      "SystemHealth": 3,
-      "SystemHealth.to_dict": 3,
-      "SystemHealth.total_components": 1,
-      "create_database_check": 1,
-      "create_event_bus_check": 1,
-      "create_external_api_check": 1,
-      "create_websocket_check": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/http/runtime/hook_registry.py": {
     "functions": {
       "HookDescriptor": 1,
@@ -11823,9 +11680,6 @@
   },
   "dazzle/http/runtime/jwt_middleware.py": {
     "functions": {
-      "DualAuthMiddleware": 4,
-      "DualAuthMiddleware.__init__": 1,
-      "DualAuthMiddleware.get_auth_context": 5,
       "JWTAuthContext": 3,
       "JWTAuthContext.email": 2,
       "JWTAuthContext.roles": 2,
@@ -11836,10 +11690,7 @@
       "JWTMiddleware._extract_token": 4,
       "JWTMiddleware._is_excluded_path": 3,
       "JWTMiddleware._is_optional_path": 3,
-      "JWTMiddleware.get_auth_context": 5,
-      "create_dual_auth_dependency": 1,
-      "create_jwt_dependency": 1,
-      "create_optional_jwt_dependency": 1
+      "JWTMiddleware.get_auth_context": 5
     },
     "mi_rank": "A"
   },
@@ -12096,62 +11947,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/http/runtime/ops_database.py": {
-    "functions": {
-      "AnalyticsEvent": 1,
-      "ApiCallRecord": 1,
-      "ComponentType": 1,
-      "HealthCheckRecord": 1,
-      "HealthStatus": 1,
-      "OpsCredentials": 2,
-      "OpsCredentials.create": 1,
-      "OpsCredentials.verify": 1,
-      "OpsDatabase": 3,
-      "OpsDatabase.__init__": 2,
-      "OpsDatabase._apply_migrations": 2,
-      "OpsDatabase._get_connection": 1,
-      "OpsDatabase._init_schema": 4,
-      "OpsDatabase._row_to_health_check": 2,
-      "OpsDatabase.connection": 2,
-      "OpsDatabase.create_credentials": 1,
-      "OpsDatabase.enforce_retention": 2,
-      "OpsDatabase.get_analytics_summary": 7,
-      "OpsDatabase.get_api_call_stats": 6,
-      "OpsDatabase.get_events": 9,
-      "OpsDatabase.get_health_history": 2,
-      "OpsDatabase.get_latest_health": 3,
-      "OpsDatabase.get_retention_config": 1,
-      "OpsDatabase.has_credentials": 2,
-      "OpsDatabase.record_analytics_event": 2,
-      "OpsDatabase.record_api_call": 2,
-      "OpsDatabase.record_event": 2,
-      "OpsDatabase.record_health_check": 2,
-      "OpsDatabase.set_retention_config": 2,
-      "OpsDatabase.verify_credentials": 3,
-      "RetentionConfig": 2,
-      "RetentionConfig.from_dict": 1,
-      "_utcnow": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/ops_integration.py": {
-    "functions": {
-      "OpsConfig": 4,
-      "OpsConfig.__init__": 3,
-      "OpsPlatform": 4,
-      "OpsPlatform.__init__": 3,
-      "OpsPlatform.configure": 5,
-      "OpsPlatform.create_http_client": 2,
-      "OpsPlatform.create_routes": 4,
-      "OpsPlatform.record_event": 1,
-      "OpsPlatform.render_email": 3,
-      "OpsPlatform.set_appspec": 5,
-      "OpsPlatform.start": 4,
-      "OpsPlatform.stop": 4,
-      "mount_ops_platform": 6
-    },
-    "mi_rank": "A"
-  },
   "dazzle/http/runtime/otp_store.py": {
     "functions": {
       "OTPRecord": 1,
@@ -12173,6 +11968,7 @@
       "_ChromeAssets": 1,
       "_PageRequestContext": 1,
       "_PageRouterConfig": 1,
+      "_annotate_form_usage": 6,
       "_apply_anon_nav": 1,
       "_apply_persona_form_overrides": 20,
       "_apply_persona_overrides": 16,
@@ -12402,29 +12198,6 @@
   "dazzle/http/runtime/process_schema.py": {
     "functions": {
       "ensure_process_tables": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/push_notifications.py": {
-    "functions": {
-      "BatchPushResult": 2,
-      "BatchPushResult.all_success": 1,
-      "NotificationPriority": 1,
-      "PushConfig": 1,
-      "PushError": 2,
-      "PushError.__init__": 1,
-      "PushNotification": 1,
-      "PushNotificationService": 6,
-      "PushNotificationService.__init__": 2,
-      "PushNotificationService._build_fcm_message": 7,
-      "PushNotificationService._ensure_initialized": 7,
-      "PushNotificationService.send_to_device": 11,
-      "PushNotificationService.send_to_topic": 4,
-      "PushNotificationService.send_to_user": 10,
-      "PushNotificationService.subscribe_to_topic": 2,
-      "PushNotificationService.unsubscribe_from_topic": 2,
-      "PushResult": 1,
-      "create_push_service": 1
     },
     "mi_rank": "A"
   },
@@ -12781,21 +12554,12 @@
       "_guarded_create_role": 1,
       "_login_options": 2,
       "_scope_policy_create": 3,
-      "build_all_rls_ddl": 9,
+      "build_all_rls_ddl": 10,
       "build_rls_policy_ddl": 2,
       "build_rls_role_ddl": 1,
       "build_rls_scope_policy_ddl": 15,
-      "describe_rls_policies": 14
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/rollback_manager.py": {
-    "functions": {
-      "RollbackManager": 4,
-      "RollbackManager.__init__": 2,
-      "RollbackManager.has_snapshot": 1,
-      "RollbackManager.rollback_to": 6,
-      "RollbackManager.save_snapshot": 3
+      "describe_rls_policies": 14,
+      "physical_cast_overrides": 4
     },
     "mi_rank": "A"
   },
@@ -12855,13 +12619,15 @@
   },
   "dazzle/http/runtime/sa_schema.py": {
     "functions": {
+      "_column_kwargs": 8,
       "_ensure_sa": 2,
       "_extract_scope_column": 8,
-      "_field_to_column": 15,
+      "_field_to_column": 8,
       "_field_type_to_sa": 6,
       "_find_circular_refs": 10,
       "_list_index_specs": 17,
       "_scalar_type_to_sa": 1,
+      "_server_default_sql": 9,
       "_tenant_composite_ref_fields": 6,
       "_tenant_table_args": 5,
       "_tenant_unique_fields": 5,
@@ -13054,7 +12820,7 @@
       "CRUDService.add_pre_create_hook": 1,
       "CRUDService.add_pre_delete_hook": 1,
       "CRUDService.add_pre_update_hook": 1,
-      "CRUDService.create": 21,
+      "CRUDService.create": 22,
       "CRUDService.delete": 10,
       "CRUDService.execute": 2,
       "CRUDService.list": 3,
@@ -13199,27 +12965,6 @@
       "verify_apple_token": 3,
       "verify_github_token": 8,
       "verify_google_token": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/spec_versioning.py": {
-    "functions": {
-      "AppSpecDiff": 3,
-      "AppSpecDiff.to_dict": 2,
-      "FieldChange": 1,
-      "SpecVersion": 1,
-      "SpecVersionStore": 5,
-      "SpecVersionStore.__init__": 1,
-      "SpecVersionStore._appspec_to_dict": 5,
-      "SpecVersionStore._compute_diff": 17,
-      "SpecVersionStore._ensure_table": 1,
-      "SpecVersionStore._get_latest_snapshot": 3,
-      "SpecVersionStore._hash_snapshot": 1,
-      "SpecVersionStore.count_versions": 2,
-      "SpecVersionStore.get_diff": 3,
-      "SpecVersionStore.get_snapshot": 3,
-      "SpecVersionStore.list_versions": 4,
-      "SpecVersionStore.save_version": 4
     },
     "mi_rank": "A"
   },
@@ -13514,23 +13259,6 @@
       "create_access_check_handler": 1,
       "create_access_denied_handler": 1,
       "get_user_personas_from_membership": 9
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/system_entity_store.py": {
-    "functions": {
-      "SystemEntityStore": 4,
-      "SystemEntityStore.__init__": 1,
-      "SystemEntityStore._list_event_traces": 10,
-      "SystemEntityStore._list_health": 5,
-      "SystemEntityStore._list_log_entries": 5,
-      "SystemEntityStore._list_metrics": 4,
-      "SystemEntityStore._list_process_runs": 6,
-      "SystemEntityStore.create": 1,
-      "SystemEntityStore.delete": 1,
-      "SystemEntityStore.get": 1,
-      "SystemEntityStore.list": 6,
-      "SystemEntityStore.update": 1
     },
     "mi_rank": "A"
   },
@@ -15075,18 +14803,26 @@
   },
   "dazzle/llm/api_client.py": {
     "functions": {
+      "Completion": 1,
       "LLMAPIClient": 5,
       "LLMAPIClient.__init__": 14,
       "LLMAPIClient._build_system_prompt": 1,
       "LLMAPIClient._build_user_prompt": 1,
-      "LLMAPIClient._call_anthropic": 4,
-      "LLMAPIClient._call_openai": 4,
+      "LLMAPIClient._call_anthropic": 6,
+      "LLMAPIClient._call_openai": 6,
       "LLMAPIClient._init_client": 6,
       "LLMAPIClient.analyze_spec": 6,
-      "LLMAPIClient.complete": 3,
+      "LLMAPIClient.complete": 1,
+      "LLMAPIClient.complete_with_usage": 3,
       "LLMAPIClient.estimate_cost": 3,
       "LLMProvider": 1,
       "_strip_code_fence": 4
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/llm/costing.py": {
+    "functions": {
+      "compute_cost_usd": 5
     },
     "mi_rank": "A"
   },
@@ -15786,8 +15522,8 @@
     "functions": {
       "_build_combined_markdown": 11,
       "_load_captures_from_dir": 9,
-      "_run_visual_pipeline": 6,
-      "analyze_composition_handler": 7,
+      "_run_visual_pipeline": 4,
+      "analyze_composition_handler": 5,
       "audit_composition_handler": 4,
       "bootstrap_composition_handler": 10,
       "capture_composition_handler": 10,
@@ -16864,7 +16600,7 @@
       "_compile_custom_surface": 2,
       "_compile_form_surface": 11,
       "_compile_list_surface": 33,
-      "_compile_view_surface": 43,
+      "_compile_view_surface": 46,
       "_enum_semantic_map": 2,
       "_extract_surface_purpose": 6,
       "_field_type_to_column_type": 4,
@@ -16904,7 +16640,7 @@
   "dazzle/page/runtime/action_prominence_resolver.py": {
     "functions": {
       "resolve_action_prominence": 3,
-      "resolve_action_prominence_by_usage": 2
+      "resolve_action_prominence_by_usage": 8
     },
     "mi_rank": "A"
   },
@@ -16950,7 +16686,7 @@
     "functions": {
       "_salience": 4,
       "resolve_column_economy": 5,
-      "resolve_column_economy_by_usage": 7
+      "resolve_column_economy_by_usage": 13
     },
     "mi_rank": "A"
   },
@@ -17033,6 +16769,13 @@
       "create_initial_state": 1,
       "sign_state": 1,
       "verify_state": 8
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/page/runtime/form_engagement_resolver.py": {
+    "functions": {
+      "_is_plain": 4,
+      "annotate_form_fields_by_usage": 15
     },
     "mi_rank": "A"
   },
@@ -17357,14 +17100,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/page/themes/token_compiler.py": {
-    "functions": {
-      "compile_design_tokens": 1,
-      "compile_tokens_from_manifest": 1,
-      "tokens_to_css": 2
-    },
-    "mi_rank": "A"
-  },
   "dazzle/page/utils/__init__.py": {
     "functions": {},
     "mi_rank": "A"
@@ -17666,7 +17401,8 @@
     "functions": {
       "CaptureTarget": 1,
       "_capture_one": 3,
-      "build_capture_plan": 9,
+      "_workspace_access_map": 5,
+      "build_capture_plan": 12,
       "capture_screenshots": 4,
       "write_manifest": 5
     },
@@ -17751,6 +17487,25 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/qa/taste_panel.py": {
+    "functions": {
+      "JudgeScore": 1,
+      "PanelImage": 1,
+      "PanelResult": 1,
+      "TastePanelError": 1,
+      "_make_client": 2,
+      "aggregate_scores": 4,
+      "assemble_pool": 6,
+      "blind_order": 1,
+      "build_report": 12,
+      "noise_sd": 5,
+      "normalize_pool_frames": 5,
+      "parity_verdict": 4,
+      "run_panel": 13,
+      "score_image": 6
+    },
+    "mi_rank": "A"
+  },
   "dazzle/qa/trial_report.py": {
     "functions": {
       "TrialReport": 1,
@@ -17776,14 +17531,14 @@
       "Criterion": 1,
       "ProbeResult": 1,
       "_display_kinds": 3,
-      "_probe_1a": 3,
+      "_probe_1a": 7,
       "_probe_1b": 6,
       "_probe_1c": 4,
       "_probe_1d": 6,
       "_probe_2b": 3,
       "_probe_2c": 2,
-      "_probe_2d": 6,
-      "_probe_3a": 5,
+      "_probe_2d": 11,
+      "_probe_3a": 6,
       "_probe_3b": 1,
       "_probe_3c": 1,
       "_probe_3d": 2,
@@ -18226,6 +17981,17 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/render/fragment/icon_html.py": {
+    "functions": {
+      "lucide_icon_html": 2,
+      "lucide_svg_html": 2
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/render/fragment/icon_registry.py": {
+    "functions": {},
+    "mi_rank": "A"
+  },
   "dazzle/render/fragment/insight.py": {
     "functions": {
       "InsightNarrative": 1,
@@ -18236,6 +18002,12 @@
       "_outlier_line": 4,
       "_scale_line": 3,
       "build_insight_narrative": 10
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/render/fragment/nav_icons.py": {
+    "functions": {
+      "infer_nav_icon": 3
     },
     "mi_rank": "A"
   },
@@ -18753,9 +18525,9 @@
       "_RenderFormsMixin._emit_add_card_row": 1,
       "_RenderFormsMixin._emit_card_picker": 4,
       "_RenderFormsMixin._emit_color_field": 2,
-      "_RenderFormsMixin._emit_combobox": 5,
+      "_RenderFormsMixin._emit_combobox": 6,
       "_RenderFormsMixin._emit_date_picker": 5,
-      "_RenderFormsMixin._emit_field": 6,
+      "_RenderFormsMixin._emit_field": 7,
       "_RenderFormsMixin._emit_file_upload": 5,
       "_RenderFormsMixin._emit_form_section": 3,
       "_RenderFormsMixin._emit_form_stack": 11,
@@ -18806,7 +18578,7 @@
       "_RenderLayoutMixin._emit_badge": 1,
       "_RenderLayoutMixin._emit_card": 4,
       "_RenderLayoutMixin._emit_drawer": 1,
-      "_RenderLayoutMixin._emit_empty_state": 2,
+      "_RenderLayoutMixin._emit_empty_state": 3,
       "_RenderLayoutMixin._emit_grid": 2,
       "_RenderLayoutMixin._emit_heading": 1,
       "_RenderLayoutMixin._emit_icon": 1,
@@ -19408,10 +19180,22 @@
   "dazzle/spec_narrative/brief.py": {
     "functions": {
       "_activate_claims": 4,
-      "_plan_skeleton": 8,
+      "_actor_workspaces": 7,
+      "_automation": 1,
+      "_automation_connections": 3,
+      "_automation_controls": 6,
+      "_automation_money": 3,
+      "_automation_workflows": 8,
+      "_journeys": 4,
+      "_places": 8,
+      "_plan_skeleton": 9,
+      "_relationships": 11,
+      "_scope_rules": 6,
       "_user_entities": 3,
       "_user_surfaces": 6,
-      "build_brief": 8
+      "_user_workspaces": 3,
+      "brief_fingerprint": 1,
+      "build_brief": 9
     },
     "mi_rank": "A"
   },
@@ -19425,12 +19209,34 @@
   "dazzle/spec_narrative/detectors.py": {
     "functions": {
       "always": 1,
+      "has_ai_assist": 1,
+      "has_approvals": 1,
+      "has_background_work": 2,
       "has_compliance_evidence": 2,
       "has_database_rls": 2,
       "has_events": 2,
+      "has_ledger": 1,
       "has_provable_rbac": 5,
       "has_rls": 3,
+      "has_slas": 1,
       "is_multi_tenant": 2
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/spec_narrative/english.py": {
+    "functions": {
+      "_humanize": 3,
+      "_op_phrase": 4,
+      "_render_bool_composite": 9,
+      "_render_column_check": 1,
+      "_render_column_ref_check": 1,
+      "_render_exists_check": 2,
+      "_render_path_check": 6,
+      "_render_poly_path_check": 1,
+      "_render_user_attr_check": 1,
+      "_user_attr_phrase": 2,
+      "_value_phrase": 9,
+      "predicate_to_english": 4
     },
     "mi_rank": "A"
   },
@@ -19438,8 +19244,13 @@
     "functions": {
       "ActivatedClaim": 1,
       "ActorItem": 1,
+      "AutomationItem": 1,
       "CapabilityItem": 1,
       "DomainItem": 1,
+      "JourneyItem": 1,
+      "PlaceItem": 1,
+      "RelationshipItem": 1,
+      "ScopeRuleItem": 1,
       "SectionPlan": 1,
       "SecurityPosture": 1,
       "SpecBrief": 1
@@ -19827,35 +19638,25 @@
       "CorrectionsContainer": 1,
       "FailureType": 1,
       "FeedbackSummary": 1,
-      "PromptVersion": 3,
-      "PromptVersion.acceptance_rate": 2,
-      "PromptVersionsContainer": 1,
       "RegressionStatus": 1,
       "RegressionsContainer": 1,
       "TestCorrection": 1,
       "TestRegression": 1,
       "_get_git_sha": 2,
       "_utcnow": 1,
-      "compare_prompt_versions": 4,
-      "get_corrections_for_regression": 3,
       "get_feedback_dir": 1,
-      "get_feedback_summary": 11,
+      "get_feedback_summary": 10,
       "get_next_correction_id": 5,
       "get_next_regression_id": 5,
       "get_pattern_insights": 3,
       "get_prompt_improvements": 3,
-      "get_prompt_version": 7,
       "get_regressions_by_status": 5,
       "load_corrections": 3,
-      "load_prompt_versions": 3,
       "load_regressions": 3,
       "record_correction": 3,
       "record_regression": 2,
-      "register_prompt_version": 7,
       "save_corrections": 1,
-      "save_prompt_versions": 1,
       "save_regressions": 1,
-      "update_prompt_stats": 4,
       "update_regression_status": 6
     },
     "mi_rank": "A"

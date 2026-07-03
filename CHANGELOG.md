@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.6] - 2026-07-03
+
+### Fixed
+- **#1536 — denied workspaces no longer render raw JSON in the browser.** Root cause: the styled 403/404/500 handlers were only registered when a sitespec existed, so any app without a marketing site served bare `{"detail": …}` to top-level navigations. Handlers now register unconditionally (app-name falls back to the AppSpec title), and the app-shell error views are redesigned to the TASTE-8 shape: a centered card with a registry-icon `EmptyState` (lock/compass/triangle-alert), muted copy, a primary "Go to Dashboard" CTA, and the back affordance.
+
+### Added
+- **Persona-matched `qa capture` plan**: `build_capture_plan` pairs personas only with workspaces they can access (same source of truth as the nav builder — `workspace_allowed_personas`); `--include-denied` restores the full product for auditing denial pages.
+- **`dazzle qa login <persona> --url <base>`** — prints a one-click magic-link URL via the dev-gated `/qa/magic-link` endpoint (server needs `DAZZLE_ENV=development` + `DAZZLE_QA_MODE=1`; `dazzle serve --local` sets them, `dazzle e2e env start --personas …` sets them too). The fastest way to browse deeper dashboards as any persona.
+
+### Agent Guidance
+- To eyeball an app as a specific persona: `dazzle e2e env start <app> --personas a,b` then `dazzle qa login <persona> --url http://localhost:PORT` and open the printed URL. Capture runs are persona-matched by default — pass `--include-denied` only when auditing denial pages.
+
 ## [0.93.5] - 2026-07-03
 
 ### Added

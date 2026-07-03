@@ -119,3 +119,56 @@ def test_build_capture_plan_reads_personas_attr() -> None:
     assert len(targets) == 1
     assert targets[0].persona == "admin"
     assert targets[0].workspace == "dashboard"
+
+
+class TestCapturePlanAccessFiltering1536:
+    """#1536 follow-on: the plan pairs personas only with workspaces they
+    can access (same source of truth as the nav builder), so captures show
+    real signed-in screens instead of denial pages. ``include_denied=True``
+    restores the full product for auditing the denial pages themselves."""
+
+    @staticmethod
+    def _appspec():
+        from types import SimpleNamespace
+
+        from dazzle.core.ir import PersonaSpec
+        from dazzle.core.ir.workspaces import (
+            WorkspaceAccessLevel,
+            WorkspaceAccessSpec,
+            WorkspaceSpec,
+        )
+
+        admin_ws = WorkspaceSpec(
+            name="admin_ws",
+            title="Admin",
+            access=WorkspaceAccessSpec(
+                level=WorkspaceAccessLevel.PERSONA, allow_personas=["admin"]
+            ),
+        )
+        open_ws = WorkspaceSpec(name="open_ws", title="Open")
+        return SimpleNamespace(
+            workspaces=[admin_ws, open_ws],
+            personas=[
+                PersonaSpec(id="admin", label="Admin"),
+                PersonaSpec(id="viewer", label="Viewer"),
+            ],
+            archetypes=None,
+        )
+
+    def test_denied_combos_are_skipped_by_default(self) -> None:
+        from dazzle.qa.capture import build_capture_plan
+
+        targets = build_capture_plan(self._appspec())
+        combos = {(t.persona, t.workspace) for t in targets}
+        assert ("admin", "admin_ws") in combos
+        assert ("admin", "open_ws") in combos
+        assert ("viewer", "open_ws") in combos
+        assert ("viewer", "admin_ws") not in combos
+
+    def test_include_denied_restores_full_product(self) -> None:
+        from dazzle.qa.capture import build_capture_plan
+
+        targets = build_capture_plan(self._appspec(), include_denied=True)
+        combos = {(t.persona, t.workspace) for t in targets}
+        assert ("viewer", "admin_ws") in combos
+        assert len(combos) == 4

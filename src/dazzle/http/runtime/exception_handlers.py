@@ -387,10 +387,16 @@ def register_site_error_handlers(
     # `brand` key, so the marketing 403/404 used to fall back to
     # "Dazzle" in nearly every deployment.
     _brand = sitespec_data.get("brand") or {}
+    # #1536: handlers register even without a sitespec, so fall back to the
+    # AppSpec title before the generic default.
+    _appspec_name = ""
+    if appspec is not None:
+        _appspec_name = str(getattr(appspec, "title", None) or getattr(appspec, "name", None) or "")
     app_name = (
         _brand.get("product_name")
         or sitespec_data.get("product_name")
         or sitespec_data.get("name")
+        or _appspec_name
         or "Dazzle"
     )
 

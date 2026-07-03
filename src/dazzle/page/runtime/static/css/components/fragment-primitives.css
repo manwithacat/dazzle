@@ -683,3 +683,40 @@
   height: 100%;
   display: block;
 }
+
+/* ── Error pages (403/404/500) — HaTchi-MaXchi #1536 ────────────────────
+   The app-shell-lite error views render Page > Stack > Card(EmptyState).
+   Centre that lone card in the viewport; everything else on these pages
+   inherits the empty-state styling. */
+.dz-page > .dz-stack:has(> .dz-card .dz-empty-state) {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-2xl);
+  background: var(--colour-bg);
+}
+
+.dz-page > .dz-stack:has(> .dz-card .dz-empty-state) > .dz-card {
+  width: 100%;
+  max-width: 28rem;
+  text-align: center;
+  padding: var(--space-2xl);
+}
+
+.dz-page > .dz-stack:has(> .dz-card .dz-empty-state) .dz-empty-state__action a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  padding-inline: var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.dz-page > .dz-stack:has(> .dz-card .dz-empty-state) .dz-empty-state__action a:hover {
+  background: var(--brand-700);
+}
