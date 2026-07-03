@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.20] - 2026-07-03
+
+### Fixed
+- **Gallery copy button UX.** Dedicated `.hm-copy` chrome replaces the borrowed `dz-button-ghost` (whose light-scheme hover wash rendered near-white against the dark code block and lingered after clicks): clipboard icon + label, flips to a green check + "Copied" for 1.6s, blurs after copy so no focus state sticks, explicit hover/active/focus-visible states. Behaviour-tested (clipboard content, feedback flip + revert, no lingering focus); darwin visual baselines refreshed.
+
 ## [0.93.19] - 2026-07-03
 
 ### Added

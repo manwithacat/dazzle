@@ -62,6 +62,32 @@ def test_confirm_dialog_intercepts_hx_confirm(page) -> None:  # type: ignore[no-
     ), "clicking an hx-confirm element must open the designed dz-alert-dialog"
 
 
+def test_copy_button_copies_and_gives_feedback(browser) -> None:  # type: ignore[no-untyped-def]
+    from pathlib import Path
+
+    SITE_URI = (Path(__file__).resolve().parents[1] / "site" / "index.html").as_uri()
+    ctx = browser.new_context(permissions=["clipboard-read", "clipboard-write"])
+    page = ctx.new_page()
+    page.goto(SITE_URI)
+    page.wait_for_timeout(200)
+    page.evaluate("document.querySelectorAll('.hm-copy')[0].click()")
+    page.wait_for_timeout(150)
+    assert page.evaluate("document.querySelectorAll('.hm-copy')[0].hasAttribute('data-copied')"), (
+        "copy click must flip the button into its Copied state"
+    )
+    clip = page.evaluate("navigator.clipboard.readText()")
+    assert clip.strip().startswith("<"), "clipboard should hold the snippet HTML"
+    # feedback reverts, and no stuck focus/hover state remains
+    page.wait_for_timeout(1800)
+    assert not page.evaluate(
+        "document.querySelectorAll('.hm-copy')[0].hasAttribute('data-copied')"
+    ), "Copied state must revert"
+    assert page.evaluate("document.activeElement.className") != "hm-copy", (
+        "button must blur after copy so no focus state lingers"
+    )
+    ctx.close()
+
+
 def test_theme_toggle_flips_rendered_colours(page) -> None:  # type: ignore[no-untyped-def]
     light = page.evaluate("getComputedStyle(document.body).backgroundColor")
     page.evaluate("document.querySelector('input[data-hm-theme=dark]').click()")

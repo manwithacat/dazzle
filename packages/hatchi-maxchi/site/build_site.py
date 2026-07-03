@@ -152,7 +152,20 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-code pre { margin: 0; padding: 1rem 4rem 1rem 1.25rem; overflow-x: auto;
   background: var(--neutral-900); color: var(--neutral-100); border-radius: var(--radius-md);
   font-family: var(--font-mono); font-size: .75rem; line-height: 1.6; }
-.hm-copy { position: absolute; top: .5rem; right: .5rem; background: var(--neutral-800); color: var(--neutral-100); }
+.hm-copy { position: absolute; top: .5rem; right: .5rem; display: inline-flex; align-items: center;
+  background: var(--neutral-800); color: var(--neutral-100); border: 1px solid var(--neutral-700);
+  border-radius: var(--radius-sm); padding: .3rem .65rem; font-size: .75rem;
+  font-family: var(--font-sans); font-weight: var(--weight-medium); cursor: pointer;
+  transition: background 120ms var(--ease-default, ease); }
+.hm-copy:hover { background: var(--neutral-700); }
+.hm-copy:active { background: var(--neutral-600); }
+.hm-copy:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset); }
+.hm-copy svg { width: .875rem; height: .875rem; }
+.hm-copy__idle, .hm-copy__done { display: inline-flex; align-items: center; gap: .4rem; }
+.hm-copy__done { display: none; color: var(--success-500); }
+.hm-copy[data-copied] .hm-copy__idle { display: none; }
+.hm-copy[data-copied] .hm-copy__done { display: inline-flex; }
 .hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .75rem; }
 .hm-notes code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
 .hm-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
@@ -205,6 +218,18 @@ def build(out_dir: Path) -> None:
         for c in comps:
             nav_parts.append(f'<a href="#{c.id}">{_html.escape(c.title)}</a>')
 
+    # Copy button: dedicated gallery chrome (NOT dz-button-ghost — the
+    # ghost hover wash is near-white in light scheme and fought the dark
+    # code block), with icon feedback: clipboard -> check "Copied".
+    copy_icon = lucide_svg_html("copy", cls="")
+    check_icon = lucide_svg_html("check", cls="")
+    copy_button = (
+        '<button class="hm-copy" type="button" aria-label="Copy snippet to clipboard">'
+        f'<span class="hm-copy__idle">{copy_icon}Copy</span>'
+        f'<span class="hm-copy__done">{check_icon}Copied</span>'
+        "</button>"
+    )
+
     for c in COMPONENTS:
         live = expand_icons(c.html)
         snippet = _html.escape(c.html)
@@ -215,8 +240,7 @@ def build(out_dir: Path) -> None:
             f"<h2>{_html.escape(c.title)}{tag}</h2>"
             f'<p class="blurb">{_html.escape(c.blurb)}</p>'
             f'<div class="hm-preview">{live}</div>'
-            f'<div class="hm-code"><button class="dz-button dz-button-ghost hm-copy" '
-            f"onclick=\"navigator.clipboard.writeText(this.parentElement.querySelector('code').textContent)\">Copy</button>"
+            f'<div class="hm-code">{copy_button}'
             f"<pre><code>{snippet}</code></pre></div>"
             f"{notes}</section>"
         )
@@ -236,6 +260,15 @@ def build(out_dir: Path) -> None:
         "var b=e.target.closest('[data-hm-open-command]');if(!b)return;"
         "var dlg=document.querySelector('dialog.dz-command');"
         "if(dlg){dlg.showModal();var i=dlg.querySelector('.dz-command__input');if(i)i.focus();}});"
+        # Copy-to-clipboard with icon feedback; blur() so no focus/hover
+        # state lingers on the button after the click.
+        "document.addEventListener('click',function(e){"
+        "var b=e.target.closest('.hm-copy');if(!b)return;"
+        "var code=b.parentElement.querySelector('code');"
+        "navigator.clipboard.writeText(code.textContent).then(function(){"
+        "b.setAttribute('data-copied','');b.blur();"
+        "clearTimeout(b.__hmCopyTimer);"
+        "b.__hmCopyTimer=setTimeout(function(){b.removeAttribute('data-copied');},1600);});});"
     )
     doc = f"""<!doctype html>
 <html lang="en">
