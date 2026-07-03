@@ -1,0 +1,41 @@
+# Tag v* -> build the distribution bundle and attach it to a GitHub
+# Release. Version source of truth is package.json; the tag must match.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check tag matches package.json version
+        run: |
+          PKG_VERSION=$(python -c "import json;print(json.load(open('package.json'))['version'])")
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG" ]; then
+            echo "tag v$TAG != package.json version $PKG_VERSION" >&2
+            exit 1
+          fi
+      - name: Build dist
+        run: |
+          python build.py
+          cd dist && zip -r ../hatchi-maxchi-dist.zip . && cd ..
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "HaTchi-MaXchi $GITHUB_REF_NAME" \
+            --generate-notes \
+            hatchi-maxchi-dist.zip \
+            dist/hatchi-maxchi.css \
+            dist/hatchi-maxchi.js

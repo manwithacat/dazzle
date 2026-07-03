@@ -4,7 +4,9 @@
  * The palette itself is server-rendered markup (dialog.dz-command with an
  * hx-get input); this controller only owns the purely-client bits:
  *   - ⌘K / Ctrl-K opens the first .dz-command dialog on the page
- *   - Esc closes (native <dialog> behaviour, kept)
+ *   - Esc closes explicitly (the palette's input is type="search", whose
+ *     native behaviour swallows the first Esc to clear its value — so
+ *     relying on <dialog>'s built-in cancel needs TWO presses mid-query)
  *   - ArrowUp/ArrowDown move [aria-selected] over .dz-command__item
  *   - Enter activates the selected item (click — works for <a> and
  *     <button hx-*> items alike)
@@ -62,7 +64,10 @@
 
     if (!dlg.open) return;
 
-    if (evt.key === "ArrowDown" || evt.key === "ArrowUp") {
+    if (evt.key === "Escape") {
+      evt.preventDefault();
+      dlg.close();
+    } else if (evt.key === "ArrowDown" || evt.key === "ArrowUp") {
       evt.preventDefault();
       var count = items(dlg).length;
       if (!count) return;

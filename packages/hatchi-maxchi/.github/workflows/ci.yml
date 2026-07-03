@@ -1,0 +1,48 @@
+# Regression gates for the design system — console + visual domains.
+#
+# Lives inside the package prefix: inert in the Dazzle monorepo (GitHub
+# only reads the repo-root .github/), live in the standalone repo.
+#
+# - console: contract tests (every published class has a rule, committed
+#   gallery artifacts match a fresh build, the prefix transform is total)
+#   + behaviour tests (palette keys, confirm dialog, theme toggle) in
+#   headless Chromium against the committed gallery.
+# - visual: gallery screenshots (light + dark) against the committed
+#   baselines in tests/baselines/ with an antialiasing tolerance. On
+#   failure the diff masks are uploaded as an artifact.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test deps
+        run: |
+          pip install pytest playwright pillow
+          playwright install --with-deps chromium
+      - name: Build dist (default + prefix smoke)
+        run: |
+          python build.py
+          python build.py --out /tmp/hm-ax --prefix ax-
+      - name: Run regression gates
+        run: python -m pytest tests/ -q
+      - name: Upload visual diffs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: tests/.diff/
+          if-no-files-found: ignore

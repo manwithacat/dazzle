@@ -1,67 +1,159 @@
 # HaTchi-MaXchi
 
-An **htmx4-native design system** — the maturity of the modern component
-aesthetic (shadcn-grade), without a client framework. Server-rendered
-markup, semantic `dz-*` classes + `data-dz-*` modifiers, design tokens for
-all variation, and interactions built on the htmx request lifecycle.
+**An htmx-native design system.** The polish of the modern component
+aesthetic — complete states, disciplined spacing, dark as a material —
+with zero client framework. Server-rendered markup, semantic classes,
+OKLCH design tokens, and interactions built on the htmx request
+lifecycle.
 
-Developed in-tree inside [Dazzle](https://github.com/manwithacat/dazzle)
-(`packages/hatchi-maxchi/`), published standalone at
-[manwithacat/hatchi-maxchi](https://github.com/manwithacat/hatchi-maxchi)
-via `git subtree split` (Stage 3 of the extraction plan). The Dazzle
-monorepo remains the source of truth; changes flow outward with
-`git subtree push --prefix=packages/hatchi-maxchi hm main`. The gallery
-deploys to GitHub Pages from `site/` on every push. See
-`docs/superpowers/specs/2026-07-03-hm-extraction-plan.md` in Dazzle.
+**[Browse the live gallery →](https://manwithacat.github.io/hatchi-maxchi/)**
+Every example *is* its copy-paste snippet — the demo and the docs are the
+same string, so they cannot drift.
 
-## The map (start here)
+[![CI](https://github.com/manwithacat/hatchi-maxchi/actions/workflows/ci.yml/badge.svg)](https://github.com/manwithacat/hatchi-maxchi/actions/workflows/ci.yml)
+[![Pages](https://github.com/manwithacat/hatchi-maxchi/actions/workflows/pages.yml/badge.svg)](https://manwithacat.github.io/hatchi-maxchi/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-| Path | What lives here |
-|------|-----------------|
-| `tokens/` | `tokens.css` — the OKLCH ramps + semantic tokens (`--colour-*`), type, spacing, shadow, motion, focus. The single colour vocabulary; the legacy HSL system was removed in Stage 2b. |
-| `base/` | `base.css` (element defaults + focus net), `fonts.css` (Geist @font-face), `design-system.css` (non-colour app-shell tokens + vendor-widget theming, moved in Stage 2b). |
-| `components/` | Component CSS (`alert.css`, `hm-core.css`, …). One semantic root class + `data-dz-*` modifiers; tokens carry the aesthetic. |
-| `controllers/` | Vanilla-JS behaviour for the purely-client bits (`dz-confirm.js` = designed `hx-confirm`; `dz-command.js` = ⌘K palette keys). htmx-aware, no framework. |
-| `site/` | The catalogue + gallery (a committed build artifact — GitHub Pages serves it as-is). `registry.py` is the **source of truth for the component list**; `build_site.py` renders the static gallery where every example IS its copy-paste snippet (they cannot drift). Includes a mock htmx4 so interactive demos run with no server, and the vendored Geist fonts (OFL). |
-| `.github/` | Pages deploy workflow — inert inside the Dazzle monorepo, live in the standalone repo. |
-
-Planned (not yet populated): `oracle/` (the taste rubric + blind-panel
-harness), `dist/` (a design-system-only bundle — today `site/hatchi-maxchi.css`
-is the full Dazzle bundle), and `assets/` (the Lucide icon registry, which
-still lives in Dazzle's `render/fragment/icon_registry.py` — `build_site.py`
-imports it from the Dazzle tree, so **gallery rebuilds happen in-tree**).
-
-## Add a component (the agent workflow)
-
-1. Write its CSS in `components/` (or extend `hm-core.css`) — one root class,
-   `data-dz-*` for variants, tokens for all values. No utility soup.
-2. Add its canonical HTML to `site/registry.py` (`Component(...)`). That
-   entry is both the gallery demo and the copy-paste snippet.
-3. If it needs client behaviour, add a controller in `controllers/`.
-4. Register the CSS file in Dazzle's three build lists (until extraction):
-   `scripts/build_dist.py` (`CSS_SOURCES`, use the `HM / …` path),
-   `src/dazzle/page/runtime/css_loader.py` (`CSS_SOURCE_FILES`, use the
-   `@hm:…` sentinel), and the `dazzle.css` mirror comment.
-5. `python scripts/build_dist.py` and re-render the gallery
-   (`python packages/hatchi-maxchi/site/build_site.py`).
-6. The gate `tests/unit/test_hm_tranche1.py` asserts the bundle carries the
-   new selectors.
-
-## Identity — familiar, not identical
-
-HaTchi-MaXchi matches shadcn's *quality* signals (complete states, spacing
-discipline, focus rings, layered elevation, dark-as-material) but owns its
-*identity* signals — a chromatic accent (not monochrome zinc), colour+icon+text
-semantics, tone-wash surfaces, htmx-lifecycle motion, and ops-app data density.
-The review test for every component: credible to a shadcn-fluent developer,
-but not mistakable for shadcn side-by-side.
-
-## Use (in any htmx4 app)
+## Quick start
 
 ```html
 <link rel="stylesheet" href="hatchi-maxchi.css">
 <script src="hatchi-maxchi.js" defer></script>
 ```
 
-Copy any component's HTML from the gallery; point its `hx-*` attributes at
-your endpoints. Geist (OFL) and Lucide (ISC) are vendored.
+Grab both files from the [latest release](https://github.com/manwithacat/hatchi-maxchi/releases)
+(or build them: `python build.py`). Then copy any component's HTML from
+the gallery and point its `hx-*` attributes at your endpoints:
+
+```html
+<button class="dz-button dz-button-primary">Save changes</button>
+
+<span class="dz-badge" data-dz-tone="success" role="status">Approved</span>
+
+<!-- the command palette is an hx-get endpoint, not a client fuzzy-finder -->
+<dialog class="dz-command" aria-label="Command palette">
+  <input class="dz-command__input" type="search"
+         hx-get="/app/command" hx-trigger="input changed delay:150ms"
+         hx-target="next .dz-command__results">
+  <div class="dz-command__results" role="listbox"></div>
+</dialog>
+```
+
+No build step, no JSX, no utility soup. One semantic root class per
+component, `data-dz-*` attributes for variants, tokens for every value.
+
+## Why htmx-native (not transliterated React)
+
+Most design systems assume a client framework owns the DOM. HaTchi-MaXchi
+assumes **the server owns the DOM** and htmx swaps it:
+
+- **The command palette** is an input with `hx-get` — results are a server
+  swap, scoped to the signed-in user, not a client-side index.
+- **Confirm dialogs**: any element with `hx-confirm` gets the designed
+  dialog automatically (`dz-confirm.js` intercepts `htmx:confirm`) — no
+  per-button wiring.
+- **Loading, empty, and error states** key off the htmx request lifecycle
+  (`htmx-request`, swap events), so states are complete by construction.
+- **Menus and popovers** are `<details>`/`<dialog>` — native behaviour,
+  styled; JavaScript only where the platform has no primitive.
+
+## Theming
+
+All colour flows through OKLCH semantic tokens; light/dark is
+`light-dark()` bound to `[data-theme]` (with `prefers-color-scheme` as
+the default). Rebrand by overriding tokens — never by editing components:
+
+```css
+:root {
+  --colour-brand: oklch(54% 0.2 150);   /* your accent */
+  --radius-md: 0.5rem;                   /* your geometry */
+}
+```
+
+Key tokens: `--colour-bg`, `--colour-surface`, `--colour-surface-muted`,
+`--colour-text`, `--colour-text-muted`, `--colour-border`,
+`--colour-brand`, `--colour-success/warning/danger/info`, the
+`--colour-*-soft` washes, and the `--focus-ring-*` family. See
+[`tokens/tokens.css`](tokens/tokens.css) — it reads top to bottom.
+
+## The `dz-` prefix is a default, not a requirement
+
+The namespace is configurable at build time:
+
+```bash
+python build.py --prefix ax-   # .ax-button, data-ax-tone, ax-fade-in…
+```
+
+The rename is total across CSS and JS (class names, `data-dz-*`
+attributes, keyframes). Your markup must use the same prefix — gallery
+snippets are published with `dz-`, so search-and-replace `dz-` → `ax-`
+when you copy. (In [Dazzle](https://github.com/manwithacat/dazzle), which
+emits this markup from a DSL, the default prefix is part of the contract.)
+
+## The map
+
+| Path | What lives here |
+|------|-----------------|
+| `tokens/` | `tokens.css` — OKLCH ramps + semantic tokens (`--colour-*`), type, spacing, shadow, motion, focus. The single colour vocabulary. |
+| `base/` | `base.css` (element defaults + focus net), `fonts.css` (Geist @font-face), `design-system.css` (non-colour tokens + vendor-widget theming). |
+| `components/` | Component CSS. One semantic root class + `data-dz-*` modifiers; tokens carry the aesthetic. |
+| `controllers/` | Vanilla-JS for the purely-client bits (`dz-confirm.js`, `dz-command.js`). htmx-aware, framework-free. |
+| `site/` | The gallery — a committed build artifact, deployed to Pages as-is. `registry.py` is the **source of truth for the component list**. |
+| `build.py` | Builds `dist/` (CSS + JS + fonts) from package sources. Stdlib-only; takes `--prefix`. |
+| `tests/` | Regression gates: contract (console), behaviour (headless Chromium), and visual (screenshot vs committed baselines). |
+
+## Identity — familiar, not identical
+
+HaTchi-MaXchi matches shadcn's *quality* signals (complete states, spacing
+discipline, focus rings, layered elevation, dark-as-material) but owns its
+*identity* signals — a chromatic accent (not monochrome zinc),
+colour+icon+text semantics (WCAG 1.4.1: status never relies on colour
+alone), tone-wash surfaces, htmx-lifecycle motion, and ops-app data
+density. The review test for every component: credible to a shadcn-fluent
+developer, but not mistakable for shadcn side-by-side.
+
+## Versioning & releases
+
+Semantic versioning from **0.1.0**; `package.json` is the version source
+of truth and release tags (`v0.1.0`) must match it — CI enforces this and
+attaches the built bundle to each
+[GitHub release](https://github.com/manwithacat/hatchi-maxchi/releases).
+Pre-1.0, minor bumps may rename or reshape components; patch bumps are
+safe to restyle on.
+
+## Development
+
+The system is developed inside the
+[Dazzle monorepo](https://github.com/manwithacat/dazzle)
+(`packages/hatchi-maxchi/` — the source of truth) and published here via
+`git subtree push`. PRs against this repo are welcome for discussion, but
+fixes land in the monorepo, where the design system's blind-panel taste
+oracle and a 12-app example fleet exercise every component.
+
+Run the gates locally:
+
+```bash
+pip install pytest playwright pillow && playwright install chromium
+python build.py && python -m pytest tests/
+```
+
+Visual baselines: after an intended visual change,
+`HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py` and commit
+the PNGs.
+
+### Add a component
+
+1. Write its CSS in `components/` — one root class, `data-dz-*` variants,
+   tokens for all values.
+2. Add its canonical HTML to `site/registry.py` — that entry is the
+   gallery demo *and* the copy-paste snippet.
+3. Client behaviour (only if the platform has no primitive) goes in
+   `controllers/`.
+4. Register the file in `build.py` `CSS_SOURCES` (and, in-tree, Dazzle's
+   build lists). Rebuild the gallery; the contract test fails on any
+   published class without a rule.
+
+## Licence
+
+MIT. Vendored assets: [Geist](https://vercel.com/font) (OFL, see
+`site/fonts/OFL.txt`) and [Lucide](https://lucide.dev) icons (ISC).

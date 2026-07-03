@@ -10,7 +10,7 @@ The gallery renders each registry component live AND shows its HTML as the
 copy-paste snippet from the SAME string, so the docs cannot drift from the
 demo (the shadcn ownership model, hypermedia-native).
 
-Usage: python scripts/hm_site/build_site.py [--out hatchi-maxchi]
+Usage: python packages/hatchi-maxchi/site/build_site.py
 """
 
 import argparse
@@ -22,14 +22,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from build import FONT_DIR, build_css, build_js  # noqa: E402  (package build.py)
 from registry import COMPONENTS, GROUPS  # noqa: E402
 
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html  # noqa: E402
 from dazzle.render.fragment.icon_registry import ICONS, LUCIDE_VERSION  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
-STATIC = ROOT / "src" / "dazzle" / "page" / "runtime" / "static"
 
 _ICON_RE = re.compile(r"\{icon:([a-z0-9-]+)\}")
 _SVG_RE = re.compile(r"\{svg:([a-z0-9-]+)\}")
@@ -118,7 +119,10 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
 """
 
 PAGE_CSS = """
-:root { color-scheme: light dark; }
+/* color-scheme comes from the bundle (tokens.css advertises `light dark`
+   on :root and binds [data-theme] to it) — declaring it again here would
+   override the [data-theme="dark"] flip at equal specificity, later in
+   document order, and kill the theme toggle. */
 body { background: var(--colour-bg); color: var(--colour-text);
   font-family: var(--font-sans); margin: 0; }
 .hm-wrap { display: grid; grid-template-columns: 15rem 1fr; min-height: 100vh; }
@@ -164,18 +168,18 @@ def build(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # ── assets (self-contained, relative paths) ──
-    (out_dir / "fonts").mkdir(exist_ok=True)
-    for f in ("geist-var.woff2", "geist-mono-var.woff2", "OFL.txt"):
-        shutil.copyfile(STATIC / "fonts" / f, out_dir / "fonts" / f)
-    css = (STATIC / "dist" / "dazzle.min.css").read_text()
-    css = css.replace("/static/fonts/", "fonts/")  # dev-absolute -> relative
-    (out_dir / "hatchi-maxchi.css").write_text(css, encoding="utf-8")
+    # CSS is the package's own design-system bundle (build.py), NOT the
+    # full Dazzle bundle — the gallery styles exactly what it ships.
+    fonts_out = out_dir / "fonts"
+    fonts_out.mkdir(exist_ok=True)
+    if fonts_out.resolve() != FONT_DIR.resolve():
+        for f in FONT_DIR.iterdir():
+            if f.is_file():
+                shutil.copyfile(f, fonts_out / f.name)
+    (out_dir / "hatchi-maxchi.css").write_text(build_css(), encoding="utf-8")
 
     # controllers the demos need + the mock htmx
-    controllers = ""
-    HM = ROOT / "packages" / "hatchi-maxchi"
-    for js in ("dz-confirm.js", "dz-command.js"):
-        controllers += "\n/* --- " + js + " --- */\n" + (HM / "controllers" / js).read_text()
+    controllers = "\n" + build_js()
     # inline icon map for the mock htmx canned command results
     icon_map = "window.__HM_ICONS__ = {"
     for name in ("layout-dashboard", "settings", "receipt", "users", "triangle-alert"):
@@ -220,8 +224,11 @@ def build(out_dir: Path) -> None:
     theme_js = (
         "function hmTheme(t){document.documentElement.setAttribute('data-theme',t);"
         "localStorage.setItem('hm-theme',t);}"
-        "(function(){var t=localStorage.getItem('hm-theme');if(t)"
-        "document.documentElement.setAttribute('data-theme',t);})();"
+        "(function(){var t=localStorage.getItem('hm-theme');if(t){"
+        "document.documentElement.setAttribute('data-theme',t);"
+        "document.addEventListener('DOMContentLoaded',function(){"
+        "var r=document.querySelector('input[name=hm-theme][data-hm-theme='+t+']');"
+        "if(r)r.checked=true;});}})();"
     )
 
     opener_js = (
@@ -253,14 +260,14 @@ def build(out_dir: Path) -> None:
   </div>
   <div class="hm-theme-toggle">
     <div class="dz-toggle-group" role="radiogroup">
-      <label><input type="radio" name="hm-theme" onclick="hmTheme('light')"><span>Light</span></label>
-      <label><input type="radio" name="hm-theme" onclick="hmTheme('dark')"><span>Dark</span></label>
+      <label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label>
+      <label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label>
     </div>
   </div>
 </div>
 {"".join(body_parts)}
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
-Generated from the Dazzle source of truth by <code>scripts/hm_site/build_site.py</code>.
+Generated from the design-system sources by <code>site/build_site.py</code>.
 Every snippet is the live example — copy it into any htmx4 app.
 </footer>
 </main>

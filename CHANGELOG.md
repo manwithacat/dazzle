@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.16] - 2026-07-03
+
+### Added
+- **HaTchi-MaXchi standalone hardening (v0.1.0 of the design system).** `packages/hatchi-maxchi/build.py` — stdlib-only standalone build producing a design-system-only `dist/hatchi-maxchi.{css,js}` + fonts; the gallery now ships this bundle instead of the full Dazzle bundle (coverage-gated: every registry class has a rule). **Configurable class prefix**: `--prefix ax-` renames the whole `dz-` namespace (classes, `data-dz-*` attrs, keyframes); `dz-` stays the default and Dazzle's emitted contract. **Regression gates** in `packages/hatchi-maxchi/tests/` (run by the standalone repo's `ci.yml`): console-domain contract + behaviour tests (headless Chromium) and visual-domain screenshot baselines (light+dark, tolerance-compared). **Release pipeline**: semver from 0.1.0, `package.json` as version source, `release.yml` gates tag==version and attaches the bundle. MIT LICENSE + engagement-focused README.
+
+### Fixed
+- **Gallery: Esc now closes the command palette on the first press.** The palette input is `type="search"`, whose native behaviour swallows the first Esc to clear the query; `dz-command.js` now handles Escape explicitly. (Fleet apps get the same fix via the bundled controller.)
+- **Gallery: the light/dark toggle actually flips.** The gallery page CSS re-declared `:root { color-scheme: light dark }` *after* the bundle, overriding tokens.css's `[data-theme="dark"] { color-scheme: dark }` at equal specificity by document order — so `light-dark()` never resolved dark. The page-level declaration is gone; the toggle also now restores the checked radio from localStorage.
+
 ## [0.93.15] - 2026-07-03
 
 ### Added

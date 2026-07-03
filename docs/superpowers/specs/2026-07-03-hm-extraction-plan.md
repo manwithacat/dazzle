@@ -46,10 +46,33 @@ stays the source of truth while the standalone repo publishes:
   in Dazzle, live standalone) and deploys the committed `site/` gallery to
   GitHub Pages — no build step, because gallery rebuilds need Dazzle's
   icon registry and run in-tree.
-- Still in-tree by design (follow-ons): the oracle port, a
-  design-system-only `dist/` bundle (today the gallery ships the full
-  Dazzle bundle), icon-registry vendoring, npm publish, and flipping
-  Dazzle to consume published releases via `update-vendors.yml`.
+- Still in-tree by design (follow-ons): the oracle port, icon-registry
+  vendoring, npm publish, and flipping Dazzle to consume published
+  releases via `update-vendors.yml`.
+
+### Post-split hardening (2026-07-03, v0.93.16 / standalone v0.1.0)
+
+- **Standalone build**: `build.py` (stdlib-only, runs in the split repo's
+  CI) builds `dist/hatchi-maxchi.{css,js}` + fonts from package sources —
+  the gallery now ships this design-system-only bundle, not the full
+  Dazzle bundle.
+- **Configurable prefix**: `python build.py --prefix ax-` renames the
+  whole `dz-` namespace (classes, `data-dz-*`, keyframes) — `dz-` is the
+  default and the contract Dazzle emits, not a requirement.
+- **Regression gates** (`tests/`, run by `ci.yml`): console domain =
+  contract tests (every published class has a rule; committed gallery
+  artifacts match a fresh build; prefix transform is total) + behaviour
+  tests (palette ⌘K/Esc/arrows, hx-confirm interception, theme toggle,
+  persistence) in headless Chromium; visual domain = light+dark gallery
+  screenshots vs committed baselines (1% differing-pixel tolerance,
+  `HM_UPDATE_BASELINES=1` to regenerate).
+- **Versioning**: semver from 0.1.0; `package.json` is the source of
+  truth; `release.yml` gates tag==version and attaches the built bundle
+  to the GitHub release.
+- Launch bugs fixed: Esc now closes the palette on the first press
+  (type=search swallowed it to clear the query); the theme toggle works
+  (the gallery's page CSS re-declared `color-scheme` after the bundle,
+  overriding the `[data-theme]` binding at equal specificity).
 
 ### Original mechanics sketch (superseded by the above)
 

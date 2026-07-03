@@ -72,7 +72,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   window.htmx = { version: "mock-4" };
 })();
 
-/* --- dz-confirm.js --- */
+/* ── controllers/dz-confirm.js ── */
 /*
  * dz-confirm — designed hx-confirm surface (HaTchi-MaXchi tranche 1).
  *
@@ -158,14 +158,16 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   });
 })();
 
-/* --- dz-command.js --- */
+/* ── controllers/dz-command.js ── */
 /*
  * dz-command — command-palette controller (HaTchi-MaXchi tranche 2B).
  *
  * The palette itself is server-rendered markup (dialog.dz-command with an
  * hx-get input); this controller only owns the purely-client bits:
  *   - ⌘K / Ctrl-K opens the first .dz-command dialog on the page
- *   - Esc closes (native <dialog> behaviour, kept)
+ *   - Esc closes explicitly (the palette's input is type="search", whose
+ *     native behaviour swallows the first Esc to clear its value — so
+ *     relying on <dialog>'s built-in cancel needs TWO presses mid-query)
  *   - ArrowUp/ArrowDown move [aria-selected] over .dz-command__item
  *   - Enter activates the selected item (click — works for <a> and
  *     <button hx-*> items alike)
@@ -223,7 +225,10 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 
     if (!dlg.open) return;
 
-    if (evt.key === "ArrowDown" || evt.key === "ArrowUp") {
+    if (evt.key === "Escape") {
+      evt.preventDefault();
+      dlg.close();
+    } else if (evt.key === "ArrowDown" || evt.key === "ArrowUp") {
       evt.preventDefault();
       var count = items(dlg).length;
       if (!count) return;
