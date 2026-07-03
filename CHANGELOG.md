@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.36] - 2026-07-03
+
+### Changed
+- **HaTchi-MaXchi ships UNPREFIXED by default; Dazzle applies `dz-` at ingest.** HM's published form (gallery snippets, dist, CDN) is now clean — `.button`, `.badge`, `data-tone`, `@keyframes fade-in` — for developer engagement. The namespace is a build parameter (`build.py --prefix dz-`/`ax-`/…), and the transform is now namespace-aware: it reprefixes classes, `data-*` attributes, and keyframes but never internal `--*` custom properties (a naive strip would collide, e.g. `--dz-shadow-sm` → `--shadow-sm`). **Dazzle consumes HM by building it with `--prefix dz-`** (`css_loader`/`build_dist` call the package's `build_css("dz-")`), so every Dazzle build now exercises the prefix mechanism in production — the strongest possible gate (if it broke, Dazzle's UI would break). Dazzle's `dist/dazzle.min.{css,js}` is **byte-identical** to before the flip; the boundary gate now pins consumption to the `@hm-build:dz-` seam.
+
+### Agent Guidance
+- HM classes are unprefixed in the published gallery/dist (`.button`, `data-tone`). Dazzle's emitters still emit `dz-*` and Dazzle builds HM with `--prefix dz-` at ingest — do not hardcode a consumed dist file; go through `build_css("dz-")`/`build_js("dz-")`. The `--prefix` transform skips `--*` custom properties by design.
+
 ## [0.93.35] - 2026-07-03
 
 ### Fixed

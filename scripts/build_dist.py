@@ -25,6 +25,27 @@ STATIC = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static"
 HM = REPO_ROOT / "packages" / "hatchi-maxchi"
 SITE_STATIC = REPO_ROOT / "src" / "dazzle" / "page" / "static"
 
+# Sentinels for the HaTchi-MaXchi bundle. HM publishes UNPREFIXED; Dazzle
+# applies its own `dz-` namespace at ingest by building the bundle with
+# prefix="dz-" (a no-op transform on the dz- source → byte-identical to the
+# pre-flip artifact). These aren't read as files — the build loops detect
+# them and call the package build.py.
+HM_DIST_CSS = HM / "dist" / "hatchi-maxchi.css"
+HM_DIST_JS = HM / "dist" / "hatchi-maxchi.js"
+
+
+def _hm_build():  # type: ignore[no-untyped-def]
+    """Load packages/hatchi-maxchi/build.py by explicit path (not `import
+    build`, which would clobber other `build` modules)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_hm_build_dist", HM / "build.py")
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 # Order mirrors static/css/dazzle.css and css_loader.CSS_SOURCE_FILES.
 # Each entry is (layer_name, path). Pre-#920 this list was stale and
 # only emitted the three legacy files, so dist/dazzle.min.css shipped
@@ -35,10 +56,10 @@ CSS_SOURCES: list[tuple[str | None, Path]] = [
     ("reset", STATIC / "css" / "reset.css"),
     ("vendor", STATIC / "vendor" / "tom-select.css"),
     ("vendor", STATIC / "vendor" / "flatpickr.css"),
-    # HaTchi-MaXchi — the PUBLISHED dist artifact (boundary Phase 2), not
-    # per-source files. Rebuild with `python packages/hatchi-maxchi/build.py`
-    # after editing package CSS (drift-gated in the package's tests).
-    (None, HM / "dist" / "hatchi-maxchi.css"),
+    # HaTchi-MaXchi — built at ingest with prefix="dz-" (see _hm_build /
+    # HM_DIST_CSS). After editing package CSS, rebuild the package
+    # (`python packages/hatchi-maxchi/build.py`) then this bundle.
+    (None, HM_DIST_CSS),
     # quill.snow.css removed in #977 cycle 4 — replaced by dz-richtext.
     # pickr.css removed in #976 — `widget=color` uses native <input type="color">,
     # no vendor CSS required (mirrors css_loader.CSS_SOURCE_FILES).
@@ -97,7 +118,7 @@ JS_SOURCES = [
     # bundle. Ordered first in the runtime block so the listener is registered
     # before any other runtime code can trigger an htmx request.
     # HaTchi-MaXchi controllers — the published dist artifact (Phase 2).
-    HM / "dist" / "hatchi-maxchi.js",
+    HM_DIST_JS,
     STATIC / "js" / "dz-csrf.js",
     STATIC / "js" / "dz-a11y.js",
     STATIC / "js" / "dz-islands.js",
@@ -220,6 +241,14 @@ def build() -> None:
         if not src.exists():
             print(f"WARNING: missing {src}", file=sys.stderr)
             continue
+        if src == HM_DIST_CSS:
+            # HM publishes UNPREFIXED; Dazzle applies its `dz-` namespace at
+            # ingest by building the bundle with prefix="dz-" (byte-identical
+            # to the pre-flip artifact — the production test of the prefix
+            # mechanism). Pre-layered; font URLs rewritten to /static/fonts/.
+            content = _hm_build().build_css("dz-").replace('url("fonts/', 'url("/static/fonts/')
+            css_parts.append(content + "\n")
+            continue
         content = src.read_text()
         if layer is None:
             # Pre-layered HM artifact; its font URLs are standalone-relative —
@@ -242,6 +271,9 @@ def build() -> None:
     # --- JS bundle ---
     js_parts = []
     for src in JS_SOURCES:
+        if src == HM_DIST_JS:
+            js_parts.append(_hm_build().build_js("dz-"))  # apply Dazzle's namespace at ingest
+            continue
         if not src.exists():
             print(f"WARNING: missing {src}", file=sys.stderr)
             continue

@@ -14,8 +14,8 @@ import pytest
 
 _SITE_URI = (Path(__file__).resolve().parents[1] / "site" / "index.html").as_uri()
 
-PALETTE = "dialog.dz-command"
-INPUT = ".dz-command__input"
+PALETTE = "dialog.command"
+INPUT = ".command__input"
 
 # Behaviour runs in BOTH Chromium and WebKit (Safari's engine). WebKit
 # catches Safari/iPadOS regressions the keyboard-only + Chromium tests
@@ -99,8 +99,8 @@ def test_palette_close_button_is_rendered_and_placed(page) -> None:  # type: ign
     invisible and untappable. The flex bar fixed it — assert it in WebKit."""
     _open_palette(page)
     box = page.evaluate(
-        "() => { const b = document.querySelector('.dz-command__close').getBoundingClientRect();"
-        " const d = document.querySelector('dialog.dz-command').getBoundingClientRect();"
+        "() => { const b = document.querySelector('.command__close').getBoundingClientRect();"
+        " const d = document.querySelector('dialog.command').getBoundingClientRect();"
         " return {w: b.width, h: b.height, topRight: b.right > d.right - 70 && b.top < d.top + 70}; }"
     )
     assert box["w"] > 10 and box["h"] > 10, f"close button collapsed ({box}) — the Safari 0×0 bug"
@@ -122,13 +122,13 @@ def test_palette_arrows_and_enter(page) -> None:  # type: ignore[no-untyped-def]
     _open_palette(page)
     page.focus(f"{PALETTE} {INPUT}")  # focus triggers the mock hx-get
     page.wait_for_timeout(200)
-    count = page.evaluate(f"document.querySelectorAll('{PALETTE} .dz-command__item').length")
+    count = page.evaluate(f"document.querySelectorAll('{PALETTE} .command__item').length")
     assert count >= 3, "mock results should populate on focus"
     # afterSwap preselects index 0; two ArrowDowns land on index 2
     page.keyboard.press("ArrowDown")
     page.keyboard.press("ArrowDown")
     selected = page.evaluate(
-        f"document.querySelectorAll('{PALETTE} .dz-command__item')[2].getAttribute('aria-selected')"
+        f"document.querySelectorAll('{PALETTE} .command__item')[2].getAttribute('aria-selected')"
     )
     assert selected == "true"
 
@@ -137,8 +137,8 @@ def test_confirm_dialog_intercepts_hx_confirm(page) -> None:  # type: ignore[no-
     page.click("[hx-confirm]")
     page.wait_for_timeout(150)
     assert page.evaluate(
-        "!!document.querySelector('dialog.dz-alert-dialog') && "
-        "document.querySelector('dialog.dz-alert-dialog').open"
+        "!!document.querySelector('dialog.alert-dialog') && "
+        "document.querySelector('dialog.alert-dialog').open"
     ), "clicking an hx-confirm element must open the designed dz-alert-dialog"
 
 

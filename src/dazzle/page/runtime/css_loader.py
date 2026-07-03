@@ -45,7 +45,7 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # same layer names as ours), so it loads raw (layer=None). After
     # editing package CSS, run `python packages/hatchi-maxchi/build.py`;
     # the package's dist drift gate fails CI when forgotten.
-    (None, "@hm:dist/hatchi-maxchi.css"),
+    (None, "@hm-build:dz-"),
     # vendor/quill.snow.css removed in #977 cycle 4 — Quill replaced by
     # dz-richtext (Dazzle-native, bundled).
     # vendor/pickr.css removed in #976 — `widget=color` uses native
@@ -75,9 +75,33 @@ CSS_UNLAYERED_FILES: tuple[str, ...] = (
 )
 
 
+def _hm_build():  # type: ignore[no-untyped-def]
+    """Load the HaTchi-MaXchi package's build module (packages/…/build.py).
+
+    HM publishes UNPREFIXED (`.button`); Dazzle applies its own `dz-`
+    namespace at ingest by calling `build_css("dz-")` — a no-op transform
+    on the `dz-`-prefixed source, so the result is byte-identical to the
+    pre-flip bundle while the standalone/CDN artifact stays clean. This is
+    the production exercise of the prefix mechanism. Loaded by explicit path
+    (not `import build`) to avoid clobbering any other `build` module."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_hm_build", _HM_ROOT / "build.py")
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def _load_css_file(rel_path: str) -> str:
-    """Load a CSS source. `@hm:` entries resolve to the HaTchi-MaXchi package;
-    everything else is relative to static/."""
+    """Load a CSS source. `@hm-build:<prefix>` builds the HaTchi-MaXchi bundle
+    with that namespace; `@hm:` resolves a file in the package; everything
+    else is relative to static/."""
+    if rel_path.startswith("@hm-build:"):
+        prefix = rel_path[len("@hm-build:") :]
+        # Font URLs come standalone-relative from build_css; rewrite to
+        # Dazzle's /static/fonts/ mount at the consumption seam.
+        return _hm_build().build_css(prefix).replace('url("fonts/', 'url("/static/fonts/')
     if rel_path.startswith("@hm:"):
         path = _HM_ROOT / rel_path[len("@hm:") :]
     else:

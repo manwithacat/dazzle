@@ -88,7 +88,7 @@
    * Two scales for two contexts. The app shell is dense and
    * compact (h1 ~18px); the marketing site is editorial and
    * expansive (h1 ~3.5rem). Pre-#983 every renderer hard-coded its
-   * own font-size, so promoting `.dz-table-title` from `--text-base`
+   * own font-size, so promoting `.table-title` from `--text-base`
    * to `--text-lg` was a one-off tweak instead of a tokenised
    * decision.
    *
@@ -181,20 +181,20 @@
    * keyframe + duration + easing in one var so templates can write
    * `animation: var(--animation-fade-in)` directly. The keyframes
    * themselves are defined below the :root block. #960 layer 1. */
-  --animation-fade-in: dz-fade-in var(--duration-base) var(--ease-out);
-  --animation-fade-out: dz-fade-out var(--duration-base) var(--ease-in);
-  --animation-scale-up: dz-scale-up var(--duration-base) var(--ease-spring-2);
-  --animation-scale-down: dz-scale-down var(--duration-base) var(--ease-in);
-  --animation-slide-in-up: dz-slide-in-up var(--duration-base) var(--ease-out);
-  --animation-slide-in-down: dz-slide-in-down var(--duration-base) var(--ease-out);
-  --animation-slide-in-left: dz-slide-in-left var(--duration-base) var(--ease-out);
-  --animation-slide-in-right: dz-slide-in-right var(--duration-base) var(--ease-out);
-  --animation-slide-out-up: dz-slide-out-up var(--duration-base) var(--ease-in);
-  --animation-slide-out-down: dz-slide-out-down var(--duration-base) var(--ease-in);
-  --animation-slide-out-left: dz-slide-out-left var(--duration-base) var(--ease-in);
-  --animation-slide-out-right: dz-slide-out-right var(--duration-base) var(--ease-in);
-  --animation-shake-x: dz-shake-x 0.4s var(--ease-out);
-  --animation-pulse: dz-pulse 2s var(--ease-in-out) infinite;
+  --animation-fade-in: fade-in var(--duration-base) var(--ease-out);
+  --animation-fade-out: fade-out var(--duration-base) var(--ease-in);
+  --animation-scale-up: scale-up var(--duration-base) var(--ease-spring-2);
+  --animation-scale-down: scale-down var(--duration-base) var(--ease-in);
+  --animation-slide-in-up: slide-in-up var(--duration-base) var(--ease-out);
+  --animation-slide-in-down: slide-in-down var(--duration-base) var(--ease-out);
+  --animation-slide-in-left: slide-in-left var(--duration-base) var(--ease-out);
+  --animation-slide-in-right: slide-in-right var(--duration-base) var(--ease-out);
+  --animation-slide-out-up: slide-out-up var(--duration-base) var(--ease-in);
+  --animation-slide-out-down: slide-out-down var(--duration-base) var(--ease-in);
+  --animation-slide-out-left: slide-out-left var(--duration-base) var(--ease-in);
+  --animation-slide-out-right: slide-out-right var(--duration-base) var(--ease-in);
+  --animation-shake-x: shake-x 0.4s var(--ease-out);
+  --animation-pulse: pulse 2s var(--ease-in-out) infinite;
 
   /* ─────────────────────────── widths ──────────────────────────────
    * Common content widths. */
@@ -282,7 +282,7 @@
   --colour-info: oklch(60% 0.13 220);
 
   /* Tone tints (background washes for surfaces) — semantic tokens
-   * the dz-tones replacements consume. Authors don't hand-craft
+   * the tones replacements consume. Authors don't hand-craft
    * `hsl(var(--success) / 0.08)` strings any more. */
   --colour-success-soft: light-dark(oklch(from var(--colour-success) 96.5% 0.04 h), oklch(from var(--colour-success) 28% 0.06 h));
   --colour-warning-soft: light-dark(oklch(from var(--colour-warning) 96.5% 0.04 h), oklch(from var(--colour-warning) 28% 0.06 h));
@@ -337,63 +337,63 @@
 
 /* ─────────────────────────── animation keyframes ────────────────────
  * Backing keyframes for the `--animation-*` named tokens above.
- * Prefixed `dz-` so they don't collide with project-defined
+ * Prefixed `` so they don't collide with project-defined
  * keyframes. Open Props convention; #960 layer 1.
  *
  * Honoured by `prefers-reduced-motion: reduce` further down. */
-@keyframes dz-fade-in {
+@keyframes fade-in {
   from { opacity: 0; }
 }
-@keyframes dz-fade-out {
+@keyframes fade-out {
   to { opacity: 0; }
 }
-@keyframes dz-scale-up {
+@keyframes scale-up {
   from { transform: scale(0.92); opacity: 0; }
 }
-@keyframes dz-scale-down {
+@keyframes scale-down {
   to { transform: scale(0.92); opacity: 0; }
 }
-@keyframes dz-slide-in-up {
+@keyframes slide-in-up {
   from { transform: translateY(8%); opacity: 0; }
 }
-@keyframes dz-slide-in-down {
+@keyframes slide-in-down {
   from { transform: translateY(-8%); opacity: 0; }
 }
-@keyframes dz-slide-in-left {
+@keyframes slide-in-left {
   from { transform: translateX(8%); opacity: 0; }
 }
-@keyframes dz-slide-in-right {
+@keyframes slide-in-right {
   from { transform: translateX(-8%); opacity: 0; }
 }
-@keyframes dz-slide-out-up {
+@keyframes slide-out-up {
   to { transform: translateY(-8%); opacity: 0; }
 }
-@keyframes dz-slide-out-down {
+@keyframes slide-out-down {
   to { transform: translateY(8%); opacity: 0; }
 }
-@keyframes dz-slide-out-left {
+@keyframes slide-out-left {
   to { transform: translateX(-8%); opacity: 0; }
 }
-@keyframes dz-slide-out-right {
+@keyframes slide-out-right {
   to { transform: translateX(8%); opacity: 0; }
 }
-@keyframes dz-shake-x {
+@keyframes shake-x {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-4px); }
   40%, 80% { transform: translateX(4px); }
 }
-@keyframes dz-pulse {
+@keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 
-/* Reduced-motion guard: collapse all dz-* animations to a near-instant
+/* Reduced-motion guard: collapse all * animations to a near-instant
  * fade so users who request reduced motion still get state changes
  * without parallax/translate/scale. Operates on the keyframe name
  * (`animation-name`) so component-local @keyframes definitions
  * (dashboard, etc.) aren't affected by this rule. */
 @media (prefers-reduced-motion: reduce) {
-  [style*="animation"], [class*="dz-anim-"], .dz-toast {
+  [style*="animation"], [class*="anim-"], .toast {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
@@ -888,30 +888,30 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 
 /* --- Page Header --- */
 
-.dz-page-header {
+.page-header {
   margin-block-end: 1.5rem;
 }
 
-.dz-page-header h1,
-.dz-page-header .text-2xl {
+.page-header h1,
+.page-header .text-2xl {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--colour-text);
 }
 
-.dz-page-header .text-sm {
+.page-header .text-sm {
   color: var(--colour-text-muted);
 }
 
 /* --- Empty State --- */
 
-.dz-empty-state {
+.empty-state {
   text-align: center;
   padding: 3rem 1.5rem;
   color: var(--colour-text-muted); /* was var(--colour-text-muted) fossil */
 }
 
-.dz-empty-state svg {
+.empty-state svg {
   width: 3rem;
   height: 3rem;
   margin: 0 auto 1rem;
@@ -920,7 +920,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 
 /* --- Action Bar --- */
 
-.dz-action-bar {
+.action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -928,7 +928,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   gap: 1rem;
 }
 
-.dz-action-bar .btn {
+.action-bar .btn {
   gap: 0.5rem;
 }
 
@@ -952,7 +952,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 
 /* Skeleton shimmer */
 .skeleton,
-.dz-skeleton {
+.skeleton {
   background: linear-gradient(
     90deg,
     var(--colour-surface-muted) 25%,
@@ -970,23 +970,23 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 }
 
 /* Spinner for HTMX loading */
-.dz-spinner {
+.spinner {
   display: inline-block;
   width: 1rem;
   height: 1rem;
   border: 2px solid var(--colour-surface-muted);
   border-top-color: var(--colour-brand);
   border-radius: 50%;
-  animation: dz-spin 0.6s linear infinite;
+  animation: spin 0.6s linear infinite;
 }
 
-.dz-spinner--sm {
+.spinner--sm {
   width: 0.75rem;
   height: 0.75rem;
   border-width: 1.5px;
 }
 
-@keyframes dz-spin {
+@keyframes spin {
   to { transform: rotate(360deg); }
 }
 
@@ -997,10 +997,10 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 
 /* Toast slide-in */
 .toast .alert {
-  animation: dz-toast-in var(--duration-slow) var(--ease-out);
+  animation: toast-in var(--duration-slow) var(--ease-out);
 }
 
-@keyframes dz-toast-in {
+@keyframes toast-in {
   from {
     opacity: 0;
     transform: translateX(100%);
@@ -1249,15 +1249,15 @@ select[aria-invalid="true"] + .ts-wrapper .ts-control {
   background: transparent;
 }
 /* Error state — underlying input border already set via Tailwind conditional */
-input[aria-invalid="true"][data-dz-widget="datepicker"],
-input[aria-invalid="true"][data-dz-widget="daterange"] {
+input[aria-invalid="true"][data-widget="datepicker"],
+input[aria-invalid="true"][data-widget="daterange"] {
   border-color: var(--colour-danger);
 }
 
 /* ── Range slider token overrides (UX-023 widget:slider) ──────────────── */
-/* Scoped to input[type="range"][data-dz-slider] so generic ranges elsewhere */
+/* Scoped to input[type="range"][data-slider] so generic ranges elsewhere */
 /* keep their browser-default appearance.                                    */
-input[type="range"][data-dz-slider] {
+input[type="range"][data-slider] {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
@@ -1265,17 +1265,17 @@ input[type="range"][data-dz-slider] {
   height: 16px; /* enough room for the thumb */
   padding: 0;
 }
-input[type="range"][data-dz-slider]:focus { outline: none; }
+input[type="range"][data-slider]:focus { outline: none; }
 
 /* Track — WebKit / Blink */
-input[type="range"][data-dz-slider]::-webkit-slider-runnable-track {
+input[type="range"][data-slider]::-webkit-slider-runnable-track {
   height: 4px;
   background: var(--colour-surface-muted);
   border-radius: 2px;
   border: 0;
 }
 /* Track — Gecko */
-input[type="range"][data-dz-slider]::-moz-range-track {
+input[type="range"][data-slider]::-moz-range-track {
   height: 4px;
   background: var(--colour-surface-muted);
   border-radius: 2px;
@@ -1283,7 +1283,7 @@ input[type="range"][data-dz-slider]::-moz-range-track {
 }
 
 /* Thumb — WebKit / Blink */
-input[type="range"][data-dz-slider]::-webkit-slider-thumb {
+input[type="range"][data-slider]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   height: 16px;
@@ -1296,15 +1296,15 @@ input[type="range"][data-dz-slider]::-webkit-slider-thumb {
   transition: filter 80ms cubic-bezier(0.2, 0, 0, 1),
               box-shadow 80ms cubic-bezier(0.2, 0, 0, 1);
 }
-input[type="range"][data-dz-slider]::-webkit-slider-thumb:hover {
+input[type="range"][data-slider]::-webkit-slider-thumb:hover {
   filter: brightness(1.05);
 }
-input[type="range"][data-dz-slider]:focus::-webkit-slider-thumb {
+input[type="range"][data-slider]:focus::-webkit-slider-thumb {
   box-shadow: 0 0 0 2px var(--focus-ring-color);
 }
 
 /* Thumb — Gecko */
-input[type="range"][data-dz-slider]::-moz-range-thumb {
+input[type="range"][data-slider]::-moz-range-thumb {
   height: 16px;
   width: 16px;
   border-radius: 50%;
@@ -1314,14 +1314,14 @@ input[type="range"][data-dz-slider]::-moz-range-thumb {
   transition: filter 80ms cubic-bezier(0.2, 0, 0, 1),
               box-shadow 80ms cubic-bezier(0.2, 0, 0, 1);
 }
-input[type="range"][data-dz-slider]::-moz-range-thumb:hover {
+input[type="range"][data-slider]::-moz-range-thumb:hover {
   filter: brightness(1.05);
 }
-input[type="range"][data-dz-slider]:focus::-moz-range-thumb {
+input[type="range"][data-slider]:focus::-moz-range-thumb {
   box-shadow: 0 0 0 2px var(--focus-ring-color);
 }
 
-input[type="range"][data-dz-slider]:disabled {
+input[type="range"][data-slider]:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -1416,22 +1416,22 @@ input[type="range"][data-dz-slider]:disabled {
 }
 /* Error state propagation via the hidden input */
 input[aria-invalid="true"][type="hidden"] + .pcr-app,
-[data-dz-widget="colorpicker"] .pcr-trigger[aria-invalid="true"] {
+[data-widget="colorpicker"] .pcr-trigger[aria-invalid="true"] {
   outline: 1px solid var(--colour-danger);
 }
 
 /* Quill .ql-* token overrides removed in #1001 — Quill replaced by
- * dz-richtext (Dazzle-native) in #977 cycle 4. Caught by /fuzz
+ * richtext (Dazzle-native) in #977 cycle 4. Caught by /fuzz
  * runtime pass: every rich_text page was 404ing on quill.snow.css.
- * The .dz-richtext-* rules in components/richtext.css handle styling.
+ * The .richtext-* rules in components/richtext.css handle styling.
  */
 
 
 /* ── Progress bar token overrides (UX-027 file upload, UX-030 review queue) */
-/* Scoped to progress[data-dz-file-progress] and progress[data-dz-progress]   */
+/* Scoped to progress[data-file-progress] and progress[data-progress]   */
 /* so generic <progress> elements elsewhere keep their browser-default look.  */
-progress[data-dz-file-progress],
-progress[data-dz-progress] {
+progress[data-file-progress],
+progress[data-progress] {
   appearance: none;
   -webkit-appearance: none;
   border: 0;
@@ -1440,19 +1440,19 @@ progress[data-dz-progress] {
   border-radius: 2px;
   background: var(--colour-surface-muted);
 }
-progress[data-dz-file-progress]::-webkit-progress-bar,
-progress[data-dz-progress]::-webkit-progress-bar {
+progress[data-file-progress]::-webkit-progress-bar,
+progress[data-progress]::-webkit-progress-bar {
   background: var(--colour-surface-muted);
   border-radius: 2px;
 }
-progress[data-dz-file-progress]::-webkit-progress-value,
-progress[data-dz-progress]::-webkit-progress-value {
+progress[data-file-progress]::-webkit-progress-value,
+progress[data-progress]::-webkit-progress-value {
   background: var(--colour-brand);
   border-radius: 2px;
   transition: width 120ms cubic-bezier(0.2, 0, 0, 1);
 }
-progress[data-dz-file-progress]::-moz-progress-bar,
-progress[data-dz-progress]::-moz-progress-bar {
+progress[data-file-progress]::-moz-progress-bar,
+progress[data-progress]::-moz-progress-bar {
   background: var(--colour-brand);
   border-radius: 2px;
 }
@@ -1641,23 +1641,23 @@ th {
 /* ── components/alert.css ── */
 @layer components {
 /*
- * dz-alert — HaTchi-MaXchi tranche 1 (spec: hatchi-maxchi-standalone).
+ * alert — HaTchi-MaXchi tranche 1 (spec: hatchi-maxchi-standalone).
  *
  * Identity signals: tone wash surface (--colour-*-soft) + registry icon +
  * text — colour never carries meaning alone (WCAG 1.4.1 as aesthetic).
  *
  * Contract:
- *   <div class="dz-alert" data-dz-tone="warning" role="alert">
- *     <span class="dz-alert__icon" aria-hidden="true"><svg…/></span>
- *     <div class="dz-alert__body">
- *       <div class="dz-alert__title">Heads up</div>
- *       <div class="dz-alert__description">Something needs attention.</div>
+ *   <div class="alert" data-tone="warning" role="alert">
+ *     <span class="alert__icon" aria-hidden="true"><svg…/></span>
+ *     <div class="alert__body">
+ *       <div class="alert__title">Heads up</div>
+ *       <div class="alert__description">Something needs attention.</div>
  *     </div>
  *   </div>
  * Tones: info (default) | success | warning | destructive | neutral.
  */
 
-.dz-alert {
+.alert {
   display: flex;
   gap: var(--space-md);
   align-items: flex-start;
@@ -1668,7 +1668,7 @@ th {
   font-size: var(--text-sm);
 }
 
-.dz-alert__icon {
+.alert__icon {
   display: inline-flex;
   width: 1.125rem;
   height: 1.125rem;
@@ -1676,59 +1676,59 @@ th {
   margin-block-start: 0.125rem;
 }
 
-.dz-alert__icon svg {
+.alert__icon svg {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.dz-alert__title {
+.alert__title {
   font-weight: var(--weight-semibold);
   margin-block-end: 0.125rem;
 }
 
-.dz-alert__description {
+.alert__description {
   color: var(--colour-text-muted);
   line-height: var(--leading-normal);
 }
 
-.dz-alert[data-dz-tone="info"] {
+.alert[data-tone="info"] {
   background: var(--colour-brand-soft);
   border-color: color-mix(in oklab, var(--colour-brand) 25%, var(--colour-border));
 }
 
-.dz-alert[data-dz-tone="info"] .dz-alert__icon { color: var(--colour-brand); }
+.alert[data-tone="info"] .alert__icon { color: var(--colour-brand); }
 
-.dz-alert[data-dz-tone="success"] {
+.alert[data-tone="success"] {
   background: var(--colour-success-soft);
   border-color: color-mix(in oklab, var(--colour-success) 25%, var(--colour-border));
 }
 
-.dz-alert[data-dz-tone="success"] .dz-alert__icon { color: var(--colour-success); }
+.alert[data-tone="success"] .alert__icon { color: var(--colour-success); }
 
-.dz-alert[data-dz-tone="warning"] {
+.alert[data-tone="warning"] {
   background: var(--colour-warning-soft);
   border-color: color-mix(in oklab, var(--colour-warning) 25%, var(--colour-border));
 }
 
-.dz-alert[data-dz-tone="warning"] .dz-alert__icon { color: var(--colour-warning); }
+.alert[data-tone="warning"] .alert__icon { color: var(--colour-warning); }
 
-.dz-alert[data-dz-tone="destructive"] {
+.alert[data-tone="destructive"] {
   background: var(--colour-danger-soft);
   border-color: color-mix(in oklab, var(--colour-danger) 25%, var(--colour-border));
 }
 
-.dz-alert[data-dz-tone="destructive"] .dz-alert__icon { color: var(--colour-danger); }
+.alert[data-tone="destructive"] .alert__icon { color: var(--colour-danger); }
 
-/* ── dz-separator ────────────────────────────────────────────────────── */
+/* ── separator ────────────────────────────────────────────────────── */
 
-.dz-separator {
+.separator {
   border: none;
   border-block-start: 1px solid var(--colour-border);
   margin-block: var(--space-lg);
 }
 
-.dz-separator--vertical {
+.separator--vertical {
   display: inline-block;
   width: 0;
   align-self: stretch;
@@ -1738,14 +1738,14 @@ th {
   margin-inline: var(--space-md);
 }
 
-/* ── data-dz-tooltip — CSS-only attribute tooltip ────────────────────── */
+/* ── data-tooltip — CSS-only attribute tooltip ────────────────────── */
 
-[data-dz-tooltip] {
+[data-tooltip] {
   position: relative;
 }
 
-[data-dz-tooltip]::after {
-  content: attr(data-dz-tooltip);
+[data-tooltip]::after {
+  content: attr(data-tooltip);
   position: absolute;
   inset-block-end: calc(100% + 0.375rem);
   inset-inline-start: 50%;
@@ -1764,31 +1764,31 @@ th {
   z-index: 50;
 }
 
-[data-dz-tooltip]:hover::after,
-[data-dz-tooltip]:focus-visible::after {
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
   opacity: 1;
   transition-delay: 300ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-dz-tooltip]::after { transition: none; }
+  [data-tooltip]::after { transition: none; }
 }
 
-/* ── dz-menu — details-based dropdown (the hypermedia answer) ────────── */
+/* ── menu — details-based dropdown (the hypermedia answer) ────────── */
 
-.dz-menu {
+.menu {
   position: relative;
   display: inline-block;
 }
 
-.dz-menu > summary {
+.menu > summary {
   list-style: none;
   cursor: pointer;
 }
 
-.dz-menu > summary::-webkit-details-marker { display: none; }
+.menu > summary::-webkit-details-marker { display: none; }
 
-.dz-menu__panel {
+.menu__panel {
   position: absolute;
   inset-block-start: calc(100% + 0.25rem);
   inset-inline-end: 0;
@@ -1801,7 +1801,7 @@ th {
   z-index: 40;
 }
 
-.dz-menu__item {
+.menu__item {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -1817,21 +1817,21 @@ th {
   cursor: pointer;
 }
 
-.dz-menu__item:hover {
+.menu__item:hover {
   background: var(--colour-bg);
 }
 
-.dz-menu__item[data-dz-tone="destructive"] { color: var(--colour-danger); }
+.menu__item[data-tone="destructive"] { color: var(--colour-danger); }
 
-.dz-menu__separator {
+.menu__separator {
   border: none;
   border-block-start: 1px solid var(--colour-border);
   margin-block: var(--space-xs);
 }
 
-/* ── dz-alert-dialog — designed hx-confirm surface ───────────────────── */
+/* ── alert-dialog — designed hx-confirm surface ───────────────────── */
 /* HYPERPART: confirm */
-dialog.dz-alert-dialog {
+dialog.alert-dialog {
   width: min(26rem, calc(100vw - 2rem));
   padding: var(--space-2xl);
   border: 1px solid var(--colour-border);
@@ -1842,12 +1842,12 @@ dialog.dz-alert-dialog {
   text-align: center;
 }
 
-dialog.dz-alert-dialog::backdrop {
+dialog.alert-dialog::backdrop {
   background: oklch(13% 0.028 261.69 / 0.5);
   backdrop-filter: blur(2px);
 }
 
-.dz-alert-dialog__icon {
+.alert-dialog__icon {
   display: inline-flex;
   width: 2rem;
   height: 2rem;
@@ -1855,21 +1855,21 @@ dialog.dz-alert-dialog::backdrop {
   margin-block-end: var(--space-md);
 }
 
-.dz-alert-dialog__icon svg { width: 100%; height: 100%; }
+.alert-dialog__icon svg { width: 100%; height: 100%; }
 
-.dz-alert-dialog__title {
+.alert-dialog__title {
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   margin: 0 0 var(--space-sm);
 }
 
-.dz-alert-dialog__message {
+.alert-dialog__message {
   color: var(--colour-text-muted);
   font-size: var(--text-sm);
   margin: 0 0 var(--space-xl);
 }
 
-.dz-alert-dialog__actions {
+.alert-dialog__actions {
   display: flex;
   gap: var(--space-md);
   justify-content: center;
@@ -1881,8 +1881,8 @@ dialog.dz-alert-dialog::backdrop {
 /*
  * badge.css — status / state / enum badge component.
  *
- * Single semantic class (.dz-badge) plus tone modifier via
- * data-dz-tone attribute. Used by the render_status_badge macro
+ * Single semantic class (.badge) plus tone modifier via
+ * data-tone attribute. Used by the render_status_badge macro
  * (templates/macros/status_badge.html) — 19 import sites across
  * tables, kanban cards, detail views, review queues.
  *
@@ -1897,19 +1897,19 @@ dialog.dz-alert-dialog::backdrop {
  * this in components/.
  */
 
-.dz-badge {
+.badge {
   display: inline-flex;
   align-items: center;
   border-radius: var(--radius-sm);
   font-weight: var(--weight-medium);
-  /* Defaults match the macro's `size="md"` branch. The .dz-badge-sm
+  /* Defaults match the macro's `size="md"` branch. The .badge-sm
    * modifier overrides for dense regions (timeline, bar_chart). */
   padding-inline: var(--space-sm);
   height: 1.25rem;
   font-size: var(--text-xs);
 }
 
-.dz-badge-sm {
+.badge-sm {
   padding-inline: var(--space-xs);
   height: 1rem;
   /* Slightly smaller than the default --text-xs for micro contexts. */
@@ -1920,9 +1920,9 @@ dialog.dz-alert-dialog::backdrop {
 /* ── WCAG colour+icon+text (#1493 slice 2 part 3) ─────────────────
  * Non-neutral tones lead with a decorative glyph so state is never
  * conveyed by colour alone (WCAG 1.4.1). Emitted by `badge_icon_html`
- * as the first child of .dz-badge; neutral badges carry no icon. */
+ * as the first child of .badge; neutral badges carry no icon. */
 
-.dz-badge-icon {
+.badge-icon {
   margin-inline-end: var(--space-xs);
   font-size: 0.875em;
   line-height: 1;
@@ -1931,30 +1931,30 @@ dialog.dz-alert-dialog::backdrop {
 /* ── Tone tints ───────────────────────────────────────────────────
  * Five tone tokens matching the wider Dazzle palette: neutral
  * (default), success, warning, info, destructive. Selected via
- * `data-dz-tone` attribute emitted by the macro. */
+ * `data-tone` attribute emitted by the macro. */
 
-.dz-badge[data-dz-tone="success"] {
+.badge[data-tone="success"] {
   background: var(--colour-success-soft);
   color: var(--colour-success);
 }
 
-.dz-badge[data-dz-tone="warning"] {
+.badge[data-tone="warning"] {
   background: var(--colour-warning-soft);
   color: var(--colour-warning);
 }
 
-.dz-badge[data-dz-tone="info"] {
+.badge[data-tone="info"] {
   background: var(--colour-brand-soft);
   color: var(--colour-brand-text);
 }
 
-.dz-badge[data-dz-tone="destructive"] {
+.badge[data-tone="destructive"] {
   background: var(--colour-danger-soft);
   color: var(--colour-danger);
 }
 
-.dz-badge[data-dz-tone="neutral"],
-.dz-badge:not([data-dz-tone]) {
+.badge[data-tone="neutral"],
+.badge:not([data-tone]) {
   background: var(--colour-bg);
   color: var(--colour-text-muted);
 }
@@ -1963,20 +1963,20 @@ dialog.dz-alert-dialog::backdrop {
  * The macro accepts a `bordered` boolean for emphasis (used in the
  * detail region). Border colour matches the tone. */
 
-.dz-badge.bordered {
+.badge.bordered {
   border: 1px solid var(--colour-border);
 }
 
-.dz-badge.bordered[data-dz-tone="success"] {
+.badge.bordered[data-tone="success"] {
   border-color: var(--colour-success);
 }
-.dz-badge.bordered[data-dz-tone="warning"] {
+.badge.bordered[data-tone="warning"] {
   border-color: var(--colour-warning);
 }
-.dz-badge.bordered[data-dz-tone="info"] {
+.badge.bordered[data-tone="info"] {
   border-color: var(--colour-brand);
 }
-.dz-badge.bordered[data-dz-tone="destructive"] {
+.badge.bordered[data-tone="destructive"] {
   border-color: var(--colour-danger);
 }
 
@@ -1985,20 +1985,20 @@ dialog.dz-alert-dialog::backdrop {
  * char placeholder (—) for absent status. Same muted treatment as
  * any other "no value" token. */
 
-.dz-badge-empty {
+.badge-empty {
   color: var(--colour-text-muted);
   font-size: var(--text-xs);
 }
 
 /* Registry SVG badge glyphs (Phase 3, supersedes #1493 entity glyphs). */
-.dz-badge-icon {
+.badge-icon {
   display: inline-flex;
   width: 0.875em;
   height: 0.875em;
   flex-shrink: 0;
 }
 
-.dz-badge-icon svg {
+.badge-icon svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -2010,10 +2010,10 @@ dialog.dz-alert-dialog::backdrop {
 /*
  * button.css — button component family.
  *
- * Single semantic class .dz-button with three variant modifiers:
- *   .dz-button-ghost        no border, hover-tint only (back, cancel)
- *   .dz-button-outline      bordered neutral (default action button)
- *   .dz-button-destructive  bordered danger (delete, revoke)
+ * Single semantic class .button with three variant modifiers:
+ *   .button-ghost        no border, hover-tint only (back, cancel)
+ *   .button-outline      bordered neutral (default action button)
+ *   .button-destructive  bordered danger (delete, revoke)
  *
  * Used everywhere — detail_view header, modal footers, drawer
  * actions, toolbar buttons. Centralising here means future
@@ -2026,7 +2026,7 @@ dialog.dz-alert-dialog::backdrop {
  * Wrapped in @layer components.
  */
 
-.dz-button {
+.button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2043,43 +2043,43 @@ dialog.dz-alert-dialog::backdrop {
     color var(--duration-fast) var(--ease-out);
 }
 
-.dz-button-ghost {
+.button-ghost {
   background: transparent;
   border: 1px solid transparent;
   color: var(--colour-text-muted);
 }
 
-.dz-button-ghost:hover {
+.button-ghost:hover {
   background: var(--colour-bg);
   color: var(--colour-text);
 }
 
-.dz-button-outline {
+.button-outline {
   background: var(--colour-surface);
   color: var(--colour-text);
   border: 1px solid var(--colour-border);
 }
 
-.dz-button-outline:hover {
+.button-outline:hover {
   background: var(--colour-bg);
 }
 
-.dz-button-destructive {
+.button-destructive {
   background: var(--colour-surface);
   color: var(--colour-danger);
   border: 1px solid var(--colour-danger);
 }
 
-.dz-button-destructive:hover {
+.button-destructive:hover {
   background: var(--colour-danger-soft);
 }
 
-/* `.dz-button.dz-button-primary` — filled brand variant. Composes
- * with .dz-button baseline (height + padding + radius). The standalone
- * `.dz-button-primary` rule in components/table.css is a smaller
+/* `.button.button-primary` — filled brand variant. Composes
+ * with .button baseline (height + padding + radius). The standalone
+ * `.button-primary` rule in components/table.css is a smaller
  * table-header-only variant and stays scoped (less-specific selector,
- * no .dz-button qualifier). */
-.dz-button.dz-button-primary {
+ * no .button qualifier). */
+.button.button-primary {
   background: var(--colour-brand);
   color: var(--colour-brand-contrast);
   border: 1px solid var(--colour-brand);
@@ -2088,25 +2088,25 @@ dialog.dz-alert-dialog::backdrop {
 
 /* TASTE-2/8: explicit hover step from the ramp (not a brightness filter)
    and a physical press — shadow collapses, button settles 0.5px. */
-.dz-button.dz-button-primary:hover {
+.button.button-primary:hover {
   background: var(--brand-700);
   border-color: var(--brand-700);
 }
 
-.dz-button.dz-button-primary:active {
+.button.button-primary:active {
   box-shadow: none;
   transform: translateY(0.5px);
 }
 
-.dz-button.dz-button-primary:disabled,
-.dz-button.dz-button-primary[aria-disabled="true"] {
+.button.button-primary:disabled,
+.button.button-primary[aria-disabled="true"] {
   opacity: 0.6;
   pointer-events: none;
 }
 
 /* Size modifier — smaller button used by inline action rows
- * (e.g. 2FA settings row buttons). Composes with .dz-button base. */
-.dz-button.dz-button-sm {
+ * (e.g. 2FA settings row buttons). Composes with .button base. */
+.button.button-sm {
   height: 1.75rem;
   padding-inline: var(--space-md);
   font-size: var(--text-xs);
@@ -2140,7 +2140,7 @@ dialog.dz-alert-dialog::backdrop {
  * Vertical flow of label / hint / input / error. Tight gap so
  * forms feel cohesive; .stack base utility would be too generous. */
 
-.dz-form-field {
+.form-field {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
@@ -2150,14 +2150,14 @@ dialog.dz-alert-dialog::backdrop {
 /* ─────────────────────────── label ──────────────────────────────
  * Block label above the input. Required-mark is a child span. */
 
-.dz-form-label {
+.form-label {
   display: block;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--colour-text);
 }
 
-.dz-form-required {
+.form-required {
   color: var(--colour-danger);
   margin-inline-start: var(--space-xs);
 }
@@ -2167,13 +2167,13 @@ dialog.dz-alert-dialog::backdrop {
  * <p id="hint-{name}"> and <p id="error-{name}"> for aria-describedby
  * referencing. */
 
-.dz-form-hint {
+.form-hint {
   font-size: var(--text-xs);
   color: var(--colour-text-muted);
   line-height: var(--leading-normal);
 }
 
-.dz-form-error {
+.form-error {
   font-size: var(--text-xs);
   color: var(--colour-danger);
   margin-block-start: var(--space-xs);
@@ -2181,11 +2181,11 @@ dialog.dz-alert-dialog::backdrop {
 
 /* ─────────────────────────── base input ─────────────────────────
  * The canonical row input — used by text, email, number, date,
- * datetime, select. Single class .dz-form-input handles the lot.
+ * datetime, select. Single class .form-input handles the lot.
  * Error state derives from `aria-invalid="true"` (selector below);
  * focus state via :focus-visible. */
 
-.dz-form-input {
+.form-input {
   width: 100%;
   /* #930: previously `height: 2rem` (32px) with `padding: 8px 12px`
      left only 16px of vertical content area for a ~22px line-box,
@@ -2208,29 +2208,29 @@ dialog.dz-alert-dialog::backdrop {
     border-color var(--duration-base) var(--ease-out);
 }
 
-.dz-form-input::placeholder {
+.form-input::placeholder {
   color: var(--colour-text-muted);
 }
 
-.dz-form-input:focus-visible {
+.form-input:focus-visible {
   outline: none;
   box-shadow: 0 0 0 1px var(--colour-brand);
   border-color: var(--colour-brand);
 }
 
-.dz-form-input[aria-invalid="true"] {
+.form-input[aria-invalid="true"] {
   border-color: var(--colour-danger);
 }
 
-.dz-form-input[aria-invalid="true"]:focus-visible {
+.form-input[aria-invalid="true"]:focus-visible {
   box-shadow: 0 0 0 1px var(--colour-danger);
 }
 
 /* ─────────────────────────── textarea ───────────────────────────
- * Same chrome as .dz-form-input but multi-line. Override height
+ * Same chrome as .form-input but multi-line. Override height
  * + padding-block; resize handle vertical only. */
 
-.dz-form-textarea {
+.form-textarea {
   height: auto;
   min-height: 6rem;
   padding-block: var(--space-sm);
@@ -2239,9 +2239,9 @@ dialog.dz-alert-dialog::backdrop {
 
 /* ─────────────────────────── checkbox ───────────────────────────
  * Inline row: checkbox + text label. The macro wraps both in
- * <label class="dz-form-checkbox-label"> for click-target convenience. */
+ * <label class="form-checkbox-label"> for click-target convenience. */
 
-.dz-form-checkbox-label {
+.form-checkbox-label {
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
@@ -2250,7 +2250,7 @@ dialog.dz-alert-dialog::backdrop {
   color: var(--colour-text);
 }
 
-.dz-form-checkbox {
+.form-checkbox {
   width: 1rem;
   height: 1rem;
   border-radius: var(--radius-sm);
@@ -2259,21 +2259,21 @@ dialog.dz-alert-dialog::backdrop {
 
 /* ─────────────────────────── money widget ───────────────────────
  * Three sub-elements:
- *   .dz-form-money-group — flex row container
- *   .dz-form-money-prefix — currency symbol box (pinned currency)
- *   .dz-form-money-select — currency dropdown (unpinned currency)
- * The amount input uses .dz-form-input with a .dz-form-input-trailing
+ *   .form-money-group — flex row container
+ *   .form-money-prefix — currency symbol box (pinned currency)
+ *   .form-money-select — currency dropdown (unpinned currency)
+ * The amount input uses .form-input with a .form-input-trailing
  * modifier to round only the right corners. */
 
-.dz-form-money-group {
+.form-money-group {
   display: flex;
   width: 100%;
 }
 
-.dz-form-money-prefix {
+.form-money-prefix {
   display: inline-flex;
   align-items: center;
-  /* #930: align with .dz-form-input height to keep prefix flush. */
+  /* #930: align with .form-input height to keep prefix flush. */
   min-height: 2.5rem;
   padding-inline: var(--space-md);
   background: var(--colour-bg);
@@ -2286,7 +2286,7 @@ dialog.dz-alert-dialog::backdrop {
   border-end-start-radius: var(--radius-sm);
 }
 
-.dz-form-money-select {
+.form-money-select {
   /* #930: matches updated input height; also gets line-height + padding
      so descenders in the currency option list don't clip. */
   height: auto;
@@ -2304,24 +2304,24 @@ dialog.dz-alert-dialog::backdrop {
   border-end-start-radius: var(--radius-sm);
 }
 
-.dz-form-money-select:focus-visible {
+.form-money-select:focus-visible {
   outline: none;
   box-shadow: 0 0 0 1px var(--colour-brand);
 }
 
-/* Modifier on .dz-form-input that joins it to a leading prefix —
+/* Modifier on .form-input that joins it to a leading prefix —
  * rounds only the right corners. Used by the money widget. */
-.dz-form-input-trailing {
+.form-input-trailing {
   border-start-start-radius: 0;
   border-end-start-radius: 0;
 }
 
 /* ─────────────────────────── file upload ────────────────────────
  * Two states (dragging via Alpine x-show; preview vs dropzone via
- * x-show). Container uses .dz-file-upload (existing class on the
+ * x-show). Container uses .file-upload (existing class on the
  * x-data root). */
 
-.dz-file-upload-preview {
+.file-upload-preview {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -2331,14 +2331,14 @@ dialog.dz-alert-dialog::backdrop {
   background: var(--colour-bg);
 }
 
-.dz-file-upload-preview-icon {
+.file-upload-preview-icon {
   width: 1.25rem;
   height: 1.25rem;
   flex-shrink: 0;
   color: var(--colour-success);
 }
 
-.dz-file-upload-preview-name {
+.file-upload-preview-name {
   font-size: var(--text-sm);
   color: var(--colour-text);
   white-space: nowrap;
@@ -2346,7 +2346,7 @@ dialog.dz-alert-dialog::backdrop {
   text-overflow: ellipsis;
 }
 
-.dz-file-upload-preview-clear {
+.file-upload-preview-clear {
   width: 1.5rem;
   height: 1.5rem;
   margin-inline-start: auto;
@@ -2359,12 +2359,12 @@ dialog.dz-alert-dialog::backdrop {
   transition: background var(--duration-fast) var(--ease-out);
 }
 
-.dz-file-upload-preview-clear:hover {
+.file-upload-preview-clear:hover {
   background: var(--colour-bg);
   color: var(--colour-text);
 }
 
-.dz-file-upload-zone {
+.file-upload-zone {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2379,13 +2379,13 @@ dialog.dz-alert-dialog::backdrop {
     border-color var(--duration-base) var(--ease-out);
 }
 
-.dz-file-upload-zone:hover,
-.dz-file-upload-zone.dragging {
+.file-upload-zone:hover,
+.file-upload-zone.dragging {
   background: var(--colour-bg);
   border-color: var(--colour-brand);
 }
 
-.dz-file-upload-zone-icon {
+.file-upload-zone-icon {
   width: 2rem;
   height: 2rem;
   margin-block-end: var(--space-sm);
@@ -2393,12 +2393,12 @@ dialog.dz-alert-dialog::backdrop {
   opacity: 0.6;
 }
 
-.dz-file-upload-zone-prompt {
+.file-upload-zone-prompt {
   font-size: var(--text-sm);
   color: var(--colour-text-muted);
 }
 
-.dz-file-upload-progress {
+.file-upload-progress {
   width: 100%;
   height: 0.25rem;
   margin-block-start: var(--space-sm);
@@ -2412,7 +2412,7 @@ dialog.dz-alert-dialog::backdrop {
  * hint / error around it. The fragment-level CSS would migrate
  * separately when we get to fragments/. */
 
-/* No rules needed — search-select inherits .dz-form-label + hint
+/* No rules needed — search-select inherits .form-label + hint
  * + error from the surrounding macro structure. */
 
 /* ─────────────────────────── colorpicker (UX-024) ───────────────
@@ -2420,15 +2420,15 @@ dialog.dz-alert-dialog::backdrop {
  * other. #976 dropped the Pickr wrapper; the native input ships ~36 KB
  * lighter and covers every actual usage in the example apps. */
 
-.dz-form-color-group {
+.form-color-group {
   display: flex;
   align-items: center;
   gap: var(--space-md);
 }
 
-.dz-form-color-input {
+.form-color-input {
   /* Strip the user-agent native chrome down to a flat 2rem swatch
-   * so the button matches the visual rhythm of the other dz-form-*
+   * so the button matches the visual rhythm of the other form-*
    * inputs. Cross-browser quirks: WebKit's swatch renders inside
    * `::-webkit-color-swatch-wrapper`; Firefox renders the swatch
    * directly on the input. Both are squared-off here. */
@@ -2442,25 +2442,25 @@ dialog.dz-alert-dialog::backdrop {
   transition: filter var(--duration-fast) var(--ease-out);
 }
 
-.dz-form-color-input:hover {
+.form-color-input:hover {
   filter: brightness(1.05);
 }
 
-.dz-form-color-input::-webkit-color-swatch-wrapper {
+.form-color-input::-webkit-color-swatch-wrapper {
   padding: 0;
 }
 
-.dz-form-color-input::-webkit-color-swatch {
+.form-color-input::-webkit-color-swatch {
   border: 0;
   border-radius: calc(var(--radius-sm) - 1px);
 }
 
-.dz-form-color-input::-moz-color-swatch {
+.form-color-input::-moz-color-swatch {
   border: 0;
   border-radius: calc(var(--radius-sm) - 1px);
 }
 
-.dz-form-color-hex {
+.form-color-hex {
   font-family: var(--font-mono, monospace);
   font-size: var(--text-xs);
   color: var(--colour-text-muted);
@@ -2470,31 +2470,31 @@ dialog.dz-alert-dialog::backdrop {
  * Quill editor wrapper. Border + radius live on the wrapper; Quill
  * internals manage their own toolbar/editor styling. */
 
-.dz-form-richtext {
+.form-richtext {
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--colour-bg);
 }
 
-.dz-form-richtext[aria-invalid="true"] {
+.form-richtext[aria-invalid="true"] {
   border-color: var(--colour-danger);
 }
 
 /* ─────────────────────────── slider (UX-023) ────────────────────
  * Native <input type="range"> + dzRangeTooltip controller. */
 
-.dz-form-slider-group {
+.form-slider-group {
   display: flex;
   align-items: center;
   gap: var(--space-md);
 }
 
-.dz-form-slider {
+.form-slider {
   inline-size: 100%;
 }
 
-.dz-form-slider-value {
+.form-slider-value {
   font-family: var(--font-mono, monospace);
   font-size: var(--text-xs);
   color: var(--colour-text);
@@ -2507,7 +2507,7 @@ dialog.dz-alert-dialog::backdrop {
  * or below a named section anchor. The panel is a muted card with a
  * tighter typographic hierarchy than the form itself. */
 
-.dz-form-companion {
+.form-companion {
   margin-block: var(--space-md);
   padding: var(--space-md);
   border-radius: var(--radius-md);
@@ -2515,7 +2515,7 @@ dialog.dz-alert-dialog::backdrop {
   border: 1px solid var(--colour-border);
 }
 
-.dz-form-companion-eyebrow {
+.form-companion-eyebrow {
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   text-transform: uppercase;
@@ -2524,7 +2524,7 @@ dialog.dz-alert-dialog::backdrop {
   margin-block-end: var(--space-2xs);
 }
 
-.dz-form-companion-title {
+.form-companion-title {
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   color: var(--colour-text);
@@ -2532,13 +2532,13 @@ dialog.dz-alert-dialog::backdrop {
 }
 
 /* summary_row — horizontal metric tiles. */
-.dz-form-companion-summary-row {
+.form-companion-summary-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: var(--space-sm);
 }
 
-.dz-form-companion-metric {
+.form-companion-metric {
   display: flex;
   flex-direction: column;
   gap: var(--space-2xs);
@@ -2548,25 +2548,25 @@ dialog.dz-alert-dialog::backdrop {
   border: 1px solid var(--colour-border);
 }
 
-.dz-form-companion-metric-label {
+.form-companion-metric-label {
   font-size: var(--text-xs);
   color: var(--colour-text-muted);
   text-transform: capitalize;
 }
 
-.dz-form-companion-metric-value {
+.form-companion-metric-value {
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   color: var(--colour-text);
   font-variant-numeric: tabular-nums;
 }
 
-.dz-form-companion-metric-expr {
+.form-companion-metric-expr {
   display: none;  /* runtime-evaluated expression — debug only */
 }
 
 /* status_list — vertical title + caption rows. */
-.dz-form-companion-status-list {
+.form-companion-status-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2575,7 +2575,7 @@ dialog.dz-alert-dialog::backdrop {
   gap: var(--space-sm);
 }
 
-.dz-form-companion-entry {
+.form-companion-entry {
   display: flex;
   flex-direction: column;
   gap: var(--space-2xs);
@@ -2583,32 +2583,32 @@ dialog.dz-alert-dialog::backdrop {
   border-inline-start: 2px solid var(--colour-border);
 }
 
-.dz-form-companion-entry--ok {
+.form-companion-entry--ok {
   border-inline-start-color: var(--colour-success, hsl(145 55% 45%));
 }
 
-.dz-form-companion-entry--warn {
+.form-companion-entry--warn {
   border-inline-start-color: var(--colour-warn, hsl(40 90% 55%));
 }
 
-.dz-form-companion-entry--pending {
+.form-companion-entry--pending {
   border-inline-start-color: var(--colour-text-muted);
   opacity: 0.85;
 }
 
-.dz-form-companion-entry-title {
+.form-companion-entry-title {
   font-weight: var(--weight-medium);
   color: var(--colour-text);
 }
 
-.dz-form-companion-entry-caption {
+.form-companion-entry-caption {
   font-size: var(--text-sm);
   color: var(--colour-text-muted);
   line-height: 1.4;
 }
 
 /* pipeline_steps — left-to-right ordered stage cards. */
-.dz-form-companion-pipeline {
+.form-companion-pipeline {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2618,7 +2618,7 @@ dialog.dz-alert-dialog::backdrop {
   counter-reset: pipeline-step;
 }
 
-.dz-form-companion-stage {
+.form-companion-stage {
   counter-increment: pipeline-step;
   padding: var(--space-sm);
   border-radius: var(--radius-sm);
@@ -2627,7 +2627,7 @@ dialog.dz-alert-dialog::backdrop {
   position: relative;
 }
 
-.dz-form-companion-stage::before {
+.form-companion-stage::before {
   content: counter(pipeline-step);
   display: inline-block;
   width: 1.25rem;
@@ -2639,20 +2639,20 @@ dialog.dz-alert-dialog::backdrop {
   margin-block-end: var(--space-2xs);
 }
 
-.dz-form-companion-stage-label {
+.form-companion-stage-label {
   display: block;
   font-weight: var(--weight-medium);
   color: var(--colour-text);
 }
 
-.dz-form-companion-stage-caption {
+.form-companion-stage-caption {
   display: block;
   font-size: var(--text-sm);
   color: var(--colour-text-muted);
   line-height: 1.4;
 }
 
-.dz-form-companion-placeholder {
+.form-companion-placeholder {
   font-size: var(--text-sm);
   color: var(--colour-text-muted);
   font-style: italic;
@@ -2662,8 +2662,8 @@ dialog.dz-alert-dialog::backdrop {
    Designed checkbox/radio/switch on NATIVE inputs — appearance:none +
    tokens; keyboard/AT semantics stay the browser's. */
 
-input.dz-checkbox,
-input.dz-radio {
+input.checkbox,
+input.radio {
   appearance: none;
   width: 1rem;
   height: 1rem;
@@ -2678,16 +2678,16 @@ input.dz-radio {
               border-color var(--duration-fast) var(--ease-out);
 }
 
-input.dz-checkbox { border-radius: var(--radius-sm); }
-input.dz-radio { border-radius: var(--radius-full); }
+input.checkbox { border-radius: var(--radius-sm); }
+input.radio { border-radius: var(--radius-full); }
 
-input.dz-checkbox:checked,
-input.dz-radio:checked {
+input.checkbox:checked,
+input.radio:checked {
   background: var(--colour-brand);
   border-color: var(--colour-brand);
 }
 
-input.dz-checkbox:checked::before {
+input.checkbox:checked::before {
   content: "";
   width: 0.625rem;
   height: 0.625rem;
@@ -2695,7 +2695,7 @@ input.dz-checkbox:checked::before {
   clip-path: polygon(14% 44%, 0 60%, 40% 100%, 100% 16%, 84% 4%, 38% 71%);
 }
 
-input.dz-radio:checked::before {
+input.radio:checked::before {
   content: "";
   width: 0.375rem;
   height: 0.375rem;
@@ -2703,7 +2703,7 @@ input.dz-radio:checked::before {
   background: var(--colour-brand-contrast);
 }
 
-input.dz-switch {
+input.switch {
   appearance: none;
   width: 2rem;
   height: 1.125rem;
@@ -2717,7 +2717,7 @@ input.dz-switch {
   transition: background var(--duration-base) var(--ease-out);
 }
 
-input.dz-switch::before {
+input.switch::before {
   content: "";
   position: absolute;
   inset-block-start: 50%;
@@ -2731,23 +2731,23 @@ input.dz-switch::before {
   transition: inset-inline-start var(--duration-base) var(--ease-out);
 }
 
-input.dz-switch:checked {
+input.switch:checked {
   background: var(--colour-brand);
 }
 
-input.dz-switch:checked::before {
+input.switch:checked::before {
   inset-inline-start: calc(100% - 0.875rem - 2px);
 }
 
 @media (prefers-color-scheme: dark) {
-  input.dz-switch { background: var(--neutral-700); }
+  input.switch { background: var(--neutral-700); }
 }
 
-[data-theme="dark"] input.dz-switch { background: var(--neutral-700); }
-[data-theme="dark"] input.dz-switch:checked { background: var(--colour-brand); }
+[data-theme="dark"] input.switch { background: var(--neutral-700); }
+[data-theme="dark"] input.switch:checked { background: var(--colour-brand); }
 
 @media (prefers-reduced-motion: reduce) {
-  input.dz-switch, input.dz-switch::before { transition: none; }
+  input.switch, input.switch::before { transition: none; }
 }
 
 }
@@ -2780,7 +2780,7 @@ input.dz-switch:checked::before {
    * shells until the chrome migration completes.
    */
 
-  .dz-page {
+  .page {
     margin: 0;
     min-height: 100vh;
     background: var(--colour-bg, var(--colour-surface));
@@ -2797,7 +2797,7 @@ input.dz-switch:checked::before {
    * deliberately narrows the rule so a normal Page → AppShell →
    * Stack layout is unaffected — the AppShell intervenes between
    * Page and Stack, so the selector doesn't match. */
-  .dz-page > .dz-stack:only-child {
+  .page > .stack:only-child {
     max-width: 36rem;
     margin: var(--space-xl) auto;
     padding: var(--space-xl) var(--space-lg);
@@ -2806,36 +2806,36 @@ input.dz-switch:checked::before {
   /* ───────────────────────── AppShell ────────────────────────
    * Multi-slot application layout — sidebar / header / main / footer.
    * Mirrors the legacy app_shell.html structure so the same component
-   * CSS in `components/fragments.css` (`.dz-app-shell`, `.dz-app-content`)
+   * CSS in `components/fragments.css` (`.app-shell`, `.app-content`)
    * applies. The Fragment AppShell adds the missing CSS hooks for
-   * the typed slots (`.dz-app-sidebar`, `.dz-app-header`, `.dz-app-main`,
-   * `.dz-app-footer`) so a Fragment-rendered shell still gets layout
+   * the typed slots (`.app-sidebar`, `.app-header`, `.app-main`,
+   * `.app-footer`) so a Fragment-rendered shell still gets layout
    * structure even when components/fragments.css isn't loaded.
    */
 
-  .dz-app-sidebar {
-    /* Composes with the existing dz-sidebar styling when present;
+  .app-sidebar {
+    /* Composes with the existing sidebar styling when present;
        on its own, provides a minimal column. Width tracks the
        legacy template's lg:w-64 (16rem). */
     flex: 0 0 auto;
     width: 16rem;
   }
 
-  .dz-app-header {
-    /* Top bar; vertical rhythm matches the dz-topbar component. */
+  .app-header {
+    /* Top bar; vertical rhythm matches the topbar component. */
     display: flex;
     align-items: center;
     padding: var(--space-sm) var(--space-md);
     border-block-end: 1px solid var(--colour-border);
   }
 
-  .dz-app-main {
+  .app-main {
     /* The main content slot — flex-grows to fill the column. */
     flex: 1 1 auto;
     padding: var(--space-md);
   }
 
-  .dz-app-footer {
+  .app-footer {
     padding: var(--space-sm) var(--space-md);
     border-block-start: 1px solid var(--colour-border);
   }
@@ -2846,7 +2846,7 @@ input.dz-switch:checked::before {
    * home link. Used inside Page.body for routes without AppShell.
    */
 
-  .dz-error-page {
+  .error-page {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2857,7 +2857,7 @@ input.dz-switch:checked::before {
     text-align: center;
   }
 
-  .dz-error-page__code {
+  .error-page__code {
     margin: 0;
     font-size: var(--text-4xl, 3rem);
     font-weight: var(--weight-bold);
@@ -2865,14 +2865,14 @@ input.dz-switch:checked::before {
     letter-spacing: -0.02em;
   }
 
-  .dz-error-page__message {
+  .error-page__message {
     margin: 0;
     font-size: var(--text-lg);
     color: var(--colour-text);
     max-width: 40rem;
   }
 
-  .dz-error-page__action {
+  .error-page__action {
     margin-block-start: var(--space-md);
     padding: var(--space-sm) var(--space-lg);
     color: var(--colour-brand-contrast);
@@ -2883,12 +2883,12 @@ input.dz-switch:checked::before {
 
   /* ───────────────────────── Topbar ──────────────────────────
    * Application top bar — leading / title / trailing layout.
-   * Class names match the legacy template's `dz-topbar` /
-   * `dz-topbar-leading` / `dz-topbar-title` / `dz-topbar-trailing`
+   * Class names match the legacy template's `topbar` /
+   * `topbar-leading` / `topbar-title` / `topbar-trailing`
    * so existing component CSS applies unchanged.
    */
 
-  .dz-topbar {
+  .topbar {
     display: flex;
     align-items: center;
     gap: var(--space-md);
@@ -2896,23 +2896,23 @@ input.dz-switch:checked::before {
     border-block-end: 1px solid var(--colour-border);
   }
 
-  .dz-topbar-leading {
+  .topbar-leading {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
   }
 
-  .dz-topbar-title {
+  .topbar-title {
     flex: 1 1 auto;
     min-width: 0;  /* allow truncation if title overflows */
   }
 
-  .dz-topbar-title-text {
+  .topbar-title-text {
     font-weight: var(--weight-semibold);
     color: var(--colour-text);
   }
 
-  .dz-topbar-trailing {
+  .topbar-trailing {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
@@ -2926,7 +2926,7 @@ input.dz-switch:checked::before {
    * truth between the visual and accessibility layers.
    */
 
-  .dz-sidebar {
+  .sidebar {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
@@ -2936,13 +2936,13 @@ input.dz-switch:checked::before {
     border-inline-end: 1px solid var(--colour-border);
   }
 
-  .dz-sidebar__header {
+  .sidebar__header {
     padding-block-end: var(--space-sm);
     border-block-end: 1px solid var(--colour-border);
   }
 
-  .dz-sidebar__items,
-  .dz-nav-group__items {
+  .sidebar__items,
+  .nav-group__items {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -2951,11 +2951,11 @@ input.dz-switch:checked::before {
     gap: var(--space-2xs, 2px);
   }
 
-  .dz-nav-item {
+  .nav-item {
     display: block;
   }
 
-  .dz-nav-link {
+  .nav-link {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -2965,22 +2965,22 @@ input.dz-switch:checked::before {
     border-radius: var(--radius-sm);
   }
 
-  .dz-nav-link:hover {
+  .nav-link:hover {
     background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.04));
   }
 
-  .dz-nav-link[aria-current="page"] {
+  .nav-link[aria-current="page"] {
     /* Active state — visible distinction without overriding the
        hover treatment. */
     background: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.08));
     font-weight: var(--weight-medium);
   }
 
-  .dz-nav-group {
+  .nav-group {
     /* `<details>` element — no list-style on summary in modern browsers. */
   }
 
-  .dz-nav-group__header {
+  .nav-group__header {
     cursor: pointer;
     padding: var(--space-xs) var(--space-sm);
     color: var(--colour-text-muted);
@@ -2991,7 +2991,7 @@ input.dz-switch:checked::before {
     list-style: none;  /* hide the default <details> marker */
   }
 
-  .dz-nav-group__header::-webkit-details-marker {
+  .nav-group__header::-webkit-details-marker {
     display: none;
   }
 
@@ -3001,7 +3001,7 @@ input.dz-switch:checked::before {
    * Slots: header (titles), body (content), footer (optional).
    */
 
-  .dz-surface {
+  .surface {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -3010,7 +3010,7 @@ input.dz-switch:checked::before {
     color: var(--colour-text);
   }
 
-  .dz-surface__header {
+  .surface__header {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
@@ -3018,13 +3018,13 @@ input.dz-switch:checked::before {
     border-block-end: 1px solid var(--colour-border);
   }
 
-  .dz-surface__body {
+  .surface__body {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
   }
 
-  .dz-surface__footer {
+  .surface__footer {
     padding-block-start: var(--space-sm);
     border-block-start: 1px solid var(--colour-border);
   }
@@ -3036,26 +3036,26 @@ input.dz-switch:checked::before {
    * Jinja-path heading variants.
    */
 
-  .dz-heading {
+  .heading {
     margin: 0;
     color: var(--colour-text);
     font-weight: var(--weight-semibold);
     line-height: 1.25;
   }
 
-  .dz-heading--level-1 { font-size: var(--text-xl); }
-  .dz-heading--level-2 { font-size: var(--text-lg); }
-  .dz-heading--level-3 { font-size: var(--text-base); }
-  .dz-heading--level-4 {
+  .heading--level-1 { font-size: var(--text-xl); }
+  .heading--level-2 { font-size: var(--text-lg); }
+  .heading--level-3 { font-size: var(--text-base); }
+  .heading--level-4 {
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
   }
-  .dz-heading--level-5 {
+  .heading--level-5 {
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     color: var(--colour-text-muted);
   }
-  .dz-heading--level-6 {
+  .heading--level-6 {
     font-size: var(--text-xs);
     font-weight: var(--weight-medium);
     color: var(--colour-text-muted);
@@ -3066,7 +3066,7 @@ input.dz-switch:checked::before {
   /* ───────────────── Layout primitives ──────────────────────
    * Stack (vertical), Row (horizontal), Grid (n-column), Split
    * (two-panel). Emitted by src/dazzle/render/fragment/renderer
-   * /_render_layout.py as `<div class="dz-{primitive} dz-{primitive}--
+   * /_render_layout.py as `<div class="{primitive} {primitive}--
    * gap-{none|sm|md|lg}">…</div>`. Without these base rules the
    * children flow inline with zero spacing — the 403/404/500 marketing
    * pages all rendered "Go to DashboardGo Home" run-together until
@@ -3074,33 +3074,33 @@ input.dz-switch:checked::before {
    * (different naming scheme) and is not styled here.
    */
 
-  .dz-stack {
+  .stack {
     display: flex;
     flex-direction: column;
   }
 
-  .dz-stack--gap-none { gap: 0; }
-  .dz-stack--gap-sm { gap: var(--space-sm); }
-  .dz-stack--gap-md { gap: var(--space-md); }
-  .dz-stack--gap-lg { gap: var(--space-lg); }
+  .stack--gap-none { gap: 0; }
+  .stack--gap-sm { gap: var(--space-sm); }
+  .stack--gap-md { gap: var(--space-md); }
+  .stack--gap-lg { gap: var(--space-lg); }
 
-  .dz-row {
+  .row {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
   }
 
-  .dz-row--gap-none { gap: 0; }
-  .dz-row--gap-sm { gap: var(--space-sm); }
-  .dz-row--gap-md { gap: var(--space-md); }
-  .dz-row--gap-lg { gap: var(--space-lg); }
+  .row--gap-none { gap: 0; }
+  .row--gap-sm { gap: var(--space-sm); }
+  .row--gap-md { gap: var(--space-md); }
+  .row--gap-lg { gap: var(--space-lg); }
 
-  .dz-row--align-start { align-items: flex-start; }
-  .dz-row--align-center { align-items: center; }
-  .dz-row--align-end { align-items: flex-end; }
-  .dz-row--align-stretch { align-items: stretch; }
+  .row--align-start { align-items: flex-start; }
+  .row--align-center { align-items: center; }
+  .row--align-end { align-items: flex-end; }
+  .row--align-stretch { align-items: stretch; }
 
-  .dz-grid {
+  .grid {
     display: grid;
     gap: var(--space-md);
   }
@@ -3108,18 +3108,18 @@ input.dz-switch:checked::before {
   /* Column counts: Grid.columns is an int in [1, 12]. Generated
    * exhaustively rather than via `repeat(auto-fit, ...)` so the
    * column count is exactly what the primitive declares. */
-  .dz-grid--columns-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-  .dz-grid--columns-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dz-grid--columns-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .dz-grid--columns-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .dz-grid--columns-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .dz-grid--columns-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .dz-grid--columns-7 { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-  .dz-grid--columns-8 { grid-template-columns: repeat(8, minmax(0, 1fr)); }
-  .dz-grid--columns-9 { grid-template-columns: repeat(9, minmax(0, 1fr)); }
-  .dz-grid--columns-10 { grid-template-columns: repeat(10, minmax(0, 1fr)); }
-  .dz-grid--columns-11 { grid-template-columns: repeat(11, minmax(0, 1fr)); }
-  .dz-grid--columns-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .grid--columns-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .grid--columns-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid--columns-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid--columns-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .grid--columns-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .grid--columns-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .grid--columns-7 { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .grid--columns-8 { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .grid--columns-9 { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+  .grid--columns-10 { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+  .grid--columns-11 { grid-template-columns: repeat(11, minmax(0, 1fr)); }
+  .grid--columns-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 
   /* ───────────────────────── Region ──────────────────────────
    * A semantic content region inside a Surface. The `kind`
@@ -3131,56 +3131,56 @@ input.dz-switch:checked::before {
    * no kind-specific styling until later plans.
    */
 
-  .dz-region {
+  .region {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
   }
 
-  .dz-region--kind-list {
+  .region--kind-list {
     /* List-mode region wraps a Table primitive. The table itself
        inherits its core styling from table.css; this rule provides
        the list-context spacing and any list-specific cascade
-       (e.g. dz-table inside .dz-region--kind-list gets the same
-       row-hover treatment as the Jinja .dz-list-table path). */
+       (e.g. table inside .region--kind-list gets the same
+       row-hover treatment as the Jinja .list-table path). */
     overflow-x: auto;
   }
 
-  .dz-region--kind-list > .dz-table {
+  .region--kind-list > .table {
     width: 100%;
     border-collapse: collapse;
     background: var(--colour-surface);
   }
 
-  .dz-region--kind-list > .dz-table thead > tr {
+  .region--kind-list > .table thead > tr {
     border-block-end: 1px solid var(--colour-border);
     text-align: left;
   }
 
-  .dz-region--kind-list > .dz-table th {
+  .region--kind-list > .table th {
     padding: var(--space-sm) var(--space-md);
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     color: var(--colour-text-muted);
   }
 
-  .dz-region--kind-list > .dz-table > tbody > tr {
+  .region--kind-list > .table > tbody > tr {
     border-block-end: 1px solid var(--colour-border);
     transition: background-color 0.12s ease;
   }
 
-  .dz-region--kind-list > .dz-table > tbody > tr:last-child {
+  .region--kind-list > .table > tbody > tr:last-child {
     border-block-end: none;
   }
 
-  .dz-region--kind-list > .dz-table > tbody > tr:hover {
+  .region--kind-list > .table > tbody > tr:hover {
     /* No --colour-surface-hover token exists yet; light/dark fallback
        picks a subtle tint that works in both modes. Promote to a token
        when more surfaces need it. */
     background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.04));
   }
 
-  .dz-region--kind-list > .dz-table td {
+  .region--kind-list > .table td {
     padding: var(--space-sm) var(--space-md);
     color: var(--colour-text);
   }
@@ -3190,28 +3190,28 @@ input.dz-switch:checked::before {
      wrapper provides the row separation; this rule provides the
      intra-row layout (label-column + value-column). */
 
-  .dz-region--kind-detail {
+  .region--kind-detail {
     overflow-x: auto;
   }
 
-  .dz-region--kind-detail .dz-stack {
+  .region--kind-detail .stack {
     gap: var(--space-md);
   }
 
-  .dz-region--kind-detail .dz-row {
+  .region--kind-detail .row {
     display: grid;
     grid-template-columns: minmax(8rem, 12rem) 1fr;
     gap: var(--space-md);
     align-items: baseline;
   }
 
-  .dz-region--kind-detail .dz-row > .dz-heading {
+  .region--kind-detail .row > .heading {
     color: var(--colour-text-muted);
     font-weight: var(--weight-medium);
     text-align: end;
   }
 
-  .dz-region--kind-detail .dz-row > .dz-text {
+  .region--kind-detail .row > .text {
     color: var(--colour-text);
   }
 
@@ -3222,13 +3222,13 @@ input.dz-switch:checked::before {
    * rows arrive in a later plan.
    */
 
-  .dz-region--kind-related {
+  .region--kind-related {
     margin-block-start: var(--space-lg);
     padding-block-start: var(--space-md);
     border-block-start: 1px solid var(--colour-border);
   }
 
-  .dz-region--kind-related .dz-heading--level-2 {
+  .region--kind-related .heading--level-2 {
     margin-block-end: var(--space-sm);
   }
 
@@ -3237,30 +3237,30 @@ input.dz-switch:checked::before {
    * layout. Used by CREATE and EDIT surfaces.
    */
 
-  .dz-region--kind-form {
+  .region--kind-form {
     /* Region container; FormStack inside provides actual layout. */
   }
 
-  .dz-form-stack {
+  .form-stack {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
     max-width: 40rem;
   }
 
-  .dz-field {
+  .field {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
   }
 
-  .dz-field__label {
+  .field__label {
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     color: var(--colour-text);
   }
 
-  .dz-field__input {
+  .field__input {
     padding: var(--space-sm) var(--space-md);
     font-size: var(--text-base);
     color: var(--colour-text);
@@ -3269,24 +3269,24 @@ input.dz-switch:checked::before {
     border-radius: var(--radius-sm);
   }
 
-  .dz-field__input:focus {
+  .field__input:focus {
     outline: 2px solid var(--colour-accent);
     outline-offset: 1px;
   }
 
-  .dz-combobox {
+  .combobox {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
   }
 
-  .dz-combobox__label {
+  .combobox__label {
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     color: var(--colour-text);
   }
 
-  .dz-combobox__select {
+  .combobox__select {
     padding: var(--space-sm) var(--space-md);
     font-size: var(--text-base);
     color: var(--colour-text);
@@ -3295,22 +3295,22 @@ input.dz-switch:checked::before {
     border-radius: var(--radius-sm);
   }
 
-  /* Plan 14: RefPicker — REF field selector. Parallels .dz-combobox in
+  /* Plan 14: RefPicker — REF field selector. Parallels .combobox in
      visual treatment; the data-ref-api attribute drives client-side
      option population via dz.filterRefSelect. */
-  .dz-ref-picker {
+  .ref-picker {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
   }
 
-  .dz-ref-picker__label {
+  .ref-picker__label {
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     color: var(--colour-text);
   }
 
-  .dz-ref-picker__select {
+  .ref-picker__select {
     padding: var(--space-sm) var(--space-md);
     font-size: var(--text-base);
     color: var(--colour-text);
@@ -3319,7 +3319,7 @@ input.dz-switch:checked::before {
     border-radius: var(--radius-sm);
   }
 
-  .dz-submit {
+  .submit {
     align-self: flex-start;
     padding: var(--space-sm) var(--space-lg);
     font-size: var(--text-base);
@@ -3331,13 +3331,13 @@ input.dz-switch:checked::before {
     cursor: pointer;
   }
 
-  .dz-submit--variant-secondary {
+  .submit--variant-secondary {
     background: var(--colour-surface);
     color: var(--colour-text);
     border: 1px solid var(--colour-border);
   }
 
-  .dz-submit--variant-danger {
+  .submit--variant-danger {
     /* fixed step: fill carries white text; the semantic token flips light in dark */
     background: var(--danger-600);
     color: var(--colour-brand-contrast);
@@ -3350,23 +3350,23 @@ input.dz-switch:checked::before {
    * warning); other tones map to existing token roles.
    */
 
-  .dz-text {
+  .text {
     color: var(--colour-text);
   }
 
-  .dz-text--tone-default { color: var(--colour-text); }
-  .dz-text--tone-muted   { color: var(--colour-text-muted); }
-  .dz-text--tone-danger  { color: var(--colour-danger); }
-  .dz-text--tone-success { color: var(--colour-success); }
-  .dz-text--tone-warning { color: var(--colour-warning); }
+  .text--tone-default { color: var(--colour-text); }
+  .text--tone-muted   { color: var(--colour-text-muted); }
+  .text--tone-danger  { color: var(--colour-danger); }
+  .text--tone-success { color: var(--colour-success); }
+  .text--tone-warning { color: var(--colour-warning); }
 
 }  /* @layer components */
 
 /* ── Icon primitive + inline-SVG icons (HaTchi-MaXchi TASTE-6) ──────────
    Server-rendered Lucide SVGs fill their fixed-size wrapper and inherit
    currentColor; sizes sit on the type scale. */
-.dz-icon,
-.dz-task-inbox-item-icon {
+.icon,
+.task-inbox-item-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3374,20 +3374,20 @@ input.dz-switch:checked::before {
   vertical-align: middle;
 }
 
-.dz-task-inbox-item-icon {
+.task-inbox-item-icon {
   width: 1.25rem;
   height: 1.25rem;
   color: var(--colour-text-muted);
 }
 
-.dz-icon--size-sm { width: 1rem; height: 1rem; }
-.dz-icon--size-md { width: 1.25rem; height: 1.25rem; }
-.dz-icon--size-lg { width: 1.5rem; height: 1.5rem; }
+.icon--size-sm { width: 1rem; height: 1rem; }
+.icon--size-md { width: 1.25rem; height: 1.25rem; }
+.icon--size-lg { width: 1.5rem; height: 1.5rem; }
 
-.dz-icon svg,
-.dz-action-card-icon svg,
-.dz-status-list-icon svg,
-.dz-task-inbox-item-icon svg {
+.icon svg,
+.action-card-icon svg,
+.status-list-icon svg,
+.task-inbox-item-icon svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -3396,8 +3396,8 @@ input.dz-switch:checked::before {
 /* ── Nav icons (HaTchi-MaXchi Phase 3, TASTE-6) ─────────────────────────
    Every sidebar item carries a registry SVG — authored or inferred. Muted
    at rest; inherits the link colour on hover/active. */
-.dz-nav-link__icon,
-.dz-nav-group__icon {
+.nav-link__icon,
+.nav-group__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3407,30 +3407,30 @@ input.dz-switch:checked::before {
   color: var(--colour-text-muted);
 }
 
-.dz-nav-link:hover .dz-nav-link__icon,
-.dz-nav-link[aria-current="page"] .dz-nav-link__icon {
+.nav-link:hover .nav-link__icon,
+.nav-link[aria-current="page"] .nav-link__icon {
   color: currentColor;
 }
 
-.dz-nav-link__icon svg,
-.dz-nav-group__icon svg {
+.nav-link__icon svg,
+.nav-group__icon svg {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.dz-nav-link {
+.nav-link {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
 }
 
 /* Empty-state icon (TASTE-8): quiet registry glyph above the message. */
-.dz-empty-state__title {
+.empty-state__title {
   color: var(--colour-text); /* tranche-1 nit: was too dim on dark surfaces */
 }
 
-.dz-empty-state__icon {
+.empty-state__icon {
   display: inline-flex;
   width: 2rem;
   height: 2rem;
@@ -3438,7 +3438,7 @@ input.dz-switch:checked::before {
   margin-block-end: var(--space-sm);
 }
 
-.dz-empty-state__icon svg {
+.empty-state__icon svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -3448,7 +3448,7 @@ input.dz-switch:checked::before {
    The app-shell-lite error views render Page > Stack > Card(EmptyState).
    Centre that lone card in the viewport; everything else on these pages
    inherits the empty-state styling. */
-.dz-page > .dz-stack:has(> .dz-card .dz-empty-state) {
+.page > .stack:has(> .card .empty-state) {
   min-height: 100vh;
   display: grid;
   place-items: center;
@@ -3456,14 +3456,14 @@ input.dz-switch:checked::before {
   background: var(--colour-bg);
 }
 
-.dz-page > .dz-stack:has(> .dz-card .dz-empty-state) > .dz-card {
+.page > .stack:has(> .card .empty-state) > .card {
   width: 100%;
   max-width: 28rem;
   text-align: center;
   padding: var(--space-2xl);
 }
 
-.dz-page > .dz-stack:has(> .dz-card .dz-empty-state) .dz-empty-state__action a {
+.page > .stack:has(> .card .empty-state) .empty-state__action a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3477,7 +3477,7 @@ input.dz-switch:checked::before {
   box-shadow: var(--shadow-sm);
 }
 
-.dz-page > .dz-stack:has(> .dz-card .dz-empty-state) .dz-empty-state__action a:hover {
+.page > .stack:has(> .card .empty-state) .empty-state__action a:hover {
   background: var(--brand-700);
 }
 
@@ -3489,18 +3489,18 @@ input.dz-switch:checked::before {
  * hatchi-maxchi-standalone). Accumulates new standalone-system
  * components until the extraction restructures per-component.
  *
- * Components: dz-progress, dz-avatar, dz-breadcrumb, dz-toggle-group,
- * dz-popover, dz-kbd.
+ * Components: progress, avatar, breadcrumb, toggle-group,
+ * popover, kbd.
  */
 
-/* ── dz-progress ─────────────────────────────────────────────────────
- * <div class="dz-progress" role="progressbar" aria-valuenow="60"
+/* ── progress ─────────────────────────────────────────────────────
+ * <div class="progress" role="progressbar" aria-valuenow="60"
  *      aria-valuemin="0" aria-valuemax="100">
- *   <div class="dz-progress__bar" style="width:60%"></div>
+ *   <div class="progress__bar" style="width:60%"></div>
  * </div>
  */
 
-.dz-progress {
+.progress {
   width: 100%;
   height: 0.5rem;
   border-radius: var(--radius-full);
@@ -3508,29 +3508,29 @@ input.dz-switch:checked::before {
   overflow: hidden;
 }
 
-.dz-progress__bar {
+.progress__bar {
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--colour-brand);
   transition: width var(--duration-slow) var(--ease-out);
 }
 
-.dz-progress[data-dz-tone="success"] .dz-progress__bar { background: var(--colour-success); }
-.dz-progress[data-dz-tone="warning"] .dz-progress__bar { background: var(--colour-warning); }
-.dz-progress[data-dz-tone="destructive"] .dz-progress__bar { background: var(--colour-danger); }
+.progress[data-tone="success"] .progress__bar { background: var(--colour-success); }
+.progress[data-tone="warning"] .progress__bar { background: var(--colour-warning); }
+.progress[data-tone="destructive"] .progress__bar { background: var(--colour-danger); }
 
 @media (prefers-reduced-motion: reduce) {
-  .dz-progress__bar { transition: none; }
+  .progress__bar { transition: none; }
 }
 
-/* ── dz-avatar ───────────────────────────────────────────────────────
- * <span class="dz-avatar" data-dz-size="md">AB</span>
- * <span class="dz-avatar"><img src="…" alt=""></span>
- * Initials inherit a deterministic tone via data-dz-hue (0-359) set by
+/* ── avatar ───────────────────────────────────────────────────────
+ * <span class="avatar" data-size="md">AB</span>
+ * <span class="avatar"><img src="…" alt=""></span>
+ * Initials inherit a deterministic tone via data-hue (0-359) set by
  * the emitter (hash of the name), falling back to brand.
  */
 
-.dz-avatar {
+.avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3549,30 +3549,30 @@ input.dz-switch:checked::before {
   user-select: none;
 }
 
-.dz-avatar[data-dz-size="sm"] { width: 1.5rem; height: 1.5rem; font-size: 0.625rem; }
-.dz-avatar[data-dz-size="lg"] { width: 2.75rem; height: 2.75rem; font-size: var(--text-sm); }
+.avatar[data-size="sm"] { width: 1.5rem; height: 1.5rem; font-size: 0.625rem; }
+.avatar[data-size="lg"] { width: 2.75rem; height: 2.75rem; font-size: var(--text-sm); }
 
-.dz-avatar img {
+.avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.dz-avatar-group {
+.avatar-group {
   display: inline-flex;
 }
 
-.dz-avatar-group .dz-avatar {
+.avatar-group .avatar {
   border: 2px solid var(--colour-surface);
 }
 
-.dz-avatar-group .dz-avatar + .dz-avatar {
+.avatar-group .avatar + .avatar {
   margin-inline-start: -0.5rem;
 }
 
-/* ── dz-breadcrumb ───────────────────────────────────────────────────
- * <nav class="dz-breadcrumb" aria-label="Breadcrumb"><ol>
+/* ── breadcrumb ───────────────────────────────────────────────────
+ * <nav class="breadcrumb" aria-label="Breadcrumb"><ol>
  *   <li><a href="/app">Home</a></li>
  *   <li><a href="/app/invoices">Invoices</a></li>
  *   <li aria-current="page">INV-0042</li>
@@ -3580,7 +3580,7 @@ input.dz-switch:checked::before {
  * Separator is CSS-generated (chevron) — markup stays list-clean.
  */
 
-.dz-breadcrumb ol {
+.breadcrumb ol {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -3590,14 +3590,14 @@ input.dz-switch:checked::before {
   font-size: var(--text-sm);
 }
 
-.dz-breadcrumb li {
+.breadcrumb li {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   color: var(--colour-text-muted);
 }
 
-.dz-breadcrumb li + li::before {
+.breadcrumb li + li::before {
   content: "";
   width: 0.875rem;
   height: 0.875rem;
@@ -3607,29 +3607,29 @@ input.dz-switch:checked::before {
     url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>');
 }
 
-.dz-breadcrumb a {
+.breadcrumb a {
   color: var(--colour-text-muted);
   text-decoration: none;
 }
 
-.dz-breadcrumb a:hover {
+.breadcrumb a:hover {
   color: var(--colour-text);
 }
 
-.dz-breadcrumb [aria-current="page"] {
+.breadcrumb [aria-current="page"] {
   color: var(--colour-text);
   font-weight: var(--weight-medium);
 }
 
-/* ── dz-toggle-group ─────────────────────────────────────────────────
+/* ── toggle-group ─────────────────────────────────────────────────
  * The hypermedia answer: native radios, styled as a segmented control.
- * <fieldset class="dz-toggle-group" role="radiogroup">
+ * <fieldset class="toggle-group" role="radiogroup">
  *   <label><input type="radio" name="view" checked><span>List</span></label>
  *   <label><input type="radio" name="view"><span>Board</span></label>
  * </fieldset>
  */
 
-.dz-toggle-group {
+.toggle-group {
   display: inline-flex;
   padding: 2px;
   gap: 2px;
@@ -3639,19 +3639,19 @@ input.dz-switch:checked::before {
   margin: 0;
 }
 
-.dz-toggle-group label {
+.toggle-group label {
   position: relative;
   cursor: pointer;
 }
 
-.dz-toggle-group input {
+.toggle-group input {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
 }
 
-.dz-toggle-group span {
+.toggle-group span {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
@@ -3664,36 +3664,36 @@ input.dz-switch:checked::before {
               color var(--duration-fast) var(--ease-out);
 }
 
-.dz-toggle-group input:checked + span {
+.toggle-group input:checked + span {
   background: var(--colour-surface);
   color: var(--colour-text);
   box-shadow: var(--shadow-sm);
 }
 
-.dz-toggle-group input:focus-visible + span {
+.toggle-group input:focus-visible + span {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
 }
 
-/* ── dz-popover — details-based generic panel ────────────────────────
- * <details class="dz-popover"><summary>…trigger…</summary>
- *   <div class="dz-popover__panel">…free content…</div></details>
- * data-dz-align="start|end" on the root positions the panel.
+/* ── popover — details-based generic panel ────────────────────────
+ * <details class="popover"><summary>…trigger…</summary>
+ *   <div class="popover__panel">…free content…</div></details>
+ * data-align="start|end" on the root positions the panel.
  */
 
-.dz-popover {
+.popover {
   position: relative;
   display: inline-block;
 }
 
-.dz-popover > summary {
+.popover > summary {
   list-style: none;
   cursor: pointer;
 }
 
-.dz-popover > summary::-webkit-details-marker { display: none; }
+.popover > summary::-webkit-details-marker { display: none; }
 
-.dz-popover__panel {
+.popover__panel {
   position: absolute;
   inset-block-start: calc(100% + 0.375rem);
   inset-inline-start: 0;
@@ -3706,16 +3706,16 @@ input.dz-switch:checked::before {
   z-index: 40;
 }
 
-.dz-popover[data-dz-align="end"] .dz-popover__panel {
+.popover[data-align="end"] .popover__panel {
   inset-inline-start: auto;
   inset-inline-end: 0;
 }
 
-/* ── dz-kbd ──────────────────────────────────────────────────────────
- * <kbd class="dz-kbd">⌘K</kbd> — shortcut chips (command palette etc.)
+/* ── kbd ──────────────────────────────────────────────────────────
+ * <kbd class="kbd">⌘K</kbd> — shortcut chips (command palette etc.)
  */
 
-.dz-kbd {
+.kbd {
   display: inline-flex;
   align-items: center;
   padding: 0.125rem 0.375rem;
@@ -3728,19 +3728,19 @@ input.dz-switch:checked::before {
   color: var(--colour-text-muted);
 }
 
-/* ── dz-command — the hx-get command palette (htmx4 flagship) ─────────
- * <dialog class="dz-command">
- *   <input class="dz-command__input" placeholder="Search…" name="q"
+/* ── command — the hx-get command palette (htmx4 flagship) ─────────
+ * <dialog class="command">
+ *   <input class="command__input" placeholder="Search…" name="q"
  *          hx-get="/app/command" hx-trigger="input changed delay:150ms"
- *          hx-target="next .dz-command__results">
- *   <div class="dz-command__results">…server-rendered items…</div>
+ *          hx-target="next .command__results">
+ *   <div class="command__results">…server-rendered items…</div>
  * </dialog>
- * Server renders .dz-command__item entries (icon + label + dz-kbd hint).
- * dz-command.js: ⌘K/Ctrl-K opens, Esc closes, arrows move [aria-selected].
+ * Server renders .command__item entries (icon + label + kbd hint).
+ * command.js: ⌘K/Ctrl-K opens, Esc closes, arrows move [aria-selected].
  */
 
 /* HYPERPART: command */
-dialog.dz-command {
+dialog.command {
   width: min(34rem, calc(100vw - 2rem));
   padding: 0;
   border: 1px solid var(--colour-border);
@@ -3753,7 +3753,7 @@ dialog.dz-command {
   margin-inline: auto;
 }
 
-dialog.dz-command::backdrop {
+dialog.command::backdrop {
   background: oklch(13% 0.028 261.69 / 0.4);
   backdrop-filter: blur(2px);
 }
@@ -3762,13 +3762,13 @@ dialog.dz-command::backdrop {
    absolute positioning — abspos against a modal <dialog> is fragile on
    Safari/iPadOS (the button landed at its static position there, so taps
    on the expected top-right corner missed it). */
-.dz-command__bar {
+.command__bar {
   display: flex;
   align-items: center;
   border-block-end: 1px solid var(--colour-border);
 }
 
-.dz-command__input {
+.command__input {
   flex: 1;
   min-width: 0;
   padding: var(--space-lg);
@@ -3783,7 +3783,7 @@ dialog.dz-command::backdrop {
 
 /* Always-visible dismiss affordance — essential on touch (no Esc key).
    A native <button> so its tap fires reliably, incl. on iOS Safari. */
-.dz-command__close {
+.command__close {
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -3798,26 +3798,26 @@ dialog.dz-command::backdrop {
   color: var(--colour-text-muted);
   cursor: pointer;
 }
-.dz-command__close:hover {
+.command__close:hover {
   background: var(--colour-surface-muted);
   color: var(--colour-text);
 }
-.dz-command__close:focus-visible {
+.command__close:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
 }
-.dz-command__close svg {
+.command__close svg {
   width: 1rem;
   height: 1rem;
 }
 
-.dz-command__results {
+.command__results {
   max-height: 20rem;
   overflow-y: auto;
   padding: var(--space-xs);
 }
 
-.dz-command__group {
+.command__group {
   padding: var(--space-sm) var(--space-md) var(--space-xs);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
@@ -3826,7 +3826,7 @@ dialog.dz-command::backdrop {
   color: var(--colour-text-muted);
 }
 
-.dz-command__item {
+.command__item {
   display: flex;
   align-items: center;
   gap: var(--space-md);
@@ -3842,32 +3842,32 @@ dialog.dz-command::backdrop {
   cursor: pointer;
 }
 
-.dz-command__item:hover,
-.dz-command__item[aria-selected="true"] {
+.command__item:hover,
+.command__item[aria-selected="true"] {
   background: color-mix(in oklab, var(--colour-brand) 8%, var(--colour-surface));
 }
 
-.dz-command__item .dz-kbd { margin-inline-start: auto; }
+.command__item .kbd { margin-inline-start: auto; }
 
-.dz-command__empty {
+.command__empty {
   padding: var(--space-xl);
   text-align: center;
   color: var(--colour-text-muted);
   font-size: var(--text-sm);
 }
 
-/* ── dz-hover-card ────────────────────────────────────────────────────
- * <span class="dz-hover-card">trigger<span class="dz-hover-card__panel">
+/* ── hover-card ────────────────────────────────────────────────────
+ * <span class="hover-card">trigger<span class="hover-card__panel">
  * …rich preview…</span></span> — pure CSS reveal, htmx can lazy-load the
  * panel body with hx-trigger="intersect once".
  */
 
-.dz-hover-card {
+.hover-card {
   position: relative;
   display: inline-block;
 }
 
-.dz-hover-card__panel {
+.hover-card__panel {
   position: absolute;
   inset-block-start: calc(100% + 0.375rem);
   inset-inline-start: 0;
@@ -3883,33 +3883,33 @@ dialog.dz-command::backdrop {
   z-index: 45;
 }
 
-.dz-hover-card:hover .dz-hover-card__panel,
-.dz-hover-card:focus-within .dz-hover-card__panel {
+.hover-card:hover .hover-card__panel,
+.hover-card:focus-within .hover-card__panel {
   opacity: 1;
   visibility: visible;
   transition-delay: 400ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dz-hover-card__panel { transition: none; }
+  .hover-card__panel { transition: none; }
 }
 
-/* ── dz-scroll-area ──────────────────────────────────────────────────
+/* ── scroll-area ──────────────────────────────────────────────────
  * Thin, token-coloured scrollbars for constrained panels.
  */
 
-.dz-scroll-area {
+.scroll-area {
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--colour-text) 25%, transparent) transparent;
 }
 
-.dz-scroll-area::-webkit-scrollbar { width: 8px; height: 8px; }
-.dz-scroll-area::-webkit-scrollbar-thumb {
+.scroll-area::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-area::-webkit-scrollbar-thumb {
   background: color-mix(in oklab, var(--colour-text) 25%, transparent);
   border-radius: var(--radius-full);
 }
-.dz-scroll-area::-webkit-scrollbar-track { background: transparent; }
+.scroll-area::-webkit-scrollbar-track { background: transparent; }
 
 }
 /* ── components/htmx-states.css ── */
@@ -3944,10 +3944,10 @@ tr.htmx-swapping {
 
 tr.htmx-added,
 tr.htmx-settling {
-  animation: dz-row-highlight 600ms var(--ease-out);
+  animation: row-highlight 600ms var(--ease-out);
 }
 
-@keyframes dz-row-highlight {
+@keyframes row-highlight {
   from {
     background-color: var(--colour-success-soft);
   }
@@ -3960,7 +3960,7 @@ tr.htmx-settling {
 /* Form button shows an in-flight state on submit. */
 
 button.htmx-request,
-.dz-button.htmx-request {
+.button.htmx-request {
   pointer-events: none;
   opacity: 0.7;
 }
@@ -4029,7 +4029,7 @@ button.htmx-request,
  * Table card root — vertical flow of header / toolbar / scroll
  * container / pagination footer. */
 
-.dz-table {
+.table {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
@@ -4042,13 +4042,13 @@ button.htmx-request,
  * Title on the left, action group (columns menu + create button)
  * on the right. */
 
-.dz-table-header {
+.table-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.dz-table-title {
+.table-title {
   /* #983 — promoted from --text-base to the canonical app page-title
    * scale so workspace titles and list-page titles share a single
    * weighted decision. Visible bump from 16px → 18px (small, but
@@ -4060,7 +4060,7 @@ button.htmx-request,
   margin: 0;
 }
 
-.dz-table-header-actions {
+.table-header-actions {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -4070,14 +4070,14 @@ button.htmx-request,
  * search input / filter chips / bulk actions. Wraps on narrow
  * containers. */
 
-.dz-table-toolbar {
+.table-toolbar {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
 }
 
-.dz-table-toolbar-filters {
+.table-toolbar-filters {
   flex: 1 1 0;
   min-width: 0;
 }
@@ -4085,11 +4085,11 @@ button.htmx-request,
 /* ─────────────────────────── column visibility menu ─────────────
  * Triggered by the "Columns" button; rendered via Alpine x-show. */
 
-.dz-table-col-menu {
+.table-col-menu {
   position: relative;
 }
 
-.dz-table-col-menu-trigger {
+.table-col-menu-trigger {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
@@ -4106,11 +4106,11 @@ button.htmx-request,
   transition: background var(--duration-fast) var(--ease-out);
 }
 
-.dz-table-col-menu-trigger:hover {
+.table-col-menu-trigger:hover {
   background: var(--colour-surface);
 }
 
-.dz-table-col-menu-panel {
+.table-col-menu-panel {
   position: absolute;
   right: 0;
   top: 100%;
@@ -4125,7 +4125,7 @@ button.htmx-request,
   overflow: hidden;
 }
 
-.dz-table-col-menu-item {
+.table-col-menu-item {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -4137,11 +4137,11 @@ button.htmx-request,
   transition: background var(--duration-fast) var(--ease-out);
 }
 
-.dz-table-col-menu-item:hover {
+.table-col-menu-item:hover {
   background: var(--colour-bg);
 }
 
-.dz-table-col-menu-checkbox {
+.table-col-menu-checkbox {
   width: 0.875rem;
   height: 0.875rem;
   border-radius: var(--radius-sm);
@@ -4151,12 +4151,12 @@ button.htmx-request,
 
 /* ─────────────────────────── primary action button ──────────────
  * The "New <Entity>" CTA. Filled brand variant — distinct from the
- * .dz-button-outline / -ghost / -destructive in button.css because
+ * .button-outline / -ghost / -destructive in button.css because
  * this is the only filled variant we currently need. Co-located with
  * the table for now; will be promoted to button.css if a second call
  * site appears. */
 
-.dz-button-primary {
+.button-primary {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
@@ -4174,7 +4174,7 @@ button.htmx-request,
   transition: opacity var(--duration-fast) var(--ease-out);
 }
 
-.dz-button-primary:hover {
+.button-primary:hover {
   opacity: 0.9;
 }
 
@@ -4183,7 +4183,7 @@ button.htmx-request,
  * Border + radius + clip live here so the sticky header doesn't
  * bleed past the rounded corners. */
 
-.dz-table-scroll {
+.table-scroll {
   position: relative;
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-md);
@@ -4197,7 +4197,7 @@ button.htmx-request,
   min-height: calc(min(var(--dz-list-rows, 10), 10) * 2.75rem + 3rem);
 }
 
-.dz-table-scroll-x {
+.table-scroll-x {
   overflow-x: auto;
 }
 
@@ -4215,7 +4215,7 @@ button.htmx-request,
  * background + centred spinner. Pointer-events none so the user can
  * still scroll mid-load. */
 
-.dz-table-loading {
+.table-loading {
   position: absolute;
   inset: 0;
   z-index: 10;
@@ -4230,37 +4230,37 @@ button.htmx-request,
 }
 
 /* htmx applies `.htmx-request` to the element named by hx-indicator
- * (the SR-only `#{table_id}-loading-sr` inside .dz-table) for the
+ * (the SR-only `#{table_id}-loading-sr` inside .table) for the
  * duration of the in-flight request. `:has()` lets us trigger the
  * overlay from any descendant — Chrome 105+, Safari 15.4+, Firefox
  * 121+ all support it. */
-.dz-table:has(.htmx-request) .dz-table-loading {
+.table:has(.htmx-request) .table-loading {
   display: flex;
   opacity: 1;
 }
 
-.dz-table-loading-spinner {
+.table-loading-spinner {
   width: 1.25rem;
   height: 1.25rem;
   color: var(--colour-text-muted);
-  animation: dz-spin 1s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
-@keyframes dz-spin {
+@keyframes spin {
   to { transform: rotate(360deg); }
 }
 
 /* ─────────────────────────── the table itself ───────────────────
  * border-collapse so the sticky-header shadow sits flush. */
 
-.dz-table-grid {
+.table-grid {
   width: 100%;
   border-collapse: collapse;
 }
 
 /* Sticky header — bg + bottom shadow stand in for a 1px border that
  * collapse would have stripped. */
-.dz-table-head {
+.table-head {
   position: sticky;
   top: 0;
   background: var(--colour-surface);
@@ -4268,7 +4268,7 @@ button.htmx-request,
   box-shadow: 0 1px 0 var(--colour-border);
 }
 
-.dz-table-th {
+.table-th {
   position: relative;
   padding-inline: var(--space-md);
   padding-block: var(--space-sm);
@@ -4282,16 +4282,16 @@ button.htmx-request,
   user-select: none;
 }
 
-.dz-table-th-select {
+.table-th-select {
   width: 2.5rem;
 }
 
-.dz-table-th-actions {
+.table-th-actions {
   width: 4rem;
 }
 
 /* Sort button — inline within the th when the column is sortable. */
-.dz-table-sort-button {
+.table-sort-button {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
@@ -4306,17 +4306,17 @@ button.htmx-request,
   transition: color var(--duration-fast) var(--ease-out);
 }
 
-.dz-table-sort-button:hover {
+.table-sort-button:hover {
   color: var(--colour-text);
 }
 
-.dz-table-sort-icon {
+.table-sort-icon {
   transition: transform var(--duration-fast) var(--ease-out);
 }
 
 /* Resize handle — 4px wide vertical strip on the right edge of each
  * th, shows brand tint on hover. */
-.dz-table-resize-handle {
+.table-resize-handle {
   position: absolute;
   top: 0;
   inset-inline-end: 0;
@@ -4327,19 +4327,19 @@ button.htmx-request,
   transition: background var(--duration-fast) var(--ease-out);
 }
 
-.dz-table-resize-handle:hover {
+.table-resize-handle:hover {
   background: color-mix(in oklch, var(--colour-brand) 50%, transparent);
 }
 
 /* Body — divide rows with subtle border-top via adjacent-sibling. */
-.dz-table-body > tr + tr {
+.table-body > tr + tr {
   border-block-start: 1px solid var(--colour-border);
 }
 
 /* ─────────────────────────── empty state ────────────────────────
  * Visible (via :has selector) when tbody has no data rows. */
 
-.dz-table-empty {
+.table-empty {
   display: none;
   flex-direction: column;
   align-items: center;
@@ -4349,30 +4349,30 @@ button.htmx-request,
 }
 
 /* Show the empty state only when the preceding table has no body cells (#1450).
- * The `tbody` is HTMX-loaded and lives INSIDE the `<table class="dz-table-grid">`,
- * which is a preceding SIBLING of `.dz-table-empty` — so the guard keys off the
- * grid (`.dz-table-grid ~ .dz-table-empty`), not a non-existent following-sibling
+ * The `tbody` is HTMX-loaded and lives INSIDE the `<table class="table-grid">`,
+ * which is a preceding SIBLING of `.table-empty` — so the guard keys off the
+ * grid (`.table-grid ~ .table-empty`), not a non-existent following-sibling
  * `tbody`. Using `tbody tr td` (any body cell) also drops the brittle
- * `data-dz-row-id` dependency the old guard required. Populated → no match → base
+ * `data-row-id` dependency the old guard required. Populated → no match → base
  * `display: none` hides it; empty (or pre-load) → shown. */
-.dz-table-grid:not(:has(tbody tr td)) ~ .dz-table-empty {
+.table-grid:not(:has(tbody tr td)) ~ .table-empty {
   display: flex;
 }
 
-.dz-table-empty-icon {
+.table-empty-icon {
   width: 2.5rem;
   height: 2.5rem;
   opacity: 0.3;
 }
 
-.dz-table-empty-title {
+.table-empty-title {
   font-size: var(--text-base);
   font-weight: var(--weight-medium);
   color: var(--colour-text);
   margin: 0;
 }
 
-.dz-table-empty-hint {
+.table-empty-hint {
   font-size: var(--text-sm);
   margin: 0;
 }
@@ -4380,14 +4380,14 @@ button.htmx-request,
 /* ─────────────────────────── pagination footer ──────────────────
  * Wrapper for the pagination fragment (own internal layout). */
 
-.dz-table-footer {
+.table-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 /* Registry row-action icons (Phase 3): fixed 14px optical size. */
-.dz-tr-action-icon {
+.tr-action-icon {
   width: 0.875rem;
   height: 0.875rem;
   display: block;
@@ -4412,51 +4412,51 @@ button.htmx-request,
  *     signal, supported in all modern browsers.
  *
  * Selectors covered:
- *   - `.dz-button` (and primary/ghost/outline/destructive variants)
- *   - `.dz-icon-button`
- *   - `.dz-card-action-button`
- *   - `.dz-list-action-button`
- *   - `.dz-sidebar-action-button`
- *   - `.dz-add-card-button`
- *   - Close buttons: `.dz-modal-close-form`, `.dz-modal-close-form-floating`,
- *     `.dz-pdf-viewer-help-close`, `.dz-pdf-viewer-panel-close`,
- *     `.dz-slideover-close`
+ *   - `.button` (and primary/ghost/outline/destructive variants)
+ *   - `.icon-button`
+ *   - `.card-action-button`
+ *   - `.list-action-button`
+ *   - `.sidebar-action-button`
+ *   - `.add-card-button`
+ *   - Close buttons: `.modal-close-form`, `.modal-close-form-floating`,
+ *     `.pdf-viewer-help-close`, `.pdf-viewer-panel-close`,
+ *     `.slideover-close`
  *
  * Wrapped in @layer components so component-specific rules win when
  * they need to.
  */
 @layer components {
   @media (pointer: coarse) {
-    .dz-button,
-    .dz-button-ghost,
-    .dz-button-outline,
-    .dz-button-destructive,
-    .dz-icon-button,
-    .dz-card-action-button,
-    .dz-list-action-button,
-    .dz-sidebar-action-button,
-    .dz-add-card-button {
+    .button,
+    .button-ghost,
+    .button-outline,
+    .button-destructive,
+    .icon-button,
+    .card-action-button,
+    .list-action-button,
+    .sidebar-action-button,
+    .add-card-button {
       min-height: var(--dz-touch-target-min);
       min-width: var(--dz-touch-target-min);
     }
 
     /* Close-X buttons are typically small icon-only — most likely
      * to under-deliver hit area. Bump explicitly. */
-    .dz-modal-close-form,
-    .dz-modal-close-form-floating,
-    .dz-pdf-viewer-help-close,
-    .dz-pdf-viewer-panel-close,
-    .dz-slideover-close {
+    .modal-close-form,
+    .modal-close-form-floating,
+    .pdf-viewer-help-close,
+    .pdf-viewer-panel-close,
+    .slideover-close {
       min-height: var(--dz-touch-target-min);
       min-width: var(--dz-touch-target-min);
     }
 
-    /* Bare native buttons / links inside .dz-button regions still
+    /* Bare native buttons / links inside .button regions still
      * benefit — a `<button>` without a Dazzle class shouldn't fall
      * below 44px on touch. */
     button,
     [role="button"],
-    a.dz-link {
+    a.link {
       min-height: var(--dz-touch-target-min);
     }
   }

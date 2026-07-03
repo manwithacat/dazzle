@@ -25,7 +25,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
-from build import FONT_DIR, build_css, build_js  # noqa: E402  (package build.py)
+from build import (  # noqa: E402  (package build.py)
+    DEFAULT_PREFIX,
+    FONT_DIR,
+    apply_prefix,
+    build_css,
+    build_js,
+)
 from hyperpart import anatomy  # noqa: E402  (package tools/hyperpart.py)
 from icons import ICONS, LUCIDE_VERSION, lucide_icon_html, lucide_svg_html  # noqa: E402
 from registry import GROUPS, HYPERPARTS  # noqa: E402
@@ -249,22 +255,27 @@ body { background: var(--colour-bg); color: var(--colour-text);
 """
 
 
-def build(out_dir: Path) -> None:
+def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # ── assets (self-contained, relative paths) ──
     # CSS is the package's own design-system bundle (build.py), NOT the
-    # full Dazzle bundle — the gallery styles exactly what it ships.
+    # full Dazzle bundle — the gallery styles exactly what it ships. The
+    # published default is UNPREFIXED (clean `.button` etc.); the same
+    # `prefix` is applied to CSS, JS, and the demo markup so the whole
+    # gallery is internally consistent.
     fonts_out = out_dir / "fonts"
     fonts_out.mkdir(exist_ok=True)
     if fonts_out.resolve() != FONT_DIR.resolve():
         for f in FONT_DIR.iterdir():
             if f.is_file():
                 shutil.copyfile(f, fonts_out / f.name)
-    (out_dir / "hatchi-maxchi.css").write_text(build_css(), encoding="utf-8")
+    (out_dir / "hatchi-maxchi.css").write_text(build_css(prefix), encoding="utf-8")
 
-    # controllers the demos need + the mock htmx
-    controllers = "\n" + build_js()
+    # controllers the demos need + the mock htmx. build_js already applied
+    # the prefix to the controllers; the mock's canned markup carries the
+    # namespace too, so reprefix it to match.
+    controllers = "\n" + build_js(prefix)
     # inline icon map for the mock htmx canned command results
     icon_map = "window.__HM_ICONS__ = {"
     for name in ("layout-dashboard", "settings", "receipt", "users", "triangle-alert"):
@@ -276,7 +287,8 @@ def build(out_dir: Path) -> None:
         )
     icon_map += "};\n"
     (out_dir / "hatchi-maxchi.js").write_text(
-        (icon_map + MOCK_HTMX + controllers).rstrip("\n") + "\n", encoding="utf-8"
+        (apply_prefix(icon_map + MOCK_HTMX, prefix) + controllers).rstrip("\n") + "\n",
+        encoding="utf-8",
     )
 
     # ── gallery HTML ──
@@ -309,7 +321,12 @@ def build(out_dir: Path) -> None:
         # live demo and the snippet — so copied markup carries real
         # inline SVG (a {icon:...} placeholder in the snippet would be
         # dead text in a consumer's app), and demo/docs cannot drift.
-        live = expand_icons(c.partial)
+        # The partial, its snippet, and the endpoint-contract prose are the
+        # PUBLISHED markup a consumer copies — reprefix them. The anatomy
+        # note is NOT reprefixed: it references source-tree filenames
+        # (e.g. controllers/dz-command.js) and HYPERPART markers, which keep
+        # the source form regardless of the published class namespace.
+        live = apply_prefix(expand_icons(c.partial), prefix)
         snippet = _html.escape(live)
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         notes = f'<div class="hm-notes">{c.notes}</div>' if c.notes else ""
@@ -321,7 +338,7 @@ def build(out_dir: Path) -> None:
             f'<div class="hm-code">{copy_button}'
             f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
             f"<code>{snippet}</code></pre></div>"
-            f"{_exchanges_html(c)}"
+            f"{apply_prefix(_exchanges_html(c), prefix)}"
             f"{_anatomy_html(c)}"
             f"{notes}</section>"
         )
@@ -336,7 +353,9 @@ def build(out_dir: Path) -> None:
         "if(r)r.checked=true;});}})();"
     )
 
-    opener_js = (
+    # opener references the published selectors (dialog.dz-command,
+    # .dz-command__input) — reprefix to match the shipped namespace.
+    opener_js = apply_prefix(
         "document.addEventListener('click',function(e){"
         "var b=e.target.closest('[data-hm-open-command]');if(!b)return;"
         "var dlg=document.querySelector('dialog.dz-command');"
@@ -349,7 +368,8 @@ def build(out_dir: Path) -> None:
         "navigator.clipboard.writeText(code.textContent).then(function(){"
         "b.setAttribute('data-copied','');b.blur();"
         "clearTimeout(b.__hmCopyTimer);"
-        "b.__hmCopyTimer=setTimeout(function(){b.removeAttribute('data-copied');},1600);});});"
+        "b.__hmCopyTimer=setTimeout(function(){b.removeAttribute('data-copied');},1600);});});",
+        prefix,
     )
     doc = f"""<!doctype html>
 <html lang="en">

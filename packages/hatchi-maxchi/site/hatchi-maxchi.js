@@ -6,18 +6,18 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 (function () {
   "use strict";
   var RESPONSES = {
-    "/mock/command": '<div class="dz-command__group">Workspaces</div>' +
-      '<a class="dz-command__item" href="#" role="option">{i:layout-dashboard}<span>Operations Dashboard</span></a>' +
-      '<a class="dz-command__item" href="#" role="option">{i:settings}<span>Platform Admin</span></a>' +
-      '<div class="dz-command__group">Records</div>' +
-      '<a class="dz-command__item" href="#" role="option">{i:receipt}<span>Invoices</span></a>' +
-      '<a class="dz-command__item" href="#" role="option">{i:users}<span>Customers</span></a>' +
-      '<a class="dz-command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>'
+    "/mock/command": '<div class="command__group">Workspaces</div>' +
+      '<a class="command__item" href="#" role="option">{i:layout-dashboard}<span>Operations Dashboard</span></a>' +
+      '<a class="command__item" href="#" role="option">{i:settings}<span>Platform Admin</span></a>' +
+      '<div class="command__group">Records</div>' +
+      '<a class="command__item" href="#" role="option">{i:receipt}<span>Invoices</span></a>' +
+      '<a class="command__item" href="#" role="option">{i:users}<span>Customers</span></a>' +
+      '<a class="command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>'
   };
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
   function expand(h) { return h.replace(/\{i:([a-z0-9-]+)\}/g, function (_, n) {
-    return '<span class="dz-icon dz-icon--size-sm">' + icon(n) + '</span>'; }); }
+    return '<span class="icon icon--size-sm">' + icon(n) + '</span>'; }); }
 
   function fire(el, name, detail) {
     var evt = new CustomEvent(name, { bubbles: true, cancelable: true, detail: detail });
@@ -27,7 +27,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 
   function doGet(el) {
     var url = el.getAttribute("hx-get");
-    var body = expand(RESPONSES[url] || '<div class="dz-command__empty">No results.</div>');
+    var body = expand(RESPONSES[url] || '<div class="command__empty">No results.</div>');
     var sel = el.getAttribute("hx-target");
     var target = null;
     if (sel && sel.indexOf("next ") === 0) {
@@ -57,7 +57,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
   });
 
-  // hx-confirm -> htmx:confirm (drives dz-confirm.js)
+  // hx-confirm -> htmx:confirm (drives confirm.js)
   document.addEventListener("click", function (e) {
     var el = e.target.closest && e.target.closest("[hx-confirm]");
     if (!el) return;
@@ -79,17 +79,17 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   window.htmx = { version: "mock-4" };
 })();
 
-/* ── controllers/dz-confirm.js ── */
+/* ── controllers/confirm.js ── */
 /* HYPERPART: confirm */
 /*
- * dz-confirm — designed hx-confirm surface (HaTchi-MaXchi tranche 1).
+ * confirm — designed hx-confirm surface (HaTchi-MaXchi tranche 1).
  *
  * Part of the `confirm` Hyperpart — manifest in site/registry.py; the
  * designed dialog's styles are in components/alert.css (marked
  * `HYPERPART: confirm`). `python tools/hyperpart.py confirm` lists them.
  *
  * Intercepts htmx's `htmx:confirm` event and replaces window.confirm with
- * a designed <dialog class="dz-alert-dialog"> (icon + title + message +
+ * a designed <dialog class="alert-dialog"> (icon + title + message +
  * destructive-styled confirm). Every existing `hx-confirm="…"` attribute
  * in the fleet upgrades automatically — no emitter changes.
  *
@@ -97,7 +97,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  * reused, and the htmx request is only issued via evt.detail.issueRequest()
  * on explicit confirm — cancel closes with no request.
  *
- * Opt-out: set `data-dz-native-confirm` on the element to keep
+ * Opt-out: set `data-native-confirm` on the element to keep
  * window.confirm (e.g. for tests that stub it).
  */
 (function () {
@@ -113,16 +113,16 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   function ensureDialog() {
     if (dialog) return dialog;
     dialog = document.createElement("dialog");
-    dialog.className = "dz-alert-dialog";
+    dialog.className = "alert-dialog";
     dialog.innerHTML =
-      '<span class="dz-alert-dialog__icon" aria-hidden="true">' +
+      '<span class="alert-dialog__icon" aria-hidden="true">' +
       LOCK_ICON +
       "</span>" +
-      '<h2 class="dz-alert-dialog__title">Are you sure?</h2>' +
-      '<p class="dz-alert-dialog__message"></p>' +
-      '<div class="dz-alert-dialog__actions">' +
-      '<button type="button" class="dz-button dz-button-outline" data-dz-confirm-cancel>Cancel</button>' +
-      '<button type="button" class="dz-button dz-button-destructive" data-dz-confirm-accept>Confirm</button>' +
+      '<h2 class="alert-dialog__title">Are you sure?</h2>' +
+      '<p class="alert-dialog__message"></p>' +
+      '<div class="alert-dialog__actions">' +
+      '<button type="button" class="button button-outline" data-confirm-cancel>Cancel</button>' +
+      '<button type="button" class="button button-destructive" data-confirm-accept>Confirm</button>' +
       "</div>";
     document.body.appendChild(dialog);
     return dialog;
@@ -130,17 +130,17 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 
   document.addEventListener("htmx:confirm", function (evt) {
     var elt = evt.detail.elt;
-    if (!elt || elt.hasAttribute("data-dz-native-confirm")) return;
+    if (!elt || elt.hasAttribute("data-native-confirm")) return;
     var question = evt.detail.question;
     if (!question) return; // no hx-confirm on this element
 
     evt.preventDefault(); // suppress window.confirm; we own the flow now
 
     var dlg = ensureDialog();
-    dlg.querySelector(".dz-alert-dialog__message").textContent = question;
+    dlg.querySelector(".alert-dialog__message").textContent = question;
 
-    var accept = dlg.querySelector("[data-dz-confirm-accept]");
-    var cancel = dlg.querySelector("[data-dz-confirm-cancel]");
+    var accept = dlg.querySelector("[data-confirm-accept]");
+    var cancel = dlg.querySelector("[data-confirm-cancel]");
 
     function cleanup() {
       accept.removeEventListener("click", onAccept);
@@ -170,23 +170,23 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   });
 })();
 
-/* ── controllers/dz-command.js ── */
+/* ── controllers/command.js ── */
 /* HYPERPART: command */
 /*
- * dz-command — command-palette controller (HaTchi-MaXchi tranche 2B).
+ * command — command-palette controller (HaTchi-MaXchi tranche 2B).
  *
  * Part of the `command` Hyperpart — see its manifest in site/registry.py
  * (partial + exchange contract) and its styles in components/hm-core.css
  * (also marked `HYPERPART: command`). `python tools/hyperpart.py command`
  * lists every part.
  *
- * The palette itself is server-rendered markup (dialog.dz-command with an
+ * The palette itself is server-rendered markup (dialog.command with an
  * hx-get input); this controller only owns the purely-client bits:
- *   - ⌘K / Ctrl-K opens the first .dz-command dialog on the page
+ *   - ⌘K / Ctrl-K opens the first .command dialog on the page
  *   - Esc closes explicitly (the palette's input is type="search", whose
  *     native behaviour swallows the first Esc to clear its value — so
  *     relying on <dialog>'s built-in cancel needs TWO presses mid-query)
- *   - ArrowUp/ArrowDown move [aria-selected] over .dz-command__item
+ *   - ArrowUp/ArrowDown move [aria-selected] over .command__item
  *   - Enter activates the selected item (click — works for <a> and
  *     <button hx-*> items alike)
  * Results arrive via htmx swaps; selection resets on each swap.
@@ -195,12 +195,12 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   "use strict";
 
   function palette() {
-    return document.querySelector("dialog.dz-command");
+    return document.querySelector("dialog.command");
   }
 
   function items(dlg) {
     return Array.prototype.slice.call(
-      dlg.querySelectorAll(".dz-command__item"),
+      dlg.querySelectorAll(".command__item"),
     );
   }
 
@@ -235,7 +235,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         dlg.close();
       } else {
         dlg.showModal();
-        var input = dlg.querySelector(".dz-command__input");
+        var input = dlg.querySelector(".command__input");
         if (input) input.focus();
       }
       return;

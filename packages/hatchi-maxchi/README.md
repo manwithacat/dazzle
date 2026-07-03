@@ -47,21 +47,21 @@ Then copy any component's HTML from the gallery and point its `hx-*`
 attributes at your endpoints:
 
 ```html
-<button class="dz-button dz-button-primary">Save changes</button>
+<button class="button button-primary">Save changes</button>
 
-<span class="dz-badge" data-dz-tone="success" role="status">Approved</span>
+<span class="badge" data-tone="success" role="status">Approved</span>
 
 <!-- the command palette is an hx-get endpoint, not a client fuzzy-finder -->
-<dialog class="dz-command" aria-label="Command palette">
-  <input class="dz-command__input" type="search"
+<dialog class="command" aria-label="Command palette">
+  <input class="command__input" type="search"
          hx-get="/app/command" hx-trigger="input changed delay:150ms"
-         hx-target="next .dz-command__results">
-  <div class="dz-command__results" role="listbox"></div>
+         hx-target="next .command__results">
+  <div class="command__results" role="listbox"></div>
 </dialog>
 ```
 
 No build step, no JSX, no utility soup. One semantic root class per
-component, `data-dz-*` attributes for variants, tokens for every value.
+component, `data-*` attributes for variants, tokens for every value.
 
 ## The unit is a Hyperpart, not a component
 
@@ -157,19 +157,29 @@ Key tokens: `--colour-bg`, `--colour-surface`, `--colour-surface-muted`,
 `--colour-*-soft` washes, and the `--focus-ring-*` family. See
 [`tokens/tokens.css`](tokens/tokens.css) — it reads top to bottom.
 
-## The `dz-` prefix is a default, not a requirement
+## No prefix by default — the namespace is yours
 
-The namespace is configurable at build time:
+HM ships **unprefixed**: `.button`, `.badge`, `data-tone`,
+`@keyframes fade-in`. Clean, readable markup you can copy straight from the
+gallery. Add your own namespace at build time if you want one:
 
 ```bash
-python build.py --prefix ax-   # .ax-button, data-ax-tone, ax-fade-in…
+python build.py              # default: unprefixed (.button, data-tone)
+python build.py --prefix dz- # .dz-button, data-dz-tone, dz-fade-in
+python build.py --prefix ax- # any lowercase namespace
 ```
 
-The rename is total across CSS and JS (class names, `data-dz-*`
-attributes, keyframes). Your markup must use the same prefix — gallery
-snippets are published with `dz-`, so search-and-replace `dz-` → `ax-`
-when you copy. (In [Dazzle](https://github.com/manwithacat/dazzle), which
-emits this markup from a DSL, the default prefix is part of the contract.)
+The rename is total across CSS, JS, and the demo markup (class names,
+`data-*` attributes, keyframes) — but **not** internal `--*` custom
+properties, which keep their names. Your markup must match the prefix you
+build with.
+
+This isn't a toggle bolted on for flexibility — it's a *production* path.
+[Dazzle](https://github.com/manwithacat/dazzle) consumes HM by building it
+with `--prefix dz-` at ingest, so every Dazzle release exercises the
+transform end-to-end (and if it ever broke, Dazzle's whole UI would break —
+a much louder gate than any unit test). HM ships clean; the consumer
+namespaces.
 
 ## The map
 

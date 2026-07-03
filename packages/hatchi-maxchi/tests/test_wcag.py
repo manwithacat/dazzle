@@ -82,7 +82,7 @@ def test_confirm_dialog_open_wcag(page) -> None:  # type: ignore[no-untyped-def]
 
 
 def test_menu_open_wcag(page) -> None:  # type: ignore[no-untyped-def]
-    page.evaluate("document.querySelector('details.dz-menu').open = true")
+    page.evaluate("document.querySelector('details.menu').open = true")
     page.wait_for_timeout(150)
     _assert_clean(_scan(page), "menu-open")
 

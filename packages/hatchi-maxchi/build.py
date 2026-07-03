@@ -58,10 +58,27 @@ JS_SOURCES = [
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)
 
+# The DEFAULT published namespace is EMPTY — HM ships clean, unprefixed
+# markup (`.button`, `data-tone`, `@keyframes fade-in`). A consumer applies
+# its own namespace at ingest: Dazzle builds with prefix="dz-" (see
+# src/dazzle/page/runtime/css_loader.py, scripts/build_dist.py), which is a
+# no-op transform on the `dz-`-prefixed SOURCE — so Dazzle's output is
+# byte-identical to before, while the standalone/CDN artifact is clean.
+DEFAULT_PREFIX = ""
+
+# A valid explicit prefix looks like `dz-` / `ax-`; "" means strip (the default).
 _PREFIX_RE = re.compile(r"^[a-z][a-z0-9]*-$")
 
+# `dz-` in the SOURCE is the namespace token on classes, data-attributes,
+# and keyframes — all part of the public API and reprefixable. It is NOT
+# reprefixed inside custom-property names (`--dz-*`, internal site tokens):
+# stripping those would collide with real tokens (e.g. `--dz-shadow-sm` ->
+# `--shadow-sm`). The negative-lookbehind for `--` skips exactly those while
+# still transforming `data-dz-*` (preceded by a single `-`).
+_DZ_TOKEN_RE = re.compile(r"(?<!--)dz-")
 
-def build_css(prefix: str = "dz-") -> str:
+
+def build_css(prefix: str = DEFAULT_PREFIX) -> str:
     parts = [LAYER_ORDER, ""]
     for layer, rel in CSS_SOURCES:
         css = (PKG / rel).read_text(encoding="utf-8")
@@ -74,20 +91,21 @@ def build_css(prefix: str = "dz-") -> str:
     return apply_prefix("\n".join(parts).rstrip("\n") + "\n", prefix)
 
 
-def build_js(prefix: str = "dz-") -> str:
+def build_js(prefix: str = DEFAULT_PREFIX) -> str:
     parts = [f"/* ── {rel} ── */\n{(PKG / rel).read_text(encoding='utf-8')}" for rel in JS_SOURCES]
     return apply_prefix("\n".join(parts).rstrip("\n") + "\n", prefix)
 
 
 def apply_prefix(text: str, prefix: str) -> str:
-    if prefix == "dz-":
-        return text
-    if not _PREFIX_RE.match(prefix):
-        raise SystemExit(f"invalid prefix {prefix!r} — want lowercase like 'ax-'")
-    return text.replace("dz-", prefix)
+    """Reprefix the design-system namespace. `prefix=""` strips it (the
+    published default); `prefix="dz-"` keeps the source form; `prefix="ax-"`
+    renames it. `--dz-*` custom-property names are never touched."""
+    if prefix and not _PREFIX_RE.match(prefix):
+        raise SystemExit(f"invalid prefix {prefix!r} — want '' (strip) or lowercase like 'ax-'")
+    return _DZ_TOKEN_RE.sub(prefix, text)
 
 
-def build(out_dir: Path, prefix: str = "dz-") -> None:
+def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "hatchi-maxchi.css").write_text(build_css(prefix), encoding="utf-8")
     (out_dir / "hatchi-maxchi.js").write_text(build_js(prefix), encoding="utf-8")
@@ -102,7 +120,11 @@ def build(out_dir: Path, prefix: str = "dz-") -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=str(PKG / "dist"))
-    ap.add_argument("--prefix", default="dz-", help="class/attr namespace (default dz-)")
+    ap.add_argument(
+        "--prefix",
+        default=DEFAULT_PREFIX,
+        help="class/attr namespace; '' (default) = unprefixed, e.g. 'dz-' or 'ax-' to prefix",
+    )
     args = ap.parse_args()
     build(Path(args.out), args.prefix)
     return 0

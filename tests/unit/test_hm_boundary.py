@@ -58,43 +58,50 @@ def test_package_references_confined_to_sanctioned_seams() -> None:
     )
 
 
-def _hm_entries_from_css_loader() -> set[str]:
+def _css_loader_hm_refs() -> set[str]:
     from dazzle.page.runtime.css_loader import CSS_SOURCE_FILES
 
-    return {rel.removeprefix("@hm:") for _, rel in CSS_SOURCE_FILES if rel.startswith("@hm:")}
+    return {rel for _, rel in CSS_SOURCE_FILES if rel and rel.startswith(("@hm:", "@hm-build:"))}
 
 
-def _hm_entries_from_build_dist() -> set[str]:
+def test_dazzle_consumes_hm_via_the_dz_build_seam() -> None:
+    """Boundary invariant (post prefix-flip): HM publishes UNPREFIXED; Dazzle
+    applies its own `dz-` namespace at ingest. Both build seams must consume
+    the package's build_*("dz-"), not per-source @hm: file reads (which would
+    reopen the internals) and not the unprefixed committed artifact (which
+    would mismatch Dazzle's dz- markup)."""
+    css_refs = _css_loader_hm_refs()
+    assert css_refs == {"@hm-build:dz-"}, (
+        "css_loader must consume HM via the dz- build seam (@hm-build:dz-), "
+        f"not: {sorted(css_refs)}"
+    )
+
     spec = importlib.util.spec_from_file_location("build_dist", REPO / "scripts" / "build_dist.py")
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    # build_dist must reference the HM bundle via its sentinels (which its
+    # build loop turns into build_css/js("dz-")) — not read them as files.
+    assert mod.HM_DIST_CSS in [p for _, p in mod.CSS_SOURCES], "build_dist lost the HM CSS bundle"
+    assert mod.HM_DIST_JS in mod.JS_SOURCES, "build_dist lost the HM JS bundle"
+    # ...and nothing else reaches into the package's source tree.
     hm_root = Path(mod.HM)
-    return {
-        str(path.relative_to(hm_root)).replace("\\", "/")
-        for _, path in mod.CSS_SOURCES
-        if hm_root in path.parents or path == hm_root
-    }
+    extra = [
+        str(p.relative_to(hm_root))
+        for _, p in mod.CSS_SOURCES
+        if (hm_root in p.parents or p == hm_root) and p != mod.HM_DIST_CSS
+    ]
+    assert not extra, f"build_dist reaches past the HM bundle into sources: {extra}"
 
 
-def test_build_lists_reference_the_same_package_files() -> None:
-    dev = _hm_entries_from_css_loader()
-    dist = _hm_entries_from_build_dist()
-    assert dev == dist, (
-        "css_loader @hm: entries and build_dist HM entries drifted — the dev "
-        f"bundle and dist bundle would diverge. dev-only: {sorted(dev - dist)}, "
-        f"dist-only: {sorted(dist - dev)}"
+def test_hm_build_seam_actually_produces_dz_css() -> None:
+    """The consumption seam must yield dz-prefixed CSS (Dazzle emits dz-*)."""
+    from dazzle.page.runtime.css_loader import get_bundled_css
+
+    css = get_bundled_css()
+    assert ".dz-button" in css and "data-dz-tone" in css, (
+        "HM build seam did not apply the dz- namespace"
     )
-    assert dev == {"dist/hatchi-maxchi.css"}, (
-        "Phase 2 invariant: Dazzle consumes ONLY the published dist artifact — "
-        f"found {sorted(dev)}. Per-source @hm: reads reopen the internals seam."
-    )
-
-
-def test_hm_paths_in_build_lists_exist() -> None:
-    pkg = REPO / "packages" / "hatchi-maxchi"
-    missing = sorted(rel for rel in _hm_entries_from_css_loader() if not (pkg / rel).is_file())
-    assert not missing, f"@hm: entries point at missing package files: {missing}"
 
 
 def _code_without_docs(path: Path) -> str:

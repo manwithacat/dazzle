@@ -40,7 +40,9 @@ def _used_classes() -> set[str]:
 
 
 def test_every_registry_class_has_a_rule() -> None:
-    css = build_css()
+    # Registry partials carry the dz- SOURCE form; check against the dz-
+    # build (the published default is unprefixed, but the source is dz-).
+    css = build_css("dz-")
     missing = sorted(
         cls for cls in _used_classes() if f".{cls}" not in css and cls not in SEMANTIC_ONLY
     )
@@ -51,7 +53,7 @@ def test_every_registry_class_has_a_rule() -> None:
 
 
 def test_semantic_only_list_is_not_stale() -> None:
-    css = build_css()
+    css = build_css("dz-")
     stale = sorted(cls for cls in SEMANTIC_ONLY if f".{cls}" in css)
     assert not stale, f"now styled — remove from SEMANTIC_ONLY: {stale}"
 
@@ -103,13 +105,28 @@ def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore
 def test_prefix_transform_is_total() -> None:
     css = build_css(prefix="ax-")
     js = build_js(prefix="ax-")
-    assert "dz-" not in css and "dz-" not in js
+    # `dz-` survives ONLY in `--dz-*` custom-property names (internal, never
+    # reprefixed — see build.apply_prefix). Everything else must be renamed.
+    css_no_customprops = re.sub(r"--dz-[a-z0-9*-]*", "", css)
+    assert "dz-" not in css_no_customprops, "class/attr/keyframe dz- leaked through --prefix ax-"
+    assert "dz-" not in js
     assert ".ax-button" in css and ".ax-alert" in css
     assert "ax-command" in js and "data-ax-native-confirm" in js
 
 
-def test_default_prefix_is_dz() -> None:
-    assert ".dz-button" in build_css()
+def test_default_prefix_is_unprefixed() -> None:
+    # HM ships clean/unprefixed by default (developer engagement); a consumer
+    # (Dazzle) applies its own namespace at ingest via build_css("dz-").
+    css = build_css()
+    assert ".button" in css and ".badge" in css
+    assert ".dz-button" not in css and "data-dz-tone" not in css
+
+
+def test_dazzle_namespace_roundtrips() -> None:
+    # The production consumption path: build_css("dz-") is the dz- form Dazzle
+    # ingests (byte-identical to the pre-flip artifact).
+    css = build_css("dz-")
+    assert ".dz-button" in css and "data-dz-tone" in css
 
 
 # ── Hypermedia exchange contracts (the "partial + endpoint contract"
