@@ -1,0 +1,38 @@
+# Deploys the component gallery (site/) to GitHub Pages.
+#
+# This workflow lives INSIDE the package prefix, so it is inert in the
+# Dazzle monorepo (GitHub only reads the repo-root .github/) and becomes
+# the standalone repo's CI after `git subtree split`. The gallery is a
+# committed build artifact — no build step needed here; rebuilds happen
+# in-tree in Dazzle (`python packages/hatchi-maxchi/site/build_site.py`)
+# and arrive via subtree pushes.
+name: Deploy gallery to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

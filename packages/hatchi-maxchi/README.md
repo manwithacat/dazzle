@@ -5,11 +5,14 @@ aesthetic (shadcn-grade), without a client framework. Server-rendered
 markup, semantic `dz-*` classes + `data-dz-*` modifiers, design tokens for
 all variation, and interactions built on the htmx request lifecycle.
 
-Currently developed inside [Dazzle](../../) (the "develop in-tree, extract
-when stable" strategy). This directory is the **extraction seed**: it will
-become a standalone repo via `git subtree split`, and Dazzle will consume
-the published bundle back. See
-[`../../docs/superpowers/specs/2026-07-03-hm-extraction-plan.md`](../../docs/superpowers/specs/2026-07-03-hm-extraction-plan.md).
+Developed in-tree inside [Dazzle](https://github.com/manwithacat/dazzle)
+(`packages/hatchi-maxchi/`), published standalone at
+[manwithacat/hatchi-maxchi](https://github.com/manwithacat/hatchi-maxchi)
+via `git subtree split` (Stage 3 of the extraction plan). The Dazzle
+monorepo remains the source of truth; changes flow outward with
+`git subtree push --prefix=packages/hatchi-maxchi hm main`. The gallery
+deploys to GitHub Pages from `site/` on every push. See
+`docs/superpowers/specs/2026-07-03-hm-extraction-plan.md` in Dazzle.
 
 ## The map (start here)
 
@@ -19,10 +22,14 @@ the published bundle back. See
 | `base/` | `base.css` (element defaults + focus net), `fonts.css` (Geist @font-face), `design-system.css` (non-colour app-shell tokens + vendor-widget theming, moved in Stage 2b). |
 | `components/` | Component CSS (`alert.css`, `hm-core.css`, …). One semantic root class + `data-dz-*` modifiers; tokens carry the aesthetic. |
 | `controllers/` | Vanilla-JS behaviour for the purely-client bits (`dz-confirm.js` = designed `hx-confirm`; `dz-command.js` = ⌘K palette keys). htmx-aware, no framework. |
-| `site/` | The catalogue + gallery. `registry.py` is the **source of truth for the component list**; `build_site.py` renders the static gallery where every example IS its copy-paste snippet (they cannot drift). Includes a mock htmx4 so interactive demos run with no server. |
-| `assets/` | Vendored Geist (OFL) + the Lucide icon registry (ISC). |
-| `oracle/` | The taste rubric + blind-panel harness — the design system carries its own quality gate. |
-| `dist/` | Built `hatchi-maxchi.{css,js}` — vendored back into Dazzle. |
+| `site/` | The catalogue + gallery (a committed build artifact — GitHub Pages serves it as-is). `registry.py` is the **source of truth for the component list**; `build_site.py` renders the static gallery where every example IS its copy-paste snippet (they cannot drift). Includes a mock htmx4 so interactive demos run with no server, and the vendored Geist fonts (OFL). |
+| `.github/` | Pages deploy workflow — inert inside the Dazzle monorepo, live in the standalone repo. |
+
+Planned (not yet populated): `oracle/` (the taste rubric + blind-panel
+harness), `dist/` (a design-system-only bundle — today `site/hatchi-maxchi.css`
+is the full Dazzle bundle), and `assets/` (the Lucide icon registry, which
+still lives in Dazzle's `render/fragment/icon_registry.py` — `build_site.py`
+imports it from the Dazzle tree, so **gallery rebuilds happen in-tree**).
 
 ## Add a component (the agent workflow)
 
@@ -49,7 +56,7 @@ semantics, tone-wash surfaces, htmx-lifecycle motion, and ops-app data density.
 The review test for every component: credible to a shadcn-fluent developer,
 but not mistakable for shadcn side-by-side.
 
-## Use (in any htmx4 app, post-extraction)
+## Use (in any htmx4 app)
 
 ```html
 <link rel="stylesheet" href="hatchi-maxchi.css">

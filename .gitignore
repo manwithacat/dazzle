@@ -159,6 +159,6 @@ tests/audit/classification.json
 PLAN.md
 .github/codeql/extensions/**/.codeql/
 
-# HaTchi-MaXchi generated site fonts (copied from vendored source) + pycache
-packages/hatchi-maxchi/site/fonts/
+# HaTchi-MaXchi pycache (site fonts became TRACKED in Stage 3 — the split
+# repo serves site/ on GitHub Pages as-is, so the woff2 must travel)
 packages/**/__pycache__/

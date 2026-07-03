@@ -32,7 +32,26 @@ component set covers shadcn breadth and the `dz-*` class names are stable
 (no renames in flight). The extraction is a directory move, not a rewrite,
 because we kept `dz-*` and developed in an extraction-ready shape.
 
-### Mechanics (when James says go)
+### Stage 3 EXECUTED (2026-07-03, v0.93.15)
+
+The split went out as a **subtree split, not a cp** — the Dazzle monorepo
+stays the source of truth while the standalone repo publishes:
+
+- `git subtree split --prefix=packages/hatchi-maxchi` →
+  [manwithacat/hatchi-maxchi](https://github.com/manwithacat/hatchi-maxchi)
+  (history-preserving; the package commits ARE the new repo's history).
+- Sync outward: `git subtree push --prefix=packages/hatchi-maxchi hm main`
+  (remote `hm` = the standalone repo). Run after HM-touching Dazzle ships.
+- CI: `.github/workflows/pages.yml` lives inside the package prefix (inert
+  in Dazzle, live standalone) and deploys the committed `site/` gallery to
+  GitHub Pages — no build step, because gallery rebuilds need Dazzle's
+  icon registry and run in-tree.
+- Still in-tree by design (follow-ons): the oracle port, a
+  design-system-only `dist/` bundle (today the gallery ships the full
+  Dazzle bundle), icon-registry vendoring, npm publish, and flipping
+  Dazzle to consume published releases via `update-vendors.yml`.
+
+### Original mechanics sketch (superseded by the above)
 
 1. `cp -r hatchi-maxchi/ ../hatchi-maxchi/` → `git init` the new repo.
 2. Move the *sources* too (not just the built site): the component CSS

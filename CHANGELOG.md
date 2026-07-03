@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.15] - 2026-07-03
+
+### Added
+- **HaTchi-MaXchi extraction — Stage 3: the standalone repo.** `packages/hatchi-maxchi/` is split out (history-preserving `git subtree split`) to [manwithacat/hatchi-maxchi](https://github.com/manwithacat/hatchi-maxchi); the component gallery deploys to GitHub Pages from the committed `site/` artifact via a workflow that lives *inside* the package prefix (inert in this monorepo, live standalone). Gallery fonts (`site/fonts/`, Geist OFL) are now tracked so the split serves as-is. Dazzle remains the source of truth — develop in-tree, then `git subtree push --prefix=packages/hatchi-maxchi hm main`. Follow-ons stay in-tree: oracle port, design-system-only dist bundle, icon-registry vendoring, npm publish, vendor-back via `update-vendors.yml`.
+
+### Agent Guidance
+- After shipping any change under `packages/hatchi-maxchi/`, sync the standalone repo: `git subtree push --prefix=packages/hatchi-maxchi hm main` (remote `hm`). Gallery rebuilds (`python packages/hatchi-maxchi/site/build_site.py`) only work in-tree — they import Dazzle's icon registry.
+
 ## [0.93.14] - 2026-07-03
 
 ### Changed
