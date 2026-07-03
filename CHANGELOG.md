@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.22] - 2026-07-03
+
+### Changed
+- HaTchi-MaXchi linux visual baselines refreshed for the new copy-button chrome (generated in the standalone repo's CI via `update-baselines.yml`).
+
 ## [0.93.21] - 2026-07-03
 
 ### Added
