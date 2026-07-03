@@ -42,6 +42,39 @@ world-class aesthetics.** Concretely:
 | Migration | **Develop in-tree, extract when stable** — build the full breadth inside Dazzle (where the oracle, walks, and gates live) in an extraction-ready tree; cut the repo when the contract stops churning |
 | Distribution | **CSS bundle + JS controllers** (npm/CDN, themable via tokens) **and copy-paste HTML registry** (per-component documented snippets with htmx4 wiring — the hypermedia analogue of shadcn's registry, doubling as the agent-facing reference). Server-side emitter kits are out of scope; Dazzle's Fragment substrate is the first emitter and stays in Dazzle |
 
+## Familiar, not identical (the counter-pull)
+
+Two objectives pull against each other and BOTH are requirements
+(James, 2026-07-03): the maturity and community-understood aesthetic of
+shadcn, and a distinct identity — never a clone chasing pixel-identity.
+The resolution: **match the quality signals, own the identity signals.**
+
+**Quality signals we match** (these read as "mature" to the community and
+are not anyone's property): complete interactive states, spacing on a
+strict scale, focus-ring discipline, restrained neutral structure, subtle
+layered elevation, dark mode as a designed material, typographic role
+clarity.
+
+**Identity signals we own** (deliberate divergence — a screen should be
+recognisably HaTchi-MaXchi at a glance):
+1. **Chromatic accent.** shadcn's default voice is monochrome zinc with
+   black CTAs; ours is a chromatic brand accent (single hue token,
+   themable per app). CTAs carry colour.
+2. **Colour+icon+text semantics.** Badges/alerts always pair tone with a
+   registry glyph and text (WCAG 1.4.1 as an aesthetic, not a retrofit).
+3. **Tone washes.** Semantic soft-wash surfaces (the `--colour-*-soft`
+   family) as a first-class layer — shadcn has no equivalent vocabulary.
+4. **Lifecycle motion.** Loading/settle/swap choreography derives from
+   the htmx request lifecycle (skeleton→settle, row swap slides) — a
+   signature no client-state system reproduces honestly.
+5. **Data density.** Ops-app-first defaults: denser tables, tabular
+   numerals everywhere, drill affordances on rows.
+
+**Review test for every component:** (a) would a shadcn-fluent developer
+find it immediately credible? (b) would they mistake it for shadcn in a
+side-by-side? The target is yes/no. The blind panel enforces (a); (b) is
+a checklist item in each component's contract review.
+
 ## Separation of concerns
 
 **In HaTchi-MaXchi (the repo, eventually):**
