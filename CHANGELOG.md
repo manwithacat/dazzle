@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.5] - 2026-07-03
+
+### Added
+- **HaTchi-MaXchi Phase 3: component pass** — the foundations applied at the seams judges actually see:
+  - **Nav icons everywhere**: authored `icon:` values now actually render (the old `data-dz-icon` attribute was consumed by nothing); unset items get a label-inferred registry icon (`render/fragment/nav_icons.py`, registry-closed by import-time guard + gate test). Sidebar links get icon+gap layout.
+  - **Designed empty states** (TASTE-8): the three hardcoded inbox-SVG empty seams (list, grid, kanban) now render registry icons via `lucide_svg_html`; the `EmptyState` primitive gains `icon: str = "inbox"`.
+  - **Badge glyphs → registry SVGs**: `badge_icon_html` renders circle-check/triangle-alert/circle-x/info inline SVGs (supersedes the #1493 HTML entities; WCAG colour+icon+text guarantee unchanged; neutral stays icon-free/byte-stable).
+  - **Row actions from the registry**: View/Edit/Delete use eye/pencil/trash-2 (replacing hand-drawn 14px paths); data-row goldens re-baselined.
+  - **Card/button craft** (TASTE-2): cards carry `--shadow-sm` at rest; primary buttons get an explicit `--brand-700` hover step (no more brightness filter) and a physical press (shadow collapse + 0.5px settle).
+
+### Agent Guidance
+- Nav-icon inference is registry-closed: extend `_KEYWORD_ICONS` in `src/dazzle/render/fragment/nav_icons.py` (every name must exist in the icon registry — the import-time guard and `test_nav_icons.py` enforce it).
+
 ## [0.93.4] - 2026-07-03
 
 ### Added

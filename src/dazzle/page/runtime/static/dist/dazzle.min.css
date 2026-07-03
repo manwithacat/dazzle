@@ -1,4 +1,4 @@
-/* dazzle v0.93.4 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.5 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -1338,6 +1338,17 @@ border-color: var(--colour-danger);
 color: var(--colour-text-muted);
 font-size: var(--text-xs);
 }
+.dz-badge-icon {
+display: inline-flex;
+width: 0.875em;
+height: 0.875em;
+flex-shrink: 0;
+}
+.dz-badge-icon svg {
+width: 100%;
+height: 100%;
+display: block;
+}
 }
 @layer components {
 .dz-button {
@@ -1385,9 +1396,15 @@ background: var(--colour-danger-soft);
 background: var(--colour-brand);
 color: var(--colour-brand-contrast);
 border: 1px solid var(--colour-brand);
+box-shadow: var(--shadow-sm);
 }
 .dz-button.dz-button-primary:hover {
-filter: brightness(1.1);
+background: var(--brand-700);
+border-color: var(--brand-700);
+}
+.dz-button.dz-button-primary:active {
+box-shadow: none;
+transform: translateY(0.5px);
 }
 .dz-button.dz-button-primary:disabled,
 .dz-button.dz-button-primary[aria-disabled="true"] {
@@ -1615,6 +1632,7 @@ transition: all var(--duration-base) var(--ease-out);
 border-radius: var(--radius-md);
 border: 1px solid var(--colour-border);
 background: var(--colour-surface);
+box-shadow: var(--shadow-sm);
 overflow: hidden;
 transition:
 border-color var(--duration-fast) var(--ease-out),
@@ -2795,6 +2813,43 @@ color: var(--colour-text-muted);
 .dz-action-card-icon svg,
 .dz-status-list-icon svg,
 .dz-task-inbox-item-icon svg {
+width: 100%;
+height: 100%;
+display: block;
+}
+.dz-nav-link__icon,
+.dz-nav-group__icon {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 1rem;
+height: 1rem;
+flex-shrink: 0;
+color: var(--colour-text-muted);
+}
+.dz-nav-link:hover .dz-nav-link__icon,
+.dz-nav-link[aria-current="page"] .dz-nav-link__icon {
+color: currentColor;
+}
+.dz-nav-link__icon svg,
+.dz-nav-group__icon svg {
+width: 100%;
+height: 100%;
+display: block;
+}
+.dz-nav-link {
+display: flex;
+align-items: center;
+gap: var(--space-sm);
+}
+.dz-empty-state__icon {
+display: inline-flex;
+width: 2rem;
+height: 2rem;
+color: var(--colour-text-muted);
+margin-block-end: var(--space-sm);
+}
+.dz-empty-state__icon svg {
 width: 100%;
 height: 100%;
 display: block;
@@ -8039,6 +8094,11 @@ margin: 0;
 display: flex;
 align-items: center;
 justify-content: space-between;
+}
+.dz-tr-action-icon {
+width: 0.875rem;
+height: 0.875rem;
+display: block;
 }
 }
 @layer components {
