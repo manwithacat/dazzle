@@ -52,6 +52,19 @@ def test_semantic_only_list_is_not_stale() -> None:
     assert not stale, f"now styled — remove from SEMANTIC_ONLY: {stale}"
 
 
+def test_committed_dist_is_current() -> None:
+    """dist/ is committed so jsDelivr can serve it straight from the repo
+    at any tag (https://cdn.jsdelivr.net/gh/manwithacat/hatchi-maxchi@TAG/dist/…).
+    A stale committed dist would be served to CDN users — fail loudly."""
+    css = (PKG / "dist" / "hatchi-maxchi.css").read_text(encoding="utf-8")
+    js = (PKG / "dist" / "hatchi-maxchi.js").read_text(encoding="utf-8")
+    assert css == build_css() and js == build_js(), (
+        "dist/ is stale — run `python build.py` and commit (CDN users get the committed files)"
+    )
+    for font in ("geist-var.woff2", "geist-mono-var.woff2", "OFL.txt"):
+        assert (PKG / "dist" / "fonts" / font).exists(), f"dist/fonts/{font} missing"
+
+
 def test_committed_gallery_css_is_current() -> None:
     committed = (PKG / "site" / "hatchi-maxchi.css").read_text(encoding="utf-8")
     assert committed == build_css(), (

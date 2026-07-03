@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.21] - 2026-07-03
+
+### Added
+- **HaTchi-MaXchi on a free CDN.** `dist/` (CSS + JS + fonts) is now committed, so jsDelivr serves it straight from the repo at any tag: `https://cdn.jsdelivr.net/gh/manwithacat/hatchi-maxchi@v0.1.1/dist/hatchi-maxchi.css` (fonts resolve relatively). README quick-start leads with the hosted snippet incl. SRI `integrity` hashes; `release.yml` now writes each release's ready-to-paste CDN+SRI snippet into the release notes. A new contract test pins committed `dist/` to a fresh build (stale dist = what CDN users would get = CI failure). Design-system version bumped to 0.1.1 (`package.json`).
+
 ## [0.93.20] - 2026-07-03
 
 ### Fixed

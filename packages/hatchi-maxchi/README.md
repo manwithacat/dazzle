@@ -16,14 +16,35 @@ same string, so they cannot drift.
 
 ## Quick start
 
+Hosted on the [jsDelivr](https://www.jsdelivr.com/) free CDN, pinned to a
+release tag (fonts resolve relatively — no extra setup):
+
+```html
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/manwithacat/hatchi-maxchi@v0.1.1/dist/hatchi-maxchi.css"
+      integrity="sha384-4Z7gtoZuZUhVnNEMeDC3/AXOILjQcFC/nbO9nQphICi8jo1RGGYZGs+CHPwOfTYw"
+      crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/gh/manwithacat/hatchi-maxchi@v0.1.1/dist/hatchi-maxchi.js"
+        integrity="sha384-jGqDs8tteHH9K20CHlgS9G9u65mjpYvV3hBuarTb2oI8ahsPn8CxPYqbPMUhCtl1"
+        crossorigin="anonymous" defer></script>
+```
+
+Each [release](https://github.com/manwithacat/hatchi-maxchi/releases)'s
+notes carry the ready-to-paste snippet with that version's SRI hashes
+(a CI drift gate pins the committed `dist/` to the sources, so the tag
+serves exactly these bytes).
+
+Prefer self-hosting? Download the same two files (plus `fonts/`) from the
+[latest release](https://github.com/manwithacat/hatchi-maxchi/releases)
+or build them yourself (`python build.py`):
+
 ```html
 <link rel="stylesheet" href="hatchi-maxchi.css">
 <script src="hatchi-maxchi.js" defer></script>
 ```
 
-Grab both files from the [latest release](https://github.com/manwithacat/hatchi-maxchi/releases)
-(or build them: `python build.py`). Then copy any component's HTML from
-the gallery and point its `hx-*` attributes at your endpoints:
+Then copy any component's HTML from the gallery and point its `hx-*`
+attributes at your endpoints:
 
 ```html
 <button class="dz-button dz-button-primary">Save changes</button>

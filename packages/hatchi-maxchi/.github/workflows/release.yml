@@ -29,13 +29,30 @@ jobs:
         run: |
           python build.py
           cd dist && zip -r ../hatchi-maxchi-dist.zip . && cd ..
-      - name: Create release
+      - name: Create release (with CDN + SRI snippet in the notes)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          CSS_SRI=$(openssl dgst -sha384 -binary dist/hatchi-maxchi.css | openssl base64 -A)
+          JS_SRI=$(openssl dgst -sha384 -binary dist/hatchi-maxchi.js | openssl base64 -A)
+          cat > /tmp/notes.md <<EOF
+          ## Hosted (jsDelivr CDN)
+
+          \`\`\`html
+          <link rel="stylesheet"
+                href="https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@${GITHUB_REF_NAME}/dist/hatchi-maxchi.css"
+                integrity="sha384-${CSS_SRI}"
+                crossorigin="anonymous">
+          <script src="https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@${GITHUB_REF_NAME}/dist/hatchi-maxchi.js"
+                  integrity="sha384-${JS_SRI}"
+                  crossorigin="anonymous" defer></script>
+          \`\`\`
+
+          Fonts resolve relatively from the CDN. Or self-host the attached assets.
+          EOF
           gh release create "$GITHUB_REF_NAME" \
             --title "HaTchi-MaXchi $GITHUB_REF_NAME" \
-            --generate-notes \
+            --notes-file /tmp/notes.md \
             hatchi-maxchi-dist.zip \
             dist/hatchi-maxchi.css \
             dist/hatchi-maxchi.js
