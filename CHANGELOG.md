@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.31] - 2026-07-03
+
+### Added
+- **HM standalone CI is a per-dimension scorecard.** `ci.yml` split into five named jobs — Contract & boundary, Behaviour (headless Chromium), Accessibility (WCAG 2.2 AA, axe-core), **Markup validity (Nu/W3C — new gate)**, Visual regression — so anyone evaluating the repo sees exactly which guarantees are enforced. The validity gate checks the gallery's live canonical markup with two documented exclusions (vnu's dated CSS grammar; `hx-*` attributes, htmx's deliberate validity trade-off).
+- **Thesis analysis: HM as the shadcn of htmx** (`docs/superpowers/specs/2026-07-03-hm-shadcn-catalogue-thesis.md`) — validated with two amendments: Tier C components are partial+**endpoint-protocol** pairs (the response contract is a first-class registry artifact), and the catalogue walk is a triage matrix with explicit hypermedia answers and a rejected list, never 1:1 transliteration. Phase 5 conformance machinery is the prerequisite "type system".
+
 ## [0.93.30] - 2026-07-03
 
 ### Changed
