@@ -33,9 +33,24 @@ def test_nav_item_inactive_omits_aria_current() -> None:
 
 
 def test_nav_item_renders_icon_when_set() -> None:
+    # "cog" is not a registry name -> client-hydration fallback keeps the
+    # authored value; registry names render inline SVG (see below).
     html = _render(NavItem(label="Settings", href=URL("/settings"), icon="cog"))
-    assert 'data-dz-icon="cog"' in html
+    assert 'data-lucide="cog"' in html
     assert 'aria-hidden="true"' in html
+
+
+def test_nav_item_registry_icon_renders_inline_svg() -> None:
+    html = _render(NavItem(label="Settings", href=URL("/settings"), icon="settings"))
+    assert '<span class="dz-nav-link__icon" aria-hidden="true"><svg' in html
+
+
+def test_nav_item_without_icon_gets_inferred_registry_svg() -> None:
+    # TASTE-6: every nav item carries an icon — inferred from the label
+    # when not authored, always registry-closed (inline SVG, never fallback).
+    html = _render(NavItem(label="Dashboard", href=URL("/d")))
+    assert '<span class="dz-nav-link__icon" aria-hidden="true"><svg' in html
+    assert "data-lucide" not in html
 
 
 def test_nav_item_label_is_escaped() -> None:
@@ -85,7 +100,8 @@ def test_nav_group_renders_icon_when_set() -> None:
         icon="folder",
     )
     html = _render(g)
-    assert 'data-dz-icon="folder"' in html
+    # "folder" is a registry name -> inline SVG in the group header
+    assert '<span class="dz-nav-group__icon" aria-hidden="true"><svg' in html
 
 
 def test_nav_group_rejects_empty_label() -> None:

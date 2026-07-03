@@ -35,6 +35,8 @@ import json
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
+from dazzle.render.fragment.icon_html import lucide_icon_html
+from dazzle.render.fragment.nav_icons import infer_nav_icon
 from dazzle.render.fragment.primitives import (
     AppShell,
     ErrorPage,
@@ -338,13 +340,11 @@ class _RenderShellMixin:
         href = ctx.escape_attr(n.href.value)
         label = ctx.escape(n.label)
         current_attr = ' aria-current="page"' if n.active else ""
-        icon_html = ""
-        if n.icon:
-            icon_html = (
-                f'<span class="dz-nav-link__icon" '
-                f'data-dz-icon="{ctx.escape_attr(n.icon)}" '
-                f'aria-hidden="true"></span>'
-            )
+        # HaTchi-MaXchi Phase 3 (TASTE-6): every nav item carries a
+        # registry icon — authored names win, otherwise inferred from the
+        # label. Inline SVG; inference is registry-closed so this seam
+        # never depends on client hydration.
+        icon_html = lucide_icon_html(n.icon or infer_nav_icon(n.label), cls="dz-nav-link__icon")
         return (
             f'<li class="dz-nav-item">'
             f'<a class="dz-nav-link" href="{href}"{current_attr}>'
@@ -357,13 +357,7 @@ class _RenderShellMixin:
         """Native `<details>` so collapsed/expanded works without JS."""
         label = ctx.escape(g.label)
         open_attr = "" if g.collapsed else " open"
-        icon_html = ""
-        if g.icon:
-            icon_html = (
-                f'<span class="dz-nav-group__icon" '
-                f'data-dz-icon="{ctx.escape_attr(g.icon)}" '
-                f'aria-hidden="true"></span>'
-            )
+        icon_html = lucide_icon_html(g.icon or infer_nav_icon(g.label), cls="dz-nav-group__icon")
         items_html = "".join(self._emit_nav_item(item, ctx) for item in g.items)
         return (
             f'<details class="dz-nav-group"{open_attr}>'

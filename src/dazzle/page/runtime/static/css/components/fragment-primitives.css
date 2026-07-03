@@ -636,3 +636,35 @@
   height: 100%;
   display: block;
 }
+
+/* ── Nav icons (HaTchi-MaXchi Phase 3, TASTE-6) ─────────────────────────
+   Every sidebar item carries a registry SVG — authored or inferred. Muted
+   at rest; inherits the link colour on hover/active. */
+.dz-nav-link__icon,
+.dz-nav-group__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--colour-text-muted);
+}
+
+.dz-nav-link:hover .dz-nav-link__icon,
+.dz-nav-link[aria-current="page"] .dz-nav-link__icon {
+  color: currentColor;
+}
+
+.dz-nav-link__icon svg,
+.dz-nav-group__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.dz-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
