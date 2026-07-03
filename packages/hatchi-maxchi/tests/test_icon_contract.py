@@ -15,6 +15,7 @@ sys.path.insert(0, str(PKG))
 sys.path.insert(0, str(PKG / "site"))
 
 from build import build_css  # noqa: E402
+from icons.html import lucide_icon_html, lucide_svg_html  # noqa: E402
 
 pytestmark = pytest.mark.gate
 
@@ -53,3 +54,28 @@ def test_gallery_publishes_unprefixed_icon_contract() -> None:
     css = _css("")  # gallery default: dz- stripped
     assert ".icon--size-xl" in css and ".icon-solid" in css
     assert ".dz-icon" not in css  # fully stripped
+
+
+# ── a11y: decorative by default, `label` makes an icon meaningful ──────────
+
+
+def test_decorative_default_is_aria_hidden() -> None:
+    out = lucide_svg_html("check", cls="dz-icon")
+    assert 'aria-hidden="true"' in out and "role=" not in out
+
+
+def test_svg_label_makes_icon_meaningful() -> None:
+    out = lucide_svg_html("trash-2", cls="dz-icon", label="Delete")
+    assert 'role="img"' in out and 'aria-label="Delete"' in out
+    assert "aria-hidden" not in out
+
+
+def test_icon_span_label_makes_icon_meaningful() -> None:
+    out = lucide_icon_html("info", cls="dz-icon", label="Information")
+    assert 'role="img"' in out and 'aria-label="Information"' in out
+    assert "aria-hidden" not in out
+
+
+def test_label_is_escaped() -> None:
+    out = lucide_svg_html("check", cls="dz-icon", label='a"b')
+    assert 'aria-label="a&quot;b"' in out
