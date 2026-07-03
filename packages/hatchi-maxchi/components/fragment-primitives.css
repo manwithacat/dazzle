@@ -610,14 +610,22 @@
 /* ── Icon primitive + inline-SVG icons (HaTchi-MaXchi TASTE-6) ──────────
    Server-rendered Lucide SVGs fill their fixed-size wrapper and inherit
    currentColor; sizes sit on the type scale. */
+/* Canonical icon contract — see the Icon Hyperpart page. Sized in `em` so an
+   icon scales with its context's font-size; the size scale pins absolute sizes. */
 .dz-icon,
 .dz-task-inbox-item-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  vertical-align: middle;
+  vertical-align: -0.125em;
+  width: 1em;
+  height: 1em;
+  color: inherit;
+  stroke: currentColor;
+  fill: none;
 }
+.dz-icon-solid { fill: currentColor; stroke: none; }
 
 .dz-task-inbox-item-icon {
   width: 1.25rem;
@@ -625,9 +633,11 @@
   color: var(--colour-text-muted);
 }
 
+.dz-icon--size-xs { width: 0.75rem; height: 0.75rem; }
 .dz-icon--size-sm { width: 1rem; height: 1rem; }
 .dz-icon--size-md { width: 1.25rem; height: 1.25rem; }
 .dz-icon--size-lg { width: 1.5rem; height: 1.5rem; }
+.dz-icon--size-xl { width: 2rem; height: 2rem; }
 
 .dz-icon svg,
 .dz-action-card-icon svg,

@@ -1,4 +1,4 @@
-/* dazzle v0.93.36 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.37 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2402,16 +2402,24 @@ display: inline-flex;
 align-items: center;
 justify-content: center;
 flex-shrink: 0;
-vertical-align: middle;
+vertical-align: -0.125em;
+width: 1em;
+height: 1em;
+color: inherit;
+stroke: currentColor;
+fill: none;
 }
+.dz-icon-solid { fill: currentColor; stroke: none; }
 .dz-task-inbox-item-icon {
 width: 1.25rem;
 height: 1.25rem;
 color: var(--colour-text-muted);
 }
+.dz-icon--size-xs { width: 0.75rem; height: 0.75rem; }
 .dz-icon--size-sm { width: 1rem; height: 1rem; }
 .dz-icon--size-md { width: 1.25rem; height: 1.25rem; }
 .dz-icon--size-lg { width: 1.5rem; height: 1.5rem; }
+.dz-icon--size-xl { width: 2rem; height: 2rem; }
 .dz-icon svg,
 .dz-action-card-icon svg,
 .dz-status-list-icon svg,

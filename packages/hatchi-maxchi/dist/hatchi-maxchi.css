@@ -3393,14 +3393,22 @@ input.switch:checked::before {
 /* ── Icon primitive + inline-SVG icons (HaTchi-MaXchi TASTE-6) ──────────
    Server-rendered Lucide SVGs fill their fixed-size wrapper and inherit
    currentColor; sizes sit on the type scale. */
+/* Canonical icon contract — see the Icon Hyperpart page. Sized in `em` so an
+   icon scales with its context's font-size; the size scale pins absolute sizes. */
 .icon,
 .task-inbox-item-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  vertical-align: middle;
+  vertical-align: -0.125em;
+  width: 1em;
+  height: 1em;
+  color: inherit;
+  stroke: currentColor;
+  fill: none;
 }
+.icon-solid { fill: currentColor; stroke: none; }
 
 .task-inbox-item-icon {
   width: 1.25rem;
@@ -3408,9 +3416,11 @@ input.switch:checked::before {
   color: var(--colour-text-muted);
 }
 
+.icon--size-xs { width: 0.75rem; height: 0.75rem; }
 .icon--size-sm { width: 1rem; height: 1rem; }
 .icon--size-md { width: 1.25rem; height: 1.25rem; }
 .icon--size-lg { width: 1.5rem; height: 1.5rem; }
+.icon--size-xl { width: 2rem; height: 2rem; }
 
 .icon svg,
 .action-card-icon svg,
