@@ -57,6 +57,7 @@ class EmptyState:
     title: str
     description: str
     action: object | None = None  # Button | Link, retyped post-Task 16
+    icon: str = "inbox"  # vendored-registry name (TASTE-8); "" = no icon
 
 
 @dataclass(frozen=True, slots=True)

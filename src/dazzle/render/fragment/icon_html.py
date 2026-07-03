@@ -11,13 +11,28 @@ import html as _html
 
 from dazzle.render.fragment.icon_registry import ICONS
 
-__all__ = ["lucide_icon_html"]
+__all__ = ["lucide_icon_html", "lucide_svg_html"]
 
 _SVG_SHELL = (
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '
     'stroke="currentColor" stroke-width="2" stroke-linecap="round" '
     'stroke-linejoin="round">{inner}</svg>'
 )
+
+
+def lucide_svg_html(name: str, *, cls: str, fallback: str = "inbox") -> str:
+    """Bare ``<svg class=cls>`` for a REGISTRY name (no span wrapper).
+
+    For seams whose CSS styles the ``<svg>`` element directly (e.g. the
+    empty-state icon). Unknown names silently use *fallback* — both are
+    framework-chosen constants here, never author input.
+    """
+    inner = ICONS.get(name) or ICONS[fallback]
+    return (
+        f'<svg class="{cls}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+        f'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+        f'stroke-linejoin="round" aria-hidden="true">{inner}</svg>'
+    )
 
 
 def lucide_icon_html(name: str, *, cls: str) -> str:

@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
+from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.primitives import (
     BarChart,
     BoxPlot,
@@ -700,11 +701,7 @@ class _RenderChartsMixin:
             label = k.empty_message or "No items found."
             return (
                 f'<div class="dz-empty-state" data-dz-empty-kind="read-only" role="status">'
-                f'<svg class="dz-empty-state-icon" fill="none" stroke="currentColor" '
-                f'viewBox="0 0 24 24" aria-hidden="true">'
-                f'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" '
-                f'd="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>'
-                f"</svg>"
+                f"{lucide_svg_html('kanban', cls='dz-empty-state-icon')}"
                 f'<p class="dz-empty-state-message">{ctx.escape(label)}</p>'
                 f"</div>"
             )

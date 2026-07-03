@@ -668,3 +668,18 @@
   align-items: center;
   gap: var(--space-sm);
 }
+
+/* Empty-state icon (TASTE-8): quiet registry glyph above the message. */
+.dz-empty-state__icon {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  color: var(--colour-text-muted);
+  margin-block-end: var(--space-sm);
+}
+
+.dz-empty-state__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

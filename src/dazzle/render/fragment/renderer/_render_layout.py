@@ -234,8 +234,10 @@ class _RenderLayoutMixin:
 
     def _emit_empty_state(self, e: EmptyState, ctx: RenderContext) -> str:
         action_html = self._emit(e.action, ctx) if e.action is not None else ""  # type: ignore[arg-type]
+        icon_html = lucide_icon_html(e.icon, cls="dz-empty-state__icon") if e.icon else ""
         return (
             f'<div class="dz-empty-state">'
+            f"{icon_html}"
             f'<h3 class="dz-empty-state__title">{ctx.escape(e.title)}</h3>'
             f'<p class="dz-empty-state__description">{ctx.escape(e.description)}</p>'
             f'<div class="dz-empty-state__action">{action_html}</div>'
