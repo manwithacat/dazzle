@@ -670,6 +670,10 @@
 }
 
 /* Empty-state icon (TASTE-8): quiet registry glyph above the message. */
+.dz-empty-state__title {
+  color: var(--colour-text); /* tranche-1 nit: was too dim on dark surfaces */
+}
+
 .dz-empty-state__icon {
   display: inline-flex;
   width: 2rem;

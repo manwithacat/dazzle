@@ -42,6 +42,7 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     ("tokens", STATIC / "css" / "design-system.css"),
     ("base", STATIC / "css" / "base.css"),
     ("utilities", STATIC / "css" / "utilities.css"),
+    ("components", STATIC / "css" / "components" / "alert.css"),
     ("components", STATIC / "css" / "components" / "badge.css"),
     ("components", STATIC / "css" / "components" / "button.css"),
     ("components", STATIC / "css" / "components" / "dashboard.css"),
@@ -103,6 +104,7 @@ JS_SOURCES = [
     # which is all of them, since app_chrome.js_scripts always points at the
     # bundle. Ordered first in the runtime block so the listener is registered
     # before any other runtime code can trigger an htmx request.
+    STATIC / "js" / "dz-confirm.js",
     STATIC / "js" / "dz-csrf.js",
     STATIC / "js" / "dz-a11y.js",
     STATIC / "js" / "dz-islands.js",

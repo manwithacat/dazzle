@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.7] - 2026-07-03
+
+### Added
+- **HaTchi-MaXchi tranche 1 — every-screen components** (spec: `docs/superpowers/specs/2026-07-03-hatchi-maxchi-standalone-design.md`; the standalone-system scope with the "familiar, not identical" rule):
+  - `dz-alert` (tone wash + registry icon + title/description), `dz-separator`, CSS-only `data-dz-tooltip`, `dz-menu` (details-based dropdown — the hypermedia answer, no JS for open state), designed selection controls (`dz-checkbox`/`dz-radio`/`dz-switch` on native inputs).
+  - **`dz-confirm.js`** — intercepts `htmx:confirm` and replaces `window.confirm` with a designed `dz-alert-dialog` (icon, message via textContent, destructive-styled confirm, Esc/backdrop = cancel). Every existing `hx-confirm` in the fleet upgrades automatically; opt out per element with `data-dz-native-confirm`.
+  - Gate: `tests/unit/test_hm_tranche1.py` (bundle carries all contracts; confirm controller wiring + safety assertions).
+
+### Fixed
+- Empty-state titles were near-black in dark mode: two Tailwind-era fossil variables (`hsl(var(--foreground,…))` in dazzle-layer.css, `hsl(var(--muted-foreground))` in design-system.css) fell back to dark values on every theme — repointed to semantic tokens.
+
 ## [0.93.6] - 2026-07-03
 
 ### Fixed

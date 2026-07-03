@@ -32,6 +32,7 @@
 @import url("tokens.css") layer(tokens);
 @import url("base.css") layer(base);
 @import url("utilities.css") layer(utilities);
+@import url("components/alert.css") layer(components);
 @import url("components/badge.css") layer(components);
 @import url("components/button.css") layer(components);
 @import url("components/dashboard.css") layer(components);

@@ -516,7 +516,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 .dz-empty-state {
   text-align: center;
   padding: 3rem 1.5rem;
-  color: hsl(var(--muted-foreground));
+  color: var(--colour-text-muted); /* was hsl(var(--muted-foreground)) fossil */
 }
 
 .dz-empty-state svg {

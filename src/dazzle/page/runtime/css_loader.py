@@ -45,6 +45,7 @@ CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
     ("tokens", "css/design-system.css"),
     ("base", "css/base.css"),
     ("utilities", "css/utilities.css"),
+    ("components", "css/components/alert.css"),
     ("components", "css/components/badge.css"),
     ("components", "css/components/button.css"),
     ("components", "css/components/dashboard.css"),

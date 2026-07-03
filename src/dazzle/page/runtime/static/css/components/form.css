@@ -540,3 +540,95 @@
   color: var(--colour-text-muted);
   font-style: italic;
 }
+
+/* ── Selection controls (HaTchi-MaXchi tranche 1) ───────────────────────
+   Designed checkbox/radio/switch on NATIVE inputs — appearance:none +
+   tokens; keyboard/AT semantics stay the browser's. */
+
+input.dz-checkbox,
+input.dz-radio {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-content: center;
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+input.dz-checkbox { border-radius: var(--radius-sm); }
+input.dz-radio { border-radius: var(--radius-full); }
+
+input.dz-checkbox:checked,
+input.dz-radio:checked {
+  background: var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+input.dz-checkbox:checked::before {
+  content: "";
+  width: 0.625rem;
+  height: 0.625rem;
+  background: var(--colour-brand-contrast);
+  clip-path: polygon(14% 44%, 0 60%, 40% 100%, 100% 16%, 84% 4%, 38% 71%);
+}
+
+input.dz-radio:checked::before {
+  content: "";
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: var(--radius-full);
+  background: var(--colour-brand-contrast);
+}
+
+input.dz-switch {
+  appearance: none;
+  width: 2rem;
+  height: 1.125rem;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--neutral-300);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: background var(--duration-base) var(--ease-out);
+}
+
+input.dz-switch::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 2px;
+  translate: 0 -50%;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: var(--radius-full);
+  background: white;
+  box-shadow: var(--shadow-sm);
+  transition: inset-inline-start var(--duration-base) var(--ease-out);
+}
+
+input.dz-switch:checked {
+  background: var(--colour-brand);
+}
+
+input.dz-switch:checked::before {
+  inset-inline-start: calc(100% - 0.875rem - 2px);
+}
+
+@media (prefers-color-scheme: dark) {
+  input.dz-switch { background: var(--neutral-700); }
+}
+
+[data-theme="dark"] input.dz-switch { background: var(--neutral-700); }
+[data-theme="dark"] input.dz-switch:checked { background: var(--colour-brand); }
+
+@media (prefers-reduced-motion: reduce) {
+  input.dz-switch, input.dz-switch::before { transition: none; }
+}
