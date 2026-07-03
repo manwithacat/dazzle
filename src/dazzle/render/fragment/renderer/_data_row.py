@@ -28,6 +28,7 @@ from dazzle.render.filters import (
     badge_icon_html,
     resolve_status_tone,
 )
+from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 
 
@@ -456,23 +457,14 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             f'data-dazzle-action="{entity_name_attr}.view" '
             f'aria-label="View {row_label_attr}" '
             f'class="dz-tr-action">'
-            '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" '
-            'xmlns="http://www.w3.org/2000/svg">'
-            '<path d="M7 2.5C4.5 2.5 2.5 5 2.5 7s2 4.5 4.5 4.5S11.5 9 11.5 7 9.5 2.5 7 2.5z" '
-            'stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>'
-            '<circle cx="7" cy="7" r="1.5" stroke="currentColor" stroke-width="1.25"/>'
-            "</svg></a>"
+            f"{lucide_svg_html('eye', cls='dz-tr-action-icon')}</a>"
         )
         edit_link_html = (
             f'<a href="{detail_url_attr}/edit" '  # nosemgrep
             f'data-dazzle-action="{entity_name_attr}.edit" '
             f'aria-label="Edit {row_label_attr}" '
             f'class="dz-tr-action">'
-            '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" '
-            'xmlns="http://www.w3.org/2000/svg">'
-            '<path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" stroke="currentColor" stroke-width="1.25" '
-            'stroke-linecap="round" stroke-linejoin="round"/>'
-            "</svg></a>"
+            f"{lucide_svg_html('pencil', cls='dz-tr-action-icon')}</a>"
         )
 
     checkbox_cell = ""
@@ -549,11 +541,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         f'hx-target="closest tr" '
         f'hx-swap="outerHTML swap:300ms" '
         f'class="dz-tr-action is-destructive">'
-        '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" '
-        'xmlns="http://www.w3.org/2000/svg">'
-        '<path d="M2 3.5h10M5.5 3.5V2.5h3v1M5.5 6v4M8.5 6v4M3 3.5l.5 8h7l.5-8" '
-        'stroke="currentColor" stroke-width="1.25" stroke-linecap="round" '
-        'stroke-linejoin="round"/></svg></button>'
+        f"{lucide_svg_html('trash-2', cls='dz-tr-action-icon')}</button>"
     )
     actions_cell = (
         '<td class="dz-tr-actions-cell" onclick="event.stopPropagation()">'

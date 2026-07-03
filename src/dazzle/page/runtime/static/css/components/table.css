@@ -378,3 +378,10 @@
   align-items: center;
   justify-content: space-between;
 }
+
+/* Registry row-action icons (Phase 3): fixed 14px optical size. */
+.dz-tr-action-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  display: block;
+}
