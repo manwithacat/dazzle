@@ -16,6 +16,10 @@ import time
 
 import pytest
 
+# Module-scoped http.server on a FIXED port: xdist workers each build the
+# fixture and clash. Pin the whole file to one worker (--dist loadgroup).
+pytestmark = pytest.mark.xdist_group("data_table_gates")
+
 # Skip the whole module if playwright isn't installed (the unit test job in
 # CI doesn't install it). This is a static-harness browser test that still
 # runs wherever playwright is available.

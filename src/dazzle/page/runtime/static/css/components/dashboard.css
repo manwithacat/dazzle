@@ -250,7 +250,7 @@
 }
 
 .dz-workspace-save[data-dz-save-state="saved"] {
-  background: var(--colour-success);
+  background: var(--success-600); /* fixed step — white text on fill */
   color: white;
 }
 

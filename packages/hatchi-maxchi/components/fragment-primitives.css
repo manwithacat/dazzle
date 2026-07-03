@@ -583,7 +583,8 @@
   }
 
   .dz-submit--variant-danger {
-    background: var(--colour-danger);
+    /* fixed step: fill carries white text; the semantic token flips light in dark */
+    background: var(--danger-600);
     color: var(--colour-brand-contrast);
   }
 

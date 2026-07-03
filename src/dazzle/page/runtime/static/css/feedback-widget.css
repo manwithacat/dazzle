@@ -128,19 +128,19 @@
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .dz-feedback-sev-btn.selected[data-severity="blocker"] {
-  background: var(--colour-danger);
+  background: var(--danger-600);
   color: white;
-  border-color: var(--colour-danger);
+  border-color: var(--danger-600);
 }
 .dz-feedback-sev-btn.selected[data-severity="annoying"] {
-  background: var(--colour-warning);
+  background: var(--warning-600);
   color: white;
-  border-color: var(--colour-warning);
+  border-color: var(--warning-600);
 }
 .dz-feedback-sev-btn.selected[data-severity="minor"] {
-  background: var(--colour-success);
+  background: var(--success-600);
   color: white;
-  border-color: var(--colour-success);
+  border-color: var(--success-600);
 }
 
 /* Description textarea */
@@ -196,7 +196,7 @@
   right: 1.5rem;
   padding: 0.75rem 1.25rem;
   border-radius: 0.375rem;
-  background: var(--colour-success);
+  background: var(--success-600);
   color: white;
   font-size: 0.875rem;
   z-index: 10000;

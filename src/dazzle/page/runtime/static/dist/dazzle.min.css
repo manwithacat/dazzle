@@ -1,4 +1,4 @@
-/* dazzle v0.93.19 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.25 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -207,10 +207,11 @@ Consolas, "Liberation Mono", monospace;
 --brand-900: oklch(37.9% 0.146 265.52);
 --brand-950: oklch(28.2% 0.091 267.94);
 --success-500: oklch(64.8% 0.150 142.50);
---success-600: oklch(60.0% 0.150 142.50);
+--success-600: oklch(53.0% 0.140 142.50);
 --warning-500: oklch(76.9% 0.188 70.08);
---warning-600: oklch(61.5% 0.188 70.08);
+--warning-600: oklch(52.0% 0.150 70.08);
 --danger-500: oklch(63.7% 0.208 25.33);
+--danger-600: oklch(51.0% 0.195 25.33);
 --colour-bg: light-dark(var(--neutral-50), var(--neutral-950));
 --colour-surface: light-dark(white, var(--neutral-900));
 --colour-surface-muted: light-dark(var(--neutral-100), var(--neutral-800));
@@ -218,16 +219,17 @@ Consolas, "Liberation Mono", monospace;
 --colour-text-muted: light-dark(var(--neutral-600), var(--neutral-400));
 --colour-border: light-dark(var(--neutral-200), var(--neutral-700));
 --colour-brand: var(--brand-600);
+--colour-brand-text: light-dark(var(--brand-600), var(--brand-300));
 --colour-brand-contrast: white;
 --colour-accent: var(--brand-500);
---colour-success: var(--success-600);
---colour-warning: var(--warning-600);
---colour-danger: var(--danger-500);
+--colour-success: light-dark(var(--success-600), oklch(74% 0.13 142.50));
+--colour-warning: light-dark(var(--warning-600), oklch(80% 0.13 70.08));
+--colour-danger: light-dark(var(--danger-600), oklch(75% 0.15 25.33));
 --colour-info: oklch(60% 0.13 220);
---colour-success-soft: oklch(from var(--colour-success) 95% 0.05 h);
---colour-warning-soft: oklch(from var(--colour-warning) 95% 0.05 h);
---colour-danger-soft: oklch(from var(--colour-danger) 95% 0.05 h);
---colour-brand-soft: oklch(from var(--colour-brand) 95% 0.05 h);
+--colour-success-soft: light-dark(oklch(from var(--colour-success) 96.5% 0.04 h), oklch(from var(--colour-success) 28% 0.06 h));
+--colour-warning-soft: light-dark(oklch(from var(--colour-warning) 96.5% 0.04 h), oklch(from var(--colour-warning) 28% 0.06 h));
+--colour-danger-soft: light-dark(oklch(from var(--colour-danger) 96.5% 0.04 h), oklch(from var(--colour-danger) 28% 0.06 h));
+--colour-brand-soft: light-dark(oklch(from var(--colour-brand) 96.5% 0.04 h), oklch(from var(--colour-brand) 28% 0.06 h));
 color-scheme: light dark;
 }
 [data-theme="dark"] {
@@ -245,6 +247,14 @@ color-scheme: light;
 --colour-text: var(--neutral-50);
 --colour-text-muted: var(--neutral-400);
 --colour-border: var(--neutral-700);
+--colour-success: oklch(74% 0.13 142.50);
+--colour-warning: oklch(80% 0.13 70.08);
+--colour-danger: oklch(75% 0.15 25.33);
+--colour-brand-text: var(--brand-300);
+--colour-success-soft: oklch(from var(--colour-success) 28% 0.06 h);
+--colour-warning-soft: oklch(from var(--colour-warning) 28% 0.06 h);
+--colour-danger-soft: oklch(from var(--colour-danger) 28% 0.06 h);
+--colour-brand-soft: oklch(from var(--colour-brand) 28% 0.06 h);
 }
 }
 }
@@ -1470,7 +1480,7 @@ color: var(--colour-warning);
 }
 .dz-badge[data-dz-tone="info"] {
 background: var(--colour-brand-soft);
-color: var(--colour-brand);
+color: var(--colour-brand-text);
 }
 .dz-badge[data-dz-tone="destructive"] {
 background: var(--colour-danger-soft);
@@ -1752,7 +1762,7 @@ color: var(--colour-brand-contrast);
 opacity: 0.7;
 }
 .dz-workspace-save[data-dz-save-state="saved"] {
-background: var(--colour-success);
+background: var(--success-600);
 color: white;
 }
 .dz-workspace-save[data-dz-save-state="error"] {
@@ -3019,7 +3029,7 @@ color: var(--colour-text);
 border: 1px solid var(--colour-border);
 }
 .dz-submit--variant-danger {
-background: var(--colour-danger);
+background: var(--danger-600);
 color: var(--colour-brand-contrast);
 }
 .dz-text {
@@ -4714,7 +4724,7 @@ padding-block: var(--space-xs);
 border-radius: var(--radius-sm);
 font-size: var(--text-xs);
 line-height: var(--leading-tight);
-background: var(--colour-danger);
+background: var(--danger-600);
 color: white;
 box-shadow: var(--shadow-sm);
 white-space: nowrap;
@@ -6187,8 +6197,8 @@ justify-content: center;
 width: 2rem;
 height: 2rem;
 border-radius: var(--radius-full);
-background: color-mix(in oklab, var(--colour-brand) 15%, var(--colour-surface));
-color: var(--colour-brand);
+background: var(--colour-brand-soft);
+color: var(--colour-brand-text);
 font-size: var(--text-xs);
 font-weight: var(--weight-semibold);
 letter-spacing: 0.02em;

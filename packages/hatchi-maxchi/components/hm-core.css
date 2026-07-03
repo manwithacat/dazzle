@@ -51,8 +51,10 @@
   width: 2rem;
   height: 2rem;
   border-radius: var(--radius-full);
-  background: color-mix(in oklab, var(--colour-brand) 15%, var(--colour-surface));
-  color: var(--colour-brand);
+  /* The semantic wash, not a hand-rolled mix — the 15% mix put initials
+     at 4.29:1 (axe); the wash token is calibrated for 4.5:1 tone text. */
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand-text);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   letter-spacing: 0.02em;

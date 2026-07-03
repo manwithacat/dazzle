@@ -89,7 +89,7 @@ COMPONENTS: list[Component] = [
         '<input class="dz-command__input" type="search" placeholder="Search workspaces and records…" '
         'hx-get="/mock/command" hx-trigger="input changed delay:150ms, focus once" '
         'hx-target="next .dz-command__results">'
-        '<div class="dz-command__results" role="listbox"></div></dialog>',
+        '<div class="dz-command__results" role="listbox" aria-label="Results"></div></dialog>',
         notes="In Dazzle the input's hx-get hits <code>/app/command</code>, which returns "
         "persona-scoped results. Here a mock htmx returns a canned list so the demo works "
         "with no server.",
@@ -183,8 +183,8 @@ COMPONENTS: list[Component] = [
         "Feedback",
         "Toned determinate bar.",
         '<div style="max-width:20rem;display:flex;flex-direction:column;gap:.75rem">'
-        '<div class="dz-progress" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="width:62%"></div></div>'
-        '<div class="dz-progress" data-dz-tone="success" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="width:100%"></div></div></div>',
+        '<div class="dz-progress" role="progressbar" aria-label="Storage used" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="width:62%"></div></div>'
+        '<div class="dz-progress" data-dz-tone="success" role="progressbar" aria-label="Upload progress" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="width:100%"></div></div></div>',
     ),
     Component(
         "empty-state",

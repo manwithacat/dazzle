@@ -276,7 +276,7 @@ class _RenderShellMixin:
                 'aria-label="Search" '
                 f'hx-get="{ep}" hx-trigger="input changed delay:150ms, search, focus once" '
                 'hx-target="next .dz-command__results" hx-swap="innerHTML">'
-                '<div class="dz-command__results" role="listbox"></div>'
+                '<div class="dz-command__results" role="listbox" aria-label="Results"></div>'
                 "</dialog>"
             )
         parts.append("</div>")

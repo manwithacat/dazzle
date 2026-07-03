@@ -65,7 +65,7 @@
 
 .dz-badge[data-dz-tone="info"] {
   background: var(--colour-brand-soft);
-  color: var(--colour-brand);
+  color: var(--colour-brand-text);
 }
 
 .dz-badge[data-dz-tone="destructive"] {

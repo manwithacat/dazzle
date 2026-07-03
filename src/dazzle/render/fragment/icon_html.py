@@ -4,7 +4,7 @@ Known names render as inline SVG from the vendored registry — no JS, no
 flash of missing icons, works with scripting disabled. Unknown names fall
 back to the pre-Phase-2 ``data-lucide`` span so the vendored client UMD
 bundle hydrates them; the registry grows deliberately via
-``scripts/taste/gen_icon_registry.py``.
+``packages/hatchi-maxchi/icons/gen_registry.py``.
 """
 
 import html as _html

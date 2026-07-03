@@ -25,10 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from build import FONT_DIR, build_css, build_js  # noqa: E402  (package build.py)
+from icons import ICONS, LUCIDE_VERSION, lucide_icon_html, lucide_svg_html  # noqa: E402
 from registry import COMPONENTS, GROUPS  # noqa: E402
-
-from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html  # noqa: E402
-from dazzle.render.fragment.icon_registry import ICONS, LUCIDE_VERSION  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -173,7 +171,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); }
 .hm-tag { display:inline-block; font-size: .625rem; text-transform: uppercase; letter-spacing: .05em;
   padding: .05rem .35rem; border-radius: var(--radius-full); margin-left: .5rem;
-  background: var(--colour-brand-soft); color: var(--colour-brand); vertical-align: middle; }
+  background: var(--colour-brand-soft); color: var(--colour-brand-text); vertical-align: middle; }
 """
 
 
@@ -245,7 +243,8 @@ def build(out_dir: Path) -> None:
             f'<p class="blurb">{_html.escape(c.blurb)}</p>'
             f'<div class="hm-preview">{live}</div>'
             f'<div class="hm-code">{copy_button}'
-            f"<pre><code>{snippet}</code></pre></div>"
+            f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
+            f"<code>{snippet}</code></pre></div>"
             f"{notes}</section>"
         )
 

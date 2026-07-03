@@ -115,9 +115,12 @@ PAIRS: list[tuple[str, str, float]] = [
     ("--colour-text-muted", "--colour-surface", 4.5),
     ("--colour-brand-contrast", "--colour-brand", 4.5),
     # semantic tone text on its soft wash (badges/alerts, light theme wash)
-    ("--colour-danger", "--colour-danger-soft", 3.0),
-    ("--colour-success", "--colour-success-soft", 3.0),
-    ("--colour-warning", "--colour-warning-soft", 3.0),
+    # 4.5 (not 3.0): badges/alerts render tone text at ~13px — normal-text
+    # AA applies. The 3.0 large-text assumption let 3.2:1 badges ship
+    # (caught by the HM axe gate, 2026-07-03).
+    ("--colour-danger", "--colour-danger-soft", 4.5),
+    ("--colour-success", "--colour-success-soft", 4.5),
+    ("--colour-warning", "--colour-warning-soft", 4.5),
     # borders only need non-text 3:1 against surface? Borders are decorative —
     # skip. Focus ring is alpha-composited — covered by axe at e2e time.
 ]

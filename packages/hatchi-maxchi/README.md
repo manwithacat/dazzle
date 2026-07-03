@@ -119,9 +119,10 @@ emits this markup from a DSL, the default prefix is part of the contract.)
 | `base/` | `base.css` (element defaults + focus net), `fonts.css` (Geist @font-face), `design-system.css` (non-colour tokens + vendor-widget theming). |
 | `components/` | Component CSS. One semantic root class + `data-dz-*` modifiers; tokens carry the aesthetic. |
 | `controllers/` | Vanilla-JS for the purely-client bits (`dz-confirm.js`, `dz-command.js`). htmx-aware, framework-free. |
+| `icons/` | The Lucide subset — source of truth (`registry.py`, ISC), rendering helpers, and the generator. Dazzle vendors a drift-gated copy. |
 | `site/` | The gallery — a committed build artifact, deployed to Pages as-is. `registry.py` is the **source of truth for the component list**. |
 | `build.py` | Builds `dist/` (CSS + JS + fonts) from package sources. Stdlib-only; takes `--prefix`. |
-| `tests/` | Regression gates: contract (console), behaviour (headless Chromium), and visual (screenshot vs committed baselines). |
+| `tests/` | Regression gates: contract (console), behaviour (headless Chromium), visual (screenshot vs committed per-platform baselines), and **WCAG 2.2 AA** (vendored axe-core over the gallery in light + dark + opened-overlay states; allowlist may only shrink). |
 
 ## Identity — familiar, not identical
 

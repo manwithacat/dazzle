@@ -34,6 +34,10 @@ from typing import Any
 
 import pytest
 
+# Module-scoped http.server on a FIXED port: xdist workers each build the
+# fixture and clash. Pin the whole file to one worker (--dist loadgroup).
+pytestmark = pytest.mark.xdist_group("pdf_viewer_gates")
+
 pytest.importorskip("playwright.sync_api")
 
 from playwright.sync_api import sync_playwright  # noqa: E402

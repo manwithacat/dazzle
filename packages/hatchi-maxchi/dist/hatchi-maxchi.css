@@ -242,10 +242,11 @@
   --brand-950: oklch(28.2% 0.091 267.94);
 
   --success-500: oklch(64.8% 0.150 142.50);
-  --success-600: oklch(60.0% 0.150 142.50); /* AA on the soft wash (TASTE-11 gate) */
+  --success-600: oklch(53.0% 0.140 142.50); /* 4.5:1 on the soft wash AND white (axe-verified) */
   --warning-500: oklch(76.9% 0.188 70.08);
-  --warning-600: oklch(61.5% 0.188 70.08); /* AA on the soft wash (TASTE-11 gate) */
+  --warning-600: oklch(52.0% 0.150 70.08); /* 4.5:1 on the soft wash AND white (axe-verified) */
   --danger-500: oklch(63.7% 0.208 25.33);
+  --danger-600: oklch(51.0% 0.195 25.33); /* 4.5:1 as text on wash/white; fills carry white text */
 
   /* ─────────────────────────── colour: semantic ────────────────────
    * Semantic tokens that components reference. Project themes
@@ -259,11 +260,18 @@
   --colour-text-muted: light-dark(var(--neutral-600), var(--neutral-400));
   --colour-border: light-dark(var(--neutral-200), var(--neutral-700));
   --colour-brand: var(--brand-600);
+  /* Brand as TEXT (badges/avatars/tags on washes): scheme-aware, unlike
+     --colour-brand which stays the vivid FILL accent in both schemes. */
+  --colour-brand-text: light-dark(var(--brand-600), var(--brand-300));
   --colour-brand-contrast: white;  /* foreground on filled brand fills (CTAs) */
   --colour-accent: var(--brand-500);
-  --colour-success: var(--success-600);
-  --colour-warning: var(--warning-600);
-  --colour-danger: var(--danger-500);
+  /* Tone TEXT semantics are scheme-aware: the -600 steps carry 4.5:1 on
+   light washes/white; dark mode needs LIGHT tone text on dark washes.
+   Solid fills that carry white text must use the fixed ramp steps
+   (--success-600 etc.), never these flippable text tokens. */
+  --colour-success: light-dark(var(--success-600), oklch(74% 0.13 142.50));
+  --colour-warning: light-dark(var(--warning-600), oklch(80% 0.13 70.08));
+  --colour-danger: light-dark(var(--danger-600), oklch(75% 0.15 25.33));
   /* Info: cyan-leaning so chart series stay distinguishable from
    * --colour-brand (hue ~263). Scheme-stable, like the tone hues. */
   --colour-info: oklch(60% 0.13 220);
@@ -271,10 +279,10 @@
   /* Tone tints (background washes for surfaces) — semantic tokens
    * the dz-tones replacements consume. Authors don't hand-craft
    * `hsl(var(--success) / 0.08)` strings any more. */
-  --colour-success-soft: oklch(from var(--colour-success) 95% 0.05 h);
-  --colour-warning-soft: oklch(from var(--colour-warning) 95% 0.05 h);
-  --colour-danger-soft: oklch(from var(--colour-danger) 95% 0.05 h);
-  --colour-brand-soft: oklch(from var(--colour-brand) 95% 0.05 h);
+  --colour-success-soft: light-dark(oklch(from var(--colour-success) 96.5% 0.04 h), oklch(from var(--colour-success) 28% 0.06 h));
+  --colour-warning-soft: light-dark(oklch(from var(--colour-warning) 96.5% 0.04 h), oklch(from var(--colour-warning) 28% 0.06 h));
+  --colour-danger-soft: light-dark(oklch(from var(--colour-danger) 96.5% 0.04 h), oklch(from var(--colour-danger) 28% 0.06 h));
+  --colour-brand-soft: light-dark(oklch(from var(--colour-brand) 96.5% 0.04 h), oklch(from var(--colour-brand) 28% 0.06 h));
 
   /* Default colour-scheme advertisement — lets browser-chrome
    * (scrollbars, form controls) pick appropriate variants. */
@@ -310,6 +318,14 @@
       --colour-text: var(--neutral-50);
       --colour-text-muted: var(--neutral-400);
       --colour-border: var(--neutral-700);
+      --colour-success: oklch(74% 0.13 142.50);
+      --colour-warning: oklch(80% 0.13 70.08);
+      --colour-danger: oklch(75% 0.15 25.33);
+      --colour-brand-text: var(--brand-300);
+      --colour-success-soft: oklch(from var(--colour-success) 28% 0.06 h);
+      --colour-warning-soft: oklch(from var(--colour-warning) 28% 0.06 h);
+      --colour-danger-soft: oklch(from var(--colour-danger) 28% 0.06 h);
+      --colour-brand-soft: oklch(from var(--colour-brand) 28% 0.06 h);
     }
   }
 }
@@ -1916,7 +1932,7 @@ dialog.dz-alert-dialog::backdrop {
 
 .dz-badge[data-dz-tone="info"] {
   background: var(--colour-brand-soft);
-  color: var(--colour-brand);
+  color: var(--colour-brand-text);
 }
 
 .dz-badge[data-dz-tone="destructive"] {
@@ -3303,7 +3319,8 @@ input.dz-switch:checked::before {
   }
 
   .dz-submit--variant-danger {
-    background: var(--colour-danger);
+    /* fixed step: fill carries white text; the semantic token flips light in dark */
+    background: var(--danger-600);
     color: var(--colour-brand-contrast);
   }
 
@@ -3499,8 +3516,10 @@ input.dz-switch:checked::before {
   width: 2rem;
   height: 2rem;
   border-radius: var(--radius-full);
-  background: color-mix(in oklab, var(--colour-brand) 15%, var(--colour-surface));
-  color: var(--colour-brand);
+  /* The semantic wash, not a hand-rolled mix — the 15% mix put initials
+     at 4.29:1 (axe); the wash token is calibrated for 4.5:1 tone text. */
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand-text);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   letter-spacing: 0.02em;

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.25] - 2026-07-03
+
+### Added
+- **WCAG 2.2 AA gate over the HaTchi-MaXchi gallery (axe-core, CI-enforced).** `packages/hatchi-maxchi/tests/test_wcag.py` injects vendored axe-core 4.10.3 via the Playwright harness and scans the gallery in light + dark plus opened-overlay states (palette, confirm, menu); any WCAG A/AA violation fails CI. `wcag-allowlist.json` may only shrink (unused entries fail). Ships with an **empty allowlist**.
+- **HM ⇄ Dazzle boundary, Phase 1: the icon registry is upstream.** `packages/hatchi-maxchi/icons/` now owns the Lucide subset (registry + helpers + generator with `--sync`); `src/dazzle/render/fragment/icon_registry.py` is an AUTO-GENERATED vendored copy, drift-gated against the HM source. The gallery builder no longer imports `dazzle.*` (enforced by the new HM `test_boundary.py`) — the split repo can regenerate its own docs. Design: `docs/superpowers/specs/2026-07-03-hm-boundary-and-wcag-gate-design.md`.
+
+### Fixed
+- **Ten real contrast failures found by the first axe run.** Tone TEXT tokens are now scheme-aware — `--colour-success/warning/danger` resolve to 4.5:1-calibrated `-600` steps in light and light variants on dark; the `--colour-*-soft` washes flip to dark washes in dark mode (an alert title had been rendering at **1.08:1** — near-invisible — on the light wash in dark mode). Solid fills carrying white text repointed to fixed ramp steps (`--danger-600` etc.). New `--colour-brand-text` for brand-as-text on washes (avatars, tags); `--colour-brand` stays the vivid fill accent. The token contrast gate's tone-on-wash threshold raised 3.0 → 4.5 (badge text is normal-size — the 3.0 large-text assumption let 3.2:1 badges ship).
+- Command palette results listbox and progress bars now carry accessible names (canonical markup + Dazzle's shell emitter); gallery code blocks are keyboard-focusable scroll regions.
+- **pdf-viewer/data-table gates pinned to xdist groups** — the module-scoped fixed-port harness server clashed across parallel workers (the residual #1538 flake). 56/56 green under `-n auto`.
+
+### Agent Guidance
+- `--colour-success/warning/danger` (and `--colour-brand-text`) are scheme-aware TEXT semantics. Solid fills that carry white text must use the fixed ramp steps (`--success-600`, `--warning-600`, `--danger-600`) — a flippable text token as a fill background breaks white-on-fill contrast in dark mode.
+- Icon set changes happen in `packages/hatchi-maxchi/icons/` (run `gen_registry.py --sync` to refresh Dazzle's vendored copy). HM code must never import `dazzle.*`.
+
 ## [0.93.24] - 2026-07-03
 
 ### Changed
