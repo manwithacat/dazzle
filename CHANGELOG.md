@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.33] - 2026-07-03
+
+### Fixed
+- **HM Pages deploy hardened against GitHub's transient "Deployment failed, try again later".** The v0.93.32 gallery deploy went red: Pages' backend returned a *terminal* deploy-status failure within seconds, and the prior single **immediate** retry fired ~7s later into the same outage window and also failed. Now three attempts with real backoff (30s, then 60s) — each creates a fresh deployment (the only thing that helps against a terminal-failed one; the action's own polling can't), the third gates the job. Concurrency switched to `cancel-in-progress: false` (queue, don't cancel — cancelling a deploy mid-flight can itself induce the "try again later" state). Not an artifact-duplication issue (that's caused by re-running a *failed run*, which duplicates the upload — still don't; push or dispatch fresh).
+
 ## [0.93.32] - 2026-07-03
 
 ### Added

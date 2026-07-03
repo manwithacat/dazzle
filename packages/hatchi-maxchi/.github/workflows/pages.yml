@@ -18,29 +18,56 @@ permissions:
   pages: write
   id-token: write
 
+# Queue deployments, don't cancel — cancelling a deploy mid-flight can
+# leave the Pages pipeline in a state that makes the next attempt fail
+# with "Deployment failed, try again later" (the GitHub-recommended
+# setting for deployment concurrency).
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      # First non-empty URL across the deploy attempts below.
+      url: >-
+        ${{ steps.deploy1.outputs.page_url
+        || steps.deploy2.outputs.page_url
+        || steps.deploy3.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
-      - id: deployment
+
+      # actions/deploy-pages creates a deployment then polls its status.
+      # GitHub Pages' backend intermittently returns a TERMINAL "Deployment
+      # failed, try again later" within seconds — the action's own polling
+      # doesn't help (the deployment is already failed), only a FRESH
+      # deployment does. An immediate retry is useless when the outage
+      # window is longer than the gap between attempts, so retries are
+      # spaced with real backoff. Each attempt reuses the single uploaded
+      # artifact (no re-upload → no "multiple artifacts" error, which is
+      # what re-running a whole failed run causes — don't do that; push or
+      # dispatch a fresh run instead).
+      - id: deploy1
         uses: actions/deploy-pages@v4
         continue-on-error: true
-      # The deploy API is occasionally flaky ("fetching artifact metadata
-      # failed — check githubstatus"); one in-run retry absorbs it. Do NOT
-      # re-run a failed run instead — that re-uploads the artifact and the
-      # deploy then fails on "multiple artifacts named github-pages".
-      - id: deployment-retry
-        if: steps.deployment.outcome == 'failure'
+
+      - if: steps.deploy1.outcome == 'failure'
+        run: sleep 30
+      - id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: sleep 60
+      - id: deploy3
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        # NOT continue-on-error: the third attempt gates the job. If it
+        # too fails, Pages is having a real incident — fail loudly.
         uses: actions/deploy-pages@v4
