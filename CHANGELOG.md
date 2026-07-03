@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.26] - 2026-07-03
+
+### Changed
+- HaTchi-MaXchi linux visual baselines refreshed for the scheme-aware tone recalibration.
+
 ## [0.93.25] - 2026-07-03
 
 ### Added
