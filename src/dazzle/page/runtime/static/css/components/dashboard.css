@@ -318,6 +318,9 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--colour-border);
   background: var(--colour-surface);
+  /* TASTE-2: quiet stacked shadow at rest — elevation reads as a surface,
+     not decoration; hover transition already declared below. */
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
   transition:
     border-color var(--duration-fast) var(--ease-out),

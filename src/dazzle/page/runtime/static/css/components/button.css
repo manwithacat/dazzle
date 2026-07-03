@@ -74,10 +74,19 @@
   background: var(--colour-brand);
   color: var(--colour-brand-contrast);
   border: 1px solid var(--colour-brand);
+  box-shadow: var(--shadow-sm);
 }
 
+/* TASTE-2/8: explicit hover step from the ramp (not a brightness filter)
+   and a physical press — shadow collapses, button settles 0.5px. */
 .dz-button.dz-button-primary:hover {
-  filter: brightness(1.1);
+  background: var(--brand-700);
+  border-color: var(--brand-700);
+}
+
+.dz-button.dz-button-primary:active {
+  box-shadow: none;
+  transform: translateY(0.5px);
 }
 
 .dz-button.dz-button-primary:disabled,
