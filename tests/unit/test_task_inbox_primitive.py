@@ -204,7 +204,9 @@ def test_renderer_includes_icon_token() -> None:
         items=(TaskInboxItem(item_id="i", icon="register", title="t"),),
     )
     html = _render(region)
-    assert 'data-icon="register"' in html
+    # "register" is not a Lucide name -> data-lucide client-hydration
+    # fallback (known names render inline SVG from the vendored registry).
+    assert 'data-lucide="register"' in html
 
 
 def test_renderer_renders_optional_meta_only_when_present() -> None:
@@ -304,7 +306,10 @@ def test_renderer_escapes_title_meta_label() -> None:
 def test_renderer_escapes_drill_urls_and_region_name() -> None:
     region = TaskInboxRegion(
         region_name='r"><script>',
-        items=(TaskInboxItem(item_id="i", icon="x", title="t", drill_url='"><svg'),),
+        # icon deliberately NOT in the vendored registry — a registry hit
+        # renders a legitimate inline <svg>, which would collide with the
+        # '"><svg' injection probe below.
+        items=(TaskInboxItem(item_id="i", icon="zz-unregistered", title="t", drill_url='"><svg'),),
         summary_chips=(TaskInboxSummaryChip(chip_id="c", count=1, label="x", drill_url='"><img>'),),
     )
     html = _render(region)

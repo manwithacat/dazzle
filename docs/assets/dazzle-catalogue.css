@@ -87,8 +87,8 @@
   /* ─────────────────────────── font families ─────────────────────
    * `--font-system` is the OS-default sans stack; `--font-mono` is
    * used by tabular numerics in chart summaries (bar_track etc.). */
-  --font-system: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
+  --font-system: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
                Consolas, "Liberation Mono", monospace;
 
   /* ─────────────────────────── line height ─────────────────────────
@@ -106,6 +106,12 @@
 
   /* ─────────────────────────── radii ───────────────────────────────
    * Use semantic names. Full = pill. */
+  /* Focus ring (HaTchi-MaXchi TASTE-1): accent at 40% alpha, 2px, offset
+     2px — one ring vocabulary for every interactive element. */
+  --focus-ring-color: color-mix(in oklab, var(--colour-brand) 40%, transparent);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
   --radius-sm: 0.25rem;  /* 4px — small inputs, badges */
   --radius-md: 0.375rem; /* 6px — cards, buttons */
   --radius-lg: 0.75rem;  /* 12px — large cards, modals */
@@ -220,7 +226,9 @@
   --brand-950: oklch(28.2% 0.091 267.94);
 
   --success-500: oklch(64.8% 0.150 142.50);
+  --success-600: oklch(60.0% 0.150 142.50); /* AA on the soft wash (TASTE-11 gate) */
   --warning-500: oklch(76.9% 0.188 70.08);
+  --warning-600: oklch(61.5% 0.188 70.08); /* AA on the soft wash (TASTE-11 gate) */
   --danger-500: oklch(63.7% 0.208 25.33);
 
   /* ─────────────────────────── colour: semantic ────────────────────
@@ -236,8 +244,8 @@
   --colour-brand: var(--brand-600);
   --colour-brand-contrast: white;  /* foreground on filled brand fills (CTAs) */
   --colour-accent: var(--brand-500);
-  --colour-success: var(--success-500);
-  --colour-warning: var(--warning-500);
+  --colour-success: var(--success-600);
+  --colour-warning: var(--warning-600);
   --colour-danger: var(--danger-500);
 
   /* Tone tints (background washes for surfaces) — semantic tokens
