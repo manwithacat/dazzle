@@ -39,29 +39,29 @@ CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
     ("vendor", "vendor/tom-select.css"),
     ("vendor", "vendor/flatpickr.css"),
     # Geist/Geist Mono @font-face (HaTchi-MaXchi Phase 2).
-    ("vendor", "css/fonts.css"),
+    ("vendor", "@hm:base/fonts.css"),
     # vendor/quill.snow.css removed in #977 cycle 4 — Quill replaced by
     # dz-richtext (Dazzle-native, bundled).
     # vendor/pickr.css removed in #976 — `widget=color` uses native
     # <input type="color">, no vendor CSS required.
-    ("tokens", "css/tokens.css"),
+    ("tokens", "@hm:tokens/tokens.css"),
     ("tokens", "css/design-system.css"),
-    ("base", "css/base.css"),
+    ("base", "@hm:base/base.css"),
     ("utilities", "css/utilities.css"),
     ("components", "@hm:components/alert.css"),
-    ("components", "css/components/badge.css"),
-    ("components", "css/components/button.css"),
+    ("components", "@hm:components/badge.css"),
+    ("components", "@hm:components/button.css"),
     ("components", "css/components/dashboard.css"),
     ("components", "css/components/detail.css"),
-    ("components", "css/components/form.css"),
+    ("components", "@hm:components/form.css"),
     ("components", "css/components/fragments.css"),
     ("components", "@hm:components/hm-core.css"),
-    ("components", "css/components/htmx-states.css"),
+    ("components", "@hm:components/htmx-states.css"),
     ("components", "css/components/pdf-viewer.css"),
     ("components", "css/components/regions.css"),
-    ("components", "css/components/table.css"),
+    ("components", "@hm:components/table.css"),
     # #958 — mobile UX (cycle 1: touch targets, cycle 4: scroll containment).
-    ("components", "css/components/touch-targets.css"),
+    ("components", "@hm:components/touch-targets.css"),
     ("components", "css/components/mobile-scroll.css"),
     # #977 cycle 1 — Dazzle-native rich-text editor (replaces Quill in cycle 4).
     ("components", "css/components/richtext.css"),

@@ -20,6 +20,9 @@
  */
 
 @layer reset, vendor, tokens, base, utilities, components, overrides;
+/* Design-system tokens + core components moved to packages/hatchi-maxchi/
+ * (read by css_loader/build_dist via @hm:/HM paths). This file mirrors
+ * only the Dazzle-app-orchestration CSS now. */
 
 @import url("reset.css") layer(reset);
 @import url("../vendor/tom-select.css") layer(vendor);
@@ -29,22 +32,15 @@
  * dz-richtext (Dazzle-native, bundled). Caught by the /fuzz runtime
  * pass: every rich_text page was 404ing on this stale @import.
  * vendor/pickr.css removed in #976 — `widget=color` uses native input. */
-@import url("tokens.css") layer(tokens);
-@import url("base.css") layer(base);
 @import url("utilities.css") layer(utilities);
 /* alert.css + hm-core.css moved to packages/hatchi-maxchi/components/
  * (HaTchi-MaXchi design-system package); css_loader/build_dist read them
  * via the @hm: sentinel. This mirror lists them for reference only. */
-@import url("components/badge.css") layer(components);
-@import url("components/button.css") layer(components);
 @import url("components/dashboard.css") layer(components);
 @import url("components/detail.css") layer(components);
-@import url("components/form.css") layer(components);
 @import url("components/fragments.css") layer(components);
-@import url("components/htmx-states.css") layer(components);
 @import url("components/pdf-viewer.css") layer(components);
 @import url("components/regions.css") layer(components);
-@import url("components/table.css") layer(components);
 
 /* Legacy framework files retained from the pre-v0.62 stack. The
  * templates were migrated to .dz-* semantic classes that live in the

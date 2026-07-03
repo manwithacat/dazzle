@@ -56,7 +56,7 @@ def test_confirm_controller_intercepts_htmx_confirm() -> None:
 
 
 def test_empty_state_title_uses_text_token() -> None:
-    css = (STATIC / "css" / "components" / "fragment-primitives.css").read_text()
+    css = (HM / "components" / "fragment-primitives.css").read_text()
     assert ".dz-empty-state__title {\n  color: var(--colour-text);" in css
 
 

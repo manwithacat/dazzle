@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.13] - 2026-07-03
+
+### Changed
+- **HaTchi-MaXchi extraction — Stage 2a: the token sheet + core components move to the package.** Ten fossil-free design-system files relocated (with git history) into `packages/hatchi-maxchi/`: `tokens/tokens.css`, `base/{base,fonts}.css`, and `components/{button,badge,form,table,fragment-primitives,htmx-states,touch-targets}.css`. Read via the `@hm:`/`HM /` build indirection; fleet bundle unchanged (boot-verified). `design-system.css` (120 legacy `hsl(var(--…))` fossil call sites) is the last file remaining — it moves once the fossils migrate onto OKLCH tokens (Stage 2b). Six test path constants + the UX-catalogue and fragment-primitive CSS scanners repointed to the package.
+
 ## [0.93.12] - 2026-07-03
 
 ### Changed

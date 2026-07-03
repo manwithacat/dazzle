@@ -16,8 +16,9 @@ from pathlib import Path
 import pytest
 
 CSS_ROOT = Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/css"
-TOUCH_CSS = CSS_ROOT / "components/touch-targets.css"
-TOKENS_CSS = CSS_ROOT / "tokens.css"
+HM = Path(__file__).resolve().parents[2] / "packages/hatchi-maxchi"
+TOUCH_CSS = HM / "components/touch-targets.css"
+TOKENS_CSS = HM / "tokens/tokens.css"
 
 
 @pytest.fixture(scope="module")

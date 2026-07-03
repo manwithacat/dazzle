@@ -16,6 +16,7 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _CSS_DIR = _REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "css"
+_HM = _REPO_ROOT / "packages" / "hatchi-maxchi"
 
 
 # Classes the Fragment renderer emits for surfaces simple_task.task_list
@@ -87,8 +88,10 @@ _REQUIRED_CLASSES: tuple[str, ...] = (
 def _bundled_css_text() -> str:
     """Read every CSS file in the components/ tree + tokens/design-system."""
     parts: list[str] = []
-    for path in sorted(_CSS_DIR.rglob("*.css")):
-        parts.append(path.read_text())
+    roots = [_CSS_DIR, _HM]  # HM design-system CSS moved to the package (Stage 2)
+    for root in roots:
+        for path in sorted(root.rglob("*.css")):
+            parts.append(path.read_text())
     return "\n".join(parts)
 
 

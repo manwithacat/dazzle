@@ -55,6 +55,9 @@ CSS_OUT_PATH = _REPO_ROOT / "docs" / "assets" / "dazzle-catalogue.css"
 # they can't clobber the mkdocs Material theme). The 270KB dist bundle is NOT used
 # because it includes vendor CSS that styles body/table/headings globally.
 _CSS_DIR = _REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "css"
+_HM = _REPO_ROOT / "packages" / "hatchi-maxchi"
+# Files moved to the HaTchi-MaXchi package (Stage 2); resolved from there.
+_HM_MOVED = {"tokens.css": "tokens/tokens.css", "components/badge.css": "components/badge.css"}
 _CSS_SOURCES = (
     "tokens.css",
     "dz.css",
@@ -289,5 +292,6 @@ def generate_catalogue_css() -> str:
     ]
     for rel in _CSS_SOURCES:
         chunks.append(f"/* --- {rel} --- */")
-        chunks.append((_CSS_DIR / rel).read_text().rstrip("\n"))
+        base = (_HM / _HM_MOVED[rel]) if rel in _HM_MOVED else (_CSS_DIR / rel)
+        chunks.append(base.read_text().rstrip("\n"))
     return "\n".join(chunks).rstrip("\n") + "\n"

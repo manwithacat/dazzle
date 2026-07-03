@@ -18,7 +18,7 @@ from pathlib import Path
 
 _CSS = (
     Path(__file__).resolve().parents[2]
-    / "src/dazzle/page/runtime/static/css/components/fragment-primitives.css"
+    / "packages/hatchi-maxchi/components/fragment-primitives.css"
 )
 
 

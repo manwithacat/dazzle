@@ -15,16 +15,7 @@ import pytest
 
 pytestmark = pytest.mark.gate
 
-TOKENS_CSS = (
-    Path(__file__).parents[2]
-    / "src"
-    / "dazzle"
-    / "page"
-    / "runtime"
-    / "static"
-    / "css"
-    / "tokens.css"
-)
+TOKENS_CSS = Path(__file__).parents[2] / "packages" / "hatchi-maxchi" / "tokens" / "tokens.css"
 
 _DECL = re.compile(r"(--[a-z0-9-]+)\s*:\s*([^;]+);")
 
