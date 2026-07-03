@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.12] - 2026-07-03
+
+### Changed
+- **HaTchi-MaXchi extraction — Stage 1: `packages/hatchi-maxchi/` is now the design-system package.** The already-HM sources moved out of Dazzle's runtime tree into the extractable package (with git history): `components/` (alert, hm-core CSS), `controllers/` (dz-confirm, dz-command JS), `site/` (the gallery generator + registry + built site). Dazzle's build reads them via an `@hm:` sentinel in `css_loader.CSS_SOURCE_FILES` and `HM / …` paths in `build_dist`; the fleet bundle is unchanged (verified live). A `README.md` maps the package for agents; `package.json` readies npm publish. Remaining design-system CSS + the token sheet migrate in Stage 2; the repo split (`git subtree`) is Stage 3.
+
+### Agent Guidance
+- HaTchi-MaXchi lives in `packages/hatchi-maxchi/` — start at its `README.md`. Component CSS goes in `components/` (registered in Dazzle's three build lists via the `@hm:` sentinel / `HM /` path); the canonical HTML per component is `site/registry.py`; regenerate the gallery with `python packages/hatchi-maxchi/site/build_site.py`.
+
 ## [0.93.11] - 2026-07-03
 
 ### Added

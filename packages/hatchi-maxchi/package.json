@@ -1,0 +1,10 @@
+{
+  "name": "hatchi-maxchi",
+  "version": "0.1.0",
+  "description": "An htmx4-native design system — shadcn-grade aesthetics without a client framework.",
+  "license": "MIT",
+  "keywords": ["design-system", "htmx", "css", "hypermedia", "components"],
+  "files": ["dist/", "components/", "controllers/", "assets/", "README.md"],
+  "main": "dist/hatchi-maxchi.css",
+  "//": "Developed in-tree in the Dazzle repo; extracted via git subtree split when the contract stabilises. Version tracks the standalone releases, independent of Dazzle's version."
+}

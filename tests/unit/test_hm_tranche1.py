@@ -7,6 +7,7 @@ import pytest
 pytestmark = pytest.mark.gate
 
 STATIC = Path(__file__).parents[2] / "src" / "dazzle" / "page" / "runtime" / "static"
+HM = Path(__file__).parents[2] / "packages" / "hatchi-maxchi"
 
 
 def _bundle() -> str:
@@ -46,7 +47,7 @@ def test_confirm_controller_bundled() -> None:
 
 
 def test_confirm_controller_intercepts_htmx_confirm() -> None:
-    js = (STATIC / "js" / "dz-confirm.js").read_text()
+    js = (HM / "controllers" / "dz-confirm.js").read_text()
     assert "htmx:confirm" in js
     assert "issueRequest(true)" in js
     assert "data-dz-native-confirm" in js  # opt-out contract
@@ -101,7 +102,7 @@ def test_command_controller_bundled_and_wired() -> None:
     import scripts.build_dist as build_dist  # type: ignore[import-not-found]
 
     assert "dz-command.js" in {p.name for p in build_dist.JS_SOURCES}
-    js = (STATIC / "js" / "dz-command.js").read_text()
+    js = (HM / "controllers" / "dz-command.js").read_text()
     assert "metaKey" in js and "htmx:afterSwap" in js and "aria-selected" in js
 
 

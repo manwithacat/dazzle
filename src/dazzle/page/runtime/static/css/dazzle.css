@@ -32,14 +32,15 @@
 @import url("tokens.css") layer(tokens);
 @import url("base.css") layer(base);
 @import url("utilities.css") layer(utilities);
-@import url("components/alert.css") layer(components);
+/* alert.css + hm-core.css moved to packages/hatchi-maxchi/components/
+ * (HaTchi-MaXchi design-system package); css_loader/build_dist read them
+ * via the @hm: sentinel. This mirror lists them for reference only. */
 @import url("components/badge.css") layer(components);
 @import url("components/button.css") layer(components);
 @import url("components/dashboard.css") layer(components);
 @import url("components/detail.css") layer(components);
 @import url("components/form.css") layer(components);
 @import url("components/fragments.css") layer(components);
-@import url("components/hm-core.css") layer(components);
 @import url("components/htmx-states.css") layer(components);
 @import url("components/pdf-viewer.css") layer(components);
 @import url("components/regions.css") layer(components);

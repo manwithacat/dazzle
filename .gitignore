@@ -158,3 +158,7 @@ tests/audit/classification.json
 .dazzle/perf/
 PLAN.md
 .github/codeql/extensions/**/.codeql/
+
+# HaTchi-MaXchi generated site fonts (copied from vendored source) + pycache
+packages/hatchi-maxchi/site/fonts/
+packages/**/__pycache__/

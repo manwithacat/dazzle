@@ -20,7 +20,7 @@ import shutil
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from registry import COMPONENTS, GROUPS  # noqa: E402
@@ -28,7 +28,7 @@ from registry import COMPONENTS, GROUPS  # noqa: E402
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html  # noqa: E402
 from dazzle.render.fragment.icon_registry import ICONS, LUCIDE_VERSION  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 STATIC = ROOT / "src" / "dazzle" / "page" / "runtime" / "static"
 
 _ICON_RE = re.compile(r"\{icon:([a-z0-9-]+)\}")
@@ -173,8 +173,9 @@ def build(out_dir: Path) -> None:
 
     # controllers the demos need + the mock htmx
     controllers = ""
+    HM = ROOT / "packages" / "hatchi-maxchi"
     for js in ("dz-confirm.js", "dz-command.js"):
-        controllers += "\n/* --- " + js + " --- */\n" + (STATIC / "js" / js).read_text()
+        controllers += "\n/* --- " + js + " --- */\n" + (HM / "controllers" / js).read_text()
     # inline icon map for the mock htmx canned command results
     icon_map = "window.__HM_ICONS__ = {"
     for name in ("layout-dashboard", "settings", "receipt", "users", "triangle-alert"):
@@ -268,7 +269,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 <script>{opener_js}</script>
 </body>
 </html>"""
-    (out_dir / "index.html").write_text(doc, encoding="utf-8")
+    (out_dir / "index.html").write_text(doc + "\n", encoding="utf-8")
 
     (out_dir / "README.md").write_text(_readme(), encoding="utf-8")
     print(f"built {len(COMPONENTS)} components -> {out_dir}/index.html")
@@ -300,7 +301,7 @@ def _readme() -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--out", default="hatchi-maxchi")
+    ap.add_argument("--out", default="packages/hatchi-maxchi/site")
     args = ap.parse_args()
     build(ROOT / args.out)
     return 0

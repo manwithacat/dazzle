@@ -19,6 +19,9 @@ import json
 from pathlib import Path
 
 _STATIC_DIR = Path(__file__).parent / "static"
+# HaTchi-MaXchi design-system sources live in the extractable package
+# (packages/hatchi-maxchi/). Entries prefixed "@hm:" resolve there.
+_HM_ROOT = Path(__file__).resolve().parents[4] / "packages" / "hatchi-maxchi"
 
 # Cascade layer order — must match `static/css/dazzle.css`. Anything
 # in a later layer wins over earlier layers regardless of selector
@@ -45,14 +48,14 @@ CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
     ("tokens", "css/design-system.css"),
     ("base", "css/base.css"),
     ("utilities", "css/utilities.css"),
-    ("components", "css/components/alert.css"),
+    ("components", "@hm:components/alert.css"),
     ("components", "css/components/badge.css"),
     ("components", "css/components/button.css"),
     ("components", "css/components/dashboard.css"),
     ("components", "css/components/detail.css"),
     ("components", "css/components/form.css"),
     ("components", "css/components/fragments.css"),
-    ("components", "css/components/hm-core.css"),
+    ("components", "@hm:components/hm-core.css"),
     ("components", "css/components/htmx-states.css"),
     ("components", "css/components/pdf-viewer.css"),
     ("components", "css/components/regions.css"),
@@ -79,8 +82,12 @@ CSS_UNLAYERED_FILES: tuple[str, ...] = (
 
 
 def _load_css_file(rel_path: str) -> str:
-    """Load a CSS file from the static/ directory by relative path."""
-    path = _STATIC_DIR / rel_path
+    """Load a CSS source. `@hm:` entries resolve to the HaTchi-MaXchi package;
+    everything else is relative to static/."""
+    if rel_path.startswith("@hm:"):
+        path = _HM_ROOT / rel_path[len("@hm:") :]
+    else:
+        path = _STATIC_DIR / rel_path
     if not path.exists():
         raise FileNotFoundError(f"CSS file not found: {path}")
     return path.read_text(encoding="utf-8")

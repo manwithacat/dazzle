@@ -22,6 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DIST_DIR = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "dist"
 
 STATIC = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static"
+HM = REPO_ROOT / "packages" / "hatchi-maxchi"
 SITE_STATIC = REPO_ROOT / "src" / "dazzle" / "page" / "static"
 
 # Order mirrors static/css/dazzle.css and css_loader.CSS_SOURCE_FILES.
@@ -42,7 +43,7 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     ("tokens", STATIC / "css" / "design-system.css"),
     ("base", STATIC / "css" / "base.css"),
     ("utilities", STATIC / "css" / "utilities.css"),
-    ("components", STATIC / "css" / "components" / "alert.css"),
+    ("components", HM / "components" / "alert.css"),
     ("components", STATIC / "css" / "components" / "badge.css"),
     ("components", STATIC / "css" / "components" / "button.css"),
     ("components", STATIC / "css" / "components" / "dashboard.css"),
@@ -50,7 +51,7 @@ CSS_SOURCES: list[tuple[str, Path]] = [
     ("components", STATIC / "css" / "components" / "form.css"),
     ("components", STATIC / "css" / "components" / "fragment-primitives.css"),
     ("components", STATIC / "css" / "components" / "fragments.css"),
-    ("components", STATIC / "css" / "components" / "hm-core.css"),
+    ("components", HM / "components" / "hm-core.css"),
     ("components", STATIC / "css" / "components" / "htmx-states.css"),
     ("components", STATIC / "css" / "components" / "pdf-viewer.css"),
     ("components", STATIC / "css" / "components" / "regions.css"),
@@ -105,8 +106,8 @@ JS_SOURCES = [
     # which is all of them, since app_chrome.js_scripts always points at the
     # bundle. Ordered first in the runtime block so the listener is registered
     # before any other runtime code can trigger an htmx request.
-    STATIC / "js" / "dz-command.js",
-    STATIC / "js" / "dz-confirm.js",
+    HM / "controllers" / "dz-command.js",
+    HM / "controllers" / "dz-confirm.js",
     STATIC / "js" / "dz-csrf.js",
     STATIC / "js" / "dz-a11y.js",
     STATIC / "js" / "dz-islands.js",
