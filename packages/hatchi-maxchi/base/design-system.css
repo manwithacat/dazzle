@@ -320,7 +320,7 @@ code, pre, kbd, samp {
    ============================================================================= */
 
 /* Smooth transitions on interactive elements */
-a, button, .btn, input, select, textarea, .card, .menu li a {
+a, button, .btn, input, select, textarea, .dz-card, .menu li a {
   transition: all var(--duration-fast) var(--ease-default);
 }
 
@@ -348,7 +348,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   .badge {
     border: 1px solid currentColor;
   }
-  .card {
+  .dz-card {
     border-width: 2px;
   }
   .input,
@@ -429,8 +429,9 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 }
 
 /* --- Cards --- */
+/* HYPERPART: card */
 
-.card {
+.dz-card {
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-lg);
@@ -440,14 +441,41 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
               transform var(--duration-normal) var(--ease-default);
 }
 
-.card:hover {
+.dz-card:hover {
   box-shadow: var(--shadow-md);
 }
 
-.card[onclick]:hover,
-.card a:hover {
+.dz-card[onclick]:hover,
+.dz-card a:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
+}
+
+/* Card content primitives — semantic classes so demos and consumers don't
+   reach for inline styles. A stat/KPI card is label + value (+ optional
+   delta); `dz-card-body` is the padded content wrapper. */
+.dz-card-body {
+  padding: var(--space-xl);
+}
+.dz-card-label {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+.dz-card-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+.dz-card-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--colour-success);
+}
+.dz-card-delta svg {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .card-title {

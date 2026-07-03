@@ -485,7 +485,7 @@ background-color: var(--colour-bg);
 code, pre, kbd, samp {
 font-family: var(--font-mono);
 }
-a, button, .btn, input, select, textarea, .card, .menu li a {
+a, button, .btn, input, select, textarea, .dz-card, .menu li a {
 transition: all var(--duration-fast) var(--ease-default);
 }
 :focus-visible {
@@ -506,7 +506,7 @@ border: 2px solid currentColor;
 .badge {
 border: 1px solid currentColor;
 }
-.card {
+.dz-card {
 border-width: 2px;
 }
 .input,
@@ -566,7 +566,7 @@ border-block-end: 1px solid var(--colour-border);
 font-weight: 600;
 letter-spacing: -0.02em;
 }
-.card {
+.dz-card {
 box-shadow: var(--shadow-sm);
 border: 1px solid var(--colour-border);
 border-radius: var(--radius-lg);
@@ -575,13 +575,36 @@ color: var(--colour-text);
 transition: box-shadow var(--duration-normal) var(--ease-default),
 transform var(--duration-normal) var(--ease-default);
 }
-.card:hover {
+.dz-card:hover {
 box-shadow: var(--shadow-md);
 }
-.card[onclick]:hover,
-.card a:hover {
+.dz-card[onclick]:hover,
+.dz-card a:hover {
 transform: translateY(-1px);
 box-shadow: var(--shadow-lg);
+}
+.dz-card-body {
+padding: var(--space-xl);
+}
+.dz-card-label {
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+}
+.dz-card-value {
+font-size: var(--text-2xl);
+font-weight: var(--weight-bold);
+font-variant-numeric: tabular-nums;
+}
+.dz-card-delta {
+display: inline-flex;
+align-items: center;
+gap: var(--space-xs);
+font-size: var(--text-sm);
+color: var(--colour-success);
+}
+.dz-card-delta svg {
+width: 0.875rem;
+height: 0.875rem;
 }
 .card-title {
 font-weight: 600;

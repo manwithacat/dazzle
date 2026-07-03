@@ -123,12 +123,12 @@ HYPERPARTS: list[Hyperpart] = [
         "card",
         "Card",
         "Data",
-        "Bordered surface with a resting stacked shadow; tabular KPIs.",
-        '<div class="dz-card" style="padding:1.5rem;max-width:16rem">'
-        '<div style="font-size:var(--text-sm);color:var(--colour-text-muted)">Total Revenue</div>'
-        '<div style="font-size:var(--text-2xl);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums">£1,250.00</div>'
-        '<div style="font-size:var(--text-sm);color:var(--colour-success);display:flex;align-items:center;gap:.25rem">'
-        '<span style="width:.875rem;height:.875rem">{svg:trending-up}</span> +12.5% this month</div></div>',
+        "Bordered surface with a resting stacked shadow; tabular KPIs — "
+        "semantic content classes, no inline styles.",
+        '<div class="dz-card dz-card-body">'
+        '<div class="dz-card-label">Total Revenue</div>'
+        '<div class="dz-card-value">£1,250.00</div>'
+        '<div class="dz-card-delta">{svg:trending-up} +12.5% this month</div></div>',
     ),
     # ── Overlays (interactive — need the mock htmx / dialog) ─────────
     Hyperpart(

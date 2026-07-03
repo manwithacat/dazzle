@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.37] - 2026-07-04
+
+### Changed
+- **Card Hyperpart: semantic content classes, no inline styles.** The card demo's inline-styled KPI content is replaced by `dz-card-body` / `dz-card-label` / `dz-card-value` / `dz-card-delta` primitives, congruent with HM's "tokens + semantic classes" ethos. The container is unified to `.dz-card` (was a legacy unprefixed `.card`, which didn't reprefix consistently), marked `HYPERPART: card`. Dazzle's dashboard cards are **unchanged** — its own `.dz-card` rule sits in the `components` layer and wins over HM's `base`-layer card (verified: full suite green, no pixel change). Follow-up: dedupe Dazzle's dashboard `.dz-card` against HM's canonical one.
+
 ## [0.93.36] - 2026-07-03
 
 ### Changed
