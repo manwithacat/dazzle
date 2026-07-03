@@ -1,8 +1,13 @@
 # HM ⇄ Dazzle boundary + WCAG gate — design
 
 **Date:** 2026-07-03
-**Status:** Phases 1 + 4 + boundary-test half of 3 SHIPPED (v0.93.25); Dazzle-side
-gates of Phase 3 + the Phase 2 dist flip remain. First axe run found 10 real
+**Status:** Phases 1 + 3 + 4 SHIPPED (v0.93.25/29); only the Phase 2 dist flip
+remains (adversarial-review-gated). Phase 3's lockstep gate found REAL DRIFT on
+its first run: `fragment-primitives.css` had been lost from the dev concat at
+the Stage 2a move (dist had it, dev didn't — `serve --local` shipped without
+`.dz-submit` styling); restored. The HM-side gallery-regen gate now runs in
+standalone CI, byte-comparing a fresh dazzle-free rebuild to the committed
+artifact. First axe run found 10 real
 contrast failures (incl. a 1.08:1 invisible dark-mode alert title) — tone text
 tokens are now scheme-aware (`light-dark()`), washes flip dark, white-text
 fills use fixed ramp steps, and the old 3.0:1 token-gate threshold is 4.5:1.

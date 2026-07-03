@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.29] - 2026-07-03
+
+### Added
+- **HM ⇄ Dazzle boundary, Phase 3: mechanical gates on both sides.** Dazzle-side (`tests/unit/test_hm_boundary.py`): package references confined to a sanctioned-seams allowlist; the dev concat (`css_loader`) and dist build (`build_dist`) must reference the SAME package CSS set; `@hm:` paths must exist; the icon seam is provenance-comments-only in executable code. HM-side: the gallery is regenerated in standalone CI and byte-compared to the committed artifact (possible since Phase 1 removed the Dazzle imports). Only Phase 2 (dist-consumption flip, adversarial-review-gated) remains of the boundary design.
+
+### Fixed
+- **Dev bundle had shipped without `fragment-primitives.css` since v0.93.13.** The Phase-3 lockstep gate found it on first run: the file was in the dist build but lost from the dev concat at the Stage 2a move — `dazzle serve --local` rendered without `.dz-submit` (and every other fragment-primitive rule) while production dist was fine. Restored.
+
 ## [0.93.28] - 2026-07-03
 
 ### Added

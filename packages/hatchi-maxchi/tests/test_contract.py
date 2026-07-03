@@ -80,6 +80,22 @@ def test_committed_gallery_js_carries_current_controllers() -> None:
     )
 
 
+def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """The committed gallery must equal a fresh standalone rebuild — the
+    boundary acceptance test (Phase 3): the split repo regenerates its own
+    docs with zero Dazzle code, and what it regenerates is what's shipped."""
+    import build_site
+
+    build_site.build(tmp_path)
+    for name in ("index.html", "hatchi-maxchi.css", "hatchi-maxchi.js"):
+        fresh = (tmp_path / name).read_text(encoding="utf-8")
+        committed = (PKG / "site" / name).read_text(encoding="utf-8")
+        assert fresh == committed, (
+            f"site/{name} is stale or the build is nondeterministic — "
+            "re-run python site/build_site.py and commit"
+        )
+
+
 def test_prefix_transform_is_total() -> None:
     css = build_css(prefix="ax-")
     js = build_js(prefix="ax-")

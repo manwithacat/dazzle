@@ -54,6 +54,10 @@ CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
     ("components", "css/components/dashboard.css"),
     ("components", "css/components/detail.css"),
     ("components", "@hm:components/form.css"),
+    # Restored by the Phase-3 lockstep gate (test_hm_boundary): this entry was
+    # LOST at the Stage 2a move (present in build_dist, absent here), so the
+    # dev bundle served without fragment-primitives rules while dist had them.
+    ("components", "@hm:components/fragment-primitives.css"),
     ("components", "css/components/fragments.css"),
     ("components", "@hm:components/hm-core.css"),
     ("components", "@hm:components/htmx-states.css"),
