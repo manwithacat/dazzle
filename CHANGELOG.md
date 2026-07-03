@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.23] - 2026-07-03
+
+### Fixed
+- **Gallery badge icons: overflow + collision with the label.** The registry's `{icon:…}` placeholder expanded with a `span.dz-icon--size-sm` wrapper (1rem) inside the 0.875em `.dz-badge-icon` box, overflowing onto the text and eating the icon/label gap. Badge, alert, and empty-state slots now use the bare-`<svg>` expansion (`{svg:…}`), matching the fleet's `badge_icon_html` structure and each slot's CSS contract.
+- **Gallery snippets are now self-contained.** The copy-paste snippet previously showed the *unexpanded* `{icon:…}` placeholder — dead text in a consumer's app. Live demo and snippet now come from the same post-expansion string (real inline SVG), restoring the "docs cannot drift" promise. `lucide_svg_html` omits the class attribute when empty (fleet callers all pass a class — no fleet byte changes).
+
 ## [0.93.22] - 2026-07-03
 
 ### Changed

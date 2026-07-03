@@ -231,8 +231,12 @@ def build(out_dir: Path) -> None:
     )
 
     for c in COMPONENTS:
+        # Expand icon placeholders ONCE and use the SAME string for the
+        # live demo and the snippet — so copied markup carries real
+        # inline SVG (a {icon:...} placeholder in the snippet would be
+        # dead text in a consumer's app), and demo/docs cannot drift.
         live = expand_icons(c.html)
-        snippet = _html.escape(c.html)
+        snippet = _html.escape(live)
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         notes = f'<div class="hm-notes">{c.notes}</div>' if c.notes else ""
         body_parts.append(

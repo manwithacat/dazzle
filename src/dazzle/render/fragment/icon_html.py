@@ -28,8 +28,9 @@ def lucide_svg_html(name: str, *, cls: str, fallback: str = "inbox") -> str:
     framework-chosen constants here, never author input.
     """
     inner = ICONS.get(name) or ICONS[fallback]
+    cls_attr = f' class="{cls}"' if cls else ""
     return (
-        f'<svg class="{cls}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+        f'<svg{cls_attr} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
         f'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
         f'stroke-linejoin="round" aria-hidden="true">{inner}</svg>'
     )

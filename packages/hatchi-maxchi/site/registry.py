@@ -49,9 +49,9 @@ COMPONENTS: list[Component] = [
         "Feedback",
         "Colour + icon + text — status never relies on colour alone (WCAG 1.4.1).",
         '<div class="hm-demo-row">'
-        '<span class="dz-badge" data-dz-tone="success" role="status"><span class="dz-badge-icon">{icon:circle-check}</span>Approved</span>'
-        '<span class="dz-badge" data-dz-tone="warning" role="status"><span class="dz-badge-icon">{icon:triangle-alert}</span>Pending</span>'
-        '<span class="dz-badge" data-dz-tone="destructive" role="status"><span class="dz-badge-icon">{icon:circle-x}</span>Rejected</span>'
+        '<span class="dz-badge" data-dz-tone="success" role="status"><span class="dz-badge-icon">{svg:circle-check}</span>Approved</span>'
+        '<span class="dz-badge" data-dz-tone="warning" role="status"><span class="dz-badge-icon">{svg:triangle-alert}</span>Pending</span>'
+        '<span class="dz-badge" data-dz-tone="destructive" role="status"><span class="dz-badge-icon">{svg:circle-x}</span>Rejected</span>'
         '<span class="dz-badge" data-dz-tone="neutral" role="status">Draft</span>'
         "</div>",
         tags=("identity",),
@@ -62,7 +62,7 @@ COMPONENTS: list[Component] = [
         "Feedback",
         "Tone-wash surfaces — an identity layer shadcn has no vocabulary for.",
         '<div class="dz-alert" data-dz-tone="warning" role="alert" style="max-width:34rem">'
-        '<span class="dz-alert__icon">{icon:triangle-alert}</span>'
+        '<span class="dz-alert__icon">{svg:triangle-alert}</span>'
         '<div class="dz-alert__body"><div class="dz-alert__title">Payment method expiring</div>'
         '<div class="dz-alert__description">Your card ending 4242 expires next month.</div></div></div>',
         tags=("identity",),
@@ -192,7 +192,7 @@ COMPONENTS: list[Component] = [
         "Feedback",
         "Icon + one sentence + primary action — never a bare 'No X'.",
         '<div class="dz-card" style="padding:1.5rem;max-width:22rem"><div class="dz-empty-state">'
-        '<span class="dz-empty-state__icon">{icon:inbox}</span>'
+        '<span class="dz-empty-state__icon">{svg:inbox}</span>'
         '<h3 class="dz-empty-state__title">No invoices yet</h3>'
         '<p class="dz-empty-state__description">Create your first invoice to get started.</p>'
         '<div class="dz-empty-state__action"><a class="dz-button dz-button-primary" href="#">New Invoice</a></div></div></div>',
