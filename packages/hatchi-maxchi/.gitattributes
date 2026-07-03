@@ -1,0 +1,6 @@
+# Override the Dazzle monorepo's root `*.png filter=lfs` rule: this
+# package is published standalone via `git subtree split`, and the split
+# repo has no LFS store — LFS'd files arrive as 131-byte pointer text.
+# The visual-regression baselines must be real blobs so the standalone
+# CI can read them.
+*.png -filter -diff -merge

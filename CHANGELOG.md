@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.17] - 2026-07-03
+
+### Fixed
+- **HaTchi-MaXchi visual baselines were LFS pointers in the standalone repo.** The monorepo's root `*.png filter=lfs` rule captured `tests/baselines/*.png`, so the subtree-split repo (no LFS store) received 131-byte pointer files and its CI failed with `PIL.UnidentifiedImageError`. A package-level `.gitattributes` now unsets the LFS filter for the package's PNGs (it travels with the split), and the baselines are committed as real blobs.
+
+### Agent Guidance
+- Anything committed under `packages/hatchi-maxchi/` must be a real blob — the standalone repo has no LFS. The package `.gitattributes` already exempts `*.png`; extend it before adding any other binary type the root `.gitattributes` routes to LFS.
+
 ## [0.93.16] - 2026-07-03
 
 ### Added
