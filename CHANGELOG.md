@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.8] - 2026-07-03
+
+### Added
+- **HaTchi-MaXchi tranche 2A** — `dz-progress` (toned bar), `dz-avatar` (+ stacked `dz-avatar-group`), `dz-breadcrumb` (CSS-generated chevrons, clean list markup), `dz-toggle-group` (segmented control on native radios — the hypermedia answer), `dz-popover` (details-based free-content panel, `data-dz-align`), `dz-kbd`. All in `components/hm-core.css`, gated by `test_hm_tranche1.py`.
+
+### Fixed
+- **Legacy HSL token system now follows `prefers-color-scheme`**: the shadcn-era `hsl(var(--foreground))`-family tokens (249 call sites) only flipped dark under `.dark`/`[data-theme=dark]`, so no-JS/pre-paint contexts rendered light values on dark. Added the media fallback mirroring tokens.css; long-term these call sites migrate to the OKLCH semantic tokens during extraction.
+
 ## [0.93.7] - 2026-07-03
 
 ### Added

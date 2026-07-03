@@ -57,3 +57,27 @@ def test_confirm_controller_intercepts_htmx_confirm() -> None:
 def test_empty_state_title_uses_text_token() -> None:
     css = (STATIC / "css" / "components" / "fragment-primitives.css").read_text()
     assert ".dz-empty-state__title {\n  color: var(--colour-text);" in css
+
+
+@pytest.mark.parametrize(
+    "selector",
+    [
+        ".dz-progress__bar",
+        ".dz-avatar",
+        ".dz-avatar-group .dz-avatar + .dz-avatar",
+        ".dz-breadcrumb li + li::before",
+        ".dz-toggle-group input:checked + span",
+        ".dz-popover__panel",
+        ".dz-kbd",
+    ],
+)
+def test_tranche2a_css_in_dev_bundle(selector: str) -> None:
+    assert selector in _bundle(), f"{selector} missing from the CSS bundle"
+
+
+def test_legacy_hsl_dark_block_has_media_fallback() -> None:
+    css = (STATIC / "css" / "design-system.css").read_text()
+    assert ':root:not([data-theme="light"])' in css, (
+        "legacy HSL tokens must follow prefers-color-scheme (no-JS/pre-paint "
+        "dark parity) — the tranche-2A fallback block was removed"
+    )

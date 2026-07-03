@@ -52,6 +52,7 @@ CSS_SOURCE_FILES: tuple[tuple[str, str], ...] = (
     ("components", "css/components/detail.css"),
     ("components", "css/components/form.css"),
     ("components", "css/components/fragments.css"),
+    ("components", "css/components/hm-core.css"),
     ("components", "css/components/htmx-states.css"),
     ("components", "css/components/pdf-viewer.css"),
     ("components", "css/components/regions.css"),

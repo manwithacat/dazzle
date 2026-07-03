@@ -299,6 +299,98 @@
   --dz-ring-glow: 0 0 0 3px oklch(0.60 0.18 270 / 0.15);
 }
 
+/* No-JS / pre-paint parity (#tranche2): the legacy HSL token system
+   must follow prefers-color-scheme like the OKLCH set does, otherwise
+   hsl(var(--…)) consumers render light values on dark until theme JS
+   sets [data-theme]. Mirrors the tokens.css fallback. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 5.9% 10%;
+
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 240 4.9% 83.9%;
+
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 98%;
+
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 98%;
+
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 98%;
+
+  --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.1);
+  --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+  --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.2), 0 2px 4px -2px hsl(0 0% 0% / 0.15);
+  --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.25), 0 4px 6px -4px hsl(0 0% 0% / 0.15);
+  --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.3), 0 8px 10px -6px hsl(0 0% 0% / 0.2);
+
+  --dz-sidebar-from: hsl(240 10% 5%);
+  --dz-sidebar-to: hsl(240 10% 8%);
+  --dz-accent-glow: hsl(var(--ring) / 0.2);
+
+  /* Site section overrides for dark mode */
+  --dz-section-alt-bg: oklch(0.08 0.01 260);
+  --dz-feature-icon-bg: oklch(0.20 0.04 260);
+
+  /* Text hierarchy */
+  --dz-text-foreground: oklch(0.95 0 0);
+  --dz-text-emphasis: oklch(0.85 0 0);
+  --dz-text-body: oklch(0.70 0 0);
+  --dz-text-muted: oklch(0.55 0 0);
+
+  /* Surfaces */
+  --dz-surface-card: oklch(0.18 0.01 260);
+
+  /* Borders */
+  --dz-border-default: oklch(1 0 0 / 0.12);
+  --dz-border-subtle: oklch(1 0 0 / 0.08);
+  --dz-border-input: oklch(1 0 0 / 0.15);
+
+  /* Header / Footer */
+  --dz-header-bg: oklch(0.15 0.01 260 / 0.95);
+  --dz-footer-bg: oklch(0.08 0.01 260);
+  --dz-footer-text: oklch(0.65 0 0);
+  --dz-footer-link: oklch(0.55 0 0);
+  --dz-footer-border: oklch(1 0 0 / 0.1);
+  --dz-footer-heading: oklch(1 0 0);
+
+  /* Logo */
+  --dz-logo-color: oklch(0.95 0 0);
+
+  /* Error feedback */
+  --dz-error-bg: oklch(0.20 0.06 25);
+  --dz-error-text: oklch(0.80 0.15 25);
+
+  /* Focus ring */
+  --dz-ring-glow: 0 0 0 3px oklch(0.60 0.18 270 / 0.15);
+  }
+}
+
+
 /* =============================================================================
    2. (DaisyUI theme bridge removed in #1113.)
 
