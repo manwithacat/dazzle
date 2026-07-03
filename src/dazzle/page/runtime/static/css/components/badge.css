@@ -109,3 +109,17 @@
   color: var(--colour-text-muted);
   font-size: var(--text-xs);
 }
+
+/* Registry SVG badge glyphs (Phase 3, supersedes #1493 entity glyphs). */
+.dz-badge-icon {
+  display: inline-flex;
+  width: 0.875em;
+  height: 0.875em;
+  flex-shrink: 0;
+}
+
+.dz-badge-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

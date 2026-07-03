@@ -15,12 +15,14 @@ from dazzle.render.filters import (
     status_tone_map,
 )
 
-# The four non-neutral tones → their leading glyph (numeric HTML entity).
+# The four non-neutral tones → their vendored-registry icon names
+# (HaTchi-MaXchi Phase 3: inline SVG supersedes the #1493 HTML entities;
+# the WCAG colour+icon+text guarantee is unchanged).
 _EXPECTED = {
-    "success": "&#10003;",
-    "warning": "&#9888;",
-    "destructive": "&#10005;",
-    "info": "&#8505;",
+    "success": "circle-check",
+    "warning": "triangle-alert",
+    "destructive": "circle-x",
+    "info": "info",
 }
 
 
@@ -41,7 +43,8 @@ class TestIconHelper:
 
     def test_badge_icon_html_wraps_glyph_in_decorative_span(self):
         html = badge_icon_html("warning")
-        assert html == ('<span class="dz-badge-icon" aria-hidden="true">&#9888;</span>')
+        assert html.startswith('<span class="dz-badge-icon" aria-hidden="true"><svg')
+        assert html.endswith("</svg></span>")
 
     def test_badge_icon_html_empty_for_neutral(self):
         assert badge_icon_html("neutral") == ""
@@ -58,7 +61,8 @@ class TestRenderSeams:
         html = _render_status_badge_html("approved")  # name-guess → success
         assert 'data-dz-tone="success"' in html
         # icon span immediately precedes the text label
-        assert '<span class="dz-badge-icon" aria-hidden="true">&#10003;</span>Approved' in html
+        assert '<span class="dz-badge-icon" aria-hidden="true"><svg' in html
+        assert "</svg></span>Approved" in html
 
     def test_render_shared_badge_neutral_has_no_icon(self):
         from dazzle.render.fragment.region._shared import _render_status_badge_html
@@ -75,7 +79,8 @@ class TestRenderSeams:
 
         html = _render_cell_display({"type": "badge"}, "rejected")  # → destructive
         assert 'data-dz-tone="destructive"' in html
-        assert '<span class="dz-badge-icon" aria-hidden="true">&#10005;</span>Rejected' in html
+        assert '<span class="dz-badge-icon" aria-hidden="true"><svg' in html
+        assert "</svg></span>Rejected" in html
 
     def test_detail_badge_neutral_unchanged(self):
         from dazzle.render.fragment.renderer._data_row import _render_cell_display
@@ -88,8 +93,8 @@ class TestRenderSeams:
 
         html = _render_cell_display({"type": "badge"}, "pending")  # → warning
         assert 'data-dz-tone="warning"' in html
-        assert "&#9888;" in html
         assert "dz-badge-icon" in html
+        assert "<svg" in html
 
     def test_htmx_cell_badge_neutral_unchanged(self):
         from dazzle.render.fragment.renderer._data_row import _render_cell_display
@@ -106,7 +111,7 @@ class TestRenderSeams:
         col = {"type": "badge", "semantic_map": {"shipped": "success"}}
         html = _render_cell_display(col, "shipped")
         assert 'data-dz-tone="success"' in html
-        assert "&#10003;" in html
+        assert "dz-badge-icon" in html and "<svg" in html
 
 
 class _FakeSM:
