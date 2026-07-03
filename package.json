@@ -1,6 +1,6 @@
 {
   "name": "dazzle",
-  "version": "0.93.38",
+  "version": "0.93.39",
   "description": "**Model your business. Ship your product. Pass your audit.**",
   "main": "eslint.config.js",
   "directories": {
