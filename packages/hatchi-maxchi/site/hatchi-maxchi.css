@@ -3406,6 +3406,13 @@ input.switch:checked::before {
   height: 1em;
   color: inherit;
   stroke: currentColor;
+  /* Lucide stroke defaults must live on the REFERENCING element: `<use>`
+     shadow content inherits these from here, NOT from the sprite sheet's
+     outer <svg> — without them, sprite icons render at the browser default
+     stroke-width:1 / butt caps (thin, squared). */
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   fill: none;
 }
 .icon-solid { fill: currentColor; stroke: none; }

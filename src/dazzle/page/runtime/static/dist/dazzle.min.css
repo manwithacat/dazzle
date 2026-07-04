@@ -1,4 +1,4 @@
-/* dazzle v0.93.37 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.40 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2407,6 +2407,9 @@ width: 1em;
 height: 1em;
 color: inherit;
 stroke: currentColor;
+stroke-width: 2;
+stroke-linecap: round;
+stroke-linejoin: round;
 fill: none;
 }
 .dz-icon-solid { fill: currentColor; stroke: none; }

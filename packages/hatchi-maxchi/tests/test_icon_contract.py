@@ -35,6 +35,11 @@ def test_dz_icon_base_declares_the_full_contract() -> None:
         "vertical-align: -0.125em",
         "flex-shrink: 0",
         "stroke: currentColor",
+        # Lucide stroke defaults — required on the referencing element so
+        # sprite `<use>` shadow content inherits them (not from the sheet).
+        "stroke-width: 2",
+        "stroke-linecap: round",
+        "stroke-linejoin: round",
         "fill: none",
     ):
         assert decl in body, f".dz-icon base missing `{decl}`"
