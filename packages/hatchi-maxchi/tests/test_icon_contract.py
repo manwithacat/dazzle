@@ -128,3 +128,22 @@ def test_committed_sprite_sheet_is_current() -> None:
     assert committed == build_symbol_sheet(ICONS), (
         "sprite_sheet.svg is stale — run icons/gen_registry.py --sync"
     )
+
+
+# ── gallery pedagogy: sprite snippets + one injected sheet ────────────────
+
+
+def _gallery_html() -> str:
+    return (PKG / "site" / "index.html").read_text(encoding="utf-8")
+
+
+def test_gallery_injects_one_symbol_sheet() -> None:
+    html = _gallery_html()
+    assert 'style="display:none"' in html, "symbol sheet not injected into the gallery"
+    assert '<symbol id="circle-check"' in html
+
+
+def test_gallery_component_snippets_use_sprite_reference() -> None:
+    html = _gallery_html()
+    assert '<use href="#' in html, "gallery icons are not the sprite <use> form"
+    assert html.count('<use href="#') >= 5

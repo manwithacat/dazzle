@@ -33,7 +33,8 @@ from build import (  # noqa: E402  (package build.py)
     build_js,
 )
 from hyperpart import anatomy  # noqa: E402  (package tools/hyperpart.py)
-from icons import ICONS, LUCIDE_VERSION, lucide_icon_html, lucide_svg_html  # noqa: E402
+from icons import ICONS, LUCIDE_VERSION, lucide_svg_html  # noqa: E402
+from icons.sprite import build_symbol_sheet, sprite_use_html  # noqa: E402
 from registry import GROUPS, HYPERPARTS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -98,10 +99,15 @@ def _require(name: str) -> str:
 
 
 def expand_icons(markup: str) -> str:
+    """Expand ``{icon:name}`` / ``{svg:name}`` tokens to the sprite ``<use>``
+    form — one short line that references the injected symbol sheet. Source
+    classes stay ``dz-``-prefixed; the caller's ``apply_prefix`` strips them
+    for the (unprefixed) gallery. The demo renders because the page carries
+    the sheet; the copied snippet reads as canonical ``<use>`` markup."""
     markup = _ICON_RE.sub(
-        lambda m: lucide_icon_html(_require(m.group(1)), cls="dz-icon dz-icon--size-sm"), markup
+        lambda m: sprite_use_html(_require(m.group(1)), cls="dz-icon dz-icon--size-sm"), markup
     )
-    markup = _SVG_RE.sub(lambda m: lucide_svg_html(_require(m.group(1)), cls=""), markup)
+    markup = _SVG_RE.sub(lambda m: sprite_use_html(_require(m.group(1)), cls="dz-icon"), markup)
     return markup
 
 
@@ -379,6 +385,10 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         "b.__hmCopyTimer=setTimeout(function(){b.removeAttribute('data-copied');},1600);});});",
         prefix,
     )
+    # One hidden symbol sheet per page — every `<use href="#name">` in the
+    # snippets/demos resolves against it same-document (renders on file://
+    # and Pages). Sheet ids are namespace-neutral icon names.
+    sheet = build_symbol_sheet(ICONS)
     doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -390,6 +400,7 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
 <script>{theme_js}</script>
 </head>
 <body>
+{sheet}
 <div class="hm-wrap">
 <nav class="hm-nav">{"".join(nav_parts)}</nav>
 <main class="hm-main">
