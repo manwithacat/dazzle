@@ -294,11 +294,11 @@ HYPERPARTS: list[Hyperpart] = [
         "Inline SVG from a vendored Lucide registry — currentColor, decorative "
         "by default. Shown here as the sprite <use> form (one sheet per page).",
         '<div class="dz-icon-demo">'
-        '<svg class="dz-icon dz-icon--size-xs" aria-hidden="true"><use href="#circle-check"/></svg>'
-        '<svg class="dz-icon dz-icon--size-sm" aria-hidden="true"><use href="#circle-check"/></svg>'
-        '<svg class="dz-icon dz-icon--size-md" aria-hidden="true"><use href="#circle-check"/></svg>'
-        '<svg class="dz-icon dz-icon--size-lg" aria-hidden="true"><use href="#circle-check"/></svg>'
-        '<svg class="dz-icon dz-icon--size-xl" aria-hidden="true"><use href="#circle-check"/></svg>'
+        '<svg class="dz-icon dz-icon--size-xs" aria-hidden="true"><use href="#i-circle-check"/></svg>'
+        '<svg class="dz-icon dz-icon--size-sm" aria-hidden="true"><use href="#i-circle-check"/></svg>'
+        '<svg class="dz-icon dz-icon--size-md" aria-hidden="true"><use href="#i-circle-check"/></svg>'
+        '<svg class="dz-icon dz-icon--size-lg" aria-hidden="true"><use href="#i-circle-check"/></svg>'
+        '<svg class="dz-icon dz-icon--size-xl" aria-hidden="true"><use href="#i-circle-check"/></svg>'
         "</div>",
         notes="Two delivery forms, one registry. <strong>Sprite</strong> "
         '(<code>&lt;svg class="icon"&gt;&lt;use href="#name"/&gt;&lt;/svg&gt;</code>) '

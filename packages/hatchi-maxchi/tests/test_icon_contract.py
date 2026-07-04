@@ -113,7 +113,7 @@ def test_sheet_has_a_symbol_per_icon() -> None:
     sheet = build_symbol_sheet(ICONS)
     assert sheet.startswith("<svg") and "display:none" in sheet
     for name in ("check", "circle-check", "chevron-down"):
-        assert f'<symbol id="{name}" viewBox="0 0 24 24">' in sheet
+        assert f'<symbol id="i-{name}" viewBox="0 0 24 24">' in sheet
 
 
 def test_sprite_use_is_short_and_decorative() -> None:
@@ -121,7 +121,7 @@ def test_sprite_use_is_short_and_decorative() -> None:
 
     assert (
         sprite_use_html("circle-check")
-        == '<svg class="icon" aria-hidden="true"><use href="#circle-check"/></svg>'
+        == '<svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg>'
     )
 
 
@@ -145,10 +145,10 @@ def _gallery_html() -> str:
 def test_gallery_injects_one_symbol_sheet() -> None:
     html = _gallery_html()
     assert 'style="display:none"' in html, "symbol sheet not injected into the gallery"
-    assert '<symbol id="circle-check"' in html
+    assert '<symbol id="i-circle-check"' in html
 
 
 def test_gallery_component_snippets_use_sprite_reference() -> None:
     html = _gallery_html()
-    assert '<use href="#' in html, "gallery icons are not the sprite <use> form"
-    assert html.count('<use href="#') >= 5
+    assert '<use href="#i-' in html, "gallery icons are not the sprite <use> form"
+    assert html.count('<use href="#i-') >= 5

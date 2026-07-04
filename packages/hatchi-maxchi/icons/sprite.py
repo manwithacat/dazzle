@@ -19,8 +19,12 @@ def build_symbol_sheet(icons: dict[str, str]) -> str:
     resolves against it. Stroke defaults live on the sheet so a ``<use>``
     inherits them; ``currentColor`` still flows from the referencing element.
     """
+    # Symbol ids are namespaced `i-<name>` so they can never collide with a
+    # page element id (e.g. a gallery section id="menu" vs the `menu` icon) —
+    # duplicate ids are invalid HTML. The `i-` prefix carries no `dz-`, so the
+    # namespace transform leaves both the sheet and the <use> refs untouched.
     symbols = "".join(
-        f'<symbol id="{name}" viewBox="0 0 24 24">{inner}</symbol>'
+        f'<symbol id="i-{name}" viewBox="0 0 24 24">{inner}</symbol>'
         for name, inner in sorted(icons.items())
     )
     return (
@@ -37,4 +41,4 @@ def sprite_use_html(name: str, *, cls: str = "icon") -> str:
     icons are always accompanied by text, and the sheet must be present on
     the page for this to render.
     """
-    return f'<svg class="{cls}" aria-hidden="true"><use href="#{name}"/></svg>'
+    return f'<svg class="{cls}" aria-hidden="true"><use href="#i-{name}"/></svg>'
