@@ -305,6 +305,12 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         encoding="utf-8",
     )
 
+    # Icon symbol sheet — every `<use href="#name">` in the snippets/demos
+    # references it. Shipped as a standalone file (a consumer inlines it once)
+    # AND inlined into index.html below so the gallery renders self-contained.
+    sheet = build_symbol_sheet(ICONS)
+    (out_dir / "sprite_sheet.svg").write_text(sheet, encoding="utf-8")
+
     # ── gallery HTML ──
     nav_parts = [
         '<div class="hm-brand">HaTchi-MaXchi<small>htmx4-native design system</small></div>'
@@ -385,10 +391,8 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         "b.__hmCopyTimer=setTimeout(function(){b.removeAttribute('data-copied');},1600);});});",
         prefix,
     )
-    # One hidden symbol sheet per page — every `<use href="#name">` in the
-    # snippets/demos resolves against it same-document (renders on file://
-    # and Pages). Sheet ids are namespace-neutral icon names.
-    sheet = build_symbol_sheet(ICONS)
+    # `sheet` (built in the assets section) is inlined once per page so every
+    # `<use href="#name">` resolves same-document (renders on file:// + Pages).
     doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -446,13 +450,22 @@ def _readme() -> str:
         "(behaviour controllers + a mock htmx for the static demos), vendored fonts,\n"
         "and `index.html` (the component gallery). Serve it on GitHub Pages as-is.\n\n"
         "## Use\n\n"
+        "Two one-time includes — the stylesheet and the icon symbol sheet:\n\n"
         "```html\n"
         '<link rel="stylesheet" href="hatchi-maxchi.css">\n'
         '<script src="hatchi-maxchi.js" defer></script>\n'
+        "\n"
+        "<!-- inline the icon sheet ONCE per page (near the top of <body>) -->\n"
+        '<!-- so every `<use href="#name">` in a snippet resolves -->\n'
+        "<!-- (copy the contents of sprite_sheet.svg, or fetch + inline it) -->\n"
         "```\n\n"
-        "Copy any component's HTML from the gallery. In a real app, swap the mock\n"
-        "htmx for [htmx](https://htmx.org) and point the `hx-*` attributes at your\n"
-        "endpoints (e.g. the command palette's `hx-get` at your search route).\n\n"
+        "Copy any component's HTML from the gallery. Icons appear as the sprite\n"
+        'form `<svg class="icon"><use href="#name"/></svg>` — short and legible,\n'
+        "but they render only when the icon sheet above is present on the page. (An\n"
+        "icon inline-`<svg>` with the full path data is self-contained if you prefer\n"
+        "no sheet dependency.) In a real app, swap the mock htmx for\n"
+        "[htmx](https://htmx.org) and point the `hx-*` attributes at your endpoints\n"
+        "(e.g. the command palette's `hx-get` at your search route).\n\n"
         "Generated from the [Dazzle](https://github.com/manwithacat/dazzle) source of\n"
         "truth by `scripts/hm_site/build_site.py`. Geist (OFL) and Lucide (ISC) are\n"
         "vendored; see `fonts/OFL.txt`.\n"
