@@ -48,9 +48,21 @@
   }
 
   document.addEventListener("htmx:confirm", function (evt) {
-    var elt = evt.detail.elt;
-    if (!elt || elt.hasAttribute("data-native-confirm")) return;
-    var question = evt.detail.question;
+    var d = evt.detail || {};
+    // htmx-4 moved the confirm payload under `detail.ctx` (sourceElement +
+    // confirm) and split the continuation into issueRequest()/dropRequest();
+    // htmx<=2 exposed `detail.elt` + `detail.question` + issueRequest(). Read
+    // both shapes so the designed dialog works on whichever htmx a consumer
+    // ships (Dazzle vendors htmx-4). `ctx` falls back to `detail` itself so a
+    // future flattening doesn't re-break this.
+    var ctx = d.ctx || d;
+    var elt = d.elt || ctx.sourceElement;
+    if (
+      !elt ||
+      (elt.hasAttribute && elt.hasAttribute("data-native-confirm"))
+    )
+      return;
+    var question = d.question || ctx.confirm;
     if (!question) return; // no hx-confirm on this element
 
     evt.preventDefault(); // suppress window.confirm; we own the flow now
@@ -70,14 +82,18 @@
     function onAccept() {
       cleanup();
       // true = skip re-running the confirm hook for this request
-      evt.detail.issueRequest(true);
+      if (d.issueRequest) d.issueRequest(true);
     }
     function onCancel() {
       cleanup();
+      // htmx-4: explicitly drop the held request; htmx<=2: preventDefault
+      // already suppressed it, so dropRequest is absent and this is a no-op.
+      if (d.dropRequest) d.dropRequest();
     }
     function onClose() {
       // Esc / backdrop close — treat as cancel
       cleanup();
+      if (d.dropRequest) d.dropRequest();
     }
 
     accept.addEventListener("click", onAccept);

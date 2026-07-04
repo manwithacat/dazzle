@@ -82,22 +82,29 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     doGet(el);
   });
 
-  // hx-confirm -> htmx:confirm (drives confirm.js)
+  // hx-confirm -> htmx:confirm (drives confirm.js).
+  // Fires the REAL htmx-4 event shape: the config lives under `detail.ctx`
+  // (sourceElement + confirm), and the request is issued/dropped via the two
+  // functions on `detail`. (Earlier this mock fired the htmx-2 shape
+  // {elt, question} — which no real htmx-4 consumer sees, so it silently
+  // masked the htmx-4 detail-shape break in confirm.js.)
   document.addEventListener("click", function (e) {
     var el = e.target.closest && e.target.closest("[hx-confirm]");
     if (!el) return;
     e.preventDefault();
+    var issued = false;
     fire(el, "htmx:confirm", {
-      elt: el,
-      question: el.getAttribute("hx-confirm"),
+      ctx: { sourceElement: el, confirm: el.getAttribute("hx-confirm") },
       issueRequest: function () {
+        issued = true;
         // demo: flash a toast-ish confirmation
         var note = document.createElement("div");
         note.className = "hm-toast";
         note.textContent = "Deleted (demo).";
         document.body.appendChild(note);
         setTimeout(function () { note.remove(); }, 1800);
-      }
+      },
+      dropRequest: function () { issued = false; }
     });
   });
 
@@ -173,9 +180,21 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   }
 
   document.addEventListener("htmx:confirm", function (evt) {
-    var elt = evt.detail.elt;
-    if (!elt || elt.hasAttribute("data-native-confirm")) return;
-    var question = evt.detail.question;
+    var d = evt.detail || {};
+    // htmx-4 moved the confirm payload under `detail.ctx` (sourceElement +
+    // confirm) and split the continuation into issueRequest()/dropRequest();
+    // htmx<=2 exposed `detail.elt` + `detail.question` + issueRequest(). Read
+    // both shapes so the designed dialog works on whichever htmx a consumer
+    // ships (Dazzle vendors htmx-4). `ctx` falls back to `detail` itself so a
+    // future flattening doesn't re-break this.
+    var ctx = d.ctx || d;
+    var elt = d.elt || ctx.sourceElement;
+    if (
+      !elt ||
+      (elt.hasAttribute && elt.hasAttribute("data-native-confirm"))
+    )
+      return;
+    var question = d.question || ctx.confirm;
     if (!question) return; // no hx-confirm on this element
 
     evt.preventDefault(); // suppress window.confirm; we own the flow now
@@ -195,14 +214,18 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     function onAccept() {
       cleanup();
       // true = skip re-running the confirm hook for this request
-      evt.detail.issueRequest(true);
+      if (d.issueRequest) d.issueRequest(true);
     }
     function onCancel() {
       cleanup();
+      // htmx-4: explicitly drop the held request; htmx<=2: preventDefault
+      // already suppressed it, so dropRequest is absent and this is a no-op.
+      if (d.dropRequest) d.dropRequest();
     }
     function onClose() {
       // Esc / backdrop close — treat as cancel
       cleanup();
+      if (d.dropRequest) d.dropRequest();
     }
 
     accept.addEventListener("click", onAccept);

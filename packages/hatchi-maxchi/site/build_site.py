@@ -254,22 +254,29 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     doGet(el);
   });
 
-  // hx-confirm -> htmx:confirm (drives dz-confirm.js)
+  // hx-confirm -> htmx:confirm (drives dz-confirm.js).
+  // Fires the REAL htmx-4 event shape: the config lives under `detail.ctx`
+  // (sourceElement + confirm), and the request is issued/dropped via the two
+  // functions on `detail`. (Earlier this mock fired the htmx-2 shape
+  // {elt, question} — which no real htmx-4 consumer sees, so it silently
+  // masked the htmx-4 detail-shape break in dz-confirm.js.)
   document.addEventListener("click", function (e) {
     var el = e.target.closest && e.target.closest("[hx-confirm]");
     if (!el) return;
     e.preventDefault();
+    var issued = false;
     fire(el, "htmx:confirm", {
-      elt: el,
-      question: el.getAttribute("hx-confirm"),
+      ctx: { sourceElement: el, confirm: el.getAttribute("hx-confirm") },
       issueRequest: function () {
+        issued = true;
         // demo: flash a toast-ish confirmation
         var note = document.createElement("div");
         note.className = "hm-toast";
         note.textContent = "Deleted (demo).";
         document.body.appendChild(note);
         setTimeout(function () { note.remove(); }, 1800);
-      }
+      },
+      dropRequest: function () { issued = false; }
     });
   });
 

@@ -134,12 +134,31 @@ def test_palette_arrows_and_enter(page) -> None:  # type: ignore[no-untyped-def]
 
 
 def test_confirm_dialog_intercepts_hx_confirm(page) -> None:  # type: ignore[no-untyped-def]
+    # The gallery mock fires the real htmx-4 `htmx:confirm` shape (config under
+    # detail.ctx, issueRequest/dropRequest). This guards the full flow, not just
+    # dialog-open, so an htmx-detail-shape drift (which silently degrades the
+    # designed dialog to native window.confirm) is caught.
+    question = page.get_attribute("[hx-confirm]", "hx-confirm")
     page.click("[hx-confirm]")
     page.wait_for_timeout(150)
     assert page.evaluate(
         "!!document.querySelector('dialog.alert-dialog') && "
         "document.querySelector('dialog.alert-dialog').open"
     ), "clicking an hx-confirm element must open the designed dz-alert-dialog"
+    # message is populated from the event payload (proves the confirm text was
+    # read off the htmx-4 detail.ctx.confirm, not a stale detail.question)
+    assert page.inner_text("dialog.alert-dialog .alert-dialog__message").strip() == question, (
+        "the designed dialog must show the hx-confirm text"
+    )
+    # accepting issues the request (the mock flags it with a toast)
+    page.click("dialog.alert-dialog [data-confirm-accept]")
+    page.wait_for_timeout(150)
+    assert page.query_selector(".hm-toast") is not None, (
+        "confirming must call issueRequest() (htmx-4 continuation) — the request was dropped"
+    )
+    assert not page.evaluate("document.querySelector('dialog.alert-dialog').open"), (
+        "the dialog must close after confirm"
+    )
 
 
 def test_copy_button_copies_and_gives_feedback(_engine_browser) -> None:  # type: ignore[no-untyped-def]

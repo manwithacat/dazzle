@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.65] - 2026-07-04
+## [0.93.66] - 2026-07-04
+
+### Fixed
+- **HM `confirm` Hyperpart was silently degrading to native `window.confirm` under htmx-4 (fleet-wide).** htmx-4 changed the `htmx:confirm` event detail shape — the config moved under `evt.detail.ctx` (`sourceElement`, `confirm`) and the continuation split into `issueRequest()`/`dropRequest()`. `dz-confirm.js` read the htmx-2 shape (`evt.detail.elt` / `evt.detail.question`), got `undefined`, and bailed — so every `hx-confirm` action lost its designed dialog and fell back to the native browser confirm. Destructive actions were still gated, but the styled dialog never rendered. Fixed `dz-confirm.js` to read both shapes and to call `dropRequest()` on cancel/Esc (HM package 0.1.1 → 0.1.2). Root-caused by dumping the real htmx-4 event detail; verified end-to-end in a real browser against the rebuilt bundle under real htmx-4 (dialog opens with the correct message, Confirm issues the request, Cancel/Esc drop it).
+- **The HM gallery mock hid this** — it fired the htmx-2 `htmx:confirm` shape while labeled `version: "mock-4"`, so the behaviour test stayed green against a shape no real htmx-4 consumer sees. The mock now fires the real htmx-4 shape, and the `test_confirm_dialog_intercepts_hx_confirm` behaviour test was strengthened to assert the message populates from `ctx.confirm` and that accepting issues the request.
+
+### Agent Guidance
+- **When a controller reads an htmx event's `evt.detail`, account for the htmx-4 shape.** htmx-4 nests request config under `evt.detail.ctx` and exposes `issueRequest`/`dropRequest`; htmx≤2 used flat `evt.detail.elt`/`evt.detail.question`/`issueRequest`. Read defensively (`detail.x || ctx.x`). Keep HM gallery mocks in sync with the real htmx version they claim, or they mask integration breaks. Separately noted (not fixed here): `dz-alpine.js` still binds the dead htmx-2 `htmx:after:settle` event name (htmx-4 is `htmx:afterSettle`).
 
 ### Removed
 - **HM migration — Bucket A2 (dead Alpine JS shadows):** removed 6 `Alpine.data()` registrations from `page/runtime/static/js/dz-alpine.js` (−265 lines). `dzConfirm` and `dzCommandPalette` duplicated the ingested HM controllers (`dz-confirm.js` intercepts `hx-confirm`; `dz-command.js` drives `dialog.dz-command` on ⌘K) and were never instantiated in the live app. `dzPopover`/`dzTooltip`/`dzContextMenu`/`dzToggleGroup` were dead — their CSS was deleted in v0.93.64 (Bucket A) and they were never instantiated either (only a dev-only, non-test-gated `test-event-widgets.html` harness referenced some). Kept: dzToast, dzTable, dzMoney, dzFileUpload, dzWizard, dzConfirmGate, dzSlideOver, dzThemeSwitcher. Verified: `node --check`, full non-e2e suite (zero new failures), real-browser ⌘K palette opens + lazy-loads via the ingested HM `dz-command.js`, and adversarial review (VERDICT SHIP).
