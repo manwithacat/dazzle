@@ -253,6 +253,34 @@ HYPERPARTS: list[Hyperpart] = [
         "accessible tooltip: keep it non-critical (no touch/SR/keyboard path).",
         '<button class="dz-button" data-dz-variant="outline" data-dz-tooltip="Saved 2 minutes ago">Hover me</button>',
     ),
+    Hyperpart(
+        "dialog",
+        "Dialog",
+        "Overlays",
+        "Modal on the native <dialog> — one line of JS to open, close for free "
+        "(Esc / backdrop / method=dialog submit). Focus-trapped by the platform.",
+        '<button class="dz-button" data-dz-variant="primary" data-dz-dialog-open="hm-dialog-demo">'
+        "Delete workspace…</button>"
+        '<dialog class="dz-dialog" id="hm-dialog-demo" aria-labelledby="hm-dialog-demo-title" closedby="any">'
+        '<form method="dialog">'
+        '<div class="dz-dialog__header">'
+        '<h2 class="dz-dialog__title" id="hm-dialog-demo-title">Delete workspace?</h2>'
+        '<button type="submit" class="dz-dialog__close" aria-label="Close dialog">{svg:x}</button>'
+        "</div>"
+        '<div class="dz-dialog__body"><p>This permanently deletes the workspace and every '
+        "record in it. This action cannot be undone.</p></div>"
+        '<div class="dz-dialog__footer">'
+        '<button type="submit" class="dz-button" data-dz-variant="outline">Cancel</button>'
+        '<button type="submit" class="dz-button" data-dz-variant="destructive" value="confirm">Delete</button>'
+        "</div></form></dialog>",
+        notes="Opening is the only scripted behaviour (<code>dz-dialog.js</code> calls "
+        "<code>showModal()</code> for a <code>[data-dz-dialog-open]</code> trigger); closing is "
+        "native. The confirm button closes the dialog and sets <code>returnValue</code> — in a "
+        "real app, carry the action on it (<code>hx-delete</code> …) or submit a form to the server.",
+        tags=("interactive",),
+        composes=("button",),
+        controller="controllers/dz-dialog.js",
+    ),
     # ── Forms ────────────────────────────────────────────────────────
     Hyperpart(
         "controls",
@@ -264,6 +292,31 @@ HYPERPARTS: list[Hyperpart] = [
         '<label class="hm-inline"><input type="radio" class="dz-radio" checked> Radio</label>'
         '<label class="hm-inline"><input type="checkbox" class="dz-switch" checked> Switch</label>'
         "</div>",
+    ),
+    Hyperpart(
+        "field",
+        "Field",
+        "Forms",
+        "The label + control + help + error triad as one accessible unit. Error "
+        "state derives from aria-invalid; help/error bind via aria-describedby.",
+        '<div class="hm-stack hm-measure">'
+        '<div class="dz-form-field">'
+        '<label class="dz-form-label" for="hm-field-email">Billing email'
+        '<span class="dz-form-required">*</span></label>'
+        '<input class="dz-form-input" id="hm-field-email" type="email" required '
+        'placeholder="you@company.com" aria-describedby="hm-field-email-hint">'
+        '<p class="dz-form-hint" id="hm-field-email-hint">Receipts and renewal notices go here.</p>'
+        "</div>"
+        '<div class="dz-form-field">'
+        '<label class="dz-form-label" for="hm-field-slug">Workspace slug</label>'
+        '<input class="dz-form-input" id="hm-field-slug" value="Acme Corp" '
+        'aria-invalid="true" aria-describedby="hm-field-slug-error">'
+        '<p class="dz-form-error" id="hm-field-slug-error">Use lowercase letters, numbers and hyphens only.</p>'
+        "</div></div>",
+        notes="Reuses the <code>dz-form-*</code> family (label / hint / input / error). The "
+        "invalid field needs no modifier class — the red border keys off "
+        "<code>aria-invalid=&quot;true&quot;</code>, the same attribute assistive tech reads.",
+        tags=("forms",),
     ),
     Hyperpart(
         "toggle-group",
@@ -286,6 +339,29 @@ HYPERPARTS: list[Hyperpart] = [
         '<li aria-current="page">INV-0042</li></ol></nav>',
     ),
     Hyperpart(
+        "accordion",
+        "Accordion",
+        "Navigation",
+        "Native <details> group; single-open via the HTML name= attribute — "
+        "opening one closes its siblings, zero JS.",
+        '<div class="dz-accordion">'
+        '<details class="dz-accordion__item" name="hm-acc" open>'
+        '<summary class="dz-accordion__trigger">What is a Hyperpart?</summary>'
+        '<div class="dz-accordion__panel">A server-rendered partial plus its exchange '
+        "contract — the htmx-native unit of reuse.</div></details>"
+        '<details class="dz-accordion__item" name="hm-acc">'
+        '<summary class="dz-accordion__trigger">Do I need a client framework?</summary>'
+        '<div class="dz-accordion__panel">No — state lives on the server and htmx swaps the markup.</div></details>'
+        '<details class="dz-accordion__item" name="hm-acc">'
+        '<summary class="dz-accordion__trigger">Can two panels be open at once?</summary>'
+        '<div class="dz-accordion__panel">Not while they share a name=. Drop the attribute for an '
+        "independent, multi-open group.</div></details></div>",
+        notes="Exclusivity is the native <code>name</code> attribute on "
+        "<code>&lt;details&gt;</code> — the browser closes the open sibling for you. No "
+        "<code>aria-expanded</code> wiring: <code>&lt;details&gt;/&lt;summary&gt;</code> carry it.",
+        tags=("interactive",),
+    ),
+    Hyperpart(
         "avatar",
         "Avatar",
         "Data",
@@ -302,6 +378,25 @@ HYPERPARTS: list[Hyperpart] = [
         '<div class="hm-stack hm-measure">'
         '<div class="dz-progress" role="progressbar" aria-label="Storage used" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="--dz-progress-value:62%"></div></div>'
         '<div class="dz-progress" data-dz-tone="success" role="progressbar" aria-label="Upload progress" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="--dz-progress-value:100%"></div></div></div>',
+    ),
+    Hyperpart(
+        "skeleton",
+        "Skeleton",
+        "Feedback",
+        "Loading placeholder with a lifecycle-driven sheen (TASTE-9) — drop it "
+        "into a swap target while the request is in flight.",
+        '<div class="dz-card dz-card-body hm-measure hm-stack" aria-hidden="true">'
+        '<div class="hm-demo-row">'
+        '<div class="dz-skeleton" data-dz-shape="circle"></div>'
+        '<div class="hm-grow hm-stack">'
+        '<div class="dz-skeleton" data-dz-shape="text"></div>'
+        '<div class="dz-skeleton" data-dz-shape="text"></div>'
+        "</div></div>"
+        '<div class="dz-skeleton" data-dz-shape="block"></div></div>',
+        notes="Purely decorative, so the placeholder region is <code>aria-hidden</code>; announce "
+        "&ldquo;loading&rdquo; on the live region that owns the swap. Shapes: "
+        "<code>data-dz-shape=&quot;text|circle|block&quot;</code>. The sheen honours "
+        "<code>prefers-reduced-motion</code>.",
     ),
     Hyperpart(
         "empty-state",

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.55] - 2026-07-04
+
+### Added
+- **HM Hyperpart library expansion — batch 1: Dialog, Accordion, Skeleton, Field.** Four new components translated into HM's hypermedia idiom (not transplanted from React), spanning all three idiom tiers: **Dialog** (`components/dialog.css` + `controllers/dz-dialog.js`) — native `<dialog>` modal where the *only* scripted behaviour is opening (a delegated `[data-dz-dialog-open="id"]` click → `showModal()`); close is native (`<form method="dialog">` submit + Esc + `closedby="any"` backdrop), focus-trapping is the platform's, and it's instance-isolated (each trigger addresses its own dialog by id, so N coexist), composing the `button` Hyperpart. **Accordion** (`components/accordion.css`) — native `<details>` group with single-open exclusivity via the HTML `name=` attribute, zero JS. **Skeleton** (`components/skeleton.css`) — CSS-only shimmer placeholder with `data-dz-shape="text|circle|block"`, lifecycle-driven sheen honouring `prefers-reduced-motion` (TASTE-9). **Field** (registry only) — the `dz-form-*` label/hint/input/error triad as one accessible unit, error state keyed off `aria-invalid`. New dialog behaviour tests (open/close + instance isolation) run in Chromium + WebKit. Design: `docs/superpowers/specs/2026-07-04-hyperpart-library-expansion-design.md`.
+
+### Changed
+- **HM markup-validity gate ignores two more vnu-lag false positives.** The pinned vnu (20.6.30) predates `method="dialog"` on `<form>` (the native no-JS dialog-close mechanism, spec'd 2014) and `name` on `<details>` (2024 single-open exclusivity). Both are standard HTML; the CI `validity` job's `--ignore-re` now lists them alongside `closedby` (each pattern narrow, so real structural errors still gate).
+
+### Removed
+- **Retired the redundant legacy skeleton shimmer from HM `base/design-system.css`.** A `.skeleton, .dz-skeleton` block + `skeleton-shimmer` keyframe was superseded by the new `skeleton` Hyperpart's canonical `.dz-skeleton`; two `.dz-skeleton` definitions in one bundle resolved only by `@layer` order was a footgun. Dazzle is unaffected — its own runtime `.dz-skeleton` (unlayered) already wins.
+
+### Agent Guidance
+- **HM Hyperparts are "build-to-replace", not additive.** An HM component only counts once Dazzle *adopts* it — i.e. deletes its bespoke equivalent and repoints callers (ADR-0003 clean break, atomic across the ingest boundary). A Hyperpart whose `.dz-*` class collides with a Dazzle-native rule is shadowed by Dazzle's unlayered CSS and never actually used (the skeleton case). When authoring a new Hyperpart, grep Dazzle (`src/dazzle/**`) for an existing equivalent first and plan the convergence; add a "Replaces (Dazzle)" note to its design entry. Batch 1's convergence (skeleton → repoint ~6 render emitters + drop Dazzle's bespoke skeleton CSS) is the next dedicated pass.
+- **After changing HM CSS/JS, rebuild both dists.** `python packages/hatchi-maxchi/build.py` + `site/build_site.py` (HM), then `python scripts/build_dist.py` (Dazzle ingests HM via `build_css("dz-")`/`build_js("dz-")` into `dist/dazzle.min.*`). New controllers go in HM `build.py` JS_SOURCES; new mocks in `site/build_site.py`. Pre-check gallery markup with `html5validator` locally; regen the linux visual baseline via `update-baselines.yml` after any gallery-section change.
+
 ## [0.93.37] - 2026-07-04
 
 ### Changed

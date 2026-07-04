@@ -1,0 +1,99 @@
+/* HYPERPART: dialog */
+/*
+ * dz-dialog — modal built on the native <dialog>. Opening is the only
+ * behaviour that needs script: dz-dialog.js calls showModal() when a
+ * [data-dz-dialog-open="id"] trigger is clicked. Everything else is
+ * native — CLOSE is a <form method="dialog"> submit (the ✕ and footer
+ * buttons), Esc, or a backdrop tap (closedby="any"); focus trapping and
+ * the inert background come free; showModal() moves focus into the dialog.
+ *
+ * Instance-safe: the trigger names its dialog by id, so any number of
+ * dialogs coexist on a page (no shared global handle).
+ */
+
+dialog.dz-dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-lg);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  box-shadow: var(--shadow-lg);
+}
+
+dialog.dz-dialog::backdrop {
+  background: oklch(13% 0.028 261.69 / 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.dz-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-lg) var(--space-md);
+}
+
+.dz-dialog__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+/* Always-visible dismiss affordance — a native submit inside the
+   method="dialog" form, so the tap closes with no JS (touch-safe). */
+.dz-dialog__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: calc(var(--space-xs) * -1) calc(var(--space-xs) * -1) 0 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--colour-text-muted);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-dialog__close:hover {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
+.dz-dialog__close:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.dz-dialog__close svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.dz-dialog__body {
+  padding: 0 var(--space-lg);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  line-height: var(--leading-normal);
+}
+
+.dz-dialog__body p {
+  margin: 0;
+}
+
+.dz-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-dialog__close { transition: none; }
+}

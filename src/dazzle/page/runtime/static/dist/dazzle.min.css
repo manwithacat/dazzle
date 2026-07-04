@@ -1,4 +1,4 @@
-/* dazzle v0.93.49 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.55 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -663,22 +663,6 @@ color: var(--colour-text);
 .loading {
 color: var(--colour-brand);
 }
-.skeleton,
-.dz-skeleton {
-background: linear-gradient(
-90deg,
-var(--colour-surface-muted) 25%,
-color-mix(in oklab, var(--colour-surface-muted) 60%, transparent) 50%,
-var(--colour-surface-muted) 75%
-);
-background-size: 200% 100%;
-animation: skeleton-shimmer 1.5s ease-in-out infinite;
-border-radius: var(--radius);
-}
-@keyframes skeleton-shimmer {
-0% { background-position: 200% 0; }
-100% { background-position: -200% 0; }
-}
 .dz-spinner {
 display: inline-block;
 width: 1rem;
@@ -1234,6 +1218,64 @@ font-size: var(--text-sm);
 }
 }
 @layer components {
+.dz-accordion {
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-md);
+background: var(--colour-surface);
+overflow: hidden;
+}
+.dz-accordion__item + .dz-accordion__item {
+border-block-start: 1px solid var(--colour-border);
+}
+.dz-accordion__trigger {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: var(--space-md);
+padding: var(--space-md) var(--space-lg);
+font-size: var(--text-sm);
+font-weight: var(--weight-medium);
+color: var(--colour-text);
+cursor: pointer;
+list-style: none;
+transition: background var(--duration-fast) var(--ease-out);
+}
+.dz-accordion__trigger::-webkit-details-marker { display: none; }
+.dz-accordion__trigger:hover {
+background: var(--colour-surface-muted);
+}
+.dz-accordion__trigger:focus-visible {
+outline: var(--focus-ring-width) solid var(--focus-ring-color);
+outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+.dz-accordion__trigger::after {
+content: "";
+flex: none;
+width: 1rem;
+height: 1rem;
+background: currentColor;
+opacity: 0.55;
+mask: center / contain no-repeat
+url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+transition: transform var(--duration-base) var(--ease-out);
+}
+.dz-accordion__item[open] .dz-accordion__trigger::after {
+transform: rotate(180deg);
+}
+.dz-accordion__panel {
+padding: 0 var(--space-lg) var(--space-md);
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+line-height: var(--leading-normal);
+}
+@media (prefers-reduced-motion: reduce) {
+.dz-accordion__trigger,
+.dz-accordion__trigger::after {
+transition: none;
+}
+}
+}
+@layer components {
 .dz-alert {
 display: flex;
 gap: var(--space-md);
@@ -1549,6 +1591,81 @@ pointer-events: none;
 height: 1.75rem;
 padding-inline: var(--space-md);
 font-size: var(--text-xs);
+}
+}
+@layer components {
+dialog.dz-dialog {
+width: min(32rem, calc(100vw - 2rem));
+padding: 0;
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-lg);
+background: var(--colour-surface);
+color: var(--colour-text);
+box-shadow: var(--shadow-lg);
+}
+dialog.dz-dialog::backdrop {
+background: oklch(13% 0.028 261.69 / 0.4);
+backdrop-filter: blur(2px);
+}
+.dz-dialog__header {
+display: flex;
+align-items: flex-start;
+gap: var(--space-md);
+padding: var(--space-lg) var(--space-lg) var(--space-md);
+}
+.dz-dialog__title {
+flex: 1;
+min-width: 0;
+margin: 0;
+font-size: var(--text-lg);
+font-weight: var(--weight-semibold);
+color: var(--colour-text);
+}
+.dz-dialog__close {
+flex: none;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 2rem;
+height: 2rem;
+margin: calc(var(--space-xs) * -1) calc(var(--space-xs) * -1) 0 0;
+padding: 0;
+border: none;
+border-radius: var(--radius-sm);
+background: transparent;
+color: var(--colour-text-muted);
+cursor: pointer;
+transition: background var(--duration-fast) var(--ease-out);
+}
+.dz-dialog__close:hover {
+background: var(--colour-surface-muted);
+color: var(--colour-text);
+}
+.dz-dialog__close:focus-visible {
+outline: var(--focus-ring-width) solid var(--focus-ring-color);
+outline-offset: var(--focus-ring-offset);
+}
+.dz-dialog__close svg {
+width: 1rem;
+height: 1rem;
+}
+.dz-dialog__body {
+padding: 0 var(--space-lg);
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+line-height: var(--leading-normal);
+}
+.dz-dialog__body p {
+margin: 0;
+}
+.dz-dialog__footer {
+display: flex;
+justify-content: flex-end;
+gap: var(--space-sm);
+padding: var(--space-lg);
+}
+@media (prefers-reduced-motion: reduce) {
+.dz-dialog__close { transition: none; }
 }
 }
 @layer components {
@@ -2897,6 +3014,49 @@ tr.htmx-added,
 tr.htmx-settling {
 animation: none;
 }
+}
+}
+@layer components {
+.dz-skeleton {
+--dz-skeleton-base: var(--colour-surface-muted);
+--dz-skeleton-sheen: color-mix(in oklab, var(--colour-text) 8%, var(--colour-surface-muted));
+display: block;
+width: 100%;
+border-radius: var(--radius-sm);
+background-color: var(--dz-skeleton-base);
+background-image: linear-gradient(
+90deg,
+transparent 0%,
+var(--dz-skeleton-sheen) 50%,
+transparent 100%
+);
+background-size: 200% 100%;
+background-repeat: no-repeat;
+animation: dz-skeleton-sweep 1.4s var(--ease-out, ease) infinite;
+}
+.dz-skeleton[data-dz-shape="text"] {
+height: 0.75rem;
+border-radius: var(--radius-full);
+}
+.dz-skeleton[data-dz-shape="text"]:last-child {
+width: 65%;
+}
+.dz-skeleton[data-dz-shape="circle"] {
+width: 2.5rem;
+height: 2.5rem;
+flex: none;
+border-radius: var(--radius-full);
+}
+.dz-skeleton[data-dz-shape="block"] {
+min-height: 4rem;
+border-radius: var(--radius-md);
+}
+@keyframes dz-skeleton-sweep {
+from { background-position: 150% 0; }
+to { background-position: -150% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+.dz-skeleton { animation: none; }
 }
 }
 @layer components {

@@ -978,24 +978,10 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   color: var(--colour-brand);
 }
 
-/* Skeleton shimmer */
-.skeleton,
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--colour-surface-muted) 25%,
-    color-mix(in oklab, var(--colour-surface-muted) 60%, transparent) 50%,
-    var(--colour-surface-muted) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
-  border-radius: var(--radius);
-}
-
-@keyframes skeleton-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+/* NOTE: the skeleton shimmer that lived here was superseded by the
+   `skeleton` Hyperpart (components/skeleton.css) — the single canonical
+   `.skeleton` with data-shape variants. Two `.skeleton` blocks
+   resolved only by @layer order was a footgun; retired 2026-07-04. */
 
 /* Spinner for HTMX loading */
 .spinner {
@@ -1666,6 +1652,89 @@ th {
 }
 
 }
+/* ── components/accordion.css ── */
+@layer components {
+/* HYPERPART: accordion */
+/*
+ * accordion — native <details> disclosure group.
+ *
+ * Zero JS. Single-open exclusivity is the HTML `name=` attribute: items
+ * sharing a name auto-close their siblings (the shadcn `type="single"`
+ * behaviour, with no controller). Drop `name` for an independent
+ * (multi-open) group. Keyboard + AT semantics are the browser's own
+ * <details>/<summary> — nothing to re-implement.
+ */
+
+.accordion {
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  overflow: hidden;
+}
+
+.accordion__item + .accordion__item {
+  border-block-start: 1px solid var(--colour-border);
+}
+
+.accordion__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  cursor: pointer;
+  list-style: none;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.accordion__trigger::-webkit-details-marker { display: none; }
+
+.accordion__trigger:hover {
+  background: var(--colour-surface-muted);
+}
+
+.accordion__trigger:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  /* inset: the accordion clips its corners (overflow:hidden), so an
+     outward offset ring would be cropped at the item edges. */
+  outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+
+/* CSS chevron — inherits currentColor, rotates when the item is open. */
+.accordion__trigger::after {
+  content: "";
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  opacity: 0.55;
+  mask: center / contain no-repeat
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.accordion__item[open] .accordion__trigger::after {
+  transform: rotate(180deg);
+}
+
+.accordion__panel {
+  padding: 0 var(--space-lg) var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  line-height: var(--leading-normal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accordion__trigger,
+  .accordion__trigger::after {
+    transition: none;
+  }
+}
+
+}
 /* ── components/alert.css ── */
 @layer components {
 /*
@@ -2136,6 +2205,109 @@ dialog.alert-dialog::backdrop {
   height: 1.75rem;
   padding-inline: var(--space-md);
   font-size: var(--text-xs);
+}
+
+}
+/* ── components/dialog.css ── */
+@layer components {
+/* HYPERPART: dialog */
+/*
+ * dialog — modal built on the native <dialog>. Opening is the only
+ * behaviour that needs script: dialog.js calls showModal() when a
+ * [data-dialog-open="id"] trigger is clicked. Everything else is
+ * native — CLOSE is a <form method="dialog"> submit (the ✕ and footer
+ * buttons), Esc, or a backdrop tap (closedby="any"); focus trapping and
+ * the inert background come free; showModal() moves focus into the dialog.
+ *
+ * Instance-safe: the trigger names its dialog by id, so any number of
+ * dialogs coexist on a page (no shared global handle).
+ */
+
+dialog.dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-lg);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  box-shadow: var(--shadow-lg);
+}
+
+dialog.dialog::backdrop {
+  background: oklch(13% 0.028 261.69 / 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.dialog__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-lg) var(--space-md);
+}
+
+.dialog__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+/* Always-visible dismiss affordance — a native submit inside the
+   method="dialog" form, so the tap closes with no JS (touch-safe). */
+.dialog__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: calc(var(--space-xs) * -1) calc(var(--space-xs) * -1) 0 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--colour-text-muted);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dialog__close:hover {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
+.dialog__close:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.dialog__close svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.dialog__body {
+  padding: 0 var(--space-lg);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  line-height: var(--leading-normal);
+}
+
+.dialog__body p {
+  margin: 0;
+}
+
+.dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog__close { transition: none; }
 }
 
 }
@@ -4103,6 +4275,71 @@ button.htmx-request,
   tr.htmx-settling {
     animation: none;
   }
+}
+
+}
+/* ── components/skeleton.css ── */
+@layer components {
+/* HYPERPART: skeleton */
+/*
+ * skeleton — loading placeholder. A muted block with a low-contrast
+ * sheen sweep derived from the request lifecycle (taste principle 9,
+ * TASTE-9): drop it into a swap target while `.htmx-request` is in flight,
+ * so the loading state IS the design language, not a spinner bolted on.
+ *
+ * Shapes via data-shape: `text` (a line of copy), `circle` (avatar),
+ * `block` (media / card body). Purely decorative — hide the placeholder
+ * from AT (aria-hidden on the region) and announce "loading" on the live
+ * region that owns the swap, not here.
+ */
+
+.skeleton {
+  /* internal tokens (double-dash → never reprefixed, kept out of the API) */
+  --dz-skeleton-base: var(--colour-surface-muted);
+  --dz-skeleton-sheen: color-mix(in oklab, var(--colour-text) 8%, var(--colour-surface-muted));
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  background-color: var(--dz-skeleton-base);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--dz-skeleton-sheen) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-sweep 1.4s var(--ease-out, ease) infinite;
+}
+
+.skeleton[data-shape="text"] {
+  height: 0.75rem;
+  border-radius: var(--radius-full);
+}
+
+.skeleton[data-shape="text"]:last-child {
+  width: 65%;
+}
+
+.skeleton[data-shape="circle"] {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  border-radius: var(--radius-full);
+}
+
+.skeleton[data-shape="block"] {
+  min-height: 4rem;
+  border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-sweep {
+  from { background-position: 150% 0; }
+  to { background-position: -150% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
 }
 
 }

@@ -1,0 +1,61 @@
+/* HYPERPART: skeleton */
+/*
+ * dz-skeleton — loading placeholder. A muted block with a low-contrast
+ * sheen sweep derived from the request lifecycle (taste principle 9,
+ * TASTE-9): drop it into a swap target while `.htmx-request` is in flight,
+ * so the loading state IS the design language, not a spinner bolted on.
+ *
+ * Shapes via data-dz-shape: `text` (a line of copy), `circle` (avatar),
+ * `block` (media / card body). Purely decorative — hide the placeholder
+ * from AT (aria-hidden on the region) and announce "loading" on the live
+ * region that owns the swap, not here.
+ */
+
+.dz-skeleton {
+  /* internal tokens (double-dash → never reprefixed, kept out of the API) */
+  --dz-skeleton-base: var(--colour-surface-muted);
+  --dz-skeleton-sheen: color-mix(in oklab, var(--colour-text) 8%, var(--colour-surface-muted));
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  background-color: var(--dz-skeleton-base);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--dz-skeleton-sheen) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: dz-skeleton-sweep 1.4s var(--ease-out, ease) infinite;
+}
+
+.dz-skeleton[data-dz-shape="text"] {
+  height: 0.75rem;
+  border-radius: var(--radius-full);
+}
+
+.dz-skeleton[data-dz-shape="text"]:last-child {
+  width: 65%;
+}
+
+.dz-skeleton[data-dz-shape="circle"] {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  border-radius: var(--radius-full);
+}
+
+.dz-skeleton[data-dz-shape="block"] {
+  min-height: 4rem;
+  border-radius: var(--radius-md);
+}
+
+@keyframes dz-skeleton-sweep {
+  from { background-position: 150% 0; }
+  to { background-position: -150% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-skeleton { animation: none; }
+}

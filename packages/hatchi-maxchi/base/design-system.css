@@ -574,24 +574,10 @@ a, button, .btn, input, select, textarea, .dz-card, .menu li a {
   color: var(--colour-brand);
 }
 
-/* Skeleton shimmer */
-.skeleton,
-.dz-skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--colour-surface-muted) 25%,
-    color-mix(in oklab, var(--colour-surface-muted) 60%, transparent) 50%,
-    var(--colour-surface-muted) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
-  border-radius: var(--radius);
-}
-
-@keyframes skeleton-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+/* NOTE: the skeleton shimmer that lived here was superseded by the
+   `skeleton` Hyperpart (components/skeleton.css) — the single canonical
+   `.dz-skeleton` with data-dz-shape variants. Two `.dz-skeleton` blocks
+   resolved only by @layer order was a footgun; retired 2026-07-04. */
 
 /* Spinner for HTMX loading */
 .dz-spinner {

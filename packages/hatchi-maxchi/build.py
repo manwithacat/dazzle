@@ -38,13 +38,16 @@ CSS_SOURCES = [
     ("tokens", "tokens/tokens.css"),
     ("tokens", "base/design-system.css"),
     ("base", "base/base.css"),
+    ("components", "components/accordion.css"),
     ("components", "components/alert.css"),
     ("components", "components/badge.css"),
     ("components", "components/button.css"),
+    ("components", "components/dialog.css"),
     ("components", "components/form.css"),
     ("components", "components/fragment-primitives.css"),
     ("components", "components/hm-core.css"),
     ("components", "components/htmx-states.css"),
+    ("components", "components/skeleton.css"),
     ("components", "components/table.css"),
     ("components", "components/touch-targets.css"),
 ]
@@ -55,6 +58,7 @@ JS_SOURCES = [
     "controllers/dz-confirm.js",
     "controllers/dz-command.js",
     "controllers/dz-master-detail.js",
+    "controllers/dz-dialog.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

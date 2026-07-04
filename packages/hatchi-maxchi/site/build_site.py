@@ -293,6 +293,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
+.hm-grow { flex: 1 1 0; min-width: 0; }
 .hm-inline { display:inline-flex; align-items:center; gap: .5rem; font-size: var(--text-sm); }
 .hm-code { position: relative; }
 .hm-code pre { margin: 0; padding: 1rem 4rem 1rem 1.25rem; overflow-x: auto;

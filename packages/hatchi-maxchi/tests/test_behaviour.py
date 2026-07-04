@@ -195,6 +195,55 @@ def test_theme_choice_persists_across_reload(page) -> None:  # type: ignore[no-u
     assert page.evaluate("document.querySelector('input[data-hm-theme=dark]').checked")
 
 
+def test_dialog_opens_and_closes_natively(page) -> None:  # type: ignore[no-untyped-def]
+    """The dialog opens from its trigger (the one scripted behaviour) and
+    closes with no extra JS: the ✕ is a <form method="dialog"> submit, and
+    Esc is native <dialog> cancel. Runs in WebKit too — Safari's <dialog>."""
+    dlg = "dialog.dialog"
+    assert not page.evaluate(f"document.querySelector('{dlg}').open")
+    page.click("[data-dialog-open]")
+    page.wait_for_timeout(120)
+    assert page.evaluate(f"document.querySelector('{dlg}').open"), "trigger must open the dialog"
+    # native close via the method="dialog" submit (the ✕ button)
+    page.click(f"{dlg} .dialog__close")
+    page.wait_for_timeout(120)
+    assert not page.evaluate(f"document.querySelector('{dlg}').open"), (
+        "a method='dialog' submit (the ✕) must close the dialog — no JS needed"
+    )
+    # reopen, then Esc (native <dialog> cancel) closes
+    page.click("[data-dialog-open]")
+    page.wait_for_timeout(120)
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(120)
+    assert not page.evaluate(f"document.querySelector('{dlg}').open"), "Esc must close the dialog"
+
+
+def test_dialog_instance_isolation(page) -> None:  # type: ignore[no-untyped-def]
+    """The opener addresses each dialog by id (getElementById), so a second
+    dialog with its own id opens independently — N dialogs coexist with no
+    shared global handle (contrast the command palette's page singleton)."""
+    page.evaluate(
+        "() => { const d = document.querySelector('dialog.dialog');"
+        " const c = d.cloneNode(true); c.id = 'hm-dialog-clone';"
+        # strip the cloned title id + labelledby so the live DOM has no dup id
+        " c.removeAttribute('aria-labelledby');"
+        " const h = c.querySelector('.dialog__title'); if (h) h.removeAttribute('id');"
+        " const t = document.createElement('button');"
+        " t.id = 'clone-trigger'; t.setAttribute('data-dialog-open', 'hm-dialog-clone');"
+        " d.after(c); d.after(t); }"
+    )
+    page.wait_for_timeout(50)
+    page.click("#clone-trigger")
+    page.wait_for_timeout(120)
+    # the CLONE opened; the original stays shut — addressed-by-id isolation
+    assert page.evaluate("document.getElementById('hm-dialog-clone').open"), (
+        "the clone's trigger must open the clone"
+    )
+    assert not page.evaluate("document.getElementById('hm-dialog-demo').open"), (
+        "opening one dialog must not open the other (instance isolation)"
+    )
+
+
 def test_master_detail_selection_and_instance_isolation(page) -> None:  # type: ignore[no-untyped-def]
     """The master-detail composite: clicking a list item selects it (aria-current
     moves) AND the controller is instance-isolated — a second master-detail on
