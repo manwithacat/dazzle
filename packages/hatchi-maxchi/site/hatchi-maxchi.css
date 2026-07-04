@@ -4828,6 +4828,17 @@ button.htmx-request,
  * controller writes and assistive tech reads (no parallel state). chevron-up =
  * ascending; descending flips it 180deg. */
 .table-sort-icon {
+  /* The caret is decorative (aria-hidden) and must be transparent to
+   * pointer/touch so a tap on the <svg>/<use> icon (a natural target at the
+   * header's right edge) never becomes the click's event.target. On older iOS
+   * Safari an event target inside an SVG <use> can retarget into the use's
+   * shadow content, from which `closest()` cannot escape → the delegated sort
+   * handler receives null and the tap does nothing. Standard hardening for an
+   * icon inside an interactive control: every tap falls through to the
+   * <button>, so event.target is always the button. (Not reproduced locally —
+   * headless WebKit taps the button fine — but a documented older-Safari
+   * failure mode and the correct mitigation regardless.) */
+  pointer-events: none;
   opacity: 0;
   transition:
     opacity var(--duration-fast) var(--ease-out),

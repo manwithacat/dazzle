@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.76] - 2026-07-04
+
+### Added
+- **`dz-grid` — live filters + a diagnostic demo redesign** (HM package 0.1.11 → 0.1.12). Filter-bar selects (`[data-dz-grid-filter="<key>"]`) now narrow the table on `change`: the controller rebuilds the tbody query from ALL current DOM state — the active sort (read back off the headers' `aria-sort`) AND every filter — so **sort and filter compose** into one server query, then fires `dz-grid:refresh`. An empty value ("Any …") clears that filter; a combination matching no rows reveals the `:has(tbody tr td)` empty-state. `refresh()` is now DOM-driven (single source of truth) rather than taking a sort key/dir. The gallery demo data was rebuilt to be **diagnostic**: 6 rows, First name / Last name split, four columns whose sorts each produce a visibly distinct order and a distinct lead row (unsorted→Mia, first→Amir, last→Sofia, plan→Ravi, signed→Noah), a filter-only `status` field, and a scrambled insertion order. Behaviour-tested on Chromium + WebKit (filter narrow / compose-with-sort / empty-state, plus the sort suite on the new data); grid is below the fold, so no visual-baseline change. Still inert in Dazzle.
+
+### Fixed
+- **Sort caret is now `pointer-events: none`** (`table.css`), so a tap on the decorative `<svg>/<use>` caret always falls through to the header `<button>`. Hardening for a documented older-iOS-Safari failure mode where an event target inside an SVG `<use>` retargets into shadow content and `closest()` can't escape it → the delegated sort handler gets null and the tap silently does nothing. Prompted by an iPadOS report ("sorting always seems to use the first column"); the sort logic itself verified correct in Chromium + WebKit (each column sorts by itself, caret moves to the tapped column) — the report's root cause was most likely the previous sparse 3-row demo data being too similar to show which column had sorted, which the diagnostic redesign above resolves.
+- **Filter labels are now programmatically associated** with their selects (`<label for>` + `id`), replacing the `aria-label`-only pattern.
+
+### Agent Guidance
+- **Sort + filter compose through one DOM-derived query.** `dz-grid`'s controller reads the active sort off the headers' `aria-sort` and every `[data-dz-grid-filter]` value, builds a single query, and fires `dz-grid:refresh`; the **server** applies the WHERE + ORDER BY. Never filter or sort rows client-side. When adding demo/example data for an interactive table, make each sortable column produce a visibly distinct order (and a distinct lead row) — sparse/similar data hides which control fired and reads as a bug. Decorative icons inside interactive controls should carry `pointer-events: none` so taps land on the control (older-Safari SVG `<use>` retargeting).
+
 ## [0.93.75] - 2026-07-04
 
 ### Added

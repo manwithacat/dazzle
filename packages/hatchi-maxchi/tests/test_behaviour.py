@@ -210,7 +210,7 @@ def test_grid_hydrates_rows_via_exchange_with_stable_ids(page) -> None:  # type:
     # By the fixture's 200ms wait the `load` exchange has replaced the skeleton
     # placeholder with the real rows — there are selectable checkboxes now.
     n = page.eval_on_selector_all(boxes, "els => els.length")
-    assert n >= 3, "the tbody must hydrate its rows from the exchange (load trigger)"
+    assert n == 6, "the tbody must hydrate its rows from the exchange (load trigger)"
     # the skeleton placeholder is gone — hydrated rows carry no skeleton
     assert page.eval_on_selector_all(f"{body} .skeleton", "els => els.length") == 0, (
         "the skeleton placeholder must be replaced by the hydrated rows"
@@ -239,7 +239,7 @@ def test_grid_hydrates_rows_via_exchange_with_stable_ids(page) -> None:  # type:
 
 
 def _grid_names(page):  # type: ignore[no-untyped-def]
-    """The Name column (first data cell) of each hydrated row, in DOM order."""
+    """The First-name column (first data cell) of each hydrated row, in DOM order."""
     return page.eval_on_selector_all(
         "[data-grid-body] tr",
         "trs => trs.map(tr => { const c = tr.querySelector('.tr-cell');"
@@ -258,42 +258,94 @@ def test_grid_sort_cycles_direction_and_reorders_rows(page) -> None:  # type: ig
     th's aria-sort, delegated + state-in-DOM), and each click reloads the tbody
     over the wire (dz-grid:refresh → the sort/dir query → the mock returns the
     sorted rows). No client-side row rendering — the server owns the order."""
-    # Unsorted at rest: hydrated in the mock's natural order, header neutral.
-    assert _aria_sort(page, "name") == "none"
-    assert _grid_names(page) == ["Jane Doe", "Ravi Patel", "Mia Chen"]
+    # Unsorted at rest: hydrated in the mock's (scrambled) natural order.
+    assert _aria_sort(page, "first") == "none"
+    natural = ["Mia", "Ravi", "Amir", "Sofia", "Noah", "Jane"]
+    assert _grid_names(page) == natural
 
-    # 1st click → ascending (Jane, Mia, Ravi).
-    page.click("[data-grid-sort='name']")
+    # 1st click → ascending by first name.
+    page.click("[data-grid-sort='first']")
     page.wait_for_timeout(120)
-    assert _aria_sort(page, "name") == "ascending"
-    assert _grid_names(page) == ["Jane Doe", "Mia Chen", "Ravi Patel"]
+    assert _aria_sort(page, "first") == "ascending"
+    assert _grid_names(page) == ["Amir", "Jane", "Mia", "Noah", "Ravi", "Sofia"]
 
     # 2nd click → descending (reversed).
-    page.click("[data-grid-sort='name']")
+    page.click("[data-grid-sort='first']")
     page.wait_for_timeout(120)
-    assert _aria_sort(page, "name") == "descending"
-    assert _grid_names(page) == ["Ravi Patel", "Mia Chen", "Jane Doe"]
+    assert _aria_sort(page, "first") == "descending"
+    assert _grid_names(page) == ["Sofia", "Ravi", "Noah", "Mia", "Jane", "Amir"]
 
     # 3rd click → cleared: back to the natural order, header neutral again.
-    page.click("[data-grid-sort='name']")
+    page.click("[data-grid-sort='first']")
     page.wait_for_timeout(120)
-    assert _aria_sort(page, "name") == "none"
-    assert _grid_names(page) == ["Jane Doe", "Ravi Patel", "Mia Chen"]
+    assert _aria_sort(page, "first") == "none"
+    assert _grid_names(page) == natural
 
 
 def test_grid_sort_is_single_column(page) -> None:  # type: ignore[no-untyped-def]
     """Only one column is sorted at a time: sorting a second column clears the
-    first's aria-sort (one server ORDER BY, one active indicator)."""
-    page.click("[data-grid-sort='name']")
+    first's aria-sort (one server ORDER BY, one active indicator). Sorting by a
+    DIFFERENT column yields a visibly different order — the diagnostic the sparse
+    data lacked."""
+    page.click("[data-grid-sort='first']")
     page.wait_for_timeout(120)
-    assert _aria_sort(page, "name") == "ascending"
+    assert _aria_sort(page, "first") == "ascending"
+    assert _grid_names(page)[0] == "Amir", "first-name asc leads with Amir"
 
-    page.click("[data-grid-sort='plan']")
+    page.click("[data-grid-sort='last']")
     page.wait_for_timeout(120)
-    assert _aria_sort(page, "plan") == "ascending", "the newly-clicked column sorts"
-    assert _aria_sort(page, "name") == "none", "the previously-sorted column resets"
-    # plan asc: Free (Ravi) before the two Pro rows
-    assert _grid_names(page)[0] == "Ravi Patel"
+    assert _aria_sort(page, "last") == "ascending", "the newly-clicked column sorts"
+    assert _aria_sort(page, "first") == "none", "the previously-sorted column resets"
+    # last-name asc leads with Alvarez (Sofia) — a DIFFERENT order than first-name
+    assert _grid_names(page)[0] == "Sofia", "sorting by last name reorders differently"
+
+
+def test_grid_filter_narrows_rows_over_the_wire(page) -> None:  # type: ignore[no-untyped-def]
+    """Changing a filter select ([data-grid-filter]) rebuilds the tbody query and
+    reloads it — the server returns only the matching rows. The 'Any …' option
+    (empty value) clears the filter."""
+    assert len(_grid_names(page)) == 6
+
+    page.select_option("[data-grid-filter='plan']", "Free")
+    page.wait_for_timeout(120)
+    # insertion order (no active sort): Sofia (cust_4) before Jane (cust_6)
+    assert _grid_names(page) == ["Sofia", "Jane"], "plan=Free narrows to the two Free rows"
+
+    page.select_option("[data-grid-filter='plan']", "")  # Any plan → cleared
+    page.wait_for_timeout(120)
+    assert len(_grid_names(page)) == 6, "clearing the filter restores every row"
+
+
+def test_grid_filter_composes_with_sort(page) -> None:  # type: ignore[no-untyped-def]
+    """Filter and sort compose in one query built from the DOM state: sorting then
+    filtering keeps BOTH — the sorted, filtered rows come back and the sort
+    indicator is preserved."""
+    page.click("[data-grid-sort='first']")  # ascending
+    page.wait_for_timeout(120)
+    page.select_option("[data-grid-filter='plan']", "Pro")
+    page.wait_for_timeout(120)
+    # the two Pro rows, still first-name-ascending (Amir before Noah)
+    assert _grid_names(page) == ["Amir", "Noah"]
+    assert _aria_sort(page, "first") == "ascending", "the active sort survives a filter change"
+
+
+def test_grid_filter_to_zero_reveals_empty_state(page) -> None:  # type: ignore[no-untyped-def]
+    """A filter combination matching no rows returns an empty tbody, and the
+    CSS `:has(tbody tr td)`-driven empty-state appears (the server owns emptiness;
+    the client invents nothing)."""
+    disp = "e => getComputedStyle(e).display"
+    assert page.eval_on_selector(".table-empty", disp) == "none", (
+        "empty-state hidden while populated"
+    )
+
+    # Free + Churned matches nobody (both Free customers are Trialing).
+    page.select_option("[data-grid-filter='plan']", "Free")
+    page.select_option("[data-grid-filter='status']", "Churned")
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == [], "no rows match the filter combination"
+    assert page.eval_on_selector(".table-empty", disp) != "none", (
+        "the empty-state must reveal when the filtered result is empty"
+    )
 
 
 def test_grid_loading_overlay_is_wired_to_htmx_request(page) -> None:  # type: ignore[no-untyped-def]

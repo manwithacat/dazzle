@@ -195,16 +195,29 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
   };
 
-  // The grid tbody hydrates + re-sorts its rows over the wire (the SERVER owns
-  // the order). Held as data, not markup, so the mock can ORDER BY the sort/dir
-  // params the controller puts on the request — mirroring a real list endpoint.
-  // Each row renders a stable `id` (`dz-grid-row-<rowid>`, the idiomorph morph
-  // key) + `data-dz-grid-row-id` (the bulk payload anchor); the two agree.
+  // The grid tbody hydrates, filters, and re-sorts its rows over the wire — the
+  // SERVER owns the order and the WHERE. Held as data (not markup) so the mock
+  // can filter + ORDER BY the query params the controller puts on the request,
+  // mirroring a real list endpoint. Each row renders a stable `id`
+  // (`dz-grid-row-<rowid>`, the idiomorph morph key) + `data-dz-grid-row-id`
+  // (the bulk payload anchor); the two agree. Values span DISTINCT sort orders
+  // per column (first vs last name vs plan vs date all reorder differently) so
+  // the demo legibly shows WHICH column you sorted. `status` is a filter-only
+  // field (not a visible column). The unsorted (insertion) order below is
+  // deliberately scrambled so "no sort" is visibly distinct from every column
+  // sort. NB on dates: a real server sorts a typed date column (SQL is
+  // type-aware); the mock sorts the ISO-8601 strings, whose LEXICAL order
+  // equals chronological order — a faithful stand-in, not string luck.
   var GRID_ROWS = [
-    { id: "cust_1", name: "Jane Doe", plan: "Pro", created: "2026-07-04" },
-    { id: "cust_2", name: "Ravi Patel", plan: "Free", created: "2026-06-28" },
-    { id: "cust_3", name: "Mia Chen", plan: "Pro", created: "2026-06-15" }
+    { id: "cust_1", first: "Mia", last: "Chen", plan: "Team", signed: "2025-06-20", status: "Active" },
+    { id: "cust_2", first: "Ravi", last: "Patel", plan: "Enterprise", signed: "2023-08-09", status: "Active" },
+    { id: "cust_3", first: "Amir", last: "Okafor", plan: "Pro", signed: "2026-01-15", status: "Active" },
+    { id: "cust_4", first: "Sofia", last: "Alvarez", plan: "Free", signed: "2026-07-01", status: "Trialing" },
+    { id: "cust_5", first: "Noah", last: "Bright", plan: "Pro", signed: "2022-03-14", status: "Churned" },
+    { id: "cust_6", first: "Jane", last: "Zimmerman", plan: "Free", signed: "2024-11-02", status: "Trialing" }
   ];
+  // Which query params are sort/paging CONTROL (everything else is a filter).
+  var GRID_CONTROL = { sort: 1, dir: 1, page: 1, page_size: 1 };
   function parseQuery(url) {
     var out = {}, qs = (url.split("?")[1] || "");
     qs.split("&").forEach(function (p) {
@@ -225,6 +238,12 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   function renderGridRows(url) {
     var q = parseQuery(url);
     var rows = GRID_ROWS.slice();
+    // Filters: every non-control param narrows by an exact field match (the
+    // server's WHERE). An empty value ("Any …") is never sent, so never narrows.
+    Object.keys(q).forEach(function (k) {
+      if (GRID_CONTROL[k] || q[k] === "") return;
+      rows = rows.filter(function (r) { return String(r[k]) === q[k]; });
+    });
     if (q.sort) {
       rows.sort(function (a, b) {
         var x = a[q.sort], y = b[q.sort];
@@ -232,14 +251,16 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
         return q.dir === "desc" ? -c : c;
       });
     }
+    // Zero rows → empty tbody, so the `:has(tbody tr td)` empty-state shows.
     return rows.map(function (r) {
-      var id = htmlEnc(r.id);
+      var id = htmlEnc(r.id), name = htmlEnc(r.first + " " + r.last);
       return '<tr class="dz-tr-row" id="dz-grid-row-' + id + '">' +
         '<td class="dz-tr-checkbox-cell"><input type="checkbox" class="dz-tr-checkbox" ' +
-        'data-dz-grid-select data-dz-grid-row-id="' + id + '" aria-label="Select ' + htmlEnc(r.name) + '"></td>' +
-        '<td class="dz-tr-cell">' + htmlEnc(r.name) + '</td>' +
+        'data-dz-grid-select data-dz-grid-row-id="' + id + '" aria-label="Select ' + name + '"></td>' +
+        '<td class="dz-tr-cell">' + htmlEnc(r.first) + '</td>' +
+        '<td class="dz-tr-cell">' + htmlEnc(r.last) + '</td>' +
         '<td class="dz-tr-cell">' + htmlEnc(r.plan) + '</td>' +
-        '<td class="dz-tr-cell">' + htmlEnc(r.created) + '</td></tr>';
+        '<td class="dz-tr-cell">' + htmlEnc(r.signed) + '</td></tr>';
     }).join("");
   }
 

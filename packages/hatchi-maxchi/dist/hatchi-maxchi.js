@@ -419,7 +419,7 @@
 /* ── controllers/grid.js ── */
 /* HYPERPART: grid */
 /*
- * grid — the data-table controller. Slices so far: row selection + sort.
+ * grid — the data-table controller. Slices so far: selection + sort + filter.
  *
  * Delegated + state-in-DOM, the HM idiom (same shape as tabs.js): one pair
  * of document-level listeners, everything scoped to the clicked control's own
@@ -454,6 +454,9 @@
  *   - sort:        `[data-grid-sort="<key>"]` (a header button) cycles the
  *                  clicked column through `data-grid-sort-cycle`
  *                  (default "asc desc none"); state lives on the th's `aria-sort`
+ *   - filter:      `[data-grid-filter="<key>"]` (a form control) narrows on
+ *                  change; empty value = no filter. Composes with sort — the
+ *                  request query is rebuilt from ALL current DOM state.
  */
 (function () {
   "use strict";
@@ -506,21 +509,45 @@
     );
   }
 
-  function refresh(root, sortKey, dir) {
+  // The active sort read back off the DOM (the one header whose aria-sort is
+  // ascending/descending), or null. Single source of truth: the headers.
+  function readSort(root) {
+    var btns = sortButtons(root);
+    for (var i = 0; i < btns.length; i++) {
+      var th = btns[i].closest("th");
+      var dir = DIR_OF[(th && th.getAttribute("aria-sort")) || "none"];
+      if (dir && dir !== "none") {
+        return { key: btns[i].getAttribute("data-grid-sort"), dir: dir };
+      }
+    }
+    return null;
+  }
+
+  // Rebuild the tbody's request query from ALL current DOM state — the active
+  // sort AND every filter select — so sort and filter COMPOSE, then ask the
+  // server (via `grid:refresh`) for the matching, ordered rows.
+  function refresh(root) {
     var body = root.querySelector("[data-grid-body]");
     if (!body) return;
-    var base =
+    var base = (
       body.getAttribute("data-grid-src") ||
       body.getAttribute("hx-get") ||
-      "";
-    base = base.split("?")[0];
+      ""
+    ).split("?")[0];
     var q = [];
-    if (dir && dir !== "none") {
-      q.push("sort=" + encodeURIComponent(sortKey));
-      q.push("dir=" + dir);
+    var s = readSort(root);
+    if (s) {
+      q.push("sort=" + encodeURIComponent(s.key));
+      q.push("dir=" + s.dir);
     }
-    // Sort resets pagination to page 1 (spec) — a no-op until the pagination
-    // slice adds page state; the reset lands there.
+    var filters = root.querySelectorAll("[data-grid-filter]");
+    for (var i = 0; i < filters.length; i++) {
+      var k = filters[i].getAttribute("data-grid-filter");
+      var v = filters[i].value;
+      if (k && v) q.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
+    }
+    // Sort/filter reset pagination to page 1 (spec) — a no-op until the
+    // pagination slice adds page state; the reset lands there.
     body.setAttribute("hx-get", base + (q.length ? "?" + q.join("&") : ""));
     body.dispatchEvent(new CustomEvent("grid:refresh", { bubbles: true }));
   }
@@ -542,7 +569,7 @@
       if (h) h.setAttribute("aria-sort", "none");
     }
     if (th) th.setAttribute("aria-sort", ARIA_OF[next] || "none");
-    refresh(root, btn.getAttribute("data-grid-sort"), next);
+    refresh(root); // reads the sort we just wrote + any active filters
   }
 
   document.addEventListener("change", function (evt) {
@@ -557,6 +584,11 @@
       var boxes = rowBoxes(root);
       for (var i = 0; i < boxes.length; i++) boxes[i].checked = t.checked;
       sync(root);
+    } else if (t.matches("[data-grid-filter]")) {
+      // A filter select changed → rebuild the query (composing with any active
+      // sort) and reload the rows from the server.
+      var fr = gridOf(t);
+      if (fr) refresh(fr);
     }
   });
 

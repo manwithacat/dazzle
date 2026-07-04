@@ -201,17 +201,24 @@ HYPERPARTS: list[Hyperpart] = [
         "A server-rendered data table: sortable headers, a filter bar, and row "
         "selection with a bulk-action bar — all HTML over the wire, on a real "
         "<table>. The tbody hydrates its rows over the wire (hx-get on load); "
-        "sortable headers and row selection are live (dz-grid.js, delegated + "
-        "state-in-DOM). Column-visibility / URL-synced state land in the next slices.",
+        "sortable headers, filters, and row selection are live (dz-grid.js, delegated "
+        "+ state-in-DOM) and compose into one server query. Column-visibility / "
+        "URL-synced state land in the next slices.",
         '<div class="hm-stack hm-measure-lg">'
         '<div class="dz-table" data-dz-grid data-dz-bulk-count="0">'
         '<div class="dz-filter-bar">'
-        '<div class="dz-filter-cell"><label class="dz-filter-label">Plan</label>'
-        '<select class="dz-filter-select" aria-label="Plan"><option>Any plan</option>'
-        "<option>Pro</option><option>Free</option></select></div>"
-        '<div class="dz-filter-cell"><label class="dz-filter-label">Status</label>'
-        '<select class="dz-filter-select" aria-label="Status"><option>Any status</option>'
-        "<option>Active</option></select></div>"
+        '<div class="dz-filter-cell">'
+        '<label class="dz-filter-label" for="hm-grid-filter-plan">Plan</label>'
+        '<select class="dz-filter-select" id="hm-grid-filter-plan" data-dz-grid-filter="plan">'
+        '<option value="">Any plan</option><option value="Free">Free</option>'
+        '<option value="Pro">Pro</option><option value="Team">Team</option>'
+        '<option value="Enterprise">Enterprise</option></select></div>'
+        '<div class="dz-filter-cell">'
+        '<label class="dz-filter-label" for="hm-grid-filter-status">Status</label>'
+        '<select class="dz-filter-select" id="hm-grid-filter-status" data-dz-grid-filter="status">'
+        '<option value="">Any status</option><option value="Active">Active</option>'
+        '<option value="Trialing">Trialing</option><option value="Churned">Churned</option>'
+        "</select></div>"
         "</div>"
         '<div class="dz-bulk-actions">'
         '<span aria-live="polite" aria-atomic="true">'
@@ -230,13 +237,16 @@ HYPERPARTS: list[Hyperpart] = [
         '<th class="dz-table-th-select">'
         '<input type="checkbox" data-dz-grid-select-all aria-label="Select all rows"></th>'
         '<th class="dz-table-th" aria-sort="none">'
-        '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="name">Name'
+        '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="first">First name'
+        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
+        '<th class="dz-table-th" aria-sort="none">'
+        '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="last">Last name'
         '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
         '<th class="dz-table-th" aria-sort="none">'
         '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="plan">Plan'
         '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
         '<th class="dz-table-th" aria-sort="none">'
-        '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="created">Created'
+        '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="signed">Signed up'
         '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
         "</tr></thead>"
         # The tbody hydrates over the wire: hx-get on `load` fetches the rows,
@@ -249,14 +259,17 @@ HYPERPARTS: list[Hyperpart] = [
         '<td class="dz-tr-checkbox-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td></tr>'
         '<tr class="dz-tr-row" aria-hidden="true">'
         '<td class="dz-tr-checkbox-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td></tr>'
         '<tr class="dz-tr-row" aria-hidden="true">'
         '<td class="dz-tr-checkbox-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td></tr>'
@@ -285,8 +298,11 @@ HYPERPARTS: list[Hyperpart] = [
         "none → ascending → descending → none (state on the th's <code>aria-sort</code>, "
         "one active column), rebuilds the tbody's request query, and fires "
         "<code>dz-grid:refresh</code> so the <em>server</em> returns the re-ordered rows "
-        "— no client-side row rendering. Bulk-action submission and URL-synced state are "
-        "the next slices. (The gallery mock approximates the "
+        "— no client-side row rendering. Filters are the same seam: a "
+        "<code>[data-dz-grid-filter]</code> select rebuilds the query on change and "
+        "<em>composes</em> with the active sort (both read from the DOM into one query); "
+        "an empty result reveals the empty-state. Bulk-action submission and URL-synced "
+        "state are the next slices. (The gallery mock approximates the "
         "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
         "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "
         "for true morph-preserved selection.)",
@@ -296,7 +312,7 @@ HYPERPARTS: list[Hyperpart] = [
                 method="GET",
                 endpoint="/app/{region}/rows?q=&sort=&dir=&page=&page_size=",
                 trigger="the tbody, on `load` and on `dz-grid:refresh` (fired by a sort "
-                "click today; search / filter / paginate in the following slices)",
+                "click or a filter change today; search / paginate in the following slices)",
                 response="the `<tr>` rows for the current query — each a `dz-tr-row` "
                 "carrying a stable `id` (the idiomorph morph key) plus "
                 "`data-dz-grid-row-id` (the bulk-action payload anchor); a zero-result "

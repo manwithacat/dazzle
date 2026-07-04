@@ -23,16 +23,29 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
   };
 
-  // The grid tbody hydrates + re-sorts its rows over the wire (the SERVER owns
-  // the order). Held as data, not markup, so the mock can ORDER BY the sort/dir
-  // params the controller puts on the request — mirroring a real list endpoint.
-  // Each row renders a stable `id` (`grid-row-<rowid>`, the idiomorph morph
-  // key) + `data-grid-row-id` (the bulk payload anchor); the two agree.
+  // The grid tbody hydrates, filters, and re-sorts its rows over the wire — the
+  // SERVER owns the order and the WHERE. Held as data (not markup) so the mock
+  // can filter + ORDER BY the query params the controller puts on the request,
+  // mirroring a real list endpoint. Each row renders a stable `id`
+  // (`grid-row-<rowid>`, the idiomorph morph key) + `data-grid-row-id`
+  // (the bulk payload anchor); the two agree. Values span DISTINCT sort orders
+  // per column (first vs last name vs plan vs date all reorder differently) so
+  // the demo legibly shows WHICH column you sorted. `status` is a filter-only
+  // field (not a visible column). The unsorted (insertion) order below is
+  // deliberately scrambled so "no sort" is visibly distinct from every column
+  // sort. NB on dates: a real server sorts a typed date column (SQL is
+  // type-aware); the mock sorts the ISO-8601 strings, whose LEXICAL order
+  // equals chronological order — a faithful stand-in, not string luck.
   var GRID_ROWS = [
-    { id: "cust_1", name: "Jane Doe", plan: "Pro", created: "2026-07-04" },
-    { id: "cust_2", name: "Ravi Patel", plan: "Free", created: "2026-06-28" },
-    { id: "cust_3", name: "Mia Chen", plan: "Pro", created: "2026-06-15" }
+    { id: "cust_1", first: "Mia", last: "Chen", plan: "Team", signed: "2025-06-20", status: "Active" },
+    { id: "cust_2", first: "Ravi", last: "Patel", plan: "Enterprise", signed: "2023-08-09", status: "Active" },
+    { id: "cust_3", first: "Amir", last: "Okafor", plan: "Pro", signed: "2026-01-15", status: "Active" },
+    { id: "cust_4", first: "Sofia", last: "Alvarez", plan: "Free", signed: "2026-07-01", status: "Trialing" },
+    { id: "cust_5", first: "Noah", last: "Bright", plan: "Pro", signed: "2022-03-14", status: "Churned" },
+    { id: "cust_6", first: "Jane", last: "Zimmerman", plan: "Free", signed: "2024-11-02", status: "Trialing" }
   ];
+  // Which query params are sort/paging CONTROL (everything else is a filter).
+  var GRID_CONTROL = { sort: 1, dir: 1, page: 1, page_size: 1 };
   function parseQuery(url) {
     var out = {}, qs = (url.split("?")[1] || "");
     qs.split("&").forEach(function (p) {
@@ -53,6 +66,12 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   function renderGridRows(url) {
     var q = parseQuery(url);
     var rows = GRID_ROWS.slice();
+    // Filters: every non-control param narrows by an exact field match (the
+    // server's WHERE). An empty value ("Any …") is never sent, so never narrows.
+    Object.keys(q).forEach(function (k) {
+      if (GRID_CONTROL[k] || q[k] === "") return;
+      rows = rows.filter(function (r) { return String(r[k]) === q[k]; });
+    });
     if (q.sort) {
       rows.sort(function (a, b) {
         var x = a[q.sort], y = b[q.sort];
@@ -60,14 +79,16 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         return q.dir === "desc" ? -c : c;
       });
     }
+    // Zero rows → empty tbody, so the `:has(tbody tr td)` empty-state shows.
     return rows.map(function (r) {
-      var id = htmlEnc(r.id);
+      var id = htmlEnc(r.id), name = htmlEnc(r.first + " " + r.last);
       return '<tr class="tr-row" id="grid-row-' + id + '">' +
         '<td class="tr-checkbox-cell"><input type="checkbox" class="tr-checkbox" ' +
-        'data-grid-select data-grid-row-id="' + id + '" aria-label="Select ' + htmlEnc(r.name) + '"></td>' +
-        '<td class="tr-cell">' + htmlEnc(r.name) + '</td>' +
+        'data-grid-select data-grid-row-id="' + id + '" aria-label="Select ' + name + '"></td>' +
+        '<td class="tr-cell">' + htmlEnc(r.first) + '</td>' +
+        '<td class="tr-cell">' + htmlEnc(r.last) + '</td>' +
         '<td class="tr-cell">' + htmlEnc(r.plan) + '</td>' +
-        '<td class="tr-cell">' + htmlEnc(r.created) + '</td></tr>';
+        '<td class="tr-cell">' + htmlEnc(r.signed) + '</td></tr>';
     }).join("");
   }
 
@@ -649,7 +670,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 /* ── controllers/grid.js ── */
 /* HYPERPART: grid */
 /*
- * grid — the data-table controller. Slices so far: row selection + sort.
+ * grid — the data-table controller. Slices so far: selection + sort + filter.
  *
  * Delegated + state-in-DOM, the HM idiom (same shape as tabs.js): one pair
  * of document-level listeners, everything scoped to the clicked control's own
@@ -684,6 +705,9 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  *   - sort:        `[data-grid-sort="<key>"]` (a header button) cycles the
  *                  clicked column through `data-grid-sort-cycle`
  *                  (default "asc desc none"); state lives on the th's `aria-sort`
+ *   - filter:      `[data-grid-filter="<key>"]` (a form control) narrows on
+ *                  change; empty value = no filter. Composes with sort — the
+ *                  request query is rebuilt from ALL current DOM state.
  */
 (function () {
   "use strict";
@@ -736,21 +760,45 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     );
   }
 
-  function refresh(root, sortKey, dir) {
+  // The active sort read back off the DOM (the one header whose aria-sort is
+  // ascending/descending), or null. Single source of truth: the headers.
+  function readSort(root) {
+    var btns = sortButtons(root);
+    for (var i = 0; i < btns.length; i++) {
+      var th = btns[i].closest("th");
+      var dir = DIR_OF[(th && th.getAttribute("aria-sort")) || "none"];
+      if (dir && dir !== "none") {
+        return { key: btns[i].getAttribute("data-grid-sort"), dir: dir };
+      }
+    }
+    return null;
+  }
+
+  // Rebuild the tbody's request query from ALL current DOM state — the active
+  // sort AND every filter select — so sort and filter COMPOSE, then ask the
+  // server (via `grid:refresh`) for the matching, ordered rows.
+  function refresh(root) {
     var body = root.querySelector("[data-grid-body]");
     if (!body) return;
-    var base =
+    var base = (
       body.getAttribute("data-grid-src") ||
       body.getAttribute("hx-get") ||
-      "";
-    base = base.split("?")[0];
+      ""
+    ).split("?")[0];
     var q = [];
-    if (dir && dir !== "none") {
-      q.push("sort=" + encodeURIComponent(sortKey));
-      q.push("dir=" + dir);
+    var s = readSort(root);
+    if (s) {
+      q.push("sort=" + encodeURIComponent(s.key));
+      q.push("dir=" + s.dir);
     }
-    // Sort resets pagination to page 1 (spec) — a no-op until the pagination
-    // slice adds page state; the reset lands there.
+    var filters = root.querySelectorAll("[data-grid-filter]");
+    for (var i = 0; i < filters.length; i++) {
+      var k = filters[i].getAttribute("data-grid-filter");
+      var v = filters[i].value;
+      if (k && v) q.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
+    }
+    // Sort/filter reset pagination to page 1 (spec) — a no-op until the
+    // pagination slice adds page state; the reset lands there.
     body.setAttribute("hx-get", base + (q.length ? "?" + q.join("&") : ""));
     body.dispatchEvent(new CustomEvent("grid:refresh", { bubbles: true }));
   }
@@ -772,7 +820,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       if (h) h.setAttribute("aria-sort", "none");
     }
     if (th) th.setAttribute("aria-sort", ARIA_OF[next] || "none");
-    refresh(root, btn.getAttribute("data-grid-sort"), next);
+    refresh(root); // reads the sort we just wrote + any active filters
   }
 
   document.addEventListener("change", function (evt) {
@@ -787,6 +835,11 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       var boxes = rowBoxes(root);
       for (var i = 0; i < boxes.length; i++) boxes[i].checked = t.checked;
       sync(root);
+    } else if (t.matches("[data-grid-filter]")) {
+      // A filter select changed → rebuild the query (composing with any active
+      // sort) and reload the rows from the server.
+      var fr = gridOf(t);
+      if (fr) refresh(fr);
     }
   });
 
