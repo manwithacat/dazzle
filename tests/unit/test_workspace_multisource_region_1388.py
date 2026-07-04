@@ -96,7 +96,7 @@ def test_multisource_base_endpoint_serves_tab_strip(tmp_path) -> None:
     assert resp.status_code == 200, f"base endpoint 404'd/errored: {resp.status_code}"
     body = resp.text
     assert "No tabs" not in body, "tab strip rendered empty — SourceTabContext→dict gap (#1388)"
-    assert 'role="tablist"' in body, "tabbed_list shell must emit a tablist"
+    assert 'class="dz-tabs"' in body, "tabbed_list shell must emit a dz-tabs strip"
     # Each per-source tab links to its sub-endpoint via hx-get.
     assert "/api/workspaces/dash/regions/review_queue/Alpha" in body
     assert "/api/workspaces/dash/regions/review_queue/Beta" in body

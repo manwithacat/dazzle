@@ -747,9 +747,14 @@ def test_tabbed_list_source_tabs_produces_lazy_tab_panel() -> None:
         ],
     }
     html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
-    assert 'role="tablist"' in html
+    # Honest link-strip (HM tabs Hyperpart): buttons + aria-current, NOT a
+    # role=tablist it can't back with roving-tabindex/arrow-key navigation.
+    assert 'role="tablist"' not in html
+    assert 'class="dz-tabs"' in html
     assert 'id="tabs-ticket_tabs"' in html
-    assert 'data-tab-target="tab-ticket_tabs-github"' in html
+    assert 'class="dz-tabs__tab"' in html
+    assert 'aria-current="true"' in html  # first tab is active
+    assert 'data-dz-tab-target="tab-ticket_tabs-github"' in html
     assert 'hx-get="/api/workspaces/admin/regions/ticket_tabs/github"' in html
     # First tab eager (load), second tab lazy (intersect once)
     assert 'hx-trigger="load"' in html
@@ -772,9 +777,11 @@ def test_tabbed_list_falls_back_to_eager_tabs_when_no_source_tabs() -> None:
         ]
     }
     html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
-    assert "dz-tabs" in html
+    assert 'class="dz-tabs"' in html
     assert "Item One" in html
-    assert 'role="tablist"' not in html  # not the lazy shape
+    # Distinguishes eager-vs-lazy by hx-get presence (both use the unified
+    # `.dz-tabs*` markup now): eager tabs render their content inline, no hx-get.
+    assert "hx-get" not in html
 
 
 def test_tabbed_list_source_tabs_drops_malformed_entries() -> None:

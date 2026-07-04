@@ -211,19 +211,35 @@ class _RenderLayoutMixin:
         return f'<div class="{cls}" role="dialog">{self._emit(m.body, ctx)}</div>'  # type: ignore[arg-type]
 
     def _emit_tabs(self, t: Tabs, ctx: RenderContext) -> str:
+        """Render an eager (content-inline) tab strip using the HM `tabs`
+        Hyperpart contract (`.dz-tabs*`), driven by the ingested
+        `dz-tabs.js` controller — the same honest link-strip as
+        `_emit_lazy_tab_panel`, but each panel carries its content inline
+        (no `hx-get`). Buttons are `<button aria-current>`, panels toggle
+        via the native `hidden` attribute; no `role=tablist`, no inline JS.
+
+        Panel ids are `dz-tab-<key>` (the generic Tabs fragment carries no
+        region namespace). Switching is safe regardless — `dz-tabs.js`
+        scopes every query to the clicked tab's `closest('.dz-tabs')` root
+        — but two eager Tabs on one page sharing a tab key would emit
+        duplicate DOM ids (HTML-invalid, cosmetic). This fragment is the
+        rare latent inline-`tabs` fallback; the live `tabbed_list` path is
+        `_emit_lazy_tab_panel`, which is region-namespaced.
+        """
         tab_buttons = "".join(
-            f'<button class="dz-tabs__button" data-tab="{ctx.escape_attr(key)}">'
+            f'<button type="button" class="dz-tabs__tab"'
+            f"{' aria-current="true"' if i == 0 else ''} "
+            f'data-dz-tab-target="dz-tab-{ctx.escape_attr(key)}">'
             f"{ctx.escape(key)}</button>"
-            for key, _panel in t.tabs
+            for i, (key, _panel) in enumerate(t.tabs)
         )
         panels = "".join(
-            f'<div class="dz-tabs__panel" data-tab="{ctx.escape_attr(key)}">'
+            f'<div id="dz-tab-{ctx.escape_attr(key)}" class="dz-tabs__panel"'
+            f"{'' if i == 0 else ' hidden'}>"
             f"{self._emit(panel, ctx)}</div>"  # type: ignore[arg-type]
-            for key, panel in t.tabs
+            for i, (key, panel) in enumerate(t.tabs)
         )
-        return (
-            f'<div class="dz-tabs"><div class="dz-tabs__buttons">{tab_buttons}</div>{panels}</div>'
-        )
+        return f'<div class="dz-tabs"><div class="dz-tabs__list">{tab_buttons}</div>{panels}</div>'
 
     def _emit_icon(self, i: Icon, ctx: RenderContext) -> str:
         return lucide_icon_html(i.name, cls=f"dz-icon dz-icon--size-{i.size}")
@@ -255,55 +271,41 @@ class _RenderLayoutMixin:
         return f'<div class="dz-skeleton-lines">{lines}</div>'
 
     def _emit_lazy_tab_panel(self, p: LazyTabPanel, ctx: RenderContext) -> str:
-        """Render a LazyTabPanel matching legacy
-        `workspace/regions/tabbed_list.html` byte-for-byte.
+        """Render a LazyTabPanel using the HM `tabs` Hyperpart contract.
 
-        Each tab becomes:
-          - a `<a role="tab">` button with an inline `onclick` JS
-            handler that toggles `is-active` and shows/hides panels
-          - a `<div class="tab-panel">` shell that fetches its own
-            content via `hx-get` on first activation
+        An honest link-strip (Tabs Phase 2 convergence): the tabs are
+        `<button class="dz-tabs__tab">`s with `aria-current="true"` on the
+        active one — NOT a `role="tablist"` the widget can't back with
+        roving-tabindex/arrow-key navigation. Panel switching is driven by
+        the ingested `dz-tabs.js` controller (delegated, scoped per
+        `.dz-tabs` root), so there is no inline `onclick` JS here.
 
-        The first tab fires `load`; subsequent tabs fire on
-        `intersect once`. The first panel is visible by default
-        (no `hidden` class); other panels start hidden.
+        Each tab points at its panel via `data-dz-tab-target`; each panel
+        (`.dz-tabs__panel`) fetches its own content via `hx-get`. The
+        first tab fires `load` (and is visible); subsequent panels carry
+        the native `hidden` attribute and fire `hx-trigger="intersect
+        once"` — revealing a hidden panel is what triggers its lazy load.
 
-        DOM ids: `tabs-<region>` for the tablist, `tab-<region>-<key>`
+        DOM ids: `tabs-<region>` for the `.dz-tabs` root, `tab-<region>-<key>`
         for each panel.
         """
         rname = ctx.escape_attr(p.region_name)
-        # Inline-JS click handler: vanilla JS toggles is-active +
-        # shows/hides panels. Mirrors the legacy template verbatim
-        # so dual-path validation stays byte-equivalent.
-        # Legacy template emits raw `>` in the onclick attribute, not
-        # `&gt;`. Match that. Note this is technically not strictly
-        # spec-valid HTML attr escaping, but browsers parse it fine
-        # and the dual-path harness compares byte-for-byte.
-        click_js = (
-            f"document.querySelectorAll('#tabs-{p.region_name} [role=tab]')"
-            f".forEach(t => t.classList.remove('is-active')); "
-            f"this.classList.add('is-active'); "
-            f"document.querySelectorAll('#panels-{p.region_name} .tab-panel')"
-            f".forEach(p => p.classList.add('hidden')); "
-            f"document.getElementById(this.dataset.tabTarget).classList.remove('hidden');"
-        )
 
         tab_buttons = "".join(
-            f'<a role="tab" '
-            f'class="dz-tabbed-list-tab{" is-active" if i == 0 else ""}" '
-            f'data-tab-target="tab-{rname}-{ctx.escape_attr(tab.key)}" '
-            f'onclick="{click_js}">'
-            f"{ctx.escape(tab.label)}</a>"
+            f'<button type="button" '
+            f'class="dz-tabs__tab"{' aria-current="true"' if i == 0 else ""} '
+            f'data-dz-tab-target="tab-{rname}-{ctx.escape_attr(tab.key)}">'
+            f"{ctx.escape(tab.label)}</button>"
             for i, tab in enumerate(p.tabs)
         )
 
         panels = "".join(
             f'<div id="tab-{rname}-{ctx.escape_attr(tab.key)}" '
-            f'class="tab-panel{"" if i == 0 else " hidden"}" '
+            f'class="dz-tabs__panel"{"" if i == 0 else " hidden"} '
             f'hx-get="{ctx.escape_attr(str(tab.endpoint))}" '
             f'hx-trigger="{"load" if (tab.eager or i == 0) else "intersect once"}" '
             f'hx-swap="innerHTML">'
-            f'<div class="dz-tabbed-list-panel-loading">'
+            f'<div class="dz-tabs__loading">'
             f'<svg fill="none" viewBox="0 0 24 24" aria-hidden="true">'
             f'<circle class="opacity-25" cx="12" cy="12" r="10" '
             f'stroke="currentColor" stroke-width="4"></circle>'
@@ -316,8 +318,8 @@ class _RenderLayoutMixin:
         )
 
         return (
-            f'<div role="tablist" class="dz-tabbed-list-tabs" id="tabs-{rname}">'
-            f"{tab_buttons}"
+            f'<div class="dz-tabs" id="tabs-{rname}">'
+            f'<div class="dz-tabs__list">{tab_buttons}</div>'
+            f"{panels}"
             f"</div>"
-            f'<div id="panels-{rname}">{panels}</div>'
         )

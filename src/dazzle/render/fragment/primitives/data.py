@@ -1523,11 +1523,15 @@ class LazyTab:
 class LazyTabPanel:
     """Tabbed container with per-panel HTMX lazy loading.
 
-    Used by `display: tabbed_list` regions. Each tab becomes a button
-    in the tab list + a panel `<div>` that fetches its own content
-    via `hx-get` on first activation. The first tab fires `load`;
-    subsequent tabs fire on `intersect once`. A vanilla-JS click
-    handler toggles the `is-active` class and shows/hides panels.
+    Used by `display: tabbed_list` regions. Each tab becomes a
+    `<button class="dz-tabs__tab">` in the tab list + a
+    `.dz-tabs__panel` `<div>` that fetches its own content via `hx-get`
+    on first activation. The first tab fires `load`; subsequent tabs
+    fire on `intersect once`. Panel switching is driven by the HM
+    `dz-tabs.js` controller (delegated, scoped per `.dz-tabs` root):
+    the active tab gets `aria-current="true"` and inactive panels carry
+    the native `hidden` attribute — an honest link-strip, no
+    `role="tablist"`, no inline JS.
 
     `region_name` namespaces the DOM ids — `tabs-<region_name>` and
     `tab-<region_name>-<tab.key>` — so multiple LazyTabPanels can

@@ -7931,46 +7931,6 @@ border-block-end: 1px solid var(--colour-border);
 .dz-tree-flat-item:last-child {
 border-block-end: 0;
 }
-.dz-tabbed-list-tabs {
-display: flex;
-border-block-end: 1px solid var(--colour-border);
-margin-block-end: var(--space-md);
-}
-.dz-tabbed-list-tab {
-padding-inline: var(--space-md);
-padding-block: var(--space-sm);
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-margin-block-end: -1px;
-border-block-end: 2px solid transparent;
-cursor: pointer;
-transition: color var(--duration-fast) var(--ease-out);
-text-decoration: none;
-}
-.dz-tabbed-list-tab:hover {
-color: var(--colour-text);
-}
-.dz-tabbed-list-tab.is-active {
-border-block-end-color: var(--colour-brand);
-color: var(--colour-text);
-font-weight: var(--weight-medium);
-}
-.dz-tabbed-list-panel-loading {
-display: flex;
-justify-content: center;
-padding-block: var(--space-2xl);
-color: var(--colour-text-muted);
-}
-.dz-tabbed-list-panel-loading > svg {
-width: 1rem;
-height: 1rem;
-animation: dz-spin 1s linear infinite;
-}
-.dz-tabbed-list-empty {
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-margin: 0;
-}
 .dz-grid-list {
 display: grid;
 grid-template-columns: 1fr;

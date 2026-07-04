@@ -640,57 +640,12 @@
 }
 
 /* ─────────────────────────── tabbed_list region ─────────────────
- * Per-source tabs that lazy-load their content. Tab strip is a
- * horizontal flex row with a bottom border. The active tab gets
- * .is-active (set by the inline JS handler) which raises the
- * bottom-border colour to brand. */
-
-.dz-tabbed-list-tabs {
-  display: flex;
-  border-block-end: 1px solid var(--colour-border);
-  margin-block-end: var(--space-md);
-}
-
-.dz-tabbed-list-tab {
-  padding-inline: var(--space-md);
-  padding-block: var(--space-sm);
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin-block-end: -1px;  /* Overlap parent border so active border flush */
-  border-block-end: 2px solid transparent;
-  cursor: pointer;
-  transition: color var(--duration-fast) var(--ease-out);
-  text-decoration: none;
-}
-
-.dz-tabbed-list-tab:hover {
-  color: var(--colour-text);
-}
-
-.dz-tabbed-list-tab.is-active {
-  border-block-end-color: var(--colour-brand);
-  color: var(--colour-text);
-  font-weight: var(--weight-medium);
-}
-
-.dz-tabbed-list-panel-loading {
-  display: flex;
-  justify-content: center;
-  padding-block: var(--space-2xl);
-  color: var(--colour-text-muted);
-}
-
-.dz-tabbed-list-panel-loading > svg {
-  width: 1rem;
-  height: 1rem;
-  animation: dz-spin 1s linear infinite;
-}
-
-.dz-tabbed-list-empty {
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin: 0;
-}
+ * The `display: tabbed_list` region now renders via the HM `tabs`
+ * Hyperpart contract (`.dz-tabs*`, styled by components/tabs.css and
+ * driven by controllers/dz-tabs.js — both ingested into the dist).
+ * The old bespoke tabbed-list rules (role=tablist + inline-JS
+ * is-active toggle) were deleted in the Tabs Phase 2 convergence
+ * (build-to-replace, ADR-0003). */
 
 /* ─────────────────────────── grid region ────────────────────────
  * Responsive cell grid (1 → 2 → 3 columns at sm/lg breakpoints).

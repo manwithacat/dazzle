@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.63] - 2026-07-04
+
+### Changed
+- **Tabs Hyperpart — Phase 2: converged the live `display: tabbed_list` region onto the HM `tabs` Hyperpart (build-to-replace).** `_emit_lazy_tab_panel` (the live prod path) and the generic `_emit_tabs` fallback (`render/fragment/renderer/_render_layout.py`) now emit the HM `.dz-tabs*` contract — an honest link-strip of `<button class="dz-tabs__tab">`s with `aria-current="true"` on the active tab, native `hidden` attribute on inactive panels, a `.dz-tabs__loading` spinner, and per-panel htmx lazy-load (`hx-trigger="load"` on the first/eager tab, `intersect once` on the rest). Panel switching is driven by the already-ingested delegated `dz-tabs.js` controller (scoped per `.dz-tabs` root), replacing the old inline `onclick` JS. The dist was rebuilt; the UX catalogue was regenerated. Verified in Chromium (tab switch, sibling-hide, aria-current move, intersect-once laziness) and adversarially reviewed.
+
+### Removed
+- `.dz-tabbed-list-tabs/-tab/-panel-loading/-empty` CSS rules (`page/runtime/static/css/components/regions.css`) — superseded by the ingested HM `.dz-tabs*` (components/tabs.css). No `role="tablist"` is emitted for tabbed lists anymore.
+
+### Agent Guidance
+- **`display: tabbed_list` now renders HM `.dz-tabs*` markup, not `.dz-tabbed-list*`/`role=tablist`.** Any test, contract-checker, or e2e selector targeting a tabbed list must key on `.dz-tabs` / `.dz-tabs__tab` / `aria-current` / `data-dz-tab-target` / `.dz-tabs__panel[hidden]` + `hx-get`, never `role="tablist"` or `.is-active`. The honest link-strip (buttons + aria-current, no unbacked role=tablist) is the deliberate a11y-candor choice shared with the menu Hyperpart. The live path (`_emit_lazy_tab_panel`) is region-namespaced; the rare generic `Tabs` fragment (`_emit_tabs`) uses `dz-tab-<key>` ids (not region-namespaced — safe because the controller is `closest('.dz-tabs')`-scoped).
+
 ## [0.93.62] - 2026-07-04
 
 ### Added

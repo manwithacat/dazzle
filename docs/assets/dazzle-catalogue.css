@@ -526,34 +526,9 @@ tr.htmx-settling {
   display: inline-block;
 }
 
-/* ── Skeleton loading placeholders ──────────────────────────────────── */
-
-.dz-skeleton {
-  background: linear-gradient(90deg, oklch(0.8 0 0 / 0.3) 25%, oklch(0.85 0 0 / 0.5) 50%, oklch(0.8 0 0 / 0.3) 75%);
-  background-size: 200% 100%;
-  animation: dz-shimmer 1.5s ease-in-out infinite;
-  border-radius: 0.25rem;
-}
-
-.dz-skeleton-text {
-  height: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.dz-skeleton-text-lg {
-  height: 1rem;
-  margin-bottom: 0.5rem;
-  width: 60%;
-}
-
-.dz-skeleton-cell {
-  height: 1rem;
-}
-
-@keyframes dz-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+/* Skeleton placeholders moved to the HM `skeleton` Hyperpart (canonical
+   `.dz-skeleton` + data-dz-shape; packages/hatchi-maxchi). The dead
+   `.dz-skeleton*` family + dz-shimmer keyframe were retired 2026-07-04. */
 
 /* ── View transitions for fragment navigation ──────────────────────── */
 
@@ -601,10 +576,6 @@ tr.htmx-settling {
 
   tr.htmx-added,
   tr.htmx-settling {
-    animation: none;
-  }
-
-  .dz-skeleton {
     animation: none;
   }
 }
@@ -1602,57 +1573,12 @@ body.cursor-col-resize * {
 }
 
 /* ─────────────────────────── tabbed_list region ─────────────────
- * Per-source tabs that lazy-load their content. Tab strip is a
- * horizontal flex row with a bottom border. The active tab gets
- * .is-active (set by the inline JS handler) which raises the
- * bottom-border colour to brand. */
-
-.dz-tabbed-list-tabs {
-  display: flex;
-  border-block-end: 1px solid var(--colour-border);
-  margin-block-end: var(--space-md);
-}
-
-.dz-tabbed-list-tab {
-  padding-inline: var(--space-md);
-  padding-block: var(--space-sm);
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin-block-end: -1px;  /* Overlap parent border so active border flush */
-  border-block-end: 2px solid transparent;
-  cursor: pointer;
-  transition: color var(--duration-fast) var(--ease-out);
-  text-decoration: none;
-}
-
-.dz-tabbed-list-tab:hover {
-  color: var(--colour-text);
-}
-
-.dz-tabbed-list-tab.is-active {
-  border-block-end-color: var(--colour-brand);
-  color: var(--colour-text);
-  font-weight: var(--weight-medium);
-}
-
-.dz-tabbed-list-panel-loading {
-  display: flex;
-  justify-content: center;
-  padding-block: var(--space-2xl);
-  color: var(--colour-text-muted);
-}
-
-.dz-tabbed-list-panel-loading > svg {
-  width: 1rem;
-  height: 1rem;
-  animation: dz-spin 1s linear infinite;
-}
-
-.dz-tabbed-list-empty {
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin: 0;
-}
+ * The `display: tabbed_list` region now renders via the HM `tabs`
+ * Hyperpart contract (`.dz-tabs*`, styled by components/tabs.css and
+ * driven by controllers/dz-tabs.js — both ingested into the dist).
+ * The old bespoke tabbed-list rules (role=tablist + inline-JS
+ * is-active toggle) were deleted in the Tabs Phase 2 convergence
+ * (build-to-replace, ADR-0003). */
 
 /* ─────────────────────────── grid region ────────────────────────
  * Responsive cell grid (1 → 2 → 3 columns at sm/lg breakpoints).
