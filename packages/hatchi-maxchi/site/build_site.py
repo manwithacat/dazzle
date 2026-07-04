@@ -192,7 +192,28 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
-    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
+    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>',
+    // The grid tbody hydrates its rows over the wire. Each row carries a stable
+    // `id` (`dz-grid-row-<rowid>`, the idiomorph morph key) plus
+    // `data-dz-grid-row-id` (the bulk payload anchor) — the two agree so a
+    // selection follows its row across a re-sort. (Mock swaps innerHTML; a real
+    // htmx4 app uses innerMorph and the ids preserve selection through the morph.)
+    "/mock/grid/rows":
+      '<tr class="dz-tr-row" id="dz-grid-row-cust_1"><td class="dz-tr-checkbox-cell">' +
+      '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select ' +
+      'data-dz-grid-row-id="cust_1" aria-label="Select Jane Doe"></td>' +
+      '<td class="dz-tr-cell">Jane Doe</td><td class="dz-tr-cell">Pro</td>' +
+      '<td class="dz-tr-cell">2026-07-04</td></tr>' +
+      '<tr class="dz-tr-row" id="dz-grid-row-cust_2"><td class="dz-tr-checkbox-cell">' +
+      '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select ' +
+      'data-dz-grid-row-id="cust_2" aria-label="Select Ravi Patel"></td>' +
+      '<td class="dz-tr-cell">Ravi Patel</td><td class="dz-tr-cell">Free</td>' +
+      '<td class="dz-tr-cell">2026-06-28</td></tr>' +
+      '<tr class="dz-tr-row" id="dz-grid-row-cust_3"><td class="dz-tr-checkbox-cell">' +
+      '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select ' +
+      'data-dz-grid-row-id="cust_3" aria-label="Select Mia Chen"></td>' +
+      '<td class="dz-tr-cell">Mia Chen</td><td class="dz-tr-cell">Pro</td>' +
+      '<td class="dz-tr-cell">2026-06-15</td></tr>'
   };
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
@@ -231,10 +252,21 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       // the lazy tab panels do.
       target = el;
     }
+    // htmx applies `.htmx-request` to the request-initiating element for the
+    // duration of the in-flight request — the loading overlay + other CSS states
+    // key off it. Mirror that protocol here (add before the swap, remove after).
+    // The mock is SYNCHRONOUS, so there is no repaint between add/remove: the
+    // overlay never visually renders during gallery hydration (real htmx is
+    // async, so it does). The CSS rule itself is exercised by
+    // test_grid_loading_overlay_is_wired_to_htmx_request, which injects the class.
+    el.classList.add("htmx-request");
+    fire(el, "htmx:beforeRequest", { elt: el });
     if (target) {
       target.innerHTML = body;
       fire(target, "htmx:afterSwap", { elt: target });
     }
+    el.classList.remove("htmx-request");
+    fire(el, "htmx:afterRequest", { elt: el });
   }
 
   // hx-get on focus/input — INPUTS only (e.g. the command palette's
@@ -246,10 +278,18 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   document.addEventListener("input", function (e) {
     if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
   });
-  // hx-get on click (non-input affordances, e.g. master-detail list links)
+  // hx-get on click (non-input affordances, e.g. master-detail list links).
+  // Respect hx-trigger: an element with an EXPLICIT non-click trigger
+  // (load / intersect / input) must NOT re-fire on a click inside it — else
+  // selecting a checkbox inside a `load`-hydrated tbody re-fetches and wipes
+  // the selection. Real htmx fires these on their declared trigger only; a
+  // click-triggered affordance (master-detail/pagination) has no hx-trigger,
+  // so its default IS click.
   document.addEventListener("click", function (e) {
     var el = e.target.closest && e.target.closest("[hx-get]");
     if (!el || el.matches("input")) return;
+    var trig = el.getAttribute("hx-trigger") || "";
+    if (trig && trig.indexOf("click") < 0) return;
     e.preventDefault();
     doGet(el);
   });
@@ -298,6 +338,21 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", observeLazy);
     else observeLazy();
   }
+
+  // hx-trigger="load": fire once when the element is ready (the grid tbody
+  // hydrates its rows this way). Deferred via setTimeout(0): this mock IIFE is
+  // concatenated BEFORE the controllers in the built bundle, so a synchronous
+  // call here would fire the swap's htmx:afterSwap before dz-grid's delegated
+  // listener is attached. A macrotask runs after every controller IIFE has
+  // executed, so the initial afterSwap re-sync lands (matters once rows can
+  // arrive pre-selected, e.g. URL-restored selection).
+  var fireLoads = function () {
+    var els = document.querySelectorAll("[hx-get][hx-trigger]");
+    for (var i = 0; i < els.length; i++) {
+      if ((els[i].getAttribute("hx-trigger") || "").indexOf("load") >= 0) doGet(els[i]);
+    }
+  };
+  setTimeout(fireLoads, 0);
 
   window.htmx = { version: "mock-4" };
 })();

@@ -200,9 +200,9 @@ HYPERPARTS: list[Hyperpart] = [
         "Data",
         "A server-rendered data table: sortable headers, a filter bar, and row "
         "selection with a bulk-action bar — all HTML over the wire, on a real "
-        "<table>. Selection is live here (dz-grid.js, delegated + state-in-DOM); "
-        "sort / column-visibility / URL-synced state and the hydrating-tbody "
-        "exchange land in the following slices.",
+        "<table>. The tbody hydrates its rows over the wire (hx-get on load); "
+        "selection is live (dz-grid.js, delegated + state-in-DOM). Sort / "
+        "column-visibility / URL-synced state land in the following slices.",
         '<div class="hm-stack hm-measure-lg">'
         '<div class="dz-table" data-dz-grid data-dz-bulk-count="0">'
         '<div class="dz-filter-bar">'
@@ -219,7 +219,12 @@ HYPERPARTS: list[Hyperpart] = [
         '<button type="button" class="dz-bulk-delete">Delete</button>'
         '<button type="button" class="dz-bulk-clear" data-dz-grid-clear>Clear</button>'
         "</div>"
-        '<div class="dz-table-scroll"><div class="dz-table-scroll-x">'
+        '<div class="dz-table-scroll">'
+        # Loading overlay (#972): pure-CSS, keyed off htmx's native `.htmx-request`
+        # on any descendant — no controller flag for idiomorph to strip on morph.
+        '<div class="dz-table-loading" aria-hidden="true">'
+        '<span class="dz-table-loading-spinner">{svg:loader-circle}</span></div>'
+        '<div class="dz-table-scroll-x">'
         '<table class="dz-table-grid">'
         "<thead><tr>"
         '<th class="dz-table-th-select">'
@@ -229,35 +234,71 @@ HYPERPARTS: list[Hyperpart] = [
         '<th class="dz-table-th">Plan</th>'
         '<th class="dz-table-th">Created</th>'
         "</tr></thead>"
-        '<tbody class="dz-table-body">'
-        '<tr class="dz-tr-row"><td class="dz-tr-checkbox-cell">'
-        '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select '
-        'data-dz-grid-row-id="cust_1" aria-label="Select Jane Doe">'
-        '</td><td class="dz-tr-cell">Jane Doe</td><td class="dz-tr-cell">Pro</td>'
-        '<td class="dz-tr-cell">2026-07-04</td></tr>'
-        '<tr class="dz-tr-row"><td class="dz-tr-checkbox-cell">'
-        '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select '
-        'data-dz-grid-row-id="cust_2" aria-label="Select Ravi Patel">'
-        '</td><td class="dz-tr-cell">Ravi Patel</td><td class="dz-tr-cell">Free</td>'
-        '<td class="dz-tr-cell">2026-06-28</td></tr>'
-        '<tr class="dz-tr-row"><td class="dz-tr-checkbox-cell">'
-        '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select '
-        'data-dz-grid-row-id="cust_3" aria-label="Select Mia Chen">'
-        '</td><td class="dz-tr-cell">Mia Chen</td><td class="dz-tr-cell">Pro</td>'
-        '<td class="dz-tr-cell">2026-06-15</td></tr>'
-        "</tbody></table></div></div></div></div>",
-        notes="Selection is delegated + state-in-DOM: <code>dz-grid.js</code> counts the "
-        "checked <code>[data-dz-grid-select]</code> boxes, writes the total to "
-        "<code>data-dz-bulk-count</code> on the root, and the CSS reveals the "
-        "<code>.dz-bulk-actions</code> bar — no reactive framework. Each checkbox's "
-        "<code>.checked</code> survives a tbody morph in place (what Alpine's scope did "
-        "not); the derived count / bar / select-all are re-synced on change and on "
-        "<code>htmx:afterSwap</code>. The select-all box reflects checked / indeterminate "
-        "/ none. Bulk-action submission, sort, and the hydrating-tbody exchange — plus "
-        "stable row ids so a selection follows its <em>row</em> across a re-sort — are "
-        "the next slices.",
-        tags=("data", "interactive"),
+        # The tbody hydrates over the wire: hx-get on `load` fetches the rows,
+        # innerMorph swaps them in (idiomorph keys on each row's stable `id`, so a
+        # selection follows its ROW across a re-sort). Until then it holds a
+        # skeleton placeholder (no data rows to select → no empty-state flash).
+        '<tbody class="dz-table-body" data-dz-grid-body '
+        'hx-get="/mock/grid/rows" hx-trigger="load" hx-swap="innerMorph">'
+        '<tr class="dz-tr-row" aria-hidden="true">'
+        '<td class="dz-tr-checkbox-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td></tr>'
+        '<tr class="dz-tr-row" aria-hidden="true">'
+        '<td class="dz-tr-checkbox-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td></tr>'
+        '<tr class="dz-tr-row" aria-hidden="true">'
+        '<td class="dz-tr-checkbox-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
+        '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td></tr>'
+        "</tbody></table>"
+        # Empty-state sibling (CSS `:has(tbody tr td)`-driven, zero JS): shown only
+        # when the hydrated tbody has no data cells.
+        '<div class="dz-table-empty">'
+        '<span class="dz-table-empty-icon">{svg:inbox}</span>'
+        '<p class="dz-table-empty-title">No customers found</p>'
+        '<p class="dz-table-empty-hint">Adjust the filters to widen your search.</p>'
+        "</div>"
+        "</div></div></div></div>",
+        notes="The tbody hydrates over the wire — <code>hx-get</code> on "
+        "<code>load</code> fetches the rows, and <code>innerMorph</code> swaps them in. "
+        "Each row carries a stable <code>id</code> (the idiomorph <em>morph key</em>) so a "
+        "selection follows its <em>row</em> — not its DOM position — across a re-sort or "
+        "paginate; <code>data-dz-grid-row-id</code> stays the bulk-action payload anchor, "
+        "and the id encodes it so the two agree. Loading is pure-CSS "
+        "(<code>.htmx-request</code> → the overlay, #972 — no controller flag idiomorph "
+        "could strip). Selection is delegated + state-in-DOM: <code>dz-grid.js</code> counts "
+        "the checked <code>[data-dz-grid-select]</code> boxes, writes the total to "
+        "<code>data-dz-bulk-count</code>, and the CSS reveals the "
+        "<code>.dz-bulk-actions</code> bar; the count / select-all tri-state re-sync on "
+        "change and on <code>htmx:afterSwap</code>. Bulk-action submission, sort, and "
+        "URL-synced state are the next slices. (The gallery mock approximates the "
+        "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
+        "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "
+        "for true morph-preserved selection.)",
+        tags=("data", "interactive", "htmx"),
+        exchanges=(
+            Exchange(
+                method="GET",
+                endpoint="/app/{region}/rows?q=&sort=&dir=&page=&page_size=",
+                trigger="the tbody, on `load` (and again on sort / search / filter / "
+                "paginate in the following slices)",
+                response="the `<tr>` rows for the current query — each a `dz-tr-row` "
+                "carrying a stable `id` (the idiomorph morph key) plus "
+                "`data-dz-grid-row-id` (the bulk-action payload anchor); a zero-result "
+                "query returns an empty tbody so the `:has(tbody tr td)`-driven empty-state "
+                "shows",
+                swap="innerMorph of the tbody (`[data-dz-grid-body]`) — idiomorph keys on "
+                "each row's `id`, so a live selection follows its row across a re-sort",
+                states=("loading", "empty", "populated", "error"),
+            ),
+        ),
         controller="controllers/dz-grid.js",
+        mock="/mock/grid",
     ),
     # ── Overlays (interactive — need the mock htmx / dialog) ─────────
     Hyperpart(

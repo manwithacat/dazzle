@@ -198,6 +198,67 @@ def test_grid_selection_reveals_and_clears_the_bulk_bar(page) -> None:  # type: 
     assert page.eval_on_selector(bar, disp) == "none"
 
 
+def test_grid_hydrates_rows_via_exchange_with_stable_ids(page) -> None:  # type: ignore[no-untyped-def]
+    """The tbody hydrates its rows over the wire (hx-get on `load`, the gallery
+    mock). The hydrated rows carry a stable `id` — the idiomorph morph key — so a
+    selection follows its ROW (not its DOM position) across a re-sort/paginate in
+    a real innerMorph swap. `data-grid-row-id` stays the bulk-payload anchor; the
+    `id` encodes it, so the two agree. (Gallery classes are un-prefixed.)"""
+    body = "[data-grid-body]"
+    boxes = "[data-grid-select]"
+
+    # By the fixture's 200ms wait the `load` exchange has replaced the skeleton
+    # placeholder with the real rows — there are selectable checkboxes now.
+    n = page.eval_on_selector_all(boxes, "els => els.length")
+    assert n >= 3, "the tbody must hydrate its rows from the exchange (load trigger)"
+    # the skeleton placeholder is gone — hydrated rows carry no skeleton
+    assert page.eval_on_selector_all(f"{body} .skeleton", "els => els.length") == 0, (
+        "the skeleton placeholder must be replaced by the hydrated rows"
+    )
+
+    # Every hydrated row exposes a stable, unique id that encodes its row-id.
+    report = page.eval_on_selector_all(
+        boxes,
+        "els => els.map(b => { const tr = b.closest('tr');"
+        " return { id: tr && tr.id, rowId: b.getAttribute('data-grid-row-id') }; })",
+    )
+    ids = [r["id"] for r in report]
+    assert all(ids), f"every hydrated row needs a stable id (the morph key): {report}"
+    assert len(set(ids)) == len(ids), f"row ids must be unique (idiomorph de-dupes on id): {ids}"
+    for r in report:
+        assert r["rowId"] and r["id"].endswith(r["rowId"]), (
+            f"the row id (morph key) must encode data-grid-row-id (payload anchor): {r}"
+        )
+
+    # Selection still works on the hydrated rows: checking one reveals the bar.
+    page.locator(boxes).first.check()
+    page.wait_for_timeout(80)
+    assert page.get_attribute("[data-grid]", "data-bulk-count") == "1", (
+        "selection must work on the hydrated rows (afterSwap re-sync)"
+    )
+
+
+def test_grid_loading_overlay_is_wired_to_htmx_request(page) -> None:  # type: ignore[no-untyped-def]
+    """Loading is pure-CSS (#972): htmx's native `.htmx-request` on any grid
+    descendant reveals the `.dz-table-loading` overlay — no controller JS, so
+    idiomorph can't strip a JS-held loading flag. At rest the overlay is hidden;
+    injecting `.htmx-request` (as htmx does mid-flight) shows it."""
+    overlay = ".table-loading"
+    disp = "e => getComputedStyle(e).display"
+    assert page.query_selector(overlay) is not None, "the grid must carry a loading overlay"
+    assert page.eval_on_selector(overlay, disp) == "none", "overlay hidden at rest (no request)"
+
+    # htmx adds `.htmx-request` to the request-initiating element in flight.
+    page.eval_on_selector("[data-grid-body]", "el => el.classList.add('htmx-request')")
+    page.wait_for_timeout(50)
+    assert page.eval_on_selector(overlay, disp) != "none", (
+        "an in-flight `.htmx-request` on a descendant must reveal the overlay"
+    )
+    page.eval_on_selector("[data-grid-body]", "el => el.classList.remove('htmx-request')")
+    page.wait_for_timeout(50)
+    assert page.eval_on_selector(overlay, disp) == "none", "overlay hides when the request settles"
+
+
 def test_copy_button_copies_and_gives_feedback(_engine_browser) -> None:  # type: ignore[no-untyped-def]
     # Headless WebKit blocks navigator.clipboard.writeText (and rejects the
     # clipboard-* permissions), so the button's feedback never fires there.

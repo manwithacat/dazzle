@@ -20,7 +20,28 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
-    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
+    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>',
+    // The grid tbody hydrates its rows over the wire. Each row carries a stable
+    // `id` (`grid-row-<rowid>`, the idiomorph morph key) plus
+    // `data-grid-row-id` (the bulk payload anchor) — the two agree so a
+    // selection follows its row across a re-sort. (Mock swaps innerHTML; a real
+    // htmx4 app uses innerMorph and the ids preserve selection through the morph.)
+    "/mock/grid/rows":
+      '<tr class="tr-row" id="grid-row-cust_1"><td class="tr-checkbox-cell">' +
+      '<input type="checkbox" class="tr-checkbox" data-grid-select ' +
+      'data-grid-row-id="cust_1" aria-label="Select Jane Doe"></td>' +
+      '<td class="tr-cell">Jane Doe</td><td class="tr-cell">Pro</td>' +
+      '<td class="tr-cell">2026-07-04</td></tr>' +
+      '<tr class="tr-row" id="grid-row-cust_2"><td class="tr-checkbox-cell">' +
+      '<input type="checkbox" class="tr-checkbox" data-grid-select ' +
+      'data-grid-row-id="cust_2" aria-label="Select Ravi Patel"></td>' +
+      '<td class="tr-cell">Ravi Patel</td><td class="tr-cell">Free</td>' +
+      '<td class="tr-cell">2026-06-28</td></tr>' +
+      '<tr class="tr-row" id="grid-row-cust_3"><td class="tr-checkbox-cell">' +
+      '<input type="checkbox" class="tr-checkbox" data-grid-select ' +
+      'data-grid-row-id="cust_3" aria-label="Select Mia Chen"></td>' +
+      '<td class="tr-cell">Mia Chen</td><td class="tr-cell">Pro</td>' +
+      '<td class="tr-cell">2026-06-15</td></tr>'
   };
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
@@ -59,10 +80,21 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       // the lazy tab panels do.
       target = el;
     }
+    // htmx applies `.htmx-request` to the request-initiating element for the
+    // duration of the in-flight request — the loading overlay + other CSS states
+    // key off it. Mirror that protocol here (add before the swap, remove after).
+    // The mock is SYNCHRONOUS, so there is no repaint between add/remove: the
+    // overlay never visually renders during gallery hydration (real htmx is
+    // async, so it does). The CSS rule itself is exercised by
+    // test_grid_loading_overlay_is_wired_to_htmx_request, which injects the class.
+    el.classList.add("htmx-request");
+    fire(el, "htmx:beforeRequest", { elt: el });
     if (target) {
       target.innerHTML = body;
       fire(target, "htmx:afterSwap", { elt: target });
     }
+    el.classList.remove("htmx-request");
+    fire(el, "htmx:afterRequest", { elt: el });
   }
 
   // hx-get on focus/input — INPUTS only (e.g. the command palette's
@@ -74,10 +106,18 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   document.addEventListener("input", function (e) {
     if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
   });
-  // hx-get on click (non-input affordances, e.g. master-detail list links)
+  // hx-get on click (non-input affordances, e.g. master-detail list links).
+  // Respect hx-trigger: an element with an EXPLICIT non-click trigger
+  // (load / intersect / input) must NOT re-fire on a click inside it — else
+  // selecting a checkbox inside a `load`-hydrated tbody re-fetches and wipes
+  // the selection. Real htmx fires these on their declared trigger only; a
+  // click-triggered affordance (master-detail/pagination) has no hx-trigger,
+  // so its default IS click.
   document.addEventListener("click", function (e) {
     var el = e.target.closest && e.target.closest("[hx-get]");
     if (!el || el.matches("input")) return;
+    var trig = el.getAttribute("hx-trigger") || "";
+    if (trig && trig.indexOf("click") < 0) return;
     e.preventDefault();
     doGet(el);
   });
@@ -126,6 +166,21 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", observeLazy);
     else observeLazy();
   }
+
+  // hx-trigger="load": fire once when the element is ready (the grid tbody
+  // hydrates its rows this way). Deferred via setTimeout(0): this mock IIFE is
+  // concatenated BEFORE the controllers in the built bundle, so a synchronous
+  // call here would fire the swap's htmx:afterSwap before grid's delegated
+  // listener is attached. A macrotask runs after every controller IIFE has
+  // executed, so the initial afterSwap re-sync lands (matters once rows can
+  // arrive pre-selected, e.g. URL-restored selection).
+  var fireLoads = function () {
+    var els = document.querySelectorAll("[hx-get][hx-trigger]");
+    for (var i = 0; i < els.length; i++) {
+      if ((els[i].getAttribute("hx-trigger") || "").indexOf("load") >= 0) doGet(els[i]);
+    }
+  };
+  setTimeout(fireLoads, 0);
 
   window.htmx = { version: "mock-4" };
 })();
@@ -563,11 +618,13 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  * select-all tri-state — is a projection of those checkboxes, so it is
  * recomputed on every `change`/`click` AND re-synced after any `htmx:afterSwap`
  * (a swap changes the row set, so the projection must be rebuilt from the
- * surviving boxes). Caveat for the sort/hydration slice: idiomorph preserves a
- * checkbox by DOM position unless the row carries a stable `id`, so anchoring a
- * selection to row *identity* across a re-sort still needs the server to emit
- * stable ids (the `data-grid-row-id` here is the payload anchor, not yet the
- * morph key). Until then this slice is honest about *counts*, not identity.
+ * surviving boxes). Row identity across a re-sort/paginate: idiomorph preserves a
+ * checkbox by DOM position UNLESS its row carries a stable `id`, which idiomorph
+ * then uses as the morph key — so a live selection follows its ROW, not a
+ * position. The server emits that `id` (`grid-row-<rowid>`);
+ * `data-grid-row-id` stays the bulk-action payload anchor, and the id encodes
+ * it so the two agree. (The HM gallery mock emits it today; Dazzle's row emitter
+ * adopts it when the runtime converges onto this primitive.)
  *
  * Contract:
  *   - root:        `[data-grid]` (also the `.table` the bulk CSS gates on)

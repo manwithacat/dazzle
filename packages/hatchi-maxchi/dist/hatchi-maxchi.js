@@ -431,11 +431,13 @@
  * select-all tri-state — is a projection of those checkboxes, so it is
  * recomputed on every `change`/`click` AND re-synced after any `htmx:afterSwap`
  * (a swap changes the row set, so the projection must be rebuilt from the
- * surviving boxes). Caveat for the sort/hydration slice: idiomorph preserves a
- * checkbox by DOM position unless the row carries a stable `id`, so anchoring a
- * selection to row *identity* across a re-sort still needs the server to emit
- * stable ids (the `data-grid-row-id` here is the payload anchor, not yet the
- * morph key). Until then this slice is honest about *counts*, not identity.
+ * surviving boxes). Row identity across a re-sort/paginate: idiomorph preserves a
+ * checkbox by DOM position UNLESS its row carries a stable `id`, which idiomorph
+ * then uses as the morph key — so a live selection follows its ROW, not a
+ * position. The server emits that `id` (`grid-row-<rowid>`);
+ * `data-grid-row-id` stays the bulk-action payload anchor, and the id encodes
+ * it so the two agree. (The HM gallery mock emits it today; Dazzle's row emitter
+ * adopts it when the runtime converges onto this primitive.)
  *
  * Contract:
  *   - root:        `[data-grid]` (also the `.table` the bulk CSS gates on)

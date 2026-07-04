@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.74] - 2026-07-04
+
+### Added
+- **`dz-grid` — the hydrating-tbody exchange + stable row ids (data-table primitive, next slice)** (HM package 0.1.9 → 0.1.10). The `grid` Hyperpart's `<tbody>` now hydrates its rows over the wire: `hx-get` on `load` fetches the rows, `innerMorph` swaps them in. Each row carries a stable `id` (`dz-grid-row-<rowid>`) — the idiomorph **morph key** — so a live selection follows its *row*, not its DOM position, across a re-sort/paginate; `data-dz-grid-row-id` stays the bulk-action payload anchor and the id encodes it so the two agree. Adds a pure-CSS loading overlay (keyed off htmx's native `.htmx-request`, #972 — no controller flag idiomorph could strip), a `:has(tbody tr td)`-driven empty-state, and a skeleton placeholder pre-hydration (no empty-state flash). The gallery mock gained a `/mock/grid/rows` exchange, `load`-trigger firing, and the `.htmx-request` request lifecycle; its click handler now respects `hx-trigger` (a `load`/`intersect` element no longer re-fires its `hx-get` on a click *inside* it — the bug where selecting a checkbox in a hydrated tbody re-fetched and wiped selection). Behaviour-tested on Chromium + WebKit (hydration + stable-id contract + loading-overlay wiring); default populated state unchanged, so no visual-baseline change. Still inert in Dazzle (no `data-dz-grid` emitted yet).
+
+### Agent Guidance
+- **Row `id` is the morph key.** For a data-table whose selection must survive an `innerMorph` re-sort/paginate, emit a stable `id` on each `<tr>` (idiomorph keys on `id`); `data-dz-grid-row-id` is only the bulk payload anchor. Emitting one without the other loses selection to DOM position. The gallery mock demonstrates the exchange; a real htmx4 app needs the idiomorph extension for `hx-swap="innerMorph"`. Next `dz-grid` slices: sort (3-state → query → tbody reload), bulk-action submission (all-matching + excluded ids + server RBAC re-validate), URL-synced state, then converge Dazzle onto the primitive and retire Alpine `dzTable`.
+- **HM gallery mock honours `hx-trigger`.** The static-gallery mock htmx only auto-fires `hx-get` on click for affordances with *no* explicit trigger (or one naming `click`); `load`/`intersect`/`input`-triggered elements fire on their own trigger. Keep this in mind when adding an interactive Hyperpart whose root wraps clickable children.
+
 ## [0.93.73] - 2026-07-04
 
 ### Added
