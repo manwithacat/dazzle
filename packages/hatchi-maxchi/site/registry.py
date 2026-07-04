@@ -214,7 +214,8 @@ HYPERPARTS: list[Hyperpart] = [
         "<option>Active</option></select></div>"
         "</div>"
         '<div class="dz-bulk-actions">'
-        "<span><span data-dz-bulk-count-target>0</span> selected</span>"
+        '<span aria-live="polite" aria-atomic="true">'
+        "<span data-dz-bulk-count-target>0</span> selected</span>"
         '<button type="button" class="dz-bulk-delete">Delete</button>'
         '<button type="button" class="dz-bulk-clear" data-dz-grid-clear>Clear</button>'
         "</div>"

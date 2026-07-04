@@ -178,6 +178,11 @@ def test_grid_selection_reveals_and_clears_the_bulk_bar(page) -> None:  # type: 
     assert page.get_attribute(root, "data-bulk-count") == "1"
     assert page.eval_on_selector(bar, disp) != "none"
     assert page.inner_text("[data-bulk-count-target]").strip() == "1"
+    # the count sits in a polite live region so SRs announce "N selected"
+    assert page.eval_on_selector(
+        "[data-bulk-count-target]",
+        "e => e.closest('[aria-live=polite]') !== null",
+    ), "the selection count must be inside an aria-live=polite region"
 
     # Select-all → every row checked, count == N, header box fully checked.
     n = page.eval_on_selector_all(boxes, "els => els.length")
