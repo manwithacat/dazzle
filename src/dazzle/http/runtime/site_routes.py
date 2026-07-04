@@ -335,7 +335,7 @@ def _render_qa_personas_html(qa_personas: list[Any]) -> str:
             f'<p class="dz-qa-persona-description">{description}</p>'
             f"{stories_html}"
             f'<button type="button" data-qa-login-persona="{pid}" '  # nosemgrep
-            f'class="dz-button dz-button-primary dz-qa-persona-login">'
+            f'class="dz-button dz-qa-persona-login" data-dz-variant="primary">'
             f"Log in as {display_name}"
             f"</button>"
             "</article>"
@@ -485,12 +485,12 @@ def create_site_page_routes(
             dashboard_attr = _html_mod.escape(dashboard_url_raw, quote=True)
             cta_html = (
                 f'<a href="{dashboard_attr}" '  # nosemgrep
-                f'class="dz-button dz-button-primary">Dashboard</a>'
+                f'class="dz-button" data-dz-variant="primary">Dashboard</a>'
             )
         elif nav_cta is not None:
             cta_href = _html_mod.escape(str(getattr(nav_cta, "href", "") or ""), quote=True)
             cta_label = _html_mod.escape(str(getattr(nav_cta, "label", "") or ""), quote=False)
-            cta_html = f'<a href="{cta_href}" class="dz-button dz-button-primary">{cta_label}</a>'  # nosemgrep
+            cta_html = f'<a href="{cta_href}" class="dz-button" data-dz-variant="primary">{cta_label}</a>'  # nosemgrep
         else:
             cta_html = ""
         theme_toggle_html = ""

@@ -121,8 +121,8 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       '<h2 class="alert-dialog__title">Are you sure?</h2>' +
       '<p class="alert-dialog__message"></p>' +
       '<div class="alert-dialog__actions">' +
-      '<button type="button" class="button button-outline" data-confirm-cancel>Cancel</button>' +
-      '<button type="button" class="button button-destructive" data-confirm-accept>Confirm</button>' +
+      '<button type="button" class="button" data-variant="outline" data-confirm-cancel>Cancel</button>' +
+      '<button type="button" class="button" data-variant="destructive" data-confirm-accept>Confirm</button>' +
       "</div>";
     document.body.appendChild(dialog);
     return dialog;

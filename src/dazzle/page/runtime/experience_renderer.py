@@ -145,7 +145,7 @@ def _render_form_step_body(experience: Any, page_context: Any) -> str:
         '<div class="dz-experience-actions">'
         # htmx 4: native hx-disabled-elt replaces the loading-states ext's
         # data-loading-disable; the native htmx-request class covers styling.
-        '<button type="submit" class="dz-button dz-button-primary" '
+        '<button type="submit" class="dz-button" data-dz-variant="primary" '
         'hx-disabled-elt="this">'
         f"{submit_label}</button>"
         f"{transition_buttons}"

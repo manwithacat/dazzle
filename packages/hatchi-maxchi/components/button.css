@@ -1,18 +1,21 @@
 /*
  * button.css — button component family.
  *
- * Single semantic class .dz-button with three variant modifiers:
- *   .dz-button-ghost        no border, hover-tint only (back, cancel)
- *   .dz-button-outline      bordered neutral (default action button)
- *   .dz-button-destructive  bordered danger (delete, revoke)
+ * One semantic class `.dz-button` + a `data-dz-variant` attribute for the
+ * visual variant (canonical, matching `data-dz-tone` on badges/alerts):
+ *   data-dz-variant="ghost"        no border, hover-tint only (back, cancel)
+ *   data-dz-variant="outline"      bordered neutral (default action button)
+ *   data-dz-variant="destructive"  bordered danger (delete, revoke)
+ *   data-dz-variant="primary"      filled brand (the recommended action)
+ * and `data-dz-size="sm"` for the compact inline-row size.
  *
- * Used everywhere — detail_view header, modal footers, drawer
- * actions, toolbar buttons. Centralising here means future
- * theming + accessibility tweaks happen in one place.
+ * A variant NEVER drops the base class — `.dz-button` carries the shared
+ * geometry, `[data-dz-variant]` layers the skin. (The standalone
+ * `.dz-button-primary` rule in components/table.css is a separate, smaller
+ * table-header variant and is intentionally left as a class.)
  *
- * The `<button>` element baseline in base.css already provides
- * focus ring, disabled state, font inheritance — these classes
- * extend that baseline with size + variant.
+ * The `<button>` element baseline in base.css already provides focus ring,
+ * disabled state, font inheritance — this extends it with size + variant.
  *
  * Wrapped in @layer components.
  */
@@ -34,43 +37,38 @@
     color var(--duration-fast) var(--ease-out);
 }
 
-.dz-button-ghost {
+.dz-button[data-dz-variant="ghost"] {
   background: transparent;
   border: 1px solid transparent;
   color: var(--colour-text-muted);
 }
 
-.dz-button-ghost:hover {
+.dz-button[data-dz-variant="ghost"]:hover {
   background: var(--colour-bg);
   color: var(--colour-text);
 }
 
-.dz-button-outline {
+.dz-button[data-dz-variant="outline"] {
   background: var(--colour-surface);
   color: var(--colour-text);
   border: 1px solid var(--colour-border);
 }
 
-.dz-button-outline:hover {
+.dz-button[data-dz-variant="outline"]:hover {
   background: var(--colour-bg);
 }
 
-.dz-button-destructive {
+.dz-button[data-dz-variant="destructive"] {
   background: var(--colour-surface);
   color: var(--colour-danger);
   border: 1px solid var(--colour-danger);
 }
 
-.dz-button-destructive:hover {
+.dz-button[data-dz-variant="destructive"]:hover {
   background: var(--colour-danger-soft);
 }
 
-/* `.dz-button.dz-button-primary` — filled brand variant. Composes
- * with .dz-button baseline (height + padding + radius). The standalone
- * `.dz-button-primary` rule in components/table.css is a smaller
- * table-header-only variant and stays scoped (less-specific selector,
- * no .dz-button qualifier). */
-.dz-button.dz-button-primary {
+.dz-button[data-dz-variant="primary"] {
   background: var(--colour-brand);
   color: var(--colour-brand-contrast);
   border: 1px solid var(--colour-brand);
@@ -79,25 +77,25 @@
 
 /* TASTE-2/8: explicit hover step from the ramp (not a brightness filter)
    and a physical press — shadow collapses, button settles 0.5px. */
-.dz-button.dz-button-primary:hover {
+.dz-button[data-dz-variant="primary"]:hover {
   background: var(--brand-700);
   border-color: var(--brand-700);
 }
 
-.dz-button.dz-button-primary:active {
+.dz-button[data-dz-variant="primary"]:active {
   box-shadow: none;
   transform: translateY(0.5px);
 }
 
-.dz-button.dz-button-primary:disabled,
-.dz-button.dz-button-primary[aria-disabled="true"] {
+.dz-button[data-dz-variant="primary"]:disabled,
+.dz-button[data-dz-variant="primary"][aria-disabled="true"] {
   opacity: 0.6;
   pointer-events: none;
 }
 
 /* Size modifier — smaller button used by inline action rows
  * (e.g. 2FA settings row buttons). Composes with .dz-button base. */
-.dz-button.dz-button-sm {
+.dz-button[data-dz-size="sm"] {
   height: 1.75rem;
   padding-inline: var(--space-md);
   font-size: var(--text-xs);

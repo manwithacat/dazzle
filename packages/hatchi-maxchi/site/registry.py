@@ -79,7 +79,7 @@ class Hyperpart:
 
 
 # Groups order the gallery nav.
-GROUPS = ["Actions", "Feedback", "Navigation", "Overlays", "Forms", "Data"]
+GROUPS = ["Actions", "Feedback", "Navigation", "Overlays", "Forms", "Data", "Primitives"]
 
 HYPERPARTS: list[Hyperpart] = [
     # ── Actions ──────────────────────────────────────────────────────
@@ -89,10 +89,10 @@ HYPERPARTS: list[Hyperpart] = [
         "Actions",
         "Primary, outline, ghost, destructive — chromatic accent CTAs.",
         '<div class="hm-demo-row">'
-        '<button class="dz-button dz-button-primary">Save changes</button>'
-        '<button class="dz-button dz-button-outline">Cancel</button>'
-        '<button class="dz-button dz-button-ghost">Learn more</button>'
-        '<button class="dz-button dz-button-destructive">Delete</button>'
+        '<button class="dz-button" data-dz-variant="primary">Save changes</button>'
+        '<button class="dz-button" data-dz-variant="outline">Cancel</button>'
+        '<button class="dz-button" data-dz-variant="ghost">Learn more</button>'
+        '<button class="dz-button" data-dz-variant="destructive">Delete</button>'
         "</div>",
     ),
     Hyperpart(
@@ -136,7 +136,7 @@ HYPERPARTS: list[Hyperpart] = [
         "Command palette",
         "Overlays",
         "The hx-get palette — the htmx4 flagship. Press ⌘K.",
-        '<button class="dz-button dz-button-outline" data-hm-open-command>Open palette <kbd class="dz-kbd">⌘K</kbd></button>'
+        '<button class="dz-button" data-dz-variant="outline" data-hm-open-command>Open palette <kbd class="dz-kbd">⌘K</kbd></button>'
         # `closedby="any"` = native light-dismiss (backdrop tap + Esc) where
         # supported (recent Chromium); dz-command.js provides the cross-browser
         # floor. The close button is the always-visible dismiss affordance —
@@ -177,7 +177,7 @@ HYPERPARTS: list[Hyperpart] = [
         "Confirm dialog",
         "Overlays",
         "Designed replacement for window.confirm — every hx-confirm upgrades automatically.",
-        '<button class="dz-button dz-button-destructive" hx-delete="/mock/noop" '
+        '<button class="dz-button" data-dz-variant="destructive" hx-delete="/mock/noop" '
         'hx-confirm="Delete this invoice? This cannot be undone.">Delete invoice</button>',
         notes="dz-confirm.js intercepts <code>htmx:confirm</code> (a client affordance — no "
         "server round-trip). On approval it issues the underlying request. No per-button "
@@ -200,7 +200,7 @@ HYPERPARTS: list[Hyperpart] = [
         "Menu",
         "Overlays",
         "Details-based dropdown — the hypermedia answer, no JS for open state.",
-        '<details class="dz-menu"><summary class="dz-button dz-button-outline">Actions ▾</summary>'
+        '<details class="dz-menu"><summary class="dz-button" data-dz-variant="outline">Actions ▾</summary>'
         '<div class="dz-menu__panel">'
         '<button class="dz-menu__item">{icon:pencil} Edit</button>'
         '<button class="dz-menu__item">{icon:copy} Duplicate</button>'
@@ -213,7 +213,7 @@ HYPERPARTS: list[Hyperpart] = [
         "Popover",
         "Overlays",
         "Free-content panel, details-based; body can lazy-load via htmx.",
-        '<details class="dz-popover"><summary class="dz-button dz-button-outline">Details</summary>'
+        '<details class="dz-popover"><summary class="dz-button" data-dz-variant="outline">Details</summary>'
         '<div class="dz-popover__panel"><div style="font-weight:var(--weight-semibold);font-size:var(--text-sm);margin-bottom:.25rem">Dimensions</div>'
         '<p style="margin:0;font-size:var(--text-sm);color:var(--colour-text-muted)">Filters, previews, quick forms.</p></div></details>',
         tags=("interactive",),
@@ -223,7 +223,7 @@ HYPERPARTS: list[Hyperpart] = [
         "Tooltip",
         "Overlays",
         "CSS-only attribute tooltip — zero JS.",
-        '<button class="dz-button dz-button-outline" data-dz-tooltip="Saved 2 minutes ago">Hover me</button>',
+        '<button class="dz-button" data-dz-variant="outline" data-dz-tooltip="Saved 2 minutes ago">Hover me</button>',
     ),
     # ── Forms ────────────────────────────────────────────────────────
     Hyperpart(
@@ -284,6 +284,31 @@ HYPERPARTS: list[Hyperpart] = [
         '<span class="dz-empty-state__icon">{svg:inbox}</span>'
         '<h3 class="dz-empty-state__title">No invoices yet</h3>'
         '<p class="dz-empty-state__description">Create your first invoice to get started.</p>'
-        '<div class="dz-empty-state__action"><a class="dz-button dz-button-primary" href="#">New Invoice</a></div></div></div>',
+        '<div class="dz-empty-state__action"><a class="dz-button" data-dz-variant="primary" href="#">New Invoice</a></div></div></div>',
+    ),
+    # ── Primitives ───────────────────────────────────────────────────
+    Hyperpart(
+        "icon",
+        "Icon",
+        "Primitives",
+        "Inline SVG from a vendored Lucide registry — currentColor, decorative "
+        "by default. Shown here as the sprite <use> form (one sheet per page).",
+        '<div class="dz-icon-demo">'
+        '<svg class="dz-icon dz-icon--size-xs" aria-hidden="true"><use href="#circle-check"/></svg>'
+        '<svg class="dz-icon dz-icon--size-sm" aria-hidden="true"><use href="#circle-check"/></svg>'
+        '<svg class="dz-icon dz-icon--size-md" aria-hidden="true"><use href="#circle-check"/></svg>'
+        '<svg class="dz-icon dz-icon--size-lg" aria-hidden="true"><use href="#circle-check"/></svg>'
+        '<svg class="dz-icon dz-icon--size-xl" aria-hidden="true"><use href="#circle-check"/></svg>'
+        "</div>",
+        notes="Two delivery forms, one registry. <strong>Sprite</strong> "
+        '(<code>&lt;svg class="icon"&gt;&lt;use href="#name"/&gt;&lt;/svg&gt;</code>) '
+        "is short and legible but needs the icon sheet inlined once per page — "
+        "use it when an icon repeats. <strong>Inline</strong> (the full "
+        "<code>&lt;svg&gt;</code> with path data) is self-contained — use it when "
+        "you want no sheet dependency. Both inherit text colour via "
+        "<code>currentColor</code> and are <code>aria-hidden</code> by default; "
+        "pass a label for a meaningful, non-decorative icon. Sizes: "
+        "<code>icon--size-xs</code> … <code>icon--size-xl</code>.",
+        tags=("icon", "svg", "sprite", "a11y"),
     ),
 ]

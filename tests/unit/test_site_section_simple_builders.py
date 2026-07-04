@@ -48,8 +48,8 @@ def test_cta_renders_headline_subhead_and_ctas() -> None:
     assert "<h2>Try it</h2>" in out
     assert '<p class="dz-subhead">Free trial</p>' in out
     assert 'href="/start"' in out
-    assert "dz-button-primary" in out
-    assert "dz-button-outline" in out
+    assert 'data-dz-variant="primary"' in out
+    assert 'data-dz-variant="outline"' in out
 
 
 def test_cta_omits_blocks_when_fields_absent() -> None:
@@ -186,8 +186,8 @@ def test_value_highlight_renders_primary_cta_only() -> None:
             "secondary_cta": {"label": "Docs", "href": "/d"},
         }
     )
-    assert "dz-button-primary" in out
-    assert "dz-button-outline" not in out
+    assert 'data-dz-variant="primary"' in out
+    assert 'data-dz-variant="outline"' not in out
 
 
 def test_value_highlight_omits_optional_blocks_when_absent() -> None:

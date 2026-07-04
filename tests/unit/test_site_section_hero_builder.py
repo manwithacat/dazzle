@@ -74,7 +74,7 @@ def test_hero_emits_primary_cta_when_provided() -> None:
         }
     )
     assert "dz-cta-group" in out
-    assert '<a href="/signup" class="dz-button dz-button-primary">Sign Up</a>' in out
+    assert '<a href="/signup" class="dz-button" data-dz-variant="primary">Sign Up</a>' in out
 
 
 def test_hero_emits_secondary_cta_with_outline_class() -> None:
@@ -85,7 +85,7 @@ def test_hero_emits_secondary_cta_with_outline_class() -> None:
             "secondary_cta": {"label": "Docs", "href": "/docs"},
         }
     )
-    assert '<a href="/docs" class="dz-button dz-button-outline">Docs</a>' in out
+    assert '<a href="/docs" class="dz-button" data-dz-variant="outline">Docs</a>' in out
 
 
 def test_hero_emits_both_ctas_when_both_provided() -> None:
@@ -97,11 +97,11 @@ def test_hero_emits_both_ctas_when_both_provided() -> None:
             "secondary_cta": {"label": "Learn", "href": "/l"},
         }
     )
-    assert "dz-button-primary" in out
-    assert "dz-button-outline" in out
+    assert 'data-dz-variant="primary"' in out
+    assert 'data-dz-variant="outline"' in out
     # Primary first, secondary second.
-    primary_pos = out.index("dz-button-primary")
-    secondary_pos = out.index("dz-button-outline")
+    primary_pos = out.index('data-dz-variant="primary"')
+    secondary_pos = out.index('data-dz-variant="outline"')
     assert primary_pos < secondary_pos
 
 

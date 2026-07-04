@@ -29,10 +29,9 @@
  */
 @layer components {
   @media (pointer: coarse) {
+    /* .dz-button covers every button — variants are data-dz-variant on the
+       same base element, so no per-variant selector is needed here. */
     .dz-button,
-    .dz-button-ghost,
-    .dz-button-outline,
-    .dz-button-destructive,
     .dz-icon-button,
     .dz-card-action-button,
     .dz-list-action-button,

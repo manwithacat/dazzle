@@ -195,7 +195,7 @@ def _build_hero_section(section: dict[str, Any]) -> str:
             label = str(primary_cta.get("label", "Get Started") or "Get Started")
             cta_parts.append(
                 f'<a href="{_html.escape(href, quote=True)}" '
-                f'class="dz-button dz-button-primary">'
+                f'class="dz-button" data-dz-variant="primary">'
                 f"{_html.escape(label)}</a>"
             )
         if secondary_cta:
@@ -203,7 +203,7 @@ def _build_hero_section(section: dict[str, Any]) -> str:
             label = str(secondary_cta.get("label", "Learn More") or "Learn More")
             cta_parts.append(
                 f'<a href="{_html.escape(href, quote=True)}" '
-                f'class="dz-button dz-button-outline">'
+                f'class="dz-button" data-dz-variant="outline">'
                 f"{_html.escape(label)}</a>"
             )
         content_inner.append(f'<div class="dz-cta-group">{"".join(cta_parts)}</div>')
@@ -247,7 +247,7 @@ def _build_cta_section(section: dict[str, Any]) -> str:
     """Typed builder for `type: cta` sitespec sections (#1037, v0.67.26).
 
     Subset of hero — no media, single content block. The class names
-    + button composition (dz-button + dz-button-primary / -outline)
+    + button composition (dz-button + data-dz-variant primary / outline)
     match `cta.html` byte-for-byte."""
     parts: list[str] = []
     parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-cta">')
@@ -267,7 +267,7 @@ def _build_cta_section(section: dict[str, Any]) -> str:
             label = str(primary_cta.get("label", "Get Started") or "Get Started")
             cta_parts.append(
                 f'<a href="{_html.escape(href, quote=True)}" '
-                f'class="dz-button dz-button-primary">'
+                f'class="dz-button" data-dz-variant="primary">'
                 f"{_html.escape(label)}</a>"
             )
         if secondary_cta:
@@ -275,7 +275,7 @@ def _build_cta_section(section: dict[str, Any]) -> str:
             label = str(secondary_cta.get("label", "Learn More") or "Learn More")
             cta_parts.append(
                 f'<a href="{_html.escape(href, quote=True)}" '
-                f'class="dz-button dz-button-outline">'
+                f'class="dz-button" data-dz-variant="outline">'
                 f"{_html.escape(label)}</a>"
             )
         inner.append(f'<div class="dz-cta-group">{"".join(cta_parts)}</div>')
@@ -364,7 +364,7 @@ def _build_value_highlight_section(section: dict[str, Any]) -> str:
         inner.append(
             f'<div class="dz-cta-group">'
             f'<a href="{_html.escape(href, quote=True)}" '
-            f'class="dz-button dz-button-primary">'
+            f'class="dz-button" data-dz-variant="primary">'
             f"{_html.escape(label)}</a>"
             f"</div>"
         )
@@ -577,7 +577,7 @@ def _build_split_content_section(section: dict[str, Any]) -> str:
         text_inner.append(
             f'<div class="dz-cta-group dz-cta-group--left">'
             f'<a href="{_html.escape(href, quote=True)}" '
-            f'class="dz-button dz-button-primary">'
+            f'class="dz-button" data-dz-variant="primary">'
             f"{_html.escape(label)}</a></div>"
         )
 
@@ -628,7 +628,7 @@ def _build_card_grid_section(section: dict[str, Any]) -> str:
             label = str(cta.get("label", "Learn More") or "Learn More")
             item_inner.append(
                 f'<a href="{_html.escape(href, quote=True)}" '
-                f'class="dz-button dz-button-primary">'
+                f'class="dz-button" data-dz-variant="primary">'
                 f"{_html.escape(label)}</a>"
             )
         item_parts.append(f'<div class="dz-card-item">{"".join(item_inner)}</div>')
@@ -775,9 +775,9 @@ def _build_pricing_section(section: dict[str, Any]) -> str:
     CTA button class resolution (#1263):
     - `cta.variant` explicit override wins: `primary` / `outline` / `ghost`.
     - Otherwise the default flips on `highlighted`: highlighted tier gets
-      `dz-button-primary` (matches Stripe/Linear convention — the
+      `data-dz-variant="primary"` (matches Stripe/Linear convention — the
       recommended action should look like the recommended action),
-      non-highlighted tiers get `dz-button-outline` to recede.
+      non-highlighted tiers get `data-dz-variant="outline"` to recede.
     - The previous default (highlighted → outline) was a deliberate
       inverse intended to balance the card emphasis, but downstream
       authors had no way to opt out; #1263 flipped the default and
@@ -817,15 +817,15 @@ def _build_pricing_section(section: dict[str, Any]) -> str:
             label = str(cta.get("label", "Choose Plan") or "Choose Plan")
             variant = cta.get("variant")
             if variant in ("primary", "outline", "ghost"):
-                button_cls = f"dz-button-{variant}"
+                button_variant = variant
             else:
                 # #1263: highlighted tier → primary by default (the
                 # recommended action looks recommended); non-highlighted
                 # tiers → outline to recede.
-                button_cls = "dz-button-primary" if is_highlighted else "dz-button-outline"
+                button_variant = "primary" if is_highlighted else "outline"
             tier_inner.append(
                 f'<a href="{_html.escape(href, quote=True)}" '
-                f'class="dz-button {button_cls}">'
+                f'class="dz-button" data-dz-variant="{button_variant}">'
                 f"{_html.escape(label)}</a>"
             )
 
@@ -1073,7 +1073,7 @@ def _build_mid_page_cta_band_section(section: dict[str, Any]) -> str:
         href = str(cta.get("href", "#") or "#")
         label = str(cta.get("label", "Get Started") or "Get Started")
         inner.append(
-            f'<a class="dz-button dz-button-primary dz-mid-cta-button" '
+            f'<a class="dz-button dz-mid-cta-button" data-dz-variant="primary" '
             f'href="{_html.escape(href, quote=True)}">{_html.escape(label)}</a>'
         )
     parts.append(f'<div class="dz-mid-cta-content">{"".join(inner)}</div>')

@@ -2038,18 +2038,21 @@ dialog.alert-dialog::backdrop {
 /*
  * button.css — button component family.
  *
- * Single semantic class .button with three variant modifiers:
- *   .button-ghost        no border, hover-tint only (back, cancel)
- *   .button-outline      bordered neutral (default action button)
- *   .button-destructive  bordered danger (delete, revoke)
+ * One semantic class `.button` + a `data-variant` attribute for the
+ * visual variant (canonical, matching `data-tone` on badges/alerts):
+ *   data-variant="ghost"        no border, hover-tint only (back, cancel)
+ *   data-variant="outline"      bordered neutral (default action button)
+ *   data-variant="destructive"  bordered danger (delete, revoke)
+ *   data-variant="primary"      filled brand (the recommended action)
+ * and `data-size="sm"` for the compact inline-row size.
  *
- * Used everywhere — detail_view header, modal footers, drawer
- * actions, toolbar buttons. Centralising here means future
- * theming + accessibility tweaks happen in one place.
+ * A variant NEVER drops the base class — `.button` carries the shared
+ * geometry, `[data-variant]` layers the skin. (The standalone
+ * `.button-primary` rule in components/table.css is a separate, smaller
+ * table-header variant and is intentionally left as a class.)
  *
- * The `<button>` element baseline in base.css already provides
- * focus ring, disabled state, font inheritance — these classes
- * extend that baseline with size + variant.
+ * The `<button>` element baseline in base.css already provides focus ring,
+ * disabled state, font inheritance — this extends it with size + variant.
  *
  * Wrapped in @layer components.
  */
@@ -2071,43 +2074,38 @@ dialog.alert-dialog::backdrop {
     color var(--duration-fast) var(--ease-out);
 }
 
-.button-ghost {
+.button[data-variant="ghost"] {
   background: transparent;
   border: 1px solid transparent;
   color: var(--colour-text-muted);
 }
 
-.button-ghost:hover {
+.button[data-variant="ghost"]:hover {
   background: var(--colour-bg);
   color: var(--colour-text);
 }
 
-.button-outline {
+.button[data-variant="outline"] {
   background: var(--colour-surface);
   color: var(--colour-text);
   border: 1px solid var(--colour-border);
 }
 
-.button-outline:hover {
+.button[data-variant="outline"]:hover {
   background: var(--colour-bg);
 }
 
-.button-destructive {
+.button[data-variant="destructive"] {
   background: var(--colour-surface);
   color: var(--colour-danger);
   border: 1px solid var(--colour-danger);
 }
 
-.button-destructive:hover {
+.button[data-variant="destructive"]:hover {
   background: var(--colour-danger-soft);
 }
 
-/* `.button.button-primary` — filled brand variant. Composes
- * with .button baseline (height + padding + radius). The standalone
- * `.button-primary` rule in components/table.css is a smaller
- * table-header-only variant and stays scoped (less-specific selector,
- * no .button qualifier). */
-.button.button-primary {
+.button[data-variant="primary"] {
   background: var(--colour-brand);
   color: var(--colour-brand-contrast);
   border: 1px solid var(--colour-brand);
@@ -2116,25 +2114,25 @@ dialog.alert-dialog::backdrop {
 
 /* TASTE-2/8: explicit hover step from the ramp (not a brightness filter)
    and a physical press — shadow collapses, button settles 0.5px. */
-.button.button-primary:hover {
+.button[data-variant="primary"]:hover {
   background: var(--brand-700);
   border-color: var(--brand-700);
 }
 
-.button.button-primary:active {
+.button[data-variant="primary"]:active {
   box-shadow: none;
   transform: translateY(0.5px);
 }
 
-.button.button-primary:disabled,
-.button.button-primary[aria-disabled="true"] {
+.button[data-variant="primary"]:disabled,
+.button[data-variant="primary"][aria-disabled="true"] {
   opacity: 0.6;
   pointer-events: none;
 }
 
 /* Size modifier — smaller button used by inline action rows
  * (e.g. 2FA settings row buttons). Composes with .button base. */
-.button.button-sm {
+.button[data-size="sm"] {
   height: 1.75rem;
   padding-inline: var(--space-md);
   font-size: var(--text-xs);
@@ -3438,6 +3436,14 @@ input.switch:checked::before {
   display: block;
 }
 
+/* Icon gallery demo — the size scale in a row (currentColor from the accent). */
+.icon-demo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  color: var(--colour-brand);
+}
+
 /* ── Nav icons (HaTchi-MaXchi Phase 3, TASTE-6) ─────────────────────────
    Every sidebar item carries a registry SVG — authored or inferred. Muted
    at rest; inherits the link colour on hover/active. */
@@ -4472,10 +4478,9 @@ button.htmx-request,
  */
 @layer components {
   @media (pointer: coarse) {
+    /* .button covers every button — variants are data-variant on the
+       same base element, so no per-variant selector is needed here. */
     .button,
-    .button-ghost,
-    .button-outline,
-    .button-destructive,
     .icon-button,
     .card-action-button,
     .list-action-button,

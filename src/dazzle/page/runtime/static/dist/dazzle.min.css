@@ -1,4 +1,4 @@
-/* dazzle v0.93.40 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.42 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -1501,51 +1501,51 @@ background var(--duration-fast) var(--ease-out),
 border-color var(--duration-fast) var(--ease-out),
 color var(--duration-fast) var(--ease-out);
 }
-.dz-button-ghost {
+.dz-button[data-dz-variant="ghost"] {
 background: transparent;
 border: 1px solid transparent;
 color: var(--colour-text-muted);
 }
-.dz-button-ghost:hover {
+.dz-button[data-dz-variant="ghost"]:hover {
 background: var(--colour-bg);
 color: var(--colour-text);
 }
-.dz-button-outline {
+.dz-button[data-dz-variant="outline"] {
 background: var(--colour-surface);
 color: var(--colour-text);
 border: 1px solid var(--colour-border);
 }
-.dz-button-outline:hover {
+.dz-button[data-dz-variant="outline"]:hover {
 background: var(--colour-bg);
 }
-.dz-button-destructive {
+.dz-button[data-dz-variant="destructive"] {
 background: var(--colour-surface);
 color: var(--colour-danger);
 border: 1px solid var(--colour-danger);
 }
-.dz-button-destructive:hover {
+.dz-button[data-dz-variant="destructive"]:hover {
 background: var(--colour-danger-soft);
 }
-.dz-button.dz-button-primary {
+.dz-button[data-dz-variant="primary"] {
 background: var(--colour-brand);
 color: var(--colour-brand-contrast);
 border: 1px solid var(--colour-brand);
 box-shadow: var(--shadow-sm);
 }
-.dz-button.dz-button-primary:hover {
+.dz-button[data-dz-variant="primary"]:hover {
 background: var(--brand-700);
 border-color: var(--brand-700);
 }
-.dz-button.dz-button-primary:active {
+.dz-button[data-dz-variant="primary"]:active {
 box-shadow: none;
 transform: translateY(0.5px);
 }
-.dz-button.dz-button-primary:disabled,
-.dz-button.dz-button-primary[aria-disabled="true"] {
+.dz-button[data-dz-variant="primary"]:disabled,
+.dz-button[data-dz-variant="primary"][aria-disabled="true"] {
 opacity: 0.6;
 pointer-events: none;
 }
-.dz-button.dz-button-sm {
+.dz-button[data-dz-size="sm"] {
 height: 1.75rem;
 padding-inline: var(--space-md);
 font-size: var(--text-xs);
@@ -2431,6 +2431,12 @@ width: 100%;
 height: 100%;
 display: block;
 }
+.dz-icon-demo {
+display: flex;
+align-items: center;
+gap: var(--space-lg);
+color: var(--colour-brand);
+}
 .dz-nav-link__icon,
 .dz-nav-group__icon {
 display: inline-flex;
@@ -3100,9 +3106,6 @@ display: block;
 @layer components {
 @media (pointer: coarse) {
 .dz-button,
-.dz-button-ghost,
-.dz-button-outline,
-.dz-button-destructive,
 .dz-icon-button,
 .dz-card-action-button,
 .dz-list-action-button,

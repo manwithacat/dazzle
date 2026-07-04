@@ -39,8 +39,8 @@
       '<h2 class="dz-alert-dialog__title">Are you sure?</h2>' +
       '<p class="dz-alert-dialog__message"></p>' +
       '<div class="dz-alert-dialog__actions">' +
-      '<button type="button" class="dz-button dz-button-outline" data-dz-confirm-cancel>Cancel</button>' +
-      '<button type="button" class="dz-button dz-button-destructive" data-dz-confirm-accept>Confirm</button>' +
+      '<button type="button" class="dz-button" data-dz-variant="outline" data-dz-confirm-cancel>Cancel</button>' +
+      '<button type="button" class="dz-button" data-dz-variant="destructive" data-dz-confirm-accept>Confirm</button>' +
       "</div>";
     document.body.appendChild(dialog);
     return dialog;

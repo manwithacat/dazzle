@@ -168,9 +168,9 @@ def test_pricing_highlighted_tier_gets_modifier_class() -> None:
 
 def test_pricing_highlighted_tier_defaults_cta_to_primary() -> None:
     """#1263: the default flipped. Highlighted tier's CTA now defaults to
-    `dz-button-primary` (matches Stripe/Linear convention — the
+    `data-dz-variant=primary` (matches Stripe/Linear convention — the
     recommended action looks like the recommended action);
-    non-highlighted tiers default to `dz-button-outline` to recede."""
+    non-highlighted tiers default to `data-dz-variant=outline` to recede."""
     out = _build_pricing_section(
         {
             "type": "pricing",
@@ -191,10 +191,10 @@ def test_pricing_highlighted_tier_defaults_cta_to_primary() -> None:
     )
     free_pos = out.index(">Pick<")
     free_section = out[max(0, free_pos - 200) : free_pos]
-    assert "dz-button-outline" in free_section
+    assert 'data-dz-variant="outline"' in free_section
     pro_pos = out.index(">Pick Pro<")
     pro_section = out[max(0, pro_pos - 200) : pro_pos]
-    assert "dz-button-primary" in pro_section
+    assert 'data-dz-variant="primary"' in pro_section
 
 
 def test_pricing_cta_variant_override_wins_over_default_1263() -> None:
@@ -225,15 +225,15 @@ def test_pricing_cta_variant_override_wins_over_default_1263() -> None:
         }
     )
     free_section = out[max(0, out.index(">FreeCTA<") - 200) : out.index(">FreeCTA<")]
-    assert "dz-button-primary" in free_section, (
-        "non-highlighted tier with variant=primary must use dz-button-primary"
+    assert 'data-dz-variant="primary"' in free_section, (
+        "non-highlighted tier with variant=primary must use data-dz-variant=primary"
     )
     pro_section = out[max(0, out.index(">ProCTA<") - 200) : out.index(">ProCTA<")]
-    assert "dz-button-outline" in pro_section, (
-        "highlighted tier with variant=outline must use dz-button-outline (the old default, opted into explicitly)"
+    assert 'data-dz-variant="outline"' in pro_section, (
+        "highlighted tier with variant=outline must use data-dz-variant=outline (the old default, opted into explicitly)"
     )
     ent_section = out[max(0, out.index(">EntCTA<") - 200) : out.index(">EntCTA<")]
-    assert "dz-button-ghost" in ent_section, "variant=ghost must use dz-button-ghost"
+    assert 'data-dz-variant="ghost"' in ent_section, "variant=ghost must use data-dz-variant=ghost"
 
 
 def test_pricing_features_list_renders_each_as_li() -> None:

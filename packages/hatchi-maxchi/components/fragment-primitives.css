@@ -655,6 +655,14 @@
   display: block;
 }
 
+/* Icon gallery demo — the size scale in a row (currentColor from the accent). */
+.dz-icon-demo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  color: var(--colour-brand);
+}
+
 /* ── Nav icons (HaTchi-MaXchi Phase 3, TASTE-6) ─────────────────────────
    Every sidebar item carries a registry SVG — authored or inferred. Muted
    at rest; inherits the link colour on hover/active. */

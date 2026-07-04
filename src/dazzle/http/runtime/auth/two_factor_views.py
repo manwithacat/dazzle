@@ -215,7 +215,7 @@ _SETUP_BODY_HTML = """\
         Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
       </p>
       <div id="dz-qr-container" class="dz-auth-qr-container">
-        <button id="dz-setup-totp" class="dz-button dz-button-outline">
+        <button id="dz-setup-totp" class="dz-button" data-dz-variant="outline">
           Generate QR Code
         </button>
       </div>
@@ -231,7 +231,7 @@ _SETUP_BODY_HTML = """\
                    inputmode="numeric" pattern="[0-9]*" maxlength="6"
                    placeholder="000000" class="dz-auth-input-code">
           </div>
-          <button type="submit" class="dz-button dz-button-primary dz-auth-submit">
+          <button type="submit" class="dz-button dz-auth-submit" data-dz-variant="primary">
             Verify &amp; Enable
           </button>
         </form>
@@ -245,7 +245,7 @@ _SETUP_BODY_HTML = """\
       <p class="dz-auth-section-body">
         Receive a one-time code via email when you sign in.
       </p>
-      <button id="dz-enable-email-otp" class="dz-button dz-button-outline dz-auth-submit">
+      <button id="dz-enable-email-otp" class="dz-button dz-auth-submit" data-dz-variant="outline">
         Enable Email OTP
       </button>
     </div>

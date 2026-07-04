@@ -67,10 +67,9 @@ def test_token_and_media_query_invariants(tokens_css: str, touch_css: str) -> No
 
 
 CORE_SELECTORS = [
+    # `.dz-button` covers every button; variants moved to data-dz-variant
+    # on the same base element (no per-variant touch selector needed).
     ".dz-button",
-    ".dz-button-ghost",
-    ".dz-button-outline",
-    ".dz-button-destructive",
     ".dz-icon-button",
     ".dz-card-action-button",
     ".dz-list-action-button",

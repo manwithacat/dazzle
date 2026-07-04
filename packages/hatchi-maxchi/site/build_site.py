@@ -324,7 +324,8 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         for c in comps:
             nav_parts.append(f'<a href="#{c.id}">{_html.escape(c.title)}</a>')
 
-    # Copy button: dedicated gallery chrome (NOT dz-button-ghost — the
+    # Copy button: dedicated gallery chrome (NOT a data-dz-variant="ghost"
+    # button — the
     # ghost hover wash is near-white in light scheme and fought the dark
     # code block), with icon feedback: clipboard -> check "Copied".
     copy_icon = lucide_svg_html("copy", cls="")
