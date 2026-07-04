@@ -186,3 +186,21 @@ def test_interactive_htmx_components_declare_contracts() -> None:
         if "htmx" in c.tags and _REQUEST_ATTR_RE.search(c.partial) and not c.exchanges
     ]
     assert not missing, f"htmx components making requests but declaring no Exchange: {missing}"
+
+
+_DATA_ATTR_RE = re.compile(r"\bdata-([a-z][a-z0-9-]*)=")
+
+
+def test_data_attributes_follow_the_namespace_grammar() -> None:
+    """Component data-attributes must be namespaced — `data-dz-*` (framework)
+    or `data-hm-*` (gallery). This stops an agent inventing inconsistent
+    alternatives like `data-color`/`data-type`/`data-style` (agent-review
+    naming-contract). Visual variants use `data-dz-variant`, semantic tone
+    `data-dz-tone`, size `data-dz-size`."""
+    offenders: dict[str, set[str]] = {}
+    for c in HYPERPARTS:
+        for m in _DATA_ATTR_RE.finditer(c.partial):
+            name = m.group(1)
+            if not name.startswith(("dz-", "hm-")):
+                offenders.setdefault(c.id, set()).add("data-" + name)
+    assert not offenders, f"non-grammar data-attributes (use data-dz-*/data-hm-*): {offenders}"

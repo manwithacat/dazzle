@@ -48,6 +48,10 @@ class Exchange:
     trigger: str  # what fires it (the hx-trigger semantics), human-readable
     response: str  # the fragment contract the server MUST return
     swap: str  # where/how the response lands (target selector + swap mode)
+    # The states the endpoint must handle (loading/empty/populated/error). A
+    # coding agent needs these enumerated, not implied — an endpoint-backed
+    # component is under-specified without its empty/error behaviour.
+    states: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -168,6 +172,7 @@ HYPERPARTS: list[Hyperpart] = [
                 'role="option">` grouped by `<div class="dz-command__group">` headers; '
                 'empty query or no matches returns `<div class="dz-command__empty">`',
                 swap="innerHTML of the sibling `.dz-command__results` listbox",
+                states=("loading", "empty", "populated", "error"),
             ),
         ),
         controller="controllers/dz-command.js",

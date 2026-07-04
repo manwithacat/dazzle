@@ -50,6 +50,7 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
         return ""
     rows = []
     for e in hyperpart.exchanges:
+        states = " ".join(f"<code>{_html.escape(s)}</code>" for s in e.states) if e.states else "—"
         rows.append(
             "<tr>"
             f'<td><code class="hm-verb">{_html.escape(e.method)}</code> '
@@ -57,12 +58,13 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             f"<td>{_html.escape(e.trigger)}</td>"
             f"<td>{_html.escape(e.response)}</td>"
             f"<td>{_html.escape(e.swap)}</td>"
+            f"<td>{states}</td>"
             "</tr>"
         )
     return (
         '<details class="hm-contract"><summary>Endpoint contract</summary>'
         '<table class="hm-contract-table"><thead><tr>'
-        "<th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th>"
+        "<th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th>"
         f"</tr></thead><tbody>{''.join(rows)}</tbody></table>"
         "<p>The partial above is only half the Hyperpart; the server must "
         "satisfy this contract for it to work. In Dazzle the response is "
