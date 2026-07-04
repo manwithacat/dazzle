@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.67] - 2026-07-04
+## [0.93.68] - 2026-07-04
+
+### Changed
+- **Empty-state convergence (Bucket B) — Dazzle now renders one empty-state form via the HM `empty-state` Hyperpart.** The render layer previously emitted two markup forms: the typed substrate emitted the HM `__` form (`.dz-empty-state__icon/__title/__description/__action`), while the table/chart read-only empties emitted a legacy single-dash form (`.dz-empty-state-icon`/`.dz-empty-state-message`). Repointed the three legacy emit sites (`_render_tables.py` ×2, `_render_charts.py` ×1) to the `__` form and deleted Dazzle's bespoke `.dz-empty-state`/`-icon`/`-message`/`-cta` rules from `fragments.css` — the `.dz-empty-state` primitive is now owned solely by the ingested HM definition (`components/fragment-primitives.css`, consolidated in 0.93.67). Both forms now render identically (centered, 2rem muted icon, muted text — verified in a browser); the only visual delta is the table/chart empty icon converging from 3rem to the HM 2rem. No test/golden pinned the legacy classes.
+
+### Agent Guidance
+- **Emit the HM `.dz-empty-state__*` form for empty states**, never the retired single-dash `.dz-empty-state-icon`/`-message`/`-cta`. The primitive is owned by the HM `empty-state` Hyperpart; Dazzle ships no bespoke empty-state CSS. This completes Bucket B's empty-state item of the HM migration.
 
 ### Changed
 - **HM `empty-state` primitive consolidated into one coherent definition (HM package 0.1.2 → 0.1.3).** The `.dz-empty-state` primitive was defined across two HM files — the legacy `base/design-system.css` (base container + a broad `.dz-empty-state svg { 3rem }`) and the modern `components/fragment-primitives.css` (`__title`, `__icon { 2rem }`, `__icon svg`). The broad `svg` rule fought `__icon` on specificity ((0,1,1) vs (0,1,0)), so a bare-svg icon rendered 3rem while a wrapped `__icon svg` rendered 2rem — the size depended on markup. Moved the base container into `fragment-primitives.css` (the single home) and dropped the fossil `svg` rule; the `__icon` wrapper (2rem) is now the one icon contract. Visually neutral for the HM gallery (it uses the `__icon` wrapper, where `__icon svg` already won — full HM visual suite green, no baseline change). Dazzle's substrate empty-state icon (emitted as a bare `<svg class="dz-empty-state__icon">`) now correctly resolves to the 2rem `__icon` size instead of the 3rem fossil. This de-tangles the cascade ahead of the eventual Dazzle-side empty-state convergence (Bucket B of the HM migration).

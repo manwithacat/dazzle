@@ -1,4 +1,4 @@
-/* dazzle v0.93.67 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.68 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -4193,43 +4193,6 @@ margin: 0;
 }
 }
 @layer components {
-.dz-empty-state {
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-padding-block: var(--space-3xl);
-text-align: center;
-}
-.dz-empty-state-icon {
-width: 3rem;
-height: 3rem;
-margin-block-end: var(--space-sm);
-color: var(--colour-text-muted);
-opacity: 0.6;
-}
-.dz-empty-state-message {
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-margin: 0;
-}
-.dz-empty-state-cta {
-margin-block-start: var(--space-md);
-display: inline-flex;
-align-items: center;
-height: 2rem;
-padding-inline: var(--space-md);
-border-radius: var(--radius-sm);
-background: var(--colour-brand);
-color: var(--colour-brand-contrast);
-font-size: var(--text-sm);
-font-weight: var(--weight-medium);
-text-decoration: none;
-transition: filter var(--duration-fast) var(--ease-out);
-}
-.dz-empty-state-cta:hover {
-filter: brightness(1.1);
-}
 .dz-toast {
 pointer-events: auto;
 max-width: 24rem;

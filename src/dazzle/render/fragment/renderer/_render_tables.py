@@ -978,8 +978,8 @@ class _RenderTablesMixin:
             label = lst.empty_message or "No items found."
             empty_html = (
                 f'<div class="dz-empty-state" data-dz-empty-kind="read-only" role="status">'
-                f"{lucide_svg_html('inbox', cls='dz-empty-state-icon')}"
-                f'<p class="dz-empty-state-message">{ctx.escape(label)}</p>'
+                f"{lucide_svg_html('inbox', cls='dz-empty-state__icon')}"
+                f'<p class="dz-empty-state__description">{ctx.escape(label)}</p>'
                 f"</div>"
             )
             return f'<div class="dz-list-region">{actions_row}{empty_html}</div>'
@@ -1067,8 +1067,8 @@ class _RenderTablesMixin:
             return (
                 f'<div class="dz-grid-region">'
                 f'<div class="dz-empty-state" data-dz-empty-kind="read-only" role="status">'
-                f"{lucide_svg_html('inbox', cls='dz-empty-state-icon')}"
-                f'<p class="dz-empty-state-message">{ctx.escape(label)}</p>'
+                f"{lucide_svg_html('inbox', cls='dz-empty-state__icon')}"
+                f'<p class="dz-empty-state__description">{ctx.escape(label)}</p>'
                 f"</div>"
                 f"</div>"
             )

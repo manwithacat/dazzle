@@ -16,51 +16,13 @@
  */
 
 /* ─────────────────────────── empty_state fragment ───────────────
- * Canonical "no data" renderer (cycle 240). Vertical centre-aligned
- * stack with optional Create-first CTA when persona has create
- * permission. */
-
-.dz-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding-block: var(--space-3xl);
-  text-align: center;
-}
-
-.dz-empty-state-icon {
-  width: 3rem;
-  height: 3rem;
-  margin-block-end: var(--space-sm);
-  color: var(--colour-text-muted);
-  opacity: 0.6;
-}
-
-.dz-empty-state-message {
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin: 0;
-}
-
-.dz-empty-state-cta {
-  margin-block-start: var(--space-md);
-  display: inline-flex;
-  align-items: center;
-  height: 2rem;
-  padding-inline: var(--space-md);
-  border-radius: var(--radius-sm);
-  background: var(--colour-brand);
-  color: var(--colour-brand-contrast);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  text-decoration: none;
-  transition: filter var(--duration-fast) var(--ease-out);
-}
-
-.dz-empty-state-cta:hover {
-  filter: brightness(1.1);
-}
+ * The `.dz-empty-state` primitive is now owned by the HM
+ * `empty-state` Hyperpart (components/fragment-primitives.css:
+ * base container + `__icon`/`__title`/`__description`/`__action`),
+ * ingested into the dist. All emitters (the typed substrate + the
+ * table/chart read-only empties) emit the `__` form; the bespoke
+ * `.dz-empty-state`/`-icon`/`-message`/`-cta` rules were deleted in
+ * the Bucket B empty-state convergence (build-to-replace, ADR-0003). */
 
 /* table_pagination — the `.dz-pagination*` family moved to the HM `pagination`
  * Hyperpart (packages/hatchi-maxchi/components/pagination.css) as the canonical
