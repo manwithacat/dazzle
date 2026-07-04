@@ -192,29 +192,57 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
-    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>',
-    // The grid tbody hydrates its rows over the wire. Each row carries a stable
-    // `id` (`dz-grid-row-<rowid>`, the idiomorph morph key) plus
-    // `data-dz-grid-row-id` (the bulk payload anchor) — the two agree so a
-    // selection follows its row across a re-sort. (Mock swaps innerHTML; a real
-    // htmx4 app uses innerMorph and the ids preserve selection through the morph.)
-    "/mock/grid/rows":
-      '<tr class="dz-tr-row" id="dz-grid-row-cust_1"><td class="dz-tr-checkbox-cell">' +
-      '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select ' +
-      'data-dz-grid-row-id="cust_1" aria-label="Select Jane Doe"></td>' +
-      '<td class="dz-tr-cell">Jane Doe</td><td class="dz-tr-cell">Pro</td>' +
-      '<td class="dz-tr-cell">2026-07-04</td></tr>' +
-      '<tr class="dz-tr-row" id="dz-grid-row-cust_2"><td class="dz-tr-checkbox-cell">' +
-      '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select ' +
-      'data-dz-grid-row-id="cust_2" aria-label="Select Ravi Patel"></td>' +
-      '<td class="dz-tr-cell">Ravi Patel</td><td class="dz-tr-cell">Free</td>' +
-      '<td class="dz-tr-cell">2026-06-28</td></tr>' +
-      '<tr class="dz-tr-row" id="dz-grid-row-cust_3"><td class="dz-tr-checkbox-cell">' +
-      '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select ' +
-      'data-dz-grid-row-id="cust_3" aria-label="Select Mia Chen"></td>' +
-      '<td class="dz-tr-cell">Mia Chen</td><td class="dz-tr-cell">Pro</td>' +
-      '<td class="dz-tr-cell">2026-06-15</td></tr>'
+    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
   };
+
+  // The grid tbody hydrates + re-sorts its rows over the wire (the SERVER owns
+  // the order). Held as data, not markup, so the mock can ORDER BY the sort/dir
+  // params the controller puts on the request — mirroring a real list endpoint.
+  // Each row renders a stable `id` (`dz-grid-row-<rowid>`, the idiomorph morph
+  // key) + `data-dz-grid-row-id` (the bulk payload anchor); the two agree.
+  var GRID_ROWS = [
+    { id: "cust_1", name: "Jane Doe", plan: "Pro", created: "2026-07-04" },
+    { id: "cust_2", name: "Ravi Patel", plan: "Free", created: "2026-06-28" },
+    { id: "cust_3", name: "Mia Chen", plan: "Pro", created: "2026-06-15" }
+  ];
+  function parseQuery(url) {
+    var out = {}, qs = (url.split("?")[1] || "");
+    qs.split("&").forEach(function (p) {
+      if (!p) return;
+      var kv = p.split("=");
+      out[kv[0]] = decodeURIComponent(kv[1] || "");
+    });
+    return out;
+  }
+  // Escape interpolated field values — the canned data is safe, but this mock
+  // sits next to the documented server contract, so it must model the correct
+  // idiom (never build row HTML from unescaped data).
+  function htmlEnc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function renderGridRows(url) {
+    var q = parseQuery(url);
+    var rows = GRID_ROWS.slice();
+    if (q.sort) {
+      rows.sort(function (a, b) {
+        var x = a[q.sort], y = b[q.sort];
+        var c = x < y ? -1 : (x > y ? 1 : 0);
+        return q.dir === "desc" ? -c : c;
+      });
+    }
+    return rows.map(function (r) {
+      var id = htmlEnc(r.id);
+      return '<tr class="dz-tr-row" id="dz-grid-row-' + id + '">' +
+        '<td class="dz-tr-checkbox-cell"><input type="checkbox" class="dz-tr-checkbox" ' +
+        'data-dz-grid-select data-dz-grid-row-id="' + id + '" aria-label="Select ' + htmlEnc(r.name) + '"></td>' +
+        '<td class="dz-tr-cell">' + htmlEnc(r.name) + '</td>' +
+        '<td class="dz-tr-cell">' + htmlEnc(r.plan) + '</td>' +
+        '<td class="dz-tr-cell">' + htmlEnc(r.created) + '</td></tr>';
+    }).join("");
+  }
+
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
   function expand(h) { return h.replace(/\\{i:([a-z0-9-]+)\\}/g, function (_, n) {
@@ -228,7 +256,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
 
   function doGet(el) {
     var url = el.getAttribute("hx-get");
-    var body = expand(RESPONSES[url] || '<div class="dz-command__empty">No results.</div>');
+    var body;
+    if (url.split("?")[0] === "/mock/grid/rows") {
+      // the grid rows are computed from the sort/dir query (server owns ORDER BY)
+      body = renderGridRows(url);
+    } else {
+      body = expand(RESPONSES[url] || '<div class="dz-command__empty">No results.</div>');
+    }
     var sel = el.getAttribute("hx-target");
     var target = null;
     if (sel && sel.indexOf("next ") === 0) {
@@ -268,6 +302,15 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     el.classList.remove("htmx-request");
     fire(el, "htmx:afterRequest", { elt: el });
   }
+
+  // dz-grid:refresh — a custom event the grid controller fires on the tbody
+  // after a sort/filter change (real htmx catches it via the tbody's hx-trigger;
+  // here the mock does). The controller has already rewritten the tbody's hx-get
+  // query, so doGet re-reads it and returns the re-ordered rows.
+  document.addEventListener("dz-grid:refresh", function (e) {
+    var el = e.target;
+    if (el && el.matches && el.matches("[hx-get]")) doGet(el);
+  });
 
   // hx-get on focus/input — INPUTS only (e.g. the command palette's
   // `focus once`). Non-input `[hx-get]` affordances (links/buttons) fire on

@@ -219,8 +219,29 @@
   color: var(--colour-text);
 }
 
+/* Sort caret: hidden while the column is unsorted (a faint hint on hover),
+ * revealed + oriented by the th's `aria-sort` — the same attribute the
+ * controller writes and assistive tech reads (no parallel state). chevron-up =
+ * ascending; descending flips it 180deg. */
 .dz-table-sort-icon {
-  transition: transform var(--duration-fast) var(--ease-out);
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.dz-table-sort-button:hover .dz-table-sort-icon {
+  opacity: 0.4;
+}
+
+.dz-table-th[aria-sort="ascending"] .dz-table-sort-icon {
+  opacity: 1;
+  transform: none;
+}
+
+.dz-table-th[aria-sort="descending"] .dz-table-sort-icon {
+  opacity: 1;
+  transform: rotate(180deg);
 }
 
 /* Resize handle — 4px wide vertical strip on the right edge of each

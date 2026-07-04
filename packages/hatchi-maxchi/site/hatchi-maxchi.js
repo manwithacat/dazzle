@@ -20,29 +20,57 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
-    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>',
-    // The grid tbody hydrates its rows over the wire. Each row carries a stable
-    // `id` (`grid-row-<rowid>`, the idiomorph morph key) plus
-    // `data-grid-row-id` (the bulk payload anchor) — the two agree so a
-    // selection follows its row across a re-sort. (Mock swaps innerHTML; a real
-    // htmx4 app uses innerMorph and the ids preserve selection through the morph.)
-    "/mock/grid/rows":
-      '<tr class="tr-row" id="grid-row-cust_1"><td class="tr-checkbox-cell">' +
-      '<input type="checkbox" class="tr-checkbox" data-grid-select ' +
-      'data-grid-row-id="cust_1" aria-label="Select Jane Doe"></td>' +
-      '<td class="tr-cell">Jane Doe</td><td class="tr-cell">Pro</td>' +
-      '<td class="tr-cell">2026-07-04</td></tr>' +
-      '<tr class="tr-row" id="grid-row-cust_2"><td class="tr-checkbox-cell">' +
-      '<input type="checkbox" class="tr-checkbox" data-grid-select ' +
-      'data-grid-row-id="cust_2" aria-label="Select Ravi Patel"></td>' +
-      '<td class="tr-cell">Ravi Patel</td><td class="tr-cell">Free</td>' +
-      '<td class="tr-cell">2026-06-28</td></tr>' +
-      '<tr class="tr-row" id="grid-row-cust_3"><td class="tr-checkbox-cell">' +
-      '<input type="checkbox" class="tr-checkbox" data-grid-select ' +
-      'data-grid-row-id="cust_3" aria-label="Select Mia Chen"></td>' +
-      '<td class="tr-cell">Mia Chen</td><td class="tr-cell">Pro</td>' +
-      '<td class="tr-cell">2026-06-15</td></tr>'
+    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
   };
+
+  // The grid tbody hydrates + re-sorts its rows over the wire (the SERVER owns
+  // the order). Held as data, not markup, so the mock can ORDER BY the sort/dir
+  // params the controller puts on the request — mirroring a real list endpoint.
+  // Each row renders a stable `id` (`grid-row-<rowid>`, the idiomorph morph
+  // key) + `data-grid-row-id` (the bulk payload anchor); the two agree.
+  var GRID_ROWS = [
+    { id: "cust_1", name: "Jane Doe", plan: "Pro", created: "2026-07-04" },
+    { id: "cust_2", name: "Ravi Patel", plan: "Free", created: "2026-06-28" },
+    { id: "cust_3", name: "Mia Chen", plan: "Pro", created: "2026-06-15" }
+  ];
+  function parseQuery(url) {
+    var out = {}, qs = (url.split("?")[1] || "");
+    qs.split("&").forEach(function (p) {
+      if (!p) return;
+      var kv = p.split("=");
+      out[kv[0]] = decodeURIComponent(kv[1] || "");
+    });
+    return out;
+  }
+  // Escape interpolated field values — the canned data is safe, but this mock
+  // sits next to the documented server contract, so it must model the correct
+  // idiom (never build row HTML from unescaped data).
+  function htmlEnc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function renderGridRows(url) {
+    var q = parseQuery(url);
+    var rows = GRID_ROWS.slice();
+    if (q.sort) {
+      rows.sort(function (a, b) {
+        var x = a[q.sort], y = b[q.sort];
+        var c = x < y ? -1 : (x > y ? 1 : 0);
+        return q.dir === "desc" ? -c : c;
+      });
+    }
+    return rows.map(function (r) {
+      var id = htmlEnc(r.id);
+      return '<tr class="tr-row" id="grid-row-' + id + '">' +
+        '<td class="tr-checkbox-cell"><input type="checkbox" class="tr-checkbox" ' +
+        'data-grid-select data-grid-row-id="' + id + '" aria-label="Select ' + htmlEnc(r.name) + '"></td>' +
+        '<td class="tr-cell">' + htmlEnc(r.name) + '</td>' +
+        '<td class="tr-cell">' + htmlEnc(r.plan) + '</td>' +
+        '<td class="tr-cell">' + htmlEnc(r.created) + '</td></tr>';
+    }).join("");
+  }
+
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
   function expand(h) { return h.replace(/\{i:([a-z0-9-]+)\}/g, function (_, n) {
@@ -56,7 +84,13 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 
   function doGet(el) {
     var url = el.getAttribute("hx-get");
-    var body = expand(RESPONSES[url] || '<div class="command__empty">No results.</div>');
+    var body;
+    if (url.split("?")[0] === "/mock/grid/rows") {
+      // the grid rows are computed from the sort/dir query (server owns ORDER BY)
+      body = renderGridRows(url);
+    } else {
+      body = expand(RESPONSES[url] || '<div class="command__empty">No results.</div>');
+    }
     var sel = el.getAttribute("hx-target");
     var target = null;
     if (sel && sel.indexOf("next ") === 0) {
@@ -96,6 +130,15 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     el.classList.remove("htmx-request");
     fire(el, "htmx:afterRequest", { elt: el });
   }
+
+  // grid:refresh — a custom event the grid controller fires on the tbody
+  // after a sort/filter change (real htmx catches it via the tbody's hx-trigger;
+  // here the mock does). The controller has already rewritten the tbody's hx-get
+  // query, so doGet re-reads it and returns the re-ordered rows.
+  document.addEventListener("grid:refresh", function (e) {
+    var el = e.target;
+    if (el && el.matches && el.matches("[hx-get]")) doGet(el);
+  });
 
   // hx-get on focus/input — INPUTS only (e.g. the command palette's
   // `focus once`). Non-input `[hx-get]` affordances (links/buttons) fire on
@@ -606,7 +649,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 /* ── controllers/grid.js ── */
 /* HYPERPART: grid */
 /*
- * grid — the data-table controller. FIRST SLICE: row selection.
+ * grid — the data-table controller. Slices so far: row selection + sort.
  *
  * Delegated + state-in-DOM, the HM idiom (same shape as tabs.js): one pair
  * of document-level listeners, everything scoped to the clicked control's own
@@ -636,6 +679,11 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  *                  `.bulk-actions` when it isn't "0") + `[data-bulk-count-target]`
  *                  mirrors the number for a "N selected" summary
  *   - clear:       `[data-grid-clear]` deselects everything
+ *   - body:        `[data-grid-body]` (the tbody htmx swaps; `data-grid-src`
+ *                  holds its immutable base endpoint, `hx-get` its current query)
+ *   - sort:        `[data-grid-sort="<key>"]` (a header button) cycles the
+ *                  clicked column through `data-grid-sort-cycle`
+ *                  (default "asc desc none"); state lives on the th's `aria-sort`
  */
 (function () {
   "use strict";
@@ -671,6 +719,62 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     }
   }
 
+  // ── Sort: state-in-DOM, server owns the order ──────────────────────────
+  // The sorted column + direction live on each header th's `aria-sort`
+  // (none|ascending|descending). A click cycles the CLICKED column through
+  // `data-grid-sort-cycle` (default "asc desc none"), clears every OTHER
+  // sortable header (one ORDER BY at a time), rebuilds the tbody's request query
+  // from that state, and fires `grid:refresh` so the server returns the
+  // re-ordered rows (real htmx via the tbody's `hx-trigger`; the gallery mock via
+  // a listener). The controller NEVER re-renders rows — it only asks.
+  var DIR_OF = { ascending: "asc", descending: "desc", none: "none" };
+  var ARIA_OF = { asc: "ascending", desc: "descending", none: "none" };
+
+  function sortButtons(root) {
+    return Array.prototype.slice.call(
+      root.querySelectorAll("[data-grid-sort]"),
+    );
+  }
+
+  function refresh(root, sortKey, dir) {
+    var body = root.querySelector("[data-grid-body]");
+    if (!body) return;
+    var base =
+      body.getAttribute("data-grid-src") ||
+      body.getAttribute("hx-get") ||
+      "";
+    base = base.split("?")[0];
+    var q = [];
+    if (dir && dir !== "none") {
+      q.push("sort=" + encodeURIComponent(sortKey));
+      q.push("dir=" + dir);
+    }
+    // Sort resets pagination to page 1 (spec) — a no-op until the pagination
+    // slice adds page state; the reset lands there.
+    body.setAttribute("hx-get", base + (q.length ? "?" + q.join("&") : ""));
+    body.dispatchEvent(new CustomEvent("grid:refresh", { bubbles: true }));
+  }
+
+  function applySort(root, btn) {
+    var th = btn.closest("th");
+    var cur = (th && th.getAttribute("aria-sort")) || "none";
+    var cycle = (btn.getAttribute("data-grid-sort-cycle") || "asc desc none")
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!cycle.length) cycle = ["asc", "desc", "none"];
+    // A fresh column is at "none" → its next state is cycle[0] (asc by default);
+    // the active column advances through the cycle.
+    var idx = cycle.indexOf(DIR_OF[cur] || "none");
+    var next = cycle[(idx + 1) % cycle.length];
+    var btns = sortButtons(root);
+    for (var i = 0; i < btns.length; i++) {
+      var h = btns[i].closest("th");
+      if (h) h.setAttribute("aria-sort", "none");
+    }
+    if (th) th.setAttribute("aria-sort", ARIA_OF[next] || "none");
+    refresh(root, btn.getAttribute("data-grid-sort"), next);
+  }
+
   document.addEventListener("change", function (evt) {
     var t = evt.target;
     if (!t || !t.matches) return;
@@ -688,7 +792,17 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 
   document.addEventListener("click", function (evt) {
     var t = evt.target;
-    var clear = t && t.closest && t.closest("[data-grid-clear]");
+    if (!t || !t.closest) return;
+    var sortBtn = t.closest("[data-grid-sort]");
+    if (sortBtn) {
+      var sroot = gridOf(sortBtn);
+      if (sroot) {
+        evt.preventDefault();
+        applySort(sroot, sortBtn);
+      }
+      return;
+    }
+    var clear = t.closest("[data-grid-clear]");
     if (!clear) return;
     var root = gridOf(clear);
     if (!root) return;

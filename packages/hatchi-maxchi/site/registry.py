@@ -201,8 +201,8 @@ HYPERPARTS: list[Hyperpart] = [
         "A server-rendered data table: sortable headers, a filter bar, and row "
         "selection with a bulk-action bar — all HTML over the wire, on a real "
         "<table>. The tbody hydrates its rows over the wire (hx-get on load); "
-        "selection is live (dz-grid.js, delegated + state-in-DOM). Sort / "
-        "column-visibility / URL-synced state land in the following slices.",
+        "sortable headers and row selection are live (dz-grid.js, delegated + "
+        "state-in-DOM). Column-visibility / URL-synced state land in the next slices.",
         '<div class="hm-stack hm-measure-lg">'
         '<div class="dz-table" data-dz-grid data-dz-bulk-count="0">'
         '<div class="dz-filter-bar">'
@@ -229,17 +229,22 @@ HYPERPARTS: list[Hyperpart] = [
         "<thead><tr>"
         '<th class="dz-table-th-select">'
         '<input type="checkbox" data-dz-grid-select-all aria-label="Select all rows"></th>'
-        '<th class="dz-table-th" aria-sort="ascending">'
-        '<button type="button" class="dz-table-sort-button">Name</button></th>'
-        '<th class="dz-table-th">Plan</th>'
-        '<th class="dz-table-th">Created</th>'
+        '<th class="dz-table-th" aria-sort="none">'
+        '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="name">Name'
+        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
+        '<th class="dz-table-th" aria-sort="none">'
+        '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="plan">Plan'
+        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
+        '<th class="dz-table-th" aria-sort="none">'
+        '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="created">Created'
+        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
         "</tr></thead>"
         # The tbody hydrates over the wire: hx-get on `load` fetches the rows,
         # innerMorph swaps them in (idiomorph keys on each row's stable `id`, so a
         # selection follows its ROW across a re-sort). Until then it holds a
         # skeleton placeholder (no data rows to select → no empty-state flash).
-        '<tbody class="dz-table-body" data-dz-grid-body '
-        'hx-get="/mock/grid/rows" hx-trigger="load" hx-swap="innerMorph">'
+        '<tbody class="dz-table-body" data-dz-grid-body data-dz-grid-src="/mock/grid/rows" '
+        'hx-get="/mock/grid/rows" hx-trigger="load, dz-grid:refresh" hx-swap="innerMorph">'
         '<tr class="dz-tr-row" aria-hidden="true">'
         '<td class="dz-tr-checkbox-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
         '<td class="dz-tr-cell"><span class="dz-skeleton" data-dz-shape="text"></span></td>'
@@ -275,8 +280,13 @@ HYPERPARTS: list[Hyperpart] = [
         "the checked <code>[data-dz-grid-select]</code> boxes, writes the total to "
         "<code>data-dz-bulk-count</code>, and the CSS reveals the "
         "<code>.dz-bulk-actions</code> bar; the count / select-all tri-state re-sync on "
-        "change and on <code>htmx:afterSwap</code>. Bulk-action submission, sort, and "
-        "URL-synced state are the next slices. (The gallery mock approximates the "
+        "change and on <code>htmx:afterSwap</code>. Sorting is delegated + state-in-DOM "
+        "too: a header button (<code>[data-dz-grid-sort]</code>) cycles its column "
+        "none → ascending → descending → none (state on the th's <code>aria-sort</code>, "
+        "one active column), rebuilds the tbody's request query, and fires "
+        "<code>dz-grid:refresh</code> so the <em>server</em> returns the re-ordered rows "
+        "— no client-side row rendering. Bulk-action submission and URL-synced state are "
+        "the next slices. (The gallery mock approximates the "
         "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
         "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "
         "for true morph-preserved selection.)",
@@ -285,8 +295,8 @@ HYPERPARTS: list[Hyperpart] = [
             Exchange(
                 method="GET",
                 endpoint="/app/{region}/rows?q=&sort=&dir=&page=&page_size=",
-                trigger="the tbody, on `load` (and again on sort / search / filter / "
-                "paginate in the following slices)",
+                trigger="the tbody, on `load` and on `dz-grid:refresh` (fired by a sort "
+                "click today; search / filter / paginate in the following slices)",
                 response="the `<tr>` rows for the current query — each a `dz-tr-row` "
                 "carrying a stable `id` (the idiomorph morph key) plus "
                 "`data-dz-grid-row-id` (the bulk-action payload anchor); a zero-result "

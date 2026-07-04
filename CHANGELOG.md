@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.75] - 2026-07-04
+
+### Added
+- **`dz-grid` — sortable headers (data-table primitive, sort slice)** (HM package 0.1.10 → 0.1.11). Clicking a header button (`[data-dz-grid-sort="<key>"]`) cycles that column **none → ascending → descending → none** (state-in-DOM on the th's `aria-sort`, delegated), clears every other sortable header (one active `ORDER BY`), rebuilds the tbody's request query (`?sort=<key>&dir=<asc|desc>`) off an immutable `data-dz-grid-src` base, and fires `dz-grid:refresh` so the **server** returns the re-ordered rows — real htmx via the tbody's `hx-trigger="load, dz-grid:refresh"`, the gallery mock via a `dz-grid:refresh` listener. The controller never re-renders rows; a CSS caret keyed off `aria-sort` shows/orients the sort indicator. The gallery mock now holds grid rows as data and `ORDER BY`s them per the query (and HTML-escapes interpolated values, modelling the correct server idiom). Behaviour-tested on Chromium + WebKit (3-state cycle + reorder + single-active-column); grid is below the fold, so no visual-baseline change. Still inert in Dazzle.
+
+### Agent Guidance
+- **Sort is delegated + state-in-DOM, server-owned.** The sorted column/direction live on the th's `aria-sort` (the same attribute AT reads — no parallel state); the controller rebuilds the request query and fires `dz-grid:refresh`, and the **server** returns the ordered rows. Never sort rows client-side. Multi-column sort, page-reset, and URL-synced sort state are later slices. An adversarial review (which read the vendored htmx4 source to confirm the custom-event + live-`hx-get` refresh path) returned VERDICT SHIP with only two SEV-3 hardening items (empty-cycle guard, mock HTML-escaping), both fixed.
+
 ## [0.93.74] - 2026-07-04
 
 ### Added

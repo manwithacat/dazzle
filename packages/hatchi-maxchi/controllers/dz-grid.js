@@ -1,6 +1,6 @@
 /* HYPERPART: grid */
 /*
- * dz-grid — the data-table controller. FIRST SLICE: row selection.
+ * dz-grid — the data-table controller. Slices so far: row selection + sort.
  *
  * Delegated + state-in-DOM, the HM idiom (same shape as dz-tabs.js): one pair
  * of document-level listeners, everything scoped to the clicked control's own
@@ -30,6 +30,11 @@
  *                  `.dz-bulk-actions` when it isn't "0") + `[data-dz-bulk-count-target]`
  *                  mirrors the number for a "N selected" summary
  *   - clear:       `[data-dz-grid-clear]` deselects everything
+ *   - body:        `[data-dz-grid-body]` (the tbody htmx swaps; `data-dz-grid-src`
+ *                  holds its immutable base endpoint, `hx-get` its current query)
+ *   - sort:        `[data-dz-grid-sort="<key>"]` (a header button) cycles the
+ *                  clicked column through `data-dz-grid-sort-cycle`
+ *                  (default "asc desc none"); state lives on the th's `aria-sort`
  */
 (function () {
   "use strict";
@@ -65,6 +70,62 @@
     }
   }
 
+  // ── Sort: state-in-DOM, server owns the order ──────────────────────────
+  // The sorted column + direction live on each header th's `aria-sort`
+  // (none|ascending|descending). A click cycles the CLICKED column through
+  // `data-dz-grid-sort-cycle` (default "asc desc none"), clears every OTHER
+  // sortable header (one ORDER BY at a time), rebuilds the tbody's request query
+  // from that state, and fires `dz-grid:refresh` so the server returns the
+  // re-ordered rows (real htmx via the tbody's `hx-trigger`; the gallery mock via
+  // a listener). The controller NEVER re-renders rows — it only asks.
+  var DIR_OF = { ascending: "asc", descending: "desc", none: "none" };
+  var ARIA_OF = { asc: "ascending", desc: "descending", none: "none" };
+
+  function sortButtons(root) {
+    return Array.prototype.slice.call(
+      root.querySelectorAll("[data-dz-grid-sort]"),
+    );
+  }
+
+  function refresh(root, sortKey, dir) {
+    var body = root.querySelector("[data-dz-grid-body]");
+    if (!body) return;
+    var base =
+      body.getAttribute("data-dz-grid-src") ||
+      body.getAttribute("hx-get") ||
+      "";
+    base = base.split("?")[0];
+    var q = [];
+    if (dir && dir !== "none") {
+      q.push("sort=" + encodeURIComponent(sortKey));
+      q.push("dir=" + dir);
+    }
+    // Sort resets pagination to page 1 (spec) — a no-op until the pagination
+    // slice adds page state; the reset lands there.
+    body.setAttribute("hx-get", base + (q.length ? "?" + q.join("&") : ""));
+    body.dispatchEvent(new CustomEvent("dz-grid:refresh", { bubbles: true }));
+  }
+
+  function applySort(root, btn) {
+    var th = btn.closest("th");
+    var cur = (th && th.getAttribute("aria-sort")) || "none";
+    var cycle = (btn.getAttribute("data-dz-grid-sort-cycle") || "asc desc none")
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!cycle.length) cycle = ["asc", "desc", "none"];
+    // A fresh column is at "none" → its next state is cycle[0] (asc by default);
+    // the active column advances through the cycle.
+    var idx = cycle.indexOf(DIR_OF[cur] || "none");
+    var next = cycle[(idx + 1) % cycle.length];
+    var btns = sortButtons(root);
+    for (var i = 0; i < btns.length; i++) {
+      var h = btns[i].closest("th");
+      if (h) h.setAttribute("aria-sort", "none");
+    }
+    if (th) th.setAttribute("aria-sort", ARIA_OF[next] || "none");
+    refresh(root, btn.getAttribute("data-dz-grid-sort"), next);
+  }
+
   document.addEventListener("change", function (evt) {
     var t = evt.target;
     if (!t || !t.matches) return;
@@ -82,7 +143,17 @@
 
   document.addEventListener("click", function (evt) {
     var t = evt.target;
-    var clear = t && t.closest && t.closest("[data-dz-grid-clear]");
+    if (!t || !t.closest) return;
+    var sortBtn = t.closest("[data-dz-grid-sort]");
+    if (sortBtn) {
+      var sroot = gridOf(sortBtn);
+      if (sroot) {
+        evt.preventDefault();
+        applySort(sroot, sortBtn);
+      }
+      return;
+    }
+    var clear = t.closest("[data-dz-grid-clear]");
     if (!clear) return;
     var root = gridOf(clear);
     if (!root) return;

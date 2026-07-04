@@ -238,6 +238,64 @@ def test_grid_hydrates_rows_via_exchange_with_stable_ids(page) -> None:  # type:
     )
 
 
+def _grid_names(page):  # type: ignore[no-untyped-def]
+    """The Name column (first data cell) of each hydrated row, in DOM order."""
+    return page.eval_on_selector_all(
+        "[data-grid-body] tr",
+        "trs => trs.map(tr => { const c = tr.querySelector('.tr-cell');"
+        " return c ? c.textContent.trim() : null; }).filter(Boolean)",
+    )
+
+
+def _aria_sort(page, key):  # type: ignore[no-untyped-def]
+    return page.eval_on_selector(
+        f"[data-grid-sort='{key}']", "b => b.closest('th').getAttribute('aria-sort')"
+    )
+
+
+def test_grid_sort_cycles_direction_and_reorders_rows(page) -> None:  # type: ignore[no-untyped-def]
+    """A sortable header cycles none → ascending → descending → none (state on the
+    th's aria-sort, delegated + state-in-DOM), and each click reloads the tbody
+    over the wire (dz-grid:refresh → the sort/dir query → the mock returns the
+    sorted rows). No client-side row rendering — the server owns the order."""
+    # Unsorted at rest: hydrated in the mock's natural order, header neutral.
+    assert _aria_sort(page, "name") == "none"
+    assert _grid_names(page) == ["Jane Doe", "Ravi Patel", "Mia Chen"]
+
+    # 1st click → ascending (Jane, Mia, Ravi).
+    page.click("[data-grid-sort='name']")
+    page.wait_for_timeout(120)
+    assert _aria_sort(page, "name") == "ascending"
+    assert _grid_names(page) == ["Jane Doe", "Mia Chen", "Ravi Patel"]
+
+    # 2nd click → descending (reversed).
+    page.click("[data-grid-sort='name']")
+    page.wait_for_timeout(120)
+    assert _aria_sort(page, "name") == "descending"
+    assert _grid_names(page) == ["Ravi Patel", "Mia Chen", "Jane Doe"]
+
+    # 3rd click → cleared: back to the natural order, header neutral again.
+    page.click("[data-grid-sort='name']")
+    page.wait_for_timeout(120)
+    assert _aria_sort(page, "name") == "none"
+    assert _grid_names(page) == ["Jane Doe", "Ravi Patel", "Mia Chen"]
+
+
+def test_grid_sort_is_single_column(page) -> None:  # type: ignore[no-untyped-def]
+    """Only one column is sorted at a time: sorting a second column clears the
+    first's aria-sort (one server ORDER BY, one active indicator)."""
+    page.click("[data-grid-sort='name']")
+    page.wait_for_timeout(120)
+    assert _aria_sort(page, "name") == "ascending"
+
+    page.click("[data-grid-sort='plan']")
+    page.wait_for_timeout(120)
+    assert _aria_sort(page, "plan") == "ascending", "the newly-clicked column sorts"
+    assert _aria_sort(page, "name") == "none", "the previously-sorted column resets"
+    # plan asc: Free (Ravi) before the two Pro rows
+    assert _grid_names(page)[0] == "Ravi Patel"
+
+
 def test_grid_loading_overlay_is_wired_to_htmx_request(page) -> None:  # type: ignore[no-untyped-def]
     """Loading is pure-CSS (#972): htmx's native `.htmx-request` on any grid
     descendant reveals the `.dz-table-loading` overlay — no controller JS, so

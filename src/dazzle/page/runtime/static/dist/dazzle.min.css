@@ -1,4 +1,4 @@
-/* dazzle v0.93.74 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.75 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3379,7 +3379,21 @@ transition: color var(--duration-fast) var(--ease-out);
 color: var(--colour-text);
 }
 .dz-table-sort-icon {
-transition: transform var(--duration-fast) var(--ease-out);
+opacity: 0;
+transition:
+opacity var(--duration-fast) var(--ease-out),
+transform var(--duration-fast) var(--ease-out);
+}
+.dz-table-sort-button:hover .dz-table-sort-icon {
+opacity: 0.4;
+}
+.dz-table-th[aria-sort="ascending"] .dz-table-sort-icon {
+opacity: 1;
+transform: none;
+}
+.dz-table-th[aria-sort="descending"] .dz-table-sort-icon {
+opacity: 1;
+transform: rotate(180deg);
 }
 .dz-table-body > tr + tr {
 border-block-start: 1px solid var(--colour-border);
