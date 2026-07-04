@@ -54,6 +54,7 @@ LAYER_ORDER = "@layer vendor, tokens, base, components;"
 JS_SOURCES = [
     "controllers/dz-confirm.js",
     "controllers/dz-command.js",
+    "controllers/dz-master-detail.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

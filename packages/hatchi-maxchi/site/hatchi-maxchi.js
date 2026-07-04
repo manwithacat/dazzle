@@ -12,7 +12,10 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       '<div class="command__group">Records</div>' +
       '<a class="command__item" href="#" role="option">{i:receipt}<span>Invoices</span></a>' +
       '<a class="command__item" href="#" role="option">{i:users}<span>Customers</span></a>' +
-      '<a class="command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>'
+      '<a class="command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>',
+    "/mock/master-detail/inv-001": '<div class="card card-body"><div class="card-label">INV-001 · Acme</div><div class="card-value">£1,250.00</div><div class="card-delta">Paid · 2 days ago</div></div>',
+    "/mock/master-detail/inv-002": '<div class="card card-body"><div class="card-label">INV-002 · Globex</div><div class="card-value">£3,400.00</div><div class="card-delta">Pending · due Friday</div></div>',
+    "/mock/master-detail/inv-003": '<div class="card card-body"><div class="card-label">INV-003 · Initech</div><div class="card-value">£820.00</div><div class="card-delta">Overdue · 6 days</div></div>'
   };
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
@@ -55,6 +58,13 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   }, true);
   document.addEventListener("input", function (e) {
     if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
+  });
+  // hx-get on click (non-input affordances, e.g. master-detail list links)
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest && e.target.closest("[hx-get]");
+    if (!el || el.matches("input")) return;
+    e.preventDefault();
+    doGet(el);
   });
 
   // hx-confirm -> htmx:confirm (drives confirm.js)
@@ -316,5 +326,39 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     ) {
       dlg.close();
     }
+  });
+})();
+
+/* ── controllers/master-detail.js ── */
+/* HYPERPART: master-detail */
+/*
+ * master-detail — selection state for the master-detail composite.
+ *
+ * The detail pane is loaded by htmx (the list item's hx-get swaps a card
+ * fragment into .master-detail__detail); this controller owns only the
+ * selection marker (aria-current) on the list.
+ *
+ * INSTANCE-ISOLATED — the reference pattern for composable controllers:
+ * one delegated listener on `document`, but every DOM query is scoped to the
+ * clicked item's OWN `.master-detail` root. So N master-details on one
+ * page each manage their own selection independently (unlike a global
+ * `document.querySelector`, which would drive only the first).
+ */
+(function () {
+  "use strict";
+
+  document.addEventListener("click", function (evt) {
+    var item = evt.target.closest(".master-detail__item");
+    if (!item) return;
+    var root = item.closest(".master-detail");
+    if (!root) return;
+    // clear the previous selection WITHIN THIS root only, then mark this one
+    var current = root.querySelectorAll(
+      ".master-detail__item[aria-current]",
+    );
+    for (var i = 0; i < current.length; i++) {
+      current[i].removeAttribute("aria-current");
+    }
+    item.setAttribute("aria-current", "true");
   });
 })();

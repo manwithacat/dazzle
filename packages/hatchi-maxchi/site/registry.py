@@ -68,6 +68,12 @@ class Hyperpart:
     # Exchange (gated by tests/test_contract.py). hx-confirm is a client
     # affordance (no server round-trip of its own), so it is exempt.
     exchanges: tuple[Exchange, ...] = field(default_factory=tuple)
+    # Composition (declarative, NOT a runtime include): the child Hyperpart
+    # ids this one embeds — nested inline in `partial`, or loaded into a slot
+    # via an Exchange. Drives the "Composed of" note + dependency-class
+    # aggregation ("Composite" + the union of children's classes). The markup
+    # in `partial` stays the source of truth; this only describes it.
+    composes: tuple[str, ...] = field(default_factory=tuple)
     # ── The Hyperpart manifest: the other code items that make up this
     #    unit, physically distributed by the build (CSS concatenated in
     #    layer order, JS bundled) but logically ONE Hyperpart. `partial`
@@ -83,7 +89,16 @@ class Hyperpart:
 
 
 # Groups order the gallery nav.
-GROUPS = ["Actions", "Feedback", "Navigation", "Overlays", "Forms", "Data", "Primitives"]
+GROUPS = [
+    "Actions",
+    "Feedback",
+    "Navigation",
+    "Overlays",
+    "Forms",
+    "Data",
+    "Composites",
+    "Primitives",
+]
 
 HYPERPARTS: list[Hyperpart] = [
     # ── Actions ──────────────────────────────────────────────────────
@@ -298,6 +313,67 @@ HYPERPARTS: list[Hyperpart] = [
         '<h3 class="dz-empty-state__title">No invoices yet</h3>'
         '<p class="dz-empty-state__description">Create your first invoice to get started.</p>'
         '<div class="dz-empty-state__action"><a class="dz-button" data-dz-variant="primary" href="#">New Invoice</a></div></div></div>',
+    ),
+    # ── Composites (Hyperparts built FROM other Hyperparts) ──────────
+    Hyperpart(
+        "toolbar",
+        "Toolbar",
+        "Composites",
+        "Inline composition — real button, toggle-group and menu markup nested "
+        "in a role=toolbar bar. No client tree, no props: composition is HTML.",
+        '<div class="dz-toolbar" role="toolbar" aria-label="Editor actions">'
+        '<button class="dz-button" data-dz-variant="primary">{icon:circle-plus} New</button>'
+        '<div class="dz-toggle-group" role="radiogroup" aria-label="View">'
+        '<label><input type="radio" name="tb-view" checked><span>List</span></label>'
+        '<label><input type="radio" name="tb-view"><span>Grid</span></label>'
+        "</div>"
+        '<details class="dz-menu"><summary class="dz-button" data-dz-variant="outline">More ▾</summary>'
+        '<div class="dz-menu__panel">'
+        '<button class="dz-menu__item">{icon:copy} Duplicate</button>'
+        '<button class="dz-menu__item" data-dz-tone="destructive">{icon:trash-2} Delete</button>'
+        "</div></details></div>",
+        notes="The dependency chips aggregate what the children need (here: Sprite, "
+        "from the menu/button icons). Copy the whole thing — it is just nested markup.",
+        tags=("composite",),
+        composes=("button", "toggle-group", "menu"),
+    ),
+    Hyperpart(
+        "master-detail",
+        "Master–detail",
+        "Composites",
+        "Exchange composition — a list item hx-gets its detail card into the "
+        "detail pane. The canonical htmx composite; two can coexist on a page.",
+        '<div class="dz-master-detail">'
+        '<ul class="dz-master-detail__list" aria-label="Invoices">'
+        '<li><a class="dz-master-detail__item" href="#" aria-current="true" '
+        'hx-get="/mock/master-detail/inv-001" hx-target="next .dz-master-detail__detail">'
+        "INV-001 · Acme</a></li>"
+        '<li><a class="dz-master-detail__item" href="#" '
+        'hx-get="/mock/master-detail/inv-002" hx-target="next .dz-master-detail__detail">'
+        "INV-002 · Globex</a></li>"
+        '<li><a class="dz-master-detail__item" href="#" '
+        'hx-get="/mock/master-detail/inv-003" hx-target="next .dz-master-detail__detail">'
+        "INV-003 · Initech</a></li></ul>"
+        '<div class="dz-master-detail__detail">'
+        '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-001 · Acme</div>'
+        '<div class="dz-card-value">£1,250.00</div>'
+        '<div class="dz-card-delta">Paid · 2 days ago</div></div></div></div>',
+        notes="The detail pane loads a card fragment via hx-get; dz-master-detail.js "
+        "sets aria-current on the chosen item, scoped to THIS root so two coexist.",
+        tags=("composite", "htmx"),
+        exchanges=(
+            Exchange(
+                method="GET",
+                endpoint="/app/master-detail/{id}",
+                trigger="a list item, on click",
+                response='a detail card fragment — `<div class="dz-card dz-card-body">…`',
+                swap="innerHTML of the sibling `.dz-master-detail__detail` pane",
+                states=("loading", "populated", "error"),
+            ),
+        ),
+        controller="controllers/dz-master-detail.js",
+        mock="/mock/master-detail",
+        composes=("card",),
     ),
     # ── Primitives ───────────────────────────────────────────────────
     Hyperpart(

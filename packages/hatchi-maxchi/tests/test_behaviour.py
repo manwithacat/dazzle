@@ -193,3 +193,34 @@ def test_theme_choice_persists_across_reload(page) -> None:  # type: ignore[no-u
     page.wait_for_timeout(200)
     assert page.evaluate("document.documentElement.getAttribute('data-theme')") == "dark"
     assert page.evaluate("document.querySelector('input[data-hm-theme=dark]').checked")
+
+
+def test_master_detail_selection_and_instance_isolation(page) -> None:  # type: ignore[no-untyped-def]
+    """The master-detail composite: clicking a list item selects it (aria-current
+    moves) AND the controller is instance-isolated — a second master-detail on
+    the page manages its own selection without touching the first."""
+    md_item = ".master-detail__item"
+    assert len(page.query_selector_all(md_item)) >= 3
+
+    # select item 2 in the (only) master-detail
+    page.click('.master-detail__item[hx-get$="inv-002"]')
+    page.wait_for_timeout(120)
+    cur = lambda sel: page.eval_on_selector(sel, "el => el.getAttribute('aria-current')")  # noqa: E731
+    assert cur('.master-detail__item[hx-get$="inv-002"]') == "true"
+    assert cur('.master-detail__item[hx-get$="inv-001"]') is None
+    # the detail pane loaded the inv-002 card fragment via hx-get
+    assert "Globex" in page.inner_text(".master-detail__detail")
+
+    # clone the whole master-detail as a SECOND instance
+    page.evaluate(
+        "() => { const md = document.querySelector('.master-detail');"
+        " const c = md.cloneNode(true); c.setAttribute('data-clone','1');"
+        " md.after(c); }"
+    )
+    page.wait_for_timeout(50)
+    # click item 3 inside the CLONE
+    page.click('[data-clone] .master-detail__item[hx-get$="inv-003"]')
+    page.wait_for_timeout(120)
+    # clone selects item 3; the ORIGINAL still has item 2 — isolation holds
+    assert cur('[data-clone] .master-detail__item[hx-get$="inv-003"]') == "true"
+    assert cur('.master-detail:not([data-clone]) .master-detail__item[hx-get$="inv-002"]') == "true"

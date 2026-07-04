@@ -98,10 +98,11 @@ def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
 _SPRITE_NOTE = "<!-- icons: include the icon sheet once per page (see Setup) -->\n"
 
 
-def _dependency_classes(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
-    """The hidden-contract dependency classes a consumer must preserve when
-    copying a component (agent-review taxonomy). Derived from the Hyperpart's
-    own fields — a component is a Primitive only if it has none."""
+_BY_ID = {h.id: h for h in HYPERPARTS}
+
+
+def _own_classes(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
+    """A single Hyperpart's own dependency classes (not its children's)."""
     deps: list[str] = []
     if "{svg:" in hyperpart.partial or "{icon:" in hyperpart.partial:
         deps.append("Sprite")
@@ -109,7 +110,36 @@ def _dependency_classes(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
         deps.append("Controller")
     if hyperpart.exchanges:
         deps.append("Endpoint")
-    return deps or ["Primitive"]
+    return deps
+
+
+def _dependency_classes(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
+    """The hidden-contract dependency classes a consumer must preserve when
+    copying a component (agent-review taxonomy). A composite is `Composite`
+    plus the UNION of its own and its children's classes (one level) — so a
+    reader sees a composite inherits the sheet/endpoint/controller needs of
+    what it embeds. A component with nothing is a Primitive."""
+    deps = _own_classes(hyperpart)
+    if hyperpart.composes:
+        for cid in hyperpart.composes:
+            child = _BY_ID.get(cid)
+            if child:
+                deps += _own_classes(child)
+        deps = ["Composite", *deps]
+    return list(dict.fromkeys(deps)) or ["Primitive"]
+
+
+def _composed_of_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    """A 'Composed of: X · Y' note linking a composite to the child Hyperparts
+    it embeds — the composition made visible."""
+    if not hyperpart.composes:
+        return ""
+    links = []
+    for cid in hyperpart.composes:
+        child = _BY_ID.get(cid)
+        title = child.title if child else cid
+        links.append(f'<a href="#{cid}">{_html.escape(title)}</a>')
+    return f'<p class="hm-composed"><strong>Composed of:</strong> {" · ".join(links)}</p>'
 
 
 def _dependency_chips(hyperpart) -> str:  # type: ignore[no-untyped-def]
@@ -153,7 +183,10 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       '<div class="dz-command__group">Records</div>' +
       '<a class="dz-command__item" href="#" role="option">{i:receipt}<span>Invoices</span></a>' +
       '<a class="dz-command__item" href="#" role="option">{i:users}<span>Customers</span></a>' +
-      '<a class="dz-command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>'
+      '<a class="dz-command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>',
+    "/mock/master-detail/inv-001": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-001 · Acme</div><div class="dz-card-value">£1,250.00</div><div class="dz-card-delta">Paid · 2 days ago</div></div>',
+    "/mock/master-detail/inv-002": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-002 · Globex</div><div class="dz-card-value">£3,400.00</div><div class="dz-card-delta">Pending · due Friday</div></div>',
+    "/mock/master-detail/inv-003": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-003 · Initech</div><div class="dz-card-value">£820.00</div><div class="dz-card-delta">Overdue · 6 days</div></div>'
   };
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
@@ -196,6 +229,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   }, true);
   document.addEventListener("input", function (e) {
     if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
+  });
+  // hx-get on click (non-input affordances, e.g. master-detail list links)
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest && e.target.closest("[hx-get]");
+    if (!el || el.matches("input")) return;
+    e.preventDefault();
+    doGet(el);
   });
 
   // hx-confirm -> htmx:confirm (drives dz-confirm.js)
@@ -310,6 +350,8 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-demo-title { font-weight: var(--weight-semibold); font-size: var(--text-sm); margin-bottom: .25rem; }
 .hm-demo-muted { margin: 0; font-size: var(--text-sm); color: var(--colour-text-muted); }
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
+.hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
+.hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }
 """
 
 
@@ -408,6 +450,7 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
             f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
             f"<code>{snippet}</code></pre></div>"
             f"{apply_prefix(_exchanges_html(c), prefix)}"
+            f"{_composed_of_html(c)}"
             f"{_anatomy_html(c)}"
             f"{notes}</section>"
         )

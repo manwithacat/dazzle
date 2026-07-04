@@ -427,3 +427,52 @@ dialog.dz-command::backdrop {
   border-radius: var(--radius-full);
 }
 .dz-scroll-area::-webkit-scrollbar-track { background: transparent; }
+
+/* HYPERPART: toolbar — inline composite (button + toggle-group + menu). */
+.dz-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: var(--space-sm);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
+
+/* HYPERPART: master-detail — exchange composite (list → hx-get detail card). */
+.dz-master-detail {
+  display: grid;
+  grid-template-columns: 14rem 1fr;
+  gap: var(--space-md);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  min-height: 12rem;
+}
+.dz-master-detail__list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-xs);
+  border-inline-end: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+}
+.dz-master-detail__item {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  color: var(--colour-text);
+  text-decoration: none;
+  font-size: var(--text-sm);
+}
+.dz-master-detail__item:hover {
+  background: var(--colour-bg);
+}
+.dz-master-detail__item[aria-current="true"] {
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand-text);
+  font-weight: var(--weight-medium);
+}
+.dz-master-detail__detail {
+  padding: var(--space-md);
+}

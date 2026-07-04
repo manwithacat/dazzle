@@ -204,3 +204,12 @@ def test_data_attributes_follow_the_namespace_grammar() -> None:
             if not name.startswith(("dz-", "hm-")):
                 offenders.setdefault(c.id, set()).add("data-" + name)
     assert not offenders, f"non-grammar data-attributes (use data-dz-*/data-hm-*): {offenders}"
+
+
+def test_composes_references_real_hyperparts() -> None:
+    """A composite's `composes` must name real Hyperparts — a dangling child
+    id means the 'Composed of' links and dependency aggregation are wrong."""
+    ids = {c.id for c in HYPERPARTS}
+    dangling = {c.id: [x for x in c.composes if x not in ids] for c in HYPERPARTS if c.composes}
+    dangling = {k: v for k, v in dangling.items() if v}
+    assert not dangling, f"composes references unknown Hyperparts: {dangling}"

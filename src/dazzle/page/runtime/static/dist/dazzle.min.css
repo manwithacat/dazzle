@@ -1,4 +1,4 @@
-/* dazzle v0.93.48 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.49 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2809,6 +2809,51 @@ background: color-mix(in oklab, var(--colour-text) 25%, transparent);
 border-radius: var(--radius-full);
 }
 .dz-scroll-area::-webkit-scrollbar-track { background: transparent; }
+.dz-toolbar {
+display: flex;
+align-items: center;
+gap: var(--space-sm);
+flex-wrap: wrap;
+padding: var(--space-sm);
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-md);
+background: var(--colour-surface);
+}
+.dz-master-detail {
+display: grid;
+grid-template-columns: 14rem 1fr;
+gap: var(--space-md);
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-md);
+overflow: hidden;
+min-height: 12rem;
+}
+.dz-master-detail__list {
+list-style: none;
+margin: 0;
+padding: var(--space-xs);
+border-inline-end: 1px solid var(--colour-border);
+background: var(--colour-surface);
+}
+.dz-master-detail__item {
+display: block;
+padding: var(--space-sm) var(--space-md);
+border-radius: var(--radius-sm);
+color: var(--colour-text);
+text-decoration: none;
+font-size: var(--text-sm);
+}
+.dz-master-detail__item:hover {
+background: var(--colour-bg);
+}
+.dz-master-detail__item[aria-current="true"] {
+background: var(--colour-brand-soft);
+color: var(--colour-brand-text);
+font-weight: var(--weight-medium);
+}
+.dz-master-detail__detail {
+padding: var(--space-md);
+}
 }
 @layer components {
 tr.htmx-swapping {
