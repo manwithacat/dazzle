@@ -18,6 +18,7 @@ Generates an inline source map for DevTools debugging.
 import base64
 import json
 from pathlib import Path
+from types import ModuleType
 
 _STATIC_DIR = Path(__file__).parent / "static"
 # HaTchi-MaXchi design-system sources live in the extractable package
@@ -75,7 +76,7 @@ CSS_UNLAYERED_FILES: tuple[str, ...] = (
 )
 
 
-def _hm_build():  # type: ignore[no-untyped-def]
+def _hm_build() -> ModuleType:
     """Load the HaTchi-MaXchi package's build module (packages/…/build.py).
 
     HM publishes UNPREFIXED (`.button`); Dazzle applies its own `dz-`
@@ -101,7 +102,8 @@ def _load_css_file(rel_path: str) -> str:
         prefix = rel_path[len("@hm-build:") :]
         # Font URLs come standalone-relative from build_css; rewrite to
         # Dazzle's /static/fonts/ mount at the consumption seam.
-        return _hm_build().build_css(prefix).replace('url("fonts/', 'url("/static/fonts/')
+        built: str = _hm_build().build_css(prefix)
+        return built.replace('url("fonts/', 'url("/static/fonts/')
     if rel_path.startswith("@hm:"):
         path = _HM_ROOT / rel_path[len("@hm:") :]
     else:
