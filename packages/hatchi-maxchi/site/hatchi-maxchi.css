@@ -4890,6 +4890,270 @@ button.htmx-request,
   display: block;
 }
 
+
+/* ── data-table rows / filter bar / bulk actions ─────────────────────
+ * Moved verbatim from Dazzle fragments.css (grid Hyperpart Slice 0b).
+ * The `.table` ancestor selectors here gate the bulk chrome (#978). */
+/* #978: bulk-actions visibility is CSS-driven by `[data-bulk-count]`
+ * on the ancestor .table (set by dzTable's $watch on bulkCount).
+ * Default state: hidden (no flash on initial paint, replaces the prior
+ * Alpine x-cloak guard). Show only when bulkCount > 0. */
+
+.bulk-actions {
+  display: none;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.table:not([data-bulk-count="0"]) .bulk-actions {
+  display: flex;
+}
+
+/* "items" vs "item" — show plural unless count is exactly 1. */
+.bulk-plural {
+  display: inline;
+}
+.table[data-bulk-count="1"] .bulk-plural {
+  display: none;
+}
+
+/* Pagination summary — selected vs row-count visibility, mirrors the
+ * #978 pattern. The two spans render in the same slot; one shows when
+ * the bulk count is positive, the other when it's zero. */
+.bulk-summary-selected {
+  display: none;
+}
+.bulk-summary-rows {
+  display: inline;
+}
+.table:not([data-bulk-count="0"]) .bulk-summary-selected {
+  display: inline;
+}
+.table:not([data-bulk-count="0"]) .bulk-summary-rows {
+  display: none;
+}
+
+.bulk-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-danger);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.bulk-delete:hover {
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+}
+
+.bulk-clear {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.bulk-clear:hover {
+  color: var(--colour-text);
+}
+
+/* ─────────────────────────── filter_bar fragment ────────────────
+ * Per-column filter inputs (selects + text + ref-loaded selects).
+ * Outer row layout + label sizing only — inputs use the form
+ * input chrome from form.css. */
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: flex-end;
+}
+
+.filter-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  width: 10rem;
+}
+
+.filter-label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+}
+
+.filter-select,
+.filter-input {
+  height: 2rem;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  padding-inline: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  outline: none;
+  transition: box-shadow var(--duration-base) var(--ease-out);
+}
+
+.filter-select:focus-visible,
+.filter-input:focus-visible {
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+/* ─────────────────────────── table_rows fragment ────────────────
+ * Inline-editable data table rows with bulk-select checkboxes,
+ * per-cell display/edit modes, and hover-revealed action buttons.
+ * Row state matrix:
+ *   - .is-selected  → bulk-select checkbox checked → 10% brand tint
+ *   - .is-saving    → editing.saving → 70% opacity
+ *   - .is-error     → editing.error  → 2px danger left border
+ *   - default       → hover row tint
+ * Alpine `:class="{...}"` binds these modifiers based on its state. */
+
+.tr-row {
+  height: 2.25rem;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out);
+}
+
+.tr-row:hover {
+  background: var(--colour-surface);
+}
+
+.tr-row.is-selected {
+  background: color-mix(in oklch, var(--colour-brand) 10%, transparent);
+}
+
+.tr-row.is-saving {
+  opacity: 0.7;
+}
+
+.tr-row.is-error {
+  border-inline-start: 2px solid var(--colour-danger);
+}
+
+.tr-checkbox-cell {
+  width: 2.5rem;
+  padding-inline: var(--space-md);
+}
+
+.tr-checkbox {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: var(--radius-sm);
+  accent-color: var(--colour-brand);
+  cursor: pointer;
+}
+
+.tr-cell {
+  padding-inline: var(--space-md);
+}
+
+.tr-cell.is-numeric {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.tr-cell-display {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  padding-inline: 0.25rem;
+  margin-inline: -0.25rem;
+  padding-block: 0.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: outline var(--duration-fast) var(--ease-out);
+}
+
+.tr-cell-display:hover {
+  outline: 1px solid var(--colour-border);
+  cursor: text;
+}
+
+.tr-cell-truncate {
+  display: block;
+  max-width: 15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tr-actions-cell {
+  width: 4rem;
+  padding-inline: var(--space-sm);
+  text-align: end;
+}
+
+.tr-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.tr-row:hover .tr-actions {
+  opacity: 1;
+}
+
+.tr-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+  text-decoration: none;
+}
+
+.tr-action:hover {
+  background: color-mix(in oklch, var(--colour-bg) 50%, transparent);
+  color: var(--colour-text);
+}
+
+.tr-action.is-destructive:hover {
+  background: color-mix(in oklch, var(--colour-danger) 10%, transparent);
+  color: var(--colour-danger);
+}
+
+/* Empty-state row spans the full table */
+.tr-empty-cell {
+  text-align: center;
+  padding-block: var(--space-2xl);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+.tr-empty-link {
+  margin-inline-start: var(--space-sm);
+  color: var(--colour-brand);
+  text-decoration: none;
+}
+
+.tr-empty-link:hover {
+  text-decoration: underline;
+}
+
 }
 /* ── components/tabs.css ── */
 @layer components {

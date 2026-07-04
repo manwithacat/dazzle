@@ -1,4 +1,4 @@
-/* dazzle v0.93.70 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.71 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3420,6 +3420,207 @@ width: 0.875rem;
 height: 0.875rem;
 display: block;
 }
+.dz-bulk-actions {
+display: none;
+align-items: center;
+gap: var(--space-md);
+}
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-actions {
+display: flex;
+}
+.dz-bulk-plural {
+display: inline;
+}
+.dz-table[data-dz-bulk-count="1"] .dz-bulk-plural {
+display: none;
+}
+.dz-bulk-summary-selected {
+display: none;
+}
+.dz-bulk-summary-rows {
+display: inline;
+}
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-selected {
+display: inline;
+}
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-rows {
+display: none;
+}
+.dz-bulk-delete {
+display: inline-flex;
+align-items: center;
+gap: 0.375rem;
+height: 2rem;
+padding-inline: var(--space-md);
+border-radius: var(--radius-sm);
+font-size: var(--text-sm);
+color: var(--colour-danger);
+background: transparent;
+border: 0;
+cursor: pointer;
+transition: background var(--duration-fast) var(--ease-out);
+}
+.dz-bulk-delete:hover {
+background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+}
+.dz-bulk-clear {
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+background: transparent;
+border: 0;
+cursor: pointer;
+transition: color var(--duration-fast) var(--ease-out);
+}
+.dz-bulk-clear:hover {
+color: var(--colour-text);
+}
+.dz-filter-bar {
+display: flex;
+flex-wrap: wrap;
+gap: var(--space-sm);
+align-items: flex-end;
+}
+.dz-filter-cell {
+display: flex;
+flex-direction: column;
+gap: 0.125rem;
+width: 10rem;
+}
+.dz-filter-label {
+font-size: var(--text-xs);
+font-weight: var(--weight-medium);
+color: var(--colour-text-muted);
+}
+.dz-filter-select,
+.dz-filter-input {
+height: 2rem;
+width: 100%;
+border-radius: var(--radius-sm);
+border: 1px solid var(--colour-border);
+background: var(--colour-surface);
+padding-inline: var(--space-sm);
+font-size: var(--text-sm);
+color: var(--colour-text);
+outline: none;
+transition: box-shadow var(--duration-base) var(--ease-out);
+}
+.dz-filter-select:focus-visible,
+.dz-filter-input:focus-visible {
+box-shadow: 0 0 0 1px var(--colour-brand);
+}
+.dz-tr-row {
+height: 2.25rem;
+font-size: var(--text-sm);
+color: var(--colour-text);
+cursor: pointer;
+transition: background var(--duration-fast) var(--ease-out),
+opacity var(--duration-fast) var(--ease-out);
+}
+.dz-tr-row:hover {
+background: var(--colour-surface);
+}
+.dz-tr-row.is-selected {
+background: color-mix(in oklch, var(--colour-brand) 10%, transparent);
+}
+.dz-tr-row.is-saving {
+opacity: 0.7;
+}
+.dz-tr-row.is-error {
+border-inline-start: 2px solid var(--colour-danger);
+}
+.dz-tr-checkbox-cell {
+width: 2.5rem;
+padding-inline: var(--space-md);
+}
+.dz-tr-checkbox {
+width: 0.875rem;
+height: 0.875rem;
+border-radius: var(--radius-sm);
+accent-color: var(--colour-brand);
+cursor: pointer;
+}
+.dz-tr-cell {
+padding-inline: var(--space-md);
+}
+.dz-tr-cell.is-numeric {
+text-align: end;
+font-variant-numeric: tabular-nums;
+}
+.dz-tr-cell-display {
+display: block;
+width: 100%;
+border-radius: var(--radius-sm);
+padding-inline: 0.25rem;
+margin-inline: -0.25rem;
+padding-block: 0.125rem;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+transition: outline var(--duration-fast) var(--ease-out);
+}
+.dz-tr-cell-display:hover {
+outline: 1px solid var(--colour-border);
+cursor: text;
+}
+.dz-tr-cell-truncate {
+display: block;
+max-width: 15rem;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+.dz-tr-actions-cell {
+width: 4rem;
+padding-inline: var(--space-sm);
+text-align: end;
+}
+.dz-tr-actions {
+display: inline-flex;
+align-items: center;
+gap: 0.125rem;
+opacity: 0;
+transition: opacity var(--duration-fast) var(--ease-out);
+}
+.dz-tr-row:hover .dz-tr-actions {
+opacity: 1;
+}
+.dz-tr-action {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 1.75rem;
+height: 1.75rem;
+border-radius: var(--radius-sm);
+color: var(--colour-text-muted);
+background: transparent;
+border: 0;
+cursor: pointer;
+transition: background var(--duration-fast) var(--ease-out),
+color var(--duration-fast) var(--ease-out);
+text-decoration: none;
+}
+.dz-tr-action:hover {
+background: color-mix(in oklch, var(--colour-bg) 50%, transparent);
+color: var(--colour-text);
+}
+.dz-tr-action.is-destructive:hover {
+background: color-mix(in oklch, var(--colour-danger) 10%, transparent);
+color: var(--colour-danger);
+}
+.dz-tr-empty-cell {
+text-align: center;
+padding-block: var(--space-2xl);
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+}
+.dz-tr-empty-link {
+margin-inline-start: var(--space-sm);
+color: var(--colour-brand);
+text-decoration: none;
+}
+.dz-tr-empty-link:hover {
+text-decoration: underline;
+}
 }
 @layer components {
 .dz-tabs {
@@ -4118,60 +4319,6 @@ flex-shrink: 0;
 .dz-toast[data-dz-toast-level="info"] .dz-toast-icon { color: var(--colour-brand); }
 .dz-toast-message {
 font-size: var(--text-sm);
-color: var(--colour-text);
-}
-.dz-bulk-actions {
-display: none;
-align-items: center;
-gap: var(--space-md);
-}
-.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-actions {
-display: flex;
-}
-.dz-bulk-plural {
-display: inline;
-}
-.dz-table[data-dz-bulk-count="1"] .dz-bulk-plural {
-display: none;
-}
-.dz-bulk-summary-selected {
-display: none;
-}
-.dz-bulk-summary-rows {
-display: inline;
-}
-.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-selected {
-display: inline;
-}
-.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-rows {
-display: none;
-}
-.dz-bulk-delete {
-display: inline-flex;
-align-items: center;
-gap: 0.375rem;
-height: 2rem;
-padding-inline: var(--space-md);
-border-radius: var(--radius-sm);
-font-size: var(--text-sm);
-color: var(--colour-danger);
-background: transparent;
-border: 0;
-cursor: pointer;
-transition: background var(--duration-fast) var(--ease-out);
-}
-.dz-bulk-delete:hover {
-background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
-}
-.dz-bulk-clear {
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-background: transparent;
-border: 0;
-cursor: pointer;
-transition: color var(--duration-fast) var(--ease-out);
-}
-.dz-bulk-clear:hover {
 color: var(--colour-text);
 }
 .dz-form-stepper {
@@ -5361,40 +5508,6 @@ box-shadow: var(--shadow-sm);
 white-space: nowrap;
 pointer-events: none;
 }
-.dz-filter-bar {
-display: flex;
-flex-wrap: wrap;
-gap: var(--space-sm);
-align-items: flex-end;
-}
-.dz-filter-cell {
-display: flex;
-flex-direction: column;
-gap: 0.125rem;
-width: 10rem;
-}
-.dz-filter-label {
-font-size: var(--text-xs);
-font-weight: var(--weight-medium);
-color: var(--colour-text-muted);
-}
-.dz-filter-select,
-.dz-filter-input {
-height: 2rem;
-width: 100%;
-border-radius: var(--radius-sm);
-border: 1px solid var(--colour-border);
-background: var(--colour-surface);
-padding-inline: var(--space-sm);
-font-size: var(--text-sm);
-color: var(--colour-text);
-outline: none;
-transition: box-shadow var(--duration-base) var(--ease-out);
-}
-.dz-filter-select:focus-visible,
-.dz-filter-input:focus-visible {
-box-shadow: 0 0 0 1px var(--colour-brand);
-}
 .dz-ref-link {
 color: var(--colour-brand);
 text-decoration: none;
@@ -5684,119 +5797,6 @@ padding-inline: var(--space-md);
 padding-block: var(--space-md);
 font-size: var(--text-sm);
 color: var(--colour-text-muted);
-}
-.dz-tr-row {
-height: 2.25rem;
-font-size: var(--text-sm);
-color: var(--colour-text);
-cursor: pointer;
-transition: background var(--duration-fast) var(--ease-out),
-opacity var(--duration-fast) var(--ease-out);
-}
-.dz-tr-row:hover {
-background: var(--colour-surface);
-}
-.dz-tr-row.is-selected {
-background: color-mix(in oklch, var(--colour-brand) 10%, transparent);
-}
-.dz-tr-row.is-saving {
-opacity: 0.7;
-}
-.dz-tr-row.is-error {
-border-inline-start: 2px solid var(--colour-danger);
-}
-.dz-tr-checkbox-cell {
-width: 2.5rem;
-padding-inline: var(--space-md);
-}
-.dz-tr-checkbox {
-width: 0.875rem;
-height: 0.875rem;
-border-radius: var(--radius-sm);
-accent-color: var(--colour-brand);
-cursor: pointer;
-}
-.dz-tr-cell {
-padding-inline: var(--space-md);
-}
-.dz-tr-cell.is-numeric {
-text-align: end;
-font-variant-numeric: tabular-nums;
-}
-.dz-tr-cell-display {
-display: block;
-width: 100%;
-border-radius: var(--radius-sm);
-padding-inline: 0.25rem;
-margin-inline: -0.25rem;
-padding-block: 0.125rem;
-white-space: nowrap;
-overflow: hidden;
-text-overflow: ellipsis;
-transition: outline var(--duration-fast) var(--ease-out);
-}
-.dz-tr-cell-display:hover {
-outline: 1px solid var(--colour-border);
-cursor: text;
-}
-.dz-tr-cell-truncate {
-display: block;
-max-width: 15rem;
-white-space: nowrap;
-overflow: hidden;
-text-overflow: ellipsis;
-}
-.dz-tr-actions-cell {
-width: 4rem;
-padding-inline: var(--space-sm);
-text-align: end;
-}
-.dz-tr-actions {
-display: inline-flex;
-align-items: center;
-gap: 0.125rem;
-opacity: 0;
-transition: opacity var(--duration-fast) var(--ease-out);
-}
-.dz-tr-row:hover .dz-tr-actions {
-opacity: 1;
-}
-.dz-tr-action {
-display: inline-flex;
-align-items: center;
-justify-content: center;
-width: 1.75rem;
-height: 1.75rem;
-border-radius: var(--radius-sm);
-color: var(--colour-text-muted);
-background: transparent;
-border: 0;
-cursor: pointer;
-transition: background var(--duration-fast) var(--ease-out),
-color var(--duration-fast) var(--ease-out);
-text-decoration: none;
-}
-.dz-tr-action:hover {
-background: color-mix(in oklch, var(--colour-bg) 50%, transparent);
-color: var(--colour-text);
-}
-.dz-tr-action.is-destructive:hover {
-background: color-mix(in oklch, var(--colour-danger) 10%, transparent);
-color: var(--colour-danger);
-}
-.dz-tr-empty-cell {
-text-align: center;
-padding-block: var(--space-2xl);
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-}
-.dz-tr-empty-link {
-margin-inline-start: var(--space-sm);
-color: var(--colour-brand);
-text-decoration: none;
-}
-.dz-tr-empty-link:hover {
-text-decoration: underline;
 }
 .dz-app-shell {
 }

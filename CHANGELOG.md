@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.70] - 2026-07-04
+## [0.93.71] - 2026-07-04
+
+### Changed
+- **HM data-table Slice 0b — the row / filter-bar / bulk-action CSS families now live in HM.** Moved the bespoke `.dz-tr-*` (rows/cells/checkbox/actions/empty), `.dz-filter-*` (filter bar), and `.dz-bulk-*` (bulk-action bar, incl. the `.dz-table[data-dz-bulk-count]` gating compounds from #978) families verbatim from Dazzle's `fragments.css` into the HM `table.css` — the same byte-identical-port + re-ingest pattern used for pagination. HM authors with the `dz-` prefix; `build_css` keeps it for the Dazzle bundle (`.dz-tr-*` unchanged) and strips it for the standalone gallery (`.tr-*`). Byte-faithful: the Dazzle dist's family rules and computed styles are unchanged (browser-verified `.dz-tr-row` height / `.dz-bulk-actions` hidden-default / `.dz-filter-bar` flex+gap). Inline-edit (`.dz-inline-edit*`) stays in Dazzle as a grid *extension* (narrow-core decision). HM package 0.1.4 → 0.1.5. No behaviour or visual change; HM visual suite green (no baseline change).
+
+### Agent Guidance
+- **The data-table's row/filter/bulk CSS is HM-owned now** (`components/table.css`), consumed by Dazzle via the ingested dist. Slice 0b of the `grid` Hyperpart arc. Next: register the `grid` Hyperpart (gallery entry) then build the vanilla delegated controller. Extensions (inline-edit, peek, column-visibility, resize) remain Dazzle-layer per `dev_docs/2026-07-04-hx-grid-spec-evaluation.md`.
 
 ### Changed
 - **HM data-table Slice 0a (grid Hyperpart groundwork).** Converged the list/table "New &lt;Entity&gt;" CTA off the local `.dz-button-primary` class (a filled-brand button co-located in HM `table.css`) onto the canonical HM button grammar: `class="dz-button" data-dz-variant="primary" data-dz-size="sm"` (the `sm` size reproduces the old 1.75rem/text-xs geometry exactly; the primary variant is the canonical brand skin). Repointed the 2 emit sites (`_render_tables.py` empty-CTA, `_render_interactive.py` CreateButton) + the CreateButton docstring. HM package 0.1.3 → 0.1.4.
