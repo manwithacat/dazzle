@@ -97,15 +97,24 @@ class _RenderInteractiveMixin:
 
         def _emit(self, fragment: Fragment, ctx: RenderContext) -> str: ...
 
+    # Button IR uses a semantic variant vocabulary; button.css skins on the
+    # canonical data-dz-variant set (ghost/outline/destructive/primary). Map
+    # the two here — the render layer is where authoring vocab meets CSS.
+    _VARIANT_MAP = {
+        "primary": "primary",
+        "secondary": "outline",
+        "danger": "destructive",
+        "ghost": "ghost",
+    }
+
     def _emit_button(self, b: Button, ctx: RenderContext) -> str:
         tokens = b.tokens if b.tokens is not None else ctx.tokens.button
-        cls_parts = [
-            "dz-button",
-            f"dz-button--variant-{b.variant}",
-            f"dz-button--size-{tokens.size}",
-            f"dz-button--visibility-{b.visibility}",
-        ]
-        cls = " ".join(cls_parts)
+        # Canonical button: one base class + data-dz-variant / data-dz-size
+        # attributes (matches button.css; the old dz-button--* BEM classes
+        # matched no CSS, so substrate buttons rendered unskinned).
+        variant_attrs = f' data-dz-variant="{self._VARIANT_MAP[b.variant]}"'
+        if tokens.size == "sm":
+            variant_attrs += ' data-dz-size="sm"'
         attrs = _hx_attrs(
             hx_get=b.hx_get,
             hx_post=b.hx_post,
@@ -121,10 +130,14 @@ class _RenderInteractiveMixin:
         )
         attr_str = f" {attrs}" if attrs else ""
         disabled = ' disabled="disabled"' if b.visibility == "disabled" else ""
+        # visibility="hidden" → the native `hidden` attribute (actually hides
+        # it); the old dz-button--visibility-hidden class matched no CSS.
+        hidden = " hidden" if b.visibility == "hidden" else ""
         action_attr = self._action_attrs(b.data_action, ctx)
         label = ctx.escape(b.label)
         return (
-            f'<button type="button" class="{cls}"{action_attr}{attr_str}{disabled}>{label}</button>'
+            f'<button type="button" class="dz-button"{variant_attrs}'
+            f"{action_attr}{attr_str}{disabled}{hidden}>{label}</button>"
         )
 
     @staticmethod

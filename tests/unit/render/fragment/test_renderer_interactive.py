@@ -20,7 +20,8 @@ def test_render_button_label() -> None:
     r = FragmentRenderer()
     out = r.render(Button(label="Save", variant="primary"))
     assert "Save" in out
-    assert "dz-button--variant-primary" in out
+    assert 'class="dz-button"' in out
+    assert 'data-dz-variant="primary"' in out
 
 
 def test_render_button_with_htmx_get() -> None:
@@ -55,7 +56,7 @@ def test_render_button_with_htmx_post_and_confirm() -> None:
 def test_render_button_visibility_hidden_class() -> None:
     r = FragmentRenderer()
     out = r.render(Button(label="Maybe", visibility="hidden"))
-    assert "dz-button--visibility-hidden" in out
+    assert " hidden>" in out or " hidden " in out  # native hidden attribute
 
 
 def test_render_button_no_htmx_no_hx_attrs() -> None:
