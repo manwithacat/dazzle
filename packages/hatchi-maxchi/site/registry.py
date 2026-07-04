@@ -198,14 +198,13 @@ HYPERPARTS: list[Hyperpart] = [
         "grid",
         "Data table",
         "Data",
-        "A server-rendered data table: sortable headers, a filter bar, row "
-        "selection, and bulk actions — all HTML over the wire, on a real "
-        "<table>. This is the styled shell; the dz-grid controller (delegated, "
-        "state-in-DOM) is the next slice and adds sort / selection / "
-        "column-visibility / URL-synced state as progressive enhancement, with "
-        "the rows hydrating into the tbody via an htmx exchange.",
+        "A server-rendered data table: sortable headers, a filter bar, and row "
+        "selection with a bulk-action bar — all HTML over the wire, on a real "
+        "<table>. Selection is live here (dz-grid.js, delegated + state-in-DOM); "
+        "sort / column-visibility / URL-synced state and the hydrating-tbody "
+        "exchange land in the following slices.",
         '<div class="hm-stack hm-measure-lg">'
-        '<div class="dz-table" data-dz-bulk-count="0">'
+        '<div class="dz-table" data-dz-grid data-dz-bulk-count="0">'
         '<div class="dz-filter-bar">'
         '<div class="dz-filter-cell"><label class="dz-filter-label">Plan</label>'
         '<select class="dz-filter-select" aria-label="Plan"><option>Any plan</option>'
@@ -214,11 +213,16 @@ HYPERPARTS: list[Hyperpart] = [
         '<select class="dz-filter-select" aria-label="Status"><option>Any status</option>'
         "<option>Active</option></select></div>"
         "</div>"
+        '<div class="dz-bulk-actions">'
+        "<span><span data-dz-bulk-count-target>0</span> selected</span>"
+        '<button type="button" class="dz-bulk-delete">Delete</button>'
+        '<button type="button" class="dz-bulk-clear" data-dz-grid-clear>Clear</button>'
+        "</div>"
         '<div class="dz-table-scroll"><div class="dz-table-scroll-x">'
         '<table class="dz-table-grid">'
         "<thead><tr>"
         '<th class="dz-table-th-select">'
-        '<input type="checkbox" aria-label="Select all rows"></th>'
+        '<input type="checkbox" data-dz-grid-select-all aria-label="Select all rows"></th>'
         '<th class="dz-table-th" aria-sort="ascending">'
         '<button type="button" class="dz-table-sort-button">Name</button></th>'
         '<th class="dz-table-th">Plan</th>'
@@ -226,26 +230,33 @@ HYPERPARTS: list[Hyperpart] = [
         "</tr></thead>"
         '<tbody class="dz-table-body">'
         '<tr class="dz-tr-row"><td class="dz-tr-checkbox-cell">'
-        '<input type="checkbox" class="dz-tr-checkbox" aria-label="Select Jane Doe">'
+        '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select '
+        'data-dz-grid-row-id="cust_1" aria-label="Select Jane Doe">'
         '</td><td class="dz-tr-cell">Jane Doe</td><td class="dz-tr-cell">Pro</td>'
         '<td class="dz-tr-cell">2026-07-04</td></tr>'
         '<tr class="dz-tr-row"><td class="dz-tr-checkbox-cell">'
-        '<input type="checkbox" class="dz-tr-checkbox" aria-label="Select Ravi Patel">'
+        '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select '
+        'data-dz-grid-row-id="cust_2" aria-label="Select Ravi Patel">'
         '</td><td class="dz-tr-cell">Ravi Patel</td><td class="dz-tr-cell">Free</td>'
         '<td class="dz-tr-cell">2026-06-28</td></tr>'
         '<tr class="dz-tr-row"><td class="dz-tr-checkbox-cell">'
-        '<input type="checkbox" class="dz-tr-checkbox" aria-label="Select Mia Chen">'
+        '<input type="checkbox" class="dz-tr-checkbox" data-dz-grid-select '
+        'data-dz-grid-row-id="cust_3" aria-label="Select Mia Chen">'
         '</td><td class="dz-tr-cell">Mia Chen</td><td class="dz-tr-cell">Pro</td>'
         '<td class="dz-tr-cell">2026-06-15</td></tr>'
         "</tbody></table></div></div></div></div>",
-        notes="The whole thing stays a real <code>&lt;table&gt;</code> — sortable headers "
-        "are <code>&lt;button&gt;</code>s carrying <code>aria-sort</code>, selection is "
-        "native checkboxes, and the tbody is a morph target the server repaints. Row "
-        "actions and the bulk-action bar (shown when a selection exists, gated by "
-        "<code>data-dz-bulk-count</code> on the table) hang off the same markup. The "
-        "<code>dz-grid</code> controller — delegated, state-in-DOM, morph-safe — is the "
-        "next slice; until then this is the styled markup contract.",
-        tags=("data",),
+        notes="Selection is delegated + state-in-DOM: <code>dz-grid.js</code> counts the "
+        "checked <code>[data-dz-grid-select]</code> boxes, writes the total to "
+        "<code>data-dz-bulk-count</code> on the root, and the CSS reveals the "
+        "<code>.dz-bulk-actions</code> bar — no reactive framework. Each checkbox's "
+        "<code>.checked</code> survives a tbody morph in place (what Alpine's scope did "
+        "not); the derived count / bar / select-all are re-synced on change and on "
+        "<code>htmx:afterSwap</code>. The select-all box reflects checked / indeterminate "
+        "/ none. Bulk-action submission, sort, and the hydrating-tbody exchange — plus "
+        "stable row ids so a selection follows its <em>row</em> across a re-sort — are "
+        "the next slices.",
+        tags=("data", "interactive"),
+        controller="controllers/dz-grid.js",
     ),
     # ── Overlays (interactive — need the mock htmx / dialog) ─────────
     Hyperpart(

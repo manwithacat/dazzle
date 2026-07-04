@@ -64,6 +64,7 @@ JS_SOURCES = [
     "controllers/dz-dialog.js",
     "controllers/dz-slider.js",
     "controllers/dz-tabs.js",
+    "controllers/dz-grid.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

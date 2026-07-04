@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.72] - 2026-07-04
+## [0.93.73] - 2026-07-04
+
+### Added
+- **`dz-grid.js` — the data-table controller, first slice: row selection** (HM package 0.1.7 → 0.1.8). A delegated, state-in-DOM vanilla controller (the HM idiom, like `dz-tabs.js`): checking `[data-dz-grid-select]` rows (or the `[data-dz-grid-select-all]` header box) writes the count to `data-dz-bulk-count` on the `[data-dz-grid]` root, the CSS reveals the `.dz-bulk-actions` bar, `[data-dz-bulk-count-target]` mirrors the number, select-all reflects checked/indeterminate/none, and `[data-dz-grid-clear]` resets. No framework, no reactive scope — each checkbox's `.checked` survives an idiomorph tbody swap in place (what Alpine's scope did not), and the derived count/bar/select-all are re-synced on `change` and on `htmx:afterSwap`. Scoped per-root via `closest()` so N grids coexist. The `grid` Hyperpart gallery entry now demonstrates live selection; behaviour-tested on Chromium + WebKit; default (unselected) state unchanged so no visual-baseline change. Inert in Dazzle for now (Dazzle emits no `data-dz-grid` yet — still the Alpine `dzTable`).
+
+### Agent Guidance
+- **Selection is the first `dz-grid` slice** of the hypermedia table primitive. Follow-ups (tracked): the bulk-action exchange, sort, the hydrating-tbody exchange, and **stable row ids** so idiomorph anchors a selection to its *row* (not DOM position) across a re-sort — the current `data-dz-grid-row-id` is the bulk payload anchor, not yet the morph key. An adversarial review confirmed the executable behaviour is correct + well-isolated (VERDICT SHIP); the morph-safety wording was tightened to distinguish per-checkbox survival (real) from derived-state re-sync (now wired via afterSwap) from row-identity anchoring (a later slice).
 
 ### Fixed
 - **Data-table filter dropdowns clipped the bottom of their text.** `.dz-filter-select`/`.dz-filter-input` (HM `table.css`) had a fixed `height: 2rem` on a `border-box` control; once the browser's default ~8px vertical `<select>` padding + 1px borders were subtracted, only ~14px of content height remained — shorter than the ~15px text, cutting off the descenders. Replaced the hard `height` with `min-height: 2rem` + an explicit `padding-block: 0.25rem` (overriding the UA default) so the text always fits and the control grows rather than crops. Affects every Dazzle list surface's filter bar (HM package 0.1.6 → 0.1.7).

@@ -161,6 +161,38 @@ def test_confirm_dialog_intercepts_hx_confirm(page) -> None:  # type: ignore[no-
     )
 
 
+def test_grid_selection_reveals_and_clears_the_bulk_bar(page) -> None:  # type: ignore[no-untyped-def]
+    """dz-grid selection is delegated + state-in-DOM: checking rows writes the
+    count to data-bulk-count on the root, the CSS reveals the bulk bar, select-all
+    reflects the tri-state, and Clear resets it. (Gallery classes are un-prefixed.)"""
+    root, bar, boxes = "[data-grid]", ".bulk-actions", "[data-grid-select]"
+    disp = "e => getComputedStyle(e).display"
+
+    # Default: nothing selected, bar hidden.
+    assert page.get_attribute(root, "data-bulk-count") == "0"
+    assert page.eval_on_selector(bar, disp) == "none"
+
+    # Select one row → count 1, bar revealed, summary mirrors the count.
+    page.locator(boxes).first.check()
+    page.wait_for_timeout(80)
+    assert page.get_attribute(root, "data-bulk-count") == "1"
+    assert page.eval_on_selector(bar, disp) != "none"
+    assert page.inner_text("[data-bulk-count-target]").strip() == "1"
+
+    # Select-all → every row checked, count == N, header box fully checked.
+    n = page.eval_on_selector_all(boxes, "els => els.length")
+    page.check("[data-grid-select-all]")
+    page.wait_for_timeout(80)
+    assert page.get_attribute(root, "data-bulk-count") == str(n)
+    assert page.eval_on_selector("[data-grid-select-all]", "e => e.checked && !e.indeterminate")
+
+    # Clear → back to zero, bar hidden again.
+    page.click("[data-grid-clear]")
+    page.wait_for_timeout(80)
+    assert page.get_attribute(root, "data-bulk-count") == "0"
+    assert page.eval_on_selector(bar, disp) == "none"
+
+
 def test_copy_button_copies_and_gives_feedback(_engine_browser) -> None:  # type: ignore[no-untyped-def]
     # Headless WebKit blocks navigator.clipboard.writeText (and rejects the
     # clipboard-* permissions), so the button's feedback never fires there.

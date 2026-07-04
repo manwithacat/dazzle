@@ -415,3 +415,106 @@
     if (panel) panel.hidden = false; // reveal → triggers the panel's intersect-once load
   });
 })();
+
+/* ── controllers/grid.js ── */
+/* HYPERPART: grid */
+/*
+ * grid — the data-table controller. FIRST SLICE: row selection.
+ *
+ * Delegated + state-in-DOM, the HM idiom (same shape as tabs.js): one pair
+ * of document-level listeners, everything scoped to the clicked control's own
+ * `[data-grid]` root via `closest()`, so N grids on a page stay independent.
+ * There is NO framework and NO reactive scope — the primary selection state is
+ * each checkbox's own `.checked`, which idiomorph preserves in place across a
+ * tbody swap (the exact thing Alpine's reactive scope did NOT survive). The
+ * *derived* state — the root's `data-bulk-count`, the summary text, and the
+ * select-all tri-state — is a projection of those checkboxes, so it is
+ * recomputed on every `change`/`click` AND re-synced after any `htmx:afterSwap`
+ * (a swap changes the row set, so the projection must be rebuilt from the
+ * surviving boxes). Caveat for the sort/hydration slice: idiomorph preserves a
+ * checkbox by DOM position unless the row carries a stable `id`, so anchoring a
+ * selection to row *identity* across a re-sort still needs the server to emit
+ * stable ids (the `data-grid-row-id` here is the payload anchor, not yet the
+ * morph key). Until then this slice is honest about *counts*, not identity.
+ *
+ * Contract:
+ *   - root:        `[data-grid]` (also the `.table` the bulk CSS gates on)
+ *   - row box:     `[data-grid-select]` (a checkbox; may carry
+ *                  `data-grid-row-id` for later bulk payloads)
+ *   - select-all:  `[data-grid-select-all]` (header checkbox; reflects
+ *                  checked / indeterminate / unchecked)
+ *   - count sink:  `data-bulk-count` written on the root (the CSS reveals
+ *                  `.bulk-actions` when it isn't "0") + `[data-bulk-count-target]`
+ *                  mirrors the number for a "N selected" summary
+ *   - clear:       `[data-grid-clear]` deselects everything
+ */
+(function () {
+  "use strict";
+
+  function gridOf(el) {
+    return el.closest ? el.closest("[data-grid]") : null;
+  }
+
+  function rowBoxes(root) {
+    return Array.prototype.slice.call(
+      root.querySelectorAll("[data-grid-select]"),
+    );
+  }
+
+  function sync(root) {
+    var boxes = rowBoxes(root);
+    var checked = 0;
+    for (var i = 0; i < boxes.length; i++) {
+      var on = boxes[i].checked;
+      if (on) checked++;
+      var tr = boxes[i].closest("tr");
+      if (tr) tr.classList.toggle("is-selected", on);
+    }
+    // The count is the single source of truth the CSS reads (#978 pattern):
+    // `.table:not([data-bulk-count="0"]) .bulk-actions { display:flex }`.
+    root.setAttribute("data-bulk-count", String(checked));
+    var target = root.querySelector("[data-bulk-count-target]");
+    if (target) target.textContent = String(checked);
+    var all = root.querySelector("[data-grid-select-all]");
+    if (all) {
+      all.checked = checked > 0 && checked === boxes.length;
+      all.indeterminate = checked > 0 && checked < boxes.length;
+    }
+  }
+
+  document.addEventListener("change", function (evt) {
+    var t = evt.target;
+    if (!t || !t.matches) return;
+    if (t.matches("[data-grid-select]")) {
+      var r = gridOf(t);
+      if (r) sync(r);
+    } else if (t.matches("[data-grid-select-all]")) {
+      var root = gridOf(t);
+      if (!root) return;
+      var boxes = rowBoxes(root);
+      for (var i = 0; i < boxes.length; i++) boxes[i].checked = t.checked;
+      sync(root);
+    }
+  });
+
+  document.addEventListener("click", function (evt) {
+    var t = evt.target;
+    var clear = t && t.closest && t.closest("[data-grid-clear]");
+    if (!clear) return;
+    var root = gridOf(clear);
+    if (!root) return;
+    var boxes = rowBoxes(root);
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
+    sync(root);
+  });
+
+  // A tbody swap changes the row set: idiomorph preserves each checkbox's
+  // `.checked` in place, but the derived count / bar / select-all must be
+  // rebuilt from the surviving boxes — else the root could say "2 selected"
+  // after those 2 rows were swapped out. Re-sync every grid on the page (cheap;
+  // no-op where nothing changed). Harmless if htmx never fires this event.
+  document.addEventListener("htmx:afterSwap", function () {
+    var grids = document.querySelectorAll("[data-grid]");
+    for (var i = 0; i < grids.length; i++) sync(grids[i]);
+  });
+})();
