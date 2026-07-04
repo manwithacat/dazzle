@@ -35,6 +35,7 @@ from build import (  # noqa: E402  (package build.py)
 from hyperpart import anatomy  # noqa: E402  (package tools/hyperpart.py)
 from icons import ICONS, LUCIDE_VERSION, lucide_svg_html  # noqa: E402
 from icons.sprite import build_symbol_sheet, sprite_use_html  # noqa: E402
+from pretty import pretty_html  # noqa: E402
 from registry import GROUPS, HYPERPARTS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -436,9 +437,11 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         # (e.g. controllers/dz-command.js) and HYPERPART markers, which keep
         # the source form regardless of the published class namespace.
         live = apply_prefix(expand_icons(c.partial), prefix)
-        # Surface the sprite dependency in the copied snippet (not the live
-        # demo, which already carries the sheet) so a paste is self-aware.
-        snippet_src = _SPRITE_NOTE + live if '<use href="#i-' in live else live
+        # The live demo uses the compact one-line `live`; the SNIPPET is
+        # pretty-printed so the structure is legible (render-faithful — see
+        # site/pretty.py). Sprite-dependency note prepended to the snippet only.
+        pretty = pretty_html(live)
+        snippet_src = _SPRITE_NOTE + pretty if '<use href="#i-' in live else pretty
         snippet = _html.escape(snippet_src)
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         deps = _dependency_chips(c)
