@@ -1,0 +1,70 @@
+/* HYPERPART: tabs */
+/*
+ * dz-tabs — a lazy tab strip. An honest link-strip, NOT a half-built ARIA
+ * tabs widget: the tabs are <button>s (natively focusable + Tab-navigable)
+ * with `aria-current="true"` on the active one — no `role="tablist"` it
+ * can't back with roving-tabindex/arrow-key navigation (the candor HM
+ * already applies to menu: "disclosure, not ARIA menu").
+ *
+ * Each panel lazy-loads its content via htmx (`hx-get` on `intersect once`,
+ * so a panel fetches the first time it's revealed); dz-tabs.js toggles the
+ * active tab + shows/hides panels, scoped to each `.dz-tabs` root so N tab
+ * groups coexist. The first panel is visible (and may carry its content
+ * inline / load on `load`); the rest start `hidden`.
+ */
+
+.dz-tabs {
+  display: block;
+}
+
+.dz-tabs__list {
+  display: flex;
+  border-block-end: 1px solid var(--colour-border);
+  margin-block-end: var(--space-md);
+}
+
+.dz-tabs__tab {
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  margin-block-end: -1px; /* overlap the list border so the active bar is flush */
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.dz-tabs__tab:hover {
+  color: var(--colour-text);
+}
+
+.dz-tabs__tab:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+
+.dz-tabs__tab[aria-current="true"] {
+  border-block-end-color: var(--colour-brand);
+  color: var(--colour-text);
+  font-weight: var(--weight-medium);
+}
+
+.dz-tabs__loading {
+  display: flex;
+  justify-content: center;
+  padding-block: var(--space-2xl);
+  color: var(--colour-text-muted);
+}
+
+.dz-tabs__loading > svg {
+  width: 1rem;
+  height: 1rem;
+  animation: dz-spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-tabs__tab { transition: none; }
+  .dz-tabs__loading > svg { animation: none; }
+}

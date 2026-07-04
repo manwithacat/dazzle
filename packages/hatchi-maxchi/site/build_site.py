@@ -190,7 +190,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     "/mock/master-detail/inv-003": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-003 · Initech</div><div class="dz-card-value">£820.00</div><div class="dz-card-delta">Overdue · 6 days</div></div>',
     "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
-    "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>'
+    "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
+    "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
+    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
   };
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
@@ -224,6 +226,10 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       // plain selector (e.g. an id `#region-body`, as pagination + most real
       // htmx targets use) — resolve like htmx's default querySelector.
       target = document.querySelector(sel);
+    } else {
+      // no hx-target → the element swaps its own content (htmx default), as
+      // the lazy tab panels do.
+      target = el;
     }
     if (target) {
       target.innerHTML = body;
@@ -266,6 +272,25 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       }
     });
   });
+
+  // intersect-once: a lazy panel (hx-trigger contains "intersect") loads the
+  // first time it becomes visible — the tab controller reveals a hidden panel,
+  // which then intersects. Mirrors real htmx's `intersect once` trigger.
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { io.unobserve(e.target); doGet(e.target); }
+      });
+    });
+    var observeLazy = function () {
+      var els = document.querySelectorAll("[hx-get][hx-trigger]");
+      for (var i = 0; i < els.length; i++) {
+        if ((els[i].getAttribute("hx-trigger") || "").indexOf("intersect") >= 0) io.observe(els[i]);
+      }
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", observeLazy);
+    else observeLazy();
+  }
 
   window.htmx = { version: "mock-4" };
 })();

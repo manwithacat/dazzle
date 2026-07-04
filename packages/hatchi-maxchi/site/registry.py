@@ -459,6 +459,47 @@ HYPERPARTS: list[Hyperpart] = [
         tags=("interactive",),
     ),
     Hyperpart(
+        "tabs",
+        "Tabs",
+        "Navigation",
+        "A lazy tab strip — an honest link-strip (buttons + aria-current, no "
+        "unkept role=tablist). Each panel hx-gets its content the first time it "
+        "is shown.",
+        '<div class="dz-tabs">'
+        '<div class="dz-tabs__list">'
+        '<button class="dz-tabs__tab" aria-current="true" data-dz-tab-target="hm-tab-overview">Overview</button>'
+        '<button class="dz-tabs__tab" data-dz-tab-target="hm-tab-activity">Activity</button>'
+        '<button class="dz-tabs__tab" data-dz-tab-target="hm-tab-settings">Settings</button>'
+        "</div>"
+        '<div id="hm-tab-overview" class="dz-tabs__panel">'
+        '<p class="hm-demo-muted">Active on the Pro plan, renewing 1 August.</p></div>'
+        '<div id="hm-tab-activity" class="dz-tabs__panel" hidden '
+        'hx-get="/mock/tabs/activity" hx-trigger="intersect once" hx-swap="innerHTML">'
+        '<div class="dz-tabs__loading">{svg:loader-circle}</div></div>'
+        '<div id="hm-tab-settings" class="dz-tabs__panel" hidden '
+        'hx-get="/mock/tabs/settings" hx-trigger="intersect once" hx-swap="innerHTML">'
+        '<div class="dz-tabs__loading">{svg:loader-circle}</div></div>'
+        "</div>",
+        notes="The tabs are <code>&lt;button&gt;</code>s with <code>aria-current</code> — no "
+        "<code>role=tablist</code> without the roving-tabindex/arrow-key contract to back it "
+        "(honest, like the menu). <code>dz-tabs.js</code> reveals the chosen panel scoped to "
+        "its <code>.dz-tabs</code> root; showing a hidden panel triggers its "
+        "<code>intersect once</code> lazy load. The first panel is eager (content inline).",
+        tags=("interactive", "htmx"),
+        exchanges=(
+            Exchange(
+                method="GET",
+                endpoint="/app/{region}/{tab}",
+                trigger="a panel, the first time it is revealed (`intersect once`); an eager panel on `load`",
+                response="the panel's content fragment (rows, a form, a chart — whatever the tab shows)",
+                swap="innerHTML of the panel itself (no hx-target)",
+                states=("loading", "populated", "error"),
+            ),
+        ),
+        controller="controllers/dz-tabs.js",
+        mock="/mock/tabs",
+    ),
+    Hyperpart(
         "avatar",
         "Avatar",
         "Data",

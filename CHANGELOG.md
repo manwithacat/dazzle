@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.62] - 2026-07-04
+
+### Added
+- **HM `tabs` Hyperpart — a lazy tab strip (batch 2, Phase 1).** An **honest link-strip**, not a half-built ARIA tabs widget: the tabs are `<button>`s with `aria-current="true"` on the active one — no `role="tablist"` without the roving-tabindex/arrow-key contract to back it (the candor HM already applies to menu). Each panel lazy-loads via htmx (`hx-get` on `intersect once`), and `dz-tabs.js` (delegated, scoped to each `.dz-tabs` root — N groups coexist) reveals the chosen panel + moves `aria-current`; showing a `hidden` panel is what triggers its intersect-once load. The gallery mock gained an `IntersectionObserver` (to fire the lazy load on reveal) and a self-swap default (`hx-get` with no `hx-target`). Verified in a real browser (switch + sibling-hide + aria-current + intersect-once load for both lazy panels); adversarial review = SHIP.
+
+### Agent Guidance
+- **Phase 1 of the Tabs convergence (additive).** The live Dazzle tab system is `LazyTabPanel` (`.dz-tabbed-list*` + `role=tablist` + inline `onclick` JS + lazy panels); converging it onto this HM Tabs (repoint the emitter to the honest-link-strip markup, delete the inline JS for `dz-tabs.js`, move the CSS, update the `role=tablist`-pinning tests, and retire the latent-broken generic `Tabs` fragment) is **Phase 2**, a separate change. The interim collision is benign: HM's `.dz-tabs{display:block}` no-ops on the generic fragment's div, HM defines no `.dz-tabs__panel` rule, and `dz-tabs.js` matches neither Dazzle tab system's classes (`.dz-tabbed-list-tab` / `.dz-tabs__button`), so the ingest is inert in Dazzle (region_adapter tests unchanged).
+
 ## [0.93.61] - 2026-07-04
 
 ### Added

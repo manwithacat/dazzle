@@ -28,6 +28,9 @@ _REQUEST_ATTR_RE = re.compile(r'hx-(get|post|put|patch|delete)="([^"]+)"')
 SEMANTIC_ONLY = {
     "dz-alert__body",
     "dz-empty-state__description",
+    # tab panel container: identity for the controller + a swap target; its
+    # visibility rides the native `hidden` attribute, so it carries no rule.
+    "dz-tabs__panel",
 }
 
 

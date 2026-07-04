@@ -51,6 +51,7 @@ CSS_SOURCES = [
     ("components", "components/pagination.css"),
     ("components", "components/skeleton.css"),
     ("components", "components/table.css"),
+    ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]
 
@@ -62,6 +63,7 @@ JS_SOURCES = [
     "controllers/dz-master-detail.js",
     "controllers/dz-dialog.js",
     "controllers/dz-slider.js",
+    "controllers/dz-tabs.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

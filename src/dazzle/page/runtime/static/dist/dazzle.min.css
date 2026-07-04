@@ -1,4 +1,4 @@
-/* dazzle v0.93.61 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.62 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3481,6 +3481,55 @@ justify-content: space-between;
 width: 0.875rem;
 height: 0.875rem;
 display: block;
+}
+}
+@layer components {
+.dz-tabs {
+display: block;
+}
+.dz-tabs__list {
+display: flex;
+border-block-end: 1px solid var(--colour-border);
+margin-block-end: var(--space-md);
+}
+.dz-tabs__tab {
+padding-inline: var(--space-md);
+padding-block: var(--space-sm);
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+background: transparent;
+border: 0;
+border-block-end: 2px solid transparent;
+margin-block-end: -1px;
+cursor: pointer;
+transition: color var(--duration-fast) var(--ease-out);
+}
+.dz-tabs__tab:hover {
+color: var(--colour-text);
+}
+.dz-tabs__tab:focus-visible {
+outline: var(--focus-ring-width) solid var(--focus-ring-color);
+outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+.dz-tabs__tab[aria-current="true"] {
+border-block-end-color: var(--colour-brand);
+color: var(--colour-text);
+font-weight: var(--weight-medium);
+}
+.dz-tabs__loading {
+display: flex;
+justify-content: center;
+padding-block: var(--space-2xl);
+color: var(--colour-text-muted);
+}
+.dz-tabs__loading > svg {
+width: 1rem;
+height: 1rem;
+animation: dz-spin 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+.dz-tabs__tab { transition: none; }
+.dz-tabs__loading > svg { animation: none; }
 }
 }
 @layer components {

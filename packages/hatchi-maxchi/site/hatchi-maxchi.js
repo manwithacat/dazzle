@@ -18,7 +18,9 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     "/mock/master-detail/inv-003": '<div class="card card-body"><div class="card-label">INV-003 · Initech</div><div class="card-value">£820.00</div><div class="card-delta">Overdue · 6 days</div></div>',
     "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
-    "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>'
+    "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
+    "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
+    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
   };
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
@@ -52,6 +54,10 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       // plain selector (e.g. an id `#region-body`, as pagination + most real
       // htmx targets use) — resolve like htmx's default querySelector.
       target = document.querySelector(sel);
+    } else {
+      // no hx-target → the element swaps its own content (htmx default), as
+      // the lazy tab panels do.
+      target = el;
     }
     if (target) {
       target.innerHTML = body;
@@ -94,6 +100,25 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       }
     });
   });
+
+  // intersect-once: a lazy panel (hx-trigger contains "intersect") loads the
+  // first time it becomes visible — the tab controller reveals a hidden panel,
+  // which then intersects. Mirrors real htmx's `intersect once` trigger.
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { io.unobserve(e.target); doGet(e.target); }
+      });
+    });
+    var observeLazy = function () {
+      var els = document.querySelectorAll("[hx-get][hx-trigger]");
+      for (var i = 0; i < els.length; i++) {
+        if ((els[i].getAttribute("hx-trigger") || "").indexOf("intersect") >= 0) io.observe(els[i]);
+      }
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", observeLazy);
+    else observeLazy();
+  }
 
   window.htmx = { version: "mock-4" };
 })();
@@ -456,4 +481,46 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   } else {
     sync();
   }
+})();
+
+/* ── controllers/tabs.js ── */
+/* HYPERPART: tabs */
+/*
+ * tabs — activate a tab + reveal its panel.
+ *
+ * Delegated from document; a click on a `.tabs__tab` marks it
+ * `aria-current="true"` and hides its siblings' panels, all scoped to the
+ * clicked tab's OWN `.tabs` root (every query via `closest`), so N tab
+ * groups on one page stay independent. Revealing a `hidden` panel is what
+ * triggers its `hx-trigger="intersect once"` lazy load (a display:none panel
+ * has no intersection; showing it makes htmx fetch it once).
+ *
+ * Replaces the per-tab inline `onclick` handler the legacy tabbed list used —
+ * one delegated listener, no inline script (CSP-friendlier), instance-safe.
+ */
+(function () {
+  "use strict";
+
+  document.addEventListener("click", function (evt) {
+    var tab = evt.target.closest(".tabs__tab");
+    if (!tab) return;
+    var root = tab.closest(".tabs");
+    if (!root) return;
+
+    var tabs = root.querySelectorAll(".tabs__tab");
+    for (var i = 0; i < tabs.length; i++)
+      tabs[i].removeAttribute("aria-current");
+    tab.setAttribute("aria-current", "true");
+
+    var panels = root.querySelectorAll(".tabs__panel");
+    for (var j = 0; j < panels.length; j++) panels[j].hidden = true;
+
+    var targetId = tab.getAttribute("data-tab-target");
+    var panel = targetId
+      ? root.querySelector(
+          "#" + (window.CSS && CSS.escape ? CSS.escape(targetId) : targetId),
+        )
+      : null;
+    if (panel) panel.hidden = false; // reveal → triggers the panel's intersect-once load
+  });
 })();

@@ -244,6 +244,29 @@ def test_dialog_instance_isolation(page) -> None:  # type: ignore[no-untyped-def
     )
 
 
+def test_tabs_switch_and_lazy_load(page) -> None:  # type: ignore[no-untyped-def]
+    """dz-tabs.js: clicking a tab reveals its panel (hiding siblings) and moves
+    aria-current, all scoped to the .dz-tabs root; revealing a hidden panel
+    triggers its `intersect once` lazy load (the mock's IntersectionObserver)."""
+    cur = '#tabs .tabs__tab[aria-current="true"]'
+    assert page.evaluate(f"document.querySelector('{cur}').textContent") == "Overview"
+    assert page.evaluate("document.getElementById('hm-tab-activity').hidden")
+    page.click('#tabs .tabs__tab[data-tab-target="hm-tab-activity"]')
+    page.wait_for_timeout(400)
+    assert not page.evaluate("document.getElementById('hm-tab-activity').hidden"), (
+        "clicking a tab reveals its panel"
+    )
+    assert page.evaluate("document.getElementById('hm-tab-overview').hidden"), (
+        "the prior panel hides"
+    )
+    assert page.evaluate(f"document.querySelector('{cur}').textContent") == "Activity", (
+        "aria-current moves to the active tab"
+    )
+    assert "3 events today" in page.inner_text("#hm-tab-activity"), (
+        "revealing a hidden panel triggers its intersect-once lazy load"
+    )
+
+
 def test_slider_updates_value_readout(page) -> None:  # type: ignore[no-untyped-def]
     """dz-slider.js writes the range value into the group's [data-range-value]
     readout on input, scoped to the slider's own group."""
