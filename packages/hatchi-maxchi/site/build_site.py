@@ -187,7 +187,10 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       '<a class="dz-command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>',
     "/mock/master-detail/inv-001": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-001 · Acme</div><div class="dz-card-value">£1,250.00</div><div class="dz-card-delta">Paid · 2 days ago</div></div>',
     "/mock/master-detail/inv-002": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-002 · Globex</div><div class="dz-card-value">£3,400.00</div><div class="dz-card-delta">Pending · due Friday</div></div>',
-    "/mock/master-detail/inv-003": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-003 · Initech</div><div class="dz-card-value">£820.00</div><div class="dz-card-delta">Overdue · 6 days</div></div>'
+    "/mock/master-detail/inv-003": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-003 · Initech</div><div class="dz-card-value">£820.00</div><div class="dz-card-delta">Overdue · 6 days</div></div>',
+    "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
+    "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
+    "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>'
   };
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
@@ -217,6 +220,10 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
           break;
         }
       }
+    } else if (sel) {
+      // plain selector (e.g. an id `#region-body`, as pagination + most real
+      // htmx targets use) — resolve like htmx's default querySelector.
+      target = document.querySelector(sel);
     }
     if (target) {
       target.innerHTML = body;
@@ -294,6 +301,9 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
 .hm-grow { flex: 1 1 0; min-width: 0; }
+.hm-pag-list { border: 1px solid var(--colour-border); border-radius: var(--radius-md); overflow: hidden; }
+.hm-pag-row { padding: .6rem .9rem; font-size: var(--text-sm); }
+.hm-pag-row + .hm-pag-row { border-block-start: 1px solid var(--colour-border); }
 .hm-inline { display:inline-flex; align-items:center; gap: .5rem; font-size: var(--text-sm); }
 .hm-code { position: relative; }
 .hm-code pre { margin: 0; padding: 1rem 4rem 1rem 1.25rem; overflow-x: auto;

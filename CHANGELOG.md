@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.60] - 2026-07-04
+
+### Changed
+- **Pagination converged onto the HM `pagination` Hyperpart (build-to-replace).** The `.dz-pagination*` family (footer summary + page buttons + ellipsis) moved from Dazzle's `fragments.css` to HM's `components/pagination.css` as the single canonical definition; Dazzle's `_emit_pagination` consumes it unchanged. The port is **byte-identical** on all 7 core rules, so there is zero visual change to Dazzle's tables — plus two zero-baseline-impact additions: a `:focus-visible` ring (TASTE-1; only paints on keyboard focus) and `:disabled` styling (unused by Dazzle's numbered-only emitter, ready for prev/next). Adversarial review verified the port rule-by-rule and that `.dz-bulk-summary-*` (a separate concern) was untouched.
+
+### Added
+- **HM `pagination` Hyperpart** — the canonical page-nav footer as an Exchange component: each page button `hx-get`s a page into the list body (demoed against a mock that swaps `#hm-pag-body`), wrapped in a `<nav aria-label="Pagination">` landmark with the current page marked `aria-current="page"` and prev/next arrows. Also added an id/plain-selector branch to the gallery mock's `doGet` (it previously resolved only `next .sel` targets) — scoped so the existing `command`/`master-detail` demos are unaffected.
+
+### Agent Guidance
+- **Byte-identical CSS ports are the low-risk convergence move.** When an HM component's class family already matches a live Dazzle family (here `.dz-pagination*`), port the values verbatim into HM and delete Dazzle's copy in the same change — Dazzle's markup then renders identically via the ingested HM bundle (verify rule-by-rule + that the regenerated `dazzle.min.css` has exactly one definition each). Layer safe enhancements (`:focus-visible`, `:disabled`) that can't alter the captured default/hover state. Reserve full redesign for families where Dazzle's version is genuinely weak.
+
 ## [0.93.59] - 2026-07-04
 
 ### Added

@@ -15,7 +15,10 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       '<a class="command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>',
     "/mock/master-detail/inv-001": '<div class="card card-body"><div class="card-label">INV-001 · Acme</div><div class="card-value">£1,250.00</div><div class="card-delta">Paid · 2 days ago</div></div>',
     "/mock/master-detail/inv-002": '<div class="card card-body"><div class="card-label">INV-002 · Globex</div><div class="card-value">£3,400.00</div><div class="card-delta">Pending · due Friday</div></div>',
-    "/mock/master-detail/inv-003": '<div class="card card-body"><div class="card-label">INV-003 · Initech</div><div class="card-value">£820.00</div><div class="card-delta">Overdue · 6 days</div></div>'
+    "/mock/master-detail/inv-003": '<div class="card card-body"><div class="card-label">INV-003 · Initech</div><div class="card-value">£820.00</div><div class="card-delta">Overdue · 6 days</div></div>',
+    "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
+    "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
+    "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>'
   };
   // icon placeholders resolved from a tiny inline map (built by the site gen)
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
@@ -45,6 +48,10 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
           break;
         }
       }
+    } else if (sel) {
+      // plain selector (e.g. an id `#region-body`, as pagination + most real
+      // htmx targets use) — resolve like htmx's default querySelector.
+      target = document.querySelector(sel);
     }
     if (target) {
       target.innerHTML = body;

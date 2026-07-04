@@ -48,6 +48,7 @@ CSS_SOURCES = [
     ("components", "components/fragment-primitives.css"),
     ("components", "components/hm-core.css"),
     ("components", "components/htmx-states.css"),
+    ("components", "components/pagination.css"),
     ("components", "components/skeleton.css"),
     ("components", "components/table.css"),
     ("components", "components/touch-targets.css"),

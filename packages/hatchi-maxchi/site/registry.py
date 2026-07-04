@@ -149,6 +149,51 @@ HYPERPARTS: list[Hyperpart] = [
         '<div class="dz-card-value">£1,250.00</div>'
         '<div class="dz-card-delta">{svg:trending-up} +12.5% this month</div></div>',
     ),
+    Hyperpart(
+        "pagination",
+        "Pagination",
+        "Data",
+        "The footer beneath a data table — a summary and page buttons. Each "
+        "button hx-gets a page into the list body (an Exchange, not a widget).",
+        '<div class="hm-stack hm-measure-lg">'
+        '<div id="hm-pag-body" class="hm-pag-list">'
+        '<div class="hm-pag-row">INV-001 · Acme</div>'
+        '<div class="hm-pag-row">INV-002 · Globex</div>'
+        '<div class="hm-pag-row">INV-003 · Initech</div>'
+        "</div>"
+        '<nav class="dz-pagination" aria-label="Pagination">'
+        '<span class="dz-pagination-summary">42 rows</span>'
+        '<div class="dz-pagination-pages">'
+        '<button class="dz-pagination-page" disabled aria-label="Previous page">‹</button>'
+        '<button class="dz-pagination-page is-current" aria-current="page">1</button>'
+        '<button class="dz-pagination-page" hx-get="/mock/pagination/2" '
+        'hx-target="#hm-pag-body" hx-swap="innerHTML">2</button>'
+        '<button class="dz-pagination-page" hx-get="/mock/pagination/3" '
+        'hx-target="#hm-pag-body" hx-swap="innerHTML">3</button>'
+        '<span class="dz-pagination-ellipsis" aria-hidden="true">…</span>'
+        '<button class="dz-pagination-page" hx-get="/mock/pagination/9" '
+        'hx-target="#hm-pag-body" hx-swap="innerHTML">9</button>'
+        '<button class="dz-pagination-page" hx-get="/mock/pagination/2" '
+        'hx-target="#hm-pag-body" hx-swap="innerHTML" aria-label="Next page">›</button>'
+        "</div></nav></div>",
+        notes="Each page button carries its own <code>hx-get</code>; here a mock htmx swaps "
+        "a canned page into <code>#hm-pag-body</code>. In Dazzle the button hits the region "
+        "endpoint (<code>?page=N&amp;page_size=…</code>) and the server returns the repainted "
+        "list body (via <code>innerMorph</code>) plus the moved <code>is-current</code> marker.",
+        tags=("htmx",),
+        exchanges=(
+            Exchange(
+                method="GET",
+                endpoint="/app/{region}?page={n}&page_size={size}",
+                trigger="a page button, on click",
+                response="the list body fragment for page n — the rows the region renders, "
+                "with the current-page button marked `is-current` + `aria-current='page'`",
+                swap="innerMorph of the region's body (`#{region}-body`)",
+                states=("loading", "populated", "error"),
+            ),
+        ),
+        mock="/mock/pagination",
+    ),
     # ── Overlays (interactive — need the mock htmx / dialog) ─────────
     Hyperpart(
         "command",

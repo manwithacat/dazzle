@@ -1,4 +1,4 @@
-/* dazzle v0.93.59 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.60 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3128,6 +3128,65 @@ animation: none;
 }
 }
 @layer components {
+.dz-pagination {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding-inline: 0.25rem;
+padding-block: var(--space-sm);
+font-size: var(--text-sm);
+}
+.dz-pagination-summary {
+color: var(--colour-text-muted);
+}
+.dz-pagination-pages {
+display: flex;
+align-items: center;
+gap: 0.25rem;
+}
+.dz-pagination-page {
+height: 2rem;
+padding-inline: var(--space-md);
+border-radius: var(--radius-sm);
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+background: transparent;
+border: 0;
+cursor: pointer;
+transition:
+background var(--duration-fast) var(--ease-out),
+color var(--duration-fast) var(--ease-out);
+}
+.dz-pagination-page:hover {
+background: var(--colour-bg);
+}
+.dz-pagination-page:focus-visible {
+outline: var(--focus-ring-width) solid var(--focus-ring-color);
+outline-offset: var(--focus-ring-offset);
+}
+.dz-pagination-page.is-current {
+background: var(--colour-brand);
+color: var(--colour-brand-contrast);
+}
+.dz-pagination-page:disabled {
+opacity: 0.4;
+cursor: not-allowed;
+}
+.dz-pagination-page:disabled:hover {
+background: transparent;
+}
+.dz-pagination-ellipsis {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+height: 2rem;
+padding-inline: var(--space-xs);
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+user-select: none;
+}
+}
+@layer components {
 .dz-skeleton {
 --dz-skeleton-base: var(--colour-surface-muted);
 --dz-skeleton-sheen: color-mix(in oklab, var(--colour-text) 8%, var(--colour-surface-muted));
@@ -4127,51 +4186,6 @@ transition: filter var(--duration-fast) var(--ease-out);
 }
 .dz-empty-state-cta:hover {
 filter: brightness(1.1);
-}
-.dz-pagination {
-display: flex;
-align-items: center;
-justify-content: space-between;
-padding-inline: 0.25rem;
-padding-block: var(--space-sm);
-font-size: var(--text-sm);
-}
-.dz-pagination-summary {
-color: var(--colour-text-muted);
-}
-.dz-pagination-pages {
-display: flex;
-align-items: center;
-gap: 0.25rem;
-}
-.dz-pagination-page {
-height: 2rem;
-padding-inline: var(--space-md);
-border-radius: var(--radius-sm);
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-background: transparent;
-border: 0;
-cursor: pointer;
-transition: background var(--duration-fast) var(--ease-out),
-color var(--duration-fast) var(--ease-out);
-}
-.dz-pagination-page:hover {
-background: var(--colour-bg);
-}
-.dz-pagination-page.is-current {
-background: var(--colour-brand);
-color: var(--colour-brand-contrast);
-}
-.dz-pagination-ellipsis {
-display: inline-flex;
-align-items: center;
-justify-content: center;
-height: 2rem;
-padding-inline: var(--space-xs);
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-user-select: none;
 }
 .dz-breadcrumbs {
 font-size: var(--text-xs);
