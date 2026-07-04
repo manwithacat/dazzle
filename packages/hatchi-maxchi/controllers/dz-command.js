@@ -13,7 +13,9 @@
  *   - Esc closes explicitly (the palette's input is type="search", whose
  *     native behaviour swallows the first Esc to clear its value — so
  *     relying on <dialog>'s built-in cancel needs TWO presses mid-query)
- *   - ArrowUp/ArrowDown move [aria-selected] over .dz-command__item
+ *   - ArrowUp/ArrowDown move the active option (combobox Model A): the
+ *     active .dz-command__item gets [aria-selected] AND its id is named by
+ *     the input's aria-activedescendant, so screen readers follow it
  *   - Enter activates the selected item (click — works for <a> and
  *     <button hx-*> items alike)
  * Results arrive via htmx swaps; selection resets on each swap.
@@ -31,16 +33,32 @@
     );
   }
 
+  function queryInput(dlg) {
+    return dlg.querySelector(".dz-command__input");
+  }
+
   function select(dlg, index) {
     var list = items(dlg);
+    var activeId = "";
     list.forEach(function (el, i) {
+      // Stable option id per result set — required for the combobox
+      // aria-activedescendant pointer (screen readers follow the active
+      // option only when the input names it; visual aria-selected alone
+      // is silent to AT).
+      if (!el.id) el.id = "dz-command-opt-" + i;
       if (i === index) {
         el.setAttribute("aria-selected", "true");
         el.scrollIntoView({ block: "nearest" });
+        activeId = el.id;
       } else {
         el.removeAttribute("aria-selected");
       }
     });
+    var inp = queryInput(dlg);
+    if (inp) {
+      if (activeId) inp.setAttribute("aria-activedescendant", activeId);
+      else inp.removeAttribute("aria-activedescendant");
+    }
     return index;
   }
 
@@ -95,7 +113,13 @@
   document.addEventListener("htmx:afterSwap", function (evt) {
     var dlg = palette();
     if (dlg && dlg.open && dlg.contains(evt.target)) {
-      if (items(dlg).length) select(dlg, 0);
+      if (items(dlg).length) {
+        select(dlg, 0);
+      } else {
+        // empty result set — drop the stale activedescendant pointer
+        var inp = queryInput(dlg);
+        if (inp) inp.removeAttribute("aria-activedescendant");
+      }
     }
   });
 

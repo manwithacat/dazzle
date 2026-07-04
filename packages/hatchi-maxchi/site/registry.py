@@ -101,10 +101,10 @@ HYPERPARTS: list[Hyperpart] = [
         "Feedback",
         "Colour + icon + text — status never relies on colour alone (WCAG 1.4.1).",
         '<div class="hm-demo-row">'
-        '<span class="dz-badge" data-dz-tone="success" role="status"><span class="dz-badge-icon">{svg:circle-check}</span>Approved</span>'
-        '<span class="dz-badge" data-dz-tone="warning" role="status"><span class="dz-badge-icon">{svg:triangle-alert}</span>Pending</span>'
-        '<span class="dz-badge" data-dz-tone="destructive" role="status"><span class="dz-badge-icon">{svg:circle-x}</span>Rejected</span>'
-        '<span class="dz-badge" data-dz-tone="neutral" role="status">Draft</span>'
+        '<span class="dz-badge" data-dz-tone="success"><span class="dz-badge-icon">{svg:circle-check}</span>Approved</span>'
+        '<span class="dz-badge" data-dz-tone="warning"><span class="dz-badge-icon">{svg:triangle-alert}</span>Pending</span>'
+        '<span class="dz-badge" data-dz-tone="destructive"><span class="dz-badge-icon">{svg:circle-x}</span>Rejected</span>'
+        '<span class="dz-badge" data-dz-tone="neutral">Draft</span>'
         "</div>",
         tags=("identity",),
     ),
@@ -149,11 +149,12 @@ HYPERPARTS: list[Hyperpart] = [
         # fragile on Safari/iPadOS (it landed at its static position there).
         '<div class="dz-command__bar">'
         '<input class="dz-command__input" type="search" placeholder="Search workspaces and records…" '
+        'role="combobox" aria-expanded="true" aria-controls="dz-command-results" aria-autocomplete="list" '
         'hx-get="/mock/command" hx-trigger="input changed delay:150ms, focus once" '
         'hx-target="next .dz-command__results">'
         '<button type="button" class="dz-command__close" data-hm-close-command '
         'aria-label="Close command palette">{svg:x}</button></div>'
-        '<div class="dz-command__results" role="listbox" aria-label="Results"></div></dialog>',
+        '<div class="dz-command__results" id="dz-command-results" role="listbox" aria-label="Results"></div></dialog>',
         notes="In Dazzle the input's hx-get hits <code>/app/command</code>, which returns "
         "persona-scoped results. Here a mock htmx returns a canned list so the demo works "
         "with no server.",

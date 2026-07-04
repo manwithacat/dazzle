@@ -70,7 +70,7 @@ def _outlier_badge(flag: str) -> RawHTML:
 
     direction = flag if flag in ("low", "high") else "outlier"
     return RawHTML(
-        f'<span class="dz-badge dz-badge-sm" data-dz-tone="warning" role="status" '
+        f'<span class="dz-badge dz-badge-sm" data-dz-tone="warning" '
         f'aria-label="Outlier: {_esc(direction)}">⚠ {_esc(direction)}</span>'
     )
 
@@ -85,7 +85,7 @@ def _rag_badge(tone: str) -> RawHTML:
     label = _RAG_LABELS.get(tone, tone)
     return RawHTML(
         f'<span class="dz-badge dz-badge-sm" data-dz-tone="{_esc(tone, quote=True)}" '
-        f'role="status" aria-label="Status: {_esc(label)}">● {_esc(label)}</span>'
+        f'aria-label="Status: {_esc(label)}">● {_esc(label)}</span>'
     )
 
 
