@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.63] - 2026-07-04
+## [0.93.64] - 2026-07-04
+
+### Removed
+- **HM migration — Bucket A (dead-shadow cleanup):** deleted 7 grep-proven-dead bespoke CSS families that shadowed existing HM Hyperparts, so the HM versions are no longer cascade-shadowed. From `fragments.css`: `.dz-breadcrumb*`, `.dz-alert-banner*`/`.dz-alert-icon`/`.dz-alert-message`/`.dz-alert-dismiss`, `.dz-toggle-group`/`.dz-toggle-item`, `.dz-popover*`, `.dz-accordion*`, `.dz-tooltip*`; from `site-sections.css`: `.dz-avatar`. All seven were un-emitted (no literal class, no Alpine `x-data` instantiation, no data-attr contract, no example/fixture use) — pure dead-code removal, no behaviour change. The live `.dz-toast*` family was preserved. Dist rebuilt; UX catalogue regenerated.
+
+### Agent Guidance
+- **These families now resolve to their HM definitions only.** `.dz-breadcrumb` (singular) and `.dz-toggle-group` are HM's (`hm-core.css`); `alert`/`accordion`/`popover`/`tooltip` are HM Hyperparts. If you need any of these in a Dazzle surface, emit the HM class contract (`.dz-alert__*`, `.dz-accordion__*`, etc.) — do not reintroduce the single-dash bespoke families. This is groundwork for the broader HM migration (Bucket A of the build-to-replace ledger).
 
 ### Changed
 - **Tabs Hyperpart — Phase 2: converged the live `display: tabbed_list` region onto the HM `tabs` Hyperpart (build-to-replace).** `_emit_lazy_tab_panel` (the live prod path) and the generic `_emit_tabs` fallback (`render/fragment/renderer/_render_layout.py`) now emit the HM `.dz-tabs*` contract — an honest link-strip of `<button class="dz-tabs__tab">`s with `aria-current="true"` on the active tab, native `hidden` attribute on inactive panels, a `.dz-tabs__loading` spinner, and per-panel htmx lazy-load (`hx-trigger="load"` on the first/eager tab, `intersect once` on the rest). Panel switching is driven by the already-ingested delegated `dz-tabs.js` controller (scoped per `.dz-tabs` root), replacing the old inline `onclick` JS. The dist was rebuilt; the UX catalogue was regenerated. Verified in Chromium (tab switch, sibling-hide, aria-current move, intersect-once laziness) and adversarially reviewed.
