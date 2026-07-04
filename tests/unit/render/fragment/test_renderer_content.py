@@ -50,4 +50,8 @@ def test_render_empty_state_with_action() -> None:
 def test_render_skeleton_lines() -> None:
     r = FragmentRenderer()
     out = r.render(Skeleton(lines=4))
-    assert out.count("dz-skeleton__line") == 4
+    # adopts the HM skeleton Hyperpart: N text-shaped `dz-skeleton` lines
+    # stacked by `dz-skeleton-lines` (the old `dz-skeleton__line` child had
+    # no CSS rule — invisible lines).
+    assert out.count('data-dz-shape="text"') == 4
+    assert 'class="dz-skeleton-lines"' in out

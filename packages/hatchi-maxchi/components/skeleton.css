@@ -51,6 +51,15 @@
   border-radius: var(--radius-md);
 }
 
+/* A stack of text-line skeletons — the most common placeholder shape
+   (a paragraph loading). The last line is shortened by the [data-dz-shape]
+   rule above for a natural ragged edge. */
+.dz-skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
 @keyframes dz-skeleton-sweep {
   from { background-position: 150% 0; }
   to { background-position: -150% 0; }

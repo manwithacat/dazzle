@@ -245,8 +245,14 @@ class _RenderLayoutMixin:
         )
 
     def _emit_skeleton(self, s: Skeleton, ctx: RenderContext) -> str:
-        lines = "".join('<div class="dz-skeleton__line"></div>' for _ in range(s.lines))
-        return f'<div class="dz-skeleton">{lines}</div>'
+        # Adopts the design system's canonical `.dz-skeleton` placeholder (the
+        # HM skeleton Hyperpart): each line is a `dz-skeleton` element shaped
+        # `text`, stacked by `dz-skeleton-lines`. (The prior `dz-skeleton__line`
+        # child class had no CSS rule — the lines rendered invisible.)
+        lines = "".join(
+            '<div class="dz-skeleton" data-dz-shape="text"></div>' for _ in range(s.lines)
+        )
+        return f'<div class="dz-skeleton-lines">{lines}</div>'
 
     def _emit_lazy_tab_panel(self, p: LazyTabPanel, ctx: RenderContext) -> str:
         """Render a LazyTabPanel matching legacy

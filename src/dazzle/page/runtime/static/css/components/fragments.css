@@ -2041,66 +2041,10 @@
   pointer-events: none;
 }
 
-/* ─────────────────────────── skeleton_patterns fragments ────────
- * Shimmer placeholder shapes used across loading states. Single
- * .dz-skeleton class with the canonical pulse animation. */
-
-.dz-skeleton {
-  border-radius: var(--radius-sm);
-  background: var(--colour-bg);
-  animation: dz-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.dz-skeleton-card {
-  background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-  box-shadow: var(--shadow-sm);
-}
-
-.dz-skeleton-card-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.dz-skeleton-detail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.dz-skeleton-detail-row {
-  display: flex;
-  gap: var(--space-md);
-}
-
-.dz-skeleton-cards-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-md);
-}
-
-@media (min-width: 40rem) {
-  .dz-skeleton-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (min-width: 64rem) {
-  .dz-skeleton-cards-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-/* Width / height tokens used by the skeleton macros */
-.dz-skeleton-h-3 { height: 0.75rem; }
-.dz-skeleton-h-4 { height: 1rem; }
-.dz-skeleton-h-6 { height: 1.5rem; }
-.dz-skeleton-w-full { width: 100%; }
-.dz-skeleton-w-3-4 { width: 75%; }
-.dz-skeleton-w-1-2 { width: 50%; }
-.dz-skeleton-w-1-3 { width: 33.333%; }
-.dz-skeleton-w-5-6 { width: 83.333%; }
-.dz-skeleton-w-24 { width: 6rem; }
-.dz-skeleton-w-48 { width: 12rem; }
+/* The `.dz-skeleton*` placeholder family that lived here was dead (zero
+ * emitters) and collided with the HM `skeleton` Hyperpart's canonical
+ * `.dz-skeleton`. Retired 2026-07-04; the live dashboard loading state is
+ * `.dz-card-skeleton` (dashboard.css), which keeps the `dz-pulse` keyframe. */
 
 /* ─────────────────────────── filter_bar fragment ────────────────
  * Per-column filter inputs (selects + text + ref-loaded selects).

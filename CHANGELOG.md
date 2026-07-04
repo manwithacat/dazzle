@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.56] - 2026-07-04
+
+### Changed
+- **Skeleton convergence — the first "build-to-replace" landing (HM skeleton is now canonical).** Dazzle carried *three* colliding `.dz-skeleton` definitions (`dz.css` shimmer, `fragments.css` pulse, and the new HM sweep) plus a typed `Skeleton` fragment emitting `.dz-skeleton__line` children **that had no CSS rule anywhere** (a latent invisible-lines bug). Collapsed onto the HM `skeleton` Hyperpart as the single source: the typed `Skeleton` fragment now emits HM's API (`dz-skeleton` + `data-dz-shape="text"` lines stacked by a new canonical `dz-skeleton-lines`), fixing the latent bug and making the fragment a real consumer of the Hyperpart. The live dashboard loading state (`.dz-card-skeleton`) and the ADR-0049 skeleton-and-hydrate *render mode* (an empty htmx-hydrated `<tbody>`) are orthogonal and untouched — they keep the `dz-pulse` keyframe.
+
+### Removed
+- **Dead `.dz-skeleton*` visual families retired** from `dz.css` (`.dz-skeleton`/`-text`/`-text-lg`/`-cell` + `dz-shimmer` keyframe) and `fragments.css` (`.dz-skeleton`/`-card`/`-card-stack`/`-detail`/`-detail-row`/`-cards-grid` + the `-w-*`/`-h-*` token classes). Every sub-class had zero emitters (verified across `.py`/`.html`/`.js`); their only effect was colliding with the HM skeleton on `.dz-skeleton`.
+
+### Agent Guidance
+- **First worked example of "build-to-replace":** an HM Hyperpart becomes real only when Dazzle deletes its bespoke equivalent and adopts the HM class contract. Here the win was mostly dead-code + a latent-bug fix (the live Dazzle skeletons are separate families). The bigger user-visible convergence — folding the `.dz-card-skeleton` dashboard family onto the HM skeleton — remains future work. Note: the HM-boundary gate (`test_hm_boundary.py`) greps Dazzle `.py` for the literal `hatchi-maxchi`, so reference the design-system by class contract in comments, not by package path.
+
 ## [0.93.55] - 2026-07-04
 
 ### Added
