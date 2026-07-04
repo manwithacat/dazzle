@@ -281,6 +281,37 @@ HYPERPARTS: list[Hyperpart] = [
         composes=("button",),
         controller="controllers/dz-dialog.js",
     ),
+    Hyperpart(
+        "drawer",
+        "Drawer",
+        "Overlays",
+        "Edge-anchored panel on the native <dialog> — a drawer with a modal's "
+        "guarantees (focus trap, inert background, Esc, backdrop). Built on the "
+        "dialog: shares its opener, adds a side + slide. No drawer-specific JS.",
+        '<button class="dz-button" data-dz-variant="outline" data-dz-dialog-open="hm-drawer-demo">'
+        "Open filters</button>"
+        '<dialog class="dz-drawer" id="hm-drawer-demo" data-dz-side="right" '
+        'aria-labelledby="hm-drawer-demo-title" closedby="any">'
+        '<form method="dialog">'
+        '<div class="dz-drawer__header">'
+        '<h2 class="dz-drawer__title" id="hm-drawer-demo-title">Filters</h2>'
+        '<button type="submit" class="dz-drawer__close" aria-label="Close drawer">{svg:x}</button>'
+        "</div>"
+        '<div class="dz-drawer__body" tabindex="0" aria-label="Drawer content">'
+        "<p>Drawer content scrolls independently of the page — filters, a record "
+        "preview, or a quick form live here.</p></div>"
+        '<div class="dz-drawer__footer">'
+        '<button type="submit" class="dz-button" data-dz-variant="ghost">Reset</button>'
+        '<button type="submit" class="dz-button" data-dz-variant="primary" value="apply">Apply</button>'
+        "</div></form></dialog>",
+        notes="Opened by the shared <code>dz-dialog.js</code> "
+        "(<code>[data-dz-dialog-open]</code>); close is native (method=dialog submit, Esc, "
+        "backdrop). Anchor the edge with <code>data-dz-side=&quot;right|left&quot;</code>; the "
+        "panel slides in via the native <code>@starting-style</code> transition, honouring "
+        "<code>prefers-reduced-motion</code>.",
+        tags=("interactive",),
+        composes=("dialog", "button"),
+    ),
     # ── Forms ────────────────────────────────────────────────────────
     Hyperpart(
         "controls",

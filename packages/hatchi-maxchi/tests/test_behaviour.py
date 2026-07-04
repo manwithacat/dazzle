@@ -244,6 +244,30 @@ def test_dialog_instance_isolation(page) -> None:  # type: ignore[no-untyped-def
     )
 
 
+def test_drawer_opens_via_shared_opener_and_closes(page) -> None:  # type: ignore[no-untyped-def]
+    """The drawer is a native <dialog> anchored to the edge; it reuses the
+    dialog's opener (no drawer-specific JS) and closes natively. Proves the
+    shared dz-dialog.js drives a *second* Hyperpart's trigger."""
+    dw = "dialog.drawer"
+    assert not page.evaluate(f"document.querySelector('{dw}').open")
+    page.click('[data-dialog-open="hm-drawer-demo"]')
+    page.wait_for_timeout(150)
+    assert page.evaluate(f"document.querySelector('{dw}').open"), (
+        "drawer opens via the SHARED dz-dialog.js opener (no drawer-specific JS)"
+    )
+    page.click(f"{dw} .drawer__close")
+    page.wait_for_timeout(150)
+    assert not page.evaluate(f"document.querySelector('{dw}').open"), (
+        "the ✕ (a method=dialog submit) closes the drawer natively"
+    )
+    # reopen, then Esc (native <dialog> cancel) closes — the headline claim
+    page.click('[data-dialog-open="hm-drawer-demo"]')
+    page.wait_for_timeout(150)
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(150)
+    assert not page.evaluate(f"document.querySelector('{dw}').open"), "Esc must close the drawer"
+
+
 def test_master_detail_selection_and_instance_isolation(page) -> None:  # type: ignore[no-untyped-def]
     """The master-detail composite: clicking a list item selects it (aria-current
     moves) AND the controller is instance-isolated — a second master-detail on

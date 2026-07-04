@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.57] - 2026-07-04
+
+### Added
+- **HM `drawer` Hyperpart — a native-`<dialog>` edge-anchored panel (batch 2, redesign-in-HM).** A drawer with a modal's guarantees — focus trap, inert background, Esc, and backdrop dismiss — none of which a plain `<aside>` toggle gets for free. It's built on the `dialog` Hyperpart: `composes=("dialog","button")` and it **reuses `dz-dialog.js` unchanged** (a `[data-dz-dialog-open="id"]` trigger drives it — the first proof the shared opener drives a second Hyperpart), so there is no drawer-specific JS. Close is native (`method="dialog"` submit / Esc / `closedby`). `data-dz-side="right"` (default) / `"left"` anchors the edge; the panel slides in via the native `@starting-style` + `allow-discrete` transition, honouring `prefers-reduced-motion`. The scrollable body is keyboard-focusable (`tabindex="0"`, WCAG 2.1.1). New behaviour tests (open via the shared opener, ✕ + Esc close) run Chromium + WebKit; a drawer-open axe scan is added. Adversarial review: SHIP (two SEV-3s folded in — the focusable scroll body; an RTL/physical-translate caveat noted as a tracked follow-up).
+
+### Agent Guidance
+- **This is redesign-in-HM (not extract-up):** Dazzle already has a bespoke `<aside class="dz-drawer">` drawer (`dashboard.css` + `_emit_drawer`), but the HM version is a native-`<dialog>` redesign to a higher a11y/taste bar. The two currently coexist without conflict — HM's rule is `dialog.dz-drawer` (element-qualified, so it only targets `<dialog>`, which Dazzle doesn't emit yet) and the sub-elements differ (`__header` BEM vs `-header`). **Converging Dazzle's `_emit_drawer` + `.dz-drawer*` onto the HM native-dialog drawer is the next pass** (an `<aside>`→`<dialog>` behaviour change: replace the open/close/backdrop state machine with `showModal()` + native close).
+
 ## [0.93.56] - 2026-07-04
 
 ### Changed

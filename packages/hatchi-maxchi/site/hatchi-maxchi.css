@@ -2311,6 +2311,154 @@ dialog.dialog::backdrop {
 }
 
 }
+/* ── components/drawer.css ── */
+@layer components {
+/* HYPERPART: drawer */
+/*
+ * drawer — an edge-anchored panel built on the native <dialog>, so it is
+ * a drawer with a modal's guarantees: focus is trapped, the background goes
+ * inert, Esc and a backdrop tap dismiss it — none of which a plain <aside>
+ * toggle gets for free. It shares the dialog's opener (dialog.js: a
+ * [data-dialog-open="id"] trigger calls showModal()) and native close
+ * (<form method="dialog"> + Esc + closedby="any") — no drawer-specific JS.
+ *
+ * `data-side="right"` (default) | `"left"` anchors the edge; the panel
+ * slides in from that edge (native <dialog> enter transition via
+ * @starting-style), honouring prefers-reduced-motion.
+ */
+
+dialog.drawer {
+  width: min(24rem, calc(100vw - 3rem));
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  box-shadow: var(--shadow-lg);
+  /* right edge (default): pin to the inline-end */
+  margin-block: 0;
+  margin-inline: auto 0;
+  border-inline-start: 1px solid var(--colour-border);
+  /* enter transition: slide from the anchored edge. `allow-discrete` lets
+     the dialog animate on open despite the display:none→block flip. */
+  translate: 0 0;
+  transition:
+    translate var(--duration-base) var(--ease-out),
+    overlay var(--duration-base) var(--ease-out) allow-discrete,
+    display var(--duration-base) var(--ease-out) allow-discrete;
+}
+
+dialog.drawer[data-side="left"] {
+  margin-inline: 0 auto;
+  border-inline: none;
+  border-inline-end: 1px solid var(--colour-border);
+}
+
+/* start state (opening) + exit state (closing) sit off the anchored edge.
+   NOTE: the slide uses a physical `translate` while anchoring uses logical
+   margins — correct for LTR; under RTL a right-anchored panel would slide
+   from the wrong edge. The package has no RTL/dir support today, so this is
+   a tracked follow-up, not a live defect. */
+@starting-style {
+  dialog.drawer[open] { translate: 100% 0; }
+  dialog.drawer[data-side="left"][open] { translate: -100% 0; }
+}
+dialog.drawer:not([open]) { translate: 100% 0; }
+dialog.drawer[data-side="left"]:not([open]) { translate: -100% 0; }
+
+dialog.drawer::backdrop {
+  background: oklch(13% 0.028 261.69 / 0.4);
+  backdrop-filter: blur(2px);
+}
+
+/* the form is the full-height flow: fixed header + footer, scrolling body */
+dialog.drawer > form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.drawer__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  flex: none;
+  padding: var(--space-lg);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.drawer__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.drawer__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: calc(var(--space-xs) * -1) calc(var(--space-xs) * -1) 0 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--colour-text-muted);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.drawer__close:hover {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
+.drawer__close:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.drawer__close svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  line-height: var(--leading-normal);
+}
+
+.drawer__body p { margin: 0; }
+
+.drawer__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  flex: none;
+  padding: var(--space-lg);
+  border-block-start: 1px solid var(--colour-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.drawer { transition: none; }
+  dialog.drawer[open],
+  dialog.drawer:not([open]) { translate: 0 0; }
+  .drawer__close { transition: none; }
+}
+
+}
 /* ── components/form.css ── */
 @layer components {
 /*

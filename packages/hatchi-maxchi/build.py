@@ -43,6 +43,7 @@ CSS_SOURCES = [
     ("components", "components/badge.css"),
     ("components", "components/button.css"),
     ("components", "components/dialog.css"),
+    ("components", "components/drawer.css"),
     ("components", "components/form.css"),
     ("components", "components/fragment-primitives.css"),
     ("components", "components/hm-core.css"),
