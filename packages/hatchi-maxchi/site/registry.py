@@ -194,6 +194,59 @@ HYPERPARTS: list[Hyperpart] = [
         ),
         mock="/mock/pagination",
     ),
+    Hyperpart(
+        "grid",
+        "Data table",
+        "Data",
+        "A server-rendered data table: sortable headers, a filter bar, row "
+        "selection, and bulk actions — all HTML over the wire, on a real "
+        "<table>. This is the styled shell; the dz-grid controller (delegated, "
+        "state-in-DOM) is the next slice and adds sort / selection / "
+        "column-visibility / URL-synced state as progressive enhancement, with "
+        "the rows hydrating into the tbody via an htmx exchange.",
+        '<div class="hm-stack hm-measure-lg">'
+        '<div class="dz-table" data-dz-bulk-count="0">'
+        '<div class="dz-filter-bar">'
+        '<div class="dz-filter-cell"><label class="dz-filter-label">Plan</label>'
+        '<select class="dz-filter-select" aria-label="Plan"><option>Any plan</option>'
+        "<option>Pro</option><option>Free</option></select></div>"
+        '<div class="dz-filter-cell"><label class="dz-filter-label">Status</label>'
+        '<select class="dz-filter-select" aria-label="Status"><option>Any status</option>'
+        "<option>Active</option></select></div>"
+        "</div>"
+        '<div class="dz-table-scroll"><div class="dz-table-scroll-x">'
+        '<table class="dz-table-grid">'
+        "<thead><tr>"
+        '<th class="dz-table-th-select">'
+        '<input type="checkbox" aria-label="Select all rows"></th>'
+        '<th class="dz-table-th" aria-sort="ascending">'
+        '<button type="button" class="dz-table-sort-button">Name</button></th>'
+        '<th class="dz-table-th">Plan</th>'
+        '<th class="dz-table-th">Created</th>'
+        "</tr></thead>"
+        '<tbody class="dz-table-body">'
+        '<tr class="dz-tr-row"><td class="dz-tr-checkbox-cell">'
+        '<input type="checkbox" class="dz-tr-checkbox" aria-label="Select Jane Doe">'
+        '</td><td class="dz-tr-cell">Jane Doe</td><td class="dz-tr-cell">Pro</td>'
+        '<td class="dz-tr-cell">2026-07-04</td></tr>'
+        '<tr class="dz-tr-row"><td class="dz-tr-checkbox-cell">'
+        '<input type="checkbox" class="dz-tr-checkbox" aria-label="Select Ravi Patel">'
+        '</td><td class="dz-tr-cell">Ravi Patel</td><td class="dz-tr-cell">Free</td>'
+        '<td class="dz-tr-cell">2026-06-28</td></tr>'
+        '<tr class="dz-tr-row"><td class="dz-tr-checkbox-cell">'
+        '<input type="checkbox" class="dz-tr-checkbox" aria-label="Select Mia Chen">'
+        '</td><td class="dz-tr-cell">Mia Chen</td><td class="dz-tr-cell">Pro</td>'
+        '<td class="dz-tr-cell">2026-06-15</td></tr>'
+        "</tbody></table></div></div></div></div>",
+        notes="The whole thing stays a real <code>&lt;table&gt;</code> — sortable headers "
+        "are <code>&lt;button&gt;</code>s carrying <code>aria-sort</code>, selection is "
+        "native checkboxes, and the tbody is a morph target the server repaints. Row "
+        "actions and the bulk-action bar (shown when a selection exists, gated by "
+        "<code>data-dz-bulk-count</code> on the table) hang off the same markup. The "
+        "<code>dz-grid</code> controller — delegated, state-in-DOM, morph-safe — is the "
+        "next slice; until then this is the styled markup contract.",
+        tags=("data",),
+    ),
     # ── Overlays (interactive — need the mock htmx / dialog) ─────────
     Hyperpart(
         "command",
