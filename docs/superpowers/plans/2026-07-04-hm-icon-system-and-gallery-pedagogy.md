@@ -539,6 +539,20 @@ Expected: PASS (icon drift, hm boundary, badge WCAG, nav-icons all green; Dazzle
 
 ---
 
+## Deferred DURING execution (2026-07-04)
+
+- **Icon Hyperpart gallery page (Task 6, the live gallery section)** — DEFERRED. Adding
+  any new Hyperpart adds a nav entry in the above-fold left column, which changes the
+  visual-regression baseline (`tests/test_visual.py`, 1280×900 capture). Baselines are
+  per-platform: darwin (local) is regenerable here via `HM_UPDATE_BASELINES=1`, but the
+  **linux** baseline (which the standalone repo's CI compares against after sync) can only
+  be produced by the standalone repo's `update-baselines.yml` workflow — not drivable from
+  the monorepo, and the sync is one-way (monorepo→standalone). So a gallery-section change
+  needs a deliberate cross-repo baseline step. **This is a shared blocker with the pending
+  button `data-variant` work (#104), which also changes an above-fold section** — batch them
+  and regenerate baselines once. The Setup/sheet-include guidance (Task 6's correctness-
+  critical half) SHIPPED in the README instead (zero visual impact).
+
 ## Deferred follow-ons (explicitly out of this plan)
 
 - **Helper convergence** `lucide_icon_html`+`lucide_svg_html` → one `icon(name, *, class, label, decorative, mode)` across 16 Dazzle callers. High churn, serves neither stated goal; do later if desired.
