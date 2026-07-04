@@ -104,11 +104,20 @@ class _TreeBuilder(HTMLParser):
         self.stack[-1].children.append(_Node(text="<!--" + data + "-->"))
 
 
+def _has_class(node: _Node, cls: str) -> bool:
+    return any(name == "class" and value and cls in value.split() for name, value in node.attrs)
+
+
 def _multiline(node: _Node) -> bool:
     """True iff the node should put its children on their own lines — i.e. it
     has a block-tag child (or a child that is itself multi-line)."""
     if node.is_text or node.self_close or node.tag in _VOID:
         return False
+    # `hm-demo-row` is the gallery's "N variants side by side" container — its
+    # children are discrete demo instances, not an inline text run, so break
+    # each onto its own line even when the instances (button/badge) are inline.
+    if _has_class(node, "hm-demo-row"):
+        return True
     for c in node.children:
         if c.is_text:
             continue
