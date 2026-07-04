@@ -388,12 +388,18 @@
 
 .dz-filter-select,
 .dz-filter-input {
-  height: 2rem;
+  /* min-height (not a hard height) + an explicit padding-block: a fixed
+   * `height: 2rem` on a border-box <select> left only ~14px of content
+   * once the UA's default ~8px vertical padding + 1px borders were
+   * subtracted, clipping the bottom of the text. min-height keeps the
+   * ~2rem look but lets the control grow rather than crop. */
+  min-height: 2rem;
   width: 100%;
   border-radius: var(--radius-sm);
   border: 1px solid var(--colour-border);
   background: var(--colour-surface);
   padding-inline: var(--space-sm);
+  padding-block: 0.25rem;
   font-size: var(--text-sm);
   color: var(--colour-text);
   outline: none;

@@ -1,4 +1,4 @@
-/* dazzle v0.93.71 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.72 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3493,12 +3493,13 @@ color: var(--colour-text-muted);
 }
 .dz-filter-select,
 .dz-filter-input {
-height: 2rem;
+min-height: 2rem;
 width: 100%;
 border-radius: var(--radius-sm);
 border: 1px solid var(--colour-border);
 background: var(--colour-surface);
 padding-inline: var(--space-sm);
+padding-block: 0.25rem;
 font-size: var(--text-sm);
 color: var(--colour-text);
 outline: none;

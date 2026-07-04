@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.71] - 2026-07-04
+## [0.93.72] - 2026-07-04
+
+### Fixed
+- **Data-table filter dropdowns clipped the bottom of their text.** `.dz-filter-select`/`.dz-filter-input` (HM `table.css`) had a fixed `height: 2rem` on a `border-box` control; once the browser's default ~8px vertical `<select>` padding + 1px borders were subtracted, only ~14px of content height remained — shorter than the ~15px text, cutting off the descenders. Replaced the hard `height` with `min-height: 2rem` + an explicit `padding-block: 0.25rem` (overriding the UA default) so the text always fits and the control grows rather than crops. Affects every Dazzle list surface's filter bar (HM package 0.1.6 → 0.1.7).
+
+### Added
+- **HM geometry gate `test_geometry.py`** — asserts no form control (`select`/`input`/`textarea`) in the gallery has a content box shorter than its font-size (the tell for vertically-clipped text). A pixel-diff visual baseline *cannot* catch this class of bug — the clip is sub-pixel at full-gallery scale, and a baseline only flags *changes*, so it would happily bake the bug in (as nearly happened here). Red-green verified: the gate fails on the pre-fix CSS and passes after.
+
+### Agent Guidance
+- **Don't put a hard `height` on a `border-box` `<select>`/`<input>` sized near the font-size** — the UA's default vertical padding + borders eat the content box and clip the text. Use `min-height` + an explicit `padding-block`. Visual baselines won't catch text-clip (sub-pixel at page scale); assert it with a content-box-vs-font-size geometry check.
 
 ### Changed
 - **HM data-table Slice 0b — the row / filter-bar / bulk-action CSS families now live in HM.** Moved the bespoke `.dz-tr-*` (rows/cells/checkbox/actions/empty), `.dz-filter-*` (filter bar), and `.dz-bulk-*` (bulk-action bar, incl. the `.dz-table[data-dz-bulk-count]` gating compounds from #978) families verbatim from Dazzle's `fragments.css` into the HM `table.css` — the same byte-identical-port + re-ingest pattern used for pagination. HM authors with the `dz-` prefix; `build_css` keeps it for the Dazzle bundle (`.dz-tr-*` unchanged) and strips it for the standalone gallery (`.tr-*`). Byte-faithful: the Dazzle dist's family rules and computed styles are unchanged (browser-verified `.dz-tr-row` height / `.dz-bulk-actions` hidden-default / `.dz-filter-bar` flex+gap). Inline-edit (`.dz-inline-edit*`) stays in Dazzle as a grid *extension* (narrow-core decision). HM package 0.1.4 → 0.1.5. No behaviour or visual change; HM visual suite green (no baseline change).
