@@ -79,6 +79,7 @@
 .dz-alert[data-dz-tone="destructive"] .dz-alert__icon { color: var(--colour-danger); }
 
 /* ── dz-separator ────────────────────────────────────────────────────── */
+/* HYPERPART: separator */
 
 .dz-separator {
   border: none;

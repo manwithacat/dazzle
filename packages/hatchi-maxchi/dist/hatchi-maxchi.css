@@ -1819,6 +1819,7 @@ th {
 .alert[data-tone="destructive"] .alert__icon { color: var(--colour-danger); }
 
 /* ── separator ────────────────────────────────────────────────────── */
+/* HYPERPART: separator */
 
 .separator {
   border: none;

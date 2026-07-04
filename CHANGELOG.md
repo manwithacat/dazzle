@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.61] - 2026-07-04
+
+### Added
+- **HM `separator` Hyperpart — a hairline divider (batch 2).** The `.dz-separator` / `.dz-separator--vertical` CSS already lived in HM (`alert.css`); this adds the first-class gallery entry: a native `<hr class="dz-separator">` (implicitly `role=separator`) for horizontal, and a zero-width `role="separator"` + `aria-orientation="vertical"` element for vertical. CSS-only, no controller. Marked `HYPERPART: separator` for the anatomy tool.
+
 ## [0.93.60] - 2026-07-04
 
 ### Changed
