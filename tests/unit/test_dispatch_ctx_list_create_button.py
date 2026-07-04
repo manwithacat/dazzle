@@ -53,7 +53,10 @@ def test_list_emits_create_button_when_url_and_entity_set() -> None:
     html = _render_list(_ctx())
     assert 'href="/contacts/create"' in html
     assert 'data-dazzle-action="Contact.create"' in html
-    assert 'class="dz-button-primary"' in html
+    # HM button grammar (the local `.dz-button-primary` class was retired):
+    assert 'class="dz-button"' in html
+    assert 'data-dz-variant="primary"' in html
+    assert 'data-dz-size="sm"' in html
 
 
 def test_list_create_button_emits_plus_icon_svg() -> None:

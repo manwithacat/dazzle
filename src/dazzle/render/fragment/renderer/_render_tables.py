@@ -295,7 +295,8 @@ class _RenderTablesMixin:
         empty_cta = ""
         if s.empty_action_href and s.empty_action_label:
             empty_cta = (
-                f'<a href="{ctx.escape_attr(s.empty_action_href)}" class="dz-button-primary">'
+                f'<a href="{ctx.escape_attr(s.empty_action_href)}" '
+                f'class="dz-button" data-dz-variant="primary" data-dz-size="sm">'
                 '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">'
                 '<path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" '
                 'stroke-linecap="round"/></svg>'

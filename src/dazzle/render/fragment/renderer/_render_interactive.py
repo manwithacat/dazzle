@@ -206,7 +206,7 @@ class _RenderInteractiveMixin:
         return (
             f'<a href="{href_attr}" '
             f'data-dazzle-action="{action_attr}" '
-            f'class="dz-button-primary">'
+            f'class="dz-button" data-dz-variant="primary" data-dz-size="sm">'
             f'<svg width="12" height="12" viewBox="0 0 12 12" fill="none" '
             f'aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
             f'<path d="M6 1v10M1 6h10" stroke="currentColor" '

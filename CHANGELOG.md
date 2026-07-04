@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.69] - 2026-07-04
+## [0.93.70] - 2026-07-04
+
+### Changed
+- **HM data-table Slice 0a (grid Hyperpart groundwork).** Converged the list/table "New &lt;Entity&gt;" CTA off the local `.dz-button-primary` class (a filled-brand button co-located in HM `table.css`) onto the canonical HM button grammar: `class="dz-button" data-dz-variant="primary" data-dz-size="sm"` (the `sm` size reproduces the old 1.75rem/text-xs geometry exactly; the primary variant is the canonical brand skin). Repointed the 2 emit sites (`_render_tables.py` empty-CTA, `_render_interactive.py` CreateButton) + the CreateButton docstring. HM package 0.1.3 → 0.1.4.
+
+### Removed
+- Dead HM `table.css` classes with zero emitters: `.dz-table-header`, `.dz-table-title`, `.dz-table-header-actions`, `.dz-table-head` (the superseded table-header chrome — the list surface's title is the page title now), `.dz-table-resize-handle` (column-resize was never wired to this class), and the retired local `.dz-button-primary`/:hover. Visually neutral (gallery doesn't use them — HM visual suite green, no baseline change).
+
+### Agent Guidance
+- **First step of the `grid` Hyperpart arc (the hypermedia table primitive).** Emit the HM button grammar (`.dz-button` + `data-dz-variant`/`data-dz-size`) for table CTAs, never the retired `.dz-button-primary`. Design + plan: `dev_docs/2026-07-04-hx-grid-spec-evaluation.md`.
 
 ### Changed
 - **Workspace overflow "More" menu converged onto the HM `menu` Hyperpart (Bucket B).** The `More ⋯` overflow dropdown (`_render_shell.py`) was a bespoke `.dz-workspace-more` family; it's now the HM `.dz-menu` disclosure (`.dz-menu` / `.dz-menu__panel` / `.dz-menu__item`). Both were already the same JS-free native `<details>` pattern, so this is a pure class/markup repoint — the trigger adopts `.dz-button data-dz-variant="outline"` (the HM summary idiom). Dropped the `role="menu"`/`role="menuitem"` ARIA roles: a `<details>` can't back the ARIA menu keyboard contract, so the honest disclosure (matching the HM menu/tabs candor) is an a11y correctness improvement. The `data-test-id="dz-workspace-more"` selector is kept.

@@ -1784,9 +1784,10 @@ class BulkActionToolbar:
 class CreateButton:
     """The "New <Entity>" link in a list-surface header.
 
-    Issue #1029 phase 3 — matches the legacy `filterable_table.html`
-    create-button shape byte-for-byte: `<a href="{href}"
-    data-dazzle-action="{entity_name}.create" class="dz-button-primary">`
+    Issue #1029 phase 3 — the create-button shape: `<a href="{href}"
+    data-dazzle-action="{entity_name}.create" class="dz-button"
+    data-dz-variant="primary" data-dz-size="sm">` (the HM button grammar;
+    was the retired `.dz-button-primary` local class until v0.93.70)
     + 12×12 plus-icon SVG + "New {entity_name with _ replaced by ' '}"
     label.
 
