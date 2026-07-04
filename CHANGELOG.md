@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.77] - 2026-07-05
+
+### Added
+- **`dz-grid` — debounced search** (HM package 0.1.12 → 0.1.13). A `[data-dz-grid-search]` input adds a free-text `q=` to the table query on `input`, **debounced** (per-input timer, default 250ms, overridable via `data-dz-grid-debounce`) so a burst of keystrokes makes exactly one request. Search **composes** with sort and filters — `refresh()` builds one query from all current DOM state (search + active sort + every filter) and fires `dz-grid:refresh`; the server matches. The gallery mock does a case-insensitive substring match across the visible text fields (first/last/plan); `q` is a reserved query key (alongside `sort`/`dir`/`page`/`page_size`). Behaviour-tested on Chromium + WebKit including a debounce-coalescing test (N keystrokes → one request) and search+filter composition; grid is below the fold, so no visual-baseline change. Still inert in Dazzle.
+
+### Agent Guidance
+- **Search / sort / filter all compose through one DOM-derived query.** The `dz-grid` controller reads the search box, the active sort (off the headers' `aria-sort`), and every `[data-dz-grid-filter]` into a single query and fires `dz-grid:refresh`; the server applies the WHERE/ILIKE + ORDER BY. Never match/sort client-side. `q`, `sort`, `dir`, `page`, `page_size` are reserved query keys — don't reuse them as a filter attribute value. Debounce free-text inputs (a per-input timer, not a shared module variable) so a keystroke burst is one request.
+
 ## [0.93.76] - 2026-07-04
 
 ### Added

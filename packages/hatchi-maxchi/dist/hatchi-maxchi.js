@@ -419,7 +419,7 @@
 /* ── controllers/grid.js ── */
 /* HYPERPART: grid */
 /*
- * grid — the data-table controller. Slices so far: selection + sort + filter.
+ * grid — the data-table controller. Slices: selection + sort + filter + search.
  *
  * Delegated + state-in-DOM, the HM idiom (same shape as tabs.js): one pair
  * of document-level listeners, everything scoped to the clicked control's own
@@ -457,6 +457,11 @@
  *   - filter:      `[data-grid-filter="<key>"]` (a form control) narrows on
  *                  change; empty value = no filter. Composes with sort — the
  *                  request query is rebuilt from ALL current DOM state.
+ *   - search:      `[data-grid-search]` (an input) adds `q=` on input,
+ *                  debounced (`data-grid-debounce`, default 250ms). Composes
+ *                  with sort + filter into the same query. NB `q`, `sort`, `dir`,
+ *                  `page`, `page_size` are reserved query keys — don't use them
+ *                  as a `data-grid-filter` value.
  */
 (function () {
   "use strict";
@@ -523,9 +528,10 @@
     return null;
   }
 
-  // Rebuild the tbody's request query from ALL current DOM state — the active
-  // sort AND every filter select — so sort and filter COMPOSE, then ask the
-  // server (via `grid:refresh`) for the matching, ordered rows.
+  // Rebuild the tbody's request query from ALL current DOM state — the search
+  // box, the active sort, AND every filter select — so search / sort / filter
+  // COMPOSE, then ask the server (via `grid:refresh`) for the matching,
+  // ordered rows.
   function refresh(root) {
     var body = root.querySelector("[data-grid-body]");
     if (!body) return;
@@ -535,6 +541,10 @@
       ""
     ).split("?")[0];
     var q = [];
+    var search = root.querySelector("[data-grid-search]");
+    if (search && search.value) {
+      q.push("q=" + encodeURIComponent(search.value));
+    }
     var s = readSort(root);
     if (s) {
       q.push("sort=" + encodeURIComponent(s.key));
@@ -546,8 +556,8 @@
       var v = filters[i].value;
       if (k && v) q.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
     }
-    // Sort/filter reset pagination to page 1 (spec) — a no-op until the
-    // pagination slice adds page state; the reset lands there.
+    // Search / sort / filter reset pagination to page 1 (spec) — a no-op until
+    // the pagination slice adds page state; the reset lands there.
     body.setAttribute("hx-get", base + (q.length ? "?" + q.join("&") : ""));
     body.dispatchEvent(new CustomEvent("grid:refresh", { bubbles: true }));
   }
@@ -571,6 +581,23 @@
     if (th) th.setAttribute("aria-sort", ARIA_OF[next] || "none");
     refresh(root); // reads the sort we just wrote + any active filters
   }
+
+  // Search: debounced so a burst of keystrokes makes ONE request. The timer
+  // lives on the input itself (delegated, no per-grid state map). Default 250ms,
+  // overridable with `data-grid-debounce`.
+  document.addEventListener("input", function (evt) {
+    var t = evt.target;
+    if (!t || !t.matches || !t.matches("[data-grid-search]")) return;
+    var root = gridOf(t);
+    if (!root) return;
+    var ms = parseInt(t.getAttribute("data-grid-debounce"), 10);
+    if (isNaN(ms)) ms = 250;
+    if (t._dzSearchTimer) clearTimeout(t._dzSearchTimer);
+    t._dzSearchTimer = setTimeout(function () {
+      t._dzSearchTimer = null;
+      refresh(root);
+    }, ms);
+  });
 
   document.addEventListener("change", function (evt) {
     var t = evt.target;

@@ -216,8 +216,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     { id: "cust_5", first: "Noah", last: "Bright", plan: "Pro", signed: "2022-03-14", status: "Churned" },
     { id: "cust_6", first: "Jane", last: "Zimmerman", plan: "Free", signed: "2024-11-02", status: "Trialing" }
   ];
-  // Which query params are sort/paging CONTROL (everything else is a filter).
-  var GRID_CONTROL = { sort: 1, dir: 1, page: 1, page_size: 1 };
+  // Query params handled specially, NOT as exact-match filters: sort/paging
+  // control + the free-text search `q`.
+  var GRID_CONTROL = { sort: 1, dir: 1, page: 1, page_size: 1, q: 1 };
   function parseQuery(url) {
     var out = {}, qs = (url.split("?")[1] || "");
     qs.split("&").forEach(function (p) {
@@ -238,6 +239,14 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   function renderGridRows(url) {
     var q = parseQuery(url);
     var rows = GRID_ROWS.slice();
+    // Free-text search: case-insensitive substring across the visible text
+    // fields (the server's ILIKE/full-text). Composes with the exact filters.
+    if (q.q) {
+      var needle = q.q.toLowerCase();
+      rows = rows.filter(function (r) {
+        return (r.first + " " + r.last + " " + r.plan).toLowerCase().indexOf(needle) >= 0;
+      });
+    }
     // Filters: every non-control param narrows by an exact field match (the
     // server's WHERE). An empty value ("Any …") is never sent, so never narrows.
     Object.keys(q).forEach(function (k) {

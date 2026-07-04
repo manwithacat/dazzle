@@ -201,12 +201,16 @@ HYPERPARTS: list[Hyperpart] = [
         "A server-rendered data table: sortable headers, a filter bar, and row "
         "selection with a bulk-action bar — all HTML over the wire, on a real "
         "<table>. The tbody hydrates its rows over the wire (hx-get on load); "
-        "sortable headers, filters, and row selection are live (dz-grid.js, delegated "
-        "+ state-in-DOM) and compose into one server query. Column-visibility / "
+        "search, sortable headers, filters, and row selection are live (dz-grid.js, "
+        "delegated + state-in-DOM) and compose into one server query. Bulk actions / "
         "URL-synced state land in the next slices.",
         '<div class="hm-stack hm-measure-lg">'
         '<div class="dz-table" data-dz-grid data-dz-bulk-count="0">'
         '<div class="dz-filter-bar">'
+        '<div class="dz-filter-cell">'
+        '<label class="dz-filter-label" for="hm-grid-search">Search</label>'
+        '<input class="dz-filter-input" id="hm-grid-search" type="search" '
+        'data-dz-grid-search name="q" placeholder="Name or plan…"></div>'
         '<div class="dz-filter-cell">'
         '<label class="dz-filter-label" for="hm-grid-filter-plan">Plan</label>'
         '<select class="dz-filter-select" id="hm-grid-filter-plan" data-dz-grid-filter="plan">'
@@ -298,11 +302,12 @@ HYPERPARTS: list[Hyperpart] = [
         "none → ascending → descending → none (state on the th's <code>aria-sort</code>, "
         "one active column), rebuilds the tbody's request query, and fires "
         "<code>dz-grid:refresh</code> so the <em>server</em> returns the re-ordered rows "
-        "— no client-side row rendering. Filters are the same seam: a "
-        "<code>[data-dz-grid-filter]</code> select rebuilds the query on change and "
-        "<em>composes</em> with the active sort (both read from the DOM into one query); "
-        "an empty result reveals the empty-state. Bulk-action submission and URL-synced "
-        "state are the next slices. (The gallery mock approximates the "
+        "— no client-side row rendering. Filters and search ride the same seam: a "
+        "<code>[data-dz-grid-filter]</code> select (on change) and the "
+        "<code>[data-dz-grid-search]</code> box (on input, debounced) each rebuild the "
+        "query and <em>compose</em> with the active sort — all read from the DOM into one "
+        "query; an empty result reveals the empty-state. Bulk-action submission and "
+        "URL-synced state are the next slices. (The gallery mock approximates the "
         "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
         "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "
         "for true morph-preserved selection.)",
@@ -312,7 +317,8 @@ HYPERPARTS: list[Hyperpart] = [
                 method="GET",
                 endpoint="/app/{region}/rows?q=&sort=&dir=&page=&page_size=",
                 trigger="the tbody, on `load` and on `dz-grid:refresh` (fired by a sort "
-                "click or a filter change today; search / paginate in the following slices)",
+                "click, a filter change, or a debounced search keystroke; paginate in a "
+                "following slice)",
                 response="the `<tr>` rows for the current query — each a `dz-tr-row` "
                 "carrying a stable `id` (the idiomorph morph key) plus "
                 "`data-dz-grid-row-id` (the bulk-action payload anchor); a zero-result "

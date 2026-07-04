@@ -348,6 +348,56 @@ def test_grid_filter_to_zero_reveals_empty_state(page) -> None:  # type: ignore[
     )
 
 
+def test_grid_search_narrows_rows_debounced(page) -> None:  # type: ignore[no-untyped-def]
+    """Typing in the search box narrows the rows over the wire after a debounce
+    (the server matches; the client just adds `q=` to the query). Clearing it
+    restores every row."""
+    assert len(_grid_names(page)) == 6
+
+    page.fill("[data-grid-search]", "chen")
+    page.wait_for_timeout(350)  # > the debounce
+    assert _grid_names(page) == ["Mia"], "search matches across fields (last name Chen)"
+
+    page.fill("[data-grid-search]", "")
+    page.wait_for_timeout(350)
+    assert len(_grid_names(page)) == 6, "clearing search restores every row"
+
+
+def test_grid_search_debounce_coalesces_keystrokes(page) -> None:  # type: ignore[no-untyped-def]
+    """A burst of keystrokes makes exactly ONE request, not one per key. Counts
+    the `dz-grid:refresh` events (un-prefixed `grid:refresh` in the gallery). A
+    long debounce makes the timing robust: during the burst nothing fires; one
+    request lands after it settles."""
+    page.eval_on_selector("[data-grid-search]", "e => e.setAttribute('data-grid-debounce', '400')")
+    page.evaluate(
+        "window.__gridRefreshes = 0;"
+        "document.addEventListener('grid:refresh', () => { window.__gridRefreshes++; });"
+    )
+    # type 4 chars quickly; each `input` resets the (400ms) timer
+    page.type("[data-grid-search]", "amir", delay=20)
+    page.wait_for_timeout(150)  # still inside the debounce window
+    assert page.evaluate("window.__gridRefreshes") == 0, (
+        "keystrokes must NOT each fire a request (debounce still pending)"
+    )
+    page.wait_for_timeout(450)  # let the debounce settle
+    assert page.evaluate("window.__gridRefreshes") == 1, (
+        "the burst must coalesce into exactly one request"
+    )
+    assert _grid_names(page) == ["Amir"], "the one request applied the final search value"
+
+
+def test_grid_search_composes_with_filter(page) -> None:  # type: ignore[no-untyped-def]
+    """Search composes with sort/filter — all read from the DOM into one query."""
+    page.select_option("[data-grid-filter='plan']", "Pro")  # Amir, Noah
+    page.wait_for_timeout(120)
+    page.fill("[data-grid-search]", "okafor")  # last name Okafor → Amir
+    page.wait_for_timeout(350)
+    assert _grid_names(page) == ["Amir"], "search + filter compose to one matching row"
+    assert page.eval_on_selector("[data-grid-filter='plan']", "s => s.value") == "Pro", (
+        "the active filter survives a search"
+    )
+
+
 def test_grid_loading_overlay_is_wired_to_htmx_request(page) -> None:  # type: ignore[no-untyped-def]
     """Loading is pure-CSS (#972): htmx's native `.htmx-request` on any grid
     descendant reveals the `.dz-table-loading` overlay — no controller JS, so
