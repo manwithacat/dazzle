@@ -153,7 +153,11 @@ HYPERPARTS: list[Hyperpart] = [
         # fragile on Safari/iPadOS (it landed at its static position there).
         '<div class="dz-command__bar">'
         '<input class="dz-command__input" type="search" placeholder="Search workspaces and records…" '
-        'role="combobox" aria-expanded="true" aria-controls="dz-command-results" aria-autocomplete="list" '
+        # type="search" is an implicit `searchbox` role: it validly supports
+        # aria-controls (→ the listbox) + aria-autocomplete + the JS-set
+        # aria-activedescendant, so the SR follows the active option. (role=
+        # combobox / aria-expanded are NOT valid on an input per ARIA-in-HTML.)
+        'aria-controls="dz-command-results" aria-autocomplete="list" '
         'hx-get="/mock/command" hx-trigger="input changed delay:150ms, focus once" '
         'hx-target="next .dz-command__results">'
         '<button type="button" class="dz-command__close" data-hm-close-command '

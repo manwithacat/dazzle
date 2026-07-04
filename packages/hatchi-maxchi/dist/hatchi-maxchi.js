@@ -105,9 +105,10 @@
  *   - Esc closes explicitly (the palette's input is type="search", whose
  *     native behaviour swallows the first Esc to clear its value — so
  *     relying on <dialog>'s built-in cancel needs TWO presses mid-query)
- *   - ArrowUp/ArrowDown move the active option (combobox Model A): the
- *     active .command__item gets [aria-selected] AND its id is named by
- *     the input's aria-activedescendant, so screen readers follow it
+ *   - ArrowUp/ArrowDown move the active option: the active .command__item
+ *     gets [aria-selected] AND its id is named by the searchbox input's
+ *     aria-activedescendant, so screen readers follow it (the input is a
+ *     type=search searchbox with aria-controls → the listbox)
  *   - Enter activates the selected item (click — works for <a> and
  *     <button hx-*> items alike)
  * Results arrive via htmx swaps; selection resets on each swap.
