@@ -19,9 +19,14 @@
   const ROW_CLASSES = "dz-auth-status-row";
   const ROW_CLASSES_LAST = "dz-auth-status-row is-last";
   const LABEL_CLASSES = "dz-auth-status-label";
-  const BTN_PRIMARY = "dz-button dz-button-primary dz-button-sm";
-  const BTN_DESTRUCTIVE = "dz-button dz-button-destructive dz-button-sm";
-  const BTN_OUTLINE = "dz-button dz-button-outline dz-button-sm";
+  // Canonical button: one base class + data-dz-variant / data-dz-size attrs
+  // (matches button.css after the class->attribute migration). Overwrites
+  // className so a re-styled button (destructive <-> primary) toggles cleanly.
+  function applyButton(el, variant) {
+    el.className = "dz-button";
+    el.setAttribute("data-dz-variant", variant);
+    el.setAttribute("data-dz-size", "sm");
+  }
 
   function showError(msg) {
     if (!errorDiv) return;
@@ -70,7 +75,7 @@
     const totpBtn = document.createElement("button");
     if (data.totp_enabled) {
       totpBtn.textContent = "Disable";
-      totpBtn.className = BTN_DESTRUCTIVE;
+      applyButton(totpBtn, "destructive");
       totpBtn.addEventListener("click", async function () {
         const resp = await fetch("/auth/2fa/totp", { method: "DELETE" });
         if (resp.ok) {
@@ -82,7 +87,7 @@
       });
     } else {
       totpBtn.textContent = "Set Up";
-      totpBtn.className = BTN_PRIMARY;
+      applyButton(totpBtn, "primary");
       totpBtn.addEventListener("click", function () {
         window.location.href = "/2fa/setup";
       });
@@ -95,7 +100,7 @@
     const emailBtn = document.createElement("button");
     if (data.email_otp_enabled) {
       emailBtn.textContent = "Disable";
-      emailBtn.className = BTN_DESTRUCTIVE;
+      applyButton(emailBtn, "destructive");
       emailBtn.addEventListener("click", async function () {
         const resp = await fetch("/auth/2fa/email-otp", { method: "DELETE" });
         if (resp.ok) {
@@ -107,7 +112,7 @@
       });
     } else {
       emailBtn.textContent = "Enable";
-      emailBtn.className = BTN_PRIMARY;
+      applyButton(emailBtn, "primary");
       emailBtn.addEventListener("click", async function () {
         const resp = await fetch("/auth/2fa/setup/email-otp", {
           method: "POST",
@@ -125,7 +130,7 @@
     // Recovery codes
     const recoveryBtn = document.createElement("button");
     recoveryBtn.textContent = "Regenerate";
-    recoveryBtn.className = BTN_OUTLINE;
+    applyButton(recoveryBtn, "outline");
     recoveryBtn.addEventListener("click", async function () {
       const resp = await fetch("/auth/2fa/recovery/regenerate", {
         method: "POST",
