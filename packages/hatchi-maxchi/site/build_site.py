@@ -223,9 +223,11 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     }
   }
 
-  // hx-get on input/focus/change
+  // hx-get on focus/input — INPUTS only (e.g. the command palette's
+  // `focus once`). Non-input `[hx-get]` affordances (links/buttons) fire on
+  // click below, matching real htmx's default trigger for those elements.
   document.addEventListener("focus", function (e) {
-    if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
+    if (e.target.matches && e.target.matches("input[hx-get]")) doGet(e.target);
   }, true);
   document.addEventListener("input", function (e) {
     if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
