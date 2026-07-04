@@ -1,9 +1,6 @@
-<div id="dz-drawer-backdrop"
-     class="dz-drawer-backdrop"
-     onclick="window.dzDrawer.close()"></div>
-<aside id="dz-detail-drawer" class="dz-drawer">
+<dialog id="dz-detail-drawer" class="dz-drawer" data-dz-side="right" closedby="any" aria-label="Detail">
   <div class="dz-drawer-header">
-    <button class="dz-drawer-button" onclick="window.dzDrawer.close()">
+    <button type="button" class="dz-drawer-button" onclick="window.dzDrawer.close()">
       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       Close
     </button>
@@ -13,50 +10,58 @@
     </a>
   </div>
   <div id="dz-detail-drawer-content" class="dz-drawer-content"></div>
-</aside>
+</dialog>
 <script>
 (function() {
-  // #934: this script gets re-executed every time `_content.html` is
-  // swapped into `#main-content` (workspace nav, htmx morph swap).
-  // Pre-fix the IIFE re-bound listeners to `document.body` on every
-  // run — N navigations meant N stacked listeners — and captured
-  // local element references in closures that pointed at detached
-  // DOM after morph. The failure mode: empty drawer "slid in" mid-
-  // page on workspace→workspace nav because state leaked across
-  // swaps and the close path mutated the wrong (detached) element.
+  // The detail drawer is now a native <dialog>: showModal() gives the
+  // backdrop, background-inert, focus-trap and Esc dismiss for free — so
+  // the old hand-rolled backdrop element, `.is-open` transform toggle and
+  // manual Escape handler are gone (the HM `dz-drawer` Hyperpart supplies
+  // the edge-anchor + slide via `dialog.dz-drawer`).
   //
-  // The fix has three parts:
-  //   1. Init guard — register every listener exactly once across the
-  //      session.
-  //   2. Look up `drawer` / `backdrop` / `content` / `expand` fresh on
-  //      each call so post-morph swaps still find the live nodes.
-  //   3. `htmx:after:settle` defensive close — if a swap landed
-  //      anywhere other than `#dz-detail-drawer-content`, force the
-  //      drawer closed. Stale `is-open` state from a previous workspace
-  //      page can no longer leak across nav.
+  // Preserved (the contract the rest of the app + the ux-verify runner rely
+  // on): the `window.dzDrawer.open(url)` / `.close()` / `.isOpen` API, the
+  // `#dz-detail-drawer-content` htmx swap target, the `#dz-drawer-expand`
+  // link, the #980 htmx-not-loaded fallback, and the #934 defensive close.
+  //
+  // #934 still applies: this markup is re-emitted on every workspace nav
+  // swap, so DOCUMENT-level listeners register exactly once (init guard) and
+  // every call looks its elements up fresh; DIALOG-level listeners (native
+  // close cleanup + backdrop-tap) are wired per-element and idempotent, so a
+  // re-emitted drawer node rewires cleanly.
   function _qd(id) { return document.getElementById(id); }
 
+  function _wire(drawer) {
+    if (drawer.__dzWired) return;
+    drawer.__dzWired = true;
+    // any native close (our close(), Esc, or backdrop) restores page scroll
+    drawer.addEventListener('close', function() {
+      document.body.classList.remove('overflow-hidden');
+    });
+    // backdrop tap: a click on the <dialog> element itself (not its content)
+    // is the ::backdrop area. closedby="any" covers browsers that support it;
+    // this is the cross-browser floor.
+    drawer.addEventListener('click', function(e) {
+      if (e.target === drawer) window.dzDrawer.close();
+    });
+  }
+
   window.dzDrawer = {
-    isOpen: false,
+    get isOpen() { var d = _qd('dz-detail-drawer'); return !!(d && d.open); },
     open: function(url) {
       var drawer = _qd('dz-detail-drawer');
-      var backdrop = _qd('dz-drawer-backdrop');
       var expand = _qd('dz-drawer-expand');
-      if (!drawer || !backdrop) return;
+      if (!drawer) return;
       if (url && expand) { expand.href = url; expand.hidden = false; }
       else if (expand) { expand.hidden = true; }
-      drawer.classList.add('is-open');
-      backdrop.classList.add('is-open');
+      _wire(drawer);
+      if (!drawer.open) drawer.showModal();
       document.body.classList.add('overflow-hidden');
-      this.isOpen = true;
     },
     close: function() {
       var drawer = _qd('dz-detail-drawer');
-      var backdrop = _qd('dz-drawer-backdrop');
-      if (drawer) drawer.classList.remove('is-open');
-      if (backdrop) backdrop.classList.remove('is-open');
-      document.body.classList.remove('overflow-hidden');
-      this.isOpen = false;
+      if (drawer && drawer.open) drawer.close();  // fires 'close' → scroll restore
+      else document.body.classList.remove('overflow-hidden');
     }
   };
 
@@ -68,9 +73,9 @@
     window.dzDrawer.open(url);
   });
 
-  // Click delegation on document.body — the drawer content node is
-  // recreated on every workspace render, so we can't bind directly to
-  // it. Filter to clicks INSIDE the live drawer content element.
+  // Click delegation on document.body — the drawer content node is recreated
+  // on every workspace render, so we can't bind directly to it. Filter to
+  // clicks INSIDE the live drawer content element.
   document.body.addEventListener('click', function(e) {
     var content = _qd('dz-detail-drawer-content');
     if (!content || !content.contains(e.target)) return;
@@ -86,12 +91,9 @@
     }
     if (href.startsWith('/')) {
       e.preventDefault();
-      // #980 round 2: guard against htmx not yet loaded. This handler
-      // is registered immediately at script-parse time (before the
-      // deferred htmx.min.js); on a fresh page load + rapid click
-      // before htmx initialises, the call would race.
+      // #980 round 2: guard against htmx not yet loaded (this handler is
+      // registered at script-parse time, before the deferred htmx.min.js).
       if (typeof htmx === 'undefined') {
-        // Fall back to native navigation — better than a dead click.
         window.location.href = href;
         return;
       }
@@ -99,25 +101,21 @@
     }
   });
 
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && window.dzDrawer.isOpen) {
-      window.dzDrawer.close();
-    }
-  });
-
-  // #934: defensive close on any swap that doesn't target the drawer.
-  // Workspace→workspace nav uses `hx-target="#main-content"`, so the
-  // drawer's `is-open` state from a prior interaction would otherwise
-  // persist visually across the swap. The drawer-targeted action path
-  // (target == 'dz-detail-drawer-content') is left alone because the
-  // `dz:drawerOpen` trigger fires *after* htmx:after:settle on that
-  // path — opening the drawer is the intended next step there.
-  document.body.addEventListener('htmx:after:settle', function(e) {
+  // #934: defensive close on any swap that doesn't target the drawer content.
+  // Workspace→workspace nav uses `hx-target="#main-content"`; the modal now
+  // makes the background inert (so a user can't trigger this while open), but
+  // programmatic nav / re-emission still can. The event is htmx-4's camelCase
+  // `htmx:afterSettle` (the old `htmx:after:settle` never fired). The scroll
+  // lock is released DIRECTLY on `body` — not via the dialog's `close` event —
+  // because a swap can DESTROY the open drawer node (it's re-emitted inside the
+  // `#main-content` body), and a removed dialog fires no `close`, so a
+  // node-scoped unlock would leak `overflow-hidden`.
+  document.body.addEventListener('htmx:afterSettle', function(e) {
     var target = e.detail && e.detail.target;
-    if (!target || target.id === 'dz-detail-drawer-content') return;
-    if (window.dzDrawer && window.dzDrawer.isOpen) {
-      window.dzDrawer.close();
-    }
+    if (target && target.id === 'dz-detail-drawer-content') return;
+    var drawer = _qd('dz-detail-drawer');
+    if (drawer && drawer.open) drawer.close();
+    document.body.classList.remove('overflow-hidden');
   });
 })();
 </script>

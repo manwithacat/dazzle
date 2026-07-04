@@ -59,8 +59,8 @@ def test_static_html_assets_are_loadable_via_importlib_resources() -> None:
 
     drawer_text = _load_static("workspace_drawer.html")
     script_text = _load_static("workspace_context_script.html")
-    assert drawer_text.startswith('<div id="dz-drawer-backdrop"'), (
-        "workspace_drawer.html starts with the backdrop div — the "
+    assert drawer_text.startswith('<dialog id="dz-detail-drawer"'), (
+        "workspace_drawer.html starts with the native <dialog> — the "
         "renderer emits it verbatim. If it doesn't, the asset got "
         "truncated or replaced."
     )
@@ -82,5 +82,5 @@ def test_renderer_loads_static_assets_at_module_import() -> None:
     raises before any test even tries to render anything."""
     from dazzle.render.fragment import renderer
 
-    assert renderer._WORKSPACE_DRAWER_HTML.startswith('<div id="dz-drawer-backdrop"')
+    assert renderer._WORKSPACE_DRAWER_HTML.startswith('<dialog id="dz-detail-drawer"')
     assert "{WS_NAME_JSON}" in renderer._WORKSPACE_CONTEXT_SCRIPT_TEMPLATE

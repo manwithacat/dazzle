@@ -2374,11 +2374,23 @@ dialog.drawer::backdrop {
   backdrop-filter: blur(2px);
 }
 
-/* the form is the full-height flow: fixed header + footer, scrolling body */
-dialog.drawer > form {
+/* The open drawer is a flex column (pinned header + footer, scrolling body).
+   Scoped to [open] so a CLOSED dialog falls through to the UA
+   `dialog:not([open]){display:none}` — an unconditional `display:flex` would
+   keep the closed dialog rendered off-screen, leaking its controls into the
+   tab order + a11y tree. The base `transition: display allow-discrete` still
+   animates the exit. */
+dialog.drawer[open] {
   display: flex;
   flex-direction: column;
-  height: 100%;
+}
+
+/* header/body/footer are the dialog's flex column whether they sit directly
+   in the <dialog> (a JS-driven drawer, e.g. a detail panel) or are wrapped in
+   a <form method="dialog"> (the native-close form). display:contents makes the
+   optional form transparent to layout so both shapes stack the same. */
+dialog.drawer > form {
+  display: contents;
 }
 
 .drawer__header {

@@ -593,43 +593,14 @@
  * drawer at z-50. Translate-x-full while closed; toggled by the
  * window.dzDrawer JS singleton via classList. */
 
-.dz-drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: oklch(0% 0 0 / 0.3);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--duration-slow) var(--ease-out);
-}
-
-.dz-drawer-backdrop.is-open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.dz-drawer {
-  position: fixed;
-  inset-block: 0;
-  inset-inline-end: 0;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  background: var(--colour-bg);
-  box-shadow: var(--shadow-lg);
-  transform: translateX(100%);
-  transition: transform var(--duration-slow) var(--ease-in-out);
-}
-
-@media (min-width: 40rem) {
-  .dz-drawer {
-    max-width: 42rem;
-  }
-}
-
-.dz-drawer.is-open {
-  transform: translateX(0);
+/* The detail drawer is now a native <dialog> styled by the HM `dz-drawer`
+   Hyperpart (`dialog.dz-drawer`): native backdrop, edge-anchor, slide via
+   @starting-style, focus-trap + Esc from showModal(). Only the app-specific
+   width is overridden here (the detail drawer is wider than the HM default).
+   The manual `.dz-drawer-backdrop`, the `position:fixed` container and the
+   `.is-open` transform were retired 2026-07-04 (native-dialog convergence). */
+#dz-detail-drawer.dz-drawer {
+  width: min(42rem, calc(100vw - 3rem));
 }
 
 .dz-drawer-header {

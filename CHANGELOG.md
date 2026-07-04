@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.58] - 2026-07-04
+
+### Changed
+- **Workspace detail drawer converged onto the HM `dz-drawer` Hyperpart — a native `<dialog>` (first user-visible build-to-replace).** The detail drawer (`#dz-detail-drawer`, `render/fragment/static/workspace_drawer.html`) was a hand-rolled `<aside>` with a manual backdrop element, an `.is-open` transform toggle, a body `overflow-hidden` lock, and a manual Escape handler. It's now a native `<dialog>` styled by the HM `dialog.dz-drawer`: `showModal()` provides the backdrop, background-inert, focus-trap and Esc dismiss for free, so the backdrop `<div>`, the `position:fixed` container, the `.is-open` transform and the Escape handler are all **deleted**. The `window.dzDrawer.open(url)`/`.close()`/`.isOpen` API is **preserved unchanged** (the ux-verify e2e drawer walk drives it), as are `#dz-detail-drawer-content` (the htmx swap target), the "Open full page" expand link, and the #980 htmx-not-loaded fallback. `.isOpen` is now a getter over the dialog's native `open` state. Verified in a real browser (16 checks: open/close/Esc/backdrop/focus-trap/scroll-lock/defensive-close, and the closed dialog is `display:none` — not in the tab order). Adversarial review caught and fixed a real regression before ship (see Agent Guidance).
+- **HM `drawer.css` supports formless drawers.** The header/body/footer flex column now works whether wrapped in `<form method="dialog">` (the HM demo's native-close form) or emitted directly (the workspace detail drawer, which closes via JS). `dialog.dz-drawer > form` is `display:contents`; the flex is scoped to `dialog.dz-drawer[open]`.
+
+### Removed
+- **Retired the hand-rolled drawer CSS** from `dashboard.css`: `.dz-drawer-backdrop`, the `position:fixed` `.dz-drawer` container, and `.dz-drawer.is-open` — superseded by the native `dialog.dz-drawer`. The detail-drawer's app-specific width and chrome (`.dz-drawer-header`/`-button`/`-content`) are kept.
+
+### Agent Guidance
+- **Native-`<dialog>` footgun (adversarial review caught this):** putting `display:flex` on a `dialog.dz-drawer` *base* rule overrides the UA `dialog:not([open]){display:none}`, leaving the CLOSED dialog rendered off-screen — its controls leak into the tab order + a11y tree on every page. Always scope layout `display` to `dialog.dz-drawer[open]`; the base keeps only `transition: … display allow-discrete` so the exit still animates. A closed-state tab-order check belongs in any drawer/dialog verification (the open-state focus check won't catch it).
+- **htmx-4 event names are camelCase:** the workspace drawer's defensive close listened for `htmx:after:settle` (never fires in htmx 4); the correct name is `htmx:afterSettle`. When a swap can destroy an open drawer node, release side effects (the body scroll lock) DIRECTLY, not via that node's `close` event (a removed dialog fires no `close`).
+
 ## [0.93.57] - 2026-07-04
 
 ### Added
