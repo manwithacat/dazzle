@@ -23,6 +23,9 @@
 }
 
 .dz-progress__bar {
+  /* Dynamic value via a custom property, not an inline width: the markup
+     sets `--dz-progress-value: 62%` and CSS owns the property mapping. */
+  width: var(--dz-progress-value, 0%);
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--colour-brand);

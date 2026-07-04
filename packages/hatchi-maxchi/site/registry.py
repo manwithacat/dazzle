@@ -113,7 +113,7 @@ HYPERPARTS: list[Hyperpart] = [
         "Alert",
         "Feedback",
         "Tone-wash surfaces — an identity layer shadcn has no vocabulary for.",
-        '<div class="dz-alert" data-dz-tone="warning" role="alert" style="max-width:34rem">'
+        '<div class="dz-alert hm-measure-lg" data-dz-tone="warning" role="alert">'
         '<span class="dz-alert__icon">{svg:triangle-alert}</span>'
         '<div class="dz-alert__body"><div class="dz-alert__title">Payment method expiring</div>'
         '<div class="dz-alert__description">Your card ending 4242 expires next month.</div></div></div>',
@@ -200,7 +200,8 @@ HYPERPARTS: list[Hyperpart] = [
         "menu",
         "Menu",
         "Overlays",
-        "Details-based dropdown — the hypermedia answer, no JS for open state.",
+        "Disclosure menu (`<details>`) — no JS for open state. A disclosure, "
+        "not a full ARIA menu: no roving tabindex or typeahead.",
         '<details class="dz-menu"><summary class="dz-button" data-dz-variant="outline">Actions ▾</summary>'
         '<div class="dz-menu__panel">'
         '<button class="dz-menu__item">{icon:pencil} Edit</button>'
@@ -213,17 +214,19 @@ HYPERPARTS: list[Hyperpart] = [
         "popover",
         "Popover",
         "Overlays",
-        "Free-content panel, details-based; body can lazy-load via htmx.",
+        "Disclosure popover (`<details>`) — free-content panel; body can "
+        "lazy-load via htmx. Not a focus-trapped/positioned popover.",
         '<details class="dz-popover"><summary class="dz-button" data-dz-variant="outline">Details</summary>'
-        '<div class="dz-popover__panel"><div style="font-weight:var(--weight-semibold);font-size:var(--text-sm);margin-bottom:.25rem">Dimensions</div>'
-        '<p style="margin:0;font-size:var(--text-sm);color:var(--colour-text-muted)">Filters, previews, quick forms.</p></div></details>',
+        '<div class="dz-popover__panel"><div class="hm-demo-title">Dimensions</div>'
+        '<p class="hm-demo-muted">Filters, previews, quick forms.</p></div></details>',
         tags=("interactive",),
     ),
     Hyperpart(
         "tooltip",
         "Tooltip",
         "Overlays",
-        "CSS-only attribute tooltip — zero JS.",
+        "CSS-only visual hint (`data-dz-tooltip`) — zero JS. A hint, not an "
+        "accessible tooltip: keep it non-critical (no touch/SR/keyboard path).",
         '<button class="dz-button" data-dz-variant="outline" data-dz-tooltip="Saved 2 minutes ago">Hover me</button>',
     ),
     # ── Forms ────────────────────────────────────────────────────────
@@ -272,16 +275,16 @@ HYPERPARTS: list[Hyperpart] = [
         "Progress",
         "Feedback",
         "Toned determinate bar.",
-        '<div style="max-width:20rem;display:flex;flex-direction:column;gap:.75rem">'
-        '<div class="dz-progress" role="progressbar" aria-label="Storage used" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="width:62%"></div></div>'
-        '<div class="dz-progress" data-dz-tone="success" role="progressbar" aria-label="Upload progress" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="width:100%"></div></div></div>',
+        '<div class="hm-stack hm-measure">'
+        '<div class="dz-progress" role="progressbar" aria-label="Storage used" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="--dz-progress-value:62%"></div></div>'
+        '<div class="dz-progress" data-dz-tone="success" role="progressbar" aria-label="Upload progress" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="--dz-progress-value:100%"></div></div></div>',
     ),
     Hyperpart(
         "empty-state",
         "Empty state",
         "Feedback",
         "Icon + one sentence + primary action — never a bare 'No X'.",
-        '<div class="dz-card" style="padding:1.5rem;max-width:22rem"><div class="dz-empty-state">'
+        '<div class="dz-card dz-card-body hm-measure"><div class="dz-empty-state">'
         '<span class="dz-empty-state__icon">{svg:inbox}</span>'
         '<h3 class="dz-empty-state__title">No invoices yet</h3>'
         '<p class="dz-empty-state__description">Create your first invoice to get started.</p>'

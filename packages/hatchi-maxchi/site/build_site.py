@@ -300,6 +300,14 @@ body { background: var(--colour-bg); color: var(--colour-text);
   letter-spacing: .02em; padding: .05rem .4rem; border-radius: var(--radius-full);
   margin-left: .4rem; vertical-align: middle; border: 1px solid var(--colour-border);
   color: var(--colour-text-muted); background: var(--colour-surface); }
+/* Demo-layout utilities (hm- = gallery scaffolding, NOT component contract —
+   replace with your app's own layout when copying a snippet). */
+.hm-measure { max-width: 22rem; }
+.hm-measure-lg { max-width: 34rem; }
+.hm-stack { display: flex; flex-direction: column; gap: .75rem; }
+.hm-demo-title { font-weight: var(--weight-semibold); font-size: var(--text-sm); margin-bottom: .25rem; }
+.hm-demo-muted { margin: 0; font-size: var(--text-sm); color: var(--colour-text-muted); }
+.hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 """
 
 
@@ -453,6 +461,9 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
     <p>An htmx4-native design system. Server-rendered markup, one accent, dark as a
     material, and lifecycle-driven motion — the maturity of the modern component
     aesthetic without a client framework. Vendored Geist + Lucide {LUCIDE_VERSION}.</p>
+    <p class="hm-hero-def"><strong>“htmx4-native”</strong> here means server-rendered
+    htmx partials, no hydration, lifecycle-aware CSS/JS affordances, and endpoint
+    contracts colocated with components — it is not an official htmx distribution.</p>
   </div>
   <div class="hm-theme-toggle">
     <div class="dz-toggle-group" role="radiogroup">

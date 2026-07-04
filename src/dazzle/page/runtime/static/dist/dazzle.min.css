@@ -2516,6 +2516,7 @@ background: color-mix(in oklab, var(--colour-brand) 12%, var(--colour-bg));
 overflow: hidden;
 }
 .dz-progress__bar {
+width: var(--dz-progress-value, 0%);
 height: 100%;
 border-radius: var(--radius-full);
 background: var(--colour-brand);
