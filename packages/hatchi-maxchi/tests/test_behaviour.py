@@ -244,6 +244,40 @@ def test_dialog_instance_isolation(page) -> None:  # type: ignore[no-untyped-def
     )
 
 
+def test_slider_updates_value_readout(page) -> None:  # type: ignore[no-untyped-def]
+    """dz-slider.js writes the range value into the group's [data-range-value]
+    readout on input, scoped to the slider's own group."""
+    page.eval_on_selector(
+        "#slider input[type=range]",
+        "el => { el.value = '30'; el.dispatchEvent(new Event('input', {bubbles: true})); }",
+    )
+    page.wait_for_timeout(100)
+    assert page.inner_text("#slider [data-range-value]").strip() == "30", (
+        "the value readout must reflect the slider value on input"
+    )
+
+
+def test_slider_skips_widget_managed_inputs(page) -> None:  # type: ignore[no-untyped-def]
+    """The load-bearing guard: HM's dz-slider.js must NOT touch a range managed
+    by a widget bridge ([data-widget] wrapper) — that's what keeps it a no-op on
+    a host (e.g. Dazzle) that wires its own range controller."""
+    page.evaluate(
+        "() => { var d = document.createElement('div'); d.id = 'wm';"
+        ' d.innerHTML = \'<div data-widget="range-tooltip" class="form-slider-group">'
+        '<input type="range" data-slider value="50">'
+        "<span data-range-value>UNTOUCHED</span></div>';"
+        " document.body.appendChild(d); }"
+    )
+    page.eval_on_selector(
+        "#wm input[type=range]",
+        "el => { el.value = '10'; el.dispatchEvent(new Event('input', {bubbles: true})); }",
+    )
+    page.wait_for_timeout(100)
+    assert page.inner_text("#wm [data-range-value]").strip() == "UNTOUCHED", (
+        "HM's controller must skip [data-widget]-managed ranges (the host owns them)"
+    )
+
+
 def test_drawer_opens_via_shared_opener_and_closes(page) -> None:  # type: ignore[no-untyped-def]
     """The drawer is a native <dialog> anchored to the edge; it reuses the
     dialog's opener (no drawer-specific JS) and closes natively. Proves the

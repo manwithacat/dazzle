@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.59] - 2026-07-04
+
+### Added
+- **HM `slider` Hyperpart — native `<input type=range>` with a live value readout (batch 2).** The range track + thumb were *already* styled in HM (`design-system.css` `input[type="range"][data-dz-slider]`, both themes + focus ring) and already consumed by Dazzle — so this adds the first-class gallery Hyperpart plus a tiny delegated controller `dz-slider.js` that writes the value into `[data-dz-range-value]`, scoped to each slider's own `.dz-form-slider-group` (N sliders stay independent). The visible readout is `aria-hidden` (the native range announces its own value). A one-time mount sync keeps a hard-coded `value=` in step for copy-paste. Adversarial review: SHIP.
+
+### Agent Guidance
+- **`dz-slider.js` is a zero-host-behavior-change addition.** It **skips inputs inside `[data-dz-widget]`** (`input.closest("[data-dz-widget]")`), so on a host that wires its own range controller — e.g. Dazzle, whose `_emit_slider_field` wraps the input in `data-dz-widget="range-tooltip"` — HM's controller no-ops; on a bare `.dz-form-slider-group` it runs. The controller is bundled into Dazzle's dist, so the guard is load-bearing (a negative behaviour test pins it). This is the canonical HM value controller: the pending convergence is to drop Dazzle's `range-tooltip` widget (entangled with the widget-contract test + fidelity scorer) so HM's controller takes over — deferred as its own scoped change.
+
 ## [0.93.58] - 2026-07-04
 
 ### Changed

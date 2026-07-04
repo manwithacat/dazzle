@@ -1269,6 +1269,7 @@ input[aria-invalid="true"][data-widget="daterange"] {
 }
 
 /* ── Range slider token overrides (UX-023 widget:slider) ──────────────── */
+/* HYPERPART: slider */
 /* Scoped to input[type="range"][data-slider] so generic ranges elsewhere */
 /* keep their browser-default appearance.                                    */
 input[type="range"][data-slider] {

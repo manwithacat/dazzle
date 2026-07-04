@@ -350,6 +350,27 @@ HYPERPARTS: list[Hyperpart] = [
         tags=("forms",),
     ),
     Hyperpart(
+        "slider",
+        "Slider",
+        "Forms",
+        "Native <input type=range> — styled track + thumb, both themes, with a "
+        "live value readout via a tiny delegated controller.",
+        '<div class="hm-stack hm-measure">'
+        '<label class="dz-form-label" for="hm-slider-vol">Volume</label>'
+        '<div class="dz-form-slider-group">'
+        '<input id="hm-slider-vol" type="range" data-dz-slider class="dz-form-slider" '
+        'min="0" max="100" step="1" value="70">'
+        '<span data-dz-range-value class="dz-form-slider-value" aria-hidden="true">70</span>'
+        "</div></div>",
+        notes="The track + thumb are styled for both themes with a focus ring; the native "
+        "range already announces its value to assistive tech, so the visible readout is "
+        "<code>aria-hidden</code>. <code>dz-slider.js</code> writes the value into "
+        "<code>[data-dz-range-value]</code> on input, scoped to each slider's own group so "
+        "many coexist.",
+        tags=("forms",),
+        controller="controllers/dz-slider.js",
+    ),
+    Hyperpart(
         "toggle-group",
         "Toggle group",
         "Navigation",
