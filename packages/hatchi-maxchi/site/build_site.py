@@ -90,6 +90,33 @@ def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     ).format(n=len(parts) + 1, parts=" · ".join(parts), id=_html.escape(hyperpart.id))
 
 
+# A copied sprite snippet is blank without the icon sheet — surface the
+# dependency IN the snippet so it travels with a paste (the README note does
+# not). Prepended once to any partial that uses the sprite `<use>` form.
+_SPRITE_NOTE = "<!-- icons: include the icon sheet once per page (see Setup) -->\n"
+
+
+def _dependency_classes(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
+    """The hidden-contract dependency classes a consumer must preserve when
+    copying a component (agent-review taxonomy). Derived from the Hyperpart's
+    own fields — a component is a Primitive only if it has none."""
+    deps: list[str] = []
+    if "{svg:" in hyperpart.partial or "{icon:" in hyperpart.partial:
+        deps.append("Sprite")
+    if hyperpart.controller:
+        deps.append("Controller")
+    if hyperpart.exchanges:
+        deps.append("Endpoint")
+    return deps or ["Primitive"]
+
+
+def _dependency_chips(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    return "".join(
+        f'<span class="hm-dep" data-dep="{d.lower()}" title="Dependency class: {d}">{d}</span>'
+        for d in _dependency_classes(hyperpart)
+    )
+
+
 def _require(name: str) -> str:
     """Fail the build loud on an unknown icon token — a typo'd ``{svg:...}``
     should not silently render the fallback and slip into the gallery."""
@@ -266,6 +293,13 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-tag { display:inline-block; font-size: .625rem; text-transform: uppercase; letter-spacing: .05em;
   padding: .05rem .35rem; border-radius: var(--radius-full); margin-left: .5rem;
   background: var(--colour-brand-soft); color: var(--colour-brand-text); vertical-align: middle; }
+/* Dependency-class chips — the hidden contract a copied component carries.
+   Neutral by design: the text label distinguishes the class, not colour
+   (WCAG 1.4.1) — and scheme-aware muted text keeps contrast in dark. */
+.hm-dep { display:inline-block; font-size: .625rem; font-weight: var(--weight-medium);
+  letter-spacing: .02em; padding: .05rem .4rem; border-radius: var(--radius-full);
+  margin-left: .4rem; vertical-align: middle; border: 1px solid var(--colour-border);
+  color: var(--colour-text-muted); background: var(--colour-surface); }
 """
 
 
@@ -348,12 +382,16 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         # (e.g. controllers/dz-command.js) and HYPERPART markers, which keep
         # the source form regardless of the published class namespace.
         live = apply_prefix(expand_icons(c.partial), prefix)
-        snippet = _html.escape(live)
+        # Surface the sprite dependency in the copied snippet (not the live
+        # demo, which already carries the sheet) so a paste is self-aware.
+        snippet_src = _SPRITE_NOTE + live if '<use href="#i-' in live else live
+        snippet = _html.escape(snippet_src)
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
+        deps = _dependency_chips(c)
         notes = f'<div class="hm-notes">{c.notes}</div>' if c.notes else ""
         body_parts.append(
             f'<section class="hm-comp" id="{c.id}">'
-            f"<h2>{_html.escape(c.title)}{tag}</h2>"
+            f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
             f'<p class="blurb">{_html.escape(c.blurb)}</p>'
             f'<div class="hm-preview">{live}</div>'
             f'<div class="hm-code">{copy_button}'
