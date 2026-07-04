@@ -265,6 +265,14 @@ def write_outputs(icons: dict[str, str]) -> int:
         print(f"{len(icons)} icons -> {OUT_DAZZLE} (vendored)")
     else:
         print("(no Dazzle tree — standalone repo, vendored copy skipped)")
+    # Sprite sheet from the same data — the gallery inlines this once so a
+    # `<use href="#name">` snippet renders (sprite delivery mode).
+    sys.path.insert(0, str(PKG))
+    from sprite import build_symbol_sheet
+
+    sheet_path = PKG / "sprite_sheet.svg"
+    sheet_path.write_text(build_symbol_sheet(icons), encoding="utf-8")
+    print(f"symbol sheet -> {sheet_path}")
     return 0
 
 

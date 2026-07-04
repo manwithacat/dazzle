@@ -96,3 +96,35 @@ def test_known_icon_token_still_expands() -> None:
     from build_site import expand_icons
 
     assert "<svg" in expand_icons("<i>{svg:check}</i>")
+
+
+# ── sprite: one symbol sheet + short <use> references ─────────────────────
+
+
+def test_sheet_has_a_symbol_per_icon() -> None:
+    from icons import ICONS
+    from icons.sprite import build_symbol_sheet
+
+    sheet = build_symbol_sheet(ICONS)
+    assert sheet.startswith("<svg") and "display:none" in sheet
+    for name in ("check", "circle-check", "chevron-down"):
+        assert f'<symbol id="{name}" viewBox="0 0 24 24">' in sheet
+
+
+def test_sprite_use_is_short_and_decorative() -> None:
+    from icons.sprite import sprite_use_html
+
+    assert (
+        sprite_use_html("circle-check")
+        == '<svg class="icon" aria-hidden="true"><use href="#circle-check"/></svg>'
+    )
+
+
+def test_committed_sprite_sheet_is_current() -> None:
+    from icons import ICONS
+    from icons.sprite import build_symbol_sheet
+
+    committed = (PKG / "icons" / "sprite_sheet.svg").read_text(encoding="utf-8")
+    assert committed == build_symbol_sheet(ICONS), (
+        "sprite_sheet.svg is stale — run icons/gen_registry.py --sync"
+    )
