@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.64] - 2026-07-04
+## [0.93.65] - 2026-07-04
+
+### Removed
+- **HM migration — Bucket A2 (dead Alpine JS shadows):** removed 6 `Alpine.data()` registrations from `page/runtime/static/js/dz-alpine.js` (−265 lines). `dzConfirm` and `dzCommandPalette` duplicated the ingested HM controllers (`dz-confirm.js` intercepts `hx-confirm`; `dz-command.js` drives `dialog.dz-command` on ⌘K) and were never instantiated in the live app. `dzPopover`/`dzTooltip`/`dzContextMenu`/`dzToggleGroup` were dead — their CSS was deleted in v0.93.64 (Bucket A) and they were never instantiated either (only a dev-only, non-test-gated `test-event-widgets.html` harness referenced some). Kept: dzToast, dzTable, dzMoney, dzFileUpload, dzWizard, dzConfirmGate, dzSlideOver, dzThemeSwitcher. Verified: `node --check`, full non-e2e suite (zero new failures), real-browser ⌘K palette opens + lazy-loads via the ingested HM `dz-command.js`, and adversarial review (VERDICT SHIP).
+
+### Agent Guidance
+- **Do not reintroduce Alpine `dzConfirm`/`dzCommandPalette`/`dzPopover`/`dzTooltip`/`dzContextMenu`/`dzToggleGroup`.** Command palette = server-rendered `dialog.dz-command` + HM `dz-command.js`; confirmation = plain `hx-confirm` + HM `dz-confirm.js`. Known follow-up (pre-existing, NOT this change): under the vendored htmx-4, `htmx:confirm` exposes the confirm text via `evt.detail` differently than HM `dz-confirm.js` reads (`evt.detail.question` came back null in a harness) — the designed confirm dialog may be falling back to native `window.confirm`; worth a separate investigation of the HM-confirm/htmx-4 integration.
 
 ### Removed
 - **HM migration — Bucket A (dead-shadow cleanup):** deleted 7 grep-proven-dead bespoke CSS families that shadowed existing HM Hyperparts, so the HM versions are no longer cascade-shadowed. From `fragments.css`: `.dz-breadcrumb*`, `.dz-alert-banner*`/`.dz-alert-icon`/`.dz-alert-message`/`.dz-alert-dismiss`, `.dz-toggle-group`/`.dz-toggle-item`, `.dz-popover*`, `.dz-accordion*`, `.dz-tooltip*`; from `site-sections.css`: `.dz-avatar`. All seven were un-emitted (no literal class, no Alpine `x-data` instantiation, no data-attr contract, no example/fixture use) — pure dead-code removal, no behaviour change. The live `.dz-toast*` family was preserved. Dist rebuilt; UX catalogue regenerated.

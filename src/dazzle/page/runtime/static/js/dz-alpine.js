@@ -7,17 +7,19 @@
  *
  * Components:
  *  - dzToast          — toast notification container
- *  - dzConfirm        — confirmation dialog with htmx.ajax
  *  - dzTable          — data table with sort, column visibility, bulk select
  *  - dzMoney          — multi-currency minor unit field
  *  - dzFileUpload     — drag-and-drop file upload
  *  - dzWizard         — multi-step form wizard
- *  - dzPopover        — anchored floating content panel
- *  - dzTooltip        — rich content tooltip with show/hide delay
- *  - dzContextMenu    — right-click context menu
- *  - dzCommandPalette — spotlight-style command palette (Cmd+K)
+ *  - dzConfirmGate    — bulk-action typed-confirmation gate
  *  - dzSlideOver      — side sheet overlay with width control
- *  - dzToggleGroup    — exclusive or multi-select button group
+ *  - dzThemeSwitcher  — light/dark/system theme toggle
+ *
+ * Removed in the HM migration (Bucket A2, v0.93.65): dzConfirm and
+ * dzCommandPalette are now driven by the ingested HM controllers
+ * (dz-confirm.js intercepts hx-confirm; dz-command.js drives dialog.dz-command
+ * on ⌘K). dzPopover / dzTooltip / dzContextMenu / dzToggleGroup were dead
+ * (their CSS was deleted in Bucket A; never instantiated in the app).
  *
  * Directives:
  *  - x-flip               — FLIP-style animations for list reorders (#960)
@@ -833,86 +835,6 @@ document.addEventListener("alpine:init", () => {
       console.error("[dz.downloadCsv]", err);
     }
   };
-
-  // ── Confirm Dialog ──────────────────────────────────────────────────
-
-  Alpine.data("dzConfirm", () => ({
-    message: "",
-    action: "",
-    method: "delete",
-    targetSel: "",
-    swap: "outerHTML",
-    loading: false,
-    _trigger: null,
-
-    init() {
-      // Listen for confirm dispatches from trigger buttons
-      window.addEventListener("dz-confirm", (e) => {
-        const d = /** @type {CustomEvent} */ (e).detail;
-        if (!d) return;
-        this.message = d.message || "Are you sure?";
-        // Sanitize: only allow safe relative URL paths
-        this.action =
-          d.action && /^\/[\w/\-?.=&%]+$/.test(d.action) ? d.action : "";
-        // Sanitize: only allow known HTTP methods
-        this.method = ["delete", "post", "put", "patch"].includes(
-          (d.method || "delete").toLowerCase(),
-        )
-          ? d.method
-          : "delete";
-        this.targetSel = d.target || "";
-        this.swap = d.swap || "outerHTML";
-        this._trigger = d.triggerEl || null;
-        this.$refs.dialog.showModal();
-      });
-    },
-
-    async confirm() {
-      if (!this.action || !this.action.startsWith("/")) return;
-      this.loading = true;
-
-      const opts = {};
-      if (this.targetSel) {
-        opts.target = this.targetSel;
-        opts.swap = this.swap;
-      } else if (this._trigger) {
-        const tr = this._trigger.closest("tr");
-        if (tr) {
-          opts.target = tr;
-          opts.swap = "outerHTML swap:300ms";
-        } else {
-          opts.target = "body";
-          opts.swap = "innerHTML";
-        }
-      }
-
-      // #980: guard against htmx not yet loaded. Both htmx.min.js and
-      // dz-alpine.js use `defer`, so document order should make htmx
-      // available — but cache misses or extension-loaded scripts can
-      // still race. Without the guard, the user clicks "Confirm" and
-      // gets a silent ReferenceError instead of a graceful failure.
-      if (typeof htmx === "undefined") {
-        console.error(
-          "[dzConfirm] htmx not yet loaded — confirm action cannot proceed",
-        );
-        this.loading = false;
-        this._trigger = null;
-        return;
-      }
-      try {
-        await htmx.ajax(this.method.toUpperCase(), this.action, opts);
-        this.$refs.dialog.close();
-      } finally {
-        this.loading = false;
-        this._trigger = null;
-      }
-    },
-
-    cancel() {
-      this.$refs.dialog.close();
-      this._trigger = null;
-    },
-  }));
 
   // ── Data Table ──────────────────────────────────────────────────────
 
@@ -1821,159 +1743,6 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
-  // ── Popover ───────────────────────────────────────────────────────────
-
-  Alpine.data("dzPopover", () => ({
-    open: false,
-
-    toggle() {
-      this.open = !this.open;
-    },
-    show() {
-      this.open = true;
-    },
-    hide() {
-      this.open = false;
-      this.$dispatch("dz:close");
-    },
-
-    init() {
-      // Close on Escape
-      this.$el.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && this.open) this.hide();
-      });
-      // Close on click outside
-      document.addEventListener("click", (e) => {
-        if (this.open && !this.$el.contains(e.target)) this.hide();
-      });
-    },
-  }));
-
-  // ── Rich Tooltip ──────────────────────────────────────────────────────
-
-  Alpine.data("dzTooltip", () => ({
-    visible: false,
-    _showTimer: null,
-    _hideTimer: null,
-
-    showDelay() {
-      return parseInt(this.$el.dataset.dzDelay || "200", 10);
-    },
-    hideDelay() {
-      return parseInt(this.$el.dataset.dzHideDelay || "100", 10);
-    },
-
-    show() {
-      clearTimeout(this._hideTimer);
-      this._showTimer = setTimeout(() => {
-        this.visible = true;
-      }, this.showDelay());
-    },
-    hide() {
-      clearTimeout(this._showTimer);
-      this._hideTimer = setTimeout(() => {
-        this.visible = false;
-      }, this.hideDelay());
-    },
-  }));
-
-  // ── Context Menu ──────────────────────────────────────────────────────
-
-  Alpine.data("dzContextMenu", () => ({
-    open: false,
-    x: 0,
-    y: 0,
-
-    onContextMenu(e) {
-      e.preventDefault();
-      this.x = e.clientX;
-      this.y = e.clientY;
-      this.open = true;
-    },
-    close() {
-      this.open = false;
-    },
-
-    init() {
-      this.$el.addEventListener("contextmenu", (e) => this.onContextMenu(e));
-      document.addEventListener("click", () => {
-        if (this.open) this.close();
-      });
-      this.$el.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && this.open) this.close();
-      });
-    },
-  }));
-
-  // ── Command Palette ───────────────────────────────────────────────────
-
-  Alpine.data("dzCommandPalette", () => ({
-    open: false,
-    query: "",
-    selectedIndex: 0,
-    actions: [],
-
-    get filtered() {
-      if (!this.query) return this.actions;
-      const q = this.query.toLowerCase();
-      return this.actions.filter(
-        (a) =>
-          a.label.toLowerCase().includes(q) ||
-          (a.group && a.group.toLowerCase().includes(q)),
-      );
-    },
-
-    toggle() {
-      this.open = !this.open;
-      if (this.open) {
-        this.query = "";
-        this.selectedIndex = 0;
-        this.$nextTick(() => this.$refs.searchInput?.focus());
-      }
-    },
-    close() {
-      this.open = false;
-      this.query = "";
-    },
-    select(action) {
-      this.close();
-      if (action.url) window.location.href = action.url;
-      if (action.handler) action.handler();
-      this.$dispatch("dz:select", { action });
-    },
-
-    onKeyDown(e) {
-      const items = this.filtered;
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        this.selectedIndex = Math.min(this.selectedIndex + 1, items.length - 1);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
-      } else if (e.key === "Enter" && items.length > 0) {
-        e.preventDefault();
-        this.select(items[this.selectedIndex]);
-      }
-    },
-
-    init() {
-      // Parse actions from data attribute
-      try {
-        this.actions = JSON.parse(this.$el.dataset.dzActions || "[]");
-      } catch (_) {
-        this.actions = [];
-      }
-      // Global keyboard shortcut: Cmd+K / Ctrl+K
-      document.addEventListener("keydown", (e) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-          e.preventDefault();
-          this.toggle();
-        }
-        if (e.key === "Escape" && this.open) this.close();
-      });
-    },
-  }));
-
   // ── Slide-Over (Enhanced) ─────────────────────────────────────────────
 
   Alpine.data("dzSlideOver", () => ({
@@ -2007,44 +1776,6 @@ document.addEventListener("alpine:init", () => {
       this.$el.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && this.open) this.hide();
       });
-    },
-  }));
-
-  // ── Toggle Group ──────────────────────────────────────────────────────
-
-  Alpine.data("dzToggleGroup", () => ({
-    value: null,
-    multi: false,
-
-    init() {
-      this.multi = this.$el.dataset.dzMulti === "true";
-      const initial = this.$el.dataset.dzValue;
-      if (initial) {
-        this.value = this.multi ? initial.split(",") : initial;
-      } else {
-        this.value = this.multi ? [] : null;
-      }
-    },
-
-    isSelected(val) {
-      return this.multi ? (this.value || []).includes(val) : this.value === val;
-    },
-
-    toggle(val) {
-      if (this.multi) {
-        const arr = this.value || [];
-        const idx = arr.indexOf(val);
-        this.value = idx >= 0 ? arr.filter((v) => v !== val) : [...arr, val];
-      } else {
-        this.value = this.value === val ? null : val;
-      }
-      // Sync to hidden input
-      const hidden = this.$el.querySelector("input[type=hidden]");
-      if (hidden)
-        hidden.value = this.multi
-          ? (this.value || []).join(",")
-          : this.value || "";
-      this.$dispatch("dz:select", { value: this.value });
     },
   }));
 
