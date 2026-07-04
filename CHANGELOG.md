@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.68] - 2026-07-04
+## [0.93.69] - 2026-07-04
+
+### Changed
+- **Workspace overflow "More" menu converged onto the HM `menu` Hyperpart (Bucket B).** The `More ⋯` overflow dropdown (`_render_shell.py`) was a bespoke `.dz-workspace-more` family; it's now the HM `.dz-menu` disclosure (`.dz-menu` / `.dz-menu__panel` / `.dz-menu__item`). Both were already the same JS-free native `<details>` pattern, so this is a pure class/markup repoint — the trigger adopts `.dz-button data-dz-variant="outline"` (the HM summary idiom). Dropped the `role="menu"`/`role="menuitem"` ARIA roles: a `<details>` can't back the ARIA menu keyboard contract, so the honest disclosure (matching the HM menu/tabs candor) is an a11y correctness improvement. The `data-test-id="dz-workspace-more"` selector is kept.
+
+### Removed
+- Bespoke `.dz-workspace-more*` CSS (dashboard.css) — superseded by the ingested HM `.dz-menu`. Also deleted the dead `.dz-dropdown-root/-panel/-item` family (fragments.css) — a dormant Alpine-dropdown remnant with no live emitter.
+
+### Agent Guidance
+- **Emit the HM `.dz-menu` disclosure for dropdown menus** (native `<details>` + `.dz-menu__panel` + `.dz-menu__item`, no ARIA menu roles), not a bespoke dropdown family. Dazzle ships no bespoke menu/dropdown CSS.
 
 ### Changed
 - **Empty-state convergence (Bucket B) — Dazzle now renders one empty-state form via the HM `empty-state` Hyperpart.** The render layer previously emitted two markup forms: the typed substrate emitted the HM `__` form (`.dz-empty-state__icon/__title/__description/__action`), while the table/chart read-only empties emitted a legacy single-dash form (`.dz-empty-state-icon`/`.dz-empty-state-message`). Repointed the three legacy emit sites (`_render_tables.py` ×2, `_render_charts.py` ×1) to the `__` form and deleted Dazzle's bespoke `.dz-empty-state`/`-icon`/`-message`/`-cta` rules from `fragments.css` — the `.dz-empty-state` primitive is now owned solely by the ingested HM definition (`components/fragment-primitives.css`, consolidated in 0.93.67). Both forms now render identically (centered, 2rem muted icon, muted text — verified in a browser); the only visual delta is the table/chart empty icon converging from 3rem to the HM 2rem. No test/golden pinned the legacy classes.

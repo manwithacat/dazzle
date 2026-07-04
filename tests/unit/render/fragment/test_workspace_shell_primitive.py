@@ -152,9 +152,12 @@ def test_workspace_shell_renders_overflow_details_menu() -> None:
             ),
         )
     )
-    assert '<details class="dz-workspace-more" data-test-id="dz-workspace-more">' in html
-    assert '<a href="/api/export" hx-boost="true" class="dz-workspace-more__item"' in html
+    # HM `menu` Hyperpart: native <details> disclosure, `.dz-menu` classes, no
+    # ARIA menu roles. The `data-test-id` is kept as the stable selector.
+    assert '<details class="dz-menu" data-test-id="dz-workspace-more">' in html
+    assert '<a href="/api/export" hx-boost="true" class="dz-menu__item"' in html
     assert ">Archive all</a>" in html
+    assert 'role="menu"' not in html and 'role="menuitem"' not in html
     # The overflow menu lives inside the primary-actions row.
     assert html.index("dz-workspace-primary-actions") < html.index("dz-workspace-more")
 

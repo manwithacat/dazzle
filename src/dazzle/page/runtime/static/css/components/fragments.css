@@ -2946,42 +2946,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* ─────────────────────────── dropdown (dormant) ─────────────────
- * Used by components/alpine/dropdown.html. Minimal chrome — Alpine
- * controls visibility via x-show/x-cloak. */
-
-.dz-dropdown-root {
-  position: relative;
-  display: inline-block;
-}
-
-.dz-dropdown-panel {
-  position: absolute;
-  inset-block-start: calc(100% + 0.25rem);
-  inset-inline-start: 0;
-  z-index: 30;
-  min-inline-size: 12rem;
-  background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-md);
-  padding-block: var(--space-xs);
-}
-
-.dz-dropdown-item {
-  display: block;
-  padding-inline: var(--space-md);
-  padding-block: var(--space-xs);
-  font-size: var(--text-sm);
-  color: var(--colour-text);
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.dz-dropdown-item:hover {
-  background: var(--colour-bg);
-}
-
 /* ─────────────────────────── island (dormant) ───────────────────
  * Generic dashboard island wrapper — used by components/island.html
  * (UX-059), no production consumer. */

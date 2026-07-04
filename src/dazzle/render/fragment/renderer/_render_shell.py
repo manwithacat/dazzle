@@ -483,28 +483,31 @@ class _RenderShellMixin:
         return f' hx-headers="{ctx.escape_attr(payload)}"'
 
     def _emit_workspace_overflow(self, w: WorkspaceShell, ctx: RenderContext) -> str:
-        """Render the 3a `More ⋯` overflow menu (#1491) — a native `<details>`
-        dropdown holding the actions demoted past the prominence budget. JS-free
-        (uses the browser's `<details>` open/close); empty when nothing overflowed
-        (the common ≤budget heading), so the output stays byte-identical there."""
+        """Render the 3a `More ⋯` overflow menu (#1491) — the HM `menu`
+        Hyperpart: a native `<details>` disclosure holding the actions demoted
+        past the prominence budget. JS-free (the browser owns open/close); empty
+        when nothing overflowed (the common ≤budget heading), so the output stays
+        byte-identical there. Honest disclosure — no `role="menu"`/`menuitem"`
+        (a `<details>` can't back the ARIA menu keyboard contract), matching the
+        HM menu/tabs candor. The `data-test-id` is kept as the stable hook."""
         if not w.overflow_actions:
             return ""
         items = "".join(
             f'<a href="{ctx.escape_attr(a.route)}" hx-boost="true" '
-            f'class="dz-workspace-more__item" role="menuitem"'
+            f'class="dz-menu__item"'
             f"{self._usage_action_attr(w.workspace_name, a.route, ctx)}>"
             f"{ctx.escape(a.label)}</a>"
             for a in w.overflow_actions
         )
         return (
-            f'<details class="dz-workspace-more" data-test-id="dz-workspace-more">'
-            f'<summary class="dz-workspace-more__trigger" aria-label="More actions">'
+            f'<details class="dz-menu" data-test-id="dz-workspace-more">'
+            f'<summary class="dz-button" data-dz-variant="outline" aria-label="More actions">'
             f'<svg width="16" height="16" fill="none" stroke="currentColor" '
             f'viewBox="0 0 24 24" aria-hidden="true">'
             f'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" '
             f'd="M12 5h.01M12 12h.01M12 19h.01"/></svg>'
             f"<span>More</span></summary>"
-            f'<div class="dz-workspace-more__menu" role="menu">{items}</div>'
+            f'<div class="dz-menu__panel">{items}</div>'
             f"</details>"
         )
 
