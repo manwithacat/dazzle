@@ -931,20 +931,10 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   color: var(--colour-text-muted);
 }
 
-/* --- Empty State --- */
-
-.empty-state {
-  text-align: center;
-  padding: 3rem 1.5rem;
-  color: var(--colour-text-muted); /* was var(--colour-text-muted) fossil */
-}
-
-.empty-state svg {
-  width: 3rem;
-  height: 3rem;
-  margin: 0 auto 1rem;
-  opacity: 0.4;
-}
+/* Empty State — consolidated into components/fragment-primitives.css (the
+ * single home for the `.empty-state` primitive). The base container +
+ * `__` parts now live together there; the broad `.empty-state svg` fossil
+ * was dropped in favour of the `__icon` wrapper contract. */
 
 /* --- Action Bar --- */
 
@@ -3808,6 +3798,18 @@ input.switch:checked::before {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+}
+
+/* Empty state — the "no data" primitive. Consolidated here (the single home)
+ * from the legacy base/design-system.css: the base container + `__` parts now
+ * live together. The old broad `.empty-state svg { 3rem }` fossil was
+ * dropped — it fought `.empty-state__icon` on specificity (0,1,1 vs 0,1,0),
+ * so a bare-svg icon rendered 3rem while a wrapped `__icon svg` rendered 2rem.
+ * The `__icon` wrapper (2rem) is now the one icon contract. */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--colour-text-muted);
 }
 
 /* Empty-state icon (TASTE-8): quiet registry glyph above the message. */

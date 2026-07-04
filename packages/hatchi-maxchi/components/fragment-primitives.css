@@ -695,6 +695,18 @@
   gap: var(--space-sm);
 }
 
+/* Empty state — the "no data" primitive. Consolidated here (the single home)
+ * from the legacy base/design-system.css: the base container + `__` parts now
+ * live together. The old broad `.dz-empty-state svg { 3rem }` fossil was
+ * dropped — it fought `.dz-empty-state__icon` on specificity (0,1,1 vs 0,1,0),
+ * so a bare-svg icon rendered 3rem while a wrapped `__icon svg` rendered 2rem.
+ * The `__icon` wrapper (2rem) is now the one icon contract. */
+.dz-empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--colour-text-muted);
+}
+
 /* Empty-state icon (TASTE-8): quiet registry glyph above the message. */
 .dz-empty-state__title {
   color: var(--colour-text); /* tranche-1 nit: was too dim on dark surfaces */

@@ -1,4 +1,4 @@
-/* dazzle v0.93.66 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.67 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -631,17 +631,6 @@ color: var(--colour-text);
 }
 .dz-page-header .text-sm {
 color: var(--colour-text-muted);
-}
-.dz-empty-state {
-text-align: center;
-padding: 3rem 1.5rem;
-color: var(--colour-text-muted);
-}
-.dz-empty-state svg {
-width: 3rem;
-height: 3rem;
-margin: 0 auto 1rem;
-opacity: 0.4;
 }
 .dz-action-bar {
 display: flex;
@@ -2689,6 +2678,11 @@ display: block;
 display: flex;
 align-items: center;
 gap: var(--space-sm);
+}
+.dz-empty-state {
+text-align: center;
+padding: 3rem 1.5rem;
+color: var(--colour-text-muted);
 }
 .dz-empty-state__title {
 color: var(--colour-text);

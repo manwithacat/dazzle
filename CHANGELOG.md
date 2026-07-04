@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.93.66] - 2026-07-04
+## [0.93.67] - 2026-07-04
+
+### Changed
+- **HM `empty-state` primitive consolidated into one coherent definition (HM package 0.1.2 → 0.1.3).** The `.dz-empty-state` primitive was defined across two HM files — the legacy `base/design-system.css` (base container + a broad `.dz-empty-state svg { 3rem }`) and the modern `components/fragment-primitives.css` (`__title`, `__icon { 2rem }`, `__icon svg`). The broad `svg` rule fought `__icon` on specificity ((0,1,1) vs (0,1,0)), so a bare-svg icon rendered 3rem while a wrapped `__icon svg` rendered 2rem — the size depended on markup. Moved the base container into `fragment-primitives.css` (the single home) and dropped the fossil `svg` rule; the `__icon` wrapper (2rem) is now the one icon contract. Visually neutral for the HM gallery (it uses the `__icon` wrapper, where `__icon svg` already won — full HM visual suite green, no baseline change). Dazzle's substrate empty-state icon (emitted as a bare `<svg class="dz-empty-state__icon">`) now correctly resolves to the 2rem `__icon` size instead of the 3rem fossil. This de-tangles the cascade ahead of the eventual Dazzle-side empty-state convergence (Bucket B of the HM migration).
+
+### Agent Guidance
+- **HM `.dz-empty-state` now lives solely in `components/fragment-primitives.css`.** Style the empty-state icon via the `.dz-empty-state__icon` wrapper (2rem), not a broad `.dz-empty-state svg` rule. The legacy `base/design-system.css` no longer carries empty-state rules.
 
 ### Fixed
 - **HM `confirm` Hyperpart was silently degrading to native `window.confirm` under htmx-4 (fleet-wide).** htmx-4 changed the `htmx:confirm` event detail shape — the config moved under `evt.detail.ctx` (`sourceElement`, `confirm`) and the continuation split into `issueRequest()`/`dropRequest()`. `dz-confirm.js` read the htmx-2 shape (`evt.detail.elt` / `evt.detail.question`), got `undefined`, and bailed — so every `hx-confirm` action lost its designed dialog and fell back to the native browser confirm. Destructive actions were still gated, but the styled dialog never rendered. Fixed `dz-confirm.js` to read both shapes and to call `dropRequest()` on cancel/Esc (HM package 0.1.1 → 0.1.2). Root-caused by dumping the real htmx-4 event detail; verified end-to-end in a real browser against the rebuilt bundle under real htmx-4 (dialog opens with the correct message, Confirm issues the request, Cancel/Esc drop it).
