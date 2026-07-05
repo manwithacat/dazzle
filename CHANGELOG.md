@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.82] - 2026-07-05
+
+### Added
+- **`dz-grid` — a11y pass** (HM package 0.1.18 → 0.1.19). (1) **Result-window announcer**: a visually-hidden `[data-dz-grid-announce]` polite live region in the grid root; after every swap the controller mirrors the server-rendered footer summary into it ("Showing 1-4 of 6") — the footer itself is repainted wholesale, which screen readers can't track. Only announced on change (no SR noise). (2) **Pagination focus restoration**: a page-control click stores its INTENT (prev/next/goto-N) on the root; after the swap settles, focus lands on the repainted equivalent control — or the current-page button when the equivalent is now disabled — instead of silently falling to `<body>`. 2 new behaviour tests (Chromium + WebKit).
+
+### Fixed
+- **HM controllers were deaf to the real htmx-4 events — dual-bound + mock made faithful** (the v0.93.66 confirm-shape bug class, second instance). The vendored htmx-4 fires ONLY colon-namespaced events (`htmx:after:swap`, `htmx:after:settle`, `htmx:config:request`) and nests the request config under `detail.ctx` with a FormData `ctx.request.body` — there is no `detail.parameters`. The `dz-grid` listeners (including the v0.93.78 bulk payload injection) and `dz-command`'s results-reset bound only the legacy camelCase names, so they were latently dead for any real htmx-4 page; the HM gallery mock fired the legacy names, masking it. Fixed: all three grid handlers + dz-command's reset are **dual-bound** (htmx-4 colon name + legacy camelCase); the bulk payload delivers via `detail.parameters` when present (htmx ≤2) or delete-then-append into the `ctx.request.body` FormData (htmx-4 — mutation confirmed to reach the wire against the vendored source; arrays repeat the key, keys still win over the query echo); the **mock now fires the real htmx-4 shapes** end-to-end. Focus restoration listens on `after:settle` (not `after:swap`): under the OOB footer contract the tbody's swap event fires while the nav is still stale, and focusing a stale button would be evicted a beat later.
+
+### Agent Guidance
+- **htmx-4 event names are colon-namespaced.** `htmx:after:swap` / `htmx:after:settle` / `htmx:config:request` / `htmx:before:request` — the camelCase `htmx:afterSwap` family is htmx-2 legacy and NEVER fires from the vendored htmx-4. When a controller binds an htmx event, dual-bind both names (the dz-confirm precedent) and read the config through `detail.ctx || detail`. To inject request params under htmx-4, mutate the `ctx.request.body` FormData during `config:request` (delete-then-append; htmx converts it to URLSearchParams after the event). Keep gallery mocks matched to the REAL htmx-4 shapes — a legacy-shaped mock green-lights dead listeners (bitten twice now: v0.93.66 confirm, this). Anything that must run after the OOB parts of a response are in place belongs on `after:settle`, not `after:swap`. Form-encoding nuance: an empty array key (e.g. `excluded_ids` with no exclusions) is ABSENT from the POST — servers default it, never KeyError.
+
 ## [0.93.81] - 2026-07-05
 
 ### Added

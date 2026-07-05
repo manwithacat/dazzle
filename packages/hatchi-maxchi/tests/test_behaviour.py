@@ -740,6 +740,57 @@ def test_grid_page_size_keeps_all_matching(page) -> None:  # type: ignore[no-unt
     )
 
 
+def test_grid_announces_result_window_changes(page) -> None:  # type: ignore[no-untyped-def]
+    """The footer is server-repainted wholesale, so screen readers can't track
+    it — the controller mirrors the result-window summary into a visually-hidden
+    polite live region on every data change."""
+    announce = "[data-grid-announce]"
+    assert page.inner_text(announce, timeout=3000).strip() == "Showing 1-4 of 6", (
+        "hydration announces the initial window"
+    )
+    assert page.get_attribute(announce, "aria-live") == "polite"
+    assert page.eval_on_selector(
+        announce,
+        "e => { const r = e.getBoundingClientRect(); return r.width <= 1 && r.height <= 1; }",
+    ), "the announcer must be visually hidden (SR-only box)"
+
+    page.select_option("[data-grid-filter='plan']", "Pro")
+    page.wait_for_timeout(150)
+    assert page.inner_text(announce).strip() == "Showing 1-2 of 2", (
+        "a filter change announces the narrowed window"
+    )
+
+    page.fill("[data-grid-search]", "zzz")
+    page.wait_for_timeout(400)
+    assert page.inner_text(announce).strip() == "Showing 0 of 0", (
+        "an empty result announces too (the SR user hears the dead end)"
+    )
+
+
+def test_grid_pagination_restores_keyboard_focus(page) -> None:  # type: ignore[no-untyped-def]
+    """Every page change repaints the footer wholesale — without restoration,
+    the keyboard user's focus silently falls to <body> and they lose their
+    place. Focus must land on the repainted equivalent control (or the
+    current-page button when the equivalent is now disabled)."""
+    page.click("[data-grid-goto='2']")
+    page.wait_for_timeout(150)
+    focused = page.evaluate(
+        "() => { const a = document.activeElement;"
+        " return a ? (a.getAttribute('data-grid-goto') || a.tagName) : null; }"
+    )
+    assert focused == "2", f"focus must land on the repainted goto control: {focused}"
+
+    # prev back to page 1: the repainted prev is DISABLED there, so focus falls
+    # through to the current-page button instead of vanishing to <body>.
+    page.click("[data-grid-page-prev]")
+    page.wait_for_timeout(150)
+    focused = page.evaluate(
+        "() => { const a = document.activeElement;"
+        " return a ? (a.getAttribute('data-grid-goto') || a.tagName) : null; }"
+    )
+    assert focused == "1", f"disabled-equivalent falls back to the current page: {focused}"
+
+
 def test_grid_search_debounce_coalesces_keystrokes(page) -> None:  # type: ignore[no-untyped-def]
     """A burst of keystrokes makes exactly ONE request, not one per key. Counts
     the `dz-grid:refresh` events (un-prefixed `grid:refresh` in the gallery). A

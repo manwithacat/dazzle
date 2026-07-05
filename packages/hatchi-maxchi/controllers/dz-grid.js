@@ -11,7 +11,8 @@
  * tbody swap (the exact thing Alpine's reactive scope did NOT survive). The
  * *derived* state — the root's `data-dz-bulk-count`, the summary text, and the
  * select-all tri-state — is a projection of those checkboxes, so it is
- * recomputed on every `change`/`click` AND re-synced after any `htmx:afterSwap`
+ * recomputed on every `change`/`click` AND re-synced after any swap (htmx-4
+ * `htmx:after:swap`; the legacy `htmx:afterSwap` is bound too)
  * (a swap changes the row set, so the projection must be rebuilt from the
  * surviving boxes). Row identity across a re-sort/paginate: idiomorph preserves a
  * checkbox by DOM position UNLESS its row carries a stable `id`, which idiomorph
@@ -46,7 +47,9 @@
  *                  `all_matching_selected`, `excluded_ids` (bulk-payload keys) are
  *                  reserved — don't use them as a `data-dz-grid-filter` value.
  *   - bulk:        `[data-dz-grid-bulk-action="<action>"]` (a button, usually
- *                  with `hx-post` + `hx-confirm`) — on `htmx:configRequest` the
+ *                  with `hx-post` + `hx-confirm`) — on the config-request
+ *                  event (htmx-4 `htmx:config:request` / legacy
+ *                  `htmx:configRequest`) the
  *                  controller injects the selection payload (action, selected
  *                  ids, all-matching/excluded shape, current-query echo) so the
  *                  server re-scopes + re-validates, never trusting client ids.
@@ -66,6 +69,14 @@
  *                  `[data-dz-grid-page-next]` (server-rendered footer buttons)
  *                  set it + refresh (`page=` in the query); the server disables
  *                  prev/next at the edges. Sort / filter / search reset it to 1.
+ *   - announcer:   `[data-dz-grid-announce]` (a visually-hidden aria-live
+ *                  region, static in the markup) — after every swap the
+ *                  controller mirrors the footer's result-window summary into
+ *                  it ("Showing 1-4 of 6"), because the footer itself is
+ *                  repainted wholesale, which screen readers can't track.
+ *                  Page-control focus is restored onto the repainted
+ *                  equivalent (or the current-page button when that control
+ *                  is now disabled) so keyboard focus never falls to <body>.
  *   - page size:   `[data-dz-grid-page-size]` (a select) re-windows the same
  *                  matched set — `page_size=` joins the query, the change
  *                  resets to page 1, and an all-matching selection SURVIVES
@@ -152,6 +163,21 @@
     if (!nav) return null;
     var t = parseInt(nav.getAttribute("data-dz-grid-total"), 10);
     return isNaN(t) ? null : t;
+  }
+
+  // Mirror the server-rendered result-window summary ("1-4 of 6") into the
+  // visually-hidden `[data-dz-grid-announce]` live region — the footer itself
+  // is repainted wholesale, which screen readers can't track. Only on CHANGE:
+  // repeating an identical announcement is SR noise.
+  function announce(root) {
+    var out = root.querySelector("[data-dz-grid-announce]");
+    if (!out) return;
+    var summary = root.querySelector(
+      "[data-dz-grid-pagination] .dz-pagination-summary",
+    );
+    if (!summary) return;
+    var msg = "Showing " + summary.textContent.trim();
+    if (out.textContent !== msg) out.textContent = msg;
   }
 
   function sync(root) {
@@ -390,6 +416,15 @@
         else if (goBtn.hasAttribute("data-dz-grid-page-next")) to = cur + 1;
         else to = parseInt(goBtn.getAttribute("data-dz-grid-goto"), 10) || 1;
         proot.setAttribute("data-dz-grid-page", String(to));
+        // The swap repaints the footer wholesale, destroying the focused
+        // control — note the INTENT (not the node) so afterSwap can restore
+        // focus onto the repainted equivalent. Ephemeral UI state, so a JS
+        // property (not an attribute) is fine: it never has to survive a morph.
+        proot._dzRefocus = goBtn.hasAttribute("data-dz-grid-page-prev")
+          ? "prev"
+          : goBtn.hasAttribute("data-dz-grid-page-next")
+            ? "next"
+            : "goto:" + to;
         refresh(proot);
       }
       return;
@@ -431,31 +466,39 @@
   });
 
   // ── Bulk actions: add the selection to the request ─────────────────────
-  // A `[data-dz-grid-bulk-action]` button posts (after its confirm). On
-  // `htmx:configRequest` we inject the selection payload so the SERVER re-scopes
-  // the action to exactly what the user was viewing — never trusting the client
-  // ids alone (§15). Payload: the action, the selected row ids, the
-  // all-matching / excluded shape (all_matching lands with the paging slice),
-  // and an echo of the current query (search / sort / filters).
-  document.addEventListener("htmx:configRequest", function (evt) {
+  // A `[data-dz-grid-bulk-action]` button posts (after its confirm). On the
+  // config-request event we inject the selection payload so the SERVER
+  // re-scopes the action to exactly what the user was viewing — never trusting
+  // the client ids alone (§15). Payload: the action, the selected row ids, the
+  // all-matching / excluded shape, and an echo of the current query
+  // (search / sort / filters).
+  //
+  // htmx-4 vs htmx-2 COMPAT (the v0.93.66 confirm lesson): htmx-4 renamed the
+  // event `htmx:configRequest` → `htmx:config:request` AND moved the config
+  // under `detail.ctx` with a FormData `ctx.request.body` (there is no
+  // `detail.parameters`). We bind BOTH names and deliver via whichever shape
+  // the event carries. Real htmx fires exactly ONE of the two names per
+  // request — the handler is not double-fire safe (the mode-clear below runs
+  // once) and doesn't need to be.
+  function onConfigRequest(evt) {
     var d = evt.detail || {};
-    var el = d.elt || evt.target;
+    var ctx = d.ctx || d; // htmx-4 nests the config under detail.ctx
+    var el = d.elt || ctx.sourceElement || evt.target;
     var btn = el && el.closest && el.closest("[data-dz-grid-bulk-action]");
     if (!btn) return;
     var root = gridOf(btn);
     if (!root) return;
-    var p = d.parameters || (d.parameters = {});
-    // Echo the current query FIRST — the filter/sort/search the rows came from —
-    // so the server applies the action to exactly those rows, re-validating
-    // server-side. The bulk-payload keys are written LAST so they always win: a
-    // filter named `action` (etc.) can't clobber the operation name.
+    // Assemble the payload: the query echo FIRST — the filter/sort/search the
+    // rows came from — then the bulk keys LAST so they always win (a filter
+    // named `action` etc. can't clobber the operation name).
+    var payload = {};
     var body = root.querySelector("[data-dz-grid-body]");
     var qs = ((body && body.getAttribute("hx-get")) || "").split("?")[1] || "";
     qs.split("&").forEach(function (kv) {
       if (!kv) return;
       var i = kv.indexOf("=");
       var k = decodeURIComponent(i < 0 ? kv : kv.slice(0, i));
-      p[k] = i < 0 ? "" : decodeURIComponent(kv.slice(i + 1));
+      payload[k] = i < 0 ? "" : decodeURIComponent(kv.slice(i + 1));
     });
     var boxes = rowBoxes(root);
     var ids = [];
@@ -465,24 +508,50 @@
         if (id) ids.push(id);
       }
     }
-    p.action = btn.getAttribute("data-dz-grid-bulk-action");
-    p.selected_ids = ids;
-    p.all_matching_selected = allMatching(root) ? "true" : "false";
-    p.excluded_ids = readExcluded(root);
+    payload.action = btn.getAttribute("data-dz-grid-bulk-action");
+    payload.selected_ids = ids;
+    payload.all_matching_selected = allMatching(root) ? "true" : "false";
+    payload.excluded_ids = readExcluded(root);
     // The action consumes the selection (spec: "clears unless configured
     // otherwise"): exit all-matching NOW, at payload-capture time, so the
     // refreshed rows that follow the action arrive unselected instead of
-    // being re-checked by the afterSwap hydration. Trade-off (deliberate):
+    // being re-checked by the after-swap hydration. Trade-off (deliberate):
     // if the server rejects the action, the all-matching selection is gone.
     if (allMatching(root)) clearAllMatching(root);
-  });
+    if (d.parameters) {
+      // htmx ≤2: a plain parameters object.
+      Object.keys(payload).forEach(function (k) {
+        d.parameters[k] = payload[k];
+      });
+    } else if (ctx.request) {
+      // htmx-4: append to the request's form body. Delete-then-append keeps
+      // the keys-win semantics; arrays repeat the key (form encoding).
+      if (!ctx.request.body || typeof ctx.request.body.append !== "function") {
+        ctx.request.body = new FormData();
+      }
+      var fd = ctx.request.body;
+      Object.keys(payload).forEach(function (k) {
+        fd.delete(k);
+        var v = payload[k];
+        if (Array.isArray(v)) {
+          for (var j = 0; j < v.length; j++) fd.append(k, v[j]);
+        } else {
+          fd.append(k, v);
+        }
+      });
+    }
+  }
+  document.addEventListener("htmx:config:request", onConfigRequest); // htmx 4
+  document.addEventListener("htmx:configRequest", onConfigRequest); // htmx ≤2
 
   // A tbody swap changes the row set: idiomorph preserves each checkbox's
   // `.checked` in place, but the derived count / bar / select-all must be
   // rebuilt from the surviving boxes — else the root could say "2 selected"
   // after those 2 rows were swapped out. Re-sync every grid on the page (cheap;
   // no-op where nothing changed). Harmless if htmx never fires this event.
-  document.addEventListener("htmx:afterSwap", function () {
+  // Bound under BOTH names: htmx-4 fires `htmx:after:swap`, htmx ≤2 fired
+  // `htmx:afterSwap`.
+  function onAfterSwap() {
     var grids = document.querySelectorAll("[data-dz-grid]");
     for (var i = 0; i < grids.length; i++) {
       // In all-matching mode freshly-rendered rows arrive SELECTED (minus the
@@ -508,6 +577,50 @@
         var pnum = parseInt(curBtn.getAttribute("data-dz-grid-goto"), 10);
         if (pnum) grids[i].setAttribute("data-dz-grid-page", String(pnum));
       }
+      // Announce the (possibly new) result window to screen readers. Safe on
+      // after-swap even under the OOB footer contract: while the nav is still
+      // stale the text hasn't changed (no announcement); the OOB nav's own
+      // after-swap then announces the real change.
+      announce(grids[i]);
     }
-  });
+  }
+  document.addEventListener("htmx:after:swap", onAfterSwap); // htmx 4
+  document.addEventListener("htmx:afterSwap", onAfterSwap); // htmx ≤2
+
+  // Focus restoration runs on after-SETTLE, not after-swap: with the OOB
+  // footer contract the tbody's after-swap fires while the nav is still STALE
+  // — focusing one of its buttons would be undone a beat later when the OOB
+  // swap evicts it (focus → <body>, the exact failure this exists to prevent).
+  // after-settle fires once, after ALL swaps (OOB included) settle, so the nav
+  // queried here is final. The gallery mock fires it after its footer repaint
+  // for the same reason. Restore the same-intent control if still usable, else
+  // the current-page button (e.g. prev clicked onto page 1, where prev is
+  // disabled). Consuming the marker twice is a no-op (it's nulled on first
+  // read), so the dual binding is safe even if both names ever fired.
+  function onAfterSettle() {
+    var grids = document.querySelectorAll("[data-dz-grid]");
+    for (var i = 0; i < grids.length; i++) {
+      var want = grids[i]._dzRefocus;
+      if (!want) continue;
+      grids[i]._dzRefocus = null;
+      var nav = grids[i].querySelector("[data-dz-grid-pagination]");
+      if (!nav) continue;
+      var el = null;
+      if (want === "prev") {
+        el = nav.querySelector("[data-dz-grid-page-prev]:not([disabled])");
+      } else if (want === "next") {
+        el = nav.querySelector("[data-dz-grid-page-next]:not([disabled])");
+      } else {
+        el = nav.querySelector(
+          "[data-dz-grid-goto='" + want.slice(5) + "']:not([disabled])",
+        );
+      }
+      if (!el) {
+        el = nav.querySelector("[data-dz-grid-goto][aria-current='page']");
+      }
+      if (el) el.focus();
+    }
+  }
+  document.addEventListener("htmx:after:settle", onAfterSettle); // htmx 4
+  document.addEventListener("htmx:afterSettle", onAfterSettle); // htmx ≤2
 })();

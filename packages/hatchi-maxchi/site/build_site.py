@@ -373,8 +373,12 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     // overlay never visually renders during gallery hydration (real htmx is
     // async, so it does). The CSS rule itself is exercised by
     // test_grid_loading_overlay_is_wired_to_htmx_request, which injects the class.
+    // NB event NAMES are the htmx-4 colon-namespaced family (htmx:after:swap,
+    // NOT htmx-2's htmx:afterSwap) — the vendored htmx-4 fires ONLY these. A
+    // mock firing the legacy names masks dead listeners fleet-wide (the
+    // v0.93.66 confirm-shape lesson, second verse).
     el.classList.add("htmx-request");
-    fire(el, "htmx:beforeRequest", { elt: el });
+    fire(el, "htmx:before:request", { elt: el });
     if (target) {
       target.innerHTML = body;
       // The server re-renders the pagination footer alongside the rows (in a
@@ -384,18 +388,24 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       if (url.split("?")[0] === "/mock/grid/rows") {
         updateGridFooter(target.closest("[data-dz-grid]"), url);
       }
-      fire(target, "htmx:afterSwap", { elt: target });
+      fire(target, "htmx:after:swap", { elt: target });
+      // Real htmx fires after:settle once, after ALL swaps (OOB included)
+      // settle — it's the only event where the OOB footer is guaranteed
+      // final, so focus restoration listens there, not on after:swap.
+      fire(target, "htmx:after:settle", { elt: target });
     }
     el.classList.remove("htmx-request");
-    fire(el, "htmx:afterRequest", { elt: el });
+    fire(el, "htmx:after:request", { elt: el });
   }
 
   // Bulk action POST (e.g. Delete). Mirrors the server contract §15: fire
-  // htmx:configRequest so the grid controller injects the selection payload
-  // (action + selected_ids + all_matching/excluded + a query echo), then apply
-  // it and swap the refreshed rows for the grid's CURRENT query. A real server
-  // re-validates permissions + re-scopes to the query and never trusts the
-  // client ids; the mock just deletes the named rows from its data.
+  // htmx:config:request (the REAL htmx-4 shape: config nested under
+  // detail.ctx, the body a FormData) so the grid controller injects the
+  // selection payload (action + selected_ids + all_matching/excluded + a
+  // query echo), then apply it and swap the refreshed rows for the grid's
+  // CURRENT query. A real server re-validates permissions + re-scopes to the
+  // query and never trusts the client ids; the mock just deletes the named
+  // rows from its data.
   // The bulk-payload keys, as distinct from the echoed query params.
   var BULK_KEYS = { action: 1, selected_ids: 1, all_matching_selected: 1, excluded_ids: 1 };
   function applyBulkDelete(params) {
@@ -417,24 +427,33 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     GRID_ROWS = GRID_ROWS.filter(function (r) { return doomed.indexOf(r.id) < 0; });
   }
   function doPost(el) {
-    var params = { selected_ids: [], excluded_ids: [] };
-    fire(el, "htmx:configRequest", { parameters: params, elt: el });
-    window.__lastBulk = params; // expose the payload for the gallery tests
     var url = el.getAttribute("hx-post") || "";
+    // Real htmx-4 config:request: the config lives under detail.ctx and the
+    // request body is form data the listener APPENDS to (there is no
+    // detail.parameters object — that was htmx ≤2).
+    var fd = new FormData();
+    var ctx = { sourceElement: el, request: { method: "post", action: url, body: fd } };
+    fire(el, "htmx:config:request", { ctx: ctx });
+    // Decode the form body back into the mock server's params (the known
+    // array keys via getAll — form encoding repeats them).
+    var params = { selected_ids: fd.getAll("selected_ids"), excluded_ids: fd.getAll("excluded_ids") };
+    fd.forEach(function (v, k) { if (!(k in params)) params[k] = v; });
+    window.__lastBulk = params; // expose the payload for the gallery tests
     if (url.split("?")[0] === "/mock/grid/bulk") applyBulkDelete(params);
     var root = el.closest && el.closest("[data-dz-grid]");
     var bodyEl = root && root.querySelector("[data-dz-grid-body]");
     var target = bodyEl || document.querySelector(el.getAttribute("hx-target") || "");
     el.classList.add("htmx-request");
-    fire(el, "htmx:beforeRequest", { elt: el });
+    fire(el, "htmx:before:request", { elt: el });
     if (target) {
       var gurl = bodyEl ? bodyEl.getAttribute("hx-get") : "/mock/grid/rows";
       target.innerHTML = renderGridRows(gurl);
       updateGridFooter(root, gurl); // the total changed → repaint the footer
-      fire(target, "htmx:afterSwap", { elt: target });
+      fire(target, "htmx:after:swap", { elt: target });
+      fire(target, "htmx:after:settle", { elt: target }); // after ALL swaps, as real htmx
     }
     el.classList.remove("htmx-request");
-    fire(el, "htmx:afterRequest", { elt: el });
+    fire(el, "htmx:after:request", { elt: el });
   }
 
   // dz-grid:refresh — a custom event the grid controller fires on the tbody
@@ -522,9 +541,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   // hx-trigger="load": fire once when the element is ready (the grid tbody
   // hydrates its rows this way). Deferred via setTimeout(0): this mock IIFE is
   // concatenated BEFORE the controllers in the built bundle, so a synchronous
-  // call here would fire the swap's htmx:afterSwap before dz-grid's delegated
+  // call here would fire the swap's htmx:after:swap before dz-grid's delegated
   // listener is attached. A macrotask runs after every controller IIFE has
-  // executed, so the initial afterSwap re-sync lands (matters once rows can
+  // executed, so the initial after:swap re-sync lands (matters once rows can
   // arrive pre-selected, e.g. URL-restored selection).
   var fireLoads = function () {
     var els = document.querySelectorAll("[hx-get][hx-trigger]");

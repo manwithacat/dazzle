@@ -110,8 +110,10 @@
     }
   });
 
-  // Reset selection whenever htmx swaps new results in.
-  document.addEventListener("htmx:afterSwap", function (evt) {
+  // Reset selection whenever htmx swaps new results in. Bound under BOTH
+  // names: htmx-4 fires `htmx:after:swap`, htmx ≤2 fired `htmx:afterSwap` —
+  // binding only the legacy name left this dead under the vendored htmx-4.
+  function onResultsSwap(evt) {
     var dlg = palette();
     if (dlg && dlg.open && dlg.contains(evt.target)) {
       if (items(dlg).length) {
@@ -122,7 +124,9 @@
         if (inp) inp.removeAttribute("aria-activedescendant");
       }
     }
-  });
+  }
+  document.addEventListener("htmx:after:swap", onResultsSwap); // htmx 4
+  document.addEventListener("htmx:afterSwap", onResultsSwap); // htmx ≤2
 
   // Pointer dismiss — the ONLY way to close on a touch device with no Esc
   // key. Two paths: the explicit close button (a native <button>, so its

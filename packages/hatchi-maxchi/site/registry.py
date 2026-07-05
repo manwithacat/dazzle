@@ -308,6 +308,11 @@ HYPERPARTS: list[Hyperpart] = [
         '<p class="dz-table-empty-hint">Adjust the filters to widen your search.</p>'
         "</div>"
         "</div></div>"  # close .dz-table-scroll-x + .dz-table-scroll
+        # SR announcer: the footer is repainted wholesale, so screen readers
+        # can't track it — dz-grid.js mirrors the result-window summary here
+        # after every data change ("Showing 1-4 of 6"). Visually hidden.
+        '<span class="dz-grid-announce" data-dz-grid-announce aria-live="polite" '
+        'aria-atomic="true"></span>'
         # Pagination footer — server-rendered (summary + prev/next/page buttons).
         # Empty until the `load` exchange fills it alongside the first page of rows.
         '<nav class="dz-pagination" data-dz-grid-pagination aria-label="Pagination"></nav>'
@@ -396,7 +401,8 @@ HYPERPARTS: list[Hyperpart] = [
                 "echoed query itself, and MUST strip `page`/`page_size` first (they window "
                 "the display, not the matched set — re-running them verbatim would apply "
                 "the action to one page only); `selected_ids` is informational (visible "
-                "state) only",
+                "state) only. NB form encoding: with no exclusions the `excluded_ids` key "
+                "is ABSENT from the POST (not sent empty) — default it to the empty list",
                 swap="innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer "
                 "(its `data-dz-grid-total` re-stamps the matched total)",
                 states=("populated", "empty", "error"),

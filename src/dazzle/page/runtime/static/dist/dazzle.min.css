@@ -1,4 +1,4 @@
-/* dazzle v0.93.81 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.82 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3502,6 +3502,17 @@ text-decoration: underline;
 }
 .dz-table[data-dz-grid-all-matching="true"] .dz-bulk-matching {
 display: none;
+}
+.dz-grid-announce {
+position: absolute;
+width: 1px;
+height: 1px;
+padding: 0;
+margin: -1px;
+overflow: hidden;
+clip-path: inset(50%);
+white-space: nowrap;
+border: 0;
 }
 .dz-filter-bar {
 display: flex;

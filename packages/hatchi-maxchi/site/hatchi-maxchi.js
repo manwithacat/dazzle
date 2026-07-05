@@ -201,8 +201,12 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     // overlay never visually renders during gallery hydration (real htmx is
     // async, so it does). The CSS rule itself is exercised by
     // test_grid_loading_overlay_is_wired_to_htmx_request, which injects the class.
+    // NB event NAMES are the htmx-4 colon-namespaced family (htmx:after:swap,
+    // NOT htmx-2's htmx:afterSwap) — the vendored htmx-4 fires ONLY these. A
+    // mock firing the legacy names masks dead listeners fleet-wide (the
+    // v0.93.66 confirm-shape lesson, second verse).
     el.classList.add("htmx-request");
-    fire(el, "htmx:beforeRequest", { elt: el });
+    fire(el, "htmx:before:request", { elt: el });
     if (target) {
       target.innerHTML = body;
       // The server re-renders the pagination footer alongside the rows (in a
@@ -212,18 +216,24 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       if (url.split("?")[0] === "/mock/grid/rows") {
         updateGridFooter(target.closest("[data-grid]"), url);
       }
-      fire(target, "htmx:afterSwap", { elt: target });
+      fire(target, "htmx:after:swap", { elt: target });
+      // Real htmx fires after:settle once, after ALL swaps (OOB included)
+      // settle — it's the only event where the OOB footer is guaranteed
+      // final, so focus restoration listens there, not on after:swap.
+      fire(target, "htmx:after:settle", { elt: target });
     }
     el.classList.remove("htmx-request");
-    fire(el, "htmx:afterRequest", { elt: el });
+    fire(el, "htmx:after:request", { elt: el });
   }
 
   // Bulk action POST (e.g. Delete). Mirrors the server contract §15: fire
-  // htmx:configRequest so the grid controller injects the selection payload
-  // (action + selected_ids + all_matching/excluded + a query echo), then apply
-  // it and swap the refreshed rows for the grid's CURRENT query. A real server
-  // re-validates permissions + re-scopes to the query and never trusts the
-  // client ids; the mock just deletes the named rows from its data.
+  // htmx:config:request (the REAL htmx-4 shape: config nested under
+  // detail.ctx, the body a FormData) so the grid controller injects the
+  // selection payload (action + selected_ids + all_matching/excluded + a
+  // query echo), then apply it and swap the refreshed rows for the grid's
+  // CURRENT query. A real server re-validates permissions + re-scopes to the
+  // query and never trusts the client ids; the mock just deletes the named
+  // rows from its data.
   // The bulk-payload keys, as distinct from the echoed query params.
   var BULK_KEYS = { action: 1, selected_ids: 1, all_matching_selected: 1, excluded_ids: 1 };
   function applyBulkDelete(params) {
@@ -245,24 +255,33 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     GRID_ROWS = GRID_ROWS.filter(function (r) { return doomed.indexOf(r.id) < 0; });
   }
   function doPost(el) {
-    var params = { selected_ids: [], excluded_ids: [] };
-    fire(el, "htmx:configRequest", { parameters: params, elt: el });
-    window.__lastBulk = params; // expose the payload for the gallery tests
     var url = el.getAttribute("hx-post") || "";
+    // Real htmx-4 config:request: the config lives under detail.ctx and the
+    // request body is form data the listener APPENDS to (there is no
+    // detail.parameters object — that was htmx ≤2).
+    var fd = new FormData();
+    var ctx = { sourceElement: el, request: { method: "post", action: url, body: fd } };
+    fire(el, "htmx:config:request", { ctx: ctx });
+    // Decode the form body back into the mock server's params (the known
+    // array keys via getAll — form encoding repeats them).
+    var params = { selected_ids: fd.getAll("selected_ids"), excluded_ids: fd.getAll("excluded_ids") };
+    fd.forEach(function (v, k) { if (!(k in params)) params[k] = v; });
+    window.__lastBulk = params; // expose the payload for the gallery tests
     if (url.split("?")[0] === "/mock/grid/bulk") applyBulkDelete(params);
     var root = el.closest && el.closest("[data-grid]");
     var bodyEl = root && root.querySelector("[data-grid-body]");
     var target = bodyEl || document.querySelector(el.getAttribute("hx-target") || "");
     el.classList.add("htmx-request");
-    fire(el, "htmx:beforeRequest", { elt: el });
+    fire(el, "htmx:before:request", { elt: el });
     if (target) {
       var gurl = bodyEl ? bodyEl.getAttribute("hx-get") : "/mock/grid/rows";
       target.innerHTML = renderGridRows(gurl);
       updateGridFooter(root, gurl); // the total changed → repaint the footer
-      fire(target, "htmx:afterSwap", { elt: target });
+      fire(target, "htmx:after:swap", { elt: target });
+      fire(target, "htmx:after:settle", { elt: target }); // after ALL swaps, as real htmx
     }
     el.classList.remove("htmx-request");
-    fire(el, "htmx:afterRequest", { elt: el });
+    fire(el, "htmx:after:request", { elt: el });
   }
 
   // grid:refresh — a custom event the grid controller fires on the tbody
@@ -350,9 +369,9 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   // hx-trigger="load": fire once when the element is ready (the grid tbody
   // hydrates its rows this way). Deferred via setTimeout(0): this mock IIFE is
   // concatenated BEFORE the controllers in the built bundle, so a synchronous
-  // call here would fire the swap's htmx:afterSwap before grid's delegated
+  // call here would fire the swap's htmx:after:swap before grid's delegated
   // listener is attached. A macrotask runs after every controller IIFE has
-  // executed, so the initial afterSwap re-sync lands (matters once rows can
+  // executed, so the initial after:swap re-sync lands (matters once rows can
   // arrive pre-selected, e.g. URL-restored selection).
   var fireLoads = function () {
     var els = document.querySelectorAll("[hx-get][hx-trigger]");
@@ -585,8 +604,10 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     }
   });
 
-  // Reset selection whenever htmx swaps new results in.
-  document.addEventListener("htmx:afterSwap", function (evt) {
+  // Reset selection whenever htmx swaps new results in. Bound under BOTH
+  // names: htmx-4 fires `htmx:after:swap`, htmx ≤2 fired `htmx:afterSwap` —
+  // binding only the legacy name left this dead under the vendored htmx-4.
+  function onResultsSwap(evt) {
     var dlg = palette();
     if (dlg && dlg.open && dlg.contains(evt.target)) {
       if (items(dlg).length) {
@@ -597,7 +618,9 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         if (inp) inp.removeAttribute("aria-activedescendant");
       }
     }
-  });
+  }
+  document.addEventListener("htmx:after:swap", onResultsSwap); // htmx 4
+  document.addEventListener("htmx:afterSwap", onResultsSwap); // htmx ≤2
 
   // Pointer dismiss — the ONLY way to close on a touch device with no Esc
   // key. Two paths: the explicit close button (a native <button>, so its
@@ -797,7 +820,8 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  * tbody swap (the exact thing Alpine's reactive scope did NOT survive). The
  * *derived* state — the root's `data-bulk-count`, the summary text, and the
  * select-all tri-state — is a projection of those checkboxes, so it is
- * recomputed on every `change`/`click` AND re-synced after any `htmx:afterSwap`
+ * recomputed on every `change`/`click` AND re-synced after any swap (htmx-4
+ * `htmx:after:swap`; the legacy `htmx:afterSwap` is bound too)
  * (a swap changes the row set, so the projection must be rebuilt from the
  * surviving boxes). Row identity across a re-sort/paginate: idiomorph preserves a
  * checkbox by DOM position UNLESS its row carries a stable `id`, which idiomorph
@@ -832,7 +856,9 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  *                  `all_matching_selected`, `excluded_ids` (bulk-payload keys) are
  *                  reserved — don't use them as a `data-grid-filter` value.
  *   - bulk:        `[data-grid-bulk-action="<action>"]` (a button, usually
- *                  with `hx-post` + `hx-confirm`) — on `htmx:configRequest` the
+ *                  with `hx-post` + `hx-confirm`) — on the config-request
+ *                  event (htmx-4 `htmx:config:request` / legacy
+ *                  `htmx:configRequest`) the
  *                  controller injects the selection payload (action, selected
  *                  ids, all-matching/excluded shape, current-query echo) so the
  *                  server re-scopes + re-validates, never trusting client ids.
@@ -852,6 +878,14 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  *                  `[data-grid-page-next]` (server-rendered footer buttons)
  *                  set it + refresh (`page=` in the query); the server disables
  *                  prev/next at the edges. Sort / filter / search reset it to 1.
+ *   - announcer:   `[data-grid-announce]` (a visually-hidden aria-live
+ *                  region, static in the markup) — after every swap the
+ *                  controller mirrors the footer's result-window summary into
+ *                  it ("Showing 1-4 of 6"), because the footer itself is
+ *                  repainted wholesale, which screen readers can't track.
+ *                  Page-control focus is restored onto the repainted
+ *                  equivalent (or the current-page button when that control
+ *                  is now disabled) so keyboard focus never falls to <body>.
  *   - page size:   `[data-grid-page-size]` (a select) re-windows the same
  *                  matched set — `page_size=` joins the query, the change
  *                  resets to page 1, and an all-matching selection SURVIVES
@@ -938,6 +972,21 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     if (!nav) return null;
     var t = parseInt(nav.getAttribute("data-grid-total"), 10);
     return isNaN(t) ? null : t;
+  }
+
+  // Mirror the server-rendered result-window summary ("1-4 of 6") into the
+  // visually-hidden `[data-grid-announce]` live region — the footer itself
+  // is repainted wholesale, which screen readers can't track. Only on CHANGE:
+  // repeating an identical announcement is SR noise.
+  function announce(root) {
+    var out = root.querySelector("[data-grid-announce]");
+    if (!out) return;
+    var summary = root.querySelector(
+      "[data-grid-pagination] .pagination-summary",
+    );
+    if (!summary) return;
+    var msg = "Showing " + summary.textContent.trim();
+    if (out.textContent !== msg) out.textContent = msg;
   }
 
   function sync(root) {
@@ -1176,6 +1225,15 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         else if (goBtn.hasAttribute("data-grid-page-next")) to = cur + 1;
         else to = parseInt(goBtn.getAttribute("data-grid-goto"), 10) || 1;
         proot.setAttribute("data-grid-page", String(to));
+        // The swap repaints the footer wholesale, destroying the focused
+        // control — note the INTENT (not the node) so afterSwap can restore
+        // focus onto the repainted equivalent. Ephemeral UI state, so a JS
+        // property (not an attribute) is fine: it never has to survive a morph.
+        proot._dzRefocus = goBtn.hasAttribute("data-grid-page-prev")
+          ? "prev"
+          : goBtn.hasAttribute("data-grid-page-next")
+            ? "next"
+            : "goto:" + to;
         refresh(proot);
       }
       return;
@@ -1217,31 +1275,39 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   });
 
   // ── Bulk actions: add the selection to the request ─────────────────────
-  // A `[data-grid-bulk-action]` button posts (after its confirm). On
-  // `htmx:configRequest` we inject the selection payload so the SERVER re-scopes
-  // the action to exactly what the user was viewing — never trusting the client
-  // ids alone (§15). Payload: the action, the selected row ids, the
-  // all-matching / excluded shape (all_matching lands with the paging slice),
-  // and an echo of the current query (search / sort / filters).
-  document.addEventListener("htmx:configRequest", function (evt) {
+  // A `[data-grid-bulk-action]` button posts (after its confirm). On the
+  // config-request event we inject the selection payload so the SERVER
+  // re-scopes the action to exactly what the user was viewing — never trusting
+  // the client ids alone (§15). Payload: the action, the selected row ids, the
+  // all-matching / excluded shape, and an echo of the current query
+  // (search / sort / filters).
+  //
+  // htmx-4 vs htmx-2 COMPAT (the v0.93.66 confirm lesson): htmx-4 renamed the
+  // event `htmx:configRequest` → `htmx:config:request` AND moved the config
+  // under `detail.ctx` with a FormData `ctx.request.body` (there is no
+  // `detail.parameters`). We bind BOTH names and deliver via whichever shape
+  // the event carries. Real htmx fires exactly ONE of the two names per
+  // request — the handler is not double-fire safe (the mode-clear below runs
+  // once) and doesn't need to be.
+  function onConfigRequest(evt) {
     var d = evt.detail || {};
-    var el = d.elt || evt.target;
+    var ctx = d.ctx || d; // htmx-4 nests the config under detail.ctx
+    var el = d.elt || ctx.sourceElement || evt.target;
     var btn = el && el.closest && el.closest("[data-grid-bulk-action]");
     if (!btn) return;
     var root = gridOf(btn);
     if (!root) return;
-    var p = d.parameters || (d.parameters = {});
-    // Echo the current query FIRST — the filter/sort/search the rows came from —
-    // so the server applies the action to exactly those rows, re-validating
-    // server-side. The bulk-payload keys are written LAST so they always win: a
-    // filter named `action` (etc.) can't clobber the operation name.
+    // Assemble the payload: the query echo FIRST — the filter/sort/search the
+    // rows came from — then the bulk keys LAST so they always win (a filter
+    // named `action` etc. can't clobber the operation name).
+    var payload = {};
     var body = root.querySelector("[data-grid-body]");
     var qs = ((body && body.getAttribute("hx-get")) || "").split("?")[1] || "";
     qs.split("&").forEach(function (kv) {
       if (!kv) return;
       var i = kv.indexOf("=");
       var k = decodeURIComponent(i < 0 ? kv : kv.slice(0, i));
-      p[k] = i < 0 ? "" : decodeURIComponent(kv.slice(i + 1));
+      payload[k] = i < 0 ? "" : decodeURIComponent(kv.slice(i + 1));
     });
     var boxes = rowBoxes(root);
     var ids = [];
@@ -1251,24 +1317,50 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         if (id) ids.push(id);
       }
     }
-    p.action = btn.getAttribute("data-grid-bulk-action");
-    p.selected_ids = ids;
-    p.all_matching_selected = allMatching(root) ? "true" : "false";
-    p.excluded_ids = readExcluded(root);
+    payload.action = btn.getAttribute("data-grid-bulk-action");
+    payload.selected_ids = ids;
+    payload.all_matching_selected = allMatching(root) ? "true" : "false";
+    payload.excluded_ids = readExcluded(root);
     // The action consumes the selection (spec: "clears unless configured
     // otherwise"): exit all-matching NOW, at payload-capture time, so the
     // refreshed rows that follow the action arrive unselected instead of
-    // being re-checked by the afterSwap hydration. Trade-off (deliberate):
+    // being re-checked by the after-swap hydration. Trade-off (deliberate):
     // if the server rejects the action, the all-matching selection is gone.
     if (allMatching(root)) clearAllMatching(root);
-  });
+    if (d.parameters) {
+      // htmx ≤2: a plain parameters object.
+      Object.keys(payload).forEach(function (k) {
+        d.parameters[k] = payload[k];
+      });
+    } else if (ctx.request) {
+      // htmx-4: append to the request's form body. Delete-then-append keeps
+      // the keys-win semantics; arrays repeat the key (form encoding).
+      if (!ctx.request.body || typeof ctx.request.body.append !== "function") {
+        ctx.request.body = new FormData();
+      }
+      var fd = ctx.request.body;
+      Object.keys(payload).forEach(function (k) {
+        fd.delete(k);
+        var v = payload[k];
+        if (Array.isArray(v)) {
+          for (var j = 0; j < v.length; j++) fd.append(k, v[j]);
+        } else {
+          fd.append(k, v);
+        }
+      });
+    }
+  }
+  document.addEventListener("htmx:config:request", onConfigRequest); // htmx 4
+  document.addEventListener("htmx:configRequest", onConfigRequest); // htmx ≤2
 
   // A tbody swap changes the row set: idiomorph preserves each checkbox's
   // `.checked` in place, but the derived count / bar / select-all must be
   // rebuilt from the surviving boxes — else the root could say "2 selected"
   // after those 2 rows were swapped out. Re-sync every grid on the page (cheap;
   // no-op where nothing changed). Harmless if htmx never fires this event.
-  document.addEventListener("htmx:afterSwap", function () {
+  // Bound under BOTH names: htmx-4 fires `htmx:after:swap`, htmx ≤2 fired
+  // `htmx:afterSwap`.
+  function onAfterSwap() {
     var grids = document.querySelectorAll("[data-grid]");
     for (var i = 0; i < grids.length; i++) {
       // In all-matching mode freshly-rendered rows arrive SELECTED (minus the
@@ -1294,6 +1386,50 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         var pnum = parseInt(curBtn.getAttribute("data-grid-goto"), 10);
         if (pnum) grids[i].setAttribute("data-grid-page", String(pnum));
       }
+      // Announce the (possibly new) result window to screen readers. Safe on
+      // after-swap even under the OOB footer contract: while the nav is still
+      // stale the text hasn't changed (no announcement); the OOB nav's own
+      // after-swap then announces the real change.
+      announce(grids[i]);
     }
-  });
+  }
+  document.addEventListener("htmx:after:swap", onAfterSwap); // htmx 4
+  document.addEventListener("htmx:afterSwap", onAfterSwap); // htmx ≤2
+
+  // Focus restoration runs on after-SETTLE, not after-swap: with the OOB
+  // footer contract the tbody's after-swap fires while the nav is still STALE
+  // — focusing one of its buttons would be undone a beat later when the OOB
+  // swap evicts it (focus → <body>, the exact failure this exists to prevent).
+  // after-settle fires once, after ALL swaps (OOB included) settle, so the nav
+  // queried here is final. The gallery mock fires it after its footer repaint
+  // for the same reason. Restore the same-intent control if still usable, else
+  // the current-page button (e.g. prev clicked onto page 1, where prev is
+  // disabled). Consuming the marker twice is a no-op (it's nulled on first
+  // read), so the dual binding is safe even if both names ever fired.
+  function onAfterSettle() {
+    var grids = document.querySelectorAll("[data-grid]");
+    for (var i = 0; i < grids.length; i++) {
+      var want = grids[i]._dzRefocus;
+      if (!want) continue;
+      grids[i]._dzRefocus = null;
+      var nav = grids[i].querySelector("[data-grid-pagination]");
+      if (!nav) continue;
+      var el = null;
+      if (want === "prev") {
+        el = nav.querySelector("[data-grid-page-prev]:not([disabled])");
+      } else if (want === "next") {
+        el = nav.querySelector("[data-grid-page-next]:not([disabled])");
+      } else {
+        el = nav.querySelector(
+          "[data-grid-goto='" + want.slice(5) + "']:not([disabled])",
+        );
+      }
+      if (!el) {
+        el = nav.querySelector("[data-grid-goto][aria-current='page']");
+      }
+      if (el) el.focus();
+    }
+  }
+  document.addEventListener("htmx:after:settle", onAfterSettle); // htmx 4
+  document.addEventListener("htmx:afterSettle", onAfterSettle); // htmx ≤2
 })();
