@@ -4998,6 +4998,27 @@ button.htmx-request,
   color: var(--colour-text);
 }
 
+/* "Select all N matching" — the all-matching escalation affordance. A quiet
+ * brand-coloured text button (it sits between the count and Delete). Hidden
+ * once the mode is active: its job is done, and the header select-all is the
+ * exit. */
+.bulk-matching {
+  font-size: var(--text-sm);
+  color: var(--colour-brand-text);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.bulk-matching:hover {
+  text-decoration: underline;
+}
+
+.table[data-grid-all-matching="true"] .bulk-matching {
+  display: none;
+}
+
 /* ─────────────────────────── filter_bar fragment ────────────────
  * Per-column filter inputs (selects + text + ref-loaded selects).
  * Outer row layout + label sizing only — inputs use the form

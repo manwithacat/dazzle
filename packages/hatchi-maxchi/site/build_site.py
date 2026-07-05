@@ -314,7 +314,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   }
   function updateGridFooter(root, url) {
     var nav = root && root.querySelector("[data-dz-grid-pagination]");
-    if (nav) nav.innerHTML = renderGridFooter(url);
+    if (!nav) return;
+    // The server stamps the matched TOTAL on the footer nav
+    // (data-dz-grid-total) — the all-matching affordance reads it ("Select
+    // all N matching") and the controller uses it for the selection count.
+    // In a real htmx app the OOB `<nav hx-swap-oob>` carries the attribute.
+    nav.setAttribute("data-dz-grid-total", String(matchedRows(parseQuery(url)).length));
+    nav.innerHTML = renderGridFooter(url);
   }
 
   // icon placeholders resolved from a tiny inline map (built by the site gen)
@@ -390,11 +396,25 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   // it and swap the refreshed rows for the grid's CURRENT query. A real server
   // re-validates permissions + re-scopes to the query and never trusts the
   // client ids; the mock just deletes the named rows from its data.
+  // The bulk-payload keys, as distinct from the echoed query params.
+  var BULK_KEYS = { action: 1, selected_ids: 1, all_matching_selected: 1, excluded_ids: 1 };
   function applyBulkDelete(params) {
-    var ids = params.selected_ids || [];
-    // all-matching (across pages) lands with pagination; here the explicit id
-    // list is the whole matching set.
-    GRID_ROWS = GRID_ROWS.filter(function (r) { return ids.indexOf(r.id) < 0; });
+    var doomed;
+    if (params.all_matching_selected === "true") {
+      // All-matching: re-run the ECHOED query server-side and apply the action
+      // to the whole matched set minus the exclusions — the visible ids are
+      // informational only (§15: never trust client ids; re-scope the query).
+      var q = {};
+      Object.keys(params).forEach(function (k) {
+        if (!BULK_KEYS[k]) q[k] = params[k];
+      });
+      var excluded = params.excluded_ids || [];
+      doomed = matchedRows(q).map(function (r) { return r.id; })
+        .filter(function (id) { return excluded.indexOf(id) < 0; });
+    } else {
+      doomed = params.selected_ids || [];
+    }
+    GRID_ROWS = GRID_ROWS.filter(function (r) { return doomed.indexOf(r.id) < 0; });
   }
   function doPost(el) {
     var params = { selected_ids: [], excluded_ids: [] };

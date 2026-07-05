@@ -201,8 +201,9 @@ HYPERPARTS: list[Hyperpart] = [
         "A server-rendered data table: sortable headers, a filter bar, and row "
         "selection with a bulk-action bar — all HTML over the wire, on a real "
         "<table>. The tbody hydrates its rows over the wire (hx-get on load); "
-        "search, sortable headers, filters, row selection, bulk actions, and pagination "
-        "are live (dz-grid.js, delegated + state-in-DOM) and compose into one server query. "
+        "search, sortable headers, filters, row selection (per page, or ALL matching "
+        "rows with exclusions), bulk actions, and pagination are live (dz-grid.js, "
+        "delegated + state-in-DOM) and compose into one server query. "
         "URL-synced state lands in the next slice.",
         '<div class="hm-stack hm-measure-lg">'
         '<div class="dz-table" data-dz-grid data-dz-bulk-count="0" data-dz-grid-page="1">'
@@ -232,6 +233,12 @@ HYPERPARTS: list[Hyperpart] = [
         '<div class="dz-bulk-actions">'
         '<span aria-live="polite" aria-atomic="true">'
         "<span data-dz-bulk-count-target>0</span> selected</span>"
+        # All-matching escalation (GMail idiom): promote the page selection to
+        # the WHOLE matched query. The total is mirrored from the footer's
+        # server-stamped data-dz-grid-total; CSS hides the button once the
+        # mode is active (its job is done — the header select-all exits it).
+        '<button type="button" class="dz-bulk-matching" data-dz-grid-select-all-matching>'
+        "Select all <span data-dz-grid-matching-total>…</span> matching</button>"
         '<button type="button" class="dz-bulk-delete" data-dz-grid-bulk-action="delete" '
         'hx-post="/mock/grid/bulk" hx-target="[data-dz-grid-body]" hx-swap="innerMorph" '
         'hx-confirm="Delete the selected customers? This cannot be undone.">Delete</button>'
@@ -324,7 +331,15 @@ HYPERPARTS: list[Hyperpart] = [
         "and filtered). Bulk actions post the selection safely: the "
         "<code>[data-dz-grid-bulk-action]</code> Delete button (behind its confirm dialog) "
         "sends the action + selected ids + the <em>current query</em> — so the server "
-        "re-scopes and re-validates rather than trusting client ids (§15). The footer is "
+        "re-scopes and re-validates rather than trusting client ids (§15). "
+        "<strong>Select all matching</strong> escalates a page selection to the whole "
+        "matched query (state on the root: <code>data-dz-grid-all-matching</code> + a "
+        "<code>data-dz-grid-excluded</code> JSON list of unchecked exceptions) — rows on "
+        "other pages arrive selected, the count shows the server-stamped matched total "
+        "(the footer's <code>data-dz-grid-total</code>), and a bulk action sends "
+        "<code>all_matching_selected=true</code> + <code>excluded_ids</code> so the "
+        "server applies it to the matched set minus exclusions. A filter or search "
+        "change drops the mode (the matched set changed); sort and paging keep it. The footer is "
         "<em>server-rendered</em>: the client intercepts a page click, adds <code>page=</code> "
         "to the query, and the server returns that page's rows plus the repainted footer "
         "(row slice + total from one query, so they can't disagree); sort / filter / search "
@@ -349,7 +364,8 @@ HYPERPARTS: list[Hyperpart] = [
                 swap="innerMorph of the tbody (`[data-dz-grid-body]`) — idiomorph keys on "
                 "each row's `id`, so a live selection follows its row across a re-sort — PLUS "
                 "an out-of-band update of the pagination footer: append "
-                '`<nav data-dz-grid-pagination hx-swap-oob="true">…</nav>` to the response '
+                '`<nav data-dz-grid-pagination data-dz-grid-total="N" hx-swap-oob="true">…</nav>` '
+                "to the response (the stamped total feeds the all-matching affordance) "
                 "(or target a wrapping region that contains both the tbody and the footer in "
                 'one swap). The footer\'s current-page button carries `aria-current="page"` — '
                 "the client reads it back as the authoritative (possibly server-clamped) page",
@@ -363,8 +379,14 @@ HYPERPARTS: list[Hyperpart] = [
                 response="the server RE-VALIDATES permissions and RE-SCOPES the action to "
                 "the echoed query (never trusting the client `selected_ids` alone), applies "
                 "it, then returns the refreshed `<tr>` rows for the current query (empty → "
-                "the empty-state)",
-                swap="innerMorph of the tbody (`[data-dz-grid-body]`)",
+                "the empty-state). When `all_matching_selected=true`, the action applies to "
+                "the WHOLE matched query minus `excluded_ids` — the server re-runs the "
+                "echoed query itself, and MUST strip `page`/`page_size` first (they window "
+                "the display, not the matched set — re-running them verbatim would apply "
+                "the action to one page only); `selected_ids` is informational (visible "
+                "state) only",
+                swap="innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer "
+                "(its `data-dz-grid-total` re-stamps the matched total)",
                 states=("populated", "empty", "error"),
             ),
         ),

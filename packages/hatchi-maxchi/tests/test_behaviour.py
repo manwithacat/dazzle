@@ -533,6 +533,159 @@ def test_grid_change_resets_to_page_one(page) -> None:  # type: ignore[no-untype
     assert page.get_attribute("[data-grid]", "data-grid-page") == "1", "search resets to page 1"
 
 
+def _enter_all_matching(page) -> None:  # type: ignore[no-untyped-def]
+    """Select the visible page, then escalate to all-matching selection."""
+    page.check("[data-grid-select-all]")
+    page.wait_for_timeout(80)
+    page.click("[data-grid-select-all-matching]", timeout=3000)
+    page.wait_for_timeout(80)
+
+
+def test_grid_select_all_matching_spans_pages(page) -> None:  # type: ignore[no-untyped-def]
+    """'Select all matching' escalates a page selection to the WHOLE matched
+    query (all pages): state lands on the root (data-grid-all-matching), the
+    count shows the matched total (from the footer's data-grid-total, not the
+    visible boxes), and rows on other pages arrive selected."""
+    page.check("[data-grid-select-all]")
+    page.wait_for_timeout(80)
+    # the affordance announces the matched total, fed from the server-rendered footer
+    assert page.inner_text("[data-grid-matching-total]", timeout=3000).strip() == "6"
+
+    page.click("[data-grid-select-all-matching]", timeout=3000)
+    page.wait_for_timeout(80)
+    assert page.get_attribute("[data-grid]", "data-grid-all-matching") == "true"
+    assert page.inner_text("[data-bulk-count-target]").strip() == "6", (
+        "the count is the matched TOTAL (6), not the 4 visible boxes"
+    )
+    # the escalation affordance hides while all-matching is active (it's done its job)
+    assert (
+        page.eval_on_selector("[data-grid-select-all-matching]", "e => getComputedStyle(e).display")
+        == "none"
+    )
+
+    # page 2's freshly-rendered rows arrive SELECTED (all-matching spans pages)
+    page.click("[data-grid-page-next]")
+    page.wait_for_timeout(150)
+    assert page.eval_on_selector_all("[data-grid-select]", "els => els.every(b => b.checked)"), (
+        "rows on a newly-loaded page must arrive checked in all-matching mode"
+    )
+    assert page.inner_text("[data-bulk-count-target]").strip() == "6"
+
+
+def test_grid_all_matching_exclusion_persists_across_pages(page) -> None:  # type: ignore[no-untyped-def]
+    """Unchecking a row in all-matching mode records an EXCLUSION on the root —
+    it survives paging away and back (state on the root, not the row DOM)."""
+    _enter_all_matching(page)
+    page.locator("[data-grid-select]").nth(1).uncheck()  # Ravi (cust_2)
+    page.wait_for_timeout(80)
+    assert page.inner_text("[data-bulk-count-target]").strip() == "5", "6 matched − 1 excluded"
+    assert "cust_2" in (page.get_attribute("[data-grid]", "data-grid-excluded") or "")
+    assert page.eval_on_selector("[data-grid-select-all]", "e => e.indeterminate"), (
+        "the header box shows the partial state while an exclusion exists"
+    )
+
+    page.click("[data-grid-page-next]")
+    page.wait_for_timeout(150)
+    page.click("[data-grid-page-prev]")
+    page.wait_for_timeout(150)
+    state = page.eval_on_selector_all(
+        "[data-grid-select]",
+        "els => els.map(b => [b.getAttribute('data-grid-row-id'), b.checked])",
+    )
+    assert dict(state).get("cust_2") is False, f"the exclusion survives the round-trip: {state}"
+    assert sum(1 for _, c in state if c) == 3, f"the other page-1 rows stay selected: {state}"
+
+
+def test_grid_all_matching_bulk_delete_applies_query_minus_exclusions(page) -> None:  # type: ignore[no-untyped-def]
+    """A bulk action in all-matching mode sends all_matching_selected=true +
+    excluded_ids + the query echo — the server applies it to the whole matched
+    set MINUS the exclusions (never just the visible ids)."""
+    _enter_all_matching(page)
+    page.locator("[data-grid-select]").first.uncheck()  # Mia (cust_1) is spared
+    page.wait_for_timeout(80)
+    _bulk_confirm_delete(page)
+
+    payload = page.evaluate("window.__lastBulk")
+    assert payload["all_matching_selected"] == "true"
+    assert payload["excluded_ids"] == ["cust_1"]
+    names = _grid_names(page)
+    assert names == ["Mia"], f"every matched row deletes EXCEPT the excluded one: {names}"
+    assert page.get_attribute("[data-grid]", "data-grid-all-matching") is None, (
+        "the action consumes the all-matching selection"
+    )
+    assert page.get_attribute("[data-grid]", "data-bulk-count") == "0"
+
+
+def test_grid_all_matching_drops_on_query_change(page) -> None:  # type: ignore[no-untyped-def]
+    """A filter/search change CHANGES the matched set, so all-matching mode must
+    drop (the user never confirmed 'all matching' over the new query) — falling
+    back to plain per-row selection."""
+    _enter_all_matching(page)
+    page.select_option("[data-grid-filter='plan']", "Pro")
+    page.wait_for_timeout(150)
+    assert page.get_attribute("[data-grid]", "data-grid-all-matching") is None, (
+        "a filter change must drop all-matching (the matched set changed)"
+    )
+    assert page.get_attribute("[data-grid]", "data-grid-excluded") is None
+    assert page.inner_text("[data-grid-matching-total]").strip() == "2", (
+        "the matched-total mirror follows the narrowed query (Pro → 2)"
+    )
+
+
+def test_grid_all_matching_survives_net_unchanged_search(page) -> None:  # type: ignore[no-untyped-def]
+    """A keystroke that is immediately deleted leaves the matched set UNCHANGED
+    — the debounced search must not silently drop a cross-page all-matching
+    selection for it (the classic silent-selection-loss before a bulk delete)."""
+    _enter_all_matching(page)
+    page.type("[data-grid-search]", "x")
+    page.wait_for_timeout(50)  # inside the 250ms debounce window
+    page.press("[data-grid-search]", "Backspace")
+    page.wait_for_timeout(500)  # let the coalesced timer fire + rows reload
+    assert page.get_attribute("[data-grid]", "data-grid-all-matching") == "true", (
+        "a net-unchanged search must keep the all-matching selection"
+    )
+    assert page.inner_text("[data-bulk-count-target]").strip() == "6"
+
+    # …but a search that actually CHANGES the matched set still drops it.
+    page.fill("[data-grid-search]", "pro")
+    page.wait_for_timeout(500)
+    assert page.get_attribute("[data-grid]", "data-grid-all-matching") is None, (
+        "a real search change must still drop all-matching"
+    )
+
+
+def test_grid_all_matching_exclusion_survives_resort(page) -> None:  # type: ignore[no-untyped-def]
+    """Pin for the afterSwap re-projection: after a re-sort (rows re-rendered,
+    order changed, mode kept), an excluded row stays unchecked and the others
+    stay checked — the root's state re-projects onto whatever rows render."""
+    _enter_all_matching(page)
+    page.locator("[data-grid-select]").first.uncheck()  # Mia (cust_1)
+    page.wait_for_timeout(80)
+    page.click("[data-grid-sort='first']")  # ascending: Amir, Jane, Mia, Noah
+    page.wait_for_timeout(150)
+    assert page.get_attribute("[data-grid]", "data-grid-all-matching") == "true", (
+        "a sort re-orders the SAME matched set — the mode survives"
+    )
+    state = page.eval_on_selector_all(
+        "[data-grid-select]",
+        "els => els.map(b => [b.getAttribute('data-grid-row-id'), b.checked])",
+    )
+    assert dict(state).get("cust_1") is False, f"the exclusion re-projects after a sort: {state}"
+    assert sum(1 for _, c in state if c) == 3, f"non-excluded rows re-project checked: {state}"
+    assert page.inner_text("[data-bulk-count-target]").strip() == "5"
+
+
+def test_grid_select_all_header_uncheck_exits_all_matching(page) -> None:  # type: ignore[no-untyped-def]
+    """Unchecking the header select-all while in all-matching mode deselects
+    EVERYTHING — mode, exclusions, and boxes."""
+    _enter_all_matching(page)
+    page.uncheck("[data-grid-select-all]")
+    page.wait_for_timeout(80)
+    assert page.get_attribute("[data-grid]", "data-grid-all-matching") is None
+    assert page.get_attribute("[data-grid]", "data-grid-excluded") is None
+    assert page.get_attribute("[data-grid]", "data-bulk-count") == "0"
+
+
 def test_grid_search_debounce_coalesces_keystrokes(page) -> None:  # type: ignore[no-untyped-def]
     """A burst of keystrokes makes exactly ONE request, not one per key. Counts
     the `dz-grid:refresh` events (un-prefixed `grid:refresh` in the gallery). A

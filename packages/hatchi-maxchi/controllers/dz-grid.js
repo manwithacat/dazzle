@@ -50,6 +50,17 @@
  *                  controller injects the selection payload (action, selected
  *                  ids, all-matching/excluded shape, current-query echo) so the
  *                  server re-scopes + re-validates, never trusting client ids.
+ *   - all-matching: `[data-dz-grid-select-all-matching]` (a button, in the bulk
+ *                  bar) escalates the selection to the WHOLE matched query —
+ *                  `data-dz-grid-all-matching="true"` on the root, exclusions
+ *                  (rows the user unchecks) in `data-dz-grid-excluded` (a JSON
+ *                  array of row-ids). The matched TOTAL comes from the
+ *                  server-rendered footer's `data-dz-grid-total` and is
+ *                  mirrored into any `[data-dz-grid-matching-total]`. A filter /
+ *                  search change that CHANGES the matched set drops the mode
+ *                  (compared against the `data-dz-grid-scope` snapshot taken at
+ *                  entry, so a net-unchanged keystroke keeps it); a sort or
+ *                  page change keeps it (same set, reordered/windowed).
  *   - page:        current page is `data-dz-grid-page` on the root (default 1).
  *                  `[data-dz-grid-goto="<n>"]` / `[data-dz-grid-page-prev]` /
  *                  `[data-dz-grid-page-next]` (server-rendered footer buttons)
@@ -69,6 +80,72 @@
     );
   }
 
+  // ── All-matching selection: state on the root, not the rows ────────────
+  // `data-dz-grid-all-matching="true"` marks the WHOLE matched query selected
+  // (every page); `data-dz-grid-excluded` (a JSON array of row-ids) records
+  // the exceptions the user unchecked. Both live on the root because the
+  // selection spans pages the DOM doesn't hold. The matched TOTAL is read from
+  // the server-rendered footer's `data-dz-grid-total` — the server is
+  // authoritative about how many rows match.
+  function allMatching(root) {
+    return root.getAttribute("data-dz-grid-all-matching") === "true";
+  }
+
+  function readExcluded(root) {
+    try {
+      var ids = JSON.parse(root.getAttribute("data-dz-grid-excluded") || "[]");
+      return Array.isArray(ids) ? ids : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function writeExcluded(root, ids) {
+    if (ids.length) {
+      root.setAttribute("data-dz-grid-excluded", JSON.stringify(ids));
+    } else {
+      root.removeAttribute("data-dz-grid-excluded");
+    }
+  }
+
+  function clearAllMatching(root) {
+    root.removeAttribute("data-dz-grid-all-matching");
+    root.removeAttribute("data-dz-grid-excluded");
+    root.removeAttribute("data-dz-grid-scope");
+  }
+
+  // The matched-set-DEFINING part of the query: search + filters. Sort and
+  // page reorder/window the SAME set, so they're not part of the scope.
+  function scopeKey(root) {
+    var parts = [];
+    var search = root.querySelector("[data-dz-grid-search]");
+    if (search && search.value) parts.push("q=" + search.value);
+    var filters = root.querySelectorAll("[data-dz-grid-filter]");
+    for (var i = 0; i < filters.length; i++) {
+      var k = filters[i].getAttribute("data-dz-grid-filter");
+      if (k && filters[i].value) parts.push(k + "=" + filters[i].value);
+    }
+    return parts.join("&");
+  }
+
+  // Drop all-matching ONLY if the matched set actually changed since the mode
+  // was entered (its scope snapshot lives on the root). A search keystroke
+  // that's deleted again — net-unchanged query — must NOT silently destroy a
+  // cross-page selection right before a destructive bulk action.
+  function dropModeIfScopeChanged(root) {
+    if (!allMatching(root)) return;
+    if (scopeKey(root) !== (root.getAttribute("data-dz-grid-scope") || "")) {
+      clearAllMatching(root);
+    }
+  }
+
+  function matchedTotal(root) {
+    var nav = root.querySelector("[data-dz-grid-pagination]");
+    if (!nav) return null;
+    var t = parseInt(nav.getAttribute("data-dz-grid-total"), 10);
+    return isNaN(t) ? null : t;
+  }
+
   function sync(root) {
     var boxes = rowBoxes(root);
     var checked = 0;
@@ -78,15 +155,35 @@
       var tr = boxes[i].closest("tr");
       if (tr) tr.classList.toggle("is-selected", on);
     }
+    // In all-matching mode the selection is the whole matched query minus the
+    // exclusions, so the count comes from the server's total — NOT the visible
+    // boxes. If the footer (and its total) hasn't rendered yet, degrade to the
+    // visible count rather than invent one.
+    var am = allMatching(root);
+    var excluded = am ? readExcluded(root) : [];
+    var total = matchedTotal(root);
+    var count = checked;
+    if (am && total !== null) count = Math.max(0, total - excluded.length);
     // The count is the single source of truth the CSS reads (#978 pattern):
     // `.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-actions { display:flex }`.
-    root.setAttribute("data-dz-bulk-count", String(checked));
+    root.setAttribute("data-dz-bulk-count", String(count));
     var target = root.querySelector("[data-dz-bulk-count-target]");
-    if (target) target.textContent = String(checked);
+    if (target) target.textContent = String(count);
+    // Mirror the matched total into the escalation affordance's label
+    // ("Select all N matching") whenever the footer knows it.
+    var mirror = root.querySelector("[data-dz-grid-matching-total]");
+    if (mirror && total !== null) mirror.textContent = String(total);
     var all = root.querySelector("[data-dz-grid-select-all]");
     if (all) {
-      all.checked = checked > 0 && checked === boxes.length;
-      all.indeterminate = checked > 0 && checked < boxes.length;
+      if (am) {
+        // The header box reflects the QUERY-wide selection: fully checked
+        // until an exclusion exists, then indeterminate.
+        all.checked = excluded.length === 0;
+        all.indeterminate = excluded.length > 0;
+      } else {
+        all.checked = checked > 0 && checked === boxes.length;
+        all.indeterminate = checked > 0 && checked < boxes.length;
+      }
     }
   }
 
@@ -196,6 +293,10 @@
     if (t._dzSearchTimer) clearTimeout(t._dzSearchTimer);
     t._dzSearchTimer = setTimeout(function () {
       t._dzSearchTimer = null;
+      // A search that CHANGES the matched set drops all-matching — a
+      // selection over the old query must not silently apply to the new one.
+      // (Scope-compared, so a net-unchanged keystroke keeps the mode.)
+      dropModeIfScopeChanged(root);
       resetPage(root); // a new search starts at page 1
       refresh(root);
     }, ms);
@@ -206,18 +307,40 @@
     if (!t || !t.matches) return;
     if (t.matches("[data-dz-grid-select]")) {
       var r = gridOf(t);
-      if (r) sync(r);
+      if (!r) return;
+      if (allMatching(r)) {
+        // In all-matching mode a row toggle edits the EXCLUSION list on the
+        // root — the row's own checkbox can't carry the state, because the
+        // selection spans pages whose boxes aren't in the DOM.
+        var id = t.getAttribute("data-dz-grid-row-id");
+        if (id) {
+          var ex = readExcluded(r);
+          var at = ex.indexOf(id);
+          if (!t.checked && at < 0) ex.push(id);
+          if (t.checked && at >= 0) ex.splice(at, 1);
+          writeExcluded(r, ex);
+        }
+      }
+      sync(r);
     } else if (t.matches("[data-dz-grid-select-all]")) {
       var root = gridOf(t);
       if (!root) return;
+      if (allMatching(root)) {
+        // Checking restores the FULL all-matching selection (exclusions
+        // gone); unchecking exits the mode — everything deselects.
+        if (t.checked) writeExcluded(root, []);
+        else clearAllMatching(root);
+      }
       var boxes = rowBoxes(root);
       for (var i = 0; i < boxes.length; i++) boxes[i].checked = t.checked;
       sync(root);
     } else if (t.matches("[data-dz-grid-filter]")) {
       // A filter select changed → rebuild the query (composing with any active
-      // sort) and reload the rows from the server, back at page 1.
+      // sort) and reload the rows from the server, back at page 1. The matched
+      // set changed, so an all-matching selection drops (same rule as search).
       var fr = gridOf(t);
       if (fr) {
+        dropModeIfScopeChanged(fr);
         resetPage(fr);
         refresh(fr);
       }
@@ -257,10 +380,28 @@
       }
       return;
     }
+    var amBtn = t.closest("[data-dz-grid-select-all-matching]");
+    if (amBtn) {
+      var aroot = gridOf(amBtn);
+      if (aroot) {
+        // Escalate to the whole matched query: mark the root, snapshot the
+        // scope the user confirmed (search + filters — so a later change can
+        // be told apart from a net no-op), drop any stale exclusions, and
+        // check the visible boxes so the DOM agrees.
+        aroot.setAttribute("data-dz-grid-all-matching", "true");
+        aroot.setAttribute("data-dz-grid-scope", scopeKey(aroot));
+        writeExcluded(aroot, []);
+        var aboxes = rowBoxes(aroot);
+        for (var j = 0; j < aboxes.length; j++) aboxes[j].checked = true;
+        sync(aroot);
+      }
+      return;
+    }
     var clear = t.closest("[data-dz-grid-clear]");
     if (!clear) return;
     var root = gridOf(clear);
     if (!root) return;
+    clearAllMatching(root); // Clear means everything — mode included
     var boxes = rowBoxes(root);
     for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
     sync(root);
@@ -303,8 +444,14 @@
     }
     p.action = btn.getAttribute("data-dz-grid-bulk-action");
     p.selected_ids = ids;
-    p.all_matching_selected = "false";
-    p.excluded_ids = [];
+    p.all_matching_selected = allMatching(root) ? "true" : "false";
+    p.excluded_ids = readExcluded(root);
+    // The action consumes the selection (spec: "clears unless configured
+    // otherwise"): exit all-matching NOW, at payload-capture time, so the
+    // refreshed rows that follow the action arrive unselected instead of
+    // being re-checked by the afterSwap hydration. Trade-off (deliberate):
+    // if the server rejects the action, the all-matching selection is gone.
+    if (allMatching(root)) clearAllMatching(root);
   });
 
   // A tbody swap changes the row set: idiomorph preserves each checkbox's
@@ -315,6 +462,17 @@
   document.addEventListener("htmx:afterSwap", function () {
     var grids = document.querySelectorAll("[data-dz-grid]");
     for (var i = 0; i < grids.length; i++) {
+      // In all-matching mode freshly-rendered rows arrive SELECTED (minus the
+      // exclusions): the mode spans pages, the DOM doesn't, so each swap
+      // re-projects the root's state onto the new boxes.
+      if (allMatching(grids[i])) {
+        var ex = readExcluded(grids[i]);
+        var boxes = rowBoxes(grids[i]);
+        for (var j = 0; j < boxes.length; j++) {
+          boxes[j].checked =
+            ex.indexOf(boxes[j].getAttribute("data-dz-grid-row-id")) < 0;
+        }
+      }
       sync(grids[i]);
       // Re-sync the root's page from the server-rendered footer's current-page
       // marker: the server may have CLAMPED the page (e.g. a bulk delete that

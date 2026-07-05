@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.80] - 2026-07-05
+
+### Added
+- **`dz-grid` — all-matching selection** (HM package 0.1.16 → 0.1.17). The bulk bar's **Select all N matching** button escalates a page selection to the WHOLE matched query, GMail-style: the mode lives on the root (`data-dz-grid-all-matching="true"`), exclusions (rows the user unchecks) in `data-dz-grid-excluded` (a JSON list of row-ids), and the query snapshot the user confirmed in `data-dz-grid-scope` — all on the ROOT, because the selection spans pages whose checkboxes aren't in the DOM. The matched total comes from the **server**: the footer nav now carries `data-dz-grid-total` (stamped alongside the OOB footer render), mirrored into the button's `[data-dz-grid-matching-total]`, and the selection count becomes `total − excluded`. After every swap the controller re-projects the root's state onto whatever rows rendered (checked unless excluded), so page 2 arrives selected and an exclusion survives paging away and back, or a re-sort. A bulk action posts `all_matching_selected="true"` + `excluded_ids` + the query echo — the server re-runs the echoed query minus exclusions (and MUST strip `page`/`page_size` first); the action consumes the selection (mode cleared at payload capture). Header select-all: check restores the full selection, uncheck exits the mode; Clear exits too. A filter/search change drops the mode ONLY if the matched set actually changed (scope-compared). 7 new behaviour tests on Chromium + WebKit; grid below the fold, so no visual-baseline change. Still inert in Dazzle.
+
+### Agent Guidance
+- **All-matching selection is root-state + server-total.** Never derive a cross-page selection from checkboxes — the DOM only holds one page. State goes on the grid root (`data-dz-grid-all-matching` / `data-dz-grid-excluded` / `data-dz-grid-scope`); the matched total is the server-stamped `data-dz-grid-total` on the pagination footer; every `htmx:afterSwap` re-projects root-state onto the fresh rows. Server contract: on `all_matching_selected=true`, re-run the echoed query minus `excluded_ids`, and **strip `page`/`page_size` first** — they window the display, not the matched set (a verbatim re-run would apply the action to one page only). Two adversarial-review catches worth remembering: (1) a debounced search handler must not drop a cross-page selection on a NET-UNCHANGED query (type + delete a char) — compare against the scope snapshot instead of clearing unconditionally; (2) exit all-matching at `htmx:configRequest` time (payload capture), so the post-action swap doesn't re-check the refreshed rows.
+
 ## [0.93.79] - 2026-07-05
 
 ### Added
