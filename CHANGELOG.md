@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.78] - 2026-07-05
+
+### Added
+- **`dz-grid` — bulk actions** (HM package 0.1.14 → 0.1.15). The selection bar's Delete button is now live: `[data-dz-grid-bulk-action="delete"]` + `hx-post` + `hx-confirm`. On the confirm-approved POST the controller injects the selection payload via `htmx:configRequest` — the action, the selected row ids, the `all_matching_selected`/`excluded_ids` shape, and an **echo of the current query** — so the server re-scopes the action to exactly the rows the filter/sort/search produced and **re-validates server-side, never trusting the client ids** (spec §15). The gallery mock deletes the named rows, returns the refreshed tbody for the current query, and the selection (and its bar) clears. Behaviour-tested on Chromium + WebKit (delete-removes-selected, payload-carries-selection-and-query, and payload-keys-win-over-query-echo); grid below the fold, so no visual-baseline change. Still inert in Dazzle. The all-matching *value* stays `false` until the pagination slice makes it meaningful; the payload *shape* ships complete.
+
+### Agent Guidance
+- **Bulk actions post the selection safely.** A `[data-dz-grid-bulk-action]` button (usually with `hx-post` + `hx-confirm`) lets the `dz-grid` controller inject `action` + `selected_ids` + the all-matching/excluded shape + a current-query echo on `htmx:configRequest`; the **server** re-scopes to the echoed query and re-validates permissions — never trust the client `selected_ids` alone. The bulk-payload keys (`action`, `selected_ids`, `all_matching_selected`, `excluded_ids`) join `q`/`sort`/`dir`/`page`/`page_size` as reserved query keys — don't reuse them as a filter attribute value (the payload keys are written last so they win, but keep the namespaces clean). An adversarial review caught the write-order (the query echo would otherwise clobber a bulk key named by a colliding filter); fixed + regression-tested.
+
 ### Changed
 - **HM gallery — the `grid` demo now teaches its filter-on-a-hidden-field pattern** (HM package 0.1.13 → 0.1.14). The Status filter narrows on a server field the table doesn't render as a column — clever but opaque to a newcomer. A gallery card note plus an inline snippet comment now explain that filters (like scopes) can target *any* queryable server field, not only displayed columns (only Plan is both shown and filtered). Gallery/docs only — no dist or runtime change.
 

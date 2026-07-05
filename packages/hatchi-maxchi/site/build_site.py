@@ -333,6 +333,37 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     fire(el, "htmx:afterRequest", { elt: el });
   }
 
+  // Bulk action POST (e.g. Delete). Mirrors the server contract §15: fire
+  // htmx:configRequest so the grid controller injects the selection payload
+  // (action + selected_ids + all_matching/excluded + a query echo), then apply
+  // it and swap the refreshed rows for the grid's CURRENT query. A real server
+  // re-validates permissions + re-scopes to the query and never trusts the
+  // client ids; the mock just deletes the named rows from its data.
+  function applyBulkDelete(params) {
+    var ids = params.selected_ids || [];
+    // all-matching (across pages) lands with pagination; here the explicit id
+    // list is the whole matching set.
+    GRID_ROWS = GRID_ROWS.filter(function (r) { return ids.indexOf(r.id) < 0; });
+  }
+  function doPost(el) {
+    var params = { selected_ids: [], excluded_ids: [] };
+    fire(el, "htmx:configRequest", { parameters: params, elt: el });
+    window.__lastBulk = params; // expose the payload for the gallery tests
+    var url = el.getAttribute("hx-post") || "";
+    if (url.split("?")[0] === "/mock/grid/bulk") applyBulkDelete(params);
+    var root = el.closest && el.closest("[data-dz-grid]");
+    var bodyEl = root && root.querySelector("[data-dz-grid-body]");
+    var target = bodyEl || document.querySelector(el.getAttribute("hx-target") || "");
+    el.classList.add("htmx-request");
+    fire(el, "htmx:beforeRequest", { elt: el });
+    if (target) {
+      target.innerHTML = renderGridRows(bodyEl ? bodyEl.getAttribute("hx-get") : "/mock/grid/rows");
+      fire(target, "htmx:afterSwap", { elt: target });
+    }
+    el.classList.remove("htmx-request");
+    fire(el, "htmx:afterRequest", { elt: el });
+  }
+
   // dz-grid:refresh — a custom event the grid controller fires on the tbody
   // after a sort/filter change (real htmx catches it via the tbody's hx-trigger;
   // here the mock does). The controller has already rewritten the tbody's hx-get
@@ -382,7 +413,10 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       ctx: { sourceElement: el, confirm: el.getAttribute("hx-confirm") },
       issueRequest: function () {
         issued = true;
-        // demo: flash a toast-ish confirmation
+        // A confirmed hx-post issues the real (mock) request — e.g. a bulk
+        // action. Other confirmed affordances (the confirm Hyperpart's demo
+        // hx-delete, which has no endpoint) just flash a toast.
+        if (el.getAttribute("hx-post")) { doPost(el); return; }
         var note = document.createElement("div");
         note.className = "hm-toast";
         note.textContent = "Deleted (demo).";

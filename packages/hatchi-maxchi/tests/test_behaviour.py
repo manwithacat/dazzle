@@ -138,8 +138,12 @@ def test_confirm_dialog_intercepts_hx_confirm(page) -> None:  # type: ignore[no-
     # detail.ctx, issueRequest/dropRequest). This guards the full flow, not just
     # dialog-open, so an htmx-detail-shape drift (which silently degrades the
     # designed dialog to native window.confirm) is caught.
-    question = page.get_attribute("[hx-confirm]", "hx-confirm")
-    page.click("[hx-confirm]")
+    # Scope to the confirm Hyperpart's own button (hx-delete) — the grid's bulk
+    # Delete also carries hx-confirm now (with hx-post), so a bare [hx-confirm]
+    # is ambiguous.
+    trigger = "[hx-delete][hx-confirm]"
+    question = page.get_attribute(trigger, "hx-confirm")
+    page.click(trigger)
     page.wait_for_timeout(150)
     assert page.evaluate(
         "!!document.querySelector('dialog.alert-dialog') && "
@@ -361,6 +365,78 @@ def test_grid_search_narrows_rows_debounced(page) -> None:  # type: ignore[no-un
     page.fill("[data-grid-search]", "")
     page.wait_for_timeout(350)
     assert len(_grid_names(page)) == 6, "clearing search restores every row"
+
+
+def _bulk_confirm_delete(page) -> None:  # type: ignore[no-untyped-def]
+    """Click the bulk Delete and approve the designed confirm dialog."""
+    page.click(".bulk-delete")
+    page.wait_for_timeout(150)
+    assert page.evaluate("document.querySelector('dialog.alert-dialog').open"), (
+        "the bulk Delete must go through the designed confirm dialog"
+    )
+    page.click("dialog.alert-dialog [data-confirm-accept]")
+    page.wait_for_timeout(200)
+
+
+def test_grid_bulk_delete_removes_selected_rows(page) -> None:  # type: ignore[no-untyped-def]
+    """Selecting rows and confirming Delete posts the selection, the server
+    removes exactly those rows and returns the refreshed tbody, and the selection
+    (and its bar) clears. (Gallery mock mutates its row set.)"""
+    page.locator("[data-grid-select]").nth(0).check()  # Mia
+    page.locator("[data-grid-select]").nth(1).check()  # Ravi
+    page.wait_for_timeout(80)
+    assert page.get_attribute("[data-grid]", "data-bulk-count") == "2"
+
+    _bulk_confirm_delete(page)
+
+    names = _grid_names(page)
+    assert len(names) == 4 and "Mia" not in names and "Ravi" not in names, (
+        f"the two selected rows must be gone: {names}"
+    )
+    assert page.get_attribute("[data-grid]", "data-bulk-count") == "0", (
+        "the selection (and bar) must clear after the action"
+    )
+
+
+def test_grid_bulk_payload_carries_selection_and_query(page) -> None:  # type: ignore[no-untyped-def]
+    """The posted payload carries the action, the selected ids, the all-matching /
+    excluded shape, AND an echo of the current query — so the server re-scopes the
+    action to what the user was viewing and never trusts client ids alone."""
+    page.select_option("[data-grid-filter='plan']", "Pro")  # Amir, Noah
+    page.wait_for_timeout(120)
+    page.locator("[data-grid-select]").first.check()  # Amir
+    page.wait_for_timeout(80)
+    amir_id = page.eval_on_selector("[data-grid-select]", "b => b.getAttribute('data-grid-row-id')")
+
+    _bulk_confirm_delete(page)
+
+    payload = page.evaluate("window.__lastBulk")
+    assert payload["action"] == "delete"
+    assert amir_id in payload["selected_ids"], "the payload carries the selected ids"
+    assert payload["all_matching_selected"] == "false", (
+        "all-matching shape present (false until paging)"
+    )
+    assert payload["excluded_ids"] == [], "excluded-ids shape present"
+    assert payload["plan"] == "Pro", (
+        "the payload echoes the current query (re-scope, never trust ids)"
+    )
+    assert _grid_names(page) == ["Noah"], "only Amir deleted; Noah remains under the Pro filter"
+
+
+def test_grid_bulk_payload_keys_win_over_query_echo(page) -> None:  # type: ignore[no-untyped-def]
+    """A query param that collides with a bulk-payload key (e.g. a filter named
+    'action') must NOT clobber the operation — the payload keys are written last
+    so they always win."""
+    page.eval_on_selector(
+        "[data-grid-body]",
+        "b => b.setAttribute('hx-get', b.getAttribute('data-grid-src') + '?action=archive')",
+    )
+    page.locator("[data-grid-select]").first.check()
+    page.wait_for_timeout(80)
+    _bulk_confirm_delete(page)
+    assert page.evaluate("window.__lastBulk").get("action") == "delete", (
+        "the bulk action must win over an echoed query key named 'action'"
+    )
 
 
 def test_grid_search_debounce_coalesces_keystrokes(page) -> None:  # type: ignore[no-untyped-def]

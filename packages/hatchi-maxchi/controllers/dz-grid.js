@@ -1,6 +1,7 @@
 /* HYPERPART: grid */
 /*
- * dz-grid — the data-table controller. Slices: selection + sort + filter + search.
+ * dz-grid — the data-table controller. Slices: selection + sort + filter +
+ * search + bulk actions.
  *
  * Delegated + state-in-DOM, the HM idiom (same shape as dz-tabs.js): one pair
  * of document-level listeners, everything scoped to the clicked control's own
@@ -41,8 +42,14 @@
  *   - search:      `[data-dz-grid-search]` (an input) adds `q=` on input,
  *                  debounced (`data-dz-grid-debounce`, default 250ms). Composes
  *                  with sort + filter into the same query. NB `q`, `sort`, `dir`,
- *                  `page`, `page_size` are reserved query keys — don't use them
- *                  as a `data-dz-grid-filter` value.
+ *                  `page`, `page_size` (query keys) and `action`, `selected_ids`,
+ *                  `all_matching_selected`, `excluded_ids` (bulk-payload keys) are
+ *                  reserved — don't use them as a `data-dz-grid-filter` value.
+ *   - bulk:        `[data-dz-grid-bulk-action="<action>"]` (a button, usually
+ *                  with `hx-post` + `hx-confirm`) — on `htmx:configRequest` the
+ *                  controller injects the selection payload (action, selected
+ *                  ids, all-matching/excluded shape, current-query echo) so the
+ *                  server re-scopes + re-validates, never trusting client ids.
  */
 (function () {
   "use strict";
@@ -219,6 +226,47 @@
     var boxes = rowBoxes(root);
     for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
     sync(root);
+  });
+
+  // ── Bulk actions: add the selection to the request ─────────────────────
+  // A `[data-dz-grid-bulk-action]` button posts (after its confirm). On
+  // `htmx:configRequest` we inject the selection payload so the SERVER re-scopes
+  // the action to exactly what the user was viewing — never trusting the client
+  // ids alone (§15). Payload: the action, the selected row ids, the
+  // all-matching / excluded shape (all_matching lands with the paging slice),
+  // and an echo of the current query (search / sort / filters).
+  document.addEventListener("htmx:configRequest", function (evt) {
+    var d = evt.detail || {};
+    var el = d.elt || evt.target;
+    var btn = el && el.closest && el.closest("[data-dz-grid-bulk-action]");
+    if (!btn) return;
+    var root = gridOf(btn);
+    if (!root) return;
+    var p = d.parameters || (d.parameters = {});
+    // Echo the current query FIRST — the filter/sort/search the rows came from —
+    // so the server applies the action to exactly those rows, re-validating
+    // server-side. The bulk-payload keys are written LAST so they always win: a
+    // filter named `action` (etc.) can't clobber the operation name.
+    var body = root.querySelector("[data-dz-grid-body]");
+    var qs = ((body && body.getAttribute("hx-get")) || "").split("?")[1] || "";
+    qs.split("&").forEach(function (kv) {
+      if (!kv) return;
+      var i = kv.indexOf("=");
+      var k = decodeURIComponent(i < 0 ? kv : kv.slice(0, i));
+      p[k] = i < 0 ? "" : decodeURIComponent(kv.slice(i + 1));
+    });
+    var boxes = rowBoxes(root);
+    var ids = [];
+    for (var i = 0; i < boxes.length; i++) {
+      if (boxes[i].checked) {
+        var id = boxes[i].getAttribute("data-dz-grid-row-id");
+        if (id) ids.push(id);
+      }
+    }
+    p.action = btn.getAttribute("data-dz-grid-bulk-action");
+    p.selected_ids = ids;
+    p.all_matching_selected = "false";
+    p.excluded_ids = [];
   });
 
   // A tbody swap changes the row set: idiomorph preserves each checkbox's

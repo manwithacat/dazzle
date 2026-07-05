@@ -201,9 +201,9 @@ HYPERPARTS: list[Hyperpart] = [
         "A server-rendered data table: sortable headers, a filter bar, and row "
         "selection with a bulk-action bar — all HTML over the wire, on a real "
         "<table>. The tbody hydrates its rows over the wire (hx-get on load); "
-        "search, sortable headers, filters, and row selection are live (dz-grid.js, "
-        "delegated + state-in-DOM) and compose into one server query. Bulk actions / "
-        "URL-synced state land in the next slices.",
+        "search, sortable headers, filters, row selection, and bulk actions are live "
+        "(dz-grid.js, delegated + state-in-DOM) and compose into one server query. "
+        "Pagination / URL-synced state land in the next slices.",
         '<div class="hm-stack hm-measure-lg">'
         '<div class="dz-table" data-dz-grid data-dz-bulk-count="0">'
         '<div class="dz-filter-bar">'
@@ -232,7 +232,9 @@ HYPERPARTS: list[Hyperpart] = [
         '<div class="dz-bulk-actions">'
         '<span aria-live="polite" aria-atomic="true">'
         "<span data-dz-bulk-count-target>0</span> selected</span>"
-        '<button type="button" class="dz-bulk-delete">Delete</button>'
+        '<button type="button" class="dz-bulk-delete" data-dz-grid-bulk-action="delete" '
+        'hx-post="/mock/grid/bulk" hx-target="[data-dz-grid-body]" hx-swap="innerMorph" '
+        'hx-confirm="Delete the selected customers? This cannot be undone.">Delete</button>'
         '<button type="button" class="dz-bulk-clear" data-dz-grid-clear>Clear</button>'
         "</div>"
         '<div class="dz-table-scroll">'
@@ -315,8 +317,11 @@ HYPERPARTS: list[Hyperpart] = [
         "filter is a teaching case: the table renders no Status column, yet the filter "
         "narrows on it — filters (like scopes) can target <em>any</em> queryable server "
         "field, not only what's displayed (here only <strong>Plan</strong> is both shown "
-        "and filtered). Bulk-action submission and URL-synced state are the next slices. "
-        "(The gallery mock approximates the "
+        "and filtered). Bulk actions post the selection safely: the "
+        "<code>[data-dz-grid-bulk-action]</code> Delete button (behind its confirm dialog) "
+        "sends the action + selected ids + the <em>current query</em> — so the server "
+        "re-scopes and re-validates rather than trusting client ids (§15). Pagination and "
+        "URL-synced state are the next slices. (The gallery mock approximates the "
         "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
         "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "
         "for true morph-preserved selection.)",
@@ -336,6 +341,18 @@ HYPERPARTS: list[Hyperpart] = [
                 swap="innerMorph of the tbody (`[data-dz-grid-body]`) — idiomorph keys on "
                 "each row's `id`, so a live selection follows its row across a re-sort",
                 states=("loading", "empty", "populated", "error"),
+            ),
+            Exchange(
+                method="POST",
+                endpoint="/app/{region}/bulk",
+                trigger="a bulk-action button (e.g. Delete), after the user approves its "
+                "confirm dialog; the controller injects the selection on `htmx:configRequest`",
+                response="the server RE-VALIDATES permissions and RE-SCOPES the action to "
+                "the echoed query (never trusting the client `selected_ids` alone), applies "
+                "it, then returns the refreshed `<tr>` rows for the current query (empty → "
+                "the empty-state)",
+                swap="innerMorph of the tbody (`[data-dz-grid-body]`)",
+                states=("populated", "empty", "error"),
             ),
         ),
         controller="controllers/dz-grid.js",

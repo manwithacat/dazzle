@@ -76,7 +76,7 @@ def test_command_palette_open_wcag(page) -> None:  # type: ignore[no-untyped-def
 
 
 def test_confirm_dialog_open_wcag(page) -> None:  # type: ignore[no-untyped-def]
-    page.click("[hx-confirm]")
+    page.click("[hx-delete][hx-confirm]")
     page.wait_for_timeout(200)
     _assert_clean(_scan(page), "confirm-open")
 
@@ -105,7 +105,7 @@ def test_allowlist_entries_all_still_needed(page) -> None:  # type: ignore[no-un
     for setup in (
         lambda: None,
         lambda: page.click("[data-hm-open-command]"),
-        lambda: page.click("[hx-confirm]"),
+        lambda: page.click("[hx-delete][hx-confirm]"),
     ):
         page.goto(page.url)
         page.wait_for_timeout(200)
