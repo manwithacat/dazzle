@@ -66,8 +66,11 @@ class TestEmbeddedArchetype:
             ),
         )
         # Row id precedes the marker; the checkbox cell stops propagation.
+        # Convergence C0a: an identified row also carries the stable morph-key
+        # `id` (`dz-grid-row-<id>`, the HM grid contract) so a live selection
+        # follows its row across an idiomorph re-sort/paginate.
         assert rows[0].startswith(
-            '<tr data-dz-row-id="id1" data-dz-list-kind="embedded" '
+            '<tr id="dz-grid-row-id1" data-dz-row-id="id1" data-dz-list-kind="embedded" '
             'class="dz-table__row"><td class="dz-tr-checkbox-cell" '
             'onclick="event.stopPropagation()">'
         )

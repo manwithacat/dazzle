@@ -253,7 +253,11 @@ class _RenderInteractiveMixin:
             )
         rows_label = "row" if p.total == 1 else "rows"
         return (
-            f'<div class="dz-pagination">'
+            # data-dz-grid-total: the server-authoritative matched total the HM
+            # grid primitive reads (all-matching selection) — convergence C0a.
+            # C1 GATE: `data-dz-grid-pagination` must land on THIS element
+            # (matchedTotal() reads the total off the marker's carrier).
+            f'<div class="dz-pagination" data-dz-grid-total="{p.total}">'
             f'<span class="dz-pagination-summary">'
             f'<span class="dz-bulk-summary-selected">'
             f"<span data-dz-bulk-count-target>0</span> of {p.total} selected"

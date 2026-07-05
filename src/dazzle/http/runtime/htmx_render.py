@@ -101,7 +101,13 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
         )
 
     return (
-        '<div class="dz-pagination">'
+        # data-dz-grid-total: the server-authoritative matched total the HM
+        # grid primitive reads (all-matching selection count) — convergence C0a.
+        # C1 GATE: the controller's matchedTotal() reads this off the element
+        # carrying `data-dz-grid-pagination` — when C1 adds that marker, it MUST
+        # land on this same element (or the total silently degrades to the
+        # visible-row count).
+        f'<div class="dz-pagination" data-dz-grid-total="{total}">'
         '<span class="dz-pagination-summary">'
         '<span class="dz-bulk-summary-selected">'
         f"<span data-dz-bulk-count-target>0</span> of {total} selected"

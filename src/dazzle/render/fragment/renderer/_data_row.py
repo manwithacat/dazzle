@@ -123,6 +123,13 @@ def assemble_list_row(
     head = "<tr"
     if dom_id:
         head += f' id="{dom_id}"'
+    elif row_id_attr:
+        # HM grid contract (convergence C0a): a row with an identity carries a
+        # stable `id` — the idiomorph MORPH KEY — so a live selection follows
+        # its ROW (not its DOM position) across a re-sort/paginate. The id
+        # encodes `data-dz-row-id` (the payload anchor) so the two agree. An
+        # explicit `dom_id` (drawer/detail anchor) wins: any id is a morph key.
+        head += f' id="dz-grid-row-{row_id_attr}"'
     if data_dazzle_row:
         head += f' data-dazzle-row="{data_dazzle_row}"'
     if row_id_attr:

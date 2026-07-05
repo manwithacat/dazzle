@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.84] - 2026-07-05
+
+### Added
+- **Grid convergence C0a — additive server-contract attributes** (Dazzle-only, no HM change; plan: the grid-convergence design doc, approved). No UI flip — the HM `grid` primitive stays inert in Dazzle; these attributes are what it will consume when the emitters flip in C1. (1) **Universal morph-key row ids**: `assemble_list_row` now derives `id="dz-grid-row-<row-id>"` for any identified row that lacks an explicit `dom_id` (embedded/region archetypes; data-table rows already carried `id="row-<id>"`, which satisfies the contract — byte-identical output there). A stable row `id` is the idiomorph morph key: a live selection follows its ROW across a re-sort/paginate. (2) **`data-dz-grid-total`** on both pagination footers (`_render_table_pagination` + the Fragment `Pagination` primitive) — the server-authoritative matched total the primitive's all-matching selection reads. C1 gate noted in-code: `data-dz-grid-pagination` must land on the SAME element as the total. Scoping findings recorded in the plan doc: the `?q=` search alias and bare/bracketed filter keys already exist on the list route (#596), and the skeleton+hydrate tbody (ADR-0049) already matches the primitive's body contract — C1.1 is largely an attribute repoint.
+
+### Agent Guidance
+- **Grid convergence C1 gates.** When flipping the table emitters onto the HM grid primitive: `data-dz-grid-pagination` must be added to the same element that carries `data-dz-grid-total` (the controller reads the total off the marker's carrier — silent degradation otherwise); every echoed matching-relevant param on a bulk POST must be consumable by the server or the request must be rejected (silently ignoring a narrowing param over-applies the action — the C0b fail-closed rule).
+
 ## [0.93.83] - 2026-07-05
 
 ### Added
