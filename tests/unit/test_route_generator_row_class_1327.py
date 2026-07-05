@@ -1,14 +1,17 @@
-"""Regression gate for GitHub issue #1327.
+"""Regression gate for GitHub issue #1327 (and its C2.3 resolution).
 
-`_render_table_row` interpolates the row id into Alpine bindings. The id token
-came from `json.dumps(item_id)` — a *double*-quoted JS literal (`"<id>"`). When
-embedded inside a *double*-quoted HTML/Alpine attribute (`:class="…"`,
-`x-if="…"`), the inner `"` terminates the attribute early, so Alpine receives a
-truncated expression and throws "Unexpected token".
+#1327's bug class: `_render_table_row` interpolated the row id into Alpine
+binding attributes (`:class="…"`, `x-if="…"`, `@dblclick='…'`) as a JS string
+literal, and a wrong quote flavour terminated the HTML attribute early —
+Alpine "Unexpected token".
 
-The fix uses a *single*-quoted JS literal (`'<id>'`) inside those double-quoted
-attributes (mirroring the checkbox's `selected.has('<id>')`), while keeping the
-double-quoted literal inside the single-quoted `@dblclick='…'` attribute.
+Convergence C2.3 eliminated the bug class structurally: rows emit NO Alpine
+bindings at all. Selection (`is-selected`) and edit state (`is-saving` /
+`is-error`) are applied by the delegated controllers (dz-grid.js /
+dz-grid-edit.js) as plain classes; the inline-edit affordance is a display
+span whose contract rides html-escaped data attributes; the row id appears
+once, on `data-dz-row-id`. This gate pins that absence — a reintroduced
+Alpine row bind would resurrect the #1327 quoting hazard.
 """
 
 from __future__ import annotations
@@ -21,9 +24,7 @@ from dazzle.render.fragment.renderer._data_row import render_data_table_rows
 
 def _render_table_row(table: dict, item: dict) -> str:
     """Render one rich row via the converged render/ substrate (#1505 P2) — the
-    `dz-tr-row` source of truth, formerly `http/htmx_render._render_table_row`.
-    The #1327 single-quoted-id escaping lives in the ported row-core, so this
-    regression gate now exercises it there."""
+    `dz-tr-row` source of truth, formerly `http/htmx_render._render_table_row`."""
     return render_data_table_rows(build_data_table(table, [item]))
 
 
@@ -40,58 +41,37 @@ def _table(*, bulk_actions: bool = True, inline: bool = True) -> dict:
     }
 
 
-def _attr_values(html: str, attr: str) -> list[str]:
-    """Extract the value of every `attr="..."` (double-quoted) occurrence."""
-    return re.findall(rf'{re.escape(attr)}="([^"]*)"', html)
-
-
-def test_class_binding_uses_single_quoted_id_no_premature_quote() -> None:
-    """#1327: the :class binding must reference the id as a single-quoted JS
-    literal so its value is one balanced double-quoted attribute.
-
-    Convergence C1.1: selection state moved off the Alpine bind (the row
-    checkbox's own `.checked` is the state; `is-selected` is applied by the
-    grid controller, not `selected.has(...)`), so the :class bind now carries
-    only the is-saving/is-error inline-edit states — the single-quoted-id
-    guard applies to those."""
+def test_no_alpine_row_bindings_emitted() -> None:
+    """C2.3: the row carries no Alpine bindings — the #1327 id-in-JS-literal
+    quoting hazard has no surface left to bite."""
     html = _render_table_row(_table(), {"id": "abc-123", "name": "Ada"})
 
-    class_vals = _attr_values(html, ":class")
-    assert class_vals, ":class binding not emitted"
-    cls = class_vals[0]
-    # The id appears single-quoted inside the editing.rowId comparisons,
-    # never double-quoted; selected.has(...) is gone from the bind.
-    assert "editing.rowId === 'abc-123'" in cls
-    assert 'editing.rowId === "abc-123"' not in cls
-    assert "'is-saving'" in cls
-    assert "'is-error'" in cls
-    assert "selected.has" not in cls
-    # The captured attribute value contains no stray double-quote (that would
-    # mean the regex stopped early because the id's `"` closed the attribute).
-    assert '"' not in cls
+    assert ":class=" not in html
+    assert "x-if=" not in html
+    assert "@dblclick=" not in html
+    assert "isEditing(" not in html
+    assert "startEdit(" not in html
 
 
-def test_x_if_bindings_use_single_quoted_id() -> None:
-    """#1327: both x-if bindings (display + edit templates) must use the
-    single-quoted id literal inside their double-quoted attribute."""
+def test_row_id_rides_data_attribute() -> None:
+    """The row id appears on `data-dz-row-id` (the controllers' anchor) and as
+    the morph key — plain html-escaped attributes, no JS-literal context."""
     html = _render_table_row(_table(), {"id": "row-9", "name": "Grace"})
 
-    x_if_vals = _attr_values(html, "x-if")
-    assert len(x_if_vals) >= 2, "expected display + edit x-if bindings"
-    for val in x_if_vals:
-        assert "isEditing('row-9'" in val
-        assert 'isEditing("row-9"' not in val
-        assert '"' not in val
+    assert 'data-dz-row-id="row-9"' in html
+    # Drill rows carry an explicit dom_id (`row-<id>`), which doubles as the
+    # morph key; `dz-grid-row-<id>` is the fallback when no dom_id exists.
+    assert 'id="row-row-9"' in html
 
 
-def test_dblclick_single_quoted_attr_keeps_double_quoted_id() -> None:
-    """The @dblclick handler lives in a *single*-quoted attribute, so its id
-    literal must stay double-quoted (a single-quoted id would collide with the
-    attribute delimiter)."""
-    html = _render_table_row(_table(), {"id": "xyz-7", "name": "Edsger"})
+def test_inline_edit_seam_span_contract() -> None:
+    """The editable cell emits the C2.3 display-span seam (id-free — the
+    controller reads the row id from the enclosing `data-dz-row-id`)."""
+    html = _render_table_row(_table(), {"id": "abc", "name": "Ada"})
 
-    # @dblclick='startEdit("xyz-7", "name", ...)'  — double-quoted id is correct
-    assert '@dblclick=\'startEdit("xyz-7"' in html
+    assert 'data-dz-grid-edit="name"' in html
+    assert 'data-dz-edit-kind="text"' in html
+    assert 'data-dz-edit-value="Ada"' in html
 
 
 def test_balanced_double_quotes_overall() -> None:
@@ -101,13 +81,15 @@ def test_balanced_double_quotes_overall() -> None:
     assert html.count('"') % 2 == 0
 
 
-def test_id_with_embedded_single_quote_is_escaped() -> None:
-    """Non-UUID string ids containing a single quote stay correct: the id is
-    JS-escaped then HTML-escaped, so it neither breaks the JS literal nor the
-    HTML attribute."""
-    html = _render_table_row(_table(), {"id": "o'brien", "name": "x"})
-    class_vals = _attr_values(html, ":class")
-    assert class_vals
-    # No premature double-quote termination, and the raw apostrophe doesn't
-    # appear unescaped as a bare JS-string terminator.
-    assert '"' not in class_vals[0]
+def test_id_with_embedded_quotes_stays_escaped() -> None:
+    """Ids (and values) containing quote characters stay html-escaped in the
+    data attributes — neither flavour can terminate an attribute early."""
+    html = _render_table_row(_table(), {"id": "o'brien", "name": 'say "hi"'})
+
+    assert 'data-dz-row-id="o&#x27;brien"' in html
+    # The double quote inside the value must arrive entity-escaped.
+    assert 'data-dz-edit-value="say &quot;hi&quot;"' in html
+    # Every double-quoted attribute value parses without a premature close.
+    for val in re.findall(r'data-dz-edit-value="([^"]*)"', html):
+        assert '"' not in val
+    assert html.count('"') % 2 == 0

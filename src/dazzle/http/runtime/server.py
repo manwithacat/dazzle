@@ -1819,6 +1819,20 @@ class DazzleBackendApp:
                 "bulk_actions": bool(
                     _ls is not None and getattr(getattr(_ls, "ux", None), "bulk_actions", None)
                 ),
+                # Convergence C2.3: the type-derived inline-editable column set
+                # (mirrors template_compiler's rule). Never threaded before —
+                # hydrated rows lost their edit affordance when ADR-0049 moved
+                # row rendering to /api.
+                "inline_editable": [
+                    str(c.get("key", ""))
+                    for c in cols
+                    if str(c.get("type", "")) in ("text", "bool", "badge", "date")
+                    and str(c.get("key", "")) not in ("id", "created_at", "updated_at")
+                    and not str(c.get("key", "")).endswith("_id")
+                    # A badge cell edits via a <select> built from the column's
+                    # enum options — without them the editor would be empty.
+                    and (str(c.get("type", "")) != "badge" or c.get("filter_options"))
+                ],
             }
 
         # Build per-entity audit config mapping.

@@ -208,6 +208,9 @@ class _RenderLayoutMixin:
             # the one-url-synced-grid-per-page constraint; workspace/dashboard
             # regions stay off until the URL keys are namespaced.
             " data-dz-grid data-dz-grid-url"
+            # C2.3: the inline-edit extension's commit base — the entity's
+            # API root (commits PUT {base}/{id}, the standard update route).
+            f' data-dz-grid-edit-url="{endpoint}"'
             f' x-data=\'dzTable("{table_id}", "{endpoint}", {config_json})\''
             ' :aria-busy="loading"'
             ' data-dz-bulk-count="0"'

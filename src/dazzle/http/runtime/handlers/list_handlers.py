@@ -103,6 +103,7 @@ def create_list_handler(
     htmx_entity_name: str | None = None,
     htmx_empty_message: str = "No items found.",
     htmx_bulk_actions: bool = False,
+    htmx_inline_editable: list[str] | None = None,
     search_fields: list[str] | None = None,
     filter_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
@@ -170,6 +171,10 @@ def create_list_handler(
         # (Never threaded before — API-hydrated rows NEVER had checkboxes, one
         # of the four legs of the dead-bulk-feature chain.)
         request.state.htmx_bulk_actions = htmx_bulk_actions
+        # C2.3: the editable column set — hydrated cells render their
+        # dz-grid-edit seams from it (also never threaded before: rows lost
+        # the edit affordance when ADR-0049 moved row rendering to /api).
+        request.state.htmx_inline_editable = htmx_inline_editable or []
 
     if optional_auth_dep is not None:
 
@@ -577,6 +582,7 @@ async def _list_handler_body(
                 "api_endpoint": str(request.url.path),
                 "table_id": table_id,
                 "bulk_actions": getattr(request.state, "htmx_bulk_actions", False),
+                "inline_editable": getattr(request.state, "htmx_inline_editable", []),
                 "sort_field": sort or "",
                 "sort_dir": dir,
                 "filter_values": filters,

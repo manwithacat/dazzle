@@ -150,6 +150,9 @@ JS_SOURCES = [
     # Convergence C2.2: column resize as a delegated extension (net-new as a
     # reachable feature — the dzTable code was never wired to any markup).
     STATIC / "js" / "dz-grid-resize.js",
+    # Convergence C2.3: inline cell editing as a delegated extension (the
+    # dzTable commit URL never matched the mounted field route — silent 404).
+    STATIC / "js" / "dz-grid-edit.js",
     SITE_STATIC / "js" / "site.js",
 ]
 
@@ -169,6 +172,7 @@ FRAMEWORK_JS = {
     "dz-toast.js",
     "dz-grid-cols.js",
     "dz-grid-resize.js",
+    "dz-grid-edit.js",
     "site.js",
 }
 

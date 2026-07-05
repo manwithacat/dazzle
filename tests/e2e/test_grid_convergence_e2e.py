@@ -525,3 +525,51 @@ def test_grid_column_resize_extension(browser, server) -> None:  # type: ignore[
         page.evaluate("localStorage.clear()")
         page.close()
     assert not errors, f"page threw JS errors: {errors}"
+
+
+@pytest.mark.e2e
+def test_grid_inline_edit_extension(browser, server) -> None:  # type: ignore[no-untyped-def]
+    """C2.3: inline edit on the cell-owns-its-affordance seam — a dblclick
+    opens an in-cell editor, Enter commits a single-field PUT to the update route
+    (pre-convergence dzTable PATCHed /api/{EntityName}/... while the route
+    mounts at /{plural}/... — a silent 404, the third dead leg), the grid
+    refreshes with the saved value, and Escape cancels."""
+    _seed(server)
+    page = browser.new_page(viewport={"width": 1280, "height": 900})
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    try:
+        _login_admin(page, server)
+        page.goto(f"{server.ui_url}/app/invoice")
+        page.wait_for_selector("[data-dz-grid-body] tr td", timeout=15000)
+
+        # EDIT + COMMIT: dblclick the INV-001 number cell, replace, Enter.
+        cell = "[data-dz-grid-body] tr td[data-dz-col='number'] [data-dz-grid-edit]"
+        page.dblclick(f"{cell} >> text=INV-001")
+        page.wait_for_timeout(300)
+        editor = page.query_selector("[data-dz-grid-body] input.dz-inline-edit-input")
+        assert editor, "dblclick opens the in-cell editor"
+        editor.fill("INV-001-EDITED")
+        editor.press("Enter")
+        page.wait_for_timeout(1200)
+        numbers = _invoice_numbers(page)
+        assert "INV-001-EDITED" in numbers, (
+            f"the commit must persist and the grid refresh must show it: {numbers}"
+        )
+        assert "INV-001" not in numbers, f"the old value is gone: {numbers}"
+
+        # ESC cancels without a write.
+        page.dblclick(f"{cell} >> text=INV-002")
+        page.wait_for_timeout(300)
+        editor = page.query_selector("[data-dz-grid-body] input.dz-inline-edit-input")
+        assert editor, "second edit opens"
+        editor.fill("SHOULD-NOT-PERSIST")
+        editor.press("Escape")
+        page.wait_for_timeout(600)
+        numbers = _invoice_numbers(page)
+        assert "INV-002" in numbers and "SHOULD-NOT-PERSIST" not in numbers, (
+            f"Escape must discard the buffer: {numbers}"
+        )
+    finally:
+        page.close()
+    assert not errors, f"page threw JS errors: {errors}"

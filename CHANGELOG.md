@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.90] - 2026-07-05
+
+### Added
+- **Grid convergence C2.3 — inline cell editing rebuilt as a delegated
+  extension** (`dz-grid-edit.js`) on the HM grid primitive's seams, replacing
+  the Alpine `dzTable` implementation (dead in production: its commit URL
+  never matched a mounted route, and hydrated rows lost the edit affordance
+  when ADR-0049 moved row rendering to `/api`). Editable cells emit one
+  display span (`data-dz-grid-edit` + `data-dz-edit-kind/-value/-label/
+  -options`); dblclick opens an in-cell editor (text/date/bool/select); Enter
+  commits, Escape cancels, Tab/Shift-Tab commits and advances (ring derived
+  from the DOM, wrapping rows); an in-flight edit survives tbody swaps via a
+  buffer on the grid root. Commits go through the entity's **standard update
+  route** (PUT, single-field JSON body; all-optional update schema +
+  `exclude_unset` = partial update) so permit + scope pre-read + #1312
+  destination-scope + storage verification all apply — no bespoke field
+  route. The raw `fetch` echoes the `dazzle_csrf` double-submit cookie as
+  `X-CSRF-Token` (adversarial review: the htmx-only CSRF wiring doesn't cover
+  raw fetches, and Chromium's `Sec-Fetch-Site` gate masks the gap in e2e).
+
+### Changed
+- Rows no longer emit any Alpine bindings: the `is-saving`/`is-error`
+  `:class` bind is gone (the delegated controllers own those classes; an
+  Alpine re-evaluation would strip them), which structurally retires the
+  #1327 id-in-JS-literal quoting hazard — its regression gate now pins the
+  *absence* of Alpine row bindings. Badge columns without enum options are
+  excluded from `inline_editable` (their select editor would be empty).
+
+### Removed
+- `_render_inline_edit` (the Alpine x-if editor-template mirror) deleted from
+  `render/fragment/renderer/_data_row.py`, along with the now-unused
+  single-quoted-JS id escaping helpers.
+
+### Agent Guidance
+- Inline-edit commits are ordinary entity updates: to change what a persona
+  may edit inline, change their `permit`/`scope` rules — there is no separate
+  inline-edit permission surface. Any client JS that writes outside htmx must
+  echo the `dazzle_csrf` cookie as an `X-CSRF-Token` header.
+
 ## [0.93.89] - 2026-07-05
 
 ### Added
