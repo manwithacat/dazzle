@@ -442,6 +442,12 @@ def test_grid_bulk_delete_on_last_page_reclamps(page) -> None:  # type: ignore[n
         "the root re-syncs to the server-clamped page after the last page is emptied"
     )
     assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"], "the surviving page 1 shows"
+    # The URL must follow the clamp too (page 1 = default → no page param): the
+    # address bar mirrors the request query EXACTLY, even when the SERVER moved
+    # the page out from under the client.
+    assert "page" not in _url_params(page), (
+        f"a server clamp must not leave a stale page= in the URL: {_url_params(page)}"
+    )
 
 
 def test_grid_bulk_payload_keys_win_over_query_echo(page) -> None:  # type: ignore[no-untyped-def]
@@ -738,6 +744,80 @@ def test_grid_page_size_keeps_all_matching(page) -> None:  # type: ignore[no-unt
     assert all(c for rid, c in state if rid != "cust_1"), (
         f"the other re-windowed rows arrive selected (afterSwap re-projection): {state}"
     )
+
+
+def _url_params(page):  # type: ignore[no-untyped-def]
+    return page.evaluate("() => Object.fromEntries(new URLSearchParams(location.search).entries())")
+
+
+def test_grid_url_syncs_state_to_the_address_bar(page) -> None:  # type: ignore[no-untyped-def]
+    """With [data-grid-url] on the root, every state change lands in the URL as
+    human-readable params (spec §7) — the URL mirrors the request query EXACTLY
+    (page_size included: the select always rides the query), so a deep link
+    reproduces the request byte-for-byte."""
+    ps = {"page_size": "4"}  # the demo's Per-page select rides every query
+    page.click("[data-grid-sort='first']")
+    page.wait_for_timeout(150)
+    assert _url_params(page) == {"sort": "first", "dir": "asc", **ps}
+
+    page.select_option("[data-grid-filter='plan']", "Pro")
+    page.wait_for_timeout(150)
+    assert _url_params(page) == {"sort": "first", "dir": "asc", "plan": "Pro", **ps}
+
+    page.select_option("[data-grid-filter='plan']", "")
+    page.wait_for_timeout(150)
+    page.click("[data-grid-page-next]")
+    page.wait_for_timeout(150)
+    assert _url_params(page) == {"sort": "first", "dir": "asc", "page": "2", **ps}
+
+    page.fill("[data-grid-search]", "ch")
+    page.wait_for_timeout(400)
+    p = _url_params(page)
+    assert p.get("q") == "ch" and "page" not in p, (
+        f"search lands in the URL (and the page-1 reset drops page=): {p}"
+    )
+
+
+def test_grid_url_restores_state_on_load(page) -> None:  # type: ignore[no-untyped-def]
+    """Deep link: loading the page WITH grid params applies them — controls
+    reflect the state, and the hydration fetch uses the restored query (no
+    default-then-correct double fetch)."""
+    page.goto(_SITE_URI + "?plan=Pro&sort=first&dir=asc")
+    page.wait_for_timeout(300)
+    assert _grid_names(page) == ["Amir", "Noah"], "rows arrive already narrowed + sorted"
+    assert page.eval_on_selector("[data-grid-filter='plan']", "e => e.value") == "Pro"
+    assert _aria_sort(page, "first") == "ascending"
+    assert _page_summary(page) == "1-2 of 2"
+
+
+def test_grid_url_back_button_restores_previous_state(page) -> None:  # type: ignore[no-untyped-def]
+    """Discrete state changes push history entries, so Back returns to the
+    previous grid state — controls, rows, and URL all restore (popstate)."""
+    page.select_option("[data-grid-filter='plan']", "Pro")
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Amir", "Noah"]
+
+    page.select_option("[data-grid-filter='plan']", "Free")
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Sofia", "Jane"]
+
+    page.go_back()
+    page.wait_for_timeout(200)
+    assert _url_params(page).get("plan") == "Pro"
+    assert page.eval_on_selector("[data-grid-filter='plan']", "e => e.value") == "Pro"
+    assert _grid_names(page) == ["Amir", "Noah"], "Back restores the previous matched rows"
+
+
+def test_grid_url_preserves_unrelated_params(page) -> None:  # type: ignore[no-untyped-def]
+    """The grid only owns its OWN keys (q/sort/dir/page/page_size + its filter
+    fields) — a foreign query param on the page URL survives grid activity."""
+    page.goto(_SITE_URI + "?foo=bar")
+    page.wait_for_timeout(300)
+    page.click("[data-grid-sort='plan']")
+    page.wait_for_timeout(150)
+    p = _url_params(page)
+    assert p.get("foo") == "bar", f"foreign params must survive: {p}"
+    assert p.get("sort") == "plan"
 
 
 def test_grid_announces_result_window_changes(page) -> None:  # type: ignore[no-untyped-def]

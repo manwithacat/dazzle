@@ -203,10 +203,13 @@ HYPERPARTS: list[Hyperpart] = [
         "<table>. The tbody hydrates its rows over the wire (hx-get on load); "
         "search, sortable headers, filters, row selection (per page, or ALL matching "
         "rows with exclusions), bulk actions, and pagination are live (dz-grid.js, "
-        "delegated + state-in-DOM) and compose into one server query. "
-        "URL-synced state lands in the next slice.",
+        "delegated + state-in-DOM) and compose into one server query. State is "
+        "URL-synced (data-dz-grid-url): deep-linkable, Back walks grid states.",
         '<div class="hm-stack hm-measure-lg">'
-        '<div class="dz-table" data-dz-grid data-dz-bulk-count="0" data-dz-grid-page="1">'
+        # data-dz-grid-url: opt-in URL-synced state — the grid's query mirrors
+        # into the address bar (deep-linkable, Back walks grid states).
+        '<div class="dz-table" data-dz-grid data-dz-grid-url data-dz-bulk-count="0" '
+        'data-dz-grid-page="1">'
         '<div class="dz-filter-bar">'
         '<div class="dz-filter-cell">'
         '<label class="dz-filter-label" for="hm-grid-search">Search</label>'
@@ -359,7 +362,13 @@ HYPERPARTS: list[Hyperpart] = [
         "reset to page 1. The <strong>Per page</strong> select is a windowing control on the "
         "same seam (<code>[data-dz-grid-page-size]</code> → <code>page_size=</code>): it "
         "re-pages the same matched set, resets to page 1, and — unlike a filter/search "
-        "change — keeps an all-matching selection. URL-synced state is the next slice. "
+        "change — keeps an all-matching selection. State is <strong>URL-synced</strong> "
+        "(<code>data-dz-grid-url</code>, opt-in): the grid's query mirrors into the "
+        "address bar as the same human-readable params the server sees — deep links "
+        "restore on load (before the hydration fetch, so no double fetch), discrete "
+        "actions push history entries (Back walks grid states), the debounced search "
+        "replaces, and foreign URL params survive (the grid only touches its own keys). "
+        "The all-matching selection is ephemeral and deliberately NOT in the URL. "
         "(The gallery mock approximates the "
         "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
         "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "

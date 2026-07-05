@@ -894,6 +894,15 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  *                  involved), so a server pre-selecting a NON-default size
  *                  must also bake `page_size=` into that initial URL — else
  *                  the first interaction visibly re-windows.
+ *   - url:         `data-grid-url` on the root (opt-in) mirrors the grid's
+ *                  query into the address bar — the SAME human-readable
+ *                  params the server sees. Discrete actions (sort / filter /
+ *                  page / size) push history entries (Back walks grid
+ *                  states); the debounced search replaces. Deep links restore
+ *                  at controller init (before htmx fetches); popstate
+ *                  restores + refetches. The grid only touches its OWN keys —
+ *                  foreign URL params survive. One url-synced grid per page
+ *                  (the keys aren't namespaced yet).
  */
 (function () {
   "use strict";
@@ -1061,18 +1070,10 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     return null;
   }
 
-  // Rebuild the tbody's request query from ALL current DOM state — the search
-  // box, the active sort, AND every filter select — so search / sort / filter
-  // COMPOSE, then ask the server (via `grid:refresh`) for the matching,
-  // ordered rows.
-  function refresh(root) {
-    var body = root.querySelector("[data-grid-body]");
-    if (!body) return;
-    var base = (
-      body.getAttribute("data-grid-src") ||
-      body.getAttribute("hx-get") ||
-      ""
-    ).split("?")[0];
+  // Build the tbody's request query from ALL current DOM state — the search
+  // box, the active sort, every filter select, the page-size select, and the
+  // root's page — so they all COMPOSE into one server query.
+  function buildQuery(root) {
     var q = [];
     var search = root.querySelector("[data-grid-search]");
     if (search && search.value) {
@@ -1101,7 +1102,105 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     // refresh; a page-control click sets it, then refreshes.
     var page = root.getAttribute("data-grid-page");
     if (page && page !== "1") q.push("page=" + encodeURIComponent(page));
-    body.setAttribute("hx-get", base + (q.length ? "?" + q.join("&") : ""));
+    return q.join("&");
+  }
+
+  // Write the current DOM state onto the tbody's `hx-get` (no fetch) — the
+  // shared half of refresh() and the URL-restore path (where the `load`
+  // trigger or the popstate caller does the fetching).
+  function setQuery(root) {
+    var body = root.querySelector("[data-grid-body]");
+    if (!body) return null;
+    var base = (
+      body.getAttribute("data-grid-src") ||
+      body.getAttribute("hx-get") ||
+      ""
+    ).split("?")[0];
+    var qs = buildQuery(root);
+    body.setAttribute("hx-get", base + (qs ? "?" + qs : ""));
+    return body;
+  }
+
+  // ── URL-synced state (opt-in: `data-grid-url` on the root) ──────────
+  // The grid's query lands in the address bar as the SAME human-readable
+  // params the server sees (spec §7) — q / sort / dir / page / page_size plus
+  // this grid's filter keys. The grid only ever touches its OWN keys, so
+  // foreign params on the page URL survive. Discrete actions (sort / filter /
+  // page / size) PUSH a history entry — Back walks grid states; the debounced
+  // search REPLACES (a keystroke burst is not N history entries). The
+  // all-matching selection is ephemeral UI state and is deliberately NOT in
+  // the URL.
+  function ownedKeys(root) {
+    var keys = { q: 1, sort: 1, dir: 1, page: 1, page_size: 1 };
+    var filters = root.querySelectorAll("[data-grid-filter]");
+    for (var i = 0; i < filters.length; i++) {
+      var k = filters[i].getAttribute("data-grid-filter");
+      if (k) keys[k] = 1;
+    }
+    return keys;
+  }
+
+  function syncUrl(root, mode) {
+    if (!root.hasAttribute("data-grid-url")) return;
+    var owned = ownedKeys(root);
+    var sp = new URLSearchParams(location.search);
+    Object.keys(owned).forEach(function (k) {
+      sp.delete(k);
+    });
+    // The tbody's hx-get query is the single source of truth for what the
+    // grid is showing — mirror exactly that into the URL.
+    var body = root.querySelector("[data-grid-body]");
+    var qs = ((body && body.getAttribute("hx-get")) || "").split("?")[1] || "";
+    new URLSearchParams(qs).forEach(function (v, k) {
+      sp.set(k, v);
+    });
+    var urlq = sp.toString();
+    var url = location.pathname + (urlq ? "?" + urlq : "") + location.hash;
+    if (mode === "push") history.pushState({}, "", url);
+    else history.replaceState({}, "", url);
+  }
+
+  // Apply the URL's params onto the grid's controls + the tbody query (NO
+  // fetch — at init the `load` trigger fetches; on popstate the caller
+  // dispatches the refresh). Runs at controller parse time, BEFORE htmx
+  // initialises, so the hydration fetch already carries the restored query —
+  // no default-then-correct double fetch. (A server rendering this page can
+  // also bake the params in directly; this restore is then a no-op.)
+  function restoreFromUrl(root) {
+    if (!root.hasAttribute("data-grid-url")) return;
+    var sp = new URLSearchParams(location.search);
+    var search = root.querySelector("[data-grid-search]");
+    if (search) search.value = sp.get("q") || "";
+    var sort = sp.get("sort");
+    var dir = sp.get("dir");
+    if (dir !== "asc" && dir !== "desc") dir = null;
+    var btns = sortButtons(root);
+    for (var i = 0; i < btns.length; i++) {
+      var th = btns[i].closest("th");
+      if (!th) continue;
+      var active =
+        sort && dir && btns[i].getAttribute("data-grid-sort") === sort;
+      th.setAttribute("aria-sort", active ? ARIA_OF[dir] : "none");
+    }
+    var filters = root.querySelectorAll("[data-grid-filter]");
+    for (i = 0; i < filters.length; i++) {
+      var k = filters[i].getAttribute("data-grid-filter");
+      filters[i].value = (k && sp.get(k)) || "";
+    }
+    var size = root.querySelector("[data-grid-page-size]");
+    if (size && sp.get("page_size")) size.value = sp.get("page_size");
+    root.setAttribute("data-grid-page", sp.get("page") || "1");
+    setQuery(root);
+  }
+
+  // Rebuild the query from the DOM, sync the URL (per `urlMode`: "push" for
+  // discrete actions, "replace" for continuous ones, falsy for none — e.g.
+  // the popstate path, which must never rewrite the URL it is restoring), and
+  // ask the server (via `grid:refresh`) for the matching, ordered rows.
+  function refresh(root, urlMode) {
+    var body = setQuery(root);
+    if (!body) return;
+    if (urlMode) syncUrl(root, urlMode);
     body.dispatchEvent(new CustomEvent("grid:refresh", { bubbles: true }));
   }
 
@@ -1127,7 +1226,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     }
     if (th) th.setAttribute("aria-sort", ARIA_OF[next] || "none");
     resetPage(root); // a new sort starts at page 1
-    refresh(root); // reads the sort we just wrote + any active filters
+    refresh(root, "push"); // reads the sort we just wrote + any active filters
   }
 
   // Search: debounced so a burst of keystrokes makes ONE request. The timer
@@ -1148,7 +1247,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       // (Scope-compared, so a net-unchanged keystroke keeps the mode.)
       dropModeIfScopeChanged(root);
       resetPage(root); // a new search starts at page 1
-      refresh(root);
+      refresh(root, "replace"); // continuous input REPLACES (no history spam)
     }, ms);
   });
 
@@ -1192,7 +1291,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       if (fr) {
         dropModeIfScopeChanged(fr);
         resetPage(fr);
-        refresh(fr);
+        refresh(fr, "push");
       }
     } else if (t.matches("[data-grid-page-size]")) {
       // Page size re-WINDOWS the same matched set (like a page click, NOT a
@@ -1200,7 +1299,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       var zr = gridOf(t);
       if (zr) {
         resetPage(zr);
-        refresh(zr);
+        refresh(zr, "push");
       }
     }
   });
@@ -1234,7 +1333,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
           : goBtn.hasAttribute("data-grid-page-next")
             ? "next"
             : "goto:" + to;
-        refresh(proot);
+        refresh(proot, "push");
       }
       return;
     }
@@ -1384,7 +1483,19 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         nav && nav.querySelector("[data-grid-goto][aria-current='page']");
       if (curBtn) {
         var pnum = parseInt(curBtn.getAttribute("data-grid-goto"), 10);
-        if (pnum) grids[i].setAttribute("data-grid-page", String(pnum));
+        if (
+          pnum &&
+          String(pnum) !== grids[i].getAttribute("data-grid-page")
+        ) {
+          // The SERVER moved the page out from under the client (e.g. a bulk
+          // delete emptied the last page). Follow it everywhere the page is
+          // mirrored: the root, the tbody query, and — for a url-synced grid —
+          // the address bar. REPLACE, not push: a clamp is a correction, not a
+          // navigation the user should Back into.
+          grids[i].setAttribute("data-grid-page", String(pnum));
+          setQuery(grids[i]);
+          syncUrl(grids[i], "replace");
+        }
       }
       // Announce the (possibly new) result window to screen readers. Safe on
       // after-swap even under the OOB footer contract: while the nav is still
@@ -1432,4 +1543,30 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   }
   document.addEventListener("htmx:after:settle", onAfterSettle); // htmx 4
   document.addEventListener("htmx:afterSettle", onAfterSettle); // htmx ≤2
+
+  // ── URL-state wiring ────────────────────────────────────────────────────
+  // Init: apply the URL's params to every opted-in grid NOW, synchronously at
+  // controller parse — before htmx initialises — so the hydration fetch
+  // already carries the deep-linked query (no double fetch). Back/forward:
+  // restore the state the URL describes, then fetch it; the popstate path
+  // never calls syncUrl (it must not rewrite the history it is walking).
+  var urlGrids = document.querySelectorAll("[data-grid][data-grid-url]");
+  for (var g = 0; g < urlGrids.length; g++) restoreFromUrl(urlGrids[g]);
+
+  window.addEventListener("popstate", function () {
+    var grids = document.querySelectorAll("[data-grid][data-grid-url]");
+    for (var i = 0; i < grids.length; i++) {
+      var body = grids[i].querySelector("[data-grid-body]");
+      // Back across a HASH-only history entry (e.g. in-page anchors) fires
+      // popstate with the grid's params unchanged — skip the refetch when the
+      // restore didn't change the query (no loading flash for a no-op).
+      var before = body && body.getAttribute("hx-get");
+      restoreFromUrl(grids[i]);
+      if (body && body.getAttribute("hx-get") !== before) {
+        body.dispatchEvent(
+          new CustomEvent("grid:refresh", { bubbles: true }),
+        );
+      }
+    }
+  });
 })();

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.83] - 2026-07-05
+
+### Added
+- **`dz-grid` — URL-synced state** (HM package 0.1.19 → 0.1.20; spec §7/§8, the last v1-core slice). Opt-in via `data-dz-grid-url` on the grid root: the grid's query mirrors into the address bar as the **same human-readable params the server sees** (`q`/`sort`/`dir`/`page`/`page_size` + the grid's filter keys — the URL reproduces the request exactly). Discrete actions (sort / filter / page / size) **push** history entries, so Back walks grid states; the debounced search **replaces** (a keystroke burst is not N history entries). Deep links restore at controller init — synchronously, before htmx fires the hydration fetch, so the first request already carries the deep-linked query (no default-then-correct double fetch). `popstate` restores controls + refetches (and never rewrites the history it is walking); a Back across a hash-only entry is detected as a no-op (no refetch flash). The grid only touches its OWN keys, so foreign URL params survive; one url-synced grid per page (keys aren't namespaced). The all-matching selection is ephemeral and deliberately NOT in the URL. Verified `pushState`/`replaceState` work over `file://` in headless Chromium + WebKit before building. 4 new behaviour tests + a clamp-URL pin.
+
+### Fixed
+- **Server page-clamp now corrects the URL and the tbody query too** (adversarial-review catch on this slice). A bulk delete that empties the last page makes the server clamp to an earlier page; the client re-synced the root's page from the footer but left the address bar (and the tbody's `hx-get`) saying the stale page. The clamp branch now — only when the page actually moved — updates the root, rebuilds the query, and `replaceState`s the URL (replace, not push: a clamp is a correction, not a navigation).
+
+### Agent Guidance
+- **URL-state rules for grid-like controllers.** The URL mirrors the request query EXACTLY (single source of truth = the tbody's `hx-get`; the spec's own example URLs include `page_size`). Push for discrete actions, replace for continuous input and for server corrections (clamps); the popstate path must never call the URL-writer. Deep-link restore must run BEFORE the hydration fetch fires (synchronous at controller parse) or you pay a double fetch. Guard popstate refetches with a did-the-query-change check — Back across a hash-only history entry fires popstate with identical params.
+
 ## [0.93.82] - 2026-07-05
 
 ### Added
