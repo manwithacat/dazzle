@@ -4633,10 +4633,20 @@ button.htmx-request,
 }
 
 /* ─────────────────────────── column visibility menu ─────────────
- * Triggered by the "Columns" button; rendered via Alpine x-show. */
+ * A native <details> disclosure (the .menu idiom — no open/close
+ * JS); the toggles ride the delegated grid-cols extension (C2.1). */
 
 .table-col-menu {
   position: relative;
+}
+
+/* The trigger is the <summary> — strip the UA disclosure marker so the
+ * existing button chrome applies cleanly. */
+summary.table-col-menu-trigger {
+  list-style: none;
+}
+summary.table-col-menu-trigger::-webkit-details-marker {
+  display: none;
 }
 
 .table-col-menu-trigger {

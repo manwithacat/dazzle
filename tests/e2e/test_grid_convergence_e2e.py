@@ -374,3 +374,65 @@ def test_grid_url_state_and_drill_back(browser, server) -> None:  # type: ignore
     finally:
         page.close()
     assert not errors, f"page threw JS errors: {errors}"
+
+
+@pytest.mark.e2e
+def test_grid_column_visibility_extension(browser, server) -> None:  # type: ignore[no-untyped-def]
+    """C2.1: column visibility as a delegated extension on the primitive's
+    seams — a native <details> menu, toggles that hide header + cells,
+    persistence across a swap (re-sort) AND a full reload (localStorage),
+    and re-checking restores the column."""
+    _seed(server)
+    page = browser.new_page(viewport={"width": 1280, "height": 900})
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    try:
+        _login_admin(page, server)
+        page.goto(f"{server.ui_url}/app/invoice")
+        page.wait_for_selector("[data-dz-grid-body] tr td", timeout=15000)
+
+        def col_visible(key: str) -> bool:
+            return page.eval_on_selector(
+                f"[data-dz-grid-body] td[data-dz-col='{key}']",
+                "td => getComputedStyle(td).display !== 'none'",
+            )
+
+        # The menu is a native details disclosure.
+        assert page.query_selector("details.dz-table-col-menu"), (
+            "the column menu is a native <details> (no open/close JS)"
+        )
+        page.click("details.dz-table-col-menu summary")
+        page.wait_for_timeout(200)
+
+        # Hide Amount: header + every cell disappear.
+        page.uncheck("[data-dz-grid-col-toggle='amount']")
+        page.wait_for_timeout(200)
+        assert not col_visible("amount"), "unchecking hides the cells"
+        assert page.eval_on_selector(
+            "th[data-dz-col='amount']", "th => getComputedStyle(th).display === 'none'"
+        ), "the header hides in lock-step"
+
+        # Survives a swap: re-sort re-fetches rows — they arrive hidden.
+        page.click("[data-dz-grid-sort='number']")
+        page.wait_for_timeout(600)
+        assert not col_visible("amount"), "hydrated rows re-apply the hidden set"
+
+        # Survives a full reload (localStorage persistence).
+        page.reload()
+        page.wait_for_selector("[data-dz-grid-body] tr td", timeout=15000)
+        page.wait_for_timeout(300)
+        assert not col_visible("amount"), "the preference persists across reloads"
+
+        # Re-check restores the column (and the box reflects storage on load).
+        page.click("details.dz-table-col-menu summary")
+        page.wait_for_timeout(200)
+        assert not page.is_checked("[data-dz-grid-col-toggle='amount']"), (
+            "the menu box reflects the persisted hidden state"
+        )
+        page.check("[data-dz-grid-col-toggle='amount']")
+        page.wait_for_timeout(200)
+        assert col_visible("amount"), "re-checking restores the column"
+    finally:
+        page.evaluate("localStorage.clear()")
+        page.close()
+    assert not errors, f"page threw JS errors: {errors}"

@@ -501,24 +501,27 @@ class _RenderTablesMixin:
         return "".join(parts)
 
     def _emit_column_visibility_menu(self, m: ColumnVisibilityMenu, ctx: RenderContext) -> str:
-        """Task 4c: the column-visibility dropdown, bound to dzTable."""
+        """Convergence C2.1: the column-visibility menu as a native <details>
+        disclosure (the HM `.dz-menu` idiom — no open/close JS), with the
+        toggles on the delegated `dz-grid-cols.js` extension's seam
+        (`data-dz-grid-col-toggle`; checked = visible; persisted per grid id).
+        The ARIA menu roles are deliberately dropped — a details disclosure
+        can't back the menu keyboard contract (the Bucket-B precedent)."""
         items: list[str] = []
         for key, label in m.columns:
             ck = ctx.escape_attr(key)
             cl_attr = ctx.escape_attr(label)
             items.append(
-                '<label role="menuitemcheckbox" class="dz-table-col-menu-item">'
-                '<input type="checkbox" class="dz-table-col-menu-checkbox" '
-                f":checked=\"isColumnVisible('{ck}')\" "
-                f"@change=\"toggleColumn('{ck}')\" "
+                '<label class="dz-table-col-menu-item">'
+                '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
+                f'data-dz-grid-col-toggle="{ck}" '
                 f'aria-label="Show {cl_attr} column">'
                 f"<span>{ctx.escape(label)}</span></label>"
             )
         return (
-            '<div class="dz-table-col-menu" @click.outside="colMenuOpen = false">'
-            '<button type="button" @click="colMenuOpen = !colMenuOpen" '
-            ':aria-expanded="colMenuOpen" aria-label="Toggle column visibility" '
-            'aria-haspopup="menu" class="dz-table-col-menu-trigger">'
+            '<details class="dz-table-col-menu">'
+            '<summary class="dz-table-col-menu-trigger" '
+            'aria-label="Toggle column visibility">'
             '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" '
             'aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
             '<rect x="1" y="1" width="3" height="12" rx="0.5" stroke="currentColor" '
@@ -527,10 +530,9 @@ class _RenderTablesMixin:
             'stroke-width="1.5"/>'
             '<rect x="10" y="1" width="3" height="12" rx="0.5" stroke="currentColor" '
             'stroke-width="1.5"/>'
-            "</svg>Columns</button>"
-            '<div x-show="colMenuOpen" x-transition.opacity.duration.80ms '
-            'role="menu" class="dz-table-col-menu-panel">'
-            f"{''.join(items)}</div></div>"
+            "</svg>Columns</summary>"
+            '<div class="dz-table-col-menu-panel">'
+            f"{''.join(items)}</div></details>"
         )
 
     def _emit_kpi(self, k: KPI, ctx: RenderContext) -> str:

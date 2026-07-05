@@ -29,10 +29,20 @@
 }
 
 /* ─────────────────────────── column visibility menu ─────────────
- * Triggered by the "Columns" button; rendered via Alpine x-show. */
+ * A native <details> disclosure (the .dz-menu idiom — no open/close
+ * JS); the toggles ride the delegated dz-grid-cols extension (C2.1). */
 
 .dz-table-col-menu {
   position: relative;
+}
+
+/* The trigger is the <summary> — strip the UA disclosure marker so the
+ * existing button chrome applies cleanly. */
+summary.dz-table-col-menu-trigger {
+  list-style: none;
+}
+summary.dz-table-col-menu-trigger::-webkit-details-marker {
+  display: none;
 }
 
 .dz-table-col-menu-trigger {

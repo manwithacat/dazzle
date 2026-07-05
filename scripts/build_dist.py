@@ -144,6 +144,9 @@ JS_SOURCES = [
     # sendBeacon on a field's first focus so the 1a widget inferer can adapt to
     # real usage. Zero-dep, best-effort, same-origin.
     STATIC / "js" / "dz-usage.js",
+    # Convergence C2.1: column-visibility as a delegated extension on the HM
+    # grid primitive's seams (replaces dzTable's Alpine implementation).
+    STATIC / "js" / "dz-grid-cols.js",
     SITE_STATIC / "js" / "site.js",
 ]
 
@@ -161,6 +164,7 @@ FRAMEWORK_JS = {
     "pdf-viewer.js",
     "dz-debug.js",
     "dz-toast.js",
+    "dz-grid-cols.js",
     "site.js",
 }
 

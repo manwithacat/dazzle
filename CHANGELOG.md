@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.88] - 2026-07-05
+
+### Changed
+- **Grid convergence C2.1 — column visibility becomes a delegated extension** (HM package 0.1.23 → 0.1.24; the first of the four C2 extension re-homes). The Alpine dzTable implementation is replaced by `dz-grid-cols.js`, a Dazzle extension in the primitive's own idiom: delegated document listeners, state in DOM + localStorage, no framework. The menu is now a native `<details>` disclosure (the HM `.dz-menu` idiom — no open/close JS; the ARIA menu roles are deliberately dropped, the Bucket-B honest-disclosure precedent); toggles carry `data-dz-grid-col-toggle` (checked = visible); the hidden set persists under the SAME `dz-cols-<grid-id>` localStorage key dzTable used, so users keep their saved preferences; visibility re-projects onto `[data-dz-col]` cells after every swap (hydrated rows arrive visible-by-default) with the #853 stale-key prune preserved. Row cells drop their per-cell `x-show` Alpine bindings. New browser e2e leg: hide a column → survives a re-sort swap AND a full reload → the menu box reflects storage → re-check restores. dzTable's now-unreachable col-vis code is deleted in C3.
+
+### Agent Guidance
+- **Extension re-home recipe (C2).** A dzTable feature moves to a delegated vanilla controller on the primitive's seams: keep the localStorage key (user prefs survive), re-apply state on BOTH htmx swap event names (hydrated content arrives default-state), prune stale persisted keys against the live DOM at init, and prefer a native `<details>` disclosure over JS open/close state. The old Alpine methods go unreachable (bindings gone) but stay in dz-alpine.js until C3 — verify coexistence is idempotent (same storage key, same DOM writes) rather than assuming.
+
 ## [0.93.87] - 2026-07-05
 
 ### Added

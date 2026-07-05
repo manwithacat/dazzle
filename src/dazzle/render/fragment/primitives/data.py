@@ -294,13 +294,16 @@ class RelatedGroup:
 
 @dataclass(frozen=True, slots=True)
 class ColumnVisibilityMenu:
-    """The list header's column-visibility menu (ADR-0049 Phase 1 Task 4c).
+    """The list toolbar's column-visibility menu (convergence C2.1).
 
-    A dropdown of per-column checkboxes bound to the `dzTable` controller's
-    `isColumnVisible`/`toggleColumn` — mirrors the legacy
-    `render_filterable_table` column menu. `columns` is the ordered tuple of
-    visible `(key, label)` pairs. `_build_list` only constructs the menu when
-    there are more than three visible columns (the legacy gate)."""
+    A native `<details>` disclosure of per-column checkboxes — each carries
+    `data-dz-grid-col-toggle="<key>"` (checked = visible); the delegated
+    `dz-grid-cols.js` extension persists the hidden set to
+    `localStorage["dz-cols-<grid-id>"]` and projects `style.display` onto
+    every `[data-dz-col]` cell in the grid root (re-applied after swaps).
+    No Alpine bindings. `columns` is the ordered tuple of visible
+    `(key, label)` pairs. `_build_list` only constructs the menu when there
+    are more than three visible columns (the legacy gate)."""
 
     columns: tuple[tuple[str, str], ...]
 

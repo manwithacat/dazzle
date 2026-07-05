@@ -539,9 +539,10 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         else:
             cell_inner = display_html
 
+        # C2.1: no per-cell visibility binding — dz-grid-cols.js projects the
+        # hidden set onto [data-dz-col] cells after every swap.
         cell_parts.append(
             f'<td data-dz-col="{col_key_attr}" '  # nosemgrep
-            f"x-show=\"isColumnVisible('{col_key_attr}')\" "
             f'class="{cell_classes}" onclick="event.stopPropagation()">'
             f"{cell_inner}</td>"
         )

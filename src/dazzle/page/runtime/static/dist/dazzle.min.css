@@ -1,4 +1,4 @@
-/* dazzle v0.93.87 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.88 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3247,6 +3247,12 @@ min-width: 0;
 }
 .dz-table-col-menu {
 position: relative;
+}
+summary.dz-table-col-menu-trigger {
+list-style: none;
+}
+summary.dz-table-col-menu-trigger::-webkit-details-marker {
+display: none;
 }
 .dz-table-col-menu-trigger {
 display: inline-flex;

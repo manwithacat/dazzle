@@ -166,24 +166,29 @@ class TestColumnVisibilityMenu:
 
         return ColumnVisibilityMenu(columns=cols)
 
-    def test_trigger_button_a11y(self) -> None:
+    # Convergence C2.1: the menu is a native <details> disclosure and the
+    # toggles ride the delegated dz-grid-cols extension — no Alpine bindings.
+    def test_trigger_is_a_details_summary(self) -> None:
         html = _render(self._menu((("name", "Name"), ("status", "Status"))))
-        assert 'class="dz-table-col-menu"' in html
-        assert '@click.outside="colMenuOpen = false"' in html
+        assert '<details class="dz-table-col-menu">' in html
+        assert '<summary class="dz-table-col-menu-trigger"' in html
         assert 'aria-label="Toggle column visibility"' in html
-        assert 'aria-haspopup="menu"' in html
-        assert ':aria-expanded="colMenuOpen"' in html
+        assert "colMenuOpen" not in html, "no Alpine open/close state"
 
-    def test_panel_is_a_menu(self) -> None:
+    def test_panel_is_a_plain_disclosure(self) -> None:
         html = _render(self._menu((("name", "Name"),)))
-        assert 'role="menu" class="dz-table-col-menu-panel"' in html
-        assert 'x-show="colMenuOpen"' in html
+        assert 'class="dz-table-col-menu-panel"' in html
+        # A details disclosure can't back the ARIA menu keyboard contract —
+        # the roles are deliberately dropped (Bucket-B precedent).
+        assert 'role="menu"' not in html
+        assert "x-show" not in html
 
-    def test_per_column_checkbox_bound_to_controller(self) -> None:
+    def test_per_column_checkbox_is_delegated(self) -> None:
         html = _render(self._menu((("name", "Name"), ("status", "Status"))))
-        assert "isColumnVisible('name')" in html
-        assert "toggleColumn('name')" in html
-        assert "isColumnVisible('status')" in html
+        assert 'data-dz-grid-col-toggle="name"' in html
+        assert 'data-dz-grid-col-toggle="status"' in html
+        assert "toggleColumn" not in html and "isColumnVisible" not in html
+        assert "checked" in html, "server default = visible; storage syncs at init"
         assert "<span>Name</span>" in html
         assert 'aria-label="Show Status column"' in html
 
