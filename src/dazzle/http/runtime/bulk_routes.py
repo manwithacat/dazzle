@@ -2,16 +2,25 @@
 
 When a list-mode surface declares bulk actions in its ``ux:`` block, the
 runtime mounts a single ``POST /api/{entity_plural}/bulk`` endpoint that
-applies a named field transition to every supplied id.
+applies a named field transition to every supplied id. ``delete`` is a
+BUILT-IN action (grid convergence C0b — the HM grid's flagship bulk flow)
+unless the surface declares its own action of that name, which always wins.
+
+Two body shapes (C0b): the legacy dzTable JSON ``{action, ids}`` and the HM
+grid primitive's form payload — ``action`` + repeated ``selected_ids`` /
+``excluded_ids`` + ``all_matching_selected`` + a query echo. All-matching
+re-runs the echoed query through the SAME gated list pipeline the view used
+(never trusting client ids, §15) via :mod:`dazzle.http.runtime.bulk_payload`,
+which fails CLOSED on any echo it can't consume faithfully.
 
 RBAC (#1170): the bulk endpoint enforces the same authorization as the
-generated single-record UPDATE route — an entity-level Cedar permit gate
-plus a per-id ``scope:`` check via :func:`_scoped_pre_read`. Ids the
-caller cannot scope to are reported as ``not_found`` (the same IDOR-safe
-shape the single-record route uses), never silently mutated. The actual
-field patch still goes through ``repo.update`` directly — it is a
-constrained, per-item transition with no user-supplied payload to
-validate.
+generated single-record route — an entity-level Cedar permit gate (UPDATE
+for transitions, DELETE for the built-in delete) plus a per-id ``scope:``
+check via :func:`_scoped_pre_read`. Ids the caller cannot scope to are
+reported as ``not_found`` (the same IDOR-safe shape the single-record route
+uses), never silently mutated. A field patch goes through ``repo.update``
+directly — a constrained, per-item transition with no user-supplied payload
+to validate; a delete goes through the service (hooks/cascades apply).
 
 When the app has no auth configured at all (``optional_auth_dep`` is
 ``None``) the endpoint applies actions unenforced — consistent with the
@@ -27,9 +36,15 @@ from fastapi.responses import JSONResponse
 from dazzle.core.access import AccessOperationKind
 from dazzle.core.ir import BulkActionSpec
 from dazzle.core.strings import to_api_plural
+from dazzle.http.runtime.access.gated import AccessForbidden, access_context_from
 from dazzle.http.runtime.audit_wrap import (
     _build_access_context,
     _record_to_dict,
+)
+from dazzle.http.runtime.bulk_payload import (
+    BulkQueryError,
+    parse_bulk_selection,
+    resolve_all_matching_ids,
 )
 from dazzle.http.runtime.scope_filters import _scoped_pre_read
 from dazzle.render.access_evaluator import evaluate_permission
@@ -72,6 +87,11 @@ def create_bulk_routes(
     fk_graph: Any,
     optional_auth_dep: Any,
     admin_personas: list[str] | None = None,
+    entity_search_fields: dict[str, list[str]] | None = None,
+    entity_filter_fields: dict[str, list[str]] | None = None,
+    entity_access_specs: dict[str, Any] | None = None,
+    entity_ref_targets: dict[str, dict[str, str]] | None = None,
+    all_matching_cap: int = 10_000,
 ) -> APIRouter | None:
     """Register ``POST /api/{plural}/bulk`` for every bulk-action-bearing entity.
 
@@ -121,6 +141,11 @@ def create_bulk_routes(
             fk_graph=fk_graph,
             optional_auth_dep=optional_auth_dep,
             admin_personas=admin_personas,
+            search_fields=(entity_search_fields or {}).get(entity_name),
+            filter_fields=(entity_filter_fields or {}).get(entity_name),
+            access_spec=(entity_access_specs or {}).get(entity_name),
+            ref_targets=(entity_ref_targets or {}).get(entity_name),
+            all_matching_cap=all_matching_cap,
         )
 
     return router
@@ -137,6 +162,11 @@ def _register_bulk_route(
     fk_graph: Any,
     optional_auth_dep: Any,
     admin_personas: list[str] | None,
+    search_fields: list[str] | None = None,
+    filter_fields: list[str] | None = None,
+    access_spec: Any = None,
+    ref_targets: dict[str, str] | None = None,
+    all_matching_cap: int = 10_000,
 ) -> None:
     """Wire one entity's bulk endpoint with RBAC + scope enforcement."""
     action_map = {a.name: a for a in actions}
@@ -147,44 +177,96 @@ def _register_bulk_route(
         request: Request,
         auth_context: Any = Depends(auth_dep),
     ) -> JSONResponse:
+        # Dual body shapes (convergence C0b): the legacy dzTable JSON
+        # `{action, ids}` and the HM grid primitive's form payload (action +
+        # repeated selected_ids/excluded_ids + all_matching_selected + the
+        # query echo the rows came from).
         try:
-            body = await request.json()
+            sel = await parse_bulk_selection(request)
         except Exception:
-            return JSONResponse(content={"error": "Body must be valid JSON"}, status_code=400)
+            return JSONResponse(content={"error": "Unparseable bulk body"}, status_code=400)
 
-        action_name = str(body.get("action", ""))
-        ids = body.get("ids")
-
-        if action_name not in action_map:
+        action_name = sel.action
+        # `delete` is a BUILT-IN action (the grid's flagship bulk flow) unless
+        # the surface declares its own action of that name — a declared
+        # transition always wins (never shadow the app's semantics).
+        is_delete = action_name == "delete" and action_name not in action_map
+        if not is_delete and action_name not in action_map:
             return JSONResponse(
                 content={
                     "error": f"Unknown action {action_name!r} for {entity_name}",
-                    "actions": sorted(action_map.keys()),
+                    "actions": sorted({*action_map.keys(), "delete"}),
                 },
                 status_code=422,
             )
-        if not isinstance(ids, list) or not ids:
+        if is_delete and service is None:
+            return JSONResponse(
+                content={"error": "Bulk delete requires a service for this entity"},
+                status_code=422,
+            )
+
+        # Resolve WHO the action applies to. All-matching (§15): re-run the
+        # echoed query through the SAME gated list pipeline the view used —
+        # never trusting the client ids — then subtract the exclusions. The
+        # resolver fails CLOSED on any echo it can't consume faithfully.
+        if sel.all_matching:
+            if service is None:
+                return JSONResponse(
+                    content={"error": "All-matching selection requires a service"},
+                    status_code=422,
+                )
+            access = access_context_from(
+                auth_context=auth_context,
+                entity_name=entity_name,
+                cedar_access_spec=cedar_spec,
+                fk_graph=fk_graph,
+                admin_personas=admin_personas,
+            )
+            try:
+                matched = await resolve_all_matching_ids(
+                    service=service,
+                    access=access,
+                    echo=sel.echo,
+                    search_fields=search_fields,
+                    filter_fields=filter_fields,
+                    access_spec=access_spec,
+                    ref_targets=ref_targets,
+                    cap=all_matching_cap,
+                )
+            except BulkQueryError as e:
+                return JSONResponse(content={"error": str(e)}, status_code=422)
+            except AccessForbidden as e:
+                # gated_list's LIST permit gate — a caller with UPDATE/DELETE
+                # permit but no LIST permit can't resolve an all-matching set.
+                return JSONResponse(content={"error": str(e)}, status_code=403)
+            excluded = set(sel.excluded_ids)
+            ids = [i for i in matched if i not in excluded]
+        else:
+            ids = sel.selected_ids
+
+        if not ids:
             return JSONResponse(
                 content={"error": "`ids` must be a non-empty list"},
                 status_code=422,
             )
 
-        spec = action_map[action_name]
-        update_payload = {spec.field: spec.target_value}
+        spec = action_map.get(action_name)
+        update_payload = {spec.field: spec.target_value} if spec else {}
 
         # `auth_context is None` ⟺ the app has no auth configured; the
         # real optional-auth dependency always returns an AuthContext
         # (possibly unauthenticated). Only enforce when auth exists.
+        # A delete enforces the DELETE operation; a transition, UPDATE.
+        op_kind = AccessOperationKind.DELETE if is_delete else AccessOperationKind.UPDATE
+        op_name = "delete" if is_delete else "update"
         enforce = auth_context is not None
         ctx: Any = None
         if enforce:
             _user, ctx = _build_access_context(auth_context, admin_personas)
-            # Entity-level permit gate — mirrors the generated UPDATE route.
-            # A categorically-denied role fails the whole request with 403.
+            # Entity-level permit gate — mirrors the generated single-record
+            # route. A categorically-denied role fails the whole request 403.
             if cedar_spec is not None:
-                gate = evaluate_permission(
-                    cedar_spec, AccessOperationKind.UPDATE, None, ctx, entity_name=entity_name
-                )
+                gate = evaluate_permission(cedar_spec, op_kind, None, ctx, entity_name=entity_name)
                 if not gate.allowed:
                     raise HTTPException(
                         status_code=403,
@@ -204,7 +286,7 @@ def _register_bulk_route(
                     # uses (scope-denied is indistinguishable from absent).
                     existing = await _scoped_pre_read(
                         service=service,
-                        operation="update",
+                        operation=op_name,
                         id=item_id,
                         cedar_access_spec=cedar_spec,
                         auth_context=auth_context,
@@ -220,7 +302,7 @@ def _register_bulk_route(
                     if cedar_spec is not None:
                         rec = evaluate_permission(
                             cedar_spec,
-                            AccessOperationKind.UPDATE,
+                            op_kind,
                             _record_to_dict(existing),
                             ctx,
                             entity_name=entity_name,
@@ -229,10 +311,16 @@ def _register_bulk_route(
                             results.append({"id": item_id, "ok": False, "error": "forbidden"})
                             continue
 
-                updated = await repo.update(item_id, update_payload)
-                if updated is None:
-                    results.append({"id": item_id, "ok": False, "error": "not_found"})
-                    continue
+                if is_delete:
+                    # Through the service (not the raw repo) so delete hooks /
+                    # cascades apply — the same path the single-record DELETE
+                    # route takes.
+                    await service.execute(operation="delete", id=item_id)
+                else:
+                    updated = await repo.update(item_id, update_payload)
+                    if updated is None:
+                        results.append({"id": item_id, "ok": False, "error": "not_found"})
+                        continue
                 results.append({"id": item_id, "ok": True})
                 ok_count += 1
             except Exception as e:
@@ -251,8 +339,8 @@ def _register_bulk_route(
         return JSONResponse(
             content={
                 "action": action_name,
-                "field": spec.field,
-                "target_value": spec.target_value,
+                "field": spec.field if spec else None,
+                "target_value": spec.target_value if spec else None,
                 "total": len(ids),
                 "succeeded": ok_count,
                 "results": results,

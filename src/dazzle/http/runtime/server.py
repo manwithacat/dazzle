@@ -2290,6 +2290,15 @@ class DazzleBackendApp:
             # name (`list_invoices`, ...), so pass the entity-keyed view
             # (#1181) — otherwise every bulk route is silently skipped under
             # auth ("no service for scope enforcement").
+            # C0b: the all-matching resolver re-runs the echoed query through
+            # gated_list with the SAME search/filter/visibility config the
+            # list view used — parity is the §15 guarantee. (Same derivation
+            # of the legacy visibility specs as the CRUD route generation.)
+            _visibility_specs: dict[str, Any] = {
+                entity.name: entity.metadata["access"]
+                for entity in self._entities
+                if entity.metadata and "access" in entity.metadata
+            }
             bulk_router = create_bulk_routes(
                 list(self._appspec.surfaces),
                 repositories=self._repositories,
@@ -2298,6 +2307,10 @@ class DazzleBackendApp:
                 fk_graph=_fk_graph,
                 optional_auth_dep=optional_auth_dep,
                 admin_personas=_admin_personas,
+                entity_search_fields=self._entity_search_fields,
+                entity_filter_fields=self._entity_filter_fields,
+                entity_access_specs=_visibility_specs,
+                entity_ref_targets=self._entity_ref_targets,
             )
             if bulk_router is not None:
                 self._app.include_router(bulk_router)

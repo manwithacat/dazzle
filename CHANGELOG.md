@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.85] - 2026-07-05
+
+### Added
+- **Grid convergence C0b — the bulk endpoint speaks the grid primitive's contract** (Dazzle-only). `POST /api/{plural}/bulk` now accepts BOTH body shapes: the legacy dzTable JSON `{action, ids}` and the HM grid's form payload (`action` + repeated `selected_ids`/`excluded_ids` + `all_matching_selected` + the query echo). **All-matching selection (§15)**: the server never trusts client ids — it re-runs the echoed query through `gated_list` (the SAME permit + scope + visibility pipeline the list view used, in the new `http/runtime/bulk_payload.py`), strips `page`/`page_size` (they window the display, not the matched set), subtracts the exclusions, and feeds the ids to the existing per-record enforcement loop (scope pre-read + per-record forbid — double enforcement). **Fail-closed echo rules**: an echoed search on an entity with no `search_fields`, or an unconsumable bare filter key, is rejected 422 rather than silently widening the action; matched sets above a 10k cap are rejected ("narrow the query"). **Built-in `delete` action** (DELETE permit gate + per-id scope + per-record forbid; mutation through the service so hooks/cascades apply) — a surface-declared action named `delete` always wins. 12 new unit tests (TDD, RED-first).
+
+### Fixed
+- **dzTable's bulk delete was posting into a 404** (latent, found during C0b): `dz-alpine.js` posts `/api/{entity}/bulk-delete`, but that route only exists on the never-mounted `generate_crud_routes` convenience wrapper — production apps never had it. The grid convergence replaces the flow with the built-in `delete` action on the REAL mounted `/bulk` route (C1.2 points the primitive's Delete there); dzTable's dead endpoint retires with dzTable itself (C3).
+- Adversarial review (2 catches, both fixed + regression-tested): the all-matching resolver's `q`/`search` precedence was inverted vs the list route (`search` must win, #596 parity — a crafted POST carrying both could act on a different set than the view showed); `AccessForbidden` from `gated_list`'s LIST permit gate now maps to 403 instead of an unhandled 500 (a caller with UPDATE permit but role-restricted LIST).
+
+### Agent Guidance
+- **§15 server-side, the Dazzle shape.** All-matching bulk = re-run the echoed query through `gated_list` with the SAME `search_fields`/`filter_fields`/visibility config the list route uses (parity is the guarantee), strip windowing params, subtract exclusions, then per-record enforcement anyway (defense in depth). Fail CLOSED on any echo you can't consume — silently dropping a narrowing param widens the action. Match the list route's alias precedence exactly (`search or q`). Catch `AccessForbidden` wherever `gated_list` is called outside the list route (403, not 500). Follow-on: a real-PG integration test for the full all-matching→delete path on a multi-tenant schema (the constituent parts are separately PG-proofed).
+
 ## [0.93.84] - 2026-07-05
 
 ### Added

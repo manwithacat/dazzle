@@ -458,3 +458,322 @@ class TestBulkEndpointRBAC:
         body = json.loads(resp.content)
         assert body["succeeded"] == 1
         assert rows[0]["status"] == "active"
+
+
+class _ListService:
+    """Fake service with a real-ish LIST op (filters + search + paging) plus
+    read/delete — enough for the grid-primitive all-matching path (C0b)."""
+
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        self.rows = rows
+
+    async def execute(
+        self,
+        *,
+        operation: str,
+        id: Any = None,
+        filters: dict[str, Any] | None = None,
+        page: int = 1,
+        page_size: int = 20,
+        search: str | None = None,
+        search_fields: list[str] | None = None,
+        **_kw: Any,
+    ) -> Any:
+        if operation == "read":
+            return next((r for r in self.rows if str(r["id"]) == str(id)), None)
+        if operation == "list":
+            rows = self.rows
+            for k, v in (filters or {}).items():
+                rows = [r for r in rows if str(r.get(k)) == str(v)]
+            if search:
+                fields = search_fields or []
+                rows = [
+                    r
+                    for r in rows
+                    if any(search.lower() in str(r.get(f, "")).lower() for f in fields)
+                ]
+            total = len(rows)
+            start = (page - 1) * page_size
+            return {
+                "items": rows[start : start + page_size],
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+            }
+        if operation == "delete":
+            before = len(self.rows)
+            self.rows[:] = [r for r in self.rows if str(r["id"]) != str(id)]
+            return {"deleted": len(self.rows) < before}
+        return None
+
+
+class TestGridBulkPayload:
+    """C0b: the /bulk route accepts the HM grid primitive's FORM payload —
+    per-id parity, all-matching re-scope (§15), fail-closed echo rules, and
+    the built-in `delete` action (the mounted route the primitive posts to)."""
+
+    _ROWS = [
+        {"id": "r1", "status": "new", "plan": "Pro", "name": "Amir"},
+        {"id": "r2", "status": "new", "plan": "Pro", "name": "Noah"},
+        {"id": "r3", "status": "new", "plan": "Free", "name": "Sofia"},
+    ]
+
+    def _build(
+        self,
+        rows: list[dict[str, Any]],
+        *,
+        search_fields: list[str] | None = None,
+        filter_fields: list[str] | None = None,
+        cap: int = 10_000,
+    ) -> tuple[TestClient, _ListService]:
+        from dazzle.http.runtime.bulk_routes import create_bulk_routes
+
+        svc = _ListService(rows)
+        router = create_bulk_routes(
+            [_surface_with_bulk()],
+            repositories={"InsertionPoint": _Repo(rows)},
+            services={"InsertionPoint": svc},
+            cedar_access_specs={},
+            fk_graph=None,
+            optional_auth_dep=None,
+            entity_search_fields={"InsertionPoint": search_fields or []},
+            entity_filter_fields={"InsertionPoint": filter_fields or []},
+            all_matching_cap=cap,
+        )
+        assert router is not None
+        return _mount(router), svc
+
+    def test_form_encoded_per_id_parity(self) -> None:
+        rows = [dict(r) for r in self._ROWS]
+        client, _svc = self._build(rows)
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={
+                "action": "accept",
+                "selected_ids": ["r1", "r2"],
+                "all_matching_selected": "false",
+                "excluded_ids": [],
+            },
+        )
+        assert resp.status_code == 200
+        assert json.loads(resp.content)["succeeded"] == 2
+        assert rows[0]["status"] == "active" and rows[1]["status"] == "active"
+        assert rows[2]["status"] == "new"
+
+    def test_all_matching_applies_query_minus_exclusions_and_strips_paging(self) -> None:
+        rows = [dict(r) for r in self._ROWS]
+        client, _svc = self._build(rows)
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={
+                "action": "accept",
+                "selected_ids": ["r1"],  # informational (visible state) only
+                "all_matching_selected": "true",
+                "excluded_ids": ["r2"],
+                "filter[plan]": "Pro",
+                # windowing params MUST be stripped — a verbatim re-run would
+                # apply the action to one display page only
+                "page": "2",
+                "page_size": "1",
+                "sort": "name",
+                "dir": "desc",
+            },
+        )
+        assert resp.status_code == 200
+        body = json.loads(resp.content)
+        assert body["succeeded"] == 1
+        assert rows[0]["status"] == "active", "matched (Pro) and not excluded"
+        assert rows[1]["status"] == "new", "excluded id is spared"
+        assert rows[2]["status"] == "new", "Free row never matched"
+
+    def test_all_matching_unconsumable_bare_key_rejected(self) -> None:
+        rows = [dict(r) for r in self._ROWS]
+        client, _svc = self._build(rows)
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={
+                "action": "accept",
+                "all_matching_selected": "true",
+                "bogus": "x",
+            },
+        )
+        assert resp.status_code == 422, "an unconsumable narrowing param must fail closed"
+        assert all(r["status"] == "new" for r in rows)
+
+    def test_all_matching_search_without_search_fields_rejected(self) -> None:
+        rows = [dict(r) for r in self._ROWS]
+        client, _svc = self._build(rows)  # no search_fields
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={"action": "accept", "all_matching_selected": "true", "q": "amir"},
+        )
+        assert resp.status_code == 422
+        assert all(r["status"] == "new" for r in rows)
+
+    def test_all_matching_search_narrows_with_search_fields(self) -> None:
+        rows = [dict(r) for r in self._ROWS]
+        client, _svc = self._build(rows, search_fields=["name"])
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={"action": "accept", "all_matching_selected": "true", "q": "amir"},
+        )
+        assert resp.status_code == 200
+        assert rows[0]["status"] == "active"
+        assert rows[1]["status"] == "new" and rows[2]["status"] == "new"
+
+    def test_all_matching_bare_key_allowed_when_declared(self) -> None:
+        rows = [dict(r) for r in self._ROWS]
+        client, _svc = self._build(rows, filter_fields=["plan"])
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={"action": "accept", "all_matching_selected": "true", "plan": "Free"},
+        )
+        assert resp.status_code == 200
+        assert rows[2]["status"] == "active"
+        assert rows[0]["status"] == "new" and rows[1]["status"] == "new"
+
+    def test_all_matching_cap_rejects_oversize_sets(self) -> None:
+        rows = [dict(r) for r in self._ROWS]
+        client, _svc = self._build(rows, cap=2)
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={"action": "accept", "all_matching_selected": "true"},
+        )
+        assert resp.status_code == 422, "3 matched > cap 2 — narrow the query"
+        assert all(r["status"] == "new" for r in rows)
+
+    def test_builtin_delete_action_per_id(self) -> None:
+        rows = [dict(r) for r in self._ROWS]
+        client, svc = self._build(rows)
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={
+                "action": "delete",
+                "selected_ids": ["r2"],
+                "all_matching_selected": "false",
+            },
+        )
+        assert resp.status_code == 200
+        assert json.loads(resp.content)["succeeded"] == 1
+        assert [r["id"] for r in svc.rows] == ["r1", "r3"], "the selected row is deleted"
+
+    def test_builtin_delete_all_matching(self) -> None:
+        rows = [dict(r) for r in self._ROWS]
+        client, svc = self._build(rows)
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={
+                "action": "delete",
+                "all_matching_selected": "true",
+                "excluded_ids": ["r1"],
+                "filter[plan]": "Pro",
+            },
+        )
+        assert resp.status_code == 200
+        assert [r["id"] for r in svc.rows] == ["r1", "r3"], (
+            "Pro rows delete EXCEPT the excluded one; Free never matched"
+        )
+
+    def test_declared_action_shadows_builtin_delete(self) -> None:
+        """A DSL-declared action NAMED `delete` wins over the built-in."""
+        rows = [dict(r) for r in self._ROWS]
+        from dazzle.http.runtime.bulk_routes import create_bulk_routes
+
+        svc = _ListService(rows)
+        router = create_bulk_routes(
+            [
+                _surface_with_bulk(
+                    actions=[BulkActionSpec(name="delete", field="status", target_value="gone")]
+                )
+            ],
+            repositories={"InsertionPoint": _Repo(rows)},
+            services={"InsertionPoint": svc},
+            cedar_access_specs={},
+            fk_graph=None,
+            optional_auth_dep=None,
+        )
+        assert router is not None
+        client = _mount(router)
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={"action": "delete", "selected_ids": ["r1"], "all_matching_selected": "false"},
+        )
+        assert resp.status_code == 200
+        assert rows[0]["status"] == "gone", "the declared transition ran"
+        assert len(svc.rows) == 3, "nothing was deleted"
+
+
+class TestGridBulkPayloadFixes:
+    """C0b review fixes: search/q precedence parity + AccessForbidden → 403."""
+
+    _ROWS = [
+        {"id": "r1", "status": "new", "name": "Amir"},
+        {"id": "r2", "status": "new", "name": "Noah"},
+    ]
+
+    def test_search_wins_over_q_when_both_echoed(self) -> None:
+        """The list route resolves `search or q` (#596) — the all-matching
+        resolver must use the SAME precedence, or a crafted POST carrying both
+        applies the action to a different set than the view showed."""
+        rows = [dict(r) for r in self._ROWS]
+        client, _svc = TestGridBulkPayload()._build(rows, search_fields=["name"])
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={
+                "action": "accept",
+                "all_matching_selected": "true",
+                "search": "amir",  # what the list view used (wins on the list route)
+                "q": "o",  # broader — matches Noah too; must NOT win here
+            },
+        )
+        assert resp.status_code == 200
+        assert rows[0]["status"] == "active", "the `search` term's match applies"
+        assert rows[1]["status"] == "new", "the broader `q` term must not widen the action"
+
+    def test_all_matching_list_permit_denied_maps_to_403(self) -> None:
+        """A caller with UPDATE permit but NO LIST permit: gated_list's permit
+        gate raises AccessForbidden — the route must map it to 403, not 500."""
+        from dazzle.core.access import (
+            AccessOperationKind,
+            AccessPolicyEffect,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+        from dazzle.http.runtime.bulk_routes import create_bulk_routes
+
+        rows = [dict(r) for r in self._ROWS]
+        svc = _ListService(rows)
+        # UPDATE permitted to any authenticated user; LIST permitted ONLY to
+        # `admin` (a pure-role rule) — the caller is `editor`, so gated_list's
+        # permit gate raises AccessForbidden.
+        cedar = EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.UPDATE,
+                    personas=[],
+                    effect=AccessPolicyEffect.PERMIT,
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    personas=["admin"],
+                    effect=AccessPolicyEffect.PERMIT,
+                ),
+            ],
+            scopes=[],
+        )
+        router = create_bulk_routes(
+            [_surface_with_bulk()],
+            repositories={"InsertionPoint": _Repo(rows)},
+            services={"InsertionPoint": svc},
+            cedar_access_specs={"InsertionPoint": cedar},
+            fk_graph=None,
+            optional_auth_dep=_auth_dep_returning(_auth_ctx(authenticated=True, roles=["editor"])),
+        )
+        assert router is not None
+        client = _mount(router)
+        resp = client.post(
+            "/api/insertionpoints/bulk",
+            data={"action": "accept", "all_matching_selected": "true"},
+        )
+        assert resp.status_code == 403, f"AccessForbidden must map to 403: {resp.status_code}"
+        assert all(r["status"] == "new" for r in rows)
