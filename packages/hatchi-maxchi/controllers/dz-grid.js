@@ -1,7 +1,7 @@
 /* HYPERPART: grid */
 /*
  * dz-grid — the data-table controller. Slices: selection + sort + filter +
- * search + bulk actions.
+ * search + bulk actions + pagination.
  *
  * Delegated + state-in-DOM, the HM idiom (same shape as dz-tabs.js): one pair
  * of document-level listeners, everything scoped to the clicked control's own
@@ -50,6 +50,11 @@
  *                  controller injects the selection payload (action, selected
  *                  ids, all-matching/excluded shape, current-query echo) so the
  *                  server re-scopes + re-validates, never trusting client ids.
+ *   - page:        current page is `data-dz-grid-page` on the root (default 1).
+ *                  `[data-dz-grid-goto="<n>"]` / `[data-dz-grid-page-prev]` /
+ *                  `[data-dz-grid-page-next]` (server-rendered footer buttons)
+ *                  set it + refresh (`page=` in the query); the server disables
+ *                  prev/next at the edges. Sort / filter / search reset it to 1.
  */
 (function () {
   "use strict";
@@ -144,10 +149,17 @@
       var v = filters[i].value;
       if (k && v) q.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
     }
-    // Search / sort / filter reset pagination to page 1 (spec) — a no-op until
-    // the pagination slice adds page state; the reset lands there.
+    // Current page lives on the root; page 1 is the default (omitted for a clean
+    // query). Search / sort / filter reset it to 1 via resetPage() BEFORE calling
+    // refresh; a page-control click sets it, then refreshes.
+    var page = root.getAttribute("data-dz-grid-page");
+    if (page && page !== "1") q.push("page=" + encodeURIComponent(page));
     body.setAttribute("hx-get", base + (q.length ? "?" + q.join("&") : ""));
     body.dispatchEvent(new CustomEvent("dz-grid:refresh", { bubbles: true }));
+  }
+
+  function resetPage(root) {
+    root.setAttribute("data-dz-grid-page", "1");
   }
 
   function applySort(root, btn) {
@@ -167,6 +179,7 @@
       if (h) h.setAttribute("aria-sort", "none");
     }
     if (th) th.setAttribute("aria-sort", ARIA_OF[next] || "none");
+    resetPage(root); // a new sort starts at page 1
     refresh(root); // reads the sort we just wrote + any active filters
   }
 
@@ -183,6 +196,7 @@
     if (t._dzSearchTimer) clearTimeout(t._dzSearchTimer);
     t._dzSearchTimer = setTimeout(function () {
       t._dzSearchTimer = null;
+      resetPage(root); // a new search starts at page 1
       refresh(root);
     }, ms);
   });
@@ -201,15 +215,39 @@
       sync(root);
     } else if (t.matches("[data-dz-grid-filter]")) {
       // A filter select changed → rebuild the query (composing with any active
-      // sort) and reload the rows from the server.
+      // sort) and reload the rows from the server, back at page 1.
       var fr = gridOf(t);
-      if (fr) refresh(fr);
+      if (fr) {
+        resetPage(fr);
+        refresh(fr);
+      }
     }
   });
 
   document.addEventListener("click", function (evt) {
     var t = evt.target;
     if (!t || !t.closest) return;
+    // Pagination: a page-number (`data-dz-grid-goto`) or prev/next control. The
+    // server disables prev/next at the edges, so a disabled button won't fire;
+    // the max(1, …) is a floor for safety. Page is state on the root.
+    var goBtn = t.closest(
+      "[data-dz-grid-goto], [data-dz-grid-page-prev], [data-dz-grid-page-next]",
+    );
+    if (goBtn) {
+      var proot = gridOf(goBtn);
+      if (proot) {
+        evt.preventDefault();
+        var cur = parseInt(proot.getAttribute("data-dz-grid-page"), 10) || 1;
+        var to;
+        if (goBtn.hasAttribute("data-dz-grid-page-prev"))
+          to = Math.max(1, cur - 1);
+        else if (goBtn.hasAttribute("data-dz-grid-page-next")) to = cur + 1;
+        else to = parseInt(goBtn.getAttribute("data-dz-grid-goto"), 10) || 1;
+        proot.setAttribute("data-dz-grid-page", String(to));
+        refresh(proot);
+      }
+      return;
+    }
     var sortBtn = t.closest("[data-dz-grid-sort]");
     if (sortBtn) {
       var sroot = gridOf(sortBtn);
@@ -276,6 +314,19 @@
   // no-op where nothing changed). Harmless if htmx never fires this event.
   document.addEventListener("htmx:afterSwap", function () {
     var grids = document.querySelectorAll("[data-dz-grid]");
-    for (var i = 0; i < grids.length; i++) sync(grids[i]);
+    for (var i = 0; i < grids.length; i++) {
+      sync(grids[i]);
+      // Re-sync the root's page from the server-rendered footer's current-page
+      // marker: the server may have CLAMPED the page (e.g. a bulk delete that
+      // removed the last page), so the client's requested page can be stale.
+      // The footer is authoritative about which page actually rendered.
+      var nav = grids[i].querySelector("[data-dz-grid-pagination]");
+      var curBtn =
+        nav && nav.querySelector("[data-dz-grid-goto][aria-current='page']");
+      if (curBtn) {
+        var pnum = parseInt(curBtn.getAttribute("data-dz-grid-goto"), 10);
+        if (pnum) grids[i].setAttribute("data-dz-grid-page", String(pnum));
+      }
+    }
   });
 })();

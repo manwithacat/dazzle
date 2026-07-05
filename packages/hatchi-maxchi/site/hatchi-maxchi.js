@@ -64,8 +64,12 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
     });
   }
-  function renderGridRows(url) {
-    var q = parseQuery(url);
+  var GRID_PAGE_SIZE = 4; // the server's default page size for this demo
+
+  // The full result set for a query — search + filters + sort, WITHOUT paging.
+  // The row slice and the pagination total both derive from this, so they can
+  // never disagree (the bug class #847-#851 chased for charts).
+  function matchedRows(q) {
     var rows = GRID_ROWS.slice();
     // Free-text search: case-insensitive substring across the visible text
     // fields (the server's ILIKE/full-text). Composes with the exact filters.
@@ -88,8 +92,21 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         return q.dir === "desc" ? -c : c;
       });
     }
+    return rows;
+  }
+  function gridPaging(q, total) {
+    var size = parseInt(q.page_size, 10) || GRID_PAGE_SIZE;
+    var pages = Math.max(1, Math.ceil(total / size));
+    var page = Math.min(Math.max(1, parseInt(q.page, 10) || 1), pages);
+    return { size: size, page: page, pages: pages };
+  }
+  function renderGridRows(url) {
+    var q = parseQuery(url);
+    var rows = matchedRows(q);
+    var pg = gridPaging(q, rows.length);
+    var start = (pg.page - 1) * pg.size;
     // Zero rows → empty tbody, so the `:has(tbody tr td)` empty-state shows.
-    return rows.map(function (r) {
+    return rows.slice(start, start + pg.size).map(function (r) {
       var id = htmlEnc(r.id), name = htmlEnc(r.first + " " + r.last);
       return '<tr class="tr-row" id="grid-row-' + id + '">' +
         '<td class="tr-checkbox-cell"><input type="checkbox" class="tr-checkbox" ' +
@@ -99,6 +116,33 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         '<td class="tr-cell">' + htmlEnc(r.plan) + '</td>' +
         '<td class="tr-cell">' + htmlEnc(r.signed) + '</td></tr>';
     }).join("");
+  }
+  // The server renders the pagination footer too (state-in-DOM: the page
+  // controls carry their target; the current page + total live in the markup).
+  // The client only intercepts the clicks and re-requests.
+  function renderGridFooter(url) {
+    var q = parseQuery(url);
+    var total = matchedRows(q).length;
+    var pg = gridPaging(q, total);
+    var start = total ? (pg.page - 1) * pg.size + 1 : 0;
+    var end = Math.min(pg.page * pg.size, total);
+    var summary = total ? start + "-" + end + " of " + total : "0 of 0";
+    var html = '<span class="pagination-summary">' + summary + "</span>";
+    html += '<div class="pagination-pages">';
+    html += '<button type="button" class="pagination-page" data-grid-page-prev ' +
+      (pg.page <= 1 ? "disabled " : "") + 'aria-label="Previous page">‹</button>';
+    for (var i = 1; i <= pg.pages; i++) {
+      html += '<button type="button" class="pagination-page' +
+        (i === pg.page ? " is-current" : "") + '" data-grid-goto="' + i + '"' +
+        (i === pg.page ? ' aria-current="page"' : "") + ">" + i + "</button>";
+    }
+    html += '<button type="button" class="pagination-page" data-grid-page-next ' +
+      (pg.page >= pg.pages ? "disabled " : "") + 'aria-label="Next page">›</button>';
+    return html + "</div>";
+  }
+  function updateGridFooter(root, url) {
+    var nav = root && root.querySelector("[data-grid-pagination]");
+    if (nav) nav.innerHTML = renderGridFooter(url);
   }
 
   // icon placeholders resolved from a tiny inline map (built by the site gen)
@@ -155,6 +199,13 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     fire(el, "htmx:beforeRequest", { elt: el });
     if (target) {
       target.innerHTML = body;
+      // The server re-renders the pagination footer alongside the rows (in a
+      // real htmx app: an OOB `<nav>` or a wrapping region swap; here the mock
+      // updates it directly). Rows + footer come from the SAME query, so they
+      // agree on total / current page.
+      if (url.split("?")[0] === "/mock/grid/rows") {
+        updateGridFooter(target.closest("[data-grid]"), url);
+      }
       fire(target, "htmx:afterSwap", { elt: target });
     }
     el.classList.remove("htmx-request");
@@ -185,7 +236,9 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     el.classList.add("htmx-request");
     fire(el, "htmx:beforeRequest", { elt: el });
     if (target) {
-      target.innerHTML = renderGridRows(bodyEl ? bodyEl.getAttribute("hx-get") : "/mock/grid/rows");
+      var gurl = bodyEl ? bodyEl.getAttribute("hx-get") : "/mock/grid/rows";
+      target.innerHTML = renderGridRows(gurl);
+      updateGridFooter(root, gurl); // the total changed → repaint the footer
       fire(target, "htmx:afterSwap", { elt: target });
     }
     el.classList.remove("htmx-request");
@@ -714,7 +767,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 /* HYPERPART: grid */
 /*
  * grid — the data-table controller. Slices: selection + sort + filter +
- * search + bulk actions.
+ * search + bulk actions + pagination.
  *
  * Delegated + state-in-DOM, the HM idiom (same shape as tabs.js): one pair
  * of document-level listeners, everything scoped to the clicked control's own
@@ -763,6 +816,11 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  *                  controller injects the selection payload (action, selected
  *                  ids, all-matching/excluded shape, current-query echo) so the
  *                  server re-scopes + re-validates, never trusting client ids.
+ *   - page:        current page is `data-grid-page` on the root (default 1).
+ *                  `[data-grid-goto="<n>"]` / `[data-grid-page-prev]` /
+ *                  `[data-grid-page-next]` (server-rendered footer buttons)
+ *                  set it + refresh (`page=` in the query); the server disables
+ *                  prev/next at the edges. Sort / filter / search reset it to 1.
  */
 (function () {
   "use strict";
@@ -857,10 +915,17 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       var v = filters[i].value;
       if (k && v) q.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
     }
-    // Search / sort / filter reset pagination to page 1 (spec) — a no-op until
-    // the pagination slice adds page state; the reset lands there.
+    // Current page lives on the root; page 1 is the default (omitted for a clean
+    // query). Search / sort / filter reset it to 1 via resetPage() BEFORE calling
+    // refresh; a page-control click sets it, then refreshes.
+    var page = root.getAttribute("data-grid-page");
+    if (page && page !== "1") q.push("page=" + encodeURIComponent(page));
     body.setAttribute("hx-get", base + (q.length ? "?" + q.join("&") : ""));
     body.dispatchEvent(new CustomEvent("grid:refresh", { bubbles: true }));
+  }
+
+  function resetPage(root) {
+    root.setAttribute("data-grid-page", "1");
   }
 
   function applySort(root, btn) {
@@ -880,6 +945,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       if (h) h.setAttribute("aria-sort", "none");
     }
     if (th) th.setAttribute("aria-sort", ARIA_OF[next] || "none");
+    resetPage(root); // a new sort starts at page 1
     refresh(root); // reads the sort we just wrote + any active filters
   }
 
@@ -896,6 +962,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     if (t._dzSearchTimer) clearTimeout(t._dzSearchTimer);
     t._dzSearchTimer = setTimeout(function () {
       t._dzSearchTimer = null;
+      resetPage(root); // a new search starts at page 1
       refresh(root);
     }, ms);
   });
@@ -914,15 +981,39 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       sync(root);
     } else if (t.matches("[data-grid-filter]")) {
       // A filter select changed → rebuild the query (composing with any active
-      // sort) and reload the rows from the server.
+      // sort) and reload the rows from the server, back at page 1.
       var fr = gridOf(t);
-      if (fr) refresh(fr);
+      if (fr) {
+        resetPage(fr);
+        refresh(fr);
+      }
     }
   });
 
   document.addEventListener("click", function (evt) {
     var t = evt.target;
     if (!t || !t.closest) return;
+    // Pagination: a page-number (`data-grid-goto`) or prev/next control. The
+    // server disables prev/next at the edges, so a disabled button won't fire;
+    // the max(1, …) is a floor for safety. Page is state on the root.
+    var goBtn = t.closest(
+      "[data-grid-goto], [data-grid-page-prev], [data-grid-page-next]",
+    );
+    if (goBtn) {
+      var proot = gridOf(goBtn);
+      if (proot) {
+        evt.preventDefault();
+        var cur = parseInt(proot.getAttribute("data-grid-page"), 10) || 1;
+        var to;
+        if (goBtn.hasAttribute("data-grid-page-prev"))
+          to = Math.max(1, cur - 1);
+        else if (goBtn.hasAttribute("data-grid-page-next")) to = cur + 1;
+        else to = parseInt(goBtn.getAttribute("data-grid-goto"), 10) || 1;
+        proot.setAttribute("data-grid-page", String(to));
+        refresh(proot);
+      }
+      return;
+    }
     var sortBtn = t.closest("[data-grid-sort]");
     if (sortBtn) {
       var sroot = gridOf(sortBtn);
@@ -989,6 +1080,19 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   // no-op where nothing changed). Harmless if htmx never fires this event.
   document.addEventListener("htmx:afterSwap", function () {
     var grids = document.querySelectorAll("[data-grid]");
-    for (var i = 0; i < grids.length; i++) sync(grids[i]);
+    for (var i = 0; i < grids.length; i++) {
+      sync(grids[i]);
+      // Re-sync the root's page from the server-rendered footer's current-page
+      // marker: the server may have CLAMPED the page (e.g. a bulk delete that
+      // removed the last page), so the client's requested page can be stale.
+      // The footer is authoritative about which page actually rendered.
+      var nav = grids[i].querySelector("[data-grid-pagination]");
+      var curBtn =
+        nav && nav.querySelector("[data-grid-goto][aria-current='page']");
+      if (curBtn) {
+        var pnum = parseInt(curBtn.getAttribute("data-grid-goto"), 10);
+        if (pnum) grids[i].setAttribute("data-grid-page", String(pnum));
+      }
+    }
   });
 })();

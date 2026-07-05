@@ -236,8 +236,12 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
     });
   }
-  function renderGridRows(url) {
-    var q = parseQuery(url);
+  var GRID_PAGE_SIZE = 4; // the server's default page size for this demo
+
+  // The full result set for a query — search + filters + sort, WITHOUT paging.
+  // The row slice and the pagination total both derive from this, so they can
+  // never disagree (the bug class #847-#851 chased for charts).
+  function matchedRows(q) {
     var rows = GRID_ROWS.slice();
     // Free-text search: case-insensitive substring across the visible text
     // fields (the server's ILIKE/full-text). Composes with the exact filters.
@@ -260,8 +264,21 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
         return q.dir === "desc" ? -c : c;
       });
     }
+    return rows;
+  }
+  function gridPaging(q, total) {
+    var size = parseInt(q.page_size, 10) || GRID_PAGE_SIZE;
+    var pages = Math.max(1, Math.ceil(total / size));
+    var page = Math.min(Math.max(1, parseInt(q.page, 10) || 1), pages);
+    return { size: size, page: page, pages: pages };
+  }
+  function renderGridRows(url) {
+    var q = parseQuery(url);
+    var rows = matchedRows(q);
+    var pg = gridPaging(q, rows.length);
+    var start = (pg.page - 1) * pg.size;
     // Zero rows → empty tbody, so the `:has(tbody tr td)` empty-state shows.
-    return rows.map(function (r) {
+    return rows.slice(start, start + pg.size).map(function (r) {
       var id = htmlEnc(r.id), name = htmlEnc(r.first + " " + r.last);
       return '<tr class="dz-tr-row" id="dz-grid-row-' + id + '">' +
         '<td class="dz-tr-checkbox-cell"><input type="checkbox" class="dz-tr-checkbox" ' +
@@ -271,6 +288,33 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
         '<td class="dz-tr-cell">' + htmlEnc(r.plan) + '</td>' +
         '<td class="dz-tr-cell">' + htmlEnc(r.signed) + '</td></tr>';
     }).join("");
+  }
+  // The server renders the pagination footer too (state-in-DOM: the page
+  // controls carry their target; the current page + total live in the markup).
+  // The client only intercepts the clicks and re-requests.
+  function renderGridFooter(url) {
+    var q = parseQuery(url);
+    var total = matchedRows(q).length;
+    var pg = gridPaging(q, total);
+    var start = total ? (pg.page - 1) * pg.size + 1 : 0;
+    var end = Math.min(pg.page * pg.size, total);
+    var summary = total ? start + "-" + end + " of " + total : "0 of 0";
+    var html = '<span class="dz-pagination-summary">' + summary + "</span>";
+    html += '<div class="dz-pagination-pages">';
+    html += '<button type="button" class="dz-pagination-page" data-dz-grid-page-prev ' +
+      (pg.page <= 1 ? "disabled " : "") + 'aria-label="Previous page">‹</button>';
+    for (var i = 1; i <= pg.pages; i++) {
+      html += '<button type="button" class="dz-pagination-page' +
+        (i === pg.page ? " is-current" : "") + '" data-dz-grid-goto="' + i + '"' +
+        (i === pg.page ? ' aria-current="page"' : "") + ">" + i + "</button>";
+    }
+    html += '<button type="button" class="dz-pagination-page" data-dz-grid-page-next ' +
+      (pg.page >= pg.pages ? "disabled " : "") + 'aria-label="Next page">›</button>';
+    return html + "</div>";
+  }
+  function updateGridFooter(root, url) {
+    var nav = root && root.querySelector("[data-dz-grid-pagination]");
+    if (nav) nav.innerHTML = renderGridFooter(url);
   }
 
   // icon placeholders resolved from a tiny inline map (built by the site gen)
@@ -327,6 +371,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     fire(el, "htmx:beforeRequest", { elt: el });
     if (target) {
       target.innerHTML = body;
+      // The server re-renders the pagination footer alongside the rows (in a
+      // real htmx app: an OOB `<nav>` or a wrapping region swap; here the mock
+      // updates it directly). Rows + footer come from the SAME query, so they
+      // agree on total / current page.
+      if (url.split("?")[0] === "/mock/grid/rows") {
+        updateGridFooter(target.closest("[data-dz-grid]"), url);
+      }
       fire(target, "htmx:afterSwap", { elt: target });
     }
     el.classList.remove("htmx-request");
@@ -357,7 +408,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     el.classList.add("htmx-request");
     fire(el, "htmx:beforeRequest", { elt: el });
     if (target) {
-      target.innerHTML = renderGridRows(bodyEl ? bodyEl.getAttribute("hx-get") : "/mock/grid/rows");
+      var gurl = bodyEl ? bodyEl.getAttribute("hx-get") : "/mock/grid/rows";
+      target.innerHTML = renderGridRows(gurl);
+      updateGridFooter(root, gurl); // the total changed → repaint the footer
       fire(target, "htmx:afterSwap", { elt: target });
     }
     el.classList.remove("htmx-request");

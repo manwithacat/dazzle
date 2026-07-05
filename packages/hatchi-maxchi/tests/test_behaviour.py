@@ -214,7 +214,7 @@ def test_grid_hydrates_rows_via_exchange_with_stable_ids(page) -> None:  # type:
     # By the fixture's 200ms wait the `load` exchange has replaced the skeleton
     # placeholder with the real rows — there are selectable checkboxes now.
     n = page.eval_on_selector_all(boxes, "els => els.length")
-    assert n == 6, "the tbody must hydrate its rows from the exchange (load trigger)"
+    assert n == 4, "the tbody hydrates the first page (page_size 4 of 6 rows)"
     # the skeleton placeholder is gone — hydrated rows carry no skeleton
     assert page.eval_on_selector_all(f"{body} .skeleton", "els => els.length") == 0, (
         "the skeleton placeholder must be replaced by the hydrated rows"
@@ -262,28 +262,28 @@ def test_grid_sort_cycles_direction_and_reorders_rows(page) -> None:  # type: ig
     th's aria-sort, delegated + state-in-DOM), and each click reloads the tbody
     over the wire (dz-grid:refresh → the sort/dir query → the mock returns the
     sorted rows). No client-side row rendering — the server owns the order."""
-    # Unsorted at rest: hydrated in the mock's (scrambled) natural order.
+    # Unsorted at rest: PAGE 1 (page_size 4) of the mock's scrambled order.
     assert _aria_sort(page, "first") == "none"
-    natural = ["Mia", "Ravi", "Amir", "Sofia", "Noah", "Jane"]
-    assert _grid_names(page) == natural
+    natural_p1 = ["Mia", "Ravi", "Amir", "Sofia"]
+    assert _grid_names(page) == natural_p1
 
-    # 1st click → ascending by first name.
+    # 1st click → ascending by first name (page 1 of the sorted set).
     page.click("[data-grid-sort='first']")
     page.wait_for_timeout(120)
     assert _aria_sort(page, "first") == "ascending"
-    assert _grid_names(page) == ["Amir", "Jane", "Mia", "Noah", "Ravi", "Sofia"]
+    assert _grid_names(page) == ["Amir", "Jane", "Mia", "Noah"]
 
-    # 2nd click → descending (reversed).
+    # 2nd click → descending (page 1 of the reversed set).
     page.click("[data-grid-sort='first']")
     page.wait_for_timeout(120)
     assert _aria_sort(page, "first") == "descending"
-    assert _grid_names(page) == ["Sofia", "Ravi", "Noah", "Mia", "Jane", "Amir"]
+    assert _grid_names(page) == ["Sofia", "Ravi", "Noah", "Mia"]
 
     # 3rd click → cleared: back to the natural order, header neutral again.
     page.click("[data-grid-sort='first']")
     page.wait_for_timeout(120)
     assert _aria_sort(page, "first") == "none"
-    assert _grid_names(page) == natural
+    assert _grid_names(page) == natural_p1
 
 
 def test_grid_sort_is_single_column(page) -> None:  # type: ignore[no-untyped-def]
@@ -308,7 +308,7 @@ def test_grid_filter_narrows_rows_over_the_wire(page) -> None:  # type: ignore[n
     """Changing a filter select ([data-grid-filter]) rebuilds the tbody query and
     reloads it — the server returns only the matching rows. The 'Any …' option
     (empty value) clears the filter."""
-    assert len(_grid_names(page)) == 6
+    assert len(_grid_names(page)) == 4  # page 1 of 6
 
     page.select_option("[data-grid-filter='plan']", "Free")
     page.wait_for_timeout(120)
@@ -317,7 +317,7 @@ def test_grid_filter_narrows_rows_over_the_wire(page) -> None:  # type: ignore[n
 
     page.select_option("[data-grid-filter='plan']", "")  # Any plan → cleared
     page.wait_for_timeout(120)
-    assert len(_grid_names(page)) == 6, "clearing the filter restores every row"
+    assert len(_grid_names(page)) == 4, "clearing the filter restores every row (page 1)"
 
 
 def test_grid_filter_composes_with_sort(page) -> None:  # type: ignore[no-untyped-def]
@@ -355,8 +355,8 @@ def test_grid_filter_to_zero_reveals_empty_state(page) -> None:  # type: ignore[
 def test_grid_search_narrows_rows_debounced(page) -> None:  # type: ignore[no-untyped-def]
     """Typing in the search box narrows the rows over the wire after a debounce
     (the server matches; the client just adds `q=` to the query). Clearing it
-    restores every row."""
-    assert len(_grid_names(page)) == 6
+    restores every row (page 1)."""
+    assert len(_grid_names(page)) == 4  # page 1 of 6
 
     page.fill("[data-grid-search]", "chen")
     page.wait_for_timeout(350)  # > the debounce
@@ -364,7 +364,7 @@ def test_grid_search_narrows_rows_debounced(page) -> None:  # type: ignore[no-un
 
     page.fill("[data-grid-search]", "")
     page.wait_for_timeout(350)
-    assert len(_grid_names(page)) == 6, "clearing search restores every row"
+    assert len(_grid_names(page)) == 4, "clearing search restores every row (page 1)"
 
 
 def _bulk_confirm_delete(page) -> None:  # type: ignore[no-untyped-def]
@@ -423,6 +423,27 @@ def test_grid_bulk_payload_carries_selection_and_query(page) -> None:  # type: i
     assert _grid_names(page) == ["Noah"], "only Amir deleted; Noah remains under the Pro filter"
 
 
+def test_grid_bulk_delete_on_last_page_reclamps(page) -> None:  # type: ignore[no-untyped-def]
+    """Deleting the only rows on the last page removes that page — the client
+    re-syncs the root's page from the server-rendered footer (which clamped it),
+    so no stale page lingers (the classic delete-on-last-page bug)."""
+    page.click("[data-grid-page-next]")  # page 2: Noah, Jane
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Noah", "Jane"]
+    assert page.get_attribute("[data-grid]", "data-grid-page") == "2"
+
+    page.locator("[data-grid-select]").nth(0).check()  # Noah
+    page.locator("[data-grid-select]").nth(1).check()  # Jane
+    page.wait_for_timeout(80)
+    _bulk_confirm_delete(page)
+
+    # 4 rows remain (one page); the root must re-sync to the clamped page 1.
+    assert page.get_attribute("[data-grid]", "data-grid-page") == "1", (
+        "the root re-syncs to the server-clamped page after the last page is emptied"
+    )
+    assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"], "the surviving page 1 shows"
+
+
 def test_grid_bulk_payload_keys_win_over_query_echo(page) -> None:  # type: ignore[no-untyped-def]
     """A query param that collides with a bulk-payload key (e.g. a filter named
     'action') must NOT clobber the operation — the payload keys are written last
@@ -437,6 +458,79 @@ def test_grid_bulk_payload_keys_win_over_query_echo(page) -> None:  # type: igno
     assert page.evaluate("window.__lastBulk").get("action") == "delete", (
         "the bulk action must win over an echoed query key named 'action'"
     )
+
+
+def _page_summary(page):  # type: ignore[no-untyped-def]
+    return page.eval_on_selector(
+        "[data-grid-pagination] .pagination-summary", "e => e.textContent.trim()"
+    )
+
+
+def test_grid_paginates_and_navigates(page) -> None:  # type: ignore[no-untyped-def]
+    """The server-rendered footer pages the result set (page_size 4 of 6): prev
+    is disabled on page 1, next on the last page, and prev / next / a page number
+    each reload the tbody for that page."""
+    assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"], "page 1"
+    assert _page_summary(page) == "1-4 of 6"
+    assert page.eval_on_selector("[data-grid-page-prev]", "b => b.disabled") is True, (
+        "prev is disabled on the first page"
+    )
+
+    page.click("[data-grid-page-next]")
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Noah", "Jane"], "page 2 shows the remaining rows"
+    assert _page_summary(page) == "5-6 of 6"
+    assert page.eval_on_selector("[data-grid-page-next]", "b => b.disabled") is True, (
+        "next is disabled on the last page"
+    )
+
+    page.click("[data-grid-page-prev]")
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"], "prev returns to page 1"
+
+    page.click("[data-grid-goto='2']")
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Noah", "Jane"], "a page-number jump goes straight there"
+
+
+def test_grid_sort_persists_across_pages(page) -> None:  # type: ignore[no-untyped-def]
+    """Sort is applied to the whole result set server-side, so page 2 continues
+    the ordered sequence (not a re-sort of the visible page)."""
+    page.click("[data-grid-sort='first']")  # ascending
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Amir", "Jane", "Mia", "Noah"], "sorted page 1"
+    page.click("[data-grid-page-next]")
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Ravi", "Sofia"], "sorted page 2 continues the order"
+
+
+def test_grid_change_resets_to_page_one(page) -> None:  # type: ignore[no-untyped-def]
+    """A sort / filter / search change resets the page to 1 (spec) — you never
+    land on page 2 of a freshly-narrowed result."""
+    page.click("[data-grid-page-next]")
+    page.wait_for_timeout(150)
+    assert page.get_attribute("[data-grid]", "data-grid-page") == "2"
+
+    page.click("[data-grid-sort='first']")
+    page.wait_for_timeout(150)
+    assert page.get_attribute("[data-grid]", "data-grid-page") == "1", "sort resets to page 1"
+    assert _grid_names(page) == ["Amir", "Jane", "Mia", "Noah"], "page 1 of the sorted set"
+
+    # a filter change also resets to page 1
+    page.click("[data-grid-page-next]")
+    page.wait_for_timeout(150)
+    page.select_option("[data-grid-filter='plan']", "Pro")
+    page.wait_for_timeout(150)
+    assert page.get_attribute("[data-grid]", "data-grid-page") == "1", "filter resets to page 1"
+    page.select_option("[data-grid-filter='plan']", "")  # clear
+    page.wait_for_timeout(150)
+
+    # and a search change resets to page 1
+    page.click("[data-grid-page-next]")
+    page.wait_for_timeout(150)
+    page.fill("[data-grid-search]", "chen")
+    page.wait_for_timeout(350)
+    assert page.get_attribute("[data-grid]", "data-grid-page") == "1", "search resets to page 1"
 
 
 def test_grid_search_debounce_coalesces_keystrokes(page) -> None:  # type: ignore[no-untyped-def]

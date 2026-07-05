@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.79] - 2026-07-05
+
+### Added
+- **`dz-grid` — server pagination** (HM package 0.1.15 → 0.1.16). The result set is paged: the current page lives on the root (`data-dz-grid-page`), and the **server renders the footer** (`<nav data-dz-grid-pagination>` — a summary plus prev / next / page-number buttons, with prev/next disabled at the edges and the current page marked `aria-current="page"`). The controller intercepts a page control (`[data-dz-grid-goto]` / `[data-dz-grid-page-prev]` / `[data-dz-grid-page-next]`), adds `page=` to the query, and re-requests; sort / filter / search **reset to page 1**; sort spans pages (the whole result set is ordered server-side). The row slice and the pagination total derive from **one** query (`matchedRows`), so they can never disagree. After every swap the controller re-reads the footer's current-page marker back onto the root, so a server clamp (e.g. a bulk delete that empties the last page) can't leave a stale page — the classic delete-on-last-page bug. Behaviour-tested on Chromium + WebKit (navigate / sort-spans-pages / reset-to-page-1 / delete-on-last-page-reclamp); grid below the fold, so no visual-baseline change. Still inert in Dazzle.
+
+### Agent Guidance
+- **Pagination is server-rendered + state-in-DOM.** The server returns the current page's rows **plus** the repainted footer (an OOB `<nav data-dz-grid-pagination hx-swap-oob="true">`, or a wrapping region swap); the client only intercepts page clicks and adds `page=`. Derive the row slice and the total from the SAME query so the summary and the rows agree. The footer's `aria-current="page"` button is authoritative — the client reads it back onto `data-dz-grid-page` after each swap, so a server-side clamp survives. Sort/filter/search must reset the page to 1. An adversarial review caught the stale-page (delete-on-last-page) case; fixed + regression-tested.
+
 ## [0.93.78] - 2026-07-05
 
 ### Added

@@ -201,11 +201,11 @@ HYPERPARTS: list[Hyperpart] = [
         "A server-rendered data table: sortable headers, a filter bar, and row "
         "selection with a bulk-action bar — all HTML over the wire, on a real "
         "<table>. The tbody hydrates its rows over the wire (hx-get on load); "
-        "search, sortable headers, filters, row selection, and bulk actions are live "
-        "(dz-grid.js, delegated + state-in-DOM) and compose into one server query. "
-        "Pagination / URL-synced state land in the next slices.",
+        "search, sortable headers, filters, row selection, bulk actions, and pagination "
+        "are live (dz-grid.js, delegated + state-in-DOM) and compose into one server query. "
+        "URL-synced state lands in the next slice.",
         '<div class="hm-stack hm-measure-lg">'
-        '<div class="dz-table" data-dz-grid data-dz-bulk-count="0">'
+        '<div class="dz-table" data-dz-grid data-dz-bulk-count="0" data-dz-grid-page="1">'
         '<div class="dz-filter-bar">'
         '<div class="dz-filter-cell">'
         '<label class="dz-filter-label" for="hm-grid-search">Search</label>'
@@ -292,7 +292,11 @@ HYPERPARTS: list[Hyperpart] = [
         '<p class="dz-table-empty-title">No customers found</p>'
         '<p class="dz-table-empty-hint">Adjust the filters to widen your search.</p>'
         "</div>"
-        "</div></div></div></div>",
+        "</div></div>"  # close .dz-table-scroll-x + .dz-table-scroll
+        # Pagination footer — server-rendered (summary + prev/next/page buttons).
+        # Empty until the `load` exchange fills it alongside the first page of rows.
+        '<nav class="dz-pagination" data-dz-grid-pagination aria-label="Pagination"></nav>'
+        "</div></div>",  # close .dz-table (root) + .hm-stack
         notes="The tbody hydrates over the wire — <code>hx-get</code> on "
         "<code>load</code> fetches the rows, and <code>innerMorph</code> swaps them in. "
         "Each row carries a stable <code>id</code> (the idiomorph <em>morph key</em>) so a "
@@ -320,8 +324,11 @@ HYPERPARTS: list[Hyperpart] = [
         "and filtered). Bulk actions post the selection safely: the "
         "<code>[data-dz-grid-bulk-action]</code> Delete button (behind its confirm dialog) "
         "sends the action + selected ids + the <em>current query</em> — so the server "
-        "re-scopes and re-validates rather than trusting client ids (§15). Pagination and "
-        "URL-synced state are the next slices. (The gallery mock approximates the "
+        "re-scopes and re-validates rather than trusting client ids (§15). The footer is "
+        "<em>server-rendered</em>: the client intercepts a page click, adds <code>page=</code> "
+        "to the query, and the server returns that page's rows plus the repainted footer "
+        "(row slice + total from one query, so they can't disagree); sort / filter / search "
+        "reset to page 1. URL-synced state is the next slice. (The gallery mock approximates the "
         "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
         "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "
         "for true morph-preserved selection.)",
@@ -331,15 +338,21 @@ HYPERPARTS: list[Hyperpart] = [
                 method="GET",
                 endpoint="/app/{region}/rows?q=&sort=&dir=&page=&page_size=",
                 trigger="the tbody, on `load` and on `dz-grid:refresh` (fired by a sort "
-                "click, a filter change, or a debounced search keystroke; paginate in a "
-                "following slice)",
-                response="the `<tr>` rows for the current query — each a `dz-tr-row` "
+                "click, a filter change, a debounced search keystroke, or a page "
+                "control) — with `page=` added for pagination",
+                response="the current page's `<tr>` rows for the query — each a `dz-tr-row` "
                 "carrying a stable `id` (the idiomorph morph key) plus "
-                "`data-dz-grid-row-id` (the bulk-action payload anchor); a zero-result "
-                "query returns an empty tbody so the `:has(tbody tr td)`-driven empty-state "
-                "shows",
+                "`data-dz-grid-row-id` (the bulk-action payload anchor) — plus the repainted "
+                "pagination footer (via an OOB `<nav>` or a wrapping region swap); a "
+                "zero-result query returns an empty tbody so the `:has(tbody tr td)`-driven "
+                "empty-state shows",
                 swap="innerMorph of the tbody (`[data-dz-grid-body]`) — idiomorph keys on "
-                "each row's `id`, so a live selection follows its row across a re-sort",
+                "each row's `id`, so a live selection follows its row across a re-sort — PLUS "
+                "an out-of-band update of the pagination footer: append "
+                '`<nav data-dz-grid-pagination hx-swap-oob="true">…</nav>` to the response '
+                "(or target a wrapping region that contains both the tbody and the footer in "
+                'one swap). The footer\'s current-page button carries `aria-current="page"` — '
+                "the client reads it back as the authoritative (possibly server-clamped) page",
                 states=("loading", "empty", "populated", "error"),
             ),
             Exchange(
