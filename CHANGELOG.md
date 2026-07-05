@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.89] - 2026-07-05
+
+### Added
+- **Grid convergence C2.2 — column resize ships as a real feature** (HM package 0.1.24 → 0.1.25). Investigation found dzTable's resize code was NEVER reachable in production (`startColumnResize` bound only in a static dev-harness file; no emitter rendered handles or a colgroup) — James called it: build it net-new as a delegated extension rather than park it. `dz-grid-resize.js`: a pointer drag on the header handle (`[data-dz-grid-resize]`, an 8px strip fully inside the th) resizes the column's `<col data-col>` — live, snapped to an 8px grid, clamped 80–800px — and persists per grid under `dz-widths-<id>` (the key dzTable reserved). Per-drag window listeners attach at drag start and detach at drag end (the #795 teardown discipline); stale-key prune at init; widths re-apply after swaps and full-page history restores. Skeleton tables gain the `<colgroup>`; every canonical header gains the handle. The drag baselines at the column's ACTUAL rendered width (`col.offsetWidth` — verified empirically in Chromium + WebKit against a review claim that it's always 0; a th-rect fallback covers engines where col boxes don't report). Browser e2e: drag a ~300px-wide column +64px → lands within a snap-step of start+64 → persists across reload. Pointer-only for now (column width is presentational); the table stays `table-layout: auto` (a col width is a strong hint — content can still push wider; documented trade-off).
+
+### Agent Guidance
+- **Verify review claims empirically before implementing.** A confident, theoretically-grounded review finding (`col.offsetWidth` is 0 — "cols don't form rendering boxes") was refuted by a two-engine live probe; the RIGHT response was a probe + a tightened e2e that would have falsified either side, then defense-in-depth anyway (the th-rect fallback). Also: absolute-positioned edge affordances must stay fully inside their positioning parent when any ancestor clips (`overflow: hidden` halved the last column's handle at `right: -4px`).
+
 ## [0.93.88] - 2026-07-05
 
 ### Changed

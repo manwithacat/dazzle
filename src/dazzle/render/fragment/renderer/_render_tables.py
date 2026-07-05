@@ -164,6 +164,10 @@ class _RenderTablesMixin:
                     head_cells_parts.append(
                         f'<th data-dz-col="{ck}" aria-sort="{aria}" '
                         'scope="col" class="dz-table-th">'
+                        # C2.2: the pointer-drag resize handle (decorative for
+                        # SR; dz-grid-resize.js drives col[data-col] widths).
+                        f'<span class="dz-table-resize-handle" '
+                        f'data-dz-grid-resize="{ck}" aria-hidden="true"></span>'
                         f'<button type="button" data-dz-grid-sort="{ck}" '
                         f'aria-label="Sort by {label}" class="dz-table-sort-button">'
                         f"{label}"
@@ -177,7 +181,10 @@ class _RenderTablesMixin:
                     )
                 else:
                     head_cells_parts.append(
-                        f'<th data-dz-col="{ck}" scope="col" class="dz-table-th">{label}</th>'
+                        f'<th data-dz-col="{ck}" scope="col" class="dz-table-th">'
+                        f'<span class="dz-table-resize-handle" '
+                        f'data-dz-grid-resize="{ck}" aria-hidden="true"></span>'
+                        f"{label}</th>"
                     )
             elif isinstance(c, SortHeader):
                 head_cells_parts.append(f"<th>{self._emit(c, ctx)}</th>")
@@ -233,9 +240,20 @@ class _RenderTablesMixin:
                 f"{indicator_attr} "
                 'class="dz-table-body"></tbody>'
             )
+            # C2.2: per-column <col> resize targets — widths on the col
+            # resize header + cells together, and cols survive tbody swaps.
+            col_parts: list[str] = []
+            if t.bulk_select:
+                col_parts.append('<col class="dz-table-col-select">')
+            for k in keys or ():
+                col_parts.append(f'<col data-col="{ctx.escape_attr(k)}">')
+            if t.has_actions:
+                col_parts.append('<col class="dz-table-col-actions">')
+            colgroup_html = f"<colgroup>{''.join(col_parts)}</colgroup>" if keys else ""
             return (
                 f'<table class="dz-table-grid">'
                 f"{caption_html}"
+                f"{colgroup_html}"
                 f"<thead><tr>{head_html}</tr></thead>"
                 f"{skeleton_tbody}"
                 f"</table>"

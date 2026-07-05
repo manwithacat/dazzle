@@ -209,6 +209,45 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   width: 4rem;
 }
 
+/* Column-resize handle (C2.2, Dazzle extension seam): an 8px pointer strip
+ * at the header's right edge driving col[data-col] widths via
+ * dz-grid-resize.js. Decorative (aria-hidden); a faint hairline appears on
+ * hover; while a drag is live the root carries data-dz-resizing. */
+.dz-table-resize-handle {
+  position: absolute;
+  top: 0;
+  /* Fully inside the th: a -4px overhang on the LAST column gets clipped by
+   * .dz-table-scroll's overflow:hidden, halving its pointer target. */
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 1;
+}
+
+.dz-table-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  right: 1px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-table-resize-handle:hover::after,
+[data-dz-resizing] .dz-table-resize-handle::after {
+  background: var(--colour-border);
+}
+
+[data-dz-grid][data-dz-resizing] {
+  cursor: col-resize;
+  user-select: none;
+}
+
 /* Sort button — inline within the th when the column is sortable. */
 .dz-table-sort-button {
   display: inline-flex;

@@ -147,6 +147,9 @@ JS_SOURCES = [
     # Convergence C2.1: column-visibility as a delegated extension on the HM
     # grid primitive's seams (replaces dzTable's Alpine implementation).
     STATIC / "js" / "dz-grid-cols.js",
+    # Convergence C2.2: column resize as a delegated extension (net-new as a
+    # reachable feature — the dzTable code was never wired to any markup).
+    STATIC / "js" / "dz-grid-resize.js",
     SITE_STATIC / "js" / "site.js",
 ]
 
@@ -165,6 +168,7 @@ FRAMEWORK_JS = {
     "dz-debug.js",
     "dz-toast.js",
     "dz-grid-cols.js",
+    "dz-grid-resize.js",
     "site.js",
 }
 

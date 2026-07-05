@@ -436,3 +436,92 @@ def test_grid_column_visibility_extension(browser, server) -> None:  # type: ign
         page.evaluate("localStorage.clear()")
         page.close()
     assert not errors, f"page threw JS errors: {errors}"
+
+
+@pytest.mark.e2e
+def test_grid_column_resize_extension(browser, server) -> None:  # type: ignore[no-untyped-def]
+    """C2.2: column resize as a delegated extension — a pointer drag on a
+    header handle resizes the column's <col> (snapped to an 8px grid,
+    clamped 80..800), and the width persists across a full reload."""
+    _seed(server)
+    # A LONG invoice number makes the Number column render well over 160px —
+    # exposing the col.offsetWidth===0 trap (cols are non-rendered boxes, so
+    # a naive baseline defaults to 160px and a first drag on any wide column
+    # does nothing / jumps).
+    import requests
+
+    wide = requests.post(
+        f"{server.api_url}/__test__/seed",
+        json={
+            "fixtures": [
+                # Self-contained chain — refs resolve within one request.
+                {"id": "org2", "entity": "Organization", "data": {"name": "Beta"}},
+                {
+                    "id": "proj2",
+                    "entity": "Project",
+                    "data": {"name": "Zephyr"},
+                    "refs": {"org": "org2"},
+                },
+                {
+                    "id": "inv4",
+                    "entity": "Invoice",
+                    "data": {"number": "INV-0004-EXTENDED-ALPHANUMERIC-FORMAT", "amount": 400},
+                    "refs": {"project": "proj2"},
+                },
+            ]
+        },
+        headers={"X-Test-Secret": server.test_secret},
+        timeout=10,
+    )
+    assert wide.status_code == 200, f"wide-row seed failed: {wide.text[:200]}"
+    page = browser.new_page(viewport={"width": 1280, "height": 900})
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    try:
+        _login_admin(page, server)
+        page.goto(f"{server.ui_url}/app/invoice")
+        page.wait_for_selector("[data-dz-grid-body] tr td", timeout=15000)
+
+        handle = page.query_selector("[data-dz-grid-resize='number']")
+        assert handle, "the number header carries a resize handle"
+        assert page.query_selector("colgroup col[data-col='number']"), (
+            "the table carries a colgroup with per-column <col> targets"
+        )
+
+        # Drag the handle 64px right.
+        box = handle.bounding_box()
+        start_w = page.eval_on_selector(
+            "th[data-dz-col='number']", "th => th.getBoundingClientRect().width"
+        )
+        page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.mouse.down()
+        page.mouse.move(box["x"] + box["width"] / 2 + 64, box["y"] + box["height"] / 2, steps=4)
+        page.mouse.up()
+        page.wait_for_timeout(200)
+
+        col_width = page.eval_on_selector("col[data-col='number']", "c => c.style.width")
+        assert col_width.endswith("px") and int(col_width[:-2]) % 8 == 0, (
+            f"the col width is set and snapped to the 8px grid: {col_width!r}"
+        )
+        new_w = page.eval_on_selector(
+            "th[data-dz-col='number']", "th => th.getBoundingClientRect().width"
+        )
+        # TIGHT: the drag baselines at the column's ACTUAL rendered width, so
+        # +64px of pointer travel lands within a snap-step of start+64. (The
+        # col.offsetWidth===0 bug baselined every first drag at 160px — wide
+        # columns didn't move at all and narrow ones jumped.)
+        assert abs(new_w - (start_w + 64)) <= 16, (
+            f"the drag must baseline at the rendered width: {start_w} -> {new_w}"
+        )
+
+        # Persists across a reload (localStorage).
+        page.reload()
+        page.wait_for_selector("[data-dz-grid-body] tr td", timeout=15000)
+        page.wait_for_timeout(300)
+        assert page.eval_on_selector("col[data-col='number']", "c => c.style.width") == col_width, (
+            "the width re-applies from storage on load"
+        )
+    finally:
+        page.evaluate("localStorage.clear()")
+        page.close()
+    assert not errors, f"page threw JS errors: {errors}"

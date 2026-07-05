@@ -291,8 +291,17 @@ class TestColumnVisibilityWiring:
         # the JS hides columns by style.display on [data-dz-col]; the thead
         # cells need it too or the header/cell columns desync. Non-sortable
         # canonical headers carry the dz-table-th class.
-        assert '<th data-dz-col="name" scope="col" class="dz-table-th">Name</th>' in html
-        assert '<th data-dz-col="status" scope="col" class="dz-table-th">Status</th>' in html
+        assert (
+            '<th data-dz-col="name" scope="col" class="dz-table-th">'
+            # C2.2: canonical headers carry the resize-handle span
+            '<span class="dz-table-resize-handle" data-dz-grid-resize="name" '
+            'aria-hidden="true"></span>Name</th>'
+        ) in html
+        assert (
+            '<th data-dz-col="status" scope="col" class="dz-table-th">'
+            '<span class="dz-table-resize-handle" data-dz-grid-resize="status" '
+            'aria-hidden="true"></span>Status</th>'
+        ) in html
 
     def test_skeleton_sortable_header_is_grid_sort_button(self) -> None:
         html = _render(

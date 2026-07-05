@@ -203,7 +203,12 @@ def test_list_sortable_column_is_grid_sort_button() -> None:
     assert "toggleSort" not in html
     assert "ariaSortDir" not in html
     # non-sortable Score is a plain canonical header (no sort button)
-    assert '<th data-dz-col="score" scope="col" class="dz-table-th">Score</th>' in html
+    assert (
+        '<th data-dz-col="score" scope="col" class="dz-table-th">'
+        # C2.2: canonical headers carry the resize-handle span
+        '<span class="dz-table-resize-handle" data-dz-grid-resize="score" '
+        'aria-hidden="true"></span>Score</th>'
+    ) in html
 
 
 def test_list_active_sort_threads_into_controller_config_and_hydrate() -> None:
@@ -228,5 +233,10 @@ def test_list_with_no_sortable_columns_emits_plain_headers() -> None:
     )
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    assert '<th data-dz-col="name" scope="col" class="dz-table-th">Name</th>' in html
+    assert (
+        '<th data-dz-col="name" scope="col" class="dz-table-th">'
+        # C2.2: canonical headers carry the resize-handle span
+        '<span class="dz-table-resize-handle" data-dz-grid-resize="name" '
+        'aria-hidden="true"></span>Name</th>'
+    ) in html
     assert "toggleSort" not in html
