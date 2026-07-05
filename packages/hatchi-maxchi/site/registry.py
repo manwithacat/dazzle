@@ -250,8 +250,12 @@ HYPERPARTS: list[Hyperpart] = [
         # mode is active (its job is done — the header select-all exits it).
         '<button type="button" class="dz-bulk-matching" data-dz-grid-select-all-matching>'
         "Select all <span data-dz-grid-matching-total>…</span> matching</button>"
+        # Two-request bulk pattern: the POST applies the action (JSON/204
+        # response, nothing swapped); data-dz-grid-bulk-refresh tells the
+        # controller to re-fetch rows + footer for the current query after the
+        # request settles — the same GET path every other state change uses.
         '<button type="button" class="dz-bulk-delete" data-dz-grid-bulk-action="delete" '
-        'hx-post="/mock/grid/bulk" hx-target="[data-dz-grid-body]" hx-swap="innerMorph" '
+        'data-dz-grid-bulk-refresh hx-swap="none" hx-post="/mock/grid/bulk" '
         'hx-confirm="Delete the selected customers? This cannot be undone.">Delete</button>'
         '<button type="button" class="dz-bulk-clear" data-dz-grid-clear>Clear</button>'
         "</div>"
@@ -403,9 +407,12 @@ HYPERPARTS: list[Hyperpart] = [
                 trigger="a bulk-action button (e.g. Delete), after the user approves its "
                 "confirm dialog; the controller injects the selection on `htmx:configRequest`",
                 response="the server RE-VALIDATES permissions and RE-SCOPES the action to "
-                "the echoed query (never trusting the client `selected_ids` alone), applies "
-                "it, then returns the refreshed `<tr>` rows for the current query (empty → "
-                "the empty-state). When `all_matching_selected=true`, the action applies to "
+                "the echoed query (never trusting the client `selected_ids` alone) and "
+                "applies it. Two patterns: with `data-dz-grid-bulk-refresh` on the button "
+                "(this demo), the response swaps NOTHING (JSON/204) and the controller "
+                "re-fetches rows + footer via the normal GET; without it, put `hx-target` "
+                "on the button and return the refreshed `<tr>` rows directly. "
+                "When `all_matching_selected=true`, the action applies to "
                 "the WHOLE matched query minus `excluded_ids` — the server re-runs the "
                 "echoed query itself, and MUST strip `page`/`page_size` first (they window "
                 "the display, not the matched set — re-running them verbatim would apply "

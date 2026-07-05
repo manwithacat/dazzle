@@ -4,9 +4,10 @@ adapter's bulk-actions toolbar + per-row checkboxes — closes #1029.
 Pre-fix, list surfaces declaring `bulk_actions: true` rendered no
 checkbox column and no bulk-action toolbar. Fix:
 
-  - New `BulkActionToolbar` primitive matching legacy
-    `bulk_actions.html` byte-for-byte (Delete + Clear-selection
-    buttons, Alpine `@click` bindings to the dzTable controller).
+  - New `BulkActionToolbar` primitive (Delete + Clear-selection
+    buttons). Convergence C1.1: the toolbar now rides the HM grid
+    controller's seams (`data-dz-grid-bulk-action` / `data-dz-grid-clear`
+    + an hx-post to `{endpoint}/bulk`), not Alpine `@click` bindings.
   - `Table.bulk_select` flag + `row_ids` parallel tuple — when set,
     the renderer prepends a select-all `<th>` checkbox to the header
     and a per-row `<td>` checkbox + `data-dz-row-id` attribute on
@@ -86,25 +87,33 @@ def test_dispatch_ctx_defaults_bulk_actions_to_false() -> None:
 
 
 def test_bulk_action_toolbar_emits_delete_button() -> None:
-    """Delete button binds `@click="bulkDelete()"` and carries the
-    bulk-count target span the dzTable controller mirrors."""
-    html = FragmentRenderer().render(BulkActionToolbar())
-    assert '@click="bulkDelete()"' in html
+    """Convergence C1.1: Delete rides the HM grid controller —
+    `data-dz-grid-bulk-action="delete"` posting to `{endpoint}/bulk` behind
+    an hx-confirm, with the bulk-count target span the controller mirrors.
+    No Alpine `@click` binding."""
+    html = FragmentRenderer().render(BulkActionToolbar(endpoint="/api/contacts"))
+    assert 'data-dz-grid-bulk-action="delete"' in html
+    assert "data-dz-grid-bulk-refresh" in html
+    assert 'hx-post="/api/contacts/bulk"' in html
+    assert 'hx-confirm="Delete the selected items? This cannot be undone."' in html
     assert 'class="dz-bulk-delete"' in html
     assert "data-dz-bulk-count-target" in html
+    assert '@click="bulkDelete()"' not in html
 
 
 def test_bulk_action_toolbar_emits_clear_selection_button() -> None:
-    """Clear-selection button binds `@click="clearSelection()"`."""
-    html = FragmentRenderer().render(BulkActionToolbar())
-    assert '@click="clearSelection()"' in html
+    """Convergence C1.1: Clear-selection is the grid controller's
+    `data-dz-grid-clear` seam — no Alpine `@click` binding."""
+    html = FragmentRenderer().render(BulkActionToolbar(endpoint="/api/contacts"))
+    assert "data-dz-grid-clear" in html
     assert 'class="dz-bulk-clear"' in html
     assert "Clear selection" in html
+    assert '@click="clearSelection()"' not in html
 
 
 def test_bulk_action_toolbar_emits_trash_icon_svg() -> None:
     """Trash-icon SVG is inlined verbatim from the legacy template."""
-    html = FragmentRenderer().render(BulkActionToolbar())
+    html = FragmentRenderer().render(BulkActionToolbar(endpoint="/api/contacts"))
     assert '<polyline points="3 6 5 6 21 6">' in html
 
 
@@ -142,9 +151,13 @@ def test_table_bulk_select_emits_select_all_th_and_per_row_checkbox() -> None:
         row_ids=("abc", "def"),
     )
     html = FragmentRenderer().render(t)
-    # Select-all header cell.
+    # Select-all header cell. Convergence C1.1: the select-all box is the HM
+    # grid controller's `data-dz-grid-select-all` seam (the controller drives
+    # its checked/indeterminate tri-state) — no Alpine bindings.
     assert 'class="dz-table-th-select"' in html
-    assert '@change="toggleSelectAll($event.target.checked)"' in html
+    assert "data-dz-grid-select-all" in html
+    assert 'aria-label="Select all rows"' in html
+    assert "toggleSelectAll" not in html
     # Per-row checkbox cells with Alpine bindings.
     assert html.count('class="dz-tr-checkbox"') == 2
     assert "@change=\"toggleRow('abc')\"" in html
@@ -175,12 +188,12 @@ def test_list_renders_bulk_toolbar_and_select_all_when_bulk_actions_on() -> None
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
     assert "dz-bulk-actions" in html
-    assert '@click="bulkDelete()"' in html
+    # Convergence C1.1: Delete is the grid controller's bulk seam posting to
+    # the entity API base (`{endpoint}/bulk`), not an Alpine @click.
+    assert 'data-dz-grid-bulk-action="delete"' in html
+    assert 'hx-post="/api/contacts/bulk"' in html
     assert "dz-table-th-select" in html
     # per-row checkboxes are not inlined at first paint (rows come from /api).
-    # NB the select-all `:checked` binding legitimately references
-    # `data-dz-row-id` inside a querySelectorAll, so assert on the per-row
-    # ATTRIBUTE form, not the bare substring.
     assert "dz-tr-checkbox" not in html
     assert 'data-dz-row-id="' not in html
 

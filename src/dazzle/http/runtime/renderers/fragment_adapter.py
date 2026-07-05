@@ -13,6 +13,7 @@ import json
 from typing import Any
 
 from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
+from dazzle.core.strings import to_api_plural
 from dazzle.render.fragment import (
     URL,
     Button,
@@ -175,6 +176,12 @@ class FragmentSurfaceAdapter:
             has_actions=True,
             column_keys=col_keys,
             sortable_keys=sortable_keys,
+            # C1.1 review fix: the default sort must be VISIBLE on the header
+            # (aria-sort) — the grid controller composes every refresh query
+            # from header state, so an unmarked default silently drops on the
+            # first filter/search/page interaction.
+            sort_field=sort_field,
+            sort_dir=sort_dir,
         )
 
         empty_title, empty_description = _pick_empty_state(ctx)
@@ -228,13 +235,27 @@ class FragmentSurfaceAdapter:
                 )
             )
 
-        # Body: [BulkActionToolbar?] + toolbar + the list-table shell.
+        # Body: [BulkActionToolbar?] + toolbar [+ column menu] + the shell.
         body_children: list[Fragment] = []
         if bulk_actions:
             from dazzle.render.fragment import BulkActionToolbar
 
-            body_children.append(BulkActionToolbar())
+            # The bulk route mounts at /api/{plural}/bulk (bulk_routes.py) —
+            # NOT under the list endpoint (which is mounted un-prefixed, e.g.
+            # /invoices). Compute the base the same way the route does.
+            body_children.append(BulkActionToolbar(endpoint=f"/api/{to_api_plural(entity_name)}"))
         body_children.extend(toolbar)
+        if len(visible) > 3:
+            # Inside the region = inside the dzTable Alpine scope (see the
+            # header comment above; C2 re-homes this as a delegated controller).
+            body_children.append(
+                ColumnVisibilityMenu(
+                    columns=tuple(
+                        (str(c.get("key", "")), str(c.get("label", c.get("key", ""))))
+                        for c in visible
+                    )
+                )
+            )
         body_children.append(shell)
         # #1494 (2c, Slice 2): `peek: slide_over` emits the one shared right-side
         # panel inline with the list — a row's chevron loads its detail body into
@@ -252,17 +273,12 @@ class FragmentSurfaceAdapter:
             Stack(children=tuple(body_children), gap="sm") if len(body_children) > 1 else shell
         )
 
-        # Header: title + column-visibility menu (>3 visible cols) + create.
+        # Header: title + create. (The column-visibility menu used to render
+        # here — OUTSIDE the region's `x-data="dzTable"` scope, so every one of
+        # its Alpine bindings was dead: the panel sat permanently open over the
+        # table and the toggles did nothing. Convergence C1.1 moved it into the
+        # region body below, inside the scope, resurrecting the feature.)
         header_children: list[Fragment] = [Heading(title, level=1)]
-        if len(visible) > 3:
-            header_children.append(
-                ColumnVisibilityMenu(
-                    columns=tuple(
-                        (str(c.get("key", "")), str(c.get("label", c.get("key", ""))))
-                        for c in visible
-                    )
-                )
-            )
         if create_url and entity_name:
             header_children.append(
                 CreateButton(

@@ -181,6 +181,12 @@ class Table:
     # column-visibility toggle hides the header in lock-step with the hydrated
     # `render_data_row` body cells. Empty = plain headers (embedded tables).
     column_keys: tuple[str, ...] = ()
+    # Convergence C1.1: the surface's DEFAULT sort (`ux: sort:`), reflected on
+    # the matching header's initial `aria-sort` — the grid controller reads
+    # sort state off the headers (state-in-DOM), so an all-"none" thead would
+    # silently drop the default order on the first composed refresh.
+    sort_field: str = ""
+    sort_dir: str = "asc"
     # Keys whose canonical list header renders as a dzTable `toggleSort`
     # button (client-state sort + aria-sort + sort icon), not a static label.
     # Only consulted in skeleton mode alongside `column_keys`.
@@ -1767,17 +1773,23 @@ class DashboardGrid:
 class BulkActionToolbar:
     """Bulk-selection toolbar for list surfaces (Phase 7 of #1029).
 
-    Fixed shape singleton matching legacy `bulk_actions.html` byte-
-    for-byte: Delete + Clear-selection buttons. Visibility CSS-driven
-    via `[data-dz-bulk-count]` on the outer `.dz-table` wrapper (set
-    by dzTable's `$watch` on bulkCount); the count text is mirrored
-    to `[data-dz-bulk-count-target]` descendants imperatively per
-    ADR-0022 (no Alpine bindings on children that idiomorph could
-    re-evaluate before scope rebinds).
+    Convergence C1.1: the toolbar rides the HM grid controller's seams —
+    Delete is `[data-dz-grid-bulk-action="delete"]` posting form-encoded to
+    ``{endpoint}/bulk`` (behind an `hx-confirm` dialog; the controller
+    injects action + selected/excluded ids + all-matching + the query echo
+    on config-request, and `data-dz-grid-bulk-refresh` re-fetches rows +
+    footer after the POST settles); Clear is `[data-dz-grid-clear]`; the
+    "Select all N matching" escalation rides `[data-dz-grid-select-all-matching]`
+    with the total mirrored from the footer's `data-dz-grid-total`.
+    Visibility stays CSS-driven via `[data-dz-bulk-count]` on the grid root
+    (written by dz-grid.js's sync()); the count text is mirrored to
+    `[data-dz-bulk-count-target]` (#978 / ADR-0022 — no bindings idiomorph
+    could re-evaluate).
 
-    Alpine state lives on the dzTable controller — `selected` Set,
-    `bulkDelete()`, `clearSelection()` — already shipped in
-    `static/js/dz_table.js`. This primitive emits the matching DOM."""
+    ``endpoint`` is the entity's API base (e.g. ``/api/contacts``) — the
+    bulk POST goes to ``{endpoint}/bulk`` (the C0b route)."""
+
+    endpoint: str = ""
 
 
 @dataclass(frozen=True, slots=True)

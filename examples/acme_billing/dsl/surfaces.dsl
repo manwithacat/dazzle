@@ -147,7 +147,10 @@ surface invoice_list "Invoices":
   # Bulk sensitivity transitions — the runtime mounts POST /api/invoices/bulk.
   # The endpoint enforces the Invoice `update` permit gate (admin / org_owner
   # only), so auditor / project_member / external_contractor are denied (#1170).
+  # The declared sort gives the list sortable headers (grid convergence C1.1 —
+  # exercised end-to-end by tests/e2e/test_grid_convergence_e2e.py).
   ux:
+    sort: number asc
     bulk_actions:
       mark_sensitive: sensitive -> true
       mark_public: sensitive -> false

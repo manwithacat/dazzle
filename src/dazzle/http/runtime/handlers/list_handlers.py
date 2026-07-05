@@ -102,6 +102,7 @@ def create_list_handler(
     htmx_peek_by_table_id: dict[str, str] | None = None,
     htmx_entity_name: str | None = None,
     htmx_empty_message: str = "No items found.",
+    htmx_bulk_actions: bool = False,
     search_fields: list[str] | None = None,
     filter_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
@@ -164,6 +165,11 @@ def create_list_handler(
             request.state.htmx_peek_by_table_id = htmx_peek_by_table_id
         request.state.htmx_entity_name = htmx_entity_name
         request.state.htmx_empty_message = htmx_empty_message
+        # Convergence C1.1: the row-hydrate path renders bulk-select checkbox
+        # cells iff the entity's list surface declares `ux: bulk_actions:`.
+        # (Never threaded before — API-hydrated rows NEVER had checkboxes, one
+        # of the four legs of the dead-bulk-feature chain.)
+        request.state.htmx_bulk_actions = htmx_bulk_actions
 
     if optional_auth_dep is not None:
 
@@ -570,6 +576,7 @@ async def _list_handler_body(
                 "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
                 "api_endpoint": str(request.url.path),
                 "table_id": table_id,
+                "bulk_actions": getattr(request.state, "htmx_bulk_actions", False),
                 "sort_field": sort or "",
                 "sort_dir": dir,
                 "filter_values": filters,

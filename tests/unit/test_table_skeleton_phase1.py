@@ -31,13 +31,19 @@ class TestSkeletonTbody:
         # hydrating tbody pointing at /api with load trigger + innerMorph swap
         assert '<tbody id="dt-task-body"' in html
         assert 'hx-get="/api/task"' in html
-        assert 'hx-trigger="load"' in html
+        # Convergence C1.1: the tbody is the grid controller's body seam —
+        # data-dz-grid-body + the immutable data-dz-grid-src base, and
+        # dz-grid:refresh always joins the trigger list.
+        assert "data-dz-grid-body" in html
+        assert 'data-dz-grid-src="/api/task"' in html
+        assert 'hx-trigger="load, dz-grid:refresh"' in html
         assert 'hx-swap="innerMorph"' in html
         assert 'hx-headers=\'{"Accept": "text/html"}\'' in html
         assert 'class="dz-table-body"' in html
-        # the dzTable loading bindings (mounted on the Region) drive the spinner
-        assert '@htmx:before-request="loading = true"' in html
-        assert '@htmx:after-settle="loading = false"' in html
+        # Convergence C1.1: the Alpine @htmx:* loading bindings are gone
+        # (loading is the pure-CSS .htmx-request overlay, #972).
+        assert "@htmx:before-request" not in html
+        assert "@htmx:after-settle" not in html
         # NO inline rows — rows come from /api → render_data_row only
         assert "<tr>" not in html.split("<tbody")[1]
         assert "<td" not in html
@@ -55,11 +61,14 @@ class TestSkeletonTbody:
                 refresh_interval=30,
             )
         )
-        assert 'hx-trigger="load, every 30s"' in html
+        # Convergence C1.1: dz-grid:refresh sits between load and the poll.
+        assert 'hx-trigger="load, dz-grid:refresh, every 30s"' in html
 
-    def test_skeleton_blank_trigger_suppresses_attr(self) -> None:
+    def test_skeleton_blank_trigger_still_gets_grid_refresh(self) -> None:
         # search_first lists omit the load trigger (the search box drives the
-        # first fetch). `_build_list` passes hx_trigger="".
+        # first fetch). `_build_list` passes hx_trigger="". Convergence C1.1:
+        # the trigger attr is now PRESENT with just dz-grid:refresh (no load),
+        # so sort/filter/page/bulk refreshes still re-fetch the tbody.
         html = _render(
             Table(
                 columns=("Name",),
@@ -70,7 +79,8 @@ class TestSkeletonTbody:
                 hx_trigger="",
             )
         )
-        assert "hx-trigger=" not in html
+        assert 'hx-trigger="dz-grid:refresh"' in html
+        assert 'hx-trigger="load' not in html
 
     def test_skeleton_loading_indicator(self) -> None:
         html = _render(
@@ -96,8 +106,11 @@ class TestSkeletonTbody:
                 bulk_select=True,
             )
         )
-        # select-all header cell present; tbody still empty
-        assert "toggleSelectAll" in html
+        # select-all header cell present; tbody still empty. Convergence C1.1:
+        # the select-all box is the grid controller's data-dz-grid-select-all
+        # seam (no Alpine toggleSelectAll binding).
+        assert "data-dz-grid-select-all" in html
+        assert "toggleSelectAll" not in html
         assert "<td" not in html
 
     def test_skeleton_forbids_inline_rows(self) -> None:

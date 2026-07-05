@@ -136,7 +136,9 @@ def test_list_skeleton_hydrates_rows_from_api_not_inline() -> None:
     # the empty hydrating tbody points at the row-data endpoint
     assert 'class="dz-table-body"' in html
     assert 'hx-get="/api/contacts' in html
-    assert 'hx-trigger="load"' in html
+    # Convergence C1.1: the tbody is the grid controller's body seam —
+    # dz-grid:refresh always joins the load trigger.
+    assert 'hx-trigger="load, dz-grid:refresh"' in html
     # no inline data rows / per-row drill at first paint
     assert "dz-table__row--linked" not in html
     assert "Alice" not in html

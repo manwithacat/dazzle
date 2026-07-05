@@ -4928,7 +4928,10 @@ button.htmx-request,
  * Moved verbatim from Dazzle fragments.css (grid Hyperpart Slice 0b).
  * The `.table` ancestor selectors here gate the bulk chrome (#978). */
 /* #978: bulk-actions visibility is CSS-driven by `[data-bulk-count]`
- * on the ancestor .table (set by dzTable's $watch on bulkCount).
+ * on the ancestor grid root — historically the `.table` element (the
+ * gallery), generalized to `[data-grid]` for consumers whose root is a
+ * wrapping region (Dazzle's list <section>, convergence C1.1). The count is
+ * written by grid.js's sync().
  * Default state: hidden (no flash on initial paint, replaces the prior
  * Alpine x-cloak guard). Show only when bulkCount > 0. */
 
@@ -4938,7 +4941,8 @@ button.htmx-request,
   gap: var(--space-md);
 }
 
-.table:not([data-bulk-count="0"]) .bulk-actions {
+.table:not([data-bulk-count="0"]) .bulk-actions,
+[data-grid]:not([data-bulk-count="0"]) .bulk-actions {
   display: flex;
 }
 
@@ -4946,7 +4950,8 @@ button.htmx-request,
 .bulk-plural {
   display: inline;
 }
-.table[data-bulk-count="1"] .bulk-plural {
+.table[data-bulk-count="1"] .bulk-plural,
+[data-grid][data-bulk-count="1"] .bulk-plural {
   display: none;
 }
 
@@ -4959,10 +4964,12 @@ button.htmx-request,
 .bulk-summary-rows {
   display: inline;
 }
-.table:not([data-bulk-count="0"]) .bulk-summary-selected {
+.table:not([data-bulk-count="0"]) .bulk-summary-selected,
+[data-grid]:not([data-bulk-count="0"]) .bulk-summary-selected {
   display: inline;
 }
-.table:not([data-bulk-count="0"]) .bulk-summary-rows {
+.table:not([data-bulk-count="0"]) .bulk-summary-rows,
+[data-grid]:not([data-bulk-count="0"]) .bulk-summary-rows {
   display: none;
 }
 
@@ -5015,7 +5022,8 @@ button.htmx-request,
   text-decoration: underline;
 }
 
-.table[data-grid-all-matching="true"] .bulk-matching {
+.table[data-grid-all-matching="true"] .bulk-matching,
+[data-grid][data-grid-all-matching="true"] .bulk-matching {
   display: none;
 }
 

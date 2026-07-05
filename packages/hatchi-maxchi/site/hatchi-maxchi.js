@@ -127,7 +127,13 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     var start = total ? (pg.page - 1) * pg.size + 1 : 0;
     var end = Math.min(pg.page * pg.size, total);
     var summary = total ? start + "-" + end + " of " + total : "0 of 0";
-    var html = '<span class="pagination-summary">' + summary + "</span>";
+    // The summary is the Dazzle-faithful PAIR: a bulk-count mirror shown while
+    // a selection exists, the row window otherwise (CSS-toggled off the root's
+    // data-bulk-count — see table.css .bulk-summary-*).
+    var html = '<span class="pagination-summary">' +
+      '<span class="bulk-summary-selected">' +
+      '<span data-bulk-count-target>0</span> of ' + total + ' selected</span>' +
+      '<span class="bulk-summary-rows">' + summary + "</span></span>";
     html += '<div class="pagination-pages">';
     html += '<button type="button" class="pagination-page" data-grid-page-prev ' +
       (pg.page <= 1 ? "disabled " : "") + 'aria-label="Previous page">‹</button>';
@@ -268,18 +274,13 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     fd.forEach(function (v, k) { if (!(k in params)) params[k] = v; });
     window.__lastBulk = params; // expose the payload for the gallery tests
     if (url.split("?")[0] === "/mock/grid/bulk") applyBulkDelete(params);
-    var root = el.closest && el.closest("[data-grid]");
-    var bodyEl = root && root.querySelector("[data-grid-body]");
-    var target = bodyEl || document.querySelector(el.getAttribute("hx-target") || "");
+    // Two-request pattern: the POST applies the action and returns nothing to
+    // swap (a real server answers JSON/204). The button's
+    // data-grid-bulk-refresh makes the controller re-fetch rows + footer
+    // for the current query after the request settles — the same GET path
+    // every other state change uses.
     el.classList.add("htmx-request");
     fire(el, "htmx:before:request", { elt: el });
-    if (target) {
-      var gurl = bodyEl ? bodyEl.getAttribute("hx-get") : "/mock/grid/rows";
-      target.innerHTML = renderGridRows(gurl);
-      updateGridFooter(root, gurl); // the total changed → repaint the footer
-      fire(target, "htmx:after:swap", { elt: target });
-      fire(target, "htmx:after:settle", { elt: target }); // after ALL swaps, as real htmx
-    }
     el.classList.remove("htmx-request");
     fire(el, "htmx:after:request", { elt: el });
   }
@@ -862,6 +863,11 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  *                  controller injects the selection payload (action, selected
  *                  ids, all-matching/excluded shape, current-query echo) so the
  *                  server re-scopes + re-validates, never trusting client ids.
+ *   - bulk refresh: `data-grid-bulk-refresh` on a bulk button opts into the
+ *                  two-request pattern — the POST's response swaps nothing
+ *                  (JSON/204); after it settles the controller re-fetches
+ *                  rows + footer for the current query. Omit it when the
+ *                  server returns the refreshed rows directly (hx-target).
  *   - all-matching: `[data-grid-select-all-matching]` (a button, in the bulk
  *                  bar) escalates the selection to the WHOLE matched query —
  *                  `data-grid-all-matching="true"` on the root, exclusions
@@ -990,9 +996,11 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   function announce(root) {
     var out = root.querySelector("[data-grid-announce]");
     if (!out) return;
-    var summary = root.querySelector(
-      "[data-grid-pagination] .pagination-summary",
-    );
+    // Prefer the row-window span when the summary is the selected/rows PAIR
+    // (the count half is already covered by the bulk bar's own live region).
+    var summary =
+      root.querySelector("[data-grid-pagination] .bulk-summary-rows") ||
+      root.querySelector("[data-grid-pagination] .pagination-summary");
     if (!summary) return;
     var msg = "Showing " + summary.textContent.trim();
     if (out.textContent !== msg) out.textContent = msg;
@@ -1019,8 +1027,13 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     // The count is the single source of truth the CSS reads (#978 pattern):
     // `.table:not([data-bulk-count="0"]) .bulk-actions { display:flex }`.
     root.setAttribute("data-bulk-count", String(count));
-    var target = root.querySelector("[data-bulk-count-target]");
-    if (target) target.textContent = String(count);
+    // ALL count mirrors update — the bulk bar's "Delete N items" AND the
+    // footer's "N of M selected" (querySelector-first left the footer stuck
+    // at 0 — C1.1 review catch).
+    var targets = root.querySelectorAll("[data-bulk-count-target]");
+    for (var t = 0; t < targets.length; t++) {
+      targets[t].textContent = String(count);
+    }
     // Mirror the matched total into the escalation affordance's label
     // ("Select all N matching") whenever the footer knows it.
     var mirror = root.querySelector("[data-grid-matching-total]");
@@ -1543,6 +1556,28 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   }
   document.addEventListener("htmx:after:settle", onAfterSettle); // htmx 4
   document.addEventListener("htmx:afterSettle", onAfterSettle); // htmx ≤2
+
+  // ── Bulk two-request pattern ────────────────────────────────────────────
+  // A bulk button carrying `data-grid-bulk-refresh` posts an action whose
+  // response swaps NOTHING (a real server answers JSON/204) — after the
+  // request settles the controller re-fetches rows + footer for the current
+  // query, the same GET path every other state change uses. Servers that
+  // return the refreshed rows directly (hx-target on the button) simply omit
+  // the attribute. No urlMode: a bulk action doesn't change the query (a
+  // server page-clamp is corrected by the after-swap re-sync).
+  function onAfterRequest(evt) {
+    var d = evt.detail || {};
+    var el = d.elt || (d.ctx && d.ctx.sourceElement) || evt.target;
+    var btn =
+      el &&
+      el.closest &&
+      el.closest("[data-grid-bulk-action][data-grid-bulk-refresh]");
+    if (!btn) return;
+    var root = gridOf(btn);
+    if (root) refresh(root);
+  }
+  document.addEventListener("htmx:after:request", onAfterRequest); // htmx 4
+  document.addEventListener("htmx:afterRequest", onAfterRequest); // htmx ≤2
 
   // ── URL-state wiring ────────────────────────────────────────────────────
   // Init: apply the URL's params to every opted-in grid NOW, synchronously at

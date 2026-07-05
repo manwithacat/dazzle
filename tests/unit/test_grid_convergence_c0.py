@@ -72,3 +72,46 @@ class TestPaginationTotalStamp:
         )
         html = FragmentRenderer().render(p)
         assert 'data-dz-grid-total="42"' in html
+
+
+class TestDefaultSortAriaState:
+    """C1.1 review fix: a surface's `ux: sort:` default must be REFLECTED on
+    the header's aria-sort at first paint — the grid controller reads sort
+    state off the headers (state-in-DOM), so an all-"none" thead silently
+    drops the default order on the first filter/search/page refresh."""
+
+    def test_default_sorted_header_carries_initial_aria_sort(self) -> None:
+        from dazzle.render.fragment import FragmentRenderer, Table
+
+        html = FragmentRenderer().render(
+            Table(
+                columns=("Number", "Amount"),
+                rows=(),
+                skeleton=True,
+                tbody_id="t-body",
+                hx_endpoint="/api/invoices?sort=number&dir=asc",
+                column_keys=("number", "amount"),
+                sortable_keys=("number", "amount"),
+                sort_field="number",
+                sort_dir="asc",
+            )
+        )
+        assert 'aria-sort="ascending"' in html, "the default-sorted column announces its state"
+        assert html.count('aria-sort="none"') == 1, "the other sortable column stays none"
+
+    def test_no_default_sort_keeps_all_none(self) -> None:
+        from dazzle.render.fragment import FragmentRenderer, Table
+
+        html = FragmentRenderer().render(
+            Table(
+                columns=("Number",),
+                rows=(),
+                skeleton=True,
+                tbody_id="t-body",
+                hx_endpoint="/api/invoices",
+                column_keys=("number",),
+                sortable_keys=("number",),
+            )
+        )
+        assert 'aria-sort="none"' in html
+        assert "ascending" not in html

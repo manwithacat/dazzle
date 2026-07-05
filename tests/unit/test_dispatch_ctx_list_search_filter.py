@@ -246,10 +246,12 @@ def test_dispatch_ctx_region_name_falls_back_to_table_id_without_surface_name() 
     assert ctx["region_name"] == "dt-device_list"
 
 
-def test_list_filter_bar_hx_target_uses_surface_region_id() -> None:
-    """Canonical (ADR-0049 Task 4e): list filters target the hydrating tbody
-    (`#{table_id}-body`) with `filter[<key>]` param names — what the /api list
-    handler parses — NOT the dead `#region-*` workspace target."""
+def test_list_filter_bar_uses_grid_filter_seam() -> None:
+    """Convergence C1.1: list filters are the HM grid controller's seam —
+    each control carries `data-dz-grid-filter="filter[<key>]"` (the wire key
+    the /api list handler parses) and NO per-control hx-get/hx-target; the
+    controller composes one query from all DOM state on change. The dead
+    `#region-*` workspace target stays gone."""
     table = _table(
         table_id="dt-contact_list",
         columns=[
@@ -268,10 +270,11 @@ def test_list_filter_bar_hx_target_uses_surface_region_id() -> None:
     )
     ctx = _build_dispatch_ctx(_RC(table), _Surface())
     html = _render_list(ctx)
-    # The list filter targets the hydrating tbody with a filter[<key>] name,
-    # not the dead #region-* workspace container.
-    assert 'hx-target="#contact_list-body"' in html
+    # The filter select is grid-controller-driven: filter[<key>] wire name +
+    # data-dz-grid-filter seam, no per-control htmx target.
     assert 'name="filter[status]"' in html
+    assert 'data-dz-grid-filter="filter[status]"' in html
+    assert 'hx-target="#contact_list-body"' not in html
     assert "#region-" not in html
 
 

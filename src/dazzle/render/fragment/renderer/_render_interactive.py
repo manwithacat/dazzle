@@ -19,9 +19,9 @@ date range, CSV export, search box, confirm gate):
   - _emit_csv_export_button
   - _emit_date_range_picker
 
-Also houses `_BULK_ACTION_TOOLBAR_HTML`, the singleton constant the
-match-arm for `BulkActionToolbar` returns directly (no dedicated
-method — the constant IS the rendering).
+Also houses `_emit_bulk_action_toolbar` (convergence C1.1: the bulk
+toolbar on the HM grid controller's seams — Delete posts to the C0b
+`/bulk` route, Clear + Select-all-matching ride the delegated markers).
 
 All methods only call `self._emit(child, ctx)` for recursion, plus
 the module-level helpers `_hx_attrs` and `_pagination_pages` from
@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.primitives import (
+    BulkActionToolbar,
     Button,
     ConfirmCheckItem,
     ConfirmGate,
@@ -59,16 +60,16 @@ if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
 
 
-# Bulk-action toolbar — emitted byte-for-byte by the BulkActionToolbar
-# primitive (Phase 7 of #1029). Singleton — Delete + Clear-selection
-# buttons. Visibility CSS-driven via `[data-dz-bulk-count]` on the
-# outer .dz-table wrapper (set by dzTable's `$watch` on bulkCount per
-# #978 / ADR-0022). Count text mirrored to `[data-dz-bulk-count-target]`
-# imperatively — no Alpine bindings on children that idiomorph could
-# re-evaluate before scope rebinds.
-_BULK_ACTION_TOOLBAR_HTML = (
-    '<div class="dz-bulk-actions">'
-    '<button @click="bulkDelete()" type="button" class="dz-bulk-delete">'
+# Bulk-action toolbar (convergence C1.1): rides the HM grid controller's
+# seams. Delete = `[data-dz-grid-bulk-action="delete"]` posting form-encoded
+# to `{endpoint}/bulk` (the C0b route) behind an hx-confirm dialog, with
+# `data-dz-grid-bulk-refresh` re-fetching rows + footer after the POST
+# settles (two-request pattern — the response is JSON, nothing swaps).
+# "Select all N matching" escalates a page selection to the whole matched
+# query (total mirrored from the footer's data-dz-grid-total). Visibility
+# stays CSS-driven via `[data-dz-bulk-count]` on the grid root (#978 /
+# ADR-0022; written by dz-grid.js's sync()).
+_BULK_DELETE_SVG = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" '
     'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
     'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
@@ -78,13 +79,6 @@ _BULK_ACTION_TOOLBAR_HTML = (
     '<path d="M14 11v6"></path>'
     '<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>'
     "</svg>"
-    "<span>Delete <span data-dz-bulk-count-target>0</span> "
-    'item<span class="dz-bulk-plural">s</span></span>'
-    "</button>"
-    '<button @click="clearSelection()" type="button" class="dz-bulk-clear">'
-    "Clear selection"
-    "</button>"
-    "</div>"
 )
 
 
@@ -214,6 +208,31 @@ class _RenderInteractiveMixin:
             f"</svg>"
             f"{ctx.escape(label)}"
             f"</a>"
+        )
+
+    def _emit_bulk_action_toolbar(self, b: BulkActionToolbar, ctx: RenderContext) -> str:
+        """Render the bulk toolbar on the HM grid controller's seams
+        (convergence C1.1) — see the primitive's docstring for the contract."""
+        endpoint = ctx.escape_attr(b.endpoint)
+        return (
+            '<div class="dz-bulk-actions">'
+            '<button type="button" class="dz-bulk-matching" data-dz-grid-select-all-matching>'
+            "Select all <span data-dz-grid-matching-total>…</span> matching</button>"
+            '<button type="button" class="dz-bulk-delete" '
+            'data-dz-grid-bulk-action="delete" data-dz-grid-bulk-refresh '
+            # hx-swap=none: the two-request pattern swaps NOTHING on the POST
+            # (without it htmx-4 swaps the JSON response into the button).
+            'hx-swap="none" '
+            f'hx-post="{endpoint}/bulk" '
+            'hx-confirm="Delete the selected items? This cannot be undone.">'
+            f"{_BULK_DELETE_SVG}"
+            "<span>Delete <span data-dz-bulk-count-target>0</span> "
+            'item<span class="dz-bulk-plural">s</span></span>'
+            "</button>"
+            '<button type="button" class="dz-bulk-clear" data-dz-grid-clear>'
+            "Clear selection"
+            "</button>"
+            "</div>"
         )
 
     def _emit_pagination(self, p: Pagination, ctx: RenderContext) -> str:
@@ -484,18 +503,15 @@ class _RenderInteractiveMixin:
         /api list handler parses), `innerMorph` swap, and
         `hx-include="closest [data-dazzle-table]"` so all active filters ride
         along — mirroring the legacy `render_filterable_table` filter bar."""
-        endpoint = ctx.escape_attr(str(f.endpoint))
-        target = ctx.escape_attr(f"#{f.tbody_id}")
-        indicator_attr = (
-            f' hx-indicator="{ctx.escape_attr(f.loading_indicator)}"' if f.loading_indicator else ""
-        )
-        common = (
-            f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerMorph" '
-            'hx-include="closest [data-dazzle-table]" '
-            'hx-headers=\'{"Accept": "text/html"}\''
-            f"{indicator_attr}"
-        )
 
+        # Convergence C1.1: filters are the HM grid controller's seam —
+        # `data-dz-grid-filter="filter[key]"` (the bracketed wire key the /api
+        # list route parses). On change the controller composes ONE query from
+        # ALL current DOM state (sort + every filter + page-size, back at page
+        # 1), so a filter change can no longer lose the active sort (the old
+        # per-control hx-get + hx-include never carried sort state). Text
+        # filters apply on change (blur/Enter) for now — a debounced-input
+        # filter seam is a tracked HM follow-up.
         def _control(col: FilterColumn) -> str:
             name = f"filter[{ctx.escape_attr(col.key)}]"
             sel = ctx.escape_attr(col.selected)
@@ -503,15 +519,15 @@ class _RenderInteractiveMixin:
                 placeholder = ctx.escape_attr(f"Filter {col.label.lower()}…")
                 return (
                     f'<input type="text" name="{name}" class="dz-filter-input" '
-                    f'placeholder="{placeholder}" value="{sel}" '
-                    f'hx-trigger="keyup changed delay:300ms" {common}>'
+                    f'data-dz-grid-filter="{name}" '
+                    f'placeholder="{placeholder}" value="{sel}">'
                 )
             if col.filter_type == "ref":
                 return (
                     f'<select name="{name}" class="dz-filter-select" '
+                    f'data-dz-grid-filter="{name}" '
                     f'data-ref-api="{ctx.escape_attr(col.ref_api)}" '
                     f'data-selected-value="{sel}" '
-                    f'hx-trigger="change changed" {common} '
                     'x-init="dzFilterRefSelect($el)">'
                     '<option value="">All</option></select>'
                 )
@@ -524,7 +540,7 @@ class _RenderInteractiveMixin:
                 )
             return (
                 f'<select name="{name}" class="dz-filter-select" '
-                f'hx-trigger="change changed" {common}>'
+                f'data-dz-grid-filter="{name}">'
                 f"{options_html}</select>"
             )
 

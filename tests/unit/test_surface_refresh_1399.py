@@ -90,10 +90,13 @@ class TestSurfaceRefreshRender:
         return FragmentRenderer().render(FragmentSurfaceAdapter()._build_list(surface, ctx))
 
     def test_tbody_trigger_polls_when_set(self) -> None:
+        # Convergence C1.1: dz-grid:refresh always joins the tbody trigger
+        # list — after the load trigger, before the poll.
         html = self._render(refresh_interval=30)
-        assert 'hx-trigger="load, every 30s"' in html
+        assert 'hx-trigger="load, dz-grid:refresh, every 30s"' in html
 
     def test_tbody_trigger_no_poll_by_default(self) -> None:
+        # Convergence C1.1: no poll, but dz-grid:refresh still rides along.
         html = self._render()
-        assert 'hx-trigger="load"' in html
+        assert 'hx-trigger="load, dz-grid:refresh"' in html
         assert "every" not in html.split("dz-table-body")[0].rsplit("<tbody", 1)[-1]

@@ -214,15 +214,18 @@ class TestListFilterBar:
         base.update(over)
         return FilterColumn(**base)
 
-    def test_select_targets_tbody_with_bracket_param(self) -> None:
+    def test_select_carries_grid_filter_key(self) -> None:
+        # Convergence C1.1: filters are the HM grid controller's seam — each
+        # control carries data-dz-grid-filter with the bracketed wire key the
+        # /api list handler parses; the per-control hx-get/hx-target/hx-include
+        # wiring is gone (the controller composes one query from DOM state).
         html = _render(self._bar((self._select_col(),)))
-        # the param name the /api list handler actually parses (filter[<key>])
         assert 'name="filter[status]"' in html
-        # targets the hydrating tbody, not a dead #region-* id
-        assert 'hx-target="#task-body"' in html
+        assert 'data-dz-grid-filter="filter[status]"' in html
+        assert "hx-get=" not in html
+        assert "hx-target=" not in html
+        assert "hx-include=" not in html
         assert "#region-" not in html
-        assert 'hx-indicator="#task-loading-sr"' in html
-        assert 'hx-include="closest [data-dazzle-table]"' in html
 
     def test_select_renders_options_and_all(self) -> None:
         html = _render(self._bar((self._select_col(selected="done"),)))
@@ -238,7 +241,10 @@ class TestListFilterBar:
         )
         assert 'name="filter[owner]"' in html
         assert 'type="text"' in html
-        assert 'hx-trigger="keyup changed delay:300ms"' in html
+        # Convergence C1.1: the text input applies via the grid controller's
+        # data-dz-grid-filter seam, not a per-control hx-trigger.
+        assert 'data-dz-grid-filter="filter[owner]"' in html
+        assert "hx-trigger=" not in html
 
     def test_ref_select_carries_ref_api_and_init(self) -> None:
         html = _render(
@@ -283,7 +289,7 @@ class TestColumnVisibilityWiring:
         assert '<th data-dz-col="name" scope="col" class="dz-table-th">Name</th>' in html
         assert '<th data-dz-col="status" scope="col" class="dz-table-th">Status</th>' in html
 
-    def test_skeleton_sortable_header_is_dztable_button(self) -> None:
+    def test_skeleton_sortable_header_is_grid_sort_button(self) -> None:
         html = _render(
             Table(
                 columns=("Name",),
@@ -294,12 +300,18 @@ class TestColumnVisibilityWiring:
                 sortable_keys=("name",),
             )
         )
-        # sortable headers drive the mounted dzTable controller (client-state
-        # sort + aria-sort + icon + live-region announce), not a stale hx-link.
-        assert '<th data-dz-col="name" :aria-sort="ariaSortDir(\'name\')" scope="col"' in html
-        assert "@click=\"toggleSort('name')\"" in html
-        assert "sortIcon('name')" in html
+        # Convergence C1.1: sortable headers drive the HM grid controller —
+        # data-dz-grid-sort button, static aria-sort="none" (dz-grid.js cycles
+        # it), CSS caret keyed off aria-sort (chevron-UP path). No Alpine.
+        assert '<th data-dz-col="name" aria-sort="none" scope="col" class="dz-table-th">' in html
+        assert 'data-dz-grid-sort="name"' in html
+        assert 'class="dz-table-sort-button"' in html
+        assert 'class="dz-table-sort-icon"' in html
+        assert '<path d="M2 7.5l4-4 4 4"' in html
         assert 'aria-label="Sort by Name"' in html
+        assert "toggleSort" not in html
+        assert "sortIcon" not in html
+        assert ":aria-sort=" not in html
 
     def test_skeleton_th_plain_without_keys(self) -> None:
         html = _render(Table(columns=("Name",), rows=(), skeleton=True, hx_endpoint="/x"))

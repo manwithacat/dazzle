@@ -135,7 +135,6 @@ from dazzle.render.fragment.renderer._render_charts import _RenderChartsMixin
 from dazzle.render.fragment.renderer._render_dashboard import _RenderDashboardMixin
 from dazzle.render.fragment.renderer._render_forms import _RenderFormsMixin
 from dazzle.render.fragment.renderer._render_interactive import (
-    _BULK_ACTION_TOOLBAR_HTML,
     _RenderInteractiveMixin,
 )
 from dazzle.render.fragment.renderer._render_layout import _RenderLayoutMixin
@@ -350,7 +349,7 @@ class FragmentRenderer(
             case CreateButton():
                 return self._emit_create_button(fragment, ctx)
             case BulkActionToolbar():
-                return _BULK_ACTION_TOOLBAR_HTML
+                return self._emit_bulk_action_toolbar(fragment, ctx)
             case CohortStripRegion():
                 return self._emit_cohort_strip_region(fragment, ctx)
             case DayTimelineRegion():

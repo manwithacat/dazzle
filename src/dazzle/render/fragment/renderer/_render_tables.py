@@ -125,17 +125,14 @@ class _RenderTablesMixin:
         # checkbox header cell. Alpine `dzTable` controller owns
         # bulkCount + toggleSelectAll.
         if t.bulk_select:
-            # Task 5: the select-all checkbox reflects selection state via the
-            # dzTable controller's bulkCount vs the rendered row count (legacy
-            # parity) — checked when all rows selected, indeterminate for some.
+            # Convergence C1.1: selection is owned by the HM grid controller
+            # (dz-grid.js, delegated + state-in-DOM) — the select-all box is
+            # `[data-dz-grid-select-all]`; the controller drives its checked /
+            # indeterminate tri-state from the row boxes on every change/swap.
             head_cells_parts.append(
                 '<th scope="col" class="dz-table-th-select">'
                 '<input type="checkbox" class="dz-table-col-menu-checkbox" '
-                '@change="toggleSelectAll($event.target.checked)" '
-                ':checked="bulkCount > 0 && bulkCount === '
-                "$el.closest('table').querySelectorAll('tbody tr[data-dz-row-id]').length\" "
-                ':indeterminate="bulkCount > 0 && bulkCount < '
-                "$el.closest('table').querySelectorAll('tbody tr[data-dz-row-id]').length\" "
+                "data-dz-grid-select-all "
                 'aria-label="Select all rows">'
                 "</th>"
             )
@@ -153,16 +150,29 @@ class _RenderTablesMixin:
                 ck = ctx.escape_attr(keys[i])
                 label = ctx.escape(str(c))
                 if keys[i] in sortable:
+                    # Convergence C1.1: sort is owned by the HM grid controller
+                    # — state lives on the th's `aria-sort` (cycled by
+                    # dz-grid.js, one active column), the button carries
+                    # `data-dz-grid-sort`, and the caret is pure CSS keyed off
+                    # aria-sort (HM table.css). No Alpine bindings. The
+                    # surface's DEFAULT sort pre-populates its header's
+                    # aria-sort so the first composed refresh keeps the order.
+                    if keys[i] == t.sort_field:
+                        aria = "descending" if t.sort_dir == "desc" else "ascending"
+                    else:
+                        aria = "none"
                     head_cells_parts.append(
-                        f'<th data-dz-col="{ck}" :aria-sort="ariaSortDir(\'{ck}\')" '
+                        f'<th data-dz-col="{ck}" aria-sort="{aria}" '
                         'scope="col" class="dz-table-th">'
-                        f'<button type="button" @click="toggleSort(\'{ck}\')" '
+                        f'<button type="button" data-dz-grid-sort="{ck}" '
                         f'aria-label="Sort by {label}" class="dz-table-sort-button">'
                         f"{label}"
                         '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" '
                         'aria-hidden="true" xmlns="http://www.w3.org/2000/svg" '
-                        f':class="sortIcon(\'{ck}\')" class="dz-table-sort-icon">'
-                        '<path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" '
+                        'class="dz-table-sort-icon">'
+                        # chevron-UP: the HM caret CSS shows it as-is for
+                        # ascending and rotates 180° for descending.
+                        '<path d="M2 7.5l4-4 4 4" stroke="currentColor" stroke-width="1.5" '
                         'stroke-linecap="round" stroke-linejoin="round"/></svg></button></th>'
                     )
                 else:
@@ -194,9 +204,17 @@ class _RenderTablesMixin:
                 else ""
             )
             id_attr = f' id="{ctx.escape_attr(t.tbody_id)}"' if t.tbody_id else ""
+            # Convergence C1.1: the tbody is the grid controller's body seam —
+            # `data-dz-grid-body` + the immutable `data-dz-grid-src` base, and
+            # `dz-grid:refresh` joins the trigger so a sort / filter / page /
+            # bulk-refresh re-fetches with the controller-composed query. The
+            # Alpine @htmx:* loading bindings are gone (they bound htmx-2
+            # event names that never fire under the vendored htmx-4; loading
+            # is the pure-CSS `.htmx-request` overlay, #972).
             triggers: list[str] = []
             if t.hx_trigger:
                 triggers.append(t.hx_trigger)
+            triggers.append("dz-grid:refresh")
             if t.refresh_interval:
                 triggers.append(f"every {int(t.refresh_interval)}s")
             trigger_attr = f' hx-trigger="{", ".join(triggers)}"' if triggers else ""
@@ -206,14 +224,13 @@ class _RenderTablesMixin:
                 else ""
             )
             skeleton_tbody = (
-                f"<tbody{id_attr} "
+                f"<tbody{id_attr} data-dz-grid-body "
+                f'data-dz-grid-src="{ctx.escape_attr(t.hx_endpoint)}" '
                 f'hx-get="{ctx.escape_attr(t.hx_endpoint)}"'
                 f"{trigger_attr} "
                 'hx-swap="innerMorph" '
                 'hx-headers=\'{"Accept": "text/html"}\''
                 f"{indicator_attr} "
-                '@htmx:before-request="loading = true" '
-                '@htmx:after-settle="loading = false" '
                 'class="dz-table-body"></tbody>'
             )
             return (
@@ -321,8 +338,18 @@ class _RenderTablesMixin:
         )
         # The /api response fills this via an hx-swap-oob pagination swap
         # (list_handlers). Empty at first paint; absent for infinite lists.
+        # C1.1: the SR announcer — dz-grid.js mirrors the footer's result-window
+        # summary ("Showing 1-4 of 6") into this visually-hidden live region on
+        # every swap (the footer itself is repainted wholesale, which screen
+        # readers can't track).
+        announcer = (
+            '<span class="dz-grid-announce" data-dz-grid-announce '
+            'aria-live="polite" aria-atomic="true"></span>'
+        )
         pagination_footer = (
-            f'<div id="{table_id}-pagination" class="dz-table-footer"></div>' if s.paginated else ""
+            f'{announcer}<div id="{table_id}-pagination" class="dz-table-footer"></div>'
+            if s.paginated
+            else ""
         )
 
         return (

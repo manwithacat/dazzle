@@ -126,8 +126,10 @@ class TestThreadedFieldsDriveChrome:
         assert '"inlineEditable": ["name"]' in html
 
     def test_refresh_interval_polls(self) -> None:
+        # Convergence C1.1: dz-grid:refresh always joins the trigger list,
+        # after the load trigger and before the poll.
         html = _render(self._ctx(refresh_interval=15))
-        assert 'hx-trigger="load, every 15s"' in html
+        assert 'hx-trigger="load, dz-grid:refresh, every 15s"' in html
 
     def test_infinite_pagination_has_no_footer(self) -> None:
         html = _render(self._ctx(pagination_mode="infinite"))
@@ -174,7 +176,13 @@ class TestParityPolish:
         html = _render(_build_dispatch_ctx(_RC(_tc(entity_title="To-Do")), _Surface()))
         assert "No to-dos found" in html
 
-    def test_select_all_reflects_selection_state(self) -> None:
+    def test_select_all_is_grid_controller_seam(self) -> None:
+        # Convergence C1.1: the select-all box is the HM grid controller's
+        # `data-dz-grid-select-all` seam — the controller drives its checked/
+        # indeterminate tri-state from the row boxes; the Alpine :checked/
+        # :indeterminate bindings are gone.
         html = _render(_build_dispatch_ctx(_RC(_tc(bulk_actions=True)), _Surface()))
-        assert ':checked="bulkCount > 0 &amp;&amp; bulkCount ===' in html or ":checked=" in html
-        assert ":indeterminate=" in html
+        assert "data-dz-grid-select-all" in html
+        assert 'aria-label="Select all rows"' in html
+        assert ":checked=" not in html
+        assert ":indeterminate=" not in html

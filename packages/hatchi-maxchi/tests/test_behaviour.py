@@ -182,6 +182,14 @@ def test_grid_selection_reveals_and_clears_the_bulk_bar(page) -> None:  # type: 
     assert page.get_attribute(root, "data-bulk-count") == "1"
     assert page.eval_on_selector(bar, disp) != "none"
     assert page.inner_text("[data-bulk-count-target]").strip() == "1"
+    # EVERY count mirror updates — the footer's "N of M selected" too
+    # (querySelector-first once left it stuck at 0; C1.1 review catch).
+    assert (
+        page.eval_on_selector(
+            "[data-grid-pagination] [data-bulk-count-target]", "e => e.textContent.trim()"
+        )
+        == "1"
+    )
     # the count sits in a polite live region so SRs announce "N selected"
     assert page.eval_on_selector(
         "[data-bulk-count-target]",
@@ -467,8 +475,10 @@ def test_grid_bulk_payload_keys_win_over_query_echo(page) -> None:  # type: igno
 
 
 def _page_summary(page):  # type: ignore[no-untyped-def]
+    # The summary is the selected/rows PAIR — read the row-window half (the
+    # visible one while nothing is selected).
     return page.eval_on_selector(
-        "[data-grid-pagination] .pagination-summary", "e => e.textContent.trim()"
+        "[data-grid-pagination] .bulk-summary-rows", "e => e.textContent.trim()"
     )
 
 

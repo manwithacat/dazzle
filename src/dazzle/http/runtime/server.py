@@ -1813,6 +1813,12 @@ class DazzleBackendApp:
                 # the entity-list rows into the inline detail-panel chevron.
                 "peek_mode": resolve_peek_mode(_ls, entity).value if _ls else "off",
                 "peek_by_table_id": peek_by_table_id,
+                # Convergence C1.1: rows hydrated over /api render bulk-select
+                # checkboxes iff the (first) list surface declares bulk actions
+                # (first-surface value, same convention as peek_mode).
+                "bulk_actions": bool(
+                    _ls is not None and getattr(getattr(_ls, "ux", None), "bulk_actions", None)
+                ),
             }
 
         # Build per-entity audit config mapping.

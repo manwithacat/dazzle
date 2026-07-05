@@ -53,6 +53,11 @@
  *                  controller injects the selection payload (action, selected
  *                  ids, all-matching/excluded shape, current-query echo) so the
  *                  server re-scopes + re-validates, never trusting client ids.
+ *   - bulk refresh: `data-dz-grid-bulk-refresh` on a bulk button opts into the
+ *                  two-request pattern — the POST's response swaps nothing
+ *                  (JSON/204); after it settles the controller re-fetches
+ *                  rows + footer for the current query. Omit it when the
+ *                  server returns the refreshed rows directly (hx-target).
  *   - all-matching: `[data-dz-grid-select-all-matching]` (a button, in the bulk
  *                  bar) escalates the selection to the WHOLE matched query —
  *                  `data-dz-grid-all-matching="true"` on the root, exclusions
@@ -181,9 +186,11 @@
   function announce(root) {
     var out = root.querySelector("[data-dz-grid-announce]");
     if (!out) return;
-    var summary = root.querySelector(
-      "[data-dz-grid-pagination] .dz-pagination-summary",
-    );
+    // Prefer the row-window span when the summary is the selected/rows PAIR
+    // (the count half is already covered by the bulk bar's own live region).
+    var summary =
+      root.querySelector("[data-dz-grid-pagination] .dz-bulk-summary-rows") ||
+      root.querySelector("[data-dz-grid-pagination] .dz-pagination-summary");
     if (!summary) return;
     var msg = "Showing " + summary.textContent.trim();
     if (out.textContent !== msg) out.textContent = msg;
@@ -210,8 +217,13 @@
     // The count is the single source of truth the CSS reads (#978 pattern):
     // `.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-actions { display:flex }`.
     root.setAttribute("data-dz-bulk-count", String(count));
-    var target = root.querySelector("[data-dz-bulk-count-target]");
-    if (target) target.textContent = String(count);
+    // ALL count mirrors update — the bulk bar's "Delete N items" AND the
+    // footer's "N of M selected" (querySelector-first left the footer stuck
+    // at 0 — C1.1 review catch).
+    var targets = root.querySelectorAll("[data-dz-bulk-count-target]");
+    for (var t = 0; t < targets.length; t++) {
+      targets[t].textContent = String(count);
+    }
     // Mirror the matched total into the escalation affordance's label
     // ("Select all N matching") whenever the footer knows it.
     var mirror = root.querySelector("[data-dz-grid-matching-total]");
@@ -734,6 +746,28 @@
   }
   document.addEventListener("htmx:after:settle", onAfterSettle); // htmx 4
   document.addEventListener("htmx:afterSettle", onAfterSettle); // htmx ≤2
+
+  // ── Bulk two-request pattern ────────────────────────────────────────────
+  // A bulk button carrying `data-dz-grid-bulk-refresh` posts an action whose
+  // response swaps NOTHING (a real server answers JSON/204) — after the
+  // request settles the controller re-fetches rows + footer for the current
+  // query, the same GET path every other state change uses. Servers that
+  // return the refreshed rows directly (hx-target on the button) simply omit
+  // the attribute. No urlMode: a bulk action doesn't change the query (a
+  // server page-clamp is corrected by the after-swap re-sync).
+  function onAfterRequest(evt) {
+    var d = evt.detail || {};
+    var el = d.elt || (d.ctx && d.ctx.sourceElement) || evt.target;
+    var btn =
+      el &&
+      el.closest &&
+      el.closest("[data-dz-grid-bulk-action][data-dz-grid-bulk-refresh]");
+    if (!btn) return;
+    var root = gridOf(btn);
+    if (root) refresh(root);
+  }
+  document.addEventListener("htmx:after:request", onAfterRequest); // htmx 4
+  document.addEventListener("htmx:afterRequest", onAfterRequest); // htmx ≤2
 
   // ── URL-state wiring ────────────────────────────────────────────────────
   // Init: apply the URL's params to every opted-in grid NOW, synchronously at

@@ -47,15 +47,25 @@ def _attr_values(html: str, attr: str) -> list[str]:
 
 def test_class_binding_uses_single_quoted_id_no_premature_quote() -> None:
     """#1327: the :class binding must reference the id as a single-quoted JS
-    literal so its value is one balanced double-quoted attribute."""
+    literal so its value is one balanced double-quoted attribute.
+
+    Convergence C1.1: selection state moved off the Alpine bind (the row
+    checkbox's own `.checked` is the state; `is-selected` is applied by the
+    grid controller, not `selected.has(...)`), so the :class bind now carries
+    only the is-saving/is-error inline-edit states — the single-quoted-id
+    guard applies to those."""
     html = _render_table_row(_table(), {"id": "abc-123", "name": "Ada"})
 
     class_vals = _attr_values(html, ":class")
     assert class_vals, ":class binding not emitted"
     cls = class_vals[0]
-    # The id appears single-quoted inside selected.has(...), never double-quoted.
-    assert "selected.has('abc-123')" in cls
-    assert 'selected.has("abc-123")' not in cls
+    # The id appears single-quoted inside the editing.rowId comparisons,
+    # never double-quoted; selected.has(...) is gone from the bind.
+    assert "editing.rowId === 'abc-123'" in cls
+    assert 'editing.rowId === "abc-123"' not in cls
+    assert "'is-saving'" in cls
+    assert "'is-error'" in cls
+    assert "selected.has" not in cls
     # The captured attribute value contains no stray double-quote (that would
     # mean the regex stopped early because the id's `"` closed the attribute).
     assert '"' not in cls

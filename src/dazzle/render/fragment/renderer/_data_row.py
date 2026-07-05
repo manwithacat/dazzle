@@ -387,9 +387,13 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     row_label_attr = _html_mod.escape(str(raw_label or ""), quote=True)
 
     # Row state Alpine binds — emitted as a single :class attribute.
+    # Convergence C1.1: `is-selected` is owned by the HM grid controller
+    # (dz-grid.js toggles the class directly from the checkbox state) — it must
+    # NOT ride the Alpine :class bind, or any Alpine re-evaluation would strip
+    # the controller-applied class. is-saving/is-error stay Alpine until the
+    # inline-edit extension moves in C2.
     row_state_class = (
-        f"{{'is-selected': selected.has({item_id_js}), "
-        f"'is-saving': editing && editing.rowId === {item_id_js} && editing.saving, "
+        f"{{'is-saving': editing && editing.rowId === {item_id_js} && editing.saving, "
         f"'is-error': editing && editing.rowId === {item_id_js} && editing.error}}"
     )
 
@@ -476,14 +480,18 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
 
     checkbox_cell = ""
     if bulk_actions:
+        # Convergence C1.1: the row box is the HM grid controller's selection
+        # seam — `data-dz-grid-select` (delegated change handler) +
+        # `data-dz-grid-row-id` (the bulk payload anchor; the row's stable
+        # `id` encodes the same value = the idiomorph morph key). The
+        # checkbox's own `.checked` IS the state — no Alpine bindings.
         checkbox_cell = (
             '<td class="dz-tr-checkbox-cell" onclick="event.stopPropagation()">'
             f'<label class="visually-hidden" for="row-check-{item_id_attr}">'
             f"Select {row_label}</label>"
             f'<input type="checkbox" id="row-check-{item_id_attr}" '  # nosemgrep
             f'class="dz-tr-checkbox" '
-            f":checked=\"selected.has('{item_id_attr}')\" "
-            f"@change=\"toggleRow('{item_id_attr}')\" "
+            f'data-dz-grid-select data-dz-grid-row-id="{item_id_attr}" '
             f'aria-label="Select {row_label_attr}" /></td>'
         )
 

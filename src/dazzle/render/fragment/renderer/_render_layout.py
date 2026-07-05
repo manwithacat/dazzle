@@ -197,6 +197,12 @@ class _RenderLayoutMixin:
         endpoint = ctx.escape_attr(m.endpoint)
         return (
             f' id="{table_id}"'
+            # Convergence C1.1: `data-dz-grid` marks this region as an HM grid
+            # root — dz-grid.js (delegated) owns sort / selection / bulk /
+            # pagination within it. The dzTable Alpine mount stays for the
+            # not-yet-flipped extensions (column-visibility / resize /
+            # inline-edit) until C2/C3.
+            " data-dz-grid"
             f' x-data=\'dzTable("{table_id}", "{endpoint}", {config_json})\''
             ' :aria-busy="loading"'
             ' data-dz-bulk-count="0"'

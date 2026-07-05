@@ -184,20 +184,25 @@ def test_renderer_emits_sort_header_inside_th_for_sortable_columns() -> None:
 
 
 # ── End-to-end: canonical model (ADR-0049 Phase 1 Task 4e) ───────────────
-# Sortable list headers are dzTable `toggleSort` buttons (client-state sort
-# via the mounted controller), not pre-baked SortHeader hx-links. The current
-# sort lives in the dzTable config + the skeleton tbody hydrate endpoint.
+# Convergence C1.1: sortable list headers are HM grid `data-dz-grid-sort`
+# buttons — state lives on the th's `aria-sort` (cycled by dz-grid.js), not
+# Alpine `toggleSort` bindings. The current sort still lives in the controller
+# config + the skeleton tbody hydrate endpoint.
 
 
-def test_list_sortable_column_is_dztable_toggle_button() -> None:
-    """sortable=True → a dzTable toggleSort button header; sortable=False →
-    a plain canonical `dz-table-th`."""
+def test_list_sortable_column_is_grid_sort_button() -> None:
+    """Convergence C1.1: sortable=True → an HM grid `data-dz-grid-sort`
+    button header with static `aria-sort="none"` (dz-grid.js cycles it);
+    sortable=False → a plain canonical `dz-table-th`. No Alpine bindings."""
     table = _table()
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    assert "@click=\"toggleSort('name')\"" in html
-    assert ":aria-sort=\"ariaSortDir('name')\"" in html
-    # non-sortable Score is a plain canonical header (no toggleSort)
+    assert 'data-dz-grid-sort="name"' in html
+    assert '<th data-dz-col="name" aria-sort="none" scope="col" class="dz-table-th">' in html
+    assert 'aria-label="Sort by Name"' in html
+    assert "toggleSort" not in html
+    assert "ariaSortDir" not in html
+    # non-sortable Score is a plain canonical header (no sort button)
     assert '<th data-dz-col="score" scope="col" class="dz-table-th">Score</th>' in html
 
 

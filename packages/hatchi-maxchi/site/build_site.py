@@ -299,7 +299,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     var start = total ? (pg.page - 1) * pg.size + 1 : 0;
     var end = Math.min(pg.page * pg.size, total);
     var summary = total ? start + "-" + end + " of " + total : "0 of 0";
-    var html = '<span class="dz-pagination-summary">' + summary + "</span>";
+    // The summary is the Dazzle-faithful PAIR: a bulk-count mirror shown while
+    // a selection exists, the row window otherwise (CSS-toggled off the root's
+    // data-dz-bulk-count — see table.css .dz-bulk-summary-*).
+    var html = '<span class="dz-pagination-summary">' +
+      '<span class="dz-bulk-summary-selected">' +
+      '<span data-dz-bulk-count-target>0</span> of ' + total + ' selected</span>' +
+      '<span class="dz-bulk-summary-rows">' + summary + "</span></span>";
     html += '<div class="dz-pagination-pages">';
     html += '<button type="button" class="dz-pagination-page" data-dz-grid-page-prev ' +
       (pg.page <= 1 ? "disabled " : "") + 'aria-label="Previous page">‹</button>';
@@ -440,18 +446,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     fd.forEach(function (v, k) { if (!(k in params)) params[k] = v; });
     window.__lastBulk = params; // expose the payload for the gallery tests
     if (url.split("?")[0] === "/mock/grid/bulk") applyBulkDelete(params);
-    var root = el.closest && el.closest("[data-dz-grid]");
-    var bodyEl = root && root.querySelector("[data-dz-grid-body]");
-    var target = bodyEl || document.querySelector(el.getAttribute("hx-target") || "");
+    // Two-request pattern: the POST applies the action and returns nothing to
+    // swap (a real server answers JSON/204). The button's
+    // data-dz-grid-bulk-refresh makes the controller re-fetch rows + footer
+    // for the current query after the request settles — the same GET path
+    // every other state change uses.
     el.classList.add("htmx-request");
     fire(el, "htmx:before:request", { elt: el });
-    if (target) {
-      var gurl = bodyEl ? bodyEl.getAttribute("hx-get") : "/mock/grid/rows";
-      target.innerHTML = renderGridRows(gurl);
-      updateGridFooter(root, gurl); // the total changed → repaint the footer
-      fire(target, "htmx:after:swap", { elt: target });
-      fire(target, "htmx:after:settle", { elt: target }); // after ALL swaps, as real htmx
-    }
     el.classList.remove("htmx-request");
     fire(el, "htmx:after:request", { elt: el });
   }

@@ -66,8 +66,6 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
 
     Emits the pagination summary + ellipsis-collapsed page buttons.
     Returns empty string when `total <= page_size` (matches Jinja `{% if %}`)."""
-    import html as _html_mod
-
     from dazzle.render.filters import _pagination_pages
 
     if not table:
@@ -78,10 +76,12 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
         return ""
     total_pages = (total + page_size - 1) // page_size
     current_page = int(table.get("page", 1) or 1)
-    table_id = _html_mod.escape(str(table.get("table_id") or "dt-table"), quote=True)
-    endpoint_attr = _html_mod.escape(str(table.get("api_endpoint", "") or ""), quote=True)
     rows_label = "row" if total == 1 else "rows"
 
+    # Convergence C1.1: page buttons are the HM grid controller's seam —
+    # `data-dz-grid-goto` clicks compose ONE query from the DOM (sort +
+    # filters + page), so pagination can no longer lose sort/filter state
+    # (the per-button hx-get URLs used to carry a server-side snapshot).
     buttons: list[str] = []
     for p in _pagination_pages(current_page, total_pages):
         if p is None:
@@ -90,14 +90,9 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
         is_current = p == current_page
         current_cls = " is-current" if is_current else ""
         current_attr = ' aria-current="page"' if is_current else ""
-        url_q = _build_table_url_params(table, p)
         buttons.append(
-            f'<button class="dz-pagination-page{current_cls}"{current_attr} '  # nosemgrep
-            f'hx-get="{endpoint_attr}?{url_q}" '
-            f'hx-target="#{table_id}-body" '
-            f'hx-swap="innerMorph" '
-            f'hx-headers=\'{{"Accept": "text/html"}}\' '
-            f'hx-indicator="#{table_id}-loading">{p}</button>'
+            f'<button type="button" class="dz-pagination-page{current_cls}"{current_attr} '
+            f'data-dz-grid-goto="{p}">{p}</button>'
         )
 
     return (
@@ -107,7 +102,7 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
         # carrying `data-dz-grid-pagination` — when C1 adds that marker, it MUST
         # land on this same element (or the total silently degrades to the
         # visible-row count).
-        f'<div class="dz-pagination" data-dz-grid-total="{total}">'
+        f'<div class="dz-pagination" data-dz-grid-pagination data-dz-grid-total="{total}">'
         '<span class="dz-pagination-summary">'
         '<span class="dz-bulk-summary-selected">'
         f"<span data-dz-bulk-count-target>0</span> of {total} selected"

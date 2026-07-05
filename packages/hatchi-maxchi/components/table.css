@@ -324,7 +324,10 @@
  * Moved verbatim from Dazzle fragments.css (grid Hyperpart Slice 0b).
  * The `.dz-table` ancestor selectors here gate the bulk chrome (#978). */
 /* #978: bulk-actions visibility is CSS-driven by `[data-dz-bulk-count]`
- * on the ancestor .dz-table (set by dzTable's $watch on bulkCount).
+ * on the ancestor grid root — historically the `.dz-table` element (the
+ * gallery), generalized to `[data-dz-grid]` for consumers whose root is a
+ * wrapping region (Dazzle's list <section>, convergence C1.1). The count is
+ * written by dz-grid.js's sync().
  * Default state: hidden (no flash on initial paint, replaces the prior
  * Alpine x-cloak guard). Show only when bulkCount > 0. */
 
@@ -334,7 +337,8 @@
   gap: var(--space-md);
 }
 
-.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-actions {
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-actions,
+[data-dz-grid]:not([data-dz-bulk-count="0"]) .dz-bulk-actions {
   display: flex;
 }
 
@@ -342,7 +346,8 @@
 .dz-bulk-plural {
   display: inline;
 }
-.dz-table[data-dz-bulk-count="1"] .dz-bulk-plural {
+.dz-table[data-dz-bulk-count="1"] .dz-bulk-plural,
+[data-dz-grid][data-dz-bulk-count="1"] .dz-bulk-plural {
   display: none;
 }
 
@@ -355,10 +360,12 @@
 .dz-bulk-summary-rows {
   display: inline;
 }
-.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-selected {
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-selected,
+[data-dz-grid]:not([data-dz-bulk-count="0"]) .dz-bulk-summary-selected {
   display: inline;
 }
-.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-rows {
+.dz-table:not([data-dz-bulk-count="0"]) .dz-bulk-summary-rows,
+[data-dz-grid]:not([data-dz-bulk-count="0"]) .dz-bulk-summary-rows {
   display: none;
 }
 
@@ -411,7 +418,8 @@
   text-decoration: underline;
 }
 
-.dz-table[data-dz-grid-all-matching="true"] .dz-bulk-matching {
+.dz-table[data-dz-grid-all-matching="true"] .dz-bulk-matching,
+[data-dz-grid][data-dz-grid-all-matching="true"] .dz-bulk-matching {
   display: none;
 }
 
