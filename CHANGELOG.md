@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **HM gallery — the `grid` demo now teaches its filter-on-a-hidden-field pattern** (HM package 0.1.13 → 0.1.14). The Status filter narrows on a server field the table doesn't render as a column — clever but opaque to a newcomer. A gallery card note plus an inline snippet comment now explain that filters (like scopes) can target *any* queryable server field, not only displayed columns (only Plan is both shown and filtered). Gallery/docs only — no dist or runtime change.
+
 ## [0.93.77] - 2026-07-05
 
 ### Added

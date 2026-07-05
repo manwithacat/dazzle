@@ -217,6 +217,11 @@ HYPERPARTS: list[Hyperpart] = [
         '<option value="">Any plan</option><option value="Free">Free</option>'
         '<option value="Pro">Pro</option><option value="Team">Team</option>'
         '<option value="Enterprise">Enterprise</option></select></div>'
+        # `status` is a FILTER-ONLY field: the table renders no Status column, yet
+        # the filter narrows on it — filters (like scopes) target any queryable
+        # server field, not just displayed columns. Only `plan` is shown-and-filtered.
+        "<!-- status is a filter-only field (no column): filters can narrow on any "
+        "server field, not just displayed columns -->"
         '<div class="dz-filter-cell">'
         '<label class="dz-filter-label" for="hm-grid-filter-status">Status</label>'
         '<select class="dz-filter-select" id="hm-grid-filter-status" data-dz-grid-filter="status">'
@@ -306,8 +311,12 @@ HYPERPARTS: list[Hyperpart] = [
         "<code>[data-dz-grid-filter]</code> select (on change) and the "
         "<code>[data-dz-grid-search]</code> box (on input, debounced) each rebuild the "
         "query and <em>compose</em> with the active sort — all read from the DOM into one "
-        "query; an empty result reveals the empty-state. Bulk-action submission and "
-        "URL-synced state are the next slices. (The gallery mock approximates the "
+        "query; an empty result reveals the empty-state. Note the <strong>Status</strong> "
+        "filter is a teaching case: the table renders no Status column, yet the filter "
+        "narrows on it — filters (like scopes) can target <em>any</em> queryable server "
+        "field, not only what's displayed (here only <strong>Plan</strong> is both shown "
+        "and filtered). Bulk-action submission and URL-synced state are the next slices. "
+        "(The gallery mock approximates the "
         "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
         "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "
         "for true morph-preserved selection.)",
