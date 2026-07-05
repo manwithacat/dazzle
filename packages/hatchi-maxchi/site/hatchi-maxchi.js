@@ -852,6 +852,14 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  *                  `[data-grid-page-next]` (server-rendered footer buttons)
  *                  set it + refresh (`page=` in the query); the server disables
  *                  prev/next at the edges. Sort / filter / search reset it to 1.
+ *   - page size:   `[data-grid-page-size]` (a select) re-windows the same
+ *                  matched set — `page_size=` joins the query, the change
+ *                  resets to page 1, and an all-matching selection SURVIVES
+ *                  (windowing, not a scope change). NB the initial `load`
+ *                  fires the tbody's static `hx-get` (refresh() isn't
+ *                  involved), so a server pre-selecting a NON-default size
+ *                  must also bake `page_size=` into that initial URL — else
+ *                  the first interaction visibly re-windows.
  */
 (function () {
   "use strict";
@@ -1032,6 +1040,13 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       var v = filters[i].value;
       if (k && v) q.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
     }
+    // Page size: a windowing control ([data-grid-page-size] select). Sent
+    // whenever the control exists — the server's own default applies when the
+    // grid doesn't offer the choice.
+    var size = root.querySelector("[data-grid-page-size]");
+    if (size && size.value) {
+      q.push("page_size=" + encodeURIComponent(size.value));
+    }
     // Current page lives on the root; page 1 is the default (omitted for a clean
     // query). Search / sort / filter reset it to 1 via resetPage() BEFORE calling
     // refresh; a page-control click sets it, then refreshes.
@@ -1129,6 +1144,14 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
         dropModeIfScopeChanged(fr);
         resetPage(fr);
         refresh(fr);
+      }
+    } else if (t.matches("[data-grid-page-size]")) {
+      // Page size re-WINDOWS the same matched set (like a page click, NOT a
+      // scope change): back to page 1, but an all-matching selection survives.
+      var zr = gridOf(t);
+      if (zr) {
+        resetPage(zr);
+        refresh(zr);
       }
     }
   });

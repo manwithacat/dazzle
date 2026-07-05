@@ -229,6 +229,14 @@ HYPERPARTS: list[Hyperpart] = [
         '<option value="">Any status</option><option value="Active">Active</option>'
         '<option value="Trialing">Trialing</option><option value="Churned">Churned</option>'
         "</select></div>"
+        # Page size is a WINDOWING control (like a page click): it re-pages the
+        # same matched set, so it lives outside the filter semantics — changing
+        # it keeps an all-matching selection and resets to page 1.
+        '<div class="dz-filter-cell">'
+        '<label class="dz-filter-label" for="hm-grid-page-size">Per page</label>'
+        '<select class="dz-filter-select" id="hm-grid-page-size" data-dz-grid-page-size>'
+        '<option value="2">2</option><option value="4" selected>4</option>'
+        '<option value="8">8</option></select></div>'
         "</div>"
         '<div class="dz-bulk-actions">'
         '<span aria-live="polite" aria-atomic="true">'
@@ -343,7 +351,11 @@ HYPERPARTS: list[Hyperpart] = [
         "<em>server-rendered</em>: the client intercepts a page click, adds <code>page=</code> "
         "to the query, and the server returns that page's rows plus the repainted footer "
         "(row slice + total from one query, so they can't disagree); sort / filter / search "
-        "reset to page 1. URL-synced state is the next slice. (The gallery mock approximates the "
+        "reset to page 1. The <strong>Per page</strong> select is a windowing control on the "
+        "same seam (<code>[data-dz-grid-page-size]</code> → <code>page_size=</code>): it "
+        "re-pages the same matched set, resets to page 1, and — unlike a filter/search "
+        "change — keeps an all-matching selection. URL-synced state is the next slice. "
+        "(The gallery mock approximates the "
         "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
         "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "
         "for true morph-preserved selection.)",

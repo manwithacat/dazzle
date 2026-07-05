@@ -686,6 +686,60 @@ def test_grid_select_all_header_uncheck_exits_all_matching(page) -> None:  # typ
     assert page.get_attribute("[data-grid]", "data-bulk-count") == "0"
 
 
+def test_grid_page_size_rewindows_and_resets_to_page_one(page) -> None:  # type: ignore[no-untyped-def]
+    """The page-size select re-WINDOWS the matched set: the server repages for
+    the new size (rows + footer from one query), and any size change lands back
+    on page 1 — you never keep a page number that no longer exists."""
+    assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"], "default 4/page"
+
+    page.select_option("[data-grid-page-size]", "8", timeout=3000)
+    page.wait_for_timeout(150)
+    assert len(_grid_names(page)) == 6, "8/page shows all 6 rows on one page"
+    assert _page_summary(page) == "1-6 of 6"
+    assert page.eval_on_selector("[data-grid-page-next]", "b => b.disabled") is True
+
+    page.select_option("[data-grid-page-size]", "2")
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Mia", "Ravi"], "2/page windows to the first pair"
+    assert _page_summary(page) == "1-2 of 6"
+    page.click("[data-grid-goto='3']")
+    page.wait_for_timeout(150)
+    assert _grid_names(page) == ["Noah", "Jane"], "page 3 of the 2/page windows"
+
+    page.select_option("[data-grid-page-size]", "4")
+    page.wait_for_timeout(150)
+    assert page.get_attribute("[data-grid]", "data-grid-page") == "1", (
+        "a size change resets to page 1"
+    )
+    assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"]
+
+
+def test_grid_page_size_keeps_all_matching(page) -> None:  # type: ignore[no-untyped-def]
+    """Page size WINDOWS the same matched set (like a page click) — it must NOT
+    drop an all-matching selection OR its exclusions the way a filter/search
+    scope change does."""
+    _enter_all_matching(page)
+    page.locator("[data-grid-select]").first.uncheck()  # exclude Mia (cust_1)
+    page.wait_for_timeout(80)
+    page.select_option("[data-grid-page-size]", "2", timeout=3000)
+    page.wait_for_timeout(150)
+    assert page.get_attribute("[data-grid]", "data-grid-all-matching") == "true", (
+        "a page-size change re-windows the SAME matched set — the mode survives"
+    )
+    assert "cust_1" in (page.get_attribute("[data-grid]", "data-grid-excluded") or ""), (
+        "the exclusion survives the re-window too"
+    )
+    assert page.inner_text("[data-bulk-count-target]").strip() == "5", "6 matched − 1 excluded"
+    state = page.eval_on_selector_all(
+        "[data-grid-select]",
+        "els => els.map(b => [b.getAttribute('data-grid-row-id'), b.checked])",
+    )
+    assert dict(state).get("cust_1") is False, f"the excluded row re-projects unchecked: {state}"
+    assert all(c for rid, c in state if rid != "cust_1"), (
+        f"the other re-windowed rows arrive selected (afterSwap re-projection): {state}"
+    )
+
+
 def test_grid_search_debounce_coalesces_keystrokes(page) -> None:  # type: ignore[no-untyped-def]
     """A burst of keystrokes makes exactly ONE request, not one per key. Counts
     the `dz-grid:refresh` events (un-prefixed `grid:refresh` in the gallery). A

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.81] - 2026-07-05
+
+### Added
+- **`dz-grid` — page-size select** (HM package 0.1.17 → 0.1.18). A `[data-dz-grid-page-size]` select (the demo's "Per page": 2 / 4 / 8) joins the composed query as `page_size=`. It is a **windowing** control, not a scope change: a size change resets to page 1 and re-pages the same matched set — so, unlike a filter/search change, it **keeps an all-matching selection** (and its exclusions; the afterSwap re-projection covers the re-windowed rows). The mock already parsed `page_size`; the slice is controller + markup + contract only. 2 new behaviour tests (Chromium + WebKit).
+
+### Agent Guidance
+- **Windowing vs scope, the grid's dividing line.** `page`, `page_size`, and `sort` re-window/re-order the SAME matched set — they must preserve an all-matching selection; `q` and filters change WHICH rows match — they drop it (scope-compared). When adding any new grid control, decide which side it's on first. Initial-load caveat: the tbody's first fetch fires its static `hx-get` (not the controller's `refresh()`), so a server pre-selecting a non-default page size must bake `page_size=` into that initial URL or the first interaction visibly re-windows.
+
 ## [0.93.80] - 2026-07-05
 
 ### Added
