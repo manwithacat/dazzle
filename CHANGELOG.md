@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **HM gallery — per-Hyperpart notes collapse under "Agent Implementation Guidance"** (HM package 0.1.21 → 0.1.22, gallery-only). The explanatory notes on every Hyperpart card now sit behind the same disclosure treatment as the endpoint contract — the notes' primary audience is coding agents looking for implementation guidance (seams, traps, contracts-in-prose), so the visual gallery stays scannable and the depth is one click away. No dist or runtime change.
+
 ## [0.93.86] - 2026-07-05
 
 ### Changed

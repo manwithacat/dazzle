@@ -616,6 +616,16 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-anatomy code { font-family: var(--font-mono); font-size: .9em; }
 .hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .75rem; }
 .hm-notes code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
+/* Agent Implementation Guidance — the per-Hyperpart notes, collapsed behind
+   the same disclosure treatment as the endpoint contract (primary audience:
+   coding agents; the visual gallery stays scannable). */
+.hm-guidance { margin-top: .75rem; border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
+.hm-guidance > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
+  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
+.hm-guidance > .hm-notes { margin: 0; padding: .6rem .75rem; background: var(--colour-surface);
+  border-top: 1px solid var(--colour-border);
+  border-radius: 0 0 var(--radius-md) var(--radius-md); }
 .hm-contract { margin-top: .75rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-brand-soft); }
 .hm-contract > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
@@ -743,7 +753,17 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         snippet = _html.escape(snippet_src)
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         deps = _dependency_chips(c)
-        notes = f'<div class="hm-notes">{c.notes}</div>' if c.notes else ""
+        # The notes are written FOR coding agents (implementation guidance,
+        # traps, contracts-in-prose) — collapsed behind a disclosure like the
+        # endpoint contract, so the gallery scans visually and the depth is
+        # one click away.
+        notes = (
+            '<details class="hm-guidance">'
+            "<summary>Agent Implementation Guidance</summary>"
+            f'<div class="hm-notes">{c.notes}</div></details>'
+            if c.notes
+            else ""
+        )
         body_parts.append(
             f'<section class="hm-comp" id="{c.id}">'
             f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
