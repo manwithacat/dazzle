@@ -304,3 +304,73 @@ def test_grid_sort_select_and_bulk_delete(browser, server) -> None:  # type: ign
     finally:
         page.close()
     assert not errors, f"page threw JS errors: {errors}"
+
+
+@pytest.mark.e2e
+def test_grid_url_state_and_drill_back(browser, server) -> None:  # type: ignore[no-untyped-def]
+    """C1.3: full-page list surfaces are URL-synced (data-dz-grid-url).
+
+    - a sort click lands in the address bar as human-readable params;
+    - drilling into a row (hx-push-url detail navigation) and pressing Back
+      restores the LIST with the grid state intact — the two history writers
+      (the grid's pushState and htmx's push-url) must compose;
+    - a deep-link reload WITH grid params applies them (controls + rows).
+    """
+    _seed(server)
+    page = browser.new_page(viewport={"width": 1280, "height": 900})
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    try:
+        _login_admin(page, server)
+        page.goto(f"{server.ui_url}/app/invoice")
+        page.wait_for_selector("[data-dz-grid-body] tr td", timeout=15000)
+
+        # SORT → URL: one click on the ascending default advances to DESC and
+        # the query mirrors into the address bar.
+        page.click("[data-dz-grid-sort='number']")
+        page.wait_for_timeout(600)
+        assert _invoice_numbers(page) == ["INV-003", "INV-002", "INV-001"]
+        params = page.evaluate(
+            "() => Object.fromEntries(new URLSearchParams(location.search).entries())"
+        )
+        assert params.get("sort") == "number" and params.get("dir") == "desc", (
+            f"the sorted state must mirror into the URL: {params}"
+        )
+
+        # DRILL + BACK: row click navigates to the detail (hx-push-url); Back
+        # must restore the list with the sorted state intact. Dispatch on the
+        # <tr> itself — data cells carry stopPropagation (#1511 §3.2), so a
+        # cell-centre click deliberately doesn't drill.
+        page.eval_on_selector("[data-dz-grid-body] tr", "tr => tr.click()")
+        page.wait_for_timeout(1200)
+        assert "/app/invoice/" in page.url, f"the drill navigates to the detail: {page.url}"
+
+        page.go_back()
+        page.wait_for_timeout(1500)
+        page.wait_for_selector("[data-dz-grid-body] tr td", timeout=15000)
+        assert _invoice_numbers(page) == ["INV-003", "INV-002", "INV-001"], (
+            "Back must restore the sorted list (grid pushState + htmx push-url compose)"
+        )
+        assert (
+            page.eval_on_selector(
+                "[data-dz-grid-sort='number']", "b => b.closest('th').getAttribute('aria-sort')"
+            )
+            == "descending"
+        ), "the header state survives the drill round-trip"
+
+        # DEEP LINK: a fresh load with grid params applies them.
+        page.goto(f"{server.ui_url}/app/invoice?sort=number&dir=desc")
+        page.wait_for_selector("[data-dz-grid-body] tr td", timeout=15000)
+        page.wait_for_timeout(400)
+        assert _invoice_numbers(page) == ["INV-003", "INV-002", "INV-001"], (
+            "a deep link with grid params must render the described state"
+        )
+        assert (
+            page.eval_on_selector(
+                "[data-dz-grid-sort='number']", "b => b.closest('th').getAttribute('aria-sort')"
+            )
+            == "descending"
+        ), "the deep-linked sort must reflect on the header (state-in-DOM)"
+    finally:
+        page.close()
+    assert not errors, f"page threw JS errors: {errors}"

@@ -202,7 +202,12 @@ class _RenderLayoutMixin:
             # pagination within it. The dzTable Alpine mount stays for the
             # not-yet-flipped extensions (column-visibility / resize /
             # inline-edit) until C2/C3.
-            " data-dz-grid"
+            # C1.3: `data-dz-grid-url` opts the grid into URL-synced state —
+            # this mount renders ONLY for full-page list surfaces (the one
+            # DzTableMount construction site is `_build_list`), which satisfies
+            # the one-url-synced-grid-per-page constraint; workspace/dashboard
+            # regions stay off until the URL keys are namespaced.
+            " data-dz-grid data-dz-grid-url"
             f' x-data=\'dzTable("{table_id}", "{endpoint}", {config_json})\''
             ' :aria-busy="loading"'
             ' data-dz-bulk-count="0"'

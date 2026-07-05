@@ -818,6 +818,31 @@ def test_grid_url_back_button_restores_previous_state(page) -> None:  # type: ig
     assert _grid_names(page) == ["Amir", "Noah"], "Back restores the previous matched rows"
 
 
+def test_grid_url_unresolvable_params_do_not_loop(page) -> None:  # type: ignore[no-untyped-def]
+    """A deep link whose grid params the DOM cannot express (a renamed sort
+    column in a stale bookmark, an out-of-range page_size) must DEGRADE, not
+    LOOP: the after-settle re-sync only re-dispatches when the restore
+    actually changed the query — else an un-satisfiable URL param re-fetches
+    forever (GET storm under real htmx; stack overflow under the synchronous
+    gallery mock)."""
+    page.goto(_SITE_URI + "?sort=renamed_column&dir=asc&page_size=999")
+    page.wait_for_timeout(800)
+    # The grid still hydrates and works (graceful degradation)…
+    assert page.eval_on_selector_all("[data-grid-body] tr td", "tds => tds.length > 0"), (
+        "the grid must still hydrate under unresolvable params"
+    )
+    # …and no error escaped (the page fixture also asserts pageerrors on
+    # teardown — a re-sync loop would blow the stack synchronously here).
+    page.click("[data-grid-sort='first']")
+    page.wait_for_timeout(400)
+    assert (
+        page.eval_on_selector(
+            "[data-grid-sort='first']", "b => b.closest('th').getAttribute('aria-sort')"
+        )
+        == "ascending"
+    ), "the grid stays interactive after the degraded deep link"
+
+
 def test_grid_url_preserves_unrelated_params(page) -> None:  # type: ignore[no-untyped-def]
     """The grid only owns its OWN keys (q/sort/dir/page/page_size + its filter
     fields) — a foreign query param on the page URL survives grid activity."""

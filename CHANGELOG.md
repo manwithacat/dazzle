@@ -9,8 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.87] - 2026-07-05
+
+### Added
+- **Grid convergence C1.3 — URL-synced state on every full-page list surface** (HM package 0.1.22 → 0.1.23; closes C1). `data-dz-grid-url` rides the list mount: sort/filter/page state mirrors into the address bar as the same params the server sees — deep-linkable, and Back walks grid states. Three controller upgrades forced by real-app verification (all TDD'd + adversarially reviewed): (1) **spec-correct restore order** (URL params > EXISTING DOM > defaults): the server-rendered state is snapshotted at init (`captureInitial`) and an ABSENT URL param restores to it — previously the restore reset to empty, clobbering a `ux: sort:` default header at init and refetching unsorted; a param-less entry URL now leaves the DOM entirely alone. (2) **htmx-4 history composition**: Back from an `hx-push-url` row-drill detail onto a grid-written entry restored NOTHING (htmx-4's popstate handler only acts on entries whose `state.htmx` is truthy — verified in the vendored source). Grid entries now carry `{htmx: true}` so htmx's server restore fires; the grid's own popstate path defers to real htmx (detected via `window.htmx.ajax`, so the gallery's mock stub doesn't trip it) and an after-settle re-sync applies the URL's grid state to the freshly restored default-state DOM. (3) **The re-sync is loop-proof** (review SEV-1): a URL param the DOM cannot express — a renamed sort column in a stale bookmark, an out-of-range `page_size` — would have re-fetched forever (GET storm; stack overflow under the synchronous gallery mock). The dispatch now fires only when the restore actually changed the query: unsatisfiable params degrade. The browser e2e gains the full journey: sort → URL params → row-drill → Back restores the sorted list → deep-link reload applies params.
+
 ### Changed
 - **HM gallery — per-Hyperpart notes collapse under "Agent Implementation Guidance"** (HM package 0.1.21 → 0.1.22, gallery-only). The explanatory notes on every Hyperpart card now sit behind the same disclosure treatment as the endpoint contract — the notes' primary audience is coding agents looking for implementation guidance (seams, traps, contracts-in-prose), so the visual gallery stays scannable and the depth is one click away. No dist or runtime change.
+
+### Agent Guidance
+- **URL-state restore semantics.** Absent URL params restore to the SNAPSHOTTED initial DOM state, never to empty — the server-rendered defaults are state the entry URL legitimately omits. When composing with htmx-4 history: htmx only restores entries whose `state.htmx` is truthy, so any feature writing its own pushState entries on an htmx page must mark them (and then re-apply its URL state after htmx's restore swap, since the restored page renders server defaults). Any settle-time "detect divergence → refetch" loop needs a did-anything-actually-change guard, or an unsatisfiable input loops it forever — RED-test the unsatisfiable case (`?sort=renamed_column`) explicitly.
 
 ## [0.93.86] - 2026-07-05
 

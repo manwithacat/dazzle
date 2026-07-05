@@ -94,11 +94,22 @@
  *                  query into the address bar — the SAME human-readable
  *                  params the server sees. Discrete actions (sort / filter /
  *                  page / size) push history entries (Back walks grid
- *                  states); the debounced search replaces. Deep links restore
- *                  at controller init (before htmx fetches); popstate
- *                  restores + refetches. The grid only touches its OWN keys —
- *                  foreign URL params survive. One url-synced grid per page
- *                  (the keys aren't namespaced yet).
+ *                  states); the debounced search replaces. Restore order per
+ *                  the spec: URL params > EXISTING DOM > defaults — the
+ *                  server-rendered state is snapshotted at init and an
+ *                  ABSENT URL param restores to it (a `ux: sort:` default
+ *                  the entry URL omits must survive a deep link that only
+ *                  sets, say, a filter). Deep links apply at controller init
+ *                  (before htmx fetches); a param-less entry URL leaves the
+ *                  DOM untouched. History entries carry `{htmx: true}` so a
+ *                  Back from a FOREIGN page (e.g. an hx-push-url row-drill
+ *                  detail) triggers real htmx-4's server restore; the
+ *                  after-settle re-sync then applies the URL's grid state to
+ *                  the freshly rendered (default-state) DOM. On htmx-less
+ *                  hosts (the static gallery) popstate restores client-side.
+ *                  The grid only touches its OWN keys — foreign URL params
+ *                  survive. One url-synced grid per page (keys not
+ *                  namespaced yet).
  */
 (function () {
   "use strict";
@@ -359,8 +370,14 @@
     });
     var urlq = sp.toString();
     var url = location.pathname + (urlq ? "?" + urlq : "") + location.hash;
-    if (mode === "push") history.pushState({}, "", url);
-    else history.replaceState({}, "", url);
+    // The state object carries `{htmx: true}` — htmx-4 only restores history
+    // entries it recognises (its popstate handler checks `e.state.htmx`), so
+    // an unmarked grid entry would strand the user when they Back onto it
+    // from a foreign page (e.g. a row-drill detail): nothing would restore
+    // the list. Marked, htmx re-GETs the full page; the after-settle re-sync
+    // below then applies the URL's grid state to the freshly rendered DOM.
+    if (mode === "push") history.pushState({ htmx: true }, "", url);
+    else history.replaceState({ htmx: true }, "", url);
   }
 
   // Apply the URL's params onto the grid's controls + the tbody query (NO
@@ -369,30 +386,92 @@
   // initialises, so the hydration fetch already carries the restored query —
   // no default-then-correct double fetch. (A server rendering this page can
   // also bake the params in directly; this restore is then a no-op.)
-  function restoreFromUrl(root) {
-    if (!root.hasAttribute("data-dz-grid-url")) return;
-    var sp = new URLSearchParams(location.search);
+  // Snapshot a url-synced grid's SERVER-RENDERED state at controller parse —
+  // the "existing DOM" tier of the spec's restore order (URL params > existing
+  // DOM > defaults). An ABSENT URL param must restore to this, not to empty:
+  // a server-rendered default (e.g. a `ux: sort:` header marked ascending, or
+  // a pre-selected filter) is state the entry URL legitimately omits.
+  function captureInitial(root) {
+    var state = {
+      search: "",
+      sorts: {},
+      filters: {},
+      size: "",
+      page: root.getAttribute("data-dz-grid-page") || "1",
+    };
     var search = root.querySelector("[data-dz-grid-search]");
-    if (search) search.value = sp.get("q") || "";
-    var sort = sp.get("sort");
-    var dir = sp.get("dir");
-    if (dir !== "asc" && dir !== "desc") dir = null;
+    if (search) state.search = search.value;
     var btns = sortButtons(root);
     for (var i = 0; i < btns.length; i++) {
       var th = btns[i].closest("th");
-      if (!th) continue;
-      var active =
-        sort && dir && btns[i].getAttribute("data-dz-grid-sort") === sort;
-      th.setAttribute("aria-sort", active ? ARIA_OF[dir] : "none");
+      if (th) {
+        state.sorts[btns[i].getAttribute("data-dz-grid-sort")] =
+          th.getAttribute("aria-sort") || "none";
+      }
     }
     var filters = root.querySelectorAll("[data-dz-grid-filter]");
     for (i = 0; i < filters.length; i++) {
       var k = filters[i].getAttribute("data-dz-grid-filter");
-      filters[i].value = (k && sp.get(k)) || "";
+      if (k) state.filters[k] = filters[i].value;
     }
     var size = root.querySelector("[data-dz-grid-page-size]");
-    if (size && sp.get("page_size")) size.value = sp.get("page_size");
-    root.setAttribute("data-dz-grid-page", sp.get("page") || "1");
+    if (size) state.size = size.value;
+    root._dzInitial = state;
+  }
+
+  // True when the URL carries ANY of this grid's owned keys — the gate for
+  // touching the server-rendered state at init (a param-less entry URL must
+  // leave the DOM and the tbody's default query completely alone).
+  function urlHasGridState(root, sp) {
+    var owned = ownedKeys(root);
+    var keys = Object.keys(owned);
+    for (var i = 0; i < keys.length; i++) {
+      if (sp.has(keys[i])) return true;
+    }
+    return false;
+  }
+
+  function restoreFromUrl(root) {
+    if (!root.hasAttribute("data-dz-grid-url")) return;
+    var sp = new URLSearchParams(location.search);
+    var init = root._dzInitial || {
+      search: "",
+      sorts: {},
+      filters: {},
+      size: "",
+      page: "1",
+    };
+    var search = root.querySelector("[data-dz-grid-search]");
+    if (search) search.value = sp.has("q") ? sp.get("q") : init.search;
+    var sort = sp.get("sort");
+    var dir = sp.get("dir");
+    if (dir !== "asc" && dir !== "desc") dir = null;
+    var urlSort = Boolean(sort && dir);
+    var btns = sortButtons(root);
+    for (var i = 0; i < btns.length; i++) {
+      var th = btns[i].closest("th");
+      if (!th) continue;
+      var key = btns[i].getAttribute("data-dz-grid-sort");
+      if (urlSort) {
+        th.setAttribute("aria-sort", key === sort ? ARIA_OF[dir] : "none");
+      } else {
+        // No sort in the URL → the initial (server-rendered) state stands.
+        th.setAttribute("aria-sort", init.sorts[key] || "none");
+      }
+    }
+    var filters = root.querySelectorAll("[data-dz-grid-filter]");
+    for (i = 0; i < filters.length; i++) {
+      var k = filters[i].getAttribute("data-dz-grid-filter");
+      if (!k) continue;
+      filters[i].value = sp.has(k) ? sp.get(k) : init.filters[k] || "";
+    }
+    var size = root.querySelector("[data-dz-grid-page-size]");
+    if (size)
+      size.value = sp.has("page_size") ? sp.get("page_size") : init.size;
+    root.setAttribute(
+      "data-dz-grid-page",
+      sp.has("page") ? sp.get("page") : init.page,
+    );
     setQuery(root);
   }
 
@@ -720,9 +799,57 @@
   // the current-page button (e.g. prev clicked onto page 1, where prev is
   // disabled). Consuming the marker twice is a no-op (it's nulled on first
   // read), so the dual binding is safe even if both names ever fired.
+  // Does the DOM-derived query satisfy every grid-owned param IN THE URL?
+  // Deliberately asymmetric: DOM-only extras (e.g. a page-size select's
+  // default that no interaction has mirrored into the URL yet) are NOT a
+  // divergence — only a URL param the DOM contradicts is.
+  function domMatchesUrlState(root) {
+    var owned = ownedKeys(root);
+    var dom = {};
+    new URLSearchParams(buildQuery(root)).forEach(function (v, k) {
+      dom[k] = v;
+    });
+    var ok = true;
+    new URLSearchParams(location.search).forEach(function (v, k) {
+      if (owned[k] && (dom[k] || "") !== v) ok = false;
+    });
+    return ok;
+  }
+
   function onAfterSettle() {
     var grids = document.querySelectorAll("[data-dz-grid]");
     for (var i = 0; i < grids.length; i++) {
+      // History-restore re-sync (url-synced grids): after htmx restores a
+      // history entry it re-GETs the page, which renders the SERVER DEFAULT
+      // state — while the URL still describes the grid state the user was
+      // on. When the two diverge, re-apply the URL to the fresh DOM and
+      // refetch. Normal swaps never diverge (the grid writes both sides), so
+      // this no-ops everywhere else; the did-the-query-change dispatch guard
+      // below is what makes it loop-proof (unsatisfiable params degrade).
+      if (
+        grids[i].hasAttribute("data-dz-grid-url") &&
+        urlHasGridState(grids[i], new URLSearchParams(location.search)) &&
+        !domMatchesUrlState(grids[i])
+      ) {
+        // A history-restored body is a FRESH server render — its root never
+        // went through the init loop, so snapshot it now: this DOM *is* the
+        // server-default state that absent URL params must restore to.
+        if (!grids[i]._dzInitial) captureInitial(grids[i]);
+        // Re-dispatch ONLY when the restore actually changed the query (the
+        // popstate path's proven guard): a URL param the DOM cannot express
+        // (a renamed sort column in a stale bookmark, an out-of-range
+        // page_size) leaves hx-get unchanged — dispatching anyway would
+        // re-fetch forever (GET storm; stack overflow under a synchronous
+        // mock). Unsatisfiable params degrade, they don't loop.
+        var rbody = grids[i].querySelector("[data-dz-grid-body]");
+        var rBefore = rbody && rbody.getAttribute("hx-get");
+        restoreFromUrl(grids[i]);
+        if (rbody && rbody.getAttribute("hx-get") !== rBefore) {
+          rbody.dispatchEvent(
+            new CustomEvent("dz-grid:refresh", { bubbles: true }),
+          );
+        }
+      }
       var want = grids[i]._dzRefocus;
       if (!want) continue;
       grids[i]._dzRefocus = null;
@@ -776,11 +903,35 @@
   // restore the state the URL describes, then fetch it; the popstate path
   // never calls syncUrl (it must not rewrite the history it is walking).
   var urlGrids = document.querySelectorAll("[data-dz-grid][data-dz-grid-url]");
-  for (var g = 0; g < urlGrids.length; g++) restoreFromUrl(urlGrids[g]);
+  var initSp = new URLSearchParams(location.search);
+  for (var g = 0; g < urlGrids.length; g++) {
+    // Snapshot the server-rendered state FIRST — it's the restore target for
+    // absent URL params (spec order: URL > existing DOM > defaults). Then
+    // only touch the DOM when the URL actually carries grid state: a
+    // param-less entry URL must leave the server-rendered defaults (and the
+    // tbody's baked default query) completely alone.
+    captureInitial(urlGrids[g]);
+    if (urlHasGridState(urlGrids[g], initSp)) restoreFromUrl(urlGrids[g]);
+  }
 
-  window.addEventListener("popstate", function () {
+  window.addEventListener("popstate", function (evt) {
+    // When REAL htmx is present and recognises the entry (state.htmx), it
+    // owns the restore — a full-page GET replaces the body and the
+    // after-settle re-sync applies the URL's grid state. The client-side
+    // path below serves htmx-less hosts (the static gallery).
+    // "Real htmx" = it exposes the ajax API the restore pipeline uses; the
+    // static gallery's mock stub (`{version: "mock-4"}`) must NOT trip this.
+    if (
+      evt.state &&
+      evt.state.htmx &&
+      window.htmx &&
+      typeof window.htmx.ajax === "function"
+    ) {
+      return;
+    }
     var grids = document.querySelectorAll("[data-dz-grid][data-dz-grid-url]");
     for (var i = 0; i < grids.length; i++) {
+      if (!grids[i]._dzInitial) captureInitial(grids[i]);
       var body = grids[i].querySelector("[data-dz-grid-body]");
       // Back across a HASH-only history entry (e.g. in-page anchors) fires
       // popstate with the grid's params unchanged — skip the refetch when the
