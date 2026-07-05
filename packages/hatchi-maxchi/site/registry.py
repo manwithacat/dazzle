@@ -85,6 +85,11 @@ class Hyperpart:
     #    tools/hyperpart.py assembles the full anatomy; test_hyperpart_cohesion
     #    keeps the manifest and the markers honest.
     controller: str | None = None  # a controllers/*.js file, if it needs client behaviour
+    # OPTIONAL extension controllers riding this Hyperpart's seams (each a
+    # controllers/*.js file). An extension adds behaviour a consumer can take
+    # or leave — its absence never breaks the core partial (the grid works
+    # without column-resize; resize needs the grid). Bundled like controllers.
+    extensions: tuple[str, ...] = field(default_factory=tuple)
     mock: str | None = None  # the gallery mock endpoint (interactive Hyperparts)
 
 
@@ -204,12 +209,19 @@ HYPERPARTS: list[Hyperpart] = [
         "search, sortable headers, filters, row selection (per page, or ALL matching "
         "rows with exclusions), bulk actions, and pagination are live (dz-grid.js, "
         "delegated + state-in-DOM) and compose into one server query. State is "
-        "URL-synced (data-dz-grid-url): deep-linkable, Back walks grid states.",
+        "URL-synced (data-dz-grid-url): deep-linkable, Back walks grid states. "
+        "Three OPTIONAL extensions ride the same seams: column visibility "
+        "(dz-grid-cols.js — the Columns menu), column resize (dz-grid-resize.js "
+        "— drag a header's right edge), and inline cell editing (dz-grid-edit.js "
+        "— dblclick a cell; commits a single-field PUT to the entity's standard "
+        "update route). Each persists per grid; the core grid works without them.",
         '<div class="hm-stack hm-measure-lg">'
         # data-dz-grid-url: opt-in URL-synced state — the grid's query mirrors
         # into the address bar (deep-linkable, Back walks grid states).
         '<div class="dz-table" data-dz-grid data-dz-grid-url data-dz-bulk-count="0" '
-        'data-dz-grid-page="1">'
+        # data-dz-grid-edit-url: the inline-edit extension's commit base — the
+        # entity's STANDARD update route (PUT {base}/{id}, single-field JSON).
+        'data-dz-grid-page="1" data-dz-grid-edit-url="/mock/grid">'
         '<div class="dz-filter-bar">'
         '<div class="dz-filter-cell">'
         '<label class="dz-filter-label" for="hm-grid-search">Search</label>'
@@ -240,6 +252,30 @@ HYPERPARTS: list[Hyperpart] = [
         '<select class="dz-filter-select" id="hm-grid-page-size" data-dz-grid-page-size>'
         '<option value="2">2</option><option value="4" selected>4</option>'
         '<option value="8">8</option></select></div>'
+        # Column-visibility menu (dz-grid-cols.js extension): a native <details>
+        # disclosure — no open/close JS. Checked = visible; the hidden set is
+        # projected onto every [data-dz-col] cell and persists per grid id.
+        '<details class="dz-table-col-menu">'
+        '<summary class="dz-table-col-menu-trigger" '
+        'aria-label="Toggle column visibility">Columns</summary>'
+        '<div class="dz-table-col-menu-panel">'
+        '<label class="dz-table-col-menu-item">'
+        '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
+        'data-dz-grid-col-toggle="first" aria-label="Show First name column">'
+        "<span>First name</span></label>"
+        '<label class="dz-table-col-menu-item">'
+        '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
+        'data-dz-grid-col-toggle="last" aria-label="Show Last name column">'
+        "<span>Last name</span></label>"
+        '<label class="dz-table-col-menu-item">'
+        '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
+        'data-dz-grid-col-toggle="plan" aria-label="Show Plan column">'
+        "<span>Plan</span></label>"
+        '<label class="dz-table-col-menu-item">'
+        '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
+        'data-dz-grid-col-toggle="signed" aria-label="Show Signed up column">'
+        "<span>Signed up</span></label>"
+        "</div></details>"
         "</div>"
         '<div class="dz-bulk-actions">'
         '<span aria-live="polite" aria-atomic="true">'
@@ -266,21 +302,39 @@ HYPERPARTS: list[Hyperpart] = [
         '<span class="dz-table-loading-spinner">{svg:loader-circle}</span></div>'
         '<div class="dz-table-scroll-x">'
         '<table class="dz-table-grid">'
+        # Per-column <col> resize targets (dz-grid-resize.js): widths applied
+        # to the col size header + cells together, and cols survive tbody swaps.
+        "<colgroup>"
+        '<col class="dz-table-col-select">'
+        '<col data-dz-col="first"><col data-dz-col="last">'
+        '<col data-dz-col="plan"><col data-dz-col="signed">'
+        "</colgroup>"
         "<thead><tr>"
         '<th class="dz-table-th-select">'
         '<input type="checkbox" data-dz-grid-select-all aria-label="Select all rows"></th>'
-        '<th class="dz-table-th" aria-sort="none">'
+        # Each data header carries data-dz-col (column-visibility hides header
+        # + cells + col in lock-step) and an in-th resize handle (decorative;
+        # pointer drag resizes col[data-col] — a drag never fires the sort).
+        '<th class="dz-table-th" data-dz-col="first" aria-sort="none">'
         '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="first">First name'
-        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
-        '<th class="dz-table-th" aria-sort="none">'
+        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
+        '<span class="dz-table-resize-handle" data-dz-grid-resize="first" aria-hidden="true">'
+        "</span></th>"
+        '<th class="dz-table-th" data-dz-col="last" aria-sort="none">'
         '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="last">Last name'
-        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
-        '<th class="dz-table-th" aria-sort="none">'
+        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
+        '<span class="dz-table-resize-handle" data-dz-grid-resize="last" aria-hidden="true">'
+        "</span></th>"
+        '<th class="dz-table-th" data-dz-col="plan" aria-sort="none">'
         '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="plan">Plan'
-        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
-        '<th class="dz-table-th" aria-sort="none">'
+        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
+        '<span class="dz-table-resize-handle" data-dz-grid-resize="plan" aria-hidden="true">'
+        "</span></th>"
+        '<th class="dz-table-th" data-dz-col="signed" aria-sort="none">'
         '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="signed">Signed up'
-        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button></th>'
+        '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
+        '<span class="dz-table-resize-handle" data-dz-grid-resize="signed" aria-hidden="true">'
+        "</span></th>"
         "</tr></thead>"
         # The tbody hydrates over the wire: hx-get on `load` fetches the rows,
         # innerMorph swaps them in (idiomorph keys on each row's stable `id`, so a
@@ -373,6 +427,26 @@ HYPERPARTS: list[Hyperpart] = [
         "actions push history entries (Back walks grid states), the debounced search "
         "replaces, and foreign URL params survive (the grid only touches its own keys). "
         "The all-matching selection is ephemeral and deliberately NOT in the URL. "
+        "The three <strong>extensions</strong> are opt-in per grid, keyed off their own "
+        "seams. <em>Column visibility</em> (<code>dz-grid-cols.js</code>): the Columns "
+        "<code>&lt;details&gt;</code> menu's checkboxes "
+        "(<code>[data-dz-grid-col-toggle]</code>) project a hidden set onto every "
+        "<code>[data-dz-col]</code> cell — header, hydrated tds, and the colgroup's "
+        "<code>&lt;col&gt;</code> — persisted per grid id in localStorage; re-fetched "
+        "rows re-hide on swap; stale keys prune at init. <em>Column resize</em> "
+        "(<code>dz-grid-resize.js</code>): a pointer drag on the in-th handle "
+        "(<code>[data-dz-grid-resize]</code>) widens <code>col[data-dz-col]</code> live "
+        "(snap-8, clamp 80–800px), persists per grid, and never fires the header's "
+        "sort; the table stays <code>table-layout:auto</code>, so a width is a strong "
+        "hint. <em>Inline edit</em> (<code>dz-grid-edit.js</code>): dblclick a cell's "
+        "display span (<code>[data-dz-grid-edit]</code> + "
+        "<code>data-dz-edit-kind/-value/-label/-options</code>) to open an in-cell "
+        "editor; Enter commits, Escape cancels, Tab advances — the commit is a "
+        "single-field JSON <strong>PUT to the entity's standard update route</strong> "
+        "(<code>data-dz-grid-edit-url</code> on the root; no bespoke field endpoint), "
+        "and a <code>dz-grid:refresh</code> re-renders the row server-side. An "
+        "in-flight edit survives a tbody swap: the buffer lives on the grid root, "
+        "outside the morph path. "
         "(The gallery mock approximates the "
         "<code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a "
         "real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, "
@@ -423,8 +497,36 @@ HYPERPARTS: list[Hyperpart] = [
                 "(its `data-dz-grid-total` re-stamps the matched total)",
                 states=("populated", "empty", "error"),
             ),
+            Exchange(
+                method="PUT",
+                endpoint="/app/{entity}/{id}",
+                trigger="the inline-edit extension (dz-grid-edit.js): dblclick an "
+                "editable cell's display span opens an in-cell editor; Enter (or a "
+                "change, for bool/select/date) commits a raw fetch PUT to "
+                "`{data-dz-grid-edit-url}/{rowId}` — NOT an htmx exchange",
+                response="this is the entity's STANDARD update route, not a bespoke "
+                "field endpoint: the body is a single-field JSON object "
+                '(`{"plan": "Pro"}`), so an all-optional update schema + '
+                "exclude-unset semantics make it a partial update, and the full "
+                "update gate (permissions, scoping, validation) applies. Return "
+                "2xx JSON on success; any non-2xx keeps the editor open with the "
+                "response text as its error. The controller then fires "
+                "`dz-grid:refresh` on the tbody, so the committed value renders "
+                "SERVER-side (badges/dates re-render; no client patching)",
+                swap="none (raw fetch) — the follow-up `dz-grid:refresh` re-fetches "
+                "rows + footer via the tbody's normal GET",
+                states=("populated", "error"),
+            ),
         ),
         controller="controllers/dz-grid.js",
+        # The optional extension controllers (promoted from Dazzle, 0.1.26):
+        # column visibility, column resize, inline cell editing — each rides
+        # the grid's seams; the core grid works without any of them.
+        extensions=(
+            "controllers/dz-grid-cols.js",
+            "controllers/dz-grid-resize.js",
+            "controllers/dz-grid-edit.js",
+        ),
         mock="/mock/grid",
     ),
     # ── Overlays (interactive — need the mock htmx / dialog) ─────────

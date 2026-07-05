@@ -100,7 +100,12 @@ class TestDataTableIntegrationGates:
     """Integration gates: real DOM pointer/keyboard events via Playwright."""
 
     def test_column_resize_pointer_drag(self, browser_page: Page) -> None:
-        """Pointer drag on resize handle updates <col> style.width in DOM."""
+        """Pointer drag on resize handle updates <col> style.width in DOM.
+
+        NB this harness exercises the LEGACY dzTable Alpine resize (its cols
+        use `data-col`); production resize is the promoted HM dz-grid-resize
+        extension on `col[data-dz-col]`, covered by the grid convergence e2e.
+        The harness + this gate retire with dzTable in C3."""
         # Get initial col width
         initial_width_str: str = browser_page.evaluate(
             "document.querySelector('col[data-col=\"title\"]')?.style.width || ''"

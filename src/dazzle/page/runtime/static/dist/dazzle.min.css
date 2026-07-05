@@ -1,4 +1,4 @@
-/* dazzle v0.93.90 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.91 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3367,6 +3367,42 @@ width: 2.5rem;
 .dz-table-th-actions {
 width: 4rem;
 }
+.dz-inline-edit-input {
+width: 100%;
+height: 1.75rem;
+padding-inline: var(--space-sm);
+font-size: var(--text-sm);
+color: var(--colour-text);
+background: var(--colour-surface);
+border-radius: var(--radius-sm);
+border: 1px solid var(--colour-brand);
+outline: none;
+transition:
+border-color var(--duration-fast) var(--ease-out),
+box-shadow var(--duration-fast) var(--ease-out);
+}
+.dz-inline-edit-input:focus-visible {
+box-shadow: 0 0 0 2px color-mix(in oklch, var(--colour-brand) 20%, transparent);
+}
+.dz-inline-edit-input:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
+.dz-inline-edit-select {
+padding-inline-end: var(--space-lg);
+appearance: none;
+}
+.dz-inline-edit-checkbox {
+width: 1rem;
+height: 1rem;
+border-radius: var(--radius-sm);
+accent-color: var(--colour-brand);
+cursor: pointer;
+}
+.dz-inline-edit-checkbox:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
 .dz-table-resize-handle {
 position: absolute;
 top: 0;
@@ -5501,93 +5537,6 @@ flex-shrink: 0;
 position: relative;
 margin-inline: -0.25rem;
 margin-block: -0.125rem;
-}
-.dz-inline-edit-input {
-width: 100%;
-height: 1.75rem;
-padding-inline: var(--space-sm);
-font-size: var(--text-sm);
-color: var(--colour-text);
-background: var(--colour-surface);
-border-radius: var(--radius-sm);
-border: 1px solid var(--colour-brand);
-outline: none;
-transition:
-border-color var(--duration-fast) var(--ease-out),
-box-shadow var(--duration-fast) var(--ease-out);
-}
-.dz-inline-edit-input:focus-visible {
-box-shadow: 0 0 0 2px color-mix(in oklch, var(--colour-brand) 20%, transparent);
-}
-.dz-inline-edit-input[data-dz-edit-error="true"] {
-border-color: var(--colour-danger);
-}
-.dz-inline-edit-input[data-dz-edit-error="true"]:focus-visible {
-box-shadow: 0 0 0 2px color-mix(in oklch, var(--colour-danger) 30%, transparent);
-}
-.dz-inline-edit-input:disabled {
-opacity: 0.5;
-cursor: not-allowed;
-}
-.dz-inline-edit-select {
-padding-inline-end: var(--space-lg);
-appearance: none;
-}
-.dz-inline-edit-bool-row {
-display: flex;
-align-items: center;
-gap: var(--space-sm);
-height: 1.75rem;
-padding-inline: 0.25rem;
-}
-.dz-inline-edit-checkbox {
-width: 1rem;
-height: 1rem;
-border-radius: var(--radius-sm);
-accent-color: var(--colour-brand);
-cursor: pointer;
-}
-.dz-inline-edit-checkbox:disabled {
-opacity: 0.5;
-cursor: not-allowed;
-}
-.dz-inline-edit-bool-label {
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-user-select: none;
-cursor: pointer;
-}
-.dz-inline-edit-spinner {
-position: absolute;
-inset-block: 0;
-inset-inline-end: 0.25rem;
-display: flex;
-align-items: center;
-pointer-events: none;
-}
-.dz-inline-edit-spinner-icon {
-width: 0.875rem;
-height: 0.875rem;
-color: var(--colour-text-muted);
-animation: dz-spin 1s linear infinite;
-}
-.dz-inline-edit-error {
-position: absolute;
-inset-block-start: 100%;
-inset-inline-start: 0;
-margin-block-start: 0.25rem;
-z-index: 50;
-max-width: 12.5rem;
-padding-inline: var(--space-sm);
-padding-block: var(--space-xs);
-border-radius: var(--radius-sm);
-font-size: var(--text-xs);
-line-height: var(--leading-tight);
-background: var(--danger-600);
-color: white;
-box-shadow: var(--shadow-sm);
-white-space: nowrap;
-pointer-events: none;
 }
 .dz-ref-link {
 color: var(--colour-brand);

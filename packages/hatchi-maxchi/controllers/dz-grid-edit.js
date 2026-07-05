@@ -1,8 +1,9 @@
 /*
- * dz-grid-edit — inline cell editing, a DAZZLE EXTENSION on the HM grid
- * primitive's seams (convergence C2.3; the dzTable Alpine implementation is
- * deleted in C3 — its commit PATCHed `/api/{EntityName}/…` while the field
- * route mounts at `/{plural}/…`, so every commit silently 404'd).
+ * HYPERPART: grid (extension)
+ *
+ * dz-grid-edit — inline cell editing, an OPTIONAL grid extension on the grid
+ * primitive's seams (promoted from the Dazzle layer, 0.1.26 — Dazzle now
+ * consumes it from here).
  *
  * The ratified seam design: the CELL owns its edit affordance; the grid
  * stays out of the way. One display span per editable cell carries the

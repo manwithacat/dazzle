@@ -118,6 +118,9 @@ JS_SOURCES = [
     # bundle. Ordered first in the runtime block so the listener is registered
     # before any other runtime code can trigger an htmx request.
     # HaTchi-MaXchi controllers — the published dist artifact (Phase 2).
+    # Includes the grid primitive AND its optional extensions
+    # (dz-grid-cols / dz-grid-resize / dz-grid-edit), promoted from this
+    # repo's page layer in 0.1.26 per the core-UX-from-HM directive.
     HM_DIST_JS,
     STATIC / "js" / "dz-csrf.js",
     STATIC / "js" / "dz-a11y.js",
@@ -144,15 +147,6 @@ JS_SOURCES = [
     # sendBeacon on a field's first focus so the 1a widget inferer can adapt to
     # real usage. Zero-dep, best-effort, same-origin.
     STATIC / "js" / "dz-usage.js",
-    # Convergence C2.1: column-visibility as a delegated extension on the HM
-    # grid primitive's seams (replaces dzTable's Alpine implementation).
-    STATIC / "js" / "dz-grid-cols.js",
-    # Convergence C2.2: column resize as a delegated extension (net-new as a
-    # reachable feature — the dzTable code was never wired to any markup).
-    STATIC / "js" / "dz-grid-resize.js",
-    # Convergence C2.3: inline cell editing as a delegated extension (the
-    # dzTable commit URL never matched the mounted field route — silent 404).
-    STATIC / "js" / "dz-grid-edit.js",
     SITE_STATIC / "js" / "site.js",
 ]
 
@@ -170,9 +164,6 @@ FRAMEWORK_JS = {
     "pdf-viewer.js",
     "dz-debug.js",
     "dz-toast.js",
-    "dz-grid-cols.js",
-    "dz-grid-resize.js",
-    "dz-grid-edit.js",
     "site.js",
 }
 

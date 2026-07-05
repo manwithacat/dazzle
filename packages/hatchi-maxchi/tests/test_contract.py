@@ -22,6 +22,21 @@ from registry import HYPERPARTS  # noqa: E402
 # Exchange). hx-confirm is a client affordance (no round-trip) → exempt.
 _REQUEST_ATTR_RE = re.compile(r'hx-(get|post|put|patch|delete)="([^"]+)"')
 
+# Extension affordances that request OUTSIDE htmx (a raw fetch on a
+# controller seam) — attribute → HTTP method. The inline-edit extension
+# commits `PUT {data-dz-grid-edit-url}/{id}`; declaring the attribute in a
+# partial is making that request, so it needs (and satisfies) an Exchange.
+_EXTENSION_REQUEST_ATTRS = {"data-dz-grid-edit-url": "PUT"}
+
+
+def _methods_in_markup(partial: str) -> set[str]:
+    methods = {m.upper() for m, _ in _REQUEST_ATTR_RE.findall(partial)}
+    for attr, method in _EXTENSION_REQUEST_ATTRS.items():
+        if attr + "=" in partial:
+            methods.add(method)
+    return methods
+
+
 # Structural wrappers that intentionally carry no rule of their own
 # (styled via inheritance / parent selectors). Additions here need a
 # comment in the component's CSS explaining why.
@@ -31,6 +46,10 @@ SEMANTIC_ONLY = {
     # tab panel container: identity for the controller + a swap target; its
     # visibility rides the native `hidden` attribute, so it carries no rule.
     "dz-tabs__panel",
+    # the select-column <col> in the grid's colgroup: a structural marker so
+    # the resize/visibility extensions can address data cols by exclusion —
+    # the table stays layout:auto, so the col itself needs no width rule.
+    "dz-table-col-select",
 }
 
 
@@ -52,6 +71,30 @@ def test_every_registry_class_has_a_rule() -> None:
     assert not missing, (
         f"registry HTML uses classes with no rule in the bundle: {missing}. "
         "Style them or (if genuinely structural) add to SEMANTIC_ONLY with a comment."
+    )
+
+
+def test_js_assigned_classes_have_rules() -> None:
+    """Classes a controller assigns at runtime (`el.className = …`,
+    `classList.add(…)`) are invisible to the registry-class gate above —
+    the 0.1.26 blind spot where the inline-edit editor rendered unstyled
+    in the gallery because its input classes existed only in Dazzle CSS.
+    Every dz-* class a controller can put in the DOM must have a rule in
+    the built bundle. State classes (`is-*`) are exempt: they style via
+    compound selectors on their host."""
+    css = build_css("dz-")
+    controllers = sorted((PKG / "controllers").glob("*.js"))
+    assign_re = re.compile(r"""(?:className\s*=\s*|classList\.add\()["']([^"']+)["']""")
+    missing = []
+    for f in controllers:
+        for m in assign_re.finditer(f.read_text(encoding="utf-8")):
+            for cls in m.group(1).split():
+                if not cls.startswith("dz-") or cls in SEMANTIC_ONLY:
+                    continue
+                if f".{cls}" not in css:
+                    missing.append(f"{f.name}: .{cls}")
+    assert not missing, (
+        "controller-assigned classes with no CSS rule in the bundle:\n  " + "\n  ".join(missing)
     )
 
 
@@ -144,11 +187,11 @@ def test_every_request_affordance_has_a_declared_exchange() -> None:
     gaps = []
     for c in HYPERPARTS:
         declared = {(e.method.upper(), e.endpoint) for e in c.exchanges}
-        for method, _url in _REQUEST_ATTR_RE.findall(c.partial):
+        for method in sorted(_methods_in_markup(c.partial)):
             # markup uses mock endpoints; exchanges declare the REAL contract
             # — so we require one exchange per request METHOD, not per URL.
-            if not any(m == method.upper() for m, _ in declared):
-                gaps.append(f"{c.id}: hx-{method} in markup with no declared Exchange")
+            if not any(m == method for m, _ in declared):
+                gaps.append(f"{c.id}: {method} affordance in markup with no declared Exchange")
     assert not gaps, (
         "components make requests they don't declare as Exchange contracts:\n  " + "\n  ".join(gaps)
     )
@@ -159,7 +202,7 @@ def test_no_orphan_exchange_without_an_affordance() -> None:
     contract — the partial doesn't actually make that request."""
     orphans = []
     for c in HYPERPARTS:
-        methods_in_markup = {m.upper() for m, _ in _REQUEST_ATTR_RE.findall(c.partial)}
+        methods_in_markup = _methods_in_markup(c.partial)
         for e in c.exchanges:
             if e.method.upper() not in methods_in_markup:
                 orphans.append(f"{c.id}: Exchange {e.method} {e.endpoint} has no hx-* affordance")

@@ -32,25 +32,27 @@ _MOCK_SRC = (PKG / "site" / "build_site.py").read_text(encoding="utf-8")
 
 def test_declared_controllers_exist_and_are_marked() -> None:
     for h in HYPERPARTS:
-        if not h.controller:
-            continue
-        f = PKG / h.controller
-        assert f.is_file(), f"{h.id}: declared controller {h.controller} does not exist"
-        text = f.read_text(encoding="utf-8")
-        assert f"HYPERPART: {h.id}" in text, (
-            f"{h.id}: controller {h.controller} lacks its `HYPERPART: {h.id}` marker "
-            "(bottom-up cohesion — an agent opening the file must see which Hyperpart it serves)"
-        )
+        for ref in ((h.controller,) if h.controller else ()) + tuple(h.extensions):
+            f = PKG / ref
+            assert f.is_file(), f"{h.id}: declared controller {ref} does not exist"
+            text = f.read_text(encoding="utf-8")
+            assert f"HYPERPART: {h.id}" in text, (
+                f"{h.id}: controller {ref} lacks its `HYPERPART: {h.id}` marker "
+                "(bottom-up cohesion — an agent opening the file must see which "
+                "Hyperpart it serves)"
+            )
 
 
 def test_no_unowned_controller() -> None:
     """Every controller file must be claimed by exactly one Hyperpart —
     an unowned controller is code with no home in the manifest."""
     declared = {h.controller for h in HYPERPARTS if h.controller}
+    declared |= {ext for h in HYPERPARTS for ext in h.extensions}
     on_disk = {f"controllers/{f.name}" for f in _CONTROLLERS_DIR.glob("*.js")}
     unowned = sorted(on_disk - declared)
     assert not unowned, (
-        f"controllers with no owning Hyperpart: {unowned} (add `controller=` to one)"
+        f"controllers with no owning Hyperpart: {unowned} "
+        "(add `controller=` or `extensions=` to one)"
     )
 
 

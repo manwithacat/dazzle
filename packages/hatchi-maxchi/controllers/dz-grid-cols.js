@@ -1,7 +1,9 @@
 /*
- * dz-grid-cols — column visibility, a DAZZLE EXTENSION on the HM grid
- * primitive's seams (convergence C2.1; replaces the dzTable Alpine
- * implementation, deleted in C3).
+ * HYPERPART: grid (extension)
+ *
+ * dz-grid-cols — column visibility, an OPTIONAL grid extension on the grid
+ * primitive's seams (promoted from the Dazzle layer, 0.1.26 — Dazzle now
+ * consumes it from here).
  *
  * Same idiom as the primitive: delegated document-level listeners, state in
  * the DOM + localStorage, no framework. The menu itself is a native

@@ -1174,3 +1174,135 @@ def test_master_detail_selection_and_instance_isolation(page) -> None:  # type: 
     # clone selects item 3; the ORIGINAL still has item 2 — isolation holds
     assert cur('[data-clone] .master-detail__item[hx-get$="inv-003"]') == "true"
     assert cur('.master-detail:not([data-clone]) .master-detail__item[hx-get$="inv-002"]') == "true"
+
+
+# === Grid extensions (promoted from Dazzle, 0.1.26): col-vis / resize / edit ===
+
+
+def _hydrate_grid(page):  # type: ignore[no-untyped-def]
+    """Wait for the grid tbody to hold real (non-skeleton) rows."""
+    page.wait_for_selector("[data-grid-body] tr[id]", timeout=3000)
+
+
+def test_grid_column_resize_drags_col_width_and_persists(page) -> None:  # type: ignore[no-untyped-def]
+    """grid-resize extension: a pointer drag on a header handle widens the
+    column's <col> (snap-8, live), and the width survives a reload
+    (localStorage). The handle lives INSIDE the th (never clipped by the
+    scroll container) and a drag must not fire the header's sort."""
+    _hydrate_grid(page)
+    handle = page.query_selector('[data-grid-resize="first"]')
+    assert handle is not None, "the First-name header must carry a resize handle"
+    # raw mouse events use viewport coords — the grid sits below the fold
+    handle.scroll_into_view_if_needed()
+    page.wait_for_timeout(50)
+    col = '[data-grid] col[data-col="first"]'
+    start = page.eval_on_selector(col, "c => c.offsetWidth || c.getBoundingClientRect().width")
+    if not start:  # engines where col boxes don't report: baseline from the th
+        start = page.eval_on_selector(
+            '[data-grid-resize="first"]',
+            "h => Math.round(h.closest('th').getBoundingClientRect().width)",
+        )
+    box = handle.bounding_box()
+    x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    sort_before = page.get_attribute('[data-grid-resize="first"]', "data-grid-resize")
+    assert sort_before == "first"
+    aria_before = page.eval_on_selector(
+        '[data-grid-resize="first"]', "h => h.closest('th').getAttribute('aria-sort')"
+    )
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x + 64, y, steps=4)
+    page.mouse.up()
+    page.wait_for_timeout(80)
+    width = page.eval_on_selector(col, "c => parseInt(c.style.width, 10) || 0")
+    assert abs(width - (start + 64)) <= 16, (
+        f"drag +64 from {start} must land within a snap step: got {width}"
+    )
+    # the drag must NOT have cycled the sort
+    aria_after = page.eval_on_selector(
+        '[data-grid-resize="first"]', "h => h.closest('th').getAttribute('aria-sort')"
+    )
+    assert aria_after == aria_before, "a resize drag must not trigger the header sort"
+    # persistence: reload → the stored width re-applies to the fresh <col>
+    page.reload()
+    page.wait_for_timeout(300)
+    _hydrate_grid(page)
+    width2 = page.eval_on_selector(col, "c => parseInt(c.style.width, 10) || 0")
+    assert width2 == width, "the column width must persist across a reload"
+
+
+def test_grid_column_visibility_menu_toggles_and_persists(page) -> None:  # type: ignore[no-untyped-def]
+    """grid-cols extension: unchecking a column in the native <details> menu
+    hides every cell of that column (header + hydrated data cells + its <col>),
+    the preference persists across a reload, and re-checking restores it."""
+    _hydrate_grid(page)
+    toggle = '[data-grid-col-toggle="plan"]'
+    assert page.query_selector(toggle) is not None, "the grid must render a column menu"
+    plan_cells = '[data-grid] [data-col="plan"]'
+    n = page.eval_on_selector_all(plan_cells, "els => els.length")
+    assert n >= 2, "th + hydrated tds must carry the column key"
+    visible = "els => els.filter(e => getComputedStyle(e).display !== 'none').length"
+
+    page.eval_on_selector(
+        toggle, "t => { t.checked = false; t.dispatchEvent(new Event('change', {bubbles: true})); }"
+    )
+    page.wait_for_timeout(80)
+    assert page.eval_on_selector_all(plan_cells, visible) == 0, "every plan cell must hide"
+
+    # hydrated rows arriving AFTER the toggle stay hidden (after-swap re-apply)
+    page.eval_on_selector(
+        "[data-grid-body]",
+        "b => b.dispatchEvent(new CustomEvent('grid:refresh', {bubbles: true}))",
+    )
+    page.wait_for_timeout(120)
+    assert page.eval_on_selector_all(plan_cells, visible) == 0, (
+        "re-fetched rows must re-hide the column"
+    )
+
+    # persists across reload
+    page.reload()
+    page.wait_for_timeout(300)
+    _hydrate_grid(page)
+    assert page.eval_on_selector_all(plan_cells, visible) == 0
+    assert page.eval_on_selector(toggle, "t => t.checked") is False
+
+    # restore
+    page.eval_on_selector(
+        toggle, "t => { t.checked = true; t.dispatchEvent(new Event('change', {bubbles: true})); }"
+    )
+    page.wait_for_timeout(80)
+    assert page.eval_on_selector_all(plan_cells, visible) >= n - 1
+
+
+def test_grid_inline_edit_commits_via_put_and_refreshes(page) -> None:  # type: ignore[no-untyped-def]
+    """grid-edit extension: dblclick an editable cell's display span opens an
+    in-cell editor; Enter commits a single-field PUT to the grid's edit URL
+    (the entity's standard update route); on success the controller refreshes
+    the rows and the server-rendered cell shows the new value. Escape cancels
+    without a request."""
+    _hydrate_grid(page)
+    span = page.query_selector('[data-grid-body] [data-grid-edit="first"]')
+    assert span is not None, "hydrated editable cells must carry the edit seam span"
+
+    # Escape cancels: no editor left behind, value unchanged
+    span.dblclick()
+    page.wait_for_timeout(80)
+    editor = page.query_selector("[data-grid-editor]")
+    assert editor is not None, "dblclick must open the in-cell editor"
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(80)
+    assert page.query_selector("[data-grid-editor]") is None
+
+    # Enter commits: PUT applied to the mock data, refresh renders it
+    span = page.query_selector('[data-grid-body] [data-grid-edit="first"]')
+    span.dblclick()
+    page.wait_for_timeout(80)
+    page.fill("[data-grid-editor]", "Renamed")
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(300)
+    assert page.query_selector("[data-grid-editor]") is None, "commit must close the editor"
+    names = page.eval_on_selector_all(
+        '[data-grid-body] [data-grid-edit="first"]',
+        "els => els.map(e => e.textContent.trim())",
+    )
+    assert "Renamed" in names, f"the committed value must render from the server: {names}"

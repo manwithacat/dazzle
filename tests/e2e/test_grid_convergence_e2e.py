@@ -484,7 +484,7 @@ def test_grid_column_resize_extension(browser, server) -> None:  # type: ignore[
 
         handle = page.query_selector("[data-dz-grid-resize='number']")
         assert handle, "the number header carries a resize handle"
-        assert page.query_selector("colgroup col[data-col='number']"), (
+        assert page.query_selector("colgroup col[data-dz-col='number']"), (
             "the table carries a colgroup with per-column <col> targets"
         )
 
@@ -499,7 +499,7 @@ def test_grid_column_resize_extension(browser, server) -> None:  # type: ignore[
         page.mouse.up()
         page.wait_for_timeout(200)
 
-        col_width = page.eval_on_selector("col[data-col='number']", "c => c.style.width")
+        col_width = page.eval_on_selector("col[data-dz-col='number']", "c => c.style.width")
         assert col_width.endswith("px") and int(col_width[:-2]) % 8 == 0, (
             f"the col width is set and snapped to the 8px grid: {col_width!r}"
         )
@@ -518,9 +518,9 @@ def test_grid_column_resize_extension(browser, server) -> None:  # type: ignore[
         page.reload()
         page.wait_for_selector("[data-dz-grid-body] tr td", timeout=15000)
         page.wait_for_timeout(300)
-        assert page.eval_on_selector("col[data-col='number']", "c => c.style.width") == col_width, (
-            "the width re-applies from storage on load"
-        )
+        assert (
+            page.eval_on_selector("col[data-dz-col='number']", "c => c.style.width") == col_width
+        ), "the width re-applies from storage on load"
     finally:
         page.evaluate("localStorage.clear()")
         page.close()

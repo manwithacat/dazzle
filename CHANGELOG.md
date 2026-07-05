@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.91] - 2026-07-06
+
+### Changed
+- **Grid extensions promoted into HaTchi-MaXchi** (HM 0.1.25 → 0.1.26), per
+  James's directive: *Dazzle obtains all its core UX expression from HM*.
+  `dz-grid-cols.js` (column visibility), `dz-grid-resize.js` (column resize)
+  and `dz-grid-edit.js` (inline cell editing) moved from
+  `src/dazzle/page/runtime/static/js/` into
+  `packages/hatchi-maxchi/controllers/` as OPTIONAL extensions of the `grid`
+  Hyperpart — a new `extensions=` manifest field (cohesion-gated: each file
+  needs its `HYPERPART: grid` marker and exactly one owner). Dazzle's bundle
+  now sources them from the HM dist; behaviour is unchanged (the grid
+  convergence e2e re-proves the consumption path). The HM gallery grid demo
+  now exercises all three live (Columns menu, drag handles, dblclick-to-edit
+  against a mock PUT), with three new two-engine behaviour tests.
+- **Colgroup attribute renamed `data-col` → `data-dz-col`** (HM namespace
+  grammar gate: component data-attributes must be `data-dz-*`/`data-hm-*`).
+  One attribute now serves both extensions — column visibility hides the
+  header, the hydrated cells *and* the `<col>` in lock-step, and resize
+  addresses `col[data-dz-col]`. Emitter, controller, gallery and test pins
+  updated together; the legacy dzTable harness (`test-data-table.html` +
+  its pointer-drag gate) keeps `data-col` and retires with dzTable in C3.
+- The inline-edit PUT is now a **declared Exchange** on the grid Hyperpart:
+  the contract gates learned that `data-dz-grid-edit-url` is a request
+  affordance (a raw-fetch seam, not an `hx-` attribute).
+
+### Agent Guidance
+- New grid behaviour belongs in HM first: author it as a grid `extensions=`
+  controller with a gallery demo + behaviour test, then let Dazzle consume
+  it from the HM dist. Don't add table JS under `src/dazzle/page/`.
+
 ## [0.93.90] - 2026-07-05
 
 ### Added

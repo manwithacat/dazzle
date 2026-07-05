@@ -165,7 +165,7 @@ class _RenderTablesMixin:
                         f'<th data-dz-col="{ck}" aria-sort="{aria}" '
                         'scope="col" class="dz-table-th">'
                         # C2.2: the pointer-drag resize handle (decorative for
-                        # SR; dz-grid-resize.js drives col[data-col] widths).
+                        # SR; dz-grid-resize.js drives col[data-dz-col] widths).
                         f'<span class="dz-table-resize-handle" '
                         f'data-dz-grid-resize="{ck}" aria-hidden="true"></span>'
                         f'<button type="button" data-dz-grid-sort="{ck}" '
@@ -246,7 +246,7 @@ class _RenderTablesMixin:
             if t.bulk_select:
                 col_parts.append('<col class="dz-table-col-select">')
             for k in keys or ():
-                col_parts.append(f'<col data-col="{ctx.escape_attr(k)}">')
+                col_parts.append(f'<col data-dz-col="{ctx.escape_attr(k)}">')
             if t.has_actions:
                 col_parts.append('<col class="dz-table-col-actions">')
             colgroup_html = f"<colgroup>{''.join(col_parts)}</colgroup>" if keys else ""

@@ -1,19 +1,20 @@
 /*
- * dz-grid-resize — column resize, a DAZZLE EXTENSION on the HM grid
- * primitive's seams (convergence C2.2). Net-new as a REACHABLE feature: the
- * dzTable implementation existed but no production emitter ever rendered a
- * handle or a colgroup, so users never had it.
+ * HYPERPART: grid (extension)
+ *
+ * dz-grid-resize — column resize, an OPTIONAL grid extension on the grid
+ * primitive's seams (promoted from the Dazzle layer, 0.1.26 — Dazzle now
+ * consumes it from here).
  *
  * Same idiom as the primitive: delegated document-level pointerdown; the
  * per-drag window listeners attach at drag start and detach at drag end
  * (the #795 teardown discipline — nothing leaks between drags). Widths live
- * on the table's `<col data-col>` elements + localStorage.
+ * on the table's `<col data-dz-col>` elements + localStorage.
  *
  * Contract:
  *   - handle:  `[data-dz-grid-resize="<key>"]` (a decorative span at the
  *              header's right edge; pointer-only — column width is
  *              presentational, so there is no keyboard path yet).
- *   - target:  `col[data-col="<key>"]` in the table's colgroup — resizing
+ *   - target:  `col[data-dz-col="<key>"]` in the table's colgroup — resizing
  *              the col resizes the whole column (header + cells), and cols
  *              survive tbody-only swaps untouched.
  *   - width:   clamped 80..800px, snapped to an 8px grid (live during the
@@ -53,7 +54,7 @@
   }
 
   function colOf(root, key) {
-    return root.querySelector('col[data-col="' + key + '"]');
+    return root.querySelector('col[data-dz-col="' + key + '"]');
   }
 
   function snapClamp(px) {
@@ -71,11 +72,11 @@
   // Drop stored widths whose column no longer exists (the #853 analogue) —
   // skipped when no cols are present (not-yet-rendered table).
   function prune(root) {
-    var cols = root.querySelectorAll("col[data-col]");
+    var cols = root.querySelectorAll("col[data-dz-col]");
     if (!cols.length) return;
     var present = {};
     for (var i = 0; i < cols.length; i++) {
-      present[cols[i].getAttribute("data-col")] = true;
+      present[cols[i].getAttribute("data-dz-col")] = true;
     }
     var widths = readWidths(root);
     var cleaned = {};

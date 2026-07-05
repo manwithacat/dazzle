@@ -106,15 +106,34 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     var pg = gridPaging(q, rows.length);
     var start = (pg.page - 1) * pg.size;
     // Zero rows → empty tbody, so the `:has(tbody tr td)` empty-state shows.
+    // Editable cells emit the inline-edit seam: ONE display span per cell
+    // carrying kind/value/label (+ options for selects). The grid-edit
+    // extension builds the editor on dblclick and commits a single-field PUT
+    // to the root's data-grid-edit-url; cells stay server-rendered.
+    function editSpan(col, kind, value, label, options) {
+      return '<span class="tr-cell-display" data-grid-edit="' + col + '" ' +
+        'data-edit-kind="' + kind + '" data-edit-value="' + htmlEnc(value) + '" ' +
+        'data-edit-label="' + label + '"' +
+        (options ? ' data-edit-options="' + htmlEnc(JSON.stringify(options)) + '"' : "") +
+        ">" + htmlEnc(value) + "</span>";
+    }
+    var PLAN_OPTIONS = [["Free", "Free"], ["Pro", "Pro"], ["Team", "Team"],
+      ["Enterprise", "Enterprise"]];
     return rows.slice(start, start + pg.size).map(function (r) {
       var id = htmlEnc(r.id), name = htmlEnc(r.first + " " + r.last);
-      return '<tr class="tr-row" id="grid-row-' + id + '">' +
+      // data-col on every data cell = the column-visibility target;
+      // data-row-id on the tr = the extensions' row anchor (Dazzle parity).
+      return '<tr class="tr-row" id="grid-row-' + id + '" data-row-id="' + id + '">' +
         '<td class="tr-checkbox-cell"><input type="checkbox" class="tr-checkbox" ' +
         'data-grid-select data-grid-row-id="' + id + '" aria-label="Select ' + name + '"></td>' +
-        '<td class="tr-cell">' + htmlEnc(r.first) + '</td>' +
-        '<td class="tr-cell">' + htmlEnc(r.last) + '</td>' +
-        '<td class="tr-cell">' + htmlEnc(r.plan) + '</td>' +
-        '<td class="tr-cell">' + htmlEnc(r.signed) + '</td></tr>';
+        '<td class="tr-cell" data-col="first">' +
+        editSpan("first", "text", r.first, "First name") + '</td>' +
+        '<td class="tr-cell" data-col="last">' +
+        editSpan("last", "text", r.last, "Last name") + '</td>' +
+        '<td class="tr-cell" data-col="plan">' +
+        editSpan("plan", "select", r.plan, "Plan", PLAN_OPTIONS) + '</td>' +
+        '<td class="tr-cell" data-col="signed">' +
+        editSpan("signed", "date", r.signed, "Signed up") + '</td></tr>';
     }).join("");
   }
   // The server renders the pagination footer too (state-in-DOM: the page
@@ -284,6 +303,29 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     el.classList.remove("htmx-request");
     fire(el, "htmx:after:request", { elt: el });
   }
+
+  // Inline-edit commits (grid-edit.js) use a raw fetch — a PUT to the
+  // entity's STANDARD update route with a single-field JSON body — not an
+  // htmx exchange, so the mock intercepts window.fetch for /mock/grid/<id>.
+  // A real server runs its full update gate (RBAC, scope, validation) here.
+  var realFetch = window.fetch ? window.fetch.bind(window) : null;
+  window.fetch = function (url, opts) {
+    var m = typeof url === "string" && url.match(/^\/mock\/grid\/([^/?]+)$/);
+    if (m && opts && String(opts.method).toUpperCase() === "PUT") {
+      var patch = {};
+      try { patch = JSON.parse(opts.body || "{}"); } catch (e) { patch = {}; }
+      var hit = null;
+      GRID_ROWS.forEach(function (r) { if (r.id === decodeURIComponent(m[1])) hit = r; });
+      if (!hit) return Promise.resolve(new Response("{}", { status: 404 }));
+      Object.keys(patch).forEach(function (k) {
+        if (k in hit) hit[k] = String(patch[k]);
+      });
+      return Promise.resolve(new Response("{}", {
+        status: 200, headers: { "Content-Type": "application/json" }
+      }));
+    }
+    return realFetch ? realFetch(url, opts) : Promise.reject(new Error("no fetch"));
+  };
 
   // grid:refresh — a custom event the grid controller fires on the tbody
   // after a sort/filter change (real htmx catches it via the tbody's hx-trigger;
@@ -1755,4 +1797,620 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       }
     }
   });
+})();
+
+/* ── controllers/grid-cols.js ── */
+/*
+ * HYPERPART: grid (extension)
+ *
+ * grid-cols — column visibility, an OPTIONAL grid extension on the grid
+ * primitive's seams (promoted from the Dazzle layer, 0.1.26 — Dazzle now
+ * consumes it from here).
+ *
+ * Same idiom as the primitive: delegated document-level listeners, state in
+ * the DOM + localStorage, no framework. The menu itself is a native
+ * `<details>` disclosure (the HM `.menu` idiom — no open/close JS).
+ *
+ * Contract:
+ *   - root:    the `[data-grid]` element; its `id` keys the persisted
+ *              hidden set (`localStorage["cols-<id>"]` — the SAME key the
+ *              retired dzTable used, so users keep their saved preferences).
+ *   - toggle:  `[data-grid-col-toggle="<key>"]` (a checkbox in the menu);
+ *              checked = visible. The controller syncs the boxes from
+ *              storage at init and after every change.
+ *   - cells:   every `[data-col="<key>"]` th/td inside the root gets
+ *              `style.display` applied — including rows hydrated later (the
+ *              after-swap re-apply; hydrated cells carry no per-cell
+ *              bindings).
+ *   - prune:   stale stored keys that match no current column are dropped at
+ *              init (#853 — otherwise a renamed column leaves invisible
+ *              cells behind forever).
+ */
+(function () {
+  "use strict";
+
+  function storageKey(root) {
+    return "cols-" + (root.id || "grid");
+  }
+
+  function readHidden(root) {
+    try {
+      var list = JSON.parse(localStorage.getItem(storageKey(root)) || "[]");
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function writeHidden(root, list) {
+    try {
+      localStorage.setItem(storageKey(root), JSON.stringify(list));
+    } catch (e) {
+      /* storage unavailable (private mode) — visibility still works, just
+         doesn't persist */
+    }
+  }
+
+  // Project the hidden set onto every [data-col] cell + the menu boxes.
+  function apply(root) {
+    var hidden = readHidden(root);
+    var cells = root.querySelectorAll("[data-col]");
+    for (var i = 0; i < cells.length; i++) {
+      var key = cells[i].getAttribute("data-col");
+      cells[i].style.display = hidden.indexOf(key) >= 0 ? "none" : "";
+    }
+    var boxes = root.querySelectorAll("[data-grid-col-toggle]");
+    for (i = 0; i < boxes.length; i++) {
+      boxes[i].checked =
+        hidden.indexOf(boxes[i].getAttribute("data-grid-col-toggle")) < 0;
+    }
+  }
+
+  // #853: drop stored keys that match no current column — stale storage from
+  // before a column rename would otherwise hide cells forever ("headers
+  // render but cells are empty"). Skips the prune when NO columns are present
+  // (empty-state / not-yet-hydrated renders must not wipe the preference).
+  function prune(root) {
+    var present = {};
+    var cells = root.querySelectorAll("[data-col]");
+    if (!cells.length) return;
+    for (var i = 0; i < cells.length; i++) {
+      present[cells[i].getAttribute("data-col")] = true;
+    }
+    var hidden = readHidden(root);
+    var cleaned = [];
+    for (i = 0; i < hidden.length; i++) {
+      if (present[hidden[i]]) cleaned.push(hidden[i]);
+    }
+    if (cleaned.length !== hidden.length) writeHidden(root, cleaned);
+  }
+
+  document.addEventListener("change", function (evt) {
+    var t = evt.target;
+    if (!t || !t.matches || !t.matches("[data-grid-col-toggle]")) return;
+    var root = t.closest("[data-grid]");
+    if (!root) return;
+    var key = t.getAttribute("data-grid-col-toggle");
+    var hidden = readHidden(root);
+    var at = hidden.indexOf(key);
+    if (t.checked && at >= 0) hidden.splice(at, 1);
+    if (!t.checked && at < 0) hidden.push(key);
+    writeHidden(root, hidden);
+    apply(root);
+  });
+
+  // Hydrated / re-fetched rows arrive visible-by-default — re-project the
+  // hidden set after every swap. Bound under BOTH names (htmx-4 colon /
+  // legacy camelCase), same as the primitive.
+  function onSwap() {
+    var grids = document.querySelectorAll("[data-grid]");
+    for (var i = 0; i < grids.length; i++) {
+      if (grids[i].querySelector("[data-grid-col-toggle]")) apply(grids[i]);
+    }
+  }
+  document.addEventListener("htmx:after:swap", onSwap); // htmx 4
+  document.addEventListener("htmx:afterSwap", onSwap); // htmx ≤2
+
+  // Init: prune stale keys, then apply the stored preference.
+  var grids = document.querySelectorAll("[data-grid]");
+  for (var g = 0; g < grids.length; g++) {
+    if (grids[g].querySelector("[data-grid-col-toggle]")) {
+      prune(grids[g]);
+      apply(grids[g]);
+    }
+  }
+})();
+
+/* ── controllers/grid-resize.js ── */
+/*
+ * HYPERPART: grid (extension)
+ *
+ * grid-resize — column resize, an OPTIONAL grid extension on the grid
+ * primitive's seams (promoted from the Dazzle layer, 0.1.26 — Dazzle now
+ * consumes it from here).
+ *
+ * Same idiom as the primitive: delegated document-level pointerdown; the
+ * per-drag window listeners attach at drag start and detach at drag end
+ * (the #795 teardown discipline — nothing leaks between drags). Widths live
+ * on the table's `<col data-col>` elements + localStorage.
+ *
+ * Contract:
+ *   - handle:  `[data-grid-resize="<key>"]` (a decorative span at the
+ *              header's right edge; pointer-only — column width is
+ *              presentational, so there is no keyboard path yet).
+ *   - target:  `col[data-col="<key>"]` in the table's colgroup — resizing
+ *              the col resizes the whole column (header + cells), and cols
+ *              survive tbody-only swaps untouched.
+ *   - width:   clamped 80..800px, snapped to an 8px grid (live during the
+ *              drag), persisted as `localStorage["widths-<root.id>"]`
+ *              ({key: px} — the key dzTable reserved for this feature).
+ *   - state:   `data-resizing` on the root during a drag (CSS: col-resize
+ *              cursor + selection off).
+ *   - NB: the table keeps `table-layout: auto`, so a col width acts as a
+ *              strong hint — content can still push a column wider than a
+ *              too-small width. Honest trade-off; `fixed` would make widths
+ *              exact but reflows every other column on the first drag.
+ */
+(function () {
+  "use strict";
+
+  var drag = null; // {root, key, startX, startWidth} — one drag at a time
+
+  function storageKey(root) {
+    return "widths-" + (root.id || "grid");
+  }
+
+  function readWidths(root) {
+    try {
+      var w = JSON.parse(localStorage.getItem(storageKey(root)) || "{}");
+      return w && typeof w === "object" && !Array.isArray(w) ? w : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writeWidths(root, widths) {
+    try {
+      localStorage.setItem(storageKey(root), JSON.stringify(widths));
+    } catch (e) {
+      /* storage unavailable — resize still works, just doesn't persist */
+    }
+  }
+
+  function colOf(root, key) {
+    return root.querySelector('col[data-col="' + key + '"]');
+  }
+
+  function snapClamp(px) {
+    return Math.round(Math.min(800, Math.max(80, px)) / 8) * 8;
+  }
+
+  function apply(root) {
+    var widths = readWidths(root);
+    for (var key in widths) {
+      var col = colOf(root, key);
+      if (col) col.style.width = widths[key] + "px";
+    }
+  }
+
+  // Drop stored widths whose column no longer exists (the #853 analogue) —
+  // skipped when no cols are present (not-yet-rendered table).
+  function prune(root) {
+    var cols = root.querySelectorAll("col[data-col]");
+    if (!cols.length) return;
+    var present = {};
+    for (var i = 0; i < cols.length; i++) {
+      present[cols[i].getAttribute("data-col")] = true;
+    }
+    var widths = readWidths(root);
+    var cleaned = {};
+    var dropped = false;
+    for (var key in widths) {
+      if (present[key]) cleaned[key] = widths[key];
+      else dropped = true;
+    }
+    if (dropped) writeWidths(root, cleaned);
+  }
+
+  function onMove(evt) {
+    if (!drag) return;
+    var col = colOf(drag.root, drag.key);
+    if (col) {
+      col.style.width =
+        snapClamp(drag.startWidth + (evt.clientX - drag.startX)) + "px";
+    }
+  }
+
+  function onUp(evt) {
+    if (!drag) return;
+    var width = snapClamp(drag.startWidth + (evt.clientX - drag.startX));
+    var col = colOf(drag.root, drag.key);
+    if (col) col.style.width = width + "px";
+    var widths = readWidths(drag.root);
+    widths[drag.key] = width;
+    writeWidths(drag.root, widths);
+    drag.root.removeAttribute("data-resizing");
+    document.body.style.cursor = "";
+    drag = null;
+    // #795: the window listeners live only for the drag.
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("pointercancel", onUp);
+  }
+
+  document.addEventListener("pointerdown", function (evt) {
+    var handle =
+      evt.target &&
+      evt.target.closest &&
+      evt.target.closest("[data-grid-resize]");
+    if (!handle) return;
+    var root = handle.closest("[data-grid]");
+    if (!root) return;
+    var key = handle.getAttribute("data-grid-resize");
+    var col = colOf(root, key);
+    if (!col) return;
+    // Baseline = the column's ACTUAL rendered width. col.offsetWidth reports
+    // it correctly in Chromium + WebKit (verified empirically); the th-rect
+    // fallback covers engines where col boxes don't report, and the 160
+    // sentinel is unreachable in practice (the handle lives inside a th).
+    var th = handle.closest("th");
+    drag = {
+      root: root,
+      key: key,
+      startX: evt.clientX,
+      startWidth:
+        col.offsetWidth ||
+        parseInt(col.style.width, 10) ||
+        (th ? Math.round(th.getBoundingClientRect().width) : 160),
+    };
+    root.setAttribute("data-resizing", "");
+    document.body.style.cursor = "col-resize";
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    // A drag must not select text or start a sort click.
+    evt.preventDefault();
+    evt.stopPropagation();
+  });
+
+  // Re-apply after swaps: cols survive tbody-only swaps, but a full-page
+  // history restore renders a fresh table. Both htmx event-name families.
+  function onSwap() {
+    var grids = document.querySelectorAll("[data-grid]");
+    for (var i = 0; i < grids.length; i++) {
+      if (grids[i].querySelector("[data-grid-resize]")) apply(grids[i]);
+    }
+  }
+  document.addEventListener("htmx:after:swap", onSwap); // htmx 4
+  document.addEventListener("htmx:afterSwap", onSwap); // htmx ≤2
+
+  // Init: prune stale keys, then apply the stored widths.
+  var grids = document.querySelectorAll("[data-grid]");
+  for (var g = 0; g < grids.length; g++) {
+    if (grids[g].querySelector("[data-grid-resize]")) {
+      prune(grids[g]);
+      apply(grids[g]);
+    }
+  }
+})();
+
+/* ── controllers/grid-edit.js ── */
+/*
+ * HYPERPART: grid (extension)
+ *
+ * grid-edit — inline cell editing, an OPTIONAL grid extension on the grid
+ * primitive's seams (promoted from the Dazzle layer, 0.1.26 — Dazzle now
+ * consumes it from here).
+ *
+ * The ratified seam design: the CELL owns its edit affordance; the grid
+ * stays out of the way. One display span per editable cell carries the
+ * contract; the controller builds the editor input on demand, and the typed
+ * BUFFER lives on the grid root (`root._dzEdit`) — out of the morph path —
+ * so an in-flight edit survives a tbody swap (poll refresh, re-sort): the
+ * before-swap hook captures the input's live value, the after-swap hook
+ * re-opens the editor on the (morph-keyed) row and restores the buffer.
+ *
+ * Contract:
+ *   - root:   `[data-grid]` with `data-grid-edit-url` = the entity API
+ *             base; commits PUT `{base}/{rowId}` with a single-field JSON
+ *             body — the entity's STANDARD gated update route (permit +
+ *             scope pre-read + destination-scope + schema validation).
+ *   - cell:   `[data-grid-edit="<col>"]` (the display span) with
+ *             `data-edit-kind` (text|date|bool|select),
+ *             `data-edit-value` (the raw value), `data-edit-label`
+ *             (a11y), and for selects `data-edit-options`
+ *             (JSON [[value,label],…]).
+ *   - open:   dblclick the span (dzTable parity; pointer-first — a keyboard
+ *             entry point is tracked follow-up work).
+ *   - keys:   Enter commits (text/date), Escape cancels, Tab / Shift-Tab
+ *             commits then advances to the next/previous editable cell
+ *             (wrapping to the adjacent row); bool/select commit on change.
+ *   - state:  `is-saving` / `is-error` classes on the row (the same classes
+ *             the Alpine `:class` bind used); a failed commit keeps the
+ *             editor open with the server error in its `title`.
+ *   - after a successful commit the controller fires `grid:refresh` on
+ *             the tbody — the server re-renders rows, so rich display chrome
+ *             (badges, dates) stays server-owned.
+ */
+(function () {
+  "use strict";
+
+  function rootOf(el) {
+    return el.closest ? el.closest("[data-grid]") : null;
+  }
+
+  function cellSpan(root, rowId, colKey) {
+    var row = root.querySelector('[data-row-id="' + rowId + '"]');
+    return row && row.querySelector('[data-grid-edit="' + colKey + '"]');
+  }
+
+  function buildEditor(edit) {
+    var el;
+    if (edit.kind === "bool") {
+      el = document.createElement("input");
+      el.type = "checkbox";
+      el.className = "inline-edit-checkbox";
+      el.checked = edit.value === "true";
+    } else if (edit.kind === "select") {
+      el = document.createElement("select");
+      el.className = "inline-edit-input inline-edit-select";
+      var opts = [];
+      try {
+        opts = JSON.parse(edit.options || "[]");
+      } catch (e) {
+        opts = [];
+      }
+      for (var i = 0; i < opts.length; i++) {
+        var o = document.createElement("option");
+        o.value = String(opts[i][0]);
+        o.textContent = String(opts[i][1]);
+        if (String(opts[i][0]) === edit.value) o.selected = true;
+        el.appendChild(o);
+      }
+    } else {
+      el = document.createElement("input");
+      el.type = edit.kind === "date" ? "date" : "text";
+      el.className = "inline-edit-input";
+      el.value = edit.value;
+    }
+    el.setAttribute("data-grid-editor", "");
+    el.setAttribute("aria-label", "Edit " + (edit.label || edit.colKey));
+    return el;
+  }
+
+  // Project the root's edit state into the DOM: hide the display span, put
+  // the editor next to it, focus. Returns false when the target cell is gone
+  // (e.g. the row was filtered away by the swap that interrupted the edit).
+  function openEditor(root) {
+    var edit = root._dzEdit;
+    if (!edit) return false;
+    var span = cellSpan(root, edit.rowId, edit.colKey);
+    if (!span) return false;
+    var editor = buildEditor(edit);
+    span.style.display = "none";
+    span.parentNode.insertBefore(editor, span.nextSibling);
+    editor.focus();
+    if (editor.select && edit.kind === "text") editor.select();
+    return true;
+  }
+
+  function closeEditor(root) {
+    var editor = root.querySelector("[data-grid-editor]");
+    if (editor) {
+      var span = editor.previousSibling;
+      editor.parentNode.removeChild(editor);
+      if (span && span.style) span.style.display = "";
+    }
+    root._dzEdit = null;
+  }
+
+  function editorValue(editor, kind) {
+    return kind === "bool" ? String(editor.checked) : editor.value;
+  }
+
+  function rowOf(root, rowId) {
+    return root.querySelector('[data-row-id="' + rowId + '"]');
+  }
+
+  // The row's editable columns, in DOM order — Tab-advance derives the ring
+  // from the markup itself (no config list to drift).
+  function editableKeys(root, rowId) {
+    var row = rowOf(root, rowId);
+    if (!row) return [];
+    var spans = row.querySelectorAll("[data-grid-edit]");
+    var keys = [];
+    for (var i = 0; i < spans.length; i++) {
+      keys.push(spans[i].getAttribute("data-grid-edit"));
+    }
+    return keys;
+  }
+
+  function nextEditable(root, rowId, colKey, direction) {
+    var keys = editableKeys(root, rowId);
+    var at = keys.indexOf(colKey);
+    if (at < 0) return null;
+    if (direction === "next" && at < keys.length - 1) {
+      return { rowId: rowId, colKey: keys[at + 1] };
+    }
+    if (direction === "prev" && at > 0) {
+      return { rowId: rowId, colKey: keys[at - 1] };
+    }
+    // Wrap to the adjacent row's first/last editable cell.
+    var rows = root.querySelectorAll("[data-row-id]");
+    var ids = [];
+    for (var i = 0; i < rows.length; i++) {
+      ids.push(rows[i].getAttribute("data-row-id"));
+    }
+    var rowAt = ids.indexOf(rowId);
+    if (direction === "next" && rowAt >= 0 && rowAt < ids.length - 1) {
+      var nk = editableKeys(root, ids[rowAt + 1]);
+      return nk.length ? { rowId: ids[rowAt + 1], colKey: nk[0] } : null;
+    }
+    if (direction === "prev" && rowAt > 0) {
+      var pk = editableKeys(root, ids[rowAt - 1]);
+      return pk.length
+        ? { rowId: ids[rowAt - 1], colKey: pk[pk.length - 1] }
+        : null;
+    }
+    return null;
+  }
+
+  function startEdit(root, span) {
+    if (root._dzEdit) closeEditor(root); // one edit at a time
+    var row = span.closest("[data-row-id]");
+    if (!row) return;
+    root._dzEdit = {
+      rowId: row.getAttribute("data-row-id"),
+      colKey: span.getAttribute("data-grid-edit"),
+      kind: span.getAttribute("data-edit-kind") || "text",
+      value: span.getAttribute("data-edit-value") || "",
+      label: span.getAttribute("data-edit-label") || "",
+      options: span.getAttribute("data-edit-options") || "",
+    };
+    openEditor(root);
+  }
+
+  function commit(root, value, andThen) {
+    var edit = root._dzEdit;
+    if (!edit || edit.saving) return;
+    edit.saving = true;
+    var row = rowOf(root, edit.rowId);
+    if (row) {
+      row.classList.add("is-saving");
+      row.classList.remove("is-error");
+    }
+    var base = root.getAttribute("data-grid-edit-url") || "";
+    // Commit through the entity's STANDARD update route (PUT, all-optional
+    // update schema + exclude_unset = partial update) with a single-field
+    // JSON body — full RBAC (permit + scope pre-read + #1312 destination
+    // scope), storage verification, and schema validation for free. (The old
+    // dzTable posted a bespoke /field/ route that was never mounted.)
+    var payload = {};
+    payload[edit.colKey] = edit.kind === "bool" ? value === "true" : value;
+    // Raw fetch bypasses csrf.js (which wires the token onto htmx requests
+    // only), so echo the double-submit cookie here — without it the commit
+    // 403s wherever the Sec-Fetch-Site origin gate is absent (Safari <16.4).
+    var csrf =
+      (document.cookie.match(/(?:^|; )dazzle_csrf=([^;]*)/) || [])[1] || "";
+    var headers = { "Content-Type": "application/json" };
+    if (csrf) headers["X-CSRF-Token"] = decodeURIComponent(csrf);
+    fetch(base + "/" + encodeURIComponent(edit.rowId), {
+      method: "PUT",
+      headers: headers,
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    })
+      .then(function (resp) {
+        if (row) row.classList.remove("is-saving");
+        if (!resp.ok) {
+          return resp.text().then(function (text) {
+            edit.saving = false;
+            if (row) row.classList.add("is-error");
+            var editor = root.querySelector("[data-grid-editor]");
+            if (editor) editor.title = text || "Error " + resp.status;
+            return;
+          });
+        }
+        closeEditor(root);
+        // Server-owned rendering: refresh the rows so badge/date chrome is
+        // re-rendered rather than patched client-side.
+        var body = root.querySelector("[data-grid-body]");
+        if (body) {
+          body.dispatchEvent(
+            new CustomEvent("grid:refresh", { bubbles: true }),
+          );
+        }
+        if (andThen) andThen();
+      })
+      .catch(function (err) {
+        edit.saving = false;
+        if (row) {
+          row.classList.remove("is-saving");
+          row.classList.add("is-error");
+        }
+        var editor = root.querySelector("[data-grid-editor]");
+        if (editor) editor.title = (err && err.message) || "Network error";
+      });
+  }
+
+  document.addEventListener("dblclick", function (evt) {
+    var span =
+      evt.target &&
+      evt.target.closest &&
+      evt.target.closest("[data-grid-edit]");
+    if (!span) return;
+    var root = rootOf(span);
+    if (!root || !root.hasAttribute("data-grid-edit-url")) return;
+    startEdit(root, span);
+  });
+
+  document.addEventListener("change", function (evt) {
+    var t = evt.target;
+    if (!t || !t.matches || !t.matches("[data-grid-editor]")) return;
+    var root = rootOf(t);
+    if (!root || !root._dzEdit) return;
+    var kind = root._dzEdit.kind;
+    // bool / select / date commit on change (dzTable parity); text commits
+    // on Enter/Tab so a blur-out mid-thought doesn't write.
+    if (kind === "bool" || kind === "select" || kind === "date") {
+      commit(root, editorValue(t, kind));
+    }
+  });
+
+  document.addEventListener("keydown", function (evt) {
+    var t = evt.target;
+    if (!t || !t.matches || !t.matches("[data-grid-editor]")) return;
+    var root = rootOf(t);
+    if (!root || !root._dzEdit) return;
+    var edit = root._dzEdit;
+    if (evt.key === "Escape") {
+      evt.preventDefault();
+      closeEditor(root);
+    } else if (evt.key === "Enter" && edit.kind !== "select") {
+      evt.preventDefault();
+      commit(root, editorValue(t, edit.kind));
+    } else if (evt.key === "Tab") {
+      evt.preventDefault();
+      var target = nextEditable(
+        root,
+        edit.rowId,
+        edit.colKey,
+        evt.shiftKey ? "prev" : "next",
+      );
+      commit(root, editorValue(t, edit.kind), function () {
+        if (!target) return;
+        var span = cellSpan(root, target.rowId, target.colKey);
+        if (span) startEdit(root, span);
+      });
+    }
+  });
+
+  // Morph safety: capture the live buffer before a swap replaces the editor,
+  // re-project it after. If the row is gone (filtered away), the edit drops.
+  function onBeforeSwap() {
+    var grids = document.querySelectorAll("[data-grid]");
+    for (var i = 0; i < grids.length; i++) {
+      var edit = grids[i]._dzEdit;
+      if (!edit) continue;
+      var editor = grids[i].querySelector("[data-grid-editor]");
+      if (editor) edit.value = editorValue(editor, edit.kind);
+    }
+  }
+  document.addEventListener("htmx:before:swap", onBeforeSwap); // htmx 4
+  document.addEventListener("htmx:beforeSwap", onBeforeSwap); // htmx ≤2
+
+  function onAfterSwap() {
+    var grids = document.querySelectorAll("[data-grid]");
+    for (var i = 0; i < grids.length; i++) {
+      var edit = grids[i]._dzEdit;
+      if (!edit || edit.saving) continue;
+      // The swap destroyed the editor element; re-open on the morph-keyed
+      // row with the captured buffer (or drop if the row vanished).
+      var stale = grids[i].querySelector("[data-grid-editor]");
+      if (stale) stale.parentNode.removeChild(stale);
+      if (!openEditor(grids[i])) grids[i]._dzEdit = null;
+    }
+  }
+  document.addEventListener("htmx:after:swap", onAfterSwap); // htmx 4
+  document.addEventListener("htmx:afterSwap", onAfterSwap); // htmx ≤2
 })();

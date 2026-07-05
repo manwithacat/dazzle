@@ -62,6 +62,7 @@ def anatomy(hp_id: str) -> dict:
         "exchanges": [f"{e.method} {e.endpoint}" for e in hp.exchanges],
         "styles": [s for s in sites if ".css" in s],
         "controller": hp.controller,
+        "extensions": list(hp.extensions),
         "mock": hp.mock,
     }
 
@@ -73,6 +74,7 @@ def _print(hp_id: str) -> None:
     print(f"  exchanges   {', '.join(a['exchanges']) or '—'}")
     print(f"  styles      {', '.join(a['styles']) or '(no HYPERPART marker yet)'}")
     print(f"  controller  {a['controller'] or '—'}")
+    print(f"  extensions  {', '.join(a['extensions']) or '—'}")
     print(f"  mock        {a['mock'] or '—'}")
 
 

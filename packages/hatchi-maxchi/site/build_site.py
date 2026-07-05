@@ -83,6 +83,7 @@ def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     parts = ["<code>site/registry.py</code>"]
     parts += [f"<code>{_html.escape(s)}</code>" for s in a["styles"]]
     parts.append(f"<code>{_html.escape(a['controller'])}</code>")
+    parts += [f"<code>{_html.escape(e)}</code>" for e in a["extensions"]]
     if a["mock"]:
         parts.append(f"mock <code>{_html.escape(a['mock'])}</code>")
     return (
@@ -278,15 +279,34 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     var pg = gridPaging(q, rows.length);
     var start = (pg.page - 1) * pg.size;
     // Zero rows → empty tbody, so the `:has(tbody tr td)` empty-state shows.
+    // Editable cells emit the inline-edit seam: ONE display span per cell
+    // carrying kind/value/label (+ options for selects). The dz-grid-edit
+    // extension builds the editor on dblclick and commits a single-field PUT
+    // to the root's data-dz-grid-edit-url; cells stay server-rendered.
+    function editSpan(col, kind, value, label, options) {
+      return '<span class="dz-tr-cell-display" data-dz-grid-edit="' + col + '" ' +
+        'data-dz-edit-kind="' + kind + '" data-dz-edit-value="' + htmlEnc(value) + '" ' +
+        'data-dz-edit-label="' + label + '"' +
+        (options ? ' data-dz-edit-options="' + htmlEnc(JSON.stringify(options)) + '"' : "") +
+        ">" + htmlEnc(value) + "</span>";
+    }
+    var PLAN_OPTIONS = [["Free", "Free"], ["Pro", "Pro"], ["Team", "Team"],
+      ["Enterprise", "Enterprise"]];
     return rows.slice(start, start + pg.size).map(function (r) {
       var id = htmlEnc(r.id), name = htmlEnc(r.first + " " + r.last);
-      return '<tr class="dz-tr-row" id="dz-grid-row-' + id + '">' +
+      // data-dz-col on every data cell = the column-visibility target;
+      // data-dz-row-id on the tr = the extensions' row anchor (Dazzle parity).
+      return '<tr class="dz-tr-row" id="dz-grid-row-' + id + '" data-dz-row-id="' + id + '">' +
         '<td class="dz-tr-checkbox-cell"><input type="checkbox" class="dz-tr-checkbox" ' +
         'data-dz-grid-select data-dz-grid-row-id="' + id + '" aria-label="Select ' + name + '"></td>' +
-        '<td class="dz-tr-cell">' + htmlEnc(r.first) + '</td>' +
-        '<td class="dz-tr-cell">' + htmlEnc(r.last) + '</td>' +
-        '<td class="dz-tr-cell">' + htmlEnc(r.plan) + '</td>' +
-        '<td class="dz-tr-cell">' + htmlEnc(r.signed) + '</td></tr>';
+        '<td class="dz-tr-cell" data-dz-col="first">' +
+        editSpan("first", "text", r.first, "First name") + '</td>' +
+        '<td class="dz-tr-cell" data-dz-col="last">' +
+        editSpan("last", "text", r.last, "Last name") + '</td>' +
+        '<td class="dz-tr-cell" data-dz-col="plan">' +
+        editSpan("plan", "select", r.plan, "Plan", PLAN_OPTIONS) + '</td>' +
+        '<td class="dz-tr-cell" data-dz-col="signed">' +
+        editSpan("signed", "date", r.signed, "Signed up") + '</td></tr>';
     }).join("");
   }
   // The server renders the pagination footer too (state-in-DOM: the page
@@ -456,6 +476,29 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     el.classList.remove("htmx-request");
     fire(el, "htmx:after:request", { elt: el });
   }
+
+  // Inline-edit commits (dz-grid-edit.js) use a raw fetch — a PUT to the
+  // entity's STANDARD update route with a single-field JSON body — not an
+  // htmx exchange, so the mock intercepts window.fetch for /mock/grid/<id>.
+  // A real server runs its full update gate (RBAC, scope, validation) here.
+  var realFetch = window.fetch ? window.fetch.bind(window) : null;
+  window.fetch = function (url, opts) {
+    var m = typeof url === "string" && url.match(/^\\/mock\\/grid\\/([^/?]+)$/);
+    if (m && opts && String(opts.method).toUpperCase() === "PUT") {
+      var patch = {};
+      try { patch = JSON.parse(opts.body || "{}"); } catch (e) { patch = {}; }
+      var hit = null;
+      GRID_ROWS.forEach(function (r) { if (r.id === decodeURIComponent(m[1])) hit = r; });
+      if (!hit) return Promise.resolve(new Response("{}", { status: 404 }));
+      Object.keys(patch).forEach(function (k) {
+        if (k in hit) hit[k] = String(patch[k]);
+      });
+      return Promise.resolve(new Response("{}", {
+        status: 200, headers: { "Content-Type": "application/json" }
+      }));
+    }
+    return realFetch ? realFetch(url, opts) : Promise.reject(new Error("no fetch"));
+  };
 
   // dz-grid:refresh — a custom event the grid controller fires on the tbody
   // after a sort/filter change (real htmx catches it via the tbody's hx-trigger;
