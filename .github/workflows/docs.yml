@@ -10,9 +10,13 @@ permissions:
   pages: write
   id-token: write
 
+# Queue Pages deployments, don't cancel: cancelling a deploy mid-flight can
+# leave the Pages pipeline in a state that fails the next attempt with
+# "Deployment failed, try again later" (GitHub's recommended setting for
+# deployment concurrency — matches packages/hatchi-maxchi/.github/workflows/pages.yml).
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
