@@ -1085,11 +1085,15 @@ HYPERPARTS: list[Hyperpart] = [
         '<button type="button" class="dz-icon-button" aria-label="Notifications">'
         "{svg:triangle-alert}</button></div>"
         "</div></header>"
-        '<main class="dz-app-main" id="main-content">'
+        # a <div> here, NOT <main>: this demo embeds in the gallery page,
+        # which already has its own <main> (one visible main per document).
+        # In a real app the workspace slot IS <main id="main-content"> —
+        # the saas-shell Blueprint (its own document) shows the true form.
+        '<div class="dz-app-main">'
         '<p class="hm-demo-muted">The routed workspace. The hamburger collapses '
         "the sidebar; the state persists via a cookie so the server renders it "
         "correctly on the next request.</p>"
-        "</main></div></div>",
+        "</div></div></div>",
         notes="The shell root carries <code>data-dz-sidebar=&quot;open|closed&quot;</code> "
         "— SERVER-rendered from the <code>dz_sidebar</code> cookie, so first "
         "paint is correct with no flash; <code>dz-app-shell.js</code> flips the "
@@ -1102,12 +1106,116 @@ HYPERPARTS: list[Hyperpart] = [
         "primitives inside stay media-query-free). The demo above sits in a "
         "device frame the GALLERY adds (a transformed box contains the "
         "fixed-position sidebar) — the snippet below is the pure, copyable "
-        "shell markup. The full motif — routed "
+        "shell markup, with one embedding concession: the workspace slot is "
+        "a <code>&lt;div&gt;</code> here because this demo lives inside the "
+        "gallery's own <code>&lt;main&gt;</code>; in your app it is "
+        "<code>&lt;main id=&quot;main-content&quot;&gt;</code> (one visible "
+        "main per document — the Blueprint shows the true form). The full "
+        "motif — routed "
         "navigation swapping the main slot — is the "
         '<a href="blueprints/saas-shell.html">saas-shell Blueprint</a>.',
         tags=("composite", "shell"),
         controller="controllers/dz-app-shell.js",
         framed=True,
+    ),
+    Hyperpart(
+        "status-list",
+        "Status list",
+        "Data",
+        "System / check states as an icon + title + caption list — tone rides "
+        "data-dz-state per row, never colour alone.",
+        '<div class="dz-status-list-region hm-measure-lg">'
+        '<ul class="dz-status-list" data-dz-entry-count="3">'
+        '<li class="dz-status-list-entry" data-dz-state="success">'
+        '<span class="dz-status-list-icon" aria-hidden="true">{svg:circle-check}</span>'
+        '<div class="dz-status-list-text">'
+        '<div class="dz-status-list-title">Payments API</div>'
+        '<div class="dz-status-list-caption">Operational · 99.99% this month</div></div>'
+        '<span class="dz-status-list-pill">success</span></li>'
+        '<li class="dz-status-list-entry" data-dz-state="warning">'
+        '<span class="dz-status-list-icon" aria-hidden="true">{svg:triangle-alert}</span>'
+        '<div class="dz-status-list-text">'
+        '<div class="dz-status-list-title">Webhooks</div>'
+        '<div class="dz-status-list-caption">Elevated retries since 09:20</div></div>'
+        '<span class="dz-status-list-pill">warning</span></li>'
+        '<li class="dz-status-list-entry" data-dz-state="neutral">'
+        '<span class="dz-status-list-icon-spacer" aria-hidden="true"></span>'
+        '<div class="dz-status-list-text">'
+        '<div class="dz-status-list-title">Nightly export</div>'
+        '<div class="dz-status-list-caption">Scheduled 02:00</div></div></li>'
+        "</ul></div>",
+        notes="Per-row state is <code>data-dz-state</code> on the entry (the "
+        "pill repeats it as text for WCAG 1.4.1); a neutral row has no pill "
+        "and an icon SPACER keeps the text column aligned. The wrapper's "
+        "<code>data-dz-entry-count</code> is the server's row count — "
+        "handy for e2e assertions without counting DOM.",
+        tags=("data",),
+    ),
+    Hyperpart(
+        "action-grid",
+        "Action grid",
+        "Data",
+        "Tone-tinted CTA cards with a count badge — the dashboard's "
+        "'what needs doing' surface. Cards with a URL are anchors; the grid "
+        "packs intrinsically.",
+        '<div class="dz-action-grid-region">'
+        '<div class="dz-action-grid">'
+        '<a class="dz-action-card" data-dz-tone="warning" href="#">'
+        '<div class="dz-action-card-row">'
+        '<span class="dz-action-card-icon">{svg:triangle-alert}</span>'
+        '<span class="dz-action-card-count" data-dz-tone-badge="warning">3</span></div>'
+        '<span class="dz-action-card-label">Overdue invoices</span></a>'
+        '<a class="dz-action-card" data-dz-tone="accent" href="#">'
+        '<div class="dz-action-card-row">'
+        '<span class="dz-action-card-icon">{svg:receipt}</span>'
+        '<span class="dz-action-card-count" data-dz-tone-badge="accent">12</span></div>'
+        '<span class="dz-action-card-label">Awaiting approval</span></a>'
+        '<div class="dz-action-card" data-dz-tone="neutral">'
+        '<div class="dz-action-card-row">'
+        '<span class="dz-action-card-icon-spacer"></span></div>'
+        '<span class="dz-action-card-label">Nothing else today</span></div>'
+        "</div></div>",
+        notes="Tone tints the card surface via <code>data-dz-tone</code> and "
+        "the count badge via <code>data-dz-tone-badge</code>. A URL makes "
+        "the card an <code>&lt;a&gt;</code> (whole card = the target); "
+        "without one it renders a static <code>&lt;div&gt;</code>. An icon "
+        "SPACER holds the row height when a card has no icon.",
+        tags=("data",),
+    ),
+    Hyperpart(
+        "queue",
+        "Queue",
+        "Data",
+        "The worklist: a count, roll-up metrics, and attention-flagged rows — "
+        "the triage surface for SLA-driven work.",
+        '<div class="dz-queue-region hm-measure-lg">'
+        '<div class="dz-queue-count-row">'
+        '<span class="dz-queue-count">7</span><span>open items</span></div>'
+        '<div class="dz-queue-metrics">'
+        '<div class="dz-queue-metric">'
+        '<div class="dz-queue-metric-value">2</div>'
+        '<div class="dz-queue-metric-label">breaching today</div></div>'
+        '<div class="dz-queue-metric">'
+        '<div class="dz-queue-metric-value">4h</div>'
+        '<div class="dz-queue-metric-label">median age</div></div></div>'
+        '<ul class="dz-queue-rows">'
+        '<li class="dz-queue-row" data-dz-attn="critical">'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">Refund request — Acme</span></div>'
+        '<p class="dz-queue-row-attn">SLA breaches at 16:00 — assign now.</p>'
+        '<span class="dz-queue-row-date">2h left</span></div></li>'
+        '<li class="dz-queue-row">'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">KYC review — Globex</span></div>'
+        '<span class="dz-queue-row-date">due tomorrow</span></div></li>'
+        "</ul></div>",
+        notes="Attention rows carry <code>data-dz-attn=&quot;&lt;level&gt;&quot;</code> "
+        "plus a human message (<code>dz-queue-row-attn</code>) — the flag is "
+        "never colour-only. Counts and metrics are SERVER-rendered rollups "
+        "(the same query that produced the rows, so they can't disagree).",
+        tags=("data",),
     ),
     # ── Primitives ───────────────────────────────────────────────────
     Hyperpart(

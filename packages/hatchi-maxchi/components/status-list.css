@@ -1,0 +1,119 @@
+/* HYPERPART: status-list */
+/* Promoted VERBATIM from Dazzle regions.css (W1, fleet convergence).
+ * The Dazzle emitter contract predates the move and is unchanged. */
+
+/* ─────────────────────────── status_list region ─────────────────
+ * Vertical list of icon + title + caption + state pill rows.
+ * Pill colour keys off data-dz-state on the row (positive /
+ * warning / destructive / accent / neutral). Pill is omitted for
+ * neutral entries — the row reads as plain info rather than a
+ * status row. */
+
+.dz-status-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0;
+}
+
+.dz-status-list > li + li {
+  border-block-start: 1px solid var(--colour-border);
+}
+
+.dz-status-list-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding-block: var(--space-md);
+}
+
+.dz-status-list-entry:first-child {
+  padding-block-start: 0.25rem;
+}
+
+.dz-status-list-entry:last-child {
+  padding-block-end: 0.25rem;
+}
+
+.dz-status-list-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-block-start: 0.125rem;
+  flex-shrink: 0;
+}
+
+.dz-status-list-icon-spacer {
+  width: 1.25rem;
+  flex-shrink: 0;
+}
+
+.dz-status-list-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dz-status-list-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
+}
+
+.dz-status-list-caption {
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.dz-status-list-pill {
+  flex-shrink: 0;
+  padding-inline: var(--space-sm);
+  padding-block: 0.125rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* State tints (moved from Dazzle dz-tones.css with the component). */
+.dz-status-list-entry[data-dz-state="positive"] .dz-status-list-pill {
+  background: var(--colour-success-soft);
+  color: var(--colour-success);
+}
+.dz-status-list-entry[data-dz-state="warning"] .dz-status-list-pill {
+  background: var(--colour-warning-soft);
+  color: var(--colour-warning);
+}
+.dz-status-list-entry[data-dz-state="destructive"] .dz-status-list-pill {
+  background: var(--colour-danger-soft);
+  color: var(--colour-danger);
+}
+.dz-status-list-entry[data-dz-state="accent"] .dz-status-list-pill {
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand);
+}
+
+/* Icon colour matches the state. Neutral entries fall back to the
+ * default muted-foreground. */
+.dz-status-list-entry[data-dz-state="positive"] .dz-status-list-icon {
+  color: var(--colour-success);
+}
+.dz-status-list-entry[data-dz-state="warning"] .dz-status-list-icon {
+  color: var(--colour-warning);
+}
+.dz-status-list-entry[data-dz-state="destructive"] .dz-status-list-icon {
+  color: var(--colour-danger);
+}
+.dz-status-list-entry[data-dz-state="accent"] .dz-status-list-icon {
+  color: var(--colour-brand);
+}
+.dz-status-list-entry[data-dz-state="neutral"] .dz-status-list-icon,
+.dz-status-list-entry:not([data-dz-state]) .dz-status-list-icon {
+  color: var(--colour-text-muted);
+}

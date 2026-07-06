@@ -51,6 +51,12 @@ SEMANTIC_ONLY = {
     # the resize/visibility extensions can address data cols by exclusion —
     # the table stays layout:auto, so the col itself needs no width rule.
     "dz-table-col-select",
+    # region-body wrappers (W1): the workspace card slot provides the box;
+    # these wrappers are the emitters' structural anchors and have never
+    # carried rules (verbatim from Dazzle, where they were also rule-less).
+    "dz-status-list-region",
+    "dz-action-grid-region",
+    "dz-queue-region",
 }
 
 

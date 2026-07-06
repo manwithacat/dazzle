@@ -1,0 +1,189 @@
+/* HYPERPART: action-grid */
+/* Promoted VERBATIM from Dazzle regions.css (W1, fleet convergence).
+ * The Dazzle emitter contract predates the move and is unchanged. */
+
+/* ─────────────────────────── action_grid region ─────────────────
+ * Responsive 1/2/3-col grid of CTA cards. Each card carries a
+ * label, optional icon, optional count badge — and a tone token
+ * (positive / warning / destructive / accent / neutral) routed
+ * through dz-tones.css via data-dz-tone / data-dz-tone-badge
+ * (unchanged). The hover/cursor affordance is gated on the
+ * <a>-vs-<div> wrapper choice in the template; the .dz-action-card
+ * rule covers the shared shape. */
+
+.dz-action-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  margin-block-start: var(--space-sm);
+}
+
+@media (min-width: 40rem) {
+  .dz-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .dz-action-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.dz-action-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  text-decoration: none;
+  color: var(--colour-text);
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+a.dz-action-card {
+  cursor: pointer;
+}
+
+a.dz-action-card:hover {
+  background: var(--colour-bg);
+}
+
+.dz-action-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.dz-action-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--colour-text-muted);
+}
+
+.dz-action-card-icon-spacer {
+  width: 1.25rem;
+  /* height too — a label-only card (no icon, no count) otherwise
+   * collapses its row to 0 height (the zero-paint gate's catch; the
+   * bug shipped in Dazzle for as long as the spacer existed). */
+  height: 1.25rem;
+  display: inline-block;
+}
+
+.dz-action-card-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding-inline: var(--space-sm);
+  padding-block: 0.125rem;
+  border-radius: var(--radius-full);
+}
+
+.dz-action-card-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  line-height: var(--leading-tight);
+}
+
+/* Tone tints (moved from Dazzle dz-tones.css with the component —
+ * the tinting IS the component's point). */
+/* v0.61.74 (#906 cleanup): action_grid was the second template using
+ * the buried-dynamic-class pattern. Card surface tint + count-badge
+ * tint both route via `data-dz-tone` / `data-dz-tone-badge`.
+ * Hardcoded `hsl(145,55%,45%)` / `hsl(40,90%,55%)` literals in the
+ * template are gone — both now use design-system slots so theming
+ * applies. */
+
+.dz-action-card[data-dz-tone="positive"] {
+  border-color: var(--colour-success-soft);
+  background: var(--colour-success-soft);
+}
+.dz-action-card[data-dz-tone="positive"]:hover {
+  background: var(--colour-success-soft);
+}
+.dz-action-card[data-dz-tone="warning"] {
+  border-color: var(--colour-warning-soft);
+  background: var(--colour-warning-soft);
+}
+.dz-action-card[data-dz-tone="warning"]:hover {
+  background: var(--colour-warning-soft);
+}
+.dz-action-card[data-dz-tone="destructive"] {
+  border-color: var(--colour-danger-soft);
+  background: var(--colour-danger-soft);
+}
+.dz-action-card[data-dz-tone="destructive"]:hover {
+  background: var(--colour-danger-soft);
+}
+.dz-action-card[data-dz-tone="accent"] {
+  border-color: var(--colour-brand-soft);
+  background: var(--colour-brand-soft);
+}
+.dz-action-card[data-dz-tone="accent"]:hover {
+  background: var(--colour-brand-soft);
+}
+.dz-action-card[data-dz-tone="neutral"],
+.dz-action-card:not([data-dz-tone]) {
+  border-color: var(--colour-border);
+  background: var(--colour-surface);
+}
+.dz-action-card[data-dz-tone="neutral"]:hover,
+.dz-action-card:not([data-dz-tone]):hover {
+  background: color-mix(in oklab, var(--colour-surface-muted) 40%, transparent);
+}
+
+/* Count-badge tints — same five tones, slightly different opacities
+ * so the badge reads as denser than the card surface. */
+.dz-action-card-count[data-dz-tone-badge="positive"] {
+  background: var(--colour-success-soft);
+  color: var(--colour-success);
+}
+.dz-action-card-count[data-dz-tone-badge="warning"] {
+  background: var(--colour-warning-soft);
+  color: var(--colour-warning);
+}
+.dz-action-card-count[data-dz-tone-badge="destructive"] {
+  background: var(--colour-danger-soft);
+  color: var(--colour-danger);
+}
+.dz-action-card-count[data-dz-tone-badge="accent"] {
+  background: var(--colour-brand-soft);
+  /* the scheme-aware TEXT token (brand-600 light / brand-300 dark) —
+   * raw --colour-brand fails contrast on the dark soft tint (axe). */
+  color: var(--colour-brand-text);
+}
+.dz-action-card-count[data-dz-tone-badge="neutral"],
+.dz-action-card-count:not([data-dz-tone-badge]) {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text-muted);
+}
+
+/* ── Metric delta arrow colour (#884 / sibling #906 cleanup) ──────── */
+/* v0.61.74: the period-over-period delta arrow used to compute its
+ * tone via a dynamic Tailwind class string. Now driven by
+ * `data-dz-delta-tone` matching the standard tone palette. The
+ * hardcoded `hsl(142 76% 36%)` literal is gone — `--success` is the
+ * canonical green slot. */
+
+.dz-metric-delta[data-dz-delta-tone="positive"] {
+  color: var(--colour-success);
+}
+.dz-metric-delta[data-dz-delta-tone="destructive"] {
+  color: var(--colour-danger);
+}
+.dz-metric-delta[data-dz-delta-tone="neutral"],
+.dz-metric-delta:not([data-dz-delta-tone]) {
+  color: var(--colour-text-muted);
+}
+
+/* ── Status list pill + icon colour (#3 / roadmap #3) ─────────────── */
+
+/* Pill backgrounds (rendered only for non-neutral states; neutral
+ * entries omit the pill via template branch). */

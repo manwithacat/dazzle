@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.105] - 2026-07-06
+
+### Added
+- **Fleet convergence W1** (HM 0.1.35 → 0.1.36): three workspace-region
+  families promoted verbatim into HM as Hyperparts with gallery demos —
+  **status-list** (per-row `data-dz-state` + pill text + icon-spacer
+  alignment), **action-grid** (tone-tinted CTA cards, anchor-vs-div,
+  count badges), and **queue** (count row, rollup metrics,
+  `data-dz-attn` attention rows with a human message). Their tone/state
+  tint rules moved WITH them out of `dz-tones.css` — the tinting is the
+  component's point.
+
+### Fixed
+- Two real fleet bugs the HM gates caught on the components' first
+  gallery exposure: the action-card icon SPACER had width but no height
+  (label-only cards collapsed their row — shipped that way for as long
+  as the spacer existed; zero-paint gate), and the promoted tint recipes
+  failed WCAG contrast (raw `color-mix` tints vs the engineered
+  `-soft`/text token pairs the badge Hyperpart uses — axe gate; the
+  accent badge additionally needed the scheme-aware `--colour-brand-text`
+  in dark). Demo-fidelity review also corrected the queue demo to the
+  emitter's true contract (`data-dz-attn="<level>"`, the `row-main`
+  wrapper that makes title ellipsis work, date outside the headline) and
+  wrapped demo icons in their class-bearing containers.
+- The app-shell index demo no longer nests a `<main>` inside the
+  gallery's own `<main>` (three Nu validity errors on the standalone) —
+  the embedded demo uses a `<div>` with the true contract documented;
+  the Blueprint (its own document) shows the real form.
+
 ## [0.93.104] - 2026-07-06
 
 ### Added

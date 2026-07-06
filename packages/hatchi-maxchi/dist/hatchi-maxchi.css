@@ -5912,6 +5912,495 @@ summary.table-col-menu-trigger::-webkit-details-marker {
 }
 
 }
+/* ── components/status-list.css ── */
+@layer components {
+/* HYPERPART: status-list */
+/* Promoted VERBATIM from Dazzle regions.css (W1, fleet convergence).
+ * The Dazzle emitter contract predates the move and is unchanged. */
+
+/* ─────────────────────────── status_list region ─────────────────
+ * Vertical list of icon + title + caption + state pill rows.
+ * Pill colour keys off data-state on the row (positive /
+ * warning / destructive / accent / neutral). Pill is omitted for
+ * neutral entries — the row reads as plain info rather than a
+ * status row. */
+
+.status-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0;
+}
+
+.status-list > li + li {
+  border-block-start: 1px solid var(--colour-border);
+}
+
+.status-list-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding-block: var(--space-md);
+}
+
+.status-list-entry:first-child {
+  padding-block-start: 0.25rem;
+}
+
+.status-list-entry:last-child {
+  padding-block-end: 0.25rem;
+}
+
+.status-list-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-block-start: 0.125rem;
+  flex-shrink: 0;
+}
+
+.status-list-icon-spacer {
+  width: 1.25rem;
+  flex-shrink: 0;
+}
+
+.status-list-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.status-list-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
+}
+
+.status-list-caption {
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.status-list-pill {
+  flex-shrink: 0;
+  padding-inline: var(--space-sm);
+  padding-block: 0.125rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* State tints (moved from Dazzle tones.css with the component). */
+.status-list-entry[data-state="positive"] .status-list-pill {
+  background: var(--colour-success-soft);
+  color: var(--colour-success);
+}
+.status-list-entry[data-state="warning"] .status-list-pill {
+  background: var(--colour-warning-soft);
+  color: var(--colour-warning);
+}
+.status-list-entry[data-state="destructive"] .status-list-pill {
+  background: var(--colour-danger-soft);
+  color: var(--colour-danger);
+}
+.status-list-entry[data-state="accent"] .status-list-pill {
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand);
+}
+
+/* Icon colour matches the state. Neutral entries fall back to the
+ * default muted-foreground. */
+.status-list-entry[data-state="positive"] .status-list-icon {
+  color: var(--colour-success);
+}
+.status-list-entry[data-state="warning"] .status-list-icon {
+  color: var(--colour-warning);
+}
+.status-list-entry[data-state="destructive"] .status-list-icon {
+  color: var(--colour-danger);
+}
+.status-list-entry[data-state="accent"] .status-list-icon {
+  color: var(--colour-brand);
+}
+.status-list-entry[data-state="neutral"] .status-list-icon,
+.status-list-entry:not([data-state]) .status-list-icon {
+  color: var(--colour-text-muted);
+}
+
+}
+/* ── components/action-grid.css ── */
+@layer components {
+/* HYPERPART: action-grid */
+/* Promoted VERBATIM from Dazzle regions.css (W1, fleet convergence).
+ * The Dazzle emitter contract predates the move and is unchanged. */
+
+/* ─────────────────────────── action_grid region ─────────────────
+ * Responsive 1/2/3-col grid of CTA cards. Each card carries a
+ * label, optional icon, optional count badge — and a tone token
+ * (positive / warning / destructive / accent / neutral) routed
+ * through tones.css via data-tone / data-tone-badge
+ * (unchanged). The hover/cursor affordance is gated on the
+ * <a>-vs-<div> wrapper choice in the template; the .action-card
+ * rule covers the shared shape. */
+
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  margin-block-start: var(--space-sm);
+}
+
+@media (min-width: 40rem) {
+  .action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .action-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.action-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  text-decoration: none;
+  color: var(--colour-text);
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+a.action-card {
+  cursor: pointer;
+}
+
+a.action-card:hover {
+  background: var(--colour-bg);
+}
+
+.action-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.action-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--colour-text-muted);
+}
+
+.action-card-icon-spacer {
+  width: 1.25rem;
+  /* height too — a label-only card (no icon, no count) otherwise
+   * collapses its row to 0 height (the zero-paint gate's catch; the
+   * bug shipped in Dazzle for as long as the spacer existed). */
+  height: 1.25rem;
+  display: inline-block;
+}
+
+.action-card-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding-inline: var(--space-sm);
+  padding-block: 0.125rem;
+  border-radius: var(--radius-full);
+}
+
+.action-card-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  line-height: var(--leading-tight);
+}
+
+/* Tone tints (moved from Dazzle tones.css with the component —
+ * the tinting IS the component's point). */
+/* v0.61.74 (#906 cleanup): action_grid was the second template using
+ * the buried-dynamic-class pattern. Card surface tint + count-badge
+ * tint both route via `data-tone` / `data-tone-badge`.
+ * Hardcoded `hsl(145,55%,45%)` / `hsl(40,90%,55%)` literals in the
+ * template are gone — both now use design-system slots so theming
+ * applies. */
+
+.action-card[data-tone="positive"] {
+  border-color: var(--colour-success-soft);
+  background: var(--colour-success-soft);
+}
+.action-card[data-tone="positive"]:hover {
+  background: var(--colour-success-soft);
+}
+.action-card[data-tone="warning"] {
+  border-color: var(--colour-warning-soft);
+  background: var(--colour-warning-soft);
+}
+.action-card[data-tone="warning"]:hover {
+  background: var(--colour-warning-soft);
+}
+.action-card[data-tone="destructive"] {
+  border-color: var(--colour-danger-soft);
+  background: var(--colour-danger-soft);
+}
+.action-card[data-tone="destructive"]:hover {
+  background: var(--colour-danger-soft);
+}
+.action-card[data-tone="accent"] {
+  border-color: var(--colour-brand-soft);
+  background: var(--colour-brand-soft);
+}
+.action-card[data-tone="accent"]:hover {
+  background: var(--colour-brand-soft);
+}
+.action-card[data-tone="neutral"],
+.action-card:not([data-tone]) {
+  border-color: var(--colour-border);
+  background: var(--colour-surface);
+}
+.action-card[data-tone="neutral"]:hover,
+.action-card:not([data-tone]):hover {
+  background: color-mix(in oklab, var(--colour-surface-muted) 40%, transparent);
+}
+
+/* Count-badge tints — same five tones, slightly different opacities
+ * so the badge reads as denser than the card surface. */
+.action-card-count[data-tone-badge="positive"] {
+  background: var(--colour-success-soft);
+  color: var(--colour-success);
+}
+.action-card-count[data-tone-badge="warning"] {
+  background: var(--colour-warning-soft);
+  color: var(--colour-warning);
+}
+.action-card-count[data-tone-badge="destructive"] {
+  background: var(--colour-danger-soft);
+  color: var(--colour-danger);
+}
+.action-card-count[data-tone-badge="accent"] {
+  background: var(--colour-brand-soft);
+  /* the scheme-aware TEXT token (brand-600 light / brand-300 dark) —
+   * raw --colour-brand fails contrast on the dark soft tint (axe). */
+  color: var(--colour-brand-text);
+}
+.action-card-count[data-tone-badge="neutral"],
+.action-card-count:not([data-tone-badge]) {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text-muted);
+}
+
+/* ── Metric delta arrow colour (#884 / sibling #906 cleanup) ──────── */
+/* v0.61.74: the period-over-period delta arrow used to compute its
+ * tone via a dynamic Tailwind class string. Now driven by
+ * `data-delta-tone` matching the standard tone palette. The
+ * hardcoded `hsl(142 76% 36%)` literal is gone — `--success` is the
+ * canonical green slot. */
+
+.metric-delta[data-delta-tone="positive"] {
+  color: var(--colour-success);
+}
+.metric-delta[data-delta-tone="destructive"] {
+  color: var(--colour-danger);
+}
+.metric-delta[data-delta-tone="neutral"],
+.metric-delta:not([data-delta-tone]) {
+  color: var(--colour-text-muted);
+}
+
+/* ── Status list pill + icon colour (#3 / roadmap #3) ─────────────── */
+
+/* Pill backgrounds (rendered only for non-neutral states; neutral
+ * entries omit the pill via template branch). */
+
+}
+/* ── components/queue.css ── */
+@layer components {
+/* HYPERPART: queue */
+/* Promoted VERBATIM from Dazzle regions.css (W1, fleet convergence).
+ * The Dazzle emitter contract predates the move and is unchanged. */
+
+/* ─────────────────────────── queue region ───────────────────────
+ * Review queue: count chip + metrics row + filter bar + rows with
+ * inline transition buttons. Each row has plain padding (no full
+ * border — dashboard slot owns chrome) and a hover tint when no
+ * attention accent is present. */
+
+.queue-count-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-block-end: var(--space-sm);
+}
+
+.queue-count {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-sm);
+  height: 1.25rem;
+  border-radius: var(--radius-xs, 0.1875rem);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+}
+
+.queue-metrics {
+  display: flex;
+  gap: var(--space-md);
+  margin-block-end: var(--space-md);
+}
+
+.queue-metric {
+  flex: 1 1 0;
+  text-align: center;
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+  border: 1px solid var(--colour-border);
+}
+
+.queue-metric-value {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.queue-metric-label {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.queue-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-sm);
+}
+
+.queue-filter-select {
+  height: 1.75rem;
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+}
+
+.queue-filter-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+.queue-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.queue-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+/* Hover tint only when no attention accent — attention accents
+ * carry their own tint via attention_classes macro. */
+.queue-row:not([data-attn]):hover {
+  background: var(--colour-bg);
+}
+
+.queue-row-main {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.queue-row-main.is-clickable {
+  cursor: pointer;
+}
+
+.queue-row-headline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.queue-row-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-row-attn {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.queue-row-date {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.queue-row-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.queue-action {
+  height: 1.75rem;
+  padding-inline: 0.625rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: transparent;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.queue-action:hover {
+  background: var(--colour-bg);
+}
+
+.queue-overflow {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+.queue-empty {
+  text-align: center;
+  padding-block: var(--space-md);
+}
+
+}
 /* ── components/tabs.css ── */
 @layer components {
 /* HYPERPART: tabs */

@@ -53,6 +53,9 @@ CSS_SOURCES = [
     ("components", "components/table.css"),
     ("components", "components/layout.css"),
     ("components", "components/app-shell.css"),
+    ("components", "components/status-list.css"),
+    ("components", "components/action-grid.css"),
+    ("components", "components/queue.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]
