@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.94] - 2026-07-06
+
+### Changed
+- Linux visual baselines regenerated for the gallery's above-the-fold Setup
+  block (captured in CI's own environment via the standalone repo's
+  `update-baselines` workflow artifact — the 0.93.93 follow-through).
+
 ## [0.93.93] - 2026-07-06
 
 ### Fixed
