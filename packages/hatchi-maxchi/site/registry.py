@@ -215,7 +215,9 @@ HYPERPARTS: list[Hyperpart] = [
         "— drag a header's right edge), and inline cell editing (dz-grid-edit.js "
         "— dblclick a cell; commits a single-field PUT to the entity's standard "
         "update route). Each persists per grid; the core grid works without them.",
-        '<div class="hm-stack hm-measure-lg">'
+        # Full width (no hm-measure cap): a data table demos its column
+        # behaviour — resize needs room to move, and real tables run wide.
+        '<div class="hm-stack">'
         # data-dz-grid-url: opt-in URL-synced state — the grid's query mirrors
         # into the address bar (deep-linkable, Back walks grid states).
         '<div class="dz-table" data-dz-grid data-dz-grid-url data-dz-bulk-count="0" '

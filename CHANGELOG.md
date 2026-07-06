@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.92] - 2026-07-06
+
+### Added
+- **Touch accommodations for the grid extensions** (HM 0.1.26 → 0.1.27) and
+  a touch-input development/testing plan for ALL Hyperparts (HM README ›
+  Development › "Touch input"). Under `@media (pointer: coarse)`: the
+  resize handle widens from an 8px mouse-precision strip to a 24px edge
+  strip (the web-data-grid touch idiom — a full 44px block would swallow
+  the header's sort button) and its hairline is ALWAYS visible (hover
+  doesn't exist under a finger); editable cell spans carry
+  `touch-action: manipulation` so a double-tap opens the editor instead of
+  zooming. `touch-action: none` on the handle (already present) keeps the
+  drag out of scroll panning. New chromium `is_mobile`+`has_touch`
+  behaviour test asserts the coarse-pointer CSS applies and a
+  `pointerType: 'touch'` drag resizes the column; the checklist (44px HIG
+  floor, no hover-only affordances, gesture arbitration via touch-action,
+  Pointer Events only, synthetic-touch test tier + real-device caveat) is
+  the plan of record for future Hyperparts.
+
+### Changed
+- The HM gallery grid demo renders **full width** (dropped the
+  `hm-measure-lg` cap): a data table demos its column behaviour — resize
+  needs room to move, and real tables run wide.
+
 ## [0.93.91] - 2026-07-06
 
 ### Changed

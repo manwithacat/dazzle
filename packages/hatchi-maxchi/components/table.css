@@ -296,6 +296,24 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   user-select: none;
 }
 
+/* Touch (coarse pointer): the 8px strip is a mouse-precision target. Widen
+ * the strip to 24px — the web-data-grid touch idiom (an edge slop, not a
+ * 44px HIG block, which would eat half the header) — and keep the hairline
+ * ALWAYS visible: hover doesn't exist on touch, so the affordance must not
+ * depend on it. touch-action:none above already stops the drag being
+ * swallowed by scroll panning. Worst case: at the 80px column minimum the
+ * strip is 30% of the header and the sort label's rightmost text sits under
+ * it — accepted for a user-chosen minimum width. */
+@media (pointer: coarse) {
+  .dz-table-resize-handle {
+    width: 24px;
+  }
+
+  .dz-table-resize-handle::after {
+    background: var(--colour-border);
+  }
+}
+
 /* Sort button — inline within the th when the column is sortable. */
 .dz-table-sort-button {
   display: inline-flex;
@@ -654,6 +672,8 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   overflow: hidden;
   text-overflow: ellipsis;
   transition: outline var(--duration-fast) var(--ease-out);
+  /* double-tap must open the editor, not zoom (dblclick on touch) */
+  touch-action: manipulation;
 }
 
 .dz-tr-cell-display:hover {

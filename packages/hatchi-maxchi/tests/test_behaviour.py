@@ -1306,3 +1306,66 @@ def test_grid_inline_edit_commits_via_put_and_refreshes(page) -> None:  # type: 
         "els => els.map(e => e.textContent.trim())",
     )
     assert "Renamed" in names, f"the committed value must render from the server: {names}"
+
+
+def test_grid_touch_resize_and_edit_accommodations(_engine_browser) -> None:  # type: ignore[no-untyped-def]
+    """Touch (coarse pointer) accommodations for the grid extensions,
+    chromium-only (WebKit has no mobile/pointer:coarse emulation):
+    - the resize handle widens to a 24px strip and its hairline is visible
+      WITHOUT hover (touch has no hover);
+    - a touch-pointer drag resizes the column (touch-action:none keeps the
+      gesture out of scroll panning; this synthetic-event test pins the
+      controller contract — gesture arbitration itself needs a real device);
+    - editable cells carry touch-action:manipulation so a double-tap opens
+      the editor instead of zooming."""
+    if _engine_browser.browser_type.name != "chromium":
+        pytest.skip("pointer:coarse emulation (is_mobile) is chromium-only")
+    ctx = _engine_browser.new_context(
+        viewport={"width": 834, "height": 1112},  # iPad Pro 11" portrait
+        is_mobile=True,
+        has_touch=True,
+    )
+    page = ctx.new_page()
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.goto(_SITE_URI)
+    page.wait_for_selector("[data-grid-body] tr[id]", timeout=3000)
+
+    # coarse-pointer CSS actually applied (guards the emulation itself)
+    assert page.evaluate("matchMedia('(pointer: coarse)').matches"), (
+        "mobile emulation must flip pointer:coarse for this test to mean anything"
+    )
+    handle = '[data-grid-resize="first"]'
+    assert page.eval_on_selector(handle, "h => getComputedStyle(h).width") == "24px"
+    hairline = page.eval_on_selector(handle, "h => getComputedStyle(h, '::after').backgroundColor")
+    assert hairline not in ("rgba(0, 0, 0, 0)", "transparent"), (
+        "the resize hairline must be visible without hover on touch"
+    )
+    assert (
+        page.eval_on_selector(
+            '[data-grid-body] [data-grid-edit="first"]',
+            "s => getComputedStyle(s).touchAction",
+        )
+        == "manipulation"
+    )
+
+    # synthetic touch-pointer drag → the controller resizes the col
+    width = page.evaluate(
+        """() => new Promise((resolve) => {
+          const h = document.querySelector('[data-grid-resize="first"]');
+          const r = h.getBoundingClientRect();
+          const x = r.x + r.width / 2, y = r.y + r.height / 2;
+          const ev = (type, cx) => new PointerEvent(type, {
+            bubbles: true, pointerType: 'touch', isPrimary: true,
+            clientX: cx, clientY: y,
+          });
+          h.dispatchEvent(ev('pointerdown', x));
+          window.dispatchEvent(ev('pointermove', x + 64));
+          window.dispatchEvent(ev('pointerup', x + 64));
+          const col = document.querySelector('[data-grid] col[data-col="first"]');
+          resolve(parseInt(col.style.width, 10) || 0);
+        })"""
+    )
+    assert width > 0, "a touch-pointer drag must resize the column"
+    assert not errors, f"gallery page threw JS errors: {errors}"
+    ctx.close()

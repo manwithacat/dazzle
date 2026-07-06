@@ -242,6 +242,38 @@ Visual baselines: after an intended visual change,
 `HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py` and commit
 the PNGs.
 
+### Touch input — every Hyperpart, by construction
+
+Hyperparts must work under a finger, not just a mouse. There is no
+separate "mobile version": the same partial adapts via `@media (pointer:
+coarse)` (the explicit "primary input is a finger" signal — width queries
+misclassify touch tablets in landscape and mouse users in small windows).
+
+Checklist for any interactive Hyperpart or extension:
+
+- **Hit areas**: interactive elements get the 44px HIG floor on coarse
+  pointers (`components/touch-targets.css` covers the button family; new
+  affordances add their own rule). Edge affordances (e.g. the grid's
+  resize handle) may use a widened strip instead of a full 44px block
+  when a block would swallow the neighbouring control — document the
+  trade-off at the rule.
+- **No hover-only affordances**: anything revealed on `:hover` must be
+  visible (or reachable another way) on coarse pointers — hover does not
+  exist under a finger.
+- **Gesture arbitration**: a drag affordance needs `touch-action: none`
+  on the handle (else scroll panning swallows the pointermove stream);
+  a tap/double-tap affordance needs `touch-action: manipulation` (else
+  the double-tap-zoom heuristic eats the second tap). Controllers use
+  Pointer Events, which unify mouse/touch/pen — never `mousedown`.
+- **Tests**: behaviour tests run Chromium + WebKit; touch accommodations
+  get a chromium `is_mobile` + `has_touch` context (flips
+  `pointer: coarse`) asserting the coarse-pointer CSS applied and the
+  pointer contract works with `pointerType: 'touch'` synthetic events.
+  Synthetic events pin the controller contract; gesture arbitration
+  (pan vs drag) can only be proven on a real device — note it in the
+  test docstring, and verify on iPad when the affordance is new.
+
+
 ### Add a Hyperpart
 
 1. Write its CSS in `components/` — one root class, `data-dz-*` variants,
