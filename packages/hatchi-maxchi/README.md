@@ -170,9 +170,11 @@ python build.py --prefix ax- # any lowercase namespace
 ```
 
 The rename is total across CSS, JS, and the demo markup (class names,
-`data-*` attributes, keyframes) — but **not** internal `--*` custom
-properties, which keep their names. Your markup must match the prefix you
-build with.
+`data-*` attributes, keyframes) — plus the **public custom-property
+knobs** you set yourself (`--progress-value`, `--list-rows`,
+`--touch-target-min` in the default build; declared in `build.py`'s
+`PUBLIC_CSS_PROPS`). Internal `--*` tokens keep their names — they're
+private. Your markup must match the prefix you build with.
 
 This isn't a toggle bolted on for flexibility — it's a *production* path.
 [Dazzle](https://github.com/manwithacat/dazzle) consumes HM by building it

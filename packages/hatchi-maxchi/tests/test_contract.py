@@ -74,6 +74,46 @@ def test_every_registry_class_has_a_rule() -> None:
     )
 
 
+def test_public_css_props_follow_the_prefix() -> None:
+    """Custom-property KNOBS that consumers set (inline in snippets, or
+    server-emitted like the list row floor) are public API — they must
+    follow the namespace prefix exactly like classes/data-attributes/
+    keyframes do. Internal tokens keep their source names (private).
+
+    The 2026-07-06 case: the progress demo showed
+    `style="--dz-progress-value:62%"` against an otherwise unprefixed
+    gallery — the one place the source namespace leaked into the
+    published artifact."""
+    from build import PUBLIC_CSS_PROPS
+
+    stripped = build_css("")
+    renamed = build_css("ax-")
+    kept = build_css("dz-")
+    for prop in PUBLIC_CSS_PROPS:
+        bare = prop.removeprefix("--dz-")
+        assert f"--dz-{bare}" not in stripped, f"{prop} must strip with the prefix"
+        assert f"--{bare}" in stripped, f"--{bare} missing from the stripped bundle"
+        assert f"--ax-{bare}" in renamed, f"{prop} must follow a custom prefix"
+        assert f"--dz-{bare}" in kept, f"{prop} must survive the dz- (no-op) build"
+
+
+def test_no_private_css_prop_leaks_into_snippets() -> None:
+    """A registry partial (the copy-paste snippet) may only reference
+    custom properties declared public — a private token in a snippet is
+    an undocumented API a consumer would copy and depend on."""
+    from build import PUBLIC_CSS_PROPS
+
+    leaks = []
+    for c in HYPERPARTS:
+        for name in re.findall(r"--dz-[a-z0-9-]+", c.partial):
+            if name not in PUBLIC_CSS_PROPS:
+                leaks.append(f"{c.id}: {name}")
+    assert not leaks, (
+        "private custom properties referenced in snippets (declare in "
+        "PUBLIC_CSS_PROPS or use a public knob):\n  " + "\n  ".join(leaks)
+    )
+
+
 def test_js_assigned_classes_have_rules() -> None:
     """Classes a controller assigns at runtime (`el.className = …`,
     `classList.add(…)`) are invisible to the registry-class gate above —
@@ -151,8 +191,9 @@ def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore
 def test_prefix_transform_is_total() -> None:
     css = build_css(prefix="ax-")
     js = build_js(prefix="ax-")
-    # `dz-` survives ONLY in `--dz-*` custom-property names (internal, never
-    # reprefixed — see build.apply_prefix). Everything else must be renamed.
+    # `dz-` survives ONLY in PRIVATE `--dz-*` custom-property names (the
+    # public knobs in PUBLIC_CSS_PROPS are reprefixed like any API name —
+    # see build.apply_prefix). Everything else must be renamed.
     css_no_customprops = re.sub(r"--dz-[a-z0-9*-]*", "", css)
     assert "dz-" not in css_no_customprops, "class/attr/keyframe dz- leaked through --prefix ax-"
     assert "dz-" not in js

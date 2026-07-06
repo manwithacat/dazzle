@@ -214,7 +214,7 @@
    *
    * #958 cycle 1.
    */
-  --dz-touch-target-min: 44px;
+  --touch-target-min: 44px;
 
   /* ─────────────────────────── colour ramps ────────────────────────
    * Raw OKLCH ramps lifted from Open Props
@@ -3901,8 +3901,8 @@ input.switch:checked::before {
 
 .progress__bar {
   /* Dynamic value via a custom property, not an inline width: the markup
-     sets `--dz-progress-value: 62%` and CSS owns the property mapping. */
-  width: var(--dz-progress-value, 0%);
+     sets `--progress-value: 62%` and CSS owns the property mapping. */
+  width: var(--progress-value, 0%);
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--colour-brand);
@@ -4725,11 +4725,11 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   overflow: hidden;
   /* Reserve vertical space for the upcoming htmx fetch so the page below
      doesn't shift when rows arrive (#965 — CLS regression on list views).
-     Floor: `--dz-list-rows` rows × row height + header. The template emits
-     --dz-list-rows from table.page_size; without it we default to 10 rows,
+     Floor: `--list-rows` rows × row height + header. The template emits
+     --list-rows from table.page_size; without it we default to 10 rows,
      which catches the common case (CLS lands cleanly under 0.1 even when
      actual results are smaller than the reservation). */
-  min-height: calc(min(var(--dz-list-rows, 10), 10) * 2.75rem + 3rem);
+  min-height: calc(min(var(--list-rows, 10), 10) * 2.75rem + 3rem);
 }
 
 .table-scroll-x {
@@ -5440,7 +5440,7 @@ summary.table-col-menu-trigger::-webkit-details-marker {
  * touch-targets.css — mobile touch hit-area enforcement (#958 cycle 1).
  *
  * Bumps every interactive primitive's min-height + min-width to
- * `--dz-touch-target-min` (44px, Apple HIG) on touch devices. Desktop
+ * `--touch-target-min` (44px, Apple HIG) on touch devices. Desktop
  * keeps its dense pixel-perfect sizing.
  *
  * Why `@media (pointer: coarse)` rather than `(max-width: ...)`?
@@ -5475,8 +5475,8 @@ summary.table-col-menu-trigger::-webkit-details-marker {
     .list-action-button,
     .sidebar-action-button,
     .add-card-button {
-      min-height: var(--dz-touch-target-min);
-      min-width: var(--dz-touch-target-min);
+      min-height: var(--touch-target-min);
+      min-width: var(--touch-target-min);
     }
 
     /* Close-X buttons are typically small icon-only — most likely
@@ -5486,8 +5486,8 @@ summary.table-col-menu-trigger::-webkit-details-marker {
     .pdf-viewer-help-close,
     .pdf-viewer-panel-close,
     .slideover-close {
-      min-height: var(--dz-touch-target-min);
-      min-width: var(--dz-touch-target-min);
+      min-height: var(--touch-target-min);
+      min-width: var(--touch-target-min);
     }
 
     /* Bare native buttons / links inside .button regions still
@@ -5496,7 +5496,7 @@ summary.table-col-menu-trigger::-webkit-details-marker {
     button,
     [role="button"],
     a.link {
-      min-height: var(--dz-touch-target-min);
+      min-height: var(--touch-target-min);
     }
   }
 }

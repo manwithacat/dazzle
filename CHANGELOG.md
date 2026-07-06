@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.96] - 2026-07-06
+
+### Fixed
+- **Custom-property namespace leak in HM snippets** (HM 0.1.28 → 0.1.29):
+  the progress demo showed `style="--dz-progress-value:62%"` against an
+  otherwise unprefixed gallery — the one place the source namespace leaked
+  into the published artifact. Strategy: custom-property KNOBS a consumer
+  sets are public API and now follow the prefix like classes/data-attrs/
+  keyframes (`--progress-value`, `--list-rows`, `--touch-target-min` in the
+  default build), declared in `build.py`'s `PUBLIC_CSS_PROPS`. Internal
+  `--*` tokens stay private and keep their names (a blanket rename would
+  strip-collide with real theme tokens — six such collisions exist). Two
+  new gates: the mechanics per prefix (strip/rename/no-op), and a no-leak
+  sweep — a registry snippet may only reference declared-public custom
+  properties. Dazzle (prefix `dz-`) is byte-unaffected.
+
 ## [0.93.95] - 2026-07-06
 
 ### Changed

@@ -84,12 +84,25 @@ DEFAULT_PREFIX = ""
 _PREFIX_RE = re.compile(r"^[a-z][a-z0-9]*-$")
 
 # `dz-` in the SOURCE is the namespace token on classes, data-attributes,
-# and keyframes — all part of the public API and reprefixable. It is NOT
-# reprefixed inside custom-property names (`--dz-*`, internal site tokens):
-# stripping those would collide with real tokens (e.g. `--dz-shadow-sm` ->
-# `--shadow-sm`). The negative-lookbehind for `--` skips exactly those while
-# still transforming `data-dz-*` (preceded by a single `-`).
+# and keyframes — all part of the public API and reprefixable. Custom-property
+# names are NOT blanket-reprefixed (the negative-lookbehind for `--` skips
+# them): most are internal tokens, and stripping those wholesale would
+# collide with real theme tokens (e.g. `--dz-shadow-sm` -> `--shadow-sm`).
 _DZ_TOKEN_RE = re.compile(r"(?<!--)dz-")
+
+# EXCEPT the public knobs: custom properties a CONSUMER sets — inline in a
+# snippet (`style="--dz-progress-value:62%"`), server-emitted per request
+# (`--dz-list-rows` from page_size), or overridden at :root
+# (`--dz-touch-target-min`). These are API exactly like a class name, so
+# they follow the prefix (strip -> `--progress-value`). Adding a name here
+# requires checking it doesn't strip-collide with an existing bare token
+# (test_public_css_props_follow_the_prefix gates the mechanics; the
+# no-leak gate stops snippets referencing anything NOT listed here).
+PUBLIC_CSS_PROPS = (
+    "--dz-progress-value",
+    "--dz-list-rows",
+    "--dz-touch-target-min",
+)
 
 
 def build_css(prefix: str = DEFAULT_PREFIX) -> str:
@@ -113,10 +126,14 @@ def build_js(prefix: str = DEFAULT_PREFIX) -> str:
 def apply_prefix(text: str, prefix: str) -> str:
     """Reprefix the design-system namespace. `prefix=""` strips it (the
     published default); `prefix="dz-"` keeps the source form; `prefix="ax-"`
-    renames it. `--dz-*` custom-property names are never touched."""
+    renames it. Custom-property names are untouched EXCEPT the public knobs
+    in `PUBLIC_CSS_PROPS`, which follow the prefix like any other API name."""
     if prefix and not _PREFIX_RE.match(prefix):
         raise SystemExit(f"invalid prefix {prefix!r} — want '' (strip) or lowercase like 'ax-'")
-    return _DZ_TOKEN_RE.sub(prefix, text)
+    out = _DZ_TOKEN_RE.sub(prefix, text)
+    for prop in PUBLIC_CSS_PROPS:
+        out = out.replace(prop, "--" + prefix + prop.removeprefix("--dz-"))
+    return out
 
 
 def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
