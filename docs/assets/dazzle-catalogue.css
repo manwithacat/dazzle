@@ -2456,12 +2456,15 @@ dialog.dz-alert-dialog::backdrop {
  * the typed substrate) — dropped rather than published as fake API. */
 /* --- hatchi-maxchi/components/confirm-panel.css --- */
 /* HYPERPART: confirm-panel */
-/* Promoted from Dazzle regions.css (Tier F, fleet convergence). One
- * deliberate delta from the source: the `.dz-confirm-primary.is-disabled`
- * selector was dropped — the gate state now lives SOLELY in
- * `aria-disabled` (state-in-DOM, set by controllers/dz-confirm-gate.js,
- * which replaces the Alpine `dzConfirmGate` island). The
- * `[aria-disabled="true"]` selector below is the single disabled hook. */
+/* Promoted from Dazzle regions.css (Tier F, fleet convergence). Two
+ * deliberate deltas from the source: (1) the
+ * `.dz-confirm-primary.is-disabled` selector was dropped — the gate
+ * state now lives SOLELY in `aria-disabled` (state-in-DOM, set by
+ * controllers/dz-confirm-gate.js, which replaces the Alpine
+ * `dzConfirmGate` island); (2) `.dz-confirm-title`/`.dz-confirm-caption`
+ * gained `display: block` — the emitter's divs-in-label became spans
+ * (a <label> only admits phrasing content; the gallery vnu gate caught
+ * the invalid nesting the legacy template shipped). */
 
 /* ─────────────────────────── confirm panel ──────────────────────
  * Irreversible-action consent primitive. Renders a checklist of
@@ -2531,12 +2534,15 @@ dialog.dz-alert-dialog::backdrop {
 }
 
 .dz-confirm-title {
+  /* span (a <label> only admits phrasing content) styled as block */
+  display: block;
   font-size: var(--text-sm);
   line-height: var(--leading-tight);
   color: var(--colour-text);
 }
 
 .dz-confirm-caption {
+  display: block;
   font-size: var(--text-xs);
   line-height: var(--leading-tight);
   color: var(--colour-text-muted);

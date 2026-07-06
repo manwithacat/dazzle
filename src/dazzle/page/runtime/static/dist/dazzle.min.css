@@ -1,4 +1,4 @@
-/* dazzle v0.93.110 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.111 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -5827,11 +5827,13 @@ flex: 1 1 0;
 cursor: pointer;
 }
 .dz-confirm-title {
+display: block;
 font-size: var(--text-sm);
 line-height: var(--leading-tight);
 color: var(--colour-text);
 }
 .dz-confirm-caption {
+display: block;
 font-size: var(--text-xs);
 line-height: var(--leading-tight);
 color: var(--colour-text-muted);

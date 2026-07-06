@@ -770,22 +770,22 @@ HYPERPARTS: list[Hyperpart] = [
         '<input type="checkbox" class="dz-confirm-checkbox" '
         'data-dz-required="true" id="dz-confirm-1">'
         '<label for="dz-confirm-1" class="dz-confirm-row-label">'
-        '<div class="dz-confirm-title">I have exported a backup of live data</div>'
-        '<div class="dz-confirm-caption">Rollback needs a snapshot taken '
-        "today.</div>"
+        '<span class="dz-confirm-title">I have exported a backup of live data</span>'
+        '<span class="dz-confirm-caption">Rollback needs a snapshot taken '
+        "today.</span>"
         "</label></li>"
         '<li class="dz-confirm-row" data-dz-required="true">'
         '<input type="checkbox" class="dz-confirm-checkbox" '
         'data-dz-required="true" id="dz-confirm-2">'
         '<label for="dz-confirm-2" class="dz-confirm-row-label">'
-        '<div class="dz-confirm-title">The billing owner has approved this '
-        "change</div>"
+        '<span class="dz-confirm-title">The billing owner has approved this '
+        "change</span>"
         "</label></li>"
         '<li class="dz-confirm-row" data-dz-required="false">'
         '<input type="checkbox" class="dz-confirm-checkbox" id="dz-confirm-3">'
         '<label for="dz-confirm-3" class="dz-confirm-row-label">'
-        '<div class="dz-confirm-title">Notify the team afterwards '
-        "(optional)</div>"
+        '<span class="dz-confirm-title">Notify the team afterwards '
+        "(optional)</span>"
         "</label></li>"
         '<li class="dz-confirm-actions">'
         '<a href="#" class="dz-confirm-secondary">Save draft</a>'

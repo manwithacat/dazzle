@@ -8176,12 +8176,15 @@ a.action-card:hover {
 /* ── components/confirm-panel.css ── */
 @layer components {
 /* HYPERPART: confirm-panel */
-/* Promoted from Dazzle regions.css (Tier F, fleet convergence). One
- * deliberate delta from the source: the `.confirm-primary.is-disabled`
- * selector was dropped — the gate state now lives SOLELY in
- * `aria-disabled` (state-in-DOM, set by controllers/confirm-gate.js,
- * which replaces the Alpine `dzConfirmGate` island). The
- * `[aria-disabled="true"]` selector below is the single disabled hook. */
+/* Promoted from Dazzle regions.css (Tier F, fleet convergence). Two
+ * deliberate deltas from the source: (1) the
+ * `.confirm-primary.is-disabled` selector was dropped — the gate
+ * state now lives SOLELY in `aria-disabled` (state-in-DOM, set by
+ * controllers/confirm-gate.js, which replaces the Alpine
+ * `dzConfirmGate` island); (2) `.confirm-title`/`.confirm-caption`
+ * gained `display: block` — the emitter's divs-in-label became spans
+ * (a <label> only admits phrasing content; the gallery vnu gate caught
+ * the invalid nesting the legacy template shipped). */
 
 /* ─────────────────────────── confirm panel ──────────────────────
  * Irreversible-action consent primitive. Renders a checklist of
@@ -8251,12 +8254,15 @@ a.action-card:hover {
 }
 
 .confirm-title {
+  /* span (a <label> only admits phrasing content) styled as block */
+  display: block;
   font-size: var(--text-sm);
   line-height: var(--leading-tight);
   color: var(--colour-text);
 }
 
 .confirm-caption {
+  display: block;
   font-size: var(--text-xs);
   line-height: var(--leading-tight);
   color: var(--colour-text-muted);

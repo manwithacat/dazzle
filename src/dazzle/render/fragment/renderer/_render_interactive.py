@@ -378,8 +378,11 @@ class _RenderInteractiveMixin:
                 # Required items get the data attribute the delegated
                 # dz-confirm-gate controller recounts on every change.
                 required_attrs = 'data-dz-required="true" ' if item.required else ""
+                # spans, not divs — a <label> only admits phrasing content
+                # (the HM gallery's vnu gate caught the div-in-label the
+                # legacy template shipped); display:block lives in the CSS.
                 caption_html = (
-                    f'<div class="dz-confirm-caption">{ctx.escape(item.caption)}</div>'
+                    f'<span class="dz-confirm-caption">{ctx.escape(item.caption)}</span>'
                     if item.caption
                     else ""
                 )
@@ -389,7 +392,7 @@ class _RenderInteractiveMixin:
                     f"{required_attrs}"
                     f'id="dz-confirm-{i}">'
                     f'<label for="dz-confirm-{i}" class="dz-confirm-row-label">'
-                    f'<div class="dz-confirm-title">{ctx.escape(item.title)}</div>'
+                    f'<span class="dz-confirm-title">{ctx.escape(item.title)}</span>'
                     f"{caption_html}"
                     f"</label>"
                     f"</li>"

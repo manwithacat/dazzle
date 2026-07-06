@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.111] - 2026-07-06
+
+### Fixed
+- **Invalid div-in-label in the confirm panel** (HM 0.1.41 → 0.1.42):
+  the confirm_action_panel emitter (and its new gallery demo, which
+  faithfully copied it) nested `<div class="dz-confirm-title">`/
+  `-caption` inside the row `<label>` — a `<label>` only admits
+  phrasing content. Caught by the HM gallery's vnu (Nu/W3C) gate on
+  the 0.1.41 sync, a latent invalidity the legacy Jinja template had
+  always shipped. Both are now `<span>`s with `display: block` in
+  `confirm-panel.css`.
+
+### Agent Guidance
+- **vnu runs only in the HM standalone CI**, not the local HM suite —
+  a demo that copies emitter markup verbatim can be locally green and
+  fail the sync's validity gate. When a promotion demo trips vnu, fix
+  the EMITTER too (the demo was honest; the markup was wrong).
+
 ## [0.93.110] - 2026-07-06
 
 ### Added
