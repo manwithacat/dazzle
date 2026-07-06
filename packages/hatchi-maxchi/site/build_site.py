@@ -725,6 +725,12 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-blueprint-live { border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: 1.5rem; margin-block-end: 1.5rem; background: var(--colour-surface); }
 /* Device frame: the transform makes this the containing block for
  * position:fixed descendants, so an app shell demos in-page. */
+.hm-bp-toolbar { display: flex; align-items: center; gap: .5rem; margin-block-end: .75rem; }
+.hm-bp-toolbar button { font: inherit; font-size: var(--text-sm); padding: .25rem .75rem; border-radius: var(--radius-sm); border: 1px solid var(--colour-border); background: var(--colour-surface); color: var(--colour-text-muted); cursor: pointer; }
+.hm-bp-toolbar button[aria-current="true"] { border-color: var(--colour-brand); color: var(--colour-text); }
+.hm-bp-open { margin-inline-start: auto; font-size: var(--text-sm); color: var(--colour-brand); text-decoration: none; }
+.hm-bp-stage { display: flex; justify-content: center; background: var(--colour-bg); border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: .75rem; }
+.hm-bp-frame { width: 100%; height: 40rem; max-width: 100%; border: 0; border-radius: var(--radius-sm); background: var(--colour-surface); transition: width var(--duration-base) var(--ease-out); }
 .hm-blueprint-live--framed { padding: 0; height: 40rem; overflow: auto; transform: translateZ(0); }
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
@@ -978,6 +984,33 @@ Every snippet is the live example — copy it into any htmx4 app.
         composes = " · ".join(
             f'<a href="../index.html#{cid}">{_html.escape(cid)}</a>' for cid in bp.composes
         )
+        # Standalone LIVE page — the blueprint rendered as a real page
+        # (its own browsing context), so fixed positioning, dvh units and
+        # media queries behave exactly as shipped. The doc page embeds it
+        # via iframe; nothing full-page ever shares a DOM with docs
+        # chrome again (the 2026-07-06 Pages-layout breakage class).
+        live_doc = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{_html.escape(bp.title)} — live</title>
+<link rel="stylesheet" href="../hatchi-maxchi.css">
+<script>{theme_js}
+// live-update the scheme when the parent gallery toggles it
+window.addEventListener('storage', function (e) {{
+  if (e.key === 'hm-theme' && e.newValue)
+    document.documentElement.setAttribute('data-theme', e.newValue);
+}});</script>
+</head>
+<body>
+{sheet}
+{bp_live}
+<script src="../hatchi-maxchi.js" defer></script>
+</body>
+</html>"""
+        (bp_dir / f"{bp.id}-live.html").write_text(live_doc + "\n", encoding="utf-8")
+
         bp_doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -997,7 +1030,28 @@ Every snippet is the live example — copy it into any htmx4 app.
 <p class="hm-hero-def">{_html.escape(bp.blurb)}</p>
 <p class="hm-composed"><strong>Composed of:</strong> {composes}</p>
 </header>
-<div class="hm-blueprint-live{" hm-blueprint-live--framed" if bp.framed else ""}">{bp_live}</div>
+<div class="hm-bp-toolbar" role="group" aria-label="Preview viewport">
+<button type="button" data-bp-width="390">390</button>
+<button type="button" data-bp-width="834">834</button>
+<button type="button" data-bp-width="" aria-current="true">Full</button>
+<a class="hm-bp-open" href="{bp.id}-live.html" target="_blank" rel="noopener">Open full page &nearr;</a>
+</div>
+<div class="hm-bp-stage">
+<iframe class="hm-bp-frame" src="{bp.id}-live.html" title="{_html.escape(bp.title)} — live preview"></iframe>
+</div>
+<script>
+document.addEventListener('click', function (e) {{
+  var b = e.target.closest('[data-bp-width]');
+  if (!b) return;
+  var f = document.querySelector('.hm-bp-frame');
+  var w = b.getAttribute('data-bp-width');
+  f.style.width = w ? w + 'px' : '100%';
+  document.querySelectorAll('[data-bp-width]').forEach(function (x) {{
+    if (x === b) x.setAttribute('aria-current', 'true');
+    else x.removeAttribute('aria-current');
+  }});
+}});
+</script>
 <details class="hm-contract"><summary>Page source — the whole page is the snippet</summary>
 <pre class="hm-code"><code>{bp_snippet}</code></pre></details>
 {bp_notes}

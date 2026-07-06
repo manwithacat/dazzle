@@ -28,7 +28,10 @@ _VIEWPORTS = {"phone": 390, "tablet": 834, "desktop": 1280}
 
 
 def _bp_uri(bp_id: str) -> str:
-    return (PKG / "site" / "blueprints" / f"{bp_id}.html").as_uri()
+    # The behaviour tests drive the STANDALONE live page (its own
+    # browsing context — exactly what the doc page's iframe embeds and
+    # what a consumer ships). The {id}.html doc page is chrome + iframe.
+    return (PKG / "site" / "blueprints" / f"{bp_id}-live.html").as_uri()
 
 
 def _goto(page, bp_id: str, width: int) -> None:  # type: ignore[no-untyped-def]
@@ -88,7 +91,7 @@ class TestWorkspaceDrawer:
         rule-less dz-* classes)."""
         _goto(page, "workspace-drawer", _VIEWPORTS["desktop"])
         leaks = page.eval_on_selector(
-            ".hm-blueprint-live",
+            "body",
             """e => Array.from(e.querySelectorAll('*'))
                  .flatMap(el => Array.from(el.classList))
                  .filter(c => c.startsWith('hm-'))""",
@@ -105,7 +108,7 @@ def test_blueprint_zero_paint_sweep(page, bp_id, width) -> None:  # type: ignore
     collapsed = page.evaluate(
         """() => {
           const out = [];
-          const host = document.querySelector('.hm-blueprint-live');
+          const host = document.body;
           for (const el of host.querySelectorAll('*')) {
             const tag = el.tagName.toLowerCase();
             if (['col', 'colgroup', 'option', 'template', 'script', 'style',
@@ -153,14 +156,14 @@ class TestMasterDetail:
     def test_list_docks_beside_detail_on_desktop_stacks_on_phone(self, page) -> None:  # type: ignore[no-untyped-def]
         _goto(page, "master-detail", _VIEWPORTS["desktop"])
         tops = page.eval_on_selector(
-            ".hm-blueprint-live .sidebar-layout",
+            "body .sidebar-layout",
             "e => [e.children[0].getBoundingClientRect().top,"
             " e.children[1].getBoundingClientRect().top]",
         )
         assert tops[0] == tops[1], "desktop: list docks beside the reading pane"
         _goto(page, "master-detail", _VIEWPORTS["phone"])
         tops = page.eval_on_selector(
-            ".hm-blueprint-live .sidebar-layout",
+            "body .sidebar-layout",
             "e => [e.children[0].getBoundingClientRect().top,"
             " e.children[1].getBoundingClientRect().top]",
         )
@@ -204,7 +207,7 @@ class TestAuth:
     def test_card_keeps_the_reading_measure(self, page) -> None:  # type: ignore[no-untyped-def]
         _goto(page, "auth", _VIEWPORTS["desktop"])
         w = page.eval_on_selector(
-            '.hm-blueprint-live > .center[data-measure="prose"]',
+            'body > .center[data-measure="prose"]',
             "e => e.getBoundingClientRect().width",
         )
         # 65ch at 16px base is well under 800px — the card must not span
@@ -256,17 +259,32 @@ class TestSaasShell:
         pad = page.eval_on_selector(".app-content", "e => getComputedStyle(e).paddingInlineStart")
         assert pad == "0px", f"phone: content must take the full width: {pad}"
 
-    def test_frame_contains_the_fixed_sidebar(self, page) -> None:  # type: ignore[no-untyped-def]
-        """The device-frame promise: the transformed wrapper is the
-        containing block, so the fixed sidebar stays INSIDE the blueprint
-        page instead of overlaying its chrome."""
+    def test_fixed_sidebar_positions_at_page_origin(self, page) -> None:  # type: ignore[no-untyped-def]
+        """The iframe replaced the translateZ device-frame hack: the live
+        page is a REAL browsing context, so position:fixed means the page
+        viewport — the sidebar sits at the origin, exactly as shipped."""
         _goto(page, "saas-shell", _VIEWPORTS["desktop"])
-        inside = page.evaluate(
-            """() => {
-              const frame = document.querySelector('.hm-blueprint-live--framed');
-              const sb = frame.querySelector('.sidebar');
-              const f = frame.getBoundingClientRect(), s = sb.getBoundingClientRect();
-              return s.left >= f.left - 1 && s.top >= f.top - 1;
-            }"""
+        box = page.eval_on_selector(
+            ".sidebar",
+            "e => { const r = e.getBoundingClientRect(); return [r.left, r.top]; }",
         )
-        assert inside, "the fixed sidebar must be contained by the frame"
+        assert box[0] <= 1 and box[1] <= 1, f"fixed sidebar at page origin: {box}"
+
+
+def test_blueprint_doc_pages_embed_the_live_iframe(page) -> None:  # type: ignore[no-untyped-def]
+    """The doc page never inlines full-page markup (the Pages-layout
+    breakage class): the live rendering is an iframe onto the standalone
+    page, with viewport toggle buttons resizing it."""
+    page.goto((PKG / "site" / "blueprints" / "workspace-drawer.html").as_uri())
+    page.wait_for_timeout(200)
+    frame_el = page.query_selector("iframe.hm-bp-frame")
+    assert frame_el is not None
+    assert frame_el.get_attribute("src") == "workspace-drawer-live.html"
+    # no inlined blueprint markup on the doc page itself
+    assert page.query_selector(".hm-blueprint-live .workspace") is None
+    page.click('[data-bp-width="390"]')
+    # the frame width is CSS-transitioned — wait for it to settle
+    page.wait_for_function(
+        "Math.abs(document.querySelector('iframe.hm-bp-frame')"
+        ".getBoundingClientRect().width - 390) < 2"
+    )

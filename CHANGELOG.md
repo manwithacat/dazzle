@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.119] - 2026-07-07
+
+### Fixed
+- **Blueprints no longer break the gallery/docs page layout** (HM
+  0.1.49 → 0.1.50, James's report). Blueprint doc pages had been
+  inlining their FULL-PAGE partials into the docs DOM — fixed-position
+  sidebars, `100dvh` panes and viewport media queries escaped the
+  preview card (only saas-shell had the translateZ containment hack).
+  Each blueprint now emits a standalone `blueprints/{id}-live.html`
+  (the page IS the snippet, literally), and the doc page embeds it via
+  an `<iframe>` — a real browsing context, so fixed/dvh/media-query
+  behaviour is exactly as shipped, with zero leakage. New viewport
+  toggle (390/834/full) resizes the frame for honest responsive
+  previews; theme syncs via localStorage + a storage listener. The
+  Playwright blueprint tests now drive the live pages directly; the
+  translateZ device-frame test was rewritten as
+  fixed-sidebar-at-page-origin.
+
+### Agent Guidance
+- **Full-page compositions never share a DOM with docs chrome** —
+  present them via iframe onto a standalone page. The `framed=`/
+  translateZ containment hack survives only for the index app-shell
+  Hyperpart demo and is a candidate for the same treatment.
+- The pinned vnu (20.6.30) predates `loading="lazy"` on iframes —
+  don't use it in gallery markup (or extend the CI ignore-re).
+
 ## [0.93.118] - 2026-07-06
 
 ### Removed
