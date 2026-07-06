@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.98] - 2026-07-06
+
+### Fixed
+- **Toasts actually work now.** The sweep of orphaned Alpine components
+  found the toast system in three disconnected halves: the shell renders
+  the `#dz-toast` stack, but the server helper `with_toast` OOB-targeted
+  `#dz-toast-container` — an id no layout ever rendered — and the client
+  path (`window.dz.toast`, the optimistic-rollback nudge) dispatched
+  events whose only listener was the never-mounted `dzToast` Alpine
+  component. Every toast, server or client, was silently swallowed.
+  `with_toast` now targets the real stack, and `dz-toast.js` gains a
+  vanilla client bridge (both event shapes; capture-phase for the
+  non-bubbling `toast` event; `textContent`, never HTML) rendering
+  server-parity markup — one dismiss path, one CSS contract. Structural
+  pins in `test_client_toast_bridge.py`; behavioural coverage arrives
+  with the HM `toast` Hyperpart (Bucket C-T2).
+
+### Removed
+- **Alpine orphan sweep** (the ratified deprecation path, step 2): the
+  never-mounted `dzToast`, `dzFileUpload`, `dzSlideOver`, and
+  `dzThemeSwitcher` components deleted from `dz-alpine.js` (~430 lines),
+  along with the `test-event-widgets.html` harness (it exercised
+  components removed back in Bucket A2). Three Alpine islands remain
+  (dzMoney, dzWizard, dzConfirmGate) plus dzDashboardBuilder — each
+  converts as its HM Hyperpart lands.
+
 ## [0.93.97] - 2026-07-06
 
 ### Removed

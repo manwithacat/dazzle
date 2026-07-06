@@ -21,7 +21,7 @@ def with_toast(
 ) -> HTMLResponse:
     """Append an auto-dismissing toast to an HTMX response via OOB swap.
 
-    The toast is injected into ``#dz-toast-container`` and auto-dismissed by
+    The toast is OOB-prepended into the shell's ``#dz-toast`` stack and auto-dismissed by
     the ``dz-toast.js`` bridge (``data-dz-remove-after``) — replacing the
     htmx-2 ``remove-me`` extension, dropped in the htmx 4 migration.
 
@@ -35,8 +35,12 @@ def with_toast(
     """
     safe_message = escape(message)
     safe_level = escape(level, quote=True)
+    # OOB target = the shell's toast stack (`#dz-toast`, _render_shell) —
+    # the wrapper div is consumed by the swap, its children prepended.
+    # (Historically targeted `#dz-toast-container`, an id no layout ever
+    # rendered, so every toast silently missed — caught in the C3 sweep.)
     toast_html = (
-        f'<div id="dz-toast-container" hx-swap-oob="afterbegin:#dz-toast-container">'
+        f'<div hx-swap-oob="afterbegin:#dz-toast">'
         f'<div class="dz-toast" data-dz-toast-level="{safe_level}" data-dz-remove-after="{duration}">'
         f"<span>{safe_message}</span>"
         f"</div>"

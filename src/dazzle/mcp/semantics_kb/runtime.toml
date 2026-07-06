@@ -459,39 +459,38 @@ Alpine.js components registered in dz-alpine.js that manage UI state.
 Replaced the former dz.js micro-runtime in v0.45.0.
 """
 runtime_behaviour = """
-Components registered via Alpine.data() in dz-alpine.js:
+Alpine.js is DEPRECATED for new code (2026-07-06; CLAUDE.md UI Invariants).
+Client behaviour follows the HM Hyperpart idiom: delegated vanilla
+controllers, state in the DOM, server-owned rendering.
 
-dzToast — Toast notifications
-  Listens for: HTMX showToast trigger, Alpine $dispatch('toast')
-  Auto-dismisses after 4 seconds
-
-dzConfirm — Confirmation dialog
-  Triggered via: window event 'dz-confirm' with {message, action, method}
-  Executes action via htmx.ajax(), sanitizes URL and method
-
-dzTable — Data table (sort, column visibility, bulk select)
-  Params: dzTable(tableId, endpoint, sortField, sortDir)
-  Column visibility persisted to localStorage
-  Bulk select IDs injected via htmx:configRequest
+Remaining Alpine ISLANDS registered via Alpine.data() in dz-alpine.js
+(each converts as its HM Hyperpart lands):
 
 dzMoney — Currency field (minor unit conversion)
   ISO 4217 scale table, bidirectional display↔minor conversion
   Supports pinned and unpinned (dropdown) currency
 
-dzFileUpload — File upload with drag-and-drop
-  Uploads via fetch() to /files/upload
-  Shows preview with clear button
-
 dzWizard — Multi-step form wizard
   Params: dzWizard(totalSteps)
   Per-stage validation, stepper dot navigation
 
-Backward compatibility:
-  window.dz.toast(message, type) — global function preserved as shim
+dzConfirmGate — bulk-action typed-confirmation gate
+
+Retired (do NOT reference): dzTable (convergence C1-C3 — the HM grid
+dz-grid.js + dz-grid-cols/-resize/-edit extensions own the data table);
+dzConfirm/dzCommandPalette (HM dz-confirm.js / dz-command.js, Bucket A2);
+dzToast/dzFileUpload/dzSlideOver/dzThemeSwitcher (orphan sweep — never
+mounted by any emitter).
+
+Toasts: server OOB via response_helpers.with_toast into the #dz-toast
+stack; client-initiated via window.dz.toast(message, type) — both handled
+by dz-toast.js (render + auto-dismiss). The file-upload widget's
+controller is unimplemented (tracked follow-up).
 """
 implemented_by = [
     "dazzle_page.runtime.static.js.dz-alpine.js",
-    "dazzle_page.templates.base.html (script loading order)",
+    "dazzle_page.runtime.static.js.dz-toast.js",
+    "packages.hatchi-maxchi.controllers (grid + extensions, via the HM dist)",
 ]
 
 # =============================================================================

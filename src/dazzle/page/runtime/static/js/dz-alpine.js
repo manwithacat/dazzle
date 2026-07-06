@@ -5,20 +5,20 @@
  * Registers named Alpine.data() components that replace dz.js features.
  * Must load BEFORE alpine.min.js (uses alpine:init event).
  *
- * Components:
- *  - dzToast          — toast notification container
+ * Components (each an Alpine ISLAND slated for conversion — Alpine is
+ * deprecated for new code, CLAUDE.md UI Invariants):
  *  - dzMoney          — multi-currency minor unit field
- *  - dzFileUpload     — drag-and-drop file upload
  *  - dzWizard         — multi-step form wizard
  *  - dzConfirmGate    — bulk-action typed-confirmation gate
- *  - dzSlideOver      — side sheet overlay with width control
- *  - dzThemeSwitcher  — light/dark/system theme toggle
  *
  * Removed in the HM migration (Bucket A2, v0.93.65): dzConfirm and
  * dzCommandPalette are now driven by the ingested HM controllers
  * (dz-confirm.js intercepts hx-confirm; dz-command.js drives dialog.dz-command
  * on ⌘K). dzPopover / dzTooltip / dzContextMenu / dzToggleGroup were dead
  * (their CSS was deleted in Bucket A; never instantiated in the app).
+ * Deleted in convergence C3 + the orphan sweep (2026-07-06): dzTable (the
+ * HM grid owns it) and the never-mounted dzToast / dzFileUpload /
+ * dzSlideOver / dzThemeSwitcher.
  *
  * Directives:
  *  - x-flip               — FLIP-style animations for list reorders (#960)
@@ -742,42 +742,7 @@ document.addEventListener("alpine:init", () => {
     }
   }
 
-  // ── Toast Notifications ─────────────────────────────────────────────
-
-  Alpine.data("dzToast", () => ({
-    toasts: [],
-    _nextId: 0,
-
-    init() {
-      // Listen for HTMX server-sent showToast triggers
-      document.body.addEventListener("showToast", (e) => {
-        const d = /** @type {CustomEvent} */ (e).detail;
-        if (d && d.message) this.show(d.message, d.type || "success");
-      });
-      // Listen for Alpine $dispatch('toast', ...) events
-      this.$el.addEventListener("toast", (e) => {
-        const d = /** @type {CustomEvent} */ (e).detail;
-        if (d && d.message) this.show(d.message, d.type || "info");
-      });
-    },
-
-    show(message, type = "info") {
-      const id = ++this._nextId;
-      this.toasts.push({ id, message, type, leaving: false });
-      setTimeout(() => this.dismiss(id), 4000);
-    },
-
-    dismiss(id) {
-      const t = this.toasts.find((t) => t.id === id);
-      if (t) {
-        t.leaving = true;
-        setTimeout(() => {
-          this.toasts = this.toasts.filter((t) => t.id !== id);
-        }, 300);
-      }
-    },
-  }));
-
+  // ── Client toast dispatch + CSV download (window.dz utilities) ─────
   // Global toast function (backward compat with dz.toast)
   window.dz = window.dz || {};
   window.dz.toast = (message, type = "info") => {
@@ -834,6 +799,15 @@ document.addEventListener("alpine:init", () => {
       console.error("[dz.downloadCsv]", err);
     }
   };
+
+  // ── Toast / File Upload / Slide-Over / Theme Switcher ───────────────
+  // Deleted in the C3 orphan sweep (2026-07-06): all four Alpine
+  // components were registered but never mounted by any emitter. Toasts
+  // are dz-toast.js (server OOB + the client bridge); the file-upload
+  // widget (`data-dz-widget="file-upload"`) is emitted but its controller
+  // is UNIMPLEMENTED (pre-existing — the Alpine component was never
+  // mounted either; tracked follow-up); the slide-over reveal is inline hx-on
+  // (#1494); theming is server-owned. See CHANGELOG v0.93.98.
 
   // ── Data Table ──────────────────────────────────────────────────────
   // dzTable was deleted in convergence C3 (2026-07-06): the HM grid
@@ -941,207 +915,6 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
-  // ── File Upload ─────────────────────────────────────────────────────
-
-  Alpine.data("dzFileUpload", () => ({
-    filename: "",
-    hasFile: false,
-    uploading: false,
-    progress: 0, // 0-100; bytes-uploaded percentage (#1213 Phase A)
-    error: "",
-    dragging: false,
-
-    selectFile(event) {
-      const files = event.target.files;
-      if (files && files[0]) this.upload(files[0]);
-    },
-
-    onDrop(event) {
-      event.preventDefault();
-      this.dragging = false;
-      if (event.dataTransfer?.files?.[0]) {
-        this.upload(event.dataTransfer.files[0]);
-      }
-    },
-
-    upload(file) {
-      // XMLHttpRequest over fetch() to expose upload-progress events
-      // (#1213 Phase A). The fetch() Streams body progress API is not
-      // yet a uniform browser baseline, and `xhr.upload.onprogress`
-      // is what the existing <progress> element needs to display real
-      // bytes-loaded percentage instead of binary on/off.
-      //
-      // Phase C: when data-dz-file-mode="managed_upload" is present,
-      // route through the ticket flow (POST /api/{entity}/upload-ticket
-      // → presigned POST to S3 → set hidden input to s3_key). The
-      // framework's verify_storage_field_keys hook on entity-create
-      // POSTs runs the prefix-sandbox + head_object verification on
-      // form submit, so no separate finalize round-trip is needed.
-      this.error = "";
-      this.uploading = true;
-      this.progress = 0;
-
-      const mode = this.$el.dataset.dzFileMode || "";
-      if (mode === "managed_upload") {
-        return this._uploadManaged(file);
-      }
-      return this._uploadSimple(file);
-    },
-
-    _uploadSimple(file) {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const form = this.$el.closest("form");
-      const entityName = form?.dataset.dazzleForm || "";
-      const fieldName = this.$el.dataset.dzFile || "";
-      if (entityName) formData.append("entity", entityName);
-      if (fieldName) formData.append("field", fieldName);
-
-      return new Promise((resolve) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/files/upload");
-        xhr.responseType = "json";
-
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable && event.total > 0) {
-            this.progress = Math.round((event.loaded / event.total) * 100);
-          }
-        };
-
-        xhr.onload = () => {
-          this.uploading = false;
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const data = xhr.response || {};
-            this.filename = data.filename || file.name;
-            this.hasFile = true;
-            this.progress = 100;
-            const hidden = this.$el.querySelector("[data-dz-file-value]");
-            if (hidden) hidden.value = data.url || data.id;
-          } else {
-            const detail = (xhr.response && xhr.response.detail) || "";
-            this.error = detail || "Upload failed";
-            this.progress = 0;
-          }
-          resolve();
-        };
-
-        xhr.onerror = () => {
-          this.uploading = false;
-          this.progress = 0;
-          this.error = "Upload failed";
-          resolve();
-        };
-
-        xhr.send(formData);
-      });
-    },
-
-    async _uploadManaged(file) {
-      // managed_upload (#1213 Phase C): three steps.
-      // 1) POST /api/{entity}/upload-ticket → ticket payload
-      // 2) Direct presigned POST to ticket.upload.url with the file
-      //    binary; xhr.upload.onprogress drives the <progress> bar
-      // 3) Set hidden input value to ticket.s3_key — the entity-create
-      //    route's verify_storage_field_keys hook validates it on
-      //    form submit (prefix sandbox + head_object).
-      const form = this.$el.closest("form");
-      const entityName = form?.dataset.dazzleForm || "";
-      const fieldName = this.$el.dataset.dzFile || "";
-      if (!entityName) {
-        this.uploading = false;
-        this.error = "managed_upload requires data-dazzle-form on the form";
-        return;
-      }
-
-      const ticketUrl = `/api/${entityName.toLowerCase()}/upload-ticket`;
-      let ticket;
-      try {
-        const ticketResp = await fetch(ticketUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            content_type: file.type || "application/octet-stream",
-            field: fieldName,
-          }),
-        });
-        if (!ticketResp.ok) {
-          const errBody = await ticketResp.json().catch(() => ({}));
-          throw new Error(
-            errBody.error || `ticket request failed (${ticketResp.status})`,
-          );
-        }
-        ticket = await ticketResp.json();
-      } catch (err) {
-        this.uploading = false;
-        this.progress = 0;
-        this.error = err.message || "Upload ticket request failed";
-        return;
-      }
-
-      const presigned = (ticket && ticket.upload) || {};
-      const s3Url = presigned.url;
-      const s3Fields = presigned.fields || {};
-      const s3Key = ticket.s3_key;
-      if (!s3Url || !s3Key) {
-        this.uploading = false;
-        this.error = "Malformed upload ticket: missing url or s3_key";
-        return;
-      }
-
-      const s3Form = new FormData();
-      for (const [k, v] of Object.entries(s3Fields)) s3Form.append(k, v);
-      s3Form.append("file", file);
-
-      return new Promise((resolve) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", s3Url);
-
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable && event.total > 0) {
-            this.progress = Math.round((event.loaded / event.total) * 100);
-          }
-        };
-
-        xhr.onload = () => {
-          this.uploading = false;
-          if (xhr.status >= 200 && xhr.status < 300) {
-            this.filename = file.name;
-            this.hasFile = true;
-            this.progress = 100;
-            const hidden = this.$el.querySelector("[data-dz-file-value]");
-            if (hidden) hidden.value = s3Key;
-          } else {
-            this.error = `S3 upload failed (${xhr.status})`;
-            this.progress = 0;
-          }
-          resolve();
-        };
-
-        xhr.onerror = () => {
-          this.uploading = false;
-          this.progress = 0;
-          this.error = "S3 upload failed";
-          resolve();
-        };
-
-        xhr.send(s3Form);
-      });
-    },
-
-    clear() {
-      this.filename = "";
-      this.hasFile = false;
-      this.progress = 0;
-      this.error = "";
-      const hidden = this.$el.querySelector("[data-dz-file-value]");
-      if (hidden) hidden.value = "";
-      const fileInput = this.$el.querySelector("[data-dz-file-input]");
-      if (fileInput) fileInput.value = "";
-    },
-  }));
-
   // ── Wizard Form ─────────────────────────────────────────────────────
 
   Alpine.data("dzWizard", (totalSteps) => ({
@@ -1236,148 +1009,6 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
-  // ── Slide-Over (Enhanced) ─────────────────────────────────────────────
-
-  Alpine.data("dzSlideOver", () => ({
-    open: false,
-    _width: "md",
-
-    widthClass() {
-      const map = {
-        sm: "max-w-sm",
-        md: "max-w-md",
-        lg: "max-w-lg",
-        xl: "max-w-xl",
-        full: "max-w-full",
-      };
-      return map[this._width] || "max-w-md";
-    },
-
-    show() {
-      this.open = true;
-      this.$dispatch("dz:open");
-    },
-    hide() {
-      this.open = false;
-      this.$dispatch("dz:close");
-    },
-
-    init() {
-      this._width = this.$el.dataset.dzWidth || "md";
-      // Listen for open event from HTMX triggers
-      window.addEventListener("dz:slideover-open", () => this.show());
-      this.$el.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && this.open) this.hide();
-      });
-    },
-  }));
-
-  // ── Theme Switcher ──────────────────────────────────────────────────
-  //
-  // Phase C Patch 3: live app-shell theme switching.
-  //
-  // Server emits a `<script type="application/json" id="dz-app-themes">`
-  // map of `{<theme_name>: [<url>, ...]}` (chain order, parent → leaf)
-  // covering every theme discovered at startup. The component reads
-  // the active theme from `<html data-theme-name>` (server-set), then
-  // on `setTheme(name)` swaps the `<link data-theme-link>` chain to
-  // the new theme's URLs and persists the choice via `dzPrefs` (or
-  // localStorage as fallback for unauthenticated users).
-  //
-  // Usage in a template:
-  //   <div x-data="dzThemeSwitcher">
-  //     <template x-for="t in themes" :key="t">
-  //       <button @click="setTheme(t)" :aria-pressed="active === t"
-  //               x-text="t"></button>
-  //     </template>
-  //   </div>
-  Alpine.data("dzThemeSwitcher", () => ({
-    /** @type {string[]} */
-    themes: [],
-    /** @type {string} */
-    active: "",
-
-    init() {
-      // Active theme = server-rendered `<html data-theme-name="...">`.
-      this.active = document.documentElement.dataset.themeName || "";
-      // Theme map shipped as inline JSON.
-      const mapEl = document.getElementById("dz-app-themes");
-      if (!mapEl) return;
-      try {
-        const map = JSON.parse(mapEl.textContent || "{}");
-        this.themes = Object.keys(map).sort();
-        this._urls = map; // { name: ['/static/css/themes/x.css', ...] }
-      } catch (e) {
-        /* malformed JSON — leave themes empty */
-      }
-      // Restore persisted choice (overrides server-rendered default
-      // for THIS request only — server still honours its own resolution
-      // for first-paint flash prevention on next navigation).
-      const persisted = this._readPersisted();
-      if (persisted && persisted !== this.active && this._urls[persisted]) {
-        this.setTheme(persisted);
-      }
-    },
-
-    setTheme(name) {
-      if (!this._urls[name]) return; // unknown — silently ignore
-      // Remove existing theme links
-      document
-        .querySelectorAll("link[data-theme-link]")
-        .forEach((el) => el.parentNode && el.parentNode.removeChild(el));
-      // Inject the new chain in cascade order (parent first → leaf last).
-      // Defence in depth: even though the server emits the URL list as
-      // inline JSON (see init()), validate each URL matches the
-      // expected theme-CSS shape before assigning to `link.href`.
-      // Closes CodeQL js/xss-through-dom (#81) — and rejects any
-      // `javascript:` / `data:` payload that would otherwise reach the
-      // DOM sink.
-      const SAFE_THEME_URL = /^\/(?:static\/)?(?:css\/)?themes\/[\w-]+\.css$/;
-      const head = document.head;
-      this._urls[name].forEach((url) => {
-        if (typeof url !== "string" || !SAFE_THEME_URL.test(url)) return;
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = url;
-        link.dataset.themeLink = name;
-        head.appendChild(link);
-      });
-      this.active = name;
-      document.documentElement.dataset.themeName = name;
-      this._persist(name);
-      // Notify any listeners (e.g. data-island re-renders) that the
-      // theme changed. Alpine bridges `dz:` events naturally.
-      window.dispatchEvent(
-        new CustomEvent("dz:theme-changed", { detail: { name } }),
-      );
-    },
-
-    _persist(name) {
-      // Prefer server-backed prefs (auth users); fall back to localStorage.
-      if (window.dzPrefs && typeof window.dzPrefs.set === "function") {
-        window.dzPrefs.set("app_theme", name);
-      } else {
-        try {
-          localStorage.setItem("dz.app_theme", name);
-        } catch (e) {
-          /* private browsing — ignore */
-        }
-      }
-    },
-
-    _readPersisted() {
-      // Try server prefs first (instant for auth users)
-      if (window.dzPrefs && typeof window.dzPrefs.get === "function") {
-        const v = window.dzPrefs.get("app_theme", null);
-        if (v) return v;
-      }
-      try {
-        return localStorage.getItem("dz.app_theme") || null;
-      } catch (e) {
-        return null;
-      }
-    },
-  }));
 });
 
 // ── HTMX morph-swap → Alpine.initTree bridge (#924) ───────────────────

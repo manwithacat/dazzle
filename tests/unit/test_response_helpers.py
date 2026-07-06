@@ -11,8 +11,11 @@ class TestWithToast:
         result = with_toast(resp, "Saved successfully", "success")
         body = result.body.decode()
         assert "<p>OK</p>" in body
-        assert 'id="dz-toast-container"' in body
-        assert "hx-swap-oob" in body
+        # the OOB target must be the shell's REAL toast stack (`#dz-toast`,
+        # rendered by _render_shell) — `#dz-toast-container` never existed
+        # in any layout, so every with_toast OOB silently missed.
+        assert 'hx-swap-oob="afterbegin:#dz-toast"' in body
+        assert 'id="dz-toast-container"' not in body
         assert "Saved successfully" in body
         # #1113 — tone driven by data attribute instead of DaisyUI
         # `alert-{level}` class.
