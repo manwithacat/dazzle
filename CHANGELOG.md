@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.101] - 2026-07-06
+
+### Added
+- **Layouts L3 — Blueprints** (HM 0.1.32 → 0.1.33): full-page layout
+  motifs as gallery sub-pages, the shadcn-Blocks analogue. New
+  `site/blueprints.py` declaration (`Blueprint`: id/title/blurb/partial/
+  composes/notes) + sub-page rendering in `build_site.py` (same bundle,
+  sprite sheet, and theme chrome; a view-source disclosure of the
+  identical string — the page IS the snippet), a "Blueprints" nav group
+  on the index, and `llms.txt` entries. First blueprint:
+  **workspace-drawer** — sidebar navigation, header cluster, KPI
+  auto-grid, reading-measure prose, and a detail drawer on the dialog
+  Hyperpart, composed ONLY of published Hyperparts and Layout primitives
+  (a gate asserts no gallery-chrome classes leak into the composition).
+  Nine new gates deliver the design's test tiers: viewport-parameterized
+  geometry at 390/834/1280 (sidebar wraps under content on phone, KPI
+  grid packs 3→1 columns), drawer open/Esc-close, the zero-paint sweep
+  per blueprint per viewport, and axe WCAG 2.2 A/AA per sub-page.
+
 ## [0.93.100] - 2026-07-06
 
 ### Changed

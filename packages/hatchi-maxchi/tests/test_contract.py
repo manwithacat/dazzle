@@ -15,6 +15,7 @@ PKG = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PKG))
 sys.path.insert(0, str(PKG / "site"))
 
+from blueprints import BLUEPRINTS  # noqa: E402
 from build import build_css, build_js  # noqa: E402
 from registry import HYPERPARTS  # noqa: E402
 
@@ -53,10 +54,19 @@ SEMANTIC_ONLY = {
 }
 
 
+def _all_partials():
+    """Every published markup string — Hyperpart demos AND Blueprint pages
+    (a typo'd class in either ships unstyled to every consumer)."""
+    for c in HYPERPARTS:
+        yield c.id, c.partial
+    for bp in BLUEPRINTS:
+        yield f"blueprint:{bp.id}", bp.partial
+
+
 def _used_classes() -> set[str]:
     used: set[str] = set()
-    for c in HYPERPARTS:
-        for m in re.finditer(r'class="([^"]+)"', c.partial):
+    for _pid, partial in _all_partials():
+        for m in re.finditer(r'class="([^"]+)"', partial):
             used.update(cls for cls in m.group(1).split() if cls.startswith("dz-"))
     return used
 
@@ -104,10 +114,10 @@ def test_no_private_css_prop_leaks_into_snippets() -> None:
     from build import PUBLIC_CSS_PROPS
 
     leaks = []
-    for c in HYPERPARTS:
-        for name in re.findall(r"--dz-[a-z0-9-]+", c.partial):
+    for pid, partial in _all_partials():
+        for name in re.findall(r"--dz-[a-z0-9-]+", partial):
             if name not in PUBLIC_CSS_PROPS:
-                leaks.append(f"{c.id}: {name}")
+                leaks.append(f"{pid}: {name}")
     assert not leaks, (
         "private custom properties referenced in snippets (declare in "
         "PUBLIC_CSS_PROPS or use a public knob):\n  " + "\n  ".join(leaks)
@@ -185,6 +195,14 @@ def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore
         assert fresh == committed, (
             f"site/{name} is stale or the build is nondeterministic — "
             "re-run python site/build_site.py and commit"
+        )
+    # Blueprint sub-pages regenerate byte-identically too — stale committed
+    # HTML would make test_blueprints.py exercise outdated markup while green.
+    for bp_html in sorted((tmp_path / "blueprints").glob("*.html")):
+        fresh = bp_html.read_text(encoding="utf-8")
+        committed = (PKG / "site" / "blueprints" / bp_html.name).read_text(encoding="utf-8")
+        assert fresh == committed, (
+            f"site/blueprints/{bp_html.name} is stale — re-run python site/build_site.py and commit"
         )
 
 
@@ -285,11 +303,11 @@ def test_data_attributes_follow_the_namespace_grammar() -> None:
     naming-contract). Visual variants use `data-dz-variant`, semantic tone
     `data-dz-tone`, size `data-dz-size`."""
     offenders: dict[str, set[str]] = {}
-    for c in HYPERPARTS:
-        for m in _DATA_ATTR_RE.finditer(c.partial):
+    for pid, partial in _all_partials():
+        for m in _DATA_ATTR_RE.finditer(partial):
             name = m.group(1)
             if not name.startswith(("dz-", "hm-")):
-                offenders.setdefault(c.id, set()).add("data-" + name)
+                offenders.setdefault(pid, set()).add("data-" + name)
     assert not offenders, f"non-grammar data-attributes (use data-dz-*/data-hm-*): {offenders}"
 
 

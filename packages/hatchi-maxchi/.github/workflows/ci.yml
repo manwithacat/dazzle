@@ -95,7 +95,7 @@ jobs:
           python-version: "3.12"
       - run: pip install html5validator
       - run: >
-          html5validator --root site --match index.html
+          html5validator --root site --match "*.html"
           --ignore-re 'CSS: ' 'Attribute "hx-[a-z-]+" not allowed'
           'Attribute "closedby" not allowed'
           'Bad value "dialog" for attribute "method"'

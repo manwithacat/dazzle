@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
+from blueprints import BLUEPRINTS  # noqa: E402
 from build import (  # noqa: E402  (package build.py)
     DEFAULT_PREFIX,
     FONT_DIR,
@@ -711,6 +712,11 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-demo-title { font-weight: var(--weight-semibold); font-size: var(--text-sm); margin-bottom: .25rem; }
 .hm-demo-muted { margin: 0; font-size: var(--text-sm); color: var(--colour-text-muted); }
 .hm-demo-box { padding: .5rem .75rem; border: 1px dashed var(--colour-border); border-radius: var(--radius-sm); font-size: var(--text-sm); color: var(--colour-text-muted); background: var(--colour-bg); }
+.hm-blueprint-page { max-width: 72rem; margin-inline: auto; padding: 2rem 1.5rem 4rem; }
+.hm-blueprint-head { margin-block-end: 2rem; }
+.hm-blueprint-head a { color: var(--colour-brand); text-decoration: none; font-size: var(--text-sm); }
+.hm-blueprint-head h1 { margin: .5rem 0 .25rem; letter-spacing: -.02em; }
+.hm-blueprint-live { border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: 1.5rem; margin-block-end: 1.5rem; background: var(--colour-surface); }
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
 .hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }
@@ -771,6 +777,12 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         nav_parts.append(f'<div class="hm-nav-group">{group}</div>')
         for c in comps:
             nav_parts.append(f'<a href="#{c.id}">{_html.escape(c.title)}</a>')
+
+    # Blueprints: full-page motifs on their own sub-pages (the Blocks
+    # analogue) — nav links out rather than anchoring.
+    nav_parts.append('<div class="hm-nav-group">Blueprints</div>')
+    for bp in BLUEPRINTS:
+        nav_parts.append(f'<a href="blueprints/{bp.id}.html">{_html.escape(bp.title)}</a>')
 
     # Copy button: dedicated gallery chrome (NOT a data-dz-variant="ghost"
     # button — the
@@ -930,6 +942,54 @@ Every snippet is the live example — copy it into any htmx4 app.
 </html>"""
     (out_dir / "index.html").write_text(doc + "\n", encoding="utf-8")
 
+    # ── Blueprint sub-pages ──
+    # Each Blueprint renders to blueprints/<id>.html: the SAME bundle/sheet/
+    # theme chrome, the composed page live, and a view-source disclosure of
+    # the identical string — the page IS the snippet.
+    bp_dir = out_dir / "blueprints"
+    bp_dir.mkdir(exist_ok=True)
+    for bp in BLUEPRINTS:
+        bp_live = apply_prefix(expand_icons(bp.partial), prefix)
+        bp_snippet = _html.escape(pretty_html(bp_live))
+        bp_notes = (
+            f'<details class="hm-guidance"><summary>Agent Implementation '
+            f'Guidance</summary><div class="hm-notes">{apply_prefix(bp.notes, prefix)}'
+            f"</div></details>"
+            if bp.notes
+            else ""
+        )
+        composes = " · ".join(
+            f'<a href="../index.html#{cid}">{_html.escape(cid)}</a>' for cid in bp.composes
+        )
+        bp_doc = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{_html.escape(bp.title)} — HaTchi-MaXchi Blueprint</title>
+<link rel="stylesheet" href="../hatchi-maxchi.css">
+<style>{PAGE_CSS}</style>
+<script>{theme_js}</script>
+</head>
+<body>
+{sheet}
+<div class="hm-blueprint-page">
+<header class="hm-blueprint-head">
+<a href="../index.html">&larr; HaTchi-MaXchi</a>
+<h1>{_html.escape(bp.title)}</h1>
+<p class="hm-hero-def">{_html.escape(bp.blurb)}</p>
+<p class="hm-composed"><strong>Composed of:</strong> {composes}</p>
+</header>
+<div class="hm-blueprint-live">{bp_live}</div>
+<details class="hm-contract"><summary>Page source — the whole page is the snippet</summary>
+<pre class="hm-code"><code>{bp_snippet}</code></pre></details>
+{bp_notes}
+</div>
+<script src="../hatchi-maxchi.js" defer></script>
+</body>
+</html>"""
+        (bp_dir / f"{bp.id}.html").write_text(bp_doc + "\n", encoding="utf-8")
+
     # llms.txt (https://llmstxt.org): the LLM-facing map of this site —
     # points agents at the machine-readable sources instead of the HTML.
     (out_dir / "llms.txt").write_text(
@@ -948,6 +1008,13 @@ Every snippet is the live example — copy it into any htmx4 app.
         "- [README]"
         "(https://github.com/manwithacat/hatchi-maxchi#readme):"
         " setup, theming, prefixing, releases\n"
+        "## Blueprints (full-page layout motifs)\n\n"
+        + "".join(
+            f"- [{bp.title}](https://manwithacat.github.io/hatchi-maxchi/"
+            f"blueprints/{bp.id}.html): {bp.blurb}\n"
+            for bp in BLUEPRINTS
+        )
+        + "\n"
         "- [CONTRIBUTING]"
         "(https://github.com/manwithacat/hatchi-maxchi/blob/main/CONTRIBUTING.md):"
         " this repo is a synced mirror of the Dazzle monorepo; PRs land via a"

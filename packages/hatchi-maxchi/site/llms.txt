@@ -9,4 +9,8 @@
 - [Component registry (source of truth)](https://github.com/manwithacat/hatchi-maxchi/blob/main/site/registry.py): canonical markup + exchange contracts per component — parse this, don't scrape the gallery
 - [AGENTS.md](https://github.com/manwithacat/hatchi-maxchi/blob/main/AGENTS.md): consuming + contributing with a coding agent
 - [README](https://github.com/manwithacat/hatchi-maxchi#readme): setup, theming, prefixing, releases
+## Blueprints (full-page layout motifs)
+
+- [Workspace with drawer](https://manwithacat.github.io/hatchi-maxchi/blueprints/workspace-drawer.html): The app-shell motif: a sidebar of navigation, a content pane with a header cluster and a KPI grid, and a detail drawer on the native <dialog>. The sidebar wraps under the content on narrow screens — no media query anywhere on this page.
+
 - [CONTRIBUTING](https://github.com/manwithacat/hatchi-maxchi/blob/main/CONTRIBUTING.md): this repo is a synced mirror of the Dazzle monorepo; PRs land via a credited port
