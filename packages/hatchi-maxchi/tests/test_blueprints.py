@@ -136,3 +136,74 @@ def test_blueprint_wcag(page, bp_id) -> None:  # type: ignore[no-untyped-def]
     page.evaluate(AXE_JS)
     violations = page.evaluate(AXE_RUN)
     _assert_clean(violations, f"blueprint:{bp_id}")
+
+
+class TestMasterDetail:
+    def test_list_docks_beside_detail_on_desktop_stacks_on_phone(self, page) -> None:  # type: ignore[no-untyped-def]
+        _goto(page, "master-detail", _VIEWPORTS["desktop"])
+        tops = page.eval_on_selector(
+            ".hm-blueprint-live .sidebar-layout",
+            "e => [e.children[0].getBoundingClientRect().top,"
+            " e.children[1].getBoundingClientRect().top]",
+        )
+        assert tops[0] == tops[1], "desktop: list docks beside the reading pane"
+        _goto(page, "master-detail", _VIEWPORTS["phone"])
+        tops = page.eval_on_selector(
+            ".hm-blueprint-live .sidebar-layout",
+            "e => [e.children[0].getBoundingClientRect().top,"
+            " e.children[1].getBoundingClientRect().top]",
+        )
+        assert tops[0] != tops[1], "phone: the list stacks above the detail"
+
+    def test_selection_exchange_loads_the_detail_card(self, page) -> None:  # type: ignore[no-untyped-def]
+        _goto(page, "master-detail", _VIEWPORTS["desktop"])
+        page.click('.master-detail__item[hx-get$="inv-002"]')
+        page.wait_for_timeout(150)
+        assert "Globex" in page.inner_text(".master-detail__detail")
+
+
+class TestDashboard:
+    def test_kpi_grid_packs_per_viewport(self, page) -> None:  # type: ignore[no-untyped-def]
+        counts = {}
+        for name, width in _VIEWPORTS.items():
+            _goto(page, "dashboard", width)
+            counts[name] = page.eval_on_selector(
+                ".auto-grid",
+                "e => getComputedStyle(e).gridTemplateColumns.split(' ').length",
+            )
+        assert counts["desktop"] >= 4, counts
+        assert counts["phone"] <= 2, counts
+
+    def test_progress_values_paint(self, page) -> None:  # type: ignore[no-untyped-def]
+        """The public knob at page scale: each bar's width tracks its
+        inline --progress-value (the v0.93.96 prefix strategy live)."""
+        _goto(page, "dashboard", _VIEWPORTS["desktop"])
+        widths = page.eval_on_selector_all(
+            ".progress",
+            """els => els.map(e => {
+              const bar = e.querySelector('.progress__bar');
+              return Math.round(bar.getBoundingClientRect().width /
+                e.getBoundingClientRect().width * 100);
+            })""",
+        )
+        assert widths and abs(widths[0] - 62) <= 2 and abs(widths[1] - 38) <= 2, widths
+
+
+class TestAuth:
+    def test_card_keeps_the_reading_measure(self, page) -> None:  # type: ignore[no-untyped-def]
+        _goto(page, "auth", _VIEWPORTS["desktop"])
+        w = page.eval_on_selector(
+            '.hm-blueprint-live > .center[data-measure="prose"]',
+            "e => e.getBoundingClientRect().width",
+        )
+        # 65ch at 16px base is well under 800px — the card must not span
+        # the desktop viewport.
+        assert w < 800, f"the auth column must hold its measure: {w}px"
+
+    def test_form_fields_are_labelled(self, page) -> None:  # type: ignore[no-untyped-def]
+        _goto(page, "auth", _VIEWPORTS["phone"])
+        pairs = page.eval_on_selector_all(
+            ".form-input",
+            """els => els.map(e => !!document.querySelector('label[for="' + e.id + '"]'))""",
+        )
+        assert pairs and all(pairs), "every input must have a bound label"

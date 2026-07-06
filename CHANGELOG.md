@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.102] - 2026-07-06
+
+### Added
+- **Layouts L4 — the remaining Blueprints** (HM 0.1.33 → 0.1.34):
+  **master-detail** (the triage motif at page scale — the master–detail
+  composite docked in a sidebar layout beside a reading-measure pane; the
+  selection exchange runs live on the sub-page against the gallery mock),
+  **dashboard** (KPI tiles in a packing grid, capacity progress bars
+  driving the public `--dz-progress-value` knob at page scale, status
+  cluster), and **auth** (the centred single-card motif with the
+  `dz-form-*` field triad). Motif-specific gates join the parameterized
+  tiers: dock/stack per viewport + the exchange loads the selected card;
+  grid packs 4→≤2 columns; progress widths track their knob values ±2%;
+  the auth column holds its measure and every input has a bound label.
+  Review notes folded in: dashboard and auth wrap their compositions in a
+  `<main>` landmark (blueprints are copy-paste page templates — the
+  landmark travels with the paste), and a no-op `dz-center` on the auth
+  heading was dropped rather than teaching copy-pasters a fake idiom.
+
 ## [0.93.101] - 2026-07-06
 
 ### Added

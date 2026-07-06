@@ -12,5 +12,8 @@
 ## Blueprints (full-page layout motifs)
 
 - [Workspace with drawer](https://manwithacat.github.io/hatchi-maxchi/blueprints/workspace-drawer.html): The app-shell motif: a sidebar of navigation, a content pane with a header cluster and a KPI grid, and a detail drawer on the native <dialog>. The sidebar wraps under the content on narrow screens — no media query anywhere on this page.
+- [Master–detail page](https://manwithacat.github.io/hatchi-maxchi/blueprints/master-detail.html): The triage motif at page scale: a persistent record list beside a reading-measure detail pane. Selection is a hypermedia exchange — the item hx-gets its card into the pane; the composite wraps in a sidebar layout so the list docks beside the detail on wide screens and stacks above it on narrow ones.
+- [Dashboard](https://manwithacat.github.io/hatchi-maxchi/blueprints/dashboard.html): KPI tiles in a packing grid, a capacity list with progress bars, and a status cluster — the at-a-glance motif. Column count is entirely intrinsic: the grid packs whatever fits above its minimum tile width.
+- [Auth page](https://manwithacat.github.io/hatchi-maxchi/blueprints/auth.html): The centred single-card motif: a sign-in form in a reading measure, vertically composed with the stack. The same card works for sign-up, reset, and 2FA steps.
 
 - [CONTRIBUTING](https://github.com/manwithacat/hatchi-maxchi/blob/main/CONTRIBUTING.md): this repo is a synced mirror of the Dazzle monorepo; PRs land via a credited port
