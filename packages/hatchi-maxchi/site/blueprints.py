@@ -209,7 +209,10 @@ BLUEPRINTS: list[Blueprint] = [
         '<label class="dz-form-label" for="bp-auth-email">Email'
         '<span class="dz-form-required">*</span></label>'
         '<input class="dz-form-input" id="bp-auth-email" type="email" required '
-        'autocomplete="username" placeholder="you@company.com">'
+        # Nu rejects autocomplete="username" on type=email; "email" is the
+        # spec-clean token here and password managers pair it with
+        # current-password just the same.
+        'autocomplete="email" placeholder="you@company.com">'
         "</div>"
         '<div class="dz-form-field">'
         '<label class="dz-form-label" for="bp-auth-password">Password'

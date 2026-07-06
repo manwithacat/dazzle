@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.103] - 2026-07-06
+
+### Fixed
+- The auth blueprint's email field used `autocomplete="username"`, which
+  the Nu/W3C validator rejects on `type="email"` — caught by the extended
+  vnu gate on its FIRST CI outing (it validated only `index.html` before
+  v0.93.101). Now `autocomplete="email"`, spec-clean and password-manager
+  equivalent. HM stays 0.1.34 content-wise except the regenerated page.
+
 ## [0.93.102] - 2026-07-06
 
 ### Added
