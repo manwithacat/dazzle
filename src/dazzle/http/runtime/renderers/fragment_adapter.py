@@ -20,6 +20,7 @@ from dazzle.render.fragment import (
     ColumnVisibilityMenu,
     CreateButton,
     DataListScroll,
+    DetailGrid,
     DzTableMount,
     EmptyState,
     FilterBar,
@@ -335,17 +336,16 @@ class FragmentSurfaceAdapter:
                 description="This record has no displayable fields.",
             )
         else:
-            field_rows = tuple(
-                Row(
-                    children=(
-                        Heading(str(f.get("label", f.get("key", ""))), level=4),
-                        _detail_field_value(f),
-                    ),
-                    align="start",
+            # Layouts L2: the label/value layout is the DetailGrid
+            # primitive's job (a semantic <dl> with the two-column grid CSS)
+            # — the old Stack-of-Rows shape only looked right because a
+            # contextual `.dz-region--kind-detail .dz-row` rule hijacked
+            # Row into a grid, which died with the dz-row family.
+            detail_body = DetailGrid(
+                rows=tuple(
+                    (str(f.get("label", f.get("key", ""))), _detail_field_value(f)) for f in fields
                 )
-                for f in fields
             )
-            detail_body = Stack(children=field_rows, gap="sm")
 
         entity_name = (getattr(surface, "entity_ref", "") or ctx.get("entity_name") or "").strip()
         item_id = str(ctx.get("item_id", "") or "")

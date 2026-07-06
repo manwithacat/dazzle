@@ -3428,37 +3428,10 @@ input.switch:checked::before {
    * (different naming scheme) and is not styled here.
    */
 
-  .stack {
-    display: flex;
-    flex-direction: column;
-    /* L1 contract: unset gap = md. Declared HERE (not in layout.css's
-     * direct-layer rule) so the legacy --gap-* modifiers below and the
-     * data-gap scale both still win — this file's inner @layer wrapper
-     * puts its rules in a SUBLAYER that any direct components-layer rule
-     * would beat regardless of specificity (tracked follow-up). */
-    gap: var(--space-md);
-  }
-
-  .stack--gap-none { gap: 0; }
-  .stack--gap-sm { gap: var(--space-sm); }
-  .stack--gap-md { gap: var(--space-md); }
-  .stack--gap-lg { gap: var(--space-lg); }
-
-  .row {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .row--gap-none { gap: 0; }
-  .row--gap-sm { gap: var(--space-sm); }
-  .row--gap-md { gap: var(--space-md); }
-  .row--gap-lg { gap: var(--space-lg); }
-
-  .row--align-start { align-items: flex-start; }
-  .row--align-center { align-items: center; }
-  .row--align-end { align-items: flex-end; }
-  .row--align-stretch { align-items: stretch; }
+  /* Layouts L2: the Stack/Row layout rules retired — the Stack primitive
+   * emits the HM stack Hyperpart contract (base rule + data-gap scale
+   * in layout.css) and Row emits the cluster Hyperpart. .stack's base
+   * rule moved to layout.css with the rest of its Hyperpart. */
 
   .grid {
     display: grid;
@@ -3554,26 +3527,9 @@ input.switch:checked::before {
     overflow-x: auto;
   }
 
-  .region--kind-detail .stack {
-    gap: var(--space-md);
-  }
-
-  .region--kind-detail .row {
-    display: grid;
-    grid-template-columns: minmax(8rem, 12rem) 1fr;
-    gap: var(--space-md);
-    align-items: baseline;
-  }
-
-  .region--kind-detail .row > .heading {
-    color: var(--colour-text-muted);
-    font-weight: var(--weight-medium);
-    text-align: end;
-  }
-
-  .region--kind-detail .row > .text {
-    color: var(--colour-text);
-  }
+  /* L2: the contextual Row-as-grid rules retired — the detail field
+   * layout is the DetailGrid primitive's <dl> (detail-region-grid),
+   * not a hijacked Row. */
 
   /* ───────────────────────── Related ─────────────────────────
    * Related-group region — appended to detail surfaces, one per
@@ -5402,13 +5358,15 @@ summary.table-col-menu-trigger::-webkit-details-marker {
  * attribute contract (data-gap: xs|sm|md|lg|xl; unset = md). */
 
 /* HYPERPART: stack */
-/* The base rule (display, direction, and the unset=md gap default) lives in
- * fragment-primitives.css alongside the legacy --gap-* modifier scale: that
- * file wraps itself in an inner @layer, so a gap declared HERE (direct
- * components layer) would beat every sublayered modifier and silently
- * flatten legacy emissions to md. This file only adds the data-gap
- * attribute scale (below) — higher specificity, same direct layer, wins
- * over the base as intended. */
+/* L2: with the legacy --gap-* modifier scale retired (the emitters now
+ * speak data-gap), the base rule lives here with the rest of the
+ * Hyperpart — the sublayer-precedence trap it once had to dodge has no
+ * competing rules left. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
 
 /* HYPERPART: cluster */
 .cluster {
@@ -5430,6 +5388,10 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   align-items: baseline;
 }
 
+.cluster[data-align="stretch"] {
+  align-items: stretch;
+}
+
 .cluster[data-justify="end"] {
   justify-content: flex-end;
 }
@@ -5443,6 +5405,12 @@ summary.table-col-menu-trigger::-webkit-details-marker {
 }
 
 /* The shared gap scale — one contract for the three gapped layouts. */
+.stack[data-gap="none"],
+.cluster[data-gap="none"],
+.auto-grid[data-gap="none"] {
+  gap: 0;
+}
+
 .stack[data-gap="xs"],
 .cluster[data-gap="xs"],
 .auto-grid[data-gap="xs"] {

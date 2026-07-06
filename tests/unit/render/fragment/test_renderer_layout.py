@@ -9,14 +9,18 @@ def test_render_stack_with_two_children() -> None:
     out = r.render(Stack(children=(Text("a"), Text("b"))))
     # Each Text emits one <span class="dz-text ..."> element.
     assert out.count('<span class="dz-text') == 2
-    assert "dz-stack" in out
-    assert "dz-stack--gap-md" in out
+    # L2: the HM stack Hyperpart contract — gap on the shared attribute.
+    assert '<div class="dz-stack" data-dz-gap="md">' in out
 
 
 def test_render_row_alignment() -> None:
+    # L2: Row emits the cluster Hyperpart; center is the default (no attr),
+    # other alignments ride data-dz-align.
     r = FragmentRenderer()
     out = r.render(Row(children=(Text("x"),), align="center"))
-    assert "dz-row--align-center" in out
+    assert '<div class="dz-cluster" data-dz-gap="md">' in out
+    out = r.render(Row(children=(Text("x"),), align="end"))
+    assert 'data-dz-align="end"' in out
 
 
 def test_render_split() -> None:

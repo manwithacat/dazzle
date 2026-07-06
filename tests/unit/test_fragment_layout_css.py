@@ -16,30 +16,37 @@ from __future__ import annotations
 
 from pathlib import Path
 
-_CSS = (
-    Path(__file__).resolve().parents[2]
-    / "packages/hatchi-maxchi/components/fragment-primitives.css"
-)
+_COMPONENTS = Path(__file__).resolve().parents[2] / "packages/hatchi-maxchi/components"
 
 
 def _text() -> str:
-    return _CSS.read_text()
+    # L2 split the layout vocabulary across two HM files: the Layout
+    # Hyperparts (layout.css) + the remaining fragment chrome
+    # (fragment-primitives.css). The contract is the union.
+    return (_COMPONENTS / "fragment-primitives.css").read_text() + (
+        _COMPONENTS / "layout.css"
+    ).read_text()
 
 
-def test_stack_base_and_gap_modifiers_present() -> None:
+def test_stack_hyperpart_contract_present() -> None:
+    """L2: the stack Hyperpart (layout.css) — base rule + the shared
+    data-dz-gap scale replace the retired --gap-* modifier classes."""
     css = _text()
     assert ".dz-stack {" in css
-    for gap in ("none", "sm", "md", "lg"):
-        assert f".dz-stack--gap-{gap}" in css, f"missing .dz-stack--gap-{gap}"
+    assert ".dz-stack--gap-" not in css, "the legacy modifier scale is retired"
+    for gap in ("none", "xs", "sm", "md", "lg", "xl"):
+        assert f'.dz-stack[data-dz-gap="{gap}"]' in css
 
 
-def test_row_base_gap_and_align_modifiers_present() -> None:
+def test_cluster_hyperpart_replaces_row() -> None:
+    """L2: Row emits the cluster Hyperpart — the dz-row rule family is
+    retired with it."""
     css = _text()
-    assert ".dz-row {" in css
-    for gap in ("none", "sm", "md", "lg"):
-        assert f".dz-row--gap-{gap}" in css, f"missing .dz-row--gap-{gap}"
-    for align in ("start", "center", "end", "stretch"):
-        assert f".dz-row--align-{align}" in css, f"missing .dz-row--align-{align}"
+    assert ".dz-cluster {" in css
+    assert ".dz-row {" not in css
+    assert ".dz-row--" not in css
+    for align in ("start", "end", "baseline", "stretch"):
+        assert f'.dz-cluster[data-dz-align="{align}"]' in css
 
 
 def test_grid_base_and_all_column_modifiers_present() -> None:

@@ -60,7 +60,7 @@ def test_unsupported_mode_raises() -> None:
 
 def test_view_mode_produces_surface_with_detail_region() -> None:
     """Plan 8 — SurfaceMode.VIEW renders fields as definition-list Region."""
-    from dazzle.render.fragment import Heading, Region, Stack, Surface
+    from dazzle.render.fragment import Heading, Region, Surface
 
     surface = SurfaceSpec(
         name="task_detail",
@@ -81,15 +81,20 @@ def test_view_mode_produces_surface_with_detail_region() -> None:
     assert fragment.header.body == "Task Detail"
     assert isinstance(fragment.body, Region)
     assert fragment.body.kind == "detail"
-    assert isinstance(fragment.body.body, Stack)
-    assert len(fragment.body.body.children) == 2
+    # Layouts L2: the field body is the DetailGrid primitive (a semantic
+    # <dl> label/value definition list), not a Stack of hijacked Rows.
+    from dazzle.render.fragment import DetailGrid
+
+    assert isinstance(fragment.body.body, DetailGrid)
+    assert len(fragment.body.body.rows) == 2
 
 
 def test_view_mode_field_row_shape() -> None:
-    """Each field renders as Row(Heading, value). ADR-0049 Phase 2: the value
-    goes through the typed cell core (`_render_cell_display`), so it's RawHTML
-    (the typed rendering) rather than a plain Text."""
-    from dazzle.render.fragment import Heading, RawHTML, Row
+    """Each field is a DetailGrid (label, value) pair (Layouts L2 — the old
+    Row shape only laid out via a contextual CSS hijack). ADR-0049 Phase 2:
+    the value goes through the typed cell core (`_render_cell_display`),
+    so it's RawHTML rather than a plain Text."""
+    from dazzle.render.fragment import RawHTML
 
     surface = SurfaceSpec(name="x", title="X", mode=SurfaceMode.VIEW, entity_ref="Task")
     ctx = {
@@ -97,12 +102,9 @@ def test_view_mode_field_row_shape() -> None:
         "region_name": "x_main",
     }
     fragment = FragmentSurfaceAdapter().build(surface, ctx)
-    stack = fragment.body.body
-    first_row = stack.children[0]
-    assert isinstance(first_row, Row)
-    label, value = first_row.children
-    assert isinstance(label, Heading)
-    assert label.body == "Title"
+    grid = fragment.body.body
+    label, value = grid.rows[0]
+    assert label == "Title"
     assert isinstance(value, RawHTML)
     assert "Hello" in value.html
 
@@ -337,11 +339,9 @@ def test_view_mode_no_related_groups_unchanged() -> None:
     }
     fragment = FragmentSurfaceAdapter().build(surface, ctx)
     assert fragment.body.kind == "detail"
-    # Body is the field stack directly (not a wrapper Stack)
-    from dazzle.render.fragment import Stack
+    # Body is the field DetailGrid directly (no wrapper Stack)
+    from dazzle.render.fragment import DetailGrid
 
-    assert isinstance(fragment.body.body, Stack)
-    # First child should be a Row (field), not a Region (related)
-    from dazzle.render.fragment import Row
-
-    assert isinstance(fragment.body.body.children[0], Row)
+    assert isinstance(fragment.body.body, DetailGrid)
+    # The grid carries the field pairs directly (no related-group Regions)
+    assert fragment.body.body.rows[0][0] == "Title"

@@ -1,4 +1,4 @@
-/* dazzle v0.93.99 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.100 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2417,28 +2417,6 @@ color: var(--colour-text-muted);
 text-transform: uppercase;
 letter-spacing: 0.05em;
 }
-.dz-stack {
-display: flex;
-flex-direction: column;
-gap: var(--space-md);
-}
-.dz-stack--gap-none { gap: 0; }
-.dz-stack--gap-sm { gap: var(--space-sm); }
-.dz-stack--gap-md { gap: var(--space-md); }
-.dz-stack--gap-lg { gap: var(--space-lg); }
-.dz-row {
-display: flex;
-flex-direction: row;
-flex-wrap: wrap;
-}
-.dz-row--gap-none { gap: 0; }
-.dz-row--gap-sm { gap: var(--space-sm); }
-.dz-row--gap-md { gap: var(--space-md); }
-.dz-row--gap-lg { gap: var(--space-lg); }
-.dz-row--align-start { align-items: flex-start; }
-.dz-row--align-center { align-items: center; }
-.dz-row--align-end { align-items: flex-end; }
-.dz-row--align-stretch { align-items: stretch; }
 .dz-grid {
 display: grid;
 gap: var(--space-md);
@@ -2494,23 +2472,6 @@ color: var(--colour-text);
 }
 .dz-region--kind-detail {
 overflow-x: auto;
-}
-.dz-region--kind-detail .dz-stack {
-gap: var(--space-md);
-}
-.dz-region--kind-detail .dz-row {
-display: grid;
-grid-template-columns: minmax(8rem, 12rem) 1fr;
-gap: var(--space-md);
-align-items: baseline;
-}
-.dz-region--kind-detail .dz-row > .dz-heading {
-color: var(--colour-text-muted);
-font-weight: var(--weight-medium);
-text-align: end;
-}
-.dz-region--kind-detail .dz-row > .dz-text {
-color: var(--colour-text);
 }
 .dz-region--kind-related {
 margin-block-start: var(--space-lg);
@@ -3770,6 +3731,11 @@ text-decoration: underline;
 }
 }
 @layer components {
+.dz-stack {
+display: flex;
+flex-direction: column;
+gap: var(--space-md);
+}
 .dz-cluster {
 display: flex;
 flex-wrap: wrap;
@@ -3785,6 +3751,9 @@ align-items: flex-end;
 .dz-cluster[data-dz-align="baseline"] {
 align-items: baseline;
 }
+.dz-cluster[data-dz-align="stretch"] {
+align-items: stretch;
+}
 .dz-cluster[data-dz-justify="end"] {
 justify-content: flex-end;
 }
@@ -3793,6 +3762,11 @@ justify-content: space-between;
 }
 .dz-cluster[data-dz-justify="center"] {
 justify-content: center;
+}
+.dz-stack[data-dz-gap="none"],
+.dz-cluster[data-dz-gap="none"],
+.dz-auto-grid[data-dz-gap="none"] {
+gap: 0;
 }
 .dz-stack[data-dz-gap="xs"],
 .dz-cluster[data-dz-gap="xs"],

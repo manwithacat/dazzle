@@ -10,13 +10,15 @@
  * attribute contract (data-dz-gap: xs|sm|md|lg|xl; unset = md). */
 
 /* HYPERPART: stack */
-/* The base rule (display, direction, and the unset=md gap default) lives in
- * fragment-primitives.css alongside the legacy --gap-* modifier scale: that
- * file wraps itself in an inner @layer, so a gap declared HERE (direct
- * components layer) would beat every sublayered modifier and silently
- * flatten legacy emissions to md. This file only adds the data-dz-gap
- * attribute scale (below) — higher specificity, same direct layer, wins
- * over the base as intended. */
+/* L2: with the legacy --gap-* modifier scale retired (the emitters now
+ * speak data-dz-gap), the base rule lives here with the rest of the
+ * Hyperpart — the sublayer-precedence trap it once had to dodge has no
+ * competing rules left. */
+.dz-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
 
 /* HYPERPART: cluster */
 .dz-cluster {
@@ -38,6 +40,10 @@
   align-items: baseline;
 }
 
+.dz-cluster[data-dz-align="stretch"] {
+  align-items: stretch;
+}
+
 .dz-cluster[data-dz-justify="end"] {
   justify-content: flex-end;
 }
@@ -51,6 +57,12 @@
 }
 
 /* The shared gap scale — one contract for the three gapped layouts. */
+.dz-stack[data-dz-gap="none"],
+.dz-cluster[data-dz-gap="none"],
+.dz-auto-grid[data-dz-gap="none"] {
+  gap: 0;
+}
+
 .dz-stack[data-dz-gap="xs"],
 .dz-cluster[data-dz-gap="xs"],
 .dz-auto-grid[data-dz-gap="xs"] {

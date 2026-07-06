@@ -85,14 +85,18 @@ class _RenderLayoutMixin:
         return f'<h{h.level} class="{cls}">{body}</h{h.level}>'
 
     def _emit_stack(self, s: Stack, ctx: RenderContext) -> str:
-        cls = f"dz-stack dz-stack--gap-{s.gap}"
+        # Layouts L2: the HM stack Hyperpart contract — gap rides the shared
+        # data-dz-gap scale, not the retired --gap-* modifier classes.
         body = "".join(self._emit(c, ctx) for c in s.children)  # type: ignore[arg-type]
-        return f'<div class="{cls}">{body}</div>'
+        return f'<div class="dz-stack" data-dz-gap="{ctx.escape_attr(s.gap)}">{body}</div>'
 
     def _emit_row(self, r: Row, ctx: RenderContext) -> str:
-        cls = f"dz-row dz-row--gap-{r.gap} dz-row--align-{r.align}"
+        # Layouts L2: Row renders the HM cluster Hyperpart (wrapping
+        # horizontal group). align=center is the cluster default; other
+        # alignments ride data-dz-align.
+        align = "" if r.align == "center" else f' data-dz-align="{ctx.escape_attr(r.align)}"'
         body = "".join(self._emit(c, ctx) for c in r.children)  # type: ignore[arg-type]
-        return f'<div class="{cls}">{body}</div>'
+        return f'<div class="dz-cluster" data-dz-gap="{ctx.escape_attr(r.gap)}"{align}>{body}</div>'
 
     def _emit_split(self, s: Split, ctx: RenderContext) -> str:
         # The colon in ratio strings is invalid in CSS class names; replace

@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.100] - 2026-07-06
+
+### Changed
+- **Layouts L2 — the Stack/Row emitters speak the Layout Hyperpart
+  contracts** (HM 0.1.31 → 0.1.32). `Stack(gap=…)` emits
+  `<div class="dz-stack" data-dz-gap="…">`; `Row` emits the `dz-cluster`
+  Hyperpart (`data-dz-gap` + `data-dz-align`, centre being the cluster
+  default). The legacy `--gap-*`/`dz-row` modifier families are deleted
+  from `fragment-primitives.css`, and the stack base rule consolidates
+  into `layout.css` (the L1 sublayer trap is moot once the modifiers are
+  gone). `Split`/`Grid` keep their legacy emission — both have zero
+  production call sites, so they wait for a consumer to motivate a
+  contract choice. Review added the missing `gap="none"` and
+  `align="stretch"` CSS coverage (the type contracts promised both).
+- **Detail views render their fields as a real `<dl>`** — the call-site
+  verification the design demanded paid off: the detail field rows were
+  `Row(Heading, value)` whose two-column layout came entirely from a
+  contextual `.dz-region--kind-detail .dz-row` CSS hijack (which also,
+  wrongly, gridified the action toolbar). The adapter now emits the
+  existing `DetailGrid` primitive (semantic `dt`/`dd`, the same one
+  workspace detail regions use); the hijack rules are deleted; the action
+  toolbar becomes a true wrapping cluster. Dropping the `<h4>` labels for
+  `<dt>` also removes spurious heading-navigation entries from every
+  detail view (WCAG 1.3.1-correct structure).
+
 ## [0.93.99] - 2026-07-06
 
 ### Added

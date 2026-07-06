@@ -319,37 +319,10 @@
    * (different naming scheme) and is not styled here.
    */
 
-  .dz-stack {
-    display: flex;
-    flex-direction: column;
-    /* L1 contract: unset gap = md. Declared HERE (not in layout.css's
-     * direct-layer rule) so the legacy --gap-* modifiers below and the
-     * data-dz-gap scale both still win — this file's inner @layer wrapper
-     * puts its rules in a SUBLAYER that any direct components-layer rule
-     * would beat regardless of specificity (tracked follow-up). */
-    gap: var(--space-md);
-  }
-
-  .dz-stack--gap-none { gap: 0; }
-  .dz-stack--gap-sm { gap: var(--space-sm); }
-  .dz-stack--gap-md { gap: var(--space-md); }
-  .dz-stack--gap-lg { gap: var(--space-lg); }
-
-  .dz-row {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .dz-row--gap-none { gap: 0; }
-  .dz-row--gap-sm { gap: var(--space-sm); }
-  .dz-row--gap-md { gap: var(--space-md); }
-  .dz-row--gap-lg { gap: var(--space-lg); }
-
-  .dz-row--align-start { align-items: flex-start; }
-  .dz-row--align-center { align-items: center; }
-  .dz-row--align-end { align-items: flex-end; }
-  .dz-row--align-stretch { align-items: stretch; }
+  /* Layouts L2: the Stack/Row layout rules retired — the Stack primitive
+   * emits the HM stack Hyperpart contract (base rule + data-dz-gap scale
+   * in layout.css) and Row emits the cluster Hyperpart. .dz-stack's base
+   * rule moved to layout.css with the rest of its Hyperpart. */
 
   .dz-grid {
     display: grid;
@@ -445,26 +418,9 @@
     overflow-x: auto;
   }
 
-  .dz-region--kind-detail .dz-stack {
-    gap: var(--space-md);
-  }
-
-  .dz-region--kind-detail .dz-row {
-    display: grid;
-    grid-template-columns: minmax(8rem, 12rem) 1fr;
-    gap: var(--space-md);
-    align-items: baseline;
-  }
-
-  .dz-region--kind-detail .dz-row > .dz-heading {
-    color: var(--colour-text-muted);
-    font-weight: var(--weight-medium);
-    text-align: end;
-  }
-
-  .dz-region--kind-detail .dz-row > .dz-text {
-    color: var(--colour-text);
-  }
+  /* L2: the contextual Row-as-grid rules retired — the detail field
+   * layout is the DetailGrid primitive's <dl> (dz-detail-region-grid),
+   * not a hijacked Row. */
 
   /* ───────────────────────── Related ─────────────────────────
    * Related-group region — appended to detail surfaces, one per
