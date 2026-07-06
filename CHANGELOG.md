@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.116] - 2026-07-06
+
+### Changed
+- **Alpine island retired: dzMoney** (Tier F4c, HM 0.1.46 → 0.1.47).
+  The money widget is state-in-DOM: a `data-dz-money` root carries the
+  mutable `data-dz-scale`, the new delegated HM `dz-money.js` keeps the
+  hidden `*_minor` carrier in sync (input), normalizes the display on
+  blur, and retunes scale/prefix on currency change. The edit-mode
+  display value is now SERVER-computed from the minor carrier — no
+  client init pass. One behavioural improvement: the currency-change
+  prefix update actually works (the Alpine branch queried a class the
+  emitter never emitted). New gallery `money` Hyperpart with a
+  real-browser sync/normalize test. Remaining Alpine islands: dzWizard,
+  dzDashboardBuilder + the touch/optimistic directives.
+
+### Fixed
+- **Zero-decimal currencies posted ×100 minor units** (latent, review
+  catch): `form_field.py` collapsed a scale of `0` (JPY et al.) to `""`
+  via `or ""`, and the new controller's fallback would have read scale 2
+  — typing ¥1,500 would post 150,000. The old Alpine failed loud (NaN);
+  the conversion would have made it silent. Zero now survives to
+  `data-dz-scale="0"`, regression-pinned.
+
+### Agent Guidance
+- **`x or ""` collapses falsy-but-meaningful values** — a `0` scale,
+  count, or index silently becomes empty. Use explicit None/"" checks
+  when the domain includes zero.
+
 ## [0.93.115] - 2026-07-06
 
 ### Changed

@@ -2,10 +2,10 @@
 `form_renderer._render_money` (first-class `: money` field, widget 2/9).
 
 `money` is a first-class lexer type (used by the `pra` fixture). The legacy
-widget emits the `x-data="dzMoney"` controller contract — a major-unit text
+widget emits the HM `data-dz-money` controller contract — a major-unit text
 input backed by a hidden `{name}_minor` integer carrier — in two modes
 (fixed-currency vs currency-selector). This pins the substrate `MoneyField`
-to the same mount attributes so the dzMoney Alpine controller keeps working
+to the same mount attributes so the delegated dz-money.js controller keeps working
 after the 3b forms flip (and money doesn't degrade to a plain number input).
 """
 
@@ -65,17 +65,20 @@ def test_money_does_not_degrade_to_number() -> None:
 
 def test_fixed_mode_controller_contract() -> None:
     html = _render(_FIXED)
-    assert 'x-data="dzMoney"' in html
+    # F4c: state-in-DOM — the delegated dz-money.js keys off the root
+    # marker; scale/currency live as data attributes; no Alpine.
+    assert "x-data" not in html and "x-model" not in html
+    assert "@input" not in html and "@blur" not in html
+    assert "data-dz-money" in html
     assert 'data-dz-currency="GBP"' in html
     assert 'data-dz-scale="2"' in html
-    # Major-unit visible input bound to the controller.
     assert 'inputmode="decimal"' in html
     assert 'id="field-amount"' in html
-    assert 'x-model="displayValue"' in html
-    assert '@input="onInput()"' in html
-    # Hidden minor + currency carriers.
-    assert 'name="amount_minor"' in html
-    assert "minorValue = '1500'" in html
+    # Edit mode: the display value is SERVER-computed from the minor
+    # carrier (1500 @ scale 2 → "15.00") — no client init pass.
+    assert 'value="15.00"' in html
+    # Hidden minor + currency carriers, SSR'd.
+    assert 'name="amount_minor" value="1500"' in html
     assert 'name="amount_currency"' in html
     assert 'value="GBP"' in html
     # Symbol prefix.
@@ -90,7 +93,7 @@ def test_fixed_mode_required_aria() -> None:
 def test_selector_mode_currency_options() -> None:
     html = _render(_SELECTOR)
     assert 'name="price_currency"' in html
-    assert '@change="onCurrencyChange($event)"' in html
+    assert "@change" not in html  # dz-money.js listens for change delegated
     assert '<option value="USD"' in html
     assert 'data-symbol="$"' in html
     assert '<option value="EUR"' in html
@@ -104,3 +107,23 @@ def test_selector_mode_currency_options() -> None:
 # Phase 3b — `form_renderer` is deleted, so there is no legacy renderer left to
 # compare against; the substrate is now the source of truth (parity is recorded
 # in git history + the CHANGELOG). The substrate-only assertions above stand.
+
+
+def test_zero_decimal_scale_survives_to_the_dom() -> None:
+    """F4c review catch: `or ""` collapsed a zero-decimal scale (JPY →
+    int 0) to "" — dz-money.js would then fall back to scale 2 and post
+    ×100 minor units (silent write corruption). Zero must reach the DOM
+    as data-dz-scale="0" and the display precompute must honour it."""
+    field = {
+        **_FIXED,
+        "extra": {
+            **_FIXED["extra"],
+            "currency_code": "JPY",
+            "scale": 0,
+            "symbol": "¥",
+        },
+        "value": "1500",
+    }
+    html = _render(field)
+    assert 'data-dz-scale="0"' in html
+    assert 'value="1500"' in html  # 1500 minor @ scale 0 → display "1500"

@@ -165,7 +165,10 @@ def field_dict_to_primitive(
             name=name,
             label=label,
             currency_code=str(extra.get("currency_code", "") or ""),
-            scale=str(extra.get("scale", "") or ""),
+            # `or ""` would collapse a zero-decimal scale (JPY → int 0) to
+            # "" — the controller would then fall back to scale 2 and post
+            # ×100 minor units (silent corruption; F4c review catch).
+            scale=("" if extra.get("scale") in (None, "") else str(extra.get("scale"))),
             symbol=str(extra.get("symbol", "") or ""),
             currency_fixed=bool(extra.get("currency_fixed", True)),
             currency_options=currency_options,

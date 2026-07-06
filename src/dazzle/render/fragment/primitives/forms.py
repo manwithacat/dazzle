@@ -186,7 +186,7 @@ class MoneyField:
     """Money input for a first-class `: money` field — at parity with the
     legacy `_render_money` widget.
 
-    Renders the `x-data="dzMoney"` controller contract: a major-unit text
+    Renders the HM `data-dz-money` controller contract: a major-unit text
     input (`inputmode="decimal"`, `x-model="displayValue"`) backed by a
     hidden `{name}_minor` input (the integer minor units the controller
     keeps in sync) plus a `{name}_currency` carrier. Two modes:
@@ -198,7 +198,7 @@ class MoneyField:
       of `currency_options` (each `(code, scale, symbol)`) driving
       `onCurrencyChange`.
 
-    The dzMoney Alpine controller already exists client-side; this primitive
+    The delegated `dz-money.js` controller ships in the HM dist; this primitive
     only emits the mount attributes it reads."""
 
     name: str

@@ -1537,3 +1537,23 @@ def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # t
     # grace expired; the confirm line lives inside the closed panel).
     assert page.is_hidden(panel)
     page.reload()
+
+
+def test_money_field_syncs_minor_carrier_and_normalizes(page) -> None:  # type: ignore[no-untyped-def]
+    """F4c: typing a major amount keeps the hidden minor carrier in sync
+    (input event); blur normalizes the display to the scale."""
+    root = "#money [data-money]"
+    inp = f"{root} input[inputmode=decimal]"
+    minor = f"{root} input[name=amount_minor]"
+
+    assert page.input_value(minor) == "1500"  # SSR'd from edit mode
+    page.fill(inp, "12.5")
+    assert page.input_value(minor) == "1250"
+    page.eval_on_selector(inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(inp) == "12.50", "blur must normalize to scale"
+    page.fill(inp, "")
+    page.eval_on_selector(inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(minor) == "", "empty display clears the carrier"
+    page.reload()

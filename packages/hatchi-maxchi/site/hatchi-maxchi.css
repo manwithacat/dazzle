@@ -2623,6 +2623,7 @@ dialog.drawer > form {
   accent-color: var(--colour-brand);
 }
 
+/* HYPERPART: money */
 /* ─────────────────────────── money widget ───────────────────────
  * Three sub-elements:
  *   .form-money-group — flex row container

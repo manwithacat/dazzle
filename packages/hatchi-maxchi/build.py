@@ -102,6 +102,7 @@ JS_SOURCES = [
     "controllers/dz-app-shell.js",
     "controllers/dz-confirm-gate.js",
     "controllers/dz-search-select.js",
+    "controllers/dz-money.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

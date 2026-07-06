@@ -367,17 +367,31 @@ class _RenderFormsMixin:
         )
 
     def _emit_money(self, m: MoneyField, ctx: RenderContext) -> str:
-        """Render a MoneyField reproducing the legacy `_render_money` dzMoney
-        contract — a major-unit text input + hidden `{name}_minor` carrier,
-        in fixed (symbol prefix + hidden currency) or selector mode."""
+        """Render a MoneyField — a major-unit text input + hidden
+        `{name}_minor` carrier, in fixed (symbol prefix + hidden currency)
+        or selector mode. State-in-DOM (Tier F4c): the delegated HM
+        `dz-money.js` keys off the root `data-dz-money` marker, reads the
+        scale from `data-dz-scale`, and keeps the hidden minor carrier in
+        sync on input/blur/currency-change. The edit-mode display value is
+        SERVER-computed from the minor carrier (no client init pass).
+        Replaces the Alpine `dzMoney` island."""
         name = ctx.escape_attr(m.name)
         label_text = ctx.escape(m.label)
         minor_attr = ctx.escape_attr(m.minor_initial)
         required_attr = ' required aria-required="true"' if m.required else ""
+        # Edit mode: precompute the major-unit display from the minor
+        # carrier server-side ("1500" @ scale 2 -> "15.00").
+        display = ""
+        if m.minor_initial:
+            try:
+                display = f"{int(m.minor_initial) / (10 ** int(m.scale)):.{int(m.scale)}f}"
+            except (ValueError, TypeError):
+                display = ""
+        display_attr = ctx.escape_attr(display)
 
         if m.currency_fixed:
             return (
-                '<div x-data="dzMoney" '
+                '<div class="dz-money" data-dz-money '
                 f'data-dz-currency="{ctx.escape_attr(m.currency_code)}" '
                 f'data-dz-scale="{ctx.escape_attr(m.scale)}">'
                 '<div class="dz-form-money-group">'
@@ -385,14 +399,13 @@ class _RenderFormsMixin:
                 f"{ctx.escape(m.symbol)}</span>"
                 f'<input type="text" inputmode="decimal" id="field-{name}" '
                 f'data-dazzle-field="{name}" '
-                'x-model="displayValue" @input="onInput()" @blur="onBlur()" '
+                f'value="{display_attr}" '
                 'class="dz-form-input dz-form-input-trailing" '
                 'placeholder="0.00" '
                 f'aria-label="{label_text} ({ctx.escape(m.currency_code)})"'
                 f"{required_attr}>"
                 "</div>"
-                f'<input type="hidden" name="{name}_minor" x-model="minorValue" '
-                f"x-init=\"minorValue = '{minor_attr}'\">"
+                f'<input type="hidden" name="{name}_minor" value="{minor_attr}">'
                 f'<input type="hidden" name="{name}_currency" '
                 f'value="{ctx.escape_attr(m.currency_code)}">'
                 "</div>"
@@ -406,24 +419,22 @@ class _RenderFormsMixin:
             for code, opt_scale, opt_symbol in m.currency_options
         )
         return (
-            f'<div x-data="dzMoney" data-dz-scale="{ctx.escape_attr(m.scale)}">'
+            f'<div class="dz-money" data-dz-money data-dz-scale="{ctx.escape_attr(m.scale)}">'
             '<div class="dz-form-money-group">'
             f'<select name="{name}_currency" '
-            '@change="onCurrencyChange($event)" '
             'class="dz-form-money-select" '
             f'aria-label="Currency for {label_text}">'
             f"{currency_opts}"
             "</select>"
             f'<input type="text" inputmode="decimal" id="field-{name}" '
             f'data-dazzle-field="{name}" '
-            'x-model="displayValue" @input="onInput()" @blur="onBlur()" '
+            f'value="{display_attr}" '
             'class="dz-form-input dz-form-input-trailing" '
             'placeholder="0.00" '
             f'aria-label="{label_text}"'
             f"{required_attr}>"
             "</div>"
-            f'<input type="hidden" name="{name}_minor" x-model="minorValue" '
-            f"x-init=\"minorValue = '{minor_attr}'\">"
+            f'<input type="hidden" name="{name}_minor" value="{minor_attr}">'
             "</div>"
         )
 

@@ -7,7 +7,6 @@
  *
  * Components (each an Alpine ISLAND slated for conversion — Alpine is
  * deprecated for new code, CLAUDE.md UI Invariants):
- *  - dzMoney          — multi-currency minor unit field
  *  - dzWizard         — multi-step form wizard
  *
  * Removed in the HM migration (Bucket A2, v0.93.65): dzConfirm and
@@ -814,105 +813,11 @@ document.addEventListener("alpine:init", () => {
   // own the entire data-table behaviour surface — delegated, state-in-DOM,
   // no Alpine scope. See CHANGELOG v0.93.97 and the C1.1-C2.4 entries.
 
-  // ── Money Field ─────────────────────────────────────────────────────
-
-  const CURRENCY_SCALES = {
-    GBP: 2,
-    USD: 2,
-    EUR: 2,
-    AUD: 2,
-    CAD: 2,
-    CHF: 2,
-    CNY: 2,
-    INR: 2,
-    NZD: 2,
-    SGD: 2,
-    HKD: 2,
-    SEK: 2,
-    NOK: 2,
-    DKK: 2,
-    ZAR: 2,
-    MXN: 2,
-    BRL: 2,
-    JPY: 0,
-    KRW: 0,
-    VND: 0,
-    CLP: 0,
-    ISK: 0,
-    BHD: 3,
-    KWD: 3,
-    OMR: 3,
-    TND: 3,
-    JOD: 3,
-    IQD: 3,
-    LYD: 3,
-  };
-
-  Alpine.data("dzMoney", () => ({
-    displayValue: "",
-    minorValue: "",
-    _scale: 2,
-
-    init() {
-      // Determine scale from container attributes
-      this._scale = this._getScale();
-      // Populate display from minor on load (edit mode)
-      if (this.minorValue && !this.displayValue) {
-        this.displayValue = this._toDisplay(this.minorValue);
-      }
-    },
-
-    onInput() {
-      this.minorValue = String(this._toMinor(this.displayValue));
-    },
-
-    onBlur() {
-      if (!this.displayValue.trim()) {
-        this.minorValue = "";
-        return;
-      }
-      const minor = this._toMinor(this.displayValue);
-      this.minorValue = String(minor);
-      this.displayValue = this._toDisplay(String(minor));
-    },
-
-    onCurrencyChange(event) {
-      const opt = event.target.selectedOptions[0];
-      if (opt && opt.dataset.scale !== undefined) {
-        this._scale = parseInt(opt.dataset.scale, 10);
-      }
-      // Update prefix symbol
-      const prefix = this.$el.querySelector(".dz-money-prefix");
-      if (prefix && opt && opt.dataset.symbol) {
-        prefix.textContent = opt.dataset.symbol;
-      }
-      // Re-convert with new scale
-      if (this.displayValue) {
-        const minor = this._toMinor(this.displayValue);
-        this.minorValue = String(minor);
-        this.displayValue = this._toDisplay(String(minor));
-      }
-    },
-
-    _getScale() {
-      const scaleAttr = this.$el.getAttribute("data-dz-scale");
-      if (scaleAttr !== null) return parseInt(scaleAttr, 10);
-      const code = this.$el.getAttribute("data-dz-currency") || "GBP";
-      return CURRENCY_SCALES[code] !== undefined ? CURRENCY_SCALES[code] : 2;
-    },
-
-    _toMinor(val) {
-      const num = parseFloat(val);
-      if (isNaN(num)) return 0;
-      return Math.round(num * Math.pow(10, this._scale));
-    },
-
-    _toDisplay(val) {
-      const num = parseInt(val, 10);
-      if (isNaN(num)) return "";
-      return (num / Math.pow(10, this._scale)).toFixed(this._scale);
-    },
-  }));
+  // ── Money field ─────────────────────────────────────────────────────
+  // dzMoney removed (Tier F4c, 2026-07-06): the money widget converged
+  // onto the HM dz-money.js delegated controller — state-in-DOM
+  // (data-dz-money root + data-dz-scale + SSR'd hidden minor carrier);
+  // the emitter no longer binds x-model/x-init.
 
   // ── Wizard Form ─────────────────────────────────────────────────────
 

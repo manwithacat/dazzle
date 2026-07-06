@@ -466,7 +466,7 @@ controllers, state in the DOM, server-owned rendering.
 Remaining Alpine ISLANDS registered via Alpine.data() in dz-alpine.js
 (each converts as its HM Hyperpart lands):
 
-dzMoney — Currency field (minor unit conversion)
+dz-money.js (HM) — Currency field (minor unit conversion; converted from the dzMoney Alpine island, Tier F4c)
   ISO 4217 scale table, bidirectional display↔minor conversion
   Supports pinned and unpinned (dropdown) currency
 
@@ -474,7 +474,7 @@ dzWizard — Multi-step form wizard
   Params: dzWizard(totalSteps)
   Per-stage validation, stepper dot navigation
 
-dzConfirmGate — bulk-action typed-confirmation gate
+dz-confirm-gate.js (HM) — confirm-panel consent gate (converted from the dzConfirmGate Alpine island, Tier F1)
 
 Retired (do NOT reference): dzTable (convergence C1-C3 — the HM grid
 dz-grid.js + dz-grid-cols/-resize/-edit extensions own the data table);
