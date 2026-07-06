@@ -852,6 +852,145 @@ HYPERPARTS: list[Hyperpart] = [
         controller="controllers/dz-confirm-gate.js",
     ),
     Hyperpart(
+        "search-box",
+        "Search box",
+        "Forms",
+        "The FTS search region: a debounced search input, an aria-live "
+        "results panel, and a coaching line that hides — via pure CSS — "
+        "the moment the user types.",
+        '<div class="dz-search-box-region hm-measure">'
+        '<div class="dz-search-box-input-row">'
+        '<label for="hm-search-input" class="visually-hidden">Search records</label>'
+        '<input id="hm-search-input" type="search" name="q" '
+        'class="dz-search-box-input" placeholder="Search records…" '
+        'autocomplete="off" '
+        'hx-get="/mock/search" '
+        'hx-trigger="input changed delay:250ms, search" '
+        'hx-target="#hm-search-results" '
+        'hx-swap="innerHTML">'
+        "</div>"
+        '<div id="hm-search-results" class="dz-search-box-results" '
+        'role="region" aria-live="polite">'
+        '<div class="dz-search-box-empty">Type a title or keyword</div>'
+        "</div></div>",
+        notes="No JS beyond htmx: the 250ms debounce is "
+        "<code>hx-trigger=&quot;input changed delay:250ms, search&quot;</code>, "
+        "the results land in an <code>aria-live=&quot;polite&quot;</code> "
+        "region, and the coaching line is hidden by "
+        "<code>:has(input:not(:placeholder-shown))</code> — no client "
+        "state. Results are server-rendered "
+        "<code>dz-search-box-result</code> rows (title + per-field "
+        "<code>&lt;mark&gt;</code>-highlighted snippets, count line above); "
+        "the no-results state reuses <code>dz-search-box-empty</code> with "
+        "the <code>--no-results</code> modifier.",
+        tags=("forms", "htmx"),
+        exchanges=(
+            Exchange(
+                method="GET",
+                endpoint="/app/fts/{entity}?q=&html=1",
+                trigger="the input, debounced 250ms (and the native "
+                "`search` event — Esc/clear on type=search)",
+                response="the results fragment: a `dz-search-box-result-count` "
+                "line + a `dz-search-box-result-list` of linked rows with "
+                "`<mark>`-highlighted snippets; zero hits return the "
+                "`--no-results` variant of the empty line (which the CSS "
+                "toggle deliberately never hides). Empty queries aren't "
+                "sent (min length 1)",
+                swap="innerHTML",
+            ),
+        ),
+    ),
+    Hyperpart(
+        "form-chrome",
+        "Form chrome",
+        "Forms",
+        "The structural form pieces: titled sections, the validation-error "
+        "summary, and the multi-section progress stepper.",
+        '<div class="hm-stack hm-measure">'
+        '<div class="dz-form-errors" role="alert">'
+        '<svg class="dz-form-errors-icon" xmlns="http://www.w3.org/2000/svg" '
+        'fill="none" viewBox="0 0 24 24" stroke="currentColor" '
+        'stroke-width="2" aria-hidden="true">'
+        '<path stroke-linecap="round" stroke-linejoin="round" '
+        'd="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 '
+        "0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 "
+        '0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>'
+        '<div class="dz-form-errors-body">'
+        '<h3 class="dz-form-errors-title">Validation Error</h3>'
+        '<ul class="dz-form-errors-list" role="list">'
+        "<li>Name is required</li>"
+        "<li>Start date must be before end date</li>"
+        "</ul></div></div>"
+        '<ol class="dz-form-stepper" role="list" aria-label="Form progress">'
+        '<li class="dz-form-stepper-item is-not-last" aria-current="step">'
+        '<span class="dz-form-stepper-circle is-active"><span>1</span></span>'
+        '<span class="dz-form-stepper-label is-active">Details</span>'
+        '<span class="dz-form-stepper-connector" aria-hidden="true"></span></li>'
+        '<li class="dz-form-stepper-item is-not-last">'
+        '<span class="dz-form-stepper-circle"><span>2</span></span>'
+        '<span class="dz-form-stepper-label">Schedule</span>'
+        '<span class="dz-form-stepper-connector" aria-hidden="true"></span></li>'
+        '<li class="dz-form-stepper-item">'
+        '<span class="dz-form-stepper-circle"><span>3</span></span>'
+        '<span class="dz-form-stepper-label">Review</span></li>'
+        "</ol>"
+        '<section class="dz-form-section">'
+        '<h3 class="dz-form-section-title">Contact details</h3>'
+        '<p class="dz-form-section-note">Shown on invoices and receipts.</p>'
+        '<div class="dz-form-field">'
+        '<label class="dz-form-label" for="hm-fc-name">Full name'
+        '<span class="dz-form-required" aria-hidden="true">*</span></label>'
+        '<input id="hm-fc-name" class="dz-form-input" type="text" '
+        'aria-required="true"></div>'
+        "</section>"
+        "</div>",
+        notes="Sections are real <code>&lt;section&gt;</code>s with an "
+        "<code>h3</code> title + optional note; fields inside use the HM "
+        "form primitives. The error summary is "
+        "<code>role=&quot;alert&quot;</code> (the server re-renders it on "
+        "a failed submit). The stepper here shows RENDERED states "
+        "(<code>is-active</code>/<code>is-not-last</code>, "
+        "<code>aria-current=&quot;step&quot;</code>) — in Dazzle its "
+        "click/keyboard behaviour is still the dzWizard Alpine island, "
+        "converting to an HM controller as this family completes.",
+        tags=("forms",),
+        composes=("field",),
+    ),
+    Hyperpart(
+        "date-range",
+        "Date range",
+        "Forms",
+        "Two native date inputs driving one htmx exchange — the from/to "
+        "filter bar for time-scoped regions.",
+        '<div class="dz-date-range-picker date-range-bar">'
+        '<label class="dz-date-range-label" for="hm-dr-from">From</label>'
+        '<input type="date" id="hm-dr-from" name="date_from" value="2026-06-01" '
+        'class="dz-date-range-input" hx-get="/mock/search" '
+        'hx-target="#hm-dr-out" hx-swap="innerHTML" '
+        'hx-include="closest .date-range-bar">'
+        '<label class="dz-date-range-label" for="hm-dr-to">To</label>'
+        '<input type="date" id="hm-dr-to" name="date_to" value="2026-06-30" '
+        'class="dz-date-range-input" hx-get="/mock/search" '
+        'hx-target="#hm-dr-out" hx-swap="innerHTML" '
+        'hx-include="closest .date-range-bar">'
+        '<div id="hm-dr-out" hidden></div>'
+        "</div>",
+        notes="Native <code>type=&quot;date&quot;</code> inputs — no picker "
+        "JS. Each input fires the region's hx-get on change and "
+        "<code>hx-include=&quot;closest .date-range-bar&quot;</code> sends "
+        "BOTH bounds every time, so the server always sees the full range.",
+        tags=("forms", "htmx"),
+        exchanges=(
+            Exchange(
+                method="GET",
+                endpoint="/app/{region}?date_from=&date_to=",
+                trigger="either date input's change — hx-include sends both bounds",
+                response="the re-rendered region body for the new range",
+                swap="innerHTML",
+            ),
+        ),
+    ),
+    Hyperpart(
         "toggle-group",
         "Toggle group",
         "Navigation",

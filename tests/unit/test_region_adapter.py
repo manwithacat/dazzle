@@ -1278,8 +1278,10 @@ def test_confirm_action_panel_drops_malformed_confirmations() -> None:
 
 def test_search_box_renders_typed_search_box_primitive() -> None:
     """Phase 4B.1.d: `_build_search_box` now produces the typed
-    `SearchBox` primitive — HTMX FTS input + lazy result panel +
-    Alpine coaching toggle. Replaced the prior plain-Field rendering."""
+    `SearchBox` primitive — HTMX FTS input + lazy result panel + a
+    pure-CSS coaching toggle (`:has(:not(:placeholder-shown))` hides the
+    coaching line once the user types — the Alpine q-island retired in
+    Tier F3). Replaced the prior plain-Field rendering."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "source_entity": "Manuscript",
@@ -1292,7 +1294,10 @@ def test_search_box_renders_typed_search_box_primitive() -> None:
     assert 'hx-get="/_dazzle/fts/Manuscript?html=1"' in html
     assert 'hx-trigger="input changed delay:250ms, search"' in html
     assert 'aria-live="polite"' in html
-    assert 'x-show="!q"' in html
+    assert "x-show" not in html  # coaching visibility is CSS-only now
+    assert "x-data" not in html
+    assert "x-model" not in html
+    assert "dz-search-box-empty" in html
     assert "Type a title or keyword" in html
 
 

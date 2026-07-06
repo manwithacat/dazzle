@@ -1,0 +1,168 @@
+/* HYPERPART: search-box */
+/* Tier F3, fleet convergence. Two lineages in one file:
+ *
+ * 1. The `.dz-search-box-*` family is AUTHORED here — the Dazzle FTS
+ *    search_box region emitted this markup UNSTYLED (no rules existed
+ *    anywhere), so these are new HM styles for the live contract, not
+ *    a move. The coaching-line toggle is pure CSS (`:has` +
+ *    `:placeholder-shown`) — it replaced the Alpine `q` island.
+ *
+ * 2. The `.dz-select-result-*` / `.dz-search-result-*` families are
+ *    promoted VERBATIM from Dazzle fragments.css (the search-flow
+ *    autofill pattern; also consumed by the search-select widget). */
+
+.dz-search-box-region {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.dz-search-box-input-row {
+  display: flex;
+  align-items: center;
+}
+
+.dz-search-box-input {
+  width: 100%;
+  height: 2.25rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-search-box-input:focus-visible {
+  outline: none;
+  border-color: var(--colour-brand);
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+/* Coaching line — visible until the user types. Pure CSS: while the
+ * input shows its placeholder the query is empty; the first keystroke
+ * hides the line (and the first result swap replaces it entirely). */
+.dz-search-box-region:has(.dz-search-box-input:not(:placeholder-shown))
+  .dz-search-box-empty:not(.dz-search-box-empty--no-results) {
+  display: none;
+}
+
+.dz-search-box-empty {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  padding-block: var(--space-sm);
+}
+
+.dz-search-box-result-count {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-end: var(--space-xs);
+}
+
+.dz-search-box-result-list {
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dz-search-box-result {
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-search-box-result:last-child {
+  border-block-end: 0;
+}
+
+.dz-search-box-result-link {
+  display: block;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-xs);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-search-box-result-link:hover {
+  background: var(--colour-bg);
+}
+
+.dz-search-box-result-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-search-box-result-snippets {
+  list-style: none;
+  margin: 0.125rem 0 0;
+  padding-inline-start: 0;
+}
+
+.dz-search-box-result-snippet {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-search-box-result-snippet-field {
+  font-weight: var(--weight-medium);
+  margin-inline-end: 0.25rem;
+}
+
+/* mark = the FTS highlight the server emits inside snippets/titles */
+.dz-search-box-result-link mark {
+  background: var(--colour-warning-soft);
+  color: inherit;
+  border-radius: 2px;
+}
+
+/* ── search-flow fragments (VERBATIM from Dazzle fragments.css) ──
+ * select_result + search_results fragments — used by the
+ * search-flow autofill pattern (cycle 288). select_result uses a
+ * success-tinted "Selected:" line; search_results renders a list
+ * of clickable rows + an empty/no-results state. */
+
+.dz-select-result-confirm {
+  padding: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--colour-success);
+}
+
+.dz-select-result-input {
+  width: 100%;
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-search-result-row {
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-search-result-row:hover {
+  background: var(--colour-bg);
+}
+
+.dz-search-result-name {
+  font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+}
+
+.dz-search-result-secondary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-search-result-empty {
+  padding: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}

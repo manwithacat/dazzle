@@ -73,6 +73,10 @@ SEMANTIC_ONLY = {
     # confirm-panel root: the state branch keys off data-dz-state-value;
     # the wrapper itself carries no rule (verbatim from Dazzle).
     "dz-confirm-panel",
+    # search-box results container: the htmx swap target + aria-live
+    # region — pure structure, its children (count/list/rows) carry the
+    # styling.
+    "dz-search-box-results",
     # task-inbox item skeleton: rule-less in Dazzle too (the dashboard's
     # plain list); the icon is the only styled piece. Follow-up candidate.
     "dz-task-inbox-items",

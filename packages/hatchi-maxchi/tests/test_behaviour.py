@@ -1454,3 +1454,44 @@ def test_drawer_lazy_trigger_opens_dialog_and_loads_body(page) -> None:  # type:
     page.keyboard.press("Escape")
     page.wait_for_timeout(100)
     assert page.get_attribute("#hm-drawer-lazy", "open") is None
+
+
+def test_search_box_coaching_hides_on_type_via_pure_css(page) -> None:  # type: ignore[no-untyped-def]
+    """The search-box coaching line is toggled by CSS alone
+    (`:has(input:not(:placeholder-shown))`) — no client state. Typing
+    hides it (before any swap); clearing brings it back; the debounced
+    hx-get lands the results fragment."""
+    box = "#search-box .search-box-region"
+    coaching = f"{box} .search-box-empty"
+    inp = f"{box} input[type=search]"
+
+    assert page.is_visible(coaching)
+    page.fill(inp, "substation")
+    assert not page.is_visible(coaching), "typing must hide the coaching line (CSS :has)"
+    page.wait_for_timeout(400)  # past the 250ms debounce
+    assert "Aurora" in page.inner_text(f"{box} .search-box-results")
+    page.fill(inp, "")
+    # results were swapped in, so the coaching line is gone from the DOM —
+    # but an untouched box (fresh reload) shows it again when empty
+    page.reload()
+    page.wait_for_timeout(300)
+    assert page.is_visible(coaching)
+
+
+def test_search_box_no_results_state_survives_the_css_toggle(page) -> None:  # type: ignore[no-untyped-def]
+    """SEV-1 regression pin (F3 review): the coaching-hide rule must NOT
+    catch the server's zero-hit state — `dz-search-box-empty
+    --no-results` arrives while the input is non-empty by construction,
+    and hiding it would render a blank panel."""
+    box = "#search-box .search-box-region"
+    page.fill(f"{box} input[type=search]", "zzz-no-such")
+    page.eval_on_selector(
+        f"{box} .search-box-results",
+        """el => { el.innerHTML =
+          '<div class="search-box-empty search-box-empty--no-results">' +
+          'No results for “zzz-no-such”</div>'; }""",
+    )
+    assert page.is_visible(f"{box} .search-box-empty--no-results"), (
+        "the no-results line must stay visible while the input is non-empty"
+    )
+    page.reload()

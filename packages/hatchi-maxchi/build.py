@@ -78,6 +78,9 @@ CSS_SOURCES = [
     ("components", "components/tree.css"),
     ("components", "components/diagram.css"),
     ("components", "components/confirm-panel.css"),
+    ("components", "components/search-box.css"),
+    ("components", "components/form-chrome.css"),
+    ("components", "components/date-range.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]

@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.113] - 2026-07-06
+
+### Added
+- **Fleet convergence Tier F3** (HM 0.1.43 → 0.1.44): three Forms-family
+  Hyperparts — **search-box** (the FTS region; the previously-unstyled
+  live `.dz-search-box-*` markup gets authored HM styles, plus the
+  search-flow autofill fragments verbatim), **form-chrome** (form
+  sections, the validation-error summary, form stepper, experience
+  steps indicator), and **date-range** (native from/to date inputs, one
+  htmx exchange, `hx-include` sends both bounds).
+
+### Changed
+- **Alpine island retired: the search-box `q` scope.** The coaching
+  line now hides via pure CSS —
+  `:has(.dz-search-box-input:not(:placeholder-shown))` — no client
+  state at all. The emitter guards against an empty placeholder (it is
+  load-bearing for the toggle) and the server's `--no-results` state is
+  explicitly excluded from the hide rule (review catch: it arrives
+  while the input is non-empty and would have rendered a blank panel).
+
+### Removed
+- **Dead form/search CSS deleted** (zero producers, independently
+  verified): the `.dz-form-shell/-header/-title/-body/-actions` wrapper
+  family (its producer was the legacy form_renderer.py removed in
+  ADR-0049 Phase 3b) and the `.dz-search-input*/.dz-search-clear`
+  fragment family.
+
+### Fixed
+- **A `*/` inside a CSS comment was corrupting the shipped bundle**: a
+  tombstone comment mentioning `.dz-search-input*/` closed the comment
+  early, and the surviving junk text formed an invalid selector that ate
+  the next rule — the command palette's overlay positioning — in every
+  shipped app. Caught by the F3 adversarial review; reworded, rule
+  restored.
+
+### Agent Guidance
+- **Never write `*/` inside a CSS comment** — including class-glob
+  shorthand like `.dz-foo*/`. It closes the comment and CSS error
+  recovery silently eats the NEXT rule in the minified bundle.
+- **`:placeholder-shown` toggles need a non-empty placeholder** — treat
+  the placeholder as load-bearing when using the coaching-line pattern.
+
 ## [0.93.112] - 2026-07-06
 
 ### Changed
