@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.97] - 2026-07-06
+
+### Removed
+- **Convergence C3 — dzTable is deleted** (512 lines from `dz-alpine.js`),
+  along with its dev harness (`test-data-table.html`) and the
+  data-table quality gates that exercised it. The HM grid primitive
+  (`dz-grid.js`) and its extensions own the entire data-table behaviour
+  surface; grep-proven dead first (the C2.4 mount retirement left zero
+  emitters). The #853 stale-column-prune ratchets re-anchor onto
+  `dz-grid-cols.js`.
+
+### Added
+- **Column-menu "Show all columns" reset** (HM 0.1.29 → 0.1.30): dzTable's
+  #853 escape hatch had no equivalent in the extension — deleting the code
+  would have lost the capability. `dz-grid-cols.js` now handles
+  `[data-dz-grid-cols-reset]` (shows every column, clears the stored
+  preference); the Dazzle column menu and the HM gallery both carry the
+  button, with a two-engine behaviour test (hide → reset → reload stays
+  all-visible).
+
+### Deprecated
+- **Alpine.js is deprecated for new code** (ratified 2026-07-06; policy in
+  CLAUDE.md › UI Invariants). Client behaviour follows the HM Hyperpart
+  idiom — delegated vanilla controllers, state in the DOM, server-owned
+  rendering. Remaining islands (dzMoney, dzWizard, dzConfirmGate,
+  dzDashboardBuilder, four small form scopes) convert opportunistically as
+  their HM Hyperparts land; several registered components are already
+  orphaned (dzToast, dzSlideOver, dzThemeSwitcher, dzFileUpload) and go in
+  the next sweep. End state removes the vendored Alpine (~90KB).
+
+### Agent Guidance
+- Never add an `x-data`/`@click`/`x-show` binding. New client behaviour is
+  a delegated HM controller (or extension) with its seams documented in
+  the Hyperpart registry. The grid pins assert the absence of Alpine on
+  its regions.
+
 ## [0.93.96] - 2026-07-06
 
 ### Fixed

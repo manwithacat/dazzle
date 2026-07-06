@@ -45,8 +45,8 @@ class _RowArchetype:
     list_kind: str
 
 
-# The three archetypes (design §3.3). `data-table` is the rich CRUD row (Alpine
-# `dzTable` controller mounted); `embedded` is the plain Fragment `Table` row;
+# The three archetypes (design §3.3). `data-table` is the rich CRUD row (the
+# HM grid root's delegated controllers); `embedded` is the plain Fragment `Table` row;
 # `region` is the workspace `kind: list` row. All three flow through
 # `assemble_list_row` — only HTML production converges; RBAC/scope/sort and the
 # per-archetype cell content stay in the callers.

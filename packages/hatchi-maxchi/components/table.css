@@ -97,6 +97,28 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   background: var(--colour-bg);
 }
 
+/* #853 escape hatch: the "Show all columns" reset at the panel's foot. */
+.dz-table-col-menu-reset {
+  display: block;
+  width: 100%;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-xs);
+  margin-block-start: var(--space-xs);
+  border: none;
+  border-block-start: 1px solid var(--colour-border);
+  background: none;
+  text-align: start;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-table-col-menu-reset:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
 .dz-table-col-menu-checkbox {
   width: 0.875rem;
   height: 0.875rem;

@@ -271,6 +271,9 @@ HYPERPARTS: list[Hyperpart] = [
         '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
         'data-dz-grid-col-toggle="signed" aria-label="Show Signed up column">'
         "<span>Signed up</span></label>"
+        # #853 escape hatch: show every column + clear the stored preference.
+        '<button type="button" class="dz-table-col-menu-reset" '
+        "data-dz-grid-cols-reset>Show all columns</button>"
         "</div></details>"
         "</div>"
         '<div class="dz-bulk-actions">'

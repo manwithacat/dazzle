@@ -122,8 +122,8 @@ class _RenderTablesMixin:
         # the legacy string-column shape backwards-compatible.
         head_cells_parts: list[str] = []
         # Issue #1029 phase 7: bulk_select prepends a select-all
-        # checkbox header cell. Alpine `dzTable` controller owns
-        # bulkCount + toggleSelectAll.
+        # checkbox header cell (the HM grid controller's
+        # data-dz-grid-select-all seam drives its tri-state).
         if t.bulk_select:
             # Convergence C1.1: selection is owned by the HM grid controller
             # (dz-grid.js, delegated + state-in-DOM) — the select-all box is
@@ -137,7 +137,7 @@ class _RenderTablesMixin:
                 "</th>"
             )
         # Task 4e: when column keys are supplied (the canonical list path), each
-        # data header carries `data-dz-col="{key}"` so the dzTable controller's
+        # data header carries `data-dz-col="{key}"` so dz-grid-cols.js's
         # column-visibility toggle (which sets style.display on every
         # `[data-dz-col]` cell) hides the header in lock-step with the hydrated
         # body cells (which already carry data-dz-col via render_data_row).
@@ -146,7 +146,7 @@ class _RenderTablesMixin:
         for i, c in enumerate(t.columns):
             if keys:
                 # Canonical list header: data-dz-col (column-visibility) +
-                # dz-table-th; sortable columns are dzTable toggleSort buttons.
+                # dz-table-th; sortable columns are data-dz-grid-sort buttons.
                 ck = ctx.escape_attr(keys[i])
                 label = ctx.escape(str(c))
                 if keys[i] in sortable:
@@ -553,7 +553,11 @@ class _RenderTablesMixin:
             'stroke-width="1.5"/>'
             "</svg>Columns</summary>"
             '<div class="dz-table-col-menu-panel">'
-            f"{''.join(items)}</div></details>"
+            f"{''.join(items)}"
+            # #853 escape hatch: show every column + clear the stored set.
+            '<button type="button" class="dz-table-col-menu-reset" '
+            "data-dz-grid-cols-reset>Show all columns</button>"
+            "</div></details>"
         )
 
     def _emit_kpi(self, k: KPI, ctx: RenderContext) -> str:

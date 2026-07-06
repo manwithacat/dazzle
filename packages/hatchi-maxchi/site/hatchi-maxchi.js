@@ -1825,6 +1825,9 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  *   - prune:   stale stored keys that match no current column are dropped at
  *              init (#853 — otherwise a renamed column leaves invisible
  *              cells behind forever).
+ *   - reset:   `[data-grid-cols-reset]` (a menu button) shows every
+ *              column and clears the stored preference — the #853 escape
+ *              hatch for a user who hid everything.
  */
 (function () {
   "use strict";
@@ -1884,6 +1887,25 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     }
     if (cleaned.length !== hidden.length) writeHidden(root, cleaned);
   }
+
+  // Escape hatch (#853 follow-on): a menu affordance that shows every
+  // column and clears the stored preference — without it, a user who
+  // hides everything is stuck until they find devtools.
+  document.addEventListener("click", function (evt) {
+    var t =
+      evt.target &&
+      evt.target.closest &&
+      evt.target.closest("[data-grid-cols-reset]");
+    if (!t) return;
+    var root = t.closest("[data-grid]");
+    if (!root) return;
+    try {
+      localStorage.removeItem(storageKey(root));
+    } catch (e) {
+      /* storage unavailable — the in-DOM reset below still applies */
+    }
+    apply(root);
+  });
 
   document.addEventListener("change", function (evt) {
     var t = evt.target;

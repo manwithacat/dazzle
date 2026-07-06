@@ -151,10 +151,9 @@ class Table:
     # Issue #1029 phase 7: bulk-selection support.
     # When `bulk_select=True`, the renderer prepends a checkbox column
     # to the header + each row. `row_ids` (parallel to `rows`) provides
-    # the per-row id used in `data-dz-row-id` + Alpine `toggleRow('{id}')`
-    # bindings. The dzTable Alpine controller (see legacy
-    # `static/js/dz_table.js`) owns the `selected` Set and exposes
-    # `toggleRow`, `toggleSelectAll`, `bulkDelete`, `clearSelection`.
+    # the per-row id used in `data-dz-row-id` + the HM selection seam
+    # (`data-dz-grid-select` / `data-dz-grid-row-id`; dz-grid.js counts the
+    # checked boxes — the checkbox's own .checked IS the state).
     bulk_select: bool = False
     row_ids: tuple[str, ...] = ()
     # ADR-0049 Phase 1 (D2): skeleton mode. When `skeleton=True` the table
@@ -177,8 +176,8 @@ class Table:
     caption: str = ""
     has_actions: bool = False
     # ADR-0049 Phase 1 Task 4e: parallel column keys (aligned to `columns`).
-    # When set, each data `<th>` carries `data-dz-col="{key}"` so the dzTable
-    # column-visibility toggle hides the header in lock-step with the hydrated
+    # When set, each data `<th>` carries `data-dz-col="{key}"` so the
+    # dz-grid-cols.js visibility toggle hides the header in lock-step with the hydrated
     # `render_data_row` body cells. Empty = plain headers (embedded tables).
     column_keys: tuple[str, ...] = ()
     # Convergence C1.1: the surface's DEFAULT sort (`ux: sort:`), reflected on
@@ -187,8 +186,8 @@ class Table:
     # silently drop the default order on the first composed refresh.
     sort_field: str = ""
     sort_dir: str = "asc"
-    # Keys whose canonical list header renders as a dzTable `toggleSort`
-    # button (client-state sort + aria-sort + sort icon), not a static label.
+    # Keys whose canonical list header renders as a data-dz-grid-sort
+    # button (aria-sort state-in-DOM + sort icon), not a static label.
     # Only consulted in skeleton mode alongside `column_keys`.
     sortable_keys: tuple[str, ...] = ()
 

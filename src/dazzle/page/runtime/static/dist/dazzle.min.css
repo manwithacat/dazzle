@@ -1,4 +1,4 @@
-/* dazzle v0.93.96 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.97 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3301,6 +3301,25 @@ transition: background var(--duration-fast) var(--ease-out);
 }
 .dz-table-col-menu-item:hover {
 background: var(--colour-bg);
+}
+.dz-table-col-menu-reset {
+display: block;
+width: 100%;
+padding-inline: var(--space-md);
+padding-block: var(--space-xs);
+margin-block-start: var(--space-xs);
+border: none;
+border-block-start: 1px solid var(--colour-border);
+background: none;
+text-align: start;
+cursor: pointer;
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+transition: background var(--duration-fast) var(--ease-out);
+}
+.dz-table-col-menu-reset:hover {
+background: var(--colour-bg);
+color: var(--colour-text);
 }
 .dz-table-col-menu-checkbox {
 width: 0.875rem;

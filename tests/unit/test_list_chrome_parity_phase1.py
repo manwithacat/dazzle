@@ -168,6 +168,14 @@ class TestColumnVisibilityMenu:
 
     # Convergence C2.1: the menu is a native <details> disclosure and the
     # toggles ride the delegated dz-grid-cols extension — no Alpine bindings.
+    def test_reset_escape_hatch_button_is_present(self) -> None:
+        """C3 (#853 follow-on): the menu carries the Show-all reset on the
+        dz-grid-cols.js seam — dzTable's escape hatch, ported."""
+        html = _render(self._menu((("name", "Name"),)))
+        assert 'class="dz-table-col-menu-reset"' in html
+        assert "data-dz-grid-cols-reset" in html
+        assert "Show all columns" in html
+
     def test_trigger_is_a_details_summary(self) -> None:
         html = _render(self._menu((("name", "Name"), ("status", "Status"))))
         assert '<details class="dz-table-col-menu">' in html

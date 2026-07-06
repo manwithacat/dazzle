@@ -1369,3 +1369,33 @@ def test_grid_touch_resize_and_edit_accommodations(_engine_browser) -> None:  # 
     assert width > 0, "a touch-pointer drag must resize the column"
     assert not errors, f"gallery page threw JS errors: {errors}"
     ctx.close()
+
+
+def test_grid_column_visibility_reset_shows_all_and_clears(page) -> None:  # type: ignore[no-untyped-def]
+    """grid-cols #853 escape hatch: after hiding columns, the menu's
+    "Show all columns" button reveals every cell and CLEARS the stored
+    preference (a reload stays all-visible)."""
+    _hydrate_grid(page)
+    visible = "els => els.filter(e => getComputedStyle(e).display !== 'none').length"
+    for key in ("plan", "signed"):
+        page.eval_on_selector(
+            f'[data-grid-col-toggle="{key}"]',
+            "t => { t.checked = false; t.dispatchEvent(new Event('change', {bubbles: true})); }",
+        )
+    page.wait_for_timeout(80)
+    assert page.eval_on_selector_all('[data-grid] [data-col="plan"]', visible) == 0
+
+    reset = page.query_selector("[data-grid-cols-reset]")
+    assert reset is not None, "the column menu must carry the Show-all reset"
+    page.eval_on_selector("[data-grid-cols-reset]", "b => b.click()")
+    page.wait_for_timeout(80)
+    n_plan = page.eval_on_selector_all('[data-grid] [data-col="plan"]', visible)
+    n_signed = page.eval_on_selector_all('[data-grid] [data-col="signed"]', visible)
+    assert n_plan > 0 and n_signed > 0, "reset must reveal every hidden column"
+    assert page.eval_on_selector('[data-grid-col-toggle="plan"]', "t => t.checked")
+
+    # cleared, not just re-shown: a reload stays all-visible
+    page.reload()
+    page.wait_for_timeout(300)
+    _hydrate_grid(page)
+    assert page.eval_on_selector_all('[data-grid] [data-col="plan"]', visible) > 0
