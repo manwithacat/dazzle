@@ -1,0 +1,76 @@
+/* HYPERPART: bullet */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── bullet chart region ───────────────
+ * Stephen Few bullet rows. Three fixed columns: label (right) /
+ * track / value. Track contains: optional reference bands behind,
+ * actual bar, target tick. Band/bar/tick are absolutely positioned
+ * inside the relative track. */
+
+.dz-bullet-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+}
+
+.dz-bullet-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-xs);
+}
+
+.dz-bullet-label {
+  width: 6rem;
+  text-align: end;
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-bullet-track {
+  flex: 1 1 0;
+  position: relative;
+  height: 1.25rem;
+  background: var(--colour-bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.dz-bullet-band {
+  position: absolute;
+  inset-block: 0;
+  opacity: 0.18;
+}
+
+.dz-bullet-actual {
+  position: absolute;
+  inset-block: 0.25rem;
+  inset-inline-start: 0;
+  background: var(--colour-brand);
+  border-radius: var(--radius-sm);
+}
+
+.dz-bullet-target {
+  position: absolute;
+  inset-block: 0;
+  width: 2px;
+  background: var(--colour-text);
+}
+
+.dz-bullet-value {
+  width: 4rem;
+  text-align: end;
+  font-family: var(--font-mono);
+  color: var(--colour-text-muted);
+}
+
+.dz-bullet-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}

@@ -221,7 +221,7 @@ def test_renderer_renders_optional_meta_only_when_present() -> None:
     assert "Period 3" in html
     # First item should not contain a meta div
     first_li_end = html.index("dz-task-inbox-item-meta")
-    first_li_start = html.index('data-item-id="a"')
+    first_li_start = html.index('data-dz-item-id="a"')
     # meta div for second item must appear AFTER first item's </li>
     assert first_li_end > first_li_start + 100  # comfortable buffer past first item
 
@@ -322,19 +322,22 @@ def test_renderer_escapes_drill_urls_and_region_name() -> None:
 
 
 def _regions_css() -> str:
+    """The task-inbox styles moved to HM (Tier C-b fleet convergence) —
+    the pin reads the union of the remaining Dazzle regions.css and the
+    HM component file."""
     from pathlib import Path
 
     import dazzle.page as dazzle_page
 
-    css_path = (
-        Path(dazzle_page.__file__).parent
-        / "runtime"
-        / "static"
-        / "css"
-        / "components"
-        / "regions.css"
+    css_dir = Path(dazzle_page.__file__).parent / "runtime" / "static" / "css"
+    hm_css = (
+        Path(__file__).resolve().parents[2] / "packages/hatchi-maxchi/components/task-inbox.css"
     )
-    return css_path.read_text(encoding="utf-8")
+    return (
+        (css_dir / "components" / "regions.css").read_text(encoding="utf-8")
+        + "\n"
+        + hm_css.read_text(encoding="utf-8")
+    )
 
 
 def test_task_inbox_chip_has_count_label_separator_css() -> None:

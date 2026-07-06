@@ -1,0 +1,20 @@
+/* HYPERPART: box-plot */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── box_plot region ────────────────────
+ * Server-rendered SVG quartile boxes per group. SVG fill/stroke
+ * tokens stay inline (per-element shape colour); host wrapper sized
+ * via .dz-box-plot-svg + summary uses .dz-box-plot-summary. */
+
+.dz-box-plot-svg {
+  width: 100%;
+  height: auto;
+}
+
+.dz-box-plot-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}

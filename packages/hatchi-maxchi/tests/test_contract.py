@@ -61,6 +61,22 @@ SEMANTIC_ONLY = {
     "dz-sparkline-region",
     "dz-funnel-chart-region",
     "dz-bar-chart-region",
+    "dz-heatmap-region",
+    "dz-bullet-region",
+    "dz-pivot-region",
+    "dz-bar-track-region",
+    "dz-histogram-region",
+    "dz-box-plot-region",
+    "dz-progress-region",
+    # task-inbox item skeleton: rule-less in Dazzle too (the dashboard's
+    # plain list); the icon is the only styled piece. Follow-up candidate.
+    "dz-task-inbox-items",
+    # (dz-task-inbox-item itself matches via the styled -item-icon substring)
+    "dz-task-inbox-item-link",
+    "dz-task-inbox-item-body",
+    "dz-task-inbox-item-title",
+    "dz-task-inbox-item-meta",
+    "dz-task-inbox-empty",
 }
 
 

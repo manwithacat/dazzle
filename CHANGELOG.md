@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.108] - 2026-07-06
+
+### Added
+- **Fleet convergence Tier C-b** (HM 0.1.38 → 0.1.39): eight region-CSS
+  families promoted from `regions.css` into HaTchi-MaXchi with
+  emitter-faithful gallery demos — **heatmap** (threshold-toned matrix,
+  `data-dz-heatmap-tone="good|warn|bad"`; tone cells converged from
+  `color-mix` recipes onto the engineered `--colour-*-soft` tokens),
+  **pivot** (dim columns as badges/FK labels, `is-measure` mono numeric
+  treatment, `dz-pivot-null` em-dashes), **bullet** (server-computed band
+  /actual/target inline percentages, saturated band-map colours),
+  **bar-track** (real `role="progressbar"` + aria values), **histogram**
+  and **box-plot** (server-rendered SVG + mono summary),
+  **progress-region** (native `<progress>` + `data-dz-stage-tone` chips),
+  and **task-inbox** (count-then-label filter chips,
+  `data-dz-urgency="overdue|due|soon|later"` items). `regions.css` is now
+  tombstones plus profile_card/diagram/tree/tabbed_list/grid/list/
+  confirm_action_panel.
+
+### Changed
+- **Off-grammar data attributes renamed**: the task-inbox emitter's
+  `data-chip-id`/`data-item-id` are now `data-dz-chip-id`/
+  `data-dz-item-id` (HM data-attribute grammar gate). The attributes are
+  write-only markers — no JS readers existed.
+
+### Fixed
+- **Published UX catalogue lost styling for HM-promoted families**: the
+  catalogue CSS generator enumerated moved files by hand and silently
+  dropped every family promoted to HM (Tier C-a's funnel previews were
+  already unstyled on the published docs). `generate_catalogue_css` now
+  concatenates ALL `packages/hatchi-maxchi/components/*.css` wholesale —
+  class-scoped, so extra rules are inert — and can't drift again.
+
+### Agent Guidance
+- **Promotion slices must extend the catalogue generator no more**: HM
+  component CSS is now picked up wholesale by `gen_ux_catalogue.py`;
+  regenerate the catalogue in any slice that moves CSS, but no generator
+  edit is needed.
+- **Gallery demos are emitter-faithful**: before writing a Hyperpart demo,
+  render the real emitter output (`_render_tables.py`/`_render_charts.py`/
+  `_render_dashboard.py`) and copy its exact structure — the C-b review
+  caught four demos (progress, pivot, bullet, task-inbox) teaching markup
+  the emitters never produce.
+
 ## [0.93.107] - 2026-07-06
 
 ### Added

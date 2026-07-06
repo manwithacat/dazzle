@@ -1,0 +1,67 @@
+/* HYPERPART: progress-region */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── progress region ────────────────────
+ * Header row: <progress> bar + percentage label. Stages row: chips
+ * coloured by status (complete=success, in-progress=warning,
+ * empty=neutral). Optional summary line beneath. */
+
+.dz-progress-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-sm);
+}
+
+.dz-progress-header > progress {
+  flex: 1 1 0;
+  height: 0.5rem;
+  width: 100%;
+}
+
+.dz-progress-header > span {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  color: var(--colour-text);
+}
+
+.dz-progress-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.dz-progress-chip {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-sm);
+  padding-block: 0.125rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+}
+
+/* Per-stage tone — driven by data-dz-stage-tone (template emits
+ * "complete" / "active" / "empty"). Mirror of the badge tone system. */
+.dz-progress-chip[data-dz-stage-tone="complete"] {
+  background: var(--colour-success-soft);
+  color: var(--colour-success);
+  border-color: color-mix(in oklch, var(--colour-success) 30%, transparent);
+}
+
+.dz-progress-chip[data-dz-stage-tone="active"] {
+  background: var(--colour-warning-soft);
+  color: var(--colour-warning);
+  border-color: color-mix(in oklch, var(--colour-warning) 30%, transparent);
+}
+
+.dz-progress-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}

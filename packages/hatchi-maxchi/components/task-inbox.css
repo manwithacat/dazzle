@@ -1,0 +1,40 @@
+/* HYPERPART: task-inbox */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── task_inbox region ──────────────────
+ * Summary chips (count + label pill) above a list of task rows
+ * (#1015). The `.dz-task-inbox-chip*` family had NO css at all, so the
+ * count and label spans rendered glued together ("0manuscripts");
+ * the chip is now an inline-flex pill with a gap between count and
+ * label, mirroring `.dz-progress-chip` (#1326). */
+
+.dz-task-inbox-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-block-end: var(--space-sm);
+}
+
+.dz-task-inbox-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  padding-inline: var(--space-sm);
+  padding-block: 0.125rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+  text-decoration: none;
+}
+
+.dz-task-inbox-chip-count {
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.dz-task-inbox-chip-label {
+  color: var(--colour-text-muted);
+}

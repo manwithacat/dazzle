@@ -1512,6 +1512,253 @@ HYPERPARTS: list[Hyperpart] = [
         "strokes — inline, per series, server-assigned.",
         tags=("data", "chart"),
     ),
+    Hyperpart(
+        "heatmap",
+        "Heatmap",
+        "Data",
+        "A two-dimensional grid of toned cells — rows × buckets, thresholds "
+        "driving good/warn/bad tones, never colour alone (the value is IN "
+        "the cell).",
+        '<div class="dz-heatmap-region hm-measure-lg">'
+        '<div class="dz-heatmap-scroll">'
+        '<table class="dz-heatmap-grid">'
+        "<thead><tr><th></th><th>Mon</th><th>Tue</th><th>Wed</th></tr></thead>"
+        "<tbody><tr>"
+        '<td class="dz-heatmap-row-label">API</td>'
+        '<td class="dz-heatmap-cell" data-dz-heatmap-tone="good"> 99.9 </td>'
+        '<td class="dz-heatmap-cell" data-dz-heatmap-tone="good"> 99.7 </td>'
+        '<td class="dz-heatmap-cell" data-dz-heatmap-tone="warn"> 97.2 </td>'
+        "</tr><tr>"
+        '<td class="dz-heatmap-row-label">Webhooks</td>'
+        '<td class="dz-heatmap-cell" data-dz-heatmap-tone="warn"> 96.1 </td>'
+        '<td class="dz-heatmap-cell" data-dz-heatmap-tone="bad"> 89.4 </td>'
+        '<td class="dz-heatmap-cell" data-dz-heatmap-tone="good"> 99.2 </td>'
+        "</tr></tbody></table></div></div>",
+        notes="Cell tones ride <code>data-dz-heatmap-tone=&quot;good|warn|"
+        "bad&quot;</code>, resolved server-side against the declared "
+        "thresholds — and the numeric value always renders inside the cell, "
+        "so tone is reinforcement, not the only signal. Overflowing grids "
+        "append a <code>dz-heatmap-overflow</code> count line; the scroll "
+        "wrapper keeps wide grids inside their card.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "bullet",
+        "Bullet chart",
+        "Data",
+        "Actual vs target on qualitative bands — the KPI-with-context bar. "
+        "All geometry is server-computed inline percentages.",
+        '<div class="dz-bullet-region hm-measure-lg">'
+        '<div class="dz-bullet-rows">'
+        '<div class="dz-bullet-row">'
+        '<span class="dz-bullet-label">Revenue</span>'
+        '<div class="dz-bullet-track">'
+        '<span class="dz-bullet-band" style="left: 0%; width: 60%; '
+        'background: var(--colour-danger);" title="Poor: 0–60"></span>'
+        '<span class="dz-bullet-band" style="left: 60%; width: 25%; '
+        'background: hsl(40, 90%, 55%);" title="OK: 60–85"></span>'
+        '<span class="dz-bullet-band" style="left: 85%; width: 15%; '
+        'background: hsl(145, 55%, 45%);" title="Good: 85–100"></span>'
+        '<span class="dz-bullet-actual" style="width: 72%;" '
+        'title="Revenue actual: 72"></span>'
+        '<span class="dz-bullet-target" style="left: 80%;" '
+        'title="Revenue target: 80"></span>'
+        "</div>"
+        '<span class="dz-bullet-value">72 / 80</span>'
+        "</div></div>"
+        '<p class="dz-bullet-summary">1 rows · scale 0–100</p>'
+        "</div>",
+        notes="Bands, the actual bar, and the target tick are absolutely "
+        "positioned by SERVER-computed inline percentages (per-row data, the "
+        "same contract as the funnel widths); each carries a "
+        "<code>title</code> with its numeric range. Band fills come from the "
+        "server's reference-band colour map (<code>target</code> → "
+        "<code>var(--colour-brand)</code>, <code>destructive</code> → "
+        "<code>var(--colour-danger)</code>, plus fixed positive/warning/"
+        "muted values) — saturated colours, because the band layer renders "
+        "at 0.18 opacity. The value (and target, when set) renders as text "
+        "beside the track; the mono summary line carries row count and "
+        "scale.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "pivot",
+        "Pivot table",
+        "Data",
+        "Two group-bys crossed into a matrix — row labels × column buckets, "
+        "empty intersections rendered as explicit nulls.",
+        '<div class="dz-pivot-region hm-measure-lg">'
+        '<div class="dz-pivot-scroll">'
+        '<table class="dz-pivot-grid">'
+        "<thead><tr><th>System</th><th>Severity</th>"
+        '<th class="is-measure">Count</th></tr></thead>'
+        "<tbody>"
+        "<tr><td>API</td>"
+        '<td><span class="dz-badge dz-badge-sm" data-dz-tone="destructive" '
+        'role="status" aria-label="Status: Critical">'
+        '<span class="dz-badge-icon">{svg:circle-x}</span>Critical</span></td>'
+        '<td class="is-measure">3</td></tr>'
+        "<tr><td>Dashboard</td>"
+        '<td><span class="dz-pivot-null">—</span></td>'
+        '<td class="is-measure">9</td></tr>'
+        "</tbody></table></div>"
+        '<p class="dz-pivot-summary">2 rows</p>'
+        "</div>",
+        notes="One scope-aware two-dimensional <code>GROUP BY</code> fills "
+        "the whole matrix: dimension columns lead (status values render as "
+        "badges, FK values as their label text), then measure columns — "
+        "<code>class=&quot;is-measure&quot;</code> on the measure th/td pair "
+        "drives the mono right-aligned numeric treatment. Empty "
+        "intersections render <code>dz-pivot-null</code> em-dashes rather "
+        "than blanks (absence is data). The scroll wrapper keeps wide "
+        "matrices inside their card.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "bar-track",
+        "Bar track",
+        "Data",
+        "Value-against-capacity rows with real progressbar semantics — the "
+        "resource-usage sibling of the bar chart.",
+        '<div class="dz-bar-track-region hm-measure-lg">'
+        '<div class="dz-bar-track-rows">'
+        '<div class="dz-bar-track-row">'
+        '<span class="dz-bar-track-label" title="Storage">Storage</span>'
+        '<div class="dz-bar-track" role="progressbar" aria-valuemin="0" '
+        'aria-valuemax="100" aria-valuenow="62" aria-label="Storage: 62%">'
+        '<span class="dz-bar-track-fill" style="width: 62%;" '
+        'title="Storage: 62%"></span></div>'
+        '<span class="dz-bar-track-value">62%</span></div>'
+        '<div class="dz-bar-track-row">'
+        '<span class="dz-bar-track-label" title="Compute">Compute</span>'
+        '<div class="dz-bar-track" role="progressbar" aria-valuemin="0" '
+        'aria-valuemax="100" aria-valuenow="38" aria-label="Compute: 38%">'
+        '<span class="dz-bar-track-fill" style="width: 38%;" '
+        'title="Compute: 38%"></span></div>'
+        '<span class="dz-bar-track-value">38%</span></div>'
+        "</div></div>",
+        notes="Each track is a real <code>role=&quot;progressbar&quot;</code> "
+        "with numeric aria values — the fill width is presentation, the "
+        "aria is the content. Labels and fills both carry <code>title</code> "
+        "for hover detail.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "histogram",
+        "Histogram",
+        "Data",
+        "Value-distribution buckets as a server-rendered SVG plus a mono summary line.",
+        '<div class="dz-histogram-region hm-measure-lg">'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" '
+        'role="img" aria-label="Histogram — 6 buckets, 120 samples">'
+        '<rect x="4" y="30" width="24" height="18" fill="var(--colour-brand)" fill-opacity="0.7"/>'
+        '<rect x="32" y="18" width="24" height="30" fill="var(--colour-brand)" fill-opacity="0.7"/>'
+        '<rect x="60" y="6" width="24" height="42" fill="var(--colour-brand)" fill-opacity="0.7"/>'
+        '<rect x="88" y="14" width="24" height="34" fill="var(--colour-brand)" fill-opacity="0.7"/>'
+        '<rect x="116" y="28" width="24" height="20" fill="var(--colour-brand)" fill-opacity="0.7"/>'
+        '<rect x="144" y="38" width="24" height="10" fill="var(--colour-brand)" fill-opacity="0.7"/>'
+        "</svg>"
+        '<p class="dz-histogram-summary">6 buckets · 120 samples</p>'
+        "</div>",
+        notes="The SVG body is SERVER-computed (this demo is schematic — the "
+        "real geometry comes from <code>dazzle.render.svg.histogram_svg</code>) "
+        "with the numeric story in <code>aria-label</code> and the mono "
+        "summary line.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "box-plot",
+        "Box plot",
+        "Data",
+        "Distribution five-number summaries per bucket — a server-rendered "
+        "SVG with the counts in the summary line.",
+        '<div class="dz-box-plot-region hm-measure-lg">'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" '
+        'role="img" aria-label="Box plot — 3 buckets">'
+        '<line x1="20" y1="8" x2="20" y2="40" stroke="var(--colour-text-muted)"/>'
+        '<rect x="8" y="16" width="24" height="16" fill="var(--colour-brand)" '
+        'fill-opacity="0.25" stroke="var(--colour-brand)"/>'
+        '<line x1="8" y1="24" x2="32" y2="24" stroke="var(--colour-brand)" stroke-width="2"/>'
+        '<line x1="90" y1="4" x2="90" y2="44" stroke="var(--colour-text-muted)"/>'
+        '<rect x="78" y="12" width="24" height="22" fill="var(--colour-brand)" '
+        'fill-opacity="0.25" stroke="var(--colour-brand)"/>'
+        '<line x1="78" y1="20" x2="102" y2="20" stroke="var(--colour-brand)" stroke-width="2"/>'
+        '<line x1="160" y1="10" x2="160" y2="38" stroke="var(--colour-text-muted)"/>'
+        '<rect x="148" y="18" width="24" height="14" fill="var(--colour-brand)" '
+        'fill-opacity="0.25" stroke="var(--colour-brand)"/>'
+        '<line x1="148" y1="26" x2="172" y2="26" stroke="var(--colour-brand)" stroke-width="2"/>'
+        "</svg>"
+        '<p class="dz-box-plot-summary">3 buckets · whiskers at min/max</p>'
+        "</div>",
+        notes="Schematic demo — real whisker/quartile geometry is "
+        "server-computed. The summary line carries the bucket count.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "progress-region",
+        "Progress stages",
+        "Data",
+        "A native progress bar with stage chips — where the work is, stage "
+        "by stage, with completion tones.",
+        '<div class="dz-progress-region hm-measure-lg">'
+        '<div class="dz-progress-header">'
+        '<progress data-dz-progress value="33" max="100"></progress>'
+        "<span>33%</span>"
+        "</div>"
+        '<div class="dz-progress-stages">'
+        '<span class="dz-progress-chip" data-dz-stage-tone="complete">Draft (4)</span>'
+        '<span class="dz-progress-chip" data-dz-stage-tone="active">Review (2)</span>'
+        '<span class="dz-progress-chip" data-dz-stage-tone="empty">Published (0)</span>'
+        "</div>"
+        '<p class="dz-progress-summary">1 of 3 complete</p>'
+        "</div>",
+        notes="The bar is a NATIVE <code>&lt;progress&gt;</code> (styled via "
+        "<code>data-dz-progress</code>) with its percent readout as a plain "
+        "<code>&lt;span&gt;</code> beside it in the header; chips are plain "
+        "text (<code>Name (count)</code>) toned by "
+        "<code>data-dz-stage-tone=&quot;complete|active|empty&quot;</code>; "
+        "the summary paragraph follows the stages.",
+        tags=("data",),
+    ),
+    Hyperpart(
+        "task-inbox",
+        "Task inbox",
+        "Data",
+        "The personal worklist: filter chips over urgency-flagged items, "
+        "each a drill link with title and meta.",
+        '<div class="hm-measure-lg">'
+        '<div class="dz-task-inbox-chips">'
+        '<div class="dz-task-inbox-chip" data-dz-chip-id="all">'
+        '<span class="dz-task-inbox-chip-count">6</span>'
+        '<span class="dz-task-inbox-chip-label">All</span></div>'
+        '<div class="dz-task-inbox-chip" data-dz-chip-id="overdue">'
+        '<span class="dz-task-inbox-chip-count">2</span>'
+        '<span class="dz-task-inbox-chip-label">Overdue</span></div>'
+        "</div>"
+        '<ul class="dz-task-inbox-items">'
+        '<li class="dz-task-inbox-item" data-dz-urgency="overdue" data-dz-item-id="t1">'
+        '<a class="dz-task-inbox-item-link" href="#">'
+        '<span class="dz-task-inbox-item-icon" aria-hidden="true">{svg:inbox}</span>'
+        '<div class="dz-task-inbox-item-body">'
+        '<div class="dz-task-inbox-item-title">Approve refund — Acme</div>'
+        '<div class="dz-task-inbox-item-meta">due in 2h · assigned to you</div>'
+        "</div></a></li>"
+        '<li class="dz-task-inbox-item" data-dz-urgency="due" data-dz-item-id="t2">'
+        '<a class="dz-task-inbox-item-link" href="#">'
+        '<span class="dz-task-inbox-item-icon" aria-hidden="true">{svg:inbox}</span>'
+        '<div class="dz-task-inbox-item-body">'
+        '<div class="dz-task-inbox-item-title">Review KYC — Globex</div>'
+        '<div class="dz-task-inbox-item-meta">due tomorrow</div>'
+        "</div></a></li>"
+        "</ul></div>",
+        notes="Items carry <code>data-dz-urgency=&quot;overdue|due|soon|"
+        "later&quot;</code> (the server clamps anything else to "
+        "<code>later</code>) + a stable <code>data-dz-item-id</code>; the "
+        "whole row is one link, leading with its icon. Chips render count "
+        "THEN label (<code>data-dz-chip-id</code> anchors a filter exchange "
+        "in Dazzle).",
+        tags=("data",),
+    ),
     # ── Primitives ───────────────────────────────────────────────────
     Hyperpart(
         "separator",

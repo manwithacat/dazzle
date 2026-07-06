@@ -2382,7 +2382,7 @@ def test_task_inbox_builds_items_with_urgency() -> None:
     ]
     surface = adapter.build(region, {"task_inbox_items": items})
     html = _render(surface)
-    assert 'data-item-id="i1"' in html
+    assert 'data-dz-item-id="i1"' in html
     assert 'data-dz-urgency="due"' in html
     assert 'data-dz-urgency="overdue"' in html
     assert 'data-lucide="register"' in html  # unknown name -> client-hydration fallback
@@ -2413,7 +2413,7 @@ def test_task_inbox_skips_items_with_missing_id() -> None:
     ]
     surface = adapter.build(region, {"task_inbox_items": items})
     html = _render(surface)
-    assert 'data-item-id="i1"' in html
+    assert 'data-dz-item-id="i1"' in html
     assert "bad" not in html
 
 

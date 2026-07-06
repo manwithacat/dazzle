@@ -1,0 +1,88 @@
+/* HYPERPART: heatmap */
+/* Promoted from Dazzle regions.css (Tier C-b, fleet convergence).
+ * The Dazzle emitter contract is unchanged. One deliberate delta from
+ * the source: the three tone-cell backgrounds moved from
+ * `color-mix(... 15%, transparent)` recipes to the engineered
+ * `--colour-*-soft` tokens (the HM contrast recipe — same change the
+ * status-list/alert promotions made). */
+
+/* ─────────────────────────── heatmap region ─────────────────────
+ * Matrix table with row labels and column labels, value cells
+ * tinted by threshold band (success / warning / destructive).
+ * Tints route through data-dz-heatmap-tone so the threshold
+ * branching can stay in CSS (template emits the data-attribute,
+ * not a class string). */
+
+.dz-heatmap-scroll {
+  overflow-x: auto;
+}
+
+.dz-heatmap-grid {
+  width: 100%;
+  font-size: var(--text-sm);
+  border-collapse: collapse;
+}
+
+.dz-heatmap-grid > thead > tr {
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-heatmap-grid th {
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  text-align: center;
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+}
+
+.dz-heatmap-grid > tbody > tr {
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-heatmap-grid > tbody > tr:last-child {
+  border-block-end: 0;
+}
+
+.dz-heatmap-grid > tbody > tr.is-clickable {
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-heatmap-grid > tbody > tr.is-clickable:hover {
+  background: var(--colour-bg);
+}
+
+.dz-heatmap-row-label {
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-heatmap-cell {
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  text-align: center;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-heatmap-cell[data-dz-heatmap-tone="bad"] {
+  background: var(--colour-danger-soft);
+  color: var(--colour-danger);
+}
+
+.dz-heatmap-cell[data-dz-heatmap-tone="warn"] {
+  background: var(--colour-warning-soft);
+  color: var(--colour-warning);
+}
+
+.dz-heatmap-cell[data-dz-heatmap-tone="good"] {
+  background: var(--colour-success-soft);
+  color: var(--colour-success);
+}
+
+.dz-heatmap-overflow {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}

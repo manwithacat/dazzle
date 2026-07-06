@@ -1,0 +1,64 @@
+/* HYPERPART: pivot */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── pivot_table region ─────────────────
+ * Multi-dimension cross-tab. Same shape as the heatmap grid but
+ * with per-row dimension labels on the left and measure values
+ * (right-aligned, mono-numeric) on the right. */
+
+.dz-pivot-scroll {
+  overflow-x: auto;
+}
+
+.dz-pivot-grid {
+  width: 100%;
+  font-size: var(--text-sm);
+  border-collapse: collapse;
+}
+
+.dz-pivot-grid > thead > tr {
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-pivot-grid th {
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  text-align: start;
+}
+
+.dz-pivot-grid th.is-measure {
+  text-align: end;
+  font-family: var(--font-mono);
+}
+
+.dz-pivot-grid > tbody > tr {
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-pivot-grid > tbody > tr:last-child {
+  border-block-end: 0;
+}
+
+.dz-pivot-grid td {
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  color: var(--colour-text);
+}
+
+.dz-pivot-grid td.is-measure {
+  text-align: end;
+  font-family: var(--font-mono);
+}
+
+.dz-pivot-null {
+  color: var(--colour-text-muted);
+}
+
+.dz-pivot-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}

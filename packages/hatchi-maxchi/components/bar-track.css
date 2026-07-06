@@ -1,0 +1,62 @@
+/* HYPERPART: bar-track */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── bar_track region ───────────────────
+ * Compact horizontal value bars, one per group. Three columns per
+ * row: fixed-width label (right-aligned) | flex-grow track | value. */
+
+.dz-bar-track-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-block-start: var(--space-sm);
+}
+
+.dz-bar-track-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-xs);
+}
+
+.dz-bar-track-label {
+  width: 7rem;
+  text-align: end;
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-bar-track {
+  flex: 1 1 0;
+  position: relative;
+  height: 1rem;
+  background: var(--colour-bg);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.dz-bar-track-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  background: var(--colour-brand);
+  border-radius: var(--radius-full);
+  transition: width var(--duration-base) var(--ease-out);
+}
+
+.dz-bar-track-value {
+  width: 4rem;
+  text-align: end;
+  font-family: var(--font-mono);
+  color: var(--colour-text-muted);
+}
+
+.dz-bar-track-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}

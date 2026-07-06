@@ -437,14 +437,14 @@ class _RenderDashboardMixin:
                 chip_parts.append(
                     f'<a class="dz-task-inbox-chip" '
                     f'href="{ctx.escape_attr(chip.drill_url)}" '
-                    f'data-chip-id="{ctx.escape_attr(chip.chip_id)}">'
+                    f'data-dz-chip-id="{ctx.escape_attr(chip.chip_id)}">'
                     f"{inner}"
                     f"</a>"
                 )
             else:
                 chip_parts.append(
                     f'<div class="dz-task-inbox-chip" '
-                    f'data-chip-id="{ctx.escape_attr(chip.chip_id)}">'
+                    f'data-dz-chip-id="{ctx.escape_attr(chip.chip_id)}">'
                     f"{inner}"
                     f"</div>"
                 )
@@ -474,7 +474,7 @@ class _RenderDashboardMixin:
                 item_parts.append(
                     f'<li class="dz-task-inbox-item" '
                     f'data-dz-urgency="{ctx.escape_attr(urgency)}" '
-                    f'data-item-id="{ctx.escape_attr(item.item_id)}">'
+                    f'data-dz-item-id="{ctx.escape_attr(item.item_id)}">'
                     f'<a class="dz-task-inbox-item-link" '
                     f'href="{ctx.escape_attr(item.drill_url)}">'
                     f"{inner}"
@@ -484,7 +484,7 @@ class _RenderDashboardMixin:
                 item_parts.append(
                     f'<li class="dz-task-inbox-item" '
                     f'data-dz-urgency="{ctx.escape_attr(urgency)}" '
-                    f'data-item-id="{ctx.escape_attr(item.item_id)}">'
+                    f'data-dz-item-id="{ctx.escape_attr(item.item_id)}">'
                     f"{inner}"
                     f"</li>"
                 )

@@ -1,0 +1,20 @@
+/* HYPERPART: histogram */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── histogram region ───────────────────
+ * Server-rendered SVG histogram. Bar fill, axis line, and reference
+ * lines all use design tokens via their own SVG attributes; this
+ * file owns only the host shape + summary footer. */
+
+.dz-histogram-svg {
+  width: 100%;
+  height: auto;
+}
+
+.dz-histogram-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}
