@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.120] - 2026-07-07
+
+### Added
+- **Tier A1 — regions.css is fully retired** (HM 0.1.50 → 0.1.51). The
+  last live family, **profile-card** (identity panel: avatar/initials,
+  name + meta, `<dl>` stats grid, facts list), promoted verbatim to
+  HaTchi-MaXchi with an emitter-faithful gallery entry. `regions.css`
+  is now an index of tombstones recording where every family went —
+  the workspace visualisation chrome ships entirely from the HM dist.
+
+### Removed
+- **Dead auth chrome deleted** (zero producers, independently
+  verified): 16 `auth_page_wrapper` rules (divider/footer/link-brand/
+  hint/context-line/codes/bare-input family) — the login/signup views
+  render via the typed substrate on HM form primitives; the surviving
+  31 `dz-auth-*` selectors are the live 2FA-view chrome, queued to
+  converge onto HM primitives in Tier A2 (which also inherits: the 2FA
+  `dz-auth-page` class's only styling is the legacy site-sections
+  marketing gradient, and `dz-2fa-*.js` are live selector readers).
+
 ## [0.93.119] - 2026-07-07
 
 ### Fixed

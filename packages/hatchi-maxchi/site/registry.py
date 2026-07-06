@@ -2110,6 +2110,46 @@ HYPERPARTS: list[Hyperpart] = [
         tags=("data",),
     ),
     Hyperpart(
+        "profile-card",
+        "Profile card",
+        "Data",
+        "The identity panel: avatar or initials beside name and meta, an "
+        "optional 3-up stats grid, and a bulleted facts list.",
+        '<div class="dz-profile-card-region hm-measure">'
+        '<div class="dz-profile-card">'
+        '<div class="dz-profile-identity">'
+        '<span class="dz-profile-initials" aria-hidden="true">MR</span>'
+        '<div class="dz-profile-text">'
+        '<h3 class="dz-profile-primary">Maya Reyes</h3>'
+        '<p class="dz-profile-secondary">Operations lead · North grid</p>'
+        "</div></div>"
+        '<dl class="dz-profile-stats">'
+        '<div class="dz-profile-stat">'
+        '<dt class="dz-profile-stat-label">Open work orders</dt>'
+        '<dd class="dz-profile-stat-value">7</dd></div>'
+        '<div class="dz-profile-stat">'
+        '<dt class="dz-profile-stat-label">Sites</dt>'
+        '<dd class="dz-profile-stat-value">3</dd></div>'
+        '<div class="dz-profile-stat">'
+        '<dt class="dz-profile-stat-label">On call</dt>'
+        '<dd class="dz-profile-stat-value">—</dd></div>'
+        "</dl>"
+        '<ul class="dz-profile-facts">'
+        '<li class="dz-profile-fact">'
+        '<span class="dz-profile-fact-bullet" aria-hidden="true">·</span>'
+        '<span class="dz-profile-fact-text">Certified for HV switching</span></li>'
+        '<li class="dz-profile-fact">'
+        '<span class="dz-profile-fact-bullet" aria-hidden="true">·</span>'
+        '<span class="dz-profile-fact-text">Joined March 2024</span></li>'
+        "</ul></div></div>",
+        notes="The avatar slot prefers an <code>&lt;img "
+        "class=&quot;dz-profile-avatar&quot;&gt;</code> and falls back to "
+        "an initials chip; empty stat values render an em-dash (absence is "
+        "data). Stats are a real <code>&lt;dl&gt;</code>; the facts bullet "
+        "is decorative markup, hidden from assistive tech.",
+        tags=("data",),
+    ),
+    Hyperpart(
         "grid-list",
         "Cell grid",
         "Data",

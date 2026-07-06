@@ -262,7 +262,14 @@
   background: var(--colour-bg);
 }
 
-/* ─────────────────────────── auth_page_wrapper macro ────────────
+/* ─────────────────────────── auth chrome (2FA views) ────────────
+ * Tier A1 (2026-07-07): the DEAD auth_page_wrapper subset was deleted
+ * (divider*, footer*, link-brand, hint,
+ * context-line, codes, bare input — zero producers; the login/signup
+ * views render via the typed substrate on HM form primitives). The
+ * rules below are the LIVE 2FA-view chrome (two_factor_views.py +
+ * dz-2fa-*.js), queued to converge onto HM primitives in Tier A2.
+ * ──────────────────────────────────────────────────────────────────
  * Auth page card shell — centered max-w-sm card with product name,
  * heading, optional error region, and form body. */
 
@@ -361,54 +368,12 @@
   color: var(--colour-text);
 }
 
-/* Auth input — same shape as .dz-form-input but scoped to auth so
- * future tweaks don't bleed into the in-app form. */
-.dz-auth-input {
-  inline-size: 100%;
-  block-size: 2rem;
-  padding-inline: var(--space-md);
-  border-radius: var(--radius-sm);
-  background: var(--colour-bg);
-  border: 1px solid var(--colour-border);
-  color: var(--colour-text);
-  font-size: var(--text-sm);
-  transition: box-shadow var(--duration-base) var(--ease-out),
-              border-color var(--duration-base) var(--ease-out);
-}
-
-.dz-auth-input::placeholder {
-  color: var(--colour-text-muted);
-}
-
-.dz-auth-input:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 1px var(--colour-brand);
-}
-
-.dz-auth-input[aria-invalid="true"] {
-  border-color: var(--colour-danger);
-}
-
 /* Submit button stretches full width inside the card. Composes with
  * .dz-button .dz-button-primary base. */
 .dz-auth-submit {
   inline-size: 100%;
   margin-block-start: var(--space-md);
   block-size: 2.25rem;
-}
-
-/* Footer link rows: small, end-aligned for "Forgot password?" and
- * centre-aligned for the sibling-page CTA. */
-.dz-auth-footer-end {
-  text-align: end;
-  font-size: var(--text-xs);
-  margin-block-start: var(--space-sm);
-}
-
-.dz-auth-footer-center {
-  text-align: center;
-  font-size: var(--text-sm);
-  margin-block-start: var(--space-md);
 }
 
 .dz-auth-link-muted {
@@ -421,34 +386,6 @@
   text-decoration: underline;
 }
 
-.dz-auth-link-brand {
-  color: var(--colour-brand);
-  text-decoration: none;
-}
-
-.dz-auth-link-brand:hover {
-  text-decoration: underline;
-}
-
-/* Hint paragraph under a field (e.g. password requirements). */
-.dz-auth-hint {
-  font-size: var(--text-xs);
-  color: var(--colour-text-muted);
-}
-
-/* Read-only line displaying the user's email on multi-step flows
- * (forgot/reset/2FA challenge). */
-.dz-auth-context-line {
-  text-align: center;
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin-block-end: var(--space-md);
-}
-
-.dz-auth-context-line strong {
-  color: var(--colour-text);
-  font-weight: var(--weight-medium);
-}
 
 /* QR code panel for 2FA setup — flex column with code below. */
 .dz-auth-qr {
@@ -479,21 +416,6 @@
   border: 1px solid var(--colour-border);
 }
 
-/* Recovery codes block (2FA settings, post-setup). Monospace list. */
-.dz-auth-codes {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-sm);
-  margin-block: var(--space-md);
-  padding: var(--space-md);
-  background: var(--colour-bg);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono, monospace);
-  font-size: var(--text-sm);
-  color: var(--colour-text);
-}
-
 /* 2FA: large centred code input — 6 digits visually tracked apart. */
 .dz-auth-input-code {
   inline-size: 100%;
@@ -522,33 +444,7 @@
 }
 
 /* "OR" divider between primary and alternate auth methods. */
-.dz-auth-divider {
-  position: relative;
-  margin-block: var(--space-md);
-}
 
-.dz-auth-divider::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  inset-block-start: 50%;
-  border-block-start: 1px solid var(--colour-border);
-}
-
-.dz-auth-divider-label {
-  position: relative;
-  display: inline-block;
-  padding-inline: var(--space-sm);
-  background: var(--colour-surface);
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--colour-text-muted);
-}
-
-.dz-auth-divider-row {
-  text-align: center;
-}
 
 /* Inline link-button (e.g. "Send code to email" / "Resend") that
  * looks like text but is a <button>. */

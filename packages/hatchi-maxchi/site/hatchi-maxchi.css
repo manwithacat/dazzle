@@ -8940,6 +8940,131 @@ a.action-card:hover {
 }
 
 }
+/* ── components/profile-card.css ── */
+@layer components {
+/* HYPERPART: profile-card */
+/* Promoted VERBATIM from Dazzle regions.css (Tier A1, fleet
+ * convergence — the LAST regions.css family). The Dazzle emitter
+ * contract is unchanged. */
+
+/* ─────────────────────────── profile_card region ────────────────
+ * Identity panel: avatar/initials + primary/secondary text,
+ * optional 3-up stats grid, optional bulleted facts list. */
+
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.profile-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.profile-avatar,
+.profile-initials {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-full);
+  background: var(--colour-bg);
+  flex-shrink: 0;
+}
+
+.profile-avatar {
+  object-fit: cover;
+}
+
+.profile-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text-muted);
+}
+
+.profile-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.profile-primary {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-secondary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+  border-block-start: 1px solid var(--colour-border);
+  padding-block-start: var(--space-md);
+  margin: 0;
+}
+
+@media (min-width: 40rem) {
+  .profile-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.profile-stat-label {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--colour-text-muted);
+  margin: 0;
+}
+
+.profile-stat-value {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin-block-start: 0.125rem;
+}
+
+.profile-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  border-block-start: 1px solid var(--colour-border);
+  padding-block-start: var(--space-md);
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0;
+}
+
+.profile-fact {
+  display: flex;
+  gap: var(--space-sm);
+  line-height: var(--leading-tight);
+}
+
+.profile-fact-bullet {
+  color: var(--colour-text-muted);
+  flex-shrink: 0;
+}
+
+.profile-fact-text {
+  min-width: 0;
+}
+
+}
 /* ── components/tabs.css ── */
 @layer components {
 /* HYPERPART: tabs */

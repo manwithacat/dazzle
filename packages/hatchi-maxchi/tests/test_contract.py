@@ -68,6 +68,7 @@ SEMANTIC_ONLY = {
     "dz-histogram-region",
     "dz-box-plot-region",
     "dz-progress-region",
+    "dz-profile-card-region",
     "dz-grid-region",
     "dz-list-region",
     # confirm-panel root: the state branch keys off data-dz-state-value;
