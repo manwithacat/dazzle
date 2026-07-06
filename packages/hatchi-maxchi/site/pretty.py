@@ -126,9 +126,29 @@ def _multiline(node: _Node) -> bool:
     return False
 
 
+# html.parser lowercases attribute names, but SVG attributes are
+# case-SENSITIVE — a snippet with `viewbox` renders a broken svg when
+# copied. Restore the camelCase forms the spec defines.
+_SVG_CASE = {
+    "viewbox": "viewBox",
+    "preserveaspectratio": "preserveAspectRatio",
+    "gradientunits": "gradientUnits",
+    "gradienttransform": "gradientTransform",
+    "patternunits": "patternUnits",
+    "clippathunits": "clipPathUnits",
+    "markerwidth": "markerWidth",
+    "markerheight": "markerHeight",
+    "refx": "refX",
+    "refy": "refY",
+    "stddeviation": "stdDeviation",
+    "tablevalues": "tableValues",
+}
+
+
 def _attrs(attrs) -> str:  # type: ignore[no-untyped-def]
     out = []
     for name, value in attrs:
+        name = _SVG_CASE.get(name, name)
         out.append(" " + name if value is None else f' {name}="{value}"')
     return "".join(out)
 

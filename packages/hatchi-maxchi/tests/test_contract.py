@@ -57,6 +57,7 @@ SEMANTIC_ONLY = {
     "dz-status-list-region",
     "dz-action-grid-region",
     "dz-queue-region",
+    "dz-timeline-region",
 }
 
 

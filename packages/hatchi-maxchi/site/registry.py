@@ -1217,6 +1217,164 @@ HYPERPARTS: list[Hyperpart] = [
         "(the same query that produced the rows, so they can't disagree).",
         tags=("data",),
     ),
+    Hyperpart(
+        "kanban",
+        "Kanban",
+        "Data",
+        "Status columns of cards — the flow view. Columns show a count; "
+        "overflowing boards offer a server-rendered Load-all.",
+        '<div class="dz-kanban-board">'
+        '<div class="dz-kanban-column">'
+        '<div class="dz-kanban-column-head">'
+        '<span class="dz-badge" data-dz-tone="neutral">Open</span>'
+        '<span class="dz-kanban-column-count">2</span></div>'
+        '<div class="dz-kanban-stack">'
+        '<div class="dz-kanban-card">'
+        '<div class="dz-kanban-card-body">'
+        '<h4 class="dz-kanban-card-title">Refund request — Acme</h4>'
+        '<p class="dz-kanban-card-field">£1,250 · assigned to Ada</p>'
+        '<p class="dz-kanban-card-attn" data-dz-attn="critical">SLA breaches at 16:00</p>'
+        "</div></div>"
+        '<div class="dz-kanban-card">'
+        '<div class="dz-kanban-card-body">'
+        '<h4 class="dz-kanban-card-title">KYC review — Globex</h4>'
+        '<p class="dz-kanban-card-field">due tomorrow</p>'
+        "</div></div></div></div>"
+        '<div class="dz-kanban-column">'
+        '<div class="dz-kanban-column-head">'
+        '<span class="dz-badge" data-dz-tone="info">In progress</span>'
+        '<span class="dz-kanban-column-count">1</span></div>'
+        '<div class="dz-kanban-stack">'
+        '<div class="dz-kanban-card">'
+        '<div class="dz-kanban-card-body">'
+        '<h4 class="dz-kanban-card-title">Chargeback — Initech</h4>'
+        '<p class="dz-kanban-card-field">evidence uploaded</p>'
+        "</div></div></div></div>"
+        '<div class="dz-kanban-column">'
+        '<div class="dz-kanban-column-head">'
+        '<span class="dz-badge" data-dz-tone="success">'
+        '<span class="dz-badge-icon">{svg:circle-check}</span>Done</span>'
+        '<span class="dz-kanban-column-count">0</span></div>'
+        '<div class="dz-kanban-stack">'
+        '<p class="dz-kanban-empty">Nothing here yet.</p>'
+        "</div></div></div>",
+        notes="Cards are SERVER-rendered — a drag-and-drop extension is a "
+        "future controller on these seams, not a client state graph. "
+        "Attention text carries <code>data-dz-attn=&quot;&lt;level&gt;&quot;</code> "
+        "(critical/warning/notice — the same attn contract the timeline's "
+        "bullets and the queue's rows use). An overflowing board renders a "
+        "<code>dz-kanban-load-all</code> button whose <code>hx-get</code> "
+        "re-fetches the region at full page size.",
+        tags=("data",),
+    ),
+    Hyperpart(
+        "timeline",
+        "Timeline",
+        "Data",
+        "Dated events on a vertical line — bullets carry the attention "
+        "contract, dates keep a fixed column so titles align.",
+        '<div class="dz-timeline-region hm-measure-lg">'
+        '<ul class="dz-timeline-list">'
+        '<li class="dz-timeline-item">'
+        '<span class="dz-timeline-bullet-wrap">'
+        '<svg class="dz-timeline-bullet dz-attn-bullet dz-attn-tone-critical" '
+        'fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
+        '<circle cx="10" cy="10" r="6"/></svg></span>'
+        '<div class="dz-timeline-row">'
+        '<div class="dz-timeline-date">Today</div>'
+        '<div class="dz-timeline-content">'
+        '<p class="dz-timeline-title">Payment failed — retry scheduled</p>'
+        '<p class="dz-timeline-field">Card declined (insufficient funds)</p>'
+        "</div></div></li>"
+        '<li class="dz-timeline-item">'
+        '<span class="dz-timeline-bullet-wrap">'
+        '<svg class="dz-timeline-bullet dz-attn-bullet dz-attn-tone-default" '
+        'fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
+        '<circle cx="10" cy="10" r="6"/></svg></span>'
+        '<div class="dz-timeline-row">'
+        '<div class="dz-timeline-date">Mon</div>'
+        '<div class="dz-timeline-content">'
+        '<p class="dz-timeline-title">Invoice sent</p>'
+        "</div></div></li>"
+        "</ul></div>",
+        notes="The bullet is an inline SVG on <code>currentColor</code>, "
+        "toned by <code>dz-attn-tone-*</code> (critical/warning/notice/"
+        "default) — the shared attention vocabulary. Overflowing timelines "
+        "append a <code>dz-timeline-overflow</code> count line.",
+        tags=("data",),
+    ),
+    Hyperpart(
+        "activity-feed",
+        "Activity feed",
+        "Data",
+        "Who-did-what rows on a dotted spine — actor, time, and a message bubble.",
+        '<div class="hm-measure-lg">'
+        '<ul class="dz-activity-feed">'
+        '<li class="dz-activity-row">'
+        '<span class="dz-activity-dot">'
+        '<svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
+        '<circle cx="10" cy="10" r="6"/></svg></span>'
+        '<div class="dz-activity-row-inner">'
+        '<div class="dz-activity-time">09:41</div>'
+        '<div class="dz-activity-bubble">'
+        '<span class="dz-activity-actor">Ada</span> approved the refund.'
+        "</div></div></li>"
+        '<li class="dz-activity-row">'
+        '<span class="dz-activity-dot">'
+        '<svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
+        '<circle cx="10" cy="10" r="6"/></svg></span>'
+        '<div class="dz-activity-row-inner">'
+        '<div class="dz-activity-time">09:12</div>'
+        '<div class="dz-activity-bubble">'
+        '<span class="dz-activity-actor">System</span> flagged the account '
+        "for review.</div></div></li>"
+        "</ul></div>",
+        notes="Rows are server-rendered newest-first; an empty feed renders "
+        "<code>dz-activity-empty</code>. The dot column and bubble keep "
+        "alignment without a grid — the row is the flex unit.",
+        tags=("data",),
+    ),
+    Hyperpart(
+        "related-tables",
+        "Related records",
+        "Data",
+        "A detail view's companions: tabbed groups of related records — "
+        "status cards, a compact table, or a file list — each tab counted.",
+        '<div class="dz-related-group hm-measure-lg">'
+        '<div class="dz-related-tabs" role="tablist">'
+        '<button type="button" class="dz-related-tab is-active" role="tab" '
+        'aria-selected="true">Invoices'
+        '<span class="dz-related-tab-count">2</span></button>'
+        '<button type="button" class="dz-related-tab" role="tab" '
+        'aria-selected="false">Files'
+        '<span class="dz-related-tab-count">1</span></button>'
+        "</div>"
+        '<div class="dz-related-status-grid">'
+        '<div class="dz-related-status-card">'
+        '<div class="dz-related-status-card-row">'
+        '<div class="dz-related-status-card-text">'
+        '<span class="dz-related-status-card-primary">INV-001 · £1,250</span>'
+        '<span class="dz-related-status-card-secondary">due 12 Jul</span></div>'
+        '<span class="dz-related-status-card-badge">'
+        '<span class="dz-badge" data-dz-tone="success">Paid</span></span>'
+        "</div></div>"
+        '<div class="dz-related-status-card">'
+        '<div class="dz-related-status-card-row">'
+        '<div class="dz-related-status-card-text">'
+        '<span class="dz-related-status-card-primary">INV-002 · £980</span>'
+        '<span class="dz-related-status-card-secondary">due 28 Jul</span></div>'
+        '<span class="dz-related-status-card-badge">'
+        '<span class="dz-badge" data-dz-tone="warning">'
+        '<span class="dz-badge-icon">{svg:triangle-alert}</span>Overdue</span></span>'
+        "</div></div></div></div>",
+        notes="One <code>dz-related-group</code> per related entity; the tab "
+        "row carries the label + server-stamped count. Three body shapes "
+        "share the chrome: the status-card grid (shown), a compact "
+        "<code>dz-related-table</code>, and a <code>dz-related-file-list</code>. "
+        "In Dazzle these render from the detail view's related groups — the "
+        "same shared cell core as list rows, so badges/dates match.",
+        tags=("data",),
+    ),
     # ── Primitives ───────────────────────────────────────────────────
     Hyperpart(
         "separator",

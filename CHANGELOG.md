@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.106] - 2026-07-06
+
+### Added
+- **Fleet convergence W2** (HM 0.1.36 → 0.1.37): four more families
+  promoted verbatim with gallery demos — **kanban** (board/columns/cards;
+  the load-all overflow seam), **timeline** (attention-toned bullets;
+  the shared `attention_accent` macro moved with it — kanban's card-attn
+  keys the same contract), **activity-feed** (dot spine, time, actor
+  bubble), and **related-tables** (tabbed related-record groups; the
+  status-card body shape demoed, tablist/button semantics per the
+  emitter).
+
+### Fixed
+- **v0.93.105's CI failure**: `test_dz_tones_css.py` pinned the tone
+  vocabulary in `dz-tones.css`; W1 moved the action-grid/status-list tint
+  families to HM and only the HM suite was re-run after the review fixes.
+  The pin now reads the union (dz-tones.css + the HM component files).
+  Lesson recorded: review fixes invalidate prior suite runs on BOTH sides.
+- `pretty_html` LOWERCASED attribute names (html.parser behaviour) —
+  corrupting case-sensitive SVG attributes in every snippet (`viewBox` →
+  `viewbox` renders a broken svg when copied; existing icons dodged it via
+  the sprite sheet). A case-restore map fixes the whole class.
+- Another shipped-for-ages contrast bug the axe gate caught on first
+  gallery exposure: `dz-kanban-empty` used 60%-transparent muted text.
+
 ## [0.93.105] - 2026-07-06
 
 ### Added

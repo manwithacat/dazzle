@@ -1,0 +1,152 @@
+/* HYPERPART: timeline */
+/* Promoted VERBATIM from Dazzle regions.css (W2, fleet convergence).
+ * The Dazzle emitter contract predates the move and is unchanged. */
+
+/* ─────────────────────────── timeline region ────────────────────
+ * Vertical timeline (similar shape to activity_feed). Bullet
+ * marker on the left rail, date column, content pad. Shares the
+ * .dz-activity-* dot/bullet pattern but renders item-shape rather
+ * than bare message. */
+
+.dz-timeline-list {
+  position: relative;
+  padding-inline-start: var(--space-md);
+  border-inline-start: 1px solid var(--colour-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  list-style: none;
+  margin: 0;
+}
+
+.dz-timeline-item {
+  position: relative;
+}
+
+.dz-timeline-bullet-wrap {
+  position: absolute;
+  inset-inline-start: -1.3125rem;
+  top: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.dz-timeline-bullet {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.dz-timeline-row {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.dz-timeline-date {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  min-width: 5rem;
+  padding-block-start: 0.25rem;
+}
+
+.dz-timeline-content {
+  flex: 1 1 0;
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  border-radius: var(--radius-sm);
+}
+
+.dz-timeline-content.is-clickable {
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-timeline-content.is-clickable:hover {
+  background: var(--colour-bg);
+}
+
+.dz-timeline-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+.dz-timeline-field {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin: 0;
+}
+
+.dz-timeline-overflow {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+/* attention_accent macro (moved with its consumer — the timeline's
+ * bullets carry dz-attn-bullet + dz-attn-tone-*; kanban's card-attn
+ * text also keys the attn contract). */
+/* ─────────────────────────── attention_accent macro ─────────────
+ * Cross-region attention/severity tier visual treatment. The macro
+ * `attention_classes` returns a class string the caller pastes into
+ * the element's `class=` attribute; this CSS resolves the (style ×
+ * tone) matrix.
+ *
+ *   - border  — 4px inline-start accent (grid)
+ *   - tint    — 0.06–0.08 background tint (list)
+ *   - both    — border + 0.04 background tint (queue)
+ *   - bullet  — text colour for the timeline dot (timeline)
+ *
+ * Tone semantics:
+ *   - critical → danger
+ *   - warning  → warning
+ *   - notice   → brand
+ *   - default  → brand (bullet only — falls back when no attention)
+ */
+
+.dz-attn-border {
+  border-inline-start-width: 4px;
+  border-inline-start-style: solid;
+}
+
+.dz-attn-border.dz-attn-tone-critical { border-inline-start-color: var(--colour-danger); }
+.dz-attn-border.dz-attn-tone-warning  { border-inline-start-color: var(--colour-warning); }
+.dz-attn-border.dz-attn-tone-notice   { border-inline-start-color: var(--colour-brand); }
+
+.dz-attn-tint.dz-attn-tone-critical {
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+}
+.dz-attn-tint.dz-attn-tone-warning {
+  background: color-mix(in oklch, var(--colour-warning) 8%, transparent);
+}
+.dz-attn-tint.dz-attn-tone-notice {
+  background: color-mix(in oklch, var(--colour-brand) 6%, transparent);
+}
+
+.dz-attn-both {
+  border-inline-start-width: 4px;
+  border-inline-start-style: solid;
+}
+
+.dz-attn-both.dz-attn-tone-critical {
+  border-inline-start-color: var(--colour-danger);
+  background: color-mix(in oklch, var(--colour-danger) 4%, transparent);
+}
+
+.dz-attn-both.dz-attn-tone-warning {
+  border-inline-start-color: var(--colour-warning);
+  background: color-mix(in oklch, var(--colour-warning) 4%, transparent);
+}
+
+.dz-attn-both.dz-attn-tone-notice {
+  border-inline-start-color: var(--colour-brand);
+  background: color-mix(in oklch, var(--colour-brand) 4%, transparent);
+}
+
+.dz-attn-bullet.dz-attn-tone-critical { color: var(--colour-danger); }
+.dz-attn-bullet.dz-attn-tone-warning  { color: var(--colour-warning); }
+.dz-attn-bullet.dz-attn-tone-notice   { color: var(--colour-brand); }
+.dz-attn-bullet.dz-attn-tone-default  { color: var(--colour-brand); }

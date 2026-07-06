@@ -56,6 +56,10 @@ CSS_SOURCES = [
     ("components", "components/status-list.css"),
     ("components", "components/action-grid.css"),
     ("components", "components/queue.css"),
+    ("components", "components/kanban.css"),
+    ("components", "components/timeline.css"),
+    ("components", "components/activity-feed.css"),
+    ("components", "components/related-tables.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]

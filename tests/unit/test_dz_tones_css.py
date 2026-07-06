@@ -28,6 +28,22 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CSS_DIR = _REPO_ROOT / "src/dazzle/page/runtime/static/css"
+_HM_COMPONENTS = _REPO_ROOT / "packages/hatchi-maxchi/components"
+
+
+def _tones_text() -> str:
+    """The tone vocabulary is split across dz-tones.css and the HM
+    component files that took their families with them (W1/W2 fleet
+    convergence: action-grid/status-list tints, the attn macro in
+    timeline.css). The contract is the union."""
+    parts = [(_CSS_DIR / "dz-tones.css").read_text()]
+    for name in ("action-grid.css", "status-list.css", "timeline.css"):
+        f = _HM_COMPONENTS / name
+        if f.is_file():
+            parts.append(f.read_text())
+    return "\n".join(parts)
+
+
 _TPL_DIR = _REPO_ROOT / "src/dazzle/page/templates"
 
 
@@ -51,7 +67,7 @@ class TestDzTonesCssRulesPresent:
     non-neutral tone keyed off the right data attribute."""
 
     def _text(self) -> str:
-        return (_CSS_DIR / "dz-tones.css").read_text()
+        return _tones_text()
 
     def test_metric_tile_rules_present(self) -> None:
         text = self._text()
@@ -232,7 +248,7 @@ class TestActionGridAndDeltaCssRulesPresent:
     rules added in v0.61.74."""
 
     def _text(self) -> str:
-        return (_CSS_DIR / "dz-tones.css").read_text()
+        return _tones_text()
 
     def test_action_card_surface_rules_present(self) -> None:
         text = self._text()
