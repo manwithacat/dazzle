@@ -85,6 +85,11 @@ class Hyperpart:
     #    tools/hyperpart.py assembles the full anatomy; test_hyperpart_cohesion
     #    keeps the manifest and the markers honest.
     controller: str | None = None  # a controllers/*.js file, if it needs client behaviour
+    # Render the live demo inside the gallery's device frame (a transformed
+    # box that contains position:fixed descendants). The frame is GALLERY
+    # CHROME added by the builder — never part of the partial, which stays
+    # the copyable snippet (the Blueprint.framed precedent).
+    framed: bool = False
     # OPTIONAL extension controllers riding this Hyperpart's seams (each a
     # controllers/*.js file). An extension adds behaviour a consumer can take
     # or leave — its absence never breaks the core partial (the grid works
@@ -1044,6 +1049,65 @@ HYPERPARTS: list[Hyperpart] = [
         "centring context). This is the published form of the measure the "
         "gallery's own chrome uses.",
         tags=("layout",),
+    ),
+    Hyperpart(
+        "app-shell",
+        "App shell",
+        "Composites",
+        "The SaaS/admin application frame: persistent left navigation, an "
+        "optional sticky top bar, a routed main workspace, and a "
+        "responsive/collapsible sidebar whose state the server renders.",
+        # The FULL motif (routed navigation, whole sidebar anatomy) lives on
+        # the saas-shell Blueprint; the builder frames this demo (framed=True).
+        '<div class="dz-app-shell" data-dz-sidebar="open">'
+        '<aside class="dz-app-sidebar" id="dz-app-sidebar">'
+        '<div class="dz-sidebar">'
+        '<div class="dz-sidebar-brand"><span class="dz-sidebar-brand-text">Acme Ops</span></div>'
+        '<nav class="dz-sidebar-nav" aria-label="Primary">'
+        '<ul class="dz-sidebar-nav-list">'
+        '<li><a class="dz-sidebar-nav-link" aria-current="page" href="#">'
+        '<span class="dz-sidebar-nav-icon">{svg:layout-dashboard}</span>'
+        '<span class="dz-sidebar-nav-label">Dashboard</span></a></li>'
+        '<li><a class="dz-sidebar-nav-link" href="#">'
+        '<span class="dz-sidebar-nav-icon">{svg:receipt}</span>'
+        '<span class="dz-sidebar-nav-label">Invoices</span></a></li>'
+        "</ul></nav></div></aside>"
+        '<div class="dz-app-content">'
+        '<header class="dz-app-header">'
+        '<div class="dz-topbar">'
+        '<div class="dz-topbar-leading">'
+        '<button type="button" class="dz-sidebar-toggle" data-dz-sidebar-toggle '
+        'aria-expanded="true" aria-controls="dz-app-sidebar" aria-label="Toggle navigation">'
+        '<span class="dz-sidebar-toggle__icon" aria-hidden="true"></span></button>'
+        "</div>"
+        '<div class="dz-topbar-title"><span class="dz-topbar-title-text">Dashboard</span></div>'
+        '<div class="dz-topbar-trailing">'
+        '<button type="button" class="dz-icon-button" aria-label="Notifications">'
+        "{svg:triangle-alert}</button></div>"
+        "</div></header>"
+        '<main class="dz-app-main" id="main-content">'
+        '<p class="hm-demo-muted">The routed workspace. The hamburger collapses '
+        "the sidebar; the state persists via a cookie so the server renders it "
+        "correctly on the next request.</p>"
+        "</main></div></div>",
+        notes="The shell root carries <code>data-dz-sidebar=&quot;open|closed&quot;</code> "
+        "— SERVER-rendered from the <code>dz_sidebar</code> cookie, so first "
+        "paint is correct with no flash; <code>dz-app-shell.js</code> flips the "
+        "attribute and re-writes the cookie when "
+        "<code>[data-dz-sidebar-toggle]</code> is clicked (and mirrors "
+        "<code>aria-expanded</code>). Desktop (≥64rem): the sidebar is "
+        "persistent and the content pane pads around it; narrow: it slides "
+        "off-canvas and overlays (this component owns that media query "
+        "deliberately — viewport policy, not intrinsic wrapping — the layout "
+        "primitives inside stay media-query-free). The demo above sits in a "
+        "device frame the GALLERY adds (a transformed box contains the "
+        "fixed-position sidebar) — the snippet below is the pure, copyable "
+        "shell markup. The full motif — routed "
+        "navigation swapping the main slot — is the "
+        '<a href="blueprints/saas-shell.html">saas-shell Blueprint</a>.',
+        tags=("composite", "shell"),
+        controller="controllers/dz-app-shell.js",
+        framed=True,
     ),
     # ── Primitives ───────────────────────────────────────────────────
     Hyperpart(

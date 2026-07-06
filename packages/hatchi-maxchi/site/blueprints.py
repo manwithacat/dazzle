@@ -25,6 +25,12 @@ class Blueprint:
     partial: str  # the full page BODY — rendered live AND shown as the snippet
     composes: tuple[str, ...] = field(default_factory=tuple)  # Hyperpart ids used
     notes: str = ""
+    # Render the live composition inside a device frame (a transformed,
+    # scrollable box). A transformed ancestor becomes the containing block
+    # for position:fixed descendants (CSS transforms spec) — so a shell
+    # with a FIXED sidebar demos honestly inside the page instead of
+    # overlaying the gallery chrome.
+    framed: bool = False
 
 
 BLUEPRINTS: list[Blueprint] = [
@@ -231,5 +237,66 @@ BLUEPRINTS: list[Blueprint] = [
         "form reuses the <code>dz-form-*</code> field triad (label / input / "
         "hint) — error states key off <code>aria-invalid</code> exactly as "
         "the field Hyperpart documents.",
+    ),
+    Blueprint(
+        "saas-shell",
+        "SaaS app shell",
+        "The modern SaaS/admin frame: persistent left navigation, a sticky "
+        "top bar with the collapse toggle, and a ROUTED main workspace — nav "
+        "links swap only the main slot, so the shell, sidebar state, and "
+        "scroll survive every navigation. Collapse persists via a cookie the "
+        "server reads, so first paint is always correct.",
+        '<div class="dz-app-shell" data-dz-sidebar="open">'
+        '<aside class="dz-app-sidebar" id="dz-app-sidebar">'
+        '<div class="dz-sidebar">'
+        '<div class="dz-sidebar-brand"><span class="dz-sidebar-brand-text">Acme Ops</span></div>'
+        '<nav class="dz-sidebar-nav" aria-label="Primary">'
+        '<ul class="dz-sidebar-nav-list">'
+        '<li><a class="dz-sidebar-nav-link" aria-current="page" href="#" '
+        'hx-get="/mock/shell/dashboard" hx-target="#main-content" hx-swap="innerHTML">'
+        '<span class="dz-sidebar-nav-icon">{svg:layout-dashboard}</span>'
+        '<span class="dz-sidebar-nav-label">Dashboard</span></a></li>'
+        '<li><a class="dz-sidebar-nav-link" href="#" '
+        'hx-get="/mock/shell/invoices" hx-target="#main-content" hx-swap="innerHTML">'
+        '<span class="dz-sidebar-nav-icon">{svg:receipt}</span>'
+        '<span class="dz-sidebar-nav-label">Invoices</span></a></li>'
+        '<li><a class="dz-sidebar-nav-link" href="#">'
+        '<span class="dz-sidebar-nav-icon">{svg:users}</span>'
+        '<span class="dz-sidebar-nav-label">Customers</span></a></li>'
+        "</ul></nav>"
+        '<div class="dz-sidebar-footer">'
+        '<div class="dz-sidebar-user-block">'
+        '<span class="dz-sidebar-user-name">Ada Lovelace</span></div></div>'
+        "</div></aside>"
+        '<div class="dz-app-content">'
+        '<header class="dz-app-header">'
+        '<div class="dz-topbar">'
+        '<div class="dz-topbar-leading">'
+        '<button type="button" class="dz-sidebar-toggle" data-dz-sidebar-toggle '
+        'aria-expanded="true" aria-controls="dz-app-sidebar" aria-label="Toggle navigation">'
+        '<span class="dz-sidebar-toggle__icon" aria-hidden="true"></span></button>'
+        "</div>"
+        '<div class="dz-topbar-title"><span class="dz-topbar-title-text">Acme Ops</span></div>'
+        '<div class="dz-topbar-trailing">'
+        '<button type="button" class="dz-button" data-dz-variant="primary">New invoice</button>'
+        "</div></div></header>"
+        '<main class="dz-app-main" id="main-content">'
+        '<div class="dz-stack" data-dz-gap="md"><h1>Dashboard</h1>'
+        '<div class="dz-auto-grid" style="--dz-grid-min: 10rem">'
+        '<div class="dz-card dz-card-body"><div class="dz-card-label">Outstanding</div>'
+        '<div class="dz-card-value">£12,450</div></div>'
+        '<div class="dz-card dz-card-body"><div class="dz-card-label">Paid</div>'
+        '<div class="dz-card-value">£48,900</div></div></div></div>'
+        "</main></div></div>",
+        composes=("app-shell", "stack", "auto-grid", "card", "button"),
+        notes="Routing is one attribute per link: <code>hx-get</code> the page "
+        "fragment, <code>hx-target=&quot;#main-content&quot;</code> — the "
+        "server returns only the workspace body, and everything else (shell, "
+        "sidebar collapse state, focus, scroll) persists. In Dazzle this is "
+        "the workspace pattern: every example app's views render inside this "
+        "shell. The collapse toggle writes the <code>dz_sidebar</code> cookie "
+        "so the SERVER renders <code>data-dz-sidebar</code> correctly on the "
+        "next full page load — state-in-DOM at SSR, no client hydration flash.",
+        framed=True,
     ),
 ]

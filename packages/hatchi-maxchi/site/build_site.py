@@ -195,6 +195,8 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
+    "/mock/shell/dashboard": '<div class="dz-stack" data-dz-gap="md"><h1>Dashboard</h1><div class="dz-auto-grid" style="--dz-grid-min: 10rem"><div class="dz-card dz-card-body"><div class="dz-card-label">Outstanding</div><div class="dz-card-value">£12,450</div></div><div class="dz-card dz-card-body"><div class="dz-card-label">Paid</div><div class="dz-card-value">£48,900</div></div></div></div>',
+    "/mock/shell/invoices": '<div class="dz-stack" data-dz-gap="md"><h1>Invoices</h1><p class="hm-demo-muted">The routed workspace swapped — the shell, sidebar state, and scroll position persist; only the main slot changed.</p></div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
     "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
   };
@@ -717,6 +719,9 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-blueprint-head a { color: var(--colour-brand); text-decoration: none; font-size: var(--text-sm); }
 .hm-blueprint-head h1 { margin: .5rem 0 .25rem; letter-spacing: -.02em; }
 .hm-blueprint-live { border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: 1.5rem; margin-block-end: 1.5rem; background: var(--colour-surface); }
+/* Device frame: the transform makes this the containing block for
+ * position:fixed descendants, so an app shell demos in-page. */
+.hm-blueprint-live--framed { padding: 0; height: 40rem; overflow: auto; transform: translateZ(0); }
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
 .hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }
@@ -808,6 +813,14 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         # (e.g. controllers/dz-command.js) and HYPERPART markers, which keep
         # the source form regardless of the published class namespace.
         live = apply_prefix(expand_icons(c.partial), prefix)
+        # framed Hyperparts (fixed-position compositions) demo inside the
+        # gallery's device frame — chrome around the DEMO only; the snippet
+        # below stays the pure partial (partial-is-snippet holds).
+        framed_live = (
+            f'<div class="hm-blueprint-live--framed" style="height: 22rem">{live}</div>'
+            if c.framed
+            else live
+        )
         # The live demo uses the compact one-line `live`; the SNIPPET is
         # pretty-printed so the structure is legible (render-faithful — see
         # site/pretty.py). Sprite-dependency note prepended to the snippet only.
@@ -834,7 +847,7 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
             f'<section class="hm-comp" id="{c.id}">'
             f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
             f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
-            f'<div class="hm-preview">{live}</div>'
+            f'<div class="hm-preview">{framed_live}</div>'
             f'<div class="hm-code">{copy_button}'
             f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
             f"<code>{snippet}</code></pre></div>"
@@ -980,7 +993,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 <p class="hm-hero-def">{_html.escape(bp.blurb)}</p>
 <p class="hm-composed"><strong>Composed of:</strong> {composes}</p>
 </header>
-<div class="hm-blueprint-live">{bp_live}</div>
+<div class="hm-blueprint-live{" hm-blueprint-live--framed" if bp.framed else ""}">{bp_live}</div>
 <details class="hm-contract"><summary>Page source — the whole page is the snippet</summary>
 <pre class="hm-code"><code>{bp_snippet}</code></pre></details>
 {bp_notes}

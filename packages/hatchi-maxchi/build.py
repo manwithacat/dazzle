@@ -52,6 +52,7 @@ CSS_SOURCES = [
     ("components", "components/skeleton.css"),
     ("components", "components/table.css"),
     ("components", "components/layout.css"),
+    ("components", "components/app-shell.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]
@@ -69,6 +70,7 @@ JS_SOURCES = [
     "controllers/dz-grid-cols.js",
     "controllers/dz-grid-resize.js",
     "controllers/dz-grid-edit.js",
+    "controllers/dz-app-shell.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

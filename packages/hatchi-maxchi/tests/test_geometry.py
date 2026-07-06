@@ -88,9 +88,20 @@ def test_no_visible_element_collapses_to_zero_paint(page) -> None:  # type: igno
               const r = el.getBoundingClientRect();
               if (r.width === 0 || r.height === 0) {
                 // an empty inline text holder with no styling is not a bug
+                // Out-of-flow (fixed/absolute) children paint on their own
+                // box, not the wrapper's — a zero-size wrapper whose only
+                // content is out-of-flow is structural, not collapsed (the
+                // app-shell's <aside> around its fixed sidebar).
+                const inFlowChild = Array.from(el.children).some(c => {
+                  const p = getComputedStyle(c).position;
+                  return p !== 'fixed' && p !== 'absolute';
+                });
+                // direct text nodes only — textContent would count the
+                // out-of-flow child's text and defeat the wrapper exemption
+                const ownText = Array.from(el.childNodes).some(
+                  n => n.nodeType === 3 && n.textContent.trim() !== '');
                 const painted = s.borderTopWidth !== '0px' || s.borderLeftWidth !== '0px'
-                  || s.backgroundColor !== 'rgba(0, 0, 0, 0)' || el.children.length > 0
-                  || (el.textContent || '').trim() !== '';
+                  || s.backgroundColor !== 'rgba(0, 0, 0, 0)' || inFlowChild || ownText;
                 if (!painted) continue;
                 const comp = el.closest('.hm-comp');
                 out.push((comp ? comp.id + ': ' : '') + tag + '.' + (el.className || '')

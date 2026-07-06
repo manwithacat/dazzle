@@ -118,6 +118,9 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-blueprint-head a { color: var(--colour-brand); text-decoration: none; font-size: var(--text-sm); }
 .hm-blueprint-head h1 { margin: .5rem 0 .25rem; letter-spacing: -.02em; }
 .hm-blueprint-live { border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: 1.5rem; margin-block-end: 1.5rem; background: var(--colour-surface); }
+/* Device frame: the transform makes this the containing block for
+ * position:fixed descendants, so an app shell demos in-page. */
+.hm-blueprint-live--framed { padding: 0; height: 40rem; overflow: auto; transform: translateZ(0); }
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
 .hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }

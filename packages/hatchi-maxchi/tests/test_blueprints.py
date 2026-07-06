@@ -116,9 +116,20 @@ def test_blueprint_zero_paint_sweep(page, bp_id, width) -> None:  # type: ignore
             if (s.display === 'none' || s.visibility === 'hidden') continue;
             const r = el.getBoundingClientRect();
             if (r.width === 0 || r.height === 0) {
+              // Out-of-flow (fixed/absolute) children paint on their own
+              // box, not the wrapper's — a zero-size wrapper whose only
+              // content is out-of-flow is structural, not collapsed (the
+              // app-shell's <aside> around its fixed sidebar).
+              const inFlowChild = Array.from(el.children).some(c => {
+                const p = getComputedStyle(c).position;
+                return p !== 'fixed' && p !== 'absolute';
+              });
+              // direct text nodes only — textContent would count the
+              // out-of-flow child's text and defeat the wrapper exemption
+              const ownText = Array.from(el.childNodes).some(
+                n => n.nodeType === 3 && n.textContent.trim() !== '');
               const painted = s.borderTopWidth !== '0px' || s.borderLeftWidth !== '0px'
-                || s.backgroundColor !== 'rgba(0, 0, 0, 0)' || el.children.length > 0
-                || (el.textContent || '').trim() !== '';
+                || s.backgroundColor !== 'rgba(0, 0, 0, 0)' || inFlowChild || ownText;
               if (painted) out.push(tag + '.' + (el.className || '') + ' ' + r.width + 'x' + r.height);
             }
           }
@@ -207,3 +218,55 @@ class TestAuth:
             """els => els.map(e => !!document.querySelector('label[for="' + e.id + '"]'))""",
         )
         assert pairs and all(pairs), "every input must have a bound label"
+
+
+class TestSaasShell:
+    def test_toggle_collapses_and_mirrors_aria(self, page) -> None:  # type: ignore[no-untyped-def]
+        _goto(page, "saas-shell", _VIEWPORTS["desktop"])
+        state = "e => e.getAttribute('data-sidebar')"
+        assert page.eval_on_selector(".app-shell", state) == "open"
+        page.click("[data-sidebar-toggle]")
+        page.wait_for_timeout(100)
+        assert page.eval_on_selector(".app-shell", state) == "closed"
+        assert (
+            page.eval_on_selector("[data-sidebar-toggle]", "e => e.getAttribute('aria-expanded')")
+            == "false"
+        )
+        page.click("[data-sidebar-toggle]")
+        page.wait_for_timeout(100)
+        assert page.eval_on_selector(".app-shell", state) == "open"
+
+    def test_routed_navigation_swaps_only_the_main_slot(self, page) -> None:  # type: ignore[no-untyped-def]
+        _goto(page, "saas-shell", _VIEWPORTS["desktop"])
+        page.click('.sidebar-nav-link[hx-get$="invoices"]')
+        page.wait_for_timeout(150)
+        assert "routed workspace swapped" in page.inner_text("#main-content")
+        # the shell + sidebar survived the navigation
+        assert page.eval_on_selector(".app-shell", "e => e.getAttribute('data-sidebar')") == "open"
+        assert page.query_selector(".sidebar-brand") is not None
+
+    def test_sidebar_offsets_content_on_desktop_overlays_on_phone(self, page) -> None:  # type: ignore[no-untyped-def]
+        """The component's deliberate media query: ≥64rem the open sidebar
+        pads the content pane; narrow, the pane takes the full width and the
+        sidebar overlays (off-canvas when closed)."""
+        _goto(page, "saas-shell", _VIEWPORTS["desktop"])
+        pad = page.eval_on_selector(".app-content", "e => getComputedStyle(e).paddingInlineStart")
+        assert pad == "256px", f"desktop open-sidebar content offset: {pad}"
+        _goto(page, "saas-shell", _VIEWPORTS["phone"])
+        pad = page.eval_on_selector(".app-content", "e => getComputedStyle(e).paddingInlineStart")
+        assert pad == "0px", f"phone: content must take the full width: {pad}"
+
+    def test_frame_contains_the_fixed_sidebar(self, page) -> None:  # type: ignore[no-untyped-def]
+        """The device-frame promise: the transformed wrapper is the
+        containing block, so the fixed sidebar stays INSIDE the blueprint
+        page instead of overlaying its chrome."""
+        _goto(page, "saas-shell", _VIEWPORTS["desktop"])
+        inside = page.evaluate(
+            """() => {
+              const frame = document.querySelector('.hm-blueprint-live--framed');
+              const sb = frame.querySelector('.sidebar');
+              const f = frame.getBoundingClientRect(), s = sb.getBoundingClientRect();
+              return s.left >= f.left - 1 && s.top >= f.top - 1;
+            }"""
+        )
+        assert inside, "the fixed sidebar must be contained by the frame"

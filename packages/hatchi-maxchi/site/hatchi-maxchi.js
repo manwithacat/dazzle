@@ -19,6 +19,8 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
+    "/mock/shell/dashboard": '<div class="stack" data-gap="md"><h1>Dashboard</h1><div class="auto-grid" style="--grid-min: 10rem"><div class="card card-body"><div class="card-label">Outstanding</div><div class="card-value">£12,450</div></div><div class="card card-body"><div class="card-label">Paid</div><div class="card-value">£48,900</div></div></div></div>',
+    "/mock/shell/invoices": '<div class="stack" data-gap="md"><h1>Invoices</h1><p class="hm-demo-muted">The routed workspace swapped — the shell, sidebar state, and scroll position persist; only the main slot changed.</p></div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
     "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
   };
@@ -2435,4 +2437,78 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   }
   document.addEventListener("htmx:after:swap", onAfterSwap); // htmx 4
   document.addEventListener("htmx:afterSwap", onAfterSwap); // htmx ≤2
+})();
+
+/* ── controllers/app-shell.js ── */
+/* HYPERPART: app-shell */
+/*
+ * app-shell — the shell's sidebar toggle + persistence controller
+ * (promoted verbatim from Dazzle's alpine.js #1294 section; vanilla
+ * and event-delegated — it never depended on Alpine).
+ *
+ * Contract:
+ *   - root:    `.app-shell` carries `data-sidebar="open|closed"`
+ *              (server-rendered initial state).
+ *   - toggle:  `[data-sidebar-toggle]` (the topbar hamburger) flips the
+ *              state and mirrors it to aria-expanded.
+ *   - persist: the `dz_sidebar` cookie (1y) — a cookie, not localStorage,
+ *              so the SERVER renders the correct state on first paint.
+ */
+// ── #1294 — App-shell sidebar toggle + persistence ──────────────────
+// SSR emits `data-sidebar` on `.app-shell` (default "open") so the
+// nav is reachable on first paint. This vanilla, event-delegated
+// controller (a) reads the `dz_sidebar` cookie on load and applies it as
+// a universal persistence fallback for render paths that default to
+// "open", and (b) flips the state + writes the cookie when the topbar
+// toggle is clicked. No Alpine dependency — survives HTMX swaps.
+(function () {
+  "use strict";
+  var COOKIE = "dz_sidebar";
+  var MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+  function shell() {
+    return document.querySelector(".app-shell");
+  }
+  function readCookie() {
+    var m = document.cookie.match(/(?:^|;\s*)dz_sidebar=(open|closed)\b/);
+    return m ? m[1] : null;
+  }
+  function syncToggle(state) {
+    var t = document.querySelector("[data-sidebar-toggle]");
+    if (t) t.setAttribute("aria-expanded", state === "open" ? "true" : "false");
+  }
+  function apply(state) {
+    var el = shell();
+    if (!el) return;
+    el.setAttribute("data-sidebar", state);
+    syncToggle(state);
+  }
+  function init() {
+    var el = shell();
+    if (!el) return;
+    var persisted = readCookie();
+    if (persisted && persisted !== el.getAttribute("data-sidebar")) {
+      apply(persisted);
+    } else {
+      syncToggle(el.getAttribute("data-sidebar") || "open");
+    }
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+  document.addEventListener("click", function (e) {
+    var btn =
+      e.target && e.target.closest
+        ? e.target.closest("[data-sidebar-toggle]")
+        : null;
+    if (!btn) return;
+    var el = shell();
+    if (!el) return;
+    var next =
+      el.getAttribute("data-sidebar") === "open" ? "closed" : "open";
+    apply(next);
+    document.cookie =
+      COOKIE + "=" + next + "; path=/; max-age=" + MAX_AGE + "; SameSite=Lax";
+  });
 })();

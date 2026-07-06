@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard — HaTchi-MaXchi Blueprint</title>
+<title>SaaS app shell — HaTchi-MaXchi Blueprint</title>
 <link rel="stylesheet" href="../hatchi-maxchi.css">
 <style>
 /* color-scheme comes from the bundle (tokens.css advertises `light dark`
@@ -133,50 +133,54 @@ body { background: var(--colour-bg); color: var(--colour-text);
 <div class="hm-blueprint-page">
 <header class="hm-blueprint-head">
 <a href="../index.html">&larr; HaTchi-MaXchi</a>
-<h1>Dashboard</h1>
-<p class="hm-hero-def">KPI tiles in a packing grid, a capacity list with progress bars, and a status cluster — the at-a-glance motif. Column count is entirely intrinsic: the grid packs whatever fits above its minimum tile width.</p>
-<p class="hm-composed"><strong>Composed of:</strong> <a href="../index.html#stack">stack</a> · <a href="../index.html#cluster">cluster</a> · <a href="../index.html#auto-grid">auto-grid</a> · <a href="../index.html#card">card</a> · <a href="../index.html#badge">badge</a> · <a href="../index.html#progress">progress</a></p>
+<h1>SaaS app shell</h1>
+<p class="hm-hero-def">The modern SaaS/admin frame: persistent left navigation, a sticky top bar with the collapse toggle, and a ROUTED main workspace — nav links swap only the main slot, so the shell, sidebar state, and scroll survive every navigation. Collapse persists via a cookie the server reads, so first paint is always correct.</p>
+<p class="hm-composed"><strong>Composed of:</strong> <a href="../index.html#app-shell">app-shell</a> · <a href="../index.html#stack">stack</a> · <a href="../index.html#auto-grid">auto-grid</a> · <a href="../index.html#card">card</a> · <a href="../index.html#button">button</a></p>
 </header>
-<div class="hm-blueprint-live"><main class="stack" data-gap="lg"><div class="cluster" data-justify="between"><h1>Operations</h1><span class="badge" data-tone="success"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg></span>All systems normal</span></div><div class="auto-grid" style="--grid-min: 11rem"><div class="card card-body"><div class="card-label">Requests</div><div class="card-value">1.2M</div><div class="card-delta"><svg class="icon" aria-hidden="true"><use href="#i-trending-up"/></svg> +8% today</div></div><div class="card card-body"><div class="card-label">P95 latency</div><div class="card-value">184ms</div><div class="card-delta"><svg class="icon" aria-hidden="true"><use href="#i-trending-up"/></svg> within budget</div></div><div class="card card-body"><div class="card-label">Error rate</div><div class="card-value">0.02%</div><div class="card-delta"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg> nominal</div></div><div class="card card-body"><div class="card-label">Queue depth</div><div class="card-value">37</div><div class="card-delta"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg> draining</div></div></div><div class="stack" data-gap="sm"><h2>Capacity</h2><div class="progress" role="progressbar" aria-label="Storage used" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><div class="progress__bar" style="--progress-value:62%"></div></div><div class="progress" data-tone="success" role="progressbar" aria-label="Compute reserved" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100"><div class="progress__bar" style="--progress-value:38%"></div></div></div></main></div>
+<div class="hm-blueprint-live hm-blueprint-live--framed"><div class="app-shell" data-sidebar="open"><aside class="app-sidebar" id="app-sidebar"><div class="sidebar"><div class="sidebar-brand"><span class="sidebar-brand-text">Acme Ops</span></div><nav class="sidebar-nav" aria-label="Primary"><ul class="sidebar-nav-list"><li><a class="sidebar-nav-link" aria-current="page" href="#" hx-get="/mock/shell/dashboard" hx-target="#main-content" hx-swap="innerHTML"><span class="sidebar-nav-icon"><svg class="icon" aria-hidden="true"><use href="#i-layout-dashboard"/></svg></span><span class="sidebar-nav-label">Dashboard</span></a></li><li><a class="sidebar-nav-link" href="#" hx-get="/mock/shell/invoices" hx-target="#main-content" hx-swap="innerHTML"><span class="sidebar-nav-icon"><svg class="icon" aria-hidden="true"><use href="#i-receipt"/></svg></span><span class="sidebar-nav-label">Invoices</span></a></li><li><a class="sidebar-nav-link" href="#"><span class="sidebar-nav-icon"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg></span><span class="sidebar-nav-label">Customers</span></a></li></ul></nav><div class="sidebar-footer"><div class="sidebar-user-block"><span class="sidebar-user-name">Ada Lovelace</span></div></div></div></aside><div class="app-content"><header class="app-header"><div class="topbar"><div class="topbar-leading"><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-expanded="true" aria-controls="app-sidebar" aria-label="Toggle navigation"><span class="sidebar-toggle__icon" aria-hidden="true"></span></button></div><div class="topbar-title"><span class="topbar-title-text">Acme Ops</span></div><div class="topbar-trailing"><button type="button" class="button" data-variant="primary">New invoice</button></div></div></header><main class="app-main" id="main-content"><div class="stack" data-gap="md"><h1>Dashboard</h1><div class="auto-grid" style="--grid-min: 10rem"><div class="card card-body"><div class="card-label">Outstanding</div><div class="card-value">£12,450</div></div><div class="card card-body"><div class="card-label">Paid</div><div class="card-value">£48,900</div></div></div></div></main></div></div></div>
 <details class="hm-contract"><summary>Page source — the whole page is the snippet</summary>
-<pre class="hm-code"><code>&lt;main class=&quot;stack&quot; data-gap=&quot;lg&quot;&gt;
-  &lt;div class=&quot;cluster&quot; data-justify=&quot;between&quot;&gt;
-    &lt;h1&gt;Operations&lt;/h1&gt;
-    &lt;span class=&quot;badge&quot; data-tone=&quot;success&quot;&gt;&lt;span class=&quot;badge-icon&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-circle-check&quot;/&gt;&lt;/svg&gt;&lt;/span&gt;All systems normal&lt;/span&gt;
+<pre class="hm-code"><code>&lt;div class=&quot;app-shell&quot; data-sidebar=&quot;open&quot;&gt;
+  &lt;aside class=&quot;app-sidebar&quot; id=&quot;app-sidebar&quot;&gt;
+    &lt;div class=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;sidebar-brand&quot;&gt;&lt;span class=&quot;sidebar-brand-text&quot;&gt;Acme Ops&lt;/span&gt;&lt;/div&gt;
+      &lt;nav class=&quot;sidebar-nav&quot; aria-label=&quot;Primary&quot;&gt;
+        &lt;ul class=&quot;sidebar-nav-list&quot;&gt;
+          &lt;li&gt;&lt;a class=&quot;sidebar-nav-link&quot; aria-current=&quot;page&quot; href=&quot;#&quot; hx-get=&quot;/mock/shell/dashboard&quot; hx-target=&quot;#main-content&quot; hx-swap=&quot;innerHTML&quot;&gt;&lt;span class=&quot;sidebar-nav-icon&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-layout-dashboard&quot;/&gt;&lt;/svg&gt;&lt;/span&gt;&lt;span class=&quot;sidebar-nav-label&quot;&gt;Dashboard&lt;/span&gt;&lt;/a&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;a class=&quot;sidebar-nav-link&quot; href=&quot;#&quot; hx-get=&quot;/mock/shell/invoices&quot; hx-target=&quot;#main-content&quot; hx-swap=&quot;innerHTML&quot;&gt;&lt;span class=&quot;sidebar-nav-icon&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-receipt&quot;/&gt;&lt;/svg&gt;&lt;/span&gt;&lt;span class=&quot;sidebar-nav-label&quot;&gt;Invoices&lt;/span&gt;&lt;/a&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;a class=&quot;sidebar-nav-link&quot; href=&quot;#&quot;&gt;&lt;span class=&quot;sidebar-nav-icon&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-users&quot;/&gt;&lt;/svg&gt;&lt;/span&gt;&lt;span class=&quot;sidebar-nav-label&quot;&gt;Customers&lt;/span&gt;&lt;/a&gt;&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/nav&gt;
+      &lt;div class=&quot;sidebar-footer&quot;&gt;
+        &lt;div class=&quot;sidebar-user-block&quot;&gt;&lt;span class=&quot;sidebar-user-name&quot;&gt;Ada Lovelace&lt;/span&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/aside&gt;
+  &lt;div class=&quot;app-content&quot;&gt;
+    &lt;header class=&quot;app-header&quot;&gt;
+      &lt;div class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-leading&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;sidebar-toggle&quot; data-sidebar-toggle aria-expanded=&quot;true&quot; aria-controls=&quot;app-sidebar&quot; aria-label=&quot;Toggle navigation&quot;&gt;&lt;span class=&quot;sidebar-toggle__icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;
+        &lt;div class=&quot;topbar-title&quot;&gt;&lt;span class=&quot;topbar-title-text&quot;&gt;Acme Ops&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;topbar-trailing&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;button&quot; data-variant=&quot;primary&quot;&gt;New invoice&lt;/button&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/header&gt;
+    &lt;main class=&quot;app-main&quot; id=&quot;main-content&quot;&gt;
+      &lt;div class=&quot;stack&quot; data-gap=&quot;md&quot;&gt;
+        &lt;h1&gt;Dashboard&lt;/h1&gt;
+        &lt;div class=&quot;auto-grid&quot; style=&quot;--grid-min: 10rem&quot;&gt;
+          &lt;div class=&quot;card card-body&quot;&gt;
+            &lt;div class=&quot;card-label&quot;&gt;Outstanding&lt;/div&gt;
+            &lt;div class=&quot;card-value&quot;&gt;£12,450&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;card card-body&quot;&gt;
+            &lt;div class=&quot;card-label&quot;&gt;Paid&lt;/div&gt;
+            &lt;div class=&quot;card-value&quot;&gt;£48,900&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/main&gt;
   &lt;/div&gt;
-  &lt;div class=&quot;auto-grid&quot; style=&quot;--grid-min: 11rem&quot;&gt;
-    &lt;div class=&quot;card card-body&quot;&gt;
-      &lt;div class=&quot;card-label&quot;&gt;Requests&lt;/div&gt;
-      &lt;div class=&quot;card-value&quot;&gt;1.2M&lt;/div&gt;
-      &lt;div class=&quot;card-delta&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-trending-up&quot;/&gt;&lt;/svg&gt; +8% today&lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;card card-body&quot;&gt;
-      &lt;div class=&quot;card-label&quot;&gt;P95 latency&lt;/div&gt;
-      &lt;div class=&quot;card-value&quot;&gt;184ms&lt;/div&gt;
-      &lt;div class=&quot;card-delta&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-trending-up&quot;/&gt;&lt;/svg&gt; within budget&lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;card card-body&quot;&gt;
-      &lt;div class=&quot;card-label&quot;&gt;Error rate&lt;/div&gt;
-      &lt;div class=&quot;card-value&quot;&gt;0.02%&lt;/div&gt;
-      &lt;div class=&quot;card-delta&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-circle-check&quot;/&gt;&lt;/svg&gt; nominal&lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;card card-body&quot;&gt;
-      &lt;div class=&quot;card-label&quot;&gt;Queue depth&lt;/div&gt;
-      &lt;div class=&quot;card-value&quot;&gt;37&lt;/div&gt;
-      &lt;div class=&quot;card-delta&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-triangle-alert&quot;/&gt;&lt;/svg&gt; draining&lt;/div&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-  &lt;div class=&quot;stack&quot; data-gap=&quot;sm&quot;&gt;
-    &lt;h2&gt;Capacity&lt;/h2&gt;
-    &lt;div class=&quot;progress&quot; role=&quot;progressbar&quot; aria-label=&quot;Storage used&quot; aria-valuenow=&quot;62&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;100&quot;&gt;
-      &lt;div class=&quot;progress__bar&quot; style=&quot;--progress-value:62%&quot;&gt;&lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;progress&quot; data-tone=&quot;success&quot; role=&quot;progressbar&quot; aria-label=&quot;Compute reserved&quot; aria-valuenow=&quot;38&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;100&quot;&gt;
-      &lt;div class=&quot;progress__bar&quot; style=&quot;--progress-value:38%&quot;&gt;&lt;/div&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-&lt;/main&gt;</code></pre></details>
-<details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">The KPI grid's <code>--grid-min</code> is the only tuning knob on the page. The progress bars demonstrate the public custom-property knob (<code>--progress-value</code>) at page scale — inline per-record values, CSS owns the mapping.</div></details>
+&lt;/div&gt;</code></pre></details>
+<details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">Routing is one attribute per link: <code>hx-get</code> the page fragment, <code>hx-target=&quot;#main-content&quot;</code> — the server returns only the workspace body, and everything else (shell, sidebar collapse state, focus, scroll) persists. In Dazzle this is the workspace pattern: every example app's views render inside this shell. The collapse toggle writes the <code>dz_sidebar</code> cookie so the SERVER renders <code>data-sidebar</code> correctly on the next full page load — state-in-DOM at SSR, no client hydration flash.</div></details>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>
 </body>

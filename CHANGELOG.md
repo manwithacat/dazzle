@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.104] - 2026-07-06
+
+### Added
+- **The app-shell is an HM Hyperpart + Blueprint** (HM 0.1.34 → 0.1.35),
+  executing the ratified directive (the SaaS/admin shell replaces the bulk
+  of example-app workspaces; all views converge onto HM; existing layouts
+  deprecate). The entire shell family — `dz-app-shell`/content, the topbar
+  (hamburger toggle, title, icon buttons), `dz-app-main`, and the full
+  sidebar anatomy — moved VERBATIM from Dazzle's `fragments.css` into HM
+  `app-shell.css`, and the #1294 sidebar toggle+persistence controller
+  (vanilla; never Alpine-dependent) moved from `dz-alpine.js` into HM
+  `dz-app-shell.js`. The emitted contract is unchanged: `data-dz-sidebar`
+  server-rendered from the `dz_sidebar` cookie, so first paint is always
+  correct. The component's 64rem media query is documented as deliberate —
+  viewport policy, distinct from the layout primitives' intrinsic wrapping.
+- **`saas-shell` Blueprint** — persistent left navigation, sticky topbar
+  with the collapse toggle, and a ROUTED main workspace (nav links swap
+  only `#main-content`; shell and sidebar state survive navigation).
+  Demos live inside a **device frame** (a transformed wrapper is the
+  containing block for `position:fixed` descendants) — `framed=` on both
+  Blueprint and Hyperpart, with the frame added by the BUILDER so the
+  partial-is-snippet guarantee holds (review caught the first version
+  embedding gallery chrome in the copyable snippet). Gates: toggle flips
+  state + mirrors `aria-expanded`, routed nav swaps only the main slot,
+  desktop content offsets 256px vs phone 0px, and the frame contains the
+  fixed sidebar. The zero-paint sweeps learned a principled exemption: a
+  zero-size wrapper whose only content is out-of-flow children is
+  structural, not collapsed (painted = border/background/in-flow
+  child/direct text).
+
 ## [0.93.103] - 2026-07-06
 
 ### Fixed
