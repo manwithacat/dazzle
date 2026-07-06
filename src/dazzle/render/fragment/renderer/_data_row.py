@@ -328,18 +328,14 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             )
         elif peek_slide:
             # The chevron loads the detail body into this list's one shared
-            # SlideOver panel (`#slideover-content-{table_id}`) and reveals the
-            # container (`#slideover-{table_id}`). JS-free reveal via inline
-            # hx-on; the backdrop/close button (on the SlideOver) re-hide it.
+            # drawer (`#slideover-content-{table_id}`) and opens the native
+            # <dialog> via the HM dz-dialog.js opener (data-dz-dialog-open
+            # names the dialog id — Tier F2; replaces the inline hx-on
+            # hidden-toggle). Close is the dialog's own (form/Esc/backdrop).
             table_id = str(table.get("table_id") or "")
             slide_url_attr = _html_mod.escape(f"{detail_url}?peek=1", quote=True)
             content_target = _html_mod.escape(slideover_content_id(table_id), quote=True)
-            # panel id crosses into a JS-string context inside hx-on — json.dumps
-            # for the JS layer, then HTML-escape for the attribute layer (the
-            # #1494 Slice-2 hardening; table_id is a parser-validated identifier,
-            # so this is defense-in-depth).
-            panel_js = _html_mod.escape(json.dumps(slideover_panel_id(table_id)), quote=True)
-            reveal_js = f"document.getElementById({panel_js}).removeAttribute('hidden')"
+            panel_attr = _html_mod.escape(slideover_panel_id(table_id), quote=True)
             peek_toggle_html = (
                 f'<button type="button" '  # nosemgrep
                 f'class="dz-tr-action dz-tr-peek-toggle" '
@@ -348,7 +344,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 f'hx-get="{slide_url_attr}" '
                 f'hx-target="#{content_target}" '
                 f'hx-swap="innerHTML" '
-                f'hx-on:click="{reveal_js}">'
+                f'data-dz-dialog-open="{panel_attr}">'
                 '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" '
                 'xmlns="http://www.w3.org/2000/svg">'
                 '<path d="M5.5 3.5L9 7l-3.5 3.5" stroke="currentColor" stroke-width="1.25" '

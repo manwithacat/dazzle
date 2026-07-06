@@ -499,9 +499,11 @@ class TestPeekSlideOverRowChevron:
 
     def test_chevron_reveals_the_container(self):
         html = _slide_row(table_id="tasks")
-        # The reveal removes `hidden` from the shared container id.
-        assert "removeAttribute('hidden')" in html
-        assert "slideover-tasks" in html
+        # The reveal is the HM dialog opener contract (dz-dialog.js
+        # showModal on the named <dialog>) — no inline hx-on JS.
+        assert 'data-dz-dialog-open="slideover-tasks"' in html
+        assert "removeAttribute" not in html
+        assert "hx-on:click" not in html
 
     def test_slide_over_emits_no_per_row_panel(self):
         html = _slide_row()
@@ -538,28 +540,37 @@ class TestPeekSlideOverRowChevron:
 
 
 class TestSlideOverPrimitive:
-    """The `SlideOver` container renders the `.dz-slideover-*` markup with the
-    panel + content ids the row chevron addresses, initially hidden."""
+    """The `SlideOver` container renders the HM drawer contract — a native
+    `<dialog class="dz-drawer">` with the panel + content ids the row
+    chevron addresses. Focus trap, inert background, Esc and backdrop
+    dismissal are the platform's own (Tier F2 convergence; the bespoke
+    `.dz-slideover-*` family + inline hx-on toggles were retired)."""
 
     def _render(self, **kw) -> str:
         from dazzle.render.fragment import FragmentRenderer, SlideOver
 
         return FragmentRenderer().render(SlideOver(**kw))
 
-    def test_renders_hidden_container_with_matching_ids(self):
+    def test_renders_native_dialog_with_matching_ids(self):
         html = self._render(table_id="tasks", title="Task detail")
         assert 'id="slideover-tasks"' in html
-        assert "dz-slideover" in html
-        assert "hidden" in html
+        assert "<dialog" in html
+        assert "dz-drawer" in html
+        assert 'closedby="any"' in html
+        # dialogs take their accessible name only from author attributes
+        assert 'aria-labelledby="slideover-tasks-title"' in html
+        assert 'id="slideover-tasks-title"' in html
         assert 'id="slideover-content-tasks"' in html
-        assert "dz-slideover-body" in html
+        assert "dz-drawer__body" in html
 
-    def test_close_affordances_hide_the_container(self):
+    def test_close_is_the_native_dialog_form(self):
         html = self._render(table_id="tasks")
-        # Backdrop + close button both toggle the container hidden.
-        assert "dz-slideover-backdrop" in html
-        assert "dz-slideover-close" in html
-        assert html.count("setAttribute('hidden','')") == 2
+        # One <form method="dialog"> close button; no backdrop div, no
+        # inline JS — dismissal is native (Esc / backdrop / the form).
+        assert '<form method="dialog"' in html
+        assert "dz-drawer__close" in html
+        assert "dz-slideover" not in html
+        assert "hx-on:click" not in html
 
     def test_width_drives_data_attr(self):
         assert 'data-dz-width="lg"' in self._render(table_id="t", width="lg")
@@ -599,7 +610,7 @@ class TestSlideOverListContainer:
 
     def test_slide_over_emits_container(self):
         html = self._list_html("slide_over")
-        assert "dz-slideover-panel" in html
+        assert 'class="dz-drawer"' in html  # HM drawer contract (Tier F2)
         assert 'id="slideover-task_list"' in html  # table_id = region_name
 
     def test_expand_emits_no_container(self):

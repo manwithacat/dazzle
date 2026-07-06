@@ -1,4 +1,4 @@
-/* dazzle v0.93.111 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.112 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -1678,6 +1678,13 @@ transition:
 translate var(--duration-base) var(--ease-out),
 overlay var(--duration-base) var(--ease-out) allow-discrete,
 display var(--duration-base) var(--ease-out) allow-discrete;
+}
+@media (min-width: 40rem) {
+dialog.dz-drawer[data-dz-width="sm"] { width: min(24rem, calc(100vw - 3rem)); }
+dialog.dz-drawer[data-dz-width="md"] { width: min(32rem, calc(100vw - 3rem)); }
+dialog.dz-drawer[data-dz-width="lg"] { width: min(42rem, calc(100vw - 3rem)); }
+dialog.dz-drawer[data-dz-width="xl"] { width: min(56rem, calc(100vw - 3rem)); }
+dialog.dz-drawer[data-dz-width="full"] { width: calc(100vw - 3rem); }
 }
 dialog.dz-drawer[data-dz-side="left"] {
 margin-inline: 0 auto;
@@ -5977,11 +5984,9 @@ animation: dz-spin 1s linear infinite;
 min-height: var(--dz-touch-target-min);
 min-width: var(--dz-touch-target-min);
 }
-.dz-modal-close-form,
-.dz-modal-close-form-floating,
+.dz-drawer__close,
 .dz-pdf-viewer-help-close,
-.dz-pdf-viewer-panel-close,
-.dz-slideover-close {
+.dz-pdf-viewer-panel-close {
 min-height: var(--dz-touch-target-min);
 min-width: var(--dz-touch-target-min);
 }
@@ -6829,79 +6834,6 @@ background: var(--colour-bg);
 .dz-context-menu-item-icon {
 width: 0.875rem;
 height: 0.875rem;
-color: var(--colour-text-muted);
-}
-.dz-slideover-backdrop {
-position: fixed;
-inset: 0;
-background: oklch(0% 0 0 / 0.3);
-z-index: 40;
-}
-.dz-slideover-panel {
-position: fixed;
-inset-block: 0;
-inset-inline-end: 0;
-z-index: 50;
-width: 100%;
-background: var(--colour-bg);
-border-inline-start: 1px solid var(--colour-border);
-box-shadow: -8px 0 24px oklch(0% 0 0 / 0.12);
-overflow-y: auto;
-transform: translateX(0);
-}
-@media (min-width: 40rem) {
-[data-dz-width="sm"] .dz-slideover-panel { max-width: 24rem; }
-[data-dz-width="md"] .dz-slideover-panel { max-width: 32rem; }
-[data-dz-width="lg"] .dz-slideover-panel { max-width: 42rem; }
-[data-dz-width="xl"] .dz-slideover-panel { max-width: 56rem; }
-}
-.dz-slideover-header {
-display: flex;
-align-items: center;
-justify-content: space-between;
-padding: var(--space-md);
-border-block-end: 1px solid var(--colour-border);
-}
-.dz-slideover-title {
-font-size: var(--text-base);
-font-weight: var(--weight-semibold);
-color: var(--colour-text);
-margin: 0;
-}
-.dz-slideover-close {
-width: 1.75rem;
-height: 1.75rem;
-display: inline-flex;
-align-items: center;
-justify-content: center;
-border-radius: var(--radius-sm);
-color: var(--colour-text-muted);
-background: transparent;
-border: 0;
-cursor: pointer;
-transition: background var(--duration-fast) var(--ease-out),
-color var(--duration-fast) var(--ease-out);
-}
-.dz-slideover-close:hover {
-background: var(--colour-bg);
-color: var(--colour-text);
-}
-.dz-slideover-close > svg {
-width: 1rem;
-height: 1rem;
-}
-.dz-slideover-body {
-padding: var(--space-md);
-}
-.dz-slideover-empty-text {
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-}
-.dz-slideover-content {
-padding: var(--space-md);
-}
-.dz-slideover-content-empty {
-font-size: var(--text-sm);
 color: var(--colour-text-muted);
 }
 .dz-sentinel-cell {
@@ -7885,80 +7817,6 @@ font-size: var(--text-sm);
 color: var(--colour-text-muted);
 margin-block-end: var(--space-md);
 }
-.dz-modal {
-padding: 0;
-background: transparent;
-border: 0;
-transition: opacity var(--duration-base) var(--ease-out),
-transform var(--duration-base) var(--ease-out);
-}
-.dz-modal::backdrop {
-background: oklch(0% 0 0 / 0.5);
-backdrop-filter: blur(2px);
-}
-.dz-modal[open] {
-opacity: 1;
-transform: scale(1);
-}
-.dz-modal:not([open]) {
-opacity: 0;
-transform: scale(0.95);
-}
-.dz-modal-panel {
-inline-size: 100%;
-border-radius: var(--radius-lg);
-border: 1px solid var(--colour-border);
-background: var(--colour-surface);
-color: var(--colour-text);
-box-shadow: var(--shadow-lg);
-}
-.dz-modal[data-dz-modal-size="sm"] .dz-modal-panel { max-inline-size: 24rem; }
-.dz-modal[data-dz-modal-size="md"] .dz-modal-panel { max-inline-size: 32rem; }
-.dz-modal[data-dz-modal-size="lg"] .dz-modal-panel { max-inline-size: 42rem; }
-.dz-modal[data-dz-modal-size="xl"] .dz-modal-panel { max-inline-size: 56rem; }
-.dz-modal-header {
-display: flex;
-align-items: center;
-justify-content: space-between;
-padding-inline: var(--space-xl);
-padding-block-start: var(--space-xl);
-padding-block-end: var(--space-sm);
-}
-.dz-modal-title {
-font-size: var(--text-md);
-font-weight: var(--weight-semibold);
-letter-spacing: -0.01em;
-margin: 0;
-}
-.dz-modal-close-form {
-margin: 0;
-}
-.dz-modal-close-form-floating {
-position: absolute;
-inset-inline-end: var(--space-md);
-inset-block-start: var(--space-md);
-margin: 0;
-}
-.dz-modal-body {
-padding-inline: var(--space-xl);
-padding-block: var(--space-md);
-max-block-size: 70vh;
-overflow-y: auto;
-font-size: var(--text-sm);
-}
-.dz-modal-backdrop-form {
-position: fixed;
-inset: 0;
-margin: 0;
-z-index: -1;
-}
-.dz-modal-backdrop-button {
-inline-size: 100%;
-block-size: 100%;
-cursor: default;
-background: transparent;
-border: 0;
-}
 .dz-confirm-dialog {
 padding: 0;
 background: transparent;
@@ -8764,8 +8622,7 @@ min-width: 0;
 .dz-app-content,
 .dz-app-body,
 .dz-form-body,
-.dz-modal,
-.dz-slideover-content,
+.dz-drawer__body,
 .dz-pdf-viewer-panel,
 .dz-scroll {
 -webkit-overflow-scrolling: touch;

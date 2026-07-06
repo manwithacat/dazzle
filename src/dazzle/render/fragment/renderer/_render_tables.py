@@ -23,7 +23,6 @@ See issue #1064 for the full decomposition plan.
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
@@ -78,41 +77,33 @@ class _RenderTablesMixin:
 
     def _emit_slide_over(self, so: SlideOver, ctx: RenderContext) -> str:
         """The one shared right-side slide-over panel for `peek: slide_over`
-        (#1494, 2c, Slice 2). Emitted once per list; a row's chevron `hx-get`s
-        the detail body into `#slideover-content-{table_id}` and reveals
-        `#slideover-{table_id}`. Open/close is **JS-free** — an inline
-        `hx-on:click` toggling the `hidden` attribute on the container (backdrop
-        + close button hide it; the row chevron reveals it). Markup matches the
-        purpose-built `.dz-slideover-*` CSS family; `data-dz-width` picks the
-        max-width preset."""
-        panel_id_raw = slideover_panel_id(so.table_id)
-        panel_id = ctx.escape_attr(panel_id_raw)
+        (#1494 2c; converged onto the HM drawer Hyperpart in Tier F2). A
+        native `<dialog class="dz-drawer">`: a row's chevron `hx-get`s the
+        detail body into `#slideover-content-{table_id}` and opens the
+        dialog via the HM `dz-dialog.js` opener (`data-dz-dialog-open` on
+        the chevron). Close is the platform's own — `<form method="dialog">`
+        button, Esc, and a backdrop tap (`closedby="any"`) — with focus
+        trapping and an inert background for free. `data-dz-width` picks
+        the drawer width preset."""
+        panel_id = ctx.escape_attr(slideover_panel_id(so.table_id))
         content_id = ctx.escape_attr(slideover_content_id(so.table_id))
         title = ctx.escape(so.title)  # text context (<h2> body)
-        title_attr = ctx.escape_attr(so.title)  # attribute context (aria-label)
         width = ctx.escape_attr(so.width)
-        # The container id crosses into a JS-string context inside the hx-on
-        # close handlers — json.dumps for the JS layer, escape_attr for the HTML
-        # attribute layer (#1494 Slice-2 hardening; table_id is a parser-validated
-        # identifier, so this is defense-in-depth).
-        panel_js = ctx.escape_attr(json.dumps(panel_id_raw))
-        hide = f"document.getElementById({panel_js}).setAttribute('hidden','')"
         return (
-            f'<div id="{panel_id}" class="dz-slideover" data-dz-width="{width}" hidden>'
-            f'<div class="dz-slideover-backdrop" hx-on:click="{hide}"></div>'
-            f'<aside class="dz-slideover-panel" role="dialog" aria-modal="true" '
-            f'aria-label="{title_attr}">'
-            f'<header class="dz-slideover-header">'
-            f'<h2 class="dz-slideover-title">{title}</h2>'
-            f'<button type="button" class="dz-slideover-close" aria-label="Close" '
-            f'hx-on:click="{hide}">'
+            f'<dialog id="{panel_id}" class="dz-drawer" data-dz-width="{width}" '
+            f'closedby="any" aria-labelledby="{panel_id}-title">'
+            f'<header class="dz-drawer__header">'
+            f'<h2 class="dz-drawer__title" id="{panel_id}-title">{title}</h2>'
+            f'<form method="dialog">'
+            f'<button type="submit" class="dz-drawer__close" aria-label="Close">'
             '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" '
             'xmlns="http://www.w3.org/2000/svg">'
             '<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" '
             'stroke-linecap="round"/></svg></button>'
+            f"</form>"
             f"</header>"
-            f'<div id="{content_id}" class="dz-slideover-body"></div>'
-            f"</aside></div>"
+            f'<div id="{content_id}" class="dz-drawer__body"></div>'
+            f"</dialog>"
         )
 
     def _emit_table(self, t: Table, ctx: RenderContext) -> str:

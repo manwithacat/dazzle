@@ -2800,6 +2800,18 @@ dialog.dz-drawer {
     display var(--duration-base) var(--ease-out) allow-discrete;
 }
 
+/* Width presets (data-dz-width) — promoted from Dazzle's peek
+ * slide_over feature (Tier F2): the author's declared panel width.
+ * Unset/other values keep the drawer's default width above; presets
+ * only widen on viewports that can afford it. */
+@media (min-width: 40rem) {
+  dialog.dz-drawer[data-dz-width="sm"] { width: min(24rem, calc(100vw - 3rem)); }
+  dialog.dz-drawer[data-dz-width="md"] { width: min(32rem, calc(100vw - 3rem)); }
+  dialog.dz-drawer[data-dz-width="lg"] { width: min(42rem, calc(100vw - 3rem)); }
+  dialog.dz-drawer[data-dz-width="xl"] { width: min(56rem, calc(100vw - 3rem)); }
+  dialog.dz-drawer[data-dz-width="full"] { width: calc(100vw - 3rem); }
+}
+
 dialog.dz-drawer[data-dz-side="left"] {
   margin-inline: 0 auto;
   border-inline: none;
@@ -7525,9 +7537,8 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
  *   - `.dz-list-csv-button` (list-region CSV export, 28px at rest)
  *   - `.dz-sidebar-action-button`
  *   - `.dz-add-card-button`
- *   - Close buttons: `.dz-modal-close-form`, `.dz-modal-close-form-floating`,
- *     `.dz-pdf-viewer-help-close`, `.dz-pdf-viewer-panel-close`,
- *     `.dz-slideover-close`
+ *   - Close buttons: `.dz-drawer__close`, `.dz-pdf-viewer-help-close`,
+ *     `.dz-pdf-viewer-panel-close`
  *
  * Wrapped in @layer components so component-specific rules win when
  * they need to.
@@ -7548,11 +7559,9 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 
     /* Close-X buttons are typically small icon-only — most likely
      * to under-deliver hit area. Bump explicitly. */
-    .dz-modal-close-form,
-    .dz-modal-close-form-floating,
+    .dz-drawer__close,
     .dz-pdf-viewer-help-close,
-    .dz-pdf-viewer-panel-close,
-    .dz-slideover-close {
+    .dz-pdf-viewer-panel-close {
       min-height: var(--dz-touch-target-min);
       min-width: var(--dz-touch-target-min);
     }

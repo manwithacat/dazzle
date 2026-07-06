@@ -19,8 +19,7 @@
  *   - Detail card body (`.dz-detail-card-body`)
  *   - App content shells (`.dz-app-content`, `.dz-app-body`)
  *   - Form bodies (`.dz-form-body`)
- *   - Modal body (`.dz-modal`)
- *   - Slide-over (`.dz-slideover-content`)
+ *   - Drawer body (`.dz-drawer__body` — the peek slide_over panel)
  *   - PDF viewer panels
  *
  * Plus a `.dz-scroll` utility class adopters can apply to their own
@@ -36,8 +35,7 @@
   .dz-app-content,
   .dz-app-body,
   .dz-form-body,
-  .dz-modal,
-  .dz-slideover-content,
+  .dz-drawer__body,
   .dz-pdf-viewer-panel,
   .dz-scroll {
     -webkit-overflow-scrolling: touch;

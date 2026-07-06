@@ -20,9 +20,8 @@
  *   - `.dz-list-csv-button` (list-region CSV export, 28px at rest)
  *   - `.dz-sidebar-action-button`
  *   - `.dz-add-card-button`
- *   - Close buttons: `.dz-modal-close-form`, `.dz-modal-close-form-floating`,
- *     `.dz-pdf-viewer-help-close`, `.dz-pdf-viewer-panel-close`,
- *     `.dz-slideover-close`
+ *   - Close buttons: `.dz-drawer__close`, `.dz-pdf-viewer-help-close`,
+ *     `.dz-pdf-viewer-panel-close`
  *
  * Wrapped in @layer components so component-specific rules win when
  * they need to.
@@ -43,11 +42,9 @@
 
     /* Close-X buttons are typically small icon-only — most likely
      * to under-deliver hit area. Bump explicitly. */
-    .dz-modal-close-form,
-    .dz-modal-close-form-floating,
+    .dz-drawer__close,
     .dz-pdf-viewer-help-close,
-    .dz-pdf-viewer-panel-close,
-    .dz-slideover-close {
+    .dz-pdf-viewer-panel-close {
       min-height: var(--dz-touch-target-min);
       min-width: var(--dz-touch-target-min);
     }

@@ -1434,3 +1434,23 @@ def test_confirm_gate_arms_primary_only_when_required_boxes_checked(page) -> Non
     required[0].uncheck()
     assert page.get_attribute(primary, "aria-disabled") == "true"
     assert page.get_attribute(primary, "href") is None
+
+
+def test_drawer_lazy_trigger_opens_dialog_and_loads_body(page) -> None:  # type: ignore[no-untyped-def]
+    """The Dazzle peek slide_over contract: ONE trigger carrying BOTH an
+    hx-get (body content) and data-dz-dialog-open (the drawer id). The
+    dialog opener calls preventDefault(), which must NOT suppress the
+    htmx exchange — both fire; the drawer opens showing the fetched
+    body. Native close (Esc) dismisses."""
+    # gallery strips the dz- prefix from data attrs
+    trigger = '#drawer [data-dialog-open="hm-drawer-lazy"]'
+    page.click(trigger)
+    page.wait_for_timeout(150)
+    assert page.get_attribute("#hm-drawer-lazy", "open") is not None
+    body_text = page.inner_text("#hm-drawer-lazy-body")
+    assert "Aurora Substation" in body_text, (
+        "the hx-get must have fired alongside the dialog opener"
+    )
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(100)
+    assert page.get_attribute("#hm-drawer-lazy", "open") is None

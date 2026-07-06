@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.112] - 2026-07-06
+
+### Changed
+- **Fleet convergence Tier F2 — peek slide_over rides the HM drawer**
+  (HM 0.1.42 → 0.1.43): the shared slide-over panel is now a native
+  `<dialog class="dz-drawer">` (aria-labelledby'd title, `<form
+  method="dialog">` close, `closedby="any"`), opened by the row
+  chevron's `data-dz-dialog-open` via the shared `dz-dialog.js` — the
+  inline `hx-on:click` hidden-toggle JS is gone, and focus trapping,
+  inert background, and Esc dismissal are the platform's own. The
+  chevron keeps its hx-get; a new HM behaviour test proves the composed
+  trigger (one button, hx-get + dialog opener) fires both in Chromium +
+  WebKit. HM drawer gained `data-dz-width="sm|md|lg|xl|full"` presets
+  (promoted from the slideover feature); the gallery drawer demo now
+  documents the hypermedia-drawer pattern with a declared Exchange.
+
+### Removed
+- **Dead overlay CSS deleted** (zero producers, independently
+  re-verified): the entire bespoke `.dz-slideover-*` family (replaced by
+  the HM drawer) and the dormant `.dz-modal*` block (its
+  `components/modal.html` primitive died with the Jinja teardown; the
+  block's `:not([open]) { opacity: 0 }` would have rendered the latent
+  div-based Modal fragment invisible — a removed booby trap). Touch
+  targets and mobile-scroll re-pointed (`.dz-drawer__close` in;
+  modal/slideover selectors out).
+
+### Agent Guidance
+- **Overlays are the HM dialog family now**: centered = `dz-dialog`,
+  edge panel = `dz-drawer` (+ width presets), opened via
+  `data-dz-dialog-open` — never a bespoke backdrop div + hidden-toggle.
+  htmx4 attaches per-element listeners and never checks
+  `defaultPrevented`, so a single button can carry both an hx-get and
+  the dialog opener.
+
 ## [0.93.111] - 2026-07-06
 
 ### Fixed

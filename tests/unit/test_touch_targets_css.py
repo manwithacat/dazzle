@@ -81,11 +81,12 @@ CORE_SELECTORS = [
 ]
 
 CLOSE_BUTTONS = [
-    ".dz-modal-close-form",
-    ".dz-modal-close-form-floating",
+    # Tier F2: the dormant modal family + bespoke slideover were deleted
+    # (the peek slide_over converged onto the HM drawer); the drawer's
+    # close button takes their slot.
+    ".dz-drawer__close",
     ".dz-pdf-viewer-help-close",
     ".dz-pdf-viewer-panel-close",
-    ".dz-slideover-close",
 ]
 
 

@@ -36,6 +36,18 @@ dialog.dz-drawer {
     display var(--duration-base) var(--ease-out) allow-discrete;
 }
 
+/* Width presets (data-dz-width) — promoted from Dazzle's peek
+ * slide_over feature (Tier F2): the author's declared panel width.
+ * Unset/other values keep the drawer's default width above; presets
+ * only widen on viewports that can afford it. */
+@media (min-width: 40rem) {
+  dialog.dz-drawer[data-dz-width="sm"] { width: min(24rem, calc(100vw - 3rem)); }
+  dialog.dz-drawer[data-dz-width="md"] { width: min(32rem, calc(100vw - 3rem)); }
+  dialog.dz-drawer[data-dz-width="lg"] { width: min(42rem, calc(100vw - 3rem)); }
+  dialog.dz-drawer[data-dz-width="xl"] { width: min(56rem, calc(100vw - 3rem)); }
+  dialog.dz-drawer[data-dz-width="full"] { width: calc(100vw - 3rem); }
+}
+
 dialog.dz-drawer[data-dz-side="left"] {
   margin-inline: 0 auto;
   border-inline: none;

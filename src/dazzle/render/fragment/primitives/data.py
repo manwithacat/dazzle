@@ -1931,16 +1931,17 @@ class WorkspaceDrawer:
 
 @dataclass(frozen=True, slots=True)
 class SlideOver:
-    """Right-side slide-over panel for `peek: slide_over` (#1494, 2c, Slice 2).
+    """Right-side slide-over panel for `peek: slide_over` (#1494, 2c, Slice 2;
+    converged onto the HM drawer in Tier F2).
 
-    One shared panel per list, keyed by `table_id`: a row's peek chevron
-    `hx-get`s the entity's detail *body* (`?peek=1`) into the panel body
-    (`#slideover-content-{table_id}`) and reveals the container
-    (`#slideover-{table_id}`); the backdrop + close button re-hide it. **JS-free**
-    — open/close is an inline `hx-on:click` toggling the `hidden` attribute, the
-    same build-free pattern the peek-*expand* panel uses (no JS module, no `dist`
-    rebuild). Renders against the purpose-built `.dz-slideover-*` CSS family;
-    `width` drives the `data-dz-width` max-width preset.
+    One shared panel per list, keyed by `table_id`: a native
+    `<dialog class="dz-drawer">` — a row's peek chevron `hx-get`s the
+    entity's detail *body* (`?peek=1`) into `#slideover-content-{table_id}`
+    and opens `#slideover-{table_id}` via the HM `dz-dialog.js` opener
+    (`data-dz-dialog-open` on the chevron). Close is the platform's own —
+    the header's `<form method="dialog">` button, Esc, and a backdrop tap
+    (`closedby="any"`) — with focus trapping and an inert background for
+    free. `width` drives the `data-dz-width` width preset.
 
     Unlike the workspace-only `dzDrawer` (`#dz-detail-drawer-content`), this
     panel is emitted inline with the list body, so `slide_over` works on both
