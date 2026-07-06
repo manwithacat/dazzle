@@ -837,108 +837,14 @@ body.cursor-col-resize * {
  * fleet-convergence directive). Same selectors, shipped via the HM dist. */
 
 /* ─────────────────────────── diagram region ─────────────────────
- * Mermaid-rendered SVG inside a horizontal-scroll container.
- * Mermaid's own CSS handles the diagram chrome; we own the wrapper. */
-
-.dz-diagram-scroll {
-  overflow-x: auto;
-}
-
-.dz-diagram-source {
-  font-size: var(--text-sm);
-  color: var(--colour-text);
-  /* Mermaid replaces this <pre> with rendered SVG once initialised;
-   * the source-text styling matters only on the initial paint flash. */
-}
-
-.dz-diagram-empty {
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin: 0;
-}
+ * MOVED to HaTchi-MaXchi components/diagram.css (Tier F, 2026-07-06
+ * — the fleet-convergence directive). Same selectors, via the HM
+ * dist. */
 
 /* ─────────────────────────── tree region ────────────────────────
- * Nested <details>/<summary> hierarchy. Each level indents via the
- * children container's padding-inline-start. The chevron rotates
- * via the [open] state on the parent details. */
-
-.dz-tree-node {
-  background: color-mix(in oklch, var(--colour-bg) 70%, transparent);
-  border-radius: var(--radius-sm);
-  margin-block-end: var(--space-xs);
-}
-
-.dz-tree-summary {
-  font-size: var(--text-sm);
-  padding-inline: var(--space-md);
-  padding-block: 0.375rem;
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  cursor: pointer;
-  list-style: none;
-  border-radius: var(--radius-sm);
-  transition: background var(--duration-fast) var(--ease-out);
-}
-
-/* Hide the default disclosure marker — we render our own chevron. */
-.dz-tree-summary::-webkit-details-marker {
-  display: none;
-}
-
-.dz-tree-summary:hover {
-  background: var(--colour-bg);
-}
-
-.dz-tree-chevron {
-  width: 0.75rem;
-  height: 0.75rem;
-  color: var(--colour-text-muted);
-  transition: transform var(--duration-fast) var(--ease-out);
-  flex-shrink: 0;
-}
-
-.dz-tree-node[open] > .dz-tree-summary .dz-tree-chevron {
-  transform: rotate(90deg);
-}
-
-.dz-tree-label {
-  font-weight: var(--weight-medium);
-  color: var(--colour-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dz-tree-count {
-  margin-inline-start: auto;
-  display: inline-flex;
-  align-items: center;
-  padding-inline: 0.375rem;
-  height: 1rem;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  color: var(--colour-text-muted);
-  background: var(--colour-bg);
-}
-
-.dz-tree-children {
-  padding-inline-start: var(--space-lg);
-  padding-inline-end: var(--space-sm);
-  padding-block-end: var(--space-xs);
-}
-
-.dz-tree-flat-item {
-  padding-inline: var(--space-sm);
-  padding-block: 0.375rem;
-  font-size: var(--text-sm);
-  color: var(--colour-text);
-  border-block-end: 1px solid var(--colour-border);
-}
-
-.dz-tree-flat-item:last-child {
-  border-block-end: 0;
-}
+ * MOVED to HaTchi-MaXchi components/tree.css (Tier F, 2026-07-06 —
+ * the fleet-convergence directive). Same selectors, via the HM
+ * dist. */
 
 /* ─────────────────────────── tabbed_list region ─────────────────
  * The `display: tabbed_list` region now renders via the HM `tabs`
@@ -1005,173 +911,12 @@ body.cursor-col-resize * {
  * sites). Live selectors unchanged, shipped via the HM dist. */
 
 /* ─────────────────────────── confirm_action_panel region ────────
- * Irreversible-action consent primitive (#6, AegisMark UX patterns).
- * Renders a checklist of obligations + dual primary/draft buttons in
- * the off state, a "Currently live" summary + revoke in the live
- * state, and an audit footer + (optional) re-enable button in the
- * revoked state. State branch keys off the panel root's
- * data-dz-state-value so future enrichments (e.g. tone tinting) can
- * key off it without touching every branch's class string. */
-
-.dz-confirm-summary {
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--colour-border);
-  margin-block-end: var(--space-md);
-}
-
-.dz-confirm-summary[data-dz-confirm-tone="success"] {
-  border-color: color-mix(in oklch, var(--colour-success) 40%, transparent);
-  background: color-mix(in oklch, var(--colour-success) 6%, transparent);
-}
-
-.dz-confirm-summary[data-dz-confirm-tone="muted"] {
-  background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
-}
-
-.dz-confirm-summary-title {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--colour-text);
-}
-
-.dz-confirm-summary-body {
-  font-size: var(--text-xs);
-  color: var(--colour-text-muted);
-  margin-block-start: 0.125rem;
-}
-
-.dz-confirm-checklist {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  list-style: none;
-  margin: 0 0 var(--space-md);
-  padding-inline-start: 0;
-}
-
-.dz-confirm-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-}
-
-.dz-confirm-checkbox {
-  margin-block-start: 0.125rem;
-  flex-shrink: 0;
-  width: 1rem;
-  height: 1rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--colour-border);
-  accent-color: var(--colour-brand);
-}
-
-.dz-confirm-row-label {
-  flex: 1 1 0;
-  cursor: pointer;
-}
-
-.dz-confirm-title {
-  font-size: var(--text-sm);
-  line-height: var(--leading-tight);
-  color: var(--colour-text);
-}
-
-.dz-confirm-caption {
-  font-size: var(--text-xs);
-  line-height: var(--leading-tight);
-  color: var(--colour-text-muted);
-  margin-block-start: 0.125rem;
-}
-
-.dz-confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-sm);
-  margin-block-start: var(--space-sm);
-  list-style: none;
-}
-
-.dz-confirm-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding-inline: var(--space-md);
-  padding-block: var(--space-sm);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  background: var(--colour-brand);
-  color: var(--colour-brand-contrast);
-  text-decoration: none;
-  border: 0;
-  cursor: pointer;
-  transition: opacity var(--duration-fast) var(--ease-out);
-}
-
-.dz-confirm-primary:hover {
-  opacity: 0.9;
-}
-
-/* When the gate is unsatisfied, Alpine flips this to is-disabled.
- * We swap to a muted-tone surface and disable pointer events so the
- * a-tag-as-button affordance falls inert. */
-.dz-confirm-primary.is-disabled,
-.dz-confirm-primary[aria-disabled="true"] {
-  background: var(--colour-bg);
-  color: var(--colour-text-muted);
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.dz-confirm-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding-inline: var(--space-md);
-  padding-block: var(--space-sm);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  border: 1px solid var(--colour-border);
-  background: transparent;
-  color: var(--colour-text);
-  text-decoration: none;
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-out);
-}
-
-.dz-confirm-secondary:hover {
-  background: var(--colour-bg);
-}
-
-.dz-confirm-revoke {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding-inline: var(--space-md);
-  padding-block: var(--space-sm);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  border: 1px solid color-mix(in oklch, var(--colour-danger) 50%, transparent);
-  background: transparent;
-  color: var(--colour-danger);
-  text-decoration: none;
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-out);
-}
-
-.dz-confirm-revoke:hover {
-  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
-}
-
-.dz-confirm-audit {
-  font-size: var(--text-xs);
-  color: var(--colour-text-muted);
-  margin-block-start: var(--space-md);
-  line-height: var(--leading-tight);
-}
+ * MOVED to HaTchi-MaXchi components/confirm-panel.css (Tier F,
+ * 2026-07-06 — the fleet-convergence directive), where the gate also
+ * converged from the Alpine dzConfirmGate island onto the HM
+ * dz-confirm-gate.js controller (aria-disabled is now the single
+ * disabled hook; the bespoke .is-disabled class selector was
+ * retired with the island). */
 
 /* ─────────────────────────── box_plot region ────────────────────
  * MOVED to HaTchi-MaXchi components/box-plot.css (Tier C-b). */
@@ -2709,6 +2454,207 @@ dialog.dz-alert-dialog::backdrop {
 /* The dz-chart-degenerate-* fallback family that lived here was DEAD
  * on arrival (Jinja-era shapes retired with ADR-0023; zero emitters in
  * the typed substrate) — dropped rather than published as fake API. */
+/* --- hatchi-maxchi/components/confirm-panel.css --- */
+/* HYPERPART: confirm-panel */
+/* Promoted from Dazzle regions.css (Tier F, fleet convergence). One
+ * deliberate delta from the source: the `.dz-confirm-primary.is-disabled`
+ * selector was dropped — the gate state now lives SOLELY in
+ * `aria-disabled` (state-in-DOM, set by controllers/dz-confirm-gate.js,
+ * which replaces the Alpine `dzConfirmGate` island). The
+ * `[aria-disabled="true"]` selector below is the single disabled hook. */
+
+/* ─────────────────────────── confirm panel ──────────────────────
+ * Irreversible-action consent primitive. Renders a checklist of
+ * obligations + dual primary/draft buttons in the off state, a
+ * "Currently live" summary + revoke in the live state, and an audit
+ * footer + (optional) re-enable button in the revoked state. State
+ * branch keys off the panel root's data-dz-state-value so future
+ * enrichments (e.g. tone tinting) can key off it without touching
+ * every branch's class string. */
+
+.dz-confirm-summary {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  margin-block-end: var(--space-md);
+}
+
+.dz-confirm-summary[data-dz-confirm-tone="success"] {
+  border-color: color-mix(in oklch, var(--colour-success) 40%, transparent);
+  background: color-mix(in oklch, var(--colour-success) 6%, transparent);
+}
+
+.dz-confirm-summary[data-dz-confirm-tone="muted"] {
+  background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+}
+
+.dz-confirm-summary-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-confirm-summary-body {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.dz-confirm-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  list-style: none;
+  margin: 0 0 var(--space-md);
+  padding-inline-start: 0;
+}
+
+.dz-confirm-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.dz-confirm-checkbox {
+  margin-block-start: 0.125rem;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  accent-color: var(--colour-brand);
+}
+
+.dz-confirm-row-label {
+  flex: 1 1 0;
+  cursor: pointer;
+}
+
+.dz-confirm-title {
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
+}
+
+.dz-confirm-caption {
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+.dz-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+  list-style: none;
+}
+
+.dz-confirm-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  text-decoration: none;
+  border: 0;
+  cursor: pointer;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.dz-confirm-primary:hover {
+  opacity: 0.9;
+}
+
+/* While the gate is unsatisfied the controller keeps aria-disabled on
+ * the primary (and withholds its href) — muted-tone surface, pointer
+ * events off, so the a-tag-as-button affordance falls inert. */
+.dz-confirm-primary[aria-disabled="true"] {
+  background: var(--colour-bg);
+  color: var(--colour-text-muted);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.dz-confirm-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border: 1px solid var(--colour-border);
+  background: transparent;
+  color: var(--colour-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-confirm-secondary:hover {
+  background: var(--colour-bg);
+}
+
+.dz-confirm-revoke {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border: 1px solid color-mix(in oklch, var(--colour-danger) 50%, transparent);
+  background: transparent;
+  color: var(--colour-danger);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dz-confirm-revoke:hover {
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+}
+
+.dz-confirm-audit {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-md);
+  line-height: var(--leading-tight);
+}
+/* --- hatchi-maxchi/components/diagram.css --- */
+/* HYPERPART: diagram */
+/* Promoted VERBATIM from Dazzle regions.css (Tier F, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── diagram region ─────────────────────
+ * Mermaid-rendered SVG inside a horizontal-scroll container.
+ * Mermaid's own CSS handles the diagram chrome; we own the wrapper. */
+
+.dz-diagram-scroll {
+  overflow-x: auto;
+}
+
+.dz-diagram-source {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  /* Mermaid replaces this <pre> with rendered SVG once initialised;
+   * the source-text styling matters only on the initial paint flash. */
+}
+
+.dz-diagram-empty {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin: 0;
+}
 /* --- hatchi-maxchi/components/dialog.css --- */
 /* HYPERPART: dialog */
 /*
@@ -7614,4 +7560,91 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
       min-height: var(--dz-touch-target-min);
     }
   }
+}
+/* --- hatchi-maxchi/components/tree.css --- */
+/* HYPERPART: tree */
+/* Promoted VERBATIM from Dazzle regions.css (Tier F, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── tree region ────────────────────────
+ * Nested <details>/<summary> hierarchy. Each level indents via the
+ * children container's padding-inline-start. The chevron rotates
+ * via the [open] state on the parent details. */
+
+.dz-tree-node {
+  background: color-mix(in oklch, var(--colour-bg) 70%, transparent);
+  border-radius: var(--radius-sm);
+  margin-block-end: var(--space-xs);
+}
+
+.dz-tree-summary {
+  font-size: var(--text-sm);
+  padding-inline: var(--space-md);
+  padding-block: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+/* Hide the default disclosure marker — we render our own chevron. */
+.dz-tree-summary::-webkit-details-marker {
+  display: none;
+}
+
+.dz-tree-summary:hover {
+  background: var(--colour-bg);
+}
+
+.dz-tree-chevron {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--colour-text-muted);
+  transition: transform var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.dz-tree-node[open] > .dz-tree-summary .dz-tree-chevron {
+  transform: rotate(90deg);
+}
+
+.dz-tree-label {
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dz-tree-count {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 0.375rem;
+  height: 1rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  background: var(--colour-bg);
+}
+
+.dz-tree-children {
+  padding-inline-start: var(--space-lg);
+  padding-inline-end: var(--space-sm);
+  padding-block-end: var(--space-xs);
+}
+
+.dz-tree-flat-item {
+  padding-inline: var(--space-sm);
+  padding-block: 0.375rem;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-tree-flat-item:last-child {
+  border-block-end: 0;
 }

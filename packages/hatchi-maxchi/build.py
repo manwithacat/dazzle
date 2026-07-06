@@ -75,6 +75,9 @@ CSS_SOURCES = [
     ("components", "components/task-inbox.css"),
     ("components", "components/grid-list.css"),
     ("components", "components/list-region.css"),
+    ("components", "components/tree.css"),
+    ("components", "components/diagram.css"),
+    ("components", "components/confirm-panel.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]
@@ -93,6 +96,7 @@ JS_SOURCES = [
     "controllers/dz-grid-resize.js",
     "controllers/dz-grid-edit.js",
     "controllers/dz-app-shell.js",
+    "controllers/dz-confirm-gate.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

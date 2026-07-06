@@ -209,7 +209,7 @@ class _RenderChartsMixin:
 
     def _emit_kanban_board(self, k: KanbanBoard, ctx: RenderContext) -> str:
         cols = "".join(
-            f'<div class="dz-kanban__column" data-key="{ctx.escape_attr(key)}">'
+            f'<div class="dz-kanban__column" data-dz-key="{ctx.escape_attr(key)}">'
             + "".join(self._emit(item, ctx) for item in items)  # type: ignore[arg-type]
             + "</div>"
             for key, items in k.columns
@@ -251,7 +251,7 @@ class _RenderChartsMixin:
                 f"{_DIAGRAM_MERMAID_SCRIPT}"
             )
         nodes_html = "".join(
-            f'<li class="dz-diagram__node" data-key="{ctx.escape_attr(name)}">'
+            f'<li class="dz-diagram__node" data-dz-key="{ctx.escape_attr(name)}">'
             f"{ctx.escape(name)}</li>"
             for name in d.nodes
         )

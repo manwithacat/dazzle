@@ -375,12 +375,9 @@ class _RenderInteractiveMixin:
 
             def _render_check_item(i: int, item: ConfirmCheckItem) -> str:
                 required_str = "true" if item.required else "false"
-                # Required items get @change Alpine binding + data attribute.
-                # Note: emit literal `"` quotes — these are HTML attributes,
-                # not nested inside an outer-quoted attribute.
-                required_attrs = (
-                    '@change="onToggle($event)" data-dz-required="true" ' if item.required else ""
-                )
+                # Required items get the data attribute the delegated
+                # dz-confirm-gate controller recounts on every change.
+                required_attrs = 'data-dz-required="true" ' if item.required else ""
                 caption_html = (
                     f'<div class="dz-confirm-caption">{ctx.escape(item.caption)}</div>'
                     if item.caption
@@ -409,16 +406,24 @@ class _RenderInteractiveMixin:
                     f'class="dz-confirm-secondary">{ctx.escape(c.secondary_label)}</a>'
                 )
             if c.primary_action_url:
-                # Alpine bindings: enabled is provided by dzConfirmGate(count)
+                # State-in-DOM gate (dz-confirm-gate.js): the anchor ships
+                # disarmed with its destination parked in
+                # data-dz-confirm-href; the controller promotes the href
+                # and drops aria-disabled once every required box is
+                # ticked. Zero required boxes = armed at SSR (the
+                # controller then never needs to fire).
+                if required_count == 0:
+                    gate_state = f'href="{ctx.escape_attr(c.primary_action_url)}" '
+                else:
+                    gate_state = 'aria-disabled="true" '
                 actions_inner += (
-                    f"<a :href=\"enabled ? '{ctx.escape_attr(c.primary_action_url)}' : null\" "
-                    f':aria-disabled="!enabled" '
-                    f":class=\"{{ 'is-disabled': !enabled }}\" "
+                    f'<a data-dz-confirm-href="{ctx.escape_attr(c.primary_action_url)}" '
+                    f"{gate_state}"
                     f'class="dz-confirm-primary">'
                     f"{ctx.escape(c.primary_label)}</a>"
                 )
             inner = (
-                f'<ul x-data="dzConfirmGate({len(c.confirmations)})" '
+                f"<ul data-dz-confirm-gate "
                 f'class="dz-confirm-checklist" '
                 f'data-dz-required-count="{required_count}">'
                 f"{checklist_items}"

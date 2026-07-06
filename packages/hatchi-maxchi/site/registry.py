@@ -756,6 +756,71 @@ HYPERPARTS: list[Hyperpart] = [
         controller="controllers/dz-slider.js",
     ),
     Hyperpart(
+        "confirm-panel",
+        "Confirm panel",
+        "Forms",
+        "The irreversible-action consent gate: a checklist of obligations "
+        "that must be ticked before the primary action arms, plus live and "
+        "revoked summary states.",
+        '<div class="hm-measure">'
+        '<div class="dz-confirm-panel" data-dz-state-value="off">'
+        '<ul data-dz-confirm-gate class="dz-confirm-checklist" '
+        'data-dz-required-count="2">'
+        '<li class="dz-confirm-row" data-dz-required="true">'
+        '<input type="checkbox" class="dz-confirm-checkbox" '
+        'data-dz-required="true" id="dz-confirm-1">'
+        '<label for="dz-confirm-1" class="dz-confirm-row-label">'
+        '<div class="dz-confirm-title">I have exported a backup of live data</div>'
+        '<div class="dz-confirm-caption">Rollback needs a snapshot taken '
+        "today.</div>"
+        "</label></li>"
+        '<li class="dz-confirm-row" data-dz-required="true">'
+        '<input type="checkbox" class="dz-confirm-checkbox" '
+        'data-dz-required="true" id="dz-confirm-2">'
+        '<label for="dz-confirm-2" class="dz-confirm-row-label">'
+        '<div class="dz-confirm-title">The billing owner has approved this '
+        "change</div>"
+        "</label></li>"
+        '<li class="dz-confirm-row" data-dz-required="false">'
+        '<input type="checkbox" class="dz-confirm-checkbox" id="dz-confirm-3">'
+        '<label for="dz-confirm-3" class="dz-confirm-row-label">'
+        '<div class="dz-confirm-title">Notify the team afterwards '
+        "(optional)</div>"
+        "</label></li>"
+        '<li class="dz-confirm-actions">'
+        '<a href="#" class="dz-confirm-secondary">Save draft</a>'
+        '<a data-dz-confirm-href="#go-live" aria-disabled="true" '
+        'class="dz-confirm-primary">Go live</a>'
+        "</li></ul>"
+        '<p class="dz-confirm-audit">This action is recorded in the audit '
+        "log with your identity and timestamp.</p>"
+        "</div>"
+        '<div class="dz-confirm-panel" data-dz-state-value="live">'
+        '<div class="dz-confirm-summary" data-dz-confirm-tone="success">'
+        '<div class="dz-confirm-summary-title">Currently live</div>'
+        '<div class="dz-confirm-summary-body">Enabled 12 May by '
+        "j.reyes.</div>"
+        "</div>"
+        '<div class="dz-confirm-actions">'
+        '<a href="#" class="dz-confirm-revoke">Revoke</a>'
+        "</div></div>"
+        "</div>",
+        notes="The gate is state-in-DOM: the primary anchor ships with "
+        "<code>aria-disabled=&quot;true&quot;</code> and its destination "
+        "parked in <code>data-dz-confirm-href</code>; "
+        "<code>dz-confirm-gate.js</code> recounts checked "
+        "<code>data-dz-required=&quot;true&quot;</code> boxes on every "
+        "change inside the <code>[data-dz-confirm-gate]</code> root and "
+        "promotes the href / removes <code>aria-disabled</code> only when "
+        "the count meets <code>data-dz-required-count</code>. Optional "
+        "boxes never gate. Zero required boxes = always armed. The live "
+        "and revoked branches swap the checklist for a "
+        "<code>dz-confirm-summary</code> toned via "
+        "<code>data-dz-confirm-tone=&quot;success|muted&quot;</code>.",
+        tags=("forms",),
+        controller="controllers/dz-confirm-gate.js",
+    ),
+    Hyperpart(
         "toggle-group",
         "Toggle group",
         "Navigation",
@@ -1837,6 +1902,81 @@ HYPERPARTS: list[Hyperpart] = [
         "whole row is one link, leading with its icon. Chips render count "
         "THEN label (<code>data-dz-chip-id</code> anchors a filter exchange "
         "in Dazzle).",
+        tags=("data",),
+    ),
+    Hyperpart(
+        "tree",
+        "Tree",
+        "Data",
+        "Hierarchy on native <details>/<summary> — indented children, "
+        "rotating chevron, child-count chips. No JS at all.",
+        '<div class="hm-measure">'
+        '<details class="dz-tree-node" open>'
+        '<summary class="dz-tree-summary">'
+        '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
+        'stroke="currentColor" stroke-width="2" aria-hidden="true">'
+        '<path stroke-linecap="round" stroke-linejoin="round" '
+        'd="M9 5l7 7-7 7"/></svg>'
+        '<span class="dz-tree-label">Engineering</span>'
+        '<span class="dz-tree-count">2</span>'
+        "</summary>"
+        '<div class="dz-tree-children">'
+        '<details class="dz-tree-node">'
+        '<summary class="dz-tree-summary">'
+        '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
+        'stroke="currentColor" stroke-width="2" aria-hidden="true">'
+        '<path stroke-linecap="round" stroke-linejoin="round" '
+        'd="M9 5l7 7-7 7"/></svg>'
+        '<span class="dz-tree-label">Platform</span>'
+        '<span class="dz-tree-count">1</span>'
+        "</summary>"
+        '<div class="dz-tree-children">'
+        '<details class="dz-tree-node">'
+        '<summary class="dz-tree-summary">'
+        '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
+        'stroke="currentColor" stroke-width="2" aria-hidden="true">'
+        '<path stroke-linecap="round" stroke-linejoin="round" '
+        'd="M9 5l7 7-7 7"/></svg>'
+        '<span class="dz-tree-label">Build tooling</span>'
+        "</summary></details>"
+        "</div></details>"
+        '<details class="dz-tree-node">'
+        '<summary class="dz-tree-summary">'
+        '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
+        'stroke="currentColor" stroke-width="2" aria-hidden="true">'
+        '<path stroke-linecap="round" stroke-linejoin="round" '
+        'd="M9 5l7 7-7 7"/></svg>'
+        '<span class="dz-tree-label">Design systems</span>'
+        "</summary></details>"
+        "</div></details>"
+        "</div>",
+        notes="Pure hypermedia: state is the native <code>open</code> "
+        "attribute, the chevron rotation keys off "
+        "<code>.dz-tree-node[open]</code>, and each level indents via its "
+        "<code>dz-tree-children</code> wrapper. The server emits depth-0 "
+        "nodes <code>open</code> by default; the count chip renders only "
+        "for nodes with children.",
+        tags=("data",),
+    ),
+    Hyperpart(
+        "diagram",
+        "Diagram",
+        "Data",
+        "A horizontal-scroll wrapper for server-emitted Mermaid source — "
+        "the library replaces the <pre> with rendered SVG.",
+        '<div class="dz-diagram-scroll">'
+        '<pre class="mermaid dz-diagram-source">'
+        "erDiagram\n"
+        "  CUSTOMER ||--o{ ORDER : places\n"
+        "  ORDER ||--|{ LINE_ITEM : contains"
+        "</pre>"
+        "</div>",
+        notes="The gallery shows the raw source (Mermaid is not loaded "
+        "here); in Dazzle the emitter appends the Mermaid loader script "
+        "and the library swaps the <code>&lt;pre&gt;</code> for SVG at "
+        "runtime — the source styling only matters for the initial paint "
+        "flash. The wrapper owns overflow; <code>dz-diagram-empty</code> "
+        "is the no-data paragraph.",
         tags=("data",),
     ),
     # ── Primitives ───────────────────────────────────────────────────

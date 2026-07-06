@@ -70,6 +70,9 @@ SEMANTIC_ONLY = {
     "dz-progress-region",
     "dz-grid-region",
     "dz-list-region",
+    # confirm-panel root: the state branch keys off data-dz-state-value;
+    # the wrapper itself carries no rule (verbatim from Dazzle).
+    "dz-confirm-panel",
     # task-inbox item skeleton: rule-less in Dazzle too (the dashboard's
     # plain list); the icon is the only styled piece. Follow-up candidate.
     "dz-task-inbox-items",

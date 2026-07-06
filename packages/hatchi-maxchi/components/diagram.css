@@ -1,0 +1,24 @@
+/* HYPERPART: diagram */
+/* Promoted VERBATIM from Dazzle regions.css (Tier F, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── diagram region ─────────────────────
+ * Mermaid-rendered SVG inside a horizontal-scroll container.
+ * Mermaid's own CSS handles the diagram chrome; we own the wrapper. */
+
+.dz-diagram-scroll {
+  overflow-x: auto;
+}
+
+.dz-diagram-source {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  /* Mermaid replaces this <pre> with rendered SVG once initialised;
+   * the source-text styling matters only on the initial paint flash. */
+}
+
+.dz-diagram-empty {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin: 0;
+}

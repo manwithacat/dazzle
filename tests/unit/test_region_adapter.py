@@ -1193,11 +1193,13 @@ def test_confirm_action_panel_legacy_prompt_ctx_renders_synthetic_checklist() ->
     assert "&quot;" not in html  # No broken HTML escapes
 
 
-def test_confirm_action_panel_off_state_renders_alpine_gated_checklist() -> None:
-    """Phase 4B preferred: state_value=off + confirmations[] produces
-    an Alpine `dzConfirmGate(N)` checklist with `data-dz-required-count`
+def test_confirm_action_panel_off_state_renders_hm_gated_checklist() -> None:
+    """state_value=off + confirmations[] produces an HM
+    `data-dz-confirm-gate` checklist with `data-dz-required-count`
     matching the count of `required: true` items, plus dual-button
-    primary (Alpine-gated) + secondary (always enabled)."""
+    primary (gated state-in-DOM: aria-disabled + href parked in
+    data-dz-confirm-href, armed by dz-confirm-gate.js) + secondary
+    (always enabled). Replaces the Alpine dzConfirmGate island."""
     adapter = WorkspaceRegionAdapter()
     ctx = {
         "state_value": "off",
@@ -1216,13 +1218,17 @@ def test_confirm_action_panel_off_state_renders_alpine_gated_checklist() -> None
     }
     html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
     assert 'data-dz-state-value="off"' in html
-    assert 'x-data="dzConfirmGate(3)"' in html
+    assert "data-dz-confirm-gate" in html
+    assert "x-data" not in html  # Alpine island retired
     assert 'data-dz-required-count="2"' in html
     assert "I have reviewed the data" in html
     assert "All records will be synced" in html
-    assert "/admin/sync/confirm" in html
+    assert 'data-dz-confirm-href="/admin/sync/confirm"' in html
+    assert 'aria-disabled="true"' in html  # disarmed at SSR (2 required)
+    # note the leading space: bare href= would substring-match the
+    # data-dz-confirm-href attribute itself
+    assert ' href="/admin/sync/confirm"' not in html  # href parked until armed
     assert "/admin/sync/draft" in html
-    assert "is-disabled" in html  # Alpine class binding
     assert "dz-confirm-audit" in html
 
 
@@ -1266,8 +1272,8 @@ def test_confirm_action_panel_drops_malformed_confirmations() -> None:
     }
     html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
     assert "Valid item" in html
-    assert 'data-dz-required-count="1"' in html
-    assert 'x-data="dzConfirmGate(1)"' in html  # only valid items count
+    assert 'data-dz-required-count="1"' in html  # only valid items count
+    assert "data-dz-confirm-gate" in html
 
 
 def test_search_box_renders_typed_search_box_primitive() -> None:

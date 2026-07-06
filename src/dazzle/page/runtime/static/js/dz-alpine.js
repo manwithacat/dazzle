@@ -9,7 +9,6 @@
  * deprecated for new code, CLAUDE.md UI Invariants):
  *  - dzMoney          — multi-currency minor unit field
  *  - dzWizard         — multi-step form wizard
- *  - dzConfirmGate    — bulk-action typed-confirmation gate
  *
  * Removed in the HM migration (Bucket A2, v0.93.65): dzConfirm and
  * dzCommandPalette are now driven by the ingested HM controllers
@@ -968,46 +967,10 @@ document.addEventListener("alpine:init", () => {
   }));
 
   // ── Confirm gate ──────────────────────────────────────────────────────
-  // v0.61.72 (#6) — confirm_action_panel checklist gate. Tracks the
-  // count of required checkboxes that have been ticked; the primary
-  // action enables only when `tickedRequired === requiredCount`. The
-  // template binds via `enabled` (computed from the count).
-  Alpine.data("dzConfirmGate", (totalRows) => ({
-    total: totalRows,
-    tickedRequired: 0,
-    requiredCount: 0,
-
-    init() {
-      // Count required rows from the data-dz-required-count attribute
-      // on the gate's root element. Falls back to scanning if absent.
-      const declared = parseInt(
-        this.$el.getAttribute("data-dz-required-count") || "0",
-        10,
-      );
-      if (declared > 0) {
-        this.requiredCount = declared;
-      } else {
-        const reqInputs = this.$el.querySelectorAll(
-          'input[type="checkbox"][data-dz-required="true"]',
-        );
-        this.requiredCount = reqInputs.length;
-      }
-    },
-
-    onToggle(event) {
-      const target = event.target;
-      if (!target || target.dataset.dzRequired !== "true") return;
-      this.tickedRequired += target.checked ? 1 : -1;
-      if (this.tickedRequired < 0) this.tickedRequired = 0;
-    },
-
-    get enabled() {
-      // No required rows = always enabled (low-friction flow with
-      // only optional checkboxes or no checkboxes at all).
-      if (this.requiredCount === 0) return true;
-      return this.tickedRequired >= this.requiredCount;
-    },
-  }));
+  // dzConfirmGate removed (Tier F, 2026-07-06): the confirm_action_panel
+  // gate converged onto the HM dz-confirm-gate.js delegated controller —
+  // state-in-DOM via aria-disabled + data-dz-confirm-href on the primary
+  // anchor; the emitter no longer binds x-data.
 
 });
 

@@ -209,111 +209,12 @@ workspace dash "Dash":
 # ───────────────────────── runtime + template wiring ──────────────────────────
 
 
-@pytest.mark.skip(
-    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
-)
-class TestConfirmActionPanelRuntimeWiring:
-    def test_display_template_map_includes_confirm_action_panel(self) -> None:
-        from dazzle.page.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
-
-        assert "CONFIRM_ACTION_PANEL" in DISPLAY_TEMPLATE_MAP
-        assert (
-            DISPLAY_TEMPLATE_MAP["CONFIRM_ACTION_PANEL"]
-            == "workspace/regions/_typed_primitive.html"
-        )
-
-    def test_template_file_exists(self) -> None:
-        path = (
-            Path(__file__).resolve().parents[2]
-            / "src/dazzle/page/templates/workspace/regions/confirm_action_panel.html"
-        )
-        assert path.is_file()
-
-    def test_region_context_default_empty(self) -> None:
-        from dazzle.page.runtime.workspace_renderer import RegionContext
-
-        ctx = RegionContext(name="r")
-        assert ctx.confirmations == []
-        assert ctx.state_field == ""
-        assert ctx.state_value == ""
-        assert ctx.primary_action_url == ""
-        assert ctx.secondary_action_url == ""
-        assert ctx.revoke_url == ""
-        assert ctx.audit_enabled is False
-
-    def test_region_context_carries_fields(self) -> None:
-        from dazzle.page.runtime.workspace_renderer import RegionContext
-
-        ctx = RegionContext(
-            name="r",
-            confirmations=[{"title": "X", "caption": "", "required": True}],
-            state_field="status",
-            state_value="off",
-            primary_action_url="/app/integration_enable",
-            audit_enabled=True,
-        )
-        assert ctx.state_value == "off"
-        assert ctx.audit_enabled is True
-        assert len(ctx.confirmations) == 1
-
-
-@pytest.mark.skip(
-    reason="Phase 4 deletion sweep (v0.67.52) — pinned legacy Jinja template content or file existence; the typed substrate produces equivalent output via different markup"
-)
-class TestConfirmActionPanelTemplateBranches:
-    """Template-source invariants for the off/live/revoked mode
-    branching. The static template must contain at least one branch
-    per state class so the runtime can route into them."""
-
-    def _text(self) -> str:
-        path = (
-            Path(__file__).resolve().parents[2]
-            / "src/dazzle/page/templates/workspace/regions/confirm_action_panel.html"
-        )
-        return path.read_text()
-
-    def test_branches_on_state_value(self) -> None:
-        text = self._text()
-        assert "state_value" in text
-        # The three render modes
-        assert "_is_live" in text
-        assert "_is_revoked" in text
-
-    def test_renders_confirmations(self) -> None:
-        text = self._text()
-        assert "for item in confirmations" in text
-
-    def test_renders_dual_button(self) -> None:
-        text = self._text()
-        assert "primary_action_url" in text
-        assert "secondary_action_url" in text
-
-    def test_renders_revoke_in_live_mode(self) -> None:
-        text = self._text()
-        # The revoke button must live inside the _is_live branch
-        live_idx = text.find("_is_live")
-        revoke_idx = text.find("revoke_url")
-        assert live_idx > 0 and revoke_idx > live_idx, (
-            "revoke action must render inside the _is_live branch"
-        )
-
-    def test_audit_footer_gated_on_audit_enabled(self) -> None:
-        text = self._text()
-        assert "if audit_enabled" in text
-        assert "audit log" in text.lower()
-
-    def test_uses_alpine_gate(self) -> None:
-        """The required-checkbox gate uses an Alpine component named
-        `dzConfirmGate` (registered in dz-alpine.js). Pin the
-        contract: template binds, JS provides."""
-        text = self._text()
-        assert "dzConfirmGate" in text
-        # And the JS component must be registered
-        js_path = (
-            Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/js/dz-alpine.js"
-        )
-        js_text = js_path.read_text()
-        assert 'Alpine.data("dzConfirmGate"' in js_text
+# The TestConfirmActionPanelTemplateBranches class (skipped since the
+# Phase 4 deletion sweep) was DELETED in Tier F1 (2026-07-06): it pinned
+# the legacy Jinja template file AND the Alpine dzConfirmGate island,
+# both of which no longer exist — the substrate emitter contract is
+# pinned live in tests/unit/test_region_adapter.py and the gate
+# behaviour in packages/hatchi-maxchi/tests/test_behaviour.py.
 
 
 # ───────────────────────── audit auto-detect ──────────────────────────

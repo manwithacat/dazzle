@@ -1436,14 +1436,14 @@ class ConfirmGate:
       - off / pending / draft / unknown / "" → checklist (when
         `confirmations` is non-empty) + dual button (secondary
         "Save as draft" + primary "Confirm and enable" gated on
-        Alpine `dzConfirmGate(count)` checking required checkboxes)
+        the HM `dz-confirm-gate.js` controller checking required checkboxes)
       - live / active / on / enabled → "Currently live" summary +
         optional revoke link
       - revoked / disabled / off-revoked → audit summary + optional
         re-enable link
 
     Audit footer auto-renders when `audit_enabled = True` regardless
-    of state. The Alpine component `dzConfirmGate(n)` is expected to
+    of state. The HM delegated controller `dz-confirm-gate.js` is expected to
     be registered globally — the primitive references it but doesn't
     define it.
 

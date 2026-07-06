@@ -76,7 +76,7 @@ class _BuildersMiscMixin:
         Phase 4B.1.d — replaces the prior placeholder rendering (Card
         + Heading + bracketed action label). The ConfirmGate primitive
         carries the full state machine (off/pending/draft, live,
-        revoked) plus the checklist with Alpine `dzConfirmGate`
+        revoked) plus the checklist gated by HM `dz-confirm-gate.js`
         gating + dual button + audit footer.
 
         ctx shape (Phase 4B preferred):

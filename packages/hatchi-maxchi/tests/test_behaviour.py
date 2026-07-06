@@ -1399,3 +1399,38 @@ def test_grid_column_visibility_reset_shows_all_and_clears(page) -> None:  # typ
     page.wait_for_timeout(300)
     _hydrate_grid(page)
     assert page.eval_on_selector_all('[data-grid] [data-col="plan"]', visible) > 0
+
+
+# ── confirm-panel gate (dz-confirm-gate.js) ─────────────────────────
+
+
+def test_confirm_gate_arms_primary_only_when_required_boxes_checked(page) -> None:  # type: ignore[no-untyped-def]
+    """The consent gate is state-in-DOM: the primary anchor ships
+    aria-disabled with its destination parked in data-confirm-href.
+    Checking ALL required boxes (and only required ones — the optional
+    box must not count) promotes the href and drops aria-disabled;
+    unchecking re-disarms."""
+    root = "#confirm-panel [data-confirm-gate]"
+    primary = f"{root} .confirm-primary"
+
+    assert page.get_attribute(primary, "aria-disabled") == "true"
+    assert page.get_attribute(primary, "href") is None
+
+    # The optional box alone must NOT arm the gate.
+    page.check(f"{root} li[data-required='false'] input[type=checkbox]")
+    assert page.get_attribute(primary, "aria-disabled") == "true"
+
+    required = page.query_selector_all(f"{root} input[data-required='true']")
+    assert len(required) == 2, "demo carries two required boxes"
+    required[0].check()
+    assert page.get_attribute(primary, "aria-disabled") == "true", (
+        "one of two required boxes must not arm the gate"
+    )
+    required[1].check()
+    assert page.get_attribute(primary, "aria-disabled") is None
+    assert page.get_attribute(primary, "href") == "#go-live"
+
+    # Unchecking a required box re-disarms (recount, not a +/- counter).
+    required[0].uncheck()
+    assert page.get_attribute(primary, "aria-disabled") == "true"
+    assert page.get_attribute(primary, "href") is None

@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.110] - 2026-07-06
+
+### Added
+- **Fleet convergence Tier F1** (HM 0.1.40 → 0.1.41): **tree** (native
+  `<details>`/`<summary>` hierarchy, zero JS), **diagram** (Mermaid
+  scroll wrapper), and **confirm-panel** (the irreversible-action
+  consent gate) promoted from `regions.css` into HaTchi-MaXchi with
+  emitter-faithful gallery demos. `regions.css` now carries ONLY the
+  profile_card family (Tier A).
+- **New HM controller `dz-confirm-gate.js`**: delegated document-level
+  gate for the confirm panel — recounts checked
+  `data-dz-required="true"` boxes on every change inside
+  `[data-dz-confirm-gate]` and arms the primary anchor by promoting
+  `data-dz-confirm-href` → `href` and dropping `aria-disabled`.
+  Behaviour-tested in Chromium + WebKit (TDD: red before the controller
+  existed).
+
+### Changed
+- **Alpine island retired: `dzConfirmGate`.** The confirm_action_panel
+  emitter no longer binds `x-data`/`:href`/`:aria-disabled` — state is
+  in the DOM (`aria-disabled` is the single disabled hook; the
+  `.is-disabled` class selector retired with the island). Zero required
+  boxes now arm at SSR (works without JS — strictly better than the
+  Alpine gate, which needed init to bind the href). Remaining islands:
+  dzMoney, dzWizard, dzDashboardBuilder + small form scopes.
+- **Off-grammar `data-key` renamed to `data-dz-key`** on kanban columns
+  and diagram structural nodes (zero readers existed).
+
+### Agent Guidance
+- **Island-conversion recipe** (repeat for dzMoney/dzWizard): HM
+  behaviour test RED → delegated controller in
+  packages/hatchi-maxchi/controllers/ → re-pin the Dazzle emitter tests
+  RED → flip the emitter to SSR'd state-in-DOM attributes → remove the
+  Alpine.data registration → sweep every stale docstring/skipped-test
+  pin of the old contract in the same commit.
+- The confirm-panel wrapper chrome currently rides a DORMANT
+  confirm-dialog CSS block in fragments.css — see #1546 before any
+  dead-CSS sweep there.
+
 ## [0.93.109] - 2026-07-06
 
 ### Added
