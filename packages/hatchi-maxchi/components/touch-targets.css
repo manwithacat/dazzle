@@ -17,7 +17,7 @@
  *   - `.dz-button` (and primary/ghost/outline/destructive variants)
  *   - `.dz-icon-button`
  *   - `.dz-card-action-button`
- *   - `.dz-list-action-button`
+ *   - `.dz-list-csv-button` (list-region CSV export, 28px at rest)
  *   - `.dz-sidebar-action-button`
  *   - `.dz-add-card-button`
  *   - Close buttons: `.dz-modal-close-form`, `.dz-modal-close-form-floating`,
@@ -34,7 +34,7 @@
     .dz-button,
     .dz-icon-button,
     .dz-card-action-button,
-    .dz-list-action-button,
+    .dz-list-csv-button,
     .dz-sidebar-action-button,
     .dz-add-card-button {
       min-height: var(--dz-touch-target-min);

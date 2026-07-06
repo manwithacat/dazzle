@@ -72,7 +72,10 @@ CORE_SELECTORS = [
     ".dz-button",
     ".dz-icon-button",
     ".dz-card-action-button",
-    ".dz-list-action-button",
+    # The list-region's always-rendered CSV export button (28px square at
+    # rest) — swapped in for the DEAD .dz-list-action-button when the
+    # list-region family moved to HM (W-leftovers slice).
+    ".dz-list-csv-button",
     ".dz-sidebar-action-button",
     ".dz-add-card-button",
 ]

@@ -1721,6 +1721,86 @@ HYPERPARTS: list[Hyperpart] = [
         tags=("data",),
     ),
     Hyperpart(
+        "grid-list",
+        "Cell grid",
+        "Data",
+        "A responsive grid of plain record cells — title plus label: value "
+        "lines, 1 → 2 → 3 columns as the container widens.",
+        '<div class="dz-grid-region">'
+        '<div class="dz-grid-list">'
+        '<div class="dz-grid-cell ">'
+        '<h4 class="dz-grid-cell-title">Aurora Substation</h4>'
+        '<p class="dz-grid-cell-field">'
+        '<span class="dz-grid-cell-field-label">Region:</span> North</p>'
+        '<p class="dz-grid-cell-field">'
+        '<span class="dz-grid-cell-field-label">Load:</span> 82%</p>'
+        "</div>"
+        '<div class="dz-grid-cell ">'
+        '<h4 class="dz-grid-cell-title">Beacon Substation</h4>'
+        '<p class="dz-grid-cell-field">'
+        '<span class="dz-grid-cell-field-label">Region:</span> East</p>'
+        '<p class="dz-grid-cell-field">'
+        '<span class="dz-grid-cell-field-label">Load:</span> 47%</p>'
+        "</div>"
+        '<div class="dz-grid-cell ">'
+        '<h4 class="dz-grid-cell-title">Cinder Substation</h4>'
+        '<p class="dz-grid-cell-field">'
+        '<span class="dz-grid-cell-field-label">Region:</span> West</p>'
+        '<p class="dz-grid-cell-field">'
+        '<span class="dz-grid-cell-field-label">Load:</span> 91%</p>'
+        "</div>"
+        "</div></div>",
+        notes="Cells are deliberately chrome-free — the surrounding card "
+        "owns borders and title. The column count is a viewport response "
+        "(1 column, then 2 at 40rem, 3 at 64rem). The "
+        "<code>is-clickable</code> hover/cursor affordance is styled but "
+        "currently a LEGACY reserve — the substrate grid emitter does not "
+        "yet wire cell drill URLs (follow-up on the Dazzle side).",
+        tags=("data",),
+    ),
+    Hyperpart(
+        "list-region",
+        "List region",
+        "Data",
+        "The in-card data table: an actions row with CSV export, a "
+        "horizontally scrollable table, and an overflow count.",
+        '<div class="dz-list-region">'
+        '<div class="dz-list-actions">'
+        '<div class="dz-list-action-group">'
+        '<button type="button" class="dz-list-csv-button" '
+        'title="Export CSV" aria-label="Export CSV">{svg:download}</button>'
+        "</div></div>"
+        '<div class="dz-list-scroll">'
+        '<table class="dz-list-table">'
+        "<thead><tr>"
+        '<th><a href="#" class="dz-list-sort-link">Name<span>▲</span></a></th>'
+        "<th>Owner</th><th>Status</th>"
+        "</tr></thead>"
+        "<tbody>"
+        '<tr class="dz-list-row is-clickable">'
+        "<td>Quarterly audit</td><td>M. Reyes</td><td>Active</td></tr>"
+        '<tr class="dz-list-row ">'
+        "<td>Vendor renewal</td><td>A. Osei</td><td>Draft</td></tr>"
+        "</tbody></table></div>"
+        '<p class="dz-list-overflow">Showing 2 of 14</p>'
+        "</div>",
+        notes="The CSV button is ALWAYS rendered in the actions row. The "
+        "snippet omits its wiring: the real emitter adds "
+        "<code>data-dz-csv-endpoint</code>/<code>data-dz-csv-filename</code> "
+        "and an <code>onclick</code> that calls "
+        "<code>window.dz.downloadCsv(endpoint, filename)</code> against the "
+        "server export route. Sortable headers are "
+        "<code>dz-list-sort-link</code> anchors carrying an hx-get with "
+        "<code>?sort=&lt;col&gt;&amp;dir=&lt;asc|desc&gt;</code> — the "
+        "server re-renders the region; the active column shows a text "
+        "caret. Rows wired to a drill URL carry <code>is-clickable</code>; "
+        "the overflow line reports what the page cut. For the full "
+        "hypermedia table primitive (selection, filters, pagination) use "
+        "the <code>grid</code> Hyperpart — this one is the lighter in-card "
+        "region.",
+        tags=("data",),
+    ),
+    Hyperpart(
         "task-inbox",
         "Task inbox",
         "Data",

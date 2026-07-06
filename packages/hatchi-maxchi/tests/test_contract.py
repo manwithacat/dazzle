@@ -68,6 +68,8 @@ SEMANTIC_ONLY = {
     "dz-histogram-region",
     "dz-box-plot-region",
     "dz-progress-region",
+    "dz-grid-region",
+    "dz-list-region",
     # task-inbox item skeleton: rule-less in Dazzle too (the dashboard's
     # plain list); the icon is the only styled piece. Follow-up candidate.
     "dz-task-inbox-items",

@@ -73,6 +73,8 @@ CSS_SOURCES = [
     ("components", "components/bar-track.css"),
     ("components", "components/progress-region.css"),
     ("components", "components/task-inbox.css"),
+    ("components", "components/grid-list.css"),
+    ("components", "components/list-region.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]

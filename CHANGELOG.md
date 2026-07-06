@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.109] - 2026-07-06
+
+### Added
+- **Fleet convergence W-leftovers** (HM 0.1.39 → 0.1.40): the last two
+  live workspace-region families promoted from `regions.css` into
+  HaTchi-MaXchi — **grid-list** (responsive 1→2→3-column record-cell
+  grid) and **list-region** (in-card data table: always-rendered CSV
+  export button, `dz-list-sort-link` hx-get sort headers, overflow
+  count) — both with emitter-faithful gallery demos. `regions.css` now
+  carries only profile_card, diagram, tree, and confirm_action_panel.
+
+### Removed
+- **Dead region CSS deleted, not promoted** (zero emit sites proven
+  across py/html/js/examples/dist, independently re-verified in review):
+  the entire `.dz-tab-data-*` family (the tabbed_list mini-table
+  fragment died when tabbed_list converged onto HM tabs), the
+  list-region filter bar (`.dz-list-filters`/`.dz-list-filter-select` —
+  the substrate emitter never grew filter chrome), and
+  `.dz-list-action-button` (the actions row only ever renders the CSV
+  button).
+
+### Changed
+- **Touch-target coverage swap**: the dead `.dz-list-action-button`
+  selector in HM `touch-targets.css` replaced by the live
+  `.dz-list-csv-button` (the 28px always-rendered list-region export
+  button now gets the 44px `pointer: coarse` floor).
+
+### Agent Guidance
+- **Deleting "dead" CSS requires the full producer sweep**: py + html +
+  js (including f-string class construction), examples/, fixtures/,
+  dist bundles, and `classList.add`/`className=` assignments — the
+  W-leftovers deletions shipped only after two independent sweeps
+  agreed.
+
 ## [0.93.108] - 2026-07-06
 
 ### Added
