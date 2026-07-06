@@ -1557,3 +1557,31 @@ def test_money_field_syncs_minor_carrier_and_normalizes(page) -> None:  # type: 
     page.wait_for_timeout(50)
     assert page.input_value(minor) == "", "empty display clears the carrier"
     page.reload()
+
+
+def test_wizard_forward_gated_on_validity_back_free(page) -> None:  # type: ignore[no-untyped-def]
+    """F4d: forward navigation requires the current stage's required
+    inputs to be valid; back navigation is always free; completed steps
+    swap to the CSS checkmark."""
+    root = "#wizard [data-wizard]"
+    step2 = f'{root} [data-step-to="1"]'
+    stage0 = f'{root} [data-stage="0"]'
+    stage1 = f'{root} [data-stage="1"]'
+
+    page.click(step2)  # required name is empty → blocked
+    assert page.is_visible(stage0) and page.is_hidden(stage1)
+
+    page.fill(f"{stage0} input[type=text]", "Aurora refit")
+    page.click(step2)
+    assert page.is_hidden(stage0) and page.is_visible(stage1)
+    li0 = f'{root} li:has([data-step-to="0"])'
+    li1 = f'{root} li:has([data-step-to="1"])'
+    assert page.get_attribute(li0, "data-state") == "complete"
+    assert page.get_attribute(li1, "aria-current") == "step"
+
+    # skipping ahead two steps from a fresh stage is blocked (one at a time)
+    page.click(f'{root} [data-step-to="0"]')  # back is free
+    assert page.is_visible(stage0)
+    page.click(f'{root} [data-step-to="2"]')
+    assert page.is_visible(stage0), "forward is one validated step at a time"
+    page.reload()

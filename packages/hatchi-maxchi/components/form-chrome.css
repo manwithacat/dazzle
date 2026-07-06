@@ -140,6 +140,39 @@
   transition: color var(--duration-base) var(--ease-out);
 }
 
+/* HYPERPART: wizard */
+/* The keyboard-operable step trigger — a real <button> inside the li,
+ * visually transparent (the circle/label carry the design). */
+.dz-form-stepper-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.dz-form-stepper-button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-sm);
+}
+
+/* Completed steps swap the number for a pure-CSS checkmark — keyed
+ * off data-dz-state (set by dz-wizard.js; the SSR default is
+ * current/pending, so no-JS renders numbers throughout). */
+[data-dz-state="complete"] .dz-form-stepper-circle span {
+  display: none;
+}
+
+[data-dz-state="complete"] .dz-form-stepper-circle::after {
+  content: "\2713";
+}
+
 .dz-form-stepper-label.is-active {
   color: var(--colour-text);
 }

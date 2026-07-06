@@ -1,4 +1,4 @@
-/* dazzle v0.93.116 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.117 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -1204,6 +1204,17 @@ th {
 font-weight: var(--weight-semibold);
 color: var(--colour-text-muted);
 font-size: var(--text-sm);
+}
+.visually-hidden {
+position: absolute;
+width: 1px;
+height: 1px;
+padding: 0;
+margin: -1px;
+overflow: hidden;
+clip: rect(0, 0, 0, 0);
+white-space: nowrap;
+border: 0;
 }
 }
 @layer components {
@@ -6127,6 +6138,29 @@ overflow: hidden;
 text-overflow: ellipsis;
 color: var(--colour-text-muted);
 transition: color var(--duration-base) var(--ease-out);
+}
+.dz-form-stepper-button {
+display: flex;
+align-items: center;
+gap: var(--space-sm);
+min-width: 0;
+background: none;
+border: 0;
+padding: 0;
+font: inherit;
+color: inherit;
+cursor: pointer;
+}
+.dz-form-stepper-button:focus-visible {
+outline: var(--focus-ring-width) solid var(--focus-ring-color);
+outline-offset: var(--focus-ring-offset);
+border-radius: var(--radius-sm);
+}
+[data-dz-state="complete"] .dz-form-stepper-circle span {
+display: none;
+}
+[data-dz-state="complete"] .dz-form-stepper-circle::after {
+content: "\2713";
 }
 .dz-form-stepper-label.is-active {
 color: var(--colour-text);

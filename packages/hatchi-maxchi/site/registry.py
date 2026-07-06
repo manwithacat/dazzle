@@ -950,11 +950,65 @@ HYPERPARTS: list[Hyperpart] = [
         "<code>role=&quot;alert&quot;</code> (the server re-renders it on "
         "a failed submit). The stepper here shows RENDERED states "
         "(<code>is-active</code>/<code>is-not-last</code>, "
-        "<code>aria-current=&quot;step&quot;</code>) — in Dazzle its "
-        "click/keyboard behaviour is still the dzWizard Alpine island, "
-        "converting to an HM controller as this family completes.",
+        "<code>aria-current=&quot;step&quot;</code>) — the live navigation "
+        "behaviour is the <code>wizard</code> Hyperpart "
+        "(<code>dz-wizard.js</code>; the dzWizard Alpine island retired in "
+        "Tier F4d).",
         tags=("forms",),
         composes=("field",),
+    ),
+    Hyperpart(
+        "wizard",
+        "Wizard",
+        "Forms",
+        "Multi-stage form navigation: the stepper drives stage reveal — "
+        "back freely, forward one validated step at a time.",
+        '<div data-dz-wizard data-dz-step="0" class="hm-measure-lg">'
+        '<ol class="dz-form-stepper" role="list" aria-label="Form progress">'
+        '<li class="dz-form-stepper-item is-not-last" '
+        'data-dz-state="current" aria-current="step">'
+        '<button type="button" class="dz-form-stepper-button" data-dz-step-to="0">'
+        '<span class="dz-form-stepper-circle is-active"><span>1</span></span>'
+        '<span class="dz-form-stepper-label is-active">Details</span>'
+        '<span class="visually-hidden" data-dz-step-status>current</span></button>'
+        '<span class="dz-form-stepper-connector" aria-hidden="true"></span></li>'
+        '<li class="dz-form-stepper-item is-not-last" data-dz-state="pending">'
+        '<button type="button" class="dz-form-stepper-button" data-dz-step-to="1">'
+        '<span class="dz-form-stepper-circle"><span>2</span></span>'
+        '<span class="dz-form-stepper-label">Schedule</span>'
+        '<span class="visually-hidden" data-dz-step-status>pending</span></button>'
+        '<span class="dz-form-stepper-connector" aria-hidden="true"></span></li>'
+        '<li class="dz-form-stepper-item" data-dz-state="pending">'
+        '<button type="button" class="dz-form-stepper-button" data-dz-step-to="2">'
+        '<span class="dz-form-stepper-circle"><span>3</span></span>'
+        '<span class="dz-form-stepper-label">Review</span>'
+        '<span class="visually-hidden" data-dz-step-status>pending</span></button></li>'
+        "</ol>"
+        '<div class="dz-wizard-stage" data-dz-stage="0">'
+        '<div class="dz-form-field">'
+        '<label class="dz-form-label" for="hm-wiz-name">Project name'
+        '<span class="dz-form-required" aria-hidden="true">*</span></label>'
+        '<input id="hm-wiz-name" class="dz-form-input" type="text" required '
+        'aria-required="true"></div></div>'
+        '<div class="dz-wizard-stage" data-dz-stage="1" hidden>'
+        '<div class="dz-form-field">'
+        '<label class="dz-form-label" for="hm-wiz-date">Start date</label>'
+        '<input id="hm-wiz-date" class="dz-form-input" type="date"></div></div>'
+        '<div class="dz-wizard-stage" data-dz-stage="2" hidden>'
+        "<p>Review your answers, then submit.</p></div>"
+        "</div>",
+        notes="State-in-DOM: the root's <code>data-dz-step</code> is the "
+        "current stage; stages toggle via the native <code>hidden</code> "
+        "attribute; stepper items carry "
+        "<code>data-dz-state=&quot;complete|current|pending&quot;</code> "
+        "(the checkmark is pure CSS off the state). "
+        "<code>dz-wizard.js</code> allows going BACK freely and FORWARD "
+        "one step at a time — only after every required input in the "
+        "current stage passes <code>reportValidity()</code>. No-JS renders "
+        "stage one with numbered steps (the form still posts whole).",
+        tags=("forms",),
+        controller="controllers/dz-wizard.js",
+        composes=("form-chrome", "field"),
     ),
     Hyperpart(
         "money",

@@ -463,16 +463,16 @@ Alpine.js is DEPRECATED for new code (2026-07-06; CLAUDE.md UI Invariants).
 Client behaviour follows the HM Hyperpart idiom: delegated vanilla
 controllers, state in the DOM, server-owned rendering.
 
-Remaining Alpine ISLANDS registered via Alpine.data() in dz-alpine.js
+Client widget controllers (HM delegated; the Alpine islands all converted by Tier F4d — dz-alpine.js retains only directives/haptics)
 (each converts as its HM Hyperpart lands):
 
 dz-money.js (HM) — Currency field (minor unit conversion; converted from the dzMoney Alpine island, Tier F4c)
   ISO 4217 scale table, bidirectional display↔minor conversion
   Supports pinned and unpinned (dropdown) currency
 
-dzWizard — Multi-step form wizard
-  Params: dzWizard(totalSteps)
-  Per-stage validation, stepper dot navigation
+dz-wizard.js (HM) — multi-stage form wizard (converted from the dzWizard Alpine island, Tier F4d)
+  Delegated controller, no factory/params: state-in-DOM (data-dz-wizard
+  root + data-dz-step; per-stage required validation gates forward nav)
 
 dz-confirm-gate.js (HM) — confirm-panel consent gate (converted from the dzConfirmGate Alpine island, Tier F1)
 

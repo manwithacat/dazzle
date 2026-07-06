@@ -174,3 +174,20 @@ th {
   color: var(--colour-text-muted);
   font-size: var(--text-sm);
 }
+
+/* ── screen-reader-only utility ──────────────────────────────────
+ * The standard clip pattern (matches Dazzle utilities.css verbatim).
+ * Un-prefixed by design: it is generic a11y plumbing referenced by
+ * emitter markup (e.g. the wizard stepper's SR status spans), not a
+ * design-system token. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

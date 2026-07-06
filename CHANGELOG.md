@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.117] - 2026-07-06
+
+### Fixed
+- **Multi-stage experience-form wizards work for the first time since
+  the Jinja teardown** (Tier F4d, HM 0.1.47 → 0.1.48). The dzWizard
+  Alpine island was production-dead — nothing ever mounted
+  `x-data="dzWizard"`, so multi-section experience forms rendered stage
+  one with an inert stepper. The new HM `dz-wizard.js` makes navigation
+  live: state-in-DOM (`data-dz-wizard` root carries `data-dz-step`;
+  stages toggle native `hidden`; stepper items carry
+  `data-dz-state="complete|current|pending"` with a pure-CSS completed
+  checkmark), back navigation free, forward one step at a time gated on
+  the current stage's required inputs passing `reportValidity()`.
+
+### Changed
+- **Stepper steps are keyboard-operable** (review catch for the
+  wizard's first live release): each step is a real `<button>` inside
+  its `<li>`, focus-ring styled — not a click-only list item. The
+  `visually-hidden` SR utility was added to the HM base layer (its
+  absence made SR status spans render full-width in the gallery,
+  caught by the zero-paint gate).
+- **dz-alpine.js now registers ZERO Alpine components** — dzWizard was
+  the last `Alpine.data` island. Only the x-flip/x-pull-to-refresh/
+  x-swipe/x-optimistic directives and haptics remain; the
+  dzDashboardBuilder island lives in dashboard-builder.js and is the
+  final conversion before the vendored Alpine can be removed.
+
+### Agent Guidance
+- **"Registered" is not "mounted"**: an Alpine.data component with zero
+  `x-data` call sites is dead code hiding a broken feature — census the
+  mounts, not the registrations. The wizard had been silently inert
+  through every fleet walk because no example declares multi-section
+  experience forms (#164's coverage oracle exists to catch exactly
+  this class).
+- Early Submit with empty later-stage required fields is a silent no-op
+  (htmx4 calls form.reportValidity; hidden inputs are unfocusable) —
+  parity with the old markup, now reachable; fix shape in #1548.
+
 ## [0.93.116] - 2026-07-06
 
 ### Changed

@@ -327,9 +327,8 @@ class RichTextField:
 class FormStepper:
     """Wizard stage-tabs for a multi-section experience form (`widget`-free).
     Parity with the legacy `form_renderer.render_form_stepper` — an
-    `<ol class="dz-form-stepper">` whose items are dzWizard-driven
-    (`isActive()`/`isCurrent()`/`goToStep()` live on the surrounding
-    `x-data="dzWizard"` scope). Only the experience-flow form path renders a
+    `<ol class="dz-form-stepper">` whose items are dz-wizard.js-driven
+    (navigation and state updates live in the delegated controller). Only the experience-flow form path renders a
     stepper; the main CREATE/EDIT form path groups sections without one."""
 
     sections: tuple[str, ...]

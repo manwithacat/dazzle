@@ -2277,3 +2277,84 @@
     }
   });
 })();
+
+/* ── controllers/wizard.js ── */
+/* HYPERPART: wizard */
+/*
+ * wizard — multi-stage form navigation via the stepper.
+ *
+ * Delegated from document; state lives in the DOM: the `[data-wizard]`
+ * root carries `data-step`, stages are `[data-stage]` blocks toggled
+ * via the native `hidden` attribute, and each stepper item carries
+ * `data-state="complete|current|pending"` (the completed checkmark is
+ * pure CSS off that attribute) plus `is-active` on its circle/label/
+ * connector for the visual trail.
+ *
+ * Navigation contract (ported from the dzWizard island, which was
+ * production-dead — nothing mounted x-data after the Jinja teardown):
+ * clicking a stepper item goes BACK freely; FORWARD only one step at a
+ * time, and only when every required input in the current stage is valid
+ * (reportValidity so the browser surfaces what's missing).
+ */
+(function () {
+  "use strict";
+
+  function stageValid(root, step) {
+    var stage = root.querySelector('[data-stage="' + step + '"]');
+    if (!stage) return true;
+    var inputs = stage.querySelectorAll(
+      "input[required], select[required], textarea[required]",
+    );
+    for (var i = 0; i < inputs.length; i++) {
+      if (!inputs[i].checkValidity()) {
+        inputs[i].reportValidity();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function render(root, step) {
+    root.setAttribute("data-step", String(step));
+    var stages = root.querySelectorAll("[data-stage]");
+    for (var i = 0; i < stages.length; i++)
+      stages[i].hidden =
+        parseInt(stages[i].getAttribute("data-stage"), 10) !== step;
+    var items = root.querySelectorAll("[data-step-to]");
+    for (var j = 0; j < items.length; j++) {
+      var idx = parseInt(items[j].getAttribute("data-step-to"), 10);
+      var state = idx < step ? "complete" : idx === step ? "current" : "pending";
+      // state + aria-current live on the <li> (the button's host item);
+      // the button is the keyboard-operable trigger.
+      var host = items[j].closest("li") || items[j];
+      host.setAttribute("data-state", state);
+      if (idx === step) host.setAttribute("aria-current", "step");
+      else host.removeAttribute("aria-current");
+      var active = idx <= step;
+      var circle = host.querySelector(".form-stepper-circle");
+      var label = host.querySelector(".form-stepper-label");
+      var conn = host.querySelector(".form-stepper-connector");
+      if (circle) circle.classList.toggle("is-active", active);
+      if (label) label.classList.toggle("is-active", active);
+      // the connector after item idx lights once the NEXT step is reached
+      if (conn) conn.classList.toggle("is-active", idx < step);
+      var sr = host.querySelector("[data-step-status]");
+      if (sr) sr.textContent = state;
+    }
+  }
+
+  document.addEventListener("click", function (evt) {
+    var item = evt.target.closest && evt.target.closest("[data-step-to]");
+    if (!item) return;
+    var root = item.closest("[data-wizard]");
+    if (!root) return;
+    var target = parseInt(item.getAttribute("data-step-to"), 10);
+    var current = parseInt(root.getAttribute("data-step") || "0", 10);
+    if (target === current) return;
+    if (target > current) {
+      // forward: one step at a time, current stage must validate
+      if (target !== current + 1 || !stageValid(root, current)) return;
+    }
+    render(root, target);
+  });
+})();

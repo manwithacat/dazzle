@@ -1642,6 +1642,23 @@ th {
   font-size: var(--text-sm);
 }
 
+/* ── screen-reader-only utility ──────────────────────────────────
+ * The standard clip pattern (matches Dazzle utilities.css verbatim).
+ * Un-prefixed by design: it is generic a11y plumbing referenced by
+ * emitter markup (e.g. the wizard stepper's SR status spans), not a
+ * design-system token. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 }
 /* ── components/accordion.css ── */
 @layer components {
@@ -8660,6 +8677,39 @@ a.action-card:hover {
   text-overflow: ellipsis;
   color: var(--colour-text-muted);
   transition: color var(--duration-base) var(--ease-out);
+}
+
+/* HYPERPART: wizard */
+/* The keyboard-operable step trigger — a real <button> inside the li,
+ * visually transparent (the circle/label carry the design). */
+.form-stepper-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.form-stepper-button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-sm);
+}
+
+/* Completed steps swap the number for a pure-CSS checkmark — keyed
+ * off data-state (set by wizard.js; the SSR default is
+ * current/pending, so no-JS renders numbers throughout). */
+[data-state="complete"] .form-stepper-circle span {
+  display: none;
+}
+
+[data-state="complete"] .form-stepper-circle::after {
+  content: "\2713";
 }
 
 .form-stepper-label.is-active {

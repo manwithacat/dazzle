@@ -109,14 +109,21 @@ def _render_form_step_body(experience: Any, page_context: Any) -> str:
                 else getattr(section, "fields", None) or []
             )
             field_html = "".join(render_field_context(f, initial_values) for f in fields)
-            hide_style = ' style="display:none"' if idx > 0 else ""
+            hide_attr = " hidden" if idx > 0 else ""
             stage_blocks.append(
-                f'<div class="dz-wizard-stage" data-dz-stage="{idx}"{hide_style}>'  # nosemgrep
+                f'<div class="dz-wizard-stage" data-dz-stage="{idx}"{hide_attr}>'  # nosemgrep
                 f'<h3 class="dz-experience-stage-title">{section_title_html}</h3>'
                 f"{field_html}"
                 "</div>"
             )
-        fields_body = stepper_html + "".join(stage_blocks)
+        # The wizard root: dz-wizard.js keys navigation + stage reveal off
+        # this marker; data-dz-step is the current-step state (Tier F4d).
+        fields_body = (
+            '<div data-dz-wizard data-dz-step="0">'
+            + stepper_html
+            + "".join(stage_blocks)
+            + "</div>"
+        )
     else:
         fields_body = "".join(
             render_field_context(f, initial_values) for f in (getattr(form, "fields", None) or [])

@@ -7,7 +7,6 @@
  *
  * Components (each an Alpine ISLAND slated for conversion — Alpine is
  * deprecated for new code, CLAUDE.md UI Invariants):
- *  - dzWizard         — multi-step form wizard
  *
  * Removed in the HM migration (Bucket A2, v0.93.65): dzConfirm and
  * dzCommandPalette are now driven by the ingested HM controllers
@@ -820,56 +819,12 @@ document.addEventListener("alpine:init", () => {
   // the emitter no longer binds x-model/x-init.
 
   // ── Wizard Form ─────────────────────────────────────────────────────
-
-  Alpine.data("dzWizard", (totalSteps) => ({
-    step: 0,
-    total: totalSteps,
-
-    showStage(idx) {
-      this.step = idx;
-    },
-
-    next() {
-      if (this.validateStage(this.step) && this.step < this.total - 1) {
-        this.step++;
-      }
-    },
-
-    prev() {
-      if (this.step > 0) this.step--;
-    },
-
-    goToStep(idx) {
-      if (idx <= this.step) {
-        this.step = idx;
-      } else if (idx === this.step + 1 && this.validateStage(this.step)) {
-        this.step = idx;
-      }
-    },
-
-    validateStage(idx) {
-      const stages = this.$el.querySelectorAll("[data-dz-stage]");
-      if (!stages[idx]) return true;
-      const inputs = stages[idx].querySelectorAll(
-        "input[required], select[required], textarea[required]",
-      );
-      let valid = true;
-      inputs.forEach((input) => {
-        if (!(/** @type {HTMLInputElement} */ (input).value)) {
-          /** @type {HTMLInputElement} */ (input).reportValidity();
-          valid = false;
-        }
-      });
-      return valid;
-    },
-
-    isActive(idx) {
-      return idx <= this.step;
-    },
-    isCurrent(idx) {
-      return idx === this.step;
-    },
-  }));
+  // dzWizard removed (Tier F4d, 2026-07-06): the multi-stage form wizard
+  // converged onto the HM dz-wizard.js delegated controller — state-in-DOM
+  // (data-dz-wizard root + data-dz-step; stages toggle native hidden;
+  // stepper items carry data-dz-state). The Alpine island was
+  // production-dead: nothing mounted x-data="dzWizard" after the Jinja
+  // teardown, so multi-stage experience forms were inert until now.
 
   // ── Confirm gate ──────────────────────────────────────────────────────
   // dzConfirmGate removed (Tier F, 2026-07-06): the confirm_action_panel
