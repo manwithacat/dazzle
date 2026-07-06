@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.107] - 2026-07-06
+
+### Added
+- **Fleet convergence Tier C-a** (HM 0.1.37 → 0.1.38): five chart-family
+  promotions with emitter-faithful gallery demos — **metrics** (KPI tiles,
+  `data-dz-metric-key` anchors, one GROUP-BY fills the strip),
+  **sparkline** (headline + server-rendered SVG with a numeric
+  `aria-label`), **funnel** (server-computed widths,
+  `data-dz-funnel-step`), **bar-chart** (label/track/value rows — the
+  #847-class one-query design), and **chart-legend** (the shared
+  swatch/summary tail of every SVG chart).
+
+### Fixed
+- **The funnel was unreadable at depth** — stages faded via element
+  opacity (90% → 20% by step), taking their TEXT with them; a WCAG
+  failure the axe gate caught on first gallery exposure. The fade now
+  lives on the bar surface (`--dz-funnel-fade` driving a brand→surface
+  `color-mix`); text keeps full-contrast scheme-aware ink in both
+  schemes.
+- Review fidelity passes: the funnel demo now uses the emitter's
+  zero-based step indices; the sparkline demo SVG matches the emitter's
+  real attributes (brand stroke, 180-wide viewBox, round joins); and the
+  dead `dz-chart-degenerate-*` family (Jinja-era, zero emitters since
+  ADR-0023) was dropped rather than published as fake API.
+
 ## [0.93.106] - 2026-07-06
 
 ### Added

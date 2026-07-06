@@ -1375,6 +1375,143 @@ HYPERPARTS: list[Hyperpart] = [
         "same shared cell core as list rows, so badges/dates match.",
         tags=("data",),
     ),
+    Hyperpart(
+        "metrics",
+        "Metric tiles",
+        "Data",
+        "The KPI strip: label + value tiles in a packing grid, optionally "
+        "toned. The server stamps the tile count for e2e anchors.",
+        '<div class="dz-metrics-grid" data-dz-tile-count="3">'
+        '<div class="dz-metric-tile" data-dz-metric-key="outstanding">'
+        '<div class="dz-metric-label">Outstanding</div>'
+        '<div class="dz-metric-value">£12,450</div></div>'
+        '<div class="dz-metric-tile" data-dz-metric-key="paid" data-dz-tone="positive">'
+        '<div class="dz-metric-label">Paid this month</div>'
+        '<div class="dz-metric-value">£48,900</div></div>'
+        '<div class="dz-metric-tile" data-dz-metric-key="overdue" data-dz-tone="warning">'
+        '<div class="dz-metric-label">Overdue</div>'
+        '<div class="dz-metric-value">3</div></div>'
+        "</div>",
+        notes="Each tile carries <code>data-dz-metric-key</code> (a stable "
+        "anchor for tests/telemetry) and an optional <code>data-dz-tone</code>. "
+        "In Dazzle one scope-aware GROUP BY query fills the whole strip — "
+        "the tiles can never disagree with each other.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "sparkline",
+        "Sparkline",
+        "Data",
+        "A headline number with its recent shape — the smallest chart: a "
+        "current value, its bucket label, and an area glyph.",
+        '<div class="dz-sparkline-region">'
+        '<div class="dz-sparkline-headline">'
+        '<span class="dz-sparkline-value">184ms</span>'
+        '<span class="dz-sparkline-bucket-label">this hour</span></div>'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" '
+        'class="dz-sparkline-svg" role="img" '
+        'aria-label="Sparkline — 12 points, latest 184ms, peak 240ms">'
+        '<polygon points="0,32 0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 '
+        '144,14 162,6 180,9 180,32" fill="var(--colour-brand)" '
+        'fill-opacity="0.15" stroke="none"/>'
+        '<polyline points="0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 '
+        '144,14 162,6 180,9" fill="none" stroke="var(--colour-brand)" '
+        'stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/>'
+        "</svg></div>",
+        notes="The SVG is server-rendered with a numeric summary in "
+        "<code>aria-label</code> (points / latest / peak) — the glyph is "
+        "decoration; the numbers are the content. An empty series renders "
+        "<code>dz-sparkline-empty</code>; a single point renders the "
+        "headline alone.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "funnel",
+        "Funnel",
+        "Data",
+        "Stage-by-stage narrowing — each bar's width is the stage's share, "
+        "with a total summary line.",
+        '<div class="dz-funnel-chart-region hm-measure-lg">'
+        '<div class="dz-funnel-stages">'
+        '<div class="dz-funnel-stage-row">'
+        '<div class="dz-funnel-stage" data-dz-funnel-step="0" style="width: 100%;">'
+        '<span class="dz-funnel-stage-label">Visited</span>'
+        '<span class="dz-funnel-stage-count"> (1,204)</span></div></div>'
+        '<div class="dz-funnel-stage-row">'
+        '<div class="dz-funnel-stage" data-dz-funnel-step="1" style="width: 62%;">'
+        '<span class="dz-funnel-stage-label">Signed up</span>'
+        '<span class="dz-funnel-stage-count"> (746)</span></div></div>'
+        '<div class="dz-funnel-stage-row">'
+        '<div class="dz-funnel-stage" data-dz-funnel-step="2" style="width: 28%;">'
+        '<span class="dz-funnel-stage-label">Subscribed</span>'
+        '<span class="dz-funnel-stage-count"> (338)</span></div></div>'
+        "</div>"
+        '<p class="dz-funnel-summary">1,204 total</p>'
+        "</div>",
+        notes="Widths are SERVER-computed percentages on inline style — the "
+        "one place inline style is the contract (a per-row datum, like the "
+        "progress knob). <code>data-dz-funnel-step</code> tones the stages "
+        "in sequence.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "bar-chart",
+        "Bar chart",
+        "Data",
+        "Label / track / value rows — the workhorse categorical chart, "
+        "server-computed and scope-safe.",
+        '<div class="dz-bar-chart-region hm-measure-lg">'
+        '<div class="dz-bar-chart-bars">'
+        '<div class="dz-bar-chart-row">'
+        '<span class="dz-bar-chart-label">API</span>'
+        '<div class="dz-bar-chart-track">'
+        '<div class="dz-bar-chart-fill" style="width: 84%"></div></div>'
+        '<span class="dz-bar-chart-value">126</span></div>'
+        '<div class="dz-bar-chart-row">'
+        '<span class="dz-bar-chart-label">Dashboard</span>'
+        '<div class="dz-bar-chart-track">'
+        '<div class="dz-bar-chart-fill" style="width: 56%"></div></div>'
+        '<span class="dz-bar-chart-value">84</span></div>'
+        '<div class="dz-bar-chart-row">'
+        '<span class="dz-bar-chart-label">Billing</span>'
+        '<div class="dz-bar-chart-track">'
+        '<div class="dz-bar-chart-fill" style="width: 23%"></div></div>'
+        '<span class="dz-bar-chart-value">35</span></div>'
+        "</div></div>",
+        notes="In Dazzle every bar chart compiles to ONE scope-aware "
+        "<code>GROUP BY</code> — the bucket list and the counts come from "
+        "the same query, so they cannot disagree (the #847-class bug this "
+        "design retired). Fill widths are server-computed percentages of "
+        "the max bucket.",
+        tags=("data", "chart"),
+    ),
+    Hyperpart(
+        "chart-legend",
+        "Chart legend",
+        "Data",
+        "The shared tail of every multi-series chart: swatch + series-name "
+        "chips and a sample/series summary line.",
+        '<div class="hm-measure-lg">'
+        '<ul class="dz-chart-legend">'
+        '<li class="dz-chart-legend-item">'
+        '<span class="dz-chart-legend-swatch" '
+        'style="background:var(--colour-brand)"></span>'
+        '<span class="dz-chart-legend-name">Revenue</span></li>'
+        '<li class="dz-chart-legend-item">'
+        '<span class="dz-chart-legend-swatch" '
+        'style="background:var(--colour-success)"></span>'
+        '<span class="dz-chart-legend-name">Costs</span></li>'
+        "</ul>"
+        '<p class="dz-chart-summary">12 buckets · 2 series · peak £48,900</p>'
+        "</div>",
+        notes="Every SVG chart (line / area / radar / box-plot) ends with "
+        "this pair instead of restyling it per chart: a "
+        "<code>&lt;ul&gt;</code> of swatch + mono series-name items, and a "
+        "mono summary line of bucket/series counts and the peak. The swatch "
+        "background is the series colour the chart body uses for its "
+        "strokes — inline, per series, server-assigned.",
+        tags=("data", "chart"),
+    ),
     # ── Primitives ───────────────────────────────────────────────────
     Hyperpart(
         "separator",

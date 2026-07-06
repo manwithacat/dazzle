@@ -7072,6 +7072,333 @@ a.action-card:hover {
 }
 
 }
+/* ── components/metrics.css ── */
+@layer components {
+/* HYPERPART: metrics */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-a, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── metrics region ─────────────────────
+ * Responsive 1/2/4-col grid of KPI tiles. Each tile is plain (no
+ * border — the dashboard slot owns card chrome) with a soft
+ * background tint, label / value, and optional delta row.
+ * Per-tile tone tinting still routes through tones.css keyed
+ * off data-tone (unchanged); same pattern for the delta-arrow
+ * tone via data-delta-tone. */
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+}
+
+@media (min-width: 40rem) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .metrics-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.metric-tile {
+  padding: var(--space-md);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+}
+
+.metric-label {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  letter-spacing: -0.01em;
+}
+
+.metric-value {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin-block-start: 0.125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-delta {
+  margin-block-start: var(--space-xs);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+}
+/* ── components/sparkline.css ── */
+@layer components {
+/* HYPERPART: sparkline */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-a, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── sparkline region ───────────────────
+ * Compact KPI tile: big-number + tiny line. SVG fills the width of
+ * its container; geometry comes from the template's own viewBox
+ * computation (180×32 grid) so we just size the host. */
+
+.sparkline-headline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.sparkline-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  line-height: 1;
+}
+
+.sparkline-bucket-label {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  font-family: var(--font-mono);
+}
+
+.sparkline-svg {
+  margin-block-start: var(--space-xs);
+  width: 100%;
+  height: 2rem;
+}
+
+.sparkline-empty {
+  text-align: center;
+  padding-block: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+}
+/* ── components/funnel.css ── */
+@layer components {
+/* HYPERPART: funnel */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-a, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── funnel_chart region ────────────────
+ * Stacked proportional bars rendering ordered stages. Each stage
+ * gets a width derived from `count / first_count` and a tone tint
+ * via data-funnel-step (0..N) so the depth-by-position fade can
+ * happen in CSS. Replaces the dynamic
+ * `bg-[hsl(var(--primary)/{{ pct }})]` Tailwind arbitrary value
+ * (which was JIT-invisible). */
+
+.funnel-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-block-start: var(--space-sm);
+}
+
+.funnel-stage-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.funnel-stage {
+  border-radius: var(--radius-sm);
+  padding-inline: var(--space-md);
+  padding-block: 0.375rem;
+  text-align: center;
+  /* The step fade lives on the BAR SURFACE via --dz-funnel-fade, never on
+   * element opacity — the promoted rules faded whole stages to 20%,
+   * taking the TEXT with them (unreadable + a WCAG contrast failure the
+   * axe gate caught on first gallery exposure). Text keeps full-contrast
+   * scheme-aware ink on the mixed surface. */
+  background: color-mix(
+    in oklab,
+    var(--colour-brand) calc(var(--dz-funnel-fade, 100) * 1%),
+    var(--colour-surface)
+  );
+  color: var(--colour-text);
+  min-width: 7.5rem;
+}
+
+/* Position-driven surface fade (steps 0..7). Beyond step 7 the surface
+ * stays at the step-7 mix. */
+.funnel-stage[data-funnel-step="0"] { --dz-funnel-fade: 60; }
+.funnel-stage[data-funnel-step="1"] { --dz-funnel-fade: 50; }
+.funnel-stage[data-funnel-step="2"] { --dz-funnel-fade: 41; }
+.funnel-stage[data-funnel-step="3"] { --dz-funnel-fade: 33; }
+.funnel-stage[data-funnel-step="4"] { --dz-funnel-fade: 26; }
+.funnel-stage[data-funnel-step="5"] { --dz-funnel-fade: 20; }
+.funnel-stage[data-funnel-step="6"] { --dz-funnel-fade: 15; }
+.funnel-stage[data-funnel-step="7"] { --dz-funnel-fade: 11; }
+
+.funnel-stage-label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.funnel-stage-count {
+  font-size: var(--text-xs);
+  /* inherits the stage's full-contrast ink — muted text fails WCAG on
+   * the brand-tinted surfaces; size alone differentiates it. */
+  margin-inline-start: 0.25rem;
+}
+
+.funnel-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+}
+/* ── components/bar-chart.css ── */
+@layer components {
+/* HYPERPART: bar-chart */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-a, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── bar_chart region ───────────────────
+ * Horizontal bar rows: label (right) / track / value (right). The
+ * track has rounded-full chrome; the fill is brand-coloured and
+ * its width is the inline value-derived percentage. */
+
+.bar-chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+}
+
+.bar-chart-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.bar-chart-label {
+  width: 6rem;
+  text-align: end;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-chart-label.is-wide {
+  width: 7rem;
+  color: var(--colour-text-muted);
+}
+
+.bar-chart-track {
+  flex: 1 1 0;
+  height: 1.25rem;
+  background: var(--colour-bg);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.bar-chart-fill {
+  height: 100%;
+  background: var(--colour-brand);
+  border-radius: var(--radius-full);
+  transition: width var(--duration-base) var(--ease-out);
+}
+
+.bar-chart-value {
+  width: 2.5rem;
+  text-align: end;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--colour-text-muted);
+}
+
+.bar-chart-value.is-wide {
+  width: 2.5rem;
+  color: var(--colour-text);
+}
+
+.bar-chart-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+}
+/* ── components/chart-legend.css ── */
+@layer components {
+/* HYPERPART: chart-legend */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-a, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── chart legend / summary ─────────────
+ * Shared across the SVG chart family (line / area / radar). Each
+ * chart template renders its own SVG body but ends with a legend
+ * row of (swatch + series-name) chips and a summary line of
+ * sample/series counts. Single class set instead of duplicating
+ * inline `flex flex-wrap gap-x-3 ...` Tailwind across every
+ * template. */
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+}
+
+/* Radar-specific: long axis labels at the -90°/90° spokes can extend
+ * past the SVG viewBox because the rotation pivot of the existing
+ * spoke-label markup doesn't perfectly counter-translate. Allow the
+ * labels to render past the SVG bounds rather than clipping mid-word
+ * (closes #917). The radar SVG is always the rightmost element in its
+ * card, and CSS Grid gives each card an isolated overflow region, so
+ * letting labels spill past the SVG won't bleed into neighbouring
+ * regions.
+ *
+ * Note: trig-placed labels (per the issue's "option 1") would
+ * eliminate the need for this rule entirely. Worth a follow-up; this
+ * is the smaller-blast-radius fix while the template still uses the
+ * nested-rotate workaround. */
+.radar-svg {
+  overflow: visible;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-md);
+  row-gap: 0.25rem;
+  margin-block-start: var(--space-sm);
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chart-legend-swatch {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-sm);
+}
+
+.chart-legend-name {
+  font-family: var(--font-mono);
+}
+
+.chart-summary {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+  font-family: var(--font-mono);
+}
+
+/* The chart-degenerate-* fallback family that lived here was DEAD
+ * on arrival (Jinja-era shapes retired with ADR-0023; zero emitters in
+ * the typed substrate) — dropped rather than published as fake API. */
+
+}
 /* ── components/tabs.css ── */
 @layer components {
 /* HYPERPART: tabs */

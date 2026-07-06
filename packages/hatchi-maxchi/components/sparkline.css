@@ -1,0 +1,40 @@
+/* HYPERPART: sparkline */
+/* Promoted VERBATIM from Dazzle regions.css (Tier C-a, fleet
+ * convergence). The Dazzle emitter contract is unchanged. */
+
+/* ─────────────────────────── sparkline region ───────────────────
+ * Compact KPI tile: big-number + tiny line. SVG fills the width of
+ * its container; geometry comes from the template's own viewBox
+ * computation (180×32 grid) so we just size the host. */
+
+.dz-sparkline-headline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.dz-sparkline-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  line-height: 1;
+}
+
+.dz-sparkline-bucket-label {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  font-family: var(--font-mono);
+}
+
+.dz-sparkline-svg {
+  margin-block-start: var(--space-xs);
+  width: 100%;
+  height: 2rem;
+}
+
+.dz-sparkline-empty {
+  text-align: center;
+  padding-block: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}

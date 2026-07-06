@@ -60,6 +60,11 @@ CSS_SOURCES = [
     ("components", "components/timeline.css"),
     ("components", "components/activity-feed.css"),
     ("components", "components/related-tables.css"),
+    ("components", "components/metrics.css"),
+    ("components", "components/sparkline.css"),
+    ("components", "components/funnel.css"),
+    ("components", "components/bar-chart.css"),
+    ("components", "components/chart-legend.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]
