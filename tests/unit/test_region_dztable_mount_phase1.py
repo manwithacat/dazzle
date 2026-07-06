@@ -1,15 +1,19 @@
-"""Task 3 (ADR-0049 Phase 1): the list Region mounts the dzTable controller.
+"""The list Region's grid mount (ADR-0049 D3 → convergence C2.4).
 
-D3 — the `dzTable` Alpine controller mounts on the list Region (the container
-that knows it's a stateful list). The substrate builder threads the config
-(sortField/sortDir/inlineEditable/bulkActions/entityName) so the hydrated
-rows' toggleRow/startEdit/isColumnVisible/toggleSort bindings resolve — the
-same controller the legacy `render_filterable_table` wrapper mounted.
+History: D3 originally mounted the `dzTable` Alpine controller here. The
+HM grid primitive + its extensions (dz-grid.js / dz-grid-cols.js /
+dz-grid-resize.js / dz-grid-edit.js — all delegated, state-in-DOM) now own
+every behaviour dzTable carried, so C2.4 retires the `x-data` mount: the
+region root is an HM grid root and nothing else. C3 deletes the dzTable
+controller code itself.
+
+The pinned contract: the mount emits the grid-root attributes
+(`data-dz-grid`, `data-dz-grid-url`, `data-dz-grid-edit-url`,
+`data-dz-bulk-count`) and NO Alpine bindings — a reintroduced `x-data`
+would resurrect the two-controller split the convergence removed.
 """
 
 from __future__ import annotations
-
-import json
 
 from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.render.fragment import DzTableMount, FragmentRenderer, Region, Text
@@ -19,11 +23,11 @@ def _render(frag: object) -> str:
     return FragmentRenderer().render(frag)  # type: ignore[arg-type]
 
 
-# ── Region renderer: the mount emits the dzTable x-data wrapper ──
+# ── Region renderer: the mount emits the HM grid root, no Alpine ──
 
 
 class TestRegionMount:
-    def test_mount_emits_dztable_x_data_with_config(self) -> None:
+    def test_mount_emits_hm_grid_root(self) -> None:
         html = _render(
             Region(
                 kind="list",
@@ -41,29 +45,36 @@ class TestRegionMount:
             )
         )
         assert 'id="dt-task"' in html
-        assert 'dzTable("dt-task", "/api/task"' in html
-        assert ':aria-busy="loading"' in html
+        assert "data-dz-grid data-dz-grid-url" in html
+        assert 'data-dz-grid-edit-url="/api/task"' in html
         assert 'data-dz-bulk-count="0"' in html
         # data-dazzle-table + region kind class preserved
         assert 'data-dazzle-table="Task"' in html
         assert "dz-region--kind-list" in html
-        # config JSON carries every dzTable key with the legacy shape
-        start = html.index("dzTable(")
-        cfg_start = html.index("{", start)
-        cfg_end = html.index("}", cfg_start) + 1
-        config = json.loads(html[cfg_start:cfg_end])
-        assert config == {
-            "sortField": "name",
-            "sortDir": "asc",
-            "inlineEditable": ["name"],
-            "bulkActions": True,
-            "entityName": "Task",
-        }
+
+    def test_mount_emits_no_alpine_bindings(self) -> None:
+        """C2.4: the dzTable Alpine mount is retired — the delegated HM
+        controllers own sort/selection/bulk/cols/resize/edit. Any Alpine
+        binding here would re-split state ownership."""
+        html = _render(
+            Region(
+                kind="list",
+                body=Text("rows"),
+                mount=DzTableMount(table_id="t", endpoint="/api/t"),
+            )
+        )
+        assert "x-data" not in html
+        assert "dzTable" not in html
+        assert "aria-busy" not in html
+        # the dzTable announcer target is gone too (dz-grid.js announces via
+        # [data-dz-grid-announce]; dashboard-builder self-creates its own)
+        assert "dz-live-region" not in html
 
     def test_no_mount_emits_no_controller(self) -> None:
         html = _render(Region(kind="list", body=Text("rows"), data_table="Task"))
         assert "x-data" not in html
         assert "dzTable" not in html
+        assert "data-dz-grid" not in html
         # the plain region is otherwise unchanged
         assert 'data-dazzle-table="Task"' in html
 
@@ -95,31 +106,22 @@ def _build_list_html(**ctx_over: object) -> str:
 
 
 class TestBuildListMount:
-    def test_build_list_mounts_dztable_with_interactive_config(self) -> None:
+    def test_build_list_mounts_grid_root(self) -> None:
         html = _build_list_html(
             bulk_actions=True,
             sort_field="name",
             sort_dir="desc",
             inline_editable=["name"],
         )
-        assert "dzTable(" in html
-        start = html.index("dzTable(")
-        cfg = json.loads(html[html.index("{", start) : html.index("}", start) + 1])
-        assert cfg["bulkActions"] is True
-        assert cfg["sortField"] == "name"
-        assert cfg["sortDir"] == "desc"
-        assert cfg["inlineEditable"] == ["name"]
-        assert cfg["entityName"] == "Task"
-        # the dzTable id matches the region/tbody convention (region_name)
+        assert "data-dz-grid data-dz-grid-url" in html
+        assert 'data-dz-grid-edit-url="/api/task"' in html
+        assert "dzTable(" not in html
+        # the grid id matches the region/tbody convention (region_name)
         assert 'id="task"' in html
 
-    def test_build_list_plain_list_still_mounts_controller(self) -> None:
-        # Legacy always mounts dzTable (it owns the loading spinner + tbody
-        # hydrate, not just sort/bulk). A non-interactive list mounts it too,
-        # with a quiet config.
+    def test_build_list_plain_list_still_mounts_grid_root(self) -> None:
+        # Every full-page list is a grid root (the tbody hydrate + loading
+        # overlay ride the HM contract, not just sort/bulk).
         html = _build_list_html()
-        assert "dzTable(" in html
-        start = html.index("dzTable(")
-        cfg = json.loads(html[html.index("{", start) : html.index("}", start) + 1])
-        assert cfg["bulkActions"] is False
-        assert cfg["inlineEditable"] == []
+        assert "data-dz-grid data-dz-grid-url" in html
+        assert "dzTable(" not in html

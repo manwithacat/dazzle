@@ -30,7 +30,6 @@ See issue #1064 for the full decomposition plan.
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
@@ -166,42 +165,24 @@ class _RenderLayoutMixin:
             data_attr += f' data-dazzle-entity="{ent}" data-dz-entity="{ent}"'
             if r.data_entity_id:
                 data_attr += f' data-dz-entity-id="{ctx.escape_attr(r.data_entity_id)}"'
-        # ADR-0049 D3: when the region carries a dzTable mount, the root gets
-        # the `x-data="dzTable(id, endpoint, config)"` controller wrapper —
-        # the same one the legacy `render_filterable_table` mounted — so the
-        # hydrated rows' sort/bulk/inline/column-visibility bindings resolve.
+        # ADR-0049 D3 → convergence C2.4: when the region carries a grid
+        # mount, the root is an HM grid root — dz-grid.js and its extensions
+        # (all delegated, state-in-DOM) resolve every behaviour against these
+        # attributes. The dzTable Alpine `x-data` wrapper this originally
+        # emitted is retired (its last bindings converged in C2.1–C2.3).
         mount_attr = self._dztable_mount_attrs(r.mount, ctx) if r.mount is not None else ""
         body_html = self._emit(r.body, ctx)  # type: ignore[arg-type]
-        # Task 4e: a controlled list region carries the polite ARIA live region
-        # the dzTable controller announces sort/loading state into
-        # (`getElementById("dz-live-region")`). One per list region.
-        live_region = (
-            '<div id="dz-live-region" aria-live="polite" aria-atomic="true" '
-            'class="visually-hidden"></div>'
-            if r.mount is not None
-            else ""
-        )
-        return f'<section class="{cls}"{mount_attr}{data_attr}>{body_html}{live_region}</section>'
+        return f'<section class="{cls}"{mount_attr}{data_attr}>{body_html}</section>'
 
     @staticmethod
     def _dztable_mount_attrs(m: DzTableMount, ctx: RenderContext) -> str:
-        config = {
-            "sortField": m.sort_field,
-            "sortDir": m.sort_dir,
-            "inlineEditable": list(m.inline_editable),
-            "bulkActions": m.bulk_actions,
-            "entityName": m.entity_name,
-        }
-        config_json = json.dumps(config)
         table_id = ctx.escape_attr(m.table_id)
         endpoint = ctx.escape_attr(m.endpoint)
         return (
             f' id="{table_id}"'
             # Convergence C1.1: `data-dz-grid` marks this region as an HM grid
             # root — dz-grid.js (delegated) owns sort / selection / bulk /
-            # pagination within it. The dzTable Alpine mount stays for the
-            # not-yet-flipped extensions (column-visibility / resize /
-            # inline-edit) until C2/C3.
+            # pagination within it.
             # C1.3: `data-dz-grid-url` opts the grid into URL-synced state —
             # this mount renders ONLY for full-page list surfaces (the one
             # DzTableMount construction site is `_build_list`), which satisfies
@@ -211,8 +192,6 @@ class _RenderLayoutMixin:
             # C2.3: the inline-edit extension's commit base — the entity's
             # API root (commits PUT {base}/{id}, the standard update route).
             f' data-dz-grid-edit-url="{endpoint}"'
-            f' x-data=\'dzTable("{table_id}", "{endpoint}", {config_json})\''
-            ' :aria-busy="loading"'
             ' data-dz-bulk-count="0"'
         )
 

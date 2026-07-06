@@ -273,12 +273,15 @@ class _RenderTablesMixin:
             checkbox_cell = ""
             if t.bulk_select:
                 row_id = ctx.escape_attr(t.row_ids[i]) if t.row_ids else ""
+                # Convergence C2.4: the HM grid selection seam (delegated
+                # dz-grid.js change handler; the checkbox's own .checked IS
+                # the state) — the Alpine toggleRow/selected bindings this
+                # emitted were dzTable's, retired with its mount.
                 checkbox_cell = (
                     f'<td class="dz-tr-checkbox-cell" '
                     f'onclick="event.stopPropagation()">'
                     f'<input type="checkbox" class="dz-tr-checkbox" '
-                    f"@change=\"toggleRow('{row_id}')\" "
-                    f":checked=\"selected.has('{row_id}')\" "
+                    f"data-dz-grid-select data-dz-grid-row-id='{row_id}' "
                     f'aria-label="Select row" />'
                     f"</td>"
                 )

@@ -356,7 +356,11 @@ class TestPaginationFooter:
 
 
 class TestRegionLiveRegion:
-    def test_mounted_region_appends_live_region(self) -> None:
+    def test_no_region_emits_dztable_live_region(self) -> None:
+        """C2.4: the dzTable announcer target (`#dz-live-region`) retired
+        with the Alpine mount — the grid announces via the SR span on its
+        own seam (`[data-dz-grid-announce]`), and dashboard-builder.js
+        self-creates its live region on demand."""
         from dazzle.render.fragment import DzTableMount, Region, Text
 
         html = _render(
@@ -367,10 +371,7 @@ class TestRegionLiveRegion:
                 mount=DzTableMount(table_id="task", endpoint="/api/task"),
             )
         )
-        assert (
-            '<div id="dz-live-region" aria-live="polite" aria-atomic="true" '
-            'class="visually-hidden"></div>'
-        ) in html
+        assert "dz-live-region" not in html
 
     def test_unmounted_region_has_no_live_region(self) -> None:
         from dazzle.render.fragment import Region, Text

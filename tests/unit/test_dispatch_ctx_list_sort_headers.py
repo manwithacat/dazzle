@@ -211,16 +211,18 @@ def test_list_sortable_column_is_grid_sort_button() -> None:
     ) in html
 
 
-def test_list_active_sort_threads_into_controller_config_and_hydrate() -> None:
-    """The active sort is carried client-side by the dzTable controller config
-    and on the skeleton tbody hydrate endpoint (current direction, not 'next')."""
+def test_list_active_sort_threads_into_headers_and_hydrate() -> None:
+    """The active sort is carried in the DOM — the header's aria-sort (the
+    grid controller's state-in-DOM source) and the skeleton tbody hydrate
+    endpoint (current direction, not 'next'). C2.4: the dzTable config JSON
+    that used to duplicate this is gone."""
     # production resolves sort_field from default_sort_field at request time
     # (page_routes.py:1522); the dispatch ctx reads the resolved sort_field.
     table = _table(sort_field="name", sort_dir="desc")
     ctx = _build_dispatch_ctx(_RC(table), object())
     html = _render_list(ctx)
-    assert '"sortField": "name"' in html
-    assert '"sortDir": "desc"' in html
+    assert 'aria-sort="descending"' in html
+    assert "sortField" not in html
     # the hydrate endpoint fetches the current sort
     assert "sort=name&amp;dir=desc" in html or "sort=name&dir=desc" in html
 

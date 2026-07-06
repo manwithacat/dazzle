@@ -158,11 +158,13 @@ def test_table_bulk_select_emits_select_all_th_and_per_row_checkbox() -> None:
     assert "data-dz-grid-select-all" in html
     assert 'aria-label="Select all rows"' in html
     assert "toggleSelectAll" not in html
-    # Per-row checkbox cells with Alpine bindings.
+    # Per-row checkbox cells on the HM selection seam (C2.4: the Alpine
+    # toggleRow/selected bindings retired with the dzTable mount).
     assert html.count('class="dz-tr-checkbox"') == 2
-    assert "@change=\"toggleRow('abc')\"" in html
-    assert "@change=\"toggleRow('def')\"" in html
-    # data-dz-row-id on each <tr> for the dzTable count selector.
+    assert "data-dz-grid-select data-dz-grid-row-id='abc'" in html
+    assert "data-dz-grid-select data-dz-grid-row-id='def'" in html
+    assert "toggleRow" not in html
+    # data-dz-row-id on each <tr> for the grid controller's count selector.
     assert 'data-dz-row-id="abc"' in html
     assert 'data-dz-row-id="def"' in html
 

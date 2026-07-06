@@ -67,7 +67,7 @@ def test_experience_triage_step_renders_list_via_substrate() -> None:
     # It renders the substrate list (not the deleted legacy table chrome).
     assert "dz-region--kind-list" in table_html
     assert 'class="dz-table-body"' in table_html  # the hydrating skeleton tbody
-    assert "dzTable(" in table_html  # the mounted controller
+    assert "data-dz-grid" in table_html  # the HM grid root (C2.4: Alpine mount retired)
 
     # And it composes into the experience inner HTML.
     inner = render_experience_inner_html(exp_ctx, surface_step_html=table_html)

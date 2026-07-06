@@ -121,9 +121,14 @@ class TestThreadedFieldsDriveChrome:
         assert 'data-ref-api="/client"' in html
         assert 'x-init="dzFilterRefSelect($el)"' in html
 
-    def test_inline_editable_reaches_controller_config(self) -> None:
+    def test_inline_editable_mount_carries_no_config(self) -> None:
+        """C2.4: the dzTable config JSON is gone — inline-editable columns
+        reach the rows as per-cell seam spans (`data-dz-grid-edit`, threaded
+        through list_handlers), and the mount only carries the commit base
+        (`data-dz-grid-edit-url`)."""
         html = _render(self._ctx(inline_editable=["name"]))
-        assert '"inlineEditable": ["name"]' in html
+        assert "inlineEditable" not in html
+        assert "data-dz-grid-edit-url" in html
 
     def test_refresh_interval_polls(self) -> None:
         # Convergence C1.1: dz-grid:refresh always joins the trigger list,

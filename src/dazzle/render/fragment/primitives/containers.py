@@ -47,16 +47,16 @@ class Card:
 
 @dataclass(frozen=True, slots=True)
 class DzTableMount:
-    """The `dzTable` Alpine-controller mount for a stateful list Region
-    (ADR-0049 Phase 1, D3).
+    """The HM grid-root mount for a stateful list Region (ADR-0049 D3,
+    Alpine mount retired in convergence C2.4).
 
     When a `Region(kind="list")` carries a `DzTableMount`, the renderer adds
-    `id`, `x-data="dzTable(id, endpoint, config)"`, `:aria-busy="loading"`,
-    and `data-dz-bulk-count="0"` to the region root — so the hydrated rows'
-    `toggleRow`/`startEdit`/`isColumnVisible`/`toggleSort` bindings resolve
-    against the controller (the same one the legacy `render_filterable_table`
-    wrapper mounted). The config JSON shape mirrors the legacy mount:
-    `{sortField, sortDir, inlineEditable, bulkActions, entityName}`.
+    `id`, `data-dz-grid`, `data-dz-grid-url`, `data-dz-grid-edit-url`
+    and `data-dz-bulk-count="0"` to the region root — the delegated HM grid
+    controller and its extensions (dz-grid.js / -cols / -resize / -edit)
+    resolve every behaviour against those attributes. The extra config
+    fields (sort/inline/bulk/entity) are retained on the primitive for the
+    builders that thread them into the Table/toolbar primitives.
     `inline_editable` is a tuple to keep the frozen dataclass hashable.
     """
 
@@ -86,9 +86,9 @@ class Region:
     checker (and htmx `closest [data-dazzle-table]` selectors in
     search/filter fragments) can locate the entity container."""
     mount: DzTableMount | None = None
-    """ADR-0049 D3: optional dzTable controller mount for stateful list
-    regions. When set, the region root carries the `x-data="dzTable(...)"`
-    wrapper. None = a plain (uncontrolled) region — backwards-compatible."""
+    """ADR-0049 D3 → C2.4: optional grid mount for stateful list regions.
+    When set, the region root carries the HM grid-root attributes
+    (`data-dz-grid` etc.). None = a plain (uncontrolled) region."""
     data_entity: str = ""
     """ADR-0049 Phase 2: entity name for a detail region — emitted as
     `data-dazzle-entity`/`data-dz-entity` (the selector tier2 e2e gestures +

@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.95] - 2026-07-06
+
+### Changed
+- **Convergence C2.4 — the dzTable Alpine mount is retired.** The grid
+  region root no longer emits `x-data='dzTable(...)'` (with its config
+  JSON), `:aria-busy="loading"`, or the `#dz-live-region` announcer div —
+  it is an HM grid root and nothing else (`data-dz-grid`,
+  `data-dz-grid-url`, `data-dz-grid-edit-url`, `data-dz-bulk-count`). Every
+  behaviour the mount served is owned by the delegated HM controllers
+  (dz-grid.js + the cols/resize/edit extensions); the peek machinery was
+  already delegated (`hx-on:click`). The embedded static-table checkbox
+  branch (production-unreachable, but public `Table` API) swaps its Alpine
+  `toggleRow`/`selected.has` bindings for the HM selection seam. Active
+  sort state now lives ONLY in the DOM (`aria-sort` on headers) — the
+  config JSON that duplicated it is gone. Six pin tests re-anchored to the
+  no-Alpine contract.
+- Follow-up noted from review: three proactive SR announcements dzTable
+  used to make ("Sorted by X", "Saved", "N items deleted") are not
+  replicated — the grid's live region announces the result window after
+  every action and `aria-sort` conveys sort state; a richer SR pass on the
+  HM controllers is a candidate C3 companion.
+
+### Agent Guidance
+- Grid regions carry NO Alpine scope. Anything needing behaviour inside a
+  list region binds to the delegated HM seams (`data-dz-grid-*`) or uses a
+  window-global helper — an `x-data` on the region root would re-split
+  state ownership and is pinned against.
+
 ## [0.93.94] - 2026-07-06
 
 ### Changed
