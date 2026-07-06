@@ -119,7 +119,7 @@ class TestThreadedFieldsDriveChrome:
             )
         )
         assert 'data-ref-api="/client"' in html
-        assert 'x-init="dzFilterRefSelect($el)"' in html
+        assert "x-init" not in html  # F4e: auto-mounted off data-ref-api
 
     def test_inline_editable_mount_carries_no_config(self) -> None:
         """C2.4: the dzTable config JSON is gone — inline-editable columns

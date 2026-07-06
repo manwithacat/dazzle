@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.118] - 2026-07-06
+
+### Removed
+- **Alpine.js is GONE** (Tier F4e, HM 0.1.48 → 0.1.49). The last island
+  — dzDashboardBuilder, the 875-line dashboard drag/save/picker
+  controller — converted to a vanilla factory
+  (`createDzDashboardBuilder(root)`, mounted per
+  `data-dz-dashboard-builder` root at load + after htmx settles), and
+  the vendored Alpine runtime plus its persist/anchor/collapse/focus
+  plugins (~100KB) left the bundle. `dz-alpine.js` is deleted;
+  `dz-utils.js` carries its four live vanilla blocks (haptics,
+  `window.dz.toast`/`downloadCsv`, `filterRefSelect` — now auto-mounted
+  off `data-ref-api` instead of per-element `x-init` — and the #1233
+  row-action handler). The four mount-less `x-*` directives
+  (flip/pull-to-refresh/swipe/optimistic), the Alpine error handler,
+  the `[x-cloak]` rule, and the #924 initTree bridge went with it (git
+  history has the directive implementations if a consumer wants a
+  vanilla rebuild).
+
+### Changed
+- **Dashboard toolbar and picker are state-in-DOM**: save-state spans
+  key off the button's `data-dz-save-state` via CSS; reset/save/
+  add-card/picker-entry triggers carry `data-dz-action`/
+  `data-dz-add-region` for root delegation. ColorField's hex readout
+  is the new HM `dz-color.js` (the last inline `x-data` straggler).
+  The 10 real-browser dashboard quality gates (drag threshold, pointer
+  math, save lifecycle) were ported to the vanilla mount and pass.
+
+### Agent Guidance
+- **Never author `x-*` attributes** — there is no Alpine runtime.
+  Client behaviour is HM delegated controllers + `dz-utils.js`
+  helpers; state lives in the DOM.
+- The `x-init` mount pattern is dead: auto-mount sweeps key off data
+  attributes (`select[data-ref-api]`, `[data-dz-dashboard-builder]`)
+  at load + `htmx:after:settle`, including the swap target itself.
+- A morph that preserves a mounted root does NOT re-init it — SSR'd
+  chrome under a live builder can go stale (unreachable today; see the
+  F4e review note in dashboard-builder.js before emitting
+  `hx-swap="morph"` at workspace-root level).
+
 ## [0.93.117] - 2026-07-06
 
 ### Fixed

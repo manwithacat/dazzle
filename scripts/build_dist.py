@@ -96,21 +96,14 @@ JS_SOURCES = [
     # instant drill. htmx 4 activates an extension by inclusion (no hx-ext); the
     # `hx-preload="mouseover"` attribute on clickable rows does the rest.
     STATIC / "vendor" / "hx-preload.min.js",
-    # Alpine plugins + Alpine core (order matters: plugins before core).
-    # SortableJS + alpine-sort were removed in #948 cycle 1 — pointer-event
-    # drag in dashboard-builder.js replaced them. workspace-editor.js was
-    # similarly retired. Keep the list tight; the drift gate in
-    # tests/unit/test_asset_bundle.py catches both stale entries (files
-    # in JS_SOURCES that no longer exist on disk OR aren't referenced
-    # from base.html) and missing entries (scripts in base.html that
-    # aren't bundled).
-    STATIC / "vendor" / "alpine-persist.min.js",
-    STATIC / "vendor" / "alpine-anchor.min.js",
-    STATIC / "vendor" / "alpine-collapse.min.js",
-    STATIC / "vendor" / "alpine-focus.min.js",
-    STATIC / "js" / "dz-alpine.js",
+    # Alpine REMOVED (Tier F4e, 2026-07-06): the last island
+    # (dzDashboardBuilder) converted to a vanilla factory and the four
+    # x-* directives had zero mounts — the core + persist/anchor/
+    # collapse/focus plugins (~100KB) left the bundle. dz-utils.js is the
+    # surviving vanilla remainder (haptics + window.dz toast/downloadCsv/
+    # filterRefSelect + the #1233 row-action handler).
+    STATIC / "js" / "dz-utils.js",
     STATIC / "js" / "dashboard-builder.js",
-    STATIC / "vendor" / "alpine.min.js",
     # Dazzle runtime (csrf + a11y + islands + bridge + widget registry)
     # #1337: dz-csrf.js wires the htmx:configRequest CSRF echo. Bundled (not a
     # standalone <script>) so it loads on every app page the dist bundle does —
@@ -156,8 +149,7 @@ ICONS_SOURCES = [
 
 # Framework JS files get comment stripping; vendor files are left as-is.
 FRAMEWORK_JS = {
-    "dz-alpine.js",
-    "workspace-editor.js",
+    "dz-utils.js",
     "dz-csrf.js",
     "dz-a11y.js",
     "dz-islands.js",

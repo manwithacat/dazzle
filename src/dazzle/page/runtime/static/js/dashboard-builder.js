@@ -1,5 +1,8 @@
 /**
- * dashboard-builder.js — Alpine.js controller for spec-governed dashboards.
+ * dashboard-builder.js — vanilla controller for spec-governed dashboards
+ * (Tier F4e: converted from the dzDashboardBuilder Alpine island; a
+ * factory per [data-dz-dashboard-builder] root, mounted at load and
+ * after htmx settles).
  *
  * #948 server-render migration: cards are server-rendered HTML via
  * `<div class="dz-card-wrapper" data-card-id="..." data-card-region="..."
@@ -26,11 +29,16 @@
  *
  * Implements: ux-architect/components/dashboard-grid.md
  */
-document.addEventListener("alpine:init", () => {
-  Alpine.data("dzDashboardBuilder", () => ({
-    // ── Ephemeral UI state ──
-    showPicker: false,
-    saveState: "clean", // clean | dirty | saving | saved | error
+function createDzDashboardBuilder(root) {
+  // Tier F4e: plain factory (was Alpine.data("dzDashboardBuilder")).
+  // State is in the DOM: `showPicker`/`saveState` are accessor
+  // properties (defined after the literal) whose setters mirror to
+  // `data-show-picker` on the root and `data-dz-save-state` on the
+  // save button — CSS drives the picker + toolbar-span visibility.
+  const builder = {
+    // ── Ephemeral UI state (backing fields for the accessors) ──
+    _showPicker: false,
+    _saveState: "clean", // clean | dirty | saving | saved | error
     _saveError: "",
     undoStack: [],
 
@@ -118,12 +126,26 @@ document.addEventListener("alpine:init", () => {
       // Alpine re-established the parent scope, throwing
       // "showPicker is not defined" — fourth ADR-0022 instance after
       // #970 / #972 / #978. Same cure: data-attribute + CSS.
-      const root = this.$el;
-      const syncShowPicker = (v) => {
-        root.dataset.showPicker = v ? "1" : "";
+      root.dataset.showPicker = this._showPicker ? "1" : "";
+
+      // Toolbar + add-card delegation (replaces the Alpine @click
+      // bindings): one listener on the root.
+      this._onActionClick = (e) => {
+        const btn = e.target.closest("[data-dz-action]");
+        if (!btn || !root.contains(btn)) return;
+        const action = btn.getAttribute("data-dz-action");
+        if (action === "reset") this.resetLayout();
+        else if (action === "save") this.save();
+        else if (action === "toggle-picker") this.showPicker = !this.showPicker;
       };
-      syncShowPicker(this.showPicker);
-      this.$watch("showPicker", syncShowPicker);
+      // picker entries carry data-dz-add-region (was an Alpine @click)
+      this._onAddRegionClick = (e) => {
+        const entry = e.target.closest("[data-dz-add-region]");
+        if (!entry || !root.contains(entry)) return;
+        this.addCard(entry.getAttribute("data-dz-add-region"));
+      };
+      root.addEventListener("click", this._onAddRegionClick);
+      root.addEventListener("click", this._onActionClick);
 
       // Click-outside handler for the picker. Replaces the pre-fix
       // `@click.away="showPicker = false"` Alpine binding which evaluated
@@ -146,6 +168,14 @@ document.addEventListener("alpine:init", () => {
     },
 
     destroy() {
+      if (this._onActionClick) {
+        root.removeEventListener("click", this._onActionClick);
+        this._onActionClick = null;
+      }
+      if (this._onAddRegionClick) {
+        root.removeEventListener("click", this._onAddRegionClick);
+        this._onAddRegionClick = null;
+      }
       if (this._onKeydown) {
         document.removeEventListener("keydown", this._onKeydown);
         this._onKeydown = null;
@@ -260,8 +290,10 @@ document.addEventListener("alpine:init", () => {
           if (this.saveState === "saved") this.saveState = "clean";
         }, 1200);
       } catch (err) {
-        this.saveState = "error";
+        // _saveError first — the saveState setter mirrors it into the
+        // save button's title.
         this._saveError = err.message || "Failed to save";
+        this.saveState = "error";
       }
     },
 
@@ -551,7 +583,7 @@ document.addEventListener("alpine:init", () => {
           this._markDirty();
           this._announce("Card moved to position " + (newIdx + 1));
           // Restore focus after the move
-          this.$nextTick(() => cardEl.focus());
+          requestAnimationFrame(() => cardEl.focus());
         }
         return;
       }
@@ -871,5 +903,78 @@ document.addEventListener("alpine:init", () => {
       }
       el.textContent = message;
     },
-  }));
-});
+  };
+
+  Object.defineProperty(builder, "showPicker", {
+    get() {
+      return this._showPicker;
+    },
+    set(v) {
+      this._showPicker = v;
+      root.dataset.showPicker = v ? "1" : "";
+    },
+  });
+
+  Object.defineProperty(builder, "saveState", {
+    get() {
+      return this._saveState;
+    },
+    set(v) {
+      this._saveState = v;
+      const btn = root.querySelector(".dz-workspace-save");
+      if (btn) {
+        btn.setAttribute("data-dz-save-state", v);
+        btn.disabled = v === "clean" || v === "saving" || v === "saved";
+        btn.title = v === "error" ? this._saveError : "";
+      }
+    },
+  });
+
+  return builder;
+}
+
+// ── Mount lifecycle ────────────────────────────────────────────────
+// Alpine used to init/destroy per x-data element; we mount on every
+// `[data-dz-dashboard-builder]` root at load and after htmx settles
+// (the #919/#924 morph seam), destroying builders whose root left the
+// DOM so document/window listeners don't leak across swaps.
+(function () {
+  "use strict";
+  const live = [];
+
+  function mountAll(scope) {
+    for (let i = live.length - 1; i >= 0; i--) {
+      if (!live[i].root.isConnected) {
+        live[i].builder.destroy();
+        live.splice(i, 1);
+      }
+    }
+    const host = scope || document;
+    const roots = Array.from(
+      host.querySelectorAll("[data-dz-dashboard-builder]"),
+    );
+    // querySelectorAll excludes the scope element itself (Alpine's
+    // initTree included it) — cover an hx-target that IS the root.
+    if (host.matches && host.matches("[data-dz-dashboard-builder]"))
+      roots.push(host);
+    roots.forEach((root) => {
+      if (root._dzBuilderMounted) return;
+      root._dzBuilderMounted = true;
+      const builder = createDzDashboardBuilder(root);
+      // exposed for harness/debug introspection (Alpine.$data parity)
+      root._dzBuilder = builder;
+      live.push({ root, builder });
+      builder.init();
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => mountAll(document));
+  } else {
+    mountAll(document);
+  }
+  document.body &&
+    document.body.addEventListener("htmx:after:settle", (e) => {
+      mountAll((e.detail && e.detail.target) || document);
+    });
+})();

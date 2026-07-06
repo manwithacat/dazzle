@@ -172,6 +172,21 @@
     opacity var(--duration-fast) var(--ease-out);
 }
 
+/* Save-state span visibility (Tier F4e: replaces the Alpine
+ * x-cloak/x-show pair) — the button's data-dz-save-state selects
+ * exactly one label span. */
+.dz-workspace-save [data-dz-when] {
+  display: none;
+}
+
+.dz-workspace-save[data-dz-save-state="clean"] [data-dz-when="clean"],
+.dz-workspace-save[data-dz-save-state="dirty"] [data-dz-when="dirty"],
+.dz-workspace-save[data-dz-save-state="saving"] [data-dz-when="saving"],
+.dz-workspace-save[data-dz-save-state="saved"] [data-dz-when="saved"],
+.dz-workspace-save[data-dz-save-state="error"] [data-dz-when="error"] {
+  display: inline-flex;
+}
+
 .dz-workspace-save[data-dz-save-state="clean"] {
   color: var(--colour-text-muted);
   cursor: default;

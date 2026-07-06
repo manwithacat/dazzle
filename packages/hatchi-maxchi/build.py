@@ -104,6 +104,7 @@ JS_SOURCES = [
     "controllers/dz-search-select.js",
     "controllers/dz-money.js",
     "controllers/dz-wizard.js",
+    "controllers/dz-color.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

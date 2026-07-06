@@ -303,7 +303,8 @@ class _RenderFormsMixin:
             f'<select class="dz-ref-picker__select" name="{name}" '
             f'data-ref-api="{ref_api}" '
             f'data-selected-value="{initial_value}" '
-            f'x-init="dz.filterRefSelect($el)"{required_attr}>'
+            # auto-mounted by dz-utils.js off data-ref-api (was x-init)
+            f"{required_attr}>"
             f"{initial_option}"
             f"</select>"
             f"</label>"
@@ -504,12 +505,15 @@ class _RenderFormsMixin:
         name = ctx.escape_attr(c.name)
         init_attr = ctx.escape_attr(c.initial_value)
         required_attr = ' required aria-required="true"' if c.required else ""
+        # State-in-DOM (Tier F4e): the hex readout SSRs the initial value
+        # and dz-color.js mirrors future input — the x-data island retired
+        # with the Alpine runtime.
         inner = (
-            f'<div class="dz-form-color-group" x-data="{{ value: \'{init_attr}\' }}">'
+            f'<div class="dz-form-color-group">'
             f'<input type="color" id="field-{name}" name="{name}" '
-            f'class="dz-form-color-input" x-model="value"{required_attr}>'
-            '<span class="dz-form-color-hex" aria-hidden="true" '
-            f'x-text="value">{ctx.escape(c.initial_value)}</span>'
+            f'class="dz-form-color-input" value="{init_attr}"{required_attr}>'
+            '<span class="dz-form-color-hex" aria-hidden="true">'
+            f"{ctx.escape(c.initial_value)}</span>"
             "</div>"
         )
         return self._widget_label(ctx.escape(c.label), name, inner)
@@ -615,13 +619,11 @@ class _RenderFormsMixin:
         `@click='addCard("name")'` per entry — also single-quoted for
         the same reason. The legacy template uses Jinja's `tojson` to
         emit the name argument; we replicate that with `json.dumps`."""
-        from json import dumps as _json_dumps
-
         title = '<h4 class="dz-card-picker-title">Add a card</h4>'
 
         if p.entries:
             entries_html = "".join(
-                f"<button @click='addCard({_json_dumps(e.name)})' "
+                f'<button data-dz-add-region="{ctx.escape_attr(e.name)}" '
                 f'data-test-id="dz-card-picker-entry" '
                 f'data-test-region="{ctx.escape_attr(e.name)}" '
                 f'class="dz-card-picker-entry">'
@@ -645,14 +647,14 @@ class _RenderFormsMixin:
         section byte-for-byte (Phase 4B.5.b.2.iii).
 
         `<div class="dz-add-card-row">` with a `+` button toggling
-        `showPicker` on the parent `dzDashboardBuilder()` x-data
-        (`@click="showPicker = !showPicker"`), then the embedded
+        `showPicker` on the workspace's dashboard-builder controller
+        (`data-dz-action="toggle-picker"`, root delegation), then the embedded
         CardPicker — visibility CSS-driven per #982 via
         `[data-show-picker="1"]` on the workspace ancestor."""
         picker_html = self._emit(r.picker, ctx)
         return (
             f'<div class="dz-add-card-row">'
-            f'<button @click="showPicker = !showPicker" '
+            f'<button data-dz-action="toggle-picker" '
             f'data-test-id="dz-add-card-trigger" '
             f'class="dz-add-card-button">'
             f'<svg width="16" height="16" fill="none" stroke="currentColor" '

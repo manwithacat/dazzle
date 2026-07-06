@@ -72,15 +72,18 @@ def test_picker_date_vs_datetime() -> None:
     assert '"enableTime":true' in dt_html
 
 
-def test_color_widget_self_contained_alpine() -> None:
+def test_color_widget_state_in_dom() -> None:
+    """F4e: the hex readout mirrors the input via the delegated HM
+    dz-color.js (input event → sibling .dz-form-color-hex textContent).
+    The straggler `x-data value` island retired with the Alpine runtime."""
     fd = {"name": "accent", "label": "Accent", "widget": "color", "default": "#ff0000"}
     assert isinstance(_field_to_primitive(fd), ColorField)
     html = _render(fd)
     assert 'type="color"' in html
     assert 'id="field-accent"' in html
-    assert 'x-model="value"' in html
-    assert "value: '#ff0000'" in html
-    assert "#ff0000" in html  # hex readout
+    assert "x-model" not in html and "x-data" not in html and "x-text" not in html
+    assert 'value="#ff0000"' in html  # SSR'd input value
+    assert ">#ff0000</span>" in html  # SSR'd hex readout
 
 
 def test_color_default_fallback() -> None:

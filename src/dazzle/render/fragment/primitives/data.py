@@ -1961,7 +1961,7 @@ class AddCardRow:
     """The "Add Card" row that anchors the picker popover (Phase 4B.5.b.2.iii).
 
     Emits `<div class="dz-add-card-row">` with a `+` button toggling
-    `showPicker` on the parent `dzDashboardBuilder()` x-data, plus the
+    `showPicker` on the dashboard-builder controller, plus the
     embedded CardPicker. Visibility of the picker is CSS-driven via
     `[data-show-picker="1"]` on the workspace ancestor (#982); this
     primitive doesn't manage that — it just composes the row + picker.
@@ -1977,13 +1977,13 @@ class WorkspaceToolbar:
     """Workspace toolbar row — Reset + Save buttons (Phase 4B.5.b.2.i).
 
     Fixed shape singleton matching the legacy `_content.html` toolbar
-    section. The Alpine state machine `dzDashboardBuilder()`
+    section. The vanilla controller factory `createDzDashboardBuilder`
     parent owns `saveState`, `resetLayout()`, `save()`, `_saveError`;
     this primitive emits the markup that binds to those.
 
-    Save button has five `x-cloak`+`x-show` spans for the saveState
-    states: clean / dirty / saving / saved / error. `x-cloak` gates
-    visibility until Alpine evaluates `x-show` — protects against
+    Save button has five `data-dz-when` spans for the saveState
+    states: clean / dirty / saving / saved / error. CSS gates
+    visibility the span matching the button's data-dz-save-state.
     degraded state (#866) where alpine:init fails to fire (HTMX morph
     race, layout-JSON parse error, etc.) and the browser's default
     `display: inline` would otherwise stack every status label
@@ -2008,7 +2008,7 @@ class WorkspaceShell:
     """The outer `.dz-workspace` wrapper (Phase 4B.5.b.1).
 
     Emits the dashboard chrome shell:
-      - Outer `<div class="dz-workspace" x-data="dzDashboardBuilder()" ...>`
+      - Outer `<div class="dz-workspace" data-dz-dashboard-builder ...>`
         with `data-workspace-name` (always) and optional `data-fold-count`.
       - Heading row: `<h2 class="dz-workspace-title">` + optional
         primary-actions row (`<div class="dz-workspace-primary-actions">`
@@ -2044,7 +2044,7 @@ class CardPicker:
         the attribute (matching legacy `#963` convention) so embedded
         `"` chars from `tojson` don't terminate the attribute mid-value.
       - A `dz-card-picker-title` heading.
-      - One `<button class="dz-card-picker-entry" @click='addCard(...)'>`
+      - One `<button class="dz-card-picker-entry" data-dz-add-region=...>` (root-delegated addCard)
         per entry, with `data-test-id` + `data-test-region` for the
         Playwright harness.
       - A `dz-card-picker-empty` fallback when entries is empty.

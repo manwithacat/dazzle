@@ -1,13 +1,13 @@
 """Tests for #980 — guard against `htmx is not defined` race in JS callsites.
 
-Background: htmx.min.js and dz-alpine.js both use `defer`, so document
+Background: htmx.min.js and dz-utils.js both use `defer`, so document
 order should make htmx available — but cache misses, extension-loaded
 scripts, or aggressive script blockers can race. Several Alpine
 component methods call `htmx.ajax(...)` directly in user-event handlers;
 without a guard the user gets a silent ReferenceError mid-action.
 
 Fix per #980: every `htmx.ajax(...)` / `htmx.process(...)` /
-`htmx.swap(...)` call in dz-alpine.js or other dz JS files must be
+`htmx.swap(...)` call in dz-utils.js or other dz JS files must be
 guarded by a `typeof htmx !== "undefined"` check (or be inside a
 function that early-returns when htmx is missing). This test scans
 the JS for un-guarded uses.
@@ -69,8 +69,8 @@ def _is_guarded(js: str, call_pos: int, *, window: int = 1500) -> bool:
 
 
 def test_htmx_calls_in_dz_alpine_are_guarded() -> None:
-    """Every htmx.X(...) call in dz-alpine.js must be preceded by a guard."""
-    path = JS_DIR / "dz-alpine.js"
+    """Every htmx.X(...) call in dz-utils.js must be preceded by a guard."""
+    path = JS_DIR / "dz-utils.js"
     raw = path.read_text()
     js = _strip_comments(raw)
     unguarded: list[str] = []
@@ -83,7 +83,7 @@ def test_htmx_calls_in_dz_alpine_are_guarded() -> None:
             line_no = raw[:call_text_idx].count("\n") + 1 if call_text_idx >= 0 else 0
             unguarded.append(f"line ~{line_no}: htmx.{match.group(1)}(...)")
     assert not unguarded, (
-        "Unguarded `htmx.X(...)` calls in dz-alpine.js (#980 — silent "
+        "Unguarded `htmx.X(...)` calls in dz-utils.js (#980 — silent "
         "ReferenceError on script-load-order race):\n"
         + "\n".join(f"  - {u}" for u in unguarded)
         + '\n\nWrap each in `if (typeof htmx === "undefined") return;` '

@@ -30,7 +30,7 @@ import pytest
 pytestmark = pytest.mark.gate
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DZ_ALPINE = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "js" / "dz-alpine.js"
+DZ_ALPINE = REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static" / "js" / "dz-utils.js"
 
 
 def _helper_block() -> str:
@@ -38,7 +38,9 @@ def _helper_block() -> str:
     js = DZ_ALPINE.read_text()
     start = js.find("window.dz.filterRefSelect = function")
     assert start >= 0, "missing dz.filterRefSelect helper"
-    end = js.find("\nwindow.dzFilterRefSelect", start)
+    # F4e: the bare-name alias died with the x-init mounts; the helper
+    # now ends at the auto-mount block.
+    end = js.find("// Auto-mount", start)
     assert end > start
     return js[start:end]
 

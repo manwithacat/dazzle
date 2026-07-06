@@ -1,4 +1,4 @@
-/* dazzle v0.93.117 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.118 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -6570,6 +6570,16 @@ color var(--duration-fast) var(--ease-out),
 border-color var(--duration-fast) var(--ease-out),
 opacity var(--duration-fast) var(--ease-out);
 }
+.dz-workspace-save [data-dz-when] {
+display: none;
+}
+.dz-workspace-save[data-dz-save-state="clean"] [data-dz-when="clean"],
+.dz-workspace-save[data-dz-save-state="dirty"] [data-dz-when="dirty"],
+.dz-workspace-save[data-dz-save-state="saving"] [data-dz-when="saving"],
+.dz-workspace-save[data-dz-save-state="saved"] [data-dz-when="saved"],
+.dz-workspace-save[data-dz-save-state="error"] [data-dz-when="error"] {
+display: inline-flex;
+}
 .dz-workspace-save[data-dz-save-state="clean"] {
 color: var(--colour-text-muted);
 cursor: default;
@@ -9130,9 +9140,6 @@ color: var(--colour-brand-contrast);
 }
 }
 @layer components {
-[x-cloak] {
-display: none !important;
-}
 #app,
 .dz-app {
 min-height: 100vh;

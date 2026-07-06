@@ -1,15 +1,10 @@
 {
   "_schema": {
-    "description": "SHA-256 of every file in src/dazzle/page/runtime/static/vendor/. CI gate test_vendor_hashes.py recomputes these and fails on drift; scripts/update_vendors.py regenerates entries it touches (htmx core + 4 extensions, idiomorph, lucide) as part of its auto-update PR. Other entries (alpine, flatpickr, tom-select, etc.) are vendored manually \u2014 to update one of those, run scripts/update_vendor_hashes.py after replacing the file.",
     "algorithm": "sha256",
-    "covers": "every .js and .css file under src/dazzle/page/runtime/static/vendor/"
+    "covers": "every .js and .css file under src/dazzle/page/runtime/static/vendor/",
+    "description": "SHA-256 of every file in src/dazzle/page/runtime/static/vendor/. CI gate test_vendor_hashes.py recomputes these and fails on drift; scripts/update_vendors.py regenerates entries it touches (htmx core + 4 extensions, idiomorph, lucide) as part of its auto-update PR. Other entries (alpine, flatpickr, tom-select, etc.) are vendored manually \u2014 to update one of those, run scripts/update_vendor_hashes.py after replacing the file."
   },
   "files": {
-    "alpine-anchor.min.js": "sha256:0a6f42b49db459a8fe4aee31bf7a4c907d664ccb735d500f63c81eb60e010030",
-    "alpine-collapse.min.js": "sha256:c7661d4e2cf0465e3cd693190debb5f592ac72dcc4cfe650581273767558b27b",
-    "alpine-focus.min.js": "sha256:d8739e0897812f0dcbce03c95efbde2d2478ba327ec53fb8af2d936bc09d7c1f",
-    "alpine-persist.min.js": "sha256:e77d932c52ce616c2a5c5dc45530a0221911a31aab48a179e8680932d4d3aa47",
-    "alpine.min.js": "sha256:899842782a7fd16fcc2d7a7c877ff9ec159394044c87b158b2ef132786606932",
     "flatpickr.css": "sha256:847e19bf7d5529fd8a30e26f214a6120c1cc8578df4cea7ae5405be87e76b101",
     "flatpickr.min.js": "sha256:f8dd3f8f0ef355d62bd21f2a0a8d0c6c1cae055f5610403b5c894ed771687d28",
     "htmx.min.js": "sha256:26382eb1b57b52105e4e9394799e79ac1f52548cc32d4c58d34eabd34f0c46f0",

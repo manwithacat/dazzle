@@ -2,7 +2,7 @@
 
 Safari ignores the `<a download>` attribute for same-origin responses
 with `Content-Type: text/csv`, rendering the CSV inline and breaking
-the workspace-context-preservation UX. The helper in dz-alpine.js
+the workspace-context-preservation UX. The helper in dz-utils.js
 forces a fetch + Blob + click flow that works on all browsers.
 
 This source-grep test pins the contract so future refactors don't
@@ -22,7 +22,7 @@ JS_PATH = (
     / "runtime"
     / "static"
     / "js"
-    / "dz-alpine.js"
+    / "dz-utils.js"
 )
 
 

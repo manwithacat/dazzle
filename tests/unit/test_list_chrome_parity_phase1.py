@@ -275,7 +275,7 @@ class TestListFilterBar:
         )
         assert 'name="filter[client]"' in html
         assert 'data-ref-api="/client"' in html
-        assert 'x-init="dzFilterRefSelect($el)"' in html
+        assert "x-init" not in html  # F4e: auto-mounted off data-ref-api
 
     def test_labels_present(self) -> None:
         html = _render(self._bar((self._select_col(),)))

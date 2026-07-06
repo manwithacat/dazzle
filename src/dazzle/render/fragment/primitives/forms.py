@@ -90,7 +90,7 @@ class SearchSelect:
     Emits the exact DOM contract the fidelity scorer's interaction check
     keys off (`search-input-{name}`, `search-results-{name}`,
     `hx-indicator`, `delay:` debounce, an empty-state prompt, and
-    `aria-invalid` error wiring). The Alpine open/close + htmx wiring is
+    `aria-invalid` error wiring). The open/close (dz-search-select.js) + htmx wiring is
     driven by the delegated HM `dz-search-select.js` controller (state-in-DOM: `data-dz-open` on the widget root).
 
     `initial_value` is the persisted FK id; `initial_label` the display
@@ -126,7 +126,7 @@ class RefPicker:
     (sufficient for enum), RefPicker carries a `ref_api` URL pointing
     at the related entity's list endpoint. Options are populated
     client-side at render time by the existing `dz.filterRefSelect`
-    machinery in `dz-alpine.js`.
+    machinery in `dz-utils.js` (auto-mounted off `data-ref-api`).
 
     `initial_label` lets EDIT forms display the currently-selected
     record's display field without an extra round-trip on render —
@@ -154,8 +154,8 @@ class FileUpload:
     Renders as a `<div data-dz-widget="file-upload">` carrying a
     hidden `<input>` that holds the FK to a stored Document (or any
     file-resource entity) once upload completes. The drop-zone UI
-    + multipart POST to `upload_url` is wired by Alpine
-    (`dz.fileUpload` in `dz-alpine.js`); this primitive emits the
+    + multipart POST to `upload_url` was wired by the retired dzFileUpload
+    Alpine island (never mounted; orphan-swept 2026-07-06) — this primitive emits the
     DOM contract the legacy Jinja path already produces.
 
     `initial_value` carries the persisted file URL/key in EDIT mode

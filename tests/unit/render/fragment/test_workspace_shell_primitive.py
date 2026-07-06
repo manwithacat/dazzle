@@ -3,7 +3,7 @@
 
 Pins the chrome contract emitted by `_emit_workspace_shell`:
 
-  - `<div class="dz-workspace" x-data="dzDashboardBuilder()" ...>`
+  - `<div class="dz-workspace" data-dz-dashboard-builder ...>`
     outer wrapper carrying the Alpine state machine + workspace name
     + optional fold count.
   - `<div class="dz-workspace-heading">` with `<h2 class="dz-workspace-title">`
@@ -29,13 +29,14 @@ def _render(ws: WorkspaceShell) -> str:
     return FragmentRenderer().render(ws)
 
 
-def test_workspace_shell_emits_outer_wrapper_with_alpine_x_data() -> None:
+def test_workspace_shell_emits_outer_wrapper_with_builder_marker() -> None:
     """The outer `<div class="dz-workspace">` carries
-    `x-data="dzDashboardBuilder()"` — the Alpine root that owns
+    `data-dz-dashboard-builder` — the vanilla controller root that owns
     saveState / isDragging / isResizing / showPicker."""
     html = _render(WorkspaceShell(workspace_name="dashboard", title="X", body=Text("")))
     assert '<div class="dz-workspace"' in html
-    assert 'x-data="dzDashboardBuilder()"' in html
+    assert "data-dz-dashboard-builder" in html
+    assert "x-data" not in html
 
 
 def test_workspace_shell_carries_workspace_name_data_attribute() -> None:

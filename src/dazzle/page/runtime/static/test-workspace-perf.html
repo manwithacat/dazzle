@@ -24,13 +24,8 @@
   <script defer src="vendor/htmx-ext-remove-me.js"></script>
 
   <!-- Alpine plugins + Alpine core — deferred -->
-  <script defer src="vendor/alpine-persist.min.js"></script>
-  <script defer src="vendor/alpine-anchor.min.js"></script>
-  <script defer src="vendor/alpine-collapse.min.js"></script>
-  <script defer src="vendor/alpine-focus.min.js"></script>
-  <script defer src="js/dz-alpine.js"></script>
+  <script defer src="js/dz-utils.js"></script>
   <script defer src="js/dashboard-builder.js"></script>
-  <script defer src="vendor/alpine.min.js"></script>
 
   <!-- Framework runtime + bridges — deferred -->
   <script defer src="js/dz-a11y.js"></script>
@@ -47,8 +42,8 @@
     document.addEventListener("DOMContentLoaded", () => {
       performance.mark("perf-harness:dom-content-loaded");
     });
-    document.addEventListener("alpine:init", () => {
-      performance.mark("perf-harness:alpine-init");
+    document.addEventListener("DOMContentLoaded", () => {
+      performance.mark("perf-harness:runtime-init");
     });
     window.addEventListener("load", () => {
       performance.mark("perf-harness:window-load");

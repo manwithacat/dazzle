@@ -88,23 +88,19 @@ _WORKSPACE_CONTEXT_SCRIPT_TEMPLATE = _load_static("workspace_context_script.html
 
 # Workspace toolbar — emitted byte-for-byte by `_emit_workspace_toolbar`
 # (Phase 4B.5.b.2.i). Fixed shape: Reset button + Save button with
-# five x-cloak+x-show saveState spans (clean/dirty/saving/saved/error).
+# five data-dz-when saveState spans (clean/dirty/saving/saved/error),
+# shown one-at-a-time by CSS off the button's data-dz-save-state.
 # Spinner SVG (24×24) + checkmark SVG (20×20) are inlined verbatim
 # from the legacy `_content.html` template.
 _WORKSPACE_TOOLBAR_HTML = (
     '<div class="dz-workspace-toolbar">'
     '<div class="dz-workspace-toolbar-spacer"></div>'
-    '<button @click="resetLayout()" class="dz-workspace-reset">Reset</button>'
-    '<button @click="save()" '
-    ":disabled=\"saveState === 'clean' || saveState === 'saving' || "
-    "saveState === 'saved'\" "
-    ':data-dz-save-state="saveState" '
-    ":title=\"saveState === 'error' ? _saveError : ''\" "
+    '<button data-dz-action="reset" class="dz-workspace-reset">Reset</button>'
+    '<button data-dz-action="save" data-dz-save-state="clean" disabled '
     'class="dz-workspace-save">'
-    "<span x-cloak x-show=\"saveState === 'clean'\">Saved</span>"
-    "<span x-cloak x-show=\"saveState === 'dirty'\">Save layout</span>"
-    "<span x-cloak x-show=\"saveState === 'saving'\" "
-    'class="dz-workspace-save-busy">'
+    '<span data-dz-when="clean">Saved</span>'
+    '<span data-dz-when="dirty">Save layout</span>'
+    '<span data-dz-when="saving" class="dz-workspace-save-busy">'
     '<svg class="dz-workspace-save-busy-icon" viewBox="0 0 24 24" fill="none">'
     '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" '
     'stroke-width="4"/>'
@@ -113,16 +109,16 @@ _WORKSPACE_TOOLBAR_HTML = (
     "</svg>"
     "Saving"
     "</span>"
-    "<span x-cloak x-show=\"saveState === 'saved'\" "
-    'class="dz-workspace-save-busy">'
+    '<span data-dz-when="saved" class="dz-workspace-save-busy">'
     '<svg class="dz-workspace-save-busy-icon" viewBox="0 0 20 20" fill="currentColor">'
     '<path fill-rule="evenodd" '
     'd="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 '
-    '011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>'
+    '011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" '
+    'clip-rule="evenodd"/>'
     "</svg>"
     "Saved"
     "</span>"
-    "<span x-cloak x-show=\"saveState === 'error'\">Retry</span>"
+    '<span data-dz-when="error">Retry</span>'
     "</button>"
     "</div>"
 )
@@ -338,7 +334,7 @@ class _RenderShellMixin:
         )
         # #1294 — built-in sidebar toggle. Emitted at the start of the
         # leading area so the sidebar nav is reachable (and collapsible)
-        # on every app-shell page. The JS controller (dz-alpine.js) wires
+        # on every app-shell page. The HM controller (dz-app-shell.js) wires
         # the click → flip `data-dz-sidebar` on `.dz-app-shell` + persist
         # the `dz_sidebar` cookie; aria-expanded is synced on load + click.
         toggle_html = ""
@@ -465,7 +461,7 @@ class _RenderShellMixin:
         by the parent `dzDashboardBuilder()` x-data; this primitive
         emits the markup that binds to it.
 
-        Five `x-cloak`+`x-show` spans cover the saveState states:
+        Five `data-dz-when` spans cover the saveState states:
         clean / dirty / saving / saved / error. The two busy states
         (`saving`, `saved`) carry their own SVG icons (spinner +
         checkmark respectively)."""
@@ -559,7 +555,7 @@ class _RenderShellMixin:
 
         return (
             f'<div class="dz-workspace" '
-            f'x-data="dzDashboardBuilder()" '
+            f"data-dz-dashboard-builder "
             f'data-workspace-name="{ctx.escape_attr(w.workspace_name)}"'
             f"{fold_attr}>"
             f'<div class="dz-workspace-heading">'

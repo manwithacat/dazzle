@@ -40,11 +40,12 @@ def test_ref_picker_required_emits_required_attr() -> None:
     assert "required" in html
 
 
-def test_ref_picker_emits_alpine_init_hook() -> None:
-    """The select must carry x-init="dz.filterRefSelect($el)" so the
-    existing client-side fetch machinery picks it up."""
+def test_ref_picker_carries_ref_api_for_the_auto_mount() -> None:
+    """F4e: dz-utils.js auto-mounts every select[data-ref-api] at load
+    and after htmx settles — no per-element x-init."""
     html = _render(RefPicker(name="x", label="X", ref_api=URL("/a")))
-    assert "dz.filterRefSelect" in html
+    assert 'data-ref-api="/a"' in html
+    assert "x-init" not in html
 
 
 def test_ref_picker_emits_dz_ref_picker_class() -> None:

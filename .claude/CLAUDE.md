@@ -375,7 +375,7 @@ When authoring or editing a `guide` (per-persona onboarding overlays), read `doc
 
 ## UI Invariants
 
-- **Alpine.js is deprecated for new code** (ratified 2026-07-06). Client behaviour follows the HM Hyperpart idiom: delegated document-level vanilla controllers, state in the DOM (attributes/`.checked`/`aria-*`), server-owned rendering. Never add an `x-data`/`@click`/`x-show` binding — the morph path strips Alpine-applied classes, and `x-data` scope boundaries have caused production-dead bindings. Remaining Alpine islands (dzMoney/dzWizard/dzDashboardBuilder + small form scopes; dzConfirmGate converted to HM dz-confirm-gate.js in Tier F1) convert opportunistically as their HM Hyperparts land; the vendored Alpine is removed once the last island converts.
+- **Alpine.js is deprecated for new code** (ratified 2026-07-06). Client behaviour follows the HM Hyperpart idiom: delegated document-level vanilla controllers, state in the DOM (attributes/`.checked`/`aria-*`), server-owned rendering. Never add an `x-data`/`@click`/`x-show` binding — the morph path strips Alpine-applied classes, and `x-data` scope boundaries have caused production-dead bindings. ALL Alpine islands converted and the vendored Alpine runtime REMOVED (Tier F4e): client behaviour is HM delegated controllers + dz-utils.js (haptics, window.dz toast/downloadCsv/filterRefSelect, row-action handler). Never author x-* attributes.
 
 - **Taste (HaTchi-MaXchi)**: the house aesthetic is defined in `docs/reference/taste.md` (9 principles → TASTE-n rules → judged rubric). Read it before any styling work in framework CSS. The blind parity gate is `dazzle qa taste-panel` (fleet vs dialect references; baseline `dev_docs/taste/baseline-2026-07-02.md`); rubric source of truth is `src/dazzle/core/taste_rubric.py` (drift-gated by `tests/unit/test_taste_doc_drift.py`).
 - **Card safety**: any new region template, dashboard layout change, or fragment primitive must satisfy the 8 invariants in `docs/reference/card-safety-invariants.md`. The scanners in `src/dazzle/testing/ux/contract_checker.py` enforce them, and the composite gate `tests/unit/test_htmx_workspace_composite.py` runs them on the stitched post-HTMX DOM. Regions emit zero chrome + zero title; the dashboard slot owns both. Tests run on the composite DOM, not isolated templates.
@@ -413,4 +413,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.93.117 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.93.118 | **Python**: 3.12+ | **Status**: Production Ready

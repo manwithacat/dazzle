@@ -87,7 +87,7 @@
     // zombie root behind" (length should be 1 for the typical
     // workspace, more if nested components are present).
     if (typeof document === "undefined") return [];
-    var nodes = document.querySelectorAll("[x-data]");
+    var nodes = document.querySelectorAll("[data-dz-dashboard-builder], [data-dz-widget]");
     var out = [];
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
@@ -101,7 +101,7 @@
       out.push({
         tagName: n.tagName,
         id: n.id || null,
-        xData: n.getAttribute("x-data"),
+        xData: n.getAttribute("data-dz-widget") || "dashboard-builder",
         proxyId: dataIdentity(selector),
       });
     }

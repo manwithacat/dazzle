@@ -2,15 +2,14 @@
 for the typed `WorkspaceToolbar` primitive.
 
 The toolbar is a fixed-shape singleton: Reset button + Save button
-with five `x-cloak`+`x-show` saveState spans (clean / dirty / saving /
+with five `data-dz-when` saveState spans (clean / dirty / saving /
 saved / error). The Alpine state machine that drives it (saveState,
 resetLayout, save, _saveError) is owned by the parent
-`dzDashboardBuilder()` x-data on the WorkspaceShell wrapper.
+dashboard-builder controller on the WorkspaceShell wrapper (F4e).
 """
 
 from __future__ import annotations
 
-from dazzle.http.runtime.renderers.html_normalise import diff_summary
 from dazzle.render.fragment import FragmentRenderer, WorkspaceToolbar
 
 # The legacy `_content.html` toolbar block, extracted verbatim. Pinned
@@ -46,10 +45,11 @@ def _render() -> str:
     return FragmentRenderer().render(WorkspaceToolbar())
 
 
-def test_workspace_toolbar_byte_equivalent_to_legacy() -> None:
-    """The typed primitive's output normalises to the same string as
-    the legacy `_content.html` toolbar block."""
-    assert diff_summary(_LEGACY_TOOLBAR_HTML, _render()) is None
+# The byte-parity-with-legacy test was RETIRED in Tier F4e: the toolbar
+# contract deliberately changed from Alpine bindings to state-in-DOM
+# (data-dz-action triggers + data-dz-when spans keyed off the save
+# button's data-dz-save-state). The structural pins below hold the new
+# contract; tests/unit/test_dashboard_builder_f4e.py pins it end-to-end.
 
 
 def test_workspace_toolbar_carries_outer_class() -> None:
@@ -58,37 +58,33 @@ def test_workspace_toolbar_carries_outer_class() -> None:
     assert '<div class="dz-workspace-toolbar">' in _render()
 
 
-def test_workspace_toolbar_emits_reset_button_with_alpine_handler() -> None:
-    """Reset button binds to Alpine's `resetLayout()` method on the
-    parent `dzDashboardBuilder()` x-data."""
+def test_workspace_toolbar_emits_reset_button_with_action_trigger() -> None:
+    """Reset button carries data-dz-action for the dashboard-builder's
+    root click delegation (F4e; was an Alpine @click)."""
     html = _render()
-    assert '@click="resetLayout()"' in html
+    assert 'data-dz-action="reset"' in html
     assert 'class="dz-workspace-reset"' in html
     assert ">Reset<" in html
 
 
-def test_workspace_toolbar_save_button_binds_full_alpine_state() -> None:
-    """Save button must carry the full state binding contract:
-    `@click="save()"`, `:disabled` (clean/saving/saved disable it),
-    `:data-dz-save-state="saveState"` (CSS keys off this), and
-    `:title` (error tooltip from `_saveError`)."""
+def test_workspace_toolbar_save_button_ssrs_state() -> None:
+    """Save button SSRs the clean state, disabled; the controller's
+    saveState setter drives data-dz-save-state/disabled/title from
+    there (F4e state-in-DOM)."""
     html = _render()
-    assert '@click="save()"' in html
-    assert ":disabled=\"saveState === 'clean'" in html
-    assert ':data-dz-save-state="saveState"' in html
-    assert ":title=\"saveState === 'error' ? _saveError : ''\"" in html
+    assert 'data-dz-action="save"' in html
+    assert 'data-dz-save-state="clean"' in html
+    assert "disabled" in html
 
 
-def test_workspace_toolbar_emits_five_x_cloak_x_show_spans() -> None:
-    """One span per saveState value: clean, dirty, saving, saved,
-    error. `x-cloak` gates visibility until Alpine evaluates `x-show`
-    — protects against degraded state (#866) where alpine:init fails
-    and the browser would otherwise stack every label simultaneously."""
+def test_workspace_toolbar_emits_five_state_spans() -> None:
+    """One span per saveState value, keyed by data-dz-when — CSS shows
+    exactly the span matching the button's data-dz-save-state, so a
+    degraded (no-JS) page shows only the SSR'd clean label (#866's
+    stacked-labels failure can't occur)."""
     html = _render()
     for state in ("clean", "dirty", "saving", "saved", "error"):
-        assert f"x-cloak x-show=\"saveState === '{state}'\"" in html, (
-            f"missing x-cloak/x-show binding for state {state!r}"
-        )
+        assert f'data-dz-when="{state}"' in html, f"missing state span for {state!r}"
 
 
 def test_workspace_toolbar_busy_states_carry_their_own_svg_icons() -> None:

@@ -27,12 +27,11 @@
     .pass { color: #4cb782; font-weight: bold; }
     .fail { color: #eb5757; font-weight: bold; }
   </style>
-  {# #947 cycle 2 — dz-alpine.js wires the destroy+init handler
-     on htmx:after:settle. Loaded so the bridge gates can verify
-     the same handler runs the framework uses in production. #}
-  <script defer src="js/dz-alpine.js"></script>
+  {# Tier F4e — the vanilla dashboard-builder factory mounts per
+     [data-dz-dashboard-builder] root; dz-utils.js carries the
+     window.dz helpers. Alpine removed. #}
+  <script defer src="js/dz-utils.js"></script>
   <script defer src="js/dashboard-builder.js"></script>
-  <script defer src="vendor/alpine.min.js"></script>
   {# #947 cycle 1 — dz-debug introspection helper. Loaded so the
      bridge gates in test_alpine_htmx_bridge.py can read proxy
      identity via window.dzDebug.dataIdentity(). Cheap (~1.5KB);
@@ -45,7 +44,7 @@
      real production code path (DOM as source of truth) rather than
      the pre-#948 JSON island + x-for projection. #}
   <div class="dz-workspace"
-       x-data="dzDashboardBuilder()"
+       data-dz-dashboard-builder
        data-workspace-name="test_dashboard">
     <div class="dz-workspace-toolbar">
       <div style="flex:1;">
@@ -158,14 +157,14 @@
 
   <script>
   // #948: gates poke DOM state directly where the data lives there
-  // (cards count, ids, ordering). Where state is genuinely Alpine
-  // (drag mid-flight, saveState lifecycle), they still poke `comp.X`
-  // through `Alpine.$data(root)`.
+  // (cards count, ids, ordering). Where state is genuinely internal
+  // (drag mid-flight, saveState lifecycle), they poke `comp.X` through
+  // the builder instance exposed on the root (F4e; was Alpine.$data).
   window.qualityGates = {
     results: {},
 
     _comp() {
-      return Alpine.$data(document.querySelector('[x-data]'));
+      return document.querySelector("[data-dz-dashboard-builder]")._dzBuilder;
     },
 
     _allCards() {

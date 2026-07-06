@@ -538,7 +538,8 @@ class _RenderInteractiveMixin:
                     f'data-dz-grid-filter="{name}" '
                     f'data-ref-api="{ctx.escape_attr(col.ref_api)}" '
                     f'data-selected-value="{sel}" '
-                    'x-init="dzFilterRefSelect($el)">'
+                    # auto-mounted by dz-utils.js off data-ref-api
+                    ">"
                     '<option value="">All</option></select>'
                 )
             options_html = '<option value="">All</option>'

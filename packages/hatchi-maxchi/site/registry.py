@@ -764,6 +764,10 @@ HYPERPARTS: list[Hyperpart] = [
         "invalid field needs no modifier class — the red border keys off "
         "<code>aria-invalid=&quot;true&quot;</code>, the same attribute assistive tech reads.",
         tags=("forms",),
+        # The colour widget's hex-readout mirror rides the field family
+        # (delegated input listener on .dz-form-color-input; Tier F4e —
+        # replaced the last inline Alpine x-data straggler).
+        extensions=("controllers/dz-color.js",),
     ),
     Hyperpart(
         "slider",

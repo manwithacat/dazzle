@@ -173,7 +173,7 @@ def _bench_browser_harness(
                             load_ms: t.loadEventEnd - t.navigationStart,
                             firstPaint_ms: fp ? fp.startTime : null,
                             firstContentfulPaint_ms: fcp ? fcp.startTime : null,
-                            alpineInit_ms: marks['perf-harness:alpine-init'] || null,
+                            runtimeInit_ms: marks['perf-harness:runtime-init'] || null,
                             cardsRendered_ms: marks['perf-harness:18-cards-rendered'] || null,
                             domNodes: document.getElementsByTagName('*').length,
                             cardCount: document.querySelectorAll('[data-card-id]').length,
@@ -220,7 +220,7 @@ def _bench_browser_harness(
         "ttfb_ms": _agg("ttfb_ms"),
         "firstPaint_ms": _agg("firstPaint_ms"),
         "firstContentfulPaint_ms": _agg("firstContentfulPaint_ms"),
-        "alpineInit_ms": _agg("alpineInit_ms"),
+        "runtimeInit_ms": _agg("runtimeInit_ms"),
         "cardsRendered_ms": _agg("cardsRendered_ms"),
         "domContentLoaded_ms": _agg("domContentLoaded_ms"),
         "load_ms": _agg("load_ms"),
@@ -276,7 +276,7 @@ def _print_browser_results(results: dict | None, label: str) -> None:
         "ttfb_ms",
         "firstPaint_ms",
         "firstContentfulPaint_ms",
-        "alpineInit_ms",
+        "runtimeInit_ms",
         "cardsRendered_ms",
         "domContentLoaded_ms",
         "load_ms",
@@ -309,7 +309,7 @@ def main() -> None:
     browser_realistic = _bench_browser_harness("test-workspace-perf.html")
     _print_browser_results(browser_realistic, "realistic (full script chain, 18 cards)")
 
-    # Minimal harness: just dashboard-builder.js + alpine, 4 cards.
+    # Minimal harness: dashboard-builder.js + dz-utils.js, 4 cards.
     # Useful as a reference point for what's "irreducible" overhead.
     browser_minimal = _bench_browser_harness("test-dashboard.html")
     _print_browser_results(browser_minimal, "minimal (just Alpine + builder, 4 cards)")

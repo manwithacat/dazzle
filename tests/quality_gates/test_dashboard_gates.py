@@ -46,9 +46,10 @@ def browser_page(server):
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1280, "height": 800})
         page.goto(server)
-        # Wait for Alpine to load and initialize the dashboard component
+        # Wait for the vanilla builder to mount (F4e; was Alpine init)
         page.wait_for_function(
-            "typeof Alpine !== 'undefined' && document.querySelector('[data-card-id]') !== null",
+            "document.querySelector('[data-dz-dashboard-builder]')?._dzBuilder !== undefined "
+            "&& document.querySelector('[data-card-id]') !== null",
             timeout=10000,
         )
         yield page
@@ -124,7 +125,7 @@ class TestDashboardIntegrationGates:
         """
         browser_page.evaluate(f"""
             (() => {{
-                const comp = Alpine.$data(document.querySelector('[x-data]'));
+                const comp = document.querySelector('[data-dz-dashboard-builder]')._dzBuilder;
                 comp.drag = null;
                 comp.resize = null;
                 comp.undoStack = [];
@@ -174,12 +175,12 @@ class TestDashboardIntegrationGates:
 
     def _get_phase(self, browser_page):
         return browser_page.evaluate(
-            "Alpine.$data(document.querySelector('[x-data]'))?.drag?.phase || null"
+            "document.querySelector('[data-dz-dashboard-builder]')._dzBuilder?.drag?.phase || null"
         )
 
     def _get_drag(self, browser_page):
         return browser_page.evaluate(
-            "JSON.parse(JSON.stringify(Alpine.$data(document.querySelector('[x-data]'))?.drag || null))"
+            "JSON.parse(JSON.stringify(document.querySelector('[data-dz-dashboard-builder]')._dzBuilder?.drag || null))"
         )
 
     def test_pointermove_window_transitions_phase(self, browser_page):

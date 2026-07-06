@@ -455,7 +455,7 @@ implemented_by = [
 [concepts.alpine_components]
 category = "Runtime Contract"
 definition = """
-Alpine.js components registered in dz-alpine.js that manage UI state.
+Alpine.js components in dashboard-builder.js / dz-utils.js that manage UI state.
 Replaced the former dz.js micro-runtime in v0.45.0.
 """
 runtime_behaviour = """
@@ -463,7 +463,7 @@ Alpine.js is DEPRECATED for new code (2026-07-06; CLAUDE.md UI Invariants).
 Client behaviour follows the HM Hyperpart idiom: delegated vanilla
 controllers, state in the DOM, server-owned rendering.
 
-Client widget controllers (HM delegated; the Alpine islands all converted by Tier F4d — dz-alpine.js retains only directives/haptics)
+Client widget controllers (HM delegated; the Alpine islands all converted by Tier F4d — dz-alpine.js DELETED in F4e; dz-utils.js carries the vanilla helpers)
 (each converts as its HM Hyperpart lands):
 
 dz-money.js (HM) — Currency field (minor unit conversion; converted from the dzMoney Alpine island, Tier F4c)
@@ -488,7 +488,7 @@ by dz-toast.js (render + auto-dismiss). The file-upload widget's
 controller is unimplemented (tracked follow-up).
 """
 implemented_by = [
-    "dazzle_page.runtime.static.js.dz-alpine.js",
+    "dazzle_page.runtime.static.js.dz-utils.js",
     "dazzle_page.runtime.static.js.dz-toast.js",
     "packages.hatchi-maxchi.controllers (grid + extensions, via the HM dist)",
 ]
