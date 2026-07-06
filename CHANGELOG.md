@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.93] - 2026-07-06
+
+### Fixed
+- **Separator `<hr>` rendered as a blank line** (HM 0.1.27 → 0.1.28): the UA
+  stylesheet gives `hr` `margin-inline: auto`, and inside the gallery's
+  flex-column demo stack those auto margins absorbed ALL free space — 1px
+  tall, zero wide. `.dz-separator` now pins `margin-inline: 0`. Why no test
+  caught it: a pixel baseline bakes the collapse in as the expected image —
+  the new geometry gate `test_no_visible_element_collapses_to_zero_paint`
+  sweeps every visible gallery element (checkVisibility-aware) for zero-size
+  paint boxes and flagged exactly this bug on the pre-fix tree.
+- **Gallery prose showed `dz-` names against unprefixed snippets**: the
+  per-Hyperpart notes and blurbs now go through the same `apply_prefix`
+  transform as the partial and exchange contracts.
+
+### Added
+- **Gallery Setup section** (`#setup`, collapsed above the catalogue): what a
+  copied snippet needs — the CDN/SRI bundle, the icon symbol sheet
+  once-per-page, and the server half (endpoint contracts + idiomorph), with
+  a link to the README. The sprite snippet comment now points at it.
+- **Community + agent meta for the standalone repo** (rides the subtree
+  sync): `CONTRIBUTING.md` (the repo is a synced mirror — PRs are reviewed
+  in place, then ported into the monorepo with `Co-authored-by` credit and
+  closed on the next sync; the standard read-only-mirror arrangement),
+  `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), a PR template,
+  `AGENTS.md` (agent entry point: parse `site/registry.py`, don't scrape
+  the gallery; the gate list; mirror warning), and `llms.txt` on the Pages
+  site per llmstxt.org.
+
+### Changed
+- The grid Hyperpart's headline blurb is non-technical again (features in
+  one breath, no seam/filename detail) — the wiring lives in the Agent
+  Implementation Guidance disclosure, not the summary.
+
 ## [0.93.92] - 2026-07-06
 
 ### Added

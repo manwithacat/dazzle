@@ -1,4 +1,4 @@
-/* dazzle v0.93.92 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.93 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -1319,6 +1319,7 @@ border-color: color-mix(in oklab, var(--colour-danger) 25%, var(--colour-border)
 border: none;
 border-block-start: 1px solid var(--colour-border);
 margin-block: var(--space-lg);
+margin-inline: 0;
 }
 .dz-separator--vertical {
 display: inline-block;

@@ -55,3 +55,53 @@ def test_no_form_control_clips_its_text_vertically(page) -> None:  # type: ignor
         "text line can't fit, so it's clipped (a fixed height too small once "
         "padding + borders are subtracted):\n" + "\n".join(str(c) for c in clipped)
     )
+
+
+def test_no_visible_element_collapses_to_zero_paint(page) -> None:  # type: ignore[no-untyped-def]
+    """Every VISIBLE element in a demo must paint a nonzero box. A pixel
+    baseline can't catch this class of bug (it bakes the collapse in as the
+    expected image): the 2026-07-06 case was the separator <hr>, whose UA
+    `margin-inline: auto` absorbed all free space inside the flex-column
+    demo stack — 1px tall, ZERO wide, rendered as a blank line.
+
+    Exemptions are structural: unrendered subtrees (closed details/dialog,
+    [hidden], display:none/visibility:hidden), table plumbing (col/colgroup),
+    and the SR-only clip pattern (1px boxes pass the nonzero check anyway).
+    """
+    collapsed = page.evaluate(
+        """() => {
+          const out = [];
+          for (const host of document.querySelectorAll('.hm-preview')) {
+            for (const el of host.querySelectorAll('*')) {
+              const tag = el.tagName.toLowerCase();
+              if (['col', 'colgroup', 'option', 'optgroup', 'template',
+                   'script', 'style', 'use', 'defs', 'symbol'].includes(tag)) continue;
+              if (el.closest('[hidden]')) continue;
+              if (el.closest('details:not([open])') && !el.matches('summary') &&
+                  !el.closest('summary')) continue;
+              if (el.closest('dialog:not([open])')) continue;
+              // checkVisibility covers display:none ANCESTORS too — a child
+              // of a hidden subtree keeps its own computed display value.
+              if (el.checkVisibility && !el.checkVisibility()) continue;
+              const s = getComputedStyle(el);
+              if (s.display === 'none' || s.visibility === 'hidden') continue;
+              const r = el.getBoundingClientRect();
+              if (r.width === 0 || r.height === 0) {
+                // an empty inline text holder with no styling is not a bug
+                const painted = s.borderTopWidth !== '0px' || s.borderLeftWidth !== '0px'
+                  || s.backgroundColor !== 'rgba(0, 0, 0, 0)' || el.children.length > 0
+                  || (el.textContent || '').trim() !== '';
+                if (!painted) continue;
+                const comp = el.closest('.hm-comp');
+                out.push((comp ? comp.id + ': ' : '') + tag + '.' + (el.className || '')
+                  + ' -> ' + r.width + 'x' + r.height);
+              }
+            }
+          }
+          return out;
+        }"""
+    )
+    assert not collapsed, (
+        "visible elements painting a zero-size box (the collapsed-<hr> bug class):\n  "
+        + "\n  ".join(collapsed)
+    )

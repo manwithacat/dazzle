@@ -85,6 +85,10 @@
   border: none;
   border-block-start: 1px solid var(--colour-border);
   margin-block: var(--space-lg);
+  /* The UA gives <hr> margin-inline auto; in a column flexbox those auto
+   * margins absorb ALL free space and the rule's width collapses to zero
+   * (rendered as a blank line). Pin the inline margins. */
+  margin-inline: 0;
 }
 
 .dz-separator--vertical {

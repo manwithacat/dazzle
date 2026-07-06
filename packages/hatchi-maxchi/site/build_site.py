@@ -97,7 +97,9 @@ def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
 # A copied sprite snippet is blank without the icon sheet — surface the
 # dependency IN the snippet so it travels with a paste (the README note does
 # not). Prepended once to any partial that uses the sprite `<use>` form.
-_SPRITE_NOTE = "<!-- icons: include the icon sheet once per page (see Setup) -->\n"
+_SPRITE_NOTE = (
+    "<!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->\n"
+)
 
 
 _BY_ID = {h.id: h for h in HYPERPARTS}
@@ -657,6 +659,11 @@ body { background: var(--colour-bg); color: var(--colour-text);
   padding: .5rem .7rem; border-left: 2px solid var(--colour-brand); background: var(--colour-brand-soft);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
 .hm-anatomy code { font-family: var(--font-mono); font-size: .9em; }
+.hm-setup { margin: 0 0 1.5rem; border: 1px solid var(--colour-border); border-radius: var(--radius-md); }
+.hm-setup > summary { cursor: pointer; padding: .6rem .9rem; font-weight: 600; font-size: var(--text-sm); }
+.hm-setup-body { padding: 0 .9rem .75rem; font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 46rem; }
+.hm-setup-body code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
+.hm-setup-body a { color: var(--colour-brand); }
 .hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .75rem; }
 .hm-notes code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
 /* Agent Implementation Guidance — the per-Hyperpart notes, collapsed behind
@@ -803,14 +810,17 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         notes = (
             '<details class="hm-guidance">'
             "<summary>Agent Implementation Guidance</summary>"
-            f'<div class="hm-notes">{c.notes}</div></details>'
+            # notes prose references classes/attributes/events by name —
+            # transform it like the partial, or the guidance shows dz-*
+            # names against an unprefixed gallery.
+            f'<div class="hm-notes">{apply_prefix(c.notes, prefix)}</div></details>'
             if c.notes
             else ""
         )
         body_parts.append(
             f'<section class="hm-comp" id="{c.id}">'
             f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
-            f'<p class="blurb">{_html.escape(c.blurb)}</p>'
+            f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
             f'<div class="hm-preview">{live}</div>'
             f'<div class="hm-code">{copy_button}'
             f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
@@ -883,6 +893,29 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
     </div>
   </div>
 </div>
+<details class="hm-setup" id="setup">
+  <summary>Setup — what a copied snippet needs</summary>
+  <div class="hm-setup-body">
+    <p><strong>1. The bundle.</strong> One CSS + one JS file, hosted on the
+    jsDelivr CDN pinned to a release tag. Every
+    <a href="https://github.com/manwithacat/hatchi-maxchi/releases">release</a>'s
+    notes carry the ready-to-paste <code>&lt;link&gt;</code>/<code>&lt;script&gt;</code>
+    snippet with that version's SRI hashes; or vendor
+    <code>dist/hatchi-maxchi.css</code> + <code>dist/hatchi-maxchi.js</code>.</p>
+    <p><strong>2. Icons.</strong> Snippets reference icons as
+    <code>&lt;svg&gt;&lt;use href="#name"&gt;&lt;/svg&gt;</code> against a symbol
+    sheet included <em>once per page</em> — copy
+    <a href="sprite_sheet.svg"><code>sprite_sheet.svg</code></a> inline into your
+    layout (this page embeds it at the top of <code>&lt;body&gt;</code>).</p>
+    <p><strong>3. The server half.</strong> Interactive Hyperparts are htmx4
+    partials: your endpoints must return the fragments documented in each
+    component's <em>Endpoint contract</em>. Tables/lists that swap with
+    <code>hx-swap="innerMorph"</code> need the idiomorph extension. This gallery
+    runs a static mock instead of a server, so everything here works offline.</p>
+    <p>Full details (theming, prefixing, releases):
+    <a href="https://github.com/manwithacat/hatchi-maxchi#readme">the README</a>.</p>
+  </div>
+</details>
 {"".join(body_parts)}
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
@@ -895,6 +928,31 @@ Every snippet is the live example — copy it into any htmx4 app.
 </body>
 </html>"""
     (out_dir / "index.html").write_text(doc + "\n", encoding="utf-8")
+
+    # llms.txt (https://llmstxt.org): the LLM-facing map of this site —
+    # points agents at the machine-readable sources instead of the HTML.
+    (out_dir / "llms.txt").write_text(
+        "# HaTchi-MaXchi\n\n"
+        "> An htmx4-native design system. The unit of reuse is a Hyperpart: a\n"
+        "> server-rendered partial + its endpoint exchange contracts + an\n"
+        "> optional vanilla-JS controller. No client framework.\n\n"
+        "## Sources\n\n"
+        "- [Component registry (source of truth)]"
+        "(https://github.com/manwithacat/hatchi-maxchi/blob/main/site/registry.py):"
+        " canonical markup + exchange contracts per component — parse this,"
+        " don't scrape the gallery\n"
+        "- [AGENTS.md]"
+        "(https://github.com/manwithacat/hatchi-maxchi/blob/main/AGENTS.md):"
+        " consuming + contributing with a coding agent\n"
+        "- [README]"
+        "(https://github.com/manwithacat/hatchi-maxchi#readme):"
+        " setup, theming, prefixing, releases\n"
+        "- [CONTRIBUTING]"
+        "(https://github.com/manwithacat/hatchi-maxchi/blob/main/CONTRIBUTING.md):"
+        " this repo is a synced mirror of the Dazzle monorepo; PRs land via a"
+        " credited port\n",
+        encoding="utf-8",
+    )
 
     (out_dir / "README.md").write_text(_readme(), encoding="utf-8")
     print(f"built {len(HYPERPARTS)} Hyperparts -> {out_dir}/index.html")

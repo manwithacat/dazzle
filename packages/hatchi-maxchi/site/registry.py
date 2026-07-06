@@ -203,18 +203,12 @@ HYPERPARTS: list[Hyperpart] = [
         "grid",
         "Data table",
         "Data",
-        "A server-rendered data table: sortable headers, a filter bar, and row "
-        "selection with a bulk-action bar — all HTML over the wire, on a real "
-        "<table>. The tbody hydrates its rows over the wire (hx-get on load); "
-        "search, sortable headers, filters, row selection (per page, or ALL matching "
-        "rows with exclusions), bulk actions, and pagination are live (dz-grid.js, "
-        "delegated + state-in-DOM) and compose into one server query. State is "
-        "URL-synced (data-dz-grid-url): deep-linkable, Back walks grid states. "
-        "Three OPTIONAL extensions ride the same seams: column visibility "
-        "(dz-grid-cols.js — the Columns menu), column resize (dz-grid-resize.js "
-        "— drag a header's right edge), and inline cell editing (dz-grid-edit.js "
-        "— dblclick a cell; commits a single-field PUT to the entity's standard "
-        "update route). Each persists per grid; the core grid works without them.",
+        "A server-rendered data table on a real <table>, all HTML over the "
+        "wire: search, sortable headers, filters, row selection (one page or "
+        "every matching row), bulk actions, pagination, and deep-linkable "
+        "URL-synced state. Optional extensions add column visibility, column "
+        "resize, and inline cell editing. The wiring lives in the Agent "
+        "Implementation Guidance below.",
         # Full width (no hm-measure cap): a data table demos its column
         # behaviour — resize needs room to move, and real tables run wide.
         '<div class="hm-stack">'

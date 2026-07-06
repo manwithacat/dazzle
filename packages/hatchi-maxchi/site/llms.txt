@@ -1,0 +1,12 @@
+# HaTchi-MaXchi
+
+> An htmx4-native design system. The unit of reuse is a Hyperpart: a
+> server-rendered partial + its endpoint exchange contracts + an
+> optional vanilla-JS controller. No client framework.
+
+## Sources
+
+- [Component registry (source of truth)](https://github.com/manwithacat/hatchi-maxchi/blob/main/site/registry.py): canonical markup + exchange contracts per component — parse this, don't scrape the gallery
+- [AGENTS.md](https://github.com/manwithacat/hatchi-maxchi/blob/main/AGENTS.md): consuming + contributing with a coding agent
+- [README](https://github.com/manwithacat/hatchi-maxchi#readme): setup, theming, prefixing, releases
+- [CONTRIBUTING](https://github.com/manwithacat/hatchi-maxchi/blob/main/CONTRIBUTING.md): this repo is a synced mirror of the Dazzle monorepo; PRs land via a credited port
