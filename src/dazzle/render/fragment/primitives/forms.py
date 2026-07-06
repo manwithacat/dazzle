@@ -91,7 +91,7 @@ class SearchSelect:
     keys off (`search-input-{name}`, `search-results-{name}`,
     `hx-indicator`, `delay:` debounce, an empty-state prompt, and
     `aria-invalid` error wiring). The Alpine open/close + htmx wiring is
-    self-contained (`x-data="{ open: false }"`), no external controller.
+    driven by the delegated HM `dz-search-select.js` controller (state-in-DOM: `data-dz-open` on the widget root).
 
     `initial_value` is the persisted FK id; `initial_label` the display
     text shown in the visible input on EDIT (matches the legacy

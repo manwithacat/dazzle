@@ -957,6 +957,57 @@ HYPERPARTS: list[Hyperpart] = [
         composes=("field",),
     ),
     Hyperpart(
+        "search-select",
+        "Search select",
+        "Forms",
+        "The FK typeahead: a debounced combobox whose results panel opens "
+        "on focus and closes on blur — state is one aria-expanded "
+        "attribute; selection is an htmx exchange per row.",
+        '<div class="dz-search-select hm-measure" data-dz-widget="search_select">'
+        '<input type="hidden" name="company" id="hm-ss-field" value="">'
+        '<input type="text" id="hm-ss-input" class="dz-search-select-input" '
+        'placeholder="Search companies…" autocomplete="off" role="combobox" '
+        'aria-expanded="false" aria-controls="hm-ss-results" '
+        'aria-autocomplete="list" aria-haspopup="listbox" '
+        'hx-get="/mock/typeahead" '
+        'hx-trigger="keyup changed delay:300ms" '
+        'hx-target="#hm-ss-results" hx-params="q">'
+        '<div id="hm-ss-results" role="listbox" '
+        'aria-label="Company suggestions" class="dz-search-select-results">'
+        '<div class="dz-search-select-prompt" role="option" aria-disabled="true">'
+        "Type at least 3 characters to search..."
+        "</div></div></div>",
+        notes="State-in-DOM: <code>dz-search-select.js</code> flips "
+        "<code>aria-expanded</code> on focusin/focusout (200ms blur grace "
+        "— result rows are htmx affordances, so the click must land before "
+        "the panel hides) and CSS hides the panel off the attribute. Each "
+        "result row carries its own <code>hx-get</code> to a select "
+        "endpoint that swaps the panel with a confirmation and fills the "
+        "hidden FK input server-side. The form posts the hidden input, "
+        "never the visible text.",
+        tags=("forms", "htmx"),
+        controller="controllers/dz-search-select.js",
+        exchanges=(
+            Exchange(
+                method="GET",
+                endpoint="/app/fragments/search?source={source}&q=",
+                trigger="keyup on the combobox, debounced (`delay:{n}ms`)",
+                response="result rows — each a `dz-search-result-row` div "
+                "carrying its own hx-get to the select endpoint — or the "
+                "`dz-search-result-empty` prompt",
+                swap="innerHTML",
+            ),
+            Exchange(
+                method="GET",
+                endpoint="/app/fragments/select?source={source}&id={id}",
+                trigger="a click on a result row",
+                response="the `dz-select-result-confirm` line replacing the "
+                "panel contents (the hidden FK input is set alongside)",
+                swap="innerHTML",
+            ),
+        ),
+    ),
+    Hyperpart(
         "date-range",
         "Date range",
         "Forms",

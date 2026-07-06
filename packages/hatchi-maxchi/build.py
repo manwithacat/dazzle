@@ -81,6 +81,7 @@ CSS_SOURCES = [
     ("components", "components/search-box.css"),
     ("components", "components/form-chrome.css"),
     ("components", "components/date-range.css"),
+    ("components", "components/search-select.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]
@@ -100,6 +101,7 @@ JS_SOURCES = [
     "controllers/dz-grid-edit.js",
     "controllers/dz-app-shell.js",
     "controllers/dz-confirm-gate.js",
+    "controllers/dz-search-select.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

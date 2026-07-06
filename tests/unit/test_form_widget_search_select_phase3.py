@@ -75,8 +75,13 @@ def test_endpoint_and_typeahead_wiring() -> None:
     assert 'hx-params="q"' in html
     # min_chars>0 → hx-vals carries the floor.
     assert "hx-vals='{\"min_chars\": 3}'" in html
-    # Self-contained Alpine open/close (no external controller).
-    assert 'x-data="{ open: false }"' in html
+    # Open/close is state-in-DOM (F4b): SSR aria-expanded="false", the
+    # delegated dz-search-select.js controller flips it on focusin/out
+    # and CSS hides the results panel off the attribute. No Alpine.
+    assert "x-data" not in html
+    assert "@focus" not in html and "@blur" not in html
+    assert 'aria-expanded="false"' in html
+    assert "x-show" not in html and "x-cloak" not in html
     assert 'data-dz-widget="search_select"' in html
 
 

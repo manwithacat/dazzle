@@ -19,6 +19,8 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
+    "/mock/typeahead": '<div class="search-result-row" hx-get="/mock/typeahead/select" hx-target="#hm-ss-results" hx-swap="innerHTML"><div class="search-result-name">Aurora Energy Ltd</div><div class="search-result-secondary">Company no. 09182736</div></div><div class="search-result-row" hx-get="/mock/typeahead/select" hx-target="#hm-ss-results" hx-swap="innerHTML"><div class="search-result-name">Aurora Foods plc</div></div>',
+    "/mock/typeahead/select": '<div class="select-result-confirm">Selected: Aurora Energy Ltd</div>',
     "/mock/search": '<div class="search-box-result-count">2 results</div><ul class="search-box-result-list" role="list"><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Aurora <mark>Substation</mark></span><ul class="search-box-result-snippets"><li class="search-box-result-snippet"><span class="search-box-result-snippet-field">Region:</span><span class="search-box-result-snippet-text">North grid, <mark>substation</mark> cluster A</span></li></ul></a></li><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Beacon <mark>Substation</mark></span></a></li></ul>',
     "/mock/drawer/detail": '<h3>Aurora Substation</h3><p>Region: North · Load: 82%</p><p>Commissioned 2019; last inspection 14 June. Two open work orders.</p>',
     "/mock/shell/dashboard": '<div class="stack" data-gap="md"><h1>Dashboard</h1><div class="auto-grid" style="--grid-min: 10rem"><div class="card card-body"><div class="card-label">Outstanding</div><div class="card-value">£12,450</div></div><div class="card card-body"><div class="card-label">Paid</div><div class="card-value">£48,900</div></div></div></div>',
@@ -2578,5 +2580,54 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       primary.removeAttribute("href");
       primary.setAttribute("aria-disabled", "true");
     }
+  });
+})();
+
+/* ── controllers/search-select.js ── */
+/* HYPERPART: search-select */
+/*
+ * search-select — open/close for the typeahead combobox.
+ *
+ * Delegated from document; state lives in the DOM as `data-open` on
+ * the `.search-select` ROOT (the CSS hides the results panel off the
+ * attribute). The root — not the input — carries the state because the
+ * select exchange OOB-replaces the input element (fragment_routes
+ * `hx-swap-oob`), which would orphan any input-anchored state; nothing
+ * ever swaps the root. `aria-expanded` on the combobox input is kept in
+ * sync as the a11y mirror whenever the input still exists.
+ *
+ * Focus entering the input opens; focus leaving the widget closes after
+ * a 200ms grace — result rows are htmx affordances (a click blurs the
+ * input first), so an immediate close would hide the row before its
+ * request fires. Re-focusing within the grace keeps it open.
+ */
+(function () {
+  "use strict";
+
+  function setOpen(root, open) {
+    if (open) root.setAttribute("data-open", "true");
+    else root.removeAttribute("data-open");
+    var input = root.querySelector(".search-select-input");
+    if (input) input.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  document.addEventListener("focusin", function (evt) {
+    var input =
+      evt.target.closest && evt.target.closest(".search-select-input");
+    if (!input) return;
+    var root = input.closest(".search-select");
+    if (root) setOpen(root, true);
+  });
+
+  document.addEventListener("focusout", function (evt) {
+    var input =
+      evt.target.closest && evt.target.closest(".search-select-input");
+    if (!input) return;
+    var root = input.closest(".search-select");
+    if (!root) return;
+    setTimeout(function () {
+      if (root.contains(document.activeElement)) return; // re-focused
+      setOpen(root, false);
+    }, 200);
   });
 })();

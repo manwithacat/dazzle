@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.115] - 2026-07-06
+
+### Changed
+- **Alpine island retired: search-select `{ open }`** (Tier F4b, HM
+  0.1.45 → 0.1.46). The FK typeahead's open/close is state-in-DOM —
+  `data-dz-open` on the widget ROOT, flipped by the new delegated
+  `dz-search-select.js` (focusin opens; focusout closes after the 200ms
+  grace that lets a result-row click land; re-focusing within the grace
+  keeps it open — strictly better than the Alpine blur timeout).
+  `aria-expanded` on the combobox input is kept as the a11y mirror. The
+  state is deliberately root-carried, not input-carried: the review
+  caught that the select exchange OOB-replaces the input element, which
+  would have wedged an input-anchored panel permanently open. The
+  `dz-search-select-*` CSS promoted to HM `search-select.css`; new
+  gallery entry with both Exchanges declared and a real-browser test of
+  the row-click-within-grace path.
+
+### Agent Guidance
+- **Overlay/panel open-state must live on an element no exchange
+  swaps** — audit every hx-swap-oob in the widget's exchanges before
+  anchoring state; the widget ROOT is usually the only safe carrier.
+- The fleet's search-select row-selection wiring is independently
+  broken (pre-existing, #1547) — fix the field_name plumbing there
+  before relying on the select exchange.
+
 ## [0.93.114] - 2026-07-06
 
 ### Changed

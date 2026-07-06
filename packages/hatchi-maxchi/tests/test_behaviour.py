@@ -1509,3 +1509,31 @@ def test_related_tables_tab_strip_rides_dz_tabs(page) -> None:  # type: ignore[n
     assert page.is_hidden("#hm-rel-invoices")
     assert page.get_attribute(files_tab, "aria-current") == "true"
     assert "contract.pdf" in page.inner_text("#hm-rel-files")
+
+
+def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # type: ignore[no-untyped-def]
+    """F4b: the typeahead's open state is one aria-expanded attribute.
+    Focus opens the panel; a result-row click (which blurs the input)
+    must land its htmx select exchange within the 200ms grace; focusing
+    elsewhere closes the panel."""
+    root = "#search-select .search-select"
+    inp = f"{root} input[type=text]"
+    panel = f"{root} .search-select-results"
+
+    assert page.is_hidden(panel)
+    page.focus(inp)
+    assert page.is_visible(panel)
+
+    page.fill(inp, "auro")
+    page.wait_for_timeout(450)  # past the 300ms debounce
+    assert "Aurora Energy" in page.inner_text(panel)
+
+    page.click(f"{panel} .search-result-row >> nth=0")
+    page.wait_for_timeout(300)
+    # the select exchange landed within the 200ms grace (a 0ms close
+    # would hide the row before its click fired)...
+    assert "Selected: Aurora Energy Ltd" in page.inner_text(panel)
+    # ...and by +300ms the panel has closed (Alpine-parity: the blur
+    # grace expired; the confirm line lives inside the closed panel).
+    assert page.is_hidden(panel)
+    page.reload()
