@@ -1,4 +1,4 @@
-/* dazzle v0.93.98 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.99 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -2420,6 +2420,7 @@ letter-spacing: 0.05em;
 .dz-stack {
 display: flex;
 flex-direction: column;
+gap: var(--space-md);
 }
 .dz-stack--gap-none { gap: 0; }
 .dz-stack--gap-sm { gap: var(--space-sm); }
@@ -3766,6 +3767,100 @@ text-decoration: none;
 }
 .dz-tr-empty-link:hover {
 text-decoration: underline;
+}
+}
+@layer components {
+.dz-cluster {
+display: flex;
+flex-wrap: wrap;
+align-items: center;
+gap: var(--space-md);
+}
+.dz-cluster[data-dz-align="start"] {
+align-items: flex-start;
+}
+.dz-cluster[data-dz-align="end"] {
+align-items: flex-end;
+}
+.dz-cluster[data-dz-align="baseline"] {
+align-items: baseline;
+}
+.dz-cluster[data-dz-justify="end"] {
+justify-content: flex-end;
+}
+.dz-cluster[data-dz-justify="between"] {
+justify-content: space-between;
+}
+.dz-cluster[data-dz-justify="center"] {
+justify-content: center;
+}
+.dz-stack[data-dz-gap="xs"],
+.dz-cluster[data-dz-gap="xs"],
+.dz-auto-grid[data-dz-gap="xs"] {
+gap: var(--space-xs);
+}
+.dz-stack[data-dz-gap="sm"],
+.dz-cluster[data-dz-gap="sm"],
+.dz-auto-grid[data-dz-gap="sm"] {
+gap: var(--space-sm);
+}
+.dz-stack[data-dz-gap="md"],
+.dz-cluster[data-dz-gap="md"],
+.dz-auto-grid[data-dz-gap="md"] {
+gap: var(--space-md);
+}
+.dz-stack[data-dz-gap="lg"],
+.dz-cluster[data-dz-gap="lg"],
+.dz-auto-grid[data-dz-gap="lg"] {
+gap: var(--space-lg);
+}
+.dz-stack[data-dz-gap="xl"],
+.dz-cluster[data-dz-gap="xl"],
+.dz-auto-grid[data-dz-gap="xl"] {
+gap: var(--space-xl);
+}
+.dz-sidebar-layout {
+display: flex;
+flex-wrap: wrap;
+gap: var(--space-lg);
+}
+.dz-sidebar-layout > :first-child {
+flex-basis: var(--dz-sidebar-width, 16rem);
+flex-grow: 1;
+}
+.dz-sidebar-layout > :last-child {
+flex-basis: 0;
+flex-grow: 999;
+min-inline-size: var(--dz-sidebar-content-min, 50%);
+}
+.dz-sidebar-layout[data-dz-side="end"] > :first-child {
+flex-basis: 0;
+flex-grow: 999;
+min-inline-size: var(--dz-sidebar-content-min, 50%);
+}
+.dz-sidebar-layout[data-dz-side="end"] > :last-child {
+flex-basis: var(--dz-sidebar-width, 16rem);
+flex-grow: 1;
+min-inline-size: 0;
+}
+.dz-auto-grid {
+display: grid;
+grid-template-columns: repeat(
+auto-fit,
+minmax(min(var(--dz-grid-min, 14rem), 100%), 1fr)
+);
+gap: var(--space-md);
+}
+.dz-center {
+box-sizing: content-box;
+margin-inline: auto;
+max-inline-size: 65ch;
+}
+.dz-center[data-dz-measure="wide"] {
+max-inline-size: 90ch;
+}
+.dz-center[data-dz-measure="full"] {
+max-inline-size: none;
 }
 }
 @layer components {

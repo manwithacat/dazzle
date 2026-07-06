@@ -51,6 +51,7 @@ CSS_SOURCES = [
     ("components", "components/pagination.css"),
     ("components", "components/skeleton.css"),
     ("components", "components/table.css"),
+    ("components", "components/layout.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]
@@ -102,6 +103,12 @@ PUBLIC_CSS_PROPS = (
     "--dz-progress-value",
     "--dz-list-rows",
     "--dz-touch-target-min",
+    # Layout knobs (L1): the sidebar pane width + wrap threshold, and the
+    # auto-grid column minimum. Checked against strip-collisions like the
+    # rest (no bare --sidebar-width/--grid-min/--sidebar-content-min exist).
+    "--dz-sidebar-width",
+    "--dz-sidebar-content-min",
+    "--dz-grid-min",
 )
 
 

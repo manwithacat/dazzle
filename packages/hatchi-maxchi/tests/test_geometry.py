@@ -105,3 +105,65 @@ def test_no_visible_element_collapses_to_zero_paint(page) -> None:  # type: igno
         "visible elements painting a zero-size box (the collapsed-<hr> bug class):\n  "
         + "\n  ".join(collapsed)
     )
+
+
+class TestLayoutPrimitives:
+    """L1 geometry: the Layout Hyperparts must actually lay out — the bug
+    class this guards is Dazzle's substrate layout classes, which shipped
+    as markup with ZERO rules (declared gaps silently never applied)."""
+
+    def test_stack_applies_the_gap_scale(self, page) -> None:  # type: ignore[no-untyped-def]
+        gap = page.eval_on_selector('#stack [data-gap="md"]', "e => getComputedStyle(e).rowGap")
+        assert gap == "12px", f"stack md gap must be the --space-md token: {gap}"
+
+    def test_cluster_wraps_and_gaps(self, page) -> None:  # type: ignore[no-untyped-def]
+        st = page.eval_on_selector(
+            "#cluster .cluster",
+            "e => { const s = getComputedStyle(e); return s.flexWrap + ' ' + s.columnGap; }",
+        )
+        assert st == "wrap 8px", st
+
+    def test_sidebar_wraps_under_its_content_minimum(self, page) -> None:  # type: ignore[no-untyped-def]
+        """Wide: side + content share one row. Narrow: the content wraps to
+        a full-width row — no media query involved (the container width is
+        forced via JS, so the assertion is viewport-independent)."""
+        ys = page.eval_on_selector(
+            "#sidebar-layout .sidebar-layout",
+            """e => {
+              const [side, content] = e.children;
+              const row = (w) => {
+                e.style.width = w;
+                return [side.getBoundingClientRect().top === content.getBoundingClientRect().top,
+                        Math.round(content.getBoundingClientRect().width / e.getBoundingClientRect().width * 100)];
+              };
+              const wide = row('40rem'), narrow = row('20rem');
+              e.style.width = '';
+              return { wideSameRow: wide[0], narrowSameRow: narrow[0], narrowPct: narrow[1] };
+            }""",
+        )
+        assert ys["wideSameRow"], "at 40rem the side and content must share a row"
+        assert not ys["narrowSameRow"], "at 20rem the content must wrap under the side"
+        assert ys["narrowPct"] >= 95, "the wrapped content must take the full row"
+
+    def test_auto_grid_packs_columns_to_fit(self, page) -> None:  # type: ignore[no-untyped-def]
+        cols = page.eval_on_selector(
+            "#auto-grid .auto-grid",
+            """e => {
+              const count = (w) => {
+                e.style.width = w;
+                return getComputedStyle(e).gridTemplateColumns.split(' ').length;
+              };
+              const wide = count('40rem'), narrow = count('12rem');
+              e.style.width = '';
+              return { wide: wide, narrow: narrow };
+            }""",
+        )
+        assert cols["wide"] >= 3, f"40rem must fit several 9rem columns: {cols}"
+        assert cols["narrow"] == 1, f"12rem must collapse to one column: {cols}"
+
+    def test_center_caps_the_measure(self, page) -> None:  # type: ignore[no-untyped-def]
+        m = page.eval_on_selector(
+            '#center [data-measure="prose"]',
+            "e => getComputedStyle(e).maxInlineSize",
+        )
+        assert m.endswith("ch") or m != "none", f"prose measure must be capped: {m}"

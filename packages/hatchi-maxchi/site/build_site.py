@@ -710,6 +710,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-stack { display: flex; flex-direction: column; gap: .75rem; }
 .hm-demo-title { font-weight: var(--weight-semibold); font-size: var(--text-sm); margin-bottom: .25rem; }
 .hm-demo-muted { margin: 0; font-size: var(--text-sm); color: var(--colour-text-muted); }
+.hm-demo-box { padding: .5rem .75rem; border: 1px dashed var(--colour-border); border-radius: var(--radius-sm); font-size: var(--text-sm); color: var(--colour-text-muted); background: var(--colour-bg); }
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
 .hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }

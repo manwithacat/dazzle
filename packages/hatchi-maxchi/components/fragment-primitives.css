@@ -322,6 +322,12 @@
   .dz-stack {
     display: flex;
     flex-direction: column;
+    /* L1 contract: unset gap = md. Declared HERE (not in layout.css's
+     * direct-layer rule) so the legacy --gap-* modifiers below and the
+     * data-dz-gap scale both still win — this file's inner @layer wrapper
+     * puts its rules in a SUBLAYER that any direct components-layer rule
+     * would beat regardless of specificity (tracked follow-up). */
+    gap: var(--space-md);
   }
 
   .dz-stack--gap-none { gap: 0; }

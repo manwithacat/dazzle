@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.99] - 2026-07-06
+
+### Added
+- **Layouts L1 — the `Layout` Hyperpart group** (HM 0.1.30 → 0.1.31; design
+  at `dev_docs/2026-07-06-layouts-blueprints-design.md`, workstream
+  ratified). Five CSS-only Hyperparts in the Every-Layout vocabulary:
+  `stack` (vertical rhythm), `cluster` (wrapping horizontal group),
+  `sidebar-layout` (fixed side + fluid content that wraps under its own
+  minimum — responsive without a media query), `auto-grid`
+  (`auto-fit`/`minmax` card grid with the overflow-safe inner `min()`),
+  and `center` (measure-capped column). One shared gap contract
+  (`data-dz-gap: xs…xl`); the consumer-set widths (`--dz-sidebar-width`,
+  `--dz-sidebar-content-min`, `--dz-grid-min`) join `PUBLIC_CSS_PROPS` and
+  follow the namespace prefix. Five geometry gates prove the behaviour
+  (gap tokens applied, sidebar wraps at its content minimum, auto-grid
+  packs 3+/1 columns at 40rem/12rem, measure capped). Adversarial review
+  caught a real cascade-layer trap before ship: `fragment-primitives.css`
+  (which carries the legacy `--gap-*` modifier scale the substrate emits)
+  wraps itself in an inner `@layer`, putting its rules in a SUBLAYER that
+  any direct components-layer rule beats regardless of specificity — the
+  new base `.dz-stack { gap }` would have silently flattened every legacy
+  chart/table stack to the md gap. Fixed by declaring the unset=md default
+  inside the sublayer next to the modifiers (empirically probed: legacy
+  `--gap-sm` 8px, bare stack 12px, `data-dz-gap="lg"` 16px all correct in
+  the built bundle). The sublayer hazard is a tracked follow-up; the
+  emitter convergence onto the new contracts is L2.
+
 ## [0.93.98] - 2026-07-06
 
 ### Fixed

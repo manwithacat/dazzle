@@ -1,0 +1,146 @@
+/* Layout — the Every-Layout vocabulary as CSS-only Hyperparts (L1).
+ *
+ * Intrinsic, media-query-free responsiveness: the sidebar wraps when its
+ * CONTENT would get too narrow, the auto-grid packs columns to fit — the
+ * same markup behaves in a page, a card, or a drawer. Variants ride
+ * data-dz-* attributes; the consumer-set widths are PUBLIC_CSS_PROPS
+ * knobs (they follow the namespace prefix — see build.py).
+ *
+ * The gap scale is shared by stack / cluster / auto-grid via one
+ * attribute contract (data-dz-gap: xs|sm|md|lg|xl; unset = md). */
+
+/* HYPERPART: stack */
+/* The base rule (display, direction, and the unset=md gap default) lives in
+ * fragment-primitives.css alongside the legacy --gap-* modifier scale: that
+ * file wraps itself in an inner @layer, so a gap declared HERE (direct
+ * components layer) would beat every sublayered modifier and silently
+ * flatten legacy emissions to md. This file only adds the data-dz-gap
+ * attribute scale (below) — higher specificity, same direct layer, wins
+ * over the base as intended. */
+
+/* HYPERPART: cluster */
+.dz-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.dz-cluster[data-dz-align="start"] {
+  align-items: flex-start;
+}
+
+.dz-cluster[data-dz-align="end"] {
+  align-items: flex-end;
+}
+
+.dz-cluster[data-dz-align="baseline"] {
+  align-items: baseline;
+}
+
+.dz-cluster[data-dz-justify="end"] {
+  justify-content: flex-end;
+}
+
+.dz-cluster[data-dz-justify="between"] {
+  justify-content: space-between;
+}
+
+.dz-cluster[data-dz-justify="center"] {
+  justify-content: center;
+}
+
+/* The shared gap scale — one contract for the three gapped layouts. */
+.dz-stack[data-dz-gap="xs"],
+.dz-cluster[data-dz-gap="xs"],
+.dz-auto-grid[data-dz-gap="xs"] {
+  gap: var(--space-xs);
+}
+
+.dz-stack[data-dz-gap="sm"],
+.dz-cluster[data-dz-gap="sm"],
+.dz-auto-grid[data-dz-gap="sm"] {
+  gap: var(--space-sm);
+}
+
+.dz-stack[data-dz-gap="md"],
+.dz-cluster[data-dz-gap="md"],
+.dz-auto-grid[data-dz-gap="md"] {
+  gap: var(--space-md);
+}
+
+.dz-stack[data-dz-gap="lg"],
+.dz-cluster[data-dz-gap="lg"],
+.dz-auto-grid[data-dz-gap="lg"] {
+  gap: var(--space-lg);
+}
+
+.dz-stack[data-dz-gap="xl"],
+.dz-cluster[data-dz-gap="xl"],
+.dz-auto-grid[data-dz-gap="xl"] {
+  gap: var(--space-xl);
+}
+
+/* HYPERPART: sidebar-layout */
+/* The Every-Layout sidebar: the side takes its preferred width, the
+ * content grows aggressively but never below its comfortable minimum —
+ * when the line can't hold that, the content wraps to a full row. The
+ * breakpoint is the CONTENT'S minimum, not a viewport width. */
+.dz-sidebar-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+}
+
+.dz-sidebar-layout > :first-child {
+  flex-basis: var(--dz-sidebar-width, 16rem);
+  flex-grow: 1;
+}
+
+.dz-sidebar-layout > :last-child {
+  flex-basis: 0;
+  flex-grow: 999;
+  min-inline-size: var(--dz-sidebar-content-min, 50%);
+}
+
+/* data-dz-side="end": the side pane comes AFTER the content in source
+ * order too (accessibility: keep DOM order = reading order), so the
+ * grow/basis roles simply swap ends. */
+.dz-sidebar-layout[data-dz-side="end"] > :first-child {
+  flex-basis: 0;
+  flex-grow: 999;
+  min-inline-size: var(--dz-sidebar-content-min, 50%);
+}
+
+.dz-sidebar-layout[data-dz-side="end"] > :last-child {
+  flex-basis: var(--dz-sidebar-width, 16rem);
+  flex-grow: 1;
+  min-inline-size: 0;
+}
+
+/* HYPERPART: auto-grid */
+/* The inner min() stops overflow when the container is narrower than the
+ * column minimum — the classic auto-fit footgun. */
+.dz-auto-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(var(--dz-grid-min, 14rem), 100%), 1fr)
+  );
+  gap: var(--space-md);
+}
+
+/* HYPERPART: center */
+.dz-center {
+  box-sizing: content-box;
+  margin-inline: auto;
+  max-inline-size: 65ch;
+}
+
+.dz-center[data-dz-measure="wide"] {
+  max-inline-size: 90ch;
+}
+
+.dz-center[data-dz-measure="full"] {
+  max-inline-size: none;
+}

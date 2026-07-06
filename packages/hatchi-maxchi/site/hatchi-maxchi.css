@@ -3431,6 +3431,12 @@ input.switch:checked::before {
   .stack {
     display: flex;
     flex-direction: column;
+    /* L1 contract: unset gap = md. Declared HERE (not in layout.css's
+     * direct-layer rule) so the legacy --gap-* modifiers below and the
+     * data-gap scale both still win — this file's inner @layer wrapper
+     * puts its rules in a SUBLAYER that any direct components-layer rule
+     * would beat regardless of specificity (tracked follow-up). */
+    gap: var(--space-md);
   }
 
   .stack--gap-none { gap: 0; }
@@ -5379,6 +5385,156 @@ summary.table-col-menu-trigger::-webkit-details-marker {
 
 .tr-empty-link:hover {
   text-decoration: underline;
+}
+
+}
+/* ── components/layout.css ── */
+@layer components {
+/* Layout — the Every-Layout vocabulary as CSS-only Hyperparts (L1).
+ *
+ * Intrinsic, media-query-free responsiveness: the sidebar wraps when its
+ * CONTENT would get too narrow, the auto-grid packs columns to fit — the
+ * same markup behaves in a page, a card, or a drawer. Variants ride
+ * data-* attributes; the consumer-set widths are PUBLIC_CSS_PROPS
+ * knobs (they follow the namespace prefix — see build.py).
+ *
+ * The gap scale is shared by stack / cluster / auto-grid via one
+ * attribute contract (data-gap: xs|sm|md|lg|xl; unset = md). */
+
+/* HYPERPART: stack */
+/* The base rule (display, direction, and the unset=md gap default) lives in
+ * fragment-primitives.css alongside the legacy --gap-* modifier scale: that
+ * file wraps itself in an inner @layer, so a gap declared HERE (direct
+ * components layer) would beat every sublayered modifier and silently
+ * flatten legacy emissions to md. This file only adds the data-gap
+ * attribute scale (below) — higher specificity, same direct layer, wins
+ * over the base as intended. */
+
+/* HYPERPART: cluster */
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.cluster[data-align="start"] {
+  align-items: flex-start;
+}
+
+.cluster[data-align="end"] {
+  align-items: flex-end;
+}
+
+.cluster[data-align="baseline"] {
+  align-items: baseline;
+}
+
+.cluster[data-justify="end"] {
+  justify-content: flex-end;
+}
+
+.cluster[data-justify="between"] {
+  justify-content: space-between;
+}
+
+.cluster[data-justify="center"] {
+  justify-content: center;
+}
+
+/* The shared gap scale — one contract for the three gapped layouts. */
+.stack[data-gap="xs"],
+.cluster[data-gap="xs"],
+.auto-grid[data-gap="xs"] {
+  gap: var(--space-xs);
+}
+
+.stack[data-gap="sm"],
+.cluster[data-gap="sm"],
+.auto-grid[data-gap="sm"] {
+  gap: var(--space-sm);
+}
+
+.stack[data-gap="md"],
+.cluster[data-gap="md"],
+.auto-grid[data-gap="md"] {
+  gap: var(--space-md);
+}
+
+.stack[data-gap="lg"],
+.cluster[data-gap="lg"],
+.auto-grid[data-gap="lg"] {
+  gap: var(--space-lg);
+}
+
+.stack[data-gap="xl"],
+.cluster[data-gap="xl"],
+.auto-grid[data-gap="xl"] {
+  gap: var(--space-xl);
+}
+
+/* HYPERPART: sidebar-layout */
+/* The Every-Layout sidebar: the side takes its preferred width, the
+ * content grows aggressively but never below its comfortable minimum —
+ * when the line can't hold that, the content wraps to a full row. The
+ * breakpoint is the CONTENT'S minimum, not a viewport width. */
+.sidebar-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+}
+
+.sidebar-layout > :first-child {
+  flex-basis: var(--sidebar-width, 16rem);
+  flex-grow: 1;
+}
+
+.sidebar-layout > :last-child {
+  flex-basis: 0;
+  flex-grow: 999;
+  min-inline-size: var(--sidebar-content-min, 50%);
+}
+
+/* data-side="end": the side pane comes AFTER the content in source
+ * order too (accessibility: keep DOM order = reading order), so the
+ * grow/basis roles simply swap ends. */
+.sidebar-layout[data-side="end"] > :first-child {
+  flex-basis: 0;
+  flex-grow: 999;
+  min-inline-size: var(--sidebar-content-min, 50%);
+}
+
+.sidebar-layout[data-side="end"] > :last-child {
+  flex-basis: var(--sidebar-width, 16rem);
+  flex-grow: 1;
+  min-inline-size: 0;
+}
+
+/* HYPERPART: auto-grid */
+/* The inner min() stops overflow when the container is narrower than the
+ * column minimum — the classic auto-fit footgun. */
+.auto-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(var(--grid-min, 14rem), 100%), 1fr)
+  );
+  gap: var(--space-md);
+}
+
+/* HYPERPART: center */
+.center {
+  box-sizing: content-box;
+  margin-inline: auto;
+  max-inline-size: 65ch;
+}
+
+.center[data-measure="wide"] {
+  max-inline-size: 90ch;
+}
+
+.center[data-measure="full"] {
+  max-inline-size: none;
 }
 
 }
