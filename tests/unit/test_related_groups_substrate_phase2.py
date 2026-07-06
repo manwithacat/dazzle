@@ -131,9 +131,17 @@ class TestTableMode:
                 ]
             )
         )
-        assert 'role="tablist"' in html
-        assert "activeTab" in html
-        assert "dz-related-tab" in html
+        # F4: the tab strip rides the HM tabs Hyperpart (dz-tabs.js) —
+        # honest link-strip (aria-current, native hidden), no Alpine, no
+        # role=tablist it can't back with arrow-key navigation.
+        assert "x-data" not in html
+        assert "activeTab" not in html
+        assert 'class="dz-tabs__tab"' in html
+        assert 'aria-current="true"' in html
+        assert 'data-dz-tab-target="dz-related-tab-tasks"' in html
+        assert 'id="dz-related-tab-files"' in html
+        assert "dz-related-tab-count" in html  # count chip survives
+        assert "hidden" in html  # non-first panel starts hidden
 
 
 # ── status_cards mode ──

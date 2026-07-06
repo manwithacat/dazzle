@@ -409,27 +409,35 @@ class _RenderTablesMixin:
         )
 
     def _emit_related_table(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+        """Multi-tab strips ride the HM tabs Hyperpart (Tier F4): honest
+        link-strip buttons (`aria-current`, no role=tablist) driven by the
+        ingested dz-tabs.js — panels toggle via the native `hidden`
+        attribute, keyed by `data-dz-tab-target` → panel id. Replaces the
+        Alpine activeTab island (x-data/:class/x-show)."""
         multi = len(tabs) > 1
-        first = tabs[0].tab_id if tabs else ""
-        parts = [f"<div x-data=\"{{ activeTab: '{ctx.escape_attr(first)}' }}\">"]
+        parts = ['<div class="dz-tabs">']
         if multi:
             buttons = "".join(
-                f'<button type="button" class="dz-related-tab" role="tab" '
-                f":class=\"{{ 'is-active': activeTab === '{ctx.escape_attr(t.tab_id)}' }}\" "
-                f":aria-selected=\"activeTab === '{ctx.escape_attr(t.tab_id)}'\" "
-                f"@click=\"activeTab = '{ctx.escape_attr(t.tab_id)}'\">"
+                f'<button type="button" class="dz-tabs__tab"'
+                f"{' aria-current="true"' if i == 0 else ''} "
+                f'data-dz-tab-target="dz-related-tab-{ctx.escape_attr(t.tab_id)}">'
                 f'{ctx.escape(t.label)}<span class="dz-related-tab-count">{len(t.rows)}</span>'
                 "</button>"
-                for t in tabs
+                for i, t in enumerate(tabs)
             )
-            parts.append(f'<div class="dz-related-tabs" role="tablist">{buttons}</div>')
-        for t in tabs:
-            x_show = f" x-show=\"activeTab === '{ctx.escape_attr(t.tab_id)}'\"" if multi else ""
+            parts.append(f'<div class="dz-tabs__list">{buttons}</div>')
+        for i, t in enumerate(tabs):
+            panel_attrs = (
+                f' id="dz-related-tab-{ctx.escape_attr(t.tab_id)}" class="dz-tabs__panel"'
+                f"{'' if i == 0 else ' hidden'}"
+                if multi
+                else ""
+            )
             head = "".join(f'<th scope="col">{ctx.escape(h)}</th>' for h in t.headers)
             if t.rows:
                 body_rows = []
-                for i, row in enumerate(t.rows):
-                    drill = t.row_drill[i] if t.row_drill else ""
+                for ri, row in enumerate(t.rows):
+                    drill = t.row_drill[ri] if t.row_drill else ""
                     attrs = (
                         f' hx-get="{ctx.escape_attr(drill)}" hx-push-url="true" '
                         'hx-trigger="click" hx-target="body" hx-swap="innerHTML"'
@@ -446,7 +454,7 @@ class _RenderTablesMixin:
                     "</td></tr>"
                 )
             parts.append(
-                f'<div{x_show} role="tabpanel"><div class="dz-related-table-card">'
+                f'<div{panel_attrs}><div class="dz-related-table-card">'
                 f"{self._related_create_row(t, ctx)}"
                 '<div class="dz-related-table-scroll">'
                 '<table class="dz-related-table">'

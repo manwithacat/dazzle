@@ -1,4 +1,4 @@
-/* dazzle v0.93.113 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.114 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -4890,31 +4890,6 @@ margin: 0;
 }
 .dz-related-status-card-badge {
 flex-shrink: 0;
-}
-.dz-related-tabs {
-display: flex;
-border-block-end: 1px solid var(--colour-border);
-}
-.dz-related-tab {
-padding-inline: var(--space-md);
-padding-block: var(--space-sm);
-font-size: var(--text-sm);
-color: var(--colour-text-muted);
-margin-block-end: -1px;
-border-block-end: 2px solid transparent;
-background: transparent;
-cursor: pointer;
-display: inline-flex;
-align-items: center;
-transition: color var(--duration-fast) var(--ease-out);
-}
-.dz-related-tab:hover {
-color: var(--colour-text);
-}
-.dz-related-tab.is-active {
-color: var(--colour-text);
-font-weight: var(--weight-medium);
-border-block-end-color: var(--colour-brand);
 }
 .dz-related-tab-count {
 margin-inline-start: 0.25rem;

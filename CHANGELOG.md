@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.114] - 2026-07-06
+
+### Changed
+- **Alpine island retired: related-tables `activeTab`** (Tier F4a, HM
+  0.1.44 → 0.1.45). Multi-tab related groups now ride the HM tabs
+  Hyperpart: `dz-tabs__tab` buttons (`aria-current`,
+  `data-dz-tab-target`) driven by the ingested `dz-tabs.js`, panels
+  toggled via the native `hidden` attribute — no `x-data`/`:class`/
+  `x-show`, and the unbackable `role="tablist"`/`aria-selected` dropped
+  per the HM honest-link-strip idiom. The count chip
+  (`dz-related-tab-count`) survives as related-specific chrome. The
+  gallery's related-tables demo is now a functional tabbed composition
+  (behaviour-tested Chromium + WebKit) declaring
+  `composes=("tabs", "badge")`.
+- **`dz-tabs.js` gained a nested-root ownership filter** (review
+  finding): its tab/panel queries were descendant-scoped, so a nested
+  `.dz-tabs` group (a related strip inside a tabbed_list region panel)
+  would have been force-hidden by the outer group's clicks. Both loops
+  now skip elements whose `closest('.dz-tabs')` isn't the clicked root.
+
+### Removed
+- The bespoke `.dz-related-tabs`/`.dz-related-tab` pill CSS (visually
+  the same underline idiom as `dz-tabs__tab`; zero producers after the
+  flip).
+
 ## [0.93.113] - 2026-07-06
 
 ### Added

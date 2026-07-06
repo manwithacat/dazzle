@@ -759,8 +759,8 @@ class TestRelatedEntityTabs:
     def test_multi_fk_path_tabs_disambiguated_by_fk_field(self):
         """#1523: N FK paths from one entity → N distinct tab_ids and labels.
 
-        Duplicate tab_ids are a functional bug (the Alpine tab strip keys
-        activeTab on tab_id, so identical ids render all tabs active at once);
+        Duplicate tab_ids are a functional bug (the HM tab strip keys the
+        panel DOM ids on tab_id, so identical ids break panel targeting);
         identical labels make the tabs indistinguishable. Both must vary by
         the FK field.
         """

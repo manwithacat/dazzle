@@ -21,13 +21,20 @@
     var root = tab.closest(".dz-tabs");
     if (!root) return;
 
+    // Ownership filter: querySelectorAll is descendant-scoped, so a
+    // NESTED .dz-tabs group (e.g. a related-tables strip inside a
+    // tabbed_list region panel) would have its tabs/panels collected by
+    // the OUTER root's click. Only touch elements whose closest .dz-tabs
+    // is this root.
     var tabs = root.querySelectorAll(".dz-tabs__tab");
     for (var i = 0; i < tabs.length; i++)
-      tabs[i].removeAttribute("aria-current");
+      if (tabs[i].closest(".dz-tabs") === root)
+        tabs[i].removeAttribute("aria-current");
     tab.setAttribute("aria-current", "true");
 
     var panels = root.querySelectorAll(".dz-tabs__panel");
-    for (var j = 0; j < panels.length; j++) panels[j].hidden = true;
+    for (var j = 0; j < panels.length; j++)
+      if (panels[j].closest(".dz-tabs") === root) panels[j].hidden = true;
 
     var targetId = tab.getAttribute("data-dz-tab-target");
     var panel = targetId

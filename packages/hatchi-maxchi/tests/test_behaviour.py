@@ -1495,3 +1495,17 @@ def test_search_box_no_results_state_survives_the_css_toggle(page) -> None:  # t
         "the no-results line must stay visible while the input is non-empty"
     )
     page.reload()
+
+
+def test_related_tables_tab_strip_rides_dz_tabs(page) -> None:  # type: ignore[no-untyped-def]
+    """F4: the related-tables tab strip is the tabs Hyperpart (no Alpine
+    activeTab island) — clicking Files reveals its panel and marks the
+    tab current, scoped to the related group's own .dz-tabs root."""
+    root = "#related-tables .tabs"
+    files_tab = f'{root} [data-tab-target="hm-rel-files"]'
+    assert page.is_hidden("#hm-rel-files")
+    page.click(files_tab)
+    assert page.is_visible("#hm-rel-files")
+    assert page.is_hidden("#hm-rel-invoices")
+    assert page.get_attribute(files_tab, "aria-current") == "true"
+    assert "contract.pdf" in page.inner_text("#hm-rel-files")

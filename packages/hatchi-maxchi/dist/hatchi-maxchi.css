@@ -6910,36 +6910,11 @@ a.action-card:hover {
   flex-shrink: 0;
 }
 
-/* table_group — Alpine-tabbed data table */
-.related-tabs {
-  display: flex;
-  border-block-end: 1px solid var(--colour-border);
-}
-
-.related-tab {
-  padding-inline: var(--space-md);
-  padding-block: var(--space-sm);
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin-block-end: -1px;
-  border-block-end: 2px solid transparent;
-  background: transparent;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  transition: color var(--duration-fast) var(--ease-out);
-}
-
-.related-tab:hover {
-  color: var(--colour-text);
-}
-
-.related-tab.is-active {
-  color: var(--colour-text);
-  font-weight: var(--weight-medium);
-  border-block-end-color: var(--colour-brand);
-}
-
+/* table_group — tab strip rides the HM tabs Hyperpart (Tier F4):
+ * .tabs__list/.tabs__tab from tabs.css, driven by tabs.js.
+ * The bespoke .related-tabs/.related-tab pill family (visually
+ * the same underline idiom) was retired with the Alpine activeTab
+ * island. Only the count chip stays related-specific. */
 .related-tab-count {
   margin-inline-start: 0.25rem;
   display: inline-flex;

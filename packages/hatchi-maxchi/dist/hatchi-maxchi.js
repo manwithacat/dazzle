@@ -402,13 +402,20 @@
     var root = tab.closest(".tabs");
     if (!root) return;
 
+    // Ownership filter: querySelectorAll is descendant-scoped, so a
+    // NESTED .tabs group (e.g. a related-tables strip inside a
+    // tabbed_list region panel) would have its tabs/panels collected by
+    // the OUTER root's click. Only touch elements whose closest .tabs
+    // is this root.
     var tabs = root.querySelectorAll(".tabs__tab");
     for (var i = 0; i < tabs.length; i++)
-      tabs[i].removeAttribute("aria-current");
+      if (tabs[i].closest(".tabs") === root)
+        tabs[i].removeAttribute("aria-current");
     tab.setAttribute("aria-current", "true");
 
     var panels = root.querySelectorAll(".tabs__panel");
-    for (var j = 0; j < panels.length; j++) panels[j].hidden = true;
+    for (var j = 0; j < panels.length; j++)
+      if (panels[j].closest(".tabs") === root) panels[j].hidden = true;
 
     var targetId = tab.getAttribute("data-tab-target");
     var panel = targetId

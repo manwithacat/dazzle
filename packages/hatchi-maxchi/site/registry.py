@@ -1576,14 +1576,16 @@ HYPERPARTS: list[Hyperpart] = [
         "A detail view's companions: tabbed groups of related records — "
         "status cards, a compact table, or a file list — each tab counted.",
         '<div class="dz-related-group hm-measure-lg">'
-        '<div class="dz-related-tabs" role="tablist">'
-        '<button type="button" class="dz-related-tab is-active" role="tab" '
-        'aria-selected="true">Invoices'
+        '<div class="dz-tabs">'
+        '<div class="dz-tabs__list">'
+        '<button type="button" class="dz-tabs__tab" aria-current="true" '
+        'data-dz-tab-target="hm-rel-invoices">Invoices'
         '<span class="dz-related-tab-count">2</span></button>'
-        '<button type="button" class="dz-related-tab" role="tab" '
-        'aria-selected="false">Files'
+        '<button type="button" class="dz-tabs__tab" '
+        'data-dz-tab-target="hm-rel-files">Files'
         '<span class="dz-related-tab-count">1</span></button>'
         "</div>"
+        '<div id="hm-rel-invoices" class="dz-tabs__panel">'
         '<div class="dz-related-status-grid">'
         '<div class="dz-related-status-card">'
         '<div class="dz-related-status-card-row">'
@@ -1601,14 +1603,27 @@ HYPERPARTS: list[Hyperpart] = [
         '<span class="dz-related-status-card-badge">'
         '<span class="dz-badge" data-dz-tone="warning">'
         '<span class="dz-badge-icon">{svg:triangle-alert}</span>Overdue</span></span>'
-        "</div></div></div></div>",
-        notes="One <code>dz-related-group</code> per related entity; the tab "
-        "row carries the label + server-stamped count. Three body shapes "
-        "share the chrome: the status-card grid (shown), a compact "
-        "<code>dz-related-table</code>, and a <code>dz-related-file-list</code>. "
-        "In Dazzle these render from the detail view's related groups — the "
-        "same shared cell core as list rows, so badges/dates match.",
+        "</div></div></div></div>"
+        '<div id="hm-rel-files" class="dz-tabs__panel" hidden>'
+        '<div class="dz-related-status-grid">'
+        '<div class="dz-related-status-card">'
+        '<div class="dz-related-status-card-row">'
+        '<div class="dz-related-status-card-text">'
+        '<span class="dz-related-status-card-primary">contract.pdf</span>'
+        '<span class="dz-related-status-card-secondary">uploaded 3 Jul</span>'
+        "</div></div></div></div></div>"
+        "</div></div>",
+        notes="One <code>dz-related-group</code> per related entity. The tab "
+        "strip IS the tabs Hyperpart (<code>dz-tabs__tab</code> + "
+        "<code>data-dz-tab-target</code>, driven by dz-tabs.js) with a "
+        "related-specific count chip; panels are native-<code>hidden</code> "
+        "toggles. Three body shapes share the chrome: the status-card grid "
+        "(shown), a compact <code>dz-related-table</code>, and a "
+        "<code>dz-related-file-list</code>. In Dazzle these render from the "
+        "detail view's related groups — the same shared cell core as list "
+        "rows, so badges/dates match.",
         tags=("data",),
+        composes=("tabs", "badge"),
     ),
     Hyperpart(
         "metrics",
