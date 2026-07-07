@@ -51,52 +51,88 @@ Four pieces, mirroring the ADR-0050 resolver pattern already used for criteria
    `core/fidelity_scorer.py`) — warn on declared-vs-inferred contradiction.
 4. **`_probe_2a`** + the `ux_maturity.py` CRITERIA declaration: L3 → L4.
 
-### Component 1 — the resolver
+### Component 1 — the rhythm-inference helper
 
 ```python
-def resolve_answer_first_landing(persona, appspec) -> str | None:
-    """Return the workspace name a persona should land on, or None to keep
-    the current generic fallback. Precedence:
-      1. persona.default_workspace (authoritative — today's behaviour)
-      2. inferred: the persona's rhythm -> first ACTIVE-phase scene ->
-         scene.surface, resolved to its owning workspace
-      3. None (no declaration, no usable rhythm signal)
-    """
+def infer_landing_workspace(
+    persona, rhythms, workspaces
+) -> str | None:
+    """Return the WORKSPACE NAME inferred from a persona's rhythm, or None.
+    Rhythm-only; does NOT consider persona.default_workspace (the caller,
+    _resolve_persona_route, owns declaration precedence)."""
 ```
 
-**Inference rule (step 2), settled:** the persona's rhythm
-(`RhythmSpec.persona == persona.id`) → the first phase whose `kind == ACTIVE` →
-that phase's **first scene** → `scene.surface`. Resolve `scene.surface` to a
-workspace name:
+This is **rhythm-only inference** — it does not encode the declaration
+precedence (that stays in `_resolve_persona_route`, Component 2). Returning a
+workspace NAME (not a route) lets the caller reuse its existing
+`_workspace_root_route` helper.
 
-- if it names a workspace directly → use it;
-- if it names a surface inside a workspace → return the owning workspace;
-- if it resolves to neither (dangling / not in any workspace) → `None` (fall
-  through, no guess).
+**Inference rule (settled, refined during planning):**
 
-**Edge cases (all → fall through to the next precedence step, never raise):**
-rhythm present but no ACTIVE phase; ACTIVE phase with no scenes; persona with
-multiple rhythms (take the first declared); persona identity via
-`spec_display_id(persona)` — **`.id`, not `.name`** (the PersonaSpec identity
-gotcha). Pure function of `(persona, appspec)`; no I/O.
+1. *Select the active phase* — `PhaseSpec.kind` is an **optional** hint
+   (`PhaseKind | None`, usually unset in real rhythms):
+   - the first phase with `kind == PhaseKind.ACTIVE`, else
+   - the first phase whose `kind` is **not** `ONBOARDING`/`GATE`/`OFFBOARDING`
+     (with `kind` unset everywhere — the common case — this is simply the first
+     phase, since phases are declared in temporal order), else
+   - `None` (only one-time phases exist) → no inference.
+2. *Take the first scene* of that phase → `scene.surface`.
+3. *Resolve to a workspace* — **workspace-only in v1:** if `scene.surface`
+   equals a `WorkspaceSpec.name` → return that name; otherwise → `None`.
+   **v1 does NOT map a bare surface to an owning workspace** — that mapping is
+   ambiguous (a surface can appear in zero or several workspaces) and
+   lower-signal, so the honest choice is to fall through to the existing generic
+   fallback. A rhythm scene that names a workspace directly (`on: ticket_queue`)
+   is the unambiguous landing signal we act on.
 
-### Component 2 — wiring at `persona_routes` construction
+**Edge cases (all → return `None`, never raise):** no rhythm for the persona;
+rhythm with no usable active phase; active phase with no scenes; first scene
+names a bare surface (not a workspace); persona with multiple rhythms → first
+declared. Persona identity matched via `persona.id` (**not `.name`** — the
+PersonaSpec identity gotcha; `RhythmSpec.persona` holds the persona id). Pure
+function of `(persona, rhythms, workspaces)`; no I/O.
 
-Where `persona_routes` is assembled from `default_workspace` (upstream of
-`create_site_routes`): for a persona with **no** `default_workspace`, call
-`resolve_answer_first_landing`; if it returns a workspace, add a `persona_routes`
-entry pointing at that workspace's route (same route-shape the declared path
-produces). If it returns `None`, add nothing — the persona keeps the generic
-`/app` fallback, and the root redirect is **byte-identical** to today.
+### Component 2 — wiring into `_resolve_persona_route`
 
-Declared `default_workspace` is untouched (precedence step 1 returns before
-inference), so every existing app's redirect behaviour is unchanged.
+The route map is built by `compute_persona_default_routes(personas, workspaces)`
+→ `_resolve_persona_route(persona, workspaces)` in
+`src/dazzle/page/converters/workspace_converter.py`. Its precedence today:
+
+1. `persona.default_route` (explicit) →
+2. `persona.default_workspace` → `_workspace_root_route(ws)` →
+3. first workspace with `access.allow_personas` including the persona →
+4. first workspace with `AUTHENTICATED` access →
+5. first workspace (fallback).
+
+**Insert a new step 2.5**, between the declared `default_workspace` (step 2) and
+the generic workspace fallbacks (steps 3–5):
+
+```python
+# 2.5 (#1558): infer the answer-first landing from the persona's rhythm
+inferred = infer_landing_workspace(persona, rhythms, workspaces)
+if inferred:
+    for ws in workspaces:
+        if ws.name == inferred:
+            return _workspace_root_route(ws)
+```
+
+Both `compute_persona_default_routes` and `_resolve_persona_route` gain a
+`rhythms: list[ir.RhythmSpec]` parameter, threaded from the two call sites in
+`src/dazzle/http/runtime/app_factory.py` (lines ~855 and ~1256) as
+`appspec.rhythms`.
+
+Because inference sits **after** the declared `default_workspace` and only fires
+when that is unset, every app with a declared landing — or no rhythms — produces
+a **byte-identical** route map. A persona with no declaration, no usable rhythm
+signal, and no explicit-access workspace still falls through to steps 3–5 exactly
+as today.
 
 ### Component 3 — the drift check (`dazzle rhythm fidelity`)
 
 For each persona that has **both** a declared `default_workspace` **and** a
-rhythm: compute the inferred landing (step 2 above, ignoring the declaration);
-if `declared_workspace != inferred_workspace`, emit a **warning**:
+rhythm: compute `infer_landing_workspace(persona, rhythms, workspaces)` (which
+ignores the declaration); if it returns a workspace and
+`declared_workspace != inferred_workspace`, emit a **warning**:
 
 > persona `P` declares `default_workspace=X`, but its rhythm's active landing
 > points at `Y` — the landing may not be answer-first for this persona.
@@ -131,25 +167,27 @@ Root GET / (authed)
   -> _resolve_auth -> persona_routes[role]           (declared OR inferred entry)
   -> RedirectResponse(landing route)                  or /app generic (unchanged)
 
-persona_routes construction (build time)
-  for persona without default_workspace:
-    resolve_answer_first_landing(persona, appspec)
-      -> rhythm.first ACTIVE phase.first scene.surface -> workspace -> route
+_resolve_persona_route (build time), new step 2.5:
+  for persona without default_route/default_workspace:
+    infer_landing_workspace(persona, rhythms, workspaces)
+      -> active phase.first scene.surface (if it names a workspace) -> route
 
 dazzle rhythm fidelity (author-invoked)
   for persona with default_workspace AND rhythm:
-    declared != inferred -> warning
+    default_workspace != infer_landing_workspace(...) -> warning
 ```
 
-## Fixture / probe coverage
+## Fixture / probe coverage — resolved: no fixture needed
 
 `support_tickets` is the only example that declares rhythms, and its personas also
 declare `default_workspace`, so no existing example exercises the *infer-when-unset*
-path. The plan will either (a) add a small validation **fixture** carrying a
-persona with a rhythm and no `default_workspace`, or (b) drop `default_workspace`
-from one suitable support_tickets persona if that persona's rhythm already implies
-the same landing (no behaviour change, but exercises inference). Decision deferred
-to the plan; the fixture route is the safer default (no example churn).
+path at runtime. But the established probe pattern (`_probe_2d`, `_probe_3a`) builds
+**synthetic in-memory IR** and calls the resolver directly — no app boot, no DB, no
+fixture app. `_probe_2a` and the integration test follow suit: construct
+`PersonaSpec` + `RhythmSpec` + `WorkspaceSpec` objects in memory and call
+`infer_landing_workspace` / `compute_persona_default_routes`. This avoids churning
+`support_tickets` (whose declared landings we do not want to disturb) and keeps the
+tests fast and hermetic. **No new fixture is added.**
 
 ## Error handling
 
