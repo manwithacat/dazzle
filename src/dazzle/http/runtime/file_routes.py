@@ -13,6 +13,8 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
 
+import dazzle.http.runtime.rate_limit as _rl
+
 from .file_storage import FileService, FileValidationError
 
 logger = logging.getLogger(__name__)
@@ -426,8 +428,6 @@ def create_file_routes(
         prefix: URL prefix for routes
         require_auth: Whether to require authentication
     """
-    import dazzle.http.runtime.rate_limit as _rl
-
     auth_dep = optional_auth_dep if optional_auth_dep is not None else _no_auth
     deps = _FileDeps(
         file_service=file_service,
@@ -459,21 +459,30 @@ def create_file_routes(
         _require_posture(deps, auth_context)
         return await _get_file_info(deps, file_id)
 
-    # Download
+    # Download — byte route, download_limit (#1551 item 4)
     @app.get(f"{prefix}/{{file_id}}/download")  # nosemgrep
-    async def download_file(file_id: str, auth_context: Any = Depends(auth_dep)) -> Any:
+    @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    async def download_file(
+        request: Request, file_id: str, auth_context: Any = Depends(auth_dep)
+    ) -> Any:
         _require_posture(deps, auth_context)
         return await _download_file(deps, file_id)
 
-    # Stream
+    # Stream — byte route, download_limit (#1551 item 4)
     @app.get(f"{prefix}/{{file_id}}/stream")  # nosemgrep
-    async def stream_file(file_id: str, auth_context: Any = Depends(auth_dep)) -> Any:
+    @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    async def stream_file(
+        request: Request, file_id: str, auth_context: Any = Depends(auth_dep)
+    ) -> Any:
         _require_posture(deps, auth_context)
         return await _stream_file(deps, file_id)
 
-    # Thumbnail — needs wrapper for Query params with constraints
+    # Thumbnail — byte route AND on-the-fly image generation (CPU),
+    # download_limit (#1551 item 4)
     @app.get(f"{prefix}/{{file_id}}/thumbnail")  # nosemgrep
+    @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def get_thumbnail(
+        request: Request,
         file_id: str,
         width: int = Query(200, ge=10, le=1000),
         height: int = Query(200, ge=10, le=1000),
@@ -540,8 +549,9 @@ def create_static_file_routes(
     )
 
     @app.get(url_prefix + "/{file_path:path}", name="files")  # nosemgrep
+    @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def serve_stored_file(
-        file_path: str, auth_context: Any = Depends(auth_dep)
+        request: Request, file_path: str, auth_context: Any = Depends(auth_dep)
     ) -> FileResponse:
         _require_posture(posture, auth_context)
         candidate = (resolved_root / file_path).resolve()

@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.132] - 2026-07-07
+
+### Security
+- **Document/file byte routes are rate-limited** (#1551 item 4, hx-pdf
+  spec §18): a new `download_limit` category (standard 120/minute,
+  strict 60/minute, basic unlimited; `DAZZLE_RATE_LIMIT_DOWNLOAD`
+  override) applies to `/files/{id}/download`, `/stream`,
+  `/thumbnail` (also on-the-fly image CPU), the static `/files/{path}`
+  handler, and both `/_dazzle/documents` routes. Test-mode boots keep
+  the no-op limiter, so e2e rigs are unaffected.
+
+### Agent Guidance
+- Rate-limit decorators capture `limits.limiter` at
+  route-registration time — the review confirmed `apply_rate_limiting`
+  runs in `_create_app()` before `_setup_routes()` mounts anything,
+  so the real Limiter is always in place. If you ever register routes
+  earlier than that, the decorators silently freeze the no-op limiter.
+- #1551 item 5 (chunked/streaming reads for range-heavy viewers)
+  remains open — it needs storage-adapter API changes.
+
 ## [0.93.131] - 2026-07-07
 
 ### Fixed

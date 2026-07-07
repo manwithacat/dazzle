@@ -117,6 +117,7 @@ _LIMIT_OVERRIDE_ENV = {
     "DAZZLE_RATE_LIMIT_AUTH": "auth_limit",
     "DAZZLE_RATE_LIMIT_UPLOAD": "upload_limit",
     "DAZZLE_RATE_LIMIT_2FA": "twofa_limit",
+    "DAZZLE_RATE_LIMIT_DOWNLOAD": "download_limit",
 }
 
 _VALID_RATE_PERIODS = frozenset({"second", "minute", "hour", "day"})
@@ -218,6 +219,10 @@ class _Limits:
     api_limit: str = "300/minute"  # #1298: matches the standard-profile default
     upload_limit: str = "10/minute"
     twofa_limit: str = "5/minute"
+    # #1551 item 4 (hx-pdf §18): document byte routes. Range-capable
+    # viewers issue many byte requests per document — looser than the
+    # write limits, but no longer unlimited.
+    download_limit: str = "120/minute"
 
 
 limits = _Limits()
@@ -272,6 +277,7 @@ class RateLimitConfig:
     api_limit: str | None = None  # general API endpoints
     upload_limit: str | None = None  # file upload
     twofa_limit: str | None = None  # 2FA verification
+    download_limit: str | None = None  # document/file byte reads (#1551)
     # #1296: trusted proxy hops for X-Forwarded-For-aware client keying.
     # 0 = spoofing-safe request.client.host; 1 for Heroku/Cloudflare.
     trusted_proxies: int = 0
@@ -302,6 +308,7 @@ def configure_rate_limits_for_profile(profile: str) -> RateLimitConfig:
             api_limit="300/minute",
             upload_limit="10/minute",
             twofa_limit="5/minute",
+            download_limit="120/minute",
         )
     else:  # strict
         return RateLimitConfig(
@@ -309,6 +316,7 @@ def configure_rate_limits_for_profile(profile: str) -> RateLimitConfig:
             api_limit="30/minute",
             upload_limit="5/minute",
             twofa_limit="3/minute",
+            download_limit="60/minute",
         )
 
 
@@ -341,6 +349,8 @@ def apply_rate_limiting(app: "FastAPI", profile: str) -> None:
         limits.upload_limit = config.upload_limit
     if config.twofa_limit:
         limits.twofa_limit = config.twofa_limit
+    if config.download_limit:
+        limits.download_limit = config.download_limit
 
     # No rate limiting on basic profile
     if profile == "basic":

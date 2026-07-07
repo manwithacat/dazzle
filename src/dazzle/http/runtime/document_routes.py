@@ -39,6 +39,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
+import dazzle.http.runtime.rate_limit as _rl
 from dazzle.http.runtime.access.gated import (
     RecordNotFound,
     access_context_from,
@@ -222,6 +223,7 @@ def create_document_routes(
         }
 
     @router.get("/{entity}/{entity_id}/{field}/file")
+    @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def document_file(
         entity: str,
         entity_id: str,
@@ -251,6 +253,7 @@ def create_document_routes(
         )
 
     @router.get("/{entity}/{entity_id}/{field}/download")
+    @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def document_download(
         entity: str,
         entity_id: str,

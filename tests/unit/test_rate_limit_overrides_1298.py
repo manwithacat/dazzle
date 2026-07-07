@@ -145,3 +145,60 @@ def test_env_override_can_lower_a_limit(monkeypatch: pytest.MonkeyPatch) -> None
     config = RateLimitConfig(api_limit="300/minute")
     _apply_env_limit_overrides(config)
     assert config.api_limit == "30/minute"
+
+
+# ---------------------------------------------------------------------------
+# #1551 item 4 — the download_limit category for document byte routes
+# (hx-pdf spec §18). Range-capable viewers issue MANY byte requests per
+# document, so the category is looser than api_limit is strict, but the
+# byte routes are no longer unlimited on standard/strict.
+# ---------------------------------------------------------------------------
+
+
+def test_strict_download_no_looser_than_standard() -> None:
+    from dazzle.http.runtime.rate_limit import configure_rate_limits_for_profile
+
+    def _per_min(v: str) -> int:
+        return int(v.split("/")[0])
+
+    strict = configure_rate_limits_for_profile("strict")
+    standard = configure_rate_limits_for_profile("standard")
+    assert _per_min(strict.download_limit) <= _per_min(standard.download_limit)
+
+
+def test_download_limit_per_profile() -> None:
+    from dazzle.http.runtime.rate_limit import configure_rate_limits_for_profile
+
+    assert configure_rate_limits_for_profile("basic").download_limit is None
+    assert configure_rate_limits_for_profile("standard").download_limit == "120/minute"
+    assert configure_rate_limits_for_profile("strict").download_limit == "60/minute"
+
+
+def test_download_limit_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    from dazzle.http.runtime.rate_limit import (
+        _apply_env_limit_overrides,
+        configure_rate_limits_for_profile,
+    )
+
+    monkeypatch.setenv("DAZZLE_RATE_LIMIT_DOWNLOAD", "600/minute")
+    config = configure_rate_limits_for_profile("standard")
+    _apply_env_limit_overrides(config, "standard")
+    assert config.download_limit == "600/minute"
+
+
+def test_byte_routes_carry_the_download_limit() -> None:
+    """The decorator must be applied at route-registration time — a
+    source-level pin that the byte-serving handlers reference
+    download_limit (the #1551 item-4 contract)."""
+    import inspect
+
+    from dazzle.http.runtime import document_routes, file_routes
+
+    doc_src = inspect.getsource(document_routes.create_document_routes)
+    assert doc_src.count("download_limit") >= 2  # /file + /download
+
+    file_src = inspect.getsource(file_routes.create_file_routes)
+    assert file_src.count("download_limit") >= 3  # download + stream + thumbnail
+
+    static_src = inspect.getsource(file_routes.create_static_file_routes)
+    assert "download_limit" in static_src
