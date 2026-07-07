@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.137] - 2026-07-07
+
+### Fixed
+- **search-select FK typeahead selection works again fleet-wide**
+  (#1547): the search endpoint never received the widget's field name
+  (`hx-params="q"` strips element params), so result rows targeted
+  `#search-results-{source}` — a nonexistent element — and selection
+  silently never completed. The emitter now appends
+  `field_name={field}` to the endpoint URL (URL params survive
+  hx-params); the search route propagates it into the select link;
+  and the post-selection OOB-swapped input now satisfies the live
+  widget contract (`dz-search-select-input`, combobox aria, and the
+  typeahead `hx-get`) so re-searching after a selection keeps
+  working — it previously detached the controller entirely.
+
 ## [0.93.136] - 2026-07-07
 
 ### Fixed

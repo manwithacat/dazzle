@@ -69,7 +69,9 @@ def test_hidden_input_holds_selected_id() -> None:
 
 def test_endpoint_and_typeahead_wiring() -> None:
     html = _render(_BASE)
-    assert 'hx-get="/_dazzle/fragments/search?source=companieshouse"' in html
+    # #1547: the emitter appends the field name so the endpoint keys
+    # its rows to the widget's ids
+    assert 'hx-get="/_dazzle/fragments/search?source=companieshouse&amp;field_name=company"' in html
     assert 'hx-trigger="keyup changed delay:400ms"' in html
     assert 'hx-target="#search-results-company"' in html
     assert 'hx-params="q"' in html
@@ -117,3 +119,24 @@ def test_min_chars_zero_omits_hx_vals() -> None:
 # Phase 3b — `form_renderer` is deleted, so there is no legacy renderer left to
 # compare against; the substrate is now the source of truth (parity is recorded
 # in git history + the CHANGELOG). The substrate-only assertions above stand.
+
+
+# ---------------------------------------------------------------------------
+# #1547 — field_name must reach the search endpoint. The endpoint is
+# per-SOURCE; the emitter is the only place field name and endpoint
+# meet, so it appends field_name to the hx-get URL (URL params survive
+# hx-params="q"). Without it the endpoint falls back to
+# field_name=source and every result row targets
+# #search-results-{source} — a nonexistent element.
+# ---------------------------------------------------------------------------
+
+
+def test_endpoint_carries_field_name() -> None:
+    html = _render(_BASE)
+    assert 'hx-get="/_dazzle/fragments/search?source=companieshouse&amp;field_name=company"' in html
+
+
+def test_field_name_is_url_escaped() -> None:
+    odd = dict(_BASE, name="weird name&x")
+    html = _render(odd)
+    assert "field_name=weird+name%26x" in html

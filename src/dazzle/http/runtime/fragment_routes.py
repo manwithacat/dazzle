@@ -128,7 +128,13 @@ def create_fragment_router(
             # Phase 4 (v0.67.62): inline-render with stdlib html.escape.
             import html as _html_mod
 
-            select_endpoint = f"/_dazzle/fragments/select?source={source}"
+            # #1547: propagate the widget's field name so the selection
+            # round-trip targets the field-keyed ids.
+            from urllib.parse import quote_plus as _qp
+
+            select_endpoint = (
+                f"/_dazzle/fragments/select?source={source}&field_name={_qp(field_name)}"
+            )
             if items:
                 rows: list[str] = []
                 for item in items:
@@ -210,6 +216,7 @@ def create_fragment_router(
             display_key = source_config.get("display_key", "name")
             value_key = source_config.get("value_key", "id")
             field_name = request.query_params.get("field_name", source)
+            from urllib.parse import quote_plus as _qp
 
             # Prepare autofill values as (form_field, value) pairs
             autofill_values = [
@@ -243,8 +250,22 @@ def create_fragment_router(
                 f'<input type="hidden" name="{fn_attr}" id="field-{fn_attr}" '  # nosemgrep
                 f'data-dazzle-field="{fn_attr}" value="{sv_attr}" '
                 f'hx-swap-oob="true" />'
+                # #1547: the OOB-swapped visible input must satisfy the
+                # live widget contract (dz-search-select-input + combobox
+                # aria + the typeahead hx-get) — the dz-search-select
+                # controller keys off these, and re-searching after a
+                # selection must keep working. Widget defaults for
+                # debounce; min_chars is enforced server-side.
                 f'<input type="text" id="search-input-{fn_attr}" '  # nosemgrep
-                f'class="dz-select-result-input" value="{dv_attr}" '
+                f'class="dz-search-select-input" value="{dv_attr}" '
+                f'autocomplete="off" role="combobox" aria-expanded="false" '
+                f'aria-controls="search-results-{fn_attr}" '
+                f'aria-autocomplete="list" aria-haspopup="listbox" '
+                f'hx-get="/_dazzle/fragments/search?source={_qp(source)}'
+                f'&amp;field_name={_qp(field_name)}" '
+                f'hx-trigger="keyup changed delay:400ms" '
+                f'hx-target="#search-results-{fn_attr}" '
+                f'hx-params="q" '
                 f'hx-swap-oob="true" />'
                 f"{autofill_html}"
             )

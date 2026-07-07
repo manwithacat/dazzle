@@ -324,7 +324,14 @@ class _RenderFormsMixin:
         name = ctx.escape_attr(s.name)
         label_text = ctx.escape(s.label)
         placeholder = ctx.escape_attr(s.placeholder or f"Search {s.label}...")
-        endpoint = ctx.escape_attr(str(s.endpoint))
+        # #1547: the endpoint is per-SOURCE; the emitter is the only
+        # place field name and endpoint meet. URL params survive
+        # hx-params="q", so the search endpoint can key its result rows
+        # + select links to the WIDGET's field-name ids.
+        from urllib.parse import quote_plus as _qp
+
+        sep = "&" if "?" in str(s.endpoint) else "?"
+        endpoint = ctx.escape_attr(f"{s.endpoint}{sep}field_name={_qp(str(s.name))}")
         init_id = ctx.escape_attr(s.initial_value)
         init_display = ctx.escape_attr(s.initial_label or s.initial_value)
         required_attr = ' required aria-required="true"' if s.required else ""
