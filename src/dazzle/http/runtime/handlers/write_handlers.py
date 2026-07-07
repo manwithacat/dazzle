@@ -340,7 +340,14 @@ def create_create_handler(
             for _ff in file_fields:
                 if _ff in body and body[_ff] is not None:
                     try:
-                        verify_file_triple(file_service, entity_name, "", _ff, body[_ff])
+                        verify_file_triple(
+                            file_service,
+                            entity_name,
+                            "",
+                            _ff,
+                            body[_ff],
+                            current_user_id=current_user,
+                        )
                     except ValueError as _exc:
                         raise HTTPException(
                             status_code=422,
@@ -481,7 +488,14 @@ def create_update_handler(
             for _ff in file_fields:
                 if _ff in body and body[_ff] is not None:
                     try:
-                        verify_file_triple(file_service, entity_name, str(id), _ff, body[_ff])
+                        verify_file_triple(
+                            file_service,
+                            entity_name,
+                            str(id),
+                            _ff,
+                            body[_ff],
+                            current_user_id=current_user,
+                        )
                     except ValueError as _exc:
                         raise HTTPException(
                             status_code=422,

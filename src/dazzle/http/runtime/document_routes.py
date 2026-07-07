@@ -87,6 +87,8 @@ def verify_file_triple(
     record_id: str,
     field: str,
     raw_value: Any,
+    *,
+    current_user_id: str | None = None,
 ) -> None:
     """#1551: a file-field write must reference a file whose metadata
     triple matches the owning (entity, id, field). Closes the
@@ -97,10 +99,18 @@ def verify_file_triple(
     pending file. The check fires only when the stored triple is
     non-empty and conflicts with the caller's target.
 
+    #1554: the empty-triple first-attach branch is additionally gated by
+    uploader identity — a caller who merely guessed a pending file's UUID
+    cannot adopt another user's upload. The guard fails open when either
+    the stored ``uploaded_by`` or the caller identity is absent (legacy
+    files predating the column / no-auth test rigs), preserving the
+    pre-#1554 first-attach behaviour.
+
     Args:
         file_service: Must implement ``get_metadata(file_id)``
             returning an object with ``entity_name``, ``entity_id``,
-            and ``field_name`` attributes (or None when missing).
+            ``field_name``, and ``uploaded_by`` attributes (or None when
+            missing).
         entity: The entity name the caller is writing to.
         record_id: The record's ID string (use ``""`` on create before
             the new ID is assigned — pending files have ``entity_id=""``
@@ -108,6 +118,8 @@ def verify_file_triple(
         field: The field name on the entity.
         raw_value: Raw field value from the request body (URL/path or
             bare UUID). ``None`` / empty string → no-op (field cleared).
+        current_user_id: The authenticated caller's user id, compared
+            against the pending file's ``uploaded_by`` on first attach.
     """
     file_id = _extract_file_id(raw_value)
     if file_id is None:
@@ -115,15 +127,26 @@ def verify_file_triple(
     metadata = file_service.get_metadata(file_id)
     if metadata is None:
         raise ValueError(f"file {file_id} referenced by {entity}.{field} does not exist")
+    stored_entity = metadata.entity_name or ""
+    stored_id = str(metadata.entity_id or "")
+    stored_field = metadata.field_name or ""
     if (
-        (metadata.entity_name or "") not in ("", entity)
-        or str(metadata.entity_id or "") not in ("", str(record_id))
-        or (metadata.field_name or "") not in ("", field)
+        stored_entity not in ("", entity)
+        or stored_id not in ("", str(record_id))
+        or stored_field not in ("", field)
     ):
         raise ValueError(
             f"file {file_id} triple {metadata.entity_name}/{metadata.entity_id}/"
             f"{metadata.field_name} does not match {entity}/{record_id}/{field}"
         )
+    # #1554: pending first-attach (empty stored triple) is uploader-gated.
+    if not (stored_entity or stored_id or stored_field):
+        uploaded_by = getattr(metadata, "uploaded_by", None)
+        if current_user_id and uploaded_by and str(uploaded_by) != str(current_user_id):
+            raise ValueError(
+                f"pending file {file_id} was uploaded by a different user; "
+                f"only its uploader can attach it"
+            )
 
 
 def create_document_routes(

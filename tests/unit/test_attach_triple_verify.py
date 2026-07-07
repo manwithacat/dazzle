@@ -68,6 +68,76 @@ def test_unknown_file_raises_value_error() -> None:
         verify_file_triple(_FS(), "Attachment", "r1", "file", _FILE_PATH)
 
 
+# --- #1554: pending first-attach is uploader-gated ---
+
+
+def _pending_fs(uploaded_by):  # type: ignore[no-untyped-def]
+    """A file_service whose stored metadata is a pending (empty-triple)
+    upload with the given ``uploaded_by``."""
+
+    class _Meta:
+        entity_name = ""
+        entity_id = ""
+        field_name = ""
+
+    meta = _Meta()
+    meta.uploaded_by = uploaded_by  # type: ignore[attr-defined]
+
+    class _FS:
+        def get_metadata(self, fid):  # type: ignore[no-untyped-def]
+            return meta
+
+    return _FS()
+
+
+def test_pending_file_rejected_for_non_uploader() -> None:
+    """#1554: a pending file (empty triple) uploaded by user-A cannot be
+    attached by user-B who merely guessed its UUID."""
+    with pytest.raises(ValueError, match="uploader"):
+        verify_file_triple(
+            _pending_fs("user-A"),
+            "Attachment",
+            "",
+            "file",
+            _FILE_PATH,
+            current_user_id="user-B",
+        )
+
+
+def test_pending_file_ok_for_uploader() -> None:
+    """The uploader attaching their own pending file is allowed."""
+    verify_file_triple(
+        _pending_fs("user-A"),
+        "Attachment",
+        "",
+        "file",
+        _FILE_PATH,
+        current_user_id="user-A",
+    )  # no raise
+
+
+def test_pending_file_fail_open_without_identity() -> None:
+    """Fail-open when uploaded_by or the caller identity is absent (legacy
+    files missing the column / no-auth test rigs) — preserves the pre-#1554
+    first-attach behaviour."""
+    verify_file_triple(
+        _pending_fs(None),
+        "Attachment",
+        "",
+        "file",
+        _FILE_PATH,
+        current_user_id="user-B",
+    )  # uploaded_by missing → no raise
+    verify_file_triple(
+        _pending_fs("user-A"),
+        "Attachment",
+        "",
+        "file",
+        _FILE_PATH,
+        current_user_id=None,
+    )  # caller identity missing → no raise
+
+
 # --- Finding 1: end-to-end gate test through the handler factory ---
 
 

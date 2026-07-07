@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.96.2] - 2026-07-07
+
+### Security
+- **Pending file first-attach is now uploader-gated** (#1554, follow-up from
+  #1551 item-5 review): `verify_file_triple` allowed the empty-triple branch
+  (the normal pending-upload first-attach) without checking `uploaded_by`, so
+  a caller who guessed another user's just-uploaded file UUID could adopt it
+  into their own record. The helper gains a keyword-only `current_user_id`
+  and, on first attach, rejects the write when the pending file's
+  `uploaded_by` and the caller differ. Threaded from both create/update
+  write-handler call sites (`current_user` was already in scope). Fails open
+  when either identity is absent (legacy files predating the column /
+  no-auth test rigs) so existing behaviour is preserved. No schema change.
+
 ## [0.96.1] - 2026-07-07
 
 ### Security
