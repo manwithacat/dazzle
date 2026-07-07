@@ -5838,6 +5838,91 @@ button.htmx-request,
   color: var(--colour-text-muted);
   user-select: none;
 }
+/* --- hatchi-maxchi/components/pdf.css --- */
+/* HYPERPART: pdf */
+/*
+ * dz-pdf — the hx-pdf viewing shell. The application owns the chrome;
+ * PDF.js paints into the viewer region's canvas. Authored for the HM
+ * promotion of the ratified hx-pdf spec (§7 markup contract); the
+ * legacy #946 dz-pdf-viewer chrome retires onto this in P3.
+ */
+
+.dz-pdf {
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  overflow: hidden;
+}
+
+.dz-pdf-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-pdf-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+.dz-pdf-page-input {
+  width: 3.5rem;
+  height: 1.75rem;
+  text-align: center;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+}
+
+.dz-pdf-page-count {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+.dz-pdf-toolbar-spacer {
+  flex: 1 1 0;
+}
+
+.dz-pdf-status {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  padding-inline: var(--space-md);
+}
+
+.dz-pdf-status:empty {
+  display: none;
+}
+
+.dz-pdf-stage {
+  overflow: auto;
+  background: var(--colour-bg);
+  padding: var(--space-md);
+  min-height: 12rem;
+  max-height: 40rem;
+}
+
+.dz-pdf-stage canvas {
+  display: block;
+  margin-inline: auto;
+  box-shadow: var(--shadow-md, 0 2px 8px oklch(0% 0 0 / 0.15));
+  background: white;
+}
+
+[data-dz-pdf-error="true"] .dz-pdf-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+}
 /* --- hatchi-maxchi/components/pivot.css --- */
 /* HYPERPART: pivot */
 /* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet

@@ -1585,3 +1585,57 @@ def test_wizard_forward_gated_on_validity_back_free(page) -> None:  # type: igno
     page.click(f'{root} [data-step-to="2"]')
     assert page.is_visible(stage0), "forward is one validated step at a time"
     page.reload()
+
+
+def test_pdf_viewer_renders_and_pages(page) -> None:  # type: ignore[no-untyped-def]
+    """hx-pdf P2: the viewer lazy-loads PDF.js, renders page 1 of the
+    real sample.pdf to a canvas, pages forward/back, and reports the
+    count. Skips when the CDN is unreachable (offline CI runners) —
+    the Dazzle-side P3 e2e is the vendored-lib oracle."""
+    import urllib.request
+
+    try:
+        urllib.request.urlopen(
+            "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs",
+            timeout=10,
+        )
+    except Exception:
+        import pytest
+
+        pytest.skip("PDF.js CDN unreachable")
+
+    # PDF.js fetches the document — fetch() is blocked on file:// pages,
+    # so this test serves the built site over an EPHEMERAL http port
+    # (port 0; the fixed-port pdf-viewer-gates flake class is avoided).
+    import functools
+    import http.server
+    import socketserver
+    import threading
+    from pathlib import Path
+
+    site_dir = Path(__file__).resolve().parents[1] / "site"
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(site_dir))
+    with socketserver.TCPServer(("127.0.0.1", 0), handler) as httpd:
+        port = httpd.server_address[1]
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        try:
+            page.goto(f"http://127.0.0.1:{port}/index.html")
+            page.wait_for_timeout(300)
+            _assert_pdf_viewer(page)
+        finally:
+            httpd.shutdown()
+
+
+def _assert_pdf_viewer(page) -> None:  # type: ignore[no-untyped-def]
+    root = "#pdf [data-pdf]"
+    page.eval_on_selector(root, "el => el.scrollIntoView()")
+    page.wait_for_selector(f'{root}[data-pdf-ready="true"]', timeout=30000)
+    assert page.query_selector(f"{root} [data-pdf-viewer] canvas") is not None
+    assert page.inner_text(f"{root} [data-pdf-page-count]") == "of 2"
+    assert page.input_value(f"{root} [data-pdf-page]") == "1"
+
+    page.click(f"{root} [data-pdf-next]")
+    page.wait_for_function(f"document.querySelector('{root} [data-pdf-page]').value === '2'")
+    page.click(f"{root} [data-pdf-prev]")
+    page.wait_for_function(f"document.querySelector('{root} [data-pdf-page]').value === '1'")

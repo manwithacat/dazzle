@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.123] - 2026-07-07
+
+### Added
+- **hx-pdf P2 — the HM `pdf` Hyperpart** (#162, HM 0.1.52 → 0.1.53).
+  `dz-pdf.js` is the viewing shell of the ratified spec: mounts per
+  `[data-dz-pdf]`, lazy-loads PDF.js as an ES module only when the
+  viewer scrolls into view (no engine bytes in any bundle), wires the
+  spec §7 toolbar slots (prev/next/page/count/zoom/fit-width),
+  devicePixelRatio-aware canvas rendering, `?dzpdf-page`/`?dzpdf-zoom`
+  deep-links via replaceState, render generation-counter (rapid paging
+  can't paint out of order), and destroy-on-swap (a swapped-out viewer
+  releases its PDF.js document + worker). The gallery renders a REAL
+  hand-written 2-page PDF, behaviour-tested in Chromium + WebKit over
+  an ephemeral HTTP origin (file:// pages can't fetch).
+
+### Fixed
+- **Class collision averted** (review catch): the new viewer-slot class
+  initially reused `.dz-pdf-viewer` — the LIVE legacy #946 viewer's
+  root — and its `max-height: 40rem` would have clamped every existing
+  full-screen `display: pdf_viewer` page to ~640px today. Renamed to
+  `.dz-pdf-stage` (the `data-dz-pdf-viewer` attribute hook is the JS
+  contract and is unchanged).
+
+### Agent Guidance
+- **New-component class names must be swept against the LIVE bundle**,
+  not just HM — the legacy family a Hyperpart will later replace is
+  still shipping, and both sides share `@layer components`.
+- Dynamic `import()` cannot carry SRI — vendor PDF.js in production
+  (the gallery's CDN pin is demo-only; the registry notes say so).
+  P3 vendors it under `/static/vendor/pdfjs/` and retires the legacy
+  viewer.
+
 ## [0.93.122] - 2026-07-07
 
 ### Added

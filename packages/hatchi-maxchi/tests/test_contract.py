@@ -27,7 +27,12 @@ _REQUEST_ATTR_RE = re.compile(r'hx-(get|post|put|patch|delete)="([^"]+)"')
 # controller seam) — attribute → HTTP method. The inline-edit extension
 # commits `PUT {data-dz-grid-edit-url}/{id}`; declaring the attribute in a
 # partial is making that request, so it needs (and satisfies) an Exchange.
-_EXTENSION_REQUEST_ATTRS = {"data-dz-grid-edit-url": "PUT"}
+_EXTENSION_REQUEST_ATTRS = {
+    "data-dz-grid-edit-url": "PUT",
+    # the pdf Hyperpart's bytes exchange: PDF.js (not htmx) fetches the
+    # data-dz-pdf-src URL — declaring the attribute IS making GETs.
+    "data-dz-pdf-src": "GET",
+}
 
 
 def _methods_in_markup(partial: str) -> set[str]:

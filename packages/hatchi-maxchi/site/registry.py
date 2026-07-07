@@ -1045,6 +1045,72 @@ HYPERPARTS: list[Hyperpart] = [
         composes=("field",),
     ),
     Hyperpart(
+        "pdf",
+        "PDF viewer",
+        "Data",
+        "The hx-pdf viewing shell: server-authorized bytes, lazy PDF.js "
+        "rendering, toolbar slots for paging/zoom, URL deep-links — "
+        "progressive enhancement over a download link.",
+        '<section class="dz-pdf" data-dz-pdf '
+        'data-dz-pdf-src="sample.pdf" '
+        'data-dz-pdf-lib="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs" '
+        'data-dz-pdf-worker="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs">'
+        '<header class="dz-pdf-toolbar" data-dz-pdf-toolbar>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-prev>Previous</button>'
+        "<label>Page "
+        '<input class="dz-pdf-page-input" data-dz-pdf-page value="1" '
+        'inputmode="numeric" aria-label="Page number">'
+        "</label>"
+        '<span class="dz-pdf-page-count" data-dz-pdf-page-count></span>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-next>Next</button>'
+        '<span class="dz-pdf-toolbar-spacer"></span>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-zoom-out aria-label="Zoom out">−</button>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-zoom-in aria-label="Zoom in">+</button>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-fit-width>Fit width</button>'
+        '<a href="sample.pdf" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="ghost" data-dz-pdf-download-link download>Download</a>'
+        "</header>"
+        '<div class="dz-pdf-status" data-dz-pdf-status aria-live="polite"></div>'
+        '<div class="dz-pdf-stage" data-dz-pdf-viewer>'
+        '<noscript><a href="sample.pdf" download>Download PDF</a></noscript>'
+        "</div>"
+        "</section>",
+        notes="The application renders the shell and CONTROLS ACCESS; "
+        "PDF.js renders the document. <code>dz-pdf.js</code> lazy-loads "
+        "the library as an ES module from <code>data-dz-pdf-lib</code> "
+        "only when the viewer scrolls into view — no PDF bytes or engine "
+        "in the bundle. In Dazzle, <code>data-dz-pdf-src</code> points at "
+        "the scope-gated range proxy "
+        "(<code>/_dazzle/documents/{entity}/{id}/{field}/file</code> — "
+        "document access IS entity access), and PDF.js range-requests "
+        "pages on demand. <code>data-dz-pdf-state=&quot;url&quot;</code> "
+        "opts a viewer into <code>?dzpdf-page/?dzpdf-zoom</code> "
+        "deep-links (replaceState — Back stays page navigation). Without "
+        "JS the noscript download link is the whole experience. In "
+        "production, VENDOR the PDF.js module — dynamic import() cannot "
+        "carry SRI; the gallery's CDN pin is demo-only.",
+        tags=("data", "htmx"),
+        controller="controllers/dz-pdf.js",
+        composes=("button",),
+        exchanges=(
+            Exchange(
+                method="GET",
+                endpoint="/_dazzle/documents/{entity}/{id}/{field}/file",
+                trigger="PDF.js fetching document bytes (initial + Range "
+                "requests as the user pages)",
+                response="the file field's bytes — 200 whole-body or "
+                "206 partial with Content-Range; opaque 404 when the "
+                "record is out of scope; 416 for unsatisfiable ranges",
+                swap="none (bytes consumed by the rendering engine)",
+            ),
+        ),
+    ),
+    Hyperpart(
         "two-factor",
         "Two-factor panel",
         "Forms",

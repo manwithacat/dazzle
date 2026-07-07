@@ -84,6 +84,7 @@ CSS_SOURCES = [
     ("components", "components/search-select.css"),
     ("components", "components/profile-card.css"),
     ("components", "components/two-factor.css"),
+    ("components", "components/pdf.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]
@@ -107,6 +108,7 @@ JS_SOURCES = [
     "controllers/dz-money.js",
     "controllers/dz-wizard.js",
     "controllers/dz-color.js",
+    "controllers/dz-pdf.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)

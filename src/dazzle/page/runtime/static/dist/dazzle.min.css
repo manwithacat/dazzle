@@ -1,4 +1,4 @@
-/* dazzle v0.93.122 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.123 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -6637,6 +6637,74 @@ border-block-end: 0;
 .dz-auth-status-label {
 font-size: var(--text-sm);
 color: var(--colour-text);
+}
+}
+@layer components {
+.dz-pdf {
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-md);
+background: var(--colour-surface);
+overflow: hidden;
+}
+.dz-pdf-toolbar {
+display: flex;
+align-items: center;
+flex-wrap: wrap;
+gap: var(--space-sm);
+padding: var(--space-sm) var(--space-md);
+border-block-end: 1px solid var(--colour-border);
+}
+.dz-pdf-toolbar label {
+display: inline-flex;
+align-items: center;
+gap: var(--space-xs);
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+}
+.dz-pdf-page-input {
+width: 3.5rem;
+height: 1.75rem;
+text-align: center;
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-sm);
+background: var(--colour-surface);
+color: var(--colour-text);
+font-size: var(--text-sm);
+}
+.dz-pdf-page-count {
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+}
+.dz-pdf-toolbar-spacer {
+flex: 1 1 0;
+}
+.dz-pdf-status {
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+padding-inline: var(--space-md);
+}
+.dz-pdf-status:empty {
+display: none;
+}
+.dz-pdf-stage {
+overflow: auto;
+background: var(--colour-bg);
+padding: var(--space-md);
+min-height: 12rem;
+max-height: 40rem;
+}
+.dz-pdf-stage canvas {
+display: block;
+margin-inline: auto;
+box-shadow: var(--shadow-md, 0 2px 8px oklch(0% 0 0 / 0.15));
+background: white;
+}
+[data-dz-pdf-error="true"] .dz-pdf-stage {
+display: flex;
+align-items: center;
+justify-content: center;
+color: var(--colour-text-muted);
+font-size: var(--text-sm);
 }
 }
 @layer components {
