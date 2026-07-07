@@ -223,3 +223,31 @@ fail a build. No new runtime failure modes; no new exceptions.
   check makes any divergence between declaration and inference visible to the
   author. A competent engineer can trace any landing back to either an explicit
   `default_workspace` or a named rhythm scene.
+
+---
+
+## Post-review extension (2026-07-08)
+
+An adversarial review of the workspace-only v1 found two gaps that undermined the
+L4 claim, both fixed before ship (per the "complete it now" decision):
+
+1. **Surface landings.** The v1 "workspace-only" narrowing meant a rhythm scene
+   naming a bare *surface* (the common authoring shape — open on a list, drill
+   inward) inferred nothing, so the only fleet rhythm (support_tickets) never
+   fired. The resolver is now `infer_landing_route(persona, rhythms, workspaces,
+   surfaces) -> str | None`, returning a **route**: a workspace root route, or a
+   **list-mode** surface's route via `app_paths.list_path("/app",
+   app_paths.entity_slug(surface.entity_ref))` — the same SSOT the list route
+   registers with, so it can never be a dead link. Non-list surfaces (VIEW/
+   CREATE/EDIT/CUSTOM) and entity-less surfaces still return `None`.
+
+2. **Both redirect paths.** Inference is now consulted in `_resolve_persona_route`
+   (step 2.5, site landing) *and* `resolve_persona_workspace_route` (step 1.5,
+   the in-app `/app` root redirect, page_routes.py). `compute_persona_default_routes`
+   and `resolve_persona_workspace_route` gained a `surfaces` param; all callers
+   and the existing workspace-route test suite were updated.
+
+Known advisory-only limitation: `check_landing_drift` can warn when a persona's
+declared `default_workspace` and its rhythm's list-surface landing express the
+same intent by different routes (e.g. a `ticket_queue` workspace vs a
+`ticket_list` surface). It's a `dazzle rhythm fidelity` advisory, never a gate.

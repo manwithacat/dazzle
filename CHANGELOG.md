@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.96.5] - 2026-07-08
+
+### Added
+- **Answer-first landing inference (UX-maturity 2a → L4, #1558).** When a
+  persona has no declared `default_workspace`, its post-login landing is now
+  inferred from its **rhythm**: the first active-phase scene's target resolves
+  to a workspace root route (`/app/workspaces/<name>`) or a **list-mode
+  surface's** route — keyed by the surface's entity through the `app_paths`
+  SSOT, so it always matches route registration (never a dead link). An
+  explicit `default_workspace` stays authoritative; an app with no rhythms is
+  byte-identical. Wired into **both** redirect resolvers (`_resolve_persona_route`
+  and the in-app `/app` root `resolve_persona_workspace_route`). Declared-vs-rhythm
+  drift surfaces as an advisory line in `dazzle rhythm fidelity`. New
+  `page/runtime/landing_resolver.py`; maturity index 3.85 → 3.92 (12/13 at L4).
+
+### Agent Guidance
+- **Landing is inferable from rhythms.** If you author a `rhythm` for a persona
+  whose day-to-day opens on a workspace or a list surface, you can omit that
+  persona's `default_workspace` — the framework infers the answer-first landing
+  from the rhythm's first active-phase scene. Declaration still wins when
+  present; `dazzle rhythm fidelity` warns if a declared landing contradicts the
+  rhythm. Story/rhythm vocabulary-unification + rhythms-derive-from-stories is
+  tracked separately (#1559).
+
 ## [0.96.4] - 2026-07-07
 
 ### Added
