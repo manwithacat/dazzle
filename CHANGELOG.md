@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.122] - 2026-07-07
+
+### Added
+- **hx-pdf P1 — the scope-gated document range proxy** (#162, first
+  slice of the ratified spec).
+  `GET /_dazzle/documents/{entity}/{id}/{field}/file` (+`/download`)
+  streams a file-field's bytes gated by the SAME access core as the
+  entity's read verb (`gated_read` — document access IS entity access;
+  denied/missing collapse to an opaque 404), with the file metadata's
+  entity/id/field triple verified against the URL so a foreign file
+  reference never leaks bytes. Validated single-Range support
+  (206/416; malformed ignored per RFC 9110), nosniff, private
+  cache-control, RFC 6266 sanitized dispositions, inline restricted to
+  a PDF+images safelist, `/download` audited via `log_decision`. The
+  runtime-urls API-surface baseline gains the two routes.
+
+### Agent Guidance
+- **Auth is a route dependency, never `request.state`** — the P1
+  adversarial review caught the first draft reading
+  `request.state.auth_context` (never populated anywhere): the cedar
+  path 500'd for every gated entity and the no-spec path served bytes
+  anonymously. Wire `Depends(optional_auth_dep)` (the bulk_routes
+  pattern) and mirror the REST read posture (`require_auth_by_default`)
+  on spec-less entities.
+- **De-mock audit fakes**: the draft called a nonexistent
+  `audit_logger.log_event` and a blanket except swallowed it while the
+  test's fake defined the phantom method — the catalogued
+  assert-on-mock counter-prior. Fakes mirror `log_decision`'s real
+  signature now; only transport errors are tolerated.
+- The legacy `/files/*` routes are unauthenticated AND entity-unscoped
+  (confirmed pre-existing) — #1551 tracks gating them; the document
+  proxy is the scope-correct read path.
+
 ## [0.93.121] - 2026-07-07
 
 ### Added

@@ -35,6 +35,7 @@ from dazzle.http.runtime.auth.partition_root import (
     reconcile_membership_partition_roots,
 )
 from dazzle.http.runtime.csrf import apply_csrf_protection
+from dazzle.http.runtime.document_routes import create_document_routes
 from dazzle.http.runtime.exception_handlers import register_exception_handlers
 from dazzle.http.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle.http.runtime.file_storage import FileService
@@ -2027,6 +2028,9 @@ class DazzleBackendApp:
         self._mount_audit_history_routes(auth_dep)
         self._mount_locale_routes()
         self._mount_file_routes()
+        self._mount_document_routes(
+            cedar_access_specs, _fk_graph, optional_auth_dep, _admin_personas
+        )
         self._mount_search_routes()
         self._mount_fts_routes(auth_dep)
         self._mount_signing_routes()
@@ -2294,6 +2298,32 @@ class DazzleBackendApp:
                 # routes module itself is stdlib-only; an ImportError
                 # here means the package is broken, not opted out.
                 logger.exception("Failed to import dazzle.signing.routes")
+
+    def _mount_document_routes(
+        self, cedar_access_specs: Any, _fk_graph: Any, optional_auth_dep: Any, _admin_personas: Any
+    ) -> None:
+        """hx-pdf P1 (#162): the scope-gated document range proxy.
+
+        Mounted whenever file storage is enabled — the route is the
+        scope-correct read path for file fields (document access =
+        entity access), the target of the pdf Hyperpart's
+        ``data-dz-pdf-src``.
+        """
+        assert self._app is not None
+        if not getattr(self, "_file_service", None):
+            return
+        self._app.include_router(
+            create_document_routes(
+                file_service=self._file_service,
+                services=self.services_by_entity(),
+                cedar_access_specs=cedar_access_specs,
+                fk_graph=_fk_graph,
+                optional_auth_dep=optional_auth_dep,
+                admin_personas=_admin_personas,
+                audit_logger=getattr(self, "_audit_logger", None),
+                require_auth_by_default=self._enable_auth and not self._enable_test_mode,
+            )
+        )
 
     def _mount_bulk_routes(
         self, cedar_access_specs: Any, _fk_graph: Any, optional_auth_dep: Any, _admin_personas: Any
