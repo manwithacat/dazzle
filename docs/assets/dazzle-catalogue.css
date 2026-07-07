@@ -2363,6 +2363,20 @@ dialog.dz-alert-dialog::backdrop {
  * enrichments (e.g. tone tinting) can key off it without touching
  * every branch's class string. */
 
+/* #1546: the wrapper's card chrome — previously an accidental cascade
+ * dependency on a DORMANT Dazzle block (dead since the Jinja teardown);
+ * the Hyperpart is self-sufficient now. Values verbatim from the
+ * shipped bundle, so in-app pixels are unchanged. */
+.dz-confirm-panel {
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-inline-size: 24rem;
+  inline-size: 100%;
+  padding: var(--space-lg);
+}
+
 .dz-confirm-summary {
   padding: var(--space-md);
   border-radius: var(--radius-md);
@@ -2425,8 +2439,10 @@ dialog.dz-alert-dialog::backdrop {
   /* span (a <label> only admits phrasing content) styled as block */
   display: block;
   font-size: var(--text-sm);
+  font-weight: var(--weight-semibold); /* #1546: folded from the dormant block (shipped look) */
   line-height: var(--leading-tight);
   color: var(--colour-text);
+  margin-block-end: var(--space-xs);
 }
 
 .dz-confirm-caption {

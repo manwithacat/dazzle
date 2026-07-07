@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.143] - 2026-07-07
+
+### Fixed
+- **confirm_action_panel owns its chrome** (#1546, HM 0.1.58): the
+  live panel's card chrome (surface/border/shadow/max-width/padding)
+  had been riding a DORMANT fragments.css block documented as
+  belonging to a deleted Alpine template — an accidental cascade
+  dependency on dead code. The chrome (plus the title's
+  semibold/margin extras) is folded into the HM confirm-panel
+  Hyperpart verbatim, so in-app pixels are unchanged;
+  `dz-confirm-panel` leaves the SEMANTIC_ONLY contract; the dormant
+  family (dialog/backdrop/message/spinner rules) is deleted. The
+  `dz-spin` keyframes — which lived INSIDE the dormant block but
+  drive LIVE loading spinners — deliberately survive the deletion.
+
 ## [0.93.142] - 2026-07-07
 
 ### Fixed

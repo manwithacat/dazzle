@@ -76,9 +76,6 @@ SEMANTIC_ONLY = {
     "dz-profile-card-region",
     "dz-grid-region",
     "dz-list-region",
-    # confirm-panel root: the state branch keys off data-dz-state-value;
-    # the wrapper itself carries no rule (verbatim from Dazzle).
-    "dz-confirm-panel",
     # wizard stage block: visibility rides the native `hidden` attribute
     # (dz-wizard.js); the fields inside carry the styling.
     "dz-wizard-stage",
