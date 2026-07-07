@@ -93,6 +93,16 @@ def always(_app: ir.AppSpec) -> bool:
     return True
 
 
+def has_byte_access_boundary(_app: ir.AppSpec) -> bool:
+    """True when the framework serves stored bytes through the audited,
+    entity-scoped byte core with no bypass (a framework-wide guarantee,
+    not app-specific — always true on this framework version).
+
+    The static proof is `dazzle rbac byte-routes --strict` (#1551 task 7).
+    """
+    return True
+
+
 REGISTRY: dict[str, Callable[[ir.AppSpec], bool]] = {
     "has_rls": has_rls,
     "has_database_rls": has_database_rls,
@@ -106,4 +116,5 @@ REGISTRY: dict[str, Callable[[ir.AppSpec], bool]] = {
     "has_slas": has_slas,
     "has_ai_assist": has_ai_assist,
     "always": always,
+    "has_byte_access_boundary": has_byte_access_boundary,
 }

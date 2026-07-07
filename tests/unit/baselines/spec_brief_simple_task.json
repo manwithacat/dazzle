@@ -692,6 +692,13 @@
       "audience": "investor",
       "claim": "AI-assisted steps are declared in the model — each with an explicit\ntrigger, prompt contract, and timeout — rather than ad-hoc calls buried in\ncode, so what the AI is allowed to touch is reviewable in one place.",
       "evidence": "dazzle validate"
+    },
+    {
+      "id": "byte_access",
+      "group": "compliance",
+      "audience": "technical",
+      "claim": "Every stored file is served through a single access-controlled,\naudited boundary. A user only receives a document's bytes when the same rule\nthat governs the record allows it, and each first access is recorded — there is\nno route that streams a stored file without that check.",
+      "evidence": "dazzle rbac byte-routes --strict"
     }
   ],
   "skeleton": [
@@ -741,8 +748,10 @@
     },
     {
       "section": "compliance_posture",
-      "populated": false,
-      "claim_ids": []
+      "populated": true,
+      "claim_ids": [
+        "byte_access"
+      ]
     }
   ]
 }

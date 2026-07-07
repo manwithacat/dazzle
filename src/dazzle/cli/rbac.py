@@ -632,6 +632,28 @@ def access_review_cmd(
         raise typer.Exit(code=1)
 
 
+@rbac_app.command("byte-routes")
+def byte_routes_cmd(
+    strict: bool = typer.Option(
+        False, "--strict", help="Exit 1 if any byte route bypasses serve_bytes"
+    ),
+) -> None:
+    """Prove every stored-byte route goes through serve_bytes (#1551)."""
+    from pathlib import Path
+
+    from dazzle.testing.byte_route_proof import find_byte_route_violations
+
+    repo = Path.cwd()
+    violations = find_byte_route_violations(repo)
+    if not violations:
+        typer.echo("OK: every byte-serving route goes through serve_bytes.")
+        return
+    for v in violations:
+        typer.echo(f"VIOLATION: {v}", err=True)
+    if strict:
+        raise typer.Exit(code=1)
+
+
 @rbac_app.command("verify-scope")
 def verify_scope_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
