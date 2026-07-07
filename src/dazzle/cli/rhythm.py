@@ -13,6 +13,9 @@ from typing import TYPE_CHECKING
 
 import typer
 
+from dazzle.cli.utils import load_project_appspec
+from dazzle.page.runtime.landing_resolver import check_landing_drift
+
 if TYPE_CHECKING:
     from dazzle.core import ir
 
@@ -29,8 +32,6 @@ def landing_drift_lines(
 ) -> list[str]:
     """One advisory line per persona whose declared ``default_workspace``
     contradicts its rhythm-inferred answer-first landing (#1558)."""
-    from dazzle.page.runtime.landing_resolver import check_landing_drift
-
     lines: list[str] = []
     for persona in personas:
         msg = check_landing_drift(persona, rhythms, workspaces)
@@ -130,8 +131,6 @@ def rhythm_fidelity(
     # rhythm-inferred answer-first landing). Best-effort — never fail fidelity.
     if not json_output:
         try:
-            from dazzle.cli.utils import load_project_appspec
-
             appspec = load_project_appspec(root)
             for line in landing_drift_lines(appspec.personas, appspec.rhythms, appspec.workspaces):
                 typer.echo(f"landing-drift: {line}")
