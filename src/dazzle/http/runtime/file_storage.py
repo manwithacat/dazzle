@@ -48,6 +48,9 @@ class FileMetadata(BaseModel):
     entity_id: str | None = Field(default=None, description="Associated record ID")
     field_name: str | None = Field(default=None, description="Field name")
     thumbnail_key: str | None = Field(default=None, description="Thumbnail storage key")
+    uploaded_by: str | None = Field(
+        default=None, description="Session user id that uploaded this file (#1551)"
+    )
     created_at: datetime = Field(description="Upload timestamp")
     url: str = Field(description="Public URL")
     thumbnail_url: str | None = Field(default=None, description="Thumbnail URL")
@@ -507,6 +510,7 @@ def ensure_file_storage_tables(cur: Any) -> None:
             entity_id TEXT,
             field_name TEXT,
             thumbnail_key TEXT,
+            uploaded_by TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT
         )
@@ -519,6 +523,9 @@ def ensure_file_storage_tables(cur: Any) -> None:
         CREATE INDEX IF NOT EXISTS idx_files_field
         ON dazzle_files(entity_name, field_name)
     """)
+    # #1551: additive column for existing tables (raw-DDL store, not Alembic).
+    # IF NOT EXISTS avoids a transaction-aborting duplicate-column error on PG.
+    cur.execute("ALTER TABLE dazzle_files ADD COLUMN IF NOT EXISTS uploaded_by TEXT")
 
 
 class FileMetadataStore:
@@ -584,6 +591,7 @@ class FileMetadataStore:
             metadata.entity_id,
             metadata.field_name,
             metadata.thumbnail_key,
+            metadata.uploaded_by,
             metadata.created_at.isoformat(),
         )
 
@@ -594,8 +602,8 @@ class FileMetadataStore:
                 """
                 INSERT INTO dazzle_files
                 (id, filename, content_type, size, storage_key, storage_backend,
-                 entity_name, entity_id, field_name, thumbnail_key, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 entity_name, entity_id, field_name, thumbnail_key, uploaded_by, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
                     filename = EXCLUDED.filename,
                     content_type = EXCLUDED.content_type,
@@ -606,6 +614,7 @@ class FileMetadataStore:
                     entity_id = EXCLUDED.entity_id,
                     field_name = EXCLUDED.field_name,
                     thumbnail_key = EXCLUDED.thumbnail_key,
+                    uploaded_by = EXCLUDED.uploaded_by,
                     updated_at = EXCLUDED.created_at
                 """,
                 params,
@@ -740,6 +749,7 @@ class FileMetadataStore:
             entity_id=row.get("entity_id"),
             field_name=row.get("field_name"),
             thumbnail_key=row.get("thumbnail_key"),
+            uploaded_by=row.get("uploaded_by"),  # None for legacy rows missing the column
             created_at=datetime.fromisoformat(row["created_at"]),
             url=url,
             thumbnail_url=thumbnail_url,
@@ -969,6 +979,7 @@ class FileService:
         entity_id: str | None = None,
         field_name: str | None = None,
         path_prefix: str = "",
+        uploaded_by: str | None = None,
     ) -> FileMetadata:
         """
         Upload a file.
@@ -981,6 +992,7 @@ class FileService:
             entity_id: Associated record ID
             field_name: Field name
             path_prefix: Optional storage path prefix
+            uploaded_by: Session user id sourced from auth_context (#1551)
 
         Returns:
             FileMetadata for the uploaded file
@@ -1000,16 +1012,17 @@ class FileService:
         file.seek(0)
         metadata = await self.storage.store(file, filename, content_type, path_prefix)
 
-        # Update with entity association
-        if entity_name or entity_id or field_name:
-            metadata = FileMetadata(
-                **{
-                    **metadata.model_dump(),
-                    "entity_name": entity_name,
-                    "entity_id": entity_id,
-                    "field_name": field_name,
-                }
-            )
+        # Merge entity association and session-sourced uploaded_by (#1551).
+        # Always reconstruct so both fields (entity + uploader) are set correctly.
+        metadata = FileMetadata(
+            **{
+                **metadata.model_dump(),
+                "entity_name": entity_name,
+                "entity_id": entity_id,
+                "field_name": field_name,
+                "uploaded_by": uploaded_by,
+            }
+        )
 
         # Save metadata
         self.metadata_store.save(metadata)

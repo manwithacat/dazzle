@@ -115,6 +115,7 @@ async def _upload_file(
     entity: str | None = None,
     entity_id: str | None = None,
     field_name: str | None = None,
+    uploaded_by: str | None = None,
 ) -> dict[str, Any]:
     """Upload a file.
 
@@ -147,7 +148,7 @@ async def _upload_file(
 
         file_obj = BytesIO(content)
 
-        # Upload
+        # Upload — uploaded_by is session-sourced, never from client input (#1551)
         metadata = await deps.file_service.upload(
             file=file_obj,
             filename=file.filename or "unnamed",
@@ -155,6 +156,7 @@ async def _upload_file(
             entity_name=entity,
             entity_id=entity_id,
             field_name=field_name,
+            uploaded_by=uploaded_by,
         )
 
         # Generate thumbnail for images
@@ -451,7 +453,17 @@ def create_file_routes(
         auth_context: Any = Depends(auth_dep),  # noqa: B008
     ) -> dict[str, Any]:
         _require_posture(deps, auth_context)
-        return await _upload_file(deps, request, file, entity, entity_id, field)
+        # Source uploaded_by from the session, never from client input (#1551).
+        uid = getattr(getattr(auth_context, "user", None), "id", None)
+        return await _upload_file(
+            deps,
+            request,
+            file,
+            entity,
+            entity_id,
+            field,
+            uploaded_by=str(uid) if uid is not None else None,
+        )
 
     # File info
     @app.get(f"{prefix}/{{file_id}}")  # nosemgrep
