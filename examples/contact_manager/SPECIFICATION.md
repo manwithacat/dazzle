@@ -70,4 +70,13 @@ enhanced — no heavy single-page JavaScript application to maintain, which
 keeps the product fast, accessible, and simple to operate (verify:
 `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:55c2f0878247a498674bbf235cd20595e0ed9d0c27af73af8ef07c616dc11873 -->
+## Compliance posture
+
+Attached documents — such as signed engagement letters — are served through an
+entity-scoped, audited byte-access boundary: bytes are released only when the
+same rule that governs the record allows it, and each access is recorded. A
+static proof holds every byte-serving route to that boundary, so no new route
+can stream document bytes outside it without being explicitly listed (verify:
+`dazzle rbac byte-routes --strict`).
+
+<!-- dazzle-spec-brief: sha256:5a47fb37298d12b6eca2992584ffb478e4931b35e47ae09fbf62ffd73c732f86 -->

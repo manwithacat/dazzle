@@ -93,14 +93,20 @@ def always(_app: ir.AppSpec) -> bool:
     return True
 
 
-def has_byte_access_boundary(_app: ir.AppSpec) -> bool:
-    """True when the framework serves stored bytes through the audited,
-    entity-scoped byte core with no bypass (a framework-wide guarantee,
-    not app-specific — always true on this framework version).
+def has_byte_access_boundary(app: ir.AppSpec) -> bool:
+    """True when the app has at least one FILE-type field on some entity.
+
+    An app with no stored files serves no bytes through the byte core, so the
+    audited byte-access boundary claim must not activate.  A file-less app is
+    not wrong — it simply has no file-serving surface to audit.
 
     The static proof is `dazzle rbac byte-routes --strict` (#1551 task 7).
     """
-    return True
+    return any(
+        field.type.kind == ir.FieldTypeKind.FILE
+        for entity in app.domain.entities
+        for field in entity.fields
+    )
 
 
 REGISTRY: dict[str, Callable[[ir.AppSpec], bool]] = {

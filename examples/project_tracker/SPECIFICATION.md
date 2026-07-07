@@ -51,4 +51,13 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:43a745923b80423eeda3057685e2de7ede7480a681ea95e53f92f611d07afa29 -->
+## Compliance posture
+
+Task attachments are served through an entity-scoped, audited byte-access
+boundary: bytes are released only when the same rule that governs the parent
+task allows it, and each access is recorded. A static proof holds every
+byte-serving route to that boundary, so no new route can stream attachment
+bytes outside it without being explicitly listed (verify:
+`dazzle rbac byte-routes --strict`).
+
+<!-- dazzle-spec-brief: sha256:e20fb36222131476c0bfb6cdb2ecdcb8f0577bcee694e497d31eb4f8a841b6d3 -->

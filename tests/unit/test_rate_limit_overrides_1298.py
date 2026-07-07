@@ -189,16 +189,19 @@ def test_download_limit_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_byte_routes_carry_the_download_limit() -> None:
     """The decorator must be applied at route-registration time — a
     source-level pin that the byte-serving handlers reference
-    download_limit (the #1551 item-4 contract)."""
+    download_limit (the #1551 item-4 contract).
+
+    The ID-keyed /files/{id}/download|stream|thumbnail routes were retired
+    in #1551 Task 5.  The active byte-serving routes are:
+      - document_routes: /{entity}/{id}/{field}/file + /{entity}/{id}/{field}/download
+      - static file_routes: /{file_path:path} (create_static_file_routes)
+    """
     import inspect
 
     from dazzle.http.runtime import document_routes, file_routes
 
     doc_src = inspect.getsource(document_routes.create_document_routes)
     assert doc_src.count("download_limit") >= 2  # /file + /download
-
-    file_src = inspect.getsource(file_routes.create_file_routes)
-    assert file_src.count("download_limit") >= 3  # download + stream + thumbnail
 
     static_src = inspect.getsource(file_routes.create_static_file_routes)
     assert "download_limit" in static_src

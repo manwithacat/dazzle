@@ -24,12 +24,25 @@ def test_byte_access_claim_detector_matches_registry():
     )
 
 
-def test_byte_access_detector_returns_true():
-    """The detector is framework-wide (always-on) — it must return True for any app."""
+def test_byte_access_detector_returns_true_for_app_with_file_fields():
+    """The detector activates for apps that have at least one FILE-type field."""
     from pathlib import Path
 
     from dazzle.core.appspec_loader import load_project_appspec
 
     repo = Path(__file__).resolve().parents[2]
-    app = load_project_appspec(repo / "examples" / "simple_task")
+    # project_tracker has an Attachment entity with a `file: file required` field
+    app = load_project_appspec(repo / "examples" / "project_tracker")
     assert REGISTRY["has_byte_access_boundary"](app) is True
+
+
+def test_byte_access_detector_returns_false_for_file_less_app():
+    """The detector does not activate for apps with no FILE-type fields."""
+    from pathlib import Path
+
+    from dazzle.core.appspec_loader import load_project_appspec
+
+    repo = Path(__file__).resolve().parents[2]
+    # simple_task has no file fields — the byte_access claim must not fire
+    app = load_project_appspec(repo / "examples" / "simple_task")
+    assert REGISTRY["has_byte_access_boundary"](app) is False
