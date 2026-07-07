@@ -554,7 +554,7 @@ git commit -m "feat(files): session-sourced uploaded_by on file metadata (#1551)
 **Files:**
 - Modify: `src/dazzle/http/runtime/document_routes.py` (add the pending route; add the triple-verification helper)
 - Modify: `src/dazzle/http/runtime/handlers/write_handlers.py` (call the verification on file-field writes) — confirm the exact write path via grep before editing.
-- Test: `tests/unit/test_pending_document_route.py`, `tests/integration/test_attach_triple_verify_pg.py`
+- Test: `tests/unit/test_pending_document_route.py`, `tests/unit/test_attach_triple_verify.py`
 
 **Interfaces:**
 - Consumes: `serve_bytes`, `AccessDecision` (Task 2); `FileMetadata.uploaded_by` (Task 3); `file_service.get_metadata`, `file_service.read_range`.
@@ -667,7 +667,7 @@ Expected: PASS (3 passed).
 - [ ] **Step 5: Write the failing triple-verification test (real PG)**
 
 ```python
-# tests/integration/test_attach_triple_verify_pg.py
+# tests/unit/test_attach_triple_verify.py
 import pytest
 from dazzle.http.runtime.document_routes import verify_file_triple
 
@@ -723,10 +723,10 @@ Grep `src/dazzle/http/runtime/handlers/write_handlers.py` for where file-field v
 
 - [ ] **Step 7: Run + commit**
 
-Run: `.venv/bin/python -m pytest tests/unit/test_pending_document_route.py tests/integration/test_attach_triple_verify_pg.py -q && .venv/bin/ruff check src/dazzle/http/runtime/document_routes.py --fix && .venv/bin/python -m mypy src/dazzle/http/runtime/document_routes.py`
+Run: `.venv/bin/python -m pytest tests/unit/test_pending_document_route.py tests/unit/test_attach_triple_verify.py -q && .venv/bin/ruff check src/dazzle/http/runtime/document_routes.py --fix && .venv/bin/python -m mypy src/dazzle/http/runtime/document_routes.py`
 
 ```bash
-git add src/dazzle/http/runtime/document_routes.py src/dazzle/http/runtime/handlers/write_handlers.py tests/unit/test_pending_document_route.py tests/integration/test_attach_triple_verify_pg.py
+git add src/dazzle/http/runtime/document_routes.py src/dazzle/http/runtime/handlers/write_handlers.py tests/unit/test_pending_document_route.py tests/unit/test_attach_triple_verify.py
 git commit -m "feat(http): uploader-gated pending-file route + attach-time triple verification (#1551)"
 ```
 
