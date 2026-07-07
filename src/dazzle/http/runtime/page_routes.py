@@ -3176,20 +3176,22 @@ def create_page_routes(
                 resolve_persona_workspace_route,
             )
 
-            # Build persona -> workspace route mapping for EVERY persona
-            # using the workspace-only resolver. It always returns a
-            # /app/workspaces/<name> route when the app has at least one
-            # workspace, so every declared persona gets a deterministic
-            # target. We deliberately use the workspace-only variant
-            # rather than compute_persona_default_routes: the latter
-            # honours persona.default_route (e.g. "/admin") which may be
-            # DSL-declared but not actually registered as a FastAPI
-            # route — hitting /app as admin would then redirect to a
-            # 404. The workspace-only resolver stays inside the
-            # guaranteed-registered /app/workspaces/<name> namespace.
+            # Build persona -> route mapping for EVERY persona using the
+            # variant that skips persona.default_route. It returns a
+            # registered /app/... route (a /app/workspaces/<name> workspace
+            # route, or via #1558 a list-mode surface's route keyed by the
+            # surface's entity through the app_paths SSOT — still registered,
+            # never a dead link), so every declared persona gets a
+            # deterministic target. We deliberately avoid
+            # compute_persona_default_routes here: the latter honours
+            # persona.default_route (e.g. "/admin") which may be DSL-declared
+            # but not actually registered as a FastAPI route — hitting /app
+            # as admin would then redirect to a 404.
             _persona_ws_routes: dict[str, str] = {}
             for _persona in appspec.personas:
-                _route = resolve_persona_workspace_route(_persona, list(workspaces))
+                _route = resolve_persona_workspace_route(
+                    _persona, list(workspaces), appspec.rhythms, appspec.surfaces
+                )
                 if _route:
                     _persona_ws_routes[_persona.id] = _route
 

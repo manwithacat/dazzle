@@ -60,7 +60,7 @@ class TestDefaultWorkspaceWins:
         return its `/app/workspaces/<name>` route."""
         ws = _WorkspaceStub(name="my_work")
         persona = _PersonaStub(id="member", default_workspace="my_work")
-        assert resolve_persona_workspace_route(persona, [ws]) == "/app/workspaces/my_work"
+        assert resolve_persona_workspace_route(persona, [ws], [], []) == "/app/workspaces/my_work"
 
     def test_default_workspace_skipped_when_not_found(self) -> None:
         """If persona.default_workspace doesn't match any workspace in the
@@ -68,7 +68,7 @@ class TestDefaultWorkspaceWins:
         ws = _WorkspaceStub(name="my_work")
         persona = _PersonaStub(id="member", default_workspace="nonexistent")
         # Should fall through to step 4 (first workspace fallback)
-        assert resolve_persona_workspace_route(persona, [ws]) == "/app/workspaces/my_work"
+        assert resolve_persona_workspace_route(persona, [ws], [], []) == "/app/workspaces/my_work"
 
 
 class TestExplicitAccessFallback:
@@ -87,7 +87,7 @@ class TestExplicitAccessFallback:
         )
         persona = _PersonaStub(id="tester")  # no default_workspace
         assert (
-            resolve_persona_workspace_route(persona, [ws_admin, ws_tester])
+            resolve_persona_workspace_route(persona, [ws_admin, ws_tester], [], [])
             == "/app/workspaces/tester_dashboard"
         )
 
@@ -104,7 +104,7 @@ class TestExplicitAccessFallback:
         )
         persona = _PersonaStub(id="engineer")
         assert (
-            resolve_persona_workspace_route(persona, [ws_admin, ws_engineer])
+            resolve_persona_workspace_route(persona, [ws_admin, ws_engineer], [], [])
             == "/app/workspaces/engineering"
         )
 
@@ -126,7 +126,7 @@ class TestAuthenticatedFallback:
         )
         persona = _PersonaStub(id="customer")
         assert (
-            resolve_persona_workspace_route(persona, [ws_admin, ws_shared])
+            resolve_persona_workspace_route(persona, [ws_admin, ws_shared], [], [])
             == "/app/workspaces/shared"
         )
 
@@ -145,13 +145,13 @@ class TestFirstWorkspaceFallback:
         ws_second = _WorkspaceStub(name="second")
         persona = _PersonaStub(id="nobody")
         assert (
-            resolve_persona_workspace_route(persona, [ws_first, ws_second])
+            resolve_persona_workspace_route(persona, [ws_first, ws_second], [], [])
             == "/app/workspaces/first"
         )
 
     def test_empty_workspaces_returns_none(self) -> None:
         persona = _PersonaStub(id="anyone")
-        assert resolve_persona_workspace_route(persona, []) is None
+        assert resolve_persona_workspace_route(persona, [], [], []) is None
 
 
 class TestDefaultRouteIsIgnoredDeliberately:
@@ -176,7 +176,10 @@ class TestDefaultRouteIsIgnoredDeliberately:
             default_route="/admin",  # would be wrong to return this
         )
         # Must return the workspace route, NOT the default_route.
-        assert resolve_persona_workspace_route(persona, [ws]) == "/app/workspaces/admin_dashboard"
+        assert (
+            resolve_persona_workspace_route(persona, [ws], [], [])
+            == "/app/workspaces/admin_dashboard"
+        )
 
     def test_default_route_ignored_even_without_default_workspace(self) -> None:
         ws_admin = _WorkspaceStub(
@@ -189,7 +192,7 @@ class TestDefaultRouteIsIgnoredDeliberately:
             # no default_workspace set
         )
         assert (
-            resolve_persona_workspace_route(persona, [ws_admin])
+            resolve_persona_workspace_route(persona, [ws_admin], [], [])
             == "/app/workspaces/admin_dashboard"
         )
 
@@ -228,7 +231,7 @@ class TestFieldtestHubShape:
 
     def test_each_persona_lands_on_own_workspace(self) -> None:
         workspaces, personas = self._fieldtest_hub()
-        routes = {p.id: resolve_persona_workspace_route(p, workspaces) for p in personas}
+        routes = {p.id: resolve_persona_workspace_route(p, workspaces, [], []) for p in personas}
         assert routes == {
             "admin": "/app/workspaces/_platform_admin",
             "engineer": "/app/workspaces/engineering_dashboard",
@@ -246,5 +249,5 @@ class TestFieldtestHubShape:
         tester = next(p for p in personas if p.id == "tester")
         tester.default_workspace = None
 
-        route = resolve_persona_workspace_route(tester, workspaces)
+        route = resolve_persona_workspace_route(tester, workspaces, [], [])
         assert route == "/app/workspaces/tester_dashboard"

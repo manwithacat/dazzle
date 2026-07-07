@@ -27,6 +27,7 @@ from dazzle._version import get_version
 from dazzle.core import ir
 from dazzle.core.ir import AggregateRef, PeekMode, state_machine, workspaces
 from dazzle.core.ir.rhythm import PhaseKind
+from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.page import app_paths
 from dazzle.page.runtime.action_prominence_resolver import (
     resolve_action_prominence,
@@ -39,7 +40,7 @@ from dazzle.page.runtime.column_economy_resolver import (
 )
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.page.runtime.form_engagement_resolver import annotate_form_fields_by_usage
-from dazzle.page.runtime.landing_resolver import check_landing_drift, infer_landing_workspace
+from dazzle.page.runtime.landing_resolver import check_landing_drift, infer_landing_route
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
 from dazzle.render.context import ColumnContext
@@ -253,22 +254,38 @@ def _probe_2a() -> ProbeResult:
             )
         ],
     )
-    # (a) infer when default_workspace is unset
+    # (a) infer a workspace landing when default_workspace is unset
     p_unset = ir.PersonaSpec(id="agent", label="Agent")
-    infers = infer_landing_workspace(p_unset, [rhythm], ws) == "queue"
+    infers = infer_landing_route(p_unset, [rhythm], ws, []) == "/app/workspaces/queue"
+    # (a2) a rhythm scene naming a LIST surface resolves to its registered route
+    surf = ir.SurfaceSpec(name="ticket_list", mode=SurfaceMode.LIST, entity_ref="Ticket")
+    r_surface = ir.RhythmSpec(
+        name="agent_surface",
+        persona="agent",
+        phases=[
+            ir.PhaseSpec(
+                name="active",
+                kind=PhaseKind.ACTIVE,
+                scenes=[ir.SceneSpec(name="browse", surface="ticket_list")],
+            )
+        ],
+    )
+    infers_surface = infer_landing_route(p_unset, [r_surface], ws, [surf]) == app_paths.list_path(
+        "/app", app_paths.entity_slug("Ticket")
+    )
     # (b) declaration is distinguished from the rhythm (drift fires on conflict)
     p_conflict = ir.PersonaSpec(id="agent", label="Agent", default_workspace="reports")
-    drift_fires = check_landing_drift(p_conflict, [rhythm], ws) is not None
+    drift_fires = check_landing_drift(p_conflict, [rhythm], ws, []) is not None
     # (c) coherent declaration is silent
     p_ok = ir.PersonaSpec(id="agent", label="Agent", default_workspace="queue")
-    drift_silent = check_landing_drift(p_ok, [rhythm], ws) is None
+    drift_silent = check_landing_drift(p_ok, [rhythm], ws, []) is None
     # cold-start: no rhythm -> no inference (fall through unchanged)
-    cold_start_safe = infer_landing_workspace(p_unset, [], ws) is None
-    ok = infers and drift_fires and drift_silent and cold_start_safe
+    cold_start_safe = infer_landing_route(p_unset, [], ws, []) is None
+    ok = infers and infers_surface and drift_fires and drift_silent and cold_start_safe
     return ProbeResult(
         ok=ok,
         note=(
-            f"infer={infers} drift_fires={drift_fires} "
+            f"infer={infers} infer_surface={infers_surface} drift_fires={drift_fires} "
             f"drift_silent={drift_silent} cold_start_safe={cold_start_safe}"
         ),
     )
@@ -455,12 +472,14 @@ CRITERIA: list[Criterion] = [
         "answer-first landing",
         4,
         "#1558 L3 + rhythm inference L4 — the answer-first landing is inferred from a "
-        "persona's rhythm (first ACTIVE-phase scene naming a workspace) when "
-        "default_workspace is unset, via `infer_landing_workspace` consulted in "
-        "`_resolve_persona_route` (step 2.5, after the declared default_workspace, before "
-        "the generic workspace fallbacks). An explicit default_workspace stays "
-        "authoritative and cold-start (no rhythm) is byte-identical; declared-vs-rhythm "
-        "drift surfaces as an advisory line in `dazzle rhythm fidelity`.",
+        "persona's rhythm (first active-phase scene) when default_workspace is unset, via "
+        "`infer_landing_route` consulted in BOTH redirect resolvers: `_resolve_persona_route` "
+        "(step 2.5) and `resolve_persona_workspace_route` (step 1.5, the in-app /app root). "
+        "The scene target resolves to a workspace root route OR a list-mode surface's route "
+        "keyed by the surface's entity through the app_paths SSOT (so it matches registration, "
+        "never a dead link). An explicit default_workspace stays authoritative and cold-start "
+        "(no rhythm) is byte-identical; declared-vs-rhythm drift surfaces as an advisory line "
+        "in `dazzle rhythm fidelity`.",
         "medium",
         _probe_2a,
     ),

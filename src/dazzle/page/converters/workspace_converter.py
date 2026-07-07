@@ -12,7 +12,7 @@ from dazzle.core import ir
 # FR-6 follow-up so core can use it without depending on the ui layer).
 from dazzle.core.access import workspace_allowed_personas as workspace_allowed_personas
 from dazzle.core.strings import to_api_plural
-from dazzle.page.runtime.landing_resolver import infer_landing_workspace
+from dazzle.page.runtime.landing_resolver import infer_landing_route
 from dazzle.page.specs import (
     AppShellLayout,
     LayoutSpec,
@@ -478,6 +478,7 @@ def compute_persona_default_routes(
     personas: list[ir.PersonaSpec],
     workspaces: list[ir.WorkspaceSpec],
     rhythms: list[ir.RhythmSpec],
+    surfaces: list[ir.SurfaceSpec],
 ) -> dict[str, str]:
     """
     Compute default routes for personas based on workspace access rules.
@@ -494,6 +495,7 @@ def compute_persona_default_routes(
         personas: List of persona specifications
         workspaces: List of workspace specifications (IR, not UISpec)
         rhythms: List of rhythm specifications (for #1558 landing inference)
+        surfaces: List of surface specifications (for #1558 surface landings)
 
     Returns:
         Dict mapping persona_id to their default route
@@ -501,7 +503,7 @@ def compute_persona_default_routes(
     result: dict[str, str] = {}
 
     for persona in personas:
-        route = _resolve_persona_route(persona, workspaces, rhythms)
+        route = _resolve_persona_route(persona, workspaces, rhythms, surfaces)
         if route:
             result[persona.id] = route
 
@@ -512,6 +514,7 @@ def _resolve_persona_route(
     persona: ir.PersonaSpec,
     workspaces: list[ir.WorkspaceSpec],
     rhythms: list[ir.RhythmSpec],
+    surfaces: list[ir.SurfaceSpec],
 ) -> str | None:
     """Resolve the default route for a single persona."""
     # 1. Explicit default_route
@@ -524,12 +527,10 @@ def _resolve_persona_route(
             if ws.name == persona.default_workspace:
                 return _workspace_root_route(ws)
 
-    # 2.5 (#1558): infer the answer-first landing from the persona's rhythm.
-    inferred = infer_landing_workspace(persona, rhythms, workspaces)
+    # 2.5 (#1558): infer the answer-first landing route from the persona's rhythm.
+    inferred = infer_landing_route(persona, rhythms, workspaces, surfaces)
     if inferred:
-        for ws in workspaces:
-            if ws.name == inferred:
-                return _workspace_root_route(ws)
+        return inferred
 
     # 3. First workspace with explicit persona access
     for ws in workspaces:
@@ -551,24 +552,30 @@ def _resolve_persona_route(
 def resolve_persona_workspace_route(
     persona: ir.PersonaSpec,
     workspaces: list[ir.WorkspaceSpec],
+    rhythms: list[ir.RhythmSpec],
+    surfaces: list[ir.SurfaceSpec],
 ) -> str | None:
-    """Resolve a **workspace-only** default route for a persona.
+    """Resolve a default route for a persona, skipping ``default_route``.
 
     Variant of :func:`_resolve_persona_route` that skips the
     ``persona.default_route`` step (step 1). Use this in contexts where
-    the caller needs a guaranteed-registered ``/app/workspaces/<name>``
-    route rather than honouring an arbitrary DSL-declared
-    ``default_route`` which may not map to any actual registered
-    FastAPI endpoint.
+    the caller needs a guaranteed-registered route rather than honouring
+    an arbitrary DSL-declared ``default_route`` which may not map to any
+    actual registered FastAPI endpoint.
 
     Resolution order:
     1. ``persona.default_workspace`` (if set and matches a workspace)
+    1.5 Inferred answer-first landing from the persona's rhythm (#1558) —
+        a workspace root route or a list-mode surface's (registered) route
     2. First workspace whose ``access.allow_personas`` includes this persona
     3. First workspace with ``access.level == AUTHENTICATED``
     4. Fallback to the first workspace
 
-    Returns ``None`` only if ``workspaces`` is empty. Otherwise always
-    returns a ``/app/workspaces/<name>`` path.
+    Returns ``None`` only if ``workspaces`` is empty. Otherwise returns a
+    registered ``/app/...`` path — a ``/app/workspaces/<name>`` workspace
+    route, or (via #1558 rhythm inference) a list-mode surface's route keyed
+    by the surface's entity through the ``app_paths`` SSOT (so it matches
+    registration, never a dead link).
 
     Introduced in cycle 227 after EX-042 surfaced the fragility of
     ``_root_redirect``'s default-workspace-or-workspaces[0] fallback
@@ -576,14 +583,18 @@ def resolve_persona_workspace_route(
     ``compute_persona_default_routes`` helper but hit a regression on
     simple_task where ``persona.default_route`` values (``/admin``,
     ``/my-work``) are DSL-declared but never registered as real routes.
-    This workspace-only variant sidesteps that by only ever returning
-    workspace URLs.
+    This variant sidesteps that by never honouring ``default_route``.
     """
     # 1. Default workspace
     if persona.default_workspace:
         for ws in workspaces:
             if ws.name == persona.default_workspace:
                 return _workspace_root_route(ws)
+
+    # 1.5 (#1558): infer the answer-first landing route from the persona's rhythm.
+    inferred = infer_landing_route(persona, rhythms, workspaces, surfaces)
+    if inferred:
+        return inferred
 
     # 2. First workspace with explicit persona access
     for ws in workspaces:

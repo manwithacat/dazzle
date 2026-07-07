@@ -29,12 +29,13 @@ def landing_drift_lines(
     personas: "list[ir.PersonaSpec]",
     rhythms: "list[ir.RhythmSpec]",
     workspaces: "list[ir.WorkspaceSpec]",
+    surfaces: "list[ir.SurfaceSpec]",
 ) -> list[str]:
     """One advisory line per persona whose declared ``default_workspace``
     contradicts its rhythm-inferred answer-first landing (#1558)."""
     lines: list[str] = []
     for persona in personas:
-        msg = check_landing_drift(persona, rhythms, workspaces)
+        msg = check_landing_drift(persona, rhythms, workspaces, surfaces)
         if msg:
             lines.append(msg)
     return lines
@@ -132,7 +133,9 @@ def rhythm_fidelity(
     if not json_output:
         try:
             appspec = load_project_appspec(root)
-            for line in landing_drift_lines(appspec.personas, appspec.rhythms, appspec.workspaces):
+            for line in landing_drift_lines(
+                appspec.personas, appspec.rhythms, appspec.workspaces, appspec.surfaces
+            ):
                 typer.echo(f"landing-drift: {line}")
         except Exception:
             pass

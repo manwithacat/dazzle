@@ -585,7 +585,7 @@ def _serve_combined(ctx: _ServeContext) -> None:
 
     # Extract personas and scenarios for dev control plane
     persona_routes = compute_persona_default_routes(
-        appspec.personas, appspec.workspaces, appspec.rhythms
+        appspec.personas, appspec.workspaces, appspec.rhythms, appspec.surfaces
     )
     personas = [
         {
