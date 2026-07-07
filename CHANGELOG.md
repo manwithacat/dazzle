@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.94.0] - 2026-07-07
+
+Minor release rolling up the 0.93.x arc (publishable milestone; no
+changes beyond v0.93.144):
+
+- **The HaTchi-MaXchi migration is complete** (v0.93.108–134, HM
+  0.1.44–58): all tiers converged, Alpine removed, hx-pdf shipped,
+  every Hyperpart fleet-exercised (#164 oracle, `KNOWN_GAPS` empty),
+  no intentionally-unconverted family remains.
+- **Security posture sweep**: `/files/*` auth posture + gated static
+  serving + rate limits (#1551 items 1–4), command-palette index
+  scoping (#1539), and ADR-0052 partition-root-subtree semantics for
+  `scope: all` on tenant kinds (#1541).
+- **Issue backlog cleared to its tail** (ten fixes, v0.93.135–144);
+  remaining: #1551 item 5 (streaming reads), #1517 (future), #1409
+  (blocked upstream).
+
 ## [0.93.144] - 2026-07-07
 
 ### Fixed
