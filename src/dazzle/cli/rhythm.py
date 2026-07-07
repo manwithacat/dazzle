@@ -9,6 +9,7 @@ Commands:
 - rhythm lifecycle: Show rhythm lifecycle overview
 """
 
+from contextlib import suppress
 from typing import TYPE_CHECKING
 
 import typer
@@ -131,14 +132,13 @@ def rhythm_fidelity(
     # #1558: advisory landing-drift lines (declared default_workspace vs the
     # rhythm-inferred answer-first landing). Best-effort — never fail fidelity.
     if not json_output:
-        try:
+        # Advisory only — a parse/load hiccup must never fail the fidelity command.
+        with suppress(Exception):
             appspec = load_project_appspec(root)
             for line in landing_drift_lines(
                 appspec.personas, appspec.rhythms, appspec.workspaces, appspec.surfaces
             ):
                 typer.echo(f"landing-drift: {line}")
-        except Exception:
-            pass
 
 
 @rhythm_app.command("lifecycle")

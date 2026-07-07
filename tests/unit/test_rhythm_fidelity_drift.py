@@ -3,9 +3,13 @@ one advisory line per persona whose declared default_workspace contradicts its
 rhythm-inferred landing.
 """
 
+import pytest
+
 from dazzle.cli.rhythm import landing_drift_lines
 from dazzle.core import ir
 from dazzle.core.ir.rhythm import PhaseKind
+
+pytestmark = pytest.mark.gate
 
 
 def _ws(*names):  # type: ignore[no-untyped-def]

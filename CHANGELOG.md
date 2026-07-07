@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.96.6] - 2026-07-08
+
+### Fixed
+- **CI meta-gates on the 2a change** (#1558 follow-up): the v0.96.5 landing
+  work tripped two gate tests that a filtered local run missed. (1)
+  `cli/rhythm.py`'s advisory landing-drift block used `except Exception: pass`,
+  forbidden by `test_no_bare_except_pass` — switched to
+  `with suppress(Exception)`. (2) `test_rhythm_fidelity_drift.py` is a
+  "drift"-family gate file and lacked `pytestmark = pytest.mark.gate`
+  (`test_gate_marker_complete`, the #1466 class) — marker added. No behaviour
+  change.
+
 ## [0.96.5] - 2026-07-08
 
 ### Added
