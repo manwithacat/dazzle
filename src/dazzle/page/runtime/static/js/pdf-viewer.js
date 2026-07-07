@@ -7,8 +7,10 @@
  *   - Esc → navigate to data-dz-back-url (or close the open panel
  *     first, if any — dialog-convention: one Esc closes, second
  *     Esc navigates back)
- *   - j or ArrowLeft → navigate to data-dz-prev-url (if set)
- *   - k or ArrowRight → navigate to data-dz-next-url (if set)
+ *   - j → navigate to data-dz-prev-url (if set)
+ *   - k → navigate to data-dz-next-url (if set)
+ *   - ArrowLeft / ArrowRight → previous/next PAGE (clicks the embedded
+ *     HM pdf Hyperpart's toolbar buttons; no-op without one) (#1552)
  *   - Each panel's `data-dz-panel-key` → toggle its panel
  *
  * Multi-panel exclusivity: opening one panel auto-closes the others.
@@ -264,7 +266,7 @@
           helpOpen();
           return;
         }
-        if (e.key === "j" || e.key === "ArrowLeft") {
+        if (e.key === "j") {
           var prev = el.getAttribute("data-dz-prev-url");
           if (prev) {
             e.preventDefault();
@@ -272,11 +274,27 @@
           }
           return;
         }
-        if (e.key === "k" || e.key === "ArrowRight") {
+        if (e.key === "k") {
           var next = el.getAttribute("data-dz-next-url");
           if (next) {
             e.preventDefault();
             navigate(next);
+          }
+          return;
+        }
+        // #1552: bare arrows drive PAGE navigation on the embedded HM
+        // pdf Hyperpart (clicking its toolbar buttons — the dz-pdf
+        // controller owns the actual paging). Never document
+        // navigation: pressing an arrow next to a "Next page" button
+        // must not yank the reader to a sibling document. Without a
+        // Hyperpart on the page the arrows deliberately no-op.
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          var pdfBtn = el.querySelector(
+            e.key === "ArrowLeft" ? "[data-dz-pdf-prev]" : "[data-dz-pdf-next]"
+          );
+          if (pdfBtn) {
+            e.preventDefault();
+            pdfBtn.click();
           }
           return;
         }

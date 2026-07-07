@@ -1077,7 +1077,7 @@ HYPERPARTS: list[Hyperpart] = [
         'data-dz-variant="ghost" data-dz-pdf-download-link download>Download</a>'
         "</header>"
         '<div class="dz-pdf-status" data-dz-pdf-status aria-live="polite"></div>'
-        '<div class="dz-pdf-stage" data-dz-pdf-viewer>'
+        '<div class="dz-pdf-stage" data-dz-pdf-viewer tabindex="0">'
         '<noscript><a href="sample.pdf" download>Download PDF</a></noscript>'
         "</div>"
         "</section>",

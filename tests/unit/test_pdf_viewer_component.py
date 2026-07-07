@@ -647,3 +647,31 @@ class TestHelpOverlayJsController:
         """j/k/p/m/f/etc are no-ops while the cheat-sheet is open."""
         source = self._load()
         assert "if (helpIsOpen()) return" in source
+
+
+class TestPageKeyAffordances1552:
+    """#1552 — the stage is keyboard-focusable and the legend/help
+    teach the arrow=page, j/k=document split."""
+
+    def _html(self) -> str:
+        from dazzle.page.runtime.pdf_viewer_renderer import render_pdf_viewer_component
+
+        return render_pdf_viewer_component(
+            src="/api/storage/docs/proxy?key=x.pdf",
+            back_url="/app/doc",
+            prev_url="/app/doc/1",
+            next_url="/app/doc/3",
+        )
+
+    def test_stage_is_focusable(self) -> None:
+        assert '<div class="dz-pdf-stage" data-dz-pdf-viewer tabindex="0">' in self._html()
+
+    def test_legend_teaches_arrows_as_page_nav(self) -> None:
+        html = self._html()
+        assert "&larr;&nbsp;&rarr;</kbd>" in html
+        assert ">Page</span>" in html
+
+    def test_help_rows_split_documents_from_pages(self) -> None:
+        html = self._html()
+        assert "<dt><kbd>j</kbd> / <kbd>k</kbd></dt><dd>Previous / next document</dd>" in html
+        assert "<dt><kbd>&larr;</kbd> / <kbd>&rarr;</kbd></dt><dd>Previous / next page</dd>" in html

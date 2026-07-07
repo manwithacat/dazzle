@@ -86,6 +86,7 @@ def _new_page(
     dark: bool = False,
     embed: bool = False,
     long_panel: bool = False,
+    extra_query: str = "",
 ) -> Any:
     """Open the harness in a fresh page and wait for the bridge to
     register the pdf-viewer widget. ``variant`` controls sibling-
@@ -103,6 +104,7 @@ def _new_page(
         qs += "&embed=1"
     if long_panel:
         qs += "&long_panel=1"
+    qs += extra_query
     page.goto(f"{server}{qs}")
     page.wait_for_function(
         "window.pdfViewerGates && window.pdfViewerGates.widgetMounted().bridgePresent",
@@ -275,21 +277,59 @@ class TestKeyboardShortcuts:
             ("Escape", "#back"),
             ("j", "#prev"),
             ("k", "#next"),
-            ("ArrowLeft", "#prev"),
-            ("ArrowRight", "#next"),
         ],
         ids=[
             "test_escape_navigates_to_back",
             "test_j_key_navigates_to_prev",
             "test_k_key_navigates_to_next",
-            "test_arrow_left_navigates_to_prev",
-            "test_arrow_right_navigates_to_next",
         ],
     )
     def test_key_navigates(self, browser: Any, server: str, key: str, expected_hash: str) -> None:
         page = _new_page(browser, server)
         url = self._press(page, key)
         assert url.endswith(expected_hash)
+        page.close()
+
+    # #1552: bare arrows drive PAGE navigation (the HM pdf Hyperpart's
+    # toolbar), never sibling-document navigation — pressing → next to
+    # a "Next page" button must not yank the reader to another
+    # document and lose the position. j/k keep sibling duty.
+    @pytest.mark.parametrize(
+        ("key", "expected_page_nav"),
+        [("ArrowLeft", "prev"), ("ArrowRight", "next")],
+        ids=["arrow_left_pages_back", "arrow_right_pages_forward"],
+    )
+    def test_arrows_drive_page_nav_not_documents(
+        self, browser: Any, server: str, key: str, expected_page_nav: str
+    ) -> None:
+        page = _new_page(browser, server)
+        page.evaluate("window.location.hash = 'sentinel'")
+        page.wait_for_timeout(20)
+        page.keyboard.press(key)
+        page.wait_for_timeout(50)
+        assert "#sentinel" in str(page.url), "arrows must not navigate documents"
+        assert page.evaluate("window.__pageNav") == expected_page_nav
+        page.close()
+
+    def test_arrows_noop_without_the_pdf_hyperpart(self, browser: Any, server: str) -> None:
+        """Empty-src / no-hyperpart pages: arrows do nothing at all
+        (they must NOT fall back to sibling navigation)."""
+        page = _new_page(browser, server, extra_query="&nopdf=1")
+        page.evaluate("window.location.hash = 'sentinel'")
+        page.wait_for_timeout(20)
+        page.keyboard.press("ArrowLeft")
+        page.keyboard.press("ArrowRight")
+        page.wait_for_timeout(50)
+        assert "#sentinel" in str(page.url)
+        assert page.evaluate("window.__pageNav") is None
+        page.close()
+
+    def test_stage_is_keyboard_focusable(self, browser: Any, server: str) -> None:
+        """The paged canvas stage is scrollable — it must be reachable
+        by Tab so keyboard users can scroll the document (#1552; the
+        legacy <embed> plugin used to take focus itself)."""
+        page = _new_page(browser, server)
+        assert page.locator(".dz-pdf-stage").get_attribute("tabindex") == "0"
         page.close()
 
 

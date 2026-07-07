@@ -162,6 +162,25 @@
         </div>
 
         <!--
+          #1552: minimal HM pdf-Hyperpart stub — the toolbar hooks the
+          page-level arrow rebind targets, and the stage is the
+          keyboard-scrollable focus stop. The buttons record clicks in
+          window.__pageNav (the dz-pdf controller itself is NOT loaded
+          here; the page-chrome gates only assert the DISPATCH).
+          Removed by ?nopdf=1 (the empty-src page shape — arrows must
+          no-op entirely, never fall back to document navigation).
+        -->
+        <section class="dz-pdf" data-dz-pdf id="harness-pdf-hyperpart">
+          <header class="dz-pdf-toolbar" data-dz-pdf-toolbar>
+            <button type="button" data-dz-pdf-prev
+              onclick="window.__pageNav = 'prev'">Previous</button>
+            <button type="button" data-dz-pdf-next
+              onclick="window.__pageNav = 'next'">Next</button>
+          </header>
+          <div class="dz-pdf-stage" data-dz-pdf-viewer tabindex="0"></div>
+        </section>
+
+        <!--
           Optional panel slot (#942 cycle 2a). Lives INSIDE
           .dz-pdf-viewer-body so position: absolute pins it to the
           body's bounds, not the wrapper's. Mirrors production
@@ -258,6 +277,12 @@
         var dark = params.get("dark") === "1";
         var useEmbed = params.get("embed") === "1";
         var longPanel = params.get("long_panel") === "1";
+
+        // #1552: the no-hyperpart page shape (empty-src documents).
+        if (params.get("nopdf") === "1") {
+          var hp = document.getElementById("harness-pdf-hyperpart");
+          if (hp) hp.remove();
+        }
 
         // #942 cycle 2c: long-content variant for overflow gates.
         // Replaces the panel body's default short content with a

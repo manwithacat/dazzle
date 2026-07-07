@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.131] - 2026-07-07
+
+### Fixed
+- **`display: pdf_viewer` keyboard model split by axis** (#1552,
+  HM 0.1.56): bare ArrowLeft/ArrowRight now page the embedded
+  document (clicking the HM pdf Hyperpart's toolbar — pressing → next
+  to a "Next page" button no longer yanks the reader to a sibling
+  document and loses the position); `j`/`k` keep sibling-document
+  duty; arrows no-op entirely without a Hyperpart (never fall back to
+  document navigation). The kbd legend and help dialog teach the
+  split.
+- **The canvas stage is keyboard-focusable** (`tabindex="0"`, both
+  the Dazzle emission and the HM partial): the stage is a scrollable
+  region — the legacy `<embed>` plugin took focus itself; the paged
+  canvas didn't, locking keyboard users out of scrolling.
+
+### Agent Guidance
+- Focused-scrollable-region vs. arrow shortcuts: horizontal arrows on
+  a vertically-scrolled stage have no native behaviour to steal at
+  fit-width, so page-nav can own them (the universal PDF-reader
+  convention); ArrowUp/Down stay native scroll. Check the conflict
+  axis before binding arrows near a focusable scroller.
+
 ## [0.93.130] - 2026-07-07
 
 ### Changed

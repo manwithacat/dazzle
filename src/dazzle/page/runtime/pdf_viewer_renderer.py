@@ -145,7 +145,7 @@ def render_pdf_viewer_component(
         'data-dz-variant="outline" data-dz-pdf-fit-width>Fit width</button>'
         "</header>"
         '<div class="dz-pdf-status" data-dz-pdf-status aria-live="polite"></div>'
-        '<div class="dz-pdf-stage" data-dz-pdf-viewer>'
+        '<div class="dz-pdf-stage" data-dz-pdf-viewer tabindex="0">'
         f'<noscript><a href="{_esc(src, quote=True)}">Download PDF</a></noscript>'
         "</div>"
         "</section>"
@@ -195,6 +195,15 @@ def render_pdf_viewer_component(
                     '<span class="dz-pdf-viewer-kbd-label">Next</span>',
                 ]
             )
+        # #1552: bare arrows page the embedded document (the HM pdf
+        # Hyperpart's toolbar), a different axis from j/k documents.
+        legend.extend(
+            [
+                '<span class="dz-pdf-viewer-kbd-sep">·</span>',
+                '<kbd class="dz-pdf-viewer-kbd">&larr;&nbsp;&rarr;</kbd>',
+                '<span class="dz-pdf-viewer-kbd-label">Page</span>',
+            ]
+        )
         for panel in _panels:
             p_key = _esc(panel.get("key", ""))
             p_label = _esc(panel.get("label", ""))
@@ -229,10 +238,12 @@ def render_pdf_viewer_component(
     if prev_url or next_url:
         help_rows.append(
             '<div class="dz-pdf-viewer-help-row">'
-            "<dt><kbd>j</kbd> / <kbd>&larr;</kbd></dt><dd>Previous</dd></div>"
-            '<div class="dz-pdf-viewer-help-row">'
-            "<dt><kbd>k</kbd> / <kbd>&rarr;</kbd></dt><dd>Next</dd></div>"
+            "<dt><kbd>j</kbd> / <kbd>k</kbd></dt><dd>Previous / next document</dd></div>"
         )
+    help_rows.append(
+        '<div class="dz-pdf-viewer-help-row">'
+        "<dt><kbd>&larr;</kbd> / <kbd>&rarr;</kbd></dt><dd>Previous / next page</dd></div>"
+    )
     for panel in _panels:
         p_key = _esc(panel.get("key", ""))
         p_label = _esc(panel.get("label", ""))
