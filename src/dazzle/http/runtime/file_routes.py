@@ -7,13 +7,11 @@ Provides REST endpoints for file upload, download, and management.
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from functools import partial
 from typing import Any
 from uuid import UUID
 
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import Response, StreamingResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, Response, StreamingResponse
 
 from .file_storage import FileService, FileValidationError
 
@@ -21,6 +19,56 @@ logger = logging.getLogger(__name__)
 
 # Callback type: (entity_name, entity_id, field_name, file_metadata_dict) -> None
 UploadCallback = Callable[[str, str, str, dict[str, Any]], Awaitable[None]]
+
+# Content types safe to render inline from the app origin (#1551,
+# mirrors the hx-pdf P1 document route). Upload-time content types are
+# client-controlled; a stored text/html served inline runs as origin
+# HTML — nosniff does not stop an honest label.
+INLINE_SAFE_CONTENT_TYPES = (
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+)
+
+
+def content_disposition(kind: str, name: str) -> str:
+    """Build a sanitized RFC 6266 Content-Disposition.
+
+    The ``filename=`` value is ASCII-folded (headers are latin-1; a
+    non-ASCII name would 500 at the Starlette layer) with injection
+    hazards stripped; the original name rides ``filename*`` UTF-8
+    encoded. Promoted from the hx-pdf P1 document route (#162) —
+    single source for every file-serving surface.
+    """
+    from urllib.parse import quote
+
+    printable = "".join(c for c in name if c.isprintable())
+    ascii_name = (
+        printable.encode("ascii", "ignore").decode("ascii").replace('"', "").replace(";", "")
+    ).strip()[:255] or "document"
+    utf8_star = quote(printable[:255], safe="")
+    return f"{kind}; filename=\"{ascii_name}\"; filename*=UTF-8''{utf8_star}"
+
+
+async def _no_auth() -> Any:
+    """Stand-in dependency when the server wires no auth (test rigs)."""
+    return None
+
+
+def _require_posture(deps: "_FileDeps", auth_context: Any) -> None:
+    """Deny anonymous callers when the app enforces auth (#1551).
+
+    Parity with the REST posture: exactly where an /api call would
+    401, the legacy /files surface does too. Auth-less apps keep
+    anonymous access. The entity-SCOPED read path is the hx-pdf P1
+    document route; this is only the posture floor for ID-keyed access.
+    """
+    if deps.require_auth and not (
+        auth_context is not None and getattr(auth_context, "is_authenticated", False)
+    ):
+        raise HTTPException(status_code=401, detail="Authentication required")
 
 
 # =============================================================================
@@ -33,6 +81,7 @@ class _FileDeps:
     file_service: FileService
     prefix: str
     require_auth: bool
+    auth_dep: Any
     max_upload_size: int
     field_size_overrides: dict[tuple[str, str], int] = field(default_factory=dict)
     on_upload_callbacks: list[UploadCallback] = field(default_factory=list)
@@ -199,8 +248,11 @@ async def _download_file(deps: _FileDeps, file_id: str) -> Any:
         content=content,
         media_type=metadata.content_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{metadata.filename}"',  # nosemgrep
+            "Content-Disposition": content_disposition(  # nosemgrep
+                "attachment", metadata.filename
+            ),
             "Content-Length": str(metadata.size),
+            "X-Content-Type-Options": "nosniff",
         },
     )
 
@@ -228,11 +280,13 @@ async def _stream_file(deps: _FileDeps, file_id: str) -> Any:
         logger.error("Failed to stream file %s: %s", file_id, e)
         raise HTTPException(status_code=500, detail="Failed to stream file")
 
+    kind = "inline" if metadata.content_type in INLINE_SAFE_CONTENT_TYPES else "attachment"
     return StreamingResponse(
         stream,
         media_type=metadata.content_type,
         headers={
-            "Content-Disposition": f'inline; filename="{metadata.filename}"',  # nosemgrep
+            "Content-Disposition": content_disposition(kind, metadata.filename),  # nosemgrep
+            "X-Content-Type-Options": "nosniff",
         },
     )
 
@@ -354,6 +408,8 @@ def create_file_routes(
     max_upload_size: int = 10 * 1024 * 1024,  # 10MB default
     field_size_overrides: dict[tuple[str, str], int] | None = None,
     on_upload_callbacks: list[UploadCallback] | None = None,
+    optional_auth_dep: Any = None,
+    require_auth_by_default: bool = False,
 ) -> None:
     """Add file upload routes to FastAPI app.
 
@@ -372,10 +428,12 @@ def create_file_routes(
     """
     import dazzle.http.runtime.rate_limit as _rl
 
+    auth_dep = optional_auth_dep if optional_auth_dep is not None else _no_auth
     deps = _FileDeps(
         file_service=file_service,
         prefix=prefix,
-        require_auth=require_auth,
+        require_auth=require_auth or require_auth_by_default,
+        auth_dep=auth_dep,
         max_upload_size=max_upload_size,
         field_size_overrides=field_size_overrides or {},
         on_upload_callbacks=list(on_upload_callbacks) if on_upload_callbacks else [],
@@ -390,17 +448,28 @@ def create_file_routes(
         entity: str | None = Query(None, description="Associated entity name"),
         entity_id: str | None = Query(None, description="Associated entity ID"),
         field: str | None = Query(None, description="Field name"),
+        auth_context: Any = Depends(auth_dep),  # noqa: B008
     ) -> dict[str, Any]:
+        _require_posture(deps, auth_context)
         return await _upload_file(deps, request, file, entity, entity_id, field)
 
     # File info
-    app.get(f"{prefix}/{{file_id}}")(partial(_get_file_info, deps))  # nosemgrep
+    @app.get(f"{prefix}/{{file_id}}")  # nosemgrep
+    async def get_file_info(file_id: str, auth_context: Any = Depends(auth_dep)) -> dict[str, Any]:
+        _require_posture(deps, auth_context)
+        return await _get_file_info(deps, file_id)
 
     # Download
-    app.get(f"{prefix}/{{file_id}}/download")(partial(_download_file, deps))  # nosemgrep
+    @app.get(f"{prefix}/{{file_id}}/download")  # nosemgrep
+    async def download_file(file_id: str, auth_context: Any = Depends(auth_dep)) -> Any:
+        _require_posture(deps, auth_context)
+        return await _download_file(deps, file_id)
 
     # Stream
-    app.get(f"{prefix}/{{file_id}}/stream")(partial(_stream_file, deps))  # nosemgrep
+    @app.get(f"{prefix}/{{file_id}}/stream")  # nosemgrep
+    async def stream_file(file_id: str, auth_context: Any = Depends(auth_dep)) -> Any:
+        _require_posture(deps, auth_context)
+        return await _stream_file(deps, file_id)
 
     # Thumbnail — needs wrapper for Query params with constraints
     @app.get(f"{prefix}/{{file_id}}/thumbnail")  # nosemgrep
@@ -408,11 +477,16 @@ def create_file_routes(
         file_id: str,
         width: int = Query(200, ge=10, le=1000),
         height: int = Query(200, ge=10, le=1000),
+        auth_context: Any = Depends(auth_dep),  # noqa: B008
     ) -> Any:
+        _require_posture(deps, auth_context)
         return await _get_thumbnail(deps, file_id, width, height)
 
     # Delete
-    app.delete(f"{prefix}/{{file_id}}")(partial(_delete_file, deps))  # nosemgrep
+    @app.delete(f"{prefix}/{{file_id}}")  # nosemgrep
+    async def delete_file(file_id: str, auth_context: Any = Depends(auth_dep)) -> dict[str, Any]:
+        _require_posture(deps, auth_context)
+        return await _delete_file(deps, file_id)
 
     # Entity-scoped routes — needs wrapper for Query param
     @app.get(f"{prefix}/entity/{{entity}}/{{entity_id}}")  # nosemgrep
@@ -420,7 +494,9 @@ def create_file_routes(
         entity: str,
         entity_id: str,
         field: str | None = Query(None),
+        auth_context: Any = Depends(auth_dep),  # noqa: B008
     ) -> dict[str, Any]:
+        _require_posture(deps, auth_context)
         return await _get_entity_files(deps, entity, entity_id, field)
 
 
@@ -428,19 +504,56 @@ def create_static_file_routes(
     app: FastAPI,
     base_path: str = ".dazzle/uploads",
     url_prefix: str = "/files",
+    optional_auth_dep: Any = None,
+    require_auth_by_default: bool = False,
 ) -> None:
-    """Add static file serving for local storage.
+    """Serve uploaded files by storage path, under the app's auth posture.
 
-    This serves uploaded files directly from the filesystem.
+    Replaces the anonymous ``StaticFiles`` mount (#1551): every stored
+    byte was readable by path in apps whose ``/api`` reads would 401,
+    and a stored ``text/html`` upload served inline as origin HTML.
+    The handler denies anonymous callers when the app enforces auth,
+    refuses paths outside the uploads root, and restricts inline
+    rendering to the viewer-safe safelist (everything else downloads
+    as an attachment). ``FileResponse`` keeps Range support.
 
     Args:
         app: FastAPI application
         base_path: Base path for uploaded files
         url_prefix: URL prefix for file access
+        optional_auth_dep: The app's optional-auth dependency
+        require_auth_by_default: The app's auth posture
     """
+    import mimetypes
     from pathlib import Path
 
-    path = Path(base_path)
-    path.mkdir(parents=True, exist_ok=True)
+    root = Path(base_path)
+    root.mkdir(parents=True, exist_ok=True)
+    resolved_root = root.resolve()
+    auth_dep = optional_auth_dep if optional_auth_dep is not None else _no_auth
+    posture = _FileDeps(
+        file_service=None,  # type: ignore[arg-type]  # posture check only
+        prefix=url_prefix,
+        require_auth=require_auth_by_default,
+        auth_dep=auth_dep,
+        max_upload_size=0,
+    )
 
-    app.mount(url_prefix, StaticFiles(directory=str(path)), name="files")
+    @app.get(url_prefix + "/{file_path:path}", name="files")  # nosemgrep
+    async def serve_stored_file(
+        file_path: str, auth_context: Any = Depends(auth_dep)
+    ) -> FileResponse:
+        _require_posture(posture, auth_context)
+        candidate = (resolved_root / file_path).resolve()
+        if not candidate.is_relative_to(resolved_root) or not candidate.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
+        media_type = mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"
+        kind = "inline" if media_type in INLINE_SAFE_CONTENT_TYPES else "attachment"
+        return FileResponse(
+            candidate,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": content_disposition(kind, candidate.name),  # nosemgrep
+                "X-Content-Type-Options": "nosniff",
+            },
+        )

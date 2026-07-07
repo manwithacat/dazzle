@@ -2027,7 +2027,7 @@ class DazzleBackendApp:
         self._mount_grant_routes(auth_dep)
         self._mount_audit_history_routes(auth_dep)
         self._mount_locale_routes()
-        self._mount_file_routes()
+        self._mount_file_routes(optional_auth_dep)
         self._mount_document_routes(
             cedar_access_specs, _fk_graph, optional_auth_dep, _admin_personas
         )
@@ -2171,8 +2171,11 @@ class DazzleBackendApp:
         if getattr(self._app.state, "usage_collector", None) is not None:
             self._app.include_router(create_usage_routes())
 
-    def _mount_file_routes(self) -> None:
+    def _mount_file_routes(self, optional_auth_dep: Any = None) -> None:
         assert self._app is not None
+        # #1551: the legacy /files surface honours the app's auth posture
+        # (same expression the document/bulk routes use).
+        _files_auth_posture = self._enable_auth and not self._enable_test_mode
         # File uploads
         if self._enable_files:
             from dazzle.http.runtime.file_storage import (
@@ -2225,11 +2228,15 @@ class DazzleBackendApp:
                 max_upload_size=_max_mb * 1024 * 1024,
                 field_size_overrides=_field_size_overrides,
                 on_upload_callbacks=_upload_callbacks,
+                optional_auth_dep=optional_auth_dep,
+                require_auth_by_default=_files_auth_posture,
             )
             create_static_file_routes(
                 self._app,
                 base_path=str(self._files_path),
                 url_prefix="/files",
+                optional_auth_dep=optional_auth_dep,
+                require_auth_by_default=_files_auth_posture,
             )
 
     def _mount_search_routes(self) -> None:

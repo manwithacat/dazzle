@@ -35,7 +35,6 @@ Hyperpart's ``data-dz-pdf-src`` target).
 import logging
 import re
 from typing import Any
-from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -45,6 +44,7 @@ from dazzle.http.runtime.access.gated import (
     access_context_from,
     gated_read,
 )
+from dazzle.http.runtime.file_routes import content_disposition
 from dazzle.http.runtime.http_errors import require_found
 
 logger = logging.getLogger(__name__)
@@ -90,20 +90,10 @@ def _extract_file_id(raw: Any) -> UUID | None:
         return None
 
 
-def _disposition(kind: str, name: str) -> str:
-    """Build a sanitized RFC 6266 Content-Disposition.
-
-    The ``filename=`` value is ASCII-folded (headers are latin-1; a
-    non-ASCII name would 500 at the Starlette layer) with injection
-    hazards stripped; the original name rides ``filename*`` UTF-8
-    encoded (spec §18: filenames are sanitized).
-    """
-    printable = "".join(c for c in name if c.isprintable())
-    ascii_name = (
-        printable.encode("ascii", "ignore").decode("ascii").replace('"', "").replace(";", "")
-    ).strip()[:255] or "document"
-    utf8_star = quote(printable[:255], safe="")
-    return f"{kind}; filename=\"{ascii_name}\"; filename*=UTF-8''{utf8_star}"
+# RFC 6266 disposition builder promoted to file_routes (#1551) —
+# single source for every file-serving surface (spec §18: filenames
+# are sanitized).
+_disposition = content_disposition
 
 
 def _parse_range(header: str | None, size: int) -> tuple[int, int] | _Unsatisfiable | None:

@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.129] - 2026-07-07
+
+### Security
+- **The legacy `/files/*` surface now honours the app's auth posture**
+  (#1551, items 1–3): every API route (upload, info, download, stream,
+  thumbnail, delete, entity-files) denies anonymous callers with 401
+  when the app enforces auth — `create_file_routes`'s `require_auth`
+  parameter was stored and never enforced. Auth-less apps are
+  unchanged (posture parity, not a lockout); test-mode boots keep
+  anonymous access for e2e rigs.
+- **The anonymous `StaticFiles` mount at `/files` is replaced** by a
+  posture-gated, traversal-safe handler: every stored byte was
+  readable by path in apps whose `/api` reads would 401, and a stored
+  `text/html` upload served inline as origin HTML (XSS from the app
+  origin). Inline rendering is now restricted to the viewer-safe
+  safelist (PDF + images, mirroring the #162 document route);
+  everything else downloads as an attachment with nosniff.
+  `FileResponse` keeps Range support.
+- **One RFC 6266 disposition builder for every file-serving surface**:
+  promoted from the #162 document route to `file_routes.
+  content_disposition` — the review caught the new static handler
+  repeating the non-latin-1-filename 500 the P1 route had already
+  documented; download/stream had the same latent bug.
+
+### Agent Guidance
+- ID-keyed `/files` reads remain entity-UNSCOPED for authenticated
+  users — the scope-correct read path is
+  `/_dazzle/documents/{entity}/{id}/{field}/file`. #1551 items 4–5
+  (rate limiting, chunked streaming) remain open.
+- When a review documents a failure mode in one handler's docstring
+  (the latin-1 header 500), grep for SIBLING handlers formatting the
+  same header — the lesson was already written down and repeated
+  twice in the same file.
+
 ## [0.93.128] - 2026-07-07
 
 ### Fixed
