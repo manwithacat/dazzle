@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.144] - 2026-07-07
+
+### Fixed
+- **CI red on v0.93.143 fixed**: the #1534 reference-docs drift gate
+  regenerated the auto-source `mcp-tools` page IN-PROCESS, where the
+  process-global MCP tool registry is mutated by sibling tests in the
+  same xdist worker (the documented mcp-isolation gotcha) — the gate
+  now regenerates in a subprocess and is order-independent.
+- **Workspace-less apps stay in fleet capture rounds** (#1537):
+  framework-injected `_platform_*` workspaces are excluded from the
+  capture plan (they are plumbing gated to framework roles — the
+  pre-#1536 reason invoice_ops's baseline was scored on denial/admin
+  pages), and when no user-authored workspace yields a target the
+  planner falls back to per-persona list-surface pages. The
+  `dazzle qa capture` empty-plan error now says WHY (nothing declared
+  vs everything filtered). invoice_ops gains a real persona-homed
+  **Finance Operations** workspace (invoice pipeline funnel, payment
+  health, approval + dispute queues) — 6 real capture targets where
+  there were zero.
+
 ## [0.93.143] - 2026-07-07
 
 ### Fixed

@@ -28,6 +28,8 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.core.access import workspace_allowed_personas
 from dazzle.core.ir.identity import spec_display_id
+from dazzle.core.strings import to_api_plural
+from dazzle.page.app_paths import list_path
 from dazzle.qa.models import CapturedScreen
 
 if TYPE_CHECKING:
@@ -94,15 +96,22 @@ def build_capture_plan(appspec: Any, *, include_denied: bool = False) -> list[Ca
     Returns:
         Ordered list of :class:`CaptureTarget` instances.
     """
-    workspaces = list(getattr(appspec, "workspaces", None) or [])
+    all_workspaces = list(getattr(appspec, "workspaces", None) or [])
+    # #1537: framework-injected workspaces (`_platform_*`) are plumbing
+    # gated to framework roles — never taste targets. Pre-#1536 they were
+    # the sole reason a workspace-less app "had" captures (all of them
+    # denial/admin pages), which quietly poisoned its baseline score.
+    workspaces = [
+        w for w in all_workspaces if not str(getattr(w, "name", "")).startswith("_platform_")
+    ]
     personas = list(
         getattr(appspec, "archetypes", None) or getattr(appspec, "personas", None) or []
     )
 
-    if not workspaces or not personas:
+    if not personas:
         return []
 
-    allowed_by_ws = _workspace_access_map(workspaces, personas)
+    allowed_by_ws = _workspace_access_map(workspaces, personas) if workspaces else {}
 
     targets: list[CaptureTarget] = []
     for persona in personas:
@@ -118,6 +127,39 @@ def build_capture_plan(appspec: Any, *, include_denied: bool = False) -> list[Ca
                     persona=persona_id,
                     workspace=workspace_name,
                     url=f"/app/workspaces/{workspace_name}",
+                )
+            )
+    if targets:
+        return targets
+
+    # #1537 fallback: no user-authored workspace produced a target
+    # (workspace-less app, or every workspace is persona-gated away).
+    # Emit per-persona LIST-surface pages so the app stays in fleet
+    # rounds instead of silently dropping out.
+    return _surface_fallback_targets(appspec, personas)
+
+
+def _surface_fallback_targets(appspec: Any, personas: list[Any]) -> list[CaptureTarget]:
+    """Per-persona list-surface targets — the workspace-less-app fallback."""
+    list_entities: list[str] = []
+    seen: set[str] = set()
+    for surface in getattr(appspec, "surfaces", None) or []:
+        mode = getattr(surface, "mode", None)
+        mode_val = getattr(mode, "value", mode)
+        entity_ref = getattr(surface, "entity_ref", None)
+        if mode_val == "list" and entity_ref and entity_ref not in seen:
+            seen.add(str(entity_ref))
+            list_entities.append(str(entity_ref))
+
+    targets: list[CaptureTarget] = []
+    for persona in personas:
+        persona_id = str(spec_display_id(persona))
+        for entity_name in list_entities:
+            targets.append(
+                CaptureTarget(
+                    persona=persona_id,
+                    workspace=f"surface:{entity_name}",
+                    url=list_path("/app", to_api_plural(entity_name)),
                 )
             )
     return targets

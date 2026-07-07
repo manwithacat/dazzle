@@ -896,7 +896,20 @@ def _plan_qa_capture(
 
     targets = build_capture_plan(appspec, include_denied=include_denied)
     if not targets:
-        typer.echo("No capture targets found (no workspaces or personas defined).", err=True)
+        # #1537: say WHY — "nothing declared" and "everything filtered
+        # away" are different failures (the latter was reported as the
+        # former for invoice_ops, and the fleet driver swallowed it).
+        n_ws = len(getattr(appspec, "workspaces", None) or [])
+        n_p = len(getattr(appspec, "personas", None) or [])
+        if n_p == 0:
+            typer.echo("No capture targets: the app declares no personas.", err=True)
+        else:
+            typer.echo(
+                f"No capture targets: {n_ws} workspace(s) and {n_p} persona(s) declared, "
+                "but no user-authored workspace is persona-accessible and no list "
+                "surfaces exist for the fallback.",
+                err=True,
+            )
         raise typer.Exit(code=1)
 
     if persona:

@@ -63,6 +63,15 @@ history of an invoice is a first-class record rather than a status flag.
 Every one of these roles sees only their own tenant's records — each
 visibility rule reads, in effect, "its tenant is the signed-in user's tenant".
 
+## Where work happens
+
+The **Finance Operations** workspace is the shared home screen for day-to-day
+invoice throughput. It shows the invoice pipeline as a funnel across lifecycle
+stages, payment-attempt health at a glance, and the two queues that need a
+person: invoices awaiting approval (largest amounts first) and open disputes.
+Each queue row opens the invoice itself, so triage and action happen in one
+place.
+
 ## How work flows through it
 
 An Invoice carries seven declared lifecycle states: *draft*, *submitted*,
@@ -131,4 +140,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:29085d792512eef25a91f1ac9f0001e8df31e82dc0385534ec9cef504032b67e -->
+<!-- dazzle-spec-brief: sha256:980d6334d3bc11c2b8a2065d85c8897abdd30be9e47ee0c8ca904bd721238c65 -->

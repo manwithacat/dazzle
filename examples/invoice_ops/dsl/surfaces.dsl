@@ -190,3 +190,44 @@ surface lineitem_create "New Line Item":
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit Amount"
+
+# ── Finance operations workspace (#1537) ─────────────────────────────────────
+# The app's home surface for fleet capture rounds: a persona-homed
+# workspace (the framework-injected `_platform_admin` is gated to
+# framework roles and is never a capture target).
+workspace finance_ops "Finance Operations":
+  purpose: "Day-to-day invoice throughput — pipeline, payment health, and the queues that need a person"
+
+  invoice_pipeline:
+    source: Invoice
+    display: funnel_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices yet"
+
+  awaiting_approval:
+    source: Invoice
+    filter: status = submitted
+    sort: amount desc
+    limit: 10
+    display: list
+    action: invoice_detail
+    empty: "Nothing awaiting approval"
+
+  payment_health:
+    source: PaymentAttempt
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(PaymentAttempt)
+    empty: "No payment attempts"
+
+  disputed_queue:
+    source: Invoice
+    filter: status = disputed
+    sort: updated_at desc
+    limit: 10
+    display: list
+    action: invoice_detail
+    empty: "No disputes open"

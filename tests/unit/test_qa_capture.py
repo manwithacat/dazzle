@@ -172,3 +172,73 @@ class TestCapturePlanAccessFiltering1536:
         combos = {(t.persona, t.workspace) for t in targets}
         assert ("viewer", "admin_ws") in combos
         assert len(combos) == 4
+
+
+# =============================================================================
+# #1537 — injected-workspace exclusion + surface fallback
+# =============================================================================
+
+
+class TestInjectedAndFallback1537:
+    """invoice_ops-class apps (personas but no user-authored workspace —
+    only the framework-injected `_platform_admin`, gated to framework
+    roles) silently produced ZERO capture targets and dropped out of
+    fleet rounds. Injected workspaces are never taste targets; when no
+    workspace target survives, the planner falls back to per-persona
+    list-surface pages so the app stays in the round."""
+
+    @staticmethod
+    def _invoice_ops_shape():
+        from types import SimpleNamespace
+
+        from dazzle.core.ir import PersonaSpec
+        from dazzle.core.ir.workspaces import (
+            WorkspaceAccessLevel,
+            WorkspaceAccessSpec,
+            WorkspaceSpec,
+        )
+
+        platform = WorkspaceSpec(
+            name="_platform_admin",
+            title="Platform",
+            access=WorkspaceAccessSpec(
+                level=WorkspaceAccessLevel.PERSONA,
+                allow_personas=["admin", "super_admin"],
+            ),
+        )
+        surfaces = [
+            SimpleNamespace(mode=SimpleNamespace(value="list"), entity_ref="Invoice"),
+            SimpleNamespace(mode=SimpleNamespace(value="view"), entity_ref="Invoice"),
+            SimpleNamespace(mode=SimpleNamespace(value="list"), entity_ref="Supplier"),
+        ]
+        return SimpleNamespace(
+            workspaces=[platform],
+            personas=[
+                PersonaSpec(id="requester", label="Requester"),
+                PersonaSpec(id="finance", label="Finance"),
+            ],
+            archetypes=None,
+            surfaces=surfaces,
+        )
+
+    def test_workspaceless_app_falls_back_to_list_surfaces(self) -> None:
+        plan = build_capture_plan(self._invoice_ops_shape())
+        assert plan, "invoice_ops shape must not yield an empty plan"
+        assert {t.persona for t in plan} == {"requester", "finance"}
+        urls = {t.url for t in plan}
+        assert any("invoice" in u for u in urls)
+        assert any("supplier" in u for u in urls)
+        # view surfaces don't become targets; only lists
+        assert len(plan) == 4  # 2 personas × 2 list surfaces
+
+    def test_injected_workspace_never_a_target(self) -> None:
+        plan = build_capture_plan(self._invoice_ops_shape(), include_denied=True)
+        assert all(t.workspace != "_platform_admin" for t in plan)
+
+    def test_fallback_not_used_when_real_workspace_exists(self) -> None:
+        from dazzle.core.ir.workspaces import WorkspaceSpec
+
+        spec = self._invoice_ops_shape()
+        spec.workspaces = [*spec.workspaces, WorkspaceSpec(name="billing", title="Billing")]
+        plan = build_capture_plan(spec)
+        assert {t.workspace for t in plan} == {"billing"}

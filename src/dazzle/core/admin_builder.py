@@ -777,8 +777,12 @@ def _is_injected_surface(surface: ir.SurfaceSpec) -> bool:
     return surface.name.startswith("_admin_")
 
 
-def _is_injected_workspace(workspace: WorkspaceSpec) -> bool:
-    """Identify framework-injected workspaces by name prefix."""
+def is_injected_workspace(workspace: WorkspaceSpec) -> bool:
+    """Identify framework-injected workspaces by name prefix.
+
+    Public (#1537): the qa capture planner excludes injected workspaces
+    from fleet rounds — they are framework plumbing gated to framework
+    roles, never meaningful taste targets."""
     return workspace.name.startswith("_platform_")
 
 
@@ -794,7 +798,7 @@ def appspec_injected_summary(appspec: ir.AppSpec) -> dict[str, list[str]]:
     return {
         "entities": sorted(e.name for e in appspec.domain.entities if _is_injected_entity(e)),
         "surfaces": sorted(s.name for s in appspec.surfaces if _is_injected_surface(s)),
-        "workspaces": sorted(w.name for w in appspec.workspaces if _is_injected_workspace(w)),
+        "workspaces": sorted(w.name for w in appspec.workspaces if is_injected_workspace(w)),
     }
 
 
@@ -876,7 +880,7 @@ def boot_log_line(appspec: ir.AppSpec) -> str:
     n_surf = len(summary["surfaces"])
     n_ws = len(summary["workspaces"])
     region_count = sum(
-        len(ws.regions or []) for ws in appspec.workspaces if _is_injected_workspace(ws)
+        len(ws.regions or []) for ws in appspec.workspaces if is_injected_workspace(ws)
     )
     return (
         f"injected: {n_ent} entities, {n_surf} admin surfaces, {n_ws} workspaces "

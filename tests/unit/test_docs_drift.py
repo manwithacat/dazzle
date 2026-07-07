@@ -302,12 +302,31 @@ def test_generated_reference_pages_match_disk() -> None:
     run `dazzle docs generate`.
     """
     pytest.importorskip("mcp")
-    import dazzle.mcp.server.docs_inventory  # noqa: F401 — registers the mcp_tools auto-source
-    from dazzle.core.docs_gen import generate_reference_docs
+    import json
+    import subprocess
+    import sys
+
+    # A SUBPROCESS, not an in-process call: the mcp tool registry is
+    # process-global and other tests in the same xdist worker mutate it
+    # (the CLAUDE.md mcp-isolation gotcha) — an in-process regeneration
+    # of the auto-source mcp-tools page drifts nondeterministically.
+    script = (
+        "import json, dazzle.mcp.server.docs_inventory;"
+        "from dazzle.core.docs_gen import generate_reference_docs;"
+        "print(json.dumps(generate_reference_docs()))"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO_ROOT),
+        check=True,
+    )
+    generated: dict[str, str] = json.loads(proc.stdout)
 
     docs_dir = REPO_ROOT / "docs" / "reference"
     stale: list[str] = []
-    for slug, content in generate_reference_docs().items():
+    for slug, content in generated.items():
         on_disk = (docs_dir / f"{slug}.md").read_text(encoding="utf-8")
         if on_disk != content:
             stale.append(slug)
