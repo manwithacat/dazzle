@@ -52,7 +52,10 @@ from dazzle.page.runtime.form_engagement_resolver import annotate_form_fields_by
 from dazzle.rbac.matrix import generate_access_matrix
 from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
+from dazzle.render.context import CustomRenderCtx
+from dazzle.render.dispatch import dispatch_render
 from dazzle.render.display_names import _inject_display_names
+from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.form_field import field_context_to_dict
 
 logger = logging.getLogger(__name__)
@@ -1931,6 +1934,39 @@ def _annotate_form_usage(
         annotate_form_fields_by_usage(ctx_dict["fields"], field_usage)
 
 
+def _dispatch_custom_mode(
+    prc: _PageRequestContext,
+    surface: Any,
+    services: Any,
+    compose: Callable[[str], str],
+) -> str | None:
+    """#1129: hand custom-mode renderers a typed CustomRenderCtx
+    instead of the empty dict the previous build path produced.
+    Existing renderers that take ``ctx: dict`` keep working —
+    CustomRenderCtx is a sibling shape, not a replacement, so
+    isinstance-aware renderers can opt into the typed form
+    without breaking the registered Protocol contract."""
+    custom_ctx = CustomRenderCtx(
+        request=prc.request,
+        params=_collect_request_params(prc.request),
+        services=services,
+        auth_ctx=prc.auth_ctx,
+        surface_name=surface.name,
+        workspace_name=getattr(surface, "workspace", None),
+    )
+    try:
+        return compose(dispatch_render(surface, ctx=custom_ctx, services=services))
+    except FragmentError as e:
+        logger.warning(
+            "dispatch_render failed for custom-mode surface %r (render=%r); "
+            "falling back to legacy path: %s",
+            surface.name,
+            surface.render,
+            e,
+        )
+        return None
+
+
 def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str | None:
     """If the surface declares an explicit ``render:`` clause, route the
     inner-HTML render through the renderer registry. Returns the inner
@@ -1982,9 +2018,6 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     # mode: custom surface was never actually called. The early-return
     # for CUSTOM mode below dispatches unconditionally and lets the
     # renderer fetch its own data via `services`.
-    from dazzle.render.dispatch import dispatch_render
-    from dazzle.render.fragment.errors import FragmentError
-
     # The legacy direct-template path composes overlay + body via
     # `_render_typed_body`. The dispatch path bypasses that composer,
     # so we have to apply the same overlay prepend here. Otherwise the
@@ -1999,33 +2032,15 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
         return overlay + inner if overlay else inner
 
     if surface.mode == SurfaceMode.CUSTOM:
-        # #1129: hand custom-mode renderers a typed CustomRenderCtx
-        # instead of the empty dict the previous build path produced.
-        # Existing renderers that take ``ctx: dict`` keep working —
-        # CustomRenderCtx is a sibling shape, not a replacement, so
-        # isinstance-aware renderers can opt into the typed form
-        # without breaking the registered Protocol contract.
-        from dazzle.render.context import CustomRenderCtx
+        return _dispatch_custom_mode(prc, surface, services, _compose)
 
-        custom_ctx = CustomRenderCtx(
-            request=prc.request,
-            params=_collect_request_params(prc.request),
-            services=services,
-            auth_ctx=prc.auth_ctx,
-            surface_name=surface.name,
-            workspace_name=getattr(surface, "workspace", None),
-        )
-        try:
-            return _compose(dispatch_render(surface, ctx=custom_ctx, services=services))
-        except FragmentError as e:
-            logger.warning(
-                "dispatch_render failed for custom-mode surface %r (render=%r); "
-                "falling back to legacy path: %s",
-                surface.name,
-                surface.render,
-                e,
-            )
-            return None
+    # ``display: pdf_viewer`` surfaces (#942/#162) render via the
+    # render_page pdf branch, which only runs when dispatch returns
+    # None — the substrate detail has no pdf shape, so dispatching
+    # here would silently swallow the viewer (the ADR-0049 VIEW flip
+    # did exactly that until the #164 adoption exposed it).
+    if getattr(render_ctx, "pdf_viewer", None) is not None:
+        return None
 
     has_table = getattr(render_ctx, "table", None) is not None
     has_detail = getattr(render_ctx, "detail", None) is not None

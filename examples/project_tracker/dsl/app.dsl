@@ -421,6 +421,19 @@ surface attachment_list "Attachments":
     filter: task
     empty: "No attachments uploaded yet."
 
+surface attachment_view "Attachment":
+  uses entity Attachment
+  mode: view
+  # Plain file field → the built-in PDF viewer sources the document
+  # through the scope-gated /_dazzle/documents range proxy (#162) —
+  # viewing an attachment is gated exactly like reading its record.
+  display: pdf_viewer
+  section main:
+    field filename "Filename"
+    field task "Task"
+    field uploaded_by "Uploaded By"
+    field created_at "Uploaded"
+
 surface attachment_create "Upload Attachment":
   uses entity Attachment
   mode: create

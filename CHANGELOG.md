@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.127] - 2026-07-07
+
+### Fixed
+- **`display: pdf_viewer` was silently dead at runtime since the
+  ADR-0049 VIEW flip**: the universal substrate dispatch swallowed
+  pdf_viewer surfaces into the generic detail renderer — the pdf
+  branch in `render_page` only runs when dispatch returns None, and
+  nothing exercised the shape end-to-end until the #164 adoption. A
+  carve-out in `_maybe_dispatch_inner_html` now routes pdf_viewer
+  surfaces to the viewer. Pinned by a dispatch-gate test that uses
+  the REAL renderer registry (a stub-registry draft passed vacuously
+  — dispatch fell back for the wrong reason).
+
+### Added
+- **Plain file fields drive the PDF viewer** (#162 adoption):
+  `display: pdf_viewer` no longer requires a `file storage=<name>`
+  binding — an entity with a plain `file` field sources the viewer
+  from the scope-gated `/_dazzle/documents/{entity}/{id}/{field}/file`
+  range proxy (v0.93.122). Storage-bound fields keep precedence and
+  the `/api/storage` proxy src unchanged.
+- **The last fleet-coverage gap is closed** (#164): project_tracker
+  gains `attachment_view` (`mode: view`, `display: pdf_viewer`) over
+  its Attachment entity — `KNOWN_GAPS` is now empty; every HM
+  Hyperpart with a Dazzle emitter is exercised by at least one
+  example.
+
+### Changed
+- `_dispatch_custom_mode` extracted from `_maybe_dispatch_inner_html`
+  (complexity ratchet) and the render-layer dispatch imports hoisted
+  to module top (deferred-imports baseline 24 → 21).
+
+### Agent Guidance
+- A dispatch-gate test against a stub registry proves nothing — the
+  fallback path returns the same None as the carve-out under test.
+  Wire the real `RuntimeServices` + `register_default_renderers` so
+  the substrate path is genuinely reachable, and watch the test fail
+  before the fix.
+- The registered-but-never-mounted class extends to RENDER PATHS: a
+  feature whose only tests drive static harness pages (the 47 pdf
+  gates) can be dead on every booted app. Fleet adoption is the
+  detector — which is why #164 exists.
+
 ## [0.93.126] - 2026-07-07
 
 ### Added

@@ -335,12 +335,17 @@ class PdfViewerContext(BaseModel):
     """Compile-time configuration for the built-in PDF viewer chrome.
 
     Set on a VIEW-mode surface via ``display: pdf_viewer`` (#942 cycle 4).
-    The renderer uses ``storage_name`` + ``file_field`` to derive the
-    proxy URL at request time from the fetched record's file-field
-    value: ``/api/storage/<storage_name>/proxy?key=<value>``.
+    Two source modes, selected by ``storage_name``:
+
+    - storage-bound (``file storage=<name>`` field): the renderer
+      derives ``/api/storage/<storage_name>/proxy?key=<value>`` from
+      the fetched record's file-field value;
+    - plain file field (``storage_name is None``, #162): the renderer
+      derives the scope-gated document range proxy
+      ``/_dazzle/documents/<entity>/<id>/<file_field>/file``.
     """
 
-    storage_name: str
+    storage_name: str | None = None
     file_field: str
 
 

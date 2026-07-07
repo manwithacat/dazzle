@@ -1281,19 +1281,25 @@ def _compile_view_surface(
 
     # v0.61.126 (#942): ``display: pdf_viewer`` surface override. Routes
     # the view surface through the built-in PDF viewer chrome instead of
-    # the generic detail layout. The wrapper template builds the proxy
-    # URL at request time from ``detail.item[file_field]`` and
-    # ``storage_name`` (which both come from the entity's
-    # ``file storage=...`` field).
+    # the generic detail layout. Storage-bound fields keep precedence
+    # (the original #942 shape, ``/api/storage/<name>/proxy`` src); a
+    # plain ``file`` field (no storage=) activates document-route mode
+    # (#162) — the renderer derives the scope-gated
+    # ``/_dazzle/documents`` src instead.
     pdf_viewer_ctx: PdfViewerContext | None = None
     if surface.display == "pdf_viewer" and entity is not None:
-        for f in entity.fields:
-            if f.type.kind == FieldTypeKind.FILE and f.storage:
-                pdf_viewer_ctx = PdfViewerContext(
-                    storage_name=f.storage[0],
-                    file_field=f.name,
-                )
-                break
+        file_fields = [f for f in entity.fields if f.type.kind == FieldTypeKind.FILE]
+        storage_bound = next((f for f in file_fields if f.storage), None)
+        if storage_bound is not None:
+            pdf_viewer_ctx = PdfViewerContext(
+                storage_name=storage_bound.storage[0],
+                file_field=storage_bound.name,
+            )
+        elif file_fields:
+            pdf_viewer_ctx = PdfViewerContext(
+                storage_name=None,
+                file_field=file_fields[0].name,
+            )
 
     return PageContext(
         page_title=surface.title or f"{entity_name} Details",

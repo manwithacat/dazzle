@@ -17,7 +17,7 @@ The product manages six kinds of thing, woven together:
 - **Attachments** — the supporting files. Every Attachment is tied to a Task and records who uploaded it.
 - **Team Members** — the people, referenced throughout as owners, assignees, authors, and uploaders.
 
-Around these, the product provides sixteen capabilities: browsing, creating, viewing, and editing Projects and Tasks; creating, listing, and editing Milestones and Comments; and listing and uploading Attachments.
+Around these, the product provides seventeen capabilities: browsing, creating, viewing, and editing Projects and Tasks; creating, listing, and editing Milestones and Comments; and listing, uploading, and viewing Attachments — opening an attachment presents the document in the built-in PDF viewer.
 
 ## Who uses it
 
@@ -51,4 +51,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:79628f5ea702f023aa51460a69bac040656e2370acd22062e36f7aaedbcac466 -->
+<!-- dazzle-spec-brief: sha256:43a745923b80423eeda3057685e2de7ede7480a681ea95e53f92f611d07afa29 -->

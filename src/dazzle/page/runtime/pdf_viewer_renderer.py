@@ -275,7 +275,21 @@ def render_pdf_viewer(
     """
     item = detail.item if detail and detail.item else {}
     pdf_key = item.get(pdf_viewer.file_field) if item else None
-    src = f"/api/storage/{pdf_viewer.storage_name}/proxy?key={pdf_key}" if pdf_key else ""
+    if not pdf_key:
+        src = ""
+    elif pdf_viewer.storage_name:
+        src = f"/api/storage/{pdf_viewer.storage_name}/proxy?key={pdf_key}"
+    else:
+        # Plain file field (#162): the scope-gated document range proxy
+        # resolves + gates the file server-side from the record triple —
+        # the stored file URL never reaches the markup.
+        entity_name = detail.entity_name if detail else ""
+        rec_id = item.get("id")
+        src = (
+            f"/_dazzle/documents/{entity_name}/{rec_id}/{pdf_viewer.file_field}/file"
+            if entity_name and rec_id
+            else ""
+        )
     back_url = detail.back_url if detail else "/"
     title = detail.title if detail else "Document"
     return render_pdf_viewer_component(src=src, back_url=back_url, title=title)

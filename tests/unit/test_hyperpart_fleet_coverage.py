@@ -110,13 +110,7 @@ SIGNALS: dict[str, object] = {
 # SECTIONED edit surface inside an experience) — a single-section
 # stepper, so step NAVIGATION is still unexercised; a multi-section
 # adoption remains desirable but the Hyperpart does render + mount.
-KNOWN_GAPS: set[str] = {
-    # pdf: display:pdf_viewer requires a `file storage=<name>` field +
-    # [storage.<name>] config — no example declares storage. Closing
-    # this needs the plain-file-field → P1 document-route wiring first
-    # (the remaining hx-pdf adoption work).
-    "pdf",
-}
+KNOWN_GAPS: set[str] = set()
 
 
 def _wizard_covered() -> bool:
