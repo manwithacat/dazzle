@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.95.1] - 2026-07-07
+
+### Fixed
+- **CI-red on v0.95.0 (PG parity gate)**: Task 3's `uploaded_by` column on
+  `dazzle_files` was added via the store's raw DDL but the committed
+  `FRAMEWORK_SCHEMA_SNAPSHOT` wasn't regenerated, so the three-way
+  parity gate saw alembic-head with the column and the snapshot without
+  it. Regenerated the snapshot (`dazzle db reframework-baseline`) — the
+  only change is the one `uploaded_by` column. (This gate is
+  postgres-only and doesn't run under `-m "not e2e"` without a
+  `DATABASE_URL` — a schema-touching change must be verified against
+  real PG before shipping.)
+
 ## [0.95.0] - 2026-07-07
 
 ### Added

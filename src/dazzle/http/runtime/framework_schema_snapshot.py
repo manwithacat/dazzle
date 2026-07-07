@@ -479,6 +479,7 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "storage_key": {"default": None, "nullable": False, "pk": False, "type": "text"},
             "thumbnail_key": {"default": None, "nullable": True, "pk": False, "type": "text"},
             "updated_at": {"default": None, "nullable": True, "pk": False, "type": "text"},
+            "uploaded_by": {"default": None, "nullable": True, "pk": False, "type": "text"},
         },
         "fks": {},
         "indexes": {
