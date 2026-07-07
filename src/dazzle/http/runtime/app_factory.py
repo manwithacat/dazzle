@@ -852,7 +852,9 @@ def assemble_post_build_routes(
         try:
             from dazzle.page.converters.workspace_converter import compute_persona_default_routes
 
-            persona_routes = compute_persona_default_routes(appspec.personas, appspec.workspaces)
+            persona_routes = compute_persona_default_routes(
+                appspec.personas, appspec.workspaces, appspec.rhythms
+            )
         except ImportError:
             pass
 
@@ -1253,7 +1255,9 @@ def create_app_factory(
 
     # Extract personas with default routes for auth redirect (#255)
 
-    persona_routes = compute_persona_default_routes(appspec.personas, appspec.workspaces)
+    persona_routes = compute_persona_default_routes(
+        appspec.personas, appspec.workspaces, appspec.rhythms
+    )
     personas = [
         {
             "id": p.id,

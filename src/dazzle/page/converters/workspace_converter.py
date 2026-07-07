@@ -12,6 +12,7 @@ from dazzle.core import ir
 # FR-6 follow-up so core can use it without depending on the ui layer).
 from dazzle.core.access import workspace_allowed_personas as workspace_allowed_personas
 from dazzle.core.strings import to_api_plural
+from dazzle.page.runtime.landing_resolver import infer_landing_workspace
 from dazzle.page.specs import (
     AppShellLayout,
     LayoutSpec,
@@ -476,6 +477,7 @@ def convert_workspaces(
 def compute_persona_default_routes(
     personas: list[ir.PersonaSpec],
     workspaces: list[ir.WorkspaceSpec],
+    rhythms: list[ir.RhythmSpec],
 ) -> dict[str, str]:
     """
     Compute default routes for personas based on workspace access rules.
@@ -483,6 +485,7 @@ def compute_persona_default_routes(
     Resolution order:
     1. Persona's explicit default_route (if set in DSL)
     2. First route of persona's default_workspace (if set)
+    2.5 Inferred answer-first landing from the persona's rhythm (#1558)
     3. First workspace where access.allow_personas includes this persona
     4. First workspace with access.level == AUTHENTICATED
     5. First workspace (fallback)
@@ -490,6 +493,7 @@ def compute_persona_default_routes(
     Args:
         personas: List of persona specifications
         workspaces: List of workspace specifications (IR, not UISpec)
+        rhythms: List of rhythm specifications (for #1558 landing inference)
 
     Returns:
         Dict mapping persona_id to their default route
@@ -497,7 +501,7 @@ def compute_persona_default_routes(
     result: dict[str, str] = {}
 
     for persona in personas:
-        route = _resolve_persona_route(persona, workspaces)
+        route = _resolve_persona_route(persona, workspaces, rhythms)
         if route:
             result[persona.id] = route
 
@@ -507,6 +511,7 @@ def compute_persona_default_routes(
 def _resolve_persona_route(
     persona: ir.PersonaSpec,
     workspaces: list[ir.WorkspaceSpec],
+    rhythms: list[ir.RhythmSpec],
 ) -> str | None:
     """Resolve the default route for a single persona."""
     # 1. Explicit default_route
@@ -517,6 +522,13 @@ def _resolve_persona_route(
     if persona.default_workspace:
         for ws in workspaces:
             if ws.name == persona.default_workspace:
+                return _workspace_root_route(ws)
+
+    # 2.5 (#1558): infer the answer-first landing from the persona's rhythm.
+    inferred = infer_landing_workspace(persona, rhythms, workspaces)
+    if inferred:
+        for ws in workspaces:
+            if ws.name == inferred:
                 return _workspace_root_route(ws)
 
     # 3. First workspace with explicit persona access

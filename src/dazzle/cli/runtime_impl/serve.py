@@ -584,7 +584,9 @@ def _serve_combined(ctx: _ServeContext) -> None:
     typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
 
     # Extract personas and scenarios for dev control plane
-    persona_routes = compute_persona_default_routes(appspec.personas, appspec.workspaces)
+    persona_routes = compute_persona_default_routes(
+        appspec.personas, appspec.workspaces, appspec.rhythms
+    )
     personas = [
         {
             "id": p.id,
