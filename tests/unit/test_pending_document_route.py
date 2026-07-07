@@ -8,6 +8,7 @@
 All denials are opaque 404 (row-existence opacity).
 """
 
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 from fastapi import FastAPI
@@ -63,7 +64,7 @@ def _client(meta, *, authed_uid):  # type: ignore[no-untyped-def]
     return TestClient(app)
 
 
-def _pending_meta(uid):  # type: ignore[no-untyped-def]
+def _pending_meta(uid, *, created_at=None):  # type: ignore[no-untyped-def]
     return SimpleNamespace(
         id="11111111-1111-1111-1111-111111111111",
         size=8,
@@ -74,6 +75,7 @@ def _pending_meta(uid):  # type: ignore[no-untyped-def]
         entity_name=None,
         entity_id=None,
         field_name=None,
+        created_at=created_at if created_at is not None else datetime.now(UTC),
     )
 
 
@@ -109,3 +111,35 @@ def test_unknown_file_id_404() -> None:
     unknown_id = "22222222-2222-2222-2222-222222222222"
     r = _client(meta, authed_uid="owner").get(f"/_dazzle/documents/pending/{unknown_id}")
     assert r.status_code == 404
+
+
+# --- #1555: pending uploads are time-boxed (upload TTL) ---
+
+
+def test_fresh_pending_file_within_ttl_served() -> None:
+    """A pending file inside the TTL window is served normally."""
+    meta = _pending_meta("owner", created_at=datetime.now(UTC) - timedelta(minutes=5))
+    r = _client(meta, authed_uid="owner").get(f"/_dazzle/documents/pending/{meta.id}")
+    assert r.status_code == 200
+
+
+def test_expired_pending_file_404() -> None:
+    """#1555: a pending file older than the default 60-min TTL → opaque 404."""
+    meta = _pending_meta("owner", created_at=datetime.now(UTC) - timedelta(hours=2))
+    r = _client(meta, authed_uid="owner").get(f"/_dazzle/documents/pending/{meta.id}")
+    assert r.status_code == 404
+
+
+def test_pending_ttl_env_override(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """DAZZLE_PENDING_UPLOAD_TTL_MINUTES tunes the window; <=0 disables it."""
+    # 0 disables the time-box: a 2h-old file is still served.
+    monkeypatch.setenv("DAZZLE_PENDING_UPLOAD_TTL_MINUTES", "0")
+    old = _pending_meta("owner", created_at=datetime.now(UTC) - timedelta(hours=2))
+    r = _client(old, authed_uid="owner").get(f"/_dazzle/documents/pending/{old.id}")
+    assert r.status_code == 200
+
+    # A tight 1-min window 404s a 5-min-old file.
+    monkeypatch.setenv("DAZZLE_PENDING_UPLOAD_TTL_MINUTES", "1")
+    recent = _pending_meta("owner", created_at=datetime.now(UTC) - timedelta(minutes=5))
+    r2 = _client(recent, authed_uid="owner").get(f"/_dazzle/documents/pending/{recent.id}")
+    assert r2.status_code == 404

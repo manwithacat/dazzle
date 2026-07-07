@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.96.3] - 2026-07-07
+
+### Security
+- **Pending-file route is now time-boxed** (#1555, follow-up from #1551): the
+  uploader-gated pre-attach read (`/_dazzle/documents/pending/{file_id}`)
+  previously granted the uploader indefinitely, so a leaked file UUID stayed
+  usable forever. It now 404s once the upload's `created_at` is older than a
+  TTL. The window is `DAZZLE_PENDING_UPLOAD_TTL_MINUTES` (**default 60**);
+  a value `<= 0` disables the time-box. Read per-request (operator-tunable
+  without restart); a legacy row missing `created_at` is never treated as
+  expired. `created_at` already existed on `dazzle_files` — no schema change.
+
+### Agent Guidance
+- New env knob `DAZZLE_PENDING_UPLOAD_TTL_MINUTES` (default 60) bounds how
+  long a just-uploaded, not-yet-attached file is readable via its pending
+  route. Tune down for a tighter security window; set `0` to disable.
+
 ## [0.96.2] - 2026-07-07
 
 ### Security
