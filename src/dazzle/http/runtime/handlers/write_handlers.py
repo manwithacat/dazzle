@@ -212,6 +212,8 @@ def create_create_handler(
     entity_slug: str = "",
     user_ref_fields: list[str] | None = None,
     persona_ref_map: dict[str, tuple[str, str, Any]] | None = None,
+    file_service: Any = None,
+    file_fields: list[str] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations with optional Cedar-style access control.
 
@@ -230,6 +232,12 @@ def create_create_handler(
             ``(target_entity, link_via, repository)`` for each ref
             field that targets a persona-backed entity. Cycle 249
             (closes EX-049). See ``resolve_backed_entity_refs``.
+        file_service: When provided with ``file_fields``, each file-field
+            value in the request body is triple-verified against its stored
+            metadata before the write proceeds (#1551). Guards are inactive
+            when ``file_service`` is ``None`` (caller did not opt in).
+        file_fields: Names of ``file``-type fields on this entity. See
+            ``verify_file_triple`` in ``document_routes`` for the contract.
     """
 
     service = spec.service
@@ -323,6 +331,27 @@ def create_create_handler(
                 _user_email,
             )
 
+        # #1551: triple-verify every file-field value before the write.
+        # record_id is unknown at create time; passing "" is intentional —
+        # a pending file has entity_id="" so ("" in ("", "")) holds, while
+        # a foreign already-attached file's entity_id won't match.
+        if file_service is not None and file_fields:
+            from dazzle.http.runtime.document_routes import verify_file_triple
+
+            for _ff in file_fields:
+                if _ff in body and body[_ff] is not None:
+                    try:
+                        verify_file_triple(file_service, entity_name, "", _ff, body[_ff])
+                    except ValueError as _exc:
+                        raise HTTPException(
+                            status_code=422,
+                            detail={
+                                "error": "file_triple_mismatch",
+                                "field": _ff,
+                                "reason": str(_exc),
+                            },
+                        ) from _exc
+
         data = input_schema.model_validate(body)
 
         # #1124 / #1311: scope: create: enforcement. Predicate is
@@ -378,11 +407,23 @@ def create_create_handler(
     )
 
 
-def create_update_handler(spec: "RouteSpec") -> Callable[..., Any]:
+def create_update_handler(
+    spec: "RouteSpec",
+    *,
+    file_service: Any = None,
+    file_fields: list[str] | None = None,
+) -> Callable[..., Any]:
     """Create a handler for update operations with optional Cedar-style access control.
 
     See :class:`RouteSpec` for the per-route contract (#1011).
     ``spec.input_schema`` is required for update handlers.
+
+    Args:
+        file_service: When provided with ``file_fields``, each file-field
+            value in the request body is triple-verified against its stored
+            metadata before the write proceeds (#1551). Guards are inactive
+            when ``file_service`` is ``None`` (caller did not opt in).
+        file_fields: Names of ``file``-type fields on this entity.
     """
 
     service = spec.service
@@ -434,6 +475,25 @@ def create_update_handler(spec: "RouteSpec") -> Callable[..., Any]:
                         "reason": exc.reason,
                     },
                 ) from exc
+
+        # #1551: triple-verify every file-field value before the write.
+        # Uses the actual record id (known on update, unlike create).
+        if file_service is not None and file_fields:
+            from dazzle.http.runtime.document_routes import verify_file_triple
+
+            for _ff in file_fields:
+                if _ff in body and body[_ff] is not None:
+                    try:
+                        verify_file_triple(file_service, entity_name, str(id), _ff, body[_ff])
+                    except ValueError as _exc:
+                        raise HTTPException(
+                            status_code=422,
+                            detail={
+                                "error": "file_triple_mismatch",
+                                "field": _ff,
+                                "reason": str(_exc),
+                            },
+                        ) from _exc
 
         data = input_schema.model_validate(body)
 

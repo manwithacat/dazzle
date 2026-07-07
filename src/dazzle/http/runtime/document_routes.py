@@ -131,6 +131,51 @@ async def _no_auth() -> Any:
     return None
 
 
+def verify_file_triple(
+    file_service: Any,
+    entity: str,
+    record_id: str,
+    field: str,
+    raw_value: Any,
+) -> None:
+    """#1551: a file-field write must reference a file whose metadata
+    triple matches the owning (entity, id, field). Closes the
+    client-chosen-metadata hole — a forged reference is a loud error.
+
+    The empty-triple case (all three metadata fields are ``""``/None)
+    is ALLOWED: that is the normal first-attach path for a just-uploaded
+    pending file. The check fires only when the stored triple is
+    non-empty and conflicts with the caller's target.
+
+    Args:
+        file_service: Must implement ``get_metadata(file_id)``
+            returning an object with ``entity_name``, ``entity_id``,
+            and ``field_name`` attributes (or None when missing).
+        entity: The entity name the caller is writing to.
+        record_id: The record's ID string (use ``""`` on create before
+            the new ID is assigned — pending files have ``entity_id=""``
+            so the check still passes).
+        field: The field name on the entity.
+        raw_value: Raw field value from the request body (URL/path or
+            bare UUID). ``None`` / empty string → no-op (field cleared).
+    """
+    file_id = _extract_file_id(raw_value)
+    if file_id is None:
+        return  # not a file reference (empty / cleared)
+    metadata = file_service.get_metadata(file_id)
+    if metadata is None:
+        raise ValueError(f"file {file_id} referenced by {entity}.{field} does not exist")
+    if (
+        (metadata.entity_name or "") not in ("", entity)
+        or str(metadata.entity_id or "") not in ("", str(record_id))
+        or (metadata.field_name or "") not in ("", field)
+    ):
+        raise ValueError(
+            f"file {file_id} triple {metadata.entity_name}/{metadata.entity_id}/"
+            f"{metadata.field_name} does not match {entity}/{record_id}/{field}"
+        )
+
+
 def create_document_routes(
     *,
     file_service: Any,
@@ -221,6 +266,47 @@ def create_document_routes(
             "Accept-Ranges": "bytes",
             "Cache-Control": "private, max-age=0",
         }
+
+    @router.get("/pending/{file_id}")
+    async def pending_document(
+        file_id: str, request: Request, auth_context: Any = Depends(auth_dep)
+    ) -> Response:
+        """Uploader-gated pre-attach read (#1551).
+
+        Grants iff the caller is the uploader AND the file is not yet
+        attached to any record. All denials → opaque 404 (no information
+        leak about which condition failed).
+        """
+        from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
+
+        uid = str(getattr(getattr(auth_context, "user", None), "id", "") or "")
+        metadata = file_service.get_metadata(file_id)
+        # opaque 404 on: unknown file, unauthenticated, wrong uploader,
+        # or file already attached to a record.
+        if (
+            metadata is None
+            or not uid
+            or str(metadata.uploaded_by or "") != uid
+            or (metadata.entity_id or "")
+        ):
+            raise HTTPException(status_code=404, detail="Not found")
+        decision = AccessDecision(
+            user_id=uid,
+            entity="(pending)",
+            record_id=str(file_id),
+            field=str(metadata.field_name or ""),
+            matched_policy="uploader",
+            verb="pending_read",
+        )
+        return await serve_bytes(
+            decision=decision,
+            file_service=file_service,
+            metadata=metadata,
+            file_id=file_id,
+            range_header=request.headers.get("range"),
+            disposition_kind="inline",
+            audit=getattr(request.app.state, "byte_audit", None),
+        )
 
     @router.get("/{entity}/{entity_id}/{field}/file")
     @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
