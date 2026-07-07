@@ -2519,7 +2519,20 @@
       say("Loading document…");
       var lib = await loadLib(root);
       var src = root.getAttribute("data-pdf-src");
-      var doc = await lib.getDocument(src).promise;
+      // #1556: open big PDFs on first-page bytes instead of prefetching the
+      // whole file. disableAutoFetch stops PDF.js's background whole-file
+      // pull, so large documents stream pages on demand over HTTP ranges.
+      // PDF.js still fetches SMALL PDFs in one shot — it only issues range
+      // GETs when the server-sent Content-Length exceeds its internal
+      // threshold — so tiny documents pay no extra round-trips (size-gated by
+      // PDF.js). The server route (serve_bytes) already advertises
+      // Accept-Ranges + Content-Length, which is what PDF.js keys off.
+      var doc = await lib.getDocument({
+        url: src,
+        disableAutoFetch: true,
+        disableStream: false,
+        rangeChunkSize: 65536,
+      }).promise;
 
       var syncUrl = root.getAttribute("data-pdf-state") === "url";
       var fromUrl = syncUrl ? urlState() : { page: null, zoom: null };
@@ -2529,7 +2542,10 @@
           Math.max(
             1,
             fromUrl.page ||
-              parseInt(root.getAttribute("data-pdf-initial-page") || "1", 10) ||
+              parseInt(
+                root.getAttribute("data-pdf-initial-page") || "1",
+                10,
+              ) ||
               1,
           ),
         ),

@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.96.4] - 2026-07-07
+
+### Added
+- **dz-pdf opens large PDFs on first-page bytes** (#1556, client half of
+  #1551): the viewer called `getDocument(src)` with defaults, so PDF.js
+  prefetched the entire file in the background even while showing page 1. It
+  now passes `disableAutoFetch: true` (+ `disableStream: false`,
+  `rangeChunkSize: 65536`), so large documents stream pages on demand over
+  HTTP ranges against the already-Range-aware `serve_bytes` route. The
+  small-PDF path is unchanged: PDF.js only issues range GETs when the
+  server's `Content-Length` exceeds its internal threshold, so tiny docs
+  still download whole with no extra round-trips (size-gating provided by
+  PDF.js, not a bespoke server signal). Rebuilt the four HM artifacts
+  (controller → dist → site → framework `dazzle.min.js`); HM 0.1.59→0.1.60.
+
+### Agent Guidance
+- The dz-pdf range behaviour is **size-gated by PDF.js itself** (via the
+  server's `Content-Length`), not by a Dazzle-emitted size hint. If a future
+  need arises for an explicit, operator-tunable threshold, plumb a
+  `data-dz-pdf-*` size/threshold attribute from `pdf_viewer_renderer.py`
+  (which today has no file-size access) — tracked as a possible follow-up, not
+  built.
+
 ## [0.96.3] - 2026-07-07
 
 ### Security
