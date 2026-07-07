@@ -10,14 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `GET /_dazzle/documents/pending/{file_id}` uploader-scoped pending-file route (#1551).
+- **Verifiable byte-serving** (#1551 item 5 — the final item; spec at `docs/superpowers/specs/2026-07-07-verifiable-byte-serving-design.md`): every stored file byte is now served through ONE range-aware core, `byte_serving.serve_bytes`, that REQUIRES an already-granted `AccessDecision` — enforcement stays upstream in the gated access core (#1422). Storage backends gain a `read_range(key, start, end)` streaming primitive (local seek+chunk; S3 `Range:`); nothing loads whole files into memory. `FileService.read_range` adds a local size-drift guard (metadata≠disk → loud refusal).
+- **Uploader-gated pending-file route** `GET /_dazzle/documents/pending/{file_id}` — a just-uploaded, not-yet-attached file is servable only to its uploader (session-sourced `uploaded_by`, never client-settable), opaque-404 otherwise.
+- **Attach-time triple verification** — writing a file-field value verifies the file's `(entity, id, field)` metadata triple server-side; a forged reference is a loud 422 (closes the client-chosen-metadata hole).
+- **Coalesced document-access audit** (`ByteAudit`) — the first access per `(user, document)` within a 15-min window writes one `log_decision` row; the scope check still runs on every request (coalescing is emission-only, never enforcement); denials/416 always audit.
+- **Three verification surfaces** proving the boundary: the `byte_access` compliance claim (honestly scoped to the document route, naming the two separately-controlled exceptions); `dazzle rbac byte-routes [--strict]` — a static AST proof that no route serves stored bytes outside `serve_bytes` (a live CI gate); and the coalesced audit rows as the runtime evidence artifact.
 
 ### Changed
-- `GET /_dazzle/documents/{entity}/{id}/{field}/file` and `/download` now stream via `serve_bytes` (Range-aware, no buffering) (#1551).
+- `GET /_dazzle/documents/{entity}/{id}/{field}/file` and `/download` now stream via `serve_bytes` (Range-aware, no buffering; the entity-scope `gated_read` still enforces first) (#1551).
 - File-cell emitter in the list row renderer now links to the scope-gated `/_dazzle/documents/{entity}/{id}/{field}/file` route instead of the retired ID-keyed path (#1551).
 
 ### Removed
 - ID-keyed `/files/{id}/download`, `/files/{id}/stream`, and `/files/{id}/thumbnail` byte reads (retired — use the scope-gated `/_dazzle/documents` route) (#1551).
+
+### Agent Guidance
+- **New byte-serving routes MUST call `serve_bytes`** with an `AccessDecision` built from a real enforcement result — the `dazzle rbac byte-routes --strict` CI gate fails any route that self-builds a `StreamingResponse`/`FileResponse`/`Response(content=...)` of stored bytes outside the core. A genuinely non-stored-byte streamer is added to the `ALLOWLIST` in `src/dazzle/testing/byte_route_proof.py` with a one-line reason — never by loosening the walk.
+- Two stored-byte paths remain under their own controls and are NAMED in the claim + allowlist (not hidden): the posture-gated static uploads path and the S3 object-storage proxy. Converging them onto `serve_bytes`/`ByteAudit` is a tracked follow-up.
 
 ## [0.94.0] - 2026-07-07
 
