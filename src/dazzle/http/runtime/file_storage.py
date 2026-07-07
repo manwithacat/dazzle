@@ -116,6 +116,19 @@ class StorageBackend(ABC):
         ...
 
     @abstractmethod
+    async def read_range(
+        self, storage_key: str, start: int, end: int | None
+    ) -> AsyncIterator[bytes]:
+        """Yield bytes [start, end] inclusive; end=None → to EOF.
+
+        Absolute offsets — the caller (serve_bytes) resolves suffix/open
+        ranges against the known size before calling. Raises
+        FileNotFoundError if the object is absent.
+        """
+        ...
+        yield b""  # pragma: no cover — abstract
+
+    @abstractmethod
     async def delete(self, storage_key: str) -> bool:
         """
         Delete a file.
@@ -230,6 +243,25 @@ class LocalStorageBackend(StorageBackend):
                 chunk = f.read(chunk_size)
                 if not chunk:
                     break
+                yield chunk
+
+    async def read_range(
+        self, storage_key: str, start: int, end: int | None
+    ) -> AsyncIterator[bytes]:
+        full_path = self.base_path / storage_key
+        if not full_path.exists():
+            raise FileNotFoundError(f"File not found: {storage_key}")
+        chunk_size = 64 * 1024
+        remaining = None if end is None else (end - start + 1)
+        with open(full_path, "rb") as f:
+            f.seek(start)
+            while remaining is None or remaining > 0:
+                want = chunk_size if remaining is None else min(chunk_size, remaining)
+                chunk = f.read(want)
+                if not chunk:
+                    break
+                if remaining is not None:
+                    remaining -= len(chunk)
                 yield chunk
 
     async def delete(self, storage_key: str) -> bool:
@@ -376,6 +408,21 @@ class S3StorageBackend(StorageBackend):
         session = aioboto3.Session()
         async with session.client("s3", **self._get_client_config()) as s3:
             response = await s3.get_object(Bucket=self.bucket, Key=storage_key)
+            async with response["Body"] as stream:
+                async for chunk in stream.iter_chunks():
+                    yield chunk
+
+    async def read_range(
+        self, storage_key: str, start: int, end: int | None
+    ) -> AsyncIterator[bytes]:
+        try:
+            import aioboto3
+        except ImportError:
+            raise ImportError("aioboto3 is required for S3 storage")
+        rng = f"bytes={start}-" if end is None else f"bytes={start}-{end}"
+        session = aioboto3.Session()
+        async with session.client("s3", **self._get_client_config()) as s3:
+            response = await s3.get_object(Bucket=self.bucket, Key=storage_key, Range=rng)
             async with response["Body"] as stream:
                 async for chunk in stream.iter_chunks():
                     yield chunk
@@ -1005,6 +1052,40 @@ class FileService:
 
         stream = self.storage.stream(metadata.storage_key)
         return stream, metadata
+
+    async def read_range(
+        self, file_id: UUID | str, start: int, end: int | None
+    ) -> tuple[AsyncIterator[bytes], FileMetadata]:
+        """Return a byte-range stream and the file metadata.
+
+        Args:
+            file_id: File ID
+            start: Absolute start offset (inclusive)
+            end: Absolute end offset (inclusive); None means to EOF
+
+        Returns:
+            Tuple of (async byte iterator, FileMetadata)
+
+        Raises:
+            FileNotFoundError: If the file record is not found
+            RuntimeError: If local disk size diverges from metadata size
+        """
+        metadata = self.metadata_store.get(file_id)
+        if not metadata:
+            raise FileNotFoundError(f"File not found: {file_id}")
+        # size-drift guard (LOCAL only — S3 HEAD would cost a round-trip; the
+        # metadata size is authoritative for Content-Length, and a local
+        # metadata/disk mismatch is a served-truncation hazard).
+        if metadata.storage_backend == "local":
+            from pathlib import Path
+
+            disk = Path(self.storage.base_path) / metadata.storage_key  # type: ignore[attr-defined]
+            if disk.exists() and disk.stat().st_size != metadata.size:
+                raise RuntimeError(
+                    f"size drift for {file_id}: metadata {metadata.size} != disk "
+                    f"{disk.stat().st_size} — refusing to serve a wrong Content-Length"
+                )
+        return self.storage.read_range(metadata.storage_key, start, end), metadata
 
     async def delete(self, file_id: UUID | str) -> bool:
         """
