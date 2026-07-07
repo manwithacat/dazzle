@@ -1290,6 +1290,10 @@
 /* =============================================================================
    QA Personas Section (#768) — local-dev-only persona switcher
    ============================================================================= */
+/* ── QA persona panel — DEPRECATED (#1553, 2026-07-06) ──────────
+ * Frozen legacy dev UX: explicitly OUT of the HaTchi-MaXchi migration
+ * scope (the sole intentionally-unconverted family). Do not extend;
+ * the replacement is an HM-native reimplementation (#1553). */
 
 .dz-qa-personas {
   padding: 4rem 1.5rem;

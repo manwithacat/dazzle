@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.125] - 2026-07-07
+
+### Added
+- **The Hyperpart fleet-coverage oracle** (#164, James's requirement):
+  `test_hyperpart_fleet_coverage.py` maps all 68 HM Hyperparts to the
+  DSL signal whose presence in an example makes Dazzle emit them
+  (framework chrome marked always; gallery-only primitives exempt with
+  reasons; the wizard gets a structural per-app check — experience step
+  → sectioned create/edit surface — because no grep expresses the
+  join). `KNOWN_GAPS` is a ratchet: it fails on NEW gaps (the
+  F4d-wizard blind-spot class) and on stale entries. Current recorded
+  adoption debt: `peek: slide_over`, `display: pdf_viewer`,
+  `widget: slider`, `money` fields, `date_range` regions. The review
+  caught the first draft lying in five places (false "always" claims,
+  loose regexes) — every signal is now emitter-verified.
+
+### Deprecated
+- **The QA persona panel** (#163, ratified boundary decision): frozen
+  legacy dev UX, explicitly OUT of the HM migration scope — the sole
+  intentionally-unconverted family. Behaviour unchanged; the HM-native
+  reimplementation is #1553.
+
+### Agent Guidance
+- **A coverage oracle that lies is worse than none** — every "always"
+  claim must name its emitter and its gating condition (the 2FA pages
+  are sitespec-gated; the overflow menu needs >3 actions). When a grep
+  can't express a rendering condition, write the structural check.
+
 ## [0.93.124] - 2026-07-07
 
 ### Changed

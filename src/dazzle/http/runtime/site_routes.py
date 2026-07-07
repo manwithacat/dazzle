@@ -298,7 +298,11 @@ def _render_site_footer_column(col: Any) -> str:
 
 
 def _render_qa_personas_html(qa_personas: list[Any]) -> str:
-    """Inline mirror of `site/sections/qa_personas.html` (Phase 4, v0.67.69).
+    """DEPRECATED (#1553, ratified 2026-07-06): frozen legacy dev UX —
+    OUT of HM migration scope; do not convert dz-qa-* CSS or extend
+    this markup. Replacement = HM-native reimplementation (#1553).
+
+    Inline mirror of `site/sections/qa_personas.html` (Phase 4, v0.67.69).
 
     Dev-only persona impersonation cards — the trailing `<script>` block
     wires click handlers that POST to `/qa/magic-link` and redirect to
