@@ -59,8 +59,9 @@ def render_pdf_viewer_component(
 ) -> str:
     """Port of `components/pdf_viewer.html`.
 
-    Returns the full `<div class="dz-pdf-viewer">…</div>` chrome with
-    embed, panels, footer and help dialog.
+    Returns the full `<div class="dz-pdf-viewer">…</div>` page chrome
+    (back/title/sibling nav, panels, footer, help dialog) around the HM
+    `pdf` Hyperpart document region (hx-pdf P3 — was a native <embed>).
     """
     title_or_default = title or "Document"
 
@@ -115,9 +116,39 @@ def render_pdf_viewer_component(
     else:
         _panels = []
 
+    # hx-pdf P3: the document region is the HM pdf Hyperpart — dz-pdf.js
+    # renders via the VENDORED PDF.js (no browser-plugin <embed>). The
+    # storage-proxy src passes through verbatim; the page chrome around
+    # it (back/title/sibling nav/panels/footer) stays Dazzle-owned.
     embed = (
-        f'<embed src="{_esc(src, quote=True)}" type="application/pdf" '
-        f'class="dz-pdf-viewer-embed" aria-label="{_esc(title_or_default, quote=True)} PDF" />'
+        f'<section class="dz-pdf dz-pdf-viewer-embed" data-dz-pdf '
+        f'data-dz-pdf-src="{_esc(src, quote=True)}" '
+        f'data-dz-pdf-lib="/static/vendor/pdfjs/pdf.min.mjs" '
+        f'data-dz-pdf-worker="/static/vendor/pdfjs/pdf.worker.min.mjs" '
+        f'aria-label="{_esc(title_or_default, quote=True)} PDF">'
+        '<header class="dz-pdf-toolbar" data-dz-pdf-toolbar>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-prev>Previous</button>'
+        "<label>Page "
+        '<input class="dz-pdf-page-input" data-dz-pdf-page value="1" '
+        'inputmode="numeric" aria-label="Page number">'
+        "</label>"
+        '<span class="dz-pdf-page-count" data-dz-pdf-page-count></span>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-next>Next</button>'
+        '<span class="dz-pdf-toolbar-spacer"></span>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-zoom-out aria-label="Zoom out">−</button>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-zoom-in aria-label="Zoom in">+</button>'
+        '<button type="button" class="dz-button" data-dz-size="sm" '
+        'data-dz-variant="outline" data-dz-pdf-fit-width>Fit width</button>'
+        "</header>"
+        '<div class="dz-pdf-status" data-dz-pdf-status aria-live="polite"></div>'
+        '<div class="dz-pdf-stage" data-dz-pdf-viewer>'
+        f'<noscript><a href="{_esc(src, quote=True)}">Download PDF</a></noscript>'
+        "</div>"
+        "</section>"
     )
 
     panel_blocks: list[str] = []

@@ -11,7 +11,7 @@ recursive-include src/dazzle/templates *.dsl *.toml *.md .gitignore
 
 # Include UI runtime static files (JS, CSS). Path updated by #1055
 # (v0.67.98) — dazzle_page nested under dazzle.page.
-recursive-include src/dazzle/page/runtime/static *.js *.css
+recursive-include src/dazzle/page/runtime/static *.js *.css *.mjs
 
 # Include LSP grammar files
 recursive-include src/dazzle/lsp/grammars *.json

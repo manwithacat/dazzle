@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.124] - 2026-07-07
+
+### Changed
+- **hx-pdf P3 — the `display: pdf_viewer` document region is the HM
+  pdf Hyperpart** (#162). The native `<embed>` (browser PDF plugin)
+  became `dz-pdf.js` rendering via the newly VENDORED pdfjs-dist
+  4.10.38 legacy build (`/static/vendor/pdfjs/`, hash-pinned). The
+  storage-proxy src passes through verbatim; the page furniture
+  (back/title/sibling nav, panels, footer, help) deliberately stays
+  Dazzle-owned — a recorded scope adjustment: full retirement of the
+  #946 chrome is off the plan; the Hyperpart owns the document region
+  only. All 47 real-browser pdf-viewer quality gates pass unchanged.
+
+### Fixed
+- **Vendored `.mjs` files were invisible to every packaging glob**
+  (review SEV-1, the #1308 blindness class): pyproject package-data
+  and MANIFEST.in only matched `*.js`/`*.css`, so every pip-installed
+  app would have 404'd the PDF.js module while repo checkouts (and all
+  CI) served it from source. Globs extended; a new
+  `test_vendor_assets_packaging.py` asserts every `vendor_hashes.json`
+  entry is matched by the package-data globs.
+- The full-page stage would have clipped the document's bottom
+  toolbar-height band (`block-size:100%` inside an `overflow:hidden`
+  section with an in-flow toolbar) — the embed slot is now a grid with
+  the stage on the `1fr` row.
+
+### Agent Guidance
+- **Repo checkouts mask packaging exclusions** — anything servable
+  from source needs a packaging test keyed off its manifest, not a
+  runtime test.
+- Keyboard follow-up filed: #1552 (bare arrows still mean
+  sibling-document nav beside a paged viewer; the canvas stage isn't
+  focusable).
+
 ## [0.93.123] - 2026-07-07
 
 ### Added

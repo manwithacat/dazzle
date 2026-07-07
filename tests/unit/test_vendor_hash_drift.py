@@ -43,6 +43,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 import pytest  # noqa: E402
 from vendor_manifest import (  # noqa: E402
+    VENDOR_DIR,  # noqa: E402
     compute_current_hashes,
     discover_vendor_files,
     load_manifest,
@@ -59,7 +60,7 @@ def test_every_vendor_file_has_manifest_entry() -> None:
     or unintended state (investigate).
     """
     manifest = load_manifest()
-    disk_files = {p.name for p in discover_vendor_files()}
+    disk_files = {str(p.relative_to(VENDOR_DIR)) for p in discover_vendor_files()}
     missing = sorted(disk_files - set(manifest))
     assert not missing, (
         f"Vendored files without a pinned hash: {missing}. "
@@ -70,7 +71,7 @@ def test_every_vendor_file_has_manifest_entry() -> None:
 def test_no_manifest_entry_without_file() -> None:
     """Conversely: no stale manifest entry pointing at a removed file."""
     manifest = load_manifest()
-    disk_files = {p.name for p in discover_vendor_files()}
+    disk_files = {str(p.relative_to(VENDOR_DIR)) for p in discover_vendor_files()}
     stale = sorted(set(manifest) - disk_files)
     assert not stale, (
         f"Manifest entries for files no longer present: {stale}. "

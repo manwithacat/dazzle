@@ -79,9 +79,13 @@ def write_manifest(files: dict[str, str]) -> None:
 
 def discover_vendor_files() -> list[Path]:
     """Every .js/.css file currently in the vendor dir, sorted."""
-    return sorted(p for p in VENDOR_DIR.iterdir() if p.is_file() and p.suffix in (".js", ".css"))
+    # rglob: vendored libraries may live in subdirectories (pdfjs/);
+    # .mjs joined the set with the PDF.js ES-module build (hx-pdf P3).
+    return sorted(
+        p for p in VENDOR_DIR.rglob("*") if p.is_file() and p.suffix in (".js", ".css", ".mjs")
+    )
 
 
 def compute_current_hashes() -> dict[str, str]:
     """Hash every file currently under VENDOR_DIR, keyed by filename."""
-    return {p.name: hash_file(p) for p in discover_vendor_files()}
+    return {str(p.relative_to(VENDOR_DIR)): hash_file(p) for p in discover_vendor_files()}

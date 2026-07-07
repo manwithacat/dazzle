@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.93.123"
+version = "0.93.124"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -383,8 +383,8 @@ dazzle = ["py.typed"]
 # Dazzle UI runtime static files (JS, CSS). Post-#1055 (v0.67.98) the
 # `dazzle_page` top-level package was nested as `dazzle.page` so all
 # package-data keys reference the new path.
-"dazzle.page" = ["static/**/*.js", "static/**/*.css"]
-"dazzle.page.runtime.static" = ["**/*.js", "**/*.css"]
+"dazzle.page" = ["static/**/*.js", "static/**/*.css", "static/**/*.mjs"]
+"dazzle.page.runtime.static" = ["**/*.js", "**/*.css", "**/*.mjs"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/dazzle/http/tests"]

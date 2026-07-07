@@ -144,6 +144,24 @@
   border: 0;
 }
 
+/* hx-pdf P3: the embed slot now hosts the HM pdf Hyperpart. Inside the
+ * full-page grid the SECTION becomes a grid (toolbar/status/stage) so
+ * the stage takes the remainder — a bare block-size:100% stage would
+ * overflow by the toolbar height and the section's overflow:hidden
+ * would clip the document's bottom band. Corners squared: the region
+ * is full-bleed here. */
+.dz-pdf-viewer .dz-pdf.dz-pdf-viewer-embed {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  border-radius: 0;
+}
+
+.dz-pdf-viewer .dz-pdf-stage {
+  max-height: none;
+  block-size: auto;
+  min-block-size: 0;
+}
+
 /* ── Footer ──────────────────────────────────────────────────── */
 
 .dz-pdf-viewer-footer {

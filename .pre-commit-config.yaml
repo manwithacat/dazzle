@@ -27,7 +27,10 @@ repos:
         exclude: mkdocs\.yml$  # Uses PyYAML-specific tags
       - id: check-toml
       - id: check-added-large-files
-        args: ['--maxkb=1000']
+        # 2000: the vendored PDF.js module worker (pdf.worker.min.mjs,
+        # ~1.4MB, hash-pinned in scripts/vendor_hashes.json) is the
+        # largest legitimate asset — hx-pdf P3.
+        args: ['--maxkb=2000']
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: detect-private-key

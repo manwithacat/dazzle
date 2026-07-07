@@ -52,8 +52,9 @@ class TestTemplateRendering:
         )
         assert 'data-dz-widget="pdf-viewer"' in html
         assert 'data-dz-back-url="/app/manuscripts"' in html
-        assert 'src="/api/storage/cohort_pdfs/proxy?key=x"' in html
-        assert 'type="application/pdf"' in html
+        # P3: the document region is the HM pdf Hyperpart, not <embed>
+        assert 'data-dz-pdf-src="/api/storage/cohort_pdfs/proxy?key=x"' in html
+        assert "data-dz-pdf-viewer" in html
 
     def test_default_title_is_document(self) -> None:
         html = _render(src="/x", back_url="/back")
@@ -118,14 +119,25 @@ class TestTemplateRendering:
         assert "x-data" not in html
         assert "x-init" not in html
 
-    def test_embed_uses_proxy_url_verbatim(self) -> None:
-        """The src is passed straight to <embed>. No transforms,
-        no rewriting — matches what the cycle 1a proxy returns."""
+    def test_document_region_is_the_hm_pdf_hyperpart(self) -> None:
+        """hx-pdf P3: the native <embed> became the HM pdf Hyperpart —
+        dz-pdf.js renders via the VENDORED PDF.js; the storage-proxy src
+        is passed through verbatim as data-dz-pdf-src."""
         proxy_url = (
             "/api/storage/cohort_pdfs/proxy?key=production/cohort_assessments/u1/abc/file.pdf"
         )
         html = _render(src=proxy_url, back_url="/back")
-        assert proxy_url in html
+        assert "<embed" not in html
+        assert "data-dz-pdf data-dz-pdf-src" in html
+        assert f'data-dz-pdf-src="{proxy_url}"' in html
+        assert 'data-dz-pdf-lib="/static/vendor/pdfjs/pdf.min.mjs"' in html
+        assert 'data-dz-pdf-worker="/static/vendor/pdfjs/pdf.worker.min.mjs"' in html
+        # the spec §7 slots render inside the page chrome
+        assert "data-dz-pdf-viewer" in html
+        assert "data-dz-pdf-page-count" in html
+        assert 'data-dz-pdf-status aria-live="polite"' in html
+        # noscript fallback keeps the raw document reachable
+        assert "<noscript>" in html
 
 
 # ---------------------------------------------------------------------------

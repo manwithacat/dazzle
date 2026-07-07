@@ -1,4 +1,4 @@
-/* dazzle v0.93.123 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.93.124 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -8363,6 +8363,16 @@ display: block;
 inline-size: 100%;
 block-size: 100%;
 border: 0;
+}
+.dz-pdf-viewer .dz-pdf.dz-pdf-viewer-embed {
+display: grid;
+grid-template-rows: auto auto 1fr;
+border-radius: 0;
+}
+.dz-pdf-viewer .dz-pdf-stage {
+max-height: none;
+block-size: auto;
+min-block-size: 0;
 }
 .dz-pdf-viewer-footer {
 display: flex;
