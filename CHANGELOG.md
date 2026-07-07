@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.95.0] - 2026-07-07
+
 ### Added
 - **Verifiable byte-serving** (#1551 item 5 — the final item; spec at `docs/superpowers/specs/2026-07-07-verifiable-byte-serving-design.md`): every stored file byte is now served through ONE range-aware core, `byte_serving.serve_bytes`, that REQUIRES an already-granted `AccessDecision` — enforcement stays upstream in the gated access core (#1422). Storage backends gain a `read_range(key, start, end)` streaming primitive (local seek+chunk; S3 `Range:`); nothing loads whole files into memory. `FileService.read_range` adds a local size-drift guard (metadata≠disk → loud refusal).
 - **Uploader-gated pending-file route** `GET /_dazzle/documents/pending/{file_id}` — a just-uploaded, not-yet-attached file is servable only to its uploader (session-sourced `uploaded_by`, never client-settable), opaque-404 otherwise.
