@@ -301,3 +301,56 @@ def test_settings_view_escapes_product_name() -> None:
     html = _render(build_2fa_settings_view(product_name="<x>"))
     assert "<x>" not in html
     assert "&lt;x&gt;" in html
+
+
+# ---------------------------------------------------------------------------
+# #1550 — hidden sections use the NATIVE hidden attribute (house idiom).
+# No `.hidden` utility class exists anywhere in the bundle, so
+# class="hidden" rendered the verify form and recovery section always
+# visible. The scaffold + dz-2fa-*.js + HM two-factor.css move together
+# to attribute-based hiding.
+# ---------------------------------------------------------------------------
+
+
+def test_setup_scaffold_hides_sections_via_native_hidden_attribute() -> None:
+    html = _render(build_2fa_setup_view(product_name="Acme"))
+    assert 'class="hidden"' not in html
+    assert '<div id="dz-totp-verify" hidden>' in html
+    assert '<div id="dz-recovery-section" hidden>' in html
+
+
+def test_setup_alerts_hidden_via_attribute_not_class() -> None:
+    html = _render(build_2fa_setup_view(product_name="Acme"))
+    assert 'class="dz-auth-error hidden"' not in html
+    assert '<div id="dz-auth-error" class="dz-auth-error" role="alert" hidden>' in html
+    assert '<div id="dz-auth-success" class="dz-auth-success" role="status" hidden>' in html
+
+
+def test_settings_alerts_hidden_via_attribute_not_class() -> None:
+    html = _render(build_2fa_settings_view(product_name="Acme"))
+    assert 'class="dz-auth-error hidden"' not in html
+    assert '<div id="dz-auth-error" class="dz-auth-error" role="alert" hidden>' in html
+
+
+def test_2fa_js_toggles_hidden_property_not_class() -> None:
+    """dz-2fa-*.js must move in lockstep: the reveal mechanic is the
+    element's `hidden` property, never classList('hidden')."""
+    from pathlib import Path
+
+    js_dir = Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/js"
+    for name in ("dz-2fa-setup.js", "dz-2fa-settings.js"):
+        text = (js_dir / name).read_text(encoding="utf-8")
+        assert 'classList.add("hidden")' not in text, name
+        assert 'classList.remove("hidden")' not in text, name
+
+
+def test_site_sections_css_carries_no_auth_rules() -> None:
+    """#1549 — site-sections.css's fossil auth block collided with the
+    HM two-factor Hyperpart (input-code font, card centering, gradient
+    over centering). HM two-factor.css is the sole owner of dz-auth-*."""
+    from pathlib import Path
+
+    css = (
+        Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/css/site-sections.css"
+    ).read_text(encoding="utf-8")
+    assert ".dz-auth-" not in css

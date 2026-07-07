@@ -9129,7 +9129,7 @@ a.action-card:hover {
 }
 
 .auth-error {
-  display: none;  /* gated by JS via classList.remove('hidden') */
+  display: none;  /* revealed by JS clearing the hidden attribute */
   flex-direction: row;
   gap: var(--space-sm);
   padding: var(--space-md);
@@ -9141,7 +9141,7 @@ a.action-card:hover {
   color: var(--colour-text);
 }
 
-.auth-error:not(.hidden) {
+.auth-error:not([hidden]) {
   display: flex;
 }
 
@@ -9160,7 +9160,7 @@ a.action-card:hover {
   color: var(--colour-text);
 }
 
-.auth-success:not(.hidden) {
+.auth-success:not([hidden]) {
   display: flex;
 }
 

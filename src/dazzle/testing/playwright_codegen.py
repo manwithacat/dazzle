@@ -99,7 +99,7 @@ def _auth_target_to_selector(target_name: str) -> str:
         "modal": "#dz-auth-modal",
         "form": "#dz-auth-form",
         "submit": "#dz-auth-submit",
-        "error": "#dz-auth-error:not(.hidden)",
+        "error": "#dz-auth-error:not(.hidden):not([hidden])",
         "user_indicator": "[data-dazzle-auth-user]",
     }
 
@@ -277,7 +277,9 @@ def _generate_step_code(step: FlowStep, fixtures: dict[str, FixtureSpec]) -> str
 
             elif assertion.kind == FlowAssertionKind.LOGIN_FAILED:
                 lines.append("# Verify login failed with error")
-                lines.append("expect(page.locator('#dz-auth-error:not(.hidden)')).to_be_visible()")
+                lines.append(
+                    "expect(page.locator('#dz-auth-error:not(.hidden):not([hidden])')).to_be_visible()"
+                )
 
             elif assertion.kind == FlowAssertionKind.ROUTE_PROTECTED:
                 lines.append("# Verify route is protected")

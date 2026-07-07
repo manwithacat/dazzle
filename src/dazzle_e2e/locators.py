@@ -315,7 +315,7 @@ class DazzleLocators:
         Returns:
             Playwright Locator for visible error message
         """
-        return self.page.locator("#dz-auth-error:not(.hidden)")
+        return self.page.locator("#dz-auth-error:not(.hidden):not([hidden])")
 
     def auth_submit(self) -> "Locator":
         """

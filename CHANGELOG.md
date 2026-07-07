@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.128] - 2026-07-07
+
+### Fixed
+- **The 2FA setup scaffold's hidden sections were always visible**
+  (#1550): no `.hidden` utility exists anywhere in the bundle, so
+  `class="hidden"` on the TOTP-verify form and recovery section did
+  nothing. The scaffold, `dz-2fa-*.js`, and HM `two-factor.css` moved
+  together to the native `hidden` attribute (the house idiom from the
+  wizard/tabs conversions): JS toggles `el.hidden`, the alert reveal
+  selectors are `:not([hidden])`, and the plain section wrappers rely
+  on the UA `[hidden]` rule (no authored `display` obstructs them).
+- **site-sections.css no longer collides with the 2FA chrome**
+  (#1549): the fossil DaisyUI-era auth block (input font clobbering
+  the big-digit code input, marketing gradient beating HM centering,
+  dark-theme overrides) is deleted — its only live consumer was the
+  2FA chrome it broke. HM `two-factor.css` is the sole owner of
+  `dz-auth-*`; its tokens are scheme-aware, so dark mode is covered
+  without the deleted rules. Pinned by
+  `test_site_sections_css_carries_no_auth_rules`.
+- The `auth_error` e2e locator and codegen selector now match both
+  hiding mechanics (`:not(.hidden):not([hidden])`) — framework 2FA
+  views use the attribute; app-custom scaffolds may still use the
+  class.
+
+### Agent Guidance
+- **Native `hidden` only works when no authored rule sets `display`**
+  on the element — the UA `[hidden]{display:none}` loses to any
+  authored display. Elements with a styled display need the base
+  `display:none` + `:not([hidden])` reveal pair; plain wrappers can
+  rely on the UA rule. Audit every converted element for authored
+  display before flipping class-based hiding to the attribute.
+- HM 0.1.54.
+
 ## [0.93.127] - 2026-07-07
 
 ### Fixed

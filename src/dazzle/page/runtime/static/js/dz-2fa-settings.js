@@ -7,8 +7,8 @@
  * enable/disable per factor + recovery-code regeneration.
  *
  * DOM contract:
- *   #dz-auth-error    — error banner (.hidden by default)
- *   #dz-auth-success  — success banner (.hidden by default)
+ *   #dz-auth-error    — error banner (hidden attribute by default)
+ *   #dz-auth-success  — success banner (hidden attribute by default)
  *   #dz-status        — container the script fills with one row per factor
  */
 (function () {
@@ -31,15 +31,15 @@
   function showError(msg) {
     if (!errorDiv) return;
     errorDiv.textContent = msg;
-    errorDiv.classList.remove("hidden");
-    if (successDiv) successDiv.classList.add("hidden");
+    errorDiv.hidden = false;
+    if (successDiv) successDiv.hidden = true;
   }
 
   function showSuccess(msg) {
     if (!successDiv) return;
     successDiv.textContent = msg;
-    successDiv.classList.remove("hidden");
-    if (errorDiv) errorDiv.classList.add("hidden");
+    successDiv.hidden = false;
+    if (errorDiv) errorDiv.hidden = true;
   }
 
   function makeRow(rowClasses, labelText, button) {

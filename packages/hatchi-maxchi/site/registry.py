@@ -1162,8 +1162,8 @@ HYPERPARTS: list[Hyperpart] = [
         "against JSON endpoints): the QR image lands CLASSLESS in "
         "<code>dz-auth-qr-container</code> (the container styles it), "
         "recovery pills and status rows are JS-created (shown here with status badges; the Dazzle settings JS renders dz-button action controls in that slot), and the "
-        "error/success alerts toggle via a <code>hidden</code> class on "
-        "stable ids. The code input reserves letter-spacing for six "
+        "error/success alerts toggle via the native <code>hidden</code> "
+        "attribute on stable ids. The code input reserves letter-spacing for six "
         "digits. Wrap full pages in <code>dz-auth-page</code> for the "
         "centered layout.",
         tags=("forms",),

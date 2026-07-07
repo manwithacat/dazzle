@@ -313,7 +313,7 @@ class TestAuthLocatorMapping:
             ("modal", "#dz-auth-modal"),
             ("form", "#dz-auth-form"),
             ("submit", "#dz-auth-submit"),
-            ("error", "#dz-auth-error:not(.hidden)"),
+            ("error", "#dz-auth-error:not(.hidden):not([hidden])"),
             ("user_indicator", "[data-dazzle-auth-user]"),
             ("field.email", '#dz-auth-form [name="email"]'),
             ("field.password", '#dz-auth-form [name="password"]'),

@@ -7,16 +7,16 @@
  * OTP enable, and recovery-code display.
  *
  * DOM contract (element IDs the script reads):
- *   #dz-auth-error          — error banner (.hidden by default)
- *   #dz-auth-success        — success banner (.hidden by default)
+ *   #dz-auth-error          — error banner (hidden attribute by default)
+ *   #dz-auth-success        — success banner (hidden attribute by default)
  *   #dz-setup-totp          — "Generate QR Code" trigger button
  *   #dz-qr-container        — QR image landing zone (and starting button host)
- *   #dz-totp-verify         — wrapper around the TOTP verify form (.hidden by default)
+ *   #dz-totp-verify         — wrapper around the TOTP verify form (hidden attribute by default)
  *   #dz-totp-secret         — code element receiving the manual-entry secret
  *   #dz-totp-form           — form posting the user-typed TOTP code
  *   #totp_code              — numeric input inside dz-totp-form
  *   #dz-enable-email-otp    — "Enable Email OTP" button
- *   #dz-recovery-section    — wrapper around the recovery-codes grid (.hidden)
+ *   #dz-recovery-section    — wrapper around the recovery-codes grid (hidden attribute)
  *   #dz-recovery-codes      — grid container for the issued recovery codes
  *
  * No build step. Plain ES2015+ wrapped in an IIFE, same as the legacy
@@ -31,15 +31,15 @@
   function showError(msg) {
     if (!errorDiv) return;
     errorDiv.textContent = msg;
-    errorDiv.classList.remove("hidden");
-    if (successDiv) successDiv.classList.add("hidden");
+    errorDiv.hidden = false;
+    if (successDiv) successDiv.hidden = true;
   }
 
   function showSuccess(msg) {
     if (!successDiv) return;
     successDiv.textContent = msg;
-    successDiv.classList.remove("hidden");
-    if (errorDiv) errorDiv.classList.add("hidden");
+    successDiv.hidden = false;
+    if (errorDiv) errorDiv.hidden = true;
   }
 
   function showRecoveryCodes(codes) {
@@ -53,7 +53,7 @@
       container.appendChild(pill);
     });
     const section = document.getElementById("dz-recovery-section");
-    if (section) section.classList.remove("hidden");
+    if (section) section.hidden = false;
   }
 
   const setupBtn = document.getElementById("dz-setup-totp");
@@ -79,7 +79,7 @@
           qrContainer.appendChild(img);
         }
         const verifyBlock = document.getElementById("dz-totp-verify");
-        if (verifyBlock) verifyBlock.classList.remove("hidden");
+        if (verifyBlock) verifyBlock.hidden = false;
       } catch (err) {
         showError("Network error");
       }

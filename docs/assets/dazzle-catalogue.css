@@ -8362,7 +8362,7 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 }
 
 .dz-auth-error {
-  display: none;  /* gated by JS via classList.remove('hidden') */
+  display: none;  /* revealed by JS clearing the hidden attribute */
   flex-direction: row;
   gap: var(--space-sm);
   padding: var(--space-md);
@@ -8374,7 +8374,7 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   color: var(--colour-text);
 }
 
-.dz-auth-error:not(.hidden) {
+.dz-auth-error:not([hidden]) {
   display: flex;
 }
 
@@ -8393,7 +8393,7 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   color: var(--colour-text);
 }
 
-.dz-auth-success:not(.hidden) {
+.dz-auth-success:not([hidden]) {
   display: flex;
 }
 

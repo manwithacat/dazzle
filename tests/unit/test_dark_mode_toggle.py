@@ -71,17 +71,6 @@ class TestDarkModeCSSClasses:
         assert '[data-theme="dark"] .dz-feature-item' in css_content
         assert '[data-theme="dark"] .dz-testimonial-item' in css_content
 
-    def test_dark_mode_auth_styles(self):
-        """Test that dark mode auth page styles are defined."""
-        from pathlib import Path
-
-        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
-        css_content = css_path.read_text()
-
-        # Check dark mode auth styles
-        assert '[data-theme="dark"] .dz-auth-card' in css_content
-        assert '[data-theme="dark"] .dz-auth-field input' in css_content
-
 
 class TestSitePageToggleButton:
     """Tests for toggle button in site pages."""

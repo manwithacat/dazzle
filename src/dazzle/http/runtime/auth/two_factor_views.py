@@ -206,8 +206,8 @@ _SETUP_BODY_HTML = """\
   <div class="dz-auth-card">
     <h1 class="dz-auth-card-title">Set Up 2FA</h1>
     <p class="dz-auth-card-subtitle">{product_name}</p>
-    <div id="dz-auth-error" class="dz-auth-error hidden" role="alert"></div>
-    <div id="dz-auth-success" class="dz-auth-success hidden" role="status"></div>
+    <div id="dz-auth-error" class="dz-auth-error" role="alert" hidden></div>
+    <div id="dz-auth-success" class="dz-auth-success" role="status" hidden></div>
 
     <div id="dz-totp-section">
       <h2 class="dz-auth-section-title">Authenticator App</h2>
@@ -219,7 +219,7 @@ _SETUP_BODY_HTML = """\
           Generate QR Code
         </button>
       </div>
-      <div id="dz-totp-verify" class="hidden">
+      <div id="dz-totp-verify" hidden>
         <p class="dz-auth-section-body">
           Or enter the secret manually:
           <code id="dz-totp-secret" class="dz-auth-secret-inline"></code>
@@ -250,7 +250,7 @@ _SETUP_BODY_HTML = """\
       </button>
     </div>
 
-    <div id="dz-recovery-section" class="hidden">
+    <div id="dz-recovery-section" hidden>
       <div class="dz-auth-recovery-alert" role="alert">
         <h3 class="dz-auth-recovery-alert-title">Save Your Recovery Codes</h3>
         <p class="dz-auth-recovery-alert-body">
@@ -270,8 +270,8 @@ _SETTINGS_BODY_HTML = """\
   <div class="dz-auth-card">
     <h1 class="dz-auth-card-title">2FA Settings</h1>
     <p class="dz-auth-card-subtitle">{product_name}</p>
-    <div id="dz-auth-error" class="dz-auth-error hidden" role="alert"></div>
-    <div id="dz-auth-success" class="dz-auth-success hidden" role="status"></div>
+    <div id="dz-auth-error" class="dz-auth-error" role="alert" hidden></div>
+    <div id="dz-auth-success" class="dz-auth-success" role="status" hidden></div>
     <div id="dz-status">
       <p class="dz-auth-status-loading">Loading status...</p>
     </div>
