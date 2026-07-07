@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.96.0] - 2026-07-07
+
+### Changed
+- **CI coverage recovers ~82 previously-skipped tests** (coverage
+  driver): the py-tests coverage job (3.12) installed only
+  `dev,llm,mcp,mobile,postgres,perf,saml,lsp`, so tests for optional
+  pure-pip subsystems silently skipped and their modules counted as
+  uncovered — most notably the entire **GraphQL BFF layer**
+  (`src/dazzle/http/graphql/*`, which had no declared extra at all),
+  plus signing, SES/SendGrid notifications, graph algorithms, OTLP
+  export, and the SQLite version manager. Added a `graphql` extra
+  (Strawberry) and a `test-full` bundle
+  (`graph,signing,sendgrid,observability,graphql,aws` + `aiosqlite`)
+  wired into the coverage job. Full `not-e2e` suite goes 19835 → 19917
+  passing, 231 → 168 skips.
+- Note: the `DATABASE_URL not set` skips on the py-tests job are NOT
+  lost coverage — those tests run in the `postgres-tests` job, which
+  uploads its own `coverage.xml` (Codecov merges the three reports).
+  `compliance`/weasyprint, `tigerbeetle`, and `saml` remain skipped —
+  they need native system libraries or a service, a separate decision.
+
 ## [0.95.2] - 2026-07-07
 
 ### Fixed

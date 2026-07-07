@@ -68,6 +68,10 @@ jobs:
     - uses: ./.github/actions/setup-dazzle
       with:
         python-version: "${{ matrix.python-version }}"
+        # +test-full: the pure-pip optional subsystems (graph/signing/
+        # sendgrid/observability/graphql + aiosqlite) whose tests otherwise
+        # skip on this coverage-measuring job, undercounting coverage.
+        extras: dev,llm,mcp,mobile,postgres,perf,saml,lsp,test-full
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.{css,js} + dazzle-icons.min.js are
