@@ -1698,6 +1698,11 @@ class DazzleBackendApp:
             # assignment must precede app startup (it does — it runs at build
             # time, well before the lifespan fires).
             self._audit_logger = audit_logger
+            # #1551 — coalesced byte-serving audit evidence surface.
+            # ByteAudit wraps any object exposing async log_decision(**kw).
+            from dazzle.http.runtime.byte_serving import ByteAudit
+
+            self._app.state.byte_audit = ByteAudit(audit_logger)
 
         # ADR-0050 Option A (first-party usage signal): construct the usage
         # collector whenever a database is available (any app can capture usage,

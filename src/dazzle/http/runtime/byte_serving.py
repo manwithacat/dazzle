@@ -9,6 +9,7 @@ outside this module (dazzle rbac byte-routes --strict, Task 7).
 
 import logging
 import re
+import time as _time_module
 from dataclasses import dataclass
 from typing import Any
 
@@ -69,12 +70,52 @@ def parse_range(header: str | None, size: int) -> "tuple[int, int] | _Unsatisfia
 
 
 class ByteAudit:
-    """Protocol placeholder — fully wired in Task 6.
+    """Coalesced document-access audit (#1551). First access per
+    (user, document) window writes a log_decision row; the scope check
+    ALREADY ran upstream on every request — coalescing is emission-only,
+    never enforcement. Denials/416 always write.
 
     Any audit object passed to serve_bytes must implement::
 
         async def record(self, decision: AccessDecision, *, served: str, coalesce: bool) -> None: ...
     """
+
+    def __init__(
+        self,
+        logger: Any,
+        *,
+        window_seconds: float = 900.0,
+        now: Any = None,
+    ) -> None:
+        self._log = logger
+        self._window = window_seconds
+        self._now = now if now is not None else _time_module.monotonic
+        self._seen: dict[tuple[Any, ...], float] = {}
+
+    async def record(
+        self,
+        decision: "AccessDecision",
+        *,
+        served: str,
+        coalesce: bool,
+    ) -> None:
+        key = (decision.user_id, decision.entity, decision.record_id, decision.field)
+        t = self._now()
+        if coalesce:
+            last = self._seen.get(key)
+            if last is not None and (t - last) < self._window:
+                return
+            self._seen[key] = t
+        outcome = "allow" if served in ("200", "206") else "deny"
+        await self._log.log_decision(
+            operation="document_access",
+            entity_name=decision.entity,
+            entity_id=decision.record_id,
+            decision=outcome,
+            matched_policy=decision.matched_policy,
+            policy_effect=outcome,
+            user_id=decision.user_id,
+        )
 
 
 def _headers(metadata: Any, kind: str) -> dict[str, str]:
