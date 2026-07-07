@@ -9,12 +9,34 @@ Commands:
 - rhythm lifecycle: Show rhythm lifecycle overview
 """
 
+from typing import TYPE_CHECKING
+
 import typer
+
+if TYPE_CHECKING:
+    from dazzle.core import ir
 
 rhythm_app = typer.Typer(
     help="Rhythm analysis and lifecycle management.",
     no_args_is_help=True,
 )
+
+
+def landing_drift_lines(
+    personas: "list[ir.PersonaSpec]",
+    rhythms: "list[ir.RhythmSpec]",
+    workspaces: "list[ir.WorkspaceSpec]",
+) -> list[str]:
+    """One advisory line per persona whose declared ``default_workspace``
+    contradicts its rhythm-inferred answer-first landing (#1558)."""
+    from dazzle.page.runtime.landing_resolver import check_landing_drift
+
+    lines: list[str] = []
+    for persona in personas:
+        msg = check_landing_drift(persona, rhythms, workspaces)
+        if msg:
+            lines.append(msg)
+    return lines
 
 
 @rhythm_app.command("propose")
@@ -103,6 +125,18 @@ def rhythm_fidelity(
         raise typer.Exit(code=1)
 
     typer.echo(format_output(result, as_json=json_output))
+
+    # #1558: advisory landing-drift lines (declared default_workspace vs the
+    # rhythm-inferred answer-first landing). Best-effort — never fail fidelity.
+    if not json_output:
+        try:
+            from dazzle.cli.utils import load_project_appspec
+
+            appspec = load_project_appspec(root)
+            for line in landing_drift_lines(appspec.personas, appspec.rhythms, appspec.workspaces):
+                typer.echo(f"landing-drift: {line}")
+        except Exception:
+            pass
 
 
 @rhythm_app.command("lifecycle")
