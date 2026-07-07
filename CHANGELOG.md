@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.139] - 2026-07-07
+
+### Fixed
+- **Dead Tailwind arbitrary-value classes replaced with live styling**
+  (#1540): bool-icon check/cross glyphs, fragment search/select error
+  and empty states, and the list error row had carried
+  `text-[hsl(var(--…))]`-era classes with no matching CSS since the
+  Tailwind/DaisyUI removal — all now use the shipped HM tokens
+  (`--colour-success` / `--colour-danger` / `--colour-text-muted`)
+  or the existing `dz-search-result-empty` class. The agent journey
+  report's pass/fail badges were the same family with an unparseable
+  CSS selector in the report's own stylesheet — now proper
+  `badge-pass`/`badge-fail` rules. The #1505 characterization
+  fixtures regenerated deliberately (`UPDATE_CHAR_1505=1`).
+
 ## [0.93.138] - 2026-07-07
 
 ### Security

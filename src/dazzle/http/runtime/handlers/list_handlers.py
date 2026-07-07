@@ -627,7 +627,8 @@ async def _list_handler_body(
             # instead of hanging indefinitely (#496).
             return HTMLResponse(
                 content=(
-                    '<tr><td colspan="99" class="text-center py-8 text-[hsl(var(--destructive))]">'
+                    '<tr><td colspan="99" style="text-align: center; padding-block: 2rem; '
+                    'color: var(--colour-danger)">'
                     "Something went wrong loading this list.</td></tr>"
                 ),
                 status_code=200,

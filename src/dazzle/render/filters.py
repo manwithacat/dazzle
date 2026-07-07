@@ -281,8 +281,8 @@ def _badge_tone_filter(value: Any) -> str:
 def _bool_icon_filter(value: Any) -> Markup:
     """Render a boolean as a check or cross icon."""
     if value:
-        return Markup('<span class="text-[hsl(var(--success))]">&#10003;</span>')
-    return Markup('<span class="text-[hsl(var(--muted-foreground)/0.3)]">&#10005;</span>')
+        return Markup('<span style="color: var(--colour-success)">&#10003;</span>')
+    return Markup('<span style="color: var(--colour-text-muted); opacity: 0.5">&#10005;</span>')
 
 
 def _timeago_filter(value: Any) -> str:

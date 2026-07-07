@@ -74,8 +74,8 @@ h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-.bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] { background: var(--pass); color: #000; }
-.bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))] { background: var(--fail); color: #fff; }
+.badge-pass { background: var(--pass); color: #000; }
+.badge-fail { background: var(--fail); color: #fff; }
 .badge-partial { background: var(--partial); color: #000; }
 .badge-blocked { background: var(--blocked); color: #fff; }
 .badge-dead_end, .badge-dead-end { background: var(--dead-end); color: #fff; }
@@ -161,9 +161,9 @@ def _render_session(session: JourneySession) -> str:
 
     summary = (
         f"{persona}"
-        f'<span class="badge bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))]">'
+        f'<span class="badge badge-pass">'
         f"{pass_count} pass</span>"
-        f'<span class="badge bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))]">'
+        f'<span class="badge badge-fail">'
         f"{fail_count} fail</span>"
         f" &mdash; {len(steps)} steps, {stories_covered}/{stories_attempted} stories"
     )
