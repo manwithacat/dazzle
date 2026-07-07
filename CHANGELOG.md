@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.134] - 2026-07-07
+
+### Changed
+- **The QA persona panel is HM-native** (#1553, closing the ratified
+  deprecation from v0.93.125): the dev-only persona switcher now
+  composes existing HM primitives — card, badge (warning-tone dev
+  banner), button, auto-grid, stack, cluster — with ZERO bespoke CSS;
+  the 134-line `dz-qa-*` block (19 classes) is deleted from
+  site-sections.css. The inline `<script>` is replaced by the
+  delegated `static/js/dz-qa.js` controller (CSP-friendly), loaded
+  only when the panel renders (the section's `data-qa-personas`
+  marker). The `data-qa-login-persona` / `POST /qa/magic-link`
+  contract is unchanged — dev workflows keep working. The HM
+  migration now has NO intentionally-unconverted family.
+
+### Agent Guidance
+- When threading page-conditional assets inside a renderer with
+  multiple function scopes, key off a MARKER IN THE RENDERED HTML
+  (`data-qa-personas`), not a variable from another scope — the
+  first draft referenced `qa_html` across function boundaries (F821)
+  and broke every site-page render until ruff caught it.
+
 ## [0.93.133] - 2026-07-07
 
 ### Fixed

@@ -298,16 +298,15 @@ def _render_site_footer_column(col: Any) -> str:
 
 
 def _render_qa_personas_html(qa_personas: list[Any]) -> str:
-    """DEPRECATED (#1553, ratified 2026-07-06): frozen legacy dev UX —
-    OUT of HM migration scope; do not convert dz-qa-* CSS or extend
-    this markup. Replacement = HM-native reimplementation (#1553).
+    """Dev-only persona impersonation panel (#1553, HM-native).
 
-    Inline mirror of `site/sections/qa_personas.html` (Phase 4, v0.67.69).
-
-    Dev-only persona impersonation cards — the trailing `<script>` block
-    wires click handlers that POST to `/qa/magic-link` and redirect to
-    the returned URL. The script is identical to the legacy template's
-    output."""
+    Composes existing HM primitives — card / badge / button /
+    auto-grid / stack / cluster — with zero bespoke CSS (the 19
+    ``dz-qa-*`` classes are retired). The magic-link wiring lives in
+    the delegated ``static/js/dz-qa.js`` controller (no inline script,
+    CSP-friendly); the ``data-qa-login-persona`` attribute and the
+    ``POST /qa/magic-link`` contract are unchanged.
+    """
     import html as _html_mod
 
     cards: list[str] = []
@@ -323,64 +322,41 @@ def _render_qa_personas_html(qa_personas: list[Any]) -> str:
         stories_html = ""
         if stories:
             story_items = "".join(
-                f'<li><span aria-hidden="true">→</span>'
-                f"<span>{_html_mod.escape(str(s), quote=False)}</span></li>"
-                for s in stories
+                f"<li>{_html_mod.escape(str(s), quote=False)}</li>" for s in stories
             )
-            stories_html = f'<ul class="dz-qa-persona-stories">{story_items}</ul>'
+            stories_html = f'<ul class="dz-card-label">{story_items}</ul>'
 
         cards.append(
-            '<article class="dz-qa-persona">'
-            '<div class="dz-qa-persona-header">'
-            f'<h3 class="dz-qa-persona-name">{display_name}</h3>'
-            f'<span class="dz-qa-persona-id">{pid_text}</span>'
+            '<article class="dz-card dz-card-body">'
+            '<div class="dz-stack" data-dz-gap="sm">'
+            '<div class="dz-cluster" data-dz-align="baseline">'
+            f"<h3>{display_name}</h3>"
+            f'<span class="dz-badge">{pid_text}</span>'
             "</div>"
-            f'<p class="dz-qa-persona-email">{email}</p>'
-            f'<p class="dz-qa-persona-description">{description}</p>'
+            f'<div class="dz-card-label">{email}</div>'
+            f"<p>{description}</p>"
             f"{stories_html}"
             f'<button type="button" data-qa-login-persona="{pid}" '  # nosemgrep
-            f'class="dz-button dz-qa-persona-login" data-dz-variant="primary">'
+            f'class="dz-button" data-dz-variant="primary">'
             f"Log in as {display_name}"
             f"</button>"
+            "</div>"
             "</article>"
         )
 
     header_html = (
-        '<div class="dz-qa-personas-header">'
-        '<div class="dz-qa-banner">'
-        '<svg class="dz-qa-banner-icon" fill="currentColor" viewBox="0 0 20 20" '
-        'aria-hidden="true">'
-        '<path d="M10 2L2 18h16L10 2zm0 5l5 9H5l5-9z"/></svg>'
-        "Local Dev Mode — not visible in production"
+        '<div class="dz-stack" data-dz-gap="sm">'
+        '<span class="dz-badge" data-dz-tone="warning">'
+        "Local Dev Mode — not visible in production</span>"
+        "<h2>Try the app as different personas</h2>"
+        "<p>This is local QA mode. Pick a persona to explore the app "
+        "with their permissions and data.</p>"
         "</div>"
-        '<h2 class="dz-qa-personas-title">Try the app as different personas</h2>'
-        '<p class="dz-qa-personas-subtitle">'
-        "This is local QA mode. Pick a persona to explore the app with their permissions and data."
-        "</p></div>"
-    )
-    script_html = (
-        "<script>(function(){"
-        "document.querySelectorAll('[data-qa-login-persona]').forEach(function(btn){"
-        "btn.addEventListener('click',function(){"
-        "var personaId=btn.dataset.qaLoginPersona;"
-        "btn.disabled=true;"
-        "var originalText=btn.textContent;"
-        "btn.textContent='Logging in...';"
-        "fetch('/qa/magic-link',{method:'POST',"
-        "headers:{'Content-Type':'application/json'},"
-        "body:JSON.stringify({persona_id:personaId})"
-        "}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})"
-        ".then(function(data){if(data.url){window.location.href=data.url;}"
-        "else{throw new Error('No URL in response');}})"
-        ".catch(function(err){btn.disabled=false;btn.textContent='Error — try again';"
-        "setTimeout(function(){btn.textContent=originalText;},2000);"
-        "console.error('QA magic link failed:',err);});});});}());</script>"
     )
     return (
-        '<section class="dz-qa-personas">'
+        '<section class="dz-stack" data-dz-gap="lg" data-qa-personas>'
         f"{header_html}"
-        f'<div class="dz-qa-personas-grid">{"".join(cards)}</div>'
-        f"{script_html}"
+        f'<div class="dz-auto-grid">{"".join(cards)}</div>'
         "</section>"
     )
 
@@ -684,6 +660,11 @@ def create_site_page_routes(
             getattr(app_state, "fragment_chrome_js_scripts", None)
             or ("/static/dist/dazzle.min.js",)
         )
+        if "data-qa-personas" in inner_html:
+            # #1553: the QA panel's delegated magic-link controller —
+            # loaded only when the dev-only panel actually renders
+            # (the renderer marks its section with data-qa-personas).
+            js_scripts = tuple(list(js_scripts) + ["/static/js/dz-qa.js"])
         theme = getattr(app_state, "fragment_chrome_theme", None)
 
         # Phase 4 (v0.67.42): thread Open Graph + Twitter card meta
