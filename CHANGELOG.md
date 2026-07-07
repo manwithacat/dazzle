@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.126] - 2026-07-07
+
+### Added
+- **Fleet coverage: three KNOWN_GAPS closed by example adoption**
+  (#164): support_tickets' ticket list adopts `peek: slide_over` (the
+  HM drawer Hyperpart gets its first fleet walk) and its ticket-queue
+  table region adopts `date_range` + `date_field: created_at` (the HM
+  date-range picker filtering by raise date); hr_records' Salary
+  entity replaces its hand-rolled `amount_minor` int +
+  `currency` enum pair with the first-class `amount: money required`
+  (the HM money widget, minor-unit + currency-code carriers). Only
+  `pdf` remains in the ratchet — `display: pdf_viewer` needs the
+  plain-file-field → document-route wiring first.
+
+### Fixed
+- **The slider coverage signal was itself an oracle lie**: the regex
+  demanded `widget:` (colon) but field options use `=` —
+  design_studio has exercised `widget=slider` at four sites all
+  along. Signal corrected to accept both; slider removed from
+  KNOWN_GAPS as a false gap.
+
+### Agent Guidance
+- When a coverage signal names a DSL keyword, verify the OPERATOR
+  against a real usage site, not the keyword alone — surface-level
+  keywords bind with `:` but field options bind with `=`. The
+  emitter-verified rule from 0.93.125 extends to syntax shape.
+
 ## [0.93.125] - 2026-07-07
 
 ### Added

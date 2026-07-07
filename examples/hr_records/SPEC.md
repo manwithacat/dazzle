@@ -100,8 +100,7 @@ The record of "person X earned £Y from effective_from to effective_to." Same te
 |---|---|---|---|
 | `id` | UUID | Yes | PK |
 | `person` | ref Person | Yes |  |
-| `amount_minor` | int | Yes | Money in pence — annual gross |
-| `currency` | enum[gbp, eur, usd] | Yes | Default gbp |
+| `amount` | money | Yes | Annual gross — stored as minor units + currency code (default GBP) |
 | `effective_from` | date | Yes |  |
 | `effective_to` | date? | No | NULL = currently active. Invariant: at most one row per person where effective_to IS NULL. |
 | `reason` | enum[new_hire, promotion, market_adjustment, annual_review, correction] | Yes | Why this salary level applied — useful for trend analysis |
@@ -127,7 +126,7 @@ A Person *can* have multiple direct reports active simultaneously (the inverse �
 ### 1. Onboarding a new starter (HR Admin)
 - Create `Person` (legal_name, preferred_name, email, started_at)
 - Create initial `Employment` (person, role, department, start_date = started_at, end_date = NULL)
-- Create initial `Salary` (person, amount_minor, currency, effective_from = started_at, effective_to = NULL, reason = new_hire)
+- Create initial `Salary` (person, amount, effective_from = started_at, effective_to = NULL, reason = new_hire)
 - Create initial `ManagerLink` (report = new person, manager = chosen, start_date = started_at, end_date = NULL)
 - Four entity creates, all sharing the same effective date.
 

@@ -271,6 +271,10 @@ surface ticket_list "Ticket List":
   uses entity Ticket
   mode: list
   render: fragment
+  # Row peek opens the ticket in a slide-over drawer (HM drawer
+  # Hyperpart) instead of the default inline expand — the queue keeps
+  # its scan position while an agent glances at a ticket.
+  peek: slide_over
 
   ux:
     purpose: "Triage and resolve incoming support tickets across the queue"
@@ -433,6 +437,10 @@ workspace ticket_queue "Ticket Queue":
     filter: status != closed
     sort: priority desc, created_at asc
     display: list
+    # From/To date pickers scoping the table to tickets raised in a
+    # window (filters created_at via date_from/date_to params)
+    date_range
+    date_field: created_at
     action: ticket_edit
     empty: "No open tickets"
 

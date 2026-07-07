@@ -277,8 +277,10 @@ entity Salary "Salary":
 
   id: uuid pk
   person: ref Person required
-  amount_minor: int required
-  currency: enum[gbp, eur, usd]=gbp
+  # First-class money type: expands to amount_minor (int, smallest
+  # unit) + amount_currency (code) columns; the form renders the HM
+  # money widget (currency-aware decimal input, minor-unit carrier).
+  amount: money required
   effective_from: date required
   effective_to: date    # NULL = currently active
 
@@ -467,7 +469,7 @@ surface role_create "Add Role":
 #   creates:
 #     - Person(legal_name, preferred_name, email, started_at)
 #     - Employment(person = above.Person.id, role, department, start_date = above.Person.started_at)
-#     - Salary(person = above.Person.id, amount_minor, currency, effective_from = above.Person.started_at, reason = new_hire)
+#     - Salary(person = above.Person.id, amount, effective_from = above.Person.started_at, reason = new_hire)
 #     - ManagerLink(report = above.Person.id, manager, start_date = above.Person.started_at)
 #   on_failure: rollback_all
 # ------------------------------------------------
@@ -494,8 +496,7 @@ surface salary_create "New Salary":
   mode: create
   section main:
     field person "Person"
-    field amount_minor "Amount (pence)"
-    field currency "Currency"
+    field amount "Amount"
     field effective_from "Effective from"
     field reason "Reason"
 

@@ -45,7 +45,9 @@ SIGNALS: dict[str, object] = {
     "drawer": r"peek:\s*slide_over",
     "master-detail": "exempt:gallery blueprint composition (no Dazzle mode yet)",
     "controls": "always",  # checkboxes in forms
-    "slider": r"widget:\s*slider",
+    # field options use `=` (widget=slider), not `:` — the colon-only
+    # regex was an oracle lie: design_studio has used slider all along
+    "slider": r"widget\s*[:=]\s*slider",
     "confirm-panel": r"display:\s*confirm_action_panel",
     "search-box": r"display:\s*search_box",
     "form-chrome": r"^\s*section\b|section:",  # form/surface sections
@@ -109,11 +111,11 @@ SIGNALS: dict[str, object] = {
 # stepper, so step NAVIGATION is still unexercised; a multi-section
 # adoption remains desirable but the Hyperpart does render + mount.
 KNOWN_GAPS: set[str] = {
-    "drawer",  # no example uses peek: slide_over (F2 composed chevron unwalked)
-    "pdf",  # no example uses display: pdf_viewer (hx-pdf unwalked)
-    "slider",  # no widget: slider field
-    "money",  # no money-typed field in any example
-    "date-range",  # no date_range region
+    # pdf: display:pdf_viewer requires a `file storage=<name>` field +
+    # [storage.<name>] config — no example declares storage. Closing
+    # this needs the plain-file-field → P1 document-route wiring first
+    # (the remaining hx-pdf adoption work).
+    "pdf",
 }
 
 
