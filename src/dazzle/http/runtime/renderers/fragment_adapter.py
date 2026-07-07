@@ -95,7 +95,8 @@ def _detail_field_value(f: dict[str, Any]) -> Fragment:
         "currency_code": str(f.get("currency_code", "") or ""),
         "semantic_map": dict(f.get("semantic_map", {}) or {}),
     }
-    return RawHTML(_render_cell_display(col, value))
+    # #1533: detail pages show the full value — only list cells truncate.
+    return RawHTML(_render_cell_display(col, value, truncate=False))
 
 
 class FragmentSurfaceAdapter:

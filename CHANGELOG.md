@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.136] - 2026-07-07
+
+### Fixed
+- **Detail (VIEW) pages no longer truncate long text fields** (#1533):
+  the ADR-0049 shared cell core clipped every prose field to 50 chars
+  server-side (data lost in the HTML, not just CSS). The core gains a
+  `truncate` flag consulted ONLY by the default text branch — the
+  detail seam passes `truncate=False` and renders the full value in a
+  `dz-detail-text` wrapper (`white-space: pre-wrap`, so textarea
+  paragraphs survive); list cells and every typed parity branch
+  (badge/bool/ref/money/…) are byte-identical to before.
+
 ## [0.93.135] - 2026-07-07
 
 ### Security

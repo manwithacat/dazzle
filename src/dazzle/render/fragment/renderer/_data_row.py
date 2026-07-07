@@ -163,7 +163,7 @@ def _json_summary(value: Any, *, max_pairs: int = 4, length: int = 80) -> str:
     return text[:length] + "…" if len(text) > length else text
 
 
-def _render_cell_display(col: dict[str, Any], value: Any) -> str:
+def _render_cell_display(col: dict[str, Any], value: Any, *, truncate: bool = True) -> str:
     """Render the display-mode value for one table cell.
 
     Mirrors the type-dispatch in `table_rows.html` (badge / bool /
@@ -172,6 +172,13 @@ def _render_cell_display(col: dict[str, Any], value: Any) -> str:
     humanised at the core so detail views (which feed the cell core
     form-typed values) stop leaking raw ISO / `True` / full-precision
     floats / mangled JSON.
+
+    ``truncate`` is consulted ONLY by the default text branch (#1533):
+    list cells clip prose to a scannable width; a detail page's whole
+    job is the full record, so its seam passes ``truncate=False`` and
+    the value renders whole in a ``dz-detail-text`` wrapper
+    (``white-space: pre-wrap`` — textarea paragraphs survive). Every
+    typed branch above the default is identical in both modes.
     """
 
     col_type = str(col.get("type", "") or "")
@@ -249,8 +256,12 @@ def _render_cell_display(col: dict[str, Any], value: Any) -> str:
         inner = _json_summary(value)
     elif isinstance(value, float):
         inner = _metric_number_filter(value)
-    else:
+    elif truncate:
         inner = _truncate_filter(value or "")
+    else:
+        inner = str(value or "")
+    if not truncate:
+        return f'<span class="dz-detail-text">{_html_mod.escape(inner, quote=False)}</span>'
     return f'<span class="dz-tr-cell-truncate">{_html_mod.escape(inner, quote=False)}</span>'
 
 

@@ -99,3 +99,41 @@ def test_money_kind_field_renders_formatted() -> None:
         {"id": "a", "price": 9900},
     )
     assert "99.00" in html  # 9900 minor units → £99.00
+
+
+# ---------------------------------------------------------------------------
+# #1533 — detail pages must show the FULL text value; only list cells
+# truncate. The shared cell core takes a truncate flag consulted solely
+# by the default text branch (every other parity branch is unaffected).
+# ---------------------------------------------------------------------------
+
+_LONG = "An unusually long description " * 10  # ~300 chars, well past 50
+
+
+def test_detail_long_text_renders_in_full() -> None:
+    from dazzle.http.runtime.renderers.fragment_adapter import _detail_field_value
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    html = FragmentRenderer().render(_detail_field_value({"kind": "textarea", "value": _LONG}))
+    assert _LONG.strip() in html
+    assert "..." not in html
+    assert "dz-tr-cell-truncate" not in html
+    assert 'class="dz-detail-text"' in html
+
+
+def test_list_cell_still_truncates() -> None:
+    from dazzle.render.fragment.renderer._data_row import _render_cell_display
+
+    html = _render_cell_display({"type": "text"}, _LONG)
+    assert "..." in html
+    assert "dz-tr-cell-truncate" in html
+
+
+def test_detail_short_text_unwrapped_semantics_kept() -> None:
+    """Short values keep their content byte-identical (only the wrapper
+    class differs from a list cell)."""
+    from dazzle.http.runtime.renderers.fragment_adapter import _detail_field_value
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    html = FragmentRenderer().render(_detail_field_value({"kind": "text", "value": "short"}))
+    assert ">short<" in html

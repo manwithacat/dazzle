@@ -116,6 +116,13 @@
   margin-block-start: var(--space-md);
 }
 
+/* #1533: full-length prose on detail pages — the list-cell truncate
+ * wrapper never appears here. pre-wrap keeps textarea paragraphs. */
+.dz-detail-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .dz-detail-fields-key {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
