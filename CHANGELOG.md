@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.135] - 2026-07-07
+
+### Security
+- **The command palette no longer serves the full surface index to
+  anonymous requests** (#1539): `/app/command` now honours the app's
+  auth posture (403 for unauthenticated callers when the app enforces
+  auth — the same expression the /files and document routes use;
+  test-mode and auth-less apps unchanged), and the index for
+  authenticated persona users derives from the SAME precomputed
+  NavModel the sidebar renders — restoring the module's stated
+  invariant that the palette never surfaces a destination that would
+  403. Records entries were previously unfiltered for everyone;
+  superusers and non-persona roles (admin/super_admin) keep the full
+  index, matching their sidebar reach.
+
 ## [0.93.134] - 2026-07-07
 
 ### Changed

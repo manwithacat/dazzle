@@ -939,6 +939,11 @@ def assemble_post_build_routes(
             # silently empty. Feed the entity-name-keyed view (same #1181 footgun).
             entity_services=builder.services_by_entity(),
             entity_auto_includes=builder.entity_auto_includes,
+            # #1539: the command palette honours the app's auth posture
+            # (same expression as the /files + document routes; the
+            # builder carries the resolved flags).
+            require_auth_by_default=bool(getattr(builder, "_enable_auth", False))
+            and not bool(getattr(builder, "_enable_test_mode", False)),
         )
         app.include_router(page_router, prefix="/app")
         logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))

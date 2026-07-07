@@ -12,6 +12,7 @@ No I/O, no request objects — testable in isolation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from dazzle.core import ir
 from dazzle.core.access import workspace_allowed_personas
@@ -100,6 +101,29 @@ def _record_entries(appspec: ir.AppSpec, *, app_prefix: str) -> list[CommandEntr
                 group="Records",
             )
         )
+    return entries
+
+
+def nav_model_entries(model: Any) -> list[CommandEntry]:
+    """Map a (reconciled) sidebar NavModel to palette entries (#1539).
+
+    The palette and the sidebar must share one source of truth — a
+    destination the sidebar wouldn't show a persona must not surface in
+    the palette. Group/link `when` visibility conditions are NOT
+    evaluated here: they gate render-time visibility, not access, and
+    the NavModel itself is already persona-scoped.
+    """
+    entries: list[CommandEntry] = []
+    for group in getattr(model, "groups", ()) or ():
+        for link in getattr(group, "links", ()) or ():
+            entries.append(
+                CommandEntry(
+                    label=link.label,
+                    url=link.route,
+                    icon=link.icon or infer_nav_icon(link.label),
+                    group=group.label,
+                )
+            )
     return entries
 
 

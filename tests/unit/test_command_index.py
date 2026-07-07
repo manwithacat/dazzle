@@ -75,3 +75,113 @@ def test_filter_prefix_ranks_before_midstring() -> None:
 def test_filter_empty_returns_all() -> None:
     entries = [CommandEntry("X", "/x", "list", "Records")]
     assert filter_command_index(entries, "  ") == entries
+
+
+# ---------------------------------------------------------------------------
+# #1539 — the palette derives from the SAME NavModel the sidebar renders
+# (the "never surfaces a destination that would 403" contract), and the
+# handler honours the app's auth posture.
+# ---------------------------------------------------------------------------
+
+
+def test_nav_model_entries_map_groups_and_links() -> None:
+    from dazzle.page.command_index import nav_model_entries
+    from dazzle.page.converters.nav_builder import NavGroup, NavLink, NavModel
+
+    model = NavModel(
+        groups=(
+            NavGroup(
+                label="Workspaces",
+                icon=None,
+                collapsed=False,
+                links=(NavLink(label="Overview", route="/app/workspaces/open_ws"),),
+            ),
+            NavGroup(
+                label="Records",
+                icon=None,
+                collapsed=False,
+                links=(NavLink(label="Invoices", route="/app/invoices", icon="receipt"),),
+            ),
+        ),
+        auto_discovered=True,
+    )
+    entries = nav_model_entries(model)
+    assert [(e.label, e.url, e.group) for e in entries] == [
+        ("Overview", "/app/workspaces/open_ws", "Workspaces"),
+        ("Invoices", "/app/invoices", "Records"),
+    ]
+    assert entries[1].icon == "receipt"  # link icon wins over inference
+
+
+class TestCommandHandlerPosture:
+    def _handler(self, *, require_auth: bool, auth_ctx, persona_navs=None):
+        from dazzle.http.runtime.page_routes import (
+            _make_command_handler,
+            _PageRouterConfig,
+        )
+
+        async def get_auth(request):
+            return auth_ctx
+
+        appspec = _appspec()
+        deps = _PageRouterConfig(
+            appspec=appspec,
+            theme_css="",
+            get_auth_context=get_auth,
+            app_prefix="/app",
+            require_auth_by_default=require_auth,
+            persona_navs=persona_navs or {},
+        )
+        return _make_command_handler(deps, appspec, "/app")
+
+    def _request(self):
+        return SimpleNamespace(query_params={})
+
+    def test_anonymous_denied_when_auth_enforced(self) -> None:
+        import asyncio
+
+        from fastapi import HTTPException
+
+        handler = self._handler(require_auth=True, auth_ctx=None)
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(handler(self._request()))
+        assert exc.value.status_code == 403
+
+    def test_persona_gets_nav_derived_subset(self) -> None:
+        import asyncio
+
+        from dazzle.page.converters.nav_builder import NavGroup, NavLink, NavModel
+
+        viewer_nav = NavModel(
+            groups=(
+                NavGroup(
+                    label="Records",
+                    icon=None,
+                    collapsed=False,
+                    links=(NavLink(label="Invoices", route="/app/invoices"),),
+                ),
+            ),
+            auto_discovered=True,
+        )
+        auth_ctx = SimpleNamespace(
+            is_authenticated=True,
+            user=SimpleNamespace(roles=["role_viewer"], is_superuser=False),
+        )
+        handler = self._handler(
+            require_auth=True, auth_ctx=auth_ctx, persona_navs={"viewer": viewer_nav}
+        )
+        html = asyncio.run(handler(self._request())).body.decode()
+        assert "Invoices" in html
+        # NOT the unfiltered index: the admin-gated workspace stays out
+        assert "Admin" not in html
+
+    def test_superuser_keeps_full_index(self) -> None:
+        import asyncio
+
+        auth_ctx = SimpleNamespace(
+            is_authenticated=True,
+            user=SimpleNamespace(roles=[], is_superuser=True),
+        )
+        handler = self._handler(require_auth=True, auth_ctx=auth_ctx)
+        html = asyncio.run(handler(self._request())).body.decode()
+        assert "Admin" in html and "Overview" in html and "Invoice" in html

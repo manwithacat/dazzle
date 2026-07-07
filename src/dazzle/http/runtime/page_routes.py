@@ -36,7 +36,11 @@ from dazzle.http.runtime.usage_signal import (
     read_usage_counts_for_request,
 )
 from dazzle.page import app_paths
-from dazzle.page.command_index import build_command_index, filter_command_index
+from dazzle.page.command_index import (
+    build_command_index,
+    filter_command_index,
+    nav_model_entries,
+)
 from dazzle.page.command_render import render_command_results
 from dazzle.page.converters.nav_builder import (
     NavGroup,
@@ -528,6 +532,11 @@ class _PageRouterConfig:
     # longer drift between the workspace-page and entity-page paths.
     persona_navs: dict[str, NavModel] = field(default_factory=dict)
     anon_nav: NavModel | None = None
+    # #1539: the app's auth posture (enable_auth and not test_mode — the
+    # same expression the /files + document routes use). When set, the
+    # command palette denies anonymous requests instead of serving the
+    # full surface index.
+    require_auth_by_default: bool = False
 
 
 # =============================================================================
@@ -2713,6 +2722,7 @@ def create_page_routes(
     claimed_paths: set[tuple[str, str]] | None = None,
     entity_services: dict[str, Any] | None = None,
     entity_auto_includes: dict[str, Any] | None = None,
+    require_auth_by_default: bool = False,
 ) -> APIRouter:
     """
     Create FastAPI page routes from an AppSpec.
@@ -2828,6 +2838,7 @@ def create_page_routes(
         theme_css=theme_css,
         get_auth_context=get_auth_context,
         app_prefix=app_prefix,
+        require_auth_by_default=require_auth_by_default,
         page_contexts=page_contexts,
         access_configs=access_configs,
         entity_cedar_specs=entity_cedar_specs,
@@ -3202,17 +3213,34 @@ def _make_command_handler(
     async def command_handler(request: Request) -> Response:
         roles: list[str] = []
         is_superuser = False
+        authenticated = False
         if deps.get_auth_context is not None:
             try:
                 auth_ctx = await _resolve_auth_context(deps.get_auth_context, request)
                 if auth_ctx and auth_ctx.is_authenticated and auth_ctx.user is not None:
+                    authenticated = True
                     roles = list(getattr(auth_ctx.user, "roles", None) or [])
                     is_superuser = bool(getattr(auth_ctx.user, "is_superuser", False))
             except Exception:
                 logger.warning("command palette: auth resolution failed", exc_info=True)
-        index = build_command_index(
-            appspec, roles=roles, is_superuser=is_superuser, app_prefix=app_prefix
-        )
+        # #1539: honour the app's auth posture — anonymous requests must
+        # not receive the surface index (matches the sibling /app
+        # workspace handlers' 403, and the /files/document posture).
+        if deps.require_auth_by_default and not authenticated:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        # The palette shares the sidebar's source of truth: a persona's
+        # precomputed NavModel (or the anon-safe subset). Superusers and
+        # authenticated non-persona roles (admin/super_admin) fall
+        # through to the full index — same reach their sidebar has.
+        nav = None
+        if not is_superuser:
+            nav = _resolve_nav_model(deps, roles, authenticated=authenticated)
+        if nav is not None:
+            index = nav_model_entries(_reconcile_nav_model(appspec, app_prefix, nav))
+        else:
+            index = build_command_index(
+                appspec, roles=roles, is_superuser=is_superuser, app_prefix=app_prefix
+            )
         query = request.query_params.get("q", "")
         html = render_command_results(filter_command_index(index, query))
         return HTMLResponse(content=html)
