@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from types import SimpleNamespace
 
 import pytest
@@ -239,3 +240,67 @@ def test_degraded_verb_no_personas_defaults_to_star(monkeypatch, caplog) -> None
         build_rls_scope_policy_ddl(entity, None, None, partition_key="tenant_id")
 
     assert "as *" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# #1531 physical-cast drift warning — mutation-gate survivors (2026-07-07
+# nightly: rls_schema 84% < floor 90%). These pin the exact conditions the
+# three survivors mutated.
+# ---------------------------------------------------------------------------
+
+
+def _resolver(overrides, logical_map=None, raises=False):
+    from dazzle.http.runtime.rls_schema import _physical_first_resolver
+
+    def logical(entity: str, field: str) -> str:
+        if raises:
+            raise ValueError("unknown column")
+        return (logical_map or {}).get((entity, field), "text")
+
+    return _physical_first_resolver(logical, overrides)
+
+
+def test_physical_first_no_warning_when_logical_unknown(caplog) -> None:
+    """logical raises → logical is None → NO drift warning (kills the
+    drift-condition `and`→`or` mutant, which would warn on None != physical)."""
+    resolve = _resolver({("T", "f"): "uuid"}, raises=True)
+    with caplog.at_level(logging.WARNING):
+        assert resolve("T", "f") == "uuid"
+    assert "RLS cast" not in caplog.text
+
+
+def test_physical_first_no_warning_when_types_agree(caplog) -> None:
+    """logical == physical → no drift, no warning (kills the drift-condition
+    `!=`→`==` mutant, which would warn exactly when they agree)."""
+    resolve = _resolver({("T", "f"): "uuid"}, logical_map={("T", "f"): "uuid"})
+    with caplog.at_level(logging.WARNING):
+        assert resolve("T", "f") == "uuid"
+    assert "RLS cast" not in caplog.text
+
+
+def test_physical_first_warns_on_genuine_drift(caplog) -> None:
+    resolve = _resolver({("T", "f"): "uuid"}, logical_map={("T", "f"): "text"})
+    with caplog.at_level(logging.WARNING):
+        assert resolve("T", "f") == "uuid"  # live type wins
+    assert "RLS cast" in caplog.text
+    assert "'uuid'" in caplog.text and "'text'" in caplog.text
+
+
+def test_physical_first_falls_through_without_override() -> None:
+    resolve = _resolver({}, logical_map={("T", "f"): "text"})
+    assert resolve("T", "f") == "text"
+
+
+def test_policy_descriptor_is_frozen() -> None:
+    """PolicyDescriptor is shared between the inspector and the drift
+    gate — a mutable instance could silently diverge the two views
+    (kills the frozen=True→False mutant)."""
+    import dataclasses
+
+    from dazzle.http.runtime.rls_schema import PolicyDescriptor
+
+    fields = {f.name: f for f in dataclasses.fields(PolicyDescriptor)}
+    kwargs = dict.fromkeys(fields, "x")
+    desc = PolicyDescriptor(**kwargs)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        desc.table = "other"  # type: ignore[misc]

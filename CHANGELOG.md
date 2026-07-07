@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.133] - 2026-07-07
+
+### Fixed
+- **The Nightly Mutation Gate is green again** (red for 5 nights:
+  `rls_schema.py` 84% vs floor 90%). The #1531 physical-cast
+  drift-warning landed as an untestable function-local closure —
+  lifted verbatim to the module-level `_physical_first_resolver`
+  factory and pinned with five tests that kill all three survivors
+  (the `and`→`or` and `!=`→`==` mutants on the drift condition, and
+  `PolicyDescriptor`'s frozen guarantee). Local mutation run confirms
+  none of the CI survivors survive the unit suite now.
+
+### Agent Guidance
+- When adding logic inside a function-local closure, ask how the
+  mutation gate will reach it — a closure only exercisable through
+  heavy integration paths accrues survivors the floor then catches
+  nights later. Lift decision-bearing closures to module level with
+  direct tests.
+
 ## [0.93.132] - 2026-07-07
 
 ### Security

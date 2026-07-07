@@ -146,6 +146,41 @@ def physical_cast_overrides(rows: Any) -> dict[tuple[str, str], str]:
     return overrides
 
 
+def _physical_first_resolver(
+    logical_types: EntityTypeResolver, overrides: dict[tuple[str, str], str]
+) -> EntityTypeResolver:
+    """Prefer the LIVE column type over the logical schema's (#1531).
+
+    A cast generated from the logical type against a drifted live column
+    would fail at policy-apply time; following the live type keeps RLS
+    applicable and the warning surfaces the drift. Module-level (not a
+    closure) so the drift-warning conditions are directly testable —
+    the 2026-07 mutation-gate survivors lived exactly here.
+    """
+
+    def _physical_first(entity_name: str, field_name: str) -> str:
+        physical = overrides.get((entity_name, field_name))
+        if physical is None:
+            return logical_types(entity_name, field_name)
+        try:
+            logical = logical_types(entity_name, field_name)
+        except ValueError:
+            logical = None
+        if logical is not None and logical != physical:
+            logger.warning(
+                "RLS cast for %s.%s follows the live column type %r; the logical "
+                "schema says %r — run `dazzle db revision` to generate the "
+                "column-type migration and close the drift (#1531)",
+                entity_name,
+                field_name,
+                physical,
+                logical,
+            )
+        return physical
+
+    return _physical_first
+
+
 def build_all_rls_ddl(
     appspec: Any,
     entities: list[Any],
@@ -218,29 +253,7 @@ def build_all_rls_ddl(
     logical_types = build_entity_type_resolver(entities)
     entity_types: EntityTypeResolver = logical_types
     if physical_types:
-        overrides = physical_types
-
-        def _physical_first(entity_name: str, field_name: str) -> str:
-            physical = overrides.get((entity_name, field_name))
-            if physical is None:
-                return logical_types(entity_name, field_name)
-            try:
-                logical = logical_types(entity_name, field_name)
-            except ValueError:
-                logical = None
-            if logical is not None and logical != physical:
-                logger.warning(
-                    "RLS cast for %s.%s follows the live column type %r; the logical "
-                    "schema says %r — run `dazzle db revision` to generate the "
-                    "column-type migration and close the drift (#1531)",
-                    entity_name,
-                    field_name,
-                    physical,
-                    logical,
-                )
-            return physical
-
-        entity_types = _physical_first
+        entity_types = _physical_first_resolver(logical_types, physical_types)
 
     # Partition the tenant-scoped entities into "has scope rules" (Phase C
     # per-verb policies) vs "tenant-flat" (Phase B baseline). A scope rule
