@@ -10,7 +10,9 @@ import ast
 from pathlib import Path
 
 # (file stem, function name) pairs allowed to build a streaming response
-# outside byte_serving — each a NON-stored-byte streamer with a reason.
+# outside byte_serving — each either a non-stored-byte streamer, or a
+# stored-byte streamer under a separately-audited/separately-controlled
+# subsystem — with a reason.
 ALLOWLIST: set[tuple[str, str]] = {
     # create_static_file_routes serves the posture-gated uploads dir via
     # FileResponse; it is itself the gated static path (#1551 items 1-3).

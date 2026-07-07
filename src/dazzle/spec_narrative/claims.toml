@@ -153,8 +153,12 @@ evidence = "dazzle validate"
 detector = "has_byte_access_boundary"
 group = "compliance"
 audience = "technical"
-claim = """Every stored file is served through a single access-controlled,
-audited boundary. A user only receives a document's bytes when the same rule
-that governs the record allows it, and each first access is recorded — there is
-no route that streams a stored file without that check."""
+claim = """When a record's attached document is served through the framework's
+document route, its bytes are released only when the same rule that governs the
+record allows it, and each first access is recorded. A static proof
+(`dazzle rbac byte-routes --strict`) holds every byte-serving route to that core,
+so a new route cannot stream document bytes outside it without being explicitly
+listed. Two paths serve bytes under their own access controls and are named in
+that list rather than hidden: the auth-posture static uploads route and the
+object-storage proxy."""
 evidence = "dazzle rbac byte-routes --strict"
