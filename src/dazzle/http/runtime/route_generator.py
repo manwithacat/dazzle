@@ -231,6 +231,8 @@ class RouteGenerator:
         entity_soft_delete: dict[str, bool] | None = None,
         admin_personas: list[str] | None = None,
         security_profile: str = "basic",
+        file_service: Any | None = None,
+        entity_file_fields: dict[str, list[str]] | None = None,
     ):
         """
         Initialize the route generator.
@@ -255,6 +257,11 @@ class RouteGenerator:
             fk_graph: Optional FKGraph from the linked AppSpec for predicate compilation
             node_graph_specs: Optional dict mapping node entity names to graph metadata (#619)
             db_manager: Optional database manager for neighborhood queries (#619)
+            file_service: FileService instance for attach-time triple verification (#1551).
+                Passed to create/update handler factories so forged file references are
+                rejected before the write reaches the database.
+            entity_file_fields: Maps entity_name → [file_field_name, …]. Used with
+                ``file_service`` to activate triple verification on file-type fields.
         """
         self.services = services
         self.models = models
@@ -316,6 +323,11 @@ class RouteGenerator:
         # (#774). None = no binding → keep the #774 auth-id injection (D5). Set by the
         # caller from `appspec.domain` after construction.
         self.auth_identity_user_link: str | None = None
+        # #1551: file service + per-entity file-field names for attach-time
+        # triple verification. Passed through to create/update handler factories
+        # so forged file references are rejected before the write proceeds.
+        self.file_service: Any | None = file_service
+        self.entity_file_fields: dict[str, list[str]] = entity_file_fields or {}
         self._router = _APIRouter()
 
     def generate_route(
@@ -441,6 +453,7 @@ class RouteGenerator:
                         _user_ref_fields = []
                 _persona_ref_map = _prm or None
 
+                _file_fields = self.entity_file_fields.get(entity_name or "") or None
                 handler = create_create_handler(
                     RouteSpec(
                         handler=replace(_base_config, audit_logger=_audit_for("create")),
@@ -453,6 +466,8 @@ class RouteGenerator:
                     entity_slug=_entity_slug,
                     user_ref_fields=_user_ref_fields or None,
                     persona_ref_map=_persona_ref_map,
+                    file_service=self.file_service if _file_fields else None,
+                    file_fields=_file_fields,
                 )
                 # #1422: register the in-process create invoker. Every create
                 # handler variant (cedar / auth / noauth) now exposes
@@ -604,6 +619,7 @@ class RouteGenerator:
         ):
             update_schema = entity_schemas.get("update", model)
             if update_schema:
+                _file_fields = self.entity_file_fields.get(entity_name or "") or None
                 handler = create_update_handler(
                     RouteSpec(
                         handler=replace(_base_config, audit_logger=_audit_for("update")),
@@ -613,7 +629,9 @@ class RouteGenerator:
                         include_field_changes=_include_fc,
                         storage_bindings=self.entity_storage_bindings.get(entity_name or "")
                         or None,
-                    )
+                    ),
+                    file_service=self.file_service if _file_fields else None,
+                    file_fields=_file_fields,
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:

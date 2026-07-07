@@ -287,7 +287,7 @@ def create_document_routes(
             metadata is None
             or not uid
             or str(metadata.uploaded_by or "") != uid
-            or (metadata.entity_id or "")
+            or bool(metadata.entity_id)
         ):
             raise HTTPException(status_code=404, detail="Not found")
         decision = AccessDecision(

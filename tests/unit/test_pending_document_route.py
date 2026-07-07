@@ -94,3 +94,18 @@ def test_attached_file_not_servable_via_pending() -> None:
     meta.entity_id = "r1"  # already attached
     r = _client(meta, authed_uid="owner").get(f"/_dazzle/documents/pending/{meta.id}")
     assert r.status_code == 404
+
+
+def test_unauthenticated_denied_404() -> None:
+    """No auth context → opaque 404 (uid is empty string)."""
+    meta = _pending_meta("owner")
+    r = _client(meta, authed_uid=None).get(f"/_dazzle/documents/pending/{meta.id}")
+    assert r.status_code == 404
+
+
+def test_unknown_file_id_404() -> None:
+    """Unknown file_id (get_metadata returns None) → opaque 404."""
+    meta = _pending_meta("owner")
+    unknown_id = "22222222-2222-2222-2222-222222222222"
+    r = _client(meta, authed_uid="owner").get(f"/_dazzle/documents/pending/{unknown_id}")
+    assert r.status_code == 404

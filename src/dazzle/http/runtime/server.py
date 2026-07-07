@@ -1914,6 +1914,31 @@ class DazzleBackendApp:
         if self._appspec and self._appspec.tenancy:
             _admin_personas = list(self._appspec.tenancy.admin_personas)
 
+        # #1551: early-construct the FileService so the route generator can
+        # wire attach-time triple verification into create/update handlers.
+        # _mount_file_routes (called later) skips reconstruction when the
+        # service is already set and proceeds directly to route mounting.
+        # This must happen before generate_all_routes because handler
+        # factories capture file_service at construction time (closures).
+        _entity_file_fields: dict[str, list[str]] = {}
+        if self._enable_files and self._appspec:
+            from dazzle.core.ir.fields import FieldTypeKind
+            from dazzle.http.runtime.file_storage import (
+                FileMetadataStore,
+                FileValidator,
+                LocalStorageBackend,
+            )
+
+            _storage = LocalStorageBackend(self._files_path, "/files")
+            _metadata_store = FileMetadataStore(database_url=self._database_url)
+            _validator = FileValidator()
+            self._file_service = FileService(_storage, _metadata_store, _validator)
+
+            for _ent in self._appspec.domain.entities:
+                _ff = [f.name for f in _ent.fields if f.type.kind == FieldTypeKind.FILE]
+                if _ff:
+                    _entity_file_fields[_ent.name] = _ff
+
         route_generator = RouteGenerator(
             security_profile=self._security_profile,
             services=self._services,
@@ -1941,6 +1966,8 @@ class DazzleBackendApp:
             entity_storage_bindings=entity_storage_bindings,
             entity_soft_delete={e.name: e.soft_delete for e in self._entities},
             admin_personas=_admin_personas,
+            file_service=self._file_service,
+            entity_file_fields=_entity_file_fields or None,
         )
 
         # Cycle 249 (EX-049): populate persona_backed_entities from appspec
@@ -2178,16 +2205,22 @@ class DazzleBackendApp:
         _files_auth_posture = self._enable_auth and not self._enable_test_mode
         # File uploads
         if self._enable_files:
-            from dazzle.http.runtime.file_storage import (
-                FileMetadataStore,
-                FileValidator,
-                LocalStorageBackend,
-            )
+            # #1551: the FileService may already be constructed (early-init in
+            # _setup_routes for route-generator wiring). Reuse it if so; build
+            # it now if not (e.g. when _mount_file_routes is called standalone
+            # in tests or subsystem contexts that skip _setup_routes).
+            if self._file_service is None:
+                from dazzle.http.runtime.file_storage import (
+                    FileMetadataStore,
+                    FileValidator,
+                    LocalStorageBackend,
+                )
 
-            storage = LocalStorageBackend(self._files_path, "/files")
-            metadata_store = FileMetadataStore(database_url=self._database_url)
-            validator = FileValidator()
-            self._file_service = FileService(storage, metadata_store, validator)
+                storage = LocalStorageBackend(self._files_path, "/files")
+                metadata_store = FileMetadataStore(database_url=self._database_url)
+                validator = FileValidator()
+                self._file_service = FileService(storage, metadata_store, validator)
+            # else: already early-constructed in _setup_routes (no reconstruction needed)
 
             # Profile-based upload size limits (v1.0.0)
             _upload_limits = {"basic": 50, "standard": 10, "strict": 5}
