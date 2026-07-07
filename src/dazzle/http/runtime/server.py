@@ -1698,11 +1698,6 @@ class DazzleBackendApp:
             # assignment must precede app startup (it does — it runs at build
             # time, well before the lifespan fires).
             self._audit_logger = audit_logger
-            # #1551 — coalesced byte-serving audit evidence surface.
-            # ByteAudit wraps any object exposing async log_decision(**kw).
-            from dazzle.http.runtime.byte_serving import ByteAudit
-
-            self._app.state.byte_audit = ByteAudit(audit_logger)
 
         # ADR-0050 Option A (first-party usage signal): construct the usage
         # collector whenever a database is available (any app can capture usage,
@@ -1943,6 +1938,14 @@ class DazzleBackendApp:
                 _ff = [f.name for f in _ent.fields if f.type.kind == FieldTypeKind.FILE]
                 if _ff:
                     _entity_file_fields[_ent.name] = _ff
+
+        # #1551 review fix — wire byte_audit whenever document routes will be
+        # mounted, NOT only when _has_auditable_entities. An app with file
+        # fields but no scope:/permit:/audit: declarations (the "posture" access
+        # path) serves stored bytes with byte_audit = None → silently unaudited.
+        # _wire_byte_audit reuses audit_logger if already constructed above;
+        # otherwise it builds one from the same inputs when a DB is present.
+        self._wire_byte_audit(audit_logger)
 
         route_generator = RouteGenerator(
             security_profile=self._security_profile,
@@ -2341,6 +2344,41 @@ class DazzleBackendApp:
                 # routes module itself is stdlib-only; an ImportError
                 # here means the package is broken, not opted out.
                 logger.exception("Failed to import dazzle.signing.routes")
+
+    def _wire_byte_audit(self, audit_logger: "AuditLogger | None") -> None:
+        """Set app.state.byte_audit whenever stored bytes can be served.
+
+        The predicate is ``self._file_service is not None`` — the same
+        condition that gates ``_mount_document_routes``.  This covers apps
+        that have file fields but no RBAC/audit declarations (the "posture"
+        access path): without this fix those apps would serve bytes with
+        ``byte_audit = None`` → silently unaudited first-access.
+
+        When ``audit_logger`` is already constructed (``_has_auditable_entities``
+        was True) it is reused.  Otherwise a fresh ``AuditLogger`` is built
+        from the same inputs, provided a database is configured.  If no database
+        is available (a fileless / DB-less test rig) this is a no-op —
+        ``serve_bytes`` already handles ``audit=None`` as a permitted no-op.
+
+        Must be called in ``_setup_routes`` after ``self._file_service`` is
+        potentially constructed (i.e. after the early-init block at #1551).
+        """
+        if not getattr(self, "_file_service", None):
+            return
+        _logger = audit_logger
+        if _logger is None and self._database_url:
+            from dazzle.http.runtime.audit_log import AuditLogger
+
+            _logger = AuditLogger(
+                database_url=self._database_url,
+                audit_integrity=self._config.audit_integrity,
+            )
+            self._audit_logger = _logger
+        if _logger is not None:
+            assert self._app is not None
+            from dazzle.http.runtime.byte_serving import ByteAudit
+
+            self._app.state.byte_audit = ByteAudit(_logger)
 
     def _mount_document_routes(
         self, cedar_access_specs: Any, _fk_graph: Any, optional_auth_dep: Any, _admin_personas: Any
